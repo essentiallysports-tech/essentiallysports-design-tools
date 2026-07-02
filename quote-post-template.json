@@ -1,0 +1,393 @@
+{
+  "metadata": {
+    "exportedAt": "2026-06-14T06:27:20.520Z",
+    "componentName": "09 - 9",
+    "totalElements": 23,
+    "nestingDepth": 4,
+    "plugin": "Figma to JSON Exporter"
+  },
+  "designTokens": {
+    "colors": {
+      "color-rgb(255, 255, 255)": "rgb(255, 255, 255)",
+      "color-rgb(10, 8, 7)": "rgb(10, 8, 7)",
+      "color-rgb(0, 0, 0)": "rgb(0, 0, 0)"
+    },
+    "fonts": {
+      "acumin-pro-condensed": {
+        "family": "Acumin Pro Condensed",
+        "sizes": {
+          "size-131": "131px"
+        },
+        "weights": {
+          "weight-900": "900"
+        }
+      }
+    },
+    "spacing": {
+      "padding-right-21": "21px",
+      "padding-bottom-21": "21px",
+      "padding-left-21": "21px",
+      "gap-10": "10px"
+    },
+    "effects": {}
+  },
+  "structure": {
+    "name": "09---9",
+    "type": "FRAME",
+    "size": {
+      "w": 1080,
+      "h": 1350
+    },
+    "styles": {
+      "layout": {
+        "direction": "row",
+        "gap": 0,
+        "align": {
+          "main": "start",
+          "cross": "start"
+        }
+      }
+    },
+    "children": [
+      {
+        "name": "image-2830",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 1350,
+          "h": 1350
+        }
+      },
+      {
+        "name": "overlay",
+        "type": "VECTOR",
+        "size": {
+          "w": 1080,
+          "h": 404
+        }
+      },
+      {
+        "name": "group-1000013003",
+        "type": "GROUP",
+        "size": {
+          "w": 653,
+          "h": 351
+        },
+        "children": [
+          {
+            "name": "frame-2087325202",
+            "type": "FRAME",
+            "size": {
+              "w": 496,
+              "h": 122
+            },
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "layout": {
+                "direction": "row",
+                "gap": 10,
+                "align": {
+                  "main": "center",
+                  "cross": "center"
+                },
+                "padding": [
+                  0,
+                  21,
+                  21,
+                  21
+                ]
+              }
+            },
+            "children": [
+              {
+                "name": "terrible",
+                "type": "TEXT",
+                "size": {
+                  "w": 454,
+                  "h": 101
+                },
+                "content": "Terrible",
+                "styles": {
+                  "bg": "rgb(10, 8, 7)",
+                  "text": {
+                    "family": "Acumin Pro Condensed",
+                    "size": 131,
+                    "weight": "900",
+                    "align": "center"
+                  },
+                  "border": {
+                    "width": 8,
+                    "color": "rgb(255, 255, 255)"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "frame-2087325225",
+            "type": "FRAME",
+            "size": {
+              "w": 653,
+              "h": 122
+            },
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "layout": {
+                "direction": "row",
+                "gap": 10,
+                "align": {
+                  "main": "center",
+                  "cross": "center"
+                },
+                "padding": [
+                  0,
+                  21,
+                  21,
+                  21
+                ]
+              }
+            },
+            "children": [
+              {
+                "name": "basketball",
+                "type": "TEXT",
+                "size": {
+                  "w": 611,
+                  "h": 101
+                },
+                "content": "Basketball",
+                "styles": {
+                  "bg": "rgb(10, 8, 7)",
+                  "text": {
+                    "family": "Acumin Pro Condensed",
+                    "size": 131,
+                    "weight": "900",
+                    "align": "center"
+                  },
+                  "border": {
+                    "width": 8,
+                    "color": "rgb(255, 255, 255)"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "frame-2087325226",
+            "type": "FRAME",
+            "size": {
+              "w": 308,
+              "h": 122
+            },
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "layout": {
+                "direction": "row",
+                "gap": 10,
+                "align": {
+                  "main": "center",
+                  "cross": "center"
+                },
+                "padding": [
+                  0,
+                  21,
+                  21,
+                  21
+                ]
+              }
+            },
+            "children": [
+              {
+                "name": "team",
+                "type": "TEXT",
+                "size": {
+                  "w": 266,
+                  "h": 101
+                },
+                "content": "Team",
+                "styles": {
+                  "bg": "rgb(10, 8, 7)",
+                  "text": {
+                    "family": "Acumin Pro Condensed",
+                    "size": 131,
+                    "weight": "900",
+                    "align": "center"
+                  },
+                  "border": {
+                    "width": 8,
+                    "color": "rgb(255, 255, 255)"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "quote-open",
+        "type": "FRAME",
+        "size": {
+          "w": 115,
+          "h": 115
+        },
+        "styles": {
+          "bg": "rgb(0, 0, 0)",
+          "layout": {
+            "direction": "row",
+            "gap": 0,
+            "align": {
+              "main": "start",
+              "cross": "start"
+            }
+          }
+        },
+        "children": [
+          {
+            "name": "group-1000012871",
+            "type": "GROUP",
+            "size": {
+              "w": 70,
+              "h": 45
+            },
+            "children": [
+              {
+                "name": "-",
+                "type": "VECTOR",
+                "size": {
+                  "w": 36,
+                  "h": 45
+                },
+                "styles": {
+                  "bg": "rgb(255, 255, 255)"
+                }
+              },
+              {
+                "name": "-",
+                "type": "VECTOR",
+                "size": {
+                  "w": 36,
+                  "h": 45
+                },
+                "styles": {
+                  "bg": "rgb(255, 255, 255)"
+                }
+              },
+              {
+                "name": "-",
+                "type": "VECTOR",
+                "size": {
+                  "w": 25,
+                  "h": 28
+                },
+                "styles": {
+                  "bg": "rgb(255, 255, 255)"
+                }
+              },
+              {
+                "name": "-",
+                "type": "VECTOR",
+                "size": {
+                  "w": 25,
+                  "h": 28
+                },
+                "styles": {
+                  "bg": "rgb(255, 255, 255)"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "quote-close",
+        "type": "FRAME",
+        "size": {
+          "w": 114,
+          "h": 114
+        },
+        "styles": {
+          "bg": "rgb(0, 0, 0)",
+          "layout": {
+            "direction": "row",
+            "gap": 0,
+            "align": {
+              "main": "start",
+              "cross": "start"
+            }
+          }
+        },
+        "children": [
+          {
+            "name": "group-1000012871",
+            "type": "GROUP",
+            "size": {
+              "w": 69,
+              "h": 44
+            },
+            "children": [
+              {
+                "name": "-",
+                "type": "VECTOR",
+                "size": {
+                  "w": 36,
+                  "h": 44
+                },
+                "styles": {
+                  "bg": "rgb(255, 255, 255)"
+                }
+              },
+              {
+                "name": "-",
+                "type": "VECTOR",
+                "size": {
+                  "w": 36,
+                  "h": 44
+                },
+                "styles": {
+                  "bg": "rgb(255, 255, 255)"
+                }
+              },
+              {
+                "name": "-",
+                "type": "VECTOR",
+                "size": {
+                  "w": 25,
+                  "h": 28
+                },
+                "styles": {
+                  "bg": "rgb(255, 255, 255)"
+                }
+              },
+              {
+                "name": "-",
+                "type": "VECTOR",
+                "size": {
+                  "w": 25,
+                  "h": 28
+                },
+                "styles": {
+                  "bg": "rgb(255, 255, 255)"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "full-logo",
+        "type": "VECTOR",
+        "size": {
+          "w": 417,
+          "h": 49
+        }
+      }
+    ]
+  },
+  "summary": {
+    "components": 0,
+    "instances": 0,
+    "frames": 6,
+    "texts": 3,
+    "hasAutoLayout": true,
+    "hasEffects": false
+  }
+}

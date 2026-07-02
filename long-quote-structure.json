@@ -1,0 +1,418 @@
+{
+  "metadata": {
+    "exportedAt": "2026-06-25T11:16:07.860Z",
+    "componentName": "Long Quote",
+    "totalElements": 23,
+    "nestingDepth": 5,
+    "plugin": "Figma to JSON Exporter"
+  },
+  "designTokens": {
+    "colors": {
+      "color-rgb(232, 232, 232)": "rgb(232, 232, 232)",
+      "color-rgb(15, 15, 15)": "rgb(15, 15, 15)",
+      "color-rgb(0, 0, 0)": "rgb(0, 0, 0)",
+      "color-rgb(255, 255, 255)": "rgb(255, 255, 255)",
+      "color-rgb(230, 242, 254)": "rgb(230, 242, 254)",
+      "color-rgb(3, 49, 98)": "rgb(3, 49, 98)"
+    },
+    "fonts": {
+      "acumin-pro-condensed": {
+        "family": "Acumin Pro Condensed",
+        "sizes": {
+          "size-53": "53px",
+          "size-29": "29px",
+          "size-54": "54px"
+        },
+        "weights": {
+          "weight-700": "700",
+          "weight-900": "900"
+        }
+      }
+    },
+    "spacing": {
+      "padding-top-8": "8px",
+      "padding-right-6": "6px",
+      "padding-left-6": "6px",
+      "gap-2": "2px",
+      "padding-top-2": "2px",
+      "padding-bottom-2": "2px",
+      "padding-top-18": "18px",
+      "padding-bottom-8": "8px",
+      "gap-8": "8px",
+      "padding-top-7": "7px",
+      "padding-right-7": "7px",
+      "padding-bottom-7": "7px",
+      "padding-left-7": "7px"
+    },
+    "effects": {}
+  },
+  "structure": {
+    "name": "long-quote",
+    "type": "FRAME",
+    "size": {
+      "w": 1080,
+      "h": 1350
+    },
+    "styles": {
+      "layout": {
+        "direction": "row",
+        "gap": 0,
+        "align": {
+          "main": "start",
+          "cross": "start"
+        }
+      }
+    },
+    "children": [
+      {
+        "name": "image-3015",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 1618,
+          "h": 1079
+        }
+      },
+      {
+        "name": "untitled-1-13",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 1237,
+          "h": 1547
+        }
+      },
+      {
+        "name": "overlay",
+        "type": "VECTOR",
+        "size": {
+          "w": 1080,
+          "h": 404
+        }
+      },
+      {
+        "name": "logo",
+        "type": "VECTOR",
+        "size": {
+          "w": 122,
+          "h": 104
+        }
+      },
+      {
+        "name": "frame-2087325648",
+        "type": "FRAME",
+        "size": {
+          "w": 980,
+          "h": 442
+        },
+        "styles": {
+          "bg": "rgb(232, 232, 232)",
+          "radius": 15,
+          "layout": {
+            "direction": "row",
+            "gap": 0,
+            "align": {
+              "main": "start",
+              "cross": "start"
+            }
+          }
+        },
+        "children": [
+          {
+            "name": "caza-2",
+            "type": "RECTANGLE",
+            "size": {
+              "w": 1922,
+              "h": 1081
+            }
+          },
+          {
+            "name": "family-time-runs-down-at-the-same-pace-as-the-game-clock--you-ve-got-to-make-the-most-of-it-before-it-s-too-late--dear-lebron--you-ve-got-nothing-left-to-prove--unite-the-laces-and-retire-a-hero-",
+            "type": "TEXT",
+            "size": {
+              "w": 905,
+              "h": 318
+            },
+            "content": "FAMILY TIME RUNS DOWN AT THE SAME PACE AS THE GAME CLOCK. YOU’VE GOT TO MAKE THE MOST OF IT BEFORE IT’S TOO LATE. DEAR LEBRON, YOU’VE GOT NOTHING LEFT TO PROVE. UNITE THE LACES AND RETIRE A HERO.",
+            "styles": {
+              "bg": "rgb(15, 15, 15)",
+              "text": {
+                "family": "Acumin Pro Condensed",
+                "size": 53,
+                "weight": "700",
+                "align": "left"
+              }
+            }
+          },
+          {
+            "name": "quote-open",
+            "type": "FRAME",
+            "size": {
+              "w": 56,
+              "h": 56
+            },
+            "styles": {
+              "bg": "rgb(0, 0, 0)",
+              "layout": {
+                "direction": "row",
+                "gap": 0,
+                "align": {
+                  "main": "start",
+                  "cross": "start"
+                }
+              }
+            },
+            "children": [
+              {
+                "name": "group-1000012871",
+                "type": "GROUP",
+                "size": {
+                  "w": 34,
+                  "h": 22
+                },
+                "children": [
+                  {
+                    "name": "-",
+                    "type": "VECTOR",
+                    "size": {
+                      "w": 18,
+                      "h": 22
+                    },
+                    "styles": {
+                      "bg": "rgb(255, 255, 255)"
+                    }
+                  },
+                  {
+                    "name": "-",
+                    "type": "VECTOR",
+                    "size": {
+                      "w": 18,
+                      "h": 22
+                    },
+                    "styles": {
+                      "bg": "rgb(255, 255, 255)"
+                    }
+                  },
+                  {
+                    "name": "-",
+                    "type": "VECTOR",
+                    "size": {
+                      "w": 12,
+                      "h": 13
+                    },
+                    "styles": {
+                      "bg": "rgb(255, 255, 255)"
+                    }
+                  },
+                  {
+                    "name": "-",
+                    "type": "VECTOR",
+                    "size": {
+                      "w": 12,
+                      "h": 13
+                    },
+                    "styles": {
+                      "bg": "rgb(255, 255, 255)"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "frame-2087325269",
+            "type": "FRAME",
+            "size": {
+              "w": 140,
+              "h": 35
+            },
+            "styles": {
+              "bg": "rgb(230, 242, 254)",
+              "layout": {
+                "direction": "row",
+                "gap": 2,
+                "align": {
+                  "main": "center",
+                  "cross": "center"
+                },
+                "padding": [
+                  8,
+                  6,
+                  0,
+                  6
+                ]
+              }
+            },
+            "children": [
+              {
+                "name": "by-es-staff",
+                "type": "TEXT",
+                "size": {
+                  "w": 129,
+                  "h": 27
+                },
+                "content": "By ES Staff",
+                "styles": {
+                  "bg": "rgb(3, 49, 98)",
+                  "text": {
+                    "family": "Acumin Pro Condensed",
+                    "size": 29,
+                    "weight": "900",
+                    "align": "center"
+                  },
+                  "border": {
+                    "width": 2,
+                    "color": "rgb(255, 255, 255)"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "swipe-with-bg",
+        "type": "FRAME",
+        "size": {
+          "w": 200,
+          "h": 56
+        },
+        "styles": {
+          "bg": "rgb(0, 0, 0)",
+          "border": {
+            "width": 2,
+            "color": "rgb(255, 255, 255)"
+          },
+          "layout": {
+            "direction": "row",
+            "gap": 0,
+            "align": {
+              "main": "start",
+              "cross": "center"
+            },
+            "padding": [
+              2,
+              0,
+              2,
+              0
+            ]
+          }
+        },
+        "children": [
+          {
+            "name": "-",
+            "type": "FRAME",
+            "size": {
+              "w": 141,
+              "h": 52
+            },
+            "styles": {
+              "layout": {
+                "direction": "row",
+                "gap": 8,
+                "align": {
+                  "main": "center",
+                  "cross": "center"
+                },
+                "padding": [
+                  18,
+                  6,
+                  8,
+                  6
+                ]
+              }
+            },
+            "children": [
+              {
+                "name": "swipe",
+                "type": "TEXT",
+                "size": {
+                  "w": 129,
+                  "h": 26
+                },
+                "content": "SWIPE",
+                "styles": {
+                  "bg": "rgb(255, 255, 255)",
+                  "text": {
+                    "family": "Acumin Pro Condensed",
+                    "size": 54,
+                    "weight": "900",
+                    "align": "left"
+                  },
+                  "border": {
+                    "width": 2,
+                    "color": "rgb(255, 255, 255)"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "-",
+            "type": "FRAME",
+            "size": {
+              "w": 57,
+              "h": 52
+            },
+            "styles": {
+              "layout": {
+                "direction": "row",
+                "gap": 8,
+                "align": {
+                  "main": "center",
+                  "cross": "center"
+                },
+                "padding": [
+                  7,
+                  7,
+                  7,
+                  7
+                ]
+              }
+            },
+            "children": [
+              {
+                "name": "--",
+                "type": "GROUP",
+                "size": {
+                  "w": 43,
+                  "h": 38
+                },
+                "children": [
+                  {
+                    "name": "vector",
+                    "type": "VECTOR",
+                    "size": {
+                      "w": 20,
+                      "h": 38
+                    },
+                    "styles": {
+                      "bg": "rgb(255, 255, 255)"
+                    }
+                  },
+                  {
+                    "name": "vector",
+                    "type": "VECTOR",
+                    "size": {
+                      "w": 20,
+                      "h": 38
+                    },
+                    "styles": {
+                      "bg": "rgb(255, 255, 255)"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "components": 0,
+    "instances": 0,
+    "frames": 7,
+    "texts": 3,
+    "hasAutoLayout": true,
+    "hasEffects": false
+  }
+}

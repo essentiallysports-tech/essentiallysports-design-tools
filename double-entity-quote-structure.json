@@ -1,0 +1,447 @@
+{
+  "metadata": {
+    "exportedAt": "2026-06-27T05:32:18.639Z",
+    "componentName": "Double Entity Quote",
+    "totalElements": 25,
+    "nestingDepth": 3,
+    "plugin": "Figma to JSON Exporter"
+  },
+  "designTokens": {
+    "colors": {
+      "color-rgb(10, 10, 10)": "rgb(10, 10, 10)",
+      "color-rgb(240, 240, 240)": "rgb(240, 240, 240)",
+      "color-rgb(119, 119, 119)": "rgb(119, 119, 119)",
+      "color-rgb(0, 0, 0)": "rgb(0, 0, 0)",
+      "color-rgb(25, 25, 25)": "rgb(25, 25, 25)",
+      "color-rgb(48, 48, 48)": "rgb(48, 48, 48)",
+      "color-rgb(255, 255, 255)": "rgb(255, 255, 255)"
+    },
+    "fonts": {
+      "acumin-pro-condensed": {
+        "family": "Acumin Pro Condensed",
+        "sizes": {
+          "size-98": "98px",
+          "size-35": "35px"
+        },
+        "weights": {
+          "weight-900": "900"
+        }
+      },
+      "roboto-condensed": {
+        "family": "Roboto Condensed",
+        "sizes": {
+          "size-33": "33px"
+        },
+        "weights": {
+          "weight-600": "600"
+        }
+      }
+    },
+    "spacing": {
+      "padding-top-8": "8px",
+      "padding-right-4": "4px",
+      "padding-bottom-2": "2px",
+      "padding-left-5": "5px",
+      "gap-16": "16px"
+    },
+    "effects": {}
+  },
+  "structure": {
+    "name": "double-entity-quote",
+    "type": "FRAME",
+    "size": {
+      "w": 1080,
+      "h": 1350
+    },
+    "styles": {
+      "bg": "rgb(10, 10, 10)",
+      "layout": {
+        "direction": "row",
+        "gap": 0,
+        "align": {
+          "main": "start",
+          "cross": "start"
+        }
+      }
+    },
+    "children": [
+      {
+        "name": "rectangle-34661691",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 1080,
+          "h": 1350
+        },
+        "styles": {
+          "bg": "rgb(240, 240, 240)"
+        }
+      },
+      {
+        "name": "frame-1984080040",
+        "type": "FRAME",
+        "size": {
+          "w": 540,
+          "h": 675
+        },
+        "styles": {
+          "bg": "rgb(119, 119, 119)",
+          "layout": {
+            "direction": "row",
+            "gap": 0,
+            "align": {
+              "main": "start",
+              "cross": "start"
+            }
+          }
+        },
+        "children": [
+          {
+            "name": "image-2657",
+            "type": "RECTANGLE",
+            "size": {
+              "w": 690,
+              "h": 1034
+            }
+          }
+        ]
+      },
+      {
+        "name": "group-1000012871",
+        "type": "GROUP",
+        "size": {
+          "w": 211,
+          "h": 135
+        },
+        "children": [
+          {
+            "name": "-",
+            "type": "VECTOR",
+            "size": {
+              "w": 110,
+              "h": 135
+            },
+            "styles": {
+              "bg": "rgb(0, 0, 0)"
+            }
+          },
+          {
+            "name": "-",
+            "type": "VECTOR",
+            "size": {
+              "w": 110,
+              "h": 135
+            },
+            "styles": {
+              "bg": "rgb(0, 0, 0)"
+            }
+          },
+          {
+            "name": "-",
+            "type": "VECTOR",
+            "size": {
+              "w": 76,
+              "h": 84
+            },
+            "styles": {
+              "bg": "rgb(0, 0, 0)"
+            }
+          },
+          {
+            "name": "-",
+            "type": "VECTOR",
+            "size": {
+              "w": 76,
+              "h": 84
+            },
+            "styles": {
+              "bg": "rgb(0, 0, 0)"
+            }
+          }
+        ]
+      },
+      {
+        "name": "frame-1984080041",
+        "type": "FRAME",
+        "size": {
+          "w": 540,
+          "h": 675
+        },
+        "styles": {
+          "bg": "rgb(119, 119, 119)",
+          "layout": {
+            "direction": "row",
+            "gap": 0,
+            "align": {
+              "main": "start",
+              "cross": "start"
+            }
+          }
+        },
+        "children": [
+          {
+            "name": "image-2658",
+            "type": "RECTANGLE",
+            "size": {
+              "w": 1746,
+              "h": 1164
+            }
+          }
+        ]
+      },
+      {
+        "name": "i-will-watch-it-from-cabo-",
+        "type": "TEXT",
+        "size": {
+          "w": 471,
+          "h": 279
+        },
+        "content": "I will Watch It From Cabo!",
+        "styles": {
+          "bg": "rgb(0, 0, 0)",
+          "text": {
+            "family": "Acumin Pro Condensed",
+            "size": 98,
+            "weight": "900",
+            "align": "left"
+          },
+          "border": {
+            "width": 4,
+            "color": "rgb(255, 255, 255)"
+          }
+        }
+      },
+      {
+        "name": "never-say-never--but-i-highly-doubt-it-",
+        "type": "TEXT",
+        "size": {
+          "w": 455,
+          "h": 372
+        },
+        "content": "Never say never, but i highly Doubt it!",
+        "styles": {
+          "bg": "rgb(25, 25, 25)",
+          "text": {
+            "family": "Acumin Pro Condensed",
+            "size": 98,
+            "weight": "900",
+            "align": "left"
+          },
+          "border": {
+            "width": 4,
+            "color": "rgb(255, 255, 255)"
+          }
+        }
+      },
+      {
+        "name": "-",
+        "type": "FRAME",
+        "size": {
+          "w": 196,
+          "h": 37
+        },
+        "styles": {
+          "bg": "rgb(48, 48, 48)",
+          "layout": {
+            "direction": "row",
+            "gap": 16,
+            "align": {
+              "main": "center",
+              "cross": "center"
+            },
+            "padding": [
+              8,
+              4,
+              2,
+              5
+            ]
+          }
+        },
+        "children": [
+          {
+            "name": "lebron-james",
+            "type": "TEXT",
+            "size": {
+              "w": 186,
+              "h": 27
+            },
+            "content": "Lebron James",
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "text": {
+                "family": "Acumin Pro Condensed",
+                "size": 35,
+                "weight": "900",
+                "align": "left"
+              },
+              "border": {
+                "width": 4,
+                "color": "rgb(255, 255, 255)"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "on-running-it-back-with-team-usa-in-2028-",
+        "type": "TEXT",
+        "size": {
+          "w": 347,
+          "h": 78
+        },
+        "content": "on running it back with team USA in 2028.",
+        "styles": {
+          "bg": "rgb(0, 0, 0)",
+          "text": {
+            "family": "Roboto Condensed",
+            "size": 33,
+            "weight": "600",
+            "align": "left"
+          },
+          "border": {
+            "width": 4,
+            "color": "rgb(255, 255, 255)"
+          }
+        }
+      },
+      {
+        "name": "-",
+        "type": "FRAME",
+        "size": {
+          "w": 214,
+          "h": 37
+        },
+        "styles": {
+          "bg": "rgb(48, 48, 48)",
+          "layout": {
+            "direction": "row",
+            "gap": 16,
+            "align": {
+              "main": "center",
+              "cross": "center"
+            },
+            "padding": [
+              8,
+              4,
+              2,
+              5
+            ]
+          }
+        },
+        "children": [
+          {
+            "name": "stephen-curry",
+            "type": "TEXT",
+            "size": {
+              "w": 204,
+              "h": 27
+            },
+            "content": "Stephen Curry",
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "text": {
+                "family": "Acumin Pro Condensed",
+                "size": 35,
+                "weight": "900",
+                "align": "left"
+              },
+              "border": {
+                "width": 4,
+                "color": "rgb(255, 255, 255)"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "group-1000012871",
+        "type": "GROUP",
+        "size": {
+          "w": 211,
+          "h": 135
+        },
+        "children": [
+          {
+            "name": "-",
+            "type": "VECTOR",
+            "size": {
+              "w": 110,
+              "h": 135
+            },
+            "styles": {
+              "bg": "rgb(0, 0, 0)"
+            }
+          },
+          {
+            "name": "-",
+            "type": "VECTOR",
+            "size": {
+              "w": 110,
+              "h": 135
+            },
+            "styles": {
+              "bg": "rgb(0, 0, 0)"
+            }
+          },
+          {
+            "name": "-",
+            "type": "VECTOR",
+            "size": {
+              "w": 76,
+              "h": 84
+            },
+            "styles": {
+              "bg": "rgb(0, 0, 0)"
+            }
+          },
+          {
+            "name": "-",
+            "type": "VECTOR",
+            "size": {
+              "w": 76,
+              "h": 84
+            },
+            "styles": {
+              "bg": "rgb(0, 0, 0)"
+            }
+          }
+        ]
+      },
+      {
+        "name": "line-630",
+        "type": "LINE",
+        "size": {
+          "w": 1361,
+          "h": 0
+        },
+        "styles": {
+          "border": {
+            "width": 3,
+            "color": "rgb(255, 255, 255)"
+          }
+        }
+      },
+      {
+        "name": "line-629",
+        "type": "LINE",
+        "size": {
+          "w": 1361,
+          "h": 0
+        },
+        "styles": {
+          "border": {
+            "width": 3,
+            "color": "rgb(255, 255, 255)"
+          }
+        }
+      }
+    ]
+  },
+  "summary": {
+    "components": 0,
+    "instances": 0,
+    "frames": 5,
+    "texts": 5,
+    "hasAutoLayout": true,
+    "hasEffects": false
+  }
+}

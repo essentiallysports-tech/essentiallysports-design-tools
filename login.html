@@ -1,0 +1,1012 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Log in to EssentiallySports Designer.">
+<title>ES Designer</title>
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Condensed:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  @font-face {
+    font-family: 'Acumin Pro Condensed Local';
+    src: url('fonts/acumin-pro-condensed-bold.otf') format('opentype');
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+  }
+  :root {
+    --white: #FFFFFF;
+    --bg-page: #F6FBFF;
+    --text-primary: #06111F;
+    --text-blue: #033162;
+    --text-muted: #8FA3B8;
+    --accent: #0A7DFA;
+    --accent-hover: #0A6FDE;
+    --border: #B5D8FD;
+    --border-soft: #D9E9FC;
+    --font-ui: 'Roboto Condensed', 'Roboto', Arial, sans-serif;
+    --font-heading: 'Roboto Condensed', 'Roboto', Arial, sans-serif;
+    --font-title: 'Acumin Pro Condensed Local', 'Arial Narrow', sans-serif;
+    --shadow-soft: 0 20px 60px rgba(3, 49, 98, 0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    min-height: 100%;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    overflow-x: clip;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity .28s cubic-bezier(.16, 1, .3, 1), transform .28s cubic-bezier(.16, 1, .3, 1);
+  }
+  body.is-page-ready {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  body.is-page-leaving {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body,
+    body.is-page-ready,
+    body.is-page-leaving {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+  a { color: inherit; }
+  .login-shell {
+    width: min(1280px, calc(100% - 80px));
+    min-height: 620px;
+    margin: 0 auto;
+    padding: 76px 0 126px;
+    display: grid;
+    grid-template-columns: minmax(300px, 420px) minmax(420px, 1fr);
+    align-items: start;
+    gap: clamp(72px, 11vw, 170px);
+  }
+  .login-panel {
+    width: 100%;
+    max-width: 440px;
+  }
+  .login-brand {
+    display: block;
+    width: min(302px, 82%);
+    height: auto;
+    margin: 0 0 34px;
+  }
+  .login-title {
+    display: block;
+    color: #000000;
+    font-family: var(--font-title);
+    font-size: clamp(30px, 3vw, 44px);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .login-form {
+    margin-top: 40px;
+    display: grid;
+    gap: 18px;
+  }
+  .login-field {
+    display: grid;
+    gap: 12px;
+  }
+  .login-field label {
+    color: #000000;
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1;
+  }
+  .login-field input {
+    width: 100%;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--text-blue);
+    font-family: var(--font-heading);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1;
+    padding: 0 16px;
+    outline: none;
+    box-shadow: 0 12px 28px rgba(3, 49, 98, 0.05);
+    transition: border-color .16s ease, box-shadow .16s ease;
+  }
+  .login-field input::placeholder {
+    color: #B8C8D9;
+  }
+  .login-field input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(10, 125, 250, .14), 0 12px 28px rgba(3, 49, 98, 0.05);
+  }
+  .login-button {
+    width: 100%;
+    height: 36px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--white);
+    font-family: var(--font-heading);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 12px 24px rgba(10, 125, 250, 0.20);
+    transition: transform .24s cubic-bezier(.16, 1, .3, 1), box-shadow .24s cubic-bezier(.16, 1, .3, 1), background-color .24s cubic-bezier(.16, 1, .3, 1);
+  }
+  .login-button:hover,
+  .login-button:focus-visible {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 16px 28px rgba(10, 125, 250, 0.26);
+    outline: none;
+  }
+  .login-button:active {
+    transform: translateY(1px);
+  }
+  .login-button[disabled] {
+    cursor: wait;
+    opacity: .78;
+  }
+  .login-note,
+  .login-error {
+    min-height: 18px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+  .login-note { color: #6C7A89; }
+  .login-error {
+    display: none;
+    color: #C62828;
+  }
+  .login-error.is-visible {
+    display: block;
+  }
+  .login-art {
+    width: 100%;
+    align-self: center;
+    position: relative;
+  }
+  .login-art img {
+    display: block;
+    width: min(640px, 100%);
+    height: auto;
+    margin-left: auto;
+  }
+  .login-showcase {
+    width: min(1280px, calc(100% - 80px));
+    margin: 0 auto;
+    padding: 0 0 260px;
+    display: block;
+  }
+  .showcase-heading {
+    max-width: 720px;
+    margin-bottom: 48px;
+  }
+  .showcase-eyebrow {
+    color: var(--accent);
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .showcase-heading h2 {
+    margin-top: 12px;
+    color: #000000;
+    font-family: var(--font-title);
+    font-size: clamp(38px, 4.2vw, 62px);
+    font-weight: 700;
+    letter-spacing: -.035em;
+    line-height: .98;
+  }
+  .showcase-heading p {
+    max-width: 640px;
+    margin-top: 20px;
+    color: #53657A;
+    font-size: clamp(16px, 1.35vw, 19px);
+    font-weight: 400;
+    line-height: 1.55;
+  }
+  .login-feature-card {
+    position: sticky;
+    top: 86px;
+    align-self: start;
+    height: min(620px, calc(100vh - 150px));
+    min-height: 520px;
+    display: grid;
+    grid-template-columns: minmax(280px, .8fr) minmax(480px, 1.2fr);
+    align-items: center;
+    gap: clamp(48px, 7vw, 104px);
+    overflow: hidden;
+    border: 1px solid rgba(181, 216, 253, .72);
+    border-radius: 34px;
+    background: #FFFFFF;
+    box-shadow: 0 28px 84px rgba(3, 49, 98, .12);
+    padding: clamp(44px, 5vw, 76px);
+    transform-origin: top center;
+  }
+  .login-feature-card + .login-feature-card {
+    margin-top: 34px;
+  }
+  .login-showcase > .login-feature-card:nth-of-type(1) {
+    z-index: 1;
+    top: 86px;
+  }
+  .login-showcase > .login-feature-card:nth-of-type(2) {
+    z-index: 2;
+    top: 106px;
+  }
+  .login-showcase > .login-feature-card:nth-of-type(3) {
+    z-index: 3;
+    top: 126px;
+  }
+  .login-feature-card.is-reversed {
+    grid-template-columns: minmax(480px, 1.2fr) minmax(280px, .8fr);
+  }
+  .login-feature-card.is-reversed .feature-copy {
+    order: 2;
+  }
+  .login-feature-card.is-reversed .feature-visual {
+    order: 1;
+  }
+  .feature-copy {
+    align-self: center;
+  }
+  .feature-index {
+    color: var(--accent);
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .feature-copy h3 {
+    margin-top: 14px;
+    color: #111111;
+    font-family: var(--font-title);
+    font-size: clamp(36px, 3.6vw, 54px);
+    font-weight: 700;
+    letter-spacing: -.035em;
+    line-height: 1;
+  }
+  .feature-copy p {
+    margin-top: 20px;
+    color: #53657A;
+    font-size: clamp(16px, 1.2vw, 18px);
+    font-weight: 400;
+    line-height: 1.58;
+  }
+  .feature-tags {
+    margin-top: 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .feature-tags span {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #F8FBFF;
+    color: var(--text-blue);
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .feature-visual {
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    place-items: center;
+    overflow: visible;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+  }
+  .feature-visual img {
+    display: block;
+    width: min(100%, 650px);
+    height: auto;
+    max-height: min(500px, calc(100vh - 260px));
+    object-fit: contain;
+  }
+  .selection-box {
+    position: absolute;
+    left: 62px;
+    top: 70px;
+    width: min(640px, 100%);
+    height: 252px;
+    border: 1.5px solid #7DBBFF;
+    border-left: 0;
+    pointer-events: none;
+  }
+  .selection-box::before,
+  .selection-box::after {
+    content: "";
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border: 1.5px solid #7DBBFF;
+    background: var(--bg-page);
+  }
+  .selection-box::before { right: -5px; top: -5px; }
+  .selection-box::after { right: -5px; bottom: -5px; }
+  .selection-corner {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border: 1.5px solid #7DBBFF;
+    background: var(--bg-page);
+  }
+  .selection-corner.is-top { left: 138px; top: -5px; }
+  .selection-corner.is-bottom { left: 0; bottom: -5px; }
+  .selection-elbow {
+    position: absolute;
+    left: -4px;
+    top: 31px;
+    width: 48px;
+    height: 46px;
+    border-left: 1.5px solid #B7DAFF;
+    border-top: 1.5px solid #B7DAFF;
+  }
+  .selection-caption {
+    position: absolute;
+    right: 220px;
+    bottom: -44px;
+    min-width: 206px;
+    height: 38px;
+    border-left: 5px solid var(--accent);
+    border-top: 1.5px solid #A6CFFF;
+    border-bottom: 1.5px solid #A6CFFF;
+    color: #24364A;
+    background: rgba(246, 251, 255, .62);
+    font-size: 25px;
+    font-weight: 800;
+    line-height: 35px;
+    padding-left: 10px;
+  }
+  .selection-caption::after {
+    content: "";
+    position: absolute;
+    right: -74px;
+    top: -1.5px;
+    width: 74px;
+    height: 38px;
+    border-top: 1.5px solid #A6CFFF;
+  }
+  .doc-chip {
+    position: absolute;
+    left: 128px;
+    top: 88px;
+    width: 88px;
+    height: 76px;
+    color: var(--text-blue);
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+  }
+  .doc-chip::before {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 20px;
+    width: 62px;
+    height: 72px;
+    border: 1.5px solid #C8DEF7;
+    border-radius: 8px;
+    background: linear-gradient(135deg, transparent 0 19px, #EAF5FF 20px), #FFFFFF;
+    box-shadow: 0 12px 30px rgba(3, 49, 98, .08);
+  }
+  .doc-chip::after {
+    content: "";
+    position: absolute;
+    right: 10px;
+    top: 50px;
+    width: 34px;
+    height: 8px;
+    border-radius: 2px;
+    background: #D9E9FC;
+    box-shadow: 0 18px 0 #D9E9FC;
+  }
+  .doc-chip span {
+    position: relative;
+    z-index: 1;
+  }
+  .mini-playbook {
+    position: absolute;
+    left: 28px;
+    top: 196px;
+    width: 250px;
+    height: 124px;
+    border-radius: 4px;
+    background: #FFFFFF;
+    border: 1px solid #E4EDF7;
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+    padding: 12px 14px;
+  }
+  .mini-playbook::before {
+    content: "PRO PLAYBOOK";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 18px;
+    padding: 0 8px;
+    background: #0F6A4F;
+    color: #FFFFFF;
+    font-size: 10px;
+    font-weight: 900;
+  }
+  .mini-playbook-title {
+    margin-top: 7px;
+    color: var(--text-blue);
+    font-size: 8px;
+    font-weight: 900;
+    line-height: 1.2;
+    max-width: 202px;
+  }
+  .mini-playbook-body {
+    display: grid;
+    grid-template-columns: 58px 1fr;
+    gap: 10px;
+    align-items: end;
+    margin-top: 9px;
+  }
+  .mini-playbook-thumb {
+    width: 58px;
+    height: 55px;
+    border: 1px solid #D9E9FC;
+    background: url("workspace-card-social-media.webp") center / cover no-repeat;
+  }
+  .mini-playbook-copy strong {
+    display: block;
+    color: var(--text-blue);
+    font-size: 11px;
+    line-height: 1.05;
+  }
+  .mini-playbook-copy span {
+    display: block;
+    margin-top: 4px;
+    color: #7B8FA6;
+    font-size: 7px;
+    line-height: 1.25;
+  }
+  .mini-playbook-button {
+    display: block;
+    height: 18px;
+    margin-top: 8px;
+    border-radius: 2px;
+    background: #09643D;
+    color: #FFFFFF;
+    font-size: 7px;
+    font-weight: 900;
+    text-align: center;
+    line-height: 18px;
+  }
+  .text-design-card {
+    position: absolute;
+    left: 260px;
+    top: 115px;
+    width: 380px;
+    height: 216px;
+    border-radius: 18px;
+    background: rgba(255,255,255,.94);
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+  }
+  .text-design-card h2 {
+    height: 62px;
+    display: flex;
+    align-items: center;
+    padding-left: 34px;
+    color: #000000;
+    font-size: 20px;
+    font-weight: 900;
+  }
+  .text-design-field {
+    height: 58px;
+    margin: 0 0 24px 34px;
+    border: 1.5px solid #A9D2FF;
+    border-right: 0;
+    border-radius: 8px 0 0 8px;
+    display: flex;
+    align-items: center;
+    padding-left: 24px;
+    color: var(--text-blue);
+    font-size: 22px;
+    font-weight: 900;
+  }
+  .design-card-actions {
+    display: flex;
+    gap: 18px;
+    padding-left: 34px;
+  }
+  .ghost-upload,
+  .ghost-export {
+    height: 40px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 900;
+  }
+  .ghost-upload {
+    width: 116px;
+    background: #FFFFFF;
+    color: #000000;
+    border: 1px solid #E5EEF8;
+  }
+  .ghost-export {
+    width: 112px;
+    background: var(--accent);
+    color: #FFFFFF;
+  }
+  .login-footer {
+    margin-top: auto;
+    background: var(--white);
+    color: #111;
+    font-weight: 700;
+  }
+  .footer-hero {
+    background: var(--accent);
+    color: var(--white);
+    text-align: center;
+    padding: 64px 24px 28px;
+  }
+  .footer-logo-img {
+    display: block;
+    width: auto;
+    max-width: min(100%, 820px);
+    height: clamp(30px, 6vw, 48px);
+    margin: 0 auto;
+  }
+  .footer-blurb {
+    width: min(980px, 100%);
+    margin: 18px auto 22px;
+    font-size: 14px;
+    font-weight: 300;
+    line-height: 18px;
+  }
+  .footer-socials {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .footer-socials a,
+  .footer-col a,
+  .footer-bottom a,
+  .footer-logo-link {
+    color: inherit;
+    text-decoration: none;
+  }
+  .footer-socials img {
+    display: block;
+    width: 24px;
+    height: 24px;
+  }
+  .footer-copy {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .footer-links {
+    width: min(1200px, calc(100% - 48px));
+    margin: 0 auto;
+    padding: 34px 0 44px;
+    display: grid;
+    grid-template-columns: 1.1fr 1.1fr 1.1fr 1.4fr;
+    gap: 44px;
+  }
+  .footer-col {
+    display: flex;
+    flex-direction: column;
+    gap: 17px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .footer-col span {
+    font-size: 16px;
+    font-weight: 800;
+  }
+  .footer-col.sports {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 36px;
+    row-gap: 17px;
+  }
+  .footer-bottom {
+    width: min(1200px, calc(100% - 48px));
+    margin: 0 auto;
+    border-top: 1px solid var(--border);
+    padding: 20px 0 24px;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 22px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  @media (max-width: 960px) {
+    .login-shell {
+      width: min(720px, calc(100% - 40px));
+      padding: 56px 0 104px;
+      grid-template-columns: 1fr;
+      gap: 56px;
+    }
+    .login-panel {
+      max-width: 440px;
+    }
+    .login-art {
+      transform: none;
+    }
+    .selection-box {
+      left: 22px;
+      width: min(640px, calc(100% - 22px));
+    }
+    .footer-links {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .login-showcase {
+      width: min(720px, calc(100% - 40px));
+      padding-bottom: 110px;
+    }
+    .login-feature-card,
+    .login-feature-card.is-reversed {
+      position: relative;
+      top: auto !important;
+      min-height: 0;
+      grid-template-columns: 1fr;
+      gap: 36px;
+    }
+    .login-feature-card.is-reversed .feature-copy,
+    .login-feature-card.is-reversed .feature-visual {
+      order: initial;
+    }
+    .feature-visual {
+      min-height: 430px;
+    }
+  }
+  @media (max-width: 680px) {
+    .login-shell {
+      width: calc(100% - 32px);
+      min-height: 0;
+      padding: 38px 0 78px;
+    }
+    .login-title {
+      font-size: 31px;
+    }
+    .login-art {
+      width: 100%;
+    }
+    .footer-logo-img {
+      height: 34px;
+    }
+    .footer-links {
+      grid-template-columns: 1fr;
+    }
+    .login-showcase {
+      width: calc(100% - 32px);
+      padding-bottom: 80px;
+      gap: 28px;
+    }
+    .showcase-heading {
+      margin-bottom: 6px;
+    }
+    .login-feature-card,
+    .login-feature-card.is-reversed {
+      padding: 28px 22px;
+      border-radius: 20px;
+      gap: 28px;
+    }
+    .feature-copy h3 {
+      font-size: 36px;
+    }
+    .feature-visual {
+      min-height: 300px;
+      border-radius: 16px;
+      padding: 16px;
+    }
+  }
+</style>
+</head>
+<body>
+<main class="login-shell">
+  <section class="login-panel" aria-labelledby="login-title">
+    <img class="login-brand" src="brand-logo-blue.svg" alt="EssentiallySports">
+    <h1 class="login-title" id="login-title">Log in to ES Designer</h1>
+    <form class="login-form" id="login-form" novalidate>
+      <div class="login-field">
+        <label for="login-email">Email</label>
+        <input id="login-email" name="email" type="email" autocomplete="email" placeholder="xyz@email.com" required>
+      </div>
+      <div class="login-field">
+        <label for="login-password">Password</label>
+        <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Password" required>
+      </div>
+      <button class="login-button" type="submit">Login</button>
+      <p class="login-error" id="login-error" role="alert"></p>
+      <p class="login-note">Demo mode accepts any valid email and password for now. The script is prepared to use a backend auth endpoint later.</p>
+    </form>
+  </section>
+
+  <section class="login-art" aria-label="Designer preview artwork">
+    <img src="login-artwork.webp" alt="EssentiallySports designer tools artwork">
+  </section>
+</main>
+
+<section class="login-showcase" aria-labelledby="showcase-title">
+  <header class="showcase-heading">
+    <div class="showcase-eyebrow">ES Designer Workspaces</div>
+    <h2 id="showcase-title">Everything your creative workflow needs.</h2>
+    <p>Move from idea to polished, brand-ready sports creative with focused tools built for the formats our teams use every day.</p>
+  </header>
+
+  <article class="login-feature-card">
+    <div class="feature-copy">
+      <div class="feature-index">01 · Social Media</div>
+      <h3>Social Media Design</h3>
+      <p>Create sharp, platform-ready visuals for stats, quotes, breaking stories, and daily sports coverage while staying inside the EssentiallySports visual system.</p>
+      <div class="feature-tags" aria-label="Social media capabilities">
+        <span>Stat Posts</span>
+        <span>Quote Cards</span>
+        <span>Instagram</span>
+      </div>
+    </div>
+    <div class="feature-visual">
+      <img src="login-social-media.webp" alt="Social media design workspace preview" loading="lazy" decoding="async">
+    </div>
+  </article>
+
+  <article class="login-feature-card is-reversed">
+    <div class="feature-copy">
+      <div class="feature-index">02 · YouTube</div>
+      <h3>YouTube Assets</h3>
+      <p>Build high-impact thumbnail concepts with clear hierarchy, strong entities, and flexible background treatments designed to stop the scroll.</p>
+      <div class="feature-tags" aria-label="YouTube capabilities">
+        <span>Thumbnails</span>
+        <span>Entity Layouts</span>
+        <span>Text Treatments</span>
+      </div>
+    </div>
+    <div class="feature-visual">
+      <img src="login-youtube-assets.webp" alt="YouTube assets workspace preview" loading="lazy" decoding="async">
+    </div>
+  </article>
+
+  <article class="login-feature-card">
+    <div class="feature-copy">
+      <div class="feature-index">03 · Newsletters</div>
+      <h3>Newsletter Assets</h3>
+      <p>Prepare consistent visual assets for newsletter launches, daily editions, and special coverage with a workflow that keeps every handoff clear.</p>
+      <div class="feature-tags" aria-label="Newsletter capabilities">
+        <span>Hero Images</span>
+        <span>Daily Editions</span>
+        <span>Brand Safe</span>
+      </div>
+    </div>
+    <div class="feature-visual">
+      <img src="login-newsletter-assets.webp" alt="Newsletter assets workspace preview" loading="lazy" decoding="async">
+    </div>
+  </article>
+</section>
+
+<footer class="site-footer login-footer">
+  <div class="footer-hero">
+    <a class="footer-logo-link" href="https://www.essentiallysports.com/"><img class="footer-logo-img" src="brand-logo-white.svg" alt="EssentiallySports"></a>
+    <p class="footer-blurb">EssentiallySports is the home for the underserved fan, delivering storytelling that goes beyond the headlines. As a media platform, we combine deep audience insights with cultural trends, to meet fandom where it lives and where it goes next. Founded in 2014, EssentiallySports now engages with an audience of over 30m+ American sports fan on its website and 1m+ readers on its newsletters daily.</p>
+    <div class="footer-socials" aria-label="Social links">
+      <a href="https://www.facebook.com/essentiallysports" aria-label="Facebook"><img src="social-icons/footer-facebook.svg" alt=""></a>
+      <a href="https://twitter.com/es_sportsnews" aria-label="X"><img src="social-icons/footer-x.svg" alt=""></a>
+      <a href="https://www.linkedin.com/company/essentiallysports" aria-label="LinkedIn"><img src="social-icons/footer-linkedin.svg" alt=""></a>
+      <a href="https://www.instagram.com/essentiallysports" aria-label="Instagram"><img src="social-icons/footer-instagram.svg" alt=""></a>
+      <a href="https://www.youtube.com/essentiallysports" aria-label="YouTube"><img src="social-icons/footer-youtube.svg" alt=""></a>
+      <a href="https://news.google.com/publications/CAAqBwgKMJqW_gwwkoGBAw" aria-label="Google News"><img src="social-icons/footer-google-news.svg" alt=""></a>
+    </div>
+    <div class="footer-copy">EssentiallySports Media, Inc. © 2026 | All Rights Reserved</div>
+  </div>
+  <div class="footer-links">
+    <div class="footer-col">
+      <span>EssentiallySports</span>
+      <a href="https://www.essentiallysports.com/about-us/">About Us</a>
+      <a href="https://www.essentiallysports.com/advertise-with-us/">Advertise With Us</a>
+      <a href="https://www.essentiallysports.com/authors/">Authors</a>
+      <a href="https://www.essentiallysports.com/editorial-team/">Editorial Team</a>
+      <a href="https://www.essentiallysports.com/editorial-policies/">Behind The Scenes</a>
+      <a href="https://www.essentiallysports.com/contact-us/">Contact Us</a>
+      <a href="https://www.essentiallysports.com/press/">Press</a>
+      <a href="index.html#faq">FAQ</a>
+    </div>
+    <div class="footer-col">
+      <span>Newsletters</span>
+      <a href="https://essentiallysports.beehiiv.com/">Lucky Dog on Track</a>
+      <a href="https://essentiallygolf.beehiiv.com/">Essentially Golf</a>
+      <a href="https://shegotgame.beehiiv.com/">She Got Game</a>
+      <a href="https://essentially-basketball.beehiiv.com/">Essentially Dunk</a>
+      <a href="https://essentiallyathletics.beehiiv.com/">Essentially Athletics</a>
+      <a href="https://the-nfl-huddle.beehiiv.com/">The Huddle</a>
+      <a href="https://chiefs-huddle.beehiiv.com/">Chiefs Huddle</a>
+      <a href="https://cowboys-huddle.beehiiv.com/">Cowboys Huddle</a>
+      <a href="https://steelers-huddle.beehiiv.com/">Steelers Huddle</a>
+      <a href="https://es-college-football.beehiiv.com/">Essentially CFB</a>
+      <a href="https://buckeye-daily.beehiiv.com/">Buckeye Daily</a>
+      <a href="https://www.essentiallysports.com/think-tank/">ES Think Tank</a>
+    </div>
+    <div class="footer-col">
+      <span>Podcasts</span>
+      <a href="https://www.essentiallysports.com/think-tank/">ES Think Tank</a>
+      <a href="https://www.essentiallysports.com/es-fancast/">ES Fancast</a>
+      <br>
+      <span>Events</span>
+      <a href="https://www.essentiallysports.com/wnba-all-star-2025/">WNBA All-Star 2025</a>
+      <a href="https://www.essentiallysports.com/us-open-2025/">US Open 2025</a>
+      <a href="https://www.essentiallysports.com/archive/">Archive</a>
+    </div>
+    <div class="footer-col sports">
+      <span>Sports</span><span></span>
+      <a href="https://www.essentiallysports.com/category/all/">All</a><a href="https://www.essentiallysports.com/category/college-football/">College Football</a>
+      <a href="https://www.essentiallysports.com/category/boxing/">Boxing</a><a href="https://www.essentiallysports.com/category/track-and-field/">Track And Field</a>
+      <a href="https://www.essentiallysports.com/category/golf/">Golf</a><a href="https://www.essentiallysports.com/category/gymnastics/">Gymnastics</a>
+      <a href="https://www.essentiallysports.com/category/nascar/">NASCAR</a><a href="https://www.essentiallysports.com/category/olympics/">Olympics</a>
+      <a href="https://www.essentiallysports.com/category/nba/">NBA</a><a href="https://www.essentiallysports.com/category/mlb/">MLB</a>
+      <a href="https://www.essentiallysports.com/category/nfl/">NFL</a><a href="https://www.essentiallysports.com/category/soccer/">Soccer</a>
+      <a href="https://www.essentiallysports.com/category/tennis/">Tennis</a><a href="https://www.essentiallysports.com/category/swimming/">Swimming</a>
+      <a href="https://www.essentiallysports.com/category/ufc/">UFC</a><a href="https://www.essentiallysports.com/category/nhl/">NHL</a>
+      <a href="https://www.essentiallysports.com/category/wnba/">WNBA</a><span></span>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <a href="https://www.essentiallysports.com/privacy-policy/">Privacy Policy</a>
+    <a href="https://www.essentiallysports.com/press/">ES Pressroom</a>
+    <a href="https://www.essentiallysports.com/ethics-policy/">Ethics Policy</a>
+    <a href="https://www.essentiallysports.com/fact-checking-policy/">Fact-Checking Policy</a>
+    <a href="https://www.essentiallysports.com/corrections-policy/">Corrections Policy</a>
+    <a href="https://www.essentiallysports.com/cookies-policy/">Cookies Policy</a>
+    <a href="https://www.essentiallysports.com/gdpr-compliance/">GDPR Compliance</a>
+    <a href="https://www.essentiallysports.com/terms-of-use/">Terms of Use</a>
+    <a href="https://www.essentiallysports.com/editorial-policies/">Editorial Guidelines</a>
+    <a href="https://www.essentiallysports.com/ownership-and-funding-information/">Ownership and funding Information</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const AUTH_STORAGE_KEY = 'es.designerAuth.v1';
+  const AUTH_ENDPOINT = window.ES_AUTH_ENDPOINT || '';
+  const form = document.getElementById('login-form');
+  const emailInput = document.getElementById('login-email');
+  const passwordInput = document.getElementById('login-password');
+  const errorEl = document.getElementById('login-error');
+  const button = form.querySelector('.login-button');
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function showPage() {
+    document.body.classList.remove('is-page-leaving');
+    document.body.classList.add('is-page-ready');
+  }
+
+  window.requestAnimationFrame(showPage);
+  window.addEventListener('pageshow', showPage);
+
+  function setError(message) {
+    errorEl.textContent = message || '';
+    errorEl.classList.toggle('is-visible', Boolean(message));
+  }
+
+  function getRedirectTarget() {
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get('redirect');
+    if (requested && /^[\w./#?=&%-]+$/.test(requested) && !requested.startsWith('http')) {
+      return requested;
+    }
+    return 'index.html#frames';
+  }
+
+  async function authenticateWithBackend(credentials) {
+    const response = await fetch(AUTH_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(credentials)
+    });
+    if (!response.ok) {
+      throw new Error('Login failed. Please check your email and password.');
+    }
+    return response.json();
+  }
+
+  async function authenticateForDemo(credentials) {
+    await new Promise(resolve => window.setTimeout(resolve, 180));
+    return {
+      token: `demo-${Date.now()}`,
+      user: {
+        email: credentials.email,
+        name: credentials.email.split('@')[0] || 'ES Designer',
+        role: 'Designer'
+      }
+    };
+  }
+
+  async function authenticate(credentials) {
+    if (AUTH_ENDPOINT) {
+      return authenticateWithBackend(credentials);
+    }
+    return authenticateForDemo(credentials);
+  }
+
+  function persistSession(session) {
+    const payload = JSON.stringify({
+      ...session,
+      createdAt: new Date().toISOString(),
+      mode: AUTH_ENDPOINT ? 'backend' : 'demo'
+    });
+    try {
+      window.sessionStorage?.setItem(AUTH_STORAGE_KEY, payload);
+    } catch (error) {
+      // Storage can be unavailable in some embedded previews; demo login should still continue.
+    }
+  }
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    setError('');
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!emailInput.validity.valid || !email) {
+      setError('Enter a valid email address.');
+      emailInput.focus();
+      return;
+    }
+    if (!password) {
+      setError('Enter your password.');
+      passwordInput.focus();
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Logging in...';
+
+    try {
+      const session = await authenticate({ email, password });
+      persistSession(session);
+      const redirectTarget = getRedirectTarget();
+      if (prefersReducedMotion) {
+        window.location.href = redirectTarget;
+        return;
+      }
+      document.body.classList.remove('is-page-ready');
+      document.body.classList.add('is-page-leaving');
+      window.setTimeout(() => {
+        window.location.href = redirectTarget;
+      }, 220);
+    } catch (error) {
+      setError(error.message || 'Unable to log in right now.');
+      button.disabled = false;
+      button.textContent = 'Login';
+    }
+  });
+})();
+</script>
+</body>
+</html>

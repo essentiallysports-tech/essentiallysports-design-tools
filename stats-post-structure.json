@@ -1,0 +1,553 @@
+{
+  "metadata": {
+    "exportedAt": "2026-06-26T05:23:12.171Z",
+    "componentName": "Stats Post",
+    "totalElements": 26,
+    "nestingDepth": 5,
+    "plugin": "Figma to JSON Exporter"
+  },
+  "designTokens": {
+    "colors": {
+      "color-rgb(0, 0, 0)": "rgb(0, 0, 0)",
+      "color-rgb(255, 255, 255)": "rgb(255, 255, 255)",
+      "color-rgb(248, 59, 15)": "rgb(248, 59, 15)"
+    },
+    "fonts": {
+      "acumin-pro-condensed": {
+        "family": "Acumin Pro Condensed",
+        "sizes": {
+          "size-198": "198px",
+          "size-47": "47px",
+          "size-164": "164px"
+        },
+        "weights": {
+          "weight-900": "900"
+        }
+      }
+    },
+    "spacing": {
+      "padding-top-44": "44px",
+      "padding-right-20": "20px",
+      "padding-bottom-44": "44px",
+      "padding-left-20": "20px",
+      "gap-35": "35px",
+      "gap-10": "10px",
+      "padding-right-8": "8px",
+      "padding-bottom-8": "8px",
+      "padding-left-8": "8px",
+      "gap-4": "4px",
+      "padding-top-31": "31px",
+      "padding-right-15": "15px",
+      "padding-left-15": "15px",
+      "gap-23": "23px"
+    },
+    "effects": {}
+  },
+  "structure": {
+    "name": "stats-post",
+    "type": "FRAME",
+    "size": {
+      "w": 1080,
+      "h": 1350
+    },
+    "styles": {
+      "bg": "rgb(0, 0, 0)",
+      "layout": {
+        "direction": "row",
+        "gap": 0,
+        "align": {
+          "main": "start",
+          "cross": "start"
+        }
+      }
+    },
+    "children": [
+      {
+        "name": "image-2857",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 2042,
+          "h": 1360
+        }
+      },
+      {
+        "name": "vector",
+        "type": "VECTOR",
+        "size": {
+          "w": 1268,
+          "h": 404
+        }
+      },
+      {
+        "name": "vector",
+        "type": "VECTOR",
+        "size": {
+          "w": 1268,
+          "h": 462
+        }
+      },
+      {
+        "name": "overlay",
+        "type": "VECTOR",
+        "size": {
+          "w": 1080,
+          "h": 404
+        }
+      },
+      {
+        "name": "frame-2087325303",
+        "type": "FRAME",
+        "size": {
+          "w": 240,
+          "h": 880
+        },
+        "styles": {
+          "bg": "rgb(0, 0, 0)",
+          "border": {
+            "width": 4,
+            "color": "rgb(248, 59, 15)"
+          },
+          "layout": {
+            "direction": "column",
+            "gap": 35,
+            "align": {
+              "main": "start",
+              "cross": "center"
+            },
+            "padding": [
+              44,
+              20,
+              44,
+              20
+            ]
+          }
+        },
+        "children": [
+          {
+            "name": "frame-2087325307",
+            "type": "FRAME",
+            "size": {
+              "w": 200,
+              "h": 218
+            },
+            "styles": {
+              "layout": {
+                "direction": "column",
+                "gap": 10,
+                "align": {
+                  "main": "start",
+                  "cross": "center"
+                }
+              }
+            },
+            "children": [
+              {
+                "name": "frame-2087325307",
+                "type": "FRAME",
+                "size": {
+                  "w": 177,
+                  "h": 160
+                },
+                "styles": {
+                  "layout": {
+                    "direction": "row",
+                    "gap": 0,
+                    "align": {
+                      "main": "start",
+                      "cross": "start"
+                    }
+                  }
+                },
+                "children": [
+                  {
+                    "name": "13",
+                    "type": "TEXT",
+                    "size": {
+                      "w": 177,
+                      "h": 160
+                    },
+                    "content": "13",
+                    "styles": {
+                      "bg": "rgb(255, 255, 255)",
+                      "text": {
+                        "family": "Acumin Pro Condensed",
+                        "size": 198,
+                        "weight": "900",
+                        "align": "center"
+                      },
+                      "border": {
+                        "width": 8,
+                        "color": "rgb(255, 255, 255)"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "name": "frame-2087325229",
+                "type": "FRAME",
+                "size": {
+                  "w": 82,
+                  "h": 48
+                },
+                "styles": {
+                  "layout": {
+                    "direction": "row",
+                    "gap": 4,
+                    "align": {
+                      "main": "center",
+                      "cross": "center"
+                    },
+                    "padding": [
+                      0,
+                      8,
+                      8,
+                      8
+                    ]
+                  }
+                },
+                "children": [
+                  {
+                    "name": "pts",
+                    "type": "TEXT",
+                    "size": {
+                      "w": 67,
+                      "h": 40
+                    },
+                    "content": "PTS",
+                    "styles": {
+                      "bg": "rgb(248, 59, 15)",
+                      "text": {
+                        "family": "Acumin Pro Condensed",
+                        "size": 47,
+                        "weight": "900",
+                        "align": "center"
+                      },
+                      "border": {
+                        "width": 3,
+                        "color": "rgb(255, 255, 255)"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "line-662",
+            "type": "LINE",
+            "size": {
+              "w": 185,
+              "h": 0
+            },
+            "styles": {
+              "border": {
+                "width": 2,
+                "color": "rgb(248, 59, 15)"
+              }
+            }
+          },
+          {
+            "name": "frame-2087325309",
+            "type": "FRAME",
+            "size": {
+              "w": 200,
+              "h": 218
+            },
+            "styles": {
+              "layout": {
+                "direction": "column",
+                "gap": 10,
+                "align": {
+                  "main": "start",
+                  "cross": "center"
+                }
+              }
+            },
+            "children": [
+              {
+                "name": "frame-2087325307",
+                "type": "FRAME",
+                "size": {
+                  "w": 177,
+                  "h": 160
+                },
+                "styles": {
+                  "layout": {
+                    "direction": "row",
+                    "gap": 0,
+                    "align": {
+                      "main": "start",
+                      "cross": "start"
+                    }
+                  }
+                },
+                "children": [
+                  {
+                    "name": "9",
+                    "type": "TEXT",
+                    "size": {
+                      "w": 177,
+                      "h": 160
+                    },
+                    "content": "9",
+                    "styles": {
+                      "bg": "rgb(255, 255, 255)",
+                      "text": {
+                        "family": "Acumin Pro Condensed",
+                        "size": 198,
+                        "weight": "900",
+                        "align": "center"
+                      },
+                      "border": {
+                        "width": 8,
+                        "color": "rgb(255, 255, 255)"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "name": "frame-2087325229",
+                "type": "FRAME",
+                "size": {
+                  "w": 82,
+                  "h": 48
+                },
+                "styles": {
+                  "layout": {
+                    "direction": "row",
+                    "gap": 4,
+                    "align": {
+                      "main": "center",
+                      "cross": "center"
+                    },
+                    "padding": [
+                      0,
+                      8,
+                      8,
+                      8
+                    ]
+                  }
+                },
+                "children": [
+                  {
+                    "name": "ast",
+                    "type": "TEXT",
+                    "size": {
+                      "w": 67,
+                      "h": 40
+                    },
+                    "content": "AST",
+                    "styles": {
+                      "bg": "rgb(248, 59, 15)",
+                      "text": {
+                        "family": "Acumin Pro Condensed",
+                        "size": 47,
+                        "weight": "900",
+                        "align": "center"
+                      },
+                      "border": {
+                        "width": 3,
+                        "color": "rgb(255, 255, 255)"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "line-661",
+            "type": "LINE",
+            "size": {
+              "w": 185,
+              "h": 0
+            },
+            "styles": {
+              "border": {
+                "width": 2,
+                "color": "rgb(248, 59, 15)"
+              }
+            }
+          },
+          {
+            "name": "frame-2087325310",
+            "type": "FRAME",
+            "size": {
+              "w": 200,
+              "h": 218
+            },
+            "styles": {
+              "layout": {
+                "direction": "column",
+                "gap": 10,
+                "align": {
+                  "main": "start",
+                  "cross": "center"
+                }
+              }
+            },
+            "children": [
+              {
+                "name": "frame-2087325307",
+                "type": "FRAME",
+                "size": {
+                  "w": 177,
+                  "h": 160
+                },
+                "styles": {
+                  "layout": {
+                    "direction": "row",
+                    "gap": 0,
+                    "align": {
+                      "main": "start",
+                      "cross": "start"
+                    }
+                  }
+                },
+                "children": [
+                  {
+                    "name": "4",
+                    "type": "TEXT",
+                    "size": {
+                      "w": 177,
+                      "h": 160
+                    },
+                    "content": "4",
+                    "styles": {
+                      "bg": "rgb(255, 255, 255)",
+                      "text": {
+                        "family": "Acumin Pro Condensed",
+                        "size": 198,
+                        "weight": "900",
+                        "align": "center"
+                      },
+                      "border": {
+                        "width": 8,
+                        "color": "rgb(255, 255, 255)"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "name": "frame-2087325229",
+                "type": "FRAME",
+                "size": {
+                  "w": 92,
+                  "h": 48
+                },
+                "styles": {
+                  "layout": {
+                    "direction": "row",
+                    "gap": 4,
+                    "align": {
+                      "main": "center",
+                      "cross": "center"
+                    },
+                    "padding": [
+                      0,
+                      8,
+                      8,
+                      8
+                    ]
+                  }
+                },
+                "children": [
+                  {
+                    "name": "mvp",
+                    "type": "TEXT",
+                    "size": {
+                      "w": 77,
+                      "h": 40
+                    },
+                    "content": "MVP",
+                    "styles": {
+                      "bg": "rgb(248, 59, 15)",
+                      "text": {
+                        "family": "Acumin Pro Condensed",
+                        "size": 47,
+                        "weight": "900",
+                        "align": "center"
+                      },
+                      "border": {
+                        "width": 3,
+                        "color": "rgb(255, 255, 255)"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "frame-2087325174",
+        "type": "FRAME",
+        "size": {
+          "w": 961,
+          "h": 149
+        },
+        "styles": {
+          "bg": "rgb(255, 255, 255)",
+          "layout": {
+            "direction": "row",
+            "gap": 23,
+            "align": {
+              "main": "center",
+              "cross": "center"
+            },
+            "padding": [
+              31,
+              15,
+              0,
+              15
+            ]
+          }
+        },
+        "children": [
+          {
+            "name": "record-alert-",
+            "type": "TEXT",
+            "size": {
+              "w": 930,
+              "h": 118
+            },
+            "content": "record alert!",
+            "styles": {
+              "bg": "rgb(248, 59, 15)",
+              "text": {
+                "family": "Acumin Pro Condensed",
+                "size": 164,
+                "weight": "900",
+                "align": "right"
+              },
+              "border": {
+                "width": 7,
+                "color": "rgb(255, 255, 255)"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "logo",
+        "type": "VECTOR",
+        "size": {
+          "w": 122,
+          "h": 104
+        }
+      }
+    ]
+  },
+  "summary": {
+    "components": 0,
+    "instances": 0,
+    "frames": 12,
+    "texts": 7,
+    "hasAutoLayout": true,
+    "hasEffects": false
+  }
+}
