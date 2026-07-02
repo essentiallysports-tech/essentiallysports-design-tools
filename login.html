@@ -745,7 +745,7 @@
       </div>
       <button class="login-button" type="submit">Login</button>
       <p class="login-error" id="login-error" role="alert"></p>
-      <p class="login-note">Demo mode accepts any valid email and password for now. The script is prepared to use a backend auth endpoint later.</p>
+      <p class="login-note">Demo mode: any password works for now. Login requires an @essentiallysports.com email. The script is prepared to use a backend auth endpoint later.</p>
     </form>
   </section>
 
@@ -972,9 +972,15 @@
 
     const email = emailInput.value.trim();
     const password = passwordInput.value;
+    const ALLOWED_EMAIL_DOMAIN = '@essentiallysports.com';
 
     if (!emailInput.validity.valid || !email) {
       setError('Enter a valid email address.');
+      emailInput.focus();
+      return;
+    }
+    if (!email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN)) {
+      setError(`Access is limited to ${ALLOWED_EMAIL_DOMAIN} email addresses.`);
       emailInput.focus();
       return;
     }
