@@ -205,6 +205,15 @@ const pickerGrid = {
   },
 };
 const pickerQueryLabel = { textContent: '' };
+const pickerSourceBadge = {
+  textContent: '',
+  fallbackClassApplied: false,
+  classList: {
+    toggle(className, isApplied) {
+      if (className === 'is-fallback') pickerSourceBadge.fallbackClassApplied = Boolean(isApplied);
+    },
+  },
+};
 const pickerSandbox = {
   aiImageSearchResults: [],
   aiImageLastQuery: '',
@@ -214,6 +223,7 @@ const pickerSandbox = {
     querySelector(selector) {
       if (selector === '[data-ai-image-picker-grid]') return pickerGrid;
       if (selector === '[data-ai-image-picker-query]') return pickerQueryLabel;
+      if (selector === '[data-ai-image-picker-source]') return pickerSourceBadge;
       return null;
     },
     createElement(tagName) {
@@ -245,7 +255,9 @@ renderAiImagePicker([
 
 assert.equal(
   pickerQueryLabel.textContent,
-  'Showing 1 ES media fallback result for “LeBron James” · ES Storage fallback: Missing or invalid token.'
+  'Showing 1 result for “LeBron James”. ES Storage fallback: Missing or invalid token.'
 );
+assert.equal(pickerSourceBadge.textContent, 'ES media fallback');
+assert.equal(pickerSourceBadge.fallbackClassApplied, true);
 
 console.log('AI image picker fallback reason regression test passed.');
