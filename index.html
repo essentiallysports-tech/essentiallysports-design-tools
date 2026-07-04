@@ -6319,9 +6319,18 @@ function cleanAiImageSearchText(value) {
 function addAiImageSearchQuery(queries, value) {
   const cleaned = cleanAiImageSearchText(value).slice(0, 140);
   if (!cleaned) return;
+  if (/^(?:BY\s+)?(?:ES\s+|ESSENTIALLYSPORTS\s+)?STAFF$/i.test(cleaned)) return;
   if (!queries.some(item => item.toLowerCase() === cleaned.toLowerCase())) {
     queries.push(cleaned);
   }
+}
+
+function isLikelyEntityOnlySearchText(value) {
+  const cleaned = cleanAiImageSearchText(value);
+  if (!cleaned || /^(?:BY\s+)?(?:ES\s+|ESSENTIALLYSPORTS\s+)?STAFF$/i.test(cleaned)) return false;
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length < 1 || words.length > 4) return false;
+  return !/\b(?:wins?|won|loses?|lost|makes?|made|says?|said|stuns?|stunned|reveals?|revealed|claims?|claimed|backs?|backed|joins?|joined|leaves?|left|signs?|signed|beats?|beaten|after|before|against|amid|during)\b/i.test(cleaned);
 }
 
 function extractEntityQueriesFromHeadline(value) {
@@ -6379,6 +6388,7 @@ function getActiveImageSearchQueries() {
   const explicitQueries = [];
   const contextQueries = [];
   const headlineEntityQueries = [];
+  const primaryExactQueries = [];
   const headlineFallbackQueries = [];
   const fieldValue = id => document.getElementById(id)?.value;
   const nameFromFields = (...ids) => ids.map(fieldValue).filter(Boolean).join(' ').trim();
@@ -6390,34 +6400,44 @@ function getActiveImageSearchQueries() {
     extractEntityQueriesFromHeadline(cleaned).forEach(item => addAiImageSearchQuery(headlineEntityQueries, item));
     addAiImageSearchQuery(headlineFallbackQueries, cleaned);
   };
+  const addPrimaryText = (value, allowEntityOnly = false) => {
+    addHeadline(value);
+    if (allowEntityOnly && isLikelyEntityOnlySearchText(value)) {
+      addAiImageSearchQuery(primaryExactQueries, value);
+    }
+  };
 
   if (activeWorkspace === 'instagram' && activeType === 'stats-single-ent') {
+    addPrimaryText(fieldValue('stats-headline'), true);
     addExplicit(state.team);
     addContext(state.sport);
-    addHeadline(fieldValue('stats-headline'));
   } else if (activeWorkspace === 'instagram' && activeType === 'stats-double-ent') {
+    addPrimaryText(fieldValue('stats-double-headline'), true);
     addExplicit(nameFromFields('stats-double-first-name-primary', 'stats-double-last-name-primary'));
     addExplicit(nameFromFields('stats-double-first-name-secondary', 'stats-double-last-name-secondary'));
     addContext(state.sport);
-    addHeadline(fieldValue('stats-double-headline'));
   } else if (activeWorkspace === 'instagram' && activeType === 'double-entity-quote') {
+    addPrimaryText(fieldValue('pill-text'));
     addExplicit(fieldValue('double-name-primary'));
     addExplicit(fieldValue('double-name-secondary'));
     addContext(state.sport);
   } else {
-    addExplicit(fieldValue('long-quote-name'));
+    addPrimaryText(fieldValue('pill-text'), activeType === 'cover');
+    if (activeWorkspace === 'instagram' && activeType === 'long-quote') {
+      addExplicit(fieldValue('long-quote-name'));
+    }
     addExplicit(state.team);
     addContext(state.sport);
   }
 
   (Array.isArray(state.lines) ? state.lines : []).forEach(addHeadline);
-  addHeadline(fieldValue('pill-text'));
 
-  // A person/entity typed in the design text must win over workspace defaults
-  // such as the previously selected team. Explicit fields remain the next-best
-  // signal, while the full headline, team/sport context are fallbacks.
+  // The visible text/headline owns the search. Capitalized names extracted
+  // from a headline and short entity-only text (including lowercase names)
+  // must win over hidden/default team, sport, and byline values.
   const ordered = [
     ...headlineEntityQueries,
+    ...primaryExactQueries,
     ...explicitQueries,
     ...headlineFallbackQueries,
     ...contextQueries,

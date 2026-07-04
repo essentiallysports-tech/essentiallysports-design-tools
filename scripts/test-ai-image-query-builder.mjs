@@ -20,7 +20,7 @@ const sandbox = {
     postType: 'cover',
     team: 'Los Angeles Lakers',
     sport: 'NBA',
-    lines: ['LeBron James makes history'],
+    lines: ['BY ES STAFF'],
   },
   document: {
     getElementById(id) {
@@ -46,14 +46,34 @@ function asPlainArray(value) {
   return Array.from(value);
 }
 
-setValues({ 'pill-text': 'LeBron James makes history' });
+setValues({
+  'pill-text': 'lebron james',
+  'long-quote-name': 'BY ES STAFF',
+});
 assert.deepEqual(asPlainArray(sandbox.getActiveImageSearchQueries().slice(0, 4)), [
-  'LeBron James',
+  'lebron james',
   'Los Angeles Lakers',
-  'LeBron James makes history',
   'NBA',
 ]);
-assert.equal(sandbox.getActiveHeadlineForImageSearch(), 'LeBron James');
+assert.equal(sandbox.getActiveHeadlineForImageSearch(), 'lebron james');
+
+for (const entityName of [
+  'serena williams',
+  'max verstappen',
+  'coco gauff',
+  'patrick mahomes',
+  'ronaldo',
+]) {
+  setValues({
+    'pill-text': entityName,
+    'long-quote-name': 'BY ES STAFF',
+  });
+  assert.equal(
+    sandbox.getActiveImageSearchQueries()[0],
+    entityName,
+    `${entityName} should outrank hidden/default workspace values`
+  );
+}
 
 sandbox.state.postType = 'stats-double-ent';
 sandbox.state.sport = 'NBA';
@@ -114,7 +134,10 @@ assert.deepEqual(
 
 console.log('AI image query builder regression test passed.');
 
-const behaviorValues = new Map([['pill-text', 'LeBron James makes history']]);
+const behaviorValues = new Map([
+  ['pill-text', 'lebron james'],
+  ['long-quote-name', 'BY ES STAFF'],
+]);
 const searchedQueries = [];
 const statusMessages = [];
 const behaviorSandbox = {
@@ -123,7 +146,7 @@ const behaviorSandbox = {
     postType: 'cover',
     team: 'Los Angeles Lakers',
     sport: 'NBA',
-    lines: ['LeBron James makes history'],
+    lines: ['BY ES STAFF'],
   },
   searchedQueries,
   statusMessages,
@@ -142,7 +165,7 @@ vm.runInContext(`
 ${aiImageCode}
 this.searchEsStorageImages = async query => {
   searchedQueries.push(query);
-  return query === 'LeBron James'
+  return query.toLowerCase() === 'lebron james'
     ? {
         source: 'mcp-agency',
         results: [{ title: 'LeBron agency image', sourceUrl: 'https://image-cdn.essentiallysports.com/lebron.webp' }],
@@ -162,14 +185,14 @@ this.setAiImageButtonLoading = isLoading => {
 await vm.runInContext('applyAiImageFromEsStorage()', behaviorSandbox);
 
 assert.deepEqual(searchedQueries.slice(0, 3), [
-  'LeBron James',
+  'lebron james',
 ]);
-assert.equal(behaviorSandbox.renderedQuery, 'LeBron James');
+assert.equal(behaviorSandbox.renderedQuery, 'lebron james');
 assert.equal(behaviorSandbox.aiImageLastSource, 'mcp-agency');
 assert.deepEqual(JSON.parse(JSON.stringify(behaviorSandbox.renderedResults)), [
   { title: 'LeBron agency image', sourceUrl: 'https://image-cdn.essentiallysports.com/lebron.webp' },
 ]);
-assert.equal(statusMessages.at(-1), 'Choose an ES Storage image for “LeBron James”.');
+assert.equal(statusMessages.at(-1), 'Choose an ES Storage image for “lebron james”.');
 assert.equal(behaviorSandbox.loadingState, false);
 
 console.log('AI image sequential entity fallback regression test passed.');
