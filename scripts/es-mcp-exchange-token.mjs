@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 
+import { readFileSync, writeFileSync } from 'node:fs';
+
 const issuer = process.env.ES_MCP_ISSUER || 'https://mcp.essentiallysports.com';
 const code = process.argv[2] || process.env.ES_MCP_AUTH_CODE;
-const clientId = process.env.ES_MCP_CLIENT_ID;
-const redirectUri = process.env.ES_MCP_REDIRECT_URI;
-const codeVerifier = process.env.ES_MCP_CODE_VERIFIER;
+const sessionFile = process.env.ES_MCP_SESSION_FILE || '';
+const tokenFile = process.env.ES_MCP_TOKEN_FILE || '';
+const session = sessionFile
+  ? JSON.parse(readFileSync(sessionFile, 'utf8'))
+  : {};
+const clientId = process.env.ES_MCP_CLIENT_ID || session.clientId;
+const redirectUri = process.env.ES_MCP_REDIRECT_URI || session.redirectUri;
+const codeVerifier = process.env.ES_MCP_CODE_VERIFIER || session.codeVerifier;
 
 if (!code || !clientId || !redirectUri || !codeVerifier) {
   console.error('Usage: ES_MCP_CLIENT_ID=... ES_MCP_REDIRECT_URI=... ES_MCP_CODE_VERIFIER=... node scripts/es-mcp-exchange-token.mjs <authorization-code>');
@@ -40,13 +47,25 @@ if (!tokenResponse.ok) {
   throw new Error(`Token exchange failed: ${tokenResponse.status}`);
 }
 
-console.log('ES MCP token exchange succeeded.');
-console.log('');
-console.log('Set this in Netlify environment variables:');
-console.log(`ES_MCP_ACCESS_TOKEN=${token.access_token}`);
-if (token.refresh_token) {
+if (tokenFile) {
+  writeFileSync(tokenFile, JSON.stringify({
+    accessToken: token.access_token,
+    refreshToken: token.refresh_token || '',
+    tokenType: token.token_type || 'Bearer',
+    expiresIn: token.expires_in || null,
+    scope: token.scope || 'mcp',
+    clientId,
+  }, null, 2), { mode: 0o600 });
+  console.log(`ES MCP token exchange succeeded; credentials saved securely to ${tokenFile}.`);
+} else {
+  console.log('ES MCP token exchange succeeded.');
   console.log('');
-  console.log('Optional refresh token, store securely if ES wants long-lived refresh support later:');
-  console.log(`ES_MCP_CLIENT_ID=${clientId}`);
-  console.log(`ES_MCP_REFRESH_TOKEN=${token.refresh_token}`);
+  console.log('Set this in Vercel environment variables:');
+  console.log(`ES_MCP_ACCESS_TOKEN=${token.access_token}`);
+  if (token.refresh_token) {
+    console.log('');
+    console.log('Optional refresh token, store securely if ES wants long-lived refresh support later:');
+    console.log(`ES_MCP_CLIENT_ID=${clientId}`);
+    console.log(`ES_MCP_REFRESH_TOKEN=${token.refresh_token}`);
+  }
 }
