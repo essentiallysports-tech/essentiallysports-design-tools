@@ -5,21 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Submit and track creative design requests for EssentiallySports.">
 <title>Design Request | EssentiallySports</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="es-auth-config.js"></script>
+<script src="es-auth.js"></script>
 <script>
   (() => {
-    const authKey = 'es.designerAuth.v1';
-    let isAuthenticated = false;
-
-    try {
-      isAuthenticated = Boolean(window.sessionStorage.getItem(authKey));
-    } catch (error) {
-      // If browser storage is unavailable, require login for this visit.
-    }
-
-    if (!isAuthenticated) {
-      const returnTo = `design-request.html${window.location.search}${window.location.hash}`;
-      window.location.replace(`login.html?redirect=${encodeURIComponent(returnTo)}`);
-    }
+    window.ESAuth?.requireAuth(`design-request.html${window.location.search}${window.location.hash}`);
   })();
 </script>
 <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -979,34 +970,52 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 13px 14px;
+    min-height: clamp(38px, 2.55vw, 50px);
+    padding: 0 18px;
     border-radius: var(--button-radius);
     font-family: var(--font-heading);
     font-size: clamp(14px, .78vw, 16px);
     font-weight: 500;
     line-height: 1;
     cursor: pointer;
-    border: none;
-    transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+    border: 1.5px solid transparent;
+    transition: transform .24s var(--motion-smooth), box-shadow .24s var(--motion-smooth), background-color .24s var(--motion-smooth), border-color .24s var(--motion-smooth), color .24s var(--motion-smooth);
     white-space: nowrap;
     letter-spacing: 0;
     text-transform: none;
   }
-  .btn:hover { opacity: 0.88; }
-  .btn:active { transform: translateY(1px); }
+  .btn:hover,
+  .btn:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 42px rgba(10, 125, 250, .18);
+    outline: none;
+  }
+  .btn:active { transform: translateY(0) scale(.98); }
   .btn-primary {
     background: var(--accent);
     color: #fff;
+    border-color: var(--accent);
     flex: 1;
-    box-shadow: none;
+    box-shadow: 0 18px 36px rgba(3, 49, 98, .08);
   }
   .btn-secondary {
     background: var(--white);
     color: var(--text-primary);
     border: 1.5px solid var(--border-strong);
     flex: 1;
+    box-shadow: 0 16px 30px rgba(3, 49, 98, .06);
   }
-  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .btn-primary:hover,
+  .btn-primary:focus-visible {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+  .btn-secondary:hover,
+  .btn-secondary:focus-visible {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-light);
+  }
   .btn-row {
     display: flex;
     gap: 0;
@@ -1236,11 +1245,21 @@
     font-family: var(--font-heading); font-size: clamp(14px, .78vw, 16px);
     font-weight: 500; line-height: 1; letter-spacing: 0;
     text-decoration: none; text-transform: none;
+    box-shadow: 0 18px 36px rgba(3, 49, 98, .08);
+    transition: transform .24s var(--motion-smooth), box-shadow .24s var(--motion-smooth), background-color .24s var(--motion-smooth), border-color .24s var(--motion-smooth);
   }
-  .frame-cta:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .frame-cta:hover,
+  .frame-cta:focus-visible {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 22px 42px rgba(10, 125, 250, .18);
+    outline: none;
+  }
   .frame-cta.is-disabled {
     background: var(--white); border-color: var(--border-strong);
     color: var(--text-secondary); cursor: default;
+    box-shadow: 0 16px 30px rgba(3, 49, 98, .06);
   }
   .ui-arrow-right {
     width: 16px;

@@ -5,23 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="EssentiallySports brand guidelines, design tools, and creative request intake.">
   <title>Design Tools | EssentiallySports</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="es-auth-config.js"></script>
+<script src="es-auth.js"></script>
 <script src="design-request-slack.js"></script>
 <script src="design-request-email.js"></script>
 <script>
   (() => {
-    const authKey = 'es.designerAuth.v1';
-    let isAuthenticated = false;
-
-    try {
-      isAuthenticated = Boolean(window.sessionStorage.getItem(authKey));
-    } catch (error) {
-      // If browser storage is unavailable, require login for this visit.
-    }
-
-    if (!isAuthenticated) {
-      const returnTo = `index.html${window.location.search}${window.location.hash}`;
-      window.location.replace(`login.html?redirect=${encodeURIComponent(returnTo)}`);
-    }
+    window.ESAuth?.requireAuth(`index.html${window.location.search}${window.location.hash}`);
   })();
 </script>
 <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -1197,34 +1188,52 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 13px 14px;
-    border-radius: var(--radius-md);
+    min-height: clamp(38px, 2.55vw, 50px);
+    padding: 0 18px;
+    border-radius: var(--button-radius);
     font-family: var(--font-heading);
     font-size: clamp(14px, .78vw, 16px);
     font-weight: 500;
     line-height: 1;
     cursor: pointer;
-    border: none;
-    transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+    border: 1.5px solid transparent;
+    transition: transform .24s var(--motion-smooth), box-shadow .24s var(--motion-smooth), background-color .24s var(--motion-smooth), border-color .24s var(--motion-smooth), color .24s var(--motion-smooth);
     white-space: nowrap;
     letter-spacing: 0;
     text-transform: none;
   }
-  .btn:hover { opacity: 0.88; }
-  .btn:active { transform: translateY(1px); }
+  .btn:hover,
+  .btn:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 42px rgba(10, 125, 250, .18);
+    outline: none;
+  }
+  .btn:active { transform: translateY(0) scale(.98); }
   .btn-primary {
     background: var(--accent);
     color: #fff;
+    border-color: var(--accent);
     flex: 1;
-    box-shadow: none;
+    box-shadow: 0 18px 36px rgba(3, 49, 98, .08);
   }
   .btn-secondary {
     background: var(--white);
     color: var(--text-primary);
     border: 1.5px solid var(--border-strong);
     flex: 1;
+    box-shadow: 0 16px 30px rgba(3, 49, 98, .06);
   }
-  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .btn-primary:hover,
+  .btn-primary:focus-visible {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+  .btn-secondary:hover,
+  .btn-secondary:focus-visible {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-light);
+  }
   .btn-row {
     display: flex;
     gap: 0;
@@ -1707,6 +1716,12 @@
     justify-content: space-between;
     gap: 8px;
   }
+  .canvas-primary-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+  }
   .canvas-bottom-actions .carousel-workspace-nav {
     width: auto;
     margin: 0;
@@ -1818,15 +1833,25 @@
     font-family: var(--font-heading); font-size: clamp(14px, .78vw, 16px);
     font-weight: 500; line-height: 1; letter-spacing: 0;
     text-decoration: none; text-transform: none;
-    transition: background-color .15s ease, border-color .15s ease;
+    box-shadow: 0 18px 36px rgba(3, 49, 98, .08);
+    transition: transform .24s var(--motion-smooth), box-shadow .24s var(--motion-smooth), background-color .24s var(--motion-smooth), border-color .24s var(--motion-smooth), color .24s var(--motion-smooth);
   }
-  .frame-cta:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .frame-cta:hover,
+  .frame-cta:focus-visible {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 22px 42px rgba(10, 125, 250, .18);
+    outline: none;
+  }
   .frame-cta.frame-cta-secondary {
     background: var(--white);
     color: var(--text-primary);
     border-color: var(--border-strong);
+    box-shadow: 0 16px 30px rgba(3, 49, 98, .06);
   }
-  .frame-cta.frame-cta-secondary:hover {
+  .frame-cta.frame-cta-secondary:hover,
+  .frame-cta.frame-cta-secondary:focus-visible {
     background: var(--accent-light);
     border-color: var(--accent);
     color: var(--accent);
@@ -2379,26 +2404,28 @@
     margin-top: 30px;
   }
 body[data-current-page="faq"] .faq-cta-action {
-  min-height: 34px;
+  min-height: clamp(38px, 2.55vw, 50px);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-    padding: 0 22px;
-    border: 1px solid #D8E5F5;
-    border-radius: 6px;
+    padding: 0 18px;
+    border: 1.5px solid #B5D8FD;
+    border-radius: var(--button-radius);
     background: #FFFFFF;
-    color: #000000;
-    font-family: var(--font-ui);
-    font-size: 12px;
+    color: #033162;
+    font-family: var(--font-heading);
+    font-size: clamp(14px, .78vw, 16px);
   font-weight: 500;
   line-height: 1;
   text-decoration: none;
-  transition: transform .18s ease, box-shadow .22s ease, background-color .15s ease, border-color .15s ease, color .15s ease;
+  box-shadow: 0 16px 30px rgba(3, 49, 98, .06);
+  transition: transform .24s var(--motion-smooth), box-shadow .24s var(--motion-smooth), background-color .24s var(--motion-smooth), border-color .24s var(--motion-smooth), color .24s var(--motion-smooth);
 }
 body[data-current-page="faq"] .faq-cta-action.is-primary {
   border-color: #0A7DFA;
   background: #0A7DFA;
   color: #FFFFFF;
+  box-shadow: 0 18px 36px rgba(3, 49, 98, .08);
 }
 body[data-current-page="faq"] .faq-cta-action:hover,
 body[data-current-page="faq"] .faq-cta-action:focus-visible {
@@ -2781,6 +2808,18 @@ body[data-current-page="faq"] .faq-cta-art img {
     box-shadow: 0 18px 36px rgba(3, 49, 98, .08);
     transition: transform .24s var(--motion-smooth), box-shadow .24s var(--motion-smooth), background-color .24s var(--motion-smooth), border-color .24s var(--motion-smooth);
   }
+  .canvas-upload-button-secondary {
+    background: #FFFFFF;
+    color: #033162;
+    border-color: #B5D8FD;
+    text-decoration: none;
+    box-shadow: 0 16px 30px rgba(3, 49, 98, .06);
+  }
+  .canvas-upload-button-secondary:hover,
+  .canvas-upload-button-secondary:focus-visible {
+    border-color: #0A7DFA;
+    color: #0A7DFA;
+  }
   .canvas-upload-button:hover,
   .canvas-upload-button:focus-visible {
     transform: translateY(-2px);
@@ -2865,6 +2904,100 @@ body[data-current-page="faq"] .faq-cta-art img {
   .image-upload-menu.is-open {
     display: grid;
     gap: 6px;
+  }
+  .ai-image-picker {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: clamp(136px, 14vw, 210px);
+    z-index: 8;
+    width: min(420px, calc(100vw - 48px));
+    display: none;
+    padding: 12px;
+    border: 1px solid #B5D8FD;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 22px 52px rgba(3, 49, 98, 0.18);
+  }
+  .ai-image-picker.is-open {
+    display: block;
+  }
+  .ai-image-picker-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .ai-image-picker-title {
+    color: #033162;
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+  .ai-image-picker-query {
+    margin-top: 3px;
+    color: var(--text-secondary);
+    font-family: var(--font-heading);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+  .ai-image-picker-close {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 999px;
+    background: #E7F2FF;
+    color: #033162;
+    cursor: pointer;
+    font-family: var(--font-heading);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .ai-image-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .ai-image-picker-option {
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #D8EAFE;
+    border-radius: 10px;
+    background: #F4F9FF;
+    color: #033162;
+    cursor: pointer;
+    text-align: left;
+    box-shadow: none;
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  }
+  .ai-image-picker-option:hover,
+  .ai-image-picker-option:focus-visible {
+    border-color: #0A7DFA;
+    box-shadow: 0 12px 24px rgba(10, 125, 250, 0.16);
+    outline: none;
+    transform: translateY(-1px);
+  }
+  .ai-image-picker-option img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    background: #E7F2FF;
+  }
+  .ai-image-picker-caption {
+    display: block;
+    padding: 7px 8px 8px;
+    overflow: hidden;
+    color: #033162;
+    font-family: var(--font-heading);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .image-upload-option {
     min-height: 38px;
@@ -3184,6 +3317,10 @@ body[data-current-page="faq"] .faq-cta-art img {
 
   @media (max-width: 680px) {
     .canvas-bottom-actions {
+      flex-wrap: wrap;
+    }
+    .canvas-primary-actions {
+      width: 100%;
       flex-wrap: wrap;
     }
     .carousel-workspace-nav {
@@ -4112,14 +4249,23 @@ body[data-current-page="faq"] .faq-cta-art img {
             <canvas id="preview" width="1080" height="1350"></canvas>
           </div>
           <div class="canvas-bottom-actions">
-            <button class="canvas-upload-button" type="button" data-background-upload aria-label="Upload background image" title="Upload background image">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 15V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-              <span>Upload Image</span>
-            </button>
+            <div class="canvas-primary-actions">
+              <button class="canvas-upload-button" type="button" data-background-upload aria-label="Upload background image" title="Upload background image">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 15V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span>Upload Image</span>
+              </button>
+              <button class="canvas-upload-button canvas-upload-button-secondary" type="button" data-ai-image-search aria-label="Fetch AI image from ES Storage" title="Fetch AI image from ES Storage">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5l-1.9-5.7-5.6-1.9L10.1 9 12 3.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                  <path d="M18 4v4M20 6h-4M6 17v3M7.5 18.5h-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+                <span>AI Images</span>
+              </button>
+            </div>
             <div class="carousel-workspace-nav view-hidden" data-page="instagram" aria-label="Social media carousel slides">
               <div class="carousel-slide-switcher">
                 <button class="carousel-slide-button carousel-slide-arrow carousel-slide-previous" id="carousel-slide-previous" type="button" aria-label="Previous slide"></button>
@@ -4135,6 +4281,16 @@ body[data-current-page="faq"] .faq-cta-art img {
           <div class="image-upload-menu" id="image-upload-menu" aria-label="Choose image upload target">
             <button class="image-upload-option" type="button" data-upload-target="photo">1st Entity Image</button>
             <button class="image-upload-option" type="button" data-upload-target="entity">2nd Entity Image</button>
+          </div>
+          <div class="ai-image-picker" id="ai-image-picker" role="dialog" aria-modal="false" aria-labelledby="ai-image-picker-title" hidden>
+            <div class="ai-image-picker-header">
+              <div>
+                <div class="ai-image-picker-title" id="ai-image-picker-title">Choose ES Image</div>
+                <div class="ai-image-picker-query" data-ai-image-picker-query></div>
+              </div>
+              <button class="ai-image-picker-close" type="button" data-ai-image-picker-close aria-label="Close AI image options">×</button>
+            </div>
+            <div class="ai-image-picker-grid" data-ai-image-picker-grid></div>
           </div>
         </div>
         <aside class="image-tool-rail" aria-label="Image adjustment tools">
@@ -4913,6 +5069,10 @@ const WORKSPACES = {
 let activeWorkspace = 'instagram';
 let activeImageTool = 'move';
 let isImageToolPanelOpen = false;
+let aiImageSearchResults = [];
+let aiImageLastQuery = '';
+let aiImageLastSource = '';
+let aiImageLastFallbackReason = '';
 const instagramSlideStates = Array.from(
   { length: 5 },
   () => createDesignerState(WORKSPACES.instagram.defaultBottomAnchor)
@@ -5477,8 +5637,16 @@ function setImageUploadMenuOpen(isOpen) {
   if (menu) menu.classList.toggle('is-open', isOpen);
 }
 
+function setAiImagePickerOpen(isOpen) {
+  const picker = document.getElementById('ai-image-picker');
+  if (!picker) return;
+  picker.hidden = !isOpen;
+  picker.classList.toggle('is-open', isOpen);
+}
+
 function selectImageTool(tool, openPanel = true) {
   setImageUploadMenuOpen(false);
+  setAiImagePickerOpen(false);
   activeImageTool = tool;
   document.querySelectorAll('[data-image-tool]').forEach(button => {
     const isActive = button.dataset.imageTool === tool;
@@ -5496,12 +5664,34 @@ function initImageToolRail() {
   document.querySelector('[data-background-upload]')?.addEventListener('click', event => {
     event.stopPropagation();
     setImageToolPanelOpen(false);
+    setAiImagePickerOpen(false);
     if (isDoubleEntityImagePost()) {
       setImageUploadMenuOpen(!document.getElementById('image-upload-menu')?.classList.contains('is-open'));
       return;
     }
     setImageUploadMenuOpen(false);
     document.getElementById('photo-input')?.click();
+  });
+
+  document.querySelector('[data-ai-image-search]')?.addEventListener('click', event => {
+    event.stopPropagation();
+    setImageToolPanelOpen(false);
+    setImageUploadMenuOpen(false);
+    applyAiImageFromEsStorage();
+  });
+
+  document.getElementById('ai-image-picker')?.addEventListener('click', event => event.stopPropagation());
+  document.querySelector('[data-ai-image-picker-close]')?.addEventListener('click', event => {
+    event.stopPropagation();
+    setAiImagePickerOpen(false);
+  });
+  document.querySelector('[data-ai-image-picker-grid]')?.addEventListener('click', event => {
+    const option = event.target.closest('[data-ai-image-result-index]');
+    if (!option) return;
+    event.stopPropagation();
+    const index = parseInt(option.dataset.aiImageResultIndex, 10);
+    const result = aiImageSearchResults[index];
+    if (result) applySelectedAiImageFromEsStorage(result);
   });
 
   document.querySelectorAll('[data-upload-target]').forEach(button => {
@@ -5532,6 +5722,9 @@ function initImageToolRail() {
   document.addEventListener('click', event => {
     if (!event.target.closest('.image-upload-menu') && !event.target.closest('[data-background-upload]')) {
       setImageUploadMenuOpen(false);
+    }
+    if (!event.target.closest('#ai-image-picker') && !event.target.closest('[data-ai-image-search]')) {
+      setAiImagePickerOpen(false);
     }
     if (!isImageToolPanelOpen) return;
     if (event.target.closest('.image-tool-rail')) return;
@@ -6114,6 +6307,314 @@ function removePhoto() {
   syncPhotoControls();
   syncImageToolControls();
   render();
+}
+
+function cleanAiImageSearchText(value) {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\s.'-]/g, ' ')
+    .trim();
+}
+
+function addAiImageSearchQuery(queries, value) {
+  const cleaned = cleanAiImageSearchText(value).slice(0, 140);
+  if (!cleaned) return;
+  if (!queries.some(item => item.toLowerCase() === cleaned.toLowerCase())) {
+    queries.push(cleaned);
+  }
+}
+
+function extractEntityQueriesFromHeadline(value) {
+  const headline = cleanAiImageSearchText(value);
+  if (!headline) return [];
+
+  const stopwords = new Set([
+    'a', 'an', 'and', 'as', 'at', 'after', 'against', 'amid', 'are', 'be', 'before',
+    'behind', 'but', 'by', 'for', 'from', 'has', 'have', 'his', 'her', 'in', 'into',
+    'is', 'its', 'new', 'no', 'not', 'of', 'on', 'over', 'the', 'their', 'this',
+    'to', 'vs', 'with', 'without', 'wins', 'win', 'won', 'loses', 'lose', 'lost',
+    'makes', 'make', 'made', 'says', 'said', 'stuns', 'stun', 'stunned', 'reveals',
+    'reveal', 'revealed', 'claims', 'claim', 'claimed', 'eyes', 'eye', 'backs', 'backed',
+    'joins', 'join', 'joined', 'leaves', 'leave', 'left', 'world', 'fans', 'star',
+    'stars', 'after', 'before', 'during'
+  ]);
+  const blockedSingles = new Set([
+    'NBA', 'NFL', 'MLB', 'NHL', 'UFC', 'F1', 'WNBA', 'WWE', 'PGA', 'LPGA', 'NASCAR',
+    'TENNIS', 'GOLF', 'SOCCER', 'FOOTBALL', 'BASKETBALL', 'BASEBALL', 'HOCKEY', 'MMA',
+    'BREAKING', 'REPORT', 'WATCH', 'VIDEO', 'PHOTO', 'PHOTOS', 'LIVE', 'UPDATE',
+    'EXCLUSIVE', 'RUMOR', 'TRADE', 'INJURY', 'NEWS'
+  ]);
+  const entities = [];
+  const addEntity = valueToAdd => {
+    const cleaned = cleanAiImageSearchText(valueToAdd)
+      .replace(/^(Breaking|Report|Watch|Video|Photo|Photos|Live|Update|Exclusive|Rumor)\s+/i, '')
+      .replace(/\s+(News|Update|Report|Rumor)$/i, '')
+      .trim();
+    if (!cleaned) return;
+    const words = cleaned.split(/\s+/).filter(Boolean);
+    const meaningful = words.filter(word => !stopwords.has(word.toLowerCase()) && !blockedSingles.has(word.toUpperCase()));
+    if (meaningful.length < 2) return;
+    const normalized = meaningful.join(' ');
+    if (!entities.some(item => item.toLowerCase() === normalized.toLowerCase())) {
+      entities.push(normalized);
+    }
+  };
+
+  const nameWordPattern = String.raw`[A-Z][A-Za-z]+(?:['’-][A-Z]?[A-Za-z]+)?`;
+  headline.match(new RegExp(`\\b${nameWordPattern}(?:\\s+${nameWordPattern}){1,3}\\b`, 'g'))?.forEach(addEntity);
+  headline.match(/\b[A-Z]{2,}(?:\s+[A-Z]{2,}){1,3}\b/g)?.forEach(addEntity);
+
+  if (!entities.length && headline === headline.toUpperCase()) {
+    const words = headline
+      .split(/\s+/)
+      .filter(word => word && !stopwords.has(word.toLowerCase()) && !blockedSingles.has(word.toUpperCase()));
+    if (words.length >= 2) addEntity(words.slice(0, Math.min(3, words.length)).join(' '));
+  }
+
+  return entities.slice(0, 4);
+}
+
+function getActiveImageSearchQueries() {
+  const activeType = activeWorkspace === 'instagram' ? (state.postType || 'cover') : 'cover';
+  const explicitQueries = [];
+  const contextQueries = [];
+  const headlineQueries = [];
+  const fieldValue = id => document.getElementById(id)?.value;
+  const nameFromFields = (...ids) => ids.map(fieldValue).filter(Boolean).join(' ').trim();
+  const addExplicit = value => addAiImageSearchQuery(explicitQueries, value);
+  const addContext = value => addAiImageSearchQuery(contextQueries, value);
+  const addHeadline = value => {
+    const cleaned = cleanAiImageSearchText(value);
+    if (!cleaned) return;
+    extractEntityQueriesFromHeadline(cleaned).forEach(item => addAiImageSearchQuery(headlineQueries, item));
+    addAiImageSearchQuery(headlineQueries, cleaned);
+  };
+
+  if (activeWorkspace === 'instagram' && activeType === 'stats-single-ent') {
+    addExplicit(state.team);
+    addContext(state.sport);
+    addHeadline(fieldValue('stats-headline'));
+  } else if (activeWorkspace === 'instagram' && activeType === 'stats-double-ent') {
+    addExplicit(nameFromFields('stats-double-first-name-primary', 'stats-double-last-name-primary'));
+    addExplicit(nameFromFields('stats-double-first-name-secondary', 'stats-double-last-name-secondary'));
+    addContext(state.sport);
+    addHeadline(fieldValue('stats-double-headline'));
+  } else if (activeWorkspace === 'instagram' && activeType === 'double-entity-quote') {
+    addExplicit(fieldValue('double-name-primary'));
+    addExplicit(fieldValue('double-name-secondary'));
+    addContext(state.sport);
+  } else {
+    addExplicit(fieldValue('long-quote-name'));
+    addExplicit(state.team);
+    addContext(state.sport);
+  }
+
+  (Array.isArray(state.lines) ? state.lines : []).forEach(addHeadline);
+  addHeadline(fieldValue('pill-text'));
+
+  const ordered = [...explicitQueries, ...headlineQueries, ...contextQueries];
+  const unique = [];
+  ordered.forEach(query => addAiImageSearchQuery(unique, query));
+  return unique.slice(0, 8);
+}
+
+function getActiveHeadlineForImageSearch() {
+  return getActiveImageSearchQueries()[0] || '';
+}
+
+function setAiImageButtonLoading(isLoading) {
+  const button = document.querySelector('[data-ai-image-search]');
+  if (!button) return;
+  button.disabled = isLoading;
+  const label = button.querySelector('span');
+  if (label) label.textContent = isLoading ? 'Finding...' : 'AI Images';
+}
+
+function directEsMediaSearchUrl(query) {
+  const url = new URL('https://www.essentiallysports.com/wp-json/wp/v2/media/');
+  url.searchParams.set('search', query);
+  url.searchParams.set('per_page', '8');
+  url.searchParams.set('media_type', 'image');
+  url.searchParams.set('_fields', 'id,title,caption,source_url,guid,media_details');
+  return url.toString();
+}
+
+function mediaSearchResultFromWordPress(media) {
+  const sizes = media?.media_details?.sizes || {};
+  const sourceUrl = sizes['1536x1536']?.source_url
+    || sizes.large?.source_url
+    || sizes.full?.source_url
+    || media?.source_url
+    || media?.guid?.rendered
+    || '';
+  const title = String(media?.title?.rendered || 'ES image').replace(/<[^>]*>/g, '').trim() || 'ES image';
+  return sourceUrl ? { title, sourceUrl, proxyUrl: sourceUrl } : null;
+}
+
+async function searchEsStorageImages(query) {
+  const apiUrl = `/api/es-image-search?query=${encodeURIComponent(query)}&per_page=8`;
+  try {
+    const response = await fetch(apiUrl);
+    if (!response.ok) throw new Error(`Proxy search failed: ${response.status}`);
+    const data = await response.json();
+    return {
+      source: data.source || 'unknown',
+      results: Array.isArray(data.results) ? data.results : [],
+      meta: data.meta || null,
+    };
+  } catch (error) {
+    // Local static preview cannot run Netlify functions, so keep a direct
+    // read-only fallback. Live Netlify uses the proxy and preserves exports.
+    const response = await fetch(directEsMediaSearchUrl(query));
+    if (!response.ok) throw new Error('ES media search failed.');
+    const data = await response.json();
+    return {
+      source: 'direct-wordpress-media',
+      results: Array.isArray(data) ? data.map(mediaSearchResultFromWordPress).filter(Boolean) : [],
+      meta: { fallbackUsed: true, mcpConfigured: false, mcpAttempted: false, mcpError: '' },
+    };
+  }
+}
+
+function normalizeAiImageSearchPayload(payload) {
+  if (Array.isArray(payload)) {
+    return { source: 'unknown', results: payload };
+  }
+  return {
+    source: payload?.source || 'unknown',
+    results: Array.isArray(payload?.results) ? payload.results : [],
+    meta: payload?.meta || null,
+  };
+}
+
+function aiImageSourceLabel(source) {
+  if (source === 'mcp-agency') return 'ES Storage';
+  if (source === 'wordpress-media' || source === 'direct-wordpress-media') return 'ES media fallback';
+  return 'image source';
+}
+
+function loadImageFromUrl(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Selected ES image could not be loaded.'));
+    img.src = src;
+  });
+}
+
+function renderAiImagePicker(results, query) {
+  const grid = document.querySelector('[data-ai-image-picker-grid]');
+  const queryLabel = document.querySelector('[data-ai-image-picker-query]');
+  if (!grid) return;
+
+  aiImageSearchResults = results.slice(0, 4);
+  aiImageLastQuery = query;
+  grid.innerHTML = '';
+  if (queryLabel) {
+    const sourceLabel = aiImageSourceLabel(aiImageLastSource);
+    const fallbackSuffix = aiImageLastFallbackReason ? ` · ES Storage fallback: ${aiImageLastFallbackReason}` : '';
+    queryLabel.textContent = `Showing ${aiImageSearchResults.length} ${sourceLabel} result${aiImageSearchResults.length === 1 ? '' : 's'} for “${query}”${fallbackSuffix}`;
+  }
+
+  aiImageSearchResults.forEach((result, index) => {
+    const imageUrl = result.proxyUrl || result.sourceUrl;
+    const button = document.createElement('button');
+    button.className = 'ai-image-picker-option';
+    button.type = 'button';
+    button.dataset.aiImageResultIndex = String(index);
+    button.setAttribute('aria-label', `Use ES image ${index + 1}: ${result.title || query}`);
+
+    const image = document.createElement('img');
+    image.src = imageUrl;
+    image.alt = result.title || `ES image result ${index + 1}`;
+    image.loading = 'lazy';
+    image.decoding = 'async';
+
+    const caption = document.createElement('span');
+    caption.className = 'ai-image-picker-caption';
+    caption.textContent = result.title || `ES image ${index + 1}`;
+
+    button.appendChild(image);
+    button.appendChild(caption);
+    grid.appendChild(button);
+  });
+
+  setAiImagePickerOpen(aiImageSearchResults.length > 0);
+}
+
+async function applySelectedAiImageFromEsStorage(result) {
+  const query = aiImageLastQuery || getActiveHeadlineForImageSearch();
+  const imageUrl = result.proxyUrl || result.sourceUrl;
+  if (!imageUrl) {
+    setStatus('Selected ES image is missing a usable URL.', 'err');
+    return;
+  }
+
+  setAiImageButtonLoading(true);
+  setStatus('Applying selected ES image...');
+
+  try {
+    const img = await loadImageFromUrl(imageUrl);
+    state.photo = img;
+    state.photoName = result.title || query || 'ES image';
+    state.photoOffsetX = 0;
+    state.photoOffsetY = 0;
+    state.photoScale = 1;
+    saveMediaContext();
+    syncPhotoControls();
+    syncImageToolControls();
+    render();
+    setAiImagePickerOpen(false);
+    setStatus(`Applied ${aiImageSourceLabel(result.source || aiImageLastSource)} image: ${state.photoName}`);
+  } catch (error) {
+    setStatus(error.message || 'Selected ES image could not be applied.', 'err');
+  } finally {
+    setAiImageButtonLoading(false);
+  }
+}
+
+async function applyAiImageFromEsStorage() {
+  const queries = getActiveImageSearchQueries();
+  if (!queries.length) {
+    setStatus('Write a headline or entity name first, then try AI Images.', 'err');
+    return;
+  }
+
+  setAiImageButtonLoading(true);
+  setStatus(`Searching ES Storage for “${queries[0]}”...`);
+
+  try {
+    let matchedQuery = queries[0];
+    let matchedSource = 'unknown';
+    let matchedFallbackReason = '';
+    let usableResults = [];
+    for (const query of queries) {
+      setStatus(`Searching ES Storage for “${query}”...`);
+      const payload = normalizeAiImageSearchPayload(await searchEsStorageImages(query));
+      usableResults = payload.results.filter(item => item?.proxyUrl || item?.sourceUrl).slice(0, 4);
+      if (usableResults.length) {
+        matchedQuery = query;
+        matchedSource = payload.source;
+        if (payload.source !== 'mcp-agency' && payload.meta?.mcpError) {
+          matchedFallbackReason = payload.meta.mcpError;
+        }
+        break;
+      }
+    }
+    if (!usableResults.length) {
+      setStatus('No ES Storage image found for this headline/entity.', 'err');
+      return;
+    }
+    aiImageLastSource = matchedSource;
+    aiImageLastFallbackReason = matchedFallbackReason;
+    renderAiImagePicker(usableResults, matchedQuery);
+    const fallbackNote = matchedFallbackReason ? ` ES Storage fallback reason: ${matchedFallbackReason}` : '';
+    setStatus(`Choose an ${aiImageSourceLabel(matchedSource)} image for “${matchedQuery}”.${fallbackNote}`);
+  } catch (error) {
+    setStatus(error.message || 'AI Images could not fetch from ES Storage.', 'err');
+  } finally {
+    setAiImageButtonLoading(false);
+  }
 }
 
 function onEntityPhotoUpload(e) {
@@ -9700,5 +10201,3 @@ loadFont().then(() => render());
 </script>
 </body>
 </html>
-
-

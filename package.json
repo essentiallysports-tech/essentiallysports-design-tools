@@ -1,5 +1,14 @@
 {
   "name": "essentiallysports-design-tools",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "scripts": {
+    "test": "npm run test:ai-image-query && npm run test:es-images && npm run test:vercel-api",
+    "test:ai-image-query": "node scripts/test-ai-image-query-builder.mjs",
+    "test:es-images": "node scripts/test-es-image-search.mjs && node scripts/test-es-image-search-fallback.mjs && node scripts/test-es-image-search-unconfigured.mjs",
+    "test:vercel-api": "node scripts/test-vercel-api-adapters.mjs",
+    "verify:es-images": "node scripts/verify-es-image-live.mjs",
+    "es:mcp:register": "node scripts/es-mcp-register-client.mjs",
+    "es:mcp:token": "node scripts/es-mcp-exchange-token.mjs"
+  }
 }

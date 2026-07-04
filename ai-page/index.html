@@ -4,6 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ES AI | EssentiallySports</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../es-auth-config.js"></script>
+  <script src="../es-auth.js"></script>
+  <script>
+    window.ESAuth?.requireAuth(`ai-page/index.html${window.location.search}${window.location.hash}`);
+  </script>
   <link rel="icon" href="../favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1211,12 +1217,17 @@
       letter-spacing: 0;
       text-decoration: none;
       text-transform: none;
-      transition: background-color .15s ease, border-color .15s ease;
+      box-shadow: 0 18px 36px rgba(3, 49, 98, .08);
+      transition: transform .24s cubic-bezier(.16, 1, .3, 1), box-shadow .24s cubic-bezier(.16, 1, .3, 1), background-color .24s cubic-bezier(.16, 1, .3, 1), border-color .24s cubic-bezier(.16, 1, .3, 1);
     }
 
-    .workspace-cta:hover {
+    .workspace-cta:hover,
+    .workspace-cta:focus-visible {
       background: #006EE5;
       border-color: #006EE5;
+      transform: translateY(-2px);
+      box-shadow: 0 22px 42px rgba(10, 125, 250, .18);
+      outline: none;
     }
 
     .workspace-cta.is-disabled {
@@ -1224,6 +1235,7 @@
       border-color: var(--border);
       color: var(--es-text-muted);
       cursor: default;
+      box-shadow: 0 16px 30px rgba(3, 49, 98, .06);
     }
 
     .workspace-arrow {

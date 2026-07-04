@@ -9,6 +9,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Condensed:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="es-auth-config.js"></script>
+<script src="es-auth.js"></script>
 <style>
   @font-face {
     font-family: 'Acumin Pro Condensed Local';
@@ -101,6 +104,28 @@
     display: grid;
     gap: 18px;
   }
+  .login-mode-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .login-mode-tab {
+    min-height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--text-blue);
+    cursor: pointer;
+    font-family: var(--font-heading);
+    font-size: 16px;
+    font-weight: 700;
+    transition: background-color .18s ease, border-color .18s ease, color .18s ease;
+  }
+  .login-mode-tab.is-active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--white);
+  }
   .login-field {
     display: grid;
     gap: 12px;
@@ -171,9 +196,13 @@
     line-height: 1.35;
   }
   .login-note { color: #6C7A89; }
+  .login-note strong { color: var(--text-blue); }
   .login-error {
     display: none;
     color: #C62828;
+  }
+  .login-error.is-success {
+    color: #2E7D32;
   }
   .login-error.is-visible {
     display: block;
@@ -733,19 +762,31 @@
 <main class="login-shell">
   <section class="login-panel" aria-labelledby="login-title">
     <img class="login-brand" src="brand-logo-blue.svg" alt="EssentiallySports">
-    <h1 class="login-title" id="login-title">Log in to ES Designer</h1>
+    <h1 class="login-title" id="login-title">Create your ES Designer account</h1>
     <form class="login-form" id="login-form" novalidate>
+      <div class="login-mode-tabs" role="tablist" aria-label="Authentication mode">
+        <button class="login-mode-tab is-active" id="create-account-tab" type="button" data-auth-mode="create" role="tab" aria-selected="true">Create account</button>
+        <button class="login-mode-tab" id="login-account-tab" type="button" data-auth-mode="login" role="tab" aria-selected="false">Login</button>
+      </div>
+      <div class="login-field" data-create-only>
+        <label for="login-name">Name</label>
+        <input id="login-name" name="name" type="text" autocomplete="name" placeholder="Your name">
+      </div>
       <div class="login-field">
         <label for="login-email">Email</label>
         <input id="login-email" name="email" type="email" autocomplete="email" placeholder="xyz@email.com" required>
       </div>
       <div class="login-field">
         <label for="login-password">Password</label>
-        <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Password" required>
+        <input id="login-password" name="password" type="password" autocomplete="new-password" placeholder="Minimum 8 characters" required>
       </div>
-      <button class="login-button" type="submit">Login</button>
+      <div class="login-field" data-create-only>
+        <label for="login-confirm-password">Confirm Password</label>
+        <input id="login-confirm-password" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Re-enter password">
+      </div>
+      <button class="login-button" type="submit">Create Account</button>
       <p class="login-error" id="login-error" role="alert"></p>
-      <p class="login-note">Demo mode: any password works for now. Login requires an @essentiallysports.com email. The script is prepared to use a backend auth endpoint later.</p>
+      <p class="login-note" id="login-note">Only @essentiallysports.com emails can create an account. After account creation, use the Login tab with the same email and password.</p>
     </form>
   </section>
 
@@ -890,14 +931,19 @@
 
 <script>
 (() => {
-  const AUTH_STORAGE_KEY = 'es.designerAuth.v1';
-  const AUTH_ENDPOINT = window.ES_AUTH_ENDPOINT || '';
   const form = document.getElementById('login-form');
+  const title = document.getElementById('login-title');
+  const modeTabs = Array.from(document.querySelectorAll('[data-auth-mode]'));
+  const createOnlyFields = Array.from(document.querySelectorAll('[data-create-only]'));
+  const nameInput = document.getElementById('login-name');
   const emailInput = document.getElementById('login-email');
   const passwordInput = document.getElementById('login-password');
+  const confirmPasswordInput = document.getElementById('login-confirm-password');
   const errorEl = document.getElementById('login-error');
+  const noteEl = document.getElementById('login-note');
   const button = form.querySelector('.login-button');
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let authMode = 'create';
 
   function showPage() {
     document.body.classList.remove('is-page-leaving');
@@ -907,9 +953,34 @@
   window.requestAnimationFrame(showPage);
   window.addEventListener('pageshow', showPage);
 
-  function setError(message) {
+  function setError(message, type = 'error') {
     errorEl.textContent = message || '';
     errorEl.classList.toggle('is-visible', Boolean(message));
+    errorEl.classList.toggle('is-success', type === 'success' && Boolean(message));
+  }
+
+  function setMode(mode) {
+    authMode = mode === 'login' ? 'login' : 'create';
+    const isCreate = authMode === 'create';
+    title.textContent = isCreate ? 'Create your ES Designer account' : 'Log in to ES Designer';
+    button.textContent = isCreate ? 'Create Account' : 'Login';
+    passwordInput.autocomplete = isCreate ? 'new-password' : 'current-password';
+    passwordInput.placeholder = isCreate ? 'Minimum 8 characters' : 'Password';
+    noteEl.innerHTML = isCreate
+      ? 'Only <strong>@essentiallysports.com</strong> emails can create an account. After account creation, use the <strong>Login</strong> tab with the same email and password.'
+      : 'Login is available only after creating an account with an approved email.';
+    createOnlyFields.forEach(field => {
+      field.hidden = !isCreate;
+      field.querySelectorAll('input').forEach(input => {
+        input.required = isCreate && input.id === 'login-confirm-password';
+      });
+    });
+    modeTabs.forEach(tab => {
+      const active = tab.dataset.authMode === authMode;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-selected', String(active));
+    });
+    setError('');
   }
 
   function getRedirectTarget() {
@@ -921,50 +992,41 @@
     return 'index.html#frames';
   }
 
-  async function authenticateWithBackend(credentials) {
-    const response = await fetch(AUTH_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(credentials)
-    });
-    if (!response.ok) {
-      throw new Error('Login failed. Please check your email and password.');
+  function validateBaseFields(email, password) {
+    if (!emailInput.validity.valid || !email) {
+      setError('Enter a valid email address.');
+      emailInput.focus();
+      return false;
     }
-    return response.json();
+    if (!window.ESAuth?.isAllowedEmail(email)) {
+      setError('Access is limited to @essentiallysports.com email addresses.');
+      emailInput.focus();
+      return false;
+    }
+    if (!password) {
+      setError('Enter your password.');
+      passwordInput.focus();
+      return false;
+    }
+    return true;
   }
 
-  async function authenticateForDemo(credentials) {
-    await new Promise(resolve => window.setTimeout(resolve, 180));
-    return {
-      token: `demo-${Date.now()}`,
-      user: {
-        email: credentials.email,
-        name: credentials.email.split('@')[0] || 'ES Designer',
-        role: 'Designer'
-      }
-    };
+  function goToApp() {
+    const redirectTarget = getRedirectTarget();
+    if (prefersReducedMotion) {
+      window.location.href = redirectTarget;
+      return;
+    }
+    document.body.classList.remove('is-page-ready');
+    document.body.classList.add('is-page-leaving');
+    window.setTimeout(() => {
+      window.location.href = redirectTarget;
+    }, 220);
   }
 
-  async function authenticate(credentials) {
-    if (AUTH_ENDPOINT) {
-      return authenticateWithBackend(credentials);
-    }
-    return authenticateForDemo(credentials);
-  }
-
-  function persistSession(session) {
-    const payload = JSON.stringify({
-      ...session,
-      createdAt: new Date().toISOString(),
-      mode: AUTH_ENDPOINT ? 'backend' : 'demo'
-    });
-    try {
-      window.sessionStorage?.setItem(AUTH_STORAGE_KEY, payload);
-    } catch (error) {
-      // Storage can be unavailable in some embedded previews; demo login should still continue.
-    }
-  }
+  modeTabs.forEach(tab => {
+    tab.addEventListener('click', () => setMode(tab.dataset.authMode));
+  });
 
   form.addEventListener('submit', async event => {
     event.preventDefault();
@@ -972,46 +1034,41 @@
 
     const email = emailInput.value.trim();
     const password = passwordInput.value;
-    const ALLOWED_EMAIL_DOMAIN = '@essentiallysports.com';
+    const name = nameInput.value.trim();
+    const confirmPassword = confirmPasswordInput.value;
 
-    if (!emailInput.validity.valid || !email) {
-      setError('Enter a valid email address.');
-      emailInput.focus();
-      return;
-    }
-    if (!email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN)) {
-      setError(`Access is limited to ${ALLOWED_EMAIL_DOMAIN} email addresses.`);
-      emailInput.focus();
-      return;
-    }
-    if (!password) {
-      setError('Enter your password.');
-      passwordInput.focus();
+    if (!validateBaseFields(email, password)) return;
+    if (authMode === 'create' && password !== confirmPassword) {
+      setError('Passwords do not match.');
+      confirmPasswordInput.focus();
       return;
     }
 
     button.disabled = true;
-    button.textContent = 'Logging in...';
+    button.textContent = authMode === 'create' ? 'Creating...' : 'Logging in...';
 
     try {
-      const session = await authenticate({ email, password });
-      persistSession(session);
-      const redirectTarget = getRedirectTarget();
-      if (prefersReducedMotion) {
-        window.location.href = redirectTarget;
+      if (authMode === 'create') {
+        await window.ESAuth.createAccount({ name, email, password });
+        setMode('login');
+        passwordInput.value = '';
+        confirmPasswordInput.value = '';
+        setError('Account created. Please log in now.', 'success');
+        button.disabled = false;
+        button.textContent = 'Login';
         return;
       }
-      document.body.classList.remove('is-page-ready');
-      document.body.classList.add('is-page-leaving');
-      window.setTimeout(() => {
-        window.location.href = redirectTarget;
-      }, 220);
+
+      await window.ESAuth.login({ email, password });
+      goToApp();
     } catch (error) {
       setError(error.message || 'Unable to log in right now.');
       button.disabled = false;
-      button.textContent = 'Login';
+      button.textContent = authMode === 'create' ? 'Create Account' : 'Login';
     }
   });
+
+  setMode('create');
 })();
 </script>
 </body>
