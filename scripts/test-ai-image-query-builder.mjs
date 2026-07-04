@@ -48,12 +48,12 @@ function asPlainArray(value) {
 
 setValues({ 'pill-text': 'LeBron James makes history' });
 assert.deepEqual(asPlainArray(sandbox.getActiveImageSearchQueries().slice(0, 4)), [
-  'Los Angeles Lakers',
   'LeBron James',
+  'Los Angeles Lakers',
   'LeBron James makes history',
   'NBA',
 ]);
-assert.equal(sandbox.getActiveHeadlineForImageSearch(), 'Los Angeles Lakers');
+assert.equal(sandbox.getActiveHeadlineForImageSearch(), 'LeBron James');
 
 sandbox.state.postType = 'stats-double-ent';
 sandbox.state.sport = 'NBA';
@@ -162,7 +162,6 @@ this.setAiImageButtonLoading = isLoading => {
 await vm.runInContext('applyAiImageFromEsStorage()', behaviorSandbox);
 
 assert.deepEqual(searchedQueries.slice(0, 3), [
-  'Los Angeles Lakers',
   'LeBron James',
 ]);
 assert.equal(behaviorSandbox.renderedQuery, 'LeBron James');

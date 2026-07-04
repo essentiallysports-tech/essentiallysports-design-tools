@@ -6378,7 +6378,8 @@ function getActiveImageSearchQueries() {
   const activeType = activeWorkspace === 'instagram' ? (state.postType || 'cover') : 'cover';
   const explicitQueries = [];
   const contextQueries = [];
-  const headlineQueries = [];
+  const headlineEntityQueries = [];
+  const headlineFallbackQueries = [];
   const fieldValue = id => document.getElementById(id)?.value;
   const nameFromFields = (...ids) => ids.map(fieldValue).filter(Boolean).join(' ').trim();
   const addExplicit = value => addAiImageSearchQuery(explicitQueries, value);
@@ -6386,8 +6387,8 @@ function getActiveImageSearchQueries() {
   const addHeadline = value => {
     const cleaned = cleanAiImageSearchText(value);
     if (!cleaned) return;
-    extractEntityQueriesFromHeadline(cleaned).forEach(item => addAiImageSearchQuery(headlineQueries, item));
-    addAiImageSearchQuery(headlineQueries, cleaned);
+    extractEntityQueriesFromHeadline(cleaned).forEach(item => addAiImageSearchQuery(headlineEntityQueries, item));
+    addAiImageSearchQuery(headlineFallbackQueries, cleaned);
   };
 
   if (activeWorkspace === 'instagram' && activeType === 'stats-single-ent') {
@@ -6412,7 +6413,15 @@ function getActiveImageSearchQueries() {
   (Array.isArray(state.lines) ? state.lines : []).forEach(addHeadline);
   addHeadline(fieldValue('pill-text'));
 
-  const ordered = [...explicitQueries, ...headlineQueries, ...contextQueries];
+  // A person/entity typed in the design text must win over workspace defaults
+  // such as the previously selected team. Explicit fields remain the next-best
+  // signal, while the full headline, team/sport context are fallbacks.
+  const ordered = [
+    ...headlineEntityQueries,
+    ...explicitQueries,
+    ...headlineFallbackQueries,
+    ...contextQueries,
+  ];
   const unique = [];
   ordered.forEach(query => addAiImageSearchQuery(unique, query));
   return unique.slice(0, 8);
