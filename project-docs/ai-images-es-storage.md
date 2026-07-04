@@ -248,6 +248,14 @@ npm run test:vercel-api
 - sends `notifications/initialized`;
 - discovers a namespaced `__search_images` tool;
 - calls the tool with `type="agency"` and `per_page >= 10`;
+- parses live MCP Markdown metadata blocks and uses their full-resolution URLs;
 - normalizes returned HTTPS images, `s3://essentiallysports-images-v2prod/...` URLs, and `{ bucket, key }` objects into picker-ready results.
 
 `test:ai-image-query` checks that the frontend query builder prioritizes entity/name fields for cover, stats double entity, double entity quote, and long quote contexts.
+
+For an authenticated schema/response diagnostic without printing the token:
+
+```bash
+ES_MCP_TOKEN_FILE=/private/path/to/token.json \
+npm run inspect:es-images -- "LeBron James"
+```

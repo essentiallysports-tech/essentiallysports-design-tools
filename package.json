@@ -8,6 +8,7 @@
     "test:es-images": "node scripts/test-es-image-search.mjs && node scripts/test-es-image-search-fallback.mjs && node scripts/test-es-image-search-unconfigured.mjs",
     "test:vercel-api": "node scripts/test-vercel-api-adapters.mjs",
     "verify:es-images": "node scripts/verify-es-image-live.mjs",
+    "inspect:es-images": "node scripts/inspect-es-mcp-live.mjs",
     "es:mcp:register": "node scripts/es-mcp-register-client.mjs",
     "es:mcp:token": "node scripts/es-mcp-exchange-token.mjs"
   }

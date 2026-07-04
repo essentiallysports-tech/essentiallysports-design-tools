@@ -379,11 +379,35 @@ function addMcpImageCandidate(candidates, item) {
   });
 }
 
+function addMcpTextImageCandidates(candidates, text) {
+  const value = String(text || '');
+  const recordPattern = /\*\*([^*\n]+)\*\*\s*\nType:\s*AGENCY\s*·\s*Full-resolution URL[^\n]*?:\s*(https?:\/\/[^\s)]+)([\s\S]*?)(?=\n+\*\*[^*\n]+\*\*\s*\nType:|$)/gi;
+  let match;
+
+  while ((match = recordPattern.exec(value))) {
+    const details = match[3] || '';
+    const readField = label => {
+      const fieldMatch = details.match(new RegExp(`(?:^|\\n)${label}:\\s*([^\\n]+)`, 'i'));
+      return fieldMatch ? fieldMatch[1].trim() : '';
+    };
+
+    addMcpImageCandidate(candidates, {
+      title: match[1].trim(),
+      url: match[2].trim(),
+      caption: readField('Caption'),
+      credit: readField('Credit'),
+      alt: readField('Alt'),
+      source: 'agency',
+    });
+  }
+}
+
 function walkMcpResult(value, candidates, seen = new WeakSet()) {
   const parsed = parseMaybeJson(value);
   if (!parsed) return;
 
   if (typeof parsed === 'string') {
+    addMcpTextImageCandidates(candidates, parsed);
     if (/^https?:\/\//i.test(parsed)) addMcpImageCandidate(candidates, { url: parsed });
     return;
   }

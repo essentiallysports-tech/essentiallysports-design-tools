@@ -9,6 +9,7 @@ const calls = [];
 const imageUrl = 'https://image-cdn.essentiallysports.com/wp-content/uploads/mock-athlete.jpg';
 const s3HttpsUrl = 'https://essentiallysports-images-v2prod.s3.amazonaws.com/social/mock-athlete-2.jpg';
 const s3BucketKeyHttpsUrl = 'https://essentiallysports-images-v2prod.s3.amazonaws.com/social/mock-athlete-3.jpg';
+const markdownImageUrl = 'https://image-cdn.essentiallysports.com/wp-content/uploads/mock-markdown-athlete.jpg';
 
 globalThis.fetch = async (url, options = {}) => {
   const body = options.body ? JSON.parse(options.body) : null;
@@ -87,6 +88,14 @@ globalThis.fetch = async (url, options = {}) => {
               { title: 'Mock bucket key athlete', bucket: 'essentiallysports-images-v2prod', key: 'social/mock-athlete-3.jpg', agency: 'Getty' },
             ],
           }),
+        }, {
+          type: 'text',
+          text: `**Mock Markdown Athlete**
+Type: AGENCY · Full-resolution URL (use this — the inline preview is a low-res thumbnail): ${markdownImageUrl}
+Caption: Mock athlete celebrates after the game.
+Credit: Mock Photographer via IMAGO
+Alt: Mock Markdown Athlete
+Folders: Imago`,
         }],
       },
     }), {
@@ -148,12 +157,16 @@ assert.deepEqual(payload.meta, {
   mcpError: '',
   fallbackUsed: false,
 });
-assert.equal(payload.results.length, 3);
+assert.equal(payload.results.length, 4);
 assert.equal(payload.results[0].title, 'Mock athlete');
 assert.equal(payload.results[0].sourceUrl, imageUrl);
 assert.ok(payload.results[0].proxyUrl.startsWith('/api/es-image-search?image='));
 assert.equal(payload.results[1].sourceUrl, s3HttpsUrl);
 assert.equal(payload.results[2].sourceUrl, s3BucketKeyHttpsUrl);
+assert.equal(payload.results[3].title, 'Mock Markdown Athlete');
+assert.equal(payload.results[3].sourceUrl, markdownImageUrl);
+assert.equal(payload.results[3].caption, 'Mock athlete celebrates after the game.');
+assert.equal(payload.results[3].credit, 'Mock Photographer via IMAGO');
 
 const methods = calls.map(call => call.body?.method).filter(Boolean);
 assert.deepEqual(methods, [
