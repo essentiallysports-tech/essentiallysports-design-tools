@@ -317,21 +317,23 @@
   }
   /* â”€â”€â”€ BREADCRUMB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .profile-menu {
-    position: absolute;
-    top: calc(100% + 14px);
-    right: 22px;
+    position: relative;
+    top: auto;
+    right: auto;
     z-index: 130;
+    flex: 0 0 auto;
     width: 236px;
     height: 58px;
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid #FFFFFF;
     border-radius: 20px;
     background: #FAFAFC;
     box-shadow: 0 0 21px rgba(0, 0, 0, .04);
-    transition: height .24s var(--motion-smooth);
+    transition: box-shadow .24s var(--motion-smooth);
   }
   .profile-menu.is-open {
-    height: 236px;
+    height: 58px;
+    box-shadow: 0 10px 30px rgba(3, 49, 98, .08);
   }
   .profile-trigger {
     width: 100%;
@@ -410,16 +412,17 @@
     transform: rotate(180deg);
   }
   .profile-dropdown {
-    position: static;
-    width: 206px;
-    min-width: 206px;
-    margin: 0 auto;
-    padding: 13px 0 0;
-    border: 0;
-    border-top: 1px solid #EBEBEB;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 236px;
+    min-width: 236px;
+    margin: 0;
+    padding: 10px;
+    border: 1px solid #FFFFFF;
+    border-radius: 18px;
+    background: #FAFAFC;
+    box-shadow: 0 18px 38px rgba(3, 49, 98, .12);
     display: flex;
     flex-direction: column;
     gap: 9px;
@@ -2208,9 +2211,6 @@
   body[data-current-page="faq"] .page-header[data-page="faq"] {
     display: none;
   }
-  body[data-current-page="faq"] .profile-menu {
-    display: none;
-  }
   body[data-current-page="faq"] .faq-page {
     width: min(1040px, calc(100% - 96px));
     margin: 0 auto;
@@ -3545,14 +3545,20 @@ body[data-current-page="faq"] .faq-cta-art img {
       display: none;
     }
     .profile-menu {
-      top: calc(100% + 8px);
-      right: 12px;
+      top: auto;
+      right: auto;
       width: min(222px, calc(100vw - 24px));
       height: 54px;
       border-radius: 18px;
     }
     .profile-menu.is-open {
-      height: 226px;
+      height: 54px;
+    }
+    .profile-dropdown {
+      top: calc(100% + 8px);
+      right: 0;
+      width: min(222px, calc(100vw - 24px));
+      min-width: min(222px, calc(100vw - 24px));
     }
     .profile-trigger {
       height: 54px;
@@ -3809,16 +3815,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     </div>
     <a href="design-request.html">Design Request</a>
     <a href="#faq" data-route="faq">FAQ</a>
-    <span class="nav-separator" aria-hidden="true"></span>
-    <a href="ai-page/index.html">ES AI</a>
   </div>
   <div class="navbar-right">
-    <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" title="Facebook" aria-label="Facebook"><img src="social-icons/nav-facebook.svg" alt=""></a>
-    <a class="navbar-icon-btn" href="https://twitter.com/es_sportsnews" title="X" aria-label="X"><img src="social-icons/nav-x.svg" alt=""></a>
-    <a class="navbar-icon-btn" href="https://www.linkedin.com/company/essentiallysports" title="LinkedIn" aria-label="LinkedIn"><img src="social-icons/nav-linkedin.svg" alt=""></a>
-    <a class="navbar-icon-btn" href="https://www.instagram.com/essentiallysports" title="Instagram" aria-label="Instagram"><img src="social-icons/nav-instagram.svg" alt=""></a>
-    <a class="navbar-icon-btn" href="https://www.youtube.com/essentiallysports" title="YouTube" aria-label="YouTube"><img src="social-icons/nav-youtube.svg" alt=""></a>
-    <a class="navbar-icon-btn" href="https://news.google.com/publications/CAAqBwgKMJqW_gwwkoGBAw" title="Google News" aria-label="Google News"><img src="social-icons/nav-google-news.svg" alt=""></a>
     <div class="profile-menu" id="profile-menu">
       <button class="profile-trigger" type="button" id="profile-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Open profile menu">
         <span class="profile-avatar" data-profile-initial aria-hidden="true"></span>
@@ -3842,6 +3840,12 @@ body[data-current-page="faq"] .faq-cta-art img {
         </a>
       </div>
     </div>
+    <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" title="Facebook" aria-label="Facebook"><img src="social-icons/nav-facebook.svg" alt=""></a>
+    <a class="navbar-icon-btn" href="https://twitter.com/es_sportsnews" title="X" aria-label="X"><img src="social-icons/nav-x.svg" alt=""></a>
+    <a class="navbar-icon-btn" href="https://www.linkedin.com/company/essentiallysports" title="LinkedIn" aria-label="LinkedIn"><img src="social-icons/nav-linkedin.svg" alt=""></a>
+    <a class="navbar-icon-btn" href="https://www.instagram.com/essentiallysports" title="Instagram" aria-label="Instagram"><img src="social-icons/nav-instagram.svg" alt=""></a>
+    <a class="navbar-icon-btn" href="https://www.youtube.com/essentiallysports" title="YouTube" aria-label="YouTube"><img src="social-icons/nav-youtube.svg" alt=""></a>
+    <a class="navbar-icon-btn" href="https://news.google.com/publications/CAAqBwgKMJqW_gwwkoGBAw" title="Google News" aria-label="Google News"><img src="social-icons/nav-google-news.svg" alt=""></a>
   </div>
 </nav>
 
