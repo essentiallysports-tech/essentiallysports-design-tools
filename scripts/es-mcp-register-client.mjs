@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
+import { writeFileSync } from 'node:fs';
+
 const issuer = process.env.ES_MCP_ISSUER || 'https://mcp.essentiallysports.com';
 const redirectUri = process.argv[2] || process.env.ES_MCP_REDIRECT_URI;
+const sessionFile = process.env.ES_MCP_SESSION_FILE || '';
 
 if (!redirectUri || !redirectUri.startsWith('https://')) {
   console.error('Usage: node scripts/es-mcp-register-client.mjs https://your-site.example/api/es-mcp-oauth-callback');
@@ -60,14 +63,26 @@ authorizationUrl.searchParams.set('state', state);
 authorizationUrl.searchParams.set('code_challenge', codeChallenge);
 authorizationUrl.searchParams.set('code_challenge_method', 'S256');
 
-console.log('Registered ES MCP OAuth client.');
-console.log('');
-console.log('Save these temporarily while completing OAuth:');
-console.log(`ES_MCP_CLIENT_ID=${registration.client_id}`);
-console.log(`ES_MCP_REDIRECT_URI=${redirectUri}`);
-console.log(`ES_MCP_CODE_VERIFIER=${codeVerifier}`);
-console.log(`ES_MCP_OAUTH_STATE=${state}`);
-console.log(`ES_MCP_TOKEN_ENDPOINT=${metadata.token_endpoint}`);
-console.log('');
+if (sessionFile) {
+  writeFileSync(sessionFile, JSON.stringify({
+    clientId: registration.client_id,
+    redirectUri,
+    codeVerifier,
+    state,
+    tokenEndpoint: metadata.token_endpoint,
+    authorizationUrl: authorizationUrl.toString(),
+  }, null, 2), { mode: 0o600 });
+  console.log(`Saved the temporary OAuth session securely to ${sessionFile}.`);
+} else {
+  console.log('Registered ES MCP OAuth client.');
+  console.log('');
+  console.log('Save these temporarily while completing OAuth:');
+  console.log(`ES_MCP_CLIENT_ID=${registration.client_id}`);
+  console.log(`ES_MCP_REDIRECT_URI=${redirectUri}`);
+  console.log(`ES_MCP_CODE_VERIFIER=${codeVerifier}`);
+  console.log(`ES_MCP_OAUTH_STATE=${state}`);
+  console.log(`ES_MCP_TOKEN_ENDPOINT=${metadata.token_endpoint}`);
+  console.log('');
+}
 console.log('Open this URL, approve access, and exchange the returned code for a token:');
 console.log(authorizationUrl.toString());
