@@ -252,22 +252,25 @@ textarea {
 }
 
 .profile-menu {
-  position: absolute;
-  top: calc(100% + 14px);
-  right: 22px;
-  z-index: 110;
+  position: relative;
+  top: auto;
+  right: auto;
+  z-index: 130;
+  order: -1;
+  flex: 0 0 auto;
   width: 236px;
   height: 58px;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid #FFFFFF;
   border-radius: 20px;
   background: #FAFAFC;
   box-shadow: 0 0 21px rgba(0, 0, 0, .04);
-  transition: height .24s cubic-bezier(.16,1,.3,1);
+  transition: box-shadow .24s cubic-bezier(.16,1,.3,1);
 }
 
 .profile-menu.is-open {
-  height: 236px;
+  height: 58px;
+  box-shadow: 0 10px 30px rgba(3, 49, 98, .08);
 }
 
 .profile-trigger {
@@ -301,12 +304,14 @@ textarea {
   height: 30px;
   flex: 0 0 30px;
   border-radius: 999px;
-  background: #BEBEBE url("assets/profile-avatar-default.webp") center / cover no-repeat;
+  background: var(--es-blue);
   color: var(--white);
   display: grid;
   place-items: center;
-  font-size: 0;
+  font-family: var(--font-display);
+  font-size: 13px;
   font-weight: 900;
+  line-height: 1;
   background-size: cover;
   background-position: center;
 }
@@ -328,17 +333,31 @@ textarea {
 }
 
 .profile-dropdown {
-  position: static;
-  width: 206px;
-  min-width: 206px;
-  margin: 0 auto;
-  padding: 13px 0 0;
-  border: 0;
-  border-top: 1px solid #EBEBEB;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 236px;
+  min-width: 236px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #FFFFFF;
+  border-radius: 18px;
+  background: #FAFAFC;
+  box-shadow: 0 18px 38px rgba(3, 49, 98, .12);
   gap: 9px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px) scale(.98);
+  transform-origin: top right;
+  transition: opacity .24s cubic-bezier(.16,1,.3,1), transform .24s cubic-bezier(.16,1,.3,1), visibility .24s cubic-bezier(.16,1,.3,1);
+}
+
+.profile-menu.is-open .profile-dropdown {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
 }
 
 .profile-name {
@@ -355,7 +374,7 @@ textarea {
 }
 
 .profile-name::after {
-  content: "Design Engineer";
+  content: attr(data-profile-role);
   display: block;
   margin-top: 2px;
   color: #979797;
@@ -364,6 +383,10 @@ textarea {
   font-weight: 500;
   line-height: 1;
   text-align: left;
+}
+
+.profile-name:not(.has-role)::after {
+  display: none;
 }
 
 .profile-option {
@@ -435,56 +458,58 @@ textarea {
 
 .account-main {
   background:
-    radial-gradient(circle at 78% 7%, rgba(10,125,250,.16), transparent 19%),
-    linear-gradient(90deg, rgba(230,242,255,.74), rgba(255,255,255,0) 33%),
-    var(--white);
-  padding: 64px clamp(20px, 5vw, 88px) 70px;
+    radial-gradient(circle at 88% 0%, rgba(10,125,250,.12), transparent 26%),
+    linear-gradient(180deg, #FFFFFF 0%, #F5FAFF 100%);
+  padding: clamp(34px, 4.5vw, 58px) clamp(22px, 5vw, 88px) 76px;
 }
 
 .account-shell {
-  width: min(1080px, 100%);
+  width: min(1180px, 100%);
   margin: 0 auto;
 }
 
 .account-kicker {
-  color: var(--es-text-muted);
-  font-family: var(--font-ui);
-  font-size: 14px;
-  font-weight: 700;
+  color: var(--es-blue);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  text-transform: uppercase;
   margin-bottom: 10px;
 }
 
 .account-title {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
   font-family: var(--font-display);
-  font-size: clamp(34px, 4vw, 52px);
-  line-height: 1;
+  font-size: clamp(48px, 5.4vw, 78px);
+  line-height: .88;
   letter-spacing: 0;
   color: var(--es-navy);
 }
 
 .account-subtitle {
-  max-width: 650px;
-  margin: 0 0 30px;
+  max-width: 720px;
+  margin: 0 0 34px;
   color: var(--es-text-muted);
-  font-family: "Roboto", Arial, sans-serif;
-  font-weight: 400;
-  line-height: 1.55;
+  font-family: var(--font-heading);
+  font-size: clamp(18px, 1.35vw, 24px);
+  font-weight: 500;
+  line-height: 1.35;
 }
 
 .account-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 330px) 1fr;
-  gap: 22px;
+  grid-template-columns: minmax(300px, 360px) 1fr;
+  gap: 24px;
   align-items: start;
 }
 
 .account-card {
-  background: rgba(255,255,255,.92);
-  border: 1px solid var(--line);
-  border-radius: var(--button-radius);
+  background: rgba(255,255,255,.96);
+  border: 1.5px solid var(--line);
+  border-radius: 20px;
   box-shadow: 0 20px 45px rgba(3,49,98,.08);
-  padding: 22px;
+  padding: clamp(24px, 2.2vw, 34px);
 }
 
 .profile-summary {
@@ -495,15 +520,18 @@ textarea {
 }
 
 .large-avatar {
-  width: 94px;
-  height: 94px;
-  border-radius: var(--button-radius);
+  width: 128px;
+  height: 128px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
   background: var(--es-blue);
   color: var(--white);
   display: grid;
   place-items: center;
-  font-size: 44px;
+  font-family: var(--font-display);
+  font-size: 48px;
   font-weight: 900;
+  line-height: 1;
   background-size: cover;
   background-position: center;
 }
@@ -513,15 +541,24 @@ textarea {
 }
 
 .summary-name {
-  margin: 8px 0 0;
-  font-size: 24px;
+  margin: 10px 0 0;
+  color: var(--es-navy);
+  font-family: var(--font-display);
+  font-size: clamp(34px, 3vw, 44px);
   font-weight: 900;
+  line-height: .95;
 }
 
 .summary-meta {
-  margin: 0;
+  margin: 6px 0 0;
   color: var(--es-text-muted);
-  font-family: "Roboto", Arial, sans-serif;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.summary-meta.is-empty {
+  display: none;
 }
 
 .avatar-upload {
@@ -539,8 +576,8 @@ textarea {
 }
 
 .avatar-upload-label {
-  min-height: 42px;
-  border: 1px solid var(--line);
+  min-height: 52px;
+  border: 1.5px solid var(--line);
   border-radius: var(--button-radius);
   background: var(--white);
   color: var(--es-navy);
@@ -548,9 +585,9 @@ textarea {
   align-items: center;
   justify-content: center;
   padding: 0 14px;
-  font-family: var(--font-heading);
-  font-size: clamp(14px, .78vw, 16px);
-  font-weight: 500;
+  font-family: var(--font-display);
+  font-size: clamp(18px, 1.15vw, 22px);
+  font-weight: 900;
   line-height: 1;
   letter-spacing: 0;
   text-transform: none;
@@ -567,8 +604,9 @@ textarea {
 .avatar-help {
   margin: 0;
   color: var(--es-text-muted);
-  font-family: "Roboto", Arial, sans-serif;
-  font-size: 14px;
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 500;
   line-height: 1.4;
 }
 
@@ -589,25 +627,32 @@ textarea {
 
 .field label,
 .settings-label {
+  color: var(--es-navy);
+  font-family: var(--font-display);
+  font-size: 22px;
   font-weight: 800;
+  line-height: 1;
 }
 
 .field input,
 .field select,
 .field textarea {
   width: 100%;
-  min-height: 46px;
-  border: 1px solid var(--line);
-  border-radius: var(--button-radius);
+  min-height: 56px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
   background: var(--white);
   color: var(--es-navy);
-  padding: 0 14px;
+  padding: 0 18px;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
   outline: none;
 }
 
 .field textarea {
-  min-height: 110px;
-  padding-top: 12px;
+  min-height: 150px;
+  padding-top: 16px;
   resize: vertical;
 }
 
@@ -620,19 +665,19 @@ textarea {
 
 .actions {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .primary-btn,
 .secondary-btn {
-  min-height: 44px;
+  min-height: 52px;
   border-radius: var(--button-radius);
-  padding: 0 18px;
-  font-family: var(--font-heading);
-  font-size: clamp(14px, .78vw, 16px);
-  font-weight: 500;
+  padding: 0 28px;
+  font-family: var(--font-display);
+  font-size: clamp(18px, 1.15vw, 22px);
+  font-weight: 900;
   line-height: 1;
   letter-spacing: 0;
   text-transform: none;
@@ -645,13 +690,14 @@ textarea {
 }
 
 .primary-btn {
-  border: 1px solid var(--es-blue);
+  border: 1.5px solid var(--es-blue);
   background: var(--es-blue);
   color: var(--white);
+  box-shadow: 0 16px 36px rgba(10,125,250,.18);
 }
 
 .secondary-btn {
-  border: 1px solid var(--line);
+  border: 1.5px solid var(--line);
   background: var(--white);
   color: var(--es-navy);
 }
@@ -950,14 +996,14 @@ textarea {
     display: none;
   }
   .profile-menu {
-    top: calc(100% + 8px);
-    right: 12px;
+    top: auto;
+    right: auto;
     width: min(222px, calc(100vw - 24px));
     height: 54px;
     border-radius: 18px;
   }
   .profile-menu.is-open {
-    height: 226px;
+    height: 54px;
   }
   .profile-trigger {
     height: 54px;

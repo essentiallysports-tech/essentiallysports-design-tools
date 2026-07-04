@@ -101,11 +101,48 @@ function loadProfile() {
 }
 
 function saveProfile(profile) {
-  localStorage.setItem('es.ai.profile', JSON.stringify(profile));
+  localStorage.setItem('es.ai.profile', JSON.stringify(sanitizeProfile(profile)));
 }
 
 function cleanVisitorName(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function cleanProfileValue(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function isDefaultProfileAvatar(value) {
+  return /(?:^|\/)profile-avatar-default\.webp(?:$|\?)/.test(String(value || ''));
+}
+
+function hasCustomProfileAvatar(value) {
+  const avatar = cleanProfileValue(value);
+  return Boolean(avatar) && !isDefaultProfileAvatar(avatar);
+}
+
+function initialsFromName(name) {
+  const cleaned = cleanProfileValue(name);
+  if (!cleaned || cleaned === 'Guest User') return 'ES';
+  return cleaned
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase();
+}
+
+function sanitizeProfile(profile = {}) {
+  const sanitized = {};
+  ['name', 'email', 'role', 'team', 'bio'].forEach(key => {
+    const value = key === 'bio' ? String(profile[key] || '').trim() : cleanProfileValue(profile[key]);
+    if (value) sanitized[key] = value;
+  });
+  if (hasCustomProfileAvatar(profile.avatar)) {
+    sanitized.avatar = String(profile.avatar).trim();
+  }
+  return sanitized;
 }
 
 function nameFromEmail(email) {
@@ -142,13 +179,12 @@ function inferVisitorProfile() {
     (storedName && !isDemoProfileName(storedName) ? storedName : '') ||
     nameFromEmail(queryEmail || identityEmail || storedEmail) ||
     'Guest User';
-  const avatar = stored.avatar || 'assets/profile-avatar-default.webp';
   if ((queryName || identityName || queryEmail || identityEmail) && name !== stored.name) {
     try {
       saveProfile({ ...stored, name, email: queryEmail || identityEmail || storedEmail });
     } catch (error) {}
   }
-  return { ...stored, name, avatar };
+  return { ...stored, name };
 }
 
 function loadSettings() {
@@ -166,15 +202,29 @@ function saveSettings(settings) {
 function syncProfileChrome() {
   const profile = inferVisitorProfile();
   const name = profile.name;
-  const avatar = profile.avatar || 'assets/profile-avatar-default.webp';
+  const role = cleanProfileValue(profile.role);
+  const avatar = profile.avatar;
   const currentPage = window.location.pathname.split('/').pop() || 'index.html';
   document.querySelectorAll('[data-profile-name]').forEach(el => {
     el.textContent = name;
+    if (role) {
+      el.dataset.profileRole = role;
+      el.classList.add('has-role');
+    } else {
+      delete el.dataset.profileRole;
+      el.classList.remove('has-role');
+    }
   });
   document.querySelectorAll('[data-profile-initial]').forEach(el => {
-    el.textContent = '';
-    el.classList.add('has-image');
-    el.style.backgroundImage = `url("${avatar}")`;
+    if (hasCustomProfileAvatar(avatar)) {
+      el.textContent = '';
+      el.classList.add('has-image');
+      el.style.backgroundImage = `url("${avatar}")`;
+    } else {
+      el.classList.remove('has-image');
+      el.style.removeProperty('background-image');
+      el.textContent = initialsFromName(name);
+    }
   });
   document.querySelectorAll('.profile-option').forEach(link => {
     const targetPage = (link.getAttribute('href') || '').split('/').pop();

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Edit Profile | ES AI</title>
+  <title>Edit Profile | ES Designer</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../es-auth-config.js"></script>
   <script src="../es-auth.js"></script>
@@ -40,8 +40,6 @@
         </div>
         <a href="../design-request.html">Design Request</a>
         <a href="../index.html#faq">FAQ</a>
-        <span class="nav-separator" aria-hidden="true"></span>
-        <a href="index.html">ES AI</a>
       </div>
       <div class="navbar-right">
         <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" aria-label="Facebook"><img src="../social-icons/nav-facebook.svg" alt=""></a>
@@ -67,24 +65,24 @@
 
     <main class="account-main">
       <div class="account-shell">
-        <div class="account-kicker">ES AI Account</div>
+        <div class="account-kicker">ES Designer Account</div>
         <h1 class="account-title">Edit Profile</h1>
-        <p class="account-subtitle">Manage how your ES AI workspace identifies you across chat history, design requests, and backend creative briefs.</p>
+        <p class="account-subtitle">Manage the profile details ES Designer uses across design tools, requests, and internal creative workflows.</p>
         <div class="account-grid">
           <section class="account-card profile-summary">
-            <div class="large-avatar has-image" id="profile-avatar-large"></div>
+            <div class="large-avatar" id="profile-avatar-large">ES</div>
             <label class="avatar-upload">
               <input id="avatar-upload" type="file" accept="image/png,image/jpeg,image/webp">
               <span class="avatar-upload-label">Upload Profile Image</span>
-              <span class="avatar-help">PNG, JPG, or WebP. Saved locally for this browser.</span>
+              <span class="avatar-help">Optional. PNG, JPG, or WebP, saved locally for this browser.</span>
             </label>
             <div>
               <h2 class="summary-name" id="summary-name">Guest User</h2>
-              <p class="summary-meta" id="summary-role">Design Engineer</p>
+              <p class="summary-meta is-empty" id="summary-role"></p>
             </div>
-            <a class="secondary-btn" href="index.html">Back to ES AI</a>
+            <a class="secondary-btn" href="../index.html#frames">Back to Design Tools</a>
           </section>
-          <section class="account-card">
+          <section class="account-card profile-form-card">
             <form id="profile-form">
               <input id="avatar" name="avatar" type="hidden">
               <div class="field-grid">
@@ -94,7 +92,7 @@
                 </div>
                 <div class="field">
                   <label for="role">Role</label>
-                  <input id="role" name="role" value="Design Engineer">
+                  <input id="role" name="role" placeholder="Optional role">
                 </div>
                 <div class="field">
                   <label for="email">Email</label>
@@ -133,10 +131,9 @@
   <script>
     const defaults = {
       name: 'Guest User',
-      role: 'Design Engineer',
       email: '',
       team: 'Design',
-      bio: 'Builds ES backend design systems, request workflows, and brand-safe creative tooling.',
+      bio: '',
       avatar: ''
     };
     const form = document.getElementById('profile-form');
@@ -145,23 +142,33 @@
     const largeAvatar = document.getElementById('profile-avatar-large');
 
     function applyProfile(profile) {
-      const data = { ...defaults, ...profile };
-      Object.entries(data).forEach(([key, value]) => {
+      const data = typeof sanitizeProfile === 'function' ? { ...defaults, ...sanitizeProfile(profile) } : { ...defaults, ...profile };
+      Object.entries(defaults).forEach(([key, value]) => {
         const field = form.elements[key];
-        if (field) field.value = value;
+        if (field) field.value = data[key] || value;
       });
+      if (form.elements.role) form.elements.role.value = data.role || '';
       document.getElementById('summary-name').textContent = data.name;
-      document.getElementById('summary-role').textContent = data.role;
-      const displayAvatar = data.avatar || 'assets/profile-avatar-default.webp';
-      largeAvatar.textContent = '';
-      largeAvatar.classList.add('has-image');
-      largeAvatar.style.backgroundImage = `url("${displayAvatar}")`;
+      const summaryRole = document.getElementById('summary-role');
+      summaryRole.textContent = data.role || '';
+      summaryRole.classList.toggle('is-empty', !data.role);
+      if (typeof hasCustomProfileAvatar === 'function' && hasCustomProfileAvatar(data.avatar)) {
+        largeAvatar.textContent = '';
+        largeAvatar.classList.add('has-image');
+        largeAvatar.style.backgroundImage = `url("${data.avatar}")`;
+      } else {
+        largeAvatar.classList.remove('has-image');
+        largeAvatar.style.removeProperty('background-image');
+        largeAvatar.textContent = typeof initialsFromName === 'function' ? initialsFromName(data.name) : 'ES';
+      }
       syncProfileChrome();
     }
 
     form.addEventListener('submit', event => {
       event.preventDefault();
-      const profile = Object.fromEntries(new FormData(form).entries());
+      const profile = typeof sanitizeProfile === 'function'
+        ? sanitizeProfile(Object.fromEntries(new FormData(form).entries()))
+        : Object.fromEntries(new FormData(form).entries());
       saveProfile(profile);
       applyProfile(profile);
       status.textContent = 'Profile saved.';
@@ -177,7 +184,9 @@
       const reader = new FileReader();
       reader.addEventListener('load', () => {
         form.elements.avatar.value = reader.result;
-        const profile = Object.fromEntries(new FormData(form).entries());
+        const profile = typeof sanitizeProfile === 'function'
+          ? sanitizeProfile(Object.fromEntries(new FormData(form).entries()))
+          : Object.fromEntries(new FormData(form).entries());
         saveProfile(profile);
         applyProfile(profile);
         status.textContent = 'Profile image saved.';
