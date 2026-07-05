@@ -192,7 +192,7 @@ assert.equal(behaviorSandbox.aiImageLastSource, 'mcp-agency');
 assert.deepEqual(JSON.parse(JSON.stringify(behaviorSandbox.renderedResults)), [
   { title: 'LeBron agency image', sourceUrl: 'https://image-cdn.essentiallysports.com/lebron.webp' },
 ]);
-assert.equal(statusMessages.at(-1), 'Choose an ES Storage image for “lebron james”.');
+assert.equal(statusMessages.at(-1), '');
 assert.equal(behaviorSandbox.loadingState, false);
 
 console.log('AI image sequential entity fallback regression test passed.');
@@ -253,11 +253,8 @@ renderAiImagePicker([
 ], 'LeBron James');
 `, pickerSandbox);
 
-assert.equal(
-  pickerQueryLabel.textContent,
-  'Showing 1 result for “LeBron James”. ES Storage fallback: Missing or invalid token.'
-);
-assert.equal(pickerSourceBadge.textContent, 'ES media fallback');
-assert.equal(pickerSourceBadge.fallbackClassApplied, true);
+assert.equal(pickerQueryLabel.textContent, '');
+assert.equal(pickerSourceBadge.textContent, '');
+assert.equal(pickerSourceBadge.fallbackClassApplied, false);
 
-console.log('AI image picker fallback reason regression test passed.');
+console.log('AI image picker metadata-hiding regression test passed.');

@@ -323,7 +323,9 @@
     right: auto;
     z-index: 130;
     flex: 0 0 auto;
-    width: 236px;
+    width: fit-content;
+    min-width: 178px;
+    max-width: 300px;
     height: 58px;
     overflow: visible;
     border: 1px solid transparent;
@@ -367,7 +369,7 @@
     height: 30px;
     flex: 0 0 30px;
     border-radius: 999px;
-    background: transparent url("profile-icon-edit.svg") center / 21px 24px no-repeat;
+    background: transparent url("profile-icon-edit.svg") center / 25px 28px no-repeat;
     color: transparent;
     display: grid;
     place-items: center;
@@ -423,8 +425,8 @@
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    width: 236px;
-    min-width: 236px;
+    width: 100%;
+    min-width: 178px;
     margin: 0;
     padding: 10px;
     border: 1px solid #FFFFFF;
@@ -463,7 +465,7 @@
     padding: 0 14px;
     font-family: "Roboto Condensed", "Roboto", Arial, sans-serif;
     font-size: 14px;
-    font-weight: 400;
+    font-weight: 500;
     line-height: 1.2;
     text-align: left;
     text-decoration: none;
@@ -2937,7 +2939,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   .ai-image-picker-header {
     display: flex;
     align-items: flex-start;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 18px;
   }
   .ai-image-picker-heading {
@@ -2972,6 +2974,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
+    margin-left: auto;
     gap: 8px;
   }
   .ai-image-picker-source {
@@ -3563,7 +3566,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     .profile-menu {
       top: auto;
       right: auto;
-      width: min(222px, calc(100vw - 24px));
+      width: fit-content;
+      min-width: 170px;
+      max-width: calc(100vw - 24px);
       height: 54px;
       border-radius: 18px;
     }
@@ -3573,8 +3578,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     .profile-dropdown {
       top: calc(100% + 8px);
       right: 0;
-      width: min(222px, calc(100vw - 24px));
-      min-width: min(222px, calc(100vw - 24px));
+      width: 100%;
+      min-width: 170px;
     }
     .profile-trigger {
       height: 54px;
@@ -4700,7 +4705,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .profile-menu {
-      width: 166px;
+      width: fit-content;
+      min-width: 170px;
+      max-width: 300px;
     }
 
     html[data-studio-shell="on"] .profile-trigger {
@@ -5512,15 +5519,9 @@ body[data-current-page="faq"] .faq-cta-art img {
           </div>
         </aside>
       </div>
-      <div class="ai-image-picker" id="ai-image-picker" role="dialog" aria-modal="false" aria-labelledby="ai-image-picker-title" hidden>
+      <div class="ai-image-picker" id="ai-image-picker" role="dialog" aria-modal="false" aria-label="Choose ES images" hidden>
         <div class="ai-image-picker-header">
-          <div class="ai-image-picker-heading">
-            <div class="ai-image-picker-eyebrow">AI image search</div>
-            <div class="ai-image-picker-title" id="ai-image-picker-title">Choose ES Image</div>
-            <div class="ai-image-picker-query" data-ai-image-picker-query></div>
-          </div>
           <div class="ai-image-picker-actions">
-            <div class="ai-image-picker-source" data-ai-image-picker-source></div>
             <button class="ai-image-picker-close" type="button" data-ai-image-picker-close aria-label="Close AI image options">×</button>
           </div>
         </div>
@@ -7725,24 +7726,11 @@ function loadImageFromUrl(src) {
 
 function renderAiImagePicker(results, query) {
   const grid = document.querySelector('[data-ai-image-picker-grid]');
-  const queryLabel = document.querySelector('[data-ai-image-picker-query]');
-  const sourceBadge = document.querySelector('[data-ai-image-picker-source]');
   if (!grid) return;
 
   aiImageSearchResults = results.slice(0, 15);
   aiImageLastQuery = query;
   grid.innerHTML = '';
-  const sourceLabel = aiImageSourceLabel(aiImageLastSource);
-  const isFallbackSource = aiImageLastSource === 'wordpress-media' || aiImageLastSource === 'direct-wordpress-media';
-  if (sourceBadge) {
-    sourceBadge.textContent = sourceLabel;
-    sourceBadge.classList.toggle('is-fallback', isFallbackSource);
-  }
-  if (queryLabel) {
-    const resultText = `${aiImageSearchResults.length} result${aiImageSearchResults.length === 1 ? '' : 's'}`;
-    const fallbackText = aiImageLastFallbackReason ? ` ES Storage fallback: ${aiImageLastFallbackReason}` : '';
-    queryLabel.textContent = `Showing ${resultText} for “${query}”.${fallbackText}`;
-  }
 
   aiImageSearchResults.forEach((result, index) => {
     const imageUrl = result.proxyUrl || result.sourceUrl;
@@ -7779,7 +7767,7 @@ async function applySelectedAiImageFromEsStorage(result) {
   }
 
   setAiImageButtonLoading(true);
-  setStatus('Applying selected ES image...');
+  setStatus('');
 
   try {
     const img = await loadImageFromUrl(imageUrl);
@@ -7793,7 +7781,7 @@ async function applySelectedAiImageFromEsStorage(result) {
     syncImageToolControls();
     render();
     setAiImagePickerOpen(false);
-    setStatus(`Applied ${aiImageSourceLabel(result.source || aiImageLastSource)} image: ${state.photoName}`);
+    setStatus('');
   } catch (error) {
     setStatus(error.message || 'Selected ES image could not be applied.', 'err');
   } finally {
@@ -7835,8 +7823,7 @@ async function applyAiImageFromEsStorage() {
     aiImageLastSource = matchedSource;
     aiImageLastFallbackReason = matchedFallbackReason;
     renderAiImagePicker(usableResults, matchedQuery);
-    const fallbackNote = matchedFallbackReason ? ` ES Storage fallback reason: ${matchedFallbackReason}` : '';
-    setStatus(`Choose an ${aiImageSourceLabel(matchedSource)} image for “${matchedQuery}”.${fallbackNote}`);
+    setStatus('');
   } catch (error) {
     setStatus(error.message || 'AI Images could not fetch from ES Storage.', 'err');
   } finally {

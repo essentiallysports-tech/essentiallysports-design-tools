@@ -258,7 +258,9 @@ textarea {
   z-index: 130;
   order: -1;
   flex: 0 0 auto;
-  width: 236px;
+  width: fit-content;
+  min-width: 178px;
+  max-width: 300px;
   height: 58px;
   overflow: visible;
   border: 1px solid transparent;
@@ -306,7 +308,7 @@ textarea {
   height: 30px;
   flex: 0 0 30px;
   border-radius: 999px;
-  background: transparent url("assets/profile-icon-edit.svg") center / 21px 24px no-repeat;
+  background: transparent url("assets/profile-icon-edit.svg") center / 25px 28px no-repeat;
   color: transparent;
   display: grid;
   place-items: center;
@@ -338,8 +340,8 @@ textarea {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 236px;
-  min-width: 236px;
+  width: 100%;
+  min-width: 178px;
   margin: 0;
   padding: 10px;
   border: 1px solid #FFFFFF;
@@ -401,7 +403,7 @@ textarea {
   padding: 0 14px;
   font-family: "Roboto Condensed", "Roboto", Arial, sans-serif;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 500;
   line-height: 1.2;
   background: transparent;
   transform: none;
@@ -1005,7 +1007,9 @@ textarea {
   .profile-menu {
     top: auto;
     right: auto;
-    width: min(222px, calc(100vw - 24px));
+    width: fit-content;
+    min-width: 170px;
+    max-width: calc(100vw - 24px);
     height: 54px;
     border-radius: 18px;
   }
