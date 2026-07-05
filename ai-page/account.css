@@ -307,8 +307,10 @@ textarea {
   width: 30px;
   height: 30px;
   flex: 0 0 30px;
+  box-sizing: border-box;
+  border: 1px solid #B5D8FD;
   border-radius: 999px;
-  background: transparent url("assets/profile-icon-edit.svg") center / 25px 28px no-repeat;
+  background: #FFFFFF url("assets/profile-icon-edit.svg") center / 15px 18px no-repeat;
   color: transparent;
   display: grid;
   place-items: center;
@@ -316,12 +318,14 @@ textarea {
   font-size: 13px;
   font-weight: 900;
   line-height: 1;
-  background-size: cover;
+  background-size: 15px 18px;
   background-position: center;
 }
 
 .profile-avatar.has-image {
+  border-color: transparent;
   color: transparent;
+  background-size: cover;
 }
 
 .profile-chevron {
