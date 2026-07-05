@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="es-auth-config.js"></script>
 <script src="es-auth.js"></script>
+<script src="dashboard-data.js"></script>
 <script src="design-request-slack.js"></script>
 <script src="design-request-email.js"></script>
 <script>
@@ -50,7 +51,7 @@
     --bg-canvas-soft: #F1F8FF;
     --border: #B5D8FD;
     --border-strong: #8CB9E8;
-    --text-primary: #033162;
+    --text-primary: #111827;
     --text-secondary: #7997B8;
     --accent: #0A7DFA;
     --accent-hover: #0A6FDE;
@@ -275,7 +276,7 @@
     min-height: 30px;
     font-size: 14px;
     font-weight: 800;
-    color: #033162;
+    color: #111827;
     background: #FFFFFF;
     border: 2px solid #B5D8FD;
     border-radius: 0;
@@ -1412,8 +1413,9 @@
   }
   .frame-hero-actions {
     position: absolute;
-    left: var(--frame-content-left);
+    left: clamp(48px, 12.7vw, 260px);
     top: clamp(220px, 15.2vw, 360px);
+    transform: none;
     display: flex;
     align-items: center;
     gap: clamp(14px, 1.2vw, 24px);
@@ -1428,7 +1430,7 @@
     border-radius: var(--button-radius);
     border: 1.5px solid #B5D8FD;
     padding: 0 18px;
-    color: #033162;
+    color: #111827;
     background: #F8FBFF;
     font-family: var(--font-heading);
     font-size: clamp(14px, .78vw, 16px);
@@ -1536,7 +1538,7 @@
   .tag-dimension,
   .tag-format {
     background: #FFFFFF;
-    color: #033162;
+    color: #111827;
     border: 2px solid #B5D8FD;
     letter-spacing: 0;
     text-transform: uppercase;
@@ -2161,7 +2163,7 @@
     border: 0;
     border-radius: 0;
     background: #FFFFFF;
-    color: #033162;
+    color: #111827;
     font-size: 14px;
     font-weight: 800;
     line-height: 1;
@@ -2229,7 +2231,7 @@
     position: sticky;
     top: 104px;
     margin: 0;
-    color: #033162;
+    color: #111827;
     font-family: var(--font-display);
     font-size: clamp(52px, 5.2vw, 72px);
     font-weight: 700;
@@ -2392,7 +2394,7 @@
   }
   body[data-current-page="faq"] .faq-cta-copy h2 {
     margin: 0;
-    color: #033162;
+    color: #111827;
     font-family: var(--font-display);
     font-size: clamp(30px, 3vw, 40px);
     font-weight: 700;
@@ -2417,7 +2419,7 @@ body[data-current-page="faq"] .faq-cta-action {
     border: 1.5px solid #B5D8FD;
     border-radius: var(--button-radius);
     background: #FFFFFF;
-    color: #033162;
+    color: #111827;
     font-family: var(--font-heading);
     font-size: clamp(14px, .78vw, 16px);
   font-weight: 500;
@@ -2769,7 +2771,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     border: 1px solid transparent;
     border-radius: 8px;
     background: transparent;
-    color: #033162;
+    color: #111827;
     cursor: pointer;
     transition: background 160ms ease, border-color 160ms ease, color 160ms ease, opacity 160ms ease;
   }
@@ -2815,7 +2817,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
   .canvas-upload-button-secondary {
     background: #FFFFFF;
-    color: #033162;
+    color: #111827;
     border-color: #B5D8FD;
     text-decoration: none;
     box-shadow: 0 16px 30px rgba(3, 49, 98, .06);
@@ -2950,7 +2952,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     text-transform: uppercase;
   }
   .ai-image-picker-title {
-    color: #033162;
+    color: #111827;
     font-family: var(--font-heading);
     font-size: clamp(18px, 1.05vw, 22px);
     font-weight: 700;
@@ -2979,7 +2981,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     border: 1px solid #B5D8FD;
     border-radius: 999px;
     background: #FFFFFF;
-    color: #033162;
+    color: #111827;
     font-family: var(--font-heading);
     font-size: 12px;
     font-weight: 700;
@@ -2996,7 +2998,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     border: 1px solid #B5D8FD;
     border-radius: 999px;
     background: #FFFFFF;
-    color: #033162;
+    color: #111827;
     cursor: pointer;
     font-family: var(--font-heading);
     font-size: 18px;
@@ -3023,7 +3025,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     border: 1.5px solid #D8EAFE;
     border-radius: 16px;
     background: #FFFFFF;
-    color: #033162;
+    color: #111827;
     cursor: pointer;
     text-align: left;
     box-shadow: 0 14px 28px rgba(3, 49, 98, 0.08);
@@ -3049,7 +3051,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     min-height: 44px;
     padding: 9px 10px 10px;
     overflow: hidden;
-    color: #033162;
+    color: #111827;
     font-family: var(--font-heading);
     font-size: 12px;
     font-weight: 700;
@@ -3085,7 +3087,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     display: flex;
   }
   .image-tool-title {
-    color: #033162;
+    color: #111827;
     font-family: var(--font-ui-condensed);
     font-size: 16px;
     font-weight: 700;
@@ -3340,6 +3342,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       background: #F2F8FF;
     }
     .frame-hero-actions {
+      left: clamp(48px, 12.7vw, 204px);
       top: clamp(230px, 19vw, 305px);
     }
   }
@@ -3368,6 +3371,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
     .request-page {
       grid-template-columns: 1fr;
+    }
+    .navbar-right .navbar-icon-btn {
+      display: none;
     }
     .footer-links {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3480,6 +3486,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       right: 24px;
       top: 130px;
       bottom: auto;
+      transform: none;
       flex-direction: column;
       align-items: stretch;
       gap: 12px;
@@ -3525,7 +3532,9 @@ body[data-current-page="faq"] .faq-cta-art img {
       line-height: 1.45;
     }
     .navbar {
+      height: auto;
       min-height: 43px;
+      flex-wrap: wrap;
       padding: 8px 14px;
       gap: 0;
       width: 100%;
@@ -3623,6 +3632,27 @@ body[data-current-page="faq"] .faq-cta-art img {
     .request-note-title {
       font-size: clamp(20px, 5.8vw, 26px);
       line-height: 1.08;
+    }
+    .frame-hero {
+      min-height: clamp(236px, 62vw, 320px);
+      align-items: stretch;
+    }
+    .frame-banner {
+      width: 100%;
+      height: auto;
+      min-height: clamp(236px, 62vw, 320px);
+      object-fit: cover;
+      object-position: center;
+    }
+    .frame-hero-actions {
+      left: 16px;
+      right: 16px;
+      top: auto;
+      bottom: 16px;
+      transform: none;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
     }
     .frame-card-title {
       font-size: clamp(20px, 5.8vw, 22px);
@@ -3791,6 +3821,911 @@ body[data-current-page="faq"] .faq-cta-art img {
       aspect-ratio: 16 / 10;
     }
   }
+  /* ─── STUDIO WORKSPACE SHELL (LOCAL, ROLLBACK-SAFE) ─────────────────────── */
+  .studio-topbar,
+  .studio-rail,
+  .studio-panel-head,
+  .studio-zoom-group {
+    display: none;
+  }
+
+  @media (min-width: 1024px) {
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) {
+      overflow: hidden;
+      background: #F6FAFF;
+    }
+
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .breadcrumb,
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .page-header,
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .site-footer {
+      display: none !important;
+    }
+
+    html[data-studio-shell="on"] .studio-topbar {
+      position: sticky;
+      top: 69px;
+      z-index: 80;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 0 24px;
+      border-bottom: 1px solid #E4EAF1;
+      background: rgba(255, 255, 255, .96);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    html[data-studio-shell="on"] .studio-topbar-left,
+    html[data-studio-shell="on"] .studio-topbar-right {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    html[data-studio-shell="on"] .studio-topbar-left,
+    html[data-studio-shell="on"] .studio-topbar-right {
+      flex: 0 0 auto;
+    }
+
+    html[data-studio-shell="on"] .studio-home-btn,
+    html[data-studio-shell="on"] .studio-zoom-btn {
+      width: 38px;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #DCE4ED;
+      border-radius: 7px;
+      background: #FFFFFF;
+      color: #111827;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color .16s ease, background-color .16s ease, color .16s ease;
+    }
+
+    html[data-studio-shell="on"] .studio-home-btn:hover,
+    html[data-studio-shell="on"] .studio-home-btn:focus-visible,
+    html[data-studio-shell="on"] .studio-zoom-btn:hover,
+    html[data-studio-shell="on"] .studio-zoom-btn:focus-visible {
+      outline: none;
+      border-color: #0A7DFA;
+      background: #F5F9FE;
+      color: #0A7DFA;
+    }
+
+    html[data-studio-shell="on"] .studio-home-btn svg,
+    html[data-studio-shell="on"] .studio-zoom-btn svg,
+    html[data-studio-shell="on"] .studio-export-btn svg,
+    html[data-studio-shell="on"] .studio-rail-btn svg {
+      width: 19px;
+      height: 19px;
+      display: block;
+    }
+
+    html[data-studio-shell="on"] .studio-title {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 0 auto;
+      color: #111827;
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -.02em;
+      line-height: .92;
+      white-space: nowrap;
+    }
+
+    html[data-studio-shell="on"] .studio-name-field {
+      width: min(360px, 30vw);
+      min-width: 180px;
+      height: 38px;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      background: transparent;
+      color: #6F8FAE;
+      padding: 0 10px;
+      font-family: var(--font-heading);
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 1;
+      outline: none;
+      transition: border-color .16s ease, background-color .16s ease, color .16s ease;
+    }
+
+    html[data-studio-shell="on"] .studio-name-field:hover,
+    html[data-studio-shell="on"] .studio-name-field:focus {
+      border-color: #B5D8FD;
+      background: #F7FBFF;
+      color: #111827;
+    }
+
+    html[data-studio-shell="on"] .studio-size-badge,
+    html[data-studio-shell="on"] .studio-mode-badge {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #DCE4ED;
+      border-radius: 7px;
+      background: #F8FAFC;
+      color: #5C7088;
+      padding: 0 12px;
+      font-family: var(--font-heading);
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    html[data-studio-shell="on"] .studio-mode-badge {
+      display: none;
+    }
+
+    html[data-studio-shell="on"] .studio-export-btn {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      border: 1px solid #0A7DFA;
+      border-radius: 7px;
+      background: #0A7DFA;
+      color: #FFFFFF;
+      cursor: pointer;
+      padding: 0 16px;
+      font-family: var(--font-heading);
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 1;
+      transition: background-color .16s ease, border-color .16s ease;
+    }
+
+    html[data-studio-shell="on"] .studio-export-btn:hover,
+    html[data-studio-shell="on"] .studio-export-btn:focus-visible {
+      outline: none;
+      background: #006FE3;
+      border-color: #006FE3;
+    }
+
+    html[data-studio-shell="on"] .app[data-workspace] {
+      width: 100%;
+      height: calc(100dvh - 129px);
+      min-height: 620px;
+      display: grid;
+      grid-template-columns: 64px minmax(0, 1fr) minmax(370px, 26vw);
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      align-items: stretch;
+      background: #F7F9FC;
+    }
+
+    html[data-studio-shell="on"] .studio-rail {
+      order: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 7px;
+      border-right: 1px solid #E4EAF1;
+      background: #FFFFFF;
+      overflow-y: auto;
+    }
+
+    html[data-studio-shell="on"] .studio-rail-divider {
+      width: 30px;
+      height: 1px;
+      margin: 6px 0;
+      background: #E4EAF1;
+    }
+
+    html[data-studio-shell="on"] .studio-rail-btn {
+      width: 46px;
+      min-height: 46px;
+      display: inline-flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: #0A0A0A;
+      font-family: var(--font-heading);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0;
+      text-align: center;
+      text-decoration: none;
+      text-transform: none;
+      transition: background-color .16s ease, border-color .16s ease, color .16s ease;
+    }
+
+    html[data-studio-shell="on"] .studio-rail-btn span {
+      display: none;
+    }
+
+    html[data-studio-shell="on"] .studio-rail-btn:hover,
+    html[data-studio-shell="on"] .studio-rail-btn:focus-visible {
+      outline: none;
+      border-color: #DCE4ED;
+      background: #F6F9FC;
+      color: #0A0A0A;
+    }
+
+    html[data-studio-shell="on"] .studio-rail-btn[aria-current="page"] {
+      border-color: #C7DDF5;
+      background: #EFF6FD;
+      color: #0A0A0A;
+    }
+
+    html[data-studio-shell="on"] .panel {
+      order: 2;
+      width: auto;
+      min-width: 0;
+      height: 100%;
+      gap: 0;
+      overflow-y: auto;
+      border-left: 1px solid #E4EAF1;
+      background: #FFFFFF;
+      box-shadow: none;
+      scrollbar-width: thin;
+      scrollbar-color: #B5D8FD transparent;
+    }
+
+    html[data-studio-shell="on"] .panel .card,
+    html[data-studio-shell="on"] .panel .text-card,
+    html[data-studio-shell="on"] .panel .swipe-button-control,
+    html[data-studio-shell="on"] .panel .advanced-card,
+    html[data-studio-shell="on"] .youtube-control-row,
+    html[data-studio-shell="on"] .newsletter-control-row,
+    html[data-studio-shell="on"] .studio-control-dock {
+      margin: 0;
+      border: 0;
+      border-radius: 0;
+      border-bottom: 1px solid #E9EEF4;
+      background: transparent;
+      box-shadow: none;
+      padding: 22px 22px;
+    }
+
+    html[data-studio-shell="on"] .studio-control-dock {
+      display: grid;
+      gap: 16px;
+      background: linear-gradient(180deg, #FFFFFF 0%, #F8FBFF 100%);
+    }
+
+    html[data-studio-shell="on"] .studio-inspector-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      padding: 4px;
+      border: 1px solid #DCE4ED;
+      border-radius: 11px;
+      background: #F4F8FD;
+    }
+
+    html[data-studio-shell="on"] .studio-inspector-tab {
+      border: 0;
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: transparent;
+      color: #6F8FAE;
+      font-family: var(--font-heading);
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    html[data-studio-shell="on"] .studio-inspector-tab.is-active {
+      background: #FFFFFF;
+      color: #111827;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, .06);
+    }
+
+    html[data-studio-shell="on"] .studio-dock-section {
+      display: grid;
+      gap: 10px;
+    }
+
+    html[data-studio-shell="on"] body[data-studio-inspector="content"] .studio-dock-section,
+    html[data-studio-shell="on"] body[data-studio-inspector="content"] .studio-ai-section,
+    html[data-studio-shell="on"] body[data-studio-inspector="image"] .panel > :not(.studio-control-dock),
+    html[data-studio-shell="on"] body[data-studio-inspector="image"] .studio-ai-section,
+    html[data-studio-shell="on"] body[data-studio-inspector="ai"] .panel > :not(.studio-control-dock),
+    html[data-studio-shell="on"] body[data-studio-inspector="ai"] .studio-dock-section {
+      display: none !important;
+    }
+
+    html[data-studio-shell="on"] body[data-studio-inspector="ai"] .studio-ai-section {
+      display: grid;
+      gap: 12px;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-empty {
+      border: 1px dashed #B5D8FD;
+      border-radius: 10px;
+      background: #F7FBFF;
+      color: #6F8FAE;
+      padding: 18px;
+      font-family: var(--font-heading);
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-section .ai-image-picker.is-open + .studio-ai-empty {
+      display: none;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-section .ai-image-picker {
+      max-height: none;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-section .ai-image-picker-header {
+      display: grid;
+      gap: 10px;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-section .ai-image-picker-actions {
+      justify-content: space-between;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-section .ai-image-picker-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-section .ai-image-picker-option {
+      border-radius: 10px;
+      box-shadow: none;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-section .ai-image-picker-option img {
+      aspect-ratio: 16 / 11;
+    }
+
+    html[data-studio-shell="on"] .studio-dock-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: #111827;
+      font-family: var(--font-heading);
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    html[data-studio-shell="on"] .studio-dock-kicker {
+      color: #7892AE;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    html[data-studio-shell="on"] .studio-dock-actions,
+    html[data-studio-shell="on"] .studio-dock-tools {
+      min-width: 0;
+    }
+
+    html[data-studio-shell="on"] .youtube-control-row,
+    html[data-studio-shell="on"] .newsletter-control-row {
+      gap: 14px;
+    }
+
+    html[data-studio-shell="on"] .youtube-control-row > .card,
+    html[data-studio-shell="on"] .newsletter-control-row > .card {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] .youtube-control-row {
+      grid-template-columns: minmax(0, 1fr) 136px;
+      column-gap: 12px;
+      row-gap: 18px;
+      align-items: end;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-variation-card {
+      grid-column: 1 / -1;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-variation-card .post-type-options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-variation-card .post-type-option {
+      width: 100%;
+      min-height: 36px;
+      padding: 7px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.15;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-variation-card .post-type-option:last-child {
+      grid-column: 1 / -1;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-variation-card .post-type-option.is-active {
+      border-color: #8CB9E8;
+      background: #EAF4FF;
+      color: #111827;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-category-card .card-title {
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-category-card select,
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-quote-control .quote-switch {
+      min-height: 40px;
+      height: 40px;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-category-card select {
+      padding-block: 0;
+      padding-inline: 12px 36px;
+      font-size: 13px;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-quote-control .quote-switch {
+      gap: 8px;
+      padding: 0 10px 0 12px;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-quote-control .quote-switch > span:first-child {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-quote-control .quote-switch-track {
+      width: 36px;
+      height: 20px;
+      flex-basis: 36px;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-quote-control .quote-switch-track::before {
+      width: 16px;
+      height: 16px;
+      left: 2px;
+      top: 2px;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] #youtube-quote-control .quote-switch.is-active .quote-switch-track::before {
+      transform: translateX(16px);
+    }
+
+    html[data-studio-shell="on"] .panel .card-title,
+    html[data-studio-shell="on"] .panel .section-label,
+    html[data-studio-shell="on"] .panel .tod-label,
+    html[data-studio-shell="on"] .panel .color-group-label {
+      color: #111827;
+      font-family: var(--font-heading);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    html[data-studio-shell="on"] .panel input[type="text"],
+    html[data-studio-shell="on"] .panel textarea,
+    html[data-studio-shell="on"] .panel select,
+    html[data-studio-shell="on"] .panel .select-dropdown-trigger,
+    html[data-studio-shell="on"] .panel .post-type-option,
+    html[data-studio-shell="on"] .panel .photo-drop {
+      border-color: #DCE4ED;
+      border-radius: 7px;
+      box-shadow: none;
+    }
+
+    html[data-studio-shell="on"] .panel input[type="text"],
+    html[data-studio-shell="on"] .panel textarea,
+    html[data-studio-shell="on"] .panel select,
+    html[data-studio-shell="on"] .panel .select-dropdown-trigger {
+      color: #111827;
+      font-family: var(--font-heading);
+      font-weight: 500;
+    }
+
+    html[data-studio-shell="on"] .panel .post-type-options {
+      gap: 8px;
+    }
+
+    html[data-studio-shell="on"] .panel .post-type-option {
+      min-height: 38px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    html[data-studio-shell="on"] .panel .swipe-button-control,
+    html[data-studio-shell="on"] .panel .quote-switch,
+    html[data-studio-shell="on"] .panel .toggle-row {
+      border-radius: 7px;
+      box-shadow: none;
+    }
+
+    html[data-studio-shell="on"] .canvas-panel {
+      position: static;
+      order: 1;
+      width: 100%;
+      height: 100%;
+      max-height: none;
+      margin: 0;
+      padding: 0;
+      display: block;
+      overflow: hidden;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="instagram"] .canvas-panel {
+      top: auto;
+      margin-top: 0;
+    }
+
+    html[data-studio-shell="on"] .canvas-card {
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: auto;
+      background-color: #FFFFFF;
+      background-image: none;
+      padding: 34px 30px 22px;
+      border-radius: 0;
+    }
+
+    html[data-studio-shell="on"] .canvas-stage {
+      width: 100%;
+      min-height: calc(100% - 68px);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 14px;
+      padding: 4px 0 26px;
+    }
+
+    html[data-studio-shell="on"] .canvas-stack {
+      --studio-canvas-base: clamp(420px, 43vw, 560px);
+      width: calc(var(--studio-canvas-base) * var(--studio-zoom, 1));
+      flex: 0 0 auto;
+      max-width: none;
+      gap: 12px;
+      transition: width .18s var(--motion-smooth);
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="instagram"] .canvas-stack {
+      --studio-canvas-base: clamp(360px, 35vw, 460px);
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] .canvas-stack,
+    html[data-studio-shell="on"] body[data-current-page="newsletter"] .canvas-stack {
+      width: calc(var(--studio-canvas-base) * var(--studio-zoom, 1));
+      flex-basis: auto;
+    }
+
+    html[data-studio-shell="on"] .canvas-wrap {
+      overflow: visible;
+      border: 1px solid #D7DEE8;
+      background: #FFFFFF;
+      box-shadow: 0 18px 45px rgba(15, 23, 42, .12), 0 1px 3px rgba(15, 23, 42, .06);
+    }
+
+    html[data-studio-shell="on"] canvas#preview {
+      width: 100%;
+    }
+
+    html[data-studio-shell="on"] .image-tool-rail {
+      position: sticky;
+      top: 6px;
+      width: 48px;
+      flex: 0 0 48px;
+      padding: 5px;
+      border-color: #DCE4ED;
+      border-radius: 9px;
+      background: #FFFFFF;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, .08);
+    }
+
+    html[data-studio-shell="on"] .studio-dock-tools .image-tool-rail {
+      position: relative;
+      top: auto;
+      width: 100%;
+      flex: none;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      align-items: stretch;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    html[data-studio-shell="on"] .studio-dock-tools .image-tool-button {
+      width: 100%;
+      height: 38px;
+      border: 1px solid #DCE4ED;
+      border-radius: 8px;
+      background: #FFFFFF;
+    }
+
+    html[data-studio-shell="on"] .studio-dock-tools .image-tool-button:hover,
+    html[data-studio-shell="on"] .studio-dock-tools .image-tool-button.is-active {
+      background: #EAF4FF;
+      border-color: #B5D8FD;
+      color: #0A7DFA;
+    }
+
+    html[data-studio-shell="on"] .image-tool-button.export-tool-button {
+      display: none;
+    }
+
+    html[data-studio-shell="on"] .image-tool-panel {
+      border-color: #DCE4ED;
+      border-radius: 8px;
+      box-shadow: 0 14px 36px rgba(15, 23, 42, .12);
+    }
+
+    html[data-studio-shell="on"] .studio-dock-tools .image-tool-panel {
+      grid-column: 1 / -1;
+      position: static;
+      width: 100%;
+      display: block;
+      padding: 14px;
+      border-radius: 9px;
+      box-shadow: none;
+    }
+
+    html[data-studio-shell="on"] .studio-dock-actions .image-upload-menu {
+      position: relative;
+      top: auto;
+      left: auto;
+      z-index: 5;
+      width: 100%;
+      margin-top: 8px;
+      box-shadow: none;
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions {
+      position: relative;
+      bottom: auto;
+      z-index: 30;
+      width: max-content;
+      max-width: min(100%, 940px);
+      min-height: 54px;
+      margin: 14px auto 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: 1px solid #DCE4ED;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .97);
+      box-shadow: 0 12px 30px rgba(15, 23, 42, .10);
+      padding: 7px 8px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      align-self: center;
+      left: auto;
+      transform: none;
+    }
+
+    html[data-studio-shell="on"] .studio-dock-actions .canvas-bottom-actions {
+      position: relative;
+      bottom: auto;
+      width: 100%;
+      max-width: none;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      align-self: stretch;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="instagram"] .canvas-bottom-actions {
+      width: min(720px, calc(100vw - 64px - max(370px, 26vw) - 24px));
+      max-width: none;
+      flex-wrap: wrap;
+      margin-left: 50%;
+      transform: translateX(calc(-50% + 30px));
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="instagram"] .studio-dock-actions .canvas-bottom-actions {
+      width: 100%;
+      flex-wrap: nowrap;
+      margin-left: 0;
+      transform: none;
+    }
+
+    html[data-studio-shell="on"] .studio-zoom-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding-right: 10px;
+      margin-right: 2px;
+      border-right: 1px solid #E4EAF1;
+    }
+
+    html[data-studio-shell="on"] .studio-dock-actions .studio-zoom-group {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) 38px;
+      gap: 8px;
+      padding: 0;
+      margin: 0;
+      border-right: 0;
+    }
+
+    html[data-studio-shell="on"] .studio-zoom-value {
+      width: 58px;
+      color: #111827;
+      font-family: var(--font-heading);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    html[data-studio-shell="on"] .canvas-primary-actions {
+      gap: 8px;
+    }
+
+    html[data-studio-shell="on"] .studio-dock-actions .canvas-primary-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+    }
+
+    html[data-studio-shell="on"] .canvas-upload-button {
+      min-width: 0;
+      min-height: 40px;
+      height: 40px;
+      border-radius: 7px;
+      padding: 0 16px;
+      box-shadow: none;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    html[data-studio-shell="on"] .studio-dock-actions .canvas-upload-button {
+      width: 100%;
+      padding: 0 10px;
+    }
+
+    html[data-studio-shell="on"] .studio-dock-actions .carousel-workspace-nav {
+      width: 100%;
+      justify-content: stretch;
+    }
+
+    html[data-studio-shell="on"] .studio-dock-actions .carousel-slide-switcher {
+      width: 100%;
+      flex-basis: auto;
+      justify-content: space-between;
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions .carousel-slide-button {
+      width: 34px;
+      height: 40px;
+      border-radius: 7px;
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions .carousel-slide-arrow {
+      width: 28px;
+    }
+
+    html[data-studio-shell="on"] .status-bar {
+      position: fixed;
+      left: 88px;
+      bottom: 18px;
+      z-index: 120;
+      width: min(420px, calc(100vw - 120px));
+      margin: 0;
+      pointer-events: none;
+    }
+
+    html[data-studio-shell="on"] .status {
+      min-height: 0;
+      display: inline-flex;
+      border-radius: 10px;
+      background: #033162;
+      color: #FFFFFF;
+      padding: 9px 12px;
+      box-shadow: 0 14px 32px rgba(3, 49, 98, .22);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    html[data-studio-shell="on"] .status:empty {
+      display: none;
+    }
+  }
+
+  @media (min-width: 1024px) and (max-width: 1199px) {
+    html[data-studio-shell="on"] .navbar {
+      padding-inline: 18px;
+    }
+
+    html[data-studio-shell="on"] .navbar-logo {
+      margin-right: 24px;
+    }
+
+    html[data-studio-shell="on"] .navbar-logo img,
+    html[data-studio-shell="on"] .navbar-logo svg {
+      height: 28px;
+    }
+
+    html[data-studio-shell="on"] .navbar-menu {
+      gap: 18px;
+      font-size: 16px;
+    }
+
+    html[data-studio-shell="on"] .navbar-menu .has-chevron::after {
+      width: 13px;
+      height: 8px;
+      margin-left: 6px;
+    }
+
+    html[data-studio-shell="on"] .profile-menu {
+      width: 166px;
+    }
+
+    html[data-studio-shell="on"] .profile-trigger {
+      padding-inline: 10px;
+      font-size: 17px;
+    }
+
+    html[data-studio-shell="on"] .navbar-right .navbar-icon-btn {
+      display: none;
+    }
+
+    html[data-studio-shell="on"] .studio-topbar {
+      padding-inline: 20px;
+    }
+
+    html[data-studio-shell="on"] .studio-title {
+      font-size: 26px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html[data-studio-shell="on"] .studio-home-btn,
+    html[data-studio-shell="on"] .studio-zoom-btn,
+    html[data-studio-shell="on"] .studio-export-btn,
+    html[data-studio-shell="on"] .studio-rail-btn,
+    html[data-studio-shell="on"] .canvas-stack {
+      transition: none;
+    }
+  }
 </style>
 </head>
 <body>
@@ -3819,6 +4754,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
     </div>
     <a href="design-request.html">Design Request</a>
+    <a href="dashboard.html" data-admin-only hidden>Dashboard</a>
     <a href="#faq" data-route="faq">FAQ</a>
   </div>
   <div class="navbar-right">
@@ -3998,12 +4934,68 @@ body[data-current-page="faq"] .faq-cta-art img {
   <div class="status" id="status"></div>
 </div>
 
+<div class="studio-topbar view-hidden" data-workspace aria-label="Studio workspace toolbar">
+  <div class="studio-topbar-left">
+    <a class="studio-home-btn" href="#frames" data-route="frames" aria-label="Back to Design Tools">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 11.5 12 5l8 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M6.5 10.5V20h11v-9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      </svg>
+    </a>
+    <span class="studio-title" id="studio-workspace-title">Social Media</span>
+    <input class="studio-name-field" id="studio-canvas-name" type="text" autocomplete="off" spellcheck="false" aria-label="Canvas export name" placeholder="Untitled canvas">
+  </div>
+  <div class="studio-topbar-right">
+    <span class="studio-mode-badge" id="studio-mode-badge">Canvas</span>
+    <span class="studio-size-badge" id="studio-canvas-size">1080 × 1350 px</span>
+    <button class="studio-export-btn export-button" id="studio-export-btn" type="button" data-studio-export aria-label="Export current design">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span data-export-label>Export</span>
+    </button>
+  </div>
+</div>
+
 <!-- MAIN APP -->
 <div class="app view-hidden" data-workspace>
 
+  <aside class="studio-rail" aria-label="Studio workspaces">
+    <a class="studio-rail-btn" href="#instagram" data-route="instagram" aria-label="Open Social Media workspace">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="4.5" y="4.5" width="15" height="15" rx="4" fill="none" stroke="currentColor" stroke-width="2"/>
+        <circle cx="12" cy="12" r="3.25" fill="none" stroke="currentColor" stroke-width="2"/>
+        <circle cx="16.75" cy="7.25" r="1.15" fill="currentColor"/>
+      </svg>
+      <span>Social</span>
+    </a>
+    <a class="studio-rail-btn" href="#youtube" data-route="youtube" aria-label="Open YouTube Assets workspace">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.5" y="7" width="17" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="m11 10 4 2-4 2v-4Z" fill="currentColor"/>
+      </svg>
+      <span>YouTube</span>
+    </a>
+    <a class="studio-rail-btn" href="#newsletter" data-route="newsletter" aria-label="Open Newsletter Assets workspace">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 5h14v14H5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M8 9h8M8 12h8M8 15h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span>News</span>
+    </a>
+    <span class="studio-rail-divider" aria-hidden="true"></span>
+    <a class="studio-rail-btn" href="design-request.html" aria-label="Open Design Request">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+      <span>Request</span>
+    </a>
+  </aside>
+
   <!-- LEFT PANEL -->
   <div class="panel">
-
     <div class="youtube-control-row" aria-label="YouTube asset options">
       <div class="card" id="youtube-variation-card">
         <div class="post-type-options" role="group" aria-label="YouTube asset variation">
@@ -4344,6 +5336,19 @@ body[data-current-page="faq"] .faq-cta-art img {
             <canvas id="preview" width="1080" height="1350"></canvas>
           </div>
           <div class="canvas-bottom-actions">
+            <div class="studio-zoom-group" aria-label="Canvas zoom controls">
+              <button class="studio-zoom-btn" type="button" data-studio-zoom="out" aria-label="Zoom out">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                </svg>
+              </button>
+              <button class="studio-zoom-btn studio-zoom-value" type="button" data-studio-zoom="reset" aria-label="Reset zoom to 100%">100%</button>
+              <button class="studio-zoom-btn" type="button" data-studio-zoom="in" aria-label="Zoom in">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
             <div class="canvas-primary-actions">
               <button class="canvas-upload-button" type="button" data-background-upload aria-label="Upload background image" title="Upload background image">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -5192,6 +6197,85 @@ const workspaceStates = {
 };
 let state = workspaceStates.instagram;
 let pendingTextChange = null;
+const CANVAS_NAME_STORAGE_KEY = 'es.canvasNames.v1';
+let canvasNameStore = {};
+
+try {
+  canvasNameStore = JSON.parse(localStorage.getItem(CANVAS_NAME_STORAGE_KEY) || '{}') || {};
+} catch (error) {
+  canvasNameStore = {};
+}
+
+function saveCanvasNameStore() {
+  try {
+    localStorage.setItem(CANVAS_NAME_STORAGE_KEY, JSON.stringify(canvasNameStore));
+  } catch (error) {
+    // Local naming is a convenience layer; exports should keep working even if storage is full.
+  }
+}
+
+function getCanvasNameKey() {
+  if (activeWorkspace === 'instagram') return `instagram:${state.postType || 'cover'}:slide-${activeInstagramSlide + 1}`;
+  if (activeWorkspace === 'youtube') return `youtube:${activeYoutubeVariation}:${state.youtubeQuote ? 'quote' : 'standard'}`;
+  if (activeWorkspace === 'newsletter') return `newsletter:${activeNewsletterAsset || 'feature-image'}`;
+  return activeWorkspace;
+}
+
+function getCanvasNameFallback() {
+  const workspaceLabel = {
+    instagram: 'Social Media',
+    youtube: 'YouTube Assets',
+    newsletter: 'Newsletter Assets',
+  }[activeWorkspace] || 'ES Design';
+  if (activeWorkspace === 'instagram') {
+    const postLabel = INSTAGRAM_POST_TYPES[state.postType || 'cover']?.label || 'Cover Image';
+    return `${workspaceLabel} · ${postLabel} · ${activeInstagramSlide + 1}`;
+  }
+  if (activeWorkspace === 'youtube') {
+    const variationLabel = activeYoutubeVariation.replace('variation-', 'Variation ');
+    return `${workspaceLabel} · ${state.youtubeQuote ? 'Quote' : variationLabel}`;
+  }
+  if (activeWorkspace === 'newsletter') {
+    return `${workspaceLabel} · ${NEWSLETTER_ASSET_TYPES[activeNewsletterAsset]?.label || 'Feature Image'}`;
+  }
+  return workspaceLabel;
+}
+
+function getCurrentCanvasName() {
+  return String(canvasNameStore[getCanvasNameKey()] || '').trim();
+}
+
+function syncCanvasNameField() {
+  const input = document.getElementById('studio-canvas-name');
+  if (!input) return;
+  input.value = getCurrentCanvasName();
+  input.placeholder = getCanvasNameFallback();
+}
+
+function setCurrentCanvasName(value) {
+  const key = getCanvasNameKey();
+  const cleanValue = String(value || '').trim();
+  if (cleanValue) {
+    canvasNameStore[key] = cleanValue;
+  } else {
+    delete canvasNameStore[key];
+  }
+  saveCanvasNameStore();
+}
+
+function slugifyFilenamePart(value, fallback = 'untitled') {
+  return String(value || fallback)
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 90) || fallback;
+}
+
+function getCanvasNameExportSlug() {
+  const customName = getCurrentCanvasName();
+  return customName ? slugifyFilenamePart(customName) : '';
+}
 
 function getTextContextKey() {
   if (activeWorkspace === 'instagram') return `instagram:${state.postType || 'cover'}`;
@@ -5741,6 +6825,7 @@ function setAiImagePickerOpen(isOpen) {
   if (!picker) return;
   picker.hidden = !isOpen;
   picker.classList.toggle('is-open', isOpen);
+  if (isOpen) window.ESSetStudioInspectorMode?.('ai');
 }
 
 function selectImageTool(tool, openPanel = true) {
@@ -5776,6 +6861,7 @@ function initImageToolRail() {
     event.stopPropagation();
     setImageToolPanelOpen(false);
     setImageUploadMenuOpen(false);
+    window.ESSetStudioInspectorMode?.('ai');
     applyAiImageFromEsStorage();
   });
 
@@ -5822,7 +6908,7 @@ function initImageToolRail() {
     if (!event.target.closest('.image-upload-menu') && !event.target.closest('[data-background-upload]')) {
       setImageUploadMenuOpen(false);
     }
-    if (!event.target.closest('#ai-image-picker') && !event.target.closest('[data-ai-image-search]')) {
+    if (!document.documentElement.dataset.studioShell && !event.target.closest('#ai-image-picker') && !event.target.closest('[data-ai-image-search]')) {
       setAiImagePickerOpen(false);
     }
     if (!isImageToolPanelOpen) return;
@@ -6042,7 +7128,7 @@ function initUI() {
   document.getElementById('remove-entity-btn-2').addEventListener('click', removeEntityPhoto2);
 
   // Download
-  document.getElementById('download-btn').addEventListener('click', downloadImage);
+document.getElementById('download-btn').addEventListener('click', downloadImage);
   document.querySelectorAll('[data-carousel-slide]').forEach(button => {
     button.addEventListener('click', () => switchInstagramSlide(Number(button.dataset.carouselSlide)));
   });
@@ -6559,7 +7645,7 @@ function setAiImageButtonLoading(isLoading) {
 }
 
 function directEsMediaSearchUrl(query) {
-  const url = new URL('https://www.essentiallysports.com/wp-json/wp/v2/media/');
+  const url = new URL('https://www.staging.essentiallysports.com/wp-json/wp/v2/media');
   url.searchParams.set('search', query);
   url.searchParams.set('per_page', '8');
   url.searchParams.set('media_type', 'image');
@@ -6624,6 +7710,7 @@ function aiImageSourceLabel(source) {
 function loadImageFromUrl(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    if (/^https?:\/\//i.test(src)) img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error('Selected ES image could not be loaded.'));
     img.src = src;
@@ -8980,12 +10067,7 @@ function getMainTextSlug(fallback = 'untitled') {
     .map(line => String(line || '').trim())
     .filter(Boolean)
     .join(' ');
-  return (source || fallback)
-    .toLowerCase()
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80) || fallback;
+  return slugifyFilenamePart(source, fallback).slice(0, 80) || fallback;
 }
 
 function saveCanvasDownload(canvas, filename, mimeType, quality, onComplete) {
@@ -9040,7 +10122,11 @@ function saveCanvasDownload(canvas, filename, mimeType, quality, onComplete) {
 }
 
 function downloadImage() {
-  const finishExportFeedback = startExportFeedback(document.getElementById('download-btn'));
+  const studioExportButton = document.getElementById('studio-export-btn');
+  const exportButton = studioExportButton && studioExportButton.offsetParent !== null
+    ? studioExportButton
+    : document.getElementById('download-btn');
+  const finishExportFeedback = startExportFeedback(exportButton);
   const workspace = getWorkspace();
   const scale = workspace.exportScale || EXPORT_SCALE;
   const W = Math.round(workspace.width * scale);
@@ -9053,7 +10139,8 @@ function downloadImage() {
 
   const teamName = (state.team || 'team').replace(/\s+/g, '-').toLowerCase();
   const sportName = (state.sport || 'es').toLowerCase();
-  const mainTextSlug = getMainTextSlug(activeWorkspace === 'newsletter' ? 'newsletter-graphic' : `${sportName}-${teamName}`);
+  const customCanvasSlug = getCanvasNameExportSlug();
+  const mainTextSlug = customCanvasSlug || getMainTextSlug(activeWorkspace === 'newsletter' ? 'newsletter-graphic' : `${sportName}-${teamName}`);
   const slideSuffix = activeWorkspace === 'instagram' ? `-slide-${activeInstagramSlide + 1}` : '';
   const postTypeSuffix = activeWorkspace === 'instagram' && (state.postType || 'cover') !== 'cover' ? `-${state.postType}` : '';
   const variationSuffix = activeWorkspace === 'youtube' ? `-${activeYoutubeVariation.replace('variation-', 'v')}` : '';
@@ -9070,8 +10157,26 @@ function downloadImage() {
   saveCanvasDownload(offscreen, filename, workspace.exportType, exportQuality, error => {
     finishExportFeedback();
     setStatus(error ? 'Export failed. Please try again.' : 'Downloaded ' + filename, error ? 'err' : 'ok');
+    if (!error) {
+      const workspaceLabels = { instagram: 'Social Media', youtube: 'YouTube Assets', newsletter: 'Newsletter Assets' };
+      const workspaceVariant = activeWorkspace === 'instagram'
+        ? (INSTAGRAM_POST_TYPES[state.postType || 'cover']?.label || state.postType || 'Cover Image')
+        : activeWorkspace === 'newsletter'
+          ? (NEWSLETTER_ASSET_TYPES[activeNewsletterAsset]?.label || activeNewsletterAsset || 'Feature Image')
+          : (state.youtubeQuote ? 'Quote Thumbnail' : activeYoutubeVariation.replace('variation-', 'Variation '));
+      window.ESDashboardData?.recordDesignExport?.({
+        workspace: workspaceLabels[activeWorkspace] || activeWorkspace,
+        workspaceVariant,
+        title: getCurrentCanvasName() || (state.lines || []).filter(Boolean).join(' ') || mainTextSlug || filename,
+        sport: state.sport || '',
+        teamOrLeague: state.team || state.newsletterBrand || '',
+        filename,
+      });
+    }
   });
 }
+
+window.ESDownloadCurrentDesign = downloadImage;
 
 // â”€â”€â”€ DESIGN REQUESTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DESIGN_REQUEST_STORAGE_KEY = 'es.designRequests.v1';
@@ -9474,6 +10579,17 @@ function setupDesignRequests() {
 
     const records = readDesignRequests();
     const persisted = writeDesignRequests([...records, record]);
+    window.ESDashboardData?.recordActivity?.({
+      type: 'request_submitted',
+      label: `Submitted request ${record.id}`,
+      entityType: 'request',
+      entityId: record.id,
+      meta: {
+        priority: record.priority || '',
+        requestType: record.requestType || '',
+        publication: record.publication || '',
+      },
+    });
     renderDesignRequestRecords();
     clearStatusAfterReset = false;
     form.reset();
@@ -9818,6 +10934,7 @@ function syncWorkspaceControls() {
   syncSwipeButtonControls();
   renderPillPositionControls();
   syncAllCustomSelects();
+  syncCanvasNameField();
 }
 
 function switchInstagramPostType(postType) {
@@ -9842,6 +10959,7 @@ function switchInstagramPostType(postType) {
     document.getElementById('pill-text').value = state.lines.join('\n');
   }
   syncPostTypeControls();
+  syncCanvasNameField();
   syncPhotoControls();
   syncEntityPhotoControls();
   syncEntityPhotoControls2();
@@ -9872,6 +10990,7 @@ function switchYoutubeVariation(variation) {
     restoreMediaContext();
     document.getElementById('preview').closest('.canvas-wrap').classList.remove('is-dragging');
     syncWorkspaceControls();
+    syncCanvasNameField();
     renderRestoredContextNow();
   }
 }
@@ -9931,6 +11050,7 @@ function toggleYoutubeQuoteMode() {
     document.getElementById('pill-text').value = state.lines.join('\n');
   }
   syncWorkspaceControls();
+  syncCanvasNameField();
   renderRestoredContextNow();
 }
 
@@ -9966,6 +11086,7 @@ function switchInstagramSlide(slideIndex) {
   document.getElementById('preview').closest('.canvas-wrap').classList.remove('is-dragging');
   syncWorkspaceControls();
   updateInstagramSlideNavigation();
+  syncCanvasNameField();
   renderRestoredContextNow();
 }
 
@@ -10360,6 +11481,163 @@ window._esWordmarkImage.src = getCanvasAssetSource(QUOTE_POST_TEMPLATE.wordmark.
 
 loadFont().then(() => render());
 
+</script>
+<script id="studio-shell-js">
+(function () {
+  'use strict';
+
+  const STUDIO_SHELL_ENABLED = true;
+  const MIN_ZOOM = 40;
+  const MAX_ZOOM = 180;
+  const STEP = 10;
+  let studioZoom = 100;
+
+  const workspaceLabels = {
+    instagram: 'Social Media',
+    youtube: 'YouTube Assets',
+    newsletter: 'Newsletter Assets',
+  };
+
+  function isWorkspace(page) {
+    return page === 'instagram' || page === 'youtube' || page === 'newsletter';
+  }
+
+  function currentWorkspace() {
+    const page = document.body.dataset.currentPage || String(location.hash || '').replace(/^#/, '') || 'frames';
+    return isWorkspace(page) ? page : null;
+  }
+
+  function setZoom(value) {
+    studioZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(value / STEP) * STEP));
+    document.documentElement.style.setProperty('--studio-zoom', String(studioZoom / 100));
+    document.querySelectorAll('.studio-zoom-value').forEach(button => {
+      button.textContent = `${studioZoom}%`;
+      button.setAttribute('aria-label', `Reset zoom to 100 percent. Current zoom is ${studioZoom} percent.`);
+    });
+  }
+
+  function syncStudioMeta() {
+    if (!STUDIO_SHELL_ENABLED) return;
+    const workspaceName = currentWorkspace();
+    if (!workspaceName || typeof WORKSPACES === 'undefined') return;
+    const workspace = typeof getWorkspace === 'function' ? getWorkspace() : WORKSPACES[workspaceName];
+    const title = workspaceLabels[workspaceName] || workspaceName;
+    const titleNode = document.getElementById('studio-workspace-title');
+    const sizeNode = document.getElementById('studio-canvas-size');
+    const modeNode = document.getElementById('studio-mode-badge');
+    if (titleNode) titleNode.textContent = title;
+    if (sizeNode && workspace) sizeNode.textContent = `${workspace.width} × ${workspace.height} px`;
+    if (modeNode) modeNode.textContent = workspaceName === 'instagram' ? 'Carousel Studio' : 'Canvas Studio';
+    if (typeof syncCanvasNameField === 'function') syncCanvasNameField();
+    document.querySelectorAll('[data-studio-card]').forEach(card => {
+      const isCurrent = card.dataset.studioCard === workspaceName;
+      card.toggleAttribute('aria-current', isCurrent);
+    });
+  }
+
+  function setStudioInspectorMode(mode) {
+    const nextMode = ['image', 'content', 'ai'].includes(mode) ? mode : 'content';
+    document.body.dataset.studioInspector = nextMode;
+    document.querySelectorAll('[data-studio-inspector-tab]').forEach(tab => {
+      const isActive = tab.dataset.studioInspectorTab === nextMode;
+      tab.classList.toggle('is-active', isActive);
+      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+  }
+
+  window.ESSetStudioInspectorMode = setStudioInspectorMode;
+
+  function ensureStudioControlDock() {
+    const panel = document.querySelector('.panel');
+    const imageRail = document.querySelector('.image-tool-rail');
+    const aiPicker = document.getElementById('ai-image-picker');
+    if (!panel || !imageRail) return;
+
+    let dock = document.querySelector('[data-studio-control-dock]');
+    if (!dock) {
+      dock = document.createElement('section');
+      dock.className = 'studio-control-dock';
+      dock.dataset.studioControlDock = 'true';
+      dock.setAttribute('aria-label', 'Studio controls');
+      dock.innerHTML = `
+        <div class="studio-inspector-tabs" role="tablist" aria-label="Inspector groups">
+          <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="image" aria-selected="false">Image Controls</button>
+          <button class="studio-inspector-tab is-active" type="button" role="tab" data-studio-inspector-tab="content" aria-selected="true">Content</button>
+          <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="ai" aria-selected="false">AI Images</button>
+        </div>
+        <div class="studio-dock-section">
+          <div class="studio-dock-title">Image Controls <span class="studio-dock-kicker">Canvas tools</span></div>
+          <div class="studio-dock-tools"></div>
+        </div>
+        <div class="studio-ai-section">
+          <div class="studio-dock-title">AI Images <span class="studio-dock-kicker">ES Storage</span></div>
+          <div class="studio-ai-empty">Click AI Images below the canvas to search images from your current text/entity name.</div>
+        </div>
+      `;
+      panel.insertBefore(dock, panel.firstElementChild);
+    }
+
+    const toolDock = dock.querySelector('.studio-dock-tools');
+    if (toolDock && imageRail.parentElement !== toolDock) toolDock.appendChild(imageRail);
+    const aiSection = dock.querySelector('.studio-ai-section');
+    if (aiSection && aiPicker && aiPicker.parentElement !== aiSection) {
+      aiSection.insertBefore(aiPicker, aiSection.querySelector('.studio-ai-empty'));
+    }
+  }
+
+  function bootStudioShell() {
+    if (!STUDIO_SHELL_ENABLED) {
+      document.documentElement.removeAttribute('data-studio-shell');
+      return;
+    }
+
+    document.documentElement.dataset.studioShell = 'on';
+    ensureStudioControlDock();
+    setStudioInspectorMode(document.body.dataset.studioInspector || 'content');
+    setZoom(100);
+    syncStudioMeta();
+
+    document.querySelectorAll('[data-studio-inspector-tab]').forEach(tab => {
+      tab.addEventListener('click', () => setStudioInspectorMode(tab.dataset.studioInspectorTab));
+    });
+
+    document.getElementById('studio-canvas-name')?.addEventListener('input', event => {
+      if (typeof setCurrentCanvasName === 'function') setCurrentCanvasName(event.target.value);
+    });
+
+    document.querySelectorAll('[data-studio-zoom]').forEach(button => {
+      button.addEventListener('click', () => {
+        const action = button.dataset.studioZoom;
+        if (action === 'in') setZoom(studioZoom + STEP);
+        if (action === 'out') setZoom(studioZoom - STEP);
+        if (action === 'reset') setZoom(100);
+      });
+    });
+
+    const studioExport = document.querySelector('[data-studio-export]');
+    let lastStudioExportAt = 0;
+    const triggerStudioExport = event => {
+      event.preventDefault();
+      const now = Date.now();
+      if (now - lastStudioExportAt < 900) return;
+      lastStudioExportAt = now;
+      setStatus('Preparing export...');
+      window.ESDownloadCurrentDesign?.();
+    };
+    studioExport?.addEventListener('click', triggerStudioExport);
+    studioExport?.addEventListener('pointerdown', triggerStudioExport);
+
+    window.addEventListener('hashchange', () => requestAnimationFrame(syncStudioMeta));
+    const observer = new MutationObserver(syncStudioMeta);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['data-current-page', 'data-newsletter-asset'] });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootStudioShell);
+  } else {
+    bootStudioShell();
+  }
+})();
 </script>
 </body>
 </html>

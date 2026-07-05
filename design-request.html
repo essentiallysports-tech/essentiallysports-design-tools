@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="es-auth-config.js"></script>
 <script src="es-auth.js"></script>
+<script src="dashboard-data.js"></script>
 <script>
   (() => {
     window.ESAuth?.requireAuth(`design-request.html${window.location.search}${window.location.hash}`);
@@ -34,7 +35,7 @@
     --bg-canvas-soft: #F1F8FF;
     --border: #B5D8FD;
     --border-strong: #8CB9E8;
-    --text-primary: #033162;
+    --text-primary: #111827;
     --text-secondary: #7997B8;
     --accent: #0A7DFA;
     --accent-hover: #0A6FDE;
@@ -58,6 +59,8 @@
     --shadow-sm: 0 19px 28px rgba(0,0,0,0.01);
     --shadow-md: 0 15px 27px rgba(0,0,0,0.1);
     --shadow-lg: 0 15px 27px rgba(0,0,0,0.1);
+    --motion-smooth: cubic-bezier(.16, 1, .3, 1);
+    --motion-standard: cubic-bezier(.22, .61, .36, 1);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html {
@@ -1299,9 +1302,9 @@
   }
   .request-hero {
     grid-column: 1 / -1;
-    width: 100vw;
-    margin-left: 50%;
-    transform: translateX(-50%);
+    width: 100%;
+    margin-left: 0;
+    transform: none;
     background: #F2F8FF;
   }
   .request-form,
@@ -1521,7 +1524,7 @@
   .request-dropdown.is-priority .request-dropdown-trigger.priority-normal {
     border-color: #B5D8FD;
     background: #EAF5FF;
-    color: #033162;
+    color: #111827;
   }
   .request-dropdown.is-priority .request-dropdown-trigger.priority-high {
     border-color: #F4C76B;
@@ -1534,7 +1537,7 @@
     color: #9B1C1C;
   }
   .request-dropdown-option.priority-normal {
-    color: #033162;
+    color: #111827;
   }
   .request-dropdown-option.priority-normal::before {
     background: #0A7DFA;
@@ -1543,7 +1546,7 @@
   .request-dropdown-option.priority-normal:focus-visible,
   .request-dropdown-option.priority-normal.is-selected {
     background: #EAF5FF;
-    color: #033162;
+    color: #111827;
   }
   .request-dropdown-option.priority-high {
     color: #765A2C;
@@ -2084,6 +2087,10 @@
     }
     .request-page {
       grid-template-columns: 1fr;
+      width: min(1030px, calc(100% - 48px));
+    }
+    .navbar-right .navbar-icon-btn {
+      display: none;
     }
     .footer-links {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2289,7 +2296,8 @@
     .page-header,
     .app,
     .request-page {
-      width: calc(100% - 28px);
+      width: min(100%, calc(100vw - 28px));
+      max-width: calc(100vw - 28px);
     }
     .breadcrumb {
       margin-top: 24px;
@@ -2409,6 +2417,7 @@
       </div>
     </div>
     <a href="#requests" data-route="requests">Design Request</a>
+    <a href="dashboard.html" data-admin-only hidden>Dashboard</a>
     <a href="index.html#faq">FAQ</a>
   </div>
   <div class="navbar-right">
@@ -3772,6 +3781,17 @@ function downloadImage() {
   saveCanvasDownload(offscreen, filename, workspace.exportType, exportQuality, error => {
     finishExportFeedback();
     setStatus(error ? 'Export failed. Please try again.' : 'Downloaded ' + filename, error ? 'err' : 'ok');
+    if (!error) {
+      const workspaceLabels = { instagram: 'Social Media', youtube: 'YouTube Assets' };
+      window.ESDashboardData?.recordDesignExport?.({
+        workspace: workspaceLabels[activeWorkspace] || activeWorkspace,
+        workspaceVariant: activeWorkspace === 'youtube' ? 'YouTube Thumbnail' : 'Social Post',
+        title: (state.lines || []).filter(Boolean).join(' ') || `${sportName} ${teamName}`,
+        sport: state.sport || '',
+        teamOrLeague: state.team || '',
+        filename,
+      });
+    }
   });
 }
 
@@ -4278,6 +4298,17 @@ function setupDesignRequests() {
 
     const records = readDesignRequests();
     const persisted = writeDesignRequests([...records, record]);
+    window.ESDashboardData?.recordActivity?.({
+      type: 'request_submitted',
+      label: `Submitted request ${record.id}`,
+      entityType: 'request',
+      entityId: record.id,
+      meta: {
+        priority: record.priority || '',
+        requestType: record.requestType || '',
+        publication: record.publication || '',
+      },
+    });
     renderDesignRequestRecords();
     clearStatusAfterReset = false;
     form.reset();

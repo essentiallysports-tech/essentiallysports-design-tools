@@ -8,7 +8,7 @@
 
 :root {
   --es-blue: #0A7DFA;
-  --es-navy: #033162;
+  --es-navy: #111827;
   --es-soft: #E6F2FF;
   --es-soft-2: #F5FAFF;
   --es-text-muted: #7997B8;
@@ -672,12 +672,12 @@ textarea {
 
 .primary-btn,
 .secondary-btn {
-  min-height: 52px;
+  min-height: clamp(38px, 2.55vw, 50px);
   border-radius: var(--button-radius);
   padding: 0 28px;
-  font-family: var(--font-display);
-  font-size: clamp(18px, 1.15vw, 22px);
-  font-weight: 900;
+  font-family: var(--font-heading);
+  font-size: clamp(14px, .78vw, 16px);
+  font-weight: 500;
   line-height: 1;
   letter-spacing: 0;
   text-transform: none;
@@ -923,10 +923,14 @@ textarea {
   font-weight: 500;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1120px) {
   .navbar {
     flex-wrap: wrap;
     height: auto;
+  }
+
+  .navbar-right .navbar-icon-btn {
+    display: none;
   }
 
   .navbar-menu {

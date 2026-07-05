@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Local-first ES Designer admin dashboard for requests, exports, owners, and activity.">
+  <title>Dashboard | ES Designer</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="es-auth-config.js"></script>
+  <script src="es-auth.js"></script>
+  <script>
+    window.ESAuth?.requireAuth(`dashboard.html${window.location.search}${window.location.hash}`);
+  </script>
+  <script src="dashboard-data.js"></script>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Condensed:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: "Acumin Pro Condensed";
+      src: url("fonts/acumin-pro-condensed-bold.otf") format("opentype");
+      font-style: normal;
+      font-weight: 700 900;
+      font-display: swap;
+    }
+
+    :root {
+      --es-blue: #0A7DFA;
+      --es-blue-dark: #0A6FDE;
+      --es-navy: #111827;
+      --es-line: #B5D8FD;
+      --es-soft: #E8F2FF;
+      --es-page: #F5FAFF;
+      --es-muted: #7997B8;
+      --es-black: #111111;
+      --es-white: #FFFFFF;
+      --warn: #F79009;
+      --danger: #D92D20;
+      --success: #2E7D32;
+      --font-ui: "Roboto Condensed", "Roboto", Arial, sans-serif;
+      --font-display: "Acumin Pro Condensed", "Roboto Condensed", "Arial Narrow", sans-serif;
+      --shadow: 0 24px 54px rgba(3, 49, 98, .08);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: linear-gradient(180deg, #FFFFFF 0%, var(--es-page) 100%);
+      color: var(--es-navy);
+      font-family: var(--font-ui);
+    }
+
+    body {
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .28s cubic-bezier(.16,1,.3,1), transform .28s cubic-bezier(.16,1,.3,1);
+    }
+
+    body.is-page-ready {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button, input, select, textarea { font: inherit; }
+
+    .navbar {
+      height: 69px;
+      background: var(--es-white);
+      border-bottom: 1px solid var(--es-blue);
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      padding: 18px 22px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .navbar-logo img { display: block; height: 31px; width: auto; }
+
+    .navbar-menu {
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--es-black);
+    }
+
+    .navbar-menu a[aria-current="page"] { color: var(--es-blue); }
+
+    .dashboard-shell {
+      width: min(1240px, calc(100% - 44px));
+      margin: 0 auto;
+      padding: clamp(34px, 4vw, 56px) 0 80px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 28px;
+      align-items: end;
+      margin-bottom: 28px;
+    }
+
+    .kicker {
+      color: var(--es-blue);
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      margin: 0 0 8px;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--es-navy);
+      font-family: var(--font-display);
+      font-size: clamp(58px, 7vw, 104px);
+      line-height: .86;
+    }
+
+    .hero-copy {
+      max-width: 730px;
+      margin: 14px 0 0;
+      color: var(--es-muted);
+      font-size: clamp(18px, 1.3vw, 24px);
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      min-height: 52px;
+      border: 1.5px solid var(--es-line);
+      border-radius: 8px;
+      padding: 0 24px;
+      background: var(--es-white);
+      color: var(--es-navy);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+    }
+
+    .btn-primary {
+      background: var(--es-blue);
+      border-color: var(--es-blue);
+      color: var(--es-white);
+      box-shadow: 0 16px 36px rgba(10, 125, 250, .18);
+    }
+
+    .btn:hover, .btn:focus-visible {
+      outline: none;
+      transform: translateY(-2px);
+      border-color: var(--es-blue);
+      box-shadow: 0 18px 38px rgba(3, 49, 98, .12);
+    }
+
+    .btn-primary:hover, .btn-primary:focus-visible { background: var(--es-blue-dark); }
+
+    .notice {
+      border: 1.5px solid var(--es-line);
+      border-radius: 18px;
+      background: var(--es-white);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-top: 26px;
+    }
+
+    .notice h2 {
+      margin: 0 0 8px;
+      font-family: var(--font-display);
+      font-size: 44px;
+      line-height: .9;
+    }
+
+    .notice p {
+      margin: 0;
+      color: var(--es-muted);
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+
+    .metric-card,
+    .panel {
+      background: rgba(255,255,255,.96);
+      border: 1.5px solid var(--es-line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .metric-card {
+      min-height: 132px;
+      padding: 20px;
+      display: grid;
+      align-content: space-between;
+    }
+
+    .metric-label {
+      color: var(--es-muted);
+      font-size: 16px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .02em;
+    }
+
+    .metric-value {
+      color: var(--es-navy);
+      font-family: var(--font-display);
+      font-size: 54px;
+      font-weight: 900;
+      line-height: .85;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(300px, .7fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .stack { display: grid; gap: 22px; }
+
+    .panel { overflow: hidden; }
+
+    .panel-head {
+      padding: 22px 22px 16px;
+      border-bottom: 1px solid var(--es-line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 36px;
+      line-height: .9;
+    }
+
+    .panel-subtitle {
+      margin: 6px 0 0;
+      color: var(--es-muted);
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .filter,
+    .table-control,
+    .note-input {
+      min-height: 42px;
+      border: 1.5px solid var(--es-line);
+      border-radius: 8px;
+      background: var(--es-white);
+      color: var(--es-navy);
+      padding: 0 12px;
+      font-weight: 800;
+      outline: none;
+    }
+
+    .table-control,
+    .note-input {
+      width: 100%;
+    }
+
+    .filter:focus,
+    .table-control:focus,
+    .note-input:focus {
+      border-color: var(--es-blue);
+      box-shadow: 0 0 0 3px rgba(10,125,250,.12);
+    }
+
+    table {
+      width: 100%;
+      min-width: 860px;
+      border-collapse: collapse;
+      font-size: 15px;
+    }
+
+    #requests-table,
+    #designs-table {
+      overflow-x: auto;
+    }
+
+    th, td {
+      border-bottom: 1px solid #D9ECFF;
+      padding: 14px 16px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--es-muted);
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .item-title {
+      display: block;
+      color: var(--es-navy);
+      font-size: 17px;
+      font-weight: 900;
+      line-height: 1.1;
+    }
+
+    .item-meta {
+      display: block;
+      margin-top: 4px;
+      color: var(--es-muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      border-radius: 999px;
+      border: 1px solid var(--es-line);
+      background: var(--es-soft);
+      color: var(--es-navy);
+      padding: 0 10px;
+      font-size: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .pill.is-urgent { background: #FFF1F1; border-color: #F5B8B2; color: var(--danger); }
+    .pill.is-high { background: #FFF6E6; border-color: #FAD79B; color: #9A5A00; }
+    .pill.is-done { background: #EAF6EE; border-color: #B7DEC4; color: var(--success); }
+
+    .empty {
+      padding: 28px 22px;
+      color: var(--es-muted);
+      font-size: 18px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .people-list,
+    .activity-list {
+      display: grid;
+      max-height: 420px;
+      overflow: auto;
+    }
+
+    .person,
+    .activity {
+      padding: 16px 18px;
+      border-bottom: 1px solid #D9ECFF;
+    }
+
+    .person:last-child,
+    .activity:last-child { border-bottom: 0; }
+
+    .person strong,
+    .activity strong {
+      display: block;
+      color: var(--es-navy);
+      font-size: 17px;
+      line-height: 1.1;
+    }
+
+    .person span,
+    .activity span {
+      display: block;
+      margin-top: 4px;
+      color: var(--es-muted);
+      font-weight: 700;
+    }
+
+    .blocked { display: none; }
+    body.is-blocked .dashboard-content { display: none; }
+    body.is-blocked .blocked { display: block; }
+
+    @media (max-width: 1080px) {
+      .hero,
+      .grid { grid-template-columns: 1fr; }
+      .hero-actions { justify-content: flex-start; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 760px) {
+      .navbar { height: auto; flex-wrap: wrap; }
+      .navbar-menu { width: 100%; gap: 18px; overflow-x: auto; }
+      .dashboard-shell { width: min(100% - 28px, 1240px); }
+      .metrics { grid-template-columns: 1fr; }
+      .panel { overflow-x: auto; }
+      table { min-width: 780px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a class="navbar-logo" href="index.html#frames" aria-label="EssentiallySports home">
+      <img src="brand-logo-blue.svg" alt="EssentiallySports">
+    </a>
+    <div class="navbar-menu">
+      <a href="index.html#logo-guidelines">Brand Guidelines</a>
+      <a href="index.html#frames">Design Tools</a>
+      <a href="design-request.html">Design Request</a>
+      <a href="index.html#faq">FAQ</a>
+    </div>
+  </nav>
+
+  <main class="dashboard-shell">
+    <section class="blocked notice">
+      <h2>Dashboard Hidden For Now</h2>
+      <p>This local-first admin dashboard is saved in the codebase, but hidden until the final dashboard design is ready.</p>
+      <p style="margin-top:14px;"><a class="btn btn-primary" href="index.html#frames">Back to Design Tools</a></p>
+    </section>
+
+    <div class="dashboard-content">
+      <section class="hero">
+        <div>
+          <p class="kicker">ES Designer Command Center</p>
+          <h1>Dashboard</h1>
+          <p class="hero-copy">Local-first visibility for design requests, exports, owners, people, and activity. Supabase-ready, but useful today.</p>
+        </div>
+        <div class="hero-actions">
+          <a class="btn" href="design-request.html">Open Requests</a>
+          <a class="btn btn-primary" href="index.html#frames">Create Design</a>
+        </div>
+      </section>
+
+      <section class="metrics" aria-label="Dashboard metrics">
+        <article class="metric-card"><span class="metric-label">Total Requests</span><span class="metric-value" data-metric="requests">0</span></article>
+        <article class="metric-card"><span class="metric-label">Open Requests</span><span class="metric-value" data-metric="open">0</span></article>
+        <article class="metric-card"><span class="metric-label">Urgent</span><span class="metric-value" data-metric="urgent">0</span></article>
+        <article class="metric-card"><span class="metric-label">Exports</span><span class="metric-value" data-metric="designs">0</span></article>
+        <article class="metric-card"><span class="metric-label">Activity</span><span class="metric-value" data-metric="activity">0</span></article>
+      </section>
+
+      <section class="grid">
+        <div class="stack">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">Design Requests</h2>
+                <p class="panel-subtitle">Assign owners, update status, and track deadlines from local submissions.</p>
+              </div>
+              <div class="filters">
+                <select class="filter" id="request-status-filter" aria-label="Filter requests by status">
+                  <option value="">All Status</option>
+                  <option>New</option>
+                  <option>In Progress</option>
+                  <option>Needs Review</option>
+                  <option>Done</option>
+                  <option>Blocked</option>
+                </select>
+                <select class="filter" id="request-owner-filter" aria-label="Filter requests by owner">
+                  <option value="">All Owners</option>
+                </select>
+              </div>
+            </div>
+            <div id="requests-table"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">Exported Designs</h2>
+                <p class="panel-subtitle">Each workspace download is captured here as a local design record.</p>
+              </div>
+              <div class="filters">
+                <select class="filter" id="design-status-filter" aria-label="Filter designs by status">
+                  <option value="">All Status</option>
+                  <option>Exported</option>
+                  <option>Assigned</option>
+                  <option>Needs Review</option>
+                  <option>Done</option>
+                </select>
+              </div>
+            </div>
+            <div id="designs-table"></div>
+          </section>
+        </div>
+
+        <aside class="stack">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">People</h2>
+                <p class="panel-subtitle">Local users seen from auth, profiles, requests, and exports.</p>
+              </div>
+            </div>
+            <div class="people-list" id="people-list"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">Activity</h2>
+                <p class="panel-subtitle">Local timeline of exports, submissions, and admin changes.</p>
+              </div>
+            </div>
+            <div class="activity-list" id="activity-list"></div>
+          </section>
+        </aside>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const STATUS_OPTIONS = ['New', 'In Progress', 'Needs Review', 'Done', 'Blocked'];
+    const DESIGN_STATUS_OPTIONS = ['Exported', 'Assigned', 'Needs Review', 'Done'];
+
+    function text(value, fallback = '—') {
+      const cleaned = String(value || '').trim();
+      return cleaned || fallback;
+    }
+
+    function dateText(value) {
+      if (!value) return 'No date';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      }).format(date);
+    }
+
+    function requestTypeLabel(value) {
+      return {
+        newsletter: 'Newsletter Graphic',
+        'web-feature': 'Web Feature Image',
+        social: 'Social Media Graphic',
+      }[value] || text(value, 'Design Request');
+    }
+
+    function priorityClass(value) {
+      const priority = String(value || '').toLowerCase();
+      if (priority === 'urgent') return 'is-urgent';
+      if (priority === 'high') return 'is-high';
+      return '';
+    }
+
+    function statusClass(value) {
+      return String(value || '').toLowerCase() === 'done' ? 'is-done' : '';
+    }
+
+    function optionList(options, selected) {
+      return options.map(option => `<option${option === selected ? ' selected' : ''}>${option}</option>`).join('');
+    }
+
+    function peopleOptions(people, selected = '') {
+      const normalizedSelected = String(selected || '').trim();
+      return `<option value="">Unassigned</option>` + people
+        .map(person => {
+          const value = person.email || person.name;
+          return `<option value="${value}"${value === normalizedSelected ? ' selected' : ''}>${person.name} (${person.email})</option>`;
+        })
+        .join('');
+    }
+
+    function computeMetrics(state) {
+      const openStatuses = new Set(['new', 'in progress', 'needs review', 'blocked', '']);
+      return {
+        requests: state.requests.length,
+        open: state.requests.filter(request => openStatuses.has(String(request.status || '').toLowerCase())).length,
+        urgent: state.requests.filter(request => String(request.priority || '').toLowerCase() === 'urgent').length,
+        designs: state.designs.length,
+        activity: state.activity.length,
+      };
+    }
+
+    function renderMetrics(state) {
+      const metrics = computeMetrics(state);
+      Object.entries(metrics).forEach(([key, value]) => {
+        const el = document.querySelector(`[data-metric="${key}"]`);
+        if (el) el.textContent = value;
+      });
+    }
+
+    function renderOwnerFilter(state) {
+      const filter = document.getElementById('request-owner-filter');
+      const current = filter.value;
+      const owners = Array.from(new Set(state.requests.map(request => request.assignedTo).filter(Boolean))).sort();
+      filter.innerHTML = '<option value="">All Owners</option>' + owners.map(owner => `<option value="${owner}"${owner === current ? ' selected' : ''}>${owner}</option>`).join('');
+    }
+
+    function renderRequests(state) {
+      const statusFilter = document.getElementById('request-status-filter').value;
+      const ownerFilter = document.getElementById('request-owner-filter').value;
+      const requests = state.requests
+        .filter(request => !statusFilter || (request.status || 'New') === statusFilter)
+        .filter(request => !ownerFilter || request.assignedTo === ownerFilter)
+        .slice()
+        .reverse();
+      const target = document.getElementById('requests-table');
+
+      if (!requests.length) {
+        target.innerHTML = '<div class="empty">No matching design requests in this browser yet.</div>';
+        return;
+      }
+
+      target.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Request</th>
+              <th>Priority</th>
+              <th>Due</th>
+              <th>Status</th>
+              <th>Owner</th>
+              <th>Admin Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${requests.map(request => `
+              <tr data-request-id="${request.id}">
+                <td>
+                  <span class="item-title">${text(request.entities || request.title || request.id)}</span>
+                  <span class="item-meta">${text(request.id)} · ${requestTypeLabel(request.requestType)} · ${text(request.requester?.name)} </span>
+                </td>
+                <td><span class="pill ${priorityClass(request.priority)}">${text(request.priority, 'Normal')}</span></td>
+                <td>${dateText(request.designDueAt)}</td>
+                <td><select class="table-control" data-request-status>${optionList(STATUS_OPTIONS, request.status || 'New')}</select></td>
+                <td><select class="table-control" data-request-owner>${peopleOptions(state.people, request.assignedTo)}</select></td>
+                <td><input class="note-input" data-request-note value="${String(request.adminNotes || '').replace(/"/g, '&quot;')}" placeholder="Optional note"></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderDesigns(state) {
+      const statusFilter = document.getElementById('design-status-filter').value;
+      const designs = state.designs
+        .filter(design => !statusFilter || (design.status || 'Exported') === statusFilter)
+        .slice();
+      const target = document.getElementById('designs-table');
+
+      if (!designs.length) {
+        target.innerHTML = '<div class="empty">No exported designs in this browser yet. Download from a workspace to capture one.</div>';
+        return;
+      }
+
+      target.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Design</th>
+              <th>Workspace</th>
+              <th>Creator</th>
+              <th>Status</th>
+              <th>Owner</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${designs.map(design => `
+              <tr data-design-id="${design.id}">
+                <td>
+                  <span class="item-title">${text(design.title)}</span>
+                  <span class="item-meta">${text(design.filename)} · ${dateText(design.createdAt)}</span>
+                </td>
+                <td><span class="pill">${text(design.workspace)}${design.workspaceVariant ? ` · ${design.workspaceVariant}` : ''}</span></td>
+                <td>${text(design.ownerName)}<span class="item-meta">${text(design.ownerEmail)}</span></td>
+                <td><select class="table-control" data-design-status>${optionList(DESIGN_STATUS_OPTIONS, design.status || 'Exported')}</select></td>
+                <td><select class="table-control" data-design-owner>${peopleOptions(state.people, design.assignedTo)}</select></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderPeople(state) {
+      const target = document.getElementById('people-list');
+      if (!state.people.length) {
+        target.innerHTML = '<div class="empty">No people found locally yet.</div>';
+        return;
+      }
+      target.innerHTML = state.people.map(person => `
+        <article class="person">
+          <strong>${text(person.name)}</strong>
+          <span>${text(person.email)}${person.role ? ` · ${person.role}` : ''}</span>
+        </article>
+      `).join('');
+    }
+
+    function renderActivity(state) {
+      const target = document.getElementById('activity-list');
+      if (!state.activity.length) {
+        target.innerHTML = '<div class="empty">No activity logged yet.</div>';
+        return;
+      }
+      target.innerHTML = state.activity.slice(0, 30).map(activity => `
+        <article class="activity">
+          <strong>${text(activity.label)}</strong>
+          <span>${dateText(activity.createdAt)} · ${text(activity.actorName)}</span>
+        </article>
+      `).join('');
+    }
+
+    function renderDashboard() {
+      const state = window.ESDashboardData.getDashboardState();
+      renderMetrics(state);
+      renderOwnerFilter(state);
+      renderRequests(state);
+      renderDesigns(state);
+      renderPeople(state);
+      renderActivity(state);
+    }
+
+    async function updateRequest(row) {
+      const id = row.dataset.requestId;
+      await window.ESDashboardData.updateRequestAdminFields(id, {
+        status: row.querySelector('[data-request-status]')?.value,
+        assignedTo: row.querySelector('[data-request-owner]')?.value,
+        adminNotes: row.querySelector('[data-request-note]')?.value,
+      });
+      renderDashboard();
+    }
+
+    async function updateDesign(row) {
+      const id = row.dataset.designId;
+      await window.ESDashboardData.updateDesignAdminFields(id, {
+        status: row.querySelector('[data-design-status]')?.value,
+        assignedTo: row.querySelector('[data-design-owner]')?.value,
+      });
+      renderDashboard();
+    }
+
+    function setupDashboardEvents() {
+      document.getElementById('request-status-filter').addEventListener('change', renderDashboard);
+      document.getElementById('request-owner-filter').addEventListener('change', renderDashboard);
+      document.getElementById('design-status-filter').addEventListener('change', renderDashboard);
+      document.addEventListener('change', event => {
+        const requestRow = event.target.closest('[data-request-id]');
+        if (requestRow) updateRequest(requestRow);
+        const designRow = event.target.closest('[data-design-id]');
+        if (designRow) updateDesign(designRow);
+      });
+      document.addEventListener('blur', event => {
+        const requestRow = event.target.closest('[data-request-id]');
+        if (requestRow && event.target.matches('[data-request-note]')) updateRequest(requestRow);
+      }, true);
+      window.addEventListener('es-dashboard-data-change', renderDashboard);
+    }
+
+    async function boot() {
+      document.body.classList.add('is-page-ready');
+      const isAdmin = await window.ESDashboardData.isCurrentUserAdmin();
+      document.body.classList.toggle('is-blocked', !isAdmin);
+      if (!isAdmin) return;
+      setupDashboardEvents();
+      renderDashboard();
+    }
+
+    boot();
+  </script>
+</body>
+</html>
