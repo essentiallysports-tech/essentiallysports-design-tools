@@ -326,14 +326,16 @@
     width: 236px;
     height: 58px;
     overflow: visible;
-    border: 1px solid #FFFFFF;
+    border: 1px solid transparent;
     border-radius: 20px;
-    background: #FAFAFC;
-    box-shadow: 0 0 21px rgba(0, 0, 0, .04);
-    transition: box-shadow .24s var(--motion-smooth);
+    background: transparent;
+    box-shadow: none;
+    transition: background-color .24s var(--motion-smooth), border-color .24s var(--motion-smooth), box-shadow .24s var(--motion-smooth);
   }
   .profile-menu.is-open {
     height: 58px;
+    border-color: #FFFFFF;
+    background: #FAFAFC;
     box-shadow: 0 10px 30px rgba(3, 49, 98, .08);
   }
   .profile-trigger {
@@ -365,8 +367,8 @@
     height: 30px;
     flex: 0 0 30px;
     border-radius: 999px;
-    background: #0A7DFA;
-    color: var(--white);
+    background: transparent url("profile-icon-edit.svg") center / 21px 24px no-repeat;
+    color: transparent;
     display: grid;
     place-items: center;
     font-family: "Roboto", Arial, sans-serif;
@@ -457,12 +459,12 @@
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 15px;
-    padding: 0 18px;
-    font-family: var(--font-display);
-    font-size: 18px;
-    font-weight: 900;
-    line-height: 1;
+    gap: 12px;
+    padding: 0 14px;
+    font-family: "Roboto Condensed", "Roboto", Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.2;
     text-align: left;
     text-decoration: none;
     cursor: pointer;
@@ -479,9 +481,9 @@
     transform: none;
     transition: none;
   }
-  .profile-option[href*="profile"]::before { background-image: url("profile-icon-edit.svg"); width: 18px; height: 20px; flex-basis: 18px; }
+  .profile-option[href*="profile"]::before { background-image: url("profile-icon-edit.svg"); }
   .profile-option[href*="settings"]::before { background-image: url("profile-icon-settings.svg"); }
-  .profile-option[href*="logout"]::before { background-image: url("profile-icon-logout.svg"); width: 15px; height: 18px; flex-basis: 15px; }
+  .profile-option[href*="logout"]::before { background-image: url("profile-icon-logout.svg"); }
   .profile-option[href*="logout"] {
     margin-top: 8px;
     background: #FFF1F2;
@@ -1413,7 +1415,7 @@
   }
   .frame-hero-actions {
     position: absolute;
-    left: clamp(48px, 12.7vw, 260px);
+    left: clamp(260px, 21.7vw, 445px);
     top: clamp(220px, 15.2vw, 360px);
     transform: none;
     display: flex;
@@ -3578,9 +3580,11 @@ body[data-current-page="faq"] .faq-cta-art img {
       height: 54px;
       padding: 0 14px 0 12px;
     }
-    .profile-name,
-    .profile-option {
+    .profile-name {
       font-size: clamp(16px, 4.8vw, 18px);
+    }
+    .profile-option {
+      font-size: 14px;
     }
     .profile-name::after {
       font-size: 14px;
@@ -7647,8 +7651,10 @@ function setAiImageButtonLoading(isLoading) {
 function directEsMediaSearchUrl(query) {
   const url = new URL('https://www.staging.essentiallysports.com/wp-json/wp/v2/media');
   url.searchParams.set('search', query);
-  url.searchParams.set('per_page', '8');
+  url.searchParams.set('per_page', '15');
   url.searchParams.set('media_type', 'image');
+  url.searchParams.set('orderby', 'date');
+  url.searchParams.set('order', 'desc');
   url.searchParams.set('_fields', 'id,title,caption,source_url,guid,media_details');
   return url.toString();
 }
@@ -7666,7 +7672,7 @@ function mediaSearchResultFromWordPress(media) {
 }
 
 async function searchEsStorageImages(query) {
-  const apiUrl = `/api/es-image-search?query=${encodeURIComponent(query)}&per_page=8`;
+  const apiUrl = `/api/es-image-search?query=${encodeURIComponent(query)}&per_page=15`;
   try {
     const response = await fetch(apiUrl);
     if (!response.ok) throw new Error(`Proxy search failed: ${response.status}`);
@@ -7723,7 +7729,7 @@ function renderAiImagePicker(results, query) {
   const sourceBadge = document.querySelector('[data-ai-image-picker-source]');
   if (!grid) return;
 
-  aiImageSearchResults = results.slice(0, 4);
+  aiImageSearchResults = results.slice(0, 15);
   aiImageLastQuery = query;
   grid.innerHTML = '';
   const sourceLabel = aiImageSourceLabel(aiImageLastSource);
@@ -7803,7 +7809,7 @@ async function applyAiImageFromEsStorage() {
   }
 
   setAiImageButtonLoading(true);
-  setStatus(`Searching ES Storage for “${queries[0]}”...`);
+  setStatus('');
 
   try {
     let matchedQuery = queries[0];
@@ -7811,9 +7817,8 @@ async function applyAiImageFromEsStorage() {
     let matchedFallbackReason = '';
     let usableResults = [];
     for (const query of queries) {
-      setStatus(`Searching ES Storage for “${query}”...`);
       const payload = normalizeAiImageSearchPayload(await searchEsStorageImages(query));
-      usableResults = payload.results.filter(item => item?.proxyUrl || item?.sourceUrl).slice(0, 4);
+      usableResults = payload.results.filter(item => item?.proxyUrl || item?.sourceUrl).slice(0, 15);
       if (usableResults.length) {
         matchedQuery = query;
         matchedSource = payload.source;
@@ -11290,7 +11295,7 @@ function syncProfileChrome() {
     } else {
       el.classList.remove('has-image');
       el.style.removeProperty('background-image');
-      el.textContent = initialsFromName(name);
+      el.textContent = '';
     }
   });
 }

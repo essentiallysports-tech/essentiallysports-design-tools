@@ -223,7 +223,7 @@ function syncProfileChrome() {
     } else {
       el.classList.remove('has-image');
       el.style.removeProperty('background-image');
-      el.textContent = initialsFromName(name);
+      el.textContent = '';
     }
   });
   document.querySelectorAll('.profile-option').forEach(link => {

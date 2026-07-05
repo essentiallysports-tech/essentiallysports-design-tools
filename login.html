@@ -984,11 +984,6 @@
   }
 
   function getRedirectTarget() {
-    const params = new URLSearchParams(window.location.search);
-    const requested = params.get('redirect');
-    if (requested && /^[\w./#?=&%-]+$/.test(requested) && !requested.startsWith('http')) {
-      return requested;
-    }
     return 'index.html#frames';
   }
 

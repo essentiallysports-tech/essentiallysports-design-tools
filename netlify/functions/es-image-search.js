@@ -502,6 +502,8 @@ async function searchWordPressMedia(query, perPage) {
   url.searchParams.set('search', query);
   url.searchParams.set('per_page', String(perPage));
   url.searchParams.set('media_type', 'image');
+  url.searchParams.set('orderby', 'date');
+  url.searchParams.set('order', 'desc');
   url.searchParams.set('_fields', 'id,title,caption,source_url,guid,media_details');
 
   const response = await fetch(url.toString(), {
@@ -542,7 +544,7 @@ exports.handler = async function handler(event) {
     if (params.image) return proxyImage(params.image);
 
     const query = cleanText(params.query).slice(0, 140);
-    const perPage = Math.min(Math.max(parseInt(params.per_page || '8', 10) || 8, 1), 12);
+    const perPage = Math.min(Math.max(parseInt(params.per_page || '15', 10) || 15, 1), 15);
     if (!query) return json(400, { error: 'Missing image search query.' });
 
     const configState = getMcpConfigState();
