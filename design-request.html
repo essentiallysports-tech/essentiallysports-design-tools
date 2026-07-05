@@ -1310,10 +1310,22 @@
   }
   .request-hero {
     grid-column: 1 / -1;
-    width: 100%;
-    margin-left: 0;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
     transform: none;
     background: #F2F8FF;
+  }
+  @media (min-width: 681px) and (max-width: 1600px) {
+    .request-hero {
+      height: clamp(300px, 25.33vw, 405px);
+      overflow: hidden;
+    }
+    .request-hero .request-hero-banner {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+    }
   }
   .request-form,
   .request-sidebar {
@@ -2644,7 +2656,9 @@
 <!-- DESIGN REQUEST PAGE -->
 <main class="request-page view-hidden" data-page="requests">
   <section class="frame-hero request-hero" aria-label="Design request">
-    <img class="frame-banner request-hero-banner" src="design-request-hero.webp" alt="Design request">
+    <video class="frame-banner request-hero-banner" autoplay muted loop playsinline preload="metadata" poster="design-request-hero.webp" aria-label="Design request">
+      <source src="design-request-banner.webm" type="video/webm">
+    </video>
   </section>
   <form class="request-form" id="design-request-form" name="design-request" method="POST" enctype="multipart/form-data" data-netlify="true" novalidate>
     <input type="hidden" name="form-name" value="design-request">
