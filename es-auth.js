@@ -117,6 +117,17 @@
     }
   }
 
+  function syncSession(session) {
+    if (!session?.user?.email) return session;
+    try {
+      window.sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+      window.dispatchEvent(new CustomEvent('es:auth-updated', { detail: { email: session.user.email } }));
+    } catch (error) {
+      // Session mirroring is only used by local UI gates; Supabase remains the source of truth.
+    }
+    return session;
+  }
+
   function localSessionFromAccount(account) {
     return {
       token: `local-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -202,9 +213,8 @@
     }
 
     const session = localSessionFromAccount(account);
-    window.sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
     syncProfile({ name: account.name, email: normalizedEmail });
-    return session;
+    return syncSession(session);
   }
 
   async function loginWithSupabase({ email, password }) {
@@ -221,8 +231,7 @@
 
     const user = data?.user;
     const displayName = user?.user_metadata?.name || normalizedEmail.split('@')[0] || 'ES Designer';
-    syncProfile({ name: displayName, email: normalizedEmail });
-    return {
+    const session = {
       token: data?.session?.access_token,
       user: {
         email: normalizedEmail,
@@ -232,6 +241,8 @@
       createdAt: new Date().toISOString(),
       mode: 'supabase',
     };
+    syncProfile({ name: displayName, email: normalizedEmail });
+    return syncSession(session);
   }
 
   async function login({ email, password }) {
@@ -256,8 +267,7 @@
       if (!session || !isAllowedEmail(email)) return null;
 
       const name = session.user?.user_metadata?.name || email.split('@')[0] || 'ES Designer';
-      syncProfile({ name, email });
-      return {
+      const mirroredSession = {
         token: session.access_token,
         user: {
           email,
@@ -267,6 +277,8 @@
         createdAt: session.user?.created_at,
         mode: 'supabase',
       };
+      syncProfile({ name, email });
+      return syncSession(mirroredSession);
     }
 
     try {
