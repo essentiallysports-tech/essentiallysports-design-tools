@@ -6,8 +6,8 @@
     // use Supabase automatically. Until then, local browser accounts remain as
     // a development fallback so the site does not lock everyone out mid-setup.
     supabase: {
-      url: '',
-      anonKey: '',
+      url: 'https://xtdusejokbhtjlmijdca.supabase.co',
+      anonKey: 'sb_publishable_1T9d9U0qXD5K-Ay-_43IVA_Qdd1dpHF',
     },
 
     // Domain-level access. Only emails from these domains can create/login.
