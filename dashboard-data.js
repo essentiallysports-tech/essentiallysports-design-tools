@@ -7,12 +7,6 @@
   const ADMIN_CONFIG_KEY = 'es.dashboard.adminConfig.v1';
   const PROFILE_KEY = 'es.ai.profile';
   const AUTH_KEY = 'es.designerAuth.v1';
-  const DASHBOARD_ENABLED = false;
-
-  function isLocalPreviewEnabled() {
-    const host = String(window.location.hostname || '').toLowerCase();
-    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
-  }
 
   const DEFAULT_ADMIN_CONFIG = Object.freeze({
     adminEmails: [
@@ -79,20 +73,18 @@
     }
   }
 
-  function getCandidateAdminEmails(...sources) {
-    const emails = new Set();
-    sources.forEach(source => {
-      const direct = normalizeEmail(source?.email);
-      const userEmail = normalizeEmail(source?.user?.email);
-      if (direct) emails.add(direct);
-      if (userEmail) emails.add(userEmail);
-    });
-    return Array.from(emails);
+  async function getAuthenticatedSession() {
+    const authSession = await getAuthSession();
+    if (authSession?.token && authSession?.user?.email) return authSession;
+
+    const localSession = getLocalSession();
+    const supabaseConfigured = Boolean(window.ESAuth?.isSupabaseConfigured?.());
+    if (!supabaseConfigured && localSession?.token && localSession?.user?.email) return localSession;
+    return null;
   }
 
   async function getCurrentUser() {
-    let session = await getAuthSession();
-    session = session || getLocalSession();
+    const session = await getAuthenticatedSession();
     const profile = getStoredProfile();
     const email = normalizeEmail(session?.user?.email || profile.email);
     const name = cleanString(session?.user?.name || profile.name || email.split('@')[0] || 'ES User');
@@ -101,14 +93,9 @@
   }
 
   async function isCurrentUserAdmin() {
-    const [user, authSession] = await Promise.all([getCurrentUser(), getAuthSession()]);
-    const adminEmails = getAdminConfig().adminEmails;
-    const candidateEmails = getCandidateAdminEmails(user, authSession, getLocalSession(), getStoredProfile());
-    return candidateEmails.some(email => adminEmails.includes(email));
-  }
-
-  function isDashboardEnabled() {
-    return DASHBOARD_ENABLED || isLocalPreviewEnabled();
+    const session = await getAuthenticatedSession();
+    const email = normalizeEmail(session?.user?.email);
+    return Boolean(email && getAdminConfig().adminEmails.includes(email));
   }
 
   async function showAdminNavigation() {
@@ -343,7 +330,6 @@
     DESIGNS_KEY,
     ACTIVITY_KEY,
     ADMIN_CONFIG_KEY,
-    isDashboardEnabled,
     getAdminConfig,
     getCurrentUser,
     isCurrentUserAdmin,

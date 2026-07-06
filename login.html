@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Condensed:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="es-auth-config.js"></script>
-<script src="es-auth.js"></script>
+  <script src="es-auth-config.js?v=20260706-auth3"></script>
+<script src="es-auth.js?v=20260706-auth3"></script>
 <style>
   @font-face {
     font-family: 'Acumin Pro Condensed Local';
@@ -780,13 +780,13 @@
 <main class="login-shell">
   <section class="login-panel" aria-labelledby="login-title">
     <img class="login-brand" src="brand-logo-blue.svg" alt="EssentiallySports">
-    <h1 class="login-title" id="login-title">Create your ES Designer account</h1>
+    <h1 class="login-title" id="login-title">Log in to ES Designer</h1>
     <form class="login-form" id="login-form" novalidate>
       <div class="login-mode-tabs" role="tablist" aria-label="Authentication mode">
-        <button class="login-mode-tab is-active" id="create-account-tab" type="button" data-auth-mode="create" role="tab" aria-selected="true">Create account</button>
-        <button class="login-mode-tab" id="login-account-tab" type="button" data-auth-mode="login" role="tab" aria-selected="false">Login</button>
+        <button class="login-mode-tab is-active" id="login-account-tab" type="button" data-auth-mode="login" role="tab" aria-selected="true">Login</button>
+        <button class="login-mode-tab" id="create-account-tab" type="button" data-auth-mode="create" role="tab" aria-selected="false">Create account</button>
       </div>
-      <div class="login-field" data-create-only>
+      <div class="login-field" data-create-only hidden>
         <label for="login-name">Name</label>
         <input id="login-name" name="name" type="text" autocomplete="name" placeholder="Your name">
       </div>
@@ -796,15 +796,15 @@
       </div>
       <div class="login-field">
         <label for="login-password">Password</label>
-        <input id="login-password" name="password" type="password" autocomplete="new-password" placeholder="Minimum 8 characters" required>
+        <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Password" required>
       </div>
-      <div class="login-field" data-create-only>
+      <div class="login-field" data-create-only hidden>
         <label for="login-confirm-password">Confirm Password</label>
         <input id="login-confirm-password" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Re-enter password">
       </div>
-      <button class="login-button" type="submit">Create Account</button>
+      <button class="login-button" type="submit">Login</button>
       <p class="login-error" id="login-error" role="alert"></p>
-      <p class="login-note" id="login-note">Only @essentiallysports.com emails can create an account. After account creation, use the Login tab with the same email and password.</p>
+      <p class="login-note" id="login-note">Login with the @essentiallysports.com account you created for ES Designer.</p>
     </form>
   </section>
 
@@ -961,7 +961,8 @@
   const noteEl = document.getElementById('login-note');
   const button = form.querySelector('.login-button');
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let authMode = 'create';
+  const defaultRedirectTarget = 'index.html#frames';
+  let authMode = 'login';
 
   function showPage() {
     document.body.classList.remove('is-page-leaving');
@@ -1002,7 +1003,17 @@
   }
 
   function getRedirectTarget() {
-    return 'index.html#frames';
+    const params = new URLSearchParams(window.location.search);
+    const rawTarget = params.get('redirect') || defaultRedirectTarget;
+    try {
+      const url = new URL(rawTarget, window.location.href);
+      if (url.origin !== window.location.origin) return defaultRedirectTarget;
+      if (/\/login\.html$/i.test(url.pathname)) return defaultRedirectTarget;
+      const path = url.pathname.replace(/^\//, '') || defaultRedirectTarget;
+      return `${path}${url.search}${url.hash}`;
+    } catch (error) {
+      return defaultRedirectTarget;
+    }
   }
 
   function validateBaseFields(email, password) {
@@ -1066,7 +1077,7 @@
         setMode('login');
         passwordInput.value = '';
         confirmPasswordInput.value = '';
-        setError('Account created. Please log in now.', 'success');
+        setError('Account created. Please log in now. If email verification is enabled, verify your email first.', 'success');
         button.disabled = false;
         button.textContent = 'Login';
         return;
@@ -1081,7 +1092,16 @@
     }
   });
 
-  setMode('create');
+  async function bootLoginPage() {
+    if (await window.ESAuth?.isValidSession?.()) {
+      window.location.replace(getRedirectTarget());
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    setMode(params.get('mode') === 'create' ? 'create' : 'login');
+  }
+
+  bootLoginPage();
 })();
 </script>
 </body>
