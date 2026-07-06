@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "npm run test:ai-image-query && npm run test:es-images && npm run test:vercel-api",
+    "test": "npm run test:auth && npm run test:ai-image-query && npm run test:es-images && npm run test:vercel-api",
+    "test:auth": "node scripts/test-auth-security.mjs",
     "test:ai-image-query": "node scripts/test-ai-image-query-builder.mjs",
     "test:es-images": "node scripts/test-es-image-search.mjs && node scripts/test-es-image-search-fallback.mjs && node scripts/test-es-image-search-unconfigured.mjs",
     "test:vercel-api": "node scripts/test-vercel-api-adapters.mjs",

@@ -78,8 +78,8 @@
     if (authSession?.token && authSession?.user?.email) return authSession;
 
     const localSession = getLocalSession();
-    const supabaseConfigured = Boolean(window.ESAuth?.isSupabaseConfigured?.());
-    if (!supabaseConfigured && localSession?.token && localSession?.user?.email) return localSession;
+    const localFallbackEnabled = Boolean(window.ESAuth?.isLocalFallbackEnabled?.());
+    if (localFallbackEnabled && localSession?.token && localSession?.user?.email) return localSession;
     return null;
   }
 

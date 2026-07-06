@@ -1,0 +1,9 @@
+.git
+.env
+.env.*
+.vercel
+essentiallysports-design-tools-flat.zip
+project-docs
+scripts
+supabase
+*.md

@@ -41,6 +41,16 @@
     );
   }
 
+  function isLocalFallbackEnabled() {
+    if (config.allowLocalFallback !== true) return false;
+    const hostname = String(window.location.hostname || '').toLowerCase();
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  }
+
+  function authUnavailableError() {
+    return new Error('ES Designer login is temporarily unavailable. Please try again shortly.');
+  }
+
   let supabaseClient = null;
 
   function getSupabaseClient() {
@@ -197,7 +207,11 @@
       return createSupabaseAccount({ name, email: normalizedEmail, password });
     }
 
-    return createLocalAccount({ name, email: normalizedEmail, password });
+    if (isLocalFallbackEnabled()) {
+      return createLocalAccount({ name, email: normalizedEmail, password });
+    }
+
+    throw authUnavailableError();
   }
 
   async function loginWithLocalAccount({ email, password }) {
@@ -255,7 +269,11 @@
       return loginWithSupabase({ email: normalizedEmail, password });
     }
 
-    return loginWithLocalAccount({ email: normalizedEmail, password });
+    if (isLocalFallbackEnabled()) {
+      return loginWithLocalAccount({ email: normalizedEmail, password });
+    }
+
+    throw authUnavailableError();
   }
 
   async function requestPasswordReset({ email, redirectTo }) {
@@ -308,6 +326,7 @@
       return syncSession(mirroredSession);
     }
 
+    if (!isLocalFallbackEnabled()) return null;
     try {
       return JSON.parse(window.sessionStorage.getItem(AUTH_STORAGE_KEY) || 'null');
     } catch (error) {
@@ -320,7 +339,7 @@
     const email = normalizeEmail(currentSession?.user?.email);
     if (!currentSession?.token || !isAllowedEmail(email)) return false;
     if (isSupabaseConfigured()) return true;
-    return accountExists(email);
+    return isLocalFallbackEnabled() && accountExists(email);
   }
 
   async function logout() {
@@ -341,16 +360,26 @@
 
   function loginUrl(returnTo) {
     const loginPath = window.location.pathname.includes('/ai-page/') ? '../login.html' : 'login.html';
-    return `${loginPath}?redirect=${encodeURIComponent(returnTo || 'index.html#frames')}`;
+    return `${loginPath}?redirect=${encodeURIComponent(returnTo || 'index.html')}`;
   }
 
   function requireAuth(returnTo) {
-    (async () => {
-      if (await isValidSession()) return;
+    document.documentElement.style.visibility = 'hidden';
+    return (async () => {
+      try {
+        if (await isValidSession()) {
+          document.documentElement.style.visibility = '';
+          window.dispatchEvent(new CustomEvent('es:auth-ready'));
+          return true;
+        }
+      } catch (error) {
+        // Treat auth service failures as signed-out rather than exposing a
+        // protected page with an unverified session.
+      }
       await logout();
       window.location.replace(loginUrl(returnTo));
+      return false;
     })();
-    return true;
   }
 
   window.ESAuth = Object.freeze({
@@ -363,6 +392,7 @@
     getSession,
     getSupabaseClient,
     isAllowedEmail,
+    isLocalFallbackEnabled,
     isSupabaseConfigured,
     isValidSession,
     login,
