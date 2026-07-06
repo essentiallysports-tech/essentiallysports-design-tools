@@ -1171,7 +1171,10 @@
       setupPageTransitions();
       const isAdmin = await window.ESDashboardData.isCurrentUserAdmin();
       document.body.classList.toggle('is-blocked', !isAdmin);
-      if (!isAdmin) return;
+      if (!isAdmin) {
+        window.location.replace('index.html#frames');
+        return;
+      }
       dashboardUser = await window.ESDashboardData.getCurrentUser();
       document.body.dataset.dashboardView = 'overview';
       renderIdentity();

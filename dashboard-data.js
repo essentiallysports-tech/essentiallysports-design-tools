@@ -71,13 +71,27 @@
     }
   }
 
-  async function getCurrentUser() {
-    let session = null;
+  async function getAuthSession() {
     try {
-      session = await window.ESAuth?.getSession?.();
+      return await window.ESAuth?.getSession?.();
     } catch (error) {
-      session = null;
+      return null;
     }
+  }
+
+  function getCandidateAdminEmails(...sources) {
+    const emails = new Set();
+    sources.forEach(source => {
+      const direct = normalizeEmail(source?.email);
+      const userEmail = normalizeEmail(source?.user?.email);
+      if (direct) emails.add(direct);
+      if (userEmail) emails.add(userEmail);
+    });
+    return Array.from(emails);
+  }
+
+  async function getCurrentUser() {
+    let session = await getAuthSession();
     session = session || getLocalSession();
     const profile = getStoredProfile();
     const email = normalizeEmail(session?.user?.email || profile.email);
@@ -87,8 +101,10 @@
   }
 
   async function isCurrentUserAdmin() {
-    const user = await getCurrentUser();
-    return getAdminConfig().adminEmails.includes(normalizeEmail(user.email));
+    const [user, authSession] = await Promise.all([getCurrentUser(), getAuthSession()]);
+    const adminEmails = getAdminConfig().adminEmails;
+    const candidateEmails = getCandidateAdminEmails(user, authSession, getLocalSession(), getStoredProfile());
+    return candidateEmails.some(email => adminEmails.includes(email));
   }
 
   function isDashboardEnabled() {
@@ -104,6 +120,24 @@
     });
     document.documentElement.classList.toggle('has-dashboard-admin', allowed);
     return allowed;
+  }
+
+  function scheduleAdminNavigationChecks() {
+    const run = () => {
+      showAdminNavigation().catch(() => {});
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', run, { once: true });
+    } else {
+      run();
+    }
+    [150, 500, 1000, 2000, 3500].forEach(delay => window.setTimeout(run, delay));
+    window.addEventListener('focus', run);
+    window.addEventListener('pageshow', run);
+    window.addEventListener('storage', event => {
+      if (!event.key || [AUTH_KEY, PROFILE_KEY, ADMIN_CONFIG_KEY].includes(event.key)) run();
+    });
+    window.addEventListener('es:auth-updated', run);
   }
 
   function readDesignRequests() {
@@ -329,9 +363,5 @@
     emitDashboardChange,
   });
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', showAdminNavigation);
-  } else {
-    showAdminNavigation();
-  }
+  scheduleAdminNavigationChecks();
 })();
