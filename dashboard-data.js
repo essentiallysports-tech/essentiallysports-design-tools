@@ -9,8 +9,16 @@
   const AUTH_KEY = 'es.designerAuth.v1';
   const DASHBOARD_ENABLED = false;
 
+  function isLocalPreviewEnabled() {
+    const host = String(window.location.hostname || '').toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  }
+
   const DEFAULT_ADMIN_CONFIG = Object.freeze({
-    adminEmails: ['suhail.quraishi@essentiallysports.com'],
+    adminEmails: [
+      'suhail.quraishi@essentiallysports.com',
+      'manish.kalsi@essentiallysports.com',
+    ],
     ownerEmails: [],
   });
 
@@ -46,10 +54,7 @@
     const stored = readJson(ADMIN_CONFIG_KEY, null);
     const config = stored && typeof stored === 'object' ? stored : DEFAULT_ADMIN_CONFIG;
     return {
-      adminEmails: Array.from(new Set([
-        ...DEFAULT_ADMIN_CONFIG.adminEmails,
-        ...(Array.isArray(config.adminEmails) ? config.adminEmails : []),
-      ].map(normalizeEmail).filter(Boolean))),
+      adminEmails: DEFAULT_ADMIN_CONFIG.adminEmails.map(normalizeEmail).filter(Boolean),
       ownerEmails: Array.from(new Set((Array.isArray(config.ownerEmails) ? config.ownerEmails : []).map(normalizeEmail).filter(Boolean))),
     };
   }
@@ -78,23 +83,23 @@
     const email = normalizeEmail(session?.user?.email || profile.email);
     const name = cleanString(session?.user?.name || profile.name || email.split('@')[0] || 'ES User');
     const role = cleanString(session?.user?.role || profile.role || '');
-    return { email, name, role };
+    return { email, name, role, avatar: cleanString(profile.avatar) };
   }
 
   async function isCurrentUserAdmin() {
-    if (!DASHBOARD_ENABLED) return false;
     const user = await getCurrentUser();
     return getAdminConfig().adminEmails.includes(normalizeEmail(user.email));
   }
 
   function isDashboardEnabled() {
-    return DASHBOARD_ENABLED;
+    return DASHBOARD_ENABLED || isLocalPreviewEnabled();
   }
 
   async function showAdminNavigation() {
     const allowed = await isCurrentUserAdmin();
     document.querySelectorAll('[data-admin-only]').forEach(element => {
       element.hidden = !allowed;
+      element.setAttribute('aria-hidden', allowed ? 'false' : 'true');
       element.classList.toggle('is-admin-visible', allowed);
     });
     document.documentElement.classList.toggle('has-dashboard-admin', allowed);

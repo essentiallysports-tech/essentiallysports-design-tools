@@ -983,6 +983,9 @@ textarea {
     font-size: 16px;
     line-height: 1.45;
   }
+  .page {
+    grid-template-rows: auto 1fr auto;
+  }
   .navbar {
     min-height: 43px;
     padding: 8px 14px;
@@ -1056,6 +1059,9 @@ textarea {
   .navbar-menu a,
   .nav-trigger {
     white-space: nowrap;
+  }
+  .footer-links {
+    gap: 28px;
   }
   .account-title {
     font-size: clamp(30px, 8.5vw, 44px);

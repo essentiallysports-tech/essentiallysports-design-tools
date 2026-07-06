@@ -16,6 +16,10 @@ function closeNavMenus(exceptMenu = null) {
 function setupHeaderMenus() {
   const profileMenu = document.getElementById('profile-menu');
   const profileTrigger = document.getElementById('profile-trigger');
+  const navbarRight = profileMenu?.closest('.navbar-right');
+  if (profileMenu && navbarRight && navbarRight.firstElementChild !== profileMenu) {
+    navbarRight.prepend(profileMenu);
+  }
 
   profileTrigger?.addEventListener('click', event => {
     event.preventDefault();

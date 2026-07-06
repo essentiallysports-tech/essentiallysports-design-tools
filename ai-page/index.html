@@ -1404,11 +1404,17 @@
       display: none;
     }
 
-    @media (max-width: 1080px) {
+    @media (max-width: 1280px) {
+      .navbar-right .navbar-icon-btn {
+        display: none;
+      }
+
       .footer-links {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
+    }
 
+    @media (max-width: 1080px) {
       .workspace {
         grid-template-columns: 292px 1fr;
       }
@@ -1789,6 +1795,114 @@
         align-items: flex-start;
       }
     }
+
+    /* Shared global chrome parity for the hidden AI workspace. */
+    .profile-menu {
+      position: relative;
+      top: auto;
+      right: auto;
+      z-index: 130;
+      order: -1;
+      width: fit-content;
+      min-width: 178px;
+      max-width: 300px;
+      height: 58px;
+      flex: 0 0 auto;
+      overflow: visible;
+      border: 1px solid transparent;
+      border-radius: 20px;
+      background: transparent;
+      box-shadow: none;
+    }
+    .profile-menu.is-open {
+      height: 58px;
+      border-color: #FFFFFF;
+      background: #FAFAFC;
+      box-shadow: 0 10px 30px rgba(3, 49, 98, .08);
+    }
+    .profile-avatar {
+      box-sizing: border-box;
+      border: 1px solid #B5D8FD;
+      background: #FFFFFF url("../profile-icon-edit.svg") center / 15px 18px no-repeat;
+      color: transparent;
+    }
+    .profile-avatar.has-image {
+      border-color: transparent;
+      background-position: center;
+      background-size: cover;
+    }
+    .profile-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 140;
+      width: 100%;
+      min-width: 178px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin: 0;
+      padding: 10px;
+      border: 1px solid #FFFFFF;
+      border-radius: 18px;
+      background: #FAFAFC;
+      box-shadow: 0 18px 38px rgba(3, 49, 98, .12);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(8px) scale(.98);
+      transform-origin: top right;
+      transition: opacity .24s cubic-bezier(.16,1,.3,1), transform .24s cubic-bezier(.16,1,.3,1), visibility .24s cubic-bezier(.16,1,.3,1);
+    }
+    .profile-menu.is-open .profile-dropdown {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+    .profile-option {
+      min-height: 42px;
+      gap: 12px;
+      padding: 0 14px;
+      font-family: "Roboto Condensed", "Roboto", Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.2;
+    }
+    .profile-option svg {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+    }
+
+    @media (max-width: 900px) {
+      .navbar {
+        height: auto;
+        flex-wrap: wrap;
+      }
+      .profile-menu {
+        top: auto;
+        right: auto;
+        width: fit-content;
+        min-width: 170px;
+        max-width: calc(100vw - 24px);
+        height: 54px;
+      }
+      .profile-menu.is-open {
+        height: 54px;
+      }
+      .footer-links {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 28px;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .footer-links {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1818,8 +1932,6 @@
         <a href="../design-request.html">Design Request</a>
         <a href="../dashboard.html" data-admin-only hidden>Dashboard</a>
         <a href="../index.html#faq">FAQ</a>
-        <span class="nav-separator" aria-hidden="true"></span>
-        <a href="index.html">ES AI</a>
       </div>
       <div class="navbar-right">
         <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" title="Facebook" aria-label="Facebook"><img src="../social-icons/nav-facebook.svg" alt=""></a>
@@ -2316,6 +2428,52 @@
     searchInput.addEventListener('input', renderHistory);
     sidebarClose.addEventListener('click', () => setSidebarCollapsed(true));
     sidebarOpen.addEventListener('click', () => setSidebarCollapsed(false));
+
+    const profileMenu = document.getElementById('profile-menu');
+    const profileTrigger = document.getElementById('profile-trigger');
+    profileTrigger?.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const isOpen = profileMenu.classList.toggle('is-open');
+      profileTrigger.setAttribute('aria-expanded', String(isOpen));
+    });
+    document.addEventListener('click', event => {
+      if (!event.target.closest('#profile-menu')) {
+        profileMenu?.classList.remove('is-open');
+        profileTrigger?.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    function setupPageTransitions() {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const showPageBody = () => {
+        document.body.classList.remove('is-page-leaving');
+        document.body.classList.add('is-page-ready');
+      };
+      requestAnimationFrame(showPageBody);
+      window.addEventListener('pageshow', showPageBody);
+      document.addEventListener('click', event => {
+        const link = event.target.closest('a[href]');
+        if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        if (link.target && link.target !== '_self') return;
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || /^(?:mailto:|tel:|javascript:)/i.test(href)) return;
+        const url = new URL(href, window.location.href);
+        if (url.origin !== window.location.origin) return;
+        event.preventDefault();
+        if (prefersReducedMotion) {
+          window.location.href = url.href;
+          return;
+        }
+        document.body.classList.remove('is-page-ready');
+        document.body.classList.add('is-page-leaving');
+        setTimeout(() => {
+          window.location.href = url.href;
+        }, 220);
+      });
+    }
+
+    setupPageTransitions();
     syncProfileChrome();
     setGreeting();
     renderHistory();
