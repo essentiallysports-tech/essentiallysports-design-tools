@@ -188,6 +188,26 @@
     cursor: wait;
     opacity: .78;
   }
+  .login-forgot {
+    justify-self: end;
+    margin-top: -8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-blue);
+    font: 500 13px/1.3 var(--font-body);
+    cursor: pointer;
+  }
+  .login-forgot:hover,
+  .login-forgot:focus-visible {
+    color: var(--accent);
+    text-decoration: underline;
+    outline: none;
+  }
+  .login-forgot[disabled] {
+    cursor: wait;
+    opacity: .6;
+  }
   .login-note,
   .login-error {
     min-height: 18px;
@@ -798,6 +818,7 @@
         <label for="login-password">Password</label>
         <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Password" required>
       </div>
+      <button class="login-forgot" id="forgot-password" type="button" data-login-only>Forgot password?</button>
       <div class="login-field" data-create-only hidden>
         <label for="login-confirm-password">Confirm Password</label>
         <input id="login-confirm-password" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Re-enter password">
@@ -953,10 +974,12 @@
   const title = document.getElementById('login-title');
   const modeTabs = Array.from(document.querySelectorAll('[data-auth-mode]'));
   const createOnlyFields = Array.from(document.querySelectorAll('[data-create-only]'));
+  const loginOnlyFields = Array.from(document.querySelectorAll('[data-login-only]'));
   const nameInput = document.getElementById('login-name');
   const emailInput = document.getElementById('login-email');
   const passwordInput = document.getElementById('login-password');
   const confirmPasswordInput = document.getElementById('login-confirm-password');
+  const forgotPasswordButton = document.getElementById('forgot-password');
   const errorEl = document.getElementById('login-error');
   const noteEl = document.getElementById('login-note');
   const button = form.querySelector('.login-button');
@@ -994,6 +1017,9 @@
         input.required = isCreate && input.id === 'login-confirm-password';
       });
     });
+    loginOnlyFields.forEach(field => {
+      field.hidden = isCreate;
+    });
     modeTabs.forEach(tab => {
       const active = tab.dataset.authMode === authMode;
       tab.classList.toggle('is-active', active);
@@ -1016,7 +1042,7 @@
     }
   }
 
-  function validateBaseFields(email, password) {
+  function validateEmail(email) {
     if (!emailInput.validity.valid || !email) {
       setError('Enter a valid email address.');
       emailInput.focus();
@@ -1027,6 +1053,11 @@
       emailInput.focus();
       return false;
     }
+    return true;
+  }
+
+  function validateBaseFields(email, password) {
+    if (!validateEmail(email)) return false;
     if (!password) {
       setError('Enter your password.');
       passwordInput.focus();
@@ -1050,6 +1081,25 @@
 
   modeTabs.forEach(tab => {
     tab.addEventListener('click', () => setMode(tab.dataset.authMode));
+  });
+
+  forgotPasswordButton.addEventListener('click', async () => {
+    setError('');
+    const email = emailInput.value.trim();
+    if (!validateEmail(email)) return;
+
+    forgotPasswordButton.disabled = true;
+    forgotPasswordButton.textContent = 'Sending reset link...';
+    try {
+      const redirectTo = new URL('reset-password.html', window.location.href).href;
+      await window.ESAuth.requestPasswordReset({ email, redirectTo });
+      setError('If an account exists for this email, a password reset link has been sent.', 'success');
+    } catch (error) {
+      setError(error.message || 'Unable to send the password reset email.');
+    } finally {
+      forgotPasswordButton.disabled = false;
+      forgotPasswordButton.textContent = 'Forgot password?';
+    }
   });
 
   form.addEventListener('submit', async event => {

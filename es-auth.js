@@ -258,6 +258,33 @@
     return loginWithLocalAccount({ email: normalizedEmail, password });
   }
 
+  async function requestPasswordReset({ email, redirectTo }) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!isAllowedEmail(normalizedEmail)) {
+      throw new Error('Password reset is limited to @essentiallysports.com email addresses.');
+    }
+    if (!isSupabaseConfigured()) {
+      throw new Error('Password reset is available only when Supabase Auth is configured.');
+    }
+
+    const { error } = await getSupabaseClient().auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: String(redirectTo || '').trim() || undefined,
+    });
+    if (error) throw new Error(error.message || 'Unable to send the password reset email.');
+    return true;
+  }
+
+  async function updatePassword(password) {
+    validatePassword(password);
+    if (!isSupabaseConfigured()) {
+      throw new Error('Password updates are available only when Supabase Auth is configured.');
+    }
+
+    const { data, error } = await getSupabaseClient().auth.updateUser({ password });
+    if (error) throw new Error(error.message || 'Unable to update the password.');
+    return data?.user || null;
+  }
+
   async function getSession() {
     if (isSupabaseConfigured()) {
       const client = getSupabaseClient();
@@ -342,6 +369,8 @@
     loginUrl,
     logout,
     normalizeEmail,
+    requestPasswordReset,
     requireAuth,
+    updatePassword,
   });
 })();
