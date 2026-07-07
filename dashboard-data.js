@@ -248,7 +248,7 @@
   }
 
   function shouldRunSupabasePresence() {
-    return /dashboard\.html$/i.test(window.location.pathname);
+    return false;
   }
 
   function scheduleSupabasePresence() {
