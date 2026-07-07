@@ -22,10 +22,8 @@ The website is intentionally mostly static HTML/CSS/JS, so it can run on Vercel 
 | --- | --- |
 | `index.html` | Main ES Designer app. Contains the homepage, workspaces, guidelines, FAQ, canvas generators, Design Request section copy, and most UI logic. |
 | `design-request.html` | Standalone Design Request page with request form, saved request list, and its own compact canvas/support logic. |
-| `login.html` | Login/demo gate and marketing-style product overview page. |
-| `design-request-slack.js` | Direct browser-side Slack webhook sender for Design Request messages. |
-| `design-request-email.js` | Direct browser-side email/Lambda sender for Design Request messages. |
-| `api/design-request-submit.js` | Serverless function (Vercel) for server-side Google Sheets and Slack sync. |
+| `login.html` | Supabase login/create-account/password-recovery page with ES-domain gating. |
+| `api/design-request-submit.js` | Serverless adapter (Vercel) for authenticated Google Sheets, Slack, and email sync. |
 | `netlify/functions/design-request-submit.js` | Equivalent Netlify Function, kept for Netlify deployments. |
 | `vercel.json` | Vercel configuration (headers). |
 | `netlify.toml` | Netlify configuration. |
@@ -58,13 +56,13 @@ This keeps the site simple: no React/Vue build step, no client router dependency
 
 File: `login.html`
 
-The login page is currently demo-auth style:
+The login page uses Supabase email/password authentication:
 
-- User enters email/password.
-- Any valid email/password can pass in demo mode.
-- Login profile details are stored in browser storage where available.
-- The code is prepared to later connect to a real backend auth endpoint.
-- After login, the user is redirected back to the original target using a `redirect` query param.
+- User must create an account with an approved `@essentiallysports.com` email.
+- Supabase remains the source of truth for account creation, login, password reset, and logout.
+- Local browser storage is only used to mirror lightweight UI/profile state.
+- Production local-auth fallback is disabled; local fallback is gated behind explicit localhost-only config.
+- After login, the user is redirected back to the original target using a `redirect` query param, defaulting to the homepage.
 
 Visual logic:
 
@@ -320,8 +318,9 @@ This optional server-side route supports:
 
 - Google Sheets append
 - Slack webhook post
+- Email notification POST
 
-It expects environment variables for secure server-side operation.
+It verifies the Supabase bearer token first and expects environment variables for secure server-side operation.
 
 When configured, it returns integration statuses like:
 
@@ -329,16 +328,17 @@ When configured, it returns integration statuses like:
 {
   integrations: {
     googleSheets: { ok, skipped, ... },
-    slack: { ok, skipped, ... }
+    slack: { ok, skipped, ... },
+    email: { ok, skipped, ... }
   }
 }
 ```
 
-### 12.2 Direct Slack integration
+### 12.2 Server-side Slack integration
 
-File: `design-request-slack.js`
+File: `netlify/functions/design-request-submit.js`
 
-This file builds a rich Slack message payload with:
+The authenticated submit function builds a rich Slack message payload with:
 
 - request ID
 - priority
@@ -350,21 +350,15 @@ This file builds a rich Slack message payload with:
 - design copy
 - notes
 - due/publish dates
-- reference links/files
+- reference links/files.
 
-It sends with `fetch(..., { mode: "no-cors" })` so the browser can fire the webhook even when Slack does not return CORS-readable responses.
+Slack delivery is enabled with `SLACK_DESIGN_REQUEST_WEBHOOK_URL`. Keep the webhook only in platform environment variables.
 
-Important tradeoff:
+### 12.3 Server-side email integration
 
-- This direct browser approach exposes the Slack webhook in source code.
-- It is useful for quick deployment and direct posting.
-- For production security, the webhook should ideally live only in platform environment variables/serverless code.
+File: `netlify/functions/design-request-submit.js`
 
-### 12.3 Direct email integration
-
-File: `design-request-email.js`
-
-This file POSTs the Design Request record to the email Lambda endpoint.
+The authenticated submit function can POST the Design Request record to an email endpoint configured with `DESIGN_REQUEST_EMAIL_ENDPOINT`.
 
 Body signature:
 
@@ -394,8 +388,7 @@ Body signature:
 Behavior:
 
 - Removes empty values before sending.
-- Sends JSON normally first.
-- If blocked by browser/CORS, falls back to `no-cors` fire-and-forget.
+- Sends JSON from the serverless function only after Supabase bearer-token verification passes.
 - Does not include uploaded file metadata because the provided email body signature does not include files.
 
 ### 12.4 Status message logic
@@ -403,8 +396,8 @@ Behavior:
 `designRequestIntegrationMessage(sync)` builds the final user-facing status:
 
 - “added to Google Sheets”
-- “sent directly to Slack”
-- “sent directly by email”
+- “sent to Slack”
+- “sent by email”
 - or a warning if external sync needs attention
 
 ## 13. Upload and image placement logic
@@ -469,15 +462,14 @@ Page/workspace variants are reflected on `<body>` with data attributes. CSS reac
 
 ## 17. Known security / production notes
 
-- Direct Slack webhook in `design-request-slack.js` is visible to anyone who can inspect source.
-- Direct email Lambda endpoint in `design-request-email.js` is also visible in source.
-- For stronger production security, route both through Netlify Functions or another backend and keep secrets in environment variables.
-- The login page is demo-mode and should be connected to real auth before public/internal production rollout.
+- Slack/email/Google Sheets submission should be routed through `/api/design-request-submit` so integrations can run server-side with environment variables.
+- Supabase Auth is active in the frontend, and protected serverless endpoints verify the Supabase bearer token before processing private requests.
+- Dashboard UI access is restricted to configured admin emails only.
 - Browser local storage is useful for demo/session history but is not a durable database.
 
 ## 18. Recommended future improvements
 
-- Move Slack and email posting fully server-side once Netlify/backend config is stable.
+- Move dashboard/request/design history from local browser storage to Supabase tables with RLS.
 - Add a real database or Google Sheets-backed request list instead of only local browser history.
 - Split the large `index.html` into smaller JS/CSS modules when the app stabilizes.
 - Add regression checks for:
@@ -485,8 +477,8 @@ Page/workspace variants are reflected on `<body>` with data attributes. CSS reac
   - dynamic pill sizing
   - newsletter asset rendering
   - design request submit fallback paths
-- Add a dedicated admin/status dashboard for submitted requests.
-- Add actual authentication and role-based access.
+- Move dashboard data from local browser storage to Supabase-backed tables.
+- Add server-side role/RLS policies for dashboard data once Supabase tables are connected.
 
 ## 19. Quick developer checklist
 
@@ -495,9 +487,8 @@ When changing the site:
 1. Confirm whether the change belongs in `index.html`, `design-request.html`, or both.
 2. If changing Design Request submit logic, update both pages.
 3. If changing external request messaging, update:
-   - `design-request-slack.js`
-   - `design-request-email.js`
-   - optionally `netlify/functions/design-request-submit.js`
+   - `netlify/functions/design-request-submit.js`
+   - `api/design-request-submit.js` only if the Vercel adapter shape changes
 4. If adding a new canvas type:
    - add state defaults
    - add UI controls
@@ -507,4 +498,3 @@ When changing the site:
    - add export naming suffix
 5. Test at laptop width and desktop width.
 6. Verify download output, not just on-screen canvas preview.
-

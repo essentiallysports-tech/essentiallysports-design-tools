@@ -14,6 +14,17 @@ globalThis.fetch = async (url, options = {}) => {
   const body = options.body ? JSON.parse(options.body) : null;
   calls.push({ url: String(url), body, headers: options.headers || {} });
 
+  if (String(url).includes('/auth/v1/user')) {
+    assert.equal(options.headers?.Authorization, 'Bearer test-user-token');
+    return new Response(JSON.stringify({
+      id: 'user-1',
+      email: 'suhail.quraishi@essentiallysports.com',
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+
   if (String(url).includes('/wp-json/wp/v2/media')) {
     return new Response(JSON.stringify([{
       id: 100,
@@ -39,6 +50,7 @@ const { handler } = require('../netlify/functions/es-image-search.js');
 
 const response = await handler({
   httpMethod: 'GET',
+  headers: { Authorization: 'Bearer test-user-token' },
   queryStringParameters: {
     query: 'Unconfigured Athlete',
     per_page: '4',
@@ -56,6 +68,6 @@ assert.deepEqual(payload.meta, {
 });
 assert.equal(payload.results.length, 1);
 assert.equal(payload.results[0].sourceUrl, wpImageUrl);
-assert.ok(calls.every(call => String(call.url).includes('/wp-json/wp/v2/media')));
+assert.ok(calls.every(call => String(call.url).includes('/auth/v1/user') || String(call.url).includes('/wp-json/wp/v2/media')));
 
 console.log('ES image search unconfigured diagnostics regression test passed.');

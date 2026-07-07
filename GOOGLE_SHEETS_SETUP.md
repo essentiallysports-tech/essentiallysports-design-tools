@@ -47,3 +47,13 @@ SLACK_DESIGN_REQUEST_WEBHOOK_URL=https://hooks.slack.com/services/...
 The message includes the tracking ID, priority, request type, requester, publication/channel, title or entities, creative brief, design copy, notes, deadlines, references, and submission source.
 
 Keep the webhook only in platform environment variables. Do not commit it to HTML, JavaScript, `vercel.json`, or `netlify.toml`. Rotate the webhook in Slack if it is ever exposed publicly.
+
+## Email Design Request Notifications
+
+The same serverless function can also POST the Design Request payload to the email notification endpoint. Add the endpoint as an environment variable:
+
+```text
+DESIGN_REQUEST_EMAIL_ENDPOINT=https://your-email-endpoint.example
+```
+
+Keep the endpoint server-side. Do not include it in browser JavaScript files or page markup.

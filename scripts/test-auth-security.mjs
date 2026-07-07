@@ -7,6 +7,7 @@ import { webcrypto } from 'node:crypto';
 
 const authSource = readFileSync(new URL('../es-auth.js', import.meta.url), 'utf8');
 const dashboardSource = readFileSync(new URL('../dashboard-data.js', import.meta.url), 'utf8');
+const supabaseSignupHookMigration = readFileSync(new URL('../supabase/migrations/20260706162500_restrict_signup_to_es_domain.sql', import.meta.url), 'utf8');
 
 function storage() {
   const values = new Map();
@@ -26,11 +27,16 @@ function storage() {
 function createEnvironment({ session = null, supabaseAvailable = true } = {}) {
   const localStorage = storage();
   const sessionStorage = storage();
+  const authCalls = {
+    resetPasswordRedirectTo: null,
+  };
   const documentElement = {
     style: {},
     classList: { toggle() {} },
   };
   const location = {
+    href: 'https://frameup.essentiallysports.com/index.html',
+    origin: 'https://frameup.essentiallysports.com',
     hostname: 'frameup.essentiallysports.com',
     pathname: '/index.html',
     search: '',
@@ -56,6 +62,7 @@ function createEnvironment({ session = null, supabaseAvailable = true } = {}) {
         return { error: null };
       },
       async resetPasswordForEmail() {
+        authCalls.resetPasswordRedirectTo = arguments[1]?.redirectTo || null;
         return { error: null };
       },
       async updateUser() {
@@ -115,7 +122,7 @@ function createEnvironment({ session = null, supabaseAvailable = true } = {}) {
   });
 
   vm.runInContext(authSource, context, { filename: 'es-auth.js' });
-  return { context, window, location, documentElement, sessionStorage };
+  return { authCalls, context, window, location, documentElement, localStorage, sessionStorage };
 }
 
 {
@@ -138,6 +145,18 @@ function createEnvironment({ session = null, supabaseAvailable = true } = {}) {
 }
 
 {
+  const { documentElement, location, window } = createEnvironment({ session: null });
+  assert.equal(documentElement.style.visibility, undefined);
+  await window.ESAuth.requireAuth('dashboard.html');
+  assert.match(location.replaceTarget, /^login\.html\?redirect=dashboard\.html$/);
+  assert.equal(documentElement.style.visibility, 'hidden');
+}
+
+assert.match(supabaseSignupHookMigration, /signup_domain\s+<>\s+'essentiallysports\.com'/i);
+assert.match(supabaseSignupHookMigration, /return\s+event\s*;/i);
+assert.doesNotMatch(supabaseSignupHookMigration, /return\s+'\{\}'::jsonb\s*;/i);
+
+{
   const session = {
     access_token: 'verified-token',
     user: {
@@ -153,6 +172,15 @@ function createEnvironment({ session = null, supabaseAvailable = true } = {}) {
   assert.equal(await window.ESDashboardData.isCurrentUserAdmin(), true);
   await window.ESAuth.requireAuth('index.html');
   assert.equal(documentElement.style.visibility, '');
+}
+
+{
+  const { authCalls, window } = createEnvironment();
+  await window.ESAuth.requestPasswordReset({
+    email: 'suhail.quraishi@essentiallysports.com',
+    redirectTo: 'https://evil.example/reset-password.html',
+  });
+  assert.equal(authCalls.resetPasswordRedirectTo, 'https://frameup.essentiallysports.com/reset-password.html');
 }
 
 {
@@ -178,6 +206,27 @@ function createEnvironment({ session = null, supabaseAvailable = true } = {}) {
   };
   const { context, window } = createEnvironment({ session });
   vm.runInContext(dashboardSource, context, { filename: 'dashboard-data.js' });
+  assert.equal(await window.ESDashboardData.isCurrentUserAdmin(), false);
+}
+
+{
+  const session = {
+    access_token: 'verified-token',
+    user: {
+      email: 'designer@essentiallysports.com',
+      user_metadata: { name: 'ES Designer', role: 'Designer' },
+    },
+  };
+  const { context, localStorage, window } = createEnvironment({ session });
+  localStorage.setItem('es.dashboard.adminConfig.v1', JSON.stringify({
+    adminEmails: ['designer@essentiallysports.com', 'someone@gmail.com'],
+    ownerEmails: ['designer@essentiallysports.com'],
+  }));
+  vm.runInContext(dashboardSource, context, { filename: 'dashboard-data.js' });
+  assert.deepEqual(Array.from(window.ESDashboardData.getAdminConfig().adminEmails), [
+    'suhail.quraishi@essentiallysports.com',
+    'manish.kalsi@essentiallysports.com',
+  ]);
   assert.equal(await window.ESDashboardData.isCurrentUserAdmin(), false);
 }
 

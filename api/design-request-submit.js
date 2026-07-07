@@ -1,372 +1,41 @@
-const crypto = require('crypto');
+const { handler } = require('../netlify/functions/design-request-submit.js');
 
-const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
-const TOKEN_URL = 'https://oauth2.googleapis.com/token';
+function toNetlifyEvent(request) {
+  const body = request.body == null
+    ? null
+    : (typeof request.body === 'string' ? request.body : JSON.stringify(request.body));
 
-const HEADERS = [
-  'Request ID',
-  'Created At',
-  'Status',
-  'Request Type',
-  'Requester Name',
-  'Requester Email',
-  'Department',
-  'Publication',
-  'Social Channel',
-  'Sport',
-  'Team or League',
-  'Title',
-  'Entities',
-  'Brief',
-  'Design Copy',
-  'Reference Links',
-  'Reference Files',
-  'Additional Notes',
-  'Priority',
-  'Design Needed By',
-  'Publish At',
-  'Source',
-];
-
-function requiredConfig() {
   return {
-    spreadsheetId: process.env.GOOGLE_SHEETS_ID,
-    clientEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    privateKey: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-    range: process.env.GOOGLE_SHEETS_RANGE || 'Sheet1!A:V',
+    httpMethod: request.method,
+    headers: request.headers || {},
+    queryStringParameters: request.query || {},
+    body,
+    isBase64Encoded: false,
   };
 }
 
-function slackConfig() {
-  return {
-    webhookUrl: process.env.SLACK_DESIGN_REQUEST_WEBHOOK_URL,
-  };
-}
-
-function base64Url(value) {
-  return Buffer.from(value)
-    .toString('base64')
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
-}
-
-function signJwt({ clientEmail, privateKey }) {
-  const now = Math.floor(Date.now() / 1000);
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const claim = {
-    iss: clientEmail,
-    scope: SHEETS_SCOPE,
-    aud: TOKEN_URL,
-    exp: now + 3600,
-    iat: now,
-  };
-  const unsigned = `${base64Url(JSON.stringify(header))}.${base64Url(JSON.stringify(claim))}`;
-  const signature = crypto.sign('RSA-SHA256', Buffer.from(unsigned), privateKey);
-  return `${unsigned}.${base64Url(signature)}`;
-}
-
-async function getAccessToken(config) {
-  const assertion = signJwt(config);
-  const response = await fetch(TOKEN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion,
-    }),
+function sendNetlifyResult(response, result) {
+  Object.entries(result.headers || {}).forEach(([name, value]) => {
+    response.setHeader(name, value);
   });
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error_description || data.error || 'Google token request failed');
-  }
-  return data.access_token;
-}
-
-function list(value) {
-  if (Array.isArray(value)) return value.join('\n');
-  return value || '';
-}
-
-function files(value) {
-  if (!Array.isArray(value)) return '';
-  return value.map(file => file?.name || '').filter(Boolean).join('\n');
-}
-
-function toSheetRow(record) {
-  return [
-    record.id,
-    record.createdAt,
-    record.status,
-    record.requestType,
-    record.requester?.name,
-    record.requester?.email,
-    record.requester?.department,
-    record.publication,
-    record.socialChannel,
-    record.sport,
-    record.teamOrLeague,
-    record.title,
-    record.entities,
-    record.brief,
-    record.designCopy,
-    list(record.referenceLinks),
-    files(record.referenceFiles),
-    record.additionalNotes,
-    record.priority,
-    record.designDueAt,
-    record.publishAt,
-    record.source,
-  ].map(value => value ?? '');
-}
-
-function slackText(value, fallback = 'Not provided') {
-  const text = String(value ?? '').trim();
-  if (!text) return fallback;
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .slice(0, 2800);
-}
-
-function slackDate(value) {
-  if (!value) return 'Not provided';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return slackText(value);
-  return date.toLocaleString('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone: 'America/New_York',
-  }) + ' ET';
-}
-
-function requestTypeLabel(value) {
-  return {
-    newsletter: 'Newsletter Graphic',
-    'web-feature': 'Web Feature Image',
-    social: 'Social Media Graphic',
-  }[value] || slackText(value);
-}
-
-function priorityPresentation(value) {
-  const priority = String(value || 'Normal').toLowerCase();
-  if (priority === 'urgent') return { label: '🔴 Urgent', color: '#D92D20' };
-  if (priority === 'high') return { label: '🟠 High', color: '#F79009' };
-  return { label: '🔵 Normal', color: '#0A7DFA' };
-}
-
-function slackLinks(values) {
-  if (!Array.isArray(values) || !values.length) return 'None';
-  return values
-    .slice(0, 8)
-    .map((value, index) => {
-      const url = String(value || '').trim();
-      return url ? `<${url.replace(/>/g, '%3E')}|Reference ${index + 1}>` : '';
-    })
-    .filter(Boolean)
-    .join('  •  ') || 'None';
-}
-
-function buildSlackPayload(record) {
-  const priority = priorityPresentation(record.priority);
-  const requesterName = slackText(record.requester?.name);
-  const requesterEmail = String(record.requester?.email || '').trim();
-  const requester = requesterEmail
-    ? `${requesterName}\n<mailto:${requesterEmail.replace(/>/g, '')}|${slackText(requesterEmail)}>`
-    : requesterName;
-  const title = record.title || record.entities || requestTypeLabel(record.requestType);
-  const location = [
-    record.publication,
-    record.socialChannel,
-    record.sport,
-    record.teamOrLeague,
-  ].filter(Boolean).map(value => slackText(value)).join(' • ') || 'Not provided';
-  const referenceFiles = files(record.referenceFiles) || 'None';
-
-  return {
-    text: `New design request ${record.id}: ${slackText(title)}`,
-    attachments: [
-      {
-        color: priority.color,
-        blocks: [
-          {
-            type: 'header',
-            text: {
-              type: 'plain_text',
-              text: '🎨 New Design Request',
-              emoji: true,
-            },
-          },
-          {
-            type: 'section',
-            fields: [
-              { type: 'mrkdwn', text: `*Request ID*\n\`${slackText(record.id)}\`` },
-              { type: 'mrkdwn', text: `*Priority*\n${priority.label}` },
-              { type: 'mrkdwn', text: `*Request Type*\n${requestTypeLabel(record.requestType)}` },
-              { type: 'mrkdwn', text: `*Requester*\n${requester}` },
-              { type: 'mrkdwn', text: `*Publication / Channel*\n${location}` },
-              { type: 'mrkdwn', text: `*Status*\n${slackText(record.status || 'New')}` },
-            ],
-          },
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: `*Title / Entities*\n${slackText(title)}`,
-            },
-          },
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: `*Creative Brief*\n${slackText(record.brief)}`,
-            },
-          },
-          {
-            type: 'section',
-            fields: [
-              { type: 'mrkdwn', text: `*Design Copy*\n${slackText(record.designCopy)}` },
-              { type: 'mrkdwn', text: `*Additional Notes*\n${slackText(record.additionalNotes)}` },
-            ],
-          },
-          {
-            type: 'section',
-            fields: [
-              { type: 'mrkdwn', text: `*Design Needed By*\n${slackDate(record.designDueAt)}` },
-              { type: 'mrkdwn', text: `*Publish At*\n${slackDate(record.publishAt)}` },
-            ],
-          },
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: `*References*\n${slackLinks(record.referenceLinks)}\n*Files:* ${slackText(referenceFiles, 'None')}`,
-            },
-          },
-          {
-            type: 'context',
-            elements: [
-              {
-                type: 'mrkdwn',
-                text: `Submitted ${slackDate(record.createdAt)} via ${slackText(record.source || 'ES Designer')}`,
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  };
-}
-
-async function postToSlack(record, config) {
-  const response = await fetch(config.webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildSlackPayload(record)),
-  });
-  const responseText = await response.text();
-  if (!response.ok) {
-    throw new Error(responseText || `Slack webhook failed with status ${response.status}`);
-  }
-  return responseText;
-}
-
-async function appendToSheet(record, config) {
-  const accessToken = await getAccessToken(config);
-  const encodedRange = encodeURIComponent(config.range);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.spreadsheetId}/values/${encodedRange}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      values: [toSheetRow(record)],
-    }),
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error?.message || 'Google Sheets append failed');
-  }
-  return data;
-}
-
-function parseBody(req) {
-  if (req.body && typeof req.body === 'object') return req.body;
-  try {
-    return JSON.parse(req.body || '{}');
-  } catch {
-    return {};
-  }
-}
-
-module.exports = async (req, res) => {
-  if (req.method !== 'POST') {
-    res.status(405).json({ ok: false, error: 'Method not allowed' });
+  const statusCode = result.statusCode || 200;
+  if (result.isBase64Encoded) {
+    response.status(statusCode).send(Buffer.from(result.body || '', 'base64'));
     return;
   }
 
+  response.status(statusCode).send(result.body || '');
+}
+
+module.exports = async function designRequestSubmit(request, response) {
   try {
-    const payload = parseBody(req);
-    if (!payload.record?.id) {
-      res.status(400).json({ ok: false, error: 'Missing design request record' });
-      return;
-    }
-
-    const sheetConfig = requiredConfig();
-    const slack = slackConfig();
-    const integrations = {
-      googleSheets: {
-        ok: false,
-        skipped: !sheetConfig.spreadsheetId || !sheetConfig.clientEmail || !sheetConfig.privateKey,
-      },
-      slack: {
-        ok: false,
-        skipped: !slack.webhookUrl,
-      },
-    };
-
-    if (!integrations.googleSheets.skipped) {
-      try {
-        const result = await appendToSheet(payload.record, sheetConfig);
-        integrations.googleSheets = {
-          ok: true,
-          skipped: false,
-          updatedRange: result.updates?.updatedRange || null,
-        };
-      } catch (error) {
-        integrations.googleSheets.error = error.message || 'Google Sheets append failed';
-      }
-    }
-
-    if (!integrations.slack.skipped) {
-      try {
-        await postToSlack(payload.record, slack);
-        integrations.slack = { ok: true, skipped: false };
-      } catch (error) {
-        integrations.slack.error = error.message || 'Slack webhook failed';
-      }
-    }
-
-    const configured = Object.values(integrations).filter(item => !item.skipped);
-    const failed = configured.filter(item => !item.ok);
-    const succeeded = configured.filter(item => item.ok);
-
-    res.status(200).json({
-      ok: failed.length === 0 && succeeded.length > 0,
-      skipped: configured.length === 0,
-      reason: configured.length === 0 ? 'missing_integration_config' : undefined,
-      integrations,
-      requiredHeaders: HEADERS,
-    });
+    const result = await handler(toNetlifyEvent(request));
+    sendNetlifyResult(response, result);
   } catch (error) {
-    res.status(500).json({
+    response.status(500).json({
       ok: false,
-      error: error.message || 'Unable to sync design request',
+      error: error instanceof Error ? error.message : 'Unable to sync design request',
     });
   }
 };

@@ -106,14 +106,14 @@ If the token is missing/expired/wrong, `probe.ok` will be `false` and `probe.err
 For a complete deployed check, run:
 
 ```bash
-npm run verify:es-images -- https://YOUR-SITE.netlify.app "LeBron James"
+ES_DESIGNER_AUTH_TOKEN=<supabase-access-token> npm run verify:es-images -- https://YOUR-SITE.netlify.app "LeBron James"
 ```
 
 The verifier checks:
 
 1. `/api/es-image-search?health=1`
-2. `/api/es-image-search?health=probe`
-3. `/api/es-image-search?query=<entity>&per_page=4`
+2. `/api/es-image-search?health=probe` with an ES Designer bearer token
+3. `/api/es-image-search?query=<entity>&per_page=15` with an ES Designer bearer token
 
 The final `"pass"` value is `true` only when MCP is configured, the probe works, and the search response comes from `mcp-agency`. The command exits with code `1` when `"pass"` is `false`, so it can be used as a deployment check.
 

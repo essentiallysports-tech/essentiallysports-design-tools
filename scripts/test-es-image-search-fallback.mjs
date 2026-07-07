@@ -12,6 +12,17 @@ globalThis.fetch = async (url, options = {}) => {
   const body = options.body ? JSON.parse(options.body) : null;
   calls.push({ url: String(url), body, headers: options.headers || {} });
 
+  if (String(url).includes('/auth/v1/user')) {
+    assert.equal(options.headers?.Authorization, 'Bearer test-user-token');
+    return new Response(JSON.stringify({
+      id: 'user-1',
+      email: 'suhail.quraishi@essentiallysports.com',
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+
   if (String(url).includes('/wp-json/wp/v2/media')) {
     return new Response(JSON.stringify([{
       id: 99,
@@ -44,6 +55,7 @@ const { handler } = require('../netlify/functions/es-image-search.js');
 
 const response = await handler({
   httpMethod: 'GET',
+  headers: { Authorization: 'Bearer test-user-token' },
   queryStringParameters: {
     query: 'Fallback Athlete',
     per_page: '4',

@@ -3,11 +3,14 @@
 const [, , baseUrlArg, queryArg = 'LeBron James'] = process.argv;
 
 function usage() {
-  console.error('Usage: npm run verify:es-images -- https://YOUR-SITE.netlify.app "LeBron James"');
+  console.error('Usage: ES_DESIGNER_AUTH_TOKEN=<supabase-access-token> npm run verify:es-images -- https://YOUR-SITE.netlify.app "LeBron James"');
   process.exit(1);
 }
 
 if (!baseUrlArg) usage();
+
+const authToken = String(process.env.ES_DESIGNER_AUTH_TOKEN || '').trim();
+if (!authToken) usage();
 
 let baseUrl;
 try {
@@ -29,6 +32,7 @@ async function readJson(pathAndSearch) {
   const response = await fetch(url, {
     headers: {
       Accept: 'application/json',
+      Authorization: `Bearer ${authToken}`,
     },
   });
   const text = await response.text();
@@ -46,7 +50,7 @@ async function readJson(pathAndSearch) {
 
 const health = await readJson('/api/es-image-search?health=1');
 const probe = await readJson('/api/es-image-search?health=probe');
-const search = await readJson(`/api/es-image-search?query=${encodeURIComponent(queryArg)}&per_page=4`);
+const search = await readJson(`/api/es-image-search?query=${encodeURIComponent(queryArg)}&per_page=15`);
 
 const firstResult = Array.isArray(search.results) ? search.results[0] : null;
 const pass = Boolean(health.mcpConfigured && probe.probe?.ok && search.source === 'mcp-agency' && firstResult?.sourceUrl);

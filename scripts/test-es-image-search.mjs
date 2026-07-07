@@ -15,6 +15,17 @@ globalThis.fetch = async (url, options = {}) => {
   const body = options.body ? JSON.parse(options.body) : null;
   calls.push({ url: String(url), body, headers: options.headers || {} });
 
+  if (String(url).includes('/auth/v1/user')) {
+    assert.equal(options.headers?.Authorization, 'Bearer test-user-token');
+    return new Response(JSON.stringify({
+      id: 'user-1',
+      email: 'suhail.quraishi@essentiallysports.com',
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+
   if (body?.method === 'tools/call' && !options.headers?.['Mcp-Session-Id']) {
     return new Response(JSON.stringify({
       jsonrpc: '2.0',
@@ -128,6 +139,7 @@ assert.equal(JSON.stringify(healthPayload).includes('test-token'), false);
 
 const probeHealthResponse = await handler({
   httpMethod: 'GET',
+  headers: { Authorization: 'Bearer test-user-token' },
   queryStringParameters: { health: 'probe' },
 });
 const probeHealthPayload = JSON.parse(probeHealthResponse.body);
@@ -142,6 +154,7 @@ assert.equal(JSON.stringify(probeHealthPayload).includes('test-token'), false);
 
 const response = await handler({
   httpMethod: 'GET',
+  headers: { Authorization: 'Bearer test-user-token' },
   queryStringParameters: {
     query: 'Mock Athlete NBA',
     per_page: '4',
@@ -181,5 +194,14 @@ assert.deepEqual(methods, [
   'tools/list',
   'tools/call',
 ]);
+
+const unauthorizedSearch = await handler({
+  httpMethod: 'GET',
+  queryStringParameters: {
+    query: 'Mock Athlete NBA',
+    per_page: '4',
+  },
+});
+assert.equal(unauthorizedSearch.statusCode, 401);
 
 console.log('ES image search MCP regression test passed.');

@@ -6,9 +6,9 @@
 <meta name="description" content="Submit and track creative design requests for EssentiallySports.">
 <title>Design Request | EssentiallySports</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="es-auth-config.js?v=20260706-auth3"></script>
-<script src="es-auth.js?v=20260706-auth3"></script>
-<script src="dashboard-data.js?v=20260706-auth3"></script>
+<script src="es-auth-config.js?v=20260707-auth4"></script>
+<script src="es-auth.js?v=20260707-auth4"></script>
+<script src="dashboard-data.js?v=20260707-auth4"></script>
 <script>
   (() => {
     window.ESAuth?.requireAuth(`design-request.html${window.location.search}${window.location.hash}`);
@@ -2990,8 +2990,6 @@
   </div>
 </footer>
 
-<script src="design-request-slack.js"></script>
-<script src="design-request-email.js"></script>
 <script>
 
 // ─── EMBEDDED DATA ────────────────────────────────────────────────────────────
@@ -4190,7 +4188,8 @@ function exportDesignRequests() {
 }
 
 async function syncDesignRequestToSheet(record) {
-  const response = await fetch('/api/design-request-submit', {
+  if (!window.ESAuth?.fetchWithAuth) throw new Error('Please log in again to submit this request.');
+  const response = await window.ESAuth.fetchWithAuth('/api/design-request-submit', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ record }),
@@ -4242,64 +4241,6 @@ async function syncDesignRequest(record) {
   let reason = serverSync.reason;
   let skipped = !!serverSync.skipped;
 
-  const slackAlreadySent = !!integrations.slack?.ok;
-  if (!slackAlreadySent && window.ESDesignRequestSlack?.send) {
-    try {
-      const directSlack = await window.ESDesignRequestSlack.send(record);
-      integrations = mergeDesignRequestIntegrations(integrations, {
-        slack: {
-          ok: !!directSlack.ok,
-          skipped: !!directSlack.skipped,
-          direct: true,
-          responseOpaque: !!directSlack.responseOpaque,
-        },
-      });
-      if (directSlack.ok) {
-        ok = true;
-        skipped = false;
-      } else if (!directSlack.skipped) {
-        reason = directSlack.reason || reason || 'direct_slack_failed';
-      }
-    } catch (error) {
-      reason = error.message || reason || 'direct_slack_failed';
-      integrations = mergeDesignRequestIntegrations(integrations, {
-        slack: {
-          ok: false,
-          skipped: false,
-          direct: true,
-          error: error.message || 'direct_slack_failed',
-        },
-      });
-    }
-  }
-
-  const emailAlreadySent = !!integrations.email?.ok;
-  if (!emailAlreadySent && window.ESDesignRequestEmail?.send) {
-    try {
-      const directEmail = await window.ESDesignRequestEmail.send(record);
-      integrations = mergeDesignRequestIntegrations(integrations, {
-        email: {
-          ok: true,
-          skipped: false,
-          direct: true,
-          responseOpaque: !!directEmail.responseOpaque,
-        },
-      });
-      ok = true;
-      skipped = false;
-    } catch (error) {
-      reason = error.message || reason || 'direct_email_failed';
-      integrations = mergeDesignRequestIntegrations(integrations, {
-        email: {
-          ok: false,
-          skipped: false,
-          direct: true,
-          error: error.message || 'direct_email_failed',
-        },
-      });
-    }
-  }
-
   return { ok, skipped, reason, integrations };
 }
 
@@ -4307,10 +4248,10 @@ function designRequestIntegrationMessage(sync) {
   const messages = [];
   if (sync.integrations?.googleSheets?.ok) messages.push('added to Google Sheets');
   if (sync.integrations?.slack?.ok) {
-    messages.push(sync.integrations.slack.direct ? 'sent directly to Slack' : 'sent to Slack');
+    messages.push('sent to Slack');
   }
   if (sync.integrations?.email?.ok) {
-    messages.push(sync.integrations.email.direct ? 'sent directly by email' : 'sent by email');
+    messages.push('sent by email');
   }
   if (messages.length) return ` and ${messages.join(' and ')}.`;
   if (sync.skipped) return '. External integrations are ready once Netlify environment variables are added.';

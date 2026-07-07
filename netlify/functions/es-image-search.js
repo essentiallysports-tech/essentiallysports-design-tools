@@ -1,4 +1,5 @@
 const ES_MEDIA_ENDPOINT = 'https://www.essentiallysports.com/wp-json/wp/v2/media';
+const { verifyEsUser } = require('./_supabase-auth.js');
 const ES_MCP_ENDPOINT = process.env.ES_MCP_ENDPOINT || 'https://mcp.essentiallysports.com/mcp';
 const ES_MCP_ISSUER = process.env.ES_MCP_ISSUER || 'https://mcp.essentiallysports.com';
 const ES_MCP_ACCESS_TOKEN = process.env.ES_MCP_ACCESS_TOKEN || '';
@@ -43,6 +44,7 @@ function json(statusCode, body) {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store',
       'Access-Control-Allow-Origin': '*',
+      Vary: 'Origin',
     },
     body: JSON.stringify(body),
   };
@@ -530,7 +532,7 @@ exports.handler = async function handler(event) {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Authorization, Content-Type',
       },
       body: '',
     };
@@ -538,10 +540,20 @@ exports.handler = async function handler(event) {
 
   try {
     const params = event.queryStringParameters || {};
-    if (params.health === '1' || params.health === 'true' || shouldProbeHealth(params.health)) {
-      return json(200, await getMcpDiagnosticState({ probe: shouldProbeHealth(params.health) }));
+    const probeHealth = shouldProbeHealth(params.health);
+    if ((params.health === '1' || params.health === 'true') && !probeHealth) {
+      return json(200, await getMcpDiagnosticState({ probe: false }));
     }
     if (params.image) return proxyImage(params.image);
+
+    const auth = await verifyEsUser(event);
+    if (!auth.ok) {
+      return json(auth.statusCode, { error: auth.error });
+    }
+
+    if (probeHealth) {
+      return json(200, await getMcpDiagnosticState({ probe: shouldProbeHealth(params.health) }));
+    }
 
     const query = cleanText(params.query).slice(0, 140);
     const perPage = Math.min(Math.max(parseInt(params.per_page || '15', 10) || 15, 1), 15);

@@ -23,7 +23,7 @@ begin
     );
   end if;
 
-  return '{}'::jsonb;
+  return event;
 end;
 $$;
 

@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { verifyEsUser } = require('./_supabase-auth.js');
 
 const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -48,6 +49,12 @@ function requiredConfig() {
 function slackConfig() {
   return {
     webhookUrl: process.env.SLACK_DESIGN_REQUEST_WEBHOOK_URL,
+  };
+}
+
+function emailConfig() {
+  return {
+    endpointUrl: process.env.DESIGN_REQUEST_EMAIL_ENDPOINT || process.env.EMAIL_DESIGN_REQUEST_ENDPOINT,
   };
 }
 
@@ -281,6 +288,72 @@ async function postToSlack(record, config) {
   return responseText;
 }
 
+function cleanString(value) {
+  const result = String(value ?? '').trim();
+  return result || undefined;
+}
+
+function cleanArray(values) {
+  if (!Array.isArray(values)) return undefined;
+  const result = values.map(cleanString).filter(Boolean);
+  return result.length ? result : undefined;
+}
+
+function cleanRequester(requester = {}) {
+  const result = {
+    name: cleanString(requester.name),
+    email: cleanString(requester.email),
+  };
+  return Object.values(result).some(Boolean) ? result : undefined;
+}
+
+function withoutEmptyValues(value) {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, item]) => {
+      if (item === undefined || item === null || item === '') return false;
+      if (Array.isArray(item)) return item.length > 0;
+      if (typeof item === 'object') return Object.values(item).some(Boolean);
+      return true;
+    })
+  );
+}
+
+function buildEmailPayload(record = {}) {
+  return withoutEmptyValues({
+    id: cleanString(record.id),
+    priority: cleanString(record.priority),
+    requestType: cleanString(record.requestType),
+    status: cleanString(record.status),
+    publication: cleanString(record.publication),
+    socialChannel: cleanString(record.socialChannel),
+    sport: cleanString(record.sport),
+    teamOrLeague: cleanString(record.teamOrLeague),
+    requester: cleanRequester(record.requester),
+    title: cleanString(record.title),
+    entities: cleanString(record.entities),
+    brief: cleanString(record.brief),
+    designCopy: cleanString(record.designCopy),
+    additionalNotes: cleanString(record.additionalNotes),
+    designDueAt: cleanString(record.designDueAt),
+    publishAt: cleanString(record.publishAt),
+    referenceLinks: cleanArray(record.referenceLinks),
+    createdAt: cleanString(record.createdAt),
+  });
+}
+
+async function postToEmail(record, config) {
+  const response = await fetch(config.endpointUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(buildEmailPayload(record)),
+  });
+  const responseText = await response.text().catch(() => '');
+  if (!response.ok) {
+    throw new Error(responseText || `Email request failed with status ${response.status}`);
+  }
+  return responseText;
+}
+
 async function appendToSheet(record, config) {
   const accessToken = await getAccessToken(config);
   const encodedRange = encodeURIComponent(config.range);
@@ -309,6 +382,11 @@ exports.handler = async event => {
   }
 
   try {
+    const auth = await verifyEsUser(event);
+    if (!auth.ok) {
+      return json(auth.statusCode, { ok: false, error: auth.error });
+    }
+
     const payload = JSON.parse(event.body || '{}');
     if (!payload.record?.id) {
       return json(400, { ok: false, error: 'Missing design request record' });
@@ -316,6 +394,7 @@ exports.handler = async event => {
 
     const sheetConfig = requiredConfig();
     const slack = slackConfig();
+    const email = emailConfig();
     const integrations = {
       googleSheets: {
         ok: false,
@@ -324,6 +403,10 @@ exports.handler = async event => {
       slack: {
         ok: false,
         skipped: !slack.webhookUrl,
+      },
+      email: {
+        ok: false,
+        skipped: !email.endpointUrl,
       },
     };
 
@@ -346,6 +429,15 @@ exports.handler = async event => {
         integrations.slack = { ok: true, skipped: false };
       } catch (error) {
         integrations.slack.error = error.message || 'Slack webhook failed';
+      }
+    }
+
+    if (!integrations.email.skipped) {
+      try {
+        await postToEmail(payload.record, email);
+        integrations.email = { ok: true, skipped: false };
+      } catch (error) {
+        integrations.email.error = error.message || 'Email request failed';
       }
     }
 

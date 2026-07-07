@@ -285,8 +285,20 @@
       throw new Error('Password reset is available only when Supabase Auth is configured.');
     }
 
+    let safeRedirectTo;
+    try {
+      const candidate = new URL(String(redirectTo || 'reset-password.html').trim(), window.location.href);
+      const isSameOrigin = candidate.origin === window.location.origin;
+      const isResetPage = /\/reset-password\.html$/i.test(candidate.pathname);
+      safeRedirectTo = isSameOrigin && isResetPage
+        ? candidate.href
+        : new URL('reset-password.html', window.location.href).href;
+    } catch (error) {
+      safeRedirectTo = new URL('reset-password.html', window.location.href).href;
+    }
+
     const { error } = await getSupabaseClient().auth.resetPasswordForEmail(normalizedEmail, {
-      redirectTo: String(redirectTo || '').trim() || undefined,
+      redirectTo: safeRedirectTo,
     });
     if (error) throw new Error(error.message || 'Unable to send the password reset email.');
     return true;
@@ -342,6 +354,19 @@
     return isLocalFallbackEnabled() && accountExists(email);
   }
 
+  async function fetchWithAuth(input, init = {}) {
+    const session = await getSession();
+    if (!await isValidSession(session)) {
+      throw new Error('Please log in again to continue.');
+    }
+    const headers = new Headers(init.headers || {});
+    headers.set('Authorization', `Bearer ${session.token}`);
+    return window.fetch(input, {
+      ...init,
+      headers,
+    });
+  }
+
   async function logout() {
     try {
       window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
@@ -389,6 +414,7 @@
     approvedDomains,
     accountExists,
     createAccount,
+    fetchWithAuth,
     getSession,
     getSupabaseClient,
     isAllowedEmail,
