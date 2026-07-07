@@ -556,7 +556,7 @@ exports.handler = async function handler(event) {
     }
 
     const query = cleanText(params.query).slice(0, 140);
-    const perPage = Math.min(Math.max(parseInt(params.per_page || '15', 10) || 15, 1), 15);
+    const perPage = Math.min(Math.max(parseInt(params.per_page || '25', 10) || 25, 1), 25);
     if (!query) return json(400, { error: 'Missing image search query.' });
 
     const configState = getMcpConfigState();

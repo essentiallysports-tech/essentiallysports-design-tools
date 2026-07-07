@@ -4291,6 +4291,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .panel .text-card,
     html[data-studio-shell="on"] .panel .swipe-button-control,
     html[data-studio-shell="on"] .panel .advanced-card,
+    html[data-studio-shell="on"] .post-type-control,
+    html[data-studio-shell="on"] .quote-logo-control,
     html[data-studio-shell="on"] .youtube-control-row,
     html[data-studio-shell="on"] .newsletter-control-row,
     html[data-studio-shell="on"] .studio-control-dock {
@@ -4307,6 +4309,15 @@ body[data-current-page="faq"] .faq-cta-art img {
       display: grid;
       gap: 16px;
       background: linear-gradient(180deg, #FFFFFF 0%, #F8FBFF 100%);
+    }
+
+    html[data-studio-shell="on"] .post-type-control .card {
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      border-bottom: 0;
+      background: transparent;
+      box-shadow: none;
     }
 
     html[data-studio-shell="on"] .studio-inspector-tabs {
@@ -4334,12 +4345,24 @@ body[data-current-page="faq"] .faq-cta-art img {
       line-height: 1;
       white-space: nowrap;
       cursor: pointer;
+      transition: background-color .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
     }
 
     html[data-studio-shell="on"] .studio-inspector-tab.is-active {
       background: #FFFFFF;
       color: #111827;
       box-shadow: 0 8px 18px rgba(15, 23, 42, .06);
+    }
+
+    @keyframes studioInspectorPanelIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     html[data-studio-shell="on"] .studio-dock-section {
@@ -4359,6 +4382,94 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] body[data-studio-inspector="ai"] .studio-ai-section {
       display: grid;
       gap: 12px;
+    }
+
+    html[data-studio-shell="on"] body[data-studio-inspector="image"] .studio-dock-section,
+    html[data-studio-shell="on"] body[data-studio-inspector="content"] .panel > :not(.studio-control-dock),
+    html[data-studio-shell="on"] body[data-studio-inspector="ai"] .studio-ai-section {
+      animation: studioInspectorPanelIn .22s ease both;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-search {
+      display: grid;
+      grid-template-columns: 18px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 8px 0 12px;
+      border: 1px solid #DCE4ED;
+      border-radius: 8px;
+      background: #FFFFFF;
+      color: #7892AE;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-search:focus-within {
+      border-color: #0A7DFA;
+      box-shadow: 0 0 0 3px rgba(10, 125, 250, .10);
+    }
+
+    html[data-studio-shell="on"] .studio-ai-search svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-search input {
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: #111827;
+      font-family: var(--font-heading);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-search input::placeholder {
+      color: #9DB4CE;
+      opacity: 1;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-search button {
+      min-height: 30px;
+      padding: 0 12px;
+      border: 1px solid #0A7DFA;
+      border-radius: 7px;
+      background: #0A7DFA;
+      color: #FFFFFF;
+      cursor: pointer;
+      font-family: var(--font-heading);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      transition: background-color .18s ease, border-color .18s ease, transform .18s ease;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-search button:hover,
+    html[data-studio-shell="on"] .studio-ai-search button:focus-visible {
+      border-color: #006FE3;
+      background: #006FE3;
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    html[data-studio-shell="on"] .studio-ai-search button:disabled {
+      cursor: wait;
+      opacity: .68;
+      transform: none;
+    }
+
+    html[data-studio-shell="on"] .studio-ai-helper {
+      color: #7892AE;
+      font-family: var(--font-heading);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.35;
     }
 
     html[data-studio-shell="on"] .studio-ai-empty {
@@ -7124,8 +7235,14 @@ function initImageToolRail() {
     event.stopPropagation();
     setImageToolPanelOpen(false);
     setImageUploadMenuOpen(false);
-    window.ESSetStudioInspectorMode?.('ai');
-    applyAiImageFromEsStorage();
+    focusAiImageSearch();
+  });
+
+  document.addEventListener('submit', event => {
+    if (!event.target.closest?.('[data-ai-image-search-form]')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    runAiImageSearch(document.querySelector('[data-ai-image-query-input]')?.value);
   });
 
   document.getElementById('ai-image-picker')?.addEventListener('click', event => event.stopPropagation());
@@ -7904,13 +8021,18 @@ function setAiImageButtonLoading(isLoading) {
   if (!button) return;
   button.disabled = isLoading;
   const label = button.querySelector('span');
-  if (label) label.textContent = isLoading ? 'Finding...' : 'AI Images';
+  if (label) label.textContent = isLoading ? 'Searching...' : 'AI Images';
+  const searchButton = document.querySelector('[data-ai-image-search-submit]');
+  if (searchButton) {
+    searchButton.disabled = isLoading;
+    searchButton.textContent = isLoading ? 'Searching' : 'Search';
+  }
 }
 
 function directEsMediaSearchUrl(query) {
   const url = new URL('https://www.staging.essentiallysports.com/wp-json/wp/v2/media');
   url.searchParams.set('search', query);
-  url.searchParams.set('per_page', '15');
+  url.searchParams.set('per_page', '25');
   url.searchParams.set('media_type', 'image');
   url.searchParams.set('orderby', 'date');
   url.searchParams.set('order', 'desc');
@@ -7931,7 +8053,7 @@ function mediaSearchResultFromWordPress(media) {
 }
 
 async function searchEsStorageImages(query) {
-  const apiUrl = `/api/es-image-search?query=${encodeURIComponent(query)}&per_page=15`;
+  const apiUrl = `/api/es-image-search?query=${encodeURIComponent(query)}&per_page=25`;
   try {
     if (!window.ESAuth?.fetchWithAuth) throw new Error('Authenticated image search is unavailable.');
     const response = await window.ESAuth.fetchWithAuth(apiUrl);
@@ -7987,7 +8109,7 @@ function renderAiImagePicker(results, query) {
   const grid = document.querySelector('[data-ai-image-picker-grid]');
   if (!grid) return;
 
-  aiImageSearchResults = results.slice(0, 15);
+  aiImageSearchResults = results.slice(0, 25);
   aiImageLastQuery = query;
   grid.innerHTML = '';
 
@@ -8015,6 +8137,48 @@ function renderAiImagePicker(results, query) {
   });
 
   setAiImagePickerOpen(aiImageSearchResults.length > 0);
+}
+
+function focusAiImageSearch(query = '') {
+  window.ESSetStudioInspectorMode?.('ai');
+  const input = document.querySelector('[data-ai-image-query-input]');
+  if (!input) return;
+  const nextQuery = String(query || getActiveHeadlineForImageSearch() || '').trim();
+  if (nextQuery && !input.value.trim()) input.value = nextQuery;
+  requestAnimationFrame(() => {
+    input.focus();
+    input.select?.();
+  });
+}
+
+async function runAiImageSearch(query) {
+  const cleanQuery = String(query || '').trim();
+  if (!cleanQuery) {
+    focusAiImageSearch();
+    setStatus('Type an entity, team, or topic to search AI Images.', 'err');
+    return;
+  }
+
+  setAiImageButtonLoading(true);
+  setStatus('');
+
+  try {
+    const payload = normalizeAiImageSearchPayload(await searchEsStorageImages(cleanQuery));
+    const usableResults = payload.results.filter(item => item?.proxyUrl || item?.sourceUrl).slice(0, 25);
+    if (!usableResults.length) {
+      setAiImagePickerOpen(false);
+      setStatus('No ES Storage image found for this search.', 'err');
+      return;
+    }
+    aiImageLastSource = payload.source || 'unknown';
+    aiImageLastFallbackReason = payload.source !== 'mcp-agency' && payload.meta?.mcpError ? payload.meta.mcpError : '';
+    renderAiImagePicker(usableResults, cleanQuery);
+    setStatus('');
+  } catch (error) {
+    setStatus(error.message || 'AI Images could not fetch from ES Storage.', 'err');
+  } finally {
+    setAiImageButtonLoading(false);
+  }
 }
 
 async function applySelectedAiImageFromEsStorage(result) {
@@ -8065,7 +8229,7 @@ async function applyAiImageFromEsStorage() {
     let usableResults = [];
     for (const query of queries) {
       const payload = normalizeAiImageSearchPayload(await searchEsStorageImages(query));
-      usableResults = payload.results.filter(item => item?.proxyUrl || item?.sourceUrl).slice(0, 15);
+      usableResults = payload.results.filter(item => item?.proxyUrl || item?.sourceUrl).slice(0, 25);
       if (usableResults.length) {
         matchedQuery = query;
         matchedSource = payload.source;
@@ -11765,7 +11929,16 @@ loadFont().then(() => render());
         </div>
         <div class="studio-ai-section">
           <div class="studio-dock-title">AI Images <span class="studio-dock-kicker">ES Storage</span></div>
-          <div class="studio-ai-empty">Click AI Images below the canvas to search images from your current text/entity name.</div>
+          <form class="studio-ai-search" data-ai-image-search-form role="search" aria-label="Search ES images">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="6.5"></circle>
+              <path d="m16 16 4 4"></path>
+            </svg>
+            <input type="search" data-ai-image-query-input placeholder="Search entity, team, topic..." autocomplete="off" spellcheck="false">
+            <button type="submit" data-ai-image-search-submit>Search</button>
+          </form>
+          <div class="studio-ai-helper">Search shows the latest ES images for the exact entity, team, topic, or keyword you type.</div>
+          <div class="studio-ai-empty">Search for an entity, team, or topic to see image options here.</div>
         </div>
       `;
       panel.insertBefore(dock, panel.firstElementChild);
