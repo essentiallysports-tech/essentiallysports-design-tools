@@ -1,0 +1,245 @@
+/* Shared mobile chrome parity.
+   Keep global navbar/footer behavior consistent across app pages without
+   touching workspace canvas, post fonts, or page-specific content layouts. */
+
+@media (max-width: 900px) {
+  html,
+  body {
+    max-width: 100%;
+    margin: 0;
+    overflow-x: hidden;
+  }
+
+  .navbar {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    min-height: 64px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "logo profile"
+      "menu menu";
+    align-items: center;
+    gap: 8px 12px;
+    padding: 10px 14px;
+  }
+
+  .navbar-logo {
+    grid-area: logo;
+    min-width: 0;
+    max-width: min(58vw, 260px);
+    margin-right: 0;
+  }
+
+  .navbar-logo img,
+  .navbar-logo svg {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: clamp(24px, 6vw, 31px);
+  }
+
+  .navbar-right {
+    grid-area: profile;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
+    max-width: 42vw;
+    margin-left: 0;
+    gap: 8px;
+  }
+
+  .navbar-right .navbar-icon-btn {
+    display: none !important;
+  }
+
+  .profile-menu {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+    height: 46px;
+    border-radius: 999px;
+  }
+
+  .profile-menu.is-open {
+    height: 46px;
+  }
+
+  .profile-trigger {
+    min-width: 0;
+    height: 46px;
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  .profile-avatar {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+  }
+
+  .profile-name {
+    min-width: 0;
+    max-width: 88px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: "Roboto Condensed", "Roboto", Arial, sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .profile-role {
+    display: none;
+  }
+
+  .profile-chevron {
+    width: 12px;
+    height: 8px;
+    flex: 0 0 12px;
+  }
+
+  .profile-dropdown {
+    top: calc(100% + 8px);
+    right: 0;
+    width: min(210px, calc(100vw - 28px));
+    min-width: 0;
+  }
+
+  .navbar-menu {
+    grid-area: menu;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 18px;
+    margin: 2px 0 0;
+    padding: 4px 0 2px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    color: #111;
+    font-family: var(--font-display, "Acumin Post", "Roboto Condensed", Arial, sans-serif);
+    font-size: clamp(15px, 4.1vw, 18px);
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .navbar-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .navbar-menu > * {
+    flex: 0 0 auto;
+  }
+
+  .navbar-menu a,
+  .nav-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    white-space: nowrap;
+  }
+
+  .nav-separator {
+    height: 20px;
+    flex: 0 0 1px;
+  }
+
+  .navbar-menu .has-chevron::after {
+    flex: 0 0 16px;
+  }
+
+  .nav-chevron {
+    display: inline-block;
+    width: 16px;
+    height: 10px;
+    flex: 0 0 16px;
+    color: var(--accent, #0A7DFA);
+  }
+
+  .nav-dropdown-menu {
+    position: fixed;
+    top: 104px;
+    right: 14px;
+    left: 14px;
+    z-index: 200;
+    width: auto;
+    min-width: 0;
+    max-height: min(62vh, 380px);
+    overflow-y: auto;
+  }
+
+  .site-footer {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .footer-hero {
+    padding: 50px 18px 24px;
+  }
+
+  .footer-logo-img {
+    max-width: min(100%, 320px);
+    height: auto;
+    max-height: 38px;
+  }
+
+  .footer-blurb {
+    width: min(100%, 620px);
+    margin: 18px auto 22px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .footer-socials {
+    flex-wrap: wrap;
+  }
+
+  .footer-copy {
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .footer-links {
+    width: calc(100% - 36px);
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 28px 0 34px;
+  }
+
+  .footer-col.sports {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+  }
+
+  .footer-bottom {
+    width: calc(100% - 36px);
+    justify-content: flex-start;
+    gap: 14px 20px;
+    padding: 18px 0 24px;
+    text-align: left;
+  }
+}
+
+@media (max-width: 420px) {
+  .navbar {
+    padding-inline: 12px;
+    gap: 8px;
+  }
+
+  .navbar-logo {
+    max-width: 56vw;
+  }
+
+  .profile-name {
+    max-width: 64px;
+  }
+}
