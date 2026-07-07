@@ -7,6 +7,10 @@
   const ADMIN_CONFIG_KEY = 'es.dashboard.adminConfig.v1';
   const PROFILE_KEY = 'es.ai.profile';
   const AUTH_KEY = 'es.designerAuth.v1';
+  const SUPABASE_PROFILES_TABLE = 'es_designer_profiles';
+  const SUPABASE_PRESENCE_TABLE = 'es_designer_presence';
+  const PRESENCE_ONLINE_WINDOW_MS = 2 * 60 * 1000;
+  const PRESENCE_HEARTBEAT_MS = 30 * 1000;
 
   const DEFAULT_ADMIN_CONFIG = Object.freeze({
     adminEmails: [
@@ -57,6 +61,14 @@
     return readJson(PROFILE_KEY, {}) || {};
   }
 
+  function getSupabaseClient() {
+    try {
+      return window.ESAuth?.getSupabaseClient?.() || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
   async function getAuthSession() {
     try {
       return await window.ESAuth?.getSession?.();
@@ -84,6 +96,177 @@
     const session = await getAuthenticatedSession();
     const email = normalizeEmail(session?.user?.email);
     return Boolean(email && getAdminConfig().adminEmails.includes(email));
+  }
+
+  let cloudPeopleCache = [];
+  let presenceTimer = null;
+  let cloudRefreshInFlight = null;
+
+  function getCurrentWorkspaceLabel() {
+    const page = document.body?.dataset?.currentPage || '';
+    const path = window.location.pathname.split('/').pop() || 'index.html';
+    if (page === 'instagram') return 'Social Media workspace';
+    if (page === 'youtube') return 'YouTube workspace';
+    if (page === 'newsletter') return 'Newsletter workspace';
+    if (/dashboard\.html$/i.test(path)) return 'Dashboard';
+    if (/design-request\.html$/i.test(path)) return 'Design Request';
+    if (/profile\.html$/i.test(path)) return 'Profile';
+    if (/settings\.html$/i.test(path)) return 'Settings';
+    return document.title?.replace(/\s*\|\s*EssentiallySports\s*$/i, '').trim() || 'ES Designer';
+  }
+
+  function normalizeCloudPerson(row = {}) {
+    const email = normalizeEmail(row.email);
+    if (!email) return null;
+    const lastSeen = row.last_seen_at || row.updated_at || '';
+    const lastSeenMs = Date.parse(lastSeen);
+    const isOnline = Number.isFinite(lastSeenMs) && Date.now() - lastSeenMs <= PRESENCE_ONLINE_WINDOW_MS;
+    return {
+      email,
+      name: cleanString(row.name || email.split('@')[0]),
+      role: cleanString(row.role || ''),
+      avatar: cleanString(row.avatar_url || row.avatar || ''),
+      workspace: cleanString(row.workspace || row.page_path || (isOnline ? 'ES Designer' : 'Not currently active')),
+      lastSeenAt: lastSeen,
+      online: isOnline,
+      source: 'supabase',
+    };
+  }
+
+  async function upsertSupabaseProfileAndPresence() {
+    const session = await getAuthenticatedSession();
+    const client = getSupabaseClient();
+    if (!session?.user?.email || !client) return false;
+
+    const profile = getStoredProfile();
+    const email = normalizeEmail(session.user.email);
+    const name = cleanString(profile.name || session.user.name || email.split('@')[0] || 'ES User');
+    const role = cleanString(profile.role || session.user.role || 'Designer');
+    const avatarUrl = cleanString(profile.avatar || '');
+    const now = new Date().toISOString();
+    const workspace = getCurrentWorkspaceLabel();
+    const pagePath = `${window.location.pathname}${window.location.hash || ''}`;
+
+    const profileRow = {
+      email,
+      name,
+      role,
+      avatar_url: avatarUrl,
+      last_seen_at: now,
+      updated_at: now,
+    };
+    const presenceRow = {
+      email,
+      name,
+      role,
+      avatar_url: avatarUrl,
+      page_path: pagePath,
+      workspace,
+      last_seen_at: now,
+      updated_at: now,
+    };
+
+    const profileResult = await client
+      .from(SUPABASE_PROFILES_TABLE)
+      .upsert(profileRow, { onConflict: 'email' });
+    if (profileResult.error) throw profileResult.error;
+
+    const presenceResult = await client
+      .from(SUPABASE_PRESENCE_TABLE)
+      .upsert(presenceRow, { onConflict: 'email' });
+    if (presenceResult.error) throw presenceResult.error;
+
+    return true;
+  }
+
+  async function fetchSupabasePeople() {
+    const client = getSupabaseClient();
+    const session = await getAuthenticatedSession();
+    if (!client || !session?.user?.email) return [];
+
+    const [{ data: profiles, error: profileError }, { data: presence, error: presenceError }] = await Promise.all([
+      client
+        .from(SUPABASE_PROFILES_TABLE)
+        .select('email,name,role,avatar_url,last_seen_at,updated_at')
+        .order('name', { ascending: true }),
+      client
+        .from(SUPABASE_PRESENCE_TABLE)
+        .select('email,name,role,avatar_url,page_path,workspace,last_seen_at,updated_at')
+        .order('last_seen_at', { ascending: false }),
+    ]);
+
+    if (profileError) throw profileError;
+    if (presenceError) throw presenceError;
+
+    const people = new Map();
+    (Array.isArray(profiles) ? profiles : []).forEach(row => {
+      const person = normalizeCloudPerson(row);
+      if (person) people.set(person.email, person);
+    });
+    (Array.isArray(presence) ? presence : []).forEach(row => {
+      const person = normalizeCloudPerson(row);
+      if (!person) return;
+      const existing = people.get(person.email) || {};
+      people.set(person.email, {
+        ...existing,
+        ...person,
+        name: person.name || existing.name,
+        role: person.role || existing.role,
+        avatar: person.avatar || existing.avatar,
+      });
+    });
+    return Array.from(people.values());
+  }
+
+  async function refreshCloudDashboardData({ silent = true, fetchPeople = /dashboard\.html$/i.test(window.location.pathname) } = {}) {
+    if (cloudRefreshInFlight) return cloudRefreshInFlight;
+    cloudRefreshInFlight = (async () => {
+      try {
+        await upsertSupabaseProfileAndPresence();
+        if (fetchPeople) {
+          cloudPeopleCache = await fetchSupabasePeople();
+          emitDashboardChange('cloud-people', { people: cloudPeopleCache });
+        }
+        return cloudPeopleCache;
+      } catch (error) {
+        if (!silent) throw error;
+        return cloudPeopleCache;
+      } finally {
+        cloudRefreshInFlight = null;
+      }
+    })();
+    return cloudRefreshInFlight;
+  }
+
+  async function recordPresenceHeartbeat() {
+    try {
+      await upsertSupabaseProfileAndPresence();
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function scheduleSupabasePresence() {
+    const beat = () => {
+      if (document.visibilityState === 'hidden') return;
+      recordPresenceHeartbeat();
+    };
+    const start = () => {
+      if (presenceTimer) return;
+      beat();
+      presenceTimer = window.setInterval(beat, PRESENCE_HEARTBEAT_MS);
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', start, { once: true });
+    } else {
+      window.setTimeout(start, 0);
+    }
+    window.addEventListener('focus', beat);
+    window.addEventListener('pageshow', beat);
+    window.addEventListener('hashchange', () => window.setTimeout(beat, 0));
+    window.addEventListener('es:auth-ready', beat);
+    window.addEventListener('es:auth-updated', beat);
   }
 
   async function showAdminNavigation() {
@@ -263,16 +446,28 @@
 
   function getPeople({ requests = readDesignRequests(), designs = readDesigns() } = {}) {
     const people = new Map();
-    const add = (email, name, role = '') => {
+    const add = (email, name, role = '', extras = {}) => {
       const normalized = normalizeEmail(email);
       if (!normalized) return;
       const existing = people.get(normalized) || {};
       people.set(normalized, {
+        ...existing,
+        ...extras,
         email: normalized,
         name: cleanString(name || existing.name || normalized.split('@')[0]),
         role: cleanString(role || existing.role || ''),
       });
     };
+
+    cloudPeopleCache.forEach(person => {
+      add(person.email, person.name, person.role, {
+        avatar: person.avatar || '',
+        workspace: person.workspace || '',
+        lastSeenAt: person.lastSeenAt || '',
+        online: Boolean(person.online),
+        source: person.source || 'supabase',
+      });
+    });
 
     const profile = getStoredProfile();
     add(profile.email, profile.name, profile.role);
@@ -291,7 +486,10 @@
     const config = getAdminConfig();
     config.adminEmails.forEach(email => add(email, email.split('@')[0], 'Admin'));
     config.ownerEmails.forEach(email => add(email, email.split('@')[0], 'Owner'));
-    return Array.from(people.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(people.values()).sort((a, b) => {
+      if (Boolean(a.online) !== Boolean(b.online)) return a.online ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
   }
 
   function getDashboardState() {
@@ -336,8 +534,12 @@
     writeDesigns,
     readActivity,
     getPeople,
+    refreshCloudDashboardData,
+    upsertSupabaseProfileAndPresence,
+    recordPresenceHeartbeat,
     emitDashboardChange,
   });
 
   scheduleAdminNavigationChecks();
+  scheduleSupabasePresence();
 })();

@@ -932,7 +932,7 @@
       target.innerHTML = state.people.map(person => `
         <article class="person">
           <strong>${text(person.name)}</strong>
-          <span>${text(person.email)}${person.role ? ` · ${text(person.role)}` : ''}</span>
+          <span>${text(person.email)}${person.role ? ` · ${text(person.role)}` : ''}${person.online ? ' · Online' : ''}</span>
         </article>
       `).join('');
     }
@@ -985,12 +985,16 @@
 
     function renderLiveActivity(state) {
       const target = document.getElementById('live-list');
-      const currentName = plainText(dashboardUser.name, 'ES Admin');
       const people = [{ ...dashboardUser, online: true, workspace: 'Dashboard overview' }]
         .concat(state.people
           .filter(person => person.email && person.email !== dashboardUser.email)
-          .slice(0, 3)
-          .map(person => ({ ...person, online: false, workspace: 'Not currently active' })));
+          .map(person => ({
+            ...person,
+            online: Boolean(person.online),
+            workspace: person.online
+              ? plainText(person.workspace, 'ES Designer')
+              : plainText(person.workspace, 'Not currently active'),
+          })));
       const onlineCount = people.filter(person => person.online).length;
       document.querySelectorAll('[data-online-count]').forEach(el => { el.textContent = onlineCount; });
       target.innerHTML = people.map(person => `
@@ -1191,6 +1195,7 @@
       document.body.dataset.dashboardView = 'overview';
       renderIdentity();
       setupDashboardEvents();
+      await window.ESDashboardData.refreshCloudDashboardData?.();
       renderDashboard();
     }
 

@@ -61,3 +61,29 @@ http://127.0.0.1:8890/reset-password.html
 The dashboard email restriction controls UI access. When dashboard data moves
 from local browser storage to Supabase tables, those tables must also have RLS
 policies enforcing the same two-admin rule.
+
+## Dashboard people and live activity
+
+The dashboard reads signed-up users and recent active sessions from:
+
+```text
+public.es_designer_profiles
+public.es_designer_presence
+```
+
+Apply the migrations with:
+
+```bash
+supabase db push
+```
+
+The dashboard people list will remain local/fallback-only until the migration
+`20260708123000_add_dashboard_profiles_presence.sql` exists in the linked
+Supabase project.
+
+Security behavior:
+
+- Every logged-in ES user can upsert only their own profile/presence heartbeat.
+- Only dashboard admins can read the shared profile/presence lists:
+  - `suhail.quraishi@essentiallysports.com`
+  - `manish.kalsi@essentiallysports.com`
