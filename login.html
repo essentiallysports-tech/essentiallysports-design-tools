@@ -1014,7 +1014,7 @@
     createOnlyFields.forEach(field => {
       field.hidden = !isCreate;
       field.querySelectorAll('input').forEach(input => {
-        input.required = isCreate && input.id === 'login-confirm-password';
+        input.required = isCreate && (input.id === 'login-name' || input.id === 'login-confirm-password');
       });
     });
     loginOnlyFields.forEach(field => {
@@ -1112,6 +1112,11 @@
     const confirmPassword = confirmPasswordInput.value;
 
     if (!validateBaseFields(email, password)) return;
+    if (authMode === 'create' && !name) {
+      setError('Enter your name.');
+      nameInput.focus();
+      return;
+    }
     if (authMode === 'create' && password !== confirmPassword) {
       setError('Passwords do not match.');
       confirmPasswordInput.focus();

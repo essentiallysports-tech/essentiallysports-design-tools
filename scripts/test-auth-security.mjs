@@ -7,6 +7,9 @@ import { webcrypto } from 'node:crypto';
 
 const authSource = readFileSync(new URL('../es-auth.js', import.meta.url), 'utf8');
 const dashboardSource = readFileSync(new URL('../dashboard-data.js', import.meta.url), 'utf8');
+const dashboardHtmlSource = readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
+const loginHtmlSource = readFileSync(new URL('../login.html', import.meta.url), 'utf8');
+const netlifyConfigSource = readFileSync(new URL('../netlify.toml', import.meta.url), 'utf8');
 const supabaseSignupHookMigration = readFileSync(new URL('../supabase/migrations/20260706162500_restrict_signup_to_es_domain.sql', import.meta.url), 'utf8');
 
 function storage() {
@@ -212,6 +215,11 @@ function createEnvironment({
 assert.match(supabaseSignupHookMigration, /signup_domain\s+<>\s+'essentiallysports\.com'/i);
 assert.match(supabaseSignupHookMigration, /return\s+event\s*;/i);
 assert.doesNotMatch(supabaseSignupHookMigration, /return\s+'\{\}'::jsonb\s*;/i);
+assert.match(dashboardHtmlSource, /const\s+hasValidSession\s*=\s*await\s+window\.ESAuth\?\.isValidSession\?\.\(\);/);
+assert.match(dashboardHtmlSource, /if\s*\(!hasValidSession\)\s*\{\s*return;\s*\}/);
+assert.match(loginHtmlSource, /input\.required\s*=\s*isCreate\s*&&\s*\(input\.id\s*===\s*'login-name'\s*\|\|\s*input\.id\s*===\s*'login-confirm-password'\)/);
+assert.match(loginHtmlSource, /authMode\s*===\s*'create'\s*&&\s*!name/);
+assert.match(netlifyConfigSource, /for\s*=\s*"\/\*\.woff2"[\s\S]*?Cache-Control\s*=\s*"public, max-age=31536000, immutable"/);
 
 {
   const session = {
