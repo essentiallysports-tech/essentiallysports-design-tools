@@ -247,7 +247,12 @@
     }
   }
 
+  function shouldRunSupabasePresence() {
+    return /dashboard\.html$/i.test(window.location.pathname);
+  }
+
   function scheduleSupabasePresence() {
+    if (!shouldRunSupabasePresence()) return;
     const beat = () => {
       if (document.visibilityState === 'hidden') return;
       recordPresenceHeartbeat();
