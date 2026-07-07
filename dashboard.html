@@ -421,10 +421,6 @@
       font-weight: 700;
     }
 
-    .blocked { display: none; }
-    body.is-blocked .dashboard-content { display: none; }
-    body.is-blocked .blocked { display: block; }
-
     @media (max-width: 1080px) {
       .hero,
       .grid { grid-template-columns: 1fr; }
@@ -559,12 +555,6 @@
       </header>
 
       <main class="dashboard-shell">
-    <section class="blocked notice">
-      <h2>Dashboard Hidden For Now</h2>
-      <p>This dashboard is still hidden in production. Use the local preview URL while its design and backend are being finalized.</p>
-      <p style="margin-top:14px;"><a class="btn btn-primary" href="index.html#frames">Back to Design Tools</a></p>
-    </section>
-
     <div class="dashboard-content">
       <section class="dashboard-welcome" data-view-section="overview">
         <div class="welcome-copy">
@@ -1170,7 +1160,6 @@
     async function boot() {
       setupPageTransitions();
       const isAdmin = await window.ESDashboardData.isCurrentUserAdmin();
-      document.body.classList.toggle('is-blocked', !isAdmin);
       if (!isAdmin) {
         window.location.replace('index.html#frames');
         return;

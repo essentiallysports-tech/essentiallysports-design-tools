@@ -61,6 +61,18 @@ function createResponse() {
 {
   const response = createResponse();
   await designSubmitHandler({
+    method: 'OPTIONS',
+    headers: {},
+    query: {},
+  }, response);
+
+  assert.equal(response.statusCode, 204);
+  assert.match(response.headers['access-control-allow-headers'], /Authorization/i);
+}
+
+{
+  const response = createResponse();
+  await designSubmitHandler({
     method: 'POST',
     headers: {},
     query: {},

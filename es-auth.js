@@ -2,7 +2,6 @@
   'use strict';
 
   const AUTH_STORAGE_KEY = 'es.designerAuth.v1';
-  const ACCOUNT_STORAGE_KEY = 'es.designerAccounts.v1';
   const PROFILE_STORAGE_KEY = 'es.ai.profile';
   const config = window.ES_AUTH_CONFIG || {};
   const supabaseConfig = config.supabase || {};
@@ -41,12 +40,6 @@
     );
   }
 
-  function isLocalFallbackEnabled() {
-    if (config.allowLocalFallback !== true) return false;
-    const hostname = String(window.location.hostname || '').toLowerCase();
-    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-  }
-
   function authUnavailableError() {
     return new Error('ES Designer login is temporarily unavailable. Please try again shortly.');
   }
@@ -65,49 +58,6 @@
       });
     }
     return supabaseClient;
-  }
-
-  function readAccounts() {
-    try {
-      return JSON.parse(window.localStorage.getItem(ACCOUNT_STORAGE_KEY) || '{}') || {};
-    } catch (error) {
-      return {};
-    }
-  }
-
-  function writeAccounts(accounts) {
-    window.localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(accounts));
-  }
-
-  function accountExists(email) {
-    return Boolean(readAccounts()[normalizeEmail(email)]);
-  }
-
-  function randomSalt() {
-    const values = new Uint8Array(16);
-    window.crypto.getRandomValues(values);
-    return Array.from(values, value => value.toString(16).padStart(2, '0')).join('');
-  }
-
-  async function sha256(value) {
-    const encoded = new TextEncoder().encode(value);
-    const hash = await window.crypto.subtle.digest('SHA-256', encoded);
-    return Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('');
-  }
-
-  async function hashPassword(password, salt) {
-    return sha256(`${salt}:${password}`);
-  }
-
-  function safeCompare(a, b) {
-    const left = String(a || '');
-    const right = String(b || '');
-    if (left.length !== right.length) return false;
-    let mismatch = 0;
-    for (let index = 0; index < left.length; index += 1) {
-      mismatch |= left.charCodeAt(index) ^ right.charCodeAt(index);
-    }
-    return mismatch === 0;
   }
 
   function validatePassword(password) {
@@ -136,39 +86,6 @@
       // Session mirroring is only used by local UI gates; Supabase remains the source of truth.
     }
     return session;
-  }
-
-  function localSessionFromAccount(account) {
-    return {
-      token: `local-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      user: {
-        email: account.email,
-        name: account.name,
-        role: account.role || 'Designer',
-      },
-      createdAt: new Date().toISOString(),
-      mode: 'local-account',
-    };
-  }
-
-  async function createLocalAccount({ name, email, password }) {
-    const normalizedEmail = normalizeEmail(email);
-    const accounts = readAccounts();
-    if (accounts[normalizedEmail]) {
-      throw new Error('An account already exists for this email. Please log in.');
-    }
-
-    const salt = randomSalt();
-    accounts[normalizedEmail] = {
-      email: normalizedEmail,
-      name: String(name || '').trim() || normalizedEmail.split('@')[0] || 'ES Designer',
-      role: 'Designer',
-      salt,
-      passwordHash: await hashPassword(password, salt),
-      createdAt: new Date().toISOString(),
-    };
-    writeAccounts(accounts);
-    return { email: normalizedEmail, name: accounts[normalizedEmail].name, role: 'Designer' };
   }
 
   async function createSupabaseAccount({ name, email, password }) {
@@ -207,28 +124,7 @@
       return createSupabaseAccount({ name, email: normalizedEmail, password });
     }
 
-    if (isLocalFallbackEnabled()) {
-      return createLocalAccount({ name, email: normalizedEmail, password });
-    }
-
     throw authUnavailableError();
-  }
-
-  async function loginWithLocalAccount({ email, password }) {
-    const normalizedEmail = normalizeEmail(email);
-    const account = readAccounts()[normalizedEmail];
-    if (!account) {
-      throw new Error('No account found for this email. Please create an account first.');
-    }
-
-    const candidateHash = await hashPassword(password, account.salt);
-    if (!safeCompare(candidateHash, account.passwordHash)) {
-      throw new Error('Incorrect password.');
-    }
-
-    const session = localSessionFromAccount(account);
-    syncProfile({ name: account.name, email: normalizedEmail });
-    return syncSession(session);
   }
 
   async function loginWithSupabase({ email, password }) {
@@ -267,10 +163,6 @@
 
     if (isSupabaseConfigured()) {
       return loginWithSupabase({ email: normalizedEmail, password });
-    }
-
-    if (isLocalFallbackEnabled()) {
-      return loginWithLocalAccount({ email: normalizedEmail, password });
     }
 
     throw authUnavailableError();
@@ -338,20 +230,14 @@
       return syncSession(mirroredSession);
     }
 
-    if (!isLocalFallbackEnabled()) return null;
-    try {
-      return JSON.parse(window.sessionStorage.getItem(AUTH_STORAGE_KEY) || 'null');
-    } catch (error) {
-      return null;
-    }
+    return null;
   }
 
   async function isValidSession(session) {
     const currentSession = session || await getSession();
     const email = normalizeEmail(currentSession?.user?.email);
     if (!currentSession?.token || !isAllowedEmail(email)) return false;
-    if (isSupabaseConfigured()) return true;
-    return isLocalFallbackEnabled() && accountExists(email);
+    return isSupabaseConfigured();
   }
 
   async function fetchWithAuth(input, init = {}) {
@@ -409,16 +295,13 @@
 
   window.ESAuth = Object.freeze({
     AUTH_STORAGE_KEY,
-    ACCOUNT_STORAGE_KEY,
     approvedEmails,
     approvedDomains,
-    accountExists,
     createAccount,
     fetchWithAuth,
     getSession,
     getSupabaseClient,
     isAllowedEmail,
-    isLocalFallbackEnabled,
     isSupabaseConfigured,
     isValidSession,
     login,

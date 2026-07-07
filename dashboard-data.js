@@ -57,14 +57,6 @@
     return readJson(PROFILE_KEY, {}) || {};
   }
 
-  function getLocalSession() {
-    try {
-      return JSON.parse(window.sessionStorage.getItem(AUTH_KEY) || 'null');
-    } catch (error) {
-      return null;
-    }
-  }
-
   async function getAuthSession() {
     try {
       return await window.ESAuth?.getSession?.();
@@ -76,10 +68,6 @@
   async function getAuthenticatedSession() {
     const authSession = await getAuthSession();
     if (authSession?.token && authSession?.user?.email) return authSession;
-
-    const localSession = getLocalSession();
-    const localFallbackEnabled = Boolean(window.ESAuth?.isLocalFallbackEnabled?.());
-    if (localFallbackEnabled && localSession?.token && localSession?.user?.email) return localSession;
     return null;
   }
 

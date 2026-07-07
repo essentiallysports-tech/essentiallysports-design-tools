@@ -24,7 +24,27 @@ function storage() {
   };
 }
 
-function createEnvironment({ session = null, supabaseAvailable = true } = {}) {
+function createAdminNavElement() {
+  const classes = new Set();
+  return {
+    hidden: true,
+    attributes: {},
+    classList: {
+      toggle(name, force) {
+        if (force) classes.add(name);
+        else classes.delete(name);
+      },
+      contains(name) {
+        return classes.has(name);
+      },
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    },
+  };
+}
+
+function createEnvironment({ session = null, supabaseAvailable = true, adminElements = [] } = {}) {
   const localStorage = storage();
   const sessionStorage = storage();
   const authCalls = {
@@ -77,7 +97,6 @@ function createEnvironment({ session = null, supabaseAvailable = true } = {}) {
         url: 'https://xtdusejokbhtjlmijdca.supabase.co',
         anonKey: 'public-test-key',
       },
-      allowLocalFallback: false,
       allowedDomains: ['essentiallysports.com'],
       allowedEmails: [],
     },
@@ -96,7 +115,7 @@ function createEnvironment({ session = null, supabaseAvailable = true } = {}) {
     document: {
       documentElement,
       readyState: 'complete',
-      querySelectorAll: () => [],
+      querySelectorAll: selector => (selector === '[data-admin-only]' ? adminElements : []),
       addEventListener() {},
     },
     TextEncoder,
@@ -132,7 +151,11 @@ function createEnvironment({ session = null, supabaseAvailable = true } = {}) {
     user: { email: 'suhail.quraishi@essentiallysports.com' },
   }));
 
-  assert.equal(window.ESAuth.isLocalFallbackEnabled(), false);
+  assert.equal(
+    window.ESAuth.isLocalFallbackEnabled,
+    undefined,
+    'browser-local auth fallback must not be exposed',
+  );
   assert.equal(await window.ESAuth.getSession(), null);
   assert.equal(await window.ESAuth.isValidSession(), false);
   await assert.rejects(
@@ -197,6 +220,23 @@ assert.doesNotMatch(supabaseSignupHookMigration, /return\s+'\{\}'::jsonb\s*;/i);
 }
 
 {
+  const adminElement = createAdminNavElement();
+  const session = {
+    access_token: 'verified-token',
+    user: {
+      email: 'suhail.quraishi@essentiallysports.com',
+      user_metadata: { name: 'Suhail Quraishi', role: 'Designer' },
+    },
+  };
+  const { context, window } = createEnvironment({ session, adminElements: [adminElement] });
+  vm.runInContext(dashboardSource, context, { filename: 'dashboard-data.js' });
+  assert.equal(await window.ESDashboardData.showAdminNavigation(), true);
+  assert.equal(adminElement.hidden, false);
+  assert.equal(adminElement.attributes['aria-hidden'], 'false');
+  assert.equal(adminElement.classList.contains('is-admin-visible'), true);
+}
+
+{
   const session = {
     access_token: 'verified-token',
     user: {
@@ -207,6 +247,23 @@ assert.doesNotMatch(supabaseSignupHookMigration, /return\s+'\{\}'::jsonb\s*;/i);
   const { context, window } = createEnvironment({ session });
   vm.runInContext(dashboardSource, context, { filename: 'dashboard-data.js' });
   assert.equal(await window.ESDashboardData.isCurrentUserAdmin(), false);
+}
+
+{
+  const adminElement = createAdminNavElement();
+  const session = {
+    access_token: 'verified-token',
+    user: {
+      email: 'designer@essentiallysports.com',
+      user_metadata: { name: 'ES Designer', role: 'Designer' },
+    },
+  };
+  const { context, window } = createEnvironment({ session, adminElements: [adminElement] });
+  vm.runInContext(dashboardSource, context, { filename: 'dashboard-data.js' });
+  assert.equal(await window.ESDashboardData.showAdminNavigation(), false);
+  assert.equal(adminElement.hidden, true);
+  assert.equal(adminElement.attributes['aria-hidden'], 'true');
+  assert.equal(adminElement.classList.contains('is-admin-visible'), false);
 }
 
 {

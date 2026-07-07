@@ -8,7 +8,7 @@ This document explains the structure and working logic of the EssentiallySports 
 
 ES Designer is a browser-based internal design tool for creating and managing EssentiallySports visual assets. It combines:
 
-- A login/demo entry page.
+- A Supabase-backed login entry page.
 - A main design workspace for Social Media, YouTube, Newsletter, and guideline pages.
 - A Design Request workflow for submitting creative requests.
 - Canvas-based generators for image exports.
@@ -61,7 +61,7 @@ The login page uses Supabase email/password authentication:
 - User must create an account with an approved `@essentiallysports.com` email.
 - Supabase remains the source of truth for account creation, login, password reset, and logout.
 - Local browser storage is only used to mirror lightweight UI/profile state.
-- Production local-auth fallback is disabled; local fallback is gated behind explicit localhost-only config.
+- There is no browser-local password/account fallback; if Supabase is unavailable, login fails closed.
 - After login, the user is redirected back to the original target using a `redirect` query param, defaulting to the homepage.
 
 Visual logic:
@@ -302,11 +302,10 @@ The form can also export saved submissions as JSON.
 The submit flow is intentionally non-blocking:
 
 1. Create the design request record.
-2. Try server-side sync (`/api/design-request-submit`, a serverless function).
-3. If Slack did not go through server-side, send directly to Slack from browser.
-4. Send directly to email Lambda from browser.
-5. Save the request locally.
-6. Show a status message summarizing what succeeded.
+2. Save the request locally so the user does not lose the submission.
+3. Try authenticated server-side sync (`/api/design-request-submit`, a serverless function).
+4. The serverless function posts to Google Sheets, Slack, and/or email only when the corresponding environment variables are configured.
+5. Show a status message summarizing what succeeded.
 
 This means a temporary integration failure should not erase the user’s request locally.
 
@@ -318,6 +317,7 @@ This optional server-side route supports:
 
 - Google Sheets append
 - Slack webhook post
+- Design request email POST
 - Email notification POST
 
 It verifies the Supabase bearer token first and expects environment variables for secure server-side operation.
@@ -476,7 +476,7 @@ Page/workspace variants are reflected on `<body>` with data attributes. CSS reac
   - switching between Social Media post types
   - dynamic pill sizing
   - newsletter asset rendering
-  - design request submit fallback paths
+  - design request server-side submit integrations
 - Move dashboard data from local browser storage to Supabase-backed tables.
 - Add server-side role/RLS policies for dashboard data once Supabase tables are connected.
 

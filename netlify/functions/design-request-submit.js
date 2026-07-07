@@ -32,7 +32,14 @@ const HEADERS = [
 function json(statusCode, body) {
   return {
     statusCode,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      Vary: 'Origin',
+    },
     body: JSON.stringify(body),
   };
 }
@@ -377,6 +384,20 @@ async function appendToSheet(record, config) {
 }
 
 exports.handler = async event => {
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Cache-Control': 'no-store',
+        Vary: 'Origin',
+      },
+      body: '',
+    };
+  }
+
   if (event.httpMethod !== 'POST') {
     return json(405, { ok: false, error: 'Method not allowed' });
   }

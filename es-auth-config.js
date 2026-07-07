@@ -8,11 +8,6 @@
       anonKey: 'sb_publishable_1T9d9U0qXD5K-Ay-_43IVA_Qdd1dpHF',
     },
 
-    // Browser-local accounts are intentionally disabled. They are not a
-    // security boundary and must never become a production auth fallback if
-    // Supabase or its CDN is temporarily unavailable.
-    allowLocalFallback: false,
-
     // Domain-level access. Only emails from these domains can create/login.
     allowedDomains: ['essentiallysports.com'],
 
