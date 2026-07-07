@@ -8091,7 +8091,7 @@ function setAiImageButtonLoading(isLoading) {
 function directEsMediaSearchUrl(query) {
   const url = new URL('https://www.staging.essentiallysports.com/wp-json/wp/v2/media');
   url.searchParams.set('search', query);
-  url.searchParams.set('per_page', '25');
+  url.searchParams.set('per_page', '45');
   url.searchParams.set('media_type', 'image');
   url.searchParams.set('orderby', 'date');
   url.searchParams.set('order', 'desc');
@@ -8112,7 +8112,7 @@ function mediaSearchResultFromWordPress(media) {
 }
 
 async function searchEsStorageImages(query) {
-  const apiUrl = `/api/es-image-search?query=${encodeURIComponent(query)}&per_page=25`;
+  const apiUrl = `/api/es-image-search?query=${encodeURIComponent(query)}&per_page=45`;
   try {
     if (!window.ESAuth?.fetchWithAuth) throw new Error('Authenticated image search is unavailable.');
     const response = await window.ESAuth.fetchWithAuth(apiUrl);
@@ -8168,7 +8168,7 @@ function renderAiImagePicker(results, query) {
   const grid = document.querySelector('[data-ai-image-picker-grid]');
   if (!grid) return;
 
-  aiImageSearchResults = results.slice(0, 25);
+  aiImageSearchResults = results.slice(0, 45);
   aiImageLastQuery = query;
   grid.innerHTML = '';
 
@@ -8223,7 +8223,7 @@ async function runAiImageSearch(query) {
 
   try {
     const payload = normalizeAiImageSearchPayload(await searchEsStorageImages(cleanQuery));
-    const usableResults = payload.results.filter(item => item?.proxyUrl || item?.sourceUrl).slice(0, 25);
+    const usableResults = payload.results.filter(item => item?.proxyUrl || item?.sourceUrl).slice(0, 45);
     if (!usableResults.length) {
       setAiImagePickerOpen(false);
       setStatus('No ES Storage image found for this search.', 'err');
@@ -8288,7 +8288,7 @@ async function applyAiImageFromEsStorage() {
     let usableResults = [];
     for (const query of queries) {
       const payload = normalizeAiImageSearchPayload(await searchEsStorageImages(query));
-      usableResults = payload.results.filter(item => item?.proxyUrl || item?.sourceUrl).slice(0, 25);
+      usableResults = payload.results.filter(item => item?.proxyUrl || item?.sourceUrl).slice(0, 45);
       if (usableResults.length) {
         matchedQuery = query;
         matchedSource = payload.source;
