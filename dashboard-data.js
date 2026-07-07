@@ -10,7 +10,7 @@
   const SUPABASE_PROFILES_TABLE = 'es_designer_profiles';
   const SUPABASE_PRESENCE_TABLE = 'es_designer_presence';
   const PRESENCE_ONLINE_WINDOW_MS = 2 * 60 * 1000;
-  const PRESENCE_HEARTBEAT_MS = 30 * 1000;
+  const PRESENCE_HEARTBEAT_MS = 60 * 1000;
 
   const DEFAULT_ADMIN_CONFIG = Object.freeze({
     adminEmails: [
@@ -248,7 +248,7 @@
   }
 
   function shouldRunSupabasePresence() {
-    return false;
+    return Boolean(window.ESAuth?.isSupabaseConfigured?.());
   }
 
   function scheduleSupabasePresence() {
@@ -259,7 +259,7 @@
     };
     const start = () => {
       if (presenceTimer) return;
-      beat();
+      window.setTimeout(beat, 1800);
       presenceTimer = window.setInterval(beat, PRESENCE_HEARTBEAT_MS);
     };
     if (document.readyState === 'loading') {
