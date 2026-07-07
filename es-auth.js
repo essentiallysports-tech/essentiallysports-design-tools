@@ -44,6 +44,36 @@
     return new Error('ES Designer login is temporarily unavailable. Please try again shortly.');
   }
 
+  function friendlyAuthError(error, fallback = 'Unable to complete authentication right now.') {
+    const message = String(error?.message || error || '').trim();
+    const normalized = message.toLowerCase();
+    if (normalized.includes('email not confirmed') || normalized.includes('not confirmed')) {
+      return new Error('Please verify your ES email before logging in.');
+    }
+    if (normalized.includes('invalid login credentials')) {
+      return new Error('Invalid email or password. If this is your first time, create an account first.');
+    }
+    if (normalized.includes('user already registered') || normalized.includes('already registered')) {
+      return new Error('An account already exists for this email. Please log in or use Forgot password.');
+    }
+    if (normalized.includes('password should be at least') || normalized.includes('weak password')) {
+      return new Error('Password must be at least 8 characters.');
+    }
+    if (normalized.includes('rate limit') || normalized.includes('too many')) {
+      return new Error('Too many attempts. Please wait a moment and try again.');
+    }
+    return new Error(message || fallback);
+  }
+
+  function withTimeout(promise, timeoutMs, message) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        window.setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  }
+
   let supabaseClient = null;
 
   function getSupabaseClient() {
@@ -104,7 +134,7 @@
       },
     });
 
-    if (error) throw new Error(error.message || 'Unable to create account.');
+    if (error) throw friendlyAuthError(error, 'Unable to create account.');
     if (data?.session) await client.auth.signOut();
     return {
       email: normalizedEmail,
@@ -137,7 +167,7 @@
       password,
     });
 
-    if (error) throw new Error(error.message || 'Unable to log in.');
+    if (error) throw friendlyAuthError(error, 'Unable to log in.');
 
     const user = data?.user;
     const displayName = user?.user_metadata?.name || normalizedEmail.split('@')[0] || 'ES Designer';
@@ -192,7 +222,7 @@
     const { error } = await getSupabaseClient().auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: safeRedirectTo,
     });
-    if (error) throw new Error(error.message || 'Unable to send the password reset email.');
+    if (error) throw friendlyAuthError(error, 'Unable to send the password reset email.');
     return true;
   }
 
@@ -203,7 +233,7 @@
     }
 
     const { data, error } = await getSupabaseClient().auth.updateUser({ password });
-    if (error) throw new Error(error.message || 'Unable to update the password.');
+    if (error) throw friendlyAuthError(error, 'Unable to update the password.');
     return data?.user || null;
   }
 
@@ -278,7 +308,7 @@
     document.documentElement.style.visibility = 'hidden';
     return (async () => {
       try {
-        if (await isValidSession()) {
+        if (await withTimeout(isValidSession(), 8000, 'Authentication check timed out.')) {
           document.documentElement.style.visibility = '';
           window.dispatchEvent(new CustomEvent('es:auth-ready'));
           return true;

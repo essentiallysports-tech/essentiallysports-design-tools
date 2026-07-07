@@ -99,20 +99,22 @@
 
   function scheduleAdminNavigationChecks() {
     const run = () => {
+      if (document.readyState === 'loading') return;
       showAdminNavigation().catch(() => {});
     };
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', run, { once: true });
+      document.addEventListener('DOMContentLoaded', () => {
+        window.setTimeout(run, 0);
+      }, { once: true });
     } else {
-      run();
+      window.setTimeout(run, 0);
     }
-    [150, 500, 1000, 2000, 3500].forEach(delay => window.setTimeout(run, delay));
     window.addEventListener('focus', run);
-    window.addEventListener('pageshow', run);
+    window.addEventListener('pageshow', () => window.setTimeout(run, 0));
     window.addEventListener('storage', event => {
       if (!event.key || [AUTH_KEY, PROFILE_KEY, ADMIN_CONFIG_KEY].includes(event.key)) run();
     });
-    window.addEventListener('es:auth-updated', run);
+    window.addEventListener('es:auth-updated', () => window.setTimeout(run, 0));
   }
 
   function readDesignRequests() {
@@ -274,7 +276,7 @@
 
     const profile = getStoredProfile();
     add(profile.email, profile.name, profile.role);
-    const session = getLocalSession();
+    const session = readJson(AUTH_KEY, null);
     add(session?.user?.email, session?.user?.name, session?.user?.role);
 
     requests.forEach(request => {

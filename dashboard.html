@@ -741,15 +741,33 @@
     const STATUS_OPTIONS = ['New', 'In Progress', 'Needs Review', 'Done', 'Blocked'];
     const DESIGN_STATUS_OPTIONS = ['Exported', 'Assigned', 'Needs Review', 'Done'];
 
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function text(value, fallback = '—') {
       const cleaned = String(value || '').trim();
+      return escapeHtml(cleaned || fallback);
+    }
+
+    function plainText(value, fallback = '—') {
+      const cleaned = String(value || '').trim();
       return cleaned || fallback;
+    }
+
+    function attr(value) {
+      return escapeHtml(String(value ?? ''));
     }
 
     function dateText(value) {
       if (!value) return 'No date';
       const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return value;
+      if (Number.isNaN(date.getTime())) return text(value);
       return new Intl.DateTimeFormat('en-US', {
         month: 'short',
         day: 'numeric',
@@ -778,7 +796,7 @@
     }
 
     function optionList(options, selected) {
-      return options.map(option => `<option${option === selected ? ' selected' : ''}>${option}</option>`).join('');
+      return options.map(option => `<option value="${attr(option)}"${option === selected ? ' selected' : ''}>${text(option)}</option>`).join('');
     }
 
     function peopleOptions(people, selected = '') {
@@ -786,7 +804,7 @@
       return `<option value="">Unassigned</option>` + people
         .map(person => {
           const value = person.email || person.name;
-          return `<option value="${value}"${value === normalizedSelected ? ' selected' : ''}>${person.name} (${person.email})</option>`;
+          return `<option value="${attr(value)}"${value === normalizedSelected ? ' selected' : ''}>${text(person.name)} (${text(person.email)})</option>`;
         })
         .join('');
     }
@@ -814,7 +832,7 @@
       const filter = document.getElementById('request-owner-filter');
       const current = filter.value;
       const owners = Array.from(new Set(state.requests.map(request => request.assignedTo).filter(Boolean))).sort();
-      filter.innerHTML = '<option value="">All Owners</option>' + owners.map(owner => `<option value="${owner}"${owner === current ? ' selected' : ''}>${owner}</option>`).join('');
+      filter.innerHTML = '<option value="">All Owners</option>' + owners.map(owner => `<option value="${attr(owner)}"${owner === current ? ' selected' : ''}>${text(owner)}</option>`).join('');
     }
 
     function renderRequests(state) {
@@ -855,7 +873,7 @@
                 <td>${dateText(request.designDueAt)}</td>
                 <td><select class="table-control" data-request-status>${optionList(STATUS_OPTIONS, request.status || 'New')}</select></td>
                 <td><select class="table-control" data-request-owner>${peopleOptions(state.people, request.assignedTo)}</select></td>
-                <td><input class="note-input" data-request-note value="${String(request.adminNotes || '').replace(/"/g, '&quot;')}" placeholder="Optional note"></td>
+                <td><input class="note-input" data-request-note value="${attr(request.adminNotes)}" placeholder="Optional note"></td>
               </tr>
             `).join('')}
           </tbody>
@@ -893,7 +911,7 @@
                   <span class="item-title">${text(design.title)}</span>
                   <span class="item-meta">${text(design.filename)} · ${dateText(design.createdAt)}</span>
                 </td>
-                <td><span class="pill">${text(design.workspace)}${design.workspaceVariant ? ` · ${design.workspaceVariant}` : ''}</span></td>
+                <td><span class="pill">${text(design.workspace)}${design.workspaceVariant ? ` · ${text(design.workspaceVariant)}` : ''}</span></td>
                 <td>${text(design.ownerName)}<span class="item-meta">${text(design.ownerEmail)}</span></td>
                 <td><select class="table-control" data-design-status>${optionList(DESIGN_STATUS_OPTIONS, design.status || 'Exported')}</select></td>
                 <td><select class="table-control" data-design-owner>${peopleOptions(state.people, design.assignedTo)}</select></td>
@@ -913,7 +931,7 @@
       target.innerHTML = state.people.map(person => `
         <article class="person">
           <strong>${text(person.name)}</strong>
-          <span>${text(person.email)}${person.role ? ` · ${person.role}` : ''}</span>
+          <span>${text(person.email)}${person.role ? ` · ${text(person.role)}` : ''}</span>
         </article>
       `).join('');
     }
@@ -945,11 +963,11 @@
     }
 
     function renderIdentity() {
-      const firstName = text(dashboardUser.name, 'Design team').split(' ')[0];
-      document.querySelectorAll('[data-sidebar-name]').forEach(el => { el.textContent = text(dashboardUser.name, 'ES Admin'); });
-      document.querySelectorAll('[data-sidebar-role]').forEach(el => { el.textContent = text(dashboardUser.role, 'Design Operations'); });
+      const firstName = plainText(dashboardUser.name, 'Design team').split(' ')[0];
+      document.querySelectorAll('[data-sidebar-name]').forEach(el => { el.textContent = plainText(dashboardUser.name, 'ES Admin'); });
+      document.querySelectorAll('[data-sidebar-role]').forEach(el => { el.textContent = plainText(dashboardUser.role, 'Design Operations'); });
       document.querySelectorAll('[data-profile-name]').forEach(el => {
-        el.textContent = text(dashboardUser.name, 'ES User');
+        el.textContent = plainText(dashboardUser.name, 'ES User');
         el.dataset.profileRole = '';
         el.classList.remove('has-role');
       });
@@ -966,7 +984,7 @@
 
     function renderLiveActivity(state) {
       const target = document.getElementById('live-list');
-      const currentName = text(dashboardUser.name, 'ES Admin');
+      const currentName = plainText(dashboardUser.name, 'ES Admin');
       const people = [{ ...dashboardUser, online: true, workspace: 'Dashboard overview' }]
         .concat(state.people
           .filter(person => person.email && person.email !== dashboardUser.email)
@@ -979,7 +997,7 @@
           <span class="live-avatar">${initials(person.name)}</span>
           <span>
             <strong>${text(person.name)}</strong>
-            <small>${text(person.workspace)}${person.role ? ` · ${person.role}` : ''}</small>
+            <small>${text(person.workspace)}${person.role ? ` · ${text(person.role)}` : ''}</small>
           </span>
           <span class="presence-state">${person.online ? '<span class="live-dot"></span>Online' : 'Offline'}</span>
         </article>
@@ -997,7 +1015,7 @@
       const max = Math.max(1, ...counts.map(item => item.count));
       target.innerHTML = counts.map(item => `
         <div class="workspace-bar">
-          <span title="${item.name}">${item.name}</span>
+          <span title="${attr(item.name)}">${text(item.name)}</span>
           <div class="bar-track"><div class="bar-fill" style="width:${Math.max(item.count ? 12 : 0, (item.count / max) * 100)}%"></div></div>
           <strong>${item.count}</strong>
         </div>

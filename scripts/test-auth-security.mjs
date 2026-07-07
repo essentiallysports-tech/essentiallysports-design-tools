@@ -44,7 +44,13 @@ function createAdminNavElement() {
   };
 }
 
-function createEnvironment({ session = null, supabaseAvailable = true, adminElements = [] } = {}) {
+function createEnvironment({
+  session = null,
+  supabaseAvailable = true,
+  adminElements = [],
+  signInError = null,
+  signUpError = null,
+} = {}) {
   const localStorage = storage();
   const sessionStorage = storage();
   const authCalls = {
@@ -72,9 +78,11 @@ function createEnvironment({ session = null, supabaseAvailable = true, adminElem
         return { data: { session } };
       },
       async signInWithPassword() {
+        if (signInError) return { data: null, error: signInError };
         return { data: { session, user: session?.user || null }, error: null };
       },
       async signUp() {
+        if (signUpError) return { data: null, error: signUpError };
         return { data: { session: null, user: null }, error: null };
       },
       async signOut() {
@@ -164,6 +172,32 @@ function createEnvironment({ session = null, supabaseAvailable = true, adminElem
       password: 'password123',
     }),
     /temporarily unavailable/i,
+  );
+}
+
+{
+  const { window } = createEnvironment({
+    signInError: { message: 'Invalid login credentials' },
+  });
+  await assert.rejects(
+    window.ESAuth.login({
+      email: 'suhail.quraishi@essentiallysports.com',
+      password: 'wrong-password',
+    }),
+    /create an account first/i,
+  );
+}
+
+{
+  const { window } = createEnvironment({
+    signInError: { message: 'Email not confirmed' },
+  });
+  await assert.rejects(
+    window.ESAuth.login({
+      email: 'suhail.quraishi@essentiallysports.com',
+      password: 'password123',
+    }),
+    /verify your ES email/i,
   );
 }
 
