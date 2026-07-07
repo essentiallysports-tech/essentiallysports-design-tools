@@ -262,11 +262,7 @@
       window.setTimeout(beat, 1800);
       presenceTimer = window.setInterval(beat, PRESENCE_HEARTBEAT_MS);
     };
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', start, { once: true });
-    } else {
-      window.setTimeout(start, 0);
-    }
+    window.addEventListener('es:auth-ready', start);
     window.addEventListener('focus', beat);
     window.addEventListener('pageshow', beat);
     window.addEventListener('hashchange', () => window.setTimeout(beat, 0));

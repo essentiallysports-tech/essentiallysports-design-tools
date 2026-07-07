@@ -215,8 +215,9 @@ function createEnvironment({
 assert.match(supabaseSignupHookMigration, /signup_domain\s+<>\s+'essentiallysports\.com'/i);
 assert.match(supabaseSignupHookMigration, /return\s+event\s*;/i);
 assert.doesNotMatch(supabaseSignupHookMigration, /return\s+'\{\}'::jsonb\s*;/i);
-assert.match(dashboardHtmlSource, /const\s+hasValidSession\s*=\s*await\s+window\.ESAuth\?\.isValidSession\?\.\(\);/);
-assert.match(dashboardHtmlSource, /if\s*\(!hasValidSession\)\s*\{\s*return;\s*\}/);
+assert.match(dashboardHtmlSource, /const\s+hasValidSession\s*=\s*await\s+withBootTimeout\(\s*window\.ESAuth\?\.isValidSession\?\.\(\),/);
+assert.match(dashboardHtmlSource, /if\s*\(!hasValidSession\)\s*(?:\{\s*)?return;?/);
+assert.match(dashboardHtmlSource, /showDashboardBootError\(error\);/);
 assert.match(loginHtmlSource, /input\.required\s*=\s*isCreate\s*&&\s*\(input\.id\s*===\s*'login-name'\s*\|\|\s*input\.id\s*===\s*'login-confirm-password'\)/);
 assert.match(loginHtmlSource, /authMode\s*===\s*'create'\s*&&\s*!name/);
 assert.match(netlifyConfigSource, /for\s*=\s*"\/\*\.woff2"[\s\S]*?Cache-Control\s*=\s*"public, max-age=31536000, immutable"/);

@@ -11,7 +11,7 @@
   <script>
     window.ESAuth?.requireAuth(`dashboard.html${window.location.search}${window.location.hash}`);
   </script>
-  <script src="dashboard-data.js?v=20260708-presence2"></script>
+  <script src="dashboard-data.js?v=20260708-dashboardstable1"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1180,25 +1180,70 @@
       });
     }
 
+    function withBootTimeout(promise, timeoutMs, message) {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => window.setTimeout(() => reject(new Error(message)), timeoutMs)),
+      ]);
+    }
+
+    function showDashboardBootError(error) {
+      document.documentElement.style.visibility = '';
+      document.body.classList.add('is-page-ready');
+      const shell = document.querySelector('.dashboard-shell');
+      if (!shell) return;
+      shell.innerHTML = `
+        <section class="dashboard-welcome">
+          <p class="eyebrow">ES Designer / Dashboard</p>
+          <h2>Dashboard could not finish loading.</h2>
+          <p>Please refresh once. If it still happens, go back to the website and log in again.</p>
+          <div class="topbar-actions" style="margin-top:22px">
+            <a class="topbar-button is-primary" href="dashboard.html">Refresh dashboard</a>
+            <a class="topbar-button" href="index.html#frames">Back to website</a>
+          </div>
+        </section>
+      `;
+      console.error('Dashboard boot failed:', error);
+    }
+
     async function boot() {
       setupPageTransitions();
-      const hasValidSession = await window.ESAuth?.isValidSession?.();
-      if (!hasValidSession) {
-        return;
+      try {
+        const hasValidSession = await withBootTimeout(
+          window.ESAuth?.isValidSession?.(),
+          9000,
+          'Authentication check timed out.'
+        );
+        if (!hasValidSession) return;
+
+        const isAdmin = await withBootTimeout(
+          window.ESDashboardData.isCurrentUserAdmin(),
+          5000,
+          'Dashboard admin check timed out.'
+        );
+        if (!isAdmin) {
+          window.location.replace('index.html#frames');
+          return;
+        }
+
+        dashboardUser = await withBootTimeout(
+          window.ESDashboardData.getCurrentUser(),
+          5000,
+          'Dashboard user profile timed out.'
+        );
+        document.documentElement.style.visibility = '';
+        document.body.dataset.dashboardView = 'overview';
+        renderIdentity();
+        setupDashboardEvents();
+        renderDashboard();
+        window.setTimeout(() => {
+          window.ESDashboardData.refreshCloudDashboardData?.()
+            .then(renderDashboard)
+            .catch(() => {});
+        }, 500);
+      } catch (error) {
+        showDashboardBootError(error);
       }
-      const isAdmin = await window.ESDashboardData.isCurrentUserAdmin();
-      if (!isAdmin) {
-        window.location.replace('index.html#frames');
-        return;
-      }
-      dashboardUser = await window.ESDashboardData.getCurrentUser();
-      document.body.dataset.dashboardView = 'overview';
-      renderIdentity();
-      setupDashboardEvents();
-      renderDashboard();
-      window.ESDashboardData.refreshCloudDashboardData?.()
-        .then(renderDashboard)
-        .catch(() => {});
     }
 
     boot();
