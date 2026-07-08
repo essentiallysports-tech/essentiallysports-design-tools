@@ -3668,7 +3668,7 @@ body[data-dashboard-view="list"] .dashboard-control-row {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border-color: var(--dash-border);
+  border-color: transparent;
   background: #fff;
   color: #050505;
   box-shadow: none;
