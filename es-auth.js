@@ -3,6 +3,7 @@
 
   const AUTH_STORAGE_KEY = 'es.designerAuth.v1';
   const PROFILE_STORAGE_KEY = 'es.ai.profile';
+  const SUPABASE_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
   const config = window.ES_AUTH_CONFIG || {};
   const supabaseConfig = config.supabase || {};
 
@@ -32,12 +33,19 @@
     return approvedDomains().includes(domain);
   }
 
-  function isSupabaseConfigured() {
+  function hasSupabaseSdk() {
+    return Boolean(window.supabase?.createClient);
+  }
+
+  function hasSupabaseCredentials() {
     return Boolean(
       supabaseConfig.url
       && supabaseConfig.anonKey
-      && window.supabase?.createClient
     );
+  }
+
+  function isSupabaseConfigured() {
+    return Boolean(hasSupabaseCredentials() && hasSupabaseSdk());
   }
 
   function authUnavailableError() {
@@ -75,6 +83,58 @@
   }
 
   let supabaseClient = null;
+  let supabaseSdkPromise = null;
+
+  function loadSupabaseSdk(timeoutMs = 8000) {
+    if (hasSupabaseSdk()) return Promise.resolve(true);
+    if (!hasSupabaseCredentials()) return Promise.resolve(false);
+    if (supabaseSdkPromise) return supabaseSdkPromise;
+
+    supabaseSdkPromise = new Promise(resolve => {
+      if (
+        typeof document === 'undefined'
+        || typeof document.createElement !== 'function'
+        || !document.head
+        || typeof document.head.appendChild !== 'function'
+      ) {
+        resolve(false);
+        return;
+      }
+      const existingScript = typeof document.querySelector === 'function'
+        ? document.querySelector(`script[src="${SUPABASE_SDK_URL}"]`)
+        : null;
+      let didFinish = false;
+      const finish = value => {
+        if (didFinish) return;
+        didFinish = true;
+        resolve(Boolean(value && hasSupabaseSdk()));
+      };
+      const timer = window.setTimeout(() => finish(false), timeoutMs);
+      const complete = value => {
+        window.clearTimeout(timer);
+        finish(value);
+      };
+
+      const script = existingScript || document.createElement('script');
+      script.src = SUPABASE_SDK_URL;
+      script.async = true;
+      script.onload = () => complete(true);
+      script.onerror = () => complete(false);
+      if (!existingScript) {
+        document.head.appendChild(script);
+      }
+    }).finally(() => {
+      if (!hasSupabaseSdk()) supabaseSdkPromise = null;
+    });
+
+    return supabaseSdkPromise;
+  }
+
+  async function ensureSupabaseReady(timeoutMs = 8000) {
+    if (!hasSupabaseCredentials()) return false;
+    if (hasSupabaseSdk()) return true;
+    return loadSupabaseSdk(timeoutMs);
+  }
 
   function getSupabaseClient() {
     if (!isSupabaseConfigured()) return null;
@@ -110,8 +170,12 @@
   function syncSession(session) {
     if (!session?.user?.email) return session;
     try {
-      window.sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
-      window.dispatchEvent(new CustomEvent('es:auth-updated', { detail: { email: session.user.email } }));
+      const nextSession = JSON.stringify(session);
+      const previousSession = window.sessionStorage.getItem(AUTH_STORAGE_KEY);
+      window.sessionStorage.setItem(AUTH_STORAGE_KEY, nextSession);
+      if (previousSession !== nextSession) {
+        window.dispatchEvent(new CustomEvent('es:auth-updated', { detail: { email: session.user.email } }));
+      }
     } catch (error) {
       // Session mirroring is only used by local UI gates; Supabase remains the source of truth.
     }
@@ -119,6 +183,7 @@
   }
 
   async function createSupabaseAccount({ name, email, password }) {
+    if (!await ensureSupabaseReady()) throw new Error('Supabase is not configured yet.');
     const client = getSupabaseClient();
     if (!client) throw new Error('Supabase is not configured yet.');
 
@@ -150,7 +215,7 @@
     }
     validatePassword(password);
 
-    if (isSupabaseConfigured()) {
+    if (await ensureSupabaseReady()) {
       return createSupabaseAccount({ name, email: normalizedEmail, password });
     }
 
@@ -158,6 +223,7 @@
   }
 
   async function loginWithSupabase({ email, password }) {
+    if (!await ensureSupabaseReady()) throw new Error('Supabase is not configured yet.');
     const client = getSupabaseClient();
     if (!client) throw new Error('Supabase is not configured yet.');
 
@@ -191,7 +257,7 @@
       throw new Error('This email is not approved for ES Designer access.');
     }
 
-    if (isSupabaseConfigured()) {
+    if (await ensureSupabaseReady()) {
       return loginWithSupabase({ email: normalizedEmail, password });
     }
 
@@ -203,7 +269,7 @@
     if (!isAllowedEmail(normalizedEmail)) {
       throw new Error('Password reset is limited to @essentiallysports.com email addresses.');
     }
-    if (!isSupabaseConfigured()) {
+    if (!await ensureSupabaseReady()) {
       throw new Error('Password reset is available only when Supabase Auth is configured.');
     }
 
@@ -228,7 +294,7 @@
 
   async function updatePassword(password) {
     validatePassword(password);
-    if (!isSupabaseConfigured()) {
+    if (!await ensureSupabaseReady()) {
       throw new Error('Password updates are available only when Supabase Auth is configured.');
     }
 
@@ -238,7 +304,7 @@
   }
 
   async function getSession() {
-    if (isSupabaseConfigured()) {
+    if (await ensureSupabaseReady()) {
       const client = getSupabaseClient();
       const { data } = await client.auth.getSession();
       const session = data?.session;
@@ -290,7 +356,7 @@
       // Ignore storage failures.
     }
 
-    if (isSupabaseConfigured()) {
+    if (await ensureSupabaseReady(5000)) {
       try {
         await getSupabaseClient()?.auth.signOut();
       } catch (error) {
@@ -331,6 +397,7 @@
     fetchWithAuth,
     getSession,
     getSupabaseClient,
+    ensureSupabaseReady,
     isAllowedEmail,
     isSupabaseConfigured,
     isValidSession,

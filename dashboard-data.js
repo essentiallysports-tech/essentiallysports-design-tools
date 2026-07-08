@@ -271,7 +271,7 @@
   }
 
   function shouldRunSupabasePresence() {
-    return Boolean(window.ESAuth?.isSupabaseConfigured?.());
+    return Boolean(window.ESAuth?.getSupabaseClient);
   }
 
   function scheduleSupabasePresence() {
