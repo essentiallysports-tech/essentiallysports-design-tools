@@ -595,7 +595,6 @@
             <section class="panel live-panel">
               <div class="panel-head">
                 <div><h2 class="panel-title">Live activity</h2><p class="panel-subtitle">Who is online and where they are working.</p></div>
-                <span class="live-badge"><span class="live-dot"></span>Live</span>
               </div>
               <div class="live-list" id="live-list"></div>
             </section>
@@ -745,6 +744,7 @@
     const STATUS_OPTIONS = ['Backlog', 'Assigned', 'Doing', 'Review', 'Done'];
     const PRIORITY_OPTIONS = ['Normal', 'High', 'Urgent'];
     const ACCESS_ROLE_OPTIONS = ['Associate', 'Admin', 'Super Admin', 'Server Owner'];
+    const DASHBOARD_SEEN_KEY = 'es.dashboard.seenBadges.v1';
     let dashboardUser = { name: 'ES Admin', email: '', role: 'Admin', accessRole: 'Admin', designation: 'Design Operations' };
     let canAssignDashboardRoles = false;
     let selectedTaskId = '';
@@ -848,6 +848,40 @@
       return true;
     }
 
+    function getSeenBadgeState() {
+      try {
+        return JSON.parse(window.localStorage.getItem(DASHBOARD_SEEN_KEY) || '{}') || {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveSeenBadgeState(state) {
+      try {
+        window.localStorage.setItem(DASHBOARD_SEEN_KEY, JSON.stringify(state || {}));
+      } catch {}
+    }
+
+    function markDashboardViewSeen(view, state = window.ESDashboardData?.getDashboardState?.()) {
+      const seen = getSeenBadgeState();
+      if (view === 'board') {
+        seen.requests = computeMetrics(state || {}).requests || 0;
+      }
+      if (view === 'people') {
+        const people = [{ ...dashboardUser, online: true, workspace: 'Dashboard board' }]
+          .concat((state?.people || []).filter(person => person.email && person.email !== dashboardUser.email));
+        seen.online = people.filter(person => person.online).length;
+      }
+      saveSeenBadgeState(seen);
+    }
+
+    function setNavBadge(selector, value, seenValue = 0) {
+      document.querySelectorAll(selector).forEach(el => {
+        el.textContent = value;
+        el.hidden = Number(value || 0) <= Number(seenValue || 0);
+      });
+    }
+
     function optionList(options, selected) {
       return options.map(option => `<option value="${attr(option)}"${option === selected ? ' selected' : ''}>${text(option)}</option>`).join('');
     }
@@ -895,12 +929,13 @@
 
     function renderMetrics(state) {
       const metrics = computeMetrics(state);
+      const seen = getSeenBadgeState();
       Object.entries(metrics).forEach(([key, value]) => {
         const el = document.querySelector(`[data-metric="${key}"]`);
         if (el) el.textContent = value;
       });
       document.querySelectorAll('[data-task-count]').forEach(el => { el.textContent = metrics.tasks; });
-      document.querySelectorAll('[data-request-count]').forEach(el => { el.textContent = metrics.requests; });
+      setNavBadge('[data-request-count]', metrics.requests, seen.requests);
     }
 
     function renderTaskFilters(state) {
@@ -1030,7 +1065,7 @@
           <span class="person-role-tools">
             <span class="role-badge is-${accessRoleClass(person.accessRole || person.role)}">${text(person.accessRole || person.role || 'Associate')}</span>
             ${canEditRole(person)
-              ? `<select class="role-select" data-person-role data-previous-value="${attr(person.accessRole || person.role || 'Associate')}" aria-label="Change role for ${attr(person.name || person.email)}">${accessRoleOptions(person.accessRole || person.role || 'Associate')}</select>`
+              ? `<label class="role-action-label"><span>Role</span><select class="role-select" data-person-role data-previous-value="${attr(person.accessRole || person.role || 'Associate')}" aria-label="Change role for ${attr(person.name || person.email)}">${accessRoleOptions(person.accessRole || person.role || 'Associate')}</select></label>`
               : ''}
           </span>
         </article>
@@ -1055,7 +1090,7 @@
       const people = [{ ...dashboardUser, online: true, workspace: 'Dashboard board' }]
         .concat(state.people.filter(person => person.email && person.email !== dashboardUser.email));
       const onlineCount = people.filter(person => person.online).length;
-      document.querySelectorAll('[data-online-count]').forEach(el => { el.textContent = onlineCount; });
+      setNavBadge('[data-online-count]', onlineCount, getSeenBadgeState().online);
       target.innerHTML = people.map(person => `
         <article class="live-person"><span class="live-avatar">${initials(person.name)}</span><span><strong>${text(person.name)}</strong><small>${text(person.workspace, person.online ? 'ES Designer' : 'Not currently active')}${person.designation ? ` · ${text(person.designation)}` : ''}</small></span><span class="presence-state ${person.online ? 'is-online' : 'is-offline'}">${person.online ? '<span class="live-dot"></span>Online' : 'Offline'}</span></article>
       `).join('') || '<div class="empty">No active users yet.</div>';
@@ -1114,7 +1149,8 @@
       });
     }
 
-    function setDashboardView(view) {
+    function setDashboardView(view, shouldMarkSeen = false) {
+      if (shouldMarkSeen) markDashboardViewSeen(view);
       document.body.dataset.dashboardView = view;
       document.querySelectorAll('[data-dashboard-view]').forEach(item => item.classList.toggle('is-active', item.dataset.dashboardView === view));
       const titles = { overview: 'Task command center', board: 'Kanban board', list: 'Task list', designs: 'Review exports', people: 'People', activity: 'Activity log' };
@@ -1233,7 +1269,7 @@
       document.querySelectorAll('[data-dashboard-view]').forEach(button => {
         button.addEventListener('click', () => {
           const view = button.dataset.dashboardView || 'overview';
-          setDashboardView(view);
+          setDashboardView(view, true);
           window.scrollTo({ top: 0, behavior: 'smooth' });
           renderDashboard();
         });
@@ -1408,6 +1444,11 @@
           window.ESDashboardData.getCurrentUser(),
           5000,
           'Dashboard user profile timed out.'
+        );
+        canAssignDashboardRoles = await withBootTimeout(
+          window.ESDashboardData.canCurrentUserAssignRoles?.(),
+          5000,
+          'Dashboard role permission check timed out.'
         );
         document.documentElement.style.visibility = '';
         window.dispatchEvent(new CustomEvent('es:auth-ready'));

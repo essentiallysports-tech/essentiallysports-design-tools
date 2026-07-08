@@ -421,14 +421,28 @@
       updated_at: now,
     };
 
-    const profileResult = await client
+    let profileResult = await client
       .from(SUPABASE_PROFILES_TABLE)
       .upsert(profileRow, { onConflict: 'email' });
+    if (profileResult.error && /designation/i.test(profileResult.error.message || '')) {
+      const fallbackProfileRow = { ...profileRow };
+      delete fallbackProfileRow.designation;
+      profileResult = await client
+        .from(SUPABASE_PROFILES_TABLE)
+        .upsert(fallbackProfileRow, { onConflict: 'email' });
+    }
     if (profileResult.error) throw profileResult.error;
 
-    const presenceResult = await client
+    let presenceResult = await client
       .from(SUPABASE_PRESENCE_TABLE)
       .upsert(presenceRow, { onConflict: 'email' });
+    if (presenceResult.error && /designation/i.test(presenceResult.error.message || '')) {
+      const fallbackPresenceRow = { ...presenceRow };
+      delete fallbackPresenceRow.designation;
+      presenceResult = await client
+        .from(SUPABASE_PRESENCE_TABLE)
+        .upsert(fallbackPresenceRow, { onConflict: 'email' });
+    }
     if (presenceResult.error) throw presenceResult.error;
 
     return true;
@@ -442,11 +456,11 @@
     const [{ data: profiles, error: profileError }, { data: presence, error: presenceError }] = await Promise.all([
       client
         .from(SUPABASE_PROFILES_TABLE)
-        .select('email,name,designation,role,access_role,avatar_url,last_seen_at,updated_at')
+        .select('*')
         .order('name', { ascending: true }),
       client
         .from(SUPABASE_PRESENCE_TABLE)
-        .select('email,name,designation,role,access_role,avatar_url,page_path,workspace,last_seen_at,updated_at')
+        .select('*')
         .order('last_seen_at', { ascending: false }),
     ]);
 

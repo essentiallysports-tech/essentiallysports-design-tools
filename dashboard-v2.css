@@ -3772,3 +3772,176 @@ body[data-dashboard-view="designs"] .stack {
 .sidebar-nav a {
   color: #111827;
 }
+
+/* People + export review alignment pass. */
+.person-role-card {
+  grid-template-columns: 48px minmax(220px, 1fr) max-content;
+  gap: 18px;
+  padding: 18px 30px;
+}
+
+.person-role-card .person-avatar {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.person-role-card .person-main {
+  min-width: 0;
+  max-width: 520px;
+}
+
+.person-role-card .person-main strong,
+.person-role-card .person-main span,
+.person-role-card .person-main small {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.person-role-card .person-role-tools {
+  justify-self: end;
+  min-width: 156px;
+  justify-content: flex-end;
+}
+
+.person-role-card .role-badge {
+  min-height: 32px;
+  padding: 0 18px;
+  font-size: 14px;
+}
+
+.task-priority {
+  min-height: 24px;
+  padding: 0 10px;
+  letter-spacing: .05em;
+  line-height: 1;
+}
+
+.task-priority.is-urgent {
+  background: #fff1f0;
+  box-shadow: inset 0 0 0 1px rgba(180, 35, 24, .08);
+}
+
+body[data-dashboard-view="designs"] .grid {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, .55fr);
+}
+
+.export-review-grid {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 24px;
+}
+
+.export-review-card {
+  border-radius: 16px;
+}
+
+.export-review-preview {
+  aspect-ratio: 16 / 10;
+}
+
+.export-review-copy {
+  gap: 10px;
+  padding: 16px;
+}
+
+.export-review-card h3 {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.export-review-card p {
+  font-size: 14px;
+}
+
+.export-review-actions .topbar-button {
+  min-height: 36px;
+  padding-inline: 12px;
+  font-size: 14px;
+}
+
+.dashboard-app .panel-head {
+  min-height: 84px;
+  padding: 22px 30px 18px;
+  align-items: center;
+}
+
+.dashboard-app .panel-title {
+  font-size: 28px;
+  line-height: .95;
+}
+
+.dashboard-app .panel-subtitle {
+  margin-top: 8px;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.person-role-card {
+  min-height: 96px;
+}
+
+.person-role-card .person-main strong {
+  color: #111827;
+  font-size: 17px;
+  line-height: 1.05;
+}
+
+.person-role-card .person-main span,
+.person-role-card .person-main small {
+  color: #667085;
+  font-family: "Roboto", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.18;
+}
+
+.role-action-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.role-action-label > span {
+  color: #98a2b3;
+  font-family: "Roboto Condensed", "Roboto", Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.role-action-label .role-select {
+  min-width: 150px;
+}
+
+.nav-count[hidden] {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .person-role-card {
+    grid-template-columns: 44px minmax(0, 1fr);
+    padding: 16px 20px;
+  }
+
+  .person-role-card .person-avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .person-role-card .person-role-tools {
+    grid-column: 2;
+    justify-self: start;
+    min-width: 0;
+  }
+}
