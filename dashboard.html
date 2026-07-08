@@ -513,10 +513,10 @@
       <p class="sidebar-label">Workspace</p>
       <nav class="sidebar-nav">
         <button class="is-active" type="button" data-dashboard-view="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg><span>Overview</span></button>
-        <button type="button" data-dashboard-view="live"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M5 20a7 7 0 0 1 14 0M19 5v4M17 7h4"/></svg><span>Live Activity</span><span class="nav-count" data-online-count>1</span></button>
-        <button type="button" data-dashboard-view="requests"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"/></svg><span>Design Requests</span></button>
-        <button type="button" data-dashboard-view="designs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4zM8 6V4h8v2M8 11h8M8 15h5"/></svg><span>Design Library</span></button>
-        <button type="button" data-dashboard-view="people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 16a5 5 0 0 1 7 4"/></svg><span>People</span></button>
+        <button type="button" data-dashboard-view="board"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h5v14H4zM10.5 5h5v14h-5zM17 5h3v14h-3z"/></svg><span>Request Board</span><span class="nav-count" data-request-count>0</span></button>
+        <button type="button" data-dashboard-view="list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg><span>Task List</span></button>
+        <button type="button" data-dashboard-view="designs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4zM8 6V4h8v2M8 11h8M8 15h5"/></svg><span>Review Exports</span></button>
+        <button type="button" data-dashboard-view="people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 16a5 5 0 0 1 7 4"/></svg><span>People</span><span class="nav-count" data-online-count>1</span></button>
         <button type="button" data-dashboard-view="activity"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18V6M4 18h16M7 14l4-4 3 2 5-6"/></svg><span>Activity Log</span></button>
       </nav>
       <p class="sidebar-label">Quick access</p>
@@ -527,15 +527,15 @@
       </nav>
       <div class="sidebar-footer">
         <span class="live-dot"></span>
-        <span><strong>Local preview</strong><small>Supabase-ready</small></span>
+        <span><strong>Shared tasks</strong><small>Supabase board</small></span>
       </div>
     </aside>
 
     <div class="dashboard-main">
       <header class="dashboard-topbar">
         <div>
-          <p class="topbar-eyebrow">ES Designer / Dashboard</p>
-          <h1>Design operations</h1>
+          <p class="topbar-eyebrow">ES Designer / Operations</p>
+          <h1>Task command center</h1>
         </div>
         <div class="topbar-actions">
           <label class="command-search">
@@ -543,8 +543,8 @@
               <circle cx="11" cy="11" r="6.5"></circle>
               <path d="m16 16 4 4"></path>
             </svg>
-            <input type="search" id="dashboard-search" placeholder="Search requests, designs, people">
-            <kbd>⌘ K</kbd>
+            <input type="search" id="dashboard-search" placeholder="Search tasks, people, notes">
+            <kbd data-shortcut-hint>⌘ K</kbd>
           </label>
           <a class="topbar-button" href="design-request.html">New request</a>
           <a class="topbar-button is-primary" href="index.html#frames">Create design</a>
@@ -552,109 +552,116 @@
       </header>
 
       <main class="dashboard-shell">
-    <div class="dashboard-content">
-      <section class="dashboard-welcome" data-view-section="overview">
-        <div class="welcome-copy">
-          <p class="welcome-kicker" data-greeting>Good morning</p>
-          <h2><span data-welcome-name>Design team</span>, here’s what’s happening.</h2>
-          <p>Track requests, exported designs, ownership, and active collaborators from one place.</p>
-        </div>
-      </section>
-
-      <section class="metrics" data-view-section="overview" aria-label="Dashboard metrics">
-        <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"/></svg></span><span class="metric-trend is-positive">Live</span></span><span class="metric-value" data-metric="requests">0</span><span class="metric-label">Total requests</span></article>
-        <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg></span><span class="metric-trend">Queue</span></span><span class="metric-value" data-metric="open">0</span><span class="metric-label">Open requests</span></article>
-        <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M12 3 3 20h18L12 3Z"/><path d="M12 9v5M12 17h.01"/></svg></span><span class="metric-trend is-warning">Priority</span></span><span class="metric-value" data-metric="urgent">0</span><span class="metric-label">Urgent</span></article>
-        <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4zM8 6V4h8v2M8 11h8M8 15h5"/></svg></span><span class="metric-trend">All time</span></span><span class="metric-value" data-metric="designs">0</span><span class="metric-label">Design exports</span></article>
-        <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M4 18V6M4 18h16M7 14l4-4 3 2 5-6"/></svg></span><span class="metric-trend">Events</span></span><span class="metric-value" data-metric="activity">0</span><span class="metric-label">Activity</span></article>
-      </section>
-
-      <section class="dashboard-overview-grid" data-view-section="overview live">
-        <section class="panel live-panel">
-          <div class="panel-head">
-            <div><h2 class="panel-title">Live activity</h2><p class="panel-subtitle">Who is online and where they are working.</p></div>
-            <span class="live-badge"><span class="live-dot"></span>Live</span>
-          </div>
-          <div class="live-list" id="live-list"></div>
-        </section>
-        <section class="panel workspace-panel">
-          <div class="panel-head">
-            <div><h2 class="panel-title">Workspace usage</h2><p class="panel-subtitle">Exports by workspace in this browser.</p></div>
-          </div>
-          <div class="workspace-bars" id="workspace-bars"></div>
-        </section>
-      </section>
-
-      <section class="grid">
-        <div class="stack">
-          <section class="panel" data-dashboard-panel="requests">
-            <div class="panel-head">
-              <div>
-                <h2 class="panel-title">Design Requests</h2>
-                <p class="panel-subtitle">Assign owners, update status, and track deadlines.</p>
-              </div>
-              <div class="filters">
-                <select class="filter" id="request-status-filter" aria-label="Filter requests by status">
-                  <option value="">All Status</option>
-                  <option>New</option>
-                  <option>In Progress</option>
-                  <option>Needs Review</option>
-                  <option>Done</option>
-                  <option>Blocked</option>
-                </select>
-                <select class="filter" id="request-owner-filter" aria-label="Filter requests by owner">
-                  <option value="">All Owners</option>
-                </select>
-              </div>
+        <div class="dashboard-content">
+          <section class="dashboard-welcome" data-view-section="overview">
+            <div class="welcome-copy">
+              <p class="welcome-kicker" data-greeting>Good morning</p>
+              <h2><span data-welcome-name>Design team</span>, here’s the work board.</h2>
+              <p>Track website design requests through the board, and review exported graphics separately.</p>
             </div>
-            <div id="requests-table"></div>
           </section>
 
-          <section class="panel" data-dashboard-panel="designs">
-            <div class="panel-head">
-              <div>
-                <h2 class="panel-title">Exported Designs</h2>
-                <p class="panel-subtitle">Each workspace download is captured here as a local design record.</p>
-              </div>
-              <div class="filters">
-                <select class="filter" id="design-status-filter" aria-label="Filter designs by status">
-                  <option value="">All Status</option>
-                  <option>Exported</option>
-                  <option>Assigned</option>
-                  <option>Needs Review</option>
-                  <option>Done</option>
-                </select>
-              </div>
+          <section class="metrics" aria-label="Dashboard metrics">
+            <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"/></svg></span><span class="metric-trend is-positive">Live</span></span><span class="metric-value" data-metric="tasks">0</span><span class="metric-label">Total tasks</span></article>
+            <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg></span><span class="metric-trend">Queue</span></span><span class="metric-value" data-metric="open">0</span><span class="metric-label">Open tasks</span></article>
+            <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M12 3 3 20h18L12 3Z"/><path d="M12 9v5M12 17h.01"/></svg></span><span class="metric-trend is-warning">Priority</span></span><span class="metric-value" data-metric="urgent">0</span><span class="metric-label">Urgent</span></article>
+            <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4zM8 6V4h8v2M8 11h8M8 15h5"/></svg></span><span class="metric-trend">Exports</span></span><span class="metric-value" data-metric="designs">0</span><span class="metric-label">Design exports</span></article>
+            <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M4 18V6M4 18h16M7 14l4-4 3 2 5-6"/></svg></span><span class="metric-trend">Events</span></span><span class="metric-value" data-metric="activity">0</span><span class="metric-label">Activity</span></article>
+          </section>
+
+          <section class="dashboard-control-row" data-view-section="overview board list designs">
+            <div class="segmented-control" role="tablist" aria-label="Dashboard view switcher">
+              <button class="is-active" type="button" data-dashboard-view="board">Request Board</button>
+              <button type="button" data-dashboard-view="list">List</button>
+              <button type="button" data-dashboard-view="designs">Review Exports</button>
             </div>
-            <div id="designs-table"></div>
+            <div class="filters">
+              <select class="filter" id="task-status-filter" aria-label="Filter tasks by status"><option value="">All Status</option></select>
+              <select class="filter" id="task-owner-filter" aria-label="Filter tasks by owner"><option value="">All Owners</option></select>
+              <select class="filter" id="task-type-filter" aria-label="Filter tasks by type"><option value="">All Types</option><option value="design_request">Design Requests</option><option value="exported_design">Exported Designs</option></select>
+            </div>
+          </section>
+
+          <section class="kanban-board" id="kanban-board" data-view-section="overview board" aria-label="Design request kanban board"></section>
+
+          <section class="panel task-list-panel" data-view-section="list">
+            <div class="panel-head">
+              <div><h2 class="panel-title">Task List</h2><p class="panel-subtitle">All design requests and exported designs with admin controls.</p></div>
+            </div>
+            <div id="tasks-table"></div>
+          </section>
+
+          <section class="dashboard-overview-grid" data-view-section="overview people">
+            <section class="panel live-panel">
+              <div class="panel-head">
+                <div><h2 class="panel-title">Live activity</h2><p class="panel-subtitle">Who is online and where they are working.</p></div>
+                <span class="live-badge"><span class="live-dot"></span>Live</span>
+              </div>
+              <div class="live-list" id="live-list"></div>
+            </section>
+            <section class="panel" data-dashboard-panel="people">
+              <div class="panel-head">
+                <div><h2 class="panel-title">People</h2><p class="panel-subtitle">Users seen from auth, tasks, and activity.</p></div>
+              </div>
+              <div class="people-list" id="people-list"></div>
+            </section>
+          </section>
+
+          <section class="grid" data-view-section="designs activity">
+            <div class="stack">
+              <section class="panel" data-dashboard-panel="designs">
+                <div class="panel-head">
+                  <div><h2 class="panel-title">Review Exports</h2><p class="panel-subtitle">Every downloaded design captured for admin review.</p></div>
+                </div>
+                <div id="designs-table"></div>
+              </section>
+            </div>
+            <aside class="stack">
+              <section class="panel" data-dashboard-panel="activity">
+                <div class="panel-head">
+                  <div><h2 class="panel-title">Activity</h2><p class="panel-subtitle">Submissions, exports, assignment changes, and status moves.</p></div>
+                </div>
+                <div class="activity-list" id="activity-list"></div>
+              </section>
+            </aside>
           </section>
         </div>
-
-        <aside class="stack">
-          <section class="panel" data-dashboard-panel="people">
-            <div class="panel-head">
-              <div>
-                <h2 class="panel-title">People</h2>
-                <p class="panel-subtitle">Users seen from auth and activity.</p>
-              </div>
-            </div>
-            <div class="people-list" id="people-list"></div>
-          </section>
-
-          <section class="panel" data-dashboard-panel="activity">
-            <div class="panel-head">
-              <div>
-                <h2 class="panel-title">Activity</h2>
-                <p class="panel-subtitle">Exports, submissions, and admin changes.</p>
-              </div>
-            </div>
-            <div class="activity-list" id="activity-list"></div>
-          </section>
-        </aside>
-      </section>
-    </div>
       </main>
     </div>
+  </div>
+
+  <div class="task-drawer" id="task-drawer" aria-hidden="true">
+    <div class="task-drawer-backdrop" data-close-task-drawer></div>
+    <aside class="task-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="task-drawer-title">
+      <button class="drawer-close" type="button" data-close-task-drawer aria-label="Close task details">×</button>
+      <p class="drawer-eyebrow" id="task-drawer-type">Task</p>
+      <h2 id="task-drawer-title">Task details</h2>
+      <div class="drawer-meta" id="task-drawer-meta"></div>
+      <div class="drawer-grid">
+        <label>Status<select id="drawer-status"></select></label>
+        <label>Assignee<select id="drawer-assignee"></select></label>
+        <label>Priority<select id="drawer-priority"><option>Normal</option><option>High</option><option>Urgent</option></select></label>
+        <label>Due date<input id="drawer-due" type="datetime-local"></label>
+      </div>
+      <section class="drawer-section"><h3>Brief</h3><p id="drawer-brief">—</p></section>
+      <section class="drawer-section"><h3>Copy / Notes</h3><p id="drawer-copy">—</p></section>
+      <section class="drawer-section" id="drawer-export-section" hidden><h3>Export details</h3><dl class="drawer-export-details" id="drawer-export-details"></dl></section>
+      <section class="drawer-section"><h3>References</h3><div id="drawer-links" class="drawer-links">—</div></section>
+      <label class="drawer-notes">Admin notes<textarea id="drawer-admin-notes" rows="5" placeholder="Add internal notes for the design team"></textarea></label>
+      <div class="drawer-actions"><button class="topbar-button" type="button" data-close-task-drawer>Cancel</button><button class="topbar-button is-primary" type="button" id="drawer-save">Save task</button></div>
+    </aside>
+  </div>
+  <div class="export-preview-modal" id="export-preview-modal" aria-hidden="true">
+    <div class="export-preview-backdrop" data-close-export-preview></div>
+    <figure class="export-preview-panel" role="dialog" aria-modal="true" aria-labelledby="export-preview-title">
+      <button class="export-preview-close" type="button" data-close-export-preview aria-label="Close export preview">×</button>
+      <img id="export-preview-image" alt="Exported design preview">
+      <figcaption>
+        <span class="export-preview-kicker">Export Review</span>
+        <strong id="export-preview-title">Exported design</strong>
+        <small id="export-preview-meta"></small>
+      </figcaption>
+    </figure>
   </div>
   <footer class="site-footer">
     <div class="footer-hero">
@@ -735,8 +742,12 @@
   </footer>
 
   <script>
-    const STATUS_OPTIONS = ['New', 'In Progress', 'Needs Review', 'Done', 'Blocked'];
-    const DESIGN_STATUS_OPTIONS = ['Exported', 'Assigned', 'Needs Review', 'Done'];
+    const STATUS_OPTIONS = ['Backlog', 'Assigned', 'Doing', 'Review', 'Done'];
+    const PRIORITY_OPTIONS = ['Normal', 'High', 'Urgent'];
+    const ACCESS_ROLE_OPTIONS = ['Associate', 'Admin', 'Super Admin', 'Server Owner'];
+    let dashboardUser = { name: 'ES Admin', email: '', role: 'Admin', accessRole: 'Admin', designation: 'Design Operations' };
+    let canAssignDashboardRoles = false;
+    let selectedTaskId = '';
 
     function escapeHtml(value) {
       return String(value ?? '')
@@ -765,20 +776,19 @@
       if (!value) return 'No date';
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return text(value);
-      return new Intl.DateTimeFormat('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      }).format(date);
+      return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date);
     }
 
-    function requestTypeLabel(value) {
-      return {
-        newsletter: 'Newsletter Graphic',
-        'web-feature': 'Web Feature Image',
-        social: 'Social Media Graphic',
-      }[value] || text(value, 'Design Request');
+    function datetimeLocalValue(value) {
+      if (!value) return '';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '';
+      const offset = date.getTimezoneOffset() * 60000;
+      return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+    }
+
+    function taskTypeLabel(value) {
+      return value === 'exported_design' ? 'Exported Design' : 'Design Request';
     }
 
     function priorityClass(value) {
@@ -788,8 +798,54 @@
       return '';
     }
 
-    function statusClass(value) {
-      return String(value || '').toLowerCase() === 'done' ? 'is-done' : '';
+    function getPreviewSource(task = {}) {
+      return String(task.previewDataUrl || task.metadata?.previewDataUrl || '').trim();
+    }
+
+    function formatDuration(ms) {
+      const value = Number(ms);
+      if (!Number.isFinite(value) || value <= 0) return '';
+      const totalSeconds = Math.max(1, Math.round(value / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      if (hours) return `${hours}h ${minutes}m`;
+      if (minutes) return `${minutes}m ${seconds}s`;
+      return `${seconds}s`;
+    }
+
+    function getExportDetails(task = {}) {
+      const meta = task.metadata && typeof task.metadata === 'object' ? task.metadata : {};
+      const dimensions = meta.outputSize || (meta.imageWidth && meta.imageHeight ? `${meta.imageWidth} × ${meta.imageHeight}px` : '');
+      return [
+        ['Exported at', meta.exportedAt || task.createdAt ? dateText(meta.exportedAt || task.createdAt) : ''],
+        ['Time spent', formatDuration(meta.durationMs)],
+        ['Image size', dimensions],
+        ['File type', meta.mimeType || (task.filename && task.filename.includes('.') ? task.filename.split('.').pop().toUpperCase() : '')],
+        ['Scale', meta.exportScale ? `${meta.exportScale}×` : ''],
+      ].filter(([, value]) => String(value || '').trim());
+    }
+
+    function renderExportDetails(task = {}) {
+      const details = getExportDetails(task);
+      if (!details.length) return '';
+      return details.map(([label, value]) => `<div><dt>${text(label)}</dt><dd>${text(value)}</dd></div>`).join('');
+    }
+
+    function accessRoleClass(role) {
+      const normalized = String(role || '').toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
+      return normalized || 'associate';
+    }
+
+    function accessRoleOptions(selected = '') {
+      return ACCESS_ROLE_OPTIONS.map(role => `<option value="${attr(role)}"${role === selected ? ' selected' : ''}>${text(role)}</option>`).join('');
+    }
+
+    function canEditRole(person = {}) {
+      const email = String(person.email || '').toLowerCase();
+      if (!canAssignDashboardRoles) return false;
+      if (email === 'suhail.quraishi@essentiallysports.com') return false;
+      return true;
     }
 
     function optionList(options, selected) {
@@ -797,22 +853,42 @@
     }
 
     function peopleOptions(people, selected = '') {
-      const normalizedSelected = String(selected || '').trim();
+      const normalizedSelected = String(selected || '').trim().toLowerCase();
       return `<option value="">Unassigned</option>` + people
+        .filter(person => person.email)
         .map(person => {
-          const value = person.email || person.name;
+          const value = person.email;
           return `<option value="${attr(value)}"${value === normalizedSelected ? ' selected' : ''}>${text(person.name)} (${text(person.email)})</option>`;
         })
         .join('');
     }
 
+    function initials(value) {
+      return String(value || 'ES').trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'ES';
+    }
+
+    function filteredTasks(state) {
+      const query = String(document.getElementById('dashboard-search')?.value || '').trim().toLowerCase();
+      const status = document.getElementById('task-status-filter')?.value || '';
+      const owner = document.getElementById('task-owner-filter')?.value || '';
+      const type = document.getElementById('task-type-filter')?.value || '';
+      return (state.tasks || []).filter(task => {
+        const haystack = [task.title, task.id, task.sourceId, task.requesterName, task.requesterEmail, task.creatorName, task.creatorEmail, task.assignedTo, task.priority, task.workspace, task.workspaceVariant, task.brief, task.adminNotes].join(' ').toLowerCase();
+        return (!query || haystack.includes(query))
+          && (!status || task.status === status)
+          && (!owner || task.assignedTo === owner)
+          && (!type || task.type === type);
+      });
+    }
+
     function computeMetrics(state) {
-      const openStatuses = new Set(['new', 'in progress', 'needs review', 'blocked', '']);
+      const tasks = state.tasks || [];
       return {
-        requests: state.requests.length,
-        open: state.requests.filter(request => openStatuses.has(String(request.status || '').toLowerCase())).length,
-        urgent: state.requests.filter(request => String(request.priority || '').toLowerCase() === 'urgent').length,
-        designs: state.designs.length,
+        tasks: tasks.length,
+        requests: tasks.filter(task => task.type === 'design_request').length,
+        open: tasks.filter(task => task.status !== 'Done').length,
+        urgent: tasks.filter(task => String(task.priority || '').toLowerCase() === 'urgent').length,
+        designs: tasks.filter(task => task.type === 'exported_design').length,
         activity: state.activity.length,
       };
     }
@@ -823,54 +899,71 @@
         const el = document.querySelector(`[data-metric="${key}"]`);
         if (el) el.textContent = value;
       });
+      document.querySelectorAll('[data-task-count]').forEach(el => { el.textContent = metrics.tasks; });
+      document.querySelectorAll('[data-request-count]').forEach(el => { el.textContent = metrics.requests; });
     }
 
-    function renderOwnerFilter(state) {
-      const filter = document.getElementById('request-owner-filter');
-      const current = filter.value;
-      const owners = Array.from(new Set(state.requests.map(request => request.assignedTo).filter(Boolean))).sort();
-      filter.innerHTML = '<option value="">All Owners</option>' + owners.map(owner => `<option value="${attr(owner)}"${owner === current ? ' selected' : ''}>${text(owner)}</option>`).join('');
+    function renderTaskFilters(state) {
+      const statusFilter = document.getElementById('task-status-filter');
+      const ownerFilter = document.getElementById('task-owner-filter');
+      if (!statusFilter || !ownerFilter) return;
+      const currentStatus = statusFilter.value;
+      const currentOwner = ownerFilter.value;
+      statusFilter.innerHTML = '<option value="">All Status</option>' + STATUS_OPTIONS.map(status => `<option value="${attr(status)}"${status === currentStatus ? ' selected' : ''}>${text(status)}</option>`).join('');
+      const owners = Array.from(new Set((state.tasks || []).map(task => task.assignedTo).filter(Boolean))).sort();
+      ownerFilter.innerHTML = '<option value="">All Owners</option>' + owners.map(owner => `<option value="${attr(owner)}"${owner === currentOwner ? ' selected' : ''}>${text(owner)}</option>`).join('');
     }
 
-    function renderRequests(state) {
-      const statusFilter = document.getElementById('request-status-filter').value;
-      const ownerFilter = document.getElementById('request-owner-filter').value;
-      const requests = state.requests
-        .filter(request => !statusFilter || (request.status || 'New') === statusFilter)
-        .filter(request => !ownerFilter || request.assignedTo === ownerFilter)
-        .slice()
-        .reverse();
-      const target = document.getElementById('requests-table');
+    function renderTaskCard(task) {
+      const owner = task.assignedTo ? task.assignedTo.split('@')[0] : 'Unassigned';
+      const sourceName = task.requesterName || task.creatorName || task.requesterEmail || task.creatorEmail || task.workspace || 'ES Designer';
+      return `
+        <article class="task-card" draggable="true" data-task-id="${attr(task.id)}">
+          <div class="task-card-top"><span class="task-type">${taskTypeLabel(task.type)}</span><span class="task-priority ${priorityClass(task.priority)}">${text(task.priority, 'Normal')}</span></div>
+          <h3>${text(task.title, 'Untitled task')}</h3>
+          <p>${text(sourceName)}</p>
+          <div class="task-card-meta"><span>Due ${dateText(task.designDueAt)}</span><span>${text(owner)}</span></div>
+        </article>
+      `;
+    }
 
-      if (!requests.length) {
-        target.innerHTML = '<div class="empty">No matching design requests in this browser yet.</div>';
+    function renderKanban(state) {
+      const board = document.getElementById('kanban-board');
+      if (!board) return;
+      const tasks = filteredTasks(state).filter(task => task.type === 'design_request');
+      board.innerHTML = STATUS_OPTIONS.map(status => {
+        const columnTasks = tasks.filter(task => task.status === status);
+        return `
+          <section class="kanban-column" data-kanban-status="${attr(status)}">
+            <header><h2>${text(status)}</h2><span>${columnTasks.length}</span></header>
+            <div class="kanban-dropzone" data-kanban-dropzone="${attr(status)}">
+              ${columnTasks.length ? columnTasks.map(renderTaskCard).join('') : '<div class="empty is-compact">No tasks here.</div>'}
+            </div>
+          </section>
+        `;
+      }).join('');
+    }
+
+    function renderTaskList(state) {
+      const target = document.getElementById('tasks-table');
+      if (!target) return;
+      const tasks = filteredTasks(state);
+      if (!tasks.length) {
+        target.innerHTML = '<div class="empty">No matching tasks yet.</div>';
         return;
       }
-
       target.innerHTML = `
         <table>
-          <thead>
-            <tr>
-              <th>Request</th>
-              <th>Priority</th>
-              <th>Due</th>
-              <th>Status</th>
-              <th>Owner</th>
-              <th>Admin Note</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Task</th><th>Type</th><th>Priority</th><th>Due</th><th>Status</th><th>Assignee</th></tr></thead>
           <tbody>
-            ${requests.map(request => `
-              <tr data-request-id="${request.id}">
-                <td>
-                  <span class="item-title">${text(request.entities || request.title || request.id)}</span>
-                  <span class="item-meta">${text(request.id)} · ${requestTypeLabel(request.requestType)} · ${text(request.requester?.name)} </span>
-                </td>
-                <td><span class="pill ${priorityClass(request.priority)}">${text(request.priority, 'Normal')}</span></td>
-                <td>${dateText(request.designDueAt)}</td>
-                <td><select class="table-control" data-request-status>${optionList(STATUS_OPTIONS, request.status || 'New')}</select></td>
-                <td><select class="table-control" data-request-owner>${peopleOptions(state.people, request.assignedTo)}</select></td>
-                <td><input class="note-input" data-request-note value="${attr(request.adminNotes)}" placeholder="Optional note"></td>
+            ${tasks.map(task => `
+              <tr data-task-id="${attr(task.id)}">
+                <td><button class="task-link" type="button" data-open-task="${attr(task.id)}"><span class="item-title">${text(task.title)}</span><span class="item-meta">${text(task.sourceId)} · ${text(task.requesterName || task.creatorName || task.workspace)}</span></button></td>
+                <td><span class="pill">${taskTypeLabel(task.type)}</span></td>
+                <td><span class="pill ${priorityClass(task.priority)}">${text(task.priority, 'Normal')}</span></td>
+                <td>${dateText(task.designDueAt)}</td>
+                <td><select class="table-control" data-task-status>${optionList(STATUS_OPTIONS, task.status)}</select></td>
+                <td><select class="table-control" data-task-owner>${peopleOptions(state.people, task.assignedTo)}</select></td>
               </tr>
             `).join('')}
           </tbody>
@@ -879,96 +972,99 @@
     }
 
     function renderDesigns(state) {
-      const statusFilter = document.getElementById('design-status-filter').value;
-      const designs = state.designs
-        .filter(design => !statusFilter || (design.status || 'Exported') === statusFilter)
-        .slice();
       const target = document.getElementById('designs-table');
-
+      if (!target) return;
+      const designs = filteredTasks(state)
+        .filter(task => task.type === 'exported_design')
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       if (!designs.length) {
-        target.innerHTML = '<div class="empty">No exported designs in this browser yet. Download from a workspace to capture one.</div>';
+        target.innerHTML = '<div class="empty">No exported designs yet. Download from a workspace to capture one.</div>';
         return;
       }
-
       target.innerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Design</th>
-              <th>Workspace</th>
-              <th>Creator</th>
-              <th>Status</th>
-              <th>Owner</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${designs.map(design => `
-              <tr data-design-id="${design.id}">
-                <td>
-                  <span class="item-title">${text(design.title)}</span>
-                  <span class="item-meta">${text(design.filename)} · ${dateText(design.createdAt)}</span>
-                </td>
-                <td><span class="pill">${text(design.workspace)}${design.workspaceVariant ? ` · ${text(design.workspaceVariant)}` : ''}</span></td>
-                <td>${text(design.ownerName)}<span class="item-meta">${text(design.ownerEmail)}</span></td>
-                <td><select class="table-control" data-design-status>${optionList(DESIGN_STATUS_OPTIONS, design.status || 'Exported')}</select></td>
-                <td><select class="table-control" data-design-owner>${peopleOptions(state.people, design.assignedTo)}</select></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+        <div class="export-review-grid">
+          ${designs.map(task => `
+            <article class="export-review-card" data-task-id="${attr(task.id)}">
+              <button class="export-review-preview" type="button" data-preview-task="${attr(task.id)}"${getPreviewSource(task) ? '' : ' disabled'}>
+                ${getPreviewSource(task)
+                  ? `<img src="${attr(getPreviewSource(task))}" alt="${attr(task.title || 'Exported design')}">`
+                  : '<span>No preview captured</span>'}
+              </button>
+              <div class="export-review-copy">
+                <span class="export-review-type">${text(task.workspace)}${task.workspaceVariant ? ` · ${text(task.workspaceVariant)}` : ''}</span>
+                <h3>${text(task.title, 'Untitled export')}</h3>
+                <p>${text(task.filename)} · ${dateText(task.createdAt)}</p>
+                <div class="export-review-meta">
+                  <span>${text(task.creatorName || task.creatorEmail, 'Unknown creator')}</span>
+                  <span>${text(task.status)}</span>
+                </div>
+                <div class="export-review-actions">
+                  <button class="topbar-button is-primary export-review-cta" type="button" data-preview-task="${attr(task.id)}"${getPreviewSource(task) ? '' : ' disabled'}>Review image<svg class="export-review-chevron" viewBox="0 0 16 10" fill="none" aria-hidden="true"><path d="M14.98 1.14 7.98 7.14.98 1.14" stroke="currentColor" stroke-width="3"/></svg></button>
+                  <button class="topbar-button" type="button" data-open-task="${attr(task.id)}">Task details</button>
+                </div>
+              </div>
+            </article>
+          `).join('')}
+        </div>
       `;
     }
 
     function renderPeople(state) {
       const target = document.getElementById('people-list');
+      if (!target) return;
       const cloudNotice = state.cloudSyncStatus?.ok === false
-        ? `<article class="person">
-            <strong>Supabase dashboard data is not connected yet</strong>
-            <span>${text(state.cloudSyncStatus.message || 'Apply the dashboard profiles/presence migration to show signed-up users and online activity.')}</span>
-          </article>`
+        ? `<article class="person"><strong>Supabase dashboard data is not connected yet</strong><span>${text(state.cloudSyncStatus.message || 'Apply dashboard migrations to show shared users and tasks.')}</span></article>`
         : '';
       if (!state.people.length) {
-        target.innerHTML = `${cloudNotice}<div class="empty">No people found locally yet.</div>`;
+        target.innerHTML = `${cloudNotice}<div class="empty">No people found yet.</div>`;
         return;
       }
       target.innerHTML = cloudNotice + state.people.map(person => `
-        <article class="person">
-          <strong>${text(person.name)}</strong>
-          <span>${text(person.email)}${person.role ? ` · ${text(person.role)}` : ''}${person.online ? ' · Online' : ''}</span>
+        <article class="person person-role-card" data-person-email="${attr(person.email)}">
+          <span class="person-avatar">${text((person.name || person.email || 'ES').split(/\s+/).map(part => part[0]).join('').slice(0, 2), 'ES')}</span>
+          <span class="person-main">
+            <strong>${text(person.name)}</strong>
+            <span>${text(person.email)}</span>
+            <small>${text(person.designation || 'Designer')}${person.online ? ' · Online now' : person.lastSeenAt ? ` · Last seen ${dateText(person.lastSeenAt)}` : ''}</small>
+          </span>
+          <span class="person-role-tools">
+            <span class="role-badge is-${accessRoleClass(person.accessRole || person.role)}">${text(person.accessRole || person.role || 'Associate')}</span>
+            ${canEditRole(person)
+              ? `<select class="role-select" data-person-role data-previous-value="${attr(person.accessRole || person.role || 'Associate')}" aria-label="Change role for ${attr(person.name || person.email)}">${accessRoleOptions(person.accessRole || person.role || 'Associate')}</select>`
+              : ''}
+          </span>
         </article>
       `).join('');
     }
 
     function renderActivity(state) {
       const target = document.getElementById('activity-list');
+      if (!target) return;
       if (!state.activity.length) {
         target.innerHTML = '<div class="empty">No activity logged yet.</div>';
         return;
       }
-      target.innerHTML = state.activity.slice(0, 30).map(activity => `
-        <article class="activity">
-          <strong>${text(activity.label)}</strong>
-          <span>${dateText(activity.createdAt)} · ${text(activity.actorName)}</span>
-        </article>
+      target.innerHTML = state.activity.slice(0, 40).map(activity => `
+        <article class="activity"><strong>${text(activity.label)}</strong><span>${dateText(activity.createdAt)} · ${text(activity.actorName)}</span></article>
       `).join('');
     }
 
-    let dashboardUser = { name: 'ES Admin', email: '', role: 'Design Operations' };
-
-    function initials(value) {
-      return String(value || 'ES')
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map(part => part[0])
-        .join('')
-        .toUpperCase() || 'ES';
+    function renderLiveActivity(state) {
+      const target = document.getElementById('live-list');
+      if (!target) return;
+      const people = [{ ...dashboardUser, online: true, workspace: 'Dashboard board' }]
+        .concat(state.people.filter(person => person.email && person.email !== dashboardUser.email));
+      const onlineCount = people.filter(person => person.online).length;
+      document.querySelectorAll('[data-online-count]').forEach(el => { el.textContent = onlineCount; });
+      target.innerHTML = people.map(person => `
+        <article class="live-person"><span class="live-avatar">${initials(person.name)}</span><span><strong>${text(person.name)}</strong><small>${text(person.workspace, person.online ? 'ES Designer' : 'Not currently active')}${person.designation ? ` · ${text(person.designation)}` : ''}</small></span><span class="presence-state ${person.online ? 'is-online' : 'is-offline'}">${person.online ? '<span class="live-dot"></span>Online' : 'Offline'}</span></article>
+      `).join('') || '<div class="empty">No active users yet.</div>';
     }
 
     function renderIdentity() {
       const firstName = plainText(dashboardUser.name, 'Design team').split(' ')[0];
       document.querySelectorAll('[data-sidebar-name]').forEach(el => { el.textContent = plainText(dashboardUser.name, 'ES Admin'); });
-      document.querySelectorAll('[data-sidebar-role]').forEach(el => { el.textContent = plainText(dashboardUser.role, 'Design Operations'); });
+      document.querySelectorAll('[data-sidebar-role]').forEach(el => { el.textContent = plainText(dashboardUser.designation, 'Design Operations'); });
       document.querySelectorAll('[data-profile-name]').forEach(el => {
         el.textContent = plainText(dashboardUser.name, 'ES User');
         el.dataset.profileRole = '';
@@ -981,168 +1077,223 @@
       });
       document.querySelectorAll('[data-welcome-name]').forEach(el => { el.textContent = firstName; });
       const hour = new Date().getHours();
-      const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+      const timeKey = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+      const greeting = timeKey === 'morning' ? 'Good morning' : timeKey === 'afternoon' ? 'Good afternoon' : 'Good evening';
       document.querySelectorAll('[data-greeting]').forEach(el => { el.textContent = greeting; });
-    }
-
-    function renderLiveActivity(state) {
-      const target = document.getElementById('live-list');
-      const people = [{ ...dashboardUser, online: true, workspace: 'Dashboard overview' }]
-        .concat(state.people
-          .filter(person => person.email && person.email !== dashboardUser.email)
-          .map(person => ({
-            ...person,
-            online: Boolean(person.online),
-            workspace: person.online
-              ? plainText(person.workspace, 'ES Designer')
-              : plainText(person.workspace, 'Not currently active'),
-          })));
-      const onlineCount = people.filter(person => person.online).length;
-      document.querySelectorAll('[data-online-count]').forEach(el => { el.textContent = onlineCount; });
-      target.innerHTML = people.map(person => `
-        <article class="live-person">
-          <span class="live-avatar">${initials(person.name)}</span>
-          <span>
-            <strong>${text(person.name)}</strong>
-            <small>${text(person.workspace)}${person.role ? ` · ${text(person.role)}` : ''}</small>
-          </span>
-          <span class="presence-state">${person.online ? '<span class="live-dot"></span>Online' : 'Offline'}</span>
-        </article>
-      `).join('');
-      if (!people.length) target.innerHTML = `<div class="empty">No active users yet.</div>`;
-    }
-
-    function renderWorkspaceUsage(state) {
-      const target = document.getElementById('workspace-bars');
-      const workspaceNames = ['Social Media', 'YouTube Assets', 'Newsletter Assets'];
-      const counts = workspaceNames.map(name => ({
-        name,
-        count: state.designs.filter(design => String(design.workspace || '').toLowerCase().includes(name.split(' ')[0].toLowerCase())).length,
-      }));
-      const max = Math.max(1, ...counts.map(item => item.count));
-      target.innerHTML = counts.map(item => `
-        <div class="workspace-bar">
-          <span title="${attr(item.name)}">${text(item.name)}</span>
-          <div class="bar-track"><div class="bar-fill" style="width:${Math.max(item.count ? 12 : 0, (item.count / max) * 100)}%"></div></div>
-          <strong>${item.count}</strong>
-        </div>
-      `).join('');
-    }
-
-    function applyDashboardSearch() {
-      const query = String(document.getElementById('dashboard-search')?.value || '').trim().toLowerCase();
-      document.querySelectorAll('#requests-table tbody tr, #designs-table tbody tr, .person, .activity').forEach(item => {
-        item.classList.toggle('search-hidden', Boolean(query) && !item.textContent.toLowerCase().includes(query));
+      document.querySelectorAll('.dashboard-welcome').forEach(el => {
+        el.classList.remove('is-morning', 'is-afternoon', 'is-evening');
+        el.classList.add(`is-${timeKey}`);
       });
+    }
+
+    function renderShortcutHints() {
+      const platform = String(navigator.userAgentData?.platform || navigator.platform || '').toLowerCase();
+      const isApple = /mac|iphone|ipad|ipod/.test(platform);
+      document.querySelectorAll('[data-shortcut-hint]').forEach(el => {
+        el.textContent = isApple ? '⌘ K' : 'Ctrl K';
+      });
+    }
+
+    function setDashboardView(view) {
+      document.body.dataset.dashboardView = view;
+      document.querySelectorAll('[data-dashboard-view]').forEach(item => item.classList.toggle('is-active', item.dataset.dashboardView === view));
+      const titles = { overview: 'Task command center', board: 'Kanban board', list: 'Task list', designs: 'Review exports', people: 'People', activity: 'Activity log' };
+      const title = document.querySelector('.dashboard-topbar h1');
+      if (title) title.textContent = titles[view] || 'Task command center';
     }
 
     function renderDashboard() {
       const state = window.ESDashboardData.getDashboardState();
       renderMetrics(state);
-      renderOwnerFilter(state);
-      renderRequests(state);
+      renderTaskFilters(state);
+      renderKanban(state);
+      renderTaskList(state);
       renderDesigns(state);
       renderPeople(state);
       renderActivity(state);
       renderLiveActivity(state);
-      renderWorkspaceUsage(state);
-      applyDashboardSearch();
     }
 
-    async function updateRequest(row) {
-      const id = row.dataset.requestId;
-      await window.ESDashboardData.updateRequestAdminFields(id, {
-        status: row.querySelector('[data-request-status]')?.value,
-        assignedTo: row.querySelector('[data-request-owner]')?.value,
-        adminNotes: row.querySelector('[data-request-note]')?.value,
+    function getTaskById(id) {
+      return window.ESDashboardData.getDashboardState().tasks.find(task => task.id === id) || null;
+    }
+
+    function openTaskDrawer(id) {
+      const task = getTaskById(id);
+      if (!task) return;
+      selectedTaskId = id;
+      document.getElementById('task-drawer-type').textContent = taskTypeLabel(task.type);
+      document.getElementById('task-drawer-title').textContent = plainText(task.title, 'Untitled task');
+      document.getElementById('task-drawer-meta').innerHTML = `${text(task.sourceId)} · ${text(task.requesterName || task.creatorName || task.workspace)} · Created ${dateText(task.createdAt)}`;
+      document.getElementById('drawer-status').innerHTML = optionList(STATUS_OPTIONS, task.status);
+      document.getElementById('drawer-assignee').innerHTML = peopleOptions(window.ESDashboardData.getDashboardState().people, task.assignedTo);
+      document.getElementById('drawer-priority').value = PRIORITY_OPTIONS.includes(task.priority) ? task.priority : 'Normal';
+      document.getElementById('drawer-due').value = datetimeLocalValue(task.designDueAt);
+      document.getElementById('drawer-brief').textContent = plainText(task.brief || task.additionalNotes || task.workspaceVariant, '—');
+      document.getElementById('drawer-copy').textContent = plainText(task.designCopy || task.filename || task.teamOrLeague, '—');
+      const exportSection = document.getElementById('drawer-export-section');
+      const exportDetails = document.getElementById('drawer-export-details');
+      const exportDetailsHtml = task.type === 'exported_design' ? renderExportDetails(task) : '';
+      if (exportSection && exportDetails) {
+        exportSection.hidden = !exportDetailsHtml;
+        exportDetails.innerHTML = exportDetailsHtml;
+      }
+      const links = task.referenceLinks || [];
+      document.getElementById('drawer-links').innerHTML = links.length ? links.map((link, index) => `<a href="${attr(link)}" target="_blank" rel="noopener">Reference ${index + 1}</a>`).join('') : '—';
+      document.getElementById('drawer-admin-notes').value = task.adminNotes || '';
+      document.getElementById('task-drawer').classList.add('is-open');
+      document.getElementById('task-drawer').setAttribute('aria-hidden', 'false');
+    }
+
+    function closeTaskDrawer() {
+      selectedTaskId = '';
+      document.getElementById('task-drawer')?.classList.remove('is-open');
+      document.getElementById('task-drawer')?.setAttribute('aria-hidden', 'true');
+    }
+
+    function openExportPreview(id) {
+      const task = getTaskById(id);
+      const preview = getPreviewSource(task || {});
+      const modal = document.getElementById('export-preview-modal');
+      if (!task || !preview || !modal) return;
+      document.getElementById('export-preview-image').src = preview;
+      document.getElementById('export-preview-title').textContent = plainText(task.title, 'Exported design');
+      document.getElementById('export-preview-meta').textContent = `${plainText(task.workspace)}${task.workspaceVariant ? ` · ${plainText(task.workspaceVariant)}` : ''} · ${plainText(task.filename)} · ${dateText(task.createdAt)}`;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeExportPreview() {
+      const modal = document.getElementById('export-preview-modal');
+      if (!modal) return;
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      const image = document.getElementById('export-preview-image');
+      if (image) image.src = '';
+    }
+
+    async function saveDrawerTask() {
+      if (!selectedTaskId) return;
+      await window.ESDashboardData.updateTaskAdminFields(selectedTaskId, {
+        status: document.getElementById('drawer-status').value,
+        assignedTo: document.getElementById('drawer-assignee').value,
+        priority: document.getElementById('drawer-priority').value,
+        designDueAt: document.getElementById('drawer-due').value,
+        adminNotes: document.getElementById('drawer-admin-notes').value,
       });
       renderDashboard();
+      closeTaskDrawer();
     }
 
-    async function updateDesign(row) {
-      const id = row.dataset.designId;
-      await window.ESDashboardData.updateDesignAdminFields(id, {
-        status: row.querySelector('[data-design-status]')?.value,
-        assignedTo: row.querySelector('[data-design-owner]')?.value,
+    async function updateTaskRow(row) {
+      const id = row.dataset.taskId;
+      await window.ESDashboardData.updateTaskAdminFields(id, {
+        status: row.querySelector('[data-task-status]')?.value,
+        assignedTo: row.querySelector('[data-task-owner]')?.value,
       });
       renderDashboard();
     }
 
     function setupDashboardEvents() {
-      document.getElementById('request-status-filter').addEventListener('change', renderDashboard);
-      document.getElementById('request-owner-filter').addEventListener('change', renderDashboard);
-      document.getElementById('design-status-filter').addEventListener('change', renderDashboard);
-      document.getElementById('dashboard-search').addEventListener('input', applyDashboardSearch);
+      document.getElementById('task-status-filter')?.addEventListener('change', renderDashboard);
+      document.getElementById('task-owner-filter')?.addEventListener('change', renderDashboard);
+      document.getElementById('task-type-filter')?.addEventListener('change', renderDashboard);
+      document.getElementById('dashboard-search')?.addEventListener('input', renderDashboard);
       document.addEventListener('keydown', event => {
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
           event.preventDefault();
           document.getElementById('dashboard-search')?.focus();
         }
+        if (event.key === 'Escape') {
+          closeTaskDrawer();
+          closeExportPreview();
+        }
       });
-      const viewTitles = {
-        overview: 'Design operations',
-        live: 'Live activity',
-        requests: 'Design requests',
-        designs: 'Design library',
-        people: 'People',
-        activity: 'Activity log',
-      };
       document.querySelectorAll('[data-dashboard-view]').forEach(button => {
         button.addEventListener('click', () => {
           const view = button.dataset.dashboardView || 'overview';
-          document.body.dataset.dashboardView = view;
-          document.querySelectorAll('[data-dashboard-view]').forEach(item => item.classList.toggle('is-active', item === button));
-          const title = document.querySelector('.dashboard-topbar h1');
-          if (title) title.textContent = viewTitles[view] || 'Design operations';
+          setDashboardView(view);
           window.scrollTo({ top: 0, behavior: 'smooth' });
-          applyDashboardSearch();
+          renderDashboard();
         });
-      });
-      const profile = document.getElementById('profile-menu');
-      const profileTrigger = document.getElementById('profile-trigger');
-      profileTrigger?.addEventListener('click', event => {
-        event.stopPropagation();
-        const isOpen = profile.classList.toggle('is-open');
-        profileTrigger.setAttribute('aria-expanded', String(isOpen));
       });
       document.addEventListener('click', event => {
-        if (!event.target.closest('#profile-menu')) {
-          profile?.classList.remove('is-open');
-          profileTrigger?.setAttribute('aria-expanded', 'false');
+        const previewButton = event.target.closest('[data-preview-task]');
+        if (previewButton && !previewButton.disabled) {
+          event.preventDefault();
+          openExportPreview(previewButton.dataset.previewTask);
+          return;
         }
-      });
-      document.querySelectorAll('.nav-dropdown').forEach(dropdown => {
-        const trigger = dropdown.querySelector('.nav-trigger');
-        dropdown.addEventListener('mouseenter', () => {
-          if (window.matchMedia('(max-width: 900px)').matches) return;
-          profile?.classList.remove('is-open');
-          profileTrigger?.setAttribute('aria-expanded', 'false');
-          document.querySelectorAll('.nav-dropdown').forEach(item => {
-            item.classList.toggle('is-open', item === dropdown);
-            item.querySelector('.nav-trigger')?.setAttribute('aria-expanded', String(item === dropdown));
-          });
-        });
-        trigger?.addEventListener('click', event => {
-          if (window.matchMedia('(max-width: 900px)').matches) {
-            event.preventDefault();
-            const willOpen = !dropdown.classList.contains('is-open');
-            document.querySelectorAll('.nav-dropdown').forEach(item => item.classList.remove('is-open'));
-            dropdown.classList.toggle('is-open', willOpen);
-            trigger.setAttribute('aria-expanded', String(willOpen));
-          }
-        });
+        if (event.target.closest('[data-close-export-preview]')) {
+          closeExportPreview();
+          return;
+        }
+        const openButton = event.target.closest('[data-open-task], .task-card');
+        if (openButton?.dataset.taskId || openButton?.dataset.openTask) openTaskDrawer(openButton.dataset.taskId || openButton.dataset.openTask);
+        if (event.target.closest('[data-close-task-drawer]')) closeTaskDrawer();
       });
       document.addEventListener('change', event => {
-        const requestRow = event.target.closest('[data-request-id]');
-        if (requestRow) updateRequest(requestRow);
-        const designRow = event.target.closest('[data-design-id]');
-        if (designRow) updateDesign(designRow);
+        if (event.target.matches('[data-person-role]')) {
+          updatePersonRole(event.target);
+          return;
+        }
+        const taskRow = event.target.closest('[data-task-id]');
+        if (taskRow && (event.target.matches('[data-task-status]') || event.target.matches('[data-task-owner]'))) updateTaskRow(taskRow);
       });
-      document.addEventListener('blur', event => {
-        const requestRow = event.target.closest('[data-request-id]');
-        if (requestRow && event.target.matches('[data-request-note]')) updateRequest(requestRow);
-      }, true);
+      document.addEventListener('dragstart', event => {
+        const card = event.target.closest('.task-card');
+        if (!card) return;
+        event.dataTransfer.setData('text/plain', card.dataset.taskId);
+        card.classList.add('is-dragging');
+      });
+      document.addEventListener('dragend', event => {
+        event.target.closest('.task-card')?.classList.remove('is-dragging');
+        document.querySelectorAll('.kanban-dropzone').forEach(zone => zone.classList.remove('is-over'));
+      });
+      document.addEventListener('dragover', event => {
+        const zone = event.target.closest('.kanban-dropzone');
+        if (!zone) return;
+        event.preventDefault();
+        zone.classList.add('is-over');
+      });
+      document.addEventListener('dragleave', event => {
+        event.target.closest('.kanban-dropzone')?.classList.remove('is-over');
+      });
+      document.addEventListener('drop', async event => {
+        const zone = event.target.closest('.kanban-dropzone');
+        if (!zone) return;
+        event.preventDefault();
+        zone.classList.remove('is-over');
+        const id = event.dataTransfer.getData('text/plain');
+        const status = zone.dataset.kanbanDropzone;
+        if (id && status) {
+          await window.ESDashboardData.updateTaskAdminFields(id, { status });
+          renderDashboard();
+        }
+      });
+      document.getElementById('drawer-save')?.addEventListener('click', saveDrawerTask);
       window.addEventListener('es-dashboard-data-change', renderDashboard);
+    }
+
+    async function updatePersonRole(select) {
+      const card = select.closest('[data-person-email]');
+      const email = card?.dataset.personEmail || '';
+      const role = select.value;
+      const previous = select.dataset.previousValue || '';
+      select.disabled = true;
+      card?.classList.add('is-saving');
+      try {
+        await window.ESDashboardData.updatePersonAccessRole(email, role);
+        select.dataset.previousValue = role;
+        await window.ESDashboardData.refreshCloudDashboardData?.();
+        renderDashboard();
+      } catch (error) {
+        if (previous) select.value = previous;
+        setTimeout(() => alert(error?.message || 'Role could not be updated.'), 0);
+      } finally {
+        select.disabled = false;
+        card?.classList.remove('is-saving');
+      }
     }
 
     function setupPageTransitions() {
@@ -1240,6 +1391,7 @@
         window.dispatchEvent(new CustomEvent('es:auth-ready'));
         document.body.dataset.dashboardView = 'overview';
         renderIdentity();
+        renderShortcutHints();
         setupDashboardEvents();
         renderDashboard();
         window.setTimeout(() => {

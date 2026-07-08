@@ -3811,6 +3811,27 @@ function saveCanvasDownload(canvas, filename, mimeType, quality, onComplete) {
   }
 }
 
+function makeDashboardPreviewDataUrl(canvas) {
+  try {
+    const maxWidth = 900;
+    const scale = Math.min(1, maxWidth / Math.max(canvas.width || maxWidth, 1));
+    const preview = document.createElement('canvas');
+    preview.width = Math.max(1, Math.round(canvas.width * scale));
+    preview.height = Math.max(1, Math.round(canvas.height * scale));
+    const previewCtx = preview.getContext('2d');
+    previewCtx.drawImage(canvas, 0, 0, preview.width, preview.height);
+    return preview.toDataURL('image/webp', 0.82);
+  } catch (error) {
+    return '';
+  }
+}
+
+const ES_WORKSPACE_SESSION_STARTED_AT = Date.now();
+
+function getWorkspaceExportDurationMs() {
+  return Math.max(0, Date.now() - ES_WORKSPACE_SESSION_STARTED_AT);
+}
+
 function downloadImage() {
   const finishExportFeedback = startExportFeedback(document.getElementById('download-btn'));
   const workspace = getWorkspace();
@@ -3840,6 +3861,18 @@ function downloadImage() {
         sport: state.sport || '',
         teamOrLeague: state.team || '',
         filename,
+        exportedAt: new Date().toISOString(),
+        durationMs: getWorkspaceExportDurationMs(),
+        imageWidth: W,
+        imageHeight: H,
+        outputSize: `${W} × ${H}px`,
+        exportScale: scale,
+        mimeType: workspace.exportType,
+        previewDataUrl: makeDashboardPreviewDataUrl(offscreen),
+        metadata: {
+          workspaceId: activeWorkspace,
+          outputSize: `${W} × ${H}px`,
+        },
       });
     }
   });
@@ -4291,6 +4324,7 @@ function setupDesignRequests() {
 
     const records = readDesignRequests();
     const persisted = writeDesignRequests([...records, record]);
+    window.ESDashboardData?.recordDesignRequest?.(record);
     window.ESDashboardData?.recordActivity?.({
       type: 'request_submitted',
       label: `Submitted request ${record.id}`,
