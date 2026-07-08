@@ -46,6 +46,7 @@ alter table public.es_designer_profiles enable row level security;
 alter table public.es_designer_presence enable row level security;
 
 drop policy if exists "ES users can read dashboard profiles" on public.es_designer_profiles;
+drop policy if exists "Dashboard admins can read dashboard profiles" on public.es_designer_profiles;
 create policy "Dashboard admins can read dashboard profiles"
 on public.es_designer_profiles
 for select
@@ -68,6 +69,7 @@ using (lower(email) = lower(auth.jwt() ->> 'email') or public.is_es_designer_adm
 with check (lower(email) = lower(auth.jwt() ->> 'email') or public.is_es_designer_admin());
 
 drop policy if exists "ES users can read dashboard presence" on public.es_designer_presence;
+drop policy if exists "Dashboard admins can read dashboard presence" on public.es_designer_presence;
 create policy "Dashboard admins can read dashboard presence"
 on public.es_designer_presence
 for select
