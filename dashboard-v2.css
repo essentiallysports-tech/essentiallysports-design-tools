@@ -3742,3 +3742,33 @@ body[data-dashboard-view="designs"] .stack {
     gap: 24px;
   }
 }
+
+/* Compact dashboard metric strip — keep all five cards in one desktop row. */
+.metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.metric-card {
+  min-height: 86px;
+  padding: 16px 18px;
+  border-radius: 16px;
+}
+
+.metric-value {
+  font-size: 34px;
+  line-height: .95;
+}
+
+.metric-label {
+  margin-top: 2px;
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+@media (max-width: 1180px) {
+  .metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
