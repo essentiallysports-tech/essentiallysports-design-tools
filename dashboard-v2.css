@@ -2436,7 +2436,7 @@ body[data-dashboard-view="activity"] .activity-list {
   width: 13px;
   height: 8px;
   flex: 0 0 13px;
-  color: #050505;
+  color: #fff;
   transform: rotate(-90deg) translateX(-1px);
 }
 
@@ -3721,5 +3721,24 @@ body[data-dashboard-view="list"] .dashboard-control-row {
   100% {
     --sidebar-entry-stroke-angle: 360deg;
     opacity: 0;
+  }
+}
+
+/* Keep Review Exports balanced on desktop: exports left, activity right. */
+body[data-dashboard-view="designs"] .grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr);
+  align-items: start;
+  gap: 34px;
+}
+
+body[data-dashboard-view="designs"] .stack {
+  gap: 0;
+}
+
+@media (max-width: 1080px) {
+  body[data-dashboard-view="designs"] .grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
   }
 }
