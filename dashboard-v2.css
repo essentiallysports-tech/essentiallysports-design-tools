@@ -3668,10 +3668,10 @@ body[data-dashboard-view="list"] .dashboard-control-row {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border-color: transparent;
+  border-color: var(--dash-border);
   background: #fff;
   color: #050505;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--sidebar-entry-accent) 28%, transparent);
+  box-shadow: none;
 }
 
 .sidebar-nav button.is-active::before {
@@ -3688,10 +3688,10 @@ body[data-dashboard-view="list"] .dashboard-control-row {
   background: conic-gradient(
     from var(--sidebar-entry-stroke-angle),
     transparent 0deg,
-    transparent 245deg,
-    color-mix(in srgb, var(--sidebar-entry-accent) 35%, transparent) 270deg,
-    var(--sidebar-entry-accent) 310deg,
-    transparent 350deg
+    transparent 260deg,
+    color-mix(in srgb, var(--sidebar-entry-accent) 20%, transparent) 282deg,
+    var(--sidebar-entry-accent) 315deg,
+    transparent 342deg
   );
   pointer-events: none;
   -webkit-mask:
@@ -3699,7 +3699,7 @@ body[data-dashboard-view="list"] .dashboard-control-row {
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: sidebarEntryStrokeOrbit 6s linear 1 forwards;
+  animation: sidebarEntryStrokeOrbit 1.45s cubic-bezier(0.22, 0.78, 0.24, 1) 1 both;
 }
 
 .sidebar-nav button.is-active > * {
@@ -3708,7 +3708,18 @@ body[data-dashboard-view="list"] .dashboard-control-row {
 }
 
 @keyframes sidebarEntryStrokeOrbit {
-  to {
+  0% {
+    --sidebar-entry-stroke-angle: 0deg;
+    opacity: 0;
+  }
+
+  10%,
+  78% {
+    opacity: 1;
+  }
+
+  100% {
     --sidebar-entry-stroke-angle: 360deg;
+    opacity: 0;
   }
 }
