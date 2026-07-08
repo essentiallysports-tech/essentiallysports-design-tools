@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20260707-auth4"></script>
-  <script src="dashboard-data.js?v=20260708-dashboardstable1"></script>
+  <script src="dashboard-data.js?v=20260708-dashboardstable2"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1232,6 +1232,7 @@
           'Dashboard user profile timed out.'
         );
         document.documentElement.style.visibility = '';
+        window.dispatchEvent(new CustomEvent('es:auth-ready'));
         document.body.dataset.dashboardView = 'overview';
         renderIdentity();
         setupDashboardEvents();

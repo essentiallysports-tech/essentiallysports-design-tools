@@ -48,6 +48,13 @@
     }
   }
 
+  function withTimeout(promise, timeoutMs, fallback = null) {
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise(resolve => window.setTimeout(() => resolve(fallback), timeoutMs)),
+    ]);
+  }
+
   function getAdminConfig() {
     const stored = readJson(ADMIN_CONFIG_KEY, null);
     const config = stored && typeof stored === 'object' ? stored : DEFAULT_ADMIN_CONFIG;
@@ -71,7 +78,7 @@
 
   async function getAuthSession() {
     try {
-      return await window.ESAuth?.getSession?.();
+      return await withTimeout(window.ESAuth?.getSession?.(), 5000, null);
     } catch (error) {
       return null;
     }
@@ -222,9 +229,9 @@
     if (cloudRefreshInFlight) return cloudRefreshInFlight;
     cloudRefreshInFlight = (async () => {
       try {
-        await upsertSupabaseProfileAndPresence();
+        await withTimeout(upsertSupabaseProfileAndPresence(), 4000, false);
         if (fetchPeople) {
-          cloudPeopleCache = await fetchSupabasePeople();
+          cloudPeopleCache = await withTimeout(fetchSupabasePeople(), 6500, cloudPeopleCache);
           emitDashboardChange('cloud-people', { people: cloudPeopleCache });
         }
         return cloudPeopleCache;
