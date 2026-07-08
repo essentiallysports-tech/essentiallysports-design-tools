@@ -3655,3 +3655,60 @@ body[data-dashboard-view="list"] .dashboard-control-row {
     transform: rotate(1turn);
   }
 }
+
+/* Social Hub-style active outline for dashboard sidebar buttons. */
+@property --sidebar-entry-stroke-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.sidebar-nav button.is-active {
+  --sidebar-entry-accent: var(--dash-blue);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-color: transparent;
+  background: #fff;
+  color: #050505;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--sidebar-entry-accent) 28%, transparent);
+}
+
+.sidebar-nav button.is-active::before {
+  content: none;
+}
+
+.sidebar-nav button.is-active::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--sidebar-entry-stroke-angle),
+    transparent 0deg,
+    transparent 245deg,
+    color-mix(in srgb, var(--sidebar-entry-accent) 35%, transparent) 270deg,
+    var(--sidebar-entry-accent) 310deg,
+    transparent 350deg
+  );
+  pointer-events: none;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: sidebarEntryStrokeOrbit 6s linear 1 forwards;
+}
+
+.sidebar-nav button.is-active > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes sidebarEntryStrokeOrbit {
+  to {
+    --sidebar-entry-stroke-angle: 360deg;
+  }
+}
