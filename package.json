@@ -10,6 +10,7 @@
     "test:vercel-api": "node scripts/test-vercel-api-adapters.mjs",
     "verify:es-images": "node scripts/verify-es-image-live.mjs",
     "inspect:es-images": "node scripts/inspect-es-mcp-live.mjs",
+    "check:dashboard-supabase": "node scripts/check-dashboard-supabase.mjs",
     "es:mcp:register": "node scripts/es-mcp-register-client.mjs",
     "es:mcp:token": "node scripts/es-mcp-exchange-token.mjs"
   }
