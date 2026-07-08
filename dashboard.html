@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20260707-auth4"></script>
-  <script src="dashboard-data.js?v=20260708-dashboardstable2"></script>
+  <script src="dashboard-data.js?v=20260708-dashboardstable3"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -922,11 +922,17 @@
 
     function renderPeople(state) {
       const target = document.getElementById('people-list');
+      const cloudNotice = state.cloudSyncStatus?.ok === false
+        ? `<article class="person">
+            <strong>Supabase dashboard data is not connected yet</strong>
+            <span>${text(state.cloudSyncStatus.message || 'Apply the dashboard profiles/presence migration to show signed-up users and online activity.')}</span>
+          </article>`
+        : '';
       if (!state.people.length) {
-        target.innerHTML = '<div class="empty">No people found locally yet.</div>';
+        target.innerHTML = `${cloudNotice}<div class="empty">No people found locally yet.</div>`;
         return;
       }
-      target.innerHTML = state.people.map(person => `
+      target.innerHTML = cloudNotice + state.people.map(person => `
         <article class="person">
           <strong>${text(person.name)}</strong>
           <span>${text(person.email)}${person.role ? ` · ${text(person.role)}` : ''}${person.online ? ' · Online' : ''}</span>

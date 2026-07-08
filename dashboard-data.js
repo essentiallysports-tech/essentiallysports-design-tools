@@ -106,6 +106,11 @@
   }
 
   let cloudPeopleCache = [];
+  let cloudSyncStatus = {
+    ok: null,
+    message: '',
+    checkedAt: '',
+  };
   let presenceTimer = null;
   let cloudRefreshInFlight = null;
 
@@ -232,10 +237,21 @@
         await withTimeout(upsertSupabaseProfileAndPresence(), 4000, false);
         if (fetchPeople) {
           cloudPeopleCache = await withTimeout(fetchSupabasePeople(), 6500, cloudPeopleCache);
+          cloudSyncStatus = {
+            ok: true,
+            message: '',
+            checkedAt: new Date().toISOString(),
+          };
           emitDashboardChange('cloud-people', { people: cloudPeopleCache });
         }
         return cloudPeopleCache;
       } catch (error) {
+        cloudSyncStatus = {
+          ok: false,
+          message: cleanString(error?.message || 'Supabase dashboard data could not be loaded.'),
+          checkedAt: new Date().toISOString(),
+        };
+        emitDashboardChange('cloud-error', { message: cloudSyncStatus.message });
         if (!silent) throw error;
         return cloudPeopleCache;
       } finally {
@@ -510,6 +526,7 @@
       activity,
       people: getPeople({ requests, designs }),
       adminConfig: getAdminConfig(),
+      cloudSyncStatus: { ...cloudSyncStatus },
     };
   }
 
