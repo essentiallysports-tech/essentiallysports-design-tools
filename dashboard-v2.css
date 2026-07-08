@@ -3758,3 +3758,17 @@ body[data-dashboard-view="designs"] .stack {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* Cleaner ES-style dashboard rail icons. */
+.sidebar-nav svg {
+  width: 23px;
+  height: 23px;
+  stroke-width: 1.95;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sidebar-nav button,
+.sidebar-nav a {
+  color: #111827;
+}
