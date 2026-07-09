@@ -5675,3 +5675,28 @@ body.dashboard-page .dashboard-choice-option.is-selected {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Overview separation: dashboard overview is exports + audience/presence only. */
+body.dashboard-page .metrics {
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+}
+
+body.dashboard-page .export-preview-panel {
+  width: min(580px, calc(100vw - 48px));
+}
+
+body.dashboard-page .export-preview-panel img {
+  max-height: min(46vh, 360px);
+}
+
+@media (max-width: 980px) {
+  body.dashboard-page .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  body.dashboard-page .metrics {
+    grid-template-columns: 1fr;
+  }
+}
