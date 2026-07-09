@@ -443,10 +443,7 @@
     </a>
     <div class="navbar-menu">
       <div class="nav-dropdown">
-        <a class="nav-trigger has-chevron" href="index.html#logo-guidelines" aria-haspopup="true" aria-expanded="false">
-          <span>Brand Guidelines</span>
-          <svg class="nav-chevron" viewBox="0 0 16 10" fill="none" aria-hidden="true"><path d="M14.98 1.14 7.98 7.14.98 1.14" stroke="currentColor" stroke-width="3"/></svg>
-        </a>
+        <a class="nav-trigger has-chevron" href="index.html#logo-guidelines" aria-haspopup="true" aria-expanded="false">Brand Guidelines</a>
         <div class="nav-dropdown-menu" role="menu" aria-label="Brand guidelines">
           <a href="index.html#logo-guidelines" role="menuitem">Logo Guidelines</a>
           <a href="index.html#social-guidelines" role="menuitem">Social Media Guidelines</a>
@@ -454,10 +451,7 @@
         </div>
       </div>
       <div class="nav-dropdown">
-        <a class="nav-trigger has-chevron" href="index.html#frames" aria-haspopup="true" aria-expanded="false">
-          <span>Design Tools</span>
-          <svg class="nav-chevron" viewBox="0 0 16 10" fill="none" aria-hidden="true"><path d="M14.98 1.14 7.98 7.14.98 1.14" stroke="currentColor" stroke-width="3"/></svg>
-        </a>
+        <a class="nav-trigger has-chevron" href="index.html#frames" aria-haspopup="true" aria-expanded="false">Design Tools</a>
         <div class="nav-dropdown-menu" role="menu" aria-label="Design workspaces">
           <a href="index.html#frames" role="menuitem">Home Page</a>
           <a href="index.html#instagram" role="menuitem">Social Media</a>
@@ -1190,6 +1184,38 @@
       profileTrigger?.setAttribute('aria-expanded', 'false');
     }
 
+    function closeDashboardNavMenus(exceptMenu = null) {
+      document.querySelectorAll('.nav-dropdown').forEach(menu => {
+        if (menu === exceptMenu) return;
+        menu.classList.remove('is-open');
+        menu.querySelector('.nav-trigger')?.setAttribute('aria-expanded', 'false');
+      });
+    }
+
+    function setupDashboardNavMenus() {
+      document.querySelectorAll('.nav-dropdown').forEach(menu => {
+        const trigger = menu.querySelector('.nav-trigger');
+        if (!trigger || trigger.dataset.menuBound === 'true') return;
+        trigger.dataset.menuBound = 'true';
+        menu.addEventListener('mouseenter', () => {
+          if (window.matchMedia('(max-width: 680px)').matches) return;
+          closeDashboardProfileMenu();
+          closeDashboardNavMenus(menu);
+          menu.classList.add('is-open');
+          trigger.setAttribute('aria-expanded', 'true');
+        });
+        trigger.addEventListener('click', event => {
+          if (!window.matchMedia('(max-width: 680px)').matches) return;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          closeDashboardProfileMenu();
+          closeDashboardNavMenus(menu);
+          const isOpen = menu.classList.toggle('is-open');
+          trigger.setAttribute('aria-expanded', String(isOpen));
+        });
+      });
+    }
+
     function setupDashboardProfileMenu() {
       const profileMenu = document.getElementById('profile-menu');
       const profileTrigger = document.getElementById('profile-trigger');
@@ -1198,6 +1224,7 @@
       profileTrigger.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
+        closeDashboardNavMenus();
         const isOpen = profileMenu.classList.toggle('is-open');
         profileTrigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       });
@@ -1330,6 +1357,7 @@
         });
       });
       document.addEventListener('click', event => {
+        if (!event.target.closest('.nav-dropdown')) closeDashboardNavMenus();
         if (!event.target.closest('.profile-menu')) closeDashboardProfileMenu();
         const previewButton = event.target.closest('[data-preview-task]');
         if (previewButton && !previewButton.disabled) {
@@ -1534,6 +1562,7 @@
         document.body.dataset.dashboardView = 'overview';
         renderIdentity();
         renderShortcutHints();
+        setupDashboardNavMenus();
         setupDashboardProfileMenu();
         setupDashboardEvents();
         renderDashboard();

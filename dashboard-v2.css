@@ -792,7 +792,8 @@ th {
   --border-strong: #8fc5ff;
   --text-primary: #111827;
   --text-secondary: #68788b;
-  --radius-sm: 8px;
+  --tag-cream: #FFF6E6;
+  --radius-sm: 6px;
   --shadow-md: 0 18px 38px rgba(3, 49, 98, .12);
   --motion-smooth: cubic-bezier(.16, 1, .3, 1);
   --font-heading: "Roboto Condensed", "Roboto", Arial, sans-serif;
@@ -854,10 +855,6 @@ html.has-dashboard-admin .navbar-menu [data-admin-only].is-admin-visible {
   display: inline-flex !important;
 }
 
-.navbar-menu a[aria-current="page"] {
-  color: var(--accent);
-}
-
 .nav-dropdown {
   position: relative;
   display: inline-flex;
@@ -880,16 +877,13 @@ html.has-dashboard-admin .navbar-menu [data-admin-only].is-admin-visible {
 }
 
 .navbar-menu .has-chevron::after {
-  content: none;
-  display: none;
-}
-
-.nav-chevron {
+  content: '';
+  display: inline-block;
   width: 16px;
   height: 10px;
-  flex: 0 0 16px;
-  color: var(--accent);
+  background: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCAxNiAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE0Ljk3NjYgMS4xNDA2Mkw3Ljk3NjU2IDcuMTQwNjNMMC45NzY1NjMgMS4xNDA2MiIgc3Ryb2tlPSIjMEE3REZBIiBzdHJva2Utd2lkdGg9IjMiLz4KPC9zdmc+Cg==") center / contain no-repeat;
   transform: translateY(1px);
+  margin-left: 8px;
 }
 
 .nav-dropdown-menu {
@@ -948,6 +942,17 @@ html.has-dashboard-admin .navbar-menu [data-admin-only].is-admin-visible {
   transition: height .22s var(--motion-smooth);
 }
 
+.nav-dropdown-menu span {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
 .nav-dropdown-menu a:hover,
 .nav-dropdown-menu a:focus-visible {
   background: var(--accent-light);
@@ -959,6 +964,18 @@ html.has-dashboard-admin .navbar-menu [data-admin-only].is-admin-visible {
 .nav-dropdown-menu a:hover::before,
 .nav-dropdown-menu a:focus-visible::before {
   height: 18px;
+}
+
+.nav-dropdown-menu .is-upcoming {
+  background: var(--tag-cream);
+  color: #765A2C;
+  border: 1px solid #D8B979;
+  cursor: default;
+}
+
+.nav-dropdown-menu .is-upcoming:hover {
+  background: var(--tag-cream);
+  color: #765A2C;
 }
 
 .navbar-right {
