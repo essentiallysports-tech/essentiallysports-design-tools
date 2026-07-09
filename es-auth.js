@@ -218,7 +218,7 @@
 
   function accessPendingError(email) {
     const normalizedEmail = normalizeEmail(email);
-    return new Error(`Access request sent for ${normalizedEmail}. An ES Designer admin can approve or reject it from the dashboard.`);
+    return new Error(`Access request sent for ${normalizedEmail}. A Frameup admin can approve or reject it from the dashboard.`);
   }
 
   function hasSupabaseSdk() {
@@ -237,7 +237,7 @@
   }
 
   function authUnavailableError() {
-    return new Error('ES Designer login is temporarily unavailable. Please try again shortly.');
+    return new Error('Frameup login is temporarily unavailable. Please try again shortly.');
   }
 
   function friendlyAuthError(error, fallback = 'Unable to complete authentication right now.') {
@@ -347,7 +347,7 @@
   function syncProfile({ name, email }) {
     try {
       window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({
-        name: String(name || '').trim() || normalizeEmail(email).split('@')[0] || 'ES Designer',
+        name: String(name || '').trim() || normalizeEmail(email).split('@')[0] || 'Frameup User',
         email: normalizeEmail(email),
       }));
     } catch (error) {
@@ -381,7 +381,7 @@
       password,
       options: {
         data: {
-          name: String(name || '').trim() || normalizedEmail.split('@')[0] || 'ES Designer',
+          name: String(name || '').trim() || normalizedEmail.split('@')[0] || 'Frameup User',
           role: 'Designer',
         },
       },
@@ -391,7 +391,7 @@
     if (data?.session) await client.auth.signOut();
     return {
       email: normalizedEmail,
-      name: data?.user?.user_metadata?.name || String(name || '').trim() || normalizedEmail.split('@')[0] || 'ES Designer',
+      name: data?.user?.user_metadata?.name || String(name || '').trim() || normalizedEmail.split('@')[0] || 'Frameup User',
       role: 'Designer',
     };
   }
@@ -432,7 +432,7 @@
     if (error) throw friendlyAuthError(error, 'Unable to log in.');
 
     const user = data?.user;
-    const displayName = user?.user_metadata?.name || normalizedEmail.split('@')[0] || 'ES Designer';
+    const displayName = user?.user_metadata?.name || normalizedEmail.split('@')[0] || 'Frameup User';
     const session = {
       token: data?.session?.access_token,
       user: {
@@ -470,7 +470,7 @@
   async function requestPasswordReset({ email, redirectTo }) {
     const normalizedEmail = normalizeEmail(email);
     if (!await isAllowedEmailAsync(normalizedEmail)) {
-      throw new Error('Password reset is available only for approved ES Designer accounts.');
+      throw new Error('Password reset is available only for approved Frameup accounts.');
     }
     if (!await ensureSupabaseReady()) {
       throw new Error('Password reset is available only when Supabase Auth is configured.');
@@ -514,7 +514,7 @@
       const email = normalizeEmail(session?.user?.email);
       if (!session || !await isAllowedEmailAsync(email)) return null;
 
-      const name = session.user?.user_metadata?.name || email.split('@')[0] || 'ES Designer';
+      const name = session.user?.user_metadata?.name || email.split('@')[0] || 'Frameup User';
       const mirroredSession = {
         token: session.access_token,
         user: {

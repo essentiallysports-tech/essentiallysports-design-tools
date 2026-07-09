@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Log in to EssentiallySports Designer.">
-<title>ES Designer</title>
+<meta name="description" content="Log in to Frameup.">
+<title>Frameup</title>
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,18 +21,18 @@
   }
   :root {
     --white: #FFFFFF;
-    --bg-page: #F6FBFF;
+    --bg-page: #F5F6F8;
     --text-primary: #06111F;
     --text-blue: #111827;
-    --text-muted: #8FA3B8;
-    --accent: #0A7DFA;
-    --accent-hover: #0A6FDE;
-    --border: #B5D8FD;
-    --border-soft: #D9E9FC;
+    --text-muted: #667085;
+    --accent: #111827;
+    --accent-hover: #050505;
+    --border: #D8DEE8;
+    --border-soft: #E7ECF3;
     --font-ui: 'Roboto Condensed', 'Roboto', Arial, sans-serif;
     --font-heading: 'Roboto Condensed', 'Roboto', Arial, sans-serif;
     --font-title: 'Acumin Pro Condensed Local', 'Arial Narrow', sans-serif;
-    --shadow-soft: 0 20px 60px rgba(3, 49, 98, 0.10);
+    --shadow-soft: 0 20px 60px rgba(17, 24, 39, 0.10);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -72,7 +72,7 @@
     width: min(1040px, calc(100% - 80px));
     min-height: 520px;
     margin: 0 auto;
-    padding: 78px 0 112px;
+    padding: 72px 0 104px;
     display: grid;
     grid-template-columns: 1fr;
     align-items: center;
@@ -81,15 +81,16 @@
     width: 100%;
     max-width: 960px;
     padding: clamp(26px, 3vw, 38px);
-    border: 0;
+    min-height: 430px;
+    border: 1px solid #E2E6EC;
     border-radius: 24px;
-    background: rgba(255, 255, 255, .92);
-    box-shadow: 0 22px 60px rgba(7, 31, 61, .08);
+    background: rgba(255, 255, 255, .94);
+    box-shadow: 0 22px 60px rgba(17, 24, 39, .08);
     overflow: hidden;
     display: grid;
     grid-template-columns: minmax(240px, 330px) minmax(360px, 1fr);
     align-items: center;
-    gap: clamp(34px, 5vw, 72px);
+    gap: clamp(38px, 5vw, 76px);
   }
   .login-copy {
     min-width: 0;
@@ -104,7 +105,7 @@
     display: block;
     color: #000000;
     font-family: var(--font-title);
-    font-size: clamp(34px, 4vw, 54px);
+    font-size: clamp(34px, 4vw, 52px);
     font-weight: 900;
     letter-spacing: -0.045em;
     line-height: .95;
@@ -114,18 +115,25 @@
   }
   .login-form {
     min-width: 0;
+    min-height: 328px;
     margin-top: 0;
     display: grid;
     gap: 18px;
+    align-content: center;
+    transition: opacity .28s cubic-bezier(.16, 1, .3, 1), transform .28s cubic-bezier(.16, 1, .3, 1);
+  }
+  .login-form.is-switching {
+    opacity: .72;
+    transform: translateY(3px);
   }
   .login-mode-tabs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     padding: 5px;
-    border: 1px solid #DCE7F4;
+    border: 1px solid #E0E5ED;
     border-radius: 14px;
-    background: #F4F8FD;
+    background: #F2F4F7;
   }
   .login-mode-tab {
     min-height: 36px;
@@ -137,16 +145,18 @@
     font-family: var(--font-heading);
     font-size: 16px;
     font-weight: 700;
-    transition: background-color .18s ease, border-color .18s ease, color .18s ease;
+    transition: background-color .26s cubic-bezier(.16, 1, .3, 1), color .26s cubic-bezier(.16, 1, .3, 1), box-shadow .26s cubic-bezier(.16, 1, .3, 1), transform .26s cubic-bezier(.16, 1, .3, 1);
   }
   .login-mode-tab.is-active {
     background: var(--white);
     color: #000000;
-    box-shadow: 0 10px 28px rgba(7, 31, 61, .08);
+    box-shadow: 0 10px 28px rgba(17, 24, 39, .08);
+    transform: translateY(-1px);
   }
   .login-field {
     display: grid;
     gap: 12px;
+    transition: opacity .26s cubic-bezier(.16, 1, .3, 1), transform .26s cubic-bezier(.16, 1, .3, 1);
   }
   .login-field label {
     color: #000000;
@@ -167,15 +177,15 @@
     line-height: 1;
     padding: 0 16px;
     outline: none;
-    box-shadow: 0 12px 28px rgba(3, 49, 98, 0.05);
+    box-shadow: 0 12px 28px rgba(17, 24, 39, 0.035);
     transition: border-color .16s ease, box-shadow .16s ease;
   }
   .login-field input::placeholder {
     color: #B8C8D9;
   }
   .login-field input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 12px 28px rgba(3, 49, 98, 0.05);
+    border-color: #9CA3AF;
+    box-shadow: 0 0 0 3px rgba(17, 24, 39, .06), 0 12px 28px rgba(17, 24, 39, 0.035);
   }
   .login-button {
     width: 100%;
@@ -189,14 +199,14 @@
     font-weight: 500;
     line-height: 1;
     cursor: pointer;
-    box-shadow: 0 12px 24px rgba(10, 125, 250, 0.20);
+    box-shadow: 0 12px 24px rgba(17, 24, 39, 0.18);
     transition: transform .24s cubic-bezier(.16, 1, .3, 1), box-shadow .24s cubic-bezier(.16, 1, .3, 1), background-color .24s cubic-bezier(.16, 1, .3, 1);
   }
   .login-button:hover,
   .login-button:focus-visible {
     background: var(--accent-hover);
     transform: translateY(-2px);
-    box-shadow: 0 16px 28px rgba(10, 125, 250, 0.26);
+    box-shadow: 0 16px 28px rgba(17, 24, 39, 0.24);
     outline: none;
   }
   .login-button:active {
@@ -213,7 +223,7 @@
     border: 0;
     background: transparent;
     color: var(--text-blue);
-    font: 500 13px/1.3 var(--font-body);
+    font: 500 13px/1.3 var(--font-ui);
     cursor: pointer;
   }
   .login-forgot:hover,
@@ -803,7 +813,7 @@
   <section class="login-panel" aria-labelledby="login-title">
     <div class="login-copy">
       <img class="login-brand" src="brand-logo-blue.svg" alt="EssentiallySports">
-      <h1 class="login-title" id="login-title">Log in to ES Designer</h1>
+      <h1 class="login-title" id="login-title">Log in to Frameup</h1>
     </div>
     <form class="login-form" id="login-form" novalidate>
       <div class="login-mode-tabs" role="tablist" aria-label="Authentication mode">
@@ -823,20 +833,16 @@
         <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Password" required>
       </div>
       <button class="login-forgot" id="forgot-password" type="button" data-login-only>Forgot password?</button>
-      <div class="login-field" data-create-only hidden>
-        <label for="login-confirm-password">Confirm Password</label>
-        <input id="login-confirm-password" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Re-enter password">
-      </div>
       <button class="login-button" type="submit">Login</button>
       <p class="login-error" id="login-error" role="alert"></p>
-      <p class="login-note" id="login-note">Login with the @essentiallysports.com account you created for ES Designer.</p>
+      <p class="login-note" id="login-note">Login with the email and password you created for Frameup.</p>
     </form>
   </section>
 </main>
 
 <section class="login-showcase" aria-labelledby="showcase-title">
   <header class="showcase-heading">
-    <div class="showcase-eyebrow">ES Designer Workspaces</div>
+    <div class="showcase-eyebrow">Frameup Workspaces</div>
     <h2 id="showcase-title">Everything your creative workflow needs.</h2>
     <p>Move from idea to polished, brand-ready sports creative with focused tools built for the formats our teams use every day.</p>
   </header>
@@ -978,7 +984,6 @@
   const nameInput = document.getElementById('login-name');
   const emailInput = document.getElementById('login-email');
   const passwordInput = document.getElementById('login-password');
-  const confirmPasswordInput = document.getElementById('login-confirm-password');
   const forgotPasswordButton = document.getElementById('forgot-password');
   const errorEl = document.getElementById('login-error');
   const noteEl = document.getElementById('login-note');
@@ -1004,17 +1009,19 @@
   function setMode(mode) {
     authMode = mode === 'login' ? 'login' : 'create';
     const isCreate = authMode === 'create';
-    title.textContent = isCreate ? 'Create your ES Designer account' : 'Log in to ES Designer';
+    form.classList.add('is-switching');
+    window.setTimeout(() => form.classList.remove('is-switching'), 180);
+    title.textContent = isCreate ? 'Create your Frameup account' : 'Log in to Frameup';
     button.textContent = isCreate ? 'Create Account' : 'Login';
     passwordInput.autocomplete = isCreate ? 'new-password' : 'current-password';
     passwordInput.placeholder = isCreate ? 'Minimum 8 characters' : 'Password';
     noteEl.innerHTML = isCreate
-      ? '<strong>New here?</strong> Create your account first. ES emails are approved automatically; other emails are sent to admins for approval.'
-      : '<strong>Already signed up?</strong> Log in with the same approved email and password.';
+      ? '<strong>New here?</strong> Create your Frameup account. ES emails are approved automatically; other emails are sent to admins for approval.'
+      : '<strong>Already signed up?</strong> Log in with your approved email and password.';
     createOnlyFields.forEach(field => {
       field.hidden = !isCreate;
       field.querySelectorAll('input').forEach(input => {
-        input.required = isCreate && (input.id === 'login-name' || input.id === 'login-confirm-password');
+        input.required = isCreate && input.id === 'login-name';
       });
     });
     loginOnlyFields.forEach(field => {
@@ -1104,17 +1111,11 @@
     const email = emailInput.value.trim();
     const password = passwordInput.value;
     const name = nameInput.value.trim();
-    const confirmPassword = confirmPasswordInput.value;
 
     if (!validateBaseFields(email, password)) return;
     if (authMode === 'create' && !name) {
       setError('Enter your name.');
       nameInput.focus();
-      return;
-    }
-    if (authMode === 'create' && password !== confirmPassword) {
-      setError('Passwords do not match.');
-      confirmPasswordInput.focus();
       return;
     }
 
@@ -1126,7 +1127,6 @@
         await window.ESAuth.createAccount({ name, email, password });
         setMode('login');
         passwordInput.value = '';
-        confirmPasswordInput.value = '';
         setError('Account created. Please log in now. If email verification is enabled, verify your email first.', 'success');
         button.disabled = false;
         button.textContent = 'Login';
@@ -1153,8 +1153,7 @@
       setMode(requestedMode);
       return;
     }
-    const hasKnownAccount = Boolean(window.ESAuth?.getKnownEmails?.().length);
-    setMode(hasKnownAccount ? 'login' : 'create');
+    setMode('login');
   }
 
   bootLoginPage();

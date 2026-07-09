@@ -218,7 +218,8 @@ assert.doesNotMatch(supabaseSignupHookMigration, /return\s+'\{\}'::jsonb\s*;/i);
 assert.match(dashboardHtmlSource, /const\s+hasValidSession\s*=\s*await\s+withBootTimeout\(\s*window\.ESAuth\?\.isValidSession\?\.\(\),/);
 assert.match(dashboardHtmlSource, /if\s*\(!hasValidSession\)\s*\{[\s\S]*?loginUrl\?\.\('dashboard\.html'\)/);
 assert.match(dashboardHtmlSource, /showDashboardBootError\(error\);/);
-assert.match(loginHtmlSource, /input\.required\s*=\s*isCreate\s*&&\s*\(input\.id\s*===\s*'login-name'\s*\|\|\s*input\.id\s*===\s*'login-confirm-password'\)/);
+assert.match(loginHtmlSource, /input\.required\s*=\s*isCreate\s*&&\s*input\.id\s*===\s*'login-name'/);
+assert.doesNotMatch(loginHtmlSource, /login-confirm-password|confirmPassword/);
 assert.match(loginHtmlSource, /authMode\s*===\s*'create'\s*&&\s*!name/);
 assert.match(netlifyConfigSource, /for\s*=\s*"\/\*\.woff2"[\s\S]*?Cache-Control\s*=\s*"public, max-age=31536000, immutable"/);
 
