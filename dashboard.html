@@ -564,18 +564,6 @@
             <article class="metric-card is-tertiary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"/></svg></span></span><span class="metric-value" data-metric="openRequests">0</span><span class="metric-label">Open requests</span></article>
           </section>
 
-          <section class="dashboard-control-row" data-view-section="board list designs">
-            <div class="segmented-control" role="tablist" aria-label="Dashboard view switcher">
-              <button class="is-active" type="button" data-dashboard-view="board">Request Board</button>
-              <button type="button" data-dashboard-view="list">List</button>
-              <button type="button" data-dashboard-view="designs">Review Exports</button>
-            </div>
-            <div class="filters">
-              <select class="filter" id="task-status-filter" aria-label="Filter tasks by status"><option value="">All Status</option></select>
-              <select class="filter" id="task-owner-filter" aria-label="Filter tasks by owner"><option value="">All Owners</option></select>
-            </div>
-          </section>
-
           <section class="kanban-board" id="kanban-board" data-view-section="board" aria-label="Design request kanban board"></section>
 
           <section class="panel task-list-panel" data-view-section="list">
@@ -614,23 +602,18 @@
             <div class="access-request-list" id="access-request-list"></div>
           </section>
 
-          <section class="grid" data-view-section="designs activity">
-            <div class="stack">
-              <section class="panel" data-dashboard-panel="designs">
-                <div class="panel-head">
-                  <div><h2 class="panel-title">Review Exports</h2><p class="panel-subtitle">Every downloaded design captured for admin review.</p></div>
-                </div>
-                <div id="designs-table"></div>
-              </section>
+          <section class="panel export-review-shell" data-view-section="designs" data-dashboard-panel="designs">
+            <div class="panel-head">
+              <div><h2 class="panel-title">Review Exports</h2><p class="panel-subtitle">Every downloaded design captured for admin review.</p></div>
             </div>
-            <aside class="stack">
-              <section class="panel" data-dashboard-panel="activity">
-                <div class="panel-head">
-                  <div><h2 class="panel-title">Activity</h2><p class="panel-subtitle">Submissions, exports, assignment changes, and status moves.</p></div>
-                </div>
-                <div class="activity-list" id="activity-list"></div>
-              </section>
-            </aside>
+            <div id="designs-table"></div>
+          </section>
+
+          <section class="panel" data-view-section="activity" data-dashboard-panel="activity">
+            <div class="panel-head">
+              <div><h2 class="panel-title">Activity</h2><p class="panel-subtitle">Submissions, exports, assignment changes, and status moves.</p></div>
+            </div>
+            <div class="activity-list" id="activity-list"></div>
           </section>
         </div>
       </main>

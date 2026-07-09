@@ -5347,6 +5347,28 @@ body.dashboard-page[data-dashboard-view="overview"] .kanban-board {
   display: none !important;
 }
 
+body.dashboard-page .dashboard-control-row {
+  display: none !important;
+}
+
+body.dashboard-page .export-review-shell {
+  width: 100%;
+  min-width: 0;
+}
+
+body.dashboard-page[data-dashboard-view="designs"] .export-review-shell {
+  display: grid;
+  box-shadow: 0 10px 28px rgba(17, 24, 39, .026);
+}
+
+body.dashboard-page .kanban-board {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 @media (max-width: 1180px) {
   body.dashboard-page[data-dashboard-view="overview"] .dashboard-overview-grid {
     grid-template-columns: 1fr;
