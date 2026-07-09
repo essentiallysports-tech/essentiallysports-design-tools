@@ -82,10 +82,11 @@
     width: 100%;
     max-width: 440px;
     padding: 26px;
-    border: 1px solid rgba(173, 209, 250, .85);
+    border: 0;
     border-radius: 22px;
     background: rgba(255, 255, 255, .92);
     box-shadow: 0 22px 60px rgba(7, 31, 61, .08);
+    overflow: hidden;
   }
   .login-brand {
     display: block;
@@ -101,7 +102,8 @@
     font-weight: 900;
     letter-spacing: -0.04em;
     line-height: 1;
-    white-space: nowrap;
+    max-width: 100%;
+    text-wrap: balance;
   }
   .login-form {
     margin-top: 30px;
