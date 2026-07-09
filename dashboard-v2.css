@@ -1910,6 +1910,7 @@ body[data-dashboard-view="board"] [data-view-section~="board"],
 body[data-dashboard-view="list"] [data-view-section~="list"],
 body[data-dashboard-view="designs"] [data-view-section~="designs"],
 body[data-dashboard-view="people"] [data-view-section~="people"],
+body[data-dashboard-view="access"] [data-view-section~="access"],
 body[data-dashboard-view="activity"] [data-view-section~="activity"] {
   display: grid;
   animation: dashboardViewEnter .28s cubic-bezier(.16, 1, .3, 1) both;
@@ -1936,6 +1937,7 @@ body[data-dashboard-view="people"] .dashboard-overview-grid { grid-template-colu
 }
 
 body[data-dashboard-view="people"] .people-list,
+body[data-dashboard-view="access"] .access-request-list,
 body[data-dashboard-view="activity"] .activity-list {
   max-height: none;
 }
@@ -3928,6 +3930,72 @@ body[data-dashboard-view="designs"] .grid {
   display: none;
 }
 
+.access-request-list {
+  display: grid;
+}
+
+.access-request-card {
+  display: grid;
+  grid-template-columns: 48px minmax(240px, 1fr) max-content max-content;
+  align-items: center;
+  gap: 18px;
+  min-height: 92px;
+  padding: 18px 30px;
+  border-top: 1px solid #E4E7EC;
+}
+
+.access-request-card:first-child {
+  border-top: 0;
+}
+
+.access-request-card.is-saving {
+  opacity: .72;
+  pointer-events: none;
+}
+
+.access-request-status {
+  display: inline-grid;
+  place-items: center;
+  min-height: 32px;
+  padding: 0 16px;
+  border: 1px solid #E4E7EC;
+  border-radius: 999px;
+  color: #667085;
+  background: #F8FAFC;
+  font-family: "Roboto Condensed", "Roboto", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.access-request-status.is-approved {
+  border-color: #B7E4C7;
+  color: #15803D;
+  background: #F0FDF4;
+}
+
+.access-request-status.is-rejected {
+  border-color: #FECACA;
+  color: #B42318;
+  background: #FEF2F2;
+}
+
+.access-request-actions {
+  display: inline-flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.access-request-actions .topbar-button {
+  min-height: 36px;
+  padding-inline: 14px;
+  font-size: 14px;
+}
+
+.access-request-actions .topbar-button[disabled] {
+  cursor: default;
+  opacity: .45;
+}
+
 @media (max-width: 760px) {
   .person-role-card {
     grid-template-columns: 44px minmax(0, 1fr);
@@ -3943,5 +4011,16 @@ body[data-dashboard-view="designs"] .grid {
     grid-column: 2;
     justify-self: start;
     min-width: 0;
+  }
+
+  .access-request-card {
+    grid-template-columns: 44px minmax(0, 1fr);
+    padding: 16px 20px;
+  }
+
+  .access-request-status,
+  .access-request-actions {
+    grid-column: 2;
+    justify-self: start;
   }
 }

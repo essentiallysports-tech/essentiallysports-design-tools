@@ -3,6 +3,9 @@
 
   const AUTH_STORAGE_KEY = 'es.designerAuth.v1';
   const PROFILE_STORAGE_KEY = 'es.ai.profile';
+  const ACCESS_REQUESTS_KEY = 'es.accessRequests.v1';
+  const KNOWN_EMAILS_KEY = 'es.authKnownEmails.v1';
+  const ACCESS_REQUESTS_TABLE = 'es_designer_access_requests';
   const SUPABASE_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
   const config = window.ES_AUTH_CONFIG || {};
   const supabaseConfig = config.supabase || {};
@@ -31,6 +34,191 @@
     if (approvedEmails().includes(normalized)) return true;
     const domain = normalized.split('@').pop();
     return approvedDomains().includes(domain);
+  }
+
+  function readJson(key, fallback) {
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (!raw) return fallback;
+      const parsed = JSON.parse(raw);
+      return parsed ?? fallback;
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function writeJson(key, value) {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function getKnownEmails() {
+    const emails = readJson(KNOWN_EMAILS_KEY, []);
+    return Array.isArray(emails) ? emails.map(normalizeEmail).filter(Boolean) : [];
+  }
+
+  function rememberKnownEmail(email) {
+    const normalized = normalizeEmail(email);
+    if (!normalized) return [];
+    const next = Array.from(new Set([normalized, ...getKnownEmails()]));
+    writeJson(KNOWN_EMAILS_KEY, next.slice(0, 12));
+    return next;
+  }
+
+  function normalizeAccessRequest(row = {}) {
+    const email = normalizeEmail(row.email);
+    if (!email) return null;
+    return {
+      email,
+      name: String(row.name || '').trim(),
+      status: String(row.status || 'Pending').trim() || 'Pending',
+      reason: String(row.reason || '').trim(),
+      source: String(row.source || 'login').trim() || 'login',
+      requestedAt: String(row.requested_at || row.requestedAt || row.updated_at || new Date().toISOString()),
+      reviewedAt: String(row.reviewed_at || row.reviewedAt || ''),
+      reviewedBy: normalizeEmail(row.reviewed_by || row.reviewedBy || ''),
+      updatedAt: String(row.updated_at || row.updatedAt || new Date().toISOString()),
+    };
+  }
+
+  function getLocalAccessRequests() {
+    const records = readJson(ACCESS_REQUESTS_KEY, []);
+    return Array.isArray(records) ? records.map(normalizeAccessRequest).filter(Boolean) : [];
+  }
+
+  function saveLocalAccessRequest(record) {
+    const normalized = normalizeAccessRequest(record);
+    if (!normalized) return null;
+    const next = [
+      normalized,
+      ...getLocalAccessRequests().filter(item => item.email !== normalized.email),
+    ];
+    writeJson(ACCESS_REQUESTS_KEY, next);
+    return normalized;
+  }
+
+  function isLocallyApprovedEmail(email) {
+    const normalized = normalizeEmail(email);
+    return getLocalAccessRequests().some(request => request.email === normalized && request.status === 'Approved');
+  }
+
+  async function isAccessApprovedInSupabase(email) {
+    const normalized = normalizeEmail(email);
+    if (!normalized || !await ensureSupabaseReady(5000)) return false;
+    const client = getSupabaseClient();
+    if (!client) return false;
+    const approvalCheck = await client
+      .rpc('is_es_designer_email_approved', { candidate_email: normalized })
+      .catch(() => ({ data: false, error: true }));
+    if (!approvalCheck.error) return Boolean(approvalCheck.data);
+    const { data, error } = await client
+      .from(ACCESS_REQUESTS_TABLE)
+      .select('email,status')
+      .eq('email', normalized)
+      .eq('status', 'Approved')
+      .maybeSingle();
+    return Boolean(!error && data?.email);
+  }
+
+  async function isAllowedEmailAsync(email) {
+    const normalized = normalizeEmail(email);
+    if (isAllowedEmail(normalized) || isLocallyApprovedEmail(normalized)) return true;
+    return isAccessApprovedInSupabase(normalized);
+  }
+
+  async function recordAccessRequest({ email, name = '', reason = 'External email login attempt', source = 'login' } = {}) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail || !normalizedEmail.includes('@')) {
+      throw new Error('Enter a valid email address before requesting access.');
+    }
+    if (isAllowedEmail(normalizedEmail)) {
+      return { email: normalizedEmail, status: 'Approved', name: String(name || '').trim(), source };
+    }
+
+    const fallbackRecord = saveLocalAccessRequest({
+      email: normalizedEmail,
+      name,
+      status: 'Pending',
+      reason,
+      source,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent || '' : '',
+      requestedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    if (await ensureSupabaseReady(5000)) {
+      const client = getSupabaseClient();
+      if (client) {
+        const { data, error } = await client.rpc('upsert_es_designer_access_request', {
+          request_email: normalizedEmail,
+          request_name: String(name || '').trim(),
+          request_reason: String(reason || '').trim(),
+          request_source: String(source || 'login').trim(),
+          request_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent || '' : '',
+        });
+        if (!error && data) {
+          return saveLocalAccessRequest(data);
+        }
+      }
+    }
+
+    return fallbackRecord;
+  }
+
+  async function getAccessRequests() {
+    let requests = getLocalAccessRequests();
+    if (await ensureSupabaseReady(5000)) {
+      const client = getSupabaseClient();
+      if (client) {
+        const { data, error } = await client
+          .from(ACCESS_REQUESTS_TABLE)
+          .select('*')
+          .order('requested_at', { ascending: false });
+        if (!error && Array.isArray(data)) {
+          requests = data.map(normalizeAccessRequest).filter(Boolean);
+          writeJson(ACCESS_REQUESTS_KEY, requests);
+        }
+      }
+    }
+    return requests;
+  }
+
+  async function reviewAccessRequest(email, status) {
+    const normalizedEmail = normalizeEmail(email);
+    const nextStatus = String(status || '').trim();
+    if (!['Pending', 'Approved', 'Rejected'].includes(nextStatus)) {
+      throw new Error('Choose Approved, Rejected, or Pending.');
+    }
+
+    let reviewed = saveLocalAccessRequest({
+      ...(getLocalAccessRequests().find(request => request.email === normalizedEmail) || {}),
+      email: normalizedEmail,
+      status: nextStatus,
+      reviewedAt: nextStatus === 'Pending' ? '' : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    if (await ensureSupabaseReady(5000)) {
+      const client = getSupabaseClient();
+      if (client) {
+        const { data, error } = await client.rpc('review_es_designer_access_request', {
+          request_email: normalizedEmail,
+          next_status: nextStatus,
+        });
+        if (error) throw error;
+        reviewed = saveLocalAccessRequest(data);
+      }
+    }
+    return reviewed;
+  }
+
+  function accessPendingError(email) {
+    const normalizedEmail = normalizeEmail(email);
+    return new Error(`Access request sent for ${normalizedEmail}. An ES Designer admin can approve or reject it from the dashboard.`);
   }
 
   function hasSupabaseSdk() {
@@ -210,13 +398,21 @@
 
   async function createAccount({ name, email, password }) {
     const normalizedEmail = normalizeEmail(email);
-    if (!isAllowedEmail(normalizedEmail)) {
-      throw new Error('This email is not approved for ES Designer access.');
+    if (!await isAllowedEmailAsync(normalizedEmail)) {
+      await recordAccessRequest({
+        email: normalizedEmail,
+        name,
+        reason: 'Signup attempt from a non-ES email.',
+        source: 'signup',
+      });
+      throw accessPendingError(normalizedEmail);
     }
     validatePassword(password);
 
     if (await ensureSupabaseReady()) {
-      return createSupabaseAccount({ name, email: normalizedEmail, password });
+      const account = await createSupabaseAccount({ name, email: normalizedEmail, password });
+      rememberKnownEmail(normalizedEmail);
+      return account;
     }
 
     throw authUnavailableError();
@@ -253,12 +449,19 @@
 
   async function login({ email, password }) {
     const normalizedEmail = normalizeEmail(email);
-    if (!isAllowedEmail(normalizedEmail)) {
-      throw new Error('This email is not approved for ES Designer access.');
+    if (!await isAllowedEmailAsync(normalizedEmail)) {
+      await recordAccessRequest({
+        email: normalizedEmail,
+        reason: 'Login attempt from a non-ES email.',
+        source: 'login',
+      });
+      throw accessPendingError(normalizedEmail);
     }
 
     if (await ensureSupabaseReady()) {
-      return loginWithSupabase({ email: normalizedEmail, password });
+      const session = await loginWithSupabase({ email: normalizedEmail, password });
+      rememberKnownEmail(normalizedEmail);
+      return session;
     }
 
     throw authUnavailableError();
@@ -266,8 +469,8 @@
 
   async function requestPasswordReset({ email, redirectTo }) {
     const normalizedEmail = normalizeEmail(email);
-    if (!isAllowedEmail(normalizedEmail)) {
-      throw new Error('Password reset is limited to @essentiallysports.com email addresses.');
+    if (!await isAllowedEmailAsync(normalizedEmail)) {
+      throw new Error('Password reset is available only for approved ES Designer accounts.');
     }
     if (!await ensureSupabaseReady()) {
       throw new Error('Password reset is available only when Supabase Auth is configured.');
@@ -309,7 +512,7 @@
       const { data } = await client.auth.getSession();
       const session = data?.session;
       const email = normalizeEmail(session?.user?.email);
-      if (!session || !isAllowedEmail(email)) return null;
+      if (!session || !await isAllowedEmailAsync(email)) return null;
 
       const name = session.user?.user_metadata?.name || email.split('@')[0] || 'ES Designer';
       const mirroredSession = {
@@ -332,7 +535,7 @@
   async function isValidSession(session) {
     const currentSession = session || await getSession();
     const email = normalizeEmail(currentSession?.user?.email);
-    if (!currentSession?.token || !isAllowedEmail(email)) return false;
+    if (!currentSession?.token || !await isAllowedEmailAsync(email)) return false;
     return isSupabaseConfigured();
   }
 
@@ -395,18 +598,23 @@
     approvedDomains,
     createAccount,
     fetchWithAuth,
+    getAccessRequests,
+    getKnownEmails,
     getSession,
     getSupabaseClient,
     ensureSupabaseReady,
     isAllowedEmail,
+    isAllowedEmailAsync,
     isSupabaseConfigured,
     isValidSession,
     login,
     loginUrl,
     logout,
     normalizeEmail,
+    recordAccessRequest,
     requestPasswordReset,
     requireAuth,
+    reviewAccessRequest,
     updatePassword,
   });
 })();

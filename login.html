@@ -81,12 +81,17 @@
   .login-panel {
     width: 100%;
     max-width: 440px;
+    padding: 26px;
+    border: 1px solid rgba(173, 209, 250, .85);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, .92);
+    box-shadow: 0 22px 60px rgba(7, 31, 61, .08);
   }
   .login-brand {
     display: block;
-    width: min(302px, 82%);
+    width: min(280px, 82%);
     height: auto;
-    margin: 0 0 34px;
+    margin: 0 0 28px;
   }
   .login-title {
     display: block;
@@ -99,20 +104,24 @@
     white-space: nowrap;
   }
   .login-form {
-    margin-top: 40px;
+    margin-top: 30px;
     display: grid;
     gap: 18px;
   }
   .login-mode-tabs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
+    padding: 5px;
+    border: 1px solid #DCE7F4;
+    border-radius: 14px;
+    background: #F4F8FD;
   }
   .login-mode-tab {
     min-height: 36px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--white);
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
     color: var(--text-blue);
     cursor: pointer;
     font-family: var(--font-heading);
@@ -121,9 +130,9 @@
     transition: background-color .18s ease, border-color .18s ease, color .18s ease;
   }
   .login-mode-tab.is-active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--white);
+    background: var(--white);
+    color: #000000;
+    box-shadow: 0 10px 28px rgba(7, 31, 61, .08);
   }
   .login-field {
     display: grid;
@@ -1009,8 +1018,8 @@
     passwordInput.autocomplete = isCreate ? 'new-password' : 'current-password';
     passwordInput.placeholder = isCreate ? 'Minimum 8 characters' : 'Password';
     noteEl.innerHTML = isCreate
-      ? 'Only <strong>@essentiallysports.com</strong> emails can create an account. After account creation, use the <strong>Login</strong> tab with the same email and password.'
-      : 'Login is available only after creating an account with an approved email.';
+      ? '<strong>New here?</strong> Create your account first. ES emails are approved automatically; other emails are sent to admins for approval.'
+      : '<strong>Already signed up?</strong> Log in with the same approved email and password.';
     createOnlyFields.forEach(field => {
       field.hidden = !isCreate;
       field.querySelectorAll('input').forEach(input => {
@@ -1045,11 +1054,6 @@
   function validateEmail(email) {
     if (!emailInput.validity.valid || !email) {
       setError('Enter a valid email address.');
-      emailInput.focus();
-      return false;
-    }
-    if (!window.ESAuth?.isAllowedEmail(email)) {
-      setError('Access is limited to @essentiallysports.com email addresses.');
       emailInput.focus();
       return false;
     }
@@ -1153,7 +1157,13 @@
       return;
     }
     const params = new URLSearchParams(window.location.search);
-    setMode(params.get('mode') === 'create' ? 'create' : 'login');
+    const requestedMode = params.get('mode');
+    if (requestedMode === 'create' || requestedMode === 'login') {
+      setMode(requestedMode);
+      return;
+    }
+    const hasKnownAccount = Boolean(window.ESAuth?.getKnownEmails?.().length);
+    setMode(hasKnownAccount ? 'login' : 'create');
   }
 
   bootLoginPage();
