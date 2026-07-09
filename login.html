@@ -21,18 +21,18 @@
   }
   :root {
     --white: #FFFFFF;
-    --bg-page: #F5F6F8;
+    --bg-page: #F6FBFF;
     --text-primary: #06111F;
     --text-blue: #111827;
-    --text-muted: #667085;
-    --accent: #111827;
-    --accent-hover: #050505;
-    --border: #D8DEE8;
-    --border-soft: #E7ECF3;
+    --text-muted: #8FA3B8;
+    --accent: #0A7DFA;
+    --accent-hover: #0A6FDE;
+    --border: #B5D8FD;
+    --border-soft: #D9E9FC;
     --font-ui: 'Roboto Condensed', 'Roboto', Arial, sans-serif;
     --font-heading: 'Roboto Condensed', 'Roboto', Arial, sans-serif;
     --font-title: 'Acumin Pro Condensed Local', 'Arial Narrow', sans-serif;
-    --shadow-soft: 0 20px 60px rgba(17, 24, 39, 0.10);
+    --shadow-soft: 0 20px 60px rgba(3, 49, 98, 0.10);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -68,11 +68,12 @@
     }
   }
   a { color: inherit; }
+  [hidden] { display: none !important; }
   .login-shell {
     width: min(1040px, calc(100% - 80px));
     min-height: 520px;
     margin: 0 auto;
-    padding: 72px 0 104px;
+    padding: 78px 0 112px;
     display: grid;
     grid-template-columns: 1fr;
     align-items: center;
@@ -81,7 +82,7 @@
     width: 100%;
     max-width: 960px;
     padding: clamp(26px, 3vw, 38px);
-    min-height: 430px;
+    min-height: 450px;
     border: 1px solid #E2E6EC;
     border-radius: 24px;
     background: rgba(255, 255, 255, .94);
@@ -115,7 +116,7 @@
   }
   .login-form {
     min-width: 0;
-    min-height: 328px;
+    min-height: 352px;
     margin-top: 0;
     display: grid;
     gap: 18px;
@@ -136,7 +137,7 @@
     background: #F2F4F7;
   }
   .login-mode-tab {
-    min-height: 36px;
+    min-height: 42px;
     border: 0;
     border-radius: 10px;
     background: transparent;
@@ -166,8 +167,8 @@
   }
   .login-field input {
     width: 100%;
-    height: 36px;
-    border: 1px solid var(--border);
+    height: 44px;
+    border: 1px solid #D8DEE8;
     border-radius: 8px;
     background: var(--white);
     color: var(--text-blue);
@@ -189,10 +190,10 @@
   }
   .login-button {
     width: 100%;
-    height: 36px;
+    height: 44px;
     border: 0;
     border-radius: 8px;
-    background: var(--accent);
+    background: #111827;
     color: var(--white);
     font-family: var(--font-heading);
     font-size: 16px;
@@ -204,7 +205,7 @@
   }
   .login-button:hover,
   .login-button:focus-visible {
-    background: var(--accent-hover);
+    background: #050505;
     transform: translateY(-2px);
     box-shadow: 0 16px 28px rgba(17, 24, 39, 0.24);
     outline: none;
