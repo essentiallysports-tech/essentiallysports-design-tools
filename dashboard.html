@@ -563,11 +563,11 @@
           </section>
 
           <section class="metrics" aria-label="Dashboard metrics">
-            <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"/></svg></span><span class="metric-trend is-positive">Live</span></span><span class="metric-value" data-metric="tasks">0</span><span class="metric-label">Total tasks</span></article>
-            <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg></span><span class="metric-trend">Queue</span></span><span class="metric-value" data-metric="open">0</span><span class="metric-label">Open tasks</span></article>
-            <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M12 3 3 20h18L12 3Z"/><path d="M12 9v5M12 17h.01"/></svg></span><span class="metric-trend is-warning">Priority</span></span><span class="metric-value" data-metric="urgent">0</span><span class="metric-label">Urgent</span></article>
-            <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4zM8 6V4h8v2M8 11h8M8 15h5"/></svg></span><span class="metric-trend">Exports</span></span><span class="metric-value" data-metric="designs">0</span><span class="metric-label">Design exports</span></article>
-            <article class="metric-card"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M4 18V6M4 18h16M7 14l4-4 3 2 5-6"/></svg></span><span class="metric-trend">Events</span></span><span class="metric-value" data-metric="activity">0</span><span class="metric-label">Activity</span></article>
+            <article class="metric-card is-primary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"/></svg></span><span class="metric-trend is-positive">Live</span></span><span class="metric-value" data-metric="tasks">0</span><span class="metric-label">Total tasks</span></article>
+            <article class="metric-card is-primary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg></span><span class="metric-trend">Queue</span></span><span class="metric-value" data-metric="open">0</span><span class="metric-label">Open tasks</span></article>
+            <article class="metric-card is-alert"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M12 3 3 20h18L12 3Z"/><path d="M12 9v5M12 17h.01"/></svg></span><span class="metric-trend is-warning">Priority</span></span><span class="metric-value" data-metric="urgent">0</span><span class="metric-label">Urgent</span></article>
+            <article class="metric-card is-secondary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4zM8 6V4h8v2M8 11h8M8 15h5"/></svg></span><span class="metric-trend">Exports</span></span><span class="metric-value" data-metric="designs">0</span><span class="metric-label">Design exports</span></article>
+            <article class="metric-card is-tertiary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M4 18V6M4 18h16M7 14l4-4 3 2 5-6"/></svg></span><span class="metric-trend">Events</span></span><span class="metric-value" data-metric="activity">0</span><span class="metric-label">Activity</span></article>
           </section>
 
           <section class="dashboard-control-row" data-view-section="overview board list designs">
@@ -965,9 +965,10 @@
     function renderTaskCard(task) {
       const owner = task.assignedTo ? task.assignedTo.split('@')[0] : 'Unassigned';
       const sourceName = task.requesterName || task.creatorName || task.requesterEmail || task.creatorEmail || task.workspace || 'ES Designer';
+      const taskPriorityClass = priorityClass(task.priority);
       return `
-        <article class="task-card" draggable="true" data-task-id="${attr(task.id)}">
-          <div class="task-card-top"><span class="task-type">${taskTypeLabel(task.type)}</span><span class="task-priority ${priorityClass(task.priority)}">${text(task.priority, 'Normal')}</span></div>
+        <article class="task-card ${taskPriorityClass}" draggable="true" data-task-id="${attr(task.id)}">
+          <div class="task-card-top"><span class="task-type">${taskTypeLabel(task.type)}</span><span class="task-priority ${taskPriorityClass}">${text(task.priority, 'Normal')}</span></div>
           <h3>${text(task.title, 'Untitled task')}</h3>
           <p>${text(sourceName)}</p>
           <div class="task-card-meta"><span>Due ${dateText(task.designDueAt)}</span><span>${text(owner)}</span></div>
