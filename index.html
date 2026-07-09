@@ -1754,6 +1754,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    transition: width .24s var(--motion-smooth), max-width .24s var(--motion-smooth), padding .24s var(--motion-smooth);
   }
   .canvas-primary-actions {
     display: inline-flex;
@@ -2850,6 +2851,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     border-color: #B5D8FD;
     text-decoration: none;
     box-shadow: 0 16px 30px rgba(3, 49, 98, .06);
+  }
+  .canvas-upload-button-secondary.is-ai-searching {
+    min-width: clamp(172px, 11vw, 220px);
   }
   .canvas-upload-button-secondary:hover,
   .canvas-upload-button-secondary:focus-visible {
@@ -4913,6 +4917,12 @@ body[data-current-page="faq"] .faq-cta-art img {
       transform: none;
     }
 
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-searching {
+      width: max-content;
+      max-width: min(100%, 980px);
+      padding-inline: 10px;
+    }
+
     html[data-studio-shell="on"] .studio-dock-actions .canvas-bottom-actions {
       position: relative;
       bottom: auto;
@@ -4994,6 +5004,10 @@ body[data-current-page="faq"] .faq-cta-art img {
       box-shadow: none;
       font-size: 14px;
       font-weight: 500;
+    }
+
+    html[data-studio-shell="on"] .canvas-upload-button-secondary.is-ai-searching {
+      min-width: 190px;
     }
 
     html[data-studio-shell="on"] .studio-dock-actions .canvas-upload-button {
@@ -8077,7 +8091,10 @@ function getActiveHeadlineForImageSearch() {
 function setAiImageButtonLoading(isLoading) {
   const button = document.querySelector('[data-ai-image-search]');
   if (!button) return;
+  const actionDock = button.closest('.canvas-bottom-actions');
   button.disabled = isLoading;
+  button.classList.toggle('is-ai-searching', Boolean(isLoading));
+  actionDock?.classList.toggle('is-ai-searching', Boolean(isLoading));
   const label = button.querySelector('span');
   if (label) label.textContent = isLoading ? 'Searching...' : 'AI Images';
   const searchButton = document.querySelector('[data-ai-image-search-submit]');
