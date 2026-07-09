@@ -6956,6 +6956,14 @@ function getSports() {
 function getTeams(sport) {
   return BRAND_KIT.filter(t => t.sport === sport).map(t => t.team);
 }
+function formatTeamDisplayName(team) {
+  const keepUpper = new Set(['fc', 'cf', 'sc', 'usa', 'us', 'ny', 'la', 'dc', 'mlb', 'nba', 'nfl', 'nhl', 'wnba', 'ufc', 'cbb']);
+  return String(team || '').replace(/\S+/g, word => {
+    const compact = word.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    if (keepUpper.has(compact)) return word.toUpperCase();
+    return word.replace(/[A-Za-zÀ-ÖØ-öø-ÿ]+/g, part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase());
+  });
+}
 function getBrandEntry(sport, team) {
   return BRAND_KIT.find(t => t.sport === sport && t.team === team);
 }
@@ -9583,7 +9591,7 @@ function syncStatsDoubleTeamControls(group) {
   const teams = getTeams(state[keys.sport]);
   if (!teams.includes(state[keys.team])) state[keys.team] = teams[0] || '';
   teamSelect.innerHTML = '';
-  teams.forEach(team => teamSelect.add(new Option(team, team)));
+  teams.forEach(team => teamSelect.add(new Option(formatTeamDisplayName(team), team)));
   teamSelect.value = state[keys.team];
   syncCustomSelect(sportSelect);
   syncCustomSelect(teamSelect);
@@ -11360,7 +11368,7 @@ function syncWorkspaceControls() {
   getTeams(state.sport).forEach(team => {
     const option = document.createElement('option');
     option.value = team;
-    option.textContent = team;
+    option.textContent = formatTeamDisplayName(team);
     teamSelect.appendChild(option);
   });
   teamSelect.value = state.team;
