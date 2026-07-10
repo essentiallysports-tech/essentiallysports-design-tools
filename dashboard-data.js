@@ -963,12 +963,47 @@
 
     const client = getSupabaseClient();
     if (!client) throw new Error('Supabase is not connected.');
-    const profileResult = await client
+    let profileResult = await client
       .rpc('set_es_designer_access_role', {
         target_email: normalizedEmail,
         target_role: accessRole,
       });
-    if (profileResult.error) throw profileResult.error;
+
+    if (profileResult.error) {
+      const message = String(profileResult.error.message || '').toLowerCase();
+      const roleMigrationMissing = /set_es_designer_access_role|access_role|schema cache|does not exist|could not find the function/.test(message);
+      if (!roleMigrationMissing) throw profileResult.error;
+
+      // Older projects may have the original `role` column but not the later
+      // access-role migration. Keep role management usable during that
+      // transition; the secure RPC remains the preferred path once migrated.
+      let directResult = await client
+        .from(SUPABASE_PROFILES_TABLE)
+        .update({ access_role: accessRole, role: accessRole, updated_at: new Date().toISOString() })
+        .eq('email', normalizedEmail)
+        .select('*')
+        .single();
+      if (directResult.error && /access_role|schema cache|does not exist/.test(String(directResult.error.message || '').toLowerCase())) {
+        directResult = await client
+          .from(SUPABASE_PROFILES_TABLE)
+          .update({ role: accessRole, updated_at: new Date().toISOString() })
+          .eq('email', normalizedEmail)
+          .select('*')
+          .single();
+      }
+      if (directResult.error) throw directResult.error;
+      profileResult = directResult;
+
+      // Presence is supplementary; do not turn a successful profile role
+      // update into a failure if the older presence schema is incomplete.
+      await client
+        .from(SUPABASE_PRESENCE_TABLE)
+        .update({ access_role: accessRole, role: accessRole, updated_at: new Date().toISOString() })
+        .eq('email', normalizedEmail)
+        .then(result => {
+          if (result.error && !/access_role|schema cache|does not exist/.test(String(result.error.message || '').toLowerCase())) throw result.error;
+        });
+    }
 
     const person = normalizeCloudPerson(profileResult.data || { email: normalizedEmail, role: accessRole, access_role: accessRole, updated_at: new Date().toISOString() });
     if (person) {
