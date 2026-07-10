@@ -5859,7 +5859,7 @@ body.dashboard-page .role-choice .dashboard-choice-trigger {
 }
 
 body.dashboard-page .role-choice .dashboard-choice-menu {
-  min-width: 100%;
+  min-width: 0;
   max-height: 240px;
   z-index: 40;
 }

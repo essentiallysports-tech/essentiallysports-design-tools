@@ -908,24 +908,24 @@
       const selected = String(person.accessRole || person.role || 'Associate').trim();
       const personLabel = person.name || person.email || 'user';
       return `
-        <details class="person-role-choice role-choice is-${accessRoleClass(selected)}">
-          <summary class="dashboard-role-summary" aria-label="Role for ${attr(personLabel)}">
+        <div class="dashboard-choice person-role-choice role-choice is-${accessRoleClass(selected)}" data-dashboard-choice="accessRole" data-role-email="${attr(person.email)}">
+          <button class="dashboard-choice-trigger" type="button" data-dashboard-choice-trigger aria-haspopup="listbox" aria-expanded="false" aria-label="Role for ${attr(personLabel)}">
             <span>${text(accessRoleLabel(selected))}</span>
-            <span class="dashboard-role-chevron" aria-hidden="true"></span>
-          </summary>
-          <div class="dashboard-role-menu" role="listbox" aria-label="Choose role for ${attr(personLabel)}">
+            <span class="dashboard-choice-chevron" aria-hidden="true"></span>
+          </button>
+          <div class="dashboard-choice-menu" role="listbox" aria-label="Choose role for ${attr(personLabel)}">
             ${ACCESS_ROLE_OPTIONS.map(role => `
               <button
-                class="dashboard-role-option${role === selected ? ' is-selected' : ''}"
+                class="dashboard-choice-option${role === selected ? ' is-selected' : ''}"
                 type="button"
                 role="option"
                 aria-selected="${role === selected ? 'true' : 'false'}"
-                data-person-role-value="${attr(role)}"
+                data-dashboard-choice-value="${attr(role)}"
                 data-role-email="${attr(person.email)}"
               >${text(accessRoleLabel(role))}</button>
             `).join('')}
           </div>
-        </details>
+        </div>
       `;
     }
 
@@ -1348,7 +1348,11 @@
           event.preventDefault();
           event.stopPropagation();
           closeDashboardChoices();
-          updateTaskChoice(option);
+          if (option.dataset.roleEmail) {
+            updatePersonRoleOption(option);
+          } else {
+            updateTaskChoice(option);
+          }
         });
       });
 
@@ -1454,6 +1458,7 @@
       menu.style.bottom = '';
       menu.style.left = '';
       menu.style.width = '';
+      menu.style.minWidth = '';
       menu.style.maxHeight = '';
       menu.style.zIndex = '';
     }
@@ -1462,6 +1467,25 @@
       const trigger = choice?.querySelector('[data-dashboard-choice-trigger]');
       const menu = choice?.querySelector('.dashboard-choice-menu');
       if (!trigger || !menu) return;
+
+      // Role controls live inside the transformed dashboard panel. A fixed
+      // menu there is positioned relative to that panel instead of the
+      // viewport, which can move it off-screen. Keep role menus anchored to
+      // their trigger; the surrounding people panel is intentionally
+      // overflow-visible.
+      if (choice.classList.contains('person-role-choice')) {
+        menu.style.position = 'absolute';
+        menu.style.top = 'calc(100% + 8px)';
+        menu.style.right = '0';
+        menu.style.bottom = 'auto';
+        menu.style.left = '0';
+        menu.style.width = 'auto';
+        menu.style.minWidth = '0';
+        menu.style.maxHeight = '240px';
+        menu.style.zIndex = '40';
+        return;
+      }
+
       const rect = trigger.getBoundingClientRect();
       const viewportPadding = 12;
       const menuWidth = Math.min(
@@ -1587,7 +1611,6 @@
         const taskRow = event.target.closest('[data-task-id]');
         if (taskRow && (event.target.matches('[data-task-status]') || event.target.matches('[data-task-owner]'))) updateTaskRow(taskRow);
       });
-      document.addEventListener('scroll', () => closeDashboardChoices(), true);
       window.addEventListener('resize', () => {
         const openChoice = document.querySelector('.dashboard-choice.is-open');
         if (openChoice) positionDashboardChoiceMenu(openChoice);
@@ -1647,7 +1670,7 @@
 
     async function updatePersonRoleOption(option) {
       const email = String(option.dataset.roleEmail || '').trim().toLowerCase();
-      const role = String(option.dataset.personRoleValue || '').trim();
+      const role = String(option.dataset.personRoleValue || option.dataset.dashboardChoiceValue || '').trim();
       const wrapper = option.closest('.role-choice');
       if (!email || !role) return;
       wrapper?.classList.add('is-saving');
