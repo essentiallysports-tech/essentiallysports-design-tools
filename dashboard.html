@@ -1305,6 +1305,36 @@
       renderAccessRequests();
       renderActivity(state);
       renderLiveActivity(state);
+      bindDashboardChoiceControls();
+    }
+
+    function bindDashboardChoiceControls() {
+      document.querySelectorAll('[data-dashboard-choice-trigger]').forEach(trigger => {
+        if (trigger.dataset.choiceBound === 'true') return;
+        trigger.dataset.choiceBound = 'true';
+        trigger.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          const choice = trigger.closest('.dashboard-choice');
+          if (!choice) return;
+          const shouldOpen = !choice.classList.contains('is-open');
+          closeDashboardChoices(choice);
+          choice.classList.toggle('is-open', shouldOpen);
+          trigger.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+          if (shouldOpen) positionDashboardChoiceMenu(choice);
+        });
+      });
+
+      document.querySelectorAll('[data-dashboard-choice-value]').forEach(option => {
+        if (option.dataset.choiceBound === 'true') return;
+        option.dataset.choiceBound = 'true';
+        option.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeDashboardChoices();
+          updateTaskChoice(option);
+        });
+      });
     }
 
     function getTaskById(id) {
