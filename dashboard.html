@@ -434,7 +434,8 @@
     }
   </style>
   <link rel="stylesheet" href="dashboard-v2.css">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20260707-mobile-chrome">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root">
+  <script src="site-mobile-chrome.js?v=20260710-mobile-root"></script>
 </head>
 <body class="dashboard-page">
   <nav class="navbar" aria-label="Global navigation">
@@ -644,7 +645,16 @@
   <script>
     const STATUS_OPTIONS = ['Backlog', 'Assigned', 'Doing', 'Review', 'Done'];
     const PRIORITY_OPTIONS = ['Normal', 'High', 'Urgent'];
-    const ACCESS_ROLE_OPTIONS = ['Associate', 'Admin', 'Super Admin', 'Server Owner'];
+    // Keep database access values stable for Supabase/RPC compatibility while
+    // presenting the team-facing role vocabulary in the dashboard UI.
+    // Stable storage values are ordered to match the visible team-facing menu.
+    const ACCESS_ROLE_OPTIONS = ['Associate', 'Server Owner', 'Admin', 'Super Admin'];
+    const ACCESS_ROLE_LABELS = Object.freeze({
+      Associate: 'Associate',
+      Admin: 'Team Lead',
+      'Super Admin': 'Design Manager',
+      'Server Owner': 'Founder',
+    });
     const PROTECTED_ROLE_EMAILS = new Set([
       'suhail.quraishi@essentiallysports.com',
       'manish.kalsi@essentiallysports.com',
@@ -799,8 +809,12 @@
       return normalized || 'associate';
     }
 
+    function accessRoleLabel(role) {
+      return ACCESS_ROLE_LABELS[String(role || '').trim()] || 'Associate';
+    }
+
     function accessRoleOptions(selected = '') {
-      return ACCESS_ROLE_OPTIONS.map(role => `<option value="${attr(role)}"${role === selected ? ' selected' : ''}>${text(role)}</option>`).join('');
+      return ACCESS_ROLE_OPTIONS.map(role => `<option value="${attr(role)}"${role === selected ? ' selected' : ''}>${text(accessRoleLabel(role))}</option>`).join('');
     }
 
     function canEditRole(person = {}) {
@@ -894,7 +908,7 @@
     function personRoleChoice(person) {
       const selected = String(person.accessRole || person.role || 'Associate').trim();
       return dashboardChoice(
-        ACCESS_ROLE_OPTIONS.map(role => ({ value: role, label: role })),
+        ACCESS_ROLE_OPTIONS.map(role => ({ value: role, label: accessRoleLabel(role) })),
         selected,
         'personRole',
         `person-role-choice role-choice is-${accessRoleClass(selected)}`
@@ -1119,7 +1133,7 @@
           <span class="person-role-tools">
             ${canEditRole(person)
               ? personRoleChoice(person)
-              : `<span class="role-badge is-${accessRoleClass(person.accessRole || person.role)}">${text(person.accessRole || person.role || 'Associate')}</span>`}
+              : `<span class="role-badge is-${accessRoleClass(person.accessRole || person.role)}">${text(accessRoleLabel(person.accessRole || person.role))}</span>`}
           </span>
         </article>
       `).join('');

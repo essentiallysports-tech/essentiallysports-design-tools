@@ -38,8 +38,8 @@
     --white: #FFFFFF;
     --bg-page: #FFFFFF;
     --bg-panel: #FFFFFF;
-    --bg-canvas: #F2F8FF;
-    --bg-canvas-soft: #F1F8FF;
+    --bg-canvas: #FFFFFF;
+    --bg-canvas-soft: #FFFFFF;
     --border: #B5D8FD;
     --border-strong: #8CB9E8;
     --text-primary: #111827;
@@ -2449,7 +2449,8 @@
     }
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20260707-mobile-chrome">
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root">
+<script src="site-mobile-chrome.js?v=20260710-mobile-root"></script>
 </head>
 <body>
 
@@ -3494,7 +3495,7 @@ function drawCanvas(ctx, W, H, scale) {
 
   // 1. Background fill
   const hasPostContent = !!state.photo || state.lines.length > 0;
-  ctx.fillStyle = hasPostContent ? '#0A0A0A' : '#F2F8FF';
+  ctx.fillStyle = hasPostContent ? '#0A0A0A' : '#FFFFFF';
   ctx.fillRect(0, 0, W, H);
   if (!hasPostContent) return;
 

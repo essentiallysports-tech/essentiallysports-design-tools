@@ -52,8 +52,8 @@
     --white: #FFFFFF;
     --bg-page: #FFFFFF;
     --bg-panel: #FFFFFF;
-    --bg-canvas: #F2F8FF;
-    --bg-canvas-soft: #F1F8FF;
+    --bg-canvas: #FFFFFF;
+    --bg-canvas-soft: #FFFFFF;
     --border: #B5D8FD;
     --border-strong: #8CB9E8;
     --text-primary: #111827;
@@ -4214,7 +4214,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       margin: 0;
       padding: 0;
       align-items: stretch;
-      background: #F7F9FC;
+      background: #F3F4F6;
     }
 
     html[data-studio-shell="on"] .studio-rail {
@@ -5123,7 +5123,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20260707-mobile-chrome">
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root">
+<script src="site-mobile-chrome.js?v=20260710-mobile-root"></script>
 </head>
 <body>
 
@@ -8745,7 +8746,7 @@ function drawCoverPost(ctx, W, H, scale) {
   // 1. Background fill
   const hasSwipeButton = activeWorkspace === 'instagram' && state.swipeButton && state.swipeButton !== 'none';
   const hasPostContent = !!state.photo || !!state.entityPhoto || state.lines.length > 0 || hasSwipeButton;
-  ctx.fillStyle = hasPostContent ? '#0A0A0A' : '#F2F8FF';
+  ctx.fillStyle = hasPostContent ? '#0A0A0A' : '#FFFFFF';
   ctx.fillRect(0, 0, W, H);
   if (!hasPostContent) return;
 
@@ -8828,7 +8829,7 @@ function drawNewsletterFeatureImage(ctx, W, H, scale) {
 
 function drawNewsletterYoutubeFI(ctx, W, H, scale) {
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#F2F8FF';
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, W, H);
 
   if (state.photo) {
@@ -8868,7 +8869,7 @@ function drawNewsletterYoutubeFI(ctx, W, H, scale) {
 
 function drawNewsletterTagFI(ctx, W, H, scale) {
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#F2F8FF';
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, W, H);
 
   if (state.photo) {
