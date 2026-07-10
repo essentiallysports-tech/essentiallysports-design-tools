@@ -433,7 +433,7 @@
       table { min-width: 780px; }
     }
   </style>
-  <link rel="stylesheet" href="dashboard-v2.css?v=20260710-dashboard-qc2">
+  <link rel="stylesheet" href="dashboard-v2.css?v=20260710-dashboard-qc3">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root2">
   <script src="site-mobile-chrome.js?v=20260710-mobile-root2"></script>
 </head>
@@ -818,6 +818,7 @@
       const email = String(person.email || '').toLowerCase();
       const signedInEmail = String(dashboardUser.email || '').trim().toLowerCase();
       if (!canAssignDashboardRoles && signedInEmail !== 'suhail.quraishi@essentiallysports.com') return false;
+      if (!email.endsWith('@essentiallysports.com')) return false;
       if (PROTECTED_ROLE_EMAILS.has(email)) return false;
       return true;
     }
@@ -907,17 +908,24 @@
       const selected = String(person.accessRole || person.role || 'Associate').trim();
       const personLabel = person.name || person.email || 'user';
       return `
-        <label class="person-role-choice role-choice is-${accessRoleClass(selected)}">
-          <span class="role-choice-label">Role</span>
-          <select
-            class="dashboard-role-select"
-            data-person-role-select
-            data-role-email="${attr(person.email)}"
-            aria-label="Role for ${attr(personLabel)}"
-          >
-            ${ACCESS_ROLE_OPTIONS.map(role => `<option value="${attr(role)}"${role === selected ? ' selected' : ''}>${text(accessRoleLabel(role))}</option>`).join('')}
-          </select>
-        </label>
+        <details class="person-role-choice role-choice is-${accessRoleClass(selected)}">
+          <summary class="dashboard-role-summary" aria-label="Role for ${attr(personLabel)}">
+            <span>${text(accessRoleLabel(selected))}</span>
+            <span class="dashboard-role-chevron" aria-hidden="true"></span>
+          </summary>
+          <div class="dashboard-role-menu" role="listbox" aria-label="Choose role for ${attr(personLabel)}">
+            ${ACCESS_ROLE_OPTIONS.map(role => `
+              <button
+                class="dashboard-role-option${role === selected ? ' is-selected' : ''}"
+                type="button"
+                role="option"
+                aria-selected="${role === selected ? 'true' : 'false'}"
+                data-person-role-value="${attr(role)}"
+                data-role-email="${attr(person.email)}"
+              >${text(accessRoleLabel(role))}</button>
+            `).join('')}
+          </div>
+        </details>
       `;
     }
 
@@ -1344,10 +1352,16 @@
         });
       });
 
-      document.querySelectorAll('[data-person-role-select]').forEach(select => {
-        if (select.dataset.roleBound === 'true') return;
-        select.dataset.roleBound = 'true';
-        select.addEventListener('change', () => updatePersonRoleSelect(select));
+      document.querySelectorAll('[data-person-role-value]').forEach(option => {
+        if (option.dataset.roleBound === 'true') return;
+        option.dataset.roleBound = 'true';
+        option.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          const details = option.closest('.role-choice');
+          if (details) details.open = false;
+          updatePersonRoleOption(option);
+        });
       });
     }
 
@@ -1631,13 +1645,12 @@
       }
     }
 
-    async function updatePersonRoleSelect(select) {
-      const email = String(select.dataset.roleEmail || '').trim().toLowerCase();
-      const role = String(select.value || '').trim();
-      const wrapper = select.closest('.role-choice');
+    async function updatePersonRoleOption(option) {
+      const email = String(option.dataset.roleEmail || '').trim().toLowerCase();
+      const role = String(option.dataset.personRoleValue || '').trim();
+      const wrapper = option.closest('.role-choice');
       if (!email || !role) return;
       wrapper?.classList.add('is-saving');
-      select.disabled = true;
       try {
         await window.ESDashboardData.updatePersonAccessRole(email, role);
         await window.ESDashboardData.refreshCloudDashboardData?.();
@@ -1647,7 +1660,6 @@
         renderDashboard();
       } finally {
         wrapper?.classList.remove('is-saving');
-        select.disabled = false;
       }
     }
 

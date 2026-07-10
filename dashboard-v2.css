@@ -5903,76 +5903,6 @@ body.dashboard-page .role-choice {
   min-width: 0;
 }
 
-body.dashboard-page .role-choice-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-body.dashboard-page .dashboard-role-select {
-  appearance: none;
-  -webkit-appearance: none;
-  display: block;
-  width: 100%;
-  min-height: 54px;
-  box-sizing: border-box;
-  padding: 0 54px 0 22px;
-  border: 1px solid #dfe3e8;
-  border-radius: 18px;
-  background-color: #f2f3f5;
-  background-image: url("data:image/svg+xml,%3Csvg width='16' height='10' viewBox='0 0 16 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14.98 1.14 7.98 7.14.98 1.14' stroke='%23050505' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-position: right 22px center;
-  background-repeat: no-repeat;
-  background-size: 16px 10px;
-  color: #4b5563;
-  font-family: var(--font-display);
-  font-size: 20px !important;
-  font-weight: 700;
-  letter-spacing: -.015em;
-  line-height: 1;
-  cursor: pointer;
-}
-
-body.dashboard-page .dashboard-role-select:focus {
-  outline: 0;
-  border-color: #a7cfff;
-  box-shadow: 0 0 0 3px rgba(167, 207, 255, .28);
-}
-
-body.dashboard-page .dashboard-role-select:disabled {
-  cursor: wait;
-}
-
-body.dashboard-page .role-choice.is-associate .dashboard-role-select {
-  border-color: #dfe3e8;
-  background-color: #f2f3f5;
-  color: #4b5563;
-}
-
-body.dashboard-page .role-choice.is-admin .dashboard-role-select {
-  border-color: #bfdbfe;
-  background-color: #eef6ff;
-  color: #1d4ed8;
-}
-
-body.dashboard-page .role-choice.is-super-admin .dashboard-role-select {
-  border-color: #d8ccff;
-  background-color: #f4f0ff;
-  color: #6d28d9;
-}
-
-body.dashboard-page .role-choice.is-server-owner .dashboard-role-select {
-  border-color: #fdc98e;
-  background-color: #fff4e7;
-  color: #c2410c;
-}
-
 @media (max-width: 1080px) {
   body.dashboard-page .person-role-card {
     grid-template-columns: 48px minmax(0, 1fr) minmax(280px, 340px);
@@ -6011,12 +5941,6 @@ body.dashboard-page .role-choice.is-server-owner .dashboard-role-select {
     font-size: 18px !important;
   }
 
-  body.dashboard-page .dashboard-role-select {
-    min-height: 50px;
-    padding-inline: 18px 48px;
-    background-position: right 18px center;
-    font-size: 18px !important;
-  }
 }
 
 /* Root mobile geometry: the shared site chrome is 64px tall on phones. */
@@ -6156,4 +6080,145 @@ body.dashboard-page .dashboard-app :where(
   .export-list-actions
 ) {
   font-size: 14px !important;
+}
+
+/* Role menu: native <details> owns the open/close interaction so the menu
+   cannot be swallowed by a delegated click handler or a scroll container. */
+body.dashboard-page .person-role-tools > details.role-choice {
+  position: relative;
+  display: block;
+  z-index: 2;
+}
+
+body.dashboard-page details.role-choice[open] {
+  z-index: 80;
+}
+
+body.dashboard-page .dashboard-role-summary {
+  min-height: 54px;
+  width: 100%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 22px;
+  border: 1px solid #dfe3e8;
+  border-radius: 18px;
+  background: #f2f3f5;
+  color: #4b5563;
+  font-family: var(--font-display);
+  font-size: 20px !important;
+  font-weight: 700;
+  letter-spacing: -.015em;
+  line-height: 1;
+  text-align: left;
+  cursor: pointer;
+  list-style: none;
+}
+
+body.dashboard-page .dashboard-role-summary::-webkit-details-marker {
+  display: none;
+}
+
+body.dashboard-page .dashboard-role-summary:focus-visible,
+body.dashboard-page details.role-choice[open] .dashboard-role-summary {
+  outline: 0;
+  border-color: #a7cfff;
+  box-shadow: 0 0 0 3px rgba(167, 207, 255, .28);
+}
+
+body.dashboard-page .dashboard-role-summary > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.dashboard-page .dashboard-role-chevron {
+  width: 12px;
+  height: 12px;
+  border-right: 4px solid #050505;
+  border-bottom: 4px solid #050505;
+  transform: rotate(45deg) translateY(-2px);
+  justify-self: end;
+  transition: transform 160ms ease;
+}
+
+body.dashboard-page details.role-choice[open] .dashboard-role-chevron {
+  transform: rotate(225deg) translate(-2px, -1px);
+}
+
+body.dashboard-page .dashboard-role-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  display: grid;
+  gap: 4px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--dash-border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 38px rgba(17, 24, 39, .12);
+}
+
+body.dashboard-page .dashboard-role-option {
+  min-height: 40px;
+  width: 100%;
+  border: 0;
+  border-radius: 9px;
+  padding: 0 12px;
+  background: transparent;
+  color: #111827;
+  font-family: var(--font-display);
+  font-size: 16px !important;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+body.dashboard-page .dashboard-role-option:hover,
+body.dashboard-page .dashboard-role-option:focus-visible,
+body.dashboard-page .dashboard-role-option.is-selected {
+  outline: 0;
+  background: #f1f5f9;
+}
+
+body.dashboard-page .role-choice.is-associate .dashboard-role-summary {
+  border-color: #dfe3e8;
+  background: #f2f3f5;
+  color: #4b5563;
+}
+
+body.dashboard-page .role-choice.is-admin .dashboard-role-summary {
+  border-color: #bfdbfe;
+  background: #eef6ff;
+  color: #1d4ed8;
+}
+
+body.dashboard-page .role-choice.is-super-admin .dashboard-role-summary {
+  border-color: #d8ccff;
+  background: #f4f0ff;
+  color: #6d28d9;
+}
+
+body.dashboard-page .role-choice.is-server-owner .dashboard-role-summary {
+  border-color: #fdc98e;
+  background: #fff4e7;
+  color: #c2410c;
+}
+
+@media (max-width: 520px) {
+  body.dashboard-page .dashboard-role-summary {
+    min-height: 50px;
+    padding-inline: 18px;
+    font-size: 18px !important;
+  }
+
+  body.dashboard-page .dashboard-role-option {
+    min-height: 42px;
+    font-size: 16px !important;
+  }
 }
