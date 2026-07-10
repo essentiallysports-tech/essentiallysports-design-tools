@@ -17,6 +17,13 @@
   background: #ffffff;
 }
 
+/* The account actions are cloned into the mobile menu at runtime. Keep that
+   clone out of the desktop navbar entirely; the original profile dropdown is
+   the desktop source of truth. */
+.mobile-menu-account {
+  display: none;
+}
+
 @media (max-width: 900px) {
   html,
   body {
@@ -282,6 +289,7 @@
   }
 
   .mobile-menu-account {
+    display: block;
     margin-top: 6px;
     padding-top: 8px;
     border-top: 1px solid #e5e7eb;

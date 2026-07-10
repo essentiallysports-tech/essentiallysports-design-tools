@@ -80,7 +80,11 @@
 
     menu.addEventListener('click', event => {
       const link = event.target.closest('a');
-      if (link && link.getAttribute('href') && !link.getAttribute('href').startsWith('#')) close();
+      const isDropdownTrigger = link
+        && link.classList.contains('nav-trigger')
+        && link.closest('.nav-dropdown')
+        && !link.closest('.nav-dropdown-menu');
+      if (link && link.getAttribute('href') && !isDropdownTrigger) close();
     });
 
     document.addEventListener('click', event => {

@@ -6004,4 +6004,26 @@ body.dashboard-page .person-role-choice.is-saving {
     padding: 0 4px;
     font-size: 11px;
   }
+
+  /* Export review should wrap tightly around the artwork and metadata. The
+     previous 1fr grid row made the modal reserve the entire viewport and
+     created a large, empty middle band on phones. */
+  body.dashboard-page .export-preview-panel {
+    inset: 12px;
+    width: auto;
+    max-height: calc(100vh - 24px);
+    height: auto;
+    align-content: start;
+    grid-template-rows: auto auto;
+    gap: 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  body.dashboard-page .export-preview-panel img {
+    width: 100%;
+    height: auto;
+    max-height: calc(100vh - 170px);
+    object-fit: contain;
+  }
 }
