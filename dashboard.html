@@ -7,7 +7,7 @@
   <title>Dashboard | ES Designer</title>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20260708-authlazy1"></script>
-  <script src="dashboard-data.js?v=20260710-dashboardstable5"></script>
+  <script src="dashboard-data.js?v=20260711-dashboardroles1"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -433,7 +433,7 @@
       table { min-width: 780px; }
     }
   </style>
-  <link rel="stylesheet" href="dashboard-v2.css?v=20260710-dashboard-qc3">
+  <link rel="stylesheet" href="dashboard-v2.css?v=20260711-dashboardroles1">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root2">
   <script src="site-mobile-chrome.js?v=20260710-mobile-root2"></script>
 </head>
@@ -645,16 +645,10 @@
   <script>
     const STATUS_OPTIONS = ['Backlog', 'Assigned', 'Doing', 'Review', 'Done'];
     const PRIORITY_OPTIONS = ['Normal', 'High', 'Urgent'];
-    // Keep database access values stable for Supabase/RPC compatibility while
-    // presenting the team-facing role vocabulary in the dashboard UI.
-    // Stable storage values are ordered to match the visible team-facing menu.
-    const ACCESS_ROLE_OPTIONS = ['Associate', 'Server Owner', 'Admin', 'Super Admin'];
-    const ACCESS_ROLE_LABELS = Object.freeze({
-      Associate: 'Associate',
-      Admin: 'Team Lead',
-      'Super Admin': 'Design Manager',
-      'Server Owner': 'Founder',
-    });
+    // Keep the database values and the visible role vocabulary identical. A
+    // role badge must never show a designation such as Founder or Design
+    // Manager because those labels obscure the actual access level.
+    const ACCESS_ROLE_OPTIONS = ['Associate', 'Admin', 'Super Admin', 'Server Owner'];
     const PROTECTED_ROLE_EMAILS = new Set([
       'suhail.quraishi@essentiallysports.com',
       'manish.kalsi@essentiallysports.com',
@@ -807,7 +801,8 @@
     }
 
     function accessRoleLabel(role) {
-      return ACCESS_ROLE_LABELS[String(role || '').trim()] || 'Associate';
+      const normalized = String(role || '').trim();
+      return ACCESS_ROLE_OPTIONS.includes(normalized) ? normalized : 'Associate';
     }
 
     function accessRoleOptions(selected = '') {

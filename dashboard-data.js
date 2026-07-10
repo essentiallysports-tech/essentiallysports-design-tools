@@ -514,13 +514,16 @@
     const session = await getAuthenticatedSession();
     if (!client || !session?.user?.email) return null;
     const row = taskToSupabaseRow(task);
-    const { data, error } = await client
+    // Do not request the inserted row back here. Non-admin creators are
+    // allowed to insert their own task, but the dashboard read policy only
+    // exposes admin-wide data. Requesting a representation would therefore
+    // make a valid insert fail under RLS. The server-normalized row is enough
+    // for the local cache; admins receive the authoritative row on refresh.
+    const { error } = await client
       .from(SUPABASE_TASKS_TABLE)
-      .upsert(row, { onConflict: 'id' })
-      .select('*')
-      .single();
+      .upsert(row, { onConflict: 'id' });
     if (error) throw error;
-    return normalizeSupabaseTask(data || row);
+    return normalizeSupabaseTask({ ...row, source: 'supabase' });
   }
 
   async function updateSupabaseTask(id, fields = {}) {
@@ -781,14 +784,20 @@
     writeDesigns([record, ...designs].slice(0, 500));
     const task = taskFromDesign(record);
     writeTasks(mergeTasks([task], readTasks()).slice(0, 750));
-    upsertSupabaseTask(task)
+    await upsertSupabaseTask(task)
       .then(saved => {
         if (saved) {
           cloudTasksCache = mergeTasks([saved], cloudTasksCache);
           emitDashboardChange('task', { record: saved });
         }
       })
-      .catch(() => {});
+      .catch(error => {
+        cloudSyncStatus = {
+          ok: false,
+          message: cleanString(error?.message || 'The export could not be shared with the dashboard.'),
+          checkedAt: new Date().toISOString(),
+        };
+      });
     emitDashboardChange('design', { record });
     await recordActivity({
       type: 'design_exported',
@@ -809,14 +818,20 @@
     });
     writeTasks(mergeTasks([task], readTasks()).slice(0, 750));
     emitDashboardChange('task', { record: task });
-    upsertSupabaseTask(task)
+    await upsertSupabaseTask(task)
       .then(saved => {
         if (saved) {
           cloudTasksCache = mergeTasks([saved], cloudTasksCache);
           emitDashboardChange('task', { record: saved });
         }
       })
-      .catch(() => {});
+      .catch(error => {
+        cloudSyncStatus = {
+          ok: false,
+          message: cleanString(error?.message || 'The request could not be shared with the dashboard.'),
+          checkedAt: new Date().toISOString(),
+        };
+      });
     return task;
   }
 
