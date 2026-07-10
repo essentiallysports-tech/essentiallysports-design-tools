@@ -17,8 +17,9 @@
   const ACCESS_ROLES = Object.freeze(['Associate', 'Admin', 'Super Admin', 'Server Owner']);
   const DASHBOARD_ACCESS_ROLES = Object.freeze(['Admin', 'Super Admin', 'Server Owner']);
   const ROLE_ASSIGNER_ROLES = Object.freeze(['Server Owner']);
+  const SERVER_OWNER_EMAIL = 'suhail.quraishi@essentiallysports.com';
   const DEFAULT_ROLE_ASSIGNMENTS = Object.freeze({
-    'suhail.quraishi@essentiallysports.com': 'Server Owner',
+    [SERVER_OWNER_EMAIL]: 'Server Owner',
     'manish.kalsi@essentiallysports.com': 'Super Admin',
   });
 
@@ -132,7 +133,11 @@
 
   async function canCurrentUserAssignRoles() {
     const user = await getCurrentUser();
-    return ROLE_ASSIGNER_ROLES.includes(user.accessRole);
+    // The server owner's email is the final authorization anchor. This keeps
+    // role controls available when an older profile row has a missing or
+    // stale access_role value; Supabase still enforces the RPC permission.
+    return normalizeEmail(user.email) === SERVER_OWNER_EMAIL
+      || ROLE_ASSIGNER_ROLES.includes(user.accessRole);
   }
 
   let cloudPeopleCache = [];
@@ -949,7 +954,9 @@
     const normalizedEmail = normalizeEmail(email);
     const accessRole = normalizeAccessRole(role, normalizedEmail);
     const actor = await getCurrentUser();
-    if (!ROLE_ASSIGNER_ROLES.includes(actor.accessRole)) {
+    const isServerOwner = normalizeEmail(actor.email) === SERVER_OWNER_EMAIL
+      || ROLE_ASSIGNER_ROLES.includes(actor.accessRole);
+    if (!isServerOwner) {
       throw new Error('Only the Server Owner can change dashboard roles.');
     }
     if (!normalizedEmail) throw new Error('Missing person email.');

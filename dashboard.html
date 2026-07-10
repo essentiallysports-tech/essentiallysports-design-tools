@@ -579,7 +579,7 @@
 
           <section class="panel" data-view-section="people" data-dashboard-panel="people">
             <div class="panel-head">
-              <div><h2 class="panel-title">People</h2><p class="panel-subtitle">Users seen from auth, requests, exports, and activity.</p></div>
+              <div><h2 class="panel-title">People</h2><p class="panel-subtitle">Users seen from auth, requests, exports, and activity. Server Owner can assign roles; Associate removes elevated dashboard access.</p></div>
             </div>
             <div class="people-list" id="people-list"></div>
           </section>
@@ -664,6 +664,7 @@
     let canAssignDashboardRoles = false;
     let selectedTaskId = '';
     let accessRequests = [];
+    let dashboardLiveSyncTimer = 0;
 
     function escapeHtml(value) {
       return String(value ?? '')
@@ -768,10 +769,6 @@
 
     function exportCreatorText(task = {}) {
       return task.creatorName || task.creatorEmail || task.ownerName || task.ownerEmail || 'Unknown';
-    }
-
-    function exportWorkspaceText(task = {}) {
-      return [task.workspace, task.workspaceVariant].filter(Boolean).join(' · ') || 'Workspace export';
     }
 
     function taskTime(task = {}) {
@@ -1051,7 +1048,6 @@
             <span>Time</span>
             <span>Size</span>
             <span>Created by</span>
-            <span>Workspace</span>
             <span>Build time</span>
             <span></span>
           </div>
@@ -1066,7 +1062,6 @@
               <span class="export-list-time">${dateText(exportCreatedAt(task))}</span>
               <span>${text(exportSizeText(task))}</span>
               <span>${text(exportCreatorText(task))}</span>
-              <span>${text(exportWorkspaceText(task))}</span>
               <span>${text(exportDurationText(task))}</span>
               <span class="export-list-actions">
                 <button class="topbar-button is-primary export-review-cta" type="button" data-preview-task="${attr(task.id)}"${getPreviewSource(task) ? '' : ' disabled'}>View Export<svg class="export-review-chevron" viewBox="0 0 16 10" fill="none" aria-hidden="true"><path d="M14.98 1.14 7.98 7.14.98 1.14" stroke="currentColor" stroke-width="3"/></svg></button>
@@ -1605,6 +1600,20 @@
       ]);
     }
 
+    function startDashboardLiveSync() {
+      if (dashboardLiveSyncTimer) window.clearInterval(dashboardLiveSyncTimer);
+      const refresh = () => {
+        if (document.hidden) return;
+        window.ESDashboardData.refreshCloudDashboardData?.({ silent: true, fetchPeople: true })
+          .then(() => renderDashboard())
+          .catch(() => {});
+      };
+      dashboardLiveSyncTimer = window.setInterval(refresh, 15000);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refresh();
+      }, { passive: true });
+    }
+
     function showDashboardBootError(error) {
       document.documentElement.style.visibility = '';
       document.body.classList.add('is-page-ready');
@@ -1667,6 +1676,7 @@
         setupDashboardEvents();
         renderDashboard();
         refreshAccessRequests();
+        startDashboardLiveSync();
         window.setTimeout(() => {
           window.ESDashboardData.refreshCloudDashboardData?.()
             .then(renderDashboard)

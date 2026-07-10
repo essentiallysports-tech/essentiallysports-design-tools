@@ -5224,7 +5224,7 @@ body.dashboard-page .export-list-head,
 body.dashboard-page .export-list-row {
   min-width: 1080px;
   display: grid;
-  grid-template-columns: 70px minmax(220px, 1.2fr) 132px 120px minmax(140px, .72fr) minmax(170px, .88fr) 100px 230px;
+  grid-template-columns: 70px minmax(260px, 1.3fr) 132px 120px minmax(160px, .8fr) 100px 230px;
   align-items: center;
   column-gap: 14px;
   padding: 14px 20px;
@@ -5319,7 +5319,7 @@ body.dashboard-page .export-list-actions .topbar-button {
 body.dashboard-page .export-list.is-compact .export-list-head,
 body.dashboard-page .export-list.is-compact .export-list-row {
   min-width: 980px;
-  grid-template-columns: 62px minmax(200px, 1.25fr) 120px 110px minmax(130px, .76fr) minmax(150px, .9fr) 92px 196px;
+  grid-template-columns: 62px minmax(230px, 1.3fr) 120px 110px minmax(150px, .82fr) 92px 196px;
   padding-block: 12px;
 }
 
