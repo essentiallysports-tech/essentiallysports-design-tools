@@ -5884,19 +5884,38 @@ body.dashboard-page .person-role-choice.is-saving {
   }
 
   body.dashboard-page .person-role-tools {
-    grid-column: 2;
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr;
+    align-items: start;
     width: 100%;
     justify-self: start;
+  }
+
+  body.dashboard-page .role-action-label {
+    grid-template-columns: max-content minmax(0, 1fr);
+    width: min(100%, 520px);
   }
 }
 
 @media (max-width: 520px) {
+  body.dashboard-page .person-role-card {
+    grid-template-columns: 40px minmax(0, 1fr);
+    padding-inline: 18px;
+  }
+
   body.dashboard-page .person-role-tools {
     grid-template-columns: 1fr;
     align-items: start;
   }
 
   body.dashboard-page .role-action-label {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+
+  body.dashboard-page .role-action-label .dashboard-choice,
+  body.dashboard-page .role-action-label .dashboard-choice-trigger {
     width: 100%;
   }
 }
