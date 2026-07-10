@@ -5700,3 +5700,97 @@ body.dashboard-page .export-preview-panel img {
     grid-template-columns: 1fr;
   }
 }
+
+/* People role tags — Discord-style compact, aligned controls. */
+body.dashboard-page .people-list {
+  overflow-x: hidden;
+}
+
+body.dashboard-page .person-role-card {
+  grid-template-columns: 54px minmax(0, 1fr) minmax(320px, auto);
+  align-items: center;
+  gap: 18px;
+}
+
+body.dashboard-page .person-role-tools {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+  justify-self: end;
+}
+
+body.dashboard-page .role-badge {
+  min-height: 28px;
+  min-width: auto;
+  padding: 0 10px;
+  border-radius: 7px;
+  border-width: 1px;
+  background: #f2f3f5;
+  color: #4b5563;
+  font-family: var(--dash-body-type);
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+body.dashboard-page .role-badge.is-admin {
+  border-color: #bfdbfe;
+  background: #eef6ff;
+  color: #1d4ed8;
+}
+
+body.dashboard-page .role-badge.is-super-admin {
+  border-color: #d8ccff;
+  background: #f4f0ff;
+  color: #6d28d9;
+}
+
+body.dashboard-page .role-badge.is-server-owner {
+  border-color: #fdc98e;
+  background: #fff4e7;
+  color: #c2410c;
+}
+
+body.dashboard-page .role-action-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+body.dashboard-page .role-action-label > span {
+  color: #98a2b3;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+body.dashboard-page .role-action-label .role-select {
+  width: 180px;
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #111827;
+  font-family: var(--font-display);
+  font-size: 14px !important;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  body.dashboard-page .person-role-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  body.dashboard-page .person-role-tools {
+    grid-column: 2;
+    justify-self: start;
+    flex-wrap: wrap;
+  }
+}
