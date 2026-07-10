@@ -133,11 +133,10 @@
 
   async function canCurrentUserAssignRoles() {
     const user = await getCurrentUser();
-    // The server owner's email is the final authorization anchor. This keeps
-    // role controls available when an older profile row has a missing or
-    // stale access_role value; Supabase still enforces the RPC permission.
-    return normalizeEmail(user.email) === SERVER_OWNER_EMAIL
-      || ROLE_ASSIGNER_ROLES.includes(user.accessRole);
+    // Role assignment belongs to this one owner identity. Keep the email
+    // check explicit so a stale or misconfigured profile cannot expose role
+    // controls to another account; Supabase enforces the same rule in the RPC.
+    return normalizeEmail(user.email) === SERVER_OWNER_EMAIL;
   }
 
   let cloudPeopleCache = [];
@@ -954,9 +953,7 @@
     const normalizedEmail = normalizeEmail(email);
     const accessRole = normalizeAccessRole(role, normalizedEmail);
     const actor = await getCurrentUser();
-    const isServerOwner = normalizeEmail(actor.email) === SERVER_OWNER_EMAIL
-      || ROLE_ASSIGNER_ROLES.includes(actor.accessRole);
-    if (!isServerOwner) {
+    if (normalizeEmail(actor.email) !== SERVER_OWNER_EMAIL) {
       throw new Error('Only the Server Owner can change dashboard roles.');
     }
     if (!normalizedEmail) throw new Error('Missing person email.');
