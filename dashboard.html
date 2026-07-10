@@ -1142,11 +1142,11 @@
             <span>${text(person.email)}</span>
             <small>${text(person.designation || 'Designer')}${person.online ? ' · Online now' : person.lastSeenAt ? ` · Last seen ${dateText(person.lastSeenAt)}` : ''}</small>
           </span>
-          <span class="person-role-tools">
+          <div class="person-role-tools">
             ${canEditRole(person)
               ? personRoleChoice(person)
               : `<span class="role-badge is-${accessRoleClass(person.accessRole || person.role)}">${text(accessRoleLabel(person.accessRole || person.role))}</span>`}
-          </span>
+          </div>
         </article>
       `).join('');
     }
