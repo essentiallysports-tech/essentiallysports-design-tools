@@ -1386,11 +1386,53 @@
       renderDashboard();
     }
 
+    function resetDashboardChoiceMenu(choice) {
+      const menu = choice?.querySelector('.dashboard-choice-menu');
+      if (!menu) return;
+      menu.style.position = '';
+      menu.style.top = '';
+      menu.style.right = '';
+      menu.style.bottom = '';
+      menu.style.left = '';
+      menu.style.width = '';
+      menu.style.maxHeight = '';
+      menu.style.zIndex = '';
+    }
+
+    function positionDashboardChoiceMenu(choice) {
+      const trigger = choice?.querySelector('[data-dashboard-choice-trigger]');
+      const menu = choice?.querySelector('.dashboard-choice-menu');
+      if (!trigger || !menu) return;
+      const rect = trigger.getBoundingClientRect();
+      const viewportPadding = 12;
+      const menuWidth = Math.min(
+        Math.max(rect.width, 220),
+        Math.max(220, window.innerWidth - viewportPadding * 2)
+      );
+      const left = Math.min(
+        Math.max(viewportPadding, rect.left),
+        Math.max(viewportPadding, window.innerWidth - menuWidth - viewportPadding)
+      );
+      const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+      const openAbove = spaceBelow < 180 && rect.top > 220;
+      const maxHeight = Math.max(120, Math.min(260, openAbove ? rect.top - viewportPadding * 2 : spaceBelow));
+
+      menu.style.position = 'fixed';
+      menu.style.left = `${left}px`;
+      menu.style.right = 'auto';
+      menu.style.width = `${menuWidth}px`;
+      menu.style.maxHeight = `${maxHeight}px`;
+      menu.style.top = openAbove ? 'auto' : `${rect.bottom + 8}px`;
+      menu.style.bottom = openAbove ? `${window.innerHeight - rect.top + 8}px` : 'auto';
+      menu.style.zIndex = '1000';
+    }
+
     function closeDashboardChoices(except = null) {
       document.querySelectorAll('.dashboard-choice.is-open').forEach(choice => {
         if (choice === except) return;
         choice.classList.remove('is-open');
         choice.querySelector('[data-dashboard-choice-trigger]')?.setAttribute('aria-expanded', 'false');
+        resetDashboardChoiceMenu(choice);
       });
     }
 
@@ -1449,6 +1491,7 @@
           closeDashboardChoices(choice);
           choice.classList.toggle('is-open', shouldOpen);
           choiceTrigger.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+          if (shouldOpen) positionDashboardChoiceMenu(choice);
           return;
         }
         const choiceOption = event.target.closest('[data-dashboard-choice-value]');
@@ -1485,6 +1528,11 @@
         const taskRow = event.target.closest('[data-task-id]');
         if (taskRow && (event.target.matches('[data-task-status]') || event.target.matches('[data-task-owner]'))) updateTaskRow(taskRow);
       });
+      document.addEventListener('scroll', () => closeDashboardChoices(), true);
+      window.addEventListener('resize', () => {
+        const openChoice = document.querySelector('.dashboard-choice.is-open');
+        if (openChoice) positionDashboardChoiceMenu(openChoice);
+      }, { passive: true });
       document.addEventListener('dragstart', event => {
         const card = event.target.closest('.task-card');
         if (!card) return;
