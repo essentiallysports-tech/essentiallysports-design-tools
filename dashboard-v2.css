@@ -6027,3 +6027,46 @@ body.dashboard-page .person-role-choice.is-saving {
     object-fit: contain;
   }
 }
+
+/* Dashboard type floor: keep operational metadata readable on laptop and
+   phone. Headings and controls with larger sizes are intentionally untouched. */
+body.dashboard-page .dashboard-app :where(
+  .sidebar-label,
+  .sidebar-workspace small,
+  .sidebar-nav a,
+  .sidebar-nav button,
+  .nav-count,
+  .topbar-eyebrow,
+  .welcome-kicker,
+  .metric-trend,
+  .metric-label,
+  .panel-subtitle,
+  .task-type,
+  .task-priority,
+  .task-card-meta,
+  .export-review-type,
+  .export-review-meta,
+  .export-preview-kicker,
+  .export-preview-panel figcaption small,
+  .person-main span,
+  .person-main small,
+  .activity span,
+  .live-person small,
+  .drawer-meta,
+  .drawer-section p,
+  .drawer-links,
+  .drawer-export-details dt,
+  .drawer-export-details dd,
+  .presence-state,
+  .role-badge,
+  .role-choice,
+  .table-control,
+  .filter,
+  .command-search kbd,
+  .export-list-head,
+  .export-list-title small,
+  .export-list-time,
+  .export-list-actions
+) {
+  font-size: 14px !important;
+}
