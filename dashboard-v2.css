@@ -5893,6 +5893,86 @@ body.dashboard-page .person-role-choice.is-saving {
   pointer-events: none;
 }
 
+/* Role assignment uses a native select for reliable keyboard, touch, and
+   browser-popup behavior. The closed state keeps the same ES dashboard
+   treatment as the other controls. */
+body.dashboard-page .role-choice {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+body.dashboard-page .role-choice-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+body.dashboard-page .dashboard-role-select {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 54px;
+  box-sizing: border-box;
+  padding: 0 54px 0 22px;
+  border: 1px solid #dfe3e8;
+  border-radius: 18px;
+  background-color: #f2f3f5;
+  background-image: url("data:image/svg+xml,%3Csvg width='16' height='10' viewBox='0 0 16 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14.98 1.14 7.98 7.14.98 1.14' stroke='%23050505' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 22px center;
+  background-repeat: no-repeat;
+  background-size: 16px 10px;
+  color: #4b5563;
+  font-family: var(--font-display);
+  font-size: 20px !important;
+  font-weight: 700;
+  letter-spacing: -.015em;
+  line-height: 1;
+  cursor: pointer;
+}
+
+body.dashboard-page .dashboard-role-select:focus {
+  outline: 0;
+  border-color: #a7cfff;
+  box-shadow: 0 0 0 3px rgba(167, 207, 255, .28);
+}
+
+body.dashboard-page .dashboard-role-select:disabled {
+  cursor: wait;
+}
+
+body.dashboard-page .role-choice.is-associate .dashboard-role-select {
+  border-color: #dfe3e8;
+  background-color: #f2f3f5;
+  color: #4b5563;
+}
+
+body.dashboard-page .role-choice.is-admin .dashboard-role-select {
+  border-color: #bfdbfe;
+  background-color: #eef6ff;
+  color: #1d4ed8;
+}
+
+body.dashboard-page .role-choice.is-super-admin .dashboard-role-select {
+  border-color: #d8ccff;
+  background-color: #f4f0ff;
+  color: #6d28d9;
+}
+
+body.dashboard-page .role-choice.is-server-owner .dashboard-role-select {
+  border-color: #fdc98e;
+  background-color: #fff4e7;
+  color: #c2410c;
+}
+
 @media (max-width: 1080px) {
   body.dashboard-page .person-role-card {
     grid-template-columns: 48px minmax(0, 1fr) minmax(280px, 340px);
@@ -5928,6 +6008,13 @@ body.dashboard-page .person-role-choice.is-saving {
   body.dashboard-page .role-choice .dashboard-choice-trigger {
     min-height: 50px;
     padding-inline: 18px;
+    font-size: 18px !important;
+  }
+
+  body.dashboard-page .dashboard-role-select {
+    min-height: 50px;
+    padding-inline: 18px 48px;
+    background-position: right 18px center;
     font-size: 18px !important;
   }
 }
