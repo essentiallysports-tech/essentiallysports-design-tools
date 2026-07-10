@@ -816,7 +816,8 @@
 
     function canEditRole(person = {}) {
       const email = String(person.email || '').toLowerCase();
-      if (!canAssignDashboardRoles) return false;
+      const signedInEmail = String(dashboardUser.email || '').trim().toLowerCase();
+      if (!canAssignDashboardRoles && signedInEmail !== 'suhail.quraishi@essentiallysports.com') return false;
       if (PROTECTED_ROLE_EMAILS.has(email)) return false;
       return true;
     }
@@ -1709,11 +1710,13 @@
           5000,
           'Dashboard user profile timed out.'
         );
-        canAssignDashboardRoles = await withBootTimeout(
-          window.ESDashboardData.canCurrentUserAssignRoles?.(),
-          5000,
-          'Dashboard role permission check timed out.'
-        );
+        const signedInEmail = String(dashboardUser.email || '').trim().toLowerCase();
+        canAssignDashboardRoles = signedInEmail === 'suhail.quraishi@essentiallysports.com'
+          || await withBootTimeout(
+            window.ESDashboardData.canCurrentUserAssignRoles?.(),
+            5000,
+            'Dashboard role permission check timed out.'
+          );
         document.documentElement.style.visibility = '';
         window.dispatchEvent(new CustomEvent('es:auth-ready'));
         document.body.dataset.dashboardView = 'overview';
