@@ -5794,3 +5794,109 @@ body.dashboard-page .role-action-label .role-select {
     flex-wrap: wrap;
   }
 }
+
+/* Role management final alignment and custom dropdown behavior. */
+body.dashboard-page .panel[data-dashboard-panel="people"],
+body.dashboard-page .panel[data-dashboard-panel="people"] .people-list {
+  max-height: none;
+  overflow: visible;
+}
+
+body.dashboard-page .person-role-card {
+  grid-template-columns: 48px minmax(0, 1fr) minmax(360px, 430px);
+  min-height: 92px;
+  gap: 20px;
+  padding: 18px 30px;
+}
+
+body.dashboard-page .person-role-card .person-avatar {
+  align-self: center;
+}
+
+body.dashboard-page .person-role-card .person-main {
+  min-width: 0;
+}
+
+body.dashboard-page .person-role-tools {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  justify-content: stretch;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  justify-self: stretch;
+}
+
+body.dashboard-page .person-role-tools > .role-badge {
+  justify-self: start;
+}
+
+body.dashboard-page .role-action-label {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+}
+
+body.dashboard-page .role-action-label > span {
+  white-space: nowrap;
+}
+
+body.dashboard-page .role-action-label .dashboard-choice {
+  width: 100%;
+  min-width: 0;
+}
+
+body.dashboard-page .role-action-label .dashboard-choice-trigger {
+  min-height: 42px;
+  border-radius: 10px;
+  padding-inline: 14px;
+  font-size: 14px !important;
+  font-weight: 700;
+}
+
+body.dashboard-page .role-action-label .dashboard-choice-menu {
+  min-width: 100%;
+  max-height: 240px;
+  z-index: 40;
+}
+
+body.dashboard-page .person-role-choice.is-saving {
+  opacity: .6;
+  pointer-events: none;
+}
+
+@media (max-width: 1080px) {
+  body.dashboard-page .person-role-card {
+    grid-template-columns: 48px minmax(0, 1fr) minmax(320px, 390px);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 900px) {
+  body.dashboard-page .person-role-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 12px 16px;
+    padding-block: 16px;
+  }
+
+  body.dashboard-page .person-role-tools {
+    grid-column: 2;
+    width: 100%;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 520px) {
+  body.dashboard-page .person-role-tools {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  body.dashboard-page .role-action-label {
+    width: 100%;
+  }
+}

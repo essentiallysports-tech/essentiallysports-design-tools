@@ -645,6 +645,10 @@
     const STATUS_OPTIONS = ['Backlog', 'Assigned', 'Doing', 'Review', 'Done'];
     const PRIORITY_OPTIONS = ['Normal', 'High', 'Urgent'];
     const ACCESS_ROLE_OPTIONS = ['Associate', 'Admin', 'Super Admin', 'Server Owner'];
+    const PROTECTED_ROLE_EMAILS = new Set([
+      'suhail.quraishi@essentiallysports.com',
+      'manish.kalsi@essentiallysports.com',
+    ]);
     const DASHBOARD_SEEN_KEY = 'es.dashboard.seenBadges.v1';
     let dashboardUser = { name: 'ES Admin', email: '', role: 'Admin', accessRole: 'Admin', designation: 'Design Operations' };
     let canAssignDashboardRoles = false;
@@ -802,7 +806,7 @@
     function canEditRole(person = {}) {
       const email = String(person.email || '').toLowerCase();
       if (!canAssignDashboardRoles) return false;
-      if (email === 'suhail.quraishi@essentiallysports.com') return false;
+      if (PROTECTED_ROLE_EMAILS.has(email)) return false;
       return true;
     }
 
@@ -847,11 +851,11 @@
       return options.map(option => `<option value="${attr(option)}"${option === selected ? ' selected' : ''}>${text(option)}</option>`).join('');
     }
 
-    function dashboardChoice(options, selected = '', field = '') {
+    function dashboardChoice(options, selected = '', field = '', extraClass = '') {
       const normalizedSelected = String(selected || '');
       const selectedOption = options.find(option => option.value === normalizedSelected) || options[0] || { value: '', label: 'Select' };
       return `
-        <div class="dashboard-choice" data-dashboard-choice="${attr(field)}">
+        <div class="dashboard-choice ${attr(extraClass)}" data-dashboard-choice="${attr(field)}">
           <button class="dashboard-choice-trigger" type="button" data-dashboard-choice-trigger aria-haspopup="listbox" aria-expanded="false">
             <span>${text(selectedOption.label)}</span>
             <span class="dashboard-choice-chevron" aria-hidden="true"></span>
@@ -885,6 +889,16 @@
           }))
       );
       return dashboardChoice(options, String(selected || '').trim().toLowerCase(), 'assignedTo');
+    }
+
+    function personRoleChoice(person) {
+      const selected = String(person.accessRole || person.role || 'Associate').trim();
+      return dashboardChoice(
+        ACCESS_ROLE_OPTIONS.map(role => ({ value: role, label: role })),
+        selected,
+        'personRole',
+        'person-role-choice'
+      );
     }
 
     function peopleOptions(people, selected = '') {
@@ -1105,7 +1119,7 @@
           <span class="person-role-tools">
             <span class="role-badge is-${accessRoleClass(person.accessRole || person.role)}">${text(person.accessRole || person.role || 'Associate')}</span>
             ${canEditRole(person)
-              ? `<label class="role-action-label"><span>Role</span><select class="role-select" data-person-role data-previous-value="${attr(person.accessRole || person.role || 'Associate')}" aria-label="Change role for ${attr(person.name || person.email)}">${accessRoleOptions(person.accessRole || person.role || 'Associate')}</select></label>`
+              ? `<div class="role-action-label"><span>Role</span>${personRoleChoice(person)}</div>`
               : ''}
           </span>
         </article>
@@ -1374,6 +1388,10 @@
 
     async function updateTaskChoice(option) {
       const choice = option.closest('[data-dashboard-choice]');
+      if (choice?.dataset.dashboardChoice === 'personRole') {
+        await updatePersonRoleChoice(option);
+        return;
+      }
       const row = option.closest('[data-task-id]');
       const id = row?.dataset.taskId || '';
       const field = choice?.dataset.dashboardChoice || '';
@@ -1456,10 +1474,6 @@
         if (event.target.closest('[data-close-task-drawer]')) closeTaskDrawer();
       });
       document.addEventListener('change', event => {
-        if (event.target.matches('[data-person-role]')) {
-          updatePersonRole(event.target);
-          return;
-        }
         const taskRow = event.target.closest('[data-task-id]');
         if (taskRow && (event.target.matches('[data-task-status]') || event.target.matches('[data-task-owner]'))) updateTaskRow(taskRow);
       });
@@ -1498,24 +1512,21 @@
       window.addEventListener('es-dashboard-data-change', renderDashboard);
     }
 
-    async function updatePersonRole(select) {
-      const card = select.closest('[data-person-email]');
+    async function updatePersonRoleChoice(option) {
+      const choice = option.closest('[data-dashboard-choice]');
+      const card = option.closest('[data-person-email]');
       const email = card?.dataset.personEmail || '';
-      const role = select.value;
-      const previous = select.dataset.previousValue || '';
-      select.disabled = true;
-      card?.classList.add('is-saving');
+      const role = option.dataset.dashboardChoiceValue || '';
+      if (!email || !role) return;
+      choice?.classList.add('is-saving');
       try {
         await window.ESDashboardData.updatePersonAccessRole(email, role);
-        select.dataset.previousValue = role;
         await window.ESDashboardData.refreshCloudDashboardData?.();
         renderDashboard();
       } catch (error) {
-        if (previous) select.value = previous;
         setTimeout(() => alert(error?.message || 'Role could not be updated.'), 0);
       } finally {
-        select.disabled = false;
-        card?.classList.remove('is-saving');
+        choice?.classList.remove('is-saving');
       }
     }
 
