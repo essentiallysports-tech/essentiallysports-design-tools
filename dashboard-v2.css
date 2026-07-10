@@ -5803,10 +5803,13 @@ body.dashboard-page .panel[data-dashboard-panel="people"] .people-list {
 }
 
 body.dashboard-page .person-role-card {
-  grid-template-columns: 48px minmax(0, 1fr) minmax(360px, 430px);
+  grid-template-columns: 48px minmax(0, 1fr) minmax(300px, 360px);
   min-height: 92px;
   gap: 20px;
   padding: 18px 30px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
 }
 
 body.dashboard-page .person-role-card .person-avatar {
@@ -5818,50 +5821,71 @@ body.dashboard-page .person-role-card .person-main {
 }
 
 body.dashboard-page .person-role-tools {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
+  display: block;
   align-items: center;
-  justify-content: stretch;
-  gap: 12px;
   width: 100%;
   min-width: 0;
   justify-self: stretch;
 }
 
-body.dashboard-page .person-role-tools > .role-badge {
-  justify-self: start;
-}
-
-body.dashboard-page .role-action-label {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  margin: 0;
-}
-
-body.dashboard-page .role-action-label > span {
-  white-space: nowrap;
-}
-
-body.dashboard-page .role-action-label .dashboard-choice {
+body.dashboard-page .person-role-tools > .role-badge,
+body.dashboard-page .person-role-tools > .role-choice {
+  display: flex;
   width: 100%;
   min-width: 0;
+  box-sizing: border-box;
 }
 
-body.dashboard-page .role-action-label .dashboard-choice-trigger {
-  min-height: 42px;
-  border-radius: 10px;
-  padding-inline: 14px;
-  font-size: 14px !important;
+body.dashboard-page .person-role-tools > .role-badge,
+body.dashboard-page .role-choice .dashboard-choice-trigger {
+  min-height: 54px;
+  border-radius: 18px;
+  padding-inline: 22px;
+  font-family: var(--font-display);
+  font-size: 20px !important;
   font-weight: 700;
+  letter-spacing: -.015em;
 }
 
-body.dashboard-page .role-action-label .dashboard-choice-menu {
+body.dashboard-page .person-role-tools > .role-badge {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+body.dashboard-page .role-choice .dashboard-choice-trigger {
+  grid-template-columns: minmax(0, 1fr) 18px;
+  border-width: 1px;
+  text-align: left;
+}
+
+body.dashboard-page .role-choice .dashboard-choice-menu {
   min-width: 100%;
   max-height: 240px;
   z-index: 40;
+}
+
+body.dashboard-page .role-choice.is-associate .dashboard-choice-trigger {
+  border-color: #dfe3e8;
+  background: #f2f3f5;
+  color: #4b5563;
+}
+
+body.dashboard-page .role-choice.is-admin .dashboard-choice-trigger {
+  border-color: #bfdbfe;
+  background: #eef6ff;
+  color: #1d4ed8;
+}
+
+body.dashboard-page .role-choice.is-super-admin .dashboard-choice-trigger {
+  border-color: #d8ccff;
+  background: #f4f0ff;
+  color: #6d28d9;
+}
+
+body.dashboard-page .role-choice.is-server-owner .dashboard-choice-trigger {
+  border-color: #fdc98e;
+  background: #fff4e7;
+  color: #c2410c;
 }
 
 body.dashboard-page .person-role-choice.is-saving {
@@ -5871,7 +5895,7 @@ body.dashboard-page .person-role-choice.is-saving {
 
 @media (max-width: 1080px) {
   body.dashboard-page .person-role-card {
-    grid-template-columns: 48px minmax(0, 1fr) minmax(320px, 390px);
+    grid-template-columns: 48px minmax(0, 1fr) minmax(280px, 340px);
     gap: 16px;
   }
 }
@@ -5885,15 +5909,8 @@ body.dashboard-page .person-role-choice.is-saving {
 
   body.dashboard-page .person-role-tools {
     grid-column: 1 / -1;
-    grid-template-columns: 1fr;
-    align-items: start;
     width: 100%;
     justify-self: start;
-  }
-
-  body.dashboard-page .role-action-label {
-    grid-template-columns: max-content minmax(0, 1fr);
-    width: min(100%, 520px);
   }
 }
 
@@ -5904,18 +5921,13 @@ body.dashboard-page .person-role-choice.is-saving {
   }
 
   body.dashboard-page .person-role-tools {
-    grid-template-columns: 1fr;
-    align-items: start;
-  }
-
-  body.dashboard-page .role-action-label {
-    grid-template-columns: 1fr;
-    gap: 6px;
     width: 100%;
   }
 
-  body.dashboard-page .role-action-label .dashboard-choice,
-  body.dashboard-page .role-action-label .dashboard-choice-trigger {
-    width: 100%;
+  body.dashboard-page .person-role-tools > .role-badge,
+  body.dashboard-page .role-choice .dashboard-choice-trigger {
+    min-height: 50px;
+    padding-inline: 18px;
+    font-size: 18px !important;
   }
 }

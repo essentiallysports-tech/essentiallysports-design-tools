@@ -897,7 +897,7 @@
         ACCESS_ROLE_OPTIONS.map(role => ({ value: role, label: role })),
         selected,
         'personRole',
-        'person-role-choice'
+        `person-role-choice role-choice is-${accessRoleClass(selected)}`
       );
     }
 
@@ -1117,10 +1117,9 @@
             <small>${text(person.designation || 'Designer')}${person.online ? ' · Online now' : person.lastSeenAt ? ` · Last seen ${dateText(person.lastSeenAt)}` : ''}</small>
           </span>
           <span class="person-role-tools">
-            <span class="role-badge is-${accessRoleClass(person.accessRole || person.role)}">${text(person.accessRole || person.role || 'Associate')}</span>
             ${canEditRole(person)
-              ? `<div class="role-action-label"><span>Role</span>${personRoleChoice(person)}</div>`
-              : ''}
+              ? personRoleChoice(person)
+              : `<span class="role-badge is-${accessRoleClass(person.accessRole || person.role)}">${text(person.accessRole || person.role || 'Associate')}</span>`}
           </span>
         </article>
       `).join('');
