@@ -435,6 +435,7 @@
   </style>
   <link rel="stylesheet" href="dashboard-v2.css?v=20260711-dashboardroles1">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root2">
+  <link rel="stylesheet" href="dashboard-ui-system.css?v=20260711-dashboard-system1">
   <script src="site-mobile-chrome.js?v=20260710-mobile-root2"></script>
 </head>
 <body class="dashboard-page">
@@ -679,6 +680,30 @@
       return cleaned || fallback;
     }
 
+    function titleCaseName(value, fallback = '') {
+      const source = String(value || fallback || '').trim().replace(/[._-]+/g, ' ');
+      if (!source) return '';
+      return source
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(word => word
+          .split(/([’'\-])/)
+          .map(part => /[’'\-]/.test(part)
+            ? part
+            : (/^[A-Z]{2,4}$/.test(part)
+              ? part
+              : part.charAt(0).toLocaleUpperCase() + part.slice(1).toLocaleLowerCase()))
+          .join(''))
+        .join(' ');
+    }
+
+    function personDisplayName(name, email = '', fallback = 'Unknown') {
+      const explicitName = String(name || '').trim();
+      if (explicitName) return titleCaseName(explicitName, fallback);
+      const emailName = String(email || '').trim().split('@')[0];
+      return titleCaseName(emailName, fallback);
+    }
+
     function attr(value) {
       return escapeHtml(String(value ?? ''));
     }
@@ -762,7 +787,11 @@
     }
 
     function exportCreatorText(task = {}) {
-      return task.creatorName || task.creatorEmail || task.ownerName || task.ownerEmail || 'Unknown';
+      return personDisplayName(
+        task.creatorName || task.ownerName,
+        task.creatorEmail || task.ownerEmail,
+        'Unknown'
+      );
     }
 
     function taskTime(task = {}) {
@@ -893,7 +922,7 @@
           .filter(person => person.email)
           .map(person => ({
             value: String(person.email || '').trim().toLowerCase(),
-            label: person.name ? `${person.name} (${person.email})` : person.email,
+            label: `${personDisplayName(person.name, person.email)} (${person.email})`,
           }))
       );
       return dashboardChoice(options, String(selected || '').trim().toLowerCase(), 'assignedTo');
@@ -903,7 +932,7 @@
       const selected = String(person.accessRole || person.role || 'Associate').trim();
       const personLabel = person.name || person.email || 'user';
       return `
-        <div class="dashboard-choice person-role-choice role-choice is-${accessRoleClass(selected)}" data-dashboard-choice="accessRole" data-role-email="${attr(person.email)}">
+        <div class="dashboard-choice person-role-choice person-role-control role-choice is-${accessRoleClass(selected)}" data-dashboard-choice="accessRole" data-role-email="${attr(person.email)}">
           <button class="dashboard-choice-trigger" type="button" data-dashboard-choice-trigger aria-haspopup="listbox" aria-expanded="false" aria-label="Role for ${attr(personLabel)}">
             <span>${text(accessRoleLabel(selected))}</span>
             <span class="dashboard-choice-chevron" aria-hidden="true"></span>
@@ -930,7 +959,7 @@
         .filter(person => person.email)
         .map(person => {
           const value = person.email;
-          return `<option value="${attr(value)}"${value === normalizedSelected ? ' selected' : ''}>${text(person.name)} (${text(person.email)})</option>`;
+          return `<option value="${attr(value)}"${value === normalizedSelected ? ' selected' : ''}>${text(personDisplayName(person.name, person.email))} (${text(person.email)})</option>`;
         })
         .join('');
     }
@@ -991,12 +1020,21 @@
       const currentOwner = ownerFilter.value;
       statusFilter.innerHTML = '<option value="">All Status</option>' + STATUS_OPTIONS.map(status => `<option value="${attr(status)}"${status === currentStatus ? ' selected' : ''}>${text(status)}</option>`).join('');
       const owners = Array.from(new Set((state.tasks || []).map(task => task.assignedTo).filter(Boolean))).sort();
-      ownerFilter.innerHTML = '<option value="">All Owners</option>' + owners.map(owner => `<option value="${attr(owner)}"${owner === currentOwner ? ' selected' : ''}>${text(owner)}</option>`).join('');
+      ownerFilter.innerHTML = '<option value="">All Owners</option>' + owners.map(owner => {
+        const person = (state.people || []).find(candidate => String(candidate.email || '').toLowerCase() === String(owner).toLowerCase());
+        const label = personDisplayName(person?.name, owner, owner);
+        return `<option value="${attr(owner)}"${owner === currentOwner ? ' selected' : ''}>${text(label)}</option>`;
+      }).join('');
     }
 
-    function renderTaskCard(task) {
-      const owner = task.assignedTo ? task.assignedTo.split('@')[0] : 'Unassigned';
-      const sourceName = task.requesterName || task.creatorName || task.requesterEmail || task.creatorEmail || task.workspace || 'ES Designer';
+    function renderTaskCard(task, people = []) {
+      const assignedPerson = (people || []).find(person => String(person.email || '').toLowerCase() === String(task.assignedTo || '').toLowerCase());
+      const owner = task.assignedTo ? personDisplayName(assignedPerson?.name, task.assignedTo) : 'Unassigned';
+      const sourcePersonName = task.requesterName || task.creatorName || '';
+      const sourcePersonEmail = task.requesterEmail || task.creatorEmail || '';
+      const sourceName = (sourcePersonName || sourcePersonEmail)
+        ? personDisplayName(sourcePersonName, sourcePersonEmail)
+        : (task.workspace || 'ES Designer');
       const taskPriorityClass = priorityClass(task.priority);
       return `
         <article class="task-card ${taskPriorityClass}" draggable="true" data-task-id="${attr(task.id)}">
@@ -1018,7 +1056,7 @@
           <section class="kanban-column" data-kanban-status="${attr(status)}">
             <header><h2>${text(status)}</h2><span>${columnTasks.length}</span></header>
             <div class="kanban-dropzone" data-kanban-dropzone="${attr(status)}">
-              ${columnTasks.length ? columnTasks.map(renderTaskCard).join('') : '<div class="empty is-compact">No tasks here.</div>'}
+              ${columnTasks.length ? columnTasks.map(task => renderTaskCard(task, state.people)).join('') : '<div class="empty is-compact">No tasks here.</div>'}
             </div>
           </section>
         `;
@@ -1039,7 +1077,7 @@
           <tbody>
             ${tasks.map(task => `
               <tr data-task-id="${attr(task.id)}">
-                <td><button class="task-link" type="button" data-open-task="${attr(task.id)}"><span class="item-title">${text(task.title)}</span><span class="item-meta">${text(task.sourceId)} · ${text(task.requesterName || task.creatorName || task.workspace)}</span></button></td>
+                <td><button class="task-link" type="button" data-open-task="${attr(task.id)}"><span class="item-title">${text(task.title)}</span><span class="item-meta">${text(task.sourceId)} · ${text((task.requesterName || task.creatorName || task.requesterEmail || task.creatorEmail) ? personDisplayName(task.requesterName || task.creatorName, task.requesterEmail || task.creatorEmail) : task.workspace)}</span></button></td>
                 <td><span class="pill ${priorityClass(task.priority)}">${text(task.priority, 'Normal')}</span></td>
                 <td>${dateText(task.designDueAt)}</td>
                 <td>${taskStatusChoice(task)}</td>
@@ -1131,16 +1169,16 @@
       }
       target.innerHTML = cloudNotice + state.people.map(person => `
         <article class="person person-role-card" data-person-email="${attr(person.email)}">
-          <span class="person-avatar">${text((person.name || person.email || 'ES').split(/\s+/).map(part => part[0]).join('').slice(0, 2), 'ES')}</span>
+          <span class="person-avatar">${text((personDisplayName(person.name, person.email, 'ES') || 'ES').split(/\s+/).map(part => part[0]).join('').slice(0, 2), 'ES')}</span>
           <span class="person-main">
-            <strong>${text(person.name)}</strong>
+            <strong>${text(personDisplayName(person.name, person.email))}</strong>
             <span>${text(person.email)}</span>
             <small>${text(person.designation || 'Designer')}${person.online ? ' · Online now' : person.lastSeenAt ? ` · Last seen ${dateText(person.lastSeenAt)}` : ''}</small>
           </span>
           <div class="person-role-tools">
             ${canEditRole(person)
               ? personRoleChoice(person)
-              : `<span class="role-badge is-${accessRoleClass(person.accessRole || person.role)}">${text(accessRoleLabel(person.accessRole || person.role))}</span>`}
+              : `<span class="role-badge person-role-control is-${accessRoleClass(person.accessRole || person.role)}">${text(accessRoleLabel(person.accessRole || person.role))}</span>`}
           </div>
         </article>
       `).join('');
@@ -1159,9 +1197,9 @@
         const isPending = status === 'Pending';
         return `
           <article class="access-request-card" data-access-email="${attr(request.email)}">
-            <span class="person-avatar">${text(initials(request.name || request.email), 'ES')}</span>
+            <span class="person-avatar">${text(initials(personDisplayName(request.name, request.email)), 'ES')}</span>
             <span class="person-main">
-              <strong>${text(request.name || request.email.split('@')[0])}</strong>
+              <strong>${text(personDisplayName(request.name, request.email))}</strong>
               <span>${text(request.email)}</span>
               <small>${text(request.source || 'login')} · Requested ${dateText(request.requestedAt || request.updatedAt)}</small>
             </span>
@@ -1194,7 +1232,7 @@
         return;
       }
       target.innerHTML = state.activity.slice(0, 40).map(activity => `
-        <article class="activity"><strong>${text(activity.label)}</strong><span>${dateText(activity.createdAt)} · ${text(activity.actorName)}</span></article>
+        <article class="activity"><strong>${text(activity.label)}</strong><span>${dateText(activity.createdAt)} · ${text(personDisplayName(activity.actorName, activity.actorEmail))}</span></article>
       `).join('');
     }
 
@@ -1206,16 +1244,17 @@
       const onlineCount = people.filter(person => person.online).length;
       setNavBadge('[data-online-count]', onlineCount, getSeenBadgeState().online);
       target.innerHTML = people.map(person => `
-        <article class="live-person"><span class="live-avatar">${initials(person.name)}</span><span><strong>${text(person.name)}</strong><small>${text(person.workspace, person.online ? 'ES Designer' : 'Not currently active')}${person.designation ? ` · ${text(person.designation)}` : ''}</small></span><span class="presence-state ${person.online ? 'is-online' : 'is-offline'}">${person.online ? 'Online' : 'Offline'}</span></article>
+        <article class="live-person"><span class="live-avatar">${initials(personDisplayName(person.name, person.email, 'ES'))}</span><span><strong>${text(personDisplayName(person.name, person.email))}</strong><small>${text(person.workspace, person.online ? 'ES Designer' : 'Not currently active')}${person.designation ? ` · ${text(person.designation)}` : ''}</small></span><span class="presence-state ${person.online ? 'is-online' : 'is-offline'}">${person.online ? 'Online' : 'Offline'}</span></article>
       `).join('') || '<div class="empty">No active users yet.</div>';
     }
 
     function renderIdentity() {
-      const firstName = plainText(dashboardUser.name, 'Design team').split(' ')[0];
-      document.querySelectorAll('[data-sidebar-name]').forEach(el => { el.textContent = plainText(dashboardUser.name, 'ES Admin'); });
+      const displayName = personDisplayName(dashboardUser.name, dashboardUser.email, 'ES Admin');
+      const firstName = displayName.split(' ')[0] || 'Design team';
+      document.querySelectorAll('[data-sidebar-name]').forEach(el => { el.textContent = displayName; });
       document.querySelectorAll('[data-sidebar-role]').forEach(el => { el.textContent = plainText(dashboardUser.designation, 'Design Operations'); });
       document.querySelectorAll('[data-profile-name]').forEach(el => {
-        el.textContent = plainText(dashboardUser.name, 'ES User');
+        el.textContent = displayName;
         el.dataset.profileRole = '';
         el.classList.remove('has-role');
       });
@@ -1374,7 +1413,12 @@
       selectedTaskId = id;
       document.getElementById('task-drawer-type').textContent = taskTypeLabel(task.type);
       document.getElementById('task-drawer-title').textContent = plainText(task.title, 'Untitled task');
-      document.getElementById('task-drawer-meta').innerHTML = `${text(task.sourceId)} · ${text(task.requesterName || task.creatorName || task.workspace)} · Created ${dateText(task.createdAt)}`;
+      const drawerPersonName = task.requesterName || task.creatorName || '';
+      const drawerPersonEmail = task.requesterEmail || task.creatorEmail || '';
+      const drawerSource = (drawerPersonName || drawerPersonEmail)
+        ? personDisplayName(drawerPersonName, drawerPersonEmail)
+        : task.workspace;
+      document.getElementById('task-drawer-meta').innerHTML = `${text(task.sourceId)} · ${text(drawerSource)} · Created ${dateText(task.createdAt)}`;
       document.getElementById('drawer-status').innerHTML = optionList(STATUS_OPTIONS, task.status);
       document.getElementById('drawer-assignee').innerHTML = peopleOptions(window.ESDashboardData.getDashboardState().people, task.assignedTo);
       document.getElementById('drawer-priority').value = PRIORITY_OPTIONS.includes(task.priority) ? task.priority : 'Normal';
