@@ -493,9 +493,75 @@ html[data-theme="dark"] body.dashboard-page .role-choice.is-server-owner .dashbo
 .profile-theme-option::before { content: "Appearance"; }
 .profile-theme-option .theme-switch { flex: 0 0 auto; }
 
+/* The profile dropdown is a light surface in light mode. Declare the label
+   explicitly so theme inheritance can never wash it out. */
+.profile-dropdown .profile-theme-option,
+.profile-dropdown .profile-theme-option::before {
+  color: #111827 !important;
+  opacity: 1 !important;
+}
+
 html[data-theme="dark"] .profile-theme-option {
   color: var(--theme-dark-text) !important;
 }
+
+html[data-theme="dark"] .profile-dropdown .profile-theme-option,
+html[data-theme="dark"] .profile-dropdown .profile-theme-option::before {
+  color: var(--theme-dark-text) !important;
+}
+
+/* Homepage feature tags remain intentionally light cards in dark mode. */
+html[data-theme="dark"] .home-feature-tags span {
+  background: #F8FBFF !important;
+  border-color: #B5D8FD !important;
+  color: #07386F !important;
+}
+
+/* Dashboard search is one surface: the input itself must remain transparent. */
+html[data-theme="dark"] body.dashboard-page .command-search input {
+  background: transparent !important;
+  color: var(--theme-dark-text) !important;
+}
+
+html[data-theme="dark"] body.dashboard-page .command-search input::placeholder {
+  color: var(--theme-dark-text-muted) !important;
+}
+
+/* Keep the FAQ contact line visible beneath the FAQ list instead of suppressing
+   the already-present contact markup in the editorial FAQ layout. */
+body[data-current-page="faq"] .faq-contact {
+  grid-column: 2;
+  display: block;
+  margin: 24px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+body[data-current-page="faq"] .faq-contact h2 {
+  margin: 0 0 6px;
+  color: #111827;
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1;
+}
+
+body[data-current-page="faq"] .faq-contact p,
+body[data-current-page="faq"] .faq-contact a {
+  margin: 0;
+  font-family: var(--font-acumin-web);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+body[data-current-page="faq"] .faq-contact p { color: #53657A; }
+body[data-current-page="faq"] .faq-contact a { color: #0A7DFA; }
+
+html[data-theme="dark"] body[data-current-page="faq"] .faq-contact h2 { color: var(--theme-dark-text) !important; }
+html[data-theme="dark"] body[data-current-page="faq"] .faq-contact p { color: var(--theme-dark-text-muted) !important; }
+html[data-theme="dark"] body[data-current-page="faq"] .faq-contact a { color: #69AEFF !important; }
 
 /* Studio-only mappings: the application chrome changes theme; the actual
    export canvas remains white and is never recolored. */
