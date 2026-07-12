@@ -1040,6 +1040,41 @@ body.dashboard-page .topbar-button:disabled {
 /* Canonical dashboard component contract.
    This stylesheet loads after dashboard-v2.css, so these rules are the real
    source of truth for repeatable cards, chips, badges, and role controls. */
+body.dashboard-page .dashboard-app :where(
+  small,
+  th,
+  td,
+  .sidebar-label,
+  .sidebar-workspace small,
+  .nav-count,
+  .panel-subtitle,
+  .metric-label,
+  .item-meta,
+  .pill,
+  .task-type,
+  .task-priority,
+  .task-card p,
+  .task-card-meta,
+  .export-list-head,
+  .export-list-row,
+  .export-list-title small,
+  .dashboard-choice-option,
+  .dashboard-choice-trigger,
+  .table-control,
+  .filter,
+  .drawer-meta,
+  .drawer-section p,
+  .drawer-links,
+  .drawer-export-details,
+  .person-main span,
+  .person-main small,
+  .activity span,
+  .live-person small,
+  .presence-state
+) {
+  font-size: 14px !important;
+}
+
 body.dashboard-page .kanban-board {
   grid-template-columns: repeat(5, minmax(250px, 1fr));
   gap: 16px;
