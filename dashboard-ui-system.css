@@ -1099,16 +1099,45 @@ body.dashboard-page .kanban-dropzone {
 }
 
 body.dashboard-page .task-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   padding: 16px 18px;
   border-radius: 14px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+body.dashboard-page .task-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: transparent;
+  z-index: 0;
+}
+
+body.dashboard-page .task-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.dashboard-page .task-card.is-high::before {
+  width: 3px;
+  background: #f59e0b;
+}
+
+body.dashboard-page .task-card.is-urgent::before {
+  width: 4px;
+  background: #b42318;
 }
 
 body.dashboard-page .task-card-top {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
   align-items: center;
-  flex-wrap: nowrap;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
   overflow: hidden;
 }
@@ -1126,7 +1155,7 @@ body.dashboard-page .task-priority {
   border-radius: 999px;
   background: var(--fu-surface-muted);
   color: #4b5563;
-  font-family: var(--fu-font-body);
+  font-family: var(--fu-font-display);
   font-size: 14px !important;
   font-weight: 700 !important;
   line-height: 1;
@@ -1138,18 +1167,18 @@ body.dashboard-page .task-priority {
 }
 
 body.dashboard-page .task-type {
-  flex: 0 0 132px;
-  width: 132px;
-  max-width: 132px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   background: #f8fafc;
   color: #334155;
 }
 
 body.dashboard-page .task-priority,
 body.dashboard-page .pill {
-  flex: 0 0 84px;
-  width: 84px;
-  max-width: 84px;
+  flex: 0 0 76px;
+  width: 76px;
+  max-width: 76px;
 }
 
 body.dashboard-page .pill.is-high,
@@ -1175,6 +1204,10 @@ body.dashboard-page .task-card h3 {
   line-height: 1.06;
 }
 
+body.dashboard-page .task-card p {
+  margin: 0;
+}
+
 body.dashboard-page .task-card p,
 body.dashboard-page .task-card-meta {
   color: var(--fu-muted);
@@ -1189,6 +1222,7 @@ body.dashboard-page .task-card-meta {
   grid-template-columns: minmax(0, 1fr) max-content;
   align-items: end;
   gap: 14px;
+  margin-top: auto;
 }
 
 body.dashboard-page .task-card-meta span:first-child {

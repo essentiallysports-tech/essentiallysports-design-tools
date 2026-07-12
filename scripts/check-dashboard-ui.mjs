@@ -43,7 +43,7 @@ const system = read(files.system);
 const theme = read(files.theme);
 
 const dashboardV2Index = html.indexOf('dashboard-v2.css');
-const dashboardSystemIndex = html.indexOf('dashboard-ui-system.css?v=20260712-dashboard-system3');
+const dashboardSystemIndex = html.indexOf('dashboard-ui-system.css?v=20260712-dashboard-system4');
 const themeIndex = html.indexOf('theme.css');
 
 if (dashboardV2Index === -1 || dashboardSystemIndex === -1 || themeIndex === -1) {
@@ -87,9 +87,16 @@ assertContains(
 
 assertContains(
   system,
-  'flex-wrap: nowrap;',
-  'dashboard task chip row can wrap again',
-  'dashboard task chip row is locked to one line'
+  'grid-template-columns: minmax(0, 1fr) max-content;',
+  'dashboard task chip row is not using the fixed kanban grid contract',
+  'dashboard task chip row uses the fixed kanban grid contract'
+);
+
+assertContains(
+  system,
+  'body.dashboard-page .task-card::before',
+  'dashboard task priority stripe normalization is missing',
+  'dashboard task priority stripe normalization exists'
 );
 
 assertContains(
@@ -101,9 +108,23 @@ assertContains(
 
 assertContains(
   system,
-  'flex: 0 0 132px;',
-  'dashboard task type chip fixed width is missing',
-  'dashboard task type chip fixed width exists'
+  'width: 100%;',
+  'dashboard task type chip is not fluid inside the kanban grid',
+  'dashboard task type chip is fluid inside the kanban grid'
+);
+
+assertContains(
+  system,
+  'width: 76px;',
+  'dashboard priority chip compact fixed width is missing',
+  'dashboard priority chip compact fixed width exists'
+);
+
+assertContains(
+  system,
+  'margin-top: auto;',
+  'dashboard card metadata is not pinned consistently',
+  'dashboard card metadata is pinned consistently'
 );
 
 assertContains(
