@@ -6268,8 +6268,10 @@ body.dashboard-page .task-card-top {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  flex-wrap: nowrap;
   gap: 10px;
   min-width: 0;
+  overflow: hidden;
 }
 
 body.dashboard-page .task-type,
@@ -6290,12 +6292,20 @@ body.dashboard-page .task-priority {
   line-height: 1;
   letter-spacing: 0;
   text-transform: none;
-  white-space: nowrap;
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 0 auto;
 }
 
 body.dashboard-page .task-type {
+  min-width: 132px;
   background: #f8fafc;
   color: #334155;
+}
+
+body.dashboard-page .task-priority {
+  min-width: 84px;
 }
 
 body.dashboard-page .task-priority.is-high {
@@ -6414,7 +6424,7 @@ body.dashboard-page .export-preview-panel img {
   }
 
   body.dashboard-page .task-card-top {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   body.dashboard-page .person-role-tools > .role-badge,
