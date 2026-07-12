@@ -2450,6 +2450,8 @@
   }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root2">
+<link rel="stylesheet" href="theme.css?v=20260711-darkmode8">
+<script src="theme.js?v=20260711-darkmode8"></script>
 <script src="site-mobile-chrome.js?v=20260710-mobile-root2"></script>
 </head>
 <body>
@@ -2835,19 +2837,6 @@
         <li>Assignment stays with design operations.</li>
         <li>A future Slack and dashboard workflow will manage delivery.</li>
       </ol>
-    </section>
-    <section class="request-note" aria-labelledby="saved-requests-title">
-      <div class="request-records-head">
-        <h2 class="request-note-title" id="saved-requests-title">Saved Submissions</h2>
-        <span class="request-record-count" id="request-record-count">0 saved</span>
-      </div>
-      <div class="request-record-list" id="request-record-list">
-        <p class="request-empty">No requests have been submitted in this browser.</p>
-      </div>
-      <button class="btn btn-primary export-button request-export" id="request-export-btn" type="button" disabled>
-        <span data-export-label>Export</span>
-        <span class="btn-icon btn-download-icon" aria-hidden="true"></span>
-      </button>
     </section>
   </aside>
 </main>
@@ -4163,74 +4152,6 @@ function createDesignRequestRecord() {
   };
 }
 
-function formatRequestDate(value) {
-  if (!value) return 'No date';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
-}
-
-function renderDesignRequestRecords() {
-  const records = readDesignRequests();
-  const list = document.getElementById('request-record-list');
-  const count = document.getElementById('request-record-count');
-  const exportButton = document.getElementById('request-export-btn');
-  if (!list || !count || !exportButton) return;
-
-  count.textContent = `${records.length} saved`;
-  exportButton.disabled = records.length === 0;
-  list.innerHTML = '';
-
-  if (!records.length) {
-    const empty = document.createElement('p');
-    empty.className = 'request-empty';
-    empty.textContent = 'No requests have been submitted in this browser.';
-    list.appendChild(empty);
-    return;
-  }
-
-  records.slice().reverse().slice(0, 5).forEach(record => {
-    const card = document.createElement('article');
-    card.className = 'request-record';
-
-    const id = document.createElement('div');
-    id.className = 'request-record-id';
-    id.textContent = record.id;
-
-    const title = document.createElement('div');
-    title.className = 'request-record-title';
-    title.textContent = record.entities || requestTypeLabel(record.requestType);
-
-    const meta = document.createElement('div');
-    meta.className = 'request-record-meta';
-    meta.textContent = `${requestTypeLabel(record.requestType)} · ${record.status || 'New'} · Due ${formatRequestDate(record.designDueAt)}`;
-
-    card.append(id, title, meta);
-    list.appendChild(card);
-  });
-}
-
-function exportDesignRequests() {
-  const records = readDesignRequests();
-  if (!records.length) return;
-  const finishExportFeedback = startExportFeedback(document.getElementById('request-export-btn'));
-  const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  const date = new Date().toISOString().slice(0, 10);
-  link.href = url;
-  link.download = `design-requests-demo-${date}.json`;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-  finishExportFeedback();
-  setRequestFormStatus('Saved submissions exported as JSON.', 'success');
-}
-
 async function syncDesignRequestToSheet(record) {
   if (!window.ESAuth?.fetchWithAuth) throw new Error('Please log in again to submit this request.');
   const response = await window.ESAuth.fetchWithAuth('/api/design-request-submit', {
@@ -4309,7 +4230,6 @@ function setupDesignRequests() {
 
   setupRequestDropdowns();
   document.getElementById('request-type').addEventListener('change', updateRequestTypeFields);
-  document.getElementById('request-export-btn').addEventListener('click', exportDesignRequests);
   form.addEventListener('input', updateRequestStages);
   form.addEventListener('change', updateRequestStages);
   form.addEventListener('reset', () => {
@@ -4347,7 +4267,6 @@ function setupDesignRequests() {
         publication: record.publication || '',
       },
     });
-    renderDesignRequestRecords();
     clearStatusAfterReset = false;
     form.reset();
     clearStatusAfterReset = true;
@@ -4359,7 +4278,6 @@ function setupDesignRequests() {
 
   updateRequestTypeFields();
   updateRequestStages();
-  renderDesignRequestRecords();
 }
 
 // ─── DEBOUNCE ─────────────────────────────────────────────────────────────────

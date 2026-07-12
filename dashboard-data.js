@@ -159,7 +159,7 @@
     if (/design-request\.html$/i.test(path)) return 'Design Request';
     if (/profile\.html$/i.test(path)) return 'Profile';
     if (/settings\.html$/i.test(path)) return 'Settings';
-    return document.title?.replace(/\s*\|\s*EssentiallySports\s*$/i, '').trim() || 'ES Designer';
+    return document.title?.replace(/\s*\|\s*EssentiallySports\s*$/i, '').trim() || 'FrameUp';
   }
 
   function normalizeCloudPerson(row = {}) {
@@ -176,7 +176,7 @@
       role: accessRole,
       accessRole,
       avatar: cleanString(row.avatar_url || row.avatar || ''),
-      workspace: cleanString(row.workspace || row.page_path || (isOnline ? 'ES Designer' : 'Not currently active')),
+      workspace: cleanString(row.workspace || row.page_path || (isOnline ? 'FrameUp' : 'Not currently active')),
       lastSeenAt: lastSeen,
       online: isOnline,
       source: 'supabase',

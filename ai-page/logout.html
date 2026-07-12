@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Logout | ES AI</title>
+  <title>Logout | FrameUp</title>
   <script src="../es-auth-config.js?v=20260707-auth4"></script>
   <script src="../es-auth.js?v=20260708-authlazy1"></script>
   <script src="../dashboard-data.js?v=20260711-dashboardroles1"></script>
@@ -13,6 +13,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Roboto+Condensed:wght@400;500;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="account.css">
   <link rel="stylesheet" href="../site-mobile-chrome.css?v=20260710-mobile-root2">
+  <link rel="stylesheet" href="../theme.css?v=20260711-darkmode8">
+  <script src="../theme.js?v=20260711-darkmode8"></script>
   <script src="../site-mobile-chrome.js?v=20260710-mobile-root2"></script>
 </head>
 <body>
@@ -72,9 +74,9 @@
               <path d="M14 8l4 4-4 4M18 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <div class="account-kicker">ES AI Account</div>
+          <div class="account-kicker">FrameUp Account</div>
           <h1 class="account-title">Logout</h1>
-          <p class="account-subtitle" id="logout-copy">You are about to leave the ES AI workspace on this device. Your local profile and settings can stay saved for the next session.</p>
+          <p class="account-subtitle" id="logout-copy">You are about to leave FrameUp on this device. Your local profile and settings can stay saved for the next session.</p>
           <div class="actions" id="logout-actions">
             <button class="primary-btn" id="confirm-logout" type="button">Logout Now</button>
             <a class="secondary-btn" href="index.html">Cancel</a>
@@ -92,9 +94,9 @@
     document.getElementById('confirm-logout').addEventListener('click', () => {
       window.ESAuth?.logout?.();
       sessionStorage.setItem('es.ai.loggedOut', 'true');
-      document.getElementById('logout-copy').textContent = 'You have been logged out of ES AI on this device.';
+      document.getElementById('logout-copy').textContent = 'You have been logged out of FrameUp on this device.';
       document.getElementById('logout-status').textContent = 'Session ended.';
-      document.getElementById('logout-actions').innerHTML = '<a class="primary-btn" href="../login.html">Return to Login</a><a class="secondary-btn" href="../index.html">Back to ES Designer</a>';
+      document.getElementById('logout-actions').innerHTML = '<a class="primary-btn" href="../login.html">Return to Login</a><a class="secondary-btn" href="../index.html">Back to FrameUp</a>';
     });
   </script>
 </body>

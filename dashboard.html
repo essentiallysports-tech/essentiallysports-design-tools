@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Local-first ES Designer admin dashboard for requests, exports, owners, and activity.">
-  <title>Dashboard | ES Designer</title>
+  <meta name="description" content="FrameUp admin dashboard for requests, exports, owners, and activity.">
+  <title>FrameUp Dashboard | EssentiallySports</title>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20260708-authlazy1"></script>
   <script src="dashboard-data.js?v=20260711-dashboardroles1"></script>
@@ -436,6 +436,8 @@
   <link rel="stylesheet" href="dashboard-v2.css?v=20260711-dashboardroles1">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root2">
   <link rel="stylesheet" href="dashboard-ui-system.css?v=20260711-dashboard-system1">
+  <link rel="stylesheet" href="theme.css?v=20260711-darkmode8">
+  <script src="theme.js?v=20260711-darkmode8"></script>
   <script src="site-mobile-chrome.js?v=20260710-mobile-root2"></script>
 </head>
 <body class="dashboard-page">
@@ -587,7 +589,7 @@
 
           <section class="panel" data-view-section="access" data-dashboard-panel="access">
             <div class="panel-head">
-              <div><h2 class="panel-title">Access Requests</h2><p class="panel-subtitle">Approve or reject non-ES emails asking to use ES Designer.</p></div>
+              <div><h2 class="panel-title">Access Requests</h2><p class="panel-subtitle">Approve or reject non-ES emails asking to use FrameUp.</p></div>
             </div>
             <div class="access-request-list" id="access-request-list"></div>
           </section>
@@ -1034,7 +1036,7 @@
       const sourcePersonEmail = task.requesterEmail || task.creatorEmail || '';
       const sourceName = (sourcePersonName || sourcePersonEmail)
         ? personDisplayName(sourcePersonName, sourcePersonEmail)
-        : (task.workspace || 'ES Designer');
+        : (task.workspace || 'FrameUp');
       const taskPriorityClass = priorityClass(task.priority);
       return `
         <article class="task-card ${taskPriorityClass}" draggable="true" data-task-id="${attr(task.id)}">
@@ -1244,7 +1246,7 @@
       const onlineCount = people.filter(person => person.online).length;
       setNavBadge('[data-online-count]', onlineCount, getSeenBadgeState().online);
       target.innerHTML = people.map(person => `
-        <article class="live-person"><span class="live-avatar">${initials(personDisplayName(person.name, person.email, 'ES'))}</span><span><strong>${text(personDisplayName(person.name, person.email))}</strong><small>${text(person.workspace, person.online ? 'ES Designer' : 'Not currently active')}${person.designation ? ` · ${text(person.designation)}` : ''}</small></span><span class="presence-state ${person.online ? 'is-online' : 'is-offline'}">${person.online ? 'Online' : 'Offline'}</span></article>
+        <article class="live-person"><span class="live-avatar">${initials(personDisplayName(person.name, person.email, 'ES'))}</span><span><strong>${text(personDisplayName(person.name, person.email))}</strong><small>${text(person.workspace, person.online ? 'FrameUp' : 'Not currently active')}${person.designation ? ` · ${text(person.designation)}` : ''}</small></span><span class="presence-state ${person.online ? 'is-online' : 'is-offline'}">${person.online ? 'Online' : 'Offline'}</span></article>
       `).join('') || '<div class="empty">No active users yet.</div>';
     }
 
@@ -1808,7 +1810,7 @@
       if (!shell) return;
       shell.innerHTML = `
         <section class="dashboard-welcome">
-          <p class="eyebrow">ES Designer / Dashboard</p>
+          <p class="eyebrow">FrameUp / Dashboard</p>
           <h2>Dashboard could not finish loading.</h2>
           <p>Please refresh once. If it still happens, go back to the website and log in again.</p>
           <div class="topbar-actions" style="margin-top:22px">
