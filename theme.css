@@ -474,30 +474,57 @@ html[data-theme="dark"] body.dashboard-page .role-choice.is-server-owner .dashbo
 
 /* The theme choice belongs to the profile menu wherever shared navigation is
    present. Login and utility pages retain the compact floating control. */
+/* Profile menu rows are declared in several page-level stylesheets. Keep the
+   injected Appearance row on the same row system as Edit Profile / Settings so
+   the icon, label, and switch never drift apart across pages or themes. */
+.profile-dropdown [data-theme-switcher].profile-theme-option,
 .profile-theme-option {
-  width: 100%;
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  /* Align to option labels after their 20px icon and 12px icon gap. */
-  padding: 0 10px 0 46px;
-  border-radius: 10px;
-  color: #111827;
-  font-family: "Roboto Condensed", "Roboto", Arial, sans-serif;
-  font-size: 14px;
-  font-weight: 500;
+  width: 100% !important;
+  min-height: 42px !important;
+  box-sizing: border-box !important;
+  display: grid !important;
+  grid-template-columns: 20px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  justify-items: stretch !important;
+  gap: 12px !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: #111827 !important;
+  font-family: "Roboto Condensed", "Roboto", Arial, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+  text-align: left !important;
 }
 
 .profile-theme-option::before { display: none !important; }
-.profile-theme-label {
-  color: #000000 !important;
-  font: inherit;
-  line-height: 1.2;
-  opacity: 1 !important;
+.profile-theme-icon {
+  width: 20px !important;
+  height: 20px !important;
+  display: grid !important;
+  place-items: center !important;
+  color: #0A7DFA !important;
 }
-.profile-theme-option .theme-switch { flex: 0 0 auto; }
+.profile-theme-icon svg {
+  width: 20px !important;
+  height: 20px !important;
+  display: block !important;
+}
+.profile-theme-label {
+  min-width: 0 !important;
+  color: #000000 !important;
+  font: inherit !important;
+  line-height: 1.2 !important;
+  opacity: 1 !important;
+  text-align: left !important;
+}
+.profile-theme-option .theme-switch {
+  justify-self: end !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
 
 /* The profile dropdown is a light surface in light mode. Declare the label
    explicitly so theme inheritance can never wash it out. */
@@ -513,7 +540,11 @@ html[data-theme="dark"] .profile-theme-option {
 
 html[data-theme="dark"] .profile-dropdown .profile-theme-option,
 html[data-theme="dark"] .profile-dropdown .profile-theme-label {
-  color: var(--theme-dark-text) !important;
+  color: #111827 !important;
+}
+
+html[data-theme="dark"] .profile-theme-icon {
+  color: #69AEFF !important;
 }
 
 /* Homepage feature tags remain intentionally light cards in dark mode. */
@@ -677,6 +708,51 @@ html[data-theme="dark"][data-studio-shell="on"] .canvas-bottom-actions {
 
 html[data-theme="dark"][data-studio-shell="on"] .canvas-bottom-actions .studio-zoom-group {
   border-color: var(--theme-dark-border) !important;
+}
+
+html[data-theme="dark"] body.dashboard-page .task-card {
+  background: var(--theme-dark-surface) !important;
+  border-color: var(--theme-dark-border-strong) !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .22) !important;
+}
+
+html[data-theme="dark"] body.dashboard-page .task-card.is-high {
+  border-color: #765327 !important;
+}
+
+html[data-theme="dark"] body.dashboard-page .task-card.is-urgent {
+  background: linear-gradient(90deg, rgba(180, 35, 24, .16) 0%, var(--theme-dark-surface) 44%) !important;
+  border-color: #78302C !important;
+}
+
+html[data-theme="dark"] body.dashboard-page .task-type,
+html[data-theme="dark"] body.dashboard-page .task-priority {
+  border-color: #dfe3e8 !important;
+  background: #f7f8fa !important;
+  color: #4b5563 !important;
+}
+
+html[data-theme="dark"] body.dashboard-page .task-priority.is-high {
+  border-color: #f3d6a5 !important;
+  background: #fff7ed !important;
+  color: #b45309 !important;
+}
+
+html[data-theme="dark"] body.dashboard-page .task-priority.is-urgent {
+  border-color: #f3b8b4 !important;
+  background: #fff1f1 !important;
+  color: #b42318 !important;
+}
+
+html[data-theme="dark"] body.dashboard-page .dashboard-role-menu,
+html[data-theme="dark"] body.dashboard-page .dashboard-choice-menu {
+  background: var(--theme-dark-surface-raised) !important;
+  border-color: var(--theme-dark-border-strong) !important;
+}
+
+html[data-theme="dark"] body.dashboard-page .dashboard-role-option,
+html[data-theme="dark"] body.dashboard-page .dashboard-choice-option {
+  color: var(--theme-dark-text) !important;
 }
 
 /* Keep footer content readable after the generic muted-text rules above. */

@@ -41,7 +41,7 @@
     const switcher = document.createElement('div');
     switcher.className = profileMenu ? 'profile-theme-option' : 'theme-switcher' + (navbar ? '' : ' theme-switcher--floating');
     switcher.dataset.themeSwitcher = 'true';
-    switcher.innerHTML = `${profileMenu ? '<span class="profile-theme-label">Appearance</span>' : ''}
+    switcher.innerHTML = `${profileMenu ? '<span class="profile-theme-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v2.2M12 18.8V21M5.64 5.64l1.56 1.56M16.8 16.8l1.56 1.56M3 12h2.2M18.8 12H21M5.64 18.36l1.56-1.56M16.8 7.2l1.56-1.56" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="3.8" stroke="currentColor" stroke-width="1.8"/></svg></span><span class="profile-theme-label">Appearance</span>' : ''}
       <button class="theme-switch" type="button" role="switch" aria-checked="false" aria-label="Switch to dark mode" title="Switch to dark mode">
         <span class="theme-switch-sun" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>

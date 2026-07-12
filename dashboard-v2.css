@@ -6254,3 +6254,171 @@ body.dashboard-page .role-choice.is-server-owner .dashboard-role-summary {
     font-size: 16px !important;
   }
 }
+
+/* Final dashboard component normalization. This sits at the end of the file so
+   older exploratory dashboard styles above cannot reintroduce uneven chips,
+   oversized role controls, or wrapped kanban metadata. */
+body.dashboard-page .task-card {
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 14px;
+}
+
+body.dashboard-page .task-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+body.dashboard-page .task-type,
+body.dashboard-page .task-priority {
+  min-height: 30px;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 13px;
+  border: 1px solid #dfe3e8;
+  border-radius: 999px;
+  background: #f7f8fa;
+  color: #4b5563;
+  font-family: var(--dash-body-type);
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+body.dashboard-page .task-type {
+  background: #f8fafc;
+  color: #334155;
+}
+
+body.dashboard-page .task-priority.is-high {
+  border-color: #f3d6a5;
+  background: #fff7ed;
+  color: #b45309;
+}
+
+body.dashboard-page .task-priority.is-urgent {
+  border-color: #f3b8b4;
+  background: #fff1f1;
+  color: #b42318;
+}
+
+body.dashboard-page .task-card h3 {
+  font-size: 20px;
+  line-height: 1.05;
+}
+
+body.dashboard-page .task-card-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: end;
+  gap: 14px;
+}
+
+body.dashboard-page .task-card-meta span:first-child {
+  min-width: 0;
+}
+
+body.dashboard-page .task-card-meta span:last-child {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+body.dashboard-page .person-role-card {
+  grid-template-columns: 48px minmax(0, 1fr) minmax(220px, 260px);
+  gap: 18px;
+  min-height: 86px;
+  padding: 16px 24px;
+}
+
+body.dashboard-page .person-role-tools {
+  display: flex;
+  justify-content: flex-end;
+}
+
+body.dashboard-page .person-role-tools > .role-badge,
+body.dashboard-page .person-role-tools > .role-choice {
+  width: min(100%, 260px);
+}
+
+body.dashboard-page .person-role-tools > .role-badge,
+body.dashboard-page .dashboard-role-summary {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 13px;
+  font-family: var(--dash-body-type);
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+body.dashboard-page .person-role-tools > .role-badge {
+  display: inline-flex;
+  align-items: center;
+}
+
+body.dashboard-page .dashboard-role-summary {
+  grid-template-columns: minmax(0, 1fr) 14px;
+}
+
+body.dashboard-page .dashboard-role-chevron,
+body.dashboard-page .dashboard-choice-chevron {
+  width: 10px;
+  height: 10px;
+  border-right-width: 3px;
+  border-bottom-width: 3px;
+}
+
+body.dashboard-page .dashboard-role-menu,
+body.dashboard-page .dashboard-choice-menu {
+  border-color: var(--dash-border);
+  box-shadow: 0 16px 34px rgba(17, 24, 39, .12);
+}
+
+body.dashboard-page .export-preview-panel {
+  width: min(520px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  grid-template-rows: auto auto;
+  align-content: start;
+}
+
+body.dashboard-page .export-preview-panel img {
+  width: 100%;
+  height: auto;
+  max-height: min(58vh, 520px);
+  object-fit: contain;
+}
+
+@media (max-width: 900px) {
+  body.dashboard-page .person-role-card {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  body.dashboard-page .person-role-tools {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 520px) {
+  body.dashboard-page .task-card {
+    padding: 16px;
+  }
+
+  body.dashboard-page .task-card-top {
+    flex-wrap: wrap;
+  }
+
+  body.dashboard-page .person-role-tools > .role-badge,
+  body.dashboard-page .person-role-tools > .role-choice {
+    width: 100%;
+  }
+}
