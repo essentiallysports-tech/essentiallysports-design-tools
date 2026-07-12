@@ -1036,3 +1036,229 @@ body.dashboard-page .topbar-button:disabled {
     padding-inline: 16px;
   }
 }
+
+/* Canonical dashboard component contract.
+   This stylesheet loads after dashboard-v2.css, so these rules are the real
+   source of truth for repeatable cards, chips, badges, and role controls. */
+body.dashboard-page .kanban-board {
+  grid-template-columns: repeat(5, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+body.dashboard-page .kanban-column {
+  min-width: 250px;
+  border: 1px solid var(--fu-border);
+  border-radius: 16px;
+  background: var(--fu-surface);
+  overflow: hidden;
+}
+
+body.dashboard-page .kanban-column header {
+  min-height: 56px;
+  padding: 0 16px;
+}
+
+body.dashboard-page .kanban-dropzone {
+  gap: 12px;
+  padding: 12px;
+}
+
+body.dashboard-page .task-card {
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 14px;
+}
+
+body.dashboard-page .task-card-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+body.dashboard-page .access-request-status,
+body.dashboard-page .pill,
+body.dashboard-page .task-type,
+body.dashboard-page .task-priority {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 13px;
+  border: 1px solid var(--fu-border);
+  border-radius: 999px;
+  background: var(--fu-surface-muted);
+  color: #4b5563;
+  font-family: var(--fu-font-body);
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.dashboard-page .task-type {
+  flex: 0 0 132px;
+  width: 132px;
+  max-width: 132px;
+  background: #f8fafc;
+  color: #334155;
+}
+
+body.dashboard-page .task-priority,
+body.dashboard-page .pill {
+  flex: 0 0 84px;
+  width: 84px;
+  max-width: 84px;
+}
+
+body.dashboard-page .pill.is-high,
+body.dashboard-page .task-priority.is-high {
+  border-color: #f3d6a5;
+  background: #fff7ed;
+  color: #b45309;
+}
+
+body.dashboard-page .pill.is-urgent,
+body.dashboard-page .task-priority.is-urgent {
+  border-color: #f3b8b4;
+  background: #fff1f1;
+  color: #b42318;
+}
+
+body.dashboard-page .task-card h3 {
+  margin: 0;
+  color: var(--fu-text);
+  font-family: var(--fu-font-display);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.06;
+}
+
+body.dashboard-page .task-card p,
+body.dashboard-page .task-card-meta {
+  color: var(--fu-muted);
+  font-family: var(--fu-font-body);
+  font-size: 14px !important;
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+body.dashboard-page .task-card-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: end;
+  gap: 14px;
+}
+
+body.dashboard-page .task-card-meta span:first-child {
+  min-width: 0;
+}
+
+body.dashboard-page .task-card-meta span:last-child {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+body.dashboard-page .person-role-card {
+  grid-template-columns: 48px minmax(0, 1fr) minmax(220px, 260px);
+  gap: 18px;
+  min-height: 86px;
+  padding: 16px 24px;
+}
+
+body.dashboard-page .person-role-card .person-main strong {
+  color: var(--fu-text);
+  font-family: var(--fu-font-display);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-transform: none;
+}
+
+body.dashboard-page .person-role-card .person-main span,
+body.dashboard-page .person-role-card .person-main small {
+  color: var(--fu-muted);
+  font-family: var(--fu-font-body);
+  font-size: 14px !important;
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+body.dashboard-page .person-role-tools {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  justify-self: end;
+}
+
+body.dashboard-page .person-role-tools > .role-badge,
+body.dashboard-page .person-role-tools > .role-choice,
+body.dashboard-page .person-role-control {
+  width: min(100%, 260px) !important;
+  min-width: 220px !important;
+  max-width: 260px !important;
+  box-sizing: border-box;
+}
+
+body.dashboard-page .person-role-tools > .role-badge,
+body.dashboard-page .person-role-control .dashboard-choice-trigger {
+  min-height: 42px;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 13px;
+  font-family: var(--fu-font-body);
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+body.dashboard-page .person-role-tools > .role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+body.dashboard-page .person-role-control .dashboard-choice-trigger {
+  grid-template-columns: minmax(0, 1fr) 14px;
+  gap: 12px;
+}
+
+body.dashboard-page .person-role-control .dashboard-choice-menu {
+  width: min(100%, 260px) !important;
+  min-width: 220px !important;
+  max-width: 260px !important;
+}
+
+@media (max-width: 900px) {
+  body.dashboard-page .person-role-card {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  body.dashboard-page .person-role-tools {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 620px) {
+  body.dashboard-page .kanban-board {
+    grid-template-columns: repeat(5, minmax(240px, 1fr));
+  }
+
+  body.dashboard-page .person-role-tools > .role-badge,
+  body.dashboard-page .person-role-tools > .role-choice,
+  body.dashboard-page .person-role-control {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
