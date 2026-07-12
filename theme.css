@@ -135,7 +135,6 @@ html[data-theme="dark"] :is(.site-footer a, .site-footer h2, .site-footer h3) {
   color: var(--theme-dark-text) !important;
 }
 
-html[data-theme="dark"] .workspace-mark,
 html[data-theme="dark"] .person-avatar,
 html[data-theme="dark"] .live-avatar {
   background: #26313D !important;
@@ -482,7 +481,8 @@ html[data-theme="dark"] body.dashboard-page .role-choice.is-server-owner .dashbo
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 0 10px 0 12px;
+  /* Align to option labels after their 20px icon and 12px icon gap. */
+  padding: 0 10px 0 46px;
   border-radius: 10px;
   color: #111827;
   font-family: "Roboto Condensed", "Roboto", Arial, sans-serif;
@@ -490,13 +490,19 @@ html[data-theme="dark"] body.dashboard-page .role-choice.is-server-owner .dashbo
   font-weight: 500;
 }
 
-.profile-theme-option::before { content: "Appearance"; }
+.profile-theme-option::before { display: none !important; }
+.profile-theme-label {
+  color: #000000 !important;
+  font: inherit;
+  line-height: 1.2;
+  opacity: 1 !important;
+}
 .profile-theme-option .theme-switch { flex: 0 0 auto; }
 
 /* The profile dropdown is a light surface in light mode. Declare the label
    explicitly so theme inheritance can never wash it out. */
 .profile-dropdown .profile-theme-option,
-.profile-dropdown .profile-theme-option::before {
+.profile-dropdown .profile-theme-label {
   color: #111827 !important;
   opacity: 1 !important;
 }
@@ -506,7 +512,7 @@ html[data-theme="dark"] .profile-theme-option {
 }
 
 html[data-theme="dark"] .profile-dropdown .profile-theme-option,
-html[data-theme="dark"] .profile-dropdown .profile-theme-option::before {
+html[data-theme="dark"] .profile-dropdown .profile-theme-label {
   color: var(--theme-dark-text) !important;
 }
 
@@ -562,6 +568,70 @@ body[data-current-page="faq"] .faq-contact a { color: #0A7DFA; }
 html[data-theme="dark"] body[data-current-page="faq"] .faq-contact h2 { color: var(--theme-dark-text) !important; }
 html[data-theme="dark"] body[data-current-page="faq"] .faq-contact p { color: var(--theme-dark-text-muted) !important; }
 html[data-theme="dark"] body[data-current-page="faq"] .faq-contact a { color: #69AEFF !important; }
+
+/* Preserve the dashboard's time-of-day cue after the generic dark-card layer
+   is applied. The tint stays restrained, while the greeting carries the
+   clearer semantic color. */
+html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-morning {
+  background: linear-gradient(135deg, #111B28 0%, #0F1924 100%) !important;
+  border-color: #29445E !important;
+}
+
+html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-afternoon {
+  background: linear-gradient(135deg, #21180F 0%, #19130D 100%) !important;
+  border-color: #5A4325 !important;
+}
+
+html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-evening {
+  background: linear-gradient(135deg, #1B1628 0%, #14111F 100%) !important;
+  border-color: #40365A !important;
+}
+
+html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-morning .welcome-kicker { color: #69AEFF !important; }
+html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-afternoon .welcome-kicker { color: #F5A524 !important; }
+html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-evening .welcome-kicker { color: #C4B5FD !important; }
+
+/* Presence is semantic information, not muted metadata. */
+html[data-theme="dark"] body.dashboard-page .presence-state.is-online { color: #32D583 !important; }
+html[data-theme="dark"] body.dashboard-page .presence-state.is-offline { color: #FF6B6B !important; }
+
+/* Export preview: let the artwork stand on its own without pale framing. */
+html[data-theme="dark"] body.dashboard-page .export-preview-panel {
+  background: var(--theme-dark-surface) !important;
+  border-color: var(--theme-dark-border-strong) !important;
+  box-shadow: 0 28px 72px rgba(0, 0, 0, .52) !important;
+}
+
+html[data-theme="dark"] body.dashboard-page .export-preview-panel img {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 16px;
+  clip-path: inset(0 round 16px);
+}
+
+/* Studio controls use dark UI surfaces; selected canvas colors themselves are
+   left untouched so a deliberate white swatch is still represented honestly. */
+html[data-theme="dark"][data-studio-shell="on"] .panel .swipe-button-control .quote-switch {
+  background: var(--theme-dark-surface-raised) !important;
+  border-color: var(--theme-dark-border-strong) !important;
+  color: var(--theme-dark-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"][data-studio-shell="on"] .panel .swipe-button-control .quote-switch > span:first-child {
+  color: var(--theme-dark-text) !important;
+}
+
+html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown-option:hover,
+html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown-option:focus-visible {
+  background: rgba(37, 134, 247, .12) !important;
+  color: var(--theme-dark-text) !important;
+}
+
+html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown-option.is-selected {
+  background: var(--theme-dark-accent-soft) !important;
+  color: #FFFFFF !important;
+}
 
 /* Studio-only mappings: the application chrome changes theme; the actual
    export canvas remains white and is never recolored. */

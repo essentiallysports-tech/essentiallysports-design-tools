@@ -86,12 +86,19 @@ body {
   flex: 0 0 34px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
-  background: var(--dash-blue);
-  color: #fff;
+  border: 1px solid #B5D8FD;
+  border-radius: 50%;
+  background: #FFFFFF url("profile-icon-edit.svg") center / 15px 18px no-repeat;
+  color: transparent;
   font-family: var(--font-display);
   font-size: 17px;
   font-weight: 900;
+}
+
+.workspace-mark.has-image {
+  border-color: transparent;
+  background-size: cover;
+  background-position: center;
 }
 
 .sidebar-workspace strong,
@@ -2060,7 +2067,7 @@ body[data-dashboard-view="activity"] .activity-list {
   width: 42px;
   height: 42px;
   flex-basis: 42px;
-  border-radius: 7px;
+  border-radius: 50%;
   font-size: 20px;
 }
 

@@ -4689,6 +4689,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .panel .select-dropdown-menu {
       position: static;
       display: none;
+      flex-direction: column;
+      gap: 4px;
       width: 100%;
       margin-top: 8px;
       max-height: min(292px, 42vh);
@@ -4708,7 +4710,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .panel .select-dropdown.is-open .select-dropdown-menu {
-      display: block;
+      display: flex;
       transform: none;
     }
 
@@ -4726,8 +4728,15 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .panel .select-dropdown-option:hover,
-    html[data-studio-shell="on"] .panel .select-dropdown-option:focus-visible,
+    html[data-studio-shell="on"] .panel .select-dropdown-option:focus-visible {
+      background: rgba(10, 125, 250, .08);
+      color: #0A7DFA;
+      transform: none;
+    }
+
     html[data-studio-shell="on"] .panel .select-dropdown-option.is-selected {
+      background: #E8F2FF;
+      color: #0A7DFA;
       transform: none;
     }
 
@@ -5124,8 +5133,8 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root2">
-<link rel="stylesheet" href="theme.css?v=20260712-darkmode9">
-<script src="theme.js?v=20260712-darkmode9"></script>
+<link rel="stylesheet" href="theme.css?v=20260712-darkmode10">
+<script src="theme.js?v=20260712-darkmode10"></script>
 <script src="site-mobile-chrome.js?v=20260710-mobile-root2"></script>
 </head>
 <body>

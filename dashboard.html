@@ -436,8 +436,8 @@
   <link rel="stylesheet" href="dashboard-v2.css?v=20260711-dashboardroles1">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root2">
   <link rel="stylesheet" href="dashboard-ui-system.css?v=20260711-dashboard-system1">
-  <link rel="stylesheet" href="theme.css?v=20260712-darkmode9">
-  <script src="theme.js?v=20260712-darkmode9"></script>
+  <link rel="stylesheet" href="theme.css?v=20260712-darkmode10">
+  <script src="theme.js?v=20260712-darkmode10"></script>
   <script src="site-mobile-chrome.js?v=20260710-mobile-root2"></script>
 </head>
 <body class="dashboard-page">
@@ -502,7 +502,7 @@
   <div class="dashboard-app">
     <aside class="dashboard-sidebar" aria-label="Dashboard navigation">
       <div class="sidebar-workspace">
-        <span class="workspace-mark">ES</span>
+        <span class="workspace-mark" data-sidebar-avatar aria-hidden="true"></span>
         <span>
           <strong data-sidebar-name>ES Admin</strong>
           <small data-sidebar-role>Design Operations</small>
@@ -1259,6 +1259,11 @@
         el.classList.remove('has-role');
       });
       document.querySelectorAll('[data-profile-initial]').forEach(el => {
+        const avatar = String(dashboardUser.avatar || '').trim();
+        el.classList.toggle('has-image', Boolean(avatar));
+        el.style.backgroundImage = avatar ? `url("${avatar}")` : '';
+      });
+      document.querySelectorAll('[data-sidebar-avatar]').forEach(el => {
         const avatar = String(dashboardUser.avatar || '').trim();
         el.classList.toggle('has-image', Boolean(avatar));
         el.style.backgroundImage = avatar ? `url("${avatar}")` : '';
