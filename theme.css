@@ -141,6 +141,18 @@ html[data-theme="dark"] .live-avatar {
   color: #fff !important;
 }
 
+html[data-theme="dark"] .profile-avatar:not(.has-image) {
+  border-color: #B5D8FD !important;
+  background: #FFFFFF url("profile-icon-edit.svg") center / 15px 18px no-repeat !important;
+  color: transparent !important;
+}
+
+html[data-theme="dark"] .profile-avatar.has-image {
+  border-color: transparent !important;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
 html[data-theme="dark"] body.dashboard-page :is(
   .panel-head,
   .live-list,
@@ -392,12 +404,19 @@ html[data-theme="dark"] .faq-page {
 html[data-theme="dark"] .home-feature-visual,
 html[data-theme="dark"] .workspace-thumbnail,
 html[data-theme="dark"] .feature-visual {
-  background: var(--theme-dark-surface-raised) !important;
+  background: transparent !important;
 }
 
 html[data-theme="dark"] .frame-hero,
 html[data-theme="dark"] .request-hero {
-  background: var(--theme-dark-surface) !important;
+  background: #EAF4FF !important;
+}
+
+html[data-theme="dark"] .frame-banner,
+html[data-theme="dark"] .request-hero img,
+html[data-theme="dark"] .request-hero video {
+  opacity: 1 !important;
+  filter: none !important;
 }
 
 html[data-theme="dark"] .logo-guidelines-card,
@@ -480,7 +499,7 @@ html[data-theme="dark"] body.dashboard-page .role-choice.is-server-owner .dashbo
 .profile-dropdown [data-theme-switcher].profile-theme-option,
 .profile-theme-option {
   width: 100% !important;
-  min-height: 42px !important;
+  min-height: 46px !important;
   box-sizing: border-box !important;
   display: grid !important;
   grid-template-columns: 20px minmax(0, 1fr) auto !important;
@@ -497,6 +516,16 @@ html[data-theme="dark"] body.dashboard-page .role-choice.is-server-owner .dashbo
   font-weight: 500 !important;
   line-height: 1.2 !important;
   text-align: left !important;
+}
+
+.profile-dropdown {
+  width: 260px !important;
+  min-width: 260px !important;
+}
+
+.profile-dropdown .profile-option,
+.profile-dropdown .profile-theme-option {
+  min-height: 46px !important;
 }
 
 .profile-theme-option::before { display: none !important; }
@@ -643,7 +672,7 @@ html[data-theme="dark"] body.dashboard-page .export-preview-panel img {
 /* Studio controls use dark UI surfaces; selected canvas colors themselves are
    left untouched so a deliberate white swatch is still represented honestly. */
 html[data-theme="dark"][data-studio-shell="on"] .panel .swipe-button-control .quote-switch {
-  background: var(--theme-dark-surface-raised) !important;
+  background: transparent !important;
   border-color: var(--theme-dark-border-strong) !important;
   color: var(--theme-dark-text) !important;
   box-shadow: none !important;
@@ -660,8 +689,18 @@ html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown-option:f
 }
 
 html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown-option.is-selected {
-  background: var(--theme-dark-accent-soft) !important;
+  background: rgba(37, 134, 247, .18) !important;
   color: #FFFFFF !important;
+}
+
+html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown-menu {
+  background: var(--theme-dark-surface) !important;
+  border-color: var(--theme-dark-border-strong) !important;
+}
+
+html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown-option {
+  background: transparent !important;
+  color: var(--theme-dark-text) !important;
 }
 
 /* Studio-only mappings: the application chrome changes theme; the actual
@@ -700,8 +739,14 @@ html[data-theme="dark"][data-studio-shell="on"] .panel :is(
   box-shadow: none !important;
 }
 
+html[data-theme="dark"][data-studio-shell="on"] .panel .swipe-button-control,
+html[data-theme="dark"][data-studio-shell="on"] .panel .swipe-button-control .quote-switch {
+  background: var(--theme-dark-surface-raised) !important;
+  color: var(--theme-dark-text) !important;
+}
+
 html[data-theme="dark"][data-studio-shell="on"] .canvas-bottom-actions {
-  background: var(--theme-dark-surface) !important;
+  background: #0E1318 !important;
   border-color: var(--theme-dark-border-strong) !important;
   box-shadow: none !important;
 }

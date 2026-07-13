@@ -5366,12 +5366,20 @@ body.dashboard-page .export-review-card {
 }
 
 body.dashboard-page .export-preview-panel {
-  width: min(760px, calc(100vw - 48px));
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 14px;
+  padding: 16px;
 }
 
 body.dashboard-page .export-preview-panel img {
-  max-height: min(58vh, 520px);
+  max-height: min(58vh, 460px);
   object-fit: contain;
+  background: transparent;
+  border: 0;
+  clip-path: inset(0 round 14px);
 }
 
 body.dashboard-page[data-dashboard-view="overview"] .dashboard-control-row,
