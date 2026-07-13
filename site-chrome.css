@@ -1,0 +1,620 @@
+/*
+ * FrameUp global site chrome
+ *
+ * This file is the single visual contract for the desktop navbar, profile
+ * menu, and shared footer. Page-level styles may define their own content,
+ * but must not redefine the global chrome after this stylesheet.
+ */
+
+@font-face {
+  font-family: "FrameUp Acumin";
+  src: url("fonts/acumin-pro-condensed-bold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 700 900;
+  font-display: swap;
+}
+
+:root {
+  --chrome-accent: #0a7dfa;
+  --chrome-navy: #06111f;
+  --chrome-muted: #6c7a89;
+  --chrome-border: #dce4ed;
+  --chrome-surface: #ffffff;
+  --chrome-soft: #f6f8fb;
+  --chrome-display: "FrameUp Acumin", "Acumin Pro Condensed Local", "Acumin Post", "Roboto Condensed", Arial, sans-serif;
+  --chrome-ui: "Roboto Condensed", "Roboto", Arial, sans-serif;
+  --chrome-motion: cubic-bezier(.16, 1, .3, 1);
+}
+
+@media (min-width: 901px) {
+  .navbar {
+    position: sticky !important;
+    inset: 0 0 auto !important;
+    z-index: 500 !important;
+    width: 100% !important;
+    height: 69px !important;
+    min-height: 69px !important;
+    display: flex !important;
+    flex-flow: row nowrap !important;
+    align-items: center !important;
+    gap: 0 !important;
+    padding: 18px 22px !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--chrome-accent) !important;
+    border-radius: 0 !important;
+    background: var(--chrome-surface) !important;
+    box-shadow: none !important;
+    color: #111111 !important;
+  }
+
+  .navbar-logo {
+    min-width: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    flex: 0 0 auto !important;
+    margin: 0 52px 0 0 !important;
+  }
+
+  .navbar-logo img,
+  .navbar-logo svg {
+    display: block !important;
+    width: auto !important;
+    height: 31px !important;
+    max-width: none !important;
+    object-fit: contain !important;
+  }
+
+  .navbar-menu {
+    position: static !important;
+    min-width: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    flex: 0 1 auto !important;
+    gap: 26px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #111111 !important;
+    font-family: var(--chrome-display) !important;
+    font-size: 18px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  .navbar-menu > a,
+  .navbar-menu > .nav-dropdown > .nav-trigger {
+    min-height: 24px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: inherit !important;
+    box-shadow: none !important;
+    font: inherit !important;
+    line-height: 1 !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+  }
+
+  .navbar-menu > a:hover,
+  .navbar-menu > a:focus-visible,
+  .navbar-menu > .nav-dropdown > .nav-trigger:hover,
+  .navbar-menu > .nav-dropdown > .nav-trigger:focus-visible,
+  .navbar-menu > a[aria-current="page"] {
+    color: var(--chrome-accent) !important;
+    outline: 0 !important;
+  }
+
+  .nav-dropdown {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+
+  .navbar-menu .has-chevron::after {
+    content: "" !important;
+    width: 16px !important;
+    height: 10px !important;
+    flex: 0 0 16px !important;
+    display: inline-block !important;
+    margin: 0 0 0 8px !important;
+    background: url("data:image/svg+xml,%3Csvg width='16' height='10' viewBox='0 0 16 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14.98 1.14 7.98 7.14.98 1.14' stroke='%230A7DFA' stroke-width='3'/%3E%3C/svg%3E") center / contain no-repeat !important;
+    transform: translateY(1px) rotate(0) !important;
+    transition: transform .24s var(--chrome-motion) !important;
+  }
+
+  .nav-dropdown.is-open > .has-chevron::after {
+    transform: translateY(1px) rotate(180deg) !important;
+  }
+
+  .nav-dropdown-menu {
+    position: absolute !important;
+    inset: calc(100% + 12px) auto auto 0 !important;
+    z-index: 520 !important;
+    width: max-content !important;
+    min-width: 190px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    padding: 10px !important;
+    overflow: visible !important;
+    border: 1px solid var(--chrome-border) !important;
+    border-radius: 12px !important;
+    background: var(--chrome-surface) !important;
+    box-shadow: 0 18px 42px rgba(3, 49, 98, .12) !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transform: translateY(8px) scale(.98) !important;
+    transform-origin: top left !important;
+    transition: opacity .24s var(--chrome-motion), transform .24s var(--chrome-motion), visibility .24s var(--chrome-motion) !important;
+  }
+
+  .nav-dropdown.is-open > .nav-dropdown-menu {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    transform: translateY(0) scale(1) !important;
+  }
+
+  .nav-dropdown-menu a,
+  .nav-dropdown-menu span {
+    position: relative !important;
+    min-height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 12px !important;
+    border-radius: 8px !important;
+    color: var(--chrome-navy) !important;
+    font-family: var(--chrome-ui) !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    line-height: 1.1 !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+    transition: color .2s var(--chrome-motion), background-color .2s var(--chrome-motion), transform .2s var(--chrome-motion) !important;
+  }
+
+  .nav-dropdown-menu a:hover,
+  .nav-dropdown-menu a:focus-visible {
+    background: #eaf4ff !important;
+    color: var(--chrome-accent) !important;
+    outline: 0 !important;
+    transform: translateX(3px) !important;
+  }
+
+  .navbar-right {
+    min-width: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    flex: 0 1 auto !important;
+    gap: 12px !important;
+    margin: 0 0 0 auto !important;
+    overflow: visible !important;
+  }
+
+  /* Profile always precedes the social icons, regardless of legacy markup order. */
+  .navbar-right > .profile-menu {
+    order: -1 !important;
+  }
+
+  .navbar-icon-btn {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 28px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #111111 !important;
+    text-decoration: none !important;
+    transition: opacity .18s ease !important;
+  }
+
+  .navbar-icon-btn:hover,
+  .navbar-icon-btn:focus-visible {
+    opacity: .68 !important;
+    outline: 0 !important;
+  }
+
+  .navbar-icon-btn img {
+    display: block !important;
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .profile-menu {
+    position: relative !important;
+    inset: auto !important;
+    z-index: 530 !important;
+    width: max-content !important;
+    min-width: 178px !important;
+    max-width: 300px !important;
+    height: 58px !important;
+    flex: 0 1 auto !important;
+    overflow: visible !important;
+    border: 1px solid transparent !important;
+    border-radius: 20px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .profile-menu.is-open {
+    border-color: var(--chrome-border) !important;
+    background: #fafafc !important;
+  }
+
+  .profile-trigger {
+    width: 100% !important;
+    height: 58px !important;
+    min-height: 58px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    padding: 0 18px 0 14px !important;
+    border: 0 !important;
+    border-radius: inherit !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #000000 !important;
+    cursor: pointer !important;
+  }
+
+  .profile-avatar {
+    width: 30px !important;
+    height: 30px !important;
+    flex: 0 0 30px !important;
+    display: grid !important;
+    place-items: center !important;
+    overflow: hidden !important;
+    border: 1px solid #b5d8fd !important;
+    border-radius: 999px !important;
+    background-color: #ffffff !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    color: transparent !important;
+  }
+
+  .profile-avatar:not(.has-image) {
+    background-image: url("profile-icon-edit.svg") !important;
+    background-size: 15px 18px !important;
+  }
+
+  .profile-avatar.has-image {
+    border-color: transparent !important;
+    background-size: cover !important;
+  }
+
+  .profile-name {
+    min-width: 0 !important;
+    display: block !important;
+    flex: 1 1 auto !important;
+    color: #000000 !important;
+    font-family: var(--chrome-display) !important;
+    font-size: 18px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+  }
+
+  .profile-name::after {
+    display: block;
+    margin-top: 3px !important;
+    color: #7b8490 !important;
+    font-family: var(--chrome-ui) !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    line-height: 1 !important;
+  }
+
+  .profile-chevron {
+    width: 14px !important;
+    height: 8px !important;
+    flex: 0 0 14px !important;
+    margin-left: auto !important;
+    color: var(--chrome-accent) !important;
+    transition: transform .24s var(--chrome-motion) !important;
+  }
+
+  .profile-menu.is-open .profile-chevron {
+    transform: rotate(180deg) !important;
+  }
+
+  .profile-dropdown {
+    position: absolute !important;
+    inset: calc(100% + 8px) 0 auto auto !important;
+    z-index: 540 !important;
+    width: 260px !important;
+    min-width: 260px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    margin: 0 !important;
+    padding: 10px !important;
+    overflow: visible !important;
+    border: 1px solid var(--chrome-border) !important;
+    border-radius: 16px !important;
+    background: #fafafc !important;
+    box-shadow: 0 18px 38px rgba(3, 49, 98, .12) !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transform: translateY(8px) scale(.98) !important;
+    transform-origin: top right !important;
+    transition: opacity .24s var(--chrome-motion), transform .24s var(--chrome-motion), visibility .24s var(--chrome-motion) !important;
+  }
+
+  .profile-menu.is-open > .profile-dropdown {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    transform: translateY(0) scale(1) !important;
+  }
+
+  .profile-dropdown .profile-option,
+  .profile-dropdown .profile-theme-option {
+    width: 100% !important;
+    min-height: 46px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    padding: 0 12px !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #111827 !important;
+    font-family: var(--chrome-ui) !important;
+    font-size: 15px !important;
+    font-weight: 400 !important;
+    line-height: 1.2 !important;
+    text-align: left !important;
+    text-decoration: none !important;
+  }
+
+  .profile-dropdown .profile-option:hover,
+  .profile-dropdown .profile-option:focus-visible {
+    background: #ffffff !important;
+    outline: 0 !important;
+  }
+
+  .profile-dropdown .profile-option svg {
+    width: 22px !important;
+    height: 22px !important;
+    flex: 0 0 22px !important;
+  }
+
+  .profile-dropdown .profile-option[href*="logout"] {
+    margin-top: 4px !important;
+    border-top: 1px solid var(--chrome-border) !important;
+    border-radius: 0 0 10px 10px !important;
+    background: #fff1f1 !important;
+    color: #8e2020 !important;
+  }
+}
+
+/* Shared footer contract. Dashboard intentionally has no footer element. */
+.site-footer {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  color: #111111 !important;
+  font-family: var(--chrome-ui) !important;
+}
+
+.site-footer .footer-hero {
+  padding: 74px 24px 28px !important;
+  background: var(--chrome-accent) !important;
+  color: #ffffff !important;
+  text-align: center !important;
+}
+
+.site-footer .footer-logo-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.site-footer .footer-logo-img {
+  display: block !important;
+  width: auto !important;
+  max-width: min(100%, 820px) !important;
+  height: clamp(30px, 6vw, 48px) !important;
+  margin: 0 auto !important;
+}
+
+.site-footer .footer-blurb {
+  width: min(980px, 100%) !important;
+  margin: 18px auto 22px !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.45 !important;
+}
+
+.site-footer .footer-socials {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  margin: 0 0 14px !important;
+}
+
+.site-footer .footer-socials a {
+  display: inline-flex !important;
+}
+
+.site-footer .footer-socials img {
+  display: block !important;
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.site-footer .footer-copy {
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
+.site-footer .footer-links {
+  width: min(1200px, calc(100% - 48px)) !important;
+  display: grid !important;
+  grid-template-columns: 1.1fr 1.1fr 1.1fr 1.4fr !important;
+  gap: 44px !important;
+  margin: 0 auto !important;
+  padding: 34px 0 44px !important;
+}
+
+.site-footer .footer-col {
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  color: #111111 !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.3 !important;
+}
+
+.site-footer .footer-col > span {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+}
+
+.site-footer .footer-col a,
+.site-footer .footer-bottom a {
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
+.site-footer .footer-col a:hover,
+.site-footer .footer-col a:focus-visible,
+.site-footer .footer-bottom a:hover,
+.site-footer .footer-bottom a:focus-visible {
+  color: var(--chrome-accent) !important;
+  outline: 0 !important;
+}
+
+.site-footer .footer-col.sports {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  column-gap: 24px !important;
+}
+
+.site-footer .footer-bottom {
+  width: min(1200px, calc(100% - 48px)) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-wrap: wrap !important;
+  gap: 14px 24px !important;
+  margin: 0 auto !important;
+  padding: 22px 0 30px !important;
+  border-top: 1px solid var(--chrome-border) !important;
+  color: #111111 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  text-align: center !important;
+}
+
+html[data-theme="dark"] .site-footer {
+  background: #0e1318 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .site-footer .footer-links,
+html[data-theme="dark"] .site-footer .footer-col,
+html[data-theme="dark"] .site-footer .footer-bottom {
+  color: #ffffff !important;
+}
+
+@media (min-width: 901px) and (max-width: 1260px) {
+  .navbar {
+    padding-inline: 18px !important;
+  }
+
+  .navbar-logo {
+    margin-right: 30px !important;
+  }
+
+  .navbar-menu {
+    gap: 19px !important;
+    font-size: 16px !important;
+  }
+
+  .navbar-right {
+    gap: 8px !important;
+  }
+
+  .navbar-icon-btn,
+  .navbar-icon-btn img {
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  .profile-menu {
+    min-width: 156px !important;
+  }
+
+  .profile-trigger {
+    padding-inline: 10px 12px !important;
+  }
+
+  .profile-name {
+    font-size: 16px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .site-footer .footer-hero {
+    padding: 50px 18px 24px !important;
+  }
+
+  .site-footer .footer-logo-img {
+    max-width: min(100%, 320px) !important;
+    height: auto !important;
+    max-height: 38px !important;
+  }
+
+  .site-footer .footer-links {
+    width: calc(100% - 36px) !important;
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+    padding: 28px 0 34px !important;
+  }
+
+  .site-footer .footer-bottom {
+    width: calc(100% - 36px) !important;
+    justify-content: flex-start !important;
+    gap: 14px 20px !important;
+    padding: 18px 0 24px !important;
+    text-align: left !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-dropdown-menu,
+  .profile-dropdown,
+  .profile-chevron,
+  .navbar-menu .has-chevron::after {
+    transition: none !important;
+  }
+}
