@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Condensed:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
   <script src="es-auth-config.js?v=20260714-authcallback1"></script>
-  <script src="es-auth.js?v=20260714-authcallback1"></script>
+  <script src="es-auth.js?v=20260714-authcallback2"></script>
 <style>
   @font-face {
     font-family: 'Acumin Pro Condensed Local';
@@ -1280,6 +1280,8 @@
       setMode(requestedMode);
       if (params.get('confirmation') === 'failed') {
         setError('That link has already been used or has expired. Try logging in first—your account may already be confirmed.');
+      } else if (params.get('confirmation') === 'success') {
+        setError('Email confirmed. Log in with your password to continue.', 'success');
       }
       return;
     }

@@ -544,22 +544,42 @@
 
     const code = currentUrl.searchParams.get('code');
     const tokenHash = currentUrl.searchParams.get('token_hash');
-    const requestedCallbackType = currentUrl.searchParams.get('type') || 'signup';
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    const requestedCallbackType = currentUrl.searchParams.get('type') || hashParams.get('type') || 'signup';
     const callbackType = AUTH_CALLBACK_TYPES.has(requestedCallbackType) ? requestedCallbackType : 'signup';
+    let didProcessCredential = false;
 
     if (code) {
       const { error } = await client.auth.exchangeCodeForSession(code);
       if (error) throw friendlyAuthError(error, 'Unable to confirm this email.');
+      didProcessCredential = true;
     } else if (tokenHash) {
       const { error } = await client.auth.verifyOtp({
         token_hash: tokenHash,
         type: callbackType,
       });
       if (error) throw friendlyAuthError(error, 'Unable to confirm this email.');
+      didProcessCredential = true;
+    } else if (accessToken && refreshToken) {
+      const { error } = await client.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (error) throw friendlyAuthError(error, 'Unable to start your confirmed session.');
+      didProcessCredential = true;
     }
 
     const session = await getSession();
     if (!session?.token) {
+      if (didProcessCredential) {
+        return {
+          token: '',
+          user: null,
+          callbackType,
+          requiresLogin: true,
+        };
+      }
       throw new Error('This confirmation link has already been used or has expired. Your account may already be confirmed—return to login and try signing in.');
     }
     rememberKnownEmail(session.user.email);

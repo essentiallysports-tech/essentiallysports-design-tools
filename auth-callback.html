@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="auth-state.css?v=20260714-authstate1">
   <script src="es-auth-config.js?v=20260714-authcallback1"></script>
-  <script src="es-auth.js?v=20260714-authcallback1"></script>
+  <script src="es-auth.js?v=20260714-authcallback2"></script>
 </head>
 <body class="auth-state-page">
   <main class="auth-state-card" aria-live="polite">
@@ -53,12 +53,26 @@
       const redirectTarget = getRedirectTarget();
       continueLink.href = redirectTarget;
 
-      function showSuccess() {
+      function successLoginUrl() {
+        const loginUrl = new URL('login.html', window.location.origin);
+        loginUrl.searchParams.set('mode', 'login');
+        loginUrl.searchParams.set('confirmation', 'success');
+        if (redirectTarget !== 'index.html') loginUrl.searchParams.set('redirect', redirectTarget);
+        return `${loginUrl.pathname.replace(/^\//, '')}${loginUrl.search}`;
+      }
+
+      function showSuccess({ requiresLogin = false } = {}) {
         document.title = 'Account confirmed | Frameup';
         icon.innerHTML = successIcon;
         icon.classList.add('is-success');
         title.textContent = 'Email confirmed';
-        message.textContent = 'Your Frameup account is ready. Taking you to the workspace now.';
+        message.textContent = requiresLogin
+          ? 'Your Frameup account is ready. Log in with your password to continue.'
+          : 'Your Frameup account is ready. Taking you to the workspace now.';
+        if (requiresLogin) {
+          continueLink.textContent = 'Log in to Frameup';
+          continueLink.href = successLoginUrl();
+        }
         loginLink.hidden = true;
         actions.hidden = false;
       }
@@ -80,9 +94,10 @@
 
       async function boot() {
         try {
-          await window.ESAuth.completeAuthCallback();
+          const result = await window.ESAuth.completeAuthCallback();
           window.history.replaceState({}, document.title, window.location.pathname);
-          showSuccess();
+          showSuccess({ requiresLogin: Boolean(result?.requiresLogin) });
+          if (result?.requiresLogin) return;
           window.setTimeout(() => window.location.replace(redirectTarget), 1400);
         } catch (error) {
           window.history.replaceState({}, document.title, window.location.pathname);

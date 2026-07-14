@@ -63,6 +63,7 @@ function createEnvironment({
     resendOptions: null,
     resetPasswordRedirectTo: null,
     signUpOptions: null,
+    setSession: null,
     verifyOtp: null,
   };
   const documentElement = {
@@ -106,6 +107,10 @@ function createEnvironment({
       },
       async verifyOtp(payload) {
         authCalls.verifyOtp = payload;
+        return { data: { session }, error: null };
+      },
+      async setSession(payload) {
+        authCalls.setSession = payload;
         return { data: { session }, error: null };
       },
       async signOut() {
@@ -261,6 +266,8 @@ assert.match(authCallbackHtmlSource, /ESAuth\.completeAuthCallback/);
 assert.match(authCallbackHtmlSource, /Email confirmed/);
 assert.match(authCallbackHtmlSource, /target\.origin\s*!==\s*window\.location\.origin/);
 assert.match(authCallbackHtmlSource, /window\.location\.replace\(redirectTarget\)/);
+assert.match(authCallbackHtmlSource, /result\?\.requiresLogin/);
+assert.match(loginHtmlSource, /confirmation'\)\s*===\s*'success'/);
 assert.match(netlifyConfigSource, /for\s*=\s*"\/\*\.woff2"[\s\S]*?Cache-Control\s*=\s*"public, max-age=31536000, immutable"/);
 
 {
@@ -352,6 +359,34 @@ assert.match(netlifyConfigSource, /for\s*=\s*"\/\*\.woff2"[\s\S]*?Cache-Control\
   await window.ESAuth.completeAuthCallback();
   assert.equal(authCalls.verifyOtp.token_hash, 'confirmation-token');
   assert.equal(authCalls.verifyOtp.type, 'signup');
+}
+
+{
+  const session = {
+    access_token: 'confirmed-token',
+    user: {
+      email: 'designer@essentiallysports.com',
+      user_metadata: { name: 'ES Designer', role: 'Designer' },
+    },
+  };
+  const { authCalls, window } = createEnvironment({
+    session,
+    locationHref: 'https://frameup.essentiallysports.com/auth-callback.html#access_token=confirmed-token&refresh_token=refresh-token&type=signup',
+  });
+  const confirmedSession = await window.ESAuth.completeAuthCallback();
+  assert.equal(authCalls.setSession.access_token, 'confirmed-token');
+  assert.equal(authCalls.setSession.refresh_token, 'refresh-token');
+  assert.equal(confirmedSession.user.email, 'designer@essentiallysports.com');
+}
+
+{
+  const { window } = createEnvironment({
+    session: null,
+    locationHref: 'https://frameup.essentiallysports.com/auth-callback.html?code=confirmation-code',
+  });
+  const confirmationResult = await window.ESAuth.completeAuthCallback();
+  assert.equal(confirmationResult.requiresLogin, true);
+  assert.equal(confirmationResult.callbackType, 'signup');
 }
 
 {
