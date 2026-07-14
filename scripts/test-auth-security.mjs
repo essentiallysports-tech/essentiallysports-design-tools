@@ -225,6 +225,20 @@ function createEnvironment({
 }
 
 {
+  const { window } = createEnvironment({
+    signUpError: { message: 'Email address not authorized' },
+  });
+  await assert.rejects(
+    window.ESAuth.createAccount({
+      name: '',
+      email: 'designer@essentiallysports.com',
+      password: 'password123',
+    }),
+    /contact suhail\.quraishi@essentiallysports\.com/i,
+  );
+}
+
+{
   const { documentElement, location, window } = createEnvironment({ session: null });
   assert.equal(documentElement.style.visibility, undefined);
   await window.ESAuth.requireAuth('dashboard.html');

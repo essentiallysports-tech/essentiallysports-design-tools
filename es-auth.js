@@ -261,6 +261,12 @@
       return new Error('Too many attempts. Please wait a moment and try again.');
     }
     if (
+      normalized.includes('email address not authorized')
+      || normalized.includes('email_address_not_authorized')
+    ) {
+      return new Error('Frameup cannot send confirmation emails to this address yet. Please contact suhail.quraishi@essentiallysports.com.');
+    }
+    if (
       normalized.includes('otp expired')
       || normalized.includes('token has expired')
       || normalized.includes('invalid token')

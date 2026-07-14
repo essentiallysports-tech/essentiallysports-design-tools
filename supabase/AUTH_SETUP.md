@@ -83,6 +83,31 @@ In **Authentication -> Providers -> Email**:
 - The confirmation email template should use Supabase's confirmation link
   (`{{ .ConfirmationURL }}`), not a visible OTP/code.
 
+## Configure production SMTP
+
+Supabase's built-in mailer is for development only. Without custom SMTP it:
+
+- refuses to send confirmation and password-recovery emails to addresses that
+  are not members of the Supabase organization;
+- is limited to approximately two messages per hour; and
+- provides no production delivery guarantee.
+
+Before opening signup to the wider EssentiallySports team, configure an SMTP
+provider in **Authentication -> Emails -> SMTP Settings**. Supabase supports
+providers such as Resend, AWS SES, Postmark, SendGrid, Brevo, and standard
+Google Workspace SMTP credentials. Use a dedicated sender such as
+`no-reply@auth.essentiallysports.com` and configure SPF, DKIM, and DMARC for
+reliable delivery.
+
+After saving SMTP credentials, verify all of these with a real ES mailbox:
+
+1. Create an account from the production login page.
+2. Receive the confirmation email.
+3. Open its confirmation link exactly once.
+4. Confirm that `auth-callback.html` shows success and enters Frameup.
+5. Request a password reset and confirm that its link opens
+   `reset-password.html`.
+
 ## Current login behavior
 
 - Email/password authentication is enabled.
