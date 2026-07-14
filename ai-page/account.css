@@ -750,6 +750,179 @@ textarea {
   font-family: "Roboto", Arial, sans-serif;
 }
 
+.danger-zone {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 28px;
+  border-color: #F0D6D8;
+  box-shadow: 0 18px 42px rgba(96, 20, 27, .05);
+}
+
+.danger-zone-kicker,
+.account-dialog-kicker {
+  margin-bottom: 7px;
+  color: #A62932;
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.danger-zone h2,
+.account-dialog h2 {
+  margin: 0;
+  color: var(--es-navy);
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.danger-zone p,
+.account-dialog p {
+  max-width: 760px;
+  margin: 10px 0 0;
+  color: #68758A;
+  font-family: "Roboto", Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.danger-btn {
+  min-height: 48px;
+  border: 1px solid #C93943;
+  border-radius: var(--button-radius);
+  background: #FFFFFF;
+  color: #A62932;
+  padding: 0 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: color .2s ease, background-color .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.danger-btn:hover,
+.danger-btn:focus-visible {
+  border-color: #A62932;
+  background: #A62932;
+  color: #FFFFFF;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.danger-btn:disabled {
+  border-color: #E2E5EA;
+  background: #F1F2F4;
+  color: #9AA1AD;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.account-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-width: none;
+  border: 0;
+  border-radius: 18px;
+  padding: 0;
+  color: var(--es-navy);
+  background: transparent;
+  box-shadow: 0 28px 80px rgba(17, 24, 39, .22);
+}
+
+.account-dialog::backdrop {
+  background: rgba(17, 24, 39, .54);
+  backdrop-filter: blur(4px);
+}
+
+.account-dialog-card {
+  position: relative;
+  border: 1px solid #E4E7EC;
+  border-radius: 18px;
+  background: #FFFFFF;
+  padding: 32px;
+}
+
+.account-dialog-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #E1E5EA;
+  border-radius: 999px;
+  background: #FFFFFF;
+  color: #111827;
+  display: grid;
+  place-items: center;
+  font-family: Arial, sans-serif;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.account-dialog-close:hover,
+.account-dialog-close:focus-visible {
+  background: #F3F4F6;
+  outline: none;
+}
+
+.delete-account-identity {
+  margin: 20px 0;
+  border-radius: 10px;
+  background: #F5F6F8;
+  padding: 13px 15px;
+  color: #566174;
+  font-family: "Roboto", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.delete-account-identity strong {
+  color: #111827;
+  font-weight: 500;
+}
+
+.delete-confirm-field {
+  margin-top: 0;
+}
+
+.delete-confirm-field > span {
+  color: var(--es-navy);
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.account-dialog-status {
+  min-height: 20px;
+  margin-top: 10px;
+  color: #A62932;
+  font-family: "Roboto", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.account-dialog-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.account-dialog-actions .secondary-btn,
+.account-dialog-actions .danger-btn {
+  min-height: 46px;
+}
+
 .settings-list {
   display: grid;
   gap: 14px;
@@ -1097,6 +1270,23 @@ textarea {
     padding: 16px;
     min-width: 0;
     max-width: 100%;
+  }
+  .danger-zone {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .danger-zone .danger-btn {
+    width: 100%;
+  }
+  .account-dialog-card {
+    padding: 28px 20px 20px;
+  }
+  .account-dialog-actions {
+    flex-direction: column-reverse;
+  }
+  .account-dialog-actions .secondary-btn,
+  .account-dialog-actions .danger-btn {
+    width: 100%;
   }
   .profile-photo {
     width: 128px;

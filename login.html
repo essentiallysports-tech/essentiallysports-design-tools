@@ -1276,16 +1276,20 @@
     }
     const params = new URLSearchParams(window.location.search);
     const requestedMode = params.get('mode');
-    if (requestedMode === 'create' || requestedMode === 'login') {
-      setMode(requestedMode);
-      if (params.get('confirmation') === 'failed') {
-        setError('That link has already been used or has expired. Try logging in first—your account may already be confirmed.');
-      } else if (params.get('confirmation') === 'success') {
-        setError('Email confirmed. Log in with your password to continue.', 'success');
-      }
-      return;
+    const accountDeleted = params.get('account') === 'deleted';
+    setMode(
+      requestedMode === 'create' || requestedMode === 'login'
+        ? requestedMode
+        : accountDeleted ? 'create' : 'login'
+    );
+
+    if (params.get('confirmation') === 'failed') {
+      setError('That link has already been used or has expired. Try logging in first—your account may already be confirmed.');
+    } else if (params.get('confirmation') === 'success') {
+      setError('Email confirmed. Log in with your password to continue.', 'success');
+    } else if (accountDeleted) {
+      setError('Your account was deleted. You can create a new account anytime with an approved ES email.', 'success');
     }
-    setMode('login');
   }
 
   bootLoginPage();

@@ -10,8 +10,11 @@ const dashboardSource = readFileSync(new URL('../dashboard-data.js', import.meta
 const dashboardHtmlSource = readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
 const loginHtmlSource = readFileSync(new URL('../login.html', import.meta.url), 'utf8');
 const authCallbackHtmlSource = readFileSync(new URL('../auth-callback.html', import.meta.url), 'utf8');
+const resetPasswordHtmlSource = readFileSync(new URL('../reset-password.html', import.meta.url), 'utf8');
+const profileHtmlSource = readFileSync(new URL('../ai-page/profile.html', import.meta.url), 'utf8');
 const netlifyConfigSource = readFileSync(new URL('../netlify.toml', import.meta.url), 'utf8');
 const supabaseSignupHookMigration = readFileSync(new URL('../supabase/migrations/20260706162500_restrict_signup_to_es_domain.sql', import.meta.url), 'utf8');
+const deleteOwnAccountMigration = readFileSync(new URL('../supabase/migrations/20260714173000_delete_own_frameup_account.sql', import.meta.url), 'utf8');
 
 function storage() {
   const values = new Map();
@@ -65,6 +68,7 @@ function createEnvironment({
     signUpOptions: null,
     setSession: null,
     verifyOtp: null,
+    rpc: null,
   };
   const documentElement = {
     style: {},
@@ -84,6 +88,10 @@ function createEnvironment({
     },
   };
   const client = {
+    async rpc(name, payload) {
+      authCalls.rpc = { name, payload: payload || null };
+      return { data: true, error: null };
+    },
     auth: {
       async getSession() {
         return { data: { session } };
@@ -268,6 +276,18 @@ assert.match(authCallbackHtmlSource, /target\.origin\s*!==\s*window\.location\.o
 assert.match(authCallbackHtmlSource, /window\.location\.replace\(redirectTarget\)/);
 assert.match(authCallbackHtmlSource, /result\?\.requiresLogin/);
 assert.match(loginHtmlSource, /confirmation'\)\s*===\s*'success'/);
+assert.match(resetPasswordHtmlSource, /ESAuth\?\.completeAuthCallback/);
+assert.match(resetPasswordHtmlSource, /Request a new password reset link from the FrameUp login page\./);
+assert.match(resetPasswordHtmlSource, /normalizedMessage\.includes\('confirmation link'\)/);
+assert.match(profileHtmlSource, /id="open-delete-account"/);
+assert.match(profileHtmlSource, /id="delete-account-confirmation"/);
+assert.match(profileHtmlSource, /ESAuth\.deleteAccount/);
+assert.match(loginHtmlSource, /account'\)\s*===\s*'deleted'/);
+assert.match(deleteOwnAccountMigration, /security definer/i);
+assert.match(deleteOwnAccountMigration, /requester_id uuid := auth\.uid\(\)/i);
+assert.match(deleteOwnAccountMigration, /delete from auth\.users[\s\S]*?where id = requester_id/i);
+assert.match(deleteOwnAccountMigration, /grant execute on function public\.delete_own_frameup_account\(\) to authenticated/i);
+assert.doesNotMatch(deleteOwnAccountMigration, /grant execute[\s\S]*?\bto anon\b/i);
 assert.match(netlifyConfigSource, /for\s*=\s*"\/\*\.woff2"[\s\S]*?Cache-Control\s*=\s*"public, max-age=31536000, immutable"/);
 
 {
@@ -396,6 +416,32 @@ assert.match(netlifyConfigSource, /for\s*=\s*"\/\*\.woff2"[\s\S]*?Cache-Control\
     redirectTo: 'https://evil.example/reset-password.html',
   });
   assert.equal(authCalls.resetPasswordRedirectTo, 'https://frameup.essentiallysports.com/reset-password.html');
+}
+
+{
+  const session = {
+    access_token: 'delete-account-token',
+    user: {
+      email: 'designer@essentiallysports.com',
+      user_metadata: { name: 'ES Designer', role: 'Designer' },
+    },
+  };
+  const { authCalls, localStorage, sessionStorage, window } = createEnvironment({ session });
+  localStorage.setItem('es.ai.profile', JSON.stringify({ email: session.user.email, name: 'ES Designer' }));
+  localStorage.setItem('es.authKnownEmails.v1', JSON.stringify([session.user.email, 'other@essentiallysports.com']));
+  sessionStorage.setItem('es.designerAuth.v1', JSON.stringify({ token: session.access_token }));
+
+  await assert.rejects(
+    window.ESAuth.deleteAccount({ confirmationEmail: 'other@essentiallysports.com' }),
+    /signed-in ES email exactly/i,
+  );
+  assert.equal(authCalls.rpc, null, 'mismatched confirmation must not call the deletion RPC');
+
+  assert.equal(await window.ESAuth.deleteAccount({ confirmationEmail: session.user.email }), true);
+  assert.equal(authCalls.rpc.name, 'delete_own_frameup_account');
+  assert.equal(localStorage.getItem('es.ai.profile'), null);
+  assert.deepEqual(JSON.parse(localStorage.getItem('es.authKnownEmails.v1')), ['other@essentiallysports.com']);
+  assert.equal(sessionStorage.getItem('es.designerAuth.v1'), null);
 }
 
 {

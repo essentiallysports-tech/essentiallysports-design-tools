@@ -687,6 +687,49 @@
     }
   }
 
+  async function deleteAccount({ confirmationEmail } = {}) {
+    if (!await ensureSupabaseReady()) throw authUnavailableError();
+
+    const session = await getSession();
+    const accountEmail = normalizeEmail(session?.user?.email);
+    const confirmedEmail = normalizeEmail(confirmationEmail);
+    if (!session?.token || !accountEmail) {
+      throw new Error('Please log in again before deleting your account.');
+    }
+    if (confirmedEmail !== accountEmail) {
+      throw new Error('Enter your signed-in ES email exactly to confirm deletion.');
+    }
+
+    const client = getSupabaseClient();
+    const { data, error } = await client.rpc('delete_own_frameup_account');
+    if (error) {
+      const message = String(error.message || '').toLowerCase();
+      if (message.includes('could not find the function') || message.includes('schema cache')) {
+        throw new Error('Account deletion is being configured. Please try again shortly.');
+      }
+      throw friendlyAuthError(error, 'Unable to delete your account right now.');
+    }
+    if (data !== true) throw new Error('Unable to confirm that your account was deleted.');
+
+    try {
+      window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+      window.localStorage.removeItem(PROFILE_STORAGE_KEY);
+      const remainingKnownEmails = getKnownEmails().filter(email => email !== accountEmail);
+      writeJson(KNOWN_EMAILS_KEY, remainingKnownEmails);
+    } catch (storageError) {
+      // The server-side account deletion has already succeeded. Storage cleanup
+      // is best-effort for browsers that block local storage.
+    }
+
+    try {
+      await client.auth.signOut({ scope: 'local' });
+    } catch (signOutError) {
+      // Deleting auth.users invalidates the session server-side even when the
+      // local SDK cannot complete its normal sign-out request.
+    }
+    return true;
+  }
+
   function loginUrl(returnTo) {
     const loginPath = window.location.pathname.includes('/ai-page/') ? '../login.html' : 'login.html';
     return `${loginPath}?redirect=${encodeURIComponent(returnTo || 'index.html')}`;
@@ -718,6 +761,7 @@
     authCallbackUrl,
     completeAuthCallback,
     createAccount,
+    deleteAccount,
     fetchWithAuth,
     getAccessRequests,
     getKnownEmails,
