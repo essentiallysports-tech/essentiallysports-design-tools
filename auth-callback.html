@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Confirm your Frameup account.">
+  <title>Confirming your account | Frameup</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="es-auth-config.js?v=20260714-authcallback1"></script>
+  <script src="es-auth.js?v=20260714-authcallback1"></script>
+  <style>
+    @font-face {
+      font-family: "Acumin Pro Condensed Local";
+      src: url("fonts/acumin-pro-condensed-bold.otf") format("opentype");
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+    }
+    :root {
+      color-scheme: light;
+      --page: #f6fbff;
+      --surface: #ffffff;
+      --text: #06111f;
+      --muted: #64748b;
+      --accent: #0a7dfa;
+      --border: #e2e8f0;
+      --danger: #b42318;
+      --font-ui: "Roboto Condensed", Arial, sans-serif;
+      --font-title: "Acumin Pro Condensed Local", "Arial Narrow", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: var(--page);
+      color: var(--text);
+      font-family: var(--font-ui);
+    }
+    .callback-card {
+      width: min(100%, 500px);
+      min-height: 420px;
+      display: grid;
+      align-content: center;
+      justify-items: start;
+      padding: clamp(30px, 6vw, 52px);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: var(--surface);
+      box-shadow: 0 22px 60px rgba(17, 24, 39, .08);
+    }
+    .brand {
+      width: min(100%, 250px);
+      height: auto;
+      margin-bottom: 34px;
+    }
+    .state-icon {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 22px;
+      border-radius: 50%;
+      background: #eef6ff;
+      color: var(--accent);
+    }
+    .state-icon svg { width: 23px; height: 23px; }
+    .state-icon.is-error {
+      background: #fff1f0;
+      color: var(--danger);
+    }
+    .spinner {
+      width: 22px;
+      height: 22px;
+      border: 2px solid #cfe6ff;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h1 {
+      margin: 0;
+      font-family: var(--font-title);
+      font-size: clamp(38px, 8vw, 54px);
+      font-weight: 700;
+      letter-spacing: -.035em;
+      line-height: .96;
+    }
+    p {
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+      font-weight: 400;
+      line-height: 1.5;
+    }
+    .actions {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+    }
+    .button {
+      min-height: 48px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 22px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: #fff;
+      color: var(--text);
+      font: 600 16px/1 var(--font-ui);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .button.is-primary {
+      border-color: #111827;
+      background: #111827;
+      color: #fff;
+    }
+    [hidden] { display: none !important; }
+    @media (prefers-reduced-motion: reduce) {
+      .spinner { animation-duration: 1.6s; }
+    }
+  </style>
+</head>
+<body>
+  <main class="callback-card" aria-live="polite">
+    <img class="brand" src="brand-logo-blue.svg" alt="EssentiallySports">
+    <div class="state-icon" id="callback-icon" aria-hidden="true"><span class="spinner"></span></div>
+    <h1 id="callback-title">Confirming your account</h1>
+    <p id="callback-message">One moment while Frameup verifies your secure link.</p>
+    <div class="actions" id="callback-actions" hidden>
+      <a class="button is-primary" id="continue-link" href="index.html">Continue to Frameup</a>
+      <a class="button" id="login-link" href="login.html">Return to login</a>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      const icon = document.getElementById('callback-icon');
+      const title = document.getElementById('callback-title');
+      const message = document.getElementById('callback-message');
+      const actions = document.getElementById('callback-actions');
+      const continueLink = document.getElementById('continue-link');
+      const loginLink = document.getElementById('login-link');
+      const successIcon = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12.5 4.2 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const errorIcon = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8v5m0 3.5v.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+      function getRedirectTarget() {
+        const fallback = 'index.html';
+        const rawTarget = new URL(window.location.href).searchParams.get('redirect') || fallback;
+        try {
+          const target = new URL(rawTarget, window.location.origin);
+          if (target.origin !== window.location.origin) return fallback;
+          if (/\/(?:auth-callback|login)\.html$/i.test(target.pathname)) return fallback;
+          const path = target.pathname.replace(/^\//, '') || fallback;
+          return `${path}${target.search}${target.hash}`;
+        } catch (error) {
+          return fallback;
+        }
+      }
+
+      const redirectTarget = getRedirectTarget();
+      continueLink.href = redirectTarget;
+
+      function showSuccess() {
+        document.title = 'Account confirmed | Frameup';
+        icon.innerHTML = successIcon;
+        title.textContent = 'Email confirmed';
+        message.textContent = 'Your Frameup account is ready. Taking you to the workspace now.';
+        loginLink.hidden = true;
+        actions.hidden = false;
+      }
+
+      function showError(error) {
+        document.title = 'Confirmation link issue | Frameup';
+        icon.innerHTML = errorIcon;
+        icon.classList.add('is-error');
+        title.textContent = 'We could not confirm that link';
+        message.textContent = error?.message || 'This link has already been used or has expired. Your account may already be confirmed—return to login and try signing in.';
+        continueLink.hidden = true;
+        const loginUrl = new URL('login.html', window.location.origin);
+        loginUrl.searchParams.set('mode', 'login');
+        loginUrl.searchParams.set('confirmation', 'failed');
+        if (redirectTarget !== 'index.html') loginUrl.searchParams.set('redirect', redirectTarget);
+        loginLink.href = `${loginUrl.pathname.replace(/^\//, '')}${loginUrl.search}`;
+        actions.hidden = false;
+      }
+
+      async function boot() {
+        try {
+          await window.ESAuth.completeAuthCallback();
+          window.history.replaceState({}, document.title, window.location.pathname);
+          showSuccess();
+          window.setTimeout(() => window.location.replace(redirectTarget), 1400);
+        } catch (error) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          showError(error);
+        }
+      }
+
+      boot();
+    })();
+  </script>
+</body>
+</html>

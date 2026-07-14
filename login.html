@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Condensed:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
-  <script src="es-auth-config.js?v=20260707-auth4"></script>
-  <script src="es-auth.js?v=20260708-authlazy1"></script>
+  <script src="es-auth-config.js?v=20260714-authcallback1"></script>
+  <script src="es-auth.js?v=20260714-authcallback1"></script>
 <style>
   @font-face {
     font-family: 'Acumin Pro Condensed Local';
@@ -82,7 +82,7 @@
     width: 100%;
     max-width: 960px;
     padding: clamp(26px, 3vw, 38px);
-    min-height: 450px;
+    min-height: 560px;
     border: 1px solid #E2E6EC;
     border-radius: 24px;
     background: rgba(255, 255, 255, .94);
@@ -116,7 +116,7 @@
   }
   .login-form {
     min-width: 0;
-    min-height: 352px;
+    min-height: 410px;
     margin-top: 0;
     display: grid;
     gap: 18px;
@@ -153,6 +153,10 @@
     color: #000000;
     box-shadow: 0 10px 28px rgba(17, 24, 39, .08);
     transform: translateY(-1px);
+  }
+  .login-mode-tab:focus-visible {
+    outline: 2px solid rgba(10, 125, 250, .28);
+    outline-offset: 2px;
   }
   .login-field {
     display: grid;
@@ -255,6 +259,82 @@
   }
   .login-error.is-visible {
     display: block;
+  }
+  .login-confirmation {
+    min-width: 0;
+    min-height: 410px;
+    display: grid;
+    align-content: center;
+    justify-items: start;
+  }
+  .login-confirmation-icon {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 20px;
+    border-radius: 50%;
+    background: #EEF6FF;
+    color: var(--accent);
+  }
+  .login-confirmation-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+  .login-confirmation h2 {
+    margin: 0;
+    color: #000;
+    font-family: var(--font-title);
+    font-size: clamp(34px, 4vw, 46px);
+    font-weight: 700;
+    letter-spacing: -.035em;
+    line-height: .98;
+  }
+  .login-confirmation p {
+    max-width: 480px;
+    margin: 16px 0 0;
+    color: #5E6C7B;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+  .login-confirmation strong {
+    color: #111827;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .login-confirmation-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 26px;
+  }
+  .login-secondary-button {
+    min-height: 44px;
+    border: 1px solid #D8DEE8;
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: #111827;
+    font: 500 16px/1 var(--font-heading);
+    cursor: pointer;
+  }
+  .login-secondary-button:hover,
+  .login-secondary-button:focus-visible {
+    border-color: #9CA3AF;
+    outline: none;
+  }
+  .login-secondary-button[disabled] {
+    cursor: wait;
+    opacity: .65;
+  }
+  .login-confirmation-status {
+    min-height: 18px;
+    margin-top: 14px;
+    color: #2E7D32;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.35;
   }
   .login-showcase {
     width: min(1280px, calc(100% - 80px));
@@ -725,6 +805,7 @@
     }
     .login-panel {
       max-width: 560px;
+      min-height: 620px;
       grid-template-columns: 1fr;
       gap: 28px;
     }
@@ -826,10 +907,6 @@
         <button class="login-mode-tab is-active" id="login-account-tab" type="button" data-auth-mode="login" role="tab" aria-selected="true">Login</button>
         <button class="login-mode-tab" id="create-account-tab" type="button" data-auth-mode="create" role="tab" aria-selected="false">Create account</button>
       </div>
-      <div class="login-field" data-create-only hidden>
-        <label for="login-name">Name</label>
-        <input id="login-name" name="name" type="text" autocomplete="name" placeholder="Your name">
-      </div>
       <div class="login-field">
         <label for="login-email">Email</label>
         <input id="login-email" name="email" type="email" autocomplete="email" placeholder="xyz@email.com" required>
@@ -843,6 +920,18 @@
       <p class="login-error" id="login-error" role="alert"></p>
       <p class="login-note" id="login-note">Login with the email and password you created for Frameup.</p>
     </form>
+    <section class="login-confirmation" id="login-confirmation" tabindex="-1" aria-live="polite" hidden>
+      <div class="login-confirmation-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 6.5h16v11H4v-11Zm.5.5 7.5 6L19.5 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h2>Check your inbox</h2>
+      <p>We sent a secure confirmation link to <strong id="confirmation-email"></strong>. Click it once to activate your account—there is no code to enter.</p>
+      <div class="login-confirmation-actions">
+        <button class="login-secondary-button" id="back-to-login" type="button">Back to login</button>
+        <button class="login-secondary-button" id="resend-confirmation" type="button">Resend link</button>
+      </div>
+      <p class="login-confirmation-status" id="confirmation-status" role="status"></p>
+    </section>
   </section>
 </main>
 
@@ -985,18 +1074,22 @@
   const form = document.getElementById('login-form');
   const title = document.getElementById('login-title');
   const modeTabs = Array.from(document.querySelectorAll('[data-auth-mode]'));
-  const createOnlyFields = Array.from(document.querySelectorAll('[data-create-only]'));
   const loginOnlyFields = Array.from(document.querySelectorAll('[data-login-only]'));
-  const nameInput = document.getElementById('login-name');
   const emailInput = document.getElementById('login-email');
   const passwordInput = document.getElementById('login-password');
   const forgotPasswordButton = document.getElementById('forgot-password');
   const errorEl = document.getElementById('login-error');
   const noteEl = document.getElementById('login-note');
   const button = form.querySelector('.login-button');
+  const confirmationPanel = document.getElementById('login-confirmation');
+  const confirmationEmail = document.getElementById('confirmation-email');
+  const confirmationStatus = document.getElementById('confirmation-status');
+  const backToLoginButton = document.getElementById('back-to-login');
+  const resendConfirmationButton = document.getElementById('resend-confirmation');
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const defaultRedirectTarget = 'index.html';
   let authMode = 'login';
+  let pendingConfirmationEmail = '';
 
   function showPage() {
     document.body.classList.remove('is-page-leaving');
@@ -1015,6 +1108,8 @@
   function setMode(mode) {
     authMode = mode === 'login' ? 'login' : 'create';
     const isCreate = authMode === 'create';
+    form.hidden = false;
+    confirmationPanel.hidden = true;
     form.classList.add('is-switching');
     window.setTimeout(() => form.classList.remove('is-switching'), 180);
     title.textContent = isCreate ? 'Create your Frameup account' : 'Log in to Frameup';
@@ -1022,14 +1117,8 @@
     passwordInput.autocomplete = isCreate ? 'new-password' : 'current-password';
     passwordInput.placeholder = isCreate ? 'Minimum 8 characters' : 'Password';
     noteEl.innerHTML = isCreate
-      ? '<strong>New here?</strong> Create your Frameup account. ES emails are approved automatically; other emails are sent to admins for approval.'
+      ? '<strong>Create your account.</strong> We will email a secure confirmation link. No OTP or code is required.'
       : '<strong>Already signed up?</strong> Log in with your approved email and password.';
-    createOnlyFields.forEach(field => {
-      field.hidden = !isCreate;
-      field.querySelectorAll('input').forEach(input => {
-        input.required = isCreate && input.id === 'login-name';
-      });
-    });
     loginOnlyFields.forEach(field => {
       field.hidden = isCreate;
     });
@@ -1039,6 +1128,16 @@
       tab.setAttribute('aria-selected', String(active));
     });
     setError('');
+  }
+
+  function showConfirmation(email) {
+    pendingConfirmationEmail = email;
+    confirmationEmail.textContent = email;
+    confirmationStatus.textContent = '';
+    form.hidden = true;
+    confirmationPanel.hidden = false;
+    title.textContent = 'Confirm your email';
+    confirmationPanel.focus?.();
   }
 
   function getRedirectTarget() {
@@ -1091,6 +1190,32 @@
     tab.addEventListener('click', () => setMode(tab.dataset.authMode));
   });
 
+  backToLoginButton.addEventListener('click', () => {
+    setMode('login');
+    emailInput.value = pendingConfirmationEmail;
+    passwordInput.value = '';
+    emailInput.focus();
+  });
+
+  resendConfirmationButton.addEventListener('click', async () => {
+    if (!pendingConfirmationEmail) return;
+    confirmationStatus.textContent = '';
+    resendConfirmationButton.disabled = true;
+    resendConfirmationButton.textContent = 'Sending…';
+    try {
+      await window.ESAuth.resendConfirmation({
+        email: pendingConfirmationEmail,
+        redirectTo: getRedirectTarget(),
+      });
+      confirmationStatus.textContent = 'A fresh confirmation link has been sent.';
+    } catch (error) {
+      confirmationStatus.textContent = error.message || 'Unable to resend the confirmation link.';
+    } finally {
+      resendConfirmationButton.disabled = false;
+      resendConfirmationButton.textContent = 'Resend link';
+    }
+  });
+
   forgotPasswordButton.addEventListener('click', async () => {
     setError('');
     const email = emailInput.value.trim();
@@ -1116,26 +1241,22 @@
 
     const email = emailInput.value.trim();
     const password = passwordInput.value;
-    const name = nameInput.value.trim();
-
     if (!validateBaseFields(email, password)) return;
-    if (authMode === 'create' && !name) {
-      setError('Enter your name.');
-      nameInput.focus();
-      return;
-    }
-
     button.disabled = true;
     button.textContent = authMode === 'create' ? 'Creating...' : 'Logging in...';
 
     try {
       if (authMode === 'create') {
-        await window.ESAuth.createAccount({ name, email, password });
-        setMode('login');
+        await window.ESAuth.createAccount({
+          name: '',
+          email,
+          password,
+          redirectTo: getRedirectTarget(),
+        });
         passwordInput.value = '';
-        setError('Account created. Please log in now. If email verification is enabled, verify your email first.', 'success');
         button.disabled = false;
-        button.textContent = 'Login';
+        button.textContent = 'Create Account';
+        showConfirmation(email);
         return;
       }
 
@@ -1157,6 +1278,9 @@
     const requestedMode = params.get('mode');
     if (requestedMode === 'create' || requestedMode === 'login') {
       setMode(requestedMode);
+      if (params.get('confirmation') === 'failed') {
+        setError('That link has already been used or has expired. Try logging in first—your account may already be confirmed.');
+      }
       return;
     }
     setMode('login');

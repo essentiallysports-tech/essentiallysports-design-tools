@@ -9,6 +9,7 @@ const authSource = readFileSync(new URL('../es-auth.js', import.meta.url), 'utf8
 const dashboardSource = readFileSync(new URL('../dashboard-data.js', import.meta.url), 'utf8');
 const dashboardHtmlSource = readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
 const loginHtmlSource = readFileSync(new URL('../login.html', import.meta.url), 'utf8');
+const authCallbackHtmlSource = readFileSync(new URL('../auth-callback.html', import.meta.url), 'utf8');
 const netlifyConfigSource = readFileSync(new URL('../netlify.toml', import.meta.url), 'utf8');
 const supabaseSignupHookMigration = readFileSync(new URL('../supabase/migrations/20260706162500_restrict_signup_to_es_domain.sql', import.meta.url), 'utf8');
 
@@ -53,23 +54,29 @@ function createEnvironment({
   adminElements = [],
   signInError = null,
   signUpError = null,
+  locationHref = 'https://frameup.essentiallysports.com/index.html',
 } = {}) {
   const localStorage = storage();
   const sessionStorage = storage();
   const authCalls = {
+    exchangeCode: null,
+    resendOptions: null,
     resetPasswordRedirectTo: null,
+    signUpOptions: null,
+    verifyOtp: null,
   };
   const documentElement = {
     style: {},
     classList: { toggle() {} },
   };
+  const parsedLocation = new URL(locationHref);
   const location = {
-    href: 'https://frameup.essentiallysports.com/index.html',
-    origin: 'https://frameup.essentiallysports.com',
-    hostname: 'frameup.essentiallysports.com',
-    pathname: '/index.html',
-    search: '',
-    hash: '',
+    href: parsedLocation.href,
+    origin: parsedLocation.origin,
+    hostname: parsedLocation.hostname,
+    pathname: parsedLocation.pathname,
+    search: parsedLocation.search,
+    hash: parsedLocation.hash,
     replaceTarget: '',
     replace(value) {
       this.replaceTarget = value;
@@ -85,8 +92,21 @@ function createEnvironment({
         return { data: { session, user: session?.user || null }, error: null };
       },
       async signUp() {
+        authCalls.signUpOptions = arguments[0]?.options || null;
         if (signUpError) return { data: null, error: signUpError };
         return { data: { session: null, user: null }, error: null };
+      },
+      async resend() {
+        authCalls.resendOptions = arguments[0] || null;
+        return { data: {}, error: null };
+      },
+      async exchangeCodeForSession(code) {
+        authCalls.exchangeCode = code;
+        return { data: { session }, error: null };
+      },
+      async verifyOtp(payload) {
+        authCalls.verifyOtp = payload;
+        return { data: { session }, error: null };
       },
       async signOut() {
         session = null;
@@ -218,9 +238,15 @@ assert.doesNotMatch(supabaseSignupHookMigration, /return\s+'\{\}'::jsonb\s*;/i);
 assert.match(dashboardHtmlSource, /const\s+hasValidSession\s*=\s*await\s+withBootTimeout\(\s*window\.ESAuth\?\.isValidSession\?\.\(\),/);
 assert.match(dashboardHtmlSource, /if\s*\(!hasValidSession\)\s*\{[\s\S]*?loginUrl\?\.\('dashboard\.html'\)/);
 assert.match(dashboardHtmlSource, /showDashboardBootError\(error\);/);
-assert.match(loginHtmlSource, /input\.required\s*=\s*isCreate\s*&&\s*input\.id\s*===\s*'login-name'/);
+assert.doesNotMatch(loginHtmlSource, /id="login-name"|name="name"/);
 assert.doesNotMatch(loginHtmlSource, /login-confirm-password|confirmPassword/);
-assert.match(loginHtmlSource, /authMode\s*===\s*'create'\s*&&\s*!name/);
+assert.doesNotMatch(loginHtmlSource, /authMode\s*===\s*'create'\s*&&\s*!name/);
+assert.match(loginHtmlSource, /id="login-confirmation"/);
+assert.match(loginHtmlSource, /ESAuth\.resendConfirmation/);
+assert.match(authCallbackHtmlSource, /ESAuth\.completeAuthCallback/);
+assert.match(authCallbackHtmlSource, /Email confirmed/);
+assert.match(authCallbackHtmlSource, /target\.origin\s*!==\s*window\.location\.origin/);
+assert.match(authCallbackHtmlSource, /window\.location\.replace\(redirectTarget\)/);
 assert.match(netlifyConfigSource, /for\s*=\s*"\/\*\.woff2"[\s\S]*?Cache-Control\s*=\s*"public, max-age=31536000, immutable"/);
 
 {
@@ -239,6 +265,79 @@ assert.match(netlifyConfigSource, /for\s*=\s*"\/\*\.woff2"[\s\S]*?Cache-Control\
   assert.equal(await window.ESDashboardData.isCurrentUserAdmin(), true);
   await window.ESAuth.requireAuth('index.html');
   assert.equal(documentElement.style.visibility, '');
+}
+
+{
+  const { authCalls, window } = createEnvironment();
+  assert.equal(
+    window.ESAuth.authCallbackUrl(),
+    'https://frameup.essentiallysports.com/auth-callback.html',
+  );
+  assert.equal(
+    window.ESAuth.authCallbackUrl('dashboard.html?view=board'),
+    'https://frameup.essentiallysports.com/auth-callback.html?redirect=dashboard.html%3Fview%3Dboard',
+  );
+  assert.equal(
+    window.ESAuth.authCallbackUrl('https://malicious.example/steal'),
+    'https://frameup.essentiallysports.com/auth-callback.html',
+  );
+  await window.ESAuth.createAccount({
+    name: '',
+    email: 'designer@essentiallysports.com',
+    password: 'password123',
+    redirectTo: 'dashboard.html',
+  });
+  assert.equal(
+    authCalls.signUpOptions.emailRedirectTo,
+    'https://frameup.essentiallysports.com/auth-callback.html?redirect=dashboard.html',
+  );
+}
+
+{
+  const { authCalls, window } = createEnvironment();
+  await window.ESAuth.resendConfirmation({
+    email: 'designer@essentiallysports.com',
+    redirectTo: 'design-request.html',
+  });
+  assert.equal(authCalls.resendOptions.type, 'signup');
+  assert.equal(
+    authCalls.resendOptions.options.emailRedirectTo,
+    'https://frameup.essentiallysports.com/auth-callback.html?redirect=design-request.html',
+  );
+}
+
+{
+  const session = {
+    access_token: 'confirmed-token',
+    user: {
+      email: 'designer@essentiallysports.com',
+      user_metadata: { name: 'ES Designer', role: 'Designer' },
+    },
+  };
+  const { authCalls, window } = createEnvironment({
+    session,
+    locationHref: 'https://frameup.essentiallysports.com/auth-callback.html?code=confirmation-code',
+  });
+  const confirmedSession = await window.ESAuth.completeAuthCallback();
+  assert.equal(authCalls.exchangeCode, 'confirmation-code');
+  assert.equal(confirmedSession.user.email, 'designer@essentiallysports.com');
+}
+
+{
+  const session = {
+    access_token: 'confirmed-token',
+    user: {
+      email: 'designer@essentiallysports.com',
+      user_metadata: { name: 'ES Designer', role: 'Designer' },
+    },
+  };
+  const { authCalls, window } = createEnvironment({
+    session,
+    locationHref: 'https://frameup.essentiallysports.com/auth-callback.html?token_hash=confirmation-token&type=unexpected',
+  });
+  await window.ESAuth.completeAuthCallback();
+  assert.equal(authCalls.verifyOtp.token_hash, 'confirmation-token');
+  assert.equal(authCalls.verifyOtp.type, 'signup');
 }
 
 {

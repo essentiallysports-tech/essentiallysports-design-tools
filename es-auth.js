@@ -6,6 +6,8 @@
   const ACCESS_REQUESTS_KEY = 'es.accessRequests.v1';
   const KNOWN_EMAILS_KEY = 'es.authKnownEmails.v1';
   const ACCESS_REQUESTS_TABLE = 'es_designer_access_requests';
+  const AUTH_CALLBACK_PATH = '/auth-callback.html';
+  const AUTH_CALLBACK_TYPES = new Set(['email', 'email_change', 'invite', 'magiclink', 'recovery', 'signup']);
   const SUPABASE_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
   const config = window.ES_AUTH_CONFIG || {};
   const supabaseConfig = config.supabase || {};
@@ -258,7 +260,38 @@
     if (normalized.includes('rate limit') || normalized.includes('too many')) {
       return new Error('Too many attempts. Please wait a moment and try again.');
     }
+    if (
+      normalized.includes('otp expired')
+      || normalized.includes('token has expired')
+      || normalized.includes('invalid token')
+      || normalized.includes('invalid claim')
+      || normalized.includes('invalid or expired')
+      || normalized.includes('already been used')
+    ) {
+      return new Error('This confirmation link has already been used or has expired. Your account may already be confirmed—return to login and try signing in.');
+    }
     return new Error(message || fallback);
+  }
+
+  function safeLocalReturnTo(returnTo) {
+    const fallback = 'index.html';
+    if (!String(returnTo || '').trim()) return fallback;
+    try {
+      const target = new URL(String(returnTo), window.location.origin);
+      if (target.origin !== window.location.origin) return fallback;
+      if (/\/(?:auth-callback|login)\.html$/i.test(target.pathname)) return fallback;
+      const path = target.pathname.replace(/^\//, '') || fallback;
+      return `${path}${target.search}${target.hash}`;
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function authCallbackUrl(returnTo) {
+    const callback = new URL(AUTH_CALLBACK_PATH, window.location.origin);
+    const safeReturnTo = safeLocalReturnTo(returnTo);
+    if (safeReturnTo !== 'index.html') callback.searchParams.set('redirect', safeReturnTo);
+    return callback.href;
   }
 
   function withTimeout(promise, timeoutMs, message) {
@@ -370,7 +403,7 @@
     return session;
   }
 
-  async function createSupabaseAccount({ name, email, password }) {
+  async function createSupabaseAccount({ name, email, password, redirectTo }) {
     if (!await ensureSupabaseReady()) throw new Error('Supabase is not configured yet.');
     const client = getSupabaseClient();
     if (!client) throw new Error('Supabase is not configured yet.');
@@ -380,6 +413,7 @@
       email: normalizedEmail,
       password,
       options: {
+        emailRedirectTo: authCallbackUrl(redirectTo),
         data: {
           name: String(name || '').trim() || normalizedEmail.split('@')[0] || 'Frameup User',
           role: 'Designer',
@@ -393,10 +427,11 @@
       email: normalizedEmail,
       name: data?.user?.user_metadata?.name || String(name || '').trim() || normalizedEmail.split('@')[0] || 'Frameup User',
       role: 'Designer',
+      requiresEmailConfirmation: !data?.session,
     };
   }
 
-  async function createAccount({ name, email, password }) {
+  async function createAccount({ name, email, password, redirectTo }) {
     const normalizedEmail = normalizeEmail(email);
     if (!await isAllowedEmailAsync(normalizedEmail)) {
       await recordAccessRequest({
@@ -410,7 +445,7 @@
     validatePassword(password);
 
     if (await ensureSupabaseReady()) {
-      const account = await createSupabaseAccount({ name, email: normalizedEmail, password });
+      const account = await createSupabaseAccount({ name, email: normalizedEmail, password, redirectTo });
       rememberKnownEmail(normalizedEmail);
       return account;
     }
@@ -465,6 +500,64 @@
     }
 
     throw authUnavailableError();
+  }
+
+  async function resendConfirmation({ email, redirectTo }) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!await isAllowedEmailAsync(normalizedEmail)) {
+      throw new Error('Confirmation links are available only for approved Frameup accounts.');
+    }
+    if (!await ensureSupabaseReady()) throw authUnavailableError();
+    const client = getSupabaseClient();
+    if (!client) throw authUnavailableError();
+
+    const { error } = await client.auth.resend({
+      type: 'signup',
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: authCallbackUrl(redirectTo),
+      },
+    });
+    if (error) throw friendlyAuthError(error, 'Unable to resend the confirmation email.');
+    rememberKnownEmail(normalizedEmail);
+    return true;
+  }
+
+  async function completeAuthCallback() {
+    if (!await ensureSupabaseReady()) throw authUnavailableError();
+    const client = getSupabaseClient();
+    if (!client) throw authUnavailableError();
+
+    const currentUrl = new URL(window.location.href);
+    const hashParams = new URLSearchParams(currentUrl.hash.replace(/^#/, ''));
+    const callbackError = currentUrl.searchParams.get('error_description')
+      || currentUrl.searchParams.get('error')
+      || hashParams.get('error_description')
+      || hashParams.get('error');
+    if (callbackError) throw friendlyAuthError(new Error(callbackError), 'Unable to confirm this email.');
+
+    const code = currentUrl.searchParams.get('code');
+    const tokenHash = currentUrl.searchParams.get('token_hash');
+    const requestedCallbackType = currentUrl.searchParams.get('type') || 'signup';
+    const callbackType = AUTH_CALLBACK_TYPES.has(requestedCallbackType) ? requestedCallbackType : 'signup';
+
+    if (code) {
+      const { error } = await client.auth.exchangeCodeForSession(code);
+      if (error) throw friendlyAuthError(error, 'Unable to confirm this email.');
+    } else if (tokenHash) {
+      const { error } = await client.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: callbackType,
+      });
+      if (error) throw friendlyAuthError(error, 'Unable to confirm this email.');
+    }
+
+    const session = await getSession();
+    if (!session?.token) {
+      throw new Error('This confirmation link has already been used or has expired. Your account may already be confirmed—return to login and try signing in.');
+    }
+    rememberKnownEmail(session.user.email);
+    return session;
   }
 
   async function requestPasswordReset({ email, redirectTo }) {
@@ -596,6 +689,8 @@
     AUTH_STORAGE_KEY,
     approvedEmails,
     approvedDomains,
+    authCallbackUrl,
+    completeAuthCallback,
     createAccount,
     fetchWithAuth,
     getAccessRequests,
@@ -612,6 +707,7 @@
     logout,
     normalizeEmail,
     recordAccessRequest,
+    resendConfirmation,
     requestPasswordReset,
     requireAuth,
     reviewAccessRequest,

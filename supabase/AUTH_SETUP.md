@@ -33,6 +33,31 @@ In the Supabase dashboard:
 After activation, signup requests using any domain other than
 `essentiallysports.com` are rejected by Supabase before a user is created.
 
+## Configure Frameup URLs
+
+In **Authentication -> URL Configuration**, set the Site URL to:
+
+```text
+https://frameup.essentiallysports.com
+```
+
+Add the production confirmation callback to **Redirect URLs**:
+
+```text
+https://frameup.essentiallysports.com/auth-callback.html
+```
+
+For localhost testing, also add the exact preview callback currently in use:
+
+```text
+http://127.0.0.1:8911/auth-callback.html
+```
+
+The signup flow explicitly sends users to `auth-callback.html`. That page
+finishes the Supabase session, removes confirmation tokens from the address
+bar, shows a clear success/error state, and takes confirmed users into
+Frameup. Users never need to copy or enter an OTP.
+
 ## Add the password recovery redirect
 
 In **Authentication -> URL Configuration -> Redirect URLs**, add:
@@ -47,6 +72,16 @@ for example:
 ```text
 http://127.0.0.1:8890/reset-password.html
 ```
+
+## Email provider settings
+
+In **Authentication -> Providers -> Email**:
+
+- Keep Email enabled.
+- Keep **Confirm email** enabled.
+- Email/password is the only required login method.
+- The confirmation email template should use Supabase's confirmation link
+  (`{{ .ConfirmationURL }}`), not a visible OTP/code.
 
 ## Current login behavior
 
