@@ -800,8 +800,8 @@ html[data-theme="dark"] body.dashboard-page .dashboard-choice-option {
   color: var(--theme-dark-text) !important;
 }
 
-/* Keep footer content readable after the generic muted-text rules above. */
-html[data-theme] .site-footer :is(p, a, small, span, .footer-copy, .footer-legal) {
+/* Keep footer content readable in dark mode without erasing the light footer. */
+html[data-theme="dark"] .site-footer :is(p, a, small, span, .footer-copy, .footer-legal) {
   color: #FFFFFF !important;
 }
 

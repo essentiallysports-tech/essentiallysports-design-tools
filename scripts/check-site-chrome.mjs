@@ -79,6 +79,18 @@ for (const file of noFooterPages) {
   assert(!html.includes('class="site-footer'), `${file} should not render the shared footer`, `${file} correctly omits the shared footer`);
 }
 
+const themeCss = read('theme.css');
+assert(
+  !/html\[data-theme\]\s+\.site-footer\s+:is\(/.test(themeCss),
+  'Theme CSS globally forces light footer content to the dark footer color',
+  'Footer text color overrides are scoped to dark mode',
+);
+assert(
+  /html\[data-theme="dark"\]\s+\.site-footer\s+:is\(/.test(themeCss),
+  'Theme CSS is missing the dark-mode footer readability rule',
+  'Dark-mode footer readability rule remains available',
+);
+
 const index = read('index.html');
 assert(
   /'section-header':\s*\{[\s\S]*?workspace:\s*\{\s*width:\s*640,\s*height:\s*47,/.test(index),

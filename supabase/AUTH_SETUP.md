@@ -70,7 +70,7 @@ For localhost testing, also add the local preview URL currently being used,
 for example:
 
 ```text
-http://127.0.0.1:8890/reset-password.html
+http://127.0.0.1:8911/reset-password.html
 ```
 
 ## Email provider settings
