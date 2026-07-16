@@ -6,6 +6,7 @@ import vm from 'node:vm';
 import { webcrypto } from 'node:crypto';
 
 const authSource = readFileSync(new URL('../es-auth.js', import.meta.url), 'utf8');
+const authConfigSource = readFileSync(new URL('../es-auth-config.js', import.meta.url), 'utf8');
 const dashboardSource = readFileSync(new URL('../dashboard-data.js', import.meta.url), 'utf8');
 const dashboardHtmlSource = readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
 const loginHtmlSource = readFileSync(new URL('../login.html', import.meta.url), 'utf8');
@@ -260,6 +261,7 @@ function createEnvironment({
 }
 
 assert.match(supabaseSignupHookMigration, /signup_domain\s+<>\s+'essentiallysports\.com'/i);
+assert.match(authConfigSource, /designteam@essentiallysports\.com/i);
 assert.match(supabaseSignupHookMigration, /return\s+event\s*;/i);
 assert.doesNotMatch(supabaseSignupHookMigration, /return\s+'\{\}'::jsonb\s*;/i);
 assert.match(dashboardHtmlSource, /const\s+hasValidSession\s*=\s*await\s+withBootTimeout\(\s*window\.ESAuth\?\.isValidSession\?\.\(\),/);

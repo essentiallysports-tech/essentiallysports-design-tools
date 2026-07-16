@@ -11,7 +11,11 @@
     // Domain-level access. Only emails from these domains can create/login.
     allowedDomains: ['essentiallysports.com'],
 
-    // Optional exact approved emails outside the ES domain.
-    allowedEmails: ['bu8945@gmail.com'],
+    // Exact approved accounts and exceptions that should remain authorized
+    // even if the domain-level policy changes later.
+    allowedEmails: [
+      'bu8945@gmail.com',
+      'designteam@essentiallysports.com',
+    ],
   });
 })();
