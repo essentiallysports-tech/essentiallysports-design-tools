@@ -93,6 +93,14 @@ assert(
 
 const index = read('index.html');
 assert(
+  !index.includes('aria-label="Brand guideline options"')
+    && !index.includes('id="frame-creative-guidelines"')
+    && !index.includes('id="frame-video-guidelines-card"')
+    && !index.includes('id="frame-logo-guidelines-card"'),
+  'Homepage still renders the removed guideline card section',
+  'Homepage guideline card section remains removed',
+);
+assert(
   /'section-header':\s*\{[\s\S]*?workspace:\s*\{\s*width:\s*640,\s*height:\s*47,/.test(index),
   'Section Header dimensions changed from the established 640×47 contract',
   'Section Header retains the established 640×47 dimensions',
@@ -112,6 +120,18 @@ if (eveningBrandMatch) {
     'ES Daily Evening Send only supplies branding colors',
   );
 }
+
+const siteChromeCss = read('site-chrome.css');
+assert(
+  /\.navbar-menu\s*>\s*a\[aria-current="page"\][\s\S]*?color:\s*#111111\s*!important;/.test(siteChromeCss),
+  'Current navbar item still uses the blue selected state',
+  'Current navbar item uses the neutral black state',
+);
+assert(
+  siteChromeCss.includes("stroke='%23111111'") && !siteChromeCss.includes("stroke='%230A7DFA'"),
+  'Shared navbar chevron still uses the blue selected state',
+  'Shared navbar chevron uses the neutral black state',
+);
 
 if (process.exitCode) {
   console.error('\nShared chrome guard failed.');

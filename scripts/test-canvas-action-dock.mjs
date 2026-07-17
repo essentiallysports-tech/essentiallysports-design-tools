@@ -28,5 +28,13 @@ assert(
   /form\?\.toggleAttribute\('inert', !expanded\)/.test(html),
   'Collapsed search must remain inert and keyboard-safe.',
 );
+assert(
+  /content:\s*\['quote-logo-control',\s*'\.text-card',\s*'swipe-button-card'\]/.test(html),
+  'Swipe Button must remain inside the Content panel.',
+);
+assert(
+  /layout:\s*\['pill-position-card'\]/.test(html),
+  'Layout panel must not retain the Swipe Button control.',
+);
 
 console.log('Canvas action dock tests passed.');
