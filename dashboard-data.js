@@ -11,6 +11,9 @@
   const SUPABASE_PROFILES_TABLE = 'es_designer_profiles';
   const SUPABASE_PRESENCE_TABLE = 'es_designer_presence';
   const SUPABASE_TASKS_TABLE = 'es_designer_tasks';
+  const SUPABASE_ACTIVITY_TABLE = 'es_designer_activity';
+  const PENDING_TASKS_KEY = 'es.dashboard.pendingTasks.v1';
+  const PENDING_ACTIVITY_KEY = 'es.dashboard.pendingActivity.v1';
   const PRESENCE_ONLINE_WINDOW_MS = 2 * 60 * 1000;
   const PRESENCE_HEARTBEAT_MS = 60 * 1000;
   const TASK_STATUS_COLUMNS = Object.freeze(['Backlog', 'Assigned', 'Doing', 'Review', 'Done']);
@@ -18,16 +21,17 @@
   const DASHBOARD_ACCESS_ROLES = Object.freeze(['Admin', 'Super Admin', 'Server Owner']);
   const ROLE_ASSIGNER_ROLES = Object.freeze(['Server Owner']);
   const SERVER_OWNER_EMAIL = 'suhail.quraishi@essentiallysports.com';
+  const DASHBOARD_ADMIN_EMAILS = Object.freeze([
+    SERVER_OWNER_EMAIL,
+    'manish.kalsi@essentiallysports.com',
+  ]);
   const DEFAULT_ROLE_ASSIGNMENTS = Object.freeze({
     [SERVER_OWNER_EMAIL]: 'Server Owner',
     'manish.kalsi@essentiallysports.com': 'Super Admin',
   });
 
   const DEFAULT_ADMIN_CONFIG = Object.freeze({
-    adminEmails: [
-      'suhail.quraishi@essentiallysports.com',
-      'manish.kalsi@essentiallysports.com',
-    ],
+    adminEmails: [...DASHBOARD_ADMIN_EMAILS],
     ownerEmails: [],
   });
 
@@ -80,6 +84,16 @@
     ]);
   }
 
+  function withRejectingTimeout(promise, timeoutMs, label) {
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise((resolve, reject) => window.setTimeout(
+        () => reject(new Error(`${label || 'Supabase request'} timed out.`)),
+        timeoutMs,
+      )),
+    ]);
+  }
+
   function getAdminConfig() {
     const stored = readJson(ADMIN_CONFIG_KEY, null);
     const config = stored && typeof stored === 'object' ? stored : DEFAULT_ADMIN_CONFIG;
@@ -91,6 +105,12 @@
 
   function getStoredProfile() {
     return readJson(PROFILE_KEY, {}) || {};
+  }
+
+  function getProfileForSession(session) {
+    const profile = getStoredProfile();
+    const sessionEmail = normalizeEmail(session?.user?.email);
+    return sessionEmail && normalizeEmail(profile.email) === sessionEmail ? profile : {};
   }
 
   function getSupabaseClient() {
@@ -117,8 +137,8 @@
 
   async function getCurrentUser() {
     const session = await getAuthenticatedSession();
-    const profile = getStoredProfile();
-    const email = normalizeEmail(session?.user?.email || profile.email);
+    const profile = getProfileForSession(session);
+    const email = normalizeEmail(session?.user?.email);
     const name = cleanString(session?.user?.name || profile.name || email.split('@')[0] || 'ES User');
     const designation = designationFromProfile(profile, session?.user || {});
     const role = normalizeAccessRole(profile.accessRole || session?.user?.accessRole || session?.user?.role || profile.role, email);
@@ -126,21 +146,22 @@
   }
 
   async function isCurrentUserAdmin() {
-    const user = await getCurrentUser();
-    const email = normalizeEmail(user.email);
-    return Boolean(email && (DASHBOARD_ACCESS_ROLES.includes(user.accessRole) || getAdminConfig().adminEmails.includes(email)));
+    const session = await getAuthenticatedSession();
+    const email = normalizeEmail(session?.user?.email);
+    return DASHBOARD_ADMIN_EMAILS.includes(email);
   }
 
   async function canCurrentUserAssignRoles() {
-    const user = await getCurrentUser();
+    const session = await getAuthenticatedSession();
     // Role assignment belongs to this one owner identity. Keep the email
     // check explicit so a stale or misconfigured profile cannot expose role
     // controls to another account; Supabase enforces the same rule in the RPC.
-    return normalizeEmail(user.email) === SERVER_OWNER_EMAIL;
+    return normalizeEmail(session?.user?.email) === SERVER_OWNER_EMAIL;
   }
 
   let cloudPeopleCache = [];
   let cloudTasksCache = [];
+  let cloudActivityCache = [];
   let cloudSyncStatus = {
     ok: null,
     message: '',
@@ -391,12 +412,74 @@
     };
   }
 
+  function normalizeActivityRecord(record = {}) {
+    return {
+      id: cleanString(record.id || makeId('ACT')),
+      createdAt: cleanString(record.createdAt || record.created_at || new Date().toISOString()),
+      type: cleanString(record.type || record.event_type || 'activity'),
+      label: cleanString(record.label || record.type || record.event_type || 'Activity'),
+      entityId: cleanString(record.entityId || record.entity_id || ''),
+      entityType: cleanString(record.entityType || record.entity_type || ''),
+      actorName: cleanString(record.actorName || record.actor_name || ''),
+      actorEmail: normalizeEmail(record.actorEmail || record.actor_email || ''),
+      meta: record.meta && typeof record.meta === 'object' ? record.meta : {},
+      source: cleanString(record.source || ''),
+    };
+  }
+
+  function activityToSupabaseRow(record = {}) {
+    const normalized = normalizeActivityRecord(record);
+    return {
+      id: normalized.id,
+      event_type: normalized.type,
+      label: normalized.label,
+      entity_id: normalized.entityId,
+      entity_type: normalized.entityType,
+      actor_name: normalized.actorName,
+      actor_email: normalized.actorEmail,
+      meta: normalized.meta,
+      created_at: normalized.createdAt,
+    };
+  }
+
+  function readPendingTasks() {
+    const parsed = readJson(PENDING_TASKS_KEY, []);
+    return Array.isArray(parsed) ? parsed.map(normalizeTask) : [];
+  }
+
+  function queuePendingTask(task) {
+    const normalized = normalizeTask(task);
+    const next = [normalized, ...readPendingTasks().filter(item => item.id !== normalized.id)].slice(0, 100);
+    writeJson(PENDING_TASKS_KEY, next);
+    return normalized;
+  }
+
+  function removePendingTask(id) {
+    writeJson(PENDING_TASKS_KEY, readPendingTasks().filter(item => item.id !== id));
+  }
+
+  function readPendingActivity() {
+    const parsed = readJson(PENDING_ACTIVITY_KEY, []);
+    return Array.isArray(parsed) ? parsed.map(normalizeActivityRecord) : [];
+  }
+
+  function queuePendingActivity(record) {
+    const normalized = normalizeActivityRecord(record);
+    const next = [normalized, ...readPendingActivity().filter(item => item.id !== normalized.id)].slice(0, 150);
+    writeJson(PENDING_ACTIVITY_KEY, next);
+    return normalized;
+  }
+
+  function removePendingActivity(id) {
+    writeJson(PENDING_ACTIVITY_KEY, readPendingActivity().filter(item => item.id !== id));
+  }
+
   async function upsertSupabaseProfileAndPresence() {
     const session = await getAuthenticatedSession();
     const client = getSupabaseClient();
     if (!session?.user?.email || !client) return false;
 
-    const profile = getStoredProfile();
+    const profile = getProfileForSession(session);
     const email = normalizeEmail(session.user.email);
     const name = cleanString(profile.name || session.user.name || email.split('@')[0] || 'ES User');
     const designation = designationFromProfile(profile, session.user);
@@ -509,6 +592,21 @@
       .filter(task => task.id);
   }
 
+  async function fetchSupabaseActivity() {
+    const client = getSupabaseClient();
+    const session = await getAuthenticatedSession();
+    if (!client || !session?.user?.email) return [];
+
+    const { data, error } = await client
+      .from(SUPABASE_ACTIVITY_TABLE)
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(250);
+
+    if (error) throw error;
+    return (Array.isArray(data) ? data : []).map(row => normalizeActivityRecord({ ...row, source: 'supabase' }));
+  }
+
   async function upsertSupabaseTask(task = {}) {
     const client = getSupabaseClient();
     const session = await getAuthenticatedSession();
@@ -524,6 +622,52 @@
       .upsert(row, { onConflict: 'id' });
     if (error) throw error;
     return normalizeSupabaseTask({ ...row, source: 'supabase' });
+  }
+
+  async function upsertSupabaseActivity(record = {}) {
+    const client = getSupabaseClient();
+    const session = await getAuthenticatedSession();
+    if (!client || !session?.user?.email) return null;
+    const row = activityToSupabaseRow(record);
+    const { error } = await client
+      .from(SUPABASE_ACTIVITY_TABLE)
+      .upsert(row, { onConflict: 'id' });
+    if (error) throw error;
+    return normalizeActivityRecord({ ...row, source: 'supabase' });
+  }
+
+  async function flushPendingCloudWrites() {
+    const session = await getAuthenticatedSession();
+    if (!session?.user?.email || !getSupabaseClient()) return { tasks: 0, activity: 0 };
+
+    let syncedTasks = 0;
+    for (const task of readPendingTasks()) {
+      try {
+        const saved = await upsertSupabaseTask(task);
+        if (saved) {
+          removePendingTask(task.id);
+          cloudTasksCache = mergeTasks([saved], cloudTasksCache);
+          syncedTasks += 1;
+        }
+      } catch (error) {
+        break;
+      }
+    }
+
+    let syncedActivity = 0;
+    for (const record of readPendingActivity()) {
+      try {
+        const saved = await upsertSupabaseActivity(record);
+        if (saved) {
+          removePendingActivity(record.id);
+          cloudActivityCache = mergeActivity([saved], cloudActivityCache);
+          syncedActivity += 1;
+        }
+      } catch (error) {
+        break;
+      }
+    }
+    return { tasks: syncedTasks, activity: syncedActivity };
   }
 
   async function updateSupabaseTask(id, fields = {}) {
@@ -562,14 +706,24 @@
     if (cloudRefreshInFlight) return cloudRefreshInFlight;
     cloudRefreshInFlight = (async () => {
       try {
-        await withTimeout(upsertSupabaseProfileAndPresence(), 4000, false);
+        await withRejectingTimeout(upsertSupabaseProfileAndPresence(), 5000, 'Profile sync');
+        await withRejectingTimeout(flushPendingCloudWrites(), 8000, 'Pending dashboard sync');
         if (fetchPeople) {
-          const [people, tasks] = await Promise.all([
-            withTimeout(fetchSupabasePeople().catch(() => cloudPeopleCache), 6500, cloudPeopleCache),
-            withTimeout(fetchSupabaseTasks().catch(() => cloudTasksCache), 6500, cloudTasksCache),
+          const results = await Promise.allSettled([
+            withRejectingTimeout(fetchSupabasePeople(), 7000, 'People sync'),
+            withRejectingTimeout(fetchSupabaseTasks(), 7000, 'Task sync'),
+            withRejectingTimeout(fetchSupabaseActivity(), 7000, 'Activity sync'),
           ]);
-          cloudPeopleCache = Array.isArray(people) ? people : cloudPeopleCache;
-          cloudTasksCache = Array.isArray(tasks) ? tasks : cloudTasksCache;
+          const [peopleResult, tasksResult, activityResult] = results;
+          if (peopleResult.status === 'fulfilled') cloudPeopleCache = peopleResult.value;
+          if (tasksResult.status === 'fulfilled') cloudTasksCache = tasksResult.value;
+          if (activityResult.status === 'fulfilled') cloudActivityCache = activityResult.value;
+
+          const errors = results
+            .filter(result => result.status === 'rejected')
+            .map(result => cleanString(result.reason?.message || 'Unknown Supabase sync error'));
+          if (errors.length) throw new Error(errors.join(' '));
+
           cloudSyncStatus = {
             ok: true,
             message: '',
@@ -577,6 +731,7 @@
           };
           emitDashboardChange('cloud-people', { people: cloudPeopleCache });
           emitDashboardChange('cloud-tasks', { tasks: cloudTasksCache });
+          emitDashboardChange('cloud-activity', { activity: cloudActivityCache });
         }
         return cloudPeopleCache;
       } catch (error) {
@@ -598,6 +753,7 @@
   async function recordPresenceHeartbeat() {
     try {
       await upsertSupabaseProfileAndPresence();
+      await flushPendingCloudWrites();
       return true;
     } catch (error) {
       return false;
@@ -625,6 +781,11 @@
     window.addEventListener('hashchange', () => window.setTimeout(beat, 0));
     window.addEventListener('es:auth-ready', beat);
     window.addEventListener('es:auth-updated', beat);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => window.setTimeout(start, 0), { once: true });
+    } else {
+      window.setTimeout(start, 0);
+    }
   }
 
   async function showAdminNavigation() {
@@ -709,6 +870,19 @@
     return Array.from(tasks.values()).sort((a, b) => Date.parse(b.updatedAt || b.createdAt || 0) - Date.parse(a.updatedAt || a.createdAt || 0));
   }
 
+  function mergeActivity(...activityGroups) {
+    const records = new Map();
+    activityGroups.flat().filter(Boolean).map(normalizeActivityRecord).forEach(record => {
+      const existing = records.get(record.id);
+      if (!existing || record.source === 'supabase' || !existing.source) {
+        records.set(record.id, { ...existing, ...record });
+      }
+    });
+    return Array.from(records.values())
+      .sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0))
+      .slice(0, 250);
+  }
+
   function getLocalTaskFallbacks({ requests = readDesignRequests(), designs = readDesigns() } = {}) {
     return mergeTasks(
       readTasks(),
@@ -741,7 +915,21 @@
       actorEmail: normalizeEmail(event.actorEmail || user.email),
       meta: event.meta && typeof event.meta === 'object' ? event.meta : {},
     };
-    writeActivity([record, ...activity].slice(0, 250));
+    writeActivity(mergeActivity([record], activity));
+    queuePendingActivity(record);
+    await upsertSupabaseActivity(record)
+      .then(saved => {
+        if (!saved) return;
+        removePendingActivity(record.id);
+        cloudActivityCache = mergeActivity([saved], cloudActivityCache);
+      })
+      .catch(error => {
+        cloudSyncStatus = {
+          ok: false,
+          message: cleanString(error?.message || 'Dashboard activity is waiting to sync.'),
+          checkedAt: new Date().toISOString(),
+        };
+      });
     emitDashboardChange('activity', { record });
     return record;
   }
@@ -784,9 +972,11 @@
     writeDesigns([record, ...designs].slice(0, 500));
     const task = taskFromDesign(record);
     writeTasks(mergeTasks([task], readTasks()).slice(0, 750));
+    queuePendingTask(task);
     await upsertSupabaseTask(task)
       .then(saved => {
         if (saved) {
+          removePendingTask(task.id);
           cloudTasksCache = mergeTasks([saved], cloudTasksCache);
           emitDashboardChange('task', { record: saved });
         }
@@ -817,10 +1007,12 @@
       creatorEmail: user.email,
     });
     writeTasks(mergeTasks([task], readTasks()).slice(0, 750));
+    queuePendingTask(task);
     emitDashboardChange('task', { record: task });
     await upsertSupabaseTask(task)
       .then(saved => {
         if (saved) {
+          removePendingTask(task.id);
           cloudTasksCache = mergeTasks([saved], cloudTasksCache);
           emitDashboardChange('task', { record: saved });
         }
@@ -949,8 +1141,10 @@
       } : design));
     }
     emitDashboardChange('task', { record: updated });
+    queuePendingTask(updated);
     const saved = await updateSupabaseTask(id, fields).catch(() => null);
     if (saved) {
+      removePendingTask(updated.id);
       cloudTasksCache = mergeTasks([saved], cloudTasksCache);
       emitDashboardChange('task', { record: saved });
     }
@@ -1069,9 +1263,11 @@
       });
     });
 
-    const profile = getStoredProfile();
-    add(profile.email, profile.name, profile.accessRole || profile.role, { designation: designationFromProfile(profile, {}) });
     const session = readJson(AUTH_KEY, null);
+    const profile = getStoredProfile();
+    if (normalizeEmail(profile.email) === normalizeEmail(session?.user?.email)) {
+      add(profile.email, profile.name, profile.accessRole || profile.role, { designation: designationFromProfile(profile, {}) });
+    }
     add(session?.user?.email, session?.user?.name, session?.user?.accessRole || session?.user?.role, { designation: designationFromProfile({}, session?.user || {}) });
 
     requests.forEach(request => {
@@ -1101,7 +1297,7 @@
   function getDashboardState() {
     const requests = readDesignRequests();
     const designs = readDesigns();
-    const activity = readActivity();
+    const activity = mergeActivity(cloudActivityCache, readActivity());
     const tasks = mergeTasks(cloudTasksCache, getLocalTaskFallbacks({ requests, designs }));
     return {
       requests,

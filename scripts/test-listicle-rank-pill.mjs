@@ -3,6 +3,18 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const rendererStart = source.indexOf('function drawListicleType1Post');
+const rendererEnd = source.indexOf('\nfunction drawListicleRankPill', rendererStart);
+assert.ok(rendererStart >= 0 && rendererEnd > rendererStart, 'listicle renderer must exist');
+const rendererSource = source.slice(rendererStart, rendererEnd);
+const rowLoopStart = rendererSource.indexOf('data.rows.forEach');
+const rowLoopEnd = rendererSource.indexOf('drawSwipeButton', rowLoopStart);
+assert.ok(rowLoopStart >= 0 && rowLoopEnd > rowLoopStart, 'listicle row renderer must exist');
+assert.doesNotMatch(
+  rendererSource.slice(rowLoopStart, rowLoopEnd),
+  /setLineDash|moveTo\s*\(|lineTo\s*\(|stroke\s*\(/,
+  'listicle rows must not render dashed horizontal or vertical separator lines',
+);
 assert.match(
   source,
   /function fitListicleHeaderFont[\s\S]*?`500 \$\{Math\.round\(size\)\}px "Roboto Condensed"/,

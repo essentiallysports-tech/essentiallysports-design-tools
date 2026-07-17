@@ -7,10 +7,10 @@
   <title>Design Tools | EssentiallySports</title>
 <script src="es-auth-config.js?v=20260707-auth4"></script>
 <script src="es-auth.js?v=20260714-authcallback2"></script>
-  <script src="dashboard-data.js?v=20260711-dashboardroles1"></script>
+  <script src="dashboard-data.js?v=20260716-dashboard-sync1"></script>
 <script>
   (() => {
-    window.ESAuth?.requireAuth(`index.html${window.location.search}${window.location.hash}`);
+      window.ESAuth?.requireAuth(`index.html${window.location.search}${window.location.hash}`);
   })();
 </script>
 <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -333,7 +333,7 @@
     max-width: 300px;
     height: 58px;
     overflow: visible;
-    border: 1px solid transparent;
+    border: 0 solid transparent;
     border-radius: 20px;
     background: transparent;
     box-shadow: none;
@@ -1993,6 +1993,106 @@
     align-items: center;
     gap: 10px;
     flex: 0 0 auto;
+  }
+  .canvas-ai-search-form {
+    width: 0;
+    max-width: 0;
+    min-width: 0;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    overflow: hidden;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: #FFFFFF;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-8px);
+    flex: 0 0 0;
+    box-sizing: border-box;
+    transition:
+      width .3s var(--motion-smooth),
+      max-width .3s var(--motion-smooth),
+      flex-basis .3s var(--motion-smooth),
+      opacity .18s ease,
+      transform .3s var(--motion-smooth),
+      border-color .2s ease;
+  }
+  .canvas-ai-search-form input {
+    min-width: 0;
+    height: 100%;
+    flex: 1 1 auto;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #111827;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 400;
+    padding: 0;
+  }
+  .canvas-ai-search-form input::placeholder {
+    color: #8793A3;
+  }
+  .canvas-ai-search-form input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .canvas-ai-search-icon {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    color: #657184;
+    margin-left: 11px;
+  }
+  .canvas-ai-search-submit,
+  .canvas-ai-search-close {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    display: inline-grid;
+    place-items: center;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #111827;
+    cursor: pointer;
+    padding: 0;
+  }
+  .canvas-ai-search-submit {
+    background: var(--accent);
+    color: #FFFFFF;
+  }
+  .canvas-ai-search-submit svg,
+  .canvas-ai-search-close svg {
+    width: 17px;
+    height: 17px;
+  }
+  .canvas-ai-search-submit:hover {
+    background: #066FDB;
+  }
+  .canvas-ai-search-close:hover {
+    background: #F0F2F5;
+  }
+  .canvas-ai-search-form:focus-within {
+    border-color: #8DC4FF;
+    box-shadow: 0 0 0 2px rgba(10, 125, 250, .10);
+  }
+  .canvas-ai-search-form.is-loading .canvas-ai-search-submit svg {
+    display: none;
+  }
+  .canvas-ai-search-form.is-loading .canvas-ai-search-submit::after {
+    content: "";
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(255, 255, 255, .45);
+    border-top-color: #FFFFFF;
+    border-radius: 50%;
+    animation: canvasAiSearchSpin .7s linear infinite;
+  }
+  @keyframes canvasAiSearchSpin {
+    to { transform: rotate(360deg); }
   }
   .canvas-bottom-actions .carousel-workspace-nav {
     width: auto;
@@ -5139,7 +5239,9 @@ body[data-current-page="faq"] .faq-cta-art img {
       bottom: auto;
       z-index: 30;
       width: max-content;
-      max-width: min(100%, 940px);
+      max-width: min(720px, calc(100vw - 80px));
+      height: 54px;
+      max-height: 54px;
       min-height: 54px;
       margin: 14px auto 0;
       display: inline-flex;
@@ -5156,12 +5258,22 @@ body[data-current-page="faq"] .faq-cta-art img {
       align-self: center;
       left: auto;
       transform: none;
+      flex-wrap: nowrap;
+      box-sizing: border-box;
+      overflow: visible;
+      transition:
+        width .34s var(--motion-smooth),
+        max-width .34s var(--motion-smooth),
+        padding .24s var(--motion-smooth),
+        box-shadow .24s ease;
     }
 
-    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-searching {
-      width: max-content;
-      max-width: min(100%, 980px);
-      padding-inline: 10px;
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded {
+      width: min(920px, calc(100vw - 80px));
+      max-width: min(920px, calc(100vw - 80px));
+      height: 54px;
+      max-height: 54px;
+      padding-inline: 8px;
     }
 
     html[data-studio-shell="on"] .studio-dock-actions .canvas-bottom-actions {
@@ -5185,11 +5297,18 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] body[data-current-page="instagram"] .canvas-bottom-actions {
-      width: min(720px, calc(100vw - 64px - max(370px, 26vw) - 24px));
-      max-width: none;
-      flex-wrap: wrap;
+      width: min(720px, calc(100vw - 80px));
+      max-width: min(720px, calc(100vw - 80px));
+      flex-wrap: nowrap;
       margin-left: 50%;
       transform: translateX(calc(-50% + 30px));
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="instagram"] .canvas-bottom-actions.is-ai-search-expanded {
+      width: min(920px, calc(100vw - 80px));
+      max-width: min(920px, calc(100vw - 80px));
+      height: 54px;
+      max-height: 54px;
     }
 
     html[data-studio-shell="on"] body[data-current-page="instagram"] .studio-dock-actions .canvas-bottom-actions {
@@ -5227,6 +5346,39 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     html[data-studio-shell="on"] .canvas-primary-actions {
       gap: 8px;
+      min-width: 0;
+      flex-wrap: nowrap;
+    }
+
+    html[data-studio-shell="on"] .canvas-primary-actions > .canvas-upload-button {
+      max-width: 190px;
+      overflow: hidden;
+      white-space: nowrap;
+      transition:
+        max-width .26s var(--motion-smooth),
+        padding .26s var(--motion-smooth),
+        opacity .16s ease,
+        border-width .26s var(--motion-smooth);
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .canvas-primary-actions > .canvas-upload-button {
+      max-width: 0;
+      min-width: 0;
+      padding-inline: 0;
+      border-width: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .canvas-ai-search-form {
+      width: clamp(250px, 21vw, 300px);
+      max-width: 300px;
+      flex-basis: clamp(250px, 21vw, 300px);
+      border-width: 1px;
+      border-color: #DCE4ED;
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0);
     }
 
     html[data-studio-shell="on"] .studio-dock-actions .canvas-primary-actions {
@@ -5245,10 +5397,6 @@ body[data-current-page="faq"] .faq-cta-art img {
       box-shadow: none;
       font-size: 14px;
       font-weight: 500;
-    }
-
-    html[data-studio-shell="on"] .canvas-upload-button-secondary.is-ai-searching {
-      min-width: 190px;
     }
 
     html[data-studio-shell="on"] .studio-dock-actions .canvas-upload-button {
@@ -5302,9 +5450,196 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .status:empty {
       display: none;
     }
+
+    /* Studio content inspector: presentation-only grouping for existing controls. */
+    html[data-studio-shell="on"] .studio-content-sections {
+      display: grid;
+      min-width: 0;
+      background: #F7F8FA;
+    }
+
+    html[data-studio-shell="on"] .studio-primary-controls {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border-bottom: 1px solid #E5E7EB;
+      background: #FFFFFF;
+    }
+
+    html[data-studio-shell="on"] .studio-primary-controls > * {
+      margin: 0;
+    }
+
+    html[data-studio-shell="on"] .studio-primary-controls > .post-type-control,
+    html[data-studio-shell="on"] .studio-primary-controls > .youtube-control-row,
+    html[data-studio-shell="on"] .studio-primary-controls > .newsletter-control-row {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-list {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-section {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid #DFE3E8;
+      border-radius: 10px;
+      background: #FFFFFF;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .025);
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-section.is-open {
+      border-color: #D6DBE2;
+      box-shadow: 0 7px 20px rgba(15, 23, 42, .045);
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-section[hidden] {
+      display: none !important;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-trigger {
+      width: 100%;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 0 16px;
+      border: 0;
+      background: #FFFFFF;
+      color: #111827;
+      cursor: pointer;
+      font-family: var(--font-heading);
+      font-size: 15px;
+      font-weight: 650;
+      line-height: 1.15;
+      text-align: left;
+      transition: background-color .18s ease, color .18s ease;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-trigger:hover {
+      background: #F8F9FA;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-trigger:focus-visible {
+      outline: 2px solid rgba(10, 125, 250, .42);
+      outline-offset: -3px;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-chevron {
+      width: 9px;
+      height: 9px;
+      flex: 0 0 auto;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(45deg) translate(-2px, -2px);
+      transition: transform .24s var(--motion-smooth);
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-section.is-open .studio-accordion-chevron {
+      transform: rotate(225deg) translate(-1px, -1px);
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-collapse {
+      display: grid;
+      grid-template-rows: 0fr;
+      opacity: 0;
+      transition: grid-template-rows .28s var(--motion-smooth), opacity .2s ease;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-section.is-open .studio-accordion-collapse {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-body {
+      min-height: 0;
+      overflow: hidden;
+      border-top: 0 solid transparent;
+      transition: border-color .2s ease, border-top-width .2s ease;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-section.is-open .studio-accordion-body {
+      border-top-width: 1px;
+      border-top-color: #ECEFF3;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-body > * {
+      margin: 0;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-body > * + * {
+      border-top: 1px solid #F0F2F5;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-body .card,
+    html[data-studio-shell="on"] .studio-accordion-body .text-card,
+    html[data-studio-shell="on"] .studio-accordion-body .swipe-button-control,
+    html[data-studio-shell="on"] .studio-accordion-body .advanced-card,
+    html[data-studio-shell="on"] .studio-accordion-body .quote-logo-control {
+      padding: 18px;
+      border: 0;
+      border-radius: 0;
+      background: #FFFFFF;
+      box-shadow: none;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-body .quote-logo-control {
+      margin: 0;
+    }
+
+    html[data-studio-shell="on"] body[data-studio-inspector="image"] .studio-content-sections,
+    html[data-studio-shell="on"] body[data-studio-inspector="ai"] .studio-content-sections {
+      display: none !important;
+    }
+
+    html[data-studio-shell="on"] body[data-studio-inspector="content"] .studio-content-sections {
+      display: grid;
+      animation: studioInspectorPanelIn .22s ease both;
+    }
   }
 
   @media (min-width: 1024px) and (max-width: 1199px) {
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .canvas-ai-search-form {
+      width: clamp(180px, 18vw, 240px);
+      max-width: 240px;
+      flex-basis: clamp(180px, 18vw, 240px);
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .studio-zoom-group {
+      padding-right: 6px;
+      margin-right: 0;
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .studio-zoom-btn {
+      width: 32px;
+      height: 38px;
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .studio-zoom-value {
+      width: 48px;
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .carousel-slide-button {
+      width: 29px;
+      height: 38px;
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .carousel-slide-arrow {
+      width: 23px;
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .carousel-slide-switcher {
+      gap: 3px;
+    }
+
     html[data-studio-shell="on"] .navbar {
       padding-inline: 18px;
     }
@@ -5353,6 +5688,174 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
   }
 
+  @media (max-width: 1023px) {
+    html[data-studio-shell="on"] .canvas-bottom-actions,
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded,
+    html[data-studio-shell="on"] body[data-current-page="instagram"] .canvas-bottom-actions,
+    html[data-studio-shell="on"] body[data-current-page="instagram"] .canvas-bottom-actions.is-ai-search-expanded {
+      width: calc(100vw - 32px);
+      max-width: calc(100vw - 32px);
+      min-height: 54px;
+      height: 54px;
+      max-height: 54px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions::-webkit-scrollbar {
+      display: none;
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .canvas-primary-actions > .canvas-upload-button {
+      display: none;
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .canvas-primary-actions {
+      width: min(100%, 440px);
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .canvas-ai-search-form {
+      width: 100%;
+      max-width: 440px;
+      flex: 1 1 100%;
+      border-width: 1px;
+      border-color: #DCE4ED;
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0);
+    }
+
+    html[data-studio-shell="on"] .studio-content-sections {
+      display: grid;
+      min-width: 0;
+      background: #F7F8FA;
+    }
+
+    html[data-studio-shell="on"] .studio-primary-controls {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid #E5E7EB;
+      background: #FFFFFF;
+    }
+
+    html[data-studio-shell="on"] .studio-primary-controls > * {
+      margin: 0;
+    }
+
+    html[data-studio-shell="on"] .studio-primary-controls > .post-type-control,
+    html[data-studio-shell="on"] .studio-primary-controls > .youtube-control-row,
+    html[data-studio-shell="on"] .studio-primary-controls > .newsletter-control-row {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-list {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-section {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid #DFE3E8;
+      border-radius: 10px;
+      background: #FFFFFF;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-section[hidden] {
+      display: none !important;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-trigger {
+      width: 100%;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 16px;
+      border: 0;
+      background: #FFFFFF;
+      color: #111827;
+      cursor: pointer;
+      font-family: var(--font-heading);
+      font-size: 16px;
+      font-weight: 650;
+      line-height: 1.15;
+      text-align: left;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-trigger:focus-visible {
+      outline: 2px solid rgba(10, 125, 250, .42);
+      outline-offset: -3px;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-chevron {
+      width: 9px;
+      height: 9px;
+      flex: 0 0 auto;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(45deg) translate(-2px, -2px);
+      transition: transform .24s var(--motion-smooth);
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-section.is-open .studio-accordion-chevron {
+      transform: rotate(225deg) translate(-1px, -1px);
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-collapse {
+      display: grid;
+      grid-template-rows: 0fr;
+      opacity: 0;
+      transition: grid-template-rows .28s var(--motion-smooth), opacity .2s ease;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-section.is-open .studio-accordion-collapse {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-body {
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-section.is-open .studio-accordion-body {
+      border-top: 1px solid #ECEFF3;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-body > * {
+      margin: 0;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-body > * + * {
+      border-top: 1px solid #F0F2F5;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-body .card,
+    html[data-studio-shell="on"] .studio-accordion-body .text-card,
+    html[data-studio-shell="on"] .studio-accordion-body .swipe-button-control,
+    html[data-studio-shell="on"] .studio-accordion-body .advanced-card,
+    html[data-studio-shell="on"] .studio-accordion-body .quote-logo-control {
+      padding: 16px;
+      border: 0;
+      border-radius: 0;
+      background: #FFFFFF;
+      box-shadow: none;
+    }
+
+    html[data-studio-shell="on"] body[data-studio-inspector="image"] .studio-content-sections,
+    html[data-studio-shell="on"] body[data-studio-inspector="ai"] .studio-content-sections {
+      display: none !important;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     html[data-studio-shell="on"] .studio-home-btn,
     html[data-studio-shell="on"] .studio-zoom-btn,
@@ -5365,7 +5868,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root2">
 <link rel="stylesheet" href="theme.css?v=20260714-footer1">
-<link rel="stylesheet" href="site-chrome.css?v=20260713-chrome1">
+<link rel="stylesheet" href="site-chrome.css?v=20260717-dock-admin2">
 <script src="theme.js?v=20260712-darkmode12"></script>
 <script src="site-mobile-chrome.js?v=20260710-mobile-root2"></script>
 <script src="site-chrome.js?v=20260713-chrome1"></script>
@@ -5396,7 +5899,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
     </div>
     <a href="design-request.html">Design Request</a>
-    <a href="dashboard.html" data-admin-only aria-hidden="true">Dashboard</a>
+    <a href="dashboard.html" data-admin-only hidden aria-hidden="true">Dashboard</a>
     <a href="#faq" data-route="faq">FAQ</a>
   </div>
   <div class="navbar-right">
@@ -6079,13 +6582,30 @@ body[data-current-page="faq"] .faq-cta-art img {
                 </svg>
                 <span>Upload Image</span>
               </button>
-              <button class="canvas-upload-button canvas-upload-button-secondary" type="button" data-ai-image-search aria-label="Fetch AI image from ES Storage" title="Fetch AI image from ES Storage">
+              <button class="canvas-upload-button canvas-upload-button-secondary" type="button" data-ai-image-search aria-label="Fetch AI image from ES Storage" aria-expanded="false" title="Fetch AI image from ES Storage">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5l-1.9-5.7-5.6-1.9L10.1 9 12 3.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
                   <path d="M18 4v4M20 6h-4M6 17v3M7.5 18.5h-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
                 </svg>
                 <span>AI Images</span>
               </button>
+              <form class="canvas-ai-search-form" data-canvas-ai-search-form role="search" aria-label="Search ES images from the canvas toolbar" aria-hidden="true" inert>
+                <svg class="canvas-ai-search-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"></circle>
+                  <path d="m16 16 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                </svg>
+                <input type="search" data-canvas-ai-image-query-input placeholder="Search entity, team, topic..." autocomplete="off" spellcheck="false" aria-label="Search ES images">
+                <button class="canvas-ai-search-submit" type="submit" data-canvas-ai-search-submit aria-label="Search ES images">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 12h13M13 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                  </svg>
+                </button>
+                <button class="canvas-ai-search-close" type="button" data-canvas-ai-search-close aria-label="Close image search">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                  </svg>
+                </button>
+              </form>
             </div>
             <div class="carousel-workspace-nav view-hidden" data-page="instagram" aria-label="Social media carousel slides">
               <div class="carousel-slide-switcher">
@@ -7577,11 +8097,32 @@ function initImageToolRail() {
   });
 
   document.addEventListener('submit', event => {
-    if (!event.target.closest?.('[data-ai-image-search-form]')) return;
+    const form = event.target.closest?.('[data-ai-image-search-form], [data-canvas-ai-search-form]');
+    if (!form) return;
     event.preventDefault();
     event.stopPropagation();
-    runAiImageSearch(document.querySelector('[data-ai-image-query-input]')?.value);
+    const input = form.querySelector('[data-ai-image-query-input], [data-canvas-ai-image-query-input]');
+    syncAiImageSearchInputs(input?.value || '', input);
+    runAiImageSearch(input?.value);
   });
+
+  document.addEventListener('input', event => {
+    if (!event.target.matches?.('[data-ai-image-query-input], [data-canvas-ai-image-query-input]')) return;
+    syncAiImageSearchInputs(event.target.value, event.target);
+  });
+
+  document.querySelector('[data-canvas-ai-search-close]')?.addEventListener('click', event => {
+    event.stopPropagation();
+    setCanvasAiSearchExpanded(false, { returnFocus: true });
+  });
+
+  document.querySelector('[data-canvas-ai-search-form]')?.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    setCanvasAiSearchExpanded(false, { returnFocus: true });
+  });
+
+  window.addEventListener('hashchange', () => setCanvasAiSearchExpanded(false));
 
   document.getElementById('ai-image-picker')?.addEventListener('click', event => event.stopPropagation());
   document.querySelector('[data-ai-image-picker-close]')?.addEventListener('click', event => {
@@ -8612,20 +9153,44 @@ function getActiveHeadlineForImageSearch() {
   return getActiveImageSearchQueries()[0] || '';
 }
 
+function syncAiImageSearchInputs(value, sourceInput = null) {
+  const nextValue = String(value || '');
+  document.querySelectorAll('[data-ai-image-query-input], [data-canvas-ai-image-query-input]').forEach(input => {
+    if (input !== sourceInput && input.value !== nextValue) input.value = nextValue;
+  });
+}
+
+function setCanvasAiSearchExpanded(isExpanded, options = {}) {
+  const form = document.querySelector('[data-canvas-ai-search-form]');
+  const trigger = document.querySelector('[data-ai-image-search]');
+  const actionDock = form?.closest('.canvas-bottom-actions');
+  const expanded = Boolean(isExpanded && form && actionDock);
+  actionDock?.classList.toggle('is-ai-search-expanded', expanded);
+  form?.setAttribute('aria-hidden', expanded ? 'false' : 'true');
+  form?.toggleAttribute('inert', !expanded);
+  trigger?.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  if (trigger) trigger.tabIndex = expanded ? -1 : 0;
+
+  if (expanded && options.focus !== false) {
+    requestAnimationFrame(() => {
+      const input = form.querySelector('[data-canvas-ai-image-query-input]');
+      input?.focus();
+      input?.select?.();
+    });
+  } else if (!expanded && options.returnFocus) {
+    requestAnimationFrame(() => trigger?.focus());
+  }
+}
+
 function setAiImageButtonLoading(isLoading) {
   const button = document.querySelector('[data-ai-image-search]');
   if (!button) return;
-  const actionDock = button.closest('.canvas-bottom-actions');
   button.disabled = isLoading;
-  button.classList.toggle('is-ai-searching', Boolean(isLoading));
-  actionDock?.classList.toggle('is-ai-searching', Boolean(isLoading));
-  const label = button.querySelector('span');
-  if (label) label.textContent = isLoading ? 'Searching...' : 'AI Images';
-  const searchButton = document.querySelector('[data-ai-image-search-submit]');
-  if (searchButton) {
+  document.querySelector('[data-canvas-ai-search-form]')?.classList.toggle('is-loading', Boolean(isLoading));
+  document.querySelectorAll('[data-ai-image-search-submit], [data-canvas-ai-search-submit]').forEach(searchButton => {
     searchButton.disabled = isLoading;
-    searchButton.textContent = isLoading ? 'Searching' : 'Search';
-  }
+    searchButton.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+  });
 }
 
 function directEsMediaSearchUrl(query) {
@@ -8740,14 +9305,12 @@ function renderAiImagePicker(results, query) {
 
 function focusAiImageSearch(query = '') {
   window.ESSetStudioInspectorMode?.('ai');
-  const input = document.querySelector('[data-ai-image-query-input]');
-  if (!input) return;
-  const nextQuery = String(query || getActiveHeadlineForImageSearch() || '').trim();
-  if (nextQuery && !input.value.trim()) input.value = nextQuery;
-  requestAnimationFrame(() => {
-    input.focus();
-    input.select?.();
-  });
+  const inlineInput = document.querySelector('[data-canvas-ai-image-query-input]');
+  const panelInput = document.querySelector('[data-ai-image-query-input]');
+  const currentQuery = String(inlineInput?.value || panelInput?.value || '').trim();
+  const nextQuery = String(query || currentQuery || getActiveHeadlineForImageSearch() || '').trim();
+  syncAiImageSearchInputs(nextQuery);
+  setCanvasAiSearchExpanded(true);
 }
 
 async function runAiImageSearch(query) {
@@ -8803,6 +9366,7 @@ async function applySelectedAiImageFromEsStorage(result) {
     syncImageToolControls();
     render();
     setAiImagePickerOpen(false);
+    setCanvasAiSearchExpanded(false);
     setStatus('');
   } catch (error) {
     setStatus(error.message || 'Selected ES image could not be applied.', 'err');
@@ -10126,8 +10690,8 @@ function drawListicleType1Post(ctx, W, H, scale) {
     ctx.fillText(String(header.text).toUpperCase(), sx(header.x), sx(302));
   });
 
-  const rowTop = 350;
-  const rowHeight = 173.2;
+  const rowTop = 356;
+  const rowHeight = 170;
   data.rows.forEach((row, index) => {
     const top = rowTop + index * rowHeight;
     const centerY = top + rowHeight / 2;
@@ -10135,14 +10699,7 @@ function drawListicleType1Post(ctx, W, H, scale) {
 
     const logoFrameSize = sx(106);
     drawListicleLogo(ctx, row, sx(174), sx(centerY) - logoFrameSize / 2, logoFrameSize, logoFrameSize, scale);
-    ctx.strokeStyle = '#6F6F6F';
-    ctx.lineWidth = Math.max(1, sx(1));
-    ctx.beginPath();
-    ctx.moveTo(sx(318), sx(top + 40));
-    ctx.lineTo(sx(318), sx(top + rowHeight - 40));
-    ctx.stroke();
-
-    const entity = fitListicleBlock(ctx, row.entity, sx(290), 2, 54 * scale, 34 * scale);
+    const entity = fitListicleBlock(ctx, row.entity, sx(335), 2, 54 * scale, 34 * scale);
     const entityLineHeight = entity.size * 0.88;
     const entityBlockHeight = entity.lines.length * entityLineHeight;
     ctx.fillStyle = '#08090A';
@@ -10150,21 +10707,12 @@ function drawListicleType1Post(ctx, W, H, scale) {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     entity.lines.forEach((line, lineIndex) => {
-      ctx.fillText(line, sx(365), sx(centerY) - entityBlockHeight / 2 + lineIndex * entityLineHeight);
+      ctx.fillText(line, sx(315), sx(centerY) - entityBlockHeight / 2 + lineIndex * entityLineHeight);
     });
 
     drawStatsText(ctx, row.metric1, sx(755), sx(centerY), sx(180), 54 * scale, 31 * scale, '#101010');
     drawStatsText(ctx, row.metric2, sx(950), sx(centerY), sx(130), 54 * scale, 31 * scale, '#101010');
 
-    const separatorY = sx(top + rowHeight);
-    ctx.beginPath();
-    ctx.moveTo(left, separatorY);
-    ctx.lineTo(right, separatorY);
-    ctx.strokeStyle = index === data.rows.length - 1 ? '#555555' : '#777777';
-    ctx.lineWidth = Math.max(1, sx(index === data.rows.length - 1 ? 2 : 1));
-    ctx.setLineDash(index === data.rows.length - 1 ? [] : [sx(10), sx(10)]);
-    ctx.stroke();
-    ctx.setLineDash([]);
   });
 
   drawSwipeButton(ctx, W, H, scale, true);
@@ -12829,6 +13377,176 @@ loadFont().then(() => render());
 
   window.ESSetStudioInspectorMode = setStudioInspectorMode;
 
+  const studioSectionLabels = {
+    instagram: {
+      content: 'Content',
+      layout: 'Layout & Placement',
+      brand: 'Brand & Colors',
+      images: 'Image Layers',
+    },
+    youtube: {
+      content: 'Copy & Format',
+      layout: 'Text Placement',
+      brand: 'Brand & Team',
+      images: 'Foreground Images',
+    },
+    newsletter: {
+      content: 'Content',
+      layout: 'Placement',
+      brand: 'Brand Settings',
+      images: 'Image Layers',
+    },
+  };
+
+  const studioSectionNodes = {
+    content: ['quote-logo-control', '.text-card'],
+    layout: ['pill-position-card', 'swipe-button-card'],
+    brand: ['.color-card'],
+    images: ['entity-image-card', 'entity-image-card-2'],
+  };
+
+  const studioOpenSectionByWorkspace = {
+    instagram: 'content',
+    youtube: 'content',
+    newsletter: 'content',
+  };
+
+  let studioSectionRefreshQueued = false;
+
+  function resolveStudioNode(selector) {
+    return selector.startsWith('.')
+      ? document.querySelector(selector)
+      : document.getElementById(selector);
+  }
+
+  function setStudioSectionOpen(section, isOpen) {
+    const trigger = section.querySelector('.studio-accordion-trigger');
+    section.classList.toggle('is-open', isOpen);
+    trigger?.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  }
+
+  function openStudioSection(sectionKey) {
+    const workspace = currentWorkspace();
+    const list = document.querySelector('[data-studio-accordion-list]');
+    if (!workspace || !list) return;
+
+    list.querySelectorAll('[data-studio-accordion-section]').forEach(section => {
+      setStudioSectionOpen(section, section.dataset.studioAccordionSection === sectionKey);
+    });
+    studioOpenSectionByWorkspace[workspace] = sectionKey;
+  }
+
+  function refreshStudioContentSections() {
+    studioSectionRefreshQueued = false;
+    const workspace = currentWorkspace();
+    const list = document.querySelector('[data-studio-accordion-list]');
+    if (!workspace || !list) return;
+
+    const labels = studioSectionLabels[workspace] || studioSectionLabels.instagram;
+    const visibleSections = [];
+    list.querySelectorAll('[data-studio-accordion-section]').forEach(section => {
+      const key = section.dataset.studioAccordionSection;
+      const label = section.querySelector('[data-studio-accordion-label]');
+      if (label) label.textContent = labels[key] || key;
+
+      section.hidden = false;
+      const body = section.querySelector('.studio-accordion-body');
+      const hasVisibleControl = [...(body?.children || [])].some(node => {
+        const style = window.getComputedStyle(node);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      });
+      section.hidden = !hasVisibleControl;
+      if (hasVisibleControl) visibleSections.push(section);
+    });
+
+    const preferred = studioOpenSectionByWorkspace[workspace];
+    const target = visibleSections.find(section => section.dataset.studioAccordionSection === preferred)
+      || visibleSections[0]
+      || null;
+    list.querySelectorAll('[data-studio-accordion-section]').forEach(section => {
+      setStudioSectionOpen(section, !section.hidden && section === target);
+    });
+    if (target) studioOpenSectionByWorkspace[workspace] = target.dataset.studioAccordionSection;
+  }
+
+  function queueStudioContentSectionRefresh() {
+    if (studioSectionRefreshQueued) return;
+    studioSectionRefreshQueued = true;
+    requestAnimationFrame(refreshStudioContentSections);
+  }
+
+  function createStudioAccordionSection(key) {
+    const section = document.createElement('section');
+    const triggerId = `studio-section-${key}-trigger`;
+    const panelId = `studio-section-${key}-panel`;
+    section.className = 'studio-accordion-section';
+    section.dataset.studioAccordionSection = key;
+    section.innerHTML = `
+      <button class="studio-accordion-trigger" id="${triggerId}" type="button" aria-expanded="false" aria-controls="${panelId}">
+        <span data-studio-accordion-label>${key}</span>
+        <span class="studio-accordion-chevron" aria-hidden="true"></span>
+      </button>
+      <div class="studio-accordion-collapse" id="${panelId}" role="region" aria-labelledby="${triggerId}">
+        <div class="studio-accordion-body"></div>
+      </div>
+    `;
+    section.querySelector('.studio-accordion-trigger')?.addEventListener('click', () => {
+      const isOpen = section.classList.contains('is-open');
+      if (isOpen) {
+        setStudioSectionOpen(section, false);
+        const workspace = currentWorkspace();
+        if (workspace) studioOpenSectionByWorkspace[workspace] = '';
+        return;
+      }
+      openStudioSection(key);
+    });
+    return section;
+  }
+
+  function ensureStudioContentSections() {
+    const panel = document.querySelector('.panel');
+    const dock = document.querySelector('[data-studio-control-dock]');
+    if (!panel || !dock) return;
+
+    let contentRoot = panel.querySelector('[data-studio-content-sections]');
+    if (contentRoot) {
+      queueStudioContentSectionRefresh();
+      return;
+    }
+
+    contentRoot = document.createElement('div');
+    contentRoot.className = 'studio-content-sections';
+    contentRoot.dataset.studioContentSections = 'true';
+    contentRoot.innerHTML = `
+      <div class="studio-primary-controls" data-studio-primary-controls aria-label="Workspace format controls"></div>
+      <div class="studio-accordion-list" data-studio-accordion-list></div>
+    `;
+    dock.insertAdjacentElement('afterend', contentRoot);
+
+    const primary = contentRoot.querySelector('[data-studio-primary-controls]');
+    [
+      document.querySelector('.youtube-control-row'),
+      document.querySelector('.newsletter-control-row'),
+      document.getElementById('post-type-control'),
+    ].filter(Boolean).forEach(node => primary.appendChild(node));
+
+    const accordionList = contentRoot.querySelector('[data-studio-accordion-list]');
+    Object.entries(studioSectionNodes).forEach(([key, selectors]) => {
+      const section = createStudioAccordionSection(key);
+      const body = section.querySelector('.studio-accordion-body');
+      selectors.map(resolveStudioNode).filter(Boolean).forEach(node => body.appendChild(node));
+      accordionList.appendChild(section);
+    });
+
+    const panelObserver = new MutationObserver(mutations => {
+      if (mutations.some(mutation => mutation.type === 'attributes' && (mutation.attributeName === 'class' || mutation.attributeName === 'style'))) {
+        queueStudioContentSectionRefresh();
+      }
+    });
+    panelObserver.observe(contentRoot, { subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+    queueStudioContentSectionRefresh();
+  }
+
   function ensureStudioControlDock() {
     const panel = document.querySelector('.panel');
     const imageRail = document.querySelector('.image-tool-rail');
@@ -12884,6 +13602,7 @@ loadFont().then(() => render());
 
     document.documentElement.dataset.studioShell = 'on';
     ensureStudioControlDock();
+    ensureStudioContentSections();
     setStudioInspectorMode(document.body.dataset.studioInspector || 'content');
     setZoom(100);
     syncStudioMeta();
@@ -12919,8 +13638,20 @@ loadFont().then(() => render());
     studioExport?.addEventListener('pointerdown', triggerStudioExport);
 
     window.addEventListener('hashchange', () => requestAnimationFrame(syncStudioMeta));
-    const observer = new MutationObserver(syncStudioMeta);
-    observer.observe(document.body, { attributes: true, attributeFilter: ['data-current-page', 'data-newsletter-asset'] });
+    const observer = new MutationObserver(() => {
+      syncStudioMeta();
+      queueStudioContentSectionRefresh();
+    });
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: [
+        'data-current-page',
+        'data-newsletter-asset',
+        'data-instagram-post-type',
+        'data-youtube-variation',
+        'data-youtube-quote',
+      ],
+    });
   }
 
   if (document.readyState === 'loading') {

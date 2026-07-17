@@ -46,7 +46,7 @@ for (const file of navbarPages) {
   const html = read(file);
   const prefix = file.startsWith('ai-page/') ? '../' : '';
   assert(
-    html.includes(`${prefix}site-chrome.css?v=20260713-chrome1`),
+    new RegExp(`${prefix.replace('../', '\\\.\\\./')}site-chrome\\.css\\?v=[^\"']+`).test(html),
     `${file} is missing the shared site chrome stylesheet`,
     `${file} uses the shared site chrome stylesheet`,
   );

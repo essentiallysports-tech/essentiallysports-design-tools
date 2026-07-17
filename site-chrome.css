@@ -546,6 +546,15 @@ html[data-theme="dark"] .site-footer .footer-bottom {
   color: #ffffff !important;
 }
 
+/* Dashboard access is opt-in only after the strict authenticated-email check. */
+html [data-admin-only]:not(.is-admin-visible) {
+  display: none !important;
+}
+
+html.has-dashboard-admin [data-admin-only].is-admin-visible {
+  display: inline-flex !important;
+}
+
 @media (min-width: 901px) and (max-width: 1260px) {
   .navbar {
     padding-inline: 18px !important;
