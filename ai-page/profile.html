@@ -18,11 +18,12 @@
   <link rel="stylesheet" href="../site-mobile-chrome.css?v=20260710-mobile-root2">
 <link rel="stylesheet" href="../theme.css?v=20260714-footer1">
   <link rel="stylesheet" href="../site-chrome.css?v=20260718-nav-neutral1">
+  <link rel="stylesheet" href="profile-page.css?v=20260718-profile1">
   <script src="../theme.js?v=20260712-darkmode12"></script>
   <script src="../site-mobile-chrome.js?v=20260710-mobile-root2"></script>
   <script src="../site-chrome.js?v=20260713-chrome1"></script>
 </head>
-<body>
+<body class="profile-page">
   <div class="page">
     <nav class="navbar">
       <a class="navbar-logo" href="../index.html" aria-label="EssentiallySports home"><img src="assets/brand-logo-blue.svg" alt="EssentiallySports"></a>
@@ -72,24 +73,31 @@
 
     <main class="account-main">
       <div class="account-shell">
-        <div class="account-kicker">FrameUp Account</div>
-        <h1 class="account-title">Edit Profile</h1>
-        <p class="account-subtitle">Manage the profile details FrameUp uses across design tools, requests, and internal creative workflows.</p>
-        <div class="account-grid">
-          <section class="account-card profile-summary">
+        <header class="profile-page-header">
+          <div class="profile-page-heading">
+            <div class="account-kicker">FrameUp Account</div>
+            <h1 class="account-title">Edit Profile</h1>
+            <p class="account-subtitle">Manage the details used across FrameUp tools, requests, and internal workflows.</p>
+          </div>
+          <a class="profile-back-link" href="../index.html#frames">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m14 6-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Back to Design Tools
+          </a>
+        </header>
+        <section class="account-card profile-editor" aria-label="Profile details">
+          <aside class="profile-summary">
             <div class="large-avatar" id="profile-avatar-large">ES</div>
-            <label class="avatar-upload">
-              <input id="avatar-upload" type="file" accept="image/png,image/jpeg,image/webp">
-              <span class="avatar-upload-label">Upload Profile Image</span>
-              <span class="avatar-help">Optional. PNG, JPG, or WebP, saved locally for this browser.</span>
-            </label>
-            <div>
+            <div class="profile-summary-copy">
               <h2 class="summary-name" id="summary-name">Guest User</h2>
               <p class="summary-meta is-empty" id="summary-role"></p>
             </div>
-            <a class="secondary-btn" href="../index.html#frames">Back to Design Tools</a>
-          </section>
-          <section class="account-card profile-form-card">
+            <label class="avatar-upload">
+              <input id="avatar-upload" type="file" accept="image/png,image/jpeg,image/webp">
+              <span class="avatar-upload-label">Upload image</span>
+              <span class="avatar-help">PNG, JPG, or WebP. Saved in this browser.</span>
+            </label>
+          </aside>
+          <div class="profile-form-card">
             <form id="profile-form">
               <input id="avatar" name="avatar" type="hidden">
               <div class="field-grid">
@@ -126,13 +134,12 @@
               </div>
               <div class="status-note" id="profile-status" aria-live="polite"></div>
             </form>
-          </section>
-        </div>
+          </div>
+        </section>
         <section class="account-card danger-zone" aria-labelledby="delete-account-title">
           <div class="danger-zone-copy">
-            <div class="danger-zone-kicker">Account controls</div>
-            <h2 id="delete-account-title">Delete my account</h2>
-            <p>Permanently remove your FrameUp login and profile. Your shared requests and exported-design history remain for the team. You can join FrameUp again later by creating a new account with an approved ES email.</p>
+            <h2 id="delete-account-title">Account controls</h2>
+            <p>Delete your FrameUp login and profile. Shared requests and export history remain available to the team.</p>
           </div>
           <button class="danger-btn" id="open-delete-account" type="button">Delete my account</button>
         </section>
