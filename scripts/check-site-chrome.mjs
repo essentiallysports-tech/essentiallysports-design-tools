@@ -128,9 +128,16 @@ assert(
   'Current navbar item uses the neutral black state',
 );
 assert(
-  siteChromeCss.includes("stroke='%23111111'") && !siteChromeCss.includes("stroke='%230A7DFA'"),
-  'Shared navbar chevron still uses the blue selected state',
-  'Shared navbar chevron uses the neutral black state',
+  siteChromeCss.includes("stroke='%230A7DFA'"),
+  'Shared navbar chevron is not using ES blue',
+  'Shared navbar chevron uses ES blue',
+);
+
+const homeSource = read('index.html');
+assert(
+  /\.home-showcase-heading h2\s*\{[\s\S]*?font-family:\s*'Acumin Pro Condensed Local'[\s\S]*?font-size:\s*clamp\(38px,\s*4\.2vw,\s*62px\);[\s\S]*?font-weight:\s*700;[\s\S]*?letter-spacing:\s*-\.035em;/.test(homeSource),
+  'Homepage workspace heading does not match login typography',
+  'Homepage workspace heading matches login typography',
 );
 
 if (process.exitCode) {
