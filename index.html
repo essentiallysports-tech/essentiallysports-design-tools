@@ -3193,8 +3193,142 @@ body[data-current-page="faq"] .faq-cta-art img {
     cursor: grab;
     touch-action: none;
   }
+  .canvas-wrap.is-image-editing canvas#preview {
+    cursor: move;
+  }
+  .canvas-wrap.is-image-dragging canvas#preview {
+    cursor: grabbing;
+  }
   .canvas-wrap.is-dragging canvas#preview {
     cursor: grabbing;
+  }
+  .canvas-image-edit-frame {
+    position: absolute;
+    z-index: 4;
+    box-sizing: border-box;
+    border: 1px solid #0A7DFA;
+    pointer-events: none;
+    animation: canvas-image-edit-enter 180ms ease both;
+  }
+  .canvas-image-edit-frame[hidden],
+  .canvas-image-edit-toolbar[hidden],
+  .canvas-image-edit-hint[hidden] {
+    display: none !important;
+  }
+  .canvas-image-edit-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: 1px solid #0A7DFA;
+    border-radius: 2px;
+    background: #FFFFFF;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    touch-action: none;
+  }
+  .canvas-image-edit-handle.is-top-left { top: 0; left: 0; cursor: nwse-resize; }
+  .canvas-image-edit-handle.is-top-right { top: 0; left: 100%; cursor: nesw-resize; }
+  .canvas-image-edit-handle.is-bottom-right { top: 100%; left: 100%; cursor: nwse-resize; }
+  .canvas-image-edit-handle.is-bottom-left { top: 100%; left: 0; cursor: nesw-resize; }
+  .canvas-image-edit-handle:focus-visible {
+    outline: 2px solid rgba(10, 125, 250, .28);
+    outline-offset: 2px;
+  }
+  .canvas-image-edit-toolbar {
+    position: absolute;
+    z-index: 6;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid #D8DEE7;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .97);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, .10);
+    transform: translateX(-50%);
+    animation: canvas-image-edit-enter 180ms ease both;
+    will-change: left, top;
+  }
+  .canvas-image-edit-label {
+    max-width: 112px;
+    overflow: hidden;
+    padding: 0 8px;
+    color: #172033;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 26px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .canvas-image-edit-divider {
+    width: 1px;
+    height: 18px;
+    background: #E2E6EC;
+  }
+  .canvas-image-edit-toolbar button {
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #172033;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .canvas-image-edit-toolbar button:hover,
+  .canvas-image-edit-toolbar button:focus-visible {
+    background: #F1F3F6;
+    outline: 2px solid rgba(10, 125, 250, .18);
+    outline-offset: 1px;
+  }
+  .canvas-image-edit-toolbar output {
+    min-width: 44px;
+    color: #172033;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .canvas-image-edit-toolbar .canvas-image-edit-reset {
+    color: #475467;
+    font-size: 13px;
+  }
+  .canvas-image-edit-toolbar .canvas-image-edit-done {
+    padding-inline: 10px;
+    background: #172033;
+    color: #FFFFFF;
+    font-size: 13px;
+  }
+  .canvas-image-edit-toolbar .canvas-image-edit-done:hover,
+  .canvas-image-edit-toolbar .canvas-image-edit-done:focus-visible {
+    background: #253047;
+  }
+  .canvas-image-edit-hint {
+    position: absolute;
+    z-index: 5;
+    padding: 5px 9px;
+    border-radius: 6px;
+    background: rgba(17, 24, 39, .82);
+    color: #FFFFFF;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    transform: translateX(-50%);
+    will-change: left, top;
+    pointer-events: none;
+    white-space: nowrap;
+    animation: canvas-image-edit-enter 180ms ease both;
+  }
+  @keyframes canvas-image-edit-enter {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
   .canvas-label {
     display: none;
@@ -3536,22 +3670,209 @@ body[data-current-page="faq"] .faq-cta-art img {
   .image-tool-section {
     display: none;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
   }
   .image-tool-section.is-active {
     display: flex;
+    animation: image-context-enter 200ms ease both;
   }
-  .image-tool-title {
-    color: #111827;
-    font-family: var(--font-ui-condensed);
-    font-size: 16px;
-    font-weight: 700;
+  @keyframes image-context-enter {
+    from { opacity: 0; transform: translateY(3px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-  .image-tool-empty {
-    color: var(--text-secondary);
+  .image-asset-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 3px;
+    border: 1px solid #E1E6ED;
+    border-radius: 8px;
+    background: #F4F6F8;
+  }
+  .image-asset-tabs.is-single {
+    display: none;
+  }
+  .image-context-empty {
+    min-height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 16px;
+    border: 1px dashed #CBD3DD;
+    border-radius: 8px;
+    background: #FAFBFC;
+  }
+  @media (max-width: 520px) {
+    .image-context-empty {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+  .image-context-empty[hidden],
+  .image-context-content[hidden] {
+    display: none !important;
+  }
+  .image-context-empty > div {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+  }
+  .image-context-empty strong,
+  .image-context-media-copy strong {
+    overflow: hidden;
+    color: #151A22;
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .image-context-empty span {
+    color: #667085;
     font-family: var(--font-ui);
     font-size: 14px;
-    line-height: 1.4;
+    line-height: 1.35;
+  }
+  .image-context-upload {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid #0A7DFA;
+    border-radius: 7px;
+    background: #0A7DFA;
+    color: #FFFFFF;
+    cursor: pointer;
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .image-context-upload:hover,
+  .image-context-upload:focus-visible {
+    border-color: #006FE3;
+    background: #006FE3;
+    outline: 3px solid rgba(10, 125, 250, .14);
+    outline-offset: 2px;
+  }
+  .image-context-content {
+    display: grid;
+    gap: 16px;
+  }
+  .image-context-media-row {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #E5E9EF;
+  }
+  .image-context-thumb {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    display: block;
+    object-fit: cover;
+    border: 1px solid #D9E0E8;
+    border-radius: 7px;
+    background: #F1F3F6;
+  }
+  .image-context-media-copy {
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+  }
+  .image-context-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .image-context-actions button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #4B5563;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+  .image-context-actions button:hover,
+  .image-context-actions button:focus-visible {
+    color: #0A7DFA;
+    outline: 2px solid rgba(10, 125, 250, .16);
+    outline-offset: 3px;
+  }
+  .image-context-actions [data-image-slot-remove]:hover,
+  .image-context-actions [data-image-slot-remove]:focus-visible {
+    color: #B42318;
+  }
+  .image-context-actions button:disabled {
+    color: #AEB6C2;
+    cursor: default;
+  }
+  .image-context-precision {
+    display: grid;
+    grid-template-columns: minmax(0, .8fr) minmax(0, .8fr) minmax(0, 1.25fr);
+    gap: 8px;
+  }
+  .image-context-precision label {
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+    color: #667085;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .image-context-precision input[type="number"] {
+    width: 100%;
+    min-width: 0;
+    height: 36px;
+    box-sizing: border-box;
+    padding: 0 9px;
+    border: 1px solid #D8DEE7;
+    border-radius: 7px;
+    background: #FFFFFF;
+    color: #172033;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .image-context-precision input[type="number"]:focus {
+    border-color: #0A7DFA;
+    outline: 2px solid rgba(10, 125, 250, .13);
+    outline-offset: 1px;
+  }
+  .image-context-number-with-unit {
+    position: relative;
+    display: block;
+  }
+  .image-context-number-with-unit input[type="number"] {
+    padding-right: 26px;
+  }
+  .image-context-number-with-unit > span {
+    position: absolute;
+    top: 50%;
+    right: 9px;
+    color: #667085;
+    font-size: 13px;
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
+  @media (max-width: 430px) {
+    .image-context-precision {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .image-context-precision label:last-child {
+      grid-column: 1 / -1;
+    }
+    .canvas-image-edit-label,
+    .canvas-image-edit-divider,
+    .canvas-image-edit-hint {
+      display: none;
+    }
   }
   .image-tool-panel input[type="range"]:disabled {
     opacity: 0.45;
@@ -5267,9 +5588,9 @@ body[data-current-page="faq"] .faq-cta-art img {
       top: auto;
       width: 100%;
       flex: none;
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
       align-items: stretch;
       padding: 0;
       border: 0;
@@ -5279,18 +5600,34 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .studio-dock-tools .image-tool-button {
-      width: 100%;
-      height: 38px;
-      border: 1px solid #DCE4ED;
-      border-radius: 8px;
-      background: #FFFFFF;
+      width: auto;
+      min-width: 0;
+      height: 34px;
+      flex: 1 1 0;
+      padding: 0 10px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: #667085;
+      font-family: var(--font-heading);
+      font-size: 14px;
+      font-weight: 500;
     }
 
     html[data-studio-shell="on"] .studio-dock-tools .image-tool-button:hover,
     html[data-studio-shell="on"] .studio-dock-tools .image-tool-button.is-active {
-      background: #EAF4FF;
-      border-color: #B5D8FD;
-      color: #0A7DFA;
+      background: #FFFFFF;
+      color: #151A22;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .08);
+    }
+
+    html[data-studio-shell="on"] .studio-dock-tools .image-tool-button.is-active {
+      box-shadow: inset 0 -2px #0A7DFA, 0 1px 2px rgba(15, 23, 42, .08);
+    }
+
+    html[data-studio-shell="on"] .studio-dock-tools .image-tool-button:focus-visible {
+      outline: 2px solid rgba(10, 125, 250, .32);
+      outline-offset: 2px;
     }
 
     html[data-studio-shell="on"] .image-tool-button.export-tool-button {
@@ -5304,12 +5641,13 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .studio-dock-tools .image-tool-panel {
-      grid-column: 1 / -1;
       position: static;
       width: 100%;
       display: block;
-      padding: 14px;
+      padding: 0;
+      border: 0;
       border-radius: 9px;
+      background: transparent;
       box-shadow: none;
     }
 
@@ -6646,6 +6984,22 @@ body[data-current-page="faq"] .faq-cta-art img {
         <div class="canvas-stack">
           <div class="canvas-wrap">
             <canvas id="preview" width="1080" height="1350"></canvas>
+            <div class="canvas-image-edit-frame" data-canvas-image-edit-frame hidden aria-hidden="true">
+              <button class="canvas-image-edit-handle is-top-left" type="button" data-canvas-image-scale-handle="top-left" aria-label="Scale selected image from top left"></button>
+              <button class="canvas-image-edit-handle is-top-right" type="button" data-canvas-image-scale-handle="top-right" aria-label="Scale selected image from top right"></button>
+              <button class="canvas-image-edit-handle is-bottom-right" type="button" data-canvas-image-scale-handle="bottom-right" aria-label="Scale selected image from bottom right"></button>
+              <button class="canvas-image-edit-handle is-bottom-left" type="button" data-canvas-image-scale-handle="bottom-left" aria-label="Scale selected image from bottom left"></button>
+            </div>
+            <div class="canvas-image-edit-toolbar" data-canvas-image-edit-toolbar hidden role="toolbar" aria-label="Selected image controls">
+              <span class="canvas-image-edit-label" data-canvas-image-edit-label>Background</span>
+              <span class="canvas-image-edit-divider" aria-hidden="true"></span>
+              <button type="button" data-canvas-image-zoom="out" aria-label="Zoom selected image out">−</button>
+              <output data-canvas-image-zoom-value aria-live="polite">100%</output>
+              <button type="button" data-canvas-image-zoom="in" aria-label="Zoom selected image in">+</button>
+              <button class="canvas-image-edit-reset" type="button" data-canvas-image-reset>Reset</button>
+              <button class="canvas-image-edit-done" type="button" data-canvas-image-done>Done</button>
+            </div>
+            <div class="canvas-image-edit-hint" data-canvas-image-edit-hint hidden>Drag image · Drag a corner to scale · Esc to finish</div>
           </div>
           <div class="canvas-bottom-actions">
             <div class="studio-zoom-group" aria-label="Canvas zoom controls">
@@ -6713,39 +7067,11 @@ body[data-current-page="faq"] .faq-cta-art img {
           </div>
         </div>
         <aside class="image-tool-rail" aria-label="Image adjustment tools">
-          <button class="image-tool-button is-hidden" type="button" data-background-remove aria-label="Remove background image" title="Remove background image" disabled>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 7h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="M9 10v7M15 10v7M7.5 7l.8 12A2 2 0 0 0 10.3 21h3.4a2 2 0 0 0 2-1.9l.8-12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <button class="image-tool-button is-active" type="button" data-image-tool="move" aria-label="Move background image" title="Move background image">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3v18M3 12h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="M12 3 9 6m3-3 3 3M12 21l-3-3m3 3 3-3M3 12l3-3m-3 3 3 3M21 12l-3-3m3 3-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-          <button class="image-tool-button" type="button" data-image-tool="zoom" aria-label="Zoom background image" title="Zoom background image">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/>
-              <path d="m15.5 15.5 5 5M8 10.5h5M10.5 8v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <button class="image-tool-button" type="button" data-image-tool="foreground-1" aria-label="Adjust foreground image 1" title="Adjust foreground image 1">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="4" y="5" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-              <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <text class="image-tool-badge" x="12" y="10.5" text-anchor="middle" fill="currentColor">1</text>
-            </svg>
-          </button>
-          <button class="image-tool-button" type="button" data-image-tool="foreground-2" aria-label="Adjust foreground image 2" title="Adjust foreground image 2">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="4" y="5" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-              <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <text class="image-tool-badge" x="12" y="10.5" text-anchor="middle" fill="currentColor">2</text>
-            </svg>
-          </button>
+          <div class="image-asset-tabs" role="tablist" aria-label="Images in this design" data-image-asset-tabs>
+            <button class="image-tool-button is-active" type="button" role="tab" data-image-tool="move" aria-selected="true" aria-controls="image-tool-background-panel">Background</button>
+            <button class="image-tool-button" type="button" role="tab" data-image-tool="foreground-1" aria-selected="false" aria-controls="image-tool-entity-1-panel">Entity 1</button>
+            <button class="image-tool-button" type="button" role="tab" data-image-tool="foreground-2" aria-selected="false" aria-controls="image-tool-entity-2-panel">Entity 2</button>
+          </div>
           <button class="image-tool-button export-tool-button export-button" id="download-btn" type="button" aria-label="Export" title="Export">
             <span id="export-label" data-export-label>Export</span>
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -6755,84 +7081,86 @@ body[data-current-page="faq"] .faq-cta-art img {
             </svg>
           </button>
           <div class="image-tool-panel" id="image-tool-panel">
-            <div class="image-tool-section is-active" data-image-tool-panel="move">
-              <div class="image-tool-title">Move Background Image</div>
-              <div class="slider-row">
-                <div class="slider-label-row">
-                  <span>Horizontal</span>
-                  <span class="slider-val" id="rail-offset-x-val">0</span>
+            <div class="image-tool-section is-active" id="image-tool-background-panel" role="tabpanel" data-image-tool-panel="move">
+              <div class="image-context-empty" data-image-empty="background">
+                <div>
+                  <strong>Add a background image</strong>
+                  <span>Upload an image to unlock position and zoom.</span>
                 </div>
-                <input type="range" id="rail-offset-x" min="-100" max="100" value="0">
+                <button class="image-context-upload" type="button" data-image-slot-upload="move">Upload image</button>
               </div>
-              <div class="slider-row">
-                <div class="slider-label-row">
-                  <span>Vertical</span>
-                  <span class="slider-val" id="rail-offset-y-val">0</span>
+              <div class="image-context-content" data-image-content="background" hidden>
+                <div class="image-context-media-row">
+                  <img class="image-context-thumb" data-image-thumb="background" alt="">
+                  <div class="image-context-media-copy">
+                    <strong data-image-name="background">Background image</strong>
+                    <div class="image-context-actions">
+                      <button type="button" data-image-slot-upload="move">Replace</button>
+                      <button type="button" data-image-slot-remove="move">Remove</button>
+                      <button type="button" data-image-slot-reset="move">Reset</button>
+                    </div>
+                  </div>
                 </div>
-                <input type="range" id="rail-offset-y" min="-100" max="100" value="0">
+                <div class="image-context-precision" aria-label="Background precise position and zoom">
+                  <label><span>X</span><input type="number" id="rail-offset-x" min="-100" max="100" value="0" aria-label="Background horizontal position"></label>
+                  <label><span>Y</span><input type="number" id="rail-offset-y" min="-100" max="100" value="0" aria-label="Background vertical position"></label>
+                  <label><span>Zoom</span><span class="image-context-number-with-unit"><input type="number" id="rail-photo-scale" min="10" max="300" step="5" value="100" aria-label="Background zoom"><span>%</span></span></label>
+                </div>
               </div>
-              <div class="image-tool-empty" data-image-empty="background">Upload a background image to use this control.</div>
             </div>
-            <div class="image-tool-section" data-image-tool-panel="zoom">
-              <div class="image-tool-title">Background Zoom</div>
-              <div class="slider-row">
-                <div class="slider-label-row">
-                  <span>Magnification</span>
-                  <span class="slider-val" id="rail-photo-scale-val">100%</span>
+            <div class="image-tool-section" id="image-tool-entity-1-panel" role="tabpanel" data-image-tool-panel="foreground-1">
+              <div class="image-context-empty" data-image-empty="foreground-1">
+                <div>
+                  <strong>Add Entity 1</strong>
+                  <span>Upload an image to unlock position and zoom.</span>
                 </div>
-                <input type="range" id="rail-photo-scale" min="10" max="300" step="5" value="100">
+                <button class="image-context-upload" type="button" data-image-slot-upload="foreground-1">Upload image</button>
               </div>
-              <div class="image-tool-empty" data-image-empty="background">Upload a background image to use this control.</div>
+              <div class="image-context-content" data-image-content="foreground-1" hidden>
+                <div class="image-context-media-row">
+                  <img class="image-context-thumb" data-image-thumb="foreground-1" alt="">
+                  <div class="image-context-media-copy">
+                    <strong data-image-name="foreground-1">Entity 1</strong>
+                    <div class="image-context-actions">
+                      <button type="button" data-image-slot-upload="foreground-1">Replace</button>
+                      <button type="button" data-image-slot-remove="foreground-1">Remove</button>
+                      <button type="button" data-image-slot-reset="foreground-1">Reset</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="image-context-precision" aria-label="Entity 1 precise position and zoom">
+                  <label><span>X</span><input type="number" id="rail-entity-offset-x" min="-100" max="100" value="0" aria-label="Entity 1 horizontal position"></label>
+                  <label><span>Y</span><input type="number" id="rail-entity-offset-y" min="-100" max="100" value="0" aria-label="Entity 1 vertical position"></label>
+                  <label><span>Zoom</span><span class="image-context-number-with-unit"><input type="number" id="rail-entity-scale" min="10" max="250" step="5" value="100" aria-label="Entity 1 zoom"><span>%</span></span></label>
+                </div>
+              </div>
             </div>
-            <div class="image-tool-section" data-image-tool-panel="foreground-1">
-              <div class="image-tool-title">Foreground Image 1</div>
-              <div class="slider-row">
-                <div class="slider-label-row">
-                  <span>Horizontal</span>
-                  <span class="slider-val" id="rail-entity-offset-x-val">0</span>
+            <div class="image-tool-section" id="image-tool-entity-2-panel" role="tabpanel" data-image-tool-panel="foreground-2">
+              <div class="image-context-empty" data-image-empty="foreground-2">
+                <div>
+                  <strong>Add Entity 2</strong>
+                  <span>Upload an image to unlock position and zoom.</span>
                 </div>
-                <input type="range" id="rail-entity-offset-x" min="-100" max="100" value="0">
+                <button class="image-context-upload" type="button" data-image-slot-upload="foreground-2">Upload image</button>
               </div>
-              <div class="slider-row">
-                <div class="slider-label-row">
-                  <span>Vertical</span>
-                  <span class="slider-val" id="rail-entity-offset-y-val">0</span>
+              <div class="image-context-content" data-image-content="foreground-2" hidden>
+                <div class="image-context-media-row">
+                  <img class="image-context-thumb" data-image-thumb="foreground-2" alt="">
+                  <div class="image-context-media-copy">
+                    <strong data-image-name="foreground-2">Entity 2</strong>
+                    <div class="image-context-actions">
+                      <button type="button" data-image-slot-upload="foreground-2">Replace</button>
+                      <button type="button" data-image-slot-remove="foreground-2">Remove</button>
+                      <button type="button" data-image-slot-reset="foreground-2">Reset</button>
+                    </div>
+                  </div>
                 </div>
-                <input type="range" id="rail-entity-offset-y" min="-100" max="100" value="0">
-              </div>
-              <div class="slider-row">
-                <div class="slider-label-row">
-                  <span>Size</span>
-                  <span class="slider-val" id="rail-entity-scale-val">100%</span>
+                <div class="image-context-precision" aria-label="Entity 2 precise position and zoom">
+                  <label><span>X</span><input type="number" id="rail-entity-offset-x-2" min="-100" max="100" value="0" aria-label="Entity 2 horizontal position"></label>
+                  <label><span>Y</span><input type="number" id="rail-entity-offset-y-2" min="-100" max="100" value="0" aria-label="Entity 2 vertical position"></label>
+                  <label><span>Zoom</span><span class="image-context-number-with-unit"><input type="number" id="rail-entity-scale-2" min="10" max="250" step="5" value="100" aria-label="Entity 2 zoom"><span>%</span></span></label>
                 </div>
-                <input type="range" id="rail-entity-scale" min="10" max="250" step="5" value="100">
               </div>
-              <div class="image-tool-empty" data-image-empty="foreground-1">Upload Foreground Image 1 to use this control.</div>
-            </div>
-            <div class="image-tool-section" data-image-tool-panel="foreground-2">
-              <div class="image-tool-title">Foreground Image 2</div>
-              <div class="slider-row">
-                <div class="slider-label-row">
-                  <span>Horizontal</span>
-                  <span class="slider-val" id="rail-entity-offset-x-val-2">0</span>
-                </div>
-                <input type="range" id="rail-entity-offset-x-2" min="-100" max="100" value="0">
-              </div>
-              <div class="slider-row">
-                <div class="slider-label-row">
-                  <span>Vertical</span>
-                  <span class="slider-val" id="rail-entity-offset-y-val-2">0</span>
-                </div>
-                <input type="range" id="rail-entity-offset-y-2" min="-100" max="100" value="0">
-              </div>
-              <div class="slider-row">
-                <div class="slider-label-row">
-                  <span>Size</span>
-                  <span class="slider-val" id="rail-entity-scale-val-2">100%</span>
-                </div>
-                <input type="range" id="rail-entity-scale-2" min="10" max="250" step="5" value="100">
-              </div>
-              <div class="image-tool-empty" data-image-empty="foreground-2">Upload Foreground Image 2 to use this control.</div>
             </div>
           </div>
         </aside>
@@ -8013,7 +8341,7 @@ function setControlDisabled(id, disabled) {
 
 function getAvailableImageTools() {
   const isDoubleEntityPost = isDoubleEntityImagePost();
-  const tools = isDoubleEntityPost ? [] : ['move', 'zoom'];
+  const tools = isDoubleEntityPost ? [] : ['move'];
   if (isDoubleEntityPost) {
     tools.push('foreground-1');
     tools.push('foreground-2');
@@ -8029,25 +8357,305 @@ function getAvailableImageTools() {
   return tools;
 }
 
+function getImageToolDescriptor(tool) {
+  const isDoubleEntityPost = isDoubleEntityImagePost();
+  if (tool === 'foreground-2') {
+    return {
+      key: 'foreground-2',
+      label: 'Entity 2',
+      image: state.entityPhoto2,
+      name: state.entityPhotoName2,
+      inputId: 'entity-photo-input-2',
+      offsetX: state.entityOffsetX2,
+      offsetY: state.entityOffsetY2,
+      scale: state.entityScale2,
+    };
+  }
+  if (tool === 'foreground-1') {
+    return isDoubleEntityPost
+      ? {
+          key: 'foreground-1',
+          label: 'Entity 1',
+          image: state.photo,
+          name: state.photoName,
+          inputId: 'photo-input',
+          offsetX: state.photoOffsetX,
+          offsetY: state.photoOffsetY,
+          scale: state.photoScale,
+        }
+      : {
+          key: 'foreground-1',
+          label: 'Entity 1',
+          image: state.entityPhoto,
+          name: state.entityPhotoName,
+          inputId: 'entity-photo-input',
+          offsetX: state.entityOffsetX,
+          offsetY: state.entityOffsetY,
+          scale: state.entityScale,
+        };
+  }
+  return {
+    key: 'background',
+    label: 'Background',
+    image: state.photo,
+    name: state.photoName,
+    inputId: 'photo-input',
+    offsetX: state.photoOffsetX,
+    offsetY: state.photoOffsetY,
+    scale: state.photoScale,
+  };
+}
+
+let canvasImageEditSuspended = false;
+let imageEditBoundsByTool = new Map();
+
+function registerImageEditBounds(ctx, image, bounds) {
+  if (!image || ctx?.canvas?.id !== 'preview') return;
+  getAvailableImageTools().forEach(tool => {
+    if (getImageToolDescriptor(tool).image === image) {
+      imageEditBoundsByTool.set(tool, {
+        x: Number(bounds.x) || 0,
+        y: Number(bounds.y) || 0,
+        w: Math.max(1, Number(bounds.w) || 1),
+        h: Math.max(1, Number(bounds.h) || 1),
+      });
+    }
+  });
+}
+
+function getSelectedImageEditBounds() {
+  return imageEditBoundsByTool.get(activeImageTool) || null;
+}
+
+function isCanvasImageEditAvailable() {
+  if (document.body.dataset.studioInspector !== 'image' || isListicleImageControlLocked()) return false;
+  if (!getAvailableImageTools().includes(activeImageTool)) return false;
+  return !!getImageToolDescriptor(activeImageTool).image;
+}
+
+function isListicleImageControlLocked() {
+  if (activeWorkspace !== 'instagram') return false;
+  const postType = state.postType || 'cover';
+  return postType === 'listicle-type-1' || postType === 'listicle-type-2';
+}
+
+function getImageToolScaleBounds(tool) {
+  return tool === 'move' ? { min: 0.1, max: 3 } : { min: 0.1, max: 2.5 };
+}
+
+function syncImageToolTransformFields(tool) {
+  const descriptor = getImageToolDescriptor(tool);
+  const scalePercent = Math.round(descriptor.scale * 100);
+  const fields = tool === 'foreground-2'
+    ? {
+        x: 'rail-entity-offset-x-2',
+        y: 'rail-entity-offset-y-2',
+        scale: 'rail-entity-scale-2',
+        xValue: 'rail-entity-offset-x-val-2',
+        yValue: 'rail-entity-offset-y-val-2',
+        scaleValue: 'rail-entity-scale-val-2',
+      }
+    : tool === 'foreground-1'
+      ? {
+          x: 'rail-entity-offset-x',
+          y: 'rail-entity-offset-y',
+          scale: 'rail-entity-scale',
+          xValue: 'rail-entity-offset-x-val',
+          yValue: 'rail-entity-offset-y-val',
+          scaleValue: 'rail-entity-scale-val',
+        }
+      : {
+          x: 'rail-offset-x',
+          y: 'rail-offset-y',
+          scale: 'rail-photo-scale',
+          xValue: 'rail-offset-x-val',
+          yValue: 'rail-offset-y-val',
+          scaleValue: 'rail-photo-scale-val',
+        };
+
+  setControlValue(fields.x, descriptor.offsetX);
+  setControlValue(fields.y, descriptor.offsetY);
+  setControlValue(fields.scale, scalePercent);
+  setControlText(fields.xValue, descriptor.offsetX);
+  setControlText(fields.yValue, descriptor.offsetY);
+  setControlText(fields.scaleValue, `${scalePercent}%`);
+}
+
+function setImageToolTransform(tool, transform, options = {}) {
+  const nextX = clamp(Number(transform.offsetX) || 0, -100, 100);
+  const nextY = clamp(Number(transform.offsetY) || 0, -100, 100);
+  const bounds = getImageToolScaleBounds(tool);
+  const nextScale = clamp(Number(transform.scale) || 1, bounds.min, bounds.max);
+
+  if (tool === 'foreground-2') {
+    state.entityOffsetX2 = nextX;
+    state.entityOffsetY2 = nextY;
+    state.entityScale2 = nextScale;
+  } else if (tool === 'foreground-1' && !isDoubleEntityImagePost()) {
+    state.entityOffsetX = nextX;
+    state.entityOffsetY = nextY;
+    state.entityScale = nextScale;
+  } else {
+    state.photoOffsetX = nextX;
+    state.photoOffsetY = nextY;
+    state.photoScale = nextScale;
+  }
+
+  if (options.interactive) syncImageToolTransformFields(tool);
+  else syncImageToolControls();
+  if (options.immediate) flushPendingRender();
+  else render();
+  if (options.persist !== false) saveMediaContext();
+}
+
+function isCanvasImageEditMode() {
+  return isCanvasImageEditAvailable() && !canvasImageEditSuspended;
+}
+
+function setCanvasImageEditSuspended(isSuspended) {
+  canvasImageEditSuspended = !!isSuspended;
+  syncCanvasImageEditMode();
+}
+
+function syncCanvasImageEditMode() {
+  const canvas = document.getElementById('preview');
+  const wrap = canvas?.closest('.canvas-wrap');
+  if (!canvas || !wrap) return;
+  const isActive = isCanvasImageEditMode();
+  const descriptor = getImageToolDescriptor(activeImageTool);
+  const bounds = getSelectedImageEditBounds();
+  wrap.classList.toggle('is-image-editing', isActive);
+  if (!isActive) wrap.classList.remove('is-image-dragging');
+  canvas.tabIndex = isActive ? 0 : -1;
+  canvas.setAttribute('aria-label', isActive
+    ? `${descriptor.label} crop mode. Drag the image to reposition, drag a corner handle to scale, or use the arrow keys for precise movement.`
+    : 'Design canvas preview');
+
+  const frame = wrap.querySelector('[data-canvas-image-edit-frame]');
+  const toolbar = wrap.querySelector('[data-canvas-image-edit-toolbar]');
+  const hint = wrap.querySelector('[data-canvas-image-edit-hint]');
+  const label = wrap.querySelector('[data-canvas-image-edit-label]');
+  const zoomValue = wrap.querySelector('[data-canvas-image-zoom-value]');
+  if (label) label.textContent = descriptor.label;
+  if (zoomValue) zoomValue.textContent = `${Math.round(descriptor.scale * 100)}%`;
+
+  const showSelection = isActive && !!bounds;
+  if (toolbar) toolbar.hidden = !showSelection;
+  if (hint) hint.hidden = !showSelection;
+  if (frame) {
+    frame.hidden = !showSelection;
+    frame.setAttribute('aria-hidden', showSelection ? 'false' : 'true');
+    frame.dataset.imageTool = activeImageTool;
+    if (showSelection) {
+      const workspace = getWorkspace();
+      const left = clamp(bounds.x, 0, workspace.width);
+      const top = clamp(bounds.y, 0, workspace.height);
+      const right = clamp(bounds.x + bounds.w, 0, workspace.width);
+      const bottom = clamp(bounds.y + bounds.h, 0, workspace.height);
+      frame.style.left = `${(left / workspace.width) * 100}%`;
+      frame.style.top = `${(top / workspace.height) * 100}%`;
+      frame.style.width = `${(Math.max(1, right - left) / workspace.width) * 100}%`;
+      frame.style.height = `${(Math.max(1, bottom - top) / workspace.height) * 100}%`;
+
+      const canvasWidth = canvas.clientWidth || canvas.getBoundingClientRect().width;
+      const canvasHeight = canvas.clientHeight || canvas.getBoundingClientRect().height;
+      const canvasLeft = canvas.offsetLeft;
+      const canvasTop = canvas.offsetTop;
+      const selectionLeft = canvasLeft + (left / workspace.width) * canvasWidth;
+      const selectionTop = canvasTop + (top / workspace.height) * canvasHeight;
+      const selectionRight = canvasLeft + (right / workspace.width) * canvasWidth;
+      const selectionBottom = canvasTop + (bottom / workspace.height) * canvasHeight;
+      const selectionCenter = selectionLeft + (selectionRight - selectionLeft) / 2;
+
+      if (toolbar) {
+        const toolbarWidth = toolbar.offsetWidth || 250;
+        const toolbarHeight = toolbar.offsetHeight || 42;
+        const halfToolbar = toolbarWidth / 2;
+        const safeLeft = clamp(selectionCenter, halfToolbar + 8, Math.max(halfToolbar + 8, canvasLeft + canvasWidth - halfToolbar - 8));
+        const aboveTop = selectionTop - toolbarHeight - 10;
+        const toolbarTop = aboveTop >= canvasTop + 8
+          ? aboveTop
+          : Math.min(canvasTop + canvasHeight - toolbarHeight - 8, selectionBottom + 10);
+        toolbar.style.left = `${safeLeft}px`;
+        toolbar.style.top = `${Math.max(canvasTop + 8, toolbarTop)}px`;
+      }
+
+      if (hint) {
+        const hintWidth = hint.offsetWidth || 220;
+        const hintHeight = hint.offsetHeight || 24;
+        const halfHint = hintWidth / 2;
+        const safeLeft = clamp(selectionCenter, halfHint + 8, Math.max(halfHint + 8, canvasLeft + canvasWidth - halfHint - 8));
+        const belowTop = selectionBottom + 8;
+        const hintTop = belowTop + hintHeight <= canvasTop + canvasHeight - 8
+          ? belowTop
+          : Math.max(canvasTop + 8, selectionTop - hintHeight - 8);
+        hint.style.left = `${safeLeft}px`;
+        hint.style.top = `${hintTop}px`;
+      }
+    }
+  }
+}
+
+window.ESSyncCanvasImageEditMode = syncCanvasImageEditMode;
+window.ESResumeCanvasImageEditMode = () => setCanvasImageEditSuspended(false);
+
+function resetImageTool(tool) {
+  if (tool === 'foreground-2') {
+    state.entityOffsetX2 = 0;
+    state.entityOffsetY2 = 0;
+    state.entityScale2 = 1;
+  } else if (tool === 'foreground-1' && !isDoubleEntityImagePost()) {
+    state.entityOffsetX = 0;
+    state.entityOffsetY = 0;
+    state.entityScale = 1;
+  } else {
+    state.photoOffsetX = 0;
+    state.photoOffsetY = 0;
+    state.photoScale = 1;
+  }
+  saveMediaContext();
+  syncPhotoControls();
+  syncEntityPhotoControls();
+  syncEntityPhotoControls2();
+  syncImageToolControls();
+  render();
+}
+
+function removeImageToolAsset(tool) {
+  if (tool === 'foreground-2') removeEntityPhoto2();
+  else if (tool === 'foreground-1' && !isDoubleEntityImagePost()) removeEntityPhoto();
+  else removePhoto();
+  selectImageTool(tool, true);
+}
+
+function openImageToolUpload(tool) {
+  const descriptor = getImageToolDescriptor(tool);
+  const input = document.getElementById(descriptor.inputId);
+  if (!input) return;
+  input.value = '';
+  input.click();
+}
+
 function syncImageToolAvailability() {
   const availableTools = getAvailableImageTools();
+  const assetTabs = document.querySelector('[data-image-asset-tabs]');
+  assetTabs?.classList.toggle('is-single', availableTools.length <= 1);
   document.querySelectorAll('[data-image-tool]').forEach(button => {
     const isAvailable = availableTools.includes(button.dataset.imageTool);
     button.classList.toggle('is-hidden', !isAvailable);
     button.disabled = !isAvailable;
     button.classList.toggle('is-active', isAvailable && button.dataset.imageTool === activeImageTool);
-    button.setAttribute('aria-pressed', isAvailable && button.dataset.imageTool === activeImageTool ? 'true' : 'false');
+    button.setAttribute('aria-selected', isAvailable && button.dataset.imageTool === activeImageTool ? 'true' : 'false');
   });
 
   if (!availableTools.includes(activeImageTool)) {
     activeImageTool = availableTools[0] || 'move';
-    setImageToolPanelOpen(false);
   }
 
   document.querySelectorAll('[data-image-tool]').forEach(button => {
     const isActive = availableTools.includes(button.dataset.imageTool) && button.dataset.imageTool === activeImageTool;
     button.classList.toggle('is-active', isActive);
-    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    button.setAttribute('aria-selected', isActive ? 'true' : 'false');
   });
   document.querySelectorAll('[data-image-tool-panel]').forEach(panel => {
     panel.classList.toggle('is-active', panel.dataset.imageToolPanel === activeImageTool);
@@ -8057,28 +8665,12 @@ function syncImageToolAvailability() {
 function syncImageToolControls() {
   syncImageToolAvailability();
   const isDoubleEntityPost = isDoubleEntityImagePost();
-  const foreground1Button = document.querySelector('[data-image-tool="foreground-1"]');
-  const foreground2Button = document.querySelector('[data-image-tool="foreground-2"]');
   const uploadButton = document.querySelector('[data-background-upload]');
-  const foreground1Title = document.querySelector('[data-image-tool-panel="foreground-1"] .image-tool-title');
-  const foreground2Title = document.querySelector('[data-image-tool-panel="foreground-2"] .image-tool-title');
   if (uploadButton) {
     const label = isDoubleEntityPost ? 'Upload entity image' : 'Upload background image';
     uploadButton.setAttribute('aria-label', label);
     uploadButton.title = label;
   }
-  if (foreground1Button) {
-    const label = isDoubleEntityPost ? 'Adjust 1st entity image' : 'Adjust foreground image 1';
-    foreground1Button.setAttribute('aria-label', label);
-    foreground1Button.title = label;
-  }
-  if (foreground2Button) {
-    const label = isDoubleEntityPost ? 'Adjust 2nd entity image' : 'Adjust foreground image 2';
-    foreground2Button.setAttribute('aria-label', label);
-    foreground2Button.title = label;
-  }
-  if (foreground1Title) foreground1Title.textContent = isDoubleEntityPost ? '1st Entity Image' : 'Foreground Image 1';
-  if (foreground2Title) foreground2Title.textContent = isDoubleEntityPost ? '2nd Entity Image' : 'Foreground Image 2';
   const bgScale = Math.round(state.photoScale * 100);
   const entityScale = Math.round((isDoubleEntityPost ? state.photoScale : state.entityScale) * 100);
   const entityScale2 = Math.round(state.entityScale2 * 100);
@@ -8112,23 +8704,33 @@ function syncImageToolControls() {
   ['rail-entity-offset-x', 'rail-entity-offset-y', 'rail-entity-scale'].forEach(id => setControlDisabled(id, !hasForeground1));
   ['rail-entity-offset-x-2', 'rail-entity-offset-y-2', 'rail-entity-scale-2'].forEach(id => setControlDisabled(id, !hasForeground2));
 
-  document.querySelectorAll('[data-image-empty="background"]').forEach(el => {
-    el.style.display = hasBackground ? 'none' : 'block';
+  const imagePresence = {
+    background: hasBackground,
+    'foreground-1': hasForeground1,
+    'foreground-2': hasForeground2,
+  };
+  ['move', 'foreground-1', 'foreground-2'].forEach(tool => {
+    const descriptor = getImageToolDescriptor(tool);
+    const hasImage = imagePresence[descriptor.key];
+    document.querySelectorAll(`[data-image-empty="${descriptor.key}"]`).forEach(element => {
+      element.hidden = hasImage;
+    });
+    document.querySelectorAll(`[data-image-content="${descriptor.key}"]`).forEach(element => {
+      element.hidden = !hasImage;
+    });
+    document.querySelectorAll(`[data-image-thumb="${descriptor.key}"]`).forEach(image => {
+      if (hasImage && descriptor.image?.src) image.src = descriptor.image.src;
+      else image.removeAttribute('src');
+      image.alt = hasImage ? `${descriptor.label} preview` : '';
+    });
+    document.querySelectorAll(`[data-image-name="${descriptor.key}"]`).forEach(element => {
+      element.textContent = descriptor.name || descriptor.label;
+    });
+    document.querySelectorAll(`[data-image-slot-reset="${tool}"]`).forEach(button => {
+      button.disabled = descriptor.offsetX === 0 && descriptor.offsetY === 0 && Math.abs(descriptor.scale - 1) < 0.001;
+    });
   });
-  document.querySelectorAll('[data-image-empty="foreground-1"]').forEach(el => {
-    el.style.display = hasForeground1 ? 'none' : 'block';
-  });
-  document.querySelectorAll('[data-image-empty="foreground-2"]').forEach(el => {
-    el.style.display = hasForeground2 ? 'none' : 'block';
-  });
-
-  document.querySelectorAll('[data-background-remove]').forEach(button => {
-    button.classList.toggle('is-hidden', !hasBackground);
-    button.disabled = !hasBackground;
-    const label = isDoubleEntityPost ? 'Remove 1st entity image' : 'Remove background image';
-    button.setAttribute('aria-label', label);
-    button.title = label;
-  });
+  syncCanvasImageEditMode();
 }
 
 function setImageToolPanelOpen(isOpen) {
@@ -8154,10 +8756,11 @@ function selectImageTool(tool, openPanel = true) {
   setImageUploadMenuOpen(false);
   setAiImagePickerOpen(false);
   activeImageTool = tool;
+  canvasImageEditSuspended = false;
   document.querySelectorAll('[data-image-tool]').forEach(button => {
     const isActive = button.dataset.imageTool === tool;
     button.classList.toggle('is-active', isActive);
-    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    button.setAttribute('aria-selected', isActive ? 'true' : 'false');
   });
   document.querySelectorAll('[data-image-tool-panel]').forEach(panel => {
     panel.classList.toggle('is-active', panel.dataset.imageToolPanel === tool);
@@ -8237,18 +8840,34 @@ function initImageToolRail() {
     });
   });
 
-  document.querySelector('[data-background-remove]')?.addEventListener('click', event => {
-    event.stopPropagation();
-    setImageToolPanelOpen(false);
-    removePhoto();
-  });
-
   document.querySelectorAll('[data-image-tool]').forEach(button => {
     button.addEventListener('click', event => {
       event.stopPropagation();
       const nextTool = button.dataset.imageTool;
-      const shouldClose = isImageToolPanelOpen && activeImageTool === nextTool;
-      selectImageTool(nextTool, !shouldClose);
+      selectImageTool(nextTool, true);
+    });
+  });
+
+  document.querySelectorAll('[data-image-slot-upload]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      const tool = button.dataset.imageSlotUpload;
+      selectImageTool(tool, true);
+      openImageToolUpload(tool);
+    });
+  });
+
+  document.querySelectorAll('[data-image-slot-remove]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      removeImageToolAsset(button.dataset.imageSlotRemove);
+    });
+  });
+
+  document.querySelectorAll('[data-image-slot-reset]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      resetImageTool(button.dataset.imageSlotReset);
     });
   });
 
@@ -8260,9 +8879,6 @@ function initImageToolRail() {
     if (!document.documentElement.dataset.studioShell && !event.target.closest('#ai-image-picker') && !event.target.closest('[data-ai-image-search]')) {
       setAiImagePickerOpen(false);
     }
-    if (!isImageToolPanelOpen) return;
-    if (event.target.closest('.image-tool-rail')) return;
-    setImageToolPanelOpen(false);
   });
 
   const wire = (id, update) => {
@@ -8270,6 +8886,7 @@ function initImageToolRail() {
     if (!input) return;
     input.addEventListener('input', event => {
       update(parseInt(event.target.value, 10) || 0);
+      saveMediaContext();
       syncImageToolControls();
       render();
     });
@@ -8317,7 +8934,7 @@ function initImageToolRail() {
   wire('rail-entity-offset-y-2', value => { state.entityOffsetY2 = value; setControlValue('entity-offset-y-2', value); setControlText('entity-offset-y-val-2', value); });
   wire('rail-entity-scale-2', value => { state.entityScale2 = value / 100; setControlValue('entity-scale-2', value); setControlText('entity-scale-val-2', `${value}%`); });
 
-  selectImageTool(activeImageTool, false);
+  selectImageTool(activeImageTool, true);
 }
 
 function getListicleData() {
@@ -9363,6 +9980,7 @@ function onPhotoUpload(e) {
         posControls.style.display = 'flex';
         posControls.style.flexDirection = 'column';
       }
+      selectImageTool(isDoubleEntityImagePost() ? 'foreground-1' : 'move', true);
       syncImageToolControls();
       render();
     };
@@ -9742,6 +10360,7 @@ async function applySelectedAiImageFromEsStorage(result) {
     state.photoOffsetY = 0;
     state.photoScale = 1;
     saveMediaContext();
+    selectImageTool(isDoubleEntityImagePost() ? 'foreground-1' : 'move', true);
     syncPhotoControls();
     syncImageToolControls();
     render();
@@ -9810,6 +10429,7 @@ function onEntityPhotoUpload(e) {
       targetState.entityPhotoName = file.name;
       saveMediaContext(mediaContextKey, targetState);
       if (targetState !== state) return;
+      selectImageTool('foreground-1', true);
       syncEntityPhotoControls();
       render();
     };
@@ -9842,6 +10462,7 @@ function onEntityPhotoUpload2(e) {
       targetState.entityPhotoName2 = file.name;
       saveMediaContext(mediaContextKey, targetState);
       if (targetState !== state) return;
+      selectImageTool('foreground-2', true);
       syncEntityPhotoControls2();
       render();
     };
@@ -11662,43 +12283,19 @@ function drawScalableCoverImage(ctx, img, dx, dy, dw, dh, useControls = true) {
   const photoScale = useControls ? Math.max(0.01, state.photoScale || 1) : 1;
   const offsetX = useControls ? state.photoOffsetX : 0;
   const offsetY = useControls ? state.photoOffsetY : 0;
-  const imgAR = img.width / img.height;
-  const rectAR = dw / dh;
+  const coverScale = Math.max(dw / img.width, dh / img.height);
+  const drawW = img.width * coverScale * photoScale;
+  const drawH = img.height * coverScale * photoScale;
+  const drawX = dx + (dw - drawW) / 2 + (offsetX / 100) * (Math.abs(drawW - dw) / 2);
+  const drawY = dy + (dh - drawH) / 2 + (offsetY / 100) * (Math.abs(drawH - dh) / 2);
 
-  if (photoScale < 1) {
-    const coverScale = imgAR > rectAR ? dh / img.height : dw / img.width;
-    const drawW = img.width * coverScale * photoScale;
-    const drawH = img.height * coverScale * photoScale;
-    const maxShiftX = Math.max(0, (drawW - dw) / 2);
-    const maxShiftY = Math.max(0, (drawH - dh) / 2);
-    const freeX = Math.max(0, dw - drawW);
-    const freeY = Math.max(0, dh - drawH);
-    const drawX = dx + freeX / 2 - maxShiftX + (offsetX / 100) * Math.max(maxShiftX, freeX / 2);
-    const drawY = dy + freeY / 2 - maxShiftY + (offsetY / 100) * Math.max(maxShiftY, freeY / 2);
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(dx, dy, dw, dh);
-    ctx.clip();
-    ctx.drawImage(img, drawX, drawY, drawW, drawH);
-    ctx.restore();
-    return;
-  }
-
-  let sw, sh;
-  if (imgAR > rectAR) {
-    sh = img.height;
-    sw = sh * rectAR;
-  } else {
-    sw = img.width;
-    sh = sw / rectAR;
-  }
-  sw /= photoScale;
-  sh /= photoScale;
-  const maxShiftX = Math.max(0, (img.width - sw) / 2);
-  const maxShiftY = Math.max(0, (img.height - sh) / 2);
-  const sx = maxShiftX - (offsetX / 100) * maxShiftX;
-  const sy = maxShiftY - (offsetY / 100) * maxShiftY;
-  ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+  registerImageEditBounds(ctx, img, { x: drawX, y: drawY, w: drawW, h: drawH });
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(dx, dy, dw, dh);
+  ctx.clip();
+  ctx.drawImage(img, drawX, drawY, drawW, drawH);
+  ctx.restore();
 }
 
 function drawForegroundImage(ctx, img, W, H, imageScale, offsetX, offsetY) {
@@ -11707,6 +12304,7 @@ function drawForegroundImage(ctx, img, W, H, imageScale, offsetX, offsetY) {
   const baseWidth = baseHeight * (img.width / img.height);
   const x = ((W - baseWidth) / 2) + (offsetX / 100) * (W * 0.42);
   const y = (H - baseHeight) + (offsetY / 100) * (H * 0.35);
+  registerImageEditBounds(ctx, img, { x, y, w: baseWidth, h: baseHeight });
   ctx.drawImage(img, x, y, baseWidth, baseHeight);
 }
 
@@ -12001,6 +12599,7 @@ function drawImageCoverRect(ctx, img, rect, scale, offsetX = 0, offsetY = 0, zoo
     const drawH = img.height * fitScale;
     const drawX = x + (w - drawW) / 2 + (offsetX / 100) * (w * 0.35);
     const drawY = y + (h - drawH) / 2 + (offsetY / 100) * (h * 0.35);
+    registerImageEditBounds(ctx, img, { x: drawX, y: drawY, w: drawW, h: drawH });
     ctx.drawImage(img, drawX, drawY, drawW, drawH);
   } else {
     ctx.fillStyle = '#777777';
@@ -12404,6 +13003,7 @@ function _render() {
   const workspace = getWorkspace();
   const ctx = canvas.getContext('2d');
   const renderContextKey = getTextContextKey();
+  imageEditBoundsByTool = new Map();
   if (contextUsesPillLayout(renderContextKey) && lastRenderedTextContextKey !== renderContextKey) {
     restoreTextContext();
     const textarea = document.getElementById('pill-text');
@@ -12416,6 +13016,7 @@ function _render() {
     saveTextContext();
   }
   lastRenderedTextContextKey = renderContextKey;
+  syncCanvasImageEditMode();
 }
 
 function getCanvasPoint(evt) {
@@ -12454,6 +13055,7 @@ function setupCanvasDrag() {
   const wrap = canvas.closest('.canvas-wrap');
 
   canvas.addEventListener('pointerdown', evt => {
+    if (isCanvasImageEditMode()) return;
     if (
       activeWorkspace === 'instagram' &&
       ((state.postType || 'cover') === 'listicle-type-1' || (state.postType || 'cover') === 'listicle-type-2')
@@ -12494,6 +13096,265 @@ function setupCanvasDrag() {
   };
   canvas.addEventListener('pointerup', stopDrag);
   canvas.addEventListener('pointercancel', stopDrag);
+}
+
+function setupCanvasImageEditing() {
+  const canvas = document.getElementById('preview');
+  const wrap = canvas?.closest('.canvas-wrap');
+  if (!canvas || !wrap) return;
+  let dragSession = null;
+  let scaleSession = null;
+  let pendingInteractiveTransform = null;
+  let interactiveFrameId = 0;
+  const activationDistance = 3;
+
+  const getLatestPointerEvent = event => {
+    const coalesced = typeof event.getCoalescedEvents === 'function' ? event.getCoalescedEvents() : null;
+    return coalesced?.length ? coalesced[coalesced.length - 1] : event;
+  };
+
+  const isPrimaryPointerPressed = event => (
+    event.pointerType === 'touch' || (Number(event.buttons) & 1) === 1
+  );
+
+  const applyPendingInteractiveTransform = () => {
+    interactiveFrameId = 0;
+    if (!pendingInteractiveTransform) return;
+    const pending = pendingInteractiveTransform;
+    pendingInteractiveTransform = null;
+    setImageToolTransform(pending.tool, pending.transform, {
+      persist: false,
+      interactive: true,
+      immediate: true,
+    });
+  };
+
+  const queueInteractiveTransform = (tool, transform) => {
+    pendingInteractiveTransform = { tool, transform };
+    if (interactiveFrameId) return;
+    interactiveFrameId = requestAnimationFrame(applyPendingInteractiveTransform);
+  };
+
+  const flushInteractiveTransform = () => {
+    if (interactiveFrameId) cancelAnimationFrame(interactiveFrameId);
+    interactiveFrameId = 0;
+    applyPendingInteractiveTransform();
+  };
+
+  const selectedTransform = () => {
+    const descriptor = getImageToolDescriptor(activeImageTool);
+    return {
+      offsetX: descriptor.offsetX,
+      offsetY: descriptor.offsetY,
+      scale: descriptor.scale,
+    };
+  };
+
+  const updateZoom = direction => {
+    if (!isCanvasImageEditAvailable()) return;
+    canvasImageEditSuspended = false;
+    const transform = selectedTransform();
+    const step = direction > 0 ? 0.05 : -0.05;
+    setImageToolTransform(activeImageTool, {
+      ...transform,
+      scale: Math.round((transform.scale + step) * 20) / 20,
+    });
+  };
+
+  canvas.addEventListener('pointerdown', event => {
+    if (!isCanvasImageEditAvailable() || event.button !== 0 || event.isPrimary === false) return;
+    const point = getCanvasPoint(event);
+    const bounds = getSelectedImageEditBounds();
+    event.stopImmediatePropagation();
+    if (!bounds || !pointInBounds(point, bounds)) {
+      setCanvasImageEditSuspended(true);
+      event.preventDefault();
+      return;
+    }
+    canvasImageEditSuspended = false;
+    syncCanvasImageEditMode();
+    const transform = selectedTransform();
+    dragSession = {
+      pointerId: event.pointerId,
+      startPoint: point,
+      startX: transform.offsetX,
+      startY: transform.offsetY,
+      bounds,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      activated: false,
+    };
+    wrap.classList.add('is-image-dragging');
+    canvas.focus({ preventScroll: true });
+    try { canvas.setPointerCapture(event.pointerId); } catch (error) {}
+    event.preventDefault();
+  }, { capture: true });
+
+  canvas.addEventListener('pointermove', event => {
+    if (!dragSession || dragSession.pointerId !== event.pointerId || !isCanvasImageEditMode()) return;
+    if (!isPrimaryPointerPressed(event)) {
+      stopImageDrag(event);
+      return;
+    }
+    const pointerEvent = getLatestPointerEvent(event);
+    if (!dragSession.activated) {
+      const distance = Math.hypot(
+        pointerEvent.clientX - dragSession.startClientX,
+        pointerEvent.clientY - dragSession.startClientY,
+      );
+      if (distance < activationDistance) return;
+      dragSession.activated = true;
+    }
+    const point = getCanvasPoint(pointerEvent);
+    const workspace = getWorkspace();
+    const isForeground = activeImageTool.startsWith('foreground') && !isDoubleEntityImagePost();
+    const pixelsPerXUnit = Math.max(0.5, (isForeground ? workspace.width * 0.42 : dragSession.bounds.w * 0.35) / 100);
+    const pixelsPerYUnit = Math.max(0.5, (isForeground ? workspace.height * 0.35 : dragSession.bounds.h * 0.35) / 100);
+    const deltaX = (point.x - dragSession.startPoint.x) / pixelsPerXUnit;
+    const deltaY = (point.y - dragSession.startPoint.y) / pixelsPerYUnit;
+    const transform = selectedTransform();
+    queueInteractiveTransform(activeImageTool, {
+      ...transform,
+      offsetX: Math.round((dragSession.startX + deltaX) * 100) / 100,
+      offsetY: Math.round((dragSession.startY + deltaY) * 100) / 100,
+    });
+    event.preventDefault();
+  });
+
+  const stopImageDrag = event => {
+    if (!dragSession || (event?.pointerId != null && dragSession.pointerId !== event.pointerId)) return;
+    const session = dragSession;
+    dragSession = null;
+    flushInteractiveTransform();
+    try {
+      if (canvas.hasPointerCapture?.(session.pointerId)) canvas.releasePointerCapture(session.pointerId);
+    } catch (error) {}
+    wrap.classList.remove('is-image-dragging');
+    if (session.activated) saveMediaContext();
+  };
+  canvas.addEventListener('pointerup', stopImageDrag);
+  canvas.addEventListener('pointercancel', stopImageDrag);
+  canvas.addEventListener('lostpointercapture', stopImageDrag);
+
+  wrap.querySelectorAll('[data-canvas-image-scale-handle]').forEach(handle => {
+    handle.addEventListener('pointerdown', event => {
+      if (!isCanvasImageEditMode() || event.button !== 0 || event.isPrimary === false) return;
+      const bounds = getSelectedImageEditBounds();
+      if (!bounds) return;
+      const point = getCanvasPoint(event);
+      const center = { x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 };
+      scaleSession = {
+        pointerId: event.pointerId,
+        startScale: selectedTransform().scale,
+        center,
+        startDistance: Math.max(1, Math.hypot(point.x - center.x, point.y - center.y)),
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        activated: false,
+        handle,
+      };
+      try { handle.setPointerCapture(event.pointerId); } catch (error) {}
+      event.stopPropagation();
+      event.preventDefault();
+    });
+
+    handle.addEventListener('pointermove', event => {
+      if (!scaleSession || scaleSession.pointerId !== event.pointerId || !isCanvasImageEditMode()) return;
+      if (!isPrimaryPointerPressed(event)) {
+        stopScale(event);
+        return;
+      }
+      const pointerEvent = getLatestPointerEvent(event);
+      if (!scaleSession.activated) {
+        const movement = Math.hypot(
+          pointerEvent.clientX - scaleSession.startClientX,
+          pointerEvent.clientY - scaleSession.startClientY,
+        );
+        if (movement < activationDistance) return;
+        scaleSession.activated = true;
+      }
+      const point = getCanvasPoint(pointerEvent);
+      const distance = Math.max(1, Math.hypot(point.x - scaleSession.center.x, point.y - scaleSession.center.y));
+      const transform = selectedTransform();
+      queueInteractiveTransform(activeImageTool, {
+        ...transform,
+        scale: scaleSession.startScale * (distance / scaleSession.startDistance),
+      });
+      event.preventDefault();
+    });
+
+    const stopScale = event => {
+      if (!scaleSession || (event?.pointerId != null && scaleSession.pointerId !== event.pointerId)) return;
+      const session = scaleSession;
+      scaleSession = null;
+      flushInteractiveTransform();
+      try {
+        if (session.handle.hasPointerCapture?.(session.pointerId)) {
+          session.handle.releasePointerCapture(session.pointerId);
+        }
+      } catch (error) {}
+      if (session.activated) saveMediaContext();
+    };
+    handle.addEventListener('pointerup', stopScale);
+    handle.addEventListener('pointercancel', stopScale);
+    handle.addEventListener('lostpointercapture', stopScale);
+  });
+
+  const stopAllPointerSessions = () => {
+    stopImageDrag();
+    if (scaleSession) {
+      const session = scaleSession;
+      scaleSession = null;
+      flushInteractiveTransform();
+      try {
+        if (session.handle.hasPointerCapture?.(session.pointerId)) {
+          session.handle.releasePointerCapture(session.pointerId);
+        }
+      } catch (error) {}
+      if (session.activated) saveMediaContext();
+    }
+  };
+  window.addEventListener('blur', stopAllPointerSessions);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopAllPointerSessions();
+  });
+
+  canvas.addEventListener('keydown', event => {
+    if (!isCanvasImageEditMode()) return;
+    const transform = selectedTransform();
+    const nudge = event.shiftKey ? 10 : 2;
+    let next = null;
+    if (event.key === 'ArrowLeft') next = { ...transform, offsetX: transform.offsetX - nudge };
+    if (event.key === 'ArrowRight') next = { ...transform, offsetX: transform.offsetX + nudge };
+    if (event.key === 'ArrowUp') next = { ...transform, offsetY: transform.offsetY - nudge };
+    if (event.key === 'ArrowDown') next = { ...transform, offsetY: transform.offsetY + nudge };
+    if (event.key === '+' || event.key === '=') next = { ...transform, scale: transform.scale + 0.05 };
+    if (event.key === '-' || event.key === '_') next = { ...transform, scale: transform.scale - 0.05 };
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setCanvasImageEditSuspended(true);
+      return;
+    }
+    if (!next) return;
+    event.preventDefault();
+    setImageToolTransform(activeImageTool, next);
+  });
+
+  wrap.querySelectorAll('[data-canvas-image-zoom]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      updateZoom(button.dataset.canvasImageZoom === 'in' ? 1 : -1);
+    });
+  });
+  wrap.querySelector('[data-canvas-image-reset]')?.addEventListener('click', event => {
+    event.stopPropagation();
+    if (isCanvasImageEditMode()) resetImageTool(activeImageTool);
+  });
+  wrap.querySelector('[data-canvas-image-done]')?.addEventListener('click', event => {
+    event.stopPropagation();
+    setCanvasImageEditSuspended(true);
+    canvas.focus({ preventScroll: true });
+  });
 }
 
 // â”€â”€â”€ DOWNLOAD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -13806,6 +14667,7 @@ function setupPageTransitions() {
 // â”€â”€â”€ BOOTSTRAP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 initUI();
 setupCanvasDrag();
+setupCanvasImageEditing();
 setupPageTransitions();
 setupNavigation();
 syncProfileChrome();
@@ -13924,12 +14786,17 @@ loadFont().then(() => render());
 
   function setStudioInspectorMode(mode) {
     const nextMode = ['image', 'content', 'ai'].includes(mode) ? mode : 'content';
+    const previousMode = document.body.dataset.studioInspector;
     document.body.dataset.studioInspector = nextMode;
     document.querySelectorAll('[data-studio-inspector-tab]').forEach(tab => {
       const isActive = tab.dataset.studioInspectorTab === nextMode;
       tab.classList.toggle('is-active', isActive);
       tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
+    if (nextMode === 'image' && previousMode !== 'image') {
+      window.ESResumeCanvasImageEditMode?.();
+    }
+    window.ESSyncCanvasImageEditMode?.();
   }
 
   window.ESSetStudioInspectorMode = setStudioInspectorMode;
@@ -14123,7 +14990,6 @@ loadFont().then(() => render());
           <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="ai" aria-selected="false">AI Images</button>
         </div>
         <div class="studio-dock-section">
-          <div class="studio-dock-title">Image Controls <span class="studio-dock-kicker">Canvas tools</span></div>
           <div class="studio-dock-tools"></div>
         </div>
         <div class="studio-ai-section">
