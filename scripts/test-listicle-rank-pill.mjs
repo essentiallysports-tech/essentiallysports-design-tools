@@ -10,10 +10,20 @@ const rendererSource = source.slice(rendererStart, rendererEnd);
 const rowLoopStart = rendererSource.indexOf('data.rows.forEach');
 const rowLoopEnd = rendererSource.indexOf('drawSwipeButton', rowLoopStart);
 assert.ok(rowLoopStart >= 0 && rowLoopEnd > rowLoopStart, 'listicle row renderer must exist');
-assert.doesNotMatch(
+assert.match(
   rendererSource.slice(rowLoopStart, rowLoopEnd),
-  /setLineDash|moveTo\s*\(|lineTo\s*\(|stroke\s*\(/,
-  'listicle rows must not render dashed horizontal or vertical separator lines',
+  /index < data\.rows\.length - 1[\s\S]*?setLineDash\(\[sx\(9\), sx\(9\)\]\)[\s\S]*?moveTo\(left, separatorY\)[\s\S]*?lineTo\(right, separatorY\)/,
+  'listicle rows must retain dotted separators between adjacent rows',
+);
+assert.equal(
+  (rendererSource.match(/const headerTop = sx\(248\)/g) || []).length,
+  1,
+  'listicle header must use one solid top divider',
+);
+assert.doesNotMatch(
+  rendererSource,
+  /const headerBottom|moveTo\(left,\s*sx\(34[0-9]\)\)/,
+  'listicle header must not render the removed duplicate solid divider',
 );
 assert.match(
   source,

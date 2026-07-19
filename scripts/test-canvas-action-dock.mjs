@@ -13,8 +13,16 @@ assert(
   'Canvas dock must keep the compact 720px single-row base contract.',
 );
 assert(
-  /\.canvas-bottom-actions\.is-ai-search-expanded\s*\{[\s\S]*?width:\s*min\(920px,[\s\S]*?height:\s*54px;[\s\S]*?max-height:\s*54px;/.test(html),
-  'AI search must expand the dock horizontally to 920px without changing height.',
+  /\.canvas-bottom-actions\.is-ai-search-expanded\s*\{[\s\S]*?width:\s*max-content;[\s\S]*?max-width:\s*min\(760px,[\s\S]*?height:\s*54px;[\s\S]*?max-height:\s*54px;/.test(html),
+  'AI search must expand to its content width without changing dock height.',
+);
+assert(
+  /\.canvas-bottom-actions\.is-ai-search-expanded \.canvas-ai-search-form\s*\{[\s\S]*?width:\s*clamp\(300px,\s*24vw,\s*360px\);[\s\S]*?max-width:\s*360px;/.test(html),
+  'Desktop AI search must use the compact 360px search-field ceiling.',
+);
+assert(
+  /\.studio-dock-actions \.canvas-bottom-actions\.is-ai-search-expanded,[\s\S]*?width:\s*max-content;[\s\S]*?display:\s*inline-flex;/.test(html),
+  'The studio dock override must preserve content-fit horizontal expansion.',
 );
 assert(
   /@media \(max-width:\s*1023px\)[\s\S]*?\.canvas-bottom-actions\.is-ai-search-expanded[\s\S]*?height:\s*54px;[\s\S]*?overflow-x:\s*auto;[\s\S]*?overflow-y:\s*hidden;/.test(html),

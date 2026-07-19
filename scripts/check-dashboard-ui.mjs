@@ -43,7 +43,7 @@ const system = read(files.system);
 const theme = read(files.theme);
 
 const dashboardV2Index = html.indexOf('dashboard-v2.css');
-const dashboardSystemIndex = html.indexOf('dashboard-ui-system.css?v=20260712-dashboard-system4');
+const dashboardSystemIndex = html.indexOf('dashboard-ui-system.css?v=20260718-dashboard-system5');
 const themeIndex = html.indexOf('theme.css');
 
 if (dashboardV2Index === -1 || dashboardSystemIndex === -1 || themeIndex === -1) {
@@ -80,16 +80,23 @@ assertContains(
 
 assertContains(
   system,
-  'body.dashboard-page .task-card-top',
-  'dashboard task chip row normalization is missing',
-  'dashboard task chip row normalization exists'
+  'body.dashboard-page:is([data-dashboard-view="board"], [data-dashboard-view="list"]) .task-view-toolbar',
+  'dashboard request control toolbar is missing',
+  'dashboard request control toolbar exists'
+);
+
+assertContains(
+  html,
+  '<body class="dashboard-page" data-dashboard-view="overview">',
+  'dashboard must declare Overview before JavaScript boots',
+  'dashboard declares Overview before JavaScript boots'
 );
 
 assertContains(
   system,
-  'grid-template-columns: minmax(0, 1fr) max-content;',
-  'dashboard task chip row is not using the fixed kanban grid contract',
-  'dashboard task chip row uses the fixed kanban grid contract'
+  'grid-auto-columns: clamp(288px, 22vw, 304px);',
+  'dashboard board is not using the compact fixed-width column contract',
+  'dashboard board uses the compact fixed-width column contract'
 );
 
 assertContains(
@@ -101,30 +108,30 @@ assertContains(
 
 assertContains(
   system,
-  'body.dashboard-page .task-type',
-  'dashboard task type chip normalization is missing',
-  'dashboard task type chip normalization exists'
+  'body.dashboard-page .task-card-heading',
+  'dashboard compact task heading is missing',
+  'dashboard compact task heading exists'
+);
+
+assertContains(
+  html,
+  'data-card-due',
+  'dashboard cards are missing direct due-date editing',
+  'dashboard cards include direct due-date editing'
+);
+
+assertContains(
+  html,
+  'data-task-quick-filter="mine"',
+  'dashboard My tasks quick filter is missing',
+  'dashboard My tasks quick filter exists'
 );
 
 assertContains(
   system,
-  'width: 100%;',
-  'dashboard task type chip is not fluid inside the kanban grid',
-  'dashboard task type chip is fluid inside the kanban grid'
-);
-
-assertContains(
-  system,
-  'width: 76px;',
-  'dashboard priority chip compact fixed width is missing',
-  'dashboard priority chip compact fixed width exists'
-);
-
-assertContains(
-  system,
-  'margin-top: auto;',
-  'dashboard card metadata is not pinned consistently',
-  'dashboard card metadata is pinned consistently'
+  'body.dashboard-page .task-card-quick-controls',
+  'dashboard task cards are missing direct assignment and priority controls',
+  'dashboard task cards include direct assignment and priority controls'
 );
 
 assertContains(

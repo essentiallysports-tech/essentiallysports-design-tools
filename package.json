@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "npm run check:site-chrome && npm run check:profile-layout && npm run check:dashboard-ui && npm run test:listicle && npm run test:listicle-pill && npm run test:listicle-accordion && npm run test:auth && npm run test:ai-image-query && npm run test:es-images && npm run test:vercel-api",
+    "test": "npm run check:site-chrome && npm run check:profile-layout && npm run check:dashboard-ui && npm run test:workspace-ui && npm run test:listicle && npm run test:listicle-pill && npm run test:listicle-accordion && npm run test:listicle-type2 && npm run test:auth && npm run test:ai-image-query && npm run test:es-images && npm run test:vercel-api",
     "check:site-chrome": "node scripts/check-site-chrome.mjs",
     "check:profile-layout": "node scripts/test-profile-layout.mjs",
     "test:auth": "node scripts/test-auth-security.mjs",
@@ -14,9 +14,11 @@
     "inspect:es-images": "node scripts/inspect-es-mcp-live.mjs",
     "check:dashboard-supabase": "node scripts/check-dashboard-supabase.mjs",
     "check:dashboard-ui": "node scripts/check-dashboard-ui.mjs",
+    "test:workspace-ui": "node scripts/test-single-stats-controls.mjs && node scripts/test-canvas-action-dock.mjs",
     "test:listicle": "node scripts/test-listicle-data.mjs",
     "test:listicle-pill": "node scripts/test-listicle-rank-pill.mjs",
     "test:listicle-accordion": "node scripts/test-listicle-accordion.mjs",
+    "test:listicle-type2": "node scripts/test-listicle-type2-data.mjs && node scripts/test-listicle-type2-ui.mjs",
     "es:mcp:register": "node scripts/es-mcp-register-client.mjs",
     "es:mcp:token": "node scripts/es-mcp-exchange-token.mjs"
   }

@@ -916,6 +916,60 @@
   .stats-entry-label-input {
     text-transform: uppercase;
   }
+
+  /* Single Stats uses compound value/label controls. Keep this isolated from
+     the double-stat editor and every other Social Media post type. */
+  #stats-single-fields {
+    container-type: inline-size;
+  }
+  #stats-single-fields .stats-headline-field {
+    margin-bottom: 14px;
+  }
+  #stats-single-fields .stats-entry-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  #stats-single-fields .stats-entry {
+    display: grid;
+    grid-template-columns: minmax(58px, .72fr) minmax(0, 1fr);
+    gap: 0;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #DCE4ED;
+    border-radius: 10px;
+    background: #FFFFFF;
+    transition: border-color .18s ease, box-shadow .18s ease;
+  }
+  #stats-single-fields .stats-entry:focus-within {
+    border-color: #1980F4;
+    box-shadow: 0 0 0 2px rgba(25, 128, 244, .10);
+  }
+  #stats-single-fields .stats-entry-grid > .stats-entry::after {
+    display: none;
+  }
+  #stats-single-fields .stats-entry .pill-entry {
+    min-width: 0;
+    min-height: 46px;
+    height: 46px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    text-align: center;
+  }
+  #stats-single-fields .stats-entry .stats-entry-label-input {
+    border-left: 1px solid #E4EAF1;
+  }
+  #stats-single-fields .stats-entry .pill-entry:focus {
+    outline: 0;
+    box-shadow: none;
+  }
+  @container (max-width: 560px) {
+    #stats-single-fields .stats-entry-grid {
+      grid-template-columns: 1fr;
+    }
+  }
   .listicle-fields {
     display: none;
     gap: 14px;
@@ -924,14 +978,14 @@
   .listicle-fields.is-visible {
     display: grid;
   }
-  body[data-instagram-post-type="listicle-type-1"] .text-card > .tod-row,
-  body[data-instagram-post-type="listicle-type-1"] .text-card > .input-wrap,
-  body[data-instagram-post-type="listicle-type-1"] .color-card,
-  body[data-instagram-post-type="listicle-type-1"] #pill-position-card,
-  body[data-instagram-post-type="listicle-type-1"] #swipe-button-card,
-  body[data-instagram-post-type="listicle-type-1"] .advanced-card,
-  body[data-instagram-post-type="listicle-type-1"] .canvas-primary-actions,
-  body[data-instagram-post-type="listicle-type-1"] .image-tool-rail {
+  body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) .text-card > .tod-row,
+  body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) .text-card > .input-wrap,
+  body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) .color-card,
+  body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) #pill-position-card,
+  body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) #swipe-button-card,
+  body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) .advanced-card,
+  body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) .canvas-primary-actions,
+  body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) .image-tool-rail {
     display: none !important;
   }
   .listicle-field-label {
@@ -1146,6 +1200,41 @@
     font-family: var(--font-ui);
     font-size: 14px;
     line-height: 1.45;
+  }
+  .listicle-type2-editor .listicle-row-primary-grid {
+    grid-template-columns: 78px minmax(0, 1fr);
+  }
+  .listicle-type2-subtitle-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .listicle-type2-assets {
+    display: grid;
+    gap: 10px;
+  }
+  .listicle-type2-asset-row {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 10px;
+    align-items: end;
+  }
+  .listicle-player-preview {
+    width: 64px;
+    aspect-ratio: 4 / 3;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid #D9DEE5;
+    border-radius: 9px;
+    background: #F4F5F7;
+    color: #6B7280;
+    font-family: var(--font-ui);
+    font-size: 12px;
+  }
+  .listicle-player-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
   /* â”€â”€â”€ SELECTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -5269,11 +5358,12 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded {
-      width: min(920px, calc(100vw - 80px));
-      max-width: min(920px, calc(100vw - 80px));
+      width: max-content;
+      max-width: min(760px, calc(100vw - 80px));
       height: 54px;
       max-height: 54px;
       padding-inline: 8px;
+      interpolate-size: allow-keywords;
     }
 
     html[data-studio-shell="on"] .studio-dock-actions .canvas-bottom-actions {
@@ -5305,10 +5395,26 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] body[data-current-page="instagram"] .canvas-bottom-actions.is-ai-search-expanded {
-      width: min(920px, calc(100vw - 80px));
-      max-width: min(920px, calc(100vw - 80px));
+      width: max-content;
+      max-width: min(760px, calc(100vw - 80px));
       height: 54px;
       max-height: 54px;
+    }
+
+    html[data-studio-shell="on"] .studio-dock-actions .canvas-bottom-actions.is-ai-search-expanded,
+    html[data-studio-shell="on"] body[data-current-page="instagram"] .studio-dock-actions .canvas-bottom-actions.is-ai-search-expanded {
+      width: max-content;
+      max-width: min(760px, calc(100vw - 80px));
+      min-height: 54px;
+      display: inline-flex;
+      grid-template-columns: none;
+      gap: 10px;
+      padding: 7px 8px;
+      border: 1px solid #DCE4ED;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .97);
+      box-shadow: 0 12px 30px rgba(15, 23, 42, .10);
+      align-self: center;
     }
 
     html[data-studio-shell="on"] body[data-current-page="instagram"] .studio-dock-actions .canvas-bottom-actions {
@@ -5371,14 +5477,38 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .canvas-ai-search-form {
-      width: clamp(250px, 21vw, 300px);
-      max-width: 300px;
-      flex-basis: clamp(250px, 21vw, 300px);
+      width: clamp(300px, 24vw, 360px);
+      max-width: 360px;
+      flex-basis: clamp(300px, 24vw, 360px);
       border-width: 1px;
       border-color: #DCE4ED;
       opacity: 1;
       pointer-events: auto;
       transform: translateX(0);
+    }
+
+    @media (min-width: 1200px) {
+      html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .studio-zoom-btn {
+        width: 34px;
+        height: 38px;
+      }
+
+      html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .studio-zoom-value {
+        width: 52px;
+      }
+
+      html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .carousel-slide-button {
+        width: 34px;
+        height: 40px;
+      }
+
+      html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .carousel-slide-arrow {
+        width: 24px;
+      }
+
+      html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .carousel-slide-switcher {
+        gap: 4px;
+      }
     }
 
     html[data-studio-shell="on"] .studio-dock-actions .canvas-primary-actions {
@@ -5608,9 +5738,9 @@ body[data-current-page="faq"] .faq-cta-art img {
 
   @media (min-width: 1024px) and (max-width: 1199px) {
     html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .canvas-ai-search-form {
-      width: clamp(180px, 18vw, 240px);
-      max-width: 240px;
-      flex-basis: clamp(180px, 18vw, 240px);
+      width: clamp(220px, 21vw, 280px);
+      max-width: 280px;
+      flex-basis: clamp(220px, 21vw, 280px);
     }
 
     html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .studio-zoom-group {
@@ -6201,6 +6331,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           <option value="stats-single-ent">Stats Post Single Ent</option>
           <option value="stats-double-ent">Stats Post Double Ent</option>
           <option value="listicle-type-1">Listicle Type 1</option>
+          <option value="listicle-type-2">Listicle Type 2</option>
         </select>
       </div>
     </div>
@@ -6391,6 +6522,14 @@ body[data-current-page="faq"] .faq-cta-art img {
         </div>
         <div class="listicle-row-list" id="listicle-row-list" aria-label="Five listicle rows"></div>
         <p class="listicle-note">This format always uses exactly five rows. Empty or invalid values safely fall back without changing the layout.</p>
+      </div>
+      <div class="listicle-fields" id="listicle-type2-fields" aria-label="Listicle Type 2 data">
+        <label class="listicle-field-label" for="listicle-type2-title">
+          Post Title
+          <textarea id="listicle-type2-title" class="pill-entry listicle-title-input" rows="2" maxlength="80" placeholder="MVP Ladder&#10;Update" spellcheck="false" data-listicle-type2-field="title"></textarea>
+        </label>
+        <div class="listicle-row-list" id="listicle-type2-row-list" aria-label="Five player listicle rows"></div>
+        <p class="listicle-note">Exactly five ranked players are kept. Team logos stay square and player images are fitted safely without stretching.</p>
       </div>
     </div>
 
@@ -7241,6 +7380,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 </footer>
 
 <script src="listicle-data.js"></script>
+<script src="listicle-type2-data.js"></script>
 <script>
 
 // â”€â”€â”€ EMBEDDED DATA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -7268,6 +7408,7 @@ function createDesignerState(defaultBottomAnchor) {
     quoteLogoPlacement: 'bottom',
     longQuoteName: 'BY ES STAFF',
     listicleData: ESListicle.createDefaultListicleData(),
+    listicleType2Data: ESListicleType2.createDefaultListicleData(),
     lines: [],
     textByContext: {},
     designByContext: {},
@@ -8435,6 +8576,292 @@ function initListicleControls() {
   });
 }
 
+function getListicleType2Data() {
+  state.listicleType2Data = ESListicleType2.normalizeListicleData(state.listicleType2Data);
+  return state.listicleType2Data;
+}
+
+function getListicleType2Payload() {
+  return {
+    type: 'listicle-type-2',
+    schemaVersion: ESListicleType2.SCHEMA_VERSION,
+    rowCount: ESListicleType2.ROW_COUNT,
+    data: getListicleType2Data(),
+  };
+}
+
+function createListicleType2Input(labelText, key, value, maxLength, rowIndex) {
+  const label = document.createElement('label');
+  label.className = 'listicle-field-label';
+  label.textContent = labelText;
+  const input = document.createElement('input');
+  input.className = 'pill-entry';
+  input.type = 'text';
+  input.value = value;
+  input.maxLength = maxLength;
+  input.spellcheck = false;
+  input.dataset.listicleType2Row = String(rowIndex);
+  input.dataset.listicleType2Key = key;
+  label.appendChild(input);
+  return label;
+}
+
+function createListicleType2AssetVisual(row, sourceKey, className, fallbackText) {
+  const frame = document.createElement('span');
+  frame.className = className;
+  const source = row[sourceKey];
+  if (source) {
+    const image = document.createElement('img');
+    image.src = source;
+    image.alt = '';
+    frame.appendChild(image);
+  } else {
+    const fallback = document.createElement('span');
+    fallback.textContent = fallbackText;
+    frame.appendChild(fallback);
+  }
+  return frame;
+}
+
+let activeListicleType2RowIndex = 0;
+
+function setListicleType2RowExpanded(rowIndex) {
+  const list = document.getElementById('listicle-type2-row-list');
+  if (!list || rowIndex < 0 || rowIndex >= ESListicleType2.ROW_COUNT) return;
+  activeListicleType2RowIndex = rowIndex;
+  list.querySelectorAll('[data-listicle-type2-row-card]').forEach((card, index) => {
+    const expanded = index === rowIndex;
+    card.classList.toggle('is-expanded', expanded);
+    card.querySelector('[data-listicle-type2-row-toggle]')?.setAttribute('aria-expanded', String(expanded));
+    const panel = card.querySelector('.listicle-row-panel');
+    if (panel) {
+      panel.setAttribute('aria-hidden', String(!expanded));
+      panel.inert = !expanded;
+    }
+  });
+}
+
+function createListicleType2AssetControl(row, rowIndex, asset) {
+  const isPlayer = asset === 'player';
+  const sourceKey = isPlayer ? 'playerSrc' : 'logoSrc';
+  const source = row[sourceKey];
+  const field = document.createElement('div');
+  field.className = 'listicle-asset-field';
+  const label = document.createElement('span');
+  label.className = 'listicle-asset-label';
+  label.textContent = isPlayer ? 'Player image' : 'Team logo';
+  const control = document.createElement('div');
+  control.className = 'listicle-logo-control';
+  const preview = createListicleType2AssetVisual(
+    row,
+    sourceKey,
+    isPlayer ? 'listicle-player-preview' : 'listicle-logo-preview',
+    isPlayer ? 'Player' : 'Logo'
+  );
+  const button = document.createElement('button');
+  button.className = `listicle-logo-button${source ? ' has-logo' : ''}`;
+  button.type = 'button';
+  button.dataset.listicleType2AssetButton = `${rowIndex}:${asset}`;
+  button.textContent = source ? `Replace ${isPlayer ? 'image' : 'logo'}` : `Upload ${isPlayer ? 'image' : 'logo'}`;
+  const remove = document.createElement('button');
+  remove.className = `listicle-logo-remove${source ? ' is-visible' : ''}`;
+  remove.type = 'button';
+  remove.dataset.listicleType2AssetRemove = `${rowIndex}:${asset}`;
+  remove.textContent = 'Remove';
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/png,image/jpeg,image/webp';
+  input.hidden = true;
+  input.dataset.listicleType2AssetInput = `${rowIndex}:${asset}`;
+  control.append(preview, button, remove);
+  field.append(label, control, input);
+  return field;
+}
+
+function buildListicleType2RowControls() {
+  const list = document.getElementById('listicle-type2-row-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const data = getListicleType2Data();
+  if (activeListicleType2RowIndex < 0 || activeListicleType2RowIndex >= ESListicleType2.ROW_COUNT) {
+    activeListicleType2RowIndex = 0;
+  }
+  data.rows.forEach((row, rowIndex) => {
+    const expanded = rowIndex === activeListicleType2RowIndex;
+    const card = document.createElement('section');
+    card.className = `listicle-row-card${expanded ? ' is-expanded' : ''}`;
+    card.dataset.listicleType2RowCard = String(rowIndex);
+
+    const summary = document.createElement('button');
+    summary.className = 'listicle-row-summary';
+    summary.type = 'button';
+    summary.dataset.listicleType2RowToggle = String(rowIndex);
+    summary.setAttribute('aria-expanded', String(expanded));
+    summary.setAttribute('aria-controls', `listicle-type2-row-panel-${rowIndex}`);
+    const blockLabel = document.createElement('span');
+    blockLabel.className = 'listicle-row-block-label';
+    blockLabel.textContent = `Block ${rowIndex + 1}`;
+    const chevron = document.createElement('span');
+    chevron.className = 'listicle-row-chevron';
+    chevron.setAttribute('aria-hidden', 'true');
+    summary.append(blockLabel, chevron);
+
+    const panel = document.createElement('div');
+    panel.className = 'listicle-row-panel';
+    panel.id = `listicle-type2-row-panel-${rowIndex}`;
+    panel.setAttribute('aria-hidden', String(!expanded));
+    panel.inert = !expanded;
+    const panelInner = document.createElement('div');
+    panelInner.className = 'listicle-row-panel-inner';
+    const editor = document.createElement('div');
+    editor.className = 'listicle-row-editor listicle-type2-editor';
+
+    const primaryGrid = document.createElement('div');
+    primaryGrid.className = 'listicle-row-primary-grid';
+    primaryGrid.append(
+      createListicleType2Input('Rank', 'rank', row.rank, ESListicleType2.LIMITS.rank, rowIndex),
+      createListicleType2Input('Player', 'entity', row.entity, ESListicleType2.LIMITS.entity, rowIndex)
+    );
+    const subtitleGrid = document.createElement('div');
+    subtitleGrid.className = 'listicle-type2-subtitle-grid';
+    subtitleGrid.append(
+      createListicleType2Input('Team', 'subtitle', row.subtitle, ESListicleType2.LIMITS.subtitle, rowIndex)
+    );
+
+    const assets = document.createElement('div');
+    assets.className = 'listicle-type2-assets';
+    const logoRow = document.createElement('div');
+    logoRow.className = 'listicle-type2-asset-row';
+    const accentField = document.createElement('label');
+    accentField.className = 'listicle-asset-field';
+    const accentLabel = document.createElement('span');
+    accentLabel.className = 'listicle-asset-label';
+    accentLabel.textContent = 'Color';
+    const accent = document.createElement('input');
+    accent.className = 'listicle-accent-input';
+    accent.type = 'color';
+    accent.value = row.accent;
+    accent.dataset.listicleType2Row = String(rowIndex);
+    accent.dataset.listicleType2Key = 'accent';
+    accent.setAttribute('aria-label', `Row ${rowIndex + 1} accent color`);
+    accentField.append(accentLabel, accent);
+    logoRow.append(accentField, createListicleType2AssetControl(row, rowIndex, 'logo'));
+    assets.append(logoRow, createListicleType2AssetControl(row, rowIndex, 'player'));
+
+    editor.append(primaryGrid, subtitleGrid, assets);
+    panelInner.appendChild(editor);
+    panel.appendChild(panelInner);
+    card.append(summary, panel);
+    list.appendChild(card);
+  });
+}
+
+function syncListicleType2Controls() {
+  const fields = document.getElementById('listicle-type2-fields');
+  if (!fields) return;
+  const data = getListicleType2Data();
+  fields.querySelectorAll('[data-listicle-type2-field]').forEach(input => {
+    const key = input.dataset.listicleType2Field;
+    if (document.activeElement !== input) input.value = data[key] || '';
+  });
+  if (fields.querySelectorAll('[data-listicle-type2-row-card]').length !== ESListicleType2.ROW_COUNT) {
+    buildListicleType2RowControls();
+  }
+}
+
+function parseListicleType2AssetToken(token) {
+  const [rowIndex, asset] = String(token || '').split(':');
+  return { rowIndex: Number(rowIndex), asset };
+}
+
+function initListicleType2Controls() {
+  const fields = document.getElementById('listicle-type2-fields');
+  if (!fields) return;
+  buildListicleType2RowControls();
+
+  fields.addEventListener('input', event => {
+    const field = event.target.closest('[data-listicle-type2-field]');
+    if (field) {
+      state.listicleType2Data = ESListicleType2.updateListicleField(
+        state.listicleType2Data,
+        field.dataset.listicleType2Field,
+        field.value
+      );
+      if (field.value !== state.listicleType2Data.title) {
+        const caret = Math.min(field.selectionStart ?? state.listicleType2Data.title.length, state.listicleType2Data.title.length);
+        field.value = state.listicleType2Data.title;
+        field.setSelectionRange?.(caret, caret);
+      }
+      render();
+      return;
+    }
+    const input = event.target.closest('[data-listicle-type2-row][data-listicle-type2-key]');
+    if (!input) return;
+    state.listicleType2Data = ESListicleType2.updateListicleRow(
+      state.listicleType2Data,
+      Number(input.dataset.listicleType2Row),
+      { [input.dataset.listicleType2Key]: input.value }
+    );
+    render();
+  });
+
+  fields.addEventListener('click', event => {
+    const toggle = event.target.closest('[data-listicle-type2-row-toggle]');
+    if (toggle) {
+      setListicleType2RowExpanded(Number(toggle.dataset.listicleType2RowToggle));
+      return;
+    }
+    const upload = event.target.closest('[data-listicle-type2-asset-button]');
+    if (upload) {
+      fields.querySelector(`[data-listicle-type2-asset-input="${upload.dataset.listicleType2AssetButton}"]`)?.click();
+      return;
+    }
+    const remove = event.target.closest('[data-listicle-type2-asset-remove]');
+    if (!remove) return;
+    const { rowIndex, asset } = parseListicleType2AssetToken(remove.dataset.listicleType2AssetRemove);
+    const sourceKey = asset === 'player' ? 'playerSrc' : 'logoSrc';
+    const nameKey = asset === 'player' ? 'playerName' : 'logoName';
+    state.listicleType2Data = ESListicleType2.updateListicleRow(state.listicleType2Data, rowIndex, {
+      [sourceKey]: '',
+      [nameKey]: '',
+    });
+    buildListicleType2RowControls();
+    render();
+  });
+
+  fields.addEventListener('change', event => {
+    const input = event.target.closest('[data-listicle-type2-asset-input]');
+    if (!input) return;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      setStatus('Use a PNG, JPEG, or WebP image.', 'err');
+      return;
+    }
+    const { rowIndex, asset } = parseListicleType2AssetToken(input.dataset.listicleType2AssetInput);
+    const maxSize = asset === 'player' ? 10 * 1024 * 1024 : 4 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setStatus(`${asset === 'player' ? 'Player image' : 'Logo'} must be smaller than ${asset === 'player' ? '10' : '4'} MB.`, 'err');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const sourceKey = asset === 'player' ? 'playerSrc' : 'logoSrc';
+      const nameKey = asset === 'player' ? 'playerName' : 'logoName';
+      state.listicleType2Data = ESListicleType2.updateListicleRow(state.listicleType2Data, rowIndex, {
+        [sourceKey]: String(reader.result || ''),
+        [nameKey]: file.name,
+      });
+      buildListicleType2RowControls();
+      render();
+      setStatus(`Block ${rowIndex + 1} ${asset === 'player' ? 'player image' : 'logo'} added.`, 'ok');
+    };
+    reader.onerror = () => setStatus('Could not read that image.', 'err');
+    reader.readAsDataURL(file);
+  });
+}
+
 function initUI() {
   const sportSel = document.getElementById('sport-select');
   getSports().forEach(s => {
@@ -8499,6 +8926,7 @@ function initUI() {
   pendingTextChange = debounce(onTextChange, 50);
   ta.addEventListener('input', pendingTextChange);
   initListicleControls();
+  initListicleType2Controls();
   const longQuoteNameInput = document.getElementById('long-quote-name');
   if (longQuoteNameInput) {
     longQuoteNameInput.addEventListener('input', event => {
@@ -8656,7 +9084,10 @@ function renderPaletteRow(entry) {
 
 function onTextChange() {
   const ta = document.getElementById('pill-text');
-  if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'listicle-type-1') return;
+  if (
+    activeWorkspace === 'instagram' &&
+    ((state.postType || 'cover') === 'listicle-type-1' || (state.postType || 'cover') === 'listicle-type-2')
+  ) return;
   if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'double-entity-quote') {
     syncDoubleEntityLinesFromFields();
     return;
@@ -9691,6 +10122,14 @@ const INSTAGRAM_POST_TYPES = {
     render: drawListicleType1Post,
     getPayload: getListicleType1Payload,
   },
+  'listicle-type-2': {
+    label: 'Listicle Type 2',
+    placeholder: '',
+    supportsSwipe: false,
+    maxLines: 0,
+    render: drawListicleType2Post,
+    getPayload: getListicleType2Payload,
+  },
 };
 
 function getPillFont(scale=1) {
@@ -10590,21 +11029,20 @@ function drawListicleType1Post(ctx, W, H, scale) {
   const right = W - sx(50);
   const titleBox = {
     x: sx(49),
-    y: sx(42),
+    y: sx(50),
     width: sx(810),
-    height: sx(166),
+    height: sx(158),
   };
-  const titleInsetY = sx(7);
   const title = fitListicleBlockInBox(
     ctx,
     data.title,
     titleBox.width,
-    titleBox.height - titleInsetY * 2,
+    titleBox.height,
     2,
     88 * scale,
     42 * scale
   );
-  const titleStartY = titleBox.y + titleInsetY + Math.max(0, (titleBox.height - titleInsetY * 2 - title.renderedHeight) / 2);
+  const titleStartY = titleBox.y;
   ctx.fillStyle = '#08090A';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
@@ -10615,14 +11053,11 @@ function drawListicleType1Post(ctx, W, H, scale) {
   drawEsLogoMark(ctx, sx(908), sx(50), sx(122), sx(104));
 
   const headerTop = sx(248);
-  const headerBottom = sx(348);
   ctx.strokeStyle = '#151515';
   ctx.lineWidth = Math.max(1, sx(2));
   ctx.beginPath();
   ctx.moveTo(left, headerTop);
   ctx.lineTo(right, headerTop);
-  ctx.moveTo(left, headerBottom);
-  ctx.lineTo(right, headerBottom);
   ctx.stroke();
 
   ctx.fillStyle = '#111111';
@@ -10662,9 +11097,169 @@ function drawListicleType1Post(ctx, W, H, scale) {
     drawStatsText(ctx, row.metric1, sx(755), sx(centerY), sx(180), 54 * scale, 31 * scale, '#101010');
     drawStatsText(ctx, row.metric2, sx(950), sx(centerY), sx(130), 54 * scale, 31 * scale, '#101010');
 
+    if (index < data.rows.length - 1) {
+      const separatorY = sx(top + rowHeight - 4);
+      ctx.save();
+      ctx.strokeStyle = '#8A8A8A';
+      ctx.lineWidth = Math.max(1, scale);
+      ctx.setLineDash([sx(9), sx(9)]);
+      ctx.beginPath();
+      ctx.moveTo(left, separatorY);
+      ctx.lineTo(right, separatorY);
+      ctx.stroke();
+      ctx.restore();
+    }
   });
 
+  ctx.save();
+  ctx.strokeStyle = '#585858';
+  ctx.lineWidth = Math.max(1, sx(2));
+  ctx.beginPath();
+  ctx.moveTo(left, sx(rowTop + rowHeight * data.rows.length + 10));
+  ctx.lineTo(right, sx(rowTop + rowHeight * data.rows.length + 10));
+  ctx.stroke();
+  ctx.restore();
+
   drawSwipeButton(ctx, W, H, scale, true);
+
+  if (scale === 1) {
+    state.lastTextBounds = null;
+    state.textHitRects = [];
+  }
+}
+
+function drawListicleType2Rank(ctx, rank, accent, x, y, width, height, scale) {
+  const value = String(rank || '').trim().toUpperCase() || '1';
+  let fontSize = 126 * scale;
+  const minSize = 58 * scale;
+  ctx.save();
+  ctx.fillStyle = accent;
+  ctx.fillRect(x, y, width, height);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  while (fontSize > minSize) {
+    ctx.font = `900 ${Math.round(fontSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    if (ctx.measureText(value).width <= width * 0.78) break;
+    fontSize -= 2 * scale;
+  }
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText(value, x + width / 2, y + height / 2 + 2 * scale);
+  ctx.restore();
+}
+
+function drawListicleType2Player(ctx, row, x, y, width, height) {
+  const image = getListicleLogoImage(row.playerSrc);
+  if (!image || image.naturalWidth <= 0 || image.naturalHeight <= 0) return;
+  const ratio = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+  const drawWidth = image.naturalWidth * ratio;
+  const drawHeight = image.naturalHeight * ratio;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, width, height);
+  ctx.clip();
+  ctx.drawImage(
+    image,
+    x + width - drawWidth,
+    y + height - drawHeight,
+    drawWidth,
+    drawHeight
+  );
+  ctx.restore();
+}
+
+function drawListicleType2Post(ctx, W, H, scale) {
+  const data = getListicleType2Data();
+  ctx.clearRect(0, 0, W, H);
+  drawListicleTexture(ctx, W, H, scale);
+
+  const sx = value => Math.round(value * scale);
+  const left = sx(49);
+  const right = W - sx(50);
+  const titleBox = {
+    x: left,
+    y: sx(50),
+    width: sx(810),
+    height: sx(158),
+  };
+  const title = fitListicleBlockInBox(
+    ctx,
+    data.title,
+    titleBox.width,
+    titleBox.height,
+    2,
+    88 * scale,
+    42 * scale
+  );
+  ctx.save();
+  ctx.fillStyle = '#08090A';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `900 ${Math.round(title.size)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  title.lines.forEach((line, index) => {
+    ctx.fillText(line, titleBox.x, titleBox.y + title.capAscent + index * title.lineHeight);
+  });
+  ctx.restore();
+  drawEsLogoMark(ctx, sx(908), sx(50), sx(122), sx(104));
+
+  ctx.save();
+  ctx.strokeStyle = '#111111';
+  ctx.lineWidth = Math.max(2, sx(5));
+  ctx.beginPath();
+  ctx.moveTo(left, sx(250));
+  ctx.lineTo(right, sx(250));
+  ctx.stroke();
+  ctx.restore();
+
+  const rowStart = 323;
+  const rowPitch = 200;
+  const rowHeight = 170;
+  data.rows.forEach((row, index) => {
+    const top = rowStart + index * rowPitch;
+    const bottom = top + rowHeight;
+    const rankX = sx(49);
+    const rankY = sx(top);
+    const rankWidth = sx(92);
+    const rankHeight = sx(134);
+    drawListicleType2Rank(ctx, row.rank, row.accent, rankX, rankY, rankWidth, rankHeight, scale);
+
+    const logoSize = sx(140);
+    drawListicleLogo(ctx, row, sx(145), sx(top - 3), logoSize, logoSize, scale);
+
+    const name = String(row.entity || '').toUpperCase();
+    const nameMaxWidth = sx(485);
+    const nameSize = fitCanvasFont(ctx, name, nameMaxWidth, 60 * scale, 36 * scale);
+    ctx.save();
+    ctx.font = `900 ${Math.round(nameSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.fillStyle = '#090A0C';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(name, sx(285), sx(top + 68));
+
+    const subtitle = String(row.subtitle || '').toUpperCase();
+    const subtitleSize = fitCanvasFont(
+      ctx,
+      subtitle,
+      nameMaxWidth,
+      30 * scale,
+      21 * scale,
+      'Roboto Condensed'
+    );
+    ctx.font = `600 ${Math.round(subtitleSize)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
+    ctx.fillStyle = row.accent;
+    ctx.fillText(subtitle, sx(285), sx(top + 112));
+    ctx.restore();
+
+    drawListicleType2Player(ctx, row, sx(760), sx(top - 15), sx(270), sx(185));
+
+    ctx.save();
+    ctx.strokeStyle = '#171717';
+    ctx.lineWidth = Math.max(1, sx(2));
+    ctx.beginPath();
+    ctx.moveTo(left, sx(bottom));
+    ctx.lineTo(right, sx(bottom));
+    ctx.stroke();
+    ctx.restore();
+  });
 
   if (scale === 1) {
     state.lastTextBounds = null;
@@ -11859,7 +12454,10 @@ function setupCanvasDrag() {
   const wrap = canvas.closest('.canvas-wrap');
 
   canvas.addEventListener('pointerdown', evt => {
-    if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'listicle-type-1') return;
+    if (
+      activeWorkspace === 'instagram' &&
+      ((state.postType || 'cover') === 'listicle-type-1' || (state.postType || 'cover') === 'listicle-type-2')
+    ) return;
     if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'long-quote') return;
     if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'stats-single-ent') return;
     if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'stats-double-ent') return;
@@ -11920,6 +12518,9 @@ function startExportFeedback(button, completeLabel = null) {
 function getMainTextSlug(fallback = 'untitled') {
   if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'listicle-type-1') {
     return slugifyFilenamePart(getListicleData().title, 'listicle').slice(0, 80) || 'listicle';
+  }
+  if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'listicle-type-2') {
+    return slugifyFilenamePart(getListicleType2Data().title, 'listicle').slice(0, 80) || 'listicle';
   }
   const source = (state.lines || [])
     .map(line => String(line || '').trim())
@@ -12549,6 +13150,7 @@ function syncPostTypeControls() {
   const statsDoubleFields = document.getElementById('stats-double-fields');
   const doubleEntityFields = document.getElementById('double-entity-fields');
   const listicleFields = document.getElementById('listicle-fields');
+  const listicleType2Fields = document.getElementById('listicle-type2-fields');
   const textarea = document.getElementById('pill-text');
   const textCardLabel = document.getElementById('tod-label');
   const colorCard = document.querySelector('.color-card');
@@ -12562,7 +13164,7 @@ function syncPostTypeControls() {
   if (textCardLabel) {
     textCardLabel.textContent = isInstagram && activeType === 'stats-double-ent'
       ? 'Stats Post Details'
-      : isInstagram && activeType === 'listicle-type-1'
+      : isInstagram && (activeType === 'listicle-type-1' || activeType === 'listicle-type-2')
         ? 'Listicle Data'
         : 'Text On Design';
   }
@@ -12600,11 +13202,16 @@ function syncPostTypeControls() {
     listicleFields.classList.toggle('is-visible', isInstagram && activeType === 'listicle-type-1');
     if (isInstagram && activeType === 'listicle-type-1') syncListicleControls();
   }
+  if (listicleType2Fields) {
+    listicleType2Fields.classList.toggle('is-visible', isInstagram && activeType === 'listicle-type-2');
+    if (isInstagram && activeType === 'listicle-type-2') syncListicleType2Controls();
+  }
   const hidePrimaryTextarea = isInstagram && (
     activeType === 'stats-single-ent' ||
     activeType === 'stats-double-ent' ||
     activeType === 'double-entity-quote' ||
-    activeType === 'listicle-type-1'
+    activeType === 'listicle-type-1' ||
+    activeType === 'listicle-type-2'
   );
   textarea.closest('.input-wrap')?.classList.toggle('view-hidden', hidePrimaryTextarea);
   if (!hidePrimaryTextarea) {
@@ -12621,7 +13228,8 @@ function syncPostTypeControls() {
         activeType === 'quote' ||
         activeType === 'long-quote' ||
         activeType === 'double-entity-quote' ||
-        activeType === 'listicle-type-1'
+        activeType === 'listicle-type-1' ||
+        activeType === 'listicle-type-2'
       )) || (activeWorkspace === 'youtube' && !!state.youtubeQuote)
     );
     colorCard.classList.toggle('is-hidden-for-newsletter-brand', isNewsletterBrandAsset);

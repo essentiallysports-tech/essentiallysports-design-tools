@@ -435,14 +435,14 @@
   </style>
   <link rel="stylesheet" href="dashboard-v2.css?v=20260712-qc2">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root2">
-  <link rel="stylesheet" href="dashboard-ui-system.css?v=20260712-dashboard-system4">
+  <link rel="stylesheet" href="dashboard-ui-system.css?v=20260718-dashboard-system5">
 <link rel="stylesheet" href="theme.css?v=20260714-footer1">
 <link rel="stylesheet" href="site-chrome.css?v=20260718-nav-neutral1">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260710-mobile-root2"></script>
   <script src="site-chrome.js?v=20260713-chrome1"></script>
 </head>
-<body class="dashboard-page">
+<body class="dashboard-page" data-dashboard-view="overview">
   <nav class="navbar" aria-label="Global navigation">
     <a class="navbar-logo" href="index.html" aria-label="EssentiallySports home">
       <img src="brand-logo-blue.svg" alt="EssentiallySports">
@@ -556,6 +556,23 @@
             <article class="metric-card is-secondary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M7 3v3M17 3v3M4.5 9h15M6 5h12a1.5 1.5 0 0 1 1.5 1.5v12A1.5 1.5 0 0 1 18 20H6a1.5 1.5 0 0 1-1.5-1.5v-12A1.5 1.5 0 0 1 6 5Z"/></svg></span></span><span class="metric-value" data-metric="visitorsMonth">0</span><span class="metric-label">Visitors this month</span></article>
           </section>
 
+          <section class="task-view-toolbar" data-view-section="board list" aria-label="Request view controls">
+            <div class="task-quick-filters" role="group" aria-label="Quick filters">
+              <button class="task-quick-filter is-active" type="button" data-task-quick-filter="all" aria-pressed="true">All requests</button>
+              <button class="task-quick-filter" type="button" data-task-quick-filter="mine" aria-pressed="false">My tasks</button>
+              <button class="task-quick-filter" type="button" data-task-quick-filter="unassigned" aria-pressed="false">Unassigned</button>
+              <button class="task-quick-filter" type="button" data-task-quick-filter="urgent" aria-pressed="false">Urgent</button>
+              <button class="task-quick-filter" type="button" data-task-quick-filter="recent" aria-pressed="false">Recently updated</button>
+            </div>
+            <div class="task-filter-controls">
+              <label><span class="sr-only">Assignee</span><select class="filter" id="task-owner-filter"><option value="">All assignees</option></select></label>
+              <label><span class="sr-only">Priority</span><select class="filter" id="task-priority-filter"><option value="">All priorities</option><option value="Urgent">Urgent</option><option value="High">High</option><option value="Normal">Normal</option></select></label>
+              <label><span class="sr-only">Due date</span><select class="filter" id="task-due-filter"><option value="">Any due date</option><option value="overdue">Overdue</option><option value="today">Due today</option><option value="week">Due this week</option><option value="none">No due date</option></select></label>
+              <label><span class="sr-only">Sort requests</span><select class="filter" id="task-sort-filter"><option value="updated">Recently updated</option><option value="due">Due date</option><option value="priority">Priority</option><option value="created">Newest created</option></select></label>
+              <button class="task-filter-reset" id="task-filter-reset" type="button" hidden>Reset</button>
+            </div>
+          </section>
+
           <section class="kanban-board" id="kanban-board" data-view-section="board" aria-label="Design request kanban board"></section>
 
           <section class="panel task-list-panel" data-view-section="list">
@@ -629,6 +646,7 @@
       <section class="drawer-section"><h3>Copy / Notes</h3><p id="drawer-copy">—</p></section>
       <section class="drawer-section" id="drawer-export-section" hidden><h3>Export details</h3><dl class="drawer-export-details" id="drawer-export-details"></dl></section>
       <section class="drawer-section"><h3>References</h3><div id="drawer-links" class="drawer-links">—</div></section>
+      <section class="drawer-section"><h3>Activity</h3><div id="drawer-activity" class="drawer-activity">—</div></section>
       <label class="drawer-notes">Admin notes<textarea id="drawer-admin-notes" rows="5" placeholder="Add internal notes for the design team"></textarea></label>
       <div class="drawer-actions"><button class="topbar-button" type="button" data-close-task-drawer>Cancel</button><button class="topbar-button is-primary" type="button" id="drawer-save">Save task</button></div>
     </aside>
@@ -660,6 +678,7 @@
     let dashboardUser = { name: 'ES Admin', email: '', role: 'Admin', accessRole: 'Admin', designation: 'Design Operations' };
     let canAssignDashboardRoles = false;
     let selectedTaskId = '';
+    let activeTaskQuickFilter = 'all';
     let accessRequests = [];
     let dashboardLiveSyncTimer = 0;
 
@@ -734,6 +753,41 @@
       if (priority === 'urgent') return 'is-urgent';
       if (priority === 'high') return 'is-high';
       return '';
+    }
+
+    function priorityWeight(value) {
+      const priority = String(value || '').toLowerCase();
+      if (priority === 'urgent') return 3;
+      if (priority === 'high') return 2;
+      return 1;
+    }
+
+    function taskDueState(task = {}) {
+      if (!task.designDueAt) return 'none';
+      const due = new Date(task.designDueAt);
+      if (Number.isNaN(due.getTime())) return 'none';
+      const now = new Date();
+      const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startTomorrow = new Date(startToday.getTime() + 86400000);
+      const endWeek = new Date(startToday.getTime() + (7 * 86400000));
+      if (due < now && task.status !== 'Done') return 'overdue';
+      if (due >= startToday && due < startTomorrow) return 'today';
+      if (due >= startTomorrow && due < endWeek) return 'week';
+      return 'future';
+    }
+
+    function dueStateClass(task = {}) {
+      const state = taskDueState(task);
+      return state === 'overdue' ? 'is-overdue' : state === 'today' ? 'is-due-today' : '';
+    }
+
+    function taskPriorityChoice(task) {
+      return dashboardChoice(
+        PRIORITY_OPTIONS.map(priority => ({ value: priority, label: priority })),
+        task.priority || 'Normal',
+        'priority',
+        'task-card-priority-choice'
+      );
     }
 
     function getPreviewSource(task = {}) {
@@ -930,6 +984,18 @@
       return dashboardChoice(options, String(selected || '').trim().toLowerCase(), 'assignedTo');
     }
 
+    function taskOwnerCompactChoice(people, selected = '') {
+      const options = [{ value: '', label: 'Unassigned' }].concat(
+        (people || [])
+          .filter(person => person.email)
+          .map(person => ({
+            value: String(person.email || '').trim().toLowerCase(),
+            label: personDisplayName(person.name, person.email),
+          }))
+      );
+      return dashboardChoice(options, String(selected || '').trim().toLowerCase(), 'assignedTo', 'task-card-owner-choice');
+    }
+
     function personRoleChoice(person) {
       const selected = String(person.accessRole || person.role || 'Associate').trim();
       const personLabel = person.name || person.email || 'user';
@@ -972,15 +1038,39 @@
 
     function filteredTasks(state) {
       const query = String(document.getElementById('dashboard-search')?.value || '').trim().toLowerCase();
-      const status = document.getElementById('task-status-filter')?.value || '';
       const owner = document.getElementById('task-owner-filter')?.value || '';
-      const type = document.getElementById('task-type-filter')?.value || '';
-      return (state.tasks || []).filter(task => {
+      const priority = document.getElementById('task-priority-filter')?.value || '';
+      const due = document.getElementById('task-due-filter')?.value || '';
+      const sort = document.getElementById('task-sort-filter')?.value || 'updated';
+      const signedInEmail = String(dashboardUser.email || '').trim().toLowerCase();
+      const recentCutoff = Date.now() - (7 * 86400000);
+      const tasks = (state.tasks || []).filter(task => {
         const haystack = [task.title, task.id, task.sourceId, task.requesterName, task.requesterEmail, task.creatorName, task.creatorEmail, task.assignedTo, task.priority, task.workspace, task.workspaceVariant, task.brief, task.adminNotes].join(' ').toLowerCase();
+        const assignedTo = String(task.assignedTo || '').trim().toLowerCase();
+        const quickFilterMatches = activeTaskQuickFilter === 'mine'
+          ? Boolean(signedInEmail && assignedTo === signedInEmail)
+          : activeTaskQuickFilter === 'unassigned'
+            ? !assignedTo
+            : activeTaskQuickFilter === 'urgent'
+              ? String(task.priority || '').toLowerCase() === 'urgent'
+              : activeTaskQuickFilter === 'recent'
+                ? new Date(task.updatedAt || task.createdAt || 0).getTime() >= recentCutoff
+                : true;
         return (!query || haystack.includes(query))
-          && (!status || task.status === status)
           && (!owner || task.assignedTo === owner)
-          && (!type || task.type === type);
+          && (!priority || task.priority === priority)
+          && (!due || taskDueState(task) === due)
+          && quickFilterMatches;
+      });
+      return tasks.sort((a, b) => {
+        if (sort === 'due') {
+          const aDue = a.designDueAt ? new Date(a.designDueAt).getTime() : Number.MAX_SAFE_INTEGER;
+          const bDue = b.designDueAt ? new Date(b.designDueAt).getTime() : Number.MAX_SAFE_INTEGER;
+          return aDue - bDue;
+        }
+        if (sort === 'priority') return priorityWeight(b.priority) - priorityWeight(a.priority);
+        if (sort === 'created') return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        return new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime();
       });
     }
 
@@ -1015,35 +1105,58 @@
     }
 
     function renderTaskFilters(state) {
-      const statusFilter = document.getElementById('task-status-filter');
       const ownerFilter = document.getElementById('task-owner-filter');
-      if (!statusFilter || !ownerFilter) return;
-      const currentStatus = statusFilter.value;
+      if (!ownerFilter) return;
       const currentOwner = ownerFilter.value;
-      statusFilter.innerHTML = '<option value="">All Status</option>' + STATUS_OPTIONS.map(status => `<option value="${attr(status)}"${status === currentStatus ? ' selected' : ''}>${text(status)}</option>`).join('');
-      const owners = Array.from(new Set((state.tasks || []).map(task => task.assignedTo).filter(Boolean))).sort();
-      ownerFilter.innerHTML = '<option value="">All Owners</option>' + owners.map(owner => {
-        const person = (state.people || []).find(candidate => String(candidate.email || '').toLowerCase() === String(owner).toLowerCase());
+      const peopleByEmail = new Map((state.people || []).filter(person => person.email).map(person => [String(person.email).toLowerCase(), person]));
+      const owners = Array.from(new Set(
+        (state.tasks || []).map(task => String(task.assignedTo || '').trim().toLowerCase()).filter(Boolean)
+          .concat((state.people || []).map(person => String(person.email || '').trim().toLowerCase()).filter(Boolean))
+      )).sort();
+      ownerFilter.innerHTML = '<option value="">All assignees</option>' + owners.map(owner => {
+        const person = peopleByEmail.get(owner);
         const label = personDisplayName(person?.name, owner, owner);
-        return `<option value="${attr(owner)}"${owner === currentOwner ? ' selected' : ''}>${text(label)}</option>`;
+        return `<option value="${attr(owner)}"${owner === String(currentOwner).toLowerCase() ? ' selected' : ''}>${text(label)}</option>`;
       }).join('');
+      document.querySelectorAll('[data-task-quick-filter]').forEach(button => {
+        const active = button.dataset.taskQuickFilter === activeTaskQuickFilter;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      const hasFilters = activeTaskQuickFilter !== 'all'
+        || Boolean(document.getElementById('dashboard-search')?.value)
+        || Boolean(ownerFilter.value)
+        || Boolean(document.getElementById('task-priority-filter')?.value)
+        || Boolean(document.getElementById('task-due-filter')?.value)
+        || (document.getElementById('task-sort-filter')?.value || 'updated') !== 'updated';
+      const reset = document.getElementById('task-filter-reset');
+      if (reset) reset.hidden = !hasFilters;
     }
 
     function renderTaskCard(task, people = []) {
-      const assignedPerson = (people || []).find(person => String(person.email || '').toLowerCase() === String(task.assignedTo || '').toLowerCase());
-      const owner = task.assignedTo ? personDisplayName(assignedPerson?.name, task.assignedTo) : 'Unassigned';
       const sourcePersonName = task.requesterName || task.creatorName || '';
       const sourcePersonEmail = task.requesterEmail || task.creatorEmail || '';
       const sourceName = (sourcePersonName || sourcePersonEmail)
         ? personDisplayName(sourcePersonName, sourcePersonEmail)
         : (task.workspace || 'FrameUp');
       const taskPriorityClass = priorityClass(task.priority);
+      const dueClass = dueStateClass(task);
       return `
-        <article class="task-card ${taskPriorityClass}" draggable="true" data-task-id="${attr(task.id)}">
-          <div class="task-card-top"><span class="task-type">${taskTypeLabel(task.type)}</span><span class="task-priority ${taskPriorityClass}">${text(task.priority, 'Normal')}</span></div>
+        <article class="task-card ${taskPriorityClass} ${dueClass}" draggable="true" data-task-id="${attr(task.id)}">
+          <div class="task-card-heading">
+            <span class="task-card-reference">${text(task.sourceId || 'Design request')}</span>
+            <span class="task-drag-handle" aria-hidden="true" title="Drag to change status">••</span>
+          </div>
           <h3>${text(task.title, 'Untitled task')}</h3>
-          <p>${text(sourceName)}</p>
-          <div class="task-card-meta"><span>Due ${dateText(task.designDueAt)}</span><span>${text(owner)}</span></div>
+          <p class="task-card-requester">${text(sourceName)}</p>
+          <label class="task-card-due ${dueClass}">
+            <span>Due</span>
+            <input type="datetime-local" data-card-due value="${attr(datetimeLocalValue(task.designDueAt))}" aria-label="Due date for ${attr(task.title || 'task')}">
+          </label>
+          <div class="task-card-quick-controls" aria-label="Quick task controls">
+            ${taskPriorityChoice(task)}
+            ${taskOwnerCompactChoice(people, task.assignedTo)}
+          </div>
         </article>
       `;
     }
@@ -1441,6 +1554,19 @@
       }
       const links = task.referenceLinks || [];
       document.getElementById('drawer-links').innerHTML = links.length ? links.map((link, index) => `<a href="${attr(link)}" target="_blank" rel="noopener">Reference ${index + 1}</a>`).join('') : '—';
+      const state = window.ESDashboardData.getDashboardState();
+      const taskActivity = (state.activity || [])
+        .filter(item => [task.id, task.sourceId].includes(item.entityId))
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice(0, 8);
+      document.getElementById('drawer-activity').innerHTML = taskActivity.length
+        ? taskActivity.map(item => `
+            <article class="drawer-activity-item">
+              <strong>${text(item.message || item.type || 'Task updated')}</strong>
+              <span>${dateText(item.createdAt)}${item.actorName || item.actorEmail ? ` · ${text(personDisplayName(item.actorName, item.actorEmail))}` : ''}</span>
+            </article>
+          `).join('')
+        : '<span class="drawer-activity-empty">No task changes recorded yet.</span>';
       document.getElementById('drawer-admin-notes').value = task.adminNotes || '';
       document.getElementById('task-drawer').classList.add('is-open');
       document.getElementById('task-drawer').setAttribute('aria-hidden', 'false');
@@ -1587,11 +1713,40 @@
       }
     }
 
+    async function updateCardDue(input) {
+      const card = input.closest('[data-task-id]');
+      const id = card?.dataset.taskId || '';
+      if (!id) return;
+      input.disabled = true;
+      try {
+        const designDueAt = input.value ? new Date(input.value).toISOString() : '';
+        await window.ESDashboardData.updateTaskAdminFields(id, { designDueAt });
+        renderDashboard();
+      } catch (error) {
+        setTimeout(() => alert(error?.message || 'Due date could not be updated.'), 0);
+        renderDashboard();
+      } finally {
+        input.disabled = false;
+      }
+    }
+
     function setupDashboardEvents() {
-      document.getElementById('task-status-filter')?.addEventListener('change', renderDashboard);
-      document.getElementById('task-owner-filter')?.addEventListener('change', renderDashboard);
-      document.getElementById('task-type-filter')?.addEventListener('change', renderDashboard);
+      ['task-owner-filter', 'task-priority-filter', 'task-due-filter', 'task-sort-filter'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', renderDashboard);
+      });
       document.getElementById('dashboard-search')?.addEventListener('input', renderDashboard);
+      document.getElementById('task-filter-reset')?.addEventListener('click', () => {
+        activeTaskQuickFilter = 'all';
+        const search = document.getElementById('dashboard-search');
+        if (search) search.value = '';
+        ['task-owner-filter', 'task-priority-filter', 'task-due-filter'].forEach(id => {
+          const control = document.getElementById(id);
+          if (control) control.value = '';
+        });
+        const sort = document.getElementById('task-sort-filter');
+        if (sort) sort.value = 'updated';
+        renderDashboard();
+      });
       document.addEventListener('keydown', event => {
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
           event.preventDefault();
@@ -1608,6 +1763,12 @@
           const view = button.dataset.dashboardView || 'overview';
           setDashboardView(view, true);
           window.scrollTo({ top: 0, behavior: 'smooth' });
+          renderDashboard();
+        });
+      });
+      document.querySelectorAll('[data-task-quick-filter]').forEach(button => {
+        button.addEventListener('click', () => {
+          activeTaskQuickFilter = button.dataset.taskQuickFilter || 'all';
           renderDashboard();
         });
       });
@@ -1650,10 +1811,15 @@
           return;
         }
         const openButton = event.target.closest('[data-open-task], .task-card');
+        if (event.target.closest('.task-card') && event.target.closest('.task-card-quick-controls, .task-card-due, input, select, button') && !event.target.closest('[data-open-task]')) return;
         if (openButton?.dataset.taskId || openButton?.dataset.openTask) openTaskDrawer(openButton.dataset.taskId || openButton.dataset.openTask);
         if (event.target.closest('[data-close-task-drawer]')) closeTaskDrawer();
       });
       document.addEventListener('change', event => {
+        if (event.target.matches('[data-card-due]')) {
+          updateCardDue(event.target);
+          return;
+        }
         const taskRow = event.target.closest('[data-task-id]');
         if (taskRow && (event.target.matches('[data-task-status]') || event.target.matches('[data-task-owner]'))) updateTaskRow(taskRow);
       });
@@ -1664,6 +1830,10 @@
       document.addEventListener('dragstart', event => {
         const card = event.target.closest('.task-card');
         if (!card) return;
+        if (event.target.closest('input, select, button, .dashboard-choice, .task-card-quick-controls, .task-card-due')) {
+          event.preventDefault();
+          return;
+        }
         event.dataTransfer.setData('text/plain', card.dataset.taskId);
         card.classList.add('is-dragging');
       });
