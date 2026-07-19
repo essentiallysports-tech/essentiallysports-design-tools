@@ -1483,7 +1483,9 @@
     position: relative;
   }
   .swatch:hover { transform: scale(1.1); box-shadow: var(--shadow-md); }
-  .swatch.active { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(10,125,250,0.2); }
+  .swatch.active { border-color: transparent !important; box-shadow: none; }
+  .swatch.is-light,
+  .swatch.is-light.active { border-color: #D8DEE7 !important; }
   .swatch-inner {
     width: 100%;
     height: 100%;
@@ -2090,7 +2092,7 @@
     height: 40px;
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 6px;
     overflow: hidden;
     border: 1px solid transparent;
     border-radius: 7px;
@@ -2133,13 +2135,13 @@
     height: 18px;
     flex: 0 0 18px;
     color: #657184;
-    margin-left: 11px;
+    margin-left: 10px;
   }
   .canvas-ai-search-submit,
   .canvas-ai-search-close {
-    width: 30px;
-    height: 30px;
-    flex: 0 0 30px;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
     display: inline-grid;
     place-items: center;
     border: 0;
@@ -2163,6 +2165,9 @@
   }
   .canvas-ai-search-close:hover {
     background: #F0F2F5;
+  }
+  .canvas-ai-search-close {
+    margin-right: 3px;
   }
   .canvas-ai-search-form:focus-within {
     border-color: #8DC4FF;
@@ -3703,6 +3708,12 @@ body[data-current-page="faq"] .faq-cta-art img {
     border-radius: 8px;
     background: #FAFBFC;
   }
+  .image-context-empty-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
   @media (max-width: 520px) {
     .image-context-empty {
       align-items: flex-start;
@@ -3717,6 +3728,10 @@ body[data-current-page="faq"] .faq-cta-art img {
     min-width: 0;
     display: grid;
     gap: 3px;
+  }
+  .image-context-empty > .image-context-empty-actions {
+    display: inline-flex;
+    gap: 8px;
   }
   .image-context-empty strong,
   .image-context-media-copy strong {
@@ -3753,6 +3768,26 @@ body[data-current-page="faq"] .faq-cta-art img {
     border-color: #006FE3;
     background: #006FE3;
     outline: 3px solid rgba(10, 125, 250, .14);
+    outline-offset: 2px;
+  }
+  .image-context-ai {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid #D6DCE5;
+    border-radius: 7px;
+    background: #FFFFFF;
+    color: #151A22;
+    cursor: pointer;
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .image-context-ai:hover,
+  .image-context-ai:focus-visible {
+    border-color: #AEB8C6;
+    background: #F5F6F8;
+    outline: 3px solid rgba(10, 125, 250, .10);
     outline-offset: 2px;
   }
   .image-context-content {
@@ -3932,7 +3967,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     display: none;
   }
   body[data-current-page="newsletter"][data-newsletter-asset="section-header"] .advanced-card,
-  body[data-current-page="newsletter"][data-newsletter-asset="section-header"] #pill-position-card {
+  body[data-current-page="newsletter"][data-newsletter-asset="section-header"] #pill-position-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="section-header-2"] .advanced-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="section-header-2"] #pill-position-card {
     display: none;
   }
   .post-type-control {
@@ -4343,7 +4380,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     .carousel-workspace-nav {
       align-items: flex-start;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
     .carousel-slide-switcher {
       width: 100%;
@@ -4608,7 +4645,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       transform: none;
       flex-direction: column;
       align-items: stretch;
-      gap: 10px;
+      gap: 8px;
     }
     .frame-card-title {
       font-size: clamp(20px, 5.8vw, 22px);
@@ -5679,7 +5716,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       border-radius: 10px;
       background: rgba(255, 255, 255, .97);
       box-shadow: 0 12px 30px rgba(15, 23, 42, .10);
-      padding: 7px 8px;
+      padding: 7px 10px;
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       align-self: center;
@@ -5700,7 +5737,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       max-width: min(760px, calc(100vw - 80px));
       height: 54px;
       max-height: 54px;
-      padding-inline: 8px;
+      padding-inline: 10px;
       interpolate-size: allow-keywords;
     }
 
@@ -5765,9 +5802,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .studio-zoom-group {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding-right: 10px;
-      margin-right: 2px;
+      gap: 6px;
+      padding-right: 8px;
+      margin-right: 0;
       border-right: 1px solid #E4EAF1;
     }
 
@@ -5815,9 +5852,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded .canvas-ai-search-form {
-      width: clamp(300px, 24vw, 360px);
-      max-width: 360px;
-      flex-basis: clamp(300px, 24vw, 360px);
+      width: clamp(280px, 22vw, 340px);
+      max-width: 340px;
+      flex-basis: clamp(280px, 22vw, 340px);
       border-width: 1px;
       border-color: #DCE4ED;
       opacity: 1;
@@ -6648,7 +6685,8 @@ body[data-current-page="faq"] .faq-cta-art img {
           <option value="feature-image">Feature Image</option>
           <option value="youtube-fi">Video FI</option>
           <option value="tag-fi">Tag FI</option>
-          <option value="section-header">Section Header</option>
+          <option value="section-header">Header Option 1</option>
+          <option value="section-header-2">Header Option 2</option>
           <option value="widgets">Widgets</option>
         </select>
       </div>
@@ -7087,7 +7125,10 @@ body[data-current-page="faq"] .faq-cta-art img {
                   <strong>Add a background image</strong>
                   <span>Upload an image to unlock position and zoom.</span>
                 </div>
-                <button class="image-context-upload" type="button" data-image-slot-upload="move">Upload image</button>
+                <div class="image-context-empty-actions">
+                  <button class="image-context-upload" type="button" data-image-slot-upload="move">Upload image</button>
+                  <button class="image-context-ai" type="button" data-image-slot-ai="move">AI Images</button>
+                </div>
               </div>
               <div class="image-context-content" data-image-content="background" hidden>
                 <div class="image-context-media-row">
@@ -7114,7 +7155,10 @@ body[data-current-page="faq"] .faq-cta-art img {
                   <strong>Add Entity 1</strong>
                   <span>Upload an image to unlock position and zoom.</span>
                 </div>
-                <button class="image-context-upload" type="button" data-image-slot-upload="foreground-1">Upload image</button>
+                <div class="image-context-empty-actions">
+                  <button class="image-context-upload" type="button" data-image-slot-upload="foreground-1">Upload image</button>
+                  <button class="image-context-ai" type="button" data-image-slot-ai="foreground-1">AI Images</button>
+                </div>
               </div>
               <div class="image-context-content" data-image-content="foreground-1" hidden>
                 <div class="image-context-media-row">
@@ -7141,7 +7185,10 @@ body[data-current-page="faq"] .faq-cta-art img {
                   <strong>Add Entity 2</strong>
                   <span>Upload an image to unlock position and zoom.</span>
                 </div>
-                <button class="image-context-upload" type="button" data-image-slot-upload="foreground-2">Upload image</button>
+                <div class="image-context-empty-actions">
+                  <button class="image-context-upload" type="button" data-image-slot-upload="foreground-2">Upload image</button>
+                  <button class="image-context-ai" type="button" data-image-slot-ai="foreground-2">AI Images</button>
+                </div>
               </div>
               <div class="image-context-content" data-image-content="foreground-2" hidden>
                 <div class="image-context-media-row">
@@ -8857,6 +8904,14 @@ function initImageToolRail() {
     });
   });
 
+  document.querySelectorAll('[data-image-slot-ai]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      selectImageTool(button.dataset.imageSlotAi, true);
+      focusAiImageSearch();
+    });
+  });
+
   document.querySelectorAll('[data-image-slot-remove]').forEach(button => {
     button.addEventListener('click', event => {
       event.stopPropagation();
@@ -9681,7 +9736,7 @@ function renderPaletteRow(entry) {
   getPaletteForWorkspace(entry).forEach((p, i) => {
     const sw = document.createElement('div');
     sw.className = 'swatch' + (i === state.pillPaletteIdx ? ' active' : '');
-    sw.style.borderColor = i === state.pillPaletteIdx ? 'var(--accent)' : 'transparent';
+    sw.classList.toggle('is-light', contrastRatio(p.background, '#FFFFFF') < 1.2);
     sw.title = `Pill ${p.background} / Text ${getTextColorForPair(p, entry)} / Mist ${getMistColorForPair(p, entry)}`;
     const inner = document.createElement('div');
     inner.className = 'swatch-inner';
@@ -10595,11 +10650,30 @@ const NEWSLETTER_ASSET_TYPES = {
     },
   },
   'section-header': {
-    label: 'Section Header',
-    slug: 'section-header',
+    label: 'Header Option 1',
+    slug: 'header-option-1',
     placeholder: 'Ex. News',
     maxLines: 1,
-    photoTitle: 'Section Header',
+    photoTitle: 'Header Option 1',
+    photoRole: 'section header',
+    workspace: {
+      width: 640,
+      height: 47,
+      exportType: 'image/png',
+      exportExtension: 'png',
+      exportScale: 1.5,
+      maxLines: 1,
+      defaultBottomAnchor: 3,
+      randomBottomMin: 3,
+      randomBottomRange: 0,
+    },
+  },
+  'section-header-2': {
+    label: 'Header Option 2',
+    slug: 'header-option-2',
+    placeholder: 'Ex. Weekly Recap',
+    maxLines: 1,
+    photoTitle: 'Header Option 2',
     photoRole: 'section header',
     workspace: {
       width: 640,
@@ -10805,6 +10879,8 @@ function getActivePostTypeConfig() {
       maxLines: asset.maxLines,
       render: activeNewsletterAsset === 'section-header'
         ? drawNewsletterSectionHeader
+        : activeNewsletterAsset === 'section-header-2'
+        ? drawNewsletterSectionHeaderOption2
         : activeNewsletterAsset === 'youtube-fi'
         ? drawNewsletterYoutubeFI
         : activeNewsletterAsset === 'tag-fi'
@@ -11060,6 +11136,64 @@ function drawNewsletterSectionHeader(ctx, W, H, scale) {
   if (scale === 1) {
     state.lastTextBounds = { x: blockX, y: blockY, w: blockW, h: blockH };
     state.textHitRects = [{ x: blockX, y: blockY, w: blockW, h: blockH }];
+  }
+}
+
+function drawNewsletterSectionHeaderOption2(ctx, W, H, scale) {
+  const navy = '#033162';
+  const cream = '#FFF9EB';
+  const fallback = 'WEEKLY RECAP';
+  const line = String(state.lines[0] || fallback).trim().replace(/\s+/g, ' ').toUpperCase() || fallback;
+  const frameTop = 3 * scale;
+  const frameHeight = 42 * scale;
+  const frameCenterY = frameTop + frameHeight / 2;
+  const lineGap = 11 * scale;
+  const lineWidth = 2 * scale;
+  const horizontalPadding = 6 * scale;
+  const minFrameWidth = 64 * scale;
+  const maxFrameWidth = Math.max(minFrameWidth, W - (lineGap * 2) - (24 * scale));
+  const initialFontSize = 37 * scale;
+  const minimumFontSize = 20 * scale;
+  let fontSize = initialFontSize;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Acumin Pro Condensed Local", "Arial Narrow", Arial, sans-serif`;
+
+  let textWidth = ctx.measureText(line).width;
+  const maxTextWidth = Math.max(1, maxFrameWidth - horizontalPadding * 2);
+  if (textWidth > maxTextWidth) {
+    fontSize = Math.max(minimumFontSize, fontSize * (maxTextWidth / textWidth));
+    ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Acumin Pro Condensed Local", "Arial Narrow", Arial, sans-serif`;
+    textWidth = ctx.measureText(line).width;
+  }
+
+  const frameWidth = Math.min(maxFrameWidth, Math.max(minFrameWidth, textWidth + horizontalPadding * 2));
+  const frameX = (W - frameWidth) / 2;
+  const sideLineWidth = Math.max(0, frameX - lineGap);
+  const metrics = ctx.measureText(line);
+  const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.72;
+  const descent = metrics.actualBoundingBoxDescent || fontSize * 0.06;
+  const baselineY = frameCenterY + (ascent - descent) / 2;
+
+  ctx.strokeStyle = navy;
+  ctx.lineWidth = lineWidth;
+  ctx.beginPath();
+  ctx.moveTo(0, frameCenterY);
+  ctx.lineTo(sideLineWidth, frameCenterY);
+  ctx.moveTo(W - sideLineWidth, frameCenterY);
+  ctx.lineTo(W, frameCenterY);
+  ctx.stroke();
+
+  ctx.fillStyle = navy;
+  ctx.fillRect(frameX, frameTop, frameWidth, frameHeight);
+  ctx.fillStyle = cream;
+  ctx.fillText(line, frameX + horizontalPadding, baselineY);
+
+  if (scale === 1) {
+    state.lastTextBounds = { x: frameX, y: frameTop, w: frameWidth, h: frameHeight };
+    state.textHitRects = [{ x: frameX, y: frameTop, w: frameWidth, h: frameHeight }];
   }
 }
 
@@ -12129,7 +12263,7 @@ function renderStatsDoublePalette(group) {
     const swatch = document.createElement('button');
     swatch.type = 'button';
     swatch.className = 'swatch' + (index === state[keys.paletteIdx] ? ' active' : '');
-    swatch.style.borderColor = index === state[keys.paletteIdx] ? 'var(--accent)' : 'transparent';
+    swatch.classList.toggle('is-light', contrastRatio(pair.background, '#FFFFFF') < 1.2);
     swatch.title = `${state[keys.team]} color ${index + 1}`;
     swatch.setAttribute('aria-label', `${state[keys.team]} color ${index + 1}`);
     swatch.setAttribute('aria-pressed', index === state[keys.paletteIdx] ? 'true' : 'false');
@@ -14081,7 +14215,8 @@ function syncPostTypeControls() {
   if (colorCard) {
     const isNewsletterBrandAsset = activeWorkspace === 'newsletter' && (
       activeNewsletterAsset === 'feature-image' ||
-      activeNewsletterAsset === 'section-header'
+      activeNewsletterAsset === 'section-header' ||
+      activeNewsletterAsset === 'section-header-2'
     );
     colorCard.classList.toggle(
       'is-hidden-for-post-type',

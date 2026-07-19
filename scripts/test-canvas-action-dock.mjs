@@ -17,8 +17,13 @@ assert(
   'AI search must expand to its content width without changing dock height.',
 );
 assert(
-  /\.canvas-bottom-actions\.is-ai-search-expanded \.canvas-ai-search-form\s*\{[\s\S]*?width:\s*clamp\(300px,\s*24vw,\s*360px\);[\s\S]*?max-width:\s*360px;/.test(html),
-  'Desktop AI search must use the compact 360px search-field ceiling.',
+  /\.canvas-bottom-actions\.is-ai-search-expanded \.canvas-ai-search-form\s*\{[\s\S]*?width:\s*clamp\(280px,\s*22vw,\s*340px\);[\s\S]*?max-width:\s*340px;/.test(html),
+  'Desktop AI search must use the compact 340px search-field ceiling.',
+);
+assert(
+  /\.canvas-bottom-actions\s*\{[\s\S]*?gap:\s*8px;[\s\S]*?padding:\s*7px 10px;/.test(html)
+    && /\.canvas-ai-search-close\s*\{[\s\S]*?margin-right:\s*3px;/.test(html),
+  'The expanded dock must keep balanced inner gaps and edge padding.',
 );
 assert(
   /\.studio-dock-actions \.canvas-bottom-actions\.is-ai-search-expanded,[\s\S]*?width:\s*max-content;[\s\S]*?display:\s*inline-flex;/.test(html),

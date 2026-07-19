@@ -14,7 +14,7 @@
     "inspect:es-images": "node scripts/inspect-es-mcp-live.mjs",
     "check:dashboard-supabase": "node scripts/check-dashboard-supabase.mjs",
     "check:dashboard-ui": "node scripts/check-dashboard-ui.mjs",
-    "test:workspace-ui": "node scripts/test-single-stats-controls.mjs && node scripts/test-canvas-action-dock.mjs && node scripts/test-image-controls-contextual.mjs",
+    "test:workspace-ui": "node scripts/test-single-stats-controls.mjs && node scripts/test-canvas-action-dock.mjs && node scripts/test-image-controls-contextual.mjs && node scripts/test-color-swatch-states.mjs && node scripts/test-newsletter-header-options.mjs",
     "test:listicle": "node scripts/test-listicle-data.mjs",
     "test:listicle-pill": "node scripts/test-listicle-rank-pill.mjs",
     "test:listicle-accordion": "node scripts/test-listicle-accordion.mjs",

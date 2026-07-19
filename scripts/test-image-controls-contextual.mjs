@@ -25,6 +25,16 @@ assert(
   'Background must have distinct upload-only and populated contextual states.',
 );
 assert(
+  /data-image-empty="background"[\s\S]*?data-image-slot-ai="move"/.test(html)
+    && /data-image-empty="foreground-1"[\s\S]*?data-image-slot-ai="foreground-1"/.test(html)
+    && /data-image-empty="foreground-2"[\s\S]*?data-image-slot-ai="foreground-2"/.test(html),
+  'Every supported empty image slot must offer the existing AI Images flow beside upload.',
+);
+assert(
+  /querySelectorAll\('\[data-image-slot-ai\]'\)[\s\S]*?selectImageTool\(button\.dataset\.imageSlotAi, true\);[\s\S]*?focusAiImageSearch\(\);/.test(html),
+  'Contextual AI Images actions must target the selected slot and reuse the shared search flow.',
+);
+assert(
   /availableTools\.length <= 1/.test(html) && /\.image-asset-tabs\.is-single\s*\{[\s\S]*?display:\s*none;/.test(html),
   'Single-image templates must hide the asset selector.',
 );
@@ -54,6 +64,10 @@ assert(
 assert(
   /\.image-context-empty\s*\{[\s\S]*?flex-wrap:\s*wrap;/.test(html),
   'The empty upload state must wrap cleanly in narrow inspectors.',
+);
+assert(
+  /\.image-context-empty\s*>\s*\.image-context-empty-actions\s*\{[\s\S]*?display:\s*inline-flex;/.test(html),
+  'Upload Image and AI Images must remain side by side instead of inheriting the copy grid layout.',
 );
 assert(
   !/querySelector\('\[data-background-remove\]'\)/.test(html),

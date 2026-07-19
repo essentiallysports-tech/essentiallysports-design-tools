@@ -102,8 +102,13 @@ assert(
 );
 assert(
   /'section-header':\s*\{[\s\S]*?workspace:\s*\{\s*width:\s*640,\s*height:\s*47,/.test(index),
-  'Section Header dimensions changed from the established 640×47 contract',
-  'Section Header retains the established 640×47 dimensions',
+  'Header Option 1 dimensions changed from the established 640×47 contract',
+  'Header Option 1 retains the established 640×47 dimensions',
+);
+assert(
+  /'section-header-2':\s*\{[\s\S]*?workspace:\s*\{\s*width:\s*640,\s*height:\s*47,/.test(index),
+  'Header Option 2 does not use the established 640×47 contract',
+  'Header Option 2 uses the established 640×47 dimensions',
 );
 
 const eveningBrandMatch = index.match(/\{\s*id:\s*'es-daily-evening-send',[\s\S]*?\},/);
