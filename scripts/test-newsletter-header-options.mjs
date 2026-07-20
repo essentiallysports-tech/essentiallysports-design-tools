@@ -25,8 +25,12 @@ assert(
   'Header Option 2 must route to its dedicated renderer.',
 );
 assert(
-  /function drawNewsletterSectionHeaderOption2\(ctx, W, H, scale\)[\s\S]*?const navy = '#033162';[\s\S]*?const cream = '#FFF9EB';/.test(html),
-  'Header Option 2 must use the approved Figma navy and cream colors.',
+  /function drawNewsletterSectionHeaderOption2\(ctx, W, H, scale\)[\s\S]*?applyNewsletterBrandPalette\(\);[\s\S]*?const brand = getNewsletterBrand\(state\.newsletterBrand\);[\s\S]*?const navy = brand\.background \|\| '#033162';[\s\S]*?const cream = brand\.foreground \|\| '#FFF9EB';/.test(html),
+  'Header Option 2 must use the selected newsletter brand colors.',
+);
+assert(
+  /data-newsletter-asset="section-header-2"\] #newsletter-brand-card/.test(html),
+  'Header Option 2 must expose the newsletter brand color selector.',
 );
 assert(
   /const frameWidth = Math\.min\(maxFrameWidth, Math\.max\(minFrameWidth, textWidth \+ horizontalPadding \* 2\)\);/.test(html),

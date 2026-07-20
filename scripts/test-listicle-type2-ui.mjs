@@ -24,7 +24,8 @@ assert.ok(rendererStart >= 0 && rendererEnd > rendererStart, 'Type 2 renderer mu
 const renderer = source.slice(rendererStart, rendererEnd);
 assert.match(renderer, /const rowStart = 323;[\s\S]*?data\.rows\.forEach/, 'Type 2 must render its fixed row system');
 assert.match(renderer, /drawListicleType2Player/, 'Type 2 must render optional player cutouts');
-assert.match(renderer, /ctx\.moveTo\(left, sx\(250\)\)/, 'Type 2 must keep one header divider');
+assert.match(renderer, /drawListicleHeading\(ctx, W, scale, data\.title\)/, 'Type 2 must use the shared aligned heading renderer');
+assert.match(renderer, /ctx\.moveTo\(left, sx\(LISTICLE_CANVAS_LAYOUT\.dividerY\)\)/, 'Type 2 must keep one header divider at the shared ruler position');
 assert.doesNotMatch(renderer, /drawSwipeButton/, 'Type 2 reference must not add a swipe badge');
 
 assert.match(

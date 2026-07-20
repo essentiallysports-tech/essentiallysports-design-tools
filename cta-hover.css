@@ -1,0 +1,212 @@
+/* Shared CTA interaction system: hover changes the stroke only. */
+:where(
+  .btn,
+  .export-button,
+  .frame-hero-cta,
+  .frame-cta,
+  .faq-cta-action,
+  .canvas-upload-button,
+  .canvas-upload-button-secondary,
+  .image-context-upload,
+  .image-context-ai,
+  .studio-export-btn,
+  .studio-ai-search button,
+  .canvas-ai-search-submit,
+  .topbar-button,
+  .export-review-cta,
+  .auth-state-button,
+  .login-button,
+  .login-secondary-button,
+  .primary-btn,
+  .secondary-btn,
+  .danger-btn,
+  .workspace-cta,
+  .quick-action,
+  .avatar-upload-label,
+  .profile-back-link,
+  .mobile-menu-account-action
+) {
+  box-shadow: none !important;
+  transition-property: border-color, outline-color !important;
+}
+
+:where(
+  .btn,
+  .export-button,
+  .frame-hero-cta,
+  .frame-cta,
+  .faq-cta-action,
+  .canvas-upload-button,
+  .canvas-upload-button-secondary,
+  .image-context-upload,
+  .image-context-ai,
+  .studio-export-btn,
+  .studio-ai-search button,
+  .canvas-ai-search-submit,
+  .topbar-button,
+  .export-review-cta,
+  .auth-state-button,
+  .login-button,
+  .login-secondary-button,
+  .primary-btn,
+  .secondary-btn,
+  .danger-btn,
+  .workspace-cta,
+  .quick-action,
+  .avatar-upload-label,
+  .profile-back-link,
+  .mobile-menu-account-action
+):not(:disabled):not(.is-disabled):hover {
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* Blue primary CTAs keep their fill and use the ES navy as the hover stroke. */
+:where(
+  .btn-primary,
+  .export-button,
+  .frame-hero-cta.is-primary,
+  .frame-cta:not(.frame-cta-secondary),
+  .faq-cta-action.is-primary,
+  .canvas-upload-button:not(.canvas-upload-button-secondary),
+  .image-context-upload,
+  .studio-export-btn,
+  .studio-ai-search button,
+  .canvas-ai-search-submit,
+  .topbar-button.is-primary,
+  .export-review-cta,
+  .primary-btn,
+  .workspace-cta
+):not(:disabled):not(.is-disabled):hover {
+  border-color: #033162 !important;
+  background-color: #0A7DFA !important;
+  color: #FFFFFF !important;
+}
+
+/* Light secondary CTAs keep their surface and use a single blue stroke. */
+:where(
+  .btn-secondary,
+  .frame-hero-cta:not(.is-primary),
+  .frame-cta.frame-cta-secondary,
+  .faq-cta-action:not(.is-primary),
+  .canvas-upload-button-secondary,
+  .image-context-ai,
+  .topbar-button:not(.is-primary),
+  .login-secondary-button,
+  .secondary-btn,
+  .quick-action,
+  .avatar-upload-label,
+  .profile-back-link,
+  .mobile-menu-account-action
+):not(:disabled):not(.is-disabled):hover {
+  border-color: #0A7DFA !important;
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+}
+
+/* Auth CTAs use the same stroke-only rule without changing their sober palette. */
+.login-button:not(:disabled):hover,
+.auth-state-button.is-primary:not(:disabled):hover {
+  border-color: #0A7DFA !important;
+  background-color: #111827 !important;
+  color: #FFFFFF !important;
+}
+
+.login-button {
+  border: 1px solid transparent !important;
+}
+
+.auth-state-button:not(.is-primary):not(:disabled):hover {
+  border-color: #0A7DFA !important;
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+}
+
+.danger-btn:not(:disabled):hover {
+  border-color: #A62932 !important;
+  background-color: #FFFFFF !important;
+  color: #A62932 !important;
+}
+
+html[data-theme="dark"] :where(
+  .btn-primary,
+  .export-button,
+  .frame-hero-cta.is-primary,
+  .frame-cta:not(.frame-cta-secondary),
+  .faq-cta-action.is-primary,
+  .canvas-upload-button:not(.canvas-upload-button-secondary),
+  .image-context-upload,
+  .studio-export-btn,
+  .studio-ai-search button,
+  .canvas-ai-search-submit,
+  .topbar-button.is-primary,
+  .export-review-cta,
+  .primary-btn,
+  .workspace-cta,
+  .login-button,
+  .auth-state-button.is-primary
+):not(:disabled):not(.is-disabled):hover {
+  border-color: #8CB9E8 !important;
+  background-color: var(--theme-dark-accent, #2586F7) !important;
+  color: #FFFFFF !important;
+}
+
+html[data-theme="dark"] :where(
+  .btn-secondary,
+  .frame-hero-cta:not(.is-primary),
+  .frame-cta.frame-cta-secondary,
+  .faq-cta-action:not(.is-primary),
+  .canvas-upload-button-secondary,
+  .image-context-ai,
+  .topbar-button:not(.is-primary),
+  .login-secondary-button,
+  .secondary-btn,
+  .quick-action,
+  .auth-state-button:not(.is-primary),
+  .avatar-upload-label,
+  .profile-back-link,
+  .mobile-menu-account-action
+):not(:disabled):not(.is-disabled):hover {
+  border-color: #8CB9E8 !important;
+  background-color: var(--theme-dark-surface-raised, #181E25) !important;
+  color: var(--theme-dark-text, #F3F5F7) !important;
+}
+
+html[data-theme="dark"] .danger-btn:not(:disabled):hover {
+  border-color: #E9878E !important;
+  background-color: var(--theme-dark-surface-raised, #181E25) !important;
+  color: #F5A0A6 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(
+    .btn,
+    .export-button,
+    .frame-hero-cta,
+    .frame-cta,
+    .faq-cta-action,
+    .canvas-upload-button,
+    .canvas-upload-button-secondary,
+    .image-context-upload,
+    .image-context-ai,
+    .studio-export-btn,
+    .studio-ai-search button,
+    .canvas-ai-search-submit,
+    .topbar-button,
+    .export-review-cta,
+    .auth-state-button,
+    .login-button,
+    .login-secondary-button,
+    .primary-btn,
+    .secondary-btn,
+    .danger-btn,
+    .workspace-cta,
+    .quick-action,
+    .avatar-upload-label,
+    .profile-back-link,
+    .mobile-menu-account-action
+  ) {
+    transition-duration: 0.01ms !important;
+  }
+}

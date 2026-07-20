@@ -13,6 +13,10 @@ assert(
   'Canvas dock must keep the compact 720px single-row base contract.',
 );
 assert(
+  /body\[data-current-page="instagram"\] \.canvas-bottom-actions\s*\{[\s\S]*?width:\s*max-content;[\s\S]*?margin-left:\s*auto;[\s\S]*?margin-right:\s*auto;[\s\S]*?transform:\s*none;/.test(html),
+  'The collapsed social canvas dock must hug its controls and remain centered.',
+);
+assert(
   /\.canvas-bottom-actions\.is-ai-search-expanded\s*\{[\s\S]*?width:\s*max-content;[\s\S]*?max-width:\s*min\(760px,[\s\S]*?height:\s*54px;[\s\S]*?max-height:\s*54px;/.test(html),
   'AI search must expand to its content width without changing dock height.',
 );

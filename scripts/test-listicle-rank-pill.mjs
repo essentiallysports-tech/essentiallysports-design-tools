@@ -16,10 +16,73 @@ assert.match(
   'listicle rows must retain dotted separators between adjacent rows',
 );
 assert.equal(
-  (rendererSource.match(/const headerTop = sx\(248\)/g) || []).length,
+  (rendererSource.match(/const headerTop = sx\(LISTICLE_TYPE1_TABLE_LAYOUT\.dividerY\)/g) || []).length,
   1,
   'listicle header must use one solid top divider',
 );
+assert.match(
+  source,
+  /const LISTICLE_TYPE1_TABLE_LAYOUT = Object\.freeze\(\{[\s\S]*?dividerY: 232,[\s\S]*?headerY: 278,[\s\S]*?rowTop: 324,[\s\S]*?rowHeight: 170,[\s\S]*?\}\);/,
+  'Listicle Type 1 must keep a compact, evenly spaced table-header rhythm',
+);
+assert.match(
+  rendererSource,
+  /fillText\(String\(header\.text\)\.toUpperCase\(\), sx\(header\.x\), sx\(LISTICLE_TYPE1_TABLE_LAYOUT\.headerY\)\)[\s\S]*?const rowTop = LISTICLE_TYPE1_TABLE_LAYOUT\.rowTop/,
+  'Listicle Type 1 must use the dedicated table spacing values',
+);
+assert.match(
+  source,
+  /const LISTICLE_CANVAS_LAYOUT = Object\.freeze\(\{[\s\S]*?safeInset: 50,[\s\S]*?titleTop: 50,[\s\S]*?dividerY: 250,[\s\S]*?function drawListicleHeading/,
+  'both listicle templates must share the approved 50px ruler inset and heading geometry',
+);
+assert.match(
+  source,
+  /const firstLineMetrics = ctx\.measureText\(title\.lines\[0\] \|\| 'A'\);[\s\S]*?const firstLineAscent = firstLineMetrics\.actualBoundingBoxAscent \|\| title\.capAscent;[\s\S]*?const titleBaselineY = titleBox\.y \+ firstLineAscent;[\s\S]*?drawEsLogoMark\(ctx, logoX, sx\(LISTICLE_CANVAS_LAYOUT\.titleTop\), logoWidth, logoHeight\)/,
+  'the shared listicle heading must align the title glyph top and ES logo to the same ruler',
+);
+assert.match(
+  rendererSource,
+  /drawListicleHeading\(ctx, W, scale, data\.title\)/,
+  'Listicle Type 1 must use the shared heading renderer',
+);
+assert.match(
+  source,
+  /function fitListicleTwoLineEntity[\s\S]*?words\.length < 2[\s\S]*?for \(let split = 1; split < words\.length; split \+= 1\)[\s\S]*?lines = \[words\.slice\(0, bestSplit\)\.join\(' '\), words\.slice\(bestSplit\)\.join\(' '\)\]/,
+  'Listicle Type 1 must balance multi-word team names into exactly two lines',
+);
+assert.match(
+  rendererSource,
+  /const entity = fitListicleTwoLineEntity\(ctx, row\.entity, sx\(335\), 54 \* scale, 34 \* scale\)/,
+  'Listicle Type 1 rows must use the dedicated two-line entity fitter',
+);
+const entityFitStart = source.indexOf('function wrapListicleWords');
+const entityFitEnd = source.indexOf('\nfunction fitListicleBlockInBox', entityFitStart);
+assert.ok(entityFitStart >= 0 && entityFitEnd > entityFitStart, 'two-line entity fitting helpers must exist');
+const entityFitSandbox = { Math, Number, POST_FONT_FAMILY: 'Roboto Condensed' };
+vm.runInNewContext(
+  `${source.slice(entityFitStart, entityFitEnd)}\nthis.fitEntity = fitListicleTwoLineEntity;`,
+  entityFitSandbox,
+);
+const entityFitContext = {
+  font: '',
+  measureText(value) {
+    const fontSize = Number(String(this.font).match(/([0-9.]+)px/)?.[1] || 16);
+    return { width: String(value).length * fontSize * 0.48 };
+  },
+};
+[
+  ['Texas Rangers', ['TEXAS', 'RANGERS']],
+  ['Cincinnati Reds', ['CINCINNATI', 'REDS']],
+  ['Los Angeles Angels', ['LOS ANGELES', 'ANGELS']],
+  ['Baltimore Orioles', ['BALTIMORE', 'ORIOLES']],
+  ['Detroit Tigers', ['DETROIT', 'TIGERS']],
+].forEach(([name, expected]) => {
+  assert.deepEqual(
+    Array.from(entityFitSandbox.fitEntity(entityFitContext, name, 335, 54, 34).lines),
+    expected,
+    `${name} must render as the approved two-line team block`,
+  );
+});
 assert.doesNotMatch(
   rendererSource,
   /const headerBottom|moveTo\(left,\s*sx\(34[0-9]\)\)/,
