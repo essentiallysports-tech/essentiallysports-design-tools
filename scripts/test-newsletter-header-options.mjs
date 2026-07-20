@@ -33,28 +33,36 @@ assert(
   'Header Option 2 must expose the newsletter brand color selector.',
 );
 assert(
-  /function getNewsletterHeaderPillTypography\(ctx, text, scale, maxFrameWidth\)[\s\S]*?const socialPillRatio = HEADER_PILL_HEIGHT \/ PILL_H;[\s\S]*?const padLeft = PILL_PAD_LEFT \* socialPillRatio \* scale;[\s\S]*?const padRight = PILL_PAD_RIGHT \* socialPillRatio \* scale;/.test(html),
-  'Newsletter headers must inherit the established Social pill padding ratio.',
+  /function drawNewsletterSectionHeader\(ctx, W, H, scale\)[\s\S]*?const blockH = 42 \* scale;[\s\S]*?const padLeft = 6 \* scale;[\s\S]*?const padRight = 6 \* scale;[\s\S]*?const fontSize = 37 \* scale;/.test(html),
+  'Header Option 1 must preserve the established header dimensions and padding.',
 );
 assert(
-  /function getNewsletterHeaderPillTypography[\s\S]*?`900 \$\{Math\.round\(fontSize\)\}px "\$\{POST_FONT_FAMILY\}"[\s\S]*?const capMetrics = ctx\.measureText\('A'\);[\s\S]*?baselineOffset: opticalTopPad \+ capAscent/.test(html),
-  'Newsletter headers must use Acumin Post Black with painted cap-height centering.',
+  /function drawNewsletterSectionHeader\(ctx, W, H, scale\)[\s\S]*?ctx\.font = `700 \$\{fontSize\}px "\$\{POST_FONT_FAMILY\}"/.test(html),
+  'Header Option 1 must use the shared Acumin Post pill face without synthetic extra bolding.',
 );
 assert(
-  /function drawNewsletterSectionHeader\(ctx, W, H, scale\)[\s\S]*?getNewsletterHeaderPillTypography\(ctx, line \|\| 'NEWS', scale, maxBlockWidth\)[\s\S]*?typography\.textWidth \+ padLeft \+ padRight/.test(html),
-  'Header Option 1 must use the shared optical typography and hug its text.',
+  /const figmaTextW = 82 \* scale;[\s\S]*?const figmaBlockW = 93 \* scale;[\s\S]*?const blockW = Math\.min\(W, Math\.max\(figmaBlockW, textW \+ padLeft \+ padRight\)\);[\s\S]*?const baselineY = blockY \+ 33 \* scale;/.test(html),
+  'Header Option 1 must retain its original hugging width and baseline behavior.',
 );
 assert(
-  /function drawNewsletterSectionHeaderOption2\(ctx, W, H, scale\)[\s\S]*?getNewsletterHeaderPillTypography\(ctx, line, scale, maxFrameWidth\)[\s\S]*?typography\.textWidth \+ typography\.padLeft \+ typography\.padRight/.test(html),
-  'Header Option 2 must use the shared optical typography and hug its text.',
+  /function drawNewsletterSectionHeaderOption2\(ctx, W, H, scale\)[\s\S]*?const frameHeight = 42 \* scale;[\s\S]*?const horizontalPadding = 6 \* scale;[\s\S]*?const initialFontSize = 37 \* scale;/.test(html),
+  'Header Option 2 must preserve the established header dimensions and padding.',
+);
+assert(
+  /function drawNewsletterSectionHeaderOption2\(ctx, W, H, scale\)[\s\S]*?ctx\.font = `700 \$\{fontSize\}px "\$\{POST_FONT_FAMILY\}"/.test(html),
+  'Header Option 2 must use the shared Acumin Post pill face without synthetic extra bolding.',
+);
+assert(
+  /const frameWidth = Math\.min\(maxFrameWidth, Math\.max\(minFrameWidth, textWidth \+ horizontalPadding \* 2\)\);/.test(html),
+  'Header Option 2 pill must keep its original text-hugging width.',
 );
 assert(
   /const sideLineWidth = Math\.max\(0, frameX - lineGap\);[\s\S]*?ctx\.lineTo\(sideLineWidth, frameCenterY\);[\s\S]*?ctx\.moveTo\(W - sideLineWidth, frameCenterY\);/.test(html),
   'Header Option 2 side lines must rebalance around the dynamic pill.',
 );
 assert(
-  /function getNewsletterHeaderPillTypography[\s\S]*?fontSize = Math\.max\(minimumFontSize, fontSize \* \(maxTextWidth \/ textWidth\)\);/.test(html),
-  'Both newsletter headers must reduce font size safely for long text.',
+  /fontSize = Math\.max\(minimumFontSize, fontSize \* \(maxTextWidth \/ textWidth\)\);/.test(html),
+  'Header Option 2 must reduce font size safely for long text.',
 );
 assert(
   /data-newsletter-asset="section-header-2"\] \.advanced-card[\s\S]*?data-newsletter-asset="section-header-2"\] #pill-position-card/.test(html),

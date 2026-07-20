@@ -10610,8 +10610,6 @@ const LOGO_SAFE_MARGIN = 50;
 const POST_SAFE_AREA = 50;
 const PILL_EDGE_TO_TEXT_GAP = 1;
 const PILL_ROW_GAP = 1;
-const HEADER_PILL_HEIGHT = 42;
-const HEADER_PILL_MIN_FONT_SIZE = 20;
 const SWIPE_BUTTON_W = 200;
 const SWIPE_BUTTON_H = 56;
 const SWIPE_BUTTON_SAFE_MARGIN = 50;
@@ -11173,20 +11171,22 @@ function drawNewsletterSectionHeader(ctx, W, H, scale) {
   const canvasPaddingTop = 3 * scale;
   const blockX = 0;
   const blockY = canvasPaddingTop;
-  const maxBlockWidth = W;
-  const typography = getNewsletterHeaderPillTypography(ctx, line || 'NEWS', scale, maxBlockWidth);
-  const blockH = typography.frameHeight;
-  const padLeft = typography.padLeft;
-  const padRight = typography.padRight;
+  const blockH = 42 * scale;
+  const padLeft = 6 * scale;
+  const padRight = 6 * scale;
+  const fontSize = 37 * scale;
 
   ctx.clearRect(0, 0, W, H);
-  ctx.font = typography.font;
+  ctx.font = `700 ${fontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
 
+  const metrics = ctx.measureText(line || 'NEWS');
+  const figmaTextW = 82 * scale;
   const figmaBlockW = 93 * scale;
-  const blockW = Math.min(W, Math.max(figmaBlockW, typography.textWidth + padLeft + padRight));
-  const baselineY = blockY + typography.baselineOffset;
+  const textW = Math.max(figmaTextW, metrics.width);
+  const blockW = Math.min(W, Math.max(figmaBlockW, textW + padLeft + padRight));
+  const baselineY = blockY + 33 * scale;
 
   ctx.fillStyle = bgColor;
   ctx.fillRect(blockX, blockY, blockW, blockH);
@@ -11200,44 +11200,6 @@ function drawNewsletterSectionHeader(ctx, W, H, scale) {
   }
 }
 
-function getNewsletterHeaderPillTypography(ctx, text, scale, maxFrameWidth) {
-  const frameHeight = HEADER_PILL_HEIGHT * scale;
-  const socialPillRatio = HEADER_PILL_HEIGHT / PILL_H;
-  const padLeft = PILL_PAD_LEFT * socialPillRatio * scale;
-  const padRight = PILL_PAD_RIGHT * socialPillRatio * scale;
-  const maxTextWidth = Math.max(1, maxFrameWidth - padLeft - padRight);
-  const initialFontSize = PILL_FONT_SIZE * socialPillRatio * scale;
-  const minimumFontSize = HEADER_PILL_MIN_FONT_SIZE * scale;
-  let fontSize = initialFontSize;
-  let font = `900 ${Math.round(fontSize)}px "${POST_FONT_FAMILY}", "Acumin Pro Condensed Local", "Arial Narrow", Arial, sans-serif`;
-
-  ctx.font = font;
-  let textWidth = ctx.measureText(text).width;
-  if (textWidth > maxTextWidth) {
-    fontSize = Math.max(minimumFontSize, fontSize * (maxTextWidth / textWidth));
-    font = `900 ${Math.round(fontSize)}px "${POST_FONT_FAMILY}", "Acumin Pro Condensed Local", "Arial Narrow", Arial, sans-serif`;
-    ctx.font = font;
-    textWidth = ctx.measureText(text).width;
-  }
-
-  // Match the social pill system: center the painted uppercase cap height,
-  // not the browser line box. This keeps top and bottom whitespace balanced.
-  const capMetrics = ctx.measureText('A');
-  const capAscent = capMetrics.actualBoundingBoxAscent || Math.round(fontSize * 0.68);
-  const capDescent = capMetrics.actualBoundingBoxDescent || 0;
-  const opticalTopPad = Math.max(0, (frameHeight - capAscent - capDescent) / 2);
-
-  return {
-    frameHeight,
-    padLeft,
-    padRight,
-    fontSize,
-    font,
-    textWidth,
-    baselineOffset: opticalTopPad + capAscent,
-  };
-}
-
 function drawNewsletterSectionHeaderOption2(ctx, W, H, scale) {
   applyNewsletterBrandPalette();
   const brand = getNewsletterBrand(state.newsletterBrand);
@@ -11246,26 +11208,37 @@ function drawNewsletterSectionHeaderOption2(ctx, W, H, scale) {
   const fallback = 'WEEKLY RECAP';
   const line = String(state.lines[0] || fallback).trim().replace(/\s+/g, ' ').toUpperCase() || fallback;
   const frameTop = 3 * scale;
-  const frameHeight = HEADER_PILL_HEIGHT * scale;
+  const frameHeight = 42 * scale;
   const frameCenterY = frameTop + frameHeight / 2;
   const lineGap = 11 * scale;
   const lineWidth = 2 * scale;
+  const horizontalPadding = 6 * scale;
   const minFrameWidth = 64 * scale;
   const maxFrameWidth = Math.max(minFrameWidth, W - (lineGap * 2) - (24 * scale));
-  const typography = getNewsletterHeaderPillTypography(ctx, line, scale, maxFrameWidth);
+  const initialFontSize = 37 * scale;
+  const minimumFontSize = 20 * scale;
+  let fontSize = initialFontSize;
 
   ctx.clearRect(0, 0, W, H);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.font = typography.font;
+  ctx.font = `700 ${fontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
 
-  const frameWidth = Math.min(
-    maxFrameWidth,
-    Math.max(minFrameWidth, typography.textWidth + typography.padLeft + typography.padRight)
-  );
+  let textWidth = ctx.measureText(line).width;
+  const maxTextWidth = Math.max(1, maxFrameWidth - horizontalPadding * 2);
+  if (textWidth > maxTextWidth) {
+    fontSize = Math.max(minimumFontSize, fontSize * (maxTextWidth / textWidth));
+    ctx.font = `700 ${fontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    textWidth = ctx.measureText(line).width;
+  }
+
+  const frameWidth = Math.min(maxFrameWidth, Math.max(minFrameWidth, textWidth + horizontalPadding * 2));
   const frameX = (W - frameWidth) / 2;
   const sideLineWidth = Math.max(0, frameX - lineGap);
-  const baselineY = frameTop + typography.baselineOffset;
+  const metrics = ctx.measureText(line);
+  const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.72;
+  const descent = metrics.actualBoundingBoxDescent || fontSize * 0.06;
+  const baselineY = frameCenterY + (ascent - descent) / 2;
 
   ctx.strokeStyle = navy;
   ctx.lineWidth = lineWidth;
@@ -11279,7 +11252,7 @@ function drawNewsletterSectionHeaderOption2(ctx, W, H, scale) {
   ctx.fillStyle = navy;
   ctx.fillRect(frameX, frameTop, frameWidth, frameHeight);
   ctx.fillStyle = cream;
-  ctx.fillText(line, frameX + typography.padLeft, baselineY);
+  ctx.fillText(line, frameX + horizontalPadding, baselineY);
 
   if (scale === 1) {
     state.lastTextBounds = { x: frameX, y: frameTop, w: frameWidth, h: frameHeight };
