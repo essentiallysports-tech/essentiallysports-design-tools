@@ -33,16 +33,28 @@ assert(
   'Header Option 2 must expose the newsletter brand color selector.',
 );
 assert(
-  /const frameWidth = Math\.min\(maxFrameWidth, Math\.max\(minFrameWidth, textWidth \+ horizontalPadding \* 2\)\);/.test(html),
-  'Header Option 2 pill must hug its text content.',
+  /function getNewsletterHeaderPillTypography\(ctx, text, scale, maxFrameWidth\)[\s\S]*?const socialPillRatio = HEADER_PILL_HEIGHT \/ PILL_H;[\s\S]*?const padLeft = PILL_PAD_LEFT \* socialPillRatio \* scale;[\s\S]*?const padRight = PILL_PAD_RIGHT \* socialPillRatio \* scale;/.test(html),
+  'Newsletter headers must inherit the established Social pill padding ratio.',
+);
+assert(
+  /function getNewsletterHeaderPillTypography[\s\S]*?`900 \$\{Math\.round\(fontSize\)\}px "\$\{POST_FONT_FAMILY\}"[\s\S]*?const capMetrics = ctx\.measureText\('A'\);[\s\S]*?baselineOffset: opticalTopPad \+ capAscent/.test(html),
+  'Newsletter headers must use Acumin Post Black with painted cap-height centering.',
+);
+assert(
+  /function drawNewsletterSectionHeader\(ctx, W, H, scale\)[\s\S]*?getNewsletterHeaderPillTypography\(ctx, line \|\| 'NEWS', scale, maxBlockWidth\)[\s\S]*?typography\.textWidth \+ padLeft \+ padRight/.test(html),
+  'Header Option 1 must use the shared optical typography and hug its text.',
+);
+assert(
+  /function drawNewsletterSectionHeaderOption2\(ctx, W, H, scale\)[\s\S]*?getNewsletterHeaderPillTypography\(ctx, line, scale, maxFrameWidth\)[\s\S]*?typography\.textWidth \+ typography\.padLeft \+ typography\.padRight/.test(html),
+  'Header Option 2 must use the shared optical typography and hug its text.',
 );
 assert(
   /const sideLineWidth = Math\.max\(0, frameX - lineGap\);[\s\S]*?ctx\.lineTo\(sideLineWidth, frameCenterY\);[\s\S]*?ctx\.moveTo\(W - sideLineWidth, frameCenterY\);/.test(html),
   'Header Option 2 side lines must rebalance around the dynamic pill.',
 );
 assert(
-  /fontSize = Math\.max\(minimumFontSize, fontSize \* \(maxTextWidth \/ textWidth\)\);/.test(html),
-  'Header Option 2 must reduce font size safely for long text.',
+  /function getNewsletterHeaderPillTypography[\s\S]*?fontSize = Math\.max\(minimumFontSize, fontSize \* \(maxTextWidth \/ textWidth\)\);/.test(html),
+  'Both newsletter headers must reduce font size safely for long text.',
 );
 assert(
   /data-newsletter-asset="section-header-2"\] \.advanced-card[\s\S]*?data-newsletter-asset="section-header-2"\] #pill-position-card/.test(html),
