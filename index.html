@@ -5918,6 +5918,50 @@ body[data-current-page="faq"] .faq-cta-art img {
       }
     }
 
+    /* Keep every control inside the fixed canvas dock. The normal desktop
+       state previously needed more horizontal space than the 720px shell,
+       which let the first and last icons paint outside its rounded edge. */
+    @media (min-width: 1024px) {
+      html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions {
+        gap: 8px;
+        padding-inline: 8px;
+        overflow: hidden;
+      }
+
+      html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions:not(.is-ai-search-expanded) .studio-zoom-group {
+        gap: 4px;
+        padding-right: 6px;
+      }
+
+      html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions:not(.is-ai-search-expanded) .studio-zoom-btn {
+        width: 34px;
+      }
+
+      html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions:not(.is-ai-search-expanded) .studio-zoom-value {
+        width: 52px;
+      }
+
+      html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions:not(.is-ai-search-expanded) .canvas-primary-actions {
+        gap: 6px;
+      }
+
+      html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions:not(.is-ai-search-expanded) .canvas-upload-button {
+        padding-inline: 12px;
+      }
+
+      html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions:not(.is-ai-search-expanded) .carousel-slide-switcher {
+        gap: 4px;
+      }
+
+      html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions:not(.is-ai-search-expanded) .carousel-slide-button {
+        width: 32px;
+      }
+
+      html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions:not(.is-ai-search-expanded) .carousel-slide-arrow {
+        width: 24px;
+      }
+    }
+
     html[data-studio-shell="on"] .studio-dock-actions .canvas-primary-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
