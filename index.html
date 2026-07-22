@@ -12011,34 +12011,50 @@ function drawListicleType1Post(ctx, W, H, scale) {
 
 function drawListicleType2Rank(ctx, rank, accent, x, y, width, height, scale) {
   const value = String(rank || '').trim().toUpperCase() || '1';
+  const isSingleDigit = /^\d$/.test(value);
+  const widthReference = isSingleDigit ? '3' : value;
   let fontSize = 126 * scale;
   const minSize = 58 * scale;
   const horizontalPad = 16 * scale;
   let textMetrics;
+  let referenceMetrics;
   ctx.save();
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   while (fontSize > minSize) {
     ctx.font = `900 ${Math.round(fontSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
     textMetrics = ctx.measureText(value);
+    referenceMetrics = ctx.measureText(widthReference);
     const glyphWidth = Math.max(
       1,
       (textMetrics.actualBoundingBoxLeft || 0) +
         (textMetrics.actualBoundingBoxRight || textMetrics.width)
     );
-    if (glyphWidth + horizontalPad * 2 <= width) break;
+    const referenceGlyphWidth = Math.max(
+      1,
+      (referenceMetrics.actualBoundingBoxLeft || 0) +
+        (referenceMetrics.actualBoundingBoxRight || referenceMetrics.width)
+    );
+    if (Math.max(glyphWidth, referenceGlyphWidth) + horizontalPad * 2 <= width) break;
     fontSize -= 2 * scale;
   }
   textMetrics = textMetrics || ctx.measureText(value);
+  referenceMetrics = referenceMetrics || ctx.measureText(widthReference);
   const glyphLeft = textMetrics.actualBoundingBoxLeft || 0;
   const glyphRight = textMetrics.actualBoundingBoxRight || textMetrics.width;
   const glyphAscent = textMetrics.actualBoundingBoxAscent || Math.round(fontSize * 0.68);
   const glyphDescent = textMetrics.actualBoundingBoxDescent || 0;
   const glyphWidth = Math.max(1, glyphLeft + glyphRight);
   const glyphHeight = Math.max(1, glyphAscent + glyphDescent);
-  const pillWidth = Math.min(width, Math.ceil(glyphWidth + horizontalPad * 2));
+  const referenceGlyphWidth = Math.max(
+    1,
+    (referenceMetrics.actualBoundingBoxLeft || 0) +
+      (referenceMetrics.actualBoundingBoxRight || referenceMetrics.width)
+  );
+  const pillWidth = Math.min(width, Math.ceil(referenceGlyphWidth + horizontalPad * 2));
   const verticalPad = Math.max(0, (height - glyphHeight) / 2);
-  const drawX = x + horizontalPad + glyphLeft;
+  const visibleLeft = x + (pillWidth - glyphWidth) / 2;
+  const drawX = visibleLeft + glyphLeft;
   const baselineY = y + verticalPad + glyphAscent;
   ctx.fillStyle = accent;
   ctx.fillRect(x, y, pillWidth, height);
