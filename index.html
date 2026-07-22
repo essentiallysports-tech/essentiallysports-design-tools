@@ -5066,8 +5066,24 @@ body[data-current-page="faq"] .faq-cta-art img {
       border-left: 1px solid #E4EAF1;
       background: #FFFFFF;
       box-shadow: none;
-      scrollbar-width: thin;
-      scrollbar-color: #B5D8FD transparent;
+      scrollbar-width: none;
+    }
+
+    html[data-studio-shell="on"] .panel::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+
+    html[data-studio-shell="on"] button:focus:not(:focus-visible),
+    html[data-studio-shell="on"] [role="button"]:focus:not(:focus-visible) {
+      outline: none;
+    }
+
+    html[data-studio-shell="on"] button:focus-visible,
+    html[data-studio-shell="on"] [role="button"]:focus-visible {
+      outline: 2px solid rgba(10, 125, 250, .42);
+      outline-offset: 2px;
     }
 
     html[data-studio-shell="on"] .panel .card,
@@ -5768,7 +5784,6 @@ body[data-current-page="faq"] .faq-cta-art img {
       flex-wrap: nowrap;
       margin-left: auto;
       margin-right: auto;
-      transform: none;
     }
 
     html[data-studio-shell="on"] body[data-current-page="instagram"] .canvas-bottom-actions.is-ai-search-expanded {
@@ -5799,6 +5814,21 @@ body[data-current-page="faq"] .faq-cta-art img {
       flex-wrap: nowrap;
       margin-left: 0;
       transform: none;
+    }
+
+    /* Keep the floating action dock centered to the canvas itself. Its width
+       can be wider than a portrait canvas, so auto margins/align-self alone
+       otherwise anchor the dock to the canvas' left edge. */
+    @media (min-width: 1024px) {
+      html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions {
+        left: 50%;
+        align-self: flex-start;
+        transform: translateX(-50%);
+      }
+
+      html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions.is-ai-search-expanded {
+        transform: translateX(-50%);
+      }
     }
 
     html[data-studio-shell="on"] .studio-zoom-group {
@@ -7065,12 +7095,12 @@ body[data-current-page="faq"] .faq-cta-art img {
                 </svg>
                 <span>Upload Image</span>
               </button>
-              <button class="canvas-upload-button canvas-upload-button-secondary" type="button" data-ai-image-search aria-label="Fetch AI image from ES Storage" aria-expanded="false" title="Fetch AI image from ES Storage">
+              <button class="canvas-upload-button canvas-upload-button-secondary" type="button" data-ai-image-search aria-label="Open ES Image Pool" aria-expanded="false" title="Open ES Image Pool">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5l-1.9-5.7-5.6-1.9L10.1 9 12 3.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
                   <path d="M18 4v4M20 6h-4M6 17v3M7.5 18.5h-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
                 </svg>
-                <span>AI Images</span>
+                <span>ES Image Pool</span>
               </button>
               <form class="canvas-ai-search-form" data-canvas-ai-search-form role="search" aria-label="Search ES images from the canvas toolbar" aria-hidden="true" inert>
                 <svg class="canvas-ai-search-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -7130,7 +7160,7 @@ body[data-current-page="faq"] .faq-cta-art img {
                 </div>
                 <div class="image-context-empty-actions">
                   <button class="image-context-upload" type="button" data-image-slot-upload="move">Upload image</button>
-                  <button class="image-context-ai" type="button" data-image-slot-ai="move">AI Images</button>
+                  <button class="image-context-ai" type="button" data-image-slot-ai="move">ES Image Pool</button>
                 </div>
               </div>
               <div class="image-context-content" data-image-content="background" hidden>
@@ -7160,7 +7190,7 @@ body[data-current-page="faq"] .faq-cta-art img {
                 </div>
                 <div class="image-context-empty-actions">
                   <button class="image-context-upload" type="button" data-image-slot-upload="foreground-1">Upload image</button>
-                  <button class="image-context-ai" type="button" data-image-slot-ai="foreground-1">AI Images</button>
+                  <button class="image-context-ai" type="button" data-image-slot-ai="foreground-1">ES Image Pool</button>
                 </div>
               </div>
               <div class="image-context-content" data-image-content="foreground-1" hidden>
@@ -7190,7 +7220,7 @@ body[data-current-page="faq"] .faq-cta-art img {
                 </div>
                 <div class="image-context-empty-actions">
                   <button class="image-context-upload" type="button" data-image-slot-upload="foreground-2">Upload image</button>
-                  <button class="image-context-ai" type="button" data-image-slot-ai="foreground-2">AI Images</button>
+                  <button class="image-context-ai" type="button" data-image-slot-ai="foreground-2">ES Image Pool</button>
                 </div>
               </div>
               <div class="image-context-content" data-image-content="foreground-2" hidden>
@@ -10431,7 +10461,7 @@ async function runAiImageSearch(query) {
   const cleanQuery = String(query || '').trim();
   if (!cleanQuery) {
     focusAiImageSearch();
-    setStatus('Type an entity, team, or topic to search AI Images.', 'err');
+    setStatus('Type an entity, team, or topic to search the ES Image Pool.', 'err');
     return;
   }
 
@@ -10451,7 +10481,7 @@ async function runAiImageSearch(query) {
     renderAiImagePicker(usableResults, cleanQuery);
     setStatus('');
   } catch (error) {
-    setStatus(error.message || 'AI Images could not fetch from ES Storage.', 'err');
+    setStatus(error.message || 'The ES Image Pool could not fetch from ES Storage.', 'err');
   } finally {
     setAiImageButtonLoading(false);
   }
@@ -10493,7 +10523,7 @@ async function applySelectedAiImageFromEsStorage(result) {
 async function applyAiImageFromEsStorage() {
   const queries = getActiveImageSearchQueries();
   if (!queries.length) {
-    setStatus('Write a headline or entity name first, then try AI Images.', 'err');
+    setStatus('Write a headline or entity name first, then try the ES Image Pool.', 'err');
     return;
   }
 
@@ -10526,7 +10556,7 @@ async function applyAiImageFromEsStorage() {
     renderAiImagePicker(usableResults, matchedQuery);
     setStatus('');
   } catch (error) {
-    setStatus(error.message || 'AI Images could not fetch from ES Storage.', 'err');
+    setStatus(error.message || 'The ES Image Pool could not fetch from ES Storage.', 'err');
   } finally {
     setAiImageButtonLoading(false);
   }
@@ -15262,13 +15292,13 @@ loadFont().then(() => render());
         <div class="studio-inspector-tabs" role="tablist" aria-label="Inspector groups">
           <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="image" aria-selected="false">Image Controls</button>
           <button class="studio-inspector-tab is-active" type="button" role="tab" data-studio-inspector-tab="content" aria-selected="true">Content</button>
-          <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="ai" aria-selected="false">AI Images</button>
+          <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="ai" aria-selected="false">ES Image Pool</button>
         </div>
         <div class="studio-dock-section">
           <div class="studio-dock-tools"></div>
         </div>
         <div class="studio-ai-section">
-          <div class="studio-dock-title">AI Images <span class="studio-dock-kicker">ES Storage</span></div>
+          <div class="studio-dock-title">ES Image Pool <span class="studio-dock-kicker">ES Storage</span></div>
           <form class="studio-ai-search" data-ai-image-search-form role="search" aria-label="Search ES images">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="11" cy="11" r="6.5"></circle>
