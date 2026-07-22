@@ -12013,18 +12013,37 @@ function drawListicleType2Rank(ctx, rank, accent, x, y, width, height, scale) {
   const value = String(rank || '').trim().toUpperCase() || '1';
   let fontSize = 126 * scale;
   const minSize = 58 * scale;
+  const horizontalPad = 16 * scale;
+  let textMetrics;
   ctx.save();
-  ctx.fillStyle = accent;
-  ctx.fillRect(x, y, width, height);
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
   while (fontSize > minSize) {
     ctx.font = `900 ${Math.round(fontSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
-    if (ctx.measureText(value).width <= width * 0.78) break;
+    textMetrics = ctx.measureText(value);
+    const glyphWidth = Math.max(
+      1,
+      (textMetrics.actualBoundingBoxLeft || 0) +
+        (textMetrics.actualBoundingBoxRight || textMetrics.width)
+    );
+    if (glyphWidth + horizontalPad * 2 <= width) break;
     fontSize -= 2 * scale;
   }
+  textMetrics = textMetrics || ctx.measureText(value);
+  const glyphLeft = textMetrics.actualBoundingBoxLeft || 0;
+  const glyphRight = textMetrics.actualBoundingBoxRight || textMetrics.width;
+  const glyphAscent = textMetrics.actualBoundingBoxAscent || Math.round(fontSize * 0.68);
+  const glyphDescent = textMetrics.actualBoundingBoxDescent || 0;
+  const glyphWidth = Math.max(1, glyphLeft + glyphRight);
+  const glyphHeight = Math.max(1, glyphAscent + glyphDescent);
+  const pillWidth = Math.min(width, Math.ceil(glyphWidth + horizontalPad * 2));
+  const verticalPad = Math.max(0, (height - glyphHeight) / 2);
+  const drawX = x + horizontalPad + glyphLeft;
+  const baselineY = y + verticalPad + glyphAscent;
+  ctx.fillStyle = accent;
+  ctx.fillRect(x, y, pillWidth, height);
   ctx.fillStyle = '#FFFFFF';
-  ctx.fillText(value, x + width / 2, y + height / 2 + 2 * scale);
+  ctx.fillText(value, drawX, baselineY);
   ctx.restore();
 }
 
@@ -12082,15 +12101,16 @@ function drawListicleType2Post(ctx, W, H, scale) {
     const logoSize = sx(140);
     drawListicleLogo(ctx, row, sx(145), sx(top - 3), logoSize, logoSize, scale);
 
+    const textX = sx(315);
     const name = String(row.entity || '').toUpperCase();
-    const nameMaxWidth = sx(485);
+    const nameMaxWidth = sx(430);
     const nameSize = fitCanvasFont(ctx, name, nameMaxWidth, 60 * scale, 36 * scale);
     ctx.save();
     ctx.font = `900 ${Math.round(nameSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
     ctx.fillStyle = '#090A0C';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(name, sx(285), sx(top + 68));
+    ctx.fillText(name, textX, sx(top + 68));
 
     const subtitle = String(row.subtitle || '').toUpperCase();
     const subtitleSize = fitCanvasFont(
@@ -12103,7 +12123,7 @@ function drawListicleType2Post(ctx, W, H, scale) {
     );
     ctx.font = `600 ${Math.round(subtitleSize)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
     ctx.fillStyle = row.accent;
-    ctx.fillText(subtitle, sx(285), sx(top + 112));
+    ctx.fillText(subtitle, textX, sx(top + 112));
     ctx.restore();
 
     drawListicleType2Player(ctx, row, sx(760), sx(top - 15), sx(270), sx(185));

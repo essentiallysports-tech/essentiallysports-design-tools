@@ -24,6 +24,10 @@ assert.ok(rendererStart >= 0 && rendererEnd > rendererStart, 'Type 2 renderer mu
 const renderer = source.slice(rendererStart, rendererEnd);
 assert.match(renderer, /const rowStart = 323;[\s\S]*?data\.rows\.forEach/, 'Type 2 must render its fixed row system');
 assert.match(renderer, /drawListicleType2Player/, 'Type 2 must render optional player cutouts');
+assert.match(source, /function drawListicleType2Rank[\s\S]*?const horizontalPad = 16 \* scale;/, 'rank badges must use equal horizontal padding');
+assert.match(source, /function drawListicleType2Rank[\s\S]*?actualBoundingBoxLeft[\s\S]*?actualBoundingBoxRight[\s\S]*?actualBoundingBoxAscent[\s\S]*?actualBoundingBoxDescent/, 'rank badges must use visible glyph bounds for optical padding');
+assert.match(source, /function drawListicleType2Rank[\s\S]*?const pillWidth = Math\.min\(width, Math\.ceil\(glyphWidth \+ horizontalPad \* 2\)\);[\s\S]*?const verticalPad = Math\.max\(0, \(height - glyphHeight\) \/ 2\);/, 'rank badges must hug their number with equal visible padding');
+assert.match(renderer, /const textX = sx\(315\);/, 'team copy must keep a deliberate gap after the logo frame');
 assert.match(renderer, /drawListicleHeading\(ctx, W, scale, data\.title\)/, 'Type 2 must use the shared aligned heading renderer');
 assert.match(renderer, /ctx\.moveTo\(left, sx\(LISTICLE_CANVAS_LAYOUT\.dividerY\)\)/, 'Type 2 must keep one header divider at the shared ruler position');
 assert.doesNotMatch(renderer, /drawSwipeButton/, 'Type 2 reference must not add a swipe badge');
