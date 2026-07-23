@@ -83,4 +83,47 @@
     }, { threshold: [0.35, 0.55, 0.75], rootMargin: '-18% 0px -35% 0px' });
     journeySteps.forEach(step => journeyObserver.observe(step));
   }
+
+  const requestJourney = document.querySelector('[data-request-journey]');
+  const requestWindow = requestJourney?.querySelector('[data-request-window]');
+  const requestTrack = requestJourney?.querySelector('[data-request-track]');
+  const requestProgress = requestJourney?.querySelector('[data-request-progress]');
+  const requestSteps = requestTrack ? [...requestTrack.children] : [];
+  const desktopJourney = window.matchMedia('(min-width: 861px)');
+  let requestFrame = 0;
+
+  const updateRequestJourney = () => {
+    requestFrame = 0;
+    if (!requestJourney || !requestWindow || !requestTrack || !desktopJourney.matches) {
+      requestTrack?.style.removeProperty('transform');
+      requestProgress?.style.removeProperty('transform');
+      requestSteps.forEach((step, index) => {
+        if (index === 0) step.setAttribute('aria-current', 'step');
+        else step.removeAttribute('aria-current');
+      });
+      return;
+    }
+
+    const rect = requestJourney.getBoundingClientRect();
+    const scrollRange = Math.max(1, requestJourney.offsetHeight - window.innerHeight);
+    const progress = Math.min(1, Math.max(0, -rect.top / scrollRange));
+    const travel = Math.max(0, requestTrack.scrollWidth - requestWindow.clientWidth);
+    requestTrack.style.transform = `translate3d(${-travel * progress}px, 0, 0)`;
+    if (requestProgress) requestProgress.style.transform = `scaleX(${progress})`;
+    const activeIndex = Math.min(requestSteps.length - 1, Math.round(progress * (requestSteps.length - 1)));
+    requestSteps.forEach((step, index) => {
+      if (index === activeIndex) step.setAttribute('aria-current', 'step');
+      else step.removeAttribute('aria-current');
+    });
+  };
+
+  const queueRequestJourney = () => {
+    if (requestFrame) return;
+    requestFrame = window.requestAnimationFrame(updateRequestJourney);
+  };
+
+  window.addEventListener('scroll', queueRequestJourney, { passive: true });
+  window.addEventListener('resize', queueRequestJourney);
+  desktopJourney.addEventListener?.('change', updateRequestJourney);
+  updateRequestJourney();
 })();

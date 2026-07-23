@@ -171,6 +171,24 @@ assert(
   'How It Works uses the shared profile mount and footer',
 );
 assert(
+  !howItWorks.includes('dashboard.html'),
+  'How It Works exposes a Dashboard destination',
+  'How It Works does not expose Dashboard access',
+);
+assert(
+  (howItWorks.match(/class="ui-arrow-right/g) || []).length >= 8
+    && !/[→➜➝]/.test(howItWorks),
+  'How It Works uses a non-standard CTA chevron',
+  'How It Works uses the shared FrameUp chevrons',
+);
+const howItWorksCss = read('how-it-works.css');
+assert(
+  /\.workspace-guide-image img\s*\{[\s\S]*?object-fit:\s*contain;/.test(howItWorksCss)
+    && /\.journey-visual--workspace img\s*\{[\s\S]*?object-fit:\s*contain;/.test(howItWorksCss),
+  'How It Works workspace imagery can still be cropped',
+  'How It Works keeps workspace imagery contain-safe',
+);
+assert(
   /'section-header':\s*\{[\s\S]*?workspace:\s*\{\s*width:\s*640,\s*height:\s*47,/.test(index),
   'Header Option 1 dimensions changed from the established 640×47 contract',
   'Header Option 1 retains the established 640×47 dimensions',

@@ -17,8 +17,8 @@
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
   <link rel="stylesheet" href="theme.css?v=20260714-footer1">
   <link rel="stylesheet" href="site-chrome.css?v=20260723-profile3">
-  <link rel="stylesheet" href="cta-hover.css?v=20260720-stroke1">
-  <link rel="stylesheet" href="how-it-works.css?v=20260723-editorial2">
+  <link rel="stylesheet" href="cta-hover.css?v=20260723-howrefine1">
+  <link rel="stylesheet" href="how-it-works.css?v=20260723-refine1">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20260723-profile2"></script>
@@ -160,7 +160,9 @@
               <div><h3>Select a format</h3><p>Pick the post, thumbnail, header, feature image, or widget you need.</p></div>
             </div>
             <div class="journey-visual journey-visual--formats" aria-hidden="true">
-              <span>Cover Image</span><span>Quote Image</span><span>Listicle</span>
+              <span><strong>Cover Image</strong><small>1080 × 1350</small></span>
+              <span><strong>Quote Image</strong><small>1080 × 1350</small></span>
+              <span><strong>Listicle</strong><small>5 fixed rows</small></span>
             </div>
           </li>
           <li data-journey-step="2">
@@ -233,20 +235,29 @@
       </div>
     </section>
 
-    <section class="how-section request-section" id="request" aria-labelledby="request-title">
-      <div class="request-copy" data-how-reveal>
-        <p class="how-eyebrow">Design Requests</p>
-        <h2 id="request-title">Build a brief the team can act on.</h2>
-        <p>You do not need design language. Tell the team what the design should communicate, where it will be used, and when it is due.</p>
-        <a class="how-button how-button--primary" href="design-request.html">Start a Design Request <span class="ui-arrow-right" aria-hidden="true"></span></a>
+    <section class="request-section" id="request" aria-labelledby="request-title" data-request-journey>
+      <div class="request-journey-sticky">
+        <div class="request-copy" data-how-reveal>
+          <div>
+            <p class="how-eyebrow">Design Requests</p>
+            <h2 id="request-title">Build a brief the team can act on.</h2>
+            <p>You do not need design language. Tell the team what the design should communicate, where it will be used, and when it is due.</p>
+          </div>
+          <a class="how-button how-button--primary" href="design-request.html">Start a Design Request <span class="ui-arrow-right" aria-hidden="true"></span></a>
+        </div>
+        <div class="request-progress" aria-hidden="true">
+          <span data-request-progress></span>
+        </div>
+        <div class="request-journey-window" data-request-window>
+          <ol class="brief-sequence" data-request-track>
+            <li aria-current="step"><span>01</span><div><strong>Title</strong><p>Give the request a clear, searchable name.</p></div></li>
+            <li><span>02</span><div><strong>Entities</strong><p>Add the people, teams, leagues, or products featured.</p></div></li>
+            <li><span>03</span><div><strong>Copy</strong><p>Provide the exact words that should appear in the design.</p></div></li>
+            <li><span>04</span><div><strong>Deadline</strong><p>Say when it is needed and when it publishes.</p></div></li>
+            <li><span>05</span><div><strong>References and notes</strong><p>Attach useful links, context, and special instructions.</p></div></li>
+          </ol>
+        </div>
       </div>
-      <ol class="brief-sequence" data-how-stagger>
-        <li><span>01</span><div><strong>Title</strong><p>Give the request a clear, searchable name.</p></div></li>
-        <li><span>02</span><div><strong>Entities</strong><p>Add the people, teams, leagues, or products featured.</p></div></li>
-        <li><span>03</span><div><strong>Copy</strong><p>Provide the exact words that should appear in the design.</p></div></li>
-        <li><span>04</span><div><strong>Deadline</strong><p>Say when it is needed and when it publishes.</p></div></li>
-        <li><span>05</span><div><strong>References and notes</strong><p>Attach useful links, context, and special instructions.</p></div></li>
-      </ol>
     </section>
 
     <section class="how-section help-section" id="help" aria-labelledby="help-title">
@@ -263,6 +274,6 @@
   </main>
 
   <footer class="site-footer" aria-label="Site footer"></footer>
-  <script src="how-it-works.js?v=20260723-editorial2"></script>
+  <script src="how-it-works.js?v=20260723-refine2"></script>
 </body>
 </html>
