@@ -34,6 +34,7 @@
   }
 
   function renderSwitcher() {
+    if (document.querySelector('[data-profile-theme-choice]')) return;
     if (document.querySelector('[data-theme-switcher]')) return;
 
     const navbar = document.querySelector('.navbar');
@@ -77,6 +78,7 @@
   }
 
   window.FrameUpTheme = { apply: applyTheme, current: () => document.documentElement.dataset.theme || LIGHT_THEME };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderSwitcher, { once: true });
-  else renderSwitcher();
+  const scheduleSwitcher = () => requestAnimationFrame(renderSwitcher);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scheduleSwitcher, { once: true });
+  else scheduleSwitcher();
 }());

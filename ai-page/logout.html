@@ -12,15 +12,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Roboto+Condensed:wght@400;500;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="account.css">
-  <link rel="stylesheet" href="../site-mobile-chrome.css?v=20260710-mobile-root2">
+  <link rel="stylesheet" href="../site-mobile-chrome.css?v=20260723-profile2">
 <link rel="stylesheet" href="../theme.css?v=20260714-footer1">
-  <link rel="stylesheet" href="../site-chrome.css?v=20260718-nav-neutral1">
+  <link rel="stylesheet" href="../site-chrome.css?v=20260723-profile2">
   <link rel="stylesheet" href="../cta-hover.css?v=20260720-stroke1">
   <script src="../theme.js?v=20260712-darkmode12"></script>
-  <script src="../site-mobile-chrome.js?v=20260710-mobile-root2"></script>
-  <script src="../site-chrome.js?v=20260713-chrome1"></script>
+  <script src="../site-mobile-chrome.js?v=20260723-profile2"></script>
+  <script src="../site-chrome.js?v=20260723-profile2"></script>
 </head>
-<body>
+<body class="logout-page">
   <div class="page">
     <nav class="navbar">
       <a class="navbar-logo" href="../index.html" aria-label="EssentiallySports home"><img src="assets/brand-logo-blue.svg" alt="EssentiallySports"></a>
@@ -53,18 +53,7 @@
         <a class="navbar-icon-btn" href="https://www.instagram.com/essentiallysports" aria-label="Instagram"><img src="../social-icons/nav-instagram.svg" alt=""></a>
         <a class="navbar-icon-btn" href="https://www.youtube.com/essentiallysports" aria-label="YouTube"><img src="../social-icons/nav-youtube.svg" alt=""></a>
         <a class="navbar-icon-btn" href="https://news.google.com/publications/CAAqBwgKMJqW_gwwkoGBAw" aria-label="Google News"><img src="../social-icons/nav-google-news.svg" alt=""></a>
-        <div class="profile-menu" id="profile-menu">
-          <button class="profile-trigger" type="button" id="profile-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Open profile menu">
-            <span class="profile-avatar" data-profile-initial aria-hidden="true"></span>
-            <span class="profile-name" data-profile-name>Guest User</span>
-            <svg class="profile-chevron" viewBox="0 0 16 10" fill="none" aria-hidden="true"><path d="M14.98 1.14 7.98 7.14.98 1.14" stroke="currentColor" stroke-width="3"/></svg>
-          </button>
-          <div class="profile-dropdown" role="menu" aria-label="Profile menu">
-            <a class="profile-option" href="profile.html" role="menuitem"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" stroke-width="2"/><path d="M4 20a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Edit Profile</a>
-            <a class="profile-option" href="settings.html" role="menuitem"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.08a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.08a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.05-.05A2 2 0 1 1 7.04 4.3l.05.05A1.65 1.65 0 0 0 8.9 4.7h.01A1.65 1.65 0 0 0 10 3.18V3a2 2 0 1 1 4 0v.08a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.05-.05a2 2 0 1 1 2.83 2.83l-.05.05A1.65 1.65 0 0 0 19.4 9c.1.32.18.66.18 1h.42a2 2 0 1 1 0 4h-.08A1.65 1.65 0 0 0 19.4 15Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Settings</a>
-            <a class="profile-option" href="logout.html" role="menuitem"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 6H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 8l4 4-4 4M18 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Logout</a>
-          </div>
-        </div>
+        <div class="profile-menu" id="profile-menu"></div>
       </div>
     </nav>
 
@@ -78,11 +67,11 @@
             </svg>
           </div>
           <div class="account-kicker">FrameUp Account</div>
-          <h1 class="account-title">Logout</h1>
-          <p class="account-subtitle" id="logout-copy">You are about to leave FrameUp on this device. Your local profile and settings can stay saved for the next session.</p>
+          <h1 class="account-title">Log out of FrameUp?</h1>
+          <p class="account-subtitle" id="logout-copy">This ends only your current session. Your local profile and workspace preferences stay on this browser.</p>
           <div class="actions" id="logout-actions">
-            <button class="primary-btn" id="confirm-logout" type="button">Logout Now</button>
-            <a class="secondary-btn" href="index.html">Cancel</a>
+            <button class="primary-btn" id="confirm-logout" type="button">Log out</button>
+            <a class="secondary-btn" href="../index.html#frames">Stay signed in</a>
           </div>
           <div class="status-note" id="logout-status" aria-live="polite"></div>
         </section>
@@ -94,12 +83,24 @@
 
   <script src="account.js"></script>
   <script>
-    document.getElementById('confirm-logout').addEventListener('click', () => {
-      window.ESAuth?.logout?.();
-      sessionStorage.setItem('es.ai.loggedOut', 'true');
-      document.getElementById('logout-copy').textContent = 'You have been logged out of FrameUp on this device.';
-      document.getElementById('logout-status').textContent = 'Session ended.';
-      document.getElementById('logout-actions').innerHTML = '<a class="primary-btn" href="../login.html">Return to Login</a><a class="secondary-btn" href="../index.html">Back to FrameUp</a>';
+    document.getElementById('confirm-logout').addEventListener('click', async event => {
+      const button = event.currentTarget;
+      const status = document.getElementById('logout-status');
+      button.disabled = true;
+      button.textContent = 'Logging out…';
+      status.textContent = 'Ending your session…';
+      try {
+        await window.ESAuth?.logout?.();
+        sessionStorage.setItem('es.ai.loggedOut', 'true');
+        document.getElementById('logout-copy').textContent = 'You have been logged out of FrameUp on this device.';
+        status.textContent = 'Session ended.';
+        document.getElementById('logout-actions').innerHTML = '<a class="primary-btn" href="../login.html">Return to login</a><a class="secondary-btn" href="../index.html">FrameUp home</a>';
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = 'Log out';
+        status.textContent = 'Could not end the session. Please try again.';
+        status.classList.add('is-error');
+      }
     });
   </script>
 </body>

@@ -1115,9 +1115,9 @@
   }
   .listicle-row-asset-grid {
     display: grid;
-    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-columns: 72px minmax(0, 1fr);
     gap: 10px;
-    align-items: end;
+    align-items: stretch;
   }
   .listicle-asset-field {
     display: grid;
@@ -1131,10 +1131,14 @@
   }
   .listicle-logo-control {
     min-width: 0;
-    display: grid;
-    grid-template-columns: 44px minmax(0, 1fr) auto;
+    min-height: 52px;
+    display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    padding: 7px 8px 7px 12px;
+    border: 1px solid #D9DEE5;
+    border-radius: 10px;
+    background: #FFFFFF;
   }
   .listicle-accent-input {
     width: 44px;
@@ -1149,17 +1153,15 @@
     width: 44px;
   }
   .listicle-logo-button {
-    min-height: 42px;
-    padding: 9px 12px;
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 7px 10px;
     border: 1px solid #D9DEE5;
-    border-radius: 10px;
+    border-radius: 8px;
     background: var(--white);
     color: var(--text-primary);
     cursor: pointer;
-    overflow: hidden;
-    text-align: left;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    text-align: center;
     font-family: var(--font-heading);
     font-size: 14px;
     font-weight: 700;
@@ -1175,7 +1177,7 @@
   .listicle-logo-remove {
     display: none;
     min-height: 34px;
-    padding: 6px 4px;
+    padding: 6px 5px;
     border: 0;
     background: transparent;
     color: #6B7280;
@@ -1210,13 +1212,36 @@
   }
   .listicle-type2-assets {
     display: grid;
-    gap: 10px;
+    gap: 8px;
   }
   .listicle-type2-asset-row {
     display: grid;
-    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-columns: 72px minmax(0, 1fr);
     gap: 10px;
-    align-items: end;
+    align-items: stretch;
+  }
+  .listicle-asset-meta {
+    min-width: 0;
+    flex: 1 1 auto;
+    display: grid;
+    gap: 2px;
+  }
+  .listicle-asset-name {
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .listicle-asset-status {
+    overflow: hidden;
+    color: #6B7280;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .listicle-player-preview {
     width: 64px;
@@ -1235,6 +1260,18 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+  }
+  @container (max-width: 430px) {
+    .listicle-row-asset-grid,
+    .listicle-type2-asset-row {
+      grid-template-columns: 1fr;
+    }
+    .listicle-logo-control {
+      flex-wrap: wrap;
+    }
+    .listicle-asset-meta {
+      flex-basis: 100%;
+    }
   }
 
   /* â”€â”€â”€ SELECTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -6447,13 +6484,13 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root2">
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
 <link rel="stylesheet" href="theme.css?v=20260714-footer1">
-<link rel="stylesheet" href="site-chrome.css?v=20260718-nav-neutral1">
+<link rel="stylesheet" href="site-chrome.css?v=20260723-profile2">
 <link rel="stylesheet" href="cta-hover.css?v=20260720-stroke1">
 <script src="theme.js?v=20260712-darkmode12"></script>
-<script src="site-mobile-chrome.js?v=20260710-mobile-root2"></script>
-<script src="site-chrome.js?v=20260713-chrome1"></script>
+<script src="site-mobile-chrome.js?v=20260723-profile2"></script>
+<script src="site-chrome.js?v=20260723-profile2"></script>
 </head>
 <body>
 
@@ -6485,29 +6522,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     <a href="#faq" data-route="faq">FAQ</a>
   </div>
   <div class="navbar-right">
-    <div class="profile-menu" id="profile-menu">
-      <button class="profile-trigger" type="button" id="profile-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Open profile menu">
-        <span class="profile-avatar" data-profile-initial aria-hidden="true"></span>
-        <span class="profile-name" data-profile-name>Guest User</span>
-        <svg class="profile-chevron" viewBox="0 0 16 10" fill="none" aria-hidden="true">
-          <path d="M14.98 1.14 7.98 7.14.98 1.14" stroke="currentColor" stroke-width="3"/>
-        </svg>
-      </button>
-      <div class="profile-dropdown" role="menu" aria-label="Profile menu">
-        <a class="profile-option" href="ai-page/profile.html" role="menuitem">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" stroke-width="2"/><path d="M4 20a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          Edit Profile
-        </a>
-        <a class="profile-option" href="ai-page/settings.html" role="menuitem">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.08a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.08a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.05-.05A2 2 0 1 1 7.04 4.3l.05.05A1.65 1.65 0 0 0 8.9 4.7h.01A1.65 1.65 0 0 0 10 3.18V3a2 2 0 1 1 4 0v.08a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.05-.05a2 2 0 1 1 2.83 2.83l-.05.05A1.65 1.65 0 0 0 19.4 9c.1.32.18.66.18 1h.42a2 2 0 1 1 0 4h-.08A1.65 1.65 0 0 0 19.4 15Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-          Settings
-        </a>
-        <a class="profile-option" href="ai-page/logout.html" role="menuitem">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 6H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 8l4 4-4 4M18 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Logout
-        </a>
-      </div>
-    </div>
+    <div class="profile-menu" id="profile-menu"></div>
     <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" title="Facebook" aria-label="Facebook"><img src="social-icons/nav-facebook.svg" alt=""></a>
     <a class="navbar-icon-btn" href="https://twitter.com/es_sportsnews" title="X" aria-label="X"><img src="social-icons/nav-x.svg" alt=""></a>
     <a class="navbar-icon-btn" href="https://www.linkedin.com/company/essentiallysports" title="LinkedIn" aria-label="LinkedIn"><img src="social-icons/nav-linkedin.svg" alt=""></a>
@@ -9174,6 +9189,19 @@ function createListicleLogoVisual(row, className) {
   return frame;
 }
 
+function createListicleAssetMeta(labelText, statusText) {
+  const meta = document.createElement('span');
+  meta.className = 'listicle-asset-meta';
+  const name = document.createElement('span');
+  name.className = 'listicle-asset-name';
+  name.textContent = labelText;
+  const status = document.createElement('span');
+  status.className = 'listicle-asset-status';
+  status.textContent = statusText;
+  meta.append(name, status);
+  return meta;
+}
+
 function setListicleRowExpanded(rowIndex) {
   const list = document.getElementById('listicle-row-list');
   if (!list || rowIndex < 0 || rowIndex >= ESListicle.ROW_COUNT) return;
@@ -9259,18 +9287,18 @@ function buildListicleRowControls() {
 
     const logoField = document.createElement('div');
     logoField.className = 'listicle-asset-field';
-    const logoLabel = document.createElement('span');
-    logoLabel.className = 'listicle-asset-label';
-    logoLabel.textContent = 'Logo';
     const logoControl = document.createElement('div');
     logoControl.className = 'listicle-logo-control';
-    const logoPreview = createListicleLogoVisual(row, 'listicle-logo-preview');
+    const logoMeta = createListicleAssetMeta(
+      'Team logo',
+      row.logoName || (row.logoSrc ? 'Default logo' : 'No logo added')
+    );
 
     const logoButton = document.createElement('button');
     logoButton.className = `listicle-logo-button${row.logoSrc ? ' has-logo' : ''}`;
     logoButton.type = 'button';
     logoButton.dataset.listicleLogoButton = String(rowIndex);
-    logoButton.textContent = row.logoSrc ? 'Replace logo' : 'Upload logo';
+    logoButton.textContent = row.logoSrc ? 'Replace' : 'Upload';
 
     const removeLogoButton = document.createElement('button');
     removeLogoButton.className = `listicle-logo-remove${row.logoSrc ? ' is-visible' : ''}`;
@@ -9283,8 +9311,8 @@ function buildListicleRowControls() {
     logoInput.accept = 'image/png,image/jpeg,image/webp';
     logoInput.hidden = true;
     logoInput.dataset.listicleLogoInput = String(rowIndex);
-    logoControl.append(logoPreview, logoButton, removeLogoButton);
-    logoField.append(logoLabel, logoControl, logoInput);
+    logoControl.append(logoMeta, logoButton, removeLogoButton);
+    logoField.append(logoControl, logoInput);
     assetGrid.append(accentField, logoField);
     editor.append(primaryGrid, metricGrid, assetGrid);
     panelInner.appendChild(editor);
@@ -9453,22 +9481,18 @@ function createListicleType2AssetControl(row, rowIndex, asset) {
   const source = row[sourceKey];
   const field = document.createElement('div');
   field.className = 'listicle-asset-field';
-  const label = document.createElement('span');
-  label.className = 'listicle-asset-label';
-  label.textContent = isPlayer ? 'Player image' : 'Team logo';
   const control = document.createElement('div');
   control.className = 'listicle-logo-control';
-  const preview = createListicleType2AssetVisual(
-    row,
-    sourceKey,
-    isPlayer ? 'listicle-player-preview' : 'listicle-logo-preview',
-    isPlayer ? 'Player' : 'Logo'
+  const statusKey = isPlayer ? 'playerName' : 'logoName';
+  const meta = createListicleAssetMeta(
+    isPlayer ? 'Player image' : 'Team logo',
+    row[statusKey] || (source ? (isPlayer ? 'Image added' : 'Default logo') : `No ${isPlayer ? 'image' : 'logo'} added`)
   );
   const button = document.createElement('button');
   button.className = `listicle-logo-button${source ? ' has-logo' : ''}`;
   button.type = 'button';
   button.dataset.listicleType2AssetButton = `${rowIndex}:${asset}`;
-  button.textContent = source ? `Replace ${isPlayer ? 'image' : 'logo'}` : `Upload ${isPlayer ? 'image' : 'logo'}`;
+  button.textContent = source ? 'Replace' : 'Upload';
   const remove = document.createElement('button');
   remove.className = `listicle-logo-remove${source ? ' is-visible' : ''}`;
   remove.type = 'button';
@@ -9479,8 +9503,8 @@ function createListicleType2AssetControl(row, rowIndex, asset) {
   input.accept = 'image/png,image/jpeg,image/webp';
   input.hidden = true;
   input.dataset.listicleType2AssetInput = `${rowIndex}:${asset}`;
-  control.append(preview, button, remove);
-  field.append(label, control, input);
+  control.append(meta, button, remove);
+  field.append(control, input);
   return field;
 }
 
@@ -14208,7 +14232,16 @@ function debounce(fn, delay) {
 // â”€â”€â”€ PAGE NAVIGATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function routeFromHash() {
   const route = window.location.hash.slice(1);
-  return ['frames', 'instagram', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'].includes(route) ? route : 'frames';
+  const allowedRoutes = ['frames', 'instagram', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'];
+  if (allowedRoutes.includes(route)) return route;
+  try {
+    const settings = JSON.parse(localStorage.getItem('es.ai.settings') || '{}');
+    const preferredRoute = settings.rememberLastWorkspace
+      ? localStorage.getItem('frameup.lastWorkspace.v1')
+      : settings.startPage;
+    if (['frames', 'instagram', 'youtube', 'newsletter'].includes(preferredRoute)) return preferredRoute;
+  } catch (error) {}
+  return 'frames';
 }
 
 function ensureWorkspaceDefaults() {
@@ -14747,6 +14780,11 @@ function showPage(page) {
     el.classList.add('page-enter');
   });
   document.body.dataset.currentPage = activePage;
+  if (isWorkspace) {
+    try {
+      localStorage.setItem('frameup.lastWorkspace.v1', activePage);
+    } catch (error) {}
+  }
   document.querySelectorAll('[data-route]').forEach(link => {
     link.setAttribute('aria-current', link.dataset.route === activePage ? 'page' : 'false');
   });
@@ -14776,10 +14814,7 @@ function closeFrameMenu(exceptMenu = null) {
 }
 
 function closeProfileMenu() {
-  const profileMenu = document.getElementById('profile-menu');
-  const profileTrigger = document.getElementById('profile-trigger');
-  profileMenu?.classList.remove('is-open');
-  profileTrigger?.setAttribute('aria-expanded', 'false');
+  window.FrameUpProfileMenu?.close();
 }
 
 function cleanVisitorName(value) {
@@ -14919,16 +14954,7 @@ function resetFaqAccordion() {
 }
 
 function setupNavigation() {
-  const profileMenu = document.getElementById('profile-menu');
-  const profileTrigger = document.getElementById('profile-trigger');
   setupFaqAccordion();
-  profileTrigger?.addEventListener('click', evt => {
-    evt.preventDefault();
-    evt.stopPropagation();
-    closeFrameMenu();
-    const isOpen = profileMenu.classList.toggle('is-open');
-    profileTrigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-  });
 
   document.querySelectorAll('.nav-dropdown').forEach(menu => {
     const trigger = menu.querySelector('.nav-trigger');
@@ -14968,7 +14994,6 @@ function setupNavigation() {
 
   document.addEventListener('click', evt => {
     if (!evt.target.closest('.nav-dropdown')) closeFrameMenu();
-    if (!evt.target.closest('.profile-menu')) closeProfileMenu();
     if (!evt.target.closest('.select-dropdown')) closeCustomSelects();
   });
 

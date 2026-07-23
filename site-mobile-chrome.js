@@ -3,8 +3,8 @@
  *
  * Every page already owns the same desktop navbar markup. This small adapter
  * gives that markup one mobile behavior: compact logo + menu button, an
- * accessible navigation panel, and the existing profile actions inside the
- * panel. It deliberately does not touch workspace controls or page content.
+ * accessible navigation panel, and the same shared account popover moved into
+ * that panel. It deliberately does not touch workspace controls or page content.
  */
 (() => {
   'use strict';
@@ -15,34 +15,29 @@
     return `${MENU_ID_PREFIX}-${index + 1}`;
   }
 
-  function copyProfileActions(navbar, menu) {
-    if (menu.querySelector('.mobile-menu-account')) return;
-    const profileDropdown = navbar.querySelector('.profile-dropdown');
-    if (!profileDropdown) return;
+  function setupProfilePlacement(navbar, menu) {
+    const navbarRight = navbar.querySelector('.navbar-right');
+    const profileMenu = navbarRight?.querySelector('.profile-menu') || menu.querySelector('.profile-menu');
+    if (!navbarRight || !profileMenu) return () => {};
 
-    const actions = Array.from(profileDropdown.querySelectorAll('a, button'))
-      .filter(action => !action.disabled && action.getAttribute('aria-hidden') !== 'true');
-    if (!actions.length) return;
+    let account = menu.querySelector('.mobile-menu-account');
+    if (!account) {
+      account = document.createElement('div');
+      account.className = 'mobile-menu-account';
+      account.setAttribute('role', 'group');
+      account.setAttribute('aria-label', 'Account');
+      menu.append(account);
+    }
 
-    const account = document.createElement('div');
-    account.className = 'mobile-menu-account';
-    account.setAttribute('role', 'group');
+    const place = () => {
+      const isMobile = window.matchMedia('(max-width: 900px)').matches;
+      const destination = isMobile ? account : navbarRight;
+      if (profileMenu.parentElement !== destination) destination.prepend(profileMenu);
+      if (!isMobile) window.FrameUpProfileMenu?.close?.();
+    };
 
-    const label = document.createElement('span');
-    label.className = 'mobile-menu-account-label';
-    label.textContent = 'Account';
-    account.append(label);
-
-    const actionList = document.createElement('div');
-    actionList.className = 'mobile-menu-account-actions';
-    actions.forEach(action => {
-      const clone = action.cloneNode(true);
-      clone.removeAttribute('id');
-      clone.classList.add('mobile-menu-account-action');
-      actionList.append(clone);
-    });
-    account.append(actionList);
-    menu.append(account);
+    place();
+    return place;
   }
 
   function initNavbar(navbar, index) {
@@ -53,7 +48,7 @@
     navbar.dataset.mobileChromeReady = 'true';
     if (!menu.id) menu.id = createMenuId(index);
     menu.setAttribute('aria-label', 'Site navigation');
-    copyProfileActions(navbar, menu);
+    const placeProfile = setupProfilePlacement(navbar, menu);
 
     const toggle = document.createElement('button');
     toggle.type = 'button';
@@ -96,6 +91,7 @@
     });
 
     window.addEventListener('resize', () => {
+      placeProfile();
       if (window.matchMedia('(min-width: 901px)').matches) close();
     }, { passive: true });
   }

@@ -13,12 +13,149 @@
     });
   }
 
-  function closeProfile(except = null) {
+  const PROFILE_STORAGE_KEY = 'es.ai.profile';
+  const THEME_STORAGE_KEY = 'frameup.theme.v1';
+
+  function cleanProfileValue(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function titleCaseName(value) {
+    const cleaned = cleanProfileValue(value).replace(/[._-]+/g, ' ');
+    if (!cleaned) return 'Guest User';
+    return cleaned
+      .split(' ')
+      .map(part => part ? part[0].toUpperCase() + part.slice(1) : '')
+      .join(' ');
+  }
+
+  function nameFromEmail(email) {
+    const localPart = cleanProfileValue(email).split('@')[0];
+    return titleCaseName(localPart.replace(/[._-]+/g, ' '));
+  }
+
+  function readStoredProfile() {
+    try {
+      return JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY) || '{}') || {};
+    } catch {
+      return {};
+    }
+  }
+
+  function hasCustomAvatar(value) {
+    const avatar = cleanProfileValue(value);
+    return Boolean(avatar) && !/(?:^|\/)profile-avatar-default\.webp(?:$|\?)/.test(avatar);
+  }
+
+  function accountBase(menu) {
+    if (menu?.dataset.accountBase) return menu.dataset.accountBase;
+    return window.location.pathname.includes('/ai-page/') ? '' : 'ai-page/';
+  }
+
+  function profileIcon(kind) {
+    const icons = {
+      profile: '<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" stroke-width="1.8"/><path d="M4 20a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+      settings: '<path d="M12 15.25A3.25 3.25 0 1 0 12 8.75a3.25 3.25 0 0 0 0 6.5Z" stroke="currentColor" stroke-width="1.7"/><path d="M19.2 14.8a1.55 1.55 0 0 0 .31 1.7l.05.05a1.9 1.9 0 1 1-2.69 2.69l-.05-.05a1.55 1.55 0 0 0-1.7-.31 1.55 1.55 0 0 0-.94 1.42v.08a1.9 1.9 0 1 1-3.8 0v-.08a1.55 1.55 0 0 0-.94-1.42 1.55 1.55 0 0 0-1.7.31l-.05.05A1.9 1.9 0 1 1 5 16.55l.05-.05a1.55 1.55 0 0 0 .31-1.7 1.55 1.55 0 0 0-1.42-.94h-.08a1.9 1.9 0 1 1 0-3.8h.08a1.55 1.55 0 0 0 1.42-.94 1.55 1.55 0 0 0-.31-1.7L5 7.37a1.9 1.9 0 1 1 2.69-2.69l.05.05a1.55 1.55 0 0 0 1.7.31 1.55 1.55 0 0 0 .94-1.42v-.08a1.9 1.9 0 1 1 3.8 0v.08a1.55 1.55 0 0 0 .94 1.42 1.55 1.55 0 0 0 1.7-.31l.05-.05a1.9 1.9 0 1 1 2.69 2.69l-.05.05a1.55 1.55 0 0 0-.31 1.7c.12.31.18.63.18.94h.08a1.9 1.9 0 1 1 0 3.8h-.08c0 .31-.06.63-.18.94Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>',
+      logout: '<path d="M10 6H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m14 8 4 4-4 4M18 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+    };
+    return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">${icons[kind]}</svg>`;
+  }
+
+  function profileMarkup(menu, index) {
+    const base = accountBase(menu);
+    const popoverId = index ? `frameup-account-popover-${index + 1}` : 'frameup-account-popover';
+    return `
+      <button class="profile-trigger" type="button" id="profile-trigger" aria-expanded="false" aria-controls="${popoverId}" aria-label="Open account options">
+        <span class="profile-avatar" data-profile-initial aria-hidden="true"></span>
+        <span class="profile-name" data-profile-name>Guest User</span>
+        <svg class="profile-chevron" viewBox="0 0 16 10" fill="none" aria-hidden="true"><path d="M14.98 1.14 7.98 7.14.98 1.14" stroke="currentColor" stroke-width="3"/></svg>
+      </button>
+      <section class="profile-dropdown" id="${popoverId}" aria-label="Account options" aria-hidden="true" inert>
+        <header class="profile-identity">
+          <span class="profile-identity-avatar" data-profile-popover-avatar aria-hidden="true"></span>
+          <span class="profile-identity-copy">
+            <strong data-profile-popover-name>Guest User</strong>
+            <span data-profile-popover-role hidden></span>
+          </span>
+        </header>
+        <nav class="profile-actions" aria-label="Account">
+          <a class="profile-option" href="${base}profile.html" data-profile-destination="profile">${profileIcon('profile')}<span>Edit Profile</span></a>
+          <a class="profile-option" href="${base}settings.html" data-profile-destination="settings">${profileIcon('settings')}<span>Settings</span></a>
+        </nav>
+        <div class="profile-appearance">
+          <span class="profile-appearance-label">Appearance</span>
+          <div class="profile-theme-segment" role="group" aria-label="Appearance">
+            <button type="button" data-profile-theme-choice="light" aria-pressed="false">Light</button>
+            <button type="button" data-profile-theme-choice="dark" aria-pressed="false">Dark</button>
+          </div>
+        </div>
+        <a class="profile-option profile-option--logout" href="${base}logout.html" data-profile-destination="logout">${profileIcon('logout')}<span>Logout</span></a>
+      </section>`;
+  }
+
+  function currentTheme() {
+    return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  }
+
+  function syncThemeControls() {
+    const theme = currentTheme();
+    document.querySelectorAll('[data-profile-theme-choice]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.profileThemeChoice === theme));
+    });
+  }
+
+  function refreshProfileMenu(profile = readStoredProfile()) {
+    const email = cleanProfileValue(profile.email);
+    const name = titleCaseName(profile.name || nameFromEmail(email));
+    const role = cleanProfileValue(profile.role);
+    const avatar = hasCustomAvatar(profile.avatar) ? cleanProfileValue(profile.avatar) : '';
+
+    document.querySelectorAll('.profile-menu [data-profile-name], .profile-menu [data-profile-popover-name]').forEach(element => {
+      element.textContent = name;
+    });
+    document.querySelectorAll('.profile-menu [data-profile-popover-role]').forEach(element => {
+      element.textContent = role;
+      element.hidden = !role;
+    });
+    document.querySelectorAll('.profile-menu [data-profile-initial], .profile-menu [data-profile-popover-avatar]').forEach(element => {
+      element.classList.toggle('has-image', Boolean(avatar));
+      if (avatar) element.style.backgroundImage = `url("${avatar.replace(/"/g, '%22')}")`;
+      else element.style.removeProperty('background-image');
+    });
+  }
+
+  function setProfileOpen(menu, open, options = {}) {
+    if (!menu) return;
+    const trigger = menu.querySelector(':scope > .profile-trigger');
+    const popover = menu.querySelector(':scope > .profile-dropdown');
+    menu.classList.toggle('is-open', open);
+    trigger?.setAttribute('aria-expanded', String(open));
+    popover?.setAttribute('aria-hidden', String(!open));
+    if (popover) popover.inert = !open;
+    if (open && options.focusFirst) {
+      popover?.querySelector('.profile-option, [data-profile-theme-choice]')?.focus({ preventScroll: true });
+    }
+    if (!open && options.returnFocus) trigger?.focus();
+  }
+
+  function closeProfile(except = null, options = {}) {
     document.querySelectorAll('.profile-menu.is-open').forEach(menu => {
       if (menu === except) return;
-      menu.classList.remove('is-open');
-      menu.querySelector(':scope > .profile-trigger')?.setAttribute('aria-expanded', 'false');
+      setProfileOpen(menu, false, options);
     });
+  }
+
+  function normalizeProfileMenus() {
+    document.querySelectorAll('.profile-menu').forEach((menu, index) => {
+      menu.dataset.profilePopoverVersion = '2';
+      menu.innerHTML = profileMarkup(menu, index);
+      const currentPage = (window.location.pathname.split('/').pop() || 'index.html').replace('.html', '');
+      menu.querySelectorAll('[data-profile-destination]').forEach(link => {
+        if (link.dataset.profileDestination === currentPage) link.setAttribute('aria-current', 'page');
+      });
+    });
+    refreshProfileMenu();
+    syncThemeControls();
   }
 
   function setupInteractions() {
@@ -46,8 +183,22 @@
         const willOpen = !menu.classList.contains('is-open');
         closeProfile(menu);
         closeMenus();
-        menu.classList.toggle('is-open', willOpen);
-        profileTrigger.setAttribute('aria-expanded', String(willOpen));
+        setProfileOpen(menu, willOpen);
+        return;
+      }
+
+      const themeChoice = event.target.closest('[data-profile-theme-choice]');
+      if (themeChoice) {
+        event.preventDefault();
+        const theme = themeChoice.dataset.profileThemeChoice === 'dark' ? 'dark' : 'light';
+        if (window.FrameUpTheme?.apply) window.FrameUpTheme.apply(theme);
+        else {
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+          try { localStorage.setItem(THEME_STORAGE_KEY, theme); } catch {}
+          window.dispatchEvent(new CustomEvent('frameup-theme-change', { detail: { theme } }));
+        }
+        syncThemeControls();
         return;
       }
 
@@ -56,9 +207,32 @@
     }, true);
 
     document.addEventListener('keydown', event => {
+      const trigger = event.target.closest?.('.profile-trigger');
+      if (trigger && event.key === 'ArrowDown') {
+        event.preventDefault();
+        closeMenus();
+        setProfileOpen(trigger.closest('.profile-menu'), true, { focusFirst: true });
+        return;
+      }
       if (event.key !== 'Escape') return;
       closeMenus();
-      closeProfile();
+      const openMenu = document.querySelector('.profile-menu.is-open');
+      if (openMenu) {
+        event.preventDefault();
+        setProfileOpen(openMenu, false, { returnFocus: true });
+      }
+    });
+
+    document.addEventListener('focusin', event => {
+      const openMenu = document.querySelector('.profile-menu.is-open');
+      if (openMenu && !openMenu.contains(event.target)) setProfileOpen(openMenu, false);
+    });
+
+    window.addEventListener('frameup-theme-change', syncThemeControls);
+    window.addEventListener('frameup-profile-change', event => refreshProfileMenu(event.detail?.profile));
+    window.addEventListener('storage', event => {
+      if (event.key === PROFILE_STORAGE_KEY) refreshProfileMenu();
+      if (event.key === THEME_STORAGE_KEY) syncThemeControls();
     });
   }
 
@@ -164,9 +338,15 @@
 
   function boot() {
     normalizeNavbar();
+    normalizeProfileMenus();
     normalizeFooter();
     setupInteractions();
   }
+
+  window.FrameUpProfileMenu = {
+    refresh: refreshProfileMenu,
+    close: () => closeProfile(),
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot, { once: true });

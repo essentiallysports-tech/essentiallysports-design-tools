@@ -339,18 +339,18 @@
     position: absolute !important;
     inset: calc(100% + 8px) 0 auto auto !important;
     z-index: 540 !important;
-    width: 260px !important;
-    min-width: 260px !important;
+    width: 232px !important;
+    min-width: 232px !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 4px !important;
+    gap: 2px !important;
     margin: 0 !important;
-    padding: 10px !important;
+    padding: 7px !important;
     overflow: visible !important;
     border: 1px solid var(--chrome-border) !important;
-    border-radius: 16px !important;
-    background: #fafafc !important;
-    box-shadow: 0 18px 38px rgba(3, 49, 98, .12) !important;
+    border-radius: 14px !important;
+    background: #ffffff !important;
+    box-shadow: 0 14px 32px rgba(17, 24, 39, .10) !important;
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
@@ -369,20 +369,20 @@
   .profile-dropdown .profile-option,
   .profile-dropdown .profile-theme-option {
     width: 100% !important;
-    min-height: 46px !important;
+    min-height: 42px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: flex-start !important;
-    gap: 12px !important;
-    padding: 0 12px !important;
+    gap: 10px !important;
+    padding: 0 11px !important;
     border: 0 !important;
     border-radius: 10px !important;
     background: transparent !important;
     box-shadow: none !important;
     color: #111827 !important;
     font-family: var(--chrome-ui) !important;
-    font-size: 15px !important;
-    font-weight: 400 !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
     line-height: 1.2 !important;
     text-align: left !important;
     text-decoration: none !important;
@@ -390,22 +390,419 @@
 
   .profile-dropdown .profile-option:hover,
   .profile-dropdown .profile-option:focus-visible {
-    background: #ffffff !important;
+    background: #f4f6f8 !important;
     outline: 0 !important;
   }
 
   .profile-dropdown .profile-option svg {
-    width: 22px !important;
-    height: 22px !important;
-    flex: 0 0 22px !important;
+    width: 20px !important;
+    height: 20px !important;
+    flex: 0 0 20px !important;
   }
 
   .profile-dropdown .profile-option[href*="logout"] {
-    margin-top: 4px !important;
+    margin-top: 5px !important;
+    padding-top: 1px !important;
     border-top: 1px solid var(--chrome-border) !important;
     border-radius: 0 0 10px 10px !important;
-    background: #fff1f1 !important;
+    background: transparent !important;
     color: #8e2020 !important;
+  }
+
+  .profile-dropdown .profile-option[href*="logout"]:hover,
+  .profile-dropdown .profile-option[href*="logout"]:focus-visible {
+    background: #fff3f3 !important;
+  }
+}
+
+/*
+ * Unified account popover (v2)
+ *
+ * Version-scoped selectors deliberately outrank legacy page-level profile
+ * rules while those pages are reduced to a lightweight mount.
+ */
+.profile-menu[data-profile-popover-version="2"] {
+  position: relative !important;
+  inset: auto !important;
+  z-index: 530 !important;
+  width: max-content !important;
+  min-width: 0 !important;
+  max-width: min(320px, calc(100vw - 24px)) !important;
+  height: 48px !important;
+  flex: 0 1 auto !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] > .profile-trigger {
+  width: auto !important;
+  max-width: min(300px, calc(100vw - 24px)) !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 9px !important;
+  padding: 0 10px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #111827 !important;
+  cursor: pointer !important;
+  transition: background-color 170ms var(--chrome-motion), box-shadow 170ms var(--chrome-motion) !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] > .profile-trigger:hover,
+.profile-menu[data-profile-popover-version="2"] > .profile-trigger:focus-visible,
+.profile-menu[data-profile-popover-version="2"].is-open > .profile-trigger {
+  background: #f3f5f7 !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] > .profile-trigger:focus-visible {
+  outline: 2px solid rgba(10, 125, 250, .34) !important;
+  outline-offset: 2px !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-avatar,
+.profile-menu[data-profile-popover-version="2"] .profile-identity-avatar {
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  border: 1px solid #c8d3df !important;
+  border-radius: 999px !important;
+  background-color: #ffffff !important;
+  background-image: url("profile-icon-edit.svg") !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  color: transparent !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  flex: 0 0 32px !important;
+  background-size: 15px 18px !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-identity-avatar {
+  width: 40px !important;
+  height: 40px !important;
+  flex: 0 0 40px !important;
+  background-size: 18px 21px !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-avatar.has-image,
+.profile-menu[data-profile-popover-version="2"] .profile-identity-avatar.has-image {
+  border-color: transparent !important;
+  background-size: cover !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-name {
+  min-width: 0 !important;
+  max-width: 190px !important;
+  display: block !important;
+  flex: 0 1 auto !important;
+  overflow: hidden !important;
+  color: #111827 !important;
+  font-family: var(--chrome-ui) !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  line-height: 1.1 !important;
+  text-align: left !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-name::after {
+  display: none !important;
+  content: none !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-chevron {
+  width: 12px !important;
+  height: 8px !important;
+  flex: 0 0 12px !important;
+  margin-left: 1px !important;
+  color: var(--chrome-accent) !important;
+  transition: transform 170ms var(--chrome-motion) !important;
+}
+
+.profile-menu[data-profile-popover-version="2"].is-open .profile-chevron {
+  transform: rotate(180deg) !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] > .profile-dropdown {
+  position: absolute !important;
+  inset: calc(100% + 8px) 0 auto auto !important;
+  z-index: 540 !important;
+  box-sizing: border-box !important;
+  width: 280px !important;
+  min-width: 0 !important;
+  max-width: calc(100vw - 24px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  margin: 0 !important;
+  padding: 8px !important;
+  overflow: hidden !important;
+  border: 1px solid #dce3ea !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 40px rgba(17, 24, 39, .12) !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(-4px) !important;
+  transform-origin: top right !important;
+  transition: opacity 170ms var(--chrome-motion), transform 170ms var(--chrome-motion), visibility 170ms var(--chrome-motion) !important;
+}
+
+.profile-menu[data-profile-popover-version="2"].is-open > .profile-dropdown {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateY(0) !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-identity {
+  min-width: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 11px !important;
+  padding: 9px 10px 11px !important;
+  border-bottom: 1px solid #e5e9ee !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-identity-copy {
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-identity-copy strong,
+.profile-menu[data-profile-popover-version="2"] .profile-identity-copy span {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-identity-copy strong {
+  color: #111827 !important;
+  font-family: var(--chrome-ui) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  line-height: 1.15 !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-identity-copy span {
+  color: #6b7280 !important;
+  font-family: var(--chrome-ui) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.15 !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-actions {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  padding-top: 4px !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-option {
+  width: 100% !important;
+  min-height: 42px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  padding: 0 10px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #202733 !important;
+  font-family: var(--chrome-ui) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+  text-align: left !important;
+  text-decoration: none !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-option:hover,
+.profile-menu[data-profile-popover-version="2"] .profile-option:focus-visible,
+.profile-menu[data-profile-popover-version="2"] .profile-option[aria-current="page"] {
+  background: #f2f4f6 !important;
+  outline: 0 !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-option:focus-visible,
+.profile-menu[data-profile-popover-version="2"] [data-profile-theme-choice]:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(10, 125, 250, .28) !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-option svg {
+  width: 19px !important;
+  height: 19px !important;
+  flex: 0 0 19px !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-appearance {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-top: 3px !important;
+  padding: 10px !important;
+  border-top: 1px solid #e5e9ee !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-appearance-label {
+  color: #202733 !important;
+  font-family: var(--chrome-ui) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-theme-segment {
+  display: grid !important;
+  grid-template-columns: repeat(2, auto) !important;
+  gap: 2px !important;
+  padding: 3px !important;
+  border: 1px solid #dce3ea !important;
+  border-radius: 9px !important;
+  background: #f3f5f7 !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] [data-profile-theme-choice] {
+  min-width: 52px !important;
+  height: 30px !important;
+  padding: 0 8px !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #667085 !important;
+  font-family: var(--chrome-ui) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] [data-profile-theme-choice][aria-pressed="true"] {
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(17, 24, 39, .12) !important;
+  color: var(--chrome-accent) !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-option--logout {
+  min-height: 44px !important;
+  margin-top: 0 !important;
+  padding: 0 10px !important;
+  border-top: 0 !important;
+  border-radius: 0 0 9px 9px !important;
+  background: transparent !important;
+  color: #a12626 !important;
+}
+
+.profile-menu[data-profile-popover-version="2"] .profile-option--logout:hover,
+.profile-menu[data-profile-popover-version="2"] .profile-option--logout:focus-visible {
+  background: #fff2f2 !important;
+}
+
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] > .profile-trigger {
+  color: #f3f4f6 !important;
+}
+
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] > .profile-trigger:hover,
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] > .profile-trigger:focus-visible,
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"].is-open > .profile-trigger {
+  background: #171c22 !important;
+}
+
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-name,
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-identity-copy strong,
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option,
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-appearance-label {
+  color: #f3f4f6 !important;
+}
+
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] > .profile-dropdown {
+  border-color: #333c47 !important;
+  background: #11161c !important;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .34) !important;
+}
+
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-avatar,
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-identity-avatar {
+  border-color: #46515d !important;
+  background-color: #19212a !important;
+  filter: none !important;
+}
+
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-identity,
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-appearance,
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option--logout {
+  border-color: #2c343e !important;
+}
+
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-identity-copy span {
+  color: #9faab6 !important;
+}
+
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option:hover,
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option:focus-visible,
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option[aria-current="page"] {
+  background: #20272f !important;
+}
+
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-theme-segment {
+  border-color: #3a4551 !important;
+  background: #1a2028 !important;
+}
+
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] [data-profile-theme-choice] {
+  color: #aab4bf !important;
+}
+
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] [data-profile-theme-choice][aria-pressed="true"] {
+  background: #303944 !important;
+  color: #72b5ff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .3) !important;
+}
+
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option--logout {
+  color: #ff9999 !important;
+}
+
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option--logout:hover,
+html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option--logout:focus-visible {
+  background: rgba(141, 35, 35, .22) !important;
+}
+
+@media (max-width: 560px) {
+  .profile-menu[data-profile-popover-version="2"] .profile-name {
+    max-width: 118px !important;
+  }
+
+  .profile-menu[data-profile-popover-version="2"] > .profile-dropdown {
+    inset-inline: auto 0 !important;
+    width: min(280px, calc(100vw - 24px)) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-menu[data-profile-popover-version="2"] > .profile-trigger,
+  .profile-menu[data-profile-popover-version="2"] > .profile-dropdown,
+  .profile-menu[data-profile-popover-version="2"] .profile-chevron {
+    transition: none !important;
   }
 }
 

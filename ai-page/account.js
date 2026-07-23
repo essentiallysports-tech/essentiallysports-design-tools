@@ -1,8 +1,5 @@
 function closeProfileMenu() {
-  const profileMenu = document.getElementById('profile-menu');
-  const profileTrigger = document.getElementById('profile-trigger');
-  profileMenu?.classList.remove('is-open');
-  profileTrigger?.setAttribute('aria-expanded', 'false');
+  window.FrameUpProfileMenu?.close();
 }
 
 function closeNavMenus(exceptMenu = null) {
@@ -14,21 +11,6 @@ function closeNavMenus(exceptMenu = null) {
 }
 
 function setupHeaderMenus() {
-  const profileMenu = document.getElementById('profile-menu');
-  const profileTrigger = document.getElementById('profile-trigger');
-  const navbarRight = profileMenu?.closest('.navbar-right');
-  if (profileMenu && navbarRight && navbarRight.firstElementChild !== profileMenu) {
-    navbarRight.prepend(profileMenu);
-  }
-
-  profileTrigger?.addEventListener('click', event => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeNavMenus();
-    const isOpen = profileMenu.classList.toggle('is-open');
-    profileTrigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-  });
-
   document.querySelectorAll('.nav-dropdown').forEach(menu => {
     const trigger = menu.querySelector('.nav-trigger');
     if (!trigger) return;
@@ -55,7 +37,6 @@ function setupHeaderMenus() {
 
   document.addEventListener('click', event => {
     if (!event.target.closest('.nav-dropdown')) closeNavMenus();
-    if (!event.target.closest('.profile-menu')) closeProfileMenu();
   });
 }
 
@@ -105,7 +86,10 @@ function loadProfile() {
 }
 
 function saveProfile(profile) {
-  localStorage.setItem('es.ai.profile', JSON.stringify(sanitizeProfile(profile)));
+  const sanitizedProfile = sanitizeProfile(profile);
+  localStorage.setItem('es.ai.profile', JSON.stringify(sanitizedProfile));
+  window.FrameUpProfileMenu?.refresh(sanitizedProfile);
+  window.dispatchEvent(new CustomEvent('frameup-profile-change', { detail: { profile: sanitizedProfile } }));
 }
 
 function cleanVisitorName(value) {
@@ -205,6 +189,10 @@ function saveSettings(settings) {
 
 function syncProfileChrome() {
   const profile = inferVisitorProfile();
+  if (window.FrameUpProfileMenu?.refresh) {
+    window.FrameUpProfileMenu.refresh(profile);
+    return;
+  }
   const name = profile.name;
   const role = cleanProfileValue(profile.role);
   const avatar = profile.avatar;

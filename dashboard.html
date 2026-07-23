@@ -434,14 +434,14 @@
     }
   </style>
   <link rel="stylesheet" href="dashboard-v2.css?v=20260712-qc2">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20260710-mobile-root2">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
   <link rel="stylesheet" href="dashboard-ui-system.css?v=20260718-dashboard-system5">
 <link rel="stylesheet" href="theme.css?v=20260714-footer1">
-<link rel="stylesheet" href="site-chrome.css?v=20260718-nav-neutral1">
+<link rel="stylesheet" href="site-chrome.css?v=20260723-profile2">
 <link rel="stylesheet" href="cta-hover.css?v=20260720-stroke1">
   <script src="theme.js?v=20260712-darkmode12"></script>
-  <script src="site-mobile-chrome.js?v=20260710-mobile-root2"></script>
-  <script src="site-chrome.js?v=20260713-chrome1"></script>
+  <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
+  <script src="site-chrome.js?v=20260723-profile2"></script>
 </head>
 <body class="dashboard-page" data-dashboard-view="overview">
   <nav class="navbar" aria-label="Global navigation">
@@ -471,29 +471,7 @@
       <a href="index.html#faq">FAQ</a>
     </div>
     <div class="navbar-right">
-      <div class="profile-menu" id="profile-menu">
-        <button class="profile-trigger" type="button" id="profile-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Open profile menu">
-          <span class="profile-avatar" data-profile-initial aria-hidden="true"></span>
-          <span class="profile-name" data-profile-name>Guest User</span>
-          <svg class="profile-chevron" viewBox="0 0 16 10" fill="none" aria-hidden="true">
-            <path d="M14.98 1.14 7.98 7.14.98 1.14" stroke="currentColor" stroke-width="3"/>
-          </svg>
-        </button>
-        <div class="profile-dropdown" role="menu" aria-label="Profile menu">
-          <a class="profile-option" href="ai-page/profile.html" role="menuitem">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" stroke-width="2"/><path d="M4 20a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            Edit Profile
-          </a>
-          <a class="profile-option" href="ai-page/settings.html" role="menuitem">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.08a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.08a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.05-.05A2 2 0 1 1 7.04 4.3l.05.05A1.65 1.65 0 0 0 8.9 4.7h.01A1.65 1.65 0 0 0 10 3.18V3a2 2 0 1 1 4 0v.08a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.05-.05a2 2 0 1 1 2.83 2.83l-.05.05A1.65 1.65 0 0 0 19.4 9c.1.32.18.66.18 1h.42a2 2 0 1 1 0 4h-.08A1.65 1.65 0 0 0 19.4 15Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-            Settings
-          </a>
-          <a class="profile-option" href="ai-page/logout.html" role="menuitem">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 6H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 8l4 4-4 4M18 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Logout
-          </a>
-        </div>
-      </div>
+      <div class="profile-menu" id="profile-menu"></div>
       <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" title="Facebook" aria-label="Facebook"><img src="social-icons/nav-facebook.svg" alt=""></a>
       <a class="navbar-icon-btn" href="https://twitter.com/es_sportsnews" title="X" aria-label="X"><img src="social-icons/nav-x.svg" alt=""></a>
       <a class="navbar-icon-btn" href="https://www.linkedin.com/company/essentiallysports" title="LinkedIn" aria-label="LinkedIn"><img src="social-icons/nav-linkedin.svg" alt=""></a>
@@ -1404,10 +1382,7 @@
     }
 
     function closeDashboardProfileMenu() {
-      const profileMenu = document.getElementById('profile-menu');
-      const profileTrigger = document.getElementById('profile-trigger');
-      profileMenu?.classList.remove('is-open');
-      profileTrigger?.setAttribute('aria-expanded', 'false');
+      window.FrameUpProfileMenu?.close();
     }
 
     function closeDashboardNavMenus(exceptMenu = null) {
@@ -1443,17 +1418,7 @@
     }
 
     function setupDashboardProfileMenu() {
-      const profileMenu = document.getElementById('profile-menu');
-      const profileTrigger = document.getElementById('profile-trigger');
-      if (!profileMenu || !profileTrigger || profileTrigger.dataset.menuBound === 'true') return;
-      profileTrigger.dataset.menuBound = 'true';
-      profileTrigger.addEventListener('click', event => {
-        event.preventDefault();
-        event.stopPropagation();
-        closeDashboardNavMenus();
-        const isOpen = profileMenu.classList.toggle('is-open');
-        profileTrigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      });
+      window.FrameUpProfileMenu?.refresh();
     }
 
     function setDashboardView(view, shouldMarkSeen = false) {
@@ -1794,7 +1759,6 @@
         }
         if (!event.target.closest('.dashboard-choice')) closeDashboardChoices();
         if (!event.target.closest('.nav-dropdown')) closeDashboardNavMenus();
-        if (!event.target.closest('.profile-menu')) closeDashboardProfileMenu();
         const previewButton = event.target.closest('[data-preview-task]');
         if (previewButton && !previewButton.disabled) {
           event.preventDefault();

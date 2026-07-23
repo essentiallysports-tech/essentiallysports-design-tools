@@ -23,6 +23,7 @@ const footerPages = [
 ];
 
 const noFooterPages = ['dashboard.html', 'reset-password.html'];
+const sharedChromeVersion = '20260723-profile2';
 
 function read(file) {
   return fs.readFileSync(file, 'utf8');
@@ -51,15 +52,34 @@ for (const file of navbarPages) {
     `${file} uses the shared site chrome stylesheet`,
   );
   assert(
-    html.includes(`${prefix}site-chrome.js?v=20260713-chrome1`),
+    html.includes(`${prefix}site-chrome.js?v=${sharedChromeVersion}`),
     `${file} is missing the shared site chrome behavior`,
     `${file} uses the shared site chrome behavior`,
+  );
+  assert(
+    html.includes(`${prefix}site-mobile-chrome.js?v=${sharedChromeVersion}`)
+      && html.includes(`${prefix}site-mobile-chrome.css?v=${sharedChromeVersion}`)
+      && html.includes(`${prefix}site-chrome.css?v=${sharedChromeVersion}`),
+    `${file} has stale shared chrome assets`,
+    `${file} uses the current shared chrome assets`,
   );
   assert(html.includes('class="navbar"'), `${file} has no global navbar`, `${file} has the global navbar`);
   assert(html.includes('class="navbar-logo"'), `${file} has no navbar logo`, `${file} has a navbar logo`);
   assert(html.includes('class="navbar-menu"'), `${file} has no navbar menu`, `${file} has a navbar menu`);
   assert(html.includes('class="navbar-right"'), `${file} has no navbar utilities`, `${file} has navbar utilities`);
-  assert(html.includes('class="profile-menu"'), `${file} has no profile menu`, `${file} has a profile menu`);
+  const profileMounts = (html.match(/<div class="profile-menu" id="profile-menu"><\/div>/g) || []).length;
+  assert(profileMounts === 1, `${file} does not have exactly one lightweight profile mount`, `${file} has one lightweight profile mount`);
+  assert(
+    !html.includes('class="profile-trigger"') && !html.includes('class="profile-dropdown"'),
+    `${file} still owns duplicated profile popover markup`,
+    `${file} delegates profile markup to shared chrome`,
+  );
+  assert(
+    !/profileMenu\??\.addEventListener\s*\(\s*['"]click['"]/.test(html)
+      && !/profileTrigger\??\.addEventListener\s*\(\s*['"]click['"]/.test(html),
+    `${file} still binds a page-local profile toggle`,
+    `${file} has no page-local profile toggle`,
+  );
 
   const socialCount = (html.match(/class="navbar-icon-btn"/g) || []).length;
   assert(
@@ -136,6 +156,40 @@ assert(
   siteChromeCss.includes("stroke='%230A7DFA'"),
   'Shared navbar chevron is not using ES blue',
   'Shared navbar chevron uses ES blue',
+);
+assert(
+  siteChromeCss.includes('.profile-menu[data-profile-popover-version="2"]')
+    && siteChromeCss.includes('max-width: calc(100vw - 24px)')
+    && siteChromeCss.includes('prefers-reduced-motion: reduce'),
+  'Shared profile popover CSS contract is incomplete',
+  'Shared profile popover CSS includes responsive and reduced-motion guards',
+);
+
+const siteChromeJs = read('site-chrome.js');
+assert(
+  siteChromeJs.includes('FrameUpProfileMenu')
+    && siteChromeJs.includes('frameup-profile-change')
+    && siteChromeJs.includes(".profile-menu [data-profile-name]")
+    && siteChromeJs.includes("event.key === 'ArrowDown'")
+    && siteChromeJs.includes(".profile-option, [data-profile-theme-choice]")
+    && siteChromeJs.includes("event.key !== 'Escape'")
+    && siteChromeJs.includes('aria-controls'),
+  'Shared profile behavior contract is incomplete',
+  'Shared profile behavior includes refresh, profile events, and keyboard disclosure support',
+);
+
+const mobileChromeJs = read('site-mobile-chrome.js');
+assert(
+  mobileChromeJs.includes('setupProfilePlacement') && !mobileChromeJs.includes('cloneNode'),
+  'Mobile chrome clones or duplicates the profile menu',
+  'Mobile chrome moves the single shared profile menu without cloning it',
+);
+
+const accountJs = read('ai-page/account.js');
+assert(
+  accountJs.includes('FrameUpProfileMenu?.refresh') && accountJs.includes('frameup-profile-change'),
+  'Profile saves do not refresh the shared account popover',
+  'Profile saves refresh and broadcast to the shared account popover',
 );
 
 const homeSource = read('index.html');
