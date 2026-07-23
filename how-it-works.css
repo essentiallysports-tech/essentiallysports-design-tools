@@ -49,12 +49,12 @@ body.how-page {
   font-family: var(--how-display);
 }
 .how-page h1 {
-  max-width: 690px;
-  margin-bottom: 28px;
-  font-size: clamp(62px, 7vw, 104px);
+  max-width: 720px;
+  margin-bottom: 24px;
+  font-size: clamp(58px, 6vw, 88px);
   font-weight: 700;
-  line-height: .86;
-  letter-spacing: -.045em;
+  line-height: .9;
+  letter-spacing: -.035em;
 }
 .how-page h2 {
   margin-bottom: 18px;
@@ -75,40 +75,54 @@ body.how-page {
   line-height: 1.52;
 }
 .how-hero {
-  min-height: 680px;
+  min-height: 610px;
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(480px, .92fr);
+  grid-template-columns: minmax(0, 1.04fr) minmax(450px, .96fr);
   align-items: center;
-  gap: 84px;
-  margin-top: 28px;
-  padding: 96px 72px 92px;
+  gap: 72px;
+  margin-top: 24px;
+  padding: 78px 72px;
   border-radius: 32px;
   background-color: var(--how-surface);
   box-shadow: var(--how-shadow);
 }
 .how-hero-copy { align-self: center; }
-.how-lede { max-width: 640px; margin-bottom: 34px; font-size: 21px !important; }
-.how-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.how-lede { max-width: 620px; margin-bottom: 30px; font-size: 20px !important; }
+.how-actions { display: flex; flex-wrap: wrap; gap: 14px; }
 .how-button {
-  min-height: 54px;
+  min-width: 168px;
+  min-height: 50px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 18px;
-  padding: 0 23px;
-  border: 1px solid var(--how-blue);
-  border-radius: 12px;
+  gap: 14px;
+  padding: 0 20px;
+  border: 1.5px solid #b5d8fd;
+  border-radius: 8px;
   color: var(--how-ink);
-  font-size: 18px;
-  font-weight: 700;
+  background: #f8fbff;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
   text-decoration: none;
   transition: border-color 170ms ease, background-color 170ms ease, color 170ms ease;
 }
-.how-button span { display: inline-block; font-size: 27px; line-height: 1; transition: transform 170ms ease; }
-.how-button--primary { background: var(--how-blue); color: #fff; }
+.how-button .ui-arrow-right { transition: transform 170ms ease; }
+.how-button--primary { border-color: var(--how-blue); background: var(--how-blue); color: #fff; }
 .how-button--secondary { background: var(--how-surface); }
 .how-button:is(:hover, :focus-visible) { border-color: var(--how-ink); outline: none; }
-.how-button:is(:hover, :focus-visible) span { transform: translateX(4px); }
+.how-button:is(:hover, :focus-visible) .ui-arrow-right { transform: rotate(-90deg) translateY(4px); }
+.ui-arrow-right {
+  width: 16px;
+  height: 10px;
+  flex: 0 0 16px;
+  display: inline-block;
+  background: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCAxNiAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE0Ljk3NjYgMS4xNDA2Mkw3Ljk3NjU2IDcuMTQwNjNMMC45NzY1NjMgMS4xNDA2MiIgc3Ryb2tlPSIjMEE3REZBIiBzdHJva2Utd2lkdGg9IjMiLz4KPC9zdmc+Cg==") center / contain no-repeat;
+  transform: rotate(-90deg);
+  transition: transform 170ms ease;
+}
+.how-button--primary .ui-arrow-right,
+.path-card--primary .ui-arrow-right { filter: brightness(0) invert(1); }
 
 .workflow-composition {
   position: relative;
@@ -186,10 +200,12 @@ body.how-page {
 .workflow-card-copy strong { font-family: var(--how-display); font-size: 26px; line-height: 1; }
 .workflow-card-copy span { color: var(--how-muted); font-size: 15px; }
 .workflow-card img {
-  width: 96px;
-  height: 54px;
+  width: 102px;
+  height: 58px;
+  padding: 4px;
   border-radius: 8px;
-  object-fit: cover;
+  background: var(--how-surface-muted);
+  object-fit: contain;
 }
 .workflow-format,
 .workflow-pill,
@@ -233,14 +249,15 @@ body.how-page {
 }
 .section-heading--split h2 { max-width: 760px; margin-bottom: 0; }
 .section-heading--split > p { max-width: 490px; margin-bottom: 3px !important; }
-.path-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; }
+.path-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .path-card {
-  min-height: 210px;
+  min-height: 280px;
   display: grid;
-  grid-template-columns: 50px minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 22px;
-  padding: 32px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr;
+  align-items: start;
+  gap: 38px 24px;
+  padding: 38px 40px;
   border: 1px solid transparent;
   border-radius: 22px;
   background: var(--how-surface);
@@ -253,28 +270,15 @@ body.how-page {
 .path-card--primary :is(h3, p) { color: inherit; }
 .path-card--primary p { color: #b9c4d0; }
 .path-card:is(:hover, :focus-visible) { border-color: var(--how-blue); outline: none; }
-.path-card:is(:hover, :focus-visible) .card-arrow { transform: translateX(4px); }
-.path-number { align-self: start; color: var(--how-blue); font-size: 14px; font-weight: 700; letter-spacing: .1em; }
+.path-card > div { align-self: end; }
+.path-number { color: var(--how-blue); font-size: 15px; font-weight: 700; letter-spacing: .1em; }
 .path-card p { max-width: 520px; margin-bottom: 0; font-size: 17px; }
-.card-arrow { display: inline-block; color: var(--how-blue); font-size: 30px; line-height: 1; transition: transform 170ms ease; }
-.admin-guide {
-  min-height: 72px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 22px;
-  margin-top: 18px;
-  padding: 16px 24px;
-  border: 1px solid transparent;
-  border-radius: 16px;
-  background: var(--how-surface-muted);
-  color: var(--how-ink);
-  text-decoration: none;
-  transition: border-color 170ms ease;
+.card-arrow { align-self: start; margin-top: 3px; }
+.path-card:is(:hover, :focus-visible) .card-arrow,
+.workspace-guide-card:is(:hover, :focus-visible) .card-arrow,
+.help-links a:is(:hover, :focus-visible) .card-arrow {
+  transform: rotate(-90deg) translateY(4px);
 }
-.admin-guide:is(:hover, :focus-visible) { border-color: var(--how-blue); outline: none; }
-.admin-guide:is(:hover, :focus-visible) .card-arrow { transform: translateX(4px); }
-.admin-guide > span:first-child { color: var(--how-muted); font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
 
 .journey-section {
   width: 100%;
@@ -324,7 +328,8 @@ body.how-page {
   border-radius: 14px;
   background: #0a1119;
 }
-.journey-visual--workspace img { width: 100%; height: 150px; display: block; object-fit: cover; object-position: center 35%; }
+.journey-visual--workspace { display: grid; place-items: center; padding: 12px; }
+.journey-visual--workspace img { width: 100%; height: 150px; display: block; object-fit: contain; }
 .journey-visual--formats { display: flex; align-items: center; gap: 8px; padding: 24px; }
 .journey-visual--formats span { padding: 11px 14px; border: 1px solid #3e4b59; border-radius: 9px; color: #d9e1e8; font-size: 15px; font-weight: 700; }
 .journey-visual--content { display: grid; align-content: center; gap: 10px; padding: 24px; }
@@ -354,9 +359,8 @@ body.how-page {
 }
 .workspace-guide-card--featured { grid-row: 1 / 3; grid-template-columns: 1fr; grid-template-rows: minmax(300px, 1fr) auto; }
 .workspace-guide-card:is(:hover, :focus-visible) { border-color: var(--how-blue); outline: none; }
-.workspace-guide-card:is(:hover, :focus-visible) .card-arrow { transform: translateX(4px); }
-.workspace-guide-image { min-height: 220px; overflow: hidden; background: var(--how-surface-muted); }
-.workspace-guide-image img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.workspace-guide-image { min-height: 220px; overflow: hidden; display: grid; place-items: center; padding: 20px; background: var(--how-surface-muted); }
+.workspace-guide-image img { width: 100%; height: 100%; display: block; object-fit: contain; }
 .workspace-guide-card--featured .workspace-guide-image { min-height: 360px; }
 .workspace-guide-copy { display: flex; flex-direction: column; align-items: flex-start; padding: 28px; }
 .workspace-guide-copy > span { display: block; margin-bottom: 14px; color: var(--how-blue); font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
@@ -429,7 +433,6 @@ body.how-page {
   text-decoration: none;
 }
 .help-links a:is(:hover, :focus-visible) { outline: none; }
-.help-links a:is(:hover, :focus-visible) .card-arrow { transform: translateX(4px); }
 .help-links a > span:first-child { color: var(--how-muted); font-size: 15px; }
 .help-links strong { font-size: 17px; overflow-wrap: anywhere; }
 

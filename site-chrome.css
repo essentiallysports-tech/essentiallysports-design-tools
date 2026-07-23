@@ -952,7 +952,7 @@ html.has-dashboard-admin [data-admin-only].is-admin-visible {
   display: inline-flex !important;
 }
 
-@media (min-width: 901px) and (max-width: 1440px) {
+@media (min-width: 901px) and (max-width: 1260px) {
   .navbar {
     padding-inline: 18px !important;
   }

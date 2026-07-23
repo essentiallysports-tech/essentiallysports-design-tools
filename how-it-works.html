@@ -7,7 +7,6 @@
   <meta name="description" content="Learn how to create, review, and export brand-ready designs with FrameUp.">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20260714-deleteaccount1"></script>
-  <script src="dashboard-data.js?v=20260716-dashboard-sync1"></script>
   <script>
     window.ESAuth?.requireAuth(`how-it-works.html${window.location.search}${window.location.hash}`);
   </script>
@@ -17,9 +16,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&amp;family=Roboto+Condensed:wght@400;500;700;800;900&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
   <link rel="stylesheet" href="theme.css?v=20260714-footer1">
-  <link rel="stylesheet" href="site-chrome.css?v=20260723-profile2">
+  <link rel="stylesheet" href="site-chrome.css?v=20260723-profile3">
   <link rel="stylesheet" href="cta-hover.css?v=20260720-stroke1">
-  <link rel="stylesheet" href="how-it-works.css?v=20260723-editorial1">
+  <link rel="stylesheet" href="how-it-works.css?v=20260723-editorial2">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20260723-profile2"></script>
@@ -49,7 +48,6 @@
         </div>
       </div>
       <a href="design-request.html">Design Request</a>
-      <a href="dashboard.html" data-admin-only hidden aria-hidden="true">Dashboard</a>
       <a href="index.html#faq">FAQ</a>
     </div>
     <div class="navbar-right">
@@ -70,8 +68,8 @@
         <h1 id="how-title">From idea to finished design.</h1>
         <p class="how-lede">Choose the right workspace, add your content, review the result, and export a brand-ready file—without starting from a blank canvas.</p>
         <div class="how-actions">
-          <a class="how-button how-button--primary" href="index.html#frames">Open Design Tools <span aria-hidden="true">›</span></a>
-          <a class="how-button how-button--secondary" href="design-request.html">Request a Design <span aria-hidden="true">›</span></a>
+          <a class="how-button how-button--primary" href="index.html#frames">Open Design Tools <span class="ui-arrow-right" aria-hidden="true"></span></a>
+          <a class="how-button how-button--secondary" href="design-request.html">Request a Design <span class="ui-arrow-right" aria-hidden="true"></span></a>
         </div>
       </div>
 
@@ -122,7 +120,7 @@
             <h3>Create it yourself</h3>
             <p>Use a focused workspace with the layout, size, colors, and export format already prepared.</p>
           </div>
-          <span class="card-arrow" aria-hidden="true">›</span>
+          <span class="ui-arrow-right card-arrow" aria-hidden="true"></span>
         </a>
         <a class="path-card" href="design-request.html">
           <span class="path-number">02</span>
@@ -130,14 +128,9 @@
             <h3>Request a design</h3>
             <p>Send the design team one clear brief with its context, copy, deadline, and references.</p>
           </div>
-          <span class="card-arrow" aria-hidden="true">›</span>
+          <span class="ui-arrow-right card-arrow" aria-hidden="true"></span>
         </a>
       </div>
-      <a class="admin-guide" href="dashboard.html" data-admin-only hidden aria-hidden="true">
-        <span>Design operations</span>
-        <strong>Manage requests, ownership, and progress in Dashboard.</strong>
-        <span class="card-arrow" aria-hidden="true">›</span>
-      </a>
     </section>
 
     <section class="journey-section how-grid-texture" aria-labelledby="journey-title">
@@ -216,7 +209,7 @@
             <span>01 · Social Media</span>
             <h3>Posts, quotes, stats, and listicles.</h3>
             <ul><li>Multi-slide stories</li><li>Stats and rankings</li><li>Platform-ready exports</li></ul>
-            <strong>Open Social Media <span class="card-arrow" aria-hidden="true">›</span></strong>
+            <strong>Open Social Media <span class="ui-arrow-right card-arrow" aria-hidden="true"></span></strong>
           </div>
         </a>
         <a class="workspace-guide-card" href="index.html#youtube">
@@ -225,7 +218,7 @@
             <span>02 · YouTube Assets</span>
             <h3>Thumbnails and entity compositions.</h3>
             <ul><li>Backgrounds and entities</li><li>Approved thumbnail formats</li></ul>
-            <strong>Open YouTube Assets <span class="card-arrow" aria-hidden="true">›</span></strong>
+            <strong>Open YouTube Assets <span class="ui-arrow-right card-arrow" aria-hidden="true"></span></strong>
           </div>
         </a>
         <a class="workspace-guide-card" href="index.html#newsletter">
@@ -234,7 +227,7 @@
             <span>03 · Newsletter Assets</span>
             <h3>Headers, features, widgets, and video assets.</h3>
             <ul><li>Brand-ready treatments</li><li>Newsletter-specific sizing</li></ul>
-            <strong>Open Newsletter Assets <span class="card-arrow" aria-hidden="true">›</span></strong>
+            <strong>Open Newsletter Assets <span class="ui-arrow-right card-arrow" aria-hidden="true"></span></strong>
           </div>
         </a>
       </div>
@@ -245,7 +238,7 @@
         <p class="how-eyebrow">Design Requests</p>
         <h2 id="request-title">Build a brief the team can act on.</h2>
         <p>You do not need design language. Tell the team what the design should communicate, where it will be used, and when it is due.</p>
-        <a class="how-button how-button--primary" href="design-request.html">Start a Design Request <span aria-hidden="true">›</span></a>
+        <a class="how-button how-button--primary" href="design-request.html">Start a Design Request <span class="ui-arrow-right" aria-hidden="true"></span></a>
       </div>
       <ol class="brief-sequence" data-how-stagger>
         <li><span>01</span><div><strong>Title</strong><p>Give the request a clear, searchable name.</p></div></li>
@@ -262,14 +255,14 @@
         <h2 id="help-title">Need a rule, answer, or person?</h2>
       </div>
       <div class="help-links" data-how-stagger>
-        <a href="index.html#logo-guidelines"><span>Brand Guidelines</span><strong>Check approved visual rules</strong><span class="card-arrow" aria-hidden="true">›</span></a>
-        <a href="index.html#faq"><span>FAQ</span><strong>Find answers to common questions</strong><span class="card-arrow" aria-hidden="true">›</span></a>
-        <a href="mailto:suhail.quraishi@essentiallysports.com"><span>Contact</span><strong>suhail.quraishi@essentiallysports.com</strong><span class="card-arrow" aria-hidden="true">›</span></a>
+        <a href="index.html#logo-guidelines"><span>Brand Guidelines</span><strong>Check approved visual rules</strong><span class="ui-arrow-right card-arrow" aria-hidden="true"></span></a>
+        <a href="index.html#faq"><span>FAQ</span><strong>Find answers to common questions</strong><span class="ui-arrow-right card-arrow" aria-hidden="true"></span></a>
+        <a href="mailto:suhail.quraishi@essentiallysports.com"><span>Contact</span><strong>suhail.quraishi@essentiallysports.com</strong><span class="ui-arrow-right card-arrow" aria-hidden="true"></span></a>
       </div>
     </section>
   </main>
 
   <footer class="site-footer" aria-label="Site footer"></footer>
-  <script src="how-it-works.js?v=20260723-editorial1"></script>
+  <script src="how-it-works.js?v=20260723-editorial2"></script>
 </body>
 </html>

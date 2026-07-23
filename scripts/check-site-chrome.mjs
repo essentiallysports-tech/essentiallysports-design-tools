@@ -26,6 +26,7 @@ const footerPages = [
 
 const noFooterPages = ['dashboard.html', 'reset-password.html'];
 const sharedChromeVersion = '20260723-profile2';
+const sharedChromeCssVersion = '20260723-profile3';
 
 function read(file) {
   return fs.readFileSync(file, 'utf8');
@@ -61,7 +62,7 @@ for (const file of navbarPages) {
   assert(
     html.includes(`${prefix}site-mobile-chrome.js?v=${sharedChromeVersion}`)
       && html.includes(`${prefix}site-mobile-chrome.css?v=${sharedChromeVersion}`)
-      && html.includes(`${prefix}site-chrome.css?v=${sharedChromeVersion}`),
+      && html.includes(`${prefix}site-chrome.css?v=${sharedChromeCssVersion}`),
     `${file} has stale shared chrome assets`,
     `${file} uses the current shared chrome assets`,
   );
