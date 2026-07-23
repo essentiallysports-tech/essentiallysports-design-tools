@@ -106,14 +106,14 @@
 ):not(:disabled):not(.is-disabled):hover {
   border-color: #0A7DFA !important;
   background-color: #FFFFFF !important;
-  color: #111827 !important;
+  color: #111111 !important;
 }
 
 /* Auth CTAs use the same stroke-only rule without changing their sober palette. */
 .login-button:not(:disabled):hover,
 .auth-state-button.is-primary:not(:disabled):hover {
   border-color: #0A7DFA !important;
-  background-color: #111827 !important;
+  background-color: #111111 !important;
   color: #FFFFFF !important;
 }
 
@@ -124,7 +124,7 @@
 .auth-state-button:not(.is-primary):not(:disabled):hover {
   border-color: #0A7DFA !important;
   background-color: #FFFFFF !important;
-  color: #111827 !important;
+  color: #111111 !important;
 }
 
 .danger-btn:not(:disabled):hover {
@@ -174,13 +174,13 @@ html[data-theme="dark"] :where(
   .mobile-menu-account-action
 ):not(:disabled):not(.is-disabled):hover {
   border-color: #8CB9E8 !important;
-  background-color: var(--theme-dark-surface-raised, #181E25) !important;
+  background-color: var(--theme-dark-surface-raised, #1A1A1A) !important;
   color: var(--theme-dark-text, #F3F5F7) !important;
 }
 
 html[data-theme="dark"] .danger-btn:not(:disabled):hover {
   border-color: #E9878E !important;
-  background-color: var(--theme-dark-surface-raised, #181E25) !important;
+  background-color: var(--theme-dark-surface-raised, #1A1A1A) !important;
   color: #F5A0A6 !important;
 }
 

@@ -7,7 +7,7 @@
 }
 
 body.profile-page {
-  --profile-ink: #111827;
+  --profile-ink: #111111;
   --profile-muted: #667085;
   --profile-line: #E2E6EC;
   --profile-surface: #FFFFFF;
@@ -287,10 +287,10 @@ body.profile-page {
 
 html[data-theme="dark"] body.profile-page {
   --profile-ink: #F5F7FA;
-  --profile-muted: #AAB3C2;
-  --profile-line: #303A47;
-  --profile-surface: #151A20;
-  --profile-canvas: #0C0F12;
+  --profile-muted: #B6B6B6;
+  --profile-line: #3A3A3A;
+  --profile-surface: #151515;
+  --profile-canvas: #0C0C0C;
 }
 
 html[data-theme="dark"] .profile-page .account-main {
@@ -303,14 +303,14 @@ html[data-theme="dark"] .profile-page .field input,
 html[data-theme="dark"] .profile-page .field select,
 html[data-theme="dark"] .profile-page .field textarea {
   border-color: var(--profile-line);
-  background: #191F27;
+  background: #191919;
   color: var(--profile-ink);
 }
 
 html[data-theme="dark"] .profile-page .profile-back-link:hover,
 html[data-theme="dark"] .profile-page .avatar-upload-label:hover {
-  border-color: #465364;
-  background: #1E252E;
+  border-color: #4A4A4A;
+  background: #222222;
 }
 
 @media (max-width: 900px) {

@@ -3,15 +3,15 @@
    coherent without affecting the generated design canvas or exported artwork. */
 
 :root {
-  --theme-dark-base: #080A0C;
-  --theme-dark-surface: #11151A;
-  --theme-dark-surface-raised: #181E25;
-  --theme-dark-surface-hover: #202731;
-  --theme-dark-border: #2A333D;
-  --theme-dark-border-strong: #3A4653;
+  --theme-dark-base: #080808;
+  --theme-dark-surface: #121212;
+  --theme-dark-surface-raised: #1A1A1A;
+  --theme-dark-surface-hover: #232323;
+  --theme-dark-border: #303030;
+  --theme-dark-border-strong: #444444;
   --theme-dark-text: #F3F5F7;
-  --theme-dark-text-muted: #AAB5C2;
-  --theme-dark-text-subtle: #7F8B99;
+  --theme-dark-text-muted: #B6B6B6;
+  --theme-dark-text-subtle: #8F8F8F;
   --theme-dark-accent: #2586F7;
   --theme-dark-accent-soft: rgba(37, 134, 247, .17);
 }
@@ -57,7 +57,7 @@
 
 .theme-switch svg { width: 14px; height: 14px; display: block; }
 .theme-switch-sun { width: 16px; height: 16px; display: grid; place-items: center; margin-left: 2px; color: #667085; }
-.theme-switch-thumb { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: #0C0F12; color: #fff; transform: translateX(0); transition: transform .24s cubic-bezier(.2,.9,.2,1), background-color .22s ease, color .22s ease; }
+.theme-switch-thumb { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: #111111; color: #fff; transform: translateX(0); transition: transform .24s cubic-bezier(.2,.9,.2,1), background-color .22s ease, color .22s ease; }
 
 html[data-theme="dark"] .theme-switch {
   border-color: #3B4856;
@@ -67,7 +67,7 @@ html[data-theme="dark"] .theme-switch {
 }
 
 html[data-theme="dark"] .theme-switch-sun { color: #7F8B99; }
-html[data-theme="dark"] .theme-switch-thumb { background: #EAF2FF; color: #0C0F12; transform: translateX(-22px); }
+html[data-theme="dark"] .theme-switch-thumb { background: #F2F2F2; color: #111111; transform: translateX(-22px); }
 
 html[data-theme="dark"],
 html[data-theme="dark"] body {
@@ -137,7 +137,7 @@ html[data-theme="dark"] :is(.site-footer a, .site-footer h2, .site-footer h3) {
 
 html[data-theme="dark"] .person-avatar,
 html[data-theme="dark"] .live-avatar {
-  background: #26313D !important;
+  background: #292929 !important;
   color: #fff !important;
 }
 
@@ -510,7 +510,7 @@ html[data-theme="dark"] body.dashboard-page .role-choice.is-server-owner .dashbo
   border: 0 !important;
   border-radius: 10px !important;
   background: transparent !important;
-  color: #111827 !important;
+  color: #111111 !important;
   font-family: "Roboto Condensed", "Roboto", Arial, sans-serif !important;
   font-size: 14px !important;
   font-weight: 500 !important;
@@ -559,7 +559,7 @@ html[data-theme="dark"] body.dashboard-page .role-choice.is-server-owner .dashbo
    explicitly so theme inheritance can never wash it out. */
 .profile-dropdown .profile-theme-option,
 .profile-dropdown .profile-theme-label {
-  color: #111827 !important;
+  color: #111111 !important;
   opacity: 1 !important;
 }
 
@@ -569,7 +569,7 @@ html[data-theme="dark"] .profile-theme-option {
 
 html[data-theme="dark"] .profile-dropdown .profile-theme-option,
 html[data-theme="dark"] .profile-dropdown .profile-theme-label {
-  color: #111827 !important;
+  color: #111111 !important;
 }
 
 html[data-theme="dark"] .profile-theme-icon {
@@ -607,7 +607,7 @@ body[data-current-page="faq"] .faq-contact {
 
 body[data-current-page="faq"] .faq-contact h2 {
   margin: 0 0 6px;
-  color: #111827;
+  color: #111111;
   font-family: var(--font-display);
   font-size: 24px;
   line-height: 1;
@@ -633,8 +633,8 @@ html[data-theme="dark"] body[data-current-page="faq"] .faq-contact a { color: #6
    is applied. The tint stays restrained, while the greeting carries the
    clearer semantic color. */
 html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-morning {
-  background: linear-gradient(135deg, #111B28 0%, #0F1924 100%) !important;
-  border-color: #29445E !important;
+  background: linear-gradient(135deg, #171717 0%, #101010 100%) !important;
+  border-color: #353535 !important;
 }
 
 html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-afternoon {
@@ -643,8 +643,8 @@ html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-afternoon {
 }
 
 html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-evening {
-  background: linear-gradient(135deg, #1B1628 0%, #14111F 100%) !important;
-  border-color: #40365A !important;
+  background: linear-gradient(135deg, #171717 0%, #101010 100%) !important;
+  border-color: #353535 !important;
 }
 
 html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-morning .welcome-kicker { color: #69AEFF !important; }
@@ -746,7 +746,7 @@ html[data-theme="dark"][data-studio-shell="on"] .panel .swipe-button-control .qu
 }
 
 html[data-theme="dark"][data-studio-shell="on"] .canvas-bottom-actions {
-  background: #0E1318 !important;
+  background: #101010 !important;
   border-color: var(--theme-dark-border-strong) !important;
   box-shadow: none !important;
 }
