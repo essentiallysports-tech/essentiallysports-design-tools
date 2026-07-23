@@ -5,6 +5,7 @@ import fs from 'node:fs';
 const navbarPages = [
   'index.html',
   'design-request.html',
+  'how-it-works.html',
   'dashboard.html',
   'ai-page/index.html',
   'ai-page/profile.html',
@@ -15,6 +16,7 @@ const navbarPages = [
 const footerPages = [
   'index.html',
   'design-request.html',
+  'how-it-works.html',
   'login.html',
   'ai-page/index.html',
   'ai-page/profile.html',
@@ -67,6 +69,22 @@ for (const file of navbarPages) {
   assert(html.includes('class="navbar-logo"'), `${file} has no navbar logo`, `${file} has a navbar logo`);
   assert(html.includes('class="navbar-menu"'), `${file} has no navbar menu`, `${file} has a navbar menu`);
   assert(html.includes('class="navbar-right"'), `${file} has no navbar utilities`, `${file} has navbar utilities`);
+  const howItWorksHref = file.startsWith('ai-page/') ? '../how-it-works.html' : 'how-it-works.html';
+  assert(
+    html.includes('>Resources</a>') && html.includes('aria-label="Resources"'),
+    `${file} is missing the unified Resources dropdown`,
+    `${file} includes the unified Resources dropdown`,
+  );
+  assert(
+    new RegExp(`href="${howItWorksHref.replace('.', '\\.')}"[^>]*>How It Works</a>`).test(html),
+    `${file} is missing the How It Works navigation item`,
+    `${file} includes the How It Works navigation item`,
+  );
+  assert(
+    !/<a[^>]*class="[^"]*\bnav-trigger\b[^"]*"[^>]*>\s*Brand Guidelines\s*<\/a>/.test(html),
+    `${file} still has Brand Guidelines as an independent navigation trigger`,
+    `${file} keeps brand guidance inside Resources`,
+  );
   const profileMounts = (html.match(/<div class="profile-menu" id="profile-menu"><\/div>/g) || []).length;
   assert(profileMounts === 1, `${file} does not have exactly one lightweight profile mount`, `${file} has one lightweight profile mount`);
   assert(
@@ -119,6 +137,37 @@ assert(
     && !index.includes('id="frame-logo-guidelines-card"'),
   'Homepage still renders the removed guideline card section',
   'Homepage guideline card section remains removed',
+);
+
+const howItWorks = read('how-it-works.html');
+for (const anchor of ['overview', 'create', 'workspaces', 'request', 'help']) {
+  assert(
+    howItWorks.includes(`id="${anchor}"`),
+    `How It Works is missing the #${anchor} section anchor`,
+    `How It Works includes the #${anchor} section anchor`,
+  );
+}
+assert(
+  howItWorks.includes('requireAuth(`how-it-works.html')
+    && howItWorks.includes('workspace-card-social-media.webp')
+    && howItWorks.includes('workspace-card-youtube-thumbnail.webp')
+    && howItWorks.includes('workspace-card-newsletter-assets.webp'),
+  'How It Works is missing its auth guard or real workspace imagery',
+  'How It Works uses the auth guard and real workspace imagery',
+);
+assert(
+  howItWorks.includes('data-workflow')
+    && howItWorks.includes('data-journey')
+    && howItWorks.includes('aria-current="step"')
+    && howItWorks.includes('how-it-works.js'),
+  'How It Works is missing the editorial workflow, sticky journey, or motion layer',
+  'How It Works includes the editorial workflow, sticky journey, and motion layer',
+);
+assert(
+  howItWorks.includes('class="profile-menu" id="profile-menu"')
+    && howItWorks.includes('<footer class="site-footer"'),
+  'How It Works is not using the shared profile mount and footer',
+  'How It Works uses the shared profile mount and footer',
 );
 assert(
   /'section-header':\s*\{[\s\S]*?workspace:\s*\{\s*width:\s*640,\s*height:\s*47,/.test(index),
