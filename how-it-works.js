@@ -3,6 +3,7 @@
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const revealTargets = [...document.querySelectorAll('[data-how-reveal], [data-how-stagger]')];
+  const headerOffset = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--site-header-height')) || 72;
 
   if (reducedMotion.matches || !('IntersectionObserver' in window)) {
     revealTargets.forEach(element => element.classList.add('is-visible'));
@@ -16,6 +17,75 @@
     }, { threshold: 0.14, rootMargin: '0px 0px -5% 0px' });
     revealTargets.forEach(element => revealObserver.observe(element));
   }
+
+  const heroScrub = document.querySelector('[data-hero-scrub]');
+  const heroFrameImage = heroScrub?.querySelector('[data-hero-frame]');
+  const heroFrameCount = Math.max(1, Number(heroScrub?.dataset.heroFrames || 1));
+  const heroFramePath = index => `assets/how-hero-bg-frames/frame-${String(index).padStart(3, '0')}.webp`;
+  let heroRenderedFrame = 0;
+  let heroFrame = 0;
+
+  const heroScrollProgress = () => {
+    if (!heroScrub) return 0;
+    const rect = heroScrub.getBoundingClientRect();
+    const range = Math.max(1, heroScrub.offsetHeight - window.innerHeight);
+    return Math.min(1, Math.max(0, -rect.top / range));
+  };
+
+  const renderHeroFrame = () => {
+    heroFrame = 0;
+    if (!heroFrameImage || reducedMotion.matches) return;
+    const nextFrame = Math.min(heroFrameCount - 1, Math.max(0, Math.round(heroScrollProgress() * (heroFrameCount - 1))));
+    if (nextFrame !== heroRenderedFrame) {
+      heroRenderedFrame = nextFrame;
+      heroFrameImage.src = heroFramePath(nextFrame);
+    }
+  };
+
+  const updateHeroFrame = () => {
+    if (!heroFrameImage || !heroScrub) return;
+    if (!heroFrame) heroFrame = window.requestAnimationFrame(renderHeroFrame);
+  };
+
+  if (heroFrameImage) {
+    for (let index = 1; index < heroFrameCount; index += 1) {
+      const preload = new Image();
+      preload.src = heroFramePath(index);
+    }
+  }
+
+  const smoothScrollTo = targetY => {
+    if (reducedMotion.matches) {
+      window.scrollTo(0, targetY);
+      return;
+    }
+    const startY = window.scrollY;
+    const distance = targetY - startY;
+    const duration = 660;
+    const startedAt = performance.now();
+    const ease = progress => progress < .5
+      ? 4 * progress * progress * progress
+      : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+    const step = now => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      window.scrollTo(0, startY + distance * ease(progress));
+      if (progress < 1) window.requestAnimationFrame(step);
+    };
+    window.requestAnimationFrame(step);
+  };
+
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a[href]');
+    if (!link) return;
+    const url = new URL(link.href, window.location.href);
+    if (url.origin !== window.location.origin || url.pathname !== window.location.pathname || !url.hash) return;
+    const target = document.querySelector(url.hash);
+    if (!target) return;
+    event.preventDefault();
+    smoothScrollTo(Math.max(0, target.getBoundingClientRect().top + window.scrollY - headerOffset() * 1.1));
+    window.history.pushState(null, '', url.hash);
+  });
 
   const workflow = document.querySelector('[data-workflow]');
   const workflowCards = workflow ? [...workflow.querySelectorAll('[data-workflow-step]')] : [];
@@ -59,6 +129,51 @@
   reducedMotion.addEventListener?.('change', startWorkflowTimer);
   setWorkflowStep(0);
   startWorkflowTimer();
+
+  const scrollLinesSection = document.querySelector('[data-scroll-lines]');
+  const scrollLines = scrollLinesSection ? [...scrollLinesSection.querySelectorAll('.frameup-intro__line')] : [];
+  let scrollLinesFrame = 0;
+
+  const updateScrollLines = () => {
+    scrollLinesFrame = 0;
+    if (!scrollLinesSection || !scrollLines.length) return;
+
+    if (reducedMotion.matches) {
+      scrollLines.forEach(line => {
+        line.style.setProperty('--line-progress', '100%');
+        line.style.setProperty('--cursor-opacity', '0');
+      });
+      return;
+    }
+
+    const rect = scrollLinesSection.getBoundingClientRect();
+    const range = Math.max(1, scrollLinesSection.offsetHeight - window.innerHeight);
+    const totalProgress = Math.min(1, Math.max(0, -rect.top / range));
+    const segment = 1 / scrollLines.length;
+
+    scrollLines.forEach((line, index) => {
+      const start = index * segment;
+      const localProgress = Math.min(1, Math.max(0, (totalProgress - start) / segment));
+      const percent = `${Math.round(localProgress * 1000) / 10}%`;
+      const cursorVisible = localProgress > 0 && localProgress < 1 ? '1' : '0';
+      line.style.setProperty('--line-progress', percent);
+      line.style.setProperty('--cursor-opacity', cursorVisible);
+    });
+  };
+
+  const queueScrollLines = () => {
+    if (scrollLinesFrame) return;
+    scrollLinesFrame = window.requestAnimationFrame(updateScrollLines);
+  };
+
+  window.addEventListener('scroll', queueScrollLines, { passive: true });
+  window.addEventListener('scroll', updateHeroFrame, { passive: true });
+  window.addEventListener('resize', queueScrollLines);
+  window.addEventListener('resize', updateHeroFrame);
+  reducedMotion.addEventListener?.('change', updateScrollLines);
+  reducedMotion.addEventListener?.('change', updateHeroFrame);
+  updateScrollLines();
+  updateHeroFrame();
 
   const creationFlow = document.querySelector('[data-creation-flow]');
   if (creationFlow) {
