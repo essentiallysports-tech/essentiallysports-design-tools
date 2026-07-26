@@ -141,31 +141,34 @@ assert(
 );
 
 const howItWorks = read('how-it-works.html');
+for (const anchor of ['overview', 'create', 'workspaces', 'request', 'help']) {
+  assert(
+    howItWorks.includes(`id="${anchor}"`),
+    `How It Works is missing the #${anchor} section anchor`,
+    `How It Works includes the #${anchor} section anchor`,
+  );
+}
 assert(
-  howItWorks.includes('id="create"')
-    && !['overview', 'workspaces', 'request', 'help'].some((anchor) => howItWorks.includes(`id="${anchor}"`)),
-  'How It Works does not contain only the creation-flow section',
-  'How It Works contains only the creation-flow section',
+  howItWorks.includes('requireAuth(`how-it-works.html')
+    && howItWorks.includes('workspace-card-social-media.webp')
+    && howItWorks.includes('workspace-card-youtube-thumbnail.webp')
+    && howItWorks.includes('workspace-card-newsletter-assets.webp'),
+  'How It Works is missing its auth guard or real workspace imagery',
+  'How It Works uses the auth guard and real workspace imagery',
 );
 assert(
-  howItWorks.includes('requireAuth(`how-it-works.html'),
-  'How It Works is missing its authentication guard',
-  'How It Works retains its authentication guard',
-);
-assert(
-  howItWorks.includes('data-journey')
+  howItWorks.includes('data-workflow')
+    && howItWorks.includes('data-creation-flow')
+    && (howItWorks.match(/data-creation-step=/g) || []).length === 5
+    && howItWorks.includes('how-step-choose.webp')
+    && howItWorks.includes('how-step-format.webp')
+    && howItWorks.includes('how-step-content.webp')
+    && howItWorks.includes('how-step-review.webp')
+    && howItWorks.includes('how-step-export.webp')
     && howItWorks.includes('aria-current="step"')
-    && (howItWorks.match(/data-journey-step=/g) || []).length === 5
-    && [
-      'how-step-choose.webp',
-      'how-step-format.webp',
-      'how-step-content.webp',
-      'how-step-review.webp',
-      'how-step-export.webp',
-    ].every((asset) => howItWorks.includes(asset))
     && howItWorks.includes('how-it-works.js'),
-  'How It Works is missing its five-step creation flow or real step imagery',
-  'How It Works includes the five-step creation flow and real step imagery',
+  'How It Works is missing the full page workflow, five-step creation flow, or motion layer',
+  'How It Works includes the full page workflow, five-step creation flow, and motion layer',
 );
 assert(
   howItWorks.includes('class="profile-menu" id="profile-menu"')
@@ -179,18 +182,17 @@ assert(
   'How It Works does not expose Dashboard access',
 );
 assert(
-  !howItWorks.includes('data-workflow')
-    && !howItWorks.includes('workspace-guide')
-    && !howItWorks.includes('request-journey')
-    && !howItWorks.includes('help-grid'),
-  'How It Works still contains a removed legacy section',
-  'How It Works legacy sections remain removed',
+  (howItWorks.match(/class="ui-arrow-right/g) || []).length >= 8
+    && !/[→➜➝]/.test(howItWorks),
+  'How It Works uses a non-standard CTA chevron',
+  'How It Works uses the shared FrameUp chevrons',
 );
 const howItWorksCss = read('how-it-works.css');
 assert(
-  /\.journey-preview img\s*\{[\s\S]*?object-fit:\s*contain;/.test(howItWorksCss),
-  'How It Works creation-flow imagery can still be cropped',
-  'How It Works keeps creation-flow imagery contain-safe',
+  /\.workspace-guide-image img\s*\{[\s\S]*?object-fit:\s*contain;/.test(howItWorksCss)
+    && /\.journey-visual--workspace img\s*\{[\s\S]*?object-fit:\s*contain;/.test(howItWorksCss),
+  'How It Works workspace imagery can still be cropped',
+  'How It Works keeps workspace imagery contain-safe',
 );
 assert(
   /'section-header':\s*\{[\s\S]*?workspace:\s*\{\s*width:\s*640,\s*height:\s*47,/.test(index),
