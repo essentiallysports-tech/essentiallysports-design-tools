@@ -129,7 +129,7 @@ body.how-page {
   align-content: center;
   gap: 22px;
   text-align: center;
-  transform: translateY(-7vh);
+  transform: translateY(-19vh);
 }
 .how-hero-kicker {
   margin: 0;
@@ -1018,7 +1018,7 @@ html[data-theme="dark"] .journey-section { background-color: #050505; }
   .how-page h2 { font-size: 40px; }
   .how-page h3 { font-size: 26px; }
   .how-page p { font-size: 17px; }
-  .how-hero-copy { padding-inline: 24px; transform: translateY(-5vh); }
+  .how-hero-copy { padding-inline: 24px; transform: translateY(-13vh); }
   .frameup-intro { height: 220vh; }
   .how-page .frameup-intro__line { font-size: clamp(35px, 11.5vw, 48px); }
   .how-actions { display: grid; }
