@@ -21,7 +21,8 @@
   const heroScrub = document.querySelector('[data-hero-scrub]');
   const heroFrameImage = heroScrub?.querySelector('[data-hero-frame]');
   const heroFrameCount = Math.max(1, Number(heroScrub?.dataset.heroFrames || 1));
-  const heroFramePath = index => `assets/how-hero-bg-frames/frame-${String(index).padStart(3, '0')}.webp`;
+  const heroFrameVersion = 'getty-slow-20260726';
+  const heroFramePath = index => `assets/how-hero-bg-frames/frame-${String(index).padStart(3, '0')}.webp?v=${heroFrameVersion}`;
   let heroRenderedFrame = 0;
   let heroFrame = 0;
 
