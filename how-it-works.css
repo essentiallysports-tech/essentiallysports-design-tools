@@ -101,7 +101,6 @@ body.how-page {
   align-content: center;
   gap: 22px;
   text-align: center;
-  transform: translateY(-15vh);
 }
 .how-hero-kicker {
   margin: 0;
@@ -948,7 +947,7 @@ html[data-theme="dark"] .journey-section { background-color: #050505; }
 }
 @media (max-width: 860px) {
   .how-section { width: min(100% - 32px, 720px); }
-  .how-hero { min-height: 182svh; }
+  .how-hero { min-height: calc(100svh - var(--site-header-height, 72px)); }
   .how-hero-copy { padding-inline: 38px; }
   .frameup-intro__sticky { width: min(100% - 32px, 720px); }
   .workflow-composition { min-height: 0; }
@@ -990,7 +989,7 @@ html[data-theme="dark"] .journey-section { background-color: #050505; }
   .how-page h2 { font-size: 40px; }
   .how-page h3 { font-size: 26px; }
   .how-page p { font-size: 17px; }
-  .how-hero-copy { padding-inline: 24px; transform: translateY(-10vh); }
+  .how-hero-copy { padding-inline: 24px; }
   .frameup-intro { height: 220vh; }
   .how-page .frameup-intro__line { font-size: clamp(35px, 11.5vw, 48px); }
   .how-actions { display: grid; }
