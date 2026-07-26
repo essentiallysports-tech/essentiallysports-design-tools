@@ -18,43 +18,6 @@
     revealTargets.forEach(element => revealObserver.observe(element));
   }
 
-  const heroScrub = document.querySelector('[data-hero-scrub]');
-  const heroFrameImage = heroScrub?.querySelector('[data-hero-frame]');
-  const heroFrameCount = Math.max(1, Number(heroScrub?.dataset.heroFrames || 1));
-  const heroFrameVersion = 'getty-slow-20260726';
-  const heroFramePath = index => `assets/how-hero-bg-frames/frame-${String(index).padStart(3, '0')}.webp?v=${heroFrameVersion}`;
-  let heroRenderedFrame = 0;
-  let heroFrame = 0;
-
-  const heroScrollProgress = () => {
-    if (!heroScrub) return 0;
-    const rect = heroScrub.getBoundingClientRect();
-    const range = Math.max(1, heroScrub.offsetHeight - window.innerHeight);
-    return Math.min(1, Math.max(0, -rect.top / range));
-  };
-
-  const renderHeroFrame = () => {
-    heroFrame = 0;
-    if (!heroFrameImage || reducedMotion.matches) return;
-    const nextFrame = Math.min(heroFrameCount - 1, Math.max(0, Math.round(heroScrollProgress() * (heroFrameCount - 1))));
-    if (nextFrame !== heroRenderedFrame) {
-      heroRenderedFrame = nextFrame;
-      heroFrameImage.src = heroFramePath(nextFrame);
-    }
-  };
-
-  const updateHeroFrame = () => {
-    if (!heroFrameImage || !heroScrub) return;
-    if (!heroFrame) heroFrame = window.requestAnimationFrame(renderHeroFrame);
-  };
-
-  if (heroFrameImage) {
-    for (let index = 1; index < heroFrameCount; index += 1) {
-      const preload = new Image();
-      preload.src = heroFramePath(index);
-    }
-  }
-
   const smoothScrollTo = targetY => {
     if (reducedMotion.matches) {
       window.scrollTo(0, targetY);
@@ -168,13 +131,9 @@
   };
 
   window.addEventListener('scroll', queueScrollLines, { passive: true });
-  window.addEventListener('scroll', updateHeroFrame, { passive: true });
   window.addEventListener('resize', queueScrollLines);
-  window.addEventListener('resize', updateHeroFrame);
   reducedMotion.addEventListener?.('change', updateScrollLines);
-  reducedMotion.addEventListener?.('change', updateHeroFrame);
   updateScrollLines();
-  updateHeroFrame();
 
   const creationFlow = document.querySelector('[data-creation-flow]');
   if (creationFlow) {
