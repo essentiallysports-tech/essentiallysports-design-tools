@@ -105,6 +105,40 @@ body.how-page {
   padding: clamp(96px, 12vh, 168px) 0 clamp(88px, 11vh, 152px);
   background: var(--how-surface);
 }
+/* Photographic hero: dark art background with a scrim so the copy stays
+   legible, fading to --how-hero-art-tone at the bottom so it hands off
+   seamlessly into the logo strip below (no visible seam between sections). */
+.how-hero--art {
+  --how-hero-art-tone: #05070d;
+  background: var(--how-hero-art-tone);
+}
+.how-hero--art .how-hero-stage {
+  /* Fills the viewport below the header, leaving room for the ticker strip's
+     own height so hero + ticker together always cover exactly the first
+     screenful — the ticker sits in view on load, and no white from the
+     section below shows before the visitor scrolls, on any resolution. */
+  min-height: calc(100svh - var(--site-header-height, 72px) - 64px);
+  background-image:
+    linear-gradient(180deg, rgba(5, 7, 13, .25) 0%, rgba(5, 7, 13, .58) 62%, var(--how-hero-art-tone) 100%),
+    url("assets/how-it-works/how-hero-bg.jpg");
+  background-size: cover;
+  background-position: center 38%;
+  background-repeat: no-repeat;
+  animation: how-hero-breathe 4.8s ease-in-out infinite;
+}
+/* Slow breathing glow: only brightness/saturation move, so it's the existing
+   blue dots quietly pulsing brighter, like the art is "activated" — not a
+   sweeping overlay effect. */
+@keyframes how-hero-breathe {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50% { filter: brightness(1.28) saturate(1.65); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .how-hero--art .how-hero-stage { animation: none; }
+}
+.how-hero--art .how-hero-kicker { color: #fff !important; }
+.how-hero--art h1 { color: #fff !important; }
+.how-hero--art .how-hero-subtitle { color: rgba(255, 255, 255, .74) !important; }
 .how-hero-copy {
   width: min(100%, var(--how-measure-hero));
   margin: 0 auto;
@@ -225,6 +259,65 @@ body.how-page {
   transition: transform 170ms ease;
 }
 .how-button--primary .ui-arrow-right { filter: brightness(0) invert(1); }
+/* Scoped to the hero's "Learn More" scroll-cue: smaller, points down to match
+   the scroll-to-next-section action instead of the shared right-pointing arrow. */
+.ui-arrow-right.how-arrow--down {
+  width: 12px;
+  height: 8px;
+  flex: 0 0 12px;
+  transform: rotate(0deg);
+}
+.how-button:is(:hover, :focus-visible) .ui-arrow-right.how-arrow--down { transform: translateY(3px); }
+
+/* Continues the hero's dark tone as a running strip of newsletter/ES marks.
+   left/width/margin-left breaks the strip out of any ancestor's max-width or
+   padding so it always spans the full viewport edge-to-edge, regardless of
+   where in the page (or at what resolution) it sits. */
+.how-brand-strip {
+  position: relative;
+  left: 50%;
+  width: 100vw;
+  margin-left: -50vw;
+  overflow: hidden;
+  background: #05070d;
+  padding: clamp(16px, 2.4vw, 26px) 0;
+}
+.how-brand-strip__track {
+  display: flex;
+  width: max-content;
+  animation: how-brand-scroll 26s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .how-brand-strip__track { animation: none; }
+}
+.how-brand-strip__group {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: clamp(24px, 3.2vw, 48px);
+  padding-right: clamp(24px, 3.2vw, 48px);
+}
+.how-brand-strip__logo {
+  height: clamp(12px, 1.3vw, 15px);
+  width: auto;
+  opacity: .85;
+}
+.how-brand-strip__logo--es { height: clamp(12px, 1.3vw, 15px); }
+.how-brand-strip__chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: clamp(12px, 1.3vw, 15px);
+}
+.how-brand-strip__chip img {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+@keyframes how-brand-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
 
 .frameup-intro {
   height: 240vh;
@@ -274,7 +367,7 @@ body.how-page {
 
 .how-page .frameup-intro__credit {
   display: grid;
-  gap: 0;
+  gap: 3px;
   margin: 28px 0 0;
   color: var(--how-ink) !important;
   font-size: 16px !important;

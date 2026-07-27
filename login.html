@@ -1252,7 +1252,11 @@
           name: '',
           email,
           password,
-          redirectTo: getRedirectTarget(),
+          // New accounts land on the How It Works walkthrough the first time
+          // they confirm their email, not the homepage; every login after
+          // that first landing goes through the normal getRedirectTarget()
+          // path (index.html by default).
+          redirectTo: 'how-it-works.html',
         });
         passwordInput.value = '';
         button.disabled = false;
