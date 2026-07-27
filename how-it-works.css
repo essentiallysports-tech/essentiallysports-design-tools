@@ -27,6 +27,11 @@
   --how-space-section: clamp(76px, 7vw, 104px);
   --how-space-heading: 48px;
   --how-space-gap: 18px;
+
+  /* Type scale inside the brief mock-up panels. */
+  --brief-meta: 12px;
+  --brief-body: 13px;
+  --brief-value: 16px;
 }
 
 * { box-sizing: border-box; }
@@ -576,11 +581,24 @@ body.how-page {
   top: var(--site-header-height, 72px);
   height: calc(100vh - var(--site-header-height, 72px));
   display: grid;
-  grid-template-rows: auto 2px minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 28px;
   overflow: hidden;
   padding: 54px max(32px, calc((100% - 1280px) / 2));
 }
+.request-progress-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+}
+.request-step-count {
+  margin: 0;
+  color: var(--how-muted);
+  font-size: 13px;
+  letter-spacing: .06em;
+}
+.request-step-count b { color: var(--how-ink); }
 .request-copy {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -599,9 +617,30 @@ body.how-page {
   transform: scaleX(0);
   transform-origin: left;
 }
-.request-journey-window { min-width: 0; overflow: hidden; }
+/* Centre the track in the tall row rather than letting it fill the row.
+   Without this the card height tracks monitor height and the mock-UI panel
+   swallows the slack: 232px at 768p but 540px at 1080p, for 67px of content. */
+.request-journey-window {
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  /* Soften both edges of the carousel: cards are clipped on the right at rest
+     and on the left once it starts moving. Px-based so the fade is a constant
+     softness rather than scaling with the window. The left edge is narrower
+     on purpose — at rest card 01 sits flush there, and a wide fade would eat
+     its step number. Disabled below 860px, where nothing is clipped. */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 26px, #000 calc(100% - 130px), transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0, #000 26px, #000 calc(100% - 130px), transparent 100%);
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+}
 .brief-sequence {
-  height: 100%;
+  /* Bounded, not 100%. Cards still stretch to the track so all five stay
+     equal height; self-sizing them instead would leave a ragged row. */
+  height: clamp(344px, 40vh, 372px);
   width: max-content;
   display: flex;
   gap: 20px;
@@ -614,7 +653,10 @@ body.how-page {
   width: min(460px, 38vw);
   min-height: 250px;
   display: grid;
-  grid-template-rows: auto 1fr;
+  /* auto, not 1fr: the panel sizes to its own content instead of swallowing
+     the card's spare height. Any slack becomes breathing room between the
+     heading and the panel rather than an empty grey box. */
+  grid-template-rows: auto auto;
   gap: 24px;
   align-content: space-between;
   padding: 26px;
@@ -642,46 +684,105 @@ body.how-page {
 .brief-card-heading strong { display: block; margin-bottom: 6px; font-family: var(--how-display); font-size: 30px; line-height: 1; }
 .brief-card-heading p { max-width: 350px; margin: 0; font-size: 16px; line-height: 1.45; }
 .brief-ui-snap {
-  min-height: 104px;
+  min-height: 200px;
   display: grid;
   align-content: center;
-  gap: 8px;
+  gap: 10px;
   padding: 18px;
   border: 1px solid var(--how-line);
   border-radius: var(--how-radius-md);
   background: var(--how-surface-muted);
 }
+/* --- Brief mock-up internals -------------------------------------------
+   One type scale (--brief-meta / --brief-body / --brief-value), one inner
+   box treatment (11px side padding, --how-radius-sm, surface fill) and one
+   gap rhythm, so all five panels agree instead of mixing 11/12/13/14/18/25px
+   and three different paddings. All five are light surfaces. */
 .brief-ui-label {
   color: var(--how-muted);
-  font-size: 12px;
+  font-size: var(--brief-meta);
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
-.brief-ui-snap strong { font-family: var(--how-body); font-size: 18px; line-height: 1.2; }
-.brief-ui-snap small { color: var(--how-muted); font-size: 13px; }
+.brief-ui-snap strong { color: var(--how-ink); font-family: var(--how-body); font-size: var(--brief-value); line-height: 1.25; }
+.brief-ui-snap small { color: var(--how-muted); font-size: var(--brief-body); line-height: 1.4; }
+.brief-ui-snap em { font-size: var(--brief-meta); font-style: normal; }
 .brief-ui-snap--title small { display: flex; gap: 7px; align-items: center; }
 .brief-ui-snap--title small i { width: 7px; height: 7px; border-radius: 50%; background: #25a55f; }
-.brief-ui-snap--entities > div,
-.brief-ui-snap--references > div { display: flex; flex-wrap: wrap; gap: 7px; }
-.brief-ui-snap--entities b,
-.brief-ui-snap--references b {
-  padding: 7px 9px;
+.brief-ui-snap--copy strong {
+  font-family: var(--how-display);
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+/* Inner boxes: field, chip and file row share padding, radius and fill. */
+.brief-field,
+.brief-chips b,
+.brief-files > span {
   border: 1px solid var(--how-line);
   border-radius: var(--how-radius-sm);
   background: var(--how-surface);
-  font-size: 13px;
-  font-weight: 600;
 }
-.brief-ui-snap--entities b.is-add { color: var(--how-blue); }
-.brief-ui-snap--copy { background: #111111; }
-.brief-ui-snap--copy .brief-ui-label,
-.brief-ui-snap--copy small { color: #b8b8b8; }
-.brief-ui-snap--copy strong { color: #ffffff; font-family: var(--how-display); font-size: 25px; letter-spacing: .02em; }
-.brief-ui-snap--deadline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.brief-ui-snap--deadline > div { display: grid; gap: 6px; }
-.brief-ui-snap--deadline span { color: var(--how-muted); font-size: 12px; }
-.brief-ui-snap--deadline strong { font-size: 14px; }
+.brief-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 10px 11px;
+}
+.brief-field span { color: var(--how-muted); font-size: var(--brief-body); line-height: 1.4; }
+.brief-field--notes { min-height: 60px; align-items: flex-start; }
+.brief-caret { width: 2px; height: var(--brief-value); margin-left: auto; background: var(--how-blue); }
+.brief-field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.brief-field-row em { color: var(--how-muted); letter-spacing: .04em; }
+
+.brief-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.brief-chips b { padding: 8px 11px; font-size: var(--brief-body); font-weight: 600; }
+.brief-chips b.is-add { color: var(--how-blue); }
+
+.brief-files { display: grid; gap: 8px; }
+.brief-files > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 11px;
+}
+.brief-files b { font-size: var(--brief-body); font-weight: 600; }
+.brief-files em { color: var(--how-muted); }
+
+.brief-ui-snap--deadline { grid-template-columns: minmax(0, 1fr); }
+.brief-deadline-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.brief-deadline-pair > div { display: grid; gap: 7px; }
+.brief-deadline-pair span { color: var(--how-muted); font-size: var(--brief-meta); }
+.brief-timeline { display: grid; gap: 10px; }
+.brief-timeline-track { position: relative; height: 3px; border-radius: 999px; background: var(--how-line); }
+.brief-timeline-track i {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--how-blue);
+  transform: translate(-50%, -50%);
+}
+.brief-timeline-track i.is-start { left: 20%; }
+.brief-timeline-track i.is-end { left: 80%; background: var(--how-surface); border: 2px solid var(--how-blue); }
+.brief-timeline-legend { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.brief-timeline-legend small { font-size: var(--brief-meta); }
+.brief-timeline-legend em {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--how-soft-blue);
+  color: var(--how-blue);
+  font-weight: 700;
+}
 
 .help-section {
   display: grid;
@@ -764,9 +865,15 @@ html[data-theme="dark"] .how-button--secondary { background: transparent; }
   }
   .request-copy { display: block; }
   .request-copy .how-button { margin-top: 28px; }
-  .request-progress { display: none; }
-  .request-journey-window { margin-top: 38px; overflow: visible; }
-  .brief-sequence { width: auto; display: grid; transform: none !important; }
+  .request-progress-row { display: none; }
+  .request-journey-window {
+    margin-top: 38px;
+    overflow: visible;
+    display: block;
+    -webkit-mask-image: none;
+            mask-image: none;
+  }
+  .brief-sequence { width: auto; height: auto; display: grid; transform: none !important; }
   .brief-sequence li { width: auto; min-height: auto; opacity: 1; }
   .help-section { grid-template-columns: 1fr; gap: 42px; }
   .workspace-bento { grid-template-columns: 1fr; }

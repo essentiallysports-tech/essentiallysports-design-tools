@@ -202,7 +202,9 @@
   const requestWindow = requestJourney?.querySelector('[data-request-window]');
   const requestTrack = requestJourney?.querySelector('[data-request-track]');
   const requestProgress = requestJourney?.querySelector('[data-request-progress]');
+  const requestCount = requestJourney?.querySelector('[data-request-count]');
   const requestSteps = requestTrack ? [...requestTrack.children] : [];
+  const padStep = index => String(index + 1).padStart(2, '0');
   const desktopJourney = window.matchMedia('(min-width: 861px)');
   let requestFrame = 0;
 
@@ -215,6 +217,7 @@
         if (index === 0) step.setAttribute('aria-current', 'step');
         else step.removeAttribute('aria-current');
       });
+      if (requestCount) requestCount.textContent = padStep(0);
       return;
     }
 
@@ -229,6 +232,7 @@
       if (index === activeIndex) step.setAttribute('aria-current', 'step');
       else step.removeAttribute('aria-current');
     });
+    if (requestCount) requestCount.textContent = padStep(activeIndex);
   };
 
   const queueRequestJourney = () => {

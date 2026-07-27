@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="theme.css?v=20260714-footer1">
   <link rel="stylesheet" href="site-chrome.css?v=20260723-profile3">
   <link rel="stylesheet" href="cta-hover.css?v=20260723-howrefine1">
-  <link rel="stylesheet" href="how-it-works.css?v=20260727-heroart1">
+  <link rel="stylesheet" href="how-it-works.css?v=20260727-brief2">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20260723-profile2"></script>
@@ -219,8 +219,11 @@
           </div>
           <a class="how-button how-button--primary" href="design-request.html">Start a Design Request <span class="ui-arrow-right" aria-hidden="true"></span></a>
         </div>
-        <div class="request-progress" aria-hidden="true">
-          <span data-request-progress></span>
+        <div class="request-progress-row" aria-hidden="true">
+          <div class="request-progress">
+            <span data-request-progress></span>
+          </div>
+          <p class="request-step-count">Step <b data-request-count>01</b> of 05</p>
         </div>
         <div class="request-journey-window" data-request-window>
           <ol class="brief-sequence" data-request-track>
@@ -228,38 +231,55 @@
               <div class="brief-card-heading"><span class="brief-step-number">01</span><div><strong>Title</strong><p>Give the request a clear, searchable name.</p></div></div>
               <div class="brief-ui-snap brief-ui-snap--title" aria-hidden="true">
                 <span class="brief-ui-label">Request title</span>
-                <strong>NBA Finals carousel</strong>
-                <small><i></i> Clear and searchable</small>
+                <div class="brief-field"><strong>NBA Finals carousel</strong><i class="brief-caret"></i></div>
+                <div class="brief-field-row"><small><i></i> Clear and searchable</small><em>19 / 60</em></div>
+                <span class="brief-ui-label">Workspace</span>
+                <div class="brief-field"><span>Social Media · Multi-slide carousel</span></div>
               </div>
             </li>
             <li>
               <div class="brief-card-heading"><span class="brief-step-number">02</span><div><strong>Entities</strong><p>Name every person, team, league, or product featured.</p></div></div>
               <div class="brief-ui-snap brief-ui-snap--entities" aria-hidden="true">
                 <span class="brief-ui-label">Featured entities</span>
-                <div><b>LeBron James</b><b>Los Angeles Lakers</b><b class="is-add">+ Add entity</b></div>
+                <div class="brief-field"><span>Search players, teams, leagues…</span></div>
+                <div class="brief-chips"><b>LeBron James</b><b>Los Angeles Lakers</b><b>NBA Finals</b><b class="is-add">+ Add entity</b></div>
+                <div class="brief-field-row"><small>3 selected</small><em>Auto-tagged</em></div>
               </div>
             </li>
             <li>
               <div class="brief-card-heading"><span class="brief-step-number">03</span><div><strong>Copy</strong><p>Provide the exact words that should appear in the design.</p></div></div>
               <div class="brief-ui-snap brief-ui-snap--copy" aria-hidden="true">
                 <span class="brief-ui-label">Design copy</span>
-                <strong>CHASE THE TITLE</strong>
-                <small>NBA FINALS · GAME 7</small>
+                <div class="brief-field"><strong>CHASE THE TITLE</strong></div>
+                <div class="brief-field-row"><small>Headline</small><em>15 / 24</em></div>
+                <div class="brief-field"><small>NBA FINALS · GAME 7</small></div>
+                <div class="brief-field-row"><small>Subhead</small><em>20 / 32</em></div>
               </div>
             </li>
             <li>
               <div class="brief-card-heading"><span class="brief-step-number">04</span><div><strong>Deadline</strong><p>Tell the team when the design is needed and when it publishes.</p></div></div>
               <div class="brief-ui-snap brief-ui-snap--deadline" aria-hidden="true">
-                <div><span>Design due</span><strong>Today · 6:00 PM</strong></div>
-                <div><span>Publish at</span><strong>Tomorrow · 9:00 AM</strong></div>
+                <div class="brief-deadline-pair">
+                  <div><span>Design due</span><div class="brief-field"><strong>Today · 6:00 PM</strong></div></div>
+                  <div><span>Publish at</span><div class="brief-field"><strong>Tomorrow · 9:00 AM</strong></div></div>
+                </div>
+                <div class="brief-timeline">
+                  <span class="brief-timeline-track"><i class="is-start"></i><i class="is-end"></i></span>
+                  <span class="brief-timeline-legend"><small>Brief sent</small><em>15 h turnaround</em><small>Live</small></span>
+                </div>
+                <div class="brief-field"><span>Reminder to the design team 2 h before it is due</span></div>
               </div>
             </li>
             <li>
               <div class="brief-card-heading"><span class="brief-step-number">05</span><div><strong>References and notes</strong><p>Attach useful links, context, and special instructions.</p></div></div>
               <div class="brief-ui-snap brief-ui-snap--references" aria-hidden="true">
                 <span class="brief-ui-label">Supporting material</span>
-                <div><b>moodboard.pdf</b><b>article-link.url</b></div>
-                <small>Keep the headline bold and mobile-safe.</small>
+                <div class="brief-files">
+                  <span><b>moodboard.pdf</b><em>2.4 MB</em></span>
+                  <span><b>article-link.url</b><em>Link</em></span>
+                </div>
+                <span class="brief-ui-label">Notes for the designer</span>
+                <div class="brief-field brief-field--notes"><small>Keep the headline bold and mobile-safe. Leave room bottom-right for the logo.</small></div>
               </div>
             </li>
           </ol>
@@ -281,6 +301,6 @@
   </main>
 
   <footer class="site-footer" aria-label="Site footer"></footer>
-  <script src="how-it-works.js?v=20260727-polish1"></script>
+  <script src="how-it-works.js?v=20260727-brief1"></script>
 </body>
 </html>
