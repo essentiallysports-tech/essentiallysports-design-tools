@@ -114,12 +114,21 @@ body.how-page {
 .how-hero-visual {
   width: var(--how-content);
   margin: 0 auto;
+  /* Dissolve the bottom edge so the band melts into the section below
+     instead of cutting off hard as it scrolls past. Percentage-based, so
+     the fade scales with the image at every width. */
+  --how-hero-fade: 68%;
+  -webkit-mask-image: linear-gradient(to bottom, #000 var(--how-hero-fade), transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 var(--how-hero-fade), transparent 100%);
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
 }
 .how-hero-visual img {
   width: 100%;
   height: auto;
   display: block;
-  border-radius: var(--how-radius-lg) var(--how-radius-lg) 0 0;
 }
 .how-hero-kicker {
   margin: 0;
@@ -769,6 +778,9 @@ html[data-theme="dark"] .how-button--secondary { background: transparent; }
   .how-page h3 { font-size: 26px; }
   .how-page p { font-size: 17px; }
   .how-hero-copy { padding-inline: 24px; }
+  /* The band is far shorter on phones, so a 32% dissolve would eat real
+     content. Keep the fade tighter here. */
+  .how-hero-visual { --how-hero-fade: 82%; }
   .frameup-intro { height: 220vh; }
   .how-page .frameup-intro__line { font-size: clamp(35px, 11.5vw, 48px); }
   .how-actions { display: grid; }
