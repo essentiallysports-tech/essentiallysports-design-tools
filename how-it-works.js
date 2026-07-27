@@ -198,6 +198,119 @@
     });
   }
 
+  // Rotating word in the hero headline.
+  const titleSwap = document.querySelector('[data-title-swap]');
+  if (titleSwap) {
+    const swapWords = ['Ideas', 'Thoughts', 'Inspirations'];
+    const swapDelay = 2400;
+    const swapMove = 260;   // keep in step with the CSS width transition
+    // The reserved box means the line width never changes, so the heading's
+    // line count is fixed at every size. Gated at 900px only because the
+    // reserved lead ("From Inspirations to") needs room to stay on one line.
+    const swapWide = window.matchMedia('(min-width: 900px)');
+    let swapTimer = 0;
+    let swapFadeTimer = 0;
+    let swapResize = 0;
+    let swapIndex = 0;
+    let swapWidths = [];
+
+    // Per-word widths, so the box hugs each word and "to" follows it directly
+    // with no reserved gap.
+    const measureSwapWords = () => {
+      const probe = document.createElement('span');
+      probe.setAttribute('aria-hidden', 'true');
+      probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;pointer-events:none';
+      titleSwap.parentNode.appendChild(probe);
+      // The heading runs letter-spacing: -.035em, which pulls the last glyph's
+      // advance width in tighter than its actual ink. Add that back, or the
+      // container clips the final letter (the "s" of "Ideas").
+      const tracking = Math.abs(parseFloat(getComputedStyle(probe).letterSpacing)) || 0;
+      swapWidths = swapWords.map(word => {
+        probe.textContent = word;
+        return Math.ceil(probe.getBoundingClientRect().width + tracking);
+      });
+      probe.remove();
+    };
+
+    // Cross-fade in place: the incoming word is layered over the outgoing one
+    // inside a box whose width never changes.
+    const crossFadeTo = index => {
+      // Drop any still-departing layer up front. Relying only on the cleanup
+      // timeout lets layers pile up whenever timers are throttled (background
+      // tab), so this keeps it to at most two at any moment.
+      titleSwap.querySelectorAll('.how-title-word.is-leaving').forEach(el => el.remove());
+      const outgoing = titleSwap.querySelector('.how-title-word:not(.is-leaving)');
+      const incoming = document.createElement('span');
+      incoming.className = 'how-title-word is-entering';
+      incoming.textContent = swapWords[index];
+      titleSwap.appendChild(incoming);
+      if (swapWidths[index]) titleSwap.style.width = `${swapWidths[index]}px`;
+      if (outgoing) outgoing.classList.add('is-leaving');
+      // Flush styles so the entering state is the transition's start value,
+      // rather than relying on a rAF that a background tab never fires.
+      void incoming.offsetWidth;
+      incoming.classList.remove('is-entering');
+      swapFadeTimer = window.setTimeout(() => outgoing && outgoing.remove(), swapMove + 80);
+    };
+
+    const setSwapWord = index => {
+      titleSwap.innerHTML = '';
+      const word = document.createElement('span');
+      word.className = 'how-title-word';
+      word.textContent = swapWords[index];
+      titleSwap.appendChild(word);
+      if (swapWidths[index]) titleSwap.style.width = `${swapWidths[index]}px`;
+    };
+
+    const stopSwap = () => {
+      window.clearInterval(swapTimer);
+      window.clearTimeout(swapFadeTimer);
+      swapTimer = 0;
+      swapFadeTimer = 0;
+    };
+
+    const startSwap = () => {
+      if (swapTimer || reducedMotion.matches || !swapWide.matches) return;
+      swapTimer = window.setInterval(() => {
+        swapIndex = (swapIndex + 1) % swapWords.length;
+        crossFadeTo(swapIndex);
+      }, swapDelay);
+    };
+
+    const resetSwap = () => {
+      stopSwap();
+      swapIndex = 0;
+      if (reducedMotion.matches || !swapWide.matches) {
+        titleSwap.style.removeProperty('width');
+        setSwapWord(0);
+        return;
+      }
+      measureSwapWords();
+      setSwapWord(0);
+      startSwap();
+    };
+
+    resetSwap();
+    // Widths depend on the webfont, so re-measure once it lands.
+    document.fonts?.ready.then(resetSwap);
+    window.addEventListener('resize', () => {
+      window.clearTimeout(swapResize);
+      swapResize = window.setTimeout(resetSwap, 180);
+    });
+    swapWide.addEventListener?.('change', resetSwap);
+    reducedMotion.addEventListener?.('change', resetSwap);
+
+    // Don't run the timer while the hero is off screen.
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) startSwap();
+          else stopSwap();
+        });
+      }, { threshold: .2 }).observe(titleSwap.closest('.how-hero') || titleSwap);
+    }
+  }
+
   const requestJourney = document.querySelector('[data-request-journey]');
   const requestWindow = requestJourney?.querySelector('[data-request-window]');
   const requestTrack = requestJourney?.querySelector('[data-request-track]');
@@ -206,6 +319,11 @@
   const requestSteps = requestTrack ? [...requestTrack.children] : [];
   const padStep = index => String(index + 1).padStart(2, '0');
   const desktopJourney = window.matchMedia('(min-width: 861px)');
+  // Edge fades ramp in over the first and last slice of travel, so the first
+  // and last card sit fully crisp at either extreme.
+  const fadeLeftMax = 26;
+  const fadeRightMax = 130;
+  const fadeRamp = .05;
   let requestFrame = 0;
 
   const updateRequestJourney = () => {
@@ -213,6 +331,8 @@
     if (!requestJourney || !requestWindow || !requestTrack || !desktopJourney.matches) {
       requestTrack?.style.removeProperty('transform');
       requestProgress?.style.removeProperty('transform');
+      requestWindow?.style.removeProperty('--how-brief-fade-l');
+      requestWindow?.style.removeProperty('--how-brief-fade-r');
       requestSteps.forEach((step, index) => {
         if (index === 0) step.setAttribute('aria-current', 'step');
         else step.removeAttribute('aria-current');
@@ -227,6 +347,10 @@
     const travel = Math.max(0, requestTrack.scrollWidth - requestWindow.clientWidth);
     requestTrack.style.transform = `translate3d(${-travel * progress}px, 0, 0)`;
     if (requestProgress) requestProgress.style.transform = `scaleX(${progress})`;
+    const fadeLeft = Math.min(1, progress / fadeRamp) * fadeLeftMax;
+    const fadeRight = Math.min(1, (1 - progress) / fadeRamp) * fadeRightMax;
+    requestWindow.style.setProperty('--how-brief-fade-l', `${fadeLeft.toFixed(1)}px`);
+    requestWindow.style.setProperty('--how-brief-fade-r', `${fadeRight.toFixed(1)}px`);
     const activeIndex = Math.min(requestSteps.length - 1, Math.round(progress * (requestSteps.length - 1)));
     requestSteps.forEach((step, index) => {
       if (index === activeIndex) step.setAttribute('aria-current', 'step');

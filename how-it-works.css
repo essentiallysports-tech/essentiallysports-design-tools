@@ -16,7 +16,9 @@
 
   /* One content width so every section's edges line up down the page. */
   --how-content: min(1280px, calc(100% - 64px));
-  --how-measure-hero: 900px;
+  /* 980, not 900: "From Inspirations to" needs 848px at the 128px cap and the
+     old measure left only 836px, so "to" was pushed onto the next line. */
+  --how-measure-hero: 980px;
 
   /* Three-step corner scale, replacing 28/22/20/16/14/13/12px. */
   --how-radius-lg: 22px;
@@ -99,10 +101,8 @@ body.how-page {
 .how-hero-stage {
   overflow: clip;
   display: grid;
-  grid-template-rows: 1fr auto;
   justify-items: center;
-  gap: clamp(48px, 5vw, 76px);
-  padding-top: clamp(76px, 9vh, 132px);
+  padding: clamp(96px, 12vh, 168px) 0 clamp(88px, 11vh, 152px);
   background: var(--how-surface);
 }
 .how-hero-copy {
@@ -116,25 +116,6 @@ body.how-page {
   text-align: center;
 }
 .how-hero-actions { justify-content: center; margin-top: 10px; }
-.how-hero-visual {
-  width: var(--how-content);
-  margin: 0 auto;
-  /* Dissolve the bottom edge so the band melts into the section below
-     instead of cutting off hard as it scrolls past. Percentage-based, so
-     the fade scales with the image at every width. */
-  --how-hero-fade: 68%;
-  -webkit-mask-image: linear-gradient(to bottom, #000 var(--how-hero-fade), transparent 100%);
-          mask-image: linear-gradient(to bottom, #000 var(--how-hero-fade), transparent 100%);
-  -webkit-mask-size: 100% 100%;
-          mask-size: 100% 100%;
-  -webkit-mask-repeat: no-repeat;
-          mask-repeat: no-repeat;
-}
-.how-hero-visual img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
 .how-hero-kicker {
   margin: 0;
   color: var(--how-blue) !important;
@@ -146,6 +127,57 @@ body.how-page {
 }
 .how-hero h1 {
   color: var(--how-ink);
+}
+/* The heading carries an aria-label, so its accessible name stays fixed at
+   "From Idea to Finished Design." while the visible word rotates. Using a
+   label rather than a duplicated visually-hidden word keeps the DOM text a
+   single clean sentence for copy-paste and text extraction. */
+/* "From <word> to" is one unbreakable block, so "to" can never fall to the
+   next line and the heading is always exactly two lines — no reflow jog as
+   words of different length rotate through. */
+.how-title-lead { display: block; white-space: nowrap; }
+.how-hero h1 { max-width: none; }
+
+.how-title-swap {
+  position: relative;
+  display: inline-block;
+  color: var(--how-blue);
+  white-space: nowrap;
+  /* The box tracks the actual word, so "to" sits right after it with no
+     reserved gap. The line is centred, so this width change is what pushes
+     "From" left and "to" right. */
+  transition: width 260ms cubic-bezier(.22, 1, .36, 1);
+  will-change: width;
+  /* Keeps a mid-transition layer inside the box, so the outgoing word can't
+     spill past a shrinking box and ghost behind "to". Negative insets let
+     ascenders, descenders and the last glyph's right side bearing bleed, so
+     letters are never sliced. The right bleed is small enough that a departing
+     word shows only a sliver, not a readable ghost. */
+  clip-path: inset(-0.35em -0.12em -0.35em 0);
+}
+/* Outgoing and incoming words overlap and cross-fade, rather than the single
+   element fading out and back in, which read as a stutter. */
+.how-title-word {
+  display: inline-block;
+  /* Grows from the left edge so the pop tracks the box opening rightward. Kept
+     at scale(1) with no overshoot — anything above 1 would be trimmed by the
+     container's clip-path. */
+  transform-origin: left center;
+  transition: opacity 140ms ease-out, transform 240ms cubic-bezier(.2, .9, .2, 1);
+  will-change: opacity, transform;
+}
+.how-title-word.is-entering { opacity: 0; transform: scale(.72); }
+.how-title-word.is-leaving {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  transform: scale(.86);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .how-title-swap,
+  .how-title-word { transition: none; }
 }
 .how-hero-subtitle {
   max-width: 620px;
@@ -625,13 +657,14 @@ body.how-page {
   overflow: hidden;
   display: flex;
   align-items: center;
-  /* Soften both edges of the carousel: cards are clipped on the right at rest
-     and on the left once it starts moving. Px-based so the fade is a constant
-     softness rather than scaling with the window. The left edge is narrower
-     on purpose — at rest card 01 sits flush there, and a wide fade would eat
-     its step number. Disabled below 860px, where nothing is clipped. */
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 26px, #000 calc(100% - 130px), transparent 100%);
-          mask-image: linear-gradient(to right, transparent 0, #000 26px, #000 calc(100% - 130px), transparent 100%);
+  /* Soften the edges only where cards are actually clipped. JS ramps these two
+     widths from the scroll progress, so at the very start there is no left fade
+     (card 01 reads fully crisp) and at the very end no right fade (card 05
+     does). Disabled below 860px, where nothing is clipped. */
+  --how-brief-fade-l: 0px;
+  --how-brief-fade-r: 130px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--how-brief-fade-l), #000 calc(100% - var(--how-brief-fade-r)), transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0, #000 var(--how-brief-fade-l), #000 calc(100% - var(--how-brief-fade-r)), transparent 100%);
   -webkit-mask-size: 100% 100%;
           mask-size: 100% 100%;
   -webkit-mask-repeat: no-repeat;
@@ -885,9 +918,6 @@ html[data-theme="dark"] .how-button--secondary { background: transparent; }
   .how-page h3 { font-size: 26px; }
   .how-page p { font-size: 17px; }
   .how-hero-copy { padding-inline: 24px; }
-  /* The band is far shorter on phones, so a 32% dissolve would eat real
-     content. Keep the fade tighter here. */
-  .how-hero-visual { --how-hero-fade: 82%; }
   .frameup-intro { height: 220vh; }
   .how-page .frameup-intro__line { font-size: clamp(35px, 11.5vw, 48px); }
   .how-actions { display: grid; }
