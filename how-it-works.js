@@ -164,10 +164,37 @@
       }, reducedMotion.matches ? 0 : 90);
     };
 
-    creationSteps.forEach((step, index) => {
-      step.addEventListener('click', () => setCreationStep(index));
-      step.addEventListener('pointerenter', () => setCreationStep(index));
-      step.addEventListener('focus', () => setCreationStep(index));
+    const creationInterval = 1800;
+    let creationCycle = 0;
+    let creationIndex = 0;
+
+    const stopCreationCycle = () => {
+      window.clearInterval(creationCycle);
+      creationCycle = 0;
+    };
+
+    const startCreationCycle = () => {
+      if (creationCycle || reducedMotion.matches || creationSteps.length < 2) return;
+      creationCycle = window.setInterval(() => {
+        creationIndex = (creationIndex + 1) % creationSteps.length;
+        setCreationStep(creationIndex);
+      }, creationInterval);
+    };
+
+    // Only cycle while the section is on screen.
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) startCreationCycle();
+          else stopCreationCycle();
+        });
+      }, { threshold: .35 }).observe(creationFlow);
+    } else {
+      startCreationCycle();
+    }
+
+    reducedMotion.addEventListener?.('change', () => {
+      if (reducedMotion.matches) stopCreationCycle();
     });
   }
 

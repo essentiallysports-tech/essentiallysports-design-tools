@@ -480,7 +480,6 @@ body.how-page {
   background: transparent;
   color: #6b7688;
   text-align: left;
-  cursor: pointer;
 }
 
 .creation-flow__number {
@@ -519,11 +518,6 @@ body.how-page {
   border-color: #1682f8;
   background: #fff;
   color: #1682f8;
-}
-
-.creation-flow__step:focus-visible {
-  outline: 2px solid #1682f8;
-  outline-offset: 4px;
 }
 
 .creation-flow__preview {
