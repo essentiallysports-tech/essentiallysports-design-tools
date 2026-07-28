@@ -3,26 +3,36 @@
 
   var STAGE_W = 1080;
   var STAGE_H = 1920;
-  var SEGMENT_LENGTH = 2.6;
-  var DEFAULT_COLOR = { background: '#0a7dfa', foreground: '#ffffff' };
+  var MAX_INLINE_UPLOAD_BYTES = 28 * 1024 * 1024;
+  var DEFAULT_STYLE_ID = 'broadcast';
+  var ES_BLUE = '#0a7dfa';
+
+  var CAPTION_STYLES = [
+    { id: 'broadcast', name: 'Broadcast', note: 'Bold ES bar', background: ES_BLUE, foreground: '#ffffff', stroke: '#08111d', mode: 'bar' },
+    { id: 'karaoke', name: 'Karaoke', note: 'Word focus', background: '#111316', foreground: '#ffffff', accent: '#ffd447', mode: 'karaoke' },
+    { id: 'headline', name: 'Headline', note: 'Big center hit', background: '#ffffff', foreground: '#111316', stroke: ES_BLUE, mode: 'headline' },
+    { id: 'clean', name: 'Clean', note: 'Subtle subtitle', background: 'rgba(0,0,0,.68)', foreground: '#ffffff', mode: 'clean' },
+  ];
 
   var LOWER_THIRD_TEMPLATES = [
-    { id: 'name-title', name: 'Name & Title', render: renderNameTitle },
-    { id: 'score-bug', name: 'Score Bug', render: renderScoreBug },
-    { id: 'quote-strip', name: 'Quote Strip', render: renderQuoteStrip },
-    { id: 'matchup', name: 'Team Matchup', render: renderMatchup },
-    { id: 'location', name: 'Location Tag', render: renderLocationTag },
-    { id: 'handle', name: 'Social Handle', render: renderSocialHandle },
+    { id: 'name-title', name: 'Name Title', primary: 'PLAYER NAME', secondary: 'TEAM / ROLE' },
+    { id: 'quote-source', name: 'Quote Source', primary: 'QUOTE CONTEXT', secondary: 'ESSENTIALLYSPORTS' },
+    { id: 'score-bug', name: 'Score Bug', primary: 'TEAM 00 - 00 TEAM', secondary: 'FINAL' },
+    { id: 'topic-tag', name: 'Topic Tag', primary: 'BREAKING', secondary: 'NFL' },
   ];
 
   var state = {
     videoLoaded: false,
+    videoFile: null,
     captions: [],
     lowerThirds: [],
-    selected: null, // { kind: 'caption' | 'lowerThird', id }
+    selectedCaptionId: null,
     nextId: 1,
+    style: CAPTION_STYLES[0],
+    captionPosition: 'lower',
+    transcriptSource: '',
     recording: false,
-    recordedChunks: [],
+    renderedOnce: false,
   };
 
   var els = {};
@@ -30,126 +40,96 @@
   document.addEventListener('DOMContentLoaded', init);
 
   function init() {
-    els.video = document.getElementById('reels-video');
-    els.canvas = document.getElementById('reels-canvas');
-    els.stageEmpty = document.getElementById('reels-stage-empty');
-    els.fileInput = document.getElementById('reels-file-input');
-    els.uploadBtn = document.getElementById('reels-upload-btn');
-    els.playBtn = document.getElementById('reels-play-btn');
-    els.scrub = document.getElementById('reels-scrub');
-    els.time = document.getElementById('reels-time');
-    els.exportBtn = document.getElementById('reels-export-btn');
-    els.exportStatus = document.getElementById('reels-export-status');
-
-    els.generateBtn = document.getElementById('reels-generate-btn');
-    els.generateNote = document.getElementById('reels-generate-note');
-    els.timelineWrap = document.getElementById('reels-caption-timeline-wrap');
-    els.timeline = document.getElementById('reels-caption-timeline');
-    els.timelineDuration = document.getElementById('reels-timeline-duration');
-    els.regenerateBtn = document.getElementById('reels-regenerate-btn');
-
-    els.captionDetail = document.getElementById('reels-caption-detail');
-    els.captionEditText = document.getElementById('reels-caption-edit-text');
-    els.captionEditStart = document.getElementById('reels-caption-edit-start');
-    els.captionEditEnd = document.getElementById('reels-caption-edit-end');
-    els.captionDeleteBtn = document.getElementById('reels-caption-delete-btn');
-    els.captionPromptInput = document.getElementById('reels-caption-prompt-input');
-    els.captionPromptApplyBtn = document.getElementById('reels-caption-prompt-apply-btn');
-    els.captionPromptLog = document.getElementById('reels-caption-prompt-log');
-
-    els.ltGrid = document.getElementById('reels-lt-grid');
-    els.ltList = document.getElementById('reels-lt-list');
-    els.ltDetail = document.getElementById('reels-lt-detail');
-    els.ltPromptInput = document.getElementById('reels-lt-prompt-input');
-    els.ltPromptApplyBtn = document.getElementById('reels-lt-prompt-apply-btn');
-    els.ltPromptLog = document.getElementById('reels-lt-prompt-log');
-
+    mapElements();
     els.canvas.width = STAGE_W;
     els.canvas.height = STAGE_H;
     state.ctx = els.canvas.getContext('2d');
 
     els.uploadBtn.addEventListener('click', function () { els.fileInput.click(); });
     els.fileInput.addEventListener('change', onFileChosen);
-    els.playBtn.addEventListener('click', togglePlay);
-    els.scrub.addEventListener('input', function () {
-      els.video.currentTime = (Number(els.scrub.value) / 1000) * els.video.duration;
-    });
-    els.video.addEventListener('loadedmetadata', onVideoReady);
+    els.video.addEventListener('loadedmetadata', onVideoMetadata);
     els.video.addEventListener('seeked', onFirstFrameReady);
-    els.video.addEventListener('error', onVideoError);
-    els.video.addEventListener('timeupdate', syncScrub);
+    els.video.addEventListener('timeupdate', syncPlayback);
     els.video.addEventListener('play', startRenderLoop);
     els.video.addEventListener('pause', stopRenderLoop);
-    els.video.addEventListener('ended', function () {
-      stopRenderLoop();
-      if (state.recording) stopExport();
+    els.video.addEventListener('ended', stopRenderLoop);
+    els.video.addEventListener('error', onVideoError);
+    els.playBtn.addEventListener('click', togglePlay);
+    els.scrub.addEventListener('input', scrubVideo);
+    els.transcribeBtn.addEventListener('click', transcribeVideo);
+    els.addCaptionBtn.addEventListener('click', addCaptionAtPlayhead);
+    els.downloadSrtBtn.addEventListener('click', downloadSrt);
+    els.captionPosition.addEventListener('change', function () {
+      state.captionPosition = els.captionPosition.value;
+      setStep('style');
+      drawFrame();
     });
-
-    els.generateBtn.addEventListener('click', generateCaptions);
-    els.regenerateBtn.addEventListener('click', generateCaptions);
-    els.captionEditText.addEventListener('input', onCaptionFieldEdit);
-    els.captionEditStart.addEventListener('input', onCaptionFieldEdit);
-    els.captionEditEnd.addEventListener('input', onCaptionFieldEdit);
-    els.captionDeleteBtn.addEventListener('click', function () { deleteSelected('caption'); });
-    els.captionPromptApplyBtn.addEventListener('click', function () {
-      applyPrompt(els.captionPromptInput, els.captionPromptLog);
-    });
-    els.ltPromptApplyBtn.addEventListener('click', function () {
-      applyPrompt(els.ltPromptInput, els.ltPromptLog);
-    });
-
+    els.applyTeamBtn.addEventListener('click', applyTeamColorFromInput);
+    els.intelBtn.addEventListener('click', applyIntelligence);
     els.exportBtn.addEventListener('click', function () {
       if (state.recording) stopExport(); else startExport();
     });
 
-    initTabs();
+    renderStyleGrid();
     renderLowerThirdGrid();
+    renderLowerThirdList();
+    renderTranscript();
+    renderTimeline();
+  }
+
+  function mapElements() {
+    [
+      'canvas', 'stageEmpty', 'fileInput', 'video', 'uploadBtn', 'playBtn', 'scrub',
+      'currentTime', 'totalTime', 'exportBtn', 'exportStatus', 'transcribeBtn',
+      'addCaptionBtn', 'downloadSrtBtn', 'transcribeStatus', 'captionTimeline',
+      'playhead', 'captionCount', 'transcriptList', 'transcriptSource', 'styleGrid',
+      'styleName', 'captionPosition', 'teamQuery', 'applyTeamBtn', 'intelPrompt',
+      'intelBtn', 'intelStatus', 'intelSource', 'ltGrid', 'ltList', 'ltCount'
+    ].forEach(function (key) {
+      var id = 'reels-' + key.replace(/[A-Z]/g, function (m) { return '-' + m.toLowerCase(); });
+      els[key] = document.getElementById(id);
+    });
+  }
+
+  function setStep(active) {
+    var order = ['upload', 'transcribe', 'review', 'style'];
+    document.querySelectorAll('.reels-step').forEach(function (step) {
+      var idx = order.indexOf(step.dataset.step);
+      var activeIdx = order.indexOf(active);
+      step.classList.toggle('is-active', step.dataset.step === active);
+      step.classList.toggle('is-done', idx < activeIdx);
+    });
+  }
+
+  function setStatus(el, text, kind) {
+    el.textContent = text || '';
+    el.classList.toggle('is-error', kind === 'error');
+    el.classList.toggle('is-good', kind === 'good');
+  }
+
+  function onFileChosen(event) {
+    var file = event.target.files && event.target.files[0];
+    if (!file) return;
+    state.videoLoaded = false;
+    state.videoFile = file;
+    state.captions = [];
+    state.lowerThirds = [];
+    state.selectedCaptionId = null;
+    state.transcriptSource = '';
+    state.renderedOnce = false;
+    els.stageEmpty.style.display = 'grid';
+    els.stageEmpty.innerHTML = '<strong>Loading clip</strong><span>Preparing the first frame.</span>';
+    els.uploadBtn.disabled = true;
+    els.video.src = URL.createObjectURL(file);
+    els.video.load();
+    setStep('upload');
+    setStatus(els.transcribeStatus, 'Clip selected. Speech recognition is ready when the video loads.');
+    renderTranscript();
+    renderTimeline();
     renderLowerThirdList();
   }
 
-  // --- Tabs -----------------------------------------------------------
-
-  function initTabs() {
-    var tabs = document.querySelectorAll('.reels-tab');
-    tabs.forEach(function (tab) {
-      tab.addEventListener('click', function () {
-        tabs.forEach(function (t) { t.classList.remove('is-active'); });
-        document.querySelectorAll('.reels-tabpanel').forEach(function (p) { p.classList.remove('is-active'); });
-        tab.classList.add('is-active');
-        document.getElementById(tab.dataset.panel).classList.add('is-active');
-      });
-    });
-  }
-
-  // --- Brand kit (team colors, looked up only via the prompt) ---------------
-
-  function getBrandKit() { return window.ES_BRAND_KIT || []; }
-  function findBrandEntryByTeamName(query) {
-    var q = query.toLowerCase();
-    return getBrandKit().find(function (t) {
-      var name = (t.team || t.variation || '').toLowerCase();
-      return name && (name.indexOf(q) !== -1 || q.indexOf(name) !== -1);
-    });
-  }
-
-  // --- Video loading -----------------------------------------------------
-
-  function onFileChosen(e) {
-    var file = e.target.files && e.target.files[0];
-    if (!file) return;
-    state.videoLoaded = false;
-    els.stageEmpty.style.display = 'grid';
-    els.stageEmpty.innerHTML = '<span class="reels-spinner" aria-hidden="true"></span>Loading clip…';
-    els.uploadBtn.disabled = true;
-    var url = URL.createObjectURL(file);
-    els.video.src = url;
-    els.video.load();
-  }
-
-  function onVideoReady() {
-    // loadedmetadata only guarantees dimensions, not a decoded frame — without
-    // forcing a seek, drawImage can paint nothing and the canvas just looks
-    // like the empty placeholder with no obvious feedback that anything loaded.
+  function onVideoMetadata() {
     els.video.currentTime = 0;
   }
 
@@ -162,16 +142,18 @@
     els.playBtn.disabled = false;
     els.scrub.disabled = false;
     els.exportBtn.disabled = false;
-    els.generateBtn.disabled = false;
-    els.generateNote.textContent = 'Ready — click Auto-Generate Captions to transcribe this clip.';
+    els.transcribeBtn.disabled = false;
+    els.addCaptionBtn.disabled = false;
+    els.totalTime.textContent = formatTime(els.video.duration || 0);
+    setStatus(els.transcribeStatus, 'Ready. Captions will be generated from the uploaded video audio.');
     drawFrame();
   }
 
   function onVideoError() {
-    if (state.videoLoaded) return;
     els.stageEmpty.style.display = 'grid';
-    els.stageEmpty.textContent = 'Couldn\'t load that clip — try a different file or format (MP4/WebM).';
+    els.stageEmpty.innerHTML = '<strong>Could not read this clip</strong><span>Try MP4, MOV, or WebM.</span>';
     els.uploadBtn.disabled = false;
+    setStatus(els.transcribeStatus, 'The browser could not decode that video file.', 'error');
   }
 
   function togglePlay() {
@@ -179,61 +161,23 @@
     if (els.video.paused) els.video.play(); else els.video.pause();
   }
 
-  function syncScrub() {
+  function scrubVideo() {
     if (!els.video.duration) return;
-    els.scrub.value = Math.round((els.video.currentTime / els.video.duration) * 1000);
-    els.time.textContent = formatTime(els.video.currentTime) + ' / ' + formatTime(els.video.duration);
+    els.video.currentTime = (Number(els.scrub.value) / 1000) * els.video.duration;
   }
 
-  function formatTime(t) {
-    var m = Math.floor(t / 60);
-    var s = Math.floor(t % 60);
-    return m + ':' + (s < 10 ? '0' : '') + s;
+  function syncPlayback() {
+    if (!els.video.duration) return;
+    var ratio = els.video.currentTime / els.video.duration;
+    els.scrub.value = Math.round(ratio * 1000);
+    els.currentTime.textContent = formatTime(els.video.currentTime);
+    els.totalTime.textContent = formatTime(els.video.duration);
+    updatePlayhead();
+    highlightActiveCaption();
   }
-
-  // --- Caption generation (stub — real transcription is a follow-up) --------
-
-  function generateCaptions() {
-    if (!state.videoLoaded) return;
-    els.generateBtn.disabled = true;
-    els.regenerateBtn.disabled = true;
-    els.generateNote.hidden = false;
-    els.generateNote.textContent = 'Generating captions…';
-    setTimeout(function () {
-      var duration = els.video.duration || 0;
-      var segments = [];
-      var t = 0;
-      var n = 1;
-      while (t < duration) {
-        var end = Math.min(t + SEGMENT_LENGTH, duration);
-        segments.push({
-          id: state.nextId++,
-          text: 'Caption ' + n + ' — tap to edit',
-          start: t,
-          end: end,
-          background: DEFAULT_COLOR.background,
-          foreground: DEFAULT_COLOR.foreground,
-        });
-        t = end;
-        n++;
-      }
-      state.captions = segments;
-      state.selected = null;
-      els.generateNote.hidden = true;
-      els.generateBtn.hidden = true;
-      els.regenerateBtn.disabled = false;
-      els.timelineWrap.hidden = false;
-      els.timelineDuration.textContent = formatTime(duration);
-      renderCaptionTimeline();
-      hideCaptionDetail();
-      drawFrame();
-    }, 700);
-  }
-
-  // --- Render loop --------------------------------------------------------
 
   function startRenderLoop() {
-    els.playBtn.textContent = '⏸';
+    els.playBtn.classList.add('is-playing');
     function tick() {
       if (els.video.paused || els.video.ended) return;
       drawFrame();
@@ -241,207 +185,163 @@
     }
     state.rafId = requestAnimationFrame(tick);
   }
+
   function stopRenderLoop() {
-    els.playBtn.textContent = '▶';
+    els.playBtn.classList.remove('is-playing');
     if (state.rafId) cancelAnimationFrame(state.rafId);
     drawFrame();
   }
 
-  function drawFrame() {
-    var ctx = state.ctx;
-    ctx.clearRect(0, 0, STAGE_W, STAGE_H);
-    ctx.fillStyle = '#05070d';
-    ctx.fillRect(0, 0, STAGE_W, STAGE_H);
-    if (state.videoLoaded && els.video.videoWidth) drawCoverVideo(ctx);
-    var t = els.video.currentTime || 0;
-    state.lowerThirds.forEach(function (lt) { if (t >= lt.start && t < lt.end) drawLowerThird(ctx, lt); });
-    state.captions.forEach(function (c) { if (t >= c.start && t < c.end) drawCaption(ctx, c); });
+  async function transcribeVideo() {
+    if (!state.videoLoaded || !state.videoFile) return;
+    if (state.videoFile.size > MAX_INLINE_UPLOAD_BYTES) {
+      setStatus(els.transcribeStatus, 'This local preview accepts clips up to 28 MB for speech recognition handoff.', 'error');
+      return;
+    }
+
+    setStep('transcribe');
+    els.transcribeBtn.disabled = true;
+    setStatus(els.transcribeStatus, 'Extracting audio and sending it to the speech-recognition service...');
+    try {
+      var payload = {
+        action: 'transcribe',
+        fileName: state.videoFile.name,
+        mimeType: state.videoFile.type || 'application/octet-stream',
+        data: await fileToBase64(state.videoFile),
+      };
+      var result = await postJson('/api/es-video-intelligence', payload);
+      state.captions = normalizeSegments(result.segments || []);
+      state.transcriptSource = result.provider || 'speech recognition';
+      state.selectedCaptionId = state.captions[0] ? state.captions[0].id : null;
+      els.downloadSrtBtn.disabled = !state.captions.length;
+      els.intelBtn.disabled = !state.selectedCaptionId;
+      setStep(state.captions.length ? 'review' : 'transcribe');
+      setStatus(els.transcribeStatus, state.captions.length
+        ? 'Speech recognition complete. Review the transcript before export.'
+        : 'Speech recognition finished, but no speech segments were returned.', state.captions.length ? 'good' : 'error');
+      renderTranscript();
+      renderTimeline();
+      drawFrame();
+    } catch (error) {
+      setStep('transcribe');
+      setStatus(els.transcribeStatus, error.message || 'Speech recognition failed.', 'error');
+    } finally {
+      els.transcribeBtn.disabled = false;
+    }
   }
 
-  function drawCoverVideo(ctx) {
-    var vw = els.video.videoWidth, vh = els.video.videoHeight;
-    var scale = Math.max(STAGE_W / vw, STAGE_H / vh);
-    var dw = vw * scale, dh = vh * scale;
-    var dx = (STAGE_W - dw) / 2, dy = (STAGE_H - dh) / 2;
-    ctx.drawImage(els.video, dx, dy, dw, dh);
-  }
-
-  function drawCaption(ctx, c) {
-    ctx.save();
-    ctx.font = '700 54px "Roboto Condensed", Arial, sans-serif';
-    ctx.textAlign = 'center';
-    var maxWidth = STAGE_W - 120;
-    var lines = wrapText(ctx, c.text.toUpperCase(), maxWidth);
-    var lineHeight = 64;
-    var blockHeight = lines.length * lineHeight + 40;
-    var y = STAGE_H - 340 - blockHeight;
-    lines.forEach(function (line, i) {
-      var ty = y + i * lineHeight + lineHeight;
-      var w = ctx.measureText(line).width + 48;
-      ctx.fillStyle = c.background;
-      roundRect(ctx, STAGE_W / 2 - w / 2, ty - lineHeight + 14, w, lineHeight - 12, 10);
-      ctx.fill();
-      ctx.fillStyle = c.foreground;
-      ctx.fillText(line, STAGE_W / 2, ty);
+  function normalizeSegments(segments) {
+    return segments.map(function (segment) {
+      return {
+        id: state.nextId++,
+        start: clamp(Number(segment.start) || 0, 0, els.video.duration || 0),
+        end: clamp(Number(segment.end) || 0, 0, els.video.duration || 0),
+        text: String(segment.text || '').trim(),
+        confidence: segment.confidence == null ? null : Number(segment.confidence),
+        words: Array.isArray(segment.words) ? segment.words : [],
+      };
+    }).filter(function (segment) {
+      if (!segment.text) return false;
+      if (segment.end <= segment.start) segment.end = Math.min((els.video.duration || segment.start + 2), segment.start + 2);
+      return segment.end > segment.start;
     });
-    ctx.restore();
   }
 
-  function wrapText(ctx, text, maxWidth) {
-    var words = text.split(' ');
-    var lines = [];
-    var current = '';
-    words.forEach(function (w) {
-      var test = current ? current + ' ' + w : w;
-      if (ctx.measureText(test).width > maxWidth && current) {
-        lines.push(current);
-        current = w;
-      } else {
-        current = test;
-      }
-    });
-    if (current) lines.push(current);
-    return lines;
+  function addCaptionAtPlayhead() {
+    if (!state.videoLoaded) return;
+    var start = els.video.currentTime || 0;
+    var end = Math.min(start + 2.4, els.video.duration || start + 2.4);
+    var caption = {
+      id: state.nextId++,
+      start: start,
+      end: end,
+      text: 'New caption',
+      confidence: null,
+      words: [],
+    };
+    state.captions.push(caption);
+    state.captions.sort(sortByStart);
+    state.selectedCaptionId = caption.id;
+    els.downloadSrtBtn.disabled = false;
+    els.intelBtn.disabled = false;
+    renderTranscript();
+    renderTimeline();
+    drawFrame();
   }
 
-  function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
+  function renderTranscript() {
+    els.transcriptSource.textContent = state.transcriptSource || 'No speech recognition yet';
+    if (!state.captions.length) {
+      els.transcriptList.innerHTML = '<p class="reels-empty-note">Generated captions will appear here as editable transcript rows with start/end timings.</p>';
+      els.captionCount.textContent = '0 segments';
+      return;
+    }
 
-  function drawLowerThird(ctx, lt) {
-    var tpl = LOWER_THIRD_TEMPLATES.find(function (t) { return t.id === lt.template; });
-    if (tpl) tpl.render(ctx, lt);
-  }
-
-  function renderNameTitle(ctx, lt) {
-    var x = lt.x, y = lt.y;
-    ctx.save();
-    ctx.fillStyle = lt.background;
-    roundRect(ctx, x, y, 560, 116, 8);
-    ctx.fill();
-    ctx.fillStyle = lt.foreground;
-    ctx.font = '700 40px "Roboto Condensed", Arial, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(lt.primaryText || 'Name', x + 24, y + 52);
-    ctx.font = '500 26px "Roboto Condensed", Arial, sans-serif';
-    ctx.globalAlpha = .85;
-    ctx.fillText(lt.secondaryText || 'Title', x + 24, y + 88);
-    ctx.restore();
-  }
-
-  function renderScoreBug(ctx, lt) {
-    var x = lt.x, y = lt.y;
-    ctx.save();
-    ctx.fillStyle = lt.background;
-    roundRect(ctx, x, y, 320, 84, 8);
-    ctx.fill();
-    ctx.fillStyle = lt.foreground;
-    ctx.font = '700 34px "Roboto Condensed", Arial, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(lt.primaryText || 'TEAM 00 - 00 TEAM', x + 20, y + 52);
-    ctx.restore();
-  }
-
-  function renderQuoteStrip(ctx, lt) {
-    var x = lt.x, y = lt.y;
-    ctx.save();
-    ctx.fillStyle = lt.background;
-    ctx.fillRect(x, y, 680, 8);
-    ctx.font = '500 32px "Roboto Condensed", Arial, sans-serif';
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'left';
-    ctx.fillText('"' + (lt.primaryText || 'Quote goes here') + '"', x, y + 48);
-    ctx.restore();
-  }
-
-  function renderMatchup(ctx, lt) {
-    var x = lt.x, y = lt.y;
-    ctx.save();
-    ctx.fillStyle = lt.background;
-    roundRect(ctx, x, y, 620, 96, 8);
-    ctx.fill();
-    ctx.fillStyle = lt.foreground;
-    ctx.font = '700 38px "Roboto Condensed", Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(lt.primaryText || 'TEAM A  vs  TEAM B', x + 310, y + 58);
-    ctx.restore();
-  }
-
-  function renderLocationTag(ctx, lt) {
-    var x = lt.x, y = lt.y;
-    ctx.save();
-    ctx.fillStyle = lt.background;
-    roundRect(ctx, x, y, 380, 64, 32);
-    ctx.fill();
-    ctx.fillStyle = lt.foreground;
-    ctx.font = '600 28px "Roboto Condensed", Arial, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('📍 ' + (lt.primaryText || 'Location'), x + 24, y + 42);
-    ctx.restore();
-  }
-
-  function renderSocialHandle(ctx, lt) {
-    var x = lt.x, y = lt.y;
-    ctx.save();
-    ctx.fillStyle = lt.background;
-    roundRect(ctx, x, y, 340, 60, 30);
-    ctx.fill();
-    ctx.fillStyle = lt.foreground;
-    ctx.font = '600 26px "Roboto Condensed", Arial, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('@' + (lt.primaryText || 'essentiallysports'), x + 24, y + 40);
-    ctx.restore();
-  }
-
-  // --- Caption timeline (Instagram-style: tap a segment, drag its edges) ----
-
-  function renderCaptionTimeline() {
-    var duration = els.video.duration || 1;
-    els.timeline.innerHTML = state.captions.map(function (c) {
-      var left = (c.start / duration * 100).toFixed(2);
-      var width = Math.max(1.5, (c.end - c.start) / duration * 100).toFixed(2);
-      var isSel = state.selected && state.selected.kind === 'caption' && state.selected.id === c.id;
-      return '<div class="reels-seg' + (isSel ? ' is-selected' : '') + '" data-id="' + c.id + '" ' +
-        'style="left:' + left + '%;width:' + width + '%;background:' + c.background + ';color:' + c.foreground + '">' +
-        '<span class="reels-seg-handle" data-handle="start"></span>' +
-        '<span class="reels-seg-label">' + escapeHtml(c.text) + '</span>' +
-        '<span class="reels-seg-handle" data-handle="end"></span></div>';
+    els.captionCount.textContent = state.captions.length + (state.captions.length === 1 ? ' segment' : ' segments');
+    els.transcriptList.innerHTML = state.captions.map(function (caption) {
+      var selected = caption.id === state.selectedCaptionId;
+      return '<div class="reels-caption-row' + (selected ? ' is-selected' : '') + '" data-id="' + caption.id + '">' +
+        '<div class="reels-caption-time">' +
+          '<input type="number" step="0.1" min="0" value="' + caption.start.toFixed(1) + '" data-field="start" aria-label="Caption start time">' +
+          '<input type="number" step="0.1" min="0" value="' + caption.end.toFixed(1) + '" data-field="end" aria-label="Caption end time">' +
+        '</div>' +
+        '<textarea class="reels-caption-text" data-field="text" aria-label="Caption text">' + escapeHtml(caption.text) + '</textarea>' +
+        '<button type="button" class="reels-row-delete" data-action="delete" aria-label="Delete caption">x</button>' +
+      '</div>';
     }).join('');
-    els.timeline.querySelectorAll('.reels-seg').forEach(function (segEl) {
-      var id = Number(segEl.dataset.id);
-      segEl.addEventListener('click', function (e) {
-        if (e.target.dataset.handle) return;
-        selectCaption(id);
+
+    els.transcriptList.querySelectorAll('.reels-caption-row').forEach(function (row) {
+      var id = Number(row.dataset.id);
+      row.addEventListener('click', function (event) {
+        if (event.target.dataset.action === 'delete') return;
+        selectCaption(id, true);
       });
-      segEl.querySelectorAll('.reels-seg-handle').forEach(function (handle) {
-        handle.addEventListener('pointerdown', function (e) {
-          e.stopPropagation();
-          beginSegmentDrag(id, handle.dataset.handle);
+      row.querySelectorAll('[data-field]').forEach(function (input) {
+        input.addEventListener('input', function () { editCaption(id, input.dataset.field, input.value); });
+      });
+      row.querySelector('[data-action="delete"]').addEventListener('click', function () { deleteCaption(id); });
+    });
+  }
+
+  function renderTimeline() {
+    var duration = els.video.duration || 1;
+    els.captionTimeline.innerHTML = state.captions.map(function (caption) {
+      var left = clamp(caption.start / duration * 100, 0, 100);
+      var width = clamp((caption.end - caption.start) / duration * 100, 1, 100 - left);
+      return '<button type="button" class="reels-timeline-seg' + (caption.id === state.selectedCaptionId ? ' is-selected' : '') + '" data-id="' + caption.id + '" style="left:' + left.toFixed(3) + '%;width:' + width.toFixed(3) + '%">' +
+        '<i class="reels-seg-handle" data-edge="start"></i><span>' + escapeHtml(caption.text) + '</span><i class="reels-seg-handle" data-edge="end"></i>' +
+      '</button>';
+    }).join('');
+    els.captionTimeline.querySelectorAll('.reels-timeline-seg').forEach(function (segment) {
+      var id = Number(segment.dataset.id);
+      segment.addEventListener('click', function (event) {
+        if (event.target.dataset.edge) return;
+        selectCaption(id, true);
+      });
+      segment.querySelectorAll('.reels-seg-handle').forEach(function (handle) {
+        handle.addEventListener('pointerdown', function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          beginTimingDrag(id, handle.dataset.edge);
         });
       });
     });
+    updatePlayhead();
   }
 
-  function beginSegmentDrag(id, edge) {
+  function beginTimingDrag(id, edge) {
+    var rect = els.captionTimeline.getBoundingClientRect();
     var duration = els.video.duration || 1;
-    var rect = els.timeline.getBoundingClientRect();
-    function onMove(e) {
-      var caption = state.captions.find(function (c) { return c.id === id; });
+    function onMove(event) {
+      var caption = findCaption(id);
       if (!caption) return;
-      var ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+      var ratio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
       var time = ratio * duration;
-      if (edge === 'start') caption.start = Math.min(time, caption.end - 0.2);
-      else caption.end = Math.max(time, caption.start + 0.2);
-      caption.start = Math.max(0, caption.start);
-      caption.end = Math.min(duration, caption.end);
-      renderCaptionTimeline();
-      if (state.selected && state.selected.kind === 'caption' && state.selected.id === id) fillCaptionDetail(caption);
+      if (edge === 'start') caption.start = clamp(time, 0, caption.end - .2);
+      else caption.end = clamp(time, caption.start + .2, duration);
+      state.captions.sort(sortByStart);
+      renderTranscript();
+      renderTimeline();
       drawFrame();
     }
     function onUp() {
@@ -452,173 +352,304 @@
     document.addEventListener('pointerup', onUp);
   }
 
-  function selectCaption(id) {
-    state.selected = { kind: 'caption', id: id };
-    renderCaptionTimeline();
-    var caption = state.captions.find(function (c) { return c.id === id; });
-    if (caption) {
-      els.captionDetail.hidden = false;
-      fillCaptionDetail(caption);
+  function selectCaption(id, seek) {
+    state.selectedCaptionId = id;
+    els.intelBtn.disabled = !id;
+    if (seek) {
+      var caption = findCaption(id);
+      if (caption && state.videoLoaded) els.video.currentTime = caption.start;
     }
+    renderTranscript();
+    renderTimeline();
+    drawFrame();
+    setStatus(els.intelStatus, id ? 'Ready for a caption-specific Intelligence pass.' : 'Select a caption row to use Intelligence.');
   }
 
-  function fillCaptionDetail(caption) {
-    els.captionEditText.value = caption.text;
-    els.captionEditStart.value = caption.start.toFixed(1);
-    els.captionEditEnd.value = caption.end.toFixed(1);
-  }
-
-  function hideCaptionDetail() {
-    els.captionDetail.hidden = true;
-  }
-
-  function onCaptionFieldEdit() {
-    if (!state.selected || state.selected.kind !== 'caption') return;
-    var caption = state.captions.find(function (c) { return c.id === state.selected.id; });
+  function editCaption(id, field, value) {
+    var caption = findCaption(id);
     if (!caption) return;
-    caption.text = els.captionEditText.value;
-    var start = Number(els.captionEditStart.value);
-    var end = Number(els.captionEditEnd.value);
-    if (!isNaN(start)) caption.start = Math.max(0, start);
-    if (!isNaN(end)) caption.end = Math.max(caption.start + 0.1, end);
-    renderCaptionTimeline();
+    if (field === 'text') caption.text = value;
+    if (field === 'start') caption.start = clamp(Number(value) || 0, 0, caption.end - .1);
+    if (field === 'end') caption.end = clamp(Number(value) || caption.end, caption.start + .1, els.video.duration || caption.end);
+    state.captions.sort(sortByStart);
+    renderTimeline();
     drawFrame();
   }
 
-  // --- Lower thirds ----------------------------------------------------------
+  function deleteCaption(id) {
+    state.captions = state.captions.filter(function (caption) { return caption.id !== id; });
+    if (state.selectedCaptionId === id) state.selectedCaptionId = state.captions[0] ? state.captions[0].id : null;
+    els.downloadSrtBtn.disabled = !state.captions.length;
+    els.intelBtn.disabled = !state.selectedCaptionId;
+    renderTranscript();
+    renderTimeline();
+    drawFrame();
+  }
+
+  function highlightActiveCaption() {
+    var active = activeCaption();
+    document.querySelectorAll('.reels-caption-row').forEach(function (row) {
+      row.classList.toggle('is-active-now', active && Number(row.dataset.id) === active.id);
+    });
+  }
+
+  function updatePlayhead() {
+    if (!state.videoLoaded || !els.video.duration) {
+      els.playhead.hidden = true;
+      return;
+    }
+    var cardRect = document.querySelector('.reels-timeline-card').getBoundingClientRect();
+    var timelineRect = els.captionTimeline.getBoundingClientRect();
+    var ratio = els.video.currentTime / els.video.duration;
+    els.playhead.hidden = false;
+    els.playhead.style.left = (timelineRect.left - cardRect.left + (timelineRect.width * ratio)) + 'px';
+  }
+
+  function renderStyleGrid() {
+    els.styleGrid.innerHTML = CAPTION_STYLES.map(function (style) {
+      return '<button type="button" class="reels-style-card' + (style.id === state.style.id ? ' is-selected' : '') + '" data-style="' + style.id + '">' +
+        '<div class="reels-style-preview" style="background:' + style.background + ';color:' + style.foreground + '">' + escapeHtml(style.name.toUpperCase()) + '</div>' +
+        '<strong>' + escapeHtml(style.name) + '</strong><span>' + escapeHtml(style.note) + '</span></button>';
+    }).join('');
+    els.styleGrid.querySelectorAll('.reels-style-card').forEach(function (button) {
+      button.addEventListener('click', function () {
+        state.style = CAPTION_STYLES.find(function (style) { return style.id === button.dataset.style; }) || state.style;
+        els.styleName.textContent = state.style.name;
+        setStep('style');
+        renderStyleGrid();
+        drawFrame();
+      });
+    });
+  }
+
+  function applyTeamColorFromInput() {
+    var entry = findBrandEntry(els.teamQuery.value);
+    if (!entry || !entry.primary) {
+      setStatus(els.intelStatus, 'No team color match found in the ES brand kit.', 'error');
+      return;
+    }
+    state.style = Object.assign({}, state.style, {
+      background: entry.primary.background,
+      foreground: entry.primary.foreground,
+      accent: entry.primary.mist || entry.primary.background,
+    });
+    els.styleName.textContent = (entry.team || entry.variation || 'Brand') + ' ' + state.style.name;
+    setStatus(els.intelStatus, 'Applied ' + (entry.team || entry.variation) + ' colors from the ES brand kit.', 'good');
+    setStep('style');
+    renderStyleGrid();
+    drawFrame();
+  }
+
+  async function applyIntelligence() {
+    var caption = findCaption(state.selectedCaptionId);
+    var prompt = els.intelPrompt.value.trim();
+    if (!caption || !prompt) return;
+    els.intelBtn.disabled = true;
+    setStatus(els.intelStatus, 'Sending caption context to the ES MCP intelligence path...');
+    try {
+      var result = await postJson('/api/es-video-intelligence', {
+        action: 'style',
+        prompt: prompt,
+        target: {
+          kind: 'caption',
+          text: caption.text,
+          start: caption.start,
+          end: caption.end,
+          style: state.style,
+          position: state.captionPosition,
+        },
+        brandKit: findBrandCandidates(prompt).slice(0, 8),
+      });
+      applyIntelligencePatch(result.patch || {});
+      els.intelSource.textContent = result.provider || 'Intelligence';
+      setStatus(els.intelStatus, result.summary || 'Applied Intelligence update.', 'good');
+      els.intelPrompt.value = '';
+    } catch (error) {
+      setStatus(els.intelStatus, error.message || 'Intelligence update failed.', 'error');
+    } finally {
+      els.intelBtn.disabled = !state.selectedCaptionId;
+    }
+  }
+
+  function applyIntelligencePatch(patch) {
+    var caption = findCaption(state.selectedCaptionId);
+    if (caption && typeof patch.text === 'string') caption.text = patch.text;
+    if (patch.position) {
+      state.captionPosition = patch.position;
+      els.captionPosition.value = patch.position;
+    }
+    if (patch.style && typeof patch.style === 'object') state.style = Object.assign({}, state.style, patch.style);
+    els.styleName.textContent = patch.styleName || state.style.name;
+    setStep('style');
+    renderStyleGrid();
+    renderTranscript();
+    renderTimeline();
+    drawFrame();
+  }
 
   function renderLowerThirdGrid() {
-    els.ltGrid.innerHTML = LOWER_THIRD_TEMPLATES.map(function (tpl) {
-      return '<button type="button" class="reels-lt-card" data-template="' + tpl.id + '">' +
-        '<div class="reels-lt-preview"><span>' + escapeHtml(tpl.name) + '</span></div>' +
-        '<div class="reels-lt-name">' + escapeHtml(tpl.name) + '</div></button>';
+    els.ltGrid.innerHTML = LOWER_THIRD_TEMPLATES.map(function (template) {
+      return '<button type="button" class="reels-lt-card" data-template="' + template.id + '"><strong>' + escapeHtml(template.name) + '</strong></button>';
     }).join('');
-    els.ltGrid.querySelectorAll('.reels-lt-card').forEach(function (btn) {
-      btn.addEventListener('click', function () { addLowerThird(btn.dataset.template); });
+    els.ltGrid.querySelectorAll('.reels-lt-card').forEach(function (button) {
+      button.addEventListener('click', function () { addLowerThird(button.dataset.template); });
     });
   }
 
   function addLowerThird(templateId) {
     if (!state.videoLoaded) return;
+    var template = LOWER_THIRD_TEMPLATES.find(function (item) { return item.id === templateId; });
     var start = els.video.currentTime || 0;
-    var end = Math.min(start + 4, els.video.duration || start + 4);
-    var id = state.nextId++;
     state.lowerThirds.push({
-      id: id,
-      template: templateId,
+      id: state.nextId++,
+      templateId: templateId,
+      primary: template.primary,
+      secondary: template.secondary,
       start: start,
-      end: end,
-      x: 60,
-      y: STAGE_H - 300,
-      background: DEFAULT_COLOR.background,
-      foreground: DEFAULT_COLOR.foreground,
-      primaryText: 'Name',
-      secondaryText: 'Title',
+      end: Math.min(start + 4, els.video.duration || start + 4),
+      background: state.style.background,
+      foreground: state.style.foreground,
     });
-    state.selected = { kind: 'lowerThird', id: id };
     renderLowerThirdList();
     drawFrame();
   }
 
   function renderLowerThirdList() {
+    els.ltCount.textContent = state.lowerThirds.length + ' placed';
     if (!state.lowerThirds.length) {
-      els.ltList.innerHTML = '<p class="reels-empty-note">No lower thirds placed yet — pick a template above.</p>';
-      els.ltDetail.hidden = true;
+      els.ltList.innerHTML = '<p class="reels-empty-note">Place a lower third at the current playhead.</p>';
       return;
     }
-    els.ltList.innerHTML = state.lowerThirds.map(function (lt) {
-      var isSel = state.selected && state.selected.kind === 'lowerThird' && state.selected.id === lt.id;
-      var tpl = LOWER_THIRD_TEMPLATES.find(function (t) { return t.id === lt.template; });
-      return '<div class="reels-item' + (isSel ? ' is-selected' : '') + '" data-id="' + lt.id + '">' +
-        '<span class="reels-item-swatch" style="background:' + lt.background + '"></span>' +
-        '<div class="reels-item-body"><div class="reels-item-title">' + escapeHtml(tpl ? tpl.name : lt.template) + '</div>' +
-        '<div class="reels-item-meta">' + formatTime(lt.start) + '–' + formatTime(lt.end) + '</div></div>' +
-        '<div class="reels-item-actions"><button type="button" data-action="delete">✕</button></div></div>';
+    els.ltList.innerHTML = state.lowerThirds.map(function (item) {
+      return '<div class="reels-lt-item"><span>' + escapeHtml(item.primary) + ' - ' + formatTime(item.start) + '-' + formatTime(item.end) + '</span><button type="button" class="reels-row-delete" data-id="' + item.id + '">x</button></div>';
     }).join('');
-    els.ltList.querySelectorAll('.reels-item').forEach(function (row) {
-      var id = Number(row.dataset.id);
-      row.addEventListener('click', function (e) {
-        if (e.target.closest('[data-action="delete"]')) {
-          var idx = state.lowerThirds.findIndex(function (item) { return item.id === id; });
-          if (idx !== -1) state.lowerThirds.splice(idx, 1);
-          if (state.selected && state.selected.kind === 'lowerThird' && state.selected.id === id) state.selected = null;
-          renderLowerThirdList();
-          drawFrame();
-          return;
-        }
-        state.selected = { kind: 'lowerThird', id: id };
+    els.ltList.querySelectorAll('button[data-id]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var id = Number(button.dataset.id);
+        state.lowerThirds = state.lowerThirds.filter(function (item) { return item.id !== id; });
         renderLowerThirdList();
+        drawFrame();
       });
     });
-    var stillSelected = state.selected && state.selected.kind === 'lowerThird' &&
-      state.lowerThirds.some(function (lt) { return lt.id === state.selected.id; });
-    els.ltDetail.hidden = !stillSelected;
   }
 
-  function deleteSelected(kind) {
-    if (!state.selected || state.selected.kind !== kind) return;
-    var collection = kind === 'caption' ? state.captions : state.lowerThirds;
-    var idx = collection.findIndex(function (item) { return item.id === state.selected.id; });
-    if (idx !== -1) collection.splice(idx, 1);
-    state.selected = null;
-    if (kind === 'caption') { renderCaptionTimeline(); hideCaptionDetail(); }
-    else renderLowerThirdList();
-    drawFrame();
+  function drawFrame() {
+    var ctx = state.ctx;
+    ctx.clearRect(0, 0, STAGE_W, STAGE_H);
+    ctx.fillStyle = '#05070d';
+    ctx.fillRect(0, 0, STAGE_W, STAGE_H);
+    if (state.videoLoaded && els.video.videoWidth) drawCoverVideo(ctx);
+    var current = els.video.currentTime || 0;
+    state.lowerThirds.forEach(function (item) {
+      if (current >= item.start && current < item.end) drawLowerThird(ctx, item);
+    });
+    var caption = activeCaption();
+    if (caption) drawCaption(ctx, caption);
+    state.renderedOnce = true;
   }
 
-  // --- Contextual prompt (local heuristic — Claude/MCP-backed version is next) --
-
-  function applyPrompt(inputEl, logEl) {
-    var prompt = inputEl.value.trim();
-    if (!prompt || !state.selected) return;
-    var collection = state.selected.kind === 'caption' ? state.captions : state.lowerThirds;
-    var item = collection.find(function (i) { return i.id === state.selected.id; });
-    if (!item) return;
-
-    var applied = [];
-    var brandMatch = findBrandEntryByTeamName(prompt);
-    if (brandMatch) {
-      item.background = brandMatch.primary.background;
-      item.foreground = brandMatch.primary.foreground;
-      applied.push('recolored to ' + (brandMatch.team || brandMatch.variation));
-    }
-    var lower = prompt.toLowerCase();
-    if (state.selected.kind === 'lowerThird') {
-      if (lower.indexOf('top') !== -1) { item.y = 140; applied.push('moved to top'); }
-      else if (lower.indexOf('bottom') !== -1) { item.y = STAGE_H - 300; applied.push('moved to bottom'); }
-      if (lower.indexOf('left') !== -1) { item.x = 60; applied.push('aligned left'); }
-      else if (lower.indexOf('right') !== -1) { item.x = STAGE_W - 680; applied.push('aligned right'); }
-      else if (lower.indexOf('center') !== -1 || lower.indexOf('centre') !== -1) { item.x = STAGE_W / 2 - 300; applied.push('centered'); }
-    }
-
-    if (!applied.length) applied.push('no recognized instruction — try a team name' + (state.selected.kind === 'lowerThird' ? ' or a position (top/bottom/left/right)' : ''));
-    logPrompt(logEl, prompt, applied.join(', '));
-    inputEl.value = '';
-    if (state.selected.kind === 'caption') renderCaptionTimeline(); else renderLowerThirdList();
-    drawFrame();
+  function drawCoverVideo(ctx) {
+    var vw = els.video.videoWidth;
+    var vh = els.video.videoHeight;
+    var scale = Math.max(STAGE_W / vw, STAGE_H / vh);
+    var dw = vw * scale;
+    var dh = vh * scale;
+    ctx.drawImage(els.video, (STAGE_W - dw) / 2, (STAGE_H - dh) / 2, dw, dh);
   }
 
-  function logPrompt(logEl, prompt, result) {
-    var entry = document.createElement('div');
-    entry.className = 'reels-prompt-entry';
-    entry.innerHTML = '<strong>"' + escapeHtml(prompt) + '"</strong><br>' + escapeHtml(result);
-    logEl.prepend(entry);
+  function drawCaption(ctx, caption) {
+    var style = state.style;
+    var text = caption.text.toUpperCase();
+    var yMap = { upper: 330, center: 900, lower: 1450 };
+    var centerY = yMap[state.captionPosition] || yMap.lower;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = (style.mode === 'headline' ? '900 86px ' : '900 64px ') + '"Roboto Condensed", Arial, sans-serif';
+    var maxWidth = STAGE_W - 130;
+    var lines = wrapText(ctx, text, maxWidth).slice(0, 3);
+    var lineHeight = style.mode === 'headline' ? 92 : 74;
+    var totalHeight = lines.length * lineHeight;
+    lines.forEach(function (line, index) {
+      var y = centerY - totalHeight / 2 + index * lineHeight + lineHeight / 2;
+      var metrics = ctx.measureText(line);
+      var boxWidth = Math.min(maxWidth + 42, metrics.width + 72);
+      if (style.mode === 'bar' || style.mode === 'clean') {
+        ctx.fillStyle = style.background;
+        roundRect(ctx, (STAGE_W - boxWidth) / 2, y - lineHeight / 2 + 5, boxWidth, lineHeight - 10, 10);
+        ctx.fill();
+      }
+      if (style.mode === 'headline') {
+        ctx.lineWidth = 14;
+        ctx.strokeStyle = style.stroke || style.background;
+        ctx.strokeText(line, STAGE_W / 2, y);
+      }
+      if (style.mode === 'karaoke' && index === 0) {
+        ctx.fillStyle = style.accent || varFallback(style.background, '#ffd447');
+        roundRect(ctx, (STAGE_W - boxWidth) / 2, y - lineHeight / 2 + 5, boxWidth * .46, lineHeight - 10, 10);
+        ctx.fill();
+      }
+      ctx.fillStyle = style.foreground;
+      ctx.fillText(line, STAGE_W / 2, y);
+    });
+    ctx.restore();
   }
 
-  // --- Export (client-side, canvas + MediaRecorder) -------------------------
+  function drawLowerThird(ctx, item) {
+    ctx.save();
+    var x = 72;
+    var y = STAGE_H - 230;
+    ctx.fillStyle = item.background || ES_BLUE;
+    roundRect(ctx, x, y, 720, 118, 8);
+    ctx.fill();
+    ctx.fillStyle = item.foreground || '#fff';
+    ctx.textAlign = 'left';
+    ctx.font = '900 44px "Roboto Condensed", Arial, sans-serif';
+    ctx.fillText(item.primary, x + 28, y + 48);
+    ctx.font = '700 28px "Roboto Condensed", Arial, sans-serif';
+    ctx.globalAlpha = .86;
+    ctx.fillText(item.secondary, x + 28, y + 86);
+    ctx.restore();
+  }
+
+  function activeCaption() {
+    var current = els.video.currentTime || 0;
+    return state.captions.find(function (caption) { return current >= caption.start && current < caption.end; }) || null;
+  }
+
+  function findCaption(id) {
+    return state.captions.find(function (caption) { return caption.id === id; }) || null;
+  }
+
+  function findBrandEntry(query) {
+    return findBrandCandidates(query)[0] || null;
+  }
+
+  function findBrandCandidates(query) {
+    var q = String(query || '').toLowerCase();
+    if (!q) return [];
+    return (window.ES_BRAND_KIT || []).filter(function (entry) {
+      var haystack = [entry.sport, entry.team, entry.variation].join(' ').toLowerCase();
+      return haystack && (haystack.indexOf(q) !== -1 || q.split(/\s+/).some(function (word) {
+        return word.length > 2 && haystack.indexOf(word) !== -1;
+      }));
+    });
+  }
 
   function startExport() {
-    if (!state.videoLoaded) return;
+    if (!state.videoLoaded || state.recording) return;
     var stream = els.canvas.captureStream(30);
     var mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
     state.recorder = new MediaRecorder(stream, { mimeType: mimeType });
     state.recordedChunks = [];
-    state.recorder.ondataavailable = function (e) { if (e.data.size) state.recordedChunks.push(e.data); };
+    state.recorder.ondataavailable = function (event) {
+      if (event.data && event.data.size) state.recordedChunks.push(event.data);
+    };
     state.recorder.onstop = onExportStopped;
     state.recorder.start();
     state.recording = true;
     els.exportBtn.textContent = 'Stop & Download';
-    els.exportStatus.textContent = 'Recording — play through the clip, then stop.';
+    setStatus(els.exportStatus, 'Recording the canvas. The clip will play from the start.');
     els.video.currentTime = 0;
     els.video.play();
   }
@@ -627,23 +658,116 @@
     if (state.recorder && state.recorder.state !== 'inactive') state.recorder.stop();
     els.video.pause();
     state.recording = false;
-    els.exportBtn.textContent = 'Export Reel';
+    els.exportBtn.textContent = 'Export Captioned Reel';
   }
 
   function onExportStopped() {
     var blob = new Blob(state.recordedChunks, { type: 'video/webm' });
     var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'reel-export.webm';
-    a.click();
-    els.exportStatus.textContent = 'Downloaded reel-export.webm';
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'es-captioned-reel.webm';
+    link.click();
+    setStatus(els.exportStatus, 'Downloaded es-captioned-reel.webm', 'good');
   }
 
-  // --- Utils ---------------------------------------------------------------
+  function downloadSrt() {
+    var text = state.captions.map(function (caption, index) {
+      return (index + 1) + '\n' + formatSrtTime(caption.start) + ' --> ' + formatSrtTime(caption.end) + '\n' + caption.text + '\n';
+    }).join('\n');
+    var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'es-reels-captions.srt';
+    link.click();
+  }
+
+  function postJson(url, payload) {
+    var fetcher = window.ESAuth && window.ESAuth.fetchWithAuth ? window.ESAuth.fetchWithAuth : fetch;
+    return fetcher(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(function (response) {
+      return response.json().catch(function () { return {}; }).then(function (data) {
+        if (!response.ok) throw new Error(data.error || data.detail || ('Request failed: ' + response.status));
+        return data;
+      });
+    });
+  }
+
+  function fileToBase64(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        resolve(String(reader.result || '').split(',')[1] || '');
+      };
+      reader.onerror = function () { reject(new Error('Could not read the selected video file.')); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function wrapText(ctx, text, maxWidth) {
+    var words = text.split(/\s+/).filter(Boolean);
+    var lines = [];
+    var line = '';
+    words.forEach(function (word) {
+      var next = line ? line + ' ' + word : word;
+      if (ctx.measureText(next).width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = next;
+      }
+    });
+    if (line) lines.push(line);
+    return lines.length ? lines : [''];
+  }
+
+  function roundRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.arcTo(x + width, y, x + width, y + height, radius);
+    ctx.arcTo(x + width, y + height, x, y + height, radius);
+    ctx.arcTo(x, y + height, x, y, radius);
+    ctx.arcTo(x, y, x + width, y, radius);
+    ctx.closePath();
+  }
+
+  function formatTime(time) {
+    var safe = Math.max(0, Number(time) || 0);
+    var minutes = Math.floor(safe / 60);
+    var seconds = Math.floor(safe % 60);
+    return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+  }
+
+  function formatSrtTime(time) {
+    var safe = Math.max(0, Number(time) || 0);
+    var hours = Math.floor(safe / 3600);
+    var minutes = Math.floor((safe % 3600) / 60);
+    var seconds = Math.floor(safe % 60);
+    var ms = Math.floor((safe % 1) * 1000);
+    return [hours, minutes, seconds].map(function (part) { return String(part).padStart(2, '0'); }).join(':') + ',' + String(ms).padStart(3, '0');
+  }
+
+  function sortByStart(a, b) {
+    return a.start - b.start;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function varFallback(value, fallback) {
+    return value || fallback;
+  }
 
   function escapeHtml(value) {
     return String(value == null ? '' : value)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 })();

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Reels | FrameUp</title>
-  <meta name="description" content="Caption and brand your short-form video with team-colored captions and ready-made lower thirds.">
+  <title>Reels Studio | FrameUp</title>
+  <meta name="description" content="Speech-recognition captions, transcript editing, brand-safe styling, and lower thirds for ES short-form video.">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20260714-deleteaccount1"></script>
   <script>
@@ -13,12 +13,12 @@
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&amp;family=Roboto+Condensed:wght@400;500;700;800;900&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@500;600;700;800;900&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
   <link rel="stylesheet" href="theme.css?v=20260714-footer1">
   <link rel="stylesheet" href="site-chrome.css?v=20260723-profile3">
   <link rel="stylesheet" href="cta-hover.css?v=20260723-howrefine1">
-  <link rel="stylesheet" href="reels.css?v=20260728-reels1">
+  <link rel="stylesheet" href="reels.css?v=20260728-reels2">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20260723-profile2"></script>
@@ -63,97 +63,117 @@
   </nav>
 
   <main>
-    <div class="reels-head">
+    <section class="reels-head" aria-labelledby="reels-title">
       <p class="reels-eyebrow">FrameUp Workspace</p>
-      <h1>Reels</h1>
-      <p>Drop in a clip, auto-caption it in your team's colors, and drop in a ready-made lower third — all exported straight from your browser.</p>
-    </div>
+      <h1 id="reels-title">Reels Studio</h1>
+      <p>Upload a short-form clip, generate captions from the video's speech, clean the transcript, apply ES-safe visual styles, and export with burned-in captions.</p>
+    </section>
 
-    <div class="reels-layout">
-      <div class="reels-stage-card">
+    <section class="reels-shell" aria-label="Reels caption editor">
+      <aside class="reels-preview">
         <div class="reels-stage-frame">
           <canvas id="reels-canvas"></canvas>
-          <div class="reels-stage-empty" id="reels-stage-empty">Upload a clip to get started</div>
+          <div class="reels-stage-empty" id="reels-stage-empty">
+            <strong>Drop in a vertical clip</strong>
+            <span>MP4, MOV, or WebM works best.</span>
+          </div>
         </div>
         <input type="file" id="reels-file-input" accept="video/*" hidden>
-        <video id="reels-video" hidden playsinline></video>
-        <button type="button" class="reels-upload-btn" id="reels-upload-btn">Upload Clip</button>
-        <div class="reels-transport">
-          <button type="button" id="reels-play-btn" disabled>▶</button>
-          <input type="range" class="reels-scrub" id="reels-scrub" min="0" max="1000" value="0" disabled>
-          <span class="reels-time" id="reels-time">0:00 / 0:00</span>
+        <video id="reels-video" hidden playsinline crossorigin="anonymous"></video>
+        <div class="reels-preview-actions">
+          <button type="button" class="reels-btn is-primary" id="reels-upload-btn">Upload Clip</button>
+          <button type="button" class="reels-icon-btn" id="reels-play-btn" disabled aria-label="Play or pause">Play</button>
         </div>
-        <div class="reels-export-row">
-          <button type="button" class="reels-upload-btn is-secondary" id="reels-export-btn" disabled>Export Reel</button>
+        <input type="range" class="reels-scrub" id="reels-scrub" min="0" max="1000" value="0" disabled aria-label="Video timeline">
+        <div class="reels-time-row">
+          <span id="reels-current-time">0:00</span>
+          <span id="reels-total-time">0:00</span>
         </div>
-        <div class="reels-export-status" id="reels-export-status"></div>
-      </div>
+        <button type="button" class="reels-btn is-secondary" id="reels-export-btn" disabled>Export Captioned Reel</button>
+        <p class="reels-status" id="reels-export-status"></p>
+      </aside>
 
-      <div class="reels-panel">
-        <div class="reels-tabs">
-          <button type="button" class="reels-tab is-active" data-panel="reels-panel-captions">Caption Maker</button>
-          <button type="button" class="reels-tab" data-panel="reels-panel-lowerthirds">Lower Thirds</button>
+      <section class="reels-workbench">
+        <div class="reels-pipeline" aria-label="Caption workflow">
+          <div class="reels-step is-active" data-step="upload"><span>1</span>Upload</div>
+          <div class="reels-step" data-step="transcribe"><span>2</span>Speech Recognition</div>
+          <div class="reels-step" data-step="review"><span>3</span>Transcript Review</div>
+          <div class="reels-step" data-step="style"><span>4</span>Brand Styling</div>
         </div>
 
-        <div class="reels-tabpanel is-active" id="reels-panel-captions">
-          <button type="button" class="reels-add-btn" id="reels-generate-btn" disabled>Auto-Generate Captions</button>
-          <p class="reels-prompt-note" id="reels-generate-note">Upload a clip first, then generate captions — you'll get an editable timeline, just like Instagram's Reel editor.</p>
+        <div class="reels-command-bar">
+          <button type="button" class="reels-btn is-primary" id="reels-transcribe-btn" disabled>Generate Captions from Speech</button>
+          <button type="button" class="reels-btn is-quiet" id="reels-add-caption-btn" disabled>Add Caption</button>
+          <button type="button" class="reels-btn is-quiet" id="reels-download-srt-btn" disabled>Download SRT</button>
+        </div>
+        <p class="reels-status" id="reels-transcribe-status">Upload a clip to begin.</p>
 
-          <div id="reels-caption-timeline-wrap" hidden>
-            <div class="reels-timeline-track" id="reels-caption-timeline"></div>
-            <div class="reels-timeline-scale">
-              <span>0:00</span><span id="reels-timeline-duration">0:00</span>
-            </div>
-            <button type="button" class="reels-upload-btn is-secondary" id="reels-regenerate-btn" style="margin-top:14px;width:100%">Regenerate Captions</button>
+        <div class="reels-timeline-card">
+          <div class="reels-timeline-head">
+            <strong>Caption Timeline</strong>
+            <span id="reels-caption-count">0 segments</span>
           </div>
+          <div class="reels-timeline" id="reels-caption-timeline" aria-label="Caption timing segments"></div>
+          <div class="reels-playhead" id="reels-playhead" hidden></div>
+        </div>
 
-          <div id="reels-caption-detail" hidden>
-            <div class="reels-detail-card">
-              <div class="reels-field">
-                <label for="reels-caption-edit-text">Caption text</label>
-                <textarea id="reels-caption-edit-text"></textarea>
+        <div class="reels-editor-grid">
+          <section class="reels-transcript-panel" aria-label="Transcript editor">
+            <div class="reels-panel-head">
+              <h2>Transcript</h2>
+              <span id="reels-transcript-source">No speech recognition yet</span>
+            </div>
+            <div class="reels-transcript-list" id="reels-transcript-list">
+              <p class="reels-empty-note">Generated captions will appear here as editable transcript rows with start/end timings.</p>
+            </div>
+          </section>
+
+          <aside class="reels-side-panel" aria-label="Caption styling and intelligence">
+            <div class="reels-panel-head">
+              <h2>Style</h2>
+              <span id="reels-style-name">Broadcast</span>
+            </div>
+            <div class="reels-style-grid" id="reels-style-grid"></div>
+            <label class="reels-field">
+              <span>Position</span>
+              <select id="reels-caption-position">
+                <option value="lower">Lower safe area</option>
+                <option value="center">Center punch</option>
+                <option value="upper">Upper safe area</option>
+              </select>
+            </label>
+            <label class="reels-field">
+              <span>Team / brand color</span>
+              <input type="search" id="reels-team-query" placeholder="Try Lakers, Chiefs, Yankees">
+            </label>
+            <button type="button" class="reels-btn is-secondary" id="reels-apply-team-btn">Apply Brand Color</button>
+
+            <div class="reels-intel-box">
+              <div class="reels-panel-head">
+                <h2>Intelligence</h2>
+                <span id="reels-intel-source">ES MCP ready path</span>
               </div>
-              <div class="reels-inline-row">
-                <div class="reels-field">
-                  <label for="reels-caption-edit-start">Start (s)</label>
-                  <input type="number" id="reels-caption-edit-start" step="0.1" min="0">
-                </div>
-                <div class="reels-field">
-                  <label for="reels-caption-edit-end">End (s)</label>
-                  <input type="number" id="reels-caption-edit-end" step="0.1" min="0">
-                </div>
+              <textarea id="reels-intel-prompt" placeholder="Example: make captions more punchy, highlight names, use Lakers colors, and keep it lower-safe"></textarea>
+              <button type="button" class="reels-btn is-primary" id="reels-intel-btn" disabled>Apply to Selected Caption</button>
+              <p class="reels-status" id="reels-intel-status">Select a caption row to use Intelligence.</p>
+            </div>
+
+            <div class="reels-lower-thirds">
+              <div class="reels-panel-head">
+                <h2>Lower Thirds</h2>
+                <span id="reels-lt-count">0 placed</span>
               </div>
-              <button type="button" class="reels-upload-btn is-secondary" id="reels-caption-delete-btn" style="width:100%">Delete this caption</button>
+              <div class="reels-lt-grid" id="reels-lt-grid"></div>
+              <div class="reels-lt-list" id="reels-lt-list"></div>
             </div>
-            <div class="reels-prompt-box" id="reels-caption-prompt-box">
-              <label>Restyle with a prompt</label>
-              <textarea id="reels-caption-prompt-input" placeholder='e.g. "make it Lakers colors"'></textarea>
-              <button type="button" class="reels-upload-btn" id="reels-caption-prompt-apply-btn">Apply</button>
-            </div>
-            <div class="reels-prompt-log" id="reels-caption-prompt-log"></div>
-          </div>
+          </aside>
         </div>
-
-        <div class="reels-tabpanel" id="reels-panel-lowerthirds">
-          <div class="reels-lt-grid" id="reels-lt-grid"></div>
-          <p class="reels-empty-note" style="margin-top:14px">Click a template to drop it in at the current playhead.</p>
-          <div class="reels-list" id="reels-lt-list" style="margin-top:14px"></div>
-
-          <div id="reels-lt-detail" hidden>
-            <div class="reels-prompt-box" id="reels-lt-prompt-box">
-              <label>Restyle with a prompt</label>
-              <textarea id="reels-lt-prompt-input" placeholder='e.g. "make it Lakers colors" or "move to the top"'></textarea>
-              <button type="button" class="reels-upload-btn" id="reels-lt-prompt-apply-btn">Apply</button>
-            </div>
-            <div class="reels-prompt-log" id="reels-lt-prompt-log"></div>
-          </div>
-        </div>
-      </div>
-    </div>
+      </section>
+    </section>
   </main>
 
   <footer class="site-footer" aria-label="Site footer"></footer>
   <script src="brand-kit.js?v=20260728-reels1"></script>
-  <script src="reels.js?v=20260728-reels1"></script>
+  <script src="reels.js?v=20260728-reels2"></script>
 </body>
 </html>

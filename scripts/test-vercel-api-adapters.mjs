@@ -5,6 +5,7 @@ const require = createRequire(import.meta.url);
 const imageHandler = require('../api/es-image-search.js');
 const designSubmitHandler = require('../api/design-request-submit.js');
 const callbackHandler = require('../api/es-mcp-oauth-callback.js');
+const videoIntelligenceHandler = require('../api/es-video-intelligence.js');
 
 const originalFetch = globalThis.fetch;
 
@@ -165,6 +166,45 @@ function createResponse() {
   assert.equal(emailCalls[0].requester.email, 'suhail.quraishi@essentiallysports.com');
 
   delete process.env.DESIGN_REQUEST_EMAIL_ENDPOINT;
+  globalThis.fetch = originalFetch;
+}
+
+{
+  globalThis.fetch = async (url, options = {}) => {
+    if (String(url).includes('/auth/v1/user')) {
+      assert.equal(options.headers?.Authorization, 'Bearer test-user-token');
+      return new Response(JSON.stringify({
+        id: 'user-1',
+        email: 'suhail.quraishi@essentiallysports.com',
+      }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  const response = createResponse();
+  await videoIntelligenceHandler({
+    method: 'POST',
+    headers: { Authorization: 'Bearer test-user-token' },
+    query: {},
+    body: {
+      action: 'style',
+      prompt: 'use Lakers colors and move lower',
+      target: { kind: 'caption', text: 'Lakers win the opener' },
+      brandKit: [{
+        team: 'Los Angeles Lakers',
+        primary: { background: '#552583', foreground: '#ffffff', mist: '#fdb927' },
+      }],
+    },
+  }, response);
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.payload);
+  assert.equal(payload.provider, 'Local rules fallback');
+  assert.equal(payload.patch.position, 'lower');
+
   globalThis.fetch = originalFetch;
 }
 
