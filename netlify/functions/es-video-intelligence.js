@@ -291,14 +291,41 @@ function normalizeMcpPatch(result) {
   return content && typeof content === 'object' ? content : { patch: {} };
 }
 
-function normalizeSegmentsFromProvider(segments) {
-  return segments.map(segment => ({
+function normalizeWordFromProvider(word) {
+  return {
+    word: String(word.word ?? word.text ?? '').trim(),
+    start: Number(word.start ?? word.start_time ?? word.startTime) || 0,
+    end: Number(word.end ?? word.end_time ?? word.endTime) || 0,
+    confidence: word.confidence == null ? null : Number(word.confidence),
+  };
+}
+
+function assignWordsToSegments(segments, words) {
+  const normalizedWords = Array.isArray(words)
+    ? words.map(normalizeWordFromProvider).filter(word => word.word)
+    : [];
+  if (!normalizedWords.length) return segments;
+  return segments.map(segment => {
+    if (Array.isArray(segment.words) && segment.words.length) return segment;
+    return {
+      ...segment,
+      words: normalizedWords.filter(word => {
+        const midpoint = (word.start + word.end) / 2;
+        return midpoint >= segment.start && midpoint <= segment.end;
+      }),
+    };
+  });
+}
+
+function normalizeSegmentsFromProvider(segments, words = []) {
+  const normalizedSegments = segments.map(segment => ({
     start: Number(segment.start ?? segment.start_time ?? segment.startTime) || 0,
     end: Number(segment.end ?? segment.end_time ?? segment.endTime) || 0,
     text: String(segment.text ?? segment.caption ?? segment.content ?? '').trim(),
     confidence: segment.confidence == null ? null : Number(segment.confidence),
-    words: Array.isArray(segment.words) ? segment.words : [],
+    words: Array.isArray(segment.words) ? segment.words.map(normalizeWordFromProvider).filter(word => word.word) : [],
   })).filter(segment => segment.text);
+  return assignWordsToSegments(normalizedSegments, words);
 }
 
 function normalizeMcpTranscription(result) {
@@ -329,7 +356,7 @@ function normalizeMcpTranscription(result) {
     provider: value.provider || 'ES MCP',
     language: value.language || '',
     text: typeof text === 'string' ? text : '',
-    segments: normalizeSegmentsFromProvider(Array.isArray(segments) ? segments : []),
+    segments: normalizeSegmentsFromProvider(Array.isArray(segments) ? segments : [], value.words || value.transcript?.words || value.result?.words || []),
   };
 }
 
@@ -474,7 +501,7 @@ async function transcribeWithGroq(payload) {
   }
 
   const segments = Array.isArray(data?.segments)
-    ? normalizeSegmentsFromProvider(data.segments)
+    ? normalizeSegmentsFromProvider(data.segments, data.words)
     : chunkPlainTranscript(data?.text || '');
 
   return json(200, {

@@ -93,6 +93,14 @@ globalThis.fetch = async (url, options = {}) => {
         { start: 0, end: 1.4, text: 'Caitlin Clark hits another' },
         { start: 1.4, end: 2.8, text: 'deep three' },
       ],
+      words: [
+        { word: 'Caitlin', start: 0.0, end: 0.3 },
+        { word: 'Clark', start: 0.3, end: 0.6 },
+        { word: 'hits', start: 0.6, end: 0.9 },
+        { word: 'another', start: 0.9, end: 1.3 },
+        { word: 'deep', start: 1.5, end: 1.9 },
+        { word: 'three', start: 1.9, end: 2.4 },
+      ],
     }), {
       status: 200,
       headers: { 'content-type': 'application/json' },
@@ -239,6 +247,9 @@ const { handler: groqHandler } = require('../netlify/functions/es-video-intellig
   assert.equal(payload.language, 'en');
   assert.equal(payload.segments.length, 2);
   assert.equal(payload.segments[1].text, 'deep three');
+  assert.equal(payload.segments[0].words.length, 4);
+  assert.equal(payload.segments[1].words.length, 2);
+  assert.equal(payload.segments[1].words[0].word, 'deep');
 }
 
 assert.ok(fetchCalls.every(call => (
