@@ -19,6 +19,9 @@ assert.match(reels, /CAPTION_MIN_SECONDS\s*=\s*0\.7/);
 assert.match(reels, /MAX_INLINE_UPLOAD_BYTES\s*=\s*3\s*\*\s*1024\s*\*\s*1024/);
 assert.match(reels, /function transcribeUploadedClip/);
 assert.match(reels, /function transcribeDecodedAudio/);
+assert.match(reels, /function transcribeCapturedAudio/);
+assert.match(reels, /function captureAudioBlobs/);
+assert.match(reels, /function offsetSegment/);
 assert.match(reels, /function formatCaptionBeats/);
 assert.match(reels, /function normalizeTimedWords/);
 assert.match(reels, /formatCaptionBeats\(result\.segments \|\| \[\]\)/);
@@ -29,6 +32,7 @@ assert.match(reels, /\/api\/es-video-intelligence\?health=public-probe/);
 assert.match(reels, /Speech backend ready: Groq Whisper captions\. ES MCP is connected for available tools\./);
 assert.match(reels, /Local rules until ES MCP adds Intelligence/);
 assert.match(reels, /mimeType:\s*'audio\/wav'/);
+assert.match(reels, /mimeType:\s*item\.blob\.type \|\| 'audio\/webm'/);
 assert.match(reels, /function drawCaptionPills/);
 assert.match(reels, /POST_FONT_FAMILY\s*=\s*'Acumin Post'/);
 assert.match(reels, /PILL_H\s*=\s*122/);
@@ -90,6 +94,18 @@ assert.match(formatterSource, /words\.slice\(i,\s*i \+ CAPTION_MAX_WORDS\)/);
 assert.match(formatterSource, /timedWords\.slice\(w,\s*w \+ CAPTION_MAX_WORDS\)/);
 assert.match(formatterSource, /chunkStart/);
 assert.match(formatterSource, /chunkEnd/);
+
+const transcribeSource = reels.slice(
+  reels.indexOf('async function transcribeUploadedClip'),
+  reels.indexOf('async function decodeClipAudio'),
+);
+assert.match(transcribeSource, /return await transcribeDecodedAudio\(file\)/);
+assert.match(transcribeSource, /return await transcribeCapturedAudio\(file\)/);
+assert.match(transcribeSource, /audioContext\.createMediaElementSource\(video\)/);
+assert.match(transcribeSource, /audioContext\.createMediaStreamDestination\(\)/);
+assert.match(transcribeSource, /recorder\.start\(TRANSCRIBE_CHUNK_SECONDS \* 1000\)/);
+assert.match(transcribeSource, /merged\.segments\.push\(offsetSegment\(segment, item\.start\)\)/);
+assert.match(transcribeSource, /merged\.segments\.push\(offsetSegment\(segment, chunk\.start\)\)/);
 
 const exportSource = reels.slice(
   reels.indexOf('function startExport'),

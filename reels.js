@@ -276,10 +276,19 @@
       try {
         return await transcribeDecodedAudio(file);
       } catch (error) {
+        try {
+          setStatus(els.transcribeStatus, 'Audio decode was unavailable, recording the clip audio track for speech recognition...');
+          return await transcribeCapturedAudio(file);
+        } catch (captureError) {
+          if (file.size <= MAX_INLINE_UPLOAD_BYTES) {
+            setStatus(els.transcribeStatus, 'Audio extraction was unavailable, sending the original clip instead...');
+          } else {
+            throw new Error('The browser could not extract audio from this clip. Try exporting MP4/WebM with one standard audio track.');
+          }
+        }
         if (file.size > MAX_INLINE_UPLOAD_BYTES) {
           throw new Error('The browser could not extract audio from this clip. Try exporting MP4/WebM with one standard audio track.');
         }
-        setStatus(els.transcribeStatus, 'Audio extraction was unavailable, sending the original clip instead...');
       }
     }
 
@@ -320,23 +329,127 @@
       merged.language = result.language || merged.language;
       merged.text = [merged.text, result.text || ''].filter(Boolean).join(' ').trim();
       (result.segments || []).forEach(function (segment) {
-        merged.segments.push({
-          start: (Number(segment.start) || 0) + chunk.start,
-          end: (Number(segment.end) || 0) + chunk.start,
-          text: segment.text,
-          confidence: segment.confidence,
-          words: Array.isArray(segment.words) ? segment.words.map(function (word) {
-            return Object.assign({}, word, {
-              start: word.start == null ? word.start : Number(word.start) + chunk.start,
-              end: word.end == null ? word.end : Number(word.end) + chunk.start,
-            });
-          }) : [],
-        });
+        merged.segments.push(offsetSegment(segment, chunk.start));
       });
     }
 
     merged.segments.sort(sortByStart);
     return merged;
+  }
+
+  async function transcribeCapturedAudio(file) {
+    if (typeof MediaRecorder === 'undefined' || typeof AudioContext === 'undefined' && typeof webkitAudioContext === 'undefined') {
+      throw new Error('Browser media capture is not available.');
+    }
+    var blobs = await captureAudioBlobs(file);
+    if (!blobs.length) throw new Error('No audio track was captured from the uploaded clip.');
+    var merged = {
+      provider: '',
+      language: '',
+      text: '',
+      segments: [],
+    };
+
+    for (var i = 0; i < blobs.length; i++) {
+      var item = blobs[i];
+      setStatus(els.transcribeStatus, 'Speech recognition captured audio chunk ' + (i + 1) + ' of ' + blobs.length + '...');
+      var result = await postJson('/api/es-video-intelligence', {
+        action: 'transcribe',
+        fileName: chunkFileName(file.name, i).replace(/\.wav$/, '.webm'),
+        mimeType: item.blob.type || 'audio/webm',
+        data: await blobToBase64(item.blob),
+      });
+
+      merged.provider = result.provider || merged.provider;
+      merged.language = result.language || merged.language;
+      merged.text = [merged.text, result.text || ''].filter(Boolean).join(' ').trim();
+      (result.segments || []).forEach(function (segment) {
+        merged.segments.push(offsetSegment(segment, item.start));
+      });
+    }
+
+    merged.segments.sort(sortByStart);
+    return merged;
+  }
+
+  function captureAudioBlobs(file) {
+    return new Promise(function (resolve, reject) {
+      var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      var audioContext = new AudioContextClass();
+      var video = document.createElement('video');
+      var url = URL.createObjectURL(file);
+      var chunks = [];
+      var recorder = null;
+      var startedAt = 0;
+
+      function cleanup() {
+        URL.revokeObjectURL(url);
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+        if (audioContext.close) audioContext.close().catch(function () {});
+      }
+
+      video.preload = 'auto';
+      video.playsInline = true;
+      video.src = url;
+      video.addEventListener('loadedmetadata', function () {
+        try {
+          var source = audioContext.createMediaElementSource(video);
+          var destination = audioContext.createMediaStreamDestination();
+          source.connect(destination);
+          recorder = new MediaRecorder(destination.stream, {
+            mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm',
+          });
+          recorder.ondataavailable = function (event) {
+            if (event.data && event.data.size) {
+              chunks.push({ start: startedAt, blob: event.data });
+              startedAt += TRANSCRIBE_CHUNK_SECONDS;
+            }
+          };
+          recorder.onerror = function () {
+            cleanup();
+            reject(new Error('Could not record the clip audio track.'));
+          };
+          recorder.onstop = function () {
+            cleanup();
+            resolve(chunks);
+          };
+          audioContext.resume().then(function () {
+            recorder.start(TRANSCRIBE_CHUNK_SECONDS * 1000);
+            return video.play();
+          }).catch(function (error) {
+            cleanup();
+            reject(error);
+          });
+        } catch (error) {
+          cleanup();
+          reject(error);
+        }
+      }, { once: true });
+      video.addEventListener('ended', function () {
+        if (recorder && recorder.state !== 'inactive') recorder.stop();
+      });
+      video.addEventListener('error', function () {
+        cleanup();
+        reject(new Error('Could not play the uploaded clip for audio capture.'));
+      }, { once: true });
+    });
+  }
+
+  function offsetSegment(segment, offset) {
+    return {
+      start: (Number(segment.start) || 0) + offset,
+      end: (Number(segment.end) || 0) + offset,
+      text: segment.text,
+      confidence: segment.confidence,
+      words: Array.isArray(segment.words) ? segment.words.map(function (word) {
+        return Object.assign({}, word, {
+          start: word.start == null ? word.start : Number(word.start) + offset,
+          end: word.end == null ? word.end : Number(word.end) + offset,
+        });
+      }) : [],
+    };
   }
 
   async function decodeClipAudio(file) {
