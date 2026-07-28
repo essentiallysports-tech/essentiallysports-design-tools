@@ -75,6 +75,8 @@
       els.video.currentTime = (Number(els.scrub.value) / 1000) * els.video.duration;
     });
     els.video.addEventListener('loadedmetadata', onVideoReady);
+    els.video.addEventListener('seeked', onFirstFrameReady);
+    els.video.addEventListener('error', onVideoError);
     els.video.addEventListener('timeupdate', syncScrub);
     els.video.addEventListener('play', startRenderLoop);
     els.video.addEventListener('pause', stopRenderLoop);
@@ -135,20 +137,41 @@
   function onFileChosen(e) {
     var file = e.target.files && e.target.files[0];
     if (!file) return;
+    state.videoLoaded = false;
+    els.stageEmpty.style.display = 'grid';
+    els.stageEmpty.innerHTML = '<span class="reels-spinner" aria-hidden="true"></span>Loading clip…';
+    els.uploadBtn.disabled = true;
     var url = URL.createObjectURL(file);
     els.video.src = url;
     els.video.load();
   }
 
   function onVideoReady() {
+    // loadedmetadata only guarantees dimensions, not a decoded frame — without
+    // forcing a seek, drawImage can paint nothing and the canvas just looks
+    // like the empty placeholder with no obvious feedback that anything loaded.
+    els.video.currentTime = 0;
+  }
+
+  function onFirstFrameReady() {
+    if (state.videoLoaded) return;
     state.videoLoaded = true;
     els.stageEmpty.style.display = 'none';
+    els.uploadBtn.disabled = false;
+    els.uploadBtn.textContent = 'Change Clip';
     els.playBtn.disabled = false;
     els.scrub.disabled = false;
     els.exportBtn.disabled = false;
     els.generateBtn.disabled = false;
     els.generateNote.textContent = 'Ready — click Auto-Generate Captions to transcribe this clip.';
     drawFrame();
+  }
+
+  function onVideoError() {
+    if (state.videoLoaded) return;
+    els.stageEmpty.style.display = 'grid';
+    els.stageEmpty.textContent = 'Couldn\'t load that clip — try a different file or format (MP4/WebM).';
+    els.uploadBtn.disabled = false;
   }
 
   function togglePlay() {

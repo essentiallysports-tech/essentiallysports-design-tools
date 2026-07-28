@@ -76,10 +76,24 @@ body.reels-page {
   inset: 0;
   display: grid;
   place-items: center;
+  justify-items: center;
+  gap: 12px;
   padding: 24px;
   text-align: center;
   color: rgba(255, 255, 255, .72);
   font-size: 14px;
+}
+.reels-spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, .25);
+  border-top-color: #fff;
+  animation: reels-spin 800ms linear infinite;
+}
+@keyframes reels-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .reels-spinner { animation: none; }
 }
 .reels-upload-btn {
   display: inline-flex;

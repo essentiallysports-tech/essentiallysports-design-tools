@@ -17,8 +17,23 @@ and what's still uncommitted.
 
 ## Entries
 
-### 2026-07-28 — Reels UX rework: auto-generate + timeline, contextual prompt (not a tab)
+### 2026-07-28 — Reels: fix invisible video on upload, add loading feedback
 - Status: `[pending push]`
+- Files touched: `reels.js`, `reels.css`.
+- Bug (reported by Suhail: "I can't see it even if it's getting uploaded"): `drawFrame()` ran on the
+  video's `loadedmetadata` event, which only guarantees known dimensions — not an actually decoded
+  frame. `drawImage` on a video with no decoded frame yet paints nothing, so the canvas just showed its
+  `#05070d` background fill with the placeholder text already hidden — i.e. nothing visibly wrong, just
+  nothing there. There was also no feedback at all between choosing a file and (maybe) seeing it.
+- Fix: after `loadedmetadata`, force `video.currentTime = 0` and wait for the `seeked` event (which
+  browsers only fire once a real frame at that time is decoded) before revealing the canvas and drawing.
+  Added a spinner + "Loading clip…" state in the stage from the moment a file is chosen until that first
+  real frame lands, an error state if the file fails to load (bad format/codec), and the upload button
+  now reads "Change Clip" once something's loaded (previously gave no indication a clip was active).
+- Still unverified in-browser (same login-gate limitation as every prior Reels entry).
+
+### 2026-07-28 — Reels UX rework: auto-generate + timeline, contextual prompt (not a tab)
+- Status: `[pushed - 6f2c831, combined with the MVP entry below into one commit]`
 - Files touched: `reels.html`, `reels.js`, `reels.css` (all uncommitted, layered on top of the entry
   right below this one — no separate commit boundary between them yet).
 - Suhail corrected the first pass after linking [Riverside 2.0](https://riverside.com/blog/riverside-2-0)
@@ -48,7 +63,7 @@ and what's still uncommitted.
   research, so the "why" isn't lost if someone reads the plan without this log entry.
 
 ### 2026-07-28 — Reels workspace MVP (new, uncommitted)
-- Status: `[pending push]`
+- Status: `[pushed - 6f2c831]`
 - Files touched (all new, nothing existing removed): `reels.html`, `reels.css`, `reels.js`,
   `brand-kit.js` (new). Small edits to existing `index.html` (4th `frame-card` for Reels, nav
   dropdown entry, "3 design workspaces" → "4") and `how-it-works.html` (nav dropdown entry).
