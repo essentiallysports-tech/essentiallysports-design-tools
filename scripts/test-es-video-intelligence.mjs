@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 
 process.env.ES_MCP_ACCESS_TOKEN = 'test-mcp-token';
 delete process.env.ES_MCP_REFRESH_TOKEN;
@@ -216,6 +217,12 @@ process.env.GROQ_API_KEY = 'test-groq-key';
 const { handler: groqHandler } = require('../netlify/functions/es-video-intelligence.js');
 
 {
+  const source = readFileSync(new URL('../netlify/functions/es-video-intelligence.js', import.meta.url), 'utf8');
+  assert.match(source, /MAX_TRANSCRIPTION_UPLOAD_BYTES\s*=\s*4\s*\*\s*1024\s*\*\s*1024/);
+  assert.match(source, /function getBase64DecodedSize/);
+}
+
+{
   const response = await groqHandler({
     httpMethod: 'GET',
     headers: {},
@@ -250,6 +257,24 @@ const { handler: groqHandler } = require('../netlify/functions/es-video-intellig
   assert.equal(payload.segments[0].words.length, 4);
   assert.equal(payload.segments[1].words.length, 2);
   assert.equal(payload.segments[1].words[0].word, 'deep');
+}
+
+{
+  const response = await groqHandler({
+    httpMethod: 'POST',
+    headers: { Authorization: 'Bearer test-user-token' },
+    body: JSON.stringify({
+      action: 'transcribe',
+      fileName: 'too-large.webm',
+      mimeType: 'audio/webm',
+      data: Buffer.alloc(4 * 1024 * 1024 + 1).toString('base64'),
+    }),
+  });
+
+  assert.equal(response.statusCode, 413);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.provider, 'request-validation');
+  assert.match(payload.error, /too large/i);
 }
 
 assert.ok(fetchCalls.every(call => (

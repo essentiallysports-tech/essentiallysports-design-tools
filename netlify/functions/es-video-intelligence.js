@@ -13,6 +13,7 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 const GROQ_TRANSCRIPTION_MODEL = process.env.GROQ_TRANSCRIPTION_MODEL || 'whisper-large-v3-turbo';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const TRANSCRIPTION_MODEL = process.env.OPENAI_TRANSCRIPTION_MODEL || 'gpt-4o-transcribe';
+const MAX_TRANSCRIPTION_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 let cachedMcpAccessToken = '';
 
@@ -64,6 +65,13 @@ function parseJsonBody(event) {
   if (!event.body) return {};
   const raw = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body;
   return JSON.parse(raw);
+}
+
+function getBase64DecodedSize(value) {
+  const clean = String(value || '').replace(/\s/g, '');
+  if (!clean) return 0;
+  const padding = clean.endsWith('==') ? 2 : (clean.endsWith('=') ? 1 : 0);
+  return Math.max(0, Math.floor((clean.length * 3) / 4) - padding);
 }
 
 function parseMcpPayload(text, contentType) {
@@ -577,6 +585,14 @@ async function styleWithIntelligence(payload) {
 }
 
 async function transcribeVideo(payload) {
+  if (!payload.data) return json(400, { error: 'Missing video/audio data.' });
+  if (getBase64DecodedSize(payload.data) > MAX_TRANSCRIPTION_UPLOAD_BYTES) {
+    return json(413, {
+      error: 'Speech upload chunk is too large. Use shorter audio chunks before transcription.',
+      provider: 'request-validation',
+    });
+  }
+
   const mcpResult = await transcribeWithMcp(payload).catch(error => ({
     provider: 'ES MCP error',
     text: '',
