@@ -6,6 +6,8 @@
   var MAX_INLINE_UPLOAD_BYTES = 3 * 1024 * 1024;
   var TRANSCRIBE_SAMPLE_RATE = 16000;
   var TRANSCRIBE_CHUNK_SECONDS = 25;
+  var CAPTION_MAX_WORDS = 5;
+  var CAPTION_MIN_SECONDS = 0.7;
   var ES_BLUE = '#0a7dfa';
   var POST_FONT_FAMILY = 'Acumin Post';
   var PILL_H = 122;
@@ -236,7 +238,7 @@
     setStatus(els.transcribeStatus, 'Extracting speech audio from the uploaded clip...');
     try {
       var result = await transcribeUploadedClip(state.videoFile);
-      state.captions = normalizeSegments(result.segments || []);
+      state.captions = normalizeSegments(formatCaptionBeats(result.segments || []));
       state.transcriptSource = result.provider || 'speech recognition';
       state.selectedCaptionId = state.captions[0] ? state.captions[0].id : null;
       els.downloadSrtBtn.disabled = !state.captions.length;
@@ -420,6 +422,35 @@
       if (segment.end <= segment.start) segment.end = Math.min((els.video.duration || segment.start + 2), segment.start + 2);
       return segment.end > segment.start;
     });
+  }
+
+  function formatCaptionBeats(segments) {
+    var beats = [];
+    segments.forEach(function (segment) {
+      var text = String(segment.text || '').replace(/\s+/g, ' ').trim();
+      if (!text) return;
+      var words = text.split(' ').filter(Boolean);
+      var start = Math.max(0, Number(segment.start) || 0);
+      var rawEnd = Number(segment.end);
+      var end = Number.isFinite(rawEnd) && rawEnd > start ? rawEnd : start + Math.max(CAPTION_MIN_SECONDS, words.length * 0.34);
+
+      for (var i = 0; i < words.length; i += CAPTION_MAX_WORDS) {
+        var chunk = words.slice(i, i + CAPTION_MAX_WORDS);
+        var chunkStart = start + ((end - start) * (i / words.length));
+        var chunkEnd = start + ((end - start) * (Math.min(words.length, i + CAPTION_MAX_WORDS) / words.length));
+        if (chunkEnd - chunkStart < CAPTION_MIN_SECONDS) {
+          chunkEnd = Math.min(end, chunkStart + CAPTION_MIN_SECONDS);
+        }
+        beats.push({
+          start: chunkStart,
+          end: chunkEnd,
+          text: chunk.join(' '),
+          confidence: segment.confidence,
+          words: Array.isArray(segment.words) ? segment.words : [],
+        });
+      }
+    });
+    return beats;
   }
 
   function addCaptionAtPlayhead() {

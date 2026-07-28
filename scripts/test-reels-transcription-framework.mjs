@@ -12,9 +12,13 @@ const socialSource = readFileSync(join(root, 'index.html'), 'utf8');
 
 assert.match(reels, /TRANSCRIBE_SAMPLE_RATE\s*=\s*16000/);
 assert.match(reels, /TRANSCRIBE_CHUNK_SECONDS\s*=\s*25/);
+assert.match(reels, /CAPTION_MAX_WORDS\s*=\s*5/);
+assert.match(reels, /CAPTION_MIN_SECONDS\s*=\s*0\.7/);
 assert.match(reels, /MAX_INLINE_UPLOAD_BYTES\s*=\s*3\s*\*\s*1024\s*\*\s*1024/);
 assert.match(reels, /function transcribeUploadedClip/);
 assert.match(reels, /function transcribeDecodedAudio/);
+assert.match(reels, /function formatCaptionBeats/);
+assert.match(reels, /formatCaptionBeats\(result\.segments \|\| \[\]\)/);
 assert.match(reels, /function encodeWav/);
 assert.match(reels, /function refreshSpeechBackendStatus/);
 assert.match(reels, /\/api\/es-video-intelligence\?health=1/);
@@ -47,5 +51,14 @@ const captionPillSource = reels.slice(
 assert.match(captionPillSource, /ctx\.fillRect\(pillX,\s*pillY,\s*pillW,\s*activePillH\)/);
 assert.doesNotMatch(captionPillSource, /roundRect|arcTo|ctx\.fill\(\)/);
 assert.match(captionPillSource, /getCaptionPillXOffset\(index,\s*lines\.length\)/);
+
+const formatterSource = reels.slice(
+  reels.indexOf('function formatCaptionBeats'),
+  reels.indexOf('function addCaptionAtPlayhead'),
+);
+assert.match(formatterSource, /i\s*\+=\s*CAPTION_MAX_WORDS/);
+assert.match(formatterSource, /words\.slice\(i,\s*i \+ CAPTION_MAX_WORDS\)/);
+assert.match(formatterSource, /chunkStart/);
+assert.match(formatterSource, /chunkEnd/);
 
 console.log('Reels transcription framework checks passed.');
