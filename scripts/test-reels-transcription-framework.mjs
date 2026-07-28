@@ -10,6 +10,7 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const reels = readFileSync(join(root, 'reels.js'), 'utf8');
 const html = readFileSync(join(root, 'reels.html'), 'utf8');
 const socialSource = readFileSync(join(root, 'index.html'), 'utf8');
+const brandKitSource = readFileSync(join(root, 'brand-kit.js'), 'utf8');
 
 assert.match(reels, /TRANSCRIBE_SAMPLE_RATE\s*=\s*16000/);
 assert.match(reels, /TRANSCRIBE_CHUNK_SECONDS\s*=\s*25/);
@@ -36,6 +37,8 @@ assert.match(reels, /function getCaptionPillXOffset/);
 assert.match(reels, /CAPTION_PILL_OFFSETS\s*=\s*\[0,\s*-96,\s*84,\s*-48\]/);
 assert.match(reels, /function initBrandControls/);
 assert.match(reels, /function renderPaletteRow/);
+assert.match(reels, /window\.ES_BRAND_KIT/);
+assert.match(reels, /linear-gradient\(135deg/);
 assert.match(html, /id="reels-sport-select"/);
 assert.match(html, /id="reels-team-select"/);
 assert.match(html, /id="reels-palette-row"/);
@@ -131,5 +134,52 @@ assert.equal(timedBeats[0].end, 21.7);
 assert.equal(timedBeats[1].start, 22.0);
 assert.equal(timedBeats[1].end, 23.8);
 assert.equal(timedBeats[0].words.length, 5);
+
+const brandSandbox = { window: {} };
+vm.runInNewContext(brandKitSource, brandSandbox);
+assert.ok(Array.isArray(brandSandbox.window.ES_BRAND_KIT), 'brand-kit.js must expose window.ES_BRAND_KIT');
+assert.ok(brandSandbox.window.ES_BRAND_KIT.length > 150, 'Reels must have access to the full social brand kit');
+
+const brandHelperSource = reels.slice(
+  reels.indexOf('function getSports'),
+  reels.indexOf('function startExport'),
+);
+const brandHelperSandbox = {
+  window: brandSandbox.window,
+  state: { sport: 'NBA', team: 'Los Angeles Lakers', pillPalette: null },
+  ES_BLUE: '#0a7dfa',
+  Math,
+  Number,
+  String,
+  Array,
+  Set,
+  parseInt,
+};
+vm.runInNewContext(`${brandHelperSource}
+this.getSports = getSports;
+this.getTeams = getTeams;
+this.getBrandEntry = getBrandEntry;
+this.getPaletteForWorkspace = getPaletteForWorkspace;
+this.getTextColorForPair = getTextColorForPair;
+this.formatTeamDisplayName = formatTeamDisplayName;`, brandHelperSandbox);
+
+assert.ok(brandHelperSandbox.getSports().includes('NBA'), 'sport dropdown must include NBA from the social brand kit');
+assert.ok(brandHelperSandbox.getSports().includes('Tennis'), 'sport dropdown must include Tennis variations from the social brand kit');
+assert.ok(brandHelperSandbox.getTeams('NBA').includes('Los Angeles Lakers'), 'team dropdown must include Lakers from the social brand kit');
+assert.ok(brandHelperSandbox.getTeams('Tennis').includes('Wimbledon'), 'Tennis selector must use brand-kit variations');
+
+const lakers = brandHelperSandbox.getBrandEntry('NBA', 'Los Angeles Lakers');
+assert.equal(lakers.primary.background, '#FAB624');
+assert.equal(lakers.primary.foreground, '#542C81');
+const lakersPalette = brandHelperSandbox.getPaletteForWorkspace(lakers);
+assert.ok(lakersPalette.length >= 4, 'Lakers color dropdown must expose multiple social palette treatments');
+assert.deepEqual(lakersPalette[0], lakers.primary);
+assert.ok(lakersPalette.some(pair => pair.background === '#542C81'), 'Lakers color dropdown must include the purple social treatment');
+assert.ok(
+  lakersPalette.some(pair => pair.background === '#542C81' && pair.foreground === '#FAB624'),
+  'Lakers color dropdown must preserve distinct foreground treatments, not only unique backgrounds',
+);
+assert.ok(brandHelperSandbox.getTextColorForPair(lakersPalette[0], lakers), 'palette swatches must resolve readable caption text colors');
+assert.equal(brandHelperSandbox.formatTeamDisplayName('Los Angeles Lakers'), 'Los Angeles Lakers');
 
 console.log('Reels transcription framework checks passed.');

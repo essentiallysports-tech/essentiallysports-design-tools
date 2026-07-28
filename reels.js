@@ -706,8 +706,9 @@
     els.paletteRow.innerHTML = palette.map(function (pair, index) {
       var active = index === state.pillPaletteIdx;
       var textColor = getTextColorForPair(pair, entry);
+      var swatchBg = 'linear-gradient(135deg,' + escapeHtml(pair.background) + ' 0 62%,' + escapeHtml(textColor) + ' 62% 100%)';
       return '<button type="button" class="reels-swatch' + (active ? ' is-active' : '') + '" data-index="' + index + '" title="Pill ' + escapeHtml(pair.background) + ' / Text ' + escapeHtml(textColor) + '" aria-label="Caption color ' + (index + 1) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' +
-        '<span class="reels-swatch-inner" style="background:' + escapeHtml(pair.background) + ';color:' + escapeHtml(textColor) + '"></span></button>';
+        '<span class="reels-swatch-inner" style="background:' + swatchBg + ';color:' + escapeHtml(textColor) + '"></span></button>';
     }).join('');
     els.paletteRow.querySelectorAll('.reels-swatch').forEach(function (button) {
       button.addEventListener('click', function () {
@@ -986,7 +987,9 @@
     var seen = {};
     return (entry?.palette || entry?.primary ? (entry.palette || [entry.primary]) : [{ background: ES_BLUE, foreground: '#ffffff', mist: '#ffffff' }])
       .filter(function (pair) {
-        var key = String(pair.background || '').toLowerCase();
+        var key = [pair.background, pair.foreground, pair.mist].map(function (color) {
+          return String(color || '').toLowerCase();
+        }).join('|');
         if (!key || seen[key]) return false;
         seen[key] = true;
         return true;
