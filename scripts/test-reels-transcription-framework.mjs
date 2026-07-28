@@ -28,7 +28,10 @@ assert.match(reels, /formatCaptionBeats\(result\.segments \|\| \[\]\)/);
 assert.match(reels, /function encodeWav/);
 assert.match(reels, /function createCaptionedExportStream/);
 assert.match(reels, /function refreshSpeechBackendStatus/);
-assert.match(reels, /\/api\/es-video-intelligence\?health=public-probe/);
+assert.match(reels, /fetch\(videoIntelligenceUrl\('\?health=public-probe'\)/);
+assert.match(reels, /LIVE_API_ORIGIN\s*=\s*'https:\/\/essentiallysports-design-tools\.vercel\.app'/);
+assert.match(reels, /function videoIntelligenceUrl/);
+assert.match(reels, /function isLocalPreviewHost/);
 assert.match(reels, /Speech backend ready: Groq Whisper captions\. ES MCP is connected for available tools\./);
 assert.match(reels, /Local rules until ES MCP adds Intelligence/);
 assert.match(reels, /mimeType:\s*'audio\/wav'/);
@@ -49,6 +52,7 @@ assert.match(html, /id="reels-sport-select"/);
 assert.match(html, /id="reels-team-select"/);
 assert.match(html, /id="reels-palette-row"/);
 assert.match(html, /Checking ES MCP/);
+assert.match(html, /reels\.js\?v=20260728-reels3/);
 
 const uploadResetSource = reels.slice(
   reels.indexOf('function onFileChosen'),

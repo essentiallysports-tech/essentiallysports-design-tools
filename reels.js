@@ -18,6 +18,7 @@
   var PILL_EDGE_TO_TEXT_GAP = 1;
   var PILL_ROW_GAP = 1;
   var CAPTION_PILL_OFFSETS = [0, -96, 84, -48];
+  var LIVE_API_ORIGIN = 'https://essentiallysports-design-tools.vercel.app';
 
   var CAPTION_STYLES = [
     { id: 'social-pill', name: 'Social Pill', note: 'ES social media pill treatment', background: ES_BLUE, foreground: '#ffffff', mode: 'pill' },
@@ -125,7 +126,7 @@
   }
 
   function refreshSpeechBackendStatus() {
-    fetch('/api/es-video-intelligence?health=public-probe', { cache: 'no-store' })
+    fetch(videoIntelligenceUrl('?health=public-probe'), { cache: 'no-store' })
       .then(function (response) { return response.ok ? response.json() : null; })
       .then(function (config) {
         if (!config) return;
@@ -296,7 +297,7 @@
       throw new Error('This clip needs browser audio extraction before upload. Try a standard MP4/WebM export with one audio track.');
     }
 
-    return postJson('/api/es-video-intelligence', {
+    return postJson(videoIntelligenceUrl(), {
       action: 'transcribe',
       fileName: file.name,
       mimeType: file.type || 'application/octet-stream',
@@ -318,7 +319,7 @@
       var chunk = chunks[i];
       setStatus(els.transcribeStatus, 'Speech recognition chunk ' + (i + 1) + ' of ' + chunks.length + '...');
       var wav = encodeWav(chunk.samples, TRANSCRIBE_SAMPLE_RATE);
-      var result = await postJson('/api/es-video-intelligence', {
+      var result = await postJson(videoIntelligenceUrl(), {
         action: 'transcribe',
         fileName: chunkFileName(file.name, i),
         mimeType: 'audio/wav',
@@ -353,7 +354,7 @@
     for (var i = 0; i < blobs.length; i++) {
       var item = blobs[i];
       setStatus(els.transcribeStatus, 'Speech recognition captured audio chunk ' + (i + 1) + ' of ' + blobs.length + '...');
-      var result = await postJson('/api/es-video-intelligence', {
+      var result = await postJson(videoIntelligenceUrl(), {
         action: 'transcribe',
         fileName: chunkFileName(file.name, i).replace(/\.wav$/, '.webm'),
         mimeType: item.blob.type || 'audio/webm',
@@ -852,7 +853,7 @@
     els.intelBtn.disabled = true;
     setStatus(els.intelStatus, 'Sending caption context to the ES MCP intelligence path...');
     try {
-      var result = await postJson('/api/es-video-intelligence', {
+      var result = await postJson(videoIntelligenceUrl(), {
         action: 'style',
         prompt: prompt,
         target: {
@@ -1271,6 +1272,15 @@
         return data;
       });
     });
+  }
+
+  function videoIntelligenceUrl(search) {
+    var path = '/api/es-video-intelligence' + (search || '');
+    return isLocalPreviewHost() ? LIVE_API_ORIGIN + path : path;
+  }
+
+  function isLocalPreviewHost() {
+    return ['localhost', '127.0.0.1', '::1'].indexOf(window.location.hostname) !== -1;
   }
 
   function fileToBase64(file) {
