@@ -15,6 +15,7 @@
   var POST_SAFE_AREA = 50;
   var PILL_EDGE_TO_TEXT_GAP = 1;
   var PILL_ROW_GAP = 1;
+  var CAPTION_PILL_OFFSETS = [0, -96, 84, -48];
 
   var CAPTION_STYLES = [
     { id: 'social-pill', name: 'Social Pill', note: 'ES social media pill treatment', background: ES_BLUE, foreground: '#ffffff', mode: 'pill' },
@@ -817,7 +818,8 @@
 
     lines.forEach(function (line, index) {
       var pillW = pillWidths[index];
-      var pillX = clamp(blockCenterX - pillW / 2, safe, STAGE_W - safe - pillW);
+      var xOffset = getCaptionPillXOffset(index, lines.length);
+      var pillX = clamp(blockCenterX + xOffset - pillW / 2, safe, STAGE_W - safe - pillW);
       var pillY = blockTopY + index * activePillSpacing;
       ctx.fillStyle = bgColor;
       ctx.fillRect(pillX, pillY, pillW, activePillH);
@@ -827,6 +829,11 @@
       ctx.textBaseline = 'alphabetic';
       ctx.fillText(line.toUpperCase(), pillX + padLeft, pillY + textBaselineFromTop);
     });
+  }
+
+  function getCaptionPillXOffset(index, total) {
+    if (total <= 1) return 0;
+    return CAPTION_PILL_OFFSETS[index % CAPTION_PILL_OFFSETS.length] || 0;
   }
 
   function getCaptionBlockTop(blockH, safe) {
