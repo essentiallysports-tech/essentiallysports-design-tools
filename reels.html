@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reels | FrameUp</title>
+  <meta name="description" content="Caption and brand your short-form video with team-colored captions and ready-made lower thirds.">
+  <script src="es-auth-config.js?v=20260707-auth4"></script>
+  <script src="es-auth.js?v=20260714-deleteaccount1"></script>
+  <script>
+    window.ESAuth?.requireAuth(`reels.html${window.location.search}${window.location.hash}`);
+  </script>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&amp;family=Roboto+Condensed:wght@400;500;700;800;900&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
+  <link rel="stylesheet" href="theme.css?v=20260714-footer1">
+  <link rel="stylesheet" href="site-chrome.css?v=20260723-profile3">
+  <link rel="stylesheet" href="cta-hover.css?v=20260723-howrefine1">
+  <link rel="stylesheet" href="reels.css?v=20260728-reels1">
+  <script src="theme.js?v=20260712-darkmode12"></script>
+  <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
+  <script src="site-chrome.js?v=20260723-profile2"></script>
+</head>
+<body class="reels-page">
+  <nav class="navbar">
+    <a class="navbar-logo" href="index.html" aria-label="EssentiallySports home">
+      <img src="brand-logo-blue.svg" alt="EssentiallySports">
+    </a>
+    <div class="navbar-menu">
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="how-it-works.html" aria-haspopup="true" aria-expanded="false">Resources</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Resources">
+          <a href="how-it-works.html" role="menuitem">How It Works</a>
+          <a href="index.html#logo-guidelines" role="menuitem">Logo Guidelines</a>
+          <a href="index.html#social-guidelines" role="menuitem">Social Media Guidelines</a>
+          <a href="index.html#video-guidelines" role="menuitem">Video Guidelines</a>
+        </div>
+      </div>
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#frames" aria-haspopup="true" aria-expanded="false">Design Tools</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Design workspaces">
+          <a href="index.html#frames" role="menuitem">Home Page</a>
+          <a href="index.html#instagram" role="menuitem">Social Media</a>
+          <a href="index.html#youtube" role="menuitem">YouTube Assets</a>
+          <a href="index.html#newsletter" role="menuitem">Newsletter Assets</a>
+          <a href="reels.html" role="menuitem" aria-current="page">Reels</a>
+        </div>
+      </div>
+      <a href="design-request.html">Design Request</a>
+      <a href="index.html#faq">FAQ</a>
+    </div>
+    <div class="navbar-right">
+      <div class="profile-menu" id="profile-menu"></div>
+      <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" aria-label="Facebook"><img src="social-icons/nav-facebook.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://twitter.com/es_sportsnews" aria-label="X"><img src="social-icons/nav-x.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.linkedin.com/company/essentiallysports" aria-label="LinkedIn"><img src="social-icons/nav-linkedin.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.instagram.com/essentiallysports" aria-label="Instagram"><img src="social-icons/nav-instagram.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.youtube.com/essentiallysports" aria-label="YouTube"><img src="social-icons/nav-youtube.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://news.google.com/publications/CAAqBwgKMJqW_gwwkoGBAw" aria-label="Google News"><img src="social-icons/nav-google-news.svg" alt=""></a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="reels-head">
+      <p class="reels-eyebrow">FrameUp Workspace</p>
+      <h1>Reels</h1>
+      <p>Drop in a clip, auto-caption it in your team's colors, and drop in a ready-made lower third — all exported straight from your browser.</p>
+    </div>
+
+    <div class="reels-layout">
+      <div class="reels-stage-card">
+        <div class="reels-stage-frame">
+          <canvas id="reels-canvas"></canvas>
+          <div class="reels-stage-empty" id="reels-stage-empty">Upload a clip to get started</div>
+        </div>
+        <input type="file" id="reels-file-input" accept="video/*" hidden>
+        <video id="reels-video" hidden playsinline></video>
+        <button type="button" class="reels-upload-btn" id="reels-upload-btn">Upload Clip</button>
+        <div class="reels-transport">
+          <button type="button" id="reels-play-btn" disabled>▶</button>
+          <input type="range" class="reels-scrub" id="reels-scrub" min="0" max="1000" value="0" disabled>
+          <span class="reels-time" id="reels-time">0:00 / 0:00</span>
+        </div>
+        <div class="reels-export-row">
+          <button type="button" class="reels-upload-btn is-secondary" id="reels-export-btn" disabled>Export Reel</button>
+        </div>
+        <div class="reels-export-status" id="reels-export-status"></div>
+      </div>
+
+      <div class="reels-panel">
+        <div class="reels-tabs">
+          <button type="button" class="reels-tab is-active" data-panel="reels-panel-captions">Caption Maker</button>
+          <button type="button" class="reels-tab" data-panel="reels-panel-lowerthirds">Lower Thirds</button>
+        </div>
+
+        <div class="reels-tabpanel is-active" id="reels-panel-captions">
+          <button type="button" class="reels-add-btn" id="reels-generate-btn" disabled>Auto-Generate Captions</button>
+          <p class="reels-prompt-note" id="reels-generate-note">Upload a clip first, then generate captions — you'll get an editable timeline, just like Instagram's Reel editor.</p>
+
+          <div id="reels-caption-timeline-wrap" hidden>
+            <div class="reels-timeline-track" id="reels-caption-timeline"></div>
+            <div class="reels-timeline-scale">
+              <span>0:00</span><span id="reels-timeline-duration">0:00</span>
+            </div>
+            <button type="button" class="reels-upload-btn is-secondary" id="reels-regenerate-btn" style="margin-top:14px;width:100%">Regenerate Captions</button>
+          </div>
+
+          <div id="reels-caption-detail" hidden>
+            <div class="reels-detail-card">
+              <div class="reels-field">
+                <label for="reels-caption-edit-text">Caption text</label>
+                <textarea id="reels-caption-edit-text"></textarea>
+              </div>
+              <div class="reels-inline-row">
+                <div class="reels-field">
+                  <label for="reels-caption-edit-start">Start (s)</label>
+                  <input type="number" id="reels-caption-edit-start" step="0.1" min="0">
+                </div>
+                <div class="reels-field">
+                  <label for="reels-caption-edit-end">End (s)</label>
+                  <input type="number" id="reels-caption-edit-end" step="0.1" min="0">
+                </div>
+              </div>
+              <button type="button" class="reels-upload-btn is-secondary" id="reels-caption-delete-btn" style="width:100%">Delete this caption</button>
+            </div>
+            <div class="reels-prompt-box" id="reels-caption-prompt-box">
+              <label>Restyle with a prompt</label>
+              <textarea id="reels-caption-prompt-input" placeholder='e.g. "make it Lakers colors"'></textarea>
+              <button type="button" class="reels-upload-btn" id="reels-caption-prompt-apply-btn">Apply</button>
+            </div>
+            <div class="reels-prompt-log" id="reels-caption-prompt-log"></div>
+          </div>
+        </div>
+
+        <div class="reels-tabpanel" id="reels-panel-lowerthirds">
+          <div class="reels-lt-grid" id="reels-lt-grid"></div>
+          <p class="reels-empty-note" style="margin-top:14px">Click a template to drop it in at the current playhead.</p>
+          <div class="reels-list" id="reels-lt-list" style="margin-top:14px"></div>
+
+          <div id="reels-lt-detail" hidden>
+            <div class="reels-prompt-box" id="reels-lt-prompt-box">
+              <label>Restyle with a prompt</label>
+              <textarea id="reels-lt-prompt-input" placeholder='e.g. "make it Lakers colors" or "move to the top"'></textarea>
+              <button type="button" class="reels-upload-btn" id="reels-lt-prompt-apply-btn">Apply</button>
+            </div>
+            <div class="reels-prompt-log" id="reels-lt-prompt-log"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer" aria-label="Site footer"></footer>
+  <script src="brand-kit.js?v=20260728-reels1"></script>
+  <script src="reels.js?v=20260728-reels1"></script>
+</body>
+</html>
