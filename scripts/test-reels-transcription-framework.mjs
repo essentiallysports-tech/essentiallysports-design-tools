@@ -55,6 +55,17 @@ assert.match(uploadResetSource, /state\.nextId\s*=\s*1/);
 assert.match(uploadResetSource, /els\.downloadSrtBtn\.disabled\s*=\s*true/);
 assert.match(uploadResetSource, /els\.intelBtn\.disabled\s*=\s*true/);
 assert.match(uploadResetSource, /els\.intelSource\.textContent\s*=\s*'Checking ES MCP'/);
+assert.match(uploadResetSource, /refreshSpeechBackendStatus\(\)/);
+
+const backendStatusSource = reels.slice(
+  reels.indexOf('function refreshSpeechBackendStatus'),
+  reels.indexOf('function onFileChosen'),
+);
+assert.match(
+  backendStatusSource,
+  /els\.intelSource\.textContent = 'Local rules until ES MCP adds Intelligence'[\s\S]*?if \(state\.videoFile\) return;/,
+  'Intelligence readiness must refresh even after a clip has been selected',
+);
 
 for (const constant of ['PILL_H', 'PILL_FONT_SIZE', 'PILL_PAD_LEFT', 'PILL_PAD_RIGHT']) {
   const socialValue = socialSource.match(new RegExp(`const ${constant}\\\\s*=\\\\s*([0-9.]+)`))?.[1];

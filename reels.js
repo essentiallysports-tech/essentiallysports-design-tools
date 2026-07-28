@@ -128,7 +128,7 @@
     fetch('/api/es-video-intelligence?health=public-probe', { cache: 'no-store' })
       .then(function (response) { return response.ok ? response.json() : null; })
       .then(function (config) {
-        if (!config || state.videoFile) return;
+        if (!config) return;
         var probe = config.probe || {};
         if (probe.intelligenceToolFound) {
           els.intelSource.textContent = 'ES MCP Intelligence ready';
@@ -137,6 +137,7 @@
         } else {
           els.intelSource.textContent = 'Local rules fallback';
         }
+        if (state.videoFile) return;
         if (config.groqFallbackConfigured) {
           setStatus(els.transcribeStatus, 'Speech backend ready: Groq Whisper captions. ES MCP is connected for available tools.', 'good');
         } else if (config.openAiFallbackConfigured) {
@@ -176,6 +177,7 @@
     renderTranscript();
     renderTimeline();
     renderLowerThirdList();
+    refreshSpeechBackendStatus();
   }
 
   function onVideoMetadata() {
