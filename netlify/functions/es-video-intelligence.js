@@ -453,6 +453,7 @@ async function transcribeWithGroq(payload) {
   form.append('file', blob, payload.fileName || 'reels-upload.mp4');
   form.append('model', GROQ_TRANSCRIPTION_MODEL);
   form.append('response_format', 'verbose_json');
+  form.append('timestamp_granularities[]', 'segment');
   form.append('temperature', '0');
 
   const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {

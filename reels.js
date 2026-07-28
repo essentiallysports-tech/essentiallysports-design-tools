@@ -3,7 +3,9 @@
 
   var STAGE_W = 1080;
   var STAGE_H = 1920;
-  var MAX_INLINE_UPLOAD_BYTES = 28 * 1024 * 1024;
+  var MAX_INLINE_UPLOAD_BYTES = 24 * 1024 * 1024;
+  var TRANSCRIBE_SAMPLE_RATE = 16000;
+  var TRANSCRIBE_CHUNK_SECONDS = 25;
   var ES_BLUE = '#0a7dfa';
   var POST_FONT_FAMILY = 'Acumin Post';
   var PILL_H = 122;
@@ -126,6 +128,7 @@
     state.captions = [];
     state.lowerThirds = [];
     state.selectedCaptionId = null;
+    state.nextId = 1;
     state.transcriptSource = '';
     state.renderedOnce = false;
     els.stageEmpty.style.display = 'grid';
@@ -205,22 +208,12 @@
 
   async function transcribeVideo() {
     if (!state.videoLoaded || !state.videoFile) return;
-    if (state.videoFile.size > MAX_INLINE_UPLOAD_BYTES) {
-      setStatus(els.transcribeStatus, 'This local preview accepts clips up to 28 MB for speech recognition handoff.', 'error');
-      return;
-    }
 
     setStep('transcribe');
     els.transcribeBtn.disabled = true;
-    setStatus(els.transcribeStatus, 'Extracting audio and sending it to the speech-recognition service...');
+    setStatus(els.transcribeStatus, 'Extracting speech audio from the uploaded clip...');
     try {
-      var payload = {
-        action: 'transcribe',
-        fileName: state.videoFile.name,
-        mimeType: state.videoFile.type || 'application/octet-stream',
-        data: await fileToBase64(state.videoFile),
-      };
-      var result = await postJson('/api/es-video-intelligence', payload);
+      var result = await transcribeUploadedClip(state.videoFile);
       state.captions = normalizeSegments(result.segments || []);
       state.transcriptSource = result.provider || 'speech recognition';
       state.selectedCaptionId = state.captions[0] ? state.captions[0].id : null;
@@ -239,6 +232,155 @@
     } finally {
       els.transcribeBtn.disabled = false;
     }
+  }
+
+  async function transcribeUploadedClip(file) {
+    if (window.AudioContext || window.webkitAudioContext) {
+      try {
+        return await transcribeDecodedAudio(file);
+      } catch (error) {
+        if (file.size > MAX_INLINE_UPLOAD_BYTES) {
+          throw new Error('The browser could not extract audio from this clip. Try exporting MP4/WebM with one audio track.');
+        }
+        setStatus(els.transcribeStatus, 'Audio extraction was unavailable, sending the original clip instead...');
+      }
+    }
+
+    if (file.size > MAX_INLINE_UPLOAD_BYTES) {
+      throw new Error('This clip is too large to send directly. Try a shorter MP4/WebM or a clip with a standard audio track.');
+    }
+
+    return postJson('/api/es-video-intelligence', {
+      action: 'transcribe',
+      fileName: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      data: await fileToBase64(file),
+    });
+  }
+
+  async function transcribeDecodedAudio(file) {
+    var decoded = await decodeClipAudio(file);
+    var chunks = sliceAudioSamples(decoded.samples, TRANSCRIBE_SAMPLE_RATE, TRANSCRIBE_CHUNK_SECONDS);
+    var merged = {
+      provider: '',
+      language: '',
+      text: '',
+      segments: [],
+    };
+
+    for (var i = 0; i < chunks.length; i++) {
+      var chunk = chunks[i];
+      setStatus(els.transcribeStatus, 'Speech recognition chunk ' + (i + 1) + ' of ' + chunks.length + '...');
+      var wav = encodeWav(chunk.samples, TRANSCRIBE_SAMPLE_RATE);
+      var result = await postJson('/api/es-video-intelligence', {
+        action: 'transcribe',
+        fileName: chunkFileName(file.name, i),
+        mimeType: 'audio/wav',
+        data: await blobToBase64(wav),
+      });
+
+      merged.provider = result.provider || merged.provider;
+      merged.language = result.language || merged.language;
+      merged.text = [merged.text, result.text || ''].filter(Boolean).join(' ').trim();
+      (result.segments || []).forEach(function (segment) {
+        merged.segments.push({
+          start: (Number(segment.start) || 0) + chunk.start,
+          end: (Number(segment.end) || 0) + chunk.start,
+          text: segment.text,
+          confidence: segment.confidence,
+          words: Array.isArray(segment.words) ? segment.words.map(function (word) {
+            return Object.assign({}, word, {
+              start: word.start == null ? word.start : Number(word.start) + chunk.start,
+              end: word.end == null ? word.end : Number(word.end) + chunk.start,
+            });
+          }) : [],
+        });
+      });
+    }
+
+    merged.segments.sort(sortByStart);
+    return merged;
+  }
+
+  async function decodeClipAudio(file) {
+    var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    var audioContext = new AudioContextClass();
+    try {
+      var audioBuffer = await audioContext.decodeAudioData(await file.arrayBuffer());
+      var mono = mixToMono(audioBuffer);
+      return {
+        samples: resampleAudio(mono, audioBuffer.sampleRate, TRANSCRIBE_SAMPLE_RATE),
+      };
+    } finally {
+      if (audioContext.close) audioContext.close().catch(function () {});
+    }
+  }
+
+  function mixToMono(audioBuffer) {
+    var samples = new Float32Array(audioBuffer.length);
+    for (var channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+      var data = audioBuffer.getChannelData(channel);
+      for (var i = 0; i < data.length; i++) samples[i] += data[i] / audioBuffer.numberOfChannels;
+    }
+    return samples;
+  }
+
+  function resampleAudio(samples, fromRate, toRate) {
+    if (fromRate === toRate) return samples;
+    var ratio = fromRate / toRate;
+    var length = Math.max(1, Math.round(samples.length / ratio));
+    var output = new Float32Array(length);
+    for (var i = 0; i < length; i++) {
+      var position = i * ratio;
+      var left = Math.floor(position);
+      var right = Math.min(samples.length - 1, left + 1);
+      var mix = position - left;
+      output[i] = samples[left] * (1 - mix) + samples[right] * mix;
+    }
+    return output;
+  }
+
+  function sliceAudioSamples(samples, sampleRate, seconds) {
+    var chunkLength = Math.max(sampleRate, Math.floor(sampleRate * seconds));
+    var chunks = [];
+    for (var start = 0; start < samples.length; start += chunkLength) {
+      chunks.push({
+        start: start / sampleRate,
+        samples: samples.slice(start, Math.min(samples.length, start + chunkLength)),
+      });
+    }
+    return chunks.length ? chunks : [{ start: 0, samples: samples }];
+  }
+
+  function encodeWav(samples, sampleRate) {
+    var buffer = new ArrayBuffer(44 + samples.length * 2);
+    var view = new DataView(buffer);
+    writeAscii(view, 0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeAscii(view, 8, 'WAVE');
+    writeAscii(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeAscii(view, 36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+    for (var i = 0; i < samples.length; i++) {
+      var sample = clamp(samples[i], -1, 1);
+      view.setInt16(44 + i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+    }
+    return new Blob([buffer], { type: 'audio/wav' });
+  }
+
+  function writeAscii(view, offset, text) {
+    for (var i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
+  }
+
+  function chunkFileName(name, index) {
+    return String(name || 'reels-upload').replace(/\.[^.]+$/, '') + '-audio-' + String(index + 1).padStart(2, '0') + '.wav';
   }
 
   function normalizeSegments(segments) {
@@ -900,6 +1042,10 @@
       reader.onerror = function () { reject(new Error('Could not read the selected video file.')); };
       reader.readAsDataURL(file);
     });
+  }
+
+  function blobToBase64(blob) {
+    return fileToBase64(blob);
   }
 
   function wrapText(ctx, text, maxWidth) {

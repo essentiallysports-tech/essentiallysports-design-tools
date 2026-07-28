@@ -82,6 +82,7 @@ globalThis.fetch = async (url, options = {}) => {
     const form = options.body;
     assert.equal(form.get('model'), 'whisper-large-v3-turbo');
     assert.equal(form.get('response_format'), 'verbose_json');
+    assert.equal(form.get('timestamp_granularities[]'), 'segment');
     assert.ok(form.get('file'));
     return new Response(JSON.stringify({
       text: 'Caitlin Clark hits another deep three',
