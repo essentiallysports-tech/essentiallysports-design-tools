@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import vm from 'node:vm';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const reels = readFileSync(join(root, 'reels.js'), 'utf8');
@@ -60,5 +61,34 @@ assert.match(formatterSource, /i\s*\+=\s*CAPTION_MAX_WORDS/);
 assert.match(formatterSource, /words\.slice\(i,\s*i \+ CAPTION_MAX_WORDS\)/);
 assert.match(formatterSource, /chunkStart/);
 assert.match(formatterSource, /chunkEnd/);
+
+const formatterSandbox = {
+  Math,
+  Number,
+  String,
+  Array,
+  CAPTION_MAX_WORDS: 5,
+  CAPTION_MIN_SECONDS: 0.7,
+};
+vm.runInNewContext(`${formatterSource}\nthis.formatCaptionBeats = formatCaptionBeats;`, formatterSandbox);
+
+const beats = formatterSandbox.formatCaptionBeats([{
+  start: 10,
+  end: 16,
+  text: 'Caitlin Clark drills another deep three and brings the crowd to its feet',
+  confidence: 0.91,
+}]);
+
+assert.equal(beats.length, 3, 'long speech segments must be split into short caption beats');
+assert.deepEqual(Array.from(beats, beat => beat.text), [
+  'Caitlin Clark drills another deep',
+  'three and brings the crowd',
+  'to its feet',
+]);
+assert.ok(beats.every(beat => beat.text.split(/\s+/).length <= 5), 'caption beats must keep social-pill text short');
+assert.equal(beats[0].start, 10);
+assert.equal(beats.at(-1).end, 16);
+assert.ok(beats.every(beat => beat.end > beat.start), 'caption beats must preserve positive timing windows');
+assert.ok(beats.every(beat => beat.confidence === 0.91), 'caption beats must preserve provider confidence');
 
 console.log('Reels transcription framework checks passed.');
