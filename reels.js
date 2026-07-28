@@ -125,15 +125,23 @@
   }
 
   function refreshSpeechBackendStatus() {
-    fetch('/api/es-video-intelligence?health=1', { cache: 'no-store' })
+    fetch('/api/es-video-intelligence?health=public-probe', { cache: 'no-store' })
       .then(function (response) { return response.ok ? response.json() : null; })
       .then(function (config) {
         if (!config || state.videoFile) return;
+        var probe = config.probe || {};
+        if (probe.intelligenceToolFound) {
+          els.intelSource.textContent = 'ES MCP Intelligence ready';
+        } else if (config.mcpConfigured) {
+          els.intelSource.textContent = 'Local rules until ES MCP adds Intelligence';
+        } else {
+          els.intelSource.textContent = 'Local rules fallback';
+        }
         if (config.groqFallbackConfigured) {
-          setStatus(els.transcribeStatus, 'Speech backend ready: ES MCP intelligence plus Groq Whisper captions.', 'good');
+          setStatus(els.transcribeStatus, 'Speech backend ready: Groq Whisper captions. ES MCP is connected for available tools.', 'good');
         } else if (config.openAiFallbackConfigured) {
-          setStatus(els.transcribeStatus, 'Speech backend ready: ES MCP intelligence plus OpenAI captions.', 'good');
-        } else if (config.mcpConfigured && config.transcribeTool !== 'auto-discover') {
+          setStatus(els.transcribeStatus, 'Speech backend ready: OpenAI captions. ES MCP is connected for available tools.', 'good');
+        } else if (config.mcpConfigured && probe.transcribeToolFound) {
           setStatus(els.transcribeStatus, 'Speech backend ready: ES MCP speech recognition configured.', 'good');
         } else {
           setStatus(els.transcribeStatus, 'Speech backend needs a transcription provider before captions can generate.', 'error');
@@ -157,7 +165,7 @@
     state.renderedOnce = false;
     els.downloadSrtBtn.disabled = true;
     els.intelBtn.disabled = true;
-    els.intelSource.textContent = 'ES MCP ready path';
+    els.intelSource.textContent = 'Checking ES MCP';
     els.stageEmpty.style.display = 'grid';
     els.stageEmpty.innerHTML = '<strong>Loading clip</strong><span>Preparing the first frame.</span>';
     els.uploadBtn.disabled = true;

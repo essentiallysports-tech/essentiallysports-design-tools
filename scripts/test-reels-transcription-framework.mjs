@@ -25,8 +25,9 @@ assert.match(reels, /formatCaptionBeats\(result\.segments \|\| \[\]\)/);
 assert.match(reels, /function encodeWav/);
 assert.match(reels, /function createCaptionedExportStream/);
 assert.match(reels, /function refreshSpeechBackendStatus/);
-assert.match(reels, /\/api\/es-video-intelligence\?health=1/);
-assert.match(reels, /Speech backend ready: ES MCP intelligence plus Groq Whisper captions\./);
+assert.match(reels, /\/api\/es-video-intelligence\?health=public-probe/);
+assert.match(reels, /Speech backend ready: Groq Whisper captions\. ES MCP is connected for available tools\./);
+assert.match(reels, /Local rules until ES MCP adds Intelligence/);
 assert.match(reels, /mimeType:\s*'audio\/wav'/);
 assert.match(reels, /function drawCaptionPills/);
 assert.match(reels, /POST_FONT_FAMILY\s*=\s*'Acumin Post'/);
@@ -43,6 +44,7 @@ assert.match(reels, /linear-gradient\(135deg/);
 assert.match(html, /id="reels-sport-select"/);
 assert.match(html, /id="reels-team-select"/);
 assert.match(html, /id="reels-palette-row"/);
+assert.match(html, /Checking ES MCP/);
 
 const uploadResetSource = reels.slice(
   reels.indexOf('function onFileChosen'),
@@ -52,6 +54,7 @@ assert.match(uploadResetSource, /state\.captions\s*=\s*\[\]/);
 assert.match(uploadResetSource, /state\.nextId\s*=\s*1/);
 assert.match(uploadResetSource, /els\.downloadSrtBtn\.disabled\s*=\s*true/);
 assert.match(uploadResetSource, /els\.intelBtn\.disabled\s*=\s*true/);
+assert.match(uploadResetSource, /els\.intelSource\.textContent\s*=\s*'Checking ES MCP'/);
 
 for (const constant of ['PILL_H', 'PILL_FONT_SIZE', 'PILL_PAD_LEFT', 'PILL_PAD_RIGHT']) {
   const socialValue = socialSource.match(new RegExp(`const ${constant}\\\\s*=\\\\s*([0-9.]+)`))?.[1];
