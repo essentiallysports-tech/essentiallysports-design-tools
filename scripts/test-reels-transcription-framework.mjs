@@ -19,6 +19,7 @@ assert.match(reels, /MAX_INLINE_UPLOAD_BYTES\s*=\s*3\s*\*\s*1024\s*\*\s*1024/);
 assert.match(reels, /function transcribeUploadedClip/);
 assert.match(reels, /function transcribeDecodedAudio/);
 assert.match(reels, /function formatCaptionBeats/);
+assert.match(reels, /function normalizeTimedWords/);
 assert.match(reels, /formatCaptionBeats\(result\.segments \|\| \[\]\)/);
 assert.match(reels, /function encodeWav/);
 assert.match(reels, /function refreshSpeechBackendStatus/);
@@ -68,6 +69,7 @@ const formatterSource = reels.slice(
 );
 assert.match(formatterSource, /i\s*\+=\s*CAPTION_MAX_WORDS/);
 assert.match(formatterSource, /words\.slice\(i,\s*i \+ CAPTION_MAX_WORDS\)/);
+assert.match(formatterSource, /timedWords\.slice\(w,\s*w \+ CAPTION_MAX_WORDS\)/);
 assert.match(formatterSource, /chunkStart/);
 assert.match(formatterSource, /chunkEnd/);
 
@@ -99,5 +101,35 @@ assert.equal(beats[0].start, 10);
 assert.equal(beats.at(-1).end, 16);
 assert.ok(beats.every(beat => beat.end > beat.start), 'caption beats must preserve positive timing windows');
 assert.ok(beats.every(beat => beat.confidence === 0.91), 'caption beats must preserve provider confidence');
+
+const timedBeats = formatterSandbox.formatCaptionBeats([{
+  start: 20,
+  end: 26,
+  text: 'LeBron James gives Los Angeles one more huge playoff moment',
+  confidence: 0.88,
+  words: [
+    { word: 'LeBron', start: 20.0, end: 20.3 },
+    { word: 'James', start: 20.3, end: 20.7 },
+    { word: 'gives', start: 20.7, end: 21.0 },
+    { word: 'Los', start: 21.0, end: 21.2 },
+    { word: 'Angeles', start: 21.2, end: 21.7 },
+    { word: 'one', start: 22.0, end: 22.2 },
+    { word: 'more', start: 22.2, end: 22.5 },
+    { word: 'huge', start: 22.5, end: 22.8 },
+    { word: 'playoff', start: 22.8, end: 23.3 },
+    { word: 'moment', start: 23.3, end: 23.8 },
+  ],
+}]);
+
+assert.equal(timedBeats.length, 2, 'word timestamps should split into five-word timed beats');
+assert.deepEqual(Array.from(timedBeats, beat => beat.text), [
+  'LeBron James gives Los Angeles',
+  'one more huge playoff moment',
+]);
+assert.equal(timedBeats[0].start, 20.0);
+assert.equal(timedBeats[0].end, 21.7);
+assert.equal(timedBeats[1].start, 22.0);
+assert.equal(timedBeats[1].end, 23.8);
+assert.equal(timedBeats[0].words.length, 5);
 
 console.log('Reels transcription framework checks passed.');

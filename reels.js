@@ -432,9 +432,27 @@
     segments.forEach(function (segment) {
       var text = String(segment.text || '').replace(/\s+/g, ' ').trim();
       if (!text) return;
-      var words = text.split(' ').filter(Boolean);
       var start = Math.max(0, Number(segment.start) || 0);
       var rawEnd = Number(segment.end);
+      var timedWords = normalizeTimedWords(segment.words, start);
+
+      if (timedWords.length) {
+        for (var w = 0; w < timedWords.length; w += CAPTION_MAX_WORDS) {
+          var wordChunk = timedWords.slice(w, w + CAPTION_MAX_WORDS);
+          var wordStart = Number(wordChunk[0].start);
+          var wordEnd = Number(wordChunk[wordChunk.length - 1].end);
+          beats.push({
+            start: Number.isFinite(wordStart) ? wordStart : start,
+            end: Number.isFinite(wordEnd) && wordEnd > wordStart ? wordEnd : (Number.isFinite(wordStart) ? wordStart + CAPTION_MIN_SECONDS : start + CAPTION_MIN_SECONDS),
+            text: wordChunk.map(function (word) { return word.text; }).join(' '),
+            confidence: segment.confidence,
+            words: wordChunk,
+          });
+        }
+        return;
+      }
+
+      var words = text.split(' ').filter(Boolean);
       var end = Number.isFinite(rawEnd) && rawEnd > start ? rawEnd : start + Math.max(CAPTION_MIN_SECONDS, words.length * 0.34);
 
       for (var i = 0; i < words.length; i += CAPTION_MAX_WORDS) {
@@ -454,6 +472,22 @@
       }
     });
     return beats;
+  }
+
+  function normalizeTimedWords(words, fallbackStart) {
+    if (!Array.isArray(words)) return [];
+    return words.map(function (word) {
+      var text = String(word.word || word.text || '').replace(/\s+/g, ' ').trim();
+      var start = Number(word.start == null ? word.startTime : word.start);
+      var end = Number(word.end == null ? word.endTime : word.end);
+      return {
+        text: text,
+        start: Number.isFinite(start) ? start : fallbackStart,
+        end: Number.isFinite(end) ? end : NaN,
+      };
+    }).filter(function (word) {
+      return word.text && Number.isFinite(word.start);
+    });
   }
 
   function addCaptionAtPlayhead() {

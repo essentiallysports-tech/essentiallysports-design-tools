@@ -83,6 +83,7 @@ globalThis.fetch = async (url, options = {}) => {
     assert.equal(form.get('model'), 'whisper-large-v3-turbo');
     assert.equal(form.get('response_format'), 'verbose_json');
     assert.equal(form.get('timestamp_granularities[]'), 'segment');
+    assert.deepEqual(form.getAll('timestamp_granularities[]'), ['segment', 'word']);
     assert.equal(form.get('language'), 'en');
     assert.ok(form.get('file'));
     return new Response(JSON.stringify({
