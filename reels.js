@@ -88,6 +88,7 @@
     renderLowerThirdList();
     renderTranscript();
     renderTimeline();
+    refreshSpeechBackendStatus();
   }
 
   function mapElements() {
@@ -119,6 +120,26 @@
     el.textContent = text || '';
     el.classList.toggle('is-error', kind === 'error');
     el.classList.toggle('is-good', kind === 'good');
+  }
+
+  function refreshSpeechBackendStatus() {
+    fetch('/api/es-video-intelligence?health=1', { cache: 'no-store' })
+      .then(function (response) { return response.ok ? response.json() : null; })
+      .then(function (config) {
+        if (!config || state.videoFile) return;
+        if (config.groqFallbackConfigured) {
+          setStatus(els.transcribeStatus, 'Speech backend ready: ES MCP intelligence plus Groq Whisper captions.', 'good');
+        } else if (config.openAiFallbackConfigured) {
+          setStatus(els.transcribeStatus, 'Speech backend ready: ES MCP intelligence plus OpenAI captions.', 'good');
+        } else if (config.mcpConfigured && config.transcribeTool !== 'auto-discover') {
+          setStatus(els.transcribeStatus, 'Speech backend ready: ES MCP speech recognition configured.', 'good');
+        } else {
+          setStatus(els.transcribeStatus, 'Speech backend needs a transcription provider before captions can generate.', 'error');
+        }
+      })
+      .catch(function () {
+        if (!state.videoFile) setStatus(els.transcribeStatus, 'Speech backend status could not be checked yet.');
+      });
   }
 
   function onFileChosen(event) {
