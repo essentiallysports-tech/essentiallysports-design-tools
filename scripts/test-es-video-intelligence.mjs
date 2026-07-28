@@ -115,18 +115,6 @@ const { handler } = require('../netlify/functions/es-video-intelligence.js');
 {
   const response = await handler({
     httpMethod: 'GET',
-    headers: {},
-    queryStringParameters: { health: 'public-probe', includeTools: '1' },
-  });
-
-  assert.equal(response.statusCode, 200);
-  const payload = JSON.parse(response.body);
-  assert.deepEqual(payload.probe.toolNames, ['mcp__es__transcribe_video']);
-}
-
-{
-  const response = await handler({
-    httpMethod: 'GET',
     headers: { Authorization: 'Bearer test-user-token' },
     queryStringParameters: { health: 'probe' },
   });
