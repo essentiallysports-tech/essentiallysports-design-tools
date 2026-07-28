@@ -238,7 +238,7 @@ async function getDiagnosticState({ probe = false } = {}) {
   return state;
 }
 
-async function getPublicProbeState() {
+async function getPublicProbeState({ includeTools = false } = {}) {
   const state = getMcpConfigState();
   state.probe = {
     attempted: false,
@@ -263,6 +263,7 @@ async function getPublicProbeState() {
     state.probe.toolCount = names.length;
     state.probe.transcribeToolFound = Boolean(findTranscriptionToolName(names));
     state.probe.intelligenceToolFound = Boolean(findIntelligenceToolName(names));
+    if (includeTools) state.probe.toolNames = names;
   } catch (error) {
     state.probe.error = safeError(error);
   }
@@ -535,7 +536,7 @@ exports.handler = async function handler(event) {
     return json(200, await getDiagnosticState({ probe: false }));
   }
   if (event.httpMethod === 'GET' && shouldPublicProbeHealth(params.health)) {
-    return json(200, await getPublicProbeState());
+    return json(200, await getPublicProbeState({ includeTools: params.includeTools === '1' || params.include_tools === '1' }));
   }
   if (!['GET', 'POST'].includes(event.httpMethod)) return json(405, { error: 'Method not allowed.' });
 

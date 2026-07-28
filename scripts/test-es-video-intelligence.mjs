@@ -109,6 +109,19 @@ const { handler } = require('../netlify/functions/es-video-intelligence.js');
   assert.equal(payload.probe.transcribeToolFound, true);
   assert.equal(payload.probe.intelligenceToolFound, false);
   assert.equal(Array.isArray(payload.probe.candidateTools), false);
+  assert.equal(Array.isArray(payload.probe.toolNames), false);
+}
+
+{
+  const response = await handler({
+    httpMethod: 'GET',
+    headers: {},
+    queryStringParameters: { health: 'public-probe', includeTools: '1' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.body);
+  assert.deepEqual(payload.probe.toolNames, ['mcp__es__transcribe_video']);
 }
 
 {
