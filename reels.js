@@ -1073,7 +1073,7 @@
 
   function startExport() {
     if (!state.videoLoaded || state.recording) return;
-    var stream = els.canvas.captureStream(30);
+    var stream = createCaptionedExportStream();
     var mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
     state.recorder = new MediaRecorder(stream, { mimeType: mimeType });
     state.recordedChunks = [];
@@ -1084,9 +1084,27 @@
     state.recorder.start();
     state.recording = true;
     els.exportBtn.textContent = 'Stop & Download';
-    setStatus(els.exportStatus, 'Recording the canvas. The clip will play from the start.');
+    setStatus(els.exportStatus, stream.getAudioTracks().length
+      ? 'Recording captioned reel with original audio. The clip will play from the start.'
+      : 'Recording captioned reel. This browser did not expose the original audio track.');
     els.video.currentTime = 0;
     els.video.play();
+  }
+
+  function createCaptionedExportStream() {
+    var canvasStream = els.canvas.captureStream(30);
+    var capture = els.video.captureStream || els.video.mozCaptureStream;
+    if (!capture || typeof MediaStream === 'undefined') return canvasStream;
+    try {
+      var videoStream = capture.call(els.video);
+      var output = new MediaStream(canvasStream.getVideoTracks());
+      videoStream.getAudioTracks().forEach(function (track) {
+        output.addTrack(track);
+      });
+      return output;
+    } catch (error) {
+      return canvasStream;
+    }
   }
 
   function stopExport() {

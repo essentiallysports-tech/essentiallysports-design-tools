@@ -23,6 +23,7 @@ assert.match(reels, /function formatCaptionBeats/);
 assert.match(reels, /function normalizeTimedWords/);
 assert.match(reels, /formatCaptionBeats\(result\.segments \|\| \[\]\)/);
 assert.match(reels, /function encodeWav/);
+assert.match(reels, /function createCaptionedExportStream/);
 assert.match(reels, /function refreshSpeechBackendStatus/);
 assert.match(reels, /\/api\/es-video-intelligence\?health=1/);
 assert.match(reels, /Speech backend ready: ES MCP intelligence plus Groq Whisper captions\./);
@@ -75,6 +76,17 @@ assert.match(formatterSource, /words\.slice\(i,\s*i \+ CAPTION_MAX_WORDS\)/);
 assert.match(formatterSource, /timedWords\.slice\(w,\s*w \+ CAPTION_MAX_WORDS\)/);
 assert.match(formatterSource, /chunkStart/);
 assert.match(formatterSource, /chunkEnd/);
+
+const exportSource = reels.slice(
+  reels.indexOf('function startExport'),
+  reels.indexOf('function onExportStopped'),
+);
+assert.match(exportSource, /var stream = createCaptionedExportStream\(\)/);
+assert.match(exportSource, /els\.video\.captureStream \|\| els\.video\.mozCaptureStream/);
+assert.match(exportSource, /new MediaStream\(canvasStream\.getVideoTracks\(\)\)/);
+assert.match(exportSource, /videoStream\.getAudioTracks\(\)\.forEach/);
+assert.match(exportSource, /output\.addTrack\(track\)/);
+assert.match(exportSource, /Recording captioned reel with original audio/);
 
 const formatterSandbox = {
   Math,
