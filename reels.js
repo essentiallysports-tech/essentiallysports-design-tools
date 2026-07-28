@@ -3,7 +3,7 @@
 
   var STAGE_W = 1080;
   var STAGE_H = 1920;
-  var MAX_INLINE_UPLOAD_BYTES = 24 * 1024 * 1024;
+  var MAX_INLINE_UPLOAD_BYTES = 3 * 1024 * 1024;
   var TRANSCRIBE_SAMPLE_RATE = 16000;
   var TRANSCRIBE_CHUNK_SECONDS = 25;
   var ES_BLUE = '#0a7dfa';
@@ -240,14 +240,14 @@
         return await transcribeDecodedAudio(file);
       } catch (error) {
         if (file.size > MAX_INLINE_UPLOAD_BYTES) {
-          throw new Error('The browser could not extract audio from this clip. Try exporting MP4/WebM with one audio track.');
+          throw new Error('The browser could not extract audio from this clip. Try exporting MP4/WebM with one standard audio track.');
         }
         setStatus(els.transcribeStatus, 'Audio extraction was unavailable, sending the original clip instead...');
       }
     }
 
     if (file.size > MAX_INLINE_UPLOAD_BYTES) {
-      throw new Error('This clip is too large to send directly. Try a shorter MP4/WebM or a clip with a standard audio track.');
+      throw new Error('This clip needs browser audio extraction before upload. Try a standard MP4/WebM export with one audio track.');
     }
 
     return postJson('/api/es-video-intelligence', {
