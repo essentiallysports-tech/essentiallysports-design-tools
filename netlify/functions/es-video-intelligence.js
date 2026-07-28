@@ -9,6 +9,8 @@ const ES_MCP_TOKEN_ENDPOINT = process.env.ES_MCP_TOKEN_ENDPOINT || '';
 const ES_MCP_PROTOCOL_VERSION = process.env.ES_MCP_PROTOCOL_VERSION || '2025-06-18';
 const ES_MCP_INTELLIGENCE_TOOL = process.env.ES_MCP_INTELLIGENCE_TOOL || '';
 const ES_MCP_TRANSCRIBE_TOOL = process.env.ES_MCP_TRANSCRIBE_TOOL || '';
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+const GROQ_TRANSCRIPTION_MODEL = process.env.GROQ_TRANSCRIPTION_MODEL || 'whisper-large-v3-turbo';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const TRANSCRIPTION_MODEL = process.env.OPENAI_TRANSCRIPTION_MODEL || 'gpt-4o-transcribe';
 
@@ -38,6 +40,8 @@ function getMcpConfigState() {
     protocolVersion: ES_MCP_PROTOCOL_VERSION,
     transcribeTool: ES_MCP_TRANSCRIBE_TOOL || 'auto-discover',
     intelligenceTool: ES_MCP_INTELLIGENCE_TOOL || 'auto-discover',
+    groqFallbackConfigured: Boolean(GROQ_API_KEY),
+    groqTranscriptionModel: GROQ_TRANSCRIPTION_MODEL,
     openAiFallbackConfigured: Boolean(OPENAI_API_KEY),
   };
 }
@@ -439,6 +443,45 @@ async function transcribeWithOpenAI(payload) {
   });
 }
 
+async function transcribeWithGroq(payload) {
+  if (!GROQ_API_KEY) return null;
+  if (!payload.data) return json(400, { error: 'Missing video/audio data.' });
+
+  const buffer = Buffer.from(payload.data, 'base64');
+  const blob = new Blob([buffer], { type: payload.mimeType || 'application/octet-stream' });
+  const form = new FormData();
+  form.append('file', blob, payload.fileName || 'reels-upload.mp4');
+  form.append('model', GROQ_TRANSCRIPTION_MODEL);
+  form.append('response_format', 'verbose_json');
+  form.append('temperature', '0');
+
+  const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+    },
+    body: form,
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    return json(response.status, {
+      error: data?.error?.message || `Groq speech recognition failed: ${response.status}`,
+      provider: 'groq',
+    });
+  }
+
+  const segments = Array.isArray(data?.segments)
+    ? normalizeSegmentsFromProvider(data.segments)
+    : chunkPlainTranscript(data?.text || '');
+
+  return json(200, {
+    provider: `Groq ${GROQ_TRANSCRIPTION_MODEL}`,
+    language: data?.language || '',
+    text: data?.text || segments.map(segment => segment.text).join(' '),
+    segments,
+  });
+}
+
 function chunkPlainTranscript(text) {
   const words = String(text || '').trim().split(/\s+/).filter(Boolean);
   if (!words.length) return [];
@@ -520,10 +563,11 @@ async function transcribeVideo(payload) {
     });
   }
 
+  if (GROQ_API_KEY) return transcribeWithGroq(payload);
   if (OPENAI_API_KEY) return transcribeWithOpenAI(payload);
 
   return json(501, {
-    error: mcpResult?.error || 'ES MCP transcription is not configured for this environment. Set ES_MCP_TRANSCRIBE_TOOL to the ES MCP speech-recognition tool name.',
+    error: mcpResult?.error || 'Speech recognition is not configured. Add an ES MCP transcription tool, GROQ_API_KEY, or OPENAI_API_KEY.',
     provider: mcpResult?.provider || 'not-configured',
   });
 }
