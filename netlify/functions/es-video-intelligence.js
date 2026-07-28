@@ -46,6 +46,10 @@ function shouldProbeHealth(value) {
   return ['probe', 'deep', 'check'].includes(String(value || '').toLowerCase());
 }
 
+function shouldPublicProbeHealth(value) {
+  return ['public-probe', 'public_probe', 'caption-check', 'caption_check'].includes(String(value || '').toLowerCase());
+}
+
 function safeError(error) {
   return String(error?.message || error || 'Unknown error')
     .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer [redacted]')
@@ -227,6 +231,38 @@ async function getDiagnosticState({ probe = false } = {}) {
     state.probe.transcribeTool = findTranscriptionToolName(names);
     state.probe.intelligenceTool = findIntelligenceToolName(names);
     state.probe.candidateTools = candidates.slice(0, 20);
+  } catch (error) {
+    state.probe.error = safeError(error);
+  }
+
+  return state;
+}
+
+async function getPublicProbeState() {
+  const state = getMcpConfigState();
+  state.probe = {
+    attempted: false,
+    ok: false,
+    toolCount: 0,
+    transcribeToolFound: false,
+    intelligenceToolFound: false,
+    error: '',
+  };
+
+  if (!state.mcpConfigured) {
+    state.probe.error = 'MCP credentials are not configured.';
+    return state;
+  }
+
+  state.probe.attempted = true;
+  try {
+    const sessionId = await initializeMcpSession();
+    const tools = await listMcpTools(sessionId);
+    const names = Array.isArray(tools) ? tools.map(tool => tool?.name || tool).filter(Boolean) : [];
+    state.probe.ok = true;
+    state.probe.toolCount = names.length;
+    state.probe.transcribeToolFound = Boolean(findTranscriptionToolName(names));
+    state.probe.intelligenceToolFound = Boolean(findIntelligenceToolName(names));
   } catch (error) {
     state.probe.error = safeError(error);
   }
@@ -497,6 +533,9 @@ exports.handler = async function handler(event) {
   const params = event.queryStringParameters || {};
   if (event.httpMethod === 'GET' && (params.health === '1' || params.health === 'true')) {
     return json(200, await getDiagnosticState({ probe: false }));
+  }
+  if (event.httpMethod === 'GET' && shouldPublicProbeHealth(params.health)) {
+    return json(200, await getPublicProbeState());
   }
   if (!['GET', 'POST'].includes(event.httpMethod)) return json(405, { error: 'Method not allowed.' });
 

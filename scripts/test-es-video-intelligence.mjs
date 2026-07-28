@@ -99,6 +99,21 @@ const { handler } = require('../netlify/functions/es-video-intelligence.js');
 {
   const response = await handler({
     httpMethod: 'GET',
+    headers: {},
+    queryStringParameters: { health: 'public-probe' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.probe.ok, true);
+  assert.equal(payload.probe.transcribeToolFound, true);
+  assert.equal(payload.probe.intelligenceToolFound, false);
+  assert.equal(Array.isArray(payload.probe.candidateTools), false);
+}
+
+{
+  const response = await handler({
+    httpMethod: 'GET',
     headers: { Authorization: 'Bearer test-user-token' },
     queryStringParameters: { health: 'probe' },
   });
