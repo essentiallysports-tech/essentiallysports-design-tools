@@ -39,6 +39,15 @@ assert.match(html, /id="reels-sport-select"/);
 assert.match(html, /id="reels-team-select"/);
 assert.match(html, /id="reels-palette-row"/);
 
+const uploadResetSource = reels.slice(
+  reels.indexOf('function onFileChosen'),
+  reels.indexOf('function onVideoMetadata'),
+);
+assert.match(uploadResetSource, /state\.captions\s*=\s*\[\]/);
+assert.match(uploadResetSource, /state\.nextId\s*=\s*1/);
+assert.match(uploadResetSource, /els\.downloadSrtBtn\.disabled\s*=\s*true/);
+assert.match(uploadResetSource, /els\.intelBtn\.disabled\s*=\s*true/);
+
 for (const constant of ['PILL_H', 'PILL_FONT_SIZE', 'PILL_PAD_LEFT', 'PILL_PAD_RIGHT']) {
   const socialValue = socialSource.match(new RegExp(`const ${constant}\\\\s*=\\\\s*([0-9.]+)`))?.[1];
   const reelsValue = reels.match(new RegExp(`var ${constant}\\\\s*=\\\\s*([0-9.]+)`))?.[1];

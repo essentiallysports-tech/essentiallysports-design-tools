@@ -155,6 +155,9 @@
     state.nextId = 1;
     state.transcriptSource = '';
     state.renderedOnce = false;
+    els.downloadSrtBtn.disabled = true;
+    els.intelBtn.disabled = true;
+    els.intelSource.textContent = 'ES MCP ready path';
     els.stageEmpty.style.display = 'grid';
     els.stageEmpty.innerHTML = '<strong>Loading clip</strong><span>Preparing the first frame.</span>';
     els.uploadBtn.disabled = true;
