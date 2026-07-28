@@ -8,6 +8,7 @@ const ES_MCP_CLIENT_ID = process.env.ES_MCP_CLIENT_ID || '';
 const ES_MCP_TOKEN_ENDPOINT = process.env.ES_MCP_TOKEN_ENDPOINT || '';
 const ES_MCP_PROTOCOL_VERSION = process.env.ES_MCP_PROTOCOL_VERSION || '2025-06-18';
 const ES_MCP_INTELLIGENCE_TOOL = process.env.ES_MCP_INTELLIGENCE_TOOL || '';
+const ES_MCP_TRANSCRIBE_TOOL = process.env.ES_MCP_TRANSCRIBE_TOOL || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const TRANSCRIPTION_MODEL = process.env.OPENAI_TRANSCRIPTION_MODEL || 'gpt-4o-transcribe';
 
@@ -161,6 +162,13 @@ async function findIntelligenceTool(sessionId) {
   return names.find(name => /video.*intelligence|caption.*style|style.*caption|prompt.*style/i.test(name)) || '';
 }
 
+async function findTranscriptionTool(sessionId) {
+  if (ES_MCP_TRANSCRIBE_TOOL) return ES_MCP_TRANSCRIBE_TOOL;
+  const tools = await listMcpTools(sessionId);
+  const names = Array.isArray(tools) ? tools.map(tool => tool?.name || tool).filter(Boolean) : [];
+  return names.find(name => /transcrib|speech.*text|audio.*text|video.*caption|caption.*generat/i.test(name)) || '';
+}
+
 function normalizeMcpPatch(result) {
   const content = result?.content || result?.structuredContent || result?.data || result;
   if (Array.isArray(content)) {
@@ -176,6 +184,48 @@ function normalizeMcpPatch(result) {
     }
   }
   return content && typeof content === 'object' ? content : { patch: {} };
+}
+
+function normalizeSegmentsFromProvider(segments) {
+  return segments.map(segment => ({
+    start: Number(segment.start ?? segment.start_time ?? segment.startTime) || 0,
+    end: Number(segment.end ?? segment.end_time ?? segment.endTime) || 0,
+    text: String(segment.text ?? segment.caption ?? segment.content ?? '').trim(),
+    confidence: segment.confidence == null ? null : Number(segment.confidence),
+    words: Array.isArray(segment.words) ? segment.words : [],
+  })).filter(segment => segment.text);
+}
+
+function normalizeMcpTranscription(result) {
+  const content = result?.content || result?.structuredContent || result?.data || result;
+  if (Array.isArray(content)) {
+    const textBlock = content.find(item => item?.type === 'text' && item.text);
+    if (textBlock) return normalizeMcpTranscription(textBlock.text);
+    const nested = content.find(item => item && typeof item === 'object');
+    if (nested) return normalizeMcpTranscription(nested);
+  }
+  if (typeof content === 'string') {
+    const cleaned = content.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+    try {
+      return normalizeMcpTranscription(JSON.parse(cleaned));
+    } catch (error) {
+      return {
+        provider: 'ES MCP',
+        text: cleaned,
+        segments: chunkPlainTranscript(cleaned),
+      };
+    }
+  }
+
+  const value = content && typeof content === 'object' ? content : {};
+  const segments = value.segments || value.captions || value.transcript?.segments || value.result?.segments || [];
+  const text = value.text || value.transcript || value.result?.text || '';
+  return {
+    provider: value.provider || 'ES MCP',
+    language: value.language || '',
+    text: typeof text === 'string' ? text : '',
+    segments: normalizeSegmentsFromProvider(Array.isArray(segments) ? segments : []),
+  };
 }
 
 async function callMcpIntelligence(payload) {
@@ -202,6 +252,42 @@ async function callMcpIntelligence(payload) {
     },
   }, sessionId);
   return normalizeMcpPatch(called.data?.result);
+}
+
+async function transcribeWithMcp(payload) {
+  if (!ES_MCP_ACCESS_TOKEN && (!ES_MCP_REFRESH_TOKEN || !ES_MCP_CLIENT_ID)) return null;
+  if (!payload.data) throw new Error('Missing video/audio data.');
+
+  const sessionId = await initializeMcpSession();
+  const toolName = await findTranscriptionTool(sessionId);
+  if (!toolName) {
+    return {
+      provider: 'ES MCP',
+      text: '',
+      segments: [],
+      error: 'ES MCP is configured, but no speech transcription tool was discovered. Set ES_MCP_TRANSCRIBE_TOOL to the correct MCP tool name.',
+    };
+  }
+
+  const called = await mcpRequest('tools/call', {
+    name: toolName,
+    arguments: {
+      task: 'transcribe_video_for_reels_captions',
+      file_name: payload.fileName || 'reels-upload.mp4',
+      fileName: payload.fileName || 'reels-upload.mp4',
+      mime_type: payload.mimeType || 'application/octet-stream',
+      mimeType: payload.mimeType || 'application/octet-stream',
+      data: payload.data,
+      base64: payload.data,
+      output: {
+        format: 'segments',
+        timestamps: 'segment',
+        fields: ['start', 'end', 'text', 'confidence', 'words'],
+      },
+    },
+  }, sessionId);
+
+  return normalizeMcpTranscription(called.data?.result);
 }
 
 async function transcribeWithOpenAI(payload) {
@@ -316,6 +402,31 @@ async function styleWithIntelligence(payload) {
   return json(200, localStyleFallback(payload));
 }
 
+async function transcribeVideo(payload) {
+  const mcpResult = await transcribeWithMcp(payload).catch(error => ({
+    provider: 'ES MCP error',
+    text: '',
+    segments: [],
+    error: safeError(error),
+  }));
+
+  if (mcpResult?.segments?.length) {
+    return json(200, {
+      provider: mcpResult.provider || 'ES MCP',
+      language: mcpResult.language || '',
+      text: mcpResult.text || mcpResult.segments.map(segment => segment.text).join(' '),
+      segments: mcpResult.segments,
+    });
+  }
+
+  if (OPENAI_API_KEY) return transcribeWithOpenAI(payload);
+
+  return json(501, {
+    error: mcpResult?.error || 'ES MCP transcription is not configured for this environment. Set ES_MCP_TRANSCRIBE_TOOL to the ES MCP speech-recognition tool name.',
+    provider: mcpResult?.provider || 'not-configured',
+  });
+}
+
 exports.handler = async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return json(204, {});
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed.' });
@@ -325,7 +436,7 @@ exports.handler = async function handler(event) {
     if (!auth.ok) return json(auth.statusCode, { error: auth.error });
 
     const payload = parseJsonBody(event);
-    if (payload.action === 'transcribe') return transcribeWithOpenAI(payload);
+    if (payload.action === 'transcribe') return transcribeVideo(payload);
     if (payload.action === 'style') return styleWithIntelligence(payload);
     return json(400, { error: 'Unknown video intelligence action.' });
   } catch (error) {

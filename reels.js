@@ -4,14 +4,18 @@
   var STAGE_W = 1080;
   var STAGE_H = 1920;
   var MAX_INLINE_UPLOAD_BYTES = 28 * 1024 * 1024;
-  var DEFAULT_STYLE_ID = 'broadcast';
   var ES_BLUE = '#0a7dfa';
+  var POST_FONT_FAMILY = 'Acumin Post';
+  var PILL_H = 122;
+  var PILL_FONT_SIZE = 130;
+  var PILL_PAD_LEFT = 18.40;
+  var PILL_PAD_RIGHT = 21.88;
+  var POST_SAFE_AREA = 50;
+  var PILL_EDGE_TO_TEXT_GAP = 1;
+  var PILL_ROW_GAP = 1;
 
   var CAPTION_STYLES = [
-    { id: 'broadcast', name: 'Broadcast', note: 'Bold ES bar', background: ES_BLUE, foreground: '#ffffff', stroke: '#08111d', mode: 'bar' },
-    { id: 'karaoke', name: 'Karaoke', note: 'Word focus', background: '#111316', foreground: '#ffffff', accent: '#ffd447', mode: 'karaoke' },
-    { id: 'headline', name: 'Headline', note: 'Big center hit', background: '#ffffff', foreground: '#111316', stroke: ES_BLUE, mode: 'headline' },
-    { id: 'clean', name: 'Clean', note: 'Subtle subtitle', background: 'rgba(0,0,0,.68)', foreground: '#ffffff', mode: 'clean' },
+    { id: 'social-pill', name: 'Social Pill', note: 'ES social media pill treatment', background: ES_BLUE, foreground: '#ffffff', mode: 'pill' },
   ];
 
   var LOWER_THIRD_TEMPLATES = [
@@ -30,6 +34,10 @@
     nextId: 1,
     style: CAPTION_STYLES[0],
     captionPosition: 'lower',
+    sport: '',
+    team: '',
+    pillPalette: null,
+    pillPaletteIdx: 0,
     transcriptSource: '',
     recording: false,
     renderedOnce: false,
@@ -64,12 +72,14 @@
       setStep('style');
       drawFrame();
     });
-    els.applyTeamBtn.addEventListener('click', applyTeamColorFromInput);
+    els.sportSelect.addEventListener('change', function () { onSportChange(els.sportSelect.value); });
+    els.teamSelect.addEventListener('change', function () { onTeamChange(els.teamSelect.value); });
     els.intelBtn.addEventListener('click', applyIntelligence);
     els.exportBtn.addEventListener('click', function () {
       if (state.recording) stopExport(); else startExport();
     });
 
+    initBrandControls();
     renderStyleGrid();
     renderLowerThirdGrid();
     renderLowerThirdList();
@@ -83,8 +93,9 @@
       'currentTime', 'totalTime', 'exportBtn', 'exportStatus', 'transcribeBtn',
       'addCaptionBtn', 'downloadSrtBtn', 'transcribeStatus', 'captionTimeline',
       'playhead', 'captionCount', 'transcriptList', 'transcriptSource', 'styleGrid',
-      'styleName', 'captionPosition', 'teamQuery', 'applyTeamBtn', 'intelPrompt',
-      'intelBtn', 'intelStatus', 'intelSource', 'ltGrid', 'ltList', 'ltCount'
+      'styleName', 'captionPosition', 'sportSelect', 'teamSelect', 'teamLabel',
+      'paletteRow', 'intelPrompt', 'intelBtn', 'intelStatus', 'intelSource',
+      'ltGrid', 'ltList', 'ltCount'
     ].forEach(function (key) {
       var id = 'reels-' + key.replace(/[A-Z]/g, function (m) { return '-' + m.toLowerCase(); });
       els[key] = document.getElementById(id);
@@ -407,8 +418,11 @@
 
   function renderStyleGrid() {
     els.styleGrid.innerHTML = CAPTION_STYLES.map(function (style) {
+      var palette = getActivePalette();
+      var background = palette.background || style.background;
+      var foreground = getTextColorForPair(palette, getActiveBrandEntry()) || style.foreground;
       return '<button type="button" class="reels-style-card' + (style.id === state.style.id ? ' is-selected' : '') + '" data-style="' + style.id + '">' +
-        '<div class="reels-style-preview" style="background:' + style.background + ';color:' + style.foreground + '">' + escapeHtml(style.name.toUpperCase()) + '</div>' +
+        '<div class="reels-style-preview" style="background:' + background + ';color:' + foreground + '">' + escapeHtml(style.name.toUpperCase()) + '</div>' +
         '<strong>' + escapeHtml(style.name) + '</strong><span>' + escapeHtml(style.note) + '</span></button>';
     }).join('');
     els.styleGrid.querySelectorAll('.reels-style-card').forEach(function (button) {
@@ -422,22 +436,57 @@
     });
   }
 
-  function applyTeamColorFromInput() {
-    var entry = findBrandEntry(els.teamQuery.value);
-    if (!entry || !entry.primary) {
-      setStatus(els.intelStatus, 'No team color match found in the ES brand kit.', 'error');
-      return;
-    }
-    state.style = Object.assign({}, state.style, {
-      background: entry.primary.background,
-      foreground: entry.primary.foreground,
-      accent: entry.primary.mist || entry.primary.background,
-    });
-    els.styleName.textContent = (entry.team || entry.variation || 'Brand') + ' ' + state.style.name;
-    setStatus(els.intelStatus, 'Applied ' + (entry.team || entry.variation) + ' colors from the ES brand kit.', 'good');
+  function initBrandControls() {
+    var sports = getSports();
+    els.sportSelect.innerHTML = sports.map(function (sport) {
+      return '<option value="' + escapeHtml(sport) + '">' + escapeHtml(sport) + '</option>';
+    }).join('');
+    onSportChange(sports[0] || '');
+  }
+
+  function onSportChange(sport) {
+    state.sport = sport;
+    els.teamLabel.textContent = sport === 'Tennis' ? 'Variation' : 'Team';
+    var teams = getTeams(sport);
+    els.teamSelect.innerHTML = teams.map(function (team) {
+      return '<option value="' + escapeHtml(team) + '">' + escapeHtml(formatTeamDisplayName(team)) + '</option>';
+    }).join('');
+    onTeamChange(teams[0] || '');
+  }
+
+  function onTeamChange(team) {
+    state.team = team;
+    state.pillPaletteIdx = 0;
+    var entry = getActiveBrandEntry();
+    var palette = getPaletteForWorkspace(entry);
+    state.pillPalette = palette[0] || entry?.primary || { background: ES_BLUE, foreground: '#ffffff', mist: '#ffffff' };
+    renderPaletteRow();
+    els.styleName.textContent = formatTeamDisplayName(team || 'Social Pill') + ' Pill';
+    setStatus(els.intelStatus, team ? 'Caption pills are using ' + formatTeamDisplayName(team) + ' colors.' : 'Caption pills are using the default ES color.', team ? 'good' : '');
     setStep('style');
     renderStyleGrid();
     drawFrame();
+  }
+
+  function renderPaletteRow() {
+    var entry = getActiveBrandEntry();
+    var palette = getPaletteForWorkspace(entry);
+    els.paletteRow.innerHTML = palette.map(function (pair, index) {
+      var active = index === state.pillPaletteIdx;
+      var textColor = getTextColorForPair(pair, entry);
+      return '<button type="button" class="reels-swatch' + (active ? ' is-active' : '') + '" data-index="' + index + '" title="Pill ' + escapeHtml(pair.background) + ' / Text ' + escapeHtml(textColor) + '" aria-label="Caption color ' + (index + 1) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' +
+        '<span class="reels-swatch-inner" style="background:' + escapeHtml(pair.background) + ';color:' + escapeHtml(textColor) + '"></span></button>';
+    }).join('');
+    els.paletteRow.querySelectorAll('.reels-swatch').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var index = Number(button.dataset.index) || 0;
+        state.pillPaletteIdx = index;
+        state.pillPalette = palette[index] || palette[0] || state.pillPalette;
+        renderPaletteRow();
+        renderStyleGrid();
+        drawFrame();
+      });
+    });
   }
 
   async function applyIntelligence() {
@@ -478,7 +527,14 @@
       state.captionPosition = patch.position;
       els.captionPosition.value = patch.position;
     }
-    if (patch.style && typeof patch.style === 'object') state.style = Object.assign({}, state.style, patch.style);
+    if (patch.style && typeof patch.style === 'object') {
+      state.style = Object.assign({}, state.style, patch.style);
+      state.pillPalette = Object.assign({}, getActivePalette(), {
+        background: patch.style.background || getActivePalette().background,
+        foreground: patch.style.foreground || getActivePalette().foreground,
+        mist: patch.style.accent || patch.style.mist || getActivePalette().mist,
+      });
+    }
     els.styleName.textContent = patch.styleName || state.style.name;
     setStep('style');
     renderStyleGrid();
@@ -558,41 +614,83 @@
   }
 
   function drawCaption(ctx, caption) {
-    var style = state.style;
-    var text = caption.text.toUpperCase();
-    var yMap = { upper: 330, center: 900, lower: 1450 };
-    var centerY = yMap[state.captionPosition] || yMap.lower;
+    var text = String(caption.text || '').toUpperCase();
     ctx.save();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = (style.mode === 'headline' ? '900 86px ' : '900 64px ') + '"Roboto Condensed", Arial, sans-serif';
-    var maxWidth = STAGE_W - 130;
-    var lines = wrapText(ctx, text, maxWidth).slice(0, 3);
-    var lineHeight = style.mode === 'headline' ? 92 : 74;
-    var totalHeight = lines.length * lineHeight;
-    lines.forEach(function (line, index) {
-      var y = centerY - totalHeight / 2 + index * lineHeight + lineHeight / 2;
-      var metrics = ctx.measureText(line);
-      var boxWidth = Math.min(maxWidth + 42, metrics.width + 72);
-      if (style.mode === 'bar' || style.mode === 'clean') {
-        ctx.fillStyle = style.background;
-        roundRect(ctx, (STAGE_W - boxWidth) / 2, y - lineHeight / 2 + 5, boxWidth, lineHeight - 10, 10);
-        ctx.fill();
-      }
-      if (style.mode === 'headline') {
-        ctx.lineWidth = 14;
-        ctx.strokeStyle = style.stroke || style.background;
-        ctx.strokeText(line, STAGE_W / 2, y);
-      }
-      if (style.mode === 'karaoke' && index === 0) {
-        ctx.fillStyle = style.accent || varFallback(style.background, '#ffd447');
-        roundRect(ctx, (STAGE_W - boxWidth) / 2, y - lineHeight / 2 + 5, boxWidth * .46, lineHeight - 10, 10);
-        ctx.fill();
-      }
-      ctx.fillStyle = style.foreground;
-      ctx.fillText(line, STAGE_W / 2, y);
-    });
+    var scale = 1;
+    var pillH = Math.round(PILL_H * scale);
+    var padLeft = PILL_PAD_LEFT * scale;
+    var padRight = PILL_PAD_RIGHT * scale;
+    var fontSize = Math.round(PILL_FONT_SIZE * scale);
+    ctx.font = '900 ' + fontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+    var maxTextWidth = STAGE_W - POST_SAFE_AREA * 2 - padLeft - padRight;
+    var lines = wrapText(ctx, text, maxTextWidth).slice(0, 2);
+    drawCaptionPills(ctx, lines, pillH, padLeft, padRight, fontSize);
     ctx.restore();
+  }
+
+  function drawCaptionPills(ctx, lines, pillH, padLeft, padRight, fontSize) {
+    if (!lines.length) return;
+    var safe = POST_SAFE_AREA;
+    var maxCanvasW = STAGE_W - safe * 2;
+    var activePillH = Math.min(pillH, Math.floor((STAGE_H - safe * 2) / Math.max(lines.length, 1)));
+    activePillH = Math.max(28, activePillH);
+    var activeFontSize = Math.round(fontSize * (activePillH / pillH));
+
+    ctx.font = '900 ' + activeFontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+
+    var maxTextW = 0;
+    lines.forEach(function (line) {
+      maxTextW = Math.max(maxTextW, ctx.measureText(line.toUpperCase()).width);
+    });
+    var maxTextAvailable = Math.max(1, maxCanvasW - padLeft - padRight);
+    if (maxTextW > maxTextAvailable) {
+      activeFontSize = Math.max(28, Math.floor(activeFontSize * (maxTextAvailable / maxTextW)));
+      ctx.font = '900 ' + activeFontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+    }
+
+    var capMetrics = ctx.measureText('A');
+    var capAscent = capMetrics.actualBoundingBoxAscent || Math.round(activeFontSize * 0.68);
+    var capDescent = capMetrics.actualBoundingBoxDescent || 0;
+    var textH = capAscent + capDescent;
+    var topPad = Math.max(0, Math.round((activePillH - textH) * 0.50));
+    var textBaselineFromTop = Math.min(topPad + capAscent, activePillH - capDescent - 2);
+    var activePillSpacing = Math.max(
+      Math.round(activePillH * 0.55),
+      activePillH - topPad + PILL_EDGE_TO_TEXT_GAP
+    ) + PILL_ROW_GAP;
+
+    var pillWidths = lines.map(function (line) {
+      var textW = ctx.measureText(line.toUpperCase()).width;
+      return Math.min(maxCanvasW, textW + padLeft + padRight);
+    });
+    var blockH = activePillH + (lines.length - 1) * activePillSpacing;
+    var blockTopY = getCaptionBlockTop(blockH, safe);
+    var blockCenterX = STAGE_W / 2;
+    var palette = getActivePalette();
+    var entry = getActiveBrandEntry();
+    var bgColor = palette.background || ES_BLUE;
+    var fgColor = getTextColorForPair(palette, entry);
+
+    lines.forEach(function (line, index) {
+      var pillW = pillWidths[index];
+      var pillX = clamp(blockCenterX - pillW / 2, safe, STAGE_W - safe - pillW);
+      var pillY = blockTopY + index * activePillSpacing;
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(pillX, pillY, pillW, activePillH);
+      ctx.fillStyle = fgColor;
+      ctx.font = '900 ' + activeFontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(line.toUpperCase(), pillX + padLeft, pillY + textBaselineFromTop);
+    });
+  }
+
+  function getCaptionBlockTop(blockH, safe) {
+    if (state.captionPosition === 'upper') return safe + 270;
+    if (state.captionPosition === 'center') return Math.round((STAGE_H - blockH) / 2);
+    return clamp(STAGE_H - 360 - blockH, safe, STAGE_H - safe - blockH);
   }
 
   function drawLowerThird(ctx, item) {
@@ -621,8 +719,104 @@
     return state.captions.find(function (caption) { return caption.id === id; }) || null;
   }
 
-  function findBrandEntry(query) {
-    return findBrandCandidates(query)[0] || null;
+  function getSports() {
+    return Array.from(new Set((window.ES_BRAND_KIT || []).map(function (entry) { return entry.sport; }).filter(Boolean)));
+  }
+
+  function getTeams(sport) {
+    return (window.ES_BRAND_KIT || [])
+      .filter(function (entry) { return entry.sport === sport; })
+      .map(function (entry) { return entry.variation || entry.team; })
+      .filter(Boolean);
+  }
+
+  function getBrandEntry(sport, team) {
+    return (window.ES_BRAND_KIT || []).find(function (entry) {
+      return entry.sport === sport && (entry.variation || entry.team) === team;
+    }) || null;
+  }
+
+  function getActiveBrandEntry() {
+    return getBrandEntry(state.sport, state.team);
+  }
+
+  function getActivePalette() {
+    return state.pillPalette || getActiveBrandEntry()?.primary || { background: ES_BLUE, foreground: '#ffffff', mist: '#ffffff' };
+  }
+
+  function getUniquePalette(entry) {
+    var seen = {};
+    return (entry?.palette || entry?.primary ? (entry.palette || [entry.primary]) : [{ background: ES_BLUE, foreground: '#ffffff', mist: '#ffffff' }])
+      .filter(function (pair) {
+        var key = String(pair.background || '').toLowerCase();
+        if (!key || seen[key]) return false;
+        seen[key] = true;
+        return true;
+      });
+  }
+
+  function getPaletteForWorkspace(entry) {
+    return getUniquePalette(entry);
+  }
+
+  function getMistColorForPair(pair, entry) {
+    if (pair?.mist && pair.mist.toLowerCase() !== String(pair.background || '').toLowerCase()) return pair.mist;
+    var alternate = entry?.palette?.find(function (item) {
+      return String(item.background || '').toLowerCase() !== String(pair?.background || '').toLowerCase();
+    });
+    if (alternate) return alternate.background;
+    if (pair?.foreground && pair.foreground.toLowerCase() !== String(pair.background || '').toLowerCase()) return pair.foreground;
+    return String(pair?.background || '').toLowerCase() === '#000000' ? '#ffffff' : '#000000';
+  }
+
+  function getTextColorForPair(pair, entry) {
+    var bg = pair?.background || ES_BLUE;
+    var mist = getMistColorForPair(pair, entry);
+    if (mist && mist.toLowerCase() !== bg.toLowerCase() && contrastRatio(bg, mist) >= 2.4) return mist;
+    return [mist, pair?.foreground, '#ffffff', '#000000']
+      .filter(function (color, index, list) {
+        return color && color.toLowerCase() !== bg.toLowerCase() &&
+          list.findIndex(function (candidate) { return candidate?.toLowerCase() === color.toLowerCase(); }) === index;
+      })
+      .sort(function (a, b) { return contrastRatio(bg, b) - contrastRatio(bg, a); })[0] || '#ffffff';
+  }
+
+  function hexToRgb(hex) {
+    var value = String(hex || '#000000').replace('#', '').trim();
+    if (value.length === 3) value = value.split('').map(function (char) { return char + char; }).join('');
+    if (!/^[0-9a-f]{6}$/i.test(value)) return { r: 0, g: 0, b: 0 };
+    return {
+      r: parseInt(value.slice(0, 2), 16),
+      g: parseInt(value.slice(2, 4), 16),
+      b: parseInt(value.slice(4, 6), 16),
+    };
+  }
+
+  function channelToLinear(value) {
+    var channel = value / 255;
+    return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+  }
+
+  function luminance(hex) {
+    var rgb = hexToRgb(hex);
+    return 0.2126 * channelToLinear(rgb.r) + 0.7152 * channelToLinear(rgb.g) + 0.0722 * channelToLinear(rgb.b);
+  }
+
+  function contrastRatio(a, b) {
+    var light = Math.max(luminance(a), luminance(b));
+    var dark = Math.min(luminance(a), luminance(b));
+    return (light + 0.05) / (dark + 0.05);
+  }
+
+  function formatTeamDisplayName(team) {
+    var keepUpper = { fc: true, cf: true, sc: true, usa: true, us: true, ny: true, la: true, dc: true, mlb: true, nba: true, nfl: true, nhl: true, wnba: true, ufc: true, cbb: true };
+    return String(team || '').replace(/\S+/g, function (word) {
+      var compact = word.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      if (keepUpper[compact]) return word.toUpperCase();
+      return word.replace(/[A-Za-z]+/g, function (part) {
+        return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+      });
+    });
   }
 
   function findBrandCandidates(query) {

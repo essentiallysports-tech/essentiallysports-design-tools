@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-delete process.env.ES_MCP_ACCESS_TOKEN;
+process.env.ES_MCP_ACCESS_TOKEN = 'test-mcp-token';
 delete process.env.ES_MCP_REFRESH_TOKEN;
 delete process.env.ES_MCP_CLIENT_ID;
 delete process.env.OPENAI_API_KEY;
@@ -21,6 +21,61 @@ globalThis.fetch = async (url, options = {}) => {
       headers: { 'content-type': 'application/json' },
     });
   }
+
+  if (String(url) === 'https://mcp.essentiallysports.com/mcp') {
+    assert.equal(options.headers?.Authorization, 'Bearer test-mcp-token');
+    const body = JSON.parse(options.body);
+
+    if (body.method === 'initialize') {
+      return new Response(JSON.stringify({
+        jsonrpc: '2.0',
+        id: body.id,
+        result: { protocolVersion: '2025-06-18', capabilities: {} },
+      }), {
+        status: 200,
+        headers: { 'content-type': 'application/json', 'mcp-session-id': 'session-1' },
+      });
+    }
+
+    if (body.method === 'notifications/initialized') {
+      return new Response('', { status: 202 });
+    }
+
+    if (body.method === 'tools/list') {
+      return new Response(JSON.stringify({
+        jsonrpc: '2.0',
+        id: body.id,
+        result: {
+          tools: [{ name: 'mcp__es__transcribe_video' }],
+        },
+      }), {
+        status: 200,
+        headers: { 'content-type': 'application/json', 'mcp-session-id': 'session-1' },
+      });
+    }
+
+    if (body.method === 'tools/call') {
+      assert.equal(body.params.name, 'mcp__es__transcribe_video');
+      assert.equal(body.params.arguments.mime_type, 'video/mp4');
+      assert.ok(body.params.arguments.base64);
+      return new Response(JSON.stringify({
+        jsonrpc: '2.0',
+        id: body.id,
+        result: {
+          provider: 'ES MCP speech',
+          language: 'en',
+          segments: [
+            { start: 0, end: 1.8, text: 'LeBron James opens the segment', confidence: 0.96 },
+            { start: 1.8, end: 3.4, text: 'with a Lakers update', confidence: 0.94 },
+          ],
+        },
+      }), {
+        status: 200,
+        headers: { 'content-type': 'application/json', 'mcp-session-id': 'session-1' },
+      });
+    }
+  }
+
   throw new Error(`Unexpected external call: ${url}`);
 };
 
@@ -39,10 +94,12 @@ const { handler } = require('../netlify/functions/es-video-intelligence.js');
     }),
   });
 
-  assert.equal(response.statusCode, 501);
+  assert.equal(response.statusCode, 200);
   const payload = JSON.parse(response.body);
-  assert.match(payload.error, /OPENAI_API_KEY is not configured/);
-  assert.equal(payload.provider, 'not-configured');
+  assert.equal(payload.provider, 'ES MCP speech');
+  assert.equal(payload.language, 'en');
+  assert.equal(payload.segments.length, 2);
+  assert.equal(payload.segments[0].text, 'LeBron James opens the segment');
 }
 
 {
@@ -77,5 +134,5 @@ const { handler } = require('../netlify/functions/es-video-intelligence.js');
   assert.equal(payload.patch.text, 'LeBron James explains why the Lakers need to start');
 }
 
-assert.ok(fetchCalls.every(call => String(call.url).includes('/auth/v1/user')));
+assert.ok(fetchCalls.every(call => String(call.url).includes('/auth/v1/user') || String(call.url) === 'https://mcp.essentiallysports.com/mcp'));
 console.log('ES video intelligence regression tests passed.');
