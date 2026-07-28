@@ -84,6 +84,34 @@ const { handler } = require('../netlify/functions/es-video-intelligence.js');
 
 {
   const response = await handler({
+    httpMethod: 'GET',
+    headers: {},
+    queryStringParameters: { health: '1' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.mcpConfigured, true);
+  assert.equal(payload.transcribeTool, 'auto-discover');
+  assert.equal(payload.openAiFallbackConfigured, false);
+}
+
+{
+  const response = await handler({
+    httpMethod: 'GET',
+    headers: { Authorization: 'Bearer test-user-token' },
+    queryStringParameters: { health: 'probe' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.probe.ok, true);
+  assert.equal(payload.probe.transcribeTool, 'mcp__es__transcribe_video');
+  assert.deepEqual(payload.probe.candidateTools, ['mcp__es__transcribe_video']);
+}
+
+{
+  const response = await handler({
     httpMethod: 'POST',
     headers: { Authorization: 'Bearer test-user-token' },
     body: JSON.stringify({

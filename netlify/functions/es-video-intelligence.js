@@ -22,10 +22,28 @@ function json(statusCode, body) {
       'Cache-Control': 'no-store',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     },
     body: JSON.stringify(body),
   };
+}
+
+function getMcpConfigState() {
+  const hasAccessToken = Boolean(ES_MCP_ACCESS_TOKEN);
+  const hasRefreshTokenMode = Boolean(ES_MCP_CLIENT_ID && ES_MCP_REFRESH_TOKEN);
+  return {
+    mcpConfigured: hasAccessToken || hasRefreshTokenMode,
+    tokenMode: hasAccessToken ? 'access-token' : (hasRefreshTokenMode ? 'refresh-token' : 'none'),
+    endpoint: ES_MCP_ENDPOINT,
+    protocolVersion: ES_MCP_PROTOCOL_VERSION,
+    transcribeTool: ES_MCP_TRANSCRIBE_TOOL || 'auto-discover',
+    intelligenceTool: ES_MCP_INTELLIGENCE_TOOL || 'auto-discover',
+    openAiFallbackConfigured: Boolean(OPENAI_API_KEY),
+  };
+}
+
+function shouldProbeHealth(value) {
+  return ['probe', 'deep', 'check'].includes(String(value || '').toLowerCase());
 }
 
 function safeError(error) {
@@ -167,6 +185,53 @@ async function findTranscriptionTool(sessionId) {
   const tools = await listMcpTools(sessionId);
   const names = Array.isArray(tools) ? tools.map(tool => tool?.name || tool).filter(Boolean) : [];
   return names.find(name => /transcrib|speech.*text|audio.*text|video.*caption|caption.*generat/i.test(name)) || '';
+}
+
+function findTranscriptionToolName(names) {
+  if (ES_MCP_TRANSCRIBE_TOOL) return ES_MCP_TRANSCRIBE_TOOL;
+  return names.find(name => /transcrib|speech.*text|audio.*text|video.*caption|caption.*generat/i.test(name)) || '';
+}
+
+function findIntelligenceToolName(names) {
+  if (ES_MCP_INTELLIGENCE_TOOL) return ES_MCP_INTELLIGENCE_TOOL;
+  return names.find(name => /video.*intelligence|caption.*style|style.*caption|prompt.*style/i.test(name)) || '';
+}
+
+async function getDiagnosticState({ probe = false } = {}) {
+  const state = getMcpConfigState();
+  if (!probe) return state;
+
+  state.probe = {
+    attempted: false,
+    ok: false,
+    toolCount: 0,
+    transcribeTool: '',
+    intelligenceTool: '',
+    candidateTools: [],
+    error: '',
+  };
+
+  if (!state.mcpConfigured) {
+    state.probe.error = 'MCP credentials are not configured.';
+    return state;
+  }
+
+  state.probe.attempted = true;
+  try {
+    const sessionId = await initializeMcpSession();
+    const tools = await listMcpTools(sessionId);
+    const names = Array.isArray(tools) ? tools.map(tool => tool?.name || tool).filter(Boolean) : [];
+    const candidates = names.filter(name => /transcrib|speech|audio|video|caption|style|prompt/i.test(name));
+    state.probe.ok = true;
+    state.probe.toolCount = names.length;
+    state.probe.transcribeTool = findTranscriptionToolName(names);
+    state.probe.intelligenceTool = findIntelligenceToolName(names);
+    state.probe.candidateTools = candidates.slice(0, 20);
+  } catch (error) {
+    state.probe.error = safeError(error);
+  }
+
+  return state;
 }
 
 function normalizeMcpPatch(result) {
@@ -429,11 +494,20 @@ async function transcribeVideo(payload) {
 
 exports.handler = async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return json(204, {});
-  if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed.' });
+  const params = event.queryStringParameters || {};
+  if (event.httpMethod === 'GET' && (params.health === '1' || params.health === 'true')) {
+    return json(200, await getDiagnosticState({ probe: false }));
+  }
+  if (!['GET', 'POST'].includes(event.httpMethod)) return json(405, { error: 'Method not allowed.' });
 
   try {
     const auth = await verifyEsUser(event);
     if (!auth.ok) return json(auth.statusCode, { error: auth.error });
+
+    if (event.httpMethod === 'GET' && shouldProbeHealth(params.health)) {
+      return json(200, await getDiagnosticState({ probe: true }));
+    }
+    if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed.' });
 
     const payload = parseJsonBody(event);
     if (payload.action === 'transcribe') return transcribeVideo(payload);
