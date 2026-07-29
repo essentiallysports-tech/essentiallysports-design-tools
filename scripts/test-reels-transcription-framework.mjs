@@ -44,11 +44,14 @@ assert.match(reels, /fetch\(videoIntelligenceUrl\('\?health=public-probe'\)/);
 assert.match(reels, /LIVE_API_ORIGIN\s*=\s*'https:\/\/essentiallysports-design-tools\.vercel\.app'/);
 assert.match(reels, /function videoIntelligenceUrl/);
 assert.match(reels, /function isLocalPreviewHost/);
-assert.match(reels, /Speech backend ready: Groq Whisper captions\. ES MCP is connected for available tools\./);
-assert.match(reels, /Speech backend ready: on-device Whisper captions will run if cloud speech is unavailable\./);
-assert.match(reels, /Speech backend check failed\. On-device Whisper captions can still run in this browser\./);
+assert.match(reels, /Upload a clip to begin\./);
+assert.match(reels, /Captions ready\. Review the transcript\./);
+assert.doesNotMatch(reels, /Speech backend ready:/);
+assert.doesNotMatch(reels, /Speech backend check failed/);
 assert.doesNotMatch(reels, /Speech backend needs a transcription provider before captions can generate/);
-assert.match(reels, /Local rules until ES MCP adds Intelligence/);
+assert.doesNotMatch(reels, /Local rules until ES MCP adds Intelligence/);
+assert.match(reels, /function initCustomSelects/);
+assert.match(reels, /function syncCustomSelect/);
 assert.match(reels, /mimeType:\s*'audio\/wav'/);
 assert.match(reels, /mimeType:\s*item\.blob\.type \|\| 'audio\/webm'/);
 assert.match(reels, /function drawCaptionPills/);
@@ -66,7 +69,7 @@ assert.match(reels, /linear-gradient\(135deg/);
 assert.match(html, /id="reels-sport-select"/);
 assert.match(html, /id="reels-team-select"/);
 assert.match(html, /id="reels-palette-row"/);
-assert.match(html, /Checking ES MCP/);
+assert.match(html, /Caption helper/);
 assert.match(html, /reels\.js\?v=20260729-reels4/);
 
 const uploadResetSource = reels.slice(
@@ -77,7 +80,7 @@ assert.match(uploadResetSource, /state\.captions\s*=\s*\[\]/);
 assert.match(uploadResetSource, /state\.nextId\s*=\s*1/);
 assert.match(uploadResetSource, /els\.downloadSrtBtn\.disabled\s*=\s*true/);
 assert.match(uploadResetSource, /els\.intelBtn\.disabled\s*=\s*true/);
-assert.match(uploadResetSource, /els\.intelSource\.textContent\s*=\s*'Checking ES MCP'/);
+assert.match(uploadResetSource, /els\.intelSource\.textContent\s*=\s*'Caption helper'/);
 assert.match(uploadResetSource, /refreshSpeechBackendStatus\(\)/);
 
 const backendStatusSource = reels.slice(
@@ -86,8 +89,8 @@ const backendStatusSource = reels.slice(
 );
 assert.match(
   backendStatusSource,
-  /els\.intelSource\.textContent = 'Local rules until ES MCP adds Intelligence'[\s\S]*?if \(state\.videoFile\) return;/,
-  'Intelligence readiness must refresh even after a clip has been selected',
+  /els\.intelSource\.textContent\s*=\s*'Caption helper'[\s\S]*?if \(state\.videoFile\) return;/,
+  'Caption helper readiness must refresh even after a clip has been selected',
 );
 
 for (const constant of ['PILL_H', 'PILL_FONT_SIZE', 'PILL_PAD_LEFT', 'PILL_PAD_RIGHT']) {

@@ -82,6 +82,7 @@
     els.captionPosition.addEventListener('change', function () {
       state.captionPosition = els.captionPosition.value;
       setStep('style');
+      syncCustomSelect('captionPosition');
       drawFrame();
     });
     els.sportSelect.addEventListener('change', function () { onSportChange(els.sportSelect.value); });
@@ -92,6 +93,7 @@
     });
 
     initBrandControls();
+    initCustomSelects();
     renderStyleGrid();
     renderLowerThirdGrid();
     renderLowerThirdList();
@@ -125,6 +127,75 @@
     });
   }
 
+  function initCustomSelects() {
+    [
+      { key: 'captionPosition', label: 'Position' },
+      { key: 'sportSelect', label: 'Sport' },
+      { key: 'teamSelect', label: 'Team' },
+    ].forEach(function (config) {
+      enhanceSelect(config.key, config.label);
+    });
+    document.addEventListener('click', function (event) {
+      if (!event.target.closest('.reels-choice')) closeCustomSelects();
+    });
+    syncAllCustomSelects();
+  }
+
+  function enhanceSelect(key, label) {
+    var select = els[key];
+    if (!select || select.dataset.enhanced === 'true') return;
+    select.dataset.enhanced = 'true';
+    select.classList.add('reels-native-select');
+    var choice = document.createElement('div');
+    choice.className = 'reels-choice';
+    choice.dataset.selectKey = key;
+    choice.innerHTML =
+      '<button type="button" class="reels-choice-trigger" aria-haspopup="listbox" aria-expanded="false">' +
+        '<span class="reels-choice-label">' + escapeHtml(label) + '</span>' +
+        '<span class="reels-choice-value"></span>' +
+      '</button>' +
+      '<div class="reels-choice-menu" role="listbox"></div>';
+    select.insertAdjacentElement('afterend', choice);
+    choice.querySelector('.reels-choice-trigger').addEventListener('click', function () {
+      var isOpen = choice.classList.contains('is-open');
+      closeCustomSelects();
+      choice.classList.toggle('is-open', !isOpen);
+      choice.querySelector('.reels-choice-trigger').setAttribute('aria-expanded', String(!isOpen));
+    });
+  }
+
+  function closeCustomSelects() {
+    document.querySelectorAll('.reels-choice.is-open').forEach(function (choice) {
+      choice.classList.remove('is-open');
+      choice.querySelector('.reels-choice-trigger')?.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function syncAllCustomSelects() {
+    ['captionPosition', 'sportSelect', 'teamSelect'].forEach(syncCustomSelect);
+  }
+
+  function syncCustomSelect(key) {
+    var select = els[key];
+    var choice = document.querySelector('.reels-choice[data-select-key="' + key + '"]');
+    if (!select || !choice) return;
+    var selected = select.options[select.selectedIndex] || select.options[0];
+    var valueNode = choice.querySelector('.reels-choice-value');
+    var menu = choice.querySelector('.reels-choice-menu');
+    valueNode.textContent = selected ? selected.textContent : 'Select';
+    menu.innerHTML = Array.prototype.map.call(select.options, function (option) {
+      var active = option.value === select.value;
+      return '<button type="button" class="reels-choice-option' + (active ? ' is-selected' : '') + '" role="option" aria-selected="' + (active ? 'true' : 'false') + '" data-value="' + escapeHtml(option.value) + '">' + escapeHtml(option.textContent) + '</button>';
+    }).join('');
+    menu.querySelectorAll('.reels-choice-option').forEach(function (button) {
+      button.addEventListener('click', function () {
+        select.value = button.dataset.value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        closeCustomSelects();
+      });
+    });
+  }
+
   function setStatus(el, text, kind) {
     el.textContent = text || '';
     el.classList.toggle('is-error', kind === 'error');
@@ -136,27 +207,12 @@
       .then(function (response) { return response.ok ? response.json() : null; })
       .then(function (config) {
         if (!config) return;
-        var probe = config.probe || {};
-        if (probe.intelligenceToolFound) {
-          els.intelSource.textContent = 'ES MCP Intelligence ready';
-        } else if (config.mcpConfigured) {
-          els.intelSource.textContent = 'Local rules until ES MCP adds Intelligence';
-        } else {
-          els.intelSource.textContent = 'Local rules fallback';
-        }
+        els.intelSource.textContent = 'Caption helper';
         if (state.videoFile) return;
-        if (config.groqFallbackConfigured) {
-          setStatus(els.transcribeStatus, 'Speech backend ready: Groq Whisper captions. ES MCP is connected for available tools.', 'good');
-        } else if (config.openAiFallbackConfigured) {
-          setStatus(els.transcribeStatus, 'Speech backend ready: OpenAI captions. ES MCP is connected for available tools.', 'good');
-        } else if (config.mcpConfigured && probe.transcribeToolFound) {
-          setStatus(els.transcribeStatus, 'Speech backend ready: ES MCP speech recognition configured.', 'good');
-        } else {
-          setStatus(els.transcribeStatus, 'Speech backend ready: on-device Whisper captions will run if cloud speech is unavailable.', 'good');
-        }
+        setStatus(els.transcribeStatus, 'Upload a clip to begin.');
       })
       .catch(function () {
-        if (!state.videoFile) setStatus(els.transcribeStatus, 'Speech backend check failed. On-device Whisper captions can still run in this browser.', 'good');
+        if (!state.videoFile) setStatus(els.transcribeStatus, 'Upload a clip to begin.');
       });
   }
 
@@ -173,14 +229,14 @@
     state.renderedOnce = false;
     els.downloadSrtBtn.disabled = true;
     els.intelBtn.disabled = true;
-    els.intelSource.textContent = 'Checking ES MCP';
+    els.intelSource.textContent = 'Caption helper';
     els.stageEmpty.style.display = 'grid';
     els.stageEmpty.innerHTML = '<strong>Loading clip</strong><span>Preparing the first frame.</span>';
     els.uploadBtn.disabled = true;
     els.video.src = URL.createObjectURL(file);
     els.video.load();
     setStep('upload');
-    setStatus(els.transcribeStatus, 'Clip selected. Speech recognition is ready when the video loads.');
+    setStatus(els.transcribeStatus, 'Clip selected. Generate captions when ready.');
     renderTranscript();
     renderTimeline();
     renderLowerThirdList();
@@ -211,7 +267,7 @@
     els.transcribeBtn.disabled = false;
     els.addCaptionBtn.disabled = false;
     els.totalTime.textContent = formatTime(els.video.duration || 0);
-    setStatus(els.transcribeStatus, 'Ready. Captions will be generated from the uploaded video audio.');
+    setStatus(els.transcribeStatus, 'Ready for captions.');
     drawFrame();
   }
 
@@ -263,7 +319,7 @@
 
     setStep('transcribe');
     els.transcribeBtn.disabled = true;
-    setStatus(els.transcribeStatus, 'Extracting speech audio from the uploaded clip...');
+    setStatus(els.transcribeStatus, 'Generating captions...');
     try {
       var result = await transcribeUploadedClip(state.videoFile);
       state.captions = normalizeSegments(formatCaptionBeats(result.segments || []));
@@ -273,14 +329,14 @@
       els.intelBtn.disabled = !state.selectedCaptionId;
       setStep(state.captions.length ? 'review' : 'transcribe');
       setStatus(els.transcribeStatus, state.captions.length
-        ? 'Speech recognition complete. Review the transcript before export.'
-        : 'Speech recognition finished, but no speech segments were returned.', state.captions.length ? 'good' : 'error');
+        ? 'Captions ready. Review the transcript.'
+        : 'No speech was detected. Add captions manually.', state.captions.length ? 'good' : 'error');
       renderTranscript();
       renderTimeline();
       drawFrame();
     } catch (error) {
       setStep('transcribe');
-      setStatus(els.transcribeStatus, error.message || 'Speech recognition failed.', 'error');
+      setStatus(els.transcribeStatus, error.message || 'Could not generate captions. Try another clip or add captions manually.', 'error');
     } finally {
       els.transcribeBtn.disabled = false;
     }
@@ -802,7 +858,7 @@
   }
 
   function renderTranscript() {
-    els.transcriptSource.textContent = state.transcriptSource || 'No speech recognition yet';
+    els.transcriptSource.textContent = state.captions.length ? 'Editable draft' : '';
     if (!state.captions.length) {
       els.transcriptList.innerHTML = '<p class="reels-empty-note">Generated captions will appear here as editable transcript rows with start/end timings.</p>';
       els.captionCount.textContent = '0 segments';
@@ -837,6 +893,8 @@
 
   function renderTimeline() {
     var duration = els.video.duration || 1;
+    var card = document.querySelector('.reels-timeline-card');
+    if (card) card.classList.toggle('has-captions', !!state.captions.length);
     els.captionTimeline.innerHTML = state.captions.map(function (caption) {
       var left = clamp(caption.start / duration * 100, 0, 100);
       var width = clamp((caption.end - caption.start) / duration * 100, 1, 100 - left);
@@ -894,7 +952,7 @@
     renderTranscript();
     renderTimeline();
     drawFrame();
-    setStatus(els.intelStatus, id ? 'Ready for a caption-specific Intelligence pass.' : 'Select a caption row to use Intelligence.');
+    setStatus(els.intelStatus, id ? 'Caption selected.' : '');
   }
 
   function editCaption(id, field, value) {
@@ -972,6 +1030,8 @@
     els.teamSelect.innerHTML = teams.map(function (team) {
       return '<option value="' + escapeHtml(team) + '">' + escapeHtml(formatTeamDisplayName(team)) + '</option>';
     }).join('');
+    syncCustomSelect('sportSelect');
+    syncCustomSelect('teamSelect');
     onTeamChange(teams[0] || '');
   }
 
@@ -983,8 +1043,9 @@
     state.pillPalette = palette[0] || entry?.primary || { background: ES_BLUE, foreground: '#ffffff', mist: '#ffffff' };
     renderPaletteRow();
     els.styleName.textContent = formatTeamDisplayName(team || 'Social Pill') + ' Pill';
-    setStatus(els.intelStatus, team ? 'Caption pills are using ' + formatTeamDisplayName(team) + ' colors.' : 'Caption pills are using the default ES color.', team ? 'good' : '');
+    setStatus(els.intelStatus, '');
     setStep('style');
+    syncCustomSelect('teamSelect');
     renderStyleGrid();
     drawFrame();
   }
@@ -1016,7 +1077,7 @@
     var prompt = els.intelPrompt.value.trim();
     if (!caption || !prompt) return;
     els.intelBtn.disabled = true;
-    setStatus(els.intelStatus, 'Sending caption context to the ES MCP intelligence path...');
+    setStatus(els.intelStatus, 'Applying suggestion...');
     try {
       var result = await postJson(videoIntelligenceUrl(), {
         action: 'style',
@@ -1033,10 +1094,10 @@
       });
       applyIntelligencePatch(result.patch || {});
       els.intelSource.textContent = result.provider || 'Intelligence';
-      setStatus(els.intelStatus, result.summary || 'Applied Intelligence update.', 'good');
+      setStatus(els.intelStatus, result.summary || 'Updated selected caption.', 'good');
       els.intelPrompt.value = '';
     } catch (error) {
-      setStatus(els.intelStatus, error.message || 'Intelligence update failed.', 'error');
+      setStatus(els.intelStatus, error.message || 'Could not apply that change.', 'error');
     } finally {
       els.intelBtn.disabled = !state.selectedCaptionId;
     }
@@ -1048,6 +1109,7 @@
     if (patch.position) {
       state.captionPosition = patch.position;
       els.captionPosition.value = patch.position;
+      syncCustomSelect('captionPosition');
     }
     if (patch.style && typeof patch.style === 'object') {
       state.style = Object.assign({}, state.style, patch.style);

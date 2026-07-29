@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="theme.css?v=20260714-footer1">
   <link rel="stylesheet" href="site-chrome.css?v=20260723-profile3">
   <link rel="stylesheet" href="cta-hover.css?v=20260723-howrefine1">
-  <link rel="stylesheet" href="reels.css?v=20260729-reels-ui2">
+  <link rel="stylesheet" href="reels.css?v=20260729-reels-clean1">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20260723-profile2"></script>
@@ -68,7 +68,7 @@
         <p class="reels-eyebrow">FrameUp Workspace</p>
         <h1 id="reels-title">Reels Studio</h1>
       </div>
-      <p>Speech captions, transcript review, brand-safe styling, lower thirds, and export in one production workspace.</p>
+      <p>Upload a clip, clean the captions, apply the ES look, and export.</p>
     </section>
 
     <section class="reels-shell" aria-label="Reels caption editor">
@@ -78,7 +78,7 @@
             <strong>Preview</strong>
             <span>9:16 output canvas</span>
           </div>
-          <span class="reels-provider-pill">Speech enabled</span>
+          <span class="reels-provider-pill">Clip</span>
         </div>
         <div class="reels-stage-frame">
           <canvas id="reels-canvas"></canvas>
@@ -107,7 +107,7 @@
           <div class="reels-flowbar">
             <div class="reels-pipeline" aria-label="Caption workflow">
               <div class="reels-step is-active" data-step="upload"><span>1</span>Upload</div>
-              <div class="reels-step" data-step="transcribe"><span>2</span>Speech</div>
+              <div class="reels-step" data-step="transcribe"><span>2</span>Captions</div>
               <div class="reels-step" data-step="review"><span>3</span>Review</div>
               <div class="reels-step" data-step="style"><span>4</span>Style</div>
             </div>
@@ -115,7 +115,7 @@
           </div>
 
           <div class="reels-command-bar">
-            <button type="button" class="reels-btn is-primary" id="reels-transcribe-btn" disabled>Generate Captions from Speech</button>
+            <button type="button" class="reels-btn is-primary" id="reels-transcribe-btn" disabled>Auto-caption</button>
             <button type="button" class="reels-btn is-quiet" id="reels-add-caption-btn" disabled>Add Caption</button>
             <button type="button" class="reels-btn is-quiet" id="reels-download-srt-btn" disabled>Download SRT</button>
           </div>
@@ -124,7 +124,7 @@
             <div class="reels-timeline-head">
               <div>
                 <strong>Caption Timeline</strong>
-                <span>Drag segment edges to retime</span>
+                <span>Select a caption to adjust timing</span>
               </div>
               <span id="reels-caption-count">0 segments</span>
             </div>
@@ -135,8 +135,8 @@
           <section class="reels-transcript-panel" aria-label="Transcript editor">
             <div class="reels-panel-head">
               <div>
-                <h2>Transcript Review</h2>
-                <p>Clean the speech draft before styling and export.</p>
+                <h2>Transcript</h2>
+                <p>Edit the words first. Styling comes after.</p>
               </div>
               <span id="reels-transcript-source">No speech recognition yet</span>
             </div>
@@ -150,8 +150,8 @@
           <section class="reels-tool-section">
             <div class="reels-panel-head">
               <div>
-                <h2>Brand Captions</h2>
-                <p>Apply ES-safe caption presets and team colors.</p>
+                <h2>Caption Look</h2>
+                <p>Choose placement and colors.</p>
               </div>
               <span id="reels-style-name">Broadcast</span>
             </div>
@@ -178,17 +178,17 @@
           <section class="reels-intel-box">
               <div class="reels-panel-head">
                 <div>
-                  <h2>Intelligence</h2>
-                  <p>Use the selected caption as context.</p>
+                  <h2>Rewrite Helper</h2>
+                  <p>Optional. Works on the selected caption.</p>
                 </div>
-                <span id="reels-intel-source">Checking ES MCP</span>
+                <span id="reels-intel-source">Caption helper</span>
               </div>
-              <textarea id="reels-intel-prompt" placeholder="Example: make captions more punchy, highlight names, use Lakers colors, and keep it lower-safe"></textarea>
-              <button type="button" class="reels-btn is-primary" id="reels-intel-btn" disabled>Apply to Selected Caption</button>
-              <p class="reels-status" id="reels-intel-status">Select a caption row to use Intelligence.</p>
+              <textarea id="reels-intel-prompt" placeholder="Make this caption punchier, shorter, or more brand-safe"></textarea>
+              <button type="button" class="reels-btn is-secondary" id="reels-intel-btn" disabled>Apply rewrite</button>
+              <p class="reels-status" id="reels-intel-status"></p>
           </section>
 
-          <details class="reels-lower-thirds" open>
+          <details class="reels-lower-thirds">
             <summary>
               <span>Lower Thirds</span>
               <small id="reels-lt-count">0 placed</small>
