@@ -24,41 +24,42 @@
   <script src="site-chrome.js?v=20260723-profile2"></script>
 </head>
 <body class="reels-page">
-  <nav class="navbar reels-editor-bar">
-    <a class="navbar-logo" href="index.html#frames" aria-label="Back to FrameUp workspaces">
+  <nav class="navbar">
+    <a class="navbar-logo" href="index.html" aria-label="EssentiallySports home">
       <img src="brand-logo-blue.svg" alt="EssentiallySports">
     </a>
-    <div class="navbar-menu reels-editor-nav-menu">
+    <div class="navbar-menu">
       <div class="nav-dropdown">
         <a class="nav-trigger has-chevron" href="how-it-works.html" aria-haspopup="true" aria-expanded="false">Resources</a>
         <div class="nav-dropdown-menu" role="menu" aria-label="Resources">
           <a href="how-it-works.html" role="menuitem">How It Works</a>
-          <a href="index.html#logo-guidelines" role="menuitem">Logo Guidelines</a>
-          <a href="index.html#social-guidelines" role="menuitem">Social Media Guidelines</a>
-          <a href="index.html#video-guidelines" role="menuitem">Video Guidelines</a>
+          <a href="index.html#logo-guidelines" data-route="logo-guidelines" role="menuitem">Logo Guidelines</a>
+          <a href="index.html#social-guidelines" data-route="social-guidelines" role="menuitem">Social Media Guidelines</a>
+          <a href="index.html#video-guidelines" data-route="video-guidelines" role="menuitem">Video Guidelines</a>
         </div>
       </div>
       <div class="nav-dropdown">
-        <a class="nav-trigger has-chevron" href="index.html#frames" aria-haspopup="true" aria-expanded="false">Design Tools</a>
+        <a class="nav-trigger has-chevron" href="index.html#frames" data-route="frames" aria-haspopup="true" aria-expanded="false">Design Tools</a>
         <div class="nav-dropdown-menu" role="menu" aria-label="Design workspaces">
-          <a href="index.html#frames" role="menuitem">Home Page</a>
-          <a href="index.html#instagram" role="menuitem">Social Media</a>
-          <a href="index.html#youtube" role="menuitem">YouTube Assets</a>
-          <a href="index.html#newsletter" role="menuitem">Newsletter Assets</a>
-          <a href="reels.html" role="menuitem" aria-current="page">Reels</a>
+          <a href="index.html#frames" data-route="frames" role="menuitem">Home Page</a>
+          <a href="index.html#instagram" data-route="instagram" role="menuitem">Social Media</a>
+          <a href="index.html#youtube" data-route="youtube" role="menuitem">YouTube Assets</a>
+          <a href="index.html#newsletter" data-route="newsletter" role="menuitem">Newsletter Assets</a>
+          <a href="reels.html" role="menuitem">Reels</a>
         </div>
       </div>
       <a href="design-request.html">Design Request</a>
-      <a href="index.html#faq">FAQ</a>
+      <a href="dashboard.html" data-admin-only hidden aria-hidden="true">Dashboard</a>
+      <a href="index.html#faq" data-route="faq">FAQ</a>
     </div>
-    <div class="reels-project-title">
-      <span>Reels Studio</span>
-      <strong>Untitled captioned reel</strong>
-    </div>
-    <span class="reels-editor-save-state">Draft saved locally</span>
     <div class="navbar-right">
-      <button type="button" class="reels-btn is-primary reels-top-export" id="reels-export-btn" disabled>Export</button>
       <div class="profile-menu" id="profile-menu"></div>
+      <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" title="Facebook" aria-label="Facebook"><img src="social-icons/nav-facebook.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://twitter.com/es_sportsnews" title="X" aria-label="X"><img src="social-icons/nav-x.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.linkedin.com/company/essentiallysports" title="LinkedIn" aria-label="LinkedIn"><img src="social-icons/nav-linkedin.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.instagram.com/essentiallysports" title="Instagram" aria-label="Instagram"><img src="social-icons/nav-instagram.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.youtube.com/essentiallysports" title="YouTube" aria-label="YouTube"><img src="social-icons/nav-youtube.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://news.google.com/publications/CAAqBwgKMJqW_gwwkoGBAw" title="Google News" aria-label="Google News"><img src="social-icons/nav-google-news.svg" alt=""></a>
     </div>
   </nav>
 
@@ -150,7 +151,10 @@
               <div class="reels-step" data-step="style"><span>4</span>Style</div>
             </div>
           </div>
-          <button type="button" class="reels-btn is-secondary reels-stage-replace" id="reels-upload-btn">Upload Clip</button>
+          <div class="reels-stage-actions">
+            <button type="button" class="reels-btn is-secondary reels-stage-replace" id="reels-upload-btn">Upload Clip</button>
+            <button type="button" class="reels-btn is-primary reels-top-export" id="reels-export-btn" disabled>Export</button>
+          </div>
         </div>
 
         <div class="reels-stage-frame">
