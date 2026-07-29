@@ -19,6 +19,11 @@
   var PILL_ROW_GAP = 1;
   var CAPTION_PILL_OFFSETS = [0, -96, 84, -48];
   var LIVE_API_ORIGIN = 'https://essentiallysports-design-tools.vercel.app';
+  var TRANSFORMERS_MODULE_URLS = [
+    'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1',
+    'https://unpkg.com/@huggingface/transformers@3.8.1',
+  ];
+  var LOCAL_WHISPER_MODEL = 'Xenova/whisper-tiny.en';
 
   var CAPTION_STYLES = [
     { id: 'social-pill', name: 'Social Pill', note: 'ES social media pill treatment', background: ES_BLUE, foreground: '#ffffff', mode: 'pill' },
@@ -47,6 +52,7 @@
     transcriptSource: '',
     recording: false,
     renderedOnce: false,
+    localWhisperPromise: null,
   };
 
   var els = {};
@@ -146,11 +152,11 @@
         } else if (config.mcpConfigured && probe.transcribeToolFound) {
           setStatus(els.transcribeStatus, 'Speech backend ready: ES MCP speech recognition configured.', 'good');
         } else {
-          setStatus(els.transcribeStatus, 'Speech backend needs a transcription provider before captions can generate.', 'error');
+          setStatus(els.transcribeStatus, 'Speech backend ready: on-device Whisper captions will run if cloud speech is unavailable.', 'good');
         }
       })
       .catch(function () {
-        if (!state.videoFile) setStatus(els.transcribeStatus, 'Speech backend status could not be checked yet.');
+        if (!state.videoFile) setStatus(els.transcribeStatus, 'Speech backend check failed. On-device Whisper captions can still run in this browser.', 'good');
       });
   }
 
@@ -282,8 +288,9 @@
 
   async function transcribeUploadedClip(file) {
     if (window.AudioContext || window.webkitAudioContext) {
+      var decoded = null;
       try {
-        return await transcribeDecodedAudio(file);
+        decoded = await decodeClipAudio(file);
       } catch (error) {
         try {
           setStatus(els.transcribeStatus, 'Audio decode was unavailable, recording the clip audio track for speech recognition...');
@@ -299,6 +306,7 @@
           throw new Error('The browser could not extract audio from this clip. Try exporting MP4/WebM with one standard audio track.');
         }
       }
+      if (decoded) return await transcribeAudioSamples(file, decoded.samples);
     }
 
     if (file.size > MAX_INLINE_UPLOAD_BYTES) {
@@ -315,7 +323,28 @@
 
   async function transcribeDecodedAudio(file) {
     var decoded = await decodeClipAudio(file);
-    var chunks = sliceAudioSamples(decoded.samples, TRANSCRIBE_SAMPLE_RATE, TRANSCRIBE_CHUNK_SECONDS);
+    return transcribeAudioSamples(file, decoded.samples);
+  }
+
+  async function transcribeAudioSamples(file, samples) {
+    var chunks = sliceAudioSamples(samples, TRANSCRIBE_SAMPLE_RATE, TRANSCRIBE_CHUNK_SECONDS);
+
+    try {
+      var serverResult = await transcribeServerAudioChunks(file, chunks);
+      if (serverResult.segments.length) return serverResult;
+      setStatus(els.transcribeStatus, 'Cloud speech returned no captions. Loading on-device Whisper...');
+    } catch (error) {
+      setStatus(els.transcribeStatus, 'Cloud speech failed. Loading on-device Whisper captions...');
+    }
+
+    try {
+      return await transcribeLocalAudioChunks(chunks);
+    } catch (error) {
+      throw new Error('On-device Whisper could not generate captions: ' + (error.message || error));
+    }
+  }
+
+  async function transcribeServerAudioChunks(file, chunks) {
     var merged = {
       provider: '',
       language: '',
@@ -346,12 +375,119 @@
     return merged;
   }
 
+  async function transcribeLocalAudioChunks(chunks) {
+    var transcriber = await loadLocalWhisperTranscriber();
+    var merged = {
+      provider: 'On-device Whisper',
+      language: 'en',
+      text: '',
+      segments: [],
+    };
+
+    for (var i = 0; i < chunks.length; i++) {
+      var chunk = chunks[i];
+      setStatus(els.transcribeStatus, 'On-device Whisper chunk ' + (i + 1) + ' of ' + chunks.length + '...');
+      var result = await transcriber(chunk.samples, {
+        return_timestamps: 'word',
+      });
+      merged.text = [merged.text, result.text || ''].filter(Boolean).join(' ').trim();
+      normalizeLocalWhisperSegments(result, chunk.start, chunk.samples.length / TRANSCRIBE_SAMPLE_RATE).forEach(function (segment) {
+        merged.segments.push(segment);
+      });
+    }
+
+    merged.segments.sort(sortByStart);
+    return merged;
+  }
+
+  async function loadLocalWhisperTranscriber() {
+    if (!state.localWhisperPromise) {
+      setStatus(els.transcribeStatus, 'Loading on-device Whisper model for no-key captions...');
+      state.localWhisperPromise = importTransformersModule().then(function (module) {
+        if (module.env) {
+          module.env.allowLocalModels = false;
+          module.env.allowRemoteModels = true;
+        }
+        return module.pipeline('automatic-speech-recognition', LOCAL_WHISPER_MODEL, {
+          dtype: 'q4',
+          progress_callback: function (progress) {
+            if (progress && progress.status === 'progress' && Number.isFinite(progress.progress)) {
+              setStatus(els.transcribeStatus, 'Loading on-device Whisper model ' + Math.round(progress.progress) + '%...');
+            }
+          },
+        });
+      });
+    }
+    return state.localWhisperPromise;
+  }
+
+  async function importTransformersModule() {
+    var lastError = null;
+    for (var i = 0; i < TRANSFORMERS_MODULE_URLS.length; i++) {
+      try {
+        return await import(TRANSFORMERS_MODULE_URLS[i]);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError || new Error('Could not load on-device Whisper.');
+  }
+
+  function normalizeLocalWhisperSegments(result, offset, duration) {
+    var chunks = Array.isArray(result?.chunks) ? result.chunks : [];
+    var words = chunks.map(function (chunk) {
+      var timestamp = Array.isArray(chunk.timestamp) ? chunk.timestamp : [];
+      var start = Number(timestamp[0]);
+      var end = Number(timestamp[1]);
+      return {
+        word: String(chunk.text || '').replace(/\s+/g, ' ').trim(),
+        start: offset + (Number.isFinite(start) ? start : 0),
+        end: offset + (Number.isFinite(end) ? end : (Number.isFinite(start) ? start + 0.34 : duration)),
+      };
+    }).filter(function (word) {
+      return word.word;
+    });
+
+    if (words.length) {
+      return [{
+        start: words[0].start,
+        end: Math.max(words[words.length - 1].end, words[0].start + CAPTION_MIN_SECONDS),
+        text: words.map(function (word) { return word.word; }).join(' '),
+        confidence: null,
+        words: words,
+      }];
+    }
+
+    var text = String(result?.text || '').replace(/\s+/g, ' ').trim();
+    if (!text) return [];
+    return [{
+      start: offset,
+      end: offset + Math.max(CAPTION_MIN_SECONDS, duration || text.split(/\s+/).length * 0.34),
+      text: text,
+      confidence: null,
+      words: [],
+    }];
+  }
+
   async function transcribeCapturedAudio(file) {
     if (typeof MediaRecorder === 'undefined' || typeof AudioContext === 'undefined' && typeof webkitAudioContext === 'undefined') {
       throw new Error('Browser media capture is not available.');
     }
     var blobs = await captureAudioBlobs(file);
     if (!blobs.length) throw new Error('No audio track was captured from the uploaded clip.');
+
+    try {
+      var serverResult = await transcribeCapturedAudioWithServer(file, blobs);
+      if (serverResult.segments.length) return serverResult;
+      setStatus(els.transcribeStatus, 'Cloud speech returned no captured captions. Loading on-device Whisper...');
+    } catch (error) {
+      setStatus(els.transcribeStatus, 'Cloud speech failed for captured audio. Loading on-device Whisper captions...');
+    }
+
+    return transcribeCapturedAudioLocally(blobs);
+  }
+
+  async function transcribeCapturedAudioWithServer(file, blobs) {
     var merged = {
       provider: '',
       language: '',
@@ -379,6 +515,27 @@
 
     merged.segments.sort(sortByStart);
     return merged;
+  }
+
+  async function transcribeCapturedAudioLocally(blobs) {
+    var chunks = [];
+    for (var i = 0; i < blobs.length; i++) {
+      var item = blobs[i];
+      setStatus(els.transcribeStatus, 'Preparing captured audio for on-device Whisper ' + (i + 1) + ' of ' + blobs.length + '...');
+      var decoded = await decodeClipAudio(item.blob);
+      sliceAudioSamples(decoded.samples, TRANSCRIBE_SAMPLE_RATE, TRANSCRIBE_CHUNK_SECONDS).forEach(function (chunk) {
+        chunks.push({
+          start: item.start + chunk.start,
+          samples: chunk.samples,
+        });
+      });
+    }
+
+    try {
+      return await transcribeLocalAudioChunks(chunks);
+    } catch (error) {
+      throw new Error('On-device Whisper could not generate captured captions: ' + (error.message || error));
+    }
   }
 
   function captureAudioBlobs(file) {

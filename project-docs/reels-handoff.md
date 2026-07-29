@@ -6,7 +6,6 @@ original product/competitor research (now partly superseded, see below), see
 [reels-workspace-plan.md](reels-workspace-plan.md).
 
 Last updated: 2026-07-29.
-
 ## Read this first: Reels has been worked on by more than one session
 
 This session built the original Reels MVP (2026-07-28: stub captions, local-heuristic prompt,
@@ -86,6 +85,13 @@ Still holding:
 | Real speech-to-text transcription | **Not verified by any AI session.** The rewrite's own status probe reported "Groq Whisper captions... ES MCP is connected" when checked, suggesting it may already be live, but the actual transcription call itself (hitting their deployed Vercel backend) was not exercised — out of scope for verifying the two fixes above, and depends on external live infrastructure/API keys this session has no visibility into. |
 | Backend-connected AI prompt (`applyIntelligence`) | **Not verified.** Same reasoning — depends on the live backend. |
 | The real gated `reels.html` page itself (login, nav, real resolution) | **Never opened by any AI session.** Everything above was tested via a throwaway harness with no auth code. |
+| Video upload, canvas preview, playback/scrub | Real, but core-loop only tested by static code review, not a browser |
+| Caption auto-generation | Real speech-to-text path with ES MCP/Groq/OpenAI server transcription first, then no-key in-browser Whisper fallback if the server path fails or returns no captions. |
+| Caption timeline (select, drag-to-retime) | Real logic (pointer events, no library), unverified in-browser |
+| Caption text/timing manual edit | Real |
+| Lower-third templates (6) + placement | Real |
+| Restyle prompt (recolor by team name, reposition by keyword) | **Local heuristic only.** Regex-matches a team name against `brand-kit.js`; keyword-matches top/bottom/left/right/center. Not Claude/MCP-backed — see plan §3 for the intended architecture (Claude tool-use calling `search_images` via ES's existing MCP integration, plus `brand-kit.js` data). |
+| Export (`captureStream` + `MediaRecorder` → `.webm`) | Real logic. Browser smoke tests cover recorded WebM export/download. |
 
 ## Immediate next steps
 
@@ -96,6 +102,19 @@ Still holding:
    duplicate.
 3. Decide whether Golf/NASCAR need `BRAND_KIT` color entries, or stay generic-styled.
 4. **Before starting any new Reels work, `git fetch` first** — see the top of this doc.
+
+## 2026-07-29 correction
+
+The table above is stale where it calls caption auto-generation a stub. Current `reels.js` has a real
+speech-to-text path:
+
+- Browser extracts 16 kHz mono audio chunks from the uploaded video.
+- Server transcription goes through `/api/es-video-intelligence`, using ES MCP when it exposes a
+  transcription tool, then Groq/OpenAI fallbacks when configured.
+- If the server path fails or returns no segments, the browser falls back to no-key in-browser Whisper
+  using `@huggingface/transformers` and `Xenova/whisper-tiny.en`.
+- Browser smoke tests cover generated WebM upload, server-failure fallback captions, team palette
+  selection, canvas rendering, and export download.
 
 ## How to resume work here
 

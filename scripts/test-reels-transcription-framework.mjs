@@ -14,12 +14,24 @@ const brandKitSource = readFileSync(join(root, 'brand-kit.js'), 'utf8');
 
 assert.match(reels, /TRANSCRIBE_SAMPLE_RATE\s*=\s*16000/);
 assert.match(reels, /TRANSCRIBE_CHUNK_SECONDS\s*=\s*25/);
+assert.match(reels, /TRANSFORMERS_MODULE_URLS\s*=\s*\[/);
+assert.match(reels, /https:\/\/cdn\.jsdelivr\.net\/npm\/@huggingface\/transformers@3\.8\.1/);
+assert.match(reels, /https:\/\/unpkg\.com\/@huggingface\/transformers@3\.8\.1/);
+assert.match(reels, /LOCAL_WHISPER_MODEL\s*=\s*'Xenova\/whisper-tiny\.en'/);
 assert.match(reels, /CAPTION_MAX_WORDS\s*=\s*5/);
 assert.match(reels, /CAPTION_MIN_SECONDS\s*=\s*0\.7/);
 assert.match(reels, /MAX_INLINE_UPLOAD_BYTES\s*=\s*3\s*\*\s*1024\s*\*\s*1024/);
 assert.match(reels, /function transcribeUploadedClip/);
 assert.match(reels, /function transcribeDecodedAudio/);
+assert.match(reels, /function transcribeAudioSamples/);
+assert.match(reels, /function transcribeServerAudioChunks/);
+assert.match(reels, /function transcribeLocalAudioChunks/);
+assert.match(reels, /function loadLocalWhisperTranscriber/);
+assert.match(reels, /function importTransformersModule/);
+assert.match(reels, /function normalizeLocalWhisperSegments/);
 assert.match(reels, /function transcribeCapturedAudio/);
+assert.match(reels, /function transcribeCapturedAudioWithServer/);
+assert.match(reels, /function transcribeCapturedAudioLocally/);
 assert.match(reels, /function captureAudioBlobs/);
 assert.match(reels, /function offsetSegment/);
 assert.match(reels, /function formatCaptionBeats/);
@@ -33,6 +45,9 @@ assert.match(reels, /LIVE_API_ORIGIN\s*=\s*'https:\/\/essentiallysports-design-t
 assert.match(reels, /function videoIntelligenceUrl/);
 assert.match(reels, /function isLocalPreviewHost/);
 assert.match(reels, /Speech backend ready: Groq Whisper captions\. ES MCP is connected for available tools\./);
+assert.match(reels, /Speech backend ready: on-device Whisper captions will run if cloud speech is unavailable\./);
+assert.match(reels, /Speech backend check failed\. On-device Whisper captions can still run in this browser\./);
+assert.doesNotMatch(reels, /Speech backend needs a transcription provider before captions can generate/);
 assert.match(reels, /Local rules until ES MCP adds Intelligence/);
 assert.match(reels, /mimeType:\s*'audio\/wav'/);
 assert.match(reels, /mimeType:\s*item\.blob\.type \|\| 'audio\/webm'/);
@@ -52,7 +67,7 @@ assert.match(html, /id="reels-sport-select"/);
 assert.match(html, /id="reels-team-select"/);
 assert.match(html, /id="reels-palette-row"/);
 assert.match(html, /Checking ES MCP/);
-assert.match(html, /reels\.js\?v=20260728-reels3/);
+assert.match(html, /reels\.js\?v=20260729-reels4/);
 
 const uploadResetSource = reels.slice(
   reels.indexOf('function onFileChosen'),
@@ -103,13 +118,33 @@ const transcribeSource = reels.slice(
   reels.indexOf('async function transcribeUploadedClip'),
   reels.indexOf('async function decodeClipAudio'),
 );
-assert.match(transcribeSource, /return await transcribeDecodedAudio\(file\)/);
+assert.doesNotMatch(transcribeSource, /return await transcribeDecodedAudio\(file\)/);
+assert.match(transcribeSource, /decoded = await decodeClipAudio\(file\)/);
+assert.match(transcribeSource, /if \(decoded\) return await transcribeAudioSamples\(file,\s*decoded\.samples\)/);
 assert.match(transcribeSource, /return await transcribeCapturedAudio\(file\)/);
+assert.match(transcribeSource, /transcribeServerAudioChunks\(file,\s*chunks\)/);
+assert.match(transcribeSource, /return await transcribeLocalAudioChunks\(chunks\)/);
+assert.match(transcribeSource, /On-device Whisper could not generate captions/);
+assert.match(transcribeSource, /pipeline\('automatic-speech-recognition',\s*LOCAL_WHISPER_MODEL/);
+assert.match(transcribeSource, /return_timestamps:\s*'word'/);
+assert.match(transcribeSource, /provider:\s*'On-device Whisper'/);
 assert.match(transcribeSource, /audioContext\.createMediaElementSource\(video\)/);
 assert.match(transcribeSource, /audioContext\.createMediaStreamDestination\(\)/);
 assert.match(transcribeSource, /recorder\.start\(TRANSCRIBE_CHUNK_SECONDS \* 1000\)/);
 assert.match(transcribeSource, /merged\.segments\.push\(offsetSegment\(segment, item\.start\)\)/);
 assert.match(transcribeSource, /merged\.segments\.push\(offsetSegment\(segment, chunk\.start\)\)/);
+assert.match(transcribeSource, /transcribeCapturedAudioWithServer\(file,\s*blobs\)/);
+assert.match(transcribeSource, /transcribeCapturedAudioLocally\(blobs\)/);
+assert.match(transcribeSource, /Cloud speech failed for captured audio/);
+assert.match(transcribeSource, /On-device Whisper could not generate captured captions/);
+
+const localWhisperCallSource = transcribeSource.slice(
+  transcribeSource.indexOf('var result = await transcriber'),
+  transcribeSource.indexOf('merged.text =', transcribeSource.indexOf('var result = await transcriber')),
+);
+assert.match(localWhisperCallSource, /return_timestamps:\s*'word'/);
+assert.doesNotMatch(localWhisperCallSource, /language:\s*'en'/);
+assert.doesNotMatch(localWhisperCallSource, /task:\s*'transcribe'/);
 
 const exportSource = reels.slice(
   reels.indexOf('function startExport'),
