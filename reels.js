@@ -1427,6 +1427,7 @@
     var animation = state.style.animation || 'pop-word';
     var isActive = index === activeInfo.activeIndex;
     var isReached = index <= activeInfo.reachedIndex;
+    if (!isReached && !isActive) return;
     var local = isActive ? activeInfo.wordLocal : (isReached ? 1 : 0);
     var intro = getWordIntroProgress(word, captionTimeStart(timing), timing);
     var fillColor = bgColor;
@@ -1437,31 +1438,33 @@
     var shadowBlur = 0;
 
     if (animation === 'karaoke') {
-      fillColor = isReached ? bgColor : '#ffffff';
-      textColor = isReached ? '#ffffff' : bgColor;
-      alpha = isReached ? 1 : 0.72;
-      scale = isActive ? 1 + 0.055 * Math.sin(local * Math.PI) : 1;
+      fillColor = bgColor;
+      textColor = '#ffffff';
+      alpha = isActive ? intro : 1;
+      scale = isActive ? 0.92 + 0.135 * easeOutBack(intro) : 1;
     } else if (animation === 'broadcast') {
       var step = easeOutCubic(intro);
       translateY = Math.round((1 - step) * 26);
       alpha = clamp(step * 1.2, 0, 1);
-      fillColor = isReached ? bgColor : '#ffffff';
-      textColor = isReached ? '#ffffff' : bgColor;
+      fillColor = bgColor;
+      textColor = '#ffffff';
     } else if (animation === 'punch') {
       fillColor = isActive ? '#ffffff' : bgColor;
       textColor = isActive ? bgColor : '#ffffff';
-      scale = isActive ? 1 + 0.12 * Math.sin(local * Math.PI) : 1;
+      alpha = isActive ? intro : 1;
+      scale = isActive ? 0.92 + 0.20 * Math.sin(local * Math.PI) : 1;
       shadowBlur = isActive ? 22 : 0;
     } else if (animation === 'snap-stack') {
       var snap = easeOutBack(intro);
       translateY = Math.round((1 - snap) * 32);
       alpha = clamp(intro * 1.35, 0, 1);
       scale = isActive ? 1.04 : Math.max(0.92, snap);
-      fillColor = isReached ? bgColor : '#ffffff';
-      textColor = isReached ? '#ffffff' : bgColor;
+      fillColor = bgColor;
+      textColor = '#ffffff';
     } else {
-      scale = isActive ? 1 + 0.10 * Math.sin(local * Math.PI) : 1;
-      alpha = isReached ? 1 : 0.82;
+      intro = isActive ? intro : 1;
+      scale = isActive ? 0.90 + 0.20 * easeOutBack(intro) : 1;
+      alpha = intro;
     }
 
     ctx.save();
@@ -1502,9 +1505,8 @@
   function getWordIntroProgress(word, captionStart, timing) {
     var current = els.video.currentTime || captionStart;
     var introStart = Number.isFinite(word.start) ? word.start : captionStart + word.index * 0.12;
-    if (current >= introStart) return 1;
-    var stagger = 0.18 + word.index * 0.045;
-    return clamp((timing.elapsed - stagger) / 0.24, 0, 1);
+    var introDuration = Math.min(0.18, Math.max(0.08, (word.end - word.start) * 0.65));
+    return clamp((current - introStart) / introDuration, 0, 1);
   }
 
   function getActiveCaptionWordInfo(words, caption, timing) {
@@ -1521,7 +1523,6 @@
     var reachedIndex = words.reduce(function (last, word, index) {
       return current >= word.start ? index : last;
     }, -1);
-    reachedIndex = Math.max(reachedIndex, activeIndex);
     return {
       activeIndex: activeIndex,
       reachedIndex: reachedIndex,

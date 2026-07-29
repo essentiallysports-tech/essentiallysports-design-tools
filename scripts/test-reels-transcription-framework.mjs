@@ -75,8 +75,8 @@ assert.match(html, /id="reels-sport-select"/);
 assert.match(html, /id="reels-team-select"/);
 assert.match(html, /id="reels-palette-row"/);
 assert.match(html, /Caption helper/);
-assert.match(html, /reels\.css\?v=20260729-reels-wordbox1/);
-assert.match(html, /reels\.js\?v=20260729-reels-wordbox1/);
+assert.match(html, /reels\.css\?v=20260729-reels-wordbox2/);
+assert.match(html, /reels\.js\?v=20260729-reels-wordbox2/);
 
 const uploadResetSource = reels.slice(
   reels.indexOf('function onFileChosen'),
@@ -121,6 +121,8 @@ assert.match(captionWordBoxSource, /packWordBoxRows/);
 assert.match(captionWordBoxSource, /roundRect\(ctx,\s*-box\.w \/ 2,\s*-box\.h \/ 2,\s*box\.w,\s*box\.h,\s*6\)/);
 assert.match(captionWordBoxSource, /index === activeInfo\.activeIndex/);
 assert.match(captionWordBoxSource, /word\.start && current < word\.end|current >= word\.start && current < word\.end/);
+assert.match(captionWordBoxSource, /if \(!isReached && !isActive\) return/);
+assert.match(captionWordBoxSource, /current - introStart/);
 assert.match(captionWordBoxSource, /wordTextKey/);
 assert.doesNotMatch(captionWordBoxSource, /drawAnimatedCaptionLine/);
 
