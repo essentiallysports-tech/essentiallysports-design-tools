@@ -92,6 +92,7 @@
       if (state.recording) stopExport(); else startExport();
     });
 
+    initToolRail();
     initBrandControls();
     initCustomSelects();
     renderStyleGrid();
@@ -128,9 +129,41 @@
     });
   }
 
+  function initToolRail() {
+    document.querySelectorAll('[data-reels-tool]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        setActiveTool(button.dataset.reelsTool || 'captions');
+      });
+    });
+    setActiveTool('captions');
+  }
+
+  function setActiveTool(tool) {
+    var active = ['captions', 'style', 'lower-thirds', 'rewrite'].indexOf(tool) >= 0 ? tool : 'captions';
+    if (!state.captions.length && active !== 'captions') active = 'captions';
+    document.body.classList.remove('reels-tool-captions', 'reels-tool-style', 'reels-tool-lower-thirds', 'reels-tool-rewrite');
+    document.body.classList.add('reels-tool-' + active);
+    document.querySelectorAll('[data-reels-tool]').forEach(function (button) {
+      var isActive = button.dataset.reelsTool === active;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-pressed', String(isActive));
+    });
+    document.querySelectorAll('[data-reels-panel]').forEach(function (panel) {
+      panel.classList.toggle('is-active', panel.dataset.reelsPanel === active);
+    });
+  }
+
   function syncWorkspaceState() {
     document.body.classList.toggle('reels-has-clip', !!state.videoFile);
     document.body.classList.toggle('reels-has-captions', !!state.captions.length);
+    document.querySelectorAll('[data-reels-tool]').forEach(function (button) {
+      var locked = !state.captions.length && button.dataset.reelsTool !== 'captions';
+      button.classList.toggle('is-locked', locked);
+      button.setAttribute('aria-disabled', String(locked));
+    });
+    if (!state.captions.length && !document.body.classList.contains('reels-tool-captions')) {
+      setActiveTool('captions');
+    }
   }
 
   function initCustomSelects() {

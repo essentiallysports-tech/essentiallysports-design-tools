@@ -18,17 +18,17 @@
   <link rel="stylesheet" href="theme.css?v=20260714-footer1">
   <link rel="stylesheet" href="site-chrome.css?v=20260723-profile3">
   <link rel="stylesheet" href="cta-hover.css?v=20260723-howrefine1">
-  <link rel="stylesheet" href="reels.css?v=20260729-reels-clean4">
+  <link rel="stylesheet" href="reels.css?v=20260729-reels-editor1">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20260723-profile2"></script>
 </head>
 <body class="reels-page">
-  <nav class="navbar">
-    <a class="navbar-logo" href="index.html" aria-label="EssentiallySports home">
+  <nav class="navbar reels-editor-bar">
+    <a class="navbar-logo" href="index.html#frames" aria-label="Back to FrameUp workspaces">
       <img src="brand-logo-blue.svg" alt="EssentiallySports">
     </a>
-    <div class="navbar-menu">
+    <div class="navbar-menu reels-editor-nav-menu">
       <div class="nav-dropdown">
         <a class="nav-trigger has-chevron" href="how-it-works.html" aria-haspopup="true" aria-expanded="false">Resources</a>
         <div class="nav-dropdown-menu" role="menu" aria-label="Resources">
@@ -51,35 +51,108 @@
       <a href="design-request.html">Design Request</a>
       <a href="index.html#faq">FAQ</a>
     </div>
+    <div class="reels-project-title">
+      <span>Reels Studio</span>
+      <strong>Untitled captioned reel</strong>
+    </div>
+    <span class="reels-editor-save-state">Draft saved locally</span>
     <div class="navbar-right">
+      <button type="button" class="reels-btn is-primary reels-top-export" id="reels-export-btn" disabled>Export</button>
       <div class="profile-menu" id="profile-menu"></div>
-      <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" aria-label="Facebook"><img src="social-icons/nav-facebook.svg" alt=""></a>
-      <a class="navbar-icon-btn" href="https://twitter.com/es_sportsnews" aria-label="X"><img src="social-icons/nav-x.svg" alt=""></a>
-      <a class="navbar-icon-btn" href="https://www.linkedin.com/company/essentiallysports" aria-label="LinkedIn"><img src="social-icons/nav-linkedin.svg" alt=""></a>
-      <a class="navbar-icon-btn" href="https://www.instagram.com/essentiallysports" aria-label="Instagram"><img src="social-icons/nav-instagram.svg" alt=""></a>
-      <a class="navbar-icon-btn" href="https://www.youtube.com/essentiallysports" aria-label="YouTube"><img src="social-icons/nav-youtube.svg" alt=""></a>
-      <a class="navbar-icon-btn" href="https://news.google.com/publications/CAAqBwgKMJqW_gwwkoGBAw" aria-label="Google News"><img src="social-icons/nav-google-news.svg" alt=""></a>
     </div>
   </nav>
 
   <main>
-    <section class="reels-head" aria-labelledby="reels-title">
-      <div>
-        <p class="reels-eyebrow">FrameUp Workspace</p>
-        <h1 id="reels-title">Reels Studio</h1>
-      </div>
-      <p>Upload a clip, clean the captions, apply the ES look, and export.</p>
-    </section>
-
     <section class="reels-shell" aria-label="Reels caption editor">
-      <aside class="reels-preview">
-        <div class="reels-preview-head">
-          <div>
-            <strong>Preview</strong>
-            <span>9:16 output canvas</span>
+      <aside class="reels-tool-rail" aria-label="Reels tools">
+        <button type="button" class="reels-tool-btn is-active" data-reels-tool="captions" aria-pressed="true">
+          <span>CC</span>
+          Captions
+        </button>
+        <button type="button" class="reels-tool-btn" data-reels-tool="style" aria-pressed="false">
+          <span>Aa</span>
+          Style
+        </button>
+        <button type="button" class="reels-tool-btn" data-reels-tool="lower-thirds" aria-pressed="false">
+          <span>LT</span>
+          Lower Thirds
+        </button>
+        <button type="button" class="reels-tool-btn" data-reels-tool="rewrite" aria-pressed="false">
+          <span>AI</span>
+          Rewrite
+        </button>
+      </aside>
+
+      <aside class="reels-task-panel" aria-label="Active Reels tool">
+        <section class="reels-task-section is-active" data-reels-panel="captions">
+          <div class="reels-panel-head">
+            <div>
+              <h2>Captions</h2>
+              <p>Generate captions, then clean the transcript.</p>
+            </div>
+            <span id="reels-transcript-source">No speech recognition yet</span>
           </div>
-          <span class="reels-provider-pill">Clip</span>
+          <div class="reels-command-bar">
+            <button type="button" class="reels-btn is-primary" id="reels-transcribe-btn" disabled>Auto-caption</button>
+            <button type="button" class="reels-btn is-quiet" id="reels-add-caption-btn" disabled>Add Caption</button>
+            <button type="button" class="reels-btn is-quiet" id="reels-download-srt-btn" disabled>Download SRT</button>
+          </div>
+          <p class="reels-status" id="reels-transcribe-status">Upload a clip to begin.</p>
+          <div class="reels-transcript-list" id="reels-transcript-list">
+            <p class="reels-empty-note">Generated captions will appear here as editable transcript rows with start/end timings.</p>
+          </div>
+        </section>
+
+        <section class="reels-task-section" data-reels-panel="style">
+          <div class="reels-panel-head">
+            <div>
+              <h2>Caption Styles</h2>
+              <p>Use the inspector to set position, sport, team, and color.</p>
+            </div>
+          </div>
+          <div class="reels-style-grid" id="reels-style-grid"></div>
+        </section>
+
+        <section class="reels-task-section" data-reels-panel="lower-thirds">
+          <details class="reels-lower-thirds" open>
+            <summary>
+              <span>Lower Thirds</span>
+              <small id="reels-lt-count">0 placed</small>
+            </summary>
+            <div class="reels-lower-thirds-body">
+              <div class="reels-lt-grid" id="reels-lt-grid"></div>
+              <div class="reels-lt-list" id="reels-lt-list"></div>
+            </div>
+          </details>
+        </section>
+
+        <section class="reels-task-section" data-reels-panel="rewrite">
+          <div class="reels-panel-head">
+            <div>
+              <h2>Rewrite Helper</h2>
+              <p>Works on the selected caption.</p>
+            </div>
+            <span id="reels-intel-source">Caption helper</span>
+          </div>
+          <textarea id="reels-intel-prompt" placeholder="Make this caption punchier, shorter, or more brand-safe"></textarea>
+          <button type="button" class="reels-btn is-secondary" id="reels-intel-btn" disabled>Apply rewrite</button>
+          <p class="reels-status" id="reels-intel-status"></p>
+        </section>
+      </aside>
+
+      <section class="reels-stage-workspace" aria-label="Reels preview and timeline">
+        <div class="reels-stage-top">
+          <div class="reels-flowbar">
+            <div class="reels-pipeline" aria-label="Caption workflow">
+              <div class="reels-step is-active" data-step="upload"><span>1</span>Upload</div>
+              <div class="reels-step" data-step="transcribe"><span>2</span>Captions</div>
+              <div class="reels-step" data-step="review"><span>3</span>Review</div>
+              <div class="reels-step" data-step="style"><span>4</span>Style</div>
+            </div>
+          </div>
+          <button type="button" class="reels-btn is-secondary reels-stage-replace" id="reels-upload-btn">Upload Clip</button>
         </div>
+
         <div class="reels-stage-frame">
           <canvas id="reels-canvas"></canvas>
           <div class="reels-stage-empty" id="reels-stage-empty">
@@ -89,64 +162,31 @@
         </div>
         <input type="file" id="reels-file-input" accept="video/*" hidden>
         <video id="reels-video" hidden playsinline crossorigin="anonymous"></video>
-        <div class="reels-preview-actions">
+
+        <div class="reels-stage-controls">
           <button type="button" class="reels-icon-btn" id="reels-play-btn" disabled aria-label="Play or pause">Play</button>
-          <button type="button" class="reels-btn is-primary" id="reels-upload-btn">Upload Clip</button>
+          <input type="range" class="reels-scrub" id="reels-scrub" min="0" max="1000" value="0" disabled aria-label="Video timeline">
+          <div class="reels-time-row">
+            <span id="reels-current-time">0:00</span>
+            <span id="reels-total-time">0:00</span>
+          </div>
         </div>
-        <input type="range" class="reels-scrub" id="reels-scrub" min="0" max="1000" value="0" disabled aria-label="Video timeline">
-        <div class="reels-time-row">
-          <span id="reels-current-time">0:00</span>
-          <span id="reels-total-time">0:00</span>
-        </div>
-        <button type="button" class="reels-btn is-secondary" id="reels-export-btn" disabled>Export Captioned Reel</button>
         <p class="reels-status" id="reels-export-status"></p>
-      </aside>
 
-      <section class="reels-workbench">
-        <div class="reels-editor-lane">
-          <div class="reels-flowbar">
-            <div class="reels-pipeline" aria-label="Caption workflow">
-              <div class="reels-step is-active" data-step="upload"><span>1</span>Upload</div>
-              <div class="reels-step" data-step="transcribe"><span>2</span>Captions</div>
-              <div class="reels-step" data-step="review"><span>3</span>Review</div>
-              <div class="reels-step" data-step="style"><span>4</span>Style</div>
+        <div class="reels-timeline-card">
+          <div class="reels-timeline-head">
+            <div>
+              <strong>Caption Timeline</strong>
+              <span>Select a caption to adjust timing</span>
             </div>
-            <p class="reels-status" id="reels-transcribe-status">Upload a clip to begin.</p>
+            <span id="reels-caption-count">0 segments</span>
           </div>
-
-          <div class="reels-command-bar">
-            <button type="button" class="reels-btn is-primary" id="reels-transcribe-btn" disabled>Auto-caption</button>
-            <button type="button" class="reels-btn is-quiet" id="reels-add-caption-btn" disabled>Add Caption</button>
-            <button type="button" class="reels-btn is-quiet" id="reels-download-srt-btn" disabled>Download SRT</button>
-          </div>
-
-          <div class="reels-timeline-card">
-            <div class="reels-timeline-head">
-              <div>
-                <strong>Caption Timeline</strong>
-                <span>Select a caption to adjust timing</span>
-              </div>
-              <span id="reels-caption-count">0 segments</span>
-            </div>
-            <div class="reels-timeline" id="reels-caption-timeline" aria-label="Caption timing segments"></div>
-            <div class="reels-playhead" id="reels-playhead" hidden></div>
-          </div>
-
-          <section class="reels-transcript-panel" aria-label="Transcript editor">
-            <div class="reels-panel-head">
-              <div>
-                <h2>Transcript</h2>
-                <p>Edit the words first. Styling comes after.</p>
-              </div>
-              <span id="reels-transcript-source">No speech recognition yet</span>
-            </div>
-            <div class="reels-transcript-list" id="reels-transcript-list">
-              <p class="reels-empty-note">Generated captions will appear here as editable transcript rows with start/end timings.</p>
-            </div>
-          </section>
+          <div class="reels-timeline" id="reels-caption-timeline" aria-label="Caption timing segments"></div>
+          <div class="reels-playhead" id="reels-playhead" hidden></div>
         </div>
+      </section>
 
-        <aside class="reels-side-panel" aria-label="Caption styling and intelligence">
+      <aside class="reels-side-panel" aria-label="Caption styling inspector">
           <section class="reels-tool-section">
             <div class="reels-panel-head">
               <div>
@@ -174,38 +214,7 @@
             </label>
             <div class="reels-palette-row" id="reels-palette-row" aria-label="Caption pill color options"></div>
           </section>
-
-          <section class="reels-intel-box">
-              <div class="reels-panel-head">
-                <div>
-                  <h2>Rewrite Helper</h2>
-                  <p>Optional. Works on the selected caption.</p>
-                </div>
-                <span id="reels-intel-source">Caption helper</span>
-              </div>
-              <textarea id="reels-intel-prompt" placeholder="Make this caption punchier, shorter, or more brand-safe"></textarea>
-              <button type="button" class="reels-btn is-secondary" id="reels-intel-btn" disabled>Apply rewrite</button>
-              <p class="reels-status" id="reels-intel-status"></p>
-          </section>
-
-          <details class="reels-lower-thirds">
-            <summary>
-              <span>Lower Thirds</span>
-              <small id="reels-lt-count">0 placed</small>
-            </summary>
-            <div class="reels-lower-thirds-body">
-              <div class="reels-panel-head">
-                <div>
-                  <h2>Overlay Library</h2>
-                  <p>Place template graphics at the playhead.</p>
-                </div>
-              </div>
-              <div class="reels-lt-grid" id="reels-lt-grid"></div>
-              <div class="reels-lt-list" id="reels-lt-list"></div>
-            </div>
-          </details>
-        </aside>
-      </section>
+      </aside>
     </section>
   </main>
 
