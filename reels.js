@@ -97,6 +97,7 @@
     renderStyleGrid();
     renderLowerThirdGrid();
     renderLowerThirdList();
+    syncWorkspaceState();
     renderTranscript();
     renderTimeline();
     refreshSpeechBackendStatus();
@@ -125,6 +126,11 @@
       step.classList.toggle('is-active', step.dataset.step === active);
       step.classList.toggle('is-done', idx < activeIdx);
     });
+  }
+
+  function syncWorkspaceState() {
+    document.body.classList.toggle('reels-has-clip', !!state.videoFile);
+    document.body.classList.toggle('reels-has-captions', !!state.captions.length);
   }
 
   function initCustomSelects() {
@@ -235,6 +241,7 @@
     els.uploadBtn.disabled = true;
     els.video.src = URL.createObjectURL(file);
     els.video.load();
+    syncWorkspaceState();
     setStep('upload');
     setStatus(els.transcribeStatus, 'Clip selected. Generate captions when ready.');
     renderTranscript();
@@ -327,6 +334,7 @@
       state.selectedCaptionId = state.captions[0] ? state.captions[0].id : null;
       els.downloadSrtBtn.disabled = !state.captions.length;
       els.intelBtn.disabled = !state.selectedCaptionId;
+      syncWorkspaceState();
       setStep(state.captions.length ? 'review' : 'transcribe');
       setStatus(els.transcribeStatus, state.captions.length
         ? 'Captions ready. Review the transcript.'
@@ -858,7 +866,9 @@
   }
 
   function renderTranscript() {
+    syncWorkspaceState();
     els.transcriptSource.textContent = state.captions.length ? 'Editable draft' : '';
+    els.transcriptList.classList.toggle('has-captions', !!state.captions.length);
     if (!state.captions.length) {
       els.transcriptList.innerHTML = '<p class="reels-empty-note">Generated captions will appear here as editable transcript rows with start/end timings.</p>';
       els.captionCount.textContent = '0 segments';
