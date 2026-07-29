@@ -182,11 +182,19 @@
   }
 
   function onVideoMetadata() {
-    els.video.currentTime = 0;
+    // Seeking to exactly 0 is a no-op in some browsers (currentTime is already
+    // 0 on load) and never fires 'seeked' — that left state.videoLoaded false
+    // forever and every control gated on it permanently disabled. A tiny
+    // non-zero offset guarantees a real seek, and the timeout is a fallback in
+    // case 'seeked' still doesn't fire for some other reason.
+    els.video.currentTime = Math.min(0.03, (els.video.duration || 1) / 2);
+    clearTimeout(state.firstFrameFallbackId);
+    state.firstFrameFallbackId = setTimeout(onFirstFrameReady, 1200);
   }
 
   function onFirstFrameReady() {
     if (state.videoLoaded) return;
+    clearTimeout(state.firstFrameFallbackId);
     state.videoLoaded = true;
     els.stageEmpty.style.display = 'none';
     els.uploadBtn.disabled = false;
@@ -1195,11 +1203,29 @@
     });
   }
 
+  // MediaRecorder can only encode what the browser actually supports. Safari
+  // supports real MP4 (H.264) output; Chrome/Firefox today generally don't —
+  // a universal cross-browser MP4 guarantee would need an in-browser
+  // transcode step (e.g. ffmpeg.wasm), which is new infrastructure beyond
+  // "client-side canvas + MediaRecorder" and hasn't been signed off on. So:
+  // use real MP4 wherever the browser can, and be honest about the
+  // container/extension when it can't, rather than mislabeling WebM as .mp4.
+  var MP4_CANDIDATES = ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4;codecs=h264,aac', 'video/mp4'];
+  var WEBM_CANDIDATES = ['video/webm;codecs=vp9', 'video/webm'];
+
+  function pickExportFormat() {
+    var mp4 = MP4_CANDIDATES.find(function (t) { return MediaRecorder.isTypeSupported(t); });
+    if (mp4) return { mimeType: mp4, ext: 'mp4' };
+    var webm = WEBM_CANDIDATES.find(function (t) { return MediaRecorder.isTypeSupported(t); });
+    return { mimeType: webm || 'video/webm', ext: 'webm' };
+  }
+
   function startExport() {
     if (!state.videoLoaded || state.recording) return;
     var stream = createCaptionedExportStream();
-    var mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
-    state.recorder = new MediaRecorder(stream, { mimeType: mimeType });
+    var format = pickExportFormat();
+    state.exportFormat = format;
+    state.recorder = new MediaRecorder(stream, { mimeType: format.mimeType });
     state.recordedChunks = [];
     state.recorder.ondataavailable = function (event) {
       if (event.data && event.data.size) state.recordedChunks.push(event.data);
@@ -1239,13 +1265,17 @@
   }
 
   function onExportStopped() {
-    var blob = new Blob(state.recordedChunks, { type: 'video/webm' });
+    var format = state.exportFormat || { mimeType: 'video/webm', ext: 'webm' };
+    var blob = new Blob(state.recordedChunks, { type: format.mimeType });
     var url = URL.createObjectURL(blob);
+    var filename = 'es-captioned-reel.' + format.ext;
     var link = document.createElement('a');
     link.href = url;
-    link.download = 'es-captioned-reel.webm';
+    link.download = filename;
     link.click();
-    setStatus(els.exportStatus, 'Downloaded es-captioned-reel.webm', 'good');
+    setStatus(els.exportStatus, format.ext === 'mp4'
+      ? 'Downloaded ' + filename
+      : 'Downloaded ' + filename + ' — this browser can\'t encode MP4 directly, so it fell back to WebM.', 'good');
   }
 
   function downloadSrt() {

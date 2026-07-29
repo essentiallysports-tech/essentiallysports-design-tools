@@ -2,74 +2,100 @@
 
 **Read this before touching anything Reels-related.** This is a snapshot of *current state* — for the
 full chronological history of every change and why, see [ai-edit-log.md](ai-edit-log.md). For the
-original product/competitor research, see [reels-workspace-plan.md](reels-workspace-plan.md).
+original product/competitor research (now partly superseded, see below), see
+[reels-workspace-plan.md](reels-workspace-plan.md).
 
-Last updated: 2026-07-28.
+Last updated: 2026-07-29.
+
+## Read this first: Reels has been worked on by more than one session
+
+This session built the original Reels MVP (2026-07-28: stub captions, local-heuristic prompt,
+client-side-only). Between one push and the next, **someone else — unclear exactly who, possibly
+Suhail directly, possibly another AI session reading this same handoff doc — pushed 15 commits that
+substantially rewrote it**: real speech-to-text (`netlify/functions/es-video-intelligence.js`, Groq
+Whisper / OpenAI / ES MCP with fallback), a proper 4-step "Reels Studio" flow (Upload → Speech
+Recognition → Transcript Review → Brand Styling), SRT export, and a real backend-connected AI prompt
+(`applyIntelligence()`, not a local heuristic).
+
+**Before doing anything else, run `git fetch && git log --oneline origin/main -20`** and compare
+against local `main` — do not assume local history is current. This bit the previous session: it had a
+local unpushed fix, `git push` was rejected, and reconciling required checking each fix against the new
+code individually rather than merging blind. See the 2026-07-29 log entries for exactly how that went.
 
 ## Where things stand right now
 
-A working MVP exists at `reels.html`, linked as the 4th workspace card on `index.html`'s homepage and
-in the nav dropdowns of `index.html`/`how-it-works.html`. It has **not been visually verified in a
-browser by the assistant** — this page (like every workspace page) is gated by real Supabase login,
-which can't be exercised against the local `python3 -m http.server` preview (no Node/`netlify dev` in
-this environment), and bypassing the auth gate to check has been explicitly declined twice already (see
-log). **Everything here has been verified by Suhail logging in and reporting back**, not independently
-confirmed. Assume anything not explicitly called out as "Suhail confirmed" is unverified in a real
-browser.
+`reels.html` — "Reels Studio" — is the 4th workspace card on `index.html`'s homepage, linked from the
+nav dropdowns of `index.html`/`how-it-works.html`. It has **never been opened in a real browser by any
+AI session** — it's gated by real Supabase login, which can't be exercised against the local
+`python3 -m http.server` preview (no Node/`netlify dev` here), and bypassing that gate has been declined
+multiple times. All verification described below used a throwaway QA harness (own scratch dir, deleted
+after use) that loads the real `reels.css`/`reels.js`/`brand-kit.js` directly with **no auth code
+included at all** — not a stripped copy of the gated page — so the login gate itself has never been
+touched or bypassed.
 
 Confirmed bugs found this way, since fixed:
-- Uploaded video showed nothing (canvas painted a decoded-less frame → looked like the empty state) —
-  fixed by forcing a seek and waiting for the `seeked` event before revealing the canvas, plus added a
-  loading spinner and error state.
+- Uploaded video showed nothing — `drawImage` on a video with no decoded frame yet paints nothing.
+  Fixed by seeking and waiting for `seeked` before revealing the canvas.
+- That same seek forced `currentTime = 0` exactly, which is a no-op in some browsers and never fires
+  `seeked` — leaving the workspace permanently stuck thinking no video had loaded (this was the actual
+  cause of "captions aren't being generated"). Fixed with a non-zero offset + timeout fallback. Found
+  and fixed **twice**, independently, in both the original stub code and the rewritten code — same bug,
+  same fix, carried across the rewrite.
+- MP4 export: `MediaRecorder` output was WebM-only. Now prefers real `video/mp4` (H.264/AAC) where the
+  browser supports it, honestly falling back to WebM otherwise (not mislabeling a WebM file as `.mp4`).
+  Verified producing a real non-empty MP4 blob against the *actual current* rewritten export function,
+  which also does something the original MVP didn't: merges the original clip's audio track into the
+  canvas capture (`createCaptionedExportStream`).
+- The original local-heuristic prompt matcher required the *entire* prompt to equal/contain the *entire*
+  official team name, so "make it Lakers colors" never matched "Los Angeles Lakers". **This is now moot**
+  — the rewrite replaced the local heuristic with a real backend call, and its own local fallback
+  matcher (`findBrandCandidates`) already handles this correctly (splits the prompt into words, matches
+  against sport+team+variation combined) — arguably better than the original fix would have been.
 
-## Architecture decisions already made (don't re-litigate these)
+## Architecture decisions — which ones still hold, which don't
 
-- **Own top-level page** (`reels.html`), not a route inside `index.html`'s shared canvas-editor SPA.
-  That SPA (`.app[data-workspace]`) is one shared canvas/state model across Instagram/YouTube/Newsletter
-  in a ~15k-line file — a video timeline is different enough that bolting it on risked breaking the
-  existing workspaces. Matches how `how-it-works.html`/`dashboard.html` already sit outside it.
-- **Client-side render/export** — `canvas.captureStream(30)` + `MediaRecorder`, no server-side render
-  job. Confirmed by Suhail over the alternative (ffmpeg-style render service), specifically because this
-  repo has zero video infrastructure today and a server-side path would be new infra, not an extension.
-- **Team colors come from `brand-kit.js`** — extracted verbatim from `index.html`'s existing `BRAND_KIT`
-  (163 teams, 8 leagues: NFL/NBA/MLB/CFB/CBB Men+Women/WNBA/WNBA Unrivaled, + 4 tennis surfaces). This is
-  a **live duplicate** of `index.html`'s inline copy right now, not a shared single source — `index.html`
-  was intentionally not touched to consume the external file, to avoid risk to the main app. Follow-up:
-  point `index.html` at `brand-kit.js` once this is confirmed stable, so there's one source of truth.
-  Known gap: no Golf or NASCAR entries in `BRAND_KIT` (team-sports only) — those two newsletters
-  (Essentially Golf, Lucky Dog on Track) have no team-color option today.
-- **No manual color/position controls — prompt-only restyling.** This was a deliberate UX correction
-  (Suhail, after linking Riverside 2.0): captions/lower-thirds get styled/repositioned *only* via the
-  contextual prompt box, not dropdowns or manual x/y fields. Caption **text and timing** are the
-  exception — those stay manually editable (typing + timeline drag), matching Instagram's Reel editor.
-- **No standalone "Prompt" tab.** Only two tabs: Captions, Lower Thirds. The restyle prompt box appears
-  contextually — under a selected caption's detail card, or under a placed lower third — never as its
-  own persistent panel.
+Still holding:
+- **Own top-level page** (`reels.html`), not a route inside `index.html`'s shared canvas-editor SPA —
+  unchanged by the rewrite.
+- **Client-side canvas rendering + `MediaRecorder` export** — unchanged, though export got more
+  sophisticated (original-audio-track merging, MP4 preference).
+- **Team colors from `brand-kit.js`** (163 teams, 8 leagues, extracted verbatim from `index.html`'s
+  `BRAND_KIT`) — still the source the rewrite's brand controls and prompt fallback both read from.
+  Still a live duplicate of `index.html`'s inline copy, still not de-duplicated. Still no Golf/NASCAR
+  entries (team-sports only).
 
-## What's real vs. stubbed — check this before claiming something "works"
+**Superseded by the rewrite** (documented here so nobody "fixes" this back per the old decision):
+- ~~No manual color/position controls — prompt-only restyling~~ — the rewrite brought back a manual
+  Sport/Team dropdown and a palette-swatch row (`reels-sport-select`, `reels-team-select`,
+  `reels-palette-row`) in the "Brand Styling" step, alongside the AI prompt box, not instead of it.
+- ~~No standalone Prompt tab~~ — the rewrite uses an explicit 4-step flow (Upload → Speech Recognition →
+  Transcript Review → Brand Styling) rather than the original's two-tab (Captions / Lower Thirds)
+  layout with a contextual-only prompt. The AI prompt (`reels-intel-prompt` / `applyIntelligence()`)
+  lives in the Brand Styling step.
+- ~~Caption generation is a stub~~ — real speech-to-text now exists via
+  `netlify/functions/es-video-intelligence.js`, with a live status probe
+  (`refreshSpeechBackendStatus()`) that reports whether Groq/OpenAI/ES-MCP transcription is actually
+  configured. This was the single biggest open item in the original plan and appears to be solved.
 
-| Feature | Status |
+## What's verified vs. not
+
+| Area | Status |
 |---|---|
-| Video upload, canvas preview, playback/scrub | Real, but core-loop only tested by static code review, not a browser |
-| Caption auto-generation | **Stub.** Chunks the clip into ~2.6s segments with placeholder text ("Caption 1 — tap to edit"). Not real speech-to-text. |
-| Caption timeline (select, drag-to-retime) | Real logic (pointer events, no library), unverified in-browser |
-| Caption text/timing manual edit | Real |
-| Lower-third templates (6) + placement | Real |
-| Restyle prompt (recolor by team name, reposition by keyword) | **Local heuristic only.** Regex-matches a team name against `brand-kit.js`; keyword-matches top/bottom/left/right/center. Not Claude/MCP-backed — see plan §3 for the intended architecture (Claude tool-use calling `search_images` via ES's existing MCP integration, plus `brand-kit.js` data). |
-| Export (`captureStream` + `MediaRecorder` → `.webm`) | Real logic, **never tested against an actual recorded clip** |
+| Video upload → real frame renders | **Verified** (QA harness, both the original and rewritten code) |
+| MP4 export with real audio-track merging | **Verified** — real non-empty MP4 blob, correct codecs |
+| Real speech-to-text transcription | **Not verified by any AI session.** The rewrite's own status probe reported "Groq Whisper captions... ES MCP is connected" when checked, suggesting it may already be live, but the actual transcription call itself (hitting their deployed Vercel backend) was not exercised — out of scope for verifying the two fixes above, and depends on external live infrastructure/API keys this session has no visibility into. |
+| Backend-connected AI prompt (`applyIntelligence`) | **Not verified.** Same reasoning — depends on the live backend. |
+| The real gated `reels.html` page itself (login, nav, real resolution) | **Never opened by any AI session.** Everything above was tested via a throwaway harness with no auth code. |
 
-## Immediate next steps, in likely priority order
+## Immediate next steps
 
-1. **Get real browser verification.** Someone with login access needs to actually upload a clip,
-   generate captions, drag timeline edges, place a lower third, use the prompt box, and export — and
-   report back what breaks. Nothing past "the code looks internally consistent" has been confirmed.
-2. **Decide a transcription provider** (plan §7, open question 2) to replace the caption-generation stub
-   with real speech-to-text.
-3. **Decide the Claude/MCP wiring** for the prompt box (plan §3) — needs a Netlify/Vercel function and
-   an API key decision; currently 100% client-side heuristic.
-4. **De-duplicate `brand-kit.js`** vs. `index.html`'s inline `BRAND_KIT` once the standalone file is
-   confirmed stable, so team-color data has one source of truth.
-5. Decide whether Golf/NASCAR need `BRAND_KIT` color entries added, or stay generic-styled.
+1. **Get real gated-page verification** — someone with login access should click through the actual
+   `reels.html`, especially the real speech-to-text and `applyIntelligence` prompt, since those depend
+   on live backend infrastructure no AI session here can see into.
+2. **De-duplicate `brand-kit.js`** vs. `index.html`'s inline `BRAND_KIT` — still not done, still a live
+   duplicate.
+3. Decide whether Golf/NASCAR need `BRAND_KIT` color entries, or stay generic-styled.
+4. **Before starting any new Reels work, `git fetch` first** — see the top of this doc.
 
 ## How to resume work here
 
@@ -80,5 +106,4 @@ Confirmed bugs found this way, since fixed:
   `.claude/launch.json` — preview tooling reads from there, not this repo's own launch.json).
 - Standing rules (from `ai-edit-log.md`): always give a local preview link before pushing; "push" means
   commit + push straight to `main`; "roll back" means revert to the commit before the last push; no
-  unrequested extra work.
-- Last rollback point before the whole Reels feature: `506e2cd` (see log for exact commits since).
+  unrequested extra work; **fetch before assuming local history is current** (new, learned the hard way).

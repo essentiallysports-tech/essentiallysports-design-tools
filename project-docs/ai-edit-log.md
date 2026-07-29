@@ -17,6 +17,44 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-07-29 — Reconciled with a major Reels rewrite pushed by someone else; reapplied 2 of 3 fixes
+- Status: `[pending push]`
+- Files touched: `reels.js` only.
+- Context: had a local, unpushed commit (`c534991`, since discarded — see below) fixing three things in
+  the *old* stub-based Reels: the invisible-video seek bug, the prompt's team-name matching, and MP4
+  export preference. Before pushing it, `git push` was rejected — `origin/main` had moved 15 commits
+  past what this session's local `main` was based on. Someone else (unclear who/what — possibly Suhail
+  directly, possibly another AI session picking up the `reels-handoff.md` next-steps list) had built a
+  **substantially more complete Reels** in the meantime: real speech-to-text via a new
+  `netlify/functions/es-video-intelligence.js` backend (Groq Whisper / OpenAI / ES MCP, with graceful
+  fallback), a proper 4-step UI ("Reels Studio": Upload → Speech Recognition → Transcript Review →
+  Brand Styling), SRT export, and more — a near-total rewrite of `reels.js`/`reels.css`/`reels.html`.
+- Rather than merge a stale 3-line-conflict-prone patch over a rewritten file, checked each of the 3
+  fixes against the new code before touching anything:
+  - **Seek bug**: still present, same pattern, just renamed (`onVideoReady` → `onVideoMetadata`). Reapplied
+    the same fix (non-zero seek offset + 1.2s timeout fallback).
+  - **Team-name matching**: already independently fixed there, and arguably better than mine — theirs
+    (`findBrandCandidates`) splits the prompt into words and matches against `sport + team + variation`
+    combined, not just the team name alone. Did **not** reapply my version — theirs is what's live.
+  - **MP4 export preference**: still missing (their export was WebM-only, but had gained something mine
+    didn't have — merging the original video's audio track into the canvas capture via
+    `createCaptionedExportStream`). Reapplied MP4-preference **on top of** their audio-merging logic,
+    not by reverting to my simpler export.
+- Reconciliation method: `git reset --hard origin/main` (safe — the discarded local commit is fully
+  described here and in the prior entries, and is recoverable via reflog if ever needed; nothing
+  uncommitted was lost since it was already committed before the reset).
+- Re-verified both reapplied fixes against the **actual current** `reels.html`/`reels.js` structure
+  (element IDs changed — `mapElements()` now maps a different set) using a fresh throwaway QA harness,
+  same no-auth-code approach as before: real video renders after upload (seek fix confirmed), and
+  export produces a genuine 15KB `video/mp4;codecs=avc1,mp4a.40.2` blob downloaded as
+  `es-captioned-reel.mp4` (MP4 preference confirmed). Did not attempt to test the real transcription
+  backend itself (would require hitting their live Vercel deployment / real API keys, out of scope for
+  verifying these two specific fixes).
+- **Takeaway for whoever reads this next**: check `git fetch && git log origin/main` before assuming
+  local `main` is current — this repo is apparently being worked on by more than one
+  session/person right now, and the "always give a local preview before pushing" rule doesn't cover
+  "check if origin moved," which is a real gap this incident exposed.
+
 ### 2026-07-28 — Reels: fix invisible video on upload, add loading feedback
 - Status: `[pending push]`
 - Files touched: `reels.js`, `reels.css`.
