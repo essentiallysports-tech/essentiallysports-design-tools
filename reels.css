@@ -826,18 +826,53 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 }
 
 .reels-style-preview {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   height: 34px;
   margin-bottom: 8px;
   border-radius: var(--reels-radius-sm);
-  background: #101820;
-  color: #fff;
+  background: #f7fbff;
+  border: 1px solid #d9ebff;
+  color: var(--reels-blue);
   font-size: 11px;
   font-weight: 900;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.reels-style-word {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.reels-style-word.is-active {
+  transform: scale(1.08);
+  box-shadow: 0 2px 5px rgba(10,125,250,.18);
+}
+
+.reels-style-preview-karaoke .reels-style-word:not(.is-reached),
+.reels-style-preview-broadcast .reels-style-word:not(.is-reached),
+.reels-style-preview-snap-stack .reels-style-word:not(.is-reached) {
+  opacity: .72;
+}
+
+.reels-style-preview-broadcast .reels-style-word:first-child {
+  transform: translateY(2px);
+}
+
+.reels-style-preview-snap-stack .reels-style-word {
+  min-width: 24px;
 }
 
 .reels-style-card strong {

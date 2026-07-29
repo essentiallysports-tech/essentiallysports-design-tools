@@ -55,6 +55,11 @@ assert.match(reels, /function syncCustomSelect/);
 assert.match(reels, /mimeType:\s*'audio\/wav'/);
 assert.match(reels, /mimeType:\s*item\.blob\.type \|\| 'audio\/webm'/);
 assert.match(reels, /function drawCaptionPills/);
+assert.match(reels, /function drawCaptionWordBoxes/);
+assert.match(reels, /function layoutCaptionWordBoxes/);
+assert.match(reels, /function drawAnimatedWordBox/);
+assert.match(reels, /function getCaptionWordBoxes/);
+assert.match(reels, /function getActiveCaptionWordInfo/);
 assert.match(reels, /POST_FONT_FAMILY\s*=\s*'Acumin Post'/);
 assert.match(reels, /PILL_H\s*=\s*122/);
 assert.match(reels, /PILL_FONT_SIZE\s*=\s*130/);
@@ -70,7 +75,8 @@ assert.match(html, /id="reels-sport-select"/);
 assert.match(html, /id="reels-team-select"/);
 assert.match(html, /id="reels-palette-row"/);
 assert.match(html, /Caption helper/);
-assert.match(html, /reels\.js\?v=20260729-reels4/);
+assert.match(html, /reels\.css\?v=20260729-reels-wordbox1/);
+assert.match(html, /reels\.js\?v=20260729-reels-wordbox1/);
 
 const uploadResetSource = reels.slice(
   reels.indexOf('function onFileChosen'),
@@ -101,11 +107,22 @@ for (const constant of ['PILL_H', 'PILL_FONT_SIZE', 'PILL_PAD_LEFT', 'PILL_PAD_R
 
 const captionPillSource = reels.slice(
   reels.indexOf('function drawCaptionPills'),
-  reels.indexOf('function getCaptionBlockTop'),
+  reels.indexOf('function drawCaptionWordBoxes'),
 );
 assert.match(captionPillSource, /ctx\.fillRect\(pillX,\s*pillY,\s*pillW,\s*activePillH\)/);
 assert.doesNotMatch(captionPillSource, /roundRect|arcTo|ctx\.fill\(\)/);
 assert.match(captionPillSource, /getCaptionPillXOffset\(index,\s*lines\.length\)/);
+
+const captionWordBoxSource = reels.slice(
+  reels.indexOf('function drawCaptionWordBoxes'),
+  reels.indexOf('function getCaptionAnimationTiming'),
+);
+assert.match(captionWordBoxSource, /packWordBoxRows/);
+assert.match(captionWordBoxSource, /roundRect\(ctx,\s*-box\.w \/ 2,\s*-box\.h \/ 2,\s*box\.w,\s*box\.h,\s*6\)/);
+assert.match(captionWordBoxSource, /index === activeInfo\.activeIndex/);
+assert.match(captionWordBoxSource, /word\.start && current < word\.end|current >= word\.start && current < word\.end/);
+assert.match(captionWordBoxSource, /wordTextKey/);
+assert.doesNotMatch(captionWordBoxSource, /drawAnimatedCaptionLine/);
 
 const formatterSource = reels.slice(
   reels.indexOf('function formatCaptionBeats'),

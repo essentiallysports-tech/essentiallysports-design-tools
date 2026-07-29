@@ -60,6 +60,8 @@ globalThis.fetch = async (url, options = {}) => {
       assert.equal(body.params.name, 'mcp__es__transcribe_video');
       assert.equal(body.params.arguments.mime_type, 'video/mp4');
       assert.ok(body.params.arguments.base64);
+      assert.equal(body.params.arguments.output.timestamps, 'word');
+      assert.ok(body.params.arguments.output.fields.includes('words'));
       return new Response(JSON.stringify({
         jsonrpc: '2.0',
         id: body.id,
@@ -67,7 +69,19 @@ globalThis.fetch = async (url, options = {}) => {
           provider: 'ES MCP speech',
           language: 'en',
           segments: [
-            { start: 0, end: 1.8, text: 'LeBron James opens the segment', confidence: 0.96 },
+            {
+              start: 0,
+              end: 1.8,
+              text: 'LeBron James opens the segment',
+              confidence: 0.96,
+              words: [
+                { word: 'LeBron', start: 0, end: 0.35 },
+                { word: 'James', start: 0.35, end: 0.7 },
+                { word: 'opens', start: 0.7, end: 1.1 },
+                { word: 'the', start: 1.1, end: 1.3 },
+                { word: 'segment', start: 1.3, end: 1.8 },
+              ],
+            },
             { start: 1.8, end: 3.4, text: 'with a Lakers update', confidence: 0.94 },
           ],
         },

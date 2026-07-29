@@ -26,11 +26,11 @@
   var LOCAL_WHISPER_MODEL = 'Xenova/whisper-tiny.en';
 
   var CAPTION_STYLES = [
-    { id: 'es-pop-word', name: 'ES Pop Word', note: 'Active words pop in with ES pill energy', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'pop-word' },
-    { id: 'karaoke-sweep', name: 'Karaoke Sweep', note: 'Line stays stable while spoken words sweep blue', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'karaoke' },
-    { id: 'broadcast-lower', name: 'Broadcast Lower', note: 'Clean lower-third entrance with restrained motion', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'broadcast' },
-    { id: 'punch-highlight', name: 'Punch Highlight', note: 'Key words flash with a sharper scale bump', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'punch' },
-    { id: 'snap-stack', name: 'Snap Stack', note: 'Phrases stack quickly for fast commentary', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'snap-stack' },
+    { id: 'es-pop-word', name: 'ES Word Pop', note: 'Each spoken word box pops on the beat', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'pop-word' },
+    { id: 'karaoke-sweep', name: 'Karaoke Box Sweep', note: 'Word boxes fill as speech reaches them', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'karaoke' },
+    { id: 'broadcast-lower', name: 'Broadcast Step', note: 'Word boxes step in like a clean sports lower', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'broadcast' },
+    { id: 'punch-highlight', name: 'Punch Box', note: 'The active word box hits with stronger emphasis', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'punch' },
+    { id: 'snap-stack', name: 'Snap Stack', note: 'Word boxes snap into compact caption stacks', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'snap-stack' },
   ];
 
   var LOWER_THIRD_TEMPLATES = [
@@ -1047,8 +1047,9 @@
       var palette = getActivePalette();
       var background = palette.background || style.background;
       var foreground = getTextColorForPair(palette, getActiveBrandEntry()) || style.foreground;
+      var previewWords = getStylePreviewWords(style, background, foreground);
       return '<button type="button" class="reels-style-card' + (style.id === state.style.id ? ' is-selected' : '') + '" data-style="' + style.id + '">' +
-        '<div class="reels-style-preview" style="background:' + background + ';color:' + foreground + '">' + escapeHtml(style.name.toUpperCase()) + '</div>' +
+        '<div class="reels-style-preview reels-style-preview-' + escapeHtml(style.animation) + '">' + previewWords + '</div>' +
         '<strong>' + escapeHtml(style.name) + '</strong><span>' + escapeHtml(style.note) + '</span></button>';
     }).join('');
     els.styleGrid.querySelectorAll('.reels-style-card').forEach(function (button) {
@@ -1262,7 +1263,12 @@
       ctx.translate(0, slide);
       ctx.globalAlpha = clamp(timing.captionIntro * 1.25, 0, 1);
     }
-    drawCaptionPills(ctx, lines, pillH, padLeft, padRight, fontSize, caption, timing);
+    var words = getCaptionWordBoxes(caption);
+    if (words.length) {
+      drawCaptionWordBoxes(ctx, words, pillH, padLeft, padRight, fontSize, caption, timing);
+    } else {
+      drawCaptionPills(ctx, lines, pillH, padLeft, padRight, fontSize, caption, timing);
+    }
     ctx.restore();
   }
 
@@ -1310,7 +1316,6 @@
     var entry = getActiveBrandEntry();
     var bgColor = palette.background || ES_BLUE;
     var fgColor = getTextColorForPair(palette, entry);
-    var wordInfo = getActiveWordInfo(lines, caption, timing);
 
     lines.forEach(function (line, index) {
       var pillW = pillWidths[index];
@@ -1327,59 +1332,257 @@
       ctx.fillStyle = bgColor;
       ctx.fillRect(pillX, pillY, pillW, activePillH);
       ctx.font = '900 ' + activeFontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
-      drawAnimatedCaptionLine(ctx, line.toUpperCase(), pillX + padLeft, pillY + textBaselineFromTop, activeFontSize, fgColor, bgColor, wordInfo);
+      ctx.fillStyle = fgColor;
+      ctx.textAlign = 'center';
+      ctx.fillText(line.toUpperCase(), pillX + pillW / 2, pillY + textBaselineFromTop);
     });
     ctx.globalAlpha = 1;
   }
 
-  function drawAnimatedCaptionLine(ctx, line, x, baseline, fontSize, fgColor, bgColor, wordInfo) {
-    var words = line.split(/\s+/).filter(Boolean);
-    var cursor = x;
-    var spaceW = ctx.measureText(' ').width;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    words.forEach(function (word) {
-      var clean = word.replace(/[^\w']/g, '');
-      var isActive = wordInfo.activeWords.indexOf(clean) >= 0;
-      var wordW = ctx.measureText(word).width;
-      if (state.style.animation === 'karaoke' && wordInfo.reachedWords.indexOf(clean) >= 0) {
-        ctx.fillStyle = '#ffffff';
-        ctx.globalAlpha = 1;
-        ctx.fillText(word, cursor, baseline);
-      } else if (state.style.animation === 'punch' && isActive) {
-        var punch = 1 + 0.12 * Math.sin(wordInfo.wordLocal * Math.PI);
-        ctx.save();
-        ctx.translate(cursor + wordW / 2, baseline - fontSize * 0.34);
-        ctx.scale(punch, punch);
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowColor = bgColor;
-        ctx.shadowBlur = 18;
-        ctx.textAlign = 'center';
-        ctx.fillText(word, 0, fontSize * 0.34);
-        ctx.restore();
-      } else if (state.style.animation === 'pop-word' && isActive) {
-        var pop = 1 + 0.10 * Math.sin(wordInfo.wordLocal * Math.PI);
-        ctx.save();
-        ctx.translate(cursor + wordW / 2, baseline - fontSize * 0.34);
-        ctx.scale(pop, pop);
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.fillText(word, 0, fontSize * 0.34);
-        ctx.restore();
-      } else {
-        ctx.fillStyle = fgColor;
-        ctx.globalAlpha = state.style.animation === 'karaoke' ? 0.58 : 1;
-        ctx.fillText(word, cursor, baseline);
-        ctx.globalAlpha = 1;
-      }
-      if ((state.style.animation === 'karaoke' || state.style.animation === 'punch') && isActive) {
-        ctx.fillStyle = '#ffffff';
-        ctx.globalAlpha = 0.22;
-        ctx.fillRect(cursor, baseline + 9, wordW, Math.max(6, Math.round(fontSize * 0.07)));
-        ctx.globalAlpha = 1;
-      }
-      cursor += wordW + spaceW;
+  function drawCaptionWordBoxes(ctx, words, pillH, padLeft, padRight, fontSize, caption, timing) {
+    if (!words.length) return;
+    var layout = layoutCaptionWordBoxes(ctx, words, pillH, padLeft, padRight, fontSize);
+    var safe = POST_SAFE_AREA;
+    var blockTopY = getCaptionBlockTop(layout.blockH, safe);
+    var palette = getActivePalette();
+    var entry = getActiveBrandEntry();
+    var bgColor = palette.background || ES_BLUE;
+    var fgColor = getTextColorForPair(palette, entry);
+    var activeInfo = getActiveCaptionWordInfo(words, caption, timing);
+
+    layout.rows.forEach(function (row, rowIndex) {
+      var cursorX = row.x;
+      row.items.forEach(function (item) {
+        var word = item.word;
+        var index = word.index;
+        var box = {
+          x: cursorX,
+          y: blockTopY + rowIndex * layout.rowStep,
+          w: item.w,
+          h: layout.boxH,
+        };
+        drawAnimatedWordBox(ctx, box, word, index, activeInfo, layout, bgColor, fgColor, timing);
+        cursorX += item.w + layout.gap;
+      });
     });
+    ctx.globalAlpha = 1;
+  }
+
+  function layoutCaptionWordBoxes(ctx, words, pillH, padLeft, padRight, fontSize) {
+    var safe = POST_SAFE_AREA;
+    var maxCanvasW = STAGE_W - safe * 2;
+    var boxPadX = Math.max(18, Math.round((padLeft + padRight) * 0.48));
+    var gap = Math.max(10, Math.round(fontSize * 0.075));
+    var activeFontSize = fontSize;
+    var rows = [];
+    var boxH = pillH;
+
+    for (var attempt = 0; attempt < 12; attempt += 1) {
+      activeFontSize = Math.max(48, Math.round(fontSize * (1 - attempt * 0.065)));
+      ctx.font = '900 ' + activeFontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+      boxPadX = Math.max(14, Math.round(activeFontSize * 0.23));
+      gap = Math.max(8, Math.round(activeFontSize * 0.08));
+      boxH = Math.max(60, Math.round(activeFontSize * 0.96));
+      rows = packWordBoxRows(ctx, words, boxPadX, gap, maxCanvasW);
+      if (rows.length <= 2) break;
+    }
+
+    rows = rows.slice(0, 2);
+    rows.forEach(function (row) {
+      row.x = Math.round((STAGE_W - row.w) / 2);
+    });
+
+    return {
+      rows: rows,
+      fontSize: activeFontSize,
+      boxH: boxH,
+      gap: gap,
+      rowStep: boxH + Math.max(10, Math.round(activeFontSize * 0.12)),
+      blockH: boxH + (rows.length - 1) * (boxH + Math.max(10, Math.round(activeFontSize * 0.12))),
+      padX: boxPadX,
+    };
+  }
+
+  function packWordBoxRows(ctx, words, padX, gap, maxCanvasW) {
+    var rows = [];
+    var row = { items: [], w: 0 };
+    words.forEach(function (word) {
+      var text = word.text.toUpperCase();
+      var itemW = Math.ceil(ctx.measureText(text).width + padX * 2);
+      itemW = Math.min(maxCanvasW, Math.max(54, itemW));
+      var nextW = row.items.length ? row.w + gap + itemW : itemW;
+      if (row.items.length && nextW > maxCanvasW) {
+        rows.push(row);
+        row = { items: [], w: 0 };
+        nextW = itemW;
+      }
+      row.items.push({ word: word, w: itemW });
+      row.w = nextW;
+    });
+    if (row.items.length) rows.push(row);
+    return rows;
+  }
+
+  function drawAnimatedWordBox(ctx, box, word, index, activeInfo, layout, bgColor, fgColor, timing) {
+    var animation = state.style.animation || 'pop-word';
+    var isActive = index === activeInfo.activeIndex;
+    var isReached = index <= activeInfo.reachedIndex;
+    var local = isActive ? activeInfo.wordLocal : (isReached ? 1 : 0);
+    var intro = getWordIntroProgress(word, captionTimeStart(timing), timing);
+    var fillColor = bgColor;
+    var textColor = fgColor;
+    var alpha = 1;
+    var scale = 1;
+    var translateY = 0;
+    var shadowBlur = 0;
+
+    if (animation === 'karaoke') {
+      fillColor = isReached ? bgColor : '#ffffff';
+      textColor = isReached ? '#ffffff' : bgColor;
+      alpha = isReached ? 1 : 0.72;
+      scale = isActive ? 1 + 0.055 * Math.sin(local * Math.PI) : 1;
+    } else if (animation === 'broadcast') {
+      var step = easeOutCubic(intro);
+      translateY = Math.round((1 - step) * 26);
+      alpha = clamp(step * 1.2, 0, 1);
+      fillColor = isReached ? bgColor : '#ffffff';
+      textColor = isReached ? '#ffffff' : bgColor;
+    } else if (animation === 'punch') {
+      fillColor = isActive ? '#ffffff' : bgColor;
+      textColor = isActive ? bgColor : '#ffffff';
+      scale = isActive ? 1 + 0.12 * Math.sin(local * Math.PI) : 1;
+      shadowBlur = isActive ? 22 : 0;
+    } else if (animation === 'snap-stack') {
+      var snap = easeOutBack(intro);
+      translateY = Math.round((1 - snap) * 32);
+      alpha = clamp(intro * 1.35, 0, 1);
+      scale = isActive ? 1.04 : Math.max(0.92, snap);
+      fillColor = isReached ? bgColor : '#ffffff';
+      textColor = isReached ? '#ffffff' : bgColor;
+    } else {
+      scale = isActive ? 1 + 0.10 * Math.sin(local * Math.PI) : 1;
+      alpha = isReached ? 1 : 0.82;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(box.x + box.w / 2, box.y + box.h / 2 + translateY);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = fillColor;
+    if (shadowBlur) {
+      ctx.shadowColor = bgColor;
+      ctx.shadowBlur = shadowBlur;
+      ctx.shadowOffsetY = 8;
+    }
+    roundRect(ctx, -box.w / 2, -box.h / 2, box.w, box.h, 6);
+    ctx.fill();
+
+    if (animation === 'karaoke' && isActive) {
+      ctx.save();
+      ctx.globalAlpha = 0.24;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-box.w / 2, -box.h / 2, box.w * clamp(local, 0, 1), box.h);
+      ctx.restore();
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.fillStyle = textColor;
+    ctx.font = '900 ' + layout.fontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(word.text.toUpperCase(), 0, Math.round(layout.fontSize * 0.04));
+    ctx.restore();
+  }
+
+  function captionTimeStart(timing) {
+    return (els.video.currentTime || 0) - timing.elapsed;
+  }
+
+  function getWordIntroProgress(word, captionStart, timing) {
+    var current = els.video.currentTime || captionStart;
+    var introStart = Number.isFinite(word.start) ? word.start : captionStart + word.index * 0.12;
+    if (current >= introStart) return 1;
+    var stagger = 0.18 + word.index * 0.045;
+    return clamp((timing.elapsed - stagger) / 0.24, 0, 1);
+  }
+
+  function getActiveCaptionWordInfo(words, caption, timing) {
+    var current = els.video.currentTime || caption.start || 0;
+    var activeIndex = words.findIndex(function (word) {
+      return current >= word.start && current < word.end;
+    });
+    if (activeIndex < 0) {
+      activeIndex = Math.min(words.length - 1, Math.floor(timing.captionProgress * words.length));
+    }
+    var activeWord = words[activeIndex] || words[0];
+    var wordDuration = Math.max(0.001, activeWord.end - activeWord.start);
+    var wordLocal = clamp((current - activeWord.start) / wordDuration, 0, 1);
+    var reachedIndex = words.reduce(function (last, word, index) {
+      return current >= word.start ? index : last;
+    }, -1);
+    reachedIndex = Math.max(reachedIndex, activeIndex);
+    return {
+      activeIndex: activeIndex,
+      reachedIndex: reachedIndex,
+      wordLocal: wordLocal,
+    };
+  }
+
+  function getCaptionWordBoxes(caption) {
+    var captionText = String(caption.text || '').replace(/\s+/g, ' ').trim();
+    if (!captionText) return [];
+    var rawWords = normalizeTimedWords(caption.words, caption.start || 0);
+    if (rawWords.length && wordTextKey(rawWords.map(function (word) { return word.text; }).join(' ')) === wordTextKey(captionText)) {
+      return rawWords.map(function (word, index) {
+        var start = Number(word.start);
+        var end = Number(word.end);
+        return {
+          index: index,
+          text: word.text,
+          start: Number.isFinite(start) ? start : caption.start,
+          end: Number.isFinite(end) && end > start ? end : (Number.isFinite(start) ? start + 0.28 : caption.start + (index + 1) * 0.28),
+        };
+      });
+    }
+    return synthesizeCaptionWords(captionText, caption);
+  }
+
+  function synthesizeCaptionWords(text, caption) {
+    var pieces = text.split(/\s+/).filter(Boolean);
+    var start = Number(caption.start) || 0;
+    var end = Number(caption.end);
+    if (!Number.isFinite(end) || end <= start) end = start + Math.max(CAPTION_MIN_SECONDS, pieces.length * 0.32);
+    var duration = Math.max(0.2, end - start);
+    return pieces.map(function (word, index) {
+      var wordStart = start + duration * (index / pieces.length);
+      var wordEnd = start + duration * ((index + 1) / pieces.length);
+      return {
+        index: index,
+        text: word,
+        start: wordStart,
+        end: Math.max(wordStart + 0.08, wordEnd),
+      };
+    });
+  }
+
+  function getStylePreviewWords(style, background, foreground) {
+    var labels = ['MAKE', 'THE', 'CALL'];
+    return labels.map(function (label, index) {
+      var reached = index <= 1;
+      var active = index === 1;
+      var bg = reached ? background : '#ffffff';
+      var fg = reached ? foreground : background;
+      if (style.animation === 'punch' && active) {
+        bg = '#ffffff';
+        fg = background;
+      }
+      return '<span class="reels-style-word' + (active ? ' is-active' : '') + (reached ? ' is-reached' : '') + '" style="background:' + bg + ';color:' + fg + ';border-color:' + background + '">' + label + '</span>';
+    }).join('');
+  }
+
+  function wordTextKey(text) {
+    return String(text || '').toLowerCase().replace(/[^\w']+/g, ' ').trim();
   }
 
   function getCaptionAnimationTiming(caption) {

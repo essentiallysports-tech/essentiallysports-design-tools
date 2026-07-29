@@ -421,7 +421,7 @@ async function transcribeWithMcp(payload) {
       base64: payload.data,
       output: {
         format: 'segments',
-        timestamps: 'segment',
+        timestamps: 'word',
         fields: ['start', 'end', 'text', 'confidence', 'words'],
       },
     },
@@ -445,6 +445,7 @@ async function transcribeWithOpenAI(payload) {
   form.append('model', TRANSCRIPTION_MODEL);
   form.append('response_format', 'verbose_json');
   form.append('timestamp_granularities[]', 'segment');
+  form.append('timestamp_granularities[]', 'word');
 
   const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
     method: 'POST',
@@ -462,12 +463,10 @@ async function transcribeWithOpenAI(payload) {
   }
 
   const segments = Array.isArray(data?.segments)
-    ? data.segments.map(segment => ({
-      start: Number(segment.start) || 0,
-      end: Number(segment.end) || 0,
-      text: String(segment.text || '').trim(),
+    ? normalizeSegmentsFromProvider(data.segments.map(segment => ({
+      ...segment,
       confidence: segment.avg_logprob == null ? null : Math.max(0, Math.min(1, 1 + Number(segment.avg_logprob))),
-    }))
+    })), data.words)
     : chunkPlainTranscript(data?.text || '');
 
   return json(200, {
