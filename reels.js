@@ -26,7 +26,11 @@
   var LOCAL_WHISPER_MODEL = 'Xenova/whisper-tiny.en';
 
   var CAPTION_STYLES = [
-    { id: 'social-pill', name: 'Social Pill', note: 'ES social media pill treatment', background: ES_BLUE, foreground: '#ffffff', mode: 'pill' },
+    { id: 'es-pop-word', name: 'ES Pop Word', note: 'Active words pop in with ES pill energy', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'pop-word' },
+    { id: 'karaoke-sweep', name: 'Karaoke Sweep', note: 'Line stays stable while spoken words sweep blue', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'karaoke' },
+    { id: 'broadcast-lower', name: 'Broadcast Lower', note: 'Clean lower-third entrance with restrained motion', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'broadcast' },
+    { id: 'punch-highlight', name: 'Punch Highlight', note: 'Key words flash with a sharper scale bump', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'punch' },
+    { id: 'snap-stack', name: 'Snap Stack', note: 'Phrases stack quickly for fast commentary', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'snap-stack' },
   ];
 
   var LOWER_THIRD_TEMPLATES = [
@@ -1085,7 +1089,7 @@
     var palette = getPaletteForWorkspace(entry);
     state.pillPalette = palette[0] || entry?.primary || { background: ES_BLUE, foreground: '#ffffff', mist: '#ffffff' };
     renderPaletteRow();
-    els.styleName.textContent = formatTeamDisplayName(team || 'Social Pill') + ' Pill';
+    els.styleName.textContent = state.style.name;
     setStatus(els.intelStatus, '');
     setStep('style');
     syncCustomSelect('teamSelect');
@@ -1243,7 +1247,9 @@
   function drawCaption(ctx, caption) {
     var text = String(caption.text || '').toUpperCase();
     ctx.save();
-    var scale = 1;
+    var timing = getCaptionAnimationTiming(caption);
+    var animation = state.style.animation || 'pop-word';
+    var scale = getCaptionScale(animation, timing);
     var pillH = Math.round(PILL_H * scale);
     var padLeft = PILL_PAD_LEFT * scale;
     var padRight = PILL_PAD_RIGHT * scale;
@@ -1251,11 +1257,16 @@
     ctx.font = '900 ' + fontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
     var maxTextWidth = STAGE_W - POST_SAFE_AREA * 2 - padLeft - padRight;
     var lines = wrapText(ctx, text, maxTextWidth).slice(0, 2);
-    drawCaptionPills(ctx, lines, pillH, padLeft, padRight, fontSize);
+    if (animation === 'broadcast') {
+      var slide = Math.round((1 - easeOutCubic(timing.captionIntro)) * 44);
+      ctx.translate(0, slide);
+      ctx.globalAlpha = clamp(timing.captionIntro * 1.25, 0, 1);
+    }
+    drawCaptionPills(ctx, lines, pillH, padLeft, padRight, fontSize, caption, timing);
     ctx.restore();
   }
 
-  function drawCaptionPills(ctx, lines, pillH, padLeft, padRight, fontSize) {
+  function drawCaptionPills(ctx, lines, pillH, padLeft, padRight, fontSize, caption, timing) {
     if (!lines.length) return;
     var safe = POST_SAFE_AREA;
     var maxCanvasW = STAGE_W - safe * 2;
@@ -1299,20 +1310,123 @@
     var entry = getActiveBrandEntry();
     var bgColor = palette.background || ES_BLUE;
     var fgColor = getTextColorForPair(palette, entry);
+    var wordInfo = getActiveWordInfo(lines, caption, timing);
 
     lines.forEach(function (line, index) {
       var pillW = pillWidths[index];
       var xOffset = getCaptionPillXOffset(index, lines.length);
       var pillX = clamp(blockCenterX + xOffset - pillW / 2, safe, STAGE_W - safe - pillW);
       var pillY = blockTopY + index * activePillSpacing;
+      if (state.style.animation === 'snap-stack') {
+        var lineIntro = clamp((timing.captionProgress - index * 0.28) / 0.32, 0, 1);
+        pillY += Math.round((1 - easeOutBack(lineIntro)) * 34);
+        ctx.globalAlpha = clamp(lineIntro * 1.3, 0, 1);
+      } else {
+        ctx.globalAlpha = 1;
+      }
       ctx.fillStyle = bgColor;
       ctx.fillRect(pillX, pillY, pillW, activePillH);
-      ctx.fillStyle = fgColor;
       ctx.font = '900 ' + activeFontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillText(line.toUpperCase(), pillX + padLeft, pillY + textBaselineFromTop);
+      drawAnimatedCaptionLine(ctx, line.toUpperCase(), pillX + padLeft, pillY + textBaselineFromTop, activeFontSize, fgColor, bgColor, wordInfo);
     });
+    ctx.globalAlpha = 1;
+  }
+
+  function drawAnimatedCaptionLine(ctx, line, x, baseline, fontSize, fgColor, bgColor, wordInfo) {
+    var words = line.split(/\s+/).filter(Boolean);
+    var cursor = x;
+    var spaceW = ctx.measureText(' ').width;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    words.forEach(function (word) {
+      var clean = word.replace(/[^\w']/g, '');
+      var isActive = wordInfo.activeWords.indexOf(clean) >= 0;
+      var wordW = ctx.measureText(word).width;
+      if (state.style.animation === 'karaoke' && wordInfo.reachedWords.indexOf(clean) >= 0) {
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = 1;
+        ctx.fillText(word, cursor, baseline);
+      } else if (state.style.animation === 'punch' && isActive) {
+        var punch = 1 + 0.12 * Math.sin(wordInfo.wordLocal * Math.PI);
+        ctx.save();
+        ctx.translate(cursor + wordW / 2, baseline - fontSize * 0.34);
+        ctx.scale(punch, punch);
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = bgColor;
+        ctx.shadowBlur = 18;
+        ctx.textAlign = 'center';
+        ctx.fillText(word, 0, fontSize * 0.34);
+        ctx.restore();
+      } else if (state.style.animation === 'pop-word' && isActive) {
+        var pop = 1 + 0.10 * Math.sin(wordInfo.wordLocal * Math.PI);
+        ctx.save();
+        ctx.translate(cursor + wordW / 2, baseline - fontSize * 0.34);
+        ctx.scale(pop, pop);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText(word, 0, fontSize * 0.34);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = fgColor;
+        ctx.globalAlpha = state.style.animation === 'karaoke' ? 0.58 : 1;
+        ctx.fillText(word, cursor, baseline);
+        ctx.globalAlpha = 1;
+      }
+      if ((state.style.animation === 'karaoke' || state.style.animation === 'punch') && isActive) {
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = 0.22;
+        ctx.fillRect(cursor, baseline + 9, wordW, Math.max(6, Math.round(fontSize * 0.07)));
+        ctx.globalAlpha = 1;
+      }
+      cursor += wordW + spaceW;
+    });
+  }
+
+  function getCaptionAnimationTiming(caption) {
+    var current = els.video.currentTime || caption.start || 0;
+    var duration = Math.max(0.4, (caption.end || current + 1) - (caption.start || 0));
+    var elapsed = clamp(current - (caption.start || 0), 0, duration);
+    return {
+      duration: duration,
+      elapsed: elapsed,
+      captionProgress: clamp(elapsed / duration, 0, 1),
+      captionIntro: clamp(elapsed / Math.min(0.28, duration * 0.36), 0, 1),
+    };
+  }
+
+  function getCaptionScale(animation, timing) {
+    if (animation === 'pop-word') return 0.96 + 0.04 * easeOutBack(timing.captionIntro);
+    if (animation === 'punch') return 0.98 + 0.035 * Math.sin(timing.captionProgress * Math.PI * 3);
+    if (animation === 'snap-stack') return 0.98 + 0.02 * easeOutCubic(timing.captionIntro);
+    return 1;
+  }
+
+  function getActiveWordInfo(lines, caption, timing) {
+    var words = lines.join(' ').split(/\s+/).map(function (word) {
+      return word.replace(/[^\w']/g, '');
+    }).filter(Boolean);
+    if (!words.length) return { activeWords: [], reachedWords: [], wordLocal: 0 };
+    var rawIndex = Math.min(words.length - 1, Math.floor(timing.captionProgress * words.length));
+    var wordStart = rawIndex / words.length;
+    var wordEnd = (rawIndex + 1) / words.length;
+    var wordLocal = clamp((timing.captionProgress - wordStart) / Math.max(0.001, wordEnd - wordStart), 0, 1);
+    var activeWords = [words[rawIndex]];
+    if (state.style.animation === 'snap-stack') activeWords = words.slice(0, rawIndex + 1);
+    return {
+      activeWords: activeWords,
+      reachedWords: words.slice(0, rawIndex + 1),
+      wordLocal: wordLocal,
+    };
+  }
+
+  function easeOutCubic(value) {
+    var t = clamp(value, 0, 1) - 1;
+    return t * t * t + 1;
+  }
+
+  function easeOutBack(value) {
+    var t = clamp(value, 0, 1) - 1;
+    return 1 + t * t * ((1.70158 + 1) * t + 1.70158);
   }
 
   function getCaptionPillXOffset(index, total) {

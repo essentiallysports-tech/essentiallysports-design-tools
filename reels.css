@@ -809,8 +809,8 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 }
 
 .reels-style-card {
-  min-height: 68px;
-  padding: 8px;
+  min-height: 82px;
+  padding: 9px;
   border: 1px solid var(--reels-line);
   border-radius: var(--reels-radius-sm);
   background: #fff;
@@ -840,10 +840,6 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
   white-space: nowrap;
 }
 
-.reels-style-card span {
-  display: none;
-}
-
 .reels-style-card strong {
   display: block;
   font-size: 13px;
@@ -852,10 +848,13 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 }
 
 .reels-style-card span {
+  display: block;
+  margin-top: 4px;
   color: var(--reels-muted);
   font-family: var(--reels-font-heading);
   font-size: 11px;
   font-weight: 500;
+  line-height: 1.2;
 }
 
 .reels-field {
