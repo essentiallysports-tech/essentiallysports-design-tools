@@ -1011,6 +1011,11 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
   color: var(--reels-blue);
 }
 
+.reels-choice-option:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
 .reels-choice-option.is-selected {
   background: var(--reels-blue);
   color: #fff;
@@ -1428,14 +1433,14 @@ body.reels-page .site-footer {
   height: 100%;
   margin: 0;
   display: grid;
-  grid-template-columns: 76px minmax(288px, 340px) minmax(0, 1fr) minmax(306px, 360px);
+  grid-template-columns: minmax(288px, 340px) minmax(0, 1fr) minmax(306px, 360px);
   gap: 0;
   align-items: stretch;
   background: transparent;
 }
 
 body.reels-page:not(.reels-has-captions) .reels-shell {
-  grid-template-columns: 76px minmax(288px, 340px) minmax(0, 1fr) minmax(306px, 360px);
+  grid-template-columns: minmax(288px, 340px) minmax(0, 1fr) minmax(306px, 360px);
 }
 
 .reels-tool-rail,
@@ -1689,8 +1694,8 @@ body.reels-page.reels-has-clip:not(.reels-has-captions) .reels-transcript-list .
 }
 
 .reels-stage-top {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  justify-content: flex-end;
   align-items: center;
   gap: 12px;
 }
@@ -1754,15 +1759,13 @@ body.reels-page.reels-has-clip:not(.reels-has-captions) .reels-transcript-list .
 .reels-stage-frame {
   align-self: center;
   justify-self: center;
-  width: min(350px, 34vw, calc((100dvh - 400px) * .5625));
-  max-height: calc(100dvh - 400px);
+  width: min(350px, 34vw, calc((100dvh - 380px) * .5625));
+  max-height: calc(100dvh - 380px);
   margin: 0;
-  border: 8px solid #0b1118;
-  border-radius: 24px;
-  background: #05070d;
-  box-shadow:
-    0 36px 80px rgba(15, 23, 42, .20),
-    0 0 0 1px rgba(255,255,255,.75);
+  border: 0;
+  border-radius: 0;
+  background: #000;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .14);
 }
 
 body.reels-page.reels-has-captions .reels-stage-frame {
@@ -1774,7 +1777,7 @@ body.reels-page.reels-has-captions .reels-stage-frame {
   position: absolute;
   inset: 7.5% 6%;
   border: 1px dashed rgba(255,255,255,.34);
-  border-radius: 14px;
+  border-radius: 0;
   pointer-events: none;
 }
 
@@ -1799,13 +1802,21 @@ body.reels-page.reels-has-clip .reels-safe-frame span {
 }
 
 .reels-stage-empty {
-  background:
-    radial-gradient(circle at 50% 32%, rgba(10,125,250,.34), transparent 30%),
-    linear-gradient(180deg, rgba(10,125,250,.14), transparent 54%);
+  background: #000;
 }
 
 .reels-stage-empty strong {
   font-size: 34px;
+}
+
+.reels-bottom-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--reels-line);
+  border-radius: 12px;
+  background: rgba(255,255,255,.94);
+  box-shadow: 0 14px 34px rgba(15,23,42,.07);
 }
 
 .reels-stage-controls {
@@ -1813,11 +1824,6 @@ body.reels-page.reels-has-clip .reels-safe-frame span {
   grid-template-columns: 42px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  padding: 9px 10px;
-  border: 1px solid var(--reels-line);
-  border-radius: 12px;
-  background: rgba(255,255,255,.94);
-  box-shadow: 0 14px 34px rgba(15,23,42,.07);
 }
 
 .reels-stage-controls .reels-time-row {
@@ -1829,12 +1835,12 @@ body.reels-page.reels-has-clip .reels-safe-frame span {
 .reels-timeline-card {
   display: grid;
   gap: 8px;
-  padding: 12px;
-  border-radius: 12px;
-  border-color: #d5e6f7;
-  background: rgba(255,255,255,.96);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   overflow: hidden;
-  box-shadow: 0 14px 34px rgba(15,23,42,.07);
+  box-shadow: none;
 }
 
 body.reels-page:not(.reels-has-captions) .reels-timeline-card {
@@ -1921,6 +1927,13 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
   gap: 10px;
 }
 
+.reels-tool-dropdown {
+  padding: 12px;
+  border: 1px solid #d6e6f5;
+  border-radius: 10px;
+  background: #f7fbff;
+}
+
 .reels-field > span {
   margin: 0;
   color: var(--reels-muted);
@@ -1948,10 +1961,18 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 }
 
 .reels-style-card {
-  min-height: 72px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   border-color: #d6e6f5;
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: 0 10px 24px rgba(15,23,42,.04);
+}
+
+.reels-style-card strong {
+  margin: 0;
+  font-size: 14px;
 }
 
 .reels-style-card.is-selected {
@@ -1959,7 +1980,49 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 }
 
 .reels-palette-row {
-  padding-left: 96px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 26px;
+  padding-left: 0;
+}
+
+.reels-swatch {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+
+.reels-swatch:hover {
+  transform: scale(1.1);
+  box-shadow: 0 10px 24px rgba(15,23,42,.12);
+}
+
+.reels-swatch.is-active {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.reels-swatch.is-light,
+.reels-swatch.is-light.is-active {
+  border-color: #d8dee7;
+}
+
+.reels-swatch-inner {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+  border-radius: 4px;
 }
 
 .reels-intel-box textarea,
@@ -2012,7 +2075,7 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 @media (max-width: 1180px) {
   .reels-shell,
   body.reels-page:not(.reels-has-captions) .reels-shell {
-    grid-template-columns: 72px minmax(250px, 304px) minmax(0, 1fr);
+    grid-template-columns: minmax(250px, 304px) minmax(0, 1fr);
   }
 
   .reels-side-panel {
@@ -2021,7 +2084,7 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 
   body.reels-page.reels-tool-style .reels-side-panel {
     display: grid;
-    grid-column: 2 / -1;
+    grid-column: 1 / -1;
     border-top: 1px solid var(--reels-line);
   }
 }
@@ -2051,22 +2114,8 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
     border-right: 0;
   }
 
-  .reels-tool-rail {
-    order: 2;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    padding: 8px 12px;
-    border-top: 1px solid var(--reels-line);
-    border-right: 0;
-  }
-
-  .reels-tool-btn {
-    min-height: 54px;
-    font-size: 11px;
-  }
-
   .reels-task-panel {
-    order: 3;
+    order: 2;
     border-top: 1px solid var(--reels-line);
     border-right: 0;
     overflow: visible;
@@ -2077,7 +2126,7 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
   }
 
   .reels-side-panel {
-    order: 4;
+    order: 3;
     display: grid;
     border-top: 1px solid var(--reels-line);
     border-right: 0;

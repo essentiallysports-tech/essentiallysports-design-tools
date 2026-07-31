@@ -65,25 +65,6 @@
 
   <main>
     <section class="reels-shell" aria-label="Reels caption editor">
-      <aside class="reels-tool-rail" aria-label="Reels tools">
-        <button type="button" class="reels-tool-btn is-active" data-reels-tool="captions" aria-pressed="true">
-          <span>CC</span>
-          Captions
-        </button>
-        <button type="button" class="reels-tool-btn" data-reels-tool="style" aria-pressed="false">
-          <span>Aa</span>
-          Style
-        </button>
-        <button type="button" class="reels-tool-btn" data-reels-tool="lower-thirds" aria-pressed="false">
-          <span>LT</span>
-          Lower Thirds
-        </button>
-        <button type="button" class="reels-tool-btn" data-reels-tool="rewrite" aria-pressed="false">
-          <span>AI</span>
-          Rewrite
-        </button>
-      </aside>
-
       <aside class="reels-task-panel" aria-label="Active Reels tool">
         <section class="reels-task-section is-active" data-reels-panel="captions">
           <div class="reels-panel-head">
@@ -171,18 +152,6 @@
 
       <section class="reels-stage-workspace" aria-label="Reels preview and timeline">
         <div class="reels-stage-top">
-          <div class="reels-flowbar">
-            <div class="reels-workspace-meta">
-              <span>Reels Editor</span>
-              <strong>AI captions + ES style system</strong>
-            </div>
-            <div class="reels-pipeline" aria-label="Caption workflow">
-              <div class="reels-step is-active" data-step="upload"><span>1</span>Upload</div>
-              <div class="reels-step" data-step="transcribe"><span>2</span>Captions</div>
-              <div class="reels-step" data-step="review"><span>3</span>Review</div>
-              <div class="reels-step" data-step="style"><span>4</span>Style</div>
-            </div>
-          </div>
           <div class="reels-stage-actions">
             <button type="button" class="reels-btn is-secondary reels-stage-replace" id="reels-upload-btn">Upload Clip</button>
             <button type="button" class="reels-btn is-primary reels-top-export" id="reels-export-btn" disabled>Export</button>
@@ -202,26 +171,28 @@
         <input type="file" id="reels-file-input" accept="video/*" hidden>
         <video id="reels-video" hidden playsinline crossorigin="anonymous"></video>
 
-        <div class="reels-stage-controls">
-          <button type="button" class="reels-icon-btn" id="reels-play-btn" disabled aria-label="Play or pause">Play</button>
-          <input type="range" class="reels-scrub" id="reels-scrub" min="0" max="1000" value="0" disabled aria-label="Video timeline">
-          <div class="reels-time-row">
-            <span id="reels-current-time">0:00</span>
-            <span id="reels-total-time">0:00</span>
-          </div>
-        </div>
-        <p class="reels-status" id="reels-export-status"></p>
-
-        <div class="reels-timeline-card">
-          <div class="reels-timeline-head">
-            <div>
-              <strong>Caption Timeline</strong>
-              <span>Select a caption to adjust timing</span>
+        <div class="reels-bottom-panel">
+          <div class="reels-stage-controls">
+            <button type="button" class="reels-icon-btn" id="reels-play-btn" disabled aria-label="Play or pause">Play</button>
+            <input type="range" class="reels-scrub" id="reels-scrub" min="0" max="1000" value="0" disabled aria-label="Video timeline">
+            <div class="reels-time-row">
+              <span id="reels-current-time">0:00</span>
+              <span id="reels-total-time">0:00</span>
             </div>
-            <span id="reels-caption-count">0 segments</span>
           </div>
-          <div class="reels-timeline" id="reels-caption-timeline" aria-label="Caption timing segments"></div>
-          <div class="reels-playhead" id="reels-playhead" hidden></div>
+          <p class="reels-status" id="reels-export-status"></p>
+
+          <div class="reels-timeline-card">
+            <div class="reels-timeline-head">
+              <div>
+                <strong>Caption Timeline</strong>
+                <span>Select a caption to adjust timing</span>
+              </div>
+              <span id="reels-caption-count">0 segments</span>
+            </div>
+            <div class="reels-timeline" id="reels-caption-timeline" aria-label="Caption timing segments"></div>
+            <div class="reels-playhead" id="reels-playhead" hidden></div>
+          </div>
         </div>
       </section>
 
@@ -234,6 +205,15 @@
               </div>
               <span id="reels-style-name">Broadcast</span>
             </div>
+            <label class="reels-field reels-tool-dropdown">
+              <span>Tool</span>
+              <select id="reels-tool-select" data-reels-tool-select aria-label="Reels tool">
+                <option value="captions">Captions</option>
+                <option value="style">Style</option>
+                <option value="lower-thirds">Lower Thirds</option>
+                <option value="rewrite">Rewrite</option>
+              </select>
+            </label>
             <div class="reels-chip-row" aria-label="Reels editor helpers">
               <span>Safe area</span>
               <span>Word boxes</span>

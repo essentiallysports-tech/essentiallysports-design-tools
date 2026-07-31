@@ -115,7 +115,7 @@
       'addCaptionBtn', 'downloadSrtBtn', 'transcribeStatus', 'captionTimeline',
       'playhead', 'captionCount', 'transcriptList', 'transcriptSource', 'styleGrid',
       'styleName', 'captionPosition', 'sportSelect', 'teamSelect', 'teamLabel',
-      'paletteRow', 'intelPrompt', 'intelBtn', 'intelStatus', 'intelSource',
+      'paletteRow', 'toolSelect', 'intelPrompt', 'intelBtn', 'intelStatus', 'intelSource',
       'ltGrid', 'ltList', 'ltCount'
     ].forEach(function (key) {
       var id = 'reels-' + key.replace(/[A-Z]/g, function (m) { return '-' + m.toLowerCase(); });
@@ -139,6 +139,11 @@
         setActiveTool(button.dataset.reelsTool || 'captions');
       });
     });
+    document.querySelectorAll('[data-reels-tool-select]').forEach(function (select) {
+      select.addEventListener('change', function () {
+        setActiveTool(select.value || 'captions');
+      });
+    });
     setActiveTool('captions');
   }
 
@@ -152,6 +157,10 @@
       button.classList.toggle('is-active', isActive);
       button.setAttribute('aria-pressed', String(isActive));
     });
+    document.querySelectorAll('[data-reels-tool-select]').forEach(function (select) {
+      select.value = active;
+    });
+    syncCustomSelect('toolSelect');
     document.querySelectorAll('[data-reels-panel]').forEach(function (panel) {
       panel.classList.toggle('is-active', panel.dataset.reelsPanel === active);
     });
@@ -165,6 +174,12 @@
       button.classList.toggle('is-locked', locked);
       button.setAttribute('aria-disabled', String(locked));
     });
+    document.querySelectorAll('[data-reels-tool-select]').forEach(function (select) {
+      Array.from(select.options).forEach(function (option) {
+        option.disabled = !state.captions.length && option.value !== 'captions';
+      });
+    });
+    syncCustomSelect('toolSelect');
     if (!state.captions.length && !document.body.classList.contains('reels-tool-captions')) {
       setActiveTool('captions');
     }
@@ -175,6 +190,7 @@
       { key: 'captionPosition', label: 'Position' },
       { key: 'sportSelect', label: 'Sport' },
       { key: 'teamSelect', label: 'Team' },
+      { key: 'toolSelect', label: 'Tool' },
     ].forEach(function (config) {
       enhanceSelect(config.key, config.label);
     });
@@ -215,7 +231,7 @@
   }
 
   function syncAllCustomSelects() {
-    ['captionPosition', 'sportSelect', 'teamSelect'].forEach(syncCustomSelect);
+    ['captionPosition', 'sportSelect', 'teamSelect', 'toolSelect'].forEach(syncCustomSelect);
   }
 
   function syncCustomSelect(key) {
@@ -228,7 +244,7 @@
     valueNode.textContent = selected ? selected.textContent : 'Select';
     menu.innerHTML = Array.prototype.map.call(select.options, function (option) {
       var active = option.value === select.value;
-      return '<button type="button" class="reels-choice-option' + (active ? ' is-selected' : '') + '" role="option" aria-selected="' + (active ? 'true' : 'false') + '" data-value="' + escapeHtml(option.value) + '">' + escapeHtml(option.textContent) + '</button>';
+      return '<button type="button" class="reels-choice-option' + (active ? ' is-selected' : '') + '" role="option" aria-selected="' + (active ? 'true' : 'false') + '" data-value="' + escapeHtml(option.value) + '"' + (option.disabled ? ' disabled' : '') + '>' + escapeHtml(option.textContent) + '</button>';
     }).join('');
     menu.querySelectorAll('.reels-choice-option').forEach(function (button) {
       button.addEventListener('click', function () {
@@ -1044,13 +1060,8 @@
 
   function renderStyleGrid() {
     els.styleGrid.innerHTML = CAPTION_STYLES.map(function (style) {
-      var palette = getActivePalette();
-      var background = palette.background || style.background;
-      var foreground = getTextColorForPair(palette, getActiveBrandEntry()) || style.foreground;
-      var previewWords = getStylePreviewWords(style, background, foreground);
       return '<button type="button" class="reels-style-card' + (style.id === state.style.id ? ' is-selected' : '') + '" data-style="' + style.id + '">' +
-        '<div class="reels-style-preview reels-style-preview-' + escapeHtml(style.animation) + '">' + previewWords + '</div>' +
-        '<strong>' + escapeHtml(style.name) + '</strong><span>' + escapeHtml(style.note) + '</span></button>';
+        '<strong>' + escapeHtml(style.name) + '</strong></button>';
     }).join('');
     els.styleGrid.querySelectorAll('.reels-style-card').forEach(function (button) {
       button.addEventListener('click', function () {
@@ -1105,7 +1116,8 @@
       var active = index === state.pillPaletteIdx;
       var textColor = getTextColorForPair(pair, entry);
       var swatchBg = 'linear-gradient(135deg,' + escapeHtml(pair.background) + ' 0 62%,' + escapeHtml(textColor) + ' 62% 100%)';
-      return '<button type="button" class="reels-swatch' + (active ? ' is-active' : '') + '" data-index="' + index + '" title="Pill ' + escapeHtml(pair.background) + ' / Text ' + escapeHtml(textColor) + '" aria-label="Caption color ' + (index + 1) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' +
+      var lightClass = contrastRatio(pair.background, '#FFFFFF') < 1.2 ? ' is-light' : '';
+      return '<button type="button" class="reels-swatch' + (active ? ' is-active' : '') + lightClass + '" data-index="' + index + '" title="Pill ' + escapeHtml(pair.background) + ' / Text ' + escapeHtml(textColor) + '" aria-label="Caption color ' + (index + 1) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' +
         '<span class="reels-swatch-inner" style="background:' + swatchBg + ';color:' + escapeHtml(textColor) + '"></span></button>';
     }).join('');
     els.paletteRow.querySelectorAll('.reels-swatch').forEach(function (button) {
