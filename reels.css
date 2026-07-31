@@ -1913,7 +1913,7 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
   min-height: 26px;
   align-items: center;
   border: 1px solid #d3e9ff;
-  border-radius: 999px;
+  border-radius: 4px;
   background: #f7fbff;
   color: #51657c;
   padding: 0 9px;
