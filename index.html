@@ -4017,11 +4017,35 @@ body[data-current-page="faq"] .faq-cta-art img {
   .post-type-control.is-visible {
     display: block;
   }
-  .post-type-control .card {
+  .reels-format-control {
+    display: none;
+    margin-bottom: 12px;
+  }
+  .reels-format-control.is-visible {
+    display: block;
+  }
+  .post-type-control .card,
+  .reels-format-control .card {
     padding: 0;
     border: 0;
     background: transparent;
     box-shadow: none;
+  }
+  .reels-helper-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .reels-helper-chips span {
+    border: 1px solid rgba(10, 125, 250, .18);
+    border-radius: 999px;
+    background: rgba(10, 125, 250, .08);
+    color: #045CBF;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    padding: 8px 10px;
   }
   .quote-logo-control {
     display: none;
@@ -4861,14 +4885,14 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
 
   @media (min-width: 1024px) {
-    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) {
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="reels"], [data-current-page="youtube"], [data-current-page="newsletter"]) {
       overflow: hidden;
       background: #F6FAFF;
     }
 
-    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .breadcrumb,
-    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .page-header,
-    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .site-footer {
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="reels"], [data-current-page="youtube"], [data-current-page="newsletter"]) .breadcrumb,
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="reels"], [data-current-page="youtube"], [data-current-page="newsletter"]) .page-header,
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="reels"], [data-current-page="youtube"], [data-current-page="newsletter"]) .site-footer {
       display: none !important;
     }
 
@@ -4974,7 +4998,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .studio-size-badge,
-    html[data-studio-shell="on"] .studio-mode-badge {
+    html[data-studio-shell="on"] .studio-mode-badge,
+    html[data-studio-shell="on"] .studio-safe-badge {
       min-height: 34px;
       display: inline-flex;
       align-items: center;
@@ -4988,6 +5013,10 @@ body[data-current-page="faq"] .faq-cta-art img {
       font-size: 14px;
       font-weight: 500;
       white-space: nowrap;
+    }
+
+    html[data-studio-shell="on"] .studio-safe-badge[hidden] {
+      display: none;
     }
 
     html[data-studio-shell="on"] .studio-mode-badge {
@@ -5128,6 +5157,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .panel .swipe-button-control,
     html[data-studio-shell="on"] .panel .advanced-card,
     html[data-studio-shell="on"] .post-type-control,
+    html[data-studio-shell="on"] .reels-format-control,
     html[data-studio-shell="on"] .quote-logo-control,
     html[data-studio-shell="on"] .youtube-control-row,
     html[data-studio-shell="on"] .newsletter-control-row,
@@ -5147,7 +5177,8 @@ body[data-current-page="faq"] .faq-cta-art img {
       background: linear-gradient(180deg, #FFFFFF 0%, #F8FBFF 100%);
     }
 
-    html[data-studio-shell="on"] .post-type-control .card {
+    html[data-studio-shell="on"] .post-type-control .card,
+    html[data-studio-shell="on"] .reels-format-control .card {
       padding: 0;
       border: 0;
       border-radius: 0;
@@ -5658,6 +5689,143 @@ body[data-current-page="faq"] .faq-cta-art img {
       box-shadow: 0 18px 45px rgba(15, 23, 42, .12), 0 1px 3px rgba(15, 23, 42, .06);
     }
 
+    html[data-studio-shell="on"] body[data-current-page="reels"] .app[data-workspace] {
+      grid-template-columns: 64px minmax(0, 1fr) minmax(390px, 27vw);
+      background:
+        linear-gradient(rgba(10, 125, 250, .045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(10, 125, 250, .045) 1px, transparent 1px),
+        radial-gradient(circle at 50% 0%, rgba(10, 125, 250, .10), transparent 34%),
+        #F7FBFF;
+      background-size: 42px 42px, 42px 42px, 100% 100%, auto;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-topbar {
+      border-bottom-color: rgba(181, 216, 253, .72);
+      background: rgba(255, 255, 255, .88);
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-rail {
+      border-right-color: rgba(181, 216, 253, .72);
+      background: rgba(255, 255, 255, .86);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-rail-btn[aria-current="page"] {
+      border-color: rgba(10, 125, 250, .32);
+      background: rgba(10, 125, 250, .10);
+      color: #0A7DFA;
+      box-shadow: 0 10px 26px rgba(10, 125, 250, .14);
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .panel {
+      border-left-color: rgba(181, 216, 253, .72);
+      background: rgba(255, 255, 255, .76);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-control-dock,
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-primary-controls,
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-content-sections {
+      background: rgba(255, 255, 255, .62);
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-accordion-section,
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-inspector-tabs,
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-ai-search,
+    html[data-studio-shell="on"] body[data-current-page="reels"] .reels-format-control select,
+    html[data-studio-shell="on"] body[data-current-page="reels"] .panel select,
+    html[data-studio-shell="on"] body[data-current-page="reels"] .panel input,
+    html[data-studio-shell="on"] body[data-current-page="reels"] .panel textarea {
+      border-color: rgba(181, 216, 253, .78);
+      background-color: rgba(255, 255, 255, .84);
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-inspector-tab.is-active,
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-ai-search button {
+      background: #0A7DFA;
+      color: #FFFFFF;
+      box-shadow: 0 12px 28px rgba(10, 125, 250, .20);
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .canvas-card {
+      background:
+        linear-gradient(rgba(10, 125, 250, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(10, 125, 250, .035) 1px, transparent 1px),
+        rgba(255, 255, 255, .52);
+      background-size: 34px 34px, 34px 34px, auto;
+      padding-top: 30px;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .canvas-stage {
+      align-items: center;
+      min-height: calc(100% - 64px);
+      padding-bottom: 20px;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .canvas-stack {
+      --studio-canvas-base: clamp(280px, 32vh, 390px);
+      animation: reelsStudioIn .42s var(--motion-smooth) both;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .canvas-wrap {
+      position: relative;
+      border-color: rgba(10, 125, 250, .28);
+      border-radius: 14px;
+      background: #FFFFFF;
+      box-shadow:
+        0 34px 80px rgba(10, 31, 68, .18),
+        0 0 0 8px rgba(255, 255, 255, .72),
+        inset 0 0 0 1px rgba(255, 255, 255, .72);
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .canvas-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 7.5% 6%;
+      border: 1px dashed rgba(10, 125, 250, .42);
+      border-radius: 10px;
+      pointer-events: none;
+      opacity: .82;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .canvas-label {
+      color: #0A7DFA;
+      font-weight: 800;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .carousel-workspace-nav {
+      display: none;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-size-badge,
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-safe-badge {
+      border-color: rgba(10, 125, 250, .20);
+      background: rgba(10, 125, 250, .08);
+      color: #045CBF;
+      font-weight: 800;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-mode-badge {
+      display: inline-flex;
+      border-color: rgba(10, 125, 250, .20);
+      background: #0A7DFA;
+      color: #FFFFFF;
+      font-weight: 800;
+    }
+
+    @keyframes reelsStudioIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
     html[data-studio-shell="on"] canvas#preview {
       width: 100%;
     }
@@ -6089,6 +6257,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .studio-primary-controls > .post-type-control,
+    html[data-studio-shell="on"] .studio-primary-controls > .reels-format-control,
     html[data-studio-shell="on"] .studio-primary-controls > .youtube-control-row,
     html[data-studio-shell="on"] .studio-primary-controls > .newsletter-control-row {
       padding: 0;
@@ -6514,6 +6683,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="nav-dropdown-menu" role="menu" aria-label="Design workspaces">
         <a href="#frames" data-route="frames" role="menuitem">Home Page</a>
         <a href="#instagram" data-route="instagram" role="menuitem">Social Media</a>
+        <a href="#reels" data-route="reels" role="menuitem">Reels Studio</a>
         <a href="#youtube" data-route="youtube" role="menuitem">YouTube Assets</a>
         <a href="#newsletter" data-route="newsletter" role="menuitem">Newsletter Assets</a>
         <a href="reels.html" role="menuitem">Reels</a>
@@ -6562,6 +6732,19 @@ body[data-current-page="faq"] .faq-cta-art img {
         <p class="frame-card-subtitle">Create Eye-catching posts that stop the scroll.</p>
         <div class="frame-card-action">
           <a class="frame-cta" href="#instagram" data-route="instagram">Create Now <span class="ui-arrow-right" aria-hidden="true"></span></a>
+        </div>
+      </div>
+    </article>
+
+    <article class="frame-card" id="frame-reels">
+      <div class="frame-thumbnail">
+        <img src="workspace-card-social-media.webp" alt="Reels Studio">
+      </div>
+      <div class="frame-card-body">
+        <h2 class="frame-card-title">Reels Studio</h2>
+        <p class="frame-card-subtitle">Build vertical, short-form sports creative for Reels, Shorts, and Stories.</p>
+        <div class="frame-card-action">
+          <a class="frame-cta" href="#reels" data-route="reels">Create Now <span class="ui-arrow-right" aria-hidden="true"></span></a>
         </div>
       </div>
     </article>
@@ -6630,9 +6813,25 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
     </article>
 
+    <article class="home-feature-card is-reels-card is-reversed">
+      <div class="home-feature-copy">
+        <div class="home-feature-index">02 · Reels</div>
+        <h3>Reels Studio</h3>
+        <p>Shape 1080 × 1920 short-form cover frames with vertical-safe spacing, entity-led layouts, and quick AI-assisted asset discovery.</p>
+        <div class="home-feature-tags" aria-label="Reels capabilities">
+          <span>1080 × 1920</span>
+          <span>Safe Zones</span>
+          <span>Short-form</span>
+        </div>
+      </div>
+      <div class="home-feature-visual">
+        <img src="login-social-media.webp" alt="Reels Studio vertical creative preview" loading="lazy" decoding="async">
+      </div>
+    </article>
+
     <article class="home-feature-card is-reversed">
       <div class="home-feature-copy">
-        <div class="home-feature-index">02 · YouTube</div>
+        <div class="home-feature-index">03 · YouTube</div>
         <h3>YouTube Assets</h3>
         <p>Build high-impact thumbnail concepts with clear hierarchy, strong entities, and flexible background treatments designed to stop the scroll.</p>
         <div class="home-feature-tags" aria-label="YouTube capabilities">
@@ -6648,7 +6847,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     <article class="home-feature-card">
       <div class="home-feature-copy">
-        <div class="home-feature-index">03 · Newsletters</div>
+        <div class="home-feature-index">04 · Newsletters</div>
         <h3>Newsletter Assets</h3>
         <p>Prepare consistent visual assets for newsletter launches, daily editions, and special coverage with a workflow that keeps every handoff clear.</p>
         <div class="home-feature-tags" aria-label="Newsletter capabilities">
@@ -6672,6 +6871,14 @@ body[data-current-page="faq"] .faq-cta-art img {
 </div>
 <div class="page-header view-hidden" data-page="instagram">
   <div class="page-title">Social Media</div>
+</div>
+<div class="breadcrumb view-hidden" data-page="reels">
+  <a href="#frames" data-route="frames">Home Page</a>
+  <span class="breadcrumb-sep" aria-hidden="true"></span>
+  <span class="breadcrumb-current">Reels Studio</span>
+</div>
+<div class="page-header view-hidden" data-page="reels">
+  <div class="page-title">Reels Studio</div>
 </div>
 <div class="breadcrumb view-hidden" data-page="youtube">
   <a href="#frames" data-route="frames">Home Page</a>
@@ -6710,6 +6917,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   <div class="studio-topbar-right">
     <span class="studio-mode-badge" id="studio-mode-badge">Canvas</span>
     <span class="studio-size-badge" id="studio-canvas-size">1080 × 1350 px</span>
+    <span class="studio-safe-badge" id="studio-safe-badge" hidden>Safe Zones On</span>
     <button class="studio-export-btn export-button" id="studio-export-btn" type="button" data-studio-export aria-label="Export current design">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -6732,6 +6940,13 @@ body[data-current-page="faq"] .faq-cta-art img {
         <circle cx="16.75" cy="7.25" r="1.15" fill="currentColor"/>
       </svg>
       <span>Social</span>
+    </a>
+    <a class="studio-rail-btn" href="#reels" data-route="reels" aria-label="Open Reels Studio workspace">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="7" y="3" width="10" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="m11 9 4 3-4 3V9Z" fill="currentColor"/>
+      </svg>
+      <span>Reels</span>
     </a>
     <a class="studio-rail-btn" href="#youtube" data-route="youtube" aria-label="Open YouTube Assets workspace">
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -6816,6 +7031,24 @@ body[data-current-page="faq"] .faq-cta-art img {
           <option value="listicle-type-1">Listicle Type 1</option>
           <option value="listicle-type-2">Listicle Type 2</option>
         </select>
+      </div>
+    </div>
+
+    <div class="reels-format-control" id="reels-format-control" aria-label="Reels format">
+      <div class="card">
+        <div class="card-title">Reels Format</div>
+        <select id="reels-format-select" aria-label="Reels format">
+          <option value="cover-frame">Cover Frame</option>
+          <option value="quote-reel">Quote Reel</option>
+          <option value="stats-reel">Stats Reel</option>
+          <option value="breaking-news">Breaking News</option>
+        </select>
+        <div class="reels-helper-chips" aria-label="Reels workspace helpers">
+          <span>Safe area</span>
+          <span>Entity focus</span>
+          <span>Caption room</span>
+          <span>Export-ready</span>
+        </div>
       </div>
     </div>
 
@@ -7924,6 +8157,7 @@ function createDesignerState(defaultBottomAnchor) {
     pillPaletteIdx: 0,
     contentCategory: 'es-exclusives',
     youtubeQuote: false,
+    reelsFormat: 'cover-frame',
     swipeButton: 'none',
     postType: 'cover',
     statsDoublePrimarySport: 'NBA',
@@ -8012,6 +8246,19 @@ const WORKSPACES = {
     randomBottomMin: 72,
     randomBottomRange: 90,
   },
+  reels: {
+    width: 1080,
+    height: 1920,
+    exportType: 'image/jpeg',
+    exportExtension: 'jpeg',
+    exportLabel: 'Export',
+    filenamePrefix: 'es-reel',
+    maxLines: 2,
+    mistHeight: 540,
+    defaultBottomAnchor: 240,
+    randomBottomMin: 190,
+    randomBottomRange: 220,
+  },
 };
 let activeWorkspace = 'instagram';
 let activeImageTool = 'move';
@@ -8033,10 +8280,13 @@ const youtubeVariationStates = {
 let activeYoutubeVariation = 'variation-1';
 const newsletterState = createDesignerState(WORKSPACES.newsletter.defaultBottomAnchor);
 let activeNewsletterAsset = 'feature-image';
+const reelsState = createDesignerState(WORKSPACES.reels.defaultBottomAnchor);
+let activeReelsFormat = 'cover-frame';
 const workspaceStates = {
   instagram: instagramSlideStates[0],
   youtube: youtubeVariationStates[activeYoutubeVariation],
   newsletter: newsletterState,
+  reels: reelsState,
 };
 let state = workspaceStates.instagram;
 let pendingTextChange = null;
@@ -8059,6 +8309,7 @@ function saveCanvasNameStore() {
 
 function getCanvasNameKey() {
   if (activeWorkspace === 'instagram') return `instagram:${state.postType || 'cover'}:slide-${activeInstagramSlide + 1}`;
+  if (activeWorkspace === 'reels') return `reels:${state.reelsFormat || activeReelsFormat || 'cover-frame'}`;
   if (activeWorkspace === 'youtube') return `youtube:${activeYoutubeVariation}:${state.youtubeQuote ? 'quote' : 'standard'}`;
   if (activeWorkspace === 'newsletter') return `newsletter:${activeNewsletterAsset || 'feature-image'}`;
   return activeWorkspace;
@@ -8067,6 +8318,7 @@ function getCanvasNameKey() {
 function getCanvasNameFallback() {
   const workspaceLabel = {
     instagram: 'Social Media',
+    reels: 'Reels Studio',
     youtube: 'YouTube Assets',
     newsletter: 'Newsletter Assets',
   }[activeWorkspace] || 'ES Design';
@@ -8077,6 +8329,10 @@ function getCanvasNameFallback() {
   if (activeWorkspace === 'youtube') {
     const variationLabel = activeYoutubeVariation.replace('variation-', 'Variation ');
     return `${workspaceLabel} · ${state.youtubeQuote ? 'Quote' : variationLabel}`;
+  }
+  if (activeWorkspace === 'reels') {
+    const reelsFormat = state.reelsFormat || activeReelsFormat || 'cover-frame';
+    return `${workspaceLabel} · ${REELS_FORMAT_TYPES[reelsFormat]?.label || 'Vertical Creative'}`;
   }
   if (activeWorkspace === 'newsletter') {
     return `${workspaceLabel} · ${NEWSLETTER_ASSET_TYPES[activeNewsletterAsset]?.label || 'Feature Image'}`;
@@ -8122,6 +8378,7 @@ function getCanvasNameExportSlug() {
 
 function getTextContextKey() {
   if (activeWorkspace === 'instagram') return `instagram:${state.postType || 'cover'}`;
+  if (activeWorkspace === 'reels') return `reels:${state.reelsFormat || activeReelsFormat || 'cover-frame'}`;
   if (activeWorkspace === 'youtube') return `youtube:${state.youtubeQuote ? 'quote' : 'cover'}`;
   if (activeWorkspace === 'newsletter') return `newsletter:${activeNewsletterAsset || 'feature-image'}`;
   return activeWorkspace;
@@ -8132,6 +8389,9 @@ function contextUsesPillLayout(key = getTextContextKey()) {
     'instagram:cover',
     'instagram:quote',
     'instagram:long-quote',
+    'reels:cover-frame',
+    'reels:quote-reel',
+    'reels:breaking-news',
     'youtube:cover',
     'youtube:quote',
     'newsletter:feature-image',
@@ -9755,6 +10015,9 @@ function initUI() {
   document.getElementById('instagram-post-type-select')?.addEventListener('change', event => {
     switchInstagramPostType(event.target.value);
   });
+  document.getElementById('reels-format-select')?.addEventListener('change', event => {
+    switchReelsFormat(event.target.value);
+  });
   document.getElementById('quote-logo-placement').addEventListener('change', event => {
     state.quoteLogoPlacement = event.target.value;
     render();
@@ -9951,7 +10214,7 @@ function onTextChange() {
   const previousCount = state.lines.length;
   const workspace = getWorkspace();
   const postTypeConfig = getActivePostTypeConfig();
-  const maxLines = activeWorkspace === 'instagram'
+  const maxLines = activeWorkspace === 'instagram' || activeWorkspace === 'reels'
     ? (postTypeConfig.maxLines || workspace.maxLines)
     : workspace.maxLines;
   const enteredLines = ta.value.split('\n').map(l => l.trim()).filter(l => l !== '');
@@ -10313,7 +10576,11 @@ function extractEntityQueriesFromHeadline(value) {
 }
 
 function getActiveImageSearchQueries() {
-  const activeType = activeWorkspace === 'instagram' ? (state.postType || 'cover') : 'cover';
+  const activeType = activeWorkspace === 'instagram'
+    ? (state.postType || 'cover')
+    : activeWorkspace === 'reels'
+      ? getReelsFormatConfig().postType
+      : 'cover';
   const explicitQueries = [];
   const contextQueries = [];
   const headlineEntityQueries = [];
@@ -10336,7 +10603,7 @@ function getActiveImageSearchQueries() {
     }
   };
 
-  if (activeWorkspace === 'instagram' && activeType === 'stats-single-ent') {
+  if ((activeWorkspace === 'instagram' || activeWorkspace === 'reels') && activeType === 'stats-single-ent') {
     addPrimaryText(fieldValue('stats-headline'), true);
     addExplicit(state.team);
     addContext(state.sport);
@@ -11001,6 +11268,37 @@ const INSTAGRAM_POST_TYPES = {
   },
 };
 
+const REELS_FORMAT_TYPES = {
+  'cover-frame': {
+    label: 'Cover Frame',
+    postType: 'cover',
+    placeholder: 'Build the reel cover headline\nOne line per pill',
+    maxLines: 2,
+  },
+  'quote-reel': {
+    label: 'Quote Reel',
+    postType: 'quote',
+    placeholder: 'Paste the quote for the reel cover',
+    maxLines: QUOTE_POST_TEMPLATE.text.maxLines,
+  },
+  'stats-reel': {
+    label: 'Stats Reel',
+    postType: 'stats-single-ent',
+    placeholder: 'Record Alert!',
+    maxLines: 4,
+  },
+  'breaking-news': {
+    label: 'Breaking News',
+    postType: 'cover',
+    placeholder: 'Breaking news headline\nShort supporting line',
+    maxLines: 2,
+  },
+};
+
+function getReelsFormatConfig() {
+  return REELS_FORMAT_TYPES[state?.reelsFormat || activeReelsFormat || 'cover-frame'] || REELS_FORMAT_TYPES['cover-frame'];
+}
+
 function getPillFont(scale=1) {
   return `900 ${Math.round(PILL_FONT_SIZE * scale)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
 }
@@ -11034,6 +11332,17 @@ function applyNewsletterBrandPalette() {
 }
 
 function getActivePostTypeConfig() {
+  if (activeWorkspace === 'reels') {
+    const reelsFormat = getReelsFormatConfig();
+    const baseConfig = INSTAGRAM_POST_TYPES[reelsFormat.postType] || INSTAGRAM_POST_TYPES.cover;
+    return {
+      ...baseConfig,
+      label: reelsFormat.label,
+      placeholder: reelsFormat.placeholder,
+      supportsSwipe: false,
+      maxLines: reelsFormat.maxLines,
+    };
+  }
   if (activeWorkspace === 'youtube' && state.youtubeQuote) {
     return {
       label: 'Quote Thumbnail',
@@ -13447,7 +13756,7 @@ function setupCanvasDrag() {
       ((state.postType || 'cover') === 'listicle-type-1' || (state.postType || 'cover') === 'listicle-type-2')
     ) return;
     if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'long-quote') return;
-    if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'stats-single-ent') return;
+    if ((activeWorkspace === 'instagram' && (state.postType || 'cover') === 'stats-single-ent') || (activeWorkspace === 'reels' && getReelsFormatConfig().postType === 'stats-single-ent')) return;
     if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'stats-double-ent') return;
     if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'double-entity-quote') return;
     if (!state.lines.length || !state.lastTextBounds) return;
@@ -13870,6 +14179,7 @@ function downloadImage() {
   const mainTextSlug = customCanvasSlug || getMainTextSlug(activeWorkspace === 'newsletter' ? 'newsletter-graphic' : `${sportName}-${teamName}`);
   const slideSuffix = activeWorkspace === 'instagram' ? `-slide-${activeInstagramSlide + 1}` : '';
   const postTypeSuffix = activeWorkspace === 'instagram' && (state.postType || 'cover') !== 'cover' ? `-${state.postType}` : '';
+  const reelsFormatSuffix = activeWorkspace === 'reels' ? `-${state.reelsFormat || activeReelsFormat || 'cover-frame'}` : '';
   const variationSuffix = activeWorkspace === 'youtube' ? `-${activeYoutubeVariation.replace('variation-', 'v')}` : '';
   const youtubeQuoteSuffix = activeWorkspace === 'youtube' && state.youtubeQuote ? '-quote' : '';
   const newsletterAssetSuffix = activeWorkspace === 'newsletter'
@@ -13878,16 +14188,18 @@ function downloadImage() {
   const newsletterBrandSuffix = activeWorkspace === 'newsletter' ? `-${getNewsletterBrand(state.newsletterBrand).id}` : '';
   const filename = activeWorkspace === 'newsletter'
     ? `${workspace.filenamePrefix}-${mainTextSlug}${newsletterBrandSuffix}${newsletterAssetSuffix}.${workspace.exportExtension}`
-    : `${workspace.filenamePrefix}-${mainTextSlug}${slideSuffix}${postTypeSuffix}${variationSuffix}${youtubeQuoteSuffix}${newsletterAssetSuffix}.${workspace.exportExtension}`;
+    : `${workspace.filenamePrefix}-${mainTextSlug}${slideSuffix}${postTypeSuffix}${reelsFormatSuffix}${variationSuffix}${youtubeQuoteSuffix}${newsletterAssetSuffix}.${workspace.exportExtension}`;
   const exportQuality = workspace.exportType === 'image/jpeg' ? 0.94 : undefined;
 
   saveCanvasDownload(offscreen, filename, workspace.exportType, exportQuality, error => {
     finishExportFeedback();
     setStatus(error ? 'Export failed. Please try again.' : 'Downloaded ' + filename, error ? 'err' : 'ok');
     if (!error) {
-      const workspaceLabels = { instagram: 'Social Media', youtube: 'YouTube Assets', newsletter: 'Newsletter Assets' };
+      const workspaceLabels = { instagram: 'Social Media', reels: 'Reels Studio', youtube: 'YouTube Assets', newsletter: 'Newsletter Assets' };
       const workspaceVariant = activeWorkspace === 'instagram'
         ? (INSTAGRAM_POST_TYPES[state.postType || 'cover']?.label || state.postType || 'Cover Image')
+        : activeWorkspace === 'reels'
+          ? (REELS_FORMAT_TYPES[state.reelsFormat || activeReelsFormat || 'cover-frame']?.label || 'Cover Frame')
         : activeWorkspace === 'newsletter'
           ? (NEWSLETTER_ASSET_TYPES[activeNewsletterAsset]?.label || activeNewsletterAsset || 'Feature Image')
           : (state.youtubeQuote ? 'Quote Thumbnail' : activeYoutubeVariation.replace('variation-', 'Variation '));
@@ -14247,20 +14559,21 @@ function debounce(fn, delay) {
 // â”€â”€â”€ PAGE NAVIGATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function routeFromHash() {
   const route = window.location.hash.slice(1);
-  const allowedRoutes = ['frames', 'instagram', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'];
+  const allowedRoutes = ['frames', 'instagram', 'reels', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'];
   if (allowedRoutes.includes(route)) return route;
   try {
     const settings = JSON.parse(localStorage.getItem('es.ai.settings') || '{}');
     const preferredRoute = settings.rememberLastWorkspace
       ? localStorage.getItem('frameup.lastWorkspace.v1')
       : settings.startPage;
-    if (['frames', 'instagram', 'youtube', 'newsletter'].includes(preferredRoute)) return preferredRoute;
+    if (['frames', 'instagram', 'reels', 'youtube', 'newsletter'].includes(preferredRoute)) return preferredRoute;
   } catch (error) {}
   return 'frames';
 }
 
 function ensureWorkspaceDefaults() {
   if (typeof state.youtubeQuote !== 'boolean') state.youtubeQuote = false;
+  if (!REELS_FORMAT_TYPES[state.reelsFormat]) state.reelsFormat = 'cover-frame';
   if (!state.quoteLogoPlacement) state.quoteLogoPlacement = 'bottom';
   if (!state.longQuoteName) state.longQuoteName = LONG_QUOTE_TEMPLATE.byline.defaultText;
   if (!NEWSLETTER_BRANDS.some(brand => brand.id === state.newsletterBrand)) state.newsletterBrand = NEWSLETTER_BRANDS[0].id;
@@ -14308,6 +14621,8 @@ function syncPhotoControls() {
   const newsletterAsset = NEWSLETTER_ASSET_TYPES[activeNewsletterAsset] || NEWSLETTER_ASSET_TYPES['feature-image'];
   const imageRole = activeWorkspace === 'newsletter'
     ? newsletterAsset.photoRole
+    : activeWorkspace === 'reels'
+    ? 'vertical background image'
     : activeWorkspace === 'youtube' && state.youtubeQuote
     ? 'quote background image'
     : activeWorkspace === 'youtube' && (activeYoutubeVariation === 'variation-2' || activeYoutubeVariation === 'variation-3')
@@ -14397,6 +14712,8 @@ function syncSwipeButtonControls() {
 
 function syncPostTypeControls() {
   const control = document.getElementById('post-type-control');
+  const reelsFormatControl = document.getElementById('reels-format-control');
+  const reelsFormatSelect = document.getElementById('reels-format-select');
   const quoteLogoControl = document.getElementById('quote-logo-control');
   const quoteLogoSelect = document.getElementById('quote-logo-placement');
   const longQuoteNameField = document.getElementById('long-quote-name-field');
@@ -14414,11 +14731,23 @@ function syncPostTypeControls() {
   if (!control || !textarea) return;
 
   const isInstagram = activeWorkspace === 'instagram';
-  const activeType = isInstagram ? (state.postType || 'cover') : 'cover';
+  const isReels = activeWorkspace === 'reels';
+  const reelsFormat = state.reelsFormat || activeReelsFormat || 'cover-frame';
+  const reelsConfig = REELS_FORMAT_TYPES[reelsFormat] || REELS_FORMAT_TYPES['cover-frame'];
+  const activeType = isInstagram ? (state.postType || 'cover') : isReels ? reelsConfig.postType : 'cover';
   const config = getActivePostTypeConfig();
   document.body.dataset.instagramPostType = isInstagram ? activeType : 'cover';
+  document.body.dataset.reelsFormat = isReels ? reelsFormat : 'cover-frame';
   if (textCardLabel) {
-    textCardLabel.textContent = isInstagram && activeType === 'stats-double-ent'
+    textCardLabel.textContent = isReels && reelsFormat === 'stats-reel'
+      ? 'Stats Reel Details'
+      : isReels && reelsFormat === 'quote-reel'
+        ? 'Reel Quote'
+        : isReels && reelsFormat === 'breaking-news'
+          ? 'Breaking News Copy'
+          : isReels
+            ? 'Reel Cover Text'
+            : isInstagram && activeType === 'stats-double-ent'
       ? 'Stats Post Details'
       : isInstagram && (activeType === 'listicle-type-1' || activeType === 'listicle-type-2')
         ? 'Listicle Data'
@@ -14426,8 +14755,14 @@ function syncPostTypeControls() {
   }
 
   control.classList.toggle('is-visible', isInstagram);
+  if (reelsFormatControl) {
+    reelsFormatControl.classList.toggle('is-visible', isReels);
+  }
+  if (reelsFormatSelect) {
+    reelsFormatSelect.value = reelsFormat;
+  }
   if (quoteLogoControl) {
-    quoteLogoControl.classList.toggle('is-visible', isInstagram && (activeType === 'quote' || activeType === 'long-quote'));
+    quoteLogoControl.classList.toggle('is-visible', (isInstagram && (activeType === 'quote' || activeType === 'long-quote')) || (isReels && activeType === 'quote'));
   }
   if (quoteLogoSelect) {
     quoteLogoSelect.value = state.quoteLogoPlacement || 'bottom';
@@ -14439,13 +14774,13 @@ function syncPostTypeControls() {
     longQuoteNameInput.value = state.longQuoteName || LONG_QUOTE_TEMPLATE.byline.defaultText;
   }
   if (statsPostFields) {
-    const isStatsPost = isInstagram && (activeType === 'stats-single-ent' || activeType === 'stats-double-ent');
+    const isStatsPost = (isInstagram && (activeType === 'stats-single-ent' || activeType === 'stats-double-ent')) || (isReels && activeType === 'stats-single-ent');
     statsPostFields.classList.toggle('is-visible', isStatsPost);
-    if (isInstagram && activeType === 'stats-single-ent') syncStatsPostFieldsFromLines();
+    if ((isInstagram || isReels) && activeType === 'stats-single-ent') syncStatsPostFieldsFromLines();
     if (isInstagram && activeType === 'stats-double-ent') syncStatsDoubleEntFieldsFromLines();
   }
   if (statsSingleFields) {
-    statsSingleFields.classList.toggle('is-visible', isInstagram && activeType === 'stats-single-ent');
+    statsSingleFields.classList.toggle('is-visible', (isInstagram || isReels) && activeType === 'stats-single-ent');
   }
   if (statsDoubleFields) {
     statsDoubleFields.classList.toggle('is-visible', isInstagram && activeType === 'stats-double-ent');
@@ -14462,13 +14797,13 @@ function syncPostTypeControls() {
     listicleType2Fields.classList.toggle('is-visible', isInstagram && activeType === 'listicle-type-2');
     if (isInstagram && activeType === 'listicle-type-2') syncListicleType2Controls();
   }
-  const hidePrimaryTextarea = isInstagram && (
+  const hidePrimaryTextarea = (isInstagram && (
     activeType === 'stats-single-ent' ||
     activeType === 'stats-double-ent' ||
     activeType === 'double-entity-quote' ||
     activeType === 'listicle-type-1' ||
     activeType === 'listicle-type-2'
-  );
+  )) || (isReels && activeType === 'stats-single-ent');
   textarea.closest('.input-wrap')?.classList.toggle('view-hidden', hidePrimaryTextarea);
   if (!hidePrimaryTextarea) {
     textarea.value = state.lines.join('\n');
@@ -14487,7 +14822,7 @@ function syncPostTypeControls() {
         activeType === 'double-entity-quote' ||
         activeType === 'listicle-type-1' ||
         activeType === 'listicle-type-2'
-      )) || (activeWorkspace === 'youtube' && !!state.youtubeQuote)
+      )) || (activeWorkspace === 'youtube' && !!state.youtubeQuote) || (isReels && activeType === 'quote')
     );
     colorCard.classList.toggle('is-hidden-for-newsletter-brand', isNewsletterBrandAsset);
   }
@@ -14526,6 +14861,7 @@ function syncWorkspaceControls() {
   const categorySelect = document.getElementById('youtube-category-select');
   const newsletterAssetSelect = document.getElementById('newsletter-asset-select');
   const newsletterBrandSelect = document.getElementById('newsletter-brand-select');
+  const reelsFormatSelect = document.getElementById('reels-format-select');
   const entityCardTitle = document.getElementById('entity-card-title');
   const newsletterAsset = NEWSLETTER_ASSET_TYPES[activeNewsletterAsset] || NEWSLETTER_ASSET_TYPES['feature-image'];
 
@@ -14548,15 +14884,19 @@ function syncWorkspaceControls() {
   });
   if (newsletterAssetSelect) newsletterAssetSelect.value = activeNewsletterAsset;
   if (newsletterBrandSelect) newsletterBrandSelect.value = getNewsletterBrand(state.newsletterBrand).id;
+  if (reelsFormatSelect) reelsFormatSelect.value = state.reelsFormat || activeReelsFormat || 'cover-frame';
   document.body.dataset.youtubeVariation = activeYoutubeVariation;
   document.body.dataset.youtubeQuote = activeWorkspace === 'youtube' && state.youtubeQuote ? 'on' : 'off';
   document.body.dataset.newsletterAsset = activeNewsletterAsset;
   document.body.dataset.instagramPostType = activeWorkspace === 'instagram' ? (state.postType || 'cover') : 'cover';
+  document.body.dataset.reelsFormat = activeWorkspace === 'reels' ? (state.reelsFormat || activeReelsFormat || 'cover-frame') : 'cover-frame';
   const photoCardTitle = document.getElementById('photo-card-title');
   if (photoCardTitle) {
     photoCardTitle.textContent =
       activeWorkspace === 'newsletter'
         ? newsletterAsset.photoTitle
+        : activeWorkspace === 'reels'
+        ? 'Select Vertical Background Image'
         : activeWorkspace === 'youtube' && state.youtubeQuote
         ? 'Select Quote Background Image'
         : activeWorkspace === 'youtube' && (activeYoutubeVariation === 'variation-2' || activeYoutubeVariation === 'variation-3')
@@ -14617,6 +14957,34 @@ function switchInstagramPostType(postType) {
     }
   }
   renderPillPositionControls();
+  renderRestoredContextNow();
+}
+
+function switchReelsFormat(format) {
+  if (activeWorkspace !== 'reels' || !REELS_FORMAT_TYPES[format]) return;
+  flushPendingTextChange();
+  cancelPendingRender();
+  saveTextContext();
+  saveMediaContext();
+  const previousFormat = state.reelsFormat || activeReelsFormat || 'cover-frame';
+  activeReelsFormat = format;
+  state.reelsFormat = format;
+  state.isDraggingText = false;
+  if (previousFormat !== format) {
+    state.lastTextBounds = null;
+    state.textHitRects = [];
+  }
+  restoreTextContext();
+  restoreMediaContext();
+  const config = getReelsFormatConfig();
+  if (Number.isFinite(config.maxLines) && state.lines.length > config.maxLines) {
+    state.lines = state.lines.slice(0, config.maxLines);
+    saveTextContext();
+    const textarea = document.getElementById('pill-text');
+    if (textarea) textarea.value = state.lines.join('\n');
+  }
+  syncWorkspaceControls();
+  syncCanvasNameField();
   renderRestoredContextNow();
 }
 
@@ -14745,6 +15113,9 @@ function activateWorkspace(workspaceName) {
   activeWorkspace = workspaceName;
   if (workspaceName === 'instagram') {
     workspaceStates.instagram = instagramSlideStates[activeInstagramSlide];
+  } else if (workspaceName === 'reels') {
+    activeReelsFormat = reelsState.reelsFormat || activeReelsFormat;
+    workspaceStates.reels = reelsState;
   } else if (workspaceName === 'youtube') {
     workspaceStates.youtube = youtubeVariationStates[activeYoutubeVariation];
   } else if (workspaceName === 'newsletter') {
@@ -14777,8 +15148,8 @@ function activateWorkspace(workspaceName) {
 }
 
 function showPage(page) {
-  const activePage = ['frames', 'instagram', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'].includes(page) ? page : 'frames';
-  const isWorkspace = activePage === 'instagram' || activePage === 'youtube' || activePage === 'newsletter';
+  const activePage = ['frames', 'instagram', 'reels', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'].includes(page) ? page : 'frames';
+  const isWorkspace = activePage === 'instagram' || activePage === 'reels' || activePage === 'youtube' || activePage === 'newsletter';
   document.querySelectorAll('[data-page]').forEach(el => {
     el.classList.toggle('view-hidden', el.dataset.page !== activePage);
   });
@@ -14805,6 +15176,7 @@ function showPage(page) {
   });
   const pageTitles = {
     instagram: 'Social Media',
+    reels: 'Reels Studio',
     youtube: 'YouTube Assets',
     newsletter: 'Newsletter Assets',
     'logo-guidelines': 'Logo Guidelines',
@@ -14995,7 +15367,7 @@ function setupNavigation() {
   document.querySelectorAll('[data-route]').forEach(link => {
     link.addEventListener('click', evt => {
       evt.preventDefault();
-      const route = ['frames', 'instagram', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'].includes(link.dataset.route)
+      const route = ['frames', 'instagram', 'reels', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'].includes(link.dataset.route)
         ? link.dataset.route
         : 'frames';
       closeFrameMenu();
@@ -15132,12 +15504,13 @@ loadFont().then(() => render());
 
   const workspaceLabels = {
     instagram: 'Social Media',
+    reels: 'Reels Studio',
     youtube: 'YouTube Assets',
     newsletter: 'Newsletter Assets',
   };
 
   function isWorkspace(page) {
-    return page === 'instagram' || page === 'youtube' || page === 'newsletter';
+    return page === 'instagram' || page === 'reels' || page === 'youtube' || page === 'newsletter';
   }
 
   function currentWorkspace() {
@@ -15163,9 +15536,34 @@ loadFont().then(() => render());
     const titleNode = document.getElementById('studio-workspace-title');
     const sizeNode = document.getElementById('studio-canvas-size');
     const modeNode = document.getElementById('studio-mode-badge');
+    const safeNode = document.getElementById('studio-safe-badge');
     if (titleNode) titleNode.textContent = title;
     if (sizeNode && workspace) sizeNode.textContent = `${workspace.width} × ${workspace.height} px`;
-    if (modeNode) modeNode.textContent = workspaceName === 'instagram' ? 'Carousel Studio' : 'Canvas Studio';
+    if (modeNode) modeNode.textContent = workspaceName === 'reels' ? 'Vertical Studio' : workspaceName === 'instagram' ? 'Carousel Studio' : 'Canvas Studio';
+    if (safeNode) {
+      safeNode.hidden = workspaceName !== 'reels';
+      safeNode.textContent = 'Safe Zones On';
+    }
+    document.querySelectorAll('[data-studio-inspector-tab]').forEach(tab => {
+      const mode = tab.dataset.studioInspectorTab;
+      if (workspaceName === 'reels') {
+        tab.textContent = mode === 'image' ? 'Scene' : mode === 'content' ? 'Text' : 'Assets';
+      } else {
+        tab.textContent = mode === 'image' ? 'Image Controls' : mode === 'content' ? 'Content' : 'ES Image Pool';
+      }
+    });
+    const aiTitle = document.querySelector('.studio-ai-section .studio-dock-title');
+    const aiHelper = document.querySelector('.studio-ai-helper');
+    const aiInput = document.querySelector('[data-ai-image-query-input]');
+    if (workspaceName === 'reels') {
+      if (aiTitle) aiTitle.innerHTML = 'Describe the reel visual <span class="studio-dock-kicker">ES Storage</span>';
+      if (aiHelper) aiHelper.textContent = 'Describe the reel visual, athlete, team, or scene to pull from the existing ES Image Pool.';
+      if (aiInput) aiInput.placeholder = 'Describe the reel visual...';
+    } else {
+      if (aiTitle) aiTitle.innerHTML = 'ES Image Pool <span class="studio-dock-kicker">ES Storage</span>';
+      if (aiHelper) aiHelper.textContent = 'Search shows the latest ES images for the exact entity, team, topic, or keyword you type.';
+      if (aiInput) aiInput.placeholder = 'Search entity, team, topic...';
+    }
     if (typeof syncCanvasNameField === 'function') syncCanvasNameField();
     document.querySelectorAll('[data-studio-card]').forEach(card => {
       const isCurrent = card.dataset.studioCard === workspaceName;
@@ -15197,6 +15595,12 @@ loadFont().then(() => render());
       brand: 'Brand & Colors',
       images: 'Image Layers',
     },
+    reels: {
+      content: 'Scene Copy',
+      layout: 'Safe Area & Placement',
+      brand: 'Brand & Colors',
+      images: 'Vertical Assets',
+    },
     youtube: {
       content: 'Copy & Format',
       layout: 'Text Placement',
@@ -15220,6 +15624,7 @@ loadFont().then(() => render());
 
   const studioOpenSectionByWorkspace = {
     instagram: 'content',
+    reels: 'content',
     youtube: 'content',
     newsletter: 'content',
   };
@@ -15341,6 +15746,7 @@ loadFont().then(() => render());
       document.querySelector('.youtube-control-row'),
       document.querySelector('.newsletter-control-row'),
       document.getElementById('post-type-control'),
+      document.getElementById('reels-format-control'),
     ].filter(Boolean).forEach(node => primary.appendChild(node));
 
     const accordionList = contentRoot.querySelector('[data-studio-accordion-list]');
@@ -15460,6 +15866,7 @@ loadFont().then(() => render());
         'data-current-page',
         'data-newsletter-asset',
         'data-instagram-post-type',
+        'data-reels-format',
         'data-youtube-variation',
         'data-youtube-quote',
       ],
