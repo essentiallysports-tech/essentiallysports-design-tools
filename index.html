@@ -4031,22 +4031,6 @@ body[data-current-page="faq"] .faq-cta-art img {
     background: transparent;
     box-shadow: none;
   }
-  .reels-helper-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 12px;
-  }
-  .reels-helper-chips span {
-    border: 1px solid rgba(10, 125, 250, .18);
-    border-radius: 999px;
-    background: rgba(10, 125, 250, .08);
-    color: #045CBF;
-    font-size: 12px;
-    font-weight: 800;
-    line-height: 1;
-    padding: 8px 10px;
-  }
   .quote-logo-control {
     display: none;
     margin-bottom: 12px;
@@ -4885,14 +4869,14 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
 
   @media (min-width: 1024px) {
-    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="reels"], [data-current-page="youtube"], [data-current-page="newsletter"]) {
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) {
       overflow: hidden;
       background: #F6FAFF;
     }
 
-    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="reels"], [data-current-page="youtube"], [data-current-page="newsletter"]) .breadcrumb,
-    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="reels"], [data-current-page="youtube"], [data-current-page="newsletter"]) .page-header,
-    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="reels"], [data-current-page="youtube"], [data-current-page="newsletter"]) .site-footer {
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .breadcrumb,
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .page-header,
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .site-footer {
       display: none !important;
     }
 
@@ -5687,129 +5671,6 @@ body[data-current-page="faq"] .faq-cta-art img {
       border: 1px solid #D7DEE8;
       background: #FFFFFF;
       box-shadow: 0 18px 45px rgba(15, 23, 42, .12), 0 1px 3px rgba(15, 23, 42, .06);
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .app[data-workspace] {
-      grid-template-columns: minmax(0, 1fr) minmax(390px, 27vw);
-      background:
-        linear-gradient(rgba(10, 125, 250, .045) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(10, 125, 250, .045) 1px, transparent 1px),
-        radial-gradient(circle at 50% 0%, rgba(10, 125, 250, .10), transparent 34%),
-        #F7FBFF;
-      background-size: 42px 42px, 42px 42px, 100% 100%, auto;
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-topbar {
-      border-bottom-color: rgba(181, 216, 253, .72);
-      background: rgba(255, 255, 255, .88);
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .panel {
-      border-left-color: rgba(181, 216, 253, .72);
-      background: rgba(255, 255, 255, .76);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-control-dock,
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-primary-controls,
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-content-sections {
-      background: rgba(255, 255, 255, .62);
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-accordion-section,
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-inspector-tabs,
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-ai-search,
-    html[data-studio-shell="on"] body[data-current-page="reels"] .reels-format-control select,
-    html[data-studio-shell="on"] body[data-current-page="reels"] .panel select,
-    html[data-studio-shell="on"] body[data-current-page="reels"] .panel input,
-    html[data-studio-shell="on"] body[data-current-page="reels"] .panel textarea {
-      border-color: rgba(181, 216, 253, .78);
-      background-color: rgba(255, 255, 255, .84);
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-inspector-tab.is-active,
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-ai-search button {
-      background: #0A7DFA;
-      color: #FFFFFF;
-      box-shadow: 0 12px 28px rgba(10, 125, 250, .20);
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .canvas-card {
-      background:
-        linear-gradient(rgba(10, 125, 250, .035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(10, 125, 250, .035) 1px, transparent 1px),
-        rgba(255, 255, 255, .52);
-      background-size: 34px 34px, 34px 34px, auto;
-      padding-top: 30px;
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .canvas-stage {
-      align-items: center;
-      min-height: calc(100% - 64px);
-      padding-bottom: 20px;
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .canvas-stack {
-      --studio-canvas-base: clamp(280px, 32vh, 390px);
-      animation: reelsStudioIn .42s var(--motion-smooth) both;
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .canvas-wrap {
-      position: relative;
-      border-color: rgba(10, 125, 250, .28);
-      border-radius: 14px;
-      background: #FFFFFF;
-      box-shadow:
-        0 34px 80px rgba(10, 31, 68, .18),
-        0 0 0 8px rgba(255, 255, 255, .72),
-        inset 0 0 0 1px rgba(255, 255, 255, .72);
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .canvas-wrap::after {
-      content: "";
-      position: absolute;
-      inset: 7.5% 6%;
-      border: 1px dashed rgba(10, 125, 250, .42);
-      border-radius: 10px;
-      pointer-events: none;
-      opacity: .82;
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .canvas-label {
-      color: #0A7DFA;
-      font-weight: 800;
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .carousel-workspace-nav {
-      display: none;
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-size-badge,
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-safe-badge {
-      border-color: rgba(10, 125, 250, .20);
-      background: rgba(10, 125, 250, .08);
-      color: #045CBF;
-      font-weight: 800;
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-mode-badge {
-      display: inline-flex;
-      border-color: rgba(10, 125, 250, .20);
-      background: #0A7DFA;
-      color: #FFFFFF;
-      font-weight: 800;
-    }
-
-    @keyframes reelsStudioIn {
-      from {
-        opacity: 0;
-        transform: translateY(12px) scale(.985);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
     }
 
     html[data-studio-shell="on"] canvas#preview {
@@ -6669,7 +6530,6 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="nav-dropdown-menu" role="menu" aria-label="Design workspaces">
         <a href="#frames" data-route="frames" role="menuitem">Home Page</a>
         <a href="#instagram" data-route="instagram" role="menuitem">Social Media</a>
-        <a href="#reels" data-route="reels" role="menuitem">Reels Studio</a>
         <a href="#youtube" data-route="youtube" role="menuitem">YouTube Assets</a>
         <a href="#newsletter" data-route="newsletter" role="menuitem">Newsletter Assets</a>
         <a href="reels.html" role="menuitem">Reels</a>
@@ -6718,19 +6578,6 @@ body[data-current-page="faq"] .faq-cta-art img {
         <p class="frame-card-subtitle">Create Eye-catching posts that stop the scroll.</p>
         <div class="frame-card-action">
           <a class="frame-cta" href="#instagram" data-route="instagram">Create Now <span class="ui-arrow-right" aria-hidden="true"></span></a>
-        </div>
-      </div>
-    </article>
-
-    <article class="frame-card" id="frame-reels">
-      <div class="frame-thumbnail">
-        <img src="workspace-card-social-media.webp" alt="Reels Studio">
-      </div>
-      <div class="frame-card-body">
-        <h2 class="frame-card-title">Reels Studio</h2>
-        <p class="frame-card-subtitle">Build vertical, short-form sports creative for Reels, Shorts, and Stories.</p>
-        <div class="frame-card-action">
-          <a class="frame-cta" href="#reels" data-route="reels">Create Now <span class="ui-arrow-right" aria-hidden="true"></span></a>
         </div>
       </div>
     </article>
@@ -6802,16 +6649,16 @@ body[data-current-page="faq"] .faq-cta-art img {
     <article class="home-feature-card is-reels-card is-reversed">
       <div class="home-feature-copy">
         <div class="home-feature-index">02 · Reels</div>
-        <h3>Reels Studio</h3>
-        <p>Shape 1080 × 1920 short-form cover frames with vertical-safe spacing, entity-led layouts, and quick AI-assisted asset discovery.</p>
+        <h3>Reels Caption Editor</h3>
+        <p>Upload short-form clips, generate captions, refine transcript timing, style ES word boxes, and export brand-ready vertical video.</p>
         <div class="home-feature-tags" aria-label="Reels capabilities">
-          <span>1080 × 1920</span>
-          <span>Safe Zones</span>
-          <span>Short-form</span>
+          <span>Auto Captions</span>
+          <span>Timeline</span>
+          <span>Lower Thirds</span>
         </div>
       </div>
       <div class="home-feature-visual">
-        <img src="login-social-media.webp" alt="Reels Studio vertical creative preview" loading="lazy" decoding="async">
+        <img src="workspace-card-video-guide.webp" alt="Reels caption editor preview" loading="lazy" decoding="async">
       </div>
     </article>
 
@@ -6857,14 +6704,6 @@ body[data-current-page="faq"] .faq-cta-art img {
 </div>
 <div class="page-header view-hidden" data-page="instagram">
   <div class="page-title">Social Media</div>
-</div>
-<div class="breadcrumb view-hidden" data-page="reels">
-  <a href="#frames" data-route="frames">Home Page</a>
-  <span class="breadcrumb-sep" aria-hidden="true"></span>
-  <span class="breadcrumb-current">Reels Studio</span>
-</div>
-<div class="page-header view-hidden" data-page="reels">
-  <div class="page-title">Reels Studio</div>
 </div>
 <div class="breadcrumb view-hidden" data-page="youtube">
   <a href="#frames" data-route="frames">Home Page</a>
@@ -6990,12 +6829,6 @@ body[data-current-page="faq"] .faq-cta-art img {
           <option value="stats-reel">Stats Reel</option>
           <option value="breaking-news">Breaking News</option>
         </select>
-        <div class="reels-helper-chips" aria-label="Reels workspace helpers">
-          <span>Safe area</span>
-          <span>Entity focus</span>
-          <span>Caption room</span>
-          <span>Export-ready</span>
-        </div>
       </div>
     </div>
 
@@ -8265,7 +8098,7 @@ function getCanvasNameKey() {
 function getCanvasNameFallback() {
   const workspaceLabel = {
     instagram: 'Social Media',
-    reels: 'Reels Studio',
+    reels: 'Reels',
     youtube: 'YouTube Assets',
     newsletter: 'Newsletter Assets',
   }[activeWorkspace] || 'ES Design';
@@ -14142,7 +13975,7 @@ function downloadImage() {
     finishExportFeedback();
     setStatus(error ? 'Export failed. Please try again.' : 'Downloaded ' + filename, error ? 'err' : 'ok');
     if (!error) {
-      const workspaceLabels = { instagram: 'Social Media', reels: 'Reels Studio', youtube: 'YouTube Assets', newsletter: 'Newsletter Assets' };
+      const workspaceLabels = { instagram: 'Social Media', reels: 'Reels', youtube: 'YouTube Assets', newsletter: 'Newsletter Assets' };
       const workspaceVariant = activeWorkspace === 'instagram'
         ? (INSTAGRAM_POST_TYPES[state.postType || 'cover']?.label || state.postType || 'Cover Image')
         : activeWorkspace === 'reels'
@@ -14506,14 +14339,14 @@ function debounce(fn, delay) {
 // â”€â”€â”€ PAGE NAVIGATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function routeFromHash() {
   const route = window.location.hash.slice(1);
-  const allowedRoutes = ['frames', 'instagram', 'reels', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'];
+  const allowedRoutes = ['frames', 'instagram', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'];
   if (allowedRoutes.includes(route)) return route;
   try {
     const settings = JSON.parse(localStorage.getItem('es.ai.settings') || '{}');
     const preferredRoute = settings.rememberLastWorkspace
       ? localStorage.getItem('frameup.lastWorkspace.v1')
       : settings.startPage;
-    if (['frames', 'instagram', 'reels', 'youtube', 'newsletter'].includes(preferredRoute)) return preferredRoute;
+    if (['frames', 'instagram', 'youtube', 'newsletter'].includes(preferredRoute)) return preferredRoute;
   } catch (error) {}
   return 'frames';
 }
@@ -15095,8 +14928,8 @@ function activateWorkspace(workspaceName) {
 }
 
 function showPage(page) {
-  const activePage = ['frames', 'instagram', 'reels', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'].includes(page) ? page : 'frames';
-  const isWorkspace = activePage === 'instagram' || activePage === 'reels' || activePage === 'youtube' || activePage === 'newsletter';
+  const activePage = ['frames', 'instagram', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'].includes(page) ? page : 'frames';
+  const isWorkspace = activePage === 'instagram' || activePage === 'youtube' || activePage === 'newsletter';
   document.querySelectorAll('[data-page]').forEach(el => {
     el.classList.toggle('view-hidden', el.dataset.page !== activePage);
   });
@@ -15123,7 +14956,6 @@ function showPage(page) {
   });
   const pageTitles = {
     instagram: 'Social Media',
-    reels: 'Reels Studio',
     youtube: 'YouTube Assets',
     newsletter: 'Newsletter Assets',
     'logo-guidelines': 'Logo Guidelines',
@@ -15314,7 +15146,7 @@ function setupNavigation() {
   document.querySelectorAll('[data-route]').forEach(link => {
     link.addEventListener('click', evt => {
       evt.preventDefault();
-      const route = ['frames', 'instagram', 'reels', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'].includes(link.dataset.route)
+      const route = ['frames', 'instagram', 'youtube', 'newsletter', 'logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'].includes(link.dataset.route)
         ? link.dataset.route
         : 'frames';
       closeFrameMenu();
@@ -15451,13 +15283,12 @@ loadFont().then(() => render());
 
   const workspaceLabels = {
     instagram: 'Social Media',
-    reels: 'Reels Studio',
     youtube: 'YouTube Assets',
     newsletter: 'Newsletter Assets',
   };
 
   function isWorkspace(page) {
-    return page === 'instagram' || page === 'reels' || page === 'youtube' || page === 'newsletter';
+    return page === 'instagram' || page === 'youtube' || page === 'newsletter';
   }
 
   function currentWorkspace() {
@@ -15486,31 +15317,21 @@ loadFont().then(() => render());
     const safeNode = document.getElementById('studio-safe-badge');
     if (titleNode) titleNode.textContent = title;
     if (sizeNode && workspace) sizeNode.textContent = `${workspace.width} × ${workspace.height} px`;
-    if (modeNode) modeNode.textContent = workspaceName === 'reels' ? 'Vertical Studio' : workspaceName === 'instagram' ? 'Carousel Studio' : 'Canvas Studio';
+    if (modeNode) modeNode.textContent = workspaceName === 'instagram' ? 'Carousel Studio' : 'Canvas Studio';
     if (safeNode) {
-      safeNode.hidden = workspaceName !== 'reels';
+      safeNode.hidden = true;
       safeNode.textContent = 'Safe Zones On';
     }
     document.querySelectorAll('[data-studio-inspector-tab]').forEach(tab => {
       const mode = tab.dataset.studioInspectorTab;
-      if (workspaceName === 'reels') {
-        tab.textContent = mode === 'image' ? 'Scene' : mode === 'content' ? 'Text' : 'Assets';
-      } else {
-        tab.textContent = mode === 'image' ? 'Image Controls' : mode === 'content' ? 'Content' : 'ES Image Pool';
-      }
+      tab.textContent = mode === 'image' ? 'Image Controls' : mode === 'content' ? 'Content' : 'ES Image Pool';
     });
     const aiTitle = document.querySelector('.studio-ai-section .studio-dock-title');
     const aiHelper = document.querySelector('.studio-ai-helper');
     const aiInput = document.querySelector('[data-ai-image-query-input]');
-    if (workspaceName === 'reels') {
-      if (aiTitle) aiTitle.innerHTML = 'Describe the reel visual <span class="studio-dock-kicker">ES Storage</span>';
-      if (aiHelper) aiHelper.textContent = 'Describe the reel visual, athlete, team, or scene to pull from the existing ES Image Pool.';
-      if (aiInput) aiInput.placeholder = 'Describe the reel visual...';
-    } else {
-      if (aiTitle) aiTitle.innerHTML = 'ES Image Pool <span class="studio-dock-kicker">ES Storage</span>';
-      if (aiHelper) aiHelper.textContent = 'Search shows the latest ES images for the exact entity, team, topic, or keyword you type.';
-      if (aiInput) aiInput.placeholder = 'Search entity, team, topic...';
-    }
+    if (aiTitle) aiTitle.innerHTML = 'ES Image Pool <span class="studio-dock-kicker">ES Storage</span>';
+    if (aiHelper) aiHelper.textContent = 'Search shows the latest ES images for the exact entity, team, topic, or keyword you type.';
+    if (aiInput) aiInput.placeholder = 'Search entity, team, topic...';
     if (typeof syncCanvasNameField === 'function') syncCanvasNameField();
     document.querySelectorAll('[data-studio-card]').forEach(card => {
       const isCurrent = card.dataset.studioCard === workspaceName;
@@ -15542,12 +15363,6 @@ loadFont().then(() => render());
       brand: 'Brand & Colors',
       images: 'Image Layers',
     },
-    reels: {
-      content: 'Scene Copy',
-      layout: 'Safe Area & Placement',
-      brand: 'Brand & Colors',
-      images: 'Vertical Assets',
-    },
     youtube: {
       content: 'Copy & Format',
       layout: 'Text Placement',
@@ -15571,7 +15386,6 @@ loadFont().then(() => render());
 
   const studioOpenSectionByWorkspace = {
     instagram: 'content',
-    reels: 'content',
     youtube: 'content',
     newsletter: 'content',
   };

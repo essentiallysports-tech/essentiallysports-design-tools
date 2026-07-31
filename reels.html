@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Reels Studio | FrameUp</title>
+  <title>Reels | FrameUp</title>
   <meta name="description" content="Speech-recognition captions, transcript editing, brand-safe styling, and lower thirds for ES short-form video.">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20260714-deleteaccount1"></script>
@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="theme.css?v=20260714-footer1">
   <link rel="stylesheet" href="site-chrome.css?v=20260723-profile3">
   <link rel="stylesheet" href="cta-hover.css?v=20260723-howrefine1">
-  <link rel="stylesheet" href="reels.css?v=20260729-reels-wordbox2">
+  <link rel="stylesheet" href="reels.css?v=20260731-reels-ui1">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20260723-profile2"></script>
@@ -89,9 +89,34 @@
           <div class="reels-panel-head">
             <div>
               <h2>Captions</h2>
-              <p>Generate captions, then clean the transcript.</p>
+              <p>Upload, generate, review, and tune short-form captions.</p>
             </div>
             <span id="reels-transcript-source">No speech recognition yet</span>
+          </div>
+          <div class="reels-setup-card" aria-label="Caption setup">
+            <div class="reels-setup-head">
+              <span>AI Caption Setup</span>
+              <strong>1080 × 1920</strong>
+            </div>
+            <div class="reels-setup-grid">
+              <label class="reels-mini-field">
+                <span>Language</span>
+                <select aria-label="Caption language">
+                  <option>English</option>
+                  <option>Hinglish</option>
+                  <option>Hindi</option>
+                  <option>Spanish</option>
+                </select>
+              </label>
+              <label class="reels-mini-field">
+                <span>Caption pace</span>
+                <select aria-label="Caption pace">
+                  <option>Short punchy lines</option>
+                  <option>Balanced phrases</option>
+                  <option>Long readable lines</option>
+                </select>
+              </label>
+            </div>
           </div>
           <div class="reels-command-bar">
             <button type="button" class="reels-btn is-primary" id="reels-transcribe-btn" disabled>Auto-caption</button>
@@ -111,7 +136,10 @@
               <p>Use the inspector to set position, sport, team, and color.</p>
             </div>
           </div>
-          <div class="reels-style-grid" id="reels-style-grid"></div>
+          <div class="reels-helper-card">
+            <strong>Style Inspector</strong>
+            <span>Caption presets, safe-zone placement, sport colors, and team palette controls stay pinned on the right.</span>
+          </div>
         </section>
 
         <section class="reels-task-section" data-reels-panel="lower-thirds">
@@ -144,6 +172,10 @@
       <section class="reels-stage-workspace" aria-label="Reels preview and timeline">
         <div class="reels-stage-top">
           <div class="reels-flowbar">
+            <div class="reels-workspace-meta">
+              <span>Reels Editor</span>
+              <strong>AI captions + ES style system</strong>
+            </div>
             <div class="reels-pipeline" aria-label="Caption workflow">
               <div class="reels-step is-active" data-step="upload"><span>1</span>Upload</div>
               <div class="reels-step" data-step="transcribe"><span>2</span>Captions</div>
@@ -159,9 +191,12 @@
 
         <div class="reels-stage-frame">
           <canvas id="reels-canvas"></canvas>
+          <div class="reels-safe-frame" aria-hidden="true">
+            <span>Caption safe zone</span>
+          </div>
           <div class="reels-stage-empty" id="reels-stage-empty">
-            <strong>Drop in a vertical clip</strong>
-            <span>MP4, MOV, or WebM works best.</span>
+            <strong>Upload a reel</strong>
+            <span>Generate captions, style word boxes, and export.</span>
           </div>
         </div>
         <input type="file" id="reels-file-input" accept="video/*" hidden>
@@ -198,6 +233,12 @@
                 <p>Choose placement and colors.</p>
               </div>
               <span id="reels-style-name">Broadcast</span>
+            </div>
+            <div class="reels-chip-row" aria-label="Reels editor helpers">
+              <span>Safe area</span>
+              <span>Word boxes</span>
+              <span>Lower thirds</span>
+              <span>SRT export</span>
             </div>
             <div class="reels-style-grid" id="reels-style-grid"></div>
             <label class="reels-field">
