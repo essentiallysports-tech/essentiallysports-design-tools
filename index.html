@@ -4881,19 +4881,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .studio-topbar {
-      position: sticky;
-      top: 69px;
-      z-index: 80;
-      height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      padding: 0 24px;
-      border-bottom: 1px solid #E4EAF1;
-      background: rgba(255, 255, 255, .96);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      display: none !important;
     }
 
     html[data-studio-shell="on"] .studio-topbar-left,
@@ -5035,7 +5023,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     html[data-studio-shell="on"] .app[data-workspace] {
       width: 100%;
-      height: calc(100dvh - 129px);
+      height: calc(100dvh - 69px);
       min-height: 620px;
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(370px, 26vw);
@@ -6730,12 +6718,6 @@ body[data-current-page="faq"] .faq-cta-art img {
 
 <div class="studio-topbar view-hidden" data-workspace aria-label="Studio workspace toolbar">
   <div class="studio-topbar-left">
-    <a class="studio-home-btn" href="#frames" data-route="frames" aria-label="Back to Design Tools">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 11.5 12 5l8 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M6.5 10.5V20h11v-9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-      </svg>
-    </a>
     <span class="studio-title" id="studio-workspace-title">Social Media</span>
     <input class="studio-name-field" id="studio-canvas-name" type="text" autocomplete="off" spellcheck="false" aria-label="Canvas export name" placeholder="Untitled canvas">
   </div>

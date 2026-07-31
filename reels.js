@@ -70,6 +70,9 @@
     state.ctx = els.canvas.getContext('2d');
 
     els.uploadBtn.addEventListener('click', function () { els.fileInput.click(); });
+    document.querySelectorAll('[data-reels-upload-trigger]').forEach(function (button) {
+      button.addEventListener('click', function () { els.fileInput.click(); });
+    });
     els.fileInput.addEventListener('change', onFileChosen);
     els.video.addEventListener('loadedmetadata', onVideoMetadata);
     els.video.addEventListener('seeked', onFirstFrameReady);
@@ -87,6 +90,13 @@
       state.captionPosition = els.captionPosition.value;
       setStep('style');
       syncCustomSelect('captionPosition');
+      drawFrame();
+    });
+    els.styleSelect.addEventListener('change', function () {
+      state.style = CAPTION_STYLES.find(function (style) { return style.id === els.styleSelect.value; }) || state.style;
+      els.styleName.textContent = state.style.name;
+      setStep('style');
+      syncCustomSelect('styleSelect');
       drawFrame();
     });
     els.sportSelect.addEventListener('change', function () { onSportChange(els.sportSelect.value); });
@@ -113,8 +123,8 @@
       'canvas', 'stageEmpty', 'fileInput', 'video', 'uploadBtn', 'playBtn', 'scrub',
       'currentTime', 'totalTime', 'exportBtn', 'exportStatus', 'transcribeBtn',
       'addCaptionBtn', 'downloadSrtBtn', 'transcribeStatus', 'captionTimeline',
-      'playhead', 'captionCount', 'transcriptList', 'transcriptSource', 'styleGrid',
-      'styleName', 'captionPosition', 'sportSelect', 'teamSelect', 'teamLabel',
+      'playhead', 'captionCount', 'transcriptList', 'transcriptSource',
+      'styleName', 'styleSelect', 'captionPosition', 'sportSelect', 'teamSelect', 'teamLabel',
       'paletteRow', 'toolSelect', 'intelPrompt', 'intelBtn', 'intelStatus', 'intelSource',
       'ltGrid', 'ltList', 'ltCount'
     ].forEach(function (key) {
@@ -191,6 +201,7 @@
       { key: 'sportSelect', label: 'Sport' },
       { key: 'teamSelect', label: 'Team' },
       { key: 'toolSelect', label: 'Tool' },
+      { key: 'styleSelect', label: 'Style' },
     ].forEach(function (config) {
       enhanceSelect(config.key, config.label);
     });
@@ -231,7 +242,7 @@
   }
 
   function syncAllCustomSelects() {
-    ['captionPosition', 'sportSelect', 'teamSelect', 'toolSelect'].forEach(syncCustomSelect);
+    ['captionPosition', 'sportSelect', 'teamSelect', 'toolSelect', 'styleSelect'].forEach(syncCustomSelect);
   }
 
   function syncCustomSelect(key) {
@@ -923,7 +934,8 @@
     els.transcriptSource.textContent = state.captions.length ? 'Editable draft' : '';
     els.transcriptList.classList.toggle('has-captions', !!state.captions.length);
     if (!state.captions.length) {
-      els.transcriptList.innerHTML = '<p class="reels-empty-note">Generated captions will appear here as editable transcript rows with start/end timings.</p>';
+      els.transcriptList.innerHTML = '<button type="button" class="reels-btn is-secondary reels-empty-upload" data-reels-upload-trigger>Upload Clip</button>';
+      els.transcriptList.querySelector('[data-reels-upload-trigger]')?.addEventListener('click', function () { els.fileInput.click(); });
       els.captionCount.textContent = '0 segments';
       return;
     }
@@ -1059,19 +1071,11 @@
   }
 
   function renderStyleGrid() {
-    els.styleGrid.innerHTML = CAPTION_STYLES.map(function (style) {
-      return '<button type="button" class="reels-style-card' + (style.id === state.style.id ? ' is-selected' : '') + '" data-style="' + style.id + '">' +
-        '<strong>' + escapeHtml(style.name) + '</strong></button>';
+    els.styleSelect.innerHTML = CAPTION_STYLES.map(function (style) {
+      return '<option value="' + escapeHtml(style.id) + '">' + escapeHtml(style.name) + '</option>';
     }).join('');
-    els.styleGrid.querySelectorAll('.reels-style-card').forEach(function (button) {
-      button.addEventListener('click', function () {
-        state.style = CAPTION_STYLES.find(function (style) { return style.id === button.dataset.style; }) || state.style;
-        els.styleName.textContent = state.style.name;
-        setStep('style');
-        renderStyleGrid();
-        drawFrame();
-      });
-    });
+    els.styleSelect.value = state.style.id;
+    syncCustomSelect('styleSelect');
   }
 
   function initBrandControls() {
@@ -1112,24 +1116,15 @@
   function renderPaletteRow() {
     var entry = getActiveBrandEntry();
     var palette = getPaletteForWorkspace(entry);
-    els.paletteRow.innerHTML = palette.map(function (pair, index) {
-      var active = index === state.pillPaletteIdx;
-      var textColor = getTextColorForPair(pair, entry);
-      var swatchBg = 'linear-gradient(135deg,' + escapeHtml(pair.background) + ' 0 62%,' + escapeHtml(textColor) + ' 62% 100%)';
-      var lightClass = contrastRatio(pair.background, '#FFFFFF') < 1.2 ? ' is-light' : '';
-      return '<button type="button" class="reels-swatch' + (active ? ' is-active' : '') + lightClass + '" data-index="' + index + '" title="Pill ' + escapeHtml(pair.background) + ' / Text ' + escapeHtml(textColor) + '" aria-label="Caption color ' + (index + 1) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' +
-        '<span class="reels-swatch-inner" style="background:' + swatchBg + ';color:' + escapeHtml(textColor) + '"></span></button>';
-    }).join('');
-    els.paletteRow.querySelectorAll('.reels-swatch').forEach(function (button) {
-      button.addEventListener('click', function () {
-        var index = Number(button.dataset.index) || 0;
-        state.pillPaletteIdx = index;
-        state.pillPalette = palette[index] || palette[0] || state.pillPalette;
-        renderPaletteRow();
-        renderStyleGrid();
-        drawFrame();
-      });
-    });
+    var pair = state.pillPalette || palette[state.pillPaletteIdx] || palette[0] || entry?.primary || { background: ES_BLUE, foreground: '#ffffff', mist: '#ffffff' };
+    var textColor = getTextColorForPair(pair, entry);
+    var pillLightClass = contrastRatio(pair.background, '#FFFFFF') < 1.2 ? ' is-light' : '';
+    var textLightClass = contrastRatio(textColor, '#FFFFFF') < 1.2 ? ' is-light' : '';
+    els.paletteRow.innerHTML =
+      '<span class="reels-swatch' + pillLightClass + '" title="Pill ' + escapeHtml(pair.background) + '" aria-label="Pill color">' +
+        '<span class="reels-swatch-inner" style="background:' + escapeHtml(pair.background) + '"></span></span>' +
+      '<span class="reels-swatch' + textLightClass + '" title="Text ' + escapeHtml(textColor) + '" aria-label="Text color">' +
+        '<span class="reels-swatch-inner" style="background:' + escapeHtml(textColor) + '"></span></span>';
   }
 
   async function applyIntelligence() {
