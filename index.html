@@ -5054,7 +5054,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       height: calc(100dvh - 129px);
       min-height: 620px;
       display: grid;
-      grid-template-columns: 64px minmax(0, 1fr) minmax(370px, 26vw);
+      grid-template-columns: minmax(0, 1fr) minmax(370px, 26vw);
       gap: 0;
       margin: 0;
       padding: 0;
@@ -5690,7 +5690,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] body[data-current-page="reels"] .app[data-workspace] {
-      grid-template-columns: 64px minmax(0, 1fr) minmax(390px, 27vw);
+      grid-template-columns: minmax(0, 1fr) minmax(390px, 27vw);
       background:
         linear-gradient(rgba(10, 125, 250, .045) 1px, transparent 1px),
         linear-gradient(90deg, rgba(10, 125, 250, .045) 1px, transparent 1px),
@@ -5702,20 +5702,6 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] body[data-current-page="reels"] .studio-topbar {
       border-bottom-color: rgba(181, 216, 253, .72);
       background: rgba(255, 255, 255, .88);
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-rail {
-      border-right-color: rgba(181, 216, 253, .72);
-      background: rgba(255, 255, 255, .86);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-    }
-
-    html[data-studio-shell="on"] body[data-current-page="reels"] .studio-rail-btn[aria-current="page"] {
-      border-color: rgba(10, 125, 250, .32);
-      background: rgba(10, 125, 250, .10);
-      color: #0A7DFA;
-      box-shadow: 0 10px 26px rgba(10, 125, 250, .14);
     }
 
     html[data-studio-shell="on"] body[data-current-page="reels"] .panel {
@@ -6931,45 +6917,6 @@ body[data-current-page="faq"] .faq-cta-art img {
 
 <!-- MAIN APP -->
 <div class="app view-hidden" data-workspace>
-
-  <aside class="studio-rail" aria-label="Studio workspaces">
-    <a class="studio-rail-btn" href="#instagram" data-route="instagram" aria-label="Open Social Media workspace">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="4.5" y="4.5" width="15" height="15" rx="4" fill="none" stroke="currentColor" stroke-width="2"/>
-        <circle cx="12" cy="12" r="3.25" fill="none" stroke="currentColor" stroke-width="2"/>
-        <circle cx="16.75" cy="7.25" r="1.15" fill="currentColor"/>
-      </svg>
-      <span>Social</span>
-    </a>
-    <a class="studio-rail-btn" href="#reels" data-route="reels" aria-label="Open Reels Studio workspace">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="7" y="3" width="10" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
-        <path d="m11 9 4 3-4 3V9Z" fill="currentColor"/>
-      </svg>
-      <span>Reels</span>
-    </a>
-    <a class="studio-rail-btn" href="#youtube" data-route="youtube" aria-label="Open YouTube Assets workspace">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="3.5" y="7" width="17" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
-        <path d="m11 10 4 2-4 2v-4Z" fill="currentColor"/>
-      </svg>
-      <span>YouTube</span>
-    </a>
-    <a class="studio-rail-btn" href="#newsletter" data-route="newsletter" aria-label="Open Newsletter Assets workspace">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M5 5h14v14H5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-        <path d="M8 9h8M8 12h8M8 15h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <span>News</span>
-    </a>
-    <span class="studio-rail-divider" aria-hidden="true"></span>
-    <a class="studio-rail-btn" href="design-request.html" aria-label="Open Design Request">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-      </svg>
-      <span>Request</span>
-    </a>
-  </aside>
 
   <!-- LEFT PANEL -->
   <div class="panel">
