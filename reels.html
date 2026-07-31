@@ -68,31 +68,6 @@
       <aside class="reels-task-panel" aria-label="Active Reels tool">
         <section class="reels-task-section is-active" data-reels-panel="captions">
           <span id="reels-transcript-source" hidden>No speech recognition yet</span>
-          <div class="reels-setup-card" aria-label="Caption setup">
-            <div class="reels-setup-head">
-              <span>AI Caption Setup</span>
-              <strong>1080 × 1920</strong>
-            </div>
-            <div class="reels-setup-grid">
-              <label class="reels-mini-field">
-                <span>Language</span>
-                <select aria-label="Caption language">
-                  <option>English</option>
-                  <option>Hinglish</option>
-                  <option>Hindi</option>
-                  <option>Spanish</option>
-                </select>
-              </label>
-              <label class="reels-mini-field">
-                <span>Caption pace</span>
-                <select aria-label="Caption pace">
-                  <option>Short punchy lines</option>
-                  <option>Balanced phrases</option>
-                  <option>Long readable lines</option>
-                </select>
-              </label>
-            </div>
-          </div>
           <div class="reels-command-bar">
             <button type="button" class="reels-btn is-primary" id="reels-transcribe-btn" disabled>Auto-caption</button>
             <button type="button" class="reels-btn is-quiet" id="reels-add-caption-btn" disabled>Add Caption</button>
@@ -100,7 +75,7 @@
           </div>
           <p class="reels-status" id="reels-transcribe-status" hidden>Upload a clip to begin.</p>
           <div class="reels-transcript-list" id="reels-transcript-list">
-            <button type="button" class="reels-btn is-secondary reels-empty-upload" data-reels-upload-trigger>Upload Clip</button>
+            <button type="button" class="reels-btn is-secondary reels-empty-upload" id="reels-upload-btn" data-reels-upload-trigger>Upload Clip</button>
           </div>
         </section>
 
@@ -145,12 +120,6 @@
       </aside>
 
       <section class="reels-stage-workspace" aria-label="Reels preview and timeline">
-        <div class="reels-stage-top">
-          <div class="reels-stage-actions">
-            <button type="button" class="reels-btn is-secondary reels-stage-replace" id="reels-upload-btn">Upload Clip</button>
-          </div>
-        </div>
-
         <div class="reels-stage-frame">
           <canvas id="reels-canvas"></canvas>
           <div class="reels-safe-frame" aria-hidden="true">
@@ -201,12 +170,6 @@
                 <option value="rewrite">Rewrite</option>
               </select>
             </label>
-            <div class="reels-chip-row" aria-label="Reels editor helpers">
-              <span>Safe area</span>
-              <span>Word boxes</span>
-              <span>Lower thirds</span>
-              <span>SRT export</span>
-            </div>
             <label class="reels-field reels-style-dropdown">
               <span>Style</span>
               <select id="reels-style-select" aria-label="Caption style"></select>

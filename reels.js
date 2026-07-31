@@ -934,7 +934,7 @@
     els.transcriptSource.textContent = state.captions.length ? 'Editable draft' : '';
     els.transcriptList.classList.toggle('has-captions', !!state.captions.length);
     if (!state.captions.length) {
-      els.transcriptList.innerHTML = '<button type="button" class="reels-btn is-secondary reels-empty-upload" data-reels-upload-trigger>Upload Clip</button>';
+      els.transcriptList.innerHTML = '<button type="button" class="reels-btn is-secondary reels-empty-upload" id="reels-upload-btn" data-reels-upload-trigger>Upload Clip</button>';
       els.transcriptList.querySelector('[data-reels-upload-trigger]')?.addEventListener('click', function () { els.fileInput.click(); });
       els.captionCount.textContent = '0 segments';
       return;
