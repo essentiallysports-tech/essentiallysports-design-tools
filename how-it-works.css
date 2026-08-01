@@ -99,6 +99,7 @@ body.how-page {
   background: var(--how-surface);
 }
 .how-hero-stage {
+  position: relative;
   overflow: clip;
   display: grid;
   justify-items: center;
@@ -118,6 +119,12 @@ body.how-page {
      screenful — the ticker sits in view on load, and no white from the
      section below shows before the visitor scrolls, on any resolution. */
   min-height: calc(100svh - var(--site-header-height, 72px) - 64px);
+  background: var(--how-hero-art-tone);
+}
+.how-hero--art .how-hero-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
   background-image:
     linear-gradient(180deg, rgba(5, 7, 13, .25) 0%, rgba(5, 7, 13, .58) 62%, var(--how-hero-art-tone) 100%),
     url("assets/how-it-works/how-hero-bg.jpg");
@@ -125,6 +132,7 @@ body.how-page {
   background-position: center 38%;
   background-repeat: no-repeat;
   animation: how-hero-breathe 4.8s ease-in-out infinite;
+  pointer-events: none;
 }
 /* Slow breathing glow: only brightness/saturation move, so it's the existing
    blue dots quietly pulsing brighter, like the art is "activated" — not a
@@ -134,12 +142,14 @@ body.how-page {
   50% { filter: brightness(1.28) saturate(1.65); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .how-hero--art .how-hero-stage { animation: none; }
+  .how-hero--art .how-hero-stage::before { animation: none; }
 }
 .how-hero--art .how-hero-kicker { color: #fff !important; }
 .how-hero--art h1 { color: #fff !important; }
 .how-hero--art .how-hero-subtitle { color: rgba(255, 255, 255, .74) !important; }
 .how-hero-copy {
+  position: relative;
+  z-index: 1;
   width: min(100%, var(--how-measure-hero));
   margin: 0 auto;
   padding: 0 32px;
@@ -337,15 +347,11 @@ body.how-page {
 }
 
 .how-page .frameup-intro__line {
-  --line-progress: 0%;
   position: relative;
   width: fit-content;
   max-width: 100%;
   margin: 0;
-  color: transparent !important;
-  background-image: linear-gradient(90deg, var(--how-ink) var(--line-progress), var(--how-line-dim) var(--line-progress));
-  -webkit-background-clip: text;
-  background-clip: text;
+  color: var(--how-line-dim) !important;
   font-family: var(--how-display);
   font-size: clamp(38px, 5.1vw, 82px);
   font-weight: 700;
@@ -353,16 +359,23 @@ body.how-page {
   letter-spacing: -.03em;
 }
 
-.how-page .frameup-intro__line::after {
+.frameup-intro__word {
+  color: var(--how-line-dim);
+  transition: color 140ms ease;
+}
+
+.frameup-intro__word.is-visible {
+  color: var(--how-ink);
+}
+
+.frameup-intro__word.is-cursor::after {
   content: "";
-  position: absolute;
-  top: .06em;
-  bottom: .08em;
-  left: var(--line-progress);
+  display: inline-block;
   width: 3px;
+  height: .86em;
+  margin-left: .04em;
   background: var(--how-blue);
-  opacity: var(--cursor-opacity, 0);
-  transform: translateX(-1px);
+  vertical-align: -.08em;
 }
 
 .how-page .frameup-intro__credit {
@@ -700,7 +713,7 @@ body.how-page {
 .workspace-guide-copy strong { color: var(--how-ink); font-size: 17px; }
 .workspace-guide-copy strong .card-arrow { margin-left: 8px; }
 
-.request-section { position: relative; height: 330vh; background: var(--how-surface-muted); }
+.request-section { position: relative; height: 330vh; background: var(--how-surface); }
 .request-journey-sticky {
   position: sticky;
   top: var(--site-header-height, 72px);

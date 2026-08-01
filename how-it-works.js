@@ -96,6 +96,21 @@
 
   const scrollLinesSection = document.querySelector('[data-scroll-lines]');
   const scrollLines = scrollLinesSection ? [...scrollLinesSection.querySelectorAll('.frameup-intro__line')] : [];
+  const scrollWords = scrollLines.map(line => {
+    const words = line.textContent.trim().split(/(\s+)/);
+    line.textContent = '';
+    return words.map(part => {
+      if (/^\s+$/.test(part)) {
+        line.appendChild(document.createTextNode(part));
+        return null;
+      }
+      const word = document.createElement('span');
+      word.className = 'frameup-intro__word';
+      word.textContent = part;
+      line.appendChild(word);
+      return word;
+    }).filter(Boolean);
+  });
   let scrollLinesFrame = 0;
 
   const updateScrollLines = () => {
@@ -103,9 +118,11 @@
     if (!scrollLinesSection || !scrollLines.length) return;
 
     if (reducedMotion.matches) {
-      scrollLines.forEach(line => {
-        line.style.setProperty('--line-progress', '100%');
-        line.style.setProperty('--cursor-opacity', '0');
+      scrollWords.forEach(words => {
+        words.forEach(word => {
+          word.classList.add('is-visible');
+          word.classList.remove('is-cursor');
+        });
       });
       return;
     }
@@ -118,10 +135,13 @@
     scrollLines.forEach((line, index) => {
       const start = index * segment;
       const localProgress = Math.min(1, Math.max(0, (totalProgress - start) / segment));
-      const percent = `${Math.round(localProgress * 1000) / 10}%`;
-      const cursorVisible = localProgress > 0 && localProgress < 1 ? '1' : '0';
-      line.style.setProperty('--line-progress', percent);
-      line.style.setProperty('--cursor-opacity', cursorVisible);
+      const words = scrollWords[index] || [];
+      const visibleCount = localProgress <= 0 ? 0 : Math.min(words.length, Math.ceil(localProgress * words.length));
+      words.forEach((word, wordIndex) => {
+        const visible = wordIndex < visibleCount || localProgress >= 1;
+        word.classList.toggle('is-visible', visible);
+        word.classList.toggle('is-cursor', localProgress > 0 && localProgress < 1 && wordIndex === Math.max(0, visibleCount - 1));
+      });
     });
   };
 
@@ -156,12 +176,12 @@
 
       window.clearTimeout(creationTimer);
       creationPreview.classList.add('is-changing');
+      creationImage.src = selected.dataset.src;
+      creationImage.alt = selected.dataset.alt || '';
+      if (creationCount) creationCount.textContent = String(index + 1).padStart(2, '0');
       creationTimer = window.setTimeout(() => {
-        creationImage.src = selected.dataset.src;
-        creationImage.alt = selected.dataset.alt || '';
-        if (creationCount) creationCount.textContent = String(index + 1).padStart(2, '0');
         window.requestAnimationFrame(() => creationPreview.classList.remove('is-changing'));
-      }, reducedMotion.matches ? 0 : 90);
+      }, reducedMotion.matches ? 0 : 120);
     };
 
     const creationInterval = 1800;
