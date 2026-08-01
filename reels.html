@@ -182,20 +182,25 @@
                 <option value="upper">Upper safe area</option>
               </select>
             </label>
-            <details class="reels-brand-card" open>
-              <summary>Brand &amp; Colors</summary>
-              <div class="reels-brand-body">
-                <label class="reels-brand-field">
-                  <span>Sports</span>
-                  <select id="reels-sport-select" aria-label="Caption sport"></select>
-                </label>
-                <label class="reels-brand-field">
-                  <span id="reels-team-label">Team</span>
-                  <select id="reels-team-select" aria-label="Caption team"></select>
-                </label>
+            <details class="reels-brand-card studio-accordion-section is-open" open>
+              <summary class="studio-accordion-trigger">
+                <span>Brand &amp; Colors</span>
+                <span class="studio-accordion-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="reels-brand-body studio-accordion-body">
+                <div class="field-row">
+                  <label class="field-group">
+                    <span class="section-label">Sports</span>
+                    <select id="reels-sport-select" aria-label="Caption sport"></select>
+                  </label>
+                  <label class="field-group">
+                    <span class="section-label" id="reels-team-label">Team</span>
+                    <select id="reels-team-select" aria-label="Caption team"></select>
+                  </label>
+                </div>
                 <div class="reels-brand-colors">
-                  <strong>Pill &amp; Text</strong>
-                  <div class="reels-palette-row" id="reels-palette-row" aria-label="Caption pill color options"></div>
+                  <strong class="color-group-label">Pill &amp; Text</strong>
+                  <div class="reels-palette-row palette-row" id="reels-palette-row" aria-label="Caption pill color options"></div>
                 </div>
               </div>
             </details>
