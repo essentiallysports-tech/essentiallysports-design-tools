@@ -1434,14 +1434,14 @@ body.reels-page .site-footer {
   height: 100%;
   margin: 0;
   display: grid;
-  grid-template-columns: minmax(288px, 340px) minmax(0, 1fr) minmax(306px, 360px);
+  grid-template-columns: minmax(288px, 340px) minmax(0, 1fr) minmax(370px, 26vw);
   gap: 0;
   align-items: stretch;
   background: transparent;
 }
 
 body.reels-page:not(.reels-has-captions) .reels-shell {
-  grid-template-columns: minmax(288px, 340px) minmax(0, 1fr) minmax(306px, 360px);
+  grid-template-columns: minmax(288px, 340px) minmax(0, 1fr) minmax(370px, 26vw);
 }
 
 .reels-tool-rail,
@@ -1897,7 +1897,7 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 .reels-tool-section {
   border: 0;
   border-radius: 0;
-  padding: 18px;
+  padding: 14px;
   gap: 14px;
   box-shadow: none;
 }
@@ -1948,13 +1948,13 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 
 .reels-brand-card {
   border: 1px solid #dce4ed;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #fff;
   overflow: hidden;
 }
 
 .reels-brand-card summary {
-  min-height: 48px;
+  min-height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1962,8 +1962,8 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
   color: #111827;
   cursor: pointer;
   font-family: var(--reels-font-heading);
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 650;
   list-style: none;
 }
 
@@ -1987,9 +1987,9 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 .reels-brand-body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 18px;
-  padding: 16px 14px 18px;
-  border-top: 1px solid #e3eaf2;
+  gap: 18px;
+  padding: 18px;
+  border-top: 1px solid #eceff3;
 }
 
 .reels-brand-field {
