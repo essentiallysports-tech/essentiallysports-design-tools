@@ -4868,6 +4868,46 @@ body[data-current-page="faq"] .faq-cta-art img {
     display: none;
   }
 
+  html[data-studio-shell="on"] .studio-topbar {
+    display: contents !important;
+  }
+
+  html[data-studio-shell="on"] .studio-topbar-left,
+  html[data-studio-shell="on"] .studio-mode-badge,
+  html[data-studio-shell="on"] .studio-size-badge,
+  html[data-studio-shell="on"] .studio-safe-badge {
+    display: none !important;
+  }
+
+  html[data-studio-shell="on"] .studio-topbar-right {
+    position: fixed;
+    top: 84px;
+    right: 22px;
+    z-index: 220;
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  html[data-studio-shell="on"] .studio-export-btn {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border: 1px solid #0A7DFA;
+    border-radius: 7px;
+    background: #0A7DFA;
+    color: #FFFFFF;
+    cursor: pointer;
+    padding: 0 16px;
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
   @media (min-width: 1024px) {
     html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) {
       overflow: hidden;
@@ -4881,7 +4921,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .studio-topbar {
-      display: none !important;
+      display: contents !important;
     }
 
     html[data-studio-shell="on"] .studio-topbar-left,
@@ -4892,7 +4932,10 @@ body[data-current-page="faq"] .faq-cta-art img {
       min-width: 0;
     }
 
-    html[data-studio-shell="on"] .studio-topbar-left,
+    html[data-studio-shell="on"] .studio-topbar-left {
+      flex: 0 0 auto;
+    }
+
     html[data-studio-shell="on"] .studio-topbar-right {
       flex: 0 0 auto;
     }
@@ -4993,6 +5036,13 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     html[data-studio-shell="on"] .studio-mode-badge {
       display: none;
+    }
+
+    html[data-studio-shell="on"] .studio-topbar-left,
+    html[data-studio-shell="on"] .studio-mode-badge,
+    html[data-studio-shell="on"] .studio-size-badge,
+    html[data-studio-shell="on"] .studio-safe-badge {
+      display: none !important;
     }
 
     html[data-studio-shell="on"] .studio-export-btn {
