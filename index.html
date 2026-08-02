@@ -4868,10 +4868,6 @@ body[data-current-page="faq"] .faq-cta-art img {
     display: none;
   }
 
-  html[data-studio-shell="on"] .studio-topbar {
-    display: contents !important;
-  }
-
   html[data-studio-shell="on"] .studio-topbar-left,
   html[data-studio-shell="on"] .studio-mode-badge,
   html[data-studio-shell="on"] .studio-size-badge,
@@ -4880,14 +4876,11 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
 
   html[data-studio-shell="on"] .studio-topbar-right {
-    position: fixed;
-    top: 84px;
-    right: 22px;
-    z-index: 220;
     display: inline-flex;
     align-items: center;
     gap: 14px;
     min-width: 0;
+    width: 100%;
   }
 
   html[data-studio-shell="on"] .studio-export-btn {
@@ -4908,6 +4901,21 @@ body[data-current-page="faq"] .faq-cta-art img {
     line-height: 1;
   }
 
+  html[data-studio-shell="on"] .studio-export-section {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin: -22px -22px 0;
+    padding: 18px 22px;
+    border-bottom: 1px solid #E9EEF4;
+    background: #FFFFFF;
+  }
+
+  html[data-studio-shell="on"] .studio-export-section .studio-topbar-right,
+  html[data-studio-shell="on"] .studio-export-section .studio-export-btn {
+    width: 100%;
+  }
+
   @media (min-width: 1024px) {
     html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) {
       overflow: hidden;
@@ -4918,10 +4926,6 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .page-header,
     html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .site-footer {
       display: none !important;
-    }
-
-    html[data-studio-shell="on"] .studio-topbar {
-      display: contents !important;
     }
 
     html[data-studio-shell="on"] .studio-topbar-left,
@@ -15572,6 +15576,7 @@ loadFont().then(() => render());
       dock.dataset.studioControlDock = 'true';
       dock.setAttribute('aria-label', 'Studio controls');
       dock.innerHTML = `
+        <div class="studio-export-section" data-studio-export-section></div>
         <div class="studio-inspector-tabs" role="tablist" aria-label="Inspector groups">
           <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="image" aria-selected="false">Image Controls</button>
           <button class="studio-inspector-tab is-active" type="button" role="tab" data-studio-inspector-tab="content" aria-selected="true">Content</button>
@@ -15595,6 +15600,12 @@ loadFont().then(() => render());
         </div>
       `;
       panel.insertBefore(dock, panel.firstElementChild);
+    }
+
+    const exportSection = dock.querySelector('[data-studio-export-section]');
+    const exportGroup = document.querySelector('.studio-topbar-right');
+    if (exportSection && exportGroup && exportGroup.parentElement !== exportSection) {
+      exportSection.appendChild(exportGroup);
     }
 
     const toolDock = dock.querySelector('.studio-dock-tools');
