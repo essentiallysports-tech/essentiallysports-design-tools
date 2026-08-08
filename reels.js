@@ -1337,7 +1337,8 @@
         ctx.globalAlpha = 1;
       }
       ctx.fillStyle = bgColor;
-      ctx.fillRect(pillX, pillY, pillW, activePillH);
+      roundRect(ctx, pillX, pillY, pillW, activePillH, activePillH / 2);
+      ctx.fill();
       ctx.font = '900 ' + activeFontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
       ctx.fillStyle = fgColor;
       ctx.textAlign = 'center';
@@ -1484,7 +1485,7 @@
       ctx.shadowBlur = shadowBlur;
       ctx.shadowOffsetY = 8;
     }
-    roundRect(ctx, -box.w / 2, -box.h / 2, box.w, box.h, 6);
+    roundRect(ctx, -box.w / 2, -box.h / 2, box.w, box.h, box.h / 2);
     ctx.fill();
 
     if (animation === 'karaoke' && isActive) {
@@ -1933,6 +1934,11 @@
   }
 
   function roundRect(ctx, x, y, width, height, radius) {
+    // Clamp so a pill-style radius (e.g. height/2) on a narrow box (a
+    // single short word) can't exceed half the box's own dimensions —
+    // arcTo doesn't do this itself, and an over-large radius makes the
+    // capsule ends overlap into a lens/eye shape instead of a clean pill.
+    radius = Math.max(0, Math.min(radius, width / 2, height / 2));
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
     ctx.arcTo(x + width, y, x + width, y + height, radius);

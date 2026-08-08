@@ -17,6 +17,36 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-07-29 — Fix caption pill shape: word/pill boxes didn't actually look like pills
+- Status: `[pending push]`
+- Files touched: `reels.js` only.
+- Bug (Suhail: "pill styling is not right"): confirmed visually via a throwaway QA harness (no auth
+  code, same approach as always) with a real uploaded clip and both a short and a longer caption.
+  Two separate rendering paths both drew what's supposed to be a "pill" as a shape that didn't read as
+  one at all:
+  - `drawAnimatedWordBox` (the per-word animated boxes used by all 5 caption styles — ES Word Pop,
+    Karaoke Box Sweep, Broadcast Step, Punch Box, Snap Stack, since they all share this one function):
+    hardcoded a 6px corner radius regardless of box size. At the actual rendered box height (~120px),
+    6px is imperceptible — each word rendered as a near-rectangle, and consecutive words looked like
+    disconnected bricks in a row rather than a cohesive pill/capsule shape.
+  - `drawCaptionPills` (the fallback path for captions with no word-level timing): used a plain
+    `ctx.fillRect` with **zero** rounding — not a pill at all. In practice this path is close to
+    unreachable today (word timings get synthesized for any non-empty caption text in
+    `getCaptionWordBoxes`), but fixed it anyway since it's clearly the same bug in spirit.
+- Fix: both now use `roundRect(..., height / 2)` — a true capsule/pill shape. Also hardened the shared
+  `roundRect` helper itself to clamp `radius` to `min(radius, width/2, height/2)`, since a naive
+  `height/2` radius on a *narrow* box (single short word like "A" or "IS", width can clamp down to
+  54px while height is ~120px) would make the capsule ends overlap into a lens/eye shape without that
+  clamp — verified this specifically by testing a caption with several short words side by side.
+- Verified visually: captured actual canvas pixels (not just code review) at multiple points during
+  playback, before and after the fix, for both a short one-word caption and a longer multi-word one
+  that wraps to two lines. Confirmed all words — including narrow ones — now render as clean rounded
+  pills with no lens artifacts, consistent across styles (spot-checked ES Word Pop and Karaoke Box
+  Sweep; the other 3 styles share the same box-drawing function so inherit the fix identically).
+- Note on process: initially suspected the caption wasn't rendering *at all* (a sparse full-canvas
+  pixel scan missed the small text region) — don't trust a coarse scan for "is anything drawn," sample
+  the actual expected region, or better, just look at a real crop of the canvas.
+
 ### 2026-07-29 — Reconciled with a major Reels rewrite pushed by someone else; reapplied 2 of 3 fixes
 - Status: `[pending push]`
 - Files touched: `reels.js` only.
