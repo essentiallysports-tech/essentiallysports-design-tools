@@ -2012,16 +2012,36 @@
   body[data-current-page="newsletter"][data-newsletter-asset="tag-fi"] #swipe-button-card {
     display: none;
   }
-  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .status-bar,
-  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .studio-topbar,
-  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .app {
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .text-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #pill-position-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #swipe-button-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .color-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .image-tool-rail,
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .canvas-stage {
+    display: none !important;
+  }
+  #widget-main-fields,
+  #widget-picks-fields {
     display: none;
   }
-  .newsletter-widgets-gallery {
-    display: none;
-  }
-  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .newsletter-widgets-gallery {
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #widget-main-fields,
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #widget-picks-fields {
     display: block;
+  }
+  .widget-preview-pane {
+    display: none;
+  }
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .widget-preview-pane {
+    display: block;
+  }
+  #widget-copy-btn {
+    display: none;
+  }
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #studio-export-btn {
+    display: none !important;
+  }
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #widget-copy-btn {
+    display: inline-flex !important;
   }
   #entity-image-card { display: none; }
   body[data-current-page="youtube"][data-youtube-variation="variation-2"] #entity-image-card,
@@ -6553,107 +6573,101 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
   }
 
-  /* ─── NEWSLETTER WIDGETS GALLERY ─────────────────────────────── */
-  .newsletter-widgets-gallery {
-    width: min(1030px, calc(100% - 48px));
-    margin: 0 auto;
-    padding: 10px 0 100px;
+  /* ─── NEWSLETTER WIDGET BUILDER ─────────────────────────────── */
+  .widget-preview-pane {
+    width: 100%;
   }
-  .newsletter-widgets-intro {
-    margin-bottom: 24px;
-  }
-  .newsletter-widgets-title {
-    font-family: var(--font-heading);
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--text-primary);
-    margin-bottom: 6px;
-  }
-  .newsletter-widgets-subtitle {
-    font-family: var(--font-ui);
-    font-size: 15px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    line-height: 1.5;
-    margin: 0;
-  }
-  .newsletter-widgets-list {
-    display: grid;
-    gap: 20px;
-  }
-  .newsletter-widget-card {
-    background: var(--white);
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
-  }
-  .newsletter-widget-card-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 18px 20px;
-    border-bottom: 1.5px solid var(--border);
-  }
-  .newsletter-widget-card-heading {
-    min-width: 0;
-  }
-  .newsletter-widget-card-name {
-    font-family: var(--font-heading);
-    font-size: 17px;
-    font-weight: 800;
-    color: var(--text-primary);
-    margin-bottom: 4px;
-  }
-  .newsletter-widget-card-desc {
-    font-family: var(--font-ui);
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    line-height: 1.45;
-    margin: 0;
-  }
-  .newsletter-widget-copy-btn {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    border: 0;
-    border-radius: var(--button-radius);
-    background: var(--accent);
-    color: var(--white);
-    font-family: var(--font-ui);
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background .15s var(--motion-standard);
-  }
-  .newsletter-widget-copy-btn:hover {
-    background: var(--accent-hover);
-  }
-  .newsletter-widget-copy-btn svg {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-  }
-  .newsletter-widget-copy-btn.is-copied {
-    background: var(--success);
-  }
-  .newsletter-widget-preview {
-    background: var(--bg-canvas-soft);
-    padding: 20px;
-    max-height: 560px;
-    overflow: auto;
-  }
-  .newsletter-widget-preview-frame {
+  .widget-preview-frame {
     display: block;
     width: 100%;
     min-height: 420px;
     border: 0;
     background: #FFFFFF;
     border-radius: var(--radius-sm);
+  }
+  #widget-copy-btn.is-copied {
+    background: var(--success);
+    border-color: var(--success);
+  }
+  .widget-field-group {
+    margin-bottom: 12px;
+  }
+  .widget-field-group:last-child {
+    margin-bottom: 0;
+  }
+  .widget-field-group + .widget-field-group {
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+  }
+  .widget-field-label {
+    display: block;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+  .widget-text-input,
+  .widget-text-area {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    resize: vertical;
+  }
+  .widget-text-area {
+    min-height: 54px;
+  }
+  .widget-image-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .widget-image-thumb {
+    flex-shrink: 0;
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--bg-canvas-soft) center/cover no-repeat;
+    overflow: hidden;
+  }
+  .widget-image-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .widget-upload-btn {
+    flex-shrink: 0;
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .widget-upload-btn:hover {
+    border-color: var(--border-strong);
+  }
+  .widget-url-hint {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: -4px 0 8px;
   }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
@@ -6900,6 +6914,10 @@ body[data-current-page="faq"] .faq-cta-art img {
         <path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>
       <span data-export-label>Export</span>
+    </button>
+    <button class="studio-export-btn export-button" id="widget-copy-btn" type="button" aria-label="Copy widget HTML">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      <span>Copy HTML</span>
     </button>
   </div>
 </div>
@@ -7283,6 +7301,83 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
     </div>
 
+    <div id="widget-main-fields">
+      <div class="widget-url-hint">Uploading a photo previews it instantly — paste its final hosted URL before copying so the link works in beehiiv.</div>
+      <div class="widget-field-group">
+        <label class="widget-field-label">Image</label>
+        <div class="widget-image-row">
+          <div class="widget-image-thumb" data-widget-thumb="main"><img alt=""></div>
+          <button type="button" class="widget-upload-btn" data-widget-upload="main">Upload (preview only)</button>
+        </div>
+        <div class="widget-url-hint">Paste the final hosted image URL — this is what goes into the copied HTML.</div>
+        <input type="text" class="widget-text-input" data-widget-field="main.imageUrl" placeholder="https://...">
+      </div>
+      <div class="widget-field-group">
+        <label class="widget-field-label">Headline</label>
+        <input type="text" class="widget-text-input" data-widget-field="main.headline" placeholder="Headline">
+      </div>
+      <div class="widget-field-group">
+        <label class="widget-field-label">Description</label>
+        <textarea class="widget-text-area" data-widget-field="main.description" placeholder="Short description"></textarea>
+      </div>
+      <div class="widget-field-group">
+        <label class="widget-field-label">Link</label>
+        <input type="text" class="widget-text-input" data-widget-field="main.link" placeholder="https://www.essentiallysports.com/...">
+      </div>
+    </div>
+
+    <div id="widget-picks-fields">
+      <div class="widget-field-group" data-widget-pick-group="0">
+        <label class="widget-field-label">Top Pick 1 — Image</label>
+        <div class="widget-image-row">
+          <div class="widget-image-thumb" data-widget-thumb="pick0"><img alt=""></div>
+          <button type="button" class="widget-upload-btn" data-widget-upload="pick0">Upload (preview only)</button>
+        </div>
+        <input type="text" class="widget-text-input" data-widget-field="picks.0.imageUrl" placeholder="https://...">
+        <label class="widget-field-label">Headline</label>
+        <input type="text" class="widget-text-input" data-widget-field="picks.0.headline" placeholder="Headline">
+        <label class="widget-field-label">Link</label>
+        <input type="text" class="widget-text-input" data-widget-field="picks.0.link" placeholder="https://www.essentiallysports.com/...">
+      </div>
+      <div class="widget-field-group" data-widget-pick-group="1">
+        <label class="widget-field-label">Top Pick 2 — Image</label>
+        <div class="widget-image-row">
+          <div class="widget-image-thumb" data-widget-thumb="pick1"><img alt=""></div>
+          <button type="button" class="widget-upload-btn" data-widget-upload="pick1">Upload (preview only)</button>
+        </div>
+        <input type="text" class="widget-text-input" data-widget-field="picks.1.imageUrl" placeholder="https://...">
+        <label class="widget-field-label">Headline</label>
+        <input type="text" class="widget-text-input" data-widget-field="picks.1.headline" placeholder="Headline">
+        <label class="widget-field-label">Link</label>
+        <input type="text" class="widget-text-input" data-widget-field="picks.1.link" placeholder="https://www.essentiallysports.com/...">
+      </div>
+      <div class="widget-field-group" data-widget-pick-group="2">
+        <label class="widget-field-label">Top Pick 3 — Image</label>
+        <div class="widget-image-row">
+          <div class="widget-image-thumb" data-widget-thumb="pick2"><img alt=""></div>
+          <button type="button" class="widget-upload-btn" data-widget-upload="pick2">Upload (preview only)</button>
+        </div>
+        <input type="text" class="widget-text-input" data-widget-field="picks.2.imageUrl" placeholder="https://...">
+        <label class="widget-field-label">Headline</label>
+        <input type="text" class="widget-text-input" data-widget-field="picks.2.headline" placeholder="Headline">
+        <label class="widget-field-label">Link</label>
+        <input type="text" class="widget-text-input" data-widget-field="picks.2.link" placeholder="https://www.essentiallysports.com/...">
+      </div>
+      <div class="widget-field-group" data-widget-pick-group="3">
+        <label class="widget-field-label">Top Pick 4 — Image</label>
+        <div class="widget-image-row">
+          <div class="widget-image-thumb" data-widget-thumb="pick3"><img alt=""></div>
+          <button type="button" class="widget-upload-btn" data-widget-upload="pick3">Upload (preview only)</button>
+        </div>
+        <input type="text" class="widget-text-input" data-widget-field="picks.3.imageUrl" placeholder="https://...">
+        <label class="widget-field-label">Headline</label>
+        <input type="text" class="widget-text-input" data-widget-field="picks.3.headline" placeholder="Headline">
+        <label class="widget-field-label">Link</label>
+        <input type="text" class="widget-text-input" data-widget-field="picks.3.link" placeholder="https://www.essentiallysports.com/...">
+      </div>
+    </div>
+    <input type="file" id="widget-upload-input" accept="image/*" hidden>
+
   </div><!-- end .panel -->
 
   <!-- RIGHT PANEL — CANVAS -->
@@ -7482,6 +7577,9 @@ body[data-current-page="faq"] .faq-cta-art img {
           </div>
         </aside>
       </div>
+      <div class="widget-preview-pane" id="widget-preview-pane">
+        <iframe class="widget-preview-frame" id="widget-canvas-preview-frame" title="Widget preview" sandbox="allow-same-origin"></iframe>
+      </div>
       <div class="ai-image-picker" id="ai-image-picker" role="dialog" aria-modal="false" aria-label="Choose ES images" hidden>
         <div class="ai-image-picker-header">
           <div class="ai-image-picker-actions">
@@ -7497,14 +7595,6 @@ body[data-current-page="faq"] .faq-cta-art img {
 </div><!-- end .app -->
 
 <!-- NEWSLETTER WIDGETS GALLERY -->
-<section class="newsletter-widgets-gallery view-hidden" data-page="newsletter" aria-label="Beehiiv widget library">
-  <div class="newsletter-widgets-intro">
-    <div class="newsletter-widgets-title">Beehiiv Widgets</div>
-    <p class="newsletter-widgets-subtitle">Preview each widget below, then copy its HTML and paste it straight into a beehiiv post.</p>
-  </div>
-  <div class="newsletter-widgets-list" id="newsletter-widgets-list"></div>
-</section>
-
 <!-- DESIGN REQUEST PAGE -->
 <div class="breadcrumb view-hidden" data-page="requests">
   <a href="#frames" data-route="frames">Design Tools</a>
@@ -11117,12 +11207,85 @@ const NEWSLETTER_ASSET_TYPES = {
     },
   },
 };
-const NEWSLETTER_WIDGETS = [
-  {
-    id: 'unmissable-stories-two-column',
-    name: 'Unmissable Stories — Two Column',
-    description: 'Feature story on the left, four Top Picks headlines on the right. Swap in your own images, headlines, and links before pasting into beehiiv.',
-    html: `<!-- ========================================= -->
+const WIDGET_DEFAULT_STATE = {
+  main: {
+    imageUrl: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/0db6fb1b-acc5-4304-8a28-730a4fac3f18/1.png?t=1786136616',
+    headline: "NASCAR's 4th Of July Traditions Get a Fresh Update for 2027",
+    description: 'Iowa\u2019s move leaves Chicagoland waiting.',
+    link: 'https://www.essentiallysports.com/nascar-news-chicagoland-misses-out-as-unforeseen-nascar-track-earns-4th-of-july-accolade-for-2027/',
+  },
+  picks: [
+    {
+      imageUrl: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/2a589938-caad-416d-b4b6-ff638ccb56ea/2.png?t=1786136679',
+      headline: "Tony Stewart's Unspoken Hand Behind Battle Against Controversial NASCAR Format",
+      link: 'https://www.essentiallysports.com/nascar-news-way-too-many-yes-people-tony-stewart-inspired-nascar-legends-battle-against-controversial-playoff-system/',
+    },
+    {
+      imageUrl: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/925b70e0-dc44-4aac-9803-2c0e664162d7/3.png?t=1786136725',
+      headline: "NASCAR 'Insanity' Called Out Over Undue Next-Gen Fixation",
+      link: 'https://www.essentiallysports.com/nasacr-news-nascar-hall-of-famer-backs-denny-hamlin-and-kevin-harvicks-next-gen-concerns-with-radical-demand/',
+    },
+    {
+      imageUrl: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/c632a10c-84d7-4432-bfe5-b2bc420b56d6/4.png?t=1786136809',
+      headline: 'Dale Jr Hints NASCAR Caution Overhaul Is Far From Finished',
+      link: 'https://www.essentiallysports.com/nascar-news-were-not-done-yet-dale-earnhardt-jr-hints-nascar-caution-overhaul-isnt-done-yet/',
+    },
+    {
+      imageUrl: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/7ed06149-f3c5-4334-9bc1-fcd75ebe01e1/5.png?t=1786137081',
+      headline: 'NASCAR Veteran Admits Regret For Choosing Loyalty Over Jeff Gordon Like Greatness',
+      link: 'https://www.essentiallysports.com/nascar-news-i-could-have-been-jeff-gordon-mark-martin-chose-loyalty-over-greatness-but-still-regrets-it/',
+    },
+  ],
+};
+
+function escapeWidgetHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function escapeWidgetAttr(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderWidgetPickItem(pick) {
+  return `        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
+  <tr>
+<td width="140" valign="top" style="padding-right: 12px; height: auto;">
+      <!--Article Feature Image -->
+      <a href="${escapeWidgetAttr(pick.link)}" style="text-decoration: none;">
+        <img src="${escapeWidgetAttr(pick.imageUrl)}" width="140" style="display: block; outline: none; text-decoration: none; border-radius:8px;">
+      </a>
+    </td>
+    <td valign="top">
+      <!-- Article title -->
+      <a href="${escapeWidgetAttr(pick.link)}" style="text-decoration: none;">
+        <div style="font-size: 16px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family: Arial, sans-serif; margin-bottom: 0px; margin-top: 0px">${escapeWidgetHtml(pick.headline)}</div>
+      </a>
+      <!--Article button -->
+      <a href="${escapeWidgetAttr(pick.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family: 'Roboto', Arial, sans-serif;">
+  <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
+    <tr>
+      <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid #FCD53D;">
+        Read More &#8599;
+      </td>
+    </tr>
+  </table>
+</a>
+    </td>
+  </tr>
+</table>`;
+}
+
+const WIDGET_PICK_DIVIDER = '        <hr style="border: none; border-top: 1px dashed #f3f5f7; margin: 0; margin-bottom: 12px; margin-top: 12px">';
+
+function buildWidgetHtml(state) {
+  const main = state.main;
+  const picksHtml = state.picks.map(renderWidgetPickItem).join(`\n\n${WIDGET_PICK_DIVIDER}\n\n`);
+  return `<!-- ========================================= -->
 <!-- MAIN TWO-COLUMN SECTION START -->
 <!-- ========================================= -->
 
@@ -11148,24 +11311,24 @@ const NEWSLETTER_WIDGETS = [
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
   <tr>
 <td width="100%" valign="top" style="padding-right: 12px; height: auto;">
-      <!--Article 1 Feature Image -->
-      <a href="https://www.essentiallysports.com/nascar-news-chicagoland-misses-out-as-unforeseen-nascar-track-earns-4th-of-july-accolade-for-2027/" style="text-decoration: none;">
-        <img src="https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/0db6fb1b-acc5-4304-8a28-730a4fac3f18/1.png?t=1786136616" width="100%" style="display: block; outline: none; text-decoration: none; margin-bottom:10px; border-radius:8px;">
+      <!--Article Feature Image -->
+      <a href="${escapeWidgetAttr(main.link)}" style="text-decoration: none;">
+        <img src="${escapeWidgetAttr(main.imageUrl)}" width="100%" style="display: block; outline: none; text-decoration: none; margin-bottom:10px; border-radius:8px;">
       </a>
 
-      <!-- Article 1 tittle -->
-      <a href="https://www.essentiallysports.com/nascar-news-chicagoland-misses-out-as-unforeseen-nascar-track-earns-4th-of-july-accolade-for-2027/" style="text-decoration: none;">
-        <div style="font-size: 20px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family: Arial, sans-serif; margin-bottom: 0px; margin-top: 0px">NASCAR's 4th Of July Traditions Get a Fresh Update for 2027</div>
+      <!-- Article title -->
+      <a href="${escapeWidgetAttr(main.link)}" style="text-decoration: none;">
+        <div style="font-size: 20px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family: Arial, sans-serif; margin-bottom: 0px; margin-top: 0px">${escapeWidgetHtml(main.headline)}</div>
       </a>
   <p style="font-size: 16px; font-weight: normal; line-height: 1.4; color: #1a1a1a; font-family: Arial, sans-serif; margin-bottom: 0px; margin-top: 0px">
-        Iowa’s move leaves Chicagoland waiting.
+        ${escapeWidgetHtml(main.description)}
       </p>
-      <!--Article 1 button -->
-      <a href="https://www.essentiallysports.com/nascar-news-chicagoland-misses-out-as-unforeseen-nascar-track-earns-4th-of-july-accolade-for-2027/" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family: 'Roboto', Arial, sans-serif;">
+      <!--Article button -->
+      <a href="${escapeWidgetAttr(main.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family: 'Roboto', Arial, sans-serif;">
   <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
     <tr>
      <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid #FCD53D;">
-        Read More ↗
+        Read More &#8599;
       </td>
     </tr>
   </table>
@@ -11196,160 +11359,7 @@ const NEWSLETTER_WIDGETS = [
         <!-- STORIES SIDEBAR HEADING END -->
 
 <div style="padding:0px 5px 0px 12px;">
-        <!-- ========================================= -->
-        <!-- UNMISSABLE STORY 1 START -->
-        <!-- ========================================= -->
-
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
-  <tr>
-<td width="140" valign="top" style="padding-right: 12px; height: auto;">
-      <!--Article 1 Feature Image -->
-      <a href="https://www.essentiallysports.com/nascar-news-way-too-many-yes-people-tony-stewart-inspired-nascar-legends-battle-against-controversial-playoff-system/" style="text-decoration: none;">
-        <img src="https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/2a589938-caad-416d-b4b6-ff638ccb56ea/2.png?t=1786136679" width="140" style="display: block; outline: none; text-decoration: none; border-radius:8px;">
-      </a>
-    </td>
-    <td valign="top">
-      <!-- Article 1 tittle -->
-      <a href="https://www.essentiallysports.com/nascar-news-way-too-many-yes-people-tony-stewart-inspired-nascar-legends-battle-against-controversial-playoff-system/" style="text-decoration: none;">
-        <div style="font-size: 16px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family: Arial, sans-serif; margin-bottom: 5px; margin-top: 0px">Tony Stewart's Unspoken Hand Behind Battle Against Controversial NASCAR Format</div>
-      </a>
-      <!--Article 1 button -->
-      <a href="https://www.essentiallysports.com/nascar-news-way-too-many-yes-people-tony-stewart-inspired-nascar-legends-battle-against-controversial-playoff-system/" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family: 'Roboto', Arial, sans-serif;">
-  <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
-    <tr>
-     <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid #FCD53D;">
-        Read More ↗
-      </td>
-    </tr>
-  </table>
-</a>
-    </td>
-  </tr>
-</table>
-
-        <!-- ========================================= -->
-        <!-- UNMISSABLE STORY 1 END -->
-        <!-- ========================================= -->
-
-
-        <!-- STORY DIVIDER -->
-       <hr style="border: none; border-top: 1px dashed #f3f5f7; margin: 0; margin-bottom: 12px; margin-top: 12px">
-
-
-        <!-- ========================================= -->
-        <!-- UNMISSABLE STORY 2 START -->
-        <!-- ========================================= -->
-
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
-  <tr>
-<td width="140" valign="top" style="padding-right: 12px; height: auto;">
-      <!--Article 1 Feature Image -->
-      <a href="https://www.essentiallysports.com/nasacr-news-nascar-hall-of-famer-backs-denny-hamlin-and-kevin-harvicks-next-gen-concerns-with-radical-demand/" style="text-decoration: none;">
-        <img src="https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/925b70e0-dc44-4aac-9803-2c0e664162d7/3.png?t=1786136725" width="140" style="display: block; outline: none; text-decoration: none; border-radius:8px;">
-      </a>
-    </td>
-    <td valign="top">
-      <!-- Article 1 tittle -->
-      <a href="https://www.essentiallysports.com/nasacr-news-nascar-hall-of-famer-backs-denny-hamlin-and-kevin-harvicks-next-gen-concerns-with-radical-demand/" style="text-decoration: none;">
-        <div style="font-size: 16px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family: Arial, sans-serif; margin-bottom: 0px; margin-top: 0px">NASCAR 'Insanity' Called Out Over Undue Next-Gen Fixation</div>
-      </a>
-      <!--Article 1 button -->
-      <a href="https://www.essentiallysports.com/nasacr-news-nascar-hall-of-famer-backs-denny-hamlin-and-kevin-harvicks-next-gen-concerns-with-radical-demand/" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family: 'Roboto', Arial, sans-serif;">
-  <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
-    <tr>
-      <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid #FCD53D;">
-        Read More ↗
-      </td>
-    </tr>
-  </table>
-</a>
-    </td>
-  </tr>
-</table>
-
-        <!-- ========================================= -->
-        <!-- UNMISSABLE STORY 2 END -->
-        <!-- ========================================= -->
-
-
-        <!-- STORY DIVIDER -->
-      <hr style="border: none; border-top: 1px dashed #f3f5f7; margin: 0; margin-bottom: 12px; margin-top:12px">
-
-
-        <!-- ========================================= -->
-        <!-- UNMISSABLE STORY 3 START -->
-        <!-- ========================================= -->
-
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
-  <tr>
-<td width="140" valign="top" style="padding-right: 12px; height: auto;">
-      <!--Article 1 Feature Image -->
-      <a href="https://www.essentiallysports.com/nascar-news-were-not-done-yet-dale-earnhardt-jr-hints-nascar-caution-overhaul-isnt-done-yet/" style="text-decoration: none;">
-        <img src="https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/c632a10c-84d7-4432-bfe5-b2bc420b56d6/4.png?t=1786136809" width="140" style="display: block; outline: none; text-decoration: none; border-radius:8px;">
-      </a>
-    </td>
-    <td valign="top">
-      <!-- Article 1 tittle -->
-      <a href="https://www.essentiallysports.com/nascar-news-were-not-done-yet-dale-earnhardt-jr-hints-nascar-caution-overhaul-isnt-done-yet/" style="text-decoration: none;">
-        <div style="font-size: 16px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family: Arial, sans-serif; margin-bottom: 0px; margin-top: 0px">Dale Jr Hints NASCAR Caution Overhaul Is Far From Finished</div>
-      </a>
-      <!--Article 1 button -->
-      <a href="https://www.essentiallysports.com/nascar-news-were-not-done-yet-dale-earnhardt-jr-hints-nascar-caution-overhaul-isnt-done-yet/" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family: 'Roboto', Arial, sans-serif;">
-  <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
-    <tr>
-      <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid #FCD53D;">
-        Read More &#8599;
-      </td>
-    </tr>
-  </table>
-</a>
-    </td>
-  </tr>
-</table>
-
-        <!-- ========================================= -->
-        <!-- UNMISSABLE STORY 3 END -->
-        <!-- ========================================= -->
-
-
-        <!-- STORY DIVIDER -->
-       <hr style="border: none; border-top: 1px dashed #f3f5f7; margin: 0; margin-bottom: 12px; margin-top:12px">
-
-
-        <!-- ========================================= -->
-        <!-- UNMISSABLE STORY 4 START -->
-        <!-- ========================================= -->
-
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
-  <tr>
-<td width="140" valign="top" style="padding-right: 12px; height: auto;">
-      <!--Article 1 Feature Image -->
-      <a href="https://www.essentiallysports.com/nascar-news-i-could-have-been-jeff-gordon-mark-martin-chose-loyalty-over-greatness-but-still-regrets-it/" style="text-decoration: none;">
-        <img src="https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/7ed06149-f3c5-4334-9bc1-fcd75ebe01e1/5.png?t=1786137081" width="140" style="display: block; outline: none; text-decoration: none; border-radius:8px;">
-      </a>
-    </td>
-    <td valign="top">
-      <!-- Article 1 tittle -->
-      <a href="https://www.essentiallysports.com/nascar-news-i-could-have-been-jeff-gordon-mark-martin-chose-loyalty-over-greatness-but-still-regrets-it/" style="text-decoration: none;">
-        <div style="font-size: 16px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family: Arial, sans-serif; margin-bottom: 0px; margin-top: 0px">NASCAR Veteran Admits Regret For Choosing Loyalty Over Jeff Gordon Like Greatness</div>
-      </a>
-      <!--Article 1 button -->
-      <a href="https://www.essentiallysports.com/nascar-news-i-could-have-been-jeff-gordon-mark-martin-chose-loyalty-over-greatness-but-still-regrets-it/" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family: 'Roboto', Arial, sans-serif;">
-  <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
-    <tr>
-      <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid #FCD53D;">
-        Read More &#8599;
-      </td>
-    </tr>
-  </table>
-</a>
-    </td>
-  </tr>
-</table>
-
-        <!-- ========================================= -->
-        <!-- UNMISSABLE STORY 4 END -->
-        <!-- ========================================= -->
+${picksHtml}
 </div>
       </td>
       <!-- ========================================= -->
@@ -11361,9 +11371,9 @@ const NEWSLETTER_WIDGETS = [
 </table>
 <!-- ========================================= -->
 <!-- MAIN TWO-COLUMN SECTION END -->
-<!-- ========================================= -->`,
-  },
-];
+<!-- ========================================= -->`;
+}
+
 const NEWSLETTER_BRANDS = [
   { id: 'essentiallysports', label: 'EssentiallySports', background: '#0A7DFA', foreground: '#FFFFFF' },
   {
@@ -15649,62 +15659,115 @@ function copyWidgetHtmlFallback(html, onCopied) {
   document.body.removeChild(textarea);
 }
 
-function renderNewsletterWidgetsGallery() {
-  const list = document.getElementById('newsletter-widgets-list');
-  if (!list) return;
-  list.innerHTML = '';
-  NEWSLETTER_WIDGETS.forEach(widget => {
-    const card = document.createElement('article');
-    card.className = 'newsletter-widget-card';
+let widgetBuilderState = null;
+const widgetImagePreviewOverrides = {};
 
-    const head = document.createElement('div');
-    head.className = 'newsletter-widget-card-head';
+function getWidgetFieldValue(path) {
+  const parts = path.split('.');
+  let node = widgetBuilderState;
+  for (const part of parts) {
+    if (node == null) return '';
+    node = node[/^\d+$/.test(part) ? Number(part) : part];
+  }
+  return node == null ? '' : node;
+}
 
-    const heading = document.createElement('div');
-    heading.className = 'newsletter-widget-card-heading';
-    const name = document.createElement('div');
-    name.className = 'newsletter-widget-card-name';
-    name.textContent = widget.name;
-    const desc = document.createElement('p');
-    desc.className = 'newsletter-widget-card-desc';
-    desc.textContent = widget.description;
-    heading.appendChild(name);
-    heading.appendChild(desc);
+function setWidgetFieldValue(path, value) {
+  const parts = path.split('.');
+  let node = widgetBuilderState;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i];
+    node = node[/^\d+$/.test(part) ? Number(part) : part];
+  }
+  node[parts[parts.length - 1]] = value;
+}
 
-    const copyButton = document.createElement('button');
-    copyButton.type = 'button';
-    copyButton.className = 'newsletter-widget-copy-btn';
-    copyButton.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>Copy HTML</span>`;
-    copyButton.addEventListener('click', () => copyWidgetHtml(widget.html, copyButton));
+function slotFromImageFieldPath(path) {
+  if (path === 'main.imageUrl') return 'main';
+  const match = path.match(/^picks\.(\d+)\.imageUrl$/);
+  return match ? `pick${match[1]}` : null;
+}
 
-    head.appendChild(heading);
-    head.appendChild(copyButton);
+function getWidgetPreviewState() {
+  const previewState = JSON.parse(JSON.stringify(widgetBuilderState));
+  if (widgetImagePreviewOverrides.main) previewState.main.imageUrl = widgetImagePreviewOverrides.main;
+  previewState.picks.forEach((pick, index) => {
+    const override = widgetImagePreviewOverrides[`pick${index}`];
+    if (override) pick.imageUrl = override;
+  });
+  return previewState;
+}
 
-    const preview = document.createElement('div');
-    preview.className = 'newsletter-widget-preview';
-    const iframe = document.createElement('iframe');
-    iframe.className = 'newsletter-widget-preview-frame';
-    iframe.setAttribute('title', `${widget.name} preview`);
-    iframe.setAttribute('sandbox', 'allow-same-origin');
-    preview.appendChild(iframe);
+function updateWidgetThumb(slot) {
+  const thumb = document.querySelector(`[data-widget-thumb="${slot}"] img`);
+  if (!thumb) return;
+  const fieldPath = slot === 'main' ? 'main.imageUrl' : `picks.${slot.replace('pick', '')}.imageUrl`;
+  thumb.src = widgetImagePreviewOverrides[slot] || getWidgetFieldValue(fieldPath) || '';
+}
 
-    card.appendChild(head);
-    card.appendChild(preview);
-    list.appendChild(card);
-
-    iframe.srcdoc = wrapWidgetPreviewDoc(widget.html);
-    iframe.addEventListener('load', () => {
+let widgetPreviewRenderTimer = null;
+function renderWidgetPreview() {
+  clearTimeout(widgetPreviewRenderTimer);
+  widgetPreviewRenderTimer = setTimeout(() => {
+    const iframe = document.getElementById('widget-canvas-preview-frame');
+    if (!iframe) return;
+    iframe.srcdoc = wrapWidgetPreviewDoc(buildWidgetHtml(getWidgetPreviewState()));
+    iframe.onload = () => {
       try {
-        const body = iframe.contentDocument.body;
-        iframe.style.height = `${body.scrollHeight}px`;
+        iframe.style.height = `${iframe.contentDocument.body.scrollHeight}px`;
       } catch (error) {}
+    };
+  }, 120);
+}
+
+function initWidgetBuilder() {
+  widgetBuilderState = JSON.parse(JSON.stringify(WIDGET_DEFAULT_STATE));
+
+  document.querySelectorAll('[data-widget-field]').forEach(field => {
+    const path = field.dataset.widgetField;
+    field.value = getWidgetFieldValue(path);
+    field.addEventListener('input', () => {
+      setWidgetFieldValue(path, field.value);
+      const slot = slotFromImageFieldPath(path);
+      if (slot) {
+        delete widgetImagePreviewOverrides[slot];
+        updateWidgetThumb(slot);
+      }
+      renderWidgetPreview();
     });
   });
+
+  ['main', 'pick0', 'pick1', 'pick2', 'pick3'].forEach(updateWidgetThumb);
+
+  const fileInput = document.getElementById('widget-upload-input');
+  let pendingUploadSlot = null;
+  document.querySelectorAll('[data-widget-upload]').forEach(button => {
+    button.addEventListener('click', () => {
+      pendingUploadSlot = button.dataset.widgetUpload;
+      fileInput.value = '';
+      fileInput.click();
+    });
+  });
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file || !pendingUploadSlot) return;
+    const blobUrl = URL.createObjectURL(file);
+    widgetImagePreviewOverrides[pendingUploadSlot] = blobUrl;
+    updateWidgetThumb(pendingUploadSlot);
+    renderWidgetPreview();
+  });
+
+  const copyButton = document.getElementById('widget-copy-btn');
+  copyButton.addEventListener('click', () => {
+    copyWidgetHtml(buildWidgetHtml(widgetBuilderState), copyButton);
+  });
+
+  renderWidgetPreview();
 }
 
 // â”€â”€â”€ BOOTSTRAP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 initUI();
-renderNewsletterWidgetsGallery();
+initWidgetBuilder();
 setupCanvasDrag();
 setupCanvasImageEditing();
 setupPageTransitions();
@@ -15873,6 +15936,8 @@ loadFont().then(() => render());
       layout: 'Placement',
       brand: 'Brand Settings',
       images: 'Image Layers',
+      widgetMain: 'Main Story',
+      widgetPicks: 'Top Picks',
     },
   };
 
@@ -15881,6 +15946,8 @@ loadFont().then(() => render());
     layout: ['pill-position-card'],
     brand: ['.color-card'],
     images: ['entity-image-card', 'entity-image-card-2'],
+    widgetMain: ['widget-main-fields'],
+    widgetPicks: ['widget-picks-fields'],
   };
 
   const studioOpenSectionByWorkspace = {
