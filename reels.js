@@ -1380,7 +1380,7 @@
     var safe = POST_SAFE_AREA;
     var maxCanvasW = STAGE_W - safe * 2;
     var boxPadX = Math.max(18, Math.round((padLeft + padRight) * 0.48));
-    var gap = Math.max(10, Math.round(fontSize * 0.075));
+    var gap = Math.max(20, Math.round(fontSize * 0.22));
     var activeFontSize = fontSize;
     var rows = [];
     var boxH = pillH;
@@ -1389,7 +1389,10 @@
       activeFontSize = Math.max(48, Math.round(fontSize * (1 - attempt * 0.065)));
       ctx.font = '900 ' + activeFontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
       boxPadX = Math.max(14, Math.round(activeFontSize * 0.23));
-      gap = Math.max(8, Math.round(activeFontSize * 0.08));
+      // Gap needs to stay a clear fraction of box height, not just of font
+      // size — at small preview/export scales a thin gap between two
+      // same-colored rounded pills blurs away and reads as one merged pill.
+      gap = Math.max(20, Math.round(activeFontSize * 0.22));
       boxH = Math.max(60, Math.round(activeFontSize * 0.96));
       rows = packWordBoxRows(ctx, words, boxPadX, gap, maxCanvasW);
       if (rows.length <= 2) break;
