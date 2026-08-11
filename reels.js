@@ -1522,18 +1522,26 @@
 
   function getActiveCaptionWordInfo(words, caption, timing) {
     var current = els.video.currentTime || caption.start || 0;
+    var reachedIndex = words.reduce(function (last, word, index) {
+      return current >= word.start ? index : last;
+    }, -1);
     var activeIndex = words.findIndex(function (word) {
       return current >= word.start && current < word.end;
     });
     if (activeIndex < 0) {
       activeIndex = Math.min(words.length - 1, Math.floor(timing.captionProgress * words.length));
     }
+    // The progress-based fallback estimates activeIndex from overall
+    // caption progress, not each word's real timing — in a pause between
+    // words (or with uneven real per-word durations) it can overshoot the
+    // words whose own start time has actually passed. Clamping it to at
+    // most one past reachedIndex prevents drawing a "reached" word ahead
+    // of an unreached one, which would otherwise leave a hole (an empty
+    // reserved slot) in the middle of an already-revealed caption line.
+    activeIndex = Math.max(0, Math.min(activeIndex, reachedIndex + 1));
     var activeWord = words[activeIndex] || words[0];
     var wordDuration = Math.max(0.001, activeWord.end - activeWord.start);
     var wordLocal = clamp((current - activeWord.start) / wordDuration, 0, 1);
-    var reachedIndex = words.reduce(function (last, word, index) {
-      return current >= word.start ? index : last;
-    }, -1);
     return {
       activeIndex: activeIndex,
       reachedIndex: reachedIndex,
