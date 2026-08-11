@@ -6290,7 +6290,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .studio-accordion-body .text-card,
     html[data-studio-shell="on"] .studio-accordion-body .swipe-button-control,
     html[data-studio-shell="on"] .studio-accordion-body .advanced-card,
-    html[data-studio-shell="on"] .studio-accordion-body .quote-logo-control {
+    html[data-studio-shell="on"] .studio-accordion-body .quote-logo-control,
+    html[data-studio-shell="on"] .studio-accordion-body #widget-main-fields,
+    html[data-studio-shell="on"] .studio-accordion-body #widget-picks-fields {
       padding: 18px;
       border: 0;
       border-radius: 0;
@@ -6549,7 +6551,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .studio-accordion-body .text-card,
     html[data-studio-shell="on"] .studio-accordion-body .swipe-button-control,
     html[data-studio-shell="on"] .studio-accordion-body .advanced-card,
-    html[data-studio-shell="on"] .studio-accordion-body .quote-logo-control {
+    html[data-studio-shell="on"] .studio-accordion-body .quote-logo-control,
+    html[data-studio-shell="on"] .studio-accordion-body #widget-main-fields,
+    html[data-studio-shell="on"] .studio-accordion-body #widget-picks-fields {
       padding: 16px;
       border: 0;
       border-radius: 0;
@@ -6590,14 +6594,14 @@ body[data-current-page="faq"] .faq-cta-art img {
     border-color: var(--success);
   }
   .widget-field-group {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
   .widget-field-group:last-child {
     margin-bottom: 0;
   }
   .widget-field-group + .widget-field-group {
-    padding-top: 12px;
-    border-top: 1px dashed var(--border);
+    padding-top: 10px;
+    border-top: 1px solid #F0F2F5;
   }
   .widget-field-label {
     display: block;
@@ -6629,13 +6633,18 @@ body[data-current-page="faq"] .faq-cta-art img {
   .widget-image-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin-bottom: 8px;
+  }
+  .widget-image-row .widget-text-input {
+    flex: 1;
+    min-width: 0;
+    margin-bottom: 0;
   }
   .widget-image-thumb {
     flex-shrink: 0;
-    width: 52px;
-    height: 52px;
+    width: 38px;
+    height: 38px;
     border-radius: var(--radius-sm);
     border: 1.5px solid var(--border);
     background: var(--bg-canvas-soft) center/cover no-repeat;
@@ -6647,27 +6656,38 @@ body[data-current-page="faq"] .faq-cta-art img {
     height: 100%;
     object-fit: cover;
   }
-  .widget-upload-btn {
+  .widget-upload-icon-btn {
     flex-shrink: 0;
-    padding: 9px 12px;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm);
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 7px;
     background: var(--white);
     color: var(--text-primary);
-    font-family: var(--font-ui);
-    font-size: 13px;
-    font-weight: 700;
     cursor: pointer;
-    white-space: nowrap;
   }
-  .widget-upload-btn:hover {
+  .widget-upload-icon-btn:hover {
     border-color: var(--border-strong);
+    background: var(--bg-canvas-soft);
   }
-  .widget-url-hint {
+  .widget-upload-icon-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+  .widget-builder-hint {
+    display: none;
+  }
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .widget-builder-hint {
+    display: block;
+    grid-column: 1 / -1;
     font-family: var(--font-ui);
     font-size: 12px;
     color: var(--text-secondary);
-    margin: -4px 0 8px;
+    line-height: 1.4;
+    margin: 8px 0 0;
   }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
@@ -6970,6 +6990,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         <div class="card-title">Newsletter Brand</div>
         <select id="newsletter-brand-select" aria-label="Newsletter brand"></select>
       </div>
+      <p class="widget-builder-hint">Uploading a photo previews it instantly — paste its final hosted URL in the field so the link works in beehiiv.</p>
     </div>
 
     <div class="post-type-control" id="post-type-control" aria-label="Instagram post type">
@@ -7302,15 +7323,15 @@ body[data-current-page="faq"] .faq-cta-art img {
     </div>
 
     <div id="widget-main-fields">
-      <div class="widget-url-hint">Uploading a photo previews it instantly — paste its final hosted URL before copying so the link works in beehiiv.</div>
       <div class="widget-field-group">
         <label class="widget-field-label">Image</label>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="main"><img alt=""></div>
-          <button type="button" class="widget-upload-btn" data-widget-upload="main">Upload (preview only)</button>
+          <input type="text" class="widget-text-input" data-widget-field="main.imageUrl" placeholder="Image URL">
+          <button type="button" class="widget-upload-icon-btn" data-widget-upload="main" title="Upload a photo to preview only — paste the final hosted URL in the field to use it in Copy HTML" aria-label="Upload photo to preview only">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
         </div>
-        <div class="widget-url-hint">Paste the final hosted image URL — this is what goes into the copied HTML.</div>
-        <input type="text" class="widget-text-input" data-widget-field="main.imageUrl" placeholder="https://...">
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Headline</label>
@@ -7328,48 +7349,56 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     <div id="widget-picks-fields">
       <div class="widget-field-group" data-widget-pick-group="0">
-        <label class="widget-field-label">Top Pick 1 — Image</label>
+        <label class="widget-field-label">Top Pick 1</label>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="pick0"><img alt=""></div>
-          <button type="button" class="widget-upload-btn" data-widget-upload="pick0">Upload (preview only)</button>
+          <input type="text" class="widget-text-input" data-widget-field="picks.0.imageUrl" placeholder="Image URL">
+          <button type="button" class="widget-upload-icon-btn" data-widget-upload="pick0" title="Upload a photo to preview only — paste the final hosted URL in the field to use it in Copy HTML" aria-label="Upload photo to preview only">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
         </div>
-        <input type="text" class="widget-text-input" data-widget-field="picks.0.imageUrl" placeholder="https://...">
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.0.headline" placeholder="Headline">
         <label class="widget-field-label">Link</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.0.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group" data-widget-pick-group="1">
-        <label class="widget-field-label">Top Pick 2 — Image</label>
+        <label class="widget-field-label">Top Pick 2</label>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="pick1"><img alt=""></div>
-          <button type="button" class="widget-upload-btn" data-widget-upload="pick1">Upload (preview only)</button>
+          <input type="text" class="widget-text-input" data-widget-field="picks.1.imageUrl" placeholder="Image URL">
+          <button type="button" class="widget-upload-icon-btn" data-widget-upload="pick1" title="Upload a photo to preview only — paste the final hosted URL in the field to use it in Copy HTML" aria-label="Upload photo to preview only">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
         </div>
-        <input type="text" class="widget-text-input" data-widget-field="picks.1.imageUrl" placeholder="https://...">
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.1.headline" placeholder="Headline">
         <label class="widget-field-label">Link</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.1.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group" data-widget-pick-group="2">
-        <label class="widget-field-label">Top Pick 3 — Image</label>
+        <label class="widget-field-label">Top Pick 3</label>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="pick2"><img alt=""></div>
-          <button type="button" class="widget-upload-btn" data-widget-upload="pick2">Upload (preview only)</button>
+          <input type="text" class="widget-text-input" data-widget-field="picks.2.imageUrl" placeholder="Image URL">
+          <button type="button" class="widget-upload-icon-btn" data-widget-upload="pick2" title="Upload a photo to preview only — paste the final hosted URL in the field to use it in Copy HTML" aria-label="Upload photo to preview only">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
         </div>
-        <input type="text" class="widget-text-input" data-widget-field="picks.2.imageUrl" placeholder="https://...">
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.2.headline" placeholder="Headline">
         <label class="widget-field-label">Link</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.2.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group" data-widget-pick-group="3">
-        <label class="widget-field-label">Top Pick 4 — Image</label>
+        <label class="widget-field-label">Top Pick 4</label>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="pick3"><img alt=""></div>
-          <button type="button" class="widget-upload-btn" data-widget-upload="pick3">Upload (preview only)</button>
+          <input type="text" class="widget-text-input" data-widget-field="picks.3.imageUrl" placeholder="Image URL">
+          <button type="button" class="widget-upload-icon-btn" data-widget-upload="pick3" title="Upload a photo to preview only — paste the final hosted URL in the field to use it in Copy HTML" aria-label="Upload photo to preview only">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
         </div>
-        <input type="text" class="widget-text-input" data-widget-field="picks.3.imageUrl" placeholder="https://...">
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.3.headline" placeholder="Headline">
         <label class="widget-field-label">Link</label>
