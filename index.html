@@ -15735,6 +15735,7 @@ function updateWidgetThumb(slot) {
 }
 
 let widgetPreviewRenderTimer = null;
+let widgetPreviewResizeObserver = null;
 function renderWidgetPreview() {
   clearTimeout(widgetPreviewRenderTimer);
   widgetPreviewRenderTimer = setTimeout(() => {
@@ -15743,7 +15744,17 @@ function renderWidgetPreview() {
     iframe.srcdoc = wrapWidgetPreviewDoc(buildWidgetHtml(getWidgetPreviewState()));
     iframe.onload = () => {
       try {
-        iframe.style.height = `${iframe.contentDocument.body.scrollHeight}px`;
+        const body = iframe.contentDocument.body;
+        const syncHeight = () => {
+          iframe.style.height = `${body.scrollHeight}px`;
+        };
+        syncHeight();
+        widgetPreviewResizeObserver?.disconnect();
+        widgetPreviewResizeObserver = new ResizeObserver(syncHeight);
+        widgetPreviewResizeObserver.observe(body);
+        body.querySelectorAll('img').forEach(img => {
+          if (!img.complete) img.addEventListener('load', syncHeight, { once: true });
+        });
       } catch (error) {}
     };
   }, 120);
