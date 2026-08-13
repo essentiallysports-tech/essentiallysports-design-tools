@@ -3085,8 +3085,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     flex: 1;
     display: flex;
     justify-content: flex-end;
-    align-items: flex-start;
+    align-items: center;
     padding-top: 0;
+    height: calc(100vh - 104px);
     max-height: calc(100vh - 104px);
   }
   @media (min-width: 901px) {
@@ -4136,8 +4137,10 @@ body[data-current-page="faq"] .faq-cta-art img {
     .canvas-panel {
       position: static;
       top: auto;
+      height: auto;
       max-height: none;
       justify-content: stretch;
+      align-items: flex-start;
       width: 100%;
     }
     .canvas-card {
@@ -6289,7 +6292,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
   .widget-preview-window {
     width: 100%;
-    border: 1px solid var(--border);
+    border: 1px solid #DCDFE4;
     border-radius: 14px;
     background: #FFFFFF;
     box-shadow: 0 18px 40px rgba(3, 49, 98, .08);
@@ -6301,7 +6304,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     gap: 8px;
     padding: 14px 16px;
     background: #F6F8FB;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid #DCDFE4;
   }
   .widget-preview-window-dot {
     width: 11px;
@@ -6423,7 +6426,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     gap: 6px;
     height: 38px;
     padding: 0 12px;
-    border: 1.5px solid var(--border-strong);
+    border: 1.5px solid #DCDFE4;
     border-radius: var(--radius-sm);
     background: var(--white);
     color: var(--text-primary);
@@ -15951,7 +15954,6 @@ function initWidgetBuilder() {
       trigger.setAttribute('aria-expanded', 'false');
     };
 
-    if (input && input.value) openField();
     trigger.addEventListener('click', () => openField({ focus: true }));
     collapseBtn?.addEventListener('click', closeField);
   });
