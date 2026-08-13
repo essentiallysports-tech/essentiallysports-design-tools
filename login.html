@@ -1255,8 +1255,9 @@
           // New accounts land on the How It Works walkthrough the first time
           // they confirm their email, not the homepage; every login after
           // that first landing goes through the normal getRedirectTarget()
-          // path (index.html by default).
-          redirectTo: 'how-it-works.html',
+          // path (index.html by default). The walkthrough now lives on the
+          // homepage itself, so this just scrolls straight to it.
+          redirectTo: 'index.html#intro',
         });
         passwordInput.value = '';
         button.disabled = false;

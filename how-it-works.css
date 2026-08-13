@@ -38,7 +38,7 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body.how-page {
+.how-page {
   margin: 0;
   background: var(--how-bg);
   color: var(--how-ink);
@@ -259,7 +259,7 @@ body.how-page {
 .how-button--secondary { background: var(--how-surface); }
 .how-button:is(:hover, :focus-visible) { outline: none; }
 .how-button:is(:hover, :focus-visible) .ui-arrow-right { transform: rotate(-90deg) translateY(4px); }
-.ui-arrow-right {
+.how-page .ui-arrow-right {
   width: 16px;
   height: 10px;
   flex: 0 0 16px;

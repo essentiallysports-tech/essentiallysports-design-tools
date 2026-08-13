@@ -3990,181 +3990,6 @@ body[data-current-page="faq"] .faq-cta-art img {
     box-shadow: none;
   }
 
-  .home-showcase {
-    width: min(1280px, calc(100% - 80px));
-    margin: 72px auto 0;
-    padding: 0 0 260px;
-  }
-  .home-showcase-heading {
-    max-width: 920px;
-    margin-bottom: 48px;
-  }
-  .home-showcase-eyebrow {
-    color: var(--accent);
-    font-family: var(--font-heading);
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-  }
-  .home-showcase-heading h2 {
-    margin: 12px 0 0;
-    color: #000;
-    font-family: 'Acumin Pro Condensed Local', 'Arial Narrow', sans-serif;
-    font-size: clamp(38px, 4.2vw, 62px);
-    font-weight: 700;
-    letter-spacing: -.035em;
-    line-height: .98;
-  }
-  .home-showcase-heading p {
-    max-width: 640px;
-    margin: 20px 0 0;
-    color: #53657A;
-    font-family: var(--font-heading);
-    font-size: clamp(16px, 1.35vw, 19px);
-    font-weight: 400;
-    line-height: 1.55;
-  }
-  .home-feature-card {
-    position: sticky;
-    top: 86px;
-    z-index: 1;
-    min-height: 520px;
-    height: min(620px, calc(100vh - 150px));
-    display: grid;
-    grid-template-columns: minmax(280px, .8fr) minmax(480px, 1.2fr);
-    align-items: center;
-    gap: clamp(48px, 7vw, 104px);
-    overflow: hidden;
-    padding: clamp(44px, 5vw, 76px);
-    border: 1px solid rgba(181, 216, 253, .72);
-    border-radius: 34px;
-    background: #fff;
-    box-shadow: 0 28px 84px rgba(3, 49, 98, .12);
-    transform-origin: top center;
-  }
-  .home-feature-card + .home-feature-card {
-    margin-top: 34px;
-  }
-  .home-feature-card:nth-of-type(2) {
-    z-index: 2;
-    top: 106px;
-  }
-  .home-feature-card:nth-of-type(3) {
-    z-index: 3;
-    top: 126px;
-  }
-  .home-feature-card.is-reversed {
-    grid-template-columns: minmax(480px, 1.2fr) minmax(280px, .8fr);
-  }
-  .home-feature-card.is-reversed .home-feature-copy {
-    order: 2;
-  }
-  .home-feature-card.is-reversed .home-feature-visual {
-    order: 1;
-  }
-  .home-feature-index {
-    color: var(--accent);
-    font-family: var(--font-heading);
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-  }
-  .home-feature-copy h3 {
-    margin: 14px 0 0;
-    color: #111;
-    font-family: var(--font-display);
-    font-size: clamp(36px, 3.6vw, 54px);
-    font-weight: 800;
-    letter-spacing: -.015em;
-    line-height: 1;
-  }
-  .home-feature-copy p {
-    margin: 20px 0 0;
-    color: #53657A;
-    font-family: var(--font-heading);
-    font-size: clamp(16px, 1.2vw, 18px);
-    font-weight: 400;
-    line-height: 1.58;
-  }
-  .home-feature-tags {
-    margin-top: 28px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .home-feature-tags span {
-    min-height: 34px;
-    display: inline-flex;
-    align-items: center;
-    padding: 0 14px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: #F8FBFF;
-    color: var(--text-blue);
-    font-family: var(--font-heading);
-    font-size: 14px;
-    font-weight: 500;
-  }
-  .home-feature-visual {
-    min-width: 0;
-    min-height: 0;
-    display: grid;
-    place-items: center;
-  }
-  .home-feature-visual img {
-    display: block;
-    width: min(100%, 650px);
-    height: auto;
-    max-height: min(500px, calc(100vh - 260px));
-    object-fit: contain;
-  }
-
-  @media (max-width: 960px) {
-    .home-showcase {
-      width: min(720px, calc(100% - 40px));
-      padding-bottom: 110px;
-    }
-    .home-feature-card,
-    .home-feature-card.is-reversed {
-      position: relative;
-      top: auto !important;
-      min-height: 0;
-      height: auto;
-      grid-template-columns: 1fr;
-      gap: 36px;
-    }
-    .home-feature-card.is-reversed .home-feature-copy,
-    .home-feature-card.is-reversed .home-feature-visual {
-      order: initial;
-    }
-    .home-feature-visual {
-      min-height: 430px;
-    }
-  }
-
-  @media (max-width: 680px) {
-    .home-showcase {
-      width: calc(100% - 32px);
-      padding-bottom: 80px;
-    }
-    .home-showcase-heading {
-      margin-bottom: 28px;
-    }
-    .home-feature-card,
-    .home-feature-card.is-reversed {
-      padding: 28px 22px;
-      border-radius: 20px;
-      gap: 28px;
-    }
-    .home-feature-copy h3 {
-      font-size: 36px;
-    }
-    .home-feature-visual {
-      min-height: 300px;
-    }
-  }
 
   .site-footer {
     background: var(--white);
@@ -6653,6 +6478,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 <link rel="stylesheet" href="theme.css?v=20260714-footer1">
 <link rel="stylesheet" href="site-chrome.css?v=20260723-profile3">
 <link rel="stylesheet" href="cta-hover.css?v=20260720-stroke1">
+<link rel="stylesheet" href="how-it-works.css?v=20260813-sync1">
 <script src="theme.js?v=20260712-darkmode12"></script>
 <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
 <script src="site-chrome.js?v=20260723-profile2"></script>
@@ -6666,9 +6492,9 @@ body[data-current-page="faq"] .faq-cta-art img {
   </a>
   <div class="navbar-menu">
     <div class="nav-dropdown">
-      <a class="nav-trigger has-chevron" href="how-it-works.html" aria-haspopup="true" aria-expanded="false">Resources</a>
+      <a class="nav-trigger has-chevron" href="#intro" aria-haspopup="true" aria-expanded="false">Resources</a>
       <div class="nav-dropdown-menu" role="menu" aria-label="Resources">
-        <a href="how-it-works.html" role="menuitem">How It Works</a>
+        <a href="#intro" role="menuitem">How It Works</a>
         <a href="#logo-guidelines" data-route="logo-guidelines" role="menuitem">Logo Guidelines</a>
         <a href="#social-guidelines" data-route="social-guidelines" role="menuitem">Social Media Guidelines</a>
         <a href="#video-guidelines" data-route="video-guidelines" role="menuitem">Video Guidelines</a>
@@ -6772,77 +6598,225 @@ body[data-current-page="faq"] .faq-cta-art img {
     </div>
   </section>
 
-  <section class="home-showcase" aria-labelledby="home-showcase-title">
-    <header class="home-showcase-heading">
-      <div class="home-showcase-eyebrow">ES Designer Workspaces</div>
-      <h2 id="home-showcase-title">Everything your creative workflow needs.</h2>
-      <p>Move from idea to polished, brand-ready sports creative with focused tools built for the formats our teams use every day.</p>
-    </header>
+  <div class="how-page">
+    <section class="frameup-intro" id="intro" aria-label="About FrameUp" data-scroll-lines>
+      <div class="frameup-intro__sticky" data-how-reveal>
+        <p class="frameup-intro__line">FrameUp gives every team a clean start.</p>
+        <p class="frameup-intro__line">Choose a workspace built for the format.</p>
+        <p class="frameup-intro__line">Add copy, images, and brand-safe details.</p>
+        <p class="frameup-intro__line">Export the file or hand it to a designer.</p>
+        <p class="frameup-intro__credit"><span>- Suhail Quraishi</span><span>Design at EssentiallySports</span></p>
+      </div>
+    </section>
 
-    <article class="home-feature-card">
-      <div class="home-feature-copy">
-        <div class="home-feature-index">01 · Social Media</div>
-        <h3>Social Media Design</h3>
-        <p>Create sharp, platform-ready visuals for stats, quotes, breaking stories, and daily sports coverage while staying inside the EssentiallySports visual system.</p>
-        <div class="home-feature-tags" aria-label="Social media capabilities">
-          <span>Stat Posts</span>
-          <span>Quote Cards</span>
-          <span>Instagram</span>
+    <section class="how-section path-section" id="create" aria-labelledby="paths-title">
+      <header class="section-heading section-heading--split" data-how-reveal>
+        <div>
+          <p class="how-eyebrow">Choose Your Path</p>
+          <h2 id="paths-title">Make it now, or hand it over.</h2>
+        </div>
+        <p>FrameUp supports quick self-serve work and detailed requests for projects that need a designer.</p>
+      </header>
+      <div class="path-grid" data-how-stagger>
+        <a class="path-card path-card--primary" href="#frames" data-route="frames">
+          <span class="path-number">01</span>
+          <div>
+            <h3>Create it yourself</h3>
+            <p>Use a focused workspace with the layout, size, colors, and export format already prepared.</p>
+          </div>
+          <span class="ui-arrow-right card-arrow" aria-hidden="true"></span>
+        </a>
+        <a class="path-card" href="design-request.html">
+          <span class="path-number">02</span>
+          <div>
+            <h3>Request a design</h3>
+            <p>Send the design team one clear brief with its context, copy, deadline, and references.</p>
+          </div>
+          <span class="ui-arrow-right card-arrow" aria-hidden="true"></span>
+        </a>
+      </div>
+    </section>
+
+    <section class="creation-flow" aria-labelledby="journey-title">
+      <div class="creation-flow__shell" data-creation-flow>
+        <header class="creation-flow__heading" data-how-reveal>
+          <div>
+            <p class="how-eyebrow">The Creation Flow</p>
+            <h2 id="journey-title">Five steps. One finished file.</h2>
+          </div>
+          <p>The same clear path works across Social Media, YouTube, and Newsletter assets.</p>
+        </header>
+
+        <div class="creation-flow__stage">
+          <ol class="creation-flow__rail" aria-label="Five steps to create a design">
+            <li>
+              <div class="creation-flow__step is-active" data-creation-step="0" data-src="how-step-choose.webp" data-alt="FrameUp workspace selection interface" aria-current="step">
+                <span class="creation-flow__number">01</span>
+                <span><strong>Choose a workspace</strong><small>Start with the kind of asset you need.</small></span>
+              </div>
+            </li>
+            <li>
+              <div class="creation-flow__step" data-creation-step="1" data-src="how-step-format.webp" data-alt="FrameUp format selection interface">
+                <span class="creation-flow__number">02</span>
+                <span><strong>Select a format</strong><small>Pick an approved post or asset type.</small></span>
+              </div>
+            </li>
+            <li>
+              <div class="creation-flow__step" data-creation-step="2" data-src="how-step-content.webp" data-alt="FrameUp content and media controls">
+                <span class="creation-flow__number">03</span>
+                <span><strong>Add text and media</strong><small>Enter copy, upload files, or use the ES Image Pool.</small></span>
+              </div>
+            </li>
+            <li>
+              <div class="creation-flow__step" data-creation-step="3" data-src="how-step-review.webp" data-alt="FrameUp slide review controls">
+                <span class="creation-flow__number">04</span>
+                <span><strong>Review every slide</strong><small>Check content, placement, and slide order.</small></span>
+              </div>
+            </li>
+            <li>
+              <div class="creation-flow__step" data-creation-step="4" data-src="how-step-export.webp" data-alt="FrameUp file naming and export controls">
+                <span class="creation-flow__number">05</span>
+                <span><strong>Name and export</strong><small>Download a clearly named final file.</small></span>
+              </div>
+            </li>
+          </ol>
+
+          <figure class="creation-flow__preview" data-creation-preview aria-live="polite">
+            <div class="creation-flow__preview-frame">
+              <img id="creation-flow-preview-image" src="how-step-choose.webp" alt="FrameUp workspace selection interface" width="921" height="518">
+            </div>
+            <figcaption>Step <b data-creation-count>01</b> of 05</figcaption>
+          </figure>
         </div>
       </div>
-      <div class="home-feature-visual">
-        <img src="login-social-media.webp" alt="Social media design workspace preview" loading="lazy" decoding="async">
-      </div>
-    </article>
+    </section>
 
-    <article class="home-feature-card is-reels-card is-reversed">
-      <div class="home-feature-copy">
-        <div class="home-feature-index">02 · Reels</div>
-        <h3>Reels Caption Editor</h3>
-        <p>Upload short-form clips, generate captions, refine transcript timing, style ES word boxes, and export brand-ready vertical video.</p>
-        <div class="home-feature-tags" aria-label="Reels capabilities">
-          <span>Auto Captions</span>
-          <span>Timeline</span>
-          <span>Lower Thirds</span>
+    <section class="how-section workspace-section" id="workspaces" aria-labelledby="workspaces-title">
+      <header class="section-heading section-heading--split" data-how-reveal>
+        <div>
+          <p class="how-eyebrow">Design Workspaces</p>
+          <h2 id="workspaces-title">Start with the format you need.</h2>
+        </div>
+        <p>Each workspace contains focused templates and controls for one type of creative work.</p>
+      </header>
+      <div class="workspace-bento" data-how-stagger>
+        <a class="workspace-guide-card workspace-guide-card--featured" href="#instagram" data-route="instagram">
+          <div class="workspace-guide-image"><img src="workspace-card-social-media.webp" alt="Preview of the Social Media workspace" loading="lazy"></div>
+          <div class="workspace-guide-copy">
+            <h3>Posts, quotes, stats, and listicles.</h3>
+            <ul><li>Multi-slide stories</li><li>Stats and rankings</li><li>Platform-ready exports</li></ul>
+            <strong>Open Social Media <span class="ui-arrow-right card-arrow" aria-hidden="true"></span></strong>
+          </div>
+        </a>
+        <a class="workspace-guide-card" href="#youtube" data-route="youtube">
+          <div class="workspace-guide-image"><img src="workspace-card-youtube-thumbnail.webp" alt="Preview of the YouTube Assets workspace" loading="lazy"></div>
+          <div class="workspace-guide-copy">
+            <h3>Thumbnails and entity compositions.</h3>
+            <ul><li>Backgrounds and entities</li><li>Approved thumbnail formats</li></ul>
+            <strong>Open YouTube Assets <span class="ui-arrow-right card-arrow" aria-hidden="true"></span></strong>
+          </div>
+        </a>
+        <a class="workspace-guide-card" href="#newsletter" data-route="newsletter">
+          <div class="workspace-guide-image"><img src="workspace-card-newsletter-assets.webp" alt="Preview of the Newsletter Assets workspace" loading="lazy"></div>
+          <div class="workspace-guide-copy">
+            <h3>Headers, features, widgets, and video assets.</h3>
+            <ul><li>Brand-ready treatments</li><li>Newsletter-specific sizing</li></ul>
+            <strong>Open Newsletter Assets <span class="ui-arrow-right card-arrow" aria-hidden="true"></span></strong>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section class="request-section" id="request" aria-labelledby="how-request-title" data-request-journey>
+      <div class="request-journey-sticky">
+        <div class="request-copy" data-how-reveal>
+          <div>
+            <p class="how-eyebrow">Design Requests</p>
+            <h2 id="how-request-title">Build a brief the team can act on.</h2>
+            <p>You do not need design language. Tell the team what the design should communicate, where it will be used, and when it is due.</p>
+          </div>
+          <a class="how-button how-button--primary" href="design-request.html">Start a Design Request <span class="ui-arrow-right" aria-hidden="true"></span></a>
+        </div>
+        <div class="request-progress-row" aria-hidden="true">
+          <div class="request-progress">
+            <span data-request-progress></span>
+          </div>
+          <p class="request-step-count">Step <b data-request-count>01</b> of 05</p>
+        </div>
+        <div class="request-journey-window" data-request-window>
+          <ol class="brief-sequence" data-request-track>
+            <li aria-current="step">
+              <div class="brief-card-heading"><span class="brief-step-number">01</span><div><strong>Title</strong><p>Give the request a clear, searchable name.</p></div></div>
+              <div class="brief-ui-snap brief-ui-snap--title" aria-hidden="true">
+                <span class="brief-ui-label">Request title</span>
+                <div class="brief-field"><strong>NBA Finals carousel</strong><i class="brief-caret"></i></div>
+                <div class="brief-field-row"><small><i></i> Clear and searchable</small><em>19 / 60</em></div>
+                <span class="brief-ui-label">Workspace</span>
+                <div class="brief-field"><span>Social Media · Multi-slide carousel</span></div>
+              </div>
+            </li>
+            <li>
+              <div class="brief-card-heading"><span class="brief-step-number">02</span><div><strong>Entities</strong><p>Name every person, team, league, or product featured.</p></div></div>
+              <div class="brief-ui-snap brief-ui-snap--entities" aria-hidden="true">
+                <span class="brief-ui-label">Featured entities</span>
+                <div class="brief-field"><span>Search players, teams, leagues…</span></div>
+                <div class="brief-chips"><b>LeBron James</b><b>Los Angeles Lakers</b><b>NBA Finals</b><b class="is-add">+ Add entity</b></div>
+                <div class="brief-field-row"><small>3 selected</small><em>Auto-tagged</em></div>
+              </div>
+            </li>
+            <li>
+              <div class="brief-card-heading"><span class="brief-step-number">03</span><div><strong>Copy</strong><p>Provide the exact words that should appear in the design.</p></div></div>
+              <div class="brief-ui-snap brief-ui-snap--copy" aria-hidden="true">
+                <span class="brief-ui-label">Design copy</span>
+                <div class="brief-field"><strong>CHASE THE TITLE</strong></div>
+                <div class="brief-field-row"><small>Headline</small><em>15 / 24</em></div>
+                <div class="brief-field"><small>NBA FINALS · GAME 7</small></div>
+                <div class="brief-field-row"><small>Subhead</small><em>20 / 32</em></div>
+              </div>
+            </li>
+            <li>
+              <div class="brief-card-heading"><span class="brief-step-number">04</span><div><strong>Deadline</strong><p>Tell the team when the design is needed and when it publishes.</p></div></div>
+              <div class="brief-ui-snap brief-ui-snap--deadline" aria-hidden="true">
+                <div class="brief-deadline-pair">
+                  <div><span>Design due</span><div class="brief-field"><strong>Today · 6:00 PM</strong></div></div>
+                  <div><span>Publish at</span><div class="brief-field"><strong>Tomorrow · 9:00 AM</strong></div></div>
+                </div>
+                <div class="brief-timeline">
+                  <span class="brief-timeline-track"><i class="is-start"></i><i class="is-end"></i></span>
+                  <span class="brief-timeline-legend"><small>Brief sent</small><em>15 h turnaround</em><small>Live</small></span>
+                </div>
+                <div class="brief-field"><span>Reminder to the design team 2 h before it is due</span></div>
+              </div>
+            </li>
+            <li>
+              <div class="brief-card-heading"><span class="brief-step-number">05</span><div><strong>References and notes</strong><p>Attach useful links, context, and special instructions.</p></div></div>
+              <div class="brief-ui-snap brief-ui-snap--references" aria-hidden="true">
+                <span class="brief-ui-label">Supporting material</span>
+                <div class="brief-files">
+                  <span><b>moodboard.pdf</b><em>2.4 MB</em></span>
+                  <span><b>article-link.url</b><em>Link</em></span>
+                </div>
+                <span class="brief-ui-label">Notes for the designer</span>
+                <div class="brief-field brief-field--notes"><small>Keep the headline bold and mobile-safe. Leave room bottom-right for the logo.</small></div>
+              </div>
+            </li>
+          </ol>
         </div>
       </div>
-      <div class="home-feature-visual">
-        <img src="workspace-card-video-guide.webp" alt="Reels caption editor preview" loading="lazy" decoding="async">
-      </div>
-    </article>
+    </section>
 
-    <article class="home-feature-card is-reversed">
-      <div class="home-feature-copy">
-        <div class="home-feature-index">03 · YouTube</div>
-        <h3>YouTube Assets</h3>
-        <p>Build high-impact thumbnail concepts with clear hierarchy, strong entities, and flexible background treatments designed to stop the scroll.</p>
-        <div class="home-feature-tags" aria-label="YouTube capabilities">
-          <span>Thumbnails</span>
-          <span>Entity Layouts</span>
-          <span>Text Treatments</span>
-        </div>
+    <section class="how-section help-section" id="help" aria-labelledby="help-title">
+      <div data-how-reveal>
+        <p class="how-eyebrow">Quick Help</p>
+        <h2 id="help-title">Need a rule, answer, or person?</h2>
       </div>
-      <div class="home-feature-visual">
-        <img src="login-youtube-assets.webp" alt="YouTube assets workspace preview" loading="lazy" decoding="async">
+      <div class="help-links" data-how-stagger>
+        <a href="#logo-guidelines" data-route="logo-guidelines"><span>Brand Guidelines</span><strong>Check approved visual rules</strong><span class="ui-arrow-right card-arrow" aria-hidden="true"></span></a>
+        <a href="#faq" data-route="faq"><span>FAQ</span><strong>Find answers to common questions</strong><span class="ui-arrow-right card-arrow" aria-hidden="true"></span></a>
+        <a href="mailto:suhail.quraishi@essentiallysports.com"><span>Contact</span><strong>suhail.quraishi@essentiallysports.com</strong><span class="ui-arrow-right card-arrow" aria-hidden="true"></span></a>
       </div>
-    </article>
-
-    <article class="home-feature-card">
-      <div class="home-feature-copy">
-        <div class="home-feature-index">04 · Newsletters</div>
-        <h3>Newsletter Assets</h3>
-        <p>Prepare consistent visual assets for newsletter launches, daily editions, and special coverage with a workflow that keeps every handoff clear.</p>
-        <div class="home-feature-tags" aria-label="Newsletter capabilities">
-          <span>Hero Images</span>
-          <span>Daily Editions</span>
-          <span>Brand Safe</span>
-        </div>
-      </div>
-      <div class="home-feature-visual">
-        <img src="login-newsletter-assets.webp" alt="Newsletter assets workspace preview" loading="lazy" decoding="async">
-      </div>
-    </article>
-  </section>
+    </section>
+  </div>
 </main>
 
 <!-- BREADCRUMB + HEADER -->
@@ -16351,5 +16325,6 @@ loadFont().then(() => render());
   }
 })();
 </script>
+<script src="how-it-works.js?v=20260813-sync1"></script>
 </body>
 </html>
