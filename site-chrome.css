@@ -190,6 +190,24 @@
     transform: translateX(3px) !important;
   }
 
+  .nav-dropdown-menu a::before {
+    content: "" !important;
+    position: absolute !important;
+    left: 5px !important;
+    top: 50% !important;
+    width: 3px !important;
+    height: 0 !important;
+    border-radius: 999px !important;
+    background: var(--chrome-accent) !important;
+    transform: translateY(-50%) !important;
+    transition: height .22s var(--chrome-motion) !important;
+  }
+
+  .nav-dropdown-menu a:hover::before,
+  .nav-dropdown-menu a:focus-visible::before {
+    height: 18px !important;
+  }
+
   .navbar-right {
     min-width: 0 !important;
     display: flex !important;
@@ -1018,6 +1036,7 @@ html.has-dashboard-admin [data-admin-only].is-admin-visible {
 
 @media (prefers-reduced-motion: reduce) {
   .nav-dropdown-menu,
+  .nav-dropdown-menu a::before,
   .profile-dropdown,
   .profile-chevron,
   .navbar-menu .has-chevron::after {

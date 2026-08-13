@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -143,125 +143,6 @@
     height: 24px;
     background: #B5D8FD;
     display: inline-block;
-  }
-  .nav-dropdown {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-  }
-  .nav-trigger {
-    appearance: none;
-    border: 0;
-    background: transparent;
-    cursor: pointer;
-    font: inherit;
-    padding: 0;
-  }
-  .navbar-menu .has-chevron::after {
-    content: '';
-    display: inline-block;
-    width: 16px;
-    height: 10px;
-    background: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCAxNiAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE0Ljk3NjYgMS4xNDA2Mkw3Ljk3NjU2IDcuMTQwNjNMMC45NzY1NjMgMS4xNDA2MiIgc3Ryb2tlPSIjMEE3REZBIiBzdHJva2Utd2lkdGg9IjMiLz4KPC9zdmc+Cg==") center / contain no-repeat;
-    transform: translateY(1px);
-    margin-left: 8px;
-  }
-  .nav-dropdown-menu {
-    position: absolute;
-    top: calc(100% + 12px);
-    left: 0;
-    min-width: 176px;
-    padding: 10px;
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-md);
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    z-index: 120;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transform: translateY(8px) scale(.98);
-    transform-origin: top left;
-    transition: opacity .24s var(--motion-smooth), transform .24s var(--motion-smooth), visibility .24s var(--motion-smooth);
-  }
-  .nav-dropdown:focus-within .nav-dropdown-menu,
-  .nav-dropdown.is-open .nav-dropdown-menu {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transform: translateY(0) scale(1);
-  }
-  .nav-dropdown-menu a {
-    position: relative;
-    color: var(--text-primary);
-    font-size: clamp(14px, .78vw, 16px);
-    font-family: var(--font-heading);
-    font-weight: 700;
-    line-height: 1;
-    padding: 10px 12px;
-    border-radius: var(--radius-sm);
-    white-space: nowrap;
-    transition: color .22s var(--motion-smooth), background-color .22s var(--motion-smooth), transform .22s var(--motion-smooth);
-  }
-  .nav-dropdown-menu a::before {
-    content: "";
-    position: absolute;
-    left: 5px;
-    top: 50%;
-    width: 3px;
-    height: 0;
-    border-radius: 999px;
-    background: var(--accent);
-    transform: translateY(-50%);
-    transition: height .22s var(--motion-smooth);
-  }
-  .nav-dropdown-menu span {
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-family: var(--font-heading);
-    font-weight: 700;
-    line-height: 1;
-    padding: 10px 12px;
-    border-radius: var(--radius-sm);
-    white-space: nowrap;
-  }
-  .nav-dropdown-menu a:hover {
-    background: var(--accent-light);
-    color: var(--accent);
-    transform: translateX(4px);
-  }
-  .nav-dropdown-menu a:hover::before,
-  .nav-dropdown-menu a:focus-visible::before {
-    height: 18px;
-  }
-  .nav-dropdown-menu a:focus-visible {
-    background: var(--accent-light);
-    color: var(--accent);
-    outline: none;
-    transform: translateX(4px);
-  }
-  .nav-dropdown-menu .is-upcoming {
-    background: var(--tag-cream);
-    color: #765A2C;
-    border: 1px solid #D8B979;
-    cursor: default;
-  }
-  .nav-dropdown-menu .is-upcoming:hover {
-    background: var(--tag-cream);
-    color: #765A2C;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .nav-dropdown-menu a,
-    .nav-dropdown-menu a::before {
-      transition: none;
-    }
-    .nav-dropdown-menu a:hover,
-    .nav-dropdown-menu a:focus-visible {
-      transform: none;
-    }
   }
   .navbar-divider {
     width: 1.5px;
@@ -2018,7 +1899,8 @@
   body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #swipe-button-card,
   body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .color-card,
   body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .image-tool-rail,
-  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .canvas-stage {
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .canvas-stage,
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .studio-inspector-tabs {
     display: none !important;
   }
   #widget-main-fields,
@@ -6583,13 +6465,34 @@ body[data-current-page="faq"] .faq-cta-art img {
     width: 100%;
     overflow: hidden;
   }
+  .widget-preview-window {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: #FFFFFF;
+    box-shadow: 0 18px 40px rgba(3, 49, 98, .08);
+    overflow: hidden;
+  }
+  .widget-preview-window-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px;
+    background: #F6F8FB;
+    border-bottom: 1px solid var(--border);
+  }
+  .widget-preview-window-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
   .widget-preview-frame {
     display: block;
     width: 100%;
     min-height: 420px;
     border: 0;
     background: #FFFFFF;
-    border-radius: var(--radius-sm);
     overflow: hidden;
   }
   #widget-copy-btn.is-copied {
@@ -7708,7 +7611,14 @@ body[data-current-page="faq"] .faq-cta-art img {
         </aside>
       </div>
       <div class="widget-preview-pane" id="widget-preview-pane">
-        <iframe class="widget-preview-frame" id="widget-canvas-preview-frame" title="Widget preview" sandbox="allow-same-origin" scrolling="no"></iframe>
+        <div class="widget-preview-window">
+          <div class="widget-preview-window-bar">
+            <span class="widget-preview-window-dot" style="background:#FF5F57;"></span>
+            <span class="widget-preview-window-dot" style="background:#FEBC2E;"></span>
+            <span class="widget-preview-window-dot" style="background:#28C840;"></span>
+          </div>
+          <iframe class="widget-preview-frame" id="widget-canvas-preview-frame" title="Widget preview" sandbox="allow-same-origin" scrolling="no"></iframe>
+        </div>
       </div>
       <div class="ai-image-picker" id="ai-image-picker" role="dialog" aria-modal="false" aria-label="Choose ES images" hidden>
         <div class="ai-image-picker-header">
