@@ -2000,7 +2000,8 @@
   body[data-current-page="newsletter"][data-newsletter-asset="feature-image"] #newsletter-brand-card,
   body[data-current-page="newsletter"][data-newsletter-asset="section-header"] #newsletter-brand-card,
   body[data-current-page="newsletter"][data-newsletter-asset="section-header-2"] #newsletter-brand-card,
-  body[data-current-page="newsletter"][data-newsletter-asset="youtube-fi"] #newsletter-brand-card {
+  body[data-current-page="newsletter"][data-newsletter-asset="youtube-fi"] #newsletter-brand-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #newsletter-brand-card {
     display: block;
   }
   body[data-current-page="newsletter"][data-newsletter-asset="youtube-fi"] .text-card,
@@ -6580,6 +6581,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   /* ─── NEWSLETTER WIDGET BUILDER ─────────────────────────────── */
   .widget-preview-pane {
     width: 100%;
+    overflow: hidden;
   }
   .widget-preview-frame {
     display: block;
@@ -6588,6 +6590,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     border: 0;
     background: #FFFFFF;
     border-radius: var(--radius-sm);
+    overflow: hidden;
   }
   #widget-copy-btn.is-copied {
     background: var(--success);
@@ -6676,6 +6679,59 @@ body[data-current-page="faq"] .faq-cta-art img {
   .widget-upload-icon-btn svg {
     width: 18px;
     height: 18px;
+  }
+  .widget-image-actions {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .widget-image-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .widget-image-action-btn svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+  .widget-image-action-btn:hover {
+    border-color: var(--border-strong);
+    background: var(--bg-canvas-soft);
+  }
+  .widget-image-action-btn.is-primary {
+    border-color: #0A7DFA;
+    background: #0A7DFA;
+    color: var(--white);
+  }
+  .widget-image-action-btn.is-primary:hover {
+    border-color: #0868D6;
+    background: #0868D6;
+  }
+  .widget-image-action-btn.is-active {
+    border-color: #0A7DFA;
+    color: #0A7DFA;
+    background: #EAF3FF;
+  }
+  .widget-image-link-row {
+    margin-bottom: 8px;
+  }
+  .widget-image-link-row .widget-text-input {
+    margin-bottom: 0;
   }
   .widget-builder-hint {
     display: none;
@@ -6990,7 +7046,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         <div class="card-title">Newsletter Brand</div>
         <select id="newsletter-brand-select" aria-label="Newsletter brand"></select>
       </div>
-      <p class="widget-builder-hint">Uploading a photo previews it instantly — paste its final hosted URL in the field so the link works in beehiiv.</p>
+      <p class="widget-builder-hint">Uploading a photo or picking one of your headers previews it instantly — paste its final hosted URL in the field so the link works in beehiiv.</p>
     </div>
 
     <div class="post-type-control" id="post-type-control" aria-label="Instagram post type">
@@ -7327,10 +7383,19 @@ body[data-current-page="faq"] .faq-cta-art img {
         <label class="widget-field-label">Image</label>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="main"><img alt=""></div>
-          <input type="text" class="widget-text-input" data-widget-field="main.imageUrl" placeholder="Image URL">
-          <button type="button" class="widget-upload-icon-btn" data-widget-upload="main" title="Upload a photo to preview only — paste the final hosted URL in the field to use it in Copy HTML" aria-label="Upload photo to preview only">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
+          <div class="widget-image-actions">
+            <button type="button" class="widget-image-action-btn is-primary" data-widget-upload="main" title="Upload a photo to preview only — paste the final hosted URL below to use it in Copy HTML" aria-label="Upload photo to preview only">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Upload Image</span>
+            </button>
+            <button type="button" class="widget-image-action-btn" data-widget-paste-link="main" aria-expanded="false" aria-controls="widget-link-row-main">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 15 15 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10.5 6.5 12 5a3.5 3.5 0 0 1 5 5l-1.5 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13.5 17.5 12 19a3.5 3.5 0 0 1-5-5l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Paste Link</span>
+            </button>
+          </div>
+        </div>
+        <div class="widget-image-link-row" id="widget-link-row-main" data-widget-link-row="main" hidden>
+          <input type="text" class="widget-text-input" data-widget-field="main.imageUrl" placeholder="https://...">
         </div>
       </div>
       <div class="widget-field-group">
@@ -7352,10 +7417,19 @@ body[data-current-page="faq"] .faq-cta-art img {
         <label class="widget-field-label">Top Pick 1</label>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="pick0"><img alt=""></div>
-          <input type="text" class="widget-text-input" data-widget-field="picks.0.imageUrl" placeholder="Image URL">
-          <button type="button" class="widget-upload-icon-btn" data-widget-upload="pick0" title="Upload a photo to preview only — paste the final hosted URL in the field to use it in Copy HTML" aria-label="Upload photo to preview only">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
+          <div class="widget-image-actions">
+            <button type="button" class="widget-image-action-btn is-primary" data-widget-upload="pick0" title="Upload a photo to preview only — paste the final hosted URL below to use it in Copy HTML" aria-label="Upload photo to preview only">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Upload Image</span>
+            </button>
+            <button type="button" class="widget-image-action-btn" data-widget-paste-link="pick0" aria-expanded="false" aria-controls="widget-link-row-pick0">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 15 15 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10.5 6.5 12 5a3.5 3.5 0 0 1 5 5l-1.5 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13.5 17.5 12 19a3.5 3.5 0 0 1-5-5l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Paste Link</span>
+            </button>
+          </div>
+        </div>
+        <div class="widget-image-link-row" id="widget-link-row-pick0" data-widget-link-row="pick0" hidden>
+          <input type="text" class="widget-text-input" data-widget-field="picks.0.imageUrl" placeholder="https://...">
         </div>
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.0.headline" placeholder="Headline">
@@ -7366,10 +7440,19 @@ body[data-current-page="faq"] .faq-cta-art img {
         <label class="widget-field-label">Top Pick 2</label>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="pick1"><img alt=""></div>
-          <input type="text" class="widget-text-input" data-widget-field="picks.1.imageUrl" placeholder="Image URL">
-          <button type="button" class="widget-upload-icon-btn" data-widget-upload="pick1" title="Upload a photo to preview only — paste the final hosted URL in the field to use it in Copy HTML" aria-label="Upload photo to preview only">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
+          <div class="widget-image-actions">
+            <button type="button" class="widget-image-action-btn is-primary" data-widget-upload="pick1" title="Upload a photo to preview only — paste the final hosted URL below to use it in Copy HTML" aria-label="Upload photo to preview only">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Upload Image</span>
+            </button>
+            <button type="button" class="widget-image-action-btn" data-widget-paste-link="pick1" aria-expanded="false" aria-controls="widget-link-row-pick1">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 15 15 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10.5 6.5 12 5a3.5 3.5 0 0 1 5 5l-1.5 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13.5 17.5 12 19a3.5 3.5 0 0 1-5-5l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Paste Link</span>
+            </button>
+          </div>
+        </div>
+        <div class="widget-image-link-row" id="widget-link-row-pick1" data-widget-link-row="pick1" hidden>
+          <input type="text" class="widget-text-input" data-widget-field="picks.1.imageUrl" placeholder="https://...">
         </div>
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.1.headline" placeholder="Headline">
@@ -7380,10 +7463,19 @@ body[data-current-page="faq"] .faq-cta-art img {
         <label class="widget-field-label">Top Pick 3</label>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="pick2"><img alt=""></div>
-          <input type="text" class="widget-text-input" data-widget-field="picks.2.imageUrl" placeholder="Image URL">
-          <button type="button" class="widget-upload-icon-btn" data-widget-upload="pick2" title="Upload a photo to preview only — paste the final hosted URL in the field to use it in Copy HTML" aria-label="Upload photo to preview only">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
+          <div class="widget-image-actions">
+            <button type="button" class="widget-image-action-btn is-primary" data-widget-upload="pick2" title="Upload a photo to preview only — paste the final hosted URL below to use it in Copy HTML" aria-label="Upload photo to preview only">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Upload Image</span>
+            </button>
+            <button type="button" class="widget-image-action-btn" data-widget-paste-link="pick2" aria-expanded="false" aria-controls="widget-link-row-pick2">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 15 15 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10.5 6.5 12 5a3.5 3.5 0 0 1 5 5l-1.5 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13.5 17.5 12 19a3.5 3.5 0 0 1-5-5l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Paste Link</span>
+            </button>
+          </div>
+        </div>
+        <div class="widget-image-link-row" id="widget-link-row-pick2" data-widget-link-row="pick2" hidden>
+          <input type="text" class="widget-text-input" data-widget-field="picks.2.imageUrl" placeholder="https://...">
         </div>
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.2.headline" placeholder="Headline">
@@ -7394,10 +7486,19 @@ body[data-current-page="faq"] .faq-cta-art img {
         <label class="widget-field-label">Top Pick 4</label>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="pick3"><img alt=""></div>
-          <input type="text" class="widget-text-input" data-widget-field="picks.3.imageUrl" placeholder="Image URL">
-          <button type="button" class="widget-upload-icon-btn" data-widget-upload="pick3" title="Upload a photo to preview only — paste the final hosted URL in the field to use it in Copy HTML" aria-label="Upload photo to preview only">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
+          <div class="widget-image-actions">
+            <button type="button" class="widget-image-action-btn is-primary" data-widget-upload="pick3" title="Upload a photo to preview only — paste the final hosted URL below to use it in Copy HTML" aria-label="Upload photo to preview only">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Upload Image</span>
+            </button>
+            <button type="button" class="widget-image-action-btn" data-widget-paste-link="pick3" aria-expanded="false" aria-controls="widget-link-row-pick3">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 15 15 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10.5 6.5 12 5a3.5 3.5 0 0 1 5 5l-1.5 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13.5 17.5 12 19a3.5 3.5 0 0 1-5-5l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Paste Link</span>
+            </button>
+          </div>
+        </div>
+        <div class="widget-image-link-row" id="widget-link-row-pick3" data-widget-link-row="pick3" hidden>
+          <input type="text" class="widget-text-input" data-widget-field="picks.3.imageUrl" placeholder="https://...">
         </div>
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.3.headline" placeholder="Headline">
@@ -7607,7 +7708,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         </aside>
       </div>
       <div class="widget-preview-pane" id="widget-preview-pane">
-        <iframe class="widget-preview-frame" id="widget-canvas-preview-frame" title="Widget preview" sandbox="allow-same-origin"></iframe>
+        <iframe class="widget-preview-frame" id="widget-canvas-preview-frame" title="Widget preview" sandbox="allow-same-origin" scrolling="no"></iframe>
       </div>
       <div class="ai-image-picker" id="ai-image-picker" role="dialog" aria-modal="false" aria-label="Choose ES images" hidden>
         <div class="ai-image-picker-header">
@@ -10046,13 +10147,13 @@ function initUI() {
   });
   const newsletterBrandSelect = document.getElementById('newsletter-brand-select');
   if (newsletterBrandSelect) {
-    NEWSLETTER_BRANDS.forEach(brand => {
-      const option = document.createElement('option');
-      option.value = brand.id;
-      option.textContent = brand.label;
-      newsletterBrandSelect.appendChild(option);
-    });
+    populateNewsletterBrandSelect(activeNewsletterAsset);
     newsletterBrandSelect.addEventListener('change', event => {
+      if (activeNewsletterAsset === 'widgets') {
+        if (widgetBuilderState) widgetBuilderState.brandId = event.target.value;
+        renderWidgetPreview();
+        return;
+      }
       state.newsletterBrand = event.target.value;
       applyNewsletterBrandPalette();
       render();
@@ -11236,7 +11337,34 @@ const NEWSLETTER_ASSET_TYPES = {
     },
   },
 };
+const WIDGET_BRAND_IDS = ['she-got-game', 'the-huddle', 'essentially-golf', 'lucky-dog-on-track'];
+
+const WIDGET_HEADER_IMAGES = {
+  'she-got-game': {
+    main: 'https://image-cdn.essentiallysports.com/wp-content/uploads/HIGHLIGHT-OF-THE-DAY-SHE-GOT-GAME.png',
+    picks: 'https://image-cdn.essentiallysports.com/wp-content/uploads/MUST-READ-PICKS-SHE-GOT-GAME.png',
+  },
+  'the-huddle': {
+    main: 'https://image-cdn.essentiallysports.com/wp-content/uploads/HEADLINE-OF-THE-DAY-THE-HUDDLE.png',
+    picks: 'https://image-cdn.essentiallysports.com/wp-content/uploads/OUR-TOP-PICKS-THE-HUDDLE.png',
+  },
+  'essentially-golf': {
+    main: 'https://image-cdn.essentiallysports.com/wp-content/uploads/HIGHLIGHT-OF-THE-DAY-GOLF.png',
+    picks: 'https://image-cdn.essentiallysports.com/wp-content/uploads/UPDATES-YOU-MISSED-GOLF.png',
+  },
+  'lucky-dog-on-track': {
+    main: 'https://image-cdn.essentiallysports.com/wp-content/uploads/THE-SPOTLIGHT-LDOT.png',
+    picks: 'https://image-cdn.essentiallysports.com/wp-content/uploads/TOP-PICKS-LDOT.png',
+  },
+};
+
+function getWidgetHeaderImage(brandId, slot) {
+  const set = WIDGET_HEADER_IMAGES[brandId] || WIDGET_HEADER_IMAGES[WIDGET_BRAND_IDS[0]];
+  return set[slot];
+}
+
 const WIDGET_DEFAULT_STATE = {
+  brandId: WIDGET_BRAND_IDS[0],
   main: {
     imageUrl: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/0db6fb1b-acc5-4304-8a28-730a4fac3f18/1.png?t=1786136616',
     headline: "NASCAR's 4th Of July Traditions Get a Fresh Update for 2027",
@@ -11280,7 +11408,7 @@ function escapeWidgetAttr(value) {
     .replace(/"/g, '&quot;');
 }
 
-function renderWidgetPickItem(pick) {
+function renderWidgetPickItem(pick, brand) {
   return `        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
   <tr>
 <td width="140" valign="top" style="padding-right: 12px; height: auto;">
@@ -11298,7 +11426,7 @@ function renderWidgetPickItem(pick) {
       <a href="${escapeWidgetAttr(pick.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family: 'Roboto', Arial, sans-serif;">
   <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
     <tr>
-      <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid #FCD53D;">
+      <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.background)};">
         Read More &#8599;
       </td>
     </tr>
@@ -11309,11 +11437,16 @@ function renderWidgetPickItem(pick) {
 </table>`;
 }
 
+function renderWidgetHeaderImage(brandId, slot) {
+  return `<img src="${escapeWidgetAttr(getWidgetHeaderImage(brandId, slot))}" width="100%" alt="" style="display:block; margin-bottom:8px; border:0;">`;
+}
+
 const WIDGET_PICK_DIVIDER = '        <hr style="border: none; border-top: 1px dashed #f3f5f7; margin: 0; margin-bottom: 12px; margin-top: 12px">';
 
 function buildWidgetHtml(state) {
   const main = state.main;
-  const picksHtml = state.picks.map(renderWidgetPickItem).join(`\n\n${WIDGET_PICK_DIVIDER}\n\n`);
+  const brand = getNewsletterBrand(state.brandId);
+  const picksHtml = state.picks.map(pick => renderWidgetPickItem(pick, brand)).join(`\n\n${WIDGET_PICK_DIVIDER}\n\n`);
   return `<!-- ========================================= -->
 <!-- MAIN TWO-COLUMN SECTION START -->
 <!-- ========================================= -->
@@ -11329,7 +11462,7 @@ function buildWidgetHtml(state) {
       <td class="stack main-story" width="50%"  valign="top">
 
        <!-- UNMISSABLE STORIES HEADING START -->
-        <img class="story-image" src="https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/d7ae4667-5246-457c-ad5e-97b7f91cfaf6/the_spotlight.png?t=1785501924" width="100%" alt="Sports story" style="margin-bottom:8px;">
+        ${renderWidgetHeaderImage(state.brandId, 'main')}
         <!-- UNMISSABLE STORIES HEADING END -->
 
 
@@ -11356,7 +11489,7 @@ function buildWidgetHtml(state) {
       <a href="${escapeWidgetAttr(main.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family: 'Roboto', Arial, sans-serif;">
   <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
     <tr>
-     <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid #FCD53D;">
+     <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.background)};">
         Read More &#8599;
       </td>
     </tr>
@@ -11384,7 +11517,7 @@ function buildWidgetHtml(state) {
       <td class="stack sidebar"  valign="top" width="50%" style="border-left:1px solid #f3f5f7;">
 
         <!-- STORIES SIDEBAR HEADING START -->
-        <div style="padding:0px 5px 0px 12px;"><img class="story-image" src="https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/4440540a-0d23-49fe-9d96-86f57e027e6e/top_picks.png?t=1785501925" width="100%" alt="Sports story" style="margin-bottom:8px;"></div>
+        <div style="padding:0px 5px 0px 12px;">${renderWidgetHeaderImage(state.brandId, 'picks')}</div>
         <!-- STORIES SIDEBAR HEADING END -->
 
 <div style="padding:0px 5px 0px 12px;">
@@ -11539,6 +11672,20 @@ function clamp(value, min, max) {
 
 function getNewsletterBrand(id) {
   return NEWSLETTER_BRANDS.find(brand => brand.id === id) || NEWSLETTER_BRANDS[0];
+}
+
+function populateNewsletterBrandSelect(assetType) {
+  const select = document.getElementById('newsletter-brand-select');
+  if (!select) return;
+  const brands = assetType === 'widgets'
+    ? WIDGET_BRAND_IDS.map(getNewsletterBrand)
+    : NEWSLETTER_BRANDS;
+  select.innerHTML = brands.map(brand =>
+    `<option value="${escapeWidgetAttr(brand.id)}">${escapeWidgetHtml(brand.label)}</option>`
+  ).join('');
+  select.value = assetType === 'widgets'
+    ? (widgetBuilderState ? widgetBuilderState.brandId : WIDGET_BRAND_IDS[0])
+    : state.newsletterBrand;
 }
 
 function getNewsletterBrandPalette(id) {
@@ -15108,7 +15255,11 @@ function syncWorkspaceControls() {
     button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
   });
   if (newsletterAssetSelect) newsletterAssetSelect.value = activeNewsletterAsset;
-  if (newsletterBrandSelect) newsletterBrandSelect.value = getNewsletterBrand(state.newsletterBrand).id;
+  if (newsletterBrandSelect) {
+    newsletterBrandSelect.value = activeNewsletterAsset === 'widgets'
+      ? (widgetBuilderState ? widgetBuilderState.brandId : WIDGET_BRAND_IDS[0])
+      : getNewsletterBrand(state.newsletterBrand).id;
+  }
   if (reelsFormatSelect) reelsFormatSelect.value = state.reelsFormat || activeReelsFormat || 'cover-frame';
   document.body.dataset.youtubeVariation = activeYoutubeVariation;
   document.body.dataset.youtubeQuote = activeWorkspace === 'youtube' && state.youtubeQuote ? 'on' : 'off';
@@ -15242,6 +15393,13 @@ function switchNewsletterAsset(assetType) {
   state.isDraggingText = false;
   activeNewsletterAsset = assetType;
   state.newsletterAsset = assetType;
+  if (assetType === 'widgets' && widgetBuilderState) {
+    if (!WIDGET_BRAND_IDS.includes(widgetBuilderState.brandId)) {
+      widgetBuilderState.brandId = WIDGET_BRAND_IDS[0];
+    }
+    renderWidgetPreview();
+  }
+  populateNewsletterBrandSelect(assetType);
   if (assetType === 'feature-image' || assetType === 'section-header' || assetType === 'youtube-fi') {
     applyNewsletterBrandPalette();
   } else {
@@ -15650,7 +15808,17 @@ function setupPageTransitions() {
 }
 
 function wrapWidgetPreviewDoc(html) {
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{margin:0;background:#ffffff;font-family:Arial,sans-serif;}</style></head><body>${html}</body></html>`;
+  // Loads the same @font-face this app itself uses for Header Option 1/2
+  // (index.html's own <style>, ~line 30) so the banner preview matches that
+  // module exactly in-studio. srcdoc inherits the parent document's base URL,
+  // so this relative path resolves the same way it does for the rest of the
+  // page. Real email clients never load custom webfonts regardless, so the
+  // copied HTML's own font-family list still falls back to Arial Narrow.
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>
+    @font-face { font-family: 'Acumin Post'; src: url('fonts/acumin-post-legacy.otf') format('opentype'); font-style: normal; font-weight: 700; font-display: block; }
+    html,body{margin:0;background:#ffffff;font-family:Arial,sans-serif;overflow:hidden;}
+    img{max-width:100%;}
+  </style></head><body>${html}</body></html>`;
 }
 
 function copyWidgetHtml(html, button) {
@@ -15795,6 +15963,25 @@ function initWidgetBuilder() {
     widgetImagePreviewOverrides[pendingUploadSlot] = blobUrl;
     updateWidgetThumb(pendingUploadSlot);
     renderWidgetPreview();
+  });
+
+  document.querySelectorAll('[data-widget-paste-link]').forEach(button => {
+    const slot = button.dataset.widgetPasteLink;
+    const linkRow = document.querySelector(`[data-widget-link-row="${slot}"]`);
+    if (!linkRow) return;
+    const linkInput = linkRow.querySelector('.widget-text-input');
+    if (linkInput && linkInput.value) {
+      linkRow.hidden = false;
+      button.classList.add('is-active');
+      button.setAttribute('aria-expanded', 'true');
+    }
+    button.addEventListener('click', () => {
+      const isOpen = !linkRow.hidden;
+      linkRow.hidden = isOpen;
+      button.classList.toggle('is-active', !isOpen);
+      button.setAttribute('aria-expanded', String(!isOpen));
+      if (!isOpen) linkRow.querySelector('.widget-text-input')?.focus();
+    });
   });
 
   const copyButton = document.getElementById('widget-copy-btn');
