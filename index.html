@@ -7406,6 +7406,10 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     <div id="widget-main-fields">
       <div class="widget-field-group">
+        <label class="widget-field-label">Header Image Link</label>
+        <input type="text" class="widget-text-input" data-widget-field="headerImages.main" placeholder="https://... (leave blank to use the default brand header)">
+      </div>
+      <div class="widget-field-group">
         <label class="widget-field-label">Image</label>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="main"><img alt=""></div>
@@ -7443,6 +7447,10 @@ body[data-current-page="faq"] .faq-cta-art img {
     </div>
 
     <div id="widget-picks-fields">
+      <div class="widget-field-group">
+        <label class="widget-field-label">Header Image Link</label>
+        <input type="text" class="widget-text-input" data-widget-field="headerImages.picks" placeholder="https://... (leave blank to use the default brand header)">
+      </div>
       <div class="widget-field-group" data-widget-pick-group="0">
         <label class="widget-field-label">Top Pick 1</label>
         <div class="widget-image-row">
@@ -11413,13 +11421,18 @@ const WIDGET_HEADER_IMAGES = {
   },
 };
 
-function getWidgetHeaderImage(brandId, slot) {
+function getWidgetHeaderImage(brandId, slot, override) {
+  if (override) return override;
   const set = WIDGET_HEADER_IMAGES[brandId] || WIDGET_HEADER_IMAGES[WIDGET_BRAND_IDS[0]];
   return set[slot];
 }
 
 const WIDGET_DEFAULT_STATE = {
   brandId: WIDGET_BRAND_IDS[0],
+  headerImages: {
+    main: '',
+    picks: '',
+  },
   main: {
     imageUrl: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/0db6fb1b-acc5-4304-8a28-730a4fac3f18/1.png?t=1786136616',
     headline: "NASCAR's 4th Of July Traditions Get a Fresh Update for 2027",
@@ -11492,8 +11505,9 @@ function renderWidgetPickItem(pick, brand) {
 </table>`;
 }
 
-function renderWidgetHeaderImage(brandId, slot) {
-  return `<img class="story-image" src="${escapeWidgetAttr(getWidgetHeaderImage(brandId, slot))}" width="100%" alt="Sports story" style="margin-bottom:8px;">`;
+function renderWidgetHeaderImage(state, slot) {
+  const src = getWidgetHeaderImage(state.brandId, slot, state.headerImages?.[slot]);
+  return `<img class="story-image" src="${escapeWidgetAttr(src)}" width="100%" alt="Sports story" style="margin-bottom:8px;">`;
 }
 
 const WIDGET_PICK_DIVIDER = '        <hr style="border: none; border-top: 1px dashed #f3f5f7; margin: 0; margin-bottom: 12px; margin-top: 12px">';
@@ -11517,7 +11531,7 @@ function buildWidgetHtml(state) {
       <td class="stack main-story" width="50%"  valign="top">
 
        <!-- UNMISSABLE STORIES HEADING START -->
-        ${renderWidgetHeaderImage(state.brandId, 'main')}
+        ${renderWidgetHeaderImage(state, 'main')}
         <!-- UNMISSABLE STORIES HEADING END -->
 
 
@@ -11572,7 +11586,7 @@ function buildWidgetHtml(state) {
       <td class="stack sidebar"  valign="top" width="50%" style="border-left:1px solid #f3f5f7;">
 
         <!-- STORIES SIDEBAR HEADING START -->
-        <div style="padding:0px 5px 0px 12px;">${renderWidgetHeaderImage(state.brandId, 'picks')}</div>
+        <div style="padding:0px 5px 0px 12px;">${renderWidgetHeaderImage(state, 'picks')}</div>
         <!-- STORIES SIDEBAR HEADING END -->
 
 <div style="padding:0px 5px 0px 12px;">
