@@ -363,7 +363,10 @@
     transition: color .22s var(--motion-smooth), background-color .22s var(--motion-smooth), transform .22s var(--motion-smooth);
   }
   .profile-option::before {
-    content: "";
+    /* Suppressed: .profile-option already renders its icon via an inline
+       currentColor <svg> (site-chrome.js profileIcon()) — this pseudo-element
+       used to render a second, duplicate icon from a hardcoded-color file. */
+    content: none;
     position: static;
     width: 20px;
     height: 20px;
@@ -3550,15 +3553,19 @@ body[data-current-page="faq"] .faq-cta-art img {
   .ai-image-picker-close {
     width: 32px;
     height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border: 1px solid #B5D8FD;
     border-radius: 999px;
     background: #FFFFFF;
     color: #111827;
     cursor: pointer;
-    font-family: var(--font-heading);
-    font-size: 18px;
-    line-height: 1;
     transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
+  }
+  .ai-image-picker-close svg {
+    width: 16px;
+    height: 16px;
   }
   .ai-image-picker-close:hover,
   .ai-image-picker-close:focus-visible {
@@ -7650,7 +7657,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="ai-image-picker" id="ai-image-picker" role="dialog" aria-modal="false" aria-label="Choose ES images" hidden>
         <div class="ai-image-picker-header">
           <div class="ai-image-picker-actions">
-            <button class="ai-image-picker-close" type="button" data-ai-image-picker-close aria-label="Close AI image options">×</button>
+            <button class="ai-image-picker-close" type="button" data-ai-image-picker-close aria-label="Close AI image options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
           </div>
         </div>
         <div class="ai-image-picker-grid" data-ai-image-picker-grid></div>

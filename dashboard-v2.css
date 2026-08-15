@@ -1169,7 +1169,9 @@ html.has-dashboard-admin .navbar-menu [data-admin-only].is-admin-visible {
 }
 
 .profile-option::before {
-  content: "";
+  /* Suppressed: duplicate icon — .profile-option already renders its icon
+     via an inline currentColor <svg> from site-chrome.js profileIcon(). */
+  content: none;
   width: 20px;
   height: 20px;
   flex: 0 0 20px;
@@ -1817,13 +1819,24 @@ html.has-dashboard-admin .navbar-menu [data-admin-only].is-admin-visible {
   right: 18px;
   width: 34px;
   height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--dash-line);
   border-radius: 999px;
   background: #fff;
   color: var(--dash-ink);
   cursor: pointer;
-  font-size: 24px;
-  line-height: 1;
+}
+
+.drawer-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.export-preview-close svg {
+  width: 20px;
+  height: 20px;
 }
 
 .drawer-eyebrow {
@@ -2538,13 +2551,14 @@ body[data-dashboard-view="activity"] .activity-list {
   right: 18px;
   width: 42px;
   height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid #b5d8fd;
   border-radius: 999px;
   background: #fff;
   color: #050505;
   cursor: pointer;
-  font-size: 30px;
-  line-height: 1;
 }
 
 @media (max-width: 1080px) {
@@ -3340,7 +3354,7 @@ body[data-dashboard-view="list"] .dashboard-control-row {
   -webkit-appearance: none;
   padding-right: 42px;
   background-color: #fff;
-  background-image: url("data:image/svg+xml,%3Csvg width='16' height='10' viewBox='0 0 16 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14.98 1.14 7.98 7.14.98 1.14' stroke='%23050505' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='16' height='10' viewBox='0 0 16 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14.98 1.14 7.98 7.14.98 1.14' stroke='%23050505' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 18px center;
   background-size: 14px 9px;
@@ -5460,13 +5474,6 @@ body.dashboard-page .sidebar-nav-secondary,
 body.dashboard-page .sidebar-footer,
 body.dashboard-page .site-footer {
   display: none !important;
-}
-
-body.dashboard-page .sidebar-icon {
-  width: 24px;
-  height: 24px;
-  display: block;
-  object-fit: contain;
 }
 
 body.dashboard-page .sidebar-nav button,

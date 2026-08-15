@@ -342,7 +342,9 @@
     transition: color .22s cubic-bezier(.16,1,.3,1), background-color .22s cubic-bezier(.16,1,.3,1), transform .22s cubic-bezier(.16,1,.3,1);
   }
   .profile-option::before {
-    content: "";
+    /* Suppressed: duplicate icon — .profile-option already renders its icon
+       via an inline currentColor <svg> from site-chrome.js profileIcon(). */
+    content: none;
     position: static;
     width: 20px;
     height: 20px;

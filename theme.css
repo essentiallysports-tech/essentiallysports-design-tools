@@ -125,9 +125,7 @@ html[data-theme="dark"] .sidebar-nav button.is-active {
   background: var(--theme-dark-surface-raised) !important;
 }
 
-html[data-theme="dark"] .footer-social img,
-html[data-theme="dark"] .sidebar-icon,
-html[data-theme="dark"] .dashboard-sidebar img {
+html[data-theme="dark"] .footer-social img {
   filter: invert(1);
 }
 

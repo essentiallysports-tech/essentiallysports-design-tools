@@ -310,7 +310,9 @@
     }
 
     .profile-option::before {
-      content: "";
+      /* Suppressed: duplicate icon — .profile-option already renders its icon
+         via an inline currentColor <svg> from site-chrome.js profileIcon(). */
+      content: none;
       position: static;
       width: 20px;
       height: 20px;
@@ -810,12 +812,13 @@
       align-items: center;
       justify-content: center;
       padding: 0;
-      font-family: Roboto, var(--font-ui);
-      font-size: 14px;
-      font-weight: 500;
-      line-height: 1;
       cursor: pointer;
       flex: 0 0 auto;
+    }
+
+    .prompt-mode-remove svg {
+      width: 12px;
+      height: 12px;
     }
 
     .prompt-mode-remove:hover,
@@ -890,10 +893,9 @@
       box-shadow: var(--shadow-blue);
     }
 
-    .quick-action img {
-      width: 26px;
-      height: 26px;
-      object-fit: contain;
+    .quick-action svg {
+      width: 20px;
+      height: 20px;
       flex: 0 0 auto;
     }
 
@@ -1883,7 +1885,7 @@
               <span class="prompt-entry">
                 <span class="prompt-mode-tag" id="prompt-mode-tag" aria-live="polite">
                   <span class="prompt-mode-label" id="prompt-mode-label"></span>
-                  <button class="prompt-mode-remove" id="prompt-mode-remove" type="button" aria-label="Remove selected option">&times;</button>
+                  <button class="prompt-mode-remove" id="prompt-mode-remove" type="button" aria-label="Remove selected option"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
                 </span>
                 <input class="prompt-input" id="prompt-input" type="text" placeholder="Type something here" aria-label="Ask ES AI">
               </span>
@@ -1897,16 +1899,16 @@
 
           <div class="quick-actions" aria-label="Design actions">
             <button class="quick-action" type="button" data-tag="Add Image" data-prompt="Add an image reference to my ES design brief">
-              <img src="assets/quick-action-add-image.svg" alt="">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 5h6"/><path d="M19 2v6"/><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/></svg>
               Add Image
             </button>
             <span class="quick-separator" aria-hidden="true"></span>
             <button class="quick-action" type="button" data-tag="Enhance Image" data-prompt="Enhance this image for an EssentiallySports backend design request">
-              <img src="assets/quick-action-enhance-image.svg" alt="">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>
               Enhance Image
             </button>
             <button class="quick-action" type="button" data-tag="Create Feature Image" data-prompt="Create a feature image for an EssentiallySports article">
-              <img src="assets/quick-action-create-feature-image.svg" alt="">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
               Create Feature Image
             </button>
           </div>

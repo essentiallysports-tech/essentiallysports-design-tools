@@ -54,11 +54,11 @@
 
   function profileIcon(kind) {
     const icons = {
-      profile: '<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" stroke-width="1.8"/><path d="M4 20a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
-      settings: '<path d="M12 15.25A3.25 3.25 0 1 0 12 8.75a3.25 3.25 0 0 0 0 6.5Z" stroke="currentColor" stroke-width="1.7"/><path d="M19.2 14.8a1.55 1.55 0 0 0 .31 1.7l.05.05a1.9 1.9 0 1 1-2.69 2.69l-.05-.05a1.55 1.55 0 0 0-1.7-.31 1.55 1.55 0 0 0-.94 1.42v.08a1.9 1.9 0 1 1-3.8 0v-.08a1.55 1.55 0 0 0-.94-1.42 1.55 1.55 0 0 0-1.7.31l-.05.05A1.9 1.9 0 1 1 5 16.55l.05-.05a1.55 1.55 0 0 0 .31-1.7 1.55 1.55 0 0 0-1.42-.94h-.08a1.9 1.9 0 1 1 0-3.8h.08a1.55 1.55 0 0 0 1.42-.94 1.55 1.55 0 0 0-.31-1.7L5 7.37a1.9 1.9 0 1 1 2.69-2.69l.05.05a1.55 1.55 0 0 0 1.7.31 1.55 1.55 0 0 0 .94-1.42v-.08a1.9 1.9 0 1 1 3.8 0v.08a1.55 1.55 0 0 0 .94 1.42 1.55 1.55 0 0 0 1.7-.31l.05-.05a1.9 1.9 0 1 1 2.69 2.69l-.05.05a1.55 1.55 0 0 0-.31 1.7c.12.31.18.63.18.94h.08a1.9 1.9 0 1 1 0 3.8h-.08c0 .31-.06.63-.18.94Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>',
-      logout: '<path d="M10 6H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m14 8 4 4-4 4M18 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+      profile: '<path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/>',
+      settings: '<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>',
+      logout: '<path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>',
     };
-    return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">${icons[kind]}</svg>`;
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[kind]}</svg>`;
   }
 
   function profileMarkup(menu, index) {
@@ -68,7 +68,7 @@
       <button class="profile-trigger" type="button" id="profile-trigger" aria-expanded="false" aria-controls="${popoverId}" aria-label="Open account options">
         <span class="profile-avatar" data-profile-initial aria-hidden="true"></span>
         <span class="profile-name" data-profile-name>Guest User</span>
-        <svg class="profile-chevron" viewBox="0 0 16 10" fill="none" aria-hidden="true"><path d="M14.98 1.14 7.98 7.14.98 1.14" stroke="currentColor" stroke-width="3"/></svg>
+        <svg class="profile-chevron" viewBox="0 0 16 10" fill="none" aria-hidden="true"><path d="M14.98 1.14 7.98 7.14.98 1.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <section class="profile-dropdown" id="${popoverId}" aria-label="Account options" aria-hidden="true" inert>
         <header class="profile-identity">

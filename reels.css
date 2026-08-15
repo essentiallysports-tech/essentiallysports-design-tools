@@ -343,9 +343,10 @@ body.reels-page .site-footer {
 .reels-icon-btn {
   width: 44px;
   flex: none;
-  overflow: hidden;
-  text-indent: -999px;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .reels-btn:disabled,
@@ -363,23 +364,21 @@ body.reels-page .site-footer {
   background: #eaf4ff;
 }
 
-.reels-icon-btn::before {
-  content: "";
-  position: absolute;
-  left: 17px;
-  top: 12px;
-  border-left: 12px solid var(--reels-ink);
-  border-top: 8px solid transparent;
-  border-bottom: 8px solid transparent;
+.reels-icon-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
-.reels-icon-btn.is-playing::before {
-  left: 15px;
-  width: 14px;
-  height: 16px;
-  border: 0;
-  border-left: 5px solid var(--reels-ink);
-  border-right: 5px solid var(--reels-ink);
+.reels-icon-btn .reels-pause-icon {
+  display: none;
+}
+
+.reels-icon-btn.is-playing .reels-play-icon {
+  display: none;
+}
+
+.reels-icon-btn.is-playing .reels-pause-icon {
+  display: block;
 }
 
 .reels-scrub {
@@ -1819,24 +1818,12 @@ body.reels-page:not(.reels-has-captions) .reels-timeline-viewport {
   width: 26px;
   height: 26px;
   min-height: 0;
-  /* The base .reels-icon-btn hides its real text off-screen and draws a
-     play/pause glyph via ::before instead — these buttons use plain "−"/
-     "+" text content, so both of those need reverting here. */
-  text-indent: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.reels-icon-btn.is-mini::before {
-  display: none;
-}
-
-.reels-icon-btn.is-mini {
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1;
   color: var(--reels-ink);
+}
+
+.reels-icon-btn.is-mini svg {
+  width: 14px;
+  height: 14px;
 }
 
 .reels-zoom-reset {
