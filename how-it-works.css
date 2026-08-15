@@ -361,11 +361,16 @@ html { scroll-behavior: smooth; }
 
 .frameup-intro__word {
   color: var(--how-line-dim);
-  transition: color 140ms ease;
+  opacity: .55;
+  transform: translateY(.06em);
+  display: inline-block;
+  transition: color 420ms cubic-bezier(.22, 1, .36, 1), opacity 420ms cubic-bezier(.22, 1, .36, 1), transform 420ms cubic-bezier(.22, 1, .36, 1);
 }
 
 .frameup-intro__word.is-visible {
   color: var(--how-ink);
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .frameup-intro__word.is-cursor::after {
