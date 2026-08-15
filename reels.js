@@ -1793,7 +1793,7 @@
         ctx.globalAlpha = 1;
       }
       ctx.fillStyle = bgColor;
-      roundRect(ctx, pillX, pillY, pillW, activePillH, activePillH / 2);
+      roundRect(ctx, pillX, pillY, pillW, activePillH, 0);
       ctx.fill();
       ctx.font = '900 ' + activeFontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
       ctx.fillStyle = fgColor;
@@ -1944,7 +1944,7 @@
       ctx.shadowBlur = shadowBlur;
       ctx.shadowOffsetY = 8;
     }
-    roundRect(ctx, -box.w / 2, -box.h / 2, box.w, box.h, box.h / 2);
+    roundRect(ctx, -box.w / 2, -box.h / 2, box.w, box.h, 0);
     ctx.fill();
 
     if (animation === 'karaoke' && isActive) {
