@@ -1667,7 +1667,7 @@
     display: flex;
     align-items: flex-start;
     overflow: hidden;
-    background: #FFFFFF;
+    background: #F2F8FF;
   }
   /* Same width/centering formula as .frame-options, so the baked-in headline's
      % offset always lines up with the cards' left edge, at every breakpoint. */
@@ -1676,10 +1676,30 @@
     width: min(1280px, calc(100% - 80px));
     margin: 0 auto;
   }
+  .frame-hero-slider {
+    position: relative;
+    overflow: hidden;
+    /* Fixed per banner-art aspect ratio (both slide images share this ratio)
+       so slides never cause a layout jump as the track slides between them. */
+    aspect-ratio: 5502 / 1394;
+  }
+  .frame-hero-track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform .7s cubic-bezier(.65, 0, .35, 1);
+    will-change: transform;
+  }
+  .frame-hero-slide {
+    position: relative;
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+  }
   .frame-banner {
     display: block;
     width: 100%;
-    height: auto;
+    height: 100%;
     min-height: 0;
     object-fit: contain;
     object-position: center top;
@@ -1688,17 +1708,95 @@
   .frame-hero-picture {
     display: block;
     width: 100%;
+    height: 100%;
   }
   .frame-hero-actions {
     position: absolute;
-    /* left/top measured directly from home-hero-banner.webp's baked headline pixels */
-    left: 21.8%;
-    top: 74%;
     transform: none;
     display: flex;
     align-items: center;
     gap: clamp(14px, 1.2vw, 24px);
     z-index: 2;
+  }
+  /* left/top measured directly from each slide's own baked-in artwork pixels */
+  [data-hero-slide="0"] .frame-hero-actions {
+    left: 13%;
+    top: 75%;
+  }
+  [data-hero-slide="1"] .frame-hero-actions {
+    left: 13%;
+    top: 72%;
+  }
+  .frame-hero-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(10, 125, 250, .22);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .82);
+    color: #0A7DFA;
+    cursor: pointer;
+    z-index: 3;
+    backdrop-filter: blur(2px);
+    transition: background-color .2s var(--motion-smooth), border-color .2s var(--motion-smooth), transform .2s var(--motion-smooth), opacity .2s var(--motion-smooth);
+  }
+  .frame-hero-arrow svg {
+    width: 20px;
+    height: 20px;
+  }
+  .frame-hero-arrow:hover,
+  .frame-hero-arrow:focus-visible {
+    background: #FFFFFF;
+    border-color: #0A7DFA;
+    outline: none;
+    transform: translateY(-50%) scale(1.06);
+  }
+  .frame-hero-arrow--prev {
+    left: 14px;
+  }
+  .frame-hero-arrow--next {
+    right: 14px;
+  }
+  .frame-hero-dots {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 3;
+  }
+  .frame-hero-dot {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .55);
+    box-shadow: 0 0 0 1px rgba(3, 49, 98, .18);
+    cursor: pointer;
+    transition: background-color .24s var(--motion-smooth), width .24s var(--motion-smooth), box-shadow .24s var(--motion-smooth);
+  }
+  .frame-hero-dot:hover,
+  .frame-hero-dot:focus-visible {
+    background: #FFFFFF;
+    outline: none;
+  }
+  .frame-hero-dot.is-active {
+    width: 22px;
+    background: #0A7DFA;
+    box-shadow: 0 0 0 1px rgba(10, 125, 250, .35);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .frame-hero-track {
+      transition: none;
+    }
   }
   .frame-hero-cta {
     min-width: clamp(126px, 8.8vw, 178px);
@@ -4127,17 +4225,6 @@ body[data-current-page="faq"] .faq-cta-art img {
     border-color: var(--accent);
   }
 
-  @media (min-width: 681px) and (max-width: 1600px) {
-    .frame-hero {
-      background: #F2F8FF;
-    }
-    /* measured from home-hero-banner-laptop.webp's baked headline pixels */
-    .frame-hero-actions {
-      left: 13%;
-      top: 75%;
-    }
-  }
-
   @media (max-width: 1040px) {
     .frame-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4437,15 +4524,25 @@ body[data-current-page="faq"] .faq-cta-art img {
       padding-top: 16px;
     }
     .frame-hero {
-      min-height: clamp(236px, 62vw, 320px);
       align-items: stretch;
+    }
+    .frame-hero-slider {
+      aspect-ratio: auto;
+      height: clamp(236px, 62vw, 320px);
     }
     .frame-banner {
       width: 100%;
-      height: auto;
+      height: 100%;
       min-height: 0;
       object-fit: contain;
       object-position: center top;
+    }
+    .frame-hero-arrow {
+      display: none;
+    }
+    .frame-hero-dots {
+      top: 10px;
+      bottom: auto;
     }
     .frame-hero-actions {
       left: 16px;
@@ -6529,7 +6626,6 @@ body[data-current-page="faq"] .faq-cta-art img {
     <div class="nav-dropdown">
       <a class="nav-trigger has-chevron" href="#intro" aria-haspopup="true" aria-expanded="false">Resources</a>
       <div class="nav-dropdown-menu" role="menu" aria-label="Resources">
-        <a href="#intro" role="menuitem" hidden>How It Works</a>
         <a href="#logo-guidelines" data-route="logo-guidelines" role="menuitem">Logo Guidelines</a>
         <a href="#social-guidelines" data-route="social-guidelines" role="menuitem">Social Media Guidelines</a>
         <a href="#video-guidelines" data-route="video-guidelines" role="menuitem">Video Guidelines</a>
@@ -6564,13 +6660,36 @@ body[data-current-page="faq"] .faq-cta-art img {
 <main class="frame-home" data-page="frames">
   <section class="frame-hero" aria-label="EssentiallySports Design Buddy">
     <div class="frame-hero-inner">
-      <picture class="frame-hero-picture">
-        <source media="(min-width: 681px) and (max-width: 1600px)" srcset="home-hero-banner-laptop.webp">
-        <img class="frame-banner" src="home-hero-banner.webp" alt="Sports designs simplified">
-      </picture>
-      <div class="frame-hero-actions">
-        <a class="frame-hero-cta is-primary" href="#logo-guidelines" data-route="logo-guidelines">Brand Guidelines</a>
-        <a class="frame-hero-cta" href="design-request.html">Request a Design</a>
+      <div class="frame-hero-slider" data-hero-slider>
+        <div class="frame-hero-track" data-hero-track>
+          <div class="frame-hero-slide is-active" data-hero-slide="0">
+            <picture class="frame-hero-picture">
+              <img class="frame-banner" src="home-hero-banner.webp" alt="Sports designs simplified">
+            </picture>
+            <div class="frame-hero-actions">
+              <a class="frame-hero-cta is-primary" href="#logo-guidelines" data-route="logo-guidelines">Brand Guidelines</a>
+              <a class="frame-hero-cta" href="design-request.html">Request a Design</a>
+            </div>
+          </div>
+          <div class="frame-hero-slide" data-hero-slide="1">
+            <picture class="frame-hero-picture">
+              <img class="frame-banner" src="home-hero-banner-reels.webp" alt="Try In-house Reel Captions Creator">
+            </picture>
+            <div class="frame-hero-actions frame-hero-actions--single">
+              <a class="frame-hero-cta is-primary" href="reels.html">Create Now</a>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="frame-hero-arrow frame-hero-arrow--prev" data-hero-prev aria-label="Previous slide">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button type="button" class="frame-hero-arrow frame-hero-arrow--next" data-hero-next aria-label="Next slide">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="frame-hero-dots" data-hero-dots role="tablist" aria-label="Hero banner slides">
+          <button type="button" class="frame-hero-dot is-active" data-hero-dot="0" role="tab" aria-selected="true" aria-label="Show slide 1"></button>
+          <button type="button" class="frame-hero-dot" data-hero-dot="1" role="tab" aria-selected="false" aria-label="Show slide 2"></button>
+        </div>
       </div>
     </div>
   </section>
@@ -16385,10 +16504,77 @@ loadFont().then(() => render());
     });
   }
 
+  function initHeroSlider() {
+    const slider = document.querySelector('[data-hero-slider]');
+    if (!slider) return;
+    const track = slider.querySelector('[data-hero-track]');
+    const slides = Array.from(slider.querySelectorAll('[data-hero-slide]'));
+    const dots = Array.from(slider.querySelectorAll('[data-hero-dot]'));
+    const prevBtn = slider.querySelector('[data-hero-prev]');
+    const nextBtn = slider.querySelector('[data-hero-next]');
+    if (!track || slides.length < 2) return;
+
+    const AUTOPLAY_MS = 6000;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let active = 0;
+    let timer = null;
+
+    function render() {
+      track.style.transform = `translateX(-${active * 100}%)`;
+      slides.forEach((slide, i) => {
+        const isActive = i === active;
+        slide.classList.toggle('is-active', isActive);
+        slide.setAttribute('aria-hidden', String(!isActive));
+        slide.querySelectorAll('a, button').forEach(el => {
+          if (isActive) el.removeAttribute('tabindex');
+          else el.setAttribute('tabindex', '-1');
+        });
+      });
+      dots.forEach((dot, i) => {
+        const isActive = i === active;
+        dot.classList.toggle('is-active', isActive);
+        dot.setAttribute('aria-selected', String(isActive));
+      });
+    }
+
+    function goTo(index) {
+      active = (index + slides.length) % slides.length;
+      render();
+    }
+
+    function next() { goTo(active + 1); }
+    function prev() { goTo(active - 1); }
+
+    function stopAutoplay() {
+      if (timer) { window.clearInterval(timer); timer = null; }
+    }
+    function startAutoplay() {
+      if (prefersReducedMotion) return;
+      stopAutoplay();
+      timer = window.setInterval(next, AUTOPLAY_MS);
+    }
+
+    nextBtn?.addEventListener('click', () => { next(); startAutoplay(); });
+    prevBtn?.addEventListener('click', () => { prev(); startAutoplay(); });
+    dots.forEach((dot, i) => {
+      dot.addEventListener('click', () => { goTo(i); startAutoplay(); });
+    });
+
+    slider.addEventListener('mouseenter', stopAutoplay);
+    slider.addEventListener('mouseleave', startAutoplay);
+    slider.addEventListener('focusin', stopAutoplay);
+    slider.addEventListener('focusout', startAutoplay);
+
+    render();
+    startAutoplay();
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bootStudioShell);
+    document.addEventListener('DOMContentLoaded', initHeroSlider);
   } else {
     bootStudioShell();
+    initHeroSlider();
   }
 })();
 </script>
