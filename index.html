@@ -1669,12 +1669,10 @@
     overflow: hidden;
     background: #F2F8FF;
   }
-  /* Same width/centering formula as .frame-options, so the baked-in headline's
-     % offset always lines up with the cards' left edge, at every breakpoint. */
+  /* Full-bleed, spans the whole viewport (not constrained to card width). */
   .frame-hero-inner {
     position: relative;
-    width: min(1280px, calc(100% - 80px));
-    margin: 0 auto;
+    width: 100%;
   }
   .frame-hero-slider {
     position: relative;
@@ -4522,7 +4520,6 @@ body[data-current-page="faq"] .faq-cta-art img {
     .page-header,
     .app,
     .frame-options,
-    .frame-hero-inner,
     .request-page {
       width: calc(100% - 28px);
     }
@@ -4554,7 +4551,9 @@ body[data-current-page="faq"] .faq-cta-art img {
       top: 10px;
       bottom: auto;
     }
-    .frame-hero-actions {
+    .frame-hero-actions,
+    [data-hero-slide="0"] .frame-hero-actions,
+    [data-hero-slide="1"] .frame-hero-actions {
       left: 16px;
       right: 16px;
       top: auto;
