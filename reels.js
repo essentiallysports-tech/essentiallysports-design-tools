@@ -57,7 +57,27 @@
     recording: false,
     renderedOnce: false,
     localWhisperPromise: null,
+    seekPending: false,
+    timeline: {
+      zoom: 1,
+      minZoom: 1,
+      maxZoom: 24,
+      pps: 0,
+      fitPps: 0,
+      viewportW: 0,
+      nodes: null,
+      drag: null,
+      followPlayhead: true,
+      lastActiveId: null,
+      lastTickStep: null,
+      lastContentW: null,
+      zoomInitialized: false,
+    },
   };
+
+  var MIN_SEG_PX = 22;
+  var SNAP_PX = 7;
+  var TICK_STEP_LADDER = [0.1, 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300];
 
   var els = {};
 
@@ -76,6 +96,7 @@
     els.fileInput.addEventListener('change', onFileChosen);
     els.video.addEventListener('loadedmetadata', onVideoMetadata);
     els.video.addEventListener('seeked', onFirstFrameReady);
+    els.video.addEventListener('seeked', function () { state.seekPending = false; });
     els.video.addEventListener('timeupdate', syncPlayback);
     els.video.addEventListener('play', startRenderLoop);
     els.video.addEventListener('pause', stopRenderLoop);
@@ -83,6 +104,7 @@
     els.video.addEventListener('error', onVideoError);
     els.playBtn.addEventListener('click', togglePlay);
     els.scrub.addEventListener('input', scrubVideo);
+    initTimelineControls();
     els.transcribeBtn.addEventListener('click', transcribeVideo);
     els.addCaptionBtn.addEventListener('click', addCaptionAtPlayhead);
     els.downloadSrtBtn.addEventListener('click', downloadSrt);
@@ -126,7 +148,8 @@
       'playhead', 'captionCount', 'transcriptList', 'transcriptSource',
       'styleName', 'styleSelect', 'captionPosition', 'sportSelect', 'teamSelect', 'teamLabel',
       'paletteRow', 'toolSelect', 'intelPrompt', 'intelBtn', 'intelStatus', 'intelSource',
-      'ltGrid', 'ltList', 'ltCount'
+      'ltGrid', 'ltList', 'ltCount',
+      'timelineViewport', 'timelineCanvas', 'timelineRuler', 'zoomIn', 'zoomOut', 'zoomLevel'
     ].forEach(function (key) {
       var id = 'reels-' + key.replace(/[A-Z]/g, function (m) { return '-' + m.toLowerCase(); });
       els[key] = document.getElementById(id);
@@ -297,6 +320,12 @@
     state.nextId = 1;
     state.transcriptSource = '';
     state.renderedOnce = false;
+    state.timeline.zoom = 1;
+    state.timeline.zoomInitialized = false;
+    state.timeline.lastActiveId = null;
+    state.timeline.lastTickStep = null;
+    state.timeline.lastContentW = null;
+    if (els.timelineViewport) els.timelineViewport.scrollLeft = 0;
     els.downloadSrtBtn.disabled = true;
     els.intelBtn.disabled = true;
     els.intelSource.textContent = 'Caption helper';
@@ -339,6 +368,7 @@
     els.addCaptionBtn.disabled = false;
     els.totalTime.textContent = formatTime(els.video.duration || 0);
     setStatus(els.transcribeStatus, 'Ready for captions.');
+    layoutTimeline();
     drawFrame();
   }
 
@@ -361,7 +391,7 @@
 
   function syncPlayback() {
     if (!els.video.duration) return;
-    var ratio = els.video.currentTime / els.video.duration;
+    var ratio = els.video.currentTime / safeDuration();
     els.scrub.value = Math.round(ratio * 1000);
     els.currentTime.textContent = formatTime(els.video.currentTime);
     els.totalTime.textContent = formatTime(els.video.duration);
@@ -374,6 +404,10 @@
     function tick() {
       if (els.video.paused || els.video.ended) return;
       drawFrame();
+      if (!state.timeline.drag) {
+        updatePlayhead();
+        highlightActiveCaption();
+      }
       state.rafId = requestAnimationFrame(tick);
     }
     state.rafId = requestAnimationFrame(tick);
@@ -966,19 +1000,123 @@
     });
   }
 
+  function initTimelineControls() {
+    if (!els.timelineViewport) return;
+
+    if (els.zoomIn) els.zoomIn.addEventListener('click', function () { zoomBy(1.6); });
+    if (els.zoomOut) els.zoomOut.addEventListener('click', function () { zoomBy(1 / 1.6); });
+    if (els.zoomLevel) els.zoomLevel.addEventListener('click', function () { setZoom(1); });
+
+    els.timelineViewport.addEventListener('wheel', function (event) {
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12);
+      } else if (event.shiftKey && event.deltaX === 0) {
+        els.timelineViewport.scrollLeft += event.deltaY;
+      }
+    }, { passive: false });
+
+    // Clicking/dragging the ruler or empty track background scrubs the
+    // playhead; segments and their resize handles keep their own handlers
+    // (registered per-node in renderTimeline/beginTimingDrag) and are
+    // excluded here since they're higher in the event path.
+    els.timelineCanvas.addEventListener('pointerdown', function (event) {
+      if (event.target.closest('.reels-timeline-seg')) return;
+      beginPlayheadDrag(event);
+    });
+    els.playhead.addEventListener('pointerdown', function (event) {
+      event.stopPropagation();
+      beginPlayheadDrag(event);
+    });
+
+    // Keyboard seeking on the playhead (ARIA slider role).
+    els.playhead.addEventListener('keydown', function (event) {
+      if (!state.videoLoaded) return;
+      var step = event.shiftKey ? 1 : 0.1;
+      if (event.key === 'ArrowLeft') { els.video.currentTime = clamp(els.video.currentTime - step, 0, safeDuration()); event.preventDefault(); }
+      else if (event.key === 'ArrowRight') { els.video.currentTime = clamp(els.video.currentTime + step, 0, safeDuration()); event.preventDefault(); }
+      else if (event.key === 'Home') { els.video.currentTime = 0; event.preventDefault(); }
+      else if (event.key === 'End') { els.video.currentTime = safeDuration(); event.preventDefault(); }
+    });
+
+    if ('ResizeObserver' in window) {
+      var ro = new ResizeObserver(function () { layoutTimeline(); });
+      ro.observe(els.timelineViewport);
+    } else {
+      window.addEventListener('resize', function () { layoutTimeline(); });
+    }
+
+    var mobileQuery = window.matchMedia('(max-width: 820px)');
+    function syncMobileFloor() {
+      els.timelineViewport.classList.toggle('is-mobile-floor', mobileQuery.matches);
+      els.timelineViewport.classList.toggle('is-compact-ruler', mobileQuery.matches);
+      layoutTimeline();
+    }
+    mobileQuery.addEventListener ? mobileQuery.addEventListener('change', syncMobileFloor) : mobileQuery.addListener(syncMobileFloor);
+    syncMobileFloor();
+  }
+
+  // ─── Caption timeline: scale model ──────────────────────────────────
+  // Everything below assumes "track width == full clip duration" ONLY at
+  // zoom 1 (fitPps). Real px positioning on a horizontally-scrolled
+  // canvas, not a CSS transform: scale — a transform would distort text,
+  // borders, and the 9px resize handles, and complicate hit-testing.
+  function safeDuration() {
+    var d = els.video.duration;
+    return (isFinite(d) && d > 0) ? d : 1;
+  }
+
+  function timeToPx(t) {
+    return t * state.timeline.pps;
+  }
+
+  function clientXToTime(clientX) {
+    var rect = els.timelineViewport.getBoundingClientRect();
+    var x = clientX - rect.left + els.timelineViewport.scrollLeft;
+    return state.timeline.pps > 0 ? x / state.timeline.pps : 0;
+  }
+
+  function densityZoom() {
+    var vw = state.timeline.viewportW || 1;
+    return Math.min(4, Math.max(1, (MIN_SEG_PX * state.captions.length) / vw));
+  }
+
+  function pickTickStep(pps, minLabelPx) {
+    for (var i = 0; i < TICK_STEP_LADDER.length; i++) {
+      var step = TICK_STEP_LADDER[i];
+      if (step * pps >= minLabelPx) return step;
+    }
+    return TICK_STEP_LADDER[TICK_STEP_LADDER.length - 1];
+  }
+
+  function formatTick(seconds, step) {
+    if (step < 1) {
+      var whole = Math.floor(seconds);
+      var tenths = Math.round((seconds - whole) * 10);
+      if (tenths === 10) { whole += 1; tenths = 0; }
+      var m = Math.floor(whole / 60);
+      var s = whole % 60;
+      return m + ':' + (s < 10 ? '0' : '') + s + '.' + tenths;
+    }
+    return formatTime(seconds);
+  }
+
+  // renderTimeline(): STRUCTURAL rebuild — only when the *set* of
+  // captions changes. All prior call sites keep calling this unchanged;
+  // the one hot path (mid-resize-drag) now calls updateSegmentGeometry()
+  // instead, see beginTimingDrag().
   function renderTimeline() {
-    var duration = els.video.duration || 1;
     var card = document.querySelector('.reels-timeline-card');
     if (card) card.classList.toggle('has-captions', !!state.captions.length);
     els.captionTimeline.innerHTML = state.captions.map(function (caption) {
-      var left = clamp(caption.start / duration * 100, 0, 100);
-      var width = clamp((caption.end - caption.start) / duration * 100, 1, 100 - left);
-      return '<button type="button" class="reels-timeline-seg' + (caption.id === state.selectedCaptionId ? ' is-selected' : '') + '" data-id="' + caption.id + '" style="left:' + left.toFixed(3) + '%;width:' + width.toFixed(3) + '%">' +
+      return '<button type="button" class="reels-timeline-seg' + (caption.id === state.selectedCaptionId ? ' is-selected' : '') + '" data-id="' + caption.id + '">' +
         '<i class="reels-seg-handle" data-edge="start"></i><span>' + escapeHtml(caption.text) + '</span><i class="reels-seg-handle" data-edge="end"></i>' +
       '</button>';
     }).join('');
+    var nodes = new Map();
     els.captionTimeline.querySelectorAll('.reels-timeline-seg').forEach(function (segment) {
       var id = Number(segment.dataset.id);
+      nodes.set(id, segment);
       segment.addEventListener('click', function (event) {
         if (event.target.dataset.edge) return;
         selectCaption(id, true);
@@ -987,34 +1125,325 @@
         handle.addEventListener('pointerdown', function (event) {
           event.preventDefault();
           event.stopPropagation();
-          beginTimingDrag(id, handle.dataset.edge);
+          beginTimingDrag(id, handle.dataset.edge, event.pointerId);
         });
       });
     });
+    state.timeline.nodes = nodes;
+    if (!state.timeline.zoomInitialized && state.captions.length) {
+      state.timeline.zoom = Math.max(state.timeline.zoom, densityZoom());
+      state.timeline.zoomInitialized = true;
+    }
+    layoutTimeline();
+  }
+
+  // layoutTimeline(): pure GEOMETRY — resize/zoom/pan/duration-change and
+  // (via updateSegmentGeometry) the single hot spot during a resize drag.
+  function layoutTimeline() {
+    if (!els.timelineViewport) return;
+    var duration = safeDuration();
+    var viewportW = els.timelineViewport.clientWidth || 1;
+    state.timeline.viewportW = viewportW;
+    var minZoom = Math.max(1, els.timelineViewport.classList.contains('is-mobile-floor') ? densityZoom() : 1);
+    state.timeline.minZoom = minZoom;
+    if (state.timeline.zoom < minZoom) state.timeline.zoom = minZoom;
+    if (state.timeline.zoom > state.timeline.maxZoom) state.timeline.zoom = state.timeline.maxZoom;
+    state.timeline.fitPps = viewportW / duration;
+    state.timeline.pps = state.timeline.fitPps * state.timeline.zoom;
+    var contentW = Math.max(viewportW, duration * state.timeline.pps);
+    els.timelineCanvas.style.width = contentW + 'px';
+
+    var tickStep = pickTickStep(state.timeline.pps, els.timelineViewport.classList.contains('is-compact-ruler') ? 80 : 64);
+    if (tickStep !== state.timeline.lastTickStep || Math.round(contentW) !== state.timeline.lastContentW) {
+      state.timeline.lastTickStep = tickStep;
+      state.timeline.lastContentW = Math.round(contentW);
+      buildRuler(tickStep, duration, contentW);
+      els.timelineCanvas.style.setProperty('--reels-tick-px', (tickStep * state.timeline.pps).toFixed(2) + 'px');
+    }
+
+    if (state.timeline.nodes) {
+      state.timeline.nodes.forEach(function (node, id) {
+        var caption = findCaption(id);
+        if (!caption) return;
+        var left = timeToPx(caption.start);
+        var width = Math.max(2, timeToPx(caption.end - caption.start));
+        node.style.left = left.toFixed(2) + 'px';
+        node.style.width = width.toFixed(2) + 'px';
+        node.classList.toggle('is-compact', width < 56 && width >= 20);
+        node.classList.toggle('is-tiny', width < 20);
+        node.title = caption.text;
+      });
+    }
+    updateZoomUi();
     updatePlayhead();
   }
 
-  function beginTimingDrag(id, edge) {
-    var rect = els.captionTimeline.getBoundingClientRect();
-    var duration = els.video.duration || 1;
+  function updateSegmentGeometry(id) {
+    if (!state.timeline.nodes) return;
+    var node = state.timeline.nodes.get(id);
+    var caption = findCaption(id);
+    if (!node || !caption) return;
+    var left = timeToPx(caption.start);
+    var width = Math.max(2, timeToPx(caption.end - caption.start));
+    node.style.left = left.toFixed(2) + 'px';
+    node.style.width = width.toFixed(2) + 'px';
+    node.classList.toggle('is-compact', width < 56 && width >= 20);
+    node.classList.toggle('is-tiny', width < 20);
+  }
+
+  function buildRuler(step, duration, contentW) {
+    if (!els.timelineRuler) return;
+    var html = '';
+    var subdivisions = (step === 15 || step === 30 || step === 60) ? 4 : 5;
+    var minorStep = step / subdivisions;
+    for (var t = 0; t <= duration + 0.001; t += minorStep) {
+      var isMajor = Math.abs(Math.round(t / step) * step - t) < minorStep / 2;
+      var x = t * state.timeline.pps;
+      if (isMajor) {
+        html += '<i class="reels-tick reels-tick--major" style="left:' + x.toFixed(1) + 'px"><span>' + formatTick(t, step) + '</span></i>';
+      } else if (minorStep * state.timeline.pps >= 8) {
+        html += '<i class="reels-tick reels-tick--minor" style="left:' + x.toFixed(1) + 'px"></i>';
+      }
+    }
+    // Always show the true end label, flush inside the right edge.
+    html += '<span class="reels-tick-end">' + formatTime(duration) + '</span>';
+    els.timelineRuler.innerHTML = html;
+  }
+
+  // ─── Zoom ────────────────────────────────────────────────────────────
+  function setZoom(nextZoom, anchorClientX) {
+    var vp = els.timelineViewport;
+    if (!vp) return;
+    var rect = vp.getBoundingClientRect();
+    var anchorX = anchorClientX != null ? anchorClientX : (rect.left + vp.clientWidth / 2);
+    var tAnchor = clientXToTime(anchorX);
+    nextZoom = clamp(nextZoom, state.timeline.minZoom, state.timeline.maxZoom);
+    state.timeline.zoom = nextZoom;
+    state.timeline.pps = state.timeline.fitPps * nextZoom;
+    var contentW = Math.max(vp.clientWidth, safeDuration() * state.timeline.pps);
+    var targetScrollLeft = tAnchor * state.timeline.pps - (anchorX - rect.left);
+    vp.scrollLeft = clamp(targetScrollLeft, 0, Math.max(0, contentW - vp.clientWidth));
+    layoutTimeline();
+  }
+
+  function updateZoomUi() {
+    if (!els.zoomLevel) return;
+    var zoom = state.timeline.zoom;
+    els.zoomLevel.textContent = zoom <= 1.001 ? 'Fit' : (zoom % 1 === 0 ? zoom + '×' : zoom.toFixed(1) + '×');
+    if (els.zoomOut) els.zoomOut.disabled = zoom <= state.timeline.minZoom + 0.001;
+    if (els.zoomIn) els.zoomIn.disabled = zoom >= state.timeline.maxZoom - 0.001;
+  }
+
+  function zoomBy(factor) {
+    var vp = els.timelineViewport;
+    var anchorX = null;
+    if (state.videoLoaded && vp) {
+      var rect = vp.getBoundingClientRect();
+      var playheadX = rect.left - vp.scrollLeft + timeToPx(els.video.currentTime);
+      if (playheadX >= rect.left && playheadX <= rect.right) anchorX = playheadX;
+    }
+    setZoom(state.timeline.zoom * factor, anchorX);
+  }
+
+  // ─── Snapping ────────────────────────────────────────────────────────
+  function buildSnapCandidates(excludeId) {
+    var candidates = [0, safeDuration()];
+    state.captions.forEach(function (caption) {
+      if (caption.id === excludeId) return;
+      candidates.push(caption.start, caption.end);
+    });
+    return candidates.sort(function (a, b) { return a - b; });
+  }
+
+  function applySnap(time, candidates, suppress) {
+    if (suppress || state.timeline.pps <= 0) return { time: time, snapped: false };
+    var snapSec = SNAP_PX / state.timeline.pps;
+    var best = null, bestDist = snapSec;
+    for (var i = 0; i < candidates.length; i++) {
+      var dist = Math.abs(candidates[i] - time);
+      if (dist <= bestDist) { bestDist = dist; best = candidates[i]; }
+    }
+    return best != null ? { time: best, snapped: true } : { time: time, snapped: false };
+  }
+
+  function showSnapGuide(pxLeft) {
+    var guide = document.getElementById('reels-snap-guide');
+    if (!guide) {
+      guide = document.createElement('div');
+      guide.id = 'reels-snap-guide';
+      guide.className = 'reels-snap-guide';
+      els.timelineCanvas.appendChild(guide);
+    }
+    guide.style.left = pxLeft.toFixed(2) + 'px';
+    guide.hidden = false;
+  }
+
+  function hideSnapGuide() {
+    var guide = document.getElementById('reels-snap-guide');
+    if (guide) guide.hidden = true;
+  }
+
+  // ─── Edge auto-scroll during any drag ───────────────────────────────
+  function maybeAutoScroll(clientX) {
+    var vp = els.timelineViewport;
+    var rect = vp.getBoundingClientRect();
+    var edge = 40;
+    var distLeft = clientX - rect.left;
+    var distRight = rect.right - clientX;
+    if (distLeft < edge && distLeft >= -edge) {
+      vp.scrollLeft -= (1 - Math.max(0, distLeft) / edge) * 14;
+    } else if (distRight < edge && distRight >= -edge) {
+      vp.scrollLeft += (1 - Math.max(0, distRight) / edge) * 14;
+    }
+  }
+
+  function beginTimingDrag(id, edge, pointerId) {
+    var handleEl = null;
+    els.captionTimeline.querySelectorAll('.reels-seg-handle[data-edge="' + edge + '"]').forEach(function (h) {
+      if (Number(h.closest('.reels-timeline-seg').dataset.id) === id) handleEl = h;
+    });
+    if (handleEl && handleEl.setPointerCapture && pointerId != null) {
+      try { handleEl.setPointerCapture(pointerId); } catch (e) {}
+    }
+    var candidates = buildSnapCandidates(id);
+    var autoScrollRaf = 0;
+    var lastClientX = 0;
+
     function onMove(event) {
+      lastClientX = event.clientX;
       var caption = findCaption(id);
       if (!caption) return;
-      var ratio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-      var time = ratio * duration;
+      var time = clientXToTime(event.clientX);
+      var snap = applySnap(time, candidates, event.altKey);
+      time = snap.time;
       if (edge === 'start') caption.start = clamp(time, 0, caption.end - .2);
-      else caption.end = clamp(time, caption.start + .2, duration);
+      else caption.end = clamp(time, caption.start + .2, safeDuration());
+      if (snap.snapped) showSnapGuide(timeToPx(edge === 'start' ? caption.start : caption.end));
+      else hideSnapGuide();
+      updateSegmentGeometry(id);
+      updateTranscriptRowTiming(id, caption);
+      requestSeeklessDraw();
+      maybeAutoScroll(event.clientX);
+      if (!autoScrollRaf) {
+        autoScrollRaf = requestAnimationFrame(function tickScroll() {
+          autoScrollRaf = 0;
+          if (state.timeline.drag) { maybeAutoScroll(lastClientX); autoScrollRaf = requestAnimationFrame(tickScroll); }
+        });
+      }
+    }
+    function onUp() {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      if (autoScrollRaf) cancelAnimationFrame(autoScrollRaf);
+      hideSnapGuide();
+      state.timeline.drag = null;
       state.captions.sort(sortByStart);
       renderTranscript();
       renderTimeline();
       drawFrame();
     }
-    function onUp() {
+    state.timeline.drag = { kind: 'resize', id: id, edge: edge };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+  }
+
+  // Cheap targeted update for the two number inputs in the matching
+  // transcript row, so a resize-drag doesn't rebuild the whole transcript
+  // list (which would also steal focus from any input the user is typing
+  // in). Skips the write if that input currently has focus.
+  function updateTranscriptRowTiming(id, caption) {
+    var row = document.querySelector('.reels-caption-row[data-id="' + id + '"]');
+    if (!row) return;
+    var startInput = row.querySelector('[data-field="start"]');
+    var endInput = row.querySelector('[data-field="end"]');
+    if (startInput && document.activeElement !== startInput) startInput.value = caption.start.toFixed(1);
+    if (endInput && document.activeElement !== endInput) endInput.value = caption.end.toFixed(1);
+  }
+
+  // rAF-coalesced canvas repaint used by both resize-drags and the
+  // playhead drag, so a high-rate pointer (500-1000 events/sec) produces
+  // at most one paint per animation frame instead of one per event.
+  var drawRafId = 0;
+  function requestSeeklessDraw() {
+    if (drawRafId) return;
+    drawRafId = requestAnimationFrame(function () {
+      drawRafId = 0;
+      drawFrame();
+    });
+  }
+
+  // rAF-coalesced seek: at most one `video.currentTime` write + one
+  // drawFrame() per animation frame, regardless of how fast pointermove
+  // fires. Guarded by seekPending so a slow decoder degrades to "playhead
+  // silky, frame a beat behind" instead of stalling.
+  var seekRafId = 0;
+  var pendingSeekTime = null;
+  function requestSeek(t) {
+    pendingSeekTime = t;
+    if (seekRafId) return;
+    seekRafId = requestAnimationFrame(function () {
+      seekRafId = 0;
+      if (pendingSeekTime == null) return;
+      if (!state.seekPending) {
+        state.seekPending = true;
+        els.video.currentTime = pendingSeekTime;
+        drawFrame();
+      }
+    });
+  }
+
+  function beginPlayheadDrag(event) {
+    if (!state.videoLoaded) return;
+    event.preventDefault();
+    var wasPlaying = !els.video.paused;
+    if (wasPlaying) els.video.pause();
+    if (els.playhead.setPointerCapture) {
+      try { els.playhead.setPointerCapture(event.pointerId); } catch (e) {}
+    }
+    var candidates = buildSnapCandidates(null);
+    state.timeline.drag = { kind: 'playhead' };
+    els.playhead.classList.add('is-dragging');
+    document.querySelector('.reels-timeline-card').classList.add('is-scrubbing');
+
+    // Land where clicked immediately, unless the press started on the cap
+    // itself (in which case the first move event carries the real target).
+    var startTime = clamp(clientXToTime(event.clientX), 0, safeDuration());
+    var snap0 = applySnap(startTime, candidates, event.altKey);
+    els.playhead.style.transform = 'translateX(' + timeToPx(snap0.time) + 'px)';
+    requestSeek(snap0.time);
+
+    function onMove(moveEvent) {
+      var t = clamp(clientXToTime(moveEvent.clientX), 0, safeDuration());
+      var snap = applySnap(t, candidates, moveEvent.altKey);
+      t = snap.time;
+      els.playhead.style.transform = 'translateX(' + timeToPx(t) + 'px)';
+      if (snap.snapped) showSnapGuide(timeToPx(t)); else hideSnapGuide();
+      els.currentTime.textContent = formatTime(t);
+      els.scrub.value = Math.round((t / safeDuration()) * 1000);
+      requestSeek(t);
+      maybeAutoScroll(moveEvent.clientX);
+    }
+    function onUp(upEvent) {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      hideSnapGuide();
+      els.playhead.classList.remove('is-dragging');
+      document.querySelector('.reels-timeline-card').classList.remove('is-scrubbing');
+      state.timeline.drag = null;
+      var finalT = upEvent ? clamp(clientXToTime(upEvent.clientX), 0, safeDuration()) : els.video.currentTime;
+      var snap = applySnap(finalT, candidates, upEvent ? upEvent.altKey : false);
+      els.video.currentTime = snap.time;
+      drawFrame();
+      highlightActiveCaption();
+      updatePlayhead();
+      if (wasPlaying) els.video.play();
     }
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
   }
 
   function selectCaption(id, seek) {
@@ -1035,7 +1464,7 @@
     if (!caption) return;
     if (field === 'text') caption.text = value;
     if (field === 'start') caption.start = clamp(Number(value) || 0, 0, caption.end - .1);
-    if (field === 'end') caption.end = clamp(Number(value) || caption.end, caption.start + .1, els.video.duration || caption.end);
+    if (field === 'end') caption.end = clamp(Number(value) || caption.end, caption.start + .1, safeDuration());
     state.captions.sort(sortByStart);
     renderTimeline();
     drawFrame();
@@ -1051,11 +1480,22 @@
     drawFrame();
   }
 
+  // Guarded so this (now running every animation frame during playback
+  // via startRenderLoop's tick()) doesn't touch the DOM when the active
+  // caption hasn't actually changed since the last call.
   function highlightActiveCaption() {
     var active = activeCaption();
+    var activeId = active ? active.id : null;
+    if (activeId === state.timeline.lastActiveId) return;
+    state.timeline.lastActiveId = activeId;
     document.querySelectorAll('.reels-caption-row').forEach(function (row) {
-      row.classList.toggle('is-active-now', active && Number(row.dataset.id) === active.id);
+      row.classList.toggle('is-active-now', activeId != null && Number(row.dataset.id) === activeId);
     });
+    if (state.timeline.nodes) {
+      state.timeline.nodes.forEach(function (node, id) {
+        node.classList.toggle('is-playing-now', id === activeId);
+      });
+    }
   }
 
   function updatePlayhead() {
@@ -1063,11 +1503,27 @@
       els.playhead.hidden = true;
       return;
     }
-    var cardRect = document.querySelector('.reels-timeline-card').getBoundingClientRect();
-    var timelineRect = els.captionTimeline.getBoundingClientRect();
-    var ratio = els.video.currentTime / els.video.duration;
+    if (state.timeline.drag && state.timeline.drag.kind === 'playhead') return;
     els.playhead.hidden = false;
-    els.playhead.style.left = (timelineRect.left - cardRect.left + (timelineRect.width * ratio)) + 'px';
+    var x = timeToPx(els.video.currentTime);
+    els.playhead.style.transform = 'translateX(' + x.toFixed(2) + 'px)';
+    els.playhead.setAttribute('aria-valuenow', String(Math.round(els.video.currentTime)));
+    els.playhead.setAttribute('aria-valuemax', String(Math.round(safeDuration())));
+    els.playhead.setAttribute('aria-valuetext', formatTime(els.video.currentTime));
+
+    // Auto-follow: keep the playhead roughly in view while zoomed, without
+    // fighting a manual pan/zoom (which clears followPlayhead until the
+    // playhead itself re-enters the viewport's middle 80%).
+    var vp = els.timelineViewport;
+    if (vp) {
+      var visibleLeft = vp.scrollLeft + vp.clientWidth * 0.1;
+      var visibleRight = vp.scrollLeft + vp.clientWidth * 0.9;
+      var inMiddle = x >= visibleLeft && x <= visibleRight;
+      if (inMiddle) state.timeline.followPlayhead = true;
+      if (state.timeline.followPlayhead && !inMiddle) {
+        vp.scrollLeft = clamp(x - vp.clientWidth * 0.25, 0, Math.max(0, els.timelineCanvas.clientWidth - vp.clientWidth));
+      }
+    }
   }
 
   function renderStyleGrid() {

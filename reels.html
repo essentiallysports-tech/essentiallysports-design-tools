@@ -147,10 +147,22 @@
                 <strong>Caption Timeline</strong>
                 <span>Select a caption to adjust timing</span>
               </div>
-              <span id="reels-caption-count">0 segments</span>
+              <div class="reels-timeline-tools">
+                <span id="reels-caption-count">0 segments</span>
+                <div class="reels-zoom-cluster">
+                  <button type="button" class="reels-icon-btn is-mini" id="reels-zoom-out" aria-label="Zoom out" disabled>&minus;</button>
+                  <button type="button" class="reels-zoom-reset" id="reels-zoom-level" title="Reset zoom" aria-live="polite">Fit</button>
+                  <button type="button" class="reels-icon-btn is-mini" id="reels-zoom-in" aria-label="Zoom in">+</button>
+                </div>
+              </div>
             </div>
-            <div class="reels-timeline" id="reels-caption-timeline" aria-label="Caption timing segments"></div>
-            <div class="reels-playhead" id="reels-playhead" hidden></div>
+            <div class="reels-timeline-viewport" id="reels-timeline-viewport" role="group" aria-label="Caption timeline">
+              <div class="reels-timeline-canvas" id="reels-timeline-canvas">
+                <div class="reels-timeline-ruler" id="reels-timeline-ruler" aria-hidden="true"></div>
+                <div class="reels-timeline" id="reels-caption-timeline" aria-label="Caption timing segments"></div>
+                <div class="reels-playhead" id="reels-playhead" hidden role="slider" aria-label="Playhead" tabindex="0"></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

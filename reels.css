@@ -541,105 +541,10 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
   padding-bottom: 2px;
 }
 
-.reels-timeline-card {
-  position: relative;
-  padding: 12px;
-  overflow: hidden;
-  box-shadow: none;
-}
-
-.reels-timeline-card:not(.has-captions) {
-  display: none;
-}
-
-.reels-timeline-head {
-  margin-bottom: 10px;
-}
-
-.reels-timeline-head > div {
-  min-width: 0;
-}
-
-.reels-timeline {
-  position: relative;
-  min-height: 88px;
-  border: 1px solid var(--reels-line);
-  border-radius: var(--reels-radius-md);
-  background:
-    linear-gradient(90deg, rgba(181,216,253,.42) 1px, transparent 1px) 0 0 / 48px 100%,
-    repeating-linear-gradient(90deg, rgba(10,125,250,.18) 0 2px, transparent 2px 9px) 0 44px / 100% 18px no-repeat,
-    linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
-  overflow: hidden;
-}
-
-.reels-timeline::before,
-.reels-timeline::after {
-  content: "0:00";
-  position: absolute;
-  top: 8px;
-  color: #738091;
-  font-family: var(--reels-font-heading);
-  font-size: 10px;
-  font-weight: 700;
-  pointer-events: none;
-}
-
-.reels-timeline::before { left: 10px; }
-.reels-timeline::after {
-  content: "end";
-  right: 10px;
-}
-
-.reels-timeline-seg {
-  position: absolute;
-  top: 30px;
-  height: 44px;
-  min-width: 18px;
-  border: 2px solid transparent;
-  border-radius: var(--reels-radius-sm);
-  background: var(--reels-blue);
-  color: #fff;
-  cursor: pointer;
-  overflow: hidden;
-  box-shadow: 0 10px 18px rgba(10, 125, 250, .14);
-}
-
-.reels-timeline-seg.is-selected {
-  border-color: var(--reels-line-strong);
-  box-shadow: 0 0 0 3px rgba(10,125,250,.12), 0 10px 18px rgba(10, 125, 250, .18);
-}
-
-.reels-timeline-seg span {
-  display: block;
-  padding: 12px 10px 0;
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.reels-seg-handle {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 9px;
-  background: rgba(0,0,0,.24);
-  cursor: ew-resize;
-}
-
-.reels-seg-handle[data-edge="start"] { left: 0; }
-.reels-seg-handle[data-edge="end"] { right: 0; }
-
-.reels-playhead {
-  position: absolute;
-  top: 52px;
-  bottom: 12px;
-  width: 2px;
-  background: #101419;
-  pointer-events: none;
-  box-shadow: 0 0 0 1px rgba(255,255,255,.8);
-}
+/* Caption timeline v2 lives in the "Full editor shell" section below
+   (search for "Caption timeline v2"), which is what actually renders for
+   .reels-stage-workspace — keeping one definition here would just be a
+   third generation of the override problem this file already had. */
 
 .reels-transcript-panel {
   min-height: 0;
@@ -1774,8 +1679,10 @@ body.reels-page.reels-has-clip:not(.reels-has-captions) .reels-transcript-list .
 }
 
 body.reels-page.reels-has-captions .reels-stage-frame {
-  width: min(310px, 30vw, calc((100dvh - 440px) * .5625));
-  max-height: calc(100dvh - 440px);
+  /* +34px vs the pre-v2 timeline card: head row, ruler, and card padding
+     replaced a chrome-less 68px track with real head/ruler/padding. */
+  width: min(310px, 30vw, calc((100dvh - 474px) * .5625));
+  max-height: calc(100dvh - 474px);
 }
 
 .reels-safe-frame {
@@ -1838,13 +1745,15 @@ body.reels-page.reels-has-clip .reels-safe-frame span {
   justify-content: end;
 }
 
+/* ─── Caption timeline v2 ─────────────────────────────────────────── */
+
 .reels-timeline-card {
   display: grid;
   gap: 8px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--reels-line);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fbfdff, #f4f9ff);
   overflow: hidden;
   box-shadow: none;
 }
@@ -1853,35 +1762,344 @@ body.reels-page:not(.reels-has-captions) .reels-timeline-card {
   display: grid;
 }
 
-body.reels-page:not(.reels-has-captions) .reels-timeline-card .reels-timeline {
+body.reels-page:not(.reels-has-captions) .reels-timeline-viewport {
   opacity: .54;
 }
 
+.reels-timeline-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 22px;
+}
+
+.reels-timeline-head strong {
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-size: 12px;
+}
+
+.reels-timeline-head > div > span {
+  font-size: 11px;
+}
+
+@media (max-width: 1180px) {
+  .reels-timeline-head > div > span {
+    display: none;
+  }
+}
+
+.reels-timeline-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+#reels-caption-count {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--reels-blue-deep);
+  background: var(--reels-soft);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.reels-zoom-cluster {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reels-icon-btn.is-mini {
+  width: 26px;
+  height: 26px;
+  min-height: 0;
+  /* The base .reels-icon-btn hides its real text off-screen and draws a
+     play/pause glyph via ::before instead — these buttons use plain "−"/
+     "+" text content, so both of those need reverting here. */
+  text-indent: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reels-icon-btn.is-mini::before {
+  display: none;
+}
+
+.reels-icon-btn.is-mini {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--reels-ink);
+}
+
+.reels-zoom-reset {
+  min-width: 34px;
+  height: 26px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--reels-muted);
+  font-family: var(--reels-font-heading);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.reels-zoom-reset:hover,
+.reels-zoom-reset:focus-visible {
+  background: var(--reels-soft);
+  color: var(--reels-blue-deep);
+  outline: none;
+}
+
+.reels-timeline-viewport {
+  position: relative;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--reels-line-strong) transparent;
+}
+
+.reels-timeline-viewport::-webkit-scrollbar {
+  height: 6px;
+}
+
+.reels-timeline-viewport::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--reels-line-strong) 60%, transparent);
+  border-radius: 999px;
+}
+
+.reels-timeline-canvas {
+  position: relative;
+  min-width: 100%;
+  contain: layout paint;
+}
+
+.reels-timeline-ruler {
+  position: relative;
+  height: 18px;
+  border-bottom: 1px solid var(--reels-line);
+  padding-top: 4px;
+}
+
+.reels-tick {
+  position: absolute;
+  top: 4px;
+  pointer-events: none;
+}
+
+.reels-tick--major {
+  width: 1px;
+  height: 14px;
+  background: color-mix(in srgb, var(--reels-line-strong) 55%, transparent);
+}
+
+.reels-tick--major span {
+  position: absolute;
+  left: 4px;
+  top: -3px;
+  font-family: var(--reels-font-heading);
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--reels-muted);
+  white-space: nowrap;
+}
+
+.reels-tick--minor {
+  width: 1px;
+  height: 7px;
+  top: 11px;
+  background: var(--reels-line);
+}
+
+.reels-tick-end {
+  position: absolute;
+  right: 4px;
+  top: 1px;
+  font-family: var(--reels-font-heading);
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--reels-muted);
+  pointer-events: none;
+}
+
 .reels-timeline {
-  min-height: 68px;
+  position: relative;
+  height: 56px;
   border-radius: 10px;
   background:
-    linear-gradient(90deg, rgba(10, 125, 250, .12) 1px, transparent 1px) 0 0 / 42px 100%,
+    linear-gradient(90deg, rgba(10, 125, 250, .10) 1px, transparent 1px) 0 0 / var(--reels-tick-px, 42px) 100%,
     linear-gradient(180deg, #ffffff 0%, #f1f7ff 100%);
 }
 
-.reels-stage-workspace .reels-timeline::before,
-.reels-stage-workspace .reels-timeline::after {
-  top: 7px;
+.reels-timeline-seg {
+  position: absolute;
+  top: 4px;
+  height: 48px;
+  min-width: 2px;
+  display: flex;
+  align-items: center;
+  border: 0;
+  border-radius: var(--reels-radius-sm);
+  background: linear-gradient(180deg, #3b9bff 0%, var(--reels-blue) 100%);
+  box-shadow: 0 1px 2px rgba(10,125,250,.28), inset 0 1px 0 rgba(255,255,255,.28), inset -1px 0 0 rgba(255,255,255,.55);
+  color: #fff;
+  cursor: pointer;
+  overflow: hidden;
+  transition: filter .16s ease, transform .16s ease, box-shadow .16s ease;
 }
 
-.reels-stage-workspace .reels-timeline-seg {
-  top: 26px;
-  height: 30px;
+.reels-timeline-seg:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
 }
 
-.reels-stage-workspace .reels-timeline-seg span {
-  padding-top: 7px;
+.reels-timeline-seg:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--reels-focus);
 }
 
-.reels-stage-workspace .reels-playhead {
-  top: 44px;
-  bottom: 10px;
+.reels-timeline-seg.is-selected {
+  background: linear-gradient(180deg, #4a9dfb 0%, var(--reels-blue-deep) 100%);
+  box-shadow: 0 0 0 2px var(--reels-line-strong), 0 0 0 5px var(--reels-focus);
+}
+
+.reels-timeline-seg.is-playing-now {
+  filter: saturate(1.15) brightness(1.12);
+}
+
+.reels-timeline-seg.is-playing-now::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: #ffffff;
+}
+
+.reels-timeline-seg span {
+  display: block;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reels-timeline-seg.is-compact span,
+.reels-timeline-seg.is-tiny span {
+  display: none;
+}
+
+.reels-timeline-seg.is-tiny {
+  border-radius: 3px;
+}
+
+.reels-seg-handle {
+  position: relative;
+  flex-shrink: 0;
+  width: 9px;
+  align-self: stretch;
+  background: rgba(0,0,0,.24);
+  cursor: ew-resize;
+}
+
+.reels-seg-handle:first-child { margin-right: auto; }
+.reels-seg-handle:last-child { margin-left: auto; }
+
+.reels-seg-handle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -6px;
+  right: -6px;
+}
+
+@media (pointer: coarse) {
+  .reels-seg-handle::before {
+    left: -11px;
+    right: -11px;
+  }
+}
+
+.reels-snap-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--reels-blue-deep);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.reels-playhead {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--reels-ink);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.85);
+  cursor: grab;
+  z-index: 4;
+  transition: transform .05s linear;
+}
+
+.reels-playhead::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 14px;
+  height: 12px;
+  transform: translateX(-50%);
+  background: var(--reels-ink);
+  clip-path: polygon(0 0, 100% 0, 100% 65%, 50% 100%, 0 65%);
+}
+
+.reels-playhead::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 28px;
+  height: 24px;
+  transform: translateX(-50%);
+}
+
+@media (pointer: coarse) {
+  .reels-playhead::after {
+    width: 40px;
+    height: 32px;
+  }
+}
+
+.reels-playhead.is-dragging {
+  cursor: grabbing;
+}
+
+.reels-playhead.is-dragging::before {
+  transform: translateX(-50%) scale(1.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reels-timeline-seg,
+  .reels-playhead {
+    transition: none;
+  }
 }
 
 .reels-side-panel {
@@ -2300,6 +2518,33 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
   .reels-pipeline {
     max-width: none;
     overflow-x: auto;
+  }
+
+  /* Scroll-first timeline: mobile never "fits" a clip to the screen —
+     the density floor (JS: is-mobile-floor) keeps it always a scrolling
+     filmstrip, since a 60s reel at fit-zoom on a phone would be ~6px per
+     caption. Zoom +/- buttons are hidden (the floor usually disables "-"
+     anyway and the head row is tight); the readout + pinch/wheel-zoom
+     still work, and tapping the readout resets to the floor. */
+  .reels-timeline {
+    height: 44px;
+  }
+
+  .reels-timeline-seg {
+    top: 3px;
+    height: 38px;
+  }
+
+  .reels-timeline-ruler {
+    height: 16px;
+  }
+
+  .reels-timeline-seg.is-compact span {
+    display: none;
+  }
+
+  .reels-zoom-cluster .reels-icon-btn.is-mini {
+    display: none;
   }
 }
 
