@@ -1654,7 +1654,6 @@
   /* â”€â”€â”€ FAQ PAGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   /* FRAME HOME */
   .frame-home {
-    --frame-content-left: max(24px, calc((100vw - 1100px) / 2));
     width: 100%;
     margin: 0;
     padding: 0;
@@ -1666,6 +1665,13 @@
     align-items: flex-start;
     overflow: hidden;
     background: #FFFFFF;
+  }
+  /* Same width/centering formula as .frame-options, so the baked-in headline's
+     % offset always lines up with the cards' left edge, at every breakpoint. */
+  .frame-hero-inner {
+    position: relative;
+    width: min(1280px, calc(100% - 80px));
+    margin: 0 auto;
   }
   .frame-banner {
     display: block;
@@ -1682,8 +1688,9 @@
   }
   .frame-hero-actions {
     position: absolute;
-    left: clamp(260px, 21.7vw, 445px);
-    top: clamp(220px, 15.2vw, 360px);
+    /* left/top measured directly from home-hero-banner.webp's baked headline pixels */
+    left: 21.8%;
+    top: 74%;
     transform: none;
     display: flex;
     align-items: center;
@@ -4117,9 +4124,10 @@ body[data-current-page="faq"] .faq-cta-art img {
     .frame-hero {
       background: #F2F8FF;
     }
+    /* measured from home-hero-banner-laptop.webp's baked headline pixels */
     .frame-hero-actions {
-      left: clamp(48px, 12.7vw, 204px);
-      top: clamp(230px, 19vw, 305px);
+      left: 13%;
+      top: 75%;
     }
   }
 
@@ -4248,31 +4256,6 @@ body[data-current-page="faq"] .faq-cta-art img {
     .guideline-body { padding-left: 0; padding-right: 0; }
     .frame-grid {
       grid-template-columns: 1fr;
-    }
-    .frame-hero {
-      min-height: 370px;
-    }
-    .frame-banner {
-      height: auto;
-      min-height: 0;
-      object-fit: contain;
-      object-position: center top;
-      transform: none;
-    }
-    .frame-hero-actions {
-      left: var(--frame-content-left);
-      right: 24px;
-      top: 130px;
-      bottom: auto;
-      transform: none;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 12px;
-    }
-    .frame-hero-cta {
-      min-width: 0;
-      min-height: 44px;
-      font-size: 14px;
     }
     .canvas-stage {
       flex-direction: column;
@@ -4415,27 +4398,6 @@ body[data-current-page="faq"] .faq-cta-art img {
       font-size: clamp(20px, 5.8vw, 26px);
       line-height: 1.08;
     }
-    .frame-hero {
-      min-height: clamp(236px, 62vw, 320px);
-      align-items: stretch;
-    }
-    .frame-banner {
-      width: 100%;
-      height: auto;
-      min-height: clamp(236px, 62vw, 320px);
-      object-fit: cover;
-      object-position: center;
-    }
-    .frame-hero-actions {
-      left: 16px;
-      right: 16px;
-      top: auto;
-      bottom: 16px;
-      transform: none;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 8px;
-    }
     .frame-card-title {
       font-size: clamp(20px, 5.8vw, 22px);
     }
@@ -4456,6 +4418,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     .page-header,
     .app,
     .frame-options,
+    .frame-hero-inner,
     .request-page {
       width: calc(100% - 28px);
     }
@@ -4473,9 +4436,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     .frame-banner {
       width: 100%;
       height: auto;
-      min-height: clamp(236px, 62vw, 320px);
-      object-fit: cover;
-      object-position: center;
+      min-height: 0;
+      object-fit: contain;
+      object-position: center top;
     }
     .frame-hero-actions {
       left: 16px;
@@ -6593,13 +6556,15 @@ body[data-current-page="faq"] .faq-cta-art img {
 <!-- FRAME HOME -->
 <main class="frame-home" data-page="frames">
   <section class="frame-hero" aria-label="EssentiallySports Design Buddy">
-    <picture class="frame-hero-picture">
-      <source media="(min-width: 681px) and (max-width: 1600px)" srcset="home-hero-banner-laptop.webp">
-      <img class="frame-banner" src="home-hero-banner.webp" alt="Sports designs simplified">
-    </picture>
-    <div class="frame-hero-actions">
-      <a class="frame-hero-cta is-primary" href="#logo-guidelines" data-route="logo-guidelines">Brand Guidelines</a>
-      <a class="frame-hero-cta" href="design-request.html">Request a Design</a>
+    <div class="frame-hero-inner">
+      <picture class="frame-hero-picture">
+        <source media="(min-width: 681px) and (max-width: 1600px)" srcset="home-hero-banner-laptop.webp">
+        <img class="frame-banner" src="home-hero-banner.webp" alt="Sports designs simplified">
+      </picture>
+      <div class="frame-hero-actions">
+        <a class="frame-hero-cta is-primary" href="#logo-guidelines" data-route="logo-guidelines">Brand Guidelines</a>
+        <a class="frame-hero-cta" href="design-request.html">Request a Design</a>
+      </div>
     </div>
   </section>
   <section class="frame-options" aria-label="Design workspace options">
