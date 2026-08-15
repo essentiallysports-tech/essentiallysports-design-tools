@@ -1677,11 +1677,8 @@
   .frame-hero-slider {
     position: relative;
     overflow: hidden;
-    /* Aspect ratio is set inline by initHeroSlider(), matching whichever
-       slide is active (slide 0 is a different ratio at wide vs laptop
-       widths; slide 1 is one fixed ratio) so neither banner ever
-       letterboxes at its own original size. */
-    aspect-ratio: 5502 / 1130;
+    /* Both slide images share this exact aspect ratio. */
+    aspect-ratio: 2560 / 637;
   }
   .frame-hero-track {
     display: flex;
@@ -1720,12 +1717,12 @@
   }
   /* left/top measured directly from each slide's own baked-in artwork pixels */
   [data-hero-slide="0"] .frame-hero-actions {
-    left: 21.8%;
+    left: 11.8%;
     top: 74%;
   }
   [data-hero-slide="1"] .frame-hero-actions {
-    left: 13%;
-    top: 72%;
+    left: 11.8%;
+    top: 70%;
   }
   .frame-hero-arrow {
     position: absolute;
@@ -1755,9 +1752,6 @@
     border-color: #0A7DFA;
     outline: none;
     transform: translateY(-50%) scale(1.06);
-  }
-  .frame-hero-arrow--prev {
-    left: 14px;
   }
   .frame-hero-arrow--next {
     right: 14px;
@@ -4225,14 +4219,6 @@ body[data-current-page="faq"] .faq-cta-art img {
     border-color: var(--accent);
   }
 
-  @media (min-width: 681px) and (max-width: 1600px) {
-    /* measured from home-hero-banner-laptop.webp's baked headline pixels */
-    [data-hero-slide="0"] .frame-hero-actions {
-      left: 13%;
-      top: 75%;
-    }
-  }
-
   @media (max-width: 1040px) {
     .frame-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6673,8 +6659,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         <div class="frame-hero-track" data-hero-track>
           <div class="frame-hero-slide is-active" data-hero-slide="0">
             <picture class="frame-hero-picture">
-              <source media="(min-width: 681px) and (max-width: 1600px)" srcset="home-hero-banner-laptop.webp">
-              <img class="frame-banner" src="home-hero-banner.webp" alt="Sports designs simplified">
+              <img class="frame-banner" src="home-hero-banner.webp?v=20260815-heroart2" alt="Sports designs simplified">
             </picture>
             <div class="frame-hero-actions">
               <a class="frame-hero-cta is-primary" href="#logo-guidelines" data-route="logo-guidelines">Brand Guidelines</a>
@@ -6683,16 +6668,13 @@ body[data-current-page="faq"] .faq-cta-art img {
           </div>
           <div class="frame-hero-slide" data-hero-slide="1">
             <picture class="frame-hero-picture">
-              <img class="frame-banner" src="home-hero-banner-reels.webp" alt="Try In-house Reel Captions Creator">
+              <img class="frame-banner" src="home-hero-banner-reels.webp?v=20260815-heroart2" alt="Try In-house Reel Captions Creator">
             </picture>
             <div class="frame-hero-actions frame-hero-actions--single">
               <a class="frame-hero-cta is-primary" href="reels.html">Create Now</a>
             </div>
           </div>
         </div>
-        <button type="button" class="frame-hero-arrow frame-hero-arrow--prev" data-hero-prev aria-label="Previous slide">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-        </button>
         <button type="button" class="frame-hero-arrow frame-hero-arrow--next" data-hero-next aria-label="Next slide">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
@@ -16518,35 +16500,32 @@ loadFont().then(() => render());
     const slider = document.querySelector('[data-hero-slider]');
     if (!slider) return;
     const track = slider.querySelector('[data-hero-track]');
-    const slides = Array.from(slider.querySelectorAll('[data-hero-slide]'));
+    const realSlides = Array.from(slider.querySelectorAll('[data-hero-slide]'));
     const dots = Array.from(slider.querySelectorAll('[data-hero-dot]'));
-    const prevBtn = slider.querySelector('[data-hero-prev]');
     const nextBtn = slider.querySelector('[data-hero-next]');
-    if (!track || slides.length < 2) return;
+    if (!track || realSlides.length < 2) return;
 
     const AUTOPLAY_MS = 6000;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const count = realSlides.length;
+
+    // Motion must always read left-to-right, never reverse. A clone of the
+    // first slide sits after the last real one, so advancing off the end
+    // keeps sliding the same direction into the clone, then snaps back to
+    // the real first slide (transition disabled for that one frame) once
+    // it's fully in view — an invisible loop point.
+    const loopClone = realSlides[0].cloneNode(true);
+    loopClone.setAttribute('aria-hidden', 'true');
+    loopClone.removeAttribute('data-hero-slide');
+    loopClone.querySelectorAll('a, button').forEach(el => el.setAttribute('tabindex', '-1'));
+    track.appendChild(loopClone);
+
+    let pos = 0;
     let active = 0;
     let timer = null;
 
-    // Slide 0's own art is a different crop above/below 1600px; slide 1 is
-    // one fixed crop at every width. Keeping the slider's aspect-ratio in
-    // sync with whichever slide is showing means neither banner ever
-    // letterboxes at its own original size.
-    function applyAspect() {
-      if (window.innerWidth <= 680) {
-        slider.style.removeProperty('aspect-ratio');
-        return;
-      }
-      const activeSlide = slides[active];
-      const isWide = window.innerWidth >= 1601;
-      const ratio = (activeSlide?.dataset.heroSlide === '0' && isWide) ? '5502 / 1130' : '5502 / 1394';
-      slider.style.aspectRatio = ratio;
-    }
-
-    function render() {
-      track.style.transform = `translateX(-${active * 100}%)`;
-      slides.forEach((slide, i) => {
+    function updateState() {
+      realSlides.forEach((slide, i) => {
         const isActive = i === active;
         slide.classList.toggle('is-active', isActive);
         slide.setAttribute('aria-hidden', String(!isActive));
@@ -16560,16 +16539,39 @@ loadFont().then(() => render());
         dot.classList.toggle('is-active', isActive);
         dot.setAttribute('aria-selected', String(isActive));
       });
-      applyAspect();
     }
 
-    function goTo(index) {
-      active = (index + slides.length) % slides.length;
-      render();
+    function renderPos() {
+      track.style.transform = `translateX(-${pos * 100}%)`;
     }
 
-    function next() { goTo(active + 1); }
-    function prev() { goTo(active - 1); }
+    // One persistent listener handles the loop-point snap-back, however many
+    // times (or however quickly) the boundary gets crossed, instead of a new
+    // one-off listener per call that could stack up if a transition never
+    // actually completes before the next advance.
+    function resetLoopIfNeeded() {
+      if (pos < count) return;
+      track.style.transition = 'none';
+      pos -= count;
+      renderPos();
+      void track.offsetWidth;
+      track.style.transition = '';
+    }
+    track.addEventListener('transitionend', resetLoopIfNeeded);
+
+    function advanceTo(targetActive) {
+      if (targetActive === active) return;
+      const steps = (targetActive - active + count) % count;
+      pos += steps;
+      active = targetActive;
+      renderPos();
+      updateState();
+      if (prefersReducedMotion) {
+        resetLoopIfNeeded();
+      }
+    }
+
+    function next() { advanceTo((active + 1) % count); }
 
     function stopAutoplay() {
       if (timer) { window.clearInterval(timer); timer = null; }
@@ -16580,10 +16582,11 @@ loadFont().then(() => render());
       timer = window.setInterval(next, AUTOPLAY_MS);
     }
 
+    // Next and every dot always advance forward (looping through the clone
+    // if the target is "behind" the current slide) — motion never reverses.
     nextBtn?.addEventListener('click', () => { next(); startAutoplay(); });
-    prevBtn?.addEventListener('click', () => { prev(); startAutoplay(); });
     dots.forEach((dot, i) => {
-      dot.addEventListener('click', () => { goTo(i); startAutoplay(); });
+      dot.addEventListener('click', () => { advanceTo(i); startAutoplay(); });
     });
 
     slider.addEventListener('mouseenter', stopAutoplay);
@@ -16591,13 +16594,8 @@ loadFont().then(() => render());
     slider.addEventListener('focusin', stopAutoplay);
     slider.addEventListener('focusout', startAutoplay);
 
-    let resizeRaf = null;
-    window.addEventListener('resize', () => {
-      if (resizeRaf) return;
-      resizeRaf = requestAnimationFrame(() => { resizeRaf = null; applyAspect(); });
-    });
-
-    render();
+    updateState();
+    renderPos();
     startAutoplay();
   }
 
