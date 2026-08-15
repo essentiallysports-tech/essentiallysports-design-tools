@@ -1656,6 +1656,9 @@
 
   /* â”€â”€â”€ FAQ PAGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   /* FRAME HOME */
+  body[data-current-page="frames"] {
+    background: #F8F8F8;
+  }
   .frame-home {
     width: 100%;
     margin: 0;
@@ -6785,7 +6788,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
     </section>
 
-    <section class="creation-flow" aria-labelledby="journey-title">
+    <section class="creation-flow" aria-labelledby="journey-title" hidden>
       <div class="creation-flow__shell" data-creation-flow>
         <header class="creation-flow__heading" data-how-reveal>
           <div>
@@ -16602,11 +16605,6 @@ loadFont().then(() => render());
     dots.forEach((dot, i) => {
       dot.addEventListener('click', () => { advanceTo(i); startAutoplay(); });
     });
-
-    slider.addEventListener('mouseenter', stopAutoplay);
-    slider.addEventListener('mouseleave', startAutoplay);
-    slider.addEventListener('focusin', stopAutoplay);
-    slider.addEventListener('focusout', startAutoplay);
 
     updateState();
     renderPos();
