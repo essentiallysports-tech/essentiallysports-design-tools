@@ -1654,6 +1654,7 @@
   /* â”€â”€â”€ FAQ PAGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   /* FRAME HOME */
   .frame-home {
+    --frame-content-left: max(24px, calc((100vw - 1100px) / 2));
     width: 100%;
     margin: 0;
     padding: 0;
@@ -1681,16 +1682,8 @@
   }
   .frame-hero-actions {
     position: absolute;
-    /* Pure vw, no px ceiling: the button row's left edge must track the
-       baked-in headline's left edge in the hero banner at every width,
-       including ultra-wide/4K monitors. Measured directly off
-       home-hero-banner.webp's headline box (canvas pixel scan): its solid
-       navy bar starts at 21.6% of the image's width. A px clamp ceiling
-       here was the main cause of the alignment drifting apart above
-       ~2050px, since the image keeps scaling past that point but the
-       button stopped. */
-    left: 21.6vw;
-    top: 15.2vw;
+    left: clamp(260px, 21.7vw, 445px);
+    top: clamp(220px, 15.2vw, 360px);
     transform: none;
     display: flex;
     align-items: center;
@@ -1770,7 +1763,7 @@
     display: block; width: 100%; height: 100%; object-fit: cover; object-position: center;
   }
   .frame-status {
-    position: absolute; z-index: 2; left: 18px; top: 14px; padding: 5px 8px;
+    position: absolute; z-index: 2; left: 14px; top: 14px; padding: 5px 8px;
     border-radius: 0; font-size: 14px; font-weight: 900;
   }
   .frame-card-body {
@@ -2253,7 +2246,7 @@
   }
   .frame-cta {
     width: 100%; min-height: 42px; border: 1.5px solid var(--accent);
-    border-radius: var(--button-radius); display: flex; justify-content: flex-start;
+    border-radius: var(--button-radius); display: flex; justify-content: center;
     align-items: center; gap: 10px; background: var(--accent); color: var(--white);
     font-family: var(--font-heading); font-size: clamp(14px, .78vw, 16px);
     font-weight: 500; line-height: 1; letter-spacing: 0;
@@ -4125,15 +4118,8 @@ body[data-current-page="faq"] .faq-cta-art img {
       background: #F2F8FF;
     }
     .frame-hero-actions {
-      /* Pure vw, no px floor: measured off home-hero-banner-laptop.webp's
-         headline box, its left edge sits at 12.8% of image width — the
-         12.7vw coefficient here was already correct, but the 230px floor
-         on `top` froze the button's vertical position below ~1210px
-         viewport width while the shrinking laptop art kept moving the
-         headline up, causing them to drift apart through the 901-1210px
-         laptop/tablet range. */
-      left: 12.7vw;
-      top: 19vw;
+      left: clamp(48px, 12.7vw, 204px);
+      top: clamp(230px, 19vw, 305px);
     }
   }
 
@@ -4262,6 +4248,31 @@ body[data-current-page="faq"] .faq-cta-art img {
     .guideline-body { padding-left: 0; padding-right: 0; }
     .frame-grid {
       grid-template-columns: 1fr;
+    }
+    .frame-hero {
+      min-height: 370px;
+    }
+    .frame-banner {
+      height: auto;
+      min-height: 0;
+      object-fit: contain;
+      object-position: center top;
+      transform: none;
+    }
+    .frame-hero-actions {
+      left: var(--frame-content-left);
+      right: 24px;
+      top: 130px;
+      bottom: auto;
+      transform: none;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+    .frame-hero-cta {
+      min-width: 0;
+      min-height: 44px;
+      font-size: 14px;
     }
     .canvas-stage {
       flex-direction: column;
@@ -4412,16 +4423,18 @@ body[data-current-page="faq"] .faq-cta-art img {
       width: 100%;
       height: auto;
       min-height: clamp(236px, 62vw, 320px);
-      /* contain, not cover: cover crops the banner horizontally, which
-         shifts the baked-in headline's true left edge away from wherever
-         .frame-hero-actions assumes it is. This range (681-900px) no
-         longer overrides .frame-hero-actions below (removed — it was
-         stacking the CTAs into a fixed bottom-left corner, unrelated to
-         the headline, for what's really still "laptop breakpoint" width),
-         so it now inherits the tracking left/top from the 681-1600px
-         rule above, and needs contain to keep that tracking valid. */
-      object-fit: contain;
-      object-position: center top;
+      object-fit: cover;
+      object-position: center;
+    }
+    .frame-hero-actions {
+      left: 16px;
+      right: 16px;
+      top: auto;
+      bottom: 16px;
+      transform: none;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
     }
     .frame-card-title {
       font-size: clamp(20px, 5.8vw, 22px);
@@ -4491,9 +4504,6 @@ body[data-current-page="faq"] .faq-cta-art img {
     .frame-card-body,
     .request-card {
       padding: 16px;
-    }
-    .frame-status {
-      left: 16px;
     }
     .app {
       padding: 20px 0 96px;
