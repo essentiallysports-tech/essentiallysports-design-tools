@@ -2252,12 +2252,13 @@
     font-weight: 500; line-height: 1; letter-spacing: 0;
     text-decoration: none; text-transform: none;
     box-shadow: 0 18px 36px rgba(3, 49, 98, .08);
+    outline: none;
     transition: transform .24s var(--motion-smooth), box-shadow .24s var(--motion-smooth), background-color .24s var(--motion-smooth), border-color .24s var(--motion-smooth), color .24s var(--motion-smooth);
   }
   .frame-cta:hover,
   .frame-cta:focus-visible {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
+    background: #3D97FB;
+    border-color: #3D97FB;
     transform: translateY(-2px);
     box-shadow: 0 22px 42px rgba(10, 125, 250, .18);
     outline: none;
@@ -15539,7 +15540,13 @@ function showPage(page) {
   };
   document.title = `${pageTitles[activePage]} | EssentiallySports`;
   if (activePage === 'faq') resetFaqAccordion();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const rawHash = window.location.hash.slice(1);
+  const scrollTarget = rawHash && rawHash !== activePage ? document.getElementById(rawHash) : null;
+  if (scrollTarget) {
+    scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
   if (isWorkspace) activateWorkspace(activePage);
 }
 

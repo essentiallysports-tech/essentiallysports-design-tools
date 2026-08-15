@@ -82,8 +82,8 @@
   .primary-btn,
   .workspace-cta
 ):not(:disabled):not(.is-disabled):hover {
-  border-color: #033162 !important;
-  background-color: #0A7DFA !important;
+  border-color: #3D97FB !important;
+  background-color: #3D97FB !important;
   color: #FFFFFF !important;
 }
 
