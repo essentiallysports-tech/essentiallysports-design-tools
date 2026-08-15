@@ -6947,11 +6947,12 @@ body[data-current-page="faq"] .faq-cta-art img {
   <div class="panel">
     <div class="youtube-control-row" aria-label="YouTube asset options">
       <div class="card" id="youtube-variation-card">
-        <div class="post-type-options" role="group" aria-label="YouTube asset variation">
-          <button class="post-type-option is-active" type="button" data-youtube-variation="variation-1" aria-pressed="true">Single Image</button>
-          <button class="post-type-option" type="button" data-youtube-variation="variation-2" aria-pressed="false">Entity + Background</button>
-          <button class="post-type-option" type="button" data-youtube-variation="variation-3" aria-pressed="false">Two Foregrounds + Background</button>
-        </div>
+        <div class="card-title">Asset Variation</div>
+        <select id="youtube-variation-select" aria-label="YouTube asset variation">
+          <option value="variation-1">Single Image</option>
+          <option value="variation-2">Entity + Background</option>
+          <option value="variation-3">Two Foregrounds + Background</option>
+        </select>
       </div>
 
       <div class="card" id="youtube-category-card">
@@ -10110,8 +10111,8 @@ function initUI() {
     state.contentCategory = event.target.value;
     render();
   });
-  document.querySelectorAll('button[data-youtube-variation]').forEach(button => {
-    button.addEventListener('click', () => switchYoutubeVariation(button.dataset.youtubeVariation));
+  document.getElementById('youtube-variation-select').addEventListener('change', event => {
+    switchYoutubeVariation(event.target.value);
   });
   document.getElementById('newsletter-asset-select').addEventListener('change', event => {
     switchNewsletterAsset(event.target.value);
@@ -15220,11 +15221,8 @@ function syncWorkspaceControls() {
   });
   teamSelect.value = state.team;
   categorySelect.value = state.contentCategory || 'es-exclusives';
-  document.querySelectorAll('button[data-youtube-variation]').forEach(button => {
-    const isActive = button.dataset.youtubeVariation === activeYoutubeVariation;
-    button.classList.toggle('is-active', isActive);
-    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-  });
+  const youtubeVariationSelect = document.getElementById('youtube-variation-select');
+  if (youtubeVariationSelect) youtubeVariationSelect.value = activeYoutubeVariation;
   if (newsletterAssetSelect) newsletterAssetSelect.value = activeNewsletterAsset;
   if (newsletterBrandSelect) {
     newsletterBrandSelect.value = activeNewsletterAsset === 'widgets'
