@@ -1679,9 +1679,11 @@
   .frame-hero-slider {
     position: relative;
     overflow: hidden;
-    /* Fixed per banner-art aspect ratio (both slide images share this ratio)
-       so slides never cause a layout jump as the track slides between them. */
-    aspect-ratio: 5502 / 1394;
+    /* Aspect ratio is set inline by initHeroSlider(), matching whichever
+       slide is active (slide 0 is a different ratio at wide vs laptop
+       widths; slide 1 is one fixed ratio) so neither banner ever
+       letterboxes at its own original size. */
+    aspect-ratio: 5502 / 1130;
   }
   .frame-hero-track {
     display: flex;
@@ -1720,8 +1722,8 @@
   }
   /* left/top measured directly from each slide's own baked-in artwork pixels */
   [data-hero-slide="0"] .frame-hero-actions {
-    left: 13%;
-    top: 75%;
+    left: 21.8%;
+    top: 74%;
   }
   [data-hero-slide="1"] .frame-hero-actions {
     left: 13%;
@@ -4225,6 +4227,14 @@ body[data-current-page="faq"] .faq-cta-art img {
     border-color: var(--accent);
   }
 
+  @media (min-width: 681px) and (max-width: 1600px) {
+    /* measured from home-hero-banner-laptop.webp's baked headline pixels */
+    [data-hero-slide="0"] .frame-hero-actions {
+      left: 13%;
+      top: 75%;
+    }
+  }
+
   @media (max-width: 1040px) {
     .frame-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6664,6 +6674,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         <div class="frame-hero-track" data-hero-track>
           <div class="frame-hero-slide is-active" data-hero-slide="0">
             <picture class="frame-hero-picture">
+              <source media="(min-width: 681px) and (max-width: 1600px)" srcset="home-hero-banner-laptop.webp">
               <img class="frame-banner" src="home-hero-banner.webp" alt="Sports designs simplified">
             </picture>
             <div class="frame-hero-actions">
@@ -16519,6 +16530,21 @@ loadFont().then(() => render());
     let active = 0;
     let timer = null;
 
+    // Slide 0's own art is a different crop above/below 1600px; slide 1 is
+    // one fixed crop at every width. Keeping the slider's aspect-ratio in
+    // sync with whichever slide is showing means neither banner ever
+    // letterboxes at its own original size.
+    function applyAspect() {
+      if (window.innerWidth <= 680) {
+        slider.style.removeProperty('aspect-ratio');
+        return;
+      }
+      const activeSlide = slides[active];
+      const isWide = window.innerWidth >= 1601;
+      const ratio = (activeSlide?.dataset.heroSlide === '0' && isWide) ? '5502 / 1130' : '5502 / 1394';
+      slider.style.aspectRatio = ratio;
+    }
+
     function render() {
       track.style.transform = `translateX(-${active * 100}%)`;
       slides.forEach((slide, i) => {
@@ -16535,6 +16561,7 @@ loadFont().then(() => render());
         dot.classList.toggle('is-active', isActive);
         dot.setAttribute('aria-selected', String(isActive));
       });
+      applyAspect();
     }
 
     function goTo(index) {
@@ -16564,6 +16591,12 @@ loadFont().then(() => render());
     slider.addEventListener('mouseleave', startAutoplay);
     slider.addEventListener('focusin', stopAutoplay);
     slider.addEventListener('focusout', startAutoplay);
+
+    let resizeRaf = null;
+    window.addEventListener('resize', () => {
+      if (resizeRaf) return;
+      resizeRaf = requestAnimationFrame(() => { resizeRaf = null; applyAspect(); });
+    });
 
     render();
     startAutoplay();
