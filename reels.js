@@ -18,11 +18,6 @@
   var PILL_EDGE_TO_TEXT_GAP = 1;
   var PILL_ROW_GAP = 1;
   var LIVE_API_ORIGIN = 'https://essentiallysports-design-tools.vercel.app';
-  var TRANSFORMERS_MODULE_URLS = [
-    'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1',
-    'https://unpkg.com/@huggingface/transformers@3.8.1',
-  ];
-  var LOCAL_WHISPER_MODEL = 'Xenova/whisper-tiny.en';
 
   // Only one style for now, by design -- a single centered word at a time.
   // Position (top/middle/bottom) is a separate, independent control below.
@@ -53,7 +48,9 @@
     transcriptSource: '',
     recording: false,
     renderedOnce: false,
-    localWhisperPromise: null,
+    localWhisperWorker: null,
+    localWhisperWorkerJobId: 0,
+    localWhisperWorkerJobs: null,
     seekPending: false,
     timeline: {
       zoom: 1,
@@ -535,7 +532,6 @@
   }
 
   async function transcribeLocalAudioChunks(chunks) {
-    var transcriber = await loadLocalWhisperTranscriber();
     var merged = {
       provider: 'On-device Whisper',
       language: 'en',
@@ -546,9 +542,7 @@
     for (var i = 0; i < chunks.length; i++) {
       var chunk = chunks[i];
       setStatus(els.transcribeStatus, 'On-device Whisper chunk ' + (i + 1) + ' of ' + chunks.length + '...');
-      var result = await transcriber(chunk.samples, {
-        return_timestamps: 'word',
-      });
+      var result = await runLocalWhisperInWorker(chunk.samples);
       merged.text = [merged.text, result.text || ''].filter(Boolean).join(' ').trim();
       normalizeLocalWhisperSegments(result, chunk.start, chunk.samples.length / TRANSCRIBE_SAMPLE_RATE).forEach(function (segment) {
         merged.segments.push(segment);
@@ -559,37 +553,43 @@
     return merged;
   }
 
-  async function loadLocalWhisperTranscriber() {
-    if (!state.localWhisperPromise) {
-      setStatus(els.transcribeStatus, 'Loading on-device Whisper model for no-key captions...');
-      state.localWhisperPromise = importTransformersModule().then(function (module) {
-        if (module.env) {
-          module.env.allowLocalModels = false;
-          module.env.allowRemoteModels = true;
+  function getLocalWhisperWorker() {
+    if (!state.localWhisperWorker) {
+      state.localWhisperWorker = new Worker('reels-whisper-worker.js?v=20260817', { type: 'module' });
+      state.localWhisperWorkerJobId = 0;
+      state.localWhisperWorkerJobs = new Map();
+      state.localWhisperWorker.onmessage = function (event) {
+        var data = event.data || {};
+        var job = state.localWhisperWorkerJobs.get(data.id);
+        if (!job) return;
+        if (data.type === 'progress') {
+          setStatus(els.transcribeStatus, 'Loading on-device Whisper model ' + Math.round(data.progress) + '%...');
+          return;
         }
-        return module.pipeline('automatic-speech-recognition', LOCAL_WHISPER_MODEL, {
-          dtype: 'q4',
-          progress_callback: function (progress) {
-            if (progress && progress.status === 'progress' && Number.isFinite(progress.progress)) {
-              setStatus(els.transcribeStatus, 'Loading on-device Whisper model ' + Math.round(progress.progress) + '%...');
-            }
-          },
+        state.localWhisperWorkerJobs.delete(data.id);
+        if (data.type === 'error') {
+          job.reject(new Error(data.message || 'On-device Whisper failed.'));
+        } else {
+          job.resolve({ text: data.text, chunks: data.chunks });
+        }
+      };
+      state.localWhisperWorker.onerror = function (event) {
+        state.localWhisperWorkerJobs.forEach(function (job) {
+          job.reject(new Error(event.message || 'On-device Whisper worker crashed.'));
         });
-      });
+        state.localWhisperWorkerJobs.clear();
+      };
     }
-    return state.localWhisperPromise;
+    return state.localWhisperWorker;
   }
 
-  async function importTransformersModule() {
-    var lastError = null;
-    for (var i = 0; i < TRANSFORMERS_MODULE_URLS.length; i++) {
-      try {
-        return await import(TRANSFORMERS_MODULE_URLS[i]);
-      } catch (error) {
-        lastError = error;
-      }
-    }
-    throw lastError || new Error('Could not load on-device Whisper.');
+  function runLocalWhisperInWorker(samples) {
+    var worker = getLocalWhisperWorker();
+    var id = ++state.localWhisperWorkerJobId;
+    return new Promise(function (resolve, reject) {
+      state.localWhisperWorkerJobs.set(id, { resolve: resolve, reject: reject });
+      worker.postMessage({ id: id, samples: samples });
+    });
   }
 
   function normalizeLocalWhisperSegments(result, offset, duration) {
