@@ -17,7 +17,6 @@
   var POST_SAFE_AREA = 50;
   var PILL_EDGE_TO_TEXT_GAP = 1;
   var PILL_ROW_GAP = 1;
-  var CAPTION_PILL_OFFSETS = [0, -96, 84, -48];
   var LIVE_API_ORIGIN = 'https://essentiallysports-design-tools.vercel.app';
   var TRANSFORMERS_MODULE_URLS = [
     'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1',
@@ -25,12 +24,10 @@
   ];
   var LOCAL_WHISPER_MODEL = 'Xenova/whisper-tiny.en';
 
+  // Only one style for now, by design -- a single centered word at a time.
+  // Position (top/middle/bottom) is a separate, independent control below.
   var CAPTION_STYLES = [
-    { id: 'es-pop-word', name: 'ES Word Pop', note: 'Each spoken word box pops on the beat', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'pop-word' },
-    { id: 'karaoke-sweep', name: 'Karaoke Box Sweep', note: 'Word boxes fill as speech reaches them', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'karaoke' },
-    { id: 'broadcast-lower', name: 'Broadcast Step', note: 'Word boxes step in like a clean sports lower', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'broadcast' },
-    { id: 'punch-highlight', name: 'Punch Box', note: 'The active word box hits with stronger emphasis', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'punch' },
-    { id: 'snap-stack', name: 'Snap Stack', note: 'Word boxes snap into compact caption stacks', background: ES_BLUE, foreground: '#ffffff', mode: 'pill', animation: 'snap-stack' },
+    { id: 'single-word', name: 'Single Word', note: 'One word at a time, centered', background: ES_BLUE, foreground: '#ffffff', mode: 'single-word', animation: 'single-word' },
   ];
 
   var LOWER_THIRD_TEMPLATES = [
@@ -1708,301 +1705,78 @@
     ctx.drawImage(els.video, (STAGE_W - dw) / 2, (STAGE_H - dh) / 2, dw, dh);
   }
 
+  // Single style, by design: one word at a time, centered, in whichever
+  // vertical position (top/middle/bottom) the user picked. Position is a
+  // fully independent control -- getCaptionBlockTop() is the only thing
+  // that reads it, same as before.
   function drawCaption(ctx, caption) {
-    var text = String(caption.text || '').toUpperCase();
-    ctx.save();
-    var timing = getCaptionAnimationTiming(caption);
-    var animation = state.style.animation || 'pop-word';
-    var scale = getCaptionScale(animation, timing);
-    var pillH = Math.round(PILL_H * scale);
-    var padLeft = PILL_PAD_LEFT * scale;
-    var padRight = PILL_PAD_RIGHT * scale;
-    var fontSize = Math.round(PILL_FONT_SIZE * scale);
-    ctx.font = '900 ' + fontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
-    var maxTextWidth = STAGE_W - POST_SAFE_AREA * 2 - padLeft - padRight;
-    var lines = wrapText(ctx, text, maxTextWidth).slice(0, 2);
-    if (animation === 'broadcast') {
-      var slide = Math.round((1 - easeOutCubic(timing.captionIntro)) * 44);
-      ctx.translate(0, slide);
-      ctx.globalAlpha = clamp(timing.captionIntro * 1.25, 0, 1);
-    }
     var words = getCaptionWordBoxes(caption);
-    if (words.length) {
-      drawCaptionWordBoxes(ctx, words, pillH, padLeft, padRight, fontSize, caption, timing);
-    } else {
-      drawCaptionPills(ctx, lines, pillH, padLeft, padRight, fontSize, caption, timing);
-    }
+    if (!words.length) return;
+    ctx.save();
+    drawSingleWordCaption(ctx, words, caption);
     ctx.restore();
   }
 
-  function drawCaptionPills(ctx, lines, pillH, padLeft, padRight, fontSize, caption, timing) {
-    if (!lines.length) return;
+  function getActiveCaptionWord(words, current) {
+    var active = words[0];
+    for (var i = 0; i < words.length; i += 1) {
+      if (current >= words[i].start) active = words[i];
+    }
+    return active;
+  }
+
+  function drawSingleWordCaption(ctx, words, caption) {
+    var current = els.video.currentTime || caption.start || 0;
+    var word = getActiveCaptionWord(words, current);
+    if (!word) return;
+
+    var wordDuration = Math.max(0.001, word.end - word.start);
+    var wordElapsed = clamp(current - word.start, 0, wordDuration);
+    var introProgress = clamp(wordElapsed / Math.min(0.16, wordDuration * 0.6), 0, 1);
+    var scale = 0.88 + 0.12 * easeOutBack(introProgress);
+    var alpha = clamp(introProgress * 1.3, 0, 1);
+
     var safe = POST_SAFE_AREA;
-    var maxCanvasW = STAGE_W - safe * 2;
-    var activePillH = Math.min(pillH, Math.floor((STAGE_H - safe * 2) / Math.max(lines.length, 1)));
-    activePillH = Math.max(28, activePillH);
-    var activeFontSize = Math.round(fontSize * (activePillH / pillH));
+    var fontSize = PILL_FONT_SIZE;
+    var maxTextWidth = STAGE_W - safe * 2 - PILL_PAD_LEFT - PILL_PAD_RIGHT;
+    var text = String(word.text || '').toUpperCase();
 
-    ctx.font = '900 ' + activeFontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-
-    var maxTextW = 0;
-    lines.forEach(function (line) {
-      maxTextW = Math.max(maxTextW, ctx.measureText(line.toUpperCase()).width);
-    });
-    var maxTextAvailable = Math.max(1, maxCanvasW - padLeft - padRight);
-    if (maxTextW > maxTextAvailable) {
-      activeFontSize = Math.max(28, Math.floor(activeFontSize * (maxTextAvailable / maxTextW)));
-      ctx.font = '900 ' + activeFontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+    ctx.font = '900 ' + fontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+    var textWidth = ctx.measureText(text).width;
+    if (textWidth > maxTextWidth) {
+      fontSize = Math.max(48, Math.floor(fontSize * (maxTextWidth / textWidth)));
+      ctx.font = '900 ' + fontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+      textWidth = ctx.measureText(text).width;
     }
 
-    var capMetrics = ctx.measureText('A');
-    var capAscent = capMetrics.actualBoundingBoxAscent || Math.round(activeFontSize * 0.68);
-    var capDescent = capMetrics.actualBoundingBoxDescent || 0;
-    var textH = capAscent + capDescent;
-    var topPad = Math.max(0, Math.round((activePillH - textH) * 0.50));
-    var textBaselineFromTop = Math.min(topPad + capAscent, activePillH - capDescent - 2);
-    var activePillSpacing = Math.max(
-      Math.round(activePillH * 0.55),
-      activePillH - topPad + PILL_EDGE_TO_TEXT_GAP
-    ) + PILL_ROW_GAP;
-
-    var pillWidths = lines.map(function (line) {
-      var textW = ctx.measureText(line.toUpperCase()).width;
-      return Math.min(maxCanvasW, textW + padLeft + padRight);
-    });
-    var blockH = activePillH + (lines.length - 1) * activePillSpacing;
-    var blockTopY = getCaptionBlockTop(blockH, safe);
-    var blockCenterX = STAGE_W / 2;
+    var pillH = PILL_H;
+    var pillW = Math.min(STAGE_W - safe * 2, textWidth + PILL_PAD_LEFT + PILL_PAD_RIGHT);
+    var blockTopY = getCaptionBlockTop(pillH, safe);
     var palette = getActivePalette();
     var entry = getActiveBrandEntry();
     var bgColor = palette.background || ES_BLUE;
     var fgColor = getTextColorForPair(palette, entry);
-
-    lines.forEach(function (line, index) {
-      var pillW = pillWidths[index];
-      var xOffset = getCaptionPillXOffset(index, lines.length);
-      var pillX = clamp(blockCenterX + xOffset - pillW / 2, safe, STAGE_W - safe - pillW);
-      var pillY = blockTopY + index * activePillSpacing;
-      if (state.style.animation === 'snap-stack') {
-        var lineIntro = clamp((timing.captionProgress - index * 0.28) / 0.32, 0, 1);
-        pillY += Math.round((1 - easeOutBack(lineIntro)) * 34);
-        ctx.globalAlpha = clamp(lineIntro * 1.3, 0, 1);
-      } else {
-        ctx.globalAlpha = 1;
-      }
-      ctx.fillStyle = bgColor;
-      roundRect(ctx, pillX, pillY, pillW, activePillH, 0);
-      ctx.fill();
-      ctx.font = '900 ' + activeFontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
-      ctx.fillStyle = fgColor;
-      ctx.textAlign = 'center';
-      ctx.fillText(line.toUpperCase(), pillX + pillW / 2, pillY + textBaselineFromTop);
-    });
-    ctx.globalAlpha = 1;
-  }
-
-  function drawCaptionWordBoxes(ctx, words, pillH, padLeft, padRight, fontSize, caption, timing) {
-    if (!words.length) return;
-    var layout = layoutCaptionWordBoxes(ctx, words, pillH, padLeft, padRight, fontSize);
-    var safe = POST_SAFE_AREA;
-    var blockTopY = getCaptionBlockTop(layout.blockH, safe);
-    var palette = getActivePalette();
-    var entry = getActiveBrandEntry();
-    var bgColor = palette.background || ES_BLUE;
-    var fgColor = getTextColorForPair(palette, entry);
-    var activeInfo = getActiveCaptionWordInfo(words, caption, timing);
-
-    layout.rows.forEach(function (row, rowIndex) {
-      var cursorX = row.x;
-      row.items.forEach(function (item) {
-        var word = item.word;
-        var index = word.index;
-        var box = {
-          x: cursorX,
-          y: blockTopY + rowIndex * layout.rowStep,
-          w: item.w,
-          h: layout.boxH,
-        };
-        drawAnimatedWordBox(ctx, box, word, index, activeInfo, layout, bgColor, fgColor, timing);
-        cursorX += item.w + layout.gap;
-      });
-    });
-    ctx.globalAlpha = 1;
-  }
-
-  function layoutCaptionWordBoxes(ctx, words, pillH, padLeft, padRight, fontSize) {
-    var safe = POST_SAFE_AREA;
-    var maxCanvasW = STAGE_W - safe * 2;
-    var boxPadX = Math.max(18, Math.round((padLeft + padRight) * 0.48));
-    var gap = Math.max(20, Math.round(fontSize * 0.22));
-    var activeFontSize = fontSize;
-    var rows = [];
-    var boxH = pillH;
-
-    for (var attempt = 0; attempt < 12; attempt += 1) {
-      activeFontSize = Math.max(48, Math.round(fontSize * (1 - attempt * 0.065)));
-      ctx.font = '900 ' + activeFontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
-      boxPadX = Math.max(14, Math.round(activeFontSize * 0.23));
-      // Gap needs to stay a clear fraction of box height, not just of font
-      // size — at small preview/export scales a thin gap between two
-      // same-colored rounded pills blurs away and reads as one merged pill.
-      gap = Math.max(20, Math.round(activeFontSize * 0.22));
-      boxH = Math.max(60, Math.round(activeFontSize * 0.96));
-      rows = packWordBoxRows(ctx, words, boxPadX, gap, maxCanvasW);
-      if (rows.length <= 2) break;
-    }
-
-    rows = rows.slice(0, 2);
-    rows.forEach(function (row) {
-      row.x = Math.round((STAGE_W - row.w) / 2);
-    });
-
-    return {
-      rows: rows,
-      fontSize: activeFontSize,
-      boxH: boxH,
-      gap: gap,
-      rowStep: boxH + Math.max(10, Math.round(activeFontSize * 0.12)),
-      blockH: boxH + (rows.length - 1) * (boxH + Math.max(10, Math.round(activeFontSize * 0.12))),
-      padX: boxPadX,
-    };
-  }
-
-  function packWordBoxRows(ctx, words, padX, gap, maxCanvasW) {
-    var rows = [];
-    var row = { items: [], w: 0 };
-    words.forEach(function (word) {
-      var text = word.text.toUpperCase();
-      var itemW = Math.ceil(ctx.measureText(text).width + padX * 2);
-      itemW = Math.min(maxCanvasW, Math.max(54, itemW));
-      var nextW = row.items.length ? row.w + gap + itemW : itemW;
-      if (row.items.length && nextW > maxCanvasW) {
-        rows.push(row);
-        row = { items: [], w: 0 };
-        nextW = itemW;
-      }
-      row.items.push({ word: word, w: itemW });
-      row.w = nextW;
-    });
-    if (row.items.length) rows.push(row);
-    return rows;
-  }
-
-  function drawAnimatedWordBox(ctx, box, word, index, activeInfo, layout, bgColor, fgColor, timing) {
-    var animation = state.style.animation || 'pop-word';
-    var isActive = index === activeInfo.activeIndex;
-    var isReached = index <= activeInfo.reachedIndex;
-    if (!isReached && !isActive) return;
-    var local = isActive ? activeInfo.wordLocal : (isReached ? 1 : 0);
-    var intro = getWordIntroProgress(word, captionTimeStart(timing), timing);
-    var fillColor = bgColor;
-    var textColor = fgColor;
-    var alpha = 1;
-    var scale = 1;
-    var translateY = 0;
-    var shadowBlur = 0;
-
-    if (animation === 'karaoke') {
-      fillColor = bgColor;
-      textColor = '#ffffff';
-      alpha = isActive ? intro : 1;
-      scale = isActive ? 0.92 + 0.135 * easeOutBack(intro) : 1;
-    } else if (animation === 'broadcast') {
-      var step = easeOutCubic(intro);
-      translateY = Math.round((1 - step) * 26);
-      alpha = clamp(step * 1.2, 0, 1);
-      fillColor = bgColor;
-      textColor = '#ffffff';
-    } else if (animation === 'punch') {
-      fillColor = isActive ? '#ffffff' : bgColor;
-      textColor = isActive ? bgColor : '#ffffff';
-      alpha = isActive ? intro : 1;
-      scale = isActive ? 0.92 + 0.20 * Math.sin(local * Math.PI) : 1;
-      shadowBlur = isActive ? 22 : 0;
-    } else if (animation === 'snap-stack') {
-      var snap = easeOutBack(intro);
-      translateY = Math.round((1 - snap) * 32);
-      alpha = clamp(intro * 1.35, 0, 1);
-      scale = isActive ? 1.04 : Math.max(0.92, snap);
-      fillColor = bgColor;
-      textColor = '#ffffff';
-    } else {
-      intro = isActive ? intro : 1;
-      scale = isActive ? 0.90 + 0.20 * easeOutBack(intro) : 1;
-      alpha = intro;
-    }
 
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.translate(box.x + box.w / 2, box.y + box.h / 2 + translateY);
+    ctx.translate(STAGE_W / 2, blockTopY + pillH / 2);
     ctx.scale(scale, scale);
-    ctx.fillStyle = fillColor;
-    if (shadowBlur) {
-      ctx.shadowColor = bgColor;
-      ctx.shadowBlur = shadowBlur;
-      ctx.shadowOffsetY = 8;
-    }
-    roundRect(ctx, -box.w / 2, -box.h / 2, box.w, box.h, 0);
+    ctx.fillStyle = bgColor;
+    roundRect(ctx, -pillW / 2, -pillH / 2, pillW, pillH, 0);
     ctx.fill();
 
-    if (animation === 'karaoke' && isActive) {
-      ctx.save();
-      ctx.globalAlpha = 0.24;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(-box.w / 2, -box.h / 2, box.w * clamp(local, 0, 1), box.h);
-      ctx.restore();
-    }
-
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-    ctx.fillStyle = textColor;
-    ctx.font = '900 ' + layout.fontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+    ctx.font = '900 ' + fontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+    ctx.fillStyle = fgColor;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(word.text.toUpperCase(), 0, Math.round(layout.fontSize * 0.04));
+    ctx.textBaseline = 'alphabetic';
+    var capMetrics = ctx.measureText('A');
+    var capAscent = capMetrics.actualBoundingBoxAscent || Math.round(fontSize * 0.68);
+    var capDescent = capMetrics.actualBoundingBoxDescent || 0;
+    var textH = capAscent + capDescent;
+    var topPad = Math.max(0, Math.round((pillH - textH) * 0.5));
+    var baselineY = -pillH / 2 + Math.min(topPad + capAscent, pillH - capDescent - 2);
+    ctx.fillText(text, 0, baselineY);
     ctx.restore();
-  }
-
-  function captionTimeStart(timing) {
-    return (els.video.currentTime || 0) - timing.elapsed;
-  }
-
-  function getWordIntroProgress(word, captionStart, timing) {
-    var current = els.video.currentTime || captionStart;
-    var introStart = Number.isFinite(word.start) ? word.start : captionStart + word.index * 0.12;
-    var introDuration = Math.min(0.18, Math.max(0.08, (word.end - word.start) * 0.65));
-    return clamp((current - introStart) / introDuration, 0, 1);
-  }
-
-  function getActiveCaptionWordInfo(words, caption, timing) {
-    var current = els.video.currentTime || caption.start || 0;
-    var reachedIndex = words.reduce(function (last, word, index) {
-      return current >= word.start ? index : last;
-    }, -1);
-    var activeIndex = words.findIndex(function (word) {
-      return current >= word.start && current < word.end;
-    });
-    if (activeIndex < 0) {
-      activeIndex = Math.min(words.length - 1, Math.floor(timing.captionProgress * words.length));
-    }
-    // The progress-based fallback estimates activeIndex from overall
-    // caption progress, not each word's real timing — in a pause between
-    // words (or with uneven real per-word durations) it can overshoot the
-    // words whose own start time has actually passed. Clamping it to at
-    // most one past reachedIndex prevents drawing a "reached" word ahead
-    // of an unreached one, which would otherwise leave a hole (an empty
-    // reserved slot) in the middle of an already-revealed caption line.
-    activeIndex = Math.max(0, Math.min(activeIndex, reachedIndex + 1));
-    var activeWord = words[activeIndex] || words[0];
-    var wordDuration = Math.max(0.001, activeWord.end - activeWord.start);
-    var wordLocal = clamp((current - activeWord.start) / wordDuration, 0, 1);
-    return {
-      activeIndex: activeIndex,
-      reachedIndex: reachedIndex,
-      wordLocal: wordLocal,
-    };
   }
 
   function getCaptionWordBoxes(caption) {
@@ -2042,75 +1816,13 @@
     });
   }
 
-  function getStylePreviewWords(style, background, foreground) {
-    var labels = ['MAKE', 'THE', 'CALL'];
-    return labels.map(function (label, index) {
-      var reached = index <= 1;
-      var active = index === 1;
-      var bg = reached ? background : '#ffffff';
-      var fg = reached ? foreground : background;
-      if (style.animation === 'punch' && active) {
-        bg = '#ffffff';
-        fg = background;
-      }
-      return '<span class="reels-style-word' + (active ? ' is-active' : '') + (reached ? ' is-reached' : '') + '" style="background:' + bg + ';color:' + fg + ';border-color:' + background + '">' + label + '</span>';
-    }).join('');
-  }
-
   function wordTextKey(text) {
     return String(text || '').toLowerCase().replace(/[^\w']+/g, ' ').trim();
-  }
-
-  function getCaptionAnimationTiming(caption) {
-    var current = els.video.currentTime || caption.start || 0;
-    var duration = Math.max(0.4, (caption.end || current + 1) - (caption.start || 0));
-    var elapsed = clamp(current - (caption.start || 0), 0, duration);
-    return {
-      duration: duration,
-      elapsed: elapsed,
-      captionProgress: clamp(elapsed / duration, 0, 1),
-      captionIntro: clamp(elapsed / Math.min(0.28, duration * 0.36), 0, 1),
-    };
-  }
-
-  function getCaptionScale(animation, timing) {
-    if (animation === 'pop-word') return 0.96 + 0.04 * easeOutBack(timing.captionIntro);
-    if (animation === 'punch') return 0.98 + 0.035 * Math.sin(timing.captionProgress * Math.PI * 3);
-    if (animation === 'snap-stack') return 0.98 + 0.02 * easeOutCubic(timing.captionIntro);
-    return 1;
-  }
-
-  function getActiveWordInfo(lines, caption, timing) {
-    var words = lines.join(' ').split(/\s+/).map(function (word) {
-      return word.replace(/[^\w']/g, '');
-    }).filter(Boolean);
-    if (!words.length) return { activeWords: [], reachedWords: [], wordLocal: 0 };
-    var rawIndex = Math.min(words.length - 1, Math.floor(timing.captionProgress * words.length));
-    var wordStart = rawIndex / words.length;
-    var wordEnd = (rawIndex + 1) / words.length;
-    var wordLocal = clamp((timing.captionProgress - wordStart) / Math.max(0.001, wordEnd - wordStart), 0, 1);
-    var activeWords = [words[rawIndex]];
-    if (state.style.animation === 'snap-stack') activeWords = words.slice(0, rawIndex + 1);
-    return {
-      activeWords: activeWords,
-      reachedWords: words.slice(0, rawIndex + 1),
-      wordLocal: wordLocal,
-    };
-  }
-
-  function easeOutCubic(value) {
-    var t = clamp(value, 0, 1) - 1;
-    return t * t * t + 1;
   }
 
   function easeOutBack(value) {
     var t = clamp(value, 0, 1) - 1;
     return 1 + t * t * ((1.70158 + 1) * t + 1.70158);
-  }
-
-  function getCaptionPillXOffset(index, total) {
-    if (total <= 1) return 0;
-    return CAPTION_PILL_OFFSETS[index % CAPTION_PILL_OFFSETS.length] || 0;
   }
 
   function getCaptionBlockTop(blockH, safe) {
@@ -2381,23 +2093,6 @@
 
   function blobToBase64(blob) {
     return fileToBase64(blob);
-  }
-
-  function wrapText(ctx, text, maxWidth) {
-    var words = text.split(/\s+/).filter(Boolean);
-    var lines = [];
-    var line = '';
-    words.forEach(function (word) {
-      var next = line ? line + ' ' + word : word;
-      if (ctx.measureText(next).width > maxWidth && line) {
-        lines.push(line);
-        line = word;
-      } else {
-        line = next;
-      }
-    });
-    if (line) lines.push(line);
-    return lines.length ? lines : [''];
   }
 
   function roundRect(ctx, x, y, width, height, radius) {
