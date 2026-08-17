@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en" data-studio-shell="on">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FrameUp Design System Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../site-chrome.css">
+  <link rel="stylesheet" href="../design-tokens.css">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 48px 24px 80px;
+      background: #f5f7fa;
+      color: var(--es-text-primary);
+      font-family: var(--es-font-body);
+    }
+
+    .specimen-shell {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+    }
+
+    .specimen-intro {
+      max-width: 720px;
+      margin-bottom: 36px;
+    }
+
+    .specimen-intro .es-type-body {
+      max-width: 660px;
+      margin-top: 12px;
+    }
+
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid #dce4ed;
+      border-radius: 10px;
+      background: #dce4ed;
+    }
+
+    .type-row {
+      min-width: 0;
+      padding: 22px;
+      background: #fff;
+    }
+
+    .type-role {
+      display: block;
+      margin-bottom: 12px;
+      color: var(--es-text-muted);
+      font: 600 11px/1.2 var(--es-font-ui);
+      text-transform: uppercase;
+    }
+
+    .builder-section {
+      margin-top: 36px;
+    }
+
+    .builder-section > .es-type-panel-title {
+      margin-bottom: 14px;
+    }
+
+    .builder-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 460px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .builder-canvas {
+      min-height: 490px;
+      display: grid;
+      place-items: center;
+      padding: 32px;
+      border: 1px solid #dce4ed;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .canvas-placeholder {
+      width: min(310px, 80%);
+      aspect-ratio: 4 / 5;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: #edf4fc;
+      color: var(--es-text-muted);
+    }
+
+    .fixture {
+      overflow: hidden;
+      border: 1px solid #dce4ed;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .fixture-head {
+      padding: 20px;
+      border-bottom: 1px solid #e4e7ec;
+    }
+
+    .fixture-head .es-type-helper { margin-top: 6px; }
+
+    .fixture-body {
+      padding: 14px;
+      background: #f7f8fa;
+    }
+
+    .studio-accordion-section {
+      overflow: hidden;
+      border: 1px solid #dce4ed;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .studio-accordion-trigger {
+      width: 100%;
+      min-height: 54px;
+      padding: 0 18px;
+      border: 0;
+      border-bottom: 1px solid #e9edf2;
+      background: #fff;
+      text-align: left;
+    }
+
+    .panel { padding: 18px; }
+
+    .tod-label,
+    .color-group-label,
+    .section-label {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid #dce4ed;
+      border-radius: 7px;
+      background: #fff;
+      padding: 13px 14px;
+    }
+
+    textarea {
+      min-height: 88px;
+      resize: none;
+    }
+
+    .color-group-label { margin-top: 22px; }
+
+    .swatches {
+      display: flex;
+      gap: 12px;
+    }
+
+    .swatches span {
+      width: 48px;
+      height: 48px;
+      border: 1px solid #d8dee7;
+      border-radius: 7px;
+      background: #ce0e2d;
+    }
+
+    .swatches span + span { background: #fff; }
+
+    @media (max-width: 820px) {
+      body { padding: 28px 16px 56px; }
+      .type-grid,
+      .builder-grid { grid-template-columns: 1fr; }
+      .builder-canvas { min-height: 320px; }
+      .fixture { order: -1; }
+    }
+  </style>
+</head>
+<body>
+  <main class="specimen-shell">
+    <header class="specimen-intro">
+      <h1 class="es-type-page-title">FrameUp type hierarchy</h1>
+      <p class="es-type-body">A shared product typography system for every workspace, inspector, dashboard, and supporting workflow.</p>
+    </header>
+
+    <section class="type-grid" aria-label="Typography roles">
+      <article class="type-row"><span class="type-role">Workspace title</span><p class="es-type-workspace-title">Social Media</p></article>
+      <article class="type-row"><span class="type-role">Panel title</span><p class="es-type-panel-title">Caption Timeline</p></article>
+      <article class="type-row"><span class="type-role">Section title</span><p class="es-type-section-title">Brand &amp; Colors</p></article>
+      <article class="type-row"><span class="type-role">Field label</span><p class="es-type-field-label">Team</p></article>
+      <article class="type-row"><span class="type-role">Control value</span><p class="es-type-control">Houston Cougars</p></article>
+      <article class="type-row"><span class="type-role">Helper text</span><p class="es-type-helper">Choose a team palette or custom color.</p></article>
+    </section>
+
+    <section class="builder-section">
+      <h2 class="es-type-panel-title">Builder hierarchy in context</h2>
+      <div class="builder-grid">
+        <div class="builder-canvas"><div class="canvas-placeholder es-type-helper">Design canvas</div></div>
+        <aside class="fixture">
+          <header class="fixture-head">
+            <div class="studio-title">Social Media</div>
+            <p class="es-type-helper">Build and export a branded post.</p>
+          </header>
+          <div class="fixture-body">
+            <section class="studio-accordion-section">
+              <button class="studio-accordion-trigger" type="button">Content</button>
+              <div class="panel">
+                <span class="tod-label">Text On Design</span>
+                <textarea placeholder="Ex. Golden State Warriors&#10;One line per pill"></textarea>
+                <div class="field-row">
+                  <label><span class="section-label">Sports</span><select><option>CBB Men</option></select></label>
+                  <label><span class="section-label">Team</span><select><option>Houston Cougars</option></select></label>
+                </div>
+                <span class="color-group-label">Pill &amp; Text</span>
+                <div class="swatches" aria-label="Color swatches"><span></span><span></span></div>
+              </div>
+            </section>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
