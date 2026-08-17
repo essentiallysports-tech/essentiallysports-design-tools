@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="theme.css?v=20260714-footer1">
   <link rel="stylesheet" href="site-chrome.css?v=20260817-icons1">
   <link rel="stylesheet" href="cta-hover.css?v=20260723-howrefine1">
-  <link rel="stylesheet" href="tool-feedback.css?v=20260817-feedback1">
+  <link rel="stylesheet" href="tool-feedback.css?v=20260817-feedback2">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20260817-icons1"></script>
@@ -63,14 +63,25 @@
     </div>
   </nav>
 
-  <div class="feedback-page-header">
-    <div class="feedback-page-title">Tool Feedback</div>
-    <p class="feedback-page-version">Found a bug, have an idea, or want to tell us something's working great? Drop it here — it goes straight to the team.</p>
-  </div>
+  <main class="feedback-main">
+    <section class="feedback-hero" aria-labelledby="feedback-title">
+      <div class="feedback-hero-copy">
+        <span class="feedback-kicker">FrameUp Support</span>
+        <h1 class="feedback-page-title" id="feedback-title">Tool Feedback</h1>
+        <p class="feedback-page-version">Report a bug, share an idea, or tell us what is working well. Your note goes straight into the FrameUp feedback queue.</p>
+      </div>
+    </section>
 
-  <main>
     <div class="feedback-shell">
-      <div class="feedback-card" id="feedback-card">
+      <section class="feedback-card" id="feedback-card" aria-label="Send tool feedback">
+        <div class="feedback-panel-head">
+          <div>
+            <span class="feedback-section-label">New feedback</span>
+            <h2 class="feedback-panel-title">Send feedback to FrameUp</h2>
+          </div>
+          <span class="feedback-panel-badge">Signed-in users only</span>
+        </div>
+
         <form class="feedback-form" id="feedback-form" novalidate>
           <div class="feedback-field">
             <span class="feedback-label">What kind of feedback is this?</span>
@@ -129,7 +140,7 @@
 
           <div class="feedback-footer-row">
             <span class="feedback-signed-in" id="feedback-signed-in">Signed in as your ES account</span>
-            <button type="submit" class="feedback-submit" id="feedback-submit">
+            <button type="submit" class="feedback-submit btn-primary" id="feedback-submit">
               <span class="feedback-spinner" aria-hidden="true"></span>
               <span class="feedback-submit-label">Send Feedback</span>
             </button>
@@ -144,13 +155,36 @@
           </div>
           <h2 class="feedback-success-title">Thanks — got it!</h2>
           <p class="feedback-success-copy">Your feedback was recorded and the team will take a look. Keep them coming.</p>
-          <button type="button" class="feedback-reset" id="feedback-reset">Send more feedback</button>
+          <button type="button" class="feedback-reset btn-secondary" id="feedback-reset">Send more feedback</button>
         </div>
-      </div>
+      </section>
+
+      <aside class="feedback-guide" aria-label="Feedback guidance">
+        <div class="feedback-guide-section">
+          <span class="feedback-section-label">What helps</span>
+          <ul class="feedback-guide-list">
+            <li>Tool name and the page you were using</li>
+            <li>What you expected to happen</li>
+            <li>What happened instead</li>
+            <li>Any exact text, asset, or export that looked off</li>
+          </ul>
+        </div>
+
+        <div class="feedback-guide-section">
+          <span class="feedback-section-label">How it moves</span>
+          <div class="feedback-route-list">
+            <span>Bug reports go into fix review.</span>
+            <span>Ideas are grouped by workspace.</span>
+            <span>Praise helps us protect what is already working.</span>
+          </div>
+        </div>
+
+        <a class="feedback-back-link btn-secondary" href="index.html#frames">Back to workspaces</a>
+      </aside>
     </div>
   </main>
 
   <footer class="site-footer" aria-label="Site footer"></footer>
-  <script src="tool-feedback.js?v=20260817-feedback1"></script>
+  <script src="tool-feedback.js?v=20260817-feedback2"></script>
 </body>
 </html>
