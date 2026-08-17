@@ -6608,17 +6608,81 @@ body[data-current-page="faq"] .faq-cta-art img {
   .widget-builder-hint.is-error {
     color: #B3261E;
   }
-  .widget-inline-tip {
-    font-family: var(--font-ui);
-    font-size: 11px;
-    color: var(--text-secondary);
-    line-height: 1.4;
-    margin: 6px 0 0;
-  }
   .widget-paste-link-input.is-flash-success {
     background: #E6F4EA;
     border-color: #34A853;
     transition: background-color .3s ease, border-color .3s ease;
+  }
+  [data-widget-upload] {
+    display: none;
+  }
+  .widget-pick-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .widget-pick-label {
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 800;
+    text-transform: none;
+    letter-spacing: 0;
+    color: #000;
+    margin-bottom: 0;
+  }
+  .widget-pick-switch {
+    appearance: none;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+  }
+  .widget-pick-switch-track {
+    width: 34px;
+    height: 20px;
+    flex: 0 0 34px;
+    border-radius: 999px;
+    background: #D8E8FA;
+    position: relative;
+    transition: background .18s ease;
+  }
+  .widget-pick-switch-track::before {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    left: 3px;
+    top: 3px;
+    border-radius: 50%;
+    background: var(--white);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.16);
+    transition: transform .18s ease;
+  }
+  .widget-pick-switch[aria-checked="true"] {
+    color: var(--accent);
+  }
+  .widget-pick-switch[aria-checked="true"] .widget-pick-switch-track {
+    background: var(--accent);
+  }
+  .widget-pick-switch[aria-checked="true"] .widget-pick-switch-track::before {
+    transform: translateX(14px);
+  }
+  .widget-field-group.is-pick-hidden .widget-image-row,
+  .widget-field-group.is-pick-hidden [data-widget-field$=".headline"],
+  .widget-field-group.is-pick-hidden [data-widget-field$=".link"],
+  .widget-field-group.is-pick-hidden > label:not(.widget-pick-label) {
+    opacity: .4;
+    pointer-events: none;
   }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
@@ -7429,7 +7493,6 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="widget-field-group">
         <label class="widget-field-label">Header Image Link</label>
         <input type="text" class="widget-text-input" data-widget-field="headerImages.main" placeholder="https://... (leave blank to use the default brand header)">
-        <p class="widget-inline-tip">Tip: an existing image link from WordPress or Google tends to be more reliable than uploading — use one if you have it.</p>
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Image</label>
@@ -7453,7 +7516,6 @@ body[data-current-page="faq"] .faq-cta-art img {
             </div>
           </div>
         </div>
-        <p class="widget-inline-tip">Tip: an existing image link from WordPress or Google tends to be more reliable than uploading — use one if you have it.</p>
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Headline</label>
@@ -7473,10 +7535,15 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="widget-field-group">
         <label class="widget-field-label">Header Image Link</label>
         <input type="text" class="widget-text-input" data-widget-field="headerImages.picks" placeholder="https://... (leave blank to use the default brand header)">
-        <p class="widget-inline-tip">Tip: an existing image link from WordPress or Google tends to be more reliable than uploading — use one if you have it.</p>
       </div>
       <div class="widget-field-group" data-widget-pick-group="0">
-        <label class="widget-field-label">Top Pick 1</label>
+        <div class="widget-pick-head">
+          <label class="widget-field-label widget-pick-label">Top Pick 1</label>
+          <button type="button" class="widget-pick-switch" data-widget-pick-toggle="0" role="switch" aria-checked="true" aria-label="Show Top Pick 1 in the newsletter">
+            <span class="widget-pick-switch-label">Show</span>
+            <span class="widget-pick-switch-track" aria-hidden="true"></span>
+          </button>
+        </div>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="pick0"><img alt=""></div>
           <div class="widget-image-actions">
@@ -7497,14 +7564,19 @@ body[data-current-page="faq"] .faq-cta-art img {
             </div>
           </div>
         </div>
-        <p class="widget-inline-tip">Tip: an existing image link from WordPress or Google tends to be more reliable than uploading — use one if you have it.</p>
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.0.headline" placeholder="Headline">
         <label class="widget-field-label">Link</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.0.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group" data-widget-pick-group="1">
-        <label class="widget-field-label">Top Pick 2</label>
+        <div class="widget-pick-head">
+          <label class="widget-field-label widget-pick-label">Top Pick 2</label>
+          <button type="button" class="widget-pick-switch" data-widget-pick-toggle="1" role="switch" aria-checked="true" aria-label="Show Top Pick 2 in the newsletter">
+            <span class="widget-pick-switch-label">Show</span>
+            <span class="widget-pick-switch-track" aria-hidden="true"></span>
+          </button>
+        </div>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="pick1"><img alt=""></div>
           <div class="widget-image-actions">
@@ -7525,14 +7597,19 @@ body[data-current-page="faq"] .faq-cta-art img {
             </div>
           </div>
         </div>
-        <p class="widget-inline-tip">Tip: an existing image link from WordPress or Google tends to be more reliable than uploading — use one if you have it.</p>
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.1.headline" placeholder="Headline">
         <label class="widget-field-label">Link</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.1.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group" data-widget-pick-group="2">
-        <label class="widget-field-label">Top Pick 3</label>
+        <div class="widget-pick-head">
+          <label class="widget-field-label widget-pick-label">Top Pick 3</label>
+          <button type="button" class="widget-pick-switch" data-widget-pick-toggle="2" role="switch" aria-checked="true" aria-label="Show Top Pick 3 in the newsletter">
+            <span class="widget-pick-switch-label">Show</span>
+            <span class="widget-pick-switch-track" aria-hidden="true"></span>
+          </button>
+        </div>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="pick2"><img alt=""></div>
           <div class="widget-image-actions">
@@ -7553,14 +7630,19 @@ body[data-current-page="faq"] .faq-cta-art img {
             </div>
           </div>
         </div>
-        <p class="widget-inline-tip">Tip: an existing image link from WordPress or Google tends to be more reliable than uploading — use one if you have it.</p>
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.2.headline" placeholder="Headline">
         <label class="widget-field-label">Link</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.2.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group" data-widget-pick-group="3">
-        <label class="widget-field-label">Top Pick 4</label>
+        <div class="widget-pick-head">
+          <label class="widget-field-label widget-pick-label">Top Pick 4</label>
+          <button type="button" class="widget-pick-switch" data-widget-pick-toggle="3" role="switch" aria-checked="true" aria-label="Show Top Pick 4 in the newsletter">
+            <span class="widget-pick-switch-label">Show</span>
+            <span class="widget-pick-switch-track" aria-hidden="true"></span>
+          </button>
+        </div>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-widget-thumb="pick3"><img alt=""></div>
           <div class="widget-image-actions">
@@ -7581,7 +7663,6 @@ body[data-current-page="faq"] .faq-cta-art img {
             </div>
           </div>
         </div>
-        <p class="widget-inline-tip">Tip: an existing image link from WordPress or Google tends to be more reliable than uploading — use one if you have it.</p>
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.3.headline" placeholder="Headline">
         <label class="widget-field-label">Link</label>
@@ -11543,7 +11624,7 @@ const WIDGET_PICK_DIVIDER = '        <hr style="border: none; border-top: 1px da
 function buildWidgetHtml(state) {
   const main = state.main;
   const brand = getNewsletterBrand(state.brandId);
-  const picksHtml = state.picks.map(pick => renderWidgetPickItem(pick, brand)).join(`\n\n${WIDGET_PICK_DIVIDER}\n\n`);
+  const picksHtml = state.picks.filter(pick => !pick.hidden).map(pick => renderWidgetPickItem(pick, brand)).join(`\n\n${WIDGET_PICK_DIVIDER}\n\n`);
   return `<!-- ========================================= -->
 <!-- MAIN TWO-COLUMN SECTION START -->
 <!-- ========================================= -->
@@ -16119,6 +16200,22 @@ function initWidgetBuilder() {
   });
 
   ['main', 'pick0', 'pick1', 'pick2', 'pick3'].forEach(updateWidgetThumb);
+
+  document.querySelectorAll('[data-widget-pick-toggle]').forEach(button => {
+    const index = Number(button.dataset.widgetPickToggle);
+    const group = button.closest('[data-widget-pick-group]');
+    const label = button.querySelector('.widget-pick-switch-label');
+    button.addEventListener('click', () => {
+      const isVisible = button.getAttribute('aria-checked') === 'true';
+      const nextVisible = !isVisible;
+      widgetBuilderState.picks[index].hidden = !nextVisible;
+      button.setAttribute('aria-checked', String(nextVisible));
+      button.setAttribute('aria-label', `${nextVisible ? 'Hide' : 'Show'} Top Pick ${index + 1} in the newsletter`);
+      if (label) label.textContent = nextVisible ? 'Show' : 'Hide';
+      group?.classList.toggle('is-pick-hidden', !nextVisible);
+      renderWidgetPreview();
+    });
+  });
 
   const fileInput = document.getElementById('widget-upload-input');
   let pendingUploadSlot = null;
