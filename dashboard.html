@@ -7,7 +7,7 @@
   <title>FrameUp Dashboard | EssentiallySports</title>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20260714-authcallback2"></script>
-  <script src="dashboard-data.js?v=20260817-feedback-ledger1"></script>
+  <script src="dashboard-data.js?v=20260817-feedback-inbox2"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -433,7 +433,7 @@
       table { min-width: 780px; }
     }
   </style>
-  <link rel="stylesheet" href="dashboard-v2.css?v=20260817-feedback-ledger1">
+  <link rel="stylesheet" href="dashboard-v2.css?v=20260817-feedback-inbox2">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
   <link rel="stylesheet" href="dashboard-ui-system.css?v=20260718-dashboard-system5">
 <link rel="stylesheet" href="theme.css?v=20260714-footer1">
@@ -1267,32 +1267,68 @@
       return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'other';
     }
 
+    function feedbackToolLabel(value) {
+      return String(value || '').trim() === 'General' ? 'General / whole site' : plainText(value, 'General / whole site');
+    }
+
+    function feedbackSearchText(item = {}) {
+      return [
+        item.feedbackType,
+        item.tool,
+        item.message,
+        item.submitterName,
+        item.submitterEmail,
+        item.status,
+        item.pageUrl,
+      ].join(' ').toLowerCase();
+    }
+
     function renderFeedback(state) {
       const target = document.getElementById('feedback-table');
       if (!target) return;
-      const feedback = state.toolFeedback || [];
+      const allFeedback = state.toolFeedback || [];
+      const query = String(document.getElementById('dashboard-search')?.value || '').trim().toLowerCase();
+      const feedback = query
+        ? allFeedback.filter(item => feedbackSearchText(item).includes(query))
+        : allFeedback;
       if (!feedback.length) {
-        target.innerHTML = '<div class="empty">No tool feedback has been submitted yet.</div>';
+        target.innerHTML = `
+          <div class="feedback-summary">
+            <span><strong>${allFeedback.length}</strong><small>Total</small></span>
+            <span><strong>${allFeedback.filter(item => item.feedbackType === 'Bug').length}</strong><small>Bugs</small></span>
+            <span><strong>${allFeedback.filter(item => item.feedbackType === 'Idea').length}</strong><small>Ideas</small></span>
+            <span><strong>${allFeedback[0] ? dateText(allFeedback[0].createdAt) : '—'}</strong><small>Latest</small></span>
+          </div>
+          <div class="empty">${query ? 'No feedback matches the current search.' : 'No tool feedback has been submitted yet.'}</div>
+        `;
         return;
       }
       target.innerHTML = `
+        <div class="feedback-summary">
+          <span><strong>${allFeedback.length}</strong><small>Total</small></span>
+          <span><strong>${allFeedback.filter(item => item.feedbackType === 'Bug').length}</strong><small>Bugs</small></span>
+          <span><strong>${allFeedback.filter(item => item.feedbackType === 'Idea').length}</strong><small>Ideas</small></span>
+          <span><strong>${dateText(allFeedback[0]?.createdAt)}</strong><small>Latest</small></span>
+        </div>
         <div class="feedback-list">
           ${feedback.map(item => `
             <article class="feedback-row" data-feedback-id="${attr(item.id)}">
+              <div class="feedback-row-type">
+                <span class="pill feedback-type is-${attr(feedbackTypeClass(item.feedbackType))}">${text(item.feedbackType, 'Other')}</span>
+                <small>${text(item.status, 'New')}</small>
+              </div>
               <div class="feedback-row-main">
                 <div class="feedback-row-head">
-                  <span class="pill feedback-type is-${attr(feedbackTypeClass(item.feedbackType))}">${text(item.feedbackType, 'Other')}</span>
-                  <strong>${text(item.tool, 'General / whole site')}</strong>
+                  <strong>${text(feedbackToolLabel(item.tool), 'General / whole site')}</strong>
                   <small>${dateText(item.createdAt)}</small>
                 </div>
                 <p>${text(item.message)}</p>
                 <div class="feedback-row-meta">
-                  <span>${text(personDisplayName(item.submitterName, item.submitterEmail))}</span>
+                  <span>From ${text(personDisplayName(item.submitterName, item.submitterEmail))}</span>
                   <span>${text(item.submitterEmail)}</span>
                 </div>
               </div>
               <div class="feedback-row-side">
-                <span class="pill feedback-status">${text(item.status, 'New')}</span>
                 ${item.pageUrl ? `<a class="topbar-button" href="${attr(item.pageUrl)}" target="_blank" rel="noopener">Open page</a>` : ''}
               </div>
             </article>
