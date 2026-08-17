@@ -179,6 +179,7 @@ exports.handler = async event => {
         ok: false,
         skipped: true,
         reason: 'missing_integration_config',
+        error: 'Feedback could not be saved: the Google Sheets integration is not configured on the server.',
       });
     }
 
