@@ -122,6 +122,7 @@
       if (state.recording) stopExport(); else startExport();
     });
 
+    initMobileShell();
     initToolRail();
     initBrandControls();
     initCustomSelects();
@@ -163,12 +164,16 @@
   function initToolRail() {
     document.querySelectorAll('[data-reels-tool]').forEach(function (button) {
       button.addEventListener('click', function () {
-        setActiveTool(button.dataset.reelsTool || 'captions');
+        var tool = button.dataset.reelsTool || 'captions';
+        setActiveTool(tool);
+        openReelsMobileSheet(tool);
       });
     });
     document.querySelectorAll('[data-reels-tool-select]').forEach(function (select) {
       select.addEventListener('change', function () {
-        setActiveTool(select.value || 'captions');
+        var tool = select.value || 'captions';
+        setActiveTool(tool);
+        openReelsMobileSheet(tool);
       });
     });
     setActiveTool('captions');
@@ -190,6 +195,54 @@
     syncCustomSelect('toolSelect');
     document.querySelectorAll('[data-reels-panel]').forEach(function (panel) {
       panel.classList.toggle('is-active', panel.dataset.reelsPanel === active);
+    });
+    syncReelsMobileSheetTitle(active);
+  }
+
+  function initMobileShell() {
+    var taskPanel = document.querySelector('.reels-task-panel');
+    var sidePanel = document.querySelector('.reels-side-panel');
+    [taskPanel, sidePanel].forEach(function (panel) {
+      if (!panel || panel.querySelector('[data-reels-mobile-sheet-head]')) return;
+      var head = document.createElement('div');
+      head.className = 'reels-mobile-sheet-head';
+      head.dataset.reelsMobileSheetHead = 'true';
+      head.innerHTML = '<span class="reels-mobile-sheet-grip" aria-hidden="true"></span><strong data-reels-mobile-sheet-title>Captions</strong><button type="button" data-reels-mobile-close aria-label="Close editor panel">Close</button>';
+      panel.insertBefore(head, panel.firstElementChild);
+    });
+    document.querySelectorAll('[data-reels-mobile-close]').forEach(function (button) {
+      button.addEventListener('click', closeReelsMobileSheet);
+    });
+    document.querySelectorAll('[data-reels-mobile-export]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        els.exportBtn.click();
+      });
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') closeReelsMobileSheet();
+    });
+  }
+
+  function openReelsMobileSheet(tool) {
+    if (!window.matchMedia('(max-width: 900px)').matches) return;
+    if (!state.captions.length && tool !== 'captions') tool = 'captions';
+    document.body.classList.add('is-reels-mobile-sheet-open');
+    syncReelsMobileSheetTitle(tool);
+  }
+
+  function closeReelsMobileSheet() {
+    document.body.classList.remove('is-reels-mobile-sheet-open');
+  }
+
+  function syncReelsMobileSheetTitle(tool) {
+    var labels = {
+      captions: 'Captions',
+      style: 'Style',
+      'lower-thirds': 'Lower Thirds',
+      rewrite: 'Rewrite',
+    };
+    document.querySelectorAll('[data-reels-mobile-sheet-title]').forEach(function (title) {
+      title.textContent = labels[tool] || 'Captions';
     });
   }
 

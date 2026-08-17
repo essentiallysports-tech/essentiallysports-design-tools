@@ -6353,6 +6353,320 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
   }
 
+  .mobile-editor-topbar,
+  .mobile-editor-nav,
+  .mobile-editor-sheet-head {
+    display: none;
+  }
+
+  @media (max-width: 900px) {
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) {
+      overflow: hidden;
+      background: #F5F8FC;
+    }
+
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .breadcrumb,
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .page-header,
+    html[data-studio-shell="on"] body:is([data-current-page="instagram"], [data-current-page="youtube"], [data-current-page="newsletter"]) .site-footer {
+      display: none !important;
+    }
+
+    html[data-studio-shell="on"] .mobile-editor-topbar:not([hidden]) {
+      position: sticky;
+      top: var(--site-header-height, 64px);
+      z-index: 220;
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 14px;
+      border-bottom: 1px solid #DCE4ED;
+      background: rgba(255, 255, 255, .96);
+      box-sizing: border-box;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    html[data-studio-shell="on"] .mobile-editor-title {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+
+    html[data-studio-shell="on"] .mobile-editor-title span {
+      color: #6F8FAE;
+      font-family: var(--font-ui, "Roboto", Arial, sans-serif);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    html[data-studio-shell="on"] .mobile-editor-title strong {
+      overflow: hidden;
+      color: #07152A;
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 900;
+      line-height: .95;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    html[data-studio-shell="on"] .mobile-editor-export,
+    html[data-studio-shell="on"] .mobile-editor-nav button,
+    html[data-studio-shell="on"] .mobile-editor-sheet-head button {
+      min-height: 44px;
+      border-radius: 8px;
+      font-family: var(--font-heading);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    html[data-studio-shell="on"] .mobile-editor-export {
+      min-width: 92px;
+      border: 1px solid #0A7DFA;
+      background: #0A7DFA;
+      color: #FFFFFF;
+      box-shadow: 0 12px 26px rgba(10, 125, 250, .18);
+    }
+
+    html[data-studio-shell="on"] .app[data-workspace] {
+      width: 100%;
+      height: calc(100dvh - var(--site-header-height, 64px) - 54px);
+      min-height: 0;
+      display: block;
+      margin: 0;
+      padding: 0 0 calc(76px + env(safe-area-inset-bottom));
+      overflow: hidden;
+      background: #F5F8FC;
+      box-sizing: border-box;
+    }
+
+    html[data-studio-shell="on"] .canvas-panel {
+      width: 100%;
+      height: 100%;
+      max-height: none;
+      display: block;
+      overflow: hidden;
+    }
+
+    html[data-studio-shell="on"] .canvas-card {
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: auto;
+      padding: 12px 12px 22px;
+      border-radius: 0;
+      background: #FFFFFF;
+      box-sizing: border-box;
+    }
+
+    html[data-studio-shell="on"] .canvas-stage {
+      min-height: 100%;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 4px 0 20px;
+    }
+
+    html[data-studio-shell="on"] .canvas-stack,
+    html[data-studio-shell="on"] body[data-current-page="youtube"] .canvas-stack,
+    html[data-studio-shell="on"] body[data-current-page="newsletter"] .canvas-stack,
+    html[data-studio-shell="on"] body[data-current-page="instagram"] .canvas-stack {
+      width: min(calc(100vw - 24px), 430px);
+      max-width: calc(100vw - 24px);
+      flex: 0 0 auto;
+      gap: 10px;
+    }
+
+    html[data-studio-shell="on"] body[data-current-page="youtube"] .canvas-stack,
+    html[data-studio-shell="on"] body[data-current-page="newsletter"] .canvas-stack {
+      width: min(calc(100vw - 24px), 560px);
+    }
+
+    html[data-studio-shell="on"] .canvas-wrap {
+      overflow: visible;
+      border: 1px solid #D7DEE8;
+      border-radius: 8px;
+      background: #FFFFFF;
+      box-shadow: 0 14px 32px rgba(15, 23, 42, .10);
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions {
+      width: 100%;
+      max-width: 100%;
+      min-height: 48px;
+      height: auto;
+      margin: 10px auto 0;
+      overflow-x: auto;
+      padding: 6px;
+      border-radius: 9px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, .10);
+    }
+
+    html[data-studio-shell="on"] .canvas-bottom-actions .canvas-upload-button,
+    html[data-studio-shell="on"] .canvas-bottom-actions .studio-zoom-btn,
+    html[data-studio-shell="on"] .canvas-bottom-actions .carousel-slide-button {
+      min-height: 40px;
+      height: 40px;
+    }
+
+    html[data-studio-shell="on"] .panel {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 620;
+      width: 100%;
+      max-height: min(72dvh, 620px);
+      min-height: 260px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      overflow: hidden;
+      border: 1px solid #B5D8FD;
+      border-bottom: 0;
+      border-radius: 14px 14px 0 0;
+      background: #FFFFFF;
+      box-shadow: 0 -20px 50px rgba(15, 23, 42, .16);
+      transform: translateY(calc(100% + 18px));
+      transition: transform .24s cubic-bezier(.16, 1, .3, 1);
+      box-sizing: border-box;
+    }
+
+    html[data-studio-shell="on"] body.is-mobile-sheet-open .panel {
+      transform: translateY(0);
+    }
+
+    html[data-studio-shell="on"] .mobile-editor-sheet-head {
+      min-height: 56px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid #E4EAF1;
+      background: #FFFFFF;
+    }
+
+    html[data-studio-shell="on"] .mobile-editor-sheet-grip {
+      position: absolute;
+      top: 7px;
+      left: 50%;
+      width: 44px;
+      height: 4px;
+      border-radius: 999px;
+      background: #C9D7E6;
+      transform: translateX(-50%);
+    }
+
+    html[data-studio-shell="on"] .mobile-editor-sheet-head strong {
+      padding-top: 8px;
+      color: #07152A;
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 900;
+      line-height: .95;
+    }
+
+    html[data-studio-shell="on"] .mobile-editor-sheet-head button {
+      margin-top: 8px;
+      border: 1px solid #DCE4ED;
+      background: #FFFFFF;
+      color: #0A7DFA;
+      padding: 0 14px;
+    }
+
+    html[data-studio-shell="on"] .panel > :not(.mobile-editor-sheet-head) {
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    html[data-studio-shell="on"] .studio-control-dock {
+      padding: 14px;
+      border-bottom: 1px solid #E4EAF1;
+    }
+
+    html[data-studio-shell="on"] .studio-export-section {
+      display: none;
+    }
+
+    html[data-studio-shell="on"] .studio-inspector-tabs {
+      display: none;
+    }
+
+    html[data-studio-shell="on"] body[data-studio-inspector="content"] .studio-control-dock {
+      display: none !important;
+    }
+
+    html[data-studio-shell="on"] .studio-content-sections {
+      background: #FFFFFF;
+    }
+
+    html[data-studio-shell="on"] .studio-primary-controls {
+      padding: 14px;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-list {
+      padding: 12px;
+    }
+
+    html[data-studio-shell="on"] .studio-accordion-body :is(input, select, textarea, button),
+    html[data-studio-shell="on"] .studio-primary-controls :is(input, select, textarea, button),
+    html[data-studio-shell="on"] .studio-control-dock :is(input, select, textarea, button) {
+      min-height: 44px;
+      font-size: 16px;
+    }
+
+    html[data-studio-shell="on"] .mobile-editor-nav:not([hidden]) {
+      position: fixed;
+      left: 10px;
+      right: 10px;
+      bottom: calc(8px + env(safe-area-inset-bottom));
+      z-index: 610;
+      min-height: 58px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 5px;
+      padding: 6px;
+      border: 1px solid #B5D8FD;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .96);
+      box-shadow: 0 16px 36px rgba(15, 23, 42, .16);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-sizing: border-box;
+    }
+
+    html[data-studio-shell="on"] .mobile-editor-nav button {
+      min-width: 0;
+      border: 1px solid transparent;
+      background: transparent;
+      color: #5F748C;
+      padding: 0 4px;
+      white-space: nowrap;
+    }
+
+    html[data-studio-shell="on"] .mobile-editor-nav button:is(:hover, :focus-visible, .is-active) {
+      outline: 0;
+      border-color: #B5D8FD;
+      background: #E8F2FF;
+      color: #0A7DFA;
+    }
+
+    html[data-studio-shell="on"] .status-bar {
+      left: 12px;
+      right: 12px;
+      bottom: calc(80px + env(safe-area-inset-bottom));
+      width: auto;
+      z-index: 640;
+    }
+  }
+
   /* ─── NEWSLETTER WIDGET BUILDER ─────────────────────────────── */
   .widget-preview-pane {
     width: 100%;
@@ -16486,6 +16800,106 @@ loadFont().then(() => render());
     studioOpenSectionByWorkspace[workspace] = sectionKey;
   }
 
+  window.ESOpenStudioSection = openStudioSection;
+
+  const mobileEditorPanels = {
+    text: { label: 'Text', mode: 'content', section: 'content' },
+    image: { label: 'Image', mode: 'image' },
+    format: { label: 'Format', mode: 'content', section: 'layout' },
+    brand: { label: 'Brand', mode: 'content', section: 'brand' },
+  };
+
+  function ensureMobileEditorShell() {
+    const app = document.querySelector('.app[data-workspace]');
+    const panel = document.querySelector('.panel');
+    if (!app || !panel || document.querySelector('[data-mobile-editor-nav]')) return;
+
+    const topbar = document.createElement('div');
+    topbar.className = 'mobile-editor-topbar';
+    topbar.dataset.mobileEditorTopbar = 'true';
+    topbar.innerHTML = `
+      <div class="mobile-editor-title">
+        <span data-mobile-editor-kicker>FrameUp</span>
+        <strong data-mobile-editor-title>Workspace</strong>
+      </div>
+      <button class="mobile-editor-export" type="button" data-mobile-editor-export>Export</button>
+    `;
+    app.insertAdjacentElement('beforebegin', topbar);
+
+    const sheetHead = document.createElement('div');
+    sheetHead.className = 'mobile-editor-sheet-head';
+    sheetHead.innerHTML = `
+      <span class="mobile-editor-sheet-grip" aria-hidden="true"></span>
+      <strong data-mobile-editor-sheet-title>Text</strong>
+      <button type="button" data-mobile-editor-close aria-label="Close editor panel">Close</button>
+    `;
+    panel.insertBefore(sheetHead, panel.firstElementChild);
+
+    const nav = document.createElement('nav');
+    nav.className = 'mobile-editor-nav';
+    nav.dataset.mobileEditorNav = 'true';
+    nav.setAttribute('aria-label', 'Mobile editor actions');
+    nav.innerHTML = `
+      <button type="button" data-mobile-editor-trigger="text">Text</button>
+      <button type="button" data-mobile-editor-trigger="image">Image</button>
+      <button type="button" data-mobile-editor-trigger="format">Format</button>
+      <button type="button" data-mobile-editor-trigger="brand">Brand</button>
+      <button type="button" data-mobile-editor-export>Export</button>
+    `;
+    document.body.append(nav);
+
+    document.querySelectorAll('[data-mobile-editor-trigger]').forEach(button => {
+      button.addEventListener('click', () => openMobileEditorPanel(button.dataset.mobileEditorTrigger));
+    });
+    document.querySelectorAll('[data-mobile-editor-export]').forEach(button => {
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        document.querySelector('[data-studio-export]')?.click();
+      });
+    });
+    document.querySelector('[data-mobile-editor-close]')?.addEventListener('click', closeMobileEditorPanel);
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeMobileEditorPanel();
+    });
+    syncMobileEditorMeta();
+  }
+
+  function openMobileEditorPanel(panelName) {
+    const config = mobileEditorPanels[panelName] || mobileEditorPanels.text;
+    setStudioInspectorMode(config.mode);
+    document.body.dataset.mobileEditorPanel = panelName;
+    document.body.classList.add('is-mobile-sheet-open');
+    const titleNode = document.querySelector('[data-mobile-editor-sheet-title]');
+    if (titleNode) titleNode.textContent = config.label;
+    document.querySelectorAll('[data-mobile-editor-trigger]').forEach(button => {
+      const isActive = button.dataset.mobileEditorTrigger === panelName;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-current', isActive ? 'true' : 'false');
+    });
+    if (config.section) {
+      requestAnimationFrame(() => openStudioSection(config.section));
+    }
+  }
+
+  function closeMobileEditorPanel() {
+    document.body.classList.remove('is-mobile-sheet-open');
+    document.querySelectorAll('[data-mobile-editor-trigger]').forEach(button => {
+      button.classList.remove('is-active');
+      button.removeAttribute('aria-current');
+    });
+  }
+
+  function syncMobileEditorMeta() {
+    const workspaceName = currentWorkspace();
+    const title = workspaceName ? (workspaceLabels[workspaceName] || workspaceName) : 'Workspace';
+    const topbar = document.querySelector('[data-mobile-editor-topbar]');
+    const titleNode = document.querySelector('[data-mobile-editor-title]');
+    if (titleNode) titleNode.textContent = title;
+    if (topbar) topbar.hidden = !workspaceName;
+    document.querySelector('[data-mobile-editor-nav]')?.toggleAttribute('hidden', !workspaceName);
+    if (!workspaceName) closeMobileEditorPanel();
+  }
+
   function refreshStudioContentSections() {
     studioSectionRefreshQueued = false;
     const workspace = currentWorkspace();
@@ -16660,9 +17074,11 @@ loadFont().then(() => render());
     document.documentElement.dataset.studioShell = 'on';
     ensureStudioControlDock();
     ensureStudioContentSections();
+    ensureMobileEditorShell();
     setStudioInspectorMode(document.body.dataset.studioInspector || 'content');
     setZoom(100);
     syncStudioMeta();
+    syncMobileEditorMeta();
 
     document.querySelectorAll('[data-studio-inspector-tab]').forEach(tab => {
       tab.addEventListener('click', () => setStudioInspectorMode(tab.dataset.studioInspectorTab));
@@ -16694,9 +17110,13 @@ loadFont().then(() => render());
     studioExport?.addEventListener('click', triggerStudioExport);
     studioExport?.addEventListener('pointerdown', triggerStudioExport);
 
-    window.addEventListener('hashchange', () => requestAnimationFrame(syncStudioMeta));
+    window.addEventListener('hashchange', () => requestAnimationFrame(() => {
+      syncStudioMeta();
+      syncMobileEditorMeta();
+    }));
     const observer = new MutationObserver(() => {
       syncStudioMeta();
+      syncMobileEditorMeta();
       queueStudioContentSectionRefresh();
     });
     observer.observe(document.body, {
