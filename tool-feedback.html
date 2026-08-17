@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tool Feedback | FrameUp</title>
+  <meta name="description" content="Report bugs, share ideas, or tell the team what's working in FrameUp.">
+  <script src="es-auth-config.js?v=20260707-auth4"></script>
+  <script src="es-auth.js?v=20260714-deleteaccount1"></script>
+  <script>
+    window.ESAuth?.requireAuth(`tool-feedback.html${window.location.search}${window.location.hash}`);
+  </script>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@500;600;700;800;900&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
+  <link rel="stylesheet" href="theme.css?v=20260714-footer1">
+  <link rel="stylesheet" href="site-chrome.css?v=20260723-profile3">
+  <link rel="stylesheet" href="cta-hover.css?v=20260723-howrefine1">
+  <link rel="stylesheet" href="tool-feedback.css?v=20260817-feedback1">
+  <script src="theme.js?v=20260712-darkmode12"></script>
+  <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
+  <script src="site-chrome.js?v=20260723-profile2"></script>
+</head>
+<body class="feedback-page">
+  <nav class="navbar">
+    <a class="navbar-logo" href="index.html" aria-label="EssentiallySports home">
+      <img src="brand-logo-blue.svg" alt="EssentiallySports">
+    </a>
+    <div class="navbar-menu">
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#intro" aria-haspopup="true" aria-expanded="false">Resources</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Resources">
+          <a href="index.html#logo-guidelines" data-route="logo-guidelines" role="menuitem">Logo Guidelines</a>
+          <a href="index.html#social-guidelines" data-route="social-guidelines" role="menuitem">Social Media Guidelines</a>
+          <a href="index.html#video-guidelines" data-route="video-guidelines" role="menuitem">Video Guidelines</a>
+        </div>
+      </div>
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#frames" data-route="frames" aria-haspopup="true" aria-expanded="false">Design Tools</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Design workspaces">
+          <a href="index.html#frames" data-route="frames" role="menuitem">Home</a>
+          <a href="index.html#instagram" data-route="instagram" role="menuitem">Social Media</a>
+          <a href="index.html#youtube" data-route="youtube" role="menuitem">YouTube</a>
+          <a href="index.html#newsletter" data-route="newsletter" role="menuitem">Newsletter</a>
+          <a href="reels.html" role="menuitem">Reel Captions</a>
+        </div>
+      </div>
+      <a href="design-request.html">Design Request</a>
+      <a href="dashboard.html" data-admin-only hidden aria-hidden="true">Dashboard</a>
+      <a href="index.html#faq" data-route="faq">FAQ</a>
+      <a href="tool-feedback.html" aria-current="page">Tool Feedback</a>
+    </div>
+    <div class="navbar-right">
+      <div class="profile-menu" id="profile-menu"></div>
+      <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" title="Facebook" aria-label="Facebook"><img src="social-icons/nav-facebook.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://twitter.com/es_sportsnews" title="X" aria-label="X"><img src="social-icons/nav-x.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.linkedin.com/company/essentiallysports" title="LinkedIn" aria-label="LinkedIn"><img src="social-icons/nav-linkedin.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.instagram.com/essentiallysports" title="Instagram" aria-label="Instagram"><img src="social-icons/nav-instagram.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.youtube.com/essentiallysports" title="YouTube" aria-label="YouTube"><img src="social-icons/nav-youtube.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://news.google.com/publications/CAAqBwgKMJqW_gwwkoGBAw" title="Google News" aria-label="Google News"><img src="social-icons/nav-google-news.svg" alt=""></a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="feedback-shell">
+      <div class="feedback-hero">
+        <span class="feedback-eyebrow">Tool Feedback</span>
+        <h1 class="feedback-title">Help us make FrameUp better</h1>
+        <p class="feedback-subtitle">Found a bug, have an idea, or want to tell us something's working great? Drop it here — it goes straight to the team.</p>
+      </div>
+
+      <div class="feedback-card" id="feedback-card">
+        <form class="feedback-form" id="feedback-form" novalidate>
+          <div class="feedback-field">
+            <span class="feedback-label">What kind of feedback is this?</span>
+            <div class="feedback-type-group">
+              <label class="feedback-type-option">
+                <input type="radio" name="feedbackType" value="Bug" checked>
+                <span class="feedback-type-pill">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 8v10a4 4 0 0 0 8 0V8"/><path d="M12 4v4"/><path d="M4 10h2"/><path d="M18 10h2"/><path d="M4 16h2"/><path d="M18 16h2"/><path d="m6 6 1.5 1.5"/><path d="M16.5 7.5 18 6"/></svg>
+                  Bug
+                </span>
+              </label>
+              <label class="feedback-type-option">
+                <input type="radio" name="feedbackType" value="Idea">
+                <span class="feedback-type-pill">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V17h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/></svg>
+                  Idea
+                </span>
+              </label>
+              <label class="feedback-type-option">
+                <input type="radio" name="feedbackType" value="Praise">
+                <span class="feedback-type-pill">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>
+                  Praise
+                </span>
+              </label>
+              <label class="feedback-type-option">
+                <input type="radio" name="feedbackType" value="Other">
+                <span class="feedback-type-pill">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+                  Other
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="feedback-field">
+            <label class="feedback-label" for="feedback-tool">Which tool is this about? <small>(optional)</small></label>
+            <select class="feedback-select" id="feedback-tool">
+              <option value="General">General / whole site</option>
+              <option value="Home">Home</option>
+              <option value="Social Media">Social Media</option>
+              <option value="YouTube">YouTube</option>
+              <option value="Newsletter">Newsletter</option>
+              <option value="Reel Captions">Reel Captions</option>
+              <option value="Design Request">Design Request</option>
+              <option value="Dashboard">Dashboard</option>
+            </select>
+          </div>
+
+          <div class="feedback-field">
+            <label class="feedback-label" for="feedback-message">Tell us more</label>
+            <textarea class="feedback-textarea" id="feedback-message" maxlength="4000" placeholder="What happened, what you'd like to see, or what's working well..." required></textarea>
+            <span class="feedback-charcount" id="feedback-charcount">0 / 4000</span>
+          </div>
+
+          <div class="feedback-footer-row">
+            <span class="feedback-signed-in" id="feedback-signed-in">Signed in as your ES account</span>
+            <button type="submit" class="feedback-submit" id="feedback-submit">
+              <span class="feedback-spinner" aria-hidden="true"></span>
+              <span class="feedback-submit-label">Send Feedback</span>
+            </button>
+          </div>
+
+          <p class="feedback-status" id="feedback-status" role="alert"></p>
+        </form>
+
+        <div class="feedback-success">
+          <div class="feedback-success-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          </div>
+          <h2 class="feedback-success-title">Thanks — got it!</h2>
+          <p class="feedback-success-copy">Your feedback was recorded and the team will take a look. Keep them coming.</p>
+          <button type="button" class="feedback-reset" id="feedback-reset">Send more feedback</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer" aria-label="Site footer"></footer>
+  <script src="tool-feedback.js?v=20260817-feedback1"></script>
+</body>
+</html>

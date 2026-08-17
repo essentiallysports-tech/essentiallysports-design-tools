@@ -36,6 +36,21 @@ Request ID,Created At,Status,Request Type,Requester Name,Requester Email,Departm
 
 Keep the private key only in platform environment variables. Do not put it in `index.html`.
 
+## Tool Feedback
+
+The Tool Feedback page (`tool-feedback.html`) posts each submission to `/api/tool-feedback-submit`, which appends a row to a separate Google Sheet using the **same service account** as above (`GOOGLE_SERVICE_ACCOUNT_EMAIL` / `GOOGLE_PRIVATE_KEY`). No extra sharing step is needed as long as that sheet stays link-shareable with edit access; if it's ever locked down, share it explicitly with the service account email as an editor.
+
+```text
+GOOGLE_FEEDBACK_SHEETS_ID=10YG34yp-Ox2fRfVZ5Yl0kz8fSZo-sBQJB62aeGpu0jU
+GOOGLE_FEEDBACK_SHEETS_RANGE=Sheet1!A:H
+```
+
+Both variables are optional — the function falls back to the sheet ID above and `Sheet1!A:H` if unset. Row 1 headers:
+
+```csv
+Feedback ID,Submitted At,Submitter Email,Feedback Type,Related Tool,Message,Page URL,Source
+```
+
 ## Slack Design Request Notifications
 
 The same serverless function can post a rich Design Request attachment to Slack. Add the incoming webhook as an environment variable:
