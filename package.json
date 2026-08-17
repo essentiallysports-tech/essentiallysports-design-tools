@@ -2,6 +2,9 @@
   "name": "essentiallysports-design-tools",
   "version": "1.0.0",
   "private": true,
+  "dependencies": {
+    "@netlify/blobs": "^10.7.13"
+  },
   "scripts": {
     "test": "npm run check:site-chrome && npm run check:profile-layout && npm run check:dashboard-ui && npm run test:workspace-ui && npm run test:listicle && npm run test:listicle-pill && npm run test:listicle-accordion && npm run test:listicle-type2 && npm run test:auth && npm run test:ai-image-query && npm run test:es-images && npm run test:video-intelligence && npm run test:vercel-api",
     "check:site-chrome": "node scripts/check-site-chrome.mjs",

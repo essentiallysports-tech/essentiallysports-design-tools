@@ -6603,6 +6603,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     line-height: 1.4;
     margin: 8px 0 0;
   }
+  .widget-builder-hint.is-error {
+    color: #B3261E;
+  }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
 <link rel="stylesheet" href="theme.css?v=20260714-footer1">
@@ -7075,7 +7078,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         <div class="card-title">Newsletter Brand</div>
         <select id="newsletter-brand-select" aria-label="Newsletter brand"></select>
       </div>
-      <p class="widget-builder-hint">Uploading a photo or picking one of your headers previews it instantly — paste its final hosted URL in the field so the link works in beehiiv.</p>
+      <p class="widget-builder-hint" id="widget-builder-hint" aria-live="polite">Uploading a photo now automatically hosts it and fills in the link for you — if that fails for any reason, your local preview still works and you can paste a link manually.</p>
     </div>
 
     <div class="post-type-control" id="post-type-control" aria-label="Instagram post type">
@@ -15960,6 +15963,74 @@ function slotFromImageFieldPath(path) {
   return match ? `pick${match[1]}` : null;
 }
 
+function imageFieldPathFromSlot(slot) {
+  if (slot === 'main') return 'main.imageUrl';
+  const match = slot.match(/^pick(\d+)$/);
+  return match ? `picks.${match[1]}.imageUrl` : null;
+}
+
+const WIDGET_UPLOAD_MAX_BYTES = 4 * 1024 * 1024;
+let widgetHintResetTimer = null;
+
+function setWidgetHint(message, isError) {
+  const hint = document.getElementById('widget-builder-hint');
+  if (!hint) return;
+  if (!hint.dataset.defaultText) hint.dataset.defaultText = hint.textContent;
+  clearTimeout(widgetHintResetTimer);
+  hint.textContent = message;
+  hint.classList.toggle('is-error', !!isError);
+  widgetHintResetTimer = setTimeout(() => {
+    hint.textContent = hint.dataset.defaultText;
+    hint.classList.remove('is-error');
+  }, 6000);
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      const commaIndex = result.indexOf(',');
+      resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error || new Error('Could not read the file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function autoUploadWidgetImage(slot, file) {
+  const fieldPath = imageFieldPathFromSlot(slot);
+  if (!fieldPath) return;
+  try {
+    if (file.size > WIDGET_UPLOAD_MAX_BYTES) {
+      throw new Error(`That image is larger than ${Math.floor(WIDGET_UPLOAD_MAX_BYTES / (1024 * 1024))}MB — please use a smaller file, or paste a link manually.`);
+    }
+    setWidgetHint('Hosting your image...');
+    const dataBase64 = await fileToBase64(file);
+    const response = await window.ESAuth.fetchWithAuth('/api/widget-image-upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contentType: file.type, dataBase64 }),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.url) {
+      throw new Error(result?.error || 'Upload failed.');
+    }
+    // Only apply the result if the user hasn't since picked a different
+    // file for this same slot while the upload was in flight.
+    const input = document.querySelector(`[data-widget-field="${fieldPath}"]`);
+    if (input && widgetImagePreviewOverrides[slot]) {
+      input.value = new URL(result.url, window.location.origin).href;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      setWidgetHint('Image hosted — link added automatically.');
+    }
+  } catch (error) {
+    // Fallback: the local blob preview set before this ran is untouched,
+    // and the manual "Paste Link" field is still available as-is.
+    setWidgetHint(`${error?.message || 'Could not auto-host this image.'} Your preview still works — paste a link manually if needed.`, true);
+  }
+}
+
 function getWidgetPreviewState() {
   const previewState = JSON.parse(JSON.stringify(widgetBuilderState));
   if (widgetImagePreviewOverrides.main) previewState.main.imageUrl = widgetImagePreviewOverrides.main;
@@ -16038,6 +16109,11 @@ function initWidgetBuilder() {
     widgetImagePreviewOverrides[pendingUploadSlot] = blobUrl;
     updateWidgetThumb(pendingUploadSlot);
     renderWidgetPreview();
+    // The local blob preview above always works. This is a best-effort
+    // enhancement on top of it -- if hosting fails for any reason, the
+    // preview stays intact and the existing manual "Paste Link" field is
+    // still right there as the fallback.
+    autoUploadWidgetImage(pendingUploadSlot, file);
   });
 
   document.querySelectorAll('[data-widget-paste-link]').forEach(trigger => {
