@@ -7,7 +7,7 @@
   <title>FrameUp Dashboard | EssentiallySports</title>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20260714-authcallback2"></script>
-  <script src="dashboard-data.js?v=20260817-feedback-inbox2"></script>
+  <script src="dashboard-data.js?v=20260817-view-state3"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -433,7 +433,7 @@
       table { min-width: 780px; }
     }
   </style>
-  <link rel="stylesheet" href="dashboard-v2.css?v=20260817-feedback-inbox2">
+  <link rel="stylesheet" href="dashboard-v2.css?v=20260817-view-state3">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
   <link rel="stylesheet" href="dashboard-ui-system.css?v=20260718-dashboard-system5">
 <link rel="stylesheet" href="theme.css?v=20260714-footer1">
@@ -1082,6 +1082,16 @@
       return DASHBOARD_VIEWS.has(fromHash) ? fromHash : 'overview';
     }
 
+    function syncDashboardViewSections(view) {
+      document.querySelectorAll('[data-view-section]').forEach(section => {
+        const allowedViews = String(section.dataset.viewSection || '').split(/\s+/).filter(Boolean);
+        section.hidden = !allowedViews.includes(view);
+      });
+      document.querySelectorAll('.metrics').forEach(section => {
+        section.hidden = view !== 'overview';
+      });
+    }
+
     function renderMetrics(state) {
       const metrics = computeMetrics(state);
       const seen = getSeenBadgeState();
@@ -1510,6 +1520,7 @@
     function setDashboardView(view, shouldMarkSeen = false) {
       if (shouldMarkSeen) markDashboardViewSeen(view);
       document.body.dataset.dashboardView = view;
+      syncDashboardViewSections(view);
       document.querySelectorAll('[data-dashboard-view]').forEach(item => item.classList.toggle('is-active', item.dataset.dashboardView === view));
       const title = document.querySelector('.dashboard-topbar h1');
       if (title) title.textContent = 'FrameUp Dashboard';

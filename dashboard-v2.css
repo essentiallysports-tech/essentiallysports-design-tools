@@ -6287,17 +6287,6 @@ body.dashboard-page .person-role-tools > details.role-choice {
   z-index: 2;
 }
 
-body.dashboard-page:not([data-dashboard-view="board"]) .kanban-board,
-body.dashboard-page:not([data-dashboard-view="board"]) .task-view-toolbar {
-  display: none !important;
-}
-
-body.dashboard-page:not([data-dashboard-view="overview"]) .metrics,
-body.dashboard-page:not([data-dashboard-view="overview"]) .dashboard-welcome,
-body.dashboard-page:not([data-dashboard-view="overview"]) .dashboard-overview-grid {
-  display: none !important;
-}
-
 body.dashboard-page details.role-choice[open] {
   z-index: 80;
 }
@@ -6607,4 +6596,24 @@ body.dashboard-page .export-preview-panel img {
   body.dashboard-page .person-role-tools > .role-choice {
     width: 100%;
   }
+}
+
+/* Final dashboard view lock. Keep this last because older dashboard layers
+   still define broad display rules for board, metrics, and panel sections. */
+body.dashboard-page [hidden] {
+  display: none !important;
+}
+
+body.dashboard-page:not([data-dashboard-view="board"]) .kanban-board {
+  display: none !important;
+}
+
+body.dashboard-page:not(:is([data-dashboard-view="board"], [data-dashboard-view="list"])) .task-view-toolbar {
+  display: none !important;
+}
+
+body.dashboard-page:not([data-dashboard-view="overview"]) .metrics,
+body.dashboard-page:not([data-dashboard-view="overview"]) .dashboard-welcome,
+body.dashboard-page:not([data-dashboard-view="overview"]) .dashboard-overview-grid {
+  display: none !important;
 }
