@@ -6606,6 +6606,11 @@ body[data-current-page="faq"] .faq-cta-art img {
   .widget-builder-hint.is-error {
     color: #B3261E;
   }
+  .widget-paste-link-input.is-flash-success {
+    background: #E6F4EA;
+    border-color: #34A853;
+    transition: background-color .3s ease, border-color .3s ease;
+  }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
 <link rel="stylesheet" href="theme.css?v=20260714-footer1">
@@ -15998,6 +16003,16 @@ function fileToBase64(file) {
   });
 }
 
+function revealWidgetLinkField(slot) {
+  const field = document.querySelector(`[data-widget-link-row="${slot}"]`);
+  const trigger = document.querySelector(`[data-widget-paste-link="${slot}"]`);
+  if (field) field.classList.add('is-open');
+  if (trigger) {
+    trigger.hidden = true;
+    trigger.setAttribute('aria-expanded', 'true');
+  }
+}
+
 async function autoUploadWidgetImage(slot, file) {
   const fieldPath = imageFieldPathFromSlot(slot);
   if (!fieldPath) return;
@@ -16014,7 +16029,7 @@ async function autoUploadWidgetImage(slot, file) {
     });
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.url) {
-      throw new Error(result?.error || 'Upload failed.');
+      throw new Error(result?.error || `Upload failed (${response.status}).`);
     }
     // Only apply the result if the user hasn't since picked a different
     // file for this same slot while the upload was in flight.
@@ -16022,12 +16037,17 @@ async function autoUploadWidgetImage(slot, file) {
     if (input && widgetImagePreviewOverrides[slot]) {
       input.value = new URL(result.url, window.location.origin).href;
       input.dispatchEvent(new Event('input', { bubbles: true }));
-      setWidgetHint('Image hosted — link added automatically.');
+      revealWidgetLinkField(slot);
+      input.classList.add('is-flash-success');
+      setTimeout(() => input.classList.remove('is-flash-success'), 2000);
+      setWidgetHint('Image hosted — the link below was filled in automatically.');
     }
   } catch (error) {
     // Fallback: the local blob preview set before this ran is untouched,
     // and the manual "Paste Link" field is still available as-is.
-    setWidgetHint(`${error?.message || 'Could not auto-host this image.'} Your preview still works — paste a link manually if needed.`, true);
+    console.error('Widget image auto-upload failed:', error);
+    revealWidgetLinkField(slot);
+    setWidgetHint(`Couldn't auto-host this image: ${error?.message || 'unknown error'}. Your preview still works — paste a link manually below.`, true);
   }
 }
 
