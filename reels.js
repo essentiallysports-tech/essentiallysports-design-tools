@@ -165,8 +165,7 @@
     document.querySelectorAll('[data-reels-tool]').forEach(function (button) {
       button.addEventListener('click', function () {
         var tool = button.dataset.reelsTool || 'captions';
-        setActiveTool(tool);
-        openReelsMobileSheet(tool);
+        toggleReelsMobileTool(tool, button);
       });
     });
     document.querySelectorAll('[data-reels-tool-select]').forEach(function (select) {
@@ -188,6 +187,8 @@
       var isActive = button.dataset.reelsTool === active;
       button.classList.toggle('is-active', isActive);
       button.setAttribute('aria-pressed', String(isActive));
+      if (isActive && document.body.classList.contains('is-reels-mobile-sheet-open')) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
     });
     document.querySelectorAll('[data-reels-tool-select]').forEach(function (select) {
       select.value = active;
@@ -207,11 +208,15 @@
       var head = document.createElement('div');
       head.className = 'reels-mobile-sheet-head';
       head.dataset.reelsMobileSheetHead = 'true';
-      head.innerHTML = '<span class="reels-mobile-sheet-grip" aria-hidden="true"></span><strong data-reels-mobile-sheet-title>Captions</strong><button type="button" data-reels-mobile-close aria-label="Close editor panel">Close</button>';
+      head.innerHTML = '<button class="reels-mobile-sheet-grip" type="button" data-reels-mobile-detent aria-label="Expand editor panel" title="Expand editor panel"><span aria-hidden="true"></span></button><strong data-reels-mobile-sheet-title>Captions</strong><div class="reels-mobile-sheet-actions"><button type="button" data-reels-mobile-detent aria-label="Expand editor panel" title="Expand editor panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 14 5-5 5 5"/></svg></button><button type="button" data-reels-mobile-close aria-label="Close editor panel" title="Close editor panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>';
       panel.insertBefore(head, panel.firstElementChild);
+      initReelsMobileSheetGestures(head);
     });
     document.querySelectorAll('[data-reels-mobile-close]').forEach(function (button) {
       button.addEventListener('click', closeReelsMobileSheet);
+    });
+    document.querySelectorAll('[data-reels-mobile-detent]').forEach(function (button) {
+      button.addEventListener('click', toggleReelsMobileDetent);
     });
     document.querySelectorAll('[data-reels-mobile-export]').forEach(function (button) {
       button.addEventListener('click', function () {
@@ -221,17 +226,84 @@
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape') closeReelsMobileSheet();
     });
+    initReelsMobileKeyboardTracking();
   }
 
-  function openReelsMobileSheet(tool) {
+  var lastReelsMobileTrigger = null;
+
+  function toggleReelsMobileTool(tool, trigger) {
+    var activeClass = 'reels-tool-' + tool;
+    if (document.body.classList.contains('is-reels-mobile-sheet-open') && document.body.classList.contains(activeClass)) {
+      closeReelsMobileSheet(false);
+      return;
+    }
+    setActiveTool(tool);
+    openReelsMobileSheet(tool, trigger);
+  }
+
+  function openReelsMobileSheet(tool, trigger) {
     if (!window.matchMedia('(max-width: 900px)').matches) return;
     if (!state.captions.length && tool !== 'captions') tool = 'captions';
+    var wasOpen = document.body.classList.contains('is-reels-mobile-sheet-open');
+    lastReelsMobileTrigger = trigger || document.querySelector('[data-reels-tool="' + tool + '"]');
+    document.body.dataset.mobileEditorPanel = tool;
+    if (!wasOpen) document.body.dataset.mobileSheetDetent = 'compact';
     document.body.classList.add('is-reels-mobile-sheet-open');
     syncReelsMobileSheetTitle(tool);
+    syncReelsMobileDetentControls();
+    document.querySelectorAll('[data-reels-tool]').forEach(function (button) {
+      if (button.dataset.reelsTool === tool) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+    });
   }
 
-  function closeReelsMobileSheet() {
+  function closeReelsMobileSheet(restoreFocus) {
     document.body.classList.remove('is-reels-mobile-sheet-open');
+    document.querySelectorAll('[data-reels-tool]').forEach(function (button) {
+      button.classList.remove('is-active');
+      button.removeAttribute('aria-current');
+    });
+    if (restoreFocus !== false && lastReelsMobileTrigger && lastReelsMobileTrigger.isConnected) lastReelsMobileTrigger.focus();
+  }
+
+  function toggleReelsMobileDetent() {
+    document.body.dataset.mobileSheetDetent = document.body.dataset.mobileSheetDetent === 'expanded' ? 'compact' : 'expanded';
+    syncReelsMobileDetentControls();
+  }
+
+  function syncReelsMobileDetentControls() {
+    var expanded = document.body.dataset.mobileSheetDetent === 'expanded';
+    document.querySelectorAll('[data-reels-mobile-detent]').forEach(function (button) {
+      button.setAttribute('aria-label', expanded ? 'Collapse editor panel' : 'Expand editor panel');
+      button.setAttribute('title', expanded ? 'Collapse editor panel' : 'Expand editor panel');
+      button.setAttribute('aria-expanded', String(expanded));
+    });
+  }
+
+  function initReelsMobileSheetGestures(head) {
+    var startY = null;
+    head.addEventListener('pointerdown', function (event) {
+      if (event.target.closest('button:not(.reels-mobile-sheet-grip)')) return;
+      startY = event.clientY;
+    });
+    head.addEventListener('pointerup', function (event) {
+      if (startY === null) return;
+      var delta = event.clientY - startY;
+      startY = null;
+      if (delta < -42 && document.body.dataset.mobileSheetDetent !== 'expanded') toggleReelsMobileDetent();
+      if (delta > 42 && document.body.dataset.mobileSheetDetent === 'expanded') toggleReelsMobileDetent();
+      else if (delta > 72) closeReelsMobileSheet();
+    });
+    head.addEventListener('pointercancel', function () { startY = null; });
+  }
+
+  function initReelsMobileKeyboardTracking() {
+    if (!window.visualViewport) return;
+    var syncKeyboard = function () {
+      document.body.classList.toggle('is-mobile-keyboard-open', window.innerHeight - window.visualViewport.height > 140);
+    };
+    window.visualViewport.addEventListener('resize', syncKeyboard);
+    window.visualViewport.addEventListener('scroll', syncKeyboard);
   }
 
   function syncReelsMobileSheetTitle(tool) {

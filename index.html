@@ -7002,7 +7002,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     pointer-events: none;
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20260817-mobile-editor2">
 <link rel="stylesheet" href="theme.css?v=20260714-footer1">
 <link rel="stylesheet" href="site-chrome.css?v=20260817-icons1">
 <link rel="stylesheet" href="cta-hover.css?v=20260720-stroke1">
@@ -16803,10 +16803,24 @@ loadFont().then(() => render());
   window.ESOpenStudioSection = openStudioSection;
 
   const mobileEditorPanels = {
-    text: { label: 'Text', mode: 'content', section: 'content' },
-    image: { label: 'Image', mode: 'image' },
-    format: { label: 'Format', mode: 'content', section: 'layout' },
-    brand: { label: 'Brand', mode: 'content', section: 'brand' },
+    content: { label: 'Content', mode: 'content', groups: ['content'] },
+    media: { label: 'Media', mode: 'image', groups: ['media'] },
+    format: { label: 'Format', mode: 'content', groups: ['format'] },
+    brand: { label: 'Brand', mode: 'content', groups: ['brand'] },
+    more: { label: 'More', mode: 'content', groups: ['more'] },
+  };
+
+  let lastMobileEditorTrigger = null;
+
+  const mobileEditorIcons = {
+    back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>',
+    content: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h11M4 18h8"/></svg>',
+    media: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>',
+    format: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M10 9v11"/></svg>',
+    brand: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a1.5 1.5 0 0 1 0-3h3a6 6 0 0 0 0-12Z"/><circle cx="7.5" cy="10" r="1"/><circle cx="9.5" cy="6.5" r="1"/><circle cx="14" cy="6" r="1"/></svg>',
+    more: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+    expand: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 14 5-5 5 5"/></svg>',
+    close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>',
   };
 
   function ensureMobileEditorShell() {
@@ -16818,6 +16832,7 @@ loadFont().then(() => render());
     topbar.className = 'mobile-editor-topbar';
     topbar.dataset.mobileEditorTopbar = 'true';
     topbar.innerHTML = `
+      <button class="mobile-editor-back" type="button" data-mobile-editor-back aria-label="Back to Design Tools" title="Back to Design Tools">${mobileEditorIcons.back}</button>
       <div class="mobile-editor-title">
         <span data-mobile-editor-kicker>FrameUp</span>
         <strong data-mobile-editor-title>Workspace</strong>
@@ -16829,9 +16844,12 @@ loadFont().then(() => render());
     const sheetHead = document.createElement('div');
     sheetHead.className = 'mobile-editor-sheet-head';
     sheetHead.innerHTML = `
-      <span class="mobile-editor-sheet-grip" aria-hidden="true"></span>
-      <strong data-mobile-editor-sheet-title>Text</strong>
-      <button type="button" data-mobile-editor-close aria-label="Close editor panel">Close</button>
+      <button class="mobile-editor-sheet-grip" type="button" data-mobile-editor-detent aria-label="Expand editor panel" title="Expand editor panel"><span aria-hidden="true"></span></button>
+      <strong data-mobile-editor-sheet-title>Content</strong>
+      <div class="mobile-editor-sheet-actions">
+        <button type="button" data-mobile-editor-detent aria-label="Expand editor panel" title="Expand editor panel">${mobileEditorIcons.expand}</button>
+        <button type="button" data-mobile-editor-close aria-label="Close editor panel" title="Close editor panel">${mobileEditorIcons.close}</button>
+      </div>
     `;
     panel.insertBefore(sheetHead, panel.firstElementChild);
 
@@ -16839,17 +16857,35 @@ loadFont().then(() => render());
     nav.className = 'mobile-editor-nav';
     nav.dataset.mobileEditorNav = 'true';
     nav.setAttribute('aria-label', 'Mobile editor actions');
-    nav.innerHTML = `
-      <button type="button" data-mobile-editor-trigger="text">Text</button>
-      <button type="button" data-mobile-editor-trigger="image">Image</button>
-      <button type="button" data-mobile-editor-trigger="format">Format</button>
-      <button type="button" data-mobile-editor-trigger="brand">Brand</button>
-      <button type="button" data-mobile-editor-export>Export</button>
-    `;
+    nav.innerHTML = Object.entries(mobileEditorPanels).map(([key, config]) => `
+      <button type="button" data-mobile-editor-trigger="${key}" aria-label="Open ${config.label} tools">
+        <span class="mobile-editor-nav-icon">${mobileEditorIcons[key]}</span>
+        <span class="mobile-editor-nav-label">${config.label}</span>
+      </button>
+    `).join('');
     document.body.append(nav);
 
+    const mediaActions = document.createElement('div');
+    mediaActions.className = 'mobile-editor-media-actions';
+    mediaActions.dataset.mobileEditorMediaActions = 'true';
+    mediaActions.innerHTML = `
+      <button type="button" data-mobile-media-action="upload">${mobileEditorIcons.media}<span>Upload image</span></button>
+      <button type="button" data-mobile-media-action="pool">${mobileEditorIcons.brand}<span>ES Image Pool</span></button>
+    `;
+    document.querySelector('.studio-dock-section')?.prepend(mediaActions);
+
+    const moreActions = document.createElement('div');
+    moreActions.className = 'mobile-editor-more-actions';
+    moreActions.dataset.mobileEditorMoreActions = 'true';
+    moreActions.dataset.mobileToolGroup = 'more';
+    moreActions.innerHTML = `
+      <button type="button" data-mobile-more-action="reset">${mobileEditorIcons.format}<span><strong>Reset view</strong><small>Return canvas zoom to 100%</small></span></button>
+      <button type="button" data-mobile-more-action="pool">${mobileEditorIcons.media}<span><strong>ES Image Pool</strong><small>Find another approved image</small></span></button>
+    `;
+    document.querySelector('[data-studio-content-sections]')?.append(moreActions);
+
     document.querySelectorAll('[data-mobile-editor-trigger]').forEach(button => {
-      button.addEventListener('click', () => openMobileEditorPanel(button.dataset.mobileEditorTrigger));
+      button.addEventListener('click', () => toggleMobileEditorPanel(button.dataset.mobileEditorTrigger, button));
     });
     document.querySelectorAll('[data-mobile-editor-export]').forEach(button => {
       button.addEventListener('click', event => {
@@ -16857,17 +16893,54 @@ loadFont().then(() => render());
         document.querySelector('[data-studio-export]')?.click();
       });
     });
-    document.querySelector('[data-mobile-editor-close]')?.addEventListener('click', closeMobileEditorPanel);
+    document.querySelector('[data-mobile-editor-back]')?.addEventListener('click', () => {
+      closeMobileEditorPanel({ restoreFocus: false });
+      window.location.hash = 'frames';
+    });
+    document.querySelectorAll('[data-mobile-editor-close]').forEach(button => {
+      button.addEventListener('click', () => closeMobileEditorPanel());
+    });
+    document.querySelectorAll('[data-mobile-editor-detent]').forEach(button => {
+      button.addEventListener('click', toggleMobileEditorDetent);
+    });
+    document.querySelectorAll('[data-mobile-media-action]').forEach(button => {
+      button.addEventListener('click', () => {
+        const target = button.dataset.mobileMediaAction === 'pool'
+          ? document.querySelector('[data-ai-image-search]')
+          : document.querySelector('[data-background-upload]');
+        target?.click();
+      });
+    });
+    document.querySelectorAll('[data-mobile-more-action]').forEach(button => {
+      button.addEventListener('click', () => {
+        if (button.dataset.mobileMoreAction === 'reset') setZoom(100);
+        else document.querySelector('[data-ai-image-search]')?.click();
+      });
+    });
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') closeMobileEditorPanel();
     });
+    initMobileSheetGestures(sheetHead);
+    initMobileKeyboardTracking();
+    markMobileEditorGroups();
     syncMobileEditorMeta();
   }
 
-  function openMobileEditorPanel(panelName) {
-    const config = mobileEditorPanels[panelName] || mobileEditorPanels.text;
+  function toggleMobileEditorPanel(panelName, trigger) {
+    if (document.body.classList.contains('is-mobile-sheet-open') && document.body.dataset.mobileEditorPanel === panelName) {
+      closeMobileEditorPanel({ restoreFocus: false });
+      return;
+    }
+    openMobileEditorPanel(panelName, trigger);
+  }
+
+  function openMobileEditorPanel(panelName, trigger) {
+    const config = mobileEditorPanels[panelName] || mobileEditorPanels.content;
+    const wasOpen = document.body.classList.contains('is-mobile-sheet-open');
+    lastMobileEditorTrigger = trigger || document.querySelector(`[data-mobile-editor-trigger="${panelName}"]`);
     setStudioInspectorMode(config.mode);
     document.body.dataset.mobileEditorPanel = panelName;
+    if (!wasOpen) document.body.dataset.mobileSheetDetent = 'compact';
     document.body.classList.add('is-mobile-sheet-open');
     const titleNode = document.querySelector('[data-mobile-editor-sheet-title]');
     if (titleNode) titleNode.textContent = config.label;
@@ -16876,17 +16949,88 @@ loadFont().then(() => render());
       button.classList.toggle('is-active', isActive);
       button.setAttribute('aria-current', isActive ? 'true' : 'false');
     });
-    if (config.section) {
-      requestAnimationFrame(() => openStudioSection(config.section));
-    }
+    syncMobileEditorGroups(panelName);
+    syncMobileEditorDetentControls();
   }
 
-  function closeMobileEditorPanel() {
+  function closeMobileEditorPanel(options = {}) {
     document.body.classList.remove('is-mobile-sheet-open');
     document.querySelectorAll('[data-mobile-editor-trigger]').forEach(button => {
       button.classList.remove('is-active');
       button.removeAttribute('aria-current');
     });
+    if (options.restoreFocus !== false && lastMobileEditorTrigger?.isConnected) lastMobileEditorTrigger.focus();
+  }
+
+  function toggleMobileEditorDetent() {
+    document.body.dataset.mobileSheetDetent = document.body.dataset.mobileSheetDetent === 'expanded' ? 'compact' : 'expanded';
+    syncMobileEditorDetentControls();
+  }
+
+  function syncMobileEditorDetentControls() {
+    const expanded = document.body.dataset.mobileSheetDetent === 'expanded';
+    document.querySelectorAll('[data-mobile-editor-detent]').forEach(button => {
+      button.setAttribute('aria-label', expanded ? 'Collapse editor panel' : 'Expand editor panel');
+      button.setAttribute('title', expanded ? 'Collapse editor panel' : 'Expand editor panel');
+      button.setAttribute('aria-expanded', String(expanded));
+    });
+  }
+
+  function initMobileSheetGestures(head) {
+    let startY = null;
+    head.addEventListener('pointerdown', event => {
+      if (event.target.closest('button:not(.mobile-editor-sheet-grip)')) return;
+      startY = event.clientY;
+    });
+    head.addEventListener('pointerup', event => {
+      if (startY === null) return;
+      const delta = event.clientY - startY;
+      startY = null;
+      if (delta < -42 && document.body.dataset.mobileSheetDetent !== 'expanded') toggleMobileEditorDetent();
+      if (delta > 42 && document.body.dataset.mobileSheetDetent === 'expanded') toggleMobileEditorDetent();
+      else if (delta > 72) closeMobileEditorPanel();
+    });
+    head.addEventListener('pointercancel', () => { startY = null; });
+  }
+
+  function initMobileKeyboardTracking() {
+    if (!window.visualViewport) return;
+    const syncKeyboard = () => {
+      const keyboardOpen = window.innerHeight - window.visualViewport.height > 140;
+      document.body.classList.toggle('is-mobile-keyboard-open', keyboardOpen);
+    };
+    window.visualViewport.addEventListener('resize', syncKeyboard);
+    window.visualViewport.addEventListener('scroll', syncKeyboard);
+  }
+
+  function markMobileEditorGroups() {
+    const groups = {
+      format: ['#post-type-control', '#reels-format-control', '#youtube-variation-card', '#youtube-category-card', '#newsletter-asset-card', '#pill-position-card'],
+      content: ['.text-card', '#widget-main-fields', '#widget-picks-fields'],
+      brand: ['.color-card', '#newsletter-brand-card'],
+      media: ['#entity-image-card', '#entity-image-card-2'],
+      more: ['#quote-logo-control', '#swipe-button-card', '#youtube-quote-control', '#widget-builder-hint'],
+    };
+    Object.entries(groups).forEach(([group, selectors]) => {
+      selectors.forEach(selector => document.querySelectorAll(selector).forEach(node => {
+        node.dataset.mobileToolGroup = group;
+      }));
+    });
+  }
+
+  function syncMobileEditorGroups(panelName) {
+    const config = mobileEditorPanels[panelName] || mobileEditorPanels.content;
+    const groups = new Set(config.groups || []);
+    document.querySelectorAll('[data-mobile-tool-group]').forEach(node => {
+      node.classList.toggle('is-mobile-tool-visible', groups.has(node.dataset.mobileToolGroup));
+    });
+    document.querySelectorAll('[data-studio-accordion-section]').forEach(section => {
+      const hasTarget = !!section.querySelector('.is-mobile-tool-visible');
+      section.classList.toggle('is-mobile-group-visible', hasTarget);
+      if (hasTarget) setStudioSectionOpen(section, true);
+    });
+    const primary = document.querySelector('[data-studio-primary-controls]');
+    primary?.classList.toggle('is-mobile-primary-visible', !!primary.querySelector('.is-mobile-tool-visible'));
   }
 
   function syncMobileEditorMeta() {
@@ -16897,7 +17041,8 @@ loadFont().then(() => render());
     if (titleNode) titleNode.textContent = title;
     if (topbar) topbar.hidden = !workspaceName;
     document.querySelector('[data-mobile-editor-nav]')?.toggleAttribute('hidden', !workspaceName);
-    if (!workspaceName) closeMobileEditorPanel();
+    document.body.classList.toggle('is-mobile-workspace-active', !!workspaceName);
+    if (!workspaceName) closeMobileEditorPanel({ restoreFocus: false });
   }
 
   function refreshStudioContentSections() {
