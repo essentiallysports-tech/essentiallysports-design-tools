@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const imageHandler = require('../api/es-image-search.js');
 const designSubmitHandler = require('../api/design-request-submit.js');
+const toolFeedbackHandler = require('../api/tool-feedback-submit.js');
 const callbackHandler = require('../api/es-mcp-oauth-callback.js');
 const videoIntelligenceHandler = require('../api/es-video-intelligence.js');
 
@@ -166,6 +167,65 @@ function createResponse() {
   assert.equal(emailCalls[0].requester.email, 'suhail.quraishi@essentiallysports.com');
 
   delete process.env.DESIGN_REQUEST_EMAIL_ENDPOINT;
+  globalThis.fetch = originalFetch;
+}
+
+{
+  const savedRows = [];
+  const previousSheetsEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const previousSheetsKey = process.env.GOOGLE_PRIVATE_KEY;
+  delete process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  delete process.env.GOOGLE_PRIVATE_KEY;
+
+  globalThis.fetch = async (url, options = {}) => {
+    if (String(url).includes('/auth/v1/user')) {
+      assert.equal(options.headers?.Authorization, 'Bearer test-user-token');
+      return new Response(JSON.stringify({
+        id: 'user-1',
+        email: 'suhail.quraishi@essentiallysports.com',
+      }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    if (String(url).includes('/rest/v1/es_designer_activity')) {
+      assert.equal(options.headers?.Authorization, 'Bearer test-user-token');
+      const row = JSON.parse(options.body);
+      savedRows.push(row);
+      return new Response(JSON.stringify([row]), {
+        status: 201,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  const response = createResponse();
+  await toolFeedbackHandler({
+    method: 'POST',
+    headers: { Authorization: 'Bearer test-user-token' },
+    query: {},
+    body: {
+      feedbackType: 'Bug',
+      tool: 'Reels Studio',
+      message: 'Caption animation preview is drifting.',
+      pageUrl: 'https://frameup.essentiallysports.com/reels.html',
+    },
+  }, response);
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.payload);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.integrations.supabase.ok, true);
+  assert.equal(payload.integrations.googleSheets.skipped, true);
+  assert.equal(savedRows.length, 1);
+  assert.equal(savedRows[0].event_type, 'tool_feedback_submitted');
+  assert.equal(savedRows[0].entity_type, 'tool_feedback');
+  assert.equal(savedRows[0].actor_email, 'suhail.quraishi@essentiallysports.com');
+  assert.equal(savedRows[0].meta.message, 'Caption animation preview is drifting.');
+
+  if (previousSheetsEmail) process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = previousSheetsEmail;
+  if (previousSheetsKey) process.env.GOOGLE_PRIVATE_KEY = previousSheetsKey;
   globalThis.fetch = originalFetch;
 }
 

@@ -90,6 +90,7 @@ async function verifyEsUser(event = {}) {
 
 module.exports = {
   ES_EMAIL_DOMAIN,
+  authConfig,
   bearerToken,
   isEsEmail,
   verifyEsUser,
