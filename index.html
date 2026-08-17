@@ -16662,19 +16662,25 @@ loadFont().then(() => render());
       track.style.transform = `translateX(-${pos * 100}%)`;
     }
 
-    // One persistent listener handles the loop-point snap-back, however many
-    // times (or however quickly) the boundary gets crossed, instead of a new
-    // one-off listener per call that could stack up if a transition never
-    // actually completes before the next advance.
+    // Snap the loop point back via a timer, not a transitionend listener --
+    // transitions never fire (or complete) while this section is hidden
+    // (e.g. the user is on a different in-app page, so this whole section
+    // sits at display:none), which let pos climb without ever resetting
+    // and eventually transform the track thousands of percent off-screen,
+    // showing a blank hero when the user came back.
+    const TRANSITION_MS = 700;
+    let loopResetTimer = null;
+    // Resync pos to active exactly (not "subtract count once") -- if many
+    // advances stacked up before this fires (each one cancels and
+    // reschedules this timer), pos can be arbitrarily far ahead of active,
+    // and active is always the correct 0..count-1 value regardless.
     function resetLoopIfNeeded() {
-      if (pos < count) return;
       track.style.transition = 'none';
-      pos -= count;
+      pos = active;
       renderPos();
       void track.offsetWidth;
       track.style.transition = '';
     }
-    track.addEventListener('transitionend', resetLoopIfNeeded);
 
     function advanceTo(targetActive) {
       if (targetActive === active) return;
@@ -16683,8 +16689,13 @@ loadFont().then(() => render());
       active = targetActive;
       renderPos();
       updateState();
-      if (prefersReducedMotion) {
-        resetLoopIfNeeded();
+      if (pos >= count) {
+        clearTimeout(loopResetTimer);
+        if (prefersReducedMotion) {
+          resetLoopIfNeeded();
+        } else {
+          loopResetTimer = setTimeout(resetLoopIfNeeded, TRANSITION_MS);
+        }
       }
     }
 
@@ -16696,7 +16707,14 @@ loadFont().then(() => render());
     function startAutoplay() {
       if (prefersReducedMotion) return;
       stopAutoplay();
-      timer = window.setInterval(next, AUTOPLAY_MS);
+      timer = window.setInterval(() => {
+        // Skip advancing while this section isn't actually shown (e.g. the
+        // user navigated to a different in-app page) -- no point cycling
+        // slides nobody can see, and it keeps pos from ever needing to
+        // climb further than one loop past the real slide count.
+        if (slider.offsetParent === null || document.hidden) return;
+        next();
+      }, AUTOPLAY_MS);
     }
 
     // Next and every dot always advance forward (looping through the clone
