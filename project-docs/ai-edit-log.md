@@ -17,6 +17,147 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-08-17 — Newsletter widget builder: per-pick Show/Hide switches, paste-link field cleanup
+- Status: `[pushed - 573da5d, 6edf0c1, 9966dbe]`
+- Files touched: `index.html` only.
+- Ask (Suhail): make each "Top Pick N" label more prominent/black, add a Hide/Show switch on the far
+  right of that row that decides whether the story renders in the generated HTML + live preview, hide
+  (not remove) the "Upload Image" button for now, and remove the WordPress/Google "Tip" line under every
+  image field.
+- Fix: `.widget-pick-label` set to bold black; added a small inline switch (`.widget-pick-switch`,
+  reusing the same track/thumb visual language as the existing `.quote-switch` component elsewhere in
+  this file) per Top Pick row, wired to `widgetBuilderState.picks[i].hidden`; `buildWidgetHtml()` now
+  does `state.picks.filter(pick => !pick.hidden)` before mapping, so a hidden pick's `<table>` block and
+  its divider are both actually absent from the output, not just visually dimmed. Upload buttons hidden
+  via a blanket `[data-widget-upload] { display: none; }` rule (DOM untouched, one line to revert). All 7
+  `.widget-inline-tip` paragraphs deleted.
+- Two follow-up UI nits from the same area: removed the leading chain-link `<svg>` icon from all 5
+  paste-link fields (main + 4 picks); then fixed a "two nested boxes" look on those same fields — a
+  site-wide `input[type="text"]` rule (specificity `(0,1,1)`) was outranking `.widget-paste-link-input`'s
+  own `border: 0` (specificity `(0,1,0)`), so the input kept its own rounded border inside the field's
+  border. Fixed by bumping the selector to `input.widget-paste-link-input` (same specificity, later in
+  the cascade, wins) and explicitly resetting `width`/`border-radius`/`padding` too, not just `border`.
+- Verified: intercepted `navigator.clipboard.writeText` and clicked the real "Copy HTML" button
+  before/after toggling a pick off — confirmed the pick's row and its divider are genuinely absent from
+  the copied HTML, then restored on toggling back on. Confirmed upload buttons `display:none` but still
+  present in the DOM. Confirmed computed `border` on the paste-link input is `0` after the specificity fix.
+
+### 2026-08-17 — Bumped site-chrome cache-busting version (stale navbar icons on other accounts)
+- Status: `[pushed - 979f64a]`
+- Files touched: `index.html`, `reels.html`, `design-request.html`, `dashboard.html`, `login.html`,
+  `ai-page/index.html`, `ai-page/settings.html`, `ai-page/profile.html`, `ai-page/logout.html`,
+  `tool-feedback.html`.
+- Bug (Suhail: "i can still see the old icon used for profile bar on navbar" on other accounts):
+  root-caused via an Explore agent diffing `af76c5f` (the Aug 15 icon-unification commit) — it changed
+  `site-chrome.js`'s `profileIcon()` glyphs (the Edit/Settings/Logout dropdown-row icons) but never
+  bumped the shared `?v=20260723-profile2` / `?v=20260723-profile3` query strings on `site-chrome.js`/
+  `site-chrome.css`. Any browser that had already cached those files before Aug 15 had no reason to
+  re-fetch them — identical URL, identical cache key — so it kept serving the pre-unification icons
+  indefinitely. Note: the top-right avatar bubble itself is CSS/initials-only (no image), so it was never
+  in scope for icon unification; the "old icon" was specifically the dropdown-menu glyphs.
+- Fix: bumped both to `?v=20260817-icons1` everywhere they're referenced (10 files, confirmed all were
+  byte-identical `20260723` values beforehand via grep, so this was a clean global bump, not a
+  per-file reconciliation).
+
+### 2026-08-17 — New Tool Feedback page + Google Sheets integration, then reworked to match the real design language
+- Status: `[pushed - 795c4a6, 07855c1, fd77195, 692ea3b]`
+- Files touched (new): `tool-feedback.html`, `tool-feedback.css`, `tool-feedback.js`,
+  `netlify/functions/tool-feedback-submit.js`, `api/tool-feedback-submit.js`. Files touched (existing):
+  the 8 pages with a top navbar (added a "Tool Feedback" link right after FAQ), `GOOGLE_SHEETS_SETUP.md`.
+- Ask (Suhail): a "Tool Feedback" nav link after FAQ on every navbar, leading to a page where anyone can
+  submit feedback that lands in a specific Google Sheet (gave a link with public edit access).
+- Built by reusing the exact append-to-sheet pattern already proven in
+  `netlify/functions/design-request-submit.js` (signed-JWT service-account OAuth2, `sheets.googleapis.com
+  ...:append`) — same `GOOGLE_SERVICE_ACCOUNT_EMAIL`/`GOOGLE_PRIVATE_KEY` env vars, new
+  `GOOGLE_FEEDBACK_SHEETS_ID` (defaults to the sheet Suhail gave, so no extra Netlify/Vercel config is
+  required to start working). Submission is auth-gated like the rest of the site; the submitter's email
+  comes from their session, not a form field.
+- First visual pass invented its own look (pill-shaped radio buttons, a rounded chip "eyebrow" label, a
+  narrow centered card) — Suhail flagged it didn't match the site ("it doesnt visually look in our
+  language"). Re-researched the *actual* design system via an Explore agent reading real CSS out of
+  `design-request.html`/`reels.css` (exact hex tokens, radius scale, the `.request-dropdown` animated
+  dropdown, the `.reels-style-card` selectable-card pattern, the real `.btn`/`.btn-primary` spec) and
+  rebuilt the page against those, including replacing a native `<select>` with a from-scratch animated
+  custom dropdown matching `.request-dropdown` exactly, since the user separately flagged the native
+  dropdown ("dropdown is not in our language our animations").
+- Real bug found and fixed along the way: when the Sheets integration is unconfigured, the function
+  returned `{ok:false, skipped:true}` with no `error` field, so the client showed a generic, useless
+  "Could not send your feedback" message. Added a real `error` string to that response so a future
+  misconfiguration is actually diagnosable instead of silent.
+- Verified: zero JS errors via the usual no-auth-code srcdoc harness; confirmed the deployed endpoint is
+  live and reachable (`curl -X POST https://essentiallysports-design-tools.vercel.app/api/tool-feedback-submit`
+  returns a proper `401 {"ok":false,"error":"Authentication required."}`, proving the function deployed
+  correctly and CORS/OPTIONS handling works); confirmed the custom dropdown opens/closes, selecting an
+  option updates the underlying `<select>` and closes the menu. **Not verified from this sandbox**: the
+  full authenticated submit → Sheets-append path end-to-end (no way to obtain a real Supabase session
+  here, same limitation noted in the widget-image-hosting entry below) — this depends on Suhail's own
+  testing, which is how the missing-`error`-field bug above was actually caught.
+
+### 2026-08-17 — Reels: fixed auto-caption freezing the tab; simplified caption style; removed safe-zone outline
+- Status: `[pushed - 97e1adc, fba90d9, 1fc6497]`
+- Files touched: `reels.js`, `reels.html`, `reels.css`, `reels-whisper-worker.js` (new).
+- Ask (Suhail): drop the caption style picker down to one built-in style — a single centered word at a
+  time — with Top/Middle/Bottom position options replacing it. Implemented (`CAPTION_STYLES` reduced to
+  one entry, `drawCaption`/`getActiveCaptionWord`/`drawSingleWordCaption` replace the old multi-style pill
+  layout/animation code, ~300 lines of now-dead style/animation helpers removed). Verified structurally
+  (zero JS errors after the refactor, position dropdown correctly relabeled Top/Middle/Bottom, direct
+  source trace confirms the position `<select>`'s `change` handler writes `state.captionPosition` which
+  `getCaptionBlockTop()` reads on every draw) — pixel-level canvas verification was attempted but proved
+  unreliable in this harness (the specific test video already contains substantial blue content of its
+  own, confounding a blue-pixel-based pill-detection scan; documented as a known limitation rather than a
+  confirmed pass).
+- Bug (Suhail: tab shows Chrome's "Page Un-responsive" dialog partway through Auto-caption on longer
+  clips): root cause was the on-device Whisper fallback (`@huggingface/transformers`) running its model
+  load + inference directly on the main thread — long enough on a real clip to trip the browser's hang
+  watchdog. Fix: moved that work into a dedicated Web Worker (`reels-whisper-worker.js`, `type: 'module'`
+  so the CDN `import()` works inside it) — `transcribeLocalAudioChunks` now posts each audio chunk to the
+  worker and awaits a message back instead of calling the pipeline inline.
+- Verified for real (not just code review): spun up the actual worker in a browser harness, watched it
+  download and load the real model via progress-callback messages, ran real inference on a sample buffer,
+  and got back a correctly-shaped `{text, chunks}` result — confirming the whole path works off the main
+  thread before shipping.
+- Separately, removed the dotted "Caption safe zone" outline overlay on the stage frame per a one-line
+  request ("in reel frame no need of that dotted outline box") — deleted the `.reels-safe-frame` div and
+  its now-unused CSS.
+
+### 2026-08-15 to 2026-08-17 — Newsletter widget image hosting: Netlify Blobs (abandoned, unverified) → Cloudinary (verified working)
+- Status: `[pushed - 0250930, 58de19a, aa712c1, 2e53375]` (the WordPress/Google recommendation tip added
+  here was later removed again on 2026-08-17, see the widget-builder entry above)
+- Ask (Suhail): uploading a widget image from a local device didn't produce a real link, so the copied
+  HTML never actually showed the image anywhere except the local preview. Wanted an auto-hosting solution,
+  free if possible; had a WordPress account on the org domain as one option.
+- Explored WordPress Application Passwords first — confirmed unavailable on the org's actual WP install
+  (scrolled to the real bottom of the profile page; no such section exists, just the version footer).
+  Abandoned that path.
+- Built a Netlify Blobs solution (two functions: an auth-gated upload, and a public-but-key-validated
+  read-back) with a graceful fallback to manual link-paste. **Could not verify the real success path from
+  this sandbox** — `window.ESAuth` is `Object.freeze()`'d, so `fetchWithAuth` can't be mocked, and there's
+  no way to fake a real logged-in Supabase session here; also no Netlify CLI/API access to check the
+  actual deploy or env vars. Suhail reported it still wasn't working in production and asked directly
+  whether it had been checked before pushing — it hadn't, only client-side logic and syntax had been.
+- **Pivoted to Cloudinary unsigned uploads** specifically *because* it doesn't require a login step to
+  test, once Suhail supplied a real cloud name + upload preset. Verified end-to-end for real this time:
+  a real upload succeeded, the returned public URL was reachable with zero auth, the full widget-builder
+  upload → auto-fill-link → Copy HTML flow was tested, and the copied HTML was confirmed to contain the
+  real Cloudinary link. The Netlify Blobs functions and the temporary `@netlify/blobs` dependency were
+  fully removed as part of the pivot (package.json is back to zero dependencies).
+- **Lesson for whoever picks this up next**: when a fix can't be verified end-to-end from this sandbox
+  (usually anything behind real auth or requiring a live deploy), say so plainly rather than shipping a
+  second unverified guess — especially once the user has already flagged frustration with back-and-forth.
+  Prefer pivoting to an approach that *can* be fully tested here over iterating blind on one that can't.
+
+### 2026-08-15 — Icon unification, sliding hero carousel, nav label renames
+- Status: `[pushed - af76c5f and others same day, see `git log --oneline` around this date]`
+- This entry predates this log's most recent AI session and is reconstructed from commit subjects only
+  (no first-hand verification detail available to record): unified site icons into one Lucide-based line
+  family (`af76c5f`); rebuilt the homepage hero into an always-forward sliding carousel with real banner
+  art across several follow-up commits; renamed nav labels site-wide ("Reels"→"Reel Captions", "Home
+  Page"→"Home", "YouTube Assets"→"YouTube", "Newsletter Assets"→"Newsletter") and added a Reel Captions
+  showcase card to the login page (`2c72461`); made Reels caption pills square instead of rounded
+  (`8f142c8`). The hero carousel later needed a real bug fix (blank banner after navigating away and back
+  while autoplay was running unboundedly in the background — fixed 2026-08-17, `f286b54`) and a top-padding
+  tweak on workspace cards (`5879ea0`) — both one-off, low-context fixes not otherwise detailed here.
+
 ### 2026-07-29 — Fix caption pill shape: word/pill boxes didn't actually look like pills
 - Status: `[pending push]`
 - Files touched: `reels.js` only.
