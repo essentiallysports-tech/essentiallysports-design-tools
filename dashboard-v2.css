@@ -5631,8 +5631,8 @@ body.dashboard-page .feedback-summary small {
 
 body.dashboard-page .feedback-row {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr) auto;
-  gap: 18px;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 20px;
   padding: 18px 22px;
   border-bottom: 1px solid var(--dash-border-soft);
   background: #fff;
@@ -5643,8 +5643,7 @@ body.dashboard-page .feedback-row:last-child {
 }
 
 body.dashboard-page .feedback-row-head,
-body.dashboard-page .feedback-row-meta,
-body.dashboard-page .feedback-row-side {
+body.dashboard-page .feedback-row-meta {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -5654,14 +5653,8 @@ body.dashboard-page .feedback-row-side {
 body.dashboard-page .feedback-row-type {
   display: grid;
   align-content: start;
-  justify-items: start;
+  justify-items: stretch;
   gap: 8px;
-}
-
-body.dashboard-page .feedback-row-type small {
-  color: #667085;
-  font-size: 13px;
-  font-weight: 700;
 }
 
 body.dashboard-page .feedback-row-head strong {
@@ -5691,10 +5684,13 @@ body.dashboard-page .feedback-row p {
   white-space: pre-wrap;
 }
 
-body.dashboard-page .feedback-row-side {
-  justify-content: flex-end;
-  align-content: start;
-  min-width: 150px;
+body.dashboard-page .feedback-type,
+body.dashboard-page .feedback-status {
+  width: 100%;
+  min-height: 30px;
+  border-radius: 999px;
+  font-size: 13px !important;
+  font-weight: 800 !important;
 }
 
 body.dashboard-page .feedback-type.is-bug {
@@ -5716,9 +5712,9 @@ body.dashboard-page .feedback-type.is-praise {
 }
 
 body.dashboard-page .feedback-status {
-  border-color: #b5d8fd;
-  background: #e8f2ff;
-  color: #0a65c7;
+  border-color: #d8dee6;
+  background: #f8fafc;
+  color: #42526a;
 }
 
 body.dashboard-page .metrics {
@@ -6204,13 +6200,21 @@ body.dashboard-page .role-choice {
     padding: 16px;
   }
 
+  body.dashboard-page .feedback-row-type {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  body.dashboard-page .feedback-type,
+  body.dashboard-page .feedback-status {
+    width: auto;
+    min-width: 78px;
+  }
+
   body.dashboard-page .feedback-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: 14px 16px;
-  }
-
-  body.dashboard-page .feedback-row-side {
-    justify-content: flex-start;
   }
 
   /* Export review should wrap tightly around the artwork and metadata. The

@@ -7,7 +7,7 @@
   <title>FrameUp Dashboard | EssentiallySports</title>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20260714-authcallback2"></script>
-  <script src="dashboard-data.js?v=20260817-view-state3"></script>
+  <script src="dashboard-data.js?v=20260817-feedback-clean4"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -433,7 +433,7 @@
       table { min-width: 780px; }
     }
   </style>
-  <link rel="stylesheet" href="dashboard-v2.css?v=20260817-view-state3">
+  <link rel="stylesheet" href="dashboard-v2.css?v=20260817-feedback-clean4">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
   <link rel="stylesheet" href="dashboard-ui-system.css?v=20260718-dashboard-system5">
 <link rel="stylesheet" href="theme.css?v=20260714-footer1">
@@ -1325,7 +1325,7 @@
             <article class="feedback-row" data-feedback-id="${attr(item.id)}">
               <div class="feedback-row-type">
                 <span class="pill feedback-type is-${attr(feedbackTypeClass(item.feedbackType))}">${text(item.feedbackType, 'Other')}</span>
-                <small>${text(item.status, 'New')}</small>
+                <span class="pill feedback-status">${text(item.status, 'New')}</span>
               </div>
               <div class="feedback-row-main">
                 <div class="feedback-row-head">
@@ -1337,9 +1337,6 @@
                   <span>From ${text(personDisplayName(item.submitterName, item.submitterEmail))}</span>
                   <span>${text(item.submitterEmail)}</span>
                 </div>
-              </div>
-              <div class="feedback-row-side">
-                ${item.pageUrl ? `<a class="topbar-button" href="${attr(item.pageUrl)}" target="_blank" rel="noopener">Open page</a>` : ''}
               </div>
             </article>
           `).join('')}
