@@ -7497,7 +7497,6 @@ body[data-current-page="faq"] .faq-cta-art img {
         <div class="card-title">Newsletter Brand</div>
         <select id="newsletter-brand-select" aria-label="Newsletter brand"></select>
       </div>
-      <p class="widget-builder-hint" id="widget-builder-hint" aria-live="polite">Uploading a photo now automatically hosts it and fills in the link for you — if that fails for any reason, your local preview still works and you can paste a link manually.</p>
     </div>
 
     <div class="post-type-control" id="post-type-control" aria-label="Instagram post type">
@@ -17035,7 +17034,7 @@ loadFont().then(() => render());
       content: ['.text-card', '#widget-main-fields', '#widget-picks-fields'],
       brand: ['.color-card', '#newsletter-brand-card'],
       media: ['#entity-image-card', '#entity-image-card-2'],
-      more: ['#quote-logo-control', '#swipe-button-card', '#youtube-quote-control', '#widget-builder-hint'],
+      more: ['#quote-logo-control', '#swipe-button-card', '#youtube-quote-control'],
     };
     Object.entries(groups).forEach(([group, selectors]) => {
       selectors.forEach(selector => document.querySelectorAll(selector).forEach(node => {
