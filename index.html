@@ -13432,8 +13432,6 @@ function drawTwitterQuotePost(ctx, W, H, scale) {
   ctx.fillStyle = '#6B6F7A';
   ctx.font = `500 ${sx(18)}px ${TWITTER_CHIRP_FONT}`;
   ctx.fillText(tweet.dateLabel, cardX + cardPad, footerY);
-  ctx.textAlign = 'right';
-  ctx.fillText(tweet.metrics, cardX + cardW - cardPad, footerY);
   ctx.restore();
 
   drawSwipeButton(ctx, W, H, scale);
