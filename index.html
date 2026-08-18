@@ -4135,10 +4135,12 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
   .tweet-fetch-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 44px 36px;
+    grid-template-columns: minmax(0, 1fr) 38px;
+    grid-template-rows: 40px 38px;
     align-items: center;
-    gap: 0;
-    min-height: 44px;
+    gap: 4px;
+    min-height: 90px;
+    padding: 4px;
     overflow: hidden;
     border: 1px solid #B5D8FD;
     border-radius: 8px;
@@ -4148,6 +4150,8 @@ body[data-current-page="faq"] .faq-cta-art img {
   .tweet-fetch-input-wrap {
     position: relative;
     min-width: 0;
+    grid-column: 1;
+    grid-row: 1;
   }
   .tweet-fetch-input-wrap::before {
     content: "";
@@ -4163,7 +4167,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E") center / contain no-repeat;
   }
   .tweet-fetch-row .pill-entry {
-    min-height: 44px;
+    width: 100%;
+    min-height: 40px;
     min-width: 0;
     padding-left: 38px;
     border: 0;
@@ -4172,21 +4177,25 @@ body[data-current-page="faq"] .faq-cta-art img {
     background: transparent;
   }
   .tweet-fetch-button {
-    display: grid;
-    place-items: center;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 38px;
+    margin: 0;
+    padding: 0 12px;
     border: 1px solid var(--accent);
     border-radius: 7px;
     background: var(--accent);
     color: #FFFFFF;
     cursor: pointer;
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    grid-column: 1 / -1;
+    grid-row: 2;
     transition: background-color .16s ease, border-color .16s ease;
-  }
-  .tweet-fetch-button svg {
-    width: 19px;
-    height: 19px;
   }
   .tweet-fetch-button:hover {
     border-color: var(--accent-hover);
@@ -4201,15 +4210,18 @@ body[data-current-page="faq"] .faq-cta-art img {
   .tweet-fetch-clear {
     display: grid;
     place-items: center;
-    width: 36px;
-    height: 44px;
+    width: 38px;
+    height: 40px;
     border: 0;
+    border-left: 1px solid #DCE8F5;
     background: transparent;
     color: #1F2937;
     cursor: pointer;
     font-family: Arial, sans-serif;
     font-size: 20px;
     line-height: 1;
+    grid-column: 2;
+    grid-row: 1;
   }
   .tweet-generated-fields {
     display: none;
@@ -7687,12 +7699,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           <div class="tweet-fetch-input-wrap">
             <input id="tweet-url-input" class="pill-entry" type="url" inputmode="url" placeholder="Paste X/Twitter post link" spellcheck="false" aria-label="Tweet URL">
           </div>
-          <button class="tweet-fetch-button" id="tweet-fetch-btn" type="button" aria-label="Generate tweet card" title="Generate tweet card">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5l-1.9-5.7-5.6-1.9L10.1 9 12 3.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-              <path d="M18 4v4M20 6h-4M6 17v3M7.5 18.5h-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
-            </svg>
-          </button>
+          <button class="tweet-fetch-button" id="tweet-fetch-btn" type="button">Generate</button>
           <button class="tweet-fetch-clear" id="tweet-fetch-clear" type="button" aria-label="Clear tweet link">×</button>
         </div>
         <div class="tweet-generated-fields" aria-hidden="true">
@@ -13335,15 +13342,18 @@ function drawTwitterQuotePost(ctx, W, H, scale) {
   const logoMargin = sx(LOGO_SAFE_MARGIN);
   drawEsLogoMark(ctx, W - logoW - logoMargin, logoMargin, logoW, logoH);
 
-  const cardW = Math.min(sx(720), W - sx(96));
-  const cardX = Math.round((W - cardW) / 2);
   const cardPad = sx(26);
   const avatar = sx(64);
   const headerH = sx(78);
   const footerH = sx(42);
-  const textMax = cardW - cardPad * 2;
   let textSize = sx(34);
   let lineHeight = sx(43);
+  ctx.font = `400 ${textSize}px ${TWITTER_CHIRP_FONT}`;
+  const naturalTextWidth = ctx.measureText(tweet.text).width;
+  const idealCardW = Math.round(Math.sqrt(Math.max(naturalTextWidth, sx(180)) * lineHeight * 4) + cardPad * 2);
+  const cardW = clamp(idealCardW, sx(520), Math.min(sx(820), W - sx(96)));
+  const cardX = Math.round((W - cardW) / 2);
+  const textMax = cardW - cardPad * 2;
   let bodyLines = [];
   while (textSize >= sx(25)) {
     ctx.font = `400 ${textSize}px ${TWITTER_CHIRP_FONT}`;
@@ -13360,7 +13370,7 @@ function drawTwitterQuotePost(ctx, W, H, scale) {
   }
 
   const bodyH = bodyLines.length * lineHeight;
-  const cardH = Math.min(sx(690), Math.max(sx(330), cardPad + headerH + sx(18) + bodyH + footerH + cardPad));
+  const cardH = Math.min(sx(760), Math.max(sx(250), cardPad + headerH + sx(18) + bodyH + footerH + cardPad));
   const bottomMargin = sx(state.swipeButton && state.swipeButton !== 'none' ? 186 : 92);
   const cardY = Math.max(sx(260), H - cardH - bottomMargin);
   ctx.save();
