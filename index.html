@@ -5726,7 +5726,11 @@ body[data-current-page="faq"] .faq-cta-art img {
        otherwise anchor the dock to the canvas' left edge. */
     @media (min-width: 1024px) {
       html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions {
+        position: relative;
         left: 50%;
+        width: max-content;
+        max-width: min(720px, calc(100vw - 80px));
+        margin-inline: 0;
         align-self: flex-start;
         transform: translateX(-50%);
       }
@@ -5948,8 +5952,8 @@ body[data-current-page="faq"] .faq-cta-art img {
       display: grid;
       gap: 12px;
       padding: 0 0 16px;
-      border-bottom: 1px solid #E5E7EB;
-      background: #FFFFFF;
+      border-bottom: 0;
+      background: transparent;
     }
 
     html[data-studio-shell="on"] .studio-primary-controls > * {
@@ -6184,9 +6188,11 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] body[data-current-page="instagram"] .canvas-bottom-actions.is-ai-search-expanded {
       width: calc(100vw - 32px);
       max-width: calc(100vw - 32px);
+      margin-inline: auto;
       min-height: 54px;
       height: 54px;
       max-height: 54px;
+      justify-content: center;
       overflow-x: auto;
       overflow-y: hidden;
       scrollbar-width: none;
@@ -6225,8 +6231,8 @@ body[data-current-page="faq"] .faq-cta-art img {
       display: grid;
       gap: 12px;
       padding: 0 0 14px;
-      border-bottom: 1px solid #E5E7EB;
-      background: #FFFFFF;
+      border-bottom: 0;
+      background: transparent;
     }
 
     html[data-studio-shell="on"] .studio-primary-controls > * {

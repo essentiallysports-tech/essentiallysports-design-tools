@@ -518,7 +518,7 @@ html { scroll-behavior: smooth; }
 .how-page .request-step-count b { color: var(--how-ink); font-weight: 700; }
 .how-page .request-progress { background: var(--how-line); }
 .how-page .request-progress span { background: var(--how-blue); }
-.how-page .help-section { border-color: var(--how-line); }
+.how-page .help-section { border-color: transparent; }
 .how-page .help-links,
 .how-page .help-links a { border-color: var(--how-line); }
 .how-page .help-links a { color: var(--how-ink); }
@@ -1063,7 +1063,7 @@ html { scroll-behavior: smooth; }
   grid-template-columns: minmax(0, .82fr) minmax(560px, 1.18fr);
   gap: 80px;
   align-items: start;
-  border-top: 1px solid var(--how-line);
+  border-top: 0;
 }
 .help-links { border-top: 1px solid var(--how-line); }
 .help-links a {

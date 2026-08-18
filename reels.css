@@ -293,15 +293,15 @@ body.reels-page .site-footer {
 }
 
 .reels-btn:disabled {
-  border-color: #d5e9ff;
-  background: #fbfdff;
-  color: #8798ad;
+  border-color: #dfe7f0;
+  background: #f6f8fb;
+  color: #91a0b2;
 }
 
 .reels-btn.is-primary:disabled {
-  border-color: #b5d8fd;
-  background: #77b7f7;
-  color: #fff;
+  border-color: #d7e5f4;
+  background: #eef5fc;
+  color: #8ca0b5;
   box-shadow: none;
 }
 
@@ -354,14 +354,16 @@ body.reels-page .site-footer {
 .reels-btn.is-secondary:disabled,
 .reels-btn.is-quiet:disabled,
 .reels-icon-btn:disabled {
-  border-color: #d5e9ff;
-  background: #fbfdff;
-  color: #8798ad;
+  border-color: #dfe7f0;
+  background: #f6f8fb;
+  color: #91a0b2;
   box-shadow: none;
 }
 
 .reels-btn.is-primary:disabled {
-  background: #eaf4ff;
+  border-color: #d7e5f4;
+  background: #eef5fc;
+  color: #8ca0b5;
 }
 
 .reels-icon-btn svg {
@@ -1558,8 +1560,19 @@ body.reels-page:not(.reels-has-captions) .reels-transcript-list {
   background: #f7fbff;
 }
 
-.reels-empty-upload {
+.reels-btn.reels-empty-upload {
   min-height: 38px;
+  border-color: var(--reels-blue);
+  background: var(--reels-blue);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 10px 22px rgba(10, 125, 250, .16);
+}
+
+.reels-btn.reels-empty-upload:hover:not(:disabled) {
+  border-color: var(--reels-blue-deep);
+  background: var(--reels-blue-deep);
+  color: #fff;
 }
 
 body.reels-page:not(.reels-has-clip) .reels-transcript-list .reels-empty-note {
@@ -2367,14 +2380,16 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 .reels-btn.is-secondary:disabled,
 .reels-btn.is-quiet:disabled,
 .reels-icon-btn:disabled {
-  border-color: #d5e9ff;
-  background: #fbfdff;
-  color: #8798ad;
+  border-color: #dfe7f0;
+  background: #f6f8fb;
+  color: #91a0b2;
   box-shadow: none;
 }
 
 .reels-btn.is-primary:disabled {
-  background: #eaf4ff;
+  border-color: #d7e5f4;
+  background: #eef5fc;
+  color: #8ca0b5;
 }
 
 @media (min-width: 1024px) {
