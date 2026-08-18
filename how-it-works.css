@@ -40,7 +40,9 @@
 html { scroll-behavior: smooth; }
 .how-page {
   margin: 0;
-  background: var(--how-bg);
+  overflow-x: clip;
+  overflow-y: visible;
+  background: var(--how-blue);
   color: var(--how-ink);
   font-family: var(--how-body);
 }
@@ -330,7 +332,9 @@ html { scroll-behavior: smooth; }
 }
 
 .frameup-intro {
-  height: 240vh;
+  --copy-opacity: 0;
+  position: relative;
+  height: 320vh;
   background: var(--how-surface);
 }
 
@@ -338,62 +342,121 @@ html { scroll-behavior: smooth; }
   position: sticky;
   top: var(--site-header-height, 72px);
   min-height: calc(100svh - var(--site-header-height, 72px));
+  overflow: hidden;
   display: grid;
-  align-content: center;
-  gap: clamp(10px, 1.1vw, 18px);
+  align-items: center;
+  isolation: isolate;
+  background: var(--how-surface);
+}
+
+.frameup-intro__fill {
+  --fill-scale: .003;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  background: #0a7dfa;
+  pointer-events: none;
+  transform: scaleY(var(--fill-scale));
+  transform-origin: top center;
+  will-change: transform;
+}
+
+.frameup-intro__copy {
+  position: relative;
+  z-index: 1;
   width: var(--how-content);
   margin: 0 auto;
-  padding: var(--how-space-section) 0;
+  color: #ffffff;
+  opacity: var(--copy-opacity);
+  will-change: opacity;
+}
+
+.how-page .frameup-intro__eyebrow {
+  margin: 0 0 clamp(24px, 4vh, 52px);
+  color: currentColor;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  opacity: .76;
+}
+
+.frameup-intro__messages {
+  position: relative;
+  min-height: clamp(190px, 25vw, 340px);
 }
 
 .how-page .frameup-intro__line {
-  --line-progress: 0;
-  --line-focus: 0;
-  position: relative;
-  width: fit-content;
-  max-width: 100%;
+  --line-active: 0;
+  --line-y: 54px;
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: min(1120px, 100%);
   margin: 0;
-  color: transparent !important;
-  background: linear-gradient(
-    90deg,
-    var(--how-ink) 0%,
-    var(--how-ink) calc(var(--line-progress) * 100%),
-    var(--how-line-dim) calc(var(--line-progress) * 100%),
-    var(--how-line-dim) 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  opacity: calc(.36 + (var(--line-focus) * .64));
+  color: currentColor;
   font-family: var(--how-display);
-  font-size: clamp(38px, 5.1vw, 82px);
+  font-size: clamp(56px, 7.4vw, 118px);
   font-weight: 700;
-  line-height: .98;
+  line-height: .9;
   letter-spacing: 0;
-  transform: translateY(calc((1 - var(--line-focus)) * 14px));
-  transition: opacity 120ms linear, transform 120ms linear;
+  opacity: var(--line-active);
+  transform: translate3d(0, var(--line-y), 0);
+  will-change: opacity, transform;
+}
+
+.frameup-intro__meta {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: clamp(18px, 3vh, 34px);
 }
 
 .how-page .frameup-intro__credit {
-  --credit-progress: 0;
   display: grid;
   gap: 3px;
-  margin: 28px 0 0;
-  color: var(--how-ink) !important;
-  font-size: 16px !important;
-  line-height: 1.05;
-  opacity: var(--credit-progress);
-  transform: translateY(calc((1 - var(--credit-progress)) * 10px));
-  transition: opacity 140ms linear, transform 140ms linear;
+  margin: 0;
+  color: currentColor;
+  font-size: 15px;
+  line-height: 1.1;
 }
 
-.frameup-intro__credit span:first-child {
-  color: var(--how-blue);
+.frameup-intro__credit span:first-child { font-weight: 700; }
+.frameup-intro__credit span:last-child { opacity: .68; }
+.how-page .frameup-intro__count {
+  margin: 0;
+  color: currentColor;
+  font-size: 14px;
   font-weight: 700;
+  letter-spacing: 0;
+  opacity: .76;
 }
 
-.frameup-intro__credit span:last-child {
-  color: var(--how-muted);
+/* The complete post-card journey lives inside one ES-blue chapter. */
+.how-page :is(.path-section, .workspace-section, .request-section, .help-section) {
+  background: transparent;
 }
+.how-page :is(.path-section, .workspace-section, .request-section, .help-section) .how-eyebrow,
+.how-page :is(.path-section, .workspace-section, .request-section, .help-section) > .section-heading :is(h2, p),
+.how-page .request-copy :is(h2, p),
+.how-page .help-section > div > :is(h2, p) {
+  color: #ffffff;
+}
+.how-page :is(.path-section, .workspace-section, .request-section, .help-section) .how-eyebrow {
+  letter-spacing: 0;
+  opacity: .72;
+}
+.how-page .request-step-count,
+.how-page .request-step-count b { color: #ffffff; }
+.how-page .request-progress { background: rgba(255, 255, 255, .28); }
+.how-page .request-progress span { background: #ffffff; }
+.how-page .help-section,
+.how-page .help-links,
+.how-page .help-links a { border-color: rgba(255, 255, 255, .34); }
+.how-page .help-links a,
+.how-page .help-links a > span:first-child,
+.how-page .help-links strong { color: #ffffff; }
 
 .path-section,
 .workspace-section,
@@ -974,6 +1037,11 @@ html[data-theme="dark"] {
 }
 html[data-theme="dark"] .how-button--secondary { background: transparent; }
 
+@media (max-width: 900px) {
+  html { overflow-x: clip; overflow-y: auto; }
+  body { overflow-x: clip; overflow-y: visible; }
+}
+
 @media (max-width: 1080px) {
   .how-hero-copy { padding-inline: 48px; }
   .workspace-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -983,7 +1051,9 @@ html[data-theme="dark"] .how-button--secondary { background: transparent; }
 @media (max-width: 860px) {
   .how-section { width: min(100% - 32px, 720px); }
   .how-hero-copy { padding-inline: 38px; }
-  .frameup-intro__sticky { width: min(100% - 32px, 720px); }
+  .frameup-intro__copy { width: min(100% - 32px, 720px); }
+  .frameup-intro__messages { min-height: clamp(220px, 43vw, 310px); }
+  .how-page .frameup-intro__line { font-size: clamp(52px, 10.5vw, 82px); }
   .section-heading--split { grid-template-columns: 1fr; gap: 22px; }
   .path-grid { grid-template-columns: 1fr; }
   .path-card { min-height: 148px; }
@@ -1023,8 +1093,13 @@ html[data-theme="dark"] .how-button--secondary { background: transparent; }
   .how-page h3 { font-size: 26px; }
   .how-page p { font-size: 17px; }
   .how-hero-copy { padding-inline: 24px; }
-  .frameup-intro { height: 220vh; }
-  .how-page .frameup-intro__line { font-size: clamp(35px, 11.5vw, 48px); }
+  .frameup-intro { height: 290vh; }
+  .frameup-intro__sticky { min-height: calc(100svh - var(--site-header-height, 72px)); }
+  .frameup-intro__messages { min-height: 210px; }
+  .how-page .frameup-intro__eyebrow { margin-bottom: 24px; font-size: 12px; }
+  .how-page .frameup-intro__line { font-size: clamp(42px, 13vw, 58px); line-height: .92; }
+  .frameup-intro__meta { margin-top: 18px; }
+  .how-page .frameup-intro__credit { font-size: 14px; }
   .how-actions { display: grid; }
   .how-button { width: 100%; }
   .path-section,

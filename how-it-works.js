@@ -94,54 +94,63 @@
   setWorkflowStep(0);
   startWorkflowTimer();
 
-  const scrollLinesSection = document.querySelector('[data-scroll-lines]');
-  const scrollLines = scrollLinesSection ? [...scrollLinesSection.querySelectorAll('.frameup-intro__line')] : [];
-  const scrollCredit = scrollLinesSection?.querySelector('.frameup-intro__credit');
-  let scrollLinesFrame = 0;
+  const blueStory = document.querySelector('[data-blue-story]');
+  const blueStoryLines = blueStory ? [...blueStory.querySelectorAll('.frameup-intro__line')] : [];
+  const blueStoryFill = blueStory?.querySelector('[data-blue-fill]');
+  const blueStoryCount = blueStory?.querySelector('[data-blue-story-count]');
+  let blueStoryFrame = 0;
   const clamp01 = value => Math.min(1, Math.max(0, value));
   const smoothstep = value => {
     const progress = clamp01(value);
     return progress * progress * (3 - 2 * progress);
   };
 
-  const updateScrollLines = () => {
-    scrollLinesFrame = 0;
-    if (!scrollLinesSection || !scrollLines.length) return;
+  const updateBlueStory = () => {
+    blueStoryFrame = 0;
+    if (!blueStory || !blueStoryLines.length) return;
 
     if (reducedMotion.matches) {
-      scrollLines.forEach(line => {
-        line.style.setProperty('--line-progress', '1');
-        line.style.setProperty('--line-focus', '1');
+      blueStory.style.setProperty('--story-progress', '1');
+      blueStory.style.setProperty('--copy-opacity', '1');
+      blueStoryFill?.style.setProperty('--fill-scale', '1');
+      blueStoryLines.forEach((line, index) => {
+        line.style.setProperty('--line-active', index === blueStoryLines.length - 1 ? '1' : '0');
+        line.style.setProperty('--line-y', index === blueStoryLines.length - 1 ? '0px' : '-54px');
       });
-      scrollCredit?.style.setProperty('--credit-progress', '1');
+      if (blueStoryCount) blueStoryCount.textContent = String(blueStoryLines.length).padStart(2, '0');
       return;
     }
 
-    const rect = scrollLinesSection.getBoundingClientRect();
-    const range = Math.max(1, scrollLinesSection.offsetHeight - window.innerHeight);
+    const rect = blueStory.getBoundingClientRect();
+    const range = Math.max(1, blueStory.offsetHeight - window.innerHeight);
     const totalProgress = Math.min(1, Math.max(0, -rect.top / range));
-    const segment = 1 / (scrollLines.length + .35);
+    const fillProgress = smoothstep(totalProgress / .14);
+    const copyProgress = smoothstep((totalProgress - .17) / .055);
+    const textProgress = clamp01((totalProgress - .22) / .78);
+    const activeFloat = textProgress * (blueStoryLines.length - 1);
+    const activeIndex = Math.min(blueStoryLines.length - 1, Math.round(activeFloat));
 
-    scrollLines.forEach((line, index) => {
-      const start = index * segment * .92;
-      const lineProgress = smoothstep((totalProgress - start) / (segment * .9));
-      const lineFocus = smoothstep((totalProgress - start + segment * .28) / (segment * .75));
-      line.style.setProperty('--line-progress', lineProgress.toFixed(3));
-      line.style.setProperty('--line-focus', lineFocus.toFixed(3));
+    blueStory.style.setProperty('--story-progress', totalProgress.toFixed(4));
+    blueStory.style.setProperty('--copy-opacity', copyProgress.toFixed(3));
+    blueStoryFill?.style.setProperty('--fill-scale', (.003 + fillProgress * .997).toFixed(4));
+    blueStoryLines.forEach((line, index) => {
+      const distance = Math.abs(activeFloat - index);
+      const active = copyProgress * (1 - smoothstep(distance / .72));
+      line.style.setProperty('--line-active', active.toFixed(3));
+      line.style.setProperty('--line-y', `${((index - activeFloat) * 54).toFixed(2)}px`);
     });
-    const creditProgress = smoothstep((totalProgress - (scrollLines.length - .3) * segment) / (segment * .7));
-    scrollCredit?.style.setProperty('--credit-progress', creditProgress.toFixed(3));
+    if (blueStoryCount) blueStoryCount.textContent = String(activeIndex + 1).padStart(2, '0');
   };
 
-  const queueScrollLines = () => {
-    if (scrollLinesFrame) return;
-    scrollLinesFrame = window.requestAnimationFrame(updateScrollLines);
+  const queueBlueStory = () => {
+    if (blueStoryFrame) return;
+    blueStoryFrame = window.requestAnimationFrame(updateBlueStory);
   };
 
-  window.addEventListener('scroll', queueScrollLines, { passive: true });
-  window.addEventListener('resize', queueScrollLines);
-  reducedMotion.addEventListener?.('change', updateScrollLines);
-  updateScrollLines();
+  window.addEventListener('scroll', queueBlueStory, { passive: true });
+  window.addEventListener('resize', queueBlueStory);
+  reducedMotion.addEventListener?.('change', updateBlueStory);
+  updateBlueStory();
 
   const creationFlow = document.querySelector('[data-creation-flow]');
   if (creationFlow) {

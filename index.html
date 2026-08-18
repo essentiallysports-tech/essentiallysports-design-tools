@@ -1828,7 +1828,7 @@
   .frame-options {
     width: min(1280px, calc(100% - 80px));
     margin: 0 auto;
-    padding: 44px 0 clamp(64px, 7vw, 112px);
+    padding: 44px 0 0;
   }
   .frame-intro {
     max-width: 680px; margin-top: 16px; color: var(--text-secondary);
@@ -7150,13 +7150,22 @@ body[data-current-page="faq"] .faq-cta-art img {
   </section>
 
   <div class="how-page">
-    <section class="frameup-intro" id="intro" aria-label="About FrameUp" data-scroll-lines>
-      <div class="frameup-intro__sticky" data-how-reveal>
-        <p class="frameup-intro__line">FrameUp gives every team a clean start.</p>
-        <p class="frameup-intro__line">Choose a workspace built for the format.</p>
-        <p class="frameup-intro__line">Add copy, images, and brand-safe details.</p>
-        <p class="frameup-intro__line">Export the file or hand it to a designer.</p>
-        <p class="frameup-intro__credit"><span>- Suhail Quraishi</span><span>Design at EssentiallySports</span></p>
+    <section class="frameup-intro" id="intro" aria-label="How FrameUp works" data-blue-story>
+      <div class="frameup-intro__sticky">
+        <span class="frameup-intro__fill" data-blue-fill aria-hidden="true"></span>
+        <div class="frameup-intro__copy">
+          <p class="frameup-intro__eyebrow">One clear path from idea to publish</p>
+          <div class="frameup-intro__messages" aria-live="off">
+            <p class="frameup-intro__line">FrameUp gives every team a clean start.</p>
+            <p class="frameup-intro__line">Choose a workspace built for the format.</p>
+            <p class="frameup-intro__line">Add copy, images, and brand-safe details.</p>
+            <p class="frameup-intro__line">Export the file or hand it to a designer.</p>
+          </div>
+          <div class="frameup-intro__meta">
+            <p class="frameup-intro__credit"><span>Suhail Quraishi</span><span>Design at EssentiallySports</span></p>
+            <p class="frameup-intro__count" aria-hidden="true"><span data-blue-story-count>01</span> / 04</p>
+          </div>
+        </div>
       </div>
     </section>
 
