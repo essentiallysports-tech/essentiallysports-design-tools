@@ -7,6 +7,7 @@ const designSubmitHandler = require('../api/design-request-submit.js');
 const toolFeedbackHandler = require('../api/tool-feedback-submit.js');
 const callbackHandler = require('../api/es-mcp-oauth-callback.js');
 const videoIntelligenceHandler = require('../api/es-video-intelligence.js');
+const tweetOembedHandler = require('../api/tweet-oembed.js');
 
 const originalFetch = globalThis.fetch;
 
@@ -58,6 +59,63 @@ function createResponse() {
   assert.equal(response.statusCode, 400);
   assert.match(response.payload, /access_denied/i);
   assert.match(response.headers['content-type'], /text\/html/i);
+}
+
+{
+  globalThis.fetch = async (url) => {
+    const value = String(url);
+    if (value.includes('cdn.syndication.twimg.com/tweet-result')) {
+      return new Response(JSON.stringify({
+        favorite_count: 514,
+        retweet_count: 72,
+        conversation_count: 13,
+        created_at: '2021-11-11T11:38:41.000Z',
+        text: 'FrameUp tweet card test https://t.co/example https://t.co/media',
+        entities: {
+          urls: [{ url: 'https://t.co/example', display_url: 'frameup.test' }],
+          media: [{ url: 'https://t.co/media' }],
+        },
+        user: {
+          name: 'Jim Raptis',
+          screen_name: 'd__raptis',
+          is_blue_verified: true,
+          profile_image_url_https: 'https://pbs.twimg.com/profile_images/example_normal.jpg',
+        },
+      }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    if (value.includes('pbs.twimg.com/profile_images/example_400x400.jpg')) {
+      return new Response(Buffer.from('avatar-image'), {
+        status: 200,
+        headers: { 'content-type': 'image/jpeg' },
+      });
+    }
+    throw new Error(`Unexpected fetch: ${value}`);
+  };
+
+  const response = createResponse();
+  await tweetOembedHandler({
+    method: 'GET',
+    headers: {},
+    query: { url: 'https://twitter.com/d__raptis/status/1458761091195064325' },
+  }, response);
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.payload);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.authorName, 'Jim Raptis');
+  assert.equal(payload.handle, 'd__raptis');
+  assert.match(payload.text, /FrameUp tweet card test/);
+  assert.match(payload.text, /frameup\.test/);
+  assert.doesNotMatch(payload.text, /t\.co\/media/);
+  assert.equal(payload.dateLabel, '11:38 AM · 11 Nov 2021');
+  assert.equal(payload.metrics, '13 replies · 72 reposts · 514 likes');
+  assert.equal(payload.verified, true);
+  assert.match(payload.avatarDataUrl, /^data:image\/jpeg;base64,/);
+
+  globalThis.fetch = originalFetch;
 }
 
 {
