@@ -13332,16 +13332,10 @@ function drawTwitterQuotePost(ctx, W, H, scale) {
     drawCoverImage(ctx, state.photo, W, H, scale);
   }
 
-  const topShade = ctx.createLinearGradient(0, 0, 0, sx(360));
-  topShade.addColorStop(0, 'rgba(0,0,0,0.48)');
-  topShade.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = topShade;
-  ctx.fillRect(0, 0, W, sx(360));
-
   const overlayHeight = sx(720);
   const grad = ctx.createLinearGradient(0, H, 0, H - overlayHeight);
-  grad.addColorStop(0, 'rgba(0,0,0,0.98)');
-  grad.addColorStop(0.32, 'rgba(0,0,0,0.88)');
+  grad.addColorStop(0, 'rgba(0,0,0,0.90)');
+  grad.addColorStop(0.32, 'rgba(0,0,0,0.82)');
   grad.addColorStop(0.66, 'rgba(0,0,0,0.38)');
   grad.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = grad;
