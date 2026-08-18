@@ -17,6 +17,34 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-08-18 — Tool Feedback focused form redesign
+- Status: `[pushed - 1f4f2b8]`
+- Files touched: `tool-feedback.html`, `tool-feedback.css`, `tool-feedback.js`.
+- Ask (Suhail): bring Tool Feedback fully into the website's established UI language, improve its
+  iconography and hierarchy, and turn it into a focused single-column form without changing feedback
+  storage or submission behavior.
+- Rebuilt the page around one centered `840px` panel and removed the competing right-side guidance
+  card. The page now uses shared design tokens, the standard page-title scale, restrained account
+  metadata, a `10px` panel radius, and the same ES-blue selected/focus/CTA language as the main site.
+- Replaced the tall feedback cards with compact Bug, Idea, Praise, and Other selectors using consistent
+  `24x24` viewBox line icons rendered at `18px`. The selected state uses `#E8F2FF` with an ES-blue border;
+  the redundant `Signed-in users only` badge was removed.
+- Added feedback-type-specific guidance below `Tell us what happened`, kept the tool preselection and
+  custom dropdown contract intact, increased the textarea height, moved the character count inside its
+  lower-right edge, and paired a quiet `Back to workspaces` link with the standard primary CTA. The
+  dropdown also received improved keyboard handling.
+- Mobile now uses `16px` page margins, a `2x2` feedback selector grid, `16px` form text, and a full-width
+  submit button while preserving 44px-or-larger touch targets. Auth, API submission, validation,
+  loading/error/success states, query-string tool preselection, and reset behavior remain intact.
+- Verified: `node --check tool-feedback.js`, `scripts/test-design-tokens.mjs`, and
+  `scripts/test-vercel-api-adapters.mjs` pass. Browser smoke passed at 1280px, 1440px, 390x844, and
+  360x740 with no horizontal overflow or console errors; contextual helper changes, query preselection,
+  and empty-submit validation were exercised. A real authenticated submission was not created during
+  visual QA to avoid adding test feedback; the API adapter regression covers the submission contract.
+- Known unrelated check: `scripts/check-site-chrome.mjs` still reports pre-existing failures for the
+  missing `how-it-works.html` page and stale chrome expectations on unrelated pages. Those files were
+  not changed as part of this focused redesign.
+
 ### 2026-08-17 — Newsletter widget builder: per-pick Show/Hide switches, paste-link field cleanup
 - Status: `[pushed - 573da5d, 6edf0c1, 9966dbe]`
 - Files touched: `index.html` only.
