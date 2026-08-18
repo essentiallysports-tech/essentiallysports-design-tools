@@ -96,53 +96,41 @@
 
   const scrollLinesSection = document.querySelector('[data-scroll-lines]');
   const scrollLines = scrollLinesSection ? [...scrollLinesSection.querySelectorAll('.frameup-intro__line')] : [];
-  const scrollWords = scrollLines.map(line => {
-    const words = line.textContent.trim().split(/(\s+)/);
-    line.textContent = '';
-    return words.map(part => {
-      if (/^\s+$/.test(part)) {
-        line.appendChild(document.createTextNode(part));
-        return null;
-      }
-      const word = document.createElement('span');
-      word.className = 'frameup-intro__word';
-      word.textContent = part;
-      line.appendChild(word);
-      return word;
-    }).filter(Boolean);
-  });
+  const scrollCredit = scrollLinesSection?.querySelector('.frameup-intro__credit');
   let scrollLinesFrame = 0;
+  const clamp01 = value => Math.min(1, Math.max(0, value));
+  const smoothstep = value => {
+    const progress = clamp01(value);
+    return progress * progress * (3 - 2 * progress);
+  };
 
   const updateScrollLines = () => {
     scrollLinesFrame = 0;
     if (!scrollLinesSection || !scrollLines.length) return;
 
     if (reducedMotion.matches) {
-      scrollWords.forEach(words => {
-        words.forEach(word => {
-          word.classList.add('is-visible');
-          word.classList.remove('is-cursor');
-        });
+      scrollLines.forEach(line => {
+        line.style.setProperty('--line-progress', '1');
+        line.style.setProperty('--line-focus', '1');
       });
+      scrollCredit?.style.setProperty('--credit-progress', '1');
       return;
     }
 
     const rect = scrollLinesSection.getBoundingClientRect();
     const range = Math.max(1, scrollLinesSection.offsetHeight - window.innerHeight);
     const totalProgress = Math.min(1, Math.max(0, -rect.top / range));
-    const segment = 1 / scrollLines.length;
+    const segment = 1 / (scrollLines.length + .35);
 
     scrollLines.forEach((line, index) => {
-      const start = index * segment;
-      const localProgress = Math.min(1, Math.max(0, (totalProgress - start) / segment));
-      const words = scrollWords[index] || [];
-      const visibleCount = localProgress <= 0 ? 0 : Math.min(words.length, Math.ceil(localProgress * words.length));
-      words.forEach((word, wordIndex) => {
-        const visible = wordIndex < visibleCount || localProgress >= 1;
-        word.classList.toggle('is-visible', visible);
-        word.classList.toggle('is-cursor', localProgress > 0 && localProgress < 1 && wordIndex === Math.max(0, visibleCount - 1));
-      });
+      const start = index * segment * .92;
+      const lineProgress = smoothstep((totalProgress - start) / (segment * .9));
+      const lineFocus = smoothstep((totalProgress - start + segment * .28) / (segment * .75));
+      line.style.setProperty('--line-progress', lineProgress.toFixed(3));
+      line.style.setProperty('--line-focus', lineFocus.toFixed(3));
     });
+    const creditProgress = smoothstep((totalProgress - (scrollLines.length - .3) * segment) / (segment * .7));
+    scrollCredit?.style.setProperty('--credit-progress', creditProgress.toFixed(3));
   };
 
   const queueScrollLines = () => {
