@@ -74,7 +74,8 @@ body.feedback-page *::after {
   color: var(--fb-ink);
   font-family: var(--fb-font-display);
   font-size: 56px;
-  font-weight: 900;
+  font-weight: 1000;
+  font-variation-settings: "wght" 1000;
   line-height: .92;
   letter-spacing: 0;
 }

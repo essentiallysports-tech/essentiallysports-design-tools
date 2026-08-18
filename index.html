@@ -17131,12 +17131,11 @@ loadFont().then(() => render());
     contentRoot.className = 'studio-content-sections';
     contentRoot.dataset.studioContentSections = 'true';
     contentRoot.innerHTML = `
-      <div class="studio-primary-controls" data-studio-primary-controls aria-label="Workspace format controls"></div>
       <div class="studio-accordion-list" data-studio-accordion-list></div>
     `;
     dock.insertAdjacentElement('afterend', contentRoot);
 
-    const primary = contentRoot.querySelector('[data-studio-primary-controls]');
+    const primary = document.querySelector('[data-studio-primary-controls]');
     [
       document.querySelector('.youtube-control-row'),
       document.querySelector('.newsletter-control-row'),
@@ -17175,6 +17174,7 @@ loadFont().then(() => render());
       dock.setAttribute('aria-label', 'Studio controls');
       dock.innerHTML = `
         <div class="studio-export-section" data-studio-export-section></div>
+        <div class="studio-primary-controls" data-studio-primary-controls aria-label="Workspace format controls"></div>
         <div class="studio-inspector-tabs" role="tablist" aria-label="Inspector groups">
           <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="image" aria-selected="false">Image Controls</button>
           <button class="studio-inspector-tab is-active" type="button" role="tab" data-studio-inspector-tab="content" aria-selected="true">Content</button>

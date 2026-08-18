@@ -118,7 +118,10 @@
       const session = await window.ESAuth.getSession();
       const email = session?.user?.email;
       if (email) {
-        signedInEl.innerHTML = `Signed in as <strong>${email.replace(/</g, '&lt;')}</strong>`;
+        signedInEl.textContent = 'Signed in as ';
+        const emailNode = document.createElement('strong');
+        emailNode.textContent = email;
+        signedInEl.appendChild(emailNode);
       }
     } catch {
       // Leave the default copy in place.
