@@ -1826,9 +1826,12 @@
     outline: none;
   }
   .frame-options {
+    position: sticky;
+    z-index: 1;
+    top: var(--cards-sticky-top, var(--site-header-height, 72px));
     width: min(1280px, calc(100% - 80px));
     margin: 0 auto;
-    padding: 44px 0 0;
+    padding: 44px 0 32px;
   }
   .frame-intro {
     max-width: 680px; margin-top: 16px; color: var(--text-secondary);
@@ -4560,6 +4563,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
     .frame-options {
       padding-top: 34px;
+      padding-bottom: 24px;
     }
     .frame-section-head {
       margin-bottom: 14px;
@@ -7152,7 +7156,10 @@ body[data-current-page="faq"] .faq-cta-art img {
   <div class="how-page">
     <section class="frameup-intro" id="intro" aria-label="How FrameUp works" data-blue-story>
       <div class="frameup-intro__sticky">
-        <span class="frameup-intro__fill" data-blue-fill aria-hidden="true"></span>
+        <p class="frameup-intro__scroll-cue" aria-hidden="true">
+          <span>Keep scrolling</span>
+          <span class="ui-arrow-right" aria-hidden="true"></span>
+        </p>
         <div class="frameup-intro__copy">
           <p class="frameup-intro__eyebrow">One clear path from idea to publish</p>
           <div class="frameup-intro__messages" aria-live="off">
