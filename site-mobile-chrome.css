@@ -23,6 +23,11 @@
   display: none;
 }
 
+html[data-studio-shell="on"] .mobile-editor-media-actions,
+html[data-studio-shell="on"] .mobile-editor-more-actions {
+  display: none;
+}
+
 @media (max-width: 900px) {
   html,
   body {
