@@ -14068,6 +14068,14 @@ function drawAsapTemplate1Post(ctx, W, H, scale) {
 
   const accentColor = getAsapTemplate1Color();
 
+  const mistHeight = cardHeight + sx(200);
+  const mistTop = Math.max(0, H - mistHeight);
+  const mistGrad = ctx.createLinearGradient(0, H, 0, mistTop);
+  mistGrad.addColorStop(0, 'rgba(0,0,0,0.85)');
+  mistGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = mistGrad;
+  ctx.fillRect(0, mistTop, W, H - mistTop);
+
   ctx.fillStyle = L.cardBg;
   drawRoundedRectPath(ctx, cardX, cardY, cardWidth, cardHeight, sx(L.cardRadius));
   ctx.fill();
