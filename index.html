@@ -7175,6 +7175,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           <option value="stats-double-ent">Stats Post Double Ent</option>
           <option value="listicle-type-1">Listicle Type 1</option>
           <option value="listicle-type-2">Listicle Type 2</option>
+          <option value="asap-template-1">ASAP Template 1</option>
         </select>
       </div>
     </div>
@@ -7385,6 +7386,14 @@ body[data-current-page="faq"] .faq-cta-art img {
         </label>
         <div class="listicle-row-list" id="listicle-type2-row-list" aria-label="Five player listicle rows"></div>
         <p class="listicle-note">Exactly five ranked players are kept. Team logos stay square and player images are fitted safely without stretching.</p>
+      </div>
+      <div class="listicle-fields" id="asap-template1-fields" aria-label="ASAP Template 1 data">
+        <label class="listicle-field-label" for="asap-template1-title">
+          Headline
+          <textarea id="asap-template1-title" class="pill-entry listicle-title-input" rows="2" maxlength="140" placeholder="Aaron Donald has already completed 2 workouts with Rams" spellcheck="false" data-asap-template1-field="title"></textarea>
+        </label>
+        <div class="listicle-row-list" id="asap-template1-row-list" aria-label="Up to six update rows"></div>
+        <p class="listicle-note">Add up to six dated updates. Leave a row blank to skip it — the card sizes itself to however many rows you fill in.</p>
       </div>
     </div>
 
@@ -8425,6 +8434,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
 <script src="listicle-data.js"></script>
 <script src="listicle-type2-data.js"></script>
+<script src="asap-template-data.js"></script>
 <script>
 
 // â”€â”€â”€ EMBEDDED DATA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -8501,6 +8511,7 @@ function createDesignerState(defaultBottomAnchor) {
     longQuoteName: 'BY ES STAFF',
     listicleData: ESListicle.createDefaultListicleData(),
     listicleType2Data: ESListicleType2.createDefaultListicleData(),
+    asapTemplate1Data: ESAsapTemplate1.createDefaultData(),
     lines: [],
     textByContext: {},
     designByContext: {},
@@ -9759,6 +9770,20 @@ function getListicleType1Payload() {
   };
 }
 
+function getAsapTemplate1Data() {
+  state.asapTemplate1Data = ESAsapTemplate1.normalizeData(state.asapTemplate1Data);
+  return state.asapTemplate1Data;
+}
+
+function getAsapTemplate1Payload() {
+  return {
+    type: 'asap-template-1',
+    schemaVersion: ESAsapTemplate1.SCHEMA_VERSION,
+    rowCount: ESAsapTemplate1.ROW_COUNT,
+    data: getAsapTemplate1Data(),
+  };
+}
+
 function createListicleInput(labelText, key, value, maxLength, rowIndex) {
   const label = document.createElement('label');
   label.className = 'listicle-field-label';
@@ -10208,6 +10233,60 @@ function parseListicleType2AssetToken(token) {
   return { rowIndex: Number(rowIndex), asset };
 }
 
+function buildAsapTemplate1RowControls() {
+  const list = document.getElementById('asap-template1-row-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const data = getAsapTemplate1Data();
+  data.rows.forEach((row, rowIndex) => {
+    const label = document.createElement('label');
+    label.className = 'listicle-field-label';
+    label.textContent = `Row ${rowIndex + 1}`;
+    const input = document.createElement('input');
+    input.className = 'pill-entry';
+    input.type = 'text';
+    input.value = row.text;
+    input.maxLength = ESAsapTemplate1.LIMITS.row;
+    input.spellcheck = false;
+    input.placeholder = 'Ex. 5th August - 1st workout with Rams';
+    input.dataset.asapTemplate1Row = String(rowIndex);
+    label.appendChild(input);
+    list.appendChild(label);
+  });
+}
+
+function syncAsapTemplate1Controls() {
+  const fields = document.getElementById('asap-template1-fields');
+  if (!fields) return;
+  const data = getAsapTemplate1Data();
+  fields.querySelectorAll('[data-asap-template1-field]').forEach(input => {
+    const key = input.dataset.asapTemplate1Field;
+    if (document.activeElement !== input) input.value = data[key] || '';
+  });
+  const rows = fields.querySelectorAll('[data-asap-template1-row]');
+  if (rows.length !== ESAsapTemplate1.ROW_COUNT) buildAsapTemplate1RowControls();
+}
+
+function initAsapTemplate1Controls() {
+  const fields = document.getElementById('asap-template1-fields');
+  if (!fields) return;
+  buildAsapTemplate1RowControls();
+
+  fields.addEventListener('input', event => {
+    const field = event.target.closest('[data-asap-template1-field]');
+    if (field) {
+      state.asapTemplate1Data = ESAsapTemplate1.updateField(state.asapTemplate1Data, field.dataset.asapTemplate1Field, field.value);
+      render();
+      return;
+    }
+    const rowInput = event.target.closest('[data-asap-template1-row]');
+    if (!rowInput) return;
+    const rowIndex = Number(rowInput.dataset.asapTemplate1Row);
+    state.asapTemplate1Data = ESAsapTemplate1.updateRow(state.asapTemplate1Data, rowIndex, { text: rowInput.value });
+    render();
+  });
+}
+
 function initListicleType2Controls() {
   const fields = document.getElementById('listicle-type2-fields');
   if (!fields) return;
@@ -10364,6 +10443,7 @@ function initUI() {
   ta.addEventListener('input', pendingTextChange);
   initListicleControls();
   initListicleType2Controls();
+  initAsapTemplate1Controls();
   const longQuoteNameInput = document.getElementById('long-quote-name');
   if (longQuoteNameInput) {
     longQuoteNameInput.addEventListener('input', event => {
@@ -10524,7 +10604,7 @@ function onTextChange() {
   const ta = document.getElementById('pill-text');
   if (
     activeWorkspace === 'instagram' &&
-    ((state.postType || 'cover') === 'listicle-type-1' || (state.postType || 'cover') === 'listicle-type-2')
+    ((state.postType || 'cover') === 'listicle-type-1' || (state.postType || 'cover') === 'listicle-type-2' || (state.postType || 'cover') === 'asap-template-1')
   ) return;
   if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'double-entity-quote') {
     syncDoubleEntityLinesFromFields();
@@ -11800,6 +11880,14 @@ const INSTAGRAM_POST_TYPES = {
     render: drawListicleType2Post,
     getPayload: getListicleType2Payload,
   },
+  'asap-template-1': {
+    label: 'ASAP Template 1',
+    placeholder: '',
+    supportsSwipe: false,
+    maxLines: 0,
+    render: drawAsapTemplate1Post,
+    getPayload: getAsapTemplate1Payload,
+  },
 };
 
 const REELS_FORMAT_TYPES = {
@@ -12972,6 +13060,144 @@ function drawListicleType1Post(ctx, W, H, scale) {
   ctx.restore();
 
   drawSwipeButton(ctx, W, H, scale, true);
+
+  if (scale === 1) {
+    state.lastTextBounds = null;
+    state.textHitRects = [];
+  }
+}
+
+const ASAP_TEMPLATE1_LAYOUT = Object.freeze({
+  safeInset: 50,
+  cardRadius: 20,
+  cardBg: '#E8E8E8',
+  accentColor: '#1B406F',
+  bulletColor: '#003594',
+  cardPaddingX: 40,
+  cardPaddingTop: 44,
+  cardPaddingBottom: 44,
+  accentLineWidth: 5,
+  accentLineGap: 22,
+  titleGapBelow: 36,
+  titleMaxLines: 3,
+  titleFontStart: 60,
+  titleFontMin: 32,
+  rowFontStart: 30,
+  rowFontMin: 20,
+  rowGap: 26,
+  bulletSize: 20,
+  bulletGap: 20,
+  cardMinHeight: 260,
+  cardMaxHeight: 900,
+  overlayHeight: 330,
+});
+
+function fitAsapTemplate1RowText(ctx, text, maxWidth, startSize, minSize) {
+  const value = String(text || '').toUpperCase();
+  let size = startSize;
+  while (size > minSize) {
+    ctx.font = `700 ${Math.round(size)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
+    if (ctx.measureText(value).width <= maxWidth) break;
+    size -= 1;
+  }
+  ctx.font = `700 ${Math.round(size)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
+  let display = value;
+  if (ctx.measureText(display).width > maxWidth) {
+    while (display.length > 1 && ctx.measureText(`${display}…`).width > maxWidth) {
+      display = display.slice(0, -1).trim();
+    }
+    display = `${display}…`;
+  }
+  return { text: display, size };
+}
+
+function drawAsapTemplate1Post(ctx, W, H, scale) {
+  const L = ASAP_TEMPLATE1_LAYOUT;
+  const sx = value => Math.round(value * scale);
+  ctx.clearRect(0, 0, W, H);
+
+  if (state.photo) {
+    drawCoverImage(ctx, state.photo, W, H, scale);
+  } else {
+    ctx.fillStyle = '#1A1A1A';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  const overlayHeight = sx(L.overlayHeight);
+  const overlayGrad = ctx.createLinearGradient(0, 0, 0, overlayHeight);
+  overlayGrad.addColorStop(0, 'rgba(0,0,0,0.5)');
+  overlayGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = overlayGrad;
+  ctx.fillRect(0, 0, W, overlayHeight);
+
+  const logoWidth = sx(LOGO_FINAL_W);
+  const logoHeight = sx(LOGO_FINAL_H);
+  drawEsLogoMark(ctx, W - sx(L.safeInset) - logoWidth, sx(L.safeInset), logoWidth, logoHeight);
+
+  const data = getAsapTemplate1Data();
+  const rows = data.rows.filter(row => row.text.trim().length > 0);
+
+  const cardX = sx(L.safeInset);
+  const cardWidth = W - sx(L.safeInset) * 2;
+  const contentX = cardX + sx(L.cardPaddingX);
+  const contentWidth = cardWidth - sx(L.cardPaddingX) * 2 - sx(L.accentLineWidth) - sx(L.accentLineGap);
+
+  const title = fitListicleBlockInBox(ctx, data.title, contentWidth, sx(300), L.titleMaxLines, L.titleFontStart * scale, L.titleFontMin * scale);
+
+  const textX = contentX + sx(L.accentLineWidth) + sx(L.accentLineGap);
+  const rowTextWidth = contentWidth - sx(L.bulletSize) - sx(L.bulletGap);
+  const measuredRows = rows.map(row => fitAsapTemplate1RowText(ctx, row.text, rowTextWidth, L.rowFontStart * scale, L.rowFontMin * scale));
+  const rowHeights = measuredRows.map(row => Math.round(row.size * 1.15));
+  const rowsHeight = rowHeights.reduce((sum, height) => sum + height, 0) + Math.max(0, measuredRows.length - 1) * sx(L.rowGap);
+  const cardContentHeight = title.renderedHeight + (measuredRows.length ? sx(L.titleGapBelow) + rowsHeight : 0);
+  const cardHeight = clamp(sx(L.cardPaddingTop) + cardContentHeight + sx(L.cardPaddingBottom), sx(L.cardMinHeight), sx(L.cardMaxHeight));
+  const cardY = H - sx(L.safeInset) - cardHeight;
+
+  ctx.fillStyle = L.cardBg;
+  drawRoundedRectPath(ctx, cardX, cardY, cardWidth, cardHeight, sx(L.cardRadius));
+  ctx.fill();
+
+  const textTop = cardY + sx(L.cardPaddingTop);
+  ctx.fillStyle = L.accentColor;
+  ctx.fillRect(contentX, textTop, sx(L.accentLineWidth), title.renderedHeight);
+
+  ctx.fillStyle = '#0A0A0A';
+  ctx.font = `900 ${Math.round(title.size)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  const titleBaselineY = textTop + title.capAscent;
+  title.lines.forEach((line, index) => {
+    ctx.fillText(line, textX, titleBaselineY + index * title.lineHeight);
+  });
+
+  let rowY = textTop + title.renderedHeight + sx(L.titleGapBelow);
+  measuredRows.forEach((row, index) => {
+    const rowHeight = rowHeights[index];
+    const centerY = rowY + rowHeight / 2;
+    const bulletSize = sx(L.bulletSize);
+    ctx.fillStyle = L.bulletColor;
+    ctx.fillRect(contentX, Math.round(centerY - bulletSize / 2), bulletSize, bulletSize);
+
+    ctx.fillStyle = '#0A0A0A';
+    ctx.font = `700 ${Math.round(row.size)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(row.text, contentX + bulletSize + sx(L.bulletGap), Math.round(centerY));
+
+    if (index < measuredRows.length - 1) {
+      const dividerY = rowY + rowHeight + Math.round(sx(L.rowGap) / 2);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = Math.max(1, sx(1));
+      ctx.setLineDash([sx(9), sx(9)]);
+      ctx.beginPath();
+      ctx.moveTo(contentX, dividerY);
+      ctx.lineTo(cardX + cardWidth - sx(L.cardPaddingX), dividerY);
+      ctx.stroke();
+      ctx.restore();
+    }
+    rowY += rowHeight + sx(L.rowGap);
+  });
 
   if (scale === 1) {
     state.lastTextBounds = null;
@@ -14301,7 +14527,7 @@ function setupCanvasDrag() {
     if (isCanvasImageEditMode()) return;
     if (
       activeWorkspace === 'instagram' &&
-      ((state.postType || 'cover') === 'listicle-type-1' || (state.postType || 'cover') === 'listicle-type-2')
+      ((state.postType || 'cover') === 'listicle-type-1' || (state.postType || 'cover') === 'listicle-type-2' || (state.postType || 'cover') === 'asap-template-1')
     ) return;
     if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'long-quote') return;
     if ((activeWorkspace === 'instagram' && (state.postType || 'cover') === 'stats-single-ent') || (activeWorkspace === 'reels' && getReelsFormatConfig().postType === 'stats-single-ent')) return;
@@ -14625,6 +14851,9 @@ function getMainTextSlug(fallback = 'untitled') {
   }
   if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'listicle-type-2') {
     return slugifyFilenamePart(getListicleType2Data().title, 'listicle').slice(0, 80) || 'listicle';
+  }
+  if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'asap-template-1') {
+    return slugifyFilenamePart(getAsapTemplate1Data().title, 'asap-template').slice(0, 80) || 'asap-template';
   }
   const source = (state.lines || [])
     .map(line => String(line || '').trim())
@@ -15299,7 +15528,9 @@ function syncPostTypeControls() {
       ? 'Stats Post Details'
       : isInstagram && (activeType === 'listicle-type-1' || activeType === 'listicle-type-2')
         ? 'Listicle Data'
-        : 'Text On Design';
+        : isInstagram && activeType === 'asap-template-1'
+          ? 'ASAP Template Data'
+          : 'Text On Design';
   }
 
   control.classList.toggle('is-visible', isInstagram);
@@ -15345,12 +15576,18 @@ function syncPostTypeControls() {
     listicleType2Fields.classList.toggle('is-visible', isInstagram && activeType === 'listicle-type-2');
     if (isInstagram && activeType === 'listicle-type-2') syncListicleType2Controls();
   }
+  const asapTemplate1Fields = document.getElementById('asap-template1-fields');
+  if (asapTemplate1Fields) {
+    asapTemplate1Fields.classList.toggle('is-visible', isInstagram && activeType === 'asap-template-1');
+    if (isInstagram && activeType === 'asap-template-1') syncAsapTemplate1Controls();
+  }
   const hidePrimaryTextarea = (isInstagram && (
     activeType === 'stats-single-ent' ||
     activeType === 'stats-double-ent' ||
     activeType === 'double-entity-quote' ||
     activeType === 'listicle-type-1' ||
-    activeType === 'listicle-type-2'
+    activeType === 'listicle-type-2' ||
+    activeType === 'asap-template-1'
   )) || (isReels && activeType === 'stats-single-ent');
   textarea.closest('.input-wrap')?.classList.toggle('view-hidden', hidePrimaryTextarea);
   if (!hidePrimaryTextarea) {
@@ -15369,7 +15606,8 @@ function syncPostTypeControls() {
         activeType === 'long-quote' ||
         activeType === 'double-entity-quote' ||
         activeType === 'listicle-type-1' ||
-        activeType === 'listicle-type-2'
+        activeType === 'listicle-type-2' ||
+        activeType === 'asap-template-1'
       )) || (activeWorkspace === 'youtube' && !!state.youtubeQuote) || (isReels && activeType === 'quote')
     );
     colorCard.classList.toggle('is-hidden-for-newsletter-brand', isNewsletterBrandAsset);
