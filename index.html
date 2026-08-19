@@ -13976,26 +13976,32 @@ const ASAP_TEMPLATE1_LAYOUT = Object.freeze({
   safeInset: 50,
   cardRadius: 20,
   cardBg: '#E8E8E8',
-  accentColor: '#1B406F',
-  bulletColor: '#003594',
+  defaultAccentColor: '#003594',
   cardPaddingX: 40,
   cardPaddingTop: 44,
   cardPaddingBottom: 44,
   accentLineWidth: 5,
   accentLineGap: 22,
   titleGapBelow: 36,
-  titleMaxLines: 3,
-  titleFontStart: 60,
-  titleFontMin: 32,
+  titleMaxLines: 8,
+  titleFontSize: 60,
   rowFontStart: 30,
   rowFontMin: 20,
   rowGap: 26,
   bulletSize: 15,
   bulletGap: 20,
   cardMinHeight: 260,
-  cardMaxHeight: 900,
   overlayHeight: 330,
 });
+
+function getAsapTemplate1Color() {
+  const entry = getBrandEntry(state.sport, state.team);
+  const palette = state.pillPalette
+    || (entry ? getPaletteForWorkspace(entry)[0] : null)
+    || entry?.primary
+    || null;
+  return palette?.background || ASAP_TEMPLATE1_LAYOUT.defaultAccentColor;
+}
 
 function fitAsapTemplate1RowText(ctx, text, maxWidth, startSize, minSize) {
   const value = String(text || '').toUpperCase();
@@ -14047,7 +14053,8 @@ function drawAsapTemplate1Post(ctx, W, H, scale) {
   const contentX = cardX + sx(L.cardPaddingX);
   const contentWidth = cardWidth - sx(L.cardPaddingX) * 2 - sx(L.accentLineWidth) - sx(L.accentLineGap);
 
-  const title = fitListicleBlockInBox(ctx, data.title, contentWidth, sx(300), L.titleMaxLines, L.titleFontStart * scale, L.titleFontMin * scale);
+  const titleFontSize = L.titleFontSize * scale;
+  const title = fitListicleBlockInBox(ctx, data.title, contentWidth, sx(4000), L.titleMaxLines, titleFontSize, titleFontSize);
 
   const textX = contentX + sx(L.accentLineWidth) + sx(L.accentLineGap);
   const rowTextWidth = contentWidth - sx(L.bulletSize) - sx(L.bulletGap);
@@ -14055,15 +14062,18 @@ function drawAsapTemplate1Post(ctx, W, H, scale) {
   const rowHeights = measuredRows.map(row => Math.round(row.size * 1.15));
   const rowsHeight = rowHeights.reduce((sum, height) => sum + height, 0) + Math.max(0, measuredRows.length - 1) * sx(L.rowGap);
   const cardContentHeight = title.renderedHeight + (measuredRows.length ? sx(L.titleGapBelow) + rowsHeight : 0);
-  const cardHeight = clamp(sx(L.cardPaddingTop) + cardContentHeight + sx(L.cardPaddingBottom), sx(L.cardMinHeight), sx(L.cardMaxHeight));
+  const cardMaxHeight = H - sx(L.safeInset) - (sx(L.safeInset) + logoHeight + sx(20));
+  const cardHeight = clamp(sx(L.cardPaddingTop) + cardContentHeight + sx(L.cardPaddingBottom), sx(L.cardMinHeight), cardMaxHeight);
   const cardY = H - sx(L.safeInset) - cardHeight;
+
+  const accentColor = getAsapTemplate1Color();
 
   ctx.fillStyle = L.cardBg;
   drawRoundedRectPath(ctx, cardX, cardY, cardWidth, cardHeight, sx(L.cardRadius));
   ctx.fill();
 
   const textTop = cardY + sx(L.cardPaddingTop);
-  ctx.fillStyle = L.accentColor;
+  ctx.fillStyle = accentColor;
   ctx.fillRect(contentX, textTop, sx(L.accentLineWidth), title.renderedHeight);
 
   ctx.fillStyle = '#0A0A0A';
@@ -14082,7 +14092,7 @@ function drawAsapTemplate1Post(ctx, W, H, scale) {
     const bulletSize = Math.round(sx(L.bulletSize));
     const bulletX = Math.round(contentX);
     const bulletY = Math.round(centerY - bulletSize / 2);
-    ctx.fillStyle = L.bulletColor;
+    ctx.fillStyle = accentColor;
     ctx.fillRect(bulletX, bulletY, bulletSize, bulletSize);
 
     ctx.fillStyle = '#0A0A0A';
@@ -16627,7 +16637,6 @@ function syncPostTypeControls() {
         activeType === 'double-entity-quote' ||
         activeType === 'listicle-type-1' ||
         activeType === 'listicle-type-2' ||
-        activeType === 'asap-template-1' ||
         activeType === 'twitter-quote'
       )) || (activeWorkspace === 'youtube' && !!state.youtubeQuote) || (isReels && activeType === 'quote')
     );
