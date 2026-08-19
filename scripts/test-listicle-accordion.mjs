@@ -31,7 +31,7 @@ assert.match(
 assert.match(
   source,
   /blockLabel\.textContent = `Block \$\{rowIndex \+ 1\}`;[\s\S]*?summary\.append\(blockLabel, chevron\);/,
-  'collapsed listicle rows must use the simplified Block 1–5 labels',
+  'collapsed listicle rows must use the simplified Block 1–10 labels',
 );
 assert.match(
   source,

@@ -14,7 +14,7 @@ assert.match(source, /let activeListicleType2RowIndex = 0;/, 'the first Type 2 b
 assert.match(
   source,
   /blockLabel\.textContent = `Block \$\{rowIndex \+ 1\}`;/,
-  'Type 2 summaries must use Block 1 through Block 5',
+  'Type 2 summaries must use Block 1 through Block 10',
 );
 assert.match(source, /asset === 'player' \? 10 \* 1024 \* 1024 : 4 \* 1024 \* 1024/, 'asset limits must stay explicit');
 
@@ -22,7 +22,7 @@ const rendererStart = source.indexOf('function drawListicleType2Post');
 const rendererEnd = source.indexOf('\nfunction drawListicleRankPill', rendererStart);
 assert.ok(rendererStart >= 0 && rendererEnd > rendererStart, 'Type 2 renderer must exist');
 const renderer = source.slice(rendererStart, rendererEnd);
-assert.match(renderer, /const rowStart = 323;[\s\S]*?data\.rows\.forEach/, 'Type 2 must render its fixed row system');
+assert.match(renderer, /const rowStart = 323;[\s\S]*?rowsToRender\.forEach/, 'Type 2 must render its dynamic row system');
 assert.match(renderer, /drawListicleType2Player/, 'Type 2 must render optional player cutouts');
 assert.match(source, /function drawListicleType2Rank[\s\S]*?const horizontalPad = 16 \* scale;/, 'rank badges must use equal horizontal padding');
 assert.match(source, /function drawListicleType2Rank[\s\S]*?actualBoundingBoxLeft[\s\S]*?actualBoundingBoxRight[\s\S]*?actualBoundingBoxAscent[\s\S]*?actualBoundingBoxDescent/, 'rank badges must use visible glyph bounds for optical padding');

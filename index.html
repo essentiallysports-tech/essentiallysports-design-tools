@@ -935,6 +935,13 @@
     border-color: #C9D0D9;
     box-shadow: 0 6px 18px rgba(17, 24, 39, 0.055);
   }
+  .listicle-row-card.is-row-hidden {
+    opacity: 0.5;
+  }
+  .listicle-row-header {
+    display: flex;
+    align-items: stretch;
+  }
   .listicle-row-summary {
     width: 100%;
     min-height: 52px;
@@ -948,6 +955,27 @@
     color: var(--text-primary);
     cursor: pointer;
     text-align: left;
+  }
+  .listicle-row-hide-toggle {
+    flex: 0 0 auto;
+    align-self: center;
+    margin-right: 12px;
+    padding: 6px 10px;
+    border: 1px solid #D9DEE5;
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .listicle-row-hide-toggle:hover {
+    background: #FAFAFA;
+  }
+  .listicle-row-card.is-row-hidden .listicle-row-hide-toggle {
+    border-color: var(--accent);
+    color: var(--accent);
   }
   .listicle-row-summary:hover {
     background: #FAFAFA;
@@ -10368,8 +10396,11 @@ function buildListicleRowControls() {
   data.rows.forEach((row, rowIndex) => {
     const card = document.createElement('section');
     const expanded = rowIndex === activeListicleRowIndex;
-    card.className = `listicle-row-card${expanded ? ' is-expanded' : ''}`;
+    card.className = `listicle-row-card${expanded ? ' is-expanded' : ''}${row.hidden ? ' is-row-hidden' : ''}`;
     card.dataset.listicleRowCard = String(rowIndex);
+
+    const header = document.createElement('div');
+    header.className = 'listicle-row-header';
 
     const summary = document.createElement('button');
     summary.className = 'listicle-row-summary';
@@ -10385,6 +10416,13 @@ function buildListicleRowControls() {
     chevron.className = 'listicle-row-chevron';
     chevron.setAttribute('aria-hidden', 'true');
     summary.append(blockLabel, chevron);
+
+    const hideToggle = document.createElement('button');
+    hideToggle.className = 'listicle-row-hide-toggle';
+    hideToggle.type = 'button';
+    hideToggle.dataset.listicleRowHide = String(rowIndex);
+    hideToggle.textContent = row.hidden ? 'Unhide' : 'Hide';
+    header.append(summary, hideToggle);
 
     const panel = document.createElement('div');
     panel.className = 'listicle-row-panel';
@@ -10458,7 +10496,7 @@ function buildListicleRowControls() {
     editor.append(primaryGrid, metricGrid, assetGrid);
     panelInner.appendChild(editor);
     panel.appendChild(panelInner);
-    card.append(summary, panel);
+    card.append(header, panel);
     list.appendChild(card);
   });
 }
@@ -10504,6 +10542,15 @@ function initListicleControls() {
     const rowToggle = event.target.closest('[data-listicle-row-toggle]');
     if (rowToggle) {
       setListicleRowExpanded(Number(rowToggle.dataset.listicleRowToggle));
+      return;
+    }
+    const hideToggle = event.target.closest('[data-listicle-row-hide]');
+    if (hideToggle) {
+      const rowIndex = Number(hideToggle.dataset.listicleRowHide);
+      const row = getListicleData().rows[rowIndex];
+      state.listicleData = ESListicle.updateListicleRow(state.listicleData, rowIndex, { hidden: !row.hidden });
+      buildListicleRowControls();
+      render();
       return;
     }
     const upload = event.target.closest('[data-listicle-logo-button]');
@@ -10660,8 +10707,11 @@ function buildListicleType2RowControls() {
   data.rows.forEach((row, rowIndex) => {
     const expanded = rowIndex === activeListicleType2RowIndex;
     const card = document.createElement('section');
-    card.className = `listicle-row-card${expanded ? ' is-expanded' : ''}`;
+    card.className = `listicle-row-card${expanded ? ' is-expanded' : ''}${row.hidden ? ' is-row-hidden' : ''}`;
     card.dataset.listicleType2RowCard = String(rowIndex);
+
+    const header = document.createElement('div');
+    header.className = 'listicle-row-header';
 
     const summary = document.createElement('button');
     summary.className = 'listicle-row-summary';
@@ -10676,6 +10726,13 @@ function buildListicleType2RowControls() {
     chevron.className = 'listicle-row-chevron';
     chevron.setAttribute('aria-hidden', 'true');
     summary.append(blockLabel, chevron);
+
+    const hideToggle = document.createElement('button');
+    hideToggle.className = 'listicle-row-hide-toggle';
+    hideToggle.type = 'button';
+    hideToggle.dataset.listicleType2RowHide = String(rowIndex);
+    hideToggle.textContent = row.hidden ? 'Unhide' : 'Hide';
+    header.append(summary, hideToggle);
 
     const panel = document.createElement('div');
     panel.className = 'listicle-row-panel';
@@ -10722,7 +10779,7 @@ function buildListicleType2RowControls() {
     editor.append(primaryGrid, subtitleGrid, assets);
     panelInner.appendChild(editor);
     panel.appendChild(panelInner);
-    card.append(summary, panel);
+    card.append(header, panel);
     list.appendChild(card);
   });
 }
@@ -10780,6 +10837,15 @@ function initListicleType2Controls() {
     const toggle = event.target.closest('[data-listicle-type2-row-toggle]');
     if (toggle) {
       setListicleType2RowExpanded(Number(toggle.dataset.listicleType2RowToggle));
+      return;
+    }
+    const hideToggle = event.target.closest('[data-listicle-type2-row-hide]');
+    if (hideToggle) {
+      const rowIndex = Number(hideToggle.dataset.listicleType2RowHide);
+      const row = getListicleType2Data().rows[rowIndex];
+      state.listicleType2Data = ESListicleType2.updateListicleRow(state.listicleType2Data, rowIndex, { hidden: !row.hidden });
+      buildListicleType2RowControls();
+      render();
       return;
     }
     const upload = event.target.closest('[data-listicle-type2-asset-button]');
@@ -13750,16 +13816,29 @@ function drawListicleType1Post(ctx, W, H, scale) {
     ctx.fillText(String(header.text).toUpperCase(), sx(header.x), sx(LISTICLE_TYPE1_TABLE_LAYOUT.headerY));
   });
 
-  const rowTop = LISTICLE_TYPE1_TABLE_LAYOUT.rowTop;
-  const rowHeight = LISTICLE_TYPE1_TABLE_LAYOUT.rowHeight;
-  data.rows.forEach((row, index) => {
-    const top = rowTop + index * rowHeight;
-    const centerY = top + rowHeight / 2;
-    drawListicleRankPill(ctx, row.rank, row.accent, left, sx(centerY), scale);
+  const rowTopPx = sx(LISTICLE_TYPE1_TABLE_LAYOUT.rowTop);
+  const baseRowHeightPx = sx(LISTICLE_TYPE1_TABLE_LAYOUT.rowHeight);
+  const swipeTopPx = H - sx(SWIPE_BUTTON_H) - sx(SWIPE_BUTTON_SAFE_MARGIN) - sx(20);
+  const visibleRows = data.rows.filter(row => !row.hidden);
+  const rowsToRender = visibleRows.length ? visibleRows : data.rows;
+  const rowHeightPx = Math.max(
+    sx(60),
+    Math.min(baseRowHeightPx, Math.floor((swipeTopPx - rowTopPx) / rowsToRender.length))
+  );
+  const rowScale = rowHeightPx / baseRowHeightPx;
+  // Row *spacing* must shrink linearly to fit more rows, but glyphs/logos read as
+  // "too small" if they shrink at the same rate — there's slack in the original
+  // padding, so content only needs to shrink at a gentler curve than the pitch.
+  const contentScale = Math.pow(rowScale, 0.6);
 
-    const logoFrameSize = sx(106);
-    drawListicleLogo(ctx, row, sx(174), sx(centerY) - logoFrameSize / 2, logoFrameSize, logoFrameSize, scale);
-    const entity = fitListicleTwoLineEntity(ctx, row.entity, sx(335), 54 * scale, 34 * scale);
+  rowsToRender.forEach((row, index) => {
+    const top = rowTopPx + index * rowHeightPx;
+    const centerY = top + rowHeightPx / 2;
+    drawListicleRankPill(ctx, row.rank, row.accent, left, centerY, scale, contentScale);
+
+    const logoFrameSize = Math.round(sx(106) * contentScale);
+    drawListicleLogo(ctx, row, sx(174), centerY - logoFrameSize / 2, logoFrameSize, logoFrameSize, scale);
+    const entity = fitListicleTwoLineEntity(ctx, row.entity, sx(335), 54 * scale * contentScale, 34 * scale * contentScale);
     const entityLineHeight = entity.size * 0.88;
     const entityBlockHeight = entity.lines.length * entityLineHeight;
     ctx.fillStyle = '#08090A';
@@ -13767,14 +13846,14 @@ function drawListicleType1Post(ctx, W, H, scale) {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     entity.lines.forEach((line, lineIndex) => {
-      ctx.fillText(line, sx(315), sx(centerY) - entityBlockHeight / 2 + lineIndex * entityLineHeight);
+      ctx.fillText(line, sx(315), centerY - entityBlockHeight / 2 + lineIndex * entityLineHeight);
     });
 
-    drawStatsText(ctx, row.metric1, sx(755), sx(centerY), sx(180), 54 * scale, 31 * scale, '#101010');
-    drawStatsText(ctx, row.metric2, sx(950), sx(centerY), sx(130), 54 * scale, 31 * scale, '#101010');
+    drawStatsText(ctx, row.metric1, sx(755), centerY, sx(180), 54 * scale * contentScale, 31 * scale * contentScale, '#101010');
+    drawStatsText(ctx, row.metric2, sx(950), centerY, sx(130), 54 * scale * contentScale, 31 * scale * contentScale, '#101010');
 
-    if (index < data.rows.length - 1) {
-      const separatorY = sx(top + rowHeight - 4);
+    if (index < rowsToRender.length - 1) {
+      const separatorY = top + rowHeightPx - sx(4);
       ctx.save();
       ctx.strokeStyle = '#8A8A8A';
       ctx.lineWidth = Math.max(1, scale);
@@ -13790,9 +13869,10 @@ function drawListicleType1Post(ctx, W, H, scale) {
   ctx.save();
   ctx.strokeStyle = '#585858';
   ctx.lineWidth = Math.max(1, sx(2));
+  const bottomLineY = rowTopPx + rowHeightPx * rowsToRender.length + sx(10);
   ctx.beginPath();
-  ctx.moveTo(left, sx(rowTop + rowHeight * data.rows.length + 10));
-  ctx.lineTo(right, sx(rowTop + rowHeight * data.rows.length + 10));
+  ctx.moveTo(left, bottomLineY);
+  ctx.lineTo(right, bottomLineY);
   ctx.stroke();
   ctx.restore();
 
@@ -13900,51 +13980,66 @@ function drawListicleType2Post(ctx, W, H, scale) {
   const rowStart = 323;
   const rowPitch = 200;
   const rowHeight = 170;
-  data.rows.forEach((row, index) => {
-    const top = rowStart + index * rowPitch;
-    const bottom = top + rowHeight;
+  const rowStartPx = sx(rowStart);
+  const basePitchPx = sx(rowPitch);
+  const bottomMarginPx = sx(27);
+  const visibleRows = data.rows.filter(row => !row.hidden);
+  const rowsToRender = visibleRows.length ? visibleRows : data.rows;
+  const pitchPx = Math.max(
+    sx(70),
+    Math.min(basePitchPx, Math.floor((H - rowStartPx - bottomMarginPx) / rowsToRender.length))
+  );
+  const pitchScale = pitchPx / basePitchPx;
+  // The row pitch shrinks linearly to fit more rows, but content (fonts, badges,
+  // logos) reads as too small if it shrinks at the same rate — give it a gentler curve.
+  const contentScale = Math.pow(pitchScale, 0.6);
+  const rowHeightPx = pitchPx * (rowHeight / rowPitch);
+
+  rowsToRender.forEach((row, index) => {
+    const top = rowStartPx + index * pitchPx;
+    const bottom = top + rowHeightPx;
     const rankX = sx(49);
-    const rankY = sx(top);
-    const rankWidth = sx(92);
-    const rankHeight = sx(134);
+    const rankY = top;
+    const rankWidth = sx(92) * contentScale;
+    const rankHeight = sx(134) * contentScale;
     drawListicleType2Rank(ctx, row.rank, row.accent, rankX, rankY, rankWidth, rankHeight, scale);
 
-    const logoSize = sx(140);
-    drawListicleLogo(ctx, row, sx(145), sx(top - 3), logoSize, logoSize, scale);
+    const logoSize = sx(140) * contentScale;
+    drawListicleLogo(ctx, row, sx(145), top - sx(3) * contentScale, logoSize, logoSize, scale);
 
     const textX = sx(315);
     const name = String(row.entity || '').toUpperCase();
     const nameMaxWidth = sx(430);
-    const nameSize = fitCanvasFont(ctx, name, nameMaxWidth, 60 * scale, 36 * scale);
+    const nameSize = fitCanvasFont(ctx, name, nameMaxWidth, 60 * scale * contentScale, 36 * scale * contentScale);
     ctx.save();
     ctx.font = `900 ${Math.round(nameSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
     ctx.fillStyle = '#090A0C';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(name, textX, sx(top + 68));
+    ctx.fillText(name, textX, top + sx(68) * contentScale);
 
     const subtitle = String(row.subtitle || '').toUpperCase();
     const subtitleSize = fitCanvasFont(
       ctx,
       subtitle,
       nameMaxWidth,
-      30 * scale,
-      21 * scale,
+      30 * scale * contentScale,
+      21 * scale * contentScale,
       'Roboto Condensed'
     );
     ctx.font = `600 ${Math.round(subtitleSize)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
     ctx.fillStyle = row.accent;
-    ctx.fillText(subtitle, textX, sx(top + 112));
+    ctx.fillText(subtitle, textX, top + sx(112) * contentScale);
     ctx.restore();
 
-    drawListicleType2Player(ctx, row, sx(760), sx(top - 15), sx(270), sx(185));
+    drawListicleType2Player(ctx, row, sx(760), top - sx(15) * contentScale, sx(270) * contentScale, sx(185) * contentScale);
 
     ctx.save();
     ctx.strokeStyle = '#171717';
     ctx.lineWidth = Math.max(1, sx(2));
     ctx.beginPath();
-    ctx.moveTo(left, sx(bottom));
-    ctx.lineTo(right, sx(bottom));
+    ctx.moveTo(left, bottom);
+    ctx.lineTo(right, bottom);
     ctx.stroke();
     ctx.restore();
   });
@@ -13955,13 +14050,13 @@ function drawListicleType2Post(ctx, W, H, scale) {
   }
 }
 
-function drawListicleRankPill(ctx, rank, accent, x, centerY, scale) {
-  const pillHeight = Math.round(88 * scale);
-  const pillPadLeft = PILL_PAD_LEFT * scale;
-  const pillPadRight = PILL_PAD_RIGHT * scale;
+function drawListicleRankPill(ctx, rank, accent, x, centerY, scale, rowScale = 1) {
+  const pillHeight = Math.round(88 * scale * rowScale);
+  const pillPadLeft = PILL_PAD_LEFT * scale * rowScale;
+  const pillPadRight = PILL_PAD_RIGHT * scale * rowScale;
   const value = String(rank || '').toUpperCase();
   // Keep the same font-to-height ratio as the established post pill system.
-  const fontSize = Math.round(PILL_FONT_SIZE * scale * (88 / PILL_H));
+  const fontSize = Math.round(PILL_FONT_SIZE * scale * rowScale * (88 / PILL_H));
 
   ctx.save();
   // Canvas text metrics depend on the active alignment and baseline. Lock both

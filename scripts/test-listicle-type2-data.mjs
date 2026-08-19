@@ -6,20 +6,21 @@ const listicle = require('../listicle-type2-data.js');
 
 const defaults = listicle.createDefaultListicleData();
 assert.equal(defaults.schemaVersion, 1);
-assert.equal(defaults.rows.length, 5, 'Type 2 must always contain exactly five rows');
-assert.deepEqual(defaults.rows.map(row => row.rank), ['1', '2', '3', '4', '5']);
+assert.equal(defaults.rows.length, 10, 'Type 2 must always contain exactly ten rows');
+assert.deepEqual(defaults.rows.map(row => row.rank), ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
 assert.deepEqual(defaults.rows.map(row => row.logoSrc), listicle.DEFAULT_LOGO_SOURCES);
 assert.equal(defaults.title, 'MVP Ladder\nUpdate');
+assert.equal(defaults.rows.every(row => row.hidden === false), true, 'rows must default to visible');
 
 const oversized = listicle.normalizeListicleData({
   title: 'First line\nSecond line\nThird line',
-  rows: Array.from({ length: 8 }, (_, index) => ({
+  rows: Array.from({ length: 15 }, (_, index) => ({
     rank: String(index + 1),
     entity: `Player ${index + 1}`,
     subtitle: `Team ${index + 1}`,
   })),
 });
-assert.equal(oversized.rows.length, 5, 'Type 2 must discard rows beyond five');
+assert.equal(oversized.rows.length, 10, 'Type 2 must discard rows beyond ten');
 assert.equal(oversized.title, 'First line\nSecond line Third line');
 
 const changed = listicle.updateListicleRow(defaults, 2, {
@@ -42,7 +43,13 @@ assert.equal(hostile.rows[0].accent, listicle.DEFAULT_ACCENTS[0]);
 assert.equal(hostile.rows[0].logoSrc, '');
 assert.equal(hostile.rows[0].playerSrc, '');
 
-const ignoredSixth = listicle.updateListicleRow(defaults, 5, { entity: 'Sixth Player' });
-assert.equal(ignoredSixth.rows.some(row => row.entity === 'Sixth Player'), false);
+const hiddenRow = listicle.updateListicleRow(defaults, 4, { hidden: true });
+assert.equal(hiddenRow.rows[4].hidden, true, 'a row can be hidden');
+assert.equal(hiddenRow.rows[3].hidden, false, 'hiding one row must not affect others');
+const unhiddenRow = listicle.updateListicleRow(hiddenRow, 4, { hidden: false });
+assert.equal(unhiddenRow.rows[4].hidden, false, 'a hidden row can be unhidden');
+
+const ignoredEleventh = listicle.updateListicleRow(defaults, 10, { entity: 'Eleventh Player' });
+assert.equal(ignoredEleventh.rows.some(row => row.entity === 'Eleventh Player'), false);
 
 console.log('Listicle Type 2 data tests passed.');

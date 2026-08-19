@@ -6,7 +6,7 @@
   'use strict';
 
   const SCHEMA_VERSION = 1;
-  const ROW_COUNT = 5;
+  const ROW_COUNT = 10;
   const LIMITS = Object.freeze({
     title: 80,
     rank: 3,
@@ -14,8 +14,16 @@
     subtitle: 40,
     assetName: 120,
   });
-  const DEFAULT_ACCENTS = Object.freeze(['#990000', '#007AC1', '#542C81', '#00471B', '#1D428A']);
+  const DEFAULT_ACCENTS = Object.freeze([
+    '#990000', '#007AC1', '#542C81', '#00471B', '#1D428A',
+    '#990000', '#007AC1', '#542C81', '#00471B', '#1D428A',
+  ]);
   const DEFAULT_LOGO_SOURCES = Object.freeze([
+    'assets/listicle-placeholders/clemson.png',
+    'assets/listicle-placeholders/auburn.png',
+    'assets/listicle-placeholders/oklahoma.png',
+    'assets/listicle-placeholders/colorado.png',
+    'assets/listicle-placeholders/georgia.png',
     'assets/listicle-placeholders/clemson.png',
     'assets/listicle-placeholders/auburn.png',
     'assets/listicle-placeholders/oklahoma.png',
@@ -28,6 +36,11 @@
     { rank: '3', entity: 'Luka Doncic', subtitle: 'Lakers' },
     { rank: '4', entity: 'Antetokounmpo', subtitle: 'Milwaukee Bucks' },
     { rank: '5', entity: 'Cade Cunningham', subtitle: 'Detroit Pistons' },
+    { rank: '6', entity: 'Jayson Tatum', subtitle: 'Boston Celtics' },
+    { rank: '7', entity: 'Anthony Edwards', subtitle: 'Minnesota Timberwolves' },
+    { rank: '8', entity: 'Devin Booker', subtitle: 'Phoenix Suns' },
+    { rank: '9', entity: 'Donovan Mitchell', subtitle: 'Cleveland Cavaliers' },
+    { rank: '10', entity: 'Tyrese Haliburton', subtitle: 'Indiana Pacers' },
   ]);
 
   function cleanText(value, maxLength, fallback = '') {
@@ -77,6 +90,7 @@
       logoName: cleanText(source.logoName, LIMITS.assetName),
       playerSrc: cleanImageSource(source.playerSrc),
       playerName: cleanText(source.playerName, LIMITS.assetName),
+      hidden: Boolean(source.hidden),
     };
   }
 

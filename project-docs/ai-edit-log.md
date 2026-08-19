@@ -17,6 +17,54 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-08-19 — Listicle Type 1 & 2: expand to 10 rows, add per-row Hide/Unhide
+- Status: `[pushed - see rollback point below]`
+- Files touched: `listicle-data.js`, `listicle-type2-data.js`, `index.html`,
+  `scripts/test-listicle-data.mjs`, `scripts/test-listicle-type2-data.mjs`,
+  `scripts/test-listicle-rank-pill.mjs`, `scripts/test-listicle-type2-ui.mjs`,
+  `scripts/test-listicle-accordion.mjs`.
+- Ask (Suhail): Listicle Type 1 and Type 2 should support 10 rows instead of 5, and each row needs a
+  Hide/Unhide control so a row can be excluded from the rendered post without deleting its content.
+- Data layer: `ROW_COUNT` raised 5 → 10 in both `listicle-data.js` and `listicle-type2-data.js`; extended
+  `DEFAULT_ACCENTS` / `DEFAULT_LOGO_SOURCES` (cycling the existing 5 placeholder logos, there are only 5
+  logo assets in `assets/listicle-placeholders/`) and `DEFAULT_ROWS` to 10 entries each. Added a `hidden`
+  boolean field to `normalizeRow` in both files (defaults to `false`); `updateListicleRow` already patches
+  arbitrary fields so toggling `hidden` needed no other data-layer change.
+- Editor UI: each row's accordion summary now has a sibling **Hide/Unhide** button (`listicle-row-header`
+  wraps the existing toggle `<button>` and the new hide `<button>` as siblings, since a button can't nest
+  inside a button). Hidden rows dim to 50% opacity (`.is-row-hidden`) in the row list. Click handlers added
+  to both `initListicleControls` and `initListicleType2Controls` toggling `row.hidden` via
+  `updateListicleRow`, then rebuilding the row controls and re-rendering.
+- Canvas rendering — this was the trickiest part, and went through two passes:
+  1. First pass: rows with `hidden: true` are filtered out before rendering, and the remaining visible
+     rows are laid out across the fixed canvas (1080×1350), with row height/pitch shrinking as needed to
+     fit however many rows are visible (`Math.min(baseRowHeight, floor(availableSpace / visibleCount))`).
+     Hiding rows down to ~5 or fewer reproduces the original spacious 5-row layout exactly (rowScale = 1
+     at ≤5 visible rows, so nothing changed for the existing 5-row use case).
+  2. Suhail flagged the first pass as "too small" at 10 rows — the bug was scaling fonts/logos/rank-pills
+     by the same linear factor as the row pitch, so 10 rows shrank content to ~53% of original size.
+     Fixed by decoupling: row *pitch* (vertical spacing) still shrinks linearly to fit more rows, but
+     content size (fonts, logo frame, rank pill, player cutout) uses `Math.pow(rowScale, 0.6)` — a gentler
+     curve that keeps glyphs/logos meaningfully larger at high row counts (e.g. at 10 rows content lands
+     at ~68% scale instead of ~53%), while still fitting inside each row's slot without overlap. At ≤5
+     visible rows this curve is still an identity (rowScale = 1), so it's fully backward compatible.
+  3. Type 1 (`drawListicleType1Post`): available table height computed from `rowTop` down to just above
+     the always-on swipe button (`SWIPE_BUTTON_H` + `SWIPE_BUTTON_SAFE_MARGIN` + a small gap). Type 2
+     (`drawListicleType2Post`, no swipe button) computes available height down to a small fixed bottom
+     margin instead. `drawListicleRankPill` gained an optional `rowScale` parameter (defaults to `1`, so
+     the standalone rank-pill tests calling it with the old 6-arg signature are unaffected).
+  4. If every row in a template is hidden, rendering falls back to showing all rows rather than a blank
+     canvas.
+- Updated the existing Node test scripts (`scripts/test-listicle-*.mjs`) for the new row count (10 instead
+  of 5) and added hide/unhide coverage. **Could not run them** — no Node.js available in this environment;
+  only manually re-read the diffs for correctness.
+- Verification note: like other pages on this site, the local `python3 -m http.server` preview is gated by
+  real Supabase login (domain-restricted to `essentiallysports.com`), which the assistant does not attempt
+  to bypass or log into on Suhail's behalf. Suhail is verifying visually in his own logged-in session;
+  the "too small" fix above was made in response to that feedback, not independently confirmed in-browser
+  by the assistant.
+- **Rollback point: `1a5946c`** — HEAD before this batch, i.e. "the version before" if this needs reverting.
+
 ### 2026-08-18 — Tool Feedback focused form redesign
 - Status: `[pushed - 1f4f2b8]`
 - Files touched: `tool-feedback.html`, `tool-feedback.css`, `tool-feedback.js`.
