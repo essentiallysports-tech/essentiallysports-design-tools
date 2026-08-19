@@ -1946,6 +1946,7 @@ body[data-dashboard-view="overview"] [data-view-section~="overview"],
 body[data-dashboard-view="board"] [data-view-section~="board"],
 body[data-dashboard-view="list"] [data-view-section~="list"],
 body[data-dashboard-view="designs"] [data-view-section~="designs"],
+body[data-dashboard-view="feedback"] [data-view-section~="feedback"],
 body[data-dashboard-view="people"] [data-view-section~="people"],
 body[data-dashboard-view="access"] [data-view-section~="access"],
 body[data-dashboard-view="activity"] [data-view-section~="activity"] {
@@ -1955,6 +1956,7 @@ body[data-dashboard-view="activity"] [data-view-section~="activity"] {
 
 body[data-dashboard-view="list"] .task-list-panel,
 body[data-dashboard-view="designs"] .grid,
+body[data-dashboard-view="feedback"] .feedback-review-shell,
 body[data-dashboard-view="activity"] .grid {
   display: block;
 }
@@ -5218,6 +5220,7 @@ body.dashboard-page .metric-label {
 body.dashboard-page[data-dashboard-view="board"] .metrics,
 body.dashboard-page[data-dashboard-view="list"] .metrics,
 body.dashboard-page[data-dashboard-view="designs"] .metrics,
+body.dashboard-page[data-dashboard-view="feedback"] .metrics,
 body.dashboard-page[data-dashboard-view="people"] .metrics,
 body.dashboard-page[data-dashboard-view="access"] .metrics,
 body.dashboard-page[data-dashboard-view="activity"] .metrics {
@@ -5583,6 +5586,135 @@ body.dashboard-page .presence-state.is-online {
 
 body.dashboard-page .presence-state.is-offline {
   color: #dc2626;
+}
+
+body.dashboard-page .feedback-list {
+  display: grid;
+  gap: 0;
+}
+
+body.dashboard-page .feedback-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 10px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--dash-border-soft);
+  background: #f8fbff;
+}
+
+body.dashboard-page .feedback-summary span {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #fff;
+}
+
+body.dashboard-page .feedback-summary strong {
+  display: block;
+  overflow: hidden;
+  color: #071733;
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.dashboard-page .feedback-summary small {
+  display: block;
+  margin-top: 5px;
+  color: #6b7c93;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+body.dashboard-page .feedback-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 20px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--dash-border-soft);
+  background: #fff;
+}
+
+body.dashboard-page .feedback-row:last-child {
+  border-bottom: 0;
+}
+
+body.dashboard-page .feedback-row-head,
+body.dashboard-page .feedback-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+body.dashboard-page .feedback-row-type {
+  display: grid;
+  align-content: start;
+  justify-items: stretch;
+  gap: 8px;
+}
+
+body.dashboard-page .feedback-row-head strong {
+  color: #071733;
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: .95;
+}
+
+body.dashboard-page .feedback-row-head small,
+body.dashboard-page .feedback-row-meta {
+  color: #6b7c93;
+  font-size: 14px;
+}
+
+body.dashboard-page .feedback-row p {
+  max-width: 920px;
+  margin: 10px 0 10px;
+  padding: 12px 14px;
+  border: 1px solid #eef0f3;
+  border-radius: 10px;
+  background: #fcfcfd;
+  color: #172033;
+  font-family: var(--dash-body-type);
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+body.dashboard-page .feedback-type,
+body.dashboard-page .feedback-status {
+  width: 100%;
+  min-height: 30px;
+  border-radius: 999px;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+
+body.dashboard-page .feedback-type.is-bug {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+body.dashboard-page .feedback-type.is-idea {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #0a65c7;
+}
+
+body.dashboard-page .feedback-type.is-praise {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+body.dashboard-page .feedback-status {
+  border-color: #d8dee6;
+  background: #f8fafc;
+  color: #42526a;
 }
 
 body.dashboard-page .metrics {
@@ -6063,6 +6195,28 @@ body.dashboard-page .role-choice {
     font-size: 11px;
   }
 
+  body.dashboard-page .feedback-row {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  body.dashboard-page .feedback-row-type {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  body.dashboard-page .feedback-type,
+  body.dashboard-page .feedback-status {
+    width: auto;
+    min-width: 78px;
+  }
+
+  body.dashboard-page .feedback-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 14px 16px;
+  }
+
   /* Export review should wrap tightly around the artwork and metadata. The
      previous 1fr grid row made the modal reserve the entire viewport and
      created a large, empty middle band on phones. */
@@ -6446,4 +6600,24 @@ body.dashboard-page .export-preview-panel img {
   body.dashboard-page .person-role-tools > .role-choice {
     width: 100%;
   }
+}
+
+/* Final dashboard view lock. Keep this last because older dashboard layers
+   still define broad display rules for board, metrics, and panel sections. */
+body.dashboard-page [hidden] {
+  display: none !important;
+}
+
+body.dashboard-page:not([data-dashboard-view="board"]) .kanban-board {
+  display: none !important;
+}
+
+body.dashboard-page:not(:is([data-dashboard-view="board"], [data-dashboard-view="list"])) .task-view-toolbar {
+  display: none !important;
+}
+
+body.dashboard-page:not([data-dashboard-view="overview"]) .metrics,
+body.dashboard-page:not([data-dashboard-view="overview"]) .dashboard-welcome,
+body.dashboard-page:not([data-dashboard-view="overview"]) .dashboard-overview-grid {
+  display: none !important;
 }

@@ -14,11 +14,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@500;600;700;800;900&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20260817-mobile-editor2">
   <link rel="stylesheet" href="theme.css?v=20260714-footer1">
   <link rel="stylesheet" href="site-chrome.css?v=20260817-icons1">
   <link rel="stylesheet" href="cta-hover.css?v=20260723-howrefine1">
-  <link rel="stylesheet" href="reels.css?v=20260731-reels-ui1">
+  <link rel="stylesheet" href="reels.css?v=20260817-mobile-editor2">
+  <link rel="stylesheet" href="design-tokens.css?v=20260817-type1">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20260817-icons1"></script>
@@ -64,6 +65,16 @@
   </nav>
 
   <main>
+    <div class="reels-mobile-topbar" aria-label="Mobile Reels workspace bar">
+      <a class="reels-mobile-back" href="index.html#frames" aria-label="Back to Design Tools" title="Back to Design Tools">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      </a>
+      <div>
+        <span>FrameUp</span>
+        <strong>Reel Captions</strong>
+      </div>
+      <button type="button" data-reels-mobile-export>Export</button>
+    </div>
     <section class="reels-shell" aria-label="Reels caption editor">
       <aside class="reels-task-panel" aria-label="Active Reels tool">
         <section class="reels-task-section is-active" data-reels-panel="captions">
@@ -219,10 +230,28 @@
           </section>
       </aside>
     </section>
+    <nav class="reels-mobile-nav" aria-label="Mobile Reels editor actions">
+      <button type="button" data-reels-tool="captions" aria-label="Open Captions tools">
+        <span class="reels-mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h11M4 18h8"/></svg></span>
+        <span>Captions</span>
+      </button>
+      <button type="button" data-reels-tool="style" aria-label="Open Style tools">
+        <span class="reels-mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4Z"/><path d="m12 8 4 4"/></svg></span>
+        <span>Style</span>
+      </button>
+      <button type="button" data-reels-tool="lower-thirds" aria-label="Open Lower Thirds tools">
+        <span class="reels-mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M6 14h7M6 17h11"/></svg></span>
+        <span>Lower</span>
+      </button>
+      <button type="button" data-reels-tool="rewrite" aria-label="Open Rewrite tools">
+        <span class="reels-mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Z"/><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z"/></svg></span>
+        <span>Rewrite</span>
+      </button>
+    </nav>
   </main>
 
   <footer class="site-footer" aria-label="Site footer"></footer>
   <script src="brand-kit.js?v=20260728-reels1"></script>
-  <script src="reels.js?v=20260729-reels-wordbox2"></script>
+  <script src="reels.js?v=20260817-mobile-editor2"></script>
 </body>
 </html>

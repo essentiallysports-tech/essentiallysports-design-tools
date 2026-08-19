@@ -6,7 +6,7 @@
   'use strict';
 
   const SCHEMA_VERSION = 1;
-  const ROW_COUNT = 5;
+  const ROW_COUNT = 10;
   const LIMITS = Object.freeze({
     title: 80,
     entityHeader: 18,
@@ -16,8 +16,16 @@
     metric: 18,
     logoName: 120,
   });
-  const DEFAULT_ACCENTS = Object.freeze(['#003278', '#C6011F', '#9C2130', '#DF4601', '#021540']);
+  const DEFAULT_ACCENTS = Object.freeze([
+    '#003278', '#C6011F', '#9C2130', '#DF4601', '#021540',
+    '#003278', '#C6011F', '#9C2130', '#DF4601', '#021540',
+  ]);
   const DEFAULT_LOGO_SOURCES = Object.freeze([
+    'assets/listicle-placeholders/clemson.png',
+    'assets/listicle-placeholders/auburn.png',
+    'assets/listicle-placeholders/oklahoma.png',
+    'assets/listicle-placeholders/colorado.png',
+    'assets/listicle-placeholders/georgia.png',
     'assets/listicle-placeholders/clemson.png',
     'assets/listicle-placeholders/auburn.png',
     'assets/listicle-placeholders/oklahoma.png',
@@ -30,6 +38,11 @@
     { rank: '3', entity: 'Los Angeles Angels', metric1: '690-836', metric2: '.452' },
     { rank: '4', entity: 'Baltimore Orioles', metric1: '689-838', metric2: '.451' },
     { rank: '5', entity: 'Detroit Tigers', metric1: '682-840', metric2: '.448' },
+    { rank: '6', entity: 'Colorado Rockies', metric1: '678-846', metric2: '.445' },
+    { rank: '7', entity: 'Chicago White Sox', metric1: '671-853', metric2: '.440' },
+    { rank: '8', entity: 'Kansas City Royals', metric1: '665-859', metric2: '.436' },
+    { rank: '9', entity: 'Miami Marlins', metric1: '660-864', metric2: '.433' },
+    { rank: '10', entity: 'Oakland Athletics', metric1: '652-872', metric2: '.428' },
   ]);
 
   function cleanText(value, maxLength, fallback = '') {
@@ -82,6 +95,7 @@
       accent: cleanHex(source.accent, DEFAULT_ACCENTS[index]),
       logoSrc: cleanLogoSource(source.logoSrc),
       logoName: cleanText(source.logoName, LIMITS.logoName),
+      hidden: Boolean(source.hidden),
     };
   }
 

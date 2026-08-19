@@ -7,7 +7,7 @@
   <title>FrameUp Dashboard | EssentiallySports</title>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20260714-authcallback2"></script>
-  <script src="dashboard-data.js?v=20260716-dashboard-sync1"></script>
+  <script src="dashboard-data.js?v=20260817-feedback-clean4"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -433,12 +433,13 @@
       table { min-width: 780px; }
     }
   </style>
-  <link rel="stylesheet" href="dashboard-v2.css?v=20260712-qc2">
+  <link rel="stylesheet" href="dashboard-v2.css?v=20260817-feedback-clean4">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
   <link rel="stylesheet" href="dashboard-ui-system.css?v=20260718-dashboard-system5">
 <link rel="stylesheet" href="theme.css?v=20260714-footer1">
   <link rel="stylesheet" href="site-chrome.css?v=20260817-icons1">
 <link rel="stylesheet" href="cta-hover.css?v=20260720-stroke1">
+  <link rel="stylesheet" href="design-tokens.css?v=20260817-type1">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20260817-icons1"></script>
@@ -489,6 +490,7 @@
         <button type="button" data-dashboard-view="board"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 3v14"/><path d="M12 3v8"/><path d="M19 3v18"/></svg><span>Request Board</span><span class="nav-count" data-request-count>0</span></button>
         <button type="button" data-dashboard-view="list"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg><span>Request List</span></button>
         <button type="button" data-dashboard-view="designs"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg><span>Review Exports</span></button>
+        <button type="button" data-dashboard-view="feedback"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 8h8"/><path d="M8 12h5"/></svg><span>Tool Feedback</span><span class="nav-count" data-feedback-count>0</span></button>
         <button type="button" data-dashboard-view="people"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg><span>People</span><span class="nav-count" data-online-count>1</span></button>
         <button type="button" data-dashboard-view="access"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg><span>Access Requests</span><span class="nav-count" data-access-count>0</span></button>
       </nav>
@@ -590,6 +592,13 @@
             <div id="designs-table"></div>
           </section>
 
+          <section class="panel feedback-review-shell" data-view-section="feedback" data-dashboard-panel="feedback">
+            <div class="panel-head">
+              <div><h2 class="panel-title">Tool Feedback</h2><p class="panel-subtitle">Feedback submitted from FrameUp tools, saved through authenticated ES sessions.</p></div>
+            </div>
+            <div id="feedback-table"></div>
+          </section>
+
           <section class="panel" data-view-section="activity" data-dashboard-panel="activity">
             <div class="panel-head">
               <div><h2 class="panel-title">Activity</h2><p class="panel-subtitle">Submissions, exports, assignment changes, and status moves.</p></div>
@@ -647,6 +656,7 @@
       'manish.kalsi@essentiallysports.com',
     ]);
     const DASHBOARD_SEEN_KEY = 'es.dashboard.seenBadges.v1';
+    const DASHBOARD_VIEWS = new Set(['overview', 'board', 'list', 'designs', 'feedback', 'people', 'access', 'activity']);
     let dashboardUser = { name: 'ES Admin', email: '', role: 'Admin', accessRole: 'Admin', designation: 'Design Operations' };
     let canAssignDashboardRoles = false;
     let selectedTaskId = '';
@@ -902,6 +912,9 @@
       if (view === 'access') {
         seen.access = accessRequests.filter(request => request.status === 'Pending').length;
       }
+      if (view === 'feedback') {
+        seen.feedback = (state?.toolFeedback || []).length;
+      }
       saveSeenBadgeState(seen);
     }
 
@@ -1061,7 +1074,23 @@
         visitors24h: uniqueVisitorCount(state.people || [], value => isWithinHours(value, 24)),
         visitorsMonth: uniqueVisitorCount(state.people || [], isThisMonth),
         activity: state.activity.length,
+        feedback: (state.toolFeedback || []).length,
       };
+    }
+
+    function requestedDashboardView() {
+      const fromHash = String(window.location.hash || '').replace(/^#/, '').trim().toLowerCase();
+      return DASHBOARD_VIEWS.has(fromHash) ? fromHash : 'overview';
+    }
+
+    function syncDashboardViewSections(view) {
+      document.querySelectorAll('[data-view-section]').forEach(section => {
+        const allowedViews = String(section.dataset.viewSection || '').split(/\s+/).filter(Boolean);
+        section.hidden = !allowedViews.includes(view);
+      });
+      document.querySelectorAll('.metrics').forEach(section => {
+        section.hidden = view !== 'overview';
+      });
     }
 
     function renderMetrics(state) {
@@ -1074,6 +1103,7 @@
       document.querySelectorAll('[data-task-count]').forEach(el => { el.textContent = metrics.tasks; });
       setNavBadge('[data-request-count]', metrics.requests, seen.requests);
       setNavBadge('[data-access-count]', accessRequests.filter(request => request.status === 'Pending').length, seen.access);
+      setNavBadge('[data-feedback-count]', metrics.feedback, seen.feedback);
     }
 
     function renderTaskFilters(state) {
@@ -1242,6 +1272,77 @@
         return;
       }
       target.innerHTML = renderExportList(designs);
+    }
+
+    function feedbackTypeClass(value) {
+      return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'other';
+    }
+
+    function feedbackToolLabel(value) {
+      return String(value || '').trim() === 'General' ? 'General / whole site' : plainText(value, 'General / whole site');
+    }
+
+    function feedbackSearchText(item = {}) {
+      return [
+        item.feedbackType,
+        item.tool,
+        item.message,
+        item.submitterName,
+        item.submitterEmail,
+        item.status,
+        item.pageUrl,
+      ].join(' ').toLowerCase();
+    }
+
+    function renderFeedback(state) {
+      const target = document.getElementById('feedback-table');
+      if (!target) return;
+      const allFeedback = state.toolFeedback || [];
+      const query = String(document.getElementById('dashboard-search')?.value || '').trim().toLowerCase();
+      const feedback = query
+        ? allFeedback.filter(item => feedbackSearchText(item).includes(query))
+        : allFeedback;
+      if (!feedback.length) {
+        target.innerHTML = `
+          <div class="feedback-summary">
+            <span><strong>${allFeedback.length}</strong><small>Total</small></span>
+            <span><strong>${allFeedback.filter(item => item.feedbackType === 'Bug').length}</strong><small>Bugs</small></span>
+            <span><strong>${allFeedback.filter(item => item.feedbackType === 'Idea').length}</strong><small>Ideas</small></span>
+            <span><strong>${allFeedback[0] ? dateText(allFeedback[0].createdAt) : '—'}</strong><small>Latest</small></span>
+          </div>
+          <div class="empty">${query ? 'No feedback matches the current search.' : 'No tool feedback has been submitted yet.'}</div>
+        `;
+        return;
+      }
+      target.innerHTML = `
+        <div class="feedback-summary">
+          <span><strong>${allFeedback.length}</strong><small>Total</small></span>
+          <span><strong>${allFeedback.filter(item => item.feedbackType === 'Bug').length}</strong><small>Bugs</small></span>
+          <span><strong>${allFeedback.filter(item => item.feedbackType === 'Idea').length}</strong><small>Ideas</small></span>
+          <span><strong>${dateText(allFeedback[0]?.createdAt)}</strong><small>Latest</small></span>
+        </div>
+        <div class="feedback-list">
+          ${feedback.map(item => `
+            <article class="feedback-row" data-feedback-id="${attr(item.id)}">
+              <div class="feedback-row-type">
+                <span class="pill feedback-type is-${attr(feedbackTypeClass(item.feedbackType))}">${text(item.feedbackType, 'Other')}</span>
+                <span class="pill feedback-status">${text(item.status, 'New')}</span>
+              </div>
+              <div class="feedback-row-main">
+                <div class="feedback-row-head">
+                  <strong>${text(feedbackToolLabel(item.tool), 'General / whole site')}</strong>
+                  <small>${dateText(item.createdAt)}</small>
+                </div>
+                <p>${text(item.message)}</p>
+                <div class="feedback-row-meta">
+                  <span>From ${text(personDisplayName(item.submitterName, item.submitterEmail))}</span>
+                  <span>${text(item.submitterEmail)}</span>
+                </div>
+              </div>
+            </article>
+          `).join('')}
+        </div>
+      `;
     }
 
     function renderPeople(state) {
@@ -1417,6 +1518,7 @@
     function setDashboardView(view, shouldMarkSeen = false) {
       if (shouldMarkSeen) markDashboardViewSeen(view);
       document.body.dataset.dashboardView = view;
+      syncDashboardViewSections(view);
       document.querySelectorAll('[data-dashboard-view]').forEach(item => item.classList.toggle('is-active', item.dataset.dashboardView === view));
       const title = document.querySelector('.dashboard-topbar h1');
       if (title) title.textContent = 'FrameUp Dashboard';
@@ -1429,6 +1531,7 @@
       renderKanban(state);
       renderTaskList(state);
       renderDesigns(state);
+      renderFeedback(state);
       renderOverviewExports(state);
       renderPeople(state);
       renderAccessRequests();
@@ -1721,6 +1824,7 @@
         button.addEventListener('click', () => {
           const view = button.dataset.dashboardView || 'overview';
           setDashboardView(view, true);
+          if (DASHBOARD_VIEWS.has(view)) history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${view}`);
           window.scrollTo({ top: 0, behavior: 'smooth' });
           renderDashboard();
         });
@@ -1992,12 +2096,13 @@
           );
         document.documentElement.style.visibility = '';
         window.dispatchEvent(new CustomEvent('es:auth-ready'));
-        document.body.dataset.dashboardView = 'overview';
+        document.body.dataset.dashboardView = requestedDashboardView();
         renderIdentity();
         renderShortcutHints();
         setupDashboardNavMenus();
         setupDashboardProfileMenu();
         setupDashboardEvents();
+        setDashboardView(document.body.dataset.dashboardView, true);
         renderDashboard();
         refreshAccessRequests();
         startDashboardLiveSync();

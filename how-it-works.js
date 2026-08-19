@@ -94,66 +94,81 @@
   setWorkflowStep(0);
   startWorkflowTimer();
 
-  const scrollLinesSection = document.querySelector('[data-scroll-lines]');
-  const scrollLines = scrollLinesSection ? [...scrollLinesSection.querySelectorAll('.frameup-intro__line')] : [];
-  const scrollWords = scrollLines.map(line => {
-    const words = line.textContent.trim().split(/(\s+)/);
-    line.textContent = '';
-    return words.map(part => {
-      if (/^\s+$/.test(part)) {
-        line.appendChild(document.createTextNode(part));
-        return null;
-      }
-      const word = document.createElement('span');
-      word.className = 'frameup-intro__word';
-      word.textContent = part;
-      line.appendChild(word);
-      return word;
-    }).filter(Boolean);
-  });
-  let scrollLinesFrame = 0;
+  const blueStory = document.querySelector('[data-blue-story]');
+  const frameOptions = document.querySelector('.frame-options');
+  const blueStoryLines = blueStory ? [...blueStory.querySelectorAll('.frameup-intro__line')] : [];
+  const blueStoryCount = blueStory?.querySelector('[data-blue-story-count]');
+  let blueStoryFrame = 0;
+  const clamp01 = value => Math.min(1, Math.max(0, value));
+  const smoothstep = value => {
+    const progress = clamp01(value);
+    return progress * progress * (3 - 2 * progress);
+  };
 
-  const updateScrollLines = () => {
-    scrollLinesFrame = 0;
-    if (!scrollLinesSection || !scrollLines.length) return;
+  const updateCardsStickyTop = () => {
+    if (!frameOptions) return;
+    const header = headerOffset();
+    const usableHeight = Math.max(0, window.innerHeight - header);
+    const stickyTop = header + Math.min(0, usableHeight - frameOptions.offsetHeight);
+    frameOptions.style.setProperty('--cards-sticky-top', `${stickyTop.toFixed(2)}px`);
+  };
+
+  const updateBlueStory = () => {
+    blueStoryFrame = 0;
+    if (!blueStory || !blueStoryLines.length) return;
 
     if (reducedMotion.matches) {
-      scrollWords.forEach(words => {
-        words.forEach(word => {
-          word.classList.add('is-visible');
-          word.classList.remove('is-cursor');
-        });
+      blueStory.style.setProperty('--story-progress', '1');
+      blueStory.style.setProperty('--copy-opacity', '1');
+      blueStory.style.setProperty('--cue-opacity', '0');
+      blueStoryLines.forEach((line, index) => {
+        line.style.setProperty('--line-active', index === blueStoryLines.length - 1 ? '1' : '0');
+        line.style.setProperty('--line-y', index === blueStoryLines.length - 1 ? '0px' : '-54px');
       });
+      if (blueStoryCount) blueStoryCount.textContent = String(blueStoryLines.length).padStart(2, '0');
       return;
     }
 
-    const rect = scrollLinesSection.getBoundingClientRect();
-    const range = Math.max(1, scrollLinesSection.offsetHeight - window.innerHeight);
-    const totalProgress = Math.min(1, Math.max(0, -rect.top / range));
-    const segment = 1 / scrollLines.length;
+    const rect = blueStory.getBoundingClientRect();
+    const pinnedTravel = headerOffset() - rect.top;
+    const range = Math.max(1, blueStory.offsetHeight - window.innerHeight);
+    const copyTravel = 80;
+    const totalProgress = clamp01(pinnedTravel / range);
+    const copyProgress = smoothstep(pinnedTravel / copyTravel);
+    const visibleBlue = window.innerHeight - rect.top;
+    const cueArrival = smoothstep((visibleBlue - 120) / 160);
+    const cueDeparture = 1 - smoothstep(pinnedTravel / 60);
+    const cueProgress = cueArrival * cueDeparture;
+    const textProgress = clamp01((pinnedTravel - copyTravel) / Math.max(1, range - copyTravel));
+    const activeFloat = textProgress * (blueStoryLines.length - 1);
+    const activeIndex = Math.min(blueStoryLines.length - 1, Math.round(activeFloat));
 
-    scrollLines.forEach((line, index) => {
-      const start = index * segment;
-      const localProgress = Math.min(1, Math.max(0, (totalProgress - start) / segment));
-      const words = scrollWords[index] || [];
-      const visibleCount = localProgress <= 0 ? 0 : Math.min(words.length, Math.ceil(localProgress * words.length));
-      words.forEach((word, wordIndex) => {
-        const visible = wordIndex < visibleCount || localProgress >= 1;
-        word.classList.toggle('is-visible', visible);
-        word.classList.toggle('is-cursor', localProgress > 0 && localProgress < 1 && wordIndex === Math.max(0, visibleCount - 1));
-      });
+    blueStory.style.setProperty('--story-progress', totalProgress.toFixed(4));
+    blueStory.style.setProperty('--copy-opacity', copyProgress.toFixed(3));
+    blueStory.style.setProperty('--cue-opacity', cueProgress.toFixed(3));
+    blueStoryLines.forEach((line, index) => {
+      const distance = Math.abs(activeFloat - index);
+      const active = copyProgress * (1 - smoothstep(distance / .72));
+      line.style.setProperty('--line-active', active.toFixed(3));
+      line.style.setProperty('--line-y', `${((index - activeFloat) * 54).toFixed(2)}px`);
     });
+    if (blueStoryCount) blueStoryCount.textContent = String(activeIndex + 1).padStart(2, '0');
   };
 
-  const queueScrollLines = () => {
-    if (scrollLinesFrame) return;
-    scrollLinesFrame = window.requestAnimationFrame(updateScrollLines);
+  const queueBlueStory = () => {
+    if (blueStoryFrame) return;
+    blueStoryFrame = window.requestAnimationFrame(updateBlueStory);
   };
 
-  window.addEventListener('scroll', queueScrollLines, { passive: true });
-  window.addEventListener('resize', queueScrollLines);
-  reducedMotion.addEventListener?.('change', updateScrollLines);
-  updateScrollLines();
+  window.addEventListener('scroll', queueBlueStory, { passive: true });
+  window.addEventListener('resize', () => {
+    updateCardsStickyTop();
+    queueBlueStory();
+  });
+  reducedMotion.addEventListener?.('change', updateBlueStory);
+  document.fonts?.ready.then(updateCardsStickyTop);
+  updateCardsStickyTop();
+  updateBlueStory();
 
   const creationFlow = document.querySelector('[data-creation-flow]');
   if (creationFlow) {

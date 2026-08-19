@@ -18,7 +18,8 @@
   <link rel="stylesheet" href="theme.css?v=20260714-footer1">
   <link rel="stylesheet" href="site-chrome.css?v=20260817-icons1">
   <link rel="stylesheet" href="cta-hover.css?v=20260723-howrefine1">
-  <link rel="stylesheet" href="tool-feedback.css?v=20260817-feedback1">
+  <link rel="stylesheet" href="tool-feedback.css?v=20260818-feedback3">
+  <link rel="stylesheet" href="design-tokens.css?v=20260817-type1">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20260817-icons1"></script>
@@ -63,14 +64,28 @@
     </div>
   </nav>
 
-  <div class="feedback-page-header">
-    <div class="feedback-page-title">Tool Feedback</div>
-    <p class="feedback-page-version">Found a bug, have an idea, or want to tell us something's working great? Drop it here — it goes straight to the team.</p>
-  </div>
+  <main class="feedback-main">
+    <section class="feedback-hero" aria-labelledby="feedback-title">
+      <div class="feedback-hero-copy">
+        <h1 class="feedback-page-title" id="feedback-title">Tool Feedback</h1>
+        <p class="feedback-page-version" id="feedback-signed-in">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 21a8 8 0 0 0-16 0"/>
+            <circle cx="12" cy="7" r="4"/>
+            <path d="m17 11 2 2 4-4"/>
+          </svg>
+          <span>Signed in as your ES account</span>
+        </p>
+      </div>
+    </section>
 
-  <main>
     <div class="feedback-shell">
-      <div class="feedback-card" id="feedback-card">
+      <section class="feedback-card" id="feedback-card" aria-label="Send tool feedback">
+        <div class="feedback-panel-head">
+          <h2 class="feedback-panel-title">Send feedback to FrameUp</h2>
+          <p>Share enough context for the team to understand and act on your note.</p>
+        </div>
+
         <form class="feedback-form" id="feedback-form" novalidate>
           <div class="feedback-field">
             <span class="feedback-label">What kind of feedback is this?</span>
@@ -122,16 +137,23 @@
           </div>
 
           <div class="feedback-field">
-            <label class="feedback-label" for="feedback-message">Tell us more</label>
-            <textarea class="feedback-textarea" id="feedback-message" maxlength="4000" placeholder="What happened, what you'd like to see, or what's working well..." required></textarea>
-            <span class="feedback-charcount" id="feedback-charcount">0 / 4000</span>
+            <label class="feedback-label" for="feedback-message">Tell us what happened</label>
+            <p class="feedback-field-helper" id="feedback-type-helper">Include what you expected, what happened instead, and steps we can use to reproduce it.</p>
+            <div class="feedback-textarea-wrap">
+              <textarea class="feedback-textarea" id="feedback-message" maxlength="4000" placeholder="Add the details that will help the team investigate..." required aria-describedby="feedback-type-helper feedback-charcount"></textarea>
+              <span class="feedback-charcount" id="feedback-charcount">0 / 4000</span>
+            </div>
           </div>
 
           <div class="feedback-footer-row">
-            <span class="feedback-signed-in" id="feedback-signed-in">Signed in as your ES account</span>
-            <button type="submit" class="feedback-submit" id="feedback-submit">
+            <a class="feedback-back-link btn-secondary" href="index.html#frames">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+              <span>Back to workspaces</span>
+            </a>
+            <button type="submit" class="feedback-submit btn-primary" id="feedback-submit">
               <span class="feedback-spinner" aria-hidden="true"></span>
               <span class="feedback-submit-label">Send Feedback</span>
+              <svg class="feedback-submit-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
             </button>
           </div>
 
@@ -144,13 +166,14 @@
           </div>
           <h2 class="feedback-success-title">Thanks — got it!</h2>
           <p class="feedback-success-copy">Your feedback was recorded and the team will take a look. Keep them coming.</p>
-          <button type="button" class="feedback-reset" id="feedback-reset">Send more feedback</button>
+          <button type="button" class="feedback-reset btn-secondary" id="feedback-reset">Send more feedback</button>
         </div>
-      </div>
+      </section>
+
     </div>
   </main>
 
   <footer class="site-footer" aria-label="Site footer"></footer>
-  <script src="tool-feedback.js?v=20260817-feedback1"></script>
+  <script src="tool-feedback.js?v=20260818-feedback3"></script>
 </body>
 </html>

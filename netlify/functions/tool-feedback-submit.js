@@ -1,9 +1,10 @@
 const crypto = require('crypto');
-const { verifyEsUser } = require('./_supabase-auth.js');
+const { authConfig, bearerToken, verifyEsUser } = require('./_supabase-auth.js');
 
 const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const DEFAULT_SHEET_ID = '10YG34yp-Ox2fRfVZ5Yl0kz8fSZo-sBQJB62aeGpu0jU';
+const SUPABASE_ACTIVITY_TABLE = 'es_designer_activity';
 
 const HEADERS = [
   'Feedback ID',
@@ -91,7 +92,8 @@ function cleanString(value, maxLength) {
 function generateFeedbackId(createdAt) {
   const date = new Date(createdAt);
   const stamp = Number.isNaN(date.getTime()) ? Date.now() : date.getTime();
-  return `FB-${stamp.toString(36).toUpperCase()}`;
+  const suffix = crypto.randomBytes(3).toString('hex').toUpperCase();
+  return `FB-${stamp.toString(36).toUpperCase()}-${suffix}`;
 }
 
 function toSheetRow(record) {
@@ -105,6 +107,56 @@ function toSheetRow(record) {
     record.pageUrl,
     record.source,
   ].map(value => value ?? '');
+}
+
+function actorNameFromEmail(email) {
+  return String(email || '')
+    .split('@')[0]
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map(part => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ') || 'ES User';
+}
+
+function toActivityRow(record) {
+  return {
+    id: record.id,
+    event_type: 'tool_feedback_submitted',
+    label: `${record.feedbackType}: ${record.tool}`,
+    entity_id: record.id,
+    entity_type: 'tool_feedback',
+    actor_name: actorNameFromEmail(record.email),
+    actor_email: record.email,
+    meta: {
+      feedbackType: record.feedbackType,
+      tool: record.tool,
+      message: record.message,
+      pageUrl: record.pageUrl,
+      source: record.source,
+      status: 'New',
+    },
+    created_at: record.createdAt,
+  };
+}
+
+async function saveFeedbackActivity(record, event) {
+  const token = bearerToken(event.headers);
+  const config = authConfig();
+  const response = await fetch(`${config.url}/rest/v1/${SUPABASE_ACTIVITY_TABLE}`, {
+    method: 'POST',
+    headers: {
+      apikey: config.publishableKey,
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify(toActivityRow(record)),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || data?.error || 'Supabase feedback save failed');
+  }
+  return data;
 }
 
 async function appendToSheet(record, config) {
@@ -173,29 +225,59 @@ exports.handler = async event => {
       source: 'FrameUp Tool Feedback',
     };
 
+    const integrations = {
+      supabase: { ok: false },
+      googleSheets: { ok: false, skipped: false },
+    };
+
+    try {
+      const result = await saveFeedbackActivity(record, event);
+      integrations.supabase = {
+        ok: true,
+        id: Array.isArray(result) ? result[0]?.id || record.id : record.id,
+      };
+    } catch (error) {
+      integrations.supabase = {
+        ok: false,
+        error: error.message || 'Supabase feedback save failed',
+      };
+    }
+
     const sheetConfig = requiredConfig();
-    if (!sheetConfig.clientEmail || !sheetConfig.privateKey) {
-      return json(200, {
+    if (sheetConfig.clientEmail && sheetConfig.privateKey) {
+      try {
+        const result = await appendToSheet(record, sheetConfig);
+        integrations.googleSheets = {
+          ok: true,
+          updatedRange: result.updates?.updatedRange || null,
+        };
+      } catch (error) {
+        integrations.googleSheets = {
+          ok: false,
+          error: error.message || 'Google Sheets append failed',
+        };
+      }
+    } else {
+      integrations.googleSheets = {
         ok: false,
         skipped: true,
         reason: 'missing_integration_config',
-        error: 'Feedback could not be saved: the Google Sheets integration is not configured on the server.',
-      });
+      };
     }
 
-    try {
-      const result = await appendToSheet(record, sheetConfig);
+    if (integrations.supabase.ok || integrations.googleSheets.ok) {
       return json(200, {
         ok: true,
         id: record.id,
-        updatedRange: result.updates?.updatedRange || null,
-      });
-    } catch (error) {
-      return json(502, {
-        ok: false,
-        error: error.message || 'Google Sheets append failed',
+        integrations,
       });
     }
+
+    return json(502, {
+      ok: false,
+      error: integrations.supabase.error || integrations.googleSheets.error || 'Feedback could not be saved.',
+      integrations,
+    });
   } catch (error) {
     return json(500, {
       ok: false,

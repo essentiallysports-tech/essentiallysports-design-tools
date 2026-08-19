@@ -427,6 +427,31 @@
     };
   }
 
+  function normalizeToolFeedback(record = {}) {
+    const activity = normalizeActivityRecord(record);
+    const meta = activity.meta && typeof activity.meta === 'object' ? activity.meta : {};
+    return {
+      id: cleanString(activity.entityId || activity.id),
+      createdAt: activity.createdAt,
+      submitterEmail: normalizeEmail(activity.actorEmail),
+      submitterName: cleanString(activity.actorName),
+      feedbackType: cleanString(meta.feedbackType || 'Other'),
+      tool: cleanString(meta.tool || 'General'),
+      message: cleanString(meta.message || ''),
+      pageUrl: cleanString(meta.pageUrl || ''),
+      status: cleanString(meta.status || 'New'),
+      source: cleanString(meta.source || activity.source || 'FrameUp Tool Feedback'),
+    };
+  }
+
+  function getToolFeedback(activity = []) {
+    return mergeActivity(activity)
+      .filter(record => record.entityType === 'tool_feedback' || record.type === 'tool_feedback_submitted')
+      .map(normalizeToolFeedback)
+      .filter(record => record.message)
+      .sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0));
+  }
+
   function activityToSupabaseRow(record = {}) {
     const normalized = normalizeActivityRecord(record);
     return {
@@ -1305,6 +1330,7 @@
       tasks,
       taskStatusColumns: [...TASK_STATUS_COLUMNS],
       activity,
+      toolFeedback: getToolFeedback(activity),
       people: getPeople({ requests, designs, tasks }),
       adminConfig: getAdminConfig(),
       cloudSyncStatus: { ...cloudSyncStatus },
@@ -1351,6 +1377,7 @@
     readTasks,
     writeTasks,
     readActivity,
+    getToolFeedback,
     getPeople,
     refreshCloudDashboardData,
     upsertSupabaseProfileAndPresence,

@@ -7,12 +7,12 @@ const rendererStart = source.indexOf('function drawListicleType1Post');
 const rendererEnd = source.indexOf('\nfunction drawListicleRankPill', rendererStart);
 assert.ok(rendererStart >= 0 && rendererEnd > rendererStart, 'listicle renderer must exist');
 const rendererSource = source.slice(rendererStart, rendererEnd);
-const rowLoopStart = rendererSource.indexOf('data.rows.forEach');
+const rowLoopStart = rendererSource.indexOf('rowsToRender.forEach');
 const rowLoopEnd = rendererSource.indexOf('drawSwipeButton', rowLoopStart);
 assert.ok(rowLoopStart >= 0 && rowLoopEnd > rowLoopStart, 'listicle row renderer must exist');
 assert.match(
   rendererSource.slice(rowLoopStart, rowLoopEnd),
-  /index < data\.rows\.length - 1[\s\S]*?setLineDash\(\[sx\(9\), sx\(9\)\]\)[\s\S]*?moveTo\(left, separatorY\)[\s\S]*?lineTo\(right, separatorY\)/,
+  /index < rowsToRender\.length - 1[\s\S]*?setLineDash\(\[sx\(9\), sx\(9\)\]\)[\s\S]*?moveTo\(left, separatorY\)[\s\S]*?lineTo\(right, separatorY\)/,
   'listicle rows must retain dotted separators between adjacent rows',
 );
 assert.equal(
@@ -27,7 +27,7 @@ assert.match(
 );
 assert.match(
   rendererSource,
-  /fillText\(String\(header\.text\)\.toUpperCase\(\), sx\(header\.x\), sx\(LISTICLE_TYPE1_TABLE_LAYOUT\.headerY\)\)[\s\S]*?const rowTop = LISTICLE_TYPE1_TABLE_LAYOUT\.rowTop/,
+  /fillText\(String\(header\.text\)\.toUpperCase\(\), sx\(header\.x\), sx\(LISTICLE_TYPE1_TABLE_LAYOUT\.headerY\)\)[\s\S]*?const rowTopPx = sx\(LISTICLE_TYPE1_TABLE_LAYOUT\.rowTop\)/,
   'Listicle Type 1 must use the dedicated table spacing values',
 );
 assert.match(
@@ -52,7 +52,7 @@ assert.match(
 );
 assert.match(
   rendererSource,
-  /const entity = fitListicleTwoLineEntity\(ctx, row\.entity, sx\(335\), 54 \* scale, 34 \* scale\)/,
+  /const entity = fitListicleTwoLineEntity\(ctx, row\.entity, sx\(335\), 54 \* scale \* contentScale, 34 \* scale \* contentScale\)/,
   'Listicle Type 1 rows must use the dedicated two-line entity fitter',
 );
 const entityFitStart = source.indexOf('function wrapListicleWords');
