@@ -17,6 +17,49 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-08-19 — Add ASAP Template 1 to the Social Media workspace; reconciled with a parallel session's changes
+- Status: `[pushed - bc1faf3, merge 8383e51]`
+- Files touched (new): `asap-template-data.js`. Files touched (existing): `index.html` only.
+- Ask (Suhail): given a Figma-exported JSON (`asap-template-structure.json`) plus a rendered PNG reference
+  for a new social post design — a photo background, an ES logo badge top-right, and a rounded gray card
+  holding a bold headline plus a dashed-divider list of dated update rows — "follow what's already
+  actually there just this is a similar different design." Read that as: reuse the established
+  `INSTAGRAM_POST_TYPES` architecture (same pattern as the two Listicle templates), not the literal pixel
+  coordinates in the Figma export — those turned out not to be in the same coordinate space as the
+  1080×1350 canvas (e.g. the background image layer is exported at its intrinsic 1700×1794 size, not its
+  placed/cropped size), so the final layout was derived from the *screenshot's* proportions plus the
+  site's existing `LISTICLE_CANVAS_LAYOUT`-style safe-inset convention (50px), not trusted 1:1 from the JSON.
+- Researched the full Listicle Type 1 implementation first (via an Explore agent, since `index.html` is
+  huge) to find every touchpoint a new post type must hook into: the post-type `<select>`, the
+  `INSTAGRAM_POST_TYPES` registry, a new editor-fields block (reused the existing generic `.listicle-*`
+  CSS classes directly rather than writing new ones), `createDesignerState()`, `syncPostTypeControls()`
+  (text-card label, field-panel visibility, `hidePrimaryTextarea`, `colorCard` hide), the
+  `onTextChange`/`setupCanvasDrag` bail-outs, and `getMainTextSlug()`. Deliberately did **not** add the new
+  type to `isListicleImageControlLocked()` or the CSS `body:is([data-instagram-post-type="listicle-type-1"],
+  ...])` combinator that hides `.image-tool-rail` — unlike the Listicle templates, this one needs a real
+  photo background with pan/zoom controls active.
+- Data model follows the exact same UMD pattern as `listicle-data.js` (`asap-template-data.js`, exposing
+  `window.ESAsapTemplate1`): a title field plus up to 6 rows, each a single text string; blank rows are
+  simply skipped when rendering rather than requiring dynamic add/remove row UI, so the card's height
+  computes itself from however many rows are actually filled in (clamped to a sane min/max).
+- Verified end-to-end in a no-auth-code srcdoc harness: zero JS errors on load; selecting "ASAP Template 1"
+  correctly shows its editor fields (6 row inputs) and hides the primary textarea/color card; the canvas
+  renders at 1080×1350 with the card's exact background color (`rgb(232,232,232)`) sampled from real pixel
+  data; edited a row's text and confirmed state updates live; blanked all rows down to zero and confirmed
+  no crash; round-tripped through a different post type and back with all visibility toggles restored
+  correctly; confirmed `.image-tool-rail` stays visible (`display:flex`) so photo pan/zoom still works.
+- **Mid-task reconciliation**: `git push` was rejected — `origin/main` had moved 30 commits ahead (another
+  session/person had been working in parallel: a Twitter Quotes post type added to the *exact same*
+  `INSTAGRAM_POST_TYPES`-adjacent code, Listicle rows expanded 5→10, a full Tool Feedback redesign +
+  dashboard-inbox integration, a shared typography/design-tokens system, and a mobile editor overhaul).
+  Per the standing rule from the 2026-07-29 entry below ("check `git fetch` before assuming local `main`
+  is current"), fetched and merged rather than force-pushing. `index.html` had 6 real conflict hunks — all
+  the same shape: my `asap-template-1` addition and their `twitter-quote` addition landing on the same
+  line in a shared conditional (post-type `<option>`, the registry object, and four spots inside
+  `syncPostTypeControls()`) — resolved by keeping both branches' lines side by side (never picking one
+  over the other) in each hunk. Re-ran the full verification harness against the merged file afterward to
+  confirm both new post types (mine and theirs) still work correctly side by side before pushing.
+
 ### 2026-08-19 — Listicle Type 1 & 2: expand to 10 rows, add per-row Hide/Unhide
 - Status: `[pushed - see rollback point below]`
 - Files touched: `listicle-data.js`, `listicle-type2-data.js`, `index.html`,
