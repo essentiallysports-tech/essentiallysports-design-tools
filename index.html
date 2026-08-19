@@ -13990,7 +13990,7 @@ const ASAP_TEMPLATE1_LAYOUT = Object.freeze({
   rowFontStart: 30,
   rowFontMin: 20,
   rowGap: 26,
-  bulletSize: 20,
+  bulletSize: 15,
   bulletGap: 20,
   cardMinHeight: 260,
   cardMaxHeight: 900,
@@ -14078,16 +14078,22 @@ function drawAsapTemplate1Post(ctx, W, H, scale) {
   let rowY = textTop + title.renderedHeight + sx(L.titleGapBelow);
   measuredRows.forEach((row, index) => {
     const rowHeight = rowHeights[index];
-    const centerY = rowY + rowHeight / 2;
-    const bulletSize = sx(L.bulletSize);
+    const centerY = Math.round(rowY + rowHeight / 2);
+    const bulletSize = Math.round(sx(L.bulletSize));
+    const bulletX = Math.round(contentX);
+    const bulletY = Math.round(centerY - bulletSize / 2);
     ctx.fillStyle = L.bulletColor;
-    ctx.fillRect(contentX, Math.round(centerY - bulletSize / 2), bulletSize, bulletSize);
+    ctx.fillRect(bulletX, bulletY, bulletSize, bulletSize);
 
     ctx.fillStyle = '#0A0A0A';
     ctx.font = `700 ${Math.round(row.size)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
     ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(row.text, contentX + bulletSize + sx(L.bulletGap), Math.round(centerY));
+    ctx.textBaseline = 'alphabetic';
+    const rowMetrics = ctx.measureText(row.text);
+    const rowCapAscent = Number.isFinite(rowMetrics.actualBoundingBoxAscent) ? rowMetrics.actualBoundingBoxAscent : row.size * 0.72;
+    const rowCapDescent = Number.isFinite(rowMetrics.actualBoundingBoxDescent) ? rowMetrics.actualBoundingBoxDescent : row.size * 0.18;
+    const rowBaselineY = Math.round(centerY + (rowCapAscent - rowCapDescent) / 2);
+    ctx.fillText(row.text, contentX + bulletSize + sx(L.bulletGap), rowBaselineY);
 
     if (index < measuredRows.length - 1) {
       const dividerY = rowY + rowHeight + Math.round(sx(L.rowGap) / 2);
