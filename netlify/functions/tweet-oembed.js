@@ -1,5 +1,6 @@
 const OEMBED_ENDPOINT = 'https://publish.twitter.com/oembed';
 const SYNDICATION_ENDPOINT = 'https://cdn.syndication.twimg.com/tweet-result';
+const FXTWITTER_ENDPOINT = 'https://api.fxtwitter.com';
 
 function json(statusCode, body) {
   return {
@@ -156,6 +157,42 @@ function parseOembed(payload, canonicalUrl) {
   };
 }
 
+async function parseFxTwitter(tweetId, canonicalUrl) {
+  // fxtwitter (api.fxtwitter.com, the open-source "FixTweet" project) is the
+  // only public, unauthenticated source found that actually resolves the
+  // full body of an X "long post" (>280 chars) -- both the syndication and
+  // oEmbed endpoints only ever return the ~280-char legacy preview for
+  // those (see parseSyndication/parseOembed below, kept as fallbacks).
+  const response = await fetch(`${FXTWITTER_ENDPOINT}/i/status/${encodeURIComponent(tweetId)}`, {
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) return null;
+  const payload = await response.json().catch(() => null);
+  const tweet = payload?.tweet;
+  if (!tweet || payload?.code !== 200) return null;
+
+  const author = tweet.author || {};
+  const avatarUrl = avatarOriginalUrl(author.avatar_url);
+  const text = String(tweet.text || '').trim();
+  if (!text) return null;
+
+  return {
+    ok: true,
+    source: 'fx-twitter',
+    url: tweet.url || canonicalUrl,
+    authorName: String(author.name || 'X User').trim(),
+    handle: String(author.screen_name || '').trim(),
+    text,
+    dateLabel: formatTweetDate(tweet.created_at),
+    metrics: `${formatCompactNumber(tweet.replies)} replies · ${formatCompactNumber(tweet.retweets)} reposts · ${formatCompactNumber(tweet.likes)} likes`,
+    avatarUrl,
+    avatarDataUrl: await imageToDataUrl(avatarUrl),
+    verified: Boolean(author.verification?.verified),
+    provider: 'X',
+    truncated: false,
+  };
+}
+
 async function parseSyndication(payload, canonicalUrl) {
   const user = payload?.user || {};
   const favoriteCount = Number(payload?.favorite_count || 0);
@@ -193,6 +230,13 @@ exports.handler = async function handler(event) {
     const url = normalizeTweetUrl(event.queryStringParameters?.url);
     const tweetId = extractTweetId(url);
     if (tweetId) {
+      try {
+        const fxResult = await parseFxTwitter(tweetId, url);
+        if (fxResult) return json(200, fxResult);
+      } catch (error) {
+        // fall through to the other sources below
+      }
+
       const syndicationResponse = await fetch(`${SYNDICATION_ENDPOINT}?id=${encodeURIComponent(tweetId)}&token=1`, {
         headers: { Accept: 'application/json' },
       });
