@@ -135,19 +135,24 @@ function parseOembed(payload, canonicalUrl) {
   const handle = authorLine.match(/\(@([^)]+)\)/)?.[1] || '';
   const authorName = String(payload?.author_name || authorLine.replace(/\s*\(@[^)]+\)\s*$/, '') || 'X User').trim();
 
+  const cleanedText = cleanHtmlText(paragraph);
   return {
     ok: true,
     source: 'x-oembed',
     url: canonicalUrl,
     authorName,
     handle,
-    text: cleanHtmlText(paragraph),
+    text: cleanedText,
     dateLabel,
     metrics: '',
     avatarUrl: '',
     avatarDataUrl: '',
     verified: false,
     provider: payload?.provider_name || 'X',
+    // The oEmbed widget marks a truncated "long post" preview with a
+    // trailing ellipsis in its HTML -- same underlying limitation as the
+    // note_tweet check in parseSyndication (see the comment there).
+    truncated: /[…]\s*$/.test(cleanedText),
   };
 }
 
@@ -171,6 +176,12 @@ async function parseSyndication(payload, canonicalUrl) {
     avatarDataUrl: await imageToDataUrl(avatarUrl),
     verified: Boolean(user.verified || user.is_blue_verified),
     provider: 'X',
+    // "Long posts" (X Premium note tweets, >280 chars) only expose this
+    // preview text through the public syndication/oEmbed APIs -- the full
+    // extended body lives behind `note_tweet`, which resolves to nothing
+    // more than an opaque GraphQL id without authenticated API access.
+    // There is no public, unauthenticated way to fetch the rest.
+    truncated: Boolean(payload?.note_tweet),
   };
 }
 

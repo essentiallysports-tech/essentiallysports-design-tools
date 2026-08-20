@@ -16422,7 +16422,12 @@ async function fetchTweetQuote() {
       verified: Boolean(payload.verified),
     };
     syncTweetQuoteFields();
-    setTweetQuoteStatus('Tweet card generated.', false);
+    setTweetQuoteStatus(
+      payload.truncated
+        ? 'This is an X long post -- only the first ~280 characters could be fetched automatically. Edit the text field below to paste the rest yourself.'
+        : 'Tweet card generated.',
+      Boolean(payload.truncated)
+    );
     render();
   } catch (error) {
     setTweetQuoteStatus(error.message || 'Could not generate that tweet.', true);
