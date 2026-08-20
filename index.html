@@ -13983,7 +13983,6 @@ const ASAP_TEMPLATE1_LAYOUT = Object.freeze({
   accentLineWidth: 5,
   accentLineGap: 22,
   titleGapBelow: 36,
-  titleMaxLines: 8,
   titleFontSize: 60,
   rowFontStart: 30,
   rowFontMin: 20,
@@ -14022,6 +14021,57 @@ function fitAsapTemplate1RowText(ctx, text, maxWidth, startSize, minSize) {
   return { text: display, size };
 }
 
+function wrapAsapTemplate1Words(ctx, text, maxWidth) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [''];
+  const lines = [];
+  let current = '';
+  words.forEach(word => {
+    if (ctx.measureText(word).width > maxWidth) {
+      if (current) { lines.push(current); current = ''; }
+      let chunk = '';
+      for (const ch of word) {
+        const candidateChunk = chunk + ch;
+        if (chunk && ctx.measureText(candidateChunk).width > maxWidth) {
+          lines.push(chunk);
+          chunk = ch;
+        } else {
+          chunk = candidateChunk;
+        }
+      }
+      current = chunk;
+      return;
+    }
+    const candidate = current ? `${current} ${word}` : word;
+    if (!current || ctx.measureText(candidate).width <= maxWidth) {
+      current = candidate;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  });
+  if (current) lines.push(current);
+  return lines;
+}
+
+function fitAsapTemplate1Title(ctx, text, maxWidth, fontSize) {
+  const value = String(text || '').toUpperCase();
+  ctx.font = `900 ${Math.round(fontSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  const lines = wrapAsapTemplate1Words(ctx, value, maxWidth);
+  const capMetrics = ctx.measureText('A');
+  const capAscent = Number.isFinite(capMetrics.actualBoundingBoxAscent) ? capMetrics.actualBoundingBoxAscent : fontSize * 0.72;
+  const capDescent = Number.isFinite(capMetrics.actualBoundingBoxDescent) ? capMetrics.actualBoundingBoxDescent : 0;
+  const lineHeight = Math.round(fontSize * 0.94);
+  return {
+    size: fontSize,
+    lines,
+    capAscent,
+    capDescent,
+    lineHeight,
+    renderedHeight: capAscent + capDescent + Math.max(0, lines.length - 1) * lineHeight,
+  };
+}
+
 function drawAsapTemplate1Post(ctx, W, H, scale) {
   const L = ASAP_TEMPLATE1_LAYOUT;
   const sx = value => Math.round(value * scale);
@@ -14054,7 +14104,7 @@ function drawAsapTemplate1Post(ctx, W, H, scale) {
   const contentWidth = cardWidth - sx(L.cardPaddingX) * 2 - sx(L.accentLineWidth) - sx(L.accentLineGap);
 
   const titleFontSize = L.titleFontSize * scale;
-  const title = fitListicleBlockInBox(ctx, data.title, contentWidth, sx(4000), L.titleMaxLines, titleFontSize, titleFontSize);
+  const title = fitAsapTemplate1Title(ctx, data.title, contentWidth, titleFontSize);
 
   const textX = contentX + sx(L.accentLineWidth) + sx(L.accentLineGap);
   const rowTextWidth = contentWidth - sx(L.bulletSize) - sx(L.bulletGap);
