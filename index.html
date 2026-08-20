@@ -607,7 +607,7 @@
   .input-wrap {
     position: relative;
   }
-  input[type="text"], textarea {
+  input[type="text"], input[type="url"], textarea {
     width: 100%;
     background: var(--white);
     border: 1px solid var(--border);
@@ -621,12 +621,12 @@
     transition: border-color 0.15s, box-shadow 0.15s;
     appearance: none;
   }
-  input[type="text"]::placeholder, textarea::placeholder {
+  input[type="text"]::placeholder, input[type="url"]::placeholder, textarea::placeholder {
     color: var(--text-secondary);
     font-weight: 400;
     opacity: 0.7;
   }
-  input[type="text"]:focus, textarea:focus {
+  input[type="text"]:focus, input[type="url"]:focus, textarea:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(10,125,250,0.12);
   }
@@ -13514,9 +13514,10 @@ function drawTwitterQuotePost(ctx, W, H, scale) {
 
   const bodyH = bodyLines.length * lineHeight;
   const bottomMargin = sx(state.swipeButton && state.swipeButton !== 'none' ? 186 : 92);
-  const logoMarginTop = sx(LOGO_SAFE_MARGIN) + sx(LOGO_FINAL_H) + sx(20);
-  const cardMaxHeight = H - bottomMargin - logoMarginTop;
-  const cardH = clamp(cardPad + headerH + sx(18) + bodyH + footerH + cardPad, sx(250), cardMaxHeight);
+  // No upper cap: the full tweet must always be visible, even if a very long
+  // tweet pushes the card up past where it would normally leave room for the
+  // logo. Only a lower bound keeps short tweets from collapsing the card.
+  const cardH = Math.max(sx(250), cardPad + headerH + sx(18) + bodyH + footerH + cardPad);
   const cardY = H - cardH - bottomMargin;
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,.32)';
