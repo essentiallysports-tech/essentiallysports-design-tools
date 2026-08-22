@@ -16,6 +16,7 @@
     allowedEmails: [
       'bu8945@gmail.com',
       'designteam@essentiallysports.com',
+      'workcallsudha@gmail.com',
     ],
   });
 })();
