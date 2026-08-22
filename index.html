@@ -17285,6 +17285,20 @@ function setupPageTransitions() {
   requestAnimationFrame(showPageBody);
   window.addEventListener('pageshow', showPageBody);
 
+  // Browsers restore the exact scroll position on back/forward-cache
+  // restores and on reload -- without this, a visitor who had scrolled
+  // partway into the long "how it works" story and then navigated away
+  // and back lands mid-page (often right on the sticky "Keep scrolling"
+  // section) instead of at the top. `scrollRestoration = 'manual'`
+  // stops the browser's own restore; the pageshow listener explicitly
+  // resets to the top only for the two cases that actually restore old
+  // scroll (bfcache restores, and same-page reloads without a hash).
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.addEventListener('pageshow', event => {
+    if (!event.persisted && window.location.hash) return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  });
+
   document.addEventListener('click', event => {
     const link = event.target.closest('a[href]');
     if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
