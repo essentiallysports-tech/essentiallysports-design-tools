@@ -94,16 +94,7 @@
   setWorkflowStep(0);
   startWorkflowTimer();
 
-  const blueStory = document.querySelector('[data-blue-story]');
   const frameOptions = document.querySelector('.frame-options');
-  const blueStoryLines = blueStory ? [...blueStory.querySelectorAll('.frameup-intro__line')] : [];
-  const blueStoryCount = blueStory?.querySelector('[data-blue-story-count]');
-  let blueStoryFrame = 0;
-  const clamp01 = value => Math.min(1, Math.max(0, value));
-  const smoothstep = value => {
-    const progress = clamp01(value);
-    return progress * progress * (3 - 2 * progress);
-  };
 
   const updateCardsStickyTop = () => {
     if (!frameOptions) return;
@@ -113,62 +104,9 @@
     frameOptions.style.setProperty('--cards-sticky-top', `${stickyTop.toFixed(2)}px`);
   };
 
-  const updateBlueStory = () => {
-    blueStoryFrame = 0;
-    if (!blueStory || !blueStoryLines.length) return;
-
-    if (reducedMotion.matches) {
-      blueStory.style.setProperty('--story-progress', '1');
-      blueStory.style.setProperty('--copy-opacity', '1');
-      blueStory.style.setProperty('--cue-opacity', '0');
-      blueStoryLines.forEach((line, index) => {
-        line.style.setProperty('--line-active', index === blueStoryLines.length - 1 ? '1' : '0');
-        line.style.setProperty('--line-y', index === blueStoryLines.length - 1 ? '0px' : '-54px');
-      });
-      if (blueStoryCount) blueStoryCount.textContent = String(blueStoryLines.length).padStart(2, '0');
-      return;
-    }
-
-    const rect = blueStory.getBoundingClientRect();
-    const pinnedTravel = headerOffset() - rect.top;
-    const range = Math.max(1, blueStory.offsetHeight - window.innerHeight);
-    const copyTravel = 80;
-    const totalProgress = clamp01(pinnedTravel / range);
-    const copyProgress = smoothstep(pinnedTravel / copyTravel);
-    const visibleBlue = window.innerHeight - rect.top;
-    const cueArrival = smoothstep((visibleBlue - 120) / 160);
-    const cueDeparture = 1 - smoothstep(pinnedTravel / 60);
-    const cueProgress = cueArrival * cueDeparture;
-    const textProgress = clamp01((pinnedTravel - copyTravel) / Math.max(1, range - copyTravel));
-    const activeFloat = textProgress * (blueStoryLines.length - 1);
-    const activeIndex = Math.min(blueStoryLines.length - 1, Math.round(activeFloat));
-
-    blueStory.style.setProperty('--story-progress', totalProgress.toFixed(4));
-    blueStory.style.setProperty('--copy-opacity', copyProgress.toFixed(3));
-    blueStory.style.setProperty('--cue-opacity', cueProgress.toFixed(3));
-    blueStoryLines.forEach((line, index) => {
-      const distance = Math.abs(activeFloat - index);
-      const active = copyProgress * (1 - smoothstep(distance / .72));
-      line.style.setProperty('--line-active', active.toFixed(3));
-      line.style.setProperty('--line-y', `${((index - activeFloat) * 54).toFixed(2)}px`);
-    });
-    if (blueStoryCount) blueStoryCount.textContent = String(activeIndex + 1).padStart(2, '0');
-  };
-
-  const queueBlueStory = () => {
-    if (blueStoryFrame) return;
-    blueStoryFrame = window.requestAnimationFrame(updateBlueStory);
-  };
-
-  window.addEventListener('scroll', queueBlueStory, { passive: true });
-  window.addEventListener('resize', () => {
-    updateCardsStickyTop();
-    queueBlueStory();
-  });
-  reducedMotion.addEventListener?.('change', updateBlueStory);
+  window.addEventListener('resize', updateCardsStickyTop);
   document.fonts?.ready.then(updateCardsStickyTop);
   updateCardsStickyTop();
-  updateBlueStory();
 
   const creationFlow = document.querySelector('[data-creation-flow]');
   if (creationFlow) {

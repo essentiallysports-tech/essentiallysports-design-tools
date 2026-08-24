@@ -336,64 +336,16 @@ html { scroll-behavior: smooth; }
 }
 
 .frameup-intro {
-  --copy-opacity: 0;
-  --cue-opacity: 0;
   position: relative;
-  height: 260vh;
+  padding: clamp(96px, 14vh, 160px) 0;
   background: var(--how-story-blue);
-}
-
-.frameup-intro__sticky {
-  position: sticky;
-  top: var(--site-header-height, 72px);
-  min-height: calc(100svh - var(--site-header-height, 72px));
-  overflow: hidden;
-  display: grid;
-  align-items: center;
-  isolation: isolate;
-  background: var(--how-story-blue);
-}
-
-.how-page .frameup-intro__scroll-cue {
-  position: absolute;
-  z-index: 2;
-  left: 50%;
-  top: clamp(24px, 4vh, 42px);
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  margin: 0;
-  color: #ffffff;
-  font-size: 23px;
-  font-weight: 700;
-  opacity: var(--cue-opacity);
-  transform: translateX(-50%);
-  pointer-events: none;
-  will-change: opacity;
-}
-
-.how-page .frameup-intro__scroll-cue .ui-arrow-right {
-  width: 22px;
-  height: 14px;
-  flex-basis: 22px;
-  filter: brightness(0) invert(1);
-  transform: rotate(0deg);
-  animation: frameup-scroll-cue 1.4s ease-in-out infinite;
-}
-
-@keyframes frameup-scroll-cue {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(5px); }
 }
 
 .frameup-intro__copy {
   position: relative;
-  z-index: 1;
   width: var(--how-content);
   margin: 0 auto;
   color: #ffffff;
-  opacity: var(--copy-opacity);
-  will-change: opacity;
 }
 
 .how-page .frameup-intro__eyebrow {
@@ -407,40 +359,24 @@ html { scroll-behavior: smooth; }
 }
 
 .frameup-intro__messages {
-  position: relative;
-  min-height: clamp(190px, 25vw, 340px);
+  display: grid;
+  gap: 18px;
 }
 
 .how-page .frameup-intro__line {
-  --line-active: 0;
-  --line-y: 54px;
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: min(1120px, 100%);
   margin: 0;
   color: currentColor;
   font-family: var(--how-display);
-  font-size: clamp(56px, 7.4vw, 118px);
+  font-size: clamp(40px, 5vw, 72px);
   font-weight: 700;
-  line-height: .9;
+  line-height: 1.05;
   letter-spacing: 0;
-  opacity: var(--line-active);
-  transform: translate3d(0, var(--line-y), 0);
-  will-change: opacity, transform;
-}
-
-.frameup-intro__meta {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 24px;
-  margin-top: clamp(18px, 3vh, 34px);
 }
 
 .how-page .frameup-intro__credit {
   display: grid;
   gap: 3px;
-  margin: 0;
+  margin: clamp(28px, 4vh, 48px) 0 0;
   color: currentColor;
   font-size: 15px;
   line-height: 1.1;
@@ -448,14 +384,6 @@ html { scroll-behavior: smooth; }
 
 .frameup-intro__credit span:first-child { font-weight: 700; }
 .frameup-intro__credit span:last-child { opacity: .68; }
-.how-page .frameup-intro__count {
-  margin: 0;
-  color: currentColor;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0;
-  opacity: .76;
-}
 
 /* The complete post-card journey lives inside one ES-blue chapter. */
 .how-page :is(.path-section, .workspace-section, .request-section, .help-section) {
@@ -1125,8 +1053,7 @@ html[data-theme="dark"] .how-button--secondary { background: transparent; }
   .how-section { width: min(100% - 32px, 720px); }
   .how-hero-copy { padding-inline: 38px; }
   .frameup-intro__copy { width: min(100% - 32px, 720px); }
-  .frameup-intro__messages { min-height: clamp(220px, 43vw, 310px); }
-  .how-page .frameup-intro__line { font-size: clamp(52px, 10.5vw, 82px); }
+  .how-page .frameup-intro__line { font-size: clamp(30px, 6vw, 48px); }
   .section-heading--split { grid-template-columns: 1fr; gap: 22px; }
   .path-grid { grid-template-columns: 1fr; }
   .path-card { min-height: 148px; }
@@ -1166,13 +1093,9 @@ html[data-theme="dark"] .how-button--secondary { background: transparent; }
   .how-page h3 { font-size: 26px; }
   .how-page p { font-size: 17px; }
   .how-hero-copy { padding-inline: 24px; }
-  .frameup-intro { height: 290vh; }
-  .frameup-intro__sticky { min-height: calc(100svh - var(--site-header-height, 72px)); }
-  .frameup-intro__messages { min-height: 210px; }
   .how-page .frameup-intro__eyebrow { margin-bottom: 24px; font-size: 12px; }
-  .how-page .frameup-intro__line { font-size: clamp(42px, 13vw, 58px); line-height: .92; }
-  .frameup-intro__meta { margin-top: 18px; }
-  .how-page .frameup-intro__credit { font-size: 14px; }
+  .how-page .frameup-intro__line { font-size: clamp(28px, 9vw, 40px); line-height: 1.1; }
+  .how-page .frameup-intro__credit { margin-top: 24px; font-size: 14px; }
   .how-actions { display: grid; }
   .how-button { width: 100%; }
   .path-section,
@@ -1196,7 +1119,4 @@ html[data-theme="dark"] .how-button--secondary { background: transparent; }
   *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
   [data-how-reveal],
   [data-how-stagger] > * { opacity: 1; transform: none; }
-  .frameup-intro { height: auto; min-height: calc(100svh - var(--site-header-height, 72px)); }
-  .frameup-intro__sticky { position: relative; top: auto; }
-  .frameup-intro__scroll-cue { display: none; }
 }
