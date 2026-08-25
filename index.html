@@ -8,6 +8,7 @@
 <script src="es-auth-config.js?v=20260707-auth4"></script>
 <script src="es-auth.js?v=20260714-authcallback2"></script>
   <script src="dashboard-data.js?v=20260716-dashboard-sync1"></script>
+  <script src="bg-remove-config.js?v=20260825-bgremove1"></script>
 <script>
   (() => {
     window.ESAuth?.requireAuth(`index.html${window.location.search}${window.location.hash}`);
@@ -3943,6 +3944,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   .image-context-actions {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
   }
   .image-context-actions button {
@@ -3969,6 +3971,26 @@ body[data-current-page="faq"] .faq-cta-art img {
   .image-context-actions button:disabled {
     color: #AEB6C2;
     cursor: default;
+  }
+  .image-context-removebg-status {
+    color: #4B5563;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .image-context-removebg-status.is-error {
+    color: #B42318;
+  }
+  .image-context-removebg-status button[data-image-slot-restore-original] {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #0A7DFA;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: underline;
   }
   .image-context-precision {
     display: grid;
@@ -5082,6 +5104,130 @@ body[data-current-page="faq"] .faq-cta-art img {
       padding: 0;
       align-items: stretch;
       background: #F3F4F6;
+    }
+
+    html[data-studio-shell="on"] .app[data-workspace].has-layers-panel {
+      grid-template-columns: minmax(200px, 240px) minmax(0, 1fr) minmax(370px, 26vw);
+    }
+
+    .layers-panel {
+      display: none;
+    }
+
+    html[data-studio-shell="on"] .layers-panel {
+      order: 0;
+      flex-direction: column;
+      min-width: 0;
+      height: 100%;
+      border-right: 1px solid #E4EAF1;
+      background: #FFFFFF;
+      overflow-y: auto;
+    }
+
+    html[data-studio-shell="on"] .app[data-workspace].has-layers-panel .layers-panel {
+      display: flex;
+    }
+
+    .layers-panel-head {
+      padding: 16px 16px 10px;
+      color: #07152A;
+      font-family: var(--font-heading);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    .layers-panel-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 0 8px 12px;
+    }
+
+    .layers-panel-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      cursor: grab;
+      transition: background-color .16s ease, border-color .16s ease;
+    }
+
+    .layers-panel-row:hover {
+      background: #F6F9FC;
+      border-color: #E4EAF1;
+    }
+
+    .layers-panel-row.is-dragging {
+      opacity: .4;
+    }
+
+    .layers-panel-row.is-drop-target {
+      border-color: #B5D8FD;
+      background: #E7F2FF;
+    }
+
+    .layers-panel-row.is-hidden-layer .layers-panel-label {
+      color: #9AA6B2;
+    }
+
+    .layers-panel-grip {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      width: 12px;
+      color: #C4CCD6;
+      flex: none;
+    }
+
+    .layers-panel-grip span {
+      display: block;
+      width: 100%;
+      height: 2px;
+      border-radius: 1px;
+      background: currentColor;
+    }
+
+    .layers-panel-label {
+      flex: 1 1 auto;
+      overflow: hidden;
+      color: #07152A;
+      font-family: var(--font-heading);
+      font-size: 13px;
+      font-weight: 600;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .layers-panel-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      flex: none;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #111827;
+      cursor: pointer;
+    }
+
+    .layers-panel-toggle:hover {
+      background: #EFF6FD;
+    }
+
+    .layers-panel-toggle svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .layers-panel-toggle[data-layer-locked="true"] {
+      color: #0A7DFA;
     }
 
     html[data-studio-shell="on"] .studio-rail {
@@ -6367,6 +6513,10 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
 
   @media (max-width: 1023px) {
+    .layers-panel {
+      display: none !important;
+    }
+
     html[data-studio-shell="on"] .canvas-bottom-actions,
     html[data-studio-shell="on"] .canvas-bottom-actions.is-ai-search-expanded,
     html[data-studio-shell="on"] body[data-current-page="instagram"] .canvas-bottom-actions,
@@ -7627,6 +7777,14 @@ body[data-current-page="faq"] .faq-cta-art img {
 <!-- MAIN APP -->
 <div class="app view-hidden" data-workspace>
 
+  <!-- LAYERS PANEL -->
+  <aside class="layers-panel" id="layers-panel" aria-label="Layers" hidden>
+    <div class="layers-panel-head">
+      <span>Layers</span>
+    </div>
+    <div class="layers-panel-list" id="layers-panel-list"></div>
+  </aside>
+
   <!-- LEFT PANEL -->
   <div class="panel">
     <div class="youtube-control-row" aria-label="YouTube asset options">
@@ -8338,7 +8496,9 @@ body[data-current-page="faq"] .faq-cta-art img {
                       <button type="button" data-image-slot-upload="move">Replace</button>
                       <button type="button" data-image-slot-remove="move">Remove</button>
                       <button type="button" data-image-slot-reset="move">Reset</button>
+                      <button type="button" data-image-slot-removebg="move">Remove background</button>
                     </div>
+                    <div class="image-context-removebg-status" data-image-removebg-status="background" hidden></div>
                   </div>
                 </div>
                 <div class="image-context-precision" aria-label="Background precise position and zoom">
@@ -8368,7 +8528,9 @@ body[data-current-page="faq"] .faq-cta-art img {
                       <button type="button" data-image-slot-upload="foreground-1">Replace</button>
                       <button type="button" data-image-slot-remove="foreground-1">Remove</button>
                       <button type="button" data-image-slot-reset="foreground-1">Reset</button>
+                      <button type="button" data-image-slot-removebg="foreground-1">Remove background</button>
                     </div>
+                    <div class="image-context-removebg-status" data-image-removebg-status="foreground-1" hidden></div>
                   </div>
                 </div>
                 <div class="image-context-precision" aria-label="Entity 1 precise position and zoom">
@@ -8398,7 +8560,9 @@ body[data-current-page="faq"] .faq-cta-art img {
                       <button type="button" data-image-slot-upload="foreground-2">Replace</button>
                       <button type="button" data-image-slot-remove="foreground-2">Remove</button>
                       <button type="button" data-image-slot-reset="foreground-2">Reset</button>
+                      <button type="button" data-image-slot-removebg="foreground-2">Remove background</button>
                     </div>
+                    <div class="image-context-removebg-status" data-image-removebg-status="foreground-2" hidden></div>
                   </div>
                 </div>
                 <div class="image-context-precision" aria-label="Entity 2 precise position and zoom">
@@ -9094,7 +9258,24 @@ function createDesignerState(defaultBottomAnchor) {
     entityScale2: 1,
     newsletterAsset: 'feature-image',
     newsletterBrand: 'essentiallysports',
+    coverLayers: createDefaultCoverLayers(),
   };
+}
+
+const COVER_LAYER_LABELS = {
+  photo: 'Background Image',
+  pills: 'Text',
+  swipeButton: 'Swipe Button',
+  logo: 'ES Logo',
+};
+
+function createDefaultCoverLayers() {
+  return Object.keys(COVER_LAYER_LABELS).map(id => ({
+    id,
+    label: COVER_LAYER_LABELS[id],
+    visible: true,
+    locked: false,
+  }));
 }
 
 const WORKSPACES = {
@@ -9989,10 +10170,145 @@ function resetImageTool(tool) {
 }
 
 function removeImageToolAsset(tool) {
+  clearBgRemovalBackup(getImageToolDescriptor(tool).key);
   if (tool === 'foreground-2') removeEntityPhoto2();
   else if (tool === 'foreground-1' && !isDoubleEntityImagePost()) removeEntityPhoto();
   else removePhoto();
   selectImageTool(tool, true);
+}
+
+function setRemoveBackgroundStatus(slotKey, message, options) {
+  const el = document.querySelector(`[data-image-removebg-status="${slotKey}"]`);
+  if (!el) return;
+  const opts = options || {};
+  el.hidden = !message;
+  el.classList.toggle('is-error', !!opts.isError);
+  if (!message) {
+    el.textContent = '';
+    return;
+  }
+  el.textContent = `${message} `;
+  if (opts.showRestore) {
+    const restoreBtn = document.createElement('button');
+    restoreBtn.type = 'button';
+    restoreBtn.textContent = 'Restore original';
+    restoreBtn.dataset.imageSlotRestoreOriginal = slotKey;
+    restoreBtn.addEventListener('click', event => {
+      event.stopPropagation();
+      restoreBgRemovalBackup(slotKey);
+    });
+    el.appendChild(restoreBtn);
+  }
+}
+
+function imageToPngBlob(img) {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(blob => {
+      if (blob) resolve(blob);
+      else reject(new Error('Could not read the current image.'));
+    }, 'image/png');
+  });
+}
+
+function blobToImage(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('The processed image could not be loaded.'));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error('Could not read the processed image.'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function setImageToolAssetImage(tool, img, name) {
+  if (tool === 'foreground-2') {
+    state.entityPhoto2 = img;
+    state.entityPhotoName2 = name;
+  } else if (tool === 'foreground-1' && !isDoubleEntityImagePost()) {
+    state.entityPhoto = img;
+    state.entityPhotoName = name;
+  } else {
+    state.photo = img;
+    state.photoName = name;
+  }
+}
+
+function stashBgRemovalBackup(tool, descriptor) {
+  state.bgRemovalBackups = state.bgRemovalBackups || {};
+  state.bgRemovalBackups[descriptor.key] = { image: descriptor.image, name: descriptor.name, tool };
+}
+
+function clearBgRemovalBackup(slotKey) {
+  if (state.bgRemovalBackups) delete state.bgRemovalBackups[slotKey];
+  setRemoveBackgroundStatus(slotKey, '');
+}
+
+function restoreBgRemovalBackup(slotKey) {
+  const backup = state.bgRemovalBackups && state.bgRemovalBackups[slotKey];
+  if (!backup) return;
+  setImageToolAssetImage(backup.tool, backup.image, backup.name);
+  delete state.bgRemovalBackups[slotKey];
+  saveMediaContext();
+  syncImageToolControls();
+  setRemoveBackgroundStatus(slotKey, '');
+  render();
+}
+
+async function removeBackgroundForTool(tool) {
+  const descriptor = getImageToolDescriptor(tool);
+  const slotKey = descriptor.key;
+  const button = document.querySelector(`[data-image-slot-removebg="${tool}"]`);
+  if (!descriptor.image) {
+    setRemoveBackgroundStatus(slotKey, 'Upload an image first.', { isError: true });
+    return;
+  }
+  const originalLabel = button ? button.textContent : '';
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Removing background...';
+  }
+  setRemoveBackgroundStatus(slotKey, '');
+  const apiBase = (window.BG_REMOVE_CONFIG && window.BG_REMOVE_CONFIG.apiBase) || 'http://localhost:8000';
+  try {
+    const originalImage = descriptor.image;
+    const originalName = descriptor.name;
+    const blob = await imageToPngBlob(originalImage);
+    const form = new FormData();
+    form.append('file', blob, 'image.png');
+    const response = await fetch(`${apiBase}/api/remove-background`, {
+      method: 'POST',
+      body: form,
+    });
+    if (!response.ok) {
+      const errorPayload = await response.json().catch(() => ({}));
+      throw new Error(errorPayload.detail || `Background removal failed (${response.status}).`);
+    }
+    const resultBlob = await response.blob();
+    const resultImage = await blobToImage(resultBlob);
+    // Original stays recoverable via "Restore original" until replaced or removed outright.
+    stashBgRemovalBackup(tool, { key: slotKey, image: originalImage, name: originalName });
+    setImageToolAssetImage(tool, resultImage, originalName);
+    saveMediaContext();
+    syncImageToolControls();
+    render();
+    setRemoveBackgroundStatus(slotKey, 'Background removed.', { showRestore: true });
+  } catch (error) {
+    setRemoveBackgroundStatus(slotKey, error.message || 'Could not remove the background.', { isError: true });
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
+  }
 }
 
 function openImageToolUpload(tool) {
@@ -10245,6 +10561,14 @@ function initImageToolRail() {
       resetImageTool(button.dataset.imageSlotReset);
     });
   });
+
+  document.querySelectorAll('[data-image-slot-removebg]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      removeBackgroundForTool(button.dataset.imageSlotRemovebg);
+    });
+  });
+
 
   document.getElementById('image-tool-panel')?.addEventListener('click', event => event.stopPropagation());
   document.addEventListener('click', event => {
@@ -11482,6 +11806,7 @@ function onPhotoUpload(e) {
       targetState.photoName = file.name;
       saveMediaContext(mediaContextKey, targetState);
       if (targetState !== state) return;
+      clearBgRemovalBackup(isDoubleEntityImagePost() ? 'foreground-1' : 'background');
       const drop = document.getElementById('photo-drop');
       if (drop) {
         drop.classList.add('has-photo');
@@ -11947,6 +12272,7 @@ function onEntityPhotoUpload(e) {
       targetState.entityPhotoName = file.name;
       saveMediaContext(mediaContextKey, targetState);
       if (targetState !== state) return;
+      clearBgRemovalBackup('foreground-1');
       selectImageTool('foreground-1', true);
       syncEntityPhotoControls();
       render();
@@ -11980,6 +12306,7 @@ function onEntityPhotoUpload2(e) {
       targetState.entityPhotoName2 = file.name;
       saveMediaContext(mediaContextKey, targetState);
       if (targetState !== state) return;
+      clearBgRemovalBackup('foreground-2');
       selectImageTool('foreground-2', true);
       syncEntityPhotoControls2();
       render();
@@ -12648,6 +12975,57 @@ function drawCanvas(ctx, W, H, scale) {
   postTypeConfig.render(ctx, W, H, scale);
 }
 
+function getCoverLayers() {
+  if (!Array.isArray(state.coverLayers) || !state.coverLayers.length) {
+    state.coverLayers = createDefaultCoverLayers();
+  }
+  return state.coverLayers;
+}
+
+function getCoverLayer(id) {
+  return getCoverLayers().find(layer => layer.id === id) || null;
+}
+
+function isCoverLayerVisible(id) {
+  const layer = getCoverLayer(id);
+  return !layer || layer.visible !== false;
+}
+
+function isCoverLayerLocked(id) {
+  const layer = getCoverLayer(id);
+  return !!layer && layer.locked === true;
+}
+
+function setCoverLayerVisible(id, visible) {
+  const layer = getCoverLayer(id);
+  if (!layer) return;
+  layer.visible = !!visible;
+}
+
+function setCoverLayerLocked(id, locked) {
+  const layer = getCoverLayer(id);
+  if (!layer) return;
+  layer.locked = !!locked;
+}
+
+function reorderCoverLayer(id, targetIndex) {
+  const layers = getCoverLayers();
+  const fromIndex = layers.findIndex(layer => layer.id === id);
+  if (fromIndex === -1) return;
+  const clamped = Math.max(0, Math.min(targetIndex, layers.length - 1));
+  if (clamped === fromIndex) return;
+  const [moved] = layers.splice(fromIndex, 1);
+  layers.splice(clamped, 0, moved);
+}
+
+function isCoverLayersPanelActive() {
+  return activeWorkspace === 'instagram' && (state.postType || 'cover') === 'cover';
+}
+
+function imageToolCoverLayerId(tool) {
+  return tool === 'move' ? 'photo' : null;
+}
+
 function drawCoverPost(ctx, W, H, scale) {
   if (activeWorkspace === 'newsletter' && activeNewsletterAsset === 'feature-image') {
     drawNewsletterFeatureImage(ctx, W, H, scale);
@@ -12671,43 +13049,47 @@ function drawCoverPost(ctx, W, H, scale) {
   ctx.fillRect(0, 0, W, H);
   if (!hasPostContent) return;
 
-  // 2. Photo (center-cropped with pan offset)
-  if (state.photo) {
-    drawCoverImage(ctx, state.photo, W, H, scale);
-  }
+  // 2-6. Remaining visual layers, drawn in the user-configurable cover-layer order
+  // (Layers panel). The gradient mist and the YouTube foreground images are visually
+  // tied to the background photo, so they travel with the "photo" layer entry rather
+  // than being separately reorderable layers.
+  const coverLayers = getCoverLayers();
+  for (const layer of coverLayers) {
+    if (layer.visible === false) continue;
+    if (layer.id === 'photo') {
+      if (state.photo) {
+        drawCoverImage(ctx, state.photo, W, H, scale);
+      }
 
-  // 3. Bottom gradient overlay (selected team mist color)
-  const gradH = Math.round(workspace.mistHeight * scale);
-  const gradY = H - gradH;
-  const teamEntry = getBrandEntry(state.sport, state.team);
-  const coverPalette = state.pillPalette || getPaletteForWorkspace(teamEntry)[0] || teamEntry?.primary || { background: '#000000', mist: '#000000' };
-  const teamBg = getMistColorForPair(coverPalette, teamEntry);
-  const grad = ctx.createLinearGradient(0, H, 0, gradY);
-  grad.addColorStop(0, teamBg);
-  grad.addColorStop(1, teamBg + '00');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, gradY, W, gradH);
+      const gradH = Math.round(workspace.mistHeight * scale);
+      const gradY = H - gradH;
+      const teamEntry = getBrandEntry(state.sport, state.team);
+      const coverPalette = state.pillPalette || getPaletteForWorkspace(teamEntry)[0] || teamEntry?.primary || { background: '#000000', mist: '#000000' };
+      const teamBg = getMistColorForPair(coverPalette, teamEntry);
+      const grad = ctx.createLinearGradient(0, H, 0, gradY);
+      grad.addColorStop(0, teamBg);
+      grad.addColorStop(1, teamBg + '00');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, gradY, W, gradH);
 
-  // 3b. Foreground images stay above the background treatment and below text.
-  if (activeWorkspace === 'youtube' && (activeYoutubeVariation === 'variation-2' || activeYoutubeVariation === 'variation-3')) {
-    drawForegroundImage(ctx, state.entityPhoto, W, H, state.entityScale, state.entityOffsetX, state.entityOffsetY);
-    if (activeYoutubeVariation === 'variation-3') {
-      drawForegroundImage(ctx, state.entityPhoto2, W, H, state.entityScale2, state.entityOffsetX2, state.entityOffsetY2);
+      if (activeWorkspace === 'youtube' && (activeYoutubeVariation === 'variation-2' || activeYoutubeVariation === 'variation-3')) {
+        drawForegroundImage(ctx, state.entityPhoto, W, H, state.entityScale, state.entityOffsetX, state.entityOffsetY);
+        if (activeYoutubeVariation === 'variation-3') {
+          drawForegroundImage(ctx, state.entityPhoto2, W, H, state.entityScale2, state.entityOffsetX2, state.entityOffsetY2);
+        }
+      }
+    } else if (layer.id === 'pills') {
+      if (state.lines.length > 0) {
+        drawPills(ctx, W, H, scale, pill_h, pill_spacing, pill_pad_left, pill_pad_right, pill_font_size, cx);
+      } else if (scale === 1) {
+        state.lastTextBounds = null;
+      }
+    } else if (layer.id === 'swipeButton') {
+      drawSwipeButton(ctx, W, H, scale);
+    } else if (layer.id === 'logo') {
+      drawLogo(ctx, W, H, scale);
     }
   }
-
-  // 4. Pill block
-  if (state.lines.length > 0) {
-    drawPills(ctx, W, H, scale, pill_h, pill_spacing, pill_pad_left, pill_pad_right, pill_font_size, cx);
-  } else if (scale === 1) {
-    state.lastTextBounds = null;
-  }
-
-  // 5. Optional Instagram carousel swipe button.
-  drawSwipeButton(ctx, W, H, scale);
-
-  // 6. ES Logo
-  drawLogo(ctx, W, H, scale);
 }
 
 function drawNewsletterFeatureImage(ctx, W, H, scale) {
@@ -15459,6 +15841,7 @@ function _render() {
   }
   lastRenderedTextContextKey = renderContextKey;
   syncCanvasImageEditMode();
+  updateLayersPanel();
 }
 
 function getCanvasPoint(evt) {
@@ -15492,6 +15875,106 @@ function setTextBlockPosition(centerX, topY) {
   state.textBlockUserMoved = true;
 }
 
+function layerEyeIconSvg(visible) {
+  return visible
+    ? '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3l18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9.9 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a15.7 15.7 0 0 1-3 3.6M6.6 6.6C4 8.3 2 12 2 12s3.6 7 10 7c1.3 0 2.5-.2 3.6-.6" stroke="currentColor" stroke-width="2"/></svg>';
+}
+
+function layerLockIconSvg(locked) {
+  return locked
+    ? '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" stroke-width="2"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V7a4 4 0 0 1 7-2.6" stroke="currentColor" stroke-width="2"/></svg>';
+}
+
+function renderLayersPanelRows() {
+  const list = document.getElementById('layers-panel-list');
+  if (!list) return;
+  const layers = getCoverLayers();
+  list.innerHTML = layers.slice().reverse().map(layer => {
+    const isHidden = layer.visible === false;
+    const isLocked = layer.locked === true;
+    return `
+      <div class="layers-panel-row${isHidden ? ' is-hidden-layer' : ''}" draggable="true" data-layer-id="${layer.id}">
+        <span class="layers-panel-grip" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span class="layers-panel-label">${layer.label}</span>
+        <button type="button" class="layers-panel-toggle" data-layer-lock-toggle data-layer-locked="${isLocked}" title="${isLocked ? 'Unlock layer' : 'Lock layer'}" aria-label="${isLocked ? 'Unlock layer' : 'Lock layer'}">${layerLockIconSvg(isLocked)}</button>
+        <button type="button" class="layers-panel-toggle" data-layer-visibility-toggle title="${isHidden ? 'Show layer' : 'Hide layer'}" aria-label="${isHidden ? 'Show layer' : 'Hide layer'}">${layerEyeIconSvg(!isHidden)}</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateLayersPanel() {
+  const app = document.querySelector('.app[data-workspace]');
+  const panel = document.getElementById('layers-panel');
+  if (!app || !panel) return;
+  const active = isCoverLayersPanelActive();
+  app.classList.toggle('has-layers-panel', active);
+  panel.hidden = !active;
+  if (active) renderLayersPanelRows();
+}
+
+function setupLayersPanel() {
+  const list = document.getElementById('layers-panel-list');
+  if (!list) return;
+  let draggedId = null;
+
+  list.addEventListener('click', evt => {
+    const row = evt.target.closest('.layers-panel-row');
+    if (!row) return;
+    const layerId = row.dataset.layerId;
+    if (evt.target.closest('[data-layer-visibility-toggle]')) {
+      setCoverLayerVisible(layerId, !isCoverLayerVisible(layerId));
+      renderLayersPanelRows();
+      render();
+    } else if (evt.target.closest('[data-layer-lock-toggle]')) {
+      setCoverLayerLocked(layerId, !isCoverLayerLocked(layerId));
+      renderLayersPanelRows();
+    }
+  });
+
+  list.addEventListener('dragstart', evt => {
+    const row = evt.target.closest('.layers-panel-row');
+    if (!row) return;
+    draggedId = row.dataset.layerId;
+    row.classList.add('is-dragging');
+    evt.dataTransfer.effectAllowed = 'move';
+    try { evt.dataTransfer.setData('text/plain', draggedId); } catch (error) {}
+  });
+
+  list.addEventListener('dragend', evt => {
+    const row = evt.target.closest('.layers-panel-row');
+    if (row) row.classList.remove('is-dragging');
+    list.querySelectorAll('.layers-panel-row.is-drop-target').forEach(el => el.classList.remove('is-drop-target'));
+    draggedId = null;
+  });
+
+  list.addEventListener('dragover', evt => {
+    if (!draggedId) return;
+    const row = evt.target.closest('.layers-panel-row');
+    if (!row) return;
+    evt.preventDefault();
+    list.querySelectorAll('.layers-panel-row.is-drop-target').forEach(el => el.classList.remove('is-drop-target'));
+    if (row.dataset.layerId !== draggedId) row.classList.add('is-drop-target');
+  });
+
+  list.addEventListener('drop', evt => {
+    const row = evt.target.closest('.layers-panel-row');
+    if (!row || !draggedId) return;
+    evt.preventDefault();
+    const targetId = row.dataset.layerId;
+    row.classList.remove('is-drop-target');
+    if (targetId === draggedId) return;
+    const layers = getCoverLayers();
+    const targetVisualIndex = Array.from(list.children).indexOf(row);
+    const targetDataIndex = layers.length - 1 - targetVisualIndex;
+    reorderCoverLayer(draggedId, targetDataIndex);
+    renderLayersPanelRows();
+    render();
+  });
+}
+
 function setupCanvasDrag() {
   const canvas = document.getElementById('preview');
   const wrap = canvas.closest('.canvas-wrap');
@@ -15507,6 +15990,7 @@ function setupCanvasDrag() {
     if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'stats-double-ent') return;
     if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'double-entity-quote') return;
     if (!state.lines.length || !state.lastTextBounds) return;
+    if (isCoverLayerLocked('pills')) return;
     const point = getCanvasPoint(evt);
     const bounds = state.lastTextBounds;
     if (!pointInTextHitArea(point)) return;
@@ -15605,6 +16089,8 @@ function setupCanvasImageEditing() {
 
   canvas.addEventListener('pointerdown', event => {
     if (!isCanvasImageEditAvailable() || event.button !== 0 || event.isPrimary === false) return;
+    const lockLayerId = imageToolCoverLayerId(activeImageTool);
+    if (lockLayerId && isCoverLayerLocked(lockLayerId)) return;
     const point = getCanvasPoint(event);
     const bounds = getSelectedImageEditBounds();
     event.stopImmediatePropagation();
@@ -17605,6 +18091,7 @@ initUI();
 initWidgetBuilder();
 setupCanvasDrag();
 setupCanvasImageEditing();
+setupLayersPanel();
 setupPageTransitions();
 setupNavigation();
 syncProfileChrome();
