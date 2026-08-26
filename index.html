@@ -7869,6 +7869,9 @@ body[data-current-page="faq"] .faq-cta-art img {
           <button class="tweet-fetch-button" id="tweet-fetch-btn" type="button">Generate</button>
           <button class="tweet-fetch-clear" id="tweet-fetch-clear" type="button" aria-label="Clear tweet link">×</button>
         </div>
+        <div class="input-wrap" style="margin-top:10px">
+          <input id="tweet-headline-input" class="pill-entry" type="text" placeholder="Headline pill above the tweet (optional)" spellcheck="false" aria-label="Optional headline above the tweet">
+        </div>
         <div class="tweet-generated-fields" aria-hidden="true">
           <div class="twitter-quote-grid">
             <input id="tweet-author-name" class="pill-entry" type="text" placeholder="Author name" spellcheck="false" aria-label="Tweet author name" tabindex="-1">
@@ -9161,6 +9164,7 @@ BRAND_KIT.push(
 
 const DEFAULT_TWEET_QUOTE = Object.freeze({
   url: '',
+  headline: '',
   authorName: 'EssentiallySports',
   handle: 'es_sportsnews',
   text: 'Paste a public X/Twitter post link and generate a polished quote card for social distribution.',
@@ -13617,6 +13621,7 @@ function getTweetQuoteData() {
     avatarDataUrl: String(tweet.avatarDataUrl || defaults.avatarDataUrl || '').trim(),
     avatarUrl: String(tweet.avatarUrl || defaults.avatarUrl || '').trim(),
     verified: Boolean(tweet.verified),
+    headline: String(tweet.headline || '').trim(),
   };
 }
 
@@ -13630,21 +13635,21 @@ function getTweetInitials(name) {
     .toUpperCase() || 'X';
 }
 
+const TWITTER_VERIFIED_BADGE_PATH = 'M440.335 185.103L417.039 161.85C414.199 159.018 411.947 155.653 410.412 151.948C408.878 148.243 408.093 144.271 408.1 140.26V113.018C408.083 96.443 401.493 80.5519 389.775 68.8299C378.057 57.1079 362.168 50.5122 345.594 50.4896H318.351C310.269 50.4679 302.521 47.2643 296.783 41.5723L273.508 18.2763C261.775 6.57257 245.878 0 229.306 0C212.733 0 196.837 6.57257 185.103 18.2763L161.85 41.5723C156.105 47.2695 148.351 50.48 140.26 50.5109H112.996C96.4217 50.5335 80.5328 57.1292 68.8148 68.8512C57.0968 80.5732 50.5065 96.4644 50.4896 113.039V140.26C50.5001 144.269 49.7177 148.24 48.1873 151.946C46.6569 155.651 44.4087 159.017 41.5723 161.85L18.2763 185.103C6.57257 196.837 0 212.733 0 229.306C0 245.878 6.57257 261.775 18.2763 273.508L41.5723 296.762C44.4126 299.593 46.6646 302.958 48.1988 306.663C49.7329 310.368 50.5187 314.341 50.5109 318.351V345.594C50.5279 362.168 57.1181 378.059 68.8361 389.781C80.5541 401.503 96.4431 408.099 113.018 408.122H140.26C148.345 408.149 156.094 411.36 161.828 417.06L185.103 440.335C196.834 452.044 212.731 458.62 229.306 458.62C245.88 458.62 261.777 452.044 273.508 440.335L296.762 417.06C302.506 411.363 310.26 408.153 318.351 408.122H345.615C362.19 408.099 378.078 401.503 389.796 389.781C401.514 378.059 408.105 362.168 408.122 345.594V318.351C408.114 314.341 408.9 310.368 410.434 306.663C411.968 302.958 414.22 299.593 417.06 296.762L440.335 273.508C452.039 261.775 458.611 245.878 458.611 229.306C458.611 212.733 452.039 196.837 440.335 185.103ZM304.612 197.903L219.279 283.236C217.796 284.725 216.034 285.906 214.094 286.712C212.154 287.518 210.073 287.933 207.972 287.933C205.871 287.933 203.791 287.518 201.851 286.712C199.91 285.906 198.148 284.725 196.666 283.236L153.999 240.57C151.173 237.537 149.634 233.525 149.707 229.38C149.78 225.235 151.46 221.28 154.391 218.348C157.322 215.417 161.277 213.738 165.422 213.665C169.568 213.591 173.579 215.13 176.612 217.956L207.972 249.338L281.999 175.332C285.032 172.506 289.044 170.967 293.189 171.041C297.334 171.114 301.289 172.793 304.22 175.724C307.152 178.656 308.831 182.611 308.904 186.756C308.977 190.901 307.439 194.913 304.612 197.946V197.903Z';
+
 function drawTwitterVerifiedBadge(ctx, x, y, size) {
+  const baseSize = 459;
   ctx.save();
-  ctx.fillStyle = '#1D9BF0';
-  ctx.beginPath();
-  ctx.arc(x, y, size / 2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#FFFFFF';
-  ctx.lineWidth = Math.max(2, size * 0.12);
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(x - size * 0.2, y + size * 0.02);
-  ctx.lineTo(x - size * 0.05, y + size * 0.18);
-  ctx.lineTo(x + size * 0.24, y - size * 0.2);
-  ctx.stroke();
+  ctx.translate(x - size / 2, y - size / 2);
+  ctx.scale(size / baseSize, size / baseSize);
+  ctx.fillStyle = '#2196F3';
+  if (typeof Path2D === 'function') {
+    ctx.fill(new Path2D(TWITTER_VERIFIED_BADGE_PATH));
+  } else {
+    ctx.beginPath();
+    ctx.arc(baseSize / 2, baseSize / 2, baseSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }
 
@@ -13728,6 +13733,40 @@ function drawTwitterQuotePost(ctx, W, H, scale) {
   ctx.fillStyle = '#FFFFFF';
   ctx.fill();
   ctx.restore();
+
+  // Optional headline pill, floating just above the tweet card. Since it's
+  // positioned relative to cardY, it automatically rides up with the card
+  // as a longer tweet grows the card taller.
+  const headlineText = (tweet.headline || '').trim().toUpperCase();
+  if (headlineText) {
+    ctx.save();
+    const pillH = sx(72);
+    const pillFontSize = sx(32);
+    const pillPadLeft = sx(30);
+    const pillPadRight = sx(34);
+    const pillGap = sx(22);
+    ctx.font = `900 ${pillFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    const maxPillTextW = cardW - pillPadLeft - pillPadRight;
+    let pillFont = pillFontSize;
+    let textW = ctx.measureText(headlineText).width;
+    while (textW > maxPillTextW && pillFont > sx(18)) {
+      pillFont -= sx(1);
+      ctx.font = `900 ${pillFont}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+      textW = ctx.measureText(headlineText).width;
+    }
+    const pillW = Math.min(cardW, textW + pillPadLeft + pillPadRight);
+    const pillX = cardX + (cardW - pillW) / 2;
+    const minPillY = logoMargin + logoH + sx(28);
+    const pillY = Math.max(minPillY, cardY - pillGap - pillH);
+    drawRoundedRect(ctx, pillX, pillY, pillW, pillH, pillH / 2);
+    ctx.fillStyle = '#0A7DFA';
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(headlineText, pillX + pillW / 2, pillY + pillH / 2 + sx(2));
+    ctx.restore();
+  }
 
   ctx.save();
   const avatarX = cardX + cardPad;
@@ -16670,6 +16709,7 @@ function syncTweetQuoteFields() {
     if (input && input.value !== value) input.value = value;
   };
   setValue('tweet-url-input', tweet.url);
+  setValue('tweet-headline-input', tweet.headline);
   setValue('tweet-author-name', tweet.authorName);
   setValue('tweet-author-handle', tweet.handle ? `@${tweet.handle}` : '');
   setValue('tweet-text-input', tweet.text);
@@ -16682,6 +16722,7 @@ function updateTweetQuoteFromFields() {
   state.tweetQuote = {
     ...getTweetQuoteData(),
     url: document.getElementById('tweet-url-input')?.value.trim() || '',
+    headline: document.getElementById('tweet-headline-input')?.value.trim() || '',
     authorName: document.getElementById('tweet-author-name')?.value.trim() || defaults.authorName,
     handle: (document.getElementById('tweet-author-handle')?.value || '').replace(/^@/, '').trim() || defaults.handle,
     text: document.getElementById('tweet-text-input')?.value.trim() || defaults.text,
