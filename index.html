@@ -17691,7 +17691,7 @@ function wrapWidgetPreviewDoc(html) {
   // page. Real email clients never load custom webfonts regardless, so the
   // copied HTML's own font-family list still falls back to Arial Narrow.
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>
-    @font-face { font-family: 'Acumin Post'; src: url('fonts/acumin-post-legacy.otf') format('opentype'); font-style: normal; font-weight: 700; font-display: block; }
+    @font-face { font-family: 'Acumin Post'; src: url('fonts/acumin-post-legacy.otf') format('opentype'); font-style: normal; font-weight: 700; font-display: swap; }
     html,body{margin:0;background:#ffffff;font-family:Arial,sans-serif;overflow:hidden;}
     img{max-width:100%;}
   </style></head><body>${html}</body></html>`;
@@ -17874,7 +17874,7 @@ function renderWidgetPreview() {
         });
       } catch (error) {}
     };
-  }, 120);
+  }, 350);
 }
 
 function initWidgetBuilder() {
