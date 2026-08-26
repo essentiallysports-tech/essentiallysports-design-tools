@@ -8,7 +8,6 @@
 <script src="es-auth-config.js?v=20260707-auth4"></script>
 <script src="es-auth.js?v=20260714-authcallback2"></script>
   <script src="dashboard-data.js?v=20260716-dashboard-sync1"></script>
-  <script src="bg-remove-config.js?v=20260825-bgremove1"></script>
 <script>
   (() => {
     window.ESAuth?.requireAuth(`index.html${window.location.search}${window.location.hash}`);
@@ -3971,26 +3970,6 @@ body[data-current-page="faq"] .faq-cta-art img {
   .image-context-actions button:disabled {
     color: #AEB6C2;
     cursor: default;
-  }
-  .image-context-removebg-status {
-    color: #4B5563;
-    font-family: var(--font-ui);
-    font-size: 12px;
-    line-height: 1.35;
-  }
-  .image-context-removebg-status.is-error {
-    color: #B42318;
-  }
-  .image-context-removebg-status button[data-image-slot-restore-original] {
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: #0A7DFA;
-    cursor: pointer;
-    font-family: var(--font-ui);
-    font-size: 12px;
-    font-weight: 600;
-    text-decoration: underline;
   }
   .image-context-precision {
     display: grid;
@@ -8496,9 +8475,7 @@ body[data-current-page="faq"] .faq-cta-art img {
                       <button type="button" data-image-slot-upload="move">Replace</button>
                       <button type="button" data-image-slot-remove="move">Remove</button>
                       <button type="button" data-image-slot-reset="move">Reset</button>
-                      <button type="button" data-image-slot-removebg="move">Remove background</button>
                     </div>
-                    <div class="image-context-removebg-status" data-image-removebg-status="background" hidden></div>
                   </div>
                 </div>
                 <div class="image-context-precision" aria-label="Background precise position and zoom">
@@ -8528,9 +8505,7 @@ body[data-current-page="faq"] .faq-cta-art img {
                       <button type="button" data-image-slot-upload="foreground-1">Replace</button>
                       <button type="button" data-image-slot-remove="foreground-1">Remove</button>
                       <button type="button" data-image-slot-reset="foreground-1">Reset</button>
-                      <button type="button" data-image-slot-removebg="foreground-1">Remove background</button>
                     </div>
-                    <div class="image-context-removebg-status" data-image-removebg-status="foreground-1" hidden></div>
                   </div>
                 </div>
                 <div class="image-context-precision" aria-label="Entity 1 precise position and zoom">
@@ -8560,9 +8535,7 @@ body[data-current-page="faq"] .faq-cta-art img {
                       <button type="button" data-image-slot-upload="foreground-2">Replace</button>
                       <button type="button" data-image-slot-remove="foreground-2">Remove</button>
                       <button type="button" data-image-slot-reset="foreground-2">Reset</button>
-                      <button type="button" data-image-slot-removebg="foreground-2">Remove background</button>
                     </div>
-                    <div class="image-context-removebg-status" data-image-removebg-status="foreground-2" hidden></div>
                   </div>
                 </div>
                 <div class="image-context-precision" aria-label="Entity 2 precise position and zoom">
@@ -10170,145 +10143,10 @@ function resetImageTool(tool) {
 }
 
 function removeImageToolAsset(tool) {
-  clearBgRemovalBackup(getImageToolDescriptor(tool).key);
   if (tool === 'foreground-2') removeEntityPhoto2();
   else if (tool === 'foreground-1' && !isDoubleEntityImagePost()) removeEntityPhoto();
   else removePhoto();
   selectImageTool(tool, true);
-}
-
-function setRemoveBackgroundStatus(slotKey, message, options) {
-  const el = document.querySelector(`[data-image-removebg-status="${slotKey}"]`);
-  if (!el) return;
-  const opts = options || {};
-  el.hidden = !message;
-  el.classList.toggle('is-error', !!opts.isError);
-  if (!message) {
-    el.textContent = '';
-    return;
-  }
-  el.textContent = `${message} `;
-  if (opts.showRestore) {
-    const restoreBtn = document.createElement('button');
-    restoreBtn.type = 'button';
-    restoreBtn.textContent = 'Restore original';
-    restoreBtn.dataset.imageSlotRestoreOriginal = slotKey;
-    restoreBtn.addEventListener('click', event => {
-      event.stopPropagation();
-      restoreBgRemovalBackup(slotKey);
-    });
-    el.appendChild(restoreBtn);
-  }
-}
-
-function imageToPngBlob(img) {
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth || img.width;
-    canvas.height = img.naturalHeight || img.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob(blob => {
-      if (blob) resolve(blob);
-      else reject(new Error('Could not read the current image.'));
-    }, 'image/png');
-  });
-}
-
-function blobToImage(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('The processed image could not be loaded.'));
-      img.src = reader.result;
-    };
-    reader.onerror = () => reject(new Error('Could not read the processed image.'));
-    reader.readAsDataURL(blob);
-  });
-}
-
-function setImageToolAssetImage(tool, img, name) {
-  if (tool === 'foreground-2') {
-    state.entityPhoto2 = img;
-    state.entityPhotoName2 = name;
-  } else if (tool === 'foreground-1' && !isDoubleEntityImagePost()) {
-    state.entityPhoto = img;
-    state.entityPhotoName = name;
-  } else {
-    state.photo = img;
-    state.photoName = name;
-  }
-}
-
-function stashBgRemovalBackup(tool, descriptor) {
-  state.bgRemovalBackups = state.bgRemovalBackups || {};
-  state.bgRemovalBackups[descriptor.key] = { image: descriptor.image, name: descriptor.name, tool };
-}
-
-function clearBgRemovalBackup(slotKey) {
-  if (state.bgRemovalBackups) delete state.bgRemovalBackups[slotKey];
-  setRemoveBackgroundStatus(slotKey, '');
-}
-
-function restoreBgRemovalBackup(slotKey) {
-  const backup = state.bgRemovalBackups && state.bgRemovalBackups[slotKey];
-  if (!backup) return;
-  setImageToolAssetImage(backup.tool, backup.image, backup.name);
-  delete state.bgRemovalBackups[slotKey];
-  saveMediaContext();
-  syncImageToolControls();
-  setRemoveBackgroundStatus(slotKey, '');
-  render();
-}
-
-async function removeBackgroundForTool(tool) {
-  const descriptor = getImageToolDescriptor(tool);
-  const slotKey = descriptor.key;
-  const button = document.querySelector(`[data-image-slot-removebg="${tool}"]`);
-  if (!descriptor.image) {
-    setRemoveBackgroundStatus(slotKey, 'Upload an image first.', { isError: true });
-    return;
-  }
-  const originalLabel = button ? button.textContent : '';
-  if (button) {
-    button.disabled = true;
-    button.textContent = 'Removing background...';
-  }
-  setRemoveBackgroundStatus(slotKey, '');
-  const apiBase = (window.BG_REMOVE_CONFIG && window.BG_REMOVE_CONFIG.apiBase) || 'http://localhost:8000';
-  try {
-    const originalImage = descriptor.image;
-    const originalName = descriptor.name;
-    const blob = await imageToPngBlob(originalImage);
-    const form = new FormData();
-    form.append('file', blob, 'image.png');
-    const response = await fetch(`${apiBase}/api/remove-background`, {
-      method: 'POST',
-      body: form,
-    });
-    if (!response.ok) {
-      const errorPayload = await response.json().catch(() => ({}));
-      throw new Error(errorPayload.detail || `Background removal failed (${response.status}).`);
-    }
-    const resultBlob = await response.blob();
-    const resultImage = await blobToImage(resultBlob);
-    // Original stays recoverable via "Restore original" until replaced or removed outright.
-    stashBgRemovalBackup(tool, { key: slotKey, image: originalImage, name: originalName });
-    setImageToolAssetImage(tool, resultImage, originalName);
-    saveMediaContext();
-    syncImageToolControls();
-    render();
-    setRemoveBackgroundStatus(slotKey, 'Background removed.', { showRestore: true });
-  } catch (error) {
-    setRemoveBackgroundStatus(slotKey, error.message || 'Could not remove the background.', { isError: true });
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = originalLabel;
-    }
-  }
 }
 
 function openImageToolUpload(tool) {
@@ -10559,13 +10397,6 @@ function initImageToolRail() {
     button.addEventListener('click', event => {
       event.stopPropagation();
       resetImageTool(button.dataset.imageSlotReset);
-    });
-  });
-
-  document.querySelectorAll('[data-image-slot-removebg]').forEach(button => {
-    button.addEventListener('click', event => {
-      event.stopPropagation();
-      removeBackgroundForTool(button.dataset.imageSlotRemovebg);
     });
   });
 
@@ -11806,7 +11637,6 @@ function onPhotoUpload(e) {
       targetState.photoName = file.name;
       saveMediaContext(mediaContextKey, targetState);
       if (targetState !== state) return;
-      clearBgRemovalBackup(isDoubleEntityImagePost() ? 'foreground-1' : 'background');
       const drop = document.getElementById('photo-drop');
       if (drop) {
         drop.classList.add('has-photo');
@@ -12272,7 +12102,6 @@ function onEntityPhotoUpload(e) {
       targetState.entityPhotoName = file.name;
       saveMediaContext(mediaContextKey, targetState);
       if (targetState !== state) return;
-      clearBgRemovalBackup('foreground-1');
       selectImageTool('foreground-1', true);
       syncEntityPhotoControls();
       render();
@@ -12306,7 +12135,6 @@ function onEntityPhotoUpload2(e) {
       targetState.entityPhotoName2 = file.name;
       saveMediaContext(mediaContextKey, targetState);
       if (targetState !== state) return;
-      clearBgRemovalBackup('foreground-2');
       selectImageTool('foreground-2', true);
       syncEntityPhotoControls2();
       render();
