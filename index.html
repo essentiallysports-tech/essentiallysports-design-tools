@@ -13734,37 +13734,48 @@ function drawTwitterQuotePost(ctx, W, H, scale) {
   ctx.fill();
   ctx.restore();
 
-  // Optional headline pill, floating just above the tweet card. Since it's
-  // positioned relative to cardY, it automatically rides up with the card
-  // as a longer tweet grows the card taller.
+  // Optional headline pill, floating just above the tweet card, drawn in the
+  // app's actual pill style (sharp-cornered bar, solid team color, bold caps
+  // left-aligned) rather than a one-off shape. Since it's positioned relative
+  // to cardY, it automatically rides up with the card as a longer tweet grows
+  // the card taller.
   const headlineText = (tweet.headline || '').trim().toUpperCase();
   if (headlineText) {
     ctx.save();
-    const pillH = sx(72);
-    const pillFontSize = sx(32);
-    const pillPadLeft = sx(30);
-    const pillPadRight = sx(34);
-    const pillGap = sx(22);
+    const pillScale = 0.5;
+    const pillH = sx(PILL_H * pillScale);
+    const pillPadLeft = sx(PILL_PAD_LEFT * pillScale);
+    const pillPadRight = sx(PILL_PAD_RIGHT * pillScale);
+    let pillFontSize = sx(PILL_FONT_SIZE * pillScale);
     ctx.font = `900 ${pillFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
     const maxPillTextW = cardW - pillPadLeft - pillPadRight;
-    let pillFont = pillFontSize;
     let textW = ctx.measureText(headlineText).width;
-    while (textW > maxPillTextW && pillFont > sx(18)) {
-      pillFont -= sx(1);
-      ctx.font = `900 ${pillFont}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    while (textW > maxPillTextW && pillFontSize > sx(16)) {
+      pillFontSize -= sx(1);
+      ctx.font = `900 ${pillFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
       textW = ctx.measureText(headlineText).width;
     }
+    const capMetrics = ctx.measureText('A');
+    const capAscent = capMetrics.actualBoundingBoxAscent || Math.round(pillFontSize * 0.72);
+    const capDescent = capMetrics.actualBoundingBoxDescent || 0;
+    const textH = capAscent + capDescent;
+    const topPad = Math.max(0, Math.round((pillH - textH) / 2));
+    const textBaselineFromTop = Math.min(topPad + capAscent, pillH - capDescent - sx(2));
+
     const pillW = Math.min(cardW, textW + pillPadLeft + pillPadRight);
-    const pillX = cardX + (cardW - pillW) / 2;
-    const minPillY = logoMargin + logoH + sx(28);
+    const pillX = cardX;
+    const pillGap = sx(18);
+    const minPillY = logoMargin + logoH + sx(24);
     const pillY = Math.max(minPillY, cardY - pillGap - pillH);
-    drawRoundedRect(ctx, pillX, pillY, pillW, pillH, pillH / 2);
-    ctx.fillStyle = '#0A7DFA';
-    ctx.fill();
-    ctx.fillStyle = '#FFFFFF';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(headlineText, pillX + pillW / 2, pillY + pillH / 2 + sx(2));
+
+    const bgColor = state.pillPalette?.background || '#1A1A1A';
+    const fgColor = getTextColorForPair(state.pillPalette, getBrandEntry(state.sport, state.team));
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(pillX, pillY, pillW, pillH);
+    ctx.fillStyle = fgColor;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(headlineText, pillX + pillPadLeft, pillY + textBaselineFromTop);
     ctx.restore();
   }
 
