@@ -17,6 +17,37 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-09-02 — Dashboard access/data audit (findings only, no code changes yet)
+- Status: `[docs only - not yet started]`
+- Files touched: none — this entry records a read-only audit ahead of a fix, so the next session (or the
+  next turn in this one) knows what was already found instead of re-deriving it.
+- Ask (Suhail): who has dashboard access, and is the dashboard data working correctly? Then: "we'll start
+  work on this" — i.e. treat the findings below as the starting point for a follow-up fix.
+- **Who has access**: hardcoded to exactly two emails in `dashboard-data.js` (`DASHBOARD_ADMIN_EMAILS`,
+  currently `suhail.quraishi@essentiallysports.com` as Server Owner and `manish.kalsi@essentiallysports.com`
+  as Super Admin). `dashboard.html`'s boot sequence calls `isCurrentUserAdmin()`, which checks only this
+  array; anyone else is redirected to `index.html#frames` before the dashboard renders. Not configurable
+  from the UI.
+- **Presence/activity sync**: checked out fine on read. `scheduleSupabasePresence()` runs globally on every
+  page (not just the dashboard) via the shared `es:auth-ready` event dispatched from `es-auth.js`, plus a
+  60s heartbeat and focus/pageshow triggers — gated only on having a valid session, not on being an admin.
+  Task/activity writes from exports and design requests go through a local-first queue
+  (`queuePendingTask`/`flushPendingCloudWrites`) with retry on reconnect, so offline writes aren't lost.
+- **Real bug found**: the dashboard's People panel lets the Server Owner assign roles (Associate / Admin /
+  Super Admin / Server Owner) via `updatePersonAccessRole`, which implies assigning "Admin" should grant
+  dashboard access. It doesn't — `isCurrentUserAdmin()` never reads that role field at all, only the
+  hardcoded two-email list above. So today, promoting someone to "Admin" in the dashboard UI has **zero
+  effect** on whether they can actually open `dashboard.html`. Either the access gate needs to also honor
+  `DASHBOARD_ACCESS_ROLES` (`Admin` / `Super Admin` / `Server Owner`) read from the person's Supabase
+  profile, or the role picker's copy/behavior needs to make clear it's display-only — Suhail hasn't picked
+  which yet.
+- Not yet verified against live data (Supabase rows, actual presence/task records) — this was a static
+  code read only, since the app is gated behind Supabase login and the assistant does not authenticate on
+  Suhail's behalf. `getAdminConfig()`'s `ownerEmails` (from `es.dashboard.adminConfig.v1` in localStorage)
+  was also checked and confirmed to be display-only (adds people to the People list with a label) — it does
+  not feed into `isCurrentUserAdmin()` either.
+- **Next step (not started)**: decide and implement the fix for the role/access mismatch above.
+
 ### 2026-08-19 — Add ASAP Template 1 to the Social Media workspace; reconciled with a parallel session's changes
 - Status: `[pushed - bc1faf3, merge 8383e51]`
 - Files touched (new): `asap-template-data.js`. Files touched (existing): `index.html` only.
