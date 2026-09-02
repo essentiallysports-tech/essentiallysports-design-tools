@@ -25,7 +25,7 @@ assert.match(
 );
 assert.match(
   source,
-  /function setListicleRowExpanded[\s\S]*?index === rowIndex[\s\S]*?classList\.toggle\('is-expanded', expanded\)/,
+  /function setListicleRowExpanded[\s\S]*?Number\(card\.dataset\.listicleRowCard\) === rowIndex[\s\S]*?classList\.toggle\('is-expanded', expanded\)/,
   'opening a row must close every other row',
 );
 assert.match(

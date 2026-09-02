@@ -642,6 +642,12 @@
   .long-quote-name-field.is-visible {
     display: block;
   }
+  .quote-name-field {
+    display: none;
+  }
+  .quote-name-field.is-visible {
+    display: block;
+  }
   .stats-post-fields {
     display: none;
     margin-top: 10px;
@@ -881,7 +887,7 @@
   body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) .text-card > .input-wrap,
   body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) .color-card,
   body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) #pill-position-card,
-  body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) #swipe-button-card,
+  body[data-instagram-post-type="listicle-type-2"] #swipe-button-card,
   body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) .advanced-card,
   body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) .canvas-primary-actions,
   body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) .image-tool-rail {
@@ -935,9 +941,6 @@
     border-color: #C9D0D9;
     box-shadow: 0 6px 18px rgba(17, 24, 39, 0.055);
   }
-  .listicle-row-card.is-row-hidden {
-    opacity: 0.5;
-  }
   .listicle-row-header {
     display: flex;
     align-items: stretch;
@@ -973,9 +976,24 @@
   .listicle-row-hide-toggle:hover {
     background: #FAFAFA;
   }
-  .listicle-row-card.is-row-hidden .listicle-row-hide-toggle {
-    border-color: var(--accent);
+  .listicle-add-row-button {
+    width: 100%;
+    min-height: 44px;
+    margin-top: 2px;
+    padding: 0 14px;
+    border: 1px dashed #C9D0D9;
+    border-radius: 12px;
+    background: transparent;
     color: var(--accent);
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+  }
+  .listicle-add-row-button:hover {
+    background: #FAFAFA;
+    border-color: var(--accent);
   }
   .listicle-row-summary:hover {
     background: #FAFAFA;
@@ -7861,6 +7879,9 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="input-wrap long-quote-name-field" id="long-quote-name-field">
         <input id="long-quote-name" class="pill-entry" type="text" placeholder="Name tag" spellcheck="false">
       </div>
+      <div class="input-wrap quote-name-field" id="quote-name-field">
+        <input id="quote-name" class="pill-entry" type="text" placeholder="Name (optional)" maxlength="60" spellcheck="false">
+      </div>
       <div class="twitter-quote-fields" id="twitter-quote-fields" aria-label="Twitter quote controls">
         <div class="tweet-fetch-row">
           <div class="tweet-fetch-input-wrap">
@@ -9200,6 +9221,7 @@ function createDesignerState(defaultBottomAnchor) {
     statsDoubleSecondaryPalette: null,
     quoteLogoPlacement: 'bottom',
     longQuoteName: 'BY ES STAFF',
+    quoteName: '',
     tweetQuote: createTweetQuoteDefaults(),
     listicleData: ESListicle.createDefaultListicleData(),
     listicleType2Data: ESListicleType2.createDefaultListicleData(),
@@ -9460,6 +9482,7 @@ function getCurrentDesignSnapshot() {
     swipeButton: state.swipeButton,
     quoteLogoPlacement: state.quoteLogoPlacement,
     longQuoteName: state.longQuoteName,
+    quoteName: state.quoteName,
   };
 }
 
@@ -9475,6 +9498,7 @@ function cloneDesignSnapshot(snapshot = {}) {
     swipeButton: snapshot.swipeButton,
     quoteLogoPlacement: snapshot.quoteLogoPlacement,
     longQuoteName: snapshot.longQuoteName,
+    quoteName: snapshot.quoteName,
   };
 }
 
@@ -9494,6 +9518,7 @@ function applyDesignSnapshot(snapshot = {}) {
   state.swipeButton = snapshot.swipeButton || 'none';
   state.quoteLogoPlacement = snapshot.quoteLogoPlacement || 'bottom';
   state.longQuoteName = snapshot.longQuoteName || 'BY ES STAFF';
+  state.quoteName = snapshot.quoteName || '';
 }
 
 function clearPillLayoutState() {
@@ -10550,8 +10575,8 @@ function setListicleRowExpanded(rowIndex) {
   const list = document.getElementById('listicle-row-list');
   if (!list || rowIndex < 0 || rowIndex >= ESListicle.ROW_COUNT) return;
   activeListicleRowIndex = rowIndex;
-  list.querySelectorAll('[data-listicle-row-card]').forEach((card, index) => {
-    const expanded = index === rowIndex;
+  list.querySelectorAll('[data-listicle-row-card]').forEach(card => {
+    const expanded = Number(card.dataset.listicleRowCard) === rowIndex;
     card.classList.toggle('is-expanded', expanded);
     card.querySelector('[data-listicle-row-toggle]')?.setAttribute('aria-expanded', String(expanded));
     const panel = card.querySelector('.listicle-row-panel');
@@ -10569,9 +10594,10 @@ function buildListicleRowControls() {
   const data = getListicleData();
   if (activeListicleRowIndex < 0 || activeListicleRowIndex >= ESListicle.ROW_COUNT) activeListicleRowIndex = 0;
   data.rows.forEach((row, rowIndex) => {
+    if (row.hidden) return;
     const card = document.createElement('section');
     const expanded = rowIndex === activeListicleRowIndex;
-    card.className = `listicle-row-card${expanded ? ' is-expanded' : ''}${row.hidden ? ' is-row-hidden' : ''}`;
+    card.className = `listicle-row-card${expanded ? ' is-expanded' : ''}`;
     card.dataset.listicleRowCard = String(rowIndex);
 
     const header = document.createElement('div');
@@ -10596,7 +10622,7 @@ function buildListicleRowControls() {
     hideToggle.className = 'listicle-row-hide-toggle';
     hideToggle.type = 'button';
     hideToggle.dataset.listicleRowHide = String(rowIndex);
-    hideToggle.textContent = row.hidden ? 'Unhide' : 'Hide';
+    hideToggle.textContent = 'Remove';
     header.append(summary, hideToggle);
 
     const panel = document.createElement('div');
@@ -10674,6 +10700,15 @@ function buildListicleRowControls() {
     card.append(header, panel);
     list.appendChild(card);
   });
+
+  if (data.rows.some(row => row.hidden)) {
+    const addRow = document.createElement('button');
+    addRow.className = 'listicle-add-row-button';
+    addRow.type = 'button';
+    addRow.dataset.listicleAddRow = 'true';
+    addRow.textContent = '+ Add Row';
+    list.appendChild(addRow);
+  }
 }
 
 function syncListicleControls() {
@@ -10685,7 +10720,8 @@ function syncListicleControls() {
     if (document.activeElement !== input) input.value = data[key] || '';
   });
   const cards = fields.querySelectorAll('[data-listicle-row-card]');
-  if (cards.length !== ESListicle.ROW_COUNT) buildListicleRowControls();
+  const visibleCount = data.rows.filter(row => !row.hidden).length;
+  if (cards.length !== visibleCount) buildListicleRowControls();
 }
 
 function initListicleControls() {
@@ -10722,10 +10758,24 @@ function initListicleControls() {
     const hideToggle = event.target.closest('[data-listicle-row-hide]');
     if (hideToggle) {
       const rowIndex = Number(hideToggle.dataset.listicleRowHide);
-      const row = getListicleData().rows[rowIndex];
-      state.listicleData = ESListicle.updateListicleRow(state.listicleData, rowIndex, { hidden: !row.hidden });
+      state.listicleData = ESListicle.updateListicleRow(state.listicleData, rowIndex, { hidden: true });
+      if (activeListicleRowIndex === rowIndex) {
+        const nextVisible = state.listicleData.rows.findIndex(row => !row.hidden);
+        activeListicleRowIndex = nextVisible >= 0 ? nextVisible : 0;
+      }
       buildListicleRowControls();
       render();
+      return;
+    }
+    const addRow = event.target.closest('[data-listicle-add-row]');
+    if (addRow) {
+      const nextHiddenIndex = state.listicleData.rows.findIndex(row => row.hidden);
+      if (nextHiddenIndex >= 0) {
+        state.listicleData = ESListicle.updateListicleRow(state.listicleData, nextHiddenIndex, { hidden: false });
+        activeListicleRowIndex = nextHiddenIndex;
+        buildListicleRowControls();
+        render();
+      }
       return;
     }
     const upload = event.target.closest('[data-listicle-logo-button]');
@@ -10826,8 +10876,8 @@ function setListicleType2RowExpanded(rowIndex) {
   const list = document.getElementById('listicle-type2-row-list');
   if (!list || rowIndex < 0 || rowIndex >= ESListicleType2.ROW_COUNT) return;
   activeListicleType2RowIndex = rowIndex;
-  list.querySelectorAll('[data-listicle-type2-row-card]').forEach((card, index) => {
-    const expanded = index === rowIndex;
+  list.querySelectorAll('[data-listicle-type2-row-card]').forEach(card => {
+    const expanded = Number(card.dataset.listicleType2RowCard) === rowIndex;
     card.classList.toggle('is-expanded', expanded);
     card.querySelector('[data-listicle-type2-row-toggle]')?.setAttribute('aria-expanded', String(expanded));
     const panel = card.querySelector('.listicle-row-panel');
@@ -10880,9 +10930,10 @@ function buildListicleType2RowControls() {
     activeListicleType2RowIndex = 0;
   }
   data.rows.forEach((row, rowIndex) => {
+    if (row.hidden) return;
     const expanded = rowIndex === activeListicleType2RowIndex;
     const card = document.createElement('section');
-    card.className = `listicle-row-card${expanded ? ' is-expanded' : ''}${row.hidden ? ' is-row-hidden' : ''}`;
+    card.className = `listicle-row-card${expanded ? ' is-expanded' : ''}`;
     card.dataset.listicleType2RowCard = String(rowIndex);
 
     const header = document.createElement('div');
@@ -10906,7 +10957,7 @@ function buildListicleType2RowControls() {
     hideToggle.className = 'listicle-row-hide-toggle';
     hideToggle.type = 'button';
     hideToggle.dataset.listicleType2RowHide = String(rowIndex);
-    hideToggle.textContent = row.hidden ? 'Unhide' : 'Hide';
+    hideToggle.textContent = 'Remove';
     header.append(summary, hideToggle);
 
     const panel = document.createElement('div');
@@ -10957,6 +11008,15 @@ function buildListicleType2RowControls() {
     card.append(header, panel);
     list.appendChild(card);
   });
+
+  if (data.rows.some(row => row.hidden)) {
+    const addRow = document.createElement('button');
+    addRow.className = 'listicle-add-row-button';
+    addRow.type = 'button';
+    addRow.dataset.listicleType2AddRow = 'true';
+    addRow.textContent = '+ Add Row';
+    list.appendChild(addRow);
+  }
 }
 
 function syncListicleType2Controls() {
@@ -10967,7 +11027,8 @@ function syncListicleType2Controls() {
     const key = input.dataset.listicleType2Field;
     if (document.activeElement !== input) input.value = data[key] || '';
   });
-  if (fields.querySelectorAll('[data-listicle-type2-row-card]').length !== ESListicleType2.ROW_COUNT) {
+  const visibleCount = data.rows.filter(row => !row.hidden).length;
+  if (fields.querySelectorAll('[data-listicle-type2-row-card]').length !== visibleCount) {
     buildListicleType2RowControls();
   }
 }
@@ -11071,10 +11132,24 @@ function initListicleType2Controls() {
     const hideToggle = event.target.closest('[data-listicle-type2-row-hide]');
     if (hideToggle) {
       const rowIndex = Number(hideToggle.dataset.listicleType2RowHide);
-      const row = getListicleType2Data().rows[rowIndex];
-      state.listicleType2Data = ESListicleType2.updateListicleRow(state.listicleType2Data, rowIndex, { hidden: !row.hidden });
+      state.listicleType2Data = ESListicleType2.updateListicleRow(state.listicleType2Data, rowIndex, { hidden: true });
+      if (activeListicleType2RowIndex === rowIndex) {
+        const nextVisible = state.listicleType2Data.rows.findIndex(row => !row.hidden);
+        activeListicleType2RowIndex = nextVisible >= 0 ? nextVisible : 0;
+      }
       buildListicleType2RowControls();
       render();
+      return;
+    }
+    const addRow = event.target.closest('[data-listicle-type2-add-row]');
+    if (addRow) {
+      const nextHiddenIndex = state.listicleType2Data.rows.findIndex(row => row.hidden);
+      if (nextHiddenIndex >= 0) {
+        state.listicleType2Data = ESListicleType2.updateListicleRow(state.listicleType2Data, nextHiddenIndex, { hidden: false });
+        activeListicleType2RowIndex = nextHiddenIndex;
+        buildListicleType2RowControls();
+        render();
+      }
       return;
     }
     const upload = event.target.closest('[data-listicle-type2-asset-button]');
@@ -11201,6 +11276,13 @@ function initUI() {
   if (longQuoteNameInput) {
     longQuoteNameInput.addEventListener('input', event => {
       state.longQuoteName = event.target.value;
+      render();
+    });
+  }
+  const quoteNameInput = document.getElementById('quote-name');
+  if (quoteNameInput) {
+    quoteNameInput.addEventListener('input', event => {
+      state.quoteName = event.target.value;
       render();
     });
   }
@@ -12643,7 +12725,7 @@ const INSTAGRAM_POST_TYPES = {
   'listicle-type-1': {
     label: 'Listicle Type 1',
     placeholder: '',
-    supportsSwipe: false,
+    supportsSwipe: true,
     maxLines: 0,
     render: drawListicleType1Post,
     getPayload: getListicleType1Payload,
@@ -13296,6 +13378,7 @@ function getQuotePostPayload() {
       quoteOpenAsset: QUOTE_POST_TEMPLATE.quoteOpen.src,
       quoteCloseAsset: QUOTE_POST_TEMPLATE.quoteClose.src,
       wordmarkAsset: QUOTE_POST_TEMPLATE.wordmark.src,
+      name: state.quoteName || '',
     },
   };
 }
@@ -14203,7 +14286,7 @@ function drawListicleType1Post(ctx, W, H, scale) {
   ctx.stroke();
   ctx.restore();
 
-  drawSwipeButton(ctx, W, H, scale, true);
+  drawSwipeButton(ctx, W, H, scale);
 
   if (scale === 1) {
     state.lastTextBounds = null;
@@ -15552,17 +15635,56 @@ function drawQuoteTextGroup(ctx, W, H, scale, lines) {
     iconBounds = getQuoteIconBounds(stripPositions);
   }
 
+  // Name tag sits a fixed 15px under the last quote line, tracking whatever
+  // position the quote block is dragged to (computed from the same
+  // already-shifted centerX/stripPositions, not fixed canvas coordinates).
+  const quoteName = String(state.quoteName || '').trim();
+  const nameGap = Math.round(28 * scale);
+  const nameFontSize = Math.round(34 * scale);
+  let nameMetrics = null;
+  if (quoteName) {
+    ctx.font = `500 ${nameFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    const measured = ctx.measureText(quoteName);
+    const nameAscent = measured.actualBoundingBoxAscent || Math.round(nameFontSize * 0.72);
+    const nameDescent = measured.actualBoundingBoxDescent || Math.round(nameFontSize * 0.08);
+    const lastStrip = stripPositions[stripPositions.length - 1];
+    const lastStripCenterX = lastStrip.x + lastStrip.w / 2;
+    let nameTop = lastStrip.y + lastStrip.h + nameGap;
+    let nameBottom = nameTop + nameAscent + nameDescent;
+    const bottomLimit = H - (hasBottomWordmark ? bottomClearance : safe);
+    if (nameBottom > bottomLimit) {
+      const overflow = nameBottom - bottomLimit;
+      baseY -= overflow;
+      stripPositions = stripPositions.map(p => ({ ...p, y: p.y - overflow }));
+      iconBounds = getQuoteIconBounds(stripPositions);
+      nameTop -= overflow;
+      nameBottom -= overflow;
+    }
+    nameMetrics = {
+      text: quoteName,
+      centerX: lastStripCenterX,
+      baselineY: nameTop + nameAscent,
+      width: measured.width,
+      x: lastStripCenterX - measured.width / 2,
+      y: nameTop,
+      w: measured.width,
+      h: nameAscent + nameDescent,
+    };
+  }
+
   if (scale === 1) {
-    const groupMinX = Math.min(iconBounds.openX, ...stripPositions.map(p => p.x));
-    const groupMaxX = Math.max(iconBounds.closeX + closeSize, ...stripPositions.map(p => p.x + p.w));
+    const groupMinX = Math.min(iconBounds.openX, ...stripPositions.map(p => p.x), nameMetrics ? nameMetrics.x : Infinity);
+    const groupMaxX = Math.max(iconBounds.closeX + closeSize, ...stripPositions.map(p => p.x + p.w), nameMetrics ? nameMetrics.x + nameMetrics.w : -Infinity);
     const groupMinY = Math.min(...stripPositions.map(p => p.y));
-    const groupMaxY = Math.max(...stripPositions.map(p => p.y + p.h));
+    const groupMaxY = Math.max(...stripPositions.map(p => p.y + p.h), nameMetrics ? nameMetrics.y + nameMetrics.h : -Infinity);
     state.textBlockX = centerX;
     state.textBlockY = baseY;
     state.lastTextBounds = { x: groupMinX, y: groupMinY, w: groupMaxX - groupMinX, h: groupMaxY - groupMinY };
     state.textHitRects = stripPositions.map(p => ({ x: p.x, y: p.y, w: p.w, h: p.h }));
+    if (nameMetrics) state.textHitRects.push({ x: nameMetrics.x, y: nameMetrics.y, w: nameMetrics.w, h: nameMetrics.h });
   }
 
+  ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
   stripPositions.forEach(strip => {
     ctx.fillStyle = template.fill;
     ctx.fillRect(strip.x, strip.y, strip.w, strip.h);
@@ -15585,6 +15707,15 @@ function drawQuoteTextGroup(ctx, W, H, scale, lines) {
   if (closeImage && closeImage.complete && closeImage.naturalWidth > 0) {
     ctx.drawImage(closeImage, closeX, closeY, closeSize, closeSize);
   }
+
+  if (nameMetrics) {
+    ctx.font = `500 ${nameFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(nameMetrics.text, nameMetrics.centerX, nameMetrics.baselineY);
+  }
+
   ctx.restore();
 }
 
@@ -16925,6 +17056,8 @@ function syncPostTypeControls() {
   const quoteLogoSelect = document.getElementById('quote-logo-placement');
   const longQuoteNameField = document.getElementById('long-quote-name-field');
   const longQuoteNameInput = document.getElementById('long-quote-name');
+  const quoteNameField = document.getElementById('quote-name-field');
+  const quoteNameInput = document.getElementById('quote-name');
   const statsPostFields = document.getElementById('stats-post-fields');
   const statsSingleFields = document.getElementById('stats-single-fields');
   const statsDoubleFields = document.getElementById('stats-double-fields');
@@ -16984,6 +17117,12 @@ function syncPostTypeControls() {
   }
   if (longQuoteNameInput) {
     longQuoteNameInput.value = state.longQuoteName || LONG_QUOTE_TEMPLATE.byline.defaultText;
+  }
+  if (quoteNameField) {
+    quoteNameField.classList.toggle('is-visible', (isInstagram && activeType === 'quote') || (isReels && activeType === 'quote'));
+  }
+  if (quoteNameInput && document.activeElement !== quoteNameInput) {
+    quoteNameInput.value = state.quoteName || '';
   }
   if (statsPostFields) {
     const isStatsPost = (isInstagram && (activeType === 'stats-single-ent' || activeType === 'stats-double-ent')) || (isReels && activeType === 'stats-single-ent');
@@ -17159,6 +17298,12 @@ function switchInstagramPostType(postType) {
   if (previousType !== postType) {
     state.lastTextBounds = null;
     state.textHitRects = [];
+  }
+  if (postType === 'listicle-type-1' && previousType !== 'listicle-type-1') {
+    // Listicle Type 1 shipped with an always-on swipe button; default it back
+    // on each time this type is selected so existing designs don't lose it,
+    // while still letting the shared swipe-button toggle turn it off.
+    state.swipeButton = 'dark';
   }
   restoreTextContext();
   restoreMediaContext();

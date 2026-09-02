@@ -7,6 +7,7 @@
 
   const SCHEMA_VERSION = 1;
   const ROW_COUNT = 10;
+  const DEFAULT_VISIBLE_ROW_COUNT = 5;
   const LIMITS = Object.freeze({
     title: 80,
     entityHeader: 18,
@@ -119,6 +120,7 @@
         accent: DEFAULT_ACCENTS[index],
         logoSrc: DEFAULT_LOGO_SOURCES[index],
         logoName: `Placeholder logo ${index + 1}`,
+        hidden: index >= DEFAULT_VISIBLE_ROW_COUNT,
       })),
     });
   }
@@ -142,6 +144,7 @@
   return Object.freeze({
     SCHEMA_VERSION,
     ROW_COUNT,
+    DEFAULT_VISIBLE_ROW_COUNT,
     LIMITS,
     DEFAULT_ACCENTS,
     DEFAULT_LOGO_SOURCES,

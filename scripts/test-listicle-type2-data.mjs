@@ -10,7 +10,12 @@ assert.equal(defaults.rows.length, 10, 'Type 2 must always contain exactly ten r
 assert.deepEqual(defaults.rows.map(row => row.rank), ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
 assert.deepEqual(defaults.rows.map(row => row.logoSrc), listicle.DEFAULT_LOGO_SOURCES);
 assert.equal(defaults.title, 'MVP Ladder\nUpdate');
-assert.equal(defaults.rows.every(row => row.hidden === false), true, 'rows must default to visible');
+assert.equal(listicle.DEFAULT_VISIBLE_ROW_COUNT, 5, 'defaults must start with five visible rows');
+assert.deepEqual(
+  defaults.rows.map(row => row.hidden),
+  [false, false, false, false, false, true, true, true, true, true],
+  'only the first five rows are visible by default; the rest are optional/hidden until added',
+);
 
 const oversized = listicle.normalizeListicleData({
   title: 'First line\nSecond line\nThird line',

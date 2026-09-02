@@ -17,6 +17,58 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-09-02 — Listicle: default to 5 visible rows + Add Row; Listicle 1 swipe-button toggle; Quote Image name tag
+- Status: `[pushed - see rollback point below]`
+- Files touched: `index.html`, `listicle-data.js`, `listicle-type2-data.js`,
+  `scripts/test-listicle-accordion.mjs`, `scripts/test-listicle-data.mjs`, `scripts/test-listicle-type2-data.mjs`.
+- Three separate asks from Suhail, landed together:
+  1. **Listicle Type 1 & 2 — default to 5 rows, rest optional/added.** Follow-up on the earlier 10-row
+     expansion: instead of always showing all 10 row cards (dimmed when hidden), the editor now only
+     renders cards for non-hidden rows, defaulting to the first 5 visible / last 5 hidden
+     (`DEFAULT_VISIBLE_ROW_COUNT = 5`, new export on both `ESListicle`/`ESListicleType2`). A dashed
+     **"+ Add Row"** button appears below the list whenever fewer than 10 rows are visible; clicking it
+     reveals the next hidden row (lowest index first) and expands it. Each visible row's toggle button is
+     now just **"Remove"** (single action, since a hidden row is no longer rendered at all — there's
+     nothing to "unhide" from within the list). Reused the exact same `hidden` field and canvas
+     reflow/content-scaling logic built for the original hide/unhide feature, so no renderer changes were
+     needed. Fixed a latent bug while in there: `setListicleRowExpanded`/`setListicleType2RowExpanded`
+     compared DOM position to row index (`index === rowIndex`), which only worked because all 10 cards
+     used to render with no gaps — now compares `card.dataset.listicleRowCard`/`listicleType2RowCard`
+     directly, since cards are sparse once rows can be individually removed/added back out of order.
+  2. **Listicle Type 1 — optional swipe button.** It was previously forced on unconditionally
+     (`drawSwipeButton(ctx, W, H, scale, true)`, force flag bypassing the shared toggle). Flipped
+     `supportsSwipe: true` in `INSTAGRAM_POST_TYPES['listicle-type-1']`, stopped force-hiding
+     `#swipe-button-card` for that type specifically (still hidden for Type 2, which never drew one), and
+     changed the render call to respect `state.swipeButton` like every other post type. To avoid silently
+     removing the button from existing designs, `switchInstagramPostType` now defaults `state.swipeButton`
+     back to `'dark'` each time Listicle Type 1 is freshly selected (previous type !== this one) — so it's
+     on by default per visit, with the existing "Black Swipe Button" switch now available to turn it off.
+  3. **Quote Image ("Quote Image" / `quote` post type, incl. Reels "Quote Reel") — optional name tag.**
+     New "Name (optional)" input (mirrors the existing `long-quote-name` field pattern; new `state.quoteName`,
+     wired through `getCurrentDesignSnapshot`/`cloneDesignSnapshot`/`applyDesignSnapshot` like
+     `longQuoteName` so it round-trips correctly per post-type context). Rendered in `drawQuoteTextGroup`
+     15px→28px (see below) under the last quote pill line, weight 500 (was 700 first pass), white,
+     **horizontally centered on the last line's own center** (`lastStrip.x + lastStrip.w / 2`, which
+     includes that line's individual random jitter offset — not the group's nominal `centerX` used for the
+     first version, per Suhail's correction: "keep the name mid aligned with last line"). Computed from the
+     same already-shifted `stripPositions`/`centerX` the quote pills use, so dragging the quote block moves
+     the name with it with no special-case drag code — it's just recomputed fresh every render. Extended
+     `state.lastTextBounds`/`textHitRects` to include the name's box (so clicking the name also starts a
+     drag, and the safe-area edge-clamp accounts for it instead of letting it run off-canvas near the
+     bottom). Caught and fixed a font-state bug of my own before shipping: measuring the name text
+     overwrote `ctx.font`, which the very next block (drawing the quote pills) implicitly relied on being
+     the pill font — added an explicit `ctx.font` reset before that loop.
+- Iterated per Suhail's live feedback after the first pass: centered the name on the last line's own
+  offset (not the group center), reduced weight 700→500, increased the gap 15px→28px.
+- Updated `scripts/test-listicle-*.mjs` for the new default-visible-count behavior and the
+  `setListicleRowExpanded` dataset-comparison fix. **Could not run them** — no Node.js in this
+  environment, only reviewed the diffs.
+- Verification note: same as always — local `python3 -m http.server` preview is gated by real Supabase
+  login; only checked for zero console/JS errors on reload (confirms no syntax breakage), everything
+  visual (row add/remove flow, swipe toggle, name tag position/drag) is unverified in-browser by the
+  assistant. Suhail iterates live in his own logged-in session.
+- **Rollback point: `d89d3e4`** — HEAD before this batch.
+
 ### 2026-09-02 — Dashboard access/data audit (findings only, no code changes yet)
 - Status: `[docs only - not yet started]`
 - Files touched: none — this entry records a read-only audit ahead of a fix, so the next session (or the
