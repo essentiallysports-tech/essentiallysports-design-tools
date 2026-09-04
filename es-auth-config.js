@@ -19,6 +19,7 @@
       'workcallsudha@gmail.com',
       'cs.subhajit101@gmail.com',
       'iamasme23@gmail.com',
+      'desaiyadnesh@gmail.com',
     ],
   });
 })();
