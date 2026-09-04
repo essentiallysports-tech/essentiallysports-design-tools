@@ -556,6 +556,18 @@
             <div id="tasks-table"></div>
           </section>
 
+          <section class="panel" data-view-section="overview" data-dashboard-panel="overview-exports-trend">
+            <div class="panel-head">
+              <div><h2 class="panel-title">Exports over time</h2><p class="panel-subtitle">Daily export volume across all workspaces.</p></div>
+              <div class="chart-range-toggle" role="group" aria-label="Chart time range">
+                <button class="task-quick-filter" type="button" data-chart-range="7" aria-pressed="false">7d</button>
+                <button class="task-quick-filter is-active" type="button" data-chart-range="30" aria-pressed="true">30d</button>
+                <button class="task-quick-filter" type="button" data-chart-range="90" aria-pressed="false">90d</button>
+              </div>
+            </div>
+            <div id="exports-trend-chart"></div>
+          </section>
+
           <section class="dashboard-overview-grid" data-view-section="overview">
             <section class="panel live-panel">
               <div class="panel-head">
@@ -661,6 +673,7 @@
     let canAssignDashboardRoles = false;
     let selectedTaskId = '';
     let activeTaskQuickFilter = 'all';
+    let activeChartRangeDays = 30;
     let accessRequests = [];
     let dashboardLiveSyncTimer = 0;
 
@@ -1263,6 +1276,171 @@
         : '<div class="empty">No exported designs yet.</div>';
     }
 
+    function startOfLocalDay(date) {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    function chartDayKey(date) {
+      const d = startOfLocalDay(date);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function formatChartDayLabel(date) {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function buildExportsTrendSeries(state, rangeDays) {
+      const today = startOfLocalDay(new Date());
+      const days = [];
+      for (let i = rangeDays - 1; i >= 0; i -= 1) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        days.push({ date: d, key: chartDayKey(d), count: 0 });
+      }
+      const byKey = new Map(days.map(day => [day.key, day]));
+      (state.tasks || [])
+        .filter(task => task.type === 'exported_design')
+        .forEach(task => {
+          const ts = Date.parse(exportCreatedAt(task));
+          if (!Number.isFinite(ts)) return;
+          const bucket = byKey.get(chartDayKey(new Date(ts)));
+          if (bucket) bucket.count += 1;
+        });
+      return days;
+    }
+
+    function bindExportsTrendHover(container, points, viewBoxWidth) {
+      const svg = container.querySelector('svg');
+      const hoverLine = container.querySelector('.chart-hover-line');
+      const tooltip = container.querySelector('.chart-tooltip');
+      const wrap = container.querySelector('.exports-trend-chart-wrap');
+      if (!svg || !hoverLine || !tooltip || !wrap) return;
+
+      const showPoint = index => {
+        const p = points[index];
+        if (!p) return;
+        hoverLine.setAttribute('x1', p.x);
+        hoverLine.setAttribute('x2', p.x);
+        hoverLine.setAttribute('opacity', '1');
+        tooltip.innerHTML = `<strong>${p.count} export${p.count === 1 ? '' : 's'}</strong><span>${escapeHtml(formatChartDayLabel(p.date))}</span>`;
+        // Position in real pixels relative to the wrap (which has its own
+        // padding around the svg), not percentages, so the tooltip lands
+        // exactly on the hovered point regardless of container padding.
+        const svgRect = svg.getBoundingClientRect();
+        const wrapRect = wrap.getBoundingClientRect();
+        const scale = svgRect.width / viewBoxWidth;
+        const left = (svgRect.left - wrapRect.left) + p.x * scale;
+        const top = (svgRect.top - wrapRect.top) + p.y * scale;
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+        tooltip.classList.add('is-visible');
+      };
+
+      const hide = () => {
+        hoverLine.setAttribute('opacity', '0');
+        tooltip.classList.remove('is-visible');
+      };
+
+      svg.addEventListener('pointermove', event => {
+        const rect = svg.getBoundingClientRect();
+        if (!rect.width) return;
+        const relX = ((event.clientX - rect.left) / rect.width) * viewBoxWidth;
+        let nearestIndex = 0;
+        let nearestDist = Infinity;
+        points.forEach((p, i) => {
+          const dist = Math.abs(p.x - relX);
+          if (dist < nearestDist) {
+            nearestDist = dist;
+            nearestIndex = i;
+          }
+        });
+        showPoint(nearestIndex);
+      });
+      svg.addEventListener('pointerleave', hide);
+    }
+
+    function renderExportsTrendChart(state, rangeDays = activeChartRangeDays) {
+      const target = document.getElementById('exports-trend-chart');
+      if (!target) return;
+
+      document.querySelectorAll('[data-chart-range]').forEach(button => {
+        const active = Number(button.dataset.chartRange) === rangeDays;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+
+      const days = buildExportsTrendSeries(state, rangeDays);
+      const total = days.reduce((sum, day) => sum + day.count, 0);
+
+      if (!total) {
+        target.innerHTML = '<div class="empty">No exports in this range yet.</div>';
+        return;
+      }
+
+      const width = 960;
+      const height = 220;
+      const padLeft = 12;
+      const padRight = 12;
+      const padTop = 20;
+      const padBottom = 32;
+      const plotW = width - padLeft - padRight;
+      const plotH = height - padTop - padBottom;
+
+      const maxCount = Math.max(1, ...days.map(day => day.count));
+      const stepX = days.length > 1 ? plotW / (days.length - 1) : 0;
+
+      const points = days.map((day, i) => ({
+        ...day,
+        x: padLeft + stepX * i,
+        y: padTop + (1 - day.count / maxCount) * plotH,
+      }));
+
+      const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+      const floorY = (padTop + plotH).toFixed(1);
+      const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${floorY} L ${points[0].x.toFixed(1)} ${floorY} Z`;
+
+      const gridLines = [0, 1 / 3, 2 / 3, 1].map(t => {
+        const y = (padTop + (1 - t) * plotH).toFixed(1);
+        return `<line x1="${padLeft}" y1="${y}" x2="${(padLeft + plotW).toFixed(1)}" y2="${y}" stroke="var(--dash-line)" stroke-width="1" />`;
+      }).join('');
+
+      const tickCount = Math.min(6, points.length);
+      const tickStep = tickCount > 1 ? (points.length - 1) / (tickCount - 1) : 0;
+      const xLabels = Array.from({ length: tickCount }, (_, i) => {
+        const p = points[Math.round(i * tickStep)];
+        return `<text x="${p.x.toFixed(1)}" y="${height - 8}" text-anchor="middle" font-size="14" fill="var(--dash-muted)">${escapeHtml(formatChartDayLabel(p.date))}</text>`;
+      }).join('');
+
+      const dots = points.map((p, i) => {
+        const isLast = i === points.length - 1;
+        return `<circle data-chart-index="${i}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${isLast ? 5 : 3}" fill="${isLast ? 'var(--dash-blue)' : '#fff'}" stroke="var(--dash-blue)" stroke-width="2" />`;
+      }).join('');
+
+      target.innerHTML = `
+        <div class="exports-trend-chart-wrap">
+          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Exports over the last ${rangeDays} days">
+            <defs>
+              <linearGradient id="exportsTrendGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--dash-blue)" stop-opacity="0.18" />
+                <stop offset="100%" stop-color="var(--dash-blue)" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+            ${gridLines}
+            <path d="${areaPath}" fill="url(#exportsTrendGradient)" stroke="none" />
+            <path d="${linePath}" fill="none" stroke="var(--dash-blue)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+            ${dots}
+            <line class="chart-hover-line" x1="0" y1="${padTop}" x2="0" y2="${floorY}" stroke="var(--dash-muted)" stroke-width="1" opacity="0" />
+            ${xLabels}
+          </svg>
+          <div class="chart-tooltip"></div>
+        </div>
+      `;
+
+      bindExportsTrendHover(target, points, width);
+    }
+
     function renderDesigns(state) {
       const target = document.getElementById('designs-table');
       if (!target) return;
@@ -1533,6 +1711,7 @@
       renderDesigns(state);
       renderFeedback(state);
       renderOverviewExports(state);
+      renderExportsTrendChart(state);
       renderPeople(state);
       renderAccessRequests();
       renderActivity(state);
@@ -1833,6 +2012,12 @@
         button.addEventListener('click', () => {
           activeTaskQuickFilter = button.dataset.taskQuickFilter || 'all';
           renderDashboard();
+        });
+      });
+      document.querySelectorAll('[data-chart-range]').forEach(button => {
+        button.addEventListener('click', () => {
+          activeChartRangeDays = Number(button.dataset.chartRange) || 30;
+          renderExportsTrendChart(window.ESDashboardData.getDashboardState(), activeChartRangeDays);
         });
       });
       document.addEventListener('click', event => {

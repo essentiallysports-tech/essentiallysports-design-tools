@@ -6602,6 +6602,68 @@ body.dashboard-page .export-preview-panel img {
   }
 }
 
+/* Exports-over-time chart (overview panel, added last so it wins over the
+   older repeated .panel-head/.panel-title generations above). */
+body.dashboard-page [data-dashboard-panel="overview-exports-trend"] .panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+body.dashboard-page .chart-range-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+body.dashboard-page .chart-range-toggle .task-quick-filter {
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+body.dashboard-page .exports-trend-chart-wrap {
+  position: relative;
+  padding: 18px 20px 12px;
+}
+
+body.dashboard-page .exports-trend-chart-wrap svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+body.dashboard-page .chart-tooltip {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--dash-ink, #111827);
+  color: #fff;
+  font-family: var(--dash-body-type, var(--font-ui));
+  font-size: 14px !important;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, calc(-100% - 10px));
+  transition: opacity .12s ease;
+}
+
+body.dashboard-page .chart-tooltip.is-visible {
+  opacity: 1;
+}
+
+body.dashboard-page .chart-tooltip strong {
+  font-size: 14px !important;
+}
+
 /* Final dashboard view lock. Keep this last because older dashboard layers
    still define broad display rules for board, metrics, and panel sections. */
 body.dashboard-page [hidden] {
