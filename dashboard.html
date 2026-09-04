@@ -556,16 +556,25 @@
             <div id="tasks-table"></div>
           </section>
 
-          <section class="panel" data-view-section="overview" data-dashboard-panel="overview-exports-trend">
-            <div class="panel-head">
-              <div><h2 class="panel-title">Exports over time</h2><p class="panel-subtitle">Daily export volume across all workspaces.</p></div>
-              <div class="chart-range-toggle" role="group" aria-label="Chart time range">
-                <button class="task-quick-filter" type="button" data-chart-range="7" aria-pressed="false">7d</button>
-                <button class="task-quick-filter is-active" type="button" data-chart-range="30" aria-pressed="true">30d</button>
-                <button class="task-quick-filter" type="button" data-chart-range="90" aria-pressed="false">90d</button>
+          <section class="dashboard-charts-grid" data-view-section="overview">
+            <section class="panel chart-panel" data-dashboard-panel="overview-exports-trend">
+              <div class="panel-head">
+                <div><h2 class="panel-title">Exports over time</h2><p class="panel-subtitle">Daily export volume.</p></div>
+                <div class="chart-range-toggle" role="group" aria-label="Chart time range">
+                  <button class="task-quick-filter" type="button" data-chart-range="7" aria-pressed="false">7d</button>
+                  <button class="task-quick-filter is-active" type="button" data-chart-range="30" aria-pressed="true">30d</button>
+                  <button class="task-quick-filter" type="button" data-chart-range="90" aria-pressed="false">90d</button>
+                </div>
               </div>
-            </div>
-            <div id="exports-trend-chart"></div>
+              <div id="exports-trend-chart"></div>
+            </section>
+
+            <section class="panel chart-panel" data-dashboard-panel="overview-exports-by-workspace">
+              <div class="panel-head">
+                <div><h2 class="panel-title">Exports by workspace</h2><p class="panel-subtitle">Same range as the chart on the left.</p></div>
+              </div>
+              <div id="exports-workspace-chart"></div>
+            </section>
           </section>
 
           <section class="dashboard-overview-grid" data-view-section="overview">
@@ -1379,12 +1388,12 @@
         return;
       }
 
-      const width = 960;
-      const height = 220;
-      const padLeft = 12;
-      const padRight = 12;
-      const padTop = 20;
-      const padBottom = 32;
+      const width = 480;
+      const height = 150;
+      const padLeft = 10;
+      const padRight = 10;
+      const padTop = 16;
+      const padBottom = 28;
       const plotW = width - padLeft - padRight;
       const plotH = height - padTop - padBottom;
 
@@ -1439,6 +1448,45 @@
       `;
 
       bindExportsTrendHover(target, points, width);
+    }
+
+    function renderExportsByWorkspaceChart(state, rangeDays = activeChartRangeDays) {
+      const target = document.getElementById('exports-workspace-chart');
+      if (!target) return;
+
+      const cutoff = Date.now() - rangeDays * 24 * 60 * 60 * 1000;
+      const counts = new Map();
+      (state.tasks || [])
+        .filter(task => task.type === 'exported_design')
+        .forEach(task => {
+          const ts = Date.parse(exportCreatedAt(task));
+          if (!Number.isFinite(ts) || ts < cutoff) return;
+          const label = String(task.workspace || 'Other').trim() || 'Other';
+          counts.set(label, (counts.get(label) || 0) + 1);
+        });
+
+      const rows = Array.from(counts.entries())
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => b.count - a.count);
+
+      if (!rows.length) {
+        target.innerHTML = '<div class="empty">No exports in this range yet.</div>';
+        return;
+      }
+
+      const maxCount = Math.max(1, ...rows.map(row => row.count));
+      const barsHtml = rows.map(row => {
+        const pct = Math.max(4, Math.round((row.count / maxCount) * 100));
+        return `
+          <div class="workspace-bar-row">
+            <span class="workspace-bar-label">${escapeHtml(row.label)}</span>
+            <span class="workspace-bar-track"><span class="workspace-bar-fill" style="width:${pct}%"></span></span>
+            <span class="workspace-bar-count">${row.count}</span>
+          </div>
+        `;
+      }).join('');
+
+      target.innerHTML = `<div class="workspace-bar-chart">${barsHtml}</div>`;
     }
 
     function renderDesigns(state) {
@@ -1712,6 +1760,7 @@
       renderFeedback(state);
       renderOverviewExports(state);
       renderExportsTrendChart(state);
+      renderExportsByWorkspaceChart(state);
       renderPeople(state);
       renderAccessRequests();
       renderActivity(state);
@@ -2017,7 +2066,9 @@
       document.querySelectorAll('[data-chart-range]').forEach(button => {
         button.addEventListener('click', () => {
           activeChartRangeDays = Number(button.dataset.chartRange) || 30;
-          renderExportsTrendChart(window.ESDashboardData.getDashboardState(), activeChartRangeDays);
+          const state = window.ESDashboardData.getDashboardState();
+          renderExportsTrendChart(state, activeChartRangeDays);
+          renderExportsByWorkspaceChart(state, activeChartRangeDays);
         });
       });
       document.addEventListener('click', event => {

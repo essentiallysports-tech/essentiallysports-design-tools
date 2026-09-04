@@ -6602,8 +6602,28 @@ body.dashboard-page .export-preview-panel img {
   }
 }
 
-/* Exports-over-time chart (overview panel, added last so it wins over the
-   older repeated .panel-head/.panel-title generations above). */
+/* Exports-over-time + exports-by-workspace charts (overview panels, added
+   last so they win over the older repeated .panel-head/.panel-title
+   generations above). */
+body.dashboard-page .dashboard-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 900px) {
+  body.dashboard-page .dashboard-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+body.dashboard-page .chart-panel .panel-head {
+  min-height: 0;
+  padding: 14px 18px 10px;
+}
+
 body.dashboard-page [data-dashboard-panel="overview-exports-trend"] .panel-head {
   display: flex;
   align-items: center;
@@ -6662,6 +6682,51 @@ body.dashboard-page .chart-tooltip.is-visible {
 
 body.dashboard-page .chart-tooltip strong {
   font-size: 14px !important;
+}
+
+body.dashboard-page .workspace-bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+}
+
+body.dashboard-page .workspace-bar-row {
+  display: grid;
+  grid-template-columns: minmax(90px, .38fr) 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+body.dashboard-page .workspace-bar-label {
+  overflow: hidden;
+  color: var(--dash-ink);
+  font-size: 14px !important;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.dashboard-page .workspace-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--dash-blue-soft, #eef6ff);
+  overflow: hidden;
+}
+
+body.dashboard-page .workspace-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--dash-blue);
+}
+
+body.dashboard-page .workspace-bar-count {
+  min-width: 20px;
+  color: var(--dash-muted);
+  font-size: 14px !important;
+  font-weight: 600;
+  text-align: right;
 }
 
 /* Final dashboard view lock. Keep this last because older dashboard layers
