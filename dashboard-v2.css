@@ -6656,6 +6656,27 @@ body.dashboard-page .exports-trend-chart-wrap svg {
   overflow: visible;
 }
 
+body.dashboard-page .chart-hover-line {
+  transition: transform .12s ease, opacity .12s ease;
+}
+
+body.dashboard-page .chart-x-axis {
+  position: relative;
+  height: 18px;
+  margin-top: 4px;
+}
+
+body.dashboard-page .chart-x-label {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  color: var(--dash-muted);
+  font-family: var(--dash-body-type, var(--font-ui));
+  font-size: 14px !important;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 body.dashboard-page .chart-tooltip {
   position: absolute;
   z-index: 4;
@@ -6673,7 +6694,7 @@ body.dashboard-page .chart-tooltip {
   pointer-events: none;
   opacity: 0;
   transform: translate(-50%, calc(-100% - 10px));
-  transition: opacity .12s ease;
+  transition: left .12s ease, top .12s ease, opacity .12s ease;
 }
 
 body.dashboard-page .chart-tooltip.is-visible {

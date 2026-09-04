@@ -1330,8 +1330,10 @@
       const showPoint = index => {
         const p = points[index];
         if (!p) return;
-        hoverLine.setAttribute('x1', p.x);
-        hoverLine.setAttribute('x2', p.x);
+        // Moved via a CSS transform (not by rewriting x1/x2 on every pointer
+        // event) so the built-in CSS transition below can animate it - a
+        // plain attribute change has nothing to interpolate between.
+        hoverLine.style.transform = `translateX(${p.x}px)`;
         hoverLine.setAttribute('opacity', '1');
         tooltip.innerHTML = `<strong>${p.count} export${p.count === 1 ? '' : 's'}</strong><span>${escapeHtml(formatChartDayLabel(p.date))}</span>`;
         // Position in real pixels relative to the wrap (which has its own
@@ -1389,11 +1391,11 @@
       }
 
       const width = 480;
-      const height = 150;
+      const height = 130;
       const padLeft = 10;
       const padRight = 10;
       const padTop = 16;
-      const padBottom = 28;
+      const padBottom = 10;
       const plotW = width - padLeft - padRight;
       const plotH = height - padTop - padBottom;
 
@@ -1417,10 +1419,15 @@
 
       const tickCount = Math.min(6, points.length);
       const tickStep = tickCount > 1 ? (points.length - 1) / (tickCount - 1) : 0;
-      const xLabels = Array.from({ length: tickCount }, (_, i) => {
-        const p = points[Math.round(i * tickStep)];
-        return `<text x="${p.x.toFixed(1)}" y="${height - 8}" text-anchor="middle" font-size="14" fill="var(--dash-muted)">${escapeHtml(formatChartDayLabel(p.date))}</text>`;
-      }).join('');
+      const tickPoints = Array.from({ length: tickCount }, (_, i) => points[Math.round(i * tickStep)]);
+      // Real HTML labels, not SVG <text>: an SVG font-size is in viewBox
+      // units, so it scales up with the panel's rendered width and no
+      // longer matches the rest of the dashboard's actual 14px text once
+      // the chart is wider than its viewBox. A plain CSS font-size avoids
+      // that entirely and always matches the rest of the UI exactly.
+      const xLabels = tickPoints.map(p => (
+        `<span class="chart-x-label" style="left:${((p.x / width) * 100).toFixed(2)}%">${escapeHtml(formatChartDayLabel(p.date))}</span>`
+      )).join('');
 
       const dots = points.map((p, i) => {
         const isLast = i === points.length - 1;
@@ -1441,8 +1448,8 @@
             <path d="${linePath}" fill="none" stroke="var(--dash-blue)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
             ${dots}
             <line class="chart-hover-line" x1="0" y1="${padTop}" x2="0" y2="${floorY}" stroke="var(--dash-muted)" stroke-width="1" opacity="0" />
-            ${xLabels}
           </svg>
+          <div class="chart-x-axis">${xLabels}</div>
           <div class="chart-tooltip"></div>
         </div>
       `;
