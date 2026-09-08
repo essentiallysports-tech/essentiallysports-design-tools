@@ -874,7 +874,10 @@
 
     function uniqueVisitorCount(people = [], predicate = () => true) {
       const visitors = new Set();
-      if (dashboardUser.email) visitors.add(dashboardUser.email);
+      // The signed-in admin's own presence row already flows through `people`
+      // (they heartbeat like anyone else); unconditionally adding them here
+      // bypassed the time-window predicate entirely, inflating every window
+      // by 1 regardless of whether they'd actually been seen in it.
       people.forEach(person => {
         const key = person.email || person.name;
         if (!key) return;

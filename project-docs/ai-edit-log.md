@@ -17,6 +17,44 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-09-02 — Fix profile-save sync delay and inflated visitor counts
+- Status: `[pushed - see rollback point below]`
+- Files touched: `ai-page/profile.html`, `dashboard.html`. No data-layer/migration changes.
+- Ask (Suhail): dashboard numbers ("Visitors last 24h" / "this month") kept looking stale/wrong; asked to
+  check and fix, then confirmed after a first attempt that he still saw no change — that turned out to be
+  because the fixes below were made but not yet pushed (nothing to do with the fixes themselves).
+- Investigated the actual data pipeline (`dashboard-data.js`, `dashboard.html`) rather than guessing, and
+  found two separate, real bugs (not just the expected ~15s poll delay documented in the prior audit
+  entry):
+  1. **`ai-page/profile.html`'s Save Profile / avatar-upload handlers only wrote to `localStorage`**
+     (`saveProfile()` in `ai-page/account.js`) and never touched Supabase. The profile/presence row other
+     views read (dashboard People list, another device) only updated whenever *this same browser's* next
+     60-second presence heartbeat happened to fire, or a different page reloaded. Fixed by calling
+     `window.ESDashboardData?.recordPresenceHeartbeat?.()` immediately after `saveProfile()` in both
+     handlers, so edits push to Supabase right away. (Caught and fixed my own mistake before shipping:
+     first draft was `...recordPresenceHeartbeat?.().catch(...)`, which throws if `ESDashboardData` isn't
+     loaded, since `?.()` short-circuiting to `undefined` still needs `?.catch` too — fixed to
+     `...recordPresenceHeartbeat?.()?.catch(() => {})`.)
+  2. **`uniqueVisitorCount()` in `dashboard.html` unconditionally added the signed-in admin to every
+     visitor-count window**, bypassing the 24h/this-month predicate entirely
+     (`if (dashboardUser.email) visitors.add(dashboardUser.email);` ran before any time check). This
+     silently inflated both "Visitors last 24h" and "Visitors this month" by 1, regardless of whether the
+     admin had actually been seen in that window. Removed the special case — the admin's own presence row
+     already flows through the normal `people` list (they heartbeat like anyone else), so it's now counted
+     the same way as every other person, correctly time-filtered.
+  3. Also resolved, along the way, a mystery from earlier in the session: `profile.html` initially
+     appeared not to exist anywhere in the repo (`find . -maxdepth 1` came up empty) before realizing it
+     lives under `ai-page/profile.html`, not the repo root — noting this here in case a future session hits
+     the same false "file doesn't exist" dead end.
+- Did not touch the ~15s dashboard poll cadence or the "stuck pending write on another device" scenario
+  from the earlier audit entry (`2026-09-02 — Dashboard access/data audit`) — those are real but weren't
+  the concrete bug found this time; flagged again here in case they still need addressing separately.
+- Verification note: same limitation as always — couldn't get past the Supabase login gate in the local
+  preview to watch this work end-to-end (repeated `navigate` attempts to gated pages were denied in this
+  session). Verified by direct code/logic review against `dashboard-data.js`'s actual exported API
+  (confirmed `recordPresenceHeartbeat` is exported and never rejects) rather than by running it.
+- **Rollback point: `92d3c05`** — HEAD before this commit.
+
 ### 2026-09-02 — Add master brand/site design-system doc
 - Status: `[pushed - see rollback point below]`
 - Files touched (new): `project-docs/brand-design-system-master.md`. No code changes.

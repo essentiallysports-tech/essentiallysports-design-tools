@@ -207,6 +207,14 @@
       syncProfileChrome();
     }
 
+    function pushProfileToCloud() {
+      // Saving only writes localStorage; without this, the change sits unsynced
+      // until this browser's next 60s presence heartbeat, so other views (the
+      // dashboard's People list, another device) see stale data for up to a
+      // minute. Push it immediately instead.
+      window.ESDashboardData?.recordPresenceHeartbeat?.()?.catch(() => {});
+    }
+
     form.addEventListener('submit', event => {
       event.preventDefault();
       const profile = typeof sanitizeProfile === 'function'
@@ -214,6 +222,7 @@
         : Object.fromEntries(new FormData(form).entries());
       saveProfile(profile);
       applyProfile(profile);
+      pushProfileToCloud();
       status.textContent = 'Profile saved.';
     });
 
@@ -232,6 +241,7 @@
           : Object.fromEntries(new FormData(form).entries());
         saveProfile(profile);
         applyProfile(profile);
+        pushProfileToCloud();
         status.textContent = 'Profile image saved.';
       });
       reader.readAsDataURL(file);
