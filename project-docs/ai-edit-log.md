@@ -17,6 +17,42 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-09-02 — Add master brand/site design-system doc
+- Status: `[pushed - see rollback point below]`
+- Files touched (new): `project-docs/brand-design-system-master.md`. No code changes.
+- Ask (Suhail): a single markdown file explaining the whole brand's site look — design tokens, navbar,
+  footer, font usage, page rules — so it can bootstrap any future EssentiallySports website, not just
+  this app.
+- Wrote it from direct inspection of the live code, not from the older brand-guide docs' assumptions:
+  read `design-tokens.css`, `theme.css`, `theme.js`, `site-chrome.css`, and the real navbar/footer markup
+  in `index.html` (lines ~66–200 for the page-chrome `:root` tokens and `.navbar`, ~9052+ for the
+  `.site-footer` markup).
+- Key things captured that weren't written down anywhere before:
+  - **No shared template/include system** — every page duplicates its own navbar/footer markup; changing
+    the navbar means editing every page that has one. This is the single most important operational fact
+    for anyone extending the site.
+  - **Two overlapping token systems** exist on purpose: page-chrome tokens (`:root` per page, `--chrome-*`
+    in `site-chrome.css`) for site chrome/new pages, vs. the stricter semantic `--es-*` type-hierarchy in
+    `design-tokens.css` for product/app UI inside workspace shells. Documented when to use which.
+  - **Corrected a stale assumption from `es-designer-brand-design-guide.md` §14**, which describes the
+    footer as "Dark/navy or strong branded section." The real implementation
+    (`site-chrome.css` `.site-footer`) is a **white body with a blue (`--chrome-accent` / `#0A7DFA`) hero
+    band on top** — not solid navy. Verified directly against the CSS, not assumed.
+  - Dark mode mechanics (`theme.js`: `data-theme` attribute, `localStorage['frameup.theme.v1']`,
+    `frameup-theme-change` event) and the fact that the navbar/footer intentionally don't reskin for dark
+    mode (only product-shell chrome does).
+  - Real responsive breakpoints in use (420 / 560 / 900 / 1260px) pulled from actual `@media` queries in
+    `site-chrome.css` / `site-mobile-chrome.css`, not guessed.
+- This file supersedes `es-designer-brand-design-guide.md` / `frameup-design-system.md` for site-chrome
+  purposes only; both are kept and cross-referenced — they still own product-UI typography rules and
+  canvas/export creative rules respectively, which this doc doesn't repeat.
+- Delivered a copy directly to Suhail as a standalone file before pushing.
+- Verification note: this is documentation, not a code change — nothing to browser-test. Accuracy comes
+  from reading the actual CSS/HTML values cited above, not from re-deriving them by inspection in a
+  running page.
+- **Rollback point: `cf3ee4c`** — HEAD before this commit (from another session's dashboard-chart/
+  allowlist work, already pulled in previously).
+
 ### 2026-09-02 — Listicle: default to 5 visible rows + Add Row; Listicle 1 swipe-button toggle; Quote Image name tag
 - Status: `[pushed - see rollback point below]`
 - Files touched: `index.html`, `listicle-data.js`, `listicle-type2-data.js`,
