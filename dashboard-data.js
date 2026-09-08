@@ -15,18 +15,21 @@
   const PENDING_TASKS_KEY = 'es.dashboard.pendingTasks.v1';
   const PENDING_ACTIVITY_KEY = 'es.dashboard.pendingActivity.v1';
   const PRESENCE_ONLINE_WINDOW_MS = 2 * 60 * 1000;
-  const PRESENCE_HEARTBEAT_MS = 60 * 1000;
+  const PRESENCE_HEARTBEAT_MS = 20 * 1000;
   const TASK_STATUS_COLUMNS = Object.freeze(['Backlog', 'Assigned', 'Doing', 'Review', 'Done']);
   const ACCESS_ROLES = Object.freeze(['Associate', 'Admin', 'Super Admin', 'Server Owner']);
   const DASHBOARD_ACCESS_ROLES = Object.freeze(['Admin', 'Super Admin', 'Server Owner']);
   const ROLE_ASSIGNER_ROLES = Object.freeze(['Server Owner']);
   const SERVER_OWNER_EMAIL = 'suhail.quraishi@essentiallysports.com';
+  // Suhail also signs in from a second account (designteam@) on some devices.
+  // Both are treated as the same owner-level identity for dashboard purposes.
+  const SERVER_OWNER_EMAILS = Object.freeze([SERVER_OWNER_EMAIL, 'designteam@essentiallysports.com']);
   const DASHBOARD_ADMIN_EMAILS = Object.freeze([
-    SERVER_OWNER_EMAIL,
+    ...SERVER_OWNER_EMAILS,
     'manish.kalsi@essentiallysports.com',
   ]);
   const DEFAULT_ROLE_ASSIGNMENTS = Object.freeze({
-    [SERVER_OWNER_EMAIL]: 'Server Owner',
+    ...Object.fromEntries(SERVER_OWNER_EMAILS.map(email => [email, 'Server Owner'])),
     'manish.kalsi@essentiallysports.com': 'Super Admin',
   });
 
@@ -153,10 +156,10 @@
 
   async function canCurrentUserAssignRoles() {
     const session = await getAuthenticatedSession();
-    // Role assignment belongs to this one owner identity. Keep the email
+    // Role assignment belongs to the owner identity/identities. Keep the email
     // check explicit so a stale or misconfigured profile cannot expose role
-    // controls to another account; Supabase enforces the same rule in the RPC.
-    return normalizeEmail(session?.user?.email) === SERVER_OWNER_EMAIL;
+    // controls to another account; Supabase's RPC must allow the same emails.
+    return SERVER_OWNER_EMAILS.includes(normalizeEmail(session?.user?.email));
   }
 
   let cloudPeopleCache = [];
@@ -1187,7 +1190,7 @@
     const normalizedEmail = normalizeEmail(email);
     const accessRole = normalizeAccessRole(role, normalizedEmail);
     const actor = await getCurrentUser();
-    if (normalizeEmail(actor.email) !== SERVER_OWNER_EMAIL) {
+    if (!SERVER_OWNER_EMAILS.includes(normalizeEmail(actor.email))) {
       throw new Error('Only the Server Owner can change dashboard roles.');
     }
     if (!normalizedEmail) throw new Error('Missing person email.');

@@ -17,6 +17,45 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-09-02 — Grant designteam@ full dashboard access; tighten sync latency
+- Status: `[pushed - see rollback point below]`
+- Files touched: `dashboard-data.js`, `dashboard.html`. No migrations.
+- Ask (Suhail): the "different numbers on different machines" turned out to be because his Mac and PC
+  are signed into two different real Supabase accounts that both display as "Suhail Quraishi" —
+  `suhail.quraishi@essentiallysports.com` (created 24 Aug, short history) and
+  `designteam@essentiallysports.com` (created 8 Jul, long history, previously NOT in the dashboard-admin
+  allowlist at all). Asked to give both full dashboard access since both are his. Separately, after
+  confirming the fix worked, reported the sync "took too long" and asked to fix that too.
+- **Access grant**: `SERVER_OWNER_EMAIL` (singular) generalized to `SERVER_OWNER_EMAILS` (array) containing
+  both emails. Updated every exact-match check that gated on the single owner email:
+  `DASHBOARD_ADMIN_EMAILS`, `DEFAULT_ROLE_ASSIGNMENTS` (both now treated as `'Server Owner'`),
+  `canCurrentUserAssignRoles()`, `updatePersonAccessRole()`'s owner check, and the redundant hardcoded
+  fast-path literal in `dashboard.html`'s `boot()` (`canAssignDashboardRoles = [...].includes(signedInEmail) || await canCurrentUserAssignRoles()`).
+  **Caveat flagged to Suhail and still true**: the Supabase RPC `set_es_designer_access_role` (referenced
+  in a comment near `updatePersonAccessRole`) is a Postgres function living in the Supabase project, not
+  in this repo — it must independently allow `designteam@essentiallysports.com` to call it, or that account
+  will get dashboard *access* fine but may hit a server-side rejection if it tries to change someone else's
+  role. Not fixable from this codebase.
+  - This edit was initially blocked by the session's auto-mode safety classifier as a sensitive
+    access-control change; re-attempted and went through after Suhail explicitly confirmed.
+- **Latency**: two intervals were tightened, both pure numeric tuning, no logic change:
+  - `PRESENCE_HEARTBEAT_MS` (how often each open tab pushes its own presence/pending-write-queue to
+    Supabase): `60s → 20s`.
+  - The dashboard's own live-poll interval (`startDashboardLiveSync`'s `setInterval`, re-fetches
+    people/tasks/activity while the tab is visible): `15s → 5s`.
+  - Combined, worst-case staleness for a cross-device change to appear on an open dashboard tab drops from
+    roughly ~75s (60s heartbeat + 15s poll) to ~25s (20s + 5s) in the pending-write-retry case, and general
+    poll lag drops from up to 15s to up to 5s in the common case where the source write already succeeded
+    immediately. Did not add a manual "Refresh" button or otherwise change the underlying architecture
+    (local-first writes with a pending-retry queue) — just made the existing polling cadence tighter.
+- Verification note: same limitation as always — could not get past the Supabase login gate in-browser
+  (repeated `navigate` attempts to gated pages denied in this session, same as prior entries); confirmed
+  via `curl` against the real production URL (`https://frameup.essentiallysports.com`, provided by Suhail
+  this session) that the *previous* commit's fixes were actually live, which is what surfaced this
+  session's two-accounts finding in the first place. This session's changes verified by code review only —
+  reload-and-check-console-errors on the (unauthenticated) login redirect page, not a full in-app test.
+- **Rollback point: `216504e`** — HEAD before this commit.
+
 ### 2026-09-02 — Fix profile-save sync delay and inflated visitor counts
 - Status: `[pushed - see rollback point below]`
 - Files touched: `ai-page/profile.html`, `dashboard.html`. No data-layer/migration changes.

@@ -2280,7 +2280,7 @@
           .then(() => renderDashboard())
           .catch(() => {});
       };
-      dashboardLiveSyncTimer = window.setInterval(refresh, 15000);
+      dashboardLiveSyncTimer = window.setInterval(refresh, 5000);
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) refresh();
       }, { passive: true });
@@ -2334,7 +2334,7 @@
           'Dashboard user profile timed out.'
         );
         const signedInEmail = String(dashboardUser.email || '').trim().toLowerCase();
-        canAssignDashboardRoles = signedInEmail === 'suhail.quraishi@essentiallysports.com'
+        canAssignDashboardRoles = ['suhail.quraishi@essentiallysports.com', 'designteam@essentiallysports.com'].includes(signedInEmail)
           || await withBootTimeout(
             window.ESDashboardData.canCurrentUserAssignRoles?.(),
             5000,
