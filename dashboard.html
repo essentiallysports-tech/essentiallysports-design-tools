@@ -2308,38 +2308,49 @@
     async function boot() {
       setupPageTransitions();
       try {
-        const hasValidSession = await withBootTimeout(
+        // These four checks each make their own independent Supabase/auth
+        // round trip and none needs a previous one's resolved value to
+        // start — only to gate what happens next. They used to run one
+        // after another (up to ~24s of timeouts stacked, and several real
+        // seconds in the common case); firing them together cuts boot time
+        // to roughly the slowest single call instead of the sum of all four.
+        const sessionPromise = withBootTimeout(
           window.ESAuth?.isValidSession?.(),
           9000,
           'Authentication check timed out.'
         );
+        const adminPromise = withBootTimeout(
+          window.ESDashboardData.isCurrentUserAdmin(),
+          5000,
+          'Dashboard admin check timed out.'
+        );
+        const userPromise = withBootTimeout(
+          window.ESDashboardData.getCurrentUser(),
+          5000,
+          'Dashboard user profile timed out.'
+        );
+        const rolePromise = withBootTimeout(
+          window.ESDashboardData.canCurrentUserAssignRoles?.(),
+          5000,
+          'Dashboard role permission check timed out.'
+        );
+
+        const hasValidSession = await sessionPromise;
         if (!hasValidSession) {
           window.location.replace(window.ESAuth?.loginUrl?.('dashboard.html') || 'login.html?redirect=dashboard.html');
           return;
         }
 
-        const isAdmin = await withBootTimeout(
-          window.ESDashboardData.isCurrentUserAdmin(),
-          5000,
-          'Dashboard admin check timed out.'
-        );
+        const isAdmin = await adminPromise;
         if (!isAdmin) {
           window.location.replace('index.html#frames');
           return;
         }
 
-        dashboardUser = await withBootTimeout(
-          window.ESDashboardData.getCurrentUser(),
-          5000,
-          'Dashboard user profile timed out.'
-        );
+        dashboardUser = await userPromise;
         const signedInEmail = String(dashboardUser.email || '').trim().toLowerCase();
         canAssignDashboardRoles = ['suhail.quraishi@essentiallysports.com', 'designteam@essentiallysports.com'].includes(signedInEmail)
-          || await withBootTimeout(
-            window.ESDashboardData.canCurrentUserAssignRoles?.(),
-            5000,
-            'Dashboard role permission check timed out.'
-          );
+          || await rolePromise;
         document.documentElement.style.visibility = '';
         window.dispatchEvent(new CustomEvent('es:auth-ready'));
         document.body.dataset.dashboardView = requestedDashboardView();
@@ -2352,11 +2363,9 @@
         renderDashboard();
         refreshAccessRequests();
         startDashboardLiveSync();
-        window.setTimeout(() => {
-          window.ESDashboardData.refreshCloudDashboardData?.()
-            .then(renderDashboard)
-            .catch(() => {});
-        }, 500);
+        window.ESDashboardData.refreshCloudDashboardData?.()
+          .then(renderDashboard)
+          .catch(() => {});
       } catch (error) {
         showDashboardBootError(error);
       }

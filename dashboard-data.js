@@ -734,24 +734,37 @@
     if (cloudRefreshInFlight) return cloudRefreshInFlight;
     cloudRefreshInFlight = (async () => {
       try {
-        await withRejectingTimeout(upsertSupabaseProfileAndPresence(), 5000, 'Profile sync');
-        await withRejectingTimeout(flushPendingCloudWrites(), 8000, 'Pending dashboard sync');
+        // These calls used to run one after another (profile upsert, then
+        // pending-write flush, then the people/tasks/activity fetch) even
+        // though none of them depend on another's result. At ~0.4-1.6s per
+        // Supabase round trip, that serial chain was the main contributor to
+        // slow dashboard load times. Run everything concurrently instead.
+        const tasks = [
+          withRejectingTimeout(upsertSupabaseProfileAndPresence(), 5000, 'Profile sync'),
+          withRejectingTimeout(flushPendingCloudWrites(), 8000, 'Pending dashboard sync'),
+        ];
         if (fetchPeople) {
-          const results = await Promise.allSettled([
+          tasks.push(
             withRejectingTimeout(fetchSupabasePeople(), 7000, 'People sync'),
             withRejectingTimeout(fetchSupabaseTasks(), 7000, 'Task sync'),
             withRejectingTimeout(fetchSupabaseActivity(), 7000, 'Activity sync'),
-          ]);
-          const [peopleResult, tasksResult, activityResult] = results;
+          );
+        }
+        const results = await Promise.allSettled(tasks);
+
+        if (fetchPeople) {
+          const [, , peopleResult, tasksResult, activityResult] = results;
           if (peopleResult.status === 'fulfilled') cloudPeopleCache = peopleResult.value;
           if (tasksResult.status === 'fulfilled') cloudTasksCache = tasksResult.value;
           if (activityResult.status === 'fulfilled') cloudActivityCache = activityResult.value;
+        }
 
-          const errors = results
-            .filter(result => result.status === 'rejected')
-            .map(result => cleanString(result.reason?.message || 'Unknown Supabase sync error'));
-          if (errors.length) throw new Error(errors.join(' '));
+        const errors = results
+          .filter(result => result.status === 'rejected')
+          .map(result => cleanString(result.reason?.message || 'Unknown Supabase sync error'));
+        if (errors.length) throw new Error(errors.join(' '));
 
+        if (fetchPeople) {
           cloudSyncStatus = {
             ok: true,
             message: '',

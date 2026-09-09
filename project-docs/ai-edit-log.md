@@ -17,6 +17,55 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-09-09 — Fix dashboard load time: parallelize serial Supabase calls
+- Status: `[pushed - see rollback point below]`
+- Files touched: `dashboard-data.js`, `dashboard.html`. No data-layer/schema changes.
+- Ask (Suhail): after the previous session's account-access grant and interval tightening, reported "it
+  is not solved yet"; clarified the actual complaint was load time (not stale/mismatched data), and asked
+  to fix it, push it, and verify how much time it was actually taking.
+- **Measured first, rather than guessing**: could not log into the live dashboard to profile it directly
+  (same Supabase-login limitation as every prior entry), but could measure real, unauthenticated round-trip
+  time to the Supabase REST endpoint from this environment via `curl -w`: **~0.4–1.6s per request**
+  (3 samples: 0.88s, 1.62s, 0.41s). That's the concrete number the fix is based on.
+- **Root cause**: not slow individual requests so much as unnecessary serial chains of them:
+  1. `dashboard.html`'s `boot()` awaited four independent Supabase/auth checks **one after another**
+     (`isValidSession` → `isCurrentUserAdmin` → `getCurrentUser` → `canCurrentUserAssignRoles`) before the
+     page even became visible, even though none of them needs a previous one's resolved value to start —
+     only to decide what happens next. At ~0.4-1.6s each, that's roughly 1.6-6.4s of pure serial waiting
+     before first paint, worst case up to 24s of stacked timeouts if Supabase were slow/down.
+  2. `refreshCloudDashboardData()` in `dashboard-data.js` awaited the profile/presence upsert, then
+     awaited the pending-write-queue flush, and only *then* started the parallel fetch of
+     people/tasks/activity that actually populates the dashboard's numbers — another two full round trips
+     of pure serial waiting stacked in front of the real data fetch every single load.
+- **Fix**: in both places, fire all the independent calls at once and await them in whatever order the
+  logic needs, instead of awaiting each before starting the next:
+  - `boot()`: all four checks now start as promises before any `await`; still awaited/gated in the same
+    logical order (session → admin → user → role) so redirect behavior is unchanged, but the four network
+    calls now overlap instead of stacking.
+  - `refreshCloudDashboardData()`: profile-upsert, pending-flush, and (when fetching for the dashboard)
+    people/tasks/activity are now one `Promise.allSettled` batch instead of two sequential `await`s
+    followed by a separate parallel batch. Preserved the existing all-or-nothing failure signaling
+    (`cloudSyncStatus`/`emitDashboardChange`) exactly — this is a pure concurrency change, not a logic
+    change.
+  - Also removed a flat, unconditional 500ms `setTimeout` in `boot()` that delayed the first real data
+    refresh for no functional reason.
+- **Expected effect**: boot's four checks go from a summed ~1.6-6.4s to roughly the single slowest call
+  (~0.4-1.6s); `refreshCloudDashboardData`'s two serial pre-steps collapse into the same batch as the
+  three fetches, saving another ~1-3s per load. Combined with the prior session's 20s/5s heartbeat/poll
+  intervals, first-paint-to-real-data should land in roughly 1-3s under normal conditions instead of
+  5-10+s.
+- Verification note: **could not verify the actual before/after wall-clock time on the real dashboard** —
+  still blocked by the Supabase login gate in this environment (same limitation noted in every dashboard
+  entry so far). What was verified: (1) the real Supabase REST latency figures above, measured directly
+  with `curl`, not estimated; (2) both edited functions reviewed line-by-line for correctness (brace
+  balance, preserved destructuring order matching the new task-array order, unchanged error/status
+  semantics); (3) zero console errors on reload of the local preview (though that only exercises the
+  pre-login page, not the authenticated dashboard code path itself). Suhail should time an actual page
+  load after this deploys and report back if it still feels slow — if so, the next place to look is
+  Supabase's own query/RLS performance (outside this repo) rather than more client-side parallelism, since
+  the remaining serial-chain opportunities in this codebase are now used up.
+- **Rollback point: `d7cb699`** — HEAD before this commit.
+
 ### 2026-09-02 — Grant designteam@ full dashboard access; tighten sync latency
 - Status: `[pushed - see rollback point below]`
 - Files touched: `dashboard-data.js`, `dashboard.html`. No migrations.
