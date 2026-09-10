@@ -17,6 +17,51 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-09-10 — Fix a regression from this same day's earlier fixes: concurrent profile upsert race
+- Status: `[pushed - see rollback point below]`
+- Files touched: `dashboard-data.js`. No database changes this time.
+- Context: right after confirming the "30MB embedded images" fix (previous entry) deployed, Suhail reported
+  the dashboard's People panel now showing **"Profile sync timed out. People sync timed out. Task sync
+  timed out. Activity sync timed out."** — all four, worse than the single "Task sync timed out" before.
+  Went back into Supabase rather than assuming: the project's own health page showed 99.8% success / 4,276
+  requests over the last hour (healthy, not overloaded), but `Logs → Postgres Logs` showed a *new* error
+  type that didn't exist before today's earlier RLS fix: repeated
+  `ERROR: new row violates row-level security policy for table "es_designer_profiles"`, four of them
+  within about one second (16:27:28–29), with the exact failing statement captured — an
+  `INSERT ... ON CONFLICT ("email") DO UPDATE` against `es_designer_profiles`, i.e.
+  `upsertSupabaseProfileAndPresence()`.
+- **Root cause — a bug introduced by this same day's own earlier changes, not the RLS/database fix**:
+  `upsertSupabaseProfileAndPresence()` and `flushPendingCloudWrites()` are each called from *two* separate
+  places: the presence-heartbeat path (`recordPresenceHeartbeat()`, which fires immediately on
+  `es:auth-ready`) and inside `refreshCloudDashboardData()`. Both of those fire at boot. Two changes made
+  earlier today made this collide in practice for the first time:
+  1. The "part 1" load-time fix removed the artificial 500ms `setTimeout` in `boot()` before the first
+     `refreshCloudDashboardData()` call, which had been (accidentally) giving the heartbeat's upsert just
+     enough of a head start to usually finish first.
+  2. That same fix made `refreshCloudDashboardData()`'s internal operations run concurrently
+     (`Promise.allSettled`) instead of sequentially.
+  Combined, at every dashboard boot two concurrent `INSERT ... ON CONFLICT DO UPDATE` statements now hit
+  the *exact same row* within milliseconds of each other. One of the two loses the race and Postgres
+  reports it as an RLS violation rather than a lock wait — a real, reproducible client-side concurrency bug,
+  not a flaw in the RLS policies themselves (the policies were not touched this entry).
+- **Fix**: added the same in-flight de-duplication pattern the file already uses for
+  `refreshCloudDashboardData()` itself (`cloudRefreshInFlight`) to these two functions specifically:
+  - `upsertSupabaseProfileAndPresence()`: renamed the real implementation to
+    `runUpsertSupabaseProfileAndPresence()`; the public-facing function now checks a new
+    `presenceUpsertInFlight` promise and returns/awaits the existing in-flight call instead of starting a
+    second one, only clearing the flag in a `finally`.
+  - `flushPendingCloudWrites()`: identical treatment with `runFlushPendingCloudWrites()` /
+    `pendingFlushInFlight`, since it has the exact same dual-call-site shape and could race the same way
+    on task/activity upserts.
+  - Neither function's actual logic changed — this is purely "don't run two of these at once from the
+    same tab," which cannot make anything slower for the normal (non-overlapping) case and only skips
+    genuinely redundant concurrent work.
+- Verification note: reviewed both wrapped functions line-by-line (brace balance, that the original
+  function bodies are unchanged apart from the rename), zero console errors on local preview reload. Have
+  **not** watched this specific race stop occurring live — that requires reloading the real dashboard
+  again and checking Postgres logs afterward for a recurrence, same limitation as every entry today.
+- **Rollback point: `a1638cd`** — HEAD before this commit.
+
 ### 2026-09-10 — Fix dashboard load time, part 2 (real root cause): 30MB of embedded base64 images
 - Status: `[pushed - see rollback point below]`
 - Files touched: `dashboard-data.js`, `dashboard.html`.

@@ -172,6 +172,8 @@
   };
   let presenceTimer = null;
   let cloudRefreshInFlight = null;
+  let presenceUpsertInFlight = null;
+  let pendingFlushInFlight = null;
 
   function getCurrentWorkspaceLabel() {
     const page = document.body?.dataset?.currentPage || '';
@@ -518,6 +520,22 @@
   }
 
   async function upsertSupabaseProfileAndPresence() {
+    // This runs on both the presence-heartbeat timer (fires immediately on
+    // es:auth-ready) and inside refreshCloudDashboardData() (also fired at
+    // boot, with no delay) - so at boot time both call this within
+    // milliseconds of each other. Two concurrent `INSERT ... ON CONFLICT
+    // (email) DO UPDATE` on the exact same row raced and one lost, showing
+    // up as "new row violates row-level security policy" even though the
+    // write itself was legitimate. De-dupe: a call that arrives while one is
+    // already in flight just awaits the same promise instead of firing a
+    // second concurrent upsert.
+    if (presenceUpsertInFlight) return presenceUpsertInFlight;
+    presenceUpsertInFlight = runUpsertSupabaseProfileAndPresence()
+      .finally(() => { presenceUpsertInFlight = null; });
+    return presenceUpsertInFlight;
+  }
+
+  async function runUpsertSupabaseProfileAndPresence() {
     const session = await getAuthenticatedSession();
     const client = getSupabaseClient();
     if (!session?.user?.email || !client) return false;
@@ -726,6 +744,17 @@
   }
 
   async function flushPendingCloudWrites() {
+    // Same concurrent-call shape as upsertSupabaseProfileAndPresence above
+    // (called from both the heartbeat and refreshCloudDashboardData) - dedupe
+    // so two overlapping flushes don't both grab the same pending items and
+    // upsert them concurrently.
+    if (pendingFlushInFlight) return pendingFlushInFlight;
+    pendingFlushInFlight = runFlushPendingCloudWrites()
+      .finally(() => { pendingFlushInFlight = null; });
+    return pendingFlushInFlight;
+  }
+
+  async function runFlushPendingCloudWrites() {
     const session = await getAuthenticatedSession();
     if (!session?.user?.email || !getSupabaseClient()) return { tasks: 0, activity: 0 };
 
