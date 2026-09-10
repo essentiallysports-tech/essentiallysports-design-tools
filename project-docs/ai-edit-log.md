@@ -15,6 +15,59 @@ and what's still uncommitted.
 
 ---
 
+## Entries
+
+### 2026-09-10 — Fix dashboard load time, part 2 (real root cause): 30MB of embedded base64 images
+- Status: `[pushed - see rollback point below]`
+- Files touched: `dashboard-data.js`, `dashboard.html`.
+- Context: the RLS fix immediately above this entry (same day) was real and Performance-Advisor-verified,
+  but Suhail reported the *exact same* "Task sync timed out" error minutes later, understandably
+  frustrated ("i dont understand what is so difficult here"). Went back into Supabase to find the actual
+  live, current-moment cause rather than assuming the previous fix was sufficient.
+- **What was actually happening, checked live**: the project's own overview page showed **91.1% success
+  rate** (not slowness — real failures) over the last 60 minutes. `Logs → Postgres Logs` showed repeated,
+  ongoing `ERROR: canceling statement due to statement timeout` entries, with the *exact* failing query
+  captured in full: a plain PostgREST-generated `SELECT * FROM es_designer_tasks ORDER BY updated_at DESC
+  LIMIT/OFFSET` — i.e. exactly `fetchSupabaseTasks()`. `Database → Tables` showed why:
+  **`es_designer_tasks` has 58 rows but is 30 MB** (compare `es_designer_profiles`: 31 rows, 80 KB). ~500KB
+  average per row. Traced it to `metadata.previewDataUrl` — every exported-design task stores its full
+  export preview as a base64 data URI directly in a `jsonb` column, and the routine `select('*')` list
+  fetch (now polled every 5s per the earlier session's interval change, likely making this worse, not
+  better) re-downloads every export's full-size image on every single load, just to render counts and
+  list rows.
+- **Fix — stop transferring the image on the routine path, load it lazily on demand instead**:
+  - `dashboard-data.js`: `fetchSupabaseTasks()` now selects an explicit column list (`TASK_LIST_COLUMNS`)
+    instead of `select('*')` — every field the list/summary views need, plus the small `metadata` sub-
+    fields (`exportedAt`, `durationMs`, `outputSize`, `mimeType`, `exportScale`) via PostgREST JSON-path
+    aliases (`meta_exported_at:metadata->>exportedAt`, etc.) — but *not* `previewDataUrl`.
+    `normalizeSupabaseTask()` rebuilds a lightweight `metadata` object from those aliased fields when the
+    full `metadata` object isn't present, so every existing reader of `task.metadata.*` keeps working
+    unchanged; `previewDataUrl` simply comes back empty from this path now.
+  - Added `fetchTaskPreview(taskId)`: a new, separate one-row fetch (`select('id, preview:metadata->>
+    previewDataUrl').eq('id', id)`) that loads *just* one export's image, and writes it back into
+    `cloudTasksCache` in place so it's fetched at most once per export per session, never again on
+    subsequent polls. Exported from the module's public API.
+  - `dashboard.html`: `renderExportList()` no longer disables the preview button/"View Export" CTA when
+    an image hasn't loaded yet (it will, lazily) — shows "Loading…" in the thumbnail slot instead of the
+    old permanent "No preview". Added `hydrateExportPreviews(designs)`, called after both places that
+    render an export list (`renderOverviewExports`, `renderDesigns`): fires `fetchTaskPreview()` in the
+    background for every visible row still missing an image, and patches the `<img>` into the DOM (via
+    `CSS.escape`-guarded `data-preview-task` selector) as each resolves. `openExportPreview()` is now
+    async and does its own on-demand fetch as a fallback for a click that beats the background hydration.
+- **Why this is the right fix, not a band-aid**: this scales — the routine list/poll payload stays small
+  forever regardless of how many exports accumulate (the actual growth driver of the original 30MB), and
+  each export's image is transferred at most once per browser session no matter how many times it's
+  polled or how many admins are looking, instead of being re-sent whole on every 5-second tick.
+- Did not touch `es_designer_activity`/`es_designer_profiles`/`es_designer_presence` — checked their sizes
+  in the same Tables view (80KB/80KB/64KB) and they show no similar blow-up; no evidence they need the
+  same treatment right now, revisit if that changes.
+- Verification note: same limitation as always for the authenticated dashboard itself (Supabase login
+  gate) — checked for zero console errors on reload of the local preview, and reviewed both files
+  line-by-line, but have not watched the lazy-load thumbnails or the "Task sync" success/failure actually
+  render in Suhail's browser yet. Ask him to reload and confirm both (a) the timeout is gone and
+  (b) export thumbnails still show up (just a beat later than before) in Recent Exports / Review Exports.
+- **Rollback point: `ee65a99`** — HEAD before this commit.
+
 ### 2026-09-10 — Fix dashboard load time (real root cause): RLS auth.jwt() re-evaluated per row
 - Status: `[applied directly to production Supabase; migration file added and pushed to this repo for history]`
 - Files touched: `supabase/migrations/20260910070000_fix_dashboard_rls_performance.sql` (new). No app code

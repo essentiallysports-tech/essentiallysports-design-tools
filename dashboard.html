@@ -1243,12 +1243,19 @@
             <span>Build time</span>
             <span></span>
           </div>
-          ${designs.map(task => `
+          ${designs.map(task => {
+            // The bulk task fetch deliberately omits the (often multi-MB)
+            // preview image data - see fetchSupabaseTasks() - so most rows
+            // won't have it yet on first render. Buttons stay enabled
+            // (exported_design rows always have *some* preview once loaded)
+            // and hydrateExportPreviews() below fills the <img> in lazily.
+            const preview = getPreviewSource(task);
+            return `
             <article class="export-list-row" data-task-id="${attr(task.id)}">
-              <button class="export-list-preview" type="button" data-preview-task="${attr(task.id)}"${getPreviewSource(task) ? '' : ' disabled'}>
-                ${getPreviewSource(task)
-                  ? `<img src="${attr(getPreviewSource(task))}" alt="${attr(task.title || 'Exported design')}">`
-                  : '<span>No preview</span>'}
+              <button class="export-list-preview" type="button" data-preview-task="${attr(task.id)}">
+                ${preview
+                  ? `<img src="${attr(preview)}" alt="${attr(task.title || 'Exported design')}">`
+                  : '<span class="export-list-preview-pending">Loading…</span>'}
               </button>
               <span class="export-list-title"><strong>${text(task.title, 'Untitled export')}</strong><small>${text(task.filename)}</small></span>
               <span class="export-list-time">${dateText(exportCreatedAt(task))}</span>
@@ -1256,13 +1263,32 @@
               <span>${text(exportCreatorText(task))}</span>
               <span>${text(exportDurationText(task))}</span>
               <span class="export-list-actions">
-                <button class="topbar-button is-primary export-review-cta" type="button" data-preview-task="${attr(task.id)}"${getPreviewSource(task) ? '' : ' disabled'}>View Export<svg class="export-review-chevron" viewBox="0 0 16 10" fill="none" aria-hidden="true"><path d="M14.98 1.14 7.98 7.14.98 1.14" stroke="currentColor" stroke-width="3"/></svg></button>
+                <button class="topbar-button is-primary export-review-cta" type="button" data-preview-task="${attr(task.id)}">View Export<svg class="export-review-chevron" viewBox="0 0 16 10" fill="none" aria-hidden="true"><path d="M14.98 1.14 7.98 7.14.98 1.14" stroke="currentColor" stroke-width="3"/></svg></button>
                 <button class="topbar-button" type="button" data-open-task="${attr(task.id)}">Details</button>
               </span>
             </article>
-          `).join('')}
+          `;
+          }).join('')}
         </div>
       `;
+    }
+
+    // Loads each missing preview image individually, in the background,
+    // caching the result on the task object (fetchTaskPreview also caches it
+    // into ESDashboardData's own cloudTasksCache) so it's fetched at most
+    // once per export - not on every list render or 5s poll.
+    function hydrateExportPreviews(designs) {
+      designs
+        .filter(task => task.id && !getPreviewSource(task))
+        .forEach(task => {
+          window.ESDashboardData.fetchTaskPreview?.(task.id).then(preview => {
+            if (!preview) return;
+            task.previewDataUrl = preview;
+            document.querySelectorAll(`[data-preview-task="${CSS.escape(task.id)}"].export-list-preview`).forEach(button => {
+              button.innerHTML = `<img src="${attr(preview)}" alt="${attr(task.title || 'Exported design')}">`;
+            });
+          }).catch(() => {});
+        });
     }
 
     function getSortedExportTasks(state) {
@@ -1286,6 +1312,7 @@
       target.innerHTML = designs.length
         ? renderExportList(designs, { compact: true })
         : '<div class="empty">No exported designs yet.</div>';
+      hydrateExportPreviews(designs);
     }
 
     function startOfLocalDay(date) {
@@ -1508,6 +1535,7 @@
         return;
       }
       target.innerHTML = renderExportList(designs);
+      hydrateExportPreviews(designs);
     }
 
     function feedbackTypeClass(value) {
@@ -1878,11 +1906,18 @@
       document.getElementById('task-drawer')?.setAttribute('aria-hidden', 'true');
     }
 
-    function openExportPreview(id) {
+    async function openExportPreview(id) {
       const task = getTaskById(id);
-      const preview = getPreviewSource(task || {});
       const modal = document.getElementById('export-preview-modal');
-      if (!task || !preview || !modal) return;
+      if (!task || !modal) return;
+      let preview = getPreviewSource(task);
+      if (!preview) {
+        // Not hydrated by hydrateExportPreviews() yet (e.g. a fast click
+        // right after render) - fetch this one export's image on demand.
+        preview = await window.ESDashboardData.fetchTaskPreview?.(id) || '';
+        if (preview) task.previewDataUrl = preview;
+      }
+      if (!preview) return;
       document.getElementById('export-preview-image').src = preview;
       document.getElementById('export-preview-title').textContent = plainText(task.title, 'Exported design');
       document.getElementById('export-preview-meta').textContent = `${plainText(task.workspace)}${task.workspaceVariant ? ` · ${plainText(task.workspaceVariant)}` : ''} · ${plainText(task.filename)} · ${dateText(task.createdAt)}`;

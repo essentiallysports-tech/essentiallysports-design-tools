@@ -336,6 +336,21 @@
   }
 
   function normalizeSupabaseTask(row = {}) {
+    // The bulk task list is fetched *without* the (often multi-MB, base64
+    // image) metadata.previewDataUrl field — see fetchSupabaseTasks(). When
+    // the full `metadata` object isn't present, rebuild a lightweight one
+    // from the small aliased sub-fields that fetch *does* select, so
+    // getExportDetails() etc. keep working; previewDataUrl stays empty until
+    // fetchTaskPreview() lazily loads it for one task at a time.
+    const metadata = row.metadata && typeof row.metadata === 'object'
+      ? row.metadata
+      : {
+        exportedAt: row.meta_exported_at || '',
+        durationMs: row.meta_duration_ms != null ? Number(row.meta_duration_ms) : undefined,
+        outputSize: row.meta_output_size || '',
+        mimeType: row.meta_mime_type || '',
+        exportScale: row.meta_export_scale || '',
+      };
     return normalizeTask({
       id: row.id,
       sourceId: row.source_id,
@@ -361,8 +376,8 @@
       additionalNotes: row.additional_notes,
       adminNotes: row.admin_notes,
       referenceLinks: row.reference_links,
-      metadata: row.metadata,
-      previewDataUrl: row.metadata?.previewDataUrl || '',
+      metadata,
+      previewDataUrl: row.previewDataUrl || metadata.previewDataUrl || '',
       completedAt: row.completed_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -604,6 +619,30 @@
     return Array.from(people.values());
   }
 
+  // Exported-design rows store their preview image as a base64 data URI
+  // inside metadata.previewDataUrl - often several hundred KB to a few MB
+  // each. A routine `select('*')` over the whole table means every poll (and
+  // every admin's dashboard load) re-downloads every export's full-size
+  // image just to show counts and list rows, which is what was blowing the
+  // 30MB/58-row es_designer_tasks table up to a real Postgres statement
+  // timeout ("Task sync timed out") even after the RLS per-row fix. This
+  // list fetch pulls everything the dashboard's list/summary views need
+  // *except* that image; fetchTaskPreview() below loads one export's image
+  // on demand, once, when a person actually opens it.
+  const TASK_LIST_COLUMNS = [
+    'id', 'source_id', 'task_type', 'title', 'status', 'priority', 'assigned_to',
+    'requester_name', 'requester_email', 'creator_name', 'creator_email',
+    'request_type', 'workspace', 'workspace_variant', 'sport', 'team_or_league',
+    'filename', 'design_due_at', 'publish_at', 'brief', 'design_copy',
+    'additional_notes', 'admin_notes', 'reference_links', 'completed_at',
+    'created_at', 'updated_at',
+    'meta_exported_at:metadata->>exportedAt',
+    'meta_duration_ms:metadata->>durationMs',
+    'meta_output_size:metadata->>outputSize',
+    'meta_mime_type:metadata->>mimeType',
+    'meta_export_scale:metadata->>exportScale',
+  ].join(',');
+
   async function fetchSupabaseTasks() {
     const client = getSupabaseClient();
     const session = await getAuthenticatedSession();
@@ -611,13 +650,35 @@
 
     const { data, error } = await client
       .from(SUPABASE_TASKS_TABLE)
-      .select('*')
+      .select(TASK_LIST_COLUMNS)
       .order('updated_at', { ascending: false });
 
     if (error) throw error;
     return (Array.isArray(data) ? data : [])
       .map(normalizeSupabaseTask)
       .filter(task => task.id);
+  }
+
+  async function fetchTaskPreview(taskId) {
+    const id = cleanString(taskId);
+    const client = getSupabaseClient();
+    const session = await getAuthenticatedSession();
+    if (!client || !session?.user?.email || !id) return '';
+
+    const { data, error } = await client
+      .from(SUPABASE_TASKS_TABLE)
+      .select('id, preview:metadata->>previewDataUrl')
+      .eq('id', id)
+      .maybeSingle();
+    if (error || !data?.preview) return '';
+
+    const preview = String(data.preview);
+    const cached = cloudTasksCache.find(task => task.id === id);
+    if (cached) {
+      cached.previewDataUrl = preview;
+      if (cached.metadata && typeof cached.metadata === 'object') cached.metadata.previewDataUrl = preview;
+    }
+    return preview;
   }
 
   async function fetchSupabaseActivity() {
@@ -1398,6 +1459,7 @@
     refreshCloudDashboardData,
     upsertSupabaseProfileAndPresence,
     recordPresenceHeartbeat,
+    fetchTaskPreview,
     emitDashboardChange,
   });
 
