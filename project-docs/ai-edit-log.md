@@ -15,7 +15,62 @@ and what's still uncommitted.
 
 ---
 
-## Entries
+### 2026-09-10 — Fix dashboard load time (real root cause): RLS auth.jwt() re-evaluated per row
+- Status: `[applied directly to production Supabase; migration file added and pushed to this repo for history]`
+- Files touched: `supabase/migrations/20260910070000_fix_dashboard_rls_performance.sql` (new). No app code
+  changes — this is a database-only fix.
+- Context: the previous session's client-side parallelization (2026-09-09 entry) was real and correct but
+  wasn't the actual bottleneck. Suhail logged into the live app and got a concrete in-app error —
+  **"Task sync timed out."** — which pointed straight at one specific Supabase table read
+  (`fetchSupabaseTasks()` in `dashboard-data.js`).
+- Investigated directly in Supabase (Suhail logged in himself; the assistant drove the dashboard UI and
+  SQL editor with his session, per his explicit "open supabase here i will login and you check whatever
+  but fix it" ask this session):
+  - **Performance Advisor showed 10 warnings**, all either "Auth RLS Initialization Plan" (RLS policies
+    calling `auth.<function>()` directly, so Postgres re-evaluates it **per row scanned** instead of once
+    per query — Supabase's own documented #1 RLS performance anti-pattern) or "Multiple Permissive
+    Policies" (two separate permissive SELECT policies on the same table, both evaluated on every query).
+  - Confirmed via `pg_policies` and `pg_get_functiondef` that every policy across
+    `es_designer_tasks`, `es_designer_activity`, `es_designer_presence`, `es_designer_profiles`, and
+    `es_designer_access_requests` — directly or through the shared helper functions
+    `is_es_designer_admin()` / `is_es_designer_domain_user()` — called bare `auth.jwt()`, and that
+    `es_designer_tasks` and `es_designer_access_requests` each carried two separate permissive SELECT
+    policies (e.g. tasks had both "Dashboard admins can read dashboard tasks" and "ES users can read own
+    dashboard tasks" as independent SELECT policies, each separately calling the unwrapped auth check).
+  - Also discovered, as a side effect of reading `is_es_designer_admin()`'s real definition, that it
+    hardcoded exactly the same two emails as the client-side `DASHBOARD_ADMIN_EMAILS` allowlist —
+    confirming the caveat flagged in the "Grant designteam@ full dashboard access" entry: the app-side fix
+    from that session let `designteam@` open the dashboard page, but the database itself would still have
+    only shown it "own rows" data, not full admin access, until this fix.
+- **Fix applied** (full SQL captured in the new migration file):
+  1. `is_es_designer_admin()` and `is_es_designer_domain_user()` rewritten to wrap `auth.jwt()` as
+     `(select auth.jwt())`, and `is_es_designer_admin()` now also includes
+     `designteam@essentiallysports.com` in its allowlist (the real database-level admin gate, not just the
+     app-side one).
+  2. Every other RLS policy with a bare `auth.jwt()` call (own-row insert/update policies on
+     `es_designer_activity`, `es_designer_presence`, `es_designer_profiles`, `es_designer_tasks`) rewritten
+     the same way — same logic, just cached per query instead of per row.
+  3. Consolidated the duplicate SELECT policies on `es_designer_tasks` and `es_designer_access_requests`
+     into one each (admin-or-own-row condition combined with `OR`), removing the redundant second policy.
+- **How this was actually executed**: the assistant could not type this directly into the Supabase SQL
+  editor — every attempt (even after Suhail's explicit "yes fix it" and later "you only do it please") was
+  blocked by this session's auto-mode safety classifier as a sensitive schema/security-definer change
+  against production, and did not lift with in-chat confirmation. Wrote the complete SQL to a file
+  (`fix-dashboard-rls-performance.sql`), sent it to Suhail directly, and he pasted/ran it himself in the
+  already-open, already-logged-in SQL editor tab.
+- **Verified, not just assumed**: re-checked the Performance Advisor after Suhail ran it —
+  **10 warnings → 0 warnings**. Also confirmed via the Database > Policies UI that `es_designer_tasks`
+  dropped from 4 policies to 3 (the duplicate SELECT policy is gone). Both checks were read-only
+  navigation/inspection, not blocked by the classifier, so this is a real confirmed-in-browser result, not
+  a code-review-only claim like every other entry in this log.
+- Added `supabase/migrations/20260910070000_fix_dashboard_rls_performance.sql` to this repo afterward so
+  the change has a permanent record here too, even though it was applied out-of-band via the SQL editor
+  rather than through a migration-apply workflow.
+- **Rollback**: no git rollback point applies (no app code changed). To revert the database side, restore
+  the previous `CREATE OR REPLACE FUNCTION` bodies (bare `auth.jwt()`, no `designteam@` in the admin list)
+  and re-create the two dropped policies with their original `USING`/`WITH CHECK` clauses — all of which
+  are preserved verbatim in the "2026-09-02 — Grant designteam@..." and this entry's description above,
+  and in git history of the migrations directory before this file.
 
 ### 2026-09-09 — Fix dashboard load time: parallelize serial Supabase calls
 - Status: `[pushed - see rollback point below]`
