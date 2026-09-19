@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NFL Pick&#39;em | FrameUp</title>
+  <meta name="description" content="Pick every NFL winner, settle ties with a score prediction, and climb the weekly and season leaderboard.">
+  <script src="es-auth-config.js?v=20260707-auth4"></script>
+  <script src="es-auth.js?v=20260714-deleteaccount1"></script>
+  <!-- No requireAuth() redirect here: guests can view the current slate and
+       rules (PRD role table). Sign-in is only required to save a pick or
+       act on the leaderboard/admin tabs, handled in pickem.js. -->
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@500;600;700;800;900&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
+  <link rel="stylesheet" href="theme.css?v=20260714-footer1">
+  <link rel="stylesheet" href="site-chrome.css?v=20260817-icons1">
+  <link rel="stylesheet" href="cta-hover.css?v=20260723-howrefine1">
+  <link rel="stylesheet" href="pickem.css?v=20260919-pickem1">
+  <script src="theme.js?v=20260712-darkmode12"></script>
+  <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
+  <script src="site-chrome.js?v=20260817-icons1"></script>
+</head>
+<body class="pickem-page">
+  <nav class="navbar">
+    <a class="navbar-logo" href="index.html" aria-label="EssentiallySports home">
+      <img src="brand-logo-blue.svg" alt="EssentiallySports">
+    </a>
+    <div class="navbar-menu">
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#intro" aria-haspopup="true" aria-expanded="false">Resources</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Resources">
+          <a href="index.html#logo-guidelines" data-route="logo-guidelines" role="menuitem">Logo Guidelines</a>
+          <a href="index.html#social-guidelines" data-route="social-guidelines" role="menuitem">Social Media Guidelines</a>
+          <a href="index.html#video-guidelines" data-route="video-guidelines" role="menuitem">Video Guidelines</a>
+        </div>
+      </div>
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#frames" data-route="frames" aria-haspopup="true" aria-expanded="false">Design Tools</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Design workspaces">
+          <a href="index.html#frames" data-route="frames" role="menuitem">Home</a>
+          <a href="index.html#instagram" data-route="instagram" role="menuitem">Social Media</a>
+          <a href="index.html#youtube" data-route="youtube" role="menuitem">YouTube</a>
+          <a href="index.html#newsletter" data-route="newsletter" role="menuitem">Newsletter</a>
+          <a href="reels.html" role="menuitem">Reel Captions</a>
+        </div>
+      </div>
+      <a href="design-request.html">Design Request</a>
+      <a href="dashboard.html" data-admin-only hidden aria-hidden="true">Dashboard</a>
+      <a href="pickem.html" aria-current="page">NFL Pick&#39;em</a>
+      <a href="index.html#faq" data-route="faq">FAQ</a>
+      <a href="tool-feedback.html">Tool Feedback</a>
+    </div>
+    <div class="navbar-right">
+      <div class="profile-menu" id="profile-menu"></div>
+      <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" title="Facebook" aria-label="Facebook"><img src="social-icons/nav-facebook.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://twitter.com/es_sportsnews" title="X" aria-label="X"><img src="social-icons/nav-x.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.linkedin.com/company/essentiallysports" title="LinkedIn" aria-label="LinkedIn"><img src="social-icons/nav-linkedin.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.instagram.com/essentiallysports" title="Instagram" aria-label="Instagram"><img src="social-icons/nav-instagram.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.youtube.com/essentiallysports" title="YouTube" aria-label="YouTube"><img src="social-icons/nav-youtube.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://news.google.com/publications/CAAqBwgKMJqW_gwwkoGBAw" title="Google News" aria-label="Google News"><img src="social-icons/nav-google-news.svg" alt=""></a>
+    </div>
+  </nav>
+
+  <main class="pickem-main">
+    <section class="pickem-hero">
+      <p class="pickem-eyebrow">NFL PICK&#39;EM</p>
+      <h1 class="pickem-title" id="pickem-week-label">Loading week&hellip;</h1>
+      <p class="pickem-tagline">Pick every winner. Climb the leaderboard.</p>
+      <p class="pickem-autosave">Picks save automatically.</p>
+      <p class="pickem-signin-note" id="pickem-signin-note" hidden>
+        You&#39;re viewing as a guest. <a id="pickem-signin-link" href="#">Sign in</a> to save picks and join the leaderboard.
+      </p>
+    </section>
+
+    <nav class="pickem-tabs" role="tablist" aria-label="Pick&#39;em sections">
+      <button type="button" class="pickem-tab is-active" data-pickem-tab="picks" role="tab" aria-selected="true">Picks</button>
+      <button type="button" class="pickem-tab" data-pickem-tab="leaderboard" role="tab" aria-selected="false">Leaderboard</button>
+      <button type="button" class="pickem-tab" data-pickem-tab="results" role="tab" aria-selected="false">My Results</button>
+      <button type="button" class="pickem-tab" data-pickem-tab="how-to-play" role="tab" aria-selected="false">How to Play</button>
+      <button type="button" class="pickem-tab" data-pickem-tab="admin" id="pickem-admin-tab" role="tab" aria-selected="false" hidden>Admin</button>
+    </nav>
+
+    <section class="pickem-panel" data-pickem-panel="picks">
+      <div class="pickem-progress-row">
+        <span id="pickem-progress-text" class="pickem-progress-text">Loading picks&hellip;</span>
+        <span id="pickem-next-lock" class="pickem-next-lock"></span>
+      </div>
+      <div id="pickem-games-list" class="pickem-games-list" aria-live="polite"></div>
+
+      <div id="pickem-tiebreaker-block" class="pickem-tiebreaker" hidden>
+        <h3>Tiebreaker predictions</h3>
+        <p class="pickem-tiebreaker-hint">Exact score of the primary tiebreaker game settles weekly ties.</p>
+        <div class="pickem-tiebreaker-grid" id="pickem-primary-tiebreak-fields"></div>
+        <div class="pickem-tiebreaker-grid" id="pickem-secondary-tiebreak-fields"></div>
+        <button type="button" class="btn-primary" id="pickem-save-tiebreaker">Save tiebreaker</button>
+        <p class="pickem-status" id="pickem-tiebreaker-status" role="status"></p>
+      </div>
+    </section>
+
+    <section class="pickem-panel" data-pickem-panel="leaderboard" hidden>
+      <div class="pickem-lb-toggle" role="group" aria-label="Leaderboard scope">
+        <button type="button" class="task-quick-filter is-active" data-lb-scope="week">This Week</button>
+        <button type="button" class="task-quick-filter" data-lb-scope="season">Season</button>
+      </div>
+      <div class="pickem-table-wrap">
+        <table class="pickem-table" id="pickem-leaderboard-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Player</th>
+              <th>Correct</th>
+              <th id="pickem-lb-extra-header">Missed</th>
+            </tr>
+          </thead>
+          <tbody id="pickem-leaderboard-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="pickem-panel" data-pickem-panel="results" hidden>
+      <div class="pickem-results-summary" id="pickem-results-summary"></div>
+      <div id="pickem-results-list" class="pickem-games-list"></div>
+    </section>
+
+    <section class="pickem-panel" data-pickem-panel="how-to-play" hidden>
+      <div class="pickem-copy-block">
+        <h2>How Pick&#39;em works</h2>
+        <p>Pick the winner of every NFL matchup. One point for every correct pick&mdash;incorrect and missed picks earn zero. Tied or canceled games are void and don&#39;t count.</p>
+        <h3>Locking</h3>
+        <p>Every game locks independently at its own official kickoff. You can still change any pick that hasn&#39;t locked yet, right up until that game starts&mdash;even if other games from earlier in the week are already locked.</p>
+        <h3>Tiebreakers</h3>
+        <p>To settle weekly ties, predict the exact final score of the primary tiebreaker game (usually Monday Night Football). If that game is void, the backup game&#39;s prediction is used instead. Players tied on correct picks with no valid tiebreaker rank behind players who submitted one.</p>
+        <h3>Joining late</h3>
+        <p>You can join any time during the week. &ldquo;Complete&rdquo; only measures the games still available to you at that moment&mdash;games that already locked before you joined are shown as Missed, but don&#39;t block completion.</p>
+        <h3>Leaderboards</h3>
+        <p>Weekly and season leaderboards use competition ranking: if two players are tied, they share the same rank and the next rank number is skipped.</p>
+      </div>
+    </section>
+
+    <section class="pickem-panel" data-pickem-panel="admin" hidden>
+      <div class="pickem-admin-grid">
+        <form class="pickem-admin-card" id="pickem-admin-season-form">
+          <h3>Create / open season</h3>
+          <label>Year <input type="number" id="pickem-admin-season-year" value="2026" required></label>
+          <label>Season type
+            <select id="pickem-admin-season-type">
+              <option value="REGULAR">Regular</option>
+              <option value="POST">Postseason</option>
+            </select>
+          </label>
+          <button type="submit" class="btn-secondary">Create season</button>
+        </form>
+
+        <form class="pickem-admin-card" id="pickem-admin-week-form">
+          <h3>Create / open week</h3>
+          <label>Season <select id="pickem-admin-week-season"></select></label>
+          <label>Week number <input type="number" id="pickem-admin-week-number" min="1" required></label>
+          <label>Label <input type="text" id="pickem-admin-week-label" placeholder="Week 3"></label>
+          <label>Opens at <input type="datetime-local" id="pickem-admin-week-opens"></label>
+          <button type="submit" class="btn-secondary">Create week</button>
+        </form>
+
+        <form class="pickem-admin-card" id="pickem-admin-game-form">
+          <h3>Add game</h3>
+          <label>Week <select id="pickem-admin-game-week"></select></label>
+          <label>Home team <select id="pickem-admin-game-home"></select></label>
+          <label>Away team <select id="pickem-admin-game-away"></select></label>
+          <label>Kickoff <input type="datetime-local" id="pickem-admin-game-kickoff" required></label>
+          <button type="submit" class="btn-secondary">Add game</button>
+        </form>
+
+        <form class="pickem-admin-card" id="pickem-admin-tiebreak-form">
+          <h3>Set tiebreaker games</h3>
+          <label>Week <select id="pickem-admin-tb-week"></select></label>
+          <label>Primary (e.g. MNF) <select id="pickem-admin-tb-primary"></select></label>
+          <label>Backup (e.g. SNF) <select id="pickem-admin-tb-secondary"></select></label>
+          <button type="submit" class="btn-secondary">Save tiebreaker games</button>
+        </form>
+
+        <form class="pickem-admin-card" id="pickem-admin-score-form">
+          <h3>Enter final score / void</h3>
+          <label>Game <select id="pickem-admin-score-game"></select></label>
+          <label>Home score <input type="number" id="pickem-admin-score-home" min="0"></label>
+          <label>Away score <input type="number" id="pickem-admin-score-away" min="0"></label>
+          <label>Status
+            <select id="pickem-admin-score-status">
+              <option value="final">Final</option>
+              <option value="suspended">Suspended</option>
+              <option value="postponed_before_start">Postponed (before start)</option>
+            </select>
+          </label>
+          <label>Reason <input type="text" id="pickem-admin-score-reason" placeholder="Official final, provider X" required></label>
+          <button type="submit" class="btn-secondary">Save score</button>
+          <button type="button" class="btn-secondary is-danger" id="pickem-admin-void-btn">Void this game instead</button>
+        </form>
+      </div>
+      <p class="pickem-status" id="pickem-admin-status" role="status"></p>
+    </section>
+  </main>
+
+  <div class="pickem-sticky-bar" id="pickem-sticky-bar" hidden>
+    <span id="pickem-sticky-text"></span>
+    <button type="button" class="btn-primary" id="pickem-complete-btn">Complete Week</button>
+  </div>
+
+  <footer class="site-footer" aria-label="Site footer"></footer>
+  <script src="pickem.js?v=20260919-pickem1"></script>
+</body>
+</html>
