@@ -21,6 +21,7 @@
       'iamasme23@gmail.com',
       'desaiyadnesh@gmail.com',
       'sanyampahwa97@gmail.com',
+      'ritikarakshit10@gmail.com',
     ],
   });
 })();
