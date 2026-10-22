@@ -1484,7 +1484,7 @@
     if (client && session?.user?.email) {
       const { data, error } = await client.rpc('list_frameup_gallery', { p_limit: limit, p_before: before });
       if (!error) return { items: (data || []).map(normalizeGalleryItem), source: 'gallery' };
-      if (!isGalleryRpcMissing(error)) throw error;
+      console.warn('[gallery] list_frameup_gallery failed:', error);
       if (await isCurrentUserAdmin()) {
         const tasks = await fetchSupabaseTasks();
         const items = tasks
@@ -1495,6 +1495,7 @@
           .slice(0, limit);
         return { items, source: 'admin' };
       }
+      if (!isGalleryRpcMissing(error)) throw error;
       return { items: [], source: 'not-ready' };
     }
     const items = readTasks()

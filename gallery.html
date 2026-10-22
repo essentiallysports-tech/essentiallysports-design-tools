@@ -9,7 +9,7 @@
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261025-perf1"></script>
-  <script src="dashboard-data.js?v=20261025-gallery1"></script>
+  <script src="dashboard-data.js?v=20261025-gallery2"></script>
   <script>
     window.ESAuth?.requireAuth(`gallery.html${window.location.search}${window.location.hash}`);
   </script>
@@ -320,7 +320,7 @@
         const total = state.items.length;
         els.count.textContent = total ? `${state.visible.length === total ? total : `${state.visible.length} of ${total}`} posts` : '';
         const noResults = total > 0 && state.visible.length === 0;
-        els.empty.hidden = !(total === 0 || noResults) || state.loading;
+        els.empty.hidden = !(total === 0 || noResults) || state.loading || state.failed;
         if (noResults) {
           els.emptyTitle.textContent = 'No matching posts';
           els.emptyCopy.textContent = 'Try a different search or type.';
@@ -346,8 +346,11 @@
           state.items.push(...items.filter(item => item.id && !known.has(item.id)));
           state.exhausted = items.length < PAGE_SIZE || source === 'admin' || source === 'local';
         } catch (error) {
+          state.failed = true;
+          console.error('[gallery]', error);
           els.notice.hidden = false;
-          els.notice.innerHTML = '<div><strong>Could not load the gallery</strong>Check your connection and refresh the page.</div>';
+          els.notice.innerHTML = '<div><strong>Could not load the gallery</strong><span>Refresh the page. If it keeps happening, share this message: </span><code></code></div>';
+          els.notice.querySelector('code').textContent = String(error?.message || error || 'Unknown error');
           state.exhausted = true;
         } finally {
           state.loading = false;
