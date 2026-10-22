@@ -1452,6 +1452,74 @@
     return getDashboardState();
   }
 
+  // ─── Gallery (team-wide exported Social Media posts) ─────────────────────
+  // Approved ES users read the gallery through two SECURITY DEFINER RPCs that
+  // expose only safe fields (see supabase/migrations/*_add_frameup_gallery.sql).
+  // Until that migration is applied, admins fall back to their existing task
+  // access; without Supabase (local preview), this browser's own exports show.
+  const GALLERY_WORKSPACE = 'Social Media';
+
+  function normalizeGalleryItem(item = {}) {
+    return {
+      id: cleanString(item.id),
+      title: cleanString(item.title || 'Untitled post'),
+      variant: cleanString(item.workspace_variant || item.workspaceVariant || ''),
+      sport: cleanString(item.sport || ''),
+      team: cleanString(item.team_or_league || item.teamOrLeague || ''),
+      creator: cleanString(item.creator_name || item.creatorName || ''),
+      filename: cleanString(item.filename || ''),
+      outputSize: cleanString(item.output_size || item.outputSize || item.metadata?.outputSize || ''),
+      exportedAt: cleanString(item.exported_at || item.exportedAt || item.metadata?.exportedAt || item.createdAt || item.created_at || ''),
+      previewDataUrl: cleanString(item.previewDataUrl || item.metadata?.previewDataUrl || ''),
+    };
+  }
+
+  function isGalleryRpcMissing(error) {
+    return /could not find the function|schema cache|does not exist/i.test(String(error?.message || ''));
+  }
+
+  async function fetchGalleryExports({ limit = 48, before = null } = {}) {
+    const client = getSupabaseClient();
+    const session = await getAuthenticatedSession();
+    if (client && session?.user?.email) {
+      const { data, error } = await client.rpc('list_frameup_gallery', { p_limit: limit, p_before: before });
+      if (!error) return { items: (data || []).map(normalizeGalleryItem), source: 'gallery' };
+      if (!isGalleryRpcMissing(error)) throw error;
+      if (await isCurrentUserAdmin()) {
+        const tasks = await fetchSupabaseTasks();
+        const items = tasks
+          .filter(task => task.type === 'exported_design' && task.workspace === GALLERY_WORKSPACE)
+          .map(normalizeGalleryItem)
+          .sort((a, b) => String(b.exportedAt).localeCompare(String(a.exportedAt)))
+          .filter(item => !before || item.exportedAt < before)
+          .slice(0, limit);
+        return { items, source: 'admin' };
+      }
+      return { items: [], source: 'not-ready' };
+    }
+    const items = readTasks()
+      .filter(task => task.type === 'exported_design' && task.workspace === GALLERY_WORKSPACE)
+      .map(normalizeGalleryItem)
+      .sort((a, b) => String(b.exportedAt).localeCompare(String(a.exportedAt)))
+      .filter(item => !before || item.exportedAt < before)
+      .slice(0, limit);
+    return { items, source: 'local' };
+  }
+
+  async function fetchGalleryPreview(id) {
+    const cleanId = cleanString(id);
+    if (!cleanId) return '';
+    const client = getSupabaseClient();
+    const session = await getAuthenticatedSession();
+    if (client && session?.user?.email) {
+      const { data, error } = await client.rpc('get_frameup_gallery_preview', { p_id: cleanId });
+      if (!error) return cleanString(data || '');
+      if (isGalleryRpcMissing(error)) return fetchTaskPreview(cleanId);
+      return '';
+    }
+    return readTasks().find(task => task.id === cleanId)?.previewDataUrl || '';
+  }
+
   window.ESDashboardData = Object.freeze({
     REQUESTS_KEY,
     DESIGNS_KEY,
@@ -1489,6 +1557,8 @@
     upsertSupabaseProfileAndPresence,
     recordPresenceHeartbeat,
     fetchTaskPreview,
+    fetchGalleryExports,
+    fetchGalleryPreview,
     emitDashboardChange,
   });
 

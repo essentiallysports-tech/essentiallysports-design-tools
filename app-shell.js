@@ -21,6 +21,7 @@
     guide: icon('<path d="M5 4h9a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h9"/>'),
     video: icon('<rect x="3" y="6" width="13" height="12" rx="3"/><path d="m16 10 5-3v10l-5-3"/>'),
     faq: icon('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.4"/><path d="M12 17h.01"/>'),
+    gallery: icon('<rect x="3.5" y="4" width="17" height="16" rx="3"/><circle cx="9" cy="9.5" r="1.8"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4.5 3.5"/>'),
     library: icon('<rect x="4" y="4" width="7" height="7" rx="2"/><circle cx="16.5" cy="7.5" r="3.5"/><path d="M4 20l3.5-6 3.5 6z"/><rect x="13" y="13" width="7" height="7" rx="2"/>'),
     trophy: icon('<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M9 20h6"/>'),
     search: icon('<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/>'),
@@ -43,6 +44,7 @@
       label: 'Work',
       items: [
         { id: 'request', label: 'Design Request', href: 'design-request.html', icon: 'request', desc: 'Send the design team one clear brief with context, copy, deadline and references.' },
+        { id: 'gallery', label: 'Gallery', href: 'gallery.html', icon: 'gallery', desc: 'Browse every Social Media post the team has exported.' },
         { id: 'dashboard', label: 'Dashboard', href: 'dashboard.html', icon: 'dashboard', adminOnly: true },
         { id: 'feedback', label: 'Tool Feedback', href: 'tool-feedback.html', icon: 'feedback' },
       ],
@@ -69,6 +71,7 @@
     'reels.html': 'reels',
     'design-request.html': 'request',
     'dashboard.html': 'dashboard',
+    'gallery.html': 'gallery',
     'tool-feedback.html': 'feedback',
     'design-system.html': 'library',
     'pickem.html': 'pickem',
