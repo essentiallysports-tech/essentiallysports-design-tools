@@ -26,6 +26,16 @@ const TOOL_OVERRIDES = {
   images: process.env.ES_MCP_SEARCH_TOOL || '',
 };
 const MAX_DESIGNS = 4;
+// Hosts the /api/es-image-search proxy will fetch (same list as es-image-search.js);
+// a photo on any other host would fail to load in the editor.
+const PROXY_IMAGE_HOSTS = new Set(['image-cdn.essentiallysports.com', 'www.essentiallysports.com', 'www.staging.essentiallysports.com']);
+const canProxy = url => {
+  try {
+    return PROXY_IMAGE_HOSTS.has(new URL(url).hostname);
+  } catch (error) {
+    return false;
+  }
+};
 
 // ─── Templates and their limits ────────────────────────────────────────────
 // Limits keep every generated line inside what the template lays out well.
@@ -292,7 +302,7 @@ function imageUrlsFromMcp(text) {
   return [...urls, ...s3].filter(url => {
     try {
       const host = new URL(url).hostname;
-      return /\.(jpe?g|png|webp)(\?|$)/i.test(url) && (isEsUrl(url) || (host.endsWith('.amazonaws.com') && url.includes(ES_IMAGE_BUCKET)));
+      return /\.(jpe?g|png|webp)(\?|$)/i.test(url) && (PROXY_IMAGE_HOSTS.has(host) || (host.endsWith('.amazonaws.com') && url.includes(ES_IMAGE_BUCKET)));
     } catch (error) {
       return false;
     }
@@ -315,8 +325,8 @@ async function findPhoto(query, mcp, tools, articles = []) {
     }
     const terms = keyTerms(query) || query;
     const surname = mainWord(terms);
-    const known = articles.find(a => isEsUrl(a.image) && surname && `${a.title} ${a.excerpt}`.toLowerCase().includes(surname));
-    const article = known || (await searchEsArticlesOnce(terms, 15000).catch(() => [])).find(a => isEsUrl(a.image));
+    const known = articles.find(a => canProxy(a.image) && surname && `${a.title} ${a.excerpt}`.toLowerCase().includes(surname));
+    const article = known || (await searchEsArticlesOnce(terms, 15000).catch(() => [])).find(a => canProxy(a.image));
     return article ? { title: article.title, sourceUrl: article.image, url: proxied(article.image) } : null;
   } catch (error) {
     return null;
@@ -520,27 +530,28 @@ function draftPlan(brief, found, allowedTypes) {
   if (allow('cover')) {
     // Wording comes from the brief (ES stories may cover a different moment):
     // its first clause if that fits, else just the name.
-    const pills = [brief.split(/[,.;!?"“]/)[0], photoQuery]
+    const pills = [brief.split(/[,.;:!?"“—]/)[0], photoQuery]
       .map(text => chunkWords(titleCase(text), 20, 3))
       .find(lines => lines.length) || [];
-    if (pills.length) designs.push({ postType: 'cover', title: pills.join(' '), fields: { pills }, photoQuery, why: 'Draft: the brief as headline pills.', sources });
+    if (pills.length) designs.push({ postType: 'cover', title: pills.join(' '), fields: { pills }, photoQuery, why: 'Your text as headline pills.', sources });
   }
 
-  const quoteSource = `${brief} ${lead?.excerpt || ''}`;
+  // The person writes the post: quotes come only from their text.
+  const quoteSource = brief;
   const quote = (quoteSource.match(/[“"]([^”"]{8,200})[”"]/) || [])[1];
   if (quote) {
-    const short = chunkWords(titleCase(quote), 16, 3);
+    const short = chunkWords(titleCase(quote.replace(/[.,;:]+$/, '')), 16, 3);
     if (short.length && allow('quote')) {
-      designs.push({ postType: 'quote', title: quote, fields: { lines: short }, photoQuery, why: 'Draft: the quote found in the brief or ES story.', sources });
+      designs.push({ postType: 'quote', title: quote, fields: { lines: short }, photoQuery, why: 'Your quote, split into short lines.', sources });
     } else if (allow('long-quote') && quote.length >= 20) {
-      designs.push({ postType: 'long-quote', title: quote, fields: { text: quote.slice(0, 220) }, photoQuery, why: 'Draft: the full quote found in the brief or ES story.', sources });
+      designs.push({ postType: 'long-quote', title: quote, fields: { text: quote.slice(0, 220) }, photoQuery, why: 'Your full quote.', sources });
     }
   }
 
   const stats = [...clean(brief).matchAll(/(\d[\d,.]*\+?%?)\s+([A-Za-z]{2,8})\b/g)]
     .map(match => ({ value: match[1].slice(0, 7), label: match[2].toUpperCase().slice(0, 8) }));
   if (allow('stats-single-ent') && stats.length >= 3) {
-    designs.push({ postType: 'stats-single-ent', title: `${photoQuery} stats`, fields: { headline: chunkWords(titleCase(photoQuery), 22, 1)[0] || 'Record Alert!', stats: stats.slice(0, 3) }, photoQuery, why: 'Draft: the three numbers from the brief.', sources });
+    designs.push({ postType: 'stats-single-ent', title: `${photoQuery} stats`, fields: { headline: chunkWords(titleCase(photoQuery), 22, 1)[0] || 'Record Alert!', stats: stats.slice(0, 3) }, photoQuery, why: 'The three numbers from your text.', sources });
   }
   return designs;
 }
