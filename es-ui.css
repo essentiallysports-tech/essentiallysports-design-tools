@@ -760,3 +760,130 @@ html[data-theme="dark"] :is(.ds-lede code, .ds-code code) { background: #1f1f1f;
     width: var(--es-content-vw) !important;
   }
 }
+
+/* Undo/redo only on editor routes (beats the studio's own display rule). */
+html.es-shell:not(.es-editor) .es-topbar .studio-history-group { display: none !important; }
+
+/* ─── Home "how it works" story as SaaS cards on the grey canvas ──────── */
+@media (min-width: 901px) {
+  html.es-shell .how-page {
+    border-top: 0 !important;
+    background: var(--es-canvas) !important;
+  }
+  html.es-shell .how-page main { background: var(--es-canvas) !important; }
+
+  /* Intro statement: a contained navy banner card (gradient, 24px radius). */
+  html.es-shell .frameup-intro {
+    margin: 8px 24px 24px;
+    padding: clamp(56px, 8vh, 96px) 0 !important;
+    border-radius: 24px;
+    background: linear-gradient(135deg, #04223f 0%, #033162 55%, #0a4c8f 100%) !important;
+    box-shadow: var(--es-shadow-soft);
+    overflow: clip;
+  }
+  html.es-shell .how-page .frameup-intro__copy { width: min(1040px, calc(100% - 96px)); }
+  html.es-shell .how-page .frameup-intro__line { font-size: clamp(32px, 3.4vw, 52px) !important; }
+
+  /* Request journey and help: white cards instead of full-bleed bands. */
+  html.es-shell .how-page :is(.request-section, .help-section)::before { background: transparent !important; }
+  html.es-shell .how-page :is(.request-section, .help-section) {
+    margin: 24px;
+    border-radius: 24px;
+    background: var(--es-bg) !important;
+    box-shadow: var(--es-shadow-soft), inset 0 0 0 1px var(--es-line);
+    overflow: clip;
+  }
+  html.es-shell .how-page .help-section { width: auto !important; padding-left: 32px !important; padding-right: 32px !important; }
+}
+
+@media (min-width: 901px) {
+  /* SaaS pages scroll normally: no pinned "curtain" under the story cards. */
+  html.es-shell .frame-options { position: relative !important; top: auto !important; }
+}
+
+/* ─── Site-wide page treatment inside the shell (desktop) ─────────────── */
+@media (min-width: 901px) {
+  /* One canvas colour behind every app page. */
+  html.es-shell :is(.feedback-main, .account-main, .pickem-main, .request-page) {
+    background: transparent !important;
+  }
+
+  /* Compact app footer: logo, copyright and socials in one slim row. The
+     corporate link columns belong to the marketing site, not the app. */
+  html.es-shell .site-footer {
+    margin: 24px 24px 24px;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  html.es-shell .site-footer .footer-links,
+  html.es-shell .site-footer .footer-blurb { display: none !important; }
+  html.es-shell .site-footer .footer-hero {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    min-height: 0 !important;
+    padding: 16px 24px !important;
+    text-align: left !important;
+  }
+  html.es-shell .site-footer .footer-logo-img { height: 24px !important; width: auto !important; }
+  html.es-shell .site-footer .footer-copy { order: 3; margin: 0 !important; font-size: 13px !important; }
+  html.es-shell .site-footer .footer-socials { margin: 0 0 0 auto !important; }
+
+  /* Pick'em: header and tabs read as an app page. */
+  html.es-shell .pickem-tabs {
+    display: inline-flex !important;
+    gap: 2px !important;
+    padding: 4px !important;
+    border: 0 !important;
+    border-radius: 14px !important;
+    background: #efeff1 !important;
+  }
+  html.es-shell .pickem-tab {
+    min-height: 36px !important;
+    padding: 0 14px !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--es-ink-3) !important;
+    font-family: var(--es-font-ui) !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+  }
+  html.es-shell .pickem-tab::after { display: none !important; }
+  html.es-shell .pickem-tab.is-active {
+    background: var(--es-bg) !important;
+    box-shadow: var(--es-shadow-pill) !important;
+    color: var(--es-ink) !important;
+  }
+  html.es-shell .pickem-panel {
+    padding: 24px !important;
+    border-radius: var(--es-radius-card) !important;
+    background: var(--es-bg) !important;
+    box-shadow: var(--es-shadow-soft), inset 0 0 0 1px var(--es-line) !important;
+  }
+  html.es-shell .pickem-panel[hidden] { display: none !important; }
+}
+
+@media (min-width: 901px) {
+  html.es-shell .site-footer .footer-hero { flex-wrap: wrap !important; }
+  html.es-shell .site-footer .footer-copy { min-width: 0; white-space: normal !important; }
+}
+
+@media (min-width: 901px) {
+  html.es-shell .site-footer { width: auto !important; max-width: none !important; box-sizing: border-box; }
+}
+
+/* FAQ: two columns need ~980px of content width; stack below that. */
+@media (min-width: 901px) and (max-width: 1279px) {
+  html.es-shell body[data-current-page="faq"] .faq-page {
+    width: min(760px, calc(100% - 48px)) !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+html.es-shell:not(.es-sidebar-collapsed) body[data-current-page="faq"] .faq-page { max-width: calc(100vw - var(--es-shell-offset) - 48px); }
+
+/* Reels keeps a light task panel in dark mode, so its intro stays ink. */
+html[data-theme="dark"] body.reels-page .reels-first-step { color: var(--es-ink-2) !important; }

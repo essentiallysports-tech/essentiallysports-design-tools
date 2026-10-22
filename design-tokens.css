@@ -1110,3 +1110,41 @@ html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
     gap: 14px !important;
   }
 }
+
+/* ─── Typography rule (site-wide) ──────────────────────────────────────────
+ * Headings: Roboto Condensed (800 for page/section, 700 for smaller).
+ * Subtext and everything people read: Roboto.
+ * Artwork previews and illustrations inside the UI are left untouched. */
+:is(h1, h2, h3, h4, h5, h6, .es-empty__title):not(:is([class*="brief-ui"], [class*="hero-art"], [class*="preview"], [class*="snap"], [class*="artwork"]) *) {
+  font-family: var(--es-font-display) !important;
+  letter-spacing: 0;
+}
+
+:is(h1, h2):not(:is([class*="brief-ui"], [class*="hero-art"], [class*="preview"], [class*="snap"], [class*="artwork"]) *) {
+  font-weight: 800 !important;
+}
+
+:is(h3, h4, h5, h6, .es-empty__title):not(:is([class*="brief-ui"], [class*="hero-art"], [class*="preview"], [class*="snap"], [class*="artwork"]) *) {
+  font-weight: 700 !important;
+}
+
+:where(p, li, label, small, dd, dt, figcaption, td, th, blockquote, input, textarea, select) {
+  font-family: var(--es-font-ui);
+}
+
+/* Known subtext that was set in Condensed. */
+.request-label,
+.faq-item p,
+.es-card__sub {
+  font-family: var(--es-font-ui) !important;
+}
+
+.request-label {
+  font-weight: 700 !important;
+}
+
+.faq-item p {
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  line-height: 1.55 !important;
+}

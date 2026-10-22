@@ -3112,3 +3112,7 @@ body.reels-page.reels-has-clip .reels-first-step {
   outline: 2px dashed var(--es-brand);
   outline-offset: -6px;
 }
+
+html[data-theme="dark"] .reels-first-step {
+  color: #c4cbd4;
+}
