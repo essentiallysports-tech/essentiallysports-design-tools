@@ -14,6 +14,8 @@ const { isMcpConfigured, createSession } = require('./_es-mcp.js');
 
 const ES_WP_API = 'https://www.essentiallysports.com/wp-json/wp/v2';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+// OpenAI is opt-in (it is billed separately): set GENERATE_USE_OPENAI=true.
+const USE_OPENAI = process.env.GENERATE_USE_OPENAI === 'true' && Boolean(OPENAI_API_KEY);
 const OPENAI_GENERATE_MODEL = process.env.OPENAI_GENERATE_MODEL || 'gpt-4.1-mini';
 const ES_IMAGE_BUCKET = process.env.ES_IMAGE_BUCKET || 'essentiallysports-images-v2prod';
 const TOOL_OVERRIDES = {
@@ -496,7 +498,7 @@ async function discover(notes) {
   }
 }
 
-const brainName = tools => (tools.think ? `es-mcp:${tools.think.name}` : (OPENAI_API_KEY ? `openai:${OPENAI_GENERATE_MODEL}` : 'draft'));
+const brainName = tools => (tools.think ? `es-mcp:${tools.think.name}` : (USE_OPENAI ? `openai:${OPENAI_GENERATE_MODEL}` : 'draft'));
 
 async function generate({ brief, formats, count }) {
   const notes = [];
@@ -510,7 +512,7 @@ async function generate({ brief, formats, count }) {
   const prompt = buildPrompt(brief, found, allowedTypes, want);
   try {
     if (tools.think) rawDesigns = await thinkWithMcp(prompt, mcp, tools.think);
-    else if (OPENAI_API_KEY) rawDesigns = await thinkWithOpenAi(prompt);
+    else if (USE_OPENAI) rawDesigns = await thinkWithOpenAi(prompt);
   } catch (error) {
     notes.push(`AI step failed, using draft mode: ${String(error.message || error).slice(0, 160)}`);
   }

@@ -88,6 +88,7 @@ assert.ok(!fetchCalls.some(url => url.includes('openai')), 'OpenAI is not used w
 
 // 2. No ES MCP, OpenAI key present: OpenAI thinks; photo from the ES story.
 process.env.OPENAI_API_KEY = 'test-key';
+process.env.GENERATE_USE_OPENAI = 'true';
 fetchCalls = [];
 handler = mockModules();
 res = await post(handler, { brief: 'Patrick Mahomes after the Chiefs win', formats: ['cover'] });
@@ -101,6 +102,16 @@ res = await post(handler, { brief: 'Patrick Mahomes after the Chiefs win' });
 assert.equal(res.body.brain, 'draft');
 assert.ok(res.body.notes.some(note => /AI step failed.*rate limited/.test(note)));
 assert.ok(res.body.designs.length >= 1);
+delete process.env.OPENAI_API_KEY;
+delete process.env.GENERATE_USE_OPENAI;
+
+// 3b. A key alone never calls OpenAI: it is opt-in (billed separately).
+process.env.OPENAI_API_KEY = 'test-key';
+fetchCalls = [];
+handler = mockModules();
+res = await post(handler, { brief: 'Patrick Mahomes after the Chiefs win' });
+assert.equal(res.body.brain, 'draft');
+assert.ok(!fetchCalls.some(url => url.includes('openai')), 'no OpenAI call without GENERATE_USE_OPENAI=true');
 delete process.env.OPENAI_API_KEY;
 
 // 4. Guards: auth, empty brief, method.
