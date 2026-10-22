@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Generate | FrameUp</title>
+  <meta name="description" content="Turn a brief into on-brand, editable Social Media posts from ES coverage.">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script">
+  <script src="es-auth-config.js?v=20260707-auth4"></script>
+  <script src="es-auth.js?v=20261025-perf1"></script>
+  <script>
+    window.ESAuth?.requireAuth(`generate.html${window.location.search}${window.location.hash}`);
+  </script>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261022-es1">
+  <link rel="stylesheet" href="theme.css?v=20261023-ux1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
+  <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261023-type1">
+<link rel="stylesheet" href="es-ui.css?v=20261025-perf1">
+  <script src="theme.js?v=20260712-darkmode12"></script>
+  <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
+  <script src="site-chrome.js?v=20261024-live1"></script>
+<script src="app-shell.js?v=20261026-gen1"></script>
+  <style>
+    .gen-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 32px 0 72px; font-family: var(--es-font-ui); color: var(--es-ink); }
+    .gen-brief { display: grid; gap: 14px; padding: 20px; border-radius: 20px; background: #fff; box-shadow: inset 0 0 0 1px var(--es-line), 0 1px 2px rgb(14 16 20 / .04); }
+    .gen-brief textarea { box-sizing: border-box; width: 100%; min-height: 96px; resize: vertical; padding: 14px 16px; border: 0; border-radius: 14px; background: var(--es-sunk); color: var(--es-ink); font: 400 16px/1.5 var(--es-font-ui); box-shadow: inset 0 0 0 1px transparent; transition: box-shadow .15s var(--es-ease), background .15s var(--es-ease); }
+    .gen-brief textarea:focus { outline: none; background: #fff; box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 3px rgb(var(--es-brand-rgb) / .15); }
+    .gen-brief textarea::placeholder { color: var(--es-placeholder, #8a8f98); }
+    .gen-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .gen-row__label { margin-right: 4px; color: var(--es-ink-3); font-size: 13px; font-weight: 500; }
+    .gen-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+    .gen-actions__hint { color: var(--es-ink-3); font-size: 13px; }
+    .gen-actions__buttons { display: flex; gap: 8px; margin-left: auto; }
+    .gen-actions__buttons .es-btn[hidden] { display: none; }
+    .gen-examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .gen-examples button { padding: 6px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--es-ink-3); font: 500 13px/1.3 var(--es-font-ui); box-shadow: inset 0 0 0 1px var(--es-line); cursor: pointer; text-align: left; }
+    .gen-examples button:hover { background: var(--es-sunk); color: var(--es-ink); }
+
+    .gen-status { display: flex; align-items: center; gap: 10px; margin: 28px 0 14px; min-height: 24px; color: var(--es-ink-2, #3f4450); font-size: 14px; }
+    .gen-status[hidden] { display: none; }
+    .gen-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--es-line); border-top-color: var(--es-brand); animation: genSpin .8s linear infinite; }
+    @keyframes genSpin { to { transform: rotate(360deg); } }
+    .gen-mode { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; white-space: nowrap; padding: 3px 10px; border-radius: 999px; background: var(--es-sunk); color: var(--es-ink-3); font-size: 12px; font-weight: 600; }
+    .gen-mode.is-ai { background: var(--es-brand-soft); color: var(--es-brand-text); }
+    .gen-notice { margin: 0 0 16px; }
+    .gen-notice[hidden] { display: none; }
+
+    .gen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+    .gen-card { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; min-width: 0; overflow: hidden; border-radius: 20px; background: #fff; box-shadow: inset 0 0 0 1px var(--es-line), 0 1px 2px rgb(14 16 20 / .04); }
+    .gen-card__media { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: var(--es-sunk); }
+    .gen-card__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .gen-card__media:not(.is-ready)::before { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / .6) 50%, transparent 80%); transform: translateX(-100%); animation: genShimmer 1.4s ease-in-out infinite; }
+    @keyframes genShimmer { to { transform: translateX(100%); } }
+    .gen-card__body { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px 16px 16px; }
+    .gen-card__type { align-self: flex-start; padding: 2px 8px; border-radius: 6px; background: var(--es-brand-soft); color: var(--es-brand-text); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .gen-card__why { margin: 0; color: var(--es-ink-2, #3f4450); font-size: 13px; line-height: 1.45; }
+    .gen-card__source { margin: 0; overflow: hidden; color: var(--es-ink-3); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .gen-card__source a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+    .gen-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
+    .gen-card__actions .es-btn { flex: 1 1 auto; }
+    .gen-card.is-skeleton .gen-card__body span { display: block; height: 12px; border-radius: 6px; background: var(--es-sunk); }
+    .gen-card.is-skeleton .gen-card__body span:first-child { width: 40%; }
+    .gen-card.is-skeleton .gen-card__body span:last-child { width: 80%; }
+    .gen-card.is-failed .gen-card__media::after { content: 'Preview unavailable'; position: absolute; inset: 0; display: grid; place-items: center; color: var(--es-ink-3); font-size: 13px; }
+
+    .gen-research { margin-top: 28px; color: var(--es-ink-3); font-size: 13px; }
+    .gen-research[hidden] { display: none; }
+    .gen-research summary { cursor: pointer; font-weight: 600; }
+    .gen-research ul { margin: 10px 0 0; padding-left: 18px; line-height: 1.7; }
+    .gen-research a { color: var(--es-ink-2, #3f4450); }
+    .gen-renderer { position: fixed; left: -12000px; top: 0; width: 1280px; height: 900px; border: 0; visibility: hidden; pointer-events: none; }
+
+    html[data-theme="dark"] :is(.gen-brief, .gen-card) { background: #151515; box-shadow: inset 0 0 0 1px #2e2e2e; }
+    html[data-theme="dark"] .gen-brief textarea { background: #1f1f1f; color: #f3f5f7; }
+    html[data-theme="dark"] .gen-brief textarea:focus { background: #1a1a1a; }
+    html[data-theme="dark"] :is(.gen-card__media, .gen-card.is-skeleton .gen-card__body span, .gen-mode) { background: #1f1f1f; }
+    html[data-theme="dark"] .gen-card__media:not(.is-ready)::before { background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / .06) 50%, transparent 80%); }
+    html[data-theme="dark"] :is(.gen-card__why, .gen-status, .gen-research a) { color: #c9cdd3; }
+    html[data-theme="dark"] .gen-examples button:hover { background: #1f1f1f; color: #f3f5f7; }
+    @media (prefers-reduced-motion: reduce) { .gen-card__media::before, .gen-spinner { animation: none !important; } }
+    @media (max-width: 900px) {
+      .gen-page { width: auto; padding: 20px 16px 56px; }
+      .gen-brief { padding: 14px; }
+      .gen-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+      .gen-actions__buttons { width: 100%; }
+      .gen-actions__buttons .es-btn { flex: 1 1 auto; }
+    }
+  </style>
+</head>
+<body class="gen-body">
+  <nav class="navbar">
+    <a class="navbar-logo" href="index.html" aria-label="EssentiallySports home">
+      <img src="brand-logo-blue.svg" alt="EssentiallySports">
+    </a>
+    <div class="navbar-menu">
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#intro" aria-haspopup="true" aria-expanded="false">Resources</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Resources">
+          <a href="index.html#logo-guidelines" data-route="logo-guidelines" role="menuitem">Logo Guidelines</a>
+          <a href="index.html#social-guidelines" data-route="social-guidelines" role="menuitem">Social Media Guidelines</a>
+          <a href="index.html#video-guidelines" data-route="video-guidelines" role="menuitem">Video Guidelines</a>
+        </div>
+      </div>
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#frames" data-route="frames" aria-haspopup="true" aria-expanded="false">Design Tools</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Design workspaces">
+          <a href="index.html#frames" data-route="frames" role="menuitem">Home</a>
+          <a href="index.html#instagram" data-route="instagram" role="menuitem">Social Media</a>
+          <a href="index.html#youtube" data-route="youtube" role="menuitem">YouTube</a>
+          <a href="index.html#newsletter" data-route="newsletter" role="menuitem">Newsletter</a>
+          <a href="reels.html" role="menuitem">Reel Captions</a>
+        </div>
+      </div>
+      <a href="design-request.html">Design Request</a>
+      <a href="generate.html" aria-current="page">Generate</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="dashboard.html" data-admin-only hidden aria-hidden="true">Dashboard</a>
+      <a href="index.html#faq" data-route="faq">FAQ</a>
+      <a href="tool-feedback.html">Tool Feedback</a>
+    </div>
+    <div class="navbar-right">
+      <div class="profile-menu" id="profile-menu"></div>
+      <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" title="Facebook" aria-label="Facebook"><img src="social-icons/nav-facebook.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://twitter.com/es_sportsnews" title="X" aria-label="X"><img src="social-icons/nav-x.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.linkedin.com/company/essentiallysports" title="LinkedIn" aria-label="LinkedIn"><img src="social-icons/nav-linkedin.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.instagram.com/essentiallysports" title="Instagram" aria-label="Instagram"><img src="social-icons/nav-instagram.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.youtube.com/essentiallysports" title="YouTube" aria-label="YouTube"><img src="social-icons/nav-youtube.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://news.google.com/publications/CAAqBwgKMJqW_gwwkoGBAw" title="Google News" aria-label="Google News"><img src="social-icons/nav-google-news.svg" alt=""></a>
+    </div>
+  </nav>
+
+  <main class="gen-page" id="main">
+    <header class="es-page-head">
+      <h1>Generate</h1>
+      <p>Describe the post. FrameUp reads ES coverage, picks the right templates and designs on-brand options you can edit.</p>
+    </header>
+
+    <form class="gen-brief" id="gen-form" novalidate>
+      <textarea id="gen-brief" maxlength="600" aria-label="Brief" placeholder="e.g. Patrick Mahomes after the Chiefs win: &quot;We are not done yet.&quot; 320 YDS, 3 TD, 1 INT"></textarea>
+      <div class="gen-row" id="gen-formats" role="group" aria-label="Formats">
+        <span class="gen-row__label">Formats</span>
+      </div>
+      <div class="gen-actions">
+        <span class="gen-actions__hint">Facts come only from your brief and ES stories. Check every post before you publish.</span>
+        <div class="gen-actions__buttons">
+          <button class="es-btn" type="button" id="gen-trending" hidden>Suggest topics</button>
+          <button class="es-btn es-btn--primary" type="submit" id="gen-submit">Generate</button>
+        </div>
+      </div>
+    </form>
+    <div class="gen-examples" id="gen-examples" aria-label="Example briefs"></div>
+
+    <p class="gen-status" id="gen-status" role="status" hidden></p>
+    <div class="es-callout gen-notice" id="gen-notice" hidden></div>
+    <div class="gen-grid" id="gen-grid"></div>
+    <details class="gen-research" id="gen-research" hidden>
+      <summary>Based on these ES stories</summary>
+      <ul id="gen-research-list"></ul>
+    </details>
+  </main>
+
+  <script>
+    // FrameUp Generate: brief → /api/es-generate (research + plan + checks) →
+    // each design rendered by the real editor in a hidden frame (frameup-spec.js).
+    (() => {
+      const FORMATS = [
+        ['cover', 'Cover'], ['quote', 'Quote'], ['long-quote', 'Long Quote'], ['double-entity-quote', 'Two-Person Quote'],
+        ['stats-single-ent', 'Player Stats'], ['stats-double-ent', 'Head-to-Head'],
+      ];
+      const EXAMPLES = [
+        'Patrick Mahomes after the Chiefs win: "We are not done yet." 320 YDS, 3 TD, 1 INT',
+        'Caitlin Clark scores 30 PTS 9 AST 6 REB against the Sky',
+        'Make a post about the Lakers losing streak',
+      ];
+      const els = {
+        form: document.getElementById('gen-form'),
+        brief: document.getElementById('gen-brief'),
+        formats: document.getElementById('gen-formats'),
+        submit: document.getElementById('gen-submit'),
+        trending: document.getElementById('gen-trending'),
+        examples: document.getElementById('gen-examples'),
+        status: document.getElementById('gen-status'),
+        notice: document.getElementById('gen-notice'),
+        grid: document.getElementById('gen-grid'),
+        research: document.getElementById('gen-research'),
+        researchList: document.getElementById('gen-research-list'),
+      };
+      const picked = new Set();
+      let busy = false;
+      let lastBrief = '';
+
+      // ── Renderer: the real editor in a hidden frame ───────────────────────
+      let rendererPromise = null;
+      function renderer() {
+        if (!rendererPromise) {
+          rendererPromise = new Promise((resolve, reject) => {
+            const frame = document.createElement('iframe');
+            frame.className = 'gen-renderer';
+            frame.title = 'Design renderer';
+            frame.setAttribute('aria-hidden', 'true');
+            frame.tabIndex = -1;
+            frame.src = 'index.html?embed=generate#instagram';
+            const timer = setTimeout(() => reject(new Error('The design renderer took too long to load.')), 45000);
+            frame.addEventListener('load', async () => {
+              try {
+                for (let i = 0; i < 100 && !frame.contentWindow.FrameUpSpec; i += 1) await new Promise(r => setTimeout(r, 100));
+                const api = frame.contentWindow.FrameUpSpec;
+                if (!api) throw new Error('The design renderer is unavailable.');
+                await api.ready();
+                clearTimeout(timer);
+                resolve(api);
+              } catch (error) {
+                clearTimeout(timer);
+                reject(error);
+              }
+            }, { once: true });
+            document.body.appendChild(frame);
+          });
+          rendererPromise.catch(() => { rendererPromise = null; });
+        }
+        return rendererPromise;
+      }
+
+      // ── UI helpers ─────────────────────────────────────────────────────────
+      function setStatus(text, spinning = false) {
+        els.status.hidden = !text;
+        els.status.innerHTML = spinning ? '<span class="gen-spinner" aria-hidden="true"></span>' : '';
+        els.status.append(document.createTextNode(text || ''));
+      }
+      function setNotice(title, body) {
+        els.notice.hidden = !title;
+        els.notice.innerHTML = '';
+        if (!title) return;
+        const wrap = document.createElement('div');
+        const strong = document.createElement('strong');
+        strong.textContent = title;
+        wrap.append(strong, document.createTextNode(body || ''));
+        els.notice.appendChild(wrap);
+      }
+      function setBusy(value) {
+        busy = value;
+        els.submit.disabled = value;
+        els.trending.disabled = value;
+        els.submit.textContent = value ? 'Generating…' : 'Generate';
+      }
+
+      function skeletonCard() {
+        const card = document.createElement('article');
+        card.className = 'gen-card is-skeleton';
+        card.innerHTML = '<div class="gen-card__media"></div><div class="gen-card__body"><span></span><span></span></div>';
+        return card;
+      }
+
+      function buildCard(spec) {
+        const card = document.createElement('article');
+        card.className = 'gen-card';
+        card.innerHTML = `
+          <div class="gen-card__media"><img alt=""></div>
+          <div class="gen-card__body">
+            <span class="gen-card__type"></span>
+            <p class="gen-card__why"></p>
+            <p class="gen-card__source" hidden>Source: <a target="_blank" rel="noopener"></a></p>
+            <div class="gen-card__actions">
+              <button class="es-btn es-btn--primary es-btn--sm" type="button" data-act="edit">Edit</button>
+              <button class="es-btn es-btn--sm" type="button" data-act="download">Download</button>
+              <button class="es-btn es-btn--sm" type="button" data-act="again" title="Try this format again">Retry</button>
+            </div>
+          </div>`;
+        fillCard(card, spec);
+        return card;
+      }
+
+      function fillCard(card, spec) {
+        card._spec = spec;
+        card.classList.remove('is-skeleton', 'is-failed');
+        card.querySelector('.gen-card__type').textContent = spec.label;
+        card.querySelector('.gen-card__why').textContent = spec.why || spec.title;
+        card.querySelector('img').alt = `${spec.label}: ${spec.title}`;
+        const source = spec.sources?.[0];
+        const sourceRow = card.querySelector('.gen-card__source');
+        sourceRow.hidden = !source;
+        if (source) {
+          const link = sourceRow.querySelector('a');
+          link.href = source.url;
+          link.textContent = source.title || source.url.replace(/^https?:\/\/(www\.)?/, '');
+        }
+      }
+
+      async function paint(card) {
+        const media = card.querySelector('.gen-card__media');
+        const img = card.querySelector('img');
+        media.classList.remove('is-ready');
+        try {
+          const api = await renderer();
+          img.src = await api.renderToDataUrl(card._spec);
+          media.classList.add('is-ready');
+        } catch (error) {
+          card.classList.add('is-failed');
+          media.classList.add('is-ready');
+        }
+      }
+
+      async function callApi(body) {
+        if (!window.ESAuth?.fetchWithAuth) throw new Error('Sign-in is still loading. Try again in a moment.');
+        const response = await window.ESAuth.fetchWithAuth('/api/es-generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(data?.detail || data?.error || `Generate failed (${response.status}).`);
+        return data;
+      }
+
+      function showMode(brain) {
+        const ai = brain && brain !== 'draft';
+        const label = ai ? (brain.startsWith('es-mcp') ? 'ES MCP' : 'AI') : 'Draft mode';
+        return `<span class="gen-mode${ai ? ' is-ai' : ''}">${label}</span>`;
+      }
+
+      // ── Generate ──────────────────────────────────────────────────────────
+      async function generate(event) {
+        event?.preventDefault();
+        const brief = els.brief.value.trim();
+        if (brief.length < 3) {
+          els.brief.focus();
+          setStatus('Write a brief first: who, what happened, and any numbers or quotes.');
+          return;
+        }
+        if (busy) return;
+        setBusy(true);
+        lastBrief = brief;
+        setNotice('');
+        els.research.hidden = true;
+        els.grid.replaceChildren(...Array.from({ length: 4 }, skeletonCard));
+        setStatus('Reading ES coverage and planning designs…', true);
+        renderer().catch(() => {});
+        try {
+          const data = await callApi({ brief, formats: [...picked], count: 4 });
+          if (!data.designs?.length) {
+            els.grid.replaceChildren();
+            setStatus('');
+            setNotice('No designs this time', ' Add who it is about and the key facts (numbers, a quote), or pick a different format.');
+            return;
+          }
+          setStatus('Designing your posts…', true);
+          const cards = data.designs.map(buildCard);
+          els.grid.replaceChildren(...cards);
+          for (const card of cards) await paint(card);
+          els.status.innerHTML = `${showMode(data.brain)}`;
+          els.status.append(document.createTextNode(` ${cards.length} design${cards.length === 1 ? '' : 's'} ready. Edit opens it in the Social Media editor.`));
+          if (data.brain === 'draft') {
+            setNotice('Draft mode', ' No AI is connected yet, so these are built from your brief with simple rules. Once ES MCP or an AI key is connected, FrameUp writes the copy and picks the formats itself.');
+          }
+          showResearch(data.research?.articles || []);
+        } catch (error) {
+          els.grid.replaceChildren();
+          setStatus('');
+          setNotice('Could not generate', ` ${error.message || 'Something went wrong.'}`);
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function showResearch(articles) {
+        els.researchList.replaceChildren(...articles.map(article => {
+          const li = document.createElement('li');
+          const link = document.createElement('a');
+          link.href = article.url;
+          link.target = '_blank';
+          link.rel = 'noopener';
+          link.textContent = article.title;
+          li.append(link, document.createTextNode(article.date ? ` · ${article.date}` : ''));
+          return li;
+        }));
+        els.research.hidden = !articles.length;
+      }
+
+      // ── Card actions ──────────────────────────────────────────────────────
+      els.grid.addEventListener('click', async event => {
+        const button = event.target.closest('[data-act]');
+        const card = button?.closest('.gen-card');
+        if (!card?._spec) return;
+        const spec = card._spec;
+        if (button.dataset.act === 'edit') {
+          try {
+            sessionStorage.setItem('frameup.openSpec.v1', JSON.stringify(spec));
+          } catch (error) {
+            setNotice('Could not open the editor', ' Your browser blocked session storage.');
+            return;
+          }
+          window.location.href = 'index.html#instagram';
+        } else if (button.dataset.act === 'download') {
+          button.disabled = true;
+          try {
+            await (await renderer()).exportSpec(spec);
+          } catch (error) {
+            setNotice('Download failed', ` ${error.message || ''}`);
+          } finally {
+            setTimeout(() => { button.disabled = false; }, 1500);
+          }
+        } else if (button.dataset.act === 'again') {
+          if (busy) return;
+          button.disabled = true;
+          const media = card.querySelector('.gen-card__media');
+          media.classList.remove('is-ready');
+          try {
+            const data = await callApi({ brief: lastBrief, formats: [spec.postType], count: 1 });
+            const next = data.designs?.[0];
+            if (next) {
+              fillCard(card, next);
+              await paint(card);
+            } else {
+              media.classList.add('is-ready');
+            }
+          } catch (error) {
+            media.classList.add('is-ready');
+            setNotice('Retry failed', ` ${error.message || ''}`);
+          } finally {
+            button.disabled = false;
+          }
+        }
+      });
+
+      // ── Trending topics (only when ES MCP has a trending tool) ─────────────
+      els.trending.addEventListener('click', async () => {
+        if (busy) return;
+        setBusy(true);
+        setStatus('Finding trending ES topics…', true);
+        try {
+          const data = await callApi({ mode: 'trending' });
+          renderExamples(data.topics?.length ? data.topics : EXAMPLES);
+          setStatus(data.topics?.length ? 'Pick a topic to use it as your brief.' : 'No trending topics right now.');
+        } catch (error) {
+          setStatus('');
+          setNotice('Could not load topics', ` ${error.message || ''}`);
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      function renderExamples(list) {
+        els.examples.replaceChildren(...list.map(text => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = text;
+          button.addEventListener('click', () => { els.brief.value = text; els.brief.focus(); });
+          return button;
+        }));
+      }
+
+      FORMATS.forEach(([type, label]) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'es-chip';
+        chip.textContent = label;
+        chip.setAttribute('aria-pressed', 'false');
+        chip.addEventListener('click', () => {
+          if (picked.has(type)) picked.delete(type); else picked.add(type);
+          chip.setAttribute('aria-pressed', String(picked.has(type)));
+        });
+        els.formats.appendChild(chip);
+      });
+      renderExamples(EXAMPLES);
+      els.form.addEventListener('submit', generate);
+      els.brief.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) generate(event);
+      });
+
+      // Show "Suggest topics" only when ES MCP offers a trending tool.
+      window.addEventListener('load', async () => {
+        try {
+          const response = await window.ESAuth?.fetchWithAuth?.('/api/es-generate');
+          const data = response?.ok ? await response.json() : null;
+          els.trending.hidden = !data?.roles?.trending;
+        } catch (error) {
+          els.trending.hidden = true;
+        }
+      }, { once: true });
+    })();
+  </script>
+</body>
+</html>

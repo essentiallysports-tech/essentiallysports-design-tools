@@ -21,6 +21,7 @@
     guide: icon('<path d="M5 4h9a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h9"/>'),
     video: icon('<rect x="3" y="6" width="13" height="12" rx="3"/><path d="m16 10 5-3v10l-5-3"/>'),
     faq: icon('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.4"/><path d="M12 17h.01"/>'),
+    sparkle: icon('<path d="M12 3.5 13.9 9 19.5 11l-5.6 2-1.9 5.5-1.9-5.5L4.5 11l5.6-2z"/><path d="M18.5 3.5v3M17 5h3"/>'),
     gallery: icon('<rect x="3.5" y="4" width="17" height="16" rx="3"/><circle cx="9" cy="9.5" r="1.8"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4.5 3.5"/>'),
     library: icon('<rect x="4" y="4" width="7" height="7" rx="2"/><circle cx="16.5" cy="7.5" r="3.5"/><path d="M4 20l3.5-6 3.5 6z"/><rect x="13" y="13" width="7" height="7" rx="2"/>'),
     trophy: icon('<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M9 20h6"/>'),
@@ -34,6 +35,7 @@
       label: 'Create',
       items: [
         { id: 'frames', label: 'Home', href: 'index.html#frames', icon: 'home' },
+        { id: 'generate', label: 'Generate', href: 'generate.html', icon: 'sparkle', badge: 'New', desc: 'Turn a brief into on-brand, editable Social Media posts.' },
         { id: 'instagram', label: 'Social Media', href: 'index.html#instagram', icon: 'social', editor: true },
         { id: 'youtube', label: 'YouTube', href: 'index.html#youtube', icon: 'youtube', editor: true },
         { id: 'newsletter', label: 'Newsletter', href: 'index.html#newsletter', icon: 'newsletter', editor: true },
@@ -72,6 +74,7 @@
     'design-request.html': 'request',
     'dashboard.html': 'dashboard',
     'gallery.html': 'gallery',
+    'generate.html': 'generate',
     'tool-feedback.html': 'feedback',
     'design-system.html': 'library',
     'pickem.html': 'pickem',
