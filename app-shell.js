@@ -42,7 +42,7 @@
     {
       label: 'Work',
       items: [
-        { id: 'request', label: 'Design Request', href: 'design-request.html', icon: 'request' },
+        { id: 'request', label: 'Design Request', href: 'design-request.html', icon: 'request', desc: 'Send the design team one clear brief with context, copy, deadline and references.' },
         { id: 'dashboard', label: 'Dashboard', href: 'dashboard.html', icon: 'dashboard', adminOnly: true },
         { id: 'feedback', label: 'Tool Feedback', href: 'tool-feedback.html', icon: 'feedback' },
       ],
@@ -199,6 +199,31 @@
     crumbs.innerHTML = `<li><a href="${base}index.html#frames">FrameUp</a></li>${entry ? `<li>${entry.group.label}</li>` : ''}<li><span aria-current="page">${pageTitle}</span></li>`;
   }
 
+  // Inside pages share one header pattern; pages without a title get one.
+  function ensurePageHead() {
+    const entry = findItem(currentId());
+    const main = document.querySelector('.request-page');
+    if (!entry || !main || main.querySelector('.es-page-head')) return;
+    const head = document.createElement('header');
+    head.className = 'es-page-head';
+    const title = document.createElement('h1');
+    title.textContent = entry.item.label;
+    head.appendChild(title);
+    if (entry.item.desc) {
+      const copy = document.createElement('p');
+      copy.textContent = entry.item.desc;
+      head.appendChild(copy);
+    }
+    main.prepend(head);
+  }
+
+  // Dashboard sections become tabs under the page title (no second sidebar).
+  function arrangeDashboard() {
+    const tabs = document.querySelector('.dashboard-sidebar');
+    const header = document.querySelector('.dashboard-topbar');
+    if (tabs && header && header.nextElementSibling !== tabs) header.after(tabs);
+  }
+
   // ─── Command palette ───────────────────────────────────────────────────
   let palette = null;
   function buildPalette() {
@@ -257,7 +282,8 @@
 
   function onKeydown(event) {
     const typing = event.target.closest?.('input, textarea, select, [contenteditable="true"]');
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+    // The dashboard keeps Ctrl/Cmd+K for its own search; '/' still opens the palette there.
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k' && !document.querySelector('.dashboard-app')) {
       event.preventDefault();
       if (palette?.open) palette.close(); else openPalette();
     } else if (event.key === '/' && !typing && !event.metaKey && !event.ctrlKey) {
@@ -276,6 +302,8 @@
     buildSidebar();
     buildTopbar();
     syncActive();
+    ensurePageHead();
+    arrangeDashboard();
     window.addEventListener('hashchange', () => { syncActive(); setCollapsed(readCollapsed(), false); });
     document.addEventListener('keydown', onKeydown);
     // Enable collapse/expand animation only after the first paint.

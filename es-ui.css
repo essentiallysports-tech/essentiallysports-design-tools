@@ -703,6 +703,7 @@ html.es-shell.es-sidebar-collapsed { --es-shell-offset: var(--es-sidebar-w-colla
 }
 .es-sidebar .profile-trigger:hover { background: var(--es-hover) !important; }
 .es-sidebar .profile-trigger > svg { margin-left: auto; transform: rotate(180deg); }
+html .es-sidebar .profile-menu[data-profile-popover-version] > .profile-dropdown,
 .es-sidebar .profile-dropdown {
   top: auto !important;
   bottom: calc(100% + 8px) !important;
@@ -711,6 +712,7 @@ html.es-shell.es-sidebar-collapsed { --es-shell-offset: var(--es-sidebar-w-colla
 }
 html.es-sidebar-collapsed .es-sidebar .profile-trigger { justify-content: center; padding: 0 !important; }
 html.es-sidebar-collapsed .es-sidebar .profile-trigger :is(.profile-name, svg) { display: none !important; }
+html.es-sidebar-collapsed .es-sidebar .profile-menu[data-profile-popover-version] > .profile-dropdown,
 html.es-sidebar-collapsed .es-sidebar .profile-dropdown { left: calc(100% + 12px) !important; bottom: 0 !important; }
 
 @media (min-width: 901px) {
@@ -808,29 +810,6 @@ html.es-shell:not(.es-editor) .es-topbar .studio-history-group { display: none !
     background: transparent !important;
   }
 
-  /* Compact app footer: logo, copyright and socials in one slim row. The
-     corporate link columns belong to the marketing site, not the app. */
-  html.es-shell .site-footer {
-    margin: 24px 24px 24px;
-    border-radius: 20px;
-    overflow: hidden;
-  }
-  html.es-shell .site-footer .footer-links,
-  html.es-shell .site-footer .footer-blurb { display: none !important; }
-  html.es-shell .site-footer .footer-hero {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 16px !important;
-    min-height: 0 !important;
-    padding: 16px 24px !important;
-    text-align: left !important;
-  }
-  html.es-shell .site-footer .footer-logo-img { height: 24px !important; width: auto !important; }
-  html.es-shell .site-footer .footer-copy { order: 3; margin: 0 !important; font-size: 13px !important; }
-  html.es-shell .site-footer .footer-socials { margin: 0 0 0 auto !important; }
-
   /* Pick'em: header and tabs read as an app page. */
   html.es-shell .pickem-tabs {
     display: inline-flex !important;
@@ -865,16 +844,12 @@ html.es-shell:not(.es-editor) .es-topbar .studio-history-group { display: none !
     box-shadow: var(--es-shadow-soft), inset 0 0 0 1px var(--es-line) !important;
   }
   html.es-shell .pickem-panel[hidden] { display: none !important; }
+  html.es-shell .pickem-tabs { width: max-content !important; max-width: 100% !important; margin: 0 0 16px !important; }
+  html.es-shell .pickem-panel { width: auto !important; max-width: none !important; margin-left: 0 !important; margin-right: 0 !important; }
+  html.es-shell :is(.pickem-hero, .pickem-main > *) { max-width: none !important; }
 }
 
-@media (min-width: 901px) {
-  html.es-shell .site-footer .footer-hero { flex-wrap: wrap !important; }
-  html.es-shell .site-footer .footer-copy { min-width: 0; white-space: normal !important; }
-}
 
-@media (min-width: 901px) {
-  html.es-shell .site-footer { width: auto !important; max-width: none !important; box-sizing: border-box; }
-}
 
 /* FAQ: two columns need ~980px of content width; stack below that. */
 @media (min-width: 901px) and (max-width: 1279px) {
@@ -887,3 +862,229 @@ html.es-shell:not(.es-sidebar-collapsed) body[data-current-page="faq"] .faq-page
 
 /* Reels keeps a light task panel in dark mode, so its intro stays ink. */
 html[data-theme="dark"] body.reels-page .reels-first-step { color: var(--es-ink-2) !important; }
+
+/* ═══ Site family ══════════════════════════════════════════════════════
+ * No footer anywhere; one unified home section; one page pattern for every
+ * inside page (same header, same width, white cards on the grey canvas). */
+.site-footer,
+.how-page[hidden] { display: none !important; }
+
+/* ─── Home: "How FrameUp works" as one card ───────────────────────────── */
+.home-start { padding: 8px 32px 48px; }
+.home-start__card {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px;
+  border-radius: 24px;
+  background: var(--es-bg);
+  box-shadow: var(--es-shadow-soft), inset 0 0 0 1px var(--es-line);
+  font-family: var(--es-font-ui);
+}
+.home-start__head h2 { margin: 0; color: var(--es-ink); font-size: 28px; line-height: 1.1; }
+.home-start__head p { margin: 6px 0 0; color: var(--es-ink-3); font-size: 15px; }
+.home-start__steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.home-start__step {
+  position: relative;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--es-sunk);
+}
+.home-start__icon { width: 40px !important; height: 40px !important; border-radius: 12px !important; }
+.home-start__icon svg { width: 20px; height: 20px; }
+.home-start__num {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: var(--es-ink-3);
+  font-family: var(--es-font-display);
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.home-start__step h3 { margin: 16px 0 4px; color: var(--es-ink); font-size: 18px; }
+.home-start__step p { margin: 0; color: var(--es-ink-2); font-size: 15px; line-height: 1.5; }
+.home-start__foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 24px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1.5px dotted var(--es-line-2);
+  align-items: center;
+}
+.home-start__cta h3 { margin: 0; color: var(--es-ink); font-size: 18px; }
+.home-start__cta p { margin: 4px 0 16px; color: var(--es-ink-2); font-size: 15px; line-height: 1.5; }
+.home-start__links { display: grid; gap: 8px; }
+.home-start__link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  color: var(--es-ink);
+  text-decoration: none;
+  transition: background-color var(--es-dur) var(--es-ease);
+}
+.home-start__link:hover { background: var(--es-sunk); }
+.home-start__link strong { display: block; font-size: 15px; font-weight: 500; }
+.home-start__link small { display: block; color: var(--es-ink-3); font-size: 13px; }
+@media (max-width: 900px) {
+  .home-start { padding: 8px 16px 32px; }
+  .home-start__card { padding: 20px; }
+  .home-start__steps, .home-start__foot { grid-template-columns: minmax(0, 1fr); }
+}
+html[data-theme="dark"] .home-start__card { background: #121212; box-shadow: inset 0 0 0 1px #2a2a2a; }
+html[data-theme="dark"] .home-start__step { background: #1a1a1a; }
+html[data-theme="dark"] :is(.home-start__head h2, .home-start__step h3, .home-start__cta h3, .home-start__link) { color: #f3f5f7 !important; }
+html[data-theme="dark"] :is(.home-start__head p, .home-start__step p, .home-start__cta p, .home-start__link small) { color: #b6b6b6 !important; }
+html[data-theme="dark"] .home-start__link:hover { background: #1a1a1a; }
+
+/* ─── One page pattern for inside pages (desktop shell) ───────────────── */
+.es-page-head { grid-column: 1 / -1; margin: 0 0 24px; }
+.es-page-head h1 { margin: 0; }
+.es-page-head p { margin: 6px 0 0; color: var(--es-ink-3); font-family: var(--es-font-ui); font-size: 15px; line-height: 1.5; }
+
+@media (min-width: 901px) {
+  /* Same content column on every inside page. */
+  html.es-shell :is(.request-page, .feedback-main, .pickem-main, .account-shell, body[data-current-page="faq"] .faq-page, .guidelines-page) {
+    width: min(1120px, calc(100% - 64px)) !important;
+    max-width: none !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-top: 32px !important;
+  }
+
+  /* Same page title + description everywhere. */
+  html.es-shell :is(.es-page-head h1, .ds-hero h1, .account-title, .dashboard-topbar h1, .faq-heading, .guidelines-title, .pickem-title, .feedback-page-title) {
+    margin: 0 !important;
+    color: var(--es-ink) !important;
+    font-family: var(--es-font-display) !important;
+    font-size: 32px !important;
+    font-weight: 800 !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0 !important;
+  }
+  html.es-shell :is(.account-subtitle, .pickem-tagline, .feedback-page-version) {
+    margin-top: 6px !important;
+    color: var(--es-ink-3) !important;
+    font-family: var(--es-font-ui) !important;
+    font-size: 15px !important;
+    font-weight: 400 !important;
+  }
+  html.es-shell :is(.profile-page-header, .account-page-header, .feedback-hero, .pickem-hero, .guidelines-hero) {
+    margin: 0 0 24px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    min-height: 0 !important;
+  }
+
+  html.es-shell .feedback-shell { width: auto !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+
+  html.es-shell body[data-current-page="faq"] .faq-item {
+    border: 0 !important;
+    border-bottom: 1px solid var(--es-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  html.es-shell body[data-current-page="faq"] .faq-item:last-child { border-bottom: 0 !important; }
+  html.es-shell body.account-page .account-shell,
+  html.es-shell body[class*="-page"] .account-shell {
+    width: min(1120px, calc(100% - 64px)) !important;
+    max-width: none !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* Account pages: the outer main adds its own padding; let the shared column own spacing. */
+  html.es-shell .account-main { padding: 0 0 48px !important; }
+  /* Library page uses the same column. */
+  html.es-shell .ds-page { width: min(1120px, calc(100% - 64px)) !important; max-width: none !important; padding: 32px 0 48px !important; }
+
+  /* Design Request: page header instead of the marketing video banner. */
+  html.es-shell .request-hero { display: none !important; }
+
+  /* FAQ: header on top, questions in one card. */
+  html.es-shell body[data-current-page="faq"] .faq-page { display: block !important; }
+  html.es-shell body[data-current-page="faq"] .faq-heading { margin-bottom: 24px !important; }
+  html.es-shell body[data-current-page="faq"] .faq-list {
+    padding: 8px 24px !important;
+    border-radius: var(--es-radius-card) !important;
+    background: var(--es-bg) !important;
+    box-shadow: var(--es-shadow-soft), inset 0 0 0 1px var(--es-line) !important;
+  }
+
+  /* Dashboard: one page header, sections as segmented tabs (no second sidebar). */
+  html.es-shell .dashboard-app { display: block !important; grid-template-columns: none !important; }
+  html.es-shell .dashboard-main { width: min(1120px, calc(100% - 64px)) !important; margin: 0 auto !important; padding-top: 32px !important; }
+  html.es-shell .dashboard-topbar {
+    position: static !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 0 16px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+  }
+  html.es-shell .dashboard-shell { width: auto !important; padding: 0 0 48px !important; margin: 0 !important; }
+  html.es-shell .dashboard-sidebar {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 0 24px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    overflow: visible !important;
+  }
+  html.es-shell .dashboard-sidebar .sidebar-nav {
+    display: inline-flex !important;
+    flex-wrap: wrap;
+    gap: 2px !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    background: #efeff1 !important;
+  }
+  html.es-shell .dashboard-sidebar .sidebar-nav :is(button, a) {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: auto !important;
+    min-height: 36px !important;
+    padding: 0 14px !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--es-ink-3) !important;
+    font-family: var(--es-font-ui) !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+  }
+  html.es-shell .dashboard-sidebar .sidebar-nav :is(button, a).is-active {
+    background: var(--es-bg) !important;
+    box-shadow: var(--es-shadow-pill) !important;
+    color: var(--es-ink) !important;
+  }
+  html.es-shell .dashboard-sidebar .sidebar-nav svg { width: 16px !important; height: 16px !important; }
+  html.es-shell .dashboard-sidebar > :not(.sidebar-nav) { display: none !important; }
+}
+
+html[data-theme="dark"].es-shell :is(.es-page-head h1, .account-title, .dashboard-topbar h1, .faq-heading, .guidelines-title, .pickem-title, .feedback-page-title) { color: #f3f5f7 !important; }
+html[data-theme="dark"].es-shell :is(.dashboard-sidebar .sidebar-nav, .pickem-tabs) { background: #1a1a1a !important; }
+html[data-theme="dark"].es-shell .dashboard-sidebar .sidebar-nav :is(button, a).is-active { background: #2a2a2a !important; color: #f3f5f7 !important; }
+html[data-theme="dark"].es-shell body[data-current-page="faq"] .faq-list { background: #121212 !important; box-shadow: inset 0 0 0 1px #2a2a2a !important; }
+
+html[data-theme="dark"] .workspace-bar-label { color: inherit !important; }
+html[data-theme="dark"].es-shell .ds-hero h1 { color: #f3f5f7 !important; }

@@ -7383,11 +7383,11 @@ body[data-current-page="faq"] .faq-cta-art img {
 <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
 <link rel="stylesheet" href="how-it-works.css?v=20261023-ux1">
 <link rel="stylesheet" href="design-tokens.css?v=20261023-type1">
-<link rel="stylesheet" href="es-ui.css?v=20261023-shell10">
+<link rel="stylesheet" href="es-ui.css?v=20261024-family8">
 <script src="theme.js?v=20260712-darkmode12"></script>
 <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
 <script src="site-chrome.js?v=20260817-icons1"></script>
-<script src="app-shell.js?v=20261023-shell2"></script>
+<script src="app-shell.js?v=20261024-family1"></script>
 </head>
 <body>
 
@@ -7534,7 +7534,55 @@ body[data-current-page="faq"] .faq-cta-art img {
     </div>
   </section>
 
-  <div class="how-page">
+  <!-- HOW IT WORKS: one unified SaaS section (replaces the long story layout) -->
+  <section class="home-start" aria-labelledby="home-start-title">
+    <div class="home-start__card">
+      <header class="home-start__head">
+        <h2 id="home-start-title">How FrameUp works</h2>
+        <p>Make brand-ready designs yourself in minutes, or hand the brief to the design team.</p>
+      </header>
+      <ol class="home-start__steps">
+        <li class="home-start__step">
+          <span class="home-start__icon es-tile es-tile--blue" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>
+          </span>
+          <span class="home-start__num">01</span>
+          <h3>Choose a workspace</h3>
+          <p>Social, YouTube, Newsletter or Reels, each with approved sizes and layouts ready.</p>
+        </li>
+        <li class="home-start__step">
+          <span class="home-start__icon es-tile es-tile--purple" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>
+          </span>
+          <span class="home-start__num">02</span>
+          <h3>Add your content</h3>
+          <p>Type the headline, pick the team colours and drop in an image. The brand rules are built in.</p>
+        </li>
+        <li class="home-start__step">
+          <span class="home-start__icon es-tile es-tile--green" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+          </span>
+          <span class="home-start__num">03</span>
+          <h3>Export and publish</h3>
+          <p>Download a clearly named, platform-ready file, with every carousel slide in one go.</p>
+        </li>
+      </ol>
+      <div class="home-start__foot">
+        <div class="home-start__cta">
+          <h3>Need something custom?</h3>
+          <p>Send the design team one clear brief with context, copy, deadline and references.</p>
+          <a class="es-btn es-btn--primary" href="design-request.html">Request a design</a>
+        </div>
+        <nav class="home-start__links" aria-label="Help and resources">
+          <a class="home-start__link" href="#logo-guidelines" data-route="logo-guidelines"><span class="es-tile es-tile--amber" aria-hidden="true">G</span><span><strong>Brand guidelines</strong><small>Approved logo, social and video rules</small></span></a>
+          <a class="home-start__link" href="#faq" data-route="faq"><span class="es-tile es-tile--pink" aria-hidden="true">?</span><span><strong>FAQ</strong><small>Answers to common questions</small></span></a>
+          <a class="home-start__link" href="tool-feedback.html"><span class="es-tile es-tile--purple" aria-hidden="true">F</span><span><strong>Tool feedback</strong><small>Report a bug or share an idea</small></span></a>
+        </nav>
+      </div>
+    </div>
+  </section>
+
+  <div class="how-page" hidden>
     <section class="frameup-intro" id="intro" aria-label="How FrameUp works">
       <div class="frameup-intro__copy">
         <p class="frameup-intro__eyebrow">One clear path from idea to publish</p>
