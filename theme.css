@@ -607,21 +607,21 @@ body[data-current-page="faq"] .faq-contact h2 {
   margin: 0 0 6px;
   color: #111111;
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1;
 }
 
 body[data-current-page="faq"] .faq-contact p,
 body[data-current-page="faq"] .faq-contact a {
   margin: 0;
-  font-family: var(--font-acumin-web);
+  font-family: var(--es-font-ui);
   font-size: 16px;
   font-weight: 400;
   line-height: 1.45;
 }
 
-body[data-current-page="faq"] .faq-contact p { color: #53657A; }
-body[data-current-page="faq"] .faq-contact a { color: #0A7DFA; }
+body[data-current-page="faq"] .faq-contact p { color: var(--es-ink-2); }
+body[data-current-page="faq"] .faq-contact a { color: var(--es-brand-text); }
 
 html[data-theme="dark"] body[data-current-page="faq"] .faq-contact h2 { color: var(--theme-dark-text) !important; }
 html[data-theme="dark"] body[data-current-page="faq"] .faq-contact p { color: var(--theme-dark-text-muted) !important; }

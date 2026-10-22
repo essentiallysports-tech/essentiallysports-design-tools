@@ -50,7 +50,7 @@ body.dashboard-page .sidebar-workspace {
 
 body.dashboard-page .sidebar-workspace strong {
   color: var(--fu-text);
-  font-family: var(--fu-font-display);
+  font-family: var(--es-font-ui);
   font-size: 15px;
   font-weight: 700;
   line-height: 1.1;
@@ -68,7 +68,7 @@ body.dashboard-page .sidebar-workspace small {
 body.dashboard-page .sidebar-label {
   margin: 0 12px 8px;
   color: var(--fu-subtle);
-  font-family: var(--fu-font-display);
+  font-family: var(--es-font-ui);
   font-size: 15px !important;
   font-weight: 700;
   letter-spacing: .08em;
@@ -86,7 +86,7 @@ body.dashboard-page .sidebar-nav a {
   border: 1px solid transparent;
   border-radius: var(--fu-radius-sm);
   color: var(--es-ink-2);
-  font-family: var(--fu-font-display);
+  font-family: var(--es-font-ui);
   font-size: 15px !important;
   font-weight: 700;
   transition: color .16s var(--es-ease), background-color .16s var(--es-ease), border-color .16s var(--es-ease);
@@ -153,7 +153,7 @@ body.dashboard-page .command-search {
 }
 
 body.dashboard-page .command-search:focus-within {
-  border-color: #84b9f8;
+  border-color: var(--es-brand-tint);
   box-shadow: 0 0 0 3px var(--fu-focus);
 }
 
@@ -180,7 +180,7 @@ body.dashboard-page .export-preview-close {
   border-radius: var(--fu-radius-sm);
   background: var(--fu-surface);
   color: var(--fu-text);
-  font-family: var(--fu-font-display);
+  font-family: var(--es-font-ui);
   font-size: 15px !important;
   font-weight: 700;
   box-shadow: none;
@@ -189,7 +189,7 @@ body.dashboard-page .export-preview-close {
 
 body.dashboard-page .topbar-button:hover,
 body.dashboard-page .topbar-button:focus-visible {
-  border-color: #b7bec8;
+  border-color: var(--es-ink-3);
   background: var(--fu-surface-muted);
   outline: 0;
 }
@@ -244,7 +244,7 @@ body.dashboard-page .dashboard-welcome h2 {
 
 body.dashboard-page .welcome-kicker {
   margin-bottom: 7px;
-  font-family: var(--fu-font-display);
+  font-family: var(--es-font-ui);
   font-size: 15px !important;
   font-weight: 700;
   letter-spacing: .1em;
@@ -281,7 +281,7 @@ body.dashboard-page .metric-value {
 body.dashboard-page .metric-label {
   margin-top: 5px;
   color: var(--fu-muted);
-  font-family: var(--fu-font-display);
+  font-family: var(--es-font-ui);
   font-size: 15px !important;
   font-weight: 700;
 }
@@ -363,9 +363,9 @@ body.dashboard-page .live-avatar {
   place-items: center;
   border: 0;
   border-radius: 50%;
-  background: #eef2f6;
+  background: var(--es-stage);
   color: var(--es-ink-2);
-  font-family: var(--fu-font-display);
+  font-family: var(--es-font-ui);
   font-size: 15px;
   font-weight: 700;
   line-height: 1;
@@ -484,9 +484,9 @@ body.dashboard-page .role-choice.is-associate .dashboard-choice-trigger {
 
 body.dashboard-page .role-badge.is-admin,
 body.dashboard-page .role-choice.is-admin .dashboard-choice-trigger {
-  border-color: #b9d8fb;
-  background: #eff7ff;
-  color: #175cd3;
+  border-color: var(--es-brand-tint);
+  background: var(--es-brand-soft);
+  color: var(--es-brand-text);
 }
 
 body.dashboard-page .role-badge.is-super-admin,
@@ -499,8 +499,8 @@ body.dashboard-page .role-choice.is-super-admin .dashboard-choice-trigger {
 body.dashboard-page .role-badge.is-server-owner,
 body.dashboard-page .role-choice.is-server-owner .dashboard-choice-trigger {
   border-color: #f5c27a;
-  background: #fff6e9;
-  color: #b54708;
+  background: var(--es-warn-soft);
+  color: var(--es-warn);
 }
 
 body.dashboard-page .dashboard-choice-trigger,
@@ -526,7 +526,7 @@ body.dashboard-page .table-control:focus,
 body.dashboard-page .drawer-grid input:focus,
 body.dashboard-page .drawer-grid select:focus,
 body.dashboard-page .drawer-notes textarea:focus {
-  border-color: #84b9f8;
+  border-color: var(--es-brand-tint);
   outline: 0;
   box-shadow: 0 0 0 3px var(--fu-focus);
 }
@@ -647,7 +647,7 @@ body.dashboard-page .task-priority {
 
 body.dashboard-page .access-request-status.is-approved {
   border-color: #b7e4c7;
-  background: #f0fdf4;
+  background: var(--es-good-soft);
   color: var(--es-good);
 }
 
@@ -655,15 +655,15 @@ body.dashboard-page .access-request-status.is-rejected,
 body.dashboard-page .pill.is-urgent,
 body.dashboard-page .task-priority.is-urgent {
   border-color: #fecaca;
-  background: #fef2f2;
+  background: var(--es-bad-soft);
   color: var(--es-bad);
 }
 
 body.dashboard-page .pill.is-high,
 body.dashboard-page .task-priority.is-high {
   border-color: #fed7aa;
-  background: #fff7ed;
-  color: #b54708;
+  background: var(--es-warn-soft);
+  color: var(--es-warn);
 }
 
 body.dashboard-page .access-request-actions {
@@ -686,7 +686,7 @@ body.dashboard-page .kanban-board {
 
 body.dashboard-page .kanban-column {
   min-width: 240px;
-  background: #f8f9fb;
+  background: var(--es-sunk);
   box-shadow: none !important;
 }
 
@@ -712,7 +712,7 @@ body.dashboard-page .kanban-column header > span {
   place-items: center;
   padding: 0 7px;
   border-radius: 999px;
-  background: #eef2f6;
+  background: var(--es-stage);
   color: var(--es-ink-2);
   font-family: var(--fu-font-body);
   font-size: 15px !important;
@@ -727,7 +727,7 @@ body.dashboard-page .kanban-dropzone {
 
 body.dashboard-page .kanban-dropzone.is-over {
   background: var(--es-brand-soft);
-  box-shadow: inset 0 0 0 1px #84b9f8;
+  box-shadow: inset 0 0 0 1px var(--es-brand-tint);
 }
 
 body.dashboard-page .task-card {
@@ -739,7 +739,7 @@ body.dashboard-page .task-card {
 
 body.dashboard-page .task-card:hover {
   transform: translateY(-1px);
-  border-color: #cbd2da !important;
+  border-color: var(--es-line-2) !important;
   box-shadow: 0 10px 24px rgba(16, 24, 40, .07) !important;
 }
 
@@ -833,7 +833,7 @@ body.dashboard-page .dashboard-choice-option {
 body.dashboard-page .dashboard-choice-option:hover,
 body.dashboard-page .dashboard-choice-option:focus-visible,
 body.dashboard-page .dashboard-choice-option.is-selected {
-  background: #f2f4f7;
+  background: var(--es-stage);
   color: var(--fu-text);
 }
 
@@ -874,7 +874,7 @@ body.dashboard-page .export-list-preview {
   height: 42px;
   border: 1px solid var(--fu-border);
   border-radius: 14px;
-  background: #f2f4f7;
+  background: var(--es-stage);
 }
 
 body.dashboard-page .export-list-title {
@@ -883,7 +883,7 @@ body.dashboard-page .export-list-title {
 
 body.dashboard-page .export-list-title strong {
   color: var(--fu-text);
-  font-family: var(--fu-font-display);
+  font-family: var(--es-font-ui);
   font-size: 16px;
   font-weight: 700;
 }
@@ -1085,10 +1085,10 @@ body.dashboard-page .task-quick-filter,
 body.dashboard-page .task-filter-reset {
   min-height: 38px;
   padding: 0 13px;
-  border: 1px solid #e2e6eb;
+  border: 1px solid var(--es-line);
   border-radius: 14px;
   background: #ffffff;
-  color: #5f6875;
+  color: var(--es-ink-2);
   font-family: var(--fu-font-body);
   font-size: 15px !important;
   font-weight: 700;
@@ -1100,13 +1100,13 @@ body.dashboard-page .task-filter-reset {
 
 body.dashboard-page .task-quick-filter:hover,
 body.dashboard-page .task-filter-reset:hover {
-  border-color: #cfd5dc;
+  border-color: var(--es-line-2);
   color: var(--es-ink);
 }
 
 body.dashboard-page .task-quick-filter.is-active {
-  border-color: #c8cfd7;
-  background: #f1f3f5;
+  border-color: var(--es-line-2);
+  background: var(--es-stage);
   color: var(--es-ink);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .65);
 }
@@ -1133,10 +1133,10 @@ body.dashboard-page .task-filter-controls .filter {
   min-height: 38px;
   height: 38px;
   padding: 0 34px 0 12px;
-  border: 1px solid #e2e6eb;
+  border: 1px solid var(--es-line);
   border-radius: 14px;
   background-color: #ffffff;
-  color: #343b45;
+  color: var(--es-ink);
   font-family: var(--fu-font-body);
   font-size: 15px !important;
   font-weight: 500;
@@ -1165,7 +1165,7 @@ body.dashboard-page .kanban-column {
   min-width: 0;
   border: 1px solid var(--es-line);
   border-radius: 14px;
-  background: #f6f7f8;
+  background: var(--es-stage);
   box-shadow: none;
   overflow: hidden;
   scroll-snap-align: start;
@@ -1184,7 +1184,7 @@ body.dashboard-page .kanban-column > header {
 
 body.dashboard-page .kanban-column > header h2 {
   margin: 0;
-  color: #171b22;
+  color: var(--es-ink);
   font-family: var(--fu-font-display);
   font-size: 18px !important;
   font-weight: 800;
@@ -1199,7 +1199,7 @@ body.dashboard-page .kanban-column > header > span {
   justify-content: center;
   border-radius: 999px;
   background: var(--es-line);
-  color: #55606f;
+  color: var(--es-ink-2);
   font-family: var(--fu-font-body);
   font-size: 15px !important;
   font-weight: 700;
@@ -1223,10 +1223,10 @@ body.dashboard-page .kanban-dropzone .empty.is-compact {
   min-height: 86px;
   display: grid;
   place-items: center;
-  border: 1px dashed #d6dbe1;
+  border: 1px dashed var(--es-line-2);
   border-radius: 14px;
   background: rgba(255, 255, 255, .45);
-  color: #7b8490;
+  color: var(--es-ink-3);
   font-size: 15px !important;
 }
 
@@ -1237,7 +1237,7 @@ body.dashboard-page .task-card {
   gap: 9px;
   min-width: 0;
   padding: 13px;
-  border: 1px solid #e2e6eb;
+  border: 1px solid var(--es-line);
   border-radius: 14px;
   background: #ffffff;
   box-shadow: 0 2px 6px rgba(14, 16, 20, .045);
@@ -1248,7 +1248,7 @@ body.dashboard-page .task-card {
 }
 
 body.dashboard-page .task-card:hover {
-  border-color: #cbd2da;
+  border-color: var(--es-line-2);
   box-shadow: 0 7px 18px rgba(14, 16, 20, .075);
   transform: translateY(-1px);
 }
@@ -1274,7 +1274,7 @@ body.dashboard-page .task-card-heading {
 body.dashboard-page .task-card-reference {
   min-width: 0;
   overflow: hidden;
-  color: #7a8491;
+  color: var(--es-ink-3);
   font-family: var(--fu-font-body);
   font-size: 15px !important;
   font-weight: 500;
@@ -1285,7 +1285,7 @@ body.dashboard-page .task-card-reference {
 
 body.dashboard-page .task-drag-handle {
   flex: 0 0 auto;
-  color: #a1a9b3;
+  color: var(--es-ink-3);
   font-size: 16px !important;
   font-weight: 700;
   letter-spacing: 2px;
@@ -1295,7 +1295,7 @@ body.dashboard-page .task-drag-handle {
 
 body.dashboard-page .task-card h3 {
   margin: 0;
-  color: #151922;
+  color: var(--es-ink);
   font-family: var(--fu-font-display);
   font-size: 22px !important;
   font-weight: 800;
@@ -1305,7 +1305,7 @@ body.dashboard-page .task-card h3 {
 body.dashboard-page .task-card-requester {
   min-width: 0;
   overflow: hidden;
-  color: #697382;
+  color: var(--es-ink-3);
   font-family: var(--fu-font-body);
   font-size: 15px !important;
   font-weight: 400;
@@ -1320,7 +1320,7 @@ body.dashboard-page .task-card-due {
   align-items: center;
   gap: 7px;
   min-width: 0;
-  color: #7a8491;
+  color: var(--es-ink-3);
   font-family: var(--fu-font-body);
   font-size: 15px !important;
   font-weight: 500;
@@ -1334,8 +1334,8 @@ body.dashboard-page .task-card-due input {
   padding: 0 7px;
   border: 1px solid var(--es-line);
   border-radius: 10px;
-  background: #fafbfc;
-  color: #47505d;
+  background: var(--es-sunk);
+  color: var(--es-ink-2);
   font-family: var(--fu-font-body);
   font-size: 15px !important;
   font-weight: 500;
@@ -1349,13 +1349,13 @@ body.dashboard-page .task-card.is-overdue .task-card-due {
 
 body.dashboard-page .task-card.is-overdue .task-card-due input {
   border-color: #f0c7c3;
-  background: #fff8f7;
-  color: #9f2117;
+  background: var(--es-bad-soft);
+  color: var(--es-bad);
 }
 
 body.dashboard-page .task-card.is-due-today .task-card-due input {
   border-color: #ead8af;
-  background: #fffbf1;
+  background: var(--es-warn-soft);
 }
 
 body.dashboard-page .task-card-quick-controls {
@@ -1378,8 +1378,8 @@ body.dashboard-page .task-card-quick-controls .dashboard-choice-trigger {
   padding: 0 9px;
   border: 1px solid var(--es-line);
   border-radius: 10px;
-  background: #fafbfc;
-  color: #49525f;
+  background: var(--es-sunk);
+  color: var(--es-ink-2);
   font-family: var(--fu-font-body);
   font-size: 15px !important;
   font-weight: 700;
@@ -1411,7 +1411,7 @@ body.dashboard-page .drawer-activity-item {
   display: grid;
   gap: 3px;
   padding: 11px 12px;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--es-line);
 }
 
 body.dashboard-page .drawer-activity-item:last-child {
@@ -1427,13 +1427,13 @@ body.dashboard-page .drawer-activity-empty {
 }
 
 body.dashboard-page .drawer-activity-item strong {
-  color: #222831;
+  color: var(--es-ink);
   font-weight: 700;
 }
 
 body.dashboard-page .drawer-activity-item span,
 body.dashboard-page .drawer-activity-empty {
-  color: #747e8b;
+  color: var(--es-ink-3);
   font-weight: 400;
 }
 
@@ -1447,7 +1447,7 @@ body.dashboard-page .task-drawer-panel .drawer-actions {
   z-index: 3;
   margin: 8px -24px -24px;
   padding: 14px 24px 18px;
-  border-top: 1px solid #e7eaee;
+  border-top: 1px solid var(--es-line);
   background: rgba(255, 255, 255, .96);
   backdrop-filter: blur(10px);
 }
@@ -1528,7 +1528,7 @@ body.dashboard-page .kanban-column {
   min-width: 0;
   border: 1px solid var(--es-line);
   border-radius: 14px;
-  background: #f6f7f8;
+  background: var(--es-stage);
   overflow: hidden;
 }
 
@@ -1599,7 +1599,7 @@ body.dashboard-page .task-priority {
   border-radius: 999px;
   background: var(--fu-surface-muted);
   color: var(--es-ink-2);
-  font-family: var(--fu-font-display);
+  font-family: var(--es-font-ui);
   font-size: 15px !important;
   font-weight: 700 !important;
   line-height: 1;
@@ -1615,7 +1615,7 @@ body.dashboard-page .task-type {
   max-width: 100%;
   min-width: 0;
   background: var(--es-sunk);
-  color: #334155;
+  color: var(--es-ink-2);
 }
 
 body.dashboard-page .task-priority,
@@ -1628,14 +1628,14 @@ body.dashboard-page .pill {
 body.dashboard-page .pill.is-high,
 body.dashboard-page .task-priority.is-high {
   border-color: #f3d6a5;
-  background: #fff7ed;
-  color: #b45309;
+  background: var(--es-warn-soft);
+  color: var(--es-warn);
 }
 
 body.dashboard-page .pill.is-urgent,
 body.dashboard-page .task-priority.is-urgent {
   border-color: #f3b8b4;
-  background: #fff1f1;
+  background: var(--es-bad-soft);
   color: var(--es-bad);
 }
 

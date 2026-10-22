@@ -45,7 +45,7 @@ assert.match(
 );
 assert.match(
   source,
-  /\.listicle-row-card\.is-expanded \{[\s\S]*?border-color: #C9D0D9;/,
+  /\.listicle-row-card\.is-expanded \{[\s\S]*?border-color: (?:#C9D0D9|var\(--es-line-2\));/,
   'expanded listicle rows must use a neutral border instead of another blue treatment',
 );
 assert.doesNotMatch(

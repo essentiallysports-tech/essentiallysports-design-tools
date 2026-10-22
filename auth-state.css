@@ -72,19 +72,19 @@ body.auth-state-page {
 }
 
 .auth-state-icon.is-error {
-  background: #fff1f0;
+  background: var(--es-bad-soft);
   color: var(--auth-danger);
 }
 
 .auth-state-icon.is-success {
-  background: #ecfdf3;
+  background: var(--es-good-soft);
   color: var(--auth-success);
 }
 
 .auth-state-spinner {
   width: 22px;
   height: 22px;
-  border: 2px solid #cfe6ff;
+  border: 2px solid var(--es-brand-tint);
   border-top-color: var(--auth-accent);
   border-radius: 50%;
   animation: auth-state-spin .8s linear infinite;
@@ -145,7 +145,7 @@ body.auth-state-page {
 
 .auth-state-input:focus {
   border-color: var(--auth-accent);
-  box-shadow: var(--es-focus);
+  box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
 }
 
 .auth-state-password-toggle {

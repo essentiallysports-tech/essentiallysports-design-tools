@@ -13,7 +13,7 @@ assert(
   'Selected color swatches must not retain the pale-blue outline or halo.',
 );
 assert(
-  /\.swatch\.is-light,[\s\S]*?\.swatch\.is-light\.active\s*\{[^}]*border-color:\s*#D8DEE7\s*!important;/.test(html),
+  /\.swatch\.is-light,[\s\S]*?\.swatch\.is-light\.active\s*\{[^}]*border-color:\s*(?:#D8DEE7|var\(--es-line-2\))\s*!important;/.test(html),
   'White and near-white swatches must retain a subtle neutral-grey boundary.',
 );
 assert(

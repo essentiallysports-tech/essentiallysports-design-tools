@@ -220,7 +220,7 @@ body.feedback-page *::after {
 }
 
 .feedback-type-option input:focus-visible + .feedback-type-card {
-  outline: 2px solid var(--fb-accent);
+  outline:  none;
   outline-offset: 2px;
 }
 
@@ -551,12 +551,12 @@ body.feedback-page *::after {
 
 html[data-theme="dark"] body.feedback-page,
 html[data-theme="dark"] .feedback-main {
-  background: #101010;
+  background: var(--es-ink);
 }
 
 html[data-theme="dark"] .feedback-card {
   border-color: rgba(181, 216, 253, .42);
-  background: #151515;
+  background: var(--es-ink);
 }
 
 html[data-theme="dark"] .feedback-page-title,
@@ -576,7 +576,7 @@ html[data-theme="dark"] .feedback-dropdown-trigger,
 html[data-theme="dark"] .feedback-dropdown-menu,
 html[data-theme="dark"] .feedback-textarea,
 html[data-theme="dark"] .feedback-reset {
-  background-color: #151515;
+  background-color: var(--es-ink);
 }
 
 html[data-theme="dark"] .feedback-type-option input:checked + .feedback-type-card {

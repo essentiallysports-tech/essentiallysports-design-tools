@@ -81,7 +81,7 @@
     --tag-blue-02: var(--es-brand-soft-hover);
     --tag-blue-03: var(--es-brand-soft);
     --tag-blue-04: var(--es-sunk);
-    --tag-cream: #FFF6E6;
+    --tag-cream: var(--es-warn-soft);
     --tag-green: var(--es-good-soft);
     --tag-green-text: var(--es-good);
     --font-ui:  var(--es-font-ui);
@@ -431,7 +431,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     line-height: 1;
     color: #000;
@@ -474,7 +474,7 @@
   }
   .page-version {
     color: var(--text-secondary);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 400;
     line-height: 1;
@@ -485,7 +485,7 @@
     font-size: 15px;
     color: var(--text-secondary);
     margin-top: 4px;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-weight: 700;
   }
   .view-hidden {
@@ -613,7 +613,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     color: var(--text-primary);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     padding: 14px 20px;
@@ -628,7 +628,7 @@
   }
   input[type="text"]:focus, input[type="url"]:focus, textarea:focus {
     border-color: var(--accent);
-    box-shadow: var(--es-focus);
+    box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
   }
   textarea {
     resize: none;
@@ -846,7 +846,7 @@
     transition: border-color .16s var(--es-ease), box-shadow .16s var(--es-ease);
   }
   #stats-single-fields .stats-entry:focus-within {
-    border-color: #1980F4;
+    border-color: var(--es-ink);
     box-shadow: 0 0 0 2px rgba(25, 128, 244, .10);
   }
   #stats-single-fields .stats-entry-grid > .stats-entry::after {
@@ -904,7 +904,7 @@
     display: grid;
     gap: 7px;
     color: var(--text-primary);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
   }
@@ -938,7 +938,7 @@
     transition: border-color 180ms var(--es-ease), box-shadow 180ms var(--es-ease);
   }
   .listicle-row-card.is-expanded {
-    border-color: #C9D0D9;
+    border-color: var(--es-line-2);
     box-shadow: 0 6px 18px rgba(14, 16, 20, 0.055);
   }
   .listicle-row-header {
@@ -968,7 +968,7 @@
     border-radius: 14px;
     background: var(--white);
     color: var(--text-primary);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
@@ -981,11 +981,11 @@
     min-height: 44px;
     margin-top: 2px;
     padding: 0 14px;
-    border: 1px dashed #C9D0D9;
+    border: 1px dashed var(--es-line-2);
     border-radius: 14px;
     background: transparent;
     color: var(--accent);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     cursor: pointer;
@@ -1003,7 +1003,7 @@
     outline-offset: -2px;
   }
   .listicle-row-block-label {
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     line-height: 1;
@@ -1052,7 +1052,7 @@
     display: grid;
     gap: 10px;
     padding: 12px;
-    border-top: 1px solid #E3E7EC;
+    border-top: 1px solid var(--es-line);
     background: var(--es-sunk);
   }
   .listicle-row-primary-grid {
@@ -1077,7 +1077,7 @@
   }
   .listicle-asset-label {
     color: var(--text-primary);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
   }
@@ -1114,7 +1114,7 @@
     color: var(--text-primary);
     cursor: pointer;
     text-align: center;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
   }
@@ -1180,7 +1180,7 @@
   }
   .listicle-asset-name {
     color: var(--text-primary);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     line-height: 1.2;
@@ -1233,7 +1233,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     line-height: 1;
@@ -1254,12 +1254,12 @@
   select:focus {
     border-color: var(--accent);
     background-color: var(--white);
-    box-shadow: var(--es-focus);
+    box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
   }
   select option {
     background: var(--white);
     color: var(--text-primary);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
   }
@@ -1289,7 +1289,7 @@
     border-radius: var(--radius-sm);
     background: var(--white);
     color: var(--text-primary);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     line-height: 1;
@@ -1354,7 +1354,7 @@
     border-radius: var(--radius-sm);
     background: transparent;
     color: var(--text-primary);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     line-height: 1;
@@ -1431,7 +1431,7 @@
     padding-top: 0;
     border-top: 0;
     line-height: 1;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
   }
   .custom-colors-header::before,
   .custom-colors-header::after {
@@ -1474,7 +1474,7 @@
   .swatch:hover { transform: scale(1.1); box-shadow: var(--shadow-md); }
   .swatch.active { border-color: transparent !important; box-shadow: none; }
   .swatch.is-light,
-  .swatch.is-light.active { border-color: #D8DEE7 !important; }
+  .swatch.is-light.active { border-color: var(--es-line-2) !important; }
   .swatch-inner {
     width: 100%;
     height: 100%;
@@ -1681,8 +1681,8 @@
   .export-button.is-export-complete {
     animation: exportFulfilled .62s cubic-bezier(.2,.8,.2,1);
     justify-content: center;
-    background: #3E9765;
-    border-color: #3E9765;
+    background: var(--es-good);
+    border-color: var(--es-good);
   }
   .export-button.is-export-complete [data-export-label] {
     opacity: 1;
@@ -1720,12 +1720,12 @@
     text-align: left;
   }
   .status.ok { color: var(--success); }
-  .status.err { color: #D32F2F; }
+  .status.err { color: var(--es-bad); }
 
   /* â”€â”€â”€ FAQ PAGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   /* FRAME HOME */
   body[data-current-page="frames"] {
-    background: #F8F8F8;
+    background: var(--es-sunk);
   }
   .frame-home {
     width: 100%;
@@ -1738,7 +1738,7 @@
     display: flex;
     align-items: flex-start;
     overflow: hidden;
-    background: #F2F8FF;
+    background: var(--es-brand-soft);
   }
   /* Full-bleed, spans the whole viewport (not constrained to card width). */
   .frame-hero-inner {
@@ -1874,9 +1874,9 @@
     padding: 0 18px;
     color: var(--es-ink);
     background: var(--es-sunk);
-    font-family: var(--font-heading);
-    font-size: clamp(14px, .78vw, 16px);
-    font-weight: 500;
+    font-family: var(--es-font-ui);
+    font-size: 15px;
+    font-weight: 700;
     line-height: 1;
     text-decoration: none;
     box-shadow: 0 18px 36px rgba(14, 16, 20, .08);
@@ -1903,20 +1903,20 @@
   }
   .frame-intro {
     max-width: 680px; margin-top: 16px; color: var(--text-secondary);
-    font-family: var(--font-heading); font-size: 15px; line-height: 1.45;
+    font-family: var(--es-font-ui); font-size: 15px; line-height: 1.45;
   }
   .frame-section-head {
     display: flex; justify-content: space-between; align-items: flex-end;
     gap: 20px; margin: 26px 0 14px;
   }
-  .frame-section-title { font-size: 22px; font-weight: 800; }
+  .frame-section-title { font-size: 22px; font-weight: 800; font-family: var(--es-font-display); }
   .frame-section-count { color: var(--text-secondary); font-size: 15px; }
   .frame-grid {
     display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px;
   }
   .frame-card {
     --card-panel-slide: 62px;
-    min-width: 0; overflow: hidden; contain: paint; border: 1px solid #E7EBF0;
+    min-width: 0; overflow: hidden; contain: paint; border: 1px solid var(--es-line);
     border-radius: var(--radius-md); background: var(--white);
     display: flex; flex-direction: column;
     position: relative;
@@ -1931,7 +1931,7 @@
   }
   .frame-thumbnail {
     aspect-ratio: 16 / 9; position: relative; overflow: hidden; contain: paint;
-    background: #F2F4F7;
+    background: var(--es-stage);
     display: grid; place-items: center;
     margin-bottom: calc(var(--card-panel-slide) * -1);
   }
@@ -1950,7 +1950,7 @@
     position: relative;
     z-index: 2;
     background: var(--white);
-    border-top: 1px solid #E6EAF0;
+    border-top: 1px solid var(--es-line);
     transform: translateY(var(--card-panel-slide));
     transition: transform .32s var(--motion-smooth);
   }
@@ -1959,7 +1959,7 @@
     transform: translateY(0);
   }
   .frame-card-title {
-    margin-top: 0; color: #000000; font-size: 22px; line-height: 1.05; font-weight: 800;
+    margin-top: 0; color: #000000; font-size: 22px; line-height: 1.05; font-weight: 800; font-family: var(--es-font-display);
   }
   .frame-card-subtitle {
     margin-top: 8px;
@@ -2128,7 +2128,7 @@
   }
   #youtube-quote-control .quote-switch > span:first-child {
     color: var(--text-primary);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     line-height: 1;
@@ -2146,7 +2146,7 @@
     background: var(--white);
     color: var(--text-primary);
     cursor: pointer;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     padding: 12px 14px 12px 18px;
@@ -2165,7 +2165,7 @@
     height: 24px;
     flex: 0 0 42px;
     border-radius: 999px;
-    background: #D8E8FA;
+    background: var(--es-brand-soft-hover);
     position: relative;
     transition: background .16s var(--es-ease);
   }
@@ -2252,7 +2252,7 @@
     padding: 0;
   }
   .canvas-ai-search-form input::placeholder {
-    color: #8793A3;
+    color: var(--es-ink-3);
   }
   .canvas-ai-search-form input::-webkit-search-cancel-button {
     -webkit-appearance: none;
@@ -2262,7 +2262,7 @@
     width: 18px;
     height: 18px;
     flex: 0 0 18px;
-    color: #657184;
+    color: var(--es-ink-3);
     margin-left: 10px;
   }
   .canvas-ai-search-submit,
@@ -2289,17 +2289,17 @@
     height: 17px;
   }
   .canvas-ai-search-submit:hover {
-    background: #066FDB;
+    background: var(--es-brand-fill);
   }
   .canvas-ai-search-close:hover {
-    background: #F0F2F5;
+    background: var(--es-stage);
   }
   .canvas-ai-search-close {
     margin-right: 3px;
   }
   .canvas-ai-search-form:focus-within {
-    border-color: #8DC4FF;
-    box-shadow: var(--es-focus);
+    border-color: var(--es-brand-tint);
+    box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
   }
   .canvas-ai-search-form.is-loading .canvas-ai-search-submit svg {
     display: none;
@@ -2347,7 +2347,7 @@
   }
   .carousel-workspace-label {
     color: var(--text-secondary);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 400;
   }
@@ -2367,7 +2367,7 @@
     border: 0;
     border-radius: 14px;
     background: var(--tag-blue-04);
-    color: #566575;
+    color: var(--es-ink-2);
     font-family: var(--font-heading);
     font-size: 16px;
     font-weight: 800;
@@ -2431,8 +2431,8 @@
     width: 100%; min-height: 42px; border: 1.5px solid var(--accent);
     border-radius: var(--button-radius); display: flex; justify-content: center;
     align-items: center; gap: 10px; background: var(--accent); color: var(--white);
-    font-family: var(--font-heading); font-size: clamp(14px, .78vw, 16px);
-    font-weight: 500; line-height: 1; letter-spacing: 0;
+    font-family: var(--es-font-ui); font-size: 15px;
+    font-weight: 700; line-height: 1; letter-spacing: 0;
     text-decoration: none; text-transform: none;
     box-shadow: 0 18px 36px rgba(14, 16, 20, .08);
     outline: none;
@@ -2582,7 +2582,7 @@
   .request-select:focus,
   .request-textarea:focus {
     border-color: var(--accent);
-    box-shadow: var(--es-focus);
+    box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
   }
   .request-help {
     margin-top: 7px;
@@ -2603,7 +2603,7 @@
     line-height: 1.45;
   }
   .request-type-guide.is-visible {
-    display: block;
+    display: block; border: 1px solid var(--es-line);
   }
   .request-file {
     width: 100%;
@@ -2743,7 +2743,7 @@
   }
   .faq-item.is-featured {
     border-color: rgba(10, 125, 250, 0.5);
-    background: linear-gradient(180deg, #F2F8FF 0%, #FFFFFF 100%);
+    background: linear-gradient(180deg, var(--es-brand-soft) 0%, #FFFFFF 100%);
     box-shadow: 0 12px 30px rgba(14, 16, 20,0.06);
   }
   .faq-badge {
@@ -2840,7 +2840,7 @@
     display: block;
     padding: 0 0 28px;
     border: 0;
-    border-bottom: 1px solid #9ABCE0;
+    border-bottom: 1px solid var(--es-ink-3);
     border-radius: 0;
     background: transparent;
     box-shadow: none;
@@ -2850,7 +2850,7 @@
   }
   body[data-current-page="faq"] .faq-item.is-featured,
   body[data-current-page="faq"] .faq-item.is-open {
-    border-color: #9ABCE0;
+    border-color: var(--es-ink-3);
     background: transparent;
   }
   body[data-current-page="faq"] .faq-question {
@@ -2949,7 +2949,7 @@
     margin: 0;
     padding: 0;
     border: 0;
-    color: #6E6E6E;
+    color: var(--es-ink-3);
     font-family: var(--font-acumin-web);
     font-size: 22px;
     font-weight: 400;
@@ -2976,7 +2976,7 @@
     grid-template-columns: minmax(280px, 0.75fr) minmax(420px, 1.25fr);
     align-items: center;
     overflow: hidden;
-    border: 1px solid #D6E8FB;
+    border: 1px solid var(--es-brand-tint);
     border-radius: 14px;
     background: var(--es-brand-soft);
   }
@@ -3013,9 +3013,9 @@ body[data-current-page="faq"] .faq-cta-action {
     border-radius: var(--button-radius);
     background: #FFFFFF;
     color: var(--es-ink);
-    font-family: var(--font-heading);
-    font-size: clamp(14px, .78vw, 16px);
-  font-weight: 500;
+    font-family: var(--es-font-ui);
+    font-size: 15px;
+  font-weight: 700;
   line-height: 1;
   text-decoration: none;
   box-shadow: 0 16px 30px rgba(14, 16, 20, .06);
@@ -3110,7 +3110,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   body[data-current-page="logo-guidelines"],
   body[data-current-page="social-guidelines"],
   body[data-current-page="video-guidelines"] {
-    background: #F4F6F8;
+    background: var(--es-stage);
   }
   .guidelines-hero {
     display: grid;
@@ -3121,7 +3121,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
   .guidelines-kicker {
     color: var(--accent);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 400;
     letter-spacing: .08em;
@@ -3243,7 +3243,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     width: 100%;
     height: auto;
     margin: 0 auto;
-    background: #EAEAEA;
+    background: var(--es-line);
   }
   .guidelines-hero-simple {
     display: block;
@@ -3386,7 +3386,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     align-items: center;
     gap: 4px;
     padding: 4px;
-    border: 1px solid #D8DEE7;
+    border: 1px solid var(--es-line-2);
     border-radius: 14px;
     background: rgba(255, 255, 255, .97);
     box-shadow: 0 6px 18px rgba(14, 16, 20, .10);
@@ -3426,7 +3426,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
   .canvas-image-edit-toolbar button:hover,
   .canvas-image-edit-toolbar button:focus-visible {
-    background: #F1F3F6;
+    background: var(--es-stage);
     outline: 2px solid rgba(10, 125, 250, .18);
     outline-offset: 1px;
   }
@@ -3450,7 +3450,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
   .canvas-image-edit-toolbar .canvas-image-edit-done:hover,
   .canvas-image-edit-toolbar .canvas-image-edit-done:focus-visible {
-    background: #253047;
+    background: var(--es-ink);
   }
   .canvas-image-edit-hint {
     position: absolute;
@@ -3505,7 +3505,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
   .image-tool-button:hover,
   .image-tool-button.is-active {
-    background: #E7F2FF;
+    background: var(--es-brand-soft);
     border-color: var(--es-line);
     color: var(--accent);
   }
@@ -3534,7 +3534,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     background: var(--es-brand-fill);
     color: #FFFFFF;
     cursor: pointer;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: clamp(14px, .78vw, 16px);
     font-weight: 500;
     line-height: 1;
@@ -3608,7 +3608,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   .image-tool-badge {
     font-family: var(--font-ui);
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
   }
   .image-tool-panel {
     position: absolute;
@@ -3692,7 +3692,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   .ai-image-picker-query {
     margin-top: 7px;
     color: var(--text-secondary);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 13px;
     font-weight: 700;
     line-height: 1.35;
@@ -3714,14 +3714,14 @@ body[data-current-page="faq"] .faq-cta-art img {
     border-radius: 999px;
     background: #FFFFFF;
     color: var(--es-ink);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 13px;
     font-weight: 700;
     white-space: nowrap;
   }
   .ai-image-picker-source.is-fallback {
     border-color: #FFD6A1;
-    background: #FFF7EC;
+    background: var(--es-warn-soft);
     color: #8A4D00;
   }
   .ai-image-picker-close {
@@ -3744,7 +3744,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   .ai-image-picker-close:hover,
   .ai-image-picker-close:focus-visible {
     border-color: var(--es-brand);
-    background: #E7F2FF;
+    background: var(--es-brand-soft);
     color: var(--es-brand-text);
     outline: none;
     transform: translateY(-1px);
@@ -3758,7 +3758,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     min-width: 0;
     padding: 0;
     overflow: hidden;
-    border: 1.5px solid #D8EAFE;
+    border: 1.5px solid var(--es-brand-tint);
     border-radius: 20px;
     background: #FFFFFF;
     color: var(--es-ink);
@@ -3780,7 +3780,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     width: 100%;
     aspect-ratio: 4 / 3;
     object-fit: cover;
-    background: #E7F2FF;
+    background: var(--es-brand-soft);
   }
   .ai-image-picker-caption {
     display: block;
@@ -3788,7 +3788,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     padding: 9px 10px 10px;
     overflow: hidden;
     color: var(--es-ink);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 13px;
     font-weight: 700;
     line-height: 1.2;
@@ -3803,7 +3803,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     background: transparent;
     color: #000000;
     cursor: pointer;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     text-align: left;
@@ -3811,7 +3811,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
   .image-upload-option:hover,
   .image-upload-option:focus-visible {
-    background: #E7F2FF;
+    background: var(--es-brand-soft);
     outline: none;
   }
   .image-tool-section {
@@ -3831,9 +3831,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     display: flex;
     gap: 4px;
     padding: 3px;
-    border: 1px solid #E1E6ED;
+    border: 1px solid var(--es-line);
     border-radius: 14px;
-    background: #F4F6F8;
+    background: var(--es-stage);
   }
   .image-asset-tabs.is-single {
     display: none;
@@ -3846,9 +3846,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     flex-wrap: wrap;
     gap: 16px;
     padding: 16px;
-    border: 1px dashed #CBD3DD;
+    border: 1px dashed var(--es-line-2);
     border-radius: 14px;
-    background: #FAFBFC;
+    background: var(--es-sunk);
   }
   .image-context-empty-actions {
     display: inline-flex;
@@ -3878,8 +3878,8 @@ body[data-current-page="faq"] .faq-cta-art img {
   .image-context-empty strong,
   .image-context-media-copy strong {
     overflow: hidden;
-    color: #151A22;
-    font-family: var(--font-heading);
+    color: var(--es-ink);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     line-height: 1.2;
@@ -3901,7 +3901,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     background: var(--es-brand-fill);
     color: #FFFFFF;
     cursor: pointer;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
   }
@@ -3916,18 +3916,18 @@ body[data-current-page="faq"] .faq-cta-art img {
     flex: 0 0 auto;
     min-height: 36px;
     padding: 0 14px;
-    border: 1px solid #D6DCE5;
+    border: 1px solid var(--es-line-2);
     border-radius: 10px;
     background: #FFFFFF;
-    color: #151A22;
+    color: var(--es-ink);
     cursor: pointer;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
   }
   .image-context-ai:hover,
   .image-context-ai:focus-visible {
-    border-color: #AEB8C6;
+    border-color: var(--es-ink-3);
     background: var(--es-sunk);
     outline: 3px solid rgba(10, 125, 250, .10);
     outline-offset: 2px;
@@ -3942,7 +3942,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     align-items: center;
     gap: 12px;
     padding-bottom: 14px;
-    border-bottom: 1px solid #E5E9EF;
+    border-bottom: 1px solid var(--es-line);
   }
   .image-context-thumb {
     width: 48px;
@@ -3950,9 +3950,9 @@ body[data-current-page="faq"] .faq-cta-art img {
     flex: 0 0 48px;
     display: block;
     object-fit: cover;
-    border: 1px solid #D9E0E8;
+    border: 1px solid var(--es-line-2);
     border-radius: 10px;
-    background: #F1F3F6;
+    background: var(--es-stage);
   }
   .image-context-media-copy {
     min-width: 0;
@@ -3987,7 +3987,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     color: var(--es-bad);
   }
   .image-context-actions button:disabled {
-    color: #AEB6C2;
+    color: var(--es-ink-3);
     cursor: default;
   }
   .image-context-precision {
@@ -4010,7 +4010,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     height: 36px;
     box-sizing: border-box;
     padding: 0 9px;
-    border: 1px solid #D8DEE7;
+    border: 1px solid var(--es-line-2);
     border-radius: 10px;
     background: #FFFFFF;
     color: var(--es-ink);
@@ -4019,7 +4019,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     font-weight: 500;
   }
   .image-context-precision input[type="number"]:focus {
-    border-color: var(--es-brand);
+    border-color: var(--es-ink);
     outline: 2px solid rgba(10, 125, 250, .13);
     outline-offset: 1px;
   }
@@ -4155,7 +4155,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     background: #FFFFFF;
     color: var(--text-primary);
     cursor: pointer;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     line-height: 1;
@@ -4231,8 +4231,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     box-shadow: none;
   }
   .tweet-fetch-row:focus-within {
-    border-color: #8DC4FF;
-    box-shadow: var(--es-focus);
+    border-color: var(--es-brand-tint);
+    box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
   }
   .tweet-fetch-button {
     display: inline-flex;
@@ -4247,7 +4247,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     background: var(--accent);
     color: #FFFFFF;
     cursor: pointer;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     line-height: 1;
@@ -4271,7 +4271,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     width: 38px;
     height: 40px;
     border: 0;
-    border-left: 1px solid #DCE8F5;
+    border-left: 1px solid var(--es-brand-tint);
     background: transparent;
     color: var(--es-ink);
     cursor: pointer;
@@ -4300,7 +4300,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     line-height: 1.35;
   }
   .twitter-quote-status.is-error {
-    color: #D32F2F;
+    color: var(--es-bad);
   }
   .panel .advanced-card {
     padding: 0;
@@ -4331,7 +4331,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   .footer-blurb {
     width: min(980px, 100%);
     margin: 18px auto 22px;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 400;
     line-height: 18px;
@@ -4357,7 +4357,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     height: 24px;
   }
   .footer-copy {
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
   }
@@ -4373,7 +4373,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     display: flex;
     flex-direction: column;
     gap: 17px;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 500;
   }
@@ -4698,7 +4698,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       line-height: 1.08;
     }
     .frame-card-title {
-      font-size: clamp(20px, 5.8vw, 22px);
+      font-size: clamp(20px, 5.8vw, 22px); font-family: var(--es-font-display);
     }
     .footer-links {
       gap: 28px;
@@ -4911,7 +4911,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     color: #FFFFFF;
     cursor: pointer;
     padding: 0 16px;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 500;
     line-height: 1;
@@ -4923,7 +4923,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     justify-content: flex-end;
     margin: -22px -22px 0;
     padding: 18px 22px;
-    border-bottom: 1px solid #E9EEF4;
+    border-bottom: 1px solid var(--es-line);
     background: #FFFFFF;
   }
 
@@ -4982,7 +4982,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .studio-zoom-btn:focus-visible {
       outline: none;
       border-color: var(--es-brand);
-      background: #F5F9FE;
+      background: var(--es-brand-soft);
       color: var(--es-brand-text);
     }
 
@@ -5015,9 +5015,9 @@ body[data-current-page="faq"] .faq-cta-art img {
       border: 1px solid transparent;
       border-radius: 10px;
       background: transparent;
-      color: #6F8FAE;
+      color: var(--es-ink-3);
       padding: 0 10px;
-      font-family: var(--font-heading);
+      font-family: var(--es-font-ui);
       font-size: 15px;
       font-weight: 500;
       line-height: 1;
@@ -5042,9 +5042,9 @@ body[data-current-page="faq"] .faq-cta-art img {
       border: 1px solid var(--es-line);
       border-radius: 10px;
       background: var(--es-sunk);
-      color: #5C7088;
+      color: var(--es-ink-3);
       padding: 0 12px;
-      font-family: var(--font-heading);
+      font-family: var(--es-font-ui);
       font-size: 15px;
       font-weight: 500;
       white-space: nowrap;
@@ -5077,7 +5077,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       color: #FFFFFF;
       cursor: pointer;
       padding: 0 16px;
-      font-family: var(--font-heading);
+      font-family: var(--es-font-ui);
       font-size: 15px;
       font-weight: 500;
       line-height: 1;
@@ -5128,8 +5128,8 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     .layers-panel-head {
       padding: 16px 16px 10px;
-      color: #07152A;
-      font-family: var(--font-heading);
+      color: var(--es-ink);
+      font-family: var(--es-font-ui);
       font-size: 13px;
       font-weight: 700;
       letter-spacing: .02em;
@@ -5166,11 +5166,11 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     .layers-panel-row.is-drop-target {
       border-color: var(--es-line);
-      background: #E7F2FF;
+      background: var(--es-brand-soft);
     }
 
     .layers-panel-row.is-hidden-layer .layers-panel-label {
-      color: #9AA6B2;
+      color: var(--es-ink-3);
     }
 
     .layers-panel-grip {
@@ -5193,8 +5193,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     .layers-panel-label {
       flex: 1 1 auto;
       overflow: hidden;
-      color: #07152A;
-      font-family: var(--font-heading);
+      color: var(--es-ink);
+      font-family: var(--es-font-ui);
       font-size: 13px;
       font-weight: 700;
       text-overflow: ellipsis;
@@ -5216,7 +5216,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     .layers-panel-toggle:hover {
-      background: #EFF6FD;
+      background: var(--es-brand-soft);
     }
 
     .layers-panel-toggle svg {
@@ -5258,8 +5258,8 @@ body[data-current-page="faq"] .faq-cta-art img {
       border: 1px solid transparent;
       border-radius: 14px;
       background: transparent;
-      color: #0A0A0A;
-      font-family: var(--font-heading);
+      color: var(--es-ink);
+      font-family: var(--es-font-ui);
       font-size: 13px;
       font-weight: 700;
       line-height: 1;
@@ -5279,13 +5279,13 @@ body[data-current-page="faq"] .faq-cta-art img {
       outline: none;
       border-color: var(--es-line);
       background: #F6F9FC;
-      color: #0A0A0A;
+      color: var(--es-ink);
     }
 
     html[data-studio-shell="on"] .studio-rail-btn[aria-current="page"] {
-      border-color: #C7DDF5;
-      background: #EFF6FD;
-      color: #0A0A0A;
+      border-color: var(--es-brand-tint);
+      background: var(--es-brand-soft);
+      color: var(--es-ink);
     }
 
     html[data-studio-shell="on"] .panel {
@@ -5331,7 +5331,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       margin: 0;
       border: 0;
       border-radius: 0;
-      border-bottom: 1px solid #E9EEF4;
+      border-bottom: 1px solid var(--es-line);
       background: transparent;
       box-shadow: none;
       padding: 22px 22px;
@@ -5360,7 +5360,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       padding: 4px;
       border: 1px solid var(--es-line);
       border-radius: 14px;
-      background: #F4F8FD;
+      background: var(--es-brand-soft);
     }
 
     html[data-studio-shell="on"] .studio-inspector-tab {
@@ -5371,8 +5371,8 @@ body[data-current-page="faq"] .faq-cta-art img {
       justify-content: center;
       border-radius: 14px;
       background: transparent;
-      color: #6F8FAE;
-      font-family: var(--font-heading);
+      color: var(--es-ink-3);
+      font-family: var(--es-font-ui);
       font-size: 13px;
       font-weight: 700;
       line-height: 1;
@@ -5428,18 +5428,18 @@ body[data-current-page="faq"] .faq-cta-art img {
       grid-template-columns: 18px minmax(0, 1fr) auto;
       align-items: center;
       gap: 8px;
-      min-height: 42px;
+      min-height: 44px;
       padding: 0 8px 0 12px;
-      border: 1px solid var(--es-line);
+      border: 0;
       border-radius: 14px;
       background: #FFFFFF;
-      color: #7892AE;
-      transition: border-color .16s var(--es-ease), box-shadow .16s var(--es-ease);
+      color: var(--es-ink-3);
+      transition: border-color .16s var(--es-ease), box-shadow .16s var(--es-ease); box-shadow: inset 0 0 0 1.5px var(--es-line-2);
     }
 
     html[data-studio-shell="on"] .studio-ai-search:focus-within {
-      border-color: var(--es-brand);
-      box-shadow: var(--es-focus);
+      border-color: transparent;
+      box-shadow: inset 0 0 0 2px var(--es-ink), 0 0 0 4px rgba(14, 16, 20, .08);
     }
 
     html[data-studio-shell="on"] .studio-ai-search svg {
@@ -5458,29 +5458,29 @@ body[data-current-page="faq"] .faq-cta-art img {
       outline: 0;
       background: transparent;
       color: var(--es-ink);
-      font-family: var(--font-heading);
+      font-family: var(--es-font-ui);
       font-size: 15px;
-      font-weight: 500;
+      font-weight: 400;
     }
 
     html[data-studio-shell="on"] .studio-ai-search input::placeholder {
-      color: #9DB4CE;
+      color: var(--es-placeholder);
       opacity: 1;
     }
 
     html[data-studio-shell="on"] .studio-ai-search button {
-      min-height: 30px;
+      min-height: 32px;
       padding: 0 12px;
       border: 1px solid var(--es-brand);
       border-radius: 10px;
       background: var(--es-brand-fill);
       color: #FFFFFF;
       cursor: pointer;
-      font-family: var(--font-heading);
+      font-family: var(--es-font-ui);
       font-size: 13px;
       font-weight: 700;
       line-height: 1;
-      transition: background-color .16s var(--es-ease), border-color .16s var(--es-ease), transform .16s var(--es-ease);
+      transition: background-color .16s var(--es-ease), border-color .16s var(--es-ease), transform .16s var(--es-ease); border-color: var(--es-brand-fill);
     }
 
     html[data-studio-shell="on"] .studio-ai-search button:hover,
@@ -5498,23 +5498,23 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .studio-ai-helper {
-      color: #7892AE;
-      font-family: var(--font-heading);
+      color: var(--es-ink-3);
+      font-family: var(--es-font-ui);
       font-size: 13px;
-      font-weight: 500;
-      line-height: 1.35;
+      font-weight: 400;
+      line-height: 1.45;
     }
 
     html[data-studio-shell="on"] .studio-ai-empty {
-      border: 1px dashed var(--es-line);
+      border: 1px solid var(--es-line);
       border-radius: 14px;
       background: var(--es-sunk);
-      color: #6F8FAE;
-      padding: 18px;
-      font-family: var(--font-heading);
+      color: var(--es-ink-3);
+      padding: 24px 16px;
+      font-family: var(--es-font-ui);
       font-size: 15px;
-      font-weight: 700;
-      line-height: 1.35;
+      font-weight: 500;
+      line-height: 1.35; text-align: center;
     }
 
     html[data-studio-shell="on"] .studio-ai-section .ai-image-picker.is-open + .studio-ai-empty {
@@ -5559,14 +5559,14 @@ body[data-current-page="faq"] .faq-cta-art img {
       justify-content: space-between;
       gap: 12px;
       color: var(--es-ink);
-      font-family: var(--font-heading);
+      font-family: var(--es-font-ui);
       font-size: 16px;
       font-weight: 700;
       line-height: 1;
     }
 
     html[data-studio-shell="on"] .studio-dock-kicker {
-      color: #7892AE;
+      color: var(--es-ink-3);
       font-size: 13px;
       font-weight: 700;
     }
@@ -5679,7 +5679,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .panel .tod-label,
     html[data-studio-shell="on"] .panel .color-group-label {
       color: var(--es-ink);
-      font-family: var(--font-heading);
+      font-family: var(--es-font-ui);
       font-size: 16px;
       font-weight: 700;
       letter-spacing: 0;
@@ -5850,7 +5850,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     html[data-studio-shell="on"] .canvas-wrap {
       overflow: visible;
-      border: 1px solid #D7DEE8;
+      border: 1px solid var(--es-line-2);
       background: #FFFFFF;
       box-shadow: 0 18px 45px rgba(14, 16, 20, .12), 0 1px 3px rgba(14, 16, 20, .06);
     }
@@ -5897,7 +5897,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       border-radius: 10px;
       background: transparent;
       color: var(--es-ink-3);
-      font-family: var(--font-heading);
+      font-family: var(--es-font-ui);
       font-size: 15px;
       font-weight: 500;
     }
@@ -5905,7 +5905,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .studio-dock-tools .image-tool-button:hover,
     html[data-studio-shell="on"] .studio-dock-tools .image-tool-button.is-active {
       background: #FFFFFF;
-      color: #151A22;
+      color: var(--es-ink);
       box-shadow: 0 1px 2px rgba(14, 16, 20, .08);
     }
 
@@ -6090,7 +6090,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .studio-zoom-value {
       width: 58px;
       color: var(--es-ink);
-      font-family: var(--font-heading);
+      font-family: var(--es-font-ui);
       font-size: 15px;
       font-weight: 700;
     }
@@ -6316,7 +6316,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .studio-accordion-section.is-open {
-      border-color: #D6DBE2;
+      border-color: var(--es-line-2);
       box-shadow: 0 7px 20px rgba(14, 16, 20, .045);
     }
 
@@ -6336,7 +6336,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       background: #FFFFFF;
       color: var(--es-ink);
       cursor: pointer;
-      font-family: var(--font-heading);
+      font-family: var(--es-font-ui);
       font-size: 15px;
       font-weight: 700;
       line-height: 1.15;
@@ -6345,7 +6345,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .studio-accordion-trigger:hover {
-      background: #F8F9FA;
+      background: var(--es-sunk);
     }
 
     html[data-studio-shell="on"] .studio-accordion-trigger:focus-visible {
@@ -6388,7 +6388,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     html[data-studio-shell="on"] .studio-accordion-section.is-open .studio-accordion-body {
       border-top-width: 1px;
-      border-top-color: #ECEFF3;
+      border-top-color: var(--es-line);
     }
 
     html[data-studio-shell="on"] .studio-accordion-body > * {
@@ -6396,7 +6396,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .studio-accordion-body > * + * {
-      border-top: 1px solid #F0F2F5;
+      border-top: 1px solid var(--es-line);
     }
 
     html[data-studio-shell="on"] .studio-accordion-body .card,
@@ -6611,7 +6611,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       background: #FFFFFF;
       color: var(--es-ink);
       cursor: pointer;
-      font-family: var(--font-heading);
+      font-family: var(--es-font-ui);
       font-size: 16px;
       font-weight: 700;
       line-height: 1.15;
@@ -6655,7 +6655,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .studio-accordion-section.is-open .studio-accordion-body {
-      border-top: 1px solid #ECEFF3;
+      border-top: 1px solid var(--es-line);
     }
 
     html[data-studio-shell="on"] .studio-accordion-body > * {
@@ -6663,7 +6663,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .studio-accordion-body > * + * {
-      border-top: 1px solid #F0F2F5;
+      border-top: 1px solid var(--es-line);
     }
 
     html[data-studio-shell="on"] .studio-accordion-body .card,
@@ -6738,7 +6738,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     html[data-studio-shell="on"] .mobile-editor-title span {
-      color: #6F8FAE;
+      color: var(--es-ink-3);
       font-family: var(--font-ui, "Roboto", Arial, sans-serif);
       font-size: 13px;
       font-weight: 700;
@@ -6748,7 +6748,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     html[data-studio-shell="on"] .mobile-editor-title strong {
       overflow: hidden;
-      color: #07152A;
+      color: var(--es-ink);
       font-family: var(--font-display);
       font-size: 22px;
       font-weight: 800;
@@ -6762,7 +6762,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .mobile-editor-sheet-head button {
       min-height: 44px;
       border-radius: 14px;
-      font-family: var(--font-heading);
+      font-family: var(--es-font-ui);
       font-size: 15px;
       font-weight: 700;
       line-height: 1;
@@ -6833,7 +6833,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     html[data-studio-shell="on"] .canvas-wrap {
       overflow: visible;
-      border: 1px solid #D7DEE8;
+      border: 1px solid var(--es-line-2);
       border-radius: 14px;
       background: #FFFFFF;
       box-shadow: 0 14px 32px rgba(14, 16, 20, .10);
@@ -6902,13 +6902,13 @@ body[data-current-page="faq"] .faq-cta-art img {
       width: 44px;
       height: 4px;
       border-radius: 999px;
-      background: #C9D7E6;
+      background: var(--es-line-2);
       transform: translateX(-50%);
     }
 
     html[data-studio-shell="on"] .mobile-editor-sheet-head strong {
       padding-top: 8px;
-      color: #07152A;
+      color: var(--es-ink);
       font-family: var(--font-display);
       font-size: 22px;
       font-weight: 800;
@@ -6989,7 +6989,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       min-width: 0;
       border: 1px solid transparent;
       background: transparent;
-      color: #5F748C;
+      color: var(--es-ink-3);
       padding: 0 4px;
       white-space: nowrap;
     }
@@ -7017,7 +7017,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
   .widget-preview-window {
     width: 100%;
-    border: 1px solid #DCDFE4;
+    border: 1px solid var(--es-line-2);
     border-radius: 14px;
     background: #FFFFFF;
     box-shadow: 0 18px 40px rgba(14, 16, 20, .08);
@@ -7029,7 +7029,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     gap: 8px;
     padding: 14px 16px;
     background: var(--es-sunk);
-    border-bottom: 1px solid #DCDFE4;
+    border-bottom: 1px solid var(--es-line-2);
   }
   .widget-preview-window-dot {
     width: 11px;
@@ -7061,7 +7061,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
   .widget-field-group + .widget-field-group {
     padding-top: 10px;
-    border-top: 1px solid #F0F2F5;
+    border-top: 1px solid var(--es-line);
   }
   .widget-field-label {
     display: block;
@@ -7151,7 +7151,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     gap: 6px;
     height: 38px;
     padding: 0 12px;
-    border: 1.5px solid #DCDFE4;
+    border: 1.5px solid var(--es-line-2);
     border-radius: var(--radius-sm);
     background: var(--white);
     color: var(--text-primary);
@@ -7179,8 +7179,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     color: var(--white);
   }
   .widget-image-action-btn.is-primary:hover {
-    border-color: #0868D6;
-    background: #0868D6;
+    border-color: var(--es-brand);
+    background: var(--es-brand-fill);
     color: var(--white);
   }
   .widget-paste-link-field {
@@ -7266,11 +7266,11 @@ body[data-current-page="faq"] .faq-cta-art img {
     margin: 8px 0 0;
   }
   .widget-builder-hint.is-error {
-    color: #B3261E;
+    color: var(--es-bad);
   }
   .widget-paste-link-input.is-flash-success {
-    background: #E6F4EA;
-    border-color: #34A853;
+    background: var(--es-good-soft);
+    border-color: var(--es-good);
     transition: background-color .3s var(--es-ease), border-color .3s var(--es-ease);
   }
   [data-widget-upload] {
@@ -7312,7 +7312,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     height: 20px;
     flex: 0 0 34px;
     border-radius: 999px;
-    background: #D8E8FA;
+    background: var(--es-brand-soft-hover);
     position: relative;
     transition: background .16s var(--es-ease);
   }

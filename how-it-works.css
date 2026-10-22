@@ -116,7 +116,7 @@ html { scroll-behavior: smooth; }
    legible, fading to --how-hero-art-tone at the bottom so it hands off
    seamlessly into the logo strip below (no visible seam between sections). */
 .how-hero--art {
-  --how-hero-art-tone: #05070d;
+  --how-hero-art-tone: var(--es-ink);
   background: var(--how-hero-art-tone);
 }
 .how-hero--art .how-hero-stage {
@@ -251,9 +251,9 @@ html { scroll-behavior: smooth; }
   background: var(--es-sunk);
   /* Matches the site button stack (--font-heading on index.html): Roboto
      Condensed 500, not the heavy display face. */
-  font-family: var(--how-body);
-  font-size: clamp(14px, .78vw, 16px);
-  font-weight: 500;
+  font-family: var(--es-font-ui);
+  font-size: 15px;
+  font-weight: 700;
   line-height: 1;
   letter-spacing: 0;
   text-transform: none;
@@ -295,7 +295,7 @@ html { scroll-behavior: smooth; }
   width: 100vw;
   margin-left: -50vw;
   overflow: hidden;
-  background: #05070d;
+  background: var(--es-ink);
   padding: clamp(16px, 2.4vw, 26px) 0;
 }
 .how-brand-strip__track {
@@ -911,7 +911,7 @@ html { scroll-behavior: smooth; }
 .brief-ui-snap small { color: var(--how-muted); font-size: var(--brief-body); line-height: 1.4; }
 .brief-ui-snap em { font-size: var(--brief-meta); font-style: normal; }
 .brief-ui-snap--title small { display: flex; gap: 7px; align-items: center; }
-.brief-ui-snap--title small i { width: 7px; height: 7px; border-radius: 50%; background: #25a55f; }
+.brief-ui-snap--title small i { width: 7px; height: 7px; border-radius: 50%; background: var(--es-good); }
 .brief-ui-snap--copy strong {
   font-family: var(--how-display);
   letter-spacing: .02em;
@@ -1023,16 +1023,16 @@ html { scroll-behavior: smooth; }
 [data-how-stagger].is-visible > * { opacity: 1; transform: translateY(0); }
 
 html[data-theme="dark"] {
-  --how-bg: #0b0b0b;
-  --how-surface: #151515;
-  --how-surface-muted: #202020;
+  --how-bg: var(--es-ink);
+  --how-surface: var(--es-ink);
+  --how-surface-muted: var(--es-ink);
   --how-ink: #f3f6f9;
-  --how-muted: #b6b6b6;
-  --how-line: #343434;
+  --how-muted: var(--es-ink-3);
+  --how-line: var(--es-ink);
   /* Keeps the intro's unrevealed text as subtle against a dark surface
      as #a8b1bd is against a light one (~2.1 contrast, not ~8.4). */
-  --how-line-dim: #4b4b4b;
-  --how-soft-blue: #242424;
+  --how-line-dim: var(--es-ink);
+  --how-soft-blue: var(--es-ink);
   --how-navy: #f5f5f5;
   --how-shadow: none;
 }
@@ -1097,7 +1097,7 @@ html[data-theme="dark"] .how-button--secondary { background: transparent; }
   .how-page .frameup-intro__line { font-size: clamp(28px, 9vw, 40px); line-height: 1.1; }
   .how-page .frameup-intro__credit { margin-top: 24px; font-size: 15px; }
   .how-actions { display: grid; }
-  .how-button { width: 100%; }
+  .how-button { width: 100%; font-family: var(--es-font-ui); font-size: 15px; font-weight: 700; }
   .path-section,
   .workspace-section,
   .request-section,

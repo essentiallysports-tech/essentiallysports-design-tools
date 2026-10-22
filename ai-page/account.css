@@ -16,7 +16,7 @@
   --line: var(--es-line);
   --white: #FFFFFF;
   --accent-light: var(--es-brand-soft);
-  --tag-cream: #FFF6E6;
+  --tag-cream: var(--es-warn-soft);
   --font-ui:  var(--es-font-ui);
   --font-heading:  var(--es-font-display);
   --font-display:  var(--es-font-display);
@@ -197,7 +197,7 @@ textarea {
   position: relative;
   color: var(--es-navy);
   font-size: 15px;
-  font-family: var(--font-heading);
+  font-family: var(--es-font-ui);
   font-weight: 700;
   line-height: 1;
   padding: 10px 12px;
@@ -626,7 +626,7 @@ textarea {
 .avatar-help {
   margin: 0;
   color: var(--es-text-muted);
-  font-family: var(--font-heading);
+  font-family: var(--es-font-ui);
   font-size: 16px;
   font-weight: 500;
   line-height: 1.4;
@@ -682,7 +682,7 @@ textarea {
 .field select:focus,
 .field textarea:focus {
   border-color: var(--es-blue);
-  box-shadow: var(--es-focus);
+  box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
 }
 
 .actions {
@@ -766,8 +766,8 @@ textarea {
 .danger-zone-kicker,
 .account-dialog-kicker {
   margin-bottom: 7px;
-  color: #A62932;
-  font-family: var(--font-heading);
+  color: var(--es-bad);
+  font-family: var(--es-font-ui);
   font-size: 15px;
   font-weight: 700;
   letter-spacing: .08em;
@@ -788,7 +788,7 @@ textarea {
 .account-dialog p {
   max-width: 760px;
   margin: 10px 0 0;
-  color: #68758A;
+  color: var(--es-ink-3);
   font-family: var(--es-font-ui);
   font-size: 15px;
   font-weight: 400;
@@ -797,15 +797,15 @@ textarea {
 
 .danger-btn {
   min-height: 48px;
-  border: 1px solid #C93943;
+  border: 1px solid var(--es-bad);
   border-radius: var(--button-radius);
   background: #FFFFFF;
-  color: #A62932;
+  color: var(--es-bad);
   padding: 0 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-heading);
+  font-family: var(--es-font-ui);
   font-size: 15px;
   font-weight: 700;
   line-height: 1;
@@ -815,17 +815,17 @@ textarea {
 
 .danger-btn:hover,
 .danger-btn:focus-visible {
-  border-color: #A62932;
-  background: #A62932;
+  border-color: var(--es-bad);
+  background: var(--es-bad);
   color: #FFFFFF;
   outline: none;
   transform: translateY(-1px);
 }
 
 .danger-btn:disabled {
-  border-color: #E2E5EA;
-  background: #F1F2F4;
-  color: #9AA1AD;
+  border-color: var(--es-line);
+  background: var(--es-stage);
+  color: var(--es-ink-3);
   cursor: not-allowed;
   transform: none;
 }
@@ -885,7 +885,7 @@ textarea {
   border-radius: 14px;
   background: var(--es-sunk);
   padding: 13px 15px;
-  color: #566174;
+  color: var(--es-ink-2);
   font-family: var(--es-font-ui);
   font-size: 15px;
   line-height: 1.4;
@@ -902,7 +902,7 @@ textarea {
 
 .delete-confirm-field > span {
   color: var(--es-navy);
-  font-family: var(--font-heading);
+  font-family: var(--es-font-ui);
   font-size: 16px;
   font-weight: 700;
 }
@@ -910,7 +910,7 @@ textarea {
 .account-dialog-status {
   min-height: 20px;
   margin-top: 10px;
-  color: #A62932;
+  color: var(--es-bad);
   font-family: var(--es-font-ui);
   font-size: 15px;
   line-height: 1.4;
@@ -965,7 +965,7 @@ textarea {
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  background: #D7E7F8;
+  background: var(--es-brand-soft-hover);
   cursor: pointer;
   transition: background .16s var(--es-ease);
 }
@@ -1063,7 +1063,7 @@ textarea {
 }
 
 .footer-copy {
-  font-family: var(--font-heading);
+  font-family: var(--es-font-ui);
   font-size: 15px;
   font-weight: 700;
 }
@@ -1081,7 +1081,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 17px;
-  font-family: var(--font-heading);
+  font-family: var(--es-font-ui);
   font-size: 15px;
   font-weight: 500;
 }
@@ -1268,7 +1268,7 @@ textarea {
   align-self: start;
   padding: 4px;
   border-radius: 14px;
-  background: #f1f3f5;
+  background: var(--es-stage);
 }
 
 .settings-choice button {
@@ -1309,7 +1309,7 @@ textarea {
 .settings-page .field select {
   min-height: 48px;
   padding: 0 42px 0 14px;
-  border: 1px solid #d7dce2;
+  border: 1px solid var(--es-line-2);
   border-radius: 14px;
   font-family: var(--es-font-ui);
   font-size: 15px;
@@ -1410,7 +1410,7 @@ textarea {
   height: 52px;
   margin-bottom: 24px;
   border-radius: 14px;
-  background: #f1f3f5;
+  background: var(--es-stage);
   color: var(--es-ink);
 }
 

@@ -132,9 +132,9 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     padding: 5px;
-    border: 1px solid #E0E5ED;
+    border: 1px solid var(--es-line);
     border-radius: 14px;
-    background: #F2F4F7;
+    background: var(--es-stage);
   }
   .login-mode-tab {
     min-height: 42px;
@@ -143,7 +143,7 @@
     background: transparent;
     color: var(--text-blue);
     cursor: pointer;
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 16px;
     font-weight: 700;
     transition: background-color .26s var(--es-ease), color .26s var(--es-ease), box-shadow .26s var(--es-ease), transform .26s var(--es-ease);
@@ -254,7 +254,7 @@
   .login-note strong { color: var(--text-blue); }
   .login-error {
     display: none;
-    color: #C62828;
+    color: var(--es-bad);
   }
   .login-error.is-success {
     color: var(--es-good);
@@ -295,7 +295,7 @@
   .login-confirmation p {
     max-width: 480px;
     margin: 16px 0 0;
-    color: #5E6C7B;
+    color: var(--es-ink-3);
     font-size: 16px;
     font-weight: 400;
     line-height: 1.5;
@@ -314,7 +314,7 @@
   }
   .login-secondary-button {
     min-height: 44px;
-    border: 1px solid #D8DEE8;
+    border: 1px solid var(--es-line-2);
     border-radius: 14px;
     background: #FFFFFF;
     color: var(--es-ink);
@@ -350,7 +350,7 @@
   }
   .showcase-eyebrow {
     color: var(--accent);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     letter-spacing: .08em;
@@ -368,7 +368,7 @@
   .showcase-heading p {
     max-width: 640px;
     margin-top: 20px;
-    color: #53657A;
+    color: var(--es-ink-2);
     font-size: clamp(16px, 1.35vw, 19px);
     font-weight: 400;
     line-height: 1.55;
@@ -420,7 +420,7 @@
   }
   .feature-index {
     color: var(--accent);
-    font-family: var(--font-heading);
+    font-family: var(--es-font-ui);
     font-size: 15px;
     font-weight: 700;
     letter-spacing: .08em;
@@ -437,7 +437,7 @@
   }
   .feature-copy p {
     margin-top: 20px;
-    color: #53657A;
+    color: var(--es-ink-2);
     font-size: clamp(16px, 1.2vw, 18px);
     font-weight: 400;
     line-height: 1.58;
@@ -483,7 +483,7 @@
     top: 70px;
     width: min(640px, 100%);
     height: 252px;
-    border: 1.5px solid #7DBBFF;
+    border: 1.5px solid var(--es-brand-tint);
     border-left: 0;
     pointer-events: none;
   }
@@ -493,7 +493,7 @@
     position: absolute;
     width: 9px;
     height: 9px;
-    border: 1.5px solid #7DBBFF;
+    border: 1.5px solid var(--es-brand-tint);
     background: var(--bg-page);
   }
   .selection-box::before { right: -5px; top: -5px; }
@@ -502,7 +502,7 @@
     position: absolute;
     width: 9px;
     height: 9px;
-    border: 1.5px solid #7DBBFF;
+    border: 1.5px solid var(--es-brand-tint);
     background: var(--bg-page);
   }
   .selection-corner.is-top { left: 138px; top: -5px; }
@@ -513,8 +513,8 @@
     top: 31px;
     width: 48px;
     height: 46px;
-    border-left: 1.5px solid #B7DAFF;
-    border-top: 1.5px solid #B7DAFF;
+    border-left: 1.5px solid var(--es-brand-tint);
+    border-top: 1.5px solid var(--es-brand-tint);
   }
   .selection-caption {
     position: absolute;
@@ -522,10 +522,10 @@
     bottom: -44px;
     min-width: 206px;
     height: 38px;
-    border-left: 1.5px solid #A6CFFF;
-    border-top: 1.5px solid #A6CFFF;
-    border-bottom: 1.5px solid #A6CFFF;
-    color: #24364A;
+    border-left: 1.5px solid var(--es-brand-tint);
+    border-top: 1.5px solid var(--es-brand-tint);
+    border-bottom: 1.5px solid var(--es-brand-tint);
+    color: var(--es-ink);
     background: rgba(246, 251, 255, .62);
     font-size: 22px;
     font-weight: 800;
@@ -539,7 +539,7 @@
     top: -1.5px;
     width: 74px;
     height: 38px;
-    border-top: 1.5px solid #A6CFFF;
+    border-top: 1.5px solid var(--es-brand-tint);
   }
   .doc-chip {
     position: absolute;
@@ -559,9 +559,9 @@
     top: 20px;
     width: 62px;
     height: 72px;
-    border: 1.5px solid #C8DEF7;
+    border: 1.5px solid var(--es-brand-tint);
     border-radius: 14px;
-    background: linear-gradient(135deg, transparent 0 19px, #EAF5FF 20px), #FFFFFF;
+    background: linear-gradient(135deg, transparent 0 19px, var(--es-brand-soft) 20px), #FFFFFF;
     box-shadow: 0 12px 30px rgba(14, 16, 20, .08);
   }
   .doc-chip::after {
@@ -599,7 +599,7 @@
     justify-content: center;
     height: 18px;
     padding: 0 8px;
-    background: #0F6A4F;
+    background: var(--es-good);
     color: #FFFFFF;
     font-size: 12px;
     font-weight: 800;
@@ -634,7 +634,7 @@
   .mini-playbook-copy span {
     display: block;
     margin-top: 4px;
-    color: #7B8FA6;
+    color: var(--es-ink-3);
     font-size: 12px;
     line-height: 1.25;
   }
@@ -673,7 +673,7 @@
   .text-design-field {
     height: 58px;
     margin: 0 0 24px 34px;
-    border: 1.5px solid #A9D2FF;
+    border: 1.5px solid var(--es-brand-tint);
     border-right: 0;
     border-radius: 14px 0 0 14px;
     display: flex;
@@ -702,7 +702,7 @@
     width: 116px;
     background: #FFFFFF;
     color: #000000;
-    border: 1px solid #E5EEF8;
+    border: 1px solid var(--es-brand-soft);
   }
   .ghost-export {
     width: 112px;

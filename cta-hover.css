@@ -128,9 +128,9 @@
 }
 
 .danger-btn:not(:disabled):hover {
-  border-color: #A62932 !important;
+  border-color: var(--es-bad) !important;
   background-color: #FFFFFF !important;
-  color: #A62932 !important;
+  color: var(--es-bad) !important;
 }
 
 html[data-theme="dark"] :where(
@@ -174,13 +174,13 @@ html[data-theme="dark"] :where(
   .mobile-menu-account-action
 ):not(:disabled):not(.is-disabled):hover {
   border-color: var(--es-line-2) !important;
-  background-color: var(--theme-dark-surface-raised, #1A1A1A) !important;
+  background-color: var(--theme-dark-surface-raised, var(--es-ink)) !important;
   color: var(--theme-dark-text, var(--es-sunk)) !important;
 }
 
 html[data-theme="dark"] .danger-btn:not(:disabled):hover {
   border-color: #E9878E !important;
-  background-color: var(--theme-dark-surface-raised, #1A1A1A) !important;
+  background-color: var(--theme-dark-surface-raised, var(--es-ink)) !important;
   color: #F5A0A6 !important;
 }
 

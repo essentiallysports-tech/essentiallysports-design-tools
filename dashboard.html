@@ -310,7 +310,7 @@
     .table-control:focus,
     .note-input:focus {
       border-color: var(--es-blue);
-      box-shadow: var(--es-focus);
+      box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
     }
 
     table {
@@ -373,8 +373,8 @@
       white-space: nowrap;
     }
 
-    .pill.is-urgent { background: #FFF1F1; border-color: #F5B8B2; color: var(--danger); }
-    .pill.is-high { background: #FFF6E6; border-color: #FAD79B; color: #9A5A00; }
+    .pill.is-urgent { background: var(--es-bad-soft); border-color: #F5B8B2; color: var(--danger); }
+    .pill.is-high { background: var(--es-warn-soft); border-color: #FAD79B; color: var(--es-warn); }
     .pill.is-done { background: var(--es-good-soft); border-color: #B7DEC4; color: var(--success); }
 
     .empty {

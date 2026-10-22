@@ -449,3 +449,29 @@ body.pickem-page *::after {
     width: 100%;
   }
 }
+
+/* Respect the hidden attribute; display:flex above would otherwise override it. */
+.pickem-sticky-bar[hidden],
+.pickem-sticky-bar [hidden] {
+  display: none !important;
+}
+
+/* ES action bar: solid surface, hairline on top, upward shadow, safe-area padding. */
+.pickem-sticky-bar {
+  padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top-color: var(--es-line);
+  box-shadow: var(--es-shadow-bar);
+}
+
+.pickem-sticky-bar .btn-primary {
+  min-height: 48px;
+  padding: 0 24px;
+  border: 1px solid var(--es-brand-fill);
+  border-radius: var(--es-radius-control);
+  cursor: pointer;
+  transition: background-color var(--es-dur) var(--es-ease), transform var(--es-dur-press) var(--es-ease);
+}
+
+.pickem-sticky-bar .btn-primary:active {
+  transform: scale(.98);
+}

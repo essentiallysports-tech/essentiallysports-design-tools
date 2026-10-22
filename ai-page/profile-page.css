@@ -86,7 +86,7 @@ body.profile-page {
 
 .profile-back-link:hover,
 .profile-back-link:focus-visible {
-  border-color: #B8C0CC;
+  border-color: var(--es-ink-3);
   background: var(--es-sunk);
   outline: none;
   transform: translateY(-1px);
@@ -118,7 +118,7 @@ body.profile-page {
 .profile-page .large-avatar {
   width: 112px;
   height: 112px;
-  border: 1px solid #D6DCE5;
+  border: 1px solid var(--es-line-2);
   background-color: var(--profile-blue);
   font-size: 36px;
 }
@@ -163,7 +163,7 @@ body.profile-page {
 
 .profile-page .avatar-upload-label:hover,
 .profile-page .avatar-upload-label:focus-within {
-  border-color: #B8C0CC;
+  border-color: var(--es-ink-3);
   background: var(--es-sunk);
   color: var(--profile-ink);
 }
@@ -201,7 +201,7 @@ body.profile-page {
 .profile-page .field select,
 .profile-page .field textarea {
   min-height: 52px;
-  border: 1px solid #D8DEE7;
+  border: 1px solid var(--es-line-2);
   border-radius: 14px;
   color: var(--profile-ink);
   padding: 0 15px;
@@ -219,7 +219,7 @@ body.profile-page {
 .profile-page .field select:focus,
 .profile-page .field textarea:focus {
   border-color: var(--profile-blue);
-  box-shadow: var(--es-focus);
+  box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
 }
 
 .profile-page .actions {
@@ -287,10 +287,10 @@ body.profile-page {
 
 html[data-theme="dark"] body.profile-page {
   --profile-ink: #F5F7FA;
-  --profile-muted: #B6B6B6;
-  --profile-line: #3A3A3A;
-  --profile-surface: #151515;
-  --profile-canvas: #0C0C0C;
+  --profile-muted: var(--es-ink-3);
+  --profile-line: var(--es-ink);
+  --profile-surface: var(--es-ink);
+  --profile-canvas: var(--es-ink);
 }
 
 html[data-theme="dark"] .profile-page .account-main {
@@ -303,14 +303,14 @@ html[data-theme="dark"] .profile-page .field input,
 html[data-theme="dark"] .profile-page .field select,
 html[data-theme="dark"] .profile-page .field textarea {
   border-color: var(--profile-line);
-  background: #191919;
+  background: var(--es-ink);
   color: var(--profile-ink);
 }
 
 html[data-theme="dark"] .profile-page .profile-back-link:hover,
 html[data-theme="dark"] .profile-page .avatar-upload-label:hover {
-  border-color: #4A4A4A;
-  background: #222222;
+  border-color: var(--es-ink);
+  background: var(--es-ink);
 }
 
 @media (max-width: 900px) {

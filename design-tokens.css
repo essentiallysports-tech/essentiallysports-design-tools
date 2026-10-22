@@ -150,13 +150,13 @@ html[data-theme="dark"] {
 }
 
 /* Visible focus everywhere: a white gap, then an ink ring. */
-:is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+:is(a, button, summary, [role="button"], [role="tab"], [tabindex]:not(input, select, textarea)):focus-visible {
   outline: 2px solid var(--es-ink) !important;
   outline-offset: 2px !important;
 }
 
 /* In dark mode a mid blue ring reads on both dark and kept-light surfaces. */
-html[data-theme="dark"] :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+html[data-theme="dark"] :is(a, button, summary, [role="button"], [role="tab"], [tabindex]:not(input, select, textarea)):focus-visible {
   outline-color: #5aa8ff !important;
 }
 
@@ -280,12 +280,12 @@ html[data-studio-shell="on"] .studio-inspector-tab {
   color: var(--es-ink-2);
   font-family: var(--es-font-ui);
   font-size: var(--es-type-control-size);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 html[data-studio-shell="on"] .studio-inspector-tab.is-active {
-  color: var(--es-action-primary);
-  font-weight: 800;
+  color: var(--es-ink);
+  font-weight: 700;
 }
 
 html[data-studio-shell="on"] .studio-accordion-trigger {
@@ -304,7 +304,7 @@ html[data-studio-shell="on"] .panel .widget-field-label,
 html[data-studio-shell="on"] .panel .listicle-field-label {
   color: var(--es-ink);
   font-family: var(--es-font-ui);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.25;
 }
@@ -349,7 +349,7 @@ html[data-studio-shell="on"] .studio-primary-controls .select-dropdown-trigger {
 
 html[data-studio-shell="on"] .studio-primary-controls :is(select, .select-dropdown-trigger) {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 html[data-studio-shell="on"] .panel :is(
@@ -370,7 +370,7 @@ body.reels-page .reels-panel-head h2,
 body.reels-page .reels-timeline-head strong,
 body.reels-page .reels-lower-thirds summary > span {
   color: var(--es-text-strong);
-  font-family: var(--es-font-ui);
+  font-family: var(--es-font-display);
   font-size: var(--es-type-panel-title-size);
   font-weight: var(--es-type-panel-title-weight);
   line-height: var(--es-type-panel-title-line);
@@ -443,7 +443,7 @@ body.reels-page :is(
 
 #ai-workspace .workspace-card-title {
   color: var(--es-text-primary);
-  font-family: var(--es-font-ui);
+  font-family: var(--es-font-display);
   font-size: var(--es-type-panel-title-size);
   font-weight: var(--es-type-panel-title-weight);
   line-height: var(--es-type-panel-title-line);
@@ -468,7 +468,7 @@ body.dashboard-page .dashboard-topbar h1 {
 
 body.dashboard-page .dashboard-app .panel-title {
   color: var(--es-text-strong);
-  font-family: var(--es-font-ui);
+  font-family: var(--es-font-display);
   font-size: var(--es-type-panel-title-size);
   font-weight: var(--es-type-panel-title-weight);
   line-height: var(--es-type-panel-title-line);
@@ -488,4 +488,343 @@ body.dashboard-page .dashboard-app .panel-subtitle {
     --es-type-page-title-size: 32px;
     --es-type-workspace-title-size: 22px;
   }
+}
+
+/* ------------------------------------------------------------------------
+ * ES components: one standard per control family.
+ * Primary = brand fill, white 700 label. Secondary = white, line-2 outline.
+ * Tool controls 40px, marketing CTAs 48px, fields 44px+ with a 14px radius.
+ * ---------------------------------------------------------------------- */
+
+/* Marketing CTAs (home hero, workspace cards, FAQ, how-it-works) */
+html:not([data-theme="dark"]) :is(.frame-hero-cta, .frame-cta, .faq-cta-action, .how-button){
+  min-height: 48px !important;
+  padding: 0 24px !important;
+  border-radius: var(--es-radius-control) !important;
+  font-family: var(--es-font-ui) !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  transition: background-color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease), transform var(--es-dur-press) var(--es-ease) !important;
+}
+
+html:not([data-theme="dark"]) :is(.frame-hero-cta.is-primary, .frame-cta, .faq-cta-action.is-primary, .how-button--primary){
+  border-color: var(--es-brand-fill) !important;
+  background: var(--es-brand-fill) !important;
+  color: #ffffff !important;
+}
+
+html:not([data-theme="dark"]) :is(.frame-hero-cta.is-primary, .frame-cta, .faq-cta-action.is-primary, .how-button--primary):hover{
+  border-color: var(--es-brand-fill-press) !important;
+  background: var(--es-brand-fill-press) !important;
+}
+
+html:not([data-theme="dark"]) :is(.frame-hero-cta:not(.is-primary), .faq-cta-action:not(.is-primary)){
+  border: 0 !important;
+  background: var(--es-bg) !important;
+  box-shadow: inset 0 0 0 1.5px var(--es-line-2) !important;
+  color: var(--es-ink) !important;
+}
+
+html:not([data-theme="dark"]) :is(.frame-hero-cta:not(.is-primary), .faq-cta-action:not(.is-primary)):hover{
+  background: var(--es-sunk) !important;
+}
+
+html:not([data-theme="dark"]) :is(.frame-hero-cta, .frame-cta, .faq-cta-action, .how-button):active{
+  transform: scale(.98);
+}
+
+/* Builder tool buttons */
+html:not([data-theme="dark"])[data-studio-shell="on"] :is(.studio-export-btn, .image-context-upload, .image-context-ai, .canvas-upload-button, .quote-switch){
+  min-height: 40px !important;
+  border-radius: var(--es-radius-control) !important;
+  font-family: var(--es-font-ui) !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+
+html:not([data-theme="dark"])[data-studio-shell="on"] :is(.studio-export-btn, .image-context-upload, .canvas-upload-button:not(.canvas-upload-button-secondary)){
+  border-color: var(--es-brand-fill) !important;
+  background: var(--es-brand-fill) !important;
+  color: #ffffff !important;
+}
+
+html:not([data-theme="dark"])[data-studio-shell="on"] :is(.studio-export-btn, .image-context-upload, .canvas-upload-button:not(.canvas-upload-button-secondary)):hover{
+  border-color: var(--es-brand-fill-press) !important;
+  background: var(--es-brand-fill-press) !important;
+}
+
+html:not([data-theme="dark"])[data-studio-shell="on"] :is(.image-context-ai, .canvas-upload-button-secondary, .quote-switch){
+  border-color: var(--es-line-2) !important;
+  background: var(--es-bg) !important;
+  color: var(--es-ink) !important;
+}
+
+html:not([data-theme="dark"])[data-studio-shell="on"] :is(.image-context-ai, .canvas-upload-button-secondary, .quote-switch):hover{
+  border-color: var(--es-ink-3) !important;
+  background: var(--es-sunk) !important;
+}
+
+html:not([data-theme="dark"])[data-studio-shell="on"] .studio-zoom-btn{
+  min-height: 40px !important;
+  border-color: var(--es-line-2) !important;
+}
+
+/* Segmented inspector tabs: hairline, not shadow, for the active segment */
+html:not([data-theme="dark"])[data-studio-shell="on"] .studio-inspector-tab.is-active{
+  box-shadow: inset 0 0 0 1px var(--es-line), 0 1px 2px rgb(14 16 20 / .06) !important;
+}
+
+/* Fields: 14px radius, 1.5px line-2 outline, ink-3 on hover, 2px ink + halo on focus */
+html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input){
+  border: 1.5px solid var(--es-line-2) !important;
+  border-radius: var(--es-radius-control) !important;
+  background-color: var(--es-bg);
+  color: var(--es-ink);
+  transition: border-color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease);
+}
+
+html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input):hover{
+  border-color: var(--es-ink-3) !important;
+}
+
+html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input):focus,
+html:not([data-theme="dark"])[data-studio-shell="on"] .panel .select-dropdown.is-open > .select-dropdown-trigger{
+  border-color: var(--es-ink) !important;
+  box-shadow: inset 0 0 0 .5px var(--es-ink), 0 0 0 4px rgb(14 16 20 / .08) !important;
+  outline: none !important;
+}
+
+html:not([data-theme="dark"])[data-studio-shell="on"] .panel select.is-enhanced-select{
+  font-size: 15px !important;
+}
+
+html:not([data-theme="dark"])[data-studio-shell="on"] .panel ::placeholder{
+  color: var(--es-placeholder) !important;
+  opacity: 1;
+}
+
+/* Segmented control track is neutral; brand colour is for accents only. */
+html:not([data-theme="dark"])[data-studio-shell="on"] .studio-inspector-tabs{
+  background: var(--es-sunk) !important;
+  border-color: var(--es-line) !important;
+}
+
+/* Accordion cards: hairline in every state, no drop shadow. */
+html:not([data-theme="dark"])[data-studio-shell="on"] .studio-accordion-section,
+html:not([data-theme="dark"])[data-studio-shell="on"] .studio-accordion-section.is-open{
+  border-color: var(--es-line) !important;
+  box-shadow: none !important;
+}
+
+/* Switches: neutral off, brand fill on; the row itself stays neutral. */
+html:not([data-theme="dark"]) .quote-switch-track{
+  background: var(--es-line-2) !important;
+}
+
+html:not([data-theme="dark"]) .quote-switch.is-active{
+  border-color: var(--es-line-2) !important;
+  background: var(--es-bg) !important;
+}
+
+html:not([data-theme="dark"]) .quote-switch.is-active .quote-switch-track{
+  background: var(--es-brand-fill) !important;
+}
+
+html:not([data-theme="dark"]) .quote-switch-track::before{
+  box-shadow: 0 1px 2px rgb(14 16 20 / .2) !important;
+}
+
+/* Menus and popovers float: hairline + the ES float shadow, nested 10px items. */
+html:not([data-theme="dark"]) :is(.select-dropdown-menu, .nav-dropdown-menu, .profile-dropdown){
+  border: 1px solid var(--es-line) !important;
+  box-shadow: var(--es-shadow-float) !important;
+}
+
+html:not([data-theme="dark"]) .select-dropdown-option{
+  min-height: 40px;
+  border-radius: var(--es-radius-chip) !important;
+}
+
+html:not([data-theme="dark"]) .select-dropdown-option:not(.is-selected):hover{
+  background: var(--es-sunk) !important;
+  color: var(--es-ink) !important;
+}
+
+html:not([data-theme="dark"]) .select-dropdown-option.is-selected{
+  background: var(--es-brand-soft) !important;
+  color: var(--es-brand-text) !important;
+  font-weight: 700 !important;
+}
+
+/* ---- Page-level controls (design request, feedback, account, AI, reels) ---- */
+
+/* Buttons read in Roboto 700 at 15px. */
+html:not([data-theme="dark"]) :is(.btn, .primary-btn, .secondary-btn, .danger-btn, .workspace-cta, .feedback-submit, .feedback-back-link, .reels-btn){
+  border-radius: var(--es-radius-control) !important;
+  font-family: var(--es-font-ui) !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Primary: brand fill, white label, no glow. */
+html:not([data-theme="dark"]) :is(.btn-primary, .primary-btn, .workspace-cta, .feedback-submit, .reels-btn.is-primary, .reels-btn.is-secondary):not(:disabled){
+  border-color: var(--es-brand-fill) !important;
+  background: var(--es-brand-fill) !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+}
+
+html:not([data-theme="dark"]) :is(.btn-primary, .primary-btn, .workspace-cta, .feedback-submit, .reels-btn.is-primary, .reels-btn.is-secondary):not(:disabled):hover{
+  border-color: var(--es-brand-fill-press) !important;
+  background: var(--es-brand-fill-press) !important;
+}
+
+/* Secondary / quiet: white, line-2 outline, ink label. */
+html:not([data-theme="dark"]) :is(.btn-secondary:not(.feedback-back-link), .secondary-btn, .reels-btn.is-quiet):not(:disabled){
+  border-color: var(--es-line-2) !important;
+  background: var(--es-bg) !important;
+  color: var(--es-ink) !important;
+}
+
+html:not([data-theme="dark"]) :is(.btn-secondary:not(.feedback-back-link), .secondary-btn, .reels-btn.is-quiet):not(:disabled):hover{
+  border-color: var(--es-ink-3) !important;
+  background: var(--es-sunk) !important;
+}
+
+/* Disabled: sunk fill, ink-3 label, hairline. */
+html:not([data-theme="dark"]) :is(.btn, .primary-btn, .secondary-btn, .feedback-submit, .reels-btn, .studio-export-btn):disabled{
+  border-color: var(--es-line) !important;
+  background: var(--es-sunk) !important;
+  box-shadow: none !important;
+  color: var(--es-ink-3) !important;
+  cursor: not-allowed;
+}
+
+/* Fields: white (sunk means disabled), 14px radius, line-2 outline, ink focus. */
+html:not([data-theme="dark"]) :is(.request-input, .request-select, .request-textarea, .request-dropdown-trigger:not([class*="priority-"]), .feedback-textarea, .feedback-dropdown-trigger, .reels-native-select, .reels-choice-trigger, .account-main input:not([type="checkbox"]):not([type="radio"]), .account-main select, .account-main textarea){
+  border: 1.5px solid var(--es-line-2) !important;
+  border-radius: var(--es-radius-control) !important;
+  background-color: var(--es-bg) !important;
+  color: var(--es-ink) !important;
+}
+
+html:not([data-theme="dark"]) :is(.request-input, .request-select, .request-textarea, .request-dropdown-trigger:not([class*="priority-"]), .feedback-textarea, .feedback-dropdown-trigger, .reels-native-select, .reels-choice-trigger, .account-main input:not([type="checkbox"]):not([type="radio"]), .account-main select, .account-main textarea):hover{
+  border-color: var(--es-ink-3) !important;
+}
+
+html:not([data-theme="dark"]) :is(.request-input, .request-select, .request-textarea, .feedback-textarea, .reels-native-select, .account-main input:not([type="checkbox"]):not([type="radio"]), .account-main select, .account-main textarea):focus,
+html:not([data-theme="dark"]) :is(.request-dropdown, .feedback-dropdown, .reels-choice).is-open > :is(.request-dropdown-trigger, .feedback-dropdown-trigger, .reels-choice-trigger){
+  border-color: var(--es-ink) !important;
+  box-shadow: inset 0 0 0 .5px var(--es-ink), 0 0 0 4px rgb(14 16 20 / .08) !important;
+  outline: none !important;
+}
+
+html:not([data-theme="dark"]) .reels-icon-btn{
+  border-color: var(--es-line-2) !important;
+}
+
+/* Roboto stops at 700; 800 is reserved for Condensed titles. */
+html:not([data-theme="dark"]) :is(.history-name, .setting-link, .pickem-eyebrow){
+  font-weight: 700 !important;
+}
+
+html:not([data-theme="dark"]) .footer-blurb{
+  font-family: var(--es-font-ui) !important;
+}
+
+html:not([data-theme="dark"]) .feedback-label small{
+  font-size: 13px !important;
+}
+
+html:not([data-theme="dark"]) .quick-action{
+  background: var(--es-bg) !important;
+}
+
+/* Disabled fields (directly or inside a disabled fieldset) read as sunk. */
+html:not([data-theme="dark"]) :is(.request-input, .request-select, .request-textarea, .request-dropdown-trigger, .feedback-textarea, .feedback-dropdown-trigger, .reels-native-select, .reels-choice-trigger, .account-main input, .account-main select, .account-main textarea):disabled,
+html:not([data-theme="dark"]) fieldset[disabled] :is(.request-input, .request-select, .request-textarea, .request-dropdown-trigger, .feedback-textarea, .feedback-dropdown-trigger){
+  border-color: var(--es-line) !important;
+  background-color: var(--es-sunk) !important;
+  color: var(--es-ink-3) !important;
+  cursor: not-allowed;
+}
+
+/* Reels: neutral stage, white cards, triggers that fit their column. */
+html:not([data-theme="dark"]) body.reels-page .reels-stage-workspace{
+  background: var(--es-stage) !important;
+}
+
+html:not([data-theme="dark"]) body.reels-page .reels-timeline-card{
+  background: var(--es-bg) !important;
+  border-color: var(--es-line) !important;
+}
+
+html:not([data-theme="dark"]) body.reels-page .reels-choice{
+  width: 100%;
+  min-width: 0;
+}
+
+html:not([data-theme="dark"]) body.reels-page .reels-choice-trigger{
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html:not([data-theme="dark"]) body.reels-page .reels-choice-value{
+  text-align: left !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+
+/* Field labels as ES kickers: 13px, 700, uppercase, +0.08em. */
+html:not([data-theme="dark"]) body.reels-page .reels-field > span:first-child{
+  color: var(--es-ink-2);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+/* Structural fixes that hold in both themes. */
+html[data-theme] body.reels-page .reels-choice,
+html[data-theme] body.reels-page .reels-choice-trigger {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+html[data-theme] body.reels-page .reels-choice-trigger {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-theme] body.reels-page .reels-choice-value {
+  text-align: left !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+
+/* Reels, ES AI and Pick'em keep light working surfaces in dark mode (theme.css
+   does not darken them), so their text roles stay ink rather than flipping. */
+html[data-theme="dark"] body:is(.reels-page, .pickem-page),
+html[data-theme="dark"] body:has(#ai-workspace) {
+  --es-text-strong: var(--es-ink);
+  --es-text-primary: var(--es-ink);
+  --es-text-secondary: var(--es-ink-2);
+  --es-text-muted: var(--es-ink-3);
+  --es-text-subtle: var(--es-ink-3);
+}
+
+html[data-theme="dark"] body.reels-page :is(.section-label, .color-group-label),
+html[data-theme="dark"] body:has(#ai-workspace) :is(.side-title, .workspace-section-title),
+html[data-theme="dark"] body.pickem-page .pickem-progress-text {
+  color: var(--es-ink) !important;
+}
+
+html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
+  background: var(--es-bg) !important;
+  color: var(--es-ink-2) !important;
 }
