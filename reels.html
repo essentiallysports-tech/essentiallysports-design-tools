@@ -15,11 +15,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@500;600;700;800;900&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20261022-es1">
-  <link rel="stylesheet" href="theme.css?v=20261022-es1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261022-es1">
+  <link rel="stylesheet" href="theme.css?v=20261023-ux1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
   <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
-  <link rel="stylesheet" href="reels.css?v=20261022-es1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261022-es1">
+  <link rel="stylesheet" href="reels.css?v=20261023-ux1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261023-ux1">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20260817-icons1"></script>
@@ -85,6 +85,7 @@
             <button type="button" class="reels-btn is-quiet" id="reels-download-srt-btn" disabled>Download SRT</button>
           </div>
           <p class="reels-status" id="reels-transcribe-status" hidden>Upload a clip to begin.</p>
+          <p class="reels-first-step">Start by uploading a clip. Auto-captions, styling and export unlock once it loads.</p>
           <div class="reels-transcript-list" id="reels-transcript-list">
             <button type="button" class="reels-btn is-secondary reels-empty-upload" id="reels-upload-btn" data-reels-upload-trigger>Upload Clip</button>
           </div>
@@ -133,7 +134,11 @@
       <section class="reels-stage-workspace" aria-label="Reels preview and timeline">
         <div class="reels-stage-frame">
           <canvas id="reels-canvas"></canvas>
-          <div class="reels-stage-empty" id="reels-stage-empty"></div>
+          <div class="reels-stage-empty" id="reels-stage-empty">
+            <strong>Upload a clip to start</strong>
+            <span>Drop a video here, or choose a file · MP4, MOV or WebM</span>
+            <button type="button" class="reels-btn is-primary reels-stage-upload" data-reels-upload-trigger>Upload Clip</button>
+          </div>
         </div>
         <input type="file" id="reels-file-input" accept="video/*" hidden>
         <video id="reels-video" hidden playsinline crossorigin="anonymous"></video>
@@ -251,7 +256,7 @@
   </main>
 
   <footer class="site-footer" aria-label="Site footer"></footer>
-  <script src="brand-kit.js?v=20260728-reels1"></script>
-  <script src="reels.js?v=20260817-mobile-editor2"></script>
+  <script src="brand-kit.js?v=20261023-ux1"></script>
+  <script src="reels.js?v=20261023-ux1"></script>
 </body>
 </html>

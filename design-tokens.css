@@ -543,13 +543,13 @@ html:not([data-theme="dark"])[data-studio-shell="on"] :is(.studio-export-btn, .i
   font-weight: 700 !important;
 }
 
-html:not([data-theme="dark"])[data-studio-shell="on"] :is(.studio-export-btn, .image-context-upload, .canvas-upload-button:not(.canvas-upload-button-secondary)){
+html:not([data-theme="dark"])[data-studio-shell="on"] :is(.studio-export-btn:not(.is-export-complete), .image-context-upload, .canvas-upload-button:not(.canvas-upload-button-secondary)){
   border-color: var(--es-brand-fill) !important;
   background: var(--es-brand-fill) !important;
   color: #ffffff !important;
 }
 
-html:not([data-theme="dark"])[data-studio-shell="on"] :is(.studio-export-btn, .image-context-upload, .canvas-upload-button:not(.canvas-upload-button-secondary)):hover{
+html:not([data-theme="dark"])[data-studio-shell="on"] :is(.studio-export-btn:not(.is-export-complete), .image-context-upload, .canvas-upload-button:not(.canvas-upload-button-secondary)):hover{
   border-color: var(--es-brand-fill-press) !important;
   background: var(--es-brand-fill-press) !important;
 }
@@ -827,4 +827,286 @@ html[data-theme="dark"] body.pickem-page .pickem-progress-text {
 html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
   background: var(--es-bg) !important;
   color: var(--es-ink-2) !important;
+}
+
+/* Searchable dropdowns (long lists such as teams). */
+.select-dropdown-search {
+  position: sticky;
+  top: -8px;
+  z-index: 1;
+  width: 100%;
+  min-height: 40px;
+  margin: -8px 0 6px;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 1px solid var(--es-line);
+  border-radius: 0;
+  background: inherit;
+  color: inherit;
+  font-family: var(--es-font-ui);
+  font-size: 15px;
+  outline: none;
+}
+
+.select-dropdown-search::placeholder {
+  color: var(--es-placeholder);
+}
+
+.select-dropdown-empty {
+  margin: 0;
+  padding: 12px;
+  color: var(--es-ink-3);
+  font-family: var(--es-font-ui);
+  font-size: 13px;
+}
+
+.select-dropdown-option[hidden] {
+  display: none !important;
+}
+
+/* Persistent helper text under a field; amber when a limit is reached. */
+.field-hint {
+  margin: 6px 0 0;
+  color: var(--es-ink-3);
+  font-family: var(--es-font-ui);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.field-hint.is-warning {
+  color: var(--es-warn);
+  font-weight: 500;
+}
+
+.field-hint:empty {
+  display: none;
+}
+
+#pill-text {
+  min-height: 92px;
+  resize: none;
+}
+
+/* Export success keeps its green confirmation state. */
+.export-button.is-export-complete {
+  border-color: var(--es-good) !important;
+  background: var(--es-good) !important;
+  color: #ffffff !important;
+}
+
+/* ES dialog: centred card, float shadow, ink scrim. */
+.es-dialog {
+  width: min(440px, calc(100vw - 32px));
+  padding: 24px;
+  border: 0;
+  border-radius: var(--es-radius-container);
+  background: var(--es-bg);
+  box-shadow: var(--es-shadow-float), inset 0 0 0 1px var(--es-line);
+  color: var(--es-ink);
+  font-family: var(--es-font-ui);
+}
+
+.es-dialog::backdrop {
+  background: rgb(14 16 20 / .42);
+}
+
+.es-dialog[open] {
+  animation: esDialogIn var(--es-dur-step) var(--es-ease-entrance) both;
+}
+
+.es-dialog h2 {
+  margin: 0 0 8px;
+  font-family: var(--es-font-display);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.es-dialog p {
+  margin: 0 0 24px;
+  color: var(--es-ink-2);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.es-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.es-dialog-button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--es-radius-control);
+  cursor: pointer;
+  font-family: var(--es-font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  transition: background-color var(--es-dur) var(--es-ease), transform var(--es-dur-press) var(--es-ease);
+}
+
+.es-dialog-button:active {
+  transform: scale(.98);
+}
+
+.es-dialog-button.is-primary {
+  background: var(--es-brand-fill);
+  color: #ffffff;
+}
+
+.es-dialog-button.is-primary:hover {
+  background: var(--es-brand-fill-press);
+}
+
+.es-dialog-button.is-secondary {
+  background: var(--es-bg);
+  box-shadow: inset 0 0 0 1.5px var(--es-line-2);
+  color: var(--es-ink);
+}
+
+.es-dialog-button.is-secondary:hover {
+  background: var(--es-sunk);
+}
+
+.es-dialog-button.is-quiet {
+  margin-right: auto;
+  background: transparent;
+  color: var(--es-ink-2);
+}
+
+.es-dialog-button.is-quiet:hover {
+  background: var(--es-sunk);
+}
+
+@keyframes esDialogIn {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+}
+
+/* Toasts: bottom centre, ink surface, auto-dismiss. */
+.es-toast-region {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 4000;
+  display: grid;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.es-toast {
+  max-width: min(480px, calc(100vw - 32px));
+  padding: 12px 16px;
+  border-radius: var(--es-radius-control);
+  background: var(--es-ink);
+  box-shadow: var(--es-shadow-float);
+  color: #ffffff;
+  font-family: var(--es-font-ui);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  animation: esToastIn var(--es-dur-fill) var(--es-ease) both;
+}
+
+.es-toast.is-success::before {
+  content: "✓";
+  margin-right: 8px;
+  color: #7ee2a8;
+  font-weight: 700;
+}
+
+.es-toast.is-error {
+  background: var(--es-bad);
+}
+
+.es-toast.is-leaving {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity var(--es-dur-fill) var(--es-ease), transform var(--es-dur-fill) var(--es-ease);
+}
+
+@keyframes esToastIn {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+/* Carousel slide buttons show a dot once the slide has content. */
+.carousel-slide-button[data-carousel-slide] {
+  position: relative;
+}
+
+.carousel-slide-button[data-carousel-slide].has-content::after {
+  content: "";
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--es-brand);
+}
+
+.carousel-slide-button[data-carousel-slide].is-active.has-content::after {
+  background: #ffffff;
+}
+
+/* Phones: the canvas glides above the editor sheet while it is open. */
+@media (max-width: 900px) {
+  html[data-studio-shell="on"] .canvas-wrap {
+    transition: transform var(--es-dur-step) var(--es-ease);
+  }
+}
+
+/* Home workspace grid: 4 across on desktop, 2×2 on tablets, 1 column on phones. */
+.frame-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1199px) {
+  .frame-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 639px) {
+  .frame-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Canvas toolbar (undo/redo, zoom, upload, slides): fit the canvas column and
+   wrap to a second row on smaller laptops instead of clipping controls. */
+@media (min-width: 901px) {
+  html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions {
+    max-width: min(800px, calc(100vw - 620px)) !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    row-gap: 6px;
+  }
+}
+
+/* Navbar on laptops: drop the secondary social icons (they live in the footer)
+   and tighten link spacing so labels never collide with the account menu. */
+@media (min-width: 901px) and (max-width: 1439px) {
+  .navbar .navbar-right a.navbar-icon-btn {
+    display: none !important;
+  }
+
+  .navbar .navbar-menu {
+    gap: 20px !important;
+  }
+}
+
+/* Small laptops / large tablets: show the account avatar without the name. */
+@media (min-width: 901px) and (max-width: 1119px) {
+  .navbar .profile-trigger .profile-name {
+    display: none !important;
+  }
+
+  .navbar .navbar-menu {
+    gap: 14px !important;
+  }
 }

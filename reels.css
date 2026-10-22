@@ -3072,3 +3072,43 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
     font-size: 13px;
   }
 }
+
+/* First run: one clear step until a clip is loaded. */
+body.reels-page:not(.reels-has-clip) .reels-command-bar {
+  display: none;
+}
+
+.reels-first-step {
+  margin: 0 0 12px;
+  color: var(--es-ink-2);
+  font-family: var(--es-font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+body.reels-page.reels-has-clip .reels-first-step {
+  display: none;
+}
+
+.reels-stage-empty strong {
+  font-family: var(--es-font-display);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.reels-stage-empty span {
+  color: rgba(255, 255, 255, .78);
+  font-size: 15px;
+}
+
+.reels-stage-empty .reels-stage-upload {
+  margin-top: 12px;
+  min-height: 44px;
+  padding: 0 20px;
+}
+
+/* Drag-and-drop feedback. */
+:is(.reels-stage-frame, .reels-task-panel).is-drop-target {
+  outline: 2px dashed var(--es-brand);
+  outline-offset: -6px;
+}

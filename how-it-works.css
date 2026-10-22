@@ -737,7 +737,7 @@ html { scroll-behavior: smooth; }
   }
 }
 
-.workspace-bento { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--how-space-gap); align-items: stretch; }
+.workspace-bento { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--how-space-gap); align-items: stretch; }
 .workspace-guide-card {
   min-width: 0;
   overflow: hidden;

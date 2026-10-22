@@ -4,7 +4,7 @@ import fs from 'node:fs';
 const source = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 assert.match(source, /<script src="listicle-type2-data\.js"><\/script>/, 'Type 2 data module must load');
-assert.match(source, /<option value="listicle-type-2">Listicle Type 2<\/option>/, 'Type 2 must be selectable');
+assert.match(source, /<option value="listicle-type-2">Ranked List<\/option>/, 'Type 2 must be selectable');
 assert.match(
   source,
   /'listicle-type-2': \{[\s\S]*?render: drawListicleType2Post,[\s\S]*?getPayload: getListicleType2Payload/,

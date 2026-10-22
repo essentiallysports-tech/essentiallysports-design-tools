@@ -88,10 +88,10 @@ html::-webkit-scrollbar {
     border: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: var(--es-ink) !important;
-    font-family: var(--chrome-display) !important;
-    font-size: 18px !important;
-    font-weight: 800 !important;
+    color: var(--es-ink-2) !important;
+    font-family: var(--es-font-ui) !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
     line-height: 1 !important;
     white-space: nowrap !important;
   }
@@ -119,7 +119,10 @@ html::-webkit-scrollbar {
   .navbar-menu > .nav-dropdown > .nav-trigger:focus-visible,
   .navbar-menu > a[aria-current="page"] {
     color: var(--es-ink) !important;
-    outline: 0 !important;
+  }
+
+  .navbar-menu > a[aria-current="page"] {
+    font-weight: 700 !important;
   }
 
   .nav-dropdown {

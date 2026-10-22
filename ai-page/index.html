@@ -526,6 +526,15 @@
       padding-right: 2px;
     }
 
+    .history-empty {
+      margin: 4px 0;
+      padding: 12px;
+      color: var(--es-ink-3);
+      font-family: var(--es-font-ui);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
     .history-item {
       min-height: 54px;
       min-width: 0;
@@ -1765,10 +1774,10 @@
     }
   </style>
   <link rel="stylesheet" href="../site-mobile-chrome.css?v=20261022-es1">
-<link rel="stylesheet" href="../theme.css?v=20261022-es1">
-  <link rel="stylesheet" href="../site-chrome.css?v=20261022-es1">
+<link rel="stylesheet" href="../theme.css?v=20261023-ux1">
+  <link rel="stylesheet" href="../site-chrome.css?v=20261023-ux1">
   <link rel="stylesheet" href="../cta-hover.css?v=20261022-es1">
-  <link rel="stylesheet" href="../design-tokens.css?v=20261022-es1">
+  <link rel="stylesheet" href="../design-tokens.css?v=20261023-ux1">
   <script src="../theme.js?v=20260712-darkmode12"></script>
   <script src="../site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="../site-chrome.js?v=20260817-icons1"></script>
@@ -2061,8 +2070,9 @@
     const aiWorkspace = document.getElementById('ai-workspace');
     const sidebarOpen = document.getElementById('sidebar-open');
     const sidebarClose = document.getElementById('sidebar-close');
-    let chats = [...seedChats];
-    let activeIndex = 0;
+    // History holds only this person's own chats (no sample entries).
+    let chats = [];
+    let activeIndex = -1;
 
     function loadProfile() {
       try {
@@ -2175,6 +2185,13 @@
     function renderHistory() {
       const query = searchInput.value.trim().toLowerCase();
       historyList.innerHTML = '';
+      if (!chats.length) {
+        const empty = document.createElement('p');
+        empty.className = 'history-empty';
+        empty.textContent = 'No chats yet. Your conversations will appear here.';
+        historyList.appendChild(empty);
+        return;
+      }
       chats
         .map((chat, index) => ({ chat, index }))
         .filter(({ chat }) => !query || chat.title.toLowerCase().includes(query) || chat.meta.toLowerCase().includes(query))
@@ -2207,7 +2224,9 @@
     function setGreeting() {
       const hour = new Date().getHours();
       const dayPart = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : hour < 22 ? 'Good Evening' : "It's Late Night";
-      document.getElementById('greeting').textContent = `${dayPart}, Suhail!`;
+      const firstName = cleanVisitorName(inferVisitorProfile().name).split(' ')[0];
+      const isPlaceholderName = !firstName || /^guest$/i.test(firstName);
+      document.getElementById('greeting').textContent = `${dayPart}, ${isPlaceholderName ? 'there' : firstName}!`;
     }
 
     function addConversation(prompt) {
@@ -2219,7 +2238,7 @@
         </article>
         <article class="message">
           <strong>ES AI</strong>
-          <span>I can turn this into a backend-ready creative brief with format, visual hierarchy, entity notes, and export guidance.</span>
+          <span>ES AI is in preview and can't generate designs yet. To make this now, open a workspace below, or send it to the design team with a Design Request.</span>
         </article>
       `;
       conversation.querySelector('.message span').textContent = prompt;

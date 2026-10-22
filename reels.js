@@ -88,6 +88,7 @@
       button.addEventListener('click', function () { els.fileInput.click(); });
     });
     els.fileInput.addEventListener('change', onFileChosen);
+    initClipDropTargets();
     els.video.addEventListener('loadedmetadata', onVideoMetadata);
     els.video.addEventListener('seeked', onFirstFrameReady);
     els.video.addEventListener('seeked', function () { state.seekPending = false; });
@@ -426,6 +427,34 @@
       .catch(function () {
         if (!state.videoFile) setStatus(els.transcribeStatus, 'Upload a clip to begin.');
       });
+  }
+
+  // Drag a video onto the stage or the task panel to load it.
+  function initClipDropTargets() {
+    var targets = [document.querySelector('.reels-stage-frame'), document.querySelector('.reels-task-panel')].filter(Boolean);
+    targets.forEach(function (target) {
+      target.addEventListener('dragover', function (event) {
+        if (!event.dataTransfer || ![].slice.call(event.dataTransfer.types || []).includes('Files')) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        target.classList.add('is-drop-target');
+      });
+      target.addEventListener('dragleave', function (event) {
+        if (!target.contains(event.relatedTarget)) target.classList.remove('is-drop-target');
+      });
+      target.addEventListener('drop', function (event) {
+        target.classList.remove('is-drop-target');
+        var file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+        if (!file) return;
+        event.preventDefault();
+        if (String(file.type).indexOf('video/') !== 0) {
+          els.stageEmpty.style.display = 'grid';
+          els.stageEmpty.innerHTML = '<strong>That file is not a video</strong><span>Drop an MP4, MOV or WebM clip.</span>';
+          return;
+        }
+        onFileChosen({ target: { files: [file] } });
+      });
+    });
   }
 
   function onFileChosen(event) {
@@ -1990,7 +2019,8 @@
     return (window.ES_BRAND_KIT || [])
       .filter(function (entry) { return entry.sport === sport; })
       .map(function (entry) { return entry.variation || entry.team; })
-      .filter(Boolean);
+      .filter(Boolean)
+      .sort(function (a, b) { return formatTeamDisplayName(a).localeCompare(formatTeamDisplayName(b)); });
   }
 
   function getBrandEntry(sport, team) {
@@ -2073,7 +2103,12 @@
     return (light + 0.05) / (dark + 0.05);
   }
 
+  // Display-only corrections; stored team keys stay unchanged.
+  var TEAM_NAME_FIXES = { seahwaks: 'Seahawks', bengal: 'Bengals' };
+
   function formatTeamDisplayName(team) {
+    var fixed = TEAM_NAME_FIXES[String(team || '').trim().toLowerCase()];
+    if (fixed) return fixed;
     var keepUpper = { fc: true, cf: true, sc: true, usa: true, us: true, ny: true, la: true, dc: true, mlb: true, nba: true, nfl: true, nhl: true, wnba: true, ufc: true, cbb: true };
     return String(team || '').replace(/\S+/g, function (word) {
       var compact = word.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
