@@ -32,23 +32,74 @@
     return readyPromise;
   }
 
+  const escapeRe = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const hasWords = (text, words) => new RegExp(`\\b${escapeRe(words)}s?\\b`, 'i').test(text);
+
+  // Exact name first, then whole-word matches ("Kansas City Chiefs" -> "Chiefs").
   const findOption = (options, value) => {
     const wanted = String(value || '').trim().toLowerCase();
     if (!wanted) return '';
     return options.find(option => option.toLowerCase() === wanted)
-      || options.find(option => option.toLowerCase().includes(wanted) || wanted.includes(option.toLowerCase()))
+      || options.find(option => hasWords(wanted, option.toLowerCase()) || hasWords(option.toLowerCase(), wanted))
       || '';
   };
 
+  // Team from the text about the person: full names count most, capitalised
+  // nicknames ("Chiefs") count once, opponents ("against the Sky") don't count,
+  // and mentions near the person's name ("Clark and the Indiana Fever") count
+  // far more than other teams in the same stories.
+  const OPPONENT = /\b(?:against|vs\.?|versus|over|beat|beats|beating|defeat|defeats|defeated|faces?|facing|to)\s+(?:the\s+)?$/i;
+  const NEAR = 60;
+  function guessTeam(text, sports, person = '') {
+    const personAt = [];
+    if (person) {
+      const re = new RegExp(`\\b${escapeRe(person)}\\b`, 'gi');
+      let match;
+      while ((match = re.exec(text))) personAt.push(match.index);
+    }
+    const nearPerson = index => !personAt.length || personAt.some(at => Math.abs(at - index) <= NEAR);
+    let best = null;
+    sports.forEach(sport => getTeams(sport).forEach(team => {
+      const full = team.trim();
+      const nick = full.split(/\s+/).pop();
+      if (nick.length < 3) return;
+      let score = 0;
+      const count = (words, weight) => {
+        const re = new RegExp(`\\b${escapeRe(words)}s?\\b`, 'gi');
+        let match;
+        while ((match = re.exec(text))) {
+          if (!/^[A-Z]/.test(match[0])) continue;
+          if (OPPONENT.test(text.slice(Math.max(0, match.index - 24), match.index))) continue;
+          score += nearPerson(match.index) ? weight * 4 : weight;
+        }
+      };
+      if (full.includes(' ')) count(full, 3);
+      count(nick, 1);
+      if (score > (best?.score || 0)) best = { sport, team, score };
+    }));
+    return best;
+  }
+
+  // The AI's sport/team when it names a real one, else a guess from the ES
+  // stories about the person. Unknown brands keep the current one.
+  function resolveBrand(spec) {
+    const sports = getSports();
+    const sport = findOption(sports, spec.sport) || findOption(sports, spec.hints?.sport);
+    const team = sport ? findOption(getTeams(sport), spec.team) : '';
+    if (sport && team) return { sport, team };
+    const text = [spec.team, spec.title, ...(spec.lines || []), spec.hints?.text].filter(Boolean).join(' ');
+    const guess = guessTeam(text, sport ? [sport] : sports, spec.hints?.person);
+    return guess ? { sport: guess.sport, team: guess.team } : { sport, team: '' };
+  }
+
   // Unknown sports/teams keep the current brand rather than failing.
   function applyBrand(spec) {
-    const sport = findOption(getSports(), spec.sport);
+    const { sport, team } = resolveBrand(spec);
     if (!sport) return;
     if (sport !== state.sport) {
       document.getElementById('sport-select').value = sport;
       onSportChange(sport);
     }
-    const team = findOption(getTeams(sport), spec.team);
     if (team && team !== state.team) {
       document.getElementById('team-select').value = team;
       onTeamChange(team);

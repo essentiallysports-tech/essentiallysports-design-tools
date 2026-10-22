@@ -84,6 +84,10 @@ assert.equal(cover.photo.url, `/api/es-image-search?image=${encodeURIComponent(I
 assert.deepEqual(stats.lines, ['Mahomes Masterclass', '320 | YDS', '3 | TD', '1 | INT']);
 assert.equal(stats.sources[0].url, ARTICLE.link, 'non-ES sources are replaced by real ES research');
 assert.ok(mcpCalls.includes('search_articles') && mcpCalls.includes('write_copy'));
+assert.equal(cover.hints.sport, 'NFL', 'league from the ES story URL');
+assert.equal(cover.hints.person, 'mahomes');
+assert.deepEqual(res.body.connection.roles, { think: 'write_copy', articles: 'search_articles', stats: null, trending: null, images: 'search_images' });
+assert.equal(res.body.connection.mcpConfigured, true);
 assert.ok(!fetchCalls.some(url => url.includes('openai')), 'OpenAI is not used when ES MCP can think');
 
 // 2. No ES MCP, OpenAI key present: OpenAI thinks; photo from the ES story.
@@ -125,6 +129,7 @@ assert.equal((await handler({ httpMethod: 'DELETE', headers: {} })).statusCode, 
 handler = mockModules({ mcp: fakeMcp });
 const health = JSON.parse((await handler({ httpMethod: 'GET', headers: {} })).body);
 assert.equal(health.brain, 'es-mcp:write_copy');
-assert.deepEqual(health.roles, { images: 'search_images', articles: 'search_articles', stats: null, trending: null, think: 'write_copy' });
+assert.deepEqual(health.roles, { think: 'write_copy', articles: 'search_articles', stats: null, trending: null, images: 'search_images' });
+assert.deepEqual(health.tools, ['search_images', 'search_articles', 'write_copy']);
 
 console.log('es-generate flow checks passed');

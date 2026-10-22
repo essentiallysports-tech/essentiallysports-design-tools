@@ -355,9 +355,7 @@
           for (const card of cards) await paint(card);
           els.status.innerHTML = `${showMode(data.brain)}`;
           els.status.append(document.createTextNode(` ${cards.length} design${cards.length === 1 ? '' : 's'} ready. Edit opens it in the Social Media editor.`));
-          if (data.brain === 'draft') {
-            setNotice('Draft mode', ' No AI is connected yet, so these are built from your brief with simple rules. Once ES MCP or an AI key is connected, FrameUp writes the copy and picks the formats itself.');
-          }
+          if (data.brain === 'draft') setNotice('Draft mode', ` ${draftReason(data.connection)}`);
           showResearch(data.research?.articles || []);
         } catch (error) {
           els.grid.replaceChildren();
@@ -366,6 +364,16 @@
         } finally {
           setBusy(false);
         }
+      }
+
+      // Says exactly why no AI ran, from what the server found.
+      function draftReason(connection = {}) {
+        const rules = 'These are built from your brief with simple rules.';
+        if (!connection.mcpConfigured) return `${rules} ES MCP is not set up on the server yet (its login is missing from the hosting settings).`;
+        if (connection.mcpError) return `${rules} ES MCP could not be reached: ${connection.mcpError}`;
+        const tools = connection.tools || [];
+        const list = tools.length ? ` It offers ${tools.length} tool${tools.length === 1 ? '' : 's'}: ${tools.join(', ')}.` : '';
+        return `${rules} ES MCP is connected and used for research and photos, but none of its tools can write posts, so nothing is doing the thinking.${list} Turn on an AI model to get AI-written designs.`;
       }
 
       function showResearch(articles) {

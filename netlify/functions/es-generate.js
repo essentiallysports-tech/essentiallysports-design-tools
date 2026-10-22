@@ -240,6 +240,14 @@ function keyTerms(text) {
   return plain.toLowerCase().split(/[^a-z0-9'-]+/).filter(word => word.length > 2 && !STOP_WORDS.has(word)).slice(0, 3).join(' ');
 }
 
+// The word that identifies who a text is about: a name's surname ("Patrick
+// Mahomes Chiefs" -> "mahomes"), else the first key word ("lakers losing streak").
+function mainWord(terms) {
+  const words = String(terms || '').split(' ').filter(word => word.length > 2);
+  const isName = words.length > 1 && /^[A-Z]/.test(words[0]) && /^[A-Z]/.test(words[1]);
+  return (isName ? words[1] : words[0] || '').toLowerCase();
+}
+
 // ES search is slow when uncached (~15s), so: one search, and a shorter retry
 // only when the first one came back empty quickly.
 async function searchEsArticles(query) {
@@ -301,7 +309,7 @@ async function findPhoto(query, mcp, tools, articles = []) {
       }
     }
     const terms = keyTerms(query) || query;
-    const surname = terms.split(' ').filter(word => word.length > 2).slice(-2)[0]?.toLowerCase() || '';
+    const surname = mainWord(terms);
     const known = articles.find(a => isEsUrl(a.image) && surname && `${a.title} ${a.excerpt}`.toLowerCase().includes(surname));
     const article = known || (await searchEsArticlesOnce(terms, 15000).catch(() => [])).find(a => isEsUrl(a.image));
     return article ? { title: article.title, sourceUrl: article.image, url: proxied(article.image) } : null;
@@ -356,7 +364,7 @@ function buildPrompt(brief, found, allowedTypes, count) {
     '- Write like ES: punchy, confident, plain American sports English. Title Case for pills and headlines. No emojis, no hashtags.',
     '- Respect every character limit exactly. Shorter is better.',
     '- Vary the templates when the story allows it.',
-    '- sport is the league, e.g. NFL, NBA, MLB, NHL, WNBA, NCAAF, Golf, Tennis, F1, Soccer. team is the team or league name, e.g. "Los Angeles Lakers".',
+    '- Work out who the post is about from the research: the person, their CURRENT team and league. sport is the league: NFL, NBA, WNBA, MLB, CFB (college football), CBB Men, CBB Women, Tennis. team is that person\'s own team, full name, e.g. "Kansas City Chiefs" (never the opponent). Our templates use the team\'s brand colours, so get the team right.',
     '- photoQuery is 2-5 words naming who should be in the photo, e.g. "LeBron James Lakers".',
     '',
     `Templates:\n${catalog}`,
@@ -444,7 +452,7 @@ function draftPlan(brief, found, allowedTypes) {
   const allow = type => !allowedTypes.length || allowedTypes.includes(type);
   // The person comes from the brief; an ES story is used only if it is about them.
   const photoQuery = keyTerms(brief) || guessEntity(brief);
-  const surname = photoQuery.split(' ').filter(word => word.length > 2).slice(-2)[0]?.toLowerCase() || '';
+  const surname = mainWord(photoQuery);
   const lead = found.articles.find(a => surname && a.title.toLowerCase().includes(surname));
   const sources = lead ? [{ url: lead.url, title: lead.title }] : [];
   const designs = [];
@@ -487,15 +495,54 @@ function json(statusCode, body) {
 }
 
 async function discover(notes) {
-  if (!isMcpConfigured()) return { mcp: null, tools: {}, toolNames: [] };
+  if (!isMcpConfigured()) return { mcp: null, tools: {}, toolNames: [], error: '' };
   try {
     const mcp = createSession();
     const list = await mcp.listTools();
-    return { mcp, tools: classifyTools(list), toolNames: list.map(tool => tool?.name).filter(Boolean) };
+    return { mcp, tools: classifyTools(list), toolNames: list.map(tool => tool?.name).filter(Boolean), error: '' };
   } catch (error) {
-    notes.push(`ES MCP unavailable: ${String(error.message || error).slice(0, 120)}`);
-    return { mcp: null, tools: {}, toolNames: [] };
+    const message = String(error.message || error).slice(0, 160);
+    notes.push(`ES MCP unavailable: ${message}`);
+    return { mcp: null, tools: {}, toolNames: [], error: message };
   }
+}
+
+// What is connected, so the page can explain draft mode precisely.
+const connectionInfo = (tools, toolNames, error) => ({
+  mcpConfigured: isMcpConfigured(),
+  mcpError: error || '',
+  tools: toolNames,
+  roles: Object.fromEntries(['think', 'articles', 'stats', 'trending', 'images'].map(role => [role, tools[role]?.name || null])),
+  openai: USE_OPENAI,
+});
+
+// ES story URLs start with the league, e.g. /nfl-active-news-..., /nba-news-...
+const URL_SPORTS = [
+  [/^\/wnba-/, 'WNBA'], [/^\/nba-/, 'NBA'], [/^\/nfl-/, 'NFL'], [/^\/mlb-/, 'MLB'],
+  [/^\/(?:college-football|ncaaf|cfb)-/, 'CFB'], [/^\/(?:college-basketball|ncaab|cbb)-/, 'CBB Men'],
+  [/^\/tennis-/, 'Tennis'],
+];
+function sportFromUrl(url) {
+  try {
+    const pathName = new URL(url).pathname;
+    return (URL_SPORTS.find(([pattern]) => pattern.test(pathName)) || [])[1] || '';
+  } catch (error) {
+    return '';
+  }
+}
+
+// Text about the design's person, for matching the team (and its colours) in the editor.
+function brandHints(spec, brief, articles) {
+  const terms = keyTerms(spec.photoQuery || brief) || '';
+  const surname = mainWord(terms);
+  const about = surname ? articles.filter(a => `${a.title} ${a.excerpt}`.toLowerCase().includes(surname)) : [];
+  const sports = about.map(a => sportFromUrl(a.url)).filter(Boolean);
+  const sport = sports.sort((a, b) => sports.filter(s => s === b).length - sports.filter(s => s === a).length)[0] || '';
+  return {
+    sport,
+    person: surname,
+    text: [brief, ...about.map(a => `${a.title}. ${a.excerpt}`)].join(' ').slice(0, 2500),
+  };
 }
 
 const brainName = tools => (tools.think ? `es-mcp:${tools.think.name}` : (USE_OPENAI ? `openai:${OPENAI_GENERATE_MODEL}` : 'draft'));
@@ -504,7 +551,7 @@ async function generate({ brief, formats, count }) {
   const notes = [];
   const allowedTypes = (Array.isArray(formats) ? formats : []).filter(type => TEMPLATES[type]);
   const want = Math.min(Math.max(parseInt(count, 10) || MAX_DESIGNS, 1), MAX_DESIGNS);
-  const { mcp, tools } = await discover(notes);
+  const { mcp, tools, toolNames, error: mcpError } = await discover(notes);
   const found = await research(brief, mcp, tools, notes);
 
   let brain = brainName(tools);
@@ -530,6 +577,8 @@ async function generate({ brief, formats, count }) {
   });
   await Promise.all(designs.map(async spec => {
     spec.photo = await findPhoto(spec.photoQuery, mcp, tools, found.articles);
+    spec.hints = brandHints(spec, brief, found.articles);
+    if (!spec.sport) spec.sport = spec.hints.sport;
     if (!spec.sources.length && found.sources[0]) spec.sources = [{ url: found.sources[0], title: found.articles.find(a => a.url === found.sources[0])?.title || '' }];
   }));
 
@@ -537,6 +586,7 @@ async function generate({ brief, formats, count }) {
     brain,
     designs,
     research: { articles: found.articles.map(({ title, url, date }) => ({ title, url, date })) },
+    connection: connectionInfo(tools, toolNames, mcpError),
     notes,
   };
 }
@@ -560,12 +610,11 @@ exports.handler = async function handler(event) {
   try {
     if (event.httpMethod === 'GET') {
       const notes = [];
-      const { tools, toolNames } = await discover(notes);
+      const { tools, toolNames, error } = await discover(notes);
+      const connection = connectionInfo(tools, toolNames, error);
       return json(200, {
-        mcpConfigured: isMcpConfigured(),
+        ...connection,
         brain: brainName(tools),
-        tools: toolNames,
-        roles: Object.fromEntries(Object.entries(tools).map(([role, tool]) => [role, tool?.name || null])),
         templates: Object.fromEntries(Object.entries(TEMPLATES).map(([type, t]) => [type, t.label])),
         notes,
       });
@@ -583,4 +632,4 @@ exports.handler = async function handler(event) {
 };
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
-exports._test = { TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms };
+exports._test = { TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints };

@@ -77,4 +77,20 @@ draft.forEach((design, index) => assert.ok(checkSpec(design, index, []).spec, `d
 assert.deepEqual(draft.find(d => d.postType === 'stats-single-ent').fields.stats, [{ value: '38', label: 'PTS' }, { value: '9', label: 'AST' }, { value: '7', label: 'REB' }]);
 assert.equal(draftPlan('Celtics win', { articles: [] }, ['quote']).length, 0);
 
+// Who a design is about, their league from ES URLs, and the text to match a team.
+const { mainWord, sportFromUrl, brandHints } = _test;
+assert.equal(mainWord('Patrick Mahomes Chiefs'), 'mahomes');
+assert.equal(mainWord('Caitlin Clark'), 'clark');
+assert.equal(mainWord('lakers losing streak'), 'lakers');
+assert.equal(sportFromUrl('https://www.essentiallysports.com/nfl-active-news-x/'), 'NFL');
+assert.equal(sportFromUrl('https://www.essentiallysports.com/wnba-news-x/'), 'WNBA');
+assert.equal(sportFromUrl('https://www.essentiallysports.com/golf-news-x/'), '');
+const hints = brandHints({ photoQuery: 'Caitlin Clark' }, 'Caitlin Clark scores 30', [
+  { title: 'Caitlin Clark and the Fever roll', excerpt: '', url: 'https://www.essentiallysports.com/wnba-news-a/' },
+  { title: 'Chiefs win again', excerpt: '', url: 'https://www.essentiallysports.com/nfl-news-b/' },
+]);
+assert.equal(hints.sport, 'WNBA', 'only stories about the person decide the league');
+assert.equal(hints.person, 'clark');
+assert.ok(hints.text.includes('Fever') && !hints.text.includes('Chiefs'));
+
 console.log('es-generate checks passed');
