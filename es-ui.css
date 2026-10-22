@@ -487,7 +487,7 @@ html.es-shell-ready .es-sidebar { transition: width var(--es-dur-step) var(--es-
 }
 .es-sidebar__logo { display: flex; align-items: center; min-width: 0; }
 .es-sidebar__logo img { height: 22px; width: auto; display: block; }
-.es-sidebar__logo img.es-sidebar__logo-mark { display: none; width: 28px; height: 28px; border-radius: 8px; }
+.es-sidebar__logo img.es-sidebar__logo-mark { display: none; width: 32px; height: 32px; border-radius: 50%; }
 .es-sidebar__search { margin: 0 0 12px; }
 .es-sidebar__search .es-kbd { margin-left: auto; }
 .es-sidebar__scroll {
@@ -1048,3 +1048,11 @@ html[data-theme="dark"].es-shell body[data-current-page="faq"] .faq-list { backg
 
 html[data-theme="dark"] .workspace-bar-label { color: inherit !important; }
 html[data-theme="dark"].es-shell .ds-hero h1 { color: #f3f5f7 !important; }
+
+/* The sidebar must stay fixed. A transform on <body> (the page fade-in) turns
+   fixed elements into scrolling ones, so the shell keeps <body> untransformed. */
+@media (min-width: 901px) {
+  html.es-shell body { transform: none !important; }
+  /* Pinned to both viewport edges (inset top/bottom), never taller than the window. */
+  html.es-shell .es-sidebar { top: 0 !important; bottom: 0 !important; height: auto !important; max-height: 100vh; }
+}

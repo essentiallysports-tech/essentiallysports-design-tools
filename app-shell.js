@@ -112,7 +112,7 @@
       <div class="es-sidebar__brand">
         <a class="es-sidebar__logo" href="${base}index.html#frames" aria-label="FrameUp home">
           <img src="${base}brand-logo-blue.svg" alt="EssentiallySports">
-          <img class="es-sidebar__logo-mark" src="${base}favicon.svg" alt="">
+          <img class="es-sidebar__logo-mark" src="${base}favicon.ico" alt="">
         </a>
         <button type="button" class="es-icon-btn es-icon-btn--plain es-sidebar__collapse" aria-label="Collapse sidebar" title="Collapse sidebar">${ICONS.collapse}</button>
       </div>
