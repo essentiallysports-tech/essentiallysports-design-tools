@@ -44,7 +44,7 @@
       label: 'Work',
       items: [
         { id: 'request', label: 'Design Request', href: 'design-request.html', icon: 'request', desc: 'Send the design team one clear brief with context, copy, deadline and references.' },
-        { id: 'gallery', label: 'Gallery', href: 'gallery.html', icon: 'gallery', desc: 'Browse every Social Media post the team has exported.' },
+        { id: 'gallery', label: 'Gallery', href: 'gallery.html', icon: 'gallery', badge: 'New', desc: 'Browse every Social Media post the team has exported.' },
         { id: 'dashboard', label: 'Dashboard', href: 'dashboard.html', icon: 'dashboard', adminOnly: true },
         { id: 'feedback', label: 'Tool Feedback', href: 'tool-feedback.html', icon: 'feedback' },
       ],
