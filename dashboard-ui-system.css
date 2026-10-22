@@ -3,24 +3,24 @@
    follows one spacing, type, control, radius, and elevation scale. */
 
 body.dashboard-page {
-  --fu-bg: #f5f6f8;
+  --fu-bg: var(--es-sunk);
   --fu-surface: #ffffff;
-  --fu-surface-muted: #f9fafb;
-  --fu-border: #e4e7ec;
-  --fu-border-strong: #d0d5dd;
-  --fu-text: #101828;
-  --fu-muted: #667085;
-  --fu-subtle: #98a2b3;
-  --fu-blue: #1677f2;
-  --fu-blue-hover: #0b67d1;
+  --fu-surface-muted: var(--es-sunk);
+  --fu-border: var(--es-line);
+  --fu-border-strong: var(--es-line-2);
+  --fu-text: var(--es-ink);
+  --fu-muted: var(--es-ink-3);
+  --fu-subtle: var(--es-ink-3);
+  --fu-blue: var(--es-brand-fill);
+  --fu-blue-hover: var(--es-brand-fill-press);
   --fu-focus: rgba(22, 119, 242, .14);
-  --fu-radius-sm: 10px;
+  --fu-radius-sm: 14px;
   --fu-radius-md: 14px;
-  --fu-radius-lg: 18px;
+  --fu-radius-lg: 20px;
   --fu-control-height: 42px;
   --fu-shadow-card: 0 1px 2px rgba(16, 24, 40, .025), 0 8px 24px rgba(16, 24, 40, .035);
-  --fu-font-display: "Roboto Condensed", "Roboto", Arial, sans-serif;
-  --fu-font-body: "Roboto", Arial, sans-serif;
+  --fu-font-display:  var(--es-font-display);
+  --fu-font-body:  var(--es-font-ui);
   background: var(--fu-bg);
   color: var(--fu-text);
 }
@@ -43,7 +43,7 @@ body.dashboard-page .sidebar-workspace {
   margin-bottom: 22px;
   padding: 10px 12px;
   border: 1px solid var(--fu-border);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--fu-surface);
   box-shadow: none;
 }
@@ -60,7 +60,7 @@ body.dashboard-page .sidebar-workspace small {
   margin-top: 4px;
   color: var(--fu-muted);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 400;
   line-height: 1.2;
 }
@@ -69,7 +69,7 @@ body.dashboard-page .sidebar-label {
   margin: 0 12px 8px;
   color: var(--fu-subtle);
   font-family: var(--fu-font-display);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 700;
   letter-spacing: .08em;
 }
@@ -85,11 +85,11 @@ body.dashboard-page .sidebar-nav a {
   padding: 0 12px;
   border: 1px solid transparent;
   border-radius: var(--fu-radius-sm);
-  color: #344054;
+  color: var(--es-ink-2);
   font-family: var(--fu-font-display);
   font-size: 15px !important;
   font-weight: 700;
-  transition: color .16s ease, background-color .16s ease, border-color .16s ease;
+  transition: color .16s var(--es-ease), background-color .16s var(--es-ease), border-color .16s var(--es-ease);
 }
 
 body.dashboard-page .sidebar-nav button:hover,
@@ -116,8 +116,8 @@ body.dashboard-page .nav-count {
   background: var(--fu-blue);
   color: #fff;
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
-  font-weight: 600;
+  font-size: 15px !important;
+  font-weight: 700;
 }
 
 body.dashboard-page .dashboard-topbar {
@@ -131,7 +131,7 @@ body.dashboard-page .dashboard-topbar {
 body.dashboard-page .dashboard-topbar h1 {
   color: var(--fu-text);
   font-family: var(--font-display);
-  font-size: 25px;
+  font-size: 22px;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -.015em;
@@ -160,7 +160,7 @@ body.dashboard-page .command-search:focus-within {
 body.dashboard-page .command-search input {
   color: var(--fu-text);
   font-family: var(--fu-font-body);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 400;
 }
 
@@ -168,7 +168,7 @@ body.dashboard-page .command-search kbd {
   border-color: var(--fu-border);
   background: var(--fu-surface-muted);
   color: var(--fu-subtle);
-  font-size: 14px !important;
+  font-size: 15px !important;
 }
 
 body.dashboard-page .topbar-button,
@@ -181,10 +181,10 @@ body.dashboard-page .export-preview-close {
   background: var(--fu-surface);
   color: var(--fu-text);
   font-family: var(--fu-font-display);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 700;
   box-shadow: none;
-  transition: color .16s ease, background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+  transition: color .16s var(--es-ease), background-color .16s var(--es-ease), border-color .16s var(--es-ease), box-shadow .16s var(--es-ease);
 }
 
 body.dashboard-page .topbar-button:hover,
@@ -245,7 +245,7 @@ body.dashboard-page .dashboard-welcome h2 {
 body.dashboard-page .welcome-kicker {
   margin-bottom: 7px;
   font-family: var(--fu-font-display);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 700;
   letter-spacing: .1em;
 }
@@ -273,7 +273,7 @@ body.dashboard-page .metric-card {
 body.dashboard-page .metric-value {
   color: var(--fu-text);
   font-family: var(--fu-font-display);
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 800;
   line-height: 1;
 }
@@ -282,8 +282,8 @@ body.dashboard-page .metric-label {
   margin-top: 5px;
   color: var(--fu-muted);
   font-family: var(--fu-font-display);
-  font-size: 14px !important;
-  font-weight: 600;
+  font-size: 15px !important;
+  font-weight: 700;
 }
 
 body.dashboard-page .panel,
@@ -312,7 +312,7 @@ body.dashboard-page .panel-subtitle {
   margin-top: 7px;
   color: var(--fu-muted);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 400 !important;
   line-height: 1.4;
 }
@@ -331,7 +331,7 @@ body.dashboard-page .live-person,
 body.dashboard-page .access-request-card {
   border-bottom: 1px solid var(--fu-border);
   background: var(--fu-surface);
-  transition: background-color .16s ease;
+  transition: background-color .16s var(--es-ease);
 }
 
 body.dashboard-page .person:last-child,
@@ -364,9 +364,9 @@ body.dashboard-page .live-avatar {
   border: 0;
   border-radius: 50%;
   background: #eef2f6;
-  color: #475467;
+  color: var(--es-ink-2);
   font-family: var(--fu-font-display);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1;
 }
@@ -399,7 +399,7 @@ body.dashboard-page .person-main small,
 body.dashboard-page .live-person small {
   color: var(--fu-subtle);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 400 !important;
   line-height: 1.25;
 }
@@ -428,8 +428,8 @@ body.dashboard-page .person-role-control .dashboard-choice-trigger {
   border: 1px solid var(--fu-border-strong);
   border-radius: var(--fu-radius-sm);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
-  font-weight: 600 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
   line-height: 1;
   letter-spacing: 0;
   box-shadow: none;
@@ -462,24 +462,24 @@ body.dashboard-page .person-role-control .dashboard-choice-menu {
   box-sizing: border-box;
   padding: 6px;
   border: 1px solid var(--fu-border);
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: 0 14px 32px rgba(16, 24, 40, .12);
 }
 
 body.dashboard-page .person-role-control .dashboard-choice-option {
   min-height: 38px;
   padding: 0 10px;
-  border-radius: 8px;
+  border-radius: 14px;
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 500;
 }
 
 body.dashboard-page .role-badge.is-associate,
 body.dashboard-page .role-choice.is-associate .dashboard-choice-trigger {
-  border-color: #dfe3e8;
-  background: #f3f4f6;
-  color: #475467;
+  border-color: var(--es-line);
+  background: var(--es-stage);
+  color: var(--es-ink-2);
 }
 
 body.dashboard-page .role-badge.is-admin,
@@ -515,7 +515,7 @@ body.dashboard-page .drawer-notes textarea {
   background-color: var(--fu-surface);
   color: var(--fu-text);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
 }
 
 body.dashboard-page .dashboard-choice-trigger:hover,
@@ -552,7 +552,7 @@ body.dashboard-page .item-meta,
 body.dashboard-page .activity span {
   color: var(--fu-muted);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 400 !important;
   line-height: 1.4;
 }
@@ -561,7 +561,7 @@ body.dashboard-page .empty {
   padding: 28px 24px;
   color: var(--fu-muted);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
 }
 
 /* Shared operational surfaces */
@@ -597,16 +597,16 @@ body.dashboard-page .presence-state {
   background: transparent;
   box-shadow: none;
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
-  font-weight: 600 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
 }
 
 body.dashboard-page .presence-state.is-online {
-  color: #15803d;
+  color: var(--es-good);
 }
 
 body.dashboard-page .presence-state.is-offline {
-  color: #dc2626;
+  color: var(--es-bad);
 }
 
 body.dashboard-page .activity {
@@ -636,10 +636,10 @@ body.dashboard-page .task-priority {
   border: 1px solid var(--fu-border);
   border-radius: 999px;
   background: var(--fu-surface-muted);
-  color: #475467;
+  color: var(--es-ink-2);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
-  font-weight: 600 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
   line-height: 1;
   letter-spacing: 0;
   text-transform: none;
@@ -648,7 +648,7 @@ body.dashboard-page .task-priority {
 body.dashboard-page .access-request-status.is-approved {
   border-color: #b7e4c7;
   background: #f0fdf4;
-  color: #15803d;
+  color: var(--es-good);
 }
 
 body.dashboard-page .access-request-status.is-rejected,
@@ -656,7 +656,7 @@ body.dashboard-page .pill.is-urgent,
 body.dashboard-page .task-priority.is-urgent {
   border-color: #fecaca;
   background: #fef2f2;
-  color: #b42318;
+  color: var(--es-bad);
 }
 
 body.dashboard-page .pill.is-high,
@@ -713,10 +713,10 @@ body.dashboard-page .kanban-column header > span {
   padding: 0 7px;
   border-radius: 999px;
   background: #eef2f6;
-  color: #475467;
+  color: var(--es-ink-2);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
-  font-weight: 600;
+  font-size: 15px !important;
+  font-weight: 700;
 }
 
 body.dashboard-page .kanban-dropzone {
@@ -726,7 +726,7 @@ body.dashboard-page .kanban-dropzone {
 }
 
 body.dashboard-page .kanban-dropzone.is-over {
-  background: #eef6ff;
+  background: var(--es-brand-soft);
   box-shadow: inset 0 0 0 1px #84b9f8;
 }
 
@@ -734,7 +734,7 @@ body.dashboard-page .task-card {
   gap: 10px;
   padding: 15px;
   cursor: grab;
-  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+  transition: transform .16s var(--es-ease), border-color .16s var(--es-ease), box-shadow .16s var(--es-ease);
 }
 
 body.dashboard-page .task-card:hover {
@@ -761,7 +761,7 @@ body.dashboard-page .task-list-panel table {
   min-width: 900px;
   border-collapse: collapse;
   font-family: var(--fu-font-body);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 body.dashboard-page .task-list-panel th {
@@ -770,8 +770,8 @@ body.dashboard-page .task-list-panel th {
   background: var(--fu-surface-muted);
   color: var(--fu-muted);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
-  font-weight: 600;
+  font-size: 15px !important;
+  font-weight: 700;
   letter-spacing: 0;
   text-transform: none;
 }
@@ -779,9 +779,9 @@ body.dashboard-page .task-list-panel th {
 body.dashboard-page .task-list-panel td {
   padding: 14px 16px;
   border-bottom: 1px solid var(--fu-border);
-  color: #344054;
+  color: var(--es-ink-2);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 400;
   vertical-align: middle;
 }
@@ -815,7 +815,7 @@ body.dashboard-page .dashboard-choice-menu {
   top: calc(100% + 6px);
   padding: 6px;
   border: 1px solid var(--fu-border);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--fu-surface);
   box-shadow: 0 14px 32px rgba(16, 24, 40, .12);
 }
@@ -823,10 +823,10 @@ body.dashboard-page .dashboard-choice-menu {
 body.dashboard-page .dashboard-choice-option {
   min-height: 38px;
   padding: 0 10px;
-  border-radius: 8px;
-  color: #344054;
+  border-radius: 14px;
+  color: var(--es-ink-2);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 500;
 }
 
@@ -849,8 +849,8 @@ body.dashboard-page .export-list-head {
   background: var(--fu-surface-muted);
   color: var(--fu-muted);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
-  font-weight: 600;
+  font-size: 15px !important;
+  font-weight: 700;
   letter-spacing: 0;
   text-transform: none;
 }
@@ -860,9 +860,9 @@ body.dashboard-page .export-list-row {
   border-color: var(--fu-border);
   color: var(--fu-muted);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 400;
-  transition: background-color .16s ease;
+  transition: background-color .16s var(--es-ease);
 }
 
 body.dashboard-page .export-list-row:hover {
@@ -873,7 +873,7 @@ body.dashboard-page .export-list-preview {
   width: 52px;
   height: 42px;
   border: 1px solid var(--fu-border);
-  border-radius: 8px;
+  border-radius: 14px;
   background: #f2f4f7;
 }
 
@@ -892,7 +892,7 @@ body.dashboard-page .export-list-title small,
 body.dashboard-page .export-list-time,
 body.dashboard-page .export-list-row > span {
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 400;
 }
 
@@ -908,10 +908,10 @@ body.dashboard-page .drawer-grid label,
 body.dashboard-page .drawer-notes,
 body.dashboard-page .drawer-section h3,
 body.dashboard-page .drawer-eyebrow {
-  color: #344054;
+  color: var(--es-ink-2);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
-  font-weight: 600;
+  font-size: 15px !important;
+  font-weight: 700;
 }
 
 body.dashboard-page .drawer-section {
@@ -996,7 +996,7 @@ body.dashboard-page .topbar-button:disabled {
   }
 
   body.dashboard-page .dashboard-welcome h2 {
-    font-size: 30px;
+    font-size: 28px;
   }
 
   body.dashboard-page .panel-head {
@@ -1005,7 +1005,7 @@ body.dashboard-page .topbar-button:disabled {
   }
 
   body.dashboard-page .panel-title {
-    font-size: 20px;
+    font-size: 22px;
   }
 
   body.dashboard-page .person-role-card {
@@ -1019,11 +1019,11 @@ body.dashboard-page .topbar-button:disabled {
   }
 
   body.dashboard-page .person-main strong {
-    font-size: 17px;
+    font-size: 18px;
   }
 
   body.dashboard-page .person-main span {
-    font-size: 14px !important;
+    font-size: 15px !important;
   }
 
   body.dashboard-page .metrics {
@@ -1086,28 +1086,28 @@ body.dashboard-page .task-filter-reset {
   min-height: 38px;
   padding: 0 13px;
   border: 1px solid #e2e6eb;
-  border-radius: 10px;
+  border-radius: 14px;
   background: #ffffff;
   color: #5f6875;
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
-  font-weight: 600;
+  font-size: 15px !important;
+  font-weight: 700;
   line-height: 1;
   white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, .03);
-  transition: border-color .18s ease, background-color .18s ease, color .18s ease, box-shadow .18s ease;
+  box-shadow: 0 1px 2px rgba(14, 16, 20, .03);
+  transition: border-color .16s var(--es-ease), background-color .16s var(--es-ease), color .16s var(--es-ease), box-shadow .16s var(--es-ease);
 }
 
 body.dashboard-page .task-quick-filter:hover,
 body.dashboard-page .task-filter-reset:hover {
   border-color: #cfd5dc;
-  color: #111827;
+  color: var(--es-ink);
 }
 
 body.dashboard-page .task-quick-filter.is-active {
   border-color: #c8cfd7;
   background: #f1f3f5;
-  color: #111827;
+  color: var(--es-ink);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .65);
 }
 
@@ -1134,13 +1134,13 @@ body.dashboard-page .task-filter-controls .filter {
   height: 38px;
   padding: 0 34px 0 12px;
   border: 1px solid #e2e6eb;
-  border-radius: 10px;
+  border-radius: 14px;
   background-color: #ffffff;
   color: #343b45;
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 500;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, .03);
+  box-shadow: 0 1px 2px rgba(14, 16, 20, .03);
 }
 
 body.dashboard-page .task-filter-reset[hidden] {
@@ -1163,7 +1163,7 @@ body.dashboard-page .kanban-board {
 
 body.dashboard-page .kanban-column {
   min-width: 0;
-  border: 1px solid #e4e7eb;
+  border: 1px solid var(--es-line);
   border-radius: 14px;
   background: #f6f7f8;
   box-shadow: none;
@@ -1178,7 +1178,7 @@ body.dashboard-page .kanban-column > header {
   justify-content: space-between;
   gap: 12px;
   padding: 0 14px;
-  border-bottom: 1px solid #e4e7eb;
+  border-bottom: 1px solid var(--es-line);
   background: rgba(255, 255, 255, .78);
 }
 
@@ -1186,8 +1186,8 @@ body.dashboard-page .kanban-column > header h2 {
   margin: 0;
   color: #171b22;
   font-family: var(--fu-font-display);
-  font-size: 17px !important;
-  font-weight: 750;
+  font-size: 18px !important;
+  font-weight: 800;
   line-height: 1;
 }
 
@@ -1198,10 +1198,10 @@ body.dashboard-page .kanban-column > header > span {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: #e9edf1;
+  background: var(--es-line);
   color: #55606f;
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 700;
 }
 
@@ -1211,11 +1211,11 @@ body.dashboard-page .kanban-dropzone {
   flex-direction: column;
   gap: 10px;
   padding: 10px;
-  transition: background-color .18s ease, box-shadow .18s ease;
+  transition: background-color .16s var(--es-ease), box-shadow .16s var(--es-ease);
 }
 
 body.dashboard-page .kanban-dropzone.is-over {
-  background: #eef6ff;
+  background: var(--es-brand-soft);
   box-shadow: inset 0 0 0 1px rgba(25, 128, 244, .28);
 }
 
@@ -1224,10 +1224,10 @@ body.dashboard-page .kanban-dropzone .empty.is-compact {
   display: grid;
   place-items: center;
   border: 1px dashed #d6dbe1;
-  border-radius: 11px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, .45);
   color: #7b8490;
-  font-size: 14px !important;
+  font-size: 15px !important;
 }
 
 body.dashboard-page .task-card {
@@ -1238,18 +1238,18 @@ body.dashboard-page .task-card {
   min-width: 0;
   padding: 13px;
   border: 1px solid #e2e6eb;
-  border-radius: 12px;
+  border-radius: 14px;
   background: #ffffff;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, .045);
+  box-shadow: 0 2px 6px rgba(14, 16, 20, .045);
   cursor: pointer;
   overflow: visible;
   isolation: isolate;
-  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  transition: border-color .16s var(--es-ease), box-shadow .16s var(--es-ease), transform .16s var(--es-ease);
 }
 
 body.dashboard-page .task-card:hover {
   border-color: #cbd2da;
-  box-shadow: 0 7px 18px rgba(15, 23, 42, .075);
+  box-shadow: 0 7px 18px rgba(14, 16, 20, .075);
   transform: translateY(-1px);
 }
 
@@ -1276,7 +1276,7 @@ body.dashboard-page .task-card-reference {
   overflow: hidden;
   color: #7a8491;
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 500;
   line-height: 1.15;
   text-overflow: ellipsis;
@@ -1297,8 +1297,8 @@ body.dashboard-page .task-card h3 {
   margin: 0;
   color: #151922;
   font-family: var(--fu-font-display);
-  font-size: 19px !important;
-  font-weight: 760;
+  font-size: 22px !important;
+  font-weight: 800;
   line-height: 1.08;
 }
 
@@ -1307,7 +1307,7 @@ body.dashboard-page .task-card-requester {
   overflow: hidden;
   color: #697382;
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 400;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -1322,7 +1322,7 @@ body.dashboard-page .task-card-due {
   min-width: 0;
   color: #7a8491;
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 500;
   cursor: default;
 }
@@ -1332,19 +1332,19 @@ body.dashboard-page .task-card-due input {
   width: 100%;
   height: 34px;
   padding: 0 7px;
-  border: 1px solid #e4e7eb;
-  border-radius: 8px;
+  border: 1px solid var(--es-line);
+  border-radius: 10px;
   background: #fafbfc;
   color: #47505d;
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 500;
   cursor: pointer;
 }
 
 body.dashboard-page .task-card-due.is-overdue,
 body.dashboard-page .task-card.is-overdue .task-card-due {
-  color: #b42318;
+  color: var(--es-bad);
 }
 
 body.dashboard-page .task-card.is-overdue .task-card-due input {
@@ -1376,13 +1376,13 @@ body.dashboard-page .task-card-quick-controls .dashboard-choice-trigger {
   grid-template-columns: minmax(0, 1fr) 12px;
   gap: 6px;
   padding: 0 9px;
-  border: 1px solid #e4e7eb;
-  border-radius: 8px;
+  border: 1px solid var(--es-line);
+  border-radius: 10px;
   background: #fafbfc;
   color: #49525f;
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
-  font-weight: 600;
+  font-size: 15px !important;
+  font-weight: 700;
   box-shadow: none;
 }
 
@@ -1401,8 +1401,8 @@ body.dashboard-page .task-card-owner-choice.is-saving .dashboard-choice-trigger 
 body.dashboard-page .drawer-activity {
   display: grid;
   gap: 0;
-  border: 1px solid #e4e7eb;
-  border-radius: 10px;
+  border: 1px solid var(--es-line);
+  border-radius: 14px;
   background: #ffffff;
   overflow: hidden;
 }
@@ -1422,13 +1422,13 @@ body.dashboard-page .drawer-activity-item strong,
 body.dashboard-page .drawer-activity-item span,
 body.dashboard-page .drawer-activity-empty {
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   line-height: 1.25;
 }
 
 body.dashboard-page .drawer-activity-item strong {
   color: #222831;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 body.dashboard-page .drawer-activity-item span,
@@ -1515,7 +1515,7 @@ body.dashboard-page .dashboard-app :where(
   .live-person small,
   .presence-state
 ) {
-  font-size: 14px !important;
+  font-size: 15px !important;
 }
 
 body.dashboard-page .kanban-board {
@@ -1526,7 +1526,7 @@ body.dashboard-page .kanban-board {
 
 body.dashboard-page .kanban-column {
   min-width: 0;
-  border: 1px solid #e4e7eb;
+  border: 1px solid var(--es-line);
   border-radius: 14px;
   background: #f6f7f8;
   overflow: hidden;
@@ -1548,7 +1548,7 @@ body.dashboard-page .task-card {
   flex-direction: column;
   gap: 9px;
   padding: 13px;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: visible;
   isolation: isolate;
 }
@@ -1574,7 +1574,7 @@ body.dashboard-page .task-card.is-high::before {
 
 body.dashboard-page .task-card.is-urgent::before {
   width: 4px;
-  background: #b42318;
+  background: var(--es-bad);
 }
 
 body.dashboard-page .task-card-top {
@@ -1598,9 +1598,9 @@ body.dashboard-page .task-priority {
   border: 1px solid var(--fu-border);
   border-radius: 999px;
   background: var(--fu-surface-muted);
-  color: #4b5563;
+  color: var(--es-ink-2);
   font-family: var(--fu-font-display);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 700 !important;
   line-height: 1;
   letter-spacing: 0;
@@ -1614,7 +1614,7 @@ body.dashboard-page .task-type {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  background: #f8fafc;
+  background: var(--es-sunk);
   color: #334155;
 }
 
@@ -1636,15 +1636,15 @@ body.dashboard-page .pill.is-urgent,
 body.dashboard-page .task-priority.is-urgent {
   border-color: #f3b8b4;
   background: #fff1f1;
-  color: #b42318;
+  color: var(--es-bad);
 }
 
 body.dashboard-page .task-card h3 {
   margin: 0;
   color: var(--fu-text);
   font-family: var(--fu-font-display);
-  font-size: 19px;
-  font-weight: 760;
+  font-size: 22px;
+  font-weight: 800;
   line-height: 1.08;
 }
 
@@ -1656,7 +1656,7 @@ body.dashboard-page .task-card p,
 body.dashboard-page .task-card-meta {
   color: var(--fu-muted);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 400;
   line-height: 1.25;
 }
@@ -1698,7 +1698,7 @@ body.dashboard-page .person-role-card .person-main span,
 body.dashboard-page .person-role-card .person-main small {
   color: var(--fu-muted);
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 400;
   line-height: 1.25;
 }
@@ -1726,9 +1726,9 @@ body.dashboard-page .person-role-control .dashboard-choice-trigger {
   min-height: 42px;
   height: 42px;
   padding: 0 16px;
-  border-radius: 13px;
+  border-radius: 14px;
   font-family: var(--fu-font-body);
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 700 !important;
   line-height: 1;
   letter-spacing: 0;

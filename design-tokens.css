@@ -1,79 +1,180 @@
 /*
- * FrameUp design tokens
+ * FrameUp design tokens — ES system
  *
- * This is the shared visual contract for product UI. Page styles should use
- * these semantic roles instead of inventing new font sizes, weights, or text
- * colors for the same job.
+ * The shared visual contract for product UI, aligned with the ES newsletter
+ * signup design style: crisp white, cool neutrals, one brand colour, hairlines
+ * over shadows, Roboto Condensed 700/800 for titles and numbers, Roboto for
+ * everything people read. Page styles should use these tokens instead of
+ * inventing new colours, sizes, radii or motion for the same job.
+ *
+ * Exported artwork (canvas) is not styled by this file.
  */
 
 :root {
-  /* Font families */
-  --es-font-display: "FrameUp Acumin", "Acumin Post", "Acumin Pro Condensed Local", "Roboto Condensed", Arial, sans-serif;
-  --es-font-ui: "Roboto Condensed", "Roboto", Arial, sans-serif;
+  /* Font families. Titles and numbers: Condensed 700/800. Reading text: Roboto. */
+  --es-font-display: "Roboto Condensed", "Roboto", Arial, sans-serif;
+  --es-font-ui: "Roboto", Arial, sans-serif;
   --es-font-body: "Roboto", Arial, sans-serif;
 
-  /* Text colors */
-  --es-text-strong: #101828;
-  --es-text-primary: #25364a;
-  --es-text-secondary: #52657d;
-  --es-text-muted: #6f8299;
-  --es-text-subtle: #98a2b3;
+  /* Neutrals (shared) */
+  --es-bg: #ffffff;
+  --es-stage: #f3f4f6;
+  --es-sunk: #f5f6f8;
+  --es-line: #e5e7eb;
+  --es-line-2: #d3d7de;
+  --es-ink: #0e1014;
+  --es-ink-2: #464c57;
+  --es-ink-3: #6b7280;
+  --es-placeholder: #9aa0aa;
+  --es-good: #0e7a3d;
+  --es-good-soft: #e9f6ee;
+  --es-bad: #c42323;
+  --es-bad-soft: #fdeeee;
+  --es-warn: #b45309;
+  --es-warn-soft: #fff8ed;
+
+  /* Brand slots. ES blue #0A7DFA is 3.9:1 on white, so it stays the wordmark
+     colour (dots, rules, progress) and a deeper fill/text carries AA contrast. */
+  --es-brand: #0a7dfa;
+  --es-brand-rgb: 10 125 250;
+  --es-brand-fill: #0a6bd8;
+  --es-brand-fill-press: #0859b5;
+  --es-brand-text: #0a62c7;
+  --es-brand-soft: #eaf3ff;
+  --es-brand-soft-hover: #dcebff;
+  --es-brand-tint: #b5d8fd;
+  --es-band-tint: #f5f9ff;
+  --es-selected: #0e1014;
+
+  /* Legacy text roles, now mapped onto the neutrals. */
+  --es-text-strong: var(--es-ink);
+  --es-text-primary: var(--es-ink);
+  --es-text-secondary: var(--es-ink-2);
+  --es-text-muted: var(--es-ink-3);
+  --es-text-subtle: var(--es-ink-3);
   --es-text-on-accent: #ffffff;
 
-  /* Brand and interaction colors */
-  --es-action-primary: #0a7dfa;
-  --es-action-primary-hover: #086fdf;
-  --es-action-soft: #e8f2ff;
-  --es-focus-ring: rgba(10, 125, 250, .16);
+  /* Legacy action roles */
+  --es-action-primary: var(--es-brand-fill);
+  --es-action-primary-hover: var(--es-brand-fill-press);
+  --es-action-soft: var(--es-brand-soft);
+  --es-focus-ring: rgba(14, 16, 20, .08);
 
-  /* Semantic type scale */
+  /* Spacing: 4 · 8 · 12 · 16 · 24 · 32 · 48 · 72 */
+  --es-space-1: 4px;
+  --es-space-2: 8px;
+  --es-space-3: 12px;
+  --es-space-4: 16px;
+  --es-space-5: 24px;
+  --es-space-6: 32px;
+  --es-space-7: 48px;
+  --es-space-8: 72px;
+
+  /* Radius: chips/crests · controls · containers · pills */
+  --es-radius-chip: 10px;
+  --es-radius-control: 14px;
+  --es-radius-container: 20px;
+  --es-radius-pill: 999px;
+
+  /* Sizing */
+  --es-tap: 44px;
+  --es-control-height: 56px;
+
+  /* Elevation: hairlines everywhere, real shadow only for floating things. */
+  --es-hairline: inset 0 0 0 1px var(--es-line);
+  --es-outline: inset 0 0 0 1.5px var(--es-line-2);
+  --es-shadow-float: 0 1px 1px rgb(14 16 20 / .04), 0 12px 32px -12px rgb(14 16 20 / .22);
+  --es-shadow-bar: 0 -8px 24px -16px rgb(14 16 20 / .18);
+  --es-focus: 0 0 0 3px #ffffff, 0 0 0 5px var(--es-ink);
+
+  /* Motion */
+  --es-ease: cubic-bezier(.22, .8, .24, 1);
+  --es-ease-entrance: cubic-bezier(.16, 1, .3, 1);
+  --es-dur: 160ms;
+  --es-dur-press: 140ms;
+  --es-dur-fill: 200ms;
+  --es-dur-step: 300ms;
+  --es-dur-progress: 420ms;
+
+  /* Semantic type scale (tool density: 13 · 15 · 18 · 22 · 28 · 36) */
   --es-type-display-size: 48px;
-  --es-type-display-line: .95;
-  --es-type-display-weight: 900;
+  --es-type-display-line: .98;
+  --es-type-display-weight: 800;
 
   --es-type-page-title-size: 36px;
-  --es-type-page-title-line: 1;
-  --es-type-page-title-weight: 900;
+  --es-type-page-title-line: 1.05;
+  --es-type-page-title-weight: 800;
 
-  --es-type-workspace-title-size: 24px;
-  --es-type-workspace-title-line: 1.05;
+  --es-type-workspace-title-size: 22px;
+  --es-type-workspace-title-line: 1.1;
   --es-type-workspace-title-weight: 800;
 
   --es-type-panel-title-size: 18px;
-  --es-type-panel-title-line: 1.15;
+  --es-type-panel-title-line: 1.2;
   --es-type-panel-title-weight: 800;
 
   --es-type-section-title-size: 15px;
-  --es-type-section-title-line: 1.2;
-  --es-type-section-title-weight: 800;
+  --es-type-section-title-line: 1.3;
+  --es-type-section-title-weight: 700;
 
-  --es-type-field-label-size: 12px;
-  --es-type-field-label-line: 1.25;
+  --es-type-field-label-size: 13px;
+  --es-type-field-label-line: 1.4;
   --es-type-field-label-weight: 700;
 
-  --es-type-control-size: 14px;
-  --es-type-control-line: 1.3;
+  --es-type-control-size: 15px;
+  --es-type-control-line: 1.4;
   --es-type-control-weight: 500;
 
-  --es-type-body-size: 14px;
+  --es-type-body-size: 15px;
   --es-type-body-line: 1.5;
   --es-type-body-weight: 400;
 
-  --es-type-helper-size: 12px;
-  --es-type-helper-line: 1.4;
+  --es-type-helper-size: 13px;
+  --es-type-helper-line: 1.45;
   --es-type-helper-weight: 400;
 
-  --es-type-meta-size: 11px;
-  --es-type-meta-line: 1.25;
-  --es-type-meta-weight: 600;
+  --es-type-meta-size: 13px;
+  --es-type-meta-line: 1.5;
+  --es-type-meta-weight: 500;
 }
 
 html[data-theme="dark"] {
-  --es-text-strong: #f5f7fa;
-  --es-text-primary: #e4e7ec;
-  --es-text-secondary: #c4cbd4;
-  --es-text-muted: #98a2b3;
-  --es-text-subtle: #7b8794;
+  --es-bg: #121212;
+  --es-stage: #080808;
+  --es-sunk: #1a1a1a;
+  --es-line: #303030;
+  --es-line-2: #444444;
+  --es-ink: #f3f5f7;
+  --es-ink-2: #c4cbd4;
+  --es-ink-3: #98a2b3;
+  --es-brand-text: #5aa8ff;
+  --es-brand-soft: rgba(37, 134, 247, .17);
+  --es-brand-soft-hover: rgba(37, 134, 247, .24);
+  --es-band-tint: rgba(37, 134, 247, .1);
+  --es-selected: #f3f5f7;
+  --es-focus: 0 0 0 3px #080808, 0 0 0 5px var(--es-ink);
+}
+
+/* Visible focus everywhere: a white gap, then an ink ring. */
+:is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--es-ink) !important;
+  outline-offset: 2px !important;
+}
+
+::placeholder {
+  color: var(--es-placeholder);
+}
+
+/* Reduced motion turns off every animation and transition. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Reusable semantic roles for new UI. */

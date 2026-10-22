@@ -1,21 +1,21 @@
 :root {
   --pk-white: #ffffff;
-  --pk-ink: var(--es-text-strong, #101828);
-  --pk-text: var(--es-text-primary, #25364a);
-  --pk-muted: var(--es-text-muted, #6f8299);
-  --pk-soft-blue: var(--es-action-soft, #e8f2ff);
-  --pk-border: #d7e3f0;
-  --pk-border-strong: #8cb9e8;
-  --pk-accent: var(--es-action-primary, #0a7dfa);
+  --pk-ink: var(--es-text-strong, var(--es-ink));
+  --pk-text: var(--es-text-primary, var(--es-ink-2));
+  --pk-muted: var(--es-text-muted, var(--es-ink-3));
+  --pk-soft-blue: var(--es-action-soft, var(--es-brand-soft));
+  --pk-border: var(--es-line);
+  --pk-border-strong: var(--es-line-2);
+  --pk-accent: var(--es-action-primary, var(--es-brand-fill));
   --pk-focus: var(--es-focus-ring, rgba(10, 125, 250, .16));
-  --pk-success: #2e7d32;
-  --pk-success-soft: #eaf6ee;
-  --pk-error: #c92d2d;
-  --pk-error-soft: #fdeceb;
-  --pk-void: #6f8299;
-  --pk-void-soft: #eef1f5;
-  --pk-radius-sm: 8px;
-  --pk-radius-md: 12px;
+  --pk-success: var(--es-good);
+  --pk-success-soft: var(--es-good-soft);
+  --pk-error: var(--es-bad);
+  --pk-error-soft: var(--es-bad-soft);
+  --pk-void: var(--es-ink-3);
+  --pk-void-soft: var(--es-stage);
+  --pk-radius-sm: 14px;
+  --pk-radius-md: 14px;
   --pk-font-ui: var(--es-font-ui, "Roboto Condensed", "Roboto", Arial, sans-serif);
   --pk-font-body: var(--es-font-body, "Roboto", Arial, sans-serif);
   --pk-font-display: var(--es-font-display, "FrameUp Acumin", "Acumin Post", "Arial Narrow", sans-serif);
@@ -67,7 +67,7 @@ body.pickem-page *::after {
   color: var(--pk-ink);
   font-family: var(--pk-font-display);
   font-size: clamp(28px, 4vw, 40px);
-  font-weight: 900;
+  font-weight: 800;
   line-height: 1.02;
 }
 
@@ -90,7 +90,7 @@ body.pickem-page *::after {
   border-radius: var(--pk-radius-sm);
   background: var(--pk-soft-blue);
   color: var(--pk-text);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .pickem-signin-note a {
@@ -157,7 +157,7 @@ body.pickem-page *::after {
 
 .pickem-next-lock {
   color: var(--pk-muted);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .pickem-games-list {
@@ -196,7 +196,7 @@ body.pickem-page *::after {
   color: var(--pk-ink);
   font-family: var(--pk-font-ui);
   cursor: pointer;
-  transition: border-color .15s ease, background-color .15s ease;
+  transition: border-color .16s var(--es-ease), background-color .16s var(--es-ease);
 }
 
 .pickem-team-btn:hover:not(:disabled) {
@@ -240,7 +240,7 @@ body.pickem-page *::after {
 
 .pickem-vs {
   color: var(--pk-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -255,11 +255,11 @@ body.pickem-page *::after {
 
 .pickem-game-kickoff {
   color: var(--pk-muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .pickem-game-status {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -330,7 +330,7 @@ body.pickem-page *::after {
 .pickem-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .pickem-table th,
@@ -406,7 +406,7 @@ body.pickem-page *::after {
   padding: 8px 10px;
   border: 1px solid var(--pk-border);
   border-radius: var(--pk-radius-sm);
-  font-size: 14px;
+  font-size: 15px;
   font-family: var(--pk-font-body);
 }
 
@@ -434,7 +434,7 @@ body.pickem-page *::after {
 .pickem-sticky-bar span {
   color: var(--pk-text);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 @media (max-width: 640px) {

@@ -19,7 +19,7 @@ assert(
 );
 
 assert(
-  /#stats-single-fields \.stats-entry \.stats-entry-label-input\s*\{[\s\S]*?border-left:\s*1px solid #E4EAF1;/.test(html),
+  /#stats-single-fields \.stats-entry \.stats-entry-label-input\s*\{[\s\S]*?border-left:\s*1px solid var\(--es-line\);/.test(html),
   'Single Stats compound controls must use one internal divider.',
 );
 

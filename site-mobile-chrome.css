@@ -9,7 +9,7 @@
 
 /* Shared workspace surface: grey editor chrome with a white actual canvas. */
 .app[data-workspace] {
-  background: #f3f4f6;
+  background: var(--es-stage);
 }
 
 .app[data-workspace] .canvas-wrap,
@@ -118,16 +118,16 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     gap: 5px;
     padding: 0;
     border: 0;
-    border-radius: 10px;
+    border-radius: 14px;
     background: transparent;
-    color: #111827;
+    color: var(--es-ink);
     cursor: pointer;
-    transition: background-color .18s ease, transform .18s ease;
+    transition: background-color .16s var(--es-ease), transform .16s var(--es-ease);
   }
 
   .mobile-menu-toggle:hover,
   .mobile-menu-toggle:focus-visible {
-    background: #f3f4f6;
+    background: var(--es-stage);
     outline: 0;
   }
 
@@ -137,7 +137,7 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     height: 2px;
     border-radius: 99px;
     background: currentColor;
-    transition: transform .22s ease, opacity .18s ease;
+    transition: transform .16s var(--es-ease), opacity .16s var(--es-ease);
   }
 
   .navbar.is-mobile-menu-open .mobile-menu-toggle span:nth-child(1) {
@@ -171,14 +171,14 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     overflow-y: auto !important;
     overflow-x: hidden !important;
     box-sizing: border-box;
-    border: 1px solid #e5e7eb;
-    border-radius: 16px;
+    border: 1px solid var(--es-line);
+    border-radius: 20px;
     background: #fff;
-    box-shadow: 0 16px 38px rgba(15, 23, 42, .14);
-    color: #111827;
+    box-shadow: 0 16px 38px rgba(14, 16, 20, .14);
+    color: var(--es-ink);
     font-family: var(--font-display, "Acumin Post", "Roboto Condensed", Arial, sans-serif);
     font-size: 18px;
-    font-weight: 900;
+    font-weight: 800;
     line-height: 1.15;
     white-space: normal;
   }
@@ -209,8 +209,8 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     width: 100%;
     box-sizing: border-box;
     padding: 0 14px;
-    border-radius: 10px;
-    color: #111827;
+    border-radius: 14px;
+    color: var(--es-ink);
     text-decoration: none;
   }
 
@@ -278,8 +278,8 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     width: 100%;
     box-sizing: border-box;
     padding: 0 12px;
-    border-radius: 8px;
-    color: #4b5563;
+    border-radius: 14px;
+    color: var(--es-ink-2);
     font-size: 16px;
     font-weight: 700;
     text-decoration: none;
@@ -288,7 +288,7 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
   .nav-dropdown-menu a:hover,
   .nav-dropdown-menu a:focus-visible {
     background: #f5f7fa;
-    color: #111827;
+    color: var(--es-ink);
     outline: 0;
   }
 
@@ -296,7 +296,7 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     display: block;
     margin-top: 6px;
     padding-top: 8px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--es-line);
   }
 
   .mobile-menu-account .profile-menu[data-profile-popover-version="2"] {
@@ -360,7 +360,7 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
   .footer-blurb,
   .footer-copy {
     width: min(100%, 620px);
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.45;
   }
 
@@ -418,7 +418,7 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     gap: 8px;
     padding: 6px 10px !important;
     border: 0 !important;
-    border-bottom: 1px solid #DCE4ED !important;
+    border-bottom: 1px solid var(--es-line) !important;
     border-radius: 0 !important;
     background: rgba(255, 255, 255, .98) !important;
     box-shadow: none !important;
@@ -438,7 +438,7 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     justify-content: center;
     padding: 0;
     border: 0;
-    border-radius: 8px;
+    border-radius: 14px;
     background: transparent;
     color: #15253A;
   }
@@ -472,10 +472,10 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     gap: 2px !important;
     padding: 4px 6px calc(4px + var(--mobile-editor-safe-bottom)) !important;
     border: 0 !important;
-    border-top: 1px solid #DCE4ED !important;
+    border-top: 1px solid var(--es-line) !important;
     border-radius: 0 !important;
     background: rgba(255, 255, 255, .98) !important;
-    box-shadow: 0 -8px 24px rgba(15, 23, 42, .08) !important;
+    box-shadow: 0 -8px 24px rgba(14, 16, 20, .08) !important;
     box-sizing: border-box;
   }
 
@@ -497,17 +497,17 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     gap: 3px;
     padding: 4px 2px !important;
     border: 0 !important;
-    border-radius: 8px !important;
+    border-radius: 14px !important;
     background: transparent !important;
     color: #60748A !important;
-    font-size: 11px !important;
+    font-size: 13px !important;
     font-weight: 700 !important;
     line-height: 1 !important;
   }
 
   :is(.mobile-editor-nav, .reels-mobile-nav) button:is(.is-active, :focus-visible) {
-    background: #E8F2FF !important;
-    color: #0A7DFA !important;
+    background: var(--es-brand-soft) !important;
+    color: var(--es-brand-text) !important;
     outline: 0 !important;
   }
 
@@ -537,9 +537,9 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     margin: 0 !important;
     padding: 0 !important;
     border: 0 !important;
-    border-radius: 8px !important;
+    border-radius: 14px !important;
     background: transparent !important;
-    color: #0A7DFA !important;
+    color: var(--es-brand-text) !important;
   }
 
   :is(.mobile-editor-sheet-grip, .reels-mobile-sheet-grip) {
@@ -609,8 +609,8 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     border-right: 0 !important;
     border-left: 0 !important;
     border-bottom: 0 !important;
-    border-radius: 12px 12px 0 0 !important;
-    box-shadow: 0 -12px 32px rgba(15, 23, 42, .14) !important;
+    border-radius: 14px 14px 0 0 !important;
+    box-shadow: 0 -12px 32px rgba(14, 16, 20, .14) !important;
     transform: translateY(calc(100% + var(--mobile-editor-toolbar-height) + var(--mobile-editor-safe-bottom) + 18px)) !important;
   }
 
@@ -642,7 +642,7 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
   html[data-studio-shell="on"] .mobile-editor-sheet-head strong {
     grid-column: 1;
     padding: 0 !important;
-    font-size: 20px !important;
+    font-size: 22px !important;
     line-height: 1 !important;
   }
 
@@ -723,7 +723,7 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     padding-bottom: 12px;
-    border-bottom: 1px solid #E4EAF1;
+    border-bottom: 1px solid var(--es-line);
   }
 
   html[data-studio-shell="on"] .mobile-editor-media-actions button {
@@ -733,18 +733,18 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     justify-content: center;
     gap: 8px;
     padding: 0 10px;
-    border: 1px solid #B5D8FD;
-    border-radius: 8px;
+    border: 1px solid var(--es-line);
+    border-radius: 14px;
     background: #FFFFFF;
     color: #10243C;
     font-family: var(--font-heading);
-    font-size: 14px !important;
+    font-size: 15px !important;
     font-weight: 700;
   }
 
   html[data-studio-shell="on"] .mobile-editor-media-actions button:first-child {
-    border-color: #0A7DFA;
-    background: #0A7DFA;
+    border-color: var(--es-brand);
+    background: var(--es-brand-fill);
     color: #FFFFFF;
   }
 
@@ -776,7 +776,7 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     gap: 10px;
     padding: 8px 10px;
     border: 1px solid #D9E5F2;
-    border-radius: 8px;
+    border-radius: 14px;
     background: #FFFFFF;
     color: #10243C;
     text-align: left;
@@ -790,14 +790,14 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
 
   html[data-studio-shell="on"] .mobile-editor-more-actions strong {
     font-family: var(--font-heading);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
   }
 
   html[data-studio-shell="on"] .mobile-editor-more-actions small {
     color: #60748A;
     font-family: var(--font-ui, "Roboto", Arial, sans-serif);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 400;
     line-height: 1.25;
   }
@@ -807,7 +807,7 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     height: 20px;
     justify-self: center;
     fill: none;
-    stroke: #0A7DFA;
+    stroke: var(--es-brand);
     stroke-width: 2;
   }
 

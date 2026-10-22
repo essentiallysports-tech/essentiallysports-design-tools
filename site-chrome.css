@@ -15,15 +15,15 @@
 }
 
 :root {
-  --chrome-accent: #0a7dfa;
-  --chrome-navy: #06111f;
-  --chrome-muted: #6c7a89;
-  --chrome-border: #dce4ed;
+  --chrome-accent: var(--es-brand-fill);
+  --chrome-navy: var(--es-ink);
+  --chrome-muted: var(--es-ink-3);
+  --chrome-border: var(--es-line);
   --chrome-surface: #ffffff;
-  --chrome-soft: #f6f8fb;
-  --chrome-display: "FrameUp Acumin", "Acumin Pro Condensed Local", "Acumin Post", "Roboto Condensed", Arial, sans-serif;
-  --chrome-ui: "Roboto Condensed", "Roboto", Arial, sans-serif;
-  --chrome-motion: cubic-bezier(.16, 1, .3, 1);
+  --chrome-soft: var(--es-sunk);
+  --chrome-display:  var(--es-font-display);
+  --chrome-ui:  var(--es-font-ui);
+  --chrome-motion: var(--es-ease);
 }
 
 /* Scroll stays fully functional (wheel/keyboard/touch) everywhere on the
@@ -55,7 +55,7 @@ html::-webkit-scrollbar {
     border-radius: 0 !important;
     background: var(--chrome-surface) !important;
     box-shadow: none !important;
-    color: #111111 !important;
+    color: var(--es-ink) !important;
   }
 
   .navbar-logo {
@@ -88,10 +88,10 @@ html::-webkit-scrollbar {
     border: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: #111111 !important;
+    color: var(--es-ink) !important;
     font-family: var(--chrome-display) !important;
     font-size: 18px !important;
-    font-weight: 900 !important;
+    font-weight: 800 !important;
     line-height: 1 !important;
     white-space: nowrap !important;
   }
@@ -118,7 +118,7 @@ html::-webkit-scrollbar {
   .navbar-menu > .nav-dropdown > .nav-trigger:hover,
   .navbar-menu > .nav-dropdown > .nav-trigger:focus-visible,
   .navbar-menu > a[aria-current="page"] {
-    color: #111111 !important;
+    color: var(--es-ink) !important;
     outline: 0 !important;
   }
 
@@ -137,7 +137,7 @@ html::-webkit-scrollbar {
     margin: 0 0 0 8px !important;
     background: url("data:image/svg+xml,%3Csvg width='16' height='10' viewBox='0 0 16 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14.98 1.14 7.98 7.14.98 1.14' stroke='%230A7DFA' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat !important;
     transform: translateY(1px) rotate(0) !important;
-    transition: transform .24s var(--chrome-motion) !important;
+    transition: transform .16s var(--chrome-motion) !important;
   }
 
   .nav-dropdown.is-open > .has-chevron::after {
@@ -156,15 +156,15 @@ html::-webkit-scrollbar {
     padding: 10px !important;
     overflow: visible !important;
     border: 1px solid var(--chrome-border) !important;
-    border-radius: 12px !important;
+    border-radius: 14px !important;
     background: var(--chrome-surface) !important;
-    box-shadow: 0 18px 42px rgba(3, 49, 98, .12) !important;
+    box-shadow: 0 18px 42px rgba(14, 16, 20, .12) !important;
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
     transform: translateY(8px) scale(.98) !important;
     transform-origin: top left !important;
-    transition: opacity .24s var(--chrome-motion), transform .24s var(--chrome-motion), visibility .24s var(--chrome-motion) !important;
+    transition: opacity .16s var(--chrome-motion), transform .16s var(--chrome-motion), visibility .16s var(--chrome-motion) !important;
   }
 
   .nav-dropdown.is-open > .nav-dropdown-menu {
@@ -181,7 +181,7 @@ html::-webkit-scrollbar {
     display: flex !important;
     align-items: center !important;
     padding: 0 12px !important;
-    border-radius: 8px !important;
+    border-radius: 14px !important;
     color: var(--chrome-navy) !important;
     font-family: var(--chrome-ui) !important;
     font-size: 15px !important;
@@ -194,7 +194,7 @@ html::-webkit-scrollbar {
 
   .nav-dropdown-menu a:hover,
   .nav-dropdown-menu a:focus-visible {
-    background: #eaf4ff !important;
+    background: var(--es-brand-soft) !important;
     color: var(--chrome-accent) !important;
     outline: 0 !important;
     transform: translateX(3px) !important;
@@ -210,7 +210,7 @@ html::-webkit-scrollbar {
     border-radius: 999px !important;
     background: var(--chrome-accent) !important;
     transform: translateY(-50%) !important;
-    transition: height .22s var(--chrome-motion) !important;
+    transition: height .16s var(--chrome-motion) !important;
   }
 
   .nav-dropdown-menu a:hover::before,
@@ -247,9 +247,9 @@ html::-webkit-scrollbar {
     border-radius: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: #111111 !important;
+    color: var(--es-ink) !important;
     text-decoration: none !important;
-    transition: opacity .18s ease !important;
+    transition: opacity .16s var(--es-ease) !important;
   }
 
   .navbar-icon-btn:hover,
@@ -282,7 +282,7 @@ html::-webkit-scrollbar {
 
   .profile-menu.is-open {
     border-color: var(--chrome-border) !important;
-    background: #fafafc !important;
+    background: var(--es-sunk) !important;
   }
 
   .profile-trigger {
@@ -309,7 +309,7 @@ html::-webkit-scrollbar {
     display: grid !important;
     place-items: center !important;
     overflow: hidden !important;
-    border: 1px solid #b5d8fd !important;
+    border: 1px solid var(--es-line) !important;
     border-radius: 999px !important;
     background-color: #ffffff !important;
     background-position: center !important;
@@ -334,7 +334,7 @@ html::-webkit-scrollbar {
     color: #000000 !important;
     font-family: var(--chrome-display) !important;
     font-size: 18px !important;
-    font-weight: 900 !important;
+    font-weight: 800 !important;
     line-height: 1 !important;
     text-align: left !important;
     white-space: nowrap !important;
@@ -345,7 +345,7 @@ html::-webkit-scrollbar {
     margin-top: 3px !important;
     color: #7b8490 !important;
     font-family: var(--chrome-ui) !important;
-    font-size: 14px !important;
+    font-size: 15px !important;
     font-weight: 400 !important;
     line-height: 1 !important;
   }
@@ -356,7 +356,7 @@ html::-webkit-scrollbar {
     flex: 0 0 14px !important;
     margin-left: auto !important;
     color: var(--chrome-accent) !important;
-    transition: transform .24s var(--chrome-motion) !important;
+    transition: transform .16s var(--chrome-motion) !important;
   }
 
   .profile-menu.is-open .profile-chevron {
@@ -378,13 +378,13 @@ html::-webkit-scrollbar {
     border: 1px solid var(--chrome-border) !important;
     border-radius: 14px !important;
     background: #ffffff !important;
-    box-shadow: 0 14px 32px rgba(17, 24, 39, .10) !important;
+    box-shadow: 0 14px 32px rgba(14, 16, 20, .10) !important;
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
     transform: translateY(8px) scale(.98) !important;
     transform-origin: top right !important;
-    transition: opacity .24s var(--chrome-motion), transform .24s var(--chrome-motion), visibility .24s var(--chrome-motion) !important;
+    transition: opacity .16s var(--chrome-motion), transform .16s var(--chrome-motion), visibility .16s var(--chrome-motion) !important;
   }
 
   .profile-menu.is-open > .profile-dropdown {
@@ -404,12 +404,12 @@ html::-webkit-scrollbar {
     gap: 10px !important;
     padding: 0 11px !important;
     border: 0 !important;
-    border-radius: 10px !important;
+    border-radius: 14px !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: #111111 !important;
+    color: var(--es-ink) !important;
     font-family: var(--chrome-ui) !important;
-    font-size: 14px !important;
+    font-size: 15px !important;
     font-weight: 500 !important;
     line-height: 1.2 !important;
     text-align: left !important;
@@ -432,7 +432,7 @@ html::-webkit-scrollbar {
     margin-top: 5px !important;
     padding-top: 1px !important;
     border-top: 1px solid var(--chrome-border) !important;
-    border-radius: 0 0 10px 10px !important;
+    border-radius: 0 0 14px 14px !important;
     background: transparent !important;
     color: #8e2020 !important;
   }
@@ -460,7 +460,7 @@ html::-webkit-scrollbar {
   flex: 0 1 auto !important;
   overflow: visible !important;
   border: 0 !important;
-  border-radius: 12px !important;
+  border-radius: 14px !important;
   background: transparent !important;
   box-shadow: none !important;
 }
@@ -476,10 +476,10 @@ html::-webkit-scrollbar {
   gap: 9px !important;
   padding: 0 10px !important;
   border: 0 !important;
-  border-radius: 12px !important;
+  border-radius: 14px !important;
   background: transparent !important;
   box-shadow: none !important;
-  color: #111111 !important;
+  color: var(--es-ink) !important;
   cursor: pointer !important;
   transition: background-color 170ms var(--chrome-motion), box-shadow 170ms var(--chrome-motion) !important;
 }
@@ -487,7 +487,7 @@ html::-webkit-scrollbar {
 .profile-menu[data-profile-popover-version="2"] > .profile-trigger:hover,
 .profile-menu[data-profile-popover-version="2"] > .profile-trigger:focus-visible,
 .profile-menu[data-profile-popover-version="2"].is-open > .profile-trigger {
-  background: #f3f5f7 !important;
+  background: var(--es-sunk) !important;
 }
 
 .profile-menu[data-profile-popover-version="2"] > .profile-trigger:focus-visible {
@@ -535,10 +535,10 @@ html::-webkit-scrollbar {
   display: block !important;
   flex: 0 1 auto !important;
   overflow: hidden !important;
-  color: #111111 !important;
+  color: var(--es-ink) !important;
   font-family: var(--chrome-ui) !important;
   font-size: 16px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   line-height: 1.1 !important;
   text-align: left !important;
   text-overflow: ellipsis !important;
@@ -580,7 +580,7 @@ html::-webkit-scrollbar {
   border: 1px solid #dce3ea !important;
   border-radius: 14px !important;
   background: #ffffff !important;
-  box-shadow: 0 16px 40px rgba(17, 24, 39, .12) !important;
+  box-shadow: 0 16px 40px rgba(14, 16, 20, .12) !important;
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
@@ -620,17 +620,17 @@ html::-webkit-scrollbar {
 }
 
 .profile-menu[data-profile-popover-version="2"] .profile-identity-copy strong {
-  color: #111111 !important;
+  color: var(--es-ink) !important;
   font-family: var(--chrome-ui) !important;
   font-size: 15px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   line-height: 1.15 !important;
 }
 
 .profile-menu[data-profile-popover-version="2"] .profile-identity-copy span {
-  color: #6b7280 !important;
+  color: var(--es-ink-3) !important;
   font-family: var(--chrome-ui) !important;
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 400 !important;
   line-height: 1.15 !important;
 }
@@ -651,12 +651,12 @@ html::-webkit-scrollbar {
   gap: 10px !important;
   padding: 0 10px !important;
   border: 0 !important;
-  border-radius: 9px !important;
+  border-radius: 14px !important;
   background: transparent !important;
   box-shadow: none !important;
   color: #202733 !important;
   font-family: var(--chrome-ui) !important;
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 500 !important;
   line-height: 1.2 !important;
   text-align: left !important;
@@ -666,13 +666,13 @@ html::-webkit-scrollbar {
 .profile-menu[data-profile-popover-version="2"] .profile-option:hover,
 .profile-menu[data-profile-popover-version="2"] .profile-option:focus-visible,
 .profile-menu[data-profile-popover-version="2"] .profile-option[aria-current="page"] {
-  background: #f2f4f6 !important;
+  background: var(--es-stage) !important;
   outline: 0 !important;
 }
 
 .profile-menu[data-profile-popover-version="2"] .profile-option:focus-visible,
 .profile-menu[data-profile-popover-version="2"] [data-profile-theme-choice]:focus-visible {
-  box-shadow: inset 0 0 0 2px rgba(10, 125, 250, .28) !important;
+  box-shadow: inset 0 0 0 2px rgba(14, 16, 20, .28) !important;
 }
 
 .profile-menu[data-profile-popover-version="2"] .profile-option svg {
@@ -694,7 +694,7 @@ html::-webkit-scrollbar {
 .profile-menu[data-profile-popover-version="2"] .profile-appearance-label {
   color: #202733 !important;
   font-family: var(--chrome-ui) !important;
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 500 !important;
 }
 
@@ -704,8 +704,8 @@ html::-webkit-scrollbar {
   gap: 2px !important;
   padding: 3px !important;
   border: 1px solid #dce3ea !important;
-  border-radius: 9px !important;
-  background: #f3f5f7 !important;
+  border-radius: 14px !important;
+  background: var(--es-sunk) !important;
 }
 
 .profile-menu[data-profile-popover-version="2"] [data-profile-theme-choice] {
@@ -713,10 +713,10 @@ html::-webkit-scrollbar {
   height: 30px !important;
   padding: 0 8px !important;
   border: 0 !important;
-  border-radius: 6px !important;
+  border-radius: 10px !important;
   background: transparent !important;
   box-shadow: none !important;
-  color: #667085 !important;
+  color: var(--es-ink-3) !important;
   font-family: var(--chrome-ui) !important;
   font-size: 13px !important;
   font-weight: 500 !important;
@@ -726,7 +726,7 @@ html::-webkit-scrollbar {
 
 .profile-menu[data-profile-popover-version="2"] [data-profile-theme-choice][aria-pressed="true"] {
   background: #ffffff !important;
-  box-shadow: 0 1px 3px rgba(17, 24, 39, .12) !important;
+  box-shadow: 0 1px 3px rgba(14, 16, 20, .12) !important;
   color: var(--chrome-accent) !important;
 }
 
@@ -735,7 +735,7 @@ html::-webkit-scrollbar {
   margin-top: 0 !important;
   padding: 0 10px !important;
   border-top: 0 !important;
-  border-radius: 0 0 9px 9px !important;
+  border-radius: 0 0 14px 14px !important;
   background: transparent !important;
   color: #a12626 !important;
 }
@@ -746,7 +746,7 @@ html::-webkit-scrollbar {
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] > .profile-trigger {
-  color: #f3f4f6 !important;
+  color: var(--es-stage) !important;
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] > .profile-trigger:hover,
@@ -759,12 +759,12 @@ html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-identity-copy strong,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-appearance-label {
-  color: #f3f4f6 !important;
+  color: var(--es-stage) !important;
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] > .profile-dropdown {
   border-color: #3a3a3a !important;
-  background: #111111 !important;
+  background: var(--es-ink) !important;
   box-shadow: 0 18px 42px rgba(0, 0, 0, .34) !important;
 }
 
@@ -840,7 +840,7 @@ html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile
   max-width: 100% !important;
   overflow: hidden !important;
   background: #ffffff !important;
-  color: #111111 !important;
+  color: var(--es-ink) !important;
   font-family: var(--chrome-ui) !important;
 }
 
@@ -869,7 +869,7 @@ html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile
   width: min(980px, 100%) !important;
   margin: 18px auto 22px !important;
   color: #ffffff !important;
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 400 !important;
   line-height: 1.45 !important;
 }
@@ -895,7 +895,7 @@ html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile
 
 .site-footer .footer-copy {
   color: #ffffff !important;
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 700 !important;
 }
 
@@ -913,8 +913,8 @@ html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile
   display: flex !important;
   flex-direction: column !important;
   gap: 14px !important;
-  color: #111111 !important;
-  font-size: 14px !important;
+  color: var(--es-ink) !important;
+  font-size: 15px !important;
   font-weight: 400 !important;
   line-height: 1.3 !important;
 }
@@ -954,8 +954,8 @@ html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile
   margin: 0 auto !important;
   padding: 22px 0 30px !important;
   border-top: 1px solid var(--chrome-border) !important;
-  color: #111111 !important;
-  font-size: 14px !important;
+  color: var(--es-ink) !important;
+  font-size: 15px !important;
   font-weight: 500 !important;
   text-align: center !important;
 }
@@ -991,7 +991,7 @@ html.has-dashboard-admin [data-admin-only].is-admin-visible {
 
   .navbar-menu {
     gap: 18px !important;
-    font-size: 17px !important;
+    font-size: 18px !important;
   }
 
   .navbar-right {
@@ -1013,7 +1013,7 @@ html.has-dashboard-admin [data-admin-only].is-admin-visible {
   }
 
   .profile-name {
-    font-size: 17px !important;
+    font-size: 18px !important;
   }
 }
 

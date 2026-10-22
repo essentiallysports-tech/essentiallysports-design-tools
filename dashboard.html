@@ -36,20 +36,20 @@
     }
 
     :root {
-      --es-blue: #0A7DFA;
-      --es-blue-dark: #0A6FDE;
-      --es-navy: #111827;
-      --es-line: #B5D8FD;
-      --es-soft: #E8F2FF;
-      --es-page: #F5FAFF;
-      --es-muted: #7997B8;
-      --es-black: #111111;
+      --es-blue: var(--es-brand-fill);
+      --es-blue-dark: var(--es-brand-fill-press);
+      --es-navy: var(--es-ink);
+      ;
+      --es-soft: var(--es-brand-soft);
+      --es-page: var(--es-sunk);
+      --es-muted: var(--es-ink-3);
+      --es-black: var(--es-ink);
       --es-white: #FFFFFF;
       --warn: #F79009;
-      --danger: #D92D20;
-      --success: #2E7D32;
-      --font-ui: "Roboto Condensed", "Roboto", Arial, sans-serif;
-      --font-display: 'Acumin Post', 'Acumin Pro Condensed', 'Arial Narrow', sans-serif;
+      --danger: var(--es-bad);
+      --success: var(--es-good);
+      --font-ui:  var(--es-font-ui);
+      --font-display:  var(--es-font-display);
       --font-post: 'Acumin Post', 'Acumin Pro Condensed', 'Arial Narrow', sans-serif;
       --shadow: 0 24px 54px rgba(3, 49, 98, .08);
     }
@@ -67,7 +67,7 @@
     body {
       opacity: 1;
       transform: none;
-      transition: opacity .28s cubic-bezier(.16,1,.3,1), transform .28s cubic-bezier(.16,1,.3,1);
+      transition: opacity .28s var(--es-ease), transform .28s var(--es-ease);
     }
 
     body.is-page-ready {
@@ -99,7 +99,7 @@
       gap: 26px;
       font-family: var(--font-display);
       font-size: 18px;
-      font-weight: 900;
+      font-weight: 800;
       color: var(--es-black);
     }
 
@@ -123,7 +123,7 @@
       color: var(--es-blue);
       font-family: var(--font-display);
       font-size: 18px;
-      font-weight: 900;
+      font-weight: 800;
       letter-spacing: .02em;
       text-transform: uppercase;
       margin: 0 0 8px;
@@ -156,7 +156,7 @@
     .btn {
       min-height: 52px;
       border: 1.5px solid var(--es-line);
-      border-radius: 8px;
+      border-radius: 14px;
       padding: 0 24px;
       background: var(--es-white);
       color: var(--es-navy);
@@ -165,30 +165,30 @@
       justify-content: center;
       font-family: var(--font-display);
       font-size: 22px;
-      font-weight: 900;
+      font-weight: 800;
       cursor: pointer;
-      transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+      transition: transform .2s var(--es-ease), box-shadow .2s var(--es-ease), background .2s var(--es-ease), border-color .2s var(--es-ease);
     }
 
     .btn-primary {
       background: var(--es-blue);
       border-color: var(--es-blue);
       color: var(--es-white);
-      box-shadow: 0 16px 36px rgba(10, 125, 250, .18);
+      box-shadow: 0 16px 36px rgba(14, 16, 20, .18);
     }
 
     .btn:hover, .btn:focus-visible {
       outline: none;
       transform: translateY(-2px);
       border-color: var(--es-blue);
-      box-shadow: 0 18px 38px rgba(3, 49, 98, .12);
+      box-shadow: 0 18px 38px rgba(14, 16, 20, .12);
     }
 
     .btn-primary:hover, .btn-primary:focus-visible { background: var(--es-blue-dark); }
 
     .notice {
       border: 1.5px solid var(--es-line);
-      border-radius: 18px;
+      border-radius: 20px;
       background: var(--es-white);
       box-shadow: var(--shadow);
       padding: 28px;
@@ -205,7 +205,7 @@
     .notice p {
       margin: 0;
       color: var(--es-muted);
-      font-size: 19px;
+      font-size: 22px;
       font-weight: 700;
       line-height: 1.35;
     }
@@ -221,7 +221,7 @@
     .panel {
       background: rgba(255,255,255,.96);
       border: 1.5px solid var(--es-line);
-      border-radius: 18px;
+      border-radius: 20px;
       box-shadow: var(--shadow);
     }
 
@@ -244,7 +244,7 @@
       color: var(--es-navy);
       font-family: var(--font-display);
       font-size: 54px;
-      font-weight: 900;
+      font-weight: 800;
       line-height: .85;
     }
 
@@ -293,7 +293,7 @@
     .note-input {
       min-height: 42px;
       border: 1.5px solid var(--es-line);
-      border-radius: 8px;
+      border-radius: 14px;
       background: var(--es-white);
       color: var(--es-navy);
       padding: 0 12px;
@@ -310,7 +310,7 @@
     .table-control:focus,
     .note-input:focus {
       border-color: var(--es-blue);
-      box-shadow: 0 0 0 3px rgba(10,125,250,.12);
+      box-shadow: var(--es-focus);
     }
 
     table {
@@ -326,7 +326,7 @@
     }
 
     th, td {
-      border-bottom: 1px solid #D9ECFF;
+      border-bottom: 1px solid var(--es-brand-soft);
       padding: 14px 16px;
       text-align: left;
       vertical-align: top;
@@ -334,8 +334,8 @@
 
     th {
       color: var(--es-muted);
-      font-size: 14px;
-      font-weight: 900;
+      font-size: 15px;
+      font-weight: 800;
       text-transform: uppercase;
       letter-spacing: .04em;
     }
@@ -345,8 +345,8 @@
     .item-title {
       display: block;
       color: var(--es-navy);
-      font-size: 17px;
-      font-weight: 900;
+      font-size: 18px;
+      font-weight: 800;
       line-height: 1.1;
     }
 
@@ -354,7 +354,7 @@
       display: block;
       margin-top: 4px;
       color: var(--es-muted);
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 700;
     }
 
@@ -368,14 +368,14 @@
       background: var(--es-soft);
       color: var(--es-navy);
       padding: 0 10px;
-      font-size: 14px;
-      font-weight: 900;
+      font-size: 15px;
+      font-weight: 800;
       white-space: nowrap;
     }
 
     .pill.is-urgent { background: #FFF1F1; border-color: #F5B8B2; color: var(--danger); }
     .pill.is-high { background: #FFF6E6; border-color: #FAD79B; color: #9A5A00; }
-    .pill.is-done { background: #EAF6EE; border-color: #B7DEC4; color: var(--success); }
+    .pill.is-done { background: var(--es-good-soft); border-color: #B7DEC4; color: var(--success); }
 
     .empty {
       padding: 28px 22px;
@@ -395,7 +395,7 @@
     .person,
     .activity {
       padding: 16px 18px;
-      border-bottom: 1px solid #D9ECFF;
+      border-bottom: 1px solid var(--es-brand-soft);
     }
 
     .person:last-child,
@@ -405,7 +405,7 @@
     .activity strong {
       display: block;
       color: var(--es-navy);
-      font-size: 17px;
+      font-size: 18px;
       line-height: 1.1;
     }
 
@@ -433,13 +433,13 @@
       table { min-width: 780px; }
     }
   </style>
-  <link rel="stylesheet" href="dashboard-v2.css?v=20260817-feedback-clean4">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20260723-profile2">
-  <link rel="stylesheet" href="dashboard-ui-system.css?v=20260718-dashboard-system5">
+  <link rel="stylesheet" href="dashboard-v2.css?v=20261022-es1">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261022-es1">
+  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261022-es1">
 <link rel="stylesheet" href="theme.css?v=20260714-footer1">
-  <link rel="stylesheet" href="site-chrome.css?v=20260817-icons1">
-<link rel="stylesheet" href="cta-hover.css?v=20260720-stroke1">
-  <link rel="stylesheet" href="design-tokens.css?v=20260817-type1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261022-es1">
+<link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261022-es1">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20260817-icons1"></script>

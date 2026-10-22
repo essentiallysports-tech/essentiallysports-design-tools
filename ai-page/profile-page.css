@@ -7,12 +7,12 @@
 }
 
 body.profile-page {
-  --profile-ink: #111111;
-  --profile-muted: #667085;
-  --profile-line: #E2E6EC;
+  --profile-ink: var(--es-ink);
+  --profile-muted: var(--es-ink-3);
+  --profile-line: var(--es-line);
   --profile-surface: #FFFFFF;
-  --profile-canvas: #F5F6F8;
-  --profile-blue: #0A7DFA;
+  --profile-canvas: var(--es-sunk);
+  --profile-blue: var(--es-brand-fill);
 }
 
 .profile-page .account-main {
@@ -40,7 +40,7 @@ body.profile-page {
 .profile-page .account-kicker {
   margin: 0 0 7px;
   color: var(--profile-blue);
-  font-size: 14px;
+  font-size: 15px;
   letter-spacing: .08em;
 }
 
@@ -55,7 +55,7 @@ body.profile-page {
   max-width: 680px;
   margin: 12px 0 0;
   color: var(--profile-muted);
-  font-family: "Roboto", Arial, sans-serif;
+  font-family: var(--es-font-ui);
   font-size: 16px;
   font-weight: 400;
   line-height: 1.5;
@@ -65,18 +65,18 @@ body.profile-page {
   min-height: 42px;
   flex: 0 0 auto;
   border: 1px solid var(--profile-line);
-  border-radius: 9px;
+  border-radius: 14px;
   background: var(--profile-surface);
   color: var(--profile-ink);
   padding: 0 16px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-family: "Roboto Condensed", "Roboto", Arial, sans-serif;
+  font-family: var(--es-font-ui);
   font-size: 15px;
   font-weight: 700;
   text-decoration: none;
-  transition: border-color .18s ease, background-color .18s ease, transform .18s ease;
+  transition: border-color .16s var(--es-ease), background-color .16s var(--es-ease), transform .16s var(--es-ease);
 }
 
 .profile-back-link svg {
@@ -87,14 +87,14 @@ body.profile-page {
 .profile-back-link:hover,
 .profile-back-link:focus-visible {
   border-color: #B8C0CC;
-  background: #F9FAFB;
+  background: var(--es-sunk);
   outline: none;
   transform: translateY(-1px);
 }
 
 .profile-page .account-card {
   border: 1px solid var(--profile-line);
-  border-radius: 16px;
+  border-radius: 20px;
   background: var(--profile-surface);
   box-shadow: 0 12px 34px rgba(16, 24, 40, .055);
 }
@@ -120,7 +120,7 @@ body.profile-page {
   height: 112px;
   border: 1px solid #D6DCE5;
   background-color: var(--profile-blue);
-  font-size: 40px;
+  font-size: 36px;
 }
 
 .profile-summary-copy {
@@ -133,15 +133,15 @@ body.profile-page {
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--profile-ink);
-  font-size: 26px;
+  font-size: 28px;
   line-height: 1;
 }
 
 .profile-page .summary-meta {
   margin: 7px 0 0;
   color: var(--profile-muted);
-  font-family: "Roboto", Arial, sans-serif;
-  font-size: 14px;
+  font-family: var(--es-font-ui);
+  font-size: 15px;
   font-weight: 400;
   line-height: 1.35;
 }
@@ -154,9 +154,9 @@ body.profile-page {
 .profile-page .avatar-upload-label {
   min-height: 42px;
   border: 1px solid var(--profile-line);
-  border-radius: 9px;
+  border-radius: 14px;
   color: var(--profile-ink);
-  font-family: "Roboto Condensed", "Roboto", Arial, sans-serif;
+  font-family: var(--es-font-ui);
   font-size: 15px;
   font-weight: 700;
 }
@@ -164,13 +164,13 @@ body.profile-page {
 .profile-page .avatar-upload-label:hover,
 .profile-page .avatar-upload-label:focus-within {
   border-color: #B8C0CC;
-  background: #F9FAFB;
+  background: var(--es-sunk);
   color: var(--profile-ink);
 }
 
 .profile-page .avatar-help {
   color: var(--profile-muted);
-  font-family: "Roboto", Arial, sans-serif;
+  font-family: var(--es-font-ui);
   font-size: 13px;
   font-weight: 400;
   line-height: 1.45;
@@ -191,7 +191,7 @@ body.profile-page {
 
 .profile-page .field label {
   color: var(--profile-ink);
-  font-family: "Roboto Condensed", "Roboto", Arial, sans-serif;
+  font-family: var(--es-font-ui);
   font-size: 16px;
   font-weight: 700;
   line-height: 1.2;
@@ -202,10 +202,10 @@ body.profile-page {
 .profile-page .field textarea {
   min-height: 52px;
   border: 1px solid #D8DEE7;
-  border-radius: 9px;
+  border-radius: 14px;
   color: var(--profile-ink);
   padding: 0 15px;
-  font-family: "Roboto", Arial, sans-serif;
+  font-family: var(--es-font-ui);
   font-size: 15px;
   font-weight: 400;
 }
@@ -219,7 +219,7 @@ body.profile-page {
 .profile-page .field select:focus,
 .profile-page .field textarea:focus {
   border-color: var(--profile-blue);
-  box-shadow: 0 0 0 3px rgba(10, 125, 250, .10);
+  box-shadow: var(--es-focus);
 }
 
 .profile-page .actions {
@@ -230,7 +230,7 @@ body.profile-page {
 .profile-page .primary-btn,
 .profile-page .secondary-btn {
   min-height: 44px;
-  border-radius: 9px;
+  border-radius: 14px;
   padding: 0 20px;
   font-size: 15px;
   font-weight: 700;
@@ -250,7 +250,7 @@ body.profile-page {
 .profile-page .status-note {
   min-height: 18px;
   margin-top: 9px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .profile-page .danger-zone {
@@ -264,7 +264,7 @@ body.profile-page {
 
 .profile-page .danger-zone h2 {
   color: var(--profile-ink);
-  font-family: "Roboto Condensed", "Roboto", Arial, sans-serif;
+  font-family: var(--es-font-ui);
   font-size: 18px;
   font-weight: 700;
   line-height: 1.2;
@@ -273,16 +273,16 @@ body.profile-page {
 .profile-page .danger-zone p {
   margin-top: 5px;
   color: var(--profile-muted);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.45;
 }
 
 .profile-page .danger-btn {
   min-height: 42px;
   border-color: #E0A8AD;
-  border-radius: 9px;
+  border-radius: 14px;
   padding: 0 16px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 html[data-theme="dark"] body.profile-page {
@@ -381,7 +381,7 @@ html[data-theme="dark"] .profile-page .avatar-upload-label:hover {
     grid-row: 1 / span 2;
     width: 88px;
     height: 88px;
-    font-size: 32px;
+    font-size: 36px;
   }
 
   .profile-summary-copy {
@@ -420,7 +420,7 @@ html[data-theme="dark"] .profile-page .avatar-upload-label:hover {
   }
 
   .profile-page .summary-name {
-    font-size: 23px;
+    font-size: 22px;
   }
 
   .profile-page .avatar-upload {

@@ -82,8 +82,8 @@
   .primary-btn,
   .workspace-cta
 ):not(:disabled):not(.is-disabled):hover {
-  border-color: #3D97FB !important;
-  background-color: #3D97FB !important;
+  border-color: var(--es-brand) !important;
+  background-color: var(--es-brand-fill) !important;
   color: #FFFFFF !important;
 }
 
@@ -104,16 +104,16 @@
   .profile-back-link,
   .mobile-menu-account-action
 ):not(:disabled):not(.is-disabled):hover {
-  border-color: #0A7DFA !important;
+  border-color: var(--es-brand) !important;
   background-color: #FFFFFF !important;
-  color: #111111 !important;
+  color: var(--es-ink) !important;
 }
 
 /* Auth CTAs use the same stroke-only rule without changing their sober palette. */
 .login-button:not(:disabled):hover,
 .auth-state-button.is-primary:not(:disabled):hover {
-  border-color: #0A7DFA !important;
-  background-color: #111111 !important;
+  border-color: var(--es-brand) !important;
+  background-color: var(--es-ink) !important;
   color: #FFFFFF !important;
 }
 
@@ -122,9 +122,9 @@
 }
 
 .auth-state-button:not(.is-primary):not(:disabled):hover {
-  border-color: #0A7DFA !important;
+  border-color: var(--es-brand) !important;
   background-color: #FFFFFF !important;
-  color: #111111 !important;
+  color: var(--es-ink) !important;
 }
 
 .danger-btn:not(:disabled):hover {
@@ -152,8 +152,8 @@ html[data-theme="dark"] :where(
   .login-button,
   .auth-state-button.is-primary
 ):not(:disabled):not(.is-disabled):hover {
-  border-color: #8CB9E8 !important;
-  background-color: var(--theme-dark-accent, #2586F7) !important;
+  border-color: var(--es-line-2) !important;
+  background-color: var(--theme-dark-accent, var(--es-brand-fill)) !important;
   color: #FFFFFF !important;
 }
 
@@ -173,9 +173,9 @@ html[data-theme="dark"] :where(
   .profile-back-link,
   .mobile-menu-account-action
 ):not(:disabled):not(.is-disabled):hover {
-  border-color: #8CB9E8 !important;
+  border-color: var(--es-line-2) !important;
   background-color: var(--theme-dark-surface-raised, #1A1A1A) !important;
-  color: var(--theme-dark-text, #F3F5F7) !important;
+  color: var(--theme-dark-text, var(--es-sunk)) !important;
 }
 
 html[data-theme="dark"] .danger-btn:not(:disabled):hover {

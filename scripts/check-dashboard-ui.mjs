@@ -43,7 +43,7 @@ const system = read(files.system);
 const theme = read(files.theme);
 
 const dashboardV2Index = html.indexOf('dashboard-v2.css');
-const dashboardSystemIndex = html.indexOf('dashboard-ui-system.css?v=20260718-dashboard-system5');
+const dashboardSystemIndex = html.indexOf('dashboard-ui-system.css?v=20261022-es1');
 const themeIndex = html.indexOf('theme.css');
 
 if (dashboardV2Index === -1 || dashboardSystemIndex === -1 || themeIndex === -1) {
@@ -73,7 +73,7 @@ assertContains(
 
 assertContains(
   system,
-  'font-size: 14px !important;',
+  'font-size: 15px !important;',
   'dashboard-ui-system.css does not enforce the 14px dashboard text minimum',
   'dashboard 14px text minimum is enforced'
 );
