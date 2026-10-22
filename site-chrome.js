@@ -176,7 +176,7 @@
       }
 
       const profileTrigger = event.target.closest('.profile-trigger');
-      if (profileTrigger && profileTrigger.closest('.navbar')) {
+      if (profileTrigger && profileTrigger.closest('.navbar, .es-sidebar')) {
         event.preventDefault();
         event.stopImmediatePropagation();
         const menu = profileTrigger.closest('.profile-menu');

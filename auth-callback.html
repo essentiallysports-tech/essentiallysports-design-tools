@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Confirm your Frameup account.">
-  <title>Confirming your account | Frameup</title>
+  <meta name="description" content="Confirm your FrameUp account.">
+  <title>Confirming your account | FrameUp</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,16 +17,16 @@
     html::-webkit-scrollbar { display: none; }
   </style>
   <script src="es-auth-config.js?v=20260714-authcallback1"></script>
-  <script src="es-auth.js?v=20260714-authcallback2"></script>
+  <script src="es-auth.js?v=20261024-live1"></script>
 </head>
 <body class="auth-state-page">
   <main class="auth-state-card" aria-live="polite">
     <img class="auth-state-brand" src="brand-logo-blue.svg" alt="EssentiallySports">
     <div class="auth-state-icon" id="callback-icon" aria-hidden="true"><span class="auth-state-spinner"></span></div>
     <h1 class="auth-state-title" id="callback-title">Confirming your account</h1>
-    <p class="auth-state-copy" id="callback-message">One moment while Frameup verifies your secure link.</p>
+    <p class="auth-state-copy" id="callback-message">One moment while FrameUp verifies your secure link.</p>
     <div class="auth-state-actions" id="callback-actions" hidden>
-      <a class="auth-state-button is-primary" id="continue-link" href="index.html">Continue to Frameup</a>
+      <a class="auth-state-button is-primary" id="continue-link" href="index.html">Continue to FrameUp</a>
       <a class="auth-state-button" id="login-link" href="login.html">Return to login</a>
     </div>
   </main>
@@ -68,15 +68,15 @@
       }
 
       function showSuccess({ requiresLogin = false } = {}) {
-        document.title = 'Account confirmed | Frameup';
+        document.title = 'Account confirmed | FrameUp';
         icon.innerHTML = successIcon;
         icon.classList.add('is-success');
         title.textContent = 'Email confirmed';
         message.textContent = requiresLogin
-          ? 'Your Frameup account is ready. Log in with your password to continue.'
-          : 'Your Frameup account is ready. Taking you to the workspace now.';
+          ? 'Your FrameUp account is ready. Log in with your password to continue.'
+          : 'Your FrameUp account is ready. Taking you to the workspace now.';
         if (requiresLogin) {
-          continueLink.textContent = 'Log in to Frameup';
+          continueLink.textContent = 'Log in to FrameUp';
           continueLink.href = successLoginUrl();
         }
         loginLink.hidden = true;
@@ -84,7 +84,7 @@
       }
 
       function showError(error) {
-        document.title = 'Confirmation link issue | Frameup';
+        document.title = 'Confirmation link issue | FrameUp';
         icon.innerHTML = errorIcon;
         icon.classList.add('is-error');
         title.textContent = 'We could not confirm that link';

@@ -220,7 +220,7 @@
 
   function accessPendingError(email) {
     const normalizedEmail = normalizeEmail(email);
-    return new Error(`Access request sent for ${normalizedEmail}. A Frameup admin can approve or reject it from the dashboard.`);
+    return new Error(`Access request sent for ${normalizedEmail}. A FrameUp admin can approve or reject it from the dashboard.`);
   }
 
   function hasSupabaseSdk() {
@@ -239,7 +239,7 @@
   }
 
   function authUnavailableError() {
-    return new Error('Frameup login is temporarily unavailable. Please try again shortly.');
+    return new Error('FrameUp login is temporarily unavailable. Please try again shortly.');
   }
 
   function friendlyAuthError(error, fallback = 'Unable to complete authentication right now.') {
@@ -264,7 +264,7 @@
       normalized.includes('email address not authorized')
       || normalized.includes('email_address_not_authorized')
     ) {
-      return new Error('Frameup cannot send confirmation emails to this address yet. Please contact suhail.quraishi@essentiallysports.com.');
+      return new Error('FrameUp cannot send confirmation emails to this address yet. Please contact suhail.quraishi@essentiallysports.com.');
     }
     if (
       normalized.includes('otp expired')
@@ -511,7 +511,7 @@
   async function resendConfirmation({ email, redirectTo }) {
     const normalizedEmail = normalizeEmail(email);
     if (!await isAllowedEmailAsync(normalizedEmail)) {
-      throw new Error('Confirmation links are available only for approved Frameup accounts.');
+      throw new Error('Confirmation links are available only for approved FrameUp accounts.');
     }
     if (!await ensureSupabaseReady()) throw authUnavailableError();
     const client = getSupabaseClient();
@@ -589,7 +589,7 @@
   async function requestPasswordReset({ email, redirectTo }) {
     const normalizedEmail = normalizeEmail(email);
     if (!await isAllowedEmailAsync(normalizedEmail)) {
-      throw new Error('Password reset is available only for approved Frameup accounts.');
+      throw new Error('Password reset is available only for approved FrameUp accounts.');
     }
     if (!await ensureSupabaseReady()) {
       throw new Error('Password reset is available only when Supabase Auth is configured.');

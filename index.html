@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="EssentiallySports brand guidelines, design tools, and creative request intake.">
-  <title>Design Tools | EssentiallySports</title>
+  <title>Home | FrameUp</title>
 <script src="es-auth-config.js?v=20260707-auth4"></script>
-<script src="es-auth.js?v=20260714-authcallback2"></script>
+<script src="es-auth.js?v=20261024-live1"></script>
   <script src="dashboard-data.js?v=20260716-dashboard-sync1"></script>
 <script>
   (() => {
@@ -1831,22 +1831,21 @@
     left: 14px;
   }
   .frame-hero-pause {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     display: grid;
     place-items: center;
-    margin-left: 4px;
+    margin-left: 6px;
     padding: 0;
     border: 0;
-    border-radius: 999px;
-    background: #ffffff;
-    box-shadow: inset 0 0 0 1px var(--es-line-2);
-    color: var(--es-ink-2);
+    border-radius: 6px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--es-ink-3);
     cursor: pointer;
   }
   .frame-hero-pause:hover {
     color: var(--es-ink);
-    box-shadow: inset 0 0 0 1px var(--es-ink-3);
   }
   .frame-hero-pause svg {
     width: 12px;
@@ -1870,25 +1869,22 @@
     z-index: 3;
   }
   .frame-hero-dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     padding: 0;
     border: 0;
     border-radius: 999px;
-    background: rgba(255, 255, 255, .55);
-    box-shadow: 0 0 0 1px rgba(14, 16, 20, .18);
+    background: var(--es-line-2);
+    box-shadow: none;
     cursor: pointer;
-    transition: background-color .16s var(--motion-smooth), width .16s var(--motion-smooth), box-shadow .16s var(--motion-smooth);
+    transition: background-color var(--es-dur) var(--es-ease), width var(--es-dur) var(--es-ease);
   }
-  .frame-hero-dot:hover,
-  .frame-hero-dot:focus-visible {
-    background: #FFFFFF;
-    outline: none;
+  .frame-hero-dot:hover {
+    background: var(--es-ink-3);
   }
   .frame-hero-dot.is-active {
-    width: 22px;
+    width: 18px;
     background: var(--es-brand-fill);
-    box-shadow: var(--es-focus);
   }
   @media (prefers-reduced-motion: reduce) {
     .frame-hero-track {
@@ -7383,11 +7379,11 @@ body[data-current-page="faq"] .faq-cta-art img {
 <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
 <link rel="stylesheet" href="how-it-works.css?v=20261023-ux1">
 <link rel="stylesheet" href="design-tokens.css?v=20261023-type1">
-<link rel="stylesheet" href="es-ui.css?v=20261024-family8">
+<link rel="stylesheet" href="es-ui.css?v=20261024-live1">
 <script src="theme.js?v=20260712-darkmode12"></script>
 <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
-<script src="site-chrome.js?v=20260817-icons1"></script>
-<script src="app-shell.js?v=20261024-family1"></script>
+<script src="site-chrome.js?v=20261024-live1"></script>
+<script src="app-shell.js?v=20261024-live1"></script>
 </head>
 <body>
 
@@ -7582,236 +7578,6 @@ body[data-current-page="faq"] .faq-cta-art img {
     </div>
   </section>
 
-  <div class="how-page" hidden>
-    <section class="frameup-intro" id="intro" aria-label="How FrameUp works">
-      <div class="frameup-intro__copy">
-        <p class="frameup-intro__eyebrow">One clear path from idea to publish</p>
-        <div class="frameup-intro__messages" aria-live="off">
-          <p class="frameup-intro__line">FrameUp gives every team a clean start.</p>
-          <p class="frameup-intro__line">Choose a workspace built for the format.</p>
-          <p class="frameup-intro__line">Add copy, images, and brand-safe details.</p>
-          <p class="frameup-intro__line">Export the file or hand it to a designer.</p>
-        </div>
-        <p class="frameup-intro__credit"><span>Suhail Quraishi</span><span>Design at EssentiallySports</span></p>
-      </div>
-    </section>
-
-    <section class="how-section path-section" id="create" aria-labelledby="paths-title">
-      <header class="section-heading section-heading--split" data-how-reveal>
-        <div>
-          <p class="how-eyebrow">Choose Your Path</p>
-          <h2 id="paths-title">Make it now, or hand it over.</h2>
-        </div>
-        <p>FrameUp supports quick self-serve work and detailed requests for projects that need a designer.</p>
-      </header>
-      <div class="path-grid" data-how-stagger>
-        <a class="path-card path-card--primary" href="#frames" data-route="frames">
-          <span class="path-number">01</span>
-          <div>
-            <h3>Create it yourself</h3>
-            <p>Use a focused workspace with the layout, size, colors, and export format already prepared.</p>
-          </div>
-          <span class="ui-arrow-right card-arrow" aria-hidden="true"></span>
-        </a>
-        <a class="path-card" href="design-request.html">
-          <span class="path-number">02</span>
-          <div>
-            <h3>Request a design</h3>
-            <p>Send the design team one clear brief with its context, copy, deadline, and references.</p>
-          </div>
-          <span class="ui-arrow-right card-arrow" aria-hidden="true"></span>
-        </a>
-      </div>
-    </section>
-
-    <section class="creation-flow" aria-labelledby="journey-title" hidden>
-      <div class="creation-flow__shell" data-creation-flow>
-        <header class="creation-flow__heading" data-how-reveal>
-          <div>
-            <p class="how-eyebrow">The Creation Flow</p>
-            <h2 id="journey-title">Five steps. One finished file.</h2>
-          </div>
-          <p>The same clear path works across Social Media, YouTube, and Newsletter assets.</p>
-        </header>
-
-        <div class="creation-flow__stage">
-          <ol class="creation-flow__rail" aria-label="Five steps to create a design">
-            <li>
-              <div class="creation-flow__step is-active" data-creation-step="0" data-src="how-step-choose.webp" data-alt="FrameUp workspace selection interface" aria-current="step">
-                <span class="creation-flow__number">01</span>
-                <span><strong>Choose a workspace</strong><small>Start with the kind of asset you need.</small></span>
-              </div>
-            </li>
-            <li>
-              <div class="creation-flow__step" data-creation-step="1" data-src="how-step-format.webp" data-alt="FrameUp format selection interface">
-                <span class="creation-flow__number">02</span>
-                <span><strong>Select a format</strong><small>Pick an approved post or asset type.</small></span>
-              </div>
-            </li>
-            <li>
-              <div class="creation-flow__step" data-creation-step="2" data-src="how-step-content.webp" data-alt="FrameUp content and media controls">
-                <span class="creation-flow__number">03</span>
-                <span><strong>Add text and media</strong><small>Enter copy, upload files, or use the ES Image Pool.</small></span>
-              </div>
-            </li>
-            <li>
-              <div class="creation-flow__step" data-creation-step="3" data-src="how-step-review.webp" data-alt="FrameUp slide review controls">
-                <span class="creation-flow__number">04</span>
-                <span><strong>Review every slide</strong><small>Check content, placement, and slide order.</small></span>
-              </div>
-            </li>
-            <li>
-              <div class="creation-flow__step" data-creation-step="4" data-src="how-step-export.webp" data-alt="FrameUp file naming and export controls">
-                <span class="creation-flow__number">05</span>
-                <span><strong>Name and export</strong><small>Download a clearly named final file.</small></span>
-              </div>
-            </li>
-          </ol>
-
-          <figure class="creation-flow__preview" data-creation-preview aria-live="polite">
-            <div class="creation-flow__preview-frame">
-              <img id="creation-flow-preview-image" src="how-step-choose.webp" alt="FrameUp workspace selection interface" width="921" height="518">
-            </div>
-            <figcaption>Step <b data-creation-count>01</b> of 05</figcaption>
-          </figure>
-        </div>
-      </div>
-    </section>
-
-    <section class="how-section workspace-section" id="workspaces" aria-labelledby="workspaces-title">
-      <header class="section-heading section-heading--split" data-how-reveal>
-        <div>
-          <p class="how-eyebrow">Design Workspaces</p>
-          <h2 id="workspaces-title">Start with the format you need.</h2>
-        </div>
-        <p>Each workspace contains focused templates and controls for one type of creative work.</p>
-      </header>
-      <div class="workspace-bento" data-how-stagger>
-        <a class="workspace-guide-card workspace-guide-card--featured" href="#instagram" data-route="instagram">
-          <div class="workspace-guide-image"><img src="workspace-card-social-media.webp" alt="Preview of the Social Media workspace" loading="lazy"></div>
-          <div class="workspace-guide-copy">
-            <h3>Posts, quotes, stats, and listicles.</h3>
-            <ul><li>Multi-slide stories</li><li>Stats and rankings</li><li>Platform-ready exports</li></ul>
-            <strong>Open Social Media <span class="ui-arrow-right card-arrow" aria-hidden="true"></span></strong>
-          </div>
-        </a>
-        <a class="workspace-guide-card" href="#youtube" data-route="youtube">
-          <div class="workspace-guide-image"><img src="workspace-card-youtube-thumbnail.webp" alt="Preview of the YouTube workspace" loading="lazy"></div>
-          <div class="workspace-guide-copy">
-            <h3>Thumbnails and entity compositions.</h3>
-            <ul><li>Backgrounds and entities</li><li>Approved thumbnail formats</li></ul>
-            <strong>Open YouTube <span class="ui-arrow-right card-arrow" aria-hidden="true"></span></strong>
-          </div>
-        </a>
-        <a class="workspace-guide-card" href="#newsletter" data-route="newsletter">
-          <div class="workspace-guide-image"><img src="workspace-card-newsletter-assets.webp" alt="Preview of the Newsletter workspace" loading="lazy"></div>
-          <div class="workspace-guide-copy">
-            <h3>Headers, features, widgets, and video assets.</h3>
-            <ul><li>Brand-ready treatments</li><li>Newsletter-specific sizing</li></ul>
-            <strong>Open Newsletter <span class="ui-arrow-right card-arrow" aria-hidden="true"></span></strong>
-          </div>
-        </a>
-        <a class="workspace-guide-card" href="reels.html">
-          <div class="workspace-guide-image"><img src="workspace-card-reel-captions.webp" alt="Preview of the Reel Captions workspace" loading="lazy"></div>
-          <div class="workspace-guide-copy">
-            <h3>Captions and branding for short video.</h3>
-            <ul><li>Auto-captions</li><li>Team colors and styles</li></ul>
-            <strong>Open Reel Captions <span class="ui-arrow-right card-arrow" aria-hidden="true"></span></strong>
-          </div>
-        </a>
-      </div>
-    </section>
-
-    <section class="request-section" id="request" aria-labelledby="how-request-title" data-request-journey>
-      <div class="request-journey-sticky">
-        <div class="request-copy" data-how-reveal>
-          <div>
-            <p class="how-eyebrow">Design Requests</p>
-            <h2 id="how-request-title">Build a brief the team can act on.</h2>
-            <p>You do not need design language. Tell the team what the design should communicate, where it will be used, and when it is due.</p>
-          </div>
-          <a class="how-button how-button--primary" href="design-request.html">Start a Design Request <span class="ui-arrow-right" aria-hidden="true"></span></a>
-        </div>
-        <div class="request-progress-row" aria-hidden="true">
-          <div class="request-progress">
-            <span data-request-progress></span>
-          </div>
-          <p class="request-step-count">Step <b data-request-count>01</b> of 05</p>
-        </div>
-        <div class="request-journey-window" data-request-window>
-          <ol class="brief-sequence" data-request-track>
-            <li aria-current="step">
-              <div class="brief-card-heading"><span class="brief-step-number">01</span><div><strong>Title</strong><p>Give the request a clear, searchable name.</p></div></div>
-              <div class="brief-ui-snap brief-ui-snap--title" aria-hidden="true">
-                <span class="brief-ui-label">Request title</span>
-                <div class="brief-field"><strong>NBA Finals carousel</strong><i class="brief-caret"></i></div>
-                <div class="brief-field-row"><small><i></i> Clear and searchable</small><em>19 / 60</em></div>
-                <span class="brief-ui-label">Workspace</span>
-                <div class="brief-field"><span>Social Media · Multi-slide carousel</span></div>
-              </div>
-            </li>
-            <li>
-              <div class="brief-card-heading"><span class="brief-step-number">02</span><div><strong>Entities</strong><p>Name every person, team, league, or product featured.</p></div></div>
-              <div class="brief-ui-snap brief-ui-snap--entities" aria-hidden="true">
-                <span class="brief-ui-label">Featured entities</span>
-                <div class="brief-field"><span>Search players, teams, leagues…</span></div>
-                <div class="brief-chips"><b>LeBron James</b><b>Los Angeles Lakers</b><b>NBA Finals</b><b class="is-add">+ Add entity</b></div>
-                <div class="brief-field-row"><small>3 selected</small><em>Auto-tagged</em></div>
-              </div>
-            </li>
-            <li>
-              <div class="brief-card-heading"><span class="brief-step-number">03</span><div><strong>Copy</strong><p>Provide the exact words that should appear in the design.</p></div></div>
-              <div class="brief-ui-snap brief-ui-snap--copy" aria-hidden="true">
-                <span class="brief-ui-label">Design copy</span>
-                <div class="brief-field"><strong>CHASE THE TITLE</strong></div>
-                <div class="brief-field-row"><small>Headline</small><em>15 / 24</em></div>
-                <div class="brief-field"><small>NBA FINALS · GAME 7</small></div>
-                <div class="brief-field-row"><small>Subhead</small><em>20 / 32</em></div>
-              </div>
-            </li>
-            <li>
-              <div class="brief-card-heading"><span class="brief-step-number">04</span><div><strong>Deadline</strong><p>Tell the team when the design is needed and when it publishes.</p></div></div>
-              <div class="brief-ui-snap brief-ui-snap--deadline" aria-hidden="true">
-                <div class="brief-deadline-pair">
-                  <div><span>Design due</span><div class="brief-field"><strong>Today · 6:00 PM</strong></div></div>
-                  <div><span>Publish at</span><div class="brief-field"><strong>Tomorrow · 9:00 AM</strong></div></div>
-                </div>
-                <div class="brief-timeline">
-                  <span class="brief-timeline-track"><i class="is-start"></i><i class="is-end"></i></span>
-                  <span class="brief-timeline-legend"><small>Brief sent</small><em>15 h turnaround</em><small>Live</small></span>
-                </div>
-                <div class="brief-field"><span>Reminder to the design team 2 h before it is due</span></div>
-              </div>
-            </li>
-            <li>
-              <div class="brief-card-heading"><span class="brief-step-number">05</span><div><strong>References and notes</strong><p>Attach useful links, context, and special instructions.</p></div></div>
-              <div class="brief-ui-snap brief-ui-snap--references" aria-hidden="true">
-                <span class="brief-ui-label">Supporting material</span>
-                <div class="brief-files">
-                  <span><b>moodboard.pdf</b><em>2.4 MB</em></span>
-                  <span><b>article-link.url</b><em>Link</em></span>
-                </div>
-                <span class="brief-ui-label">Notes for the designer</span>
-                <div class="brief-field brief-field--notes"><small>Keep the headline bold and mobile-safe. Leave room bottom-right for the logo.</small></div>
-              </div>
-            </li>
-          </ol>
-        </div>
-      </div>
-    </section>
-
-    <section class="how-section help-section" id="help" aria-labelledby="help-title">
-      <div data-how-reveal>
-        <p class="how-eyebrow">Quick Help</p>
-        <h2 id="help-title">Need a rule, answer, or person?</h2>
-      </div>
-      <div class="help-links" data-how-stagger>
-        <a href="#logo-guidelines" data-route="logo-guidelines"><span>Brand Guidelines</span><strong>Check approved visual rules</strong><span class="ui-arrow-right card-arrow" aria-hidden="true"></span></a>
-        <a href="#faq" data-route="faq"><span>FAQ</span><strong>Find answers to common questions</strong><span class="ui-arrow-right card-arrow" aria-hidden="true"></span></a>
-        <a href="mailto:suhail.quraishi@essentiallysports.com"><span>Contact</span><strong>suhail.quraishi@essentiallysports.com</strong><span class="ui-arrow-right card-arrow" aria-hidden="true"></span></a>
-      </div>
-    </section>
-  </div>
 </main>
 
 <!-- BREADCRUMB + HEADER -->
@@ -7973,7 +7739,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         <span class="tod-label" id="tod-label">Text On Design</span>
       </div>
       <div class="input-wrap" style="margin-bottom:10px">
-        <textarea id="pill-text" class="pill-entry" placeholder="Your Quote Text Goes Here" spellcheck="false" aria-describedby="pill-text-hint"></textarea>
+        <textarea id="pill-text" class="pill-entry" placeholder="Your Quote Text Goes Here" spellcheck="false" aria-labelledby="tod-label" aria-describedby="pill-text-hint"></textarea>
         <p class="field-hint" id="pill-text-hint" aria-live="polite"></p>
       </div>
       <div class="input-wrap long-quote-name-field" id="long-quote-name-field">
@@ -8211,7 +7977,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="field-row" style="margin-bottom: 14px;">
         <div class="field-group">
           <div class="section-label">Sports</div>
-          <select id="sport-select"></select>
+          <select id="sport-select" aria-label="Sport"></select>
         </div>
         <div class="field-group">
           <div class="section-label" id="brand-choice-label">Team</div>
@@ -18056,9 +17822,9 @@ function showPage(page) {
     'social-guidelines': 'Social Media Guidelines',
     'video-guidelines': 'Video Guidelines',
     faq: 'FAQ',
-    frames: 'Design Tools',
+    frames: 'Home',
   };
-  document.title = `${pageTitles[activePage]} | EssentiallySports`;
+  document.title = `${pageTitles[activePage]} | FrameUp`;
   if (activePage === 'faq') resetFaqAccordion();
   const rawHash = window.location.hash.slice(1);
   const scrollTarget = rawHash && rawHash !== activePage ? document.getElementById(rawHash) : null;

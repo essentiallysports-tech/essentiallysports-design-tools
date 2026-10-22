@@ -754,49 +754,10 @@ html[data-theme="dark"] :is(.ds-lede code, .ds-code code) { background: #1f1f1f;
     width: var(--es-content-vw) !important;
     margin-left: calc(50% - var(--es-content-vw) / 2) !important;
   }
-  html.es-shell .how-brand-strip {
-    width: var(--es-content-vw) !important;
-    margin-left: calc(var(--es-content-vw) / -2) !important;
-  }
-  html.es-shell .how-page :is(.request-section, .help-section)::before {
-    width: var(--es-content-vw) !important;
-  }
 }
 
 /* Undo/redo only on editor routes (beats the studio's own display rule). */
 html.es-shell:not(.es-editor) .es-topbar .studio-history-group { display: none !important; }
-
-/* ─── Home "how it works" story as SaaS cards on the grey canvas ──────── */
-@media (min-width: 901px) {
-  html.es-shell .how-page {
-    border-top: 0 !important;
-    background: var(--es-canvas) !important;
-  }
-  html.es-shell .how-page main { background: var(--es-canvas) !important; }
-
-  /* Intro statement: a contained navy banner card (gradient, 24px radius). */
-  html.es-shell .frameup-intro {
-    margin: 8px 24px 24px;
-    padding: clamp(56px, 8vh, 96px) 0 !important;
-    border-radius: 24px;
-    background: linear-gradient(135deg, #04223f 0%, #033162 55%, #0a4c8f 100%) !important;
-    box-shadow: var(--es-shadow-soft);
-    overflow: clip;
-  }
-  html.es-shell .how-page .frameup-intro__copy { width: min(1040px, calc(100% - 96px)); }
-  html.es-shell .how-page .frameup-intro__line { font-size: clamp(32px, 3.4vw, 52px) !important; }
-
-  /* Request journey and help: white cards instead of full-bleed bands. */
-  html.es-shell .how-page :is(.request-section, .help-section)::before { background: transparent !important; }
-  html.es-shell .how-page :is(.request-section, .help-section) {
-    margin: 24px;
-    border-radius: 24px;
-    background: var(--es-bg) !important;
-    box-shadow: var(--es-shadow-soft), inset 0 0 0 1px var(--es-line);
-    overflow: clip;
-  }
-  html.es-shell .how-page .help-section { width: auto !important; padding-left: 32px !important; padding-right: 32px !important; }
-}
 
 @media (min-width: 901px) {
   /* SaaS pages scroll normally: no pinned "curtain" under the story cards. */
@@ -866,8 +827,7 @@ html[data-theme="dark"] body.reels-page .reels-first-step { color: var(--es-ink-
 /* ═══ Site family ══════════════════════════════════════════════════════
  * No footer anywhere; one unified home section; one page pattern for every
  * inside page (same header, same width, white cards on the grey canvas). */
-.site-footer,
-.how-page[hidden] { display: none !important; }
+.site-footer { display: none !important; }
 
 /* ─── Home: "How FrameUp works" as one card ───────────────────────────── */
 .home-start { padding: 8px 32px 48px; }
