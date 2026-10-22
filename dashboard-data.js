@@ -1110,6 +1110,7 @@
           removePendingTask(task.id);
           cloudTasksCache = mergeTasks([saved], cloudTasksCache);
           emitDashboardChange('task', { record: saved });
+          uploadGalleryThumb(task);
         }
       })
       .catch(error => {
@@ -1507,6 +1508,70 @@
     return { items, source: 'local' };
   }
 
+  // Small thumbnails live in a private Storage bucket (thumbs/<task id>.webp)
+  // and are read through short-lived signed URLs. They are extra: the full
+  // previewDataUrl is still saved and remains the fallback for every post.
+  const PREVIEW_BUCKET = 'frameup-previews';
+  const THUMB_WIDTH = 360;
+  const thumbPath = id => `thumbs/${id}.webp`;
+
+  function makeThumbBlob(dataUrl) {
+    return new Promise(resolve => {
+      if (!dataUrl || typeof document === 'undefined') return resolve(null);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, THUMB_WIDTH / Math.max(img.naturalWidth, 1));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          // Browsers without webp encoding hand back PNG; skip those.
+          canvas.toBlob(blob => resolve(blob?.type === 'image/webp' ? blob : null), 'image/webp', 0.8);
+        } catch (error) {
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = dataUrl;
+    });
+  }
+
+  // Best effort: a failed thumbnail never affects the export or its record.
+  async function uploadGalleryThumb(task = {}) {
+    try {
+      if (task.type !== 'exported_design' || task.workspace !== GALLERY_WORKSPACE || !task.id) return;
+      const client = getSupabaseClient();
+      if (!client?.storage || !task.previewDataUrl) return;
+      const blob = await makeThumbBlob(task.previewDataUrl);
+      if (!blob) return;
+      await client.storage.from(PREVIEW_BUCKET).upload(thumbPath(task.id), blob, {
+        contentType: 'image/webp',
+        cacheControl: '31536000',
+        upsert: false,
+      });
+    } catch (error) {
+      // Ignore: the gallery falls back to the full preview.
+    }
+  }
+
+  async function fetchGalleryThumbs(ids = []) {
+    const cleanIds = ids.map(cleanString).filter(Boolean);
+    const client = getSupabaseClient();
+    if (!client?.storage || !cleanIds.length) return {};
+    try {
+      const { data, error } = await client.storage.from(PREVIEW_BUCKET).createSignedUrls(cleanIds.map(thumbPath), 3600);
+      if (error || !Array.isArray(data)) return {};
+      return Object.fromEntries(data
+        .filter(entry => entry?.signedUrl && !entry.error)
+        .map(entry => [String(entry.path || '').replace(/^thumbs\//, '').replace(/\.webp$/, ''), entry.signedUrl]));
+    } catch (error) {
+      return {};
+    }
+  }
+
   async function fetchGalleryPreview(id) {
     const cleanId = cleanString(id);
     if (!cleanId) return '';
@@ -1560,6 +1625,7 @@
     fetchTaskPreview,
     fetchGalleryExports,
     fetchGalleryPreview,
+    fetchGalleryThumbs,
     emitDashboardChange,
   });
 

@@ -9,7 +9,7 @@
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261025-perf1"></script>
-  <script src="dashboard-data.js?v=20261025-gallery2"></script>
+  <script src="dashboard-data.js?v=20261026-thumbs1"></script>
   <script>
     window.ESAuth?.requireAuth(`gallery.html${window.location.search}${window.location.hash}`);
   </script>
@@ -223,6 +223,7 @@
       };
       const state = { items: [], filter: 'All', query: '', exhausted: false, loading: false, visible: [], viewerIndex: -1 };
       const previews = new Map();
+      const thumbs = new Map();
 
       const timeAgo = iso => {
         const then = new Date(iso).getTime();
@@ -262,14 +263,23 @@
       async function hydrateCard(card) {
         const item = state.items.find(entry => entry.id === card.dataset.id);
         if (!item) return;
-        const src = await loadPreview(item);
         const thumb = card.querySelector('.gallery-card__thumb');
-        if (!src) { thumb.classList.add('is-missing'); return; }
         const img = document.createElement('img');
         img.alt = item.title;
         img.decoding = 'async';
-        img.src = src;
         img.addEventListener('load', () => thumb.classList.add('is-loaded'), { once: true });
+        const showPreview = async () => {
+          const src = await loadPreview(item);
+          if (src) img.src = src; else thumb.classList.add('is-missing');
+        };
+        // Small Storage thumbnail first; the full preview if it is missing or fails.
+        if (thumbs.has(item.id)) {
+          img.addEventListener('error', showPreview, { once: true });
+          img.src = thumbs.get(item.id);
+        } else {
+          await showPreview();
+          if (!img.src) return;
+        }
         thumb.appendChild(img);
       }
 
@@ -343,7 +353,10 @@
             els.notice.innerHTML = '<div><strong>Gallery is being set up</strong>The team gallery will appear here once it is switched on. Your own exports are always in your downloads.</div>';
           }
           const known = new Set(state.items.map(item => item.id));
-          state.items.push(...items.filter(item => item.id && !known.has(item.id)));
+          const fresh = items.filter(item => item.id && !known.has(item.id));
+          const signed = await window.ESDashboardData.fetchGalleryThumbs?.(fresh.map(item => item.id)) || {};
+          Object.entries(signed).forEach(([id, url]) => thumbs.set(id, url));
+          state.items.push(...fresh);
           state.exhausted = items.length < PAGE_SIZE || source === 'admin' || source === 'local';
         } catch (error) {
           state.failed = true;
@@ -380,6 +393,7 @@
         els.viewer.querySelector('.is-prev').disabled = index === 0;
         els.viewer.querySelector('.is-next').disabled = index === state.visible.length - 1;
         els.viewerImage.removeAttribute('src');
+        if (thumbs.has(item.id)) els.viewerImage.src = thumbs.get(item.id);
         els.viewerImage.alt = item.title;
         if (!els.viewer.open) els.viewer.showModal();
         const src = await loadPreview(item);
