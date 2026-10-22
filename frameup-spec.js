@@ -44,10 +44,11 @@
       || '';
   };
 
-  // Team from the text about the person: full names count most, capitalised
-  // nicknames ("Chiefs") count once, opponents ("against the Sky") don't count,
-  // and mentions near the person's name ("Clark and the Indiana Fever") count
-  // far more than other teams in the same stories.
+  // Team from the text about the person. Each capitalised mention of a team's
+  // nickname ("Chiefs", also inside "Kansas City Chiefs") counts once; mentions
+  // near the person's name ("Clark and the Indiana Fever") count ten times
+  // more than other teams in the same stories; opponents ("against the Sky")
+  // don't count.
   const OPPONENT = /\b(?:against|vs\.?|versus|over|beat|beats|beating|defeat|defeats|defeated|faces?|facing|to)\s+(?:the\s+)?$/i;
   const NEAR = 60;
   function guessTeam(text, sports, person = '') {
@@ -64,17 +65,20 @@
       const nick = full.split(/\s+/).pop();
       if (nick.length < 3) return;
       let score = 0;
-      const count = (words, weight) => {
-        const re = new RegExp(`\\b${escapeRe(words)}s?\\b`, 'gi');
-        let match;
-        while ((match = re.exec(text))) {
-          if (!/^[A-Z]/.test(match[0])) continue;
-          if (OPPONENT.test(text.slice(Math.max(0, match.index - 24), match.index))) continue;
-          score += nearPerson(match.index) ? weight * 4 : weight;
-        }
-      };
-      if (full.includes(' ')) count(full, 3);
-      count(nick, 1);
+      const re = new RegExp(`\\b${escapeRe(nick)}s?\\b`, 'gi');
+      let match;
+      while ((match = re.exec(text))) {
+        if (!/^[A-Z]/.test(match[0])) continue;
+        // "against the [New York] Knicks": look before the whole team name.
+        const fullStart = text.slice(0, match.index + match[0].length).toLowerCase().endsWith(full.toLowerCase())
+          ? match.index + match[0].length - full.length
+          : match.index;
+        const start = Math.min(match.index, Math.max(0, fullStart));
+        // Also skip a city in front ("beat the Dallas Cowboys").
+        const before = text.slice(Math.max(0, start - 48), start).replace(/(?:[A-Z][\w.'’-]*\s+){1,2}$/, '');
+        if (OPPONENT.test(before)) continue;
+        score += nearPerson(match.index) ? 10 : 1;
+      }
       if (score > (best?.score || 0)) best = { sport, team, score };
     }));
     return best;
