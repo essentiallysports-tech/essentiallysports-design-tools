@@ -116,8 +116,9 @@
       syncCustomSelect('styleSelect');
       drawFrame();
     });
-    els.sportSelect.addEventListener('change', function () { onSportChange(els.sportSelect.value); });
-    els.teamSelect.addEventListener('change', function () { onTeamChange(els.teamSelect.value); });
+    var rememberBrand = function () { try { window.localStorage.setItem('frameup-last-brand', JSON.stringify({ sport: state.sport, team: state.team })); } catch (error) { /* convenience only */ } };
+    els.sportSelect.addEventListener('change', function () { onSportChange(els.sportSelect.value); rememberBrand(); });
+    els.teamSelect.addEventListener('change', function () { onTeamChange(els.teamSelect.value); rememberBrand(); });
     els.intelBtn.addEventListener('click', applyIntelligence);
     els.exportBtn.addEventListener('click', function () {
       if (state.recording) stopExport(); else startExport();
@@ -1690,7 +1691,17 @@
     els.sportSelect.innerHTML = sports.map(function (sport) {
       return '<option value="' + escapeHtml(sport) + '">' + escapeHtml(sport) + '</option>';
     }).join('');
-    onSportChange(sports[0] || '');
+    // Start where this person left off (shared with the design workspaces), else NFL.
+    var remembered = null;
+    try { remembered = JSON.parse(window.localStorage.getItem('frameup-last-brand') || 'null'); } catch (error) { remembered = null; }
+    var startSport = remembered && sports.indexOf(remembered.sport) >= 0 ? remembered.sport : (sports.indexOf('NFL') >= 0 ? 'NFL' : sports[0] || '');
+    els.sportSelect.value = startSport;
+    onSportChange(startSport);
+    if (remembered && remembered.sport === startSport && getTeams(startSport).indexOf(remembered.team) >= 0) {
+      els.teamSelect.value = remembered.team;
+      syncCustomSelect('teamSelect');
+      onTeamChange(remembered.team);
+    }
   }
 
   function onSportChange(sport) {

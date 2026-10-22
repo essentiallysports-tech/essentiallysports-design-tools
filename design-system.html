@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UI Library | FrameUp</title>
+  <meta name="description" content="FrameUp UI component library: the building blocks of the FrameUp website interface.">
+  <script src="es-auth-config.js?v=20260707-auth4"></script>
+  <script src="es-auth.js?v=20260714-deleteaccount1"></script>
+  <script>
+    window.ESAuth?.requireAuth(`design-system.html${window.location.search}${window.location.hash}`);
+  </script>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@500;600;700;800;900&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261022-es1">
+  <link rel="stylesheet" href="theme.css?v=20261023-ux1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
+  <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261023-ux1">
+<link rel="stylesheet" href="es-ui.css?v=20261023-shell4">
+  <script src="theme.js?v=20260712-darkmode12"></script>
+  <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
+  <script src="site-chrome.js?v=20260817-icons1"></script>
+<script src="app-shell.js?v=20261023-shell2"></script>
+  <style>
+    .ds-page { max-width: 1040px; margin: 0 auto; padding: 32px 32px 72px; display: grid; gap: 24px; font-family: var(--es-font-ui); color: var(--es-ink); }
+    .ds-hero h1 { margin: 4px 0 8px; font-family: var(--es-font-display); font-size: 36px; font-weight: 800; line-height: 1.05; }
+    .ds-kicker { margin: 0; color: var(--es-brand-text); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .ds-lede { margin: 0 0 16px; max-width: 46em; color: var(--es-ink-2); font-size: 15px; line-height: 1.5; }
+    .ds-lede code, .ds-code code { padding: 2px 6px; border-radius: 6px; background: #efeff1; color: var(--es-ink-2); font-size: 13px; }
+    .ds-note { max-width: 46em; }
+    .ds-toc { position: sticky; top: calc(var(--es-topbar-h) + 12px); z-index: 5; justify-self: start; text-decoration: none; }
+    .ds-toc a { text-decoration: none; }
+    .ds-section { scroll-margin-top: calc(var(--es-topbar-h) + 72px); }
+    .ds-h3 { margin: 0 0 12px; color: var(--es-ink-2); font-size: 13px; font-weight: 700; }
+    .ds-stack { display: grid; gap: 16px; }
+    .ds-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0; }
+    .ds-gap { width: 16px; }
+    .ds-muted { color: var(--es-ink-3); font-size: 13px; }
+    .ds-code { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+    .ds-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+    .ds-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .ds-span-2 { grid-column: 1 / -1; }
+    .ds-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+    .ds-swatch { display: grid; gap: 4px; font-size: 13px; }
+    .ds-swatch span { height: 56px; border-radius: 14px; box-shadow: inset 0 0 0 1px rgb(14 16 20 / .08); }
+    .ds-swatch b { font-weight: 500; }
+    .ds-swatch code { color: var(--es-ink-3); font-size: 12px; }
+    .ds-type { display: grid; gap: 10px; }
+    .ds-type p { margin: 0; }
+    .ds-type__display { font-family: var(--es-font-display); font-size: 48px; font-weight: 800; line-height: .98; }
+    .ds-type__h1 { font-family: var(--es-font-display); font-size: 36px; font-weight: 800; line-height: 1.05; }
+    .ds-type__h2 { font-size: 18px; font-weight: 700; }
+    .ds-type__body { font-size: 15px; line-height: 1.5; color: var(--es-ink-2); }
+    .ds-type__small { font-size: 13px; color: var(--es-ink-3); }
+    .ds-radii { display: flex; flex-wrap: wrap; gap: 16px; }
+    .ds-radii div { display: grid; justify-items: center; gap: 6px; }
+    .ds-radii span { width: 72px; height: 56px; background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px var(--es-brand-tint); }
+    .ds-radii code { color: var(--es-ink-3); font-size: 12px; }
+    .ds-sidebar-demo { width: 260px; display: grid; gap: 2px; padding: 8px; border-radius: 16px; background: var(--es-sidebar-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
+    .ds-cell { display: inline-flex; align-items: center; gap: 10px; }
+    .ds-toast-demo { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 4000; padding: 12px 16px; border-radius: 14px; background: var(--es-ink); color: #fff; font-size: 15px; box-shadow: var(--es-shadow-float); animation: dsToast .2s var(--es-ease) both; }
+    @keyframes dsToast { from { opacity: 0; transform: translate(-50%, 8px); } }
+    @media (max-width: 900px) {
+      .ds-page { padding: 20px 16px 56px; }
+      .ds-grid-2, .ds-grid-3 { grid-template-columns: minmax(0, 1fr); }
+      .ds-toc { position: static; max-width: 100%; overflow-x: auto; }
+    }
+  </style>
+</head>
+<body class="ds-body">
+  <nav class="navbar">
+    <a class="navbar-logo" href="index.html" aria-label="EssentiallySports home">
+      <img src="brand-logo-blue.svg" alt="EssentiallySports">
+    </a>
+    <div class="navbar-menu">
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#intro" aria-haspopup="true" aria-expanded="false">Resources</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Resources">
+          <a href="index.html#logo-guidelines" data-route="logo-guidelines" role="menuitem">Logo Guidelines</a>
+          <a href="index.html#social-guidelines" data-route="social-guidelines" role="menuitem">Social Media Guidelines</a>
+          <a href="index.html#video-guidelines" data-route="video-guidelines" role="menuitem">Video Guidelines</a>
+        </div>
+      </div>
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#frames" data-route="frames" aria-haspopup="true" aria-expanded="false">Design Tools</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Design workspaces">
+          <a href="index.html#frames" data-route="frames" role="menuitem">Home</a>
+          <a href="index.html#instagram" data-route="instagram" role="menuitem">Social Media</a>
+          <a href="index.html#youtube" data-route="youtube" role="menuitem">YouTube</a>
+          <a href="index.html#newsletter" data-route="newsletter" role="menuitem">Newsletter</a>
+          <a href="reels.html" role="menuitem">Reel Captions</a>
+        </div>
+      </div>
+      <a href="design-request.html">Design Request</a>
+      <a href="dashboard.html" data-admin-only hidden aria-hidden="true">Dashboard</a>
+      <a href="index.html#faq" data-route="faq">FAQ</a>
+      <a href="tool-feedback.html">Tool Feedback</a>
+    </div>
+    <div class="navbar-right">
+      <div class="profile-menu" id="profile-menu"></div>
+      <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" title="Facebook" aria-label="Facebook"><img src="social-icons/nav-facebook.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://twitter.com/es_sportsnews" title="X" aria-label="X"><img src="social-icons/nav-x.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.linkedin.com/company/essentiallysports" title="LinkedIn" aria-label="LinkedIn"><img src="social-icons/nav-linkedin.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.instagram.com/essentiallysports" title="Instagram" aria-label="Instagram"><img src="social-icons/nav-instagram.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.youtube.com/essentiallysports" title="YouTube" aria-label="YouTube"><img src="social-icons/nav-youtube.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://news.google.com/publications/CAAqBwgKMJqW_gwwkoGBAw" title="Google News" aria-label="Google News"><img src="social-icons/nav-google-news.svg" alt=""></a>
+    </div>
+  </nav>
+
+  <main class="ds-page" id="main">
+    <header class="ds-hero">
+      <p class="ds-kicker">FrameUp UI Library</p>
+      <h1>Components for the FrameUp website</h1>
+      <p class="ds-lede">Every building block used across FrameUp's interface: one place to copy from, so new pages look and behave like the rest of the product. Styles live in <code>design-tokens.css</code> and <code>es-ui.css</code>.</p>
+      <div class="es-callout ds-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>
+        <div><strong>Website UI only</strong>These components style FrameUp's interface. Exported designs (posts, thumbnails, newsletter assets, reels) keep their own templates and brand kits and never use these styles.</div>
+      </div>
+    </header>
+
+    <nav class="ds-toc es-segmented" aria-label="Library sections">
+      <a class="es-segmented__item is-active" href="#foundations">Foundations</a>
+      <a class="es-segmented__item" href="#buttons">Buttons</a>
+      <a class="es-segmented__item" href="#navigation">Navigation</a>
+      <a class="es-segmented__item" href="#inputs">Inputs</a>
+      <a class="es-segmented__item" href="#data">Data</a>
+      <a class="es-segmented__item" href="#feedback">Feedback</a>
+    </nav>
+
+    <!-- FOUNDATIONS -->
+    <section class="es-card ds-section" id="foundations" aria-labelledby="foundations-title">
+      <div class="es-card__head"><div><h2 class="es-card__title" id="foundations-title">Foundations</h2><p class="es-card__sub">Colour, type, radius and spacing tokens every component is built from.</p></div></div>
+      <div class="es-card__body">
+        <h3 class="ds-h3">Colour</h3>
+        <div class="ds-swatches">
+          <div class="ds-swatch"><span style="background:var(--es-brand-fill)"></span><b>Brand fill</b><code>--es-brand-fill</code></div>
+          <div class="ds-swatch"><span style="background:var(--es-brand)"></span><b>Brand</b><code>--es-brand</code></div>
+          <div class="ds-swatch"><span style="background:var(--es-brand-soft)"></span><b>Brand soft</b><code>--es-brand-soft</code></div>
+          <div class="ds-swatch"><span style="background:var(--es-ink)"></span><b>Ink</b><code>--es-ink</code></div>
+          <div class="ds-swatch"><span style="background:var(--es-ink-2)"></span><b>Ink 2</b><code>--es-ink-2</code></div>
+          <div class="ds-swatch"><span style="background:var(--es-ink-3)"></span><b>Ink 3</b><code>--es-ink-3</code></div>
+          <div class="ds-swatch"><span style="background:var(--es-line-2)"></span><b>Line 2</b><code>--es-line-2</code></div>
+          <div class="ds-swatch"><span style="background:var(--es-line)"></span><b>Line</b><code>--es-line</code></div>
+          <div class="ds-swatch"><span style="background:var(--es-canvas)"></span><b>Canvas</b><code>--es-canvas</code></div>
+          <div class="ds-swatch"><span style="background:var(--es-good)"></span><b>Good</b><code>--es-good</code></div>
+          <div class="ds-swatch"><span style="background:var(--es-bad)"></span><b>Bad</b><code>--es-bad</code></div>
+          <div class="ds-swatch"><span style="background:var(--es-warn)"></span><b>Warn</b><code>--es-warn</code></div>
+        </div>
+
+        <hr class="es-divider es-divider--dotted">
+        <h3 class="ds-h3">Type</h3>
+        <div class="ds-type">
+          <p class="ds-type__display">Display · Condensed 800</p>
+          <p class="ds-type__h1">Page title · Condensed 800 · 36</p>
+          <p class="ds-type__h2">Card title · Roboto 700 · 18</p>
+          <p class="ds-type__body">Body · Roboto 400 · 15. Everything people read uses Roboto; Condensed is for titles and numbers.</p>
+          <p class="ds-type__small">Helper · Roboto 400 · 13</p>
+        </div>
+
+        <hr class="es-divider es-divider--dotted">
+        <h3 class="ds-h3">Radius</h3>
+        <div class="ds-radii">
+          <div><span style="border-radius:10px"></span><code>10 · chips</code></div>
+          <div><span style="border-radius:12px"></span><code>12 · buttons</code></div>
+          <div><span style="border-radius:14px"></span><code>14 · fields</code></div>
+          <div><span style="border-radius:20px"></span><code>20 · cards</code></div>
+          <div><span style="border-radius:999px"></span><code>999 · pills</code></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BUTTONS -->
+    <section class="es-card ds-section" id="buttons" aria-labelledby="buttons-title">
+      <div class="es-card__head"><div><h2 class="es-card__title" id="buttons-title">Buttons</h2><p class="es-card__sub">One primary action per view, in ES blue. Everything else is secondary or ghost.</p></div></div>
+      <div class="es-card__body ds-stack">
+        <div class="ds-row">
+          <button class="es-btn es-btn--primary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Export</button>
+          <button class="es-btn" type="button">Secondary</button>
+          <button class="es-btn es-btn--ghost" type="button">Ghost</button>
+          <button class="es-btn es-btn--danger" type="button">Delete</button>
+          <button class="es-btn es-btn--primary" type="button" disabled>Disabled</button>
+        </div>
+        <div class="ds-row">
+          <button class="es-btn es-btn--primary es-btn--lg" type="button">Large · 48</button>
+          <button class="es-btn" type="button">Default · 40</button>
+          <button class="es-btn es-btn--sm" type="button">Small · 32</button>
+        </div>
+        <p class="ds-code"><code>.es-btn</code> <code>.es-btn--primary</code> <code>.es-btn--ghost</code> <code>.es-btn--danger</code> <code>.es-btn--sm</code> <code>.es-btn--lg</code></p>
+
+        <hr class="es-divider es-divider--dotted">
+        <h3 class="ds-h3">Icon and tool buttons</h3>
+        <div class="ds-row">
+          <button class="es-icon-btn" type="button" aria-label="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2"/></svg></button>
+          <button class="es-icon-btn" type="button" aria-label="Redo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 7 5 5-5 5M20 12H9a5 5 0 0 0 0 10h2"/></svg></button>
+          <button class="es-icon-btn es-icon-btn--plain" type="button" aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>
+          <span class="ds-gap"></span>
+          <button class="es-tool" type="button" aria-pressed="true"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z"/></svg></span>Bold</button>
+          <button class="es-tool" type="button"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M14 5h-4M14 19h-4M13 5l-2 14"/></svg></span>Italic</button>
+          <button class="es-tool" type="button"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3"/><circle cx="9" cy="10" r="1.5"/><path d="m20 15-4-4-8 8"/></svg></span>Image</button>
+          <button class="es-tool" type="button"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span>Link</button>
+        </div>
+        <p class="ds-code"><code>.es-icon-btn</code> <code>.es-icon-btn--plain</code> <code>.es-tool</code> <code>.es-tool__icon</code></p>
+      </div>
+    </section>
+
+    <!-- NAVIGATION -->
+    <section class="es-card ds-section" id="navigation" aria-labelledby="navigation-title">
+      <div class="es-card__head"><div><h2 class="es-card__title" id="navigation-title">Navigation</h2><p class="es-card__sub">Segmented tabs switch views; breadcrumbs show where you are; the sidebar holds primary destinations.</p></div></div>
+      <div class="es-card__body ds-stack">
+        <div class="es-segmented" role="tablist" aria-label="Example tabs" data-ds-tabs>
+          <button class="es-segmented__item" role="tab" aria-selected="true" type="button">Content</button>
+          <button class="es-segmented__item" role="tab" aria-selected="false" type="button">Image Controls</button>
+          <button class="es-segmented__item" role="tab" aria-selected="false" type="button">Templates <span class="es-badge">4</span></button>
+        </div>
+        <ol class="es-breadcrumbs" aria-label="Example breadcrumb"><li><a href="#navigation">FrameUp</a></li><li>Create</li><li><span aria-current="page">Social Media</span></li></ol>
+        <div class="ds-sidebar-demo">
+          <a class="es-nav-item" href="#navigation" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5"/><path d="M6 10v9h12v-9"/></svg><span>Home</span></a>
+          <a class="es-nav-item" href="#navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20 20 12 4 4l2.5 8z"/></svg><span>Design Request</span></a>
+          <a class="es-nav-item" href="#navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><circle cx="16.5" cy="7.5" r="3.5"/></svg><span>UI Library</span><span class="es-badge es-badge--new">New</span></a>
+        </div>
+        <p class="ds-row ds-muted">Press <kbd class="es-kbd">⌘</kbd><kbd class="es-kbd">K</kbd> or <kbd class="es-kbd">/</kbd> anywhere to jump to a page. <button class="es-btn es-btn--sm" type="button" data-ds-palette>Try it</button></p>
+        <p class="ds-code"><code>.es-segmented</code> <code>.es-breadcrumbs</code> <code>.es-nav-item</code> <code>.es-kbd</code></p>
+      </div>
+    </section>
+
+    <!-- INPUTS -->
+    <section class="es-card ds-section" id="inputs" aria-labelledby="inputs-title">
+      <div class="es-card__head"><div><h2 class="es-card__title" id="inputs-title">Inputs</h2><p class="es-card__sub">White fields with a 1.5px outline; ink outline and a soft halo on focus.</p></div></div>
+      <div class="es-card__body ds-grid-2">
+        <label class="es-field"><span class="es-field__label">Headline</span><input class="es-input" type="text" placeholder="Warriors win Game 7"><span class="es-field__hint">Each line becomes its own text block.</span></label>
+        <div class="es-field"><span class="es-field__label">Search</span><label class="es-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><input type="search" placeholder="Search entity, team, topic…" aria-label="Search"><kbd class="es-kbd">/</kbd></label></div>
+        <label class="es-field ds-span-2"><span class="es-field__label">Notes for the designer</span><textarea class="es-input" placeholder="Keep the headline bold and mobile-safe."></textarea></label>
+        <p class="ds-code ds-span-2"><code>.es-field</code> <code>.es-input</code> <code>.es-search</code></p>
+      </div>
+    </section>
+
+    <!-- DATA -->
+    <section class="es-card ds-section" id="data" aria-labelledby="data-title">
+      <div class="es-card__head"><div><h2 class="es-card__title" id="data-title">Data display</h2><p class="es-card__sub">Stat cards, tables with letter tiles, badges and chips.</p></div></div>
+      <div class="es-card__body ds-stack">
+        <div class="ds-grid-3">
+          <div class="es-card es-stat"><span class="es-tile es-tile--blue" style="width:48px;height:48px;border-radius:14px"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg></span><div><p class="es-stat__value">39</p><p class="es-stat__label">Designs exported</p><span class="es-stat__trend">+4.5% vs last week</span></div></div>
+          <div class="es-card es-stat"><span class="es-tile es-tile--purple" style="width:48px;height:48px;border-radius:14px">R</span><div><p class="es-stat__value">12</p><p class="es-stat__label">Open requests</p><span class="es-stat__trend is-down">−2 vs last week</span></div></div>
+          <div class="es-card es-stat"><span class="es-tile es-tile--green" style="width:48px;height:48px;border-radius:14px">✓</span><div><p class="es-stat__value">86%</p><p class="es-stat__label">On-time delivery</p><span class="es-stat__trend">+3% vs last week</span></div></div>
+        </div>
+        <div class="es-table-wrap">
+          <table class="es-table">
+            <thead><tr><th>Request</th><th>Workspace</th><th>Status</th><th>Due</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ds-cell"><span class="es-tile es-tile--purple">N</span>NBA Finals carousel</span></td><td>Social Media</td><td><span class="es-badge es-badge--brand">In progress</span></td><td>Today</td></tr>
+              <tr><td><span class="ds-cell"><span class="es-tile es-tile--pink">M</span>MLB weekly recap header</span></td><td>Newsletter</td><td><span class="es-badge es-badge--good">Done</span></td><td>Yesterday</td></tr>
+              <tr><td><span class="ds-cell"><span class="es-tile es-tile--amber">C</span>CFB rankings thumbnail</span></td><td>YouTube</td><td><span class="es-badge es-badge--bad">Overdue</span></td><td>Mon</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="ds-row">
+          <span class="es-badge">4</span><span class="es-badge es-badge--new">New</span><span class="es-badge es-badge--brand">Brand</span><span class="es-badge es-badge--good">Done</span><span class="es-badge es-badge--bad">Overdue</span><span class="es-badge es-badge--ink">2</span>
+          <span class="ds-gap"></span>
+          <button class="es-chip" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 4l2.5 5 5.5.8-4 3.9.9 5.5L12 16.6 7.1 19.2 8 13.7 4 9.8l5.5-.8z"/></svg>Popular</button>
+          <button class="es-chip" type="button" aria-pressed="true">Captions</button>
+          <button class="es-chip" type="button">Newsletter</button>
+        </div>
+        <p class="ds-code"><code>.es-stat</code> <code>.es-table</code> <code>.es-tile</code> <code>.es-badge</code> <code>.es-chip</code></p>
+      </div>
+    </section>
+
+    <!-- FEEDBACK -->
+    <section class="es-card ds-section" id="feedback" aria-labelledby="feedback-title">
+      <div class="es-card__head"><div><h2 class="es-card__title" id="feedback-title">Feedback &amp; menus</h2><p class="es-card__sub">Callouts for tips, empty states for blank areas, floating menus for actions, toasts for confirmations.</p></div></div>
+      <div class="es-card__body ds-grid-2">
+        <div class="ds-stack">
+          <div class="es-callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg><div><strong>Label speakers for better results</strong>Assign speakers in the transcript panel to help us generate better captions.</div></div>
+          <div class="es-empty"><p class="es-empty__title">No designs yet</p><p class="es-empty__copy">Pick a workspace to start your first design. Exports appear here.</p><button class="es-btn es-btn--primary es-btn--sm" type="button">Create a design</button></div>
+          <div class="ds-row"><button class="es-btn" type="button" data-ds-toast>Show a toast</button></div>
+        </div>
+        <div class="es-menu" role="menu" aria-label="Example menu">
+          <div class="es-menu__label">Actions</div>
+          <button class="es-menu__item" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Duplicate design<kbd class="es-kbd">⌘D</kbd></button>
+          <button class="es-menu__item" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Export all slides</button>
+          <div class="es-menu__sep"></div>
+          <div class="es-menu__label">Rewrite <span class="es-badge">AI</span></div>
+          <button class="es-menu__item" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg>Fix grammar</button>
+          <button class="es-menu__item" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c1 3 4 4 4 8a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-4 0-7z"/></svg>Make it punchier</button>
+        </div>
+        <p class="ds-code ds-span-2"><code>.es-callout</code> <code>.es-empty</code> <code>.es-menu</code> <code>.es-menu__item</code> <code>showToast()</code></p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Demo behaviour for the library page only.
+    document.querySelectorAll('[data-ds-tabs]').forEach(list => list.addEventListener('click', event => {
+      const tab = event.target.closest('[role="tab"]');
+      if (!tab) return;
+      list.querySelectorAll('[role="tab"]').forEach(item => item.setAttribute('aria-selected', String(item === tab)));
+    }));
+    document.querySelector('[data-ds-palette]')?.addEventListener('click', () => window.FrameUpShell?.openPalette());
+    document.querySelector('[data-ds-toast]')?.addEventListener('click', () => {
+      const toast = document.createElement('div');
+      toast.className = 'ds-toast-demo';
+      toast.setAttribute('role', 'status');
+      toast.textContent = 'Downloaded es-ig-warriors-win.jpeg';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2600);
+    });
+    const tocLinks = [...document.querySelectorAll('.ds-toc a')];
+    const sections = tocLinks.map(link => document.querySelector(link.getAttribute('href')));
+    const syncToc = () => {
+      let current = sections[0];
+      sections.forEach(section => { if (section.getBoundingClientRect().top < 160) current = section; });
+      tocLinks.forEach((link, index) => link.classList.toggle('is-active', sections[index] === current));
+    };
+    window.addEventListener('scroll', syncToc, { passive: true });
+    syncToc();
+  </script>
+</body>
+</html>

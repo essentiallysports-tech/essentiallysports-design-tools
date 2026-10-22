@@ -1081,7 +1081,7 @@ html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
    wrap to a second row on smaller laptops instead of clipping controls. */
 @media (min-width: 901px) {
   html[data-studio-shell="on"] .canvas-stack > .canvas-bottom-actions {
-    max-width: min(800px, calc(100vw - 620px)) !important;
+    max-width: min(800px, calc(100vw - var(--es-shell-offset, 0px) - 240px - max(370px, 26vw) - 24px)) !important;
     flex-wrap: wrap !important;
     justify-content: center !important;
     row-gap: 6px;
