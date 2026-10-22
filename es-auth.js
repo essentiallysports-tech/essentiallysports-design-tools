@@ -8,7 +8,8 @@
   const ACCESS_REQUESTS_TABLE = 'es_designer_access_requests';
   const AUTH_CALLBACK_PATH = '/auth-callback.html';
   const AUTH_CALLBACK_TYPES = new Set(['email', 'email_change', 'invite', 'magiclink', 'recovery', 'signup']);
-  const SUPABASE_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+  // Pinned (same bytes the @2 alias served) so browsers can cache it for a year.
+  const SUPABASE_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js';
   const config = window.ES_AUTH_CONFIG || {};
   const supabaseConfig = config.supabase || {};
 

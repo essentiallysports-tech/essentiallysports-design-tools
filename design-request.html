@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Submit and track creative design requests for EssentiallySports.">
 <title>Design Request | FrameUp</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script">
 <script src="es-auth-config.js?v=20260707-auth4"></script>
-<script src="es-auth.js?v=20261024-live1"></script>
+<script src="es-auth.js?v=20261025-perf1"></script>
   <script src="dashboard-data.js?v=20260716-dashboard-sync1"></script>
 <script>
   (() => {
@@ -2372,7 +2374,7 @@
   <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
 <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
 <link rel="stylesheet" href="design-tokens.css?v=20261023-type1">
-<link rel="stylesheet" href="es-ui.css?v=20261024-dash2">
+<link rel="stylesheet" href="es-ui.css?v=20261025-perf1">
 <script src="theme.js?v=20260712-darkmode12"></script>
 <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
 <script src="site-chrome.js?v=20261024-live1"></script>
@@ -2610,7 +2612,7 @@
 <!-- DESIGN REQUEST PAGE -->
 <main class="request-page view-hidden" data-page="requests">
   <section class="frame-hero request-hero" aria-label="Design request">
-    <video class="frame-banner request-hero-banner" id="request-hero-video" autoplay muted playsinline preload="metadata" poster="design-request-hero.webp" aria-label="Design request">
+    <video class="frame-banner request-hero-banner" id="request-hero-video" muted playsinline preload="none" poster="design-request-hero.webp" aria-label="Design request">
       <source src="design-request-banner.webm" type="video/webm">
     </video>
   </section>
@@ -4041,10 +4043,17 @@ function validateRequestForm() {
 (() => {
   const heroVideo = document.getElementById('request-hero-video');
   if (!heroVideo) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    heroVideo.removeAttribute('autoplay');
-    heroVideo.pause();
-  }
+  // Only fetch the 1.5MB clip when the banner is actually shown (it is hidden
+  // on desktop) and motion is allowed; otherwise the poster image stands in.
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const startIfVisible = () => {
+    if (reducedMotion || heroVideo.dataset.started || !heroVideo.offsetParent) return;
+    heroVideo.dataset.started = 'true';
+    heroVideo.preload = 'auto';
+    heroVideo.play().catch(() => {});
+  };
+  window.addEventListener('load', startIfVisible, { once: true });
+  window.addEventListener('resize', startIfVisible);
   heroVideo.addEventListener('ended', () => {
     heroVideo.pause();
     heroVideo.currentTime = 0;
