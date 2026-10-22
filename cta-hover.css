@@ -109,11 +109,11 @@
   color: var(--es-ink) !important;
 }
 
-/* Auth CTAs use the same stroke-only rule without changing their sober palette. */
+/* Auth CTAs use the same stroke-only rule on the ES brand fill. */
 .login-button:not(:disabled):hover,
 .auth-state-button.is-primary:not(:disabled):hover {
-  border-color: var(--es-brand) !important;
-  background-color: var(--es-ink) !important;
+  border-color: var(--es-brand-fill-press) !important;
+  background-color: var(--es-brand-fill-press) !important;
   color: #FFFFFF !important;
 }
 

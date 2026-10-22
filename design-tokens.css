@@ -138,27 +138,26 @@
   --es-type-meta-weight: 500;
 }
 
+/* Dark mode is owned by theme.css, which deliberately keeps some surfaces
+   (the site navbar, artwork cards) light. The neutrals therefore stay light
+   here; only the semantic text roles used by dark-aware components flip. */
 html[data-theme="dark"] {
-  --es-bg: #121212;
-  --es-stage: #080808;
-  --es-sunk: #1a1a1a;
-  --es-line: #303030;
-  --es-line-2: #444444;
-  --es-ink: #f3f5f7;
-  --es-ink-2: #c4cbd4;
-  --es-ink-3: #98a2b3;
-  --es-brand-text: #5aa8ff;
-  --es-brand-soft: rgba(37, 134, 247, .17);
-  --es-brand-soft-hover: rgba(37, 134, 247, .24);
-  --es-band-tint: rgba(37, 134, 247, .1);
-  --es-selected: #f3f5f7;
-  --es-focus: 0 0 0 3px #080808, 0 0 0 5px var(--es-ink);
+  --es-text-strong: #f5f7fa;
+  --es-text-primary: #e4e7ec;
+  --es-text-secondary: #c4cbd4;
+  --es-text-muted: #98a2b3;
+  --es-text-subtle: #7b8794;
 }
 
 /* Visible focus everywhere: a white gap, then an ink ring. */
 :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--es-ink) !important;
   outline-offset: 2px !important;
+}
+
+/* In dark mode a mid blue ring reads on both dark and kept-light surfaces. */
+html[data-theme="dark"] :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline-color: #5aa8ff !important;
 }
 
 ::placeholder {
@@ -270,7 +269,7 @@ html[data-theme="dark"] {
 
 /* Shared builder hierarchy: Social, YouTube, and Newsletter. */
 html[data-studio-shell="on"] .studio-title {
-  color: var(--es-text-strong);
+  color: var(--es-ink);
   font-family: var(--es-font-display);
   font-size: var(--es-type-workspace-title-size);
   font-weight: var(--es-type-workspace-title-weight);
@@ -278,7 +277,7 @@ html[data-studio-shell="on"] .studio-title {
 }
 
 html[data-studio-shell="on"] .studio-inspector-tab {
-  color: var(--es-text-secondary);
+  color: var(--es-ink-2);
   font-family: var(--es-font-ui);
   font-size: var(--es-type-control-size);
   font-weight: 600;
@@ -290,7 +289,7 @@ html[data-studio-shell="on"] .studio-inspector-tab.is-active {
 }
 
 html[data-studio-shell="on"] .studio-accordion-trigger {
-  color: var(--es-text-strong);
+  color: var(--es-ink);
   font-family: var(--es-font-ui);
   font-size: var(--es-type-section-title-size);
   font-weight: var(--es-type-section-title-weight);
@@ -303,7 +302,7 @@ html[data-studio-shell="on"] .panel .color-group-label,
 html[data-studio-shell="on"] .panel .double-entity-section-title,
 html[data-studio-shell="on"] .panel .widget-field-label,
 html[data-studio-shell="on"] .panel .listicle-field-label {
-  color: var(--es-text-primary);
+  color: var(--es-ink);
   font-family: var(--es-font-ui);
   font-size: 14px;
   font-weight: 700;
@@ -314,7 +313,7 @@ html[data-studio-shell="on"] .studio-primary-controls .card-title,
 html[data-studio-shell="on"] .panel .section-label,
 html[data-studio-shell="on"] .panel .slider-label-row,
 html[data-studio-shell="on"] .panel .photo-supported {
-  color: var(--es-text-secondary);
+  color: var(--es-ink-2);
   font-family: var(--es-font-ui);
   font-size: var(--es-type-field-label-size);
   font-weight: var(--es-type-field-label-weight);
@@ -334,11 +333,18 @@ html[data-studio-shell="on"] .panel :is(
   .select-dropdown-option,
   .post-type-option
 ) {
-  color: var(--es-text-strong);
+  color: var(--es-ink);
   font-family: var(--es-font-ui);
   font-size: var(--es-type-control-size);
   font-weight: var(--es-type-control-weight);
   line-height: var(--es-type-control-line);
+}
+
+html[data-studio-shell="on"] .studio-primary-controls .select-dropdown-trigger {
+  overflow: hidden;
+  padding-right: 34px !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 html[data-studio-shell="on"] .studio-primary-controls :is(select, .select-dropdown-trigger) {
@@ -352,7 +358,7 @@ html[data-studio-shell="on"] .panel :is(
   .photo-supported,
   .pill-position-empty
 ) {
-  color: var(--es-text-muted);
+  color: var(--es-ink-3);
   font-family: var(--es-font-body);
   font-size: var(--es-type-helper-size);
   font-weight: var(--es-type-helper-weight);

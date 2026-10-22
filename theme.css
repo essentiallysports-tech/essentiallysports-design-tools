@@ -812,3 +812,8 @@ html[data-theme="dark"] .site-footer :is(p, a, small, span, .footer-copy, .foote
   .theme-switch,
   .theme-switch-thumb { transition: none; }
 }
+
+/* The FAQ call-to-action banner keeps its light tint in dark mode, so its copy stays ink. */
+html[data-theme="dark"] .faq-cta-banner .faq-cta-copy :is(h2, h2 *, p) {
+  color: var(--es-ink) !important;
+}

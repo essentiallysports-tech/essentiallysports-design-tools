@@ -755,7 +755,6 @@ html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"].is-open 
   background: #171717 !important;
 }
 
-html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-name,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-identity-copy strong,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-appearance-label {

@@ -209,15 +209,15 @@ body.auth-state-page {
 }
 
 .auth-state-button.is-primary {
-  border-color: var(--es-ink);
-  background: var(--es-ink);
+  border-color: var(--es-brand-fill);
+  background: var(--es-brand-fill);
   color: #fff;
 }
 
 .auth-state-button.is-primary:hover,
 .auth-state-button.is-primary:focus-visible {
-  border-color: var(--es-ink);
-  background: var(--es-ink);
+  border-color: var(--es-brand-fill);
+  background: var(--es-brand-fill);
 }
 
 .auth-state-button[disabled] {
