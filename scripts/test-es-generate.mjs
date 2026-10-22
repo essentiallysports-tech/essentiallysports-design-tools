@@ -57,6 +57,13 @@ assert.equal(roles.stats.name, 'get_player_stats');
 assert.equal(roles.trending.name, 'trending_topics');
 assert.equal(roles.think.name, 'summarize');
 assert.equal(classifyTools([{ name: 'search_images' }]).think, null);
+// The real ES MCP (2026-10): data tools only. Nothing may be mistaken for a writer,
+// even tools whose descriptions say they "answer questions".
+const esRoles = classifyTools(['search_images', 'query_articles', 'brief_podcast', 'latest_nba_angles', 'datalake_query', 'daily_top_pages',
+  'newsletter_post_metrics', 'social_post_performance', 'syndication_article_status', 'syndication_published_index', 'query_tracker_report']
+  .map(name => ({ name, description: 'Answers questions like... generate summaries' })));
+assert.deepEqual(Object.fromEntries(Object.entries(esRoles).map(([role, tool]) => [role, tool?.name || null])),
+  { images: 'search_images', articles: 'query_articles', stats: null, trending: null, think: null });
 
 // Arguments follow the tool's schema; missing required inputs skip the call.
 assert.deepEqual(buildArgs({ schema: { properties: { query: { type: 'string' }, limit: { type: 'number' } } } }, 'LeBron'), { query: 'LeBron', limit: 5 });
@@ -94,3 +101,22 @@ assert.equal(hints.person, 'clark');
 assert.ok(hints.text.includes('Fever') && !hints.text.includes('Chiefs'));
 
 console.log('es-generate checks passed');
+
+// ES MCP query_articles markdown → articles tagged with sport and teams.
+const parsed = _test.parseEsArticles(`6 results
+
+**[LeBron James' 76ers Hit With Huge Blow Hours Before Season Opener Vs. Knicks](https://www.essentiallysports.com/nba-active-basketball-news-lebron-james-76ers-hit/)**
+Sport: NBA | Writer: Krishna | Editor: A | Published: 00:41 | Entity: Lebron James,76Ers,Knicks | Type: Trend Setting
+PVs: 8,359
+
+**[Caitlin Clark Snubbed by Own Team &amp; More](https://www.essentiallysports.com/wnba-basketball-news-caitlin-clark-snubbed/)**
+Sport: WNBA/NCAA | Writer: O | Published: 03:46 | Type: In-Depth
+
+**[Not ES](https://evil.example.com/x)**
+Sport: NBA | Entity: X`);
+assert.deepEqual(parsed.map(a => [a.sport, a.excerpt]), [
+  ['NBA', 'Sport: NBA. Tagged: Lebron James,76Ers,Knicks.'],
+  ['WNBA', 'Sport: WNBA.'],
+]);
+assert.equal(parsed[1].title, 'Caitlin Clark Snubbed by Own Team & More');
+console.log('es-mcp article parsing checks passed');

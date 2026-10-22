@@ -68,7 +68,7 @@
       const re = new RegExp(`\\b${escapeRe(nick)}s?\\b`, 'gi');
       let match;
       while ((match = re.exec(text))) {
-        if (!/^[A-Z]/.test(match[0])) continue;
+        if (!/^[A-Z0-9]/.test(match[0])) continue;
         // "against the [New York] Knicks": look before the whole team name.
         const fullStart = text.slice(0, match.index + match[0].length).toLowerCase().endsWith(full.toLowerCase())
           ? match.index + match[0].length - full.length

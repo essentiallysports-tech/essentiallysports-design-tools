@@ -179,19 +179,24 @@ function checkSpec(raw, index, allowedTypes) {
 const ROLE_PATTERNS = {
   images: /search[\w-]*images?|images?[\w-]*search/i,
   trending: /trend|popular|top[\s_-]?stor|hot[\s_-]?topic/i,
-  stats: /\bstat|score|standing|box[\s_-]?score|player[\s_-]?(?:data|info)/i,
+  stats: /stats?(?:$|_)|score|standing|player[\s_-]?(?:data|info)/i,
   articles: /article|stor(?:y|ies)|news|post|content/i,
   think: /generat|write|compose|draft|summari[sz]|intelligen|ask|answer|chat|complet|reason|copy/i,
 };
 
+// The real ES MCP tools we know how to call well come first.
+const PREFERRED_TOOLS = { images: 'search_images', articles: 'query_articles' };
+
+// Roles come from tool NAMES only: descriptions are too broad (e.g. an
+// analytics tool that "answers questions" is not a writer).
 function classifyTools(tools) {
-  const named = tools.map(tool => ({ name: String(tool?.name || ''), text: `${tool?.name || ''} ${tool?.description || ''}`, schema: tool?.inputSchema || {} })).filter(t => t.name);
+  const named = tools.map(tool => ({ name: String(tool?.name || ''), schema: tool?.inputSchema || {} })).filter(t => t.name);
   const pick = role => {
     const override = TOOL_OVERRIDES[role];
     if (override) return named.find(t => t.name === override) || null;
-    const byName = named.find(t => ROLE_PATTERNS[role].test(t.name) && (role === 'images' || !ROLE_PATTERNS.images.test(t.name)));
-    if (byName) return byName;
-    return named.find(t => ROLE_PATTERNS[role].test(t.text) && (role === 'images' || !ROLE_PATTERNS.images.test(t.text))) || null;
+    const preferred = named.find(t => t.name === PREFERRED_TOOLS[role]);
+    if (preferred) return preferred;
+    return named.find(t => ROLE_PATTERNS[role].test(t.name) && (role === 'images' || !ROLE_PATTERNS.images.test(t.name))) || null;
   };
   return { images: pick('images'), articles: pick('articles'), stats: pick('stats'), trending: pick('trending'), think: pick('think') };
 }
@@ -318,11 +323,59 @@ async function findPhoto(query, mcp, tools, articles = []) {
   }
 }
 
+// ES MCP query_articles returns markdown records like:
+//   **[Title](https://www.essentiallysports.com/...)**
+//   Sport: NBA | Writer: ... | Published: 17:30 | Entity: Lebron James,76Ers | Type: ...
+function parseEsArticles(text) {
+  const records = [];
+  const re = /\*\*\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)\*\*\s*\n([^\n]*)/g;
+  let match;
+  while ((match = re.exec(String(text)))) {
+    const meta = match[3];
+    const field = name => (meta.match(new RegExp(`${name}:\\s*([^|]+)`)) || [])[1]?.trim() || '';
+    const sport = field('Sport').split('/')[0].trim();
+    const entities = field('Entity');
+    records.push({
+      title: clean(match[1]),
+      url: match[2],
+      date: '',
+      sport,
+      excerpt: [sport && `Sport: ${sport}.`, entities && `Tagged: ${entities}.`].filter(Boolean).join(' '),
+      image: '',
+    });
+  }
+  return records.filter(article => isEsUrl(article.url));
+}
+
+// Recent ES coverage about the person, ranked by readership (keyword = title search).
+async function queryEsArticles(mcp, tool, name) {
+  if (!name) return [];
+  const since = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);
+  const ask = args => mcp.callTool(tool.name, { keyword: name, limit: 8, order_by: 'total_pageviews', order_dir: 'desc', ...args }, { timeoutMs: 12000 })
+    .then(result => parseEsArticles(resultText(result)));
+  const recent = await ask({ publish_date_start: since });
+  return recent.length ? recent : ask({});
+}
+
 async function research(brief, mcp, tools, notes) {
   const out = { articles: [], digest: '', sources: [] };
   const sections = [];
+  const name = keyTerms(brief).split(' ').slice(0, 2).join(' ');
   const tryTool = async (role, label) => {
     if (!mcp || !tools[role]) return;
+    if (role === 'articles' && tools.articles.name === 'query_articles') {
+      try {
+        const articles = await queryEsArticles(mcp, tools.articles, name);
+        if (articles.length) {
+          out.mcpArticles = articles;
+          sections.push(`## Recent ES articles about ${name} (ES MCP, most read first)\n${articles.map(a => `- ${a.title} ${a.url}\n  ${a.excerpt}`).join('\n')}`);
+          out.sources.push(...articles.map(a => a.url));
+        }
+      } catch (error) {
+        notes.push(`ES articles lookup failed: ${String(error.message || error).slice(0, 120)}`);
+      }
+      return;
+    }
     const args = buildArgs(tools[role], brief);
     if (!args) return;
     try {
@@ -343,6 +396,11 @@ async function research(brief, mcp, tools, notes) {
   if (out.articles.length) {
     sections.push(`## Latest ES coverage\n${out.articles.map(a => `- ${a.title} (${a.date}) ${a.url}\n  ${a.excerpt}`).join('\n')}`);
     out.sources.push(...out.articles.map(a => a.url));
+  }
+  // ES MCP records (tagged with sport and teams) lead; site search adds images.
+  if (out.mcpArticles?.length) {
+    const seen = new Set(out.mcpArticles.map(a => a.url));
+    out.articles = [...out.mcpArticles, ...out.articles.filter(a => !seen.has(a.url))];
   }
   out.sources = [...new Set(out.sources)];
   out.digest = sections.join('\n\n').slice(0, 9000);
@@ -451,7 +509,9 @@ function guessEntity(text) {
 function draftPlan(brief, found, allowedTypes) {
   const allow = type => !allowedTypes.length || allowedTypes.includes(type);
   // The person comes from the brief; an ES story is used only if it is about them.
-  const photoQuery = keyTerms(brief) || guessEntity(brief);
+  // A lower-case brief has no capitalised name to find: use its first two key words.
+  const terms = keyTerms(brief);
+  const photoQuery = (/[A-Z]/.test(terms) ? terms : terms.split(' ').slice(0, 2).join(' ')) || guessEntity(brief);
   const surname = mainWord(photoQuery);
   const lead = found.articles.find(a => surname && a.title.toLowerCase().includes(surname));
   const sources = lead ? [{ url: lead.url, title: lead.title }] : [];
@@ -536,7 +596,7 @@ function brandHints(spec, brief, articles) {
   const terms = keyTerms(spec.photoQuery || brief) || '';
   const surname = mainWord(terms);
   const about = surname ? articles.filter(a => `${a.title} ${a.excerpt}`.toLowerCase().includes(surname)) : [];
-  const sports = about.map(a => sportFromUrl(a.url)).filter(Boolean);
+  const sports = about.map(a => a.sport || sportFromUrl(a.url)).filter(Boolean);
   const sport = sports.sort((a, b) => sports.filter(s => s === b).length - sports.filter(s => s === a).length)[0] || '';
   return {
     sport,
@@ -632,4 +692,4 @@ exports.handler = async function handler(event) {
 };
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
-exports._test = { TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints };
+exports._test = { TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles };
