@@ -50,7 +50,13 @@
     .gallery-card__body small { overflow: hidden; color: var(--es-ink-3); font-size: 12px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
     .gallery-card__body small:empty { display: none; }
     .gallery-card.is-skeleton { cursor: default; }
-    .gallery-card.is-skeleton .gallery-card__thumb, .gallery-card.is-skeleton strong, .gallery-card.is-skeleton small { animation: galleryPulse 1.2s ease-in-out infinite alternate; }
+    .gallery-card.is-skeleton strong, .gallery-card.is-skeleton small { animation: galleryPulse 1.2s ease-in-out infinite alternate; }
+    /* Soft shimmer on every thumbnail until its image has loaded. */
+    .gallery-card__thumb:not(.is-loaded):not(.is-missing)::before { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / .6) 50%, transparent 80%); transform: translateX(-100%); animation: galleryShimmer 1.4s ease-in-out infinite; }
+    @keyframes galleryShimmer { to { transform: translateX(100%); } }
+    @media (prefers-reduced-motion: reduce) {
+      .gallery-card__thumb::before, .gallery-card.is-skeleton :is(strong, small) { animation: none !important; }
+    }
     .gallery-card.is-skeleton strong { display: block; width: 70%; height: 14px; border-radius: 6px; background: var(--es-sunk); }
     .gallery-card.is-skeleton small { display: block; width: 45%; height: 12px; border-radius: 6px; background: var(--es-sunk); }
     @keyframes galleryPulse { to { opacity: .55; } }
@@ -84,6 +90,7 @@
 
     html[data-theme="dark"] .gallery-card__body strong, html[data-theme="dark"] .gallery-viewer__info h2, html[data-theme="dark"] .gallery-viewer__details dd { color: #f3f5f7; }
     html[data-theme="dark"] .gallery-card__thumb, html[data-theme="dark"] .gallery-card.is-skeleton :is(strong, small) { background: #1f1f1f; box-shadow: inset 0 0 0 1px #2e2e2e; }
+    html[data-theme="dark"] .gallery-card__thumb::before { background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / .06) 50%, transparent 80%); }
     html[data-theme="dark"] .gallery-viewer { background: #151515; color: #f3f5f7; }
     html[data-theme="dark"] .gallery-viewer__media { background: #0e0e0e; }
     html[data-theme="dark"] .gallery-viewer__details { border-color: #2e2e2e; }
