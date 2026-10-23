@@ -143,3 +143,10 @@ assert.deepEqual(fromSheet.rows.map(r => r.metric2), ['33.9', '32.7', '30.4']);
 assert.equal(_test.parseTableBrief('Patrick Mahomes after the Chiefs win: 320 YDS, 3 TD'), null, 'plain briefs are not tables');
 assert.ok(checkFields('listicle-type-1', { title: 'T', entityHeader: 'A', metric1Header: 'B', metric2Header: 'C', rows: [{ entity: 'X', metric1: '1', metric2: '2' }] }).error, 'needs 3+ rows');
 console.log('table brief checks passed');
+
+// Quotes must be real words from the brief or research.
+const source = _test.squash('Mahomes after the win: "We are not done yet." 320 YDS');
+const quoteSpec = fields => checkSpec({ postType: 'quote', fields }, 0, []).spec;
+assert.equal(_test.fakeQuote(quoteSpec({ lines: ['We Are Not', 'Done Yet'] }), source), '', 'a real quote, re-split and re-cased, passes');
+assert.match(_test.fakeQuote(quoteSpec({ lines: ['Dream', 'Duo'] }), source), /not in the brief/);
+console.log('real quote checks passed');

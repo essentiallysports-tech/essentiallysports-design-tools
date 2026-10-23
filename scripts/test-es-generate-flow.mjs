@@ -44,7 +44,9 @@ globalThis.fetch = async (url, options = {}) => {
   if (href.startsWith('https://api.groq.com/openai/v1/chat/completions')) {
     const body = JSON.parse(options.body);
     groqRequests.push(body);
-    return reply(200, { choices: [{ message: { content: groqReplies.shift() } }] });
+    const next = groqReplies.shift();
+    if (next && typeof next === 'object') return reply(next.status, { error: { message: next.message } });
+    return reply(200, { choices: [{ message: { content: next } }] });
   }
   throw new Error(`unexpected fetch ${href}`);
 };
@@ -139,8 +141,19 @@ assert.deepEqual(res.body.designs.map(d => d.postType), ['cover', 'stats-single-
 assert.equal(groqRequests.length, 2, 'exactly one repair round');
 assert.equal(groqRequests[0].response_format.type, 'json_object');
 assert.match(groqRequests[0].messages[0].content, /use those exact words/, 'brief text is kept verbatim');
-assert.match(groqRequests[1].messages[2].content, /design 2: quote needs 1-3 lines of max 18 chars/, 'repair names the broken limit');
+assert.match(groqRequests[1].messages[0].content, /design 2: quote needs 1-3 lines of max 18 chars/, 'repair names the broken limit');
+assert.ok(groqRequests[1].messages[0].content.length < 4000, 'repair request is small (no research re-sent)');
+assert.equal(groqRequests[1].messages.length, 1);
 assert.equal(new Set(res.body.designs.map(d => d.id)).size, 3, 'unique design ids');
+
+// 3e. Main model rate limited: the next free model runs instead.
+groqRequests.length = 0;
+groqReplies = [{ status: 429, message: 'Rate limit reached for model on tokens per day (TPD)' }, JSON.stringify({ designs: [AI_DESIGNS.designs[0]] })];
+handler = mockModules();
+res = await post(handler, { brief: 'Patrick Mahomes after the Chiefs win' });
+assert.deepEqual(groqRequests.map(r => r.model), ['openai/gpt-oss-120b', 'openai/gpt-oss-20b']);
+assert.equal(res.body.brain, 'groq:openai/gpt-oss-20b');
+assert.deepEqual(res.body.designs.map(d => d.postType), ['cover']);
 
 // 3d. GENERATE_AI=rules turns AI off even with a key.
 process.env.GENERATE_AI = 'rules';

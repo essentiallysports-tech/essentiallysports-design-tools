@@ -1065,6 +1065,14 @@
     return record;
   }
 
+  function generatedFrom() {
+    try {
+      return window.FrameUpSpec?.generatedFor?.() || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
   async function recordDesignExport(payload = {}) {
     const user = await getCurrentUser();
     const designs = readDesigns();
@@ -1098,6 +1106,8 @@
         exportScale: payload.exportScale || metadata.exportScale || '',
         mimeType: cleanString(payload.mimeType || metadata.mimeType || ''),
         previewDataUrl: cleanString(payload.previewDataUrl || metadata.previewDataUrl || ''),
+        // Made from a Generate design: the brief, so Generate can learn from it.
+        ...(generatedFrom() ? { generated: generatedFrom() } : {}),
       },
     };
     writeDesigns([record, ...designs].slice(0, 500));

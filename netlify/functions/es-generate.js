@@ -10,6 +10,7 @@
 // The AI never draws: it only fills fields our templates already understand.
 // The browser renders each spec with the real editor (frameup-spec.js).
 const { verifyEsUser } = require('./_supabase-auth.js');
+const { loadPastDesigns, selectExamples, formatExamples } = require('./_generate-examples.js');
 const { isMcpConfigured, createSession } = require('./_es-mcp.js');
 
 const ES_WP_API = 'https://www.essentiallysports.com/wp-json/wp/v2';
@@ -21,9 +22,11 @@ const OPENAI_GENERATE_MODEL = process.env.OPENAI_GENERATE_MODEL || 'gpt-4.1-mini
 // GENERATE_AI=rules turns AI off; GENERATE_AI=openai prefers OpenAI.
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 const GROQ_GENERATE_MODEL = process.env.GROQ_GENERATE_MODEL || 'openai/gpt-oss-120b';
+// Tried in order when the main model is rate limited (each has its own free allowance).
+const GROQ_FALLBACK_MODELS = String(process.env.GROQ_FALLBACK_MODELS ?? 'openai/gpt-oss-20b,qwen/qwen3.8-27b').split(',').map(s => s.trim()).filter(Boolean);
 const GENERATE_AI = String(process.env.GENERATE_AI || '').toLowerCase();
 const AI_PROVIDERS = {
-  groq: { url: 'https://api.groq.com/openai/v1/chat/completions', key: GROQ_API_KEY, model: GROQ_GENERATE_MODEL },
+  groq: { url: 'https://api.groq.com/openai/v1/chat/completions', key: GROQ_API_KEY, model: GROQ_GENERATE_MODEL, fallbacks: GROQ_FALLBACK_MODELS },
   openai: { url: 'https://api.openai.com/v1/chat/completions', key: OPENAI_API_KEY, model: OPENAI_GENERATE_MODEL },
 };
 function pickProvider() {
@@ -312,7 +315,9 @@ function urlsIn(text) {
 }
 
 // ─── Research ──────────────────────────────────────────────────────────────
-const STOP_WORDS = new Set('a an and are as at be but by for from has have he her his in is it its make me of on or our post she so that the their them they this to us was we were what when who will with after before about says said just'.split(' '));
+// Also drops instruction words ("make a post", "happy birthday") so searches use the name.
+const STOP_WORDS = new Set(('a an and are as at be but by for from has have he her his in is it its make me of on or our post she so that the their them they this to us was we were what when who will with after before about says said just '
+  + 'create design graphic cover quote stats stat posts happy birthday congrats congratulations need want please do some random player team').split(' '));
 
 // WordPress search matches every word, so a whole sentence finds nothing.
 // Search with the names (capitalised runs) or the first few key words.
@@ -488,12 +493,70 @@ async function research(brief, mcp, tools, notes) {
   }
   out.sources = [...new Set(out.sources)];
   // Kept short to stay inside free-tier token limits (Groq).
-  out.digest = sections.join('\n\n').slice(0, 6000);
+  out.digest = sections.join('\n\n').slice(0, 4500);
   return out;
 }
 
 // ─── Think ─────────────────────────────────────────────────────────────────
-function buildPrompt(brief, found, allowedTypes, count) {
+// Hand-written model answers: the format, template choice and ES voice to copy.
+// They demonstrate structure only; their facts are illustrative.
+const GOLD_EXAMPLES = [
+  {
+    brief: 'Mahomes after the Chiefs win: "We are not done yet." 320 YDS, 3 TD, 1 INT',
+    designs: [
+      { postType: 'stats-single-ent', sport: 'NFL', team: 'Kansas City Chiefs', fields: { headline: 'Mahomes Delivers', stats: [{ value: '320', label: 'YDS' }, { value: '3', label: 'TD' }, { value: '1', label: 'INT' }] }, photoQuery: 'Patrick Mahomes Chiefs' },
+      { postType: 'quote', sport: 'NFL', team: 'Kansas City Chiefs', fields: { lines: ['We Are Not', 'Done Yet'] }, photoQuery: 'Patrick Mahomes Chiefs' },
+      { postType: 'cover', sport: 'NFL', team: 'Kansas City Chiefs', fields: { pills: ['Can Anyone', 'Stop Mahomes?'] }, photoQuery: 'Patrick Mahomes Chiefs' },
+    ],
+  },
+  {
+    brief: 'TOP 3 RUSHING YARDS THIS SEASON\nRank\nPlayer\nTeam\nYards\n1\nDerrick Henry\nRavens\n1,120\n2\nSaquon Barkley\nEagles\n1,050\n3\nJosh Jacobs\nPackers\n980',
+    designs: [
+      { postType: 'listicle-type-1', sport: 'NFL', team: '', fields: { title: 'Top 3 Rushing Yards\nThis Season', entityHeader: 'Player', metric1Header: 'Team', metric2Header: 'Yards', rows: [{ rank: '1', entity: 'Derrick Henry', metric1: 'Ravens', metric2: '1,120', team: 'Baltimore Ravens' }, { rank: '2', entity: 'Saquon Barkley', metric1: 'Eagles', metric2: '1,050', team: 'Philadelphia Eagles' }, { rank: '3', entity: 'Josh Jacobs', metric1: 'Packers', metric2: '980', team: 'Green Bay Packers' }] } },
+    ],
+  },
+  {
+    brief: 'make a post about the Warriors trade rumours',
+    designs: [
+      { postType: 'cover', sport: 'NBA', team: 'Golden State Warriors', fields: { pills: ['Are The Warriors', 'About To Blink?'] }, photoQuery: 'Stephen Curry Warriors' },
+    ],
+  },
+];
+
+// Lower-case letters and digits only, for comparing words regardless of
+// punctuation, curly quotes or line splits.
+const squash = text => ` ${String(text || '').toLowerCase().replace(/[’‘]/g, "'").replace(/[^a-z0-9]+/g, ' ').trim()} `;
+
+// A quote design whose words are not in the brief or the research was made up.
+function fakeQuote(spec, source) {
+  const quotes = spec.postType === 'quote' ? [spec.lines.join(' ')]
+    : spec.postType === 'long-quote' ? [spec.lines[0]]
+      : spec.postType === 'double-entity-quote' ? [spec.fields.a.quote, spec.fields.b.quote]
+        : [];
+  const made = quotes.find(quote => squash(quote).trim().length >= 4 && !source.includes(squash(quote)));
+  return made ? `quote "${made}" is not in the brief or the ES research; quotes must be real words someone said` : '';
+}
+
+// The short follow-up for rejected designs: errors, the designs, the shapes.
+function repairPrompt(brief, broken) {
+  const shapes = [...new Set(broken.map(p => p.raw?.postType).filter(type => TEMPLATES[type]))]
+    .map(type => `- ${type}: ${TEMPLATES[type].shape}`).join('\n');
+  return [
+    'Our brand checker rejected these EssentiallySports Instagram designs. Fix each so it passes, or leave it out.',
+    'Keep the person\'s exact words and numbers. Quotes must be words that appear in the brief. Respect every character limit.',
+    `Brief: ${brief.slice(0, 600)}`,
+    `Errors:\n- ${broken.map(p => p.error).join('\n- ')}`,
+    `Rejected designs:\n${JSON.stringify(broken.map(p => p.raw)).slice(0, 2500)}`,
+    shapes ? `Template fields:\n${shapes}` : '',
+    'Reply with JSON only: {"designs": [...]}',
+  ].filter(Boolean).join('\n');
+}
+
+function goldExamplesText() {
+  return GOLD_EXAMPLES.map(example => `Brief: ${example.brief.replace(/\n/g, ' / ')}\nAnswer: ${JSON.stringify({ designs: example.designs })}`).join('\n\n');
+}
+
+function buildPrompt(brief, found, allowedTypes, count, pastExamples = '') {
   const catalog = Object.entries(TEMPLATES)
     .filter(([type]) => !allowedTypes.length || allowedTypes.includes(type))
     .map(([type, t]) => `- ${type} (${t.label}): ${t.use}\n  fields: ${t.shape}`)
@@ -509,14 +572,22 @@ function buildPrompt(brief, found, allowedTypes, count) {
     '- Quotes must be real (from the brief or the research). Quote and Long Quote show no name, so use them ONLY for words said BY the post\'s main person. Words said about them by someone else need the Two-Person Quote (which names both speakers) or no quote at all.',
     '- Player Stats and Head-to-Head are ONLY for real game or season performance numbers with standard labels (PTS, REB, AST, YDS, TD, INT, HR, RBI, AVG, G, GOALS...). Never use ages, years, dates, contract money, deficits or rankings as stats. No such numbers: skip the stats templates.',
     '- Write like ES: punchy, confident, plain American sports English. Title Case for pills and headlines. No emojis, no hashtags.',
+    '- ES Covers are HOOKS, not summaries: a bold claim or a curious question in 2-8 words, e.g. "Does Patrick Mahomes Really Deserve This?", "Warriors\' $40M Gamble Just Got Worse", "Are Steelers Doomed at QB?". Never just list the facts on a Cover.',
+    '- Player Stats headlines are a short reaction, not a label: e.g. "Statement Made", "No One Can Stop Her", "Mahomes Delivers".',
     '- Respect every character limit exactly; anything longer is rejected. Shorter is better.',
     '- Vary the templates when the story allows it.',
     '- If the brief is a ranking, table or top-N list (even pasted with one value per line), make ONE listicle-type-1 (Rankings Table, when rows have number columns) or listicle-type-2 (Ranked List) design with all rows in order, using the exact names and values. Never split a list into one post per row. You may add one Cover with the headline as a second option. Fill every row\'s "team" with the team that person or pair did it with (e.g. Tom Brady & Bill Belichick: New England Patriots); each row is coloured in its team\'s brand colours.',
     '- Work out the person\'s CURRENT team and league from the ES research (newest coverage wins; players change teams). sport is the league: NFL, NBA, WNBA, MLB, CFB (college football), CBB Men, CBB Women, Tennis. team is that person\'s own team, full name, e.g. "Kansas City Chiefs" (never the opponent). Our templates use the team\'s brand colours, so get the team right.',
+    '- A team named in the brief (e.g. "Dream duo", "after the Chiefs win") is the team; it beats anything you remember, since players move.',
+    '- Every design about the same person uses the same CURRENT team; a duo or list from one team uses that team on every design. If unsure of a team, leave it empty rather than guess an old team.',
+    '- If the brief gives you nothing true to say (no facts, no quote, nothing in the ES research), return {"designs": []}.',
     '- photoQuery is 2-5 words: the person plus their current team, e.g. "Patrick Mahomes Chiefs".',
     '',
     `Templates:\n${catalog}`,
     '',
+    `Model answers (copy the format, template choice and voice; not the facts):\n${goldExamplesText()}`,
+    '',
+    ...(pastExamples ? [`Real ES posts on similar topics (style and template choice only; never reuse their facts, names or numbers):\n${pastExamples}`, ''] : []),
     `Brief: ${brief}`,
     '',
     `ES research:\n${found.digest || '(no ES coverage found)'}`,
@@ -550,22 +621,39 @@ async function thinkWithMcp(prompt, mcp, tool) {
   return designsFrom(extractJson(resultText(await mcp.callTool(tool.name, args, { timeoutMs: 25000 }))));
 }
 
-// OpenAI-compatible chat (Groq and OpenAI). Returns the raw reply text.
+// OpenAI-compatible chat (Groq and OpenAI). Returns the raw reply text. When a
+// model hits its rate limit, the provider's backup models are tried in order
+// (each Groq model has its own free allowance); provider.used records which ran.
 async function chat(provider, messages) {
-  const response = await fetch(provider.url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${provider.key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: provider.model,
-      temperature: 0.4,
-      response_format: { type: 'json_object' },
-      messages,
-    }),
-    signal: AbortSignal.timeout(25000),
-  });
-  const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.error?.message || `${provider.name} request failed: ${response.status}`);
-  return String(data?.choices?.[0]?.message?.content || '');
+  // Each model is tried in strict JSON mode, then (if the provider rejects its
+  // JSON) in plain mode, which extractJson can still read.
+  let lastError = null;
+  for (const model of [provider.model, ...(provider.fallbacks || [])]) {
+    for (const json of [true, false]) {
+      const response = await fetch(provider.url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${provider.key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          temperature: 0.4,
+          ...(json ? { response_format: { type: 'json_object' } } : {}),
+          messages,
+        }),
+        signal: AbortSignal.timeout(25000),
+      });
+      const data = await response.json().catch(() => null);
+      if (response.ok) {
+        provider.used = model;
+        return String(data?.choices?.[0]?.message?.content || '');
+      }
+      lastError = new Error(data?.error?.message || `${provider.name} request failed: ${response.status}`);
+      const badJson = response.status === 400 && /json/i.test(lastError.message);
+      if (badJson && json) continue; // same model, plain mode
+      if (response.status === 429 || badJson) break; // next model
+      throw lastError; // anything else: stop
+    }
+  }
+  throw lastError;
 }
 
 // Rule-based fallback so the flow works with no AI connected. Only uses text
@@ -692,7 +780,8 @@ function draftPlan(brief, found, allowedTypes) {
   if (allow('cover')) {
     // Wording comes from the brief (ES stories may cover a different moment):
     // its first clause if that fits, else just the name.
-    const pills = [brief.split(/[,.;:!?"“—\n]/)[0], photoQuery]
+    const instruction = /^(?:make|create|do|design|give|need|want|can you|please|post)\b/i.test(brief.trim());
+    const pills = [instruction ? '' : brief.split(/[,.;:!?"“—\n]/)[0], photoQuery]
       .map(text => chunkWords(titleCase(text), 20, 3))
       .find(lines => lines.length) || [];
     if (pills.length) designs.push({ postType: 'cover', title: pills.join(' '), fields: { pills }, photoQuery, why: 'Your text as headline pills.', sources });
@@ -710,8 +799,11 @@ function draftPlan(brief, found, allowedTypes) {
     }
   }
 
-  const stats = [...clean(brief).matchAll(/(\d[\d,.]*\+?%?)\s+([A-Za-z]{2,8})\b/g)]
-    .map(match => ({ value: match[1].slice(0, 7), label: match[2].toUpperCase().slice(0, 8) }));
+  // Only real stat labels count ("1 Luka" in a ranking is not a stat).
+  const STAT_LABELS = /^(PTS|REB|REBS|AST|ASTS|STL|BLK|TOV|FG|3PM|YDS|YARDS|TD|TDS|INT|INTS|REC|CAR|RUSH|SACK|SACKS|TKL|HR|RBI|AVG|ERA|SO|K|HITS|SB|GOALS|G|A|SOG|SV|SAVES|PPG|RPG|APG|MIN|MINS)$/;
+  const stats = [...clean(brief).matchAll(/(\d[\d,.]*\+?%?)\s+([A-Za-z0-9]{1,8})\b/g)]
+    .map(match => ({ value: match[1].slice(0, 7), label: match[2].toUpperCase().slice(0, 8) }))
+    .filter(stat => STAT_LABELS.test(stat.label));
   if (allow('stats-single-ent') && stats.length >= 3) {
     designs.push({ postType: 'stats-single-ent', title: `${photoQuery} stats`, fields: { headline: chunkWords(titleCase(photoQuery), 22, 1)[0] || 'Record Alert!', stats: stats.slice(0, 3) }, photoQuery, why: 'The three numbers from your text.', sources });
   }
@@ -785,23 +877,29 @@ const brainName = tools => {
   return provider ? `${provider.name}:${provider.model}` : 'draft';
 };
 
-async function generate({ brief, formats, count }) {
+async function generate({ brief, formats, count, token }) {
   const notes = [];
   const allowedTypes = (Array.isArray(formats) ? formats : []).filter(type => TEMPLATES[type]);
   const want = Math.min(Math.max(parseInt(count, 10) || MAX_DESIGNS, 1), MAX_DESIGNS);
   const { mcp, tools, toolNames, error: mcpError } = await discover(notes);
-  const found = await research(brief, mcp, tools, notes);
+  // Past team designs (background learning) load alongside the research.
+  const [found, pastDesigns] = await Promise.all([research(brief, mcp, tools, notes), loadPastDesigns(token).catch(() => [])]);
+  const pastExamples = formatExamples(selectExamples(brief, pastDesigns, allowedTypes));
 
   let brain = brainName(tools);
   const provider = tools.think ? null : pickProvider();
-  const prompt = buildPrompt(brief, found, allowedTypes, want);
+  let aiFailed = false;
+  const prompt = buildPrompt(brief, found, allowedTypes, want, pastExamples);
   const designs = [];
   const seen = new Set();
+  // Quotes must be real: their words have to appear in the brief or the ES research.
+  const sourceText = squash(`${brief} ${found.digest}`);
   const keepValid = (list, offset = 0) => {
     const problems = [];
     list.forEach((raw, index) => {
       const checked = checkSpec(raw, index + offset, allowedTypes);
-      if (checked.error) return problems.push(checked.error);
+      const fake = checked.error ? '' : fakeQuote(checked.spec, sourceText);
+      if (checked.error || fake) return problems.push({ error: checked.error || `design ${index + offset + 1}: ${fake}`, raw });
       const key = `${checked.spec.postType}|${checked.spec.lines.join('|')}`;
       if (!seen.has(key) && designs.length < want) {
         seen.add(key);
@@ -810,27 +908,25 @@ async function generate({ brief, formats, count }) {
     });
     return problems;
   };
-  const fixable = problem => !/format not requested|unsupported post type/.test(problem);
+  const fixable = problem => !/format not requested|unsupported post type/.test(problem.error);
+  const skipped = problems => problems.map(p => `Skipped ${p.error}`);
   try {
     if (tools.think) {
-      notes.push(...keepValid(await thinkWithMcp(prompt, mcp, tools.think)).map(p => `Skipped ${p}`));
+      notes.push(...skipped(keepValid(await thinkWithMcp(prompt, mcp, tools.think))));
     } else if (provider) {
-      const messages = [{ role: 'user', content: prompt }];
-      const reply = await chat(provider, messages);
+      const reply = await chat(provider, [{ role: 'user', content: prompt }]);
       const problems = keepValid(designsFrom(extractJson(reply)));
-      notes.push(...problems.filter(p => !fixable(p)).map(p => `Skipped ${p}`));
+      notes.push(...skipped(problems.filter(p => !fixable(p))));
       const broken = problems.filter(fixable);
-      // One repair round: tell the AI exactly which limits it broke.
+      // One small repair round: only the broken designs and the rules they
+      // broke (not the whole research again), to stay inside free-tier limits.
       if (broken.length && designs.length < want) {
-        messages.push({ role: 'assistant', content: reply }, {
-          role: 'user',
-          content: `These designs broke our template rules and were rejected:\n- ${broken.join('\n- ')}\nReturn corrected versions of only those designs, same JSON shape {"designs": [...]}, respecting every character limit.`,
-        });
-        const fixed = keepValid(designsFrom(extractJson(await chat(provider, messages))), 10);
-        notes.push(...fixed.map(p => `Skipped ${p}`));
+        const fixed = keepValid(designsFrom(extractJson(await chat(provider, [{ role: 'user', content: repairPrompt(brief, broken) }]))), 10);
+        notes.push(...skipped(fixed));
       }
     }
   } catch (error) {
+    aiFailed = true;
     notes.push(`AI step failed, using your text with simple rules: ${String(error.message || error).slice(0, 160)}`);
   }
   // A table in the brief always becomes a ranking design, first, even if the
@@ -846,27 +942,33 @@ async function generate({ brief, formats, count }) {
       keepValid([table], 21);
       designs.unshift(designs.pop());
     }
-    notes.push(...problems.map(p => `Skipped ${p}`));
+    notes.push(...skipped(problems));
   } else if (designs.some(isRanking)) {
     designs.unshift(...designs.splice(designs.findIndex(isRanking), 1));
   }
-  if (!designs.length) {
-    if (brain !== 'draft') notes.push('The AI returned no usable designs; built them from your text instead.');
+  // Rules fallback (the person's own words only) when no AI could run, or the
+  // AI returned nothing for a brief that has real content. An instruction with
+  // nothing true to say ("make a stats post on a random player") gets nothing.
+  const isInstruction = /^(?:make|create|do|design|give|need|want|can you|please|post)\b/i.test(brief.trim());
+  if (!designs.length && (brain === 'draft' || aiFailed || !isInstruction)) {
+    if (brain !== 'draft') notes.push('The AI was unavailable; built them from your text instead.');
     brain = 'draft';
-    notes.push(...keepValid(draftPlan(brief, found, allowedTypes)).map(p => `Skipped ${p}`));
+    notes.push(...skipped(keepValid(draftPlan(brief, found, allowedTypes))));
   }
   await Promise.all(designs.map(async spec => {
     spec.photo = await findPhoto(spec.photoQuery, mcp, tools, found.articles);
     spec.hints = brandHints(spec, brief, found.articles);
+    spec.brief = brief.slice(0, 600);
     if (!spec.sport) spec.sport = spec.hints.sport;
     if (!spec.sources.length && found.sources[0]) spec.sources = [{ url: found.sources[0], title: found.articles.find(a => a.url === found.sources[0])?.title || '' }];
   }));
 
   return {
-    brain,
+    brain: brain !== 'draft' && provider?.used ? `${provider.name}:${provider.used}` : brain,
     designs,
     research: { articles: found.articles.map(({ title, url, date }) => ({ title, url, date })) },
     connection: connectionInfo(tools, toolNames, mcpError),
+    learning: { pastDesigns: pastDesigns.length, examplesUsed: pastExamples ? pastExamples.split('\n').length : 0 },
     notes,
   };
 }
@@ -904,13 +1006,14 @@ exports.handler = async function handler(event) {
     const body = JSON.parse(event.body || '{}');
     if (body.mode === 'trending') return json(200, await trending());
     // Keep line breaks: a pasted table is only readable row by row.
-    const brief = String(body.brief || '').replace(/<[^>]*>/g, ' ').replace(/[^\S\n]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1500);
+    const brief = String(body.brief || '').replace(/<[^>]*>/g, ' ').replace(/[^\S\n\t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1500);
     if (brief.length < 3) return json(400, { error: 'Write a brief of at least a few words.' });
-    return json(200, await generate({ brief, formats: body.formats, count: body.count }));
+    const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
+    return json(200, await generate({ brief, formats: body.formats, count: body.count, token }));
   } catch (error) {
     return json(500, { error: 'Generate failed.', detail: String(error.message || error).slice(0, 200) });
   }
 };
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
-exports._test = { TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign };
+exports._test = { TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt };

@@ -59,6 +59,7 @@
       while ((match = re.exec(text))) personAt.push(match.index);
     }
     const nearPerson = index => !personAt.length || personAt.some(at => Math.abs(at - index) <= NEAR);
+    const found = [];
     let best = null;
     sports.forEach(sport => getTeams(sport).forEach(team => {
       const full = team.trim();
@@ -79,16 +80,23 @@
         if (OPPONENT.test(before)) continue;
         score += nearPerson(match.index) ? 10 : 1;
       }
+      if (score > 0) found.push({ sport, team, score });
       if (score > (best?.score || 0)) best = { sport, team, score };
     }));
-    return best;
+    return best ? { ...best, teams: found.length } : null;
   }
 
   // The AI's sport/team when it names a real one, else a guess from the ES
   // stories about the person. Unknown brands keep the current one.
   function resolveBrand(spec) {
     const sports = getSports();
-    const sport = findOption(sports, spec.sport) || findOption(sports, spec.hints?.sport);
+    // A single team named in the brief itself ("Dream duo", "after the Chiefs
+    // win") wins over the AI, whose memory of rosters can be out of date.
+    // Opponents ("against the Sky") never count.
+    const briefSport = findOption(sports, spec.sport) || findOption(sports, spec.hints?.sport);
+    const named = spec.brief ? guessTeam(spec.brief, briefSport ? [briefSport] : sports) : null;
+    if (named && named.teams === 1) return { sport: named.sport, team: named.team };
+    const sport = briefSport;
     const team = sport ? findOption(getTeams(sport), spec.team) : '';
     if (sport && team) return { sport, team };
     const text = [spec.team, spec.title, ...(spec.lines || []), spec.hints?.text].filter(Boolean).join(' ');
@@ -225,10 +233,21 @@
     return run;
   }
 
+  // The last design opened from Generate, so its export can be remembered as a
+  // confirmed brief -> design example (Generate learns from what gets used).
+  let lastApplied = null;
+  const GENERATED_WINDOW_MS = 3 * 60 * 60 * 1000;
+  function generatedFor() {
+    if (!lastApplied?.brief || state.postType !== lastApplied.postType) return null;
+    if (Date.now() - lastApplied.at > GENERATED_WINDOW_MS) return null;
+    return { brief: lastApplied.brief, postType: lastApplied.postType };
+  }
+
   async function applySpec(spec) {
     if (!spec || !SUPPORTED.includes(spec.postType) || !Array.isArray(spec.lines)) {
       throw new Error('This design type cannot be opened in the editor yet.');
     }
+    lastApplied = { brief: String(spec.brief || '').slice(0, 600), postType: spec.postType, at: Date.now() };
     await whenReady();
     const select = document.getElementById('instagram-post-type-select');
     if (select) select.value = spec.postType;
@@ -270,6 +289,6 @@
       .catch(error => setStatus(error.message || 'This design could not be opened.', 'err'));
   }
 
-  window.FrameUpSpec = Object.freeze({ PENDING_KEY, SUPPORTED, ready: whenReady, apply, renderToDataUrl, exportSpec });
+  window.FrameUpSpec = Object.freeze({ PENDING_KEY, SUPPORTED, ready: whenReady, apply, renderToDataUrl, exportSpec, generatedFor });
   openPending();
 })();
