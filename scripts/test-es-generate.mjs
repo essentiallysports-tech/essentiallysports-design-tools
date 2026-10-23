@@ -127,3 +127,19 @@ assert.match(checkFields('long-quote', { text: 'He is the greatest player this l
 assert.ok(checkFields('quote', { lines: ['We Are Not Done', 'Yet'] }).lines, 'first-person quotes pass');
 assert.ok(checkFields('long-quote', { text: 'I told him we would win this one for my family.' }).lines, 'first person with him/my passes');
 console.log('quote speaker checks passed');
+
+// Tables in the brief: web-pasted (one cell per line) and sheet (tabs) both
+// become a Rankings Table with the exact names and values.
+const webTable = 'MOST SEASONS STARTING 5-0 TOGETHER IN NFL HISTORY\n\nRank\nQuarterback\nHead Coach\nSeasons Starting 5-0 Together\n1\nTom Brady\nBill Belichick\n4\n2\nPeyton Manning\nTony Dungy\n4\n3\nFran Tarkenton\nBud Grant\n3\n4\nPatrick Mahomes\nAndy Reid\n3';
+const fromWeb = checkSpec(_test.tableDesign(_test.parseTableBrief(webTable)), 0, []).spec.listicle;
+assert.equal(fromWeb.title, 'MOST SEASONS STARTING 5-0\nTOGETHER IN NFL HISTORY');
+assert.deepEqual([fromWeb.entityHeader, fromWeb.metric1Header, fromWeb.metric2Header], ['Quarterback', 'Head Coach', 'Seasons']);
+assert.deepEqual(fromWeb.rows.map(r => [r.rank, r.entity, r.metric1, r.metric2]), [
+  ['1', 'Tom Brady', 'Bill Belichick', '4'], ['2', 'Peyton Manning', 'Tony Dungy', '4'],
+  ['3', 'Fran Tarkenton', 'Bud Grant', '3'], ['4', 'Patrick Mahomes', 'Andy Reid', '3'],
+]);
+const fromSheet = checkSpec(_test.tableDesign(_test.parseTableBrief('Top scorers\nRank\tPlayer\tTeam\tPTS\n1\tLuka Doncic\tLakers\t33.9\n2\tShai Gilgeous-Alexander\tThunder\t32.7\n3\tGiannis Antetokounmpo\tBucks\t30.4')), 0, []).spec.listicle;
+assert.deepEqual(fromSheet.rows.map(r => r.metric2), ['33.9', '32.7', '30.4']);
+assert.equal(_test.parseTableBrief('Patrick Mahomes after the Chiefs win: 320 YDS, 3 TD'), null, 'plain briefs are not tables');
+assert.ok(checkFields('listicle-type-1', { title: 'T', entityHeader: 'A', metric1Header: 'B', metric2Header: 'C', rows: [{ entity: 'X', metric1: '1', metric2: '2' }] }).error, 'needs 3+ rows');
+console.log('table brief checks passed');

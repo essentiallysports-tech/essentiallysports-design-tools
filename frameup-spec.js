@@ -9,7 +9,7 @@
   'use strict';
 
   const PENDING_KEY = 'frameup.openSpec.v1';
-  const SUPPORTED = ['cover', 'quote', 'long-quote', 'double-entity-quote', 'stats-single-ent', 'stats-double-ent'];
+  const SUPPORTED = ['cover', 'quote', 'long-quote', 'double-entity-quote', 'stats-single-ent', 'stats-double-ent', 'listicle-type-1', 'listicle-type-2'];
   const PHOTO_TYPES = ['cover', 'quote', 'long-quote', 'stats-single-ent'];
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
   // Animation frames pause in background tabs; the timer keeps work moving.
@@ -111,9 +111,63 @@
     syncAllCustomSelects();
   }
 
+  // A row's accent is its team's brand colour when the team is known.
+  function teamAccent(teamName, sportHint) {
+    if (!teamName) return '';
+    const sports = getSports();
+    const preferred = findOption(sports, sportHint);
+    for (const sport of preferred ? [preferred, ...sports.filter(s => s !== preferred)] : sports) {
+      const team = findOption(getTeams(sport), teamName);
+      if (team) return getBrandEntry(sport, team)?.primary?.background || '';
+    }
+    return '';
+  }
+
+  // Rankings Table / Ranked List: fill the template's own data model. Row
+  // images stay empty (no placeholder logos); unused rows are hidden.
+  function applyListicle(spec) {
+    const data = spec.listicle || {};
+    const table = spec.postType === 'listicle-type-1';
+    const api = table ? ESListicle : ESListicleType2;
+    const current = table ? getListicleData() : getListicleType2Data();
+    const rows = Array.from({ length: api.ROW_COUNT }, (_, index) => {
+      const row = data.rows?.[index];
+      if (!row) return { ...current.rows[index], hidden: true };
+      return {
+        rank: row.rank,
+        entity: row.entity,
+        ...(table ? { metric1: row.metric1, metric2: row.metric2 } : { subtitle: row.subtitle || '' }),
+        accent: teamAccent(row.team, spec.sport) || api.DEFAULT_ACCENTS[index],
+        logoSrc: '',
+        logoName: '',
+        ...(table ? {} : { playerSrc: '', playerName: '' }),
+        hidden: false,
+      };
+    });
+    const next = api.normalizeListicleData({
+      ...current,
+      title: data.title,
+      ...(table ? { entityHeader: data.entityHeader, metric1Header: data.metric1Header, metric2Header: data.metric2Header } : {}),
+      rows,
+    });
+    if (table) {
+      state.listicleData = next;
+      buildListicleRowControls();
+      syncListicleControls();
+    } else {
+      state.listicleType2Data = next;
+      buildListicleType2RowControls();
+      syncListicleType2Controls();
+    }
+  }
+
   function applyLines(spec) {
     const lines = spec.lines.map(line => String(line ?? ''));
     switch (spec.postType) {
+      case 'listicle-type-1':
+      case 'listicle-type-2':
+        applyListicle(spec);
+        break;
       case 'stats-single-ent':
         state.lines = lines;
         syncStatsPostFieldsFromLines();

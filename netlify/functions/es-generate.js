@@ -86,6 +86,18 @@ const TEMPLATES = {
     photo: true,
     shape: '{"headline": "2-22 chars", "stats": [{"value": "1-7 chars", "label": "1-8 chars"}, exactly 3]}',
   },
+  'listicle-type-1': {
+    label: 'Rankings Table',
+    use: 'A ranked TABLE: a title plus 3-10 rows, each a name and two short values (e.g. QB | Coach | Seasons, Team | Record | Win %). Use for any top-N, record or ranking with columns.',
+    photo: false,
+    shape: '{"title": "max 60 chars; use one \\n to split into two lines of max 30", "entityHeader": "max 14", "metric1Header": "max 14", "metric2Header": "max 14", "rows": [{"rank": "1", "entity": "max 26 chars", "metric1": "max 14", "metric2": "max 14", "team": "the team that row achieved it with, full name (e.g. New England Patriots); empty only if truly unknown"}] (3-10 rows, in rank order)}',
+  },
+  'listicle-type-2': {
+    label: 'Ranked List',
+    use: 'A ranked LIST of people or teams: a title plus 3-10 rows, each a name and one subtitle (their team or one fact). Use for top-N lists without number columns.',
+    photo: false,
+    shape: '{"title": "max 60 chars; use one \\n to split into two lines of max 30", "rows": [{"rank": "1", "entity": "max 26 chars", "subtitle": "max 28 chars", "team": "the team that row achieved it with, full name (e.g. New England Patriots); empty only if truly unknown"}] (3-10 rows, in rank order)}',
+  },
   'stats-double-ent': {
     label: 'Head-to-Head Stats',
     use: 'Two players compared: a headline plus exactly 4 stats each, same labels in the same order.',
@@ -170,6 +182,34 @@ function checkFields(postType, fields = {}) {
         fields: { headline, a, b },
       };
     }
+    case 'listicle-type-1':
+    case 'listicle-type-2': {
+      const table = postType === 'listicle-type-1';
+      // A one-line title that is too long is split at a word break (same words).
+      const rawTitle = String(fields.title || '').split(/\n|\\n/).map(line => clean(line)).filter(Boolean);
+      const titleSource = rawTitle.length === 1 && rawTitle[0].length > 30 ? chunkWords(rawTitle[0], 30, 2) : rawTitle;
+      const titleLines = (titleSource.length ? titleSource : ['']).map(line => within(line, 1, 30)).slice(0, 3);
+      if (!titleLines.length || titleLines.length > 2 || titleLines.some(line => !line)) return { error: `${postType} title needs 1-2 lines of max 30 chars` };
+      const rows = Array.isArray(fields.rows) ? fields.rows.map((row, index) => ({
+        rank: within(row?.rank ?? index + 1, 1, 3),
+        entity: within(row?.entity, 1, 26),
+        ...(table
+          ? { metric1: within(row?.metric1, 1, 14), metric2: within(row?.metric2, 1, 14) }
+          : { subtitle: within(row?.subtitle ?? '', 0, 28) }),
+        team: within(row?.team ?? '', 0, 40) || '',
+      })) : [];
+      if (rows.length < 3 || rows.length > 10) return { error: `${postType} needs 3-10 rows` };
+      const badRow = rows.findIndex(row => !row.rank || !row.entity || (table ? !row.metric1 || !row.metric2 : row.subtitle === null));
+      if (badRow >= 0) return { error: `${postType} row ${badRow + 1} needs rank, entity (max 26 chars) and ${table ? 'two values (max 14 chars)' : 'a subtitle (max 28 chars)'}` };
+      const headers = table ? {
+        entityHeader: within(fields.entityHeader, 1, 14),
+        metric1Header: within(fields.metric1Header, 1, 14),
+        metric2Header: within(fields.metric2Header, 1, 14),
+      } : {};
+      if (table && Object.values(headers).some(value => !value)) return { error: 'listicle-type-1 needs three headers of max 14 chars' };
+      const listicle = { title: titleLines.join('\n'), ...headers, rows };
+      return { lines: [], fields: listicle, listicle };
+    }
     default:
       return { error: `unsupported post type "${postType}"` };
   }
@@ -195,11 +235,12 @@ function checkSpec(raw, index, allowedTypes) {
       id: `gen-${Date.now().toString(36)}-${index}`,
       postType,
       label: TEMPLATES[postType].label,
-      title: within(raw.title, 1, 80) || checked.lines[0].slice(0, 80),
+      title: within(raw.title, 1, 80) || (checked.lines[0] || checked.listicle?.title.replace(/\n/g, ' ') || '').slice(0, 80),
       sport: within(raw.sport, 2, 20) || '',
       team: within(raw.team, 2, 40) || '',
       fields: checked.fields,
       lines: checked.lines,
+      listicle: checked.listicle || null,
       photoQuery: TEMPLATES[postType].photo ? (within(raw.photoQuery, 2, 80) || '') : '',
       photo: null,
       why: within(raw.why, 1, 220) || '',
@@ -470,6 +511,7 @@ function buildPrompt(brief, found, allowedTypes, count) {
     '- Write like ES: punchy, confident, plain American sports English. Title Case for pills and headlines. No emojis, no hashtags.',
     '- Respect every character limit exactly; anything longer is rejected. Shorter is better.',
     '- Vary the templates when the story allows it.',
+    '- If the brief is a ranking, table or top-N list (even pasted with one value per line), make ONE listicle-type-1 (Rankings Table, when rows have number columns) or listicle-type-2 (Ranked List) design with all rows in order, using the exact names and values. Never split a list into one post per row. You may add one Cover with the headline as a second option. Fill every row\'s "team" with the team that person or pair did it with (e.g. Tom Brady & Bill Belichick: New England Patriots); each row is coloured in its team\'s brand colours.',
     '- Work out the person\'s CURRENT team and league from the ES research (newest coverage wins; players change teams). sport is the league: NFL, NBA, WNBA, MLB, CFB (college football), CBB Men, CBB Women, Tennis. team is that person\'s own team, full name, e.g. "Kansas City Chiefs" (never the opponent). Our templates use the team\'s brand colours, so get the team right.',
     '- photoQuery is 2-5 words: the person plus their current team, e.g. "Patrick Mahomes Chiefs".',
     '',
@@ -555,6 +597,87 @@ function guessEntity(text) {
   return match ? match[0].trim() : clean(text).split(' ').slice(0, 3).join(' ');
 }
 
+// ─── Tables in the brief ───────────────────────────────────────────────────
+// Reads a ranking pasted from a web page (one cell per line: title, "Rank",
+// headers, then rank/value/value... rows) or from a sheet (tab or | separated).
+function parseTableBrief(brief) {
+  const lines = String(brief || '').split('\n').map(line => line.trim()).filter(Boolean);
+  const isRank = value => /^#?\d{1,2}\.?$/.test(value);
+  // Sheet style: each row on one line with tabs or pipes.
+  const split = lines.map(line => line.split(/\t|\s*\|\s*/).map(cell => cell.trim()).filter(Boolean));
+  const rowStart = split.findIndex(cells => cells.length >= 2 && isRank(cells[0]));
+  if (rowStart >= 0 && split.slice(rowStart).filter(cells => isRank(cells[0])).length >= 3) {
+    const rows = split.slice(rowStart).filter(cells => isRank(cells[0]) && cells.length >= 2);
+    const headerCells = rowStart > 0 && split[rowStart - 1].length >= 2 ? split[rowStart - 1] : [];
+    const headers = headerCells.length === rows[0].length ? headerCells.slice(1) : headerCells.slice(-(rows[0].length - 1));
+    const title = lines.slice(0, Math.max(0, rowStart - (headerCells.length ? 1 : 0))).join(' ');
+    return { title, headers, rows: rows.map(cells => ({ rank: cells[0].replace(/\D/g, ''), cells: cells.slice(1) })) };
+  }
+  // Web-table style: one cell per line. Columns = lines from "Rank" up to the first "1".
+  const rankAt = lines.findIndex(line => /^(rank|rk|#|no\.?|pos(ition)?)$/i.test(line));
+  const firstRow = lines.findIndex((line, index) => index > rankAt && line === '1');
+  if (rankAt < 0 || firstRow < 0) return null;
+  const width = firstRow - rankAt;
+  if (width < 2 || width > 4) return null;
+  const headers = lines.slice(rankAt + 1, firstRow);
+  const rows = [];
+  for (let at = firstRow; at + width <= lines.length; at += width) {
+    const cells = lines.slice(at, at + width);
+    if (!isRank(cells[0])) break;
+    rows.push({ rank: cells[0].replace(/\D/g, ''), cells: cells.slice(1) });
+  }
+  return rows.length >= 3 ? { title: lines.slice(0, rankAt).join(' '), headers, rows } : null;
+}
+
+// Shorten a header to the template's 14 characters, keeping whole words
+// ("Seasons Starting 5-0 Together" -> "Seasons").
+function shortHeader(text, fallback) {
+  let out = '';
+  for (const word of clean(text).split(' ')) {
+    const next = out ? `${out} ${word}` : word;
+    if (next.length > 14) break;
+    out = next;
+  }
+  return out || clean(text).slice(0, 14) || fallback;
+}
+
+// Keep an all-caps title as written; otherwise Title Case it.
+const tableTitle = text => (text && text === text.toUpperCase() ? clean(text) : titleCase(text || 'The Rankings'));
+
+// The ranking as a design, using the person's exact names and values.
+function tableDesign(table) {
+  if (!table) return null;
+  const columns = table.rows[0].cells.length;
+  const titleText = tableTitle(table.title);
+  const rows = table.rows.slice(0, 10);
+  if (columns >= 3 || columns === 2 && rows.every(row => row.cells[1].length <= 14)) {
+    const [a, b, c] = table.headers;
+    return {
+      postType: 'listicle-type-1',
+      title: titleText,
+      fields: {
+        title: titleText,
+        entityHeader: shortHeader(a, 'Name'),
+        metric1Header: shortHeader(columns >= 3 ? b : '', columns >= 3 ? 'Value' : ' '),
+        metric2Header: shortHeader(columns >= 3 ? c : b, 'Value'),
+        rows: rows.map(row => ({
+          rank: row.rank,
+          entity: row.cells[0],
+          metric1: columns >= 3 ? row.cells[1] : '-',
+          metric2: columns >= 3 ? row.cells[2] : row.cells[1],
+        })),
+      },
+      why: 'Your table, in rank order, as a Rankings Table.',
+    };
+  }
+  return {
+    postType: 'listicle-type-2',
+    title: titleText,
+    fields: { title: titleText, rows: rows.map(row => ({ rank: row.rank, entity: row.cells[0], subtitle: row.cells[1] || '' })) },
+    why: 'Your list, in rank order, as a Ranked List.',
+  };
+}
+
 function draftPlan(brief, found, allowedTypes) {
   const allow = type => !allowedTypes.length || allowedTypes.includes(type);
   // The person comes from the brief; an ES story is used only if it is about them.
@@ -569,7 +692,7 @@ function draftPlan(brief, found, allowedTypes) {
   if (allow('cover')) {
     // Wording comes from the brief (ES stories may cover a different moment):
     // its first clause if that fits, else just the name.
-    const pills = [brief.split(/[,.;:!?"“—]/)[0], photoQuery]
+    const pills = [brief.split(/[,.;:!?"“—\n]/)[0], photoQuery]
       .map(text => chunkWords(titleCase(text), 20, 3))
       .find(lines => lines.length) || [];
     if (pills.length) designs.push({ postType: 'cover', title: pills.join(' '), fields: { pills }, photoQuery, why: 'Your text as headline pills.', sources });
@@ -710,6 +833,23 @@ async function generate({ brief, formats, count }) {
   } catch (error) {
     notes.push(`AI step failed, using your text with simple rules: ${String(error.message || error).slice(0, 160)}`);
   }
+  // A table in the brief always becomes a ranking design, first, even if the
+  // AI missed it (free models are not consistent about this).
+  const table = tableDesign(parseTableBrief(brief));
+  const isRanking = spec => spec.postType === 'listicle-type-1' || spec.postType === 'listicle-type-2';
+  if (table && (!allowedTypes.length || allowedTypes.includes(table.postType)) && !designs.some(isRanking)) {
+    const before = designs.length;
+    const problems = keepValid([table], 20);
+    if (designs.length > before) designs.unshift(designs.pop());
+    else if (designs.length >= want && !problems.length) {
+      designs.pop();
+      keepValid([table], 21);
+      designs.unshift(designs.pop());
+    }
+    notes.push(...problems.map(p => `Skipped ${p}`));
+  } else if (designs.some(isRanking)) {
+    designs.unshift(...designs.splice(designs.findIndex(isRanking), 1));
+  }
   if (!designs.length) {
     if (brain !== 'draft') notes.push('The AI returned no usable designs; built them from your text instead.');
     brain = 'draft';
@@ -763,7 +903,8 @@ exports.handler = async function handler(event) {
 
     const body = JSON.parse(event.body || '{}');
     if (body.mode === 'trending') return json(200, await trending());
-    const brief = clean(body.brief).slice(0, 600);
+    // Keep line breaks: a pasted table is only readable row by row.
+    const brief = String(body.brief || '').replace(/<[^>]*>/g, ' ').replace(/[^\S\n]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1500);
     if (brief.length < 3) return json(400, { error: 'Write a brief of at least a few words.' });
     return json(200, await generate({ brief, formats: body.formats, count: body.count }));
   } catch (error) {
@@ -772,4 +913,4 @@ exports.handler = async function handler(event) {
 };
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
-exports._test = { TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles };
+exports._test = { TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign };
