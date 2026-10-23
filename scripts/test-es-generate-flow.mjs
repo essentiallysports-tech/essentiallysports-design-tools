@@ -29,6 +29,8 @@ const AI_DESIGNS = {
 };
 
 let fetchCalls = [];
+const groqRequests = [];
+let groqReplies = [];
 let openAiReply = { ok: true, body: { choices: [{ message: { content: JSON.stringify(AI_DESIGNS) } }] } };
 globalThis.fetch = async (url, options = {}) => {
   const href = String(url);
@@ -38,6 +40,11 @@ globalThis.fetch = async (url, options = {}) => {
   if (href.startsWith('https://api.openai.com/')) {
     assert.match(JSON.parse(options.body).messages[0].content, /Patrick Mahomes Leads Chiefs Past Raiders/, 'the prompt includes ES research');
     return reply(openAiReply.ok ? 200 : 500, openAiReply.body);
+  }
+  if (href.startsWith('https://api.groq.com/openai/v1/chat/completions')) {
+    const body = JSON.parse(options.body);
+    groqRequests.push(body);
+    return reply(200, { choices: [{ message: { content: groqReplies.shift() } }] });
   }
   throw new Error(`unexpected fetch ${href}`);
 };
@@ -117,6 +124,33 @@ res = await post(handler, { brief: 'Patrick Mahomes after the Chiefs win' });
 assert.equal(res.body.brain, 'draft');
 assert.ok(!fetchCalls.some(url => url.includes('openai')), 'no OpenAI call without GENERATE_USE_OPENAI=true');
 delete process.env.OPENAI_API_KEY;
+
+// 3c. Groq (default when GROQ_API_KEY is set): one repair round for broken limits.
+process.env.GROQ_API_KEY = 'groq-test';
+groqReplies = [
+  JSON.stringify(AI_DESIGNS),
+  JSON.stringify({ designs: [{ postType: 'quote', title: 'Fixed', sport: 'NFL', team: 'Kansas City Chiefs', fields: { lines: ['We Are Not', 'Done Yet'] }, photoQuery: 'Patrick Mahomes Chiefs' }] }),
+];
+handler = mockModules();
+res = await post(handler, { brief: 'Patrick Mahomes after the Chiefs win: "We are not done yet"' });
+assert.equal(res.body.brain, 'groq:llama-3.3-70b-versatile');
+assert.equal(res.body.connection.ai, 'groq');
+assert.deepEqual(res.body.designs.map(d => d.postType), ['cover', 'stats-single-ent', 'quote'], 'the repaired quote is added');
+assert.equal(groqRequests.length, 2, 'exactly one repair round');
+assert.equal(groqRequests[0].response_format.type, 'json_object');
+assert.match(groqRequests[0].messages[0].content, /use those exact words/, 'brief text is kept verbatim');
+assert.match(groqRequests[1].messages[2].content, /design 2: quote needs 1-3 lines of max 18 chars/, 'repair names the broken limit');
+assert.equal(new Set(res.body.designs.map(d => d.id)).size, 3, 'unique design ids');
+
+// 3d. GENERATE_AI=rules turns AI off even with a key.
+process.env.GENERATE_AI = 'rules';
+groqRequests.length = 0;
+handler = mockModules();
+res = await post(handler, { brief: 'Patrick Mahomes after the Chiefs win' });
+assert.equal(res.body.brain, 'draft');
+assert.equal(groqRequests.length, 0);
+delete process.env.GENERATE_AI;
+delete process.env.GROQ_API_KEY;
 
 // 4. Guards: auth, empty brief, method.
 handler = mockModules({ authOk: false });

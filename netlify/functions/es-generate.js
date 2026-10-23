@@ -17,6 +17,22 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 // OpenAI is opt-in (it is billed separately): set GENERATE_USE_OPENAI=true.
 const USE_OPENAI = process.env.GENERATE_USE_OPENAI === 'true' && Boolean(OPENAI_API_KEY);
 const OPENAI_GENERATE_MODEL = process.env.OPENAI_GENERATE_MODEL || 'gpt-4.1-mini';
+// Groq (free tier) is the default brain whenever GROQ_API_KEY is set.
+// GENERATE_AI=rules turns AI off; GENERATE_AI=openai prefers OpenAI.
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+const GROQ_GENERATE_MODEL = process.env.GROQ_GENERATE_MODEL || 'llama-3.3-70b-versatile';
+const GENERATE_AI = String(process.env.GENERATE_AI || '').toLowerCase();
+const AI_PROVIDERS = {
+  groq: { url: 'https://api.groq.com/openai/v1/chat/completions', key: GROQ_API_KEY, model: GROQ_GENERATE_MODEL },
+  openai: { url: 'https://api.openai.com/v1/chat/completions', key: OPENAI_API_KEY, model: OPENAI_GENERATE_MODEL },
+};
+function pickProvider() {
+  if (GENERATE_AI === 'rules') return null;
+  if (GENERATE_AI === 'openai' && USE_OPENAI) return { name: 'openai', ...AI_PROVIDERS.openai };
+  if (GROQ_API_KEY) return { name: 'groq', ...AI_PROVIDERS.groq };
+  if (USE_OPENAI) return { name: 'openai', ...AI_PROVIDERS.openai };
+  return null;
+}
 const ES_IMAGE_BUCKET = process.env.ES_IMAGE_BUCKET || 'essentiallysports-images-v2prod';
 const TOOL_OVERRIDES = {
   think: process.env.ES_MCP_THINK_TOOL || '',
@@ -413,7 +429,8 @@ async function research(brief, mcp, tools, notes) {
     out.articles = [...out.mcpArticles, ...out.articles.filter(a => !seen.has(a.url))];
   }
   out.sources = [...new Set(out.sources)];
-  out.digest = sections.join('\n\n').slice(0, 9000);
+  // Kept short to stay inside free-tier token limits (Groq).
+  out.digest = sections.join('\n\n').slice(0, 6000);
   return out;
 }
 
@@ -425,15 +442,18 @@ function buildPrompt(brief, found, allowedTypes, count) {
     .join('\n');
   return [
     'You are the senior social designer at EssentiallySports (ES), a US sports media brand.',
-    `Plan ${count} distinct Instagram post designs for the brief below, each using one of our templates.`,
+    `Plan up to ${count} distinct Instagram post designs for the brief below, each using one of our templates.`,
+    'First understand the brief: who or what it is about, and what the person wants.',
+    '- If the brief already contains the post text (words in quotation marks, a headline, numbers), use those exact words and numbers. You may only split them into lines and fix capitalisation.',
+    '- If the brief is an instruction (e.g. "stats post on Mahomes\' last game"), write the copy yourself using ONLY facts from the ES research below.',
     'Rules:',
-    '- Use ONLY facts found in the ES research below. Never invent numbers, quotes or results. If a fact is missing, choose a template that does not need it.',
-    '- Quotes must be real quotes from the research, attributed to the person who said them.',
+    '- Never invent numbers, quotes or results. If a fact is missing, choose a template that does not need it, or return fewer designs.',
+    '- Quotes must be real (from the brief or the research) and attributed to the person who said them.',
     '- Write like ES: punchy, confident, plain American sports English. Title Case for pills and headlines. No emojis, no hashtags.',
-    '- Respect every character limit exactly. Shorter is better.',
+    '- Respect every character limit exactly; anything longer is rejected. Shorter is better.',
     '- Vary the templates when the story allows it.',
-    '- Work out who the post is about from the research: the person, their CURRENT team and league. sport is the league: NFL, NBA, WNBA, MLB, CFB (college football), CBB Men, CBB Women, Tennis. team is that person\'s own team, full name, e.g. "Kansas City Chiefs" (never the opponent). Our templates use the team\'s brand colours, so get the team right.',
-    '- photoQuery is 2-5 words naming who should be in the photo, e.g. "LeBron James Lakers".',
+    '- Work out the person\'s CURRENT team and league from the ES research (newest coverage wins; players change teams). sport is the league: NFL, NBA, WNBA, MLB, CFB (college football), CBB Men, CBB Women, Tennis. team is that person\'s own team, full name, e.g. "Kansas City Chiefs" (never the opponent). Our templates use the team\'s brand colours, so get the team right.',
+    '- photoQuery is 2-5 words: the person plus their current team, e.g. "Patrick Mahomes Chiefs".',
     '',
     `Templates:\n${catalog}`,
     '',
@@ -470,21 +490,22 @@ async function thinkWithMcp(prompt, mcp, tool) {
   return designsFrom(extractJson(resultText(await mcp.callTool(tool.name, args, { timeoutMs: 25000 }))));
 }
 
-async function thinkWithOpenAi(prompt) {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+// OpenAI-compatible chat (Groq and OpenAI). Returns the raw reply text.
+async function chat(provider, messages) {
+  const response = await fetch(provider.url, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${provider.key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: OPENAI_GENERATE_MODEL,
-      temperature: 0.6,
+      model: provider.model,
+      temperature: 0.4,
       response_format: { type: 'json_object' },
-      messages: [{ role: 'user', content: prompt }],
+      messages,
     }),
     signal: AbortSignal.timeout(25000),
   });
   const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.error?.message || `OpenAI request failed: ${response.status}`);
-  return designsFrom(extractJson(data?.choices?.[0]?.message?.content));
+  if (!response.ok) throw new Error(data?.error?.message || `${provider.name} request failed: ${response.status}`);
+  return String(data?.choices?.[0]?.message?.content || '');
 }
 
 // Rule-based fallback so the flow works with no AI connected. Only uses text
@@ -585,6 +606,7 @@ const connectionInfo = (tools, toolNames, error) => ({
   tools: toolNames,
   roles: Object.fromEntries(['think', 'articles', 'stats', 'trending', 'images'].map(role => [role, tools[role]?.name || null])),
   openai: USE_OPENAI,
+  ai: pickProvider()?.name || null,
 });
 
 // ES story URLs start with the league, e.g. /nfl-active-news-..., /nba-news-...
@@ -616,7 +638,11 @@ function brandHints(spec, brief, articles) {
   };
 }
 
-const brainName = tools => (tools.think ? `es-mcp:${tools.think.name}` : (USE_OPENAI ? `openai:${OPENAI_GENERATE_MODEL}` : 'draft'));
+const brainName = tools => {
+  if (tools.think) return `es-mcp:${tools.think.name}`;
+  const provider = pickProvider();
+  return provider ? `${provider.name}:${provider.model}` : 'draft';
+};
 
 async function generate({ brief, formats, count }) {
   const notes = [];
@@ -626,26 +652,51 @@ async function generate({ brief, formats, count }) {
   const found = await research(brief, mcp, tools, notes);
 
   let brain = brainName(tools);
-  let rawDesigns = [];
+  const provider = tools.think ? null : pickProvider();
   const prompt = buildPrompt(brief, found, allowedTypes, want);
-  try {
-    if (tools.think) rawDesigns = await thinkWithMcp(prompt, mcp, tools.think);
-    else if (USE_OPENAI) rawDesigns = await thinkWithOpenAi(prompt);
-  } catch (error) {
-    notes.push(`AI step failed, using draft mode: ${String(error.message || error).slice(0, 160)}`);
-  }
-  if (!rawDesigns.length) {
-    if (brain !== 'draft') notes.push('The AI returned no usable designs; showing draft-mode results.');
-    brain = 'draft';
-    rawDesigns = draftPlan(brief, found, allowedTypes);
-  }
-
   const designs = [];
-  rawDesigns.forEach((raw, index) => {
-    const checked = checkSpec(raw, index, allowedTypes);
-    if (checked.error) notes.push(`Skipped ${checked.error}`);
-    else if (designs.length < want) designs.push(checked.spec);
-  });
+  const seen = new Set();
+  const keepValid = (list, offset = 0) => {
+    const problems = [];
+    list.forEach((raw, index) => {
+      const checked = checkSpec(raw, index + offset, allowedTypes);
+      if (checked.error) return problems.push(checked.error);
+      const key = `${checked.spec.postType}|${checked.spec.lines.join('|')}`;
+      if (!seen.has(key) && designs.length < want) {
+        seen.add(key);
+        designs.push(checked.spec);
+      }
+    });
+    return problems;
+  };
+  const fixable = problem => !/format not requested|unsupported post type/.test(problem);
+  try {
+    if (tools.think) {
+      notes.push(...keepValid(await thinkWithMcp(prompt, mcp, tools.think)).map(p => `Skipped ${p}`));
+    } else if (provider) {
+      const messages = [{ role: 'user', content: prompt }];
+      const reply = await chat(provider, messages);
+      const problems = keepValid(designsFrom(extractJson(reply)));
+      notes.push(...problems.filter(p => !fixable(p)).map(p => `Skipped ${p}`));
+      const broken = problems.filter(fixable);
+      // One repair round: tell the AI exactly which limits it broke.
+      if (broken.length && designs.length < want) {
+        messages.push({ role: 'assistant', content: reply }, {
+          role: 'user',
+          content: `These designs broke our template rules and were rejected:\n- ${broken.join('\n- ')}\nReturn corrected versions of only those designs, same JSON shape {"designs": [...]}, respecting every character limit.`,
+        });
+        const fixed = keepValid(designsFrom(extractJson(await chat(provider, messages))), 10);
+        notes.push(...fixed.map(p => `Skipped ${p}`));
+      }
+    }
+  } catch (error) {
+    notes.push(`AI step failed, using your text with simple rules: ${String(error.message || error).slice(0, 160)}`);
+  }
+  if (!designs.length) {
+    if (brain !== 'draft') notes.push('The AI returned no usable designs; built them from your text instead.');
+    brain = 'draft';
+    notes.push(...keepValid(draftPlan(brief, found, allowedTypes)).map(p => `Skipped ${p}`));
+  }
   await Promise.all(designs.map(async spec => {
     spec.photo = await findPhoto(spec.photoQuery, mcp, tools, found.articles);
     spec.hints = brandHints(spec, brief, found.articles);

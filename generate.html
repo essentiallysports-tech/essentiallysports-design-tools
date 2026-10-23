@@ -138,7 +138,7 @@
   <main class="gen-page" id="main">
     <header class="es-page-head">
       <h1>Generate</h1>
-      <p>Write your post. FrameUp picks the templates, finds the team colours and an ES photo, and designs on-brand options you can edit.</p>
+      <p>Write a brief or your post text. FrameUp understands it, checks ES coverage for the facts and the current team, and designs on-brand options you can edit.</p>
     </header>
 
     <form class="gen-brief" id="gen-form" novalidate>
@@ -147,7 +147,7 @@
         <span class="gen-row__label">Formats</span>
       </div>
       <div class="gen-actions">
-        <span class="gen-actions__hint">Your words are used as written. Check every post before you publish.</span>
+        <span class="gen-actions__hint">Your own words are kept as written; anything else comes only from ES coverage. Check every post before you publish.</span>
         <div class="gen-actions__buttons">
           <button class="es-btn" type="button" id="gen-trending" hidden>Suggest topics</button>
           <button class="es-btn es-btn--primary" type="submit" id="gen-submit">Generate</button>
@@ -318,10 +318,12 @@
         return data;
       }
 
-      // Where the team, colours and photos came from.
-      function showMode(connection = {}) {
+      // Who planned the designs (AI or your text as written) and where team,
+      // colours and photos came from.
+      function showMode(connection = {}, brain = 'draft') {
         const live = connection.mcpConfigured && !connection.mcpError;
-        return `<span class="gen-mode${live ? ' is-ai' : ''}">${live ? 'ES MCP' : 'ES site search'}</span>`;
+        const ai = brain && brain !== 'draft';
+        return `${ai ? '<span class="gen-mode is-ai">AI</span> ' : ''}<span class="gen-mode${live ? ' is-ai' : ''}">${live ? 'ES MCP' : 'ES site search'}</span>`;
       }
 
       // ── Generate ──────────────────────────────────────────────────────────
@@ -353,10 +355,12 @@
           const cards = data.designs.map(buildCard);
           els.grid.replaceChildren(...cards);
           for (const card of cards) await paint(card);
-          els.status.innerHTML = showMode(data.connection);
+          els.status.innerHTML = showMode(data.connection, data.brain);
           els.status.append(document.createTextNode(` ${cards.length} design${cards.length === 1 ? '' : 's'} ready. Edit opens it in the Social Media editor.`));
+          const aiFailed = data.connection?.ai && data.brain === 'draft';
           const problem = mcpProblem(data.connection);
-          if (problem) setNotice('Limited ES data', ` ${problem}`);
+          if (aiFailed) setNotice('AI was unavailable', ' These were built from your text as written. Try again in a minute (the free AI tier has a per-minute limit).');
+          else if (problem) setNotice('Limited ES data', ` ${problem}`);
           showResearch(data.research?.articles || []);
         } catch (error) {
           els.grid.replaceChildren();
