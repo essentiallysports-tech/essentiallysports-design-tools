@@ -133,7 +133,7 @@ groqReplies = [
 ];
 handler = mockModules();
 res = await post(handler, { brief: 'Patrick Mahomes after the Chiefs win: "We are not done yet"' });
-assert.equal(res.body.brain, 'groq:llama-3.3-70b-versatile');
+assert.equal(res.body.brain, 'groq:openai/gpt-oss-120b');
 assert.equal(res.body.connection.ai, 'groq');
 assert.deepEqual(res.body.designs.map(d => d.postType), ['cover', 'stats-single-ent', 'quote'], 'the repaired quote is added');
 assert.equal(groqRequests.length, 2, 'exactly one repair round');

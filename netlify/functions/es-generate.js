@@ -20,7 +20,7 @@ const OPENAI_GENERATE_MODEL = process.env.OPENAI_GENERATE_MODEL || 'gpt-4.1-mini
 // Groq (free tier) is the default brain whenever GROQ_API_KEY is set.
 // GENERATE_AI=rules turns AI off; GENERATE_AI=openai prefers OpenAI.
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
-const GROQ_GENERATE_MODEL = process.env.GROQ_GENERATE_MODEL || 'llama-3.3-70b-versatile';
+const GROQ_GENERATE_MODEL = process.env.GROQ_GENERATE_MODEL || 'openai/gpt-oss-120b';
 const GENERATE_AI = String(process.env.GENERATE_AI || '').toLowerCase();
 const AI_PROVIDERS = {
   groq: { url: 'https://api.groq.com/openai/v1/chat/completions', key: GROQ_API_KEY, model: GROQ_GENERATE_MODEL },
@@ -99,6 +99,10 @@ const clean = value => String(value ?? '')
   .replace(/&#8217;|&rsquo;/g, "'")
   .replace(/&#8220;|&#8221;|&ldquo;|&rdquo;|&quot;/g, '"')
   .replace(/&#8211;|&#8212;|&ndash;|&mdash;/g, '-')
+  // Unicode hyphens/dashes (e.g. the non-breaking hyphen AI models emit) may be
+  // missing from the post fonts: use a plain hyphen.
+  .replace(/[‐-―−]/g, '-')
+  .replace(/[  ]/g, ' ')
   .replace(/&amp;/g, '&')
   .replace(/&#\d+;/g, '')
   .replace(/\s+/g, ' ')
@@ -117,6 +121,11 @@ function readStats(list, count) {
 
 const statLine = stat => `${stat.value} | ${stat.label}`;
 
+// Quote templates show no speaker, so the words must be the subject's own.
+// "He done stacked his team" (he/his, no I/we) is someone talking ABOUT them.
+const readsAsAbout = text => /\b(?:he|she|him|his|her|hers)\b/i.test(text) && !/\b(?:i|i'm|i've|i'll|me|my|we|we're|our|us)\b/i.test(text);
+const QUOTE_ABOUT_ERROR = 'quote reads as words about the person (he/his), not by them; quote templates show no speaker, so use the Two-Person Quote or drop it';
+
 // Returns { lines, fields } for a valid spec, or { error } explaining why not.
 function checkFields(postType, fields = {}) {
   switch (postType) {
@@ -128,11 +137,13 @@ function checkFields(postType, fields = {}) {
     case 'quote': {
       const lines = Array.isArray(fields.lines) ? fields.lines.map(l => within(l, 1, 18)) : [];
       if (!lines.length || lines.length > 3 || lines.some(l => !l)) return { error: 'quote needs 1-3 lines of max 18 chars' };
+      if (readsAsAbout(lines.join(' '))) return { error: QUOTE_ABOUT_ERROR };
       return { lines, fields: { lines } };
     }
     case 'long-quote': {
       const text = within(String(fields.text || '').replace(/^["“]|["”]$/g, ''), 20, 220);
       if (!text) return { error: 'long quote needs 20-220 chars' };
+      if (readsAsAbout(text)) return { error: QUOTE_ABOUT_ERROR };
       return { lines: [text], fields: { text } };
     }
     case 'double-entity-quote': {
@@ -417,8 +428,14 @@ async function research(brief, mcp, tools, notes) {
   await Promise.all([
     tryTool('articles', 'ES articles'),
     tryTool('stats', 'Stats'),
-    searchEsArticles(keyTerms(brief)).then(articles => { out.articles = articles; }).catch(() => {}),
+    // The public site search is slow (~15s); skip it when ES MCP's
+    // query_articles supplies tagged articles instead.
+    (mcp && tools.articles?.name === 'query_articles' ? Promise.resolve([]) : searchEsArticles(keyTerms(brief)))
+      .then(articles => { out.articles = articles; }).catch(() => {}),
   ]);
+  if (!out.mcpArticles?.length && !out.articles.length && mcp && tools.articles?.name === 'query_articles') {
+    out.articles = await searchEsArticles(keyTerms(brief)).catch(() => []);
+  }
   if (out.articles.length) {
     sections.push(`## Latest ES coverage\n${out.articles.map(a => `- ${a.title} (${a.date}) ${a.url}\n  ${a.excerpt}`).join('\n')}`);
     out.sources.push(...out.articles.map(a => a.url));
@@ -448,7 +465,8 @@ function buildPrompt(brief, found, allowedTypes, count) {
     '- If the brief is an instruction (e.g. "stats post on Mahomes\' last game"), write the copy yourself using ONLY facts from the ES research below.',
     'Rules:',
     '- Never invent numbers, quotes or results. If a fact is missing, choose a template that does not need it, or return fewer designs.',
-    '- Quotes must be real (from the brief or the research) and attributed to the person who said them.',
+    '- Quotes must be real (from the brief or the research). Quote and Long Quote show no name, so use them ONLY for words said BY the post\'s main person. Words said about them by someone else need the Two-Person Quote (which names both speakers) or no quote at all.',
+    '- Player Stats and Head-to-Head are ONLY for real game or season performance numbers with standard labels (PTS, REB, AST, YDS, TD, INT, HR, RBI, AVG, G, GOALS...). Never use ages, years, dates, contract money, deficits or rankings as stats. No such numbers: skip the stats templates.',
     '- Write like ES: punchy, confident, plain American sports English. Title Case for pills and headlines. No emojis, no hashtags.',
     '- Respect every character limit exactly; anything longer is rejected. Shorter is better.',
     '- Vary the templates when the story allows it.',

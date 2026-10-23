@@ -120,3 +120,10 @@ assert.deepEqual(parsed.map(a => [a.sport, a.excerpt]), [
 ]);
 assert.equal(parsed[1].title, 'Caitlin Clark Snubbed by Own Team & More');
 console.log('es-mcp article parsing checks passed');
+
+// Quote templates name no speaker: third-person words about someone are rejected.
+assert.match(checkFields('quote', { lines: ['He Done Stacked', 'His Team'] }).error, /about the person/);
+assert.match(checkFields('long-quote', { text: 'He is the greatest player this league has ever seen.' }).error, /about the person/);
+assert.ok(checkFields('quote', { lines: ['We Are Not Done', 'Yet'] }).lines, 'first-person quotes pass');
+assert.ok(checkFields('long-quote', { text: 'I told him we would win this one for my family.' }).lines, 'first person with him/my passes');
+console.log('quote speaker checks passed');
