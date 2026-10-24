@@ -1114,7 +1114,8 @@ html[data-theme="dark"] .es-dialog-button.is-quiet {
   }
 }
 
-/* Home workspace grid: 4 across on desktop, 2×2 on tablets, 1 column on phones. */
+/* Home workspace grid: 4 across on desktop, 2×2 on tablets and phones, so all
+   4 workspaces stay reachable with minimal scrolling at every width. */
 .frame-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -1122,12 +1123,6 @@ html[data-theme="dark"] .es-dialog-button.is-quiet {
 @media (max-width: 1199px) {
   .frame-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 639px) {
-  .frame-grid {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 

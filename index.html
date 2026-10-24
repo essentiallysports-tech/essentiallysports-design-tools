@@ -4583,7 +4583,37 @@ body[data-current-page="faq"] .faq-cta-art img {
     .guidelines-fact:last-child { border-bottom: 0; }
     .guideline-body { padding-left: 0; padding-right: 0; }
     .frame-grid {
-      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    /* The title/action slide-up is a hover affordance; touch has no hover, so
+       it permanently hid the CTA below the card's clipped edge. Show it. */
+    .frame-card-body {
+      transform: none;
+    }
+    .frame-card:hover .frame-card-body,
+    .frame-card:focus-within .frame-card-body {
+      transform: none;
+    }
+    .frame-card-action {
+      opacity: 1;
+      transform: none;
+      padding-top: 12px;
+    }
+    .frame-thumbnail {
+      margin-bottom: 0;
+    }
+    .frame-card-title {
+      font-size: 17px;
+    }
+    .frame-card-subtitle {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      font-size: 13px;
+    }
+    .frame-cta {
+      font-size: 14px;
     }
     .canvas-stage {
       flex-direction: column;
@@ -4615,6 +4645,14 @@ body[data-current-page="faq"] .faq-cta-art img {
     html,
     body {
       overflow-x: hidden;
+    }
+    /* Below the 901px desktop-shell breakpoint (where es-ui.css's
+       html.es-shell rule already disables this), a 1376px-tall sticky
+       section has nowhere to release to before the page ends, so it stays
+       pinned over "How FrameUp works" for the entire rest of the scroll.
+       Sticky only makes sense when the section fits in one screen. */
+    .frame-options {
+      position: static;
     }
     body {
       font-size: 16px;
@@ -7374,12 +7412,12 @@ body[data-current-page="faq"] .faq-cta-art img {
     pointer-events: none;
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20261028-mobile1">
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20261028-mobile2">
 <link rel="stylesheet" href="theme.css?v=20261023-ux1">
 <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
 <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
 <link rel="stylesheet" href="how-it-works.css?v=20261023-ux1">
-<link rel="stylesheet" href="design-tokens.css?v=20261028-mobile1">
+<link rel="stylesheet" href="design-tokens.css?v=20261028-mobile2">
 <link rel="stylesheet" href="es-ui.css?v=20261025-perf1">
 <script src="theme.js?v=20260712-darkmode12"></script>
 <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
@@ -8251,6 +8289,11 @@ body[data-current-page="faq"] .faq-cta-art img {
         <div class="canvas-stack">
           <div class="canvas-wrap">
             <canvas id="preview" width="1080" height="1350"></canvas>
+            <div class="canvas-empty-hint" data-canvas-empty-hint hidden aria-hidden="true">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="10" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m4.5 17 5-5 4 3.5 3-2.5 4.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <strong>Add an image</strong>
+              <span>Golden State Warriors</span>
+            </div>
             <div class="canvas-image-edit-frame" data-canvas-image-edit-frame hidden aria-hidden="true">
               <button class="canvas-image-edit-handle is-top-left" type="button" data-canvas-image-scale-handle="top-left" aria-label="Scale selected image from top left"></button>
               <button class="canvas-image-edit-handle is-top-right" type="button" data-canvas-image-scale-handle="top-right" aria-label="Scale selected image from top right"></button>
@@ -15836,6 +15879,22 @@ function _render() {
   lastRenderedTextContextKey = renderContextKey;
   syncCanvasImageEditMode();
   updateLayersPanel();
+  syncCanvasEmptyHint();
+}
+
+// Purely a DOM overlay next to the canvas (mobile only); never touches the
+// canvas bitmap, so it cannot affect what gets exported. Scoped to the one
+// truly-blank first-load case (default Cover Image, nothing added yet) so it
+// never second-guesses a post type that has its own default content.
+function syncCanvasEmptyHint() {
+  const hint = document.querySelector('[data-canvas-empty-hint]');
+  if (!hint) return;
+  const isBlankCover = activeWorkspace === 'instagram'
+    && (state.postType || 'cover') === 'cover'
+    && !state.photo
+    && state.lines.length === 0
+    && (!state.swipeButton || state.swipeButton === 'none');
+  hint.hidden = !isBlankCover;
 }
 
 function getCanvasPoint(evt) {
@@ -17344,15 +17403,19 @@ function syncPostTypeControls() {
           ? 'Breaking News Copy'
           : isReels
             ? 'Reel Cover Text'
-            : isInstagram && activeType === 'stats-double-ent'
-      ? 'Stats Post Details'
-      : isInstagram && (activeType === 'listicle-type-1' || activeType === 'listicle-type-2')
-        ? 'Listicle Data'
-        : isInstagram && activeType === 'asap-template-1'
-          ? 'ASAP Template Data'
-          : isInstagram && activeType === 'twitter-quote'
-            ? 'Tweet Link'
-            : 'Text On Design';
+            : isInstagram && activeType === 'stats-single-ent'
+              ? 'Player Stats'
+              : isInstagram && activeType === 'stats-double-ent'
+                ? 'Stats Post Details'
+                : isInstagram && activeType === 'double-entity-quote'
+                  ? 'Quote Details'
+                  : isInstagram && (activeType === 'listicle-type-1' || activeType === 'listicle-type-2')
+                    ? 'Listicle Data'
+                    : isInstagram && activeType === 'asap-template-1'
+                      ? 'ASAP Template Data'
+                      : isInstagram && activeType === 'twitter-quote'
+                        ? 'Tweet Link'
+                        : 'Text On Design';
   }
 
   control.classList.toggle('is-visible', isInstagram);

@@ -109,9 +109,9 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
   .mobile-menu-toggle {
     appearance: none;
     display: inline-flex;
-    width: 40px;
-    height: 40px;
-    flex: 0 0 40px;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -986,4 +986,81 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
   html[data-theme="dark"][data-studio-shell="on"] body.is-mobile-workspace-active .image-context-empty span {
     color: var(--m-text-2) !important;
   }
+}
+
+/* ─── Mobile editor, polish pass: the canvas toolbar's Upload/ES Image Pool
+   buttons duplicate the Media tab (which already has both, fully visible),
+   and the second button was clipped out of view by the bar's fixed height
+   (overflow-y: hidden on a 54px bar holding 90px of wrapped content) -
+   invisible and untappable. Hide that row on phones; keep the carousel slide
+   switcher, which is the only other thing this bar can hold. */
+@media (max-width: 900px) {
+  html[data-studio-shell="on"] body.is-mobile-workspace-active .canvas-primary-actions {
+    display: none !important;
+  }
+
+  html[data-studio-shell="on"] body.is-mobile-workspace-active .canvas-bottom-actions:has(.carousel-workspace-nav.view-hidden) {
+    display: none !important;
+  }
+
+  /* With the primary-actions row gone, the remaining slide switcher (when
+     present) should sit directly under the canvas, not float at a leftover
+     bar height. */
+  html[data-studio-shell="on"] body.is-mobile-workspace-active .canvas-bottom-actions {
+    min-height: 0;
+    padding: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  html[data-studio-shell="on"] body.is-mobile-workspace-active .canvas-bottom-actions .carousel-workspace-nav {
+    width: 100%;
+  }
+}
+
+/* Mobile editor, polish pass: a blank canvas (default Cover Image, nothing
+   added yet) showed as a plain white box. A light overlay hint, not drawn to
+   the canvas bitmap, so it can never appear in an export. */
+@media (max-width: 900px) {
+  html[data-studio-shell="on"] body.is-mobile-workspace-active .canvas-empty-hint {
+    position: absolute;
+    inset: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1.5px dashed var(--es-line-2, #c7d2e0);
+    border-radius: 14px;
+    color: var(--es-ink-3, #6b7280);
+    text-align: center;
+    pointer-events: none;
+  }
+
+  html[data-studio-shell="on"] body.is-mobile-workspace-active .canvas-empty-hint[hidden] {
+    display: none;
+  }
+
+  html[data-studio-shell="on"] body.is-mobile-workspace-active .canvas-empty-hint svg {
+    width: 28px;
+    height: 28px;
+    margin-bottom: 4px;
+  }
+
+  html[data-studio-shell="on"] body.is-mobile-workspace-active .canvas-empty-hint strong {
+    font-family: var(--es-font-ui);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--es-ink-2, #3f4450);
+  }
+
+  html[data-studio-shell="on"] body.is-mobile-workspace-active .canvas-empty-hint span {
+    font-family: var(--es-font-ui);
+    font-size: 12px;
+  }
+
+  /* This hint only shows for the one blank-cover case where the canvas
+     itself always paints white (see drawCoverPost's !hasPostContent fill),
+     regardless of the site's own light/dark theme. Its colors stay fixed to
+     that known-white backdrop instead of following the theme. */
 }
