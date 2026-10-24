@@ -3116,3 +3116,11 @@ body.reels-page.reels-has-clip .reels-first-step {
 html[data-theme="dark"] .reels-first-step {
   color: #c4cbd4;
 }
+
+/* Mobile web, Phase 1: 44px touch targets on phones (Export, Play, Fit). */
+@media (max-width: 900px) {
+  body.reels-page :is([data-reels-mobile-export], #reels-play-btn, #reels-zoom-level) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

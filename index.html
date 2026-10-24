@@ -9,7 +9,7 @@
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script">
 <script src="es-auth-config.js?v=20260707-auth4"></script>
 <script src="es-auth.js?v=20261025-perf1"></script>
-  <script src="dashboard-data.js?v=20261027-learn1"></script>
+  <script src="dashboard-data.js?v=20261028-mobile1"></script>
 <script>
   (() => {
     window.ESAuth?.requireAuth(`index.html${window.location.search}${window.location.hash}`);
@@ -7374,12 +7374,12 @@ body[data-current-page="faq"] .faq-cta-art img {
     pointer-events: none;
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20261022-es1">
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20261028-mobile1">
 <link rel="stylesheet" href="theme.css?v=20261023-ux1">
 <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
 <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
 <link rel="stylesheet" href="how-it-works.css?v=20261023-ux1">
-<link rel="stylesheet" href="design-tokens.css?v=20261023-type1">
+<link rel="stylesheet" href="design-tokens.css?v=20261028-mobile1">
 <link rel="stylesheet" href="es-ui.css?v=20261025-perf1">
 <script src="theme.js?v=20260712-darkmode12"></script>
 <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
@@ -18753,16 +18753,51 @@ loadFont().then(() => render());
     if (panelForFit) new ResizeObserver(scheduleCanvasFit).observe(panelForFit);
   }
 
-  function openMobileEditorPanel(panelName, trigger) {
+  // A tab's cards live either in the dock (template pickers, photo tools) or
+  // in the section list (text, team colours). Show the dock ("image" mode)
+  // when the tab's cards that apply to this workspace live there.
+  function mobileToolApplies(node) {
+    const dock = node.closest('[data-studio-control-dock]');
+    const stop = dock || node.closest('[data-studio-content-sections]');
+    for (let current = node; current && current !== stop; current = current.parentElement) {
+      if (current.hidden || getComputedStyle(current).display === 'none') return false;
+    }
+    return true;
+  }
+
+  function resolveMobilePanelMode(panelName) {
+    if (panelName === 'media') return 'image';
     const config = mobileEditorPanels[panelName] || mobileEditorPanels.content;
+    const groups = new Set(config.groups || []);
+    const inDock = [...document.querySelectorAll('[data-studio-control-dock] [data-mobile-tool-group]')]
+      .some(node => groups.has(node.dataset.mobileToolGroup) && mobileToolApplies(node));
+    return inDock ? 'image' : 'content';
+  }
+
+  // Media also shows the person photos (two-person templates), which live in
+  // the section list below the dock.
+  function syncMobileEntityMedia(panelName) {
+    const applies = panelName === 'media'
+      && ['#entity-image-card', '#entity-image-card-2'].some(selector => {
+        const node = document.querySelector(selector);
+        return node && getComputedStyle(node).display !== 'none';
+      });
+    document.body.classList.toggle('has-mobile-entity-media', applies);
+  }
+
+  function openMobileEditorPanel(panelName, trigger) {
     const wasOpen = document.body.classList.contains('is-mobile-sheet-open');
     lastMobileEditorTrigger = trigger || document.querySelector(`[data-mobile-editor-trigger="${panelName}"]`);
-    setStudioInspectorMode(config.mode);
+    // Mark the new tab first: the previous tab's CSS must not hide this tab's
+    // cards while we measure where they live.
     document.body.dataset.mobileEditorPanel = panelName;
+    syncMobileEditorGroups(panelName);
+    setStudioInspectorMode(resolveMobilePanelMode(panelName));
+    syncMobileEntityMedia(panelName);
     if (!wasOpen) document.body.dataset.mobileSheetDetent = 'compact';
     document.body.classList.add('is-mobile-sheet-open');
     const titleNode = document.querySelector('[data-mobile-editor-sheet-title]');
-    if (titleNode) titleNode.textContent = config.label;
+    if (titleNode) titleNode.textContent = (mobileEditorPanels[panelName] || mobileEditorPanels.content).label;
     document.querySelectorAll('[data-mobile-editor-trigger]').forEach(button => {
       const isActive = button.dataset.mobileEditorTrigger === panelName;
       button.classList.toggle('is-active', isActive);
@@ -18827,11 +18862,13 @@ loadFont().then(() => render());
 
   function markMobileEditorGroups() {
     const groups = {
-      format: ['#post-type-control', '#reels-format-control', '#youtube-variation-card', '#youtube-category-card', '#newsletter-asset-card', '#pill-position-card'],
+      // Format = which template; the YouTube quote toggle is a template choice too.
+      format: ['#post-type-control', '#reels-format-control', '#youtube-variation-card', '#youtube-category-card', '#youtube-quote-control', '#newsletter-asset-card'],
       content: ['.text-card', '#twitter-quote-fields', '#widget-main-fields', '#widget-picks-fields'],
       brand: ['.color-card', '#newsletter-brand-card'],
       media: ['#entity-image-card', '#entity-image-card-2'],
-      more: ['#quote-logo-control', '#swipe-button-card', '#youtube-quote-control'],
+      // Fine positioning is a desktop job; on phones it sits under More.
+      more: ['#quote-logo-control', '#swipe-button-card', '#pill-position-card'],
     };
     Object.entries(groups).forEach(([group, selectors]) => {
       selectors.forEach(selector => document.querySelectorAll(selector).forEach(node => {
@@ -18849,7 +18886,12 @@ loadFont().then(() => render());
     document.querySelectorAll('[data-studio-accordion-section]').forEach(section => {
       const hasTarget = !!section.querySelector('.is-mobile-tool-visible');
       section.classList.toggle('is-mobile-group-visible', hasTarget);
-      if (hasTarget) setStudioSectionOpen(section, true);
+      // The section tidy-up hides sections whose controls another tab's
+      // filter hid; un-hide the ones this tab needs.
+      if (hasTarget) {
+        section.hidden = false;
+        setStudioSectionOpen(section, true);
+      }
     });
     const primary = document.querySelector('[data-studio-primary-controls]');
     primary?.classList.toggle('is-mobile-primary-visible', !!primary.querySelector('.is-mobile-tool-visible'));

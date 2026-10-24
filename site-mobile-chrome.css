@@ -853,3 +853,137 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     animation: none !important;
   }
 }
+
+/* ─── Mobile editor, Phase 1: each tab shows its own controls ──────────────
+   The dock holds the template pickers and the photo tools. Format (and
+   Newsletter's Brand) show the dock filtered to their cards; Media shows the
+   photo tools without the pickers, plus person photos when a template uses
+   them. Desktop is untouched (900px and below only). */
+@media (max-width: 900px) {
+  html[data-studio-shell="on"] body[data-studio-inspector="image"]:not([data-mobile-editor-panel="media"]) :is(.studio-dock-section, .studio-ai-section, .mobile-editor-media-actions),
+  html[data-studio-shell="on"] body[data-studio-inspector="image"]:not([data-mobile-editor-panel="media"]) [data-studio-control-dock] [data-mobile-tool-group]:not(.is-mobile-tool-visible) {
+    display: none !important;
+  }
+
+  html[data-studio-shell="on"] body[data-studio-inspector="image"]:not([data-mobile-editor-panel="media"]) [data-studio-primary-controls] {
+    display: grid !important;
+    gap: 10px;
+  }
+
+  html[data-studio-shell="on"] body[data-studio-inspector="image"]:not([data-mobile-editor-panel="media"]) :is(.youtube-control-row, .newsletter-control-row) {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  html[data-studio-shell="on"] body[data-mobile-editor-panel="media"] [data-studio-primary-controls] {
+    display: none !important;
+  }
+
+  /* Person photos below the photo tools, in one scroll. */
+  html[data-studio-shell="on"] body[data-mobile-editor-panel="media"].has-mobile-entity-media .panel {
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+  }
+
+  html[data-studio-shell="on"] body[data-mobile-editor-panel="media"].has-mobile-entity-media :is(.studio-control-dock, .panel > .studio-content-sections) {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  html[data-studio-shell="on"] body[data-mobile-editor-panel="media"].has-mobile-entity-media .panel > .studio-content-sections {
+    display: block !important;
+  }
+
+  html[data-studio-shell="on"] body[data-mobile-editor-panel="media"] [data-studio-accordion-section]:not([data-studio-accordion-section="images"]) {
+    display: none !important;
+  }
+
+  html[data-studio-shell="on"] body[data-mobile-editor-panel="media"] [data-studio-accordion-section="images"] .studio-accordion-trigger {
+    display: none !important;
+  }
+
+  html[data-studio-shell="on"] body[data-mobile-editor-panel="media"] [data-studio-accordion-section="images"] .studio-accordion-collapse {
+    grid-template-rows: 1fr !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Media on phones: one Upload / ES Image Pool pair (top of the sheet). The
+   rail's desktop Export button, the empty-state's repeat buttons and the inline
+   ES Image Pool search (its art renders as a large black circle) are dropped;
+   Export lives in the top bar and ES Image Pool opens the full picker. */
+@media (max-width: 900px) {
+  html[data-studio-shell="on"] body.is-mobile-workspace-active :is(.panel #download-btn, .panel .image-context-empty-actions, .panel .studio-ai-section) {
+    display: none !important;
+  }
+}
+
+/* Mobile editor, Phase 1: dark theme on every editor surface (top bar, sheet,
+   sections, bottom bar, action buttons). Team colour swatches are content and
+   keep their colours. */
+@media (max-width: 900px) {
+  html[data-theme="dark"][data-studio-shell="on"] {
+    --m-surface: #151515;
+    --m-raised: #1f1f1f;
+    --m-line: #2e2e2e;
+    --m-text: #f3f5f7;
+    --m-text-2: #b6b6b6;
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"] :is(.mobile-editor-topbar, .mobile-editor-nav, .mobile-editor-sheet-head, body.is-mobile-workspace-active .panel) {
+    background: var(--m-surface) !important;
+    border-color: var(--m-line) !important;
+    color: var(--m-text) !important;
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"] body.is-mobile-workspace-active .panel {
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, .5) !important;
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"] :is(.mobile-editor-title strong, .mobile-editor-sheet-head strong, .mobile-editor-sheet-actions button, .mobile-editor-back) {
+    color: var(--m-text) !important;
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"] :is(.mobile-editor-title span, .mobile-editor-nav button) {
+    color: var(--m-text-2) !important;
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"] .mobile-editor-nav button.is-active {
+    background: var(--m-raised) !important;
+    color: var(--m-text) !important;
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"] .mobile-editor-sheet-grip span {
+    background: #4a4a4a !important;
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"] body.is-mobile-workspace-active :is(.studio-content-sections, .studio-accordion-list, [data-studio-accordion-section], .studio-control-dock, .studio-primary-controls, .image-tool-rail, .image-context-empty, .mobile-editor-more-actions) {
+    background: var(--m-surface) !important;
+    border-color: var(--m-line) !important;
+    color: var(--m-text) !important;
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"] body.is-mobile-workspace-active .studio-accordion-body > * + * {
+    border-top-color: var(--m-line) !important;
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"] body.is-mobile-workspace-active :is(.mobile-editor-more-actions button, .mobile-editor-media-actions button:not(:first-child)) {
+    background: var(--m-raised) !important;
+    border-color: var(--m-line) !important;
+    color: var(--m-text) !important;
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"] body.is-mobile-workspace-active .mobile-editor-more-actions small {
+    color: var(--m-text-2) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  html[data-theme="dark"][data-studio-shell="on"] body.is-mobile-workspace-active .image-context-empty strong {
+    color: var(--m-text) !important;
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"] body.is-mobile-workspace-active .image-context-empty span {
+    color: var(--m-text-2) !important;
+  }
+}

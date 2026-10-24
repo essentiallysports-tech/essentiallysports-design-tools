@@ -565,6 +565,7 @@
       avatar_url: avatarUrl,
       page_path: pagePath,
       workspace,
+      device: currentDevice(),
       last_seen_at: now,
       updated_at: now,
     };
@@ -584,9 +585,11 @@
     let presenceResult = await client
       .from(SUPABASE_PRESENCE_TABLE)
       .upsert(presenceRow, { onConflict: 'email' });
-    if (presenceResult.error && /designation/i.test(presenceResult.error.message || '')) {
+    if (presenceResult.error && /designation|device/i.test(presenceResult.error.message || '')) {
+      // Older databases may lack the designation or device column.
       const fallbackPresenceRow = { ...presenceRow };
       delete fallbackPresenceRow.designation;
+      delete fallbackPresenceRow.device;
       presenceResult = await client
         .from(SUPABASE_PRESENCE_TABLE)
         .upsert(fallbackPresenceRow, { onConflict: 'email' });
@@ -666,15 +669,58 @@
     const session = await getAuthenticatedSession();
     if (!client || !session?.user?.email) return [];
 
-    const { data, error } = await client
-      .from(SUPABASE_TASKS_TABLE)
-      .select(TASK_LIST_COLUMNS)
-      .order('updated_at', { ascending: false });
+    // Supabase returns at most 1,000 rows per request: page through them so
+    // the Dashboard keeps every task as the table grows.
+    const PAGE = 1000;
+    const rows = [];
+    for (let from = 0; from < PAGE * 10; from += PAGE) {
+      const { data, error } = await client
+        .from(SUPABASE_TASKS_TABLE)
+        .select(TASK_LIST_COLUMNS)
+        .order('updated_at', { ascending: false })
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      rows.push(...(Array.isArray(data) ? data : []));
+      if (!Array.isArray(data) || data.length < PAGE) break;
+    }
+    const tasks = rows.map(normalizeSupabaseTask).filter(task => task.id);
 
-    if (error) throw error;
-    return (Array.isArray(data) ? data : [])
-      .map(normalizeSupabaseTask)
-      .filter(task => task.id);
+    // If the database shows this person only their own rows (the page treats
+    // them as an admin but the database does not), show the team's Social
+    // Media exports from the Gallery list so the Dashboard matches the Gallery.
+    if (!tasks.some(task => task.type === 'exported_design') && await isCurrentUserAdmin()) {
+      const fromGallery = await fetchGalleryExportTasks(client).catch(() => []);
+      tasks.push(...fromGallery);
+    }
+    return tasks;
+  }
+
+  async function fetchGalleryExportTasks(client) {
+    const tasks = [];
+    let before = null;
+    for (let page = 0; page < 5; page += 1) {
+      const { data, error } = await client.rpc('list_frameup_gallery', { p_limit: 96, p_before: before });
+      if (error || !Array.isArray(data) || !data.length) break;
+      data.forEach(row => tasks.push(normalizeSupabaseTask({
+        id: row.id,
+        task_type: 'exported_design',
+        title: row.title,
+        status: 'Done',
+        workspace: GALLERY_WORKSPACE,
+        workspace_variant: row.workspace_variant,
+        sport: row.sport,
+        team_or_league: row.team_or_league,
+        creator_name: row.creator_name,
+        filename: row.filename,
+        created_at: row.exported_at,
+        updated_at: row.exported_at,
+        meta_exported_at: row.exported_at,
+        meta_output_size: row.output_size,
+      })));
+      if (data.length < 96) break;
+      before = data[data.length - 1].exported_at;
+    }
+    return tasks;
   }
 
   async function fetchTaskPreview(taskId) {
@@ -1065,6 +1111,15 @@
     return record;
   }
 
+  // "mobile" for phone-sized touch screens, else "desktop" (exports and presence).
+  function currentDevice() {
+    try {
+      return window.matchMedia('(max-width: 900px) and (pointer: coarse)').matches ? 'mobile' : 'desktop';
+    } catch (error) {
+      return '';
+    }
+  }
+
   function generatedFrom() {
     try {
       return window.FrameUpSpec?.generatedFor?.() || null;
@@ -1106,6 +1161,7 @@
         exportScale: payload.exportScale || metadata.exportScale || '',
         mimeType: cleanString(payload.mimeType || metadata.mimeType || ''),
         previewDataUrl: cleanString(payload.previewDataUrl || metadata.previewDataUrl || ''),
+        device: currentDevice(),
         // Made from a Generate design: the brief, so Generate can learn from it.
         ...(generatedFrom() ? { generated: generatedFrom() } : {}),
       },
