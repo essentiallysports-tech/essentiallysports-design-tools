@@ -114,9 +114,17 @@
     if (!normalized || !await ensureSupabaseReady(5000)) return false;
     const client = getSupabaseClient();
     if (!client) return false;
-    const approvalCheck = await client
-      .rpc('is_es_designer_email_approved', { candidate_email: normalized })
-      .catch(() => ({ data: false, error: true }));
+    // client.rpc(...) returns a PostgREST builder that is thenable (supports
+    // await) but does not implement .catch()/.finally() as a real Promise
+    // does -- chaining .catch() on it throws "is not a function" instead of
+    // ever catching anything, silently breaking every non-ES approved
+    // email's login/signup. Use try/catch around the await instead.
+    let approvalCheck;
+    try {
+      approvalCheck = await client.rpc('is_es_designer_email_approved', { candidate_email: normalized });
+    } catch {
+      approvalCheck = { data: false, error: true };
+    }
     if (!approvalCheck.error) return Boolean(approvalCheck.data);
     const { data, error } = await client
       .from(ACCESS_REQUESTS_TABLE)
