@@ -767,47 +767,9 @@ html.es-shell:not(.es-editor) .es-topbar .studio-history-group { display: none !
 /* ─── Site-wide page treatment inside the shell (desktop) ─────────────── */
 @media (min-width: 901px) {
   /* One canvas colour behind every app page. */
-  html.es-shell :is(.feedback-main, .account-main, .pickem-main, .request-page) {
+  html.es-shell :is(.feedback-main, .account-main, .request-page) {
     background: transparent !important;
   }
-
-  /* Pick'em: header and tabs read as an app page. */
-  html.es-shell .pickem-tabs {
-    display: inline-flex !important;
-    gap: 2px !important;
-    padding: 4px !important;
-    border: 0 !important;
-    border-radius: 14px !important;
-    background: #efeff1 !important;
-  }
-  html.es-shell .pickem-tab {
-    min-height: 36px !important;
-    padding: 0 14px !important;
-    border: 0 !important;
-    border-radius: 10px !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    color: var(--es-ink-3) !important;
-    font-family: var(--es-font-ui) !important;
-    font-size: 15px !important;
-    font-weight: 500 !important;
-  }
-  html.es-shell .pickem-tab::after { display: none !important; }
-  html.es-shell .pickem-tab.is-active {
-    background: var(--es-bg) !important;
-    box-shadow: var(--es-shadow-pill) !important;
-    color: var(--es-ink) !important;
-  }
-  html.es-shell .pickem-panel {
-    padding: 24px !important;
-    border-radius: var(--es-radius-card) !important;
-    background: var(--es-bg) !important;
-    box-shadow: var(--es-shadow-soft), inset 0 0 0 1px var(--es-line) !important;
-  }
-  html.es-shell .pickem-panel[hidden] { display: none !important; }
-  html.es-shell .pickem-tabs { width: max-content !important; max-width: 100% !important; margin: 0 0 16px !important; }
-  html.es-shell .pickem-panel { width: auto !important; max-width: none !important; margin-left: 0 !important; margin-right: 0 !important; }
-  html.es-shell :is(.pickem-hero, .pickem-main > *) { max-width: none !important; }
 }
 
 
@@ -913,7 +875,7 @@ html[data-theme="dark"] .home-start__link:hover { background: #1a1a1a; }
 
 @media (min-width: 901px) {
   /* Same content column on every inside page. */
-  html.es-shell :is(.request-page, .feedback-main, .pickem-main, .account-shell, body[data-current-page="faq"] .faq-page, .guidelines-page) {
+  html.es-shell :is(.request-page, .feedback-main, .account-shell, body[data-current-page="faq"] .faq-page, .guidelines-page) {
     width: min(1120px, calc(100% - 64px)) !important;
     max-width: none !important;
     margin-left: auto !important;
@@ -922,7 +884,7 @@ html[data-theme="dark"] .home-start__link:hover { background: #1a1a1a; }
   }
 
   /* Same page title + description everywhere. */
-  html.es-shell :is(.es-page-head h1, .ds-hero h1, .account-title, .dashboard-topbar h1, .faq-heading, .guidelines-title, .pickem-title, .feedback-page-title) {
+  html.es-shell :is(.es-page-head h1, .ds-hero h1, .account-title, .dashboard-topbar h1, .faq-heading, .guidelines-title, .feedback-page-title) {
     margin: 0 !important;
     color: var(--es-ink) !important;
     font-family: var(--es-font-display) !important;
@@ -931,14 +893,14 @@ html[data-theme="dark"] .home-start__link:hover { background: #1a1a1a; }
     line-height: 1.1 !important;
     letter-spacing: 0 !important;
   }
-  html.es-shell :is(.account-subtitle, .pickem-tagline, .feedback-page-version) {
+  html.es-shell :is(.account-subtitle, .feedback-page-version) {
     margin-top: 6px !important;
     color: var(--es-ink-3) !important;
     font-family: var(--es-font-ui) !important;
     font-size: 15px !important;
     font-weight: 400 !important;
   }
-  html.es-shell :is(.profile-page-header, .account-page-header, .feedback-hero, .pickem-hero, .guidelines-hero) {
+  html.es-shell :is(.profile-page-header, .account-page-header, .feedback-hero, .guidelines-hero) {
     margin: 0 0 24px !important;
     padding: 0 !important;
     border: 0 !important;
@@ -1041,8 +1003,8 @@ html[data-theme="dark"] .home-start__link:hover { background: #1a1a1a; }
   html.es-shell .dashboard-sidebar > :not(.sidebar-nav) { display: none !important; }
 }
 
-html[data-theme="dark"].es-shell :is(.es-page-head h1, .account-title, .dashboard-topbar h1, .faq-heading, .guidelines-title, .pickem-title, .feedback-page-title) { color: #f3f5f7 !important; }
-html[data-theme="dark"].es-shell :is(.dashboard-sidebar .sidebar-nav, .pickem-tabs) { background: #1a1a1a !important; }
+html[data-theme="dark"].es-shell :is(.es-page-head h1, .account-title, .dashboard-topbar h1, .faq-heading, .guidelines-title, .feedback-page-title) { color: #f3f5f7 !important; }
+html[data-theme="dark"].es-shell :is(.dashboard-sidebar .sidebar-nav) { background: #1a1a1a !important; }
 html[data-theme="dark"].es-shell .dashboard-sidebar .sidebar-nav :is(button, a).is-active { background: #2a2a2a !important; color: #f3f5f7 !important; }
 html[data-theme="dark"].es-shell body[data-current-page="faq"] .faq-list { background: #121212 !important; box-shadow: inset 0 0 0 1px #2a2a2a !important; }
 

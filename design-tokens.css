@@ -726,7 +726,7 @@ html:not([data-theme="dark"]) .reels-icon-btn{
 }
 
 /* Roboto stops at 700; 800 is reserved for Condensed titles. */
-html:not([data-theme="dark"]) :is(.history-name, .setting-link, .pickem-eyebrow){
+html:not([data-theme="dark"]) :is(.history-name, .setting-link){
   font-weight: 700 !important;
 }
 
@@ -807,9 +807,9 @@ html[data-theme] body.reels-page .reels-choice-value {
   letter-spacing: 0 !important;
 }
 
-/* Reels, ES AI and Pick'em keep light working surfaces in dark mode (theme.css
-   does not darken them), so their text roles stay ink rather than flipping. */
-html[data-theme="dark"] body:is(.reels-page, .pickem-page),
+/* Reels and ES AI keep light working surfaces in dark mode (theme.css does
+   not darken them), so their text roles stay ink rather than flipping. */
+html[data-theme="dark"] body.reels-page,
 html[data-theme="dark"] body:has(#ai-workspace) {
   --es-text-strong: var(--es-ink);
   --es-text-primary: var(--es-ink);
@@ -819,8 +819,7 @@ html[data-theme="dark"] body:has(#ai-workspace) {
 }
 
 html[data-theme="dark"] body.reels-page :is(.section-label, .color-group-label),
-html[data-theme="dark"] body:has(#ai-workspace) :is(.side-title, .workspace-section-title),
-html[data-theme="dark"] body.pickem-page .pickem-progress-text {
+html[data-theme="dark"] body:has(#ai-workspace) :is(.side-title, .workspace-section-title) {
   color: var(--es-ink) !important;
 }
 

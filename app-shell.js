@@ -61,12 +61,6 @@
         { id: 'library', label: 'UI Library', href: 'design-system.html', icon: 'library', badge: 'New' },
       ],
     },
-    {
-      label: 'Extras',
-      items: [
-        { id: 'pickem', label: "NFL Pick'em", href: 'pickem.html', icon: 'trophy' },
-      ],
-    },
   ];
 
   const PAGE_IDS = {
@@ -77,7 +71,6 @@
     'generate.html': 'generate',
     'tool-feedback.html': 'feedback',
     'design-system.html': 'library',
-    'pickem.html': 'pickem',
   };
 
   function currentId() {
