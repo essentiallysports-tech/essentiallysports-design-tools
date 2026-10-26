@@ -2,7 +2,6 @@
 .env
 .env.*
 .netlify
-essentiallysports-design-tools-flat.zip
 project-docs
 scripts
 supabase
