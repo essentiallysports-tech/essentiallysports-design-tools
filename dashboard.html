@@ -812,8 +812,12 @@
       );
     }
 
+    // Loaded previews, by task id. Task objects are rebuilt on every sync, so
+    // the cache lives here to keep images across redraws without refetching.
+    const exportPreviewCache = new Map();
+
     function getPreviewSource(task = {}) {
-      return String(task.previewDataUrl || task.metadata?.previewDataUrl || '').trim();
+      return String(task.previewDataUrl || task.metadata?.previewDataUrl || exportPreviewCache.get(task.id) || '').trim();
     }
 
     function formatDuration(ms) {
@@ -1291,22 +1295,68 @@
       `;
     }
 
-    // Loads each missing preview image individually, in the background,
-    // caching the result on the task object (fetchTaskPreview also caches it
-    // into ESDashboardData's own cloudTasksCache) so it's fetched at most
-    // once per export - not on every list render or 5s poll.
-    function hydrateExportPreviews(designs) {
-      designs
-        .filter(task => task.id && !getPreviewSource(task))
-        .forEach(task => {
-          window.ESDashboardData.fetchTaskPreview?.(task.id).then(preview => {
+    // Previews load only for rows on screen, a few at a time. Loading every
+    // export's preview at once (900+ parallel requests, repeated each sync)
+    // exhausted the browser's connections and flooded the database.
+    const EXPORT_PREVIEW_CONCURRENCY = 4;
+    const exportPreviewQueue = [];
+    const exportPreviewPending = new Set();
+    let exportPreviewActive = 0;
+    const exportPreviewObserver = 'IntersectionObserver' in window
+      ? new IntersectionObserver(entries => entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          exportPreviewObserver.unobserve(entry.target);
+          queueExportPreview(entry.target.dataset.previewTask);
+        }), { rootMargin: '300px 0px' })
+      : null;
+
+    function showExportPreview(id, preview) {
+      document.querySelectorAll(`[data-preview-task="${CSS.escape(id)}"].export-list-preview`).forEach(button => {
+        if (button.querySelector('img')) return;
+        const title = button.closest('.export-list-row')?.querySelector('.export-list-title strong')?.textContent || 'Exported design';
+        button.innerHTML = `<img src="${attr(preview)}" alt="${attr(title)}">`;
+      });
+    }
+
+    function queueExportPreview(id) {
+      if (!id || exportPreviewCache.has(id) || exportPreviewPending.has(id)) return;
+      exportPreviewPending.add(id);
+      exportPreviewQueue.push(id);
+      drainExportPreviewQueue();
+    }
+
+    function drainExportPreviewQueue() {
+      while (exportPreviewActive < EXPORT_PREVIEW_CONCURRENCY && exportPreviewQueue.length) {
+        const id = exportPreviewQueue.shift();
+        exportPreviewActive += 1;
+        Promise.resolve(window.ESDashboardData.fetchTaskPreview?.(id))
+          .then(preview => {
             if (!preview) return;
-            task.previewDataUrl = preview;
-            document.querySelectorAll(`[data-preview-task="${CSS.escape(task.id)}"].export-list-preview`).forEach(button => {
-              button.innerHTML = `<img src="${attr(preview)}" alt="${attr(task.title || 'Exported design')}">`;
-            });
-          }).catch(() => {});
-        });
+            exportPreviewCache.set(id, preview);
+            showExportPreview(id, preview);
+          })
+          .catch(() => {})
+          .finally(() => {
+            exportPreviewPending.delete(id);
+            exportPreviewActive -= 1;
+            drainExportPreviewQueue();
+          });
+      }
+    }
+
+    function hydrateExportPreviews() {
+      exportPreviewObserver?.disconnect();
+      document.querySelectorAll('.export-list-preview[data-preview-task]').forEach(button => {
+        if (button.querySelector('img')) return;
+        const id = button.dataset.previewTask;
+        if (exportPreviewCache.has(id)) {
+          showExportPreview(id, exportPreviewCache.get(id));
+        } else if (exportPreviewObserver) {
+          exportPreviewObserver.observe(button);
+        } else {
+          queueExportPreview(id);
+        }
+      });
     }
 
     function getSortedExportTasks(state) {
@@ -1979,7 +2029,7 @@
         // Not hydrated by hydrateExportPreviews() yet (e.g. a fast click
         // right after render) - fetch this one export's image on demand.
         preview = await window.ESDashboardData.fetchTaskPreview?.(id) || '';
-        if (preview) task.previewDataUrl = preview;
+        if (preview) exportPreviewCache.set(id, preview);
       }
       if (!preview) return;
       document.getElementById('export-preview-image').src = preview;
@@ -2403,7 +2453,9 @@
           .then(() => renderDashboard())
           .catch(() => {});
       };
-      dashboardLiveSyncTimer = window.setInterval(refresh, 5000);
+      // Each sync re-reads the full task list (~1 MB), so every 5s was ~660 MB
+      // an hour per open dashboard. Presence only beats every 20s anyway.
+      dashboardLiveSyncTimer = window.setInterval(refresh, 30000);
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) refresh();
       }, { passive: true });
