@@ -1020,7 +1020,17 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
 
 /* Mobile editor, polish pass: a blank canvas (default Cover Image, nothing
    added yet) showed as a plain white box. A light overlay hint, not drawn to
-   the canvas bitmap, so it can never appear in an export. */
+   the canvas bitmap, so it can never appear in an export. The hint's JS
+   (syncCanvasEmptyHint) clears its `hidden` attribute purely based on
+   whether the canvas content is blank -- it doesn't check screen width. So
+   this default `display: none` has to live outside the media query below:
+   without it, removing `hidden` on desktop left the element with no layout
+   rules at all, so it fell into normal document flow as a giant unstyled
+   block under the canvas instead of staying invisible. */
+.canvas-empty-hint {
+  display: none;
+}
+
 @media (max-width: 900px) {
   html[data-studio-shell="on"] body.is-mobile-workspace-active .canvas-empty-hint {
     position: absolute;
