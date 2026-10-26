@@ -378,25 +378,12 @@ body {
   font-size: 13px;
 }
 
-.metrics {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
-  margin: 12px 0;
-}
-
 .metric-card,
 .panel {
   border: 1px solid var(--dash-line);
   border-radius: var(--dash-radius);
   background: var(--dash-panel);
   box-shadow: none;
-}
-
-.metric-card {
-  min-height: 126px;
-  padding: 15px 16px;
-  align-content: initial;
-  grid-template-rows: auto 1fr auto;
 }
 
 .metric-top {
@@ -428,15 +415,6 @@ body {
 
 .metric-trend.is-positive { color: var(--es-good); }
 .metric-trend.is-warning { color: var(--es-warn); }
-
-.metric-value {
-  align-self: end;
-  margin-top: 12px;
-  font-family: var(--font-ui);
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1;
-}
 
 .metric-label {
   margin-top: 5px;
@@ -1463,12 +1441,6 @@ html.has-dashboard-admin .navbar-menu [data-admin-only].is-admin-visible {
   overflow: clip;
 }
 
-.dashboard-topbar {
-  top: 69px;
-  min-height: 78px;
-  padding: 14px clamp(20px, 2vw, 32px);
-}
-
 .topbar-eyebrow {
   font-family: var(--es-font-ui);
   font-size: 13px;
@@ -1550,22 +1522,8 @@ html.has-dashboard-admin .navbar-menu [data-admin-only].is-admin-visible {
   stroke-linejoin: round;
 }
 
-.dashboard-shell {
-  width: min(1400px, calc(100% - 48px));
-  padding: 30px 0 76px;
-}
-
-.dashboard-welcome {
-  padding: 27px 30px;
-}
-
 .dashboard-welcome h2 {
   font-size: clamp(34px, 3vw, 48px);
-}
-
-.metrics {
-  gap: 12px;
-  margin: 14px 0;
 }
 
 .metric-card {
@@ -2068,10 +2026,6 @@ body[data-dashboard-view="activity"] .activity-list {
   background: rgba(255, 255, 255, .96);
 }
 
-.dashboard-shell {
-  padding-top: 34px;
-}
-
 .sidebar-workspace {
   min-height: 66px;
   border-color: var(--es-line);
@@ -2205,14 +2159,6 @@ body[data-dashboard-view="activity"] .activity-list {
   font-weight: 800;
 }
 
-.dashboard-welcome {
-  min-height: 172px;
-  border-color: var(--es-line);
-  border-radius: 20px;
-  background:
-    linear-gradient(115deg, rgba(232, 242, 255, .9) 0%, #fff 48%, rgba(10, 125, 250, .08) 100%);
-}
-
 .welcome-kicker {
   color: var(--dash-blue);
   font-size: 15px;
@@ -2233,18 +2179,6 @@ body[data-dashboard-view="activity"] .activity-list {
   line-height: 1.35;
 }
 
-.metrics {
-  gap: 16px;
-  margin: 18px 0;
-}
-
-.metric-card {
-  min-height: 150px;
-  padding: 20px;
-  border-color: var(--es-brand-soft);
-  border-radius: 20px;
-}
-
 .metric-icon {
   width: 42px;
   height: 42px;
@@ -2256,14 +2190,6 @@ body[data-dashboard-view="activity"] .activity-list {
   width: 22px;
   height: 22px;
   stroke-width: 2.05;
-}
-
-.metric-value {
-  color: var(--es-ink);
-  font-family: var(--font-display);
-  font-size: 52px;
-  font-weight: 800;
-  line-height: .9;
 }
 
 .metric-label {
@@ -2648,20 +2574,10 @@ body[data-dashboard-view="activity"] .activity-list {
   padding: 18px 36px;
 }
 
-.dashboard-shell {
-  width: min(1280px, calc(100% - 96px));
-  padding: 52px 0 124px;
-}
-
 .dashboard-content,
 .stack {
   display: grid;
   gap: 30px;
-}
-
-.dashboard-welcome {
-  min-height: 196px;
-  padding: 38px 44px;
 }
 
 .dashboard-welcome h2 {
@@ -2674,24 +2590,8 @@ body[data-dashboard-view="activity"] .activity-list {
   margin-top: 18px;
 }
 
-.metrics {
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 24px;
-  margin: 0;
-}
-
-.metric-card {
-  min-height: 112px;
-  padding: 24px 26px;
-}
-
 .metric-top {
   display: none;
-}
-
-.metric-value {
-  margin-top: 0;
-  font-size: 44px;
 }
 
 .dashboard-control-row {
@@ -2922,22 +2822,9 @@ body[data-dashboard-view="list"] .dashboard-control-row {
   border-color: var(--es-line);
 }
 
-.dashboard-topbar {
-  border-bottom-color: var(--es-line);
-}
-
-.dashboard-sidebar {
-  border-right-color: var(--es-line);
-}
-
 .dashboard-main,
 .dashboard-app {
   background: #fff;
-}
-
-.dashboard-welcome {
-  border-color: var(--es-line);
-  background: linear-gradient(115deg, #fff 0%, var(--es-sunk) 62%, var(--es-stage) 100%);
 }
 
 .topbar-eyebrow,
@@ -3174,10 +3061,6 @@ body[data-dashboard-view="list"] .dashboard-control-row {
 .welcome-copy > p:last-child {
   font-size: 18px;
   font-weight: 500;
-}
-
-.metric-value {
-  font-size: 36px;
 }
 
 .metric-label {
@@ -3772,22 +3655,6 @@ body[data-dashboard-view="designs"] .stack {
 }
 
 /* Compact dashboard metric strip — keep all five cards in one desktop row. */
-.metrics {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 16px;
-  margin: 0;
-}
-
-.metric-card {
-  min-height: 86px;
-  padding: 16px 18px;
-  border-radius: 20px;
-}
-
-.metric-value {
-  font-size: 36px;
-  line-height: .95;
-}
 
 .metric-label {
   margin-top: 2px;
@@ -3942,18 +3809,6 @@ body,
   box-shadow: 1px 0 0 rgba(14, 16, 20, .02);
 }
 
-.dashboard-topbar {
-  min-height: 82px;
-  border-bottom-color: var(--dash-border);
-  background: rgba(255, 255, 255, .94);
-  box-shadow: 0 1px 0 rgba(14, 16, 20, .025);
-}
-
-.dashboard-shell {
-  width: min(1340px, calc(100% - 72px));
-  padding-top: 34px;
-}
-
 .dashboard-content {
   gap: 22px;
 }
@@ -4044,14 +3899,6 @@ body,
   background: var(--es-brand-fill);
 }
 
-.dashboard-welcome {
-  min-height: 132px;
-  padding: 24px 30px;
-  border-color: var(--dash-border);
-  border-radius: 20px;
-  box-shadow: 0 14px 36px rgba(14, 16, 20, .035);
-}
-
 .dashboard-welcome h2 {
   max-width: 760px;
   font-size: clamp(30px, 2.15vw, 42px);
@@ -4063,24 +3910,6 @@ body,
   margin-top: 12px;
   color: var(--dash-text-muted);
   font-size: 15px;
-}
-
-.metrics {
-  grid-template-columns: 1.08fr 1.08fr .9fr .9fr .84fr;
-  gap: 14px;
-}
-
-.metric-card {
-  min-height: 82px;
-  padding: 15px 18px;
-  border-color: var(--dash-border);
-  background: var(--dash-surface-1);
-  box-shadow: none;
-}
-
-.metric-value {
-  color: var(--dash-text);
-  font-size: 36px;
 }
 
 .metric-label {
@@ -4629,15 +4458,6 @@ body[data-dashboard-view="list"] .task-list-panel {
   margin: 0;
 }
 
-.metric-card {
-  min-height: 82px;
-  padding: 15px 18px;
-  border-color: var(--dash-border);
-  border-radius: 20px;
-  background: var(--dash-surface-1);
-  box-shadow: none;
-}
-
 .metric-card.is-primary {
   background: var(--dash-surface-0);
 }
@@ -4658,10 +4478,6 @@ body[data-dashboard-view="list"] .task-list-panel {
 
 .metric-card.is-tertiary {
   background: var(--dash-surface-2);
-}
-
-.metric-value {
-  font-size: 36px;
 }
 
 .metric-label {
