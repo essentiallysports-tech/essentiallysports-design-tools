@@ -746,13 +746,13 @@
     const session = await getAuthenticatedSession();
     if (!client || !session?.user?.email || !id) return '';
 
+    // Every export's preview is in Storage, so always look there first; the
+    // database copy is only the fallback.
     const cached = cloudTasksCache.find(task => task.id === id);
-    if (!cached || cached.metadata?.previewPath) {
-      const stored = await loadStoragePreview(id);
-      if (stored) {
-        if (cached) cached.previewDataUrl = stored;
-        return stored;
-      }
+    const stored = await loadStoragePreview(id);
+    if (stored) {
+      if (cached) cached.previewDataUrl = stored;
+      return stored;
     }
 
     const { data, error } = await client
