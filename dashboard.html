@@ -610,6 +610,12 @@
             <div class="panel-head">
               <div><h2 class="panel-title">Access Requests</h2><p class="panel-subtitle">Approve or reject non-ES emails asking to use FrameUp.</p></div>
             </div>
+            <form class="add-person-form" id="add-person-form" autocomplete="off">
+              <input type="email" id="add-person-email" placeholder="Email address" required>
+              <input type="text" id="add-person-name" placeholder="Name (optional)">
+              <button type="submit" class="topbar-button is-primary" id="add-person-submit">Add &amp; approve</button>
+              <span class="add-person-status" id="add-person-status" role="status" aria-live="polite"></span>
+            </form>
             <div class="access-request-list" id="access-request-list"></div>
           </section>
 
@@ -1688,6 +1694,35 @@
       return accessRequests;
     }
 
+    async function addPersonDirectly(event) {
+      event.preventDefault();
+      const emailInput = document.getElementById('add-person-email');
+      const nameInput = document.getElementById('add-person-name');
+      const statusEl = document.getElementById('add-person-status');
+      const submitButton = document.getElementById('add-person-submit');
+      const email = emailInput?.value.trim() || '';
+      const name = nameInput?.value.trim() || '';
+      if (!email) return;
+      statusEl.textContent = '';
+      statusEl.classList.remove('is-error');
+      submitButton.disabled = true;
+      try {
+        const record = await window.ESAuth?.recordAccessRequest?.({ email, name, reason: 'Added directly by admin', source: 'admin' });
+        if (record && record.status !== 'Approved') {
+          await window.ESAuth?.reviewAccessRequest?.(email, 'Approved');
+        }
+        await refreshAccessRequests();
+        statusEl.textContent = `${email} is approved.`;
+        emailInput.value = '';
+        nameInput.value = '';
+      } catch (error) {
+        statusEl.textContent = error?.message || 'Could not add this person.';
+        statusEl.classList.add('is-error');
+      } finally {
+        submitButton.disabled = false;
+      }
+    }
+
     function renderActivity(state) {
       const target = document.getElementById('activity-list');
       if (!target) return;
@@ -2258,6 +2293,7 @@
         }
       });
       document.getElementById('drawer-save')?.addEventListener('click', saveDrawerTask);
+      document.getElementById('add-person-form')?.addEventListener('submit', addPersonDirectly);
       window.addEventListener('es-dashboard-data-change', renderDashboard);
     }
 

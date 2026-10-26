@@ -4435,6 +4435,54 @@ body[data-dashboard-view="list"] .task-list-panel {
   display: none;
 }
 
+.add-person-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 30px;
+  border-top: 1px solid var(--es-line);
+  border-bottom: 1px solid var(--es-line);
+  background: var(--es-sunk);
+}
+
+.add-person-form input {
+  min-width: 0;
+  flex: 1 1 220px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--es-line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--es-ink);
+  font-family: var(--es-font-ui);
+  font-size: 14px;
+}
+
+.add-person-form input:focus-visible {
+  outline: 0;
+  border-color: var(--es-blue, #2F6FED);
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, .12);
+}
+
+.add-person-form .topbar-button {
+  min-height: 36px;
+  padding-inline: 16px;
+  font-size: 14px;
+  flex: 0 0 auto;
+}
+
+.add-person-status {
+  flex-basis: 100%;
+  font-family: var(--es-font-ui);
+  font-size: 13px;
+  color: var(--es-good, #1a7f4b);
+}
+
+.add-person-status.is-error {
+  color: var(--es-bad, #c0392b);
+}
+
 .access-request-list {
   display: grid;
 }
