@@ -224,6 +224,21 @@
     return cleanString(request.entities || request.title || request.brief || request.id || 'Design request');
   }
 
+  // Previews loaded from Storage are in-memory blob: URLs that only live for
+  // this page session. Keep them out of anything saved locally or synced, so a
+  // dead link can never be stored or overwrite the database copy.
+  function persistablePreview(value) {
+    const preview = cleanString(value);
+    return preview.startsWith('blob:') ? '' : preview;
+  }
+
+  function persistableMetadata(metadata) {
+    if (!metadata || typeof metadata !== 'object') return {};
+    if (!String(metadata.previewDataUrl || '').startsWith('blob:')) return metadata;
+    const { previewDataUrl, ...rest } = metadata;
+    return rest;
+  }
+
   function normalizeTask(task = {}) {
     const type = task.type === 'exported_design' || task.taskType === 'exported_design'
       ? 'exported_design'
@@ -251,7 +266,7 @@
       sport: cleanString(task.sport || ''),
       teamOrLeague: cleanString(task.teamOrLeague || task.team_or_league || ''),
       filename: cleanString(task.filename || ''),
-      previewDataUrl: cleanString(task.previewDataUrl || task.preview_data_url || task.metadata?.previewDataUrl || ''),
+      previewDataUrl: persistablePreview(task.previewDataUrl || task.preview_data_url || task.metadata?.previewDataUrl || ''),
       designDueAt: cleanString(task.designDueAt || task.design_due_at || ''),
       publishAt: cleanString(task.publishAt || task.publish_at || ''),
       brief: cleanString(task.brief || ''),
@@ -261,7 +276,7 @@
       referenceLinks: Array.isArray(task.referenceLinks || task.reference_links)
         ? (task.referenceLinks || task.reference_links).map(cleanString).filter(Boolean)
         : [],
-      metadata: task.metadata && typeof task.metadata === 'object' ? task.metadata : {},
+      metadata: persistableMetadata(task.metadata),
       completedAt,
       createdAt,
       updatedAt,
@@ -352,6 +367,7 @@
         outputSize: row.meta_output_size || '',
         mimeType: row.meta_mime_type || '',
         exportScale: row.meta_export_scale || '',
+        previewPath: row.meta_preview_path || '',
       };
     return normalizeTask({
       id: row.id,
@@ -662,6 +678,7 @@
     'meta_output_size:metadata->>outputSize',
     'meta_mime_type:metadata->>mimeType',
     'meta_export_scale:metadata->>exportScale',
+    'meta_preview_path:metadata->>previewPath',
   ].join(',');
 
   async function fetchSupabaseTasks() {
@@ -729,6 +746,15 @@
     const session = await getAuthenticatedSession();
     if (!client || !session?.user?.email || !id) return '';
 
+    const cached = cloudTasksCache.find(task => task.id === id);
+    if (!cached || cached.metadata?.previewPath) {
+      const stored = await loadStoragePreview(id);
+      if (stored) {
+        if (cached) cached.previewDataUrl = stored;
+        return stored;
+      }
+    }
+
     const { data, error } = await client
       .from(SUPABASE_TASKS_TABLE)
       .select('id, preview:metadata->>previewDataUrl')
@@ -737,7 +763,6 @@
     if (error || !data?.preview) return '';
 
     const preview = String(data.preview);
-    const cached = cloudTasksCache.find(task => task.id === id);
     if (cached) {
       cached.previewDataUrl = preview;
       if (cached.metadata && typeof cached.metadata === 'object') cached.metadata.previewDataUrl = preview;
@@ -811,6 +836,7 @@
         if (saved) {
           removePendingTask(task.id);
           cloudTasksCache = mergeTasks([saved], cloudTasksCache);
+          uploadFullPreview(task);
           syncedTasks += 1;
         }
       } catch (error) {
@@ -1168,6 +1194,7 @@
     };
     writeDesigns([record, ...designs].slice(0, 500));
     const task = taskFromDesign(record);
+    if (task.previewDataUrl) task.metadata = { ...task.metadata, previewPath: fullPreviewPath(task.id) };
     writeTasks(mergeTasks([task], readTasks()).slice(0, 750));
     queuePendingTask(task);
     await upsertSupabaseTask(task)
@@ -1177,6 +1204,7 @@
           cloudTasksCache = mergeTasks([saved], cloudTasksCache);
           emitDashboardChange('task', { record: saved });
           uploadGalleryThumb(task);
+          uploadFullPreview(task);
         }
       })
       .catch(error => {
@@ -1623,6 +1651,60 @@
     }
   }
 
+  // Full-size previews: previews/<task id>, the same image the database holds
+  // in metadata.previewDataUrl (still written, and still the fallback).
+  const fullPreviewPath = id => `previews/${id}`;
+  const storagePreviews = new Map();
+
+  function dataUrlToBlob(dataUrl) {
+    const value = String(dataUrl || '');
+    const comma = value.indexOf(',');
+    const header = value.slice(0, comma);
+    const type = /^data:(image\/(?:webp|png));base64$/.exec(header)?.[1];
+    if (comma < 0 || !type) return null;
+    const binary = atob(value.slice(comma + 1));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    return new Blob([bytes], { type });
+  }
+
+  // Best effort: a failed upload never affects the export or its record.
+  async function uploadFullPreview(task = {}) {
+    try {
+      const path = task.metadata?.previewPath;
+      if (task.type !== 'exported_design' || !task.id || !path) return false;
+      const client = getSupabaseClient();
+      const blob = client?.storage ? dataUrlToBlob(task.previewDataUrl) : null;
+      if (!blob) return false;
+      const { error } = await client.storage.from(PREVIEW_BUCKET).upload(path, blob, {
+        contentType: blob.type,
+        cacheControl: '31536000',
+        upsert: false,
+      });
+      return !error || /exists|duplicate/i.test(error.message || '');
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Downloaded through the signed-in session (so Storage applies the same
+  // access rules as the database) and kept as an in-memory URL for the page's
+  // lifetime: no expiring links. Failures aren't cached, so a preview that is
+  // still uploading is picked up on the next try.
+  function loadStoragePreview(id) {
+    if (!storagePreviews.has(id)) {
+      const pending = (async () => {
+        const client = getSupabaseClient();
+        if (!client?.storage) return '';
+        const { data, error } = await client.storage.from(PREVIEW_BUCKET).download(fullPreviewPath(id));
+        return !error && data?.size ? URL.createObjectURL(data) : '';
+      })().catch(() => '');
+      storagePreviews.set(id, pending);
+      pending.then(url => { if (!url) storagePreviews.delete(id); });
+    }
+    return storagePreviews.get(id);
+  }
+
   async function fetchGalleryThumbs(ids = []) {
     const cleanIds = ids.map(cleanString).filter(Boolean);
     const client = getSupabaseClient();
@@ -1644,6 +1726,8 @@
     const client = getSupabaseClient();
     const session = await getAuthenticatedSession();
     if (client && session?.user?.email) {
+      const stored = await loadStoragePreview(cleanId);
+      if (stored) return stored;
       const { data, error } = await client.rpc('get_frameup_gallery_preview', { p_id: cleanId });
       if (!error) return cleanString(data || '');
       if (isGalleryRpcMissing(error)) return fetchTaskPreview(cleanId);
