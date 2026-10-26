@@ -1089,6 +1089,50 @@ body.dashboard-page .export-list.is-compact .export-list-row {
 }
 body.dashboard-page .export-list.is-compact :is(.export-list-head, .export-list-row) > :is(:nth-child(4), :nth-child(6)) { display: none !important; }
 
+/* Narrow lists: the fixed columns used to keep their width while title and
+   "Created by" shrank to nothing, so their text spilled over the next column.
+   Cells now truncate, and lower-priority columns drop out as the list itself
+   (not the window: the sidebar changes its width) gets narrower.
+   Columns: 1 preview, 2 title, 3 time, 4 size, 5 created by, 6 build time, 7 actions. */
+body.dashboard-page .export-list { container-type: inline-size; }
+body.dashboard-page :is(.export-list-head, .export-list-row) > span:not(.export-list-title):not(.export-list-actions) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container (max-width: 979px) {
+  body.dashboard-page .export-list:not(.is-compact) :is(.export-list-head, .export-list-row) {
+    grid-template-columns: 52px minmax(0, 2fr) 132px 112px minmax(0, 1fr) auto !important;
+  }
+  body.dashboard-page .export-list:not(.is-compact) :is(.export-list-head, .export-list-row) > :nth-child(6) { display: none !important; }
+}
+
+@container (max-width: 819px) {
+  body.dashboard-page .export-list:not(.is-compact) :is(.export-list-head, .export-list-row) {
+    grid-template-columns: 52px minmax(0, 2fr) 120px minmax(0, 1fr) auto !important;
+  }
+  body.dashboard-page .export-list:not(.is-compact) :is(.export-list-head, .export-list-row) > :nth-child(4) { display: none !important; }
+}
+
+@container (max-width: 639px) {
+  /* :is(.is-compact, :not(.is-compact)) matches every list but carries the
+     same specificity as the wider rules above, so the narrowest one wins. */
+  body.dashboard-page .export-list:is(.is-compact, :not(.is-compact)) :is(.export-list-head, .export-list-row) {
+    grid-template-columns: 44px minmax(0, 1.4fr) minmax(0, 1fr) auto !important;
+    column-gap: 12px !important;
+    padding-inline: 14px !important;
+  }
+  body.dashboard-page .export-list :is(.export-list-head, .export-list-row) > :is(:nth-child(3), :nth-child(4), :nth-child(6)) { display: none !important; }
+}
+
+@container (max-width: 479px) {
+  body.dashboard-page .export-list:is(.is-compact, :not(.is-compact)) :is(.export-list-head, .export-list-row) {
+    grid-template-columns: 44px minmax(0, 1fr) auto !important;
+  }
+  body.dashboard-page .export-list :is(.export-list-head, .export-list-row) > :is(:nth-child(3), :nth-child(4), :nth-child(5), :nth-child(6)) { display: none !important; }
+}
+
 /* Live activity: online first, calm status, compact rows. */
 .live-panel .panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .live-summary {
