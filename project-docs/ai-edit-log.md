@@ -899,16 +899,16 @@ and what's still uncommitted.
   (`index.html#frames`) — it loads only on the main `index.html` and hides/shows on `hashchange`, so it's
   gone on the editor routes that share that file. Design (after "design can be much better"): sports-broadcast
   style — 40px ink (`#0e1014`) strip, a fixed slanted brand-blue "🏆 Stars of the week" tag on the left, then a
-  scrolling loop of a muted "Last 7 days" pill followed by #1/#2/#3, each with rank, initials avatar, name in
+  scrolling loop of #1/#2/#3, each with rank, initials avatar, name in
   Roboto Condensed caps and count — ringed/coloured gold, silver, bronze; diamond separators; faded edges, pauses on hover, static under reduced motion. Under
-  600px the tag shortens to "Stars" and the pill hides. Editor height calc subtracts `--es-ticker-h` (0 unless
+  600px the tag shortens to "Stars". (A "Last 7 days" pill was tried and dropped at Suhail's request.) Editor height calc subtracts `--es-ticker-h` (0 unless
   the ticker is showing).
 - Data: new SECURITY DEFINER RPC `get_frameup_star_user(p_days)` (returns up to 3 rows), same model as the gallery RPCs — approved
   ES users only, returns just a display name + count (never emails), windowed on `created_at` (not
   `metadata.exportedAt`, see the gallery date fix). Cached 10 min in sessionStorage. If the RPC errors or
   nobody exported, no ticker renders. **Suhail applied the migration to production Supabase himself via the
   SQL editor on 2026-10-31** and confirmed the ticker working before the redesign. The top-3 change (`limit 1` → `limit 3`, same
-  columns) **must be re-run in the SQL editor** — until then the ticker shows just the #1.
+  columns) was **re-run in the SQL editor by Suhail on 2026-10-31**.
 - Cache-busting: `app-shell.js` / `es-ui.css` → `?v=20261031-ticker1` on all 11 app-shell pages,
   `dashboard-ui-system.css` → `?v=20261031-range1`.
 - Verified: `node --check app-shell.js` and the dashboard inline script parse clean. Ran the real

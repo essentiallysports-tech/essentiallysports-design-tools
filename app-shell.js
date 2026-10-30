@@ -352,9 +352,7 @@
   }
 
   function tickerCycle(stars) {
-    const nodes = [el('span', 'es-ticker__meta', `Last ${STAR_DAYS} days`)];
-    stars.forEach((star, index) => nodes.push(tickerItem(star, index + 1)));
-    return nodes;
+    return stars.map((star, index) => tickerItem(star, index + 1));
   }
 
   // index.html hosts Home plus the editor routes; the ticker only shows on Home.
@@ -386,7 +384,7 @@
     const viewport = el('div', 'es-ticker__viewport');
     viewport.setAttribute('aria-hidden', 'true');
     const track = el('div', 'es-ticker__track');
-    const cycles = Math.max(2, Math.ceil(STAR_HALF_MIN_PX / (stars.length * STAR_ITEM_PX + 120)));
+    const cycles = Math.max(2, Math.ceil(STAR_HALF_MIN_PX / (stars.length * STAR_ITEM_PX)));
     // Two identical halves; the track slides by exactly one half, so the loop is seamless.
     for (let half = 0; half < 2; half += 1) {
       const group = el('div', 'es-ticker__group');

@@ -736,27 +736,13 @@ html.es-has-ticker { --es-ticker-h: 40px; }
   font-size: 16px;
   font-weight: 800;
 }
-.es-ticker__meta {
-  align-self: center;
-  margin-left: 28px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgb(255 255 255 / .08);
-  color: rgb(255 255 255 / .6);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-}
-
 @keyframes es-ticker-scroll {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
 @media (max-width: 600px) {
   .es-ticker__label { padding: 0 22px 0 14px; }
-  .es-ticker__label-long,
-  .es-ticker__meta { display: none; }
+  .es-ticker__label-long { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .es-ticker__track { animation: none; }
