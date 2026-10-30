@@ -181,6 +181,8 @@
     const anchor = document.querySelector('.navbar');
     if (anchor) anchor.after(bar);
     else document.querySelector('.es-sidebar').after(bar);
+    const ticker = document.querySelector('.es-ticker');
+    if (ticker) bar.after(ticker);
     return bar;
   }
 
@@ -291,6 +293,128 @@
     }
   }
 
+  // ─── Stars of the week ticker (Home only, every screen size) ───────────
+  const STAR_DAYS = 7;
+  const STAR_CACHE_KEY = 'frameup.starUsers.v2';
+  const STAR_CACHE_MS = 10 * 60 * 1000;
+  // Each half of the loop must be wider than the widest viewport, or a gap shows.
+  const STAR_HALF_MIN_PX = 2800;
+  const STAR_ITEM_PX = 340;
+  let tickerStarted = false;
+
+  function starDisplayName(value) {
+    return String(value || '').trim().replace(/[._]+/g, ' ').split(/\s+/).filter(Boolean)
+      .map(word => (word === word.toLowerCase() ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+      .join(' ');
+  }
+
+  async function fetchStarUsers() {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(STAR_CACHE_KEY) || 'null');
+      if (cached && Date.now() - cached.at < STAR_CACHE_MS) return cached.stars;
+    } catch (error) { /* storage blocked: fetch fresh */ }
+    const auth = window.ESAuth;
+    if (!auth || !(await auth.ensureSupabaseReady())) return [];
+    const client = auth.getSupabaseClient();
+    if (!client) return [];
+    const { data, error } = await client.rpc('get_frameup_star_user', { p_days: STAR_DAYS });
+    if (error) return [];
+    const stars = (Array.isArray(data) ? data : [])
+      .filter(row => row && row.star_name && row.export_count > 0)
+      .slice(0, 3)
+      .map(row => ({ name: starDisplayName(row.star_name), count: Number(row.export_count) }));
+    try { sessionStorage.setItem(STAR_CACHE_KEY, JSON.stringify({ at: Date.now(), stars })); } catch (error) { /* ignore */ }
+    return stars;
+  }
+
+  function el(tag, className, textContent) {
+    const node = document.createElement(tag);
+    node.className = className;
+    if (textContent != null) node.textContent = textContent;
+    return node;
+  }
+
+  function starInitials(name) {
+    return name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || '★';
+  }
+
+  function tickerItem(star, rank) {
+    const item = el('span', `es-ticker__item is-rank-${rank}`);
+    const stat = el('span', 'es-ticker__stat');
+    stat.append(el('b', '', String(star.count)), ` design${star.count === 1 ? '' : 's'}`);
+    item.append(
+      el('span', 'es-ticker__rank', `#${rank}`),
+      el('span', 'es-ticker__avatar', starInitials(star.name)),
+      el('span', 'es-ticker__name', star.name),
+      stat,
+    );
+    return item;
+  }
+
+  function tickerCycle(stars) {
+    const nodes = [el('span', 'es-ticker__meta', `Last ${STAR_DAYS} days`)];
+    stars.forEach((star, index) => nodes.push(tickerItem(star, index + 1)));
+    return nodes;
+  }
+
+  // index.html hosts Home plus the editor routes; the ticker only shows on Home.
+  function isMainIndexPage() {
+    const file = window.location.pathname.split('/').pop() || 'index.html';
+    return !base && file === 'index.html';
+  }
+
+  function isHomeRoute() {
+    return isMainIndexPage() && currentId() === 'frames';
+  }
+
+  function syncTickerVisibility() {
+    const bar = document.querySelector('.es-ticker');
+    if (!bar) return;
+    const show = isHomeRoute();
+    bar.hidden = !show;
+    document.documentElement.classList.toggle('es-has-ticker', show);
+  }
+
+  function buildTicker(stars) {
+    if (document.querySelector('.es-ticker')) return;
+    const bar = el('div', 'es-ticker');
+    bar.setAttribute('role', 'status');
+    bar.setAttribute('aria-label', `Stars of the week, last ${STAR_DAYS} days: ${stars.map((star, index) => `${index + 1}. ${star.name}, ${star.count} design${star.count === 1 ? '' : 's'}`).join('; ')}`);
+    const label = el('span', 'es-ticker__label');
+    label.setAttribute('aria-hidden', 'true');
+    label.innerHTML = `${ICONS.trophy}<span>Stars <span class="es-ticker__label-long">of the week</span></span>`;
+    const viewport = el('div', 'es-ticker__viewport');
+    viewport.setAttribute('aria-hidden', 'true');
+    const track = el('div', 'es-ticker__track');
+    const cycles = Math.max(2, Math.ceil(STAR_HALF_MIN_PX / (stars.length * STAR_ITEM_PX + 120)));
+    // Two identical halves; the track slides by exactly one half, so the loop is seamless.
+    for (let half = 0; half < 2; half += 1) {
+      const group = el('div', 'es-ticker__group');
+      for (let i = 0; i < cycles; i += 1) group.append(...tickerCycle(stars));
+      track.appendChild(group);
+    }
+    viewport.appendChild(track);
+    bar.append(label, viewport);
+    const anchor = document.querySelector('.es-topbar') || document.querySelector('.navbar');
+    if (anchor) anchor.after(bar);
+    else document.body.prepend(bar);
+    syncTickerVisibility();
+    window.addEventListener('hashchange', syncTickerVisibility);
+  }
+
+  function startTicker() {
+    if (tickerStarted || !isMainIndexPage()) return;
+    tickerStarted = true;
+    fetchStarUsers().then(stars => { if (stars.length) buildTicker(stars); }).catch(() => {});
+  }
+
+  window.addEventListener('es:auth-ready', startTicker);
+  // requireAuth hides the page until the session is confirmed; if it's already
+  // visible by DOM ready, auth-ready fired before this script was listening.
+  function startTickerIfAuthed() {
+    if (window.ESAuth && document.documentElement.style.visibility !== 'hidden') startTicker();
+  }
+
   // ─── Boot ──────────────────────────────────────────────────────────────
   let built = false;
   function boot() {
@@ -319,7 +443,7 @@
   }
 
   // site-chrome.js builds the account menu first; wait for it.
-  function start() { setTimeout(boot, 0); }
+  function start() { setTimeout(boot, 0); setTimeout(startTickerIfAuthed, 0); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
   desktop.addEventListener?.('change', event => { if (event.matches) boot(); });

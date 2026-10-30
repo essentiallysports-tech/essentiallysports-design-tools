@@ -437,16 +437,16 @@
   </style>
   <link rel="stylesheet" href="dashboard-v2.css?v=20261022-es1">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20261028-mobile2">
-  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261022-es1">
+  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261031-range1">
 <link rel="stylesheet" href="theme.css?v=20261023-ux1">
   <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
 <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
   <link rel="stylesheet" href="design-tokens.css?v=20261028-mobile2">
-<link rel="stylesheet" href="es-ui.css?v=20261030-cols3">
+<link rel="stylesheet" href="es-ui.css?v=20261031-ticker1">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
   <script src="site-chrome.js?v=20261024-live1"></script>
-<script src="app-shell.js?v=20261026-gen1"></script>
+<script src="app-shell.js?v=20261031-ticker1"></script>
 </head>
 <body class="dashboard-page" data-dashboard-view="overview">
   <nav class="navbar" aria-label="Global navigation">
@@ -529,11 +529,20 @@
             </div>
           </section>
 
+          <div class="metrics-range" data-view-section="overview">
+            <div class="chart-range-toggle" role="group" aria-label="Metrics time range">
+              <button class="task-quick-filter is-active" type="button" data-metric-range="1" aria-pressed="true">1d</button>
+              <button class="task-quick-filter" type="button" data-metric-range="7" aria-pressed="false">7d</button>
+              <button class="task-quick-filter" type="button" data-metric-range="30" aria-pressed="false">30d</button>
+              <button class="task-quick-filter" type="button" data-metric-range="90" aria-pressed="false">90d</button>
+            </div>
+          </div>
+
           <section class="metrics" aria-label="Dashboard metrics">
-            <article class="metric-card is-primary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4zM8 6V4h8v2M8 11h8M8 15h5"/></svg></span></span><span class="metric-value" data-metric="designs">0</span><span class="metric-label">Designs exported</span></article>
-            <article class="metric-card is-primary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg></span></span><span class="metric-value" data-metric="exports24h">0</span><span class="metric-label">Exports last 24h</span></article>
-            <article class="metric-card is-secondary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="2.8"/><circle cx="16.5" cy="9.5" r="2.3"/><path d="M4 19.5c.7-3.2 2.5-5 5-5s4.3 1.8 5 5M14.2 15.2c2.9-.4 5 .9 5.8 4.3"/></svg></span></span><span class="metric-value" data-metric="visitors24h">0</span><span class="metric-label">Visitors last 24h</span></article>
-            <article class="metric-card is-secondary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M7 3v3M17 3v3M4.5 9h15M6 5h12a1.5 1.5 0 0 1 1.5 1.5v12A1.5 1.5 0 0 1 18 20H6a1.5 1.5 0 0 1-1.5-1.5v-12A1.5 1.5 0 0 1 6 5Z"/></svg></span></span><span class="metric-value" data-metric="visitorsMonth">0</span><span class="metric-label">Visitors this month</span></article>
+            <article class="metric-card is-primary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4zM8 6V4h8v2M8 11h8M8 15h5"/></svg></span></span><span class="metric-value" data-metric="designs">0</span><span class="metric-label">Designs exported · all time</span></article>
+            <article class="metric-card is-primary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg></span></span><span class="metric-value" data-metric="exportsRange">0</span><span class="metric-label">Exports · <span data-metric-range-label>last 24h</span></span></article>
+            <article class="metric-card is-secondary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="2.8"/><circle cx="16.5" cy="9.5" r="2.3"/><path d="M4 19.5c.7-3.2 2.5-5 5-5s4.3 1.8 5 5M14.2 15.2c2.9-.4 5 .9 5.8 4.3"/></svg></span></span><span class="metric-value" data-metric="visitorsRange">0</span><span class="metric-label">Visitors · <span data-metric-range-label>last 24h</span></span></article>
+            <article class="metric-card is-secondary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M7 3v3M17 3v3M4.5 9h15M6 5h12a1.5 1.5 0 0 1 1.5 1.5v12A1.5 1.5 0 0 1 18 20H6a1.5 1.5 0 0 1-1.5-1.5v-12A1.5 1.5 0 0 1 6 5Z"/></svg></span></span><span class="metric-value" data-metric="visitorsTotal">0</span><span class="metric-label">Visitors · all time</span></article>
           </section>
 
           <section class="task-view-toolbar" data-view-section="board list" aria-label="Request view controls">
@@ -701,6 +710,16 @@
     let selectedTaskId = '';
     let activeTaskQuickFilter = 'all';
     let activeChartRangeDays = 30;
+    const METRIC_RANGES = [1, 7, 30, 90];
+    const METRIC_RANGE_KEY = 'frameup.dashboard.metricRange';
+    let activeMetricRangeDays = (() => {
+      try {
+        const saved = Number(window.localStorage.getItem(METRIC_RANGE_KEY));
+        return METRIC_RANGES.includes(saved) ? saved : 1;
+      } catch (error) {
+        return 1;
+      }
+    })();
     let accessRequests = [];
     let dashboardLiveSyncTimer = 0;
 
@@ -884,14 +903,6 @@
       const time = Date.parse(value || '');
       if (!Number.isFinite(time)) return false;
       return Date.now() - time <= hours * 60 * 60 * 1000;
-    }
-
-    function isThisMonth(value) {
-      const time = Date.parse(value || '');
-      if (!Number.isFinite(time)) return false;
-      const date = new Date(time);
-      const now = new Date();
-      return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
     }
 
     function uniqueVisitorCount(people = [], predicate = () => true) {
@@ -1117,9 +1128,9 @@
         openRequests: requests.filter(task => task.status !== 'Done').length,
         urgent: requests.filter(task => String(task.priority || '').toLowerCase() === 'urgent').length,
         designs: designs.length,
-        exports24h: designs.filter(task => isWithinHours(exportCreatedAt(task), 24)).length,
-        visitors24h: uniqueVisitorCount(state.people || [], value => isWithinHours(value, 24)),
-        visitorsMonth: uniqueVisitorCount(state.people || [], isThisMonth),
+        exportsRange: designs.filter(task => isWithinHours(exportCreatedAt(task), activeMetricRangeDays * 24)).length,
+        visitorsRange: uniqueVisitorCount(state.people || [], value => isWithinHours(value, activeMetricRangeDays * 24)),
+        visitorsTotal: uniqueVisitorCount(state.people || []),
         activity: state.activity.length,
         feedback: (state.toolFeedback || []).length,
       };
@@ -1143,6 +1154,13 @@
     function renderMetrics(state) {
       const metrics = computeMetrics(state);
       const seen = getSeenBadgeState();
+      document.querySelectorAll('[data-metric-range]').forEach(button => {
+        const active = Number(button.dataset.metricRange) === activeMetricRangeDays;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      const rangeLabel = activeMetricRangeDays === 1 ? 'last 24h' : `last ${activeMetricRangeDays} days`;
+      document.querySelectorAll('[data-metric-range-label]').forEach(el => { el.textContent = rangeLabel; });
       Object.entries(metrics).forEach(([key, value]) => {
         const el = document.querySelector(`[data-metric="${key}"]`);
         if (el) el.textContent = value;
@@ -2243,6 +2261,15 @@
         button.addEventListener('click', () => {
           activeTaskQuickFilter = button.dataset.taskQuickFilter || 'all';
           renderDashboard();
+        });
+      });
+      document.querySelectorAll('[data-metric-range]').forEach(button => {
+        button.addEventListener('click', () => {
+          const days = Number(button.dataset.metricRange);
+          if (!METRIC_RANGES.includes(days)) return;
+          activeMetricRangeDays = days;
+          try { window.localStorage.setItem(METRIC_RANGE_KEY, String(days)); } catch (error) { /* ignore */ }
+          renderMetrics(window.ESDashboardData.getDashboardState());
         });
       });
       document.querySelectorAll('[data-chart-range]').forEach(button => {

@@ -264,6 +264,15 @@ body.dashboard-page .metrics {
   margin: 0;
 }
 
+body.dashboard-page .metrics-range {
+  display: flex;
+  justify-content: flex-end;
+}
+
+body.dashboard-page .metrics-range[hidden] {
+  display: none;
+}
+
 body.dashboard-page .metric-card {
   min-height: 76px;
   padding: 14px 16px;

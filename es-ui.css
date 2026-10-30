@@ -15,6 +15,7 @@
   --es-sidebar-w: 264px;
   --es-sidebar-w-collapsed: 72px;
   --es-topbar-h: 56px;
+  --es-ticker-h: 0px;
   --es-canvas: #f7f7f8;
   --es-sidebar-bg: #f7f7f8;
   --es-hover: rgb(14 16 20 / .05);
@@ -633,6 +634,134 @@ html.es-sidebar-collapsed .es-sidebar__collapse svg { transform: scaleX(-1); }
   .es-topbar { display: none !important; }
 }
 
+/* ─── Stars of the week ticker (Home only) ────────────────────────────── */
+html.es-has-ticker { --es-ticker-h: 40px; }
+.es-ticker {
+  --es-ticker-gold: #f6c453;
+  position: relative;
+  display: flex;
+  height: var(--es-ticker-h);
+  overflow: hidden;
+  background: #0e1014;
+  color: #ffffff;
+  font-family: var(--es-font-ui);
+  white-space: nowrap;
+  box-shadow: inset 0 -1px 0 rgb(255 255 255 / .06);
+}
+.es-ticker[hidden] { display: none; }
+
+/* Fixed broadcast-style tag on the left, slanted into the scrolling strip. */
+.es-ticker__label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 0 28px 0 20px;
+  background: var(--es-brand-fill);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+  font-family: var(--es-font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.es-ticker__label svg { width: 18px; height: 18px; color: var(--es-ticker-gold); }
+
+.es-ticker__viewport {
+  flex: 1;
+  min-width: 0;
+  margin-left: -14px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 56px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 56px), transparent);
+}
+.es-ticker__track {
+  display: flex;
+  width: max-content;
+  height: 100%;
+  animation: es-ticker-scroll 70s linear infinite;
+}
+.es-ticker:hover .es-ticker__track { animation-play-state: paused; }
+.es-ticker__group { display: flex; flex: none; }
+
+.es-ticker__item {
+  --es-medal: var(--es-ticker-gold);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 28px;
+  font-size: 13px;
+}
+.es-ticker__item.is-rank-2 { --es-medal: #c9d1db; }
+.es-ticker__item.is-rank-3 { --es-medal: #d9925a; }
+.es-ticker__rank {
+  color: var(--es-medal);
+  font-family: var(--es-font-display);
+  font-size: 15px;
+  font-weight: 800;
+}
+.es-ticker__item::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin-left: 18px;
+  background: var(--es-brand);
+  transform: rotate(45deg);
+}
+.es-ticker__avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--es-brand), #0a3f86);
+  box-shadow: 0 0 0 2px var(--es-medal);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.es-ticker__name {
+  font-family: var(--es-font-display);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+.es-ticker__stat { color: rgb(255 255 255 / .82); }
+.es-ticker__stat b {
+  color: var(--es-medal);
+  font-family: var(--es-font-display);
+  font-size: 16px;
+  font-weight: 800;
+}
+.es-ticker__meta {
+  align-self: center;
+  margin-left: 28px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / .08);
+  color: rgb(255 255 255 / .6);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+@keyframes es-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (max-width: 600px) {
+  .es-ticker__label { padding: 0 22px 0 14px; }
+  .es-ticker__label-long,
+  .es-ticker__meta { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .es-ticker__track { animation: none; }
+}
+
 /* ─── Dark theme ──────────────────────────────────────────────────────── */
 html[data-theme="dark"] {
   --es-sidebar-bg: #0d0d0d;
@@ -661,7 +790,7 @@ html.es-shell.es-sidebar-collapsed { --es-shell-offset: var(--es-sidebar-w-colla
 @media (min-width: 901px) {
   /* Editors fill the viewport under the 56px top bar. */
   html.es-shell[data-studio-shell="on"] .app[data-workspace] {
-    height: calc(100dvh - var(--es-topbar-h)) !important;
+    height: calc(100dvh - var(--es-topbar-h) - var(--es-ticker-h)) !important;
   }
 
   /* Undo/redo live in the top bar on editor routes only. */

@@ -883,3 +883,38 @@ and what's still uncommitted.
   screenshots, not independently confirmed by the assistant in-browser.
 - **Rollback point: `506e2cd`** — current HEAD, pushed to `origin/main`. Previous rollback point was
   `f744cf8` if this whole batch needs reverting.
+
+### 2026-10-31 — Dashboard metric range filter (1d/7d/30d/90d); "Stars of the week" ticker on Home (top 3)
+- Status: `[pushed - see rollback point below]`
+- **Dashboard range filter** (`dashboard.html`, `dashboard-ui-system.css`): a 1d/7d/30d/90d toggle above the
+  four overview cards, reusing the charts' existing `.chart-range-toggle` markup/style. It drives
+  "Exports · last N" and "Visitors · last N"; the other two cards became all-time totals ("Designs exported ·
+  all time", "Visitors · all time") so the row doesn't double up. Choice persists in localStorage
+  (`frameup.dashboard.metricRange`), default 1d (same numbers as before). "Visitors this month" (calendar
+  month) was replaced; the now-unused `isThisMonth()` was removed. Visitor counts are people whose last-seen
+  falls in the window (same method as before, just a variable window).
+- **Stars of the week ticker** (`app-shell.js`, `es-ui.css`, new migration
+  `supabase/migrations/20261031120000_add_frameup_star_user.sql`): shows the top 3 people by exports (all
+  workspaces) in the rolling last 7 days — Suhail first asked for one star, then "stars of the week" with 3 names. First built for every page; Suhail then asked for **Home only**
+  (`index.html#frames`) — it loads only on the main `index.html` and hides/shows on `hashchange`, so it's
+  gone on the editor routes that share that file. Design (after "design can be much better"): sports-broadcast
+  style — 40px ink (`#0e1014`) strip, a fixed slanted brand-blue "🏆 Stars of the week" tag on the left, then a
+  scrolling loop of a muted "Last 7 days" pill followed by #1/#2/#3, each with rank, initials avatar, name in
+  Roboto Condensed caps and count — ringed/coloured gold, silver, bronze; diamond separators; faded edges, pauses on hover, static under reduced motion. Under
+  600px the tag shortens to "Stars" and the pill hides. Editor height calc subtracts `--es-ticker-h` (0 unless
+  the ticker is showing).
+- Data: new SECURITY DEFINER RPC `get_frameup_star_user(p_days)` (returns up to 3 rows), same model as the gallery RPCs — approved
+  ES users only, returns just a display name + count (never emails), windowed on `created_at` (not
+  `metadata.exportedAt`, see the gallery date fix). Cached 10 min in sessionStorage. If the RPC errors or
+  nobody exported, no ticker renders. **Suhail applied the migration to production Supabase himself via the
+  SQL editor on 2026-10-31** and confirmed the ticker working before the redesign. The top-3 change (`limit 1` → `limit 3`, same
+  columns) **must be re-run in the SQL editor** — until then the ticker shows just the #1.
+- Cache-busting: `app-shell.js` / `es-ui.css` → `?v=20261031-ticker1` on all 11 app-shell pages,
+  `dashboard-ui-system.css` → `?v=20261031-range1`.
+- Verified: `node --check app-shell.js` and the dashboard inline script parse clean. Ran the real
+  `app-shell.js` + `es-ui.css` locally with a stubbed Supabase client: renders on `#frames`, hidden on
+  `#instagram`, back on `#frames`; name formatting, singular/plural, caching, RPC-error → no ticker, 375px with
+  no horizontal scroll. Dashboard range filter not seen in-browser (login-gated).
+- **Not in this push**: separate local Listicle Type 2 / Infographic 1 work stays unpushed until Suhail
+  approves it; it gets its own entry when it ships.
+- **Rollback point: `1afec65`**.
