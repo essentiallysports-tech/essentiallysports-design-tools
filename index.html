@@ -18542,9 +18542,9 @@ function initWidgetBuilder() {
 // HTML -> live preview + Copy HTML. Each brand only changes the card colours
 // and the default header banner.
 const GOLF_TRIVIA_DEFAULTS = {
-  imageUrl: 'https://www.todays-golfer.com/wp-images/316323/1200x800/sergio-garcia.jpg',
-  question: 'Which Team Did Sergio Garcia Captain in LIV Golf?',
-  options: ['Torque GC', 'HyFlyers GC', 'Fireballs GC', ''],
+  imageUrl: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/098e5020-5d90-4714-9e37-c2f56f1facaf/Oct._31_-_Pepperell.png?t=1793444603',
+  question: 'Which Golfer Called Out Sergio Garcia Over DP World Tour Return?',
+  options: ['Adrian Meronk', 'Eddie Pepperell', 'Thriston Lawrence', ''],
   link: 'https://www.essentiallysports.com/es-playzone/golf-trivia/',
 };
 
@@ -18661,8 +18661,8 @@ function renderTriviaOption(letter, text, link, brand) {
         </table>`;
 }
 
-// Golf sends use their own layout: question on top, image left (42%) and
-// compact answer pills right (58%), matching the golf trivia email markup.
+// Golf sends use their own layout: image left (42%) and, on the right (58%),
+// the question above compact answer pills, matching the golf trivia email.
 function renderTriviaSidePill(text, link, brand) {
   return `                    <tr>
                       <td valign="middle" style="background-color:#FFFFFE;border:1px solid ${escapeWidgetAttr(brand.border)};border-radius:36px;padding:0;">
@@ -18679,7 +18679,7 @@ function buildTriviaSideHtml(state, brand) {
   const headerImage = String(state.headerImage || '').trim() || brand.headerImage;
   const pillGap = `
                     <tr>
-                      <td height="6" style="height:6px;font-size:0;line-height:0;">&nbsp;</td>
+                      <td style="height:9px;font-size:0;line-height:0;">&nbsp;</td>
                     </tr>
 `;
   const pills = state.options
@@ -18690,7 +18690,7 @@ function buildTriviaSideHtml(state, brand) {
   const banner = headerImage ? `        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;border-spacing:0;">
           <tbody>
             <tr>
-              <td align="left" style="padding:0px 0 16px 0;margin:0;">
+              <td align="left" style="padding:0 0 16px 0;margin:0;">
                 <img src="${escapeWidgetAttr(headerImage)}" width="100%" alt="${escapeWidgetAttr(brand.headerAlt)}" border="0" style="display:block;width:100%;height:auto;margin:0;padding:0;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;">
               </td>
             </tr>
@@ -18699,7 +18699,7 @@ function buildTriviaSideHtml(state, brand) {
 
 ` : '';
   const hasImage = Boolean(String(state.imageUrl || '').trim());
-  const imageCell = hasImage ? `              <td width="42%" valign="middle" style="width:42%;padding:0;vertical-align:middle;">
+  const imageCell = hasImage ? `              <td width="42%" valign="top" style="width:42%;padding:0;vertical-align:top;">
                 <a href="${link}" style="display:block;text-decoration:none;border:0;">
                   <img src="${escapeWidgetAttr(state.imageUrl)}" width="100%" alt="${escapeWidgetAttr(brand.headerAlt)} Trivia" border="0" style="display:block;width:100%;height:auto;margin:0;padding:0;border:0;border-radius:10px;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;">
                 </a>
@@ -18708,34 +18708,32 @@ function buildTriviaSideHtml(state, brand) {
               <td width="20" style="width:20px;min-width:20px;font-size:0;line-height:0;">&nbsp;</td>
 
 ` : '';
-  const optionsWidth = hasImage ? '58%' : '100%';
+  const columnWidth = hasImage ? '58%' : '100%';
   return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 auto;border-collapse:separate;background-color:${escapeWidgetAttr(brand.background)};border:1px solid ${escapeWidgetAttr(brand.cardBorder || brand.border)};border-radius:10px;">
   <tbody>
     <tr>
-      <td align="center" valign="top" style="padding:15px 15px;margin:0;">
+      <td align="center" valign="top" style="padding:15px;margin:0;">
 
-${banner}        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;border-spacing:0;">
-          <tbody>
-            <tr>
-              <td align="left" style="padding:0 4px 20px 4px;margin:0;font-family:Inter,Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;font-weight:700;color:${escapeWidgetAttr(brand.question)};">
-                ${escapeWidgetHtml(state.question)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border-spacing:0;">
+${banner}        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border-spacing:0;">
           <tbody>
             <tr>
 
-${imageCell}              <td width="${optionsWidth}" valign="middle" style="width:${optionsWidth};padding:0;vertical-align:middle;">
+${imageCell}              <td width="${columnWidth}" valign="top" style="width:${columnWidth};padding:0;vertical-align:top;">
+
                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border-spacing:0;">
                   <tbody>
+
+                    <tr>
+                      <td align="left" valign="top" style="padding:0 0 17px 0;margin:0;font-family:Inter,Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;font-weight:700;color:${escapeWidgetAttr(brand.question)};vertical-align:top;">
+                        ${escapeWidgetHtml(state.question)}
+                      </td>
+                    </tr>
 
 ${pills}
 
                   </tbody>
                 </table>
+
               </td>
 
             </tr>
