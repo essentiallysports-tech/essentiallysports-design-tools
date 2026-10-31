@@ -702,7 +702,7 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
 
   html[data-studio-shell="on"] .studio-primary-controls,
   html[data-studio-shell="on"] .studio-accordion-list,
-  html[data-studio-shell="on"] .studio-accordion-body :is(.card, .text-card, .swipe-button-control, .quote-logo-control, #widget-main-fields, #widget-picks-fields) {
+  html[data-studio-shell="on"] .studio-accordion-body :is(.card, .text-card, .swipe-button-control, .quote-logo-control, #widget-main-fields, #widget-picks-fields, #trivia-fields) {
     padding: 12px !important;
   }
 
