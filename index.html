@@ -11267,6 +11267,7 @@ function initUI() {
     newsletterBrandSelect.addEventListener('change', event => {
       if (activeNewsletterAsset === 'trivia') {
         if (triviaBuilderState) triviaBuilderState.brandId = event.target.value;
+        applyTriviaDefaults(event.target.value);
         renderWidgetPreview();
         return;
       }
@@ -18540,6 +18541,13 @@ function initWidgetBuilder() {
 // Same flow as the Desktop News Layout builder: form fields -> email-safe
 // HTML -> live preview + Copy HTML. Each brand only changes the card colours
 // and the default header banner.
+const GOLF_TRIVIA_DEFAULTS = {
+  imageUrl: 'https://www.todays-golfer.com/wp-images/316323/1200x800/sergio-garcia.jpg',
+  question: 'Which Team Did Sergio Garcia Captain in LIV Golf?',
+  options: ['Torque GC', 'HyFlyers GC', 'Fireballs GC', ''],
+  link: 'https://www.essentiallysports.com/es-playzone/golf-trivia/',
+};
+
 const TRIVIA_BRANDS = [
   {
     id: 'she-got-game',
@@ -18557,6 +18565,7 @@ const TRIVIA_BRANDS = [
     id: 'essentially-golf',
     label: 'Essentially Golf (Morning)',
     layout: 'side',
+    defaults: GOLF_TRIVIA_DEFAULTS,
     background: '#FFFCF3',
     cardBorder: '#E5D8B5',
     border: '#E5D8B5',
@@ -18570,6 +18579,7 @@ const TRIVIA_BRANDS = [
     id: 'es-golf-evening',
     label: 'Essentially Golf (Evening)',
     layout: 'side',
+    defaults: GOLF_TRIVIA_DEFAULTS,
     background: '#FFFCF3',
     cardBorder: '#E5D8B5',
     border: '#E5D8B5',
@@ -18604,6 +18614,27 @@ const TRIVIA_DEFAULT_STATE = {
 
 let triviaBuilderState = null;
 let triviaImagePreviewOverride = '';
+let triviaContentEdited = false;
+
+function getTriviaDefaults(brandId) {
+  return getTriviaBrand(brandId).defaults || TRIVIA_DEFAULT_STATE;
+}
+
+// Swaps in a brand's starter content, but only while the user hasn't typed
+// or uploaded anything; their own content always survives a brand switch.
+function applyTriviaDefaults(brandId) {
+  if (!triviaBuilderState || triviaContentEdited) return;
+  const defaults = getTriviaDefaults(brandId);
+  triviaBuilderState.imageUrl = defaults.imageUrl;
+  triviaBuilderState.question = defaults.question;
+  triviaBuilderState.options = [...defaults.options];
+  triviaBuilderState.link = defaults.link;
+  triviaImagePreviewOverride = '';
+  document.querySelectorAll('[data-trivia-field]').forEach(field => {
+    if (field.dataset.triviaField !== 'headerImage') field.value = getTriviaFieldValue(field.dataset.triviaField);
+  });
+  updateTriviaThumb();
+}
 
 function getTriviaBrand(id) {
   return TRIVIA_BRANDS.find(brand => brand.id === id) || TRIVIA_BRANDS[0];
@@ -18845,6 +18876,7 @@ function initTriviaBuilder() {
     field.value = getTriviaFieldValue(path);
     field.addEventListener('input', () => {
       setTriviaFieldValue(path, field.value);
+      if (path !== 'headerImage') triviaContentEdited = true;
       if (path === 'imageUrl') {
         triviaImagePreviewOverride = '';
         updateTriviaThumb();
@@ -18864,6 +18896,7 @@ function initTriviaBuilder() {
     if (!file) return;
     const previewUrl = URL.createObjectURL(file);
     triviaImagePreviewOverride = previewUrl;
+    triviaContentEdited = true;
     updateTriviaThumb();
     renderWidgetPreview();
     autoUploadTriviaImage(file, previewUrl);
