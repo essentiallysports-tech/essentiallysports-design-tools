@@ -18556,6 +18556,7 @@ const TRIVIA_BRANDS = [
   {
     id: 'essentially-golf',
     label: 'Essentially Golf (Morning)',
+    layout: 'side',
     background: '#FFFCF3',
     cardBorder: '#E5D8B5',
     border: '#E5D8B5',
@@ -18568,6 +18569,7 @@ const TRIVIA_BRANDS = [
   {
     id: 'es-golf-evening',
     label: 'Essentially Golf (Evening)',
+    layout: 'side',
     background: '#FFFCF3',
     cardBorder: '#E5D8B5',
     border: '#E5D8B5',
@@ -18628,8 +18630,96 @@ function renderTriviaOption(letter, text, link, brand) {
         </table>`;
 }
 
+// Golf sends use their own layout: question on top, image left (42%) and
+// compact answer pills right (58%), matching the golf trivia email markup.
+function renderTriviaSidePill(text, link, brand) {
+  return `                    <tr>
+                      <td valign="middle" style="background-color:#FFFFFE;border:1px solid ${escapeWidgetAttr(brand.border)};border-radius:36px;padding:0;">
+                        <a href="${link}" style="display:block;width:100%;box-sizing:border-box;padding:6px 10px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:13px;line-height:16px;font-weight:700;color:${escapeWidgetAttr(brand.text)};text-decoration:none;border-radius:36px;">
+                          <span style="color:${escapeWidgetAttr(brand.text)};">${escapeWidgetHtml(text)}</span>
+                          <span style="color:${escapeWidgetAttr(brand.accent)};font-family:Arial,Helvetica,sans-serif;">&nbsp;&#8599;&#65038;</span>
+                        </a>
+                      </td>
+                    </tr>`;
+}
+
+function buildTriviaSideHtml(state, brand) {
+  const link = escapeWidgetAttr(state.link);
+  const headerImage = String(state.headerImage || '').trim() || brand.headerImage;
+  const pillGap = `
+                    <tr>
+                      <td height="6" style="height:6px;font-size:0;line-height:0;">&nbsp;</td>
+                    </tr>
+`;
+  const pills = state.options
+    .map(text => String(text || '').trim())
+    .filter(Boolean)
+    .map(text => renderTriviaSidePill(text, link, brand))
+    .join(`\n${pillGap}\n`);
+  const banner = headerImage ? `        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;border-spacing:0;">
+          <tbody>
+            <tr>
+              <td align="left" style="padding:0px 0 16px 0;margin:0;">
+                <img src="${escapeWidgetAttr(headerImage)}" width="100%" alt="${escapeWidgetAttr(brand.headerAlt)}" border="0" style="display:block;width:100%;height:auto;margin:0;padding:0;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;">
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+` : '';
+  const hasImage = Boolean(String(state.imageUrl || '').trim());
+  const imageCell = hasImage ? `              <td width="42%" valign="middle" style="width:42%;padding:0;vertical-align:middle;">
+                <a href="${link}" style="display:block;text-decoration:none;border:0;">
+                  <img src="${escapeWidgetAttr(state.imageUrl)}" width="100%" alt="${escapeWidgetAttr(brand.headerAlt)} Trivia" border="0" style="display:block;width:100%;height:auto;margin:0;padding:0;border:0;border-radius:10px;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;">
+                </a>
+              </td>
+
+              <td width="20" style="width:20px;min-width:20px;font-size:0;line-height:0;">&nbsp;</td>
+
+` : '';
+  const optionsWidth = hasImage ? '58%' : '100%';
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 auto;border-collapse:separate;background-color:${escapeWidgetAttr(brand.background)};border:1px solid ${escapeWidgetAttr(brand.cardBorder || brand.border)};border-radius:10px;">
+  <tbody>
+    <tr>
+      <td align="center" valign="top" style="padding:15px 15px;margin:0;">
+
+${banner}        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;border-spacing:0;">
+          <tbody>
+            <tr>
+              <td align="left" style="padding:0 4px 20px 4px;margin:0;font-family:Inter,Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;font-weight:700;color:${escapeWidgetAttr(brand.question)};">
+                ${escapeWidgetHtml(state.question)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border-spacing:0;">
+          <tbody>
+            <tr>
+
+${imageCell}              <td width="${optionsWidth}" valign="middle" style="width:${optionsWidth};padding:0;vertical-align:middle;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border-spacing:0;">
+                  <tbody>
+
+${pills}
+
+                  </tbody>
+                </table>
+              </td>
+
+            </tr>
+          </tbody>
+        </table>
+
+      </td>
+    </tr>
+  </tbody>
+</table>`;
+}
+
 function buildTriviaHtml(state) {
   const brand = getTriviaBrand(state.brandId);
+  if (brand.layout === 'side') return buildTriviaSideHtml(state, brand);
   const link = escapeWidgetAttr(state.link);
   const headerImage = String(state.headerImage || '').trim() || brand.headerImage;
   const options = state.options
