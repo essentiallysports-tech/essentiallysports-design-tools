@@ -18545,28 +18545,49 @@ const TRIVIA_BRANDS = [
     id: 'she-got-game',
     label: 'Essentially W',
     background: '#FFF6F0',
+    cardBorder: '',
     border: '#FFB293',
+    text: '#000000',
+    question: '#111111',
     accent: '#F74600',
     headerImage: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/6cc5434c-35b9-4d3c-b48a-c6d2262ca7c6/WNBA_PULSE.png?t=1788444107',
     headerAlt: 'WNBA Pulse',
   },
   {
     id: 'essentially-golf',
-    label: 'Essentially Golf',
-    background: '#F0F8F0',
-    border: '#99D29B',
-    accent: '#008F05',
-    headerImage: '',
-    headerAlt: 'Essentially Golf',
+    label: 'Essentially Golf (Morning)',
+    background: '#FFFCF3',
+    cardBorder: '#E5D8B5',
+    border: '#E5D8B5',
+    text: '#003008',
+    question: '#111111',
+    accent: '#008F00',
+    headerImage: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/5de10d16-cb3a-4976-a10a-af44e9f48588/PLAYZONE.png?t=1792452668',
+    headerAlt: 'Playzone',
+  },
+  {
+    id: 'es-golf-evening',
+    label: 'Essentially Golf (Evening)',
+    background: '#FFFCF3',
+    cardBorder: '#E5D8B5',
+    border: '#E5D8B5',
+    text: '#003008',
+    question: '#111111',
+    accent: '#008F00',
+    headerImage: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/86af3a7a-5800-4b41-bed1-70762991d69d/PLAYZONE.png?t=1792001458',
+    headerAlt: 'Playzone',
   },
   {
     id: 'the-huddle',
     label: 'The Huddle',
-    background: '#EEF1F6',
-    border: '#A9B1C4',
-    accent: '#27324C',
-    headerImage: '',
-    headerAlt: 'The Huddle',
+    background: '#F4F7FB',
+    cardBorder: '#E5E9F0',
+    border: '#D5DCE3',
+    text: '#20283F',
+    question: '#20283F',
+    accent: '#20283F',
+    headerImage: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/ede24178-1991-4ac8-9551-bcc508fed3fa/Playzone.png?t=1790859101',
+    headerAlt: 'Playzone',
   },
 ];
 
@@ -18598,8 +18619,8 @@ function renderTriviaOption(letter, text, link, brand) {
   return `        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border-spacing:0;">
           <tr>
             <td width="100%" valign="middle" style="width:100%;background-color:#FFFFFE;border:1px solid ${escapeWidgetAttr(brand.border)};border-radius:36px;padding:0;">
-              <a href="${link}" style="display:block;width:100%;box-sizing:border-box;padding:10px 16px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;font-weight:700;color:#000000;text-decoration:none;border-radius:36px;">
-                <span style="color:#000000;">${letter}) ${escapeWidgetHtml(text)}</span>&nbsp;&nbsp;
+              <a href="${link}" style="display:block;width:100%;box-sizing:border-box;padding:10px 16px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;font-weight:700;color:${escapeWidgetAttr(brand.text)};text-decoration:none;border-radius:36px;">
+                <span style="color:${escapeWidgetAttr(brand.text)};">${letter}) ${escapeWidgetHtml(text)}</span>&nbsp;&nbsp;
                 <span style="color:${escapeWidgetAttr(brand.accent)};font-family:Arial,Helvetica,sans-serif;">&#8599;&#65038;</span>
               </a>
             </td>
@@ -18640,7 +18661,7 @@ function buildTriviaHtml(state) {
         </table>
 
 ` : '';
-  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0;border-collapse:separate;background-color:${escapeWidgetAttr(brand.background)};border:0;border-radius:10px;">
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0;border-collapse:separate;background-color:${escapeWidgetAttr(brand.background)};border:${brand.cardBorder ? `1px solid ${escapeWidgetAttr(brand.cardBorder)}` : '0'};border-radius:10px;">
   <tbody>
     <tr>
       <td align="left" valign="top" style="padding:16px;margin:0;">
@@ -18648,8 +18669,8 @@ function buildTriviaHtml(state) {
 ${banner}${image}        <!-- QUESTION -->
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">
           <tr>
-            <td align="left" style="padding:20px 4px 0 4px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;font-weight:700;color:#111111;">
-              <a href="${link}" style="display:block;color:#111111;text-decoration:none;font-family:Inter,Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;font-weight:700;">
+            <td align="left" style="padding:20px 4px 0 4px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;font-weight:700;color:${escapeWidgetAttr(brand.question)};">
+              <a href="${link}" style="display:block;color:${escapeWidgetAttr(brand.question)};text-decoration:none;font-family:Inter,Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;font-weight:700;">
                 ${escapeWidgetHtml(state.question)}
               </a>
             </td>
