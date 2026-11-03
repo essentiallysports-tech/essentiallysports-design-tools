@@ -2139,7 +2139,9 @@
     display: none;
   }
   body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #studio-export-btn,
-  body[data-current-page="newsletter"][data-newsletter-asset="trivia"] #studio-export-btn {
+  body[data-current-page="newsletter"][data-newsletter-asset="trivia"] #studio-export-btn,
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #studio-link-btn,
+  body[data-current-page="newsletter"][data-newsletter-asset="trivia"] #studio-link-btn {
     display: none !important;
   }
   body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #widget-copy-btn,
@@ -4999,6 +5001,34 @@ body[data-current-page="faq"] .faq-cta-art img {
     line-height: 1;
   }
 
+  .studio-link-btn {
+    min-height: 36px;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 0 12px;
+    border: 1px solid var(--es-line-2, #D6DAE1);
+    border-radius: 10px;
+    background: #FFFFFF;
+    color: var(--es-brand-text, #0A63C9);
+    cursor: pointer;
+    font-family: var(--es-font-ui);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    transition: border-color .16s var(--es-ease), background-color .16s var(--es-ease);
+  }
+  .studio-link-btn svg { width: 16px; height: 16px; }
+  .studio-link-btn:hover,
+  .studio-link-btn:focus-visible { outline: none; border-color: var(--es-brand); background: var(--es-brand-soft, #EEF5FF); }
+  .studio-link-btn:disabled { cursor: wait; opacity: .7; }
+  /* Export fills the row; Copy link keeps its natural width beside it. */
+  html[data-studio-shell="on"] .studio-export-section .studio-topbar-right > .studio-export-btn { flex: 1 1 auto; width: auto; min-width: 0; }
+  html[data-theme="dark"] .studio-link-btn { background: #1A1A1A; border-color: #333; color: #8EC2FF; }
+
   html[data-studio-shell="on"] .studio-export-section {
     display: flex;
     align-items: center;
@@ -7685,6 +7715,10 @@ body[data-current-page="faq"] .faq-cta-art img {
         <path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>
       <span data-export-label>Export</span>
+    </button>
+    <button class="studio-link-btn" id="studio-link-btn" type="button" aria-label="Upload this design and copy its image link" title="Upload this design and copy a shareable image link">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1.5 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span data-link-label>Copy link</span>
     </button>
     <button class="studio-export-btn export-button" id="widget-copy-btn" type="button" aria-label="Copy widget HTML">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
@@ -16544,12 +16578,9 @@ function getWorkspaceExportDurationMs() {
   return Math.max(0, Date.now() - ES_WORKSPACE_SESSION_STARTED_AT);
 }
 
-function downloadImage() {
-  const studioExportButton = document.getElementById('studio-export-btn');
-  const exportButton = studioExportButton && studioExportButton.offsetParent !== null
-    ? studioExportButton
-    : document.getElementById('download-btn');
-  const finishExportFeedback = startExportFeedback(exportButton);
+// Draws the current design at full export size and names the file. Shared by
+// Export (download) and Copy link (upload), so both produce the same image.
+function renderExportImage() {
   const workspace = getWorkspace();
   const scale = workspace.exportScale || EXPORT_SCALE;
   const W = Math.round(workspace.width * scale);
@@ -16577,6 +16608,99 @@ function downloadImage() {
     ? `${workspace.filenamePrefix}-${mainTextSlug}${newsletterBrandSuffix}${newsletterAssetSuffix}.${workspace.exportExtension}`
     : `${workspace.filenamePrefix}-${mainTextSlug}${slideSuffix}${postTypeSuffix}${reelsFormatSuffix}${variationSuffix}${youtubeQuoteSuffix}${newsletterAssetSuffix}.${workspace.exportExtension}`;
   const exportQuality = workspace.exportType === 'image/jpeg' ? 0.94 : undefined;
+  return { workspace, scale, W, H, offscreen, filename, mainTextSlug, exportQuality };
+}
+
+const FRAMEUP_LINKS_BUCKET = 'frameup-links';
+
+function canvasToBlob(canvas, type, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('Could not create the image.'))), type, quality);
+  });
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (error) { /* fall through */ }
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  let copied = false;
+  try { copied = document.execCommand('copy'); } catch (error) { copied = false; }
+  textarea.remove();
+  return copied;
+}
+
+function showImageLinkDialog(url) {
+  showEsDialog({
+    title: 'Image link ready',
+    body: url,
+    actions: [
+      { label: 'Open image', variant: 'secondary', onClick: () => window.open(url, '_blank', 'noopener') },
+      { label: 'Copy link', variant: 'primary', onClick: () => copyTextToClipboard(url).then(ok => showToast(ok ? 'Link copied' : 'Select the link and copy it', ok ? 'success' : 'error')) },
+    ],
+  });
+}
+
+// Uploads the exported image to a public Storage folder and copies its
+// permanent link. Uploading needs an approved, signed-in FrameUp account.
+async function copyImageLink() {
+  const button = document.getElementById('studio-link-btn');
+  const label = button?.querySelector('[data-link-label]');
+  if (button?.disabled) return;
+  const auth = window.ESAuth;
+  const client = (await auth?.ensureSupabaseReady?.()) ? auth.getSupabaseClient() : null;
+  const session = client ? (await client.auth.getSession()).data?.session : null;
+  if (!session) {
+    showToast('Sign in to FrameUp to create image links.', 'error');
+    return;
+  }
+  if (button) button.disabled = true;
+  if (label) label.textContent = 'Uploading…';
+  try {
+    const { offscreen, filename, workspace, exportQuality } = renderExportImage();
+    const blob = await canvasToBlob(offscreen, workspace.exportType, exportQuality);
+    const now = new Date();
+    const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\..*$/, '').replace('T', '-');
+    const safeName = filename.toLowerCase().replace(/[^a-z0-9.-]+/g, '-');
+    const path = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${stamp}-${Math.random().toString(36).slice(2, 6)}-${safeName}`;
+    const { error } = await client.storage.from(FRAMEUP_LINKS_BUCKET).upload(path, blob, {
+      contentType: blob.type || workspace.exportType,
+      cacheControl: '31536000',
+      upsert: false,
+    });
+    if (error) throw error;
+    const url = client.storage.from(FRAMEUP_LINKS_BUCKET).getPublicUrl(path).data.publicUrl;
+    if (await copyTextToClipboard(url)) {
+      showToast('Image link copied', 'success');
+      setStatus('Link copied: ' + url, 'ok');
+      if (label) label.textContent = 'Link copied';
+    } else {
+      showImageLinkDialog(url);
+    }
+  } catch (error) {
+    console.error('Copy image link failed:', error);
+    showToast(`Couldn't create a link: ${error?.message || 'please try again'}`, 'error');
+  } finally {
+    if (button) button.disabled = false;
+    setTimeout(() => { if (label) label.textContent = 'Copy link'; }, 1800);
+  }
+}
+
+function downloadImage() {
+  const studioExportButton = document.getElementById('studio-export-btn');
+  const exportButton = studioExportButton && studioExportButton.offsetParent !== null
+    ? studioExportButton
+    : document.getElementById('download-btn');
+  const finishExportFeedback = startExportFeedback(exportButton);
+  const { workspace, scale, W, H, offscreen, filename, mainTextSlug, exportQuality } = renderExportImage();
 
   saveCanvasDownload(offscreen, filename, workspace.exportType, exportQuality, error => {
     finishExportFeedback();
@@ -16880,6 +17004,7 @@ function requestExport() {
 }
 
 window.ESDownloadCurrentDesign = requestExport;
+document.getElementById('studio-link-btn')?.addEventListener('click', copyImageLink);
 
 // â”€â”€â”€ DESIGN REQUESTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DESIGN_REQUEST_STORAGE_KEY = 'es.designRequests.v1';
