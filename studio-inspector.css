@@ -1,0 +1,284 @@
+/*
+ * Studio inspector (right panel), desktop. Loaded after the editor's own
+ * styles: a lighter, denser panel with flat sections instead of nested cards,
+ * small sentence-case labels and 40px controls. Mobile keeps its sheet styles.
+ * Also styles the infographic panel (ig-*) on every screen size.
+ */
+
+/* ─── Infographic panel (all sizes) ─────────────────────────────────── */
+#infographic-fields { display: none; }
+body[data-current-page="newsletter"][data-newsletter-infographic="on"] #infographic-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.ig-card {
+  border: 1px solid var(--es-line);
+  border-radius: 14px;
+  background: var(--es-bg);
+  transition: border-color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease);
+}
+.ig-card[open] { border-color: var(--es-line-2); box-shadow: 0 1px 2px rgba(14, 16, 20, .04); }
+.ig-card.is-flash { animation: ig-flash 1s var(--es-ease); }
+@keyframes ig-flash {
+  0%, 30% { box-shadow: 0 0 0 3px rgb(var(--es-brand-rgb, 10 125 250) / .35); border-color: var(--es-brand); }
+  100% { box-shadow: 0 1px 2px rgba(14, 16, 20, .04); }
+}
+.ig-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+  border-radius: 14px;
+}
+.ig-card-head::-webkit-details-marker { display: none; }
+.ig-card-head:hover { background: var(--es-sunk); }
+.ig-card-head:focus-visible { outline: none; box-shadow: var(--es-focus, 0 0 0 3px rgba(10, 125, 250, .35)); }
+.ig-card-thumb {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--es-sunk);
+  display: grid;
+  place-items: center;
+  color: var(--es-ink-3);
+  font: 600 13px/1 var(--es-font-ui);
+}
+.ig-card-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.ig-card-titles { display: grid; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.ig-card-titles strong { color: var(--es-ink); font: 600 14px/1.2 var(--es-font-ui); }
+.ig-card-titles span {
+  overflow: hidden;
+  color: var(--es-ink-3);
+  font: 400 13px/1.25 var(--es-font-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ig-card-chevron { flex: 0 0 auto; color: var(--es-ink-3); transition: transform var(--es-dur) var(--es-ease); }
+.ig-card-chevron svg, .ig-icon-btn svg, .ig-chip svg, .ig-reset svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: block;
+}
+.ig-card[open] .ig-card-chevron { transform: rotate(180deg); }
+.ig-card-body {
+  display: grid;
+  gap: 14px;
+  padding: 4px 12px 14px;
+}
+
+.ig-field { display: grid; gap: 6px; min-width: 0; }
+.ig-label, .ig-cell-label {
+  color: var(--es-ink-3);
+  font: 500 12px/1.3 var(--es-font-ui);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.ig-cell-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ig-input {
+  width: 100%;
+  min-height: 40px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid var(--es-line-2);
+  border-radius: 10px;
+  background: var(--es-bg);
+  color: var(--es-ink);
+  font: 500 14px/1.3 var(--es-font-ui);
+  transition: border-color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease);
+}
+textarea.ig-input { padding: 10px 12px; resize: vertical; }
+.ig-input:hover { border-color: #b9bfc9; }
+.ig-input:focus { outline: none; border-color: var(--es-brand); box-shadow: 0 0 0 3px rgb(var(--es-brand-rgb, 10 125 250) / .15); }
+.ig-input::placeholder { color: var(--es-placeholder, #9aa1ad); }
+.ig-cells { display: grid; gap: 8px; }
+.ig-cell { display: grid; gap: 4px; min-width: 0; }
+.ig-cell .ig-input { text-align: center; padding: 0 6px; }
+
+.ig-photo { display: grid; gap: 10px; }
+.ig-photo-row { display: flex; align-items: center; gap: 10px; }
+.ig-photo-thumb {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--es-line);
+  border-radius: 10px;
+  background: var(--es-sunk);
+  cursor: pointer;
+}
+.ig-photo-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.ig-photo-thumb:hover { border-color: var(--es-brand); }
+.ig-photo-info { display: grid; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.ig-photo-info strong { color: var(--es-ink); font: 600 13px/1.2 var(--es-font-ui); }
+.ig-photo-info span { overflow: hidden; color: var(--es-ink-3); font: 400 12px/1.25 var(--es-font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.ig-chip, .ig-icon-btn, .ig-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  height: 34px;
+  margin: 0;
+  border: 1px solid var(--es-line-2);
+  border-radius: 10px;
+  background: var(--es-bg);
+  color: var(--es-ink-2);
+  cursor: pointer;
+  font: 600 13px/1 var(--es-font-ui);
+  transition: background-color var(--es-dur) var(--es-ease), border-color var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease);
+}
+.ig-chip { padding: 0 10px; }
+.ig-chip svg { width: 16px; height: 16px; }
+.ig-icon-btn { width: 34px; padding: 0; }
+.ig-chip:hover, .ig-icon-btn:hover, .ig-reset:hover { background: var(--es-sunk); color: var(--es-ink); }
+.ig-icon-btn.is-active { border-color: var(--es-brand); background: var(--es-brand-soft, #eaf3ff); color: var(--es-brand-text, #0a62c7); }
+.ig-adjust {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--es-sunk);
+}
+.ig-adjust[hidden] { display: none; }
+.ig-adjust .infographic-slider { grid-template-columns: 84px 1fr; font-size: 12px; }
+.ig-reset {
+  justify-self: start;
+  height: 32px;
+  padding: 0 10px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--es-ink-3);
+  font-weight: 500;
+}
+.ig-reset svg { width: 15px; height: 15px; }
+
+/* ─── Desktop inspector ─────────────────────────────────────────────── */
+@media (min-width: 901px) {
+  /* Header: Export / Copy link, then the template pickers. */
+  html[data-studio-shell="on"] .studio-control-dock {
+    gap: 14px !important;
+    padding: 16px !important;
+  }
+  html[data-studio-shell="on"] .studio-export-section {
+    margin: -16px -16px 0 !important;
+    padding: 14px 16px !important;
+    border-bottom: 1px solid var(--es-line);
+  }
+  html[data-studio-shell="on"] .studio-primary-controls { gap: 12px !important; padding: 0 !important; }
+
+  /* Field labels: small, quiet, sentence case. */
+  html[data-studio-shell="on"] .panel :is(.card-title, .widget-field-label, .tod-label) {
+    margin: 0 0 6px !important;
+    color: var(--es-ink-3) !important;
+    font-family: var(--es-font-ui) !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.3 !important;
+    text-transform: none !important;
+  }
+
+  /* Controls: 40px tall, 14px text, 10px corners. Only the standalone field
+     types; the compound stat / list / tweet editors (.pill-entry) keep their
+     own purpose-built sizes. */
+  html[data-studio-shell="on"] .panel :is(.widget-text-input, .select-dropdown-trigger) {
+    min-height: 40px !important;
+    border-radius: 10px !important;
+    font-size: 14px !important;
+  }
+  html[data-studio-shell="on"] .panel .widget-text-input {
+    height: 40px !important;
+    padding: 0 12px !important;
+  }
+  html[data-studio-shell="on"] .panel .select-dropdown-trigger {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    padding-left: 12px !important;
+  }
+  html[data-studio-shell="on"] .panel textarea.widget-text-area {
+    padding: 10px 12px !important;
+    border-radius: 10px !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Inspector tabs: a slimmer segmented control. */
+  html[data-studio-shell="on"] .studio-inspector-tabs { padding: 3px !important; border-radius: 12px !important; }
+  html[data-studio-shell="on"] .studio-inspector-tab { min-height: 32px !important; font-size: 13px !important; border-radius: 9px !important; }
+
+  /* Sections: flat, divided by hairlines, on white (no grey well, no card-in-card). */
+  html[data-studio-shell="on"] .studio-content-sections { background: var(--es-bg) !important; }
+  html[data-studio-shell="on"] .studio-accordion-list {
+    gap: 0 !important;
+    padding: 0 16px 24px !important;
+  }
+  html[data-studio-shell="on"] .studio-accordion-section {
+    border: 0 !important;
+    border-top: 1px solid var(--es-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  html[data-studio-shell="on"] .studio-accordion-trigger {
+    min-height: 48px !important;
+    height: auto !important;
+    padding: 0 2px !important;
+    background: transparent !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+  }
+  html[data-studio-shell="on"] .studio-accordion-body { padding: 0 2px 18px !important; }
+  /* The section already has side padding; cards inside don't add their own. */
+  html[data-studio-shell="on"] .studio-accordion-body :is(.card, .text-card, .swipe-button-control, .advanced-card, .quote-logo-control, #widget-main-fields, #widget-picks-fields, #trivia-fields, #infographic-fields) {
+    padding: 0 !important;
+    background: transparent !important;
+  }
+  /* Gap only between visible cards (hidden siblings take no space). */
+  html[data-studio-shell="on"] .studio-accordion-body { display: grid !important; gap: 16px; }
+  html[data-studio-shell="on"] .studio-accordion-body > * { min-width: 0; margin-top: 0 !important; margin-bottom: 0 !important; }
+  /* The older divider between cards would sit flush on the next label now that
+     cards have no padding (and counts hidden siblings): the gap separates them. */
+  html[data-studio-shell="on"] .studio-accordion-body > * + * { border-top: 0 !important; }
+  /* Only one section: no header to open or close, just the fields. */
+  html[data-studio-shell="on"] .studio-accordion-list.is-single .studio-accordion-section { border-top: 0 !important; }
+  html[data-studio-shell="on"] .studio-accordion-list.is-single .studio-accordion-trigger { display: none !important; }
+  html[data-studio-shell="on"] .studio-accordion-list.is-single .studio-accordion-body { padding-top: 16px !important; }
+}
+
+/* Dark theme (colours from theme.css) */
+html[data-theme="dark"] .ig-card,
+html[data-theme="dark"] .ig-input,
+html[data-theme="dark"] :is(.ig-chip, .ig-icon-btn) {
+  background: var(--theme-dark-surface, #121212);
+  border-color: var(--theme-dark-border, #303030);
+  color: var(--theme-dark-text, #f3f5f7);
+}
+html[data-theme="dark"] .ig-card[open] { border-color: var(--theme-dark-border-strong, #444); }
+html[data-theme="dark"] :is(.ig-card-head:hover, .ig-adjust, .ig-card-thumb, .ig-photo-thumb, .ig-chip:hover, .ig-icon-btn:hover, .ig-reset:hover) {
+  background: var(--theme-dark-surface-hover, #232323);
+}
+html[data-theme="dark"] :is(.ig-card-titles strong, .ig-photo-info strong) { color: var(--theme-dark-text, #f3f5f7); }
+html[data-theme="dark"] :is(.ig-card-titles span, .ig-photo-info span, .ig-label, .ig-cell-label, .ig-reset, .ig-card-chevron, .ig-card-thumb, .ig-adjust .infographic-slider) {
+  color: var(--theme-dark-text-muted, #b6b6b6) !important;
+}
+html[data-theme="dark"] .ig-icon-btn.is-active { background: var(--theme-dark-accent-soft, rgba(37, 134, 247, .17)); border-color: var(--theme-dark-accent, #2586f7); color: #fff; }
+@media (min-width: 901px) {
+  html[data-theme="dark"][data-studio-shell="on"] .studio-content-sections { background: transparent !important; }
+  html[data-theme="dark"][data-studio-shell="on"] .studio-accordion-section { border-top-color: var(--theme-dark-border, #303030) !important; }
+  html[data-theme="dark"][data-studio-shell="on"] .studio-export-section { border-bottom-color: var(--theme-dark-border, #303030); }
+  html[data-theme="dark"][data-studio-shell="on"] .panel :is(.card-title, .widget-field-label, .tod-label) {
+    color: var(--theme-dark-text-muted, #b6b6b6) !important;
+  }
+}

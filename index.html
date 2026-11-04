@@ -2118,8 +2118,31 @@
   }
   #widget-main-fields,
   #widget-picks-fields,
-  #trivia-fields {
+  #trivia-fields,
+  #infographic-fields {
     display: none;
+  }
+  /* Shown, and laid out, by studio-inspector.css. */
+  body[data-current-page="newsletter"][data-newsletter-infographic="on"] .text-card,
+  body[data-current-page="newsletter"][data-newsletter-infographic="on"] #pill-position-card,
+  body[data-current-page="newsletter"][data-newsletter-infographic="on"] #swipe-button-card,
+  body[data-current-page="newsletter"][data-newsletter-infographic="on"] .color-card,
+  body[data-current-page="newsletter"][data-newsletter-infographic="on"][data-infographic-photo="off"] .image-tool-rail,
+  body[data-current-page="newsletter"][data-newsletter-infographic="on"][data-infographic-photo="off"] .studio-inspector-tabs,
+  body[data-current-page="newsletter"][data-newsletter-infographic="on"][data-infographic-photo="off"] .canvas-primary-actions {
+    display: none !important;
+  }
+  .infographic-slider {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    align-items: center;
+    gap: 8px;
+    color: var(--es-ink-2, #5B6472);
+    font-size: 13px;
+  }
+  .infographic-slider input[type="range"] {
+    width: 100%;
+    accent-color: var(--es-brand, #0A63C9);
   }
   body[data-current-page="newsletter"][data-newsletter-asset="trivia"] #trivia-fields {
     display: block;
@@ -3148,6 +3171,15 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
   }
 
+  /* GUIDELINES HUB TABS */
+  nav.guide-tabs { display: none; }
+  body:is([data-current-page="logo-guidelines"], [data-current-page="social-guidelines"], [data-current-page="video-guidelines"], [data-current-page="faq"]) .guide-tabs {
+    display: flex;
+    width: min(520px, calc(100% - 32px));
+    margin: 28px auto 0;
+  }
+  .guide-tabs .es-segmented__item { text-decoration: none; padding: 0 10px; }
+
   /* BRAND GUIDELINES */
   .guidelines-page {
     width: min(1030px, calc(100% - 48px));
@@ -3360,6 +3392,28 @@ body[data-current-page="faq"] .faq-cta-art img {
     width: min(100%, 540px);
     flex-basis: 540px;
   }
+  @media (min-width: 901px) {
+    html[data-studio-shell="on"] .canvas-empty-hint:not([hidden]) {
+      position: absolute;
+      inset: 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1.5px dashed var(--es-line-2, #d3d7de);
+      border-radius: 14px;
+      color: var(--es-ink-3, #6b7280);
+      font-family: var(--es-font-ui);
+      text-align: center;
+      pointer-events: none;
+    }
+    html[data-studio-shell="on"] .canvas-empty-hint svg { width: 32px; height: 32px; margin-bottom: 4px; }
+    html[data-studio-shell="on"] .canvas-empty-hint strong { color: var(--es-ink-2, #464c57); font-size: 16px; font-weight: 600; }
+    html[data-studio-shell="on"] .canvas-empty-hint span { max-width: 240px; font-size: 13px; line-height: 1.4; }
+  }
+  .canvas-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; pointer-events: auto; }
+
   .canvas-wrap {
     position: relative;
     width: 100%;
@@ -5693,6 +5747,19 @@ body[data-current-page="faq"] .faq-cta-art img {
       gap: 14px;
     }
 
+    /* Stack the newsletter pickers so long template names are not cut off. */
+    html[data-studio-shell="on"] .newsletter-control-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* Only one usable content category: hide the picker. */
+    html[data-studio-shell="on"] .youtube-control-row.is-single-category #youtube-category-card {
+      display: none !important;
+    }
+    html[data-studio-shell="on"] .youtube-control-row.is-single-category #youtube-quote-control {
+      grid-column: 1 / -1;
+    }
+
     html[data-studio-shell="on"] .youtube-control-row > .card,
     html[data-studio-shell="on"] .newsletter-control-row > .card {
       margin: 0;
@@ -7459,17 +7526,18 @@ body[data-current-page="faq"] .faq-cta-art img {
     pointer-events: none;
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20261028-mobile2">
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20261104-ux1">
+<link rel="stylesheet" href="studio-inspector.css?v=20261104-ux4">
 <link rel="stylesheet" href="theme.css?v=20261023-ux1">
 <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
 <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
 <link rel="stylesheet" href="how-it-works.css?v=20261023-ux1">
-<link rel="stylesheet" href="design-tokens.css?v=20261028-mobile2">
-<link rel="stylesheet" href="es-ui.css?v=20261031-ticker1">
+<link rel="stylesheet" href="design-tokens.css?v=20261103-linkname">
+<link rel="stylesheet" href="es-ui.css?v=20261104-ux4">
 <script src="theme.js?v=20260712-darkmode12"></script>
 <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
-<script src="site-chrome.js?v=20261024-live1"></script>
-<script src="app-shell.js?v=20261031-ticker1"></script>
+<script src="site-chrome.js?v=20261104-ux4"></script>
+<script src="app-shell.js?v=20261104-ux3"></script>
 </head>
 <body>
 
@@ -8382,6 +8450,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
       <input type="file" id="trivia-upload-input" accept="image/*" hidden>
     </div>
+    <div id="infographic-fields" aria-label="Infographic content"></div>
     <input type="file" id="widget-upload-input" accept="image/*" hidden>
 
   </div><!-- end .panel -->
@@ -8393,10 +8462,14 @@ body[data-current-page="faq"] .faq-cta-art img {
         <div class="canvas-stack">
           <div class="canvas-wrap">
             <canvas id="preview" width="1080" height="1350"></canvas>
-            <div class="canvas-empty-hint" data-canvas-empty-hint hidden aria-hidden="true">
+            <div class="canvas-empty-hint" data-canvas-empty-hint hidden>
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="10" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m4.5 17 5-5 4 3.5 3-2.5 4.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <strong>Add an image</strong>
-              <span>Golden State Warriors</span>
+              <strong>Start with an image</strong>
+              <span>Upload a photo or pick one from the ES Image Pool.</span>
+              <div class="canvas-empty-actions">
+                <button class="es-btn es-btn--primary es-btn--sm" type="button" data-canvas-empty-upload>Upload image</button>
+                <button class="es-btn es-btn--ghost es-btn--sm" type="button" data-canvas-empty-pool>ES Image Pool</button>
+              </div>
             </div>
             <div class="canvas-image-edit-frame" data-canvas-image-edit-frame hidden aria-hidden="true">
               <button class="canvas-image-edit-handle is-top-left" type="button" data-canvas-image-scale-handle="top-left" aria-label="Scale selected image from top left"></button>
@@ -8819,6 +8892,28 @@ body[data-current-page="faq"] .faq-cta-art img {
   </aside>
 </main>
 
+<!-- GUIDELINES HUB: one tab strip for the four guide pages -->
+<nav class="guide-tabs es-segmented" aria-label="Guidelines">
+  <a class="es-segmented__item" href="#logo-guidelines" data-guide="logo-guidelines">Logo</a>
+  <a class="es-segmented__item" href="#social-guidelines" data-guide="social-guidelines">Social Media</a>
+  <a class="es-segmented__item" href="#video-guidelines" data-guide="video-guidelines">Video</a>
+  <a class="es-segmented__item" href="#faq" data-guide="faq">FAQ</a>
+</nav>
+<script>
+  (() => {
+    const sync = () => {
+      const page = window.location.hash.replace('#', '');
+      document.querySelectorAll('.guide-tabs [data-guide]').forEach(tab => {
+        const active = tab.dataset.guide === page;
+        tab.classList.toggle('is-active', active);
+        if (active) tab.setAttribute('aria-current', 'page'); else tab.removeAttribute('aria-current');
+      });
+    };
+    sync();
+    window.addEventListener('hashchange', sync);
+  })();
+</script>
+
 <!-- BRAND GUIDELINES -->
 <section class="guidelines-page view-hidden" data-page="logo-guidelines" aria-labelledby="logo-guidelines-title">
   <header class="guidelines-hero guidelines-hero-simple">
@@ -9158,6 +9253,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 <script src="listicle-data.js"></script>
 <script src="listicle-type2-data.js"></script>
 <script src="asap-template-data.js"></script>
+<script src="infographic-templates.js?v=20261104-ux4"></script>
 <script>
 
 // â”€â”€â”€ EMBEDDED DATA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -10386,6 +10482,7 @@ function selectImageTool(tool, openPanel = true) {
 }
 
 function initImageToolRail() {
+  initCanvasEmptyHint();
   document.querySelector('[data-background-upload]')?.addEventListener('click', event => {
     event.stopPropagation();
     setImageToolPanelOpen(false);
@@ -13028,6 +13125,8 @@ function getActivePostTypeConfig() {
         ? drawNewsletterYoutubeFI
         : activeNewsletterAsset === 'tag-fi'
         ? drawNewsletterTagFI
+        : isInfographicAsset()
+        ? drawInfographic
         : drawCoverPost,
       getPayload: () => null,
     };
@@ -13967,9 +14066,11 @@ function drawTwitterQuotePost(ctx, W, H, scale) {
   const cardH = Math.max(sx(250), cardPad + headerH + sx(18) + bodyH + footerH + cardPad);
   const cardY = H - cardH - bottomMargin;
   ctx.save();
+  // Shadows are in device pixels (they ignore the preview's transform).
+  const shadowScale = ctx.getTransform?.().a || 1;
   ctx.shadowColor = 'rgba(0,0,0,.32)';
-  ctx.shadowBlur = sx(28);
-  ctx.shadowOffsetY = sx(16);
+  ctx.shadowBlur = sx(28) * shadowScale;
+  ctx.shadowOffsetY = sx(16) * shadowScale;
   drawRoundedRect(ctx, cardX, cardY, cardW, cardH, sx(16));
   ctx.fillStyle = '#FFFFFF';
   ctx.fill();
@@ -15991,10 +16092,26 @@ function renderRestoredContextNow() {
   flushPendingRender();
 }
 
+// How many canvas pixels per design pixel the preview needs to look sharp at
+// its current on-screen size (retina screens and small designs shown large).
+function getPreviewDensity(canvas, workspace) {
+  const shown = canvas.getBoundingClientRect().width || workspace.width;
+  const needed = (shown * (window.devicePixelRatio || 1)) / workspace.width;
+  // Capped at about a 4K canvas so big zooms stay responsive.
+  const budget = Math.sqrt(8300000 / (workspace.width * workspace.height));
+  return Math.max(1, Math.min(3, budget, Math.ceil(needed * 4) / 4));
+}
+
 function _render() {
   const canvas = document.getElementById('preview');
   const workspace = getWorkspace();
   const ctx = canvas.getContext('2d');
+  const density = getPreviewDensity(canvas, workspace);
+  const backingWidth = Math.round(workspace.width * density);
+  const backingHeight = Math.round(workspace.height * density);
+  if (canvas.width !== backingWidth) canvas.width = backingWidth;
+  if (canvas.height !== backingHeight) canvas.height = backingHeight;
+  ctx.setTransform(density, 0, 0, density, 0, 0);
   const renderContextKey = getTextContextKey();
   imageEditBoundsByTool = new Map();
   if (contextUsesPillLayout(renderContextKey) && lastRenderedTextContextKey !== renderContextKey) {
@@ -16005,6 +16122,7 @@ function _render() {
     }
   }
   drawCanvas(ctx, workspace.width, workspace.height, 1);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (contextUsesPillLayout() && state.lines.length) {
     saveTextContext();
   }
@@ -16014,19 +16132,39 @@ function _render() {
   syncCanvasEmptyHint();
 }
 
-// Purely a DOM overlay next to the canvas (mobile only); never touches the
-// canvas bitmap, so it cannot affect what gets exported. Scoped to the one
-// truly-blank first-load case (default Cover Image, nothing added yet) so it
-// never second-guesses a post type that has its own default content.
+// Purely a DOM overlay on the canvas; never touches the canvas bitmap, so it
+// cannot affect what gets exported. Scoped to the truly blank cases (a Social
+// cover or a single-image YouTube thumbnail with nothing added yet) so it never
+// covers a template that has its own default content.
 function syncCanvasEmptyHint() {
   const hint = document.querySelector('[data-canvas-empty-hint]');
   if (!hint) return;
   const isBlankCover = activeWorkspace === 'instagram'
     && (state.postType || 'cover') === 'cover'
     && !state.photo
+    && !state.entityPhoto
+    && !state.entityPhoto2
     && state.lines.length === 0
     && (!state.swipeButton || state.swipeButton === 'none');
-  hint.hidden = !isBlankCover;
+  const isBlankThumbnail = activeWorkspace === 'youtube'
+    && activeYoutubeVariation === 'variation-1'
+    && !state.youtubeQuote
+    && !state.photo
+    && !state.entityPhoto
+    && !state.entityPhoto2
+    && state.lines.length === 0;
+  hint.hidden = !(isBlankCover || isBlankThumbnail);
+}
+
+function initCanvasEmptyHint() {
+  document.querySelector('[data-canvas-empty-upload]')?.addEventListener('click', event => {
+    event.stopPropagation();
+    document.getElementById('photo-input')?.click();
+  });
+  document.querySelector('[data-canvas-empty-pool]')?.addEventListener('click', event => {
+    event.stopPropagation();
+    document.querySelector('[data-ai-image-search]')?.click();
+  });
 }
 
 function getCanvasPoint(evt) {
@@ -16649,6 +16787,49 @@ function showImageLinkDialog(url) {
   });
 }
 
+// Turns a typed name into a safe link name: lowercase letters, numbers, dashes.
+function toLinkName(text) {
+  return String(text || '')
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80)
+    .replace(/-+$/g, '');
+}
+
+// Asks what the link should be called. Resolves to the name, or null if cancelled.
+function askImageLinkName(suggested, folder, extension) {
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = value => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    showEsDialog({
+      title: 'Name your image link',
+      body: 'Anyone with the link can view the image, and the link never expires.',
+      field: {
+        label: 'Link name',
+        value: suggested,
+        placeholder: 'e.g. bears-vs-packers-trivia',
+        maxLength: 100,
+        hint: value => `Link ends with …/${folder}/${toLinkName(value) || suggested}${extension}`,
+      },
+      actions: [
+        { label: 'Cancel', variant: 'quiet', onClick: () => finish(null) },
+        { label: 'Create link', variant: 'primary', onClick: value => finish(toLinkName(value) || suggested) },
+      ],
+      onClose: () => finish(null),
+    });
+  });
+}
+
+function isDuplicateUploadError(error) {
+  return String(error?.statusCode) === '409' || /already exists|duplicate/i.test(error?.message || '');
+}
+
 // Uploads the exported image to a public Storage folder and copies its
 // permanent link. Uploading needs an approved, signed-in FrameUp account.
 async function copyImageLink() {
@@ -16662,21 +16843,35 @@ async function copyImageLink() {
     showToast('Sign in to FrameUp to create image links.', 'error');
     return;
   }
+  if (isInfographicStillLoading()) {
+    showToast('The design is still loading. Try again in a moment.', 'error');
+    return;
+  }
   if (button) button.disabled = true;
-  if (label) label.textContent = 'Uploading…';
   try {
     const { offscreen, filename, workspace, exportQuality } = renderExportImage();
     const blob = await canvasToBlob(offscreen, workspace.exportType, exportQuality);
     const now = new Date();
-    const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\..*$/, '').replace('T', '-');
-    const safeName = filename.toLowerCase().replace(/[^a-z0-9.-]+/g, '-');
-    const path = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${stamp}-${Math.random().toString(36).slice(2, 6)}-${safeName}`;
-    const { error } = await client.storage.from(FRAMEUP_LINKS_BUCKET).upload(path, blob, {
-      contentType: blob.type || workspace.exportType,
-      cacheControl: '31536000',
-      upsert: false,
-    });
-    if (error) throw error;
+    const folder = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+    const extension = (filename.match(/\.[a-z0-9]+$/i)?.[0] || '.jpeg').toLowerCase();
+    const suggested = toLinkName(filename.replace(/\.[a-z0-9]+$/i, '')) || 'frameup-image';
+    const name = await askImageLinkName(suggested, folder, extension);
+    if (!name) return;
+    if (label) label.textContent = 'Uploading…';
+    // Links are permanent, so an existing name is never overwritten: a taken
+    // name gets -2, -3… and finally a short random ending.
+    let path = '';
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const suffix = attempt === 0 ? '' : attempt < 5 ? `-${attempt + 1}` : `-${Math.random().toString(36).slice(2, 6)}`;
+      path = `${folder}/${name}${suffix}${extension}`;
+      const { error } = await client.storage.from(FRAMEUP_LINKS_BUCKET).upload(path, blob, {
+        contentType: blob.type || workspace.exportType,
+        cacheControl: '31536000',
+        upsert: false,
+      });
+      if (!error) break;
+      if (!isDuplicateUploadError(error) || attempt === 5) throw error;
+    }
     const url = client.storage.from(FRAMEUP_LINKS_BUCKET).getPublicUrl(path).data.publicUrl;
     if (await copyTextToClipboard(url)) {
       showToast('Image link copied', 'success');
@@ -16813,6 +17008,7 @@ function applyDesignHistoryEntry(entry) {
   state.isDraggingText = false;
   const textarea = document.getElementById('pill-text');
   if (textarea) textarea.value = (state.lines || []).join('\n');
+  if (activeWorkspace === 'newsletter') syncInfographicAfterHistory();
   syncWorkspaceControls();
   if (activeWorkspace === 'instagram') updateInstagramSlideNavigation();
   renderRestoredContextNow();
@@ -16885,6 +17081,938 @@ function getMissingExportImage() {
   return null;
 }
 
+// ─── NEWSLETTER INFOGRAPHICS ──────────────────────────────────────────────────
+// Templates live in infographic-templates.js (see project-docs/infographics.md).
+// Each one is registered as its own newsletter asset ('ig-<id>'), drawn from its
+// layer list, and edited through a panel generated from its text/photo layers.
+// Photos can be dragged on the canvas or adjusted with the panel sliders.
+
+const INFOGRAPHIC_ASSET_PREFIX = 'ig-';
+const INFOGRAPHIC_SHOW_DRAFTS = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)
+  || new URLSearchParams(location.search).has('drafts');
+const INFOGRAPHIC_TEMPLATES = (Array.isArray(window.ES_INFOGRAPHIC_TEMPLATES) ? window.ES_INFOGRAPHIC_TEMPLATES : [])
+  .filter(template => template && template.id && template.width && template.height)
+  .filter(template => !template.draft || INFOGRAPHIC_SHOW_DRAFTS);
+const infographicStaticImages = new Map();
+const infographicFontsReady = new Set();
+
+function isInfographicAsset(assetType = activeNewsletterAsset) {
+  return String(assetType || '').startsWith(INFOGRAPHIC_ASSET_PREFIX);
+}
+
+function getInfographicTemplate(assetType = activeNewsletterAsset) {
+  if (!isInfographicAsset(assetType)) return null;
+  const id = assetType.slice(INFOGRAPHIC_ASSET_PREFIX.length);
+  return INFOGRAPHIC_TEMPLATES.find(template => template.id === id) || null;
+}
+
+function getInfographicMainPhotoLayer(template) {
+  return template?.layers.find(layer => layer.type === 'photo' && layer.main) || null;
+}
+
+function loadInfographicStaticImage(src) {
+  if (!src || infographicStaticImages.has(src)) return;
+  const img = new Image();
+  img.decoding = 'async';
+  img.onload = () => {
+    if (isInfographicAsset()) render();
+  };
+  img.src = src;
+  infographicStaticImages.set(src, img);
+}
+
+function getReadyInfographicImage(src) {
+  const img = infographicStaticImages.get(src);
+  return img?.complete && img.naturalWidth ? img : null;
+}
+
+function infographicFontFamily(layer) {
+  const family = layer.font?.family || POST_FONT_FAMILY;
+  return family.includes(',') ? family : `"${family}", "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+}
+
+function infographicFont(layer, size) {
+  return `${layer.font?.weight || 900} ${Math.round(size * 100) / 100}px ${infographicFontFamily(layer)}`;
+}
+
+// Canvas only draws fonts that are already loaded, so load a template's fonts first.
+function ensureInfographicFonts(template) {
+  if (!template || infographicFontsReady.has(template.id) || !document.fonts?.load) return;
+  infographicFontsReady.add(template.id);
+  const loads = template.layers
+    .filter(layer => layer.type === 'text')
+    .map(layer => document.fonts.load(infographicFont(layer, 40)).catch(() => null));
+  Promise.all(loads).then(() => {
+    if (getInfographicTemplate() === template) render();
+  });
+}
+
+function registerInfographicTemplates() {
+  const select = document.getElementById('newsletter-asset-select');
+  INFOGRAPHIC_TEMPLATES.forEach(template => {
+    const assetType = INFOGRAPHIC_ASSET_PREFIX + template.id;
+    const mainPhoto = getInfographicMainPhotoLayer(template);
+    NEWSLETTER_ASSET_TYPES[assetType] = {
+      label: template.label,
+      slug: template.slug || template.id,
+      placeholder: '',
+      maxLines: 0,
+      photoTitle: mainPhoto ? `Select ${mainPhoto.label || 'Photo'}` : template.label,
+      photoRole: mainPhoto ? (mainPhoto.label || 'photo').toLowerCase() : 'infographic',
+      workspace: {
+        width: template.width,
+        height: template.height,
+        exportType: template.exportType || 'image/jpeg',
+        exportExtension: template.exportType === 'image/png' ? 'png' : 'jpeg',
+        exportScale: template.exportScale || 1,
+        maxLines: 0,
+        defaultBottomAnchor: 0,
+        randomBottomMin: 0,
+        randomBottomRange: 0,
+      },
+    };
+    if (!mainPhoto) IMAGELESS_NEWSLETTER_ASSETS.add(assetType);
+    getInfographicStore(template);
+    if (select && !select.querySelector(`option[value="${assetType}"]`)) {
+      const option = document.createElement('option');
+      option.value = assetType;
+      option.textContent = template.draft ? `${template.label} (draft)` : template.label;
+      select.appendChild(option);
+    }
+  });
+}
+
+// Export waits until the template's own images have loaded.
+function isInfographicStillLoading() {
+  const template = isInfographicAsset() ? getInfographicTemplate() : null;
+  if (!template) return false;
+  ensureInfographicImages(template);
+  return template.layers.some(layer => {
+    const src = layer.type === 'image' ? layer.src : layer.type === 'photo' ? layer.placeholder?.src : '';
+    const img = src && infographicStaticImages.get(src);
+    return Boolean(img && !img.complete);
+  });
+}
+
+function ensureInfographicImages(template) {
+  template.layers.forEach(layer => {
+    if (layer.type === 'image') loadInfographicStaticImage(layer.src);
+    if (layer.type === 'photo' && layer.placeholder) loadInfographicStaticImage(layer.placeholder.src);
+  });
+}
+
+function infographicStorageKey(template) {
+  return `frameup.infographic.${template.id}`;
+}
+
+// Each template's edits — text values, uploaded photos ({ img, url }) and photo
+// positions ({ zoom, dx, dy }) — live in the Newsletter design state, so Undo /
+// Redo covers them. Typed text is also remembered in this browser.
+function getInfographicStore(template) {
+  const design = workspaceStates.newsletter;
+  const stores = design.infographic || (design.infographic = {});
+  if (!stores[template.id]) {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(infographicStorageKey(template)) || '{}') || {}; } catch (error) { saved = {}; }
+    stores[template.id] = { values: saved, photos: {}, adjust: {} };
+  }
+  return stores[template.id];
+}
+
+function getInfographicValues(template) {
+  return getInfographicStore(template).values;
+}
+
+function getInfographicPhoto(template, layer) {
+  return getInfographicStore(template).photos[layer.id] || null;
+}
+
+function saveInfographicText(template) {
+  try { localStorage.setItem(infographicStorageKey(template), JSON.stringify(getInfographicValues(template))); } catch (error) { /* per-viewer convenience only */ }
+}
+
+// After Undo / Redo: keep the remembered text in step and rebuild the panel.
+function syncInfographicAfterHistory() {
+  INFOGRAPHIC_TEMPLATES.forEach(template => {
+    if (workspaceStates.newsletter.infographic?.[template.id]) saveInfographicText(template);
+  });
+  renderedInfographicFieldsFor = '';
+}
+
+function getInfographicText(template, layer) {
+  if (!layer.id) return String(layer.text ?? '');
+  const values = getInfographicValues(template);
+  return String(values[layer.id] ?? layer.default ?? '');
+}
+
+function setInfographicText(template, layerId, value) {
+  getInfographicValues(template)[layerId] = value;
+  saveInfographicText(template);
+}
+
+function getInfographicAdjust(template, layer) {
+  const adjust = getInfographicStore(template).adjust;
+  adjust[layer.id] = adjust[layer.id] || { zoom: 1, dx: 0, dy: 0 };
+  return adjust[layer.id];
+}
+
+// Wraps text to the box width; returns null when it needs more than maxLines.
+function wrapInfographicText(ctx, text, maxWidth, maxLines) {
+  const lines = [];
+  for (const paragraph of text.split('\n')) {
+    const words = paragraph.split(/\s+/).filter(Boolean);
+    if (!words.length) {
+      lines.push('');
+      continue;
+    }
+    let line = '';
+    for (const word of words) {
+      const next = line ? `${line} ${word}` : word;
+      if (ctx.measureText(next).width <= maxWidth || !line) {
+        line = next;
+      } else {
+        lines.push(line);
+        line = word;
+      }
+    }
+    lines.push(line);
+  }
+  const tooWide = lines.some(line => ctx.measureText(line).width > maxWidth);
+  return lines.length > maxLines || tooWide ? null : lines;
+}
+
+function truncateInfographicLine(ctx, text, maxWidth) {
+  let line = text;
+  while (line && ctx.measureText(`${line}…`).width > maxWidth) line = line.slice(0, -1);
+  return `${line.trimEnd()}…`;
+}
+
+// Text on its own coloured box (one line), e.g. a name tag. The box hugs the
+// text; the text shrinks when the box would get wider than the layer.
+function drawInfographicBoxText(ctx, layer, text, scale) {
+  const box = layer.box;
+  const padL = (box.padL ?? 6) * scale;
+  const padR = (box.padR ?? 6) * scale;
+  // scaleX narrows the glyphs, to match a more condensed design font.
+  const scaleX = layer.font?.scaleX || 1;
+  const maxText = Math.max(1, (layer.w * scale - padL - padR) / scaleX);
+  const startSize = (layer.font?.size || 40) * scale;
+  const minSize = (layer.font?.minSize || layer.font?.size || 40) * scale;
+  let size = startSize;
+  ctx.font = infographicFont(layer, size);
+  while (size > minSize && ctx.measureText(text).width > maxText) {
+    size = Math.max(minSize, size - scale * 0.5);
+    ctx.font = infographicFont(layer, size);
+  }
+  const line = ctx.measureText(text).width > maxText ? truncateInfographicLine(ctx, text, maxText) : text;
+  const textWidth = ctx.measureText(line).width * scaleX;
+  const boxW = textWidth + padL + padR;
+  const boxH = (box.height || layer.h) * scale;
+  const align = layer.align || 'left';
+  const left = align === 'center' ? (layer.x + layer.w / 2) * scale - boxW / 2
+    : align === 'right' ? (layer.x + layer.w) * scale - boxW
+    : layer.x * scale;
+  const top = layer.y * scale;
+  ctx.fillStyle = box.fill || '#FFFFFF';
+  ctx.fillRect(left, top, boxW, boxH);
+  ctx.fillStyle = layer.color || '#000000';
+  ctx.textAlign = 'left';
+  // Baseline sits a fixed distance above the box bottom; scales with the font.
+  const baselineFromBottom = (box.baselineFromBottom ?? 0) * scale * (size / startSize);
+  ctx.translate(left + padL, top + boxH - baselineFromBottom);
+  ctx.scale(scaleX, 1);
+  ctx.fillText(line, 0, 0);
+}
+
+function drawInfographicText(ctx, template, layer, scale) {
+  let text = getInfographicText(template, layer);
+  if (layer.uppercase) text = text.toUpperCase();
+  if (!text.trim()) return;
+  ctx.save();
+  if ('letterSpacing' in ctx) ctx.letterSpacing = `${(layer.letterSpacing || 0) * scale}px`;
+  ctx.textBaseline = 'alphabetic';
+  if (layer.box) {
+    drawInfographicBoxText(ctx, layer, text.trim(), scale);
+    ctx.restore();
+    return;
+  }
+  const x = layer.x * scale;
+  const y = layer.y * scale;
+  const w = layer.w * scale;
+  const h = layer.h * scale;
+  const maxLines = Math.max(1, layer.maxLines || 1);
+  const lineHeight = layer.lineHeight || 1.1;
+  const startSize = (layer.font?.size || 40) * scale;
+  const minSize = (layer.font?.minSize || layer.font?.size || 40) * scale;
+
+  let size = startSize;
+  let lines = null;
+  while (true) {
+    ctx.font = infographicFont(layer, size);
+    lines = wrapInfographicText(ctx, text, w, maxLines);
+    const fitsHeight = lines && (lines.length - 1) * size * lineHeight + size <= h + 1;
+    if (lines && (fitsHeight || layer.baseline != null)) break;
+    if (size <= minSize) break;
+    size = Math.max(minSize, size - scale * 0.5);
+  }
+  if (!lines) {
+    // Still too long at the smallest size: keep what fits and end with "…".
+    lines = [];
+    const words = text.replace(/\n/g, ' ').split(/\s+/).filter(Boolean);
+    let line = '';
+    for (const word of words) {
+      const next = line ? `${line} ${word}` : word;
+      if (ctx.measureText(next).width <= w || !line) line = next;
+      else {
+        lines.push(line);
+        line = word;
+        if (lines.length === maxLines) break;
+      }
+    }
+    if (lines.length < maxLines) lines.push(line);
+    lines = lines.slice(0, maxLines);
+    lines[maxLines - 1] = truncateInfographicLine(ctx, lines[maxLines - 1] || '', w);
+  }
+
+  const align = layer.align || 'left';
+  ctx.textAlign = align;
+  ctx.fillStyle = layer.color || '#FFFFFF';
+  const capHeight = ctx.measureText('H').actualBoundingBoxAscent || size * .7;
+  const step = size * lineHeight;
+  let firstBaseline;
+  if (layer.baseline != null) {
+    // Baseline of the last line is pinned (design value); extra lines grow upward.
+    firstBaseline = layer.baseline * scale - (lines.length - 1) * step;
+  } else {
+    const blockHeight = (lines.length - 1) * step + capHeight;
+    const valign = layer.valign || 'top';
+    const top = valign === 'middle' ? y + (h - blockHeight) / 2
+      : valign === 'bottom' ? y + h - blockHeight
+      : y;
+    firstBaseline = top + capHeight;
+  }
+  const textX = align === 'center' ? x + w / 2 : align === 'right' ? x + w : x;
+  lines.forEach((line, index) => ctx.fillText(line, textX, firstBaseline + index * step));
+  ctx.restore();
+}
+
+// Rounded rect with one radius or [topLeft, topRight, bottomRight, bottomLeft].
+function infographicRoundRectPath(ctx, x, y, w, h, radius) {
+  const r = (Array.isArray(radius) ? radius : [radius, radius, radius, radius])
+    .map(value => Math.max(0, Math.min(value || 0, w / 2, h / 2)));
+  ctx.moveTo(x + r[0], y);
+  ctx.lineTo(x + w - r[1], y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r[1]);
+  ctx.lineTo(x + w, y + h - r[2]);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r[2], y + h);
+  ctx.lineTo(x + r[3], y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r[3]);
+  ctx.lineTo(x, y + r[0]);
+  ctx.quadraticCurveTo(x, y, x + r[0], y);
+  ctx.closePath();
+}
+
+function infographicShapePath(ctx, layer, scale) {
+  ctx.beginPath();
+  if (layer.points) {
+    layer.points.forEach(([px, py], index) => ctx[index ? 'lineTo' : 'moveTo'](px * scale, py * scale));
+    ctx.closePath();
+    return;
+  }
+  const x = layer.x * scale;
+  const y = layer.y * scale;
+  const w = layer.w * scale;
+  const h = layer.h * scale;
+  if (layer.shape === 'circle') {
+    ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+    ctx.closePath();
+  } else if (layer.radius) {
+    infographicRoundRectPath(ctx, x, y, w, h, Array.isArray(layer.radius) ? layer.radius.map(r => r * scale) : layer.radius * scale);
+  } else {
+    ctx.rect(x, y, w, h);
+  }
+}
+
+function getInfographicLayerBounds(layer) {
+  if (!layer.points) return { x: layer.x, y: layer.y, w: layer.w, h: layer.h };
+  const xs = layer.points.map(point => point[0]);
+  const ys = layer.points.map(point => point[1]);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+}
+
+function createInfographicGradient(ctx, gradientSpec, scale) {
+  const g = gradientSpec;
+  const gradient = ctx.createLinearGradient(g.from[0] * scale, g.from[1] * scale, g.to[0] * scale, g.to[1] * scale);
+  g.stops.forEach(([offset, color]) => gradient.addColorStop(offset, color));
+  return gradient;
+}
+
+function drawInfographicRect(ctx, layer, scale) {
+  ctx.save();
+  if (layer.opacity != null) ctx.globalAlpha = layer.opacity;
+  infographicShapePath(ctx, layer, scale);
+  if (layer.gradient) {
+    ctx.fillStyle = createInfographicGradient(ctx, layer.gradient, scale);
+    ctx.fill();
+  } else if (layer.fill) {
+    ctx.fillStyle = layer.fill;
+    ctx.fill();
+  }
+  if (layer.stroke) {
+    ctx.strokeStyle = layer.stroke;
+    ctx.lineWidth = (layer.strokeWidth || 1) * scale;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// Lines and outlines. outside: true keeps only the half of the stroke outside a
+// closed shape (Figma's "outside" stroke), e.g. the white edge of a slanted panel.
+function drawInfographicPath(ctx, template, layer, scale) {
+  ctx.save();
+  if (layer.outside) {
+    ctx.beginPath();
+    ctx.rect(0, 0, template.width * scale, template.height * scale);
+    layer.points.forEach(([px, py], index) => ctx[index ? 'lineTo' : 'moveTo'](px * scale, py * scale));
+    ctx.closePath();
+    ctx.clip('evenodd');
+  }
+  ctx.beginPath();
+  layer.points.forEach(([px, py], index) => ctx[index ? 'lineTo' : 'moveTo'](px * scale, py * scale));
+  if (layer.closed || layer.outside) ctx.closePath();
+  ctx.strokeStyle = layer.stroke || '#FFFFFF';
+  ctx.lineWidth = (layer.strokeWidth || 1) * scale;
+  ctx.lineJoin = 'miter';
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Draws img so it covers the box (x, y, w, h); anchor 'top'/'bottom' keeps that
+// edge, 'fill' stretches it to the box (some design crops are stretched).
+function drawInfographicCoverImage(ctx, img, x, y, w, h, anchor) {
+  if (anchor === 'fill') {
+    ctx.drawImage(img, x, y, w, h);
+    return;
+  }
+  const fit = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+  const dw = img.naturalWidth * fit;
+  const dh = img.naturalHeight * fit;
+  const dy = anchor === 'bottom' ? y + h - dh : anchor === 'top' ? y : y + (h - dh) / 2;
+  ctx.drawImage(img, x + (w - dw) / 2, dy, dw, dh);
+}
+
+function drawInfographicPhoto(ctx, template, layer, scale) {
+  const uploaded = layer.main ? state.photo : getInfographicPhoto(template, layer)?.img;
+  const placeholder = !uploaded && layer.placeholder ? getReadyInfographicImage(layer.placeholder.src) : null;
+  ctx.save();
+  infographicShapePath(ctx, layer, scale);
+  ctx.clip();
+  const bounds = getInfographicLayerBounds(layer);
+  const bx = bounds.x * scale;
+  const by = bounds.y * scale;
+  const bw = bounds.w * scale;
+  const bh = bounds.h * scale;
+  if (layer.fill || (!uploaded && !placeholder && layer.emptyFill)) {
+    ctx.fillStyle = layer.fill || layer.emptyFill;
+    ctx.fillRect(bx, by, bw, bh);
+  }
+  if (layer.main && uploaded) {
+    drawCoverImageInRect(ctx, uploaded, bx, by, bw, bh, true);
+  } else if (uploaded || placeholder) {
+    const adjust = getInfographicAdjust(template, layer);
+    const cx = bx + bw / 2;
+    const cy = by + bh / 2;
+    ctx.translate(cx + adjust.dx * scale, cy + adjust.dy * scale);
+    ctx.scale(adjust.zoom, adjust.zoom);
+    ctx.translate(-cx, -cy);
+    if (uploaded) {
+      const fit = layer.fit === 'contain'
+        ? Math.min(bw / uploaded.naturalWidth, bh / uploaded.naturalHeight)
+        : Math.max(bw / uploaded.naturalWidth, bh / uploaded.naturalHeight);
+      const dw = uploaded.naturalWidth * fit;
+      const dh = uploaded.naturalHeight * fit;
+      ctx.drawImage(uploaded, cx - dw / 2, cy - dh / 2, dw, dh);
+    } else {
+      // Placeholder keeps the crop from the design: its box, rotation and anchor.
+      const p = layer.placeholder;
+      const px = p.x * scale;
+      const py = p.y * scale;
+      const pw = p.w * scale;
+      const ph = p.h * scale;
+      if (p.rotate) {
+        ctx.translate(px + pw / 2, py + ph / 2);
+        ctx.rotate(p.rotate * Math.PI / 180);
+        ctx.translate(-(px + pw / 2), -(py + ph / 2));
+      }
+      ctx.beginPath();
+      ctx.rect(px, py, pw, ph);
+      ctx.clip();
+      drawInfographicCoverImage(ctx, placeholder, px, py, pw, ph, p.anchor);
+    }
+  }
+  ctx.restore();
+}
+
+function drawInfographic(ctx, W, H, scale) {
+  const template = getInfographicTemplate();
+  ctx.clearRect(0, 0, W, H);
+  if (!template) return;
+  ensureInfographicFonts(template);
+  ensureInfographicImages(template);
+  ctx.fillStyle = template.background || '#FFFFFF';
+  ctx.fillRect(0, 0, W, H);
+  template.layers.forEach(layer => {
+    if (layer.type === 'image') {
+      const img = getReadyInfographicImage(layer.src);
+      if (img) {
+        ctx.save();
+        if (layer.opacity != null) ctx.globalAlpha = layer.opacity;
+        ctx.drawImage(img, (layer.x || 0) * scale, (layer.y || 0) * scale, (layer.w || template.width) * scale, (layer.h || template.height) * scale);
+        ctx.restore();
+      }
+    } else if (layer.type === 'rect') {
+      drawInfographicRect(ctx, layer, scale);
+    } else if (layer.type === 'path') {
+      drawInfographicPath(ctx, template, layer, scale);
+    } else if (layer.type === 'photo') {
+      drawInfographicPhoto(ctx, template, layer, scale);
+    } else if (layer.type === 'text') {
+      drawInfographicText(ctx, template, layer, scale);
+    }
+  });
+  if (scale === 1) {
+    state.lastTextBounds = null;
+    state.textHitRects = [];
+  }
+}
+
+function getEditableInfographicPhotos(template) {
+  return template.layers.filter(layer => layer.type === 'photo' && layer.id && !layer.main);
+}
+
+// Topmost photo slot under a point (design pixels), for dragging on the canvas.
+let infographicProbe = null;
+function findInfographicPhotoAt(template, x, y) {
+  infographicProbe = infographicProbe || document.createElement('canvas').getContext('2d');
+  const probe = infographicProbe;
+  const photos = getEditableInfographicPhotos(template);
+  for (let index = photos.length - 1; index >= 0; index--) {
+    infographicShapePath(probe, photos[index], 1);
+    if (probe.isPointInPath(x, y)) return photos[index];
+  }
+  return null;
+}
+
+const infographicFieldSyncers = {};
+let renderedInfographicFieldsFor = '';
+
+function createInfographicSlider(labelText, min, max, step, getValue, setValue) {
+  const row = document.createElement('label');
+  row.className = 'infographic-slider';
+  const name = document.createElement('span');
+  name.textContent = labelText;
+  const input = document.createElement('input');
+  input.type = 'range';
+  input.min = String(min);
+  input.max = String(max);
+  input.step = String(step);
+  input.value = String(getValue());
+  input.addEventListener('input', () => {
+    setValue(Number(input.value));
+    render();
+  });
+  row.append(name, input);
+  return { row, sync: () => { input.value = String(getValue()); } };
+}
+
+const INFOGRAPHIC_ICONS = {
+  upload: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4m-5 5 5-5 5 5M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>',
+  adjust: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
+  reset: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.6"/><path d="M4 4v4.6h4.6"/></svg>',
+  chevron: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4"/></svg>',
+};
+
+// Per-template refreshers for card headers and live cell labels.
+let infographicPanelSyncers = [];
+function syncInfographicPanel() {
+  infographicPanelSyncers.forEach(sync => sync());
+}
+
+function infographicIconButton(icon, label) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'ig-icon-btn';
+  button.innerHTML = INFOGRAPHIC_ICONS[icon];
+  button.setAttribute('aria-label', label);
+  button.title = label;
+  return button;
+}
+
+function getInfographicPhotoSrc(template, layer) {
+  return getInfographicPhoto(template, layer)?.url || layer.placeholder?.src || '';
+}
+
+// One photo slot: thumbnail (click to replace), Replace, Reset, and position
+// sliders tucked behind "Adjust" (dragging on the canvas does the same).
+function buildInfographicPhotoField(template, layer) {
+  const wrap = document.createElement('div');
+  wrap.className = 'ig-photo';
+  const row = document.createElement('div');
+  row.className = 'ig-photo-row';
+  const thumb = document.createElement('button');
+  thumb.type = 'button';
+  thumb.className = 'ig-photo-thumb';
+  thumb.title = 'Replace photo';
+  thumb.setAttribute('aria-label', `Replace ${(layer.label || 'photo').toLowerCase()}`);
+  const thumbImg = document.createElement('img');
+  thumbImg.alt = '';
+  thumb.appendChild(thumbImg);
+  const info = document.createElement('div');
+  info.className = 'ig-photo-info';
+  const name = document.createElement('strong');
+  name.textContent = layer.label || 'Photo';
+  const hint = document.createElement('span');
+  hint.textContent = 'Drag to move';
+  hint.title = 'Drag the photo on the canvas to move it';
+  info.append(name, hint);
+  const replace = document.createElement('button');
+  replace.type = 'button';
+  replace.className = 'ig-chip';
+  replace.innerHTML = `${INFOGRAPHIC_ICONS.upload}<span>Replace</span>`;
+  const adjustToggle = infographicIconButton('adjust', 'Adjust zoom and position');
+  adjustToggle.setAttribute('aria-expanded', 'false');
+  const reset = infographicIconButton('reset', 'Back to the example photo and position');
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*';
+  fileInput.hidden = true;
+
+  const bounds = getInfographicLayerBounds(layer);
+  const adjust = () => getInfographicAdjust(template, layer);
+  const zoom = createInfographicSlider('Zoom', 0.5, 3, 0.01, () => adjust().zoom, value => { adjust().zoom = value; });
+  const moveX = createInfographicSlider('Left / right', -bounds.w, bounds.w, 1, () => adjust().dx, value => { adjust().dx = value; });
+  const moveY = createInfographicSlider('Up / down', -bounds.h, bounds.h, 1, () => adjust().dy, value => { adjust().dy = value; });
+  const sliders = document.createElement('div');
+  sliders.className = 'ig-adjust';
+  sliders.hidden = true;
+  sliders.append(zoom.row, moveX.row, moveY.row);
+
+  const sync = () => {
+    thumbImg.src = getInfographicPhotoSrc(template, layer);
+    zoom.sync();
+    moveX.sync();
+    moveY.sync();
+    syncInfographicPanel();
+  };
+  infographicFieldSyncers[`${template.id}:${layer.id}`] = sync;
+
+  const pick = () => {
+    fileInput.value = '';
+    fileInput.click();
+  };
+  thumb.addEventListener('click', pick);
+  replace.addEventListener('click', pick);
+  adjustToggle.addEventListener('click', () => {
+    sliders.hidden = !sliders.hidden;
+    adjustToggle.setAttribute('aria-expanded', String(!sliders.hidden));
+    adjustToggle.classList.toggle('is-active', !sliders.hidden);
+  });
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      getInfographicStore(template).photos[layer.id] = { img, url };
+      Object.assign(adjust(), { zoom: 1, dx: 0, dy: 0 });
+      sync();
+      render();
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      showToast('That file could not be opened as an image.', 'error');
+    };
+    img.src = url;
+  });
+  reset.addEventListener('click', () => {
+    delete getInfographicStore(template).photos[layer.id];
+    Object.assign(adjust(), { zoom: 1, dx: 0, dy: 0 });
+    sync();
+    render();
+  });
+  row.append(thumb, info, replace, adjustToggle, reset, fileInput);
+  wrap.append(row, sliders);
+  sync();
+  return wrap;
+}
+
+function buildInfographicTextInput(template, layer) {
+  const multiline = (layer.maxLines || 1) > 1;
+  const input = document.createElement(multiline ? 'textarea' : 'input');
+  if (!multiline) input.type = 'text';
+  input.className = 'ig-input';
+  input.id = `infographic-${template.id}-${layer.id}`;
+  input.value = getInfographicText(template, layer);
+  input.placeholder = String(layer.default || '').replace(/\n/g, ' ');
+  if (layer.maxLength) input.maxLength = layer.maxLength;
+  if (multiline) input.rows = Math.min(4, layer.maxLines);
+  input.addEventListener('input', () => {
+    setInfographicText(template, layer.id, input.value);
+    render();
+    syncInfographicPanel();
+  });
+  return input;
+}
+
+function buildInfographicTextField(template, layer) {
+  const field = document.createElement('div');
+  field.className = 'ig-field';
+  const label = document.createElement('label');
+  label.className = 'ig-label';
+  label.textContent = layer.label || layer.id;
+  const input = buildInfographicTextInput(template, layer);
+  label.htmlFor = input.id;
+  field.append(label, input);
+  return field;
+}
+
+// "Stat 1", "Stat 2" … share the stem "Stat #".
+function infographicFieldStem(layer) {
+  return String(layer.label || layer.id).replace(/\s*\d+\s*/, ' # ').trim();
+}
+
+// Short fields of one kind sit side by side. A cell can take its label from
+// another text field (e.g. each stat is labelled with its column name).
+function buildInfographicCells(template, layers, groupName = '') {
+  const field = document.createElement('div');
+  field.className = 'ig-field';
+  const stem = infographicFieldStem(layers[0]);
+  const captionText = `${stem.replace(/\s*#\s*/, ' ').trim()}s`;
+  // "Column 1 label" → "Column 1" when no other label is given.
+  const trailing = (stem.split('#')[1] || '').trim().toLowerCase();
+  const fallbackName = layer => {
+    const text = String(layer.label || layer.id);
+    return trailing && text.toLowerCase().endsWith(` ${trailing}`) ? text.slice(0, -(trailing.length + 1)) : text;
+  };
+  // Skip the caption when the card is already titled the same (e.g. "Column labels").
+  if (captionText.toLowerCase() !== String(groupName).toLowerCase()) {
+    const caption = document.createElement('span');
+    caption.className = 'ig-label';
+    caption.textContent = captionText;
+    field.appendChild(caption);
+  }
+  const grid = document.createElement('div');
+  grid.className = 'ig-cells';
+  grid.style.gridTemplateColumns = `repeat(${Math.min(layers.length, 4)}, minmax(0, 1fr))`;
+  layers.forEach(layer => {
+    const cell = document.createElement('label');
+    cell.className = 'ig-cell';
+    const name = document.createElement('span');
+    name.className = 'ig-cell-label';
+    const input = buildInfographicTextInput(template, layer);
+    const syncName = () => {
+      const source = layer.labelFrom && template.layers.find(entry => entry.type === 'text' && entry.id === layer.labelFrom);
+      name.textContent = (source ? getInfographicText(template, source).replace(/\n/g, ' ').trim() : '') || fallbackName(layer);
+    };
+    infographicPanelSyncers.push(syncName);
+    syncName();
+    cell.append(name, input);
+    grid.appendChild(cell);
+  });
+  field.appendChild(grid);
+  return field;
+}
+
+// Clicking a photo on the canvas opens its card in the panel.
+function focusInfographicGroup(groupName) {
+  const card = [...document.querySelectorAll('#infographic-fields .ig-card')].find(entry => entry.dataset.igGroup === groupName);
+  if (!card) return;
+  card.open = true;
+  card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  card.classList.remove('is-flash');
+  void card.offsetWidth;
+  card.classList.add('is-flash');
+}
+
+// Builds the editing panel for the active template from its text and photo layers.
+function renderInfographicFields() {
+  const container = document.getElementById('infographic-fields');
+  const template = getInfographicTemplate();
+  const isOn = activeWorkspace === 'newsletter' && Boolean(template);
+  document.body.dataset.newsletterInfographic = isOn ? 'on' : 'off';
+  document.body.dataset.infographicPhoto = isOn && getInfographicMainPhotoLayer(template) ? 'on' : 'off';
+  // Photo slots live in the panel, so the Photos / Image Pool tabs are hidden: show Content.
+  if (isOn && document.body.dataset.infographicPhoto === 'off' && document.body.dataset.studioInspector !== 'content') {
+    window.ESSetStudioInspectorMode?.('content');
+  }
+  if (!container || !template || renderedInfographicFieldsFor === template.id) return;
+  renderedInfographicFieldsFor = template.id;
+  container.innerHTML = '';
+  infographicPanelSyncers = [];
+
+  const items = [];
+  const seenText = new Set();
+  template.layers.forEach(layer => {
+    const isText = layer.type === 'text' && layer.id;
+    const isPhoto = layer.type === 'photo' && layer.id && !layer.main;
+    if (!isText && !isPhoto) return;
+    // Layers sharing an id (e.g. one column label used on every card) get one field.
+    if (isText) {
+      if (seenText.has(layer.id)) return;
+      seenText.add(layer.id);
+    }
+    items.push({ layer, kind: isText ? 'text' : 'photo', group: layer.group || '' });
+  });
+
+  const order = [...new Set([...(template.groups || []), ...items.map(item => item.group)])]
+    .filter(group => items.some(item => item.group === group));
+  // Several groups (players, cards…) become collapsible cards; otherwise a flat list.
+  const useCards = order.filter(Boolean).length >= 2;
+
+  order.forEach((groupName, index) => {
+    const groupItems = items.filter(item => item.group === groupName);
+    let body = container;
+    if (useCards) {
+      const card = document.createElement('details');
+      card.className = 'ig-card';
+      card.dataset.igGroup = groupName;
+      card.open = index === 0;
+      const head = document.createElement('summary');
+      head.className = 'ig-card-head';
+      const thumb = document.createElement('span');
+      thumb.className = 'ig-card-thumb';
+      const firstPhoto = groupItems.find(item => item.kind === 'photo');
+      const firstText = groupItems.find(item => item.kind === 'text');
+      let thumbImg = null;
+      if (firstPhoto) {
+        thumbImg = document.createElement('img');
+        thumbImg.alt = '';
+        thumb.appendChild(thumbImg);
+      } else {
+        thumb.classList.add('is-text');
+        thumb.textContent = 'Aa';
+      }
+      const titles = document.createElement('span');
+      titles.className = 'ig-card-titles';
+      const title = document.createElement('strong');
+      title.textContent = groupName || 'More text';
+      const sub = document.createElement('span');
+      titles.append(title, sub);
+      const chevron = document.createElement('span');
+      chevron.className = 'ig-card-chevron';
+      chevron.innerHTML = INFOGRAPHIC_ICONS.chevron;
+      head.append(thumb, titles, chevron);
+      body = document.createElement('div');
+      body.className = 'ig-card-body';
+      card.append(head, body);
+      container.appendChild(card);
+      infographicPanelSyncers.push(() => {
+        if (thumbImg) thumbImg.src = getInfographicPhotoSrc(template, firstPhoto.layer);
+        // Text-only cards preview all their values (e.g. Starts · Top 10s · Wins).
+        const texts = groupItems.filter(item => item.kind === 'text');
+        const preview = (firstPhoto ? texts.slice(0, 1) : texts)
+          .map(item => getInfographicText(template, item.layer).replace(/\n/g, ' ').trim())
+          .filter(Boolean)
+          .join(' · ');
+        sub.textContent = preview || (firstText ? 'Empty' : `${groupItems.length} photo${groupItems.length === 1 ? '' : 's'}`);
+      });
+    }
+    for (let i = 0; i < groupItems.length;) {
+      const item = groupItems[i];
+      const isShort = entry => entry.kind === 'text' && (entry.layer.maxLength || 99) <= 24;
+      if (isShort(item)) {
+        const stem = infographicFieldStem(item.layer);
+        let end = i;
+        while (end < groupItems.length && isShort(groupItems[end]) && infographicFieldStem(groupItems[end].layer) === stem) end += 1;
+        if (end - i >= 2) {
+          body.appendChild(buildInfographicCells(template, groupItems.slice(i, end).map(entry => entry.layer), groupName));
+          i = end;
+          continue;
+        }
+      }
+      body.appendChild(item.kind === 'text'
+        ? buildInfographicTextField(template, item.layer)
+        : buildInfographicPhotoField(template, item.layer));
+      i += 1;
+    }
+  });
+
+  if (items.some(item => item.kind === 'text')) {
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.className = 'ig-reset';
+    reset.innerHTML = `${INFOGRAPHIC_ICONS.reset}<span>Reset text to example</span>`;
+    reset.addEventListener('click', () => {
+      getInfographicStore(template).values = {};
+      try { localStorage.removeItem(infographicStorageKey(template)); } catch (error) { /* ignore */ }
+      renderedInfographicFieldsFor = '';
+      renderInfographicFields();
+      render();
+    });
+    container.appendChild(reset);
+  }
+  syncInfographicPanel();
+}
+
+// Drag a photo slot on the canvas to move that photo inside its frame.
+function setupInfographicCanvasDrag() {
+  const canvas = document.getElementById('preview');
+  if (!canvas) return;
+  let drag = null;
+  const toDesign = event => {
+    const rect = canvas.getBoundingClientRect();
+    const template = getInfographicTemplate();
+    return {
+      x: (event.clientX - rect.left) * (template.width / rect.width),
+      y: (event.clientY - rect.top) * (template.height / rect.height),
+    };
+  };
+  canvas.addEventListener('pointerdown', event => {
+    const template = activeWorkspace === 'newsletter' ? getInfographicTemplate() : null;
+    if (!template || event.button !== 0) return;
+    event.stopImmediatePropagation();
+    const point = toDesign(event);
+    const layer = findInfographicPhotoAt(template, point.x, point.y);
+    if (!layer) return;
+    event.preventDefault();
+    focusInfographicGroup(layer.group || '');
+    const adjust = getInfographicAdjust(template, layer);
+    drag = { template, layer, adjust, start: point, dx: adjust.dx, dy: adjust.dy };
+    canvas.setPointerCapture?.(event.pointerId);
+    canvas.style.cursor = 'grabbing';
+  }, true);
+  canvas.addEventListener('pointermove', event => {
+    const template = activeWorkspace === 'newsletter' ? getInfographicTemplate() : null;
+    if (!template) {
+      if (canvas.style.cursor) canvas.style.cursor = '';
+      return;
+    }
+    event.stopImmediatePropagation();
+    const point = toDesign(event);
+    if (!drag) {
+      canvas.style.cursor = findInfographicPhotoAt(template, point.x, point.y) ? 'grab' : '';
+      return;
+    }
+    drag.adjust.dx = drag.dx + (point.x - drag.start.x);
+    drag.adjust.dy = drag.dy + (point.y - drag.start.y);
+    render();
+  }, true);
+  const stop = event => {
+    if (!drag) return;
+    event.stopImmediatePropagation();
+    infographicFieldSyncers[`${drag.template.id}:${drag.layer.id}`]?.();
+    drag = null;
+    canvas.style.cursor = '';
+  };
+  canvas.addEventListener('pointerup', stop, true);
+  canvas.addEventListener('pointercancel', stop, true);
+}
+
+registerInfographicTemplates();
+setupInfographicCanvasDrag();
+
 function slideHasContent(slideState) {
   return Boolean(slideState?.photo) || (slideState?.lines || []).some(line => String(line || '').trim());
 }
@@ -16920,7 +18048,7 @@ function showToast(message, tone = 'neutral') {
   setTimeout(() => toast.remove(), 3000);
 }
 
-function showEsDialog({ title, body, actions }) {
+function showEsDialog({ title, body, actions, field, onClose }) {
   document.querySelectorAll('.es-dialog:not([open])').forEach(stale => stale.remove());
   const dialog = document.createElement('dialog');
   dialog.className = 'es-dialog';
@@ -16932,26 +18060,63 @@ function showEsDialog({ title, body, actions }) {
   copy.textContent = body;
   const row = document.createElement('div');
   row.className = 'es-dialog-actions';
+  // Optional single text field; its value is passed to the action's onClick.
+  let fieldWrap = null;
+  let input = null;
+  if (field) {
+    fieldWrap = document.createElement('label');
+    fieldWrap.className = 'es-dialog-field';
+    const fieldLabel = document.createElement('span');
+    fieldLabel.className = 'es-dialog-field-label';
+    fieldLabel.textContent = field.label || '';
+    input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'es-dialog-input';
+    input.value = field.value || '';
+    input.placeholder = field.placeholder || '';
+    input.spellcheck = false;
+    input.autocomplete = 'off';
+    if (field.maxLength) input.maxLength = field.maxLength;
+    fieldWrap.append(fieldLabel, input);
+    if (field.hint) {
+      const hint = document.createElement('span');
+      hint.className = 'es-dialog-field-hint';
+      const renderHint = () => { hint.textContent = field.hint(input.value); };
+      renderHint();
+      input.addEventListener('input', renderHint);
+      fieldWrap.appendChild(hint);
+    }
+    input.addEventListener('keydown', event => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      row.querySelector('.is-primary')?.click();
+    });
+  }
   actions.forEach(action => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = `es-dialog-button is-${action.variant || 'secondary'}`;
     button.textContent = action.label;
     button.addEventListener('click', () => {
+      const value = input ? input.value : undefined;
       dialog.close();
       dialog.remove();
-      action.onClick?.();
+      action.onClick?.(value);
     });
     row.appendChild(button);
   });
-  dialog.append(heading, copy, row);
-  dialog.addEventListener('close', () => dialog.remove());
+  dialog.append(heading, copy, ...(fieldWrap ? [fieldWrap] : []), row);
+  dialog.addEventListener('close', () => {
+    dialog.remove();
+    onClose?.();
+  });
   dialog.addEventListener('click', event => {
     if (event.target === dialog) dialog.close();
   });
   document.body.appendChild(dialog);
   dialog.showModal();
-  row.querySelector('.is-primary')?.focus();
+  if (input) input.select();
+  else row.querySelector('.is-primary')?.focus();
 }
 
 function exportInstagramSlides(indices) {
@@ -16967,6 +18132,10 @@ function exportInstagramSlides(indices) {
 }
 
 function requestExport() {
+  if (isInfographicStillLoading()) {
+    showToast('The design is still loading. Try again in a moment.', 'error');
+    return;
+  }
   const filledSlides = getFilledInstagramSlides();
   const offerAllSlides = filledSlides.length > 1;
   const missing = getMissingExportImage();
@@ -17629,13 +18798,15 @@ function syncPostTypeControls() {
             : isInstagram && activeType === 'stats-single-ent'
               ? 'Player Stats'
               : isInstagram && activeType === 'stats-double-ent'
-                ? 'Stats Post Details'
+                ? 'Head-to-Head Stats'
                 : isInstagram && activeType === 'double-entity-quote'
                   ? 'Quote Details'
-                  : isInstagram && (activeType === 'listicle-type-1' || activeType === 'listicle-type-2')
-                    ? 'Listicle Data'
+                  : isInstagram && activeType === 'listicle-type-1'
+                    ? 'Table Rows'
+                    : isInstagram && activeType === 'listicle-type-2'
+                    ? 'List Items'
                     : isInstagram && activeType === 'asap-template-1'
-                      ? 'ASAP Template Data'
+                      ? 'Timeline Entries'
                       : isInstagram && activeType === 'twitter-quote'
                         ? 'Tweet Link'
                         : 'Text On Design';
@@ -17798,6 +18969,7 @@ function syncWorkspaceControls() {
   document.body.dataset.youtubeVariation = activeYoutubeVariation;
   document.body.dataset.youtubeQuote = activeWorkspace === 'youtube' && state.youtubeQuote ? 'on' : 'off';
   document.body.dataset.newsletterAsset = activeNewsletterAsset;
+  renderInfographicFields();
   document.body.dataset.instagramPostType = activeWorkspace === 'instagram' ? (state.postType || 'cover') : 'cover';
   document.body.dataset.reelsFormat = activeWorkspace === 'reels' ? (state.reelsFormat || activeReelsFormat || 'cover-frame') : 'cover-frame';
   const photoCardTitle = document.getElementById('photo-card-title');
@@ -19141,7 +20313,39 @@ loadFont().then(() => render());
     });
   }
 
+  // Desktop: size the canvas so 100% zoom fills the free stage (width and
+  // height), instead of a fixed size that leaves big empty margins.
+  const desktopStudioQuery = window.matchMedia('(min-width: 901px)');
+  let studioFitFrame = 0;
+  function fitStudioCanvasToStage() {
+    studioFitFrame = 0;
+    const stack = document.querySelector('.canvas-stack');
+    const stage = document.querySelector('.canvas-stage');
+    const canvas = document.getElementById('preview');
+    if (!stack || !stage || !canvas) return;
+    const design = typeof getWorkspace === 'function' ? getWorkspace() : null;
+    if (!desktopStudioQuery.matches || !currentWorkspace() || !design?.width || !design?.height) {
+      stack.style.removeProperty('--studio-canvas-base');
+      return;
+    }
+    const stageRect = stage.getBoundingClientRect();
+    if (stageRect.width <= 0) return;
+    // Everything in the stack except the canvas (toolbar, carousel dots, gaps).
+    const wrap = stack.querySelector('.canvas-wrap');
+    const chrome = wrap ? stack.offsetHeight - wrap.offsetHeight : 0;
+    const viewportBottom = Math.min(window.innerHeight, stage.parentElement?.getBoundingClientRect().bottom || window.innerHeight);
+    const stagePadding = parseFloat(getComputedStyle(stage).paddingBottom) || 0;
+    const availableWidth = stage.clientWidth - 32;
+    const availableHeight = viewportBottom - Math.max(stageRect.top, 0) - chrome - stagePadding - 8;
+    const fit = Math.min(availableWidth, availableHeight * (design.width / design.height), 1100);
+    stack.style.setProperty('--studio-canvas-base', `${Math.max(280, Math.floor(fit))}px`);
+  }
+  function queueStudioCanvasFit() {
+    if (!studioFitFrame) studioFitFrame = setTimeout(fitStudioCanvasToStage, 0);
+  }
+
   function syncStudioMeta() {
+    queueStudioCanvasFit();
     if (!STUDIO_SHELL_ENABLED) return;
     const workspaceName = currentWorkspace();
     if (!workspaceName || typeof WORKSPACES === 'undefined') return;
@@ -19160,7 +20364,7 @@ loadFont().then(() => render());
     }
     document.querySelectorAll('[data-studio-inspector-tab]').forEach(tab => {
       const mode = tab.dataset.studioInspectorTab;
-      tab.textContent = mode === 'image' ? 'Image Controls' : mode === 'content' ? 'Content' : 'ES Image Pool';
+      tab.textContent = mode === 'image' ? 'Photos' : mode === 'content' ? 'Content' : 'ES Image Pool';
     });
     const aiTitle = document.querySelector('.studio-ai-section .studio-dock-title');
     const aiHelper = document.querySelector('.studio-ai-helper');
@@ -19193,31 +20397,17 @@ loadFont().then(() => render());
   window.ESSetStudioInspectorMode = setStudioInspectorMode;
 
   const studioSectionLabels = {
-    instagram: {
-      content: 'Content',
-      layout: 'Layout & Placement',
-      brand: 'Brand & Colors',
-      images: 'Image Layers',
-    },
-    youtube: {
-      content: 'Copy & Format',
-      layout: 'Text Placement',
-      brand: 'Brand & Team',
-      images: 'Foreground Images',
-    },
-    newsletter: {
-      content: 'Content',
-      layout: 'Placement',
-      brand: 'Brand Settings',
-      images: 'Image Layers',
-      widgetMain: 'Main Story',
-      widgetPicks: 'Top Picks',
-      trivia: 'Trivia',
-    },
+    content: 'Content',
+    layout: 'Text Placement',
+    brand: 'Brand & Colors',
+    images: 'Photo Layers',
+    widgetMain: 'Main Story',
+    widgetPicks: 'Top Picks',
+    trivia: 'Trivia',
   };
 
   const studioSectionNodes = {
-    content: ['quote-logo-control', '.text-card', 'swipe-button-card'],
+    content: ['quote-logo-control', '.text-card', 'infographic-fields', 'swipe-button-card'],
     layout: ['pill-position-card'],
     brand: ['.color-card'],
     images: ['entity-image-card', 'entity-image-card-2'],
@@ -19226,11 +20416,22 @@ loadFont().then(() => render());
     trivia: ['trivia-fields'],
   };
 
-  const studioOpenSectionByWorkspace = {
-    instagram: 'content',
-    youtube: 'content',
-    newsletter: 'content',
-  };
+  // Sections the person opened or closed, per workspace ({ open: [], closed: [] }).
+  // Several can be open at once; sections never touched follow the default
+  // (the first visible one is open). Remembered in this browser.
+  const STUDIO_OPEN_SECTIONS_KEY = 'frameup.studioSections.v2';
+  const studioOpenSections = (() => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(STUDIO_OPEN_SECTIONS_KEY) || '{}');
+      return stored && typeof stored === 'object' ? stored : {};
+    } catch (error) {
+      return {};
+    }
+  })();
+
+  function saveStudioOpenSections() {
+    try { window.localStorage.setItem(STUDIO_OPEN_SECTIONS_KEY, JSON.stringify(studioOpenSections)); } catch (error) { /* storage unavailable */ }
+  }
 
   let studioSectionRefreshQueued = false;
 
@@ -19246,15 +20447,23 @@ loadFont().then(() => render());
     trigger?.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
   }
 
-  function openStudioSection(sectionKey) {
+  function rememberStudioSection(sectionKey, isOpen) {
     const workspace = currentWorkspace();
-    const list = document.querySelector('[data-studio-accordion-list]');
-    if (!workspace || !list) return;
+    if (!workspace) return;
+    const entry = studioOpenSections[workspace] || {};
+    const open = new Set(entry.open || []);
+    const closed = new Set(entry.closed || []);
+    (isOpen ? open : closed).add(sectionKey);
+    (isOpen ? closed : open).delete(sectionKey);
+    studioOpenSections[workspace] = { open: [...open], closed: [...closed] };
+    saveStudioOpenSections();
+  }
 
-    list.querySelectorAll('[data-studio-accordion-section]').forEach(section => {
-      setStudioSectionOpen(section, section.dataset.studioAccordionSection === sectionKey);
-    });
-    studioOpenSectionByWorkspace[workspace] = sectionKey;
+  function openStudioSection(sectionKey) {
+    const section = document.querySelector(`[data-studio-accordion-section="${sectionKey}"]`);
+    if (!section) return;
+    setStudioSectionOpen(section, true);
+    rememberStudioSection(sectionKey, true);
   }
 
   window.ESOpenStudioSection = openStudioSection;
@@ -19536,7 +20745,7 @@ loadFont().then(() => render());
     const groups = {
       // Format = which template; the YouTube quote toggle is a template choice too.
       format: ['#post-type-control', '#reels-format-control', '#youtube-variation-card', '#youtube-category-card', '#youtube-quote-control', '#newsletter-asset-card'],
-      content: ['.text-card', '#twitter-quote-fields', '#widget-main-fields', '#widget-picks-fields', '#trivia-fields'],
+      content: ['.text-card', '#twitter-quote-fields', '#widget-main-fields', '#widget-picks-fields', '#trivia-fields', '#infographic-fields'],
       brand: ['.color-card', '#newsletter-brand-card'],
       media: ['#entity-image-card', '#entity-image-card-2'],
       // Fine positioning is a desktop job; on phones it sits under More.
@@ -19587,7 +20796,7 @@ loadFont().then(() => render());
     const list = document.querySelector('[data-studio-accordion-list]');
     if (!workspace || !list) return;
 
-    const labels = studioSectionLabels[workspace] || studioSectionLabels.instagram;
+    const labels = studioSectionLabels;
     const visibleSections = [];
     list.querySelectorAll('[data-studio-accordion-section]').forEach(section => {
       const key = section.dataset.studioAccordionSection;
@@ -19604,14 +20813,15 @@ loadFont().then(() => render());
       if (hasVisibleControl) visibleSections.push(section);
     });
 
-    const preferred = studioOpenSectionByWorkspace[workspace];
-    const target = visibleSections.find(section => section.dataset.studioAccordionSection === preferred)
-      || visibleSections[0]
-      || null;
-    list.querySelectorAll('[data-studio-accordion-section]').forEach(section => {
-      setStudioSectionOpen(section, !section.hidden && section === target);
+    const entry = studioOpenSections[workspace] || {};
+    const open = new Set(entry.open || []);
+    const closed = new Set(entry.closed || []);
+    const single = visibleSections.length === 1;
+    list.classList.toggle('is-single', single);
+    visibleSections.forEach((section, index) => {
+      const key = section.dataset.studioAccordionSection;
+      setStudioSectionOpen(section, single || open.has(key) || (!closed.has(key) && index === 0));
     });
-    if (target) studioOpenSectionByWorkspace[workspace] = target.dataset.studioAccordionSection;
   }
 
   function queueStudioContentSectionRefresh() {
@@ -19636,14 +20846,9 @@ loadFont().then(() => render());
       </div>
     `;
     section.querySelector('.studio-accordion-trigger')?.addEventListener('click', () => {
-      const isOpen = section.classList.contains('is-open');
-      if (isOpen) {
-        setStudioSectionOpen(section, false);
-        const workspace = currentWorkspace();
-        if (workspace) studioOpenSectionByWorkspace[workspace] = '';
-        return;
-      }
-      openStudioSection(key);
+      const isOpen = !section.classList.contains('is-open');
+      setStudioSectionOpen(section, isOpen);
+      rememberStudioSection(key, isOpen);
     });
     return section;
   }
@@ -19720,8 +20925,8 @@ loadFont().then(() => render());
         <div class="studio-export-section" data-studio-export-section></div>
         <div class="studio-primary-controls" data-studio-primary-controls aria-label="Workspace format controls"></div>
         <div class="studio-inspector-tabs" role="tablist" aria-label="Inspector groups">
-          <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="image" aria-selected="false">Image Controls</button>
           <button class="studio-inspector-tab is-active" type="button" role="tab" data-studio-inspector-tab="content" aria-selected="true">Content</button>
+          <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="image" aria-selected="false">Photos</button>
           <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="ai" aria-selected="false">ES Image Pool</button>
         </div>
         <div class="studio-dock-section">
@@ -19768,8 +20973,28 @@ loadFont().then(() => render());
     ensureStudioControlDock();
     ensureStudioContentSections();
     ensureMobileEditorShell();
+    const categorySelect = document.getElementById('youtube-category-select');
+    if (categorySelect && [...categorySelect.options].filter(option => !option.disabled).length <= 1) {
+      document.querySelector('.youtube-control-row')?.classList.add('is-single-category');
+    }
     setStudioInspectorMode(document.body.dataset.studioInspector || 'content');
     setZoom(100);
+    window.addEventListener('resize', queueStudioCanvasFit);
+    // The stage gets its size late (page reveal) and changes with the sidebar.
+    const stageForFit = document.querySelector('.canvas-stage');
+    if (stageForFit && 'ResizeObserver' in window) new ResizeObserver(queueStudioCanvasFit).observe(stageForFit);
+    const previewCanvas = document.getElementById('preview');
+    if (previewCanvas) {
+      new MutationObserver(queueStudioCanvasFit).observe(previewCanvas, { attributes: true, attributeFilter: ['width', 'height'] });
+      // Redraw at the new pixel density whenever the canvas changes size on screen.
+      if ('ResizeObserver' in window) {
+        new ResizeObserver(() => {
+          if (typeof getPreviewDensity !== 'function' || typeof render !== 'function') return;
+          const workspace = getWorkspace();
+          if (Math.round(workspace.width * getPreviewDensity(previewCanvas, workspace)) !== previewCanvas.width) render();
+        }).observe(previewCanvas);
+      }
+    }
     syncStudioMeta();
     syncMobileEditorMeta();
 
@@ -19823,6 +21048,8 @@ loadFont().then(() => render());
             'data-reels-format',
             'data-youtube-variation',
             'data-youtube-quote',
+            'data-newsletter-infographic',
+            'data-infographic-photo',
           ],
         });
       }

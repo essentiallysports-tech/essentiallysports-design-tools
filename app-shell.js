@@ -30,35 +30,45 @@
   };
 
   // One source of truth for navigation, breadcrumbs and the command palette.
+  // `short` is the label under the icon in the collapsed rail. `sidebar: false`
+  // keeps a page out of the sidebar (still in breadcrumbs and search); `covers`
+  // lets one sidebar item stay highlighted for several pages.
+  const GUIDE_IDS = ['logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'];
   const NAV = [
+    {
+      label: '',
+      items: [
+        { id: 'frames', label: 'Home', href: 'index.html#frames', icon: 'home' },
+      ],
+    },
     {
       label: 'Create',
       items: [
-        { id: 'frames', label: 'Home', href: 'index.html#frames', icon: 'home' },
         { id: 'generate', label: 'Generate', href: 'generate.html', icon: 'sparkle', badge: 'New', desc: 'Turn a brief into on-brand, editable Social Media posts.' },
-        { id: 'instagram', label: 'Social Media', href: 'index.html#instagram', icon: 'social', editor: true },
+        { id: 'instagram', label: 'Social Media', short: 'Social', href: 'index.html#instagram', icon: 'social', editor: true },
         { id: 'youtube', label: 'YouTube', href: 'index.html#youtube', icon: 'youtube', editor: true },
         { id: 'newsletter', label: 'Newsletter', href: 'index.html#newsletter', icon: 'newsletter', editor: true },
-        { id: 'reels', label: 'Reel Captions', href: 'reels.html', icon: 'reels', editor: true },
+        { id: 'reels', label: 'Reel Captions', short: 'Reels', href: 'reels.html', icon: 'reels', editor: true },
       ],
     },
     {
       label: 'Work',
       items: [
-        { id: 'request', label: 'Design Request', href: 'design-request.html', icon: 'request', desc: 'Send the design team one clear brief with context, copy, deadline and references.' },
+        { id: 'request', label: 'Design Request', short: 'Request', href: 'design-request.html', icon: 'request', desc: 'Send the design team one clear brief with context, copy, deadline and references.' },
         { id: 'gallery', label: 'Gallery', href: 'gallery.html', icon: 'gallery', badge: 'New', desc: 'Browse every Social Media post the team has exported.' },
         { id: 'dashboard', label: 'Dashboard', href: 'dashboard.html', icon: 'dashboard', adminOnly: true },
-        { id: 'feedback', label: 'Tool Feedback', href: 'tool-feedback.html', icon: 'feedback' },
       ],
     },
     {
-      label: 'Resources',
+      label: 'Help',
       items: [
-        { id: 'logo-guidelines', label: 'Logo Guidelines', href: 'index.html#logo-guidelines', icon: 'logo' },
-        { id: 'social-guidelines', label: 'Social Guidelines', href: 'index.html#social-guidelines', icon: 'guide' },
-        { id: 'video-guidelines', label: 'Video Guidelines', href: 'index.html#video-guidelines', icon: 'video' },
-        { id: 'faq', label: 'FAQ', href: 'index.html#faq', icon: 'faq' },
-        { id: 'library', label: 'UI Library', href: 'design-system.html', icon: 'library', badge: 'New' },
+        { id: 'guidelines', label: 'Guidelines', short: 'Guides', href: 'index.html#logo-guidelines', icon: 'guide', covers: GUIDE_IDS, palette: false },
+        { id: 'logo-guidelines', label: 'Logo Guidelines', href: 'index.html#logo-guidelines', icon: 'logo', sidebar: false },
+        { id: 'social-guidelines', label: 'Social Guidelines', href: 'index.html#social-guidelines', icon: 'guide', sidebar: false },
+        { id: 'video-guidelines', label: 'Video Guidelines', href: 'index.html#video-guidelines', icon: 'video', sidebar: false },
+        { id: 'faq', label: 'FAQ', href: 'index.html#faq', icon: 'faq', sidebar: false },
+        { id: 'feedback', label: 'Tool Feedback', short: 'Feedback', href: 'tool-feedback.html', icon: 'feedback' },
+        { id: 'library', label: 'UI Library', href: 'design-system.html', icon: 'library', sidebar: false },
       ],
     },
   ];
@@ -79,7 +89,8 @@
     if (file === 'index.html' || file === '') {
       const hash = window.location.hash.replace('#', '');
       const all = NAV.flatMap(group => group.items);
-      return all.some(item => item.id === hash) ? hash : 'frames';
+      // "guidelines" is only a sidebar shortcut, not a page.
+      return all.some(item => item.id === hash && !item.covers) ? hash : 'frames';
     }
     return null;
   }
@@ -100,7 +111,7 @@
   // ─── Sidebar ───────────────────────────────────────────────────────────
   function navItemMarkup(item) {
     const badge = item.badge ? `<span class="es-badge es-badge--new">${item.badge}</span>` : '';
-    return `<a class="es-nav-item" href="${base}${item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''} title="${item.label}">${ICONS[item.icon]}<span class="es-nav-item__text">${item.label}</span>${badge}</a>`;
+    return `<a class="es-nav-item" href="${base}${item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''} title="${item.label}">${ICONS[item.icon]}<span class="es-nav-item__text">${item.label}</span><span class="es-nav-item__short" aria-hidden="true">${item.short || item.label}</span>${badge}</a>`;
   }
 
   function buildSidebar() {
@@ -121,8 +132,8 @@
       <nav class="es-sidebar__scroll" aria-label="Primary">
         ${NAV.map(group => `
           <div class="es-sidebar__section">
-            <span class="es-sidebar__label">${group.label}</span>
-            ${group.items.map(navItemMarkup).join('')}
+            ${group.label ? `<span class="es-sidebar__label">${group.label}</span>` : ''}
+            ${group.items.filter(item => item.sidebar !== false).map(navItemMarkup).join('')}
           </div>`).join('')}
       </nav>
       <div class="es-sidebar__foot">
@@ -189,15 +200,16 @@
   function syncActive() {
     const id = currentId();
     document.documentElement.classList.toggle('es-editor', Boolean(findItem(id)?.item.editor));
+    const owner = NAV.flatMap(group => group.items).find(item => item.covers?.includes(id));
     document.querySelectorAll('.es-nav-item').forEach(link => {
-      if (link.dataset.shellId === id) link.setAttribute('aria-current', 'page');
+      if (link.dataset.shellId === id || link.dataset.shellId === owner?.id) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
     const crumbs = document.querySelector('.es-breadcrumbs');
     if (!crumbs) return;
     const entry = findItem(id);
     const pageTitle = entry?.item.label || document.title.split('|')[0].trim();
-    crumbs.innerHTML = `<li><a href="${base}index.html#frames">FrameUp</a></li>${entry ? `<li>${entry.group.label}</li>` : ''}<li><span aria-current="page">${pageTitle}</span></li>`;
+    crumbs.innerHTML = `<li><a href="${base}index.html#frames">FrameUp</a></li>${entry?.group.label ? `<li>${entry.group.label}</li>` : ''}<li><span aria-current="page">${pageTitle}</span></li>`;
   }
 
   // Inside pages share one header pattern; pages without a title get one.
@@ -258,8 +270,8 @@
     const q = query.trim().toLowerCase();
     const admin = isAdmin();
     const groups = NAV.map(group => ({
-      label: group.label,
-      items: group.items.filter(item => (!item.adminOnly || admin) && (!q || item.label.toLowerCase().includes(q) || group.label.toLowerCase().includes(q))),
+      label: group.label || 'Go to',
+      items: group.items.filter(item => item.palette !== false && (!item.adminOnly || admin) && (!q || item.label.toLowerCase().includes(q) || group.label.toLowerCase().includes(q))),
     })).filter(group => group.items.length);
     if (!groups.length) {
       list.innerHTML = '<p class="es-palette__empty">No matches</p>';
