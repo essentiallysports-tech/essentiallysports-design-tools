@@ -99,7 +99,7 @@ body[data-current-page="newsletter"][data-newsletter-infographic="on"] #infograp
 }
 textarea.ig-input { padding: 10px 12px; resize: vertical; }
 .ig-input:hover { border-color: #b9bfc9; }
-.ig-input:focus { outline: none; border-color: var(--es-brand); box-shadow: 0 0 0 3px rgb(var(--es-brand-rgb, 10 125 250) / .15); }
+.ig-input:focus { outline: none; border-color: var(--es-brand); box-shadow: none; }
 .ig-input::placeholder { color: var(--es-placeholder, #9aa1ad); }
 .ig-cells { display: grid; gap: 8px; }
 .ig-cell { display: grid; gap: 4px; min-width: 0; }

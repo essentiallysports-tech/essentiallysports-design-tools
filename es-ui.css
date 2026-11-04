@@ -339,7 +339,7 @@
 }
 textarea.es-input { min-height: 96px; padding: 12px 14px; resize: vertical; line-height: 1.5; }
 .es-input:hover { box-shadow: inset 0 0 0 1.5px var(--es-ink-3); }
-.es-input:focus { box-shadow: inset 0 0 0 2px var(--es-ink), 0 0 0 4px rgb(14 16 20 / .08); }
+.es-input:focus { box-shadow: inset 0 0 0 1.5px var(--es-brand); }
 
 /* ─── Menus (context menus, dropdowns) ────────────────────────────────── */
 .es-menu {
@@ -921,6 +921,8 @@ html[data-theme="dark"] body.reels-page .reels-first-step { color: var(--es-ink-
 }
 .home-start__head h2 { margin: 0; color: var(--es-ink); font-size: 28px; line-height: 1.1; }
 .home-start__head p { margin: 6px 0 0; color: var(--es-ink-3); font-size: 15px; }
+.home-start__more { display: inline-block; margin-top: 10px; color: var(--es-brand-text); font-size: 14px; font-weight: 500; text-decoration: none; }
+.home-start__more:hover { text-decoration: underline; }
 .home-start__steps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

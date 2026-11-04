@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How FrameUp works | FrameUp</title>
+  <meta name="description" content="A step-by-step guide to FrameUp: pick a workspace, add your content, export a brand-ready file, or send a brief to the design team.">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script">
+  <script src="es-auth-config.js?v=20260707-auth4"></script>
+  <script src="es-auth.js?v=20261025-perf1"></script>
+  <script>
+    window.ESAuth?.requireAuth(`how-frameup-works.html${window.location.search}${window.location.hash}`);
+  </script>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261028-mobile2">
+  <link rel="stylesheet" href="theme.css?v=20261023-ux1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
+  <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261104-focus1">
+  <link rel="stylesheet" href="es-ui.css?v=20261104-ux5">
+  <link rel="stylesheet" href="how-frameup-works.css?v=20261104-how1">
+  <script src="theme.js?v=20260712-darkmode12"></script>
+  <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
+  <script src="site-chrome.js?v=20261104-ux4"></script>
+  <script src="app-shell.js?v=20261104-ux5"></script>
+</head>
+<body class="how-body">
+  <nav class="navbar">
+    <a class="navbar-logo" href="index.html" aria-label="EssentiallySports home">
+      <img src="brand-logo-blue.svg" alt="EssentiallySports">
+    </a>
+    <div class="navbar-menu">
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#intro" aria-haspopup="true" aria-expanded="false">Resources</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Resources">
+          <a href="index.html#logo-guidelines" data-route="logo-guidelines" role="menuitem">Logo Guidelines</a>
+          <a href="index.html#social-guidelines" data-route="social-guidelines" role="menuitem">Social Media Guidelines</a>
+          <a href="index.html#video-guidelines" data-route="video-guidelines" role="menuitem">Video Guidelines</a>
+        </div>
+      </div>
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#frames" data-route="frames" aria-haspopup="true" aria-expanded="false">Design Tools</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Design workspaces">
+          <a href="index.html#frames" data-route="frames" role="menuitem">Home</a>
+          <a href="how-frameup-works.html" role="menuitem" aria-current="page">How FrameUp works</a>
+          <a href="index.html#instagram" data-route="instagram" role="menuitem">Social Media</a>
+          <a href="index.html#youtube" data-route="youtube" role="menuitem">YouTube</a>
+          <a href="index.html#newsletter" data-route="newsletter" role="menuitem">Newsletter</a>
+          <a href="reels.html" role="menuitem">Reel Captions</a>
+        </div>
+      </div>
+      <a href="design-request.html">Design Request</a>
+      <a href="generate.html">Generate</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="dashboard.html" data-admin-only hidden aria-hidden="true">Dashboard</a>
+      <a href="index.html#faq" data-route="faq">FAQ</a>
+      <a href="tool-feedback.html">Tool Feedback</a>
+    </div>
+    <div class="navbar-right">
+      <div class="profile-menu" id="profile-menu"></div>
+    </div>
+  </nav>
+
+  <main class="how-page" id="main">
+    <!-- Hero -->
+    <section class="how-hero" aria-labelledby="how-title">
+      <div class="how-hero__copy">
+        <span class="how-kicker">Guide</span>
+        <h1 id="how-title">How FrameUp works</h1>
+        <p class="how-lead">Make brand-ready sports graphics yourself in minutes, or hand a clear brief to the design team. Here is everything you need, start to finish.</p>
+        <div class="how-hero__actions">
+          <a class="es-btn es-btn--primary" href="index.html#frames">Start designing</a>
+          <a class="es-btn how-btn-outline" href="design-request.html">Request a design</a>
+        </div>
+      </div>
+      <div class="how-hero__art" aria-hidden="true">
+        <img src="how-hero-art-800.webp" srcset="how-hero-art-800.webp 800w, how-hero-art-1280.webp 1280w" sizes="(max-width: 900px) 92vw, 520px" alt="" decoding="async">
+      </div>
+      <ul class="how-facts" aria-label="FrameUp at a glance">
+        <li><strong>4</strong><span>design workspaces</span></li>
+        <li><strong>30+</strong><span>ready-made templates</span></li>
+        <li><strong>1 click</strong><span>to a named, ready file</span></li>
+        <li><strong>Built in</strong><span>logo, fonts and team colours</span></li>
+      </ul>
+    </section>
+
+    <!-- On this page -->
+    <nav class="how-toc" aria-label="On this page">
+      <a href="#steps">The 3 steps</a>
+      <a href="#editor">Inside the editor</a>
+      <a href="#brand">Brand rules</a>
+      <a href="#tips">Tips &amp; shortcuts</a>
+      <a href="#custom">Custom designs</a>
+    </nav>
+
+    <!-- Steps -->
+    <section class="how-section" id="steps" aria-labelledby="steps-title">
+      <header class="how-section__head">
+        <h2 id="steps-title">Three steps from idea to file</h2>
+        <p>Every design follows the same path, whichever workspace you use.</p>
+      </header>
+
+      <!-- Step 1 -->
+      <article class="how-step" aria-labelledby="step-1-title">
+        <div class="how-step__rail" aria-hidden="true">
+          <span class="es-tile how-step__icon"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg></span>
+          <span class="how-step__line"></span>
+        </div>
+        <div class="how-step__body">
+          <span class="how-step__num">Step 01</span>
+          <h3 id="step-1-title">Choose a workspace</h3>
+          <p class="how-step__intro">Each workspace has the approved sizes and layouts for one channel. Pick the channel, then the template inside it.</p>
+          <div class="how-workspaces">
+            <a class="how-ws" href="index.html#instagram">
+              <img src="workspace-card-social-media.webp" alt="" loading="lazy" decoding="async">
+              <span class="how-ws__body">
+                <strong>Social Media</strong>
+                <span>Covers, quotes, player stats, head-to-head, rankings, timelines and tweet cards. Carousels up to 5 slides.</span>
+                <span class="how-ws__meta">1080 × 1350 · 10 post types</span>
+              </span>
+            </a>
+            <a class="how-ws" href="index.html#youtube">
+              <img src="workspace-card-youtube-thumbnail.webp" alt="" loading="lazy" decoding="async">
+              <span class="how-ws__body">
+                <strong>YouTube</strong>
+                <span>Thumbnails with one image, a player cut-out over a background, or two players. Quote mode for interview clips.</span>
+                <span class="how-ws__meta">1280 × 720 · 3 layouts + quote</span>
+              </span>
+            </a>
+            <a class="how-ws" href="index.html#newsletter">
+              <img src="workspace-card-newsletter-assets.webp" alt="" loading="lazy" decoding="async">
+              <span class="how-ws__body">
+                <strong>Newsletter</strong>
+                <span>Feature images, section headers, the desktop news layout, trivia and editable infographics for every send.</span>
+                <span class="how-ws__meta">14 assets · 18 newsletter brands</span>
+              </span>
+            </a>
+            <a class="how-ws" href="reels.html">
+              <img src="workspace-card-reel-captions.webp" alt="" loading="lazy" decoding="async">
+              <span class="how-ws__body">
+                <strong>Reel Captions</strong>
+                <span>Captions from speech, an editable transcript, brand-safe caption styles and lower thirds for short videos.</span>
+                <span class="how-ws__meta">Short-form video</span>
+              </span>
+            </a>
+          </div>
+          <p class="how-note"><span class="es-tile es-tile--purple" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5 13.9 9 19.5 11l-5.6 2-1.9 5.5-1.9-5.5L4.5 11l5.6-2z"/></svg></span><span>Starting from a story? <a href="generate.html">Generate</a> turns a brief into editable Social Media posts you can finish in the editor.</span></p>
+        </div>
+      </article>
+
+      <!-- Step 2 -->
+      <article class="how-step" aria-labelledby="step-2-title">
+        <div class="how-step__rail" aria-hidden="true">
+          <span class="es-tile es-tile--purple how-step__icon"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></span>
+          <span class="how-step__line"></span>
+        </div>
+        <div class="how-step__body">
+          <span class="how-step__num">Step 02</span>
+          <h3 id="step-2-title">Add your content</h3>
+          <p class="how-step__intro">Everything you change shows on the canvas straight away. The right-hand panel only shows what the template you picked needs.</p>
+          <ul class="how-points">
+            <li>
+              <span class="es-tile how-points__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h11M4 18h8"/></svg></span>
+              <div><strong>Type your text</strong><p>Each line of the headline becomes its own pill. Press Enter to start a new line.</p></div>
+            </li>
+            <li>
+              <span class="es-tile es-tile--amber how-points__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16"/></svg></span>
+              <div><strong>Pick the sport and team</strong><p>Team colours are applied to pills and accents for you, so every design matches the club's palette.</p></div>
+            </li>
+            <li>
+              <span class="es-tile es-tile--green how-points__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><circle cx="9" cy="9.5" r="1.8"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4.5 3.5"/></svg></span>
+              <div><strong>Add a photo</strong><p>Upload your own or search the <em>ES Image Pool</em> for the latest approved images of a player, team or topic. Drag it on the canvas to move it and zoom to crop.</p></div>
+            </li>
+            <li>
+              <span class="es-tile es-tile--pink how-points__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 15v-3M12 15V9M16 15v-5"/></svg></span>
+              <div><strong>Fill a template</strong><p>Stats, rankings, trivia and infographics have a field for every value. Infographics show one card per player, with the stats side by side.</p></div>
+            </li>
+          </ul>
+          <p class="how-note"><span class="es-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-2"/></svg></span><span>Changed your mind? Undo and Redo sit next to the page title, or use <kbd class="es-kbd">Ctrl</kbd> <kbd class="es-kbd">Z</kbd> and <kbd class="es-kbd">Ctrl</kbd> <kbd class="es-kbd">Y</kbd>.</span></p>
+        </div>
+      </article>
+
+      <!-- Step 3 -->
+      <article class="how-step" aria-labelledby="step-3-title">
+        <div class="how-step__rail" aria-hidden="true">
+          <span class="es-tile es-tile--green how-step__icon"><svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg></span>
+        </div>
+        <div class="how-step__body">
+          <span class="how-step__num">Step 03</span>
+          <h3 id="step-3-title">Export and publish</h3>
+          <p class="how-step__intro">When it looks right, take it wherever it needs to go.</p>
+          <div class="how-export">
+            <div class="how-export__card">
+              <span class="es-tile es-tile--green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg></span>
+              <strong>Export</strong>
+              <p>Downloads a platform-ready file named after your headline, so it is easy to find later.</p>
+              <code class="how-file">es-ig-warriors-win-again-slide-1.jpeg</code>
+            </div>
+            <div class="how-export__card">
+              <span class="es-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="13" rx="2.5"/><path d="M8 3h11a2 2 0 0 1 2 2v11"/></svg></span>
+              <strong>Carousels in one go</strong>
+              <p>On a Social Media carousel, Export offers every filled slide at once, in order.</p>
+            </div>
+            <div class="how-export__card">
+              <span class="es-tile es-tile--purple" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg></span>
+              <strong>Copy link</strong>
+              <p>Name the image and get a permanent link to share in Slack, email or a CMS. Anyone with the link can view it.</p>
+            </div>
+            <div class="how-export__card">
+              <span class="es-tile es-tile--amber" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><circle cx="9" cy="9.5" r="1.8"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4.5 3.5"/></svg></span>
+              <strong>Find it in the Gallery</strong>
+              <p>Every exported Social Media post appears in the <a href="gallery.html">Gallery</a>, newest first, for the whole team.</p>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Editor tour -->
+    <section class="how-section" id="editor" aria-labelledby="editor-title">
+      <header class="how-section__head">
+        <h2 id="editor-title">Inside the editor</h2>
+        <p>The same layout in every workspace, so once you know one, you know them all.</p>
+      </header>
+      <div class="how-tour">
+        <div class="how-mock" aria-hidden="true">
+          <div class="how-mock__nav">
+            <span class="how-mock__dot is-brand"></span>
+            <span></span><span class="is-on"></span><span></span><span></span><span></span>
+            <b class="how-pin" style="top: 34%; left: 50%">1</b>
+          </div>
+          <div class="how-mock__stage">
+            <div class="how-mock__top"><span></span><span></span><span></span></div>
+            <div class="how-mock__canvas">
+              <div class="how-mock__photo"></div>
+              <div class="how-mock__pill">WARRIORS</div>
+              <div class="how-mock__pill is-alt">WIN AGAIN</div>
+              <b class="how-pin" style="top: 46%; left: 50%">2</b>
+            </div>
+            <div class="how-mock__toolbar"><span></span><span></span><span class="is-wide"></span><b class="how-pin" style="top: -10px; right: -10px">3</b></div>
+          </div>
+          <div class="how-mock__panel">
+            <div class="how-mock__export"><span class="is-primary">Export</span><span>Copy link</span><b class="how-pin" style="top: -10px; right: -8px">4</b></div>
+            <div class="how-mock__field"></div>
+            <div class="how-mock__tabs"><span class="is-on"></span><span></span><span></span></div>
+            <div class="how-mock__field is-short"></div>
+            <div class="how-mock__field"></div>
+            <div class="how-mock__field is-tall"></div>
+            <b class="how-pin" style="top: 55%; left: -10px">5</b>
+          </div>
+        </div>
+        <ol class="how-legend">
+          <li><b class="how-pin">1</b><div><strong>Navigation</strong><p>Switch workspaces, open Guidelines or search everything with <kbd class="es-kbd">Ctrl</kbd> <kbd class="es-kbd">K</kbd>. Collapse it for more room.</p></div></li>
+          <li><b class="how-pin">2</b><div><strong>Canvas</strong><p>A live, full-quality preview. Drag photos to reposition them. On infographics, click a photo to jump to its fields.</p></div></li>
+          <li><b class="how-pin">3</b><div><strong>Canvas toolbar</strong><p>Zoom in or out, upload an image or open the ES Image Pool. At 100% the canvas fills the space.</p></div></li>
+          <li><b class="how-pin">4</b><div><strong>Export and Copy link</strong><p>Always at the top of the panel, whatever you are editing.</p></div></li>
+          <li><b class="how-pin">5</b><div><strong>Panel</strong><p>Pick the template, then fill <em>Content</em>, adjust <em>Photos</em> or search the <em>ES Image Pool</em>. Sections remember whether you left them open.</p></div></li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Brand rules -->
+    <section class="how-section" id="brand" aria-labelledby="brand-title">
+      <header class="how-section__head">
+        <h2 id="brand-title">The brand rules are built in</h2>
+        <p>You focus on the story. FrameUp keeps every design on brand.</p>
+      </header>
+      <div class="how-grid">
+        <div class="how-card"><span class="es-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 8h16"/></svg></span><strong>Approved sizes</strong><p>Every template exports at the size each platform expects, with sharp, high-resolution output.</p></div>
+        <div class="how-card"><span class="es-tile es-tile--purple" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19 10 5h4l5 14M7.5 13h9"/></svg></span><strong>ES fonts and pills</strong><p>Headlines use the ES condensed typeface in the signature pill style, spaced the approved way.</p></div>
+        <div class="how-card"><span class="es-tile es-tile--amber" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><circle cx="12" cy="16" r="3"/></svg></span><strong>Team colours</strong><p>Pick a team and its colours are applied for you, across leagues and sports.</p></div>
+        <div class="how-card"><span class="es-tile es-tile--green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 4 7v10l8 4 8-4V7z"/><path d="m4 7 8 4 8-4M12 11v10"/></svg></span><strong>Logo and safe zones</strong><p>The ES logo sits in its approved spot, and key content stays clear of platform overlays.</p></div>
+      </div>
+      <p class="how-more"><a href="index.html#logo-guidelines">Read the full brand guidelines <span aria-hidden="true">→</span></a></p>
+    </section>
+
+    <!-- Tips -->
+    <section class="how-section" id="tips" aria-labelledby="tips-title">
+      <header class="how-section__head">
+        <h2 id="tips-title">Tips and shortcuts</h2>
+        <p>Small things that save time every day.</p>
+      </header>
+      <dl class="how-tips">
+        <div><dt><kbd class="es-kbd">Ctrl</kbd> <kbd class="es-kbd">K</kbd> or <kbd class="es-kbd">/</kbd></dt><dd>Search FrameUp and jump to any workspace or guide.</dd></div>
+        <div><dt><kbd class="es-kbd">Ctrl</kbd> <kbd class="es-kbd">Z</kbd></dt><dd>Undo the last change to your design.</dd></div>
+        <div><dt><kbd class="es-kbd">Ctrl</kbd> <kbd class="es-kbd">Y</kbd></dt><dd>Redo it (or <kbd class="es-kbd">Ctrl</kbd> <kbd class="es-kbd">Shift</kbd> <kbd class="es-kbd">Z</kbd>).</dd></div>
+        <div><dt><kbd class="es-kbd">Enter</kbd></dt><dd>In the headline box, start a new pill on its own line.</dd></div>
+        <div><dt>Drag on the canvas</dt><dd>Move a photo inside its frame; use Zoom to crop tighter.</dd></div>
+        <div><dt>Collapse the sidebar</dt><dd>The button next to the logo gives the canvas more room. FrameUp remembers your choice.</dd></div>
+      </dl>
+      <p class="how-small">On a Mac, use <kbd class="es-kbd">⌘</kbd> instead of <kbd class="es-kbd">Ctrl</kbd>.</p>
+    </section>
+
+    <!-- Custom -->
+    <section class="how-section how-custom" id="custom" aria-labelledby="custom-title">
+      <div class="how-custom__copy">
+        <h2 id="custom-title">Need something custom?</h2>
+        <p>For campaigns, special formats or anything the templates do not cover, send the design team one clear brief.</p>
+        <ol class="how-flow">
+          <li><span>1</span><div><strong>Fill in one brief</strong><p>Context, copy, deadline and references, all in one form.</p></div></li>
+          <li><span>2</span><div><strong>The design team picks it up</strong><p>They review it and follow up if anything is unclear.</p></div></li>
+          <li><span>3</span><div><strong>Get your files</strong><p>Final, on-brand designs ready to publish.</p></div></li>
+        </ol>
+        <a class="es-btn es-btn--primary" href="design-request.html">Request a design</a>
+      </div>
+      <nav class="how-help" aria-label="Help and resources">
+        <a href="index.html#logo-guidelines"><span class="es-tile es-tile--amber" aria-hidden="true">G</span><span><strong>Brand guidelines</strong><small>Logo, social and video rules</small></span></a>
+        <a href="index.html#faq"><span class="es-tile es-tile--pink" aria-hidden="true">?</span><span><strong>FAQ</strong><small>Answers to common questions</small></span></a>
+        <a href="gallery.html"><span class="es-tile es-tile--green" aria-hidden="true">G</span><span><strong>Gallery</strong><small>See what the team has made</small></span></a>
+        <a href="tool-feedback.html"><span class="es-tile es-tile--purple" aria-hidden="true">F</span><span><strong>Tool feedback</strong><small>Report a bug or share an idea</small></span></a>
+      </nav>
+    </section>
+  </main>
+</body>
+</html>

@@ -9,6 +9,7 @@
 
   const icon = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
   const ICONS = {
+    guideMap: icon('<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>'),
     home: icon('<path d="M4 11.5 12 5l8 6.5"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/>'),
     social: icon('<rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.5"/><path d="M16.5 7.5h.01"/>'),
     youtube: icon('<rect x="3" y="6" width="18" height="12" rx="4"/><path d="m10.5 9.5 4 2.5-4 2.5z"/>'),
@@ -39,6 +40,7 @@
       label: '',
       items: [
         { id: 'frames', label: 'Home', href: 'index.html#frames', icon: 'home' },
+        { id: 'how', label: 'How FrameUp works', short: 'How to', href: 'how-frameup-works.html', icon: 'guideMap' },
       ],
     },
     {
@@ -81,6 +83,7 @@
     'generate.html': 'generate',
     'tool-feedback.html': 'feedback',
     'design-system.html': 'library',
+    'how-frameup-works.html': 'how',
   };
 
   function currentId() {

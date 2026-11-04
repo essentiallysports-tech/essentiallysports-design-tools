@@ -575,7 +575,7 @@ html:not([data-theme="dark"])[data-studio-shell="on"] .studio-inspector-tab.is-a
   box-shadow: inset 0 0 0 1px var(--es-line), 0 1px 2px rgb(14 16 20 / .06) !important;
 }
 
-/* Fields: 14px radius, 1.5px line-2 outline, ink-3 on hover, 2px ink + halo on focus */
+/* Fields: 14px radius, 1.5px line-2 outline, ink-3 on hover, brand outline on focus / open */
 html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input){
   border: 1.5px solid var(--es-line-2) !important;
   border-radius: var(--es-radius-control) !important;
@@ -590,8 +590,15 @@ html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="tex
 
 html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input):focus,
 html:not([data-theme="dark"])[data-studio-shell="on"] .panel .select-dropdown.is-open > .select-dropdown-trigger{
-  border-color: var(--es-ink) !important;
-  box-shadow: inset 0 0 0 .5px var(--es-ink), 0 0 0 4px rgb(14 16 20 / .08) !important;
+  border-color: var(--es-brand) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+html[data-theme="dark"][data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input):focus,
+html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown.is-open > .select-dropdown-trigger{
+  border-color: var(--theme-dark-accent, #2586f7) !important;
+  box-shadow: none !important;
   outline: none !important;
 }
 

@@ -858,7 +858,7 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 
 .reels-choice.is-open .reels-choice-trigger {
   border-color: var(--reels-blue);
-  box-shadow: 0 0 0 3px var(--reels-focus);
+  box-shadow: none;
 }
 
 .reels-choice-label {

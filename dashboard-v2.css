@@ -5649,9 +5649,9 @@ body.dashboard-page .dashboard-choice-trigger span:first-child {
 body.dashboard-page .dashboard-choice-trigger:hover,
 body.dashboard-page .dashboard-choice-trigger:focus-visible,
 body.dashboard-page .dashboard-choice.is-open .dashboard-choice-trigger {
-  border-color: var(--es-brand-tint);
+  border-color: var(--es-brand);
   outline: 0;
-  box-shadow: var(--es-focus);
+  box-shadow: none;
 }
 
 body.dashboard-page .dashboard-choice-chevron {
