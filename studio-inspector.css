@@ -168,7 +168,7 @@ textarea.ig-input { padding: 10px 12px; resize: vertical; }
 @media (min-width: 901px) {
   /* Header: Export / Copy link, then the template pickers. */
   html[data-studio-shell="on"] .studio-control-dock {
-    gap: 14px !important;
+    gap: 16px !important;
     padding: 16px !important;
   }
   html[data-studio-shell="on"] .studio-export-section {
@@ -176,7 +176,9 @@ textarea.ig-input { padding: 10px 12px; resize: vertical; }
     padding: 14px 16px !important;
     border-bottom: 1px solid var(--es-line);
   }
-  html[data-studio-shell="on"] .studio-primary-controls { gap: 12px !important; padding: 0 !important; }
+  html[data-studio-shell="on"] .studio-primary-controls { gap: 16px !important; padding: 0 !important; }
+  html[data-studio-shell="on"] .studio-primary-controls :is(.card, .youtube-control-row, .newsletter-control-row) { margin: 0 !important; }
+  html[data-studio-shell="on"] .studio-primary-controls :is(.youtube-control-row, .newsletter-control-row) { gap: 16px !important; }
 
   /* Field labels: small, quiet, sentence case. */
   html[data-studio-shell="on"] .panel :is(.card-title, .widget-field-label, .tod-label) {
@@ -218,44 +220,144 @@ textarea.ig-input { padding: 10px 12px; resize: vertical; }
   html[data-studio-shell="on"] .studio-inspector-tabs { padding: 3px !important; border-radius: 12px !important; }
   html[data-studio-shell="on"] .studio-inspector-tab { min-height: 32px !important; font-size: 13px !important; border-radius: 9px !important; }
 
+  /* ── Spacing rhythm for the whole panel ──
+     16px between fields · 6px from a label to its field · 20px under an open
+     section · one hairline between sections, nowhere else. */
+
   /* Sections: flat, divided by hairlines, on white (no grey well, no card-in-card). */
   html[data-studio-shell="on"] .studio-content-sections { background: var(--es-bg) !important; }
   html[data-studio-shell="on"] .studio-accordion-list {
     gap: 0 !important;
-    padding: 0 16px 24px !important;
+    padding: 0 16px 32px !important;
   }
   html[data-studio-shell="on"] .studio-accordion-section {
     border: 0 !important;
-    border-top: 1px solid var(--es-line) !important;
     border-radius: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
+  }
+  /* A line only between two visible sections. */
+  html[data-studio-shell="on"] .studio-accordion-section:not([hidden]) ~ .studio-accordion-section:not([hidden]) {
+    border-top: 1px solid var(--es-line) !important;
   }
   html[data-studio-shell="on"] .studio-accordion-trigger {
     min-height: 48px !important;
     height: auto !important;
     padding: 0 2px !important;
+    border: 0 !important;
     background: transparent !important;
     font-size: 14px !important;
     font-weight: 600 !important;
   }
-  html[data-studio-shell="on"] .studio-accordion-body { padding: 0 2px 18px !important; }
-  /* The section already has side padding; cards inside don't add their own. */
-  html[data-studio-shell="on"] .studio-accordion-body :is(.card, .text-card, .swipe-button-control, .advanced-card, .quote-logo-control, #widget-main-fields, #widget-picks-fields, #trivia-fields, #infographic-fields) {
-    padding: 0 !important;
-    background: transparent !important;
+  /* Body: no line of its own; its bottom space only when the section is open
+     (a closed section used to keep 18px of empty space under its header). */
+  html[data-studio-shell="on"] .studio-accordion-body {
+    display: grid !important;
+    gap: 16px;
+    padding: 0 2px !important;
+    border: 0 !important;
   }
-  /* Gap only between visible cards (hidden siblings take no space). */
-  html[data-studio-shell="on"] .studio-accordion-body { display: grid !important; gap: 16px; }
-  html[data-studio-shell="on"] .studio-accordion-body > * { min-width: 0; margin-top: 0 !important; margin-bottom: 0 !important; }
-  /* The older divider between cards would sit flush on the next label now that
-     cards have no padding (and counts hidden siblings): the gap separates them. */
-  html[data-studio-shell="on"] .studio-accordion-body > * + * { border-top: 0 !important; }
+  html[data-studio-shell="on"] .studio-accordion-section.is-open .studio-accordion-body { padding-bottom: 20px !important; }
+  html[data-studio-shell="on"] .studio-accordion-body > * { min-width: 0; margin-top: 0 !important; margin-bottom: 0 !important; border-top: 0 !important; }
+  /* The section already has side padding; cards inside add none of their own. */
+  html[data-studio-shell="on"] .studio-accordion-body :is(.card, .text-card, .swipe-button-control, .advanced-card, .quote-logo-control, .color-card, #widget-main-fields, #widget-picks-fields, #trivia-fields, #infographic-fields) {
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
   /* Only one section: no header to open or close, just the fields. */
-  html[data-studio-shell="on"] .studio-accordion-list.is-single .studio-accordion-section { border-top: 0 !important; }
   html[data-studio-shell="on"] .studio-accordion-list.is-single .studio-accordion-trigger { display: none !important; }
   html[data-studio-shell="on"] .studio-accordion-list.is-single .studio-accordion-body { padding-top: 16px !important; }
+
+  /* Inside a card, fields stack on the same 16px rhythm; a field's label sits 6px above it.
+     The layout is applied at low priority (:where) and only to containers that are
+     shown, so every rule that hides a card or field set still wins. */
+  :where(html[data-studio-shell="on"]) .panel .text-card,
+  :where(html[data-studio-shell="on"]) .panel .color-card:not(.is-hidden-for-post-type):not(.is-hidden-for-newsletter-brand) {
+    display: grid;
+    gap: 16px;
+  }
+  html[data-studio-shell="on"] .panel :is(.stats-single-fields, .stats-double-fields).is-visible { gap: 16px !important; }
+  html[data-studio-shell="on"] .panel :is(.text-card, .color-card, .stats-post-fields) { margin: 0 !important; }
+  html[data-studio-shell="on"] .panel .text-card > :is(.tod-row, .input-wrap),
+  html[data-studio-shell="on"] .panel :is(.stats-single-fields, .stats-post-fields) > *,
+  html[data-studio-shell="on"] .panel .color-card > * {
+    margin: 0 !important;
+  }
+  html[data-studio-shell="on"] .panel .tod-row :is(.tod-label) { margin: 0 !important; }
+  html[data-studio-shell="on"] .panel .input-wrap > :is(textarea, input) { margin: 0 !important; }
+  html[data-studio-shell="on"] .panel .field-hint { margin: 6px 0 0 !important; color: var(--es-ink-3); font-size: 12px; line-height: 1.4; }
+  html[data-studio-shell="on"] .panel :is(.section-label, .color-group-label) {
+    display: block;
+    margin: 0 0 6px !important;
+    color: var(--es-ink-3) !important;
+    font-family: var(--es-font-ui) !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.3 !important;
+    text-transform: none !important;
+  }
+  /* Sport and Team stack (Sport is a row of buttons now). */
+  html[data-studio-shell="on"] .panel .color-card .field-row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 16px !important;
+    margin: 0 !important;
+  }
+  html[data-studio-shell="on"] .panel .color-card .field-group { margin: 0 !important; }
+  /* A label that is its own grid item: pull the next field up to 6px (16 − 10). */
+  html[data-studio-shell="on"] body .panel .text-card > .tod-row,
+  html[data-studio-shell="on"] body .panel .color-card > .color-group-label,
+  html[data-studio-shell="on"] body .panel .stats-single-fields > .stats-entry-grid-label {
+    margin: 0 0 -10px !important;
+  }
+
+  /* Player Stats editor: one outlined row per stat (value | label), no box inside a box. */
+  html[data-studio-shell="on"] body .panel #stats-single-fields .stats-entry .pill-entry {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+  html[data-studio-shell="on"] body .panel #stats-single-fields .stats-entry .stats-entry-label-input {
+    border-left: 1px solid var(--es-line) !important;
+  }
+  html[data-studio-shell="on"] .panel #stats-single-fields .stats-entry {
+    border: 1.5px solid var(--es-line-2) !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+  html[data-studio-shell="on"] .panel #stats-single-fields .stats-entry:focus-within { border-color: var(--es-brand) !important; }
 }
+
+/* ─── Short choices as buttons (select[data-ui="chips"]) ───────────────── */
+.select-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 6px;
+}
+.select-chip {
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--es-line-2);
+  border-radius: 10px;
+  background: var(--es-bg);
+  color: var(--es-ink-2);
+  cursor: pointer;
+  font: 500 13px/1.25 var(--es-font-ui);
+  text-align: center;
+  transition: border-color var(--es-dur) var(--es-ease), background-color var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease);
+}
+.select-chip:hover:not(:disabled) { border-color: var(--es-ink-3); color: var(--es-ink); }
+.select-chip[aria-checked="true"] { border-color: var(--es-brand); background: var(--es-brand-soft); color: var(--es-ink); font-weight: 600; }
+.select-chip:focus-visible { outline: none; border-color: var(--es-brand); }
+.select-chip:disabled { opacity: .45; cursor: not-allowed; }
+#youtube-variation-select + .select-chips,
+#quote-logo-placement + .select-chips { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+html[data-theme="dark"] .select-chip { border-color: var(--theme-dark-border, #303030); background: var(--theme-dark-surface, #121212); color: var(--theme-dark-text-muted, #b6b6b6); }
+html[data-theme="dark"] .select-chip[aria-checked="true"] { border-color: var(--theme-dark-accent, #2586f7); background: var(--theme-dark-accent-soft, rgba(37, 134, 247, .17)); color: var(--theme-dark-text, #f3f5f7); }
 
 /* Dark theme (colours from theme.css) */
 html[data-theme="dark"] .ig-card,
@@ -280,5 +382,64 @@ html[data-theme="dark"] .ig-icon-btn.is-active { background: var(--theme-dark-ac
   html[data-theme="dark"][data-studio-shell="on"] .studio-export-section { border-bottom-color: var(--theme-dark-border, #303030); }
   html[data-theme="dark"][data-studio-shell="on"] .panel :is(.card-title, .widget-field-label, .tod-label) {
     color: var(--theme-dark-text-muted, #b6b6b6) !important;
+  }
+}
+
+/* ─── One label style across every editor ──────────────────────────────── */
+/* Lists, rankings and timelines used bold 15px black labels; match the rest. */
+html[data-studio-shell="on"] body .panel .listicle-field-label,
+html[data-studio-shell="on"] body .panel .listicle-asset-label {
+  gap: 6px;
+  color: var(--es-ink-3);
+  font-family: var(--es-font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+html[data-studio-shell="on"] body .panel .listicle-field-label > :is(input, textarea) {
+  color: var(--es-ink);
+  font-size: 15px;
+  font-weight: 500;
+}
+/* Group headings inside an editor (Player 1, Quote 2…): a quiet sub-heading. */
+html[data-studio-shell="on"] body .panel .double-entity-section-title {
+  color: var(--es-ink);
+  font-family: var(--es-font-ui);
+  font-size: 14px;
+  font-weight: 600;
+}
+/* Timeline: its fields carry their own labels, so no extra heading above them. */
+body[data-instagram-post-type="asap-template-1"] .text-card > .tod-row { display: none; }
+html[data-theme="dark"][data-studio-shell="on"] body .panel :is(.listicle-field-label, .listicle-asset-label) { color: var(--theme-dark-text-muted, #b6b6b6); }
+html[data-theme="dark"][data-studio-shell="on"] body .panel .listicle-field-label > :is(input, textarea),
+html[data-theme="dark"][data-studio-shell="on"] body .panel .double-entity-section-title { color: var(--theme-dark-text, #f3f5f7); }
+
+/* Newsletter widget / trivia fields: same 16px rhythm, no lines between fields. */
+html[data-studio-shell="on"] body .panel :is(#trivia-fields, #widget-main-fields, #widget-picks-fields) .widget-field-group {
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+html[data-studio-shell="on"] body .panel :is(#trivia-fields, #widget-main-fields, #widget-picks-fields) .widget-field-group:last-child { margin-bottom: 0; }
+/* Inside a field group, each further label starts a new field: 14px above it. */
+html[data-studio-shell="on"] body .panel .widget-field-group > .widget-field-label:not(:first-child) { margin-top: 14px !important; }
+html[data-studio-shell="on"] body .panel .widget-field-group > .widget-image-row { margin-top: 2px; }
+/* Each Top Pick is its own soft card, titled "Top Pick N" with its Show switch. */
+html[data-studio-shell="on"] body .panel #widget-picks-fields .widget-field-group:has(> .widget-pick-head) {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--es-sunk);
+}
+html[data-studio-shell="on"] body .panel .widget-pick-head { margin-bottom: 10px; }
+html[data-studio-shell="on"] body .panel .widget-pick-label { color: var(--es-ink) !important; font-size: 13px !important; font-weight: 600 !important; margin: 0 !important; }
+html[data-theme="dark"][data-studio-shell="on"] body .panel #widget-picks-fields .widget-field-group:has(> .widget-pick-head) { background: var(--theme-dark-surface-raised, #1a1a1a); }
+html[data-theme="dark"][data-studio-shell="on"] body .panel .widget-pick-label { color: var(--theme-dark-text, #f3f5f7) !important; }
+
+/* Phones: the sheet already has its header line; no extra lines inside it. */
+@media (max-width: 900px) {
+  html[data-studio-shell="on"] .studio-accordion-body,
+  html[data-studio-shell="on"] .studio-accordion-body > *,
+  html[data-studio-shell="on"] .studio-accordion-body .text-card {
+    border-top: 0 !important;
   }
 }

@@ -4307,109 +4307,93 @@ body[data-current-page="faq"] .faq-cta-art img {
   .twitter-quote-fields.is-visible {
     display: grid;
   }
+  /* Tweet link: one row — the link field (link icon, × inside once filled) and Generate. */
   .tweet-fetch-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 38px;
-    grid-template-rows: 40px 38px;
-    align-items: center;
-    gap: 4px;
-    min-height: 90px;
-    padding: 4px;
-    overflow: hidden;
-    border: 1px solid var(--es-line);
-    border-radius: 14px;
-    background: #FFFFFF;
-    box-shadow: 0 1px 0 rgba(14, 16, 20, .06);
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+    gap: 8px;
   }
   .tweet-fetch-input-wrap {
     position: relative;
     min-width: 0;
-    grid-column: 1;
-    grid-row: 1;
   }
   .tweet-fetch-input-wrap::before {
     content: "";
     position: absolute;
-    left: 13px;
+    left: 14px;
     top: 50%;
-    width: 15px;
-    height: 15px;
+    z-index: 1;
+    width: 16px;
+    height: 16px;
     transform: translateY(-50%);
-    background: #48617C;
+    background: var(--es-ink-3);
     pointer-events: none;
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E") center / contain no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E") center / contain no-repeat;
   }
   .tweet-fetch-row .pill-entry {
     width: 100%;
-    min-height: 40px;
     min-width: 0;
-    padding-left: 38px;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    background: transparent;
-  }
-  .tweet-fetch-row .pill-entry:focus,
-  .tweet-fetch-row .pill-entry:focus-visible {
-    outline: 0;
-    border: 0;
-    box-shadow: none;
-  }
-  .tweet-fetch-row:focus-within {
-    border-color: var(--es-brand-tint);
-    box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
+    padding-left: 40px !important;
+    padding-right: 40px !important;
   }
   .tweet-fetch-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 0;
-    min-height: 38px;
+    min-height: 44px;
     margin: 0;
-    padding: 0 12px;
-    border: 1px solid var(--accent);
-    border-radius: 10px;
-    background: var(--accent);
+    padding: 0 18px;
+    border: 0;
+    border-radius: var(--es-radius-control, 14px);
+    background: var(--es-brand-fill, var(--accent));
     color: #FFFFFF;
     cursor: pointer;
     font-family: var(--es-font-ui);
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 14px;
+    font-weight: 600;
     line-height: 1;
-    grid-column: 1 / -1;
-    grid-row: 2;
-    transition: background-color .16s var(--es-ease), border-color .16s var(--es-ease);
+    white-space: nowrap;
+    transition: background-color .16s var(--es-ease);
   }
-  .tweet-fetch-button:hover {
-    border-color: var(--accent-hover);
-    background: var(--accent-hover);
-  }
+  .tweet-fetch-button:hover { background: var(--es-brand-fill-press, var(--accent-hover)); }
+  .tweet-fetch-button:focus-visible { outline: 2px solid var(--es-brand); outline-offset: 2px; }
   .tweet-fetch-button:disabled {
-    border-color: var(--es-line);
-    background: #F5F8FB;
-    color: var(--text-secondary);
+    background: var(--es-sunk);
+    color: var(--es-ink-3);
     cursor: wait;
   }
   .tweet-fetch-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    z-index: 1;
     display: grid;
     place-items: center;
-    width: 38px;
-    height: 40px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
     border: 0;
-    border-left: 1px solid var(--es-brand-tint);
+    border-radius: 8px;
     background: transparent;
-    color: var(--es-ink);
+    color: var(--es-ink-3);
     cursor: pointer;
     font-family: Arial, sans-serif;
-    font-size: 22px;
+    font-size: 20px;
     line-height: 1;
-    grid-column: 2;
-    grid-row: 1;
+    transform: translateY(-50%);
   }
+  .tweet-fetch-clear:hover { background: var(--es-sunk); color: var(--es-ink); }
+  /* Nothing to clear until there is a link. */
+  .tweet-fetch-input-wrap:has(.pill-entry:placeholder-shown) .tweet-fetch-clear { display: none; }
+  html[data-theme="dark"] .tweet-fetch-clear:hover { background: var(--theme-dark-surface-hover, #232323); color: var(--theme-dark-text, #f3f5f7); }
   .tweet-generated-fields {
     display: none;
   }
+  .twitter-quote-fields.is-visible { gap: 16px; }
+  /* The status line only takes space when it has something to say. */
+  .twitter-quote-status:empty { display: none; }
   .twitter-quote-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7553,7 +7537,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20261104-ux1">
-<link rel="stylesheet" href="studio-inspector.css?v=20261104-ux5">
+<link rel="stylesheet" href="studio-inspector.css?v=20261105-panel7">
 <link rel="stylesheet" href="theme.css?v=20261023-ux1">
 <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
 <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
@@ -7838,11 +7822,11 @@ body[data-current-page="faq"] .faq-cta-art img {
   <div class="panel">
     <div class="youtube-control-row" aria-label="YouTube asset options">
       <div class="card" id="youtube-variation-card">
-        <div class="card-title">Asset Variation</div>
-        <select id="youtube-variation-select" aria-label="YouTube asset variation">
-          <option value="variation-1">Single Image</option>
-          <option value="variation-2">Entity + Background</option>
-          <option value="variation-3">Two Foregrounds + Background</option>
+        <div class="card-title">Layout</div>
+        <select id="youtube-variation-select" aria-label="YouTube layout" data-ui="chips">
+          <option value="variation-1">One image</option>
+          <option value="variation-2">Player + background</option>
+          <option value="variation-3">Two players + background</option>
         </select>
       </div>
 
@@ -7929,10 +7913,10 @@ body[data-current-page="faq"] .faq-cta-art img {
     </div>
 
     <div class="quote-logo-control" id="quote-logo-control">
-      <div class="card-title">Quote Logo Placement</div>
-      <select id="quote-logo-placement" aria-label="Quote logo placement">
+      <div class="card-title">Logo position</div>
+      <select id="quote-logo-placement" aria-label="Logo position" data-ui="chips">
         <option value="bottom">Bottom wordmark</option>
-        <option value="top-right">Top Logo</option>
+        <option value="top-right">Top corner logo</option>
       </select>
     </div>
 
@@ -7955,11 +7939,11 @@ body[data-current-page="faq"] .faq-cta-art img {
         <div class="tweet-fetch-row">
           <div class="tweet-fetch-input-wrap">
             <input id="tweet-url-input" class="pill-entry" type="url" inputmode="url" placeholder="Paste X/Twitter post link" spellcheck="false" aria-label="Tweet URL">
+            <button class="tweet-fetch-clear" id="tweet-fetch-clear" type="button" aria-label="Clear tweet link" title="Clear link">×</button>
           </div>
           <button class="tweet-fetch-button" id="tweet-fetch-btn" type="button">Generate</button>
-          <button class="tweet-fetch-clear" id="tweet-fetch-clear" type="button" aria-label="Clear tweet link">×</button>
         </div>
-        <div class="input-wrap" style="margin-top:10px">
+        <div class="input-wrap">
           <input id="tweet-headline-input" class="pill-entry" type="text" placeholder="Headline pill above the tweet (optional)" spellcheck="false" aria-label="Optional headline above the tweet">
         </div>
         <div class="tweet-generated-fields" aria-hidden="true">
@@ -7977,7 +7961,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
       <div class="double-entity-fields" id="double-entity-fields">
         <section class="double-entity-quote-group" aria-labelledby="double-entity-quote-1-title">
-          <div class="double-entity-section-title" id="double-entity-quote-1-title">Quote 1 Info</div>
+          <div class="double-entity-section-title" id="double-entity-quote-1-title">Quote 1</div>
           <div class="input-wrap">
             <textarea id="double-quote-primary" class="pill-entry" placeholder="Your Quote Text Goes Here" spellcheck="false" rows="3"></textarea>
           </div>
@@ -7990,7 +7974,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         </section>
         <div class="double-entity-separator" role="separator"></div>
         <section class="double-entity-quote-group" aria-labelledby="double-entity-quote-2-title">
-          <div class="double-entity-section-title" id="double-entity-quote-2-title">Quote 2 Info</div>
+          <div class="double-entity-section-title" id="double-entity-quote-2-title">Quote 2</div>
           <div class="input-wrap">
             <textarea id="double-quote-secondary" class="pill-entry" placeholder="Your Quote Text Goes Here" spellcheck="false" rows="3"></textarea>
           </div>
@@ -8007,6 +7991,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           <div class="input-wrap stats-headline-field">
             <input id="stats-headline" class="pill-entry" type="text" placeholder="Record Alert!" spellcheck="false">
           </div>
+          <span class="section-label stats-entry-grid-label">Stats</span>
           <div class="stats-entry-grid">
             <label class="stats-entry">
               <input class="pill-entry stats-entry-value-input" type="text" data-stats-value="0" placeholder="13" spellcheck="false" aria-label="Stat 1 value">
@@ -8031,7 +8016,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           </section>
           <div class="double-entity-separator" role="separator"></div>
           <section class="stats-double-entity-section" aria-labelledby="stats-double-entity-1-title">
-            <div class="double-entity-section-title" id="stats-double-entity-1-title" data-entity-index="1">Entity 1</div>
+            <div class="double-entity-section-title" id="stats-double-entity-1-title" data-entity-index="1">Player 1</div>
             <div class="stats-double-name-grid">
               <div class="input-wrap">
                 <input id="stats-double-first-name-primary" class="pill-entry" type="text" placeholder="Luka" spellcheck="false" aria-label="Entity 1 first name">
@@ -8076,7 +8061,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           </section>
           <div class="double-entity-separator" role="separator"></div>
           <section class="stats-double-entity-section" aria-labelledby="stats-double-entity-2-title">
-            <div class="double-entity-section-title" id="stats-double-entity-2-title" data-entity-index="2">Entity 2</div>
+            <div class="double-entity-section-title" id="stats-double-entity-2-title" data-entity-index="2">Player 2</div>
             <div class="stats-double-name-grid">
               <div class="input-wrap">
                 <input id="stats-double-first-name-secondary" class="pill-entry" type="text" placeholder="Victor" spellcheck="false" aria-label="Entity 2 first name">
@@ -8128,7 +8113,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         </label>
         <div class="listicle-header-grid" aria-label="Column labels">
           <label class="listicle-field-label" for="listicle-entity-header">
-            Entity
+            Name
             <input id="listicle-entity-header" class="pill-entry" type="text" maxlength="18" placeholder="Team" spellcheck="false" data-listicle-field="entityHeader">
           </label>
           <label class="listicle-field-label" for="listicle-metric-1-header">
@@ -8179,8 +8164,8 @@ body[data-current-page="faq"] .faq-cta-art img {
       <!-- SPORT + TEAM -->
       <div class="field-row" style="margin-bottom: 14px;">
         <div class="field-group">
-          <div class="section-label">Sports</div>
-          <select id="sport-select" aria-label="Sport"></select>
+          <div class="section-label">Sport</div>
+          <select id="sport-select" aria-label="Sport" data-ui="chips"></select>
         </div>
         <div class="field-group">
           <div class="section-label" id="brand-choice-label">Team</div>
@@ -9964,9 +9949,51 @@ function closeCustomSelects(except = null) {
   });
 }
 
+// Short choices render as buttons instead of a dropdown. The <select> stays the
+// source of truth: a button sets its value and fires the usual change event.
+function syncSelectChips(select, chips, rebuild) {
+  if (rebuild) {
+    chips.innerHTML = '';
+    Array.from(select.options).forEach(option => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'select-chip';
+      button.textContent = option.textContent;
+      button.dataset.value = option.value;
+      button.disabled = option.disabled || select.disabled;
+      button.setAttribute('role', 'radio');
+      button.addEventListener('click', () => {
+        if (option.disabled || select.disabled || select.value === option.value) return;
+        select.value = option.value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        syncSelectChips(select, chips, false);
+      });
+      button.addEventListener('keydown', event => {
+        const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
+        if (!step) return;
+        event.preventDefault();
+        const buttons = [...chips.querySelectorAll('.select-chip:not(:disabled)')];
+        const next = buttons[(buttons.indexOf(button) + step + buttons.length) % buttons.length];
+        next?.click();
+        next?.focus();
+      });
+      chips.appendChild(button);
+    });
+  }
+  chips.querySelectorAll('.select-chip').forEach(button => {
+    const isOn = button.dataset.value === select.value;
+    button.setAttribute('aria-checked', isOn ? 'true' : 'false');
+    button.tabIndex = isOn ? 0 : -1;
+  });
+}
+
 function syncCustomSelect(select, rebuild = true) {
   const dropdown = select?._customDropdown;
   if (!dropdown) return;
+  if (dropdown.classList.contains('select-chips')) {
+    syncSelectChips(select, dropdown, rebuild);
+    return;
+  }
   const trigger = dropdown.querySelector('.select-dropdown-trigger');
   const menu = dropdown.querySelector('.select-dropdown-menu');
   const selectedOption = select.selectedOptions?.[0] || select.options[select.selectedIndex] || select.options[0];
@@ -10046,6 +10073,19 @@ function enhanceCustomSelects() {
       return;
     }
     select.classList.add('is-enhanced-select');
+
+    if (select.dataset.ui === 'chips') {
+      const chips = document.createElement('div');
+      chips.className = 'select-chips';
+      chips.setAttribute('role', 'radiogroup');
+      chips.setAttribute('aria-label', select.getAttribute('aria-label') || 'Options');
+      select.insertAdjacentElement('afterend', chips);
+      select._customDropdown = chips;
+      syncCustomSelect(select);
+      // Other code changes the value directly (undo, restore): keep the buttons in step.
+      select.addEventListener('change', () => syncSelectChips(select, chips, false));
+      return;
+    }
 
     const dropdown = document.createElement('div');
     dropdown.className = 'select-dropdown';
@@ -10846,7 +10886,7 @@ function buildListicleRowControls() {
     primaryGrid.className = 'listicle-row-primary-grid';
     primaryGrid.append(
       createListicleInput('Rank', 'rank', row.rank, ESListicle.LIMITS.rank, rowIndex),
-      createListicleInput('Entity / Team', 'entity', row.entity, ESListicle.LIMITS.entity, rowIndex)
+      createListicleInput('Player / Team', 'entity', row.entity, ESListicle.LIMITS.entity, rowIndex)
     );
 
     const metricGrid = document.createElement('div');
@@ -18966,7 +19006,7 @@ function syncPostTypeControls() {
           : isReels
             ? 'Reel Cover Text'
             : isInstagram && activeType === 'stats-single-ent'
-              ? 'Player Stats'
+              ? 'Headline'
               : isInstagram && activeType === 'stats-double-ent'
                 ? 'Head-to-Head Stats'
                 : isInstagram && activeType === 'double-entity-quote'
@@ -20822,7 +20862,11 @@ loadFont().then(() => render());
     const groups = new Set(config.groups || []);
     const inDock = [...document.querySelectorAll('[data-studio-control-dock] [data-mobile-tool-group]')]
       .some(node => groups.has(node.dataset.mobileToolGroup) && mobileToolApplies(node));
-    return inDock ? 'image' : 'content';
+    // A tab with controls both in the dock and in the sections (Brand: logo +
+    // colours) uses the sections view, which also shows the dock's pickers.
+    const inSections = [...document.querySelectorAll('[data-studio-content-sections] [data-mobile-tool-group]')]
+      .some(node => groups.has(node.dataset.mobileToolGroup) && mobileToolApplies(node));
+    return inDock && !inSections ? 'image' : 'content';
   }
 
   // Media also shows the person photos (two-person templates), which live in
@@ -20914,9 +20958,10 @@ loadFont().then(() => render());
   function markMobileEditorGroups() {
     const groups = {
       // Format = which template; the YouTube quote toggle is a template choice too.
-      format: ['#post-type-control', '#reels-format-control', '#youtube-variation-card', '#youtube-category-card', '#youtube-quote-control', '#newsletter-asset-card'],
+      // The logo choice sits with the template pickers (both live in the top controls).
+      format: ['#post-type-control', '#reels-format-control', '#youtube-variation-card', '#youtube-category-card', '#youtube-quote-control', '#newsletter-asset-card', '#brand-logo-control'],
       content: ['.text-card', '#twitter-quote-fields', '#widget-main-fields', '#widget-picks-fields', '#trivia-fields', '#infographic-fields'],
-      brand: ['.color-card', '#newsletter-brand-card', '#brand-logo-control'],
+      brand: ['.color-card', '#newsletter-brand-card'],
       media: ['#entity-image-card', '#entity-image-card-2'],
       // Fine positioning is a desktop job; on phones it sits under More.
       more: ['#quote-logo-control', '#swipe-button-card', '#pill-position-card'],
