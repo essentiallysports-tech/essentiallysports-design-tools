@@ -3171,6 +3171,32 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
   }
 
+  /* BRAND LOGO CHOICE (Social Media, YouTube) */
+  .brand-logo-control { display: none; }
+  body:is([data-current-page="instagram"], [data-current-page="youtube"]) .brand-logo-control { display: block; }
+  .brand-logo-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .brand-logo-option {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 6px;
+    min-height: 52px;
+    padding: 8px 6px;
+    border: 1.5px solid var(--es-line-2);
+    border-radius: 12px;
+    background: var(--es-bg);
+    color: var(--es-ink-2);
+    cursor: pointer;
+    font: 500 12px/1.2 var(--es-font-ui);
+    transition: border-color var(--es-dur) var(--es-ease), background-color var(--es-dur) var(--es-ease);
+  }
+  .brand-logo-option img { display: block; max-width: 100%; height: 28px; object-fit: contain; }
+  .brand-logo-option:hover { border-color: var(--es-ink-3); }
+  .brand-logo-option[aria-checked="true"] { border-color: var(--es-brand); background: var(--es-brand-soft); color: var(--es-ink); }
+  .brand-logo-option:focus-visible { outline: none; border-color: var(--es-brand); }
+  html[data-theme="dark"] .brand-logo-option { border-color: var(--theme-dark-border, #303030); background: var(--theme-dark-surface, #121212); color: var(--theme-dark-text-muted, #b6b6b6); }
+  html[data-theme="dark"] .brand-logo-option[aria-checked="true"] { border-color: var(--theme-dark-accent, #2586f7); background: var(--theme-dark-accent-soft, rgba(37, 134, 247, .17)); color: var(--theme-dark-text, #f3f5f7); }
+
   /* GUIDELINES HUB TABS */
   nav.guide-tabs { display: none; }
   body:is([data-current-page="logo-guidelines"], [data-current-page="social-guidelines"], [data-current-page="video-guidelines"], [data-current-page="faq"]) .guide-tabs {
@@ -7875,6 +7901,21 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
     </div>
 
+    <div class="brand-logo-control" id="brand-logo-control">
+      <div class="card-title" id="brand-logo-title">Logo</div>
+      <div class="brand-logo-options" role="radiogroup" aria-labelledby="brand-logo-title">
+        <button type="button" class="brand-logo-option" role="radio" aria-checked="true" data-brand-logo="es" title="EssentiallySports" aria-label="EssentiallySports">
+          <img src="assets/brand-logos/essentiallysports-mark.svg" alt="">
+        </button>
+        <button type="button" class="brand-logo-option" role="radio" aria-checked="false" data-brand-logo="golf" title="Essentially Golf" aria-label="Essentially Golf">
+          <img src="assets/brand-logos/essentially-golf-mark.svg" alt="">
+        </button>
+        <button type="button" class="brand-logo-option" role="radio" aria-checked="false" data-brand-logo="w" title="Essentially W" aria-label="Essentially W">
+          <img src="assets/brand-logos/essentially-w-mark.svg" alt="">
+        </button>
+      </div>
+    </div>
+
     <div class="reels-format-control" id="reels-format-control" aria-label="Reels format">
       <div class="card">
         <div class="card-title">Reels Format</div>
@@ -9391,7 +9432,7 @@ const COVER_LAYER_LABELS = {
   photo: 'Background Image',
   pills: 'Text',
   swipeButton: 'Swipe Button',
-  logo: 'ES Logo',
+  logo: 'Logo',
 };
 
 function createDefaultCoverLayers() {
@@ -10485,6 +10526,7 @@ function selectImageTool(tool, openPanel = true) {
 
 function initImageToolRail() {
   initCanvasEmptyHint();
+  initBrandLogoControl();
   document.querySelector('[data-background-upload]')?.addEventListener('click', event => {
     event.stopPropagation();
     setImageToolPanelOpen(false);
@@ -12483,6 +12525,115 @@ const PILL_PAD_RIGHT = 21.88;   // brand kit padding plus 1px optical safety
 const LOGO_FINAL_W = 122;
 const LOGO_FINAL_H = 104;
 const LOGO_SAFE_MARGIN = 50;
+
+// Brand logos people can use instead of the ES logo mark and wordmark on
+// Social Media and YouTube designs. Sizes are the SVGs' own (for proportions).
+const BRAND_LOGOS = {
+  es: { label: 'EssentiallySports' },
+  golf: {
+    label: 'Essentially Golf',
+    mark: { src: 'assets/brand-logos/essentially-golf-mark.svg', width: 411, height: 144 },
+    wordmark: { src: 'assets/brand-logos/essentially-golf-wordmark.svg', width: 1318, height: 178 },
+  },
+  w: {
+    label: 'Essentially W',
+    mark: { src: 'assets/brand-logos/essentially-w-mark.svg', width: 658, height: 637 },
+    wordmark: { src: 'assets/brand-logos/essentially-w-wordmark.svg', width: 1515, height: 237 },
+  },
+};
+const BRAND_LOGO_KEY = 'frameup.brandLogo.v1';
+let activeBrandLogo = (() => {
+  try {
+    const saved = localStorage.getItem(BRAND_LOGO_KEY);
+    return BRAND_LOGOS[saved] ? saved : 'es';
+  } catch (error) {
+    return 'es';
+  }
+})();
+const brandLogoImages = {};
+
+function loadBrandLogoImage(src) {
+  if (!brandLogoImages[src]) {
+    const image = new Image();
+    image.onload = () => render();
+    image.src = src;
+    brandLogoImages[src] = image;
+  }
+  return brandLogoImages[src];
+}
+
+// The chosen brand applies to Social Media and YouTube; other workspaces keep ES.
+function getActiveBrandLogo() {
+  if (activeWorkspace !== 'instagram' && activeWorkspace !== 'youtube') return null;
+  const brand = BRAND_LOGOS[activeBrandLogo];
+  return brand && brand.mark ? brand : null;
+}
+
+function isBrandLogoImageReady(asset) {
+  const image = asset && loadBrandLogoImage(asset.src);
+  return Boolean(image && image.complete && image.naturalWidth > 0);
+}
+
+// Brand marks are drawn at the box height (keeping their proportions), so a
+// wider mark grows away from the corner it is anchored to.
+function getBrandMarkSize(width, height) {
+  const brand = getActiveBrandLogo();
+  if (!brand) return { width, height };
+  const aspect = brand.mark.width / brand.mark.height;
+  let drawWidth = height * aspect;
+  let drawHeight = height;
+  const maxWidth = width * 2.5;
+  if (drawWidth > maxWidth) {
+    drawWidth = maxWidth;
+    drawHeight = maxWidth / aspect;
+  }
+  return { width: drawWidth, height: drawHeight };
+}
+
+function isBrandLogoLoading() {
+  const brand = getActiveBrandLogo();
+  if (!brand) return false;
+  return [brand.mark, brand.wordmark].some(asset => {
+    const image = loadBrandLogoImage(asset.src);
+    return !image.complete;
+  });
+}
+
+function setBrandLogo(key) {
+  if (!BRAND_LOGOS[key]) return;
+  activeBrandLogo = key;
+  try { localStorage.setItem(BRAND_LOGO_KEY, key); } catch (error) { /* per-browser preference */ }
+  syncBrandLogoControl();
+  render();
+}
+
+function syncBrandLogoControl() {
+  document.querySelectorAll('[data-brand-logo]').forEach(option => {
+    option.setAttribute('aria-checked', String(option.dataset.brandLogo === activeBrandLogo));
+    option.tabIndex = option.dataset.brandLogo === activeBrandLogo ? 0 : -1;
+  });
+}
+
+function initBrandLogoControl() {
+  Object.values(BRAND_LOGOS).forEach(brand => {
+    if (brand.mark) loadBrandLogoImage(brand.mark.src);
+    if (brand.wordmark) loadBrandLogoImage(brand.wordmark.src);
+  });
+  const options = [...document.querySelectorAll('[data-brand-logo]')];
+  options.forEach((option, index) => {
+    option.addEventListener('click', () => setBrandLogo(option.dataset.brandLogo));
+    // Radio-group keys: arrows move the choice.
+    option.addEventListener('keydown', event => {
+      const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
+      if (!step) return;
+      event.preventDefault();
+      const next = options[(index + step + options.length) % options.length];
+      setBrandLogo(next.dataset.brandLogo);
+      next.focus();
+    });
+  });
+  syncBrandLogoControl();
+}
 const POST_SAFE_AREA = 50;
 const PILL_EDGE_TO_TEXT_GAP = 1;
 const PILL_ROW_GAP = 1;
@@ -14334,10 +14485,12 @@ const LISTICLE_TYPE1_TABLE_LAYOUT = Object.freeze({
 
 function drawListicleHeading(ctx, W, scale, titleText) {
   const sx = value => Math.round(value * scale);
+  const markWidth = getBrandMarkSize(LISTICLE_CANVAS_LAYOUT.logoWidth, LISTICLE_CANVAS_LAYOUT.logoHeight).width;
   const titleBox = {
     x: sx(LISTICLE_CANVAS_LAYOUT.safeInset),
     y: sx(LISTICLE_CANVAS_LAYOUT.titleTop),
-    width: sx(LISTICLE_CANVAS_LAYOUT.titleWidth),
+    // ES mark: 810. A wider brand mark keeps the same 48px gap to the title.
+    width: sx(Math.min(LISTICLE_CANVAS_LAYOUT.titleWidth, W / scale - LISTICLE_CANVAS_LAYOUT.safeInset * 2 - markWidth - 48)),
     height: sx(LISTICLE_CANVAS_LAYOUT.titleHeight),
   };
   const title = fitListicleBlockInBox(
@@ -15986,6 +16139,13 @@ function drawQuoteWordmark(ctx, W, H, scale) {
   const logoH = Math.round(wordmark.height * scale);
   const x = Math.round((W - logoW) / 2);
   const y = H - Math.round(wordmark.bottom * scale) - logoH;
+  const brand = getActiveBrandLogo();
+  if (brand) {
+    if (!isBrandLogoImageReady(brand.wordmark)) return;
+    const brandW = Math.round(logoH * (brand.wordmark.width / brand.wordmark.height));
+    ctx.drawImage(loadBrandLogoImage(brand.wordmark.src), Math.round((W - brandW) / 2), y, brandW, logoH);
+    return;
+  }
   const image = window._esWordmarkImage;
   if (image && image.complete && image.naturalWidth > 0) {
     ctx.drawImage(image, x, y, logoW, logoH);
@@ -16028,7 +16188,15 @@ function drawSwipeButton(ctx, W, H, scale, force = false) {
   ctx.restore();
 }
 
-function drawEsLogoMark(ctx, x, y, width, height) {
+function drawEsLogoMark(ctx, x, y, width, height, align = 'right') {
+  const brand = getActiveBrandLogo();
+  if (brand) {
+    if (!isBrandLogoImageReady(brand.mark)) return;
+    const size = getBrandMarkSize(width, height);
+    const drawX = align === 'left' ? x : x + width - size.width;
+    ctx.drawImage(loadBrandLogoImage(brand.mark.src), drawX, y, size.width, size.height);
+    return;
+  }
   const baseW = 122.332;
   const baseH = 104.066;
   ctx.save();
@@ -16059,7 +16227,7 @@ function drawLogo(ctx, W, H, scale) {
   const hasSwipeButton = activeWorkspace === 'instagram' && state.swipeButton && state.swipeButton !== 'none';
   const x = hasSwipeButton ? margin : W - logoW - margin;
   const y = margin;
-  drawEsLogoMark(ctx, x, y, logoW, logoH);
+  drawEsLogoMark(ctx, x, y, logoW, logoH, hasSwipeButton ? 'left' : 'right');
 }
 
 // â”€â”€â”€ RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -16845,7 +17013,7 @@ async function copyImageLink() {
     showToast('Sign in to FrameUp to create image links.', 'error');
     return;
   }
-  if (isInfographicStillLoading()) {
+  if (isInfographicStillLoading() || isBrandLogoLoading()) {
     showToast('The design is still loading. Try again in a moment.', 'error');
     return;
   }
@@ -18134,7 +18302,7 @@ function exportInstagramSlides(indices) {
 }
 
 function requestExport() {
-  if (isInfographicStillLoading()) {
+  if (isInfographicStillLoading() || isBrandLogoLoading()) {
     showToast('The design is still loading. Try again in a moment.', 'error');
     return;
   }
@@ -20748,7 +20916,7 @@ loadFont().then(() => render());
       // Format = which template; the YouTube quote toggle is a template choice too.
       format: ['#post-type-control', '#reels-format-control', '#youtube-variation-card', '#youtube-category-card', '#youtube-quote-control', '#newsletter-asset-card'],
       content: ['.text-card', '#twitter-quote-fields', '#widget-main-fields', '#widget-picks-fields', '#trivia-fields', '#infographic-fields'],
-      brand: ['.color-card', '#newsletter-brand-card'],
+      brand: ['.color-card', '#newsletter-brand-card', '#brand-logo-control'],
       media: ['#entity-image-card', '#entity-image-card-2'],
       // Fine positioning is a desktop job; on phones it sits under More.
       more: ['#quote-logo-control', '#swipe-button-card', '#pill-position-card'],
@@ -20884,6 +21052,7 @@ loadFont().then(() => render());
       document.querySelector('.newsletter-control-row'),
       document.getElementById('post-type-control'),
       document.getElementById('reels-format-control'),
+      document.getElementById('brand-logo-control'),
     ].filter(Boolean).forEach(node => primary.appendChild(node));
 
     const accordionList = contentRoot.querySelector('[data-studio-accordion-list]');
