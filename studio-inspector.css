@@ -260,7 +260,7 @@ textarea.ig-input { padding: 10px 12px; resize: vertical; }
   html[data-studio-shell="on"] .studio-accordion-section.is-open .studio-accordion-body { padding-bottom: 20px !important; }
   html[data-studio-shell="on"] .studio-accordion-body > * { min-width: 0; margin-top: 0 !important; margin-bottom: 0 !important; border-top: 0 !important; }
   /* The section already has side padding; cards inside add none of their own. */
-  html[data-studio-shell="on"] .studio-accordion-body :is(.card, .text-card, .swipe-button-control, .advanced-card, .quote-logo-control, .color-card, #widget-main-fields, #widget-picks-fields, #trivia-fields, #ticker-fields, #list-fields, #infographic-fields) {
+  html[data-studio-shell="on"] .studio-accordion-body :is(.card, .text-card, .swipe-button-control, .advanced-card, .quote-logo-control, .color-card, #widget-main-fields, #widget-picks-fields, #trivia-fields, #ticker-fields, #list-fields, #list2-fields, #infographic-fields) {
     padding: 0 !important;
     border: 0 !important;
     background: transparent !important;
@@ -415,12 +415,12 @@ html[data-theme="dark"][data-studio-shell="on"] body .panel .listicle-field-labe
 html[data-theme="dark"][data-studio-shell="on"] body .panel .double-entity-section-title { color: var(--theme-dark-text, #f3f5f7); }
 
 /* Newsletter widget / trivia fields: same 16px rhythm, no lines between fields. */
-html[data-studio-shell="on"] body .panel :is(#trivia-fields, #ticker-fields, #list-fields, #widget-main-fields, #widget-picks-fields) .widget-field-group {
+html[data-studio-shell="on"] body .panel :is(#trivia-fields, #ticker-fields, #list-fields, #list2-fields, #widget-main-fields, #widget-picks-fields) .widget-field-group {
   margin: 0 0 16px;
   padding: 0;
   border: 0;
 }
-html[data-studio-shell="on"] body .panel :is(#trivia-fields, #ticker-fields, #list-fields, #widget-main-fields, #widget-picks-fields) .widget-field-group:last-child { margin-bottom: 0; }
+html[data-studio-shell="on"] body .panel :is(#trivia-fields, #ticker-fields, #list-fields, #list2-fields, #widget-main-fields, #widget-picks-fields) .widget-field-group:last-child { margin-bottom: 0; }
 /* Inside a field group, each further label starts a new field: 14px above it. */
 html[data-studio-shell="on"] body .panel .widget-field-group > .widget-field-label:not(:first-child) { margin-top: 14px !important; }
 html[data-studio-shell="on"] body .panel .widget-field-group > .widget-image-row { margin-top: 2px; }
