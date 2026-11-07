@@ -2195,6 +2195,30 @@
   body[data-current-page="newsletter"][data-newsletter-asset="ticker"] #widget-copy-btn {
     display: inline-flex !important;
   }
+  /* List widget: HTML builder, same gating as Trivia Design. */
+  body[data-current-page="newsletter"][data-newsletter-asset="list"] .text-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="list"] #pill-position-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="list"] #swipe-button-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="list"] .color-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="list"] .image-tool-rail,
+  body[data-current-page="newsletter"][data-newsletter-asset="list"] .canvas-stage,
+  body[data-current-page="newsletter"][data-newsletter-asset="list"] .studio-inspector-tabs,
+  body[data-current-page="newsletter"][data-newsletter-asset="list"] #studio-export-btn,
+  body[data-current-page="newsletter"][data-newsletter-asset="list"] #studio-link-btn {
+    display: none !important;
+  }
+  #list-fields {
+    display: none;
+  }
+  body[data-current-page="newsletter"][data-newsletter-asset="list"] #list-fields {
+    display: block;
+  }
+  body[data-current-page="newsletter"][data-newsletter-asset="list"] .widget-preview-pane {
+    display: block;
+  }
+  body[data-current-page="newsletter"][data-newsletter-asset="list"] #widget-copy-btn {
+    display: inline-flex !important;
+  }
   #entity-image-card { display: none; }
   body[data-current-page="youtube"][data-youtube-variation="variation-2"] #entity-image-card,
   body[data-current-page="youtube"][data-youtube-variation="variation-3"] #entity-image-card,
@@ -6620,7 +6644,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .studio-accordion-body #widget-main-fields,
     html[data-studio-shell="on"] .studio-accordion-body #widget-picks-fields,
     html[data-studio-shell="on"] .studio-accordion-body #trivia-fields,
-    html[data-studio-shell="on"] .studio-accordion-body #ticker-fields {
+    html[data-studio-shell="on"] .studio-accordion-body #ticker-fields,
+    html[data-studio-shell="on"] .studio-accordion-body #list-fields {
       padding: 18px;
       border: 0;
       border-radius: 0;
@@ -6889,7 +6914,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .studio-accordion-body #widget-main-fields,
     html[data-studio-shell="on"] .studio-accordion-body #widget-picks-fields,
     html[data-studio-shell="on"] .studio-accordion-body #trivia-fields,
-    html[data-studio-shell="on"] .studio-accordion-body #ticker-fields {
+    html[data-studio-shell="on"] .studio-accordion-body #ticker-fields,
+    html[data-studio-shell="on"] .studio-accordion-body #list-fields {
       padding: 16px;
       border: 0;
       border-radius: 0;
@@ -7886,6 +7912,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           <option value="widgets">Desktop News Layout</option>
           <option value="trivia">Trivia Design</option>
           <option value="ticker">Financial Ticker</option>
+          <option value="list">List Widget</option>
         </select>
       </div>
       <div class="card" id="newsletter-brand-card">
@@ -8556,6 +8583,33 @@ body[data-current-page="faq"] .faq-cta-art img {
         </div>
       </div>
       <input type="file" id="ticker-upload-input" accept="image/*" hidden>
+    </div>
+    <div id="list-fields">
+      <div class="widget-field-group">
+        <label class="widget-field-label">Item 1</label>
+        <input type="text" class="widget-text-input" data-list-field="items.0.text" placeholder="Headline for item 1">
+        <input type="text" class="widget-text-input" data-list-field="items.0.link" placeholder="https://www.essentiallysports.com/...">
+      </div>
+      <div class="widget-field-group">
+        <label class="widget-field-label">Item 2</label>
+        <input type="text" class="widget-text-input" data-list-field="items.1.text" placeholder="Headline for item 2">
+        <input type="text" class="widget-text-input" data-list-field="items.1.link" placeholder="https://www.essentiallysports.com/...">
+      </div>
+      <div class="widget-field-group">
+        <label class="widget-field-label">Item 3</label>
+        <input type="text" class="widget-text-input" data-list-field="items.2.text" placeholder="Headline for item 3">
+        <input type="text" class="widget-text-input" data-list-field="items.2.link" placeholder="https://www.essentiallysports.com/...">
+      </div>
+      <div class="widget-field-group">
+        <label class="widget-field-label">Item 4</label>
+        <input type="text" class="widget-text-input" data-list-field="items.3.text" placeholder="Headline for item 4">
+        <input type="text" class="widget-text-input" data-list-field="items.3.link" placeholder="https://www.essentiallysports.com/...">
+      </div>
+      <div class="widget-field-group">
+        <label class="widget-field-label">Item 5</label>
+        <input type="text" class="widget-text-input" data-list-field="items.4.text" placeholder="Headline for item 5">
+        <input type="text" class="widget-text-input" data-list-field="items.4.link" placeholder="https://www.essentiallysports.com/...">
+      </div>
     </div>
     <div id="infographic-fields" aria-label="Infographic content"></div>
     <input type="file" id="widget-upload-input" accept="image/*" hidden>
@@ -12952,6 +13006,22 @@ const NEWSLETTER_ASSET_TYPES = {
     maxLines: 0,
     photoTitle: 'Select Trivia Image',
     photoRole: 'trivia image',
+    workspace: {
+      width: 640,
+      height: 640,
+      maxLines: 0,
+      defaultBottomAnchor: 0,
+      randomBottomMin: 0,
+      randomBottomRange: 0,
+    },
+  },
+  list: {
+    label: 'List Widget',
+    slug: 'list',
+    placeholder: '',
+    maxLines: 0,
+    photoTitle: 'Select List Image',
+    photoRole: 'list image',
     workspace: {
       width: 640,
       height: 640,
@@ -17372,7 +17442,7 @@ function initDesignHistory() {
 // design still uses the placeholder image, and on multi-slide carousels it
 // offers "this slide" or "all slides with content".
 
-const IMAGELESS_NEWSLETTER_ASSETS = new Set(['section-header', 'section-header-2', 'widgets', 'trivia', 'ticker']);
+const IMAGELESS_NEWSLETTER_ASSETS = new Set(['section-header', 'section-header-2', 'widgets', 'trivia', 'ticker', 'list']);
 
 function getMissingExportImage() {
   if (activeWorkspace === 'newsletter' && IMAGELESS_NEWSLETTER_ASSETS.has(activeNewsletterAsset)) return null;
@@ -19423,7 +19493,7 @@ function switchNewsletterAsset(assetType) {
     }
     renderWidgetPreview();
   }
-  if ((assetType === 'trivia' && triviaBuilderState) || (assetType === 'ticker' && tickerBuilderState)) renderWidgetPreview();
+  if ((assetType === 'trivia' && triviaBuilderState) || (assetType === 'ticker' && tickerBuilderState) || (assetType === 'list' && listBuilderState)) renderWidgetPreview();
   populateNewsletterBrandSelect(assetType);
   if (assetType === 'feature-image' || assetType === 'section-header' || assetType === 'youtube-fi') {
     applyNewsletterBrandPalette();
@@ -20024,6 +20094,7 @@ function updateWidgetThumb(slot) {
 // The HTML for whichever builder-style newsletter asset is open.
 function buildActiveWidgetHtml(preview) {
   if (activeNewsletterAsset === 'trivia') return buildTriviaHtml(preview ? getTriviaPreviewState() : triviaBuilderState);
+  if (activeNewsletterAsset === 'list') return buildListHtml(listBuilderState);
   if (activeNewsletterAsset === 'ticker') return buildTickerHtml(preview ? getTickerPreviewState() : tickerBuilderState);
   return buildWidgetHtml(preview ? getWidgetPreviewState() : widgetBuilderState);
 }
@@ -20711,10 +20782,55 @@ function initTickerBuilder() {
   });
 }
 
+// ─── NEWSLETTER LIST BUILDER ─────────────────────────────────
+// Numbered list of linked headlines (1-5). No image, so no upload flow.
+const LIST_DEFAULT_STATE = {
+  items: [1, 2, 3, 4, 5].map(number => ({ text: `List item ${number} headline goes here`, link: '' })),
+};
+
+let listBuilderState = null;
+
+function buildListHtml(state) {
+  const rows = state.items.map((item, index) => {
+    const first = index === 0;
+    const last = index === state.items.length - 1;
+    const topPad = first ? '0px' : '10px';
+    const border = last ? '' : 'border-bottom:1px dashed #E8E8E8;';
+    return `  <!-- ITEM ${String(index + 1).padStart(2, '0')} -->
+  <tr>
+    <td width="28" valign="middle" style="width:28px;padding:${topPad} 8px 12px 4px;${border}">
+      <span style="font-family:Roboto,Arial,sans-serif;font-size:32px;line-height:40px;font-weight:900;color:#D6E8FC;">${index + 1}</span>
+    </td>
+    <td valign="middle" style="padding:${topPad} 4px 12px 0;${border}">
+      <a href="${escapeWidgetAttr(item.link)}" style="font-family:Roboto,Arial,sans-serif;font-size:16px;line-height:24px;font-weight:700;color:#000000;text-decoration:underline;display:block;">
+        ${escapeWidgetHtml(item.text)}
+      </a>
+    </td>
+  </tr>`;
+  }).join('\n\n');
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;font-family:Roboto,Arial,sans-serif;">
+${rows}
+
+</table>`;
+}
+
+function initListBuilder() {
+  listBuilderState = JSON.parse(JSON.stringify(LIST_DEFAULT_STATE));
+  document.querySelectorAll('[data-list-field]').forEach(field => {
+    const [, index, key] = field.dataset.listField.split('.');
+    field.value = listBuilderState.items[Number(index)][key];
+    field.addEventListener('input', () => {
+      listBuilderState.items[Number(index)][key] = field.value;
+      renderWidgetPreview();
+    });
+  });
+}
+
 initUI();
 initWidgetBuilder();
 initTriviaBuilder();
 initTickerBuilder();
+initListBuilder();
 setupCanvasDrag();
 setupCanvasImageEditing();
 setupLayersPanel();
@@ -20907,6 +21023,7 @@ loadFont().then(() => render());
     widgetPicks: 'Top Picks',
     trivia: 'Trivia',
     ticker: 'Financial Ticker',
+    list: 'List Widget',
   };
 
   const studioSectionNodes = {
@@ -20918,6 +21035,7 @@ loadFont().then(() => render());
     widgetPicks: ['widget-picks-fields'],
     trivia: ['trivia-fields'],
     ticker: ['ticker-fields'],
+    list: ['list-fields'],
   };
 
   // Sections the person opened or closed, per workspace ({ open: [], closed: [] }).
@@ -21061,7 +21179,7 @@ loadFont().then(() => render());
       button.addEventListener('click', event => {
         event.preventDefault();
         const copiesHtml = document.body.dataset.currentPage === 'newsletter'
-          && ['widgets', 'trivia', 'ticker'].includes(document.body.dataset.newsletterAsset);
+          && ['widgets', 'trivia', 'ticker', 'list'].includes(document.body.dataset.newsletterAsset);
         document.querySelector(copiesHtml ? '#widget-copy-btn' : '[data-studio-export]')?.click();
       });
     });
@@ -21254,7 +21372,7 @@ loadFont().then(() => render());
       // Format = which template; the YouTube quote toggle is a template choice too.
       // The logo choice sits with the template pickers (both live in the top controls).
       format: ['#post-type-control', '#reels-format-control', '#youtube-variation-card', '#youtube-category-card', '#youtube-quote-control', '#newsletter-asset-card', '#brand-logo-control'],
-      content: ['.text-card', '#twitter-quote-fields', '#widget-main-fields', '#widget-picks-fields', '#trivia-fields', '#ticker-fields', '#infographic-fields'],
+      content: ['.text-card', '#twitter-quote-fields', '#widget-main-fields', '#widget-picks-fields', '#trivia-fields', '#ticker-fields', '#list-fields', '#infographic-fields'],
       brand: ['.color-card', '#newsletter-brand-card'],
       media: ['#entity-image-card', '#entity-image-card-2'],
       // Fine positioning is a desktop job; on phones it sits under More.
