@@ -7284,13 +7284,21 @@ body[data-current-page="faq"] .faq-cta-art img {
     width: 100%;
     overflow: hidden;
   }
+  /* Previews render at a phone-width email (420px window, ~372px of content),
+     centred in the pane instead of stretching to its full width. Desktop News
+     Layout is a desktop layout, so it keeps the full-width preview. */
   .widget-preview-window {
     width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
     border: 1px solid var(--es-line-2);
     border-radius: 14px;
     background: #FFFFFF;
     box-shadow: 0 18px 40px rgba(14, 16, 20, .08);
     overflow: hidden;
+  }
+  body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .widget-preview-window {
+    max-width: none;
   }
   .widget-preview-window-bar {
     display: flex;
