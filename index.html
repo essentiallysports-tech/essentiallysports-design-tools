@@ -1690,6 +1690,23 @@
   .studio-locked-chip[hidden] {
     display: none !important;
   }
+  /* Ticker Direction: Up / Down in the same colours the ticker widget uses. */
+  html body .post-type-option[data-ticker-direction="up"] { --ticker-dir: #147D51; --ticker-dir-soft: #E7F3EB; }
+  html body .post-type-option[data-ticker-direction="down"] { --ticker-dir: #C0392B; --ticker-dir-soft: #FDECEC; }
+  html body .post-type-option[data-ticker-direction] {
+    color: var(--ticker-dir) !important;
+    background: var(--es-bg, #FFFFFF) !important;
+    border-color: var(--es-line-2, #D3D7DE) !important;
+    box-shadow: none !important;
+  }
+  html body .post-type-option[data-ticker-direction]:hover {
+    border-color: var(--ticker-dir) !important;
+  }
+  html body .post-type-option[data-ticker-direction].is-active {
+    color: var(--ticker-dir) !important;
+    background: var(--ticker-dir-soft) !important;
+    border-color: var(--ticker-dir) !important;
+  }
   /* Locked templates: panel controls look switched off; the canvas stays clear to view. */
   .is-locked-area:not(.canvas-wrap) {
     opacity: .5;
@@ -8721,8 +8738,8 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="widget-field-group">
         <label class="widget-field-label">Ticker Direction</label>
         <div class="post-type-options" role="group" aria-label="Ticker direction">
-          <button class="post-type-option is-active" type="button" data-ticker-direction="up" aria-pressed="true">&#8599; Up</button>
-          <button class="post-type-option" type="button" data-ticker-direction="down" aria-pressed="false">&#8600; Down</button>
+          <button class="post-type-option is-active" type="button" data-ticker-direction="up" aria-pressed="true">Up</button>
+          <button class="post-type-option" type="button" data-ticker-direction="down" aria-pressed="false">Down</button>
         </div>
       </div>
       <input type="file" id="ticker-upload-input" accept="image/*" hidden>
