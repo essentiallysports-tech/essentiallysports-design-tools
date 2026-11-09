@@ -13126,12 +13126,16 @@ const NEWSLETTER_ASSET_TYPES = {
     },
   },
 };
-const WIDGET_BRAND_IDS = ['she-got-game', 'the-huddle', 'essentially-golf', 'essentially-dunk', 'lucky-dog-on-track'];
+const WIDGET_BRAND_IDS = ['she-got-game', 'essentially-w-ncaa', 'the-huddle', 'essentially-golf', 'essentially-dunk', 'lucky-dog-on-track'];
 
 const WIDGET_HEADER_IMAGES = {
   'she-got-game': {
     main: 'https://image-cdn.essentiallysports.com/wp-content/uploads/HIGHLIGHT-OF-THE-DAY-SHE-GOT-GAME.png',
     picks: 'https://image-cdn.essentiallysports.com/wp-content/uploads/MUST-READ-PICKS-SHE-GOT-GAME.png',
+  },
+  'essentially-w-ncaa': {
+    main: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/846ba330-08ba-4a03-b584-e61049effa87/Highlight_of_the_Day.png?t=1775553846',
+    picks: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/420778fe-578c-4c3b-bccb-87cd6fca2bb9/must_read_picks.png?t=1775554065',
   },
   'the-huddle': {
     main: 'https://image-cdn.essentiallysports.com/wp-content/uploads/HEADLINE-OF-THE-DAY-THE-HUDDLE.png',
@@ -13224,7 +13228,7 @@ function renderWidgetPickItem(pick, brand) {
       <a href="${escapeWidgetAttr(pick.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family: 'Roboto', Arial, sans-serif;">
   <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
     <tr>
-      <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.background)};">
+      <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.accent || brand.background)};">
         Read More &#8599;
       </td>
     </tr>
@@ -13288,7 +13292,7 @@ function buildWidgetHtml(state) {
       <a href="${escapeWidgetAttr(main.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family: 'Roboto', Arial, sans-serif;">
   <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
     <tr>
-     <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.background)};">
+     <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.accent || brand.background)};">
         Read More &#8599;
       </td>
     </tr>
@@ -13351,6 +13355,14 @@ const NEWSLETTER_BRANDS = [
   { id: 'inside-talks', label: 'Inside Talks', background: '#073968', foreground: '#FFFFFF' },
   { id: 'lucky-dog-on-track', label: 'Lucky Dog On Track', background: '#FFD938', foreground: '#000000' },
   { id: 'she-got-game', label: 'Essentially W', background: '#FF3B05', foreground: '#FFFFFF' },
+  {
+    id: 'essentially-w-ncaa',
+    label: 'Essentially W NCAA',
+    background: '#021F41',
+    foreground: '#FFFFFF',
+    accent: '#395F8C',
+    assets: ['youtube-fi'],
+  },
   { id: 'break-point', label: 'Break Point', background: '#DFFB35', foreground: '#133A58' },
   { id: 'buckeye-daily', label: 'Buckeye Daily', background: '#C70837', foreground: '#FFFFFF' },
   { id: 'steelers-huddle', label: 'Steelers Huddle', background: '#F4B000', foreground: '#000000' },
@@ -13498,7 +13510,10 @@ function populateNewsletterBrandSelect(assetType) {
     ? TRIVIA_BRANDS
     : assetType === 'widgets'
       ? WIDGET_BRAND_IDS.map(getNewsletterBrand)
-      : NEWSLETTER_BRANDS;
+      : NEWSLETTER_BRANDS.filter(brand => !brand.assets || brand.assets.includes(assetType));
+  if (assetType !== 'trivia' && assetType !== 'widgets' && !brands.some(brand => brand.id === state.newsletterBrand)) {
+    state.newsletterBrand = brands[0].id;
+  }
   select.innerHTML = brands.map(brand =>
     `<option value="${escapeWidgetAttr(brand.id)}">${escapeWidgetHtml(brand.label)}</option>`
   ).join('');
@@ -20315,6 +20330,18 @@ const TRIVIA_BRANDS = [
     text: '#000000',
     question: '#111111',
     accent: '#F74600',
+    headerImage: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/6cc5434c-35b9-4d3c-b48a-c6d2262ca7c6/WNBA_PULSE.png?t=1788444107',
+    headerAlt: 'WNBA Pulse',
+  },
+  {
+    id: 'essentially-w-ncaa',
+    label: 'Essentially W NCAA',
+    background: '#F4F9FF',
+    cardBorder: '',
+    border: '#EEEEEE',
+    text: '#000000',
+    question: '#111111',
+    accent: '#395F8C',
     headerImage: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/6cc5434c-35b9-4d3c-b48a-c6d2262ca7c6/WNBA_PULSE.png?t=1788444107',
     headerAlt: 'WNBA Pulse',
   },
