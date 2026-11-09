@@ -1,4 +1,4 @@
-// Extracted verbatim from index.html's BRAND_KIT (163 base teams + Tennis surface variations).
+// Extracted verbatim from index.html's BRAND_KIT (163 base teams + Tennis and Golf variations).
 // Single source Reels' team-color picker reads from. index.html keeps its own inline copy for now —
 // see project-docs/reels-workspace-plan.md for the follow-up to de-duplicate.
 (function () {
@@ -49,6 +49,119 @@ BRAND_KIT.push(
       { background: '#006633', foreground: '#FFFFFF', mist: '#FFFFFF' },
       { background: '#FFFFFF', foreground: '#5A2A82', mist: '#5A2A82' },
       { background: '#E8DFF2', foreground: '#3E1C59', mist: '#3E1C59' }
+    ]
+  },
+  // Golf has no teams: five colour variations, all in the Essentially Golf
+  // family (greens, cream, sand, gold) so they feel related but distinct.
+  {
+    sport: 'Golf',
+    variation: 'ES Golf Morning',
+    primary: { background: '#008F00', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#008F00', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFCF3', foreground: '#003008', mist: '#003008' },
+      { background: '#003008', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#008F00', mist: '#008F00' }
+    ]
+  },
+  {
+    sport: 'Golf',
+    variation: 'ES Golf Evening',
+    primary: { background: '#396123', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#396123', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#F4EFDF', foreground: '#1F3614', mist: '#1F3614' },
+      { background: '#1F3614', foreground: '#F4EFDF', mist: '#F4EFDF' },
+      { background: '#FFFFFF', foreground: '#396123', mist: '#396123' }
+    ]
+  },
+  {
+    sport: 'Golf',
+    variation: 'Fairway',
+    primary: { background: '#2E8B3E', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#2E8B3E', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#EAF5E4', foreground: '#1B4D24', mist: '#1B4D24' },
+      { background: '#1B4D24', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#2E8B3E', mist: '#2E8B3E' }
+    ]
+  },
+  {
+    sport: 'Golf',
+    variation: 'Green & Gold',
+    primary: { background: '#0B5D3B', foreground: '#FFD54A', mist: '#073F28' },
+    palette: [
+      { background: '#0B5D3B', foreground: '#FFD54A', mist: '#073F28' },
+      { background: '#FFD54A', foreground: '#0B5D3B', mist: '#0B5D3B' },
+      { background: '#073F28', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#0B5D3B', mist: '#0B5D3B' }
+    ]
+  },
+  {
+    sport: 'Golf',
+    variation: 'Links Sand',
+    primary: { background: '#D8C49A', foreground: '#1F3A24', mist: '#1F3A24' },
+    palette: [
+      { background: '#D8C49A', foreground: '#1F3A24', mist: '#1F3A24' },
+      { background: '#1F3A24', foreground: '#D8C49A', mist: '#D8C49A' },
+      { background: '#F3EBD9', foreground: '#1F3A24', mist: '#1F3A24' },
+      { background: '#FFFFFF', foreground: '#5E7F3C', mist: '#5E7F3C' }
+    ]
+  },
+  // Neutral: no sport or team colours, for general posts.
+  {
+    sport: 'Neutral',
+    variation: 'Classic Black',
+    primary: { background: '#000000', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#000000', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#000000', mist: '#000000' },
+      { background: '#2B2B2B', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#E6E6E6', foreground: '#000000', mist: '#000000' }
+    ]
+  },
+  {
+    sport: 'Neutral',
+    variation: 'Clean White',
+    primary: { background: '#FFFFFF', foreground: '#111111', mist: '#111111' },
+    palette: [
+      { background: '#FFFFFF', foreground: '#111111', mist: '#111111' },
+      { background: '#111111', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#F5F5F5', foreground: '#111111', mist: '#111111' },
+      { background: '#9E9E9E', foreground: '#FFFFFF', mist: '#FFFFFF' }
+    ]
+  },
+  {
+    sport: 'Neutral',
+    variation: 'Charcoal',
+    primary: { background: '#2F3437', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#2F3437', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#F2F2F0', foreground: '#2F3437', mist: '#2F3437' },
+      { background: '#5B6166', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#2F3437', mist: '#2F3437' }
+    ]
+  },
+  {
+    sport: 'Neutral',
+    variation: 'Stone',
+    primary: { background: '#8A8178', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#8A8178', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#EDE8E1', foreground: '#3A342E', mist: '#3A342E' },
+      { background: '#3A342E', foreground: '#EDE8E1', mist: '#EDE8E1' },
+      { background: '#FFFFFF', foreground: '#3A342E', mist: '#3A342E' }
+    ]
+  },
+  {
+    sport: 'Neutral',
+    variation: 'Slate',
+    primary: { background: '#475569', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#475569', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#E2E8F0', foreground: '#1E293B', mist: '#1E293B' },
+      { background: '#1E293B', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#334155', mist: '#334155' }
     ]
   }
 );

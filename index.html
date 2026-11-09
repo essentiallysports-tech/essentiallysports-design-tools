@@ -894,12 +894,19 @@
   body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) .image-tool-rail {
     display: none !important;
   }
-  body[data-instagram-post-type="twitter-quote"] .text-card > .tod-row,
-  body[data-instagram-post-type="twitter-quote"] .text-card > .input-wrap,
-  body[data-instagram-post-type="twitter-quote"] .color-card,
-  body[data-instagram-post-type="twitter-quote"] #pill-position-card,
-  body[data-instagram-post-type="twitter-quote"] .advanced-card {
+  body:is([data-instagram-post-type="twitter-quote"], [data-instagram-post-type="twitter-multi"]) .text-card > .tod-row,
+  body:is([data-instagram-post-type="twitter-quote"], [data-instagram-post-type="twitter-multi"]) .text-card > .input-wrap,
+  body:is([data-instagram-post-type="twitter-quote"], [data-instagram-post-type="twitter-multi"]) .color-card,
+  body:is([data-instagram-post-type="twitter-quote"], [data-instagram-post-type="twitter-multi"]) #pill-position-card,
+  body:is([data-instagram-post-type="twitter-quote"], [data-instagram-post-type="twitter-multi"]) .advanced-card {
     display: none !important;
+  }
+  .multi-tweet-slot {
+    display: grid;
+    gap: 6px;
+  }
+  .multi-tweet-slot .twitter-quote-status:empty {
+    display: none;
   }
   .listicle-field-label {
     display: grid;
@@ -1475,7 +1482,8 @@
   .swatch:hover { transform: scale(1.1); box-shadow: var(--shadow-md); }
   .swatch.active { border-color: transparent !important; box-shadow: none; }
   .swatch.is-light,
-  .swatch.is-light.active { border-color: var(--es-line-2) !important; }
+  .swatch.is-light.active { border-color: #A9B0BC !important; }
+  .swatch.is-light .swatch-inner { box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .08); }
   .swatch-inner {
     width: 100%;
     height: 100%;
@@ -8095,6 +8103,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           <option value="listicle-type-2">Ranked List</option>
           <option value="asap-template-1">Timeline</option>
           <option value="twitter-quote">Tweet / X Post</option>
+          <option value="twitter-multi">Multiple Tweets</option>
         </select>
       </div>
     </div>
@@ -8172,6 +8181,51 @@ body[data-current-page="faq"] .faq-cta-art img {
           </div>
         </div>
         <div class="twitter-quote-status" id="tweet-fetch-status" aria-live="polite"></div>
+      </div>
+      <div class="twitter-quote-fields twitter-multi-fields" id="twitter-multi-fields" aria-label="Multiple tweets">
+        <div class="multi-tweet-slot" data-multi-tweet="0">
+          <span class="section-label">Tweet 1</span>
+          <div class="tweet-fetch-row">
+            <div class="tweet-fetch-input-wrap">
+              <input class="pill-entry" type="url" inputmode="url" data-multi-tweet-url="0" placeholder="Paste X/Twitter post link" spellcheck="false" aria-label="Tweet 1 link">
+              <button class="tweet-fetch-clear" type="button" data-multi-tweet-clear="0" aria-label="Clear tweet 1" title="Clear link">×</button>
+            </div>
+            <button class="tweet-fetch-button" type="button" data-multi-tweet-fetch="0">Generate</button>
+          </div>
+          <div class="twitter-quote-status" data-multi-tweet-status="0" aria-live="polite"></div>
+        </div>
+        <div class="multi-tweet-slot" data-multi-tweet="1">
+          <span class="section-label">Tweet 2</span>
+          <div class="tweet-fetch-row">
+            <div class="tweet-fetch-input-wrap">
+              <input class="pill-entry" type="url" inputmode="url" data-multi-tweet-url="1" placeholder="Paste X/Twitter post link" spellcheck="false" aria-label="Tweet 2 link">
+              <button class="tweet-fetch-clear" type="button" data-multi-tweet-clear="1" aria-label="Clear tweet 2" title="Clear link">×</button>
+            </div>
+            <button class="tweet-fetch-button" type="button" data-multi-tweet-fetch="1">Generate</button>
+          </div>
+          <div class="twitter-quote-status" data-multi-tweet-status="1" aria-live="polite"></div>
+        </div>
+        <div class="multi-tweet-slot" data-multi-tweet="2">
+          <span class="section-label">Tweet 3 (optional)</span>
+          <div class="tweet-fetch-row">
+            <div class="tweet-fetch-input-wrap">
+              <input class="pill-entry" type="url" inputmode="url" data-multi-tweet-url="2" placeholder="Paste X/Twitter post link" spellcheck="false" aria-label="Tweet 3 link">
+              <button class="tweet-fetch-clear" type="button" data-multi-tweet-clear="2" aria-label="Clear tweet 3" title="Clear link">×</button>
+            </div>
+            <button class="tweet-fetch-button" type="button" data-multi-tweet-fetch="2">Generate</button>
+          </div>
+          <div class="twitter-quote-status" data-multi-tweet-status="2" aria-live="polite"></div>
+        </div>
+        <div class="input-wrap">
+          <input id="multi-tweet-headline" class="pill-entry" type="text" placeholder="Headline pill above the tweets (optional)" spellcheck="false" aria-label="Optional headline above the tweets">
+        </div>
+        <div class="slider-row">
+          <div class="slider-label-row">
+            <span>Tweets position</span>
+            <span class="slider-val" id="multi-tweet-offset-val">Centre</span>
+          </div>
+          <input type="range" id="multi-tweet-offset" min="-100" max="100" value="0" aria-label="Move the tweets up or down">
+        </div>
       </div>
       <div class="double-entity-fields" id="double-entity-fields">
         <section class="double-entity-quote-group" aria-labelledby="double-entity-quote-1-title">
@@ -9652,6 +9706,119 @@ BRAND_KIT.push(
       { background: '#FFFFFF', foreground: '#5A2A82', mist: '#5A2A82' },
       { background: '#E8DFF2', foreground: '#3E1C59', mist: '#3E1C59' }
     ]
+  },
+  // Golf has no teams: five colour variations, all in the Essentially Golf
+  // family (greens, cream, sand, gold) so they feel related but distinct.
+  {
+    sport: 'Golf',
+    variation: 'ES Golf Morning',
+    primary: { background: '#008F00', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#008F00', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFCF3', foreground: '#003008', mist: '#003008' },
+      { background: '#003008', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#008F00', mist: '#008F00' }
+    ]
+  },
+  {
+    sport: 'Golf',
+    variation: 'ES Golf Evening',
+    primary: { background: '#396123', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#396123', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#F4EFDF', foreground: '#1F3614', mist: '#1F3614' },
+      { background: '#1F3614', foreground: '#F4EFDF', mist: '#F4EFDF' },
+      { background: '#FFFFFF', foreground: '#396123', mist: '#396123' }
+    ]
+  },
+  {
+    sport: 'Golf',
+    variation: 'Fairway',
+    primary: { background: '#2E8B3E', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#2E8B3E', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#EAF5E4', foreground: '#1B4D24', mist: '#1B4D24' },
+      { background: '#1B4D24', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#2E8B3E', mist: '#2E8B3E' }
+    ]
+  },
+  {
+    sport: 'Golf',
+    variation: 'Green & Gold',
+    primary: { background: '#0B5D3B', foreground: '#FFD54A', mist: '#073F28' },
+    palette: [
+      { background: '#0B5D3B', foreground: '#FFD54A', mist: '#073F28' },
+      { background: '#FFD54A', foreground: '#0B5D3B', mist: '#0B5D3B' },
+      { background: '#073F28', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#0B5D3B', mist: '#0B5D3B' }
+    ]
+  },
+  {
+    sport: 'Golf',
+    variation: 'Links Sand',
+    primary: { background: '#D8C49A', foreground: '#1F3A24', mist: '#1F3A24' },
+    palette: [
+      { background: '#D8C49A', foreground: '#1F3A24', mist: '#1F3A24' },
+      { background: '#1F3A24', foreground: '#D8C49A', mist: '#D8C49A' },
+      { background: '#F3EBD9', foreground: '#1F3A24', mist: '#1F3A24' },
+      { background: '#FFFFFF', foreground: '#5E7F3C', mist: '#5E7F3C' }
+    ]
+  },
+  // Neutral: no sport or team colours, for general posts.
+  {
+    sport: 'Neutral',
+    variation: 'Classic Black',
+    primary: { background: '#000000', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#000000', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#000000', mist: '#000000' },
+      { background: '#2B2B2B', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#E6E6E6', foreground: '#000000', mist: '#000000' }
+    ]
+  },
+  {
+    sport: 'Neutral',
+    variation: 'Clean White',
+    primary: { background: '#FFFFFF', foreground: '#111111', mist: '#111111' },
+    palette: [
+      { background: '#FFFFFF', foreground: '#111111', mist: '#111111' },
+      { background: '#111111', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#F5F5F5', foreground: '#111111', mist: '#111111' },
+      { background: '#9E9E9E', foreground: '#FFFFFF', mist: '#FFFFFF' }
+    ]
+  },
+  {
+    sport: 'Neutral',
+    variation: 'Charcoal',
+    primary: { background: '#2F3437', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#2F3437', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#F2F2F0', foreground: '#2F3437', mist: '#2F3437' },
+      { background: '#5B6166', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#2F3437', mist: '#2F3437' }
+    ]
+  },
+  {
+    sport: 'Neutral',
+    variation: 'Stone',
+    primary: { background: '#8A8178', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#8A8178', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#EDE8E1', foreground: '#3A342E', mist: '#3A342E' },
+      { background: '#3A342E', foreground: '#EDE8E1', mist: '#EDE8E1' },
+      { background: '#FFFFFF', foreground: '#3A342E', mist: '#3A342E' }
+    ]
+  },
+  {
+    sport: 'Neutral',
+    variation: 'Slate',
+    primary: { background: '#475569', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#475569', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#E2E8F0', foreground: '#1E293B', mist: '#1E293B' },
+      { background: '#1E293B', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#334155', mist: '#334155' }
+    ]
   }
 );
 
@@ -9695,6 +9862,9 @@ function createDesignerState(defaultBottomAnchor) {
     longQuoteName: 'BY ES STAFF',
     quoteName: '',
     tweetQuote: createTweetQuoteDefaults(),
+    multiTweets: [null, null, null],
+    multiTweetHeadline: '',
+    multiTweetOffset: 0,
     listicleData: ESListicle.createDefaultListicleData(),
     listicleType2Data: ESListicleType2.createDefaultListicleData(),
     asapTemplate1Data: ESAsapTemplate1.createDefaultData(),
@@ -10203,25 +10373,28 @@ function getSports() {
   return [...new Set(BRAND_KIT.map(t => t.sport))];
 }
 function getTeams(sport) {
-  return BRAND_KIT.filter(t => t.sport === sport).map(t => t.variation || t.team).filter(Boolean)
-    .sort((a, b) => formatTeamDisplayName(a).localeCompare(formatTeamDisplayName(b)));
+  const names = BRAND_KIT.filter(t => t.sport === sport).map(t => t.variation || t.team).filter(Boolean);
+  // Colour variations keep their set order (e.g. ES Golf Morning first); teams are A–Z.
+  if (VARIATION_SPORTS.has(sport)) return names;
+  return names.sort((a, b) => formatTeamDisplayName(a).localeCompare(formatTeamDisplayName(b)));
 }
+const VARIATION_SPORTS = new Set(['Tennis', 'Golf', 'Neutral']);
 function getBrandChoiceLabel(sport) {
-  return sport === 'Tennis' ? 'Variations' : 'Team';
+  return VARIATION_SPORTS.has(sport) ? 'Variations' : 'Team';
 }
 function syncBrandChoiceLabels(sport, group = '') {
   const label = document.getElementById(group ? `stats-double-choice-label-${group}` : 'brand-choice-label');
   const select = document.getElementById(group ? `stats-double-team-${group}` : 'team-select');
   const nextLabel = getBrandChoiceLabel(sport);
   if (label) label.textContent = nextLabel;
-  if (select) select.setAttribute('aria-label', sport === 'Tennis' ? 'Tennis variation' : group ? `Entity ${group === 'primary' ? '1' : '2'} team` : 'Team');
+  if (select) select.setAttribute('aria-label', VARIATION_SPORTS.has(sport) ? `${sport} variation` : group ? `Entity ${group === 'primary' ? '1' : '2'} team` : 'Team');
 }
 // Display-only corrections; the stored team key stays unchanged so saved designs keep resolving.
 const TEAM_NAME_FIXES = { seahwaks: 'Seahawks', bengal: 'Bengals' };
 function formatTeamDisplayName(team) {
   const fixed = TEAM_NAME_FIXES[String(team || '').trim().toLowerCase()];
   if (fixed) return fixed;
-  const keepUpper = new Set(['fc', 'cf', 'sc', 'usa', 'us', 'ny', 'la', 'dc', 'mlb', 'nba', 'nfl', 'nhl', 'wnba', 'ufc', 'cbb']);
+  const keepUpper = new Set(['es', 'fc', 'cf', 'sc', 'usa', 'us', 'ny', 'la', 'dc', 'mlb', 'nba', 'nfl', 'nhl', 'wnba', 'ufc', 'cbb']);
   return String(team || '').replace(/\S+/g, word => {
     const compact = word.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     if (keepUpper.has(compact)) return word.toUpperCase();
@@ -11968,6 +12141,42 @@ function initUI() {
     render();
     document.getElementById('tweet-url-input')?.focus();
   });
+  document.querySelectorAll('[data-multi-tweet-fetch]').forEach(button => {
+    button.addEventListener('click', () => fetchMultiTweet(Number(button.dataset.multiTweetFetch)));
+  });
+  document.querySelectorAll('[data-multi-tweet-url]').forEach(input => {
+    input.addEventListener('keydown', event => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      fetchMultiTweet(Number(input.dataset.multiTweetUrl));
+    });
+  });
+  document.querySelectorAll('[data-multi-tweet-clear]').forEach(button => {
+    button.addEventListener('click', () => {
+      const index = Number(button.dataset.multiTweetClear);
+      if (!Array.isArray(state.multiTweets)) state.multiTweets = [null, null, null];
+      state.multiTweets[index] = null;
+      const input = document.querySelector(`[data-multi-tweet-url="${index}"]`);
+      if (input) { input.value = ''; input.focus(); }
+      setMultiTweetStatus(index, '');
+      render();
+    });
+  });
+  document.getElementById('multi-tweet-headline')?.addEventListener('input', event => {
+    state.multiTweetHeadline = event.target.value;
+    render();
+  });
+  document.getElementById('multi-tweet-offset')?.addEventListener('input', event => {
+    state.multiTweetOffset = Number(event.target.value) || 0;
+    syncMultiTweetOffsetLabel();
+    render();
+  });
+  document.getElementById('multi-tweet-offset')?.addEventListener('dblclick', event => {
+    state.multiTweetOffset = 0;
+    event.target.value = '0';
+    syncMultiTweetOffsetLabel();
+    render();
+  });
   document.querySelectorAll('#twitter-quote-fields input, #twitter-quote-fields textarea').forEach(input => {
     input.addEventListener('input', () => {
       updateTweetQuoteFromFields();
@@ -12099,7 +12308,7 @@ function renderPaletteRow(entry) {
   getPaletteForWorkspace(entry).forEach((p, i) => {
     const sw = document.createElement('div');
     sw.className = 'swatch' + (i === state.pillPaletteIdx ? ' active' : '');
-    sw.classList.toggle('is-light', contrastRatio(p.background, '#FFFFFF') < 1.2);
+    sw.classList.toggle('is-light', contrastRatio(p.background, '#FFFFFF') < 1.35);
     sw.title = `Pill ${p.background} / Text ${getTextColorForPair(p, entry)} / Mist ${getMistColorForPair(p, entry)}`;
     const inner = document.createElement('div');
     inner.className = 'swatch-inner';
@@ -13640,6 +13849,14 @@ const INSTAGRAM_POST_TYPES = {
     render: drawTwitterQuotePost,
     getPayload: getTwitterQuotePayload,
   },
+  'twitter-multi': {
+    label: 'Multiple Tweets',
+    placeholder: '',
+    supportsSwipe: true,
+    maxLines: 0,
+    render: drawTwitterMultiPost,
+    getPayload: getTwitterMultiPayload,
+  },
 };
 
 const REELS_FORMAT_TYPES = {
@@ -14830,6 +15047,232 @@ function drawTwitterQuotePost(ctx, W, H, scale) {
     state.textHitRects = [];
   }
 }
+// ─── MULTIPLE TWEETS ─────────────────────────────────────────
+// Up to three tweet cards stacked over the photo, which is heavily blurred and
+// darkened so the cards stay the focus. Same card style as Tweet / X Post.
+const MULTI_TWEET_SAMPLES = Object.freeze([
+  { ...DEFAULT_TWEET_QUOTE, text: 'Paste up to three X/Twitter post links on the right and each one becomes a card here.', dateLabel: 'Now' },
+  { ...DEFAULT_TWEET_QUOTE, text: 'Your photo goes behind the cards, blurred and darkened so the tweets stay easy to read.', dateLabel: '2m' },
+]);
+
+function getMultiTweets() {
+  const tweets = (Array.isArray(state.multiTweets) ? state.multiTweets : []).filter(tweet => tweet && String(tweet.text || '').trim());
+  return tweets.length ? tweets : MULTI_TWEET_SAMPLES;
+}
+
+// The photo, cover-fitted (never stretched), heavily blurred, then darkened.
+// Uses the canvas blur filter where the browser has it; otherwise shrinks the
+// photo and scales it back up in small steps, which also blurs smoothly.
+// Cached per photo and size, so typing doesn't re-blur.
+let multiTweetBackdropCache = null;
+
+function coverDraw(target, img, x, y, w, h) {
+  const ratio = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+  const dw = img.naturalWidth * ratio;
+  const dh = img.naturalHeight * ratio;
+  target.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
+function getBlurredBackdrop(img, W, H) {
+  W = Math.max(1, Math.round(W));
+  H = Math.max(1, Math.round(H));
+  const cache = multiTweetBackdropCache;
+  if (cache && cache.img === img && cache.W === W && cache.H === H) return cache.canvas;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const out = canvas.getContext('2d');
+  const radius = Math.max(8, Math.round(Math.min(W, H) * 0.036));
+  if (typeof out.filter === 'string') {
+    // Draw past the edges so the blur never pulls in transparent borders.
+    const bleed = radius * 3;
+    out.filter = `blur(${radius}px)`;
+    coverDraw(out, img, -bleed, -bleed, W + bleed * 2, H + bleed * 2);
+    out.filter = 'none';
+  } else {
+    // Same proportions at every step, so nothing is stretched.
+    const factor = 16;
+    let source = document.createElement('canvas');
+    source.width = Math.max(2, Math.round(W / factor));
+    source.height = Math.max(2, Math.round(H / factor));
+    const first = source.getContext('2d');
+    first.imageSmoothingQuality = 'high';
+    coverDraw(first, img, 0, 0, source.width, source.height);
+    while (source.width * 2 < W) {
+      const next = document.createElement('canvas');
+      next.width = source.width * 2;
+      next.height = source.height * 2;
+      const step = next.getContext('2d');
+      step.imageSmoothingQuality = 'high';
+      step.drawImage(source, 0, 0, next.width, next.height);
+      source = next;
+    }
+    out.imageSmoothingQuality = 'high';
+    out.drawImage(source, 0, 0, W, H);
+  }
+  multiTweetBackdropCache = { img, W, H, canvas };
+  return canvas;
+}
+
+function drawBlurredBackdrop(ctx, img, W, H) {
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(getBlurredBackdrop(img, W, H), 0, 0, W, H);
+  ctx.restore();
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(0, 0, W, H);
+}
+
+function measureTweetCard(ctx, tweet, cardW, scale, textSize) {
+  const sx = value => Math.round(value * scale);
+  const cardPad = sx(26);
+  ctx.font = `400 ${textSize}px ${TWITTER_CHIRP_FONT}`;
+  const lines = wrapCanvasText(ctx, tweet.text, cardW - cardPad * 2);
+  const lineHeight = Math.round(textSize * 1.27);
+  const height = cardPad + sx(78) + sx(10) + lines.length * lineHeight + sx(40) + cardPad;
+  return { lines, lineHeight, height };
+}
+
+function drawTweetCard(ctx, tweet, cardX, cardY, cardW, layout, scale, textSize) {
+  const sx = value => Math.round(value * scale);
+  const cardPad = sx(26);
+  const avatar = sx(64);
+  ctx.save();
+  const shadowScale = ctx.getTransform?.().a || 1;
+  ctx.shadowColor = 'rgba(0,0,0,.32)';
+  ctx.shadowBlur = sx(28) * shadowScale;
+  ctx.shadowOffsetY = sx(14) * shadowScale;
+  drawRoundedRect(ctx, cardX, cardY, cardW, layout.height, sx(16));
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  const avatarX = cardX + cardPad;
+  const avatarY = cardY + cardPad;
+  drawTweetAvatar(ctx, tweet, avatarX, avatarY, avatar, scale);
+  const nameX = avatarX + avatar + sx(16);
+  const authorName = String(tweet.authorName || DEFAULT_TWEET_QUOTE.authorName);
+  const handle = String(tweet.handle || '').replace(/^@/, '');
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#1F2430';
+  ctx.font = `800 ${sx(25)}px ${TWITTER_CHIRP_FONT}`;
+  ctx.fillText(authorName, nameX, avatarY + sx(28));
+  const nameWidth = ctx.measureText(authorName).width;
+  if (tweet.verified) drawTwitterVerifiedBadge(ctx, nameX + nameWidth + sx(18), avatarY + sx(18), sx(28));
+  if (handle) {
+    ctx.fillStyle = '#6B6F7A';
+    ctx.font = `500 ${sx(21)}px ${TWITTER_CHIRP_FONT}`;
+    ctx.fillText(`@${handle}`, nameX, avatarY + sx(58));
+  }
+  const xLogo = getTwitterXLogoImage();
+  const xLogoSize = sx(38);
+  if (xLogo.complete && xLogo.naturalWidth > 0) {
+    ctx.drawImage(xLogo, cardX + cardW - cardPad - xLogoSize, avatarY + sx(8), xLogoSize, xLogoSize);
+  }
+  ctx.fillStyle = '#050505';
+  ctx.font = `400 ${textSize}px ${TWITTER_CHIRP_FONT}`;
+  const bodyY = avatarY + sx(78) + Math.round(textSize * 0.95);
+  layout.lines.forEach((line, index) => {
+    if (line) ctx.fillText(line, cardX + cardPad, bodyY + index * layout.lineHeight);
+  });
+  if (tweet.dateLabel) {
+    ctx.fillStyle = '#6B6F7A';
+    ctx.font = `500 ${sx(18)}px ${TWITTER_CHIRP_FONT}`;
+    ctx.fillText(tweet.dateLabel, cardX + cardPad, cardY + layout.height - cardPad);
+  }
+  ctx.restore();
+}
+
+function drawTwitterMultiPost(ctx, W, H, scale) {
+  const sx = value => Math.round(value * scale);
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0A0807';
+  ctx.fillRect(0, 0, W, H);
+  if (state.photo && state.photo.naturalWidth) drawBlurredBackdrop(ctx, state.photo, W, H);
+
+  const logoW = sx(LOGO_FINAL_W);
+  const logoH = sx(LOGO_FINAL_H);
+  const logoMargin = sx(LOGO_SAFE_MARGIN);
+  drawEsLogoMark(ctx, W - logoW - logoMargin, logoMargin, logoW, logoH);
+
+  const tweets = getMultiTweets();
+  const cardW = W - sx(96);
+  const cardX = Math.round((W - cardW) / 2);
+  const gap = sx(50);
+  const headlineText = String(state.multiTweetHeadline || '').trim().toUpperCase();
+  const pillScale = 0.5;
+  const pillH = headlineText ? sx(PILL_H * pillScale) : 0;
+  const pillGap = headlineText ? sx(18) : 0;
+  const top = logoMargin + logoH + sx(36);
+  const bottom = H - sx(state.swipeButton && state.swipeButton !== 'none' ? 186 : 80);
+  const available = bottom - top - pillH - pillGap;
+
+  // Largest text size (34 → 20) that fits every card.
+  let textSize = sx(34);
+  let layouts = [];
+  for (;;) {
+    layouts = tweets.map(tweet => measureTweetCard(ctx, tweet, cardW, scale, textSize));
+    const total = layouts.reduce((sum, layout) => sum + layout.height, 0) + gap * (layouts.length - 1);
+    if (total <= available || textSize <= sx(20)) break;
+    textSize -= Math.max(1, sx(1));
+  }
+  const blockH = layouts.reduce((sum, layout) => sum + layout.height, 0) + gap * (layouts.length - 1) + pillH + pillGap;
+  // Centred by default; the Tweets position slider (-100…100) moves the whole
+  // stack up or down through the free space, never off the safe area.
+  const freeSpace = Math.max(0, bottom - top - blockH);
+  const offset = Math.max(-100, Math.min(100, Number(state.multiTweetOffset) || 0)) / 100;
+  let y = Math.round(top + freeSpace / 2 + offset * (freeSpace / 2));
+  y = Math.max(top, y);
+
+  if (headlineText) {
+    ctx.save();
+    const pillPadLeft = sx(PILL_PAD_LEFT * pillScale);
+    const pillPadRight = sx(PILL_PAD_RIGHT * pillScale);
+    let pillFontSize = sx(PILL_FONT_SIZE * pillScale);
+    ctx.font = `900 ${pillFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    let textW = ctx.measureText(headlineText).width;
+    while (textW > cardW - pillPadLeft - pillPadRight && pillFontSize > sx(16)) {
+      pillFontSize -= Math.max(1, sx(1));
+      ctx.font = `900 ${pillFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+      textW = ctx.measureText(headlineText).width;
+    }
+    const capAscent = ctx.measureText('H').actualBoundingBoxAscent || Math.round(pillFontSize * 0.72);
+    const pillW = Math.min(cardW, textW + pillPadLeft + pillPadRight);
+    ctx.fillStyle = state.pillPalette?.background || '#1A1A1A';
+    ctx.fillRect(cardX, y, pillW, pillH);
+    ctx.fillStyle = getTextColorForPair(state.pillPalette, getBrandEntry(state.sport, state.team));
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(headlineText, cardX + pillPadLeft, y + (pillH + capAscent) / 2);
+    ctx.restore();
+    y += pillH + pillGap;
+  }
+
+  tweets.forEach((tweet, index) => {
+    drawTweetCard(ctx, tweet, cardX, y, cardW, layouts[index], scale, textSize);
+    y += layouts[index].height + gap;
+  });
+
+  drawSwipeButton(ctx, W, H, scale);
+  if (scale === 1) {
+    state.lastTextBounds = null;
+    state.textHitRects = [];
+  }
+}
+
+function getTwitterMultiPayload() {
+  const workspace = getWorkspace();
+  return {
+    template: 'twitter-multi-card',
+    componentName: 'Multiple Tweets',
+    canvas: { width: workspace.width, height: workspace.height },
+    fields: { headline: state.multiTweetHeadline || '', tweets: getMultiTweets() },
+  };
+}
+
 function getTwitterQuotePayload() {
   const tweet = getTweetQuoteData();
   const workspace = getWorkspace();
@@ -15834,7 +16277,7 @@ function renderStatsDoublePalette(group) {
     const swatch = document.createElement('button');
     swatch.type = 'button';
     swatch.className = 'swatch' + (index === state[keys.paletteIdx] ? ' active' : '');
-    swatch.classList.toggle('is-light', contrastRatio(pair.background, '#FFFFFF') < 1.2);
+    swatch.classList.toggle('is-light', contrastRatio(pair.background, '#FFFFFF') < 1.35);
     swatch.title = `${state[keys.team]} color ${index + 1}`;
     swatch.setAttribute('aria-label', `${state[keys.team]} color ${index + 1}`);
     swatch.setAttribute('aria-pressed', index === state[keys.paletteIdx] ? 'true' : 'false');
@@ -19263,6 +19706,83 @@ function updateTweetQuoteFromFields() {
   render();
 }
 
+function setMultiTweetStatus(index, message = '', isError = false) {
+  const status = document.querySelector(`[data-multi-tweet-status="${index}"]`);
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle('is-error', Boolean(isError));
+}
+
+function syncMultiTweetFields() {
+  const tweets = Array.isArray(state.multiTweets) ? state.multiTweets : [];
+  document.querySelectorAll('[data-multi-tweet-url]').forEach(input => {
+    const tweet = tweets[Number(input.dataset.multiTweetUrl)];
+    const value = tweet?.url || '';
+    if (document.activeElement !== input && input.value !== value) input.value = value;
+  });
+  const headline = document.getElementById('multi-tweet-headline');
+  if (headline && document.activeElement !== headline) headline.value = state.multiTweetHeadline || '';
+  const offset = document.getElementById('multi-tweet-offset');
+  if (offset) offset.value = String(state.multiTweetOffset || 0);
+  syncMultiTweetOffsetLabel();
+}
+
+function syncMultiTweetOffsetLabel() {
+  const label = document.getElementById('multi-tweet-offset-val');
+  if (!label) return;
+  const value = Number(state.multiTweetOffset) || 0;
+  label.textContent = value === 0 ? 'Centre' : value < 0 ? `Up ${-value}%` : `Down ${value}%`;
+}
+
+async function fetchMultiTweet(index) {
+  const input = document.querySelector(`[data-multi-tweet-url="${index}"]`);
+  const button = document.querySelector(`[data-multi-tweet-fetch="${index}"]`);
+  const url = input?.value.trim() || '';
+  if (!url) {
+    setMultiTweetStatus(index, 'Paste a public X/Twitter post link first.', true);
+    return;
+  }
+  const targetState = state;
+  setMultiTweetStatus(index, 'Fetching tweet...');
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Fetching';
+  }
+  try {
+    const response = await fetch(`/api/tweet-oembed?url=${encodeURIComponent(url)}`, {
+      headers: { Accept: 'application/json' },
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || `Tweet lookup failed (${response.status}).`);
+    }
+    if (!Array.isArray(targetState.multiTweets)) targetState.multiTweets = [null, null, null];
+    targetState.multiTweets[index] = {
+      url: payload.url || url,
+      authorName: payload.authorName || 'X User',
+      handle: String(payload.handle || '').replace(/^@/, ''),
+      text: payload.text || '',
+      dateLabel: payload.dateLabel || '',
+      avatarDataUrl: payload.avatarDataUrl || '',
+      avatarUrl: payload.avatarUrl || '',
+      verified: Boolean(payload.verified),
+    };
+    setMultiTweetStatus(
+      index,
+      payload.truncated ? 'Long X post: only the first ~280 characters could be fetched.' : '',
+      Boolean(payload.truncated)
+    );
+    if (targetState === state) render();
+  } catch (error) {
+    setMultiTweetStatus(index, error.message || 'Could not get that tweet.', true);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Generate';
+    }
+  }
+}
+
 async function fetchTweetQuote() {
   const button = document.getElementById('tweet-fetch-btn');
   const url = document.getElementById('tweet-url-input')?.value.trim() || '';
@@ -19488,6 +20008,8 @@ function syncPostTypeControls() {
                       ? 'Timeline Entries'
                       : isInstagram && activeType === 'twitter-quote'
                         ? 'Tweet Link'
+                        : isInstagram && activeType === 'twitter-multi'
+                        ? 'Tweets'
                         : 'Text On Design';
   }
 
@@ -19549,6 +20071,11 @@ function syncPostTypeControls() {
     twitterQuoteFields.classList.toggle('is-visible', isInstagram && activeType === 'twitter-quote');
     if (isInstagram && activeType === 'twitter-quote') syncTweetQuoteFields();
   }
+  const twitterMultiFields = document.getElementById('twitter-multi-fields');
+  if (twitterMultiFields) {
+    twitterMultiFields.classList.toggle('is-visible', isInstagram && activeType === 'twitter-multi');
+    if (isInstagram && activeType === 'twitter-multi') syncMultiTweetFields();
+  }
   const hidePrimaryTextarea = (isInstagram && (
     activeType === 'stats-single-ent' ||
     activeType === 'stats-double-ent' ||
@@ -19556,7 +20083,8 @@ function syncPostTypeControls() {
     activeType === 'listicle-type-1' ||
     activeType === 'listicle-type-2' ||
     activeType === 'asap-template-1' ||
-    activeType === 'twitter-quote'
+    activeType === 'twitter-quote' ||
+    activeType === 'twitter-multi'
   )) || (isReels && activeType === 'stats-single-ent');
   textarea.closest('.input-wrap')?.classList.toggle('view-hidden', hidePrimaryTextarea);
   if (!hidePrimaryTextarea) {
@@ -19578,7 +20106,8 @@ function syncPostTypeControls() {
         activeType === 'double-entity-quote' ||
         activeType === 'listicle-type-1' ||
         activeType === 'listicle-type-2' ||
-        activeType === 'twitter-quote'
+        activeType === 'twitter-quote' ||
+        activeType === 'twitter-multi'
       )) || (activeWorkspace === 'youtube' && !!state.youtubeQuote) || (isReels && activeType === 'quote')
     );
     colorCard.classList.toggle('is-hidden-for-newsletter-brand', isNewsletterBrandAsset);
@@ -21437,7 +21966,7 @@ loadFont().then(() => render());
   const studioSectionNodes = {
     content: ['quote-logo-control', '.text-card', 'infographic-fields', 'swipe-button-card'],
     layout: ['pill-position-card'],
-    brand: ['.color-card'],
+    brand: ['brand-logo-control', '.color-card'],
     images: ['entity-image-card', 'entity-image-card-2'],
     widgetMain: ['widget-main-fields'],
     widgetPicks: ['widget-picks-fields'],
@@ -21780,9 +22309,9 @@ loadFont().then(() => render());
     const groups = {
       // Format = which template; the YouTube quote toggle is a template choice too.
       // The logo choice sits with the template pickers (both live in the top controls).
-      format: ['#post-type-control', '#reels-format-control', '#youtube-variation-card', '#youtube-category-card', '#youtube-quote-control', '#newsletter-asset-card', '#brand-logo-control'],
-      content: ['.text-card', '#twitter-quote-fields', '#widget-main-fields', '#widget-picks-fields', '#trivia-fields', '#ticker-fields', '#list-fields', '#list2-fields', '#infographic-fields'],
-      brand: ['.color-card', '#newsletter-brand-card'],
+      format: ['#post-type-control', '#reels-format-control', '#youtube-variation-card', '#youtube-category-card', '#youtube-quote-control', '#newsletter-asset-card'],
+      content: ['.text-card', '#twitter-quote-fields', '#twitter-multi-fields', '#widget-main-fields', '#widget-picks-fields', '#trivia-fields', '#ticker-fields', '#list-fields', '#list2-fields', '#infographic-fields'],
+      brand: ['#brand-logo-control', '.color-card', '#newsletter-brand-card'],
       media: ['#entity-image-card', '#entity-image-card-2'],
       // Fine positioning is a desktop job; on phones it sits under More.
       more: ['#quote-logo-control', '#swipe-button-card', '#pill-position-card'],
@@ -21918,7 +22447,6 @@ loadFont().then(() => render());
       document.querySelector('.newsletter-control-row'),
       document.getElementById('post-type-control'),
       document.getElementById('reels-format-control'),
-      document.getElementById('brand-logo-control'),
     ].filter(Boolean).forEach(node => primary.appendChild(node));
 
     const accordionList = contentRoot.querySelector('[data-studio-accordion-list]');

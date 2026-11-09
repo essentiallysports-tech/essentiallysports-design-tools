@@ -1706,7 +1706,7 @@
 
   function onSportChange(sport) {
     state.sport = sport;
-    els.teamLabel.textContent = sport === 'Tennis' ? 'Variation' : 'Team';
+    els.teamLabel.textContent = ['Tennis', 'Golf', 'Neutral'].includes(sport) ? 'Variation' : 'Team';
     var teams = getTeams(sport);
     els.teamSelect.innerHTML = teams.map(function (team) {
       return '<option value="' + escapeHtml(team) + '">' + escapeHtml(formatTeamDisplayName(team)) + '</option>';
