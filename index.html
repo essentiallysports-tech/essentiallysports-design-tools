@@ -13035,8 +13035,8 @@ const NEWSLETTER_ASSET_TYPES = {
     photoTitle: 'Select Tag FI Background',
     photoRole: 'Tag FI background image',
     workspace: {
-      width: 900,
-      height: 675,
+      width: 960,
+      height: 510,
       maxLines: 1,
       defaultBottomAnchor: 32,
       randomBottomMin: 32,
@@ -13825,13 +13825,16 @@ function drawNewsletterTagFI(ctx, W, H, scale) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
 
+  // Even padding: centre on the capital-letter height (not this word's own
+  // shape, which made words without descenders sit high) and measure the
+  // inked width so left and right padding match.
   const metrics = ctx.measureText(label);
-  const textWidth = metrics.width;
-  const ascent = metrics.actualBoundingBoxAscent || fontSize * .72;
-  const descent = metrics.actualBoundingBoxDescent || fontSize * .18;
-  const width = Math.min(maxWidth, Math.ceil(textWidth + padX * 2));
+  const inkLeft = Number.isFinite(metrics.actualBoundingBoxLeft) ? metrics.actualBoundingBoxLeft : 0;
+  const inkWidth = Number.isFinite(metrics.actualBoundingBoxRight) ? inkLeft + metrics.actualBoundingBoxRight : metrics.width;
+  const capAscent = ctx.measureText('H').actualBoundingBoxAscent || fontSize * .72;
+  const width = Math.min(maxWidth, Math.ceil(inkWidth + padX * 2));
   const y = H - bottom - height;
-  const baseline = y + (height - ascent - descent) / 2 + ascent;
+  const baseline = y + (height + capAscent) / 2;
   const strokeWidth = 3.52 * scale;
 
   const tagColors = getTagFIColors(getNewsletterBrand(state.newsletterBrand));
@@ -13846,7 +13849,7 @@ function drawNewsletterTagFI(ctx, W, H, scale) {
     height - strokeWidth
   );
   ctx.fillStyle = tagColors.text;
-  ctx.fillText(label, x + padX, baseline);
+  ctx.fillText(label, x + padX + inkLeft, baseline);
 
   if (scale === 1) {
     state.lastTextBounds = { x, y, w: width, h: height };
@@ -13927,10 +13930,9 @@ function drawNewsletterSectionHeaderOption2(ctx, W, H, scale) {
   const frameWidth = Math.min(maxFrameWidth, Math.max(minFrameWidth, textWidth + horizontalPadding * 2));
   const frameX = (W - frameWidth) / 2;
   const sideLineWidth = Math.max(0, frameX - lineGap);
-  const metrics = ctx.measureText(line);
-  const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.72;
-  const descent = metrics.actualBoundingBoxDescent || fontSize * 0.06;
-  const baselineY = frameCenterY + (ascent - descent) / 2;
+  // Centre on the capital-letter height so every word sits at the same height.
+  const capAscent = ctx.measureText('H').actualBoundingBoxAscent || fontSize * 0.72;
+  const baselineY = frameCenterY + capAscent / 2;
 
   ctx.strokeStyle = navy;
   ctx.lineWidth = lineWidth;
