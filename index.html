@@ -2087,6 +2087,7 @@
   body[data-current-page="newsletter"][data-newsletter-asset="section-header"] #newsletter-brand-card,
   body[data-current-page="newsletter"][data-newsletter-asset="section-header-2"] #newsletter-brand-card,
   body[data-current-page="newsletter"][data-newsletter-asset="youtube-fi"] #newsletter-brand-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="tag-fi"] #newsletter-brand-card,
   body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #newsletter-brand-card,
   body[data-current-page="newsletter"][data-newsletter-asset="trivia"] #newsletter-brand-card {
     display: block;
@@ -13362,7 +13363,7 @@ const NEWSLETTER_BRANDS = [
     foreground: '#FFFFFF',
     accent: '#395F8C',
     playButton: '#009CDE',
-    assets: ['youtube-fi'],
+    assets: ['youtube-fi', 'tag-fi'],
   },
   { id: 'break-point', label: 'Break Point', background: '#DFFB35', foreground: '#133A58' },
   { id: 'buckeye-daily', label: 'Buckeye Daily', background: '#C70837', foreground: '#FFFFFF' },
@@ -13788,6 +13789,13 @@ function drawNewsletterYoutubeFI(ctx, W, H, scale) {
   }
 }
 
+// EssentiallySports keeps the original Tag FI look (white tag, light blue
+// border, navy text); other brands get a solid tag in their own colours.
+function getTagFIColors(brand) {
+  if (!brand || brand.id === 'essentiallysports') return { fill: '#FFFFFF', stroke: '#AAD1FA', text: '#003162' };
+  return { fill: brand.background, stroke: brand.background, text: brand.foreground };
+}
+
 function drawNewsletterTagFI(ctx, W, H, scale) {
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = '#FFFFFF';
@@ -13826,9 +13834,10 @@ function drawNewsletterTagFI(ctx, W, H, scale) {
   const baseline = y + (height - ascent - descent) / 2 + ascent;
   const strokeWidth = 3.52 * scale;
 
-  ctx.fillStyle = '#FFFFFF';
+  const tagColors = getTagFIColors(getNewsletterBrand(state.newsletterBrand));
+  ctx.fillStyle = tagColors.fill;
   ctx.fillRect(x, y, width, height);
-  ctx.strokeStyle = '#AAD1FA';
+  ctx.strokeStyle = tagColors.stroke;
   ctx.lineWidth = strokeWidth;
   ctx.strokeRect(
     x + strokeWidth / 2,
@@ -13836,7 +13845,7 @@ function drawNewsletterTagFI(ctx, W, H, scale) {
     width - strokeWidth,
     height - strokeWidth
   );
-  ctx.fillStyle = '#003162';
+  ctx.fillStyle = tagColors.text;
   ctx.fillText(label, x + padX, baseline);
 
   if (scale === 1) {
@@ -19351,6 +19360,7 @@ function syncPostTypeControls() {
     const isNewsletterBrandAsset = activeWorkspace === 'newsletter' && (
       activeNewsletterAsset === 'feature-image' ||
       activeNewsletterAsset === 'youtube-fi' ||
+      activeNewsletterAsset === 'tag-fi' ||
       activeNewsletterAsset === 'section-header' ||
       activeNewsletterAsset === 'section-header-2'
     );
