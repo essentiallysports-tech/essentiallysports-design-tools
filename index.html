@@ -13361,6 +13361,7 @@ const NEWSLETTER_BRANDS = [
     background: '#021F41',
     foreground: '#FFFFFF',
     accent: '#395F8C',
+    playButton: '#009CDE',
     assets: ['youtube-fi'],
   },
   { id: 'break-point', label: 'Break Point', background: '#DFFB35', foreground: '#133A58' },
@@ -13771,7 +13772,7 @@ function drawNewsletterYoutubeFI(ctx, W, H, scale) {
   ctx.beginPath();
   ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
   ctx.globalAlpha = 0.46;
-  ctx.fillStyle = brand.background || '#003162';
+  ctx.fillStyle = brand.playButton || brand.background || '#003162';
   ctx.fill();
   ctx.globalAlpha = 1;
   ctx.lineWidth = Math.max(2, 3 * scale);
@@ -19354,6 +19355,7 @@ function syncPostTypeControls() {
   if (colorCard) {
     const isNewsletterBrandAsset = activeWorkspace === 'newsletter' && (
       activeNewsletterAsset === 'feature-image' ||
+      activeNewsletterAsset === 'youtube-fi' ||
       activeNewsletterAsset === 'section-header' ||
       activeNewsletterAsset === 'section-header-2'
     );
