@@ -6,9 +6,11 @@ canvas or use Zoom / Left-right / Up-down), then Export or Copy link.
 
 ## How it works
 
-- `infographic-templates.js` holds one entry per infographic: Figma frame size,
-  `exportScale` (2 = exports at twice the frame size), background, and a list
-  of layers. The format is documented at the top of the file. That file is the
+- `infographic-templates.js` holds one entry per infographic: frame size,
+  `exportScale`, background, and a list of layers. Every newsletter FI uses one
+  frame: 640 × 426.67 design px at `exportScale` 1.5, so all export at
+  **960 × 640** (as do Video FI and Tag FI). A Figma frame with another shape
+  must be laid out to fill that frame (extend photos, move bottom elements down). The format is documented at the top of the file. That file is the
   only thing that changes when an infographic is added.
 - Images live in `assets/infographics/` as `.webp`. These are the design's
   example photos (used as placeholders) plus any composed static background.
