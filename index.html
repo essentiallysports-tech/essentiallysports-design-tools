@@ -13817,7 +13817,11 @@ function drawNewsletterTagFI(ctx, W, H, scale) {
   const x = 29 * scale;
   const bottom = 32 * scale;
   const height = 130 * scale;
-  const padX = 12 * scale;
+  // Side padding matches the space above and below the capitals, so the
+  // text has the same breathing room on all four sides.
+  ctx.font = `900 ${Math.round(100 * scale)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  const fullCapHeight = ctx.measureText('H').actualBoundingBoxAscent || 72 * scale;
+  const padX = Math.max(12 * scale, (height - fullCapHeight) / 2);
   const maxWidth = W - x - 29 * scale;
   const maxTextWidth = Math.max(1, maxWidth - padX * 2);
   const fontSize = fitCanvasFont(ctx, label, maxTextWidth, 100 * scale, 42 * scale);
