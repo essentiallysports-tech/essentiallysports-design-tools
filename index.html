@@ -13389,13 +13389,13 @@ function renderWidgetPickItem(pick, brand) {
     <td valign="top">
       <!-- Article title -->
       <a href="${escapeWidgetAttr(pick.link)}" style="text-decoration: none;">
-        <div style="font-size: 16px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family: Arial, sans-serif; margin-bottom: 0px; margin-top: 0px">${escapeWidgetHtml(pick.headline)}</div>
+        <div style="font-size: 16px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family:Roboto,Inter,Arial,sans-serif; margin-bottom: 0px; margin-top: 0px">${escapeWidgetHtml(pick.headline)}</div>
       </a>
       <!--Article button -->
-      <a href="${escapeWidgetAttr(pick.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family: 'Roboto', Arial, sans-serif;">
+      <a href="${escapeWidgetAttr(pick.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family:Roboto,Inter,Arial,sans-serif;">
   <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
     <tr>
-      <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.accent || brand.background)};">
+      <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family:Roboto,Inter,Arial,sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.accent || brand.background)};">
         Read More &#8599;
       </td>
     </tr>
@@ -13450,16 +13450,16 @@ function buildWidgetHtml(state) {
 
       <!-- Article title -->
       <a href="${escapeWidgetAttr(main.link)}" style="text-decoration: none;">
-        <div style="font-size: 20px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family: Arial, sans-serif; margin-bottom: 0px; margin-top: 0px">${escapeWidgetHtml(main.headline)}</div>
+        <div style="font-size: 20px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family:Roboto,Inter,Arial,sans-serif; margin-bottom: 0px; margin-top: 0px">${escapeWidgetHtml(main.headline)}</div>
       </a>
-  <p style="font-size: 16px; font-weight: normal; line-height: 1.4; color: #1a1a1a; font-family: Arial, sans-serif; margin-bottom: 0px; margin-top: 0px">
+  <p style="font-size: 16px; font-weight: normal; line-height: 1.4; color: #1a1a1a; font-family:Roboto,Inter,Arial,sans-serif; margin-bottom: 0px; margin-top: 0px">
         ${escapeWidgetHtml(main.description)}
       </p>
       <!--Article button -->
-      <a href="${escapeWidgetAttr(main.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family: 'Roboto', Arial, sans-serif;">
+      <a href="${escapeWidgetAttr(main.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family:Roboto,Inter,Arial,sans-serif;">
   <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
     <tr>
-     <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family: 'Roboto', Arial, sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.accent || brand.background)};">
+     <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family:Roboto,Inter,Arial,sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.accent || brand.background)};">
         Read More &#8599;
       </td>
     </tr>
@@ -13972,6 +13972,16 @@ function drawNewsletterTagFI(ctx, W, H, scale) {
 
   if (state.photo) {
     drawCoverImage(ctx, state.photo, W, H, scale);
+    // Soft dark mist along the bottom so the tag stands out; gentler than
+    // the posts' solid mist (about 55% at the very bottom, eased upward).
+    const mistTop = H * 0.55;
+    const mist = ctx.createLinearGradient(0, H, 0, mistTop);
+    mist.addColorStop(0, 'rgba(0,0,0,0.55)');
+    mist.addColorStop(0.35, 'rgba(0,0,0,0.32)');
+    mist.addColorStop(0.7, 'rgba(0,0,0,0.1)');
+    mist.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = mist;
+    ctx.fillRect(0, mistTop, W, H - mistTop);
   }
 
   const label = String(state.lines[0] || '').trim().toUpperCase();
@@ -20210,9 +20220,9 @@ function wrapWidgetPreviewDoc(html) {
   // so this relative path resolves the same way it does for the rest of the
   // page. Real email clients never load custom webfonts regardless, so the
   // copied HTML's own font-family list still falls back to Arial Narrow.
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Inter:wght@400;500;700&display=swap"><style>
     @font-face { font-family: 'Acumin Post'; src: url('fonts/acumin-post-legacy.otf') format('opentype'); font-style: normal; font-weight: 700; font-display: swap; }
-    html,body{margin:0;background:#ffffff;font-family:Arial,sans-serif;overflow:hidden;}
+    html,body{margin:0;background:#ffffff;font-family:Roboto,Inter,Arial,sans-serif;overflow:hidden;}
     img{max-width:100%;}
   </style></head><body>${html}</body></html>`;
 }
@@ -20624,9 +20634,9 @@ function renderTriviaOption(letter, text, link, brand) {
   return `        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border-spacing:0;">
           <tr>
             <td width="100%" valign="middle" style="width:100%;background-color:#FFFFFE;border:1px solid ${escapeWidgetAttr(brand.border)};border-radius:36px;padding:0;">
-              <a href="${link}" style="display:block;width:100%;box-sizing:border-box;padding:10px 16px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;font-weight:700;color:${escapeWidgetAttr(brand.text)};text-decoration:none;border-radius:36px;">
+              <a href="${link}" style="display:block;width:100%;box-sizing:border-box;padding:10px 16px;font-family:Roboto,Inter,Arial,sans-serif;font-size:15px;line-height:20px;font-weight:700;color:${escapeWidgetAttr(brand.text)};text-decoration:none;border-radius:36px;">
                 <span style="color:${escapeWidgetAttr(brand.text)};">${letter}) ${escapeWidgetHtml(text)}</span>&nbsp;&nbsp;
-                <span style="color:${escapeWidgetAttr(brand.accent)};font-family:Arial,Helvetica,sans-serif;">&#8599;&#65038;</span>
+                <span style="color:${escapeWidgetAttr(brand.accent)};font-family:Roboto,Inter,Arial,sans-serif;">&#8599;&#65038;</span>
               </a>
             </td>
           </tr>
@@ -20638,9 +20648,9 @@ function renderTriviaOption(letter, text, link, brand) {
 function renderTriviaSidePill(text, link, brand) {
   return `                    <tr>
                       <td valign="middle" style="background-color:#FFFFFE;border:1px solid ${escapeWidgetAttr(brand.border)};border-radius:36px;padding:0;">
-                        <a href="${link}" style="display:block;width:100%;box-sizing:border-box;padding:6px 10px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:13px;line-height:16px;font-weight:700;color:${escapeWidgetAttr(brand.text)};text-decoration:none;border-radius:36px;">
+                        <a href="${link}" style="display:block;width:100%;box-sizing:border-box;padding:6px 10px;font-family:Roboto,Inter,Arial,sans-serif;font-size:13px;line-height:16px;font-weight:700;color:${escapeWidgetAttr(brand.text)};text-decoration:none;border-radius:36px;">
                           <span style="color:${escapeWidgetAttr(brand.text)};">${escapeWidgetHtml(text)}</span>
-                          <span style="color:${escapeWidgetAttr(brand.accent)};font-family:Arial,Helvetica,sans-serif;">&nbsp;&#8599;&#65038;</span>
+                          <span style="color:${escapeWidgetAttr(brand.accent)};font-family:Roboto,Inter,Arial,sans-serif;">&nbsp;&#8599;&#65038;</span>
                         </a>
                       </td>
                     </tr>`;
@@ -20696,7 +20706,7 @@ ${imageCell}              <td width="${columnWidth}" valign="top" style="width:$
                   <tbody>
 
                     <tr>
-                      <td align="left" valign="top" style="padding:0 0 17px 0;margin:0;font-family:Inter,Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;font-weight:700;color:${escapeWidgetAttr(brand.question)};vertical-align:top;">
+                      <td align="left" valign="top" style="padding:0 0 17px 0;margin:0;font-family:Roboto,Inter,Arial,sans-serif;font-size:18px;line-height:24px;font-weight:700;color:${escapeWidgetAttr(brand.question)};vertical-align:top;">
                         ${escapeWidgetHtml(state.question)}
                       </td>
                     </tr>
@@ -20760,8 +20770,8 @@ function buildTriviaHtml(state) {
 ${banner}${image}        <!-- QUESTION -->
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">
           <tr>
-            <td align="left" style="padding:20px 4px 0 4px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;font-weight:700;color:${escapeWidgetAttr(brand.question)};">
-              <a href="${link}" style="display:block;color:${escapeWidgetAttr(brand.question)};text-decoration:none;font-family:Inter,Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;font-weight:700;">
+            <td align="left" style="padding:20px 4px 0 4px;font-family:Roboto,Inter,Arial,sans-serif;font-size:18px;line-height:24px;font-weight:700;color:${escapeWidgetAttr(brand.question)};">
+              <a href="${link}" style="display:block;color:${escapeWidgetAttr(brand.question)};text-decoration:none;font-family:Roboto,Inter,Arial,sans-serif;font-size:18px;line-height:24px;font-weight:700;">
                 ${escapeWidgetHtml(state.question)}
               </a>
             </td>
@@ -20908,7 +20918,7 @@ let tickerImagePreviewOverride = '';
 function buildTickerHtml(state) {
   const tone = TICKER_DIRECTIONS[state.direction] || TICKER_DIRECTIONS.up;
   const link = escapeWidgetAttr(state.link);
-  return `<!-- MONEY MATTERS - FINANCIAL TICKER --><table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;font-family:Roboto,Arial,sans-serif;background-color:#FFFFFF;">
+  return `<!-- MONEY MATTERS - FINANCIAL TICKER --><table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;font-family:Roboto,Inter,Arial,sans-serif;background-color:#FFFFFF;">
 
   <!-- MAIN CARD -->
   <tr>
@@ -20934,12 +20944,12 @@ function buildTickerHtml(state) {
           <!-- CONTENT -->
           <td valign="top" style="padding:0;">
             <!-- EDITABLE HEADLINE -->
-            <a href="${link}" target="_blank" style="font-family:Roboto,Arial,sans-serif;font-size:16px;line-height:22px;font-weight:700;color:#073766;text-decoration:underline;">
+            <a href="${link}" target="_blank" style="font-family:Roboto,Inter,Arial,sans-serif;font-size:16px;line-height:22px;font-weight:700;color:#073766;text-decoration:underline;">
               ${escapeWidgetHtml(state.headline)}
             </a>
 
             <!-- EDITABLE SUMMARY -->
-            <div style="font-family:Roboto,Arial,sans-serif;font-size:15px;line-height:20px;font-weight:400;color:#333333;padding-top:10px;">
+            <div style="font-family:Roboto,Inter,Arial,sans-serif;font-size:15px;line-height:20px;font-weight:400;color:#333333;padding-top:10px;">
               ${escapeWidgetHtml(state.summary)}
             </div>
 
@@ -20957,11 +20967,11 @@ function buildTickerHtml(state) {
       <!-- FINANCIAL TICKER -->
       <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;background-color:${tone.background};border-radius:5px;">
         <tr>
-          <td align="left" valign="middle" style="padding:9px 10px;font-family:Roboto,Arial,sans-serif;font-size:12px;line-height:17px;font-weight:800;color:${tone.color};">
+          <td align="left" valign="middle" style="padding:9px 10px;font-family:Roboto,Inter,Arial,sans-serif;font-size:12px;line-height:17px;font-weight:800;color:${tone.color};">
             <span style="font-size:17px;">${tone.arrow}</span>
             &nbsp;${escapeWidgetHtml(state.label)}
           </td>
-          <td align="right" valign="middle" style="padding:9px 10px;font-family:Roboto,Arial,sans-serif;font-size:11px;line-height:17px;font-weight:700;color:${tone.color};">
+          <td align="right" valign="middle" style="padding:9px 10px;font-family:Roboto,Inter,Arial,sans-serif;font-size:11px;line-height:17px;font-weight:700;color:${tone.color};">
             ${escapeWidgetHtml(state.category)}
           </td>
         </tr>
@@ -21093,16 +21103,16 @@ function buildListHtml(state) {
     return `  <!-- ITEM ${String(index + 1).padStart(2, '0')} -->
   <tr>
     <td width="28" valign="middle" style="width:28px;padding:${topPad} 8px 12px 4px;${border}">
-      <span style="font-family:Roboto,Arial,sans-serif;font-size:32px;line-height:40px;font-weight:900;color:#D6E8FC;">${index + 1}</span>
+      <span style="font-family:Roboto,Inter,Arial,sans-serif;font-size:32px;line-height:40px;font-weight:900;color:#D6E8FC;">${index + 1}</span>
     </td>
     <td valign="middle" style="padding:${topPad} 4px 12px 0;${border}">
-      <a href="${escapeWidgetAttr(item.link)}" style="font-family:Roboto,Arial,sans-serif;font-size:16px;line-height:24px;font-weight:700;color:#000000;text-decoration:underline;display:block;">
+      <a href="${escapeWidgetAttr(item.link)}" style="font-family:Roboto,Inter,Arial,sans-serif;font-size:16px;line-height:24px;font-weight:700;color:#000000;text-decoration:underline;display:block;">
         ${escapeWidgetHtml(item.text)}
       </a>
     </td>
   </tr>`;
   }).join('\n\n');
-  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;font-family:Roboto,Arial,sans-serif;">
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;font-family:Roboto,Inter,Arial,sans-serif;">
 ${rows}
 
 </table>`;
@@ -21137,17 +21147,17 @@ function buildList2Html(state) {
     const border = last ? '' : 'border-bottom:1px dashed #E8E8E8;';
     return `  <!-- ITEM ${String(index + 1).padStart(2, '0')} -->
   <tr>
-    <td width="24" valign="top" style="width:24px;padding:${topPad} 0 ${bottomPad} 6px;${border}font-family:Roboto,Arial,sans-serif;font-size:16px;line-height:24px;font-weight:700;color:#000000;">
+    <td width="24" valign="top" style="width:24px;padding:${topPad} 0 ${bottomPad} 6px;${border}font-family:Roboto,Inter,Arial,sans-serif;font-size:16px;line-height:24px;font-weight:700;color:#000000;">
       ${index + 1}.
     </td>
     <td valign="top" style="padding:${topPad} 6px ${bottomPad} 0;${border}">
-      <a href="${escapeWidgetAttr(item.link)}" style="font-family:Roboto,Arial,sans-serif;font-size:16px;line-height:24px;font-weight:700;color:#000000;text-decoration:underline;">
+      <a href="${escapeWidgetAttr(item.link)}" style="font-family:Roboto,Inter,Arial,sans-serif;font-size:16px;line-height:24px;font-weight:700;color:#000000;text-decoration:underline;">
         ${escapeWidgetHtml(item.text)}
       </a>
     </td>
   </tr>`;
   }).join('\n\n');
-  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;font-family:Roboto,Arial,sans-serif;">
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;font-family:Roboto,Inter,Arial,sans-serif;">
 
 ${rows}
 
