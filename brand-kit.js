@@ -54,25 +54,16 @@ BRAND_KIT.push(
   // Golf has no teams: five colour variations, all in the Essentially Golf
   // family (greens, cream, sand, gold) so they feel related but distinct.
   {
+    // Essentially Golf's own colours: the morning green and the evening olive.
     sport: 'Golf',
-    variation: 'ES Golf Morning',
+    variation: 'Basics',
     primary: { background: '#008F00', foreground: '#FFFFFF', mist: '#FFFFFF' },
     palette: [
       { background: '#008F00', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#396123', foreground: '#FFFFFF', mist: '#FFFFFF' },
       { background: '#FFFCF3', foreground: '#003008', mist: '#003008' },
       { background: '#003008', foreground: '#FFFFFF', mist: '#FFFFFF' },
       { background: '#FFFFFF', foreground: '#008F00', mist: '#008F00' }
-    ]
-  },
-  {
-    sport: 'Golf',
-    variation: 'ES Golf Evening',
-    primary: { background: '#396123', foreground: '#FFFFFF', mist: '#FFFFFF' },
-    palette: [
-      { background: '#396123', foreground: '#FFFFFF', mist: '#FFFFFF' },
-      { background: '#F4EFDF', foreground: '#1F3614', mist: '#1F3614' },
-      { background: '#1F3614', foreground: '#F4EFDF', mist: '#F4EFDF' },
-      { background: '#FFFFFF', foreground: '#396123', mist: '#396123' }
     ]
   },
   {

@@ -1467,9 +1467,11 @@
   }
   .swatch:hover { transform: scale(1.1); box-shadow: var(--shadow-md); }
   .swatch.active { border-color: transparent !important; box-shadow: none; }
+  /* Colour fills the rounded box exactly, so the 2 px outline is even all round. */
+  .swatch { overflow: hidden; }
+  .swatch .swatch-inner { border-radius: 12px; }
   .swatch.is-light,
-  .swatch.is-light.active { border-color: #A9B0BC !important; }
-  .swatch.is-light .swatch-inner { box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .08); }
+  .swatch.is-light.active { border-color: #D3D7DE !important; }
   .swatch-inner {
     width: 100%;
     height: 100%;
@@ -9696,25 +9698,16 @@ BRAND_KIT.push(
   // Golf has no teams: five colour variations, all in the Essentially Golf
   // family (greens, cream, sand, gold) so they feel related but distinct.
   {
+    // Essentially Golf's own colours: the morning green and the evening olive.
     sport: 'Golf',
-    variation: 'ES Golf Morning',
+    variation: 'Basics',
     primary: { background: '#008F00', foreground: '#FFFFFF', mist: '#FFFFFF' },
     palette: [
       { background: '#008F00', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#396123', foreground: '#FFFFFF', mist: '#FFFFFF' },
       { background: '#FFFCF3', foreground: '#003008', mist: '#003008' },
       { background: '#003008', foreground: '#FFFFFF', mist: '#FFFFFF' },
       { background: '#FFFFFF', foreground: '#008F00', mist: '#008F00' }
-    ]
-  },
-  {
-    sport: 'Golf',
-    variation: 'ES Golf Evening',
-    primary: { background: '#396123', foreground: '#FFFFFF', mist: '#FFFFFF' },
-    palette: [
-      { background: '#396123', foreground: '#FFFFFF', mist: '#FFFFFF' },
-      { background: '#F4EFDF', foreground: '#1F3614', mist: '#1F3614' },
-      { background: '#1F3614', foreground: '#F4EFDF', mist: '#F4EFDF' },
-      { background: '#FFFFFF', foreground: '#396123', mist: '#396123' }
     ]
   },
   {
