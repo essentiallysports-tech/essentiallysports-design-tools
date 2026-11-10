@@ -102,6 +102,10 @@
     // Baseline placed so the capitals sit centred in the bar.
     box: { fill: GREEN, padL: 34 * (18.4 / 122), padR: 34 * (21.88 / 122), height: 34, baselineFromBottom: 5.15 },
   };
+  // Stacked pills follow the Social cover rule (drawPills): the next pill starts
+  // just under the previous line's letters, covering its bottom padding:
+  // step = bar height − top padding + edge gap + row gap (1 px each at 122 px).
+  const FRAMEUP_PILL_STEP = 34 - 5.15 + 2 * (34 / 122);
 
   // Player Season Stats: three photo cards with name pill and three stats.
   const seasonCard = (n, x, photo, name, stats) => {
@@ -127,8 +131,8 @@
       { type: 'photo', id: `w${n}Photo`, label: 'Photo', group, x, y: 40, w: 280, h: 400, radius: [12, 12, 0, 0], fill: '#E4EBD8', placeholder: photo },
       // FrameUp's own pill: Acumin Post black, post-pill padding, stacked flush.
       { type: 'text', id: `w${n}First`, label: 'First name', group, default: first, x: x + 14, y: 452, w: 150, h: 34, maxLength: 20, ...FRAMEUP_PILL },
-      { type: 'text', id: `w${n}Last`, label: 'Last name', group, default: last, x: x + 14, y: 486, w: 150, h: 34, maxLength: 20, ...FRAMEUP_PILL },
-      { type: 'text', id: `w${n}Event`, label: 'Tournament', group, default: event, x: x + 14, y: 531, w: 150, h: 34, maxLines: 2, lineHeight: 1.15, color: INK, font: rc(500, 15, 11), maxLength: 60 },
+      { type: 'text', id: `w${n}Last`, label: 'Last name', group, default: last, x: x + 14, y: 452 + FRAMEUP_PILL_STEP, w: 150, h: 34, maxLength: 20, ...FRAMEUP_PILL },
+      { type: 'text', id: `w${n}Event`, label: 'Tournament', group, default: event, x: x + 14, y: 452 + FRAMEUP_PILL_STEP + 34 + 11, w: 150, h: 34, maxLines: 2, lineHeight: 1.15, color: INK, font: rc(500, 15, 11), maxLength: 60 },
       { type: 'rect', x: x + 175, y: 468.5, w: 1, h: 80, fill: RULE },
       { type: 'photo', id: `w${n}Logo`, label: 'Tour logo', group, x: x + 188, y: 468.5, w: 78, h: 80, fit: 'contain', fitPadding: 4, placeholder: logo },
     ];
