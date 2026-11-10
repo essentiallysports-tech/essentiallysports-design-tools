@@ -9643,7 +9643,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 <script src="listicle-data.js"></script>
 <script src="listicle-type2-data.js"></script>
 <script src="asap-template-data.js"></script>
-<script src="infographic-templates.js?v=20261109-fi960"></script>
+<script src="infographic-templates.js?v=20261110-golf9"></script>
 <script>
 
 // â”€â”€â”€ EMBEDDED DATA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -14132,6 +14132,36 @@ function drawNewsletterFeatureImage(ctx, W, H, scale) {
   }
 }
 
+// Sample photos shown on Video FI and Tag FI until a photo is uploaded (the
+// same two people as the infographic FIs).
+const NEWSLETTER_SAMPLE_PHOTOS = {
+  'youtube-fi': 'assets/infographics/sample-tennis.webp',
+  'tag-fi': 'assets/infographics/sample-golf.webp',
+};
+const newsletterSampleImages = {};
+
+function getNewsletterSamplePhoto(assetType) {
+  const src = NEWSLETTER_SAMPLE_PHOTOS[assetType];
+  if (!src) return null;
+  if (!newsletterSampleImages[src]) {
+    const img = new Image();
+    img.onload = () => render();
+    img.src = src;
+    newsletterSampleImages[src] = img;
+  }
+  const img = newsletterSampleImages[src];
+  return img.complete && img.naturalWidth ? img : null;
+}
+
+// Export waits for the sample photo when it is what the design shows.
+function isNewsletterSampleLoading() {
+  if (activeWorkspace !== 'newsletter' || state.photo) return false;
+  const src = NEWSLETTER_SAMPLE_PHOTOS[activeNewsletterAsset];
+  if (!src) return false;
+  const img = newsletterSampleImages[src];
+  return !(img && img.complete && img.naturalWidth);
+}
+
 function drawNewsletterYoutubeFI(ctx, W, H, scale) {
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = '#FFFFFF';
@@ -14139,6 +14169,9 @@ function drawNewsletterYoutubeFI(ctx, W, H, scale) {
 
   if (state.photo) {
     drawCoverImage(ctx, state.photo, W, H, scale);
+  } else {
+    const sample = getNewsletterSamplePhoto('youtube-fi');
+    if (sample) drawCoverImageInRect(ctx, sample, 0, 0, W, H, false);
   }
 
   const iconSize = 152 * scale;
@@ -14185,8 +14218,10 @@ function drawNewsletterTagFI(ctx, W, H, scale) {
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, W, H);
 
-  if (state.photo) {
-    drawCoverImage(ctx, state.photo, W, H, scale);
+  const tagPhoto = state.photo || getNewsletterSamplePhoto('tag-fi');
+  if (tagPhoto) {
+    if (state.photo) drawCoverImage(ctx, state.photo, W, H, scale);
+    else drawCoverImageInRect(ctx, tagPhoto, 0, 0, W, H, false);
     // Soft dark mist along the bottom so the tag stands out; gentler than
     // the posts' solid mist (about 55% at the very bottom, eased upward).
     const mistTop = H * 0.55;
@@ -17213,6 +17248,9 @@ function _render() {
   if (canvas.width !== backingWidth) canvas.width = backingWidth;
   if (canvas.height !== backingHeight) canvas.height = backingHeight;
   ctx.setTransform(density, 0, 0, density, 0, 0);
+  // Browsers default to low-quality image scaling; photos look much cleaner on high.
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   const renderContextKey = getTextContextKey();
   imageEditBoundsByTool = new Map();
   if (contextUsesPillLayout(renderContextKey) && lastRenderedTextContextKey !== renderContextKey) {
@@ -17828,6 +17866,8 @@ function renderExportImage() {
   offscreen.width = W;
   offscreen.height = H;
   const ctx = offscreen.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   drawCanvas(ctx, W, H, scale);
 
   const teamName = (state.team || 'team').replace(/\s+/g, '-').toLowerCase();
@@ -17945,7 +17985,7 @@ async function copyImageLink() {
     showToast('Sign in to FrameUp to create image links.', 'error');
     return;
   }
-  if (isInfographicStillLoading() || isBrandLogoLoading()) {
+  if (isInfographicStillLoading() || isBrandLogoLoading() || isNewsletterSampleLoading()) {
     showToast('The design is still loading. Try again in a moment.', 'error');
     return;
   }
@@ -18415,6 +18455,7 @@ function drawInfographicBoxText(ctx, layer, text, scale) {
     : align === 'right' ? (layer.x + layer.w) * scale - boxW
     : layer.x * scale;
   const top = layer.y * scale;
+  recordInfographicExtent(layer, left, left + boxW);
   ctx.fillStyle = box.fill || '#FFFFFF';
   ctx.fillRect(left, top, boxW, boxH);
   ctx.fillStyle = layer.color || '#000000';
@@ -18495,6 +18536,9 @@ function drawInfographicText(ctx, template, layer, scale) {
   }
   const textX = align === 'center' ? x + w / 2 : align === 'right' ? x + w : x;
   lines.forEach((line, index) => ctx.fillText(line, textX, firstBaseline + index * step));
+  const widest = Math.max(...lines.map(line => ctx.measureText(line).width));
+  const inkLeft = align === 'center' ? textX - widest / 2 : align === 'right' ? textX - widest : textX;
+  recordInfographicExtent(layer, inkLeft, inkLeft + widest);
   ctx.restore();
 }
 
@@ -18544,6 +18588,26 @@ function getInfographicLayerBounds(layer) {
   return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
 }
 
+// Flow layout: a layer with flowAfter: '<id>' starts flowGap px to the right of
+// where that layer actually ended (e.g. result pills of varying width, a unit
+// after a number). Extents are recorded as layers draw, in canvas units.
+let infographicFlowExtents = new Map();
+let infographicFlowDx = 0;
+
+function infographicFlowShift(layer, scale) {
+  if (!layer.flowAfter) return 0;
+  const anchor = infographicFlowExtents.get(layer.flowAfter);
+  if (!anchor) return 0;
+  const left = (layer.x || 0) * scale;
+  return anchor.right + (layer.flowGap || 0) * scale - left;
+}
+
+function recordInfographicExtent(layer, left, right) {
+  const key = layer.id || layer.flowId;
+  if (!key) return;
+  infographicFlowExtents.set(key, { left: left + infographicFlowDx, right: right + infographicFlowDx });
+}
+
 function createInfographicGradient(ctx, gradientSpec, scale) {
   const g = gradientSpec;
   const gradient = ctx.createLinearGradient(g.from[0] * scale, g.from[1] * scale, g.to[0] * scale, g.to[1] * scale);
@@ -18555,6 +18619,16 @@ function drawInfographicRect(ctx, layer, scale) {
   ctx.save();
   if (layer.opacity != null) ctx.globalAlpha = layer.opacity;
   infographicShapePath(ctx, layer, scale);
+  if (!layer.points) recordInfographicExtent(layer, layer.x * scale, (layer.x + layer.w) * scale);
+  if (layer.shadow) {
+    // shadow: { blur, x, y, color } in design px. Canvas shadows ignore the
+    // current transform, so scale them by it (the preview's density).
+    const device = ctx.getTransform?.().a || 1;
+    ctx.shadowColor = layer.shadow.color || 'rgba(0,0,0,.2)';
+    ctx.shadowBlur = (layer.shadow.blur || 0) * scale * device;
+    ctx.shadowOffsetX = (layer.shadow.x || 0) * scale * device;
+    ctx.shadowOffsetY = (layer.shadow.y || 0) * scale * device;
+  }
   if (layer.gradient) {
     ctx.fillStyle = createInfographicGradient(ctx, layer.gradient, scale);
     ctx.fill();
@@ -18562,6 +18636,7 @@ function drawInfographicRect(ctx, layer, scale) {
     ctx.fillStyle = layer.fill;
     ctx.fill();
   }
+  ctx.shadowColor = 'rgba(0,0,0,0)';
   if (layer.stroke) {
     ctx.strokeStyle = layer.stroke;
     ctx.lineWidth = (layer.strokeWidth || 1) * scale;
@@ -18605,17 +18680,54 @@ function drawInfographicCoverImage(ctx, img, x, y, w, h, anchor) {
   ctx.drawImage(img, x + (w - dw) / 2, dy, dw, dh);
 }
 
+// Canvas clipping cuts hard, stair-stepped edges. Shaped slots (circles,
+// rounded corners, slanted panels) are painted on their own small canvas and
+// cut out with a filled, anti-aliased shape instead, so edges stay smooth.
 function drawInfographicPhoto(ctx, template, layer, scale) {
+  const shaped = Boolean(layer.points || layer.radius || layer.shape === 'circle');
+  const t = ctx.getTransform ? ctx.getTransform() : null;
+  if (!shaped || !t || t.b || t.c) {
+    paintInfographicPhoto(ctx, template, layer, scale, true);
+    return;
+  }
+  const bounds = getInfographicLayerBounds(layer);
+  const x0 = Math.floor(t.a * bounds.x * scale + t.e) - 1;
+  const y0 = Math.floor(t.d * bounds.y * scale + t.f) - 1;
+  const w = Math.ceil(t.a * bounds.w * scale) + 3;
+  const h = Math.ceil(t.d * bounds.h * scale) + 3;
+  if (w <= 0 || h <= 0) return;
+  const piece = document.createElement('canvas');
+  piece.width = w;
+  piece.height = h;
+  const pctx = piece.getContext('2d');
+  pctx.setTransform(t.a, 0, 0, t.d, t.e - x0, t.f - y0);
+  paintInfographicPhoto(pctx, template, layer, scale, false);
+  pctx.globalCompositeOperation = 'destination-in';
+  infographicShapePath(pctx, layer, scale);
+  pctx.fillStyle = '#000000';
+  pctx.fill();
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(piece, x0, y0);
+  ctx.restore();
+}
+
+function paintInfographicPhoto(ctx, template, layer, scale, clipToShape) {
   const uploaded = layer.main ? state.photo : getInfographicPhoto(template, layer)?.img;
   const placeholder = !uploaded && layer.placeholder ? getReadyInfographicImage(layer.placeholder.src) : null;
   ctx.save();
-  infographicShapePath(ctx, layer, scale);
-  ctx.clip();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  if (clipToShape) {
+    infographicShapePath(ctx, layer, scale);
+    ctx.clip();
+  }
   const bounds = getInfographicLayerBounds(layer);
   const bx = bounds.x * scale;
   const by = bounds.y * scale;
   const bw = bounds.w * scale;
   const bh = bounds.h * scale;
+  recordInfographicExtent(layer, bx, bx + bw);
   if (layer.fill || (!uploaded && !placeholder && layer.emptyFill)) {
     ctx.fillStyle = layer.fill || layer.emptyFill;
     ctx.fillRect(bx, by, bw, bh);
@@ -18630,8 +18742,10 @@ function drawInfographicPhoto(ctx, template, layer, scale) {
     ctx.scale(adjust.zoom, adjust.zoom);
     ctx.translate(-cx, -cy);
     if (uploaded) {
+      // fitPadding (design px) keeps a contained logo clear of the slot's edge.
+      const pad = layer.fit === 'contain' ? (layer.fitPadding || 0) * scale * 2 : 0;
       const fit = layer.fit === 'contain'
-        ? Math.min(bw / uploaded.naturalWidth, bh / uploaded.naturalHeight)
+        ? Math.min((bw - pad) / uploaded.naturalWidth, (bh - pad) / uploaded.naturalHeight)
         : Math.max(bw / uploaded.naturalWidth, bh / uploaded.naturalHeight);
       const dw = uploaded.naturalWidth * fit;
       const dh = uploaded.naturalHeight * fit;
@@ -18665,13 +18779,22 @@ function drawInfographic(ctx, W, H, scale) {
   ensureInfographicImages(template);
   ctx.fillStyle = template.background || '#FFFFFF';
   ctx.fillRect(0, 0, W, H);
+  infographicFlowExtents = new Map();
   template.layers.forEach(layer => {
+    infographicFlowDx = infographicFlowShift(layer, scale);
+    if (infographicFlowDx) {
+      ctx.save();
+      ctx.translate(infographicFlowDx, 0);
+    }
     if (layer.type === 'image') {
       const img = getReadyInfographicImage(layer.src);
+      const ix = (layer.x || 0) * scale;
+      const iw = (layer.w || template.width) * scale;
+      recordInfographicExtent(layer, ix, ix + iw);
       if (img) {
         ctx.save();
         if (layer.opacity != null) ctx.globalAlpha = layer.opacity;
-        ctx.drawImage(img, (layer.x || 0) * scale, (layer.y || 0) * scale, (layer.w || template.width) * scale, (layer.h || template.height) * scale);
+        ctx.drawImage(img, ix, (layer.y || 0) * scale, iw, (layer.h || template.height) * scale);
         ctx.restore();
       }
     } else if (layer.type === 'rect') {
@@ -18683,6 +18806,8 @@ function drawInfographic(ctx, W, H, scale) {
     } else if (layer.type === 'text') {
       drawInfographicText(ctx, template, layer, scale);
     }
+    if (infographicFlowDx) ctx.restore();
+    infographicFlowDx = 0;
   });
   if (scale === 1) {
     state.lastTextBounds = null;
@@ -19235,7 +19360,7 @@ function exportInstagramSlides(indices) {
 
 function requestExport() {
   if (blockLockedExport()) return;
-  if (isInfographicStillLoading() || isBrandLogoLoading()) {
+  if (isInfographicStillLoading() || isBrandLogoLoading() || isNewsletterSampleLoading()) {
     showToast('The design is still loading. Try again in a moment.', 'error');
     return;
   }

@@ -7,13 +7,19 @@ canvas or use Zoom / Left-right / Up-down), then Export or Copy link.
 ## How it works
 
 - `infographic-templates.js` holds one entry per infographic: frame size,
-  `exportScale`, background, and a list of layers. Every newsletter FI uses one
-  frame: 640 × 426.67 design px at `exportScale` 1.5, so all export at
-  **960 × 640** (as do Video FI and Tag FI). A Figma frame with another shape
-  must be laid out to fill that frame (extend photos, move bottom elements down). The format is documented at the top of the file. That file is the
+  `exportScale`, background, and a list of layers. Every newsletter FI exports at
+  **960 × 640** (as do Video FI and Tag FI). Designs drawn at 960 × 640 in Figma
+  use that frame at 1× (coordinates copy straight across); the older designs are
+  640 × 426.67 at `exportScale` 1.5. A Figma frame with another shape must be
+  laid out to fill the frame (extend photos, move bottom elements down).
+  Layers can carry `shadow`, and `flowAfter`/`flowGap` place a layer right after
+  another one's drawn width (result pills, a unit after a number). The format is documented at the top of the file. That file is the
   only thing that changes when an infographic is added.
-- Images live in `assets/infographics/` as `.webp`. These are the design's
-  example photos (used as placeholders) plus any composed static background.
+- Images live in `assets/infographics/` as `.webp`: logos, badges, icons and
+  composed static backgrounds. Every people-photo slot uses the same two sample
+  photos (`sample-tennis.webp`, `sample-golf.webp`), placed by the `person()`
+  helper so the face lands at the same spot in each slot and heads line up side
+  by side. Video FI and Tag FI show the same samples until a photo is uploaded.
 - The engine in `index.html` (search "NEWSLETTER INFOGRAPHICS") registers each
   template as asset `ig-<id>`, draws its layers, and builds the panel:
   - one collapsible card per `group` (ordered by `groups`) when there are two or
@@ -61,7 +67,13 @@ The site has Acumin Post (condensed black, the default), Acumin Pro Condensed
 Local (bold) and Acumin Pro Condensed Web (regular). Anything else falls back to
 a system font unless it is added to `fonts/` and `@font-face`.
 
-## Current templates (from Figma "ES Design Team Files", section 2070:145)
+## Current templates (Figma "ES Design Team Files")
 
-Three Player Slant FI, Two Player Slant FI, Two Photo Split FI, Four Photo
-Sequence FI, Three Player Badges FI, Headline Photo FI, Three Player Stats FI.
+Section 2070:145: Three Player Slant FI, Two Player Slant FI, Two Photo Split
+FI, Four Photo Sequence FI, Headline Photo FI.
+
+Section 2188:941 (golf cards, 960 × 640): Player Season Stats FI, Weekend
+Winners FI, Tournament Fields FI, Defending Champion FI, Player Quote FI, Three
+Panel Collage FI, Two Up Collage FI. The card designs share `golf-bg.webp` (the
+gradient plus texture, composed once) and Roboto Condensed, which the page
+already loads.
