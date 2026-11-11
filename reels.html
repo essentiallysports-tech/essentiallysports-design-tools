@@ -18,15 +18,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@500;600;700;800;900&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20261111-p5">
   <link rel="stylesheet" href="theme.css?v=20261111-p5">
-  <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261111-icons3">
   <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
   <link rel="stylesheet" href="reels.css?v=20261104-focus1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261111-basics2">
+  <link rel="stylesheet" href="design-tokens.css?v=20261111-picker1">
 <link rel="stylesheet" href="es-ui.css?v=20261111-p4">
-  <script src="theme.js?v=20260712-darkmode12"></script>
+  <script src="theme.js?v=20261111-icons2"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
-  <script src="site-chrome.js?v=20261111-icons1"></script>
-<script src="app-shell.js?v=20261111-p5"></script>
+  <script src="site-chrome.js?v=20261111-icons2"></script>
+<script src="app-shell.js?v=20261111-icons2"></script>
 </head>
 <body class="reels-page">
   <nav class="navbar">
@@ -73,7 +73,7 @@
   <main>
     <div class="reels-mobile-topbar" aria-label="Mobile Reels workspace bar">
       <a class="reels-mobile-back" href="index.html#frames" aria-label="Back to Design Tools" title="Back to Design Tools">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
       </a>
       <div>
         <span>FrameUp</span>
@@ -152,8 +152,8 @@
         <div class="reels-bottom-panel">
           <div class="reels-stage-controls">
             <button type="button" class="reels-icon-btn" id="reels-play-btn" disabled aria-label="Play or pause">
-              <svg class="reels-play-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
-              <svg class="reels-pause-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="reels-play-icon" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="reels-pause-icon" aria-hidden="true"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>
             </button>
             <input type="range" class="reels-scrub" id="reels-scrub" min="0" max="1000" value="0" disabled aria-label="Video timeline">
             <div class="reels-time-row">
@@ -172,9 +172,9 @@
               <div class="reels-timeline-tools">
                 <span id="reels-caption-count">0 segments</span>
                 <div class="reels-zoom-cluster">
-                  <button type="button" class="reels-icon-btn is-mini" id="reels-zoom-out" aria-label="Zoom out" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
+                  <button type="button" class="reels-icon-btn is-mini" id="reels-zoom-out" aria-label="Zoom out" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
                   <button type="button" class="reels-zoom-reset" id="reels-zoom-level" title="Reset zoom" aria-live="polite">Fit</button>
-                  <button type="button" class="reels-icon-btn is-mini" id="reels-zoom-in" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
+                  <button type="button" class="reels-icon-btn is-mini" id="reels-zoom-in" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
                 </div>
               </div>
             </div>
@@ -243,19 +243,19 @@
     </section>
     <nav class="reels-mobile-nav" aria-label="Mobile Reels editor actions">
       <button type="button" data-reels-tool="captions" aria-label="Open Captions tools">
-        <span class="reels-mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h11M4 18h8"/></svg></span>
+        <span class="reels-mobile-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 5H3"/><path d="M15 12H3"/><path d="M17 19H3"/></svg></span>
         <span>Captions</span>
       </button>
       <button type="button" data-reels-tool="style" aria-label="Open Style tools">
-        <span class="reels-mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4Z"/><path d="m12 8 4 4"/></svg></span>
+        <span class="reels-mobile-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></span>
         <span>Style</span>
       </button>
       <button type="button" data-reels-tool="lower-thirds" aria-label="Open Lower Thirds tools">
-        <span class="reels-mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M6 14h7M6 17h11"/></svg></span>
+        <span class="reels-mobile-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="14" x="3" y="5" rx="2" ry="2"/><path d="M7 15h4M15 15h2M7 11h2M13 11h4"/></svg></span>
         <span>Lower</span>
       </button>
       <button type="button" data-reels-tool="rewrite" aria-label="Open Rewrite tools">
-        <span class="reels-mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Z"/><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z"/></svg></span>
+        <span class="reels-mobile-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></svg></span>
         <span>Rewrite</span>
       </button>
     </nav>
@@ -263,6 +263,6 @@
 
   <footer class="site-footer" aria-label="Site footer"></footer>
   <script src="brand-kit.js?v=20261111-tennis1"></script>
-  <script src="reels.js?v=20261110-golf1"></script>
+  <script src="reels.js?v=20261111-icons2"></script>
 </body>
 </html>

@@ -276,7 +276,7 @@
       <div class="recent-designs-head">
         <h2 id="recent-designs-title">Recent designs</h2>
         <button class="recent-designs-close" type="button" aria-label="Close">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </div>
       <p class="recent-designs-copy">Your last ${MAX_LOCAL} exports on this browser. Open one to edit it again; it opens as a new copy.</p>
@@ -329,7 +329,7 @@
       remove.className = 'recent-design__remove';
       remove.setAttribute('aria-label', `Remove ${record.title} from Recent designs`);
       remove.title = 'Remove from this list';
-      remove.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2m-7 0 1 12h8l1-12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      remove.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
       remove.addEventListener('click', async () => {
         await removeLocal([record.id]).catch(() => {});
         row.remove();

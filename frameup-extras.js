@@ -44,7 +44,7 @@
     dialog.innerHTML = `
       <div class="shortcuts-head">
         <h2 id="shortcuts-title">Keyboard shortcuts</h2>
-        <button class="shortcuts-close" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+        <button class="shortcuts-close" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <dl class="shortcuts-list"></dl>`;
     const list = dialog.querySelector('.shortcuts-list');
@@ -107,7 +107,7 @@
       const workspace = applyExportOptions(getWorkspace());
       const w = Math.round(workspace.width * workspace.exportScale);
       const h = Math.round(workspace.height * workspace.exportScale);
-      return `This design exports at ${w} × ${h} px as ${workspace.exportExtension === 'png' ? 'PNG' : 'JPG'}.`;
+      return `You’ll get a ${w} × ${h} px ${workspace.exportExtension === 'png' ? 'PNG' : 'JPG'}`;
     } catch (error) {
       return '';
     }
@@ -135,17 +135,39 @@
       menu.setAttribute('role', 'dialog');
       menu.setAttribute('aria-label', 'Export options');
       menu.innerHTML = `
-        <h3>Export options</h3>
-        <label class="export-option"><input type="checkbox" data-export-option="png"><span><strong>PNG instead of JPG</strong><small>Sharper text and edges, bigger file.</small></span></label>
-        <label class="export-option"><input type="checkbox" data-export-option="double"><span><strong>Double size (2×)</strong><small>For crisp images on high-resolution screens.</small></span></label>
+        <h3 class="export-options-title">Export settings</h3>
+        <div class="export-setting">
+          <span class="export-setting__label" id="export-format-label">Format</span>
+          <div class="export-segment" role="radiogroup" aria-labelledby="export-format-label">
+            <button type="button" role="radio" data-export-choice="png" data-value="false">JPG</button>
+            <button type="button" role="radio" data-export-choice="png" data-value="true">PNG</button>
+          </div>
+          <p class="export-setting__hint" data-export-hint="png"></p>
+        </div>
+        <div class="export-setting">
+          <span class="export-setting__label" id="export-size-label">Size</span>
+          <div class="export-segment" role="radiogroup" aria-labelledby="export-size-label">
+            <button type="button" role="radio" data-export-choice="double" data-value="false">1×</button>
+            <button type="button" role="radio" data-export-choice="double" data-value="true">2×</button>
+          </div>
+          <p class="export-setting__hint" data-export-hint="double"></p>
+        </div>
         <p class="export-options-size" data-export-options-size></p>`;
-      menu.addEventListener('change', () => {
-        setExportOptions({
-          png: menu.querySelector('[data-export-option="png"]').checked,
-          double: menu.querySelector('[data-export-option="double"]').checked,
-        });
-        menu.querySelector('[data-export-options-size]').textContent = exportSizeText();
+      menu.addEventListener('click', event => {
+        const choice = event.target.closest('[data-export-choice]');
+        if (!choice) return;
+        setExportOptions({ ...getExportOptions(), [choice.dataset.exportChoice]: choice.dataset.value === 'true' });
+        syncMenu();
         syncOptionsBadge();
+      });
+      // Arrow keys move between the two choices of a group.
+      menu.addEventListener('keydown', event => {
+        const choice = event.target.closest('[data-export-choice]');
+        if (!choice || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+        event.preventDefault();
+        const other = [...choice.parentElement.children].find(button => button !== choice);
+        other.click();
+        other.focus();
       });
       menu.addEventListener('keydown', event => {
         if (event.key === 'Escape') { closeMenu(); button.focus(); }
@@ -157,17 +179,33 @@
       });
       window.addEventListener('resize', closeMenu);
     }
-    const options = getExportOptions();
-    menu.querySelector('[data-export-option="png"]').checked = options.png;
-    menu.querySelector('[data-export-option="double"]').checked = options.double;
-    menu.querySelector('[data-export-options-size]').textContent = exportSizeText();
+    syncMenu();
     menu.hidden = false;
     const rect = button.getBoundingClientRect();
     const width = menu.offsetWidth || 280;
     menu.style.top = `${Math.round(rect.bottom + 8)}px`;
     menu.style.left = `${Math.round(Math.max(16, Math.min(window.innerWidth - width - 16, rect.right - width)))}px`;
     button.setAttribute('aria-expanded', 'true');
-    menu.querySelector('input')?.focus();
+    menu.querySelector('[data-export-choice][aria-checked="true"]')?.focus();
+  }
+
+  const EXPORT_HINTS = {
+    png: { false: 'Smaller file. Best for photos.', true: 'Sharper text and edges. Bigger file.' },
+    double: { false: 'The template’s standard size.', true: 'Crisper on high-resolution screens. Bigger file.' },
+  };
+
+  function syncMenu() {
+    if (!menu) return;
+    const options = getExportOptions();
+    menu.querySelectorAll('[data-export-choice]').forEach(choice => {
+      const on = String(Boolean(options[choice.dataset.exportChoice])) === choice.dataset.value;
+      choice.setAttribute('aria-checked', String(on));
+      choice.tabIndex = on ? 0 : -1;
+    });
+    menu.querySelectorAll('[data-export-hint]').forEach(hint => {
+      hint.textContent = EXPORT_HINTS[hint.dataset.exportHint][String(Boolean(options[hint.dataset.exportHint]))];
+    });
+    menu.querySelector('[data-export-options-size]').textContent = exportSizeText();
   }
 
   function setupExportOptions() {

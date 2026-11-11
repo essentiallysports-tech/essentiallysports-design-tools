@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="auth-state.css?v=20261022-es1">
   <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261111-basics2">
+  <link rel="stylesheet" href="design-tokens.css?v=20261111-picker1">
   <style>
     html { scrollbar-width: none; -ms-overflow-style: none; }
     html::-webkit-scrollbar { display: none; }
@@ -41,8 +41,8 @@
       const actions = document.getElementById('callback-actions');
       const continueLink = document.getElementById('continue-link');
       const loginLink = document.getElementById('login-link');
-      const successIcon = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12.5 4.2 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      const errorIcon = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8v5m0 3.5v.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+      const successIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+      const errorIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
 
       function getRedirectTarget() {
         const fallback = 'index.html';

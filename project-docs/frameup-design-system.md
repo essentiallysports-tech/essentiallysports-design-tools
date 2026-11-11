@@ -64,6 +64,12 @@ Adjacent levels must differ in at least two of these three properties: size, wei
 
 The shared dark theme remaps these semantic colors. Components should not hard-code alternate dark text colors.
 
+## Icons
+
+- Every UI icon comes from Lucide (lucide.dev, ISC licence): 24-unit viewBox, `fill="none"`, `stroke="currentColor"`, stroke width 2, round caps and joins. Copy the icon's paths as they are; don't draw new ones.
+- Two sizes only, set in `design-tokens.css`: `--es-icon` (18px) everywhere, and `--es-icon-sm` (16px) inside compact controls 32px tall or less (chips, small buttons, badges). Don't set icon sizes in page CSS.
+- Brand marks (ES logo, social network logos) and artwork drawn inside designs are not icons and stay as they are.
+
 ## Implementation Rule
 
 New components should use the semantic variables or utility classes from `design-tokens.css`. Existing pages may map their established class names to these roles, but page-specific CSS must not redefine the global scale.

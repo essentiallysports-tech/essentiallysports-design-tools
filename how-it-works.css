@@ -270,7 +270,7 @@ html { scroll-behavior: smooth; }
   height: 10px;
   flex: 0 0 16px;
   display: inline-block;
-  background: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCAxNiAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE0Ljk3NjYgMS4xNDA2Mkw3Ljk3NjU2IDcuMTQwNjNMMC45NzY1NjMgMS4xNDA2MiIgc3Ryb2tlPSIjMEE3REZBIiBzdHJva2Utd2lkdGg9IjMiLz4KPC9zdmc+Cg==") center / contain no-repeat;
+  background: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjQgNyAxNiAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtNiA5IDYgNiA2LTYiIHN0cm9rZT0iIzBBN0RGQSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=") center / contain no-repeat;
   transform: rotate(-90deg);
   transition: transform 170ms var(--es-ease);
 }

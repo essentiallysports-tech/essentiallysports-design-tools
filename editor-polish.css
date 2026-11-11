@@ -1,117 +1,268 @@
-/* FrameUp editor: one size system for the right panel (desktop studio).
+/* FrameUp editor right panel — "Clean & outlined" (Design Lab variant A).
  *
- * Loaded last on index.html, desktop widths only (phones keep their own
- * touch sizes). Three control sizes and matching icon sizes:
- *   L  44px, radius 14px: text boxes, dropdowns, main buttons (Export,
- *      export options, Copy link, Generate, Add row, Quote switch)
- *   M  36px, radius 10px: small buttons (Replace, adjust, reset, image actions)
- *   Chips 40px min, radius 10px: option chips (wrap to two lines if needed)
- * Icons: 18px in L buttons, 16px in M buttons. Stroke 1.8, rounded ends
- * everywhere (set on the icons themselves).
- * Exceptions on purpose: stat grid cells, colour swatches, logo tiles,
- * segmented tabs and the combined image-link field keep their own shapes.
+ * Desktop only (phones keep their touch sizes); loaded last on index.html.
+ * See DESIGN_PLAN.md / DESIGN_MEMORY.md. Tokens only (design-tokens.css).
+ *
+ *   Type     field label 13/700 secondary · section title 15/700 · value 15/500
+ *   Fields   white, 1px --es-line-2 outline, 12px radius, 40px; focus = 2px brand ring
+ *   Buttons  primary brand blue 40px/12 · secondary white outlined · small 32px/10
+ *   Chips    32px outlined; selected = 1.5px ink ring (not a blue fill)
+ *   Tabs     underline tabs on a hairline (Content · Photos · Style)
+ *   Sections hairline-separated, no card fills or shadows
+ *   Motion   press scale .97 / 140ms, colours ≤160ms, named properties only,
+ *            movement only with prefers-reduced-motion: no-preference
+ *   Icons    18px in 40px buttons, 16px in small buttons (stroke 1.8)
  */
 @media (min-width: 901px) {
-  /* ── Top row: Export · options · Copy link ─────────────────────────────── */
-  html[data-studio-shell="on"] body :is(#studio-export-btn, #studio-export-options-btn, #studio-link-btn, #widget-copy-btn) {
-    height: 44px;
-    min-height: 44px;
-    border-radius: 14px;
+  /* ── Type roles (design-plans 01–03) ─────────────────────────────────── */
+  html[data-studio-shell="on"]:root body .panel :is(.card-title, .ig-label, .ig-cell-label, .widget-field-label) {
+    font-size: var(--es-type-field-label-size) !important;
+    line-height: var(--es-type-field-label-line) !important;
+    font-weight: var(--es-type-field-label-weight) !important;
+    color: var(--es-text-secondary) !important;
+    letter-spacing: 0 !important;
   }
 
-  html[data-studio-shell="on"] body #studio-export-options-btn {
-    min-width: 44px;
+  html[data-studio-shell="on"]:root body .panel :is(.studio-accordion-trigger [data-studio-accordion-label], .ig-card-titles strong) {
+    font-size: var(--es-type-section-title-size) !important;
+    line-height: var(--es-type-section-title-line) !important;
+    font-weight: var(--es-type-section-title-weight) !important;
+    color: var(--es-text-primary) !important;
   }
 
-  html[data-studio-shell="on"] body #studio-link-btn {
+  html[data-studio-shell="on"]:root body .panel .select-dropdown-trigger {
+    font-size: var(--es-type-control-size) !important;
+    line-height: var(--es-type-control-line) !important;
+    font-weight: var(--es-type-control-weight) !important;
+    color: var(--es-text-strong) !important;
+  }
+
+  /* ── Fields: white, outlined, brand focus ring ─────────────────────────── */
+  html[data-studio-shell="on"]:root body .panel :is(
+    input.pill-entry:not(.stats-entry-value-input):not(.stats-entry-label-input),
+    input.ig-input,
+    input.widget-text-input,
+    .select-dropdown-trigger
+  ) {
+    height: 40px;
+    min-height: 40px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  html:not([data-theme="dark"])[data-studio-shell="on"]:root body .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input) {
+    border: 1px solid var(--es-line-2) !important;
+    border-radius: 12px !important;
+    background-color: var(--es-bg);
+    transition: border-color 140ms var(--es-ease), box-shadow 140ms var(--es-ease);
+  }
+
+  html[data-studio-shell="on"]:root body .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, .select-dropdown-trigger):not(.studio-ai-search input):focus,
+  html[data-studio-shell="on"]:root body .panel .select-dropdown.is-open > .select-dropdown-trigger {
+    border-color: var(--es-brand) !important;
+    box-shadow: 0 0 0 1px var(--es-brand) !important;
+    outline: none !important;
+  }
+
+  @media (hover: hover) {
+    html:not([data-theme="dark"])[data-studio-shell="on"]:root body .panel :is(input[type="text"], input[type="url"], textarea, .select-dropdown-trigger):not(.studio-ai-search input):not(:focus):hover {
+      border-color: var(--es-ink-3) !important;
+    }
+  }
+
+  /* ── Buttons ───────────────────────────────────────────────────────────── */
+  html[data-studio-shell="on"]:root body :is(#studio-export-btn, #studio-export-options-btn, #studio-link-btn, #widget-copy-btn) {
+    height: 40px !important;
+    min-height: 40px !important;
+    border-radius: 12px !important;
+  }
+
+  html[data-studio-shell="on"]:root body #studio-export-options-btn {
+    min-width: 40px;
+  }
+
+  html[data-studio-shell="on"]:root body #studio-link-btn {
     padding: 0 14px;
     font-size: 14px;
     font-weight: 600;
   }
 
-  html[data-studio-shell="on"] body :is(#studio-export-btn, #studio-export-options-btn, #studio-link-btn, #widget-copy-btn, .studio-zoom-btn) svg {
+  html:not([data-theme="dark"])[data-studio-shell="on"]:root body :is(#studio-export-options-btn, #studio-link-btn) {
+    border: 1px solid var(--es-line-2);
+    background: var(--es-bg);
+  }
+
+  html[data-studio-shell="on"]:root body :is(#studio-export-btn, #studio-export-options-btn, #studio-link-btn, #widget-copy-btn, .studio-zoom-btn) svg {
     width: 18px;
     height: 18px;
   }
 
-  /* ── L: text boxes and dropdowns ───────────────────────────────────────── */
-  html[data-studio-shell="on"] body .panel :is(
-    input.pill-entry:not(.stats-entry-value-input):not(.stats-entry-label-input),
-    input.ig-input
-  ) {
-    height: 44px;
-    min-height: 44px;
-    padding-top: 0;
-    padding-bottom: 0;
-    border-radius: 14px;
+  html[data-studio-shell="on"]:root body .panel :is(.tweet-fetch-button, .listicle-add-row-button) {
+    height: 40px;
+    min-height: 40px;
+    border-radius: 12px;
   }
 
-  /* Widget forms and the YouTube Quote switch sit outside .panel. */
-  html[data-studio-shell="on"] body input.widget-text-input {
-    height: 44px;
-    min-height: 44px;
-    padding-top: 0;
-    padding-bottom: 0;
-    border-radius: 14px;
+  html[data-studio-shell="on"]:root body :is(.panel .quote-switch, #youtube-quote-toggle) {
+    min-height: 40px;
+    height: 40px;
+    border-radius: 12px;
   }
 
-  html[data-studio-shell="on"] body #youtube-quote-toggle {
-    height: 44px;
-    min-height: 44px;
-    border-radius: 14px;
-  }
-
-  html[data-studio-shell="on"] body .panel .select-dropdown-trigger {
-    height: 44px;
-    min-height: 44px;
-  }
-
-  /* ── L: main buttons inside the panel ──────────────────────────────────── */
-  html[data-studio-shell="on"] body .panel :is(.tweet-fetch-button, .listicle-add-row-button, .quote-switch) {
-    height: 44px;
-    min-height: 44px;
-    border-radius: 14px;
-  }
-
-  html[data-studio-shell="on"] body .panel .brand-logo-option {
-    border-radius: 14px;
-  }
-
-  /* ── M: small buttons ──────────────────────────────────────────────────── */
-  html[data-studio-shell="on"] body .panel :is(.ig-chip, .ig-reset, .widget-image-action-btn, .listicle-logo-button) {
-    height: 36px;
-    min-height: 36px;
+  html[data-studio-shell="on"]:root body .panel :is(.ig-chip, .ig-reset, .widget-image-action-btn, .listicle-logo-button) {
+    height: 32px;
+    min-height: 32px;
     border-radius: 10px;
   }
 
-  html[data-studio-shell="on"] body .panel .ig-icon-btn {
-    width: 36px;
-    height: 36px;
-    min-height: 36px;
+  html[data-studio-shell="on"]:root body .panel .ig-icon-btn {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
     border-radius: 10px;
   }
 
-  html[data-studio-shell="on"] body .panel :is(.ig-chip, .ig-icon-btn, .ig-reset, .widget-image-action-btn, .listicle-logo-button) svg {
+  html[data-studio-shell="on"]:root body .panel :is(.ig-chip, .ig-icon-btn, .ig-reset, .widget-image-action-btn, .listicle-logo-button) svg {
     width: 16px;
     height: 16px;
   }
 
-  /* ── Chips (option choices) ────────────────────────────────────────────── */
-  html[data-studio-shell="on"] body .panel :is(.select-chip, .post-type-option) {
-    min-height: 40px;
+  /* ── Chips and logo tiles: outlined; selected = ink ring ───────────────── */
+  html[data-studio-shell="on"]:root body .panel :is(.select-chip, .post-type-option) {
+    min-height: 34px;
     border-radius: 10px;
   }
 
-  /* Photo rows: the short hint wraps instead of being cut off ("Drag to m…"). */
-  html[data-studio-shell="on"] body .panel .ig-photo-info span {
+  html:not([data-theme="dark"])[data-studio-shell="on"]:root body .panel :is(.select-chip, .brand-logo-option) {
+    border: 1px solid var(--es-line-2);
+    background: var(--es-bg);
+  }
+
+  html:not([data-theme="dark"])[data-studio-shell="on"]:root body .panel :is(.select-chip, .brand-logo-option)[aria-checked="true"] {
+    border-color: var(--es-ink);
+    background: var(--es-bg);
+    box-shadow: inset 0 0 0 0.5px var(--es-ink);
+    color: var(--es-ink);
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"]:root body .panel :is(.select-chip, .brand-logo-option)[aria-checked="true"] {
+    border-color: #f3f5f7;
+    background: transparent;
+    box-shadow: inset 0 0 0 0.5px #f3f5f7;
+    color: #f3f5f7;
+  }
+
+  html[data-studio-shell="on"]:root body .panel .brand-logo-option {
+    border-radius: 12px;
+  }
+
+  html[data-studio-shell="on"]:root body .panel :is(.swatch, .ig-swatch) {
+    border-radius: 8px;
+  }
+
+  /* ── Tabs: underline on a hairline ─────────────────────────────────────── */
+  html[data-studio-shell="on"]:root body .studio-inspector-tabs {
+    gap: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--es-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  html[data-studio-shell="on"]:root body .studio-inspector-tab {
+    position: relative;
+    min-height: 42px !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--es-ink-3) !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+    transition: color 140ms var(--es-ease);
+  }
+
+  html[data-studio-shell="on"]:root body .studio-inspector-tab.is-active {
+    background: transparent !important;
+    color: var(--es-ink) !important;
+    box-shadow: none !important;
+  }
+
+  html[data-studio-shell="on"]:root body .studio-inspector-tab.is-active::after {
+    content: "";
+    position: absolute;
+    left: 22%;
+    right: 22%;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--es-ink);
+  }
+
+  @media (hover: hover) {
+    html[data-studio-shell="on"]:root body .studio-inspector-tab:not(.is-active):hover {
+      color: var(--es-ink-2);
+    }
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"]:root body .studio-inspector-tab.is-active { color: #f3f5f7; }
+  html[data-theme="dark"][data-studio-shell="on"]:root body .studio-inspector-tab.is-active::after { background: #f3f5f7; }
+  html[data-theme="dark"][data-studio-shell="on"]:root body .studio-inspector-tabs { border-bottom-color: #2e2e2e !important; }
+
+  /* ── Sections: hairline separated, no cards ────────────────────────────── */
+  html[data-studio-shell="on"]:root body .studio-accordion-section,
+  html[data-studio-shell="on"]:root body .studio-accordion-section.is-open {
+    border: 0 !important;
+    border-bottom: 1px solid var(--es-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  html[data-studio-shell="on"]:root body .studio-accordion-trigger {
+    min-height: 48px;
+    padding: 0 2px;
+    background: transparent;
+  }
+
+  @media (hover: hover) {
+    html[data-studio-shell="on"]:root body .studio-accordion-trigger:hover {
+      background: transparent;
+      color: var(--es-ink);
+    }
+  }
+
+  html[data-theme="dark"][data-studio-shell="on"]:root body .studio-accordion-section { border-bottom-color: #2e2e2e !important; }
+
+  /* Photo rows: the short hint wraps instead of being cut off. */
+  html[data-studio-shell="on"]:root body .panel .ig-photo-info span {
     white-space: normal;
     text-overflow: clip;
   }
 
-  /* ── Swatches share one corner radius ──────────────────────────────────── */
-  html[data-studio-shell="on"] body .panel :is(.swatch, .ig-swatch) {
-    border-radius: 8px;
+  /* ── Motion: quick press feedback; colours only when motion is reduced ─── */
+  html[data-studio-shell="on"]:root body :is(#studio-export-btn, #studio-export-options-btn, #studio-link-btn, #widget-copy-btn, .template-browse-btn) ,
+  html[data-studio-shell="on"]:root body .panel :is(.select-chip, .post-type-option, .brand-logo-option, .ig-chip, .ig-icon-btn, .ig-reset, .widget-image-action-btn, .listicle-add-row-button, .tweet-fetch-button, .swatch, .ig-swatch) {
+    transition: transform 140ms var(--es-ease), background-color 140ms var(--es-ease), border-color 140ms var(--es-ease), box-shadow 140ms var(--es-ease), color 140ms var(--es-ease);
+    -webkit-tap-highlight-color: transparent;
   }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html[data-studio-shell="on"]:root body :is(#studio-export-btn, #studio-export-options-btn, #studio-link-btn, #widget-copy-btn):active:not(:disabled):not(.is-locked),
+    html[data-studio-shell="on"]:root body .panel :is(.select-chip, .post-type-option, .brand-logo-option, .ig-chip, .ig-icon-btn, .ig-reset, .widget-image-action-btn, .listicle-add-row-button, .tweet-fetch-button, .swatch, .ig-swatch):active:not(:disabled) {
+      transform: scale(.97);
+    }
+
+    /* Section content arrives softly when a tab or section opens. */
+    html[data-studio-shell="on"]:root body .studio-accordion-section.is-open .studio-accordion-body {
+      animation: esPanelIn 180ms var(--es-ease-entrance) both;
+    }
+  }
+}
+
+@keyframes esPanelIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
 }
 
 /* ── Inspector tabs: Content · Photos · Style (desktop) ──────────────────────
@@ -171,4 +322,10 @@
   html[data-studio-shell="on"] body:is([data-tab-count="0"], [data-tab-count="1"]) .studio-inspector-tabs {
     display: none !important;
   }
+}
+
+/* Dark mode: the export row matches the panel (it was hard-coded white). */
+html[data-theme="dark"][data-studio-shell="on"] .studio-export-section {
+  background: #121212;
+  border-bottom-color: #2e2e2e;
 }

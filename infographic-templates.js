@@ -31,7 +31,10 @@
 // draft: true = localhost only.
 (function defineInfographicTemplates() {
   const DIR = 'assets/infographics/';
-  const WHITE_EDGE = { type: 'path', stroke: '#FFFFFF', strokeWidth: 6, outside: true };
+  // Collage lines and logo rings: white, 6 px in the exported image.
+  const LINE_PX = 6;
+  // Slanted edges draw only the half outside the shape, at 1.5× export: 6 px = 8 units.
+  const WHITE_EDGE = { type: 'path', stroke: '#FFFFFF', strokeWidth: (LINE_PX * 2) / 1.5, outside: true };
 
   // ── Older designs: one frame of 640 × 426.67, exported at 1.5× = 960 × 640.
   const W = 640;
@@ -118,7 +121,7 @@
   const FRAMEUP_PILL = framePill(34, GREEN);
   const FRAMEUP_PILL_STEP = pillStep(34);
 
-  // Player Season Stats: three photo cards with name pill and three stats.
+  // Player Season Stats: three photo cards with a FrameUp name pill and three stats.
   const seasonCard = (n, x, photo, name, stats) => {
     const group = `Player ${n}`;
     const top = 44;
@@ -126,7 +129,7 @@
     return [
       { type: 'rect', x, y: top, w: 280, h: 528, radius: 12, fill: '#FFFFFF', shadow: CARD_SHADOW },
       { type: 'photo', id: `p${n}Photo`, label: 'Photo', group, x, y: top, w: 280, h: 380, radius: [12, 12, 0, 0], fill: PHOTO_BG, placeholder: photo },
-      { type: 'text', id: `p${n}Name`, label: 'Name', group, default: name, x: x + 16, y: 440, w: 248, h: 38, maxLength: 40, ...pill(GREEN, 28, 12, 5) },
+      { type: 'text', id: `p${n}Name`, label: 'Name', group, default: name, x: x + 16, y: 440, w: 248, h: 38, maxLength: 40, ...framePill(38, GREEN) },
       { type: 'rect', x: x + 16 + 82, y: 495, w: 1, h: 56, fill: RULE },
       { type: 'rect', x: x + 16 + 165, y: 495, w: 1, h: 56, fill: RULE },
       ...columns.map((cx, i) => ({ type: 'text', id: `label${i + 1}`, label: `Column ${i + 1} label`, group: 'Column labels', default: ['2026 Events', 'Top 10s', 'Wins'][i], x: cx, y: 492, w: 82, h: 16, align: 'center', baseline: bl(492, 16), color: MUTED, font: rc(500, 16, 11), maxLength: 24 })),
@@ -221,7 +224,7 @@
       layers: [
         { type: 'photo', id: 'left', label: 'Left photo', x: 0, y: 0, w: 318, h: H, fill: '#FFFFFF', placeholder: person(PEOPLE.a, { x: 0, y: 0, w: 318, h: H }) },
         { type: 'photo', id: 'right', label: 'Right photo', x: 322, y: 0, w: 318, h: H, fill: '#FFFFFF', placeholder: person(PEOPLE.b, { x: 322, y: 0, w: 318, h: H }) },
-        { type: 'rect', x: 318, y: 0, w: 4, h: H, fill: '#FFFFFF' },
+        { type: 'rect', x: 320 - LINE_PX / 1.5 / 2, y: 0, w: LINE_PX / 1.5, h: H, fill: '#FFFFFF' },
       ],
     },
     {
@@ -233,9 +236,7 @@
       background: '#FFFFFF',
       layers: [
         ...[PEOPLE.a, PEOPLE.b, PEOPLE.a, PEOPLE.b].map((p, i) => ({ type: 'photo', id: `photo${i + 1}`, label: `Photo ${i + 1}`, x: 160 * i, y: 0, w: 160, h: H, placeholder: person(p, { x: 160 * i, y: 0, w: 160, h: H }) })),
-        { type: 'rect', x: 157, y: 0, w: 2, h: H, fill: '#FFFFFF' },
-        { type: 'rect', x: 319, y: 0, w: 2, h: H, fill: '#FFFFFF' },
-        { type: 'rect', x: 479, y: 0, w: 2, h: H, fill: '#FFFFFF' },
+        ...[160, 320, 480].map(x => ({ type: 'rect', x: x - LINE_PX / 1.5 / 2, y: 0, w: LINE_PX / 1.5, h: H, fill: '#FFFFFF' })),
       ],
     },
     {
@@ -351,7 +352,7 @@
       label: 'Three Panel Collage FI',
       width: GW,
       height: GH,
-      background: DEEP,
+      background: '#FFFFFF',
       groups: ['Left player', 'Middle player', 'Right player'],
       layers: [
         ...[
@@ -362,9 +363,10 @@
           // Badge centred in its panel.
           const bx = x + (316 - 168.66) / 2;
           return [
-            { type: 'photo', id: `p${i + 1}Photo`, label: 'Photo', group, x, y: 0, w: 316, h: GH, fill: DEEP, placeholder: person(p, { x, y: 0, w: 316, h: GH }, 0.5, 0.25, 1.15) },
-            { type: 'rect', x, y: 0, w: 316, h: GH, gradient: { from: [0, 402.9], to: [0, 637.1], stops: [[0, 'theme.ink@0'], [1, '#000000']] } },
+            { type: 'photo', id: `p${i + 1}Photo`, label: 'Photo', group, x, y: 0, w: 316, h: GH, fill: '#111418', placeholder: person(p, { x, y: 0, w: 316, h: GH }, 0.5, 0.25, 1.15) },
+            { type: 'rect', x, y: 0, w: 316, h: GH, gradient: { from: [0, 402.9], to: [0, 637.1], stops: [[0, 'rgba(0,0,0,0)'], [1, '#000000']] } },
             { type: 'photo', id: `p${i + 1}Logo`, label: 'Logo', group, x: bx, y: 448.85, w: 168.66, h: 167.15, shape: 'circle', fill: '#FFFFFF', fit: 'contain', fitPadding: 18, placeholder: { src: DIR + badge, x: bx, y: 448.85, w: 168.66, h: 167.15, anchor: 'fill' } },
+            { type: 'rect', x: bx + LINE_PX / 2, y: 448.85 + LINE_PX / 2, w: 168.66 - LINE_PX, h: 167.15 - LINE_PX, shape: 'circle', stroke: '#FFFFFF', strokeWidth: LINE_PX },
           ];
         }),
       ],
@@ -378,11 +380,11 @@
       layers: [
         { type: 'photo', id: 'left', label: 'Left photo', x: 0, y: 0, w: 478.12, h: GH, fill: '#FFFFFF', placeholder: person(PEOPLE.a, { x: 0, y: 0, w: 478.12, h: GH }, 0.45, 0.27, 1.15) },
         { type: 'photo', id: 'right', label: 'Right photo', x: 481.88, y: 0, w: 478.12, h: GH, fill: '#FFFFFF', placeholder: person(PEOPLE.b, { x: 481.88, y: 0, w: 478.12, h: GH }, 0.55, 0.27, 1.15) },
-        { type: 'rect', x: 476.24, y: 0, w: 7.53, h: GH, fill: '#FFFFFF' },
+        { type: 'rect', x: 480 - LINE_PX / 2, y: 0, w: LINE_PX, h: GH, fill: '#FFFFFF' },
         { type: 'photo', id: 'logo1', label: 'Top logo', x: 353.88, y: 52.71, w: 248.77, h: 248.77, shape: 'circle', fill: '#FFFFFF', fit: 'contain', fitPadding: 40, placeholder: { src: DIR + 'logo-pga-tour.webp', x: 416.4, y: 93.99, w: 130.04, h: 166.34, anchor: 'fill' } },
-        { type: 'rect', x: 355.56, y: 54.39, w: 245.41, h: 245.41, shape: 'circle', stroke: GREEN, strokeWidth: 3.36 },
+        { type: 'rect', x: 353.88 + LINE_PX / 2, y: 52.71 + LINE_PX / 2, w: 248.77 - LINE_PX, h: 248.77 - LINE_PX, shape: 'circle', stroke: '#FFFFFF', strokeWidth: LINE_PX },
         { type: 'photo', id: 'logo2', label: 'Bottom logo', x: 355.76, y: 336.94, w: 248.77, h: 248.77, shape: 'circle', fill: '#FFFFFF', fit: 'contain', fitPadding: 40, placeholder: { src: DIR + 'logo-let.webp', x: 384.72, y: 347.46, w: 188.39, h: 231.35, anchor: 'fill' } },
-        { type: 'rect', x: 357.44, y: 338.62, w: 245.41, h: 245.41, shape: 'circle', stroke: GREEN, strokeWidth: 3.36 },
+        { type: 'rect', x: 355.76 + LINE_PX / 2, y: 336.94 + LINE_PX / 2, w: 248.77 - LINE_PX, h: 248.77 - LINE_PX, shape: 'circle', stroke: '#FFFFFF', strokeWidth: LINE_PX },
       ],
     },
   ];

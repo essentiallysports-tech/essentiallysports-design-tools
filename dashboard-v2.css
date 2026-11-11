@@ -866,7 +866,7 @@ html.has-dashboard-admin .navbar-menu [data-admin-only].is-admin-visible {
   display: inline-block;
   width: 16px;
   height: 10px;
-  background: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCAxNiAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE0Ljk3NjYgMS4xNDA2Mkw3Ljk3NjU2IDcuMTQwNjNMMC45NzY1NjMgMS4xNDA2MiIgc3Ryb2tlPSIjMEE3REZBIiBzdHJva2Utd2lkdGg9IjMiLz4KPC9zdmc+Cg==") center / contain no-repeat;
+  background: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjQgNyAxNiAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtNiA5IDYgNiA2LTYiIHN0cm9rZT0iIzBBN0RGQSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=") center / contain no-repeat;
   transform: translateY(1px);
   margin-left: 8px;
 }
@@ -3239,7 +3239,7 @@ body[data-dashboard-view="list"] .dashboard-control-row {
   -webkit-appearance: none;
   padding-right: 42px;
   background-color: #fff;
-  background-image: url("data:image/svg+xml,%3Csvg width='16' height='10' viewBox='0 0 16 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14.98 1.14 7.98 7.14.98 1.14' stroke='%23050505' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='16' height='10' viewBox='4 7 16 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m6 9 6 6 6-6' stroke='%23050505' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 18px center;
   background-size: 14px 9px;

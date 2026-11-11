@@ -1169,31 +1169,47 @@ html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
 
 .template-picker__head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+}
+
+.template-picker__titles {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 
 .template-picker__head h2 {
   margin: 0;
 }
 
+.template-picker__now {
+  margin: 0;
+  color: var(--es-ink-2);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.template-picker__now strong {
+  color: var(--es-ink);
+  font-weight: 700;
+}
+
 .template-picker__close {
   display: grid;
+  flex: none;
   place-items: center;
   width: 36px;
   height: 36px;
+  margin: -4px -6px 0 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 10px;
   background: transparent;
   color: var(--es-ink-2);
   cursor: pointer;
-}
-
-.template-picker__close svg {
-  width: 20px;
-  height: 20px;
+  transition: background-color 140ms var(--es-ease), color 140ms var(--es-ease);
 }
 
 .template-picker__close:hover,
@@ -1207,30 +1223,30 @@ html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 42px;
-  margin-bottom: 14px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  margin: 0 0 12px;
   padding: 0 12px;
-  border-radius: var(--es-radius-control);
+  border-radius: 12px;
   background: var(--es-bg);
-  box-shadow: inset 0 0 0 1.5px var(--es-line-2);
+  box-shadow: inset 0 0 0 1px var(--es-line-2);
   color: var(--es-ink-2);
+  transition: box-shadow 140ms var(--es-ease);
 }
 
 .template-picker__search:focus-within {
-  box-shadow: inset 0 0 0 2px var(--es-brand);
-}
-
-.template-picker__search svg {
-  flex: none;
-  width: 18px;
-  height: 18px;
+  box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand);
 }
 
 .template-picker__search input {
   flex: 1;
   min-width: 0;
-  height: 40px;
-  border: 0;
+  height: 38px;
+  margin: 0;
+  padding: 0;
+  border: 0 !important;
+  box-shadow: none !important;
   background: transparent;
   color: var(--es-ink);
   font: inherit;
@@ -1238,16 +1254,79 @@ html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
   outline: none;
 }
 
+/* Category chips: All · Feature images · Infographic FIs … with counts. */
+.template-picker__filters {
+  display: flex;
+  gap: 6px;
+  margin: 0 -2px 14px;
+  padding: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.template-picker__filters::-webkit-scrollbar {
+  display: none;
+}
+
+.template-filter {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--es-bg);
+  box-shadow: inset 0 0 0 1px var(--es-line-2);
+  color: var(--es-ink-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 140ms var(--es-ease), color 140ms var(--es-ease), box-shadow 140ms var(--es-ease);
+}
+
+.template-filter__count {
+  color: var(--es-ink-3, #8a9099);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.template-filter[aria-pressed="true"] {
+  background: var(--es-ink);
+  box-shadow: none;
+  color: var(--es-bg);
+}
+
+.template-filter[aria-pressed="true"] .template-filter__count {
+  color: inherit;
+  opacity: .7;
+}
+
+.template-filter:focus-visible {
+  outline: 2px solid var(--es-brand);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .template-filter:not([aria-pressed="true"]):hover {
+    box-shadow: inset 0 0 0 1px var(--es-ink-3, #8a9099);
+    color: var(--es-ink);
+  }
+}
+
 .template-picker__body {
   flex: 1;
   min-height: 0;
   margin: 0 -8px;
-  padding: 0 8px 8px;
+  padding: 2px 8px 8px;
   overflow-y: auto;
 }
 
 .template-picker__group + .template-picker__group {
-  margin-top: 18px;
+  margin-top: 22px;
 }
 
 .template-picker__group[hidden] {
@@ -1255,58 +1334,82 @@ html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
 }
 
 .template-picker__group h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   margin: 0 0 10px;
-  color: var(--es-ink-2);
-  font-size: 12px;
+  color: var(--es-ink);
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.template-picker__count {
+  color: var(--es-ink-3, #8a9099);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .template-picker__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
 }
 
+/* Card: a tile with the preview on top and the name below. */
 .template-card {
   display: grid;
   align-content: start;
   gap: 8px;
-  padding: 6px;
+  padding: 6px 6px 10px;
   border: 0;
-  border-radius: 12px;
-  background: transparent;
+  border-radius: 14px;
+  background: var(--es-bg);
+  box-shadow: inset 0 0 0 1px var(--es-line);
   color: var(--es-ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition: box-shadow 140ms var(--es-ease), background-color 140ms var(--es-ease), transform 140ms var(--es-ease);
 }
 
 .template-card[hidden] {
   display: none;
 }
 
-.template-card:hover,
-.template-card:focus-visible {
-  background: var(--es-sunk, rgb(0 0 0 / .04));
-  outline: none;
+@media (hover: hover) {
+  .template-card:hover {
+    box-shadow: inset 0 0 0 1px var(--es-ink-3, #8a9099), 0 6px 18px -10px rgb(14 16 20 / .35);
+  }
 }
 
-.template-card:focus-visible .template-card__thumb,
-.template-card.is-current .template-card__thumb {
-  box-shadow: 0 0 0 2px var(--es-brand, #0A7DFA);
+.template-card:focus-visible {
+  outline: 2px solid var(--es-brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .template-card:active {
+    transform: scale(.98);
+  }
+}
+
+/* Selected: brand ring, brand tint, check badge, "Current template". */
+.template-card.is-current {
+  background: var(--es-brand-soft, rgb(10 125 250 / .1));
+  box-shadow: inset 0 0 0 2px var(--es-brand, #0A7DFA);
 }
 
 .template-card__thumb {
   position: relative;
   display: grid;
   place-items: center;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 3 / 2;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: 9px;
   background: var(--es-sunk, #EEEFF1);
-  box-shadow: inset 0 0 0 1px var(--es-line);
 }
 
 .template-card__thumb img {
@@ -1323,7 +1426,7 @@ html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
 }
 
 .template-picker.is-portrait .template-picker__grid {
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 }
 
 .template-card__thumb.is-strip img {
@@ -1355,10 +1458,41 @@ html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
   text-align: center;
 }
 
+.template-card__flags {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.template-card__check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--es-brand, #0A7DFA);
+  box-shadow: 0 0 0 2px #ffffff;
+  color: #ffffff;
+}
+
+.template-card__check svg[viewBox] {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px;
+  stroke-width: 3;
+}
+
 .template-card__label {
   display: grid;
-  gap: 4px;
-  padding: 0 2px 2px;
+  gap: 2px;
+  padding: 0 4px;
 }
 
 .template-card__name {
@@ -1367,23 +1501,19 @@ html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
   line-height: 1.3;
 }
 
-.template-card__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+.template-card__status {
+  color: var(--es-brand-text, #0A63C8);
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.template-card__tags:empty {
-  display: none;
-}
-
-/* Same shape as the shared .es-badge (es-ui.css), so New / Locked / Current match. */
+/* Same shape as the shared .es-badge (es-ui.css), so New / View only match. */
 .template-tag {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  height: 20px;
-  padding: 0 6px;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
   border-radius: 999px;
   font-family: var(--es-font-ui);
   font-size: 12px;
@@ -1391,19 +1521,16 @@ html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
   line-height: 1;
 }
 
-.template-tag svg {
-  width: 11px;
-  height: 11px;
+.template-tag svg[viewBox] {
+  width: 12px !important;
+  height: 12px !important;
+  min-width: 12px;
 }
 
 .template-tag.is-locked {
-  background: var(--es-sunk, #EEEFF1);
-  color: var(--es-ink-2);
-}
-
-.template-tag.is-current {
-  background: var(--es-brand-soft, rgb(10 125 250 / .1));
-  color: var(--es-brand-text, #0A63C8);
+  background: rgb(14 16 20 / .72);
+  color: #ffffff;
+  backdrop-filter: blur(4px);
 }
 
 .template-picker__empty {
@@ -1805,51 +1932,63 @@ html[data-theme="dark"] .es-dialog-list {
   from { opacity: 0; transform: translateY(8px) scale(.98); }
 }
 
-/* Toasts: bottom centre, ink surface, auto-dismiss. */
+/* Toasts: bottom right, FrameUp card (white surface, line, float shadow),
+   an error icon (!) on failures, auto-dismiss. One optional action
+   button (e.g. "Restored your work · Start fresh"). */
 .es-toast-region {
   position: fixed;
-  left: 50%;
+  right: 24px;
   bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   z-index: 4000;
   display: grid;
-  gap: 8px;
-  transform: translateX(-50%);
+  justify-items: end;
+  gap: 10px;
+  width: min(400px, calc(100vw - 48px));
   pointer-events: none;
 }
 
 .es-toast {
-  max-width: min(480px, calc(100vw - 32px));
-  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 14px;
   border-radius: var(--es-radius-control);
-  background: var(--es-ink);
-  box-shadow: var(--es-shadow-float);
-  color: #ffffff;
+  background: var(--es-surface, #ffffff);
+  box-shadow: var(--es-shadow-float), inset 0 0 0 1px var(--es-line);
+  color: var(--es-ink);
   font-family: var(--es-font-ui);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.4;
   overflow-wrap: anywhere;
+  pointer-events: auto;
   animation: esToastIn var(--es-dur-fill) var(--es-ease) both;
 }
 
-.es-toast.is-success::before {
-  content: "✓";
-  margin-right: 8px;
-  color: #7ee2a8;
-  font-weight: 700;
+.es-toast::before {
+  display: none;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.es-toast.is-error::before {
+  content: "!";
+  display: grid;
+  background: var(--es-bad-soft, #fdeeee);
+  color: var(--es-bad, #c0392b);
 }
 
 .es-toast.is-error {
-  background: var(--es-bad);
-}
-
-/* Toast with one action button (e.g. "Restored your work · Start fresh"). */
-.es-toast--action {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: max-content;
-  pointer-events: auto;
+  box-shadow: var(--es-shadow-float), inset 0 0 0 1px var(--es-bad-soft, #f6caca), inset 3px 0 0 var(--es-bad, #c0392b);
 }
 
 .es-toast--action > span {
@@ -1860,31 +1999,73 @@ html[data-theme="dark"] .es-dialog-list {
 .es-toast-action {
   flex: none;
   margin-left: auto;
-  padding: 4px 10px;
-  border: 1px solid rgb(255 255 255 / .35);
-  border-radius: 999px;
-  background: transparent;
-  color: #ffffff;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--es-surface, #ffffff);
+  box-shadow: inset 0 0 0 1px var(--es-line-2, #d5d8dd);
+  color: var(--es-brand-text, #0a62c7);
   font: inherit;
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
 }
 
 .es-toast-action:hover,
 .es-toast-action:focus-visible {
-  background: rgb(255 255 255 / .14);
+  background: var(--es-brand-soft, #eaf3ff);
+  box-shadow: inset 0 0 0 1px var(--es-brand, #0a7dfa);
   outline: none;
 }
 
 .es-toast.is-leaving {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateX(12px);
   transition: opacity var(--es-dur-fill) var(--es-ease), transform var(--es-dur-fill) var(--es-ease);
 }
 
 @keyframes esToastIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateX(16px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .es-toast { animation: none; }
+  .es-toast.is-leaving { transform: none; }
+}
+
+/* Phones: full width at the bottom, above the editor's bottom tabs. */
+@media (max-width: 900px) {
+  .es-toast-region {
+    right: 16px;
+    left: 16px;
+    width: auto;
+    justify-items: stretch;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body:has([data-mobile-editor-nav]) .es-toast-region {
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+html[data-theme="dark"] .es-toast {
+  background: #1a1a1a;
+  box-shadow: 0 16px 40px rgb(0 0 0 / .5), inset 0 0 0 1px #2e2e2e;
+  color: #f3f5f7;
+}
+
+html[data-theme="dark"] .es-toast.is-error {
+  box-shadow: 0 16px 40px rgb(0 0 0 / .5), inset 0 0 0 1px #4a2323, inset 3px 0 0 #e5534b;
+}
+
+html[data-theme="dark"] .es-toast.is-error::before { background: #3a1717; color: #ff8a80; }
+
+html[data-theme="dark"] .es-toast-action {
+  background: #1f1f1f;
+  box-shadow: inset 0 0 0 1px #3a3a3a;
+  color: #8ec2ff;
 }
 
 /* Carousel slide buttons show a dot once the slide has content. */
@@ -1996,4 +2177,46 @@ html[data-theme="dark"] .es-dialog-list {
   font-size: 15px !important;
   font-weight: 400 !important;
   line-height: 1.55 !important;
+}
+
+/* Icons: Lucide (lucide.dev, ISC), stroke 2, currentColor.
+   Two sizes only: --es-icon (18px) everywhere, --es-icon-sm (16px) inside
+   compact controls. State illustrations keep their own size. */
+:root {
+  --es-icon: 18px;
+  --es-icon-sm: 16px;
+}
+
+svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
+  width: var(--es-icon) !important;
+  height: var(--es-icon) !important;
+  min-width: var(--es-icon);
+  flex: none;
+}
+
+:is(
+  .template-browse-btn,
+  .reels-icon-btn.is-mini,
+  .canvas-ai-search-submit,
+  .canvas-ai-search-close,
+  .ig-chip,
+  .ig-icon-btn,
+  .ig-reset,
+  .widget-image-action-btn,
+  .listicle-logo-button,
+  .es-chip,
+  .es-btn--sm,
+  .es-toast-action,
+  .es-badge,
+  .ft-tag,
+  .feedback-page-version
+) svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
+  width: var(--es-icon-sm) !important;
+  height: var(--es-icon-sm) !important;
+  min-width: var(--es-icon-sm);
+}
+
+:is(.auth-state-icon, .canvas-empty-hint) > svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
+  width: 28px !important;
+  height: 28px !important;
 }

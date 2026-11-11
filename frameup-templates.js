@@ -12,6 +12,7 @@
   'use strict';
 
   const THUMB_DIR = 'assets/template-thumbs/';
+  const THUMB_VERSION = '20261111-2'; // bump when previews are re-rendered
   const HTML_WIDGETS = new Set(['widgets', 'trivia', 'ticker', 'list', 'list2']);
   const PICKERS = [
     {
@@ -33,8 +34,9 @@
     },
   ];
 
-  const ICON_GRID = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
-  const ICON_LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  const ICON_GRID = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>';
+  const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+  const ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
 
   function optionGroups(picker, select) {
     const options = [...select.options];
@@ -96,7 +98,7 @@
     img.alt = '';
     img.loading = 'lazy';
     img.decoding = 'async';
-    img.src = `${THUMB_DIR}${picker.workspace}-${option.value}.webp`;
+    img.src = `${THUMB_DIR}${picker.workspace}-${option.value}.webp?v=${THUMB_VERSION}`;
     img.addEventListener('error', () => {
       img.remove();
       thumb.classList.add('is-missing');
@@ -125,27 +127,70 @@
     dialog.setAttribute('aria-labelledby', 'template-picker-title');
     dialog.innerHTML = `
       <div class="template-picker__head">
-        <h2 id="template-picker-title"></h2>
+        <div class="template-picker__titles">
+          <h2 id="template-picker-title"></h2>
+          <p class="template-picker__now"></p>
+        </div>
         <button class="template-picker__close" type="button" aria-label="Close">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </div>
       <label class="template-picker__search">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
         <input type="search" placeholder="Search templates" aria-label="Search templates" autocomplete="off" spellcheck="false">
       </label>
+      <div class="template-picker__filters" role="group" aria-label="Filter by category"></div>
       <div class="template-picker__body"></div>
       <p class="template-picker__empty" hidden>No templates match that search.</p>`;
     dialog.querySelector('h2').textContent = picker.title;
+    const currentOption = select.options[select.selectedIndex];
+    const now = dialog.querySelector('.template-picker__now');
+    if (currentOption) {
+      now.append('Now editing ');
+      const strong = document.createElement('strong');
+      strong.textContent = currentOption.textContent.replace(/\s*\(draft\)$/, '');
+      now.appendChild(strong);
+    } else {
+      now.remove();
+    }
+    const filters = dialog.querySelector('.template-picker__filters');
+    let activeGroup = '';
     const body = dialog.querySelector('.template-picker__body');
     const search = dialog.querySelector('input');
     const empty = dialog.querySelector('.template-picker__empty');
 
-    optionGroups(picker, select).forEach(group => {
+    const groups = optionGroups(picker, select);
+    const chip = (label, count, value) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'template-filter';
+      button.dataset.group = value;
+      button.setAttribute('aria-pressed', String(value === activeGroup));
+      button.innerHTML = '<span></span><span class="template-filter__count"></span>';
+      button.firstChild.textContent = label;
+      button.lastChild.textContent = count;
+      button.addEventListener('click', () => {
+        activeGroup = value;
+        filters.querySelectorAll('.template-filter').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
+        applyFilter();
+      });
+      filters.appendChild(button);
+    };
+    if (groups.length > 1) {
+      chip('All', groups.reduce((sum, group) => sum + group.options.length, 0), '');
+      groups.forEach(group => chip(group.label, group.options.length, group.label));
+    } else {
+      filters.remove();
+    }
+
+    groups.forEach(group => {
       const section = document.createElement('section');
       section.className = 'template-picker__group';
+      section.dataset.group = group.label;
       const heading = document.createElement('h3');
-      heading.textContent = group.label;
+      heading.innerHTML = '<span></span><span class="template-picker__count"></span>';
+      heading.firstChild.textContent = group.label;
+      heading.lastChild.textContent = group.options.length;
       const grid = document.createElement('div');
       grid.className = 'template-picker__grid';
       group.options.forEach(option => {
@@ -161,19 +206,23 @@
         const name = document.createElement('span');
         name.className = 'template-card__name';
         name.textContent = option.textContent.replace(/\s*\(draft\)$/, '');
-        const tags = document.createElement('span');
-        tags.className = 'template-card__tags';
+        // Status sits on the preview: Locked / New top-left, a check when in use.
+        const thumb = buildThumb(picker, option);
+        const flags = document.createElement('span');
+        flags.className = 'template-card__flags';
         if (option.dataset.tag === 'locked') {
-          tags.insertAdjacentHTML('beforeend', `<span class="template-tag is-locked">${ICON_LOCK}Locked</span>`);
+          flags.insertAdjacentHTML('beforeend', `<span class="template-tag is-locked">${ICON_LOCK}View only</span>`);
         }
         if (window.FrameUpWhatsNew?.isNewTemplate?.(picker.workspace, option.value)) {
-          tags.insertAdjacentHTML('beforeend', '<span class="es-badge es-badge--new">New</span>');
+          flags.insertAdjacentHTML('beforeend', '<span class="es-badge es-badge--new">New</span>');
         }
-        if (current) tags.insertAdjacentHTML('beforeend', '<span class="template-tag is-current">Current</span>');
+        if (flags.childElementCount) thumb.appendChild(flags);
+        if (current) thumb.insertAdjacentHTML('beforeend', `<span class="template-card__check">${ICON_CHECK}</span>`);
         const label = document.createElement('span');
         label.className = 'template-card__label';
-        label.append(name, tags);
-        card.append(buildThumb(picker, option), label);
+        label.appendChild(name);
+        if (current) label.insertAdjacentHTML('beforeend', '<span class="template-card__status">Current template</span>');
+        card.append(thumb, label);
         card.setAttribute('aria-label', `${name.textContent}${option.dataset.tag === 'locked' ? ', locked: view only' : ''}${current ? ', current' : ''}`);
         card.addEventListener('click', () => {
           dialog.close();
@@ -189,13 +238,14 @@
       body.appendChild(section);
     });
 
-    search.addEventListener('input', () => {
+    function applyFilter() {
       const query = search.value.trim().toLowerCase();
       let shown = 0;
       body.querySelectorAll('.template-picker__group').forEach(section => {
+        const inScope = !activeGroup || section.dataset.group === activeGroup;
         let inGroup = 0;
         section.querySelectorAll('.template-card').forEach(card => {
-          const match = !query || card.dataset.search.includes(query);
+          const match = inScope && (!query || card.dataset.search.includes(query));
           card.hidden = !match;
           if (match) inGroup += 1;
         });
@@ -203,7 +253,8 @@
         shown += inGroup;
       });
       empty.hidden = shown > 0;
-    });
+    }
+    search.addEventListener('input', applyFilter);
     search.addEventListener('keydown', event => {
       if (event.key !== 'Enter') return;
       event.preventDefault();
