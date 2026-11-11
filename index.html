@@ -2179,6 +2179,7 @@
   body[data-current-page="newsletter"][data-newsletter-asset="tag-fi"] #newsletter-brand-card,
   body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #newsletter-brand-card,
   body[data-current-page="newsletter"][data-newsletter-asset="trivia"] #newsletter-brand-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="ticker"] #newsletter-brand-card,
   body[data-current-page="newsletter"][data-newsletter-infographic="on"] #newsletter-brand-card {
     display: block;
   }
@@ -12105,6 +12106,11 @@ function initUI() {
         renderWidgetPreview();
         return;
       }
+      if (activeNewsletterAsset === 'ticker') {
+        if (tickerBuilderState) tickerBuilderState.brandId = event.target.value;
+        renderWidgetPreview();
+        return;
+      }
       if (activeNewsletterAsset === 'widgets') {
         if (widgetBuilderState) widgetBuilderState.brandId = event.target.value;
         renderWidgetPreview();
@@ -13984,10 +13990,12 @@ function populateNewsletterBrandSelect(assetType) {
   if (!select) return;
   const brands = assetType === 'trivia'
     ? TRIVIA_BRANDS
-    : assetType === 'widgets'
-      ? WIDGET_BRAND_IDS.map(getNewsletterBrand)
-      : NEWSLETTER_BRANDS.filter(brand => !brand.assets || brand.assets.includes(assetType));
-  if (assetType !== 'trivia' && assetType !== 'widgets' && !brands.some(brand => brand.id === state.newsletterBrand)) {
+    : assetType === 'ticker'
+      ? TICKER_BRANDS
+      : assetType === 'widgets'
+        ? WIDGET_BRAND_IDS.map(getNewsletterBrand)
+        : NEWSLETTER_BRANDS.filter(brand => !brand.assets || brand.assets.includes(assetType));
+  if (assetType !== 'trivia' && assetType !== 'ticker' && assetType !== 'widgets' && !brands.some(brand => brand.id === state.newsletterBrand)) {
     state.newsletterBrand = brands[0].id;
   }
   select.innerHTML = brands.map(brand =>
@@ -13995,9 +14003,11 @@ function populateNewsletterBrandSelect(assetType) {
   ).join('');
   select.value = assetType === 'trivia'
     ? (triviaBuilderState ? triviaBuilderState.brandId : TRIVIA_BRANDS[0].id)
-    : assetType === 'widgets'
-      ? (widgetBuilderState ? widgetBuilderState.brandId : WIDGET_BRAND_IDS[0])
-      : state.newsletterBrand;
+    : assetType === 'ticker'
+      ? (tickerBuilderState ? tickerBuilderState.brandId : TICKER_BRANDS[0].id)
+      : assetType === 'widgets'
+        ? (widgetBuilderState ? widgetBuilderState.brandId : WIDGET_BRAND_IDS[0])
+        : state.newsletterBrand;
 }
 
 function getNewsletterBrandPalette(id) {
@@ -20563,9 +20573,11 @@ function syncWorkspaceControls() {
   if (newsletterBrandSelect) {
     newsletterBrandSelect.value = activeNewsletterAsset === 'trivia'
       ? (triviaBuilderState ? triviaBuilderState.brandId : TRIVIA_BRANDS[0].id)
-      : activeNewsletterAsset === 'widgets'
-        ? (widgetBuilderState ? widgetBuilderState.brandId : WIDGET_BRAND_IDS[0])
-        : getNewsletterBrand(state.newsletterBrand).id;
+      : activeNewsletterAsset === 'ticker'
+        ? (tickerBuilderState ? tickerBuilderState.brandId : TICKER_BRANDS[0].id)
+        : activeNewsletterAsset === 'widgets'
+          ? (widgetBuilderState ? widgetBuilderState.brandId : WIDGET_BRAND_IDS[0])
+          : getNewsletterBrand(state.newsletterBrand).id;
   }
   if (reelsFormatSelect) reelsFormatSelect.value = state.reelsFormat || activeReelsFormat || 'cover-frame';
   document.body.dataset.youtubeVariation = activeYoutubeVariation;
@@ -21835,7 +21847,27 @@ function initTriviaBuilder() {
 // ─── NEWSLETTER FINANCIAL TICKER BUILDER ─────────────────────
 // Money Matters card: image + linked headline/summary, with a coloured
 // ticker bar underneath. Same flow as the Trivia builder.
+// Brand colours tint the card and the headline only; the ticker bar keeps its
+// green/red Up/Down colours. Taken from TRIVIA_BRANDS (card tint and border)
+// and NEWSLETTER_BRANDS (headline: the brand colour, or its dark fi.ink /
+// trivia text when the brand colour is too light to read as a link).
+const TICKER_BRANDS = [
+  { id: 'essentiallysports', label: 'EssentiallySports', card: '#FBFBFB', cardBorder: '', headline: '#073766' },
+  { id: 'she-got-game', label: 'Essentially W', card: '#FFF6F0', cardBorder: '#FFB293', headline: '#212121' },
+  { id: 'essentially-w-ncaa', label: 'Essentially W NCAA', card: '#F4F9FF', cardBorder: '', headline: '#021F41' },
+  { id: 'the-huddle', label: 'The Huddle', card: '#F4F7FB', cardBorder: '#E5E9F0', headline: '#252D47' },
+  { id: 'essentially-golf', label: 'Essentially Golf (Morning)', card: '#FFFCF3', cardBorder: '#E5D8B5', headline: '#003008' },
+  { id: 'es-golf-evening', label: 'Essentially Golf (Evening)', card: '#FFFCF3', cardBorder: '#E5D8B5', headline: '#396123' },
+  { id: 'essentially-dunk', label: 'Essentially Dunk', card: '#FBFBFB', cardBorder: '', headline: '#253B73' },
+  { id: 'lucky-dog-on-track', label: 'Lucky Dog On Track', card: '#FBFBFB', cardBorder: '#FCD53D', headline: '#210909' },
+];
+
+function getTickerBrand(id) {
+  return TICKER_BRANDS.find(brand => brand.id === id) || TICKER_BRANDS[0];
+}
+
 const TICKER_DEFAULT_STATE = {
+  brandId: TICKER_BRANDS[0].id,
   imageUrl: 'https://beehiiv-images-production.s3.amazonaws.com/uploads/asset/file/f282b19f-463a-49a1-9c7b-d8df9c0d555e/ES_Daily_FI_-_2026-11-05T040909.247.jpg?t=1793831975',
   headline: 'Your headline goes here',
   summary: 'Add a short one-line summary of the story here.',
@@ -21854,12 +21886,14 @@ let tickerImagePreviewOverride = '';
 
 function buildTickerHtml(state) {
   const tone = TICKER_DIRECTIONS[state.direction] || TICKER_DIRECTIONS.up;
+  const brand = getTickerBrand(state.brandId);
+  const cardBorder = brand.cardBorder ? `border:1px solid ${escapeWidgetAttr(brand.cardBorder)};` : '';
   const link = escapeWidgetAttr(state.link);
   return `<!-- MONEY MATTERS - FINANCIAL TICKER --><table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;font-family:Roboto,Inter,Arial,sans-serif;background-color:#FFFFFF;">
 
   <!-- MAIN CARD -->
   <tr>
-    <td style="background-color:#FBFBFB;border-radius:12px;padding:14px;">
+    <td style="background-color:${escapeWidgetAttr(brand.card)};${cardBorder}border-radius:12px;padding:14px;">
 
       <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;">
         <tr>
@@ -21881,7 +21915,7 @@ function buildTickerHtml(state) {
           <!-- CONTENT -->
           <td valign="top" style="padding:0;">
             <!-- EDITABLE HEADLINE -->
-            <a href="${link}" target="_blank" style="font-family:Roboto,Inter,Arial,sans-serif;font-size:16px;line-height:22px;font-weight:700;color:#073766;text-decoration:underline;">
+            <a href="${link}" target="_blank" style="font-family:Roboto,Inter,Arial,sans-serif;font-size:16px;line-height:22px;font-weight:700;color:${escapeWidgetAttr(brand.headline)};text-decoration:underline;">
               ${escapeWidgetHtml(state.headline)}
             </a>
 
