@@ -108,6 +108,7 @@
       await A.txDone(tx);
       A.markImagesStored(blobs.map(([imageId]) => imageId));
       await trimLocal();
+      refreshRecentCache();
     } catch (error) {
       console.warn('[designs] could not keep a copy of this design:', error);
     }
@@ -133,6 +134,7 @@
     ids.forEach(id => tx.objectStore('records').delete(LOCAL_PREFIX + id));
     await A.txDone(tx);
     await A.pruneImages().catch(() => {});
+    refreshRecentCache();
   }
 
   async function trimLocal() {
@@ -274,7 +276,7 @@
       <div class="recent-designs-head">
         <h2 id="recent-designs-title">Recent designs</h2>
         <button class="recent-designs-close" type="button" aria-label="Close">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
       </div>
       <p class="recent-designs-copy">Your last ${MAX_LOCAL} exports on this browser. Open one to edit it again; it opens as a new copy.</p>
@@ -339,6 +341,61 @@
   }
 
   document.querySelectorAll('[data-recent-designs]').forEach(button => button.addEventListener('click', showRecentDesigns));
+
+  // ⌘K: recent designs by title (kept in memory, refreshed when they change).
+  let recentCache = [];
+  function refreshRecentCache() {
+    listLocal().then(records => { recentCache = records; renderJumpBackIn(records); }).catch(() => {});
+  }
+  window.FrameUpShell?.addPaletteSource?.(() => [{
+    label: 'Recent designs',
+    onlyWhenSearching: true,
+    limit: 6,
+    items: recentCache.map(record => ({
+      label: record.title,
+      hint: [WORKSPACE_LABELS[record.workspace] || record.workspace, timeAgo(record.savedAt)].filter(Boolean).join(' · '),
+      keywords: `recent design ${record.variant || ''}`,
+      icon: 'clock',
+      run: () => openLocal(record).catch(error => showToast(error?.message || 'This design could not be opened.', 'error')),
+    })),
+  }]);
+
+  // ─── Home: "Jump back in" (last 4 designs on this browser) ────────────────
+  function renderJumpBackIn(records) {
+    const section = document.getElementById('home-recent');
+    const grid = section?.querySelector('.home-recent__grid');
+    if (!section || !grid) return;
+    const latest = records.slice(0, 4);
+    section.hidden = latest.length === 0;
+    grid.innerHTML = '';
+    latest.forEach(record => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'home-recent__card';
+      card.setAttribute('aria-label', `Open ${record.title}`);
+      const thumb = document.createElement('span');
+      thumb.className = 'home-recent__thumb';
+      if (record.thumb) {
+        const img = document.createElement('img');
+        img.alt = '';
+        img.src = record.thumb;
+        thumb.appendChild(img);
+      }
+      const text = document.createElement('span');
+      text.className = 'home-recent__text';
+      const title = document.createElement('strong');
+      title.textContent = record.title;
+      const meta = document.createElement('small');
+      meta.textContent = [WORKSPACE_LABELS[record.workspace] || record.workspace, timeAgo(record.savedAt)].filter(Boolean).join(' · ');
+      text.append(title, meta);
+      card.append(thumb, text);
+      card.addEventListener('click', () => openLocal(record).catch(error => showToast(error?.message || 'This design could not be opened.', 'error')));
+      grid.appendChild(card);
+    });
+  }
+  document.querySelector('[data-home-recent-all]')?.addEventListener('click', showRecentDesigns);
+  refreshRecentCache();
+  window.addEventListener('hashchange', () => { if (routeFromHash() === 'frames') refreshRecentCache(); });
 
   window.FrameUpDesigns = Object.freeze({ capture, storeLocal, listLocal, showRecentDesigns, openDesign });
 

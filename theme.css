@@ -98,7 +98,6 @@ html[data-theme="dark"] .app[data-workspace] {
 html[data-theme="dark"] .dashboard-topbar,
 html[data-theme="dark"] .dashboard-sidebar,
 html[data-theme="dark"] .studio-topbar,
-html[data-theme="dark"] .studio-rail,
 html[data-theme="dark"] .site-footer {
   background: var(--theme-dark-surface) !important;
   color: var(--theme-dark-text) !important;
@@ -337,7 +336,7 @@ html[data-theme="dark"] :is(input, textarea, select)::placeholder {
   color: var(--theme-dark-text-subtle) !important;
 }
 
-html[data-theme="dark"] :is(.btn-secondary, .secondary-btn, .topbar-button:not(.is-primary), .canvas-upload-button-secondary, .studio-home-btn, .studio-zoom-btn, .studio-rail-btn, .image-tool-button) {
+html[data-theme="dark"] :is(.btn-secondary, .secondary-btn, .topbar-button:not(.is-primary), .canvas-upload-button-secondary, .studio-home-btn, .studio-zoom-btn, .image-tool-button) {
   background: var(--theme-dark-surface-raised) !important;
   color: var(--theme-dark-text) !important;
   border-color: var(--theme-dark-border-strong) !important;

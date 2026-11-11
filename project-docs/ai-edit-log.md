@@ -941,3 +941,13 @@ and what's still uncommitted.
   the old version too).
 - Gallery stays Social Media only (Suhail, 2026-11-11): no database change. Reopen works for posts exported on the same browser.
 - "New" badges made uniform: picker, dropdowns and What's new use the sidebar's .es-badge--new; Locked / Current tags match its size.
+
+### 2026-11-11 — Round 2: icon family, panel sizes, Content · Photos · Style, ⌘K templates, Jump back in, names, phone menu, ESPN logos
+- Status: `[pushed]`
+- Icons: stroke 1.8 everywhere (15 files + icon CSS). Right panel: `editor-polish.css` (44 / 36 / 40 px system, desktop).
+- Phase 4: ⌘K palette sources (`FrameUpShell.addPaletteSource`), Home "Jump back in" (`#home-recent`).
+- Phase 3: inspector tabs Content · Photos · Style (`STUDIO_SECTION_TABS`, `data-studio-tab`); ES Image Pool inside Photos; empty tabs hide.
+- Phase 5: phone menu from `NAV` (`buildMobileNav`); dead `.studio-rail` / `.studio-panel-head` CSS removed.
+- Template names: Section Header (Left / Centred), Video FI (Play Button), Tag FI (Corner Label), Trivia, Headline List (Big Numbers / Simple).
+- ESPN 500px team logos resized to 240px for the listicle placeholders (Suhail approved the download).
+- Verified: 476 renders error-free, all pages console-clean, desktop + phone. Details: project-docs/editor-basics.md.

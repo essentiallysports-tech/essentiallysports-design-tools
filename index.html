@@ -5200,8 +5200,6 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
   /* ─── STUDIO WORKSPACE SHELL (LOCAL, ROLLBACK-SAFE) ─────────────────────── */
   .studio-topbar,
-  .studio-rail,
-  .studio-panel-head,
   .studio-zoom-group {
     display: none;
   }
@@ -5384,8 +5382,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     html[data-studio-shell="on"] .studio-home-btn svg,
     html[data-studio-shell="on"] .studio-zoom-btn svg,
-    html[data-studio-shell="on"] .studio-export-btn svg,
-    html[data-studio-shell="on"] .studio-rail-btn svg {
+    html[data-studio-shell="on"] .studio-export-btn svg {
       width: 19px;
       height: 19px;
       display: block;
@@ -5624,66 +5621,6 @@ body[data-current-page="faq"] .faq-cta-art img {
       color: var(--es-brand-text);
     }
 
-    html[data-studio-shell="on"] .studio-rail {
-      order: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 7px;
-      border-right: 1px solid var(--es-line);
-      background: #FFFFFF;
-      overflow-y: auto;
-    }
-
-    html[data-studio-shell="on"] .studio-rail-divider {
-      width: 30px;
-      height: 1px;
-      margin: 6px 0;
-      background: var(--es-line);
-    }
-
-    html[data-studio-shell="on"] .studio-rail-btn {
-      width: 46px;
-      min-height: 46px;
-      display: inline-flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: center;
-      gap: 0;
-      border: 1px solid transparent;
-      border-radius: 14px;
-      background: transparent;
-      color: var(--es-ink);
-      font-family: var(--es-font-ui);
-      font-size: 13px;
-      font-weight: 700;
-      line-height: 1;
-      letter-spacing: 0;
-      text-align: center;
-      text-decoration: none;
-      text-transform: none;
-      transition: background-color .16s var(--es-ease), border-color .16s var(--es-ease), color .16s var(--es-ease);
-    }
-
-    html[data-studio-shell="on"] .studio-rail-btn span {
-      display: none;
-    }
-
-    html[data-studio-shell="on"] .studio-rail-btn:hover,
-    html[data-studio-shell="on"] .studio-rail-btn:focus-visible {
-      outline: none;
-      border-color: var(--es-line);
-      background: #F6F9FC;
-      color: var(--es-ink);
-    }
-
-    html[data-studio-shell="on"] .studio-rail-btn[aria-current="page"] {
-      border-color: var(--es-brand-tint);
-      background: var(--es-brand-soft);
-      color: var(--es-ink);
-    }
-
     html[data-studio-shell="on"] .panel {
       order: 2;
       width: auto;
@@ -5843,7 +5780,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       height: 16px;
       fill: none;
       stroke: currentColor;
-      stroke-width: 1.9;
+      stroke-width: 1.8;
       stroke-linecap: round;
       stroke-linejoin: round;
     }
@@ -7107,7 +7044,6 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .studio-home-btn,
     html[data-studio-shell="on"] .studio-zoom-btn,
     html[data-studio-shell="on"] .studio-export-btn,
-    html[data-studio-shell="on"] .studio-rail-btn,
     html[data-studio-shell="on"] .canvas-stack {
       transition: none;
     }
@@ -7816,18 +7752,19 @@ body[data-current-page="faq"] .faq-cta-art img {
     pointer-events: none;
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20261104-ux1">
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20261111-p5">
 <link rel="stylesheet" href="studio-inspector.css?v=20261110-swatch1">
-<link rel="stylesheet" href="theme.css?v=20261023-ux1">
+<link rel="stylesheet" href="theme.css?v=20261111-p5">
 <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
 <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
 <link rel="stylesheet" href="how-it-works.css?v=20261023-ux1">
 <link rel="stylesheet" href="design-tokens.css?v=20261111-basics2">
-<link rel="stylesheet" href="es-ui.css?v=20261111-basics2">
+<link rel="stylesheet" href="es-ui.css?v=20261111-p4">
+<link rel="stylesheet" href="editor-polish.css?v=20261111-p3">
 <script src="theme.js?v=20260712-darkmode12"></script>
 <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
-<script src="site-chrome.js?v=20261104-ux4"></script>
-<script src="app-shell.js?v=20261111-basics2"></script>
+<script src="site-chrome.js?v=20261111-icons1"></script>
+<script src="app-shell.js?v=20261111-p5"></script>
 </head>
 <body>
 
@@ -7899,21 +7836,28 @@ body[data-current-page="faq"] .faq-cta-art img {
           </div>
         </div>
         <button type="button" class="frame-hero-arrow frame-hero-arrow--prev" data-hero-prev aria-label="Previous slide">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <button type="button" class="frame-hero-arrow frame-hero-arrow--next" data-hero-next aria-label="Next slide">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
         <div class="frame-hero-dots" data-hero-dots role="tablist" aria-label="Hero banner slides">
           <button type="button" class="frame-hero-dot is-active" data-hero-dot="0" role="tab" aria-selected="true" aria-label="Show slide 1"></button>
           <button type="button" class="frame-hero-dot" data-hero-dot="1" role="tab" aria-selected="false" aria-label="Show slide 2"></button>
           <button type="button" class="frame-hero-pause" data-hero-pause aria-label="Pause slideshow" aria-pressed="false">
-            <svg class="frame-hero-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+            <svg class="frame-hero-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
             <svg class="frame-hero-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>
           </button>
         </div>
       </div>
     </div>
+  </section>
+  <section class="home-recent" id="home-recent" aria-labelledby="home-recent-title" hidden>
+    <div class="frame-section-head">
+      <h2 class="frame-section-title" id="home-recent-title">Jump back in</h2>
+      <button type="button" class="home-recent__all" data-home-recent-all>All recent designs</button>
+    </div>
+    <div class="home-recent__grid"></div>
   </section>
   <section class="frame-options" aria-label="Design workspace options">
     <div class="frame-section-head">
@@ -8070,22 +8014,22 @@ body[data-current-page="faq"] .faq-cta-art img {
     <span class="studio-safe-badge" id="studio-safe-badge" hidden>Safe Zones On</span>
     <button class="studio-export-btn export-button" id="studio-export-btn" type="button" data-studio-export aria-label="Export current design">
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
       </svg>
       <span data-export-label>Export</span>
     </button>
     <button class="studio-export-options-btn" id="studio-export-options-btn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Export options" title="Export options: PNG, double size">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="17" r="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="17" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
       <span class="studio-export-options-badge" data-export-options-badge hidden></span>
     </button>
     <button class="studio-link-btn" id="studio-link-btn" type="button" aria-label="Upload this design and copy its image link" title="Upload this design and copy a shareable image link">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1.5 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1.5 1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1.5-1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span data-link-label>Copy link</span>
     </button>
     <button class="studio-export-btn export-button" id="widget-copy-btn" type="button" aria-label="Copy widget HTML">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
       <span>Copy HTML</span>
     </button>
   </div>
@@ -8138,20 +8082,20 @@ body[data-current-page="faq"] .faq-cta-art img {
         <select id="newsletter-asset-select" aria-label="Newsletter asset type">
           <optgroup label="Feature images">
             <option value="feature-image" data-tag="locked">Feature Image</option>
-            <option value="youtube-fi">Video FI</option>
-            <option value="tag-fi">Tag FI</option>
+            <option value="youtube-fi">Video FI (Play Button)</option>
+            <option value="tag-fi">Tag FI (Corner Label)</option>
           </optgroup>
           <optgroup label="Infographic FIs" id="newsletter-infographic-group"></optgroup>
           <optgroup label="Section headers">
-            <option value="section-header">Header Option 1</option>
-            <option value="section-header-2">Header Option 2</option>
+            <option value="section-header">Section Header (Left)</option>
+            <option value="section-header-2">Section Header (Centred)</option>
           </optgroup>
           <optgroup label="HTML widgets">
             <option value="widgets" data-tag="locked">Desktop News Layout</option>
-            <option value="trivia">Trivia Design</option>
+            <option value="trivia">Trivia</option>
             <option value="ticker">Financial Ticker</option>
-            <option value="list">List Widget</option>
-            <option value="list2">List Widget V2</option>
+            <option value="list">Headline List (Big Numbers)</option>
+            <option value="list2">Headline List (Simple)</option>
           </optgroup>
         </select>
       </div>
@@ -8601,17 +8545,17 @@ body[data-current-page="faq"] .faq-cta-art img {
           <div class="widget-image-thumb" data-widget-thumb="main"><img loading="lazy" decoding="async" alt=""></div>
           <div class="widget-image-actions">
             <button type="button" class="widget-image-action-btn is-primary" data-widget-upload="main" title="Upload a photo to preview only — paste the final hosted URL below to use it in Copy HTML" aria-label="Upload photo to preview only">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Upload Image</span>
             </button>
             <button type="button" class="widget-image-action-btn widget-paste-link-trigger" data-widget-paste-link="main" aria-expanded="false" aria-controls="widget-link-row-main">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="widget-link-row-main" data-widget-link-row="main">
               <input spellcheck="false" type="text" class="widget-paste-link-input" data-widget-field="main.imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </button>
             </div>
           </div>
@@ -8648,17 +8592,17 @@ body[data-current-page="faq"] .faq-cta-art img {
           <div class="widget-image-thumb" data-widget-thumb="pick0"><img loading="lazy" decoding="async" alt=""></div>
           <div class="widget-image-actions">
             <button type="button" class="widget-image-action-btn is-primary" data-widget-upload="pick0" title="Upload a photo to preview only — paste the final hosted URL below to use it in Copy HTML" aria-label="Upload photo to preview only">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Upload Image</span>
             </button>
             <button type="button" class="widget-image-action-btn widget-paste-link-trigger" data-widget-paste-link="pick0" aria-expanded="false" aria-controls="widget-link-row-pick0">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="widget-link-row-pick0" data-widget-link-row="pick0">
               <input spellcheck="false" type="text" class="widget-paste-link-input" data-widget-field="picks.0.imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </button>
             </div>
           </div>
@@ -8680,17 +8624,17 @@ body[data-current-page="faq"] .faq-cta-art img {
           <div class="widget-image-thumb" data-widget-thumb="pick1"><img loading="lazy" decoding="async" alt=""></div>
           <div class="widget-image-actions">
             <button type="button" class="widget-image-action-btn is-primary" data-widget-upload="pick1" title="Upload a photo to preview only — paste the final hosted URL below to use it in Copy HTML" aria-label="Upload photo to preview only">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Upload Image</span>
             </button>
             <button type="button" class="widget-image-action-btn widget-paste-link-trigger" data-widget-paste-link="pick1" aria-expanded="false" aria-controls="widget-link-row-pick1">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="widget-link-row-pick1" data-widget-link-row="pick1">
               <input spellcheck="false" type="text" class="widget-paste-link-input" data-widget-field="picks.1.imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </button>
             </div>
           </div>
@@ -8712,17 +8656,17 @@ body[data-current-page="faq"] .faq-cta-art img {
           <div class="widget-image-thumb" data-widget-thumb="pick2"><img loading="lazy" decoding="async" alt=""></div>
           <div class="widget-image-actions">
             <button type="button" class="widget-image-action-btn is-primary" data-widget-upload="pick2" title="Upload a photo to preview only — paste the final hosted URL below to use it in Copy HTML" aria-label="Upload photo to preview only">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Upload Image</span>
             </button>
             <button type="button" class="widget-image-action-btn widget-paste-link-trigger" data-widget-paste-link="pick2" aria-expanded="false" aria-controls="widget-link-row-pick2">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="widget-link-row-pick2" data-widget-link-row="pick2">
               <input spellcheck="false" type="text" class="widget-paste-link-input" data-widget-field="picks.2.imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </button>
             </div>
           </div>
@@ -8744,17 +8688,17 @@ body[data-current-page="faq"] .faq-cta-art img {
           <div class="widget-image-thumb" data-widget-thumb="pick3"><img loading="lazy" decoding="async" alt=""></div>
           <div class="widget-image-actions">
             <button type="button" class="widget-image-action-btn is-primary" data-widget-upload="pick3" title="Upload a photo to preview only — paste the final hosted URL below to use it in Copy HTML" aria-label="Upload photo to preview only">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Upload Image</span>
             </button>
             <button type="button" class="widget-image-action-btn widget-paste-link-trigger" data-widget-paste-link="pick3" aria-expanded="false" aria-controls="widget-link-row-pick3">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="widget-link-row-pick3" data-widget-link-row="pick3">
               <input spellcheck="false" type="text" class="widget-paste-link-input" data-widget-field="picks.3.imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </button>
             </div>
           </div>
@@ -8776,17 +8720,17 @@ body[data-current-page="faq"] .faq-cta-art img {
           <div class="widget-image-thumb" data-trivia-thumb><img loading="lazy" decoding="async" alt=""></div>
           <div class="widget-image-actions">
             <button type="button" class="widget-image-action-btn is-primary" data-trivia-upload title="Upload a photo; it is hosted automatically and its link filled in below" aria-label="Upload trivia image">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Upload Image</span>
             </button>
             <button type="button" class="widget-image-action-btn widget-paste-link-trigger" data-trivia-paste-link aria-expanded="false" aria-controls="trivia-link-row">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="trivia-link-row" data-trivia-link-row>
               <input spellcheck="false" type="text" class="widget-paste-link-input" data-trivia-field="imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </button>
             </div>
           </div>
@@ -8825,17 +8769,17 @@ body[data-current-page="faq"] .faq-cta-art img {
           <div class="widget-image-thumb" data-ticker-thumb><img loading="lazy" decoding="async" alt=""></div>
           <div class="widget-image-actions">
             <button type="button" class="widget-image-action-btn is-primary" data-ticker-upload title="Upload a photo; it is hosted automatically and its link filled in below" aria-label="Upload ticker image">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Upload Image</span>
             </button>
             <button type="button" class="widget-image-action-btn widget-paste-link-trigger" data-ticker-paste-link aria-expanded="false" aria-controls="ticker-link-row">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h2a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="ticker-link-row" data-ticker-link-row>
               <input spellcheck="false" type="text" class="widget-paste-link-input" data-ticker-field="imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </button>
             </div>
           </div>
@@ -8937,7 +8881,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           <div class="canvas-wrap">
             <canvas id="preview" width="1080" height="1350"></canvas>
             <div class="canvas-empty-hint" data-canvas-empty-hint hidden>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="10" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m4.5 17 5-5 4 3.5 3-2.5 4.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="10" r="1.8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m4.5 17 5-5 4 3.5 3-2.5 4.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <strong>Start with an image</strong>
               <span>Upload a photo or pick one from the ES Image Pool.</span>
               <div class="canvas-empty-actions">
@@ -8966,63 +8910,63 @@ body[data-current-page="faq"] .faq-cta-art img {
             <div class="studio-zoom-group studio-history-group" aria-label="Undo and redo">
               <button class="studio-zoom-btn" type="button" data-history="undo" aria-label="Undo" title="Undo (Ctrl/Cmd+Z)" disabled>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </button>
               <button class="studio-zoom-btn" type="button" data-history="redo" aria-label="Redo" title="Redo (Shift+Ctrl/Cmd+Z)" disabled>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m15 7 5 5-5 5M20 12H9a5 5 0 0 0 0 10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="m15 7 5 5-5 5M20 12H9a5 5 0 0 0 0 10h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </button>
               <button class="studio-zoom-btn" type="button" data-recent-designs aria-label="Recent designs" title="Recent designs: reopen what you exported">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6M3.5 4v4h4M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6M3.5 4v4h4M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </button>
             </div>
             <div class="studio-zoom-group" aria-label="Canvas zoom controls">
               <button class="studio-zoom-btn" type="button" data-studio-zoom="out" aria-label="Zoom out">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                  <path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
               </button>
               <button class="studio-zoom-btn studio-zoom-value" type="button" data-studio-zoom="reset" aria-label="Reset zoom to 100%">100%</button>
               <button class="studio-zoom-btn" type="button" data-studio-zoom="in" aria-label="Zoom in">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                  <path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
               </button>
             </div>
             <div class="canvas-primary-actions">
               <button class="canvas-upload-button" type="button" data-background-upload aria-label="Upload background image" title="Upload background image">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 15V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 15V4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  <path d="m7 9 5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
                 <span>Upload Image</span>
               </button>
               <button class="canvas-upload-button canvas-upload-button-secondary" type="button" data-ai-image-search aria-label="Open ES Image Pool" aria-expanded="false" title="Open ES Image Pool">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5l-1.9-5.7-5.6-1.9L10.1 9 12 3.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-                  <path d="M18 4v4M20 6h-4M6 17v3M7.5 18.5h-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                  <path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5l-1.9-5.7-5.6-1.9L10.1 9 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                  <path d="M18 4v4M20 6h-4M6 17v3M7.5 18.5h-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
                 <span>ES Image Pool</span>
               </button>
               <form class="canvas-ai-search-form" data-canvas-ai-search-form role="search" aria-label="Search ES images from the canvas toolbar" aria-hidden="true" inert>
                 <svg class="canvas-ai-search-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"></circle>
-                  <path d="m16 16 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                  <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+                  <path d="m16 16 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
                 </svg>
                 <input type="search" data-canvas-ai-image-query-input placeholder="Search entity, team, topic..." autocomplete="off" spellcheck="false" aria-label="Search ES images">
                 <button class="canvas-ai-search-submit" type="submit" data-canvas-ai-search-submit aria-label="Search ES images">
                   <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M5 12h13M13 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    <path d="M5 12h13M13 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
                   </svg>
                 </button>
                 <button class="canvas-ai-search-close" type="button" data-canvas-ai-search-close aria-label="Close image search">
                   <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                    <path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
                   </svg>
                 </button>
               </form>
@@ -9053,9 +8997,9 @@ body[data-current-page="faq"] .faq-cta-art img {
           <button class="image-tool-button export-tool-button export-button" id="download-btn" type="button" aria-label="Export" title="Export">
             <span id="export-label" data-export-label>Export</span>
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5 19h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             </svg>
           </button>
           <div class="image-tool-panel" id="image-tool-panel">
@@ -9167,7 +9111,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="ai-image-picker" id="ai-image-picker" role="dialog" aria-modal="false" aria-label="Choose ES images" hidden>
         <div class="ai-image-picker-header">
           <div class="ai-image-picker-actions">
-            <button class="ai-image-picker-close" type="button" data-ai-image-picker-close aria-label="Close AI image options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+            <button class="ai-image-picker-close" type="button" data-ai-image-picker-close aria-label="Close AI image options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
           </div>
         </div>
         <div class="ai-image-picker-grid" data-ai-image-picker-grid></div>
@@ -10636,7 +10580,7 @@ function syncSelectChips(select, chips, rebuild) {
   });
 }
 
-const LOCK_TAG_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const LOCK_TAG_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
 
 // Option text plus an optional tag (data-tag="locked" shows the Locked tag).
 function fillSelectLabel(target, option) {
@@ -13512,11 +13456,11 @@ const NEWSLETTER_ASSET_TYPES = {
     },
   },
   'section-header': {
-    label: 'Header Option 1',
+    label: 'Section Header (Left)',
     slug: 'header-option-1',
     placeholder: 'Ex. News',
     maxLines: 1,
-    photoTitle: 'Header Option 1',
+    photoTitle: 'Section Header (Left)',
     photoRole: 'section header',
     workspace: {
       width: 640,
@@ -13531,11 +13475,11 @@ const NEWSLETTER_ASSET_TYPES = {
     },
   },
   'section-header-2': {
-    label: 'Header Option 2',
+    label: 'Section Header (Centred)',
     slug: 'header-option-2',
     placeholder: 'Ex. Weekly Recap',
     maxLines: 1,
-    photoTitle: 'Header Option 2',
+    photoTitle: 'Section Header (Centred)',
     photoRole: 'section header',
     workspace: {
       width: 640,
@@ -13550,7 +13494,7 @@ const NEWSLETTER_ASSET_TYPES = {
     },
   },
   'youtube-fi': {
-    label: 'Video FI',
+    label: 'Video FI (Play Button)',
     slug: 'video-fi',
     placeholder: '',
     maxLines: 0,
@@ -13566,7 +13510,7 @@ const NEWSLETTER_ASSET_TYPES = {
     },
   },
   'tag-fi': {
-    label: 'Tag FI',
+    label: 'Tag FI (Corner Label)',
     slug: 'tag-fi',
     placeholder: 'Ex. Tennis',
     maxLines: 1,
@@ -13601,7 +13545,7 @@ const NEWSLETTER_ASSET_TYPES = {
   // HTML builder like widgets: the canvas is hidden, so these sizes only keep
   // the shared workspace code happy.
   trivia: {
-    label: 'Trivia Design',
+    label: 'Trivia',
     slug: 'trivia',
     placeholder: '',
     maxLines: 0,
@@ -13617,7 +13561,7 @@ const NEWSLETTER_ASSET_TYPES = {
     },
   },
   list2: {
-    label: 'List Widget V2',
+    label: 'Headline List (Simple)',
     slug: 'list-v2',
     placeholder: '',
     maxLines: 0,
@@ -13633,7 +13577,7 @@ const NEWSLETTER_ASSET_TYPES = {
     },
   },
   list: {
-    label: 'List Widget',
+    label: 'Headline List (Big Numbers)',
     slug: 'list',
     placeholder: '',
     maxLines: 0,
@@ -17513,14 +17457,14 @@ function setTextBlockPosition(centerX, topY) {
 
 function layerEyeIconSvg(visible) {
   return visible
-    ? '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>'
-    : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3l18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9.9 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a15.7 15.7 0 0 1-3 3.6M6.6 6.6C4 8.3 2 12 2 12s3.6 7 10 7c1.3 0 2.5-.2 3.6-.6" stroke="currentColor" stroke-width="2"/></svg>';
+    ? '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M9.9 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a15.7 15.7 0 0 1-3 3.6M6.6 6.6C4 8.3 2 12 2 12s3.6 7 10 7c1.3 0 2.5-.2 3.6-.6" stroke="currentColor" stroke-width="1.8"/></svg>';
 }
 
 function layerLockIconSvg(locked) {
   return locked
-    ? '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" stroke-width="2"/></svg>'
-    : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V7a4 4 0 0 1 7-2.6" stroke="currentColor" stroke-width="2"/></svg>';
+    ? '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" stroke-width="1.8"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V7a4 4 0 0 1 7-2.6" stroke="currentColor" stroke-width="1.8"/></svg>';
 }
 
 function renderLayersPanelRows() {
@@ -22559,7 +22503,7 @@ loadFont().then(() => render());
     }
     document.querySelectorAll('[data-studio-inspector-tab]').forEach(tab => {
       const mode = tab.dataset.studioInspectorTab;
-      tab.textContent = mode === 'image' ? 'Photos' : mode === 'content' ? 'Content' : 'ES Image Pool';
+      tab.textContent = mode === 'image' ? 'Photos' : mode === 'style' ? 'Style' : 'Content';
     });
     const aiTitle = document.querySelector('.studio-ai-section .studio-dock-title');
     const aiHelper = document.querySelector('.studio-ai-helper');
@@ -22574,8 +22518,13 @@ loadFont().then(() => render());
     });
   }
 
+  const studioDesktopTabs = window.matchMedia('(min-width: 901px)');
   function setStudioInspectorMode(mode) {
-    const nextMode = ['image', 'content', 'ai'].includes(mode) ? mode : 'content';
+    let nextMode = ['image', 'content', 'ai', 'style'].includes(mode) ? mode : 'content';
+    if (nextMode === 'ai' && studioDesktopTabs.matches) {
+      nextMode = 'image';
+      setTimeout(() => document.querySelector('.studio-ai-section')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 60);
+    }
     const previousMode = document.body.dataset.studioInspector;
     document.body.dataset.studioInspector = nextMode;
     document.querySelectorAll('[data-studio-inspector-tab]').forEach(tab => {
@@ -22600,9 +22549,12 @@ loadFont().then(() => render());
     widgetPicks: 'Top Picks',
     trivia: 'Trivia',
     ticker: 'Financial Ticker',
-    list: 'List Widget',
-    list2: 'List Widget V2',
+    list: 'Headline List',
+    list2: 'Headline List',
   };
+
+  // Which inspector tab each section lives in (default: Content).
+  const STUDIO_SECTION_TABS = { layout: 'style', brand: 'style', images: 'image' };
 
   const studioSectionNodes = {
     content: ['quote-logo-control', '.text-card', 'infographic-fields', 'swipe-button-card'],
@@ -23024,16 +22976,47 @@ loadFont().then(() => render());
     const closed = new Set(entry.closed || []);
     const single = visibleSections.length === 1;
     list.classList.toggle('is-single', single);
+    // Does this template show tabs at all? (Measured without our one-tab rule.)
+    delete document.body.dataset.tabCount;
+    const tabsShown = (() => {
+      const bar = document.querySelector('.studio-inspector-tabs');
+      return Boolean(bar) && window.getComputedStyle(bar).display !== 'none';
+    })();
+    document.body.dataset.inspectorTabs = tabsShown ? 'on' : 'off';
+    const seenTabs = new Set();
     visibleSections.forEach((section, index) => {
       const key = section.dataset.studioAccordionSection;
-      setStudioSectionOpen(section, single || open.has(key) || (!closed.has(key) && index === 0));
+      const tab = section.dataset.studioTab || 'content';
+      const firstInTab = tabsShown ? !seenTabs.has(tab) : index === 0;
+      seenTabs.add(tab);
+      setStudioSectionOpen(section, single || open.has(key) || (!closed.has(key) && firstInTab));
     });
+    // A tab with nothing in it hides; the panel moves to the next tab that has something.
+    const hasStyle = visibleSections.some(section => section.dataset.studioTab === 'style');
+    const hasContent = visibleSections.some(section => (section.dataset.studioTab || 'content') === 'content');
+    const hasPhotos = !(workspace === 'newsletter' && typeof IMAGELESS_NEWSLETTER_ASSETS !== 'undefined' && IMAGELESS_NEWSLETTER_ASSETS.has(activeNewsletterAsset));
+    document.body.dataset.styleTab = hasStyle ? 'on' : 'off';
+    document.body.dataset.contentTab = hasContent ? 'on' : 'off';
+    document.body.dataset.photosTab = hasPhotos ? 'on' : 'off';
+    const available = { content: hasContent || !tabsShown, image: hasPhotos, style: hasStyle };
+    // One tab or none: no tab bar (the panel shows that tab's controls).
+    document.body.dataset.tabCount = String([hasContent, hasPhotos, hasStyle].filter(Boolean).length);
+    const current = document.body.dataset.studioInspector === 'ai' ? 'image' : document.body.dataset.studioInspector;
+    // Templates without a tab bar (HTML widgets…) always show their form.
+    if (!tabsShown && studioDesktopTabs.matches && current !== 'content') setStudioInspectorMode('content');
+    else if (tabsShown && studioDesktopTabs.matches && !available[current]) {
+      const next = ['content', 'image', 'style'].find(tab => available[tab]) || 'content';
+      if (next !== current) setStudioInspectorMode(next);
+    }
   }
 
   function queueStudioContentSectionRefresh() {
     if (studioSectionRefreshQueued) return;
     studioSectionRefreshQueued = true;
-    requestAnimationFrame(refreshStudioContentSections);
+    // Next frame, or shortly after if frames are paused (background tab).
+    const run = () => { if (studioSectionRefreshQueued) refreshStudioContentSections(); };
+    requestAnimationFrame(run);
+    setTimeout(run, 150);
   }
 
   function createStudioAccordionSection(key) {
@@ -23042,6 +23025,7 @@ loadFont().then(() => render());
     const panelId = `studio-section-${key}-panel`;
     section.className = 'studio-accordion-section';
     section.dataset.studioAccordionSection = key;
+    section.dataset.studioTab = STUDIO_SECTION_TABS[key] || 'content';
     section.innerHTML = `
       <button class="studio-accordion-trigger" id="${triggerId}" type="button" aria-expanded="false" aria-controls="${panelId}">
         <span data-studio-accordion-label>${key}</span>
@@ -23133,7 +23117,7 @@ loadFont().then(() => render());
         <div class="studio-inspector-tabs" role="tablist" aria-label="Inspector groups">
           <button class="studio-inspector-tab is-active" type="button" role="tab" data-studio-inspector-tab="content" aria-selected="true">Content</button>
           <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="image" aria-selected="false">Photos</button>
-          <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="ai" aria-selected="false">ES Image Pool</button>
+          <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="style" aria-selected="false">Style</button>
         </div>
         <div class="studio-dock-section">
           <div class="studio-dock-tools"></div>
@@ -23492,9 +23476,9 @@ loadFont().then(() => render());
 </script>
 <script src="how-it-works.js?v=20260813-sync1"></script>
 <script src="frameup-autosave.js?v=20261111-basics2"></script>
-<script src="frameup-designs.js?v=20261111-basics2"></script>
-<script src="frameup-templates.js?v=20261111-basics2"></script>
-<script src="frameup-extras.js?v=20261111-basics2"></script>
+<script src="frameup-designs.js?v=20261111-p4"></script>
+<script src="frameup-templates.js?v=20261111-p4"></script>
+<script src="frameup-extras.js?v=20261111-p4"></script>
 <script src="frameup-spec.js?v=20261111-basics2"></script>
 </body>
 </html>

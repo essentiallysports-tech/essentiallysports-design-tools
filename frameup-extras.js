@@ -44,7 +44,7 @@
     dialog.innerHTML = `
       <div class="shortcuts-head">
         <h2 id="shortcuts-title">Keyboard shortcuts</h2>
-        <button class="shortcuts-close" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        <button class="shortcuts-close" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
       </div>
       <dl class="shortcuts-list"></dl>`;
     const list = dialog.querySelector('.shortcuts-list');
@@ -186,6 +186,26 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();
+
+  // ⌘K: editor actions, listed first while you're in an editor.
+  window.FrameUpShell?.addPaletteSource?.(() => {
+    if (!inEditor()) return [];
+    const items = [];
+    const exportButton = visibleButton('studio-export-btn', 'download-btn');
+    if (exportButton) items.push({ label: 'Export', hint: `${MOD}+E`, icon: 'download', keywords: 'download save image jpg png', run: () => exportButton.click() });
+    const linkButton = visibleButton('studio-link-btn');
+    if (linkButton) items.push({ label: 'Copy link', hint: `${MOD}+Shift+L`, icon: 'link', keywords: 'share url upload', run: () => linkButton.click() });
+    const copyHtml = visibleButton('widget-copy-btn');
+    if (copyHtml) items.push({ label: 'Copy HTML', icon: 'link', keywords: 'widget beehiiv code', run: () => copyHtml.click() });
+    const upload = document.querySelector('[data-background-upload]');
+    if (upload && upload.offsetParent) items.push({ label: 'Upload a photo', icon: 'upload', keywords: 'image picture background', run: () => upload.click() });
+    const optionsButton = visibleButton('studio-export-options-btn');
+    if (optionsButton) items.push({ label: 'Export options', hint: 'PNG, 2×', icon: 'sliders', keywords: 'png size double', run: () => optionsButton.click() });
+    items.push({ label: 'Browse templates', icon: 'template', keywords: 'change template post type asset picker', run: () => window.FrameUpTemplates?.openForPage?.() });
+    items.push({ label: 'Recent designs', icon: 'clock', keywords: 'reopen past exports history', run: () => window.FrameUpDesigns?.showRecentDesigns?.() });
+    items.push({ label: 'Keyboard shortcuts', hint: '?', icon: 'keyboard', keywords: 'keys hotkeys', run: showShortcuts });
+    return [{ label: 'Actions', first: true, items }];
+  });
 
   window.FrameUpShortcuts = Object.freeze({ show: showShortcuts });
 })();

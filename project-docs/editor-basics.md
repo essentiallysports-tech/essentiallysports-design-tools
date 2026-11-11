@@ -62,3 +62,30 @@ pixel against the previous version: 32 designs identical).
 - `frameup.exportOptions.v1` in localStorage: PNG instead of JPG, double size.
   Off by default. Only JPG → PNG is offered, so transparent headers never turn
   black. Applied in `renderExportImage()` via `applyExportOptions()`.
+
+## Round 2 (Nov 2026)
+- **Icons**: one family everywhere (outlined, rounded ends, stroke 1.8, 24 grid).
+  New icons should use `stroke-width="1.8"`.
+- **Right panel sizes**: `editor-polish.css` (desktop only, loaded last):
+  44px text boxes / dropdowns / main buttons, 36px small buttons, 40px chips.
+- **Tabs Content · Photos · Style** (desktop): each folding section has
+  `data-studio-tab` (`STUDIO_SECTION_TABS` in index.html: layout + brand →
+  style, images → image, everything else → content). Photos also shows the
+  canvas photo tools and the ES Image Pool search (the old "ES Image Pool" tab;
+  `setStudioInspectorMode('ai')` lands on Photos). A tab with nothing in it
+  hides; with one tab left the bar hides. Templates that hide the tab bar
+  (HTML widgets, infographics without a main photo) always show their form.
+  Phones keep their own Content / Media / Format / Brand / More sheets.
+- **⌘K**: pages add groups with `FrameUpShell.addPaletteSource(q => [{ label,
+  items: [{ label, hint, keywords, icon, run | href }] }])`. The editor adds
+  Actions (frameup-extras.js), Templates (frameup-templates.js) and Recent
+  designs (frameup-designs.js); groups with the same label merge.
+- **Home "Jump back in"**: `#home-recent`, filled by frameup-designs.js.
+- **Phone menu**: built from `NAV` in app-shell.js (`buildMobileNav`); the old
+  `.navbar` links stay in the HTML but are hidden on phones.
+- **Template names**: Section Header (Left / Centred), Video FI (Play Button),
+  Tag FI (Corner Label), Trivia, Headline List (Big Numbers / Simple). The
+  Dashboard records names with each export, so older exports keep the old names.
+- Kept on purpose (not dead): the embedded Design Request form in index.html
+  (still wired to scripts), `.photo-drop` (foreground photo boxes),
+  `.post-type-options` (ticker Up/Down).

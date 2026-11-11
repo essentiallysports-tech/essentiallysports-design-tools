@@ -16,16 +16,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261028-mobile2">
-  <link rel="stylesheet" href="theme.css?v=20261023-ux1">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261111-p5">
+  <link rel="stylesheet" href="theme.css?v=20261111-p5">
   <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
   <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
   <link rel="stylesheet" href="design-tokens.css?v=20261111-basics2">
-<link rel="stylesheet" href="es-ui.css?v=20261111-basics2">
+<link rel="stylesheet" href="es-ui.css?v=20261111-p4">
   <script src="theme.js?v=20260712-darkmode12"></script>
   <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
-  <script src="site-chrome.js?v=20261104-ux4"></script>
-<script src="app-shell.js?v=20261111-basics2"></script>
+  <script src="site-chrome.js?v=20261111-icons1"></script>
+<script src="app-shell.js?v=20261111-p5"></script>
   <style>
     .ds-page { max-width: 1040px; margin: 0 auto; padding: 32px 32px 72px; display: grid; gap: 24px; font-family: var(--es-font-ui); color: var(--es-ink); }
     .ds-hero h1 { margin: 4px 0 8px; font-family: var(--es-font-display); font-size: 36px; font-weight: 800; line-height: 1.05; }
@@ -181,7 +181,7 @@
       <div class="es-card__head"><div><h2 class="es-card__title" id="buttons-title">Buttons</h2><p class="es-card__sub">One primary action per view, in ES blue. Everything else is secondary or ghost.</p></div></div>
       <div class="es-card__body ds-stack">
         <div class="ds-row">
-          <button class="es-btn es-btn--primary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Export</button>
+          <button class="es-btn es-btn--primary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Export</button>
           <button class="es-btn" type="button">Secondary</button>
           <button class="es-btn es-btn--ghost" type="button">Ghost</button>
           <button class="es-btn es-btn--danger" type="button">Delete</button>
@@ -197,12 +197,12 @@
         <hr class="es-divider es-divider--dotted">
         <h3 class="ds-h3">Icon and tool buttons</h3>
         <div class="ds-row">
-          <button class="es-icon-btn" type="button" aria-label="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2"/></svg></button>
-          <button class="es-icon-btn" type="button" aria-label="Redo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 7 5 5-5 5M20 12H9a5 5 0 0 0 0 10h2"/></svg></button>
+          <button class="es-icon-btn" type="button" aria-label="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2"/></svg></button>
+          <button class="es-icon-btn" type="button" aria-label="Redo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 7 5 5-5 5M20 12H9a5 5 0 0 0 0 10h2"/></svg></button>
           <button class="es-icon-btn es-icon-btn--plain" type="button" aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>
           <span class="ds-gap"></span>
-          <button class="es-tool" type="button" aria-pressed="true"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z"/></svg></span>Bold</button>
-          <button class="es-tool" type="button"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M14 5h-4M14 19h-4M13 5l-2 14"/></svg></span>Italic</button>
+          <button class="es-tool" type="button" aria-pressed="true"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z"/></svg></span>Bold</button>
+          <button class="es-tool" type="button"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M14 5h-4M14 19h-4M13 5l-2 14"/></svg></span>Italic</button>
           <button class="es-tool" type="button"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3"/><circle cx="9" cy="10" r="1.5"/><path d="m20 15-4-4-8 8"/></svg></span>Image</button>
           <button class="es-tool" type="button"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span>Link</button>
         </div>

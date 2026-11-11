@@ -29,6 +29,13 @@
     search: icon('<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/>'),
     collapse: icon('<rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M9 4v16"/><path d="m15 10-2 2 2 2"/>'),
     news: icon('<path d="M4 10.5v3a1 1 0 0 0 1 1h2.5l5.5 4V5.5l-5.5 4H5a1 1 0 0 0-1 1z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/>'),
+    template: icon('<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>'),
+    download: icon('<path d="M12 4v10"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>'),
+    link: icon('<path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1.5 1.5"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1.5-1.5"/>'),
+    upload: icon('<path d="M12 15V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/>'),
+    clock: icon('<path d="M3.5 12a8.5 8.5 0 1 0 2.5-6M3.5 4v4h4"/><path d="M12 7.5V12l3 2"/>'),
+    keyboard: icon('<rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/>'),
+    sliders: icon('<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>'),
   };
 
   // One source of truth for navigation, breadcrumbs and the command palette.
@@ -166,6 +173,14 @@
   // Newest first. `templates` (workspace + dropdown value) get a "New" tag in
   // the template dropdowns and picker for 30 days from `date`.
   const WHATS_NEW = [
+    { id: '2026-11-11-round2', date: '2026-11-11', items: [
+      ['Content · Photos · Style', 'The right panel has three tabs: text in Content, photos and the ES Image Pool together in Photos, placement and colours in Style. Tabs with nothing in them hide.'],
+      ['Search finds templates and actions', 'Press ⌘K / Ctrl+K and type: jump to any template, reopen a recent design, or Export, Copy link, Upload a photo.'],
+      ['Jump back in', 'Home shows your last four designs; one click reopens them.'],
+      ['Clearer template names', 'Section Header (Left / Centred), Video FI (Play Button), Tag FI (Corner Label), Headline List (Big Numbers / Simple), Trivia.'],
+      ['One look for icons and controls', 'Every icon shares one style, and fields and buttons in the right panel line up at the same sizes.'],
+      ['Phone menu', 'On phones the menu now matches the sidebar.'],
+    ] },
     { id: '2026-11-11-basics', date: '2026-11-11', items: [
       ['Your work is saved as you go', 'Refresh or close the tab and everything comes back: every slide, layout and newsletter asset, with photos. "Start fresh" clears it.'],
       ['Reopen past designs', 'The clock button next to Undo lists your last 30 exports. In Gallery, "Open in editor" opens a copy of posts you exported on this browser.'],
@@ -187,7 +202,7 @@
       ['Essentially W NCAA', 'New brand in Video FI, Trivia and the widgets.'],
     ], templates: [['instagram', 'twitter-multi']] },
     { id: '2026-11-07-widgets', date: '2026-11-07', items: [
-      ['Financial Ticker and List widgets', 'Three new HTML widgets for newsletters: Financial Ticker, List Widget and List Widget V2.'],
+      ['Financial Ticker and Headline Lists', 'Three new HTML widgets for newsletters: Financial Ticker and two Headline Lists (big numbers or simple).'],
     ], templates: [['newsletter', 'ticker'], ['newsletter', 'list'], ['newsletter', 'list2']] },
   ];
   const WHATS_NEW_SEEN_KEY = 'frameup.whatsNew.seen';
@@ -221,7 +236,7 @@
     dialog.innerHTML = `
       <div class="whats-new-head">
         <h2 id="whats-new-title">What's new</h2>
-        <button class="whats-new-close" type="button" aria-label="Close">${'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'}</button>
+        <button class="whats-new-close" type="button" aria-label="Close">${'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'}</button>
       </div>
       <div class="whats-new-list"></div>`;
     const list = dialog.querySelector('.whats-new-list');
@@ -299,6 +314,41 @@
     window.dispatchEvent(new Event('resize'));
   }
 
+  // ─── Phone menu (same list as the sidebar) ─────────────────────────────
+  // Each page's old .navbar keeps the menu button and the account menu
+  // (site-mobile-chrome.js); its links are replaced by NAV, so phones get the
+  // same items, names and order as the sidebar.
+  function buildMobileNav() {
+    document.querySelectorAll('.navbar .navbar-menu').forEach(menu => {
+      if (menu.querySelector('.es-mobile-nav')) return;
+      const list = document.createElement('div');
+      list.className = 'es-mobile-nav';
+      list.innerHTML = NAV.map(group => {
+        const items = group.items.filter(item => item.sidebar !== false);
+        if (!items.length) return '';
+        return `<div class="es-mobile-nav__group">${group.label ? `<span class="es-mobile-nav__label">${group.label}</span>` : ''}${items.map(item => `<a class="es-mobile-nav__item" href="${item.action ? '#' : base + item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''}>${ICONS[item.icon]}<span>${item.label}</span>${item.badge ? `<span class="es-badge es-badge--new">${item.badge}</span>` : ''}</a>`).join('')}</div>`;
+      }).join('');
+      menu.prepend(list);
+      menu.classList.add('has-es-mobile-nav');
+      list.querySelector('[data-shell-id="whats-new"]')?.addEventListener('click', event => {
+        event.preventDefault();
+        menu.closest('.navbar')?.querySelector('.mobile-menu-toggle')?.click();
+        openWhatsNew();
+      });
+      if (isAdmin()) list.querySelectorAll('[data-shell-admin]').forEach(link => { link.hidden = false; });
+    });
+    syncMobileNavCurrent();
+  }
+
+  function syncMobileNavCurrent() {
+    const id = currentId();
+    const owner = NAV.flatMap(group => group.items).find(item => item.covers?.includes(id));
+    document.querySelectorAll('.es-mobile-nav__item').forEach(link => {
+      if (link.dataset.shellId === id || link.dataset.shellId === owner?.id) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
+  }
+
   // ─── Top bar ───────────────────────────────────────────────────────────
   function buildTopbar() {
     const bar = document.createElement('header');
@@ -362,7 +412,7 @@
     palette.className = 'es-palette';
     palette.setAttribute('aria-label', 'Search FrameUp');
     palette.innerHTML = `
-      <div class="es-palette__search">${ICONS.search}<input type="text" placeholder="Jump to a workspace, page or guide…" aria-label="Search" autocomplete="off"><kbd class="es-kbd">Esc</kbd></div>
+      <div class="es-palette__search">${ICONS.search}<input type="text" placeholder="Search pages, templates and actions…" aria-label="Search" autocomplete="off"><kbd class="es-kbd">Esc</kbd></div>
       <div class="es-palette__list" role="listbox"></div>`;
     document.body.appendChild(palette);
     const input = palette.querySelector('input');
@@ -383,24 +433,70 @@
     palette.addEventListener('click', event => { if (event.target === palette) palette.close(); });
   }
 
+  // Extra groups from the page (templates, actions, recent designs).
+  const paletteSources = [];
+  function addPaletteSource(source) {
+    if (typeof source === 'function') paletteSources.push(source);
+  }
+
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+
   function renderPalette(query = '') {
     const list = palette.querySelector('.es-palette__list');
     const q = query.trim().toLowerCase();
     const admin = isAdmin();
+    const matches = text => !q || String(text || '').toLowerCase().includes(q);
     const groups = NAV.map(group => ({
       label: group.label || 'Go to',
-      items: group.items.filter(item => item.palette !== false && (!item.adminOnly || admin) && (!q || item.label.toLowerCase().includes(q) || group.label.toLowerCase().includes(q))),
-    })).filter(group => group.items.length);
-    if (!groups.length) {
+      items: group.items
+        .filter(item => item.palette !== false && (!item.adminOnly || admin) && (matches(item.label) || matches(group.label)))
+        .map(item => ({ label: item.label, icon: item.icon, href: `${base}${item.href}` })),
+    }));
+    paletteSources.forEach(source => {
+      let extra = [];
+      try { extra = source(q) || []; } catch (error) { extra = []; }
+      extra.forEach(group => {
+        if (!q && group.onlyWhenSearching) return;
+        const items = (group.items || []).filter(item => matches(`${item.label} ${item.hint || ''} ${item.keywords || ''} ${group.label}`));
+        const limited = items.slice(0, group.limit || 12);
+        const existing = groups.find(entry => entry.label === group.label);
+        if (existing) existing.items.push(...limited);
+        else groups[group.first ? 'unshift' : 'push']({ label: group.label, items: limited });
+      });
+    });
+    const shown = groups.filter(group => group.items.length);
+    if (!shown.length) {
       list.innerHTML = '<p class="es-palette__empty">No matches</p>';
       return;
     }
-    list.innerHTML = groups.map(group => `
-      <div class="es-menu__label">${group.label}</div>
-      ${group.items.map(item => `<a class="es-menu__item" role="option" href="${base}${item.href}">${ICONS[item.icon]}<span>${item.label}</span></a>`).join('')}`).join('');
+    const runs = [];
+    list.innerHTML = shown.map(group => `
+      <div class="es-menu__label">${escapeHtml(group.label)}</div>
+      ${group.items.map(item => {
+        const iconMarkup = ICONS[item.icon] || (String(item.icon || '').startsWith('<svg') ? item.icon : ICONS.template);
+        const text = `<span>${escapeHtml(item.label)}</span>${item.hint ? `<small class="es-palette__hint">${escapeHtml(item.hint)}</small>` : ''}`;
+        if (item.run) {
+          runs.push(item.run);
+          return `<button class="es-menu__item" type="button" role="option" data-palette-run="${runs.length - 1}">${iconMarkup}${text}</button>`;
+        }
+        return `<a class="es-menu__item" role="option" href="${escapeHtml(item.href || '#')}">${iconMarkup}${text}</a>`;
+      }).join('')}`).join('');
     list.querySelector('.es-menu__item')?.classList.add('is-active');
-    list.querySelectorAll('.es-menu__item').forEach(link => link.addEventListener('click', () => palette.close()));
+    list.querySelectorAll('.es-menu__item').forEach(link => link.addEventListener('click', event => {
+      palette.close();
+      const index = link.dataset.paletteRun;
+      if (index != null) {
+        event.preventDefault();
+        try { runs[Number(index)](); } catch (error) { console.warn('[palette] action failed:', error); }
+      }
+    }));
   }
+
+  // Available on every page.
+  addPaletteSource(() => [{
+    label: 'Help',
+    items: [{ label: "What's new", icon: 'news', keywords: 'changes updates release notes', run: () => openWhatsNew() }],
+  }]);
 
   function openPalette() {
     if (!palette) buildPalette();
@@ -571,10 +667,18 @@
   }
 
   // site-chrome.js builds the account menu first; wait for it.
-  function start() { setTimeout(boot, 0); setTimeout(startTickerIfAuthed, 0); setTimeout(tagNewTemplates, 0); }
+  function start() {
+    setTimeout(boot, 0);
+    setTimeout(startTickerIfAuthed, 0);
+    setTimeout(tagNewTemplates, 0);
+    setTimeout(buildMobileNav, 0);
+    window.addEventListener('hashchange', syncMobileNavCurrent);
+    // The admin link is revealed after the role check.
+    setTimeout(() => { if (isAdmin()) document.querySelectorAll('.es-mobile-nav [data-shell-admin]').forEach(link => { link.hidden = false; }); }, 2500);
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
   desktop.addEventListener?.('change', event => { if (event.matches) boot(); });
 
-  window.FrameUpShell = { openPalette, setCollapsed, nav: NAV };
+  window.FrameUpShell = { openPalette, setCollapsed, nav: NAV, addPaletteSource };
 })();

@@ -1,0 +1,174 @@
+/* FrameUp editor: one size system for the right panel (desktop studio).
+ *
+ * Loaded last on index.html, desktop widths only (phones keep their own
+ * touch sizes). Three control sizes and matching icon sizes:
+ *   L  44px, radius 14px: text boxes, dropdowns, main buttons (Export,
+ *      export options, Copy link, Generate, Add row, Quote switch)
+ *   M  36px, radius 10px: small buttons (Replace, adjust, reset, image actions)
+ *   Chips 40px min, radius 10px: option chips (wrap to two lines if needed)
+ * Icons: 18px in L buttons, 16px in M buttons. Stroke 1.8, rounded ends
+ * everywhere (set on the icons themselves).
+ * Exceptions on purpose: stat grid cells, colour swatches, logo tiles,
+ * segmented tabs and the combined image-link field keep their own shapes.
+ */
+@media (min-width: 901px) {
+  /* ── Top row: Export · options · Copy link ─────────────────────────────── */
+  html[data-studio-shell="on"] body :is(#studio-export-btn, #studio-export-options-btn, #studio-link-btn, #widget-copy-btn) {
+    height: 44px;
+    min-height: 44px;
+    border-radius: 14px;
+  }
+
+  html[data-studio-shell="on"] body #studio-export-options-btn {
+    min-width: 44px;
+  }
+
+  html[data-studio-shell="on"] body #studio-link-btn {
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  html[data-studio-shell="on"] body :is(#studio-export-btn, #studio-export-options-btn, #studio-link-btn, #widget-copy-btn, .studio-zoom-btn) svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* ── L: text boxes and dropdowns ───────────────────────────────────────── */
+  html[data-studio-shell="on"] body .panel :is(
+    input.pill-entry:not(.stats-entry-value-input):not(.stats-entry-label-input),
+    input.ig-input
+  ) {
+    height: 44px;
+    min-height: 44px;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-radius: 14px;
+  }
+
+  /* Widget forms and the YouTube Quote switch sit outside .panel. */
+  html[data-studio-shell="on"] body input.widget-text-input {
+    height: 44px;
+    min-height: 44px;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-radius: 14px;
+  }
+
+  html[data-studio-shell="on"] body #youtube-quote-toggle {
+    height: 44px;
+    min-height: 44px;
+    border-radius: 14px;
+  }
+
+  html[data-studio-shell="on"] body .panel .select-dropdown-trigger {
+    height: 44px;
+    min-height: 44px;
+  }
+
+  /* ── L: main buttons inside the panel ──────────────────────────────────── */
+  html[data-studio-shell="on"] body .panel :is(.tweet-fetch-button, .listicle-add-row-button, .quote-switch) {
+    height: 44px;
+    min-height: 44px;
+    border-radius: 14px;
+  }
+
+  html[data-studio-shell="on"] body .panel .brand-logo-option {
+    border-radius: 14px;
+  }
+
+  /* ── M: small buttons ──────────────────────────────────────────────────── */
+  html[data-studio-shell="on"] body .panel :is(.ig-chip, .ig-reset, .widget-image-action-btn, .listicle-logo-button) {
+    height: 36px;
+    min-height: 36px;
+    border-radius: 10px;
+  }
+
+  html[data-studio-shell="on"] body .panel .ig-icon-btn {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    border-radius: 10px;
+  }
+
+  html[data-studio-shell="on"] body .panel :is(.ig-chip, .ig-icon-btn, .ig-reset, .widget-image-action-btn, .listicle-logo-button) svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* ── Chips (option choices) ────────────────────────────────────────────── */
+  html[data-studio-shell="on"] body .panel :is(.select-chip, .post-type-option) {
+    min-height: 40px;
+    border-radius: 10px;
+  }
+
+  /* Photo rows: the short hint wraps instead of being cut off ("Drag to m…"). */
+  html[data-studio-shell="on"] body .panel .ig-photo-info span {
+    white-space: normal;
+    text-overflow: clip;
+  }
+
+  /* ── Swatches share one corner radius ──────────────────────────────────── */
+  html[data-studio-shell="on"] body .panel :is(.swatch, .ig-swatch) {
+    border-radius: 8px;
+  }
+}
+
+/* ── Inspector tabs: Content · Photos · Style (desktop) ──────────────────────
+ * Each folding section carries data-studio-tab (content / image / style).
+ * Photos = canvas photo tools + ES Image Pool + Photo Layers in one place.
+ * When a template hides the tab bar (HTML widgets, infographics without a
+ * main photo) nothing is filtered: every section shows under Content. */
+@media (min-width: 901px) {
+  /* Content: only Content sections. */
+  html[data-studio-shell="on"] body[data-studio-inspector="content"][data-inspector-tabs="on"] [data-studio-accordion-section]:not([data-studio-tab="content"]) {
+    display: none !important;
+  }
+
+  /* Photos: photo tools, the ES Image Pool search, then Photo Layers. */
+  html[data-studio-shell="on"] body[data-studio-inspector="image"] .panel > .studio-content-sections {
+    display: grid !important;
+  }
+
+  html[data-studio-shell="on"] body[data-studio-inspector="image"] [data-studio-accordion-section]:not([data-studio-tab="image"]) {
+    display: none !important;
+  }
+
+  html[data-studio-shell="on"] body[data-studio-inspector="image"] .studio-ai-section {
+    display: grid !important;
+    gap: 12px;
+    margin-top: 6px;
+    padding-top: 18px;
+    border-top: 1px solid var(--es-line, #E5E7EB);
+  }
+
+
+  /* Style: Text Placement and Brand & Colors only. */
+  html[data-studio-shell="on"] body[data-studio-inspector="style"] :is(.studio-dock-section, .studio-ai-section) {
+    display: none !important;
+  }
+
+  html[data-studio-shell="on"] body[data-studio-inspector="style"] [data-studio-accordion-section]:not([data-studio-tab="style"]) {
+    display: none !important;
+  }
+
+  /* No Style sections for this template: no Style tab. */
+  html[data-studio-shell="on"] body[data-style-tab="off"] [data-studio-inspector-tab="style"] {
+    display: none !important;
+  }
+}
+
+@media (min-width: 901px) {
+  /* Content / Photos tabs hide when the template has nothing for them
+     (e.g. Video FI has no text fields; section headers have no photo). */
+  html[data-studio-shell="on"] body[data-content-tab="off"] [data-studio-inspector-tab="content"],
+  html[data-studio-shell="on"] body[data-photos-tab="off"] [data-studio-inspector-tab="image"] {
+    display: none !important;
+  }
+}
+
+@media (min-width: 901px) {
+  html[data-studio-shell="on"] body:is([data-tab-count="0"], [data-tab-count="1"]) .studio-inspector-tabs {
+    display: none !important;
+  }
+}

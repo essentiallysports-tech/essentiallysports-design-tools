@@ -34,7 +34,7 @@
   ];
 
   const ICON_GRID = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
-  const ICON_LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3M6 11h12v9H6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+  const ICON_LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
 
   function optionGroups(picker, select) {
     const options = [...select.options];
@@ -127,7 +127,7 @@
       <div class="template-picker__head">
         <h2 id="template-picker-title"></h2>
         <button class="template-picker__close" type="button" aria-label="Close">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
       </div>
       <label class="template-picker__search">
@@ -247,5 +247,56 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addBrowseButtons, { once: true });
   else addBrowseButtons();
 
-  window.FrameUpTemplates = Object.freeze({ open: selectId => openPicker(PICKERS.find(picker => picker.selectId === selectId)) });
+  // ⌘K: every template, from any editor page or Home. Shown once you type.
+  const TEMPLATE_SOURCES = [
+    { workspace: 'instagram', label: 'Social Media', selectId: 'instagram-post-type-select' },
+    { workspace: 'youtube', label: 'YouTube', selectId: 'youtube-variation-select' },
+    { workspace: 'newsletter', label: 'Newsletter', selectId: 'newsletter-asset-select' },
+  ];
+
+  function goToTemplate(workspace, selectId, value) {
+    const apply = () => {
+      const select = document.getElementById(selectId);
+      if (!select || select.value === value) return;
+      select.value = value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      try { syncAllCustomSelects(); } catch (error) { /* custom dropdown only */ }
+    };
+    if (routeFromHash() === workspace) {
+      apply();
+      return;
+    }
+    window.addEventListener('hashchange', () => setTimeout(apply, 80), { once: true });
+    location.hash = workspace;
+  }
+
+  window.FrameUpShell?.addPaletteSource?.(() => {
+    const items = [];
+    TEMPLATE_SOURCES.forEach(({ workspace, label, selectId }) => {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      [...select.options].forEach(option => {
+        if (option.disabled) return;
+        const group = option.parentElement?.tagName === 'OPTGROUP' ? option.parentElement.label : '';
+        items.push({
+          label: option.textContent.replace(/\s*\(draft\)$/, ''),
+          hint: [label, option.dataset.tag === 'locked' ? 'Locked' : option.dataset.tag === 'new' ? 'New' : ''].filter(Boolean).join(' · '),
+          keywords: `template ${workspace} ${group}`,
+          icon: 'template',
+          run: () => goToTemplate(workspace, selectId, option.value),
+        });
+      });
+    });
+    return [{ label: 'Templates', items, onlyWhenSearching: true, limit: 10 }];
+  });
+
+  window.FrameUpTemplates = Object.freeze({
+    open: selectId => openPicker(PICKERS.find(picker => picker.selectId === selectId)),
+    openForPage: () => {
+      const picker = PICKERS.find(item => item.workspace === document.body?.dataset.currentPage);
+      if (picker) openPicker(picker);
+      return Boolean(picker);
+    },
+    goToTemplate,
+  });
 })();
