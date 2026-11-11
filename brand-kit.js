@@ -51,6 +51,50 @@ BRAND_KIT.push(
       { background: '#E8DFF2', foreground: '#3E1C59', mist: '#3E1C59' }
     ]
   },
+  {
+    sport: 'Tennis',
+    variation: 'Australian Open',
+    primary: { background: '#0085CA', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#0085CA', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#1E2B5C', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#D9EEF9', foreground: '#1E2B5C', mist: '#1E2B5C' },
+      { background: '#FFFFFF', foreground: '#0085CA', mist: '#0085CA' }
+    ]
+  },
+  {
+    sport: 'Tennis',
+    variation: 'Roland-Garros',
+    primary: { background: '#C9582A', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#C9582A', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#00503C', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#F4E6D8', foreground: '#7A3418', mist: '#7A3418' },
+      { background: '#FFFFFF', foreground: '#C9582A', mist: '#C9582A' }
+    ]
+  },
+  {
+    sport: 'Tennis',
+    variation: 'Hard Court',
+    primary: { background: '#2F5D8C', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#2F5D8C', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#4C8C4A', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#E3ECF5', foreground: '#1E3A5C', mist: '#1E3A5C' },
+      { background: '#FFFFFF', foreground: '#2F5D8C', mist: '#2F5D8C' }
+    ]
+  },
+  {
+    sport: 'Tennis',
+    variation: 'Night Session',
+    primary: { background: '#141A33', foreground: '#D7F23D', mist: '#D7F23D' },
+    palette: [
+      { background: '#141A33', foreground: '#D7F23D', mist: '#D7F23D' },
+      { background: '#D7F23D', foreground: '#141A33', mist: '#141A33' },
+      { background: '#2A3156', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#141A33', mist: '#141A33' }
+    ]
+  },
   // Golf has no teams: five colour variations, all in the Essentially Golf
   // family (greens, cream, sand, gold) so they feel related but distinct.
   {

@@ -16,6 +16,8 @@
 //                                  anchor: 'fill' stretches to the box like the design does
 //                                  placeholder = the design's photo and its crop box (cover fit)
 //                                  main: true = the Upload photo button fills this slot
+//   swatches colour choice (panel only) { id, label, group, options: '<Social sport>', default: '<variation>' };
+//                                  pills with swatch: '<id>' take that variation's pill + text colour
 //   text   text                    { id, label, group, default, x, y, w, h, font: { family, weight, size, minSize, scaleX },
 //                                    color, align, valign | baseline, maxLines, lineHeight, letterSpacing,
 //                                    uppercase, maxLength, box: { fill, padL, padR, height, baselineFromBottom } }
@@ -93,19 +95,23 @@
     box: { fill, padL: padX, padR: padX, height: size + padY * 2, baselineFromBottom: size + padY * 2 - padY - 0.8418 * size },
   });
 
-  // FrameUp's post pill scaled to a 34 px bar: same font (Acumin Post black),
-  // same padding and baseline ratios as the Social cover pills (122 px tall).
-  const FRAMEUP_PILL = {
+  // FrameUp's post pill at any bar height h: same font (Acumin Post black),
+  // padding and proportions as the Social cover pills (122 px tall), with the
+  // capitals centred in the bar. swatch: id of a colour-choice field to take
+  // the pill and text colours from.
+  const framePill = (h, fill, swatch) => ({
     uppercase: true,
     color: '#FFFFFF',
-    font: { size: 34 * (130 / 122) * 0.955, minSize: 18, scaleX: 1 },
-    // Baseline placed so the capitals sit centred in the bar.
-    box: { fill: GREEN, padL: 34 * (18.4 / 122), padR: 34 * (21.88 / 122), height: 34, baselineFromBottom: 5.15 },
-  };
+    font: { size: h * (130 / 122) * 0.955, minSize: Math.round(h * 0.55), scaleX: 1 },
+    box: { fill, padL: h * (18.4 / 122), padR: h * (21.88 / 122), height: h, baselineFromBottom: h * (5.15 / 34) },
+    ...(swatch ? { swatch } : {}),
+  });
   // Stacked pills follow the Social cover rule (drawPills): the next pill starts
   // just under the previous line's letters, covering its bottom padding:
   // step = bar height − top padding + edge gap + row gap (1 px each at 122 px).
-  const FRAMEUP_PILL_STEP = 34 - 5.15 + 2 * (34 / 122);
+  const pillStep = h => h - h * (5.15 / 34) + 2 * (h / 122);
+  const FRAMEUP_PILL = framePill(34, GREEN);
+  const FRAMEUP_PILL_STEP = pillStep(34);
 
   // Player Season Stats: three photo cards with name pill and three stats.
   const seasonCard = (n, x, photo, name, stats) => {
@@ -143,10 +149,14 @@
 
   // Tournament Fields: a column per event, title pills then three player cards
   // with name and three result pills.
-  const fieldColumn = (k, x, color, side, titles, players) => {
+  // Pills use FrameUp's own pill; each column's colour is picked from the
+  // Social Media Tennis palettes (new tennis palettes appear automatically).
+  const fieldColumn = (k, x, palette, side, titles, players) => {
+    const colorId = `c${k}Color`;
     const layers = [
-      { type: 'text', id: `c${k}Title1`, label: 'Title line 1', group: `${side} tournament`, default: titles[0], x, y: 40, w: 420, h: 48, maxLength: 30, ...pill(color, 36, 14, 6) },
-      { type: 'text', id: `c${k}Title2`, label: 'Title line 2', group: `${side} tournament`, default: titles[1], x, y: 92, w: 420, h: 48, maxLength: 30, ...pill(color, 36, 14, 6) },
+      { type: 'swatches', id: colorId, label: 'Pill colour', group: `${side} tournament`, options: 'Tennis', default: palette },
+      { type: 'text', id: `c${k}Title1`, label: 'Title line 1', group: `${side} tournament`, default: titles[0], x, y: 40, w: 420, h: 48, maxLength: 30, ...framePill(48, '#5A2A82', colorId) },
+      { type: 'text', id: `c${k}Title2`, label: 'Title line 2', group: `${side} tournament`, default: titles[1], x, y: 40 + pillStep(48), w: 420, h: 48, maxLength: 30, ...framePill(48, '#5A2A82', colorId) },
     ];
     players.forEach((player, j) => {
       const y = 156 + 140 * j;
@@ -159,7 +169,7 @@
         { type: 'text', text: 'Last 3 Finishes', x: x + 144, y: y + 54.5, w: 200, h: 15, baseline: bl(y + 54.5, 15), color: MUTED, font: rc(600, 15, 15) },
         ...player.results.map((result, r) => ({
           type: 'text', id: `${idBase}R${r + 1}`, label: `Result ${r + 1}`, group, default: result,
-          x: x + 144, y: y + 75.5, w: 120, h: 28, maxLength: 6, ...pill(color, 22, 10, 3),
+          x: x + 144, y: y + 75.5, w: 120, h: 28, maxLength: 6, ...framePill(28, '#5A2A82', colorId),
           ...(r ? { flowAfter: `${idBase}R${r}`, flowGap: 6 } : {}),
         })),
       );
@@ -277,12 +287,12 @@
       groups: ['Left tournament', 'Left player 1', 'Left player 2', 'Left player 3', 'Right tournament', 'Right player 1', 'Right player 2', 'Right player 3'],
       layers: [
         GOLF_BG,
-        ...fieldColumn(1, 40, '#B00862', 'Left', ['Amundi Evian', 'Championship'], [
+        ...fieldColumn(1, 40, 'Wimbledon', 'Left', ['Amundi Evian', 'Championship'], [
           { person: PEOPLE.a, name: 'Nelly Korda', results: ['T43', 'T26', 'T9'] },
           { person: PEOPLE.b, name: 'Jeeno Thitikul', results: ['02', 'MC', 'T9'] },
           { person: PEOPLE.a, name: 'Haeran Ryu', results: ['MC', '05', 'T42'] },
         ]),
-        ...fieldColumn(2, 500, '#093B60', 'Right', ['Genesis', 'Scottish Open'], [
+        ...fieldColumn(2, 500, 'US Open', 'Right', ['Genesis', 'Scottish Open'], [
           { person: PEOPLE.b, name: 'Chris Gotterup', results: ['Win', 'MC', 'DNP'] },
           { person: PEOPLE.a, name: 'Ludvig Aberg', results: ['T8', 'T4', 'MC'] },
           { person: PEOPLE.b, name: 'Rory McIlroy', results: ['T2', 'T4', 'Win'] },

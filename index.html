@@ -7744,7 +7744,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20261104-ux1">
-<link rel="stylesheet" href="studio-inspector.css?v=20261105-panel7">
+<link rel="stylesheet" href="studio-inspector.css?v=20261110-swatch1">
 <link rel="stylesheet" href="theme.css?v=20261023-ux1">
 <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
 <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
@@ -9643,7 +9643,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 <script src="listicle-data.js"></script>
 <script src="listicle-type2-data.js"></script>
 <script src="asap-template-data.js"></script>
-<script src="infographic-templates.js?v=20261110-golf10"></script>
+<script src="infographic-templates.js?v=20261110-golf11"></script>
 <script>
 
 // â”€â”€â”€ EMBEDDED DATA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -9693,6 +9693,50 @@ BRAND_KIT.push(
       { background: '#006633', foreground: '#FFFFFF', mist: '#FFFFFF' },
       { background: '#FFFFFF', foreground: '#5A2A82', mist: '#5A2A82' },
       { background: '#E8DFF2', foreground: '#3E1C59', mist: '#3E1C59' }
+    ]
+  },
+  {
+    sport: 'Tennis',
+    variation: 'Australian Open',
+    primary: { background: '#0085CA', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#0085CA', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#1E2B5C', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#D9EEF9', foreground: '#1E2B5C', mist: '#1E2B5C' },
+      { background: '#FFFFFF', foreground: '#0085CA', mist: '#0085CA' }
+    ]
+  },
+  {
+    sport: 'Tennis',
+    variation: 'Roland-Garros',
+    primary: { background: '#C9582A', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#C9582A', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#00503C', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#F4E6D8', foreground: '#7A3418', mist: '#7A3418' },
+      { background: '#FFFFFF', foreground: '#C9582A', mist: '#C9582A' }
+    ]
+  },
+  {
+    sport: 'Tennis',
+    variation: 'Hard Court',
+    primary: { background: '#2F5D8C', foreground: '#FFFFFF', mist: '#FFFFFF' },
+    palette: [
+      { background: '#2F5D8C', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#4C8C4A', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#E3ECF5', foreground: '#1E3A5C', mist: '#1E3A5C' },
+      { background: '#FFFFFF', foreground: '#2F5D8C', mist: '#2F5D8C' }
+    ]
+  },
+  {
+    sport: 'Tennis',
+    variation: 'Night Session',
+    primary: { background: '#141A33', foreground: '#D7F23D', mist: '#D7F23D' },
+    palette: [
+      { background: '#141A33', foreground: '#D7F23D', mist: '#D7F23D' },
+      { background: '#D7F23D', foreground: '#141A33', mist: '#141A33' },
+      { background: '#2A3156', foreground: '#FFFFFF', mist: '#FFFFFF' },
+      { background: '#FFFFFF', foreground: '#141A33', mist: '#141A33' }
     ]
   },
   // Golf has no teams: five colour variations, all in the Essentially Golf
@@ -18381,6 +18425,26 @@ function syncInfographicAfterHistory() {
   renderedInfographicFieldsFor = '';
 }
 
+// Colour-choice fields: { type: 'swatches', id, label, group, options: 'Tennis', default }.
+// options names a Social Media sport; each of its variations is one swatch
+// (pill colour + text colour). Stored like text, so Undo covers it.
+function getInfographicSwatchOptions(layer) {
+  const sport = layer.options || 'Tennis';
+  return BRAND_KIT.filter(entry => entry.sport === sport && entry.primary).map(entry => ({
+    key: entry.variation || entry.team,
+    fill: entry.primary.background,
+    text: entry.primary.foreground,
+  }));
+}
+
+function getInfographicSwatch(template, id) {
+  const layer = template.layers.find(item => item.type === 'swatches' && item.id === id);
+  if (!layer) return null;
+  const options = getInfographicSwatchOptions(layer);
+  const chosen = getInfographicValues(template)[id] ?? layer.default;
+  return options.find(option => option.key === chosen) || options[0] || null;
+}
+
 function getInfographicText(template, layer) {
   if (!layer.id) return String(layer.text ?? '');
   const values = getInfographicValues(template);
@@ -18431,7 +18495,7 @@ function truncateInfographicLine(ctx, text, maxWidth) {
 
 // Text on its own coloured box (one line), e.g. a name tag. The box hugs the
 // text; the text shrinks when the box would get wider than the layer.
-function drawInfographicBoxText(ctx, layer, text, scale) {
+function drawInfographicBoxText(ctx, layer, text, scale, swatch) {
   const box = layer.box;
   const padL = (box.padL ?? 6) * scale;
   const padR = (box.padR ?? 6) * scale;
@@ -18456,9 +18520,9 @@ function drawInfographicBoxText(ctx, layer, text, scale) {
     : layer.x * scale;
   const top = layer.y * scale;
   recordInfographicExtent(layer, left, left + boxW);
-  ctx.fillStyle = box.fill || '#FFFFFF';
+  ctx.fillStyle = swatch?.fill || box.fill || '#FFFFFF';
   ctx.fillRect(left, top, boxW, boxH);
-  ctx.fillStyle = layer.color || '#000000';
+  ctx.fillStyle = swatch?.text || layer.color || '#000000';
   ctx.textAlign = 'left';
   // Baseline sits a fixed distance above the box bottom; scales with the font.
   const baselineFromBottom = (box.baselineFromBottom ?? 0) * scale * (size / startSize);
@@ -18475,7 +18539,7 @@ function drawInfographicText(ctx, template, layer, scale) {
   if ('letterSpacing' in ctx) ctx.letterSpacing = `${(layer.letterSpacing || 0) * scale}px`;
   ctx.textBaseline = 'alphabetic';
   if (layer.box) {
-    drawInfographicBoxText(ctx, layer, text.trim(), scale);
+    drawInfographicBoxText(ctx, layer, text.trim(), scale, layer.swatch ? getInfographicSwatch(template, layer.swatch) : null);
     ctx.restore();
     return;
   }
@@ -19082,6 +19146,10 @@ function renderInfographicFields() {
   const items = [];
   const seenText = new Set();
   template.layers.forEach(layer => {
+    if (layer.type === 'swatches' && layer.id) {
+      items.push({ layer, kind: 'swatch', group: layer.group || '' });
+      return;
+    }
     const isText = layer.type === 'text' && layer.id;
     const isPhoto = layer.type === 'photo' && layer.id && !layer.main;
     if (!isText && !isPhoto) return;
@@ -19161,7 +19229,9 @@ function renderInfographicFields() {
       }
       body.appendChild(item.kind === 'text'
         ? buildInfographicTextField(template, item.layer)
-        : buildInfographicPhotoField(template, item.layer));
+        : item.kind === 'swatch'
+          ? buildInfographicSwatchField(template, item.layer)
+          : buildInfographicPhotoField(template, item.layer));
       i += 1;
     }
   });
@@ -19181,6 +19251,52 @@ function renderInfographicFields() {
     container.appendChild(reset);
   }
   syncInfographicPanel();
+}
+
+// A row of colour swatches (each a Social Media variation, e.g. Wimbledon).
+function buildInfographicSwatchField(template, layer) {
+  const field = document.createElement('div');
+  field.className = 'ig-field ig-swatch-field';
+  const label = document.createElement('span');
+  label.className = 'ig-label';
+  label.textContent = layer.label || 'Colour';
+  const row = document.createElement('div');
+  row.className = 'ig-swatches';
+  row.setAttribute('role', 'radiogroup');
+  row.setAttribute('aria-label', layer.label || 'Colour');
+  const buttons = getInfographicSwatchOptions(layer).map(option => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ig-swatch';
+    button.setAttribute('role', 'radio');
+    button.title = option.key;
+    button.setAttribute('aria-label', option.key);
+    button.style.setProperty('--swatch-fill', option.fill);
+    button.style.setProperty('--swatch-text', option.text);
+    button.textContent = 'Aa';
+    button.addEventListener('click', () => {
+      setInfographicText(template, layer.id, option.key);
+      render();
+      syncInfographicPanel();
+    });
+    row.appendChild(button);
+    return { button, option };
+  });
+  const chosenName = document.createElement('span');
+  chosenName.className = 'ig-swatch-name';
+  const sync = () => {
+    const current = getInfographicSwatch(template, layer.id);
+    buttons.forEach(({ button, option }) => {
+      const on = option.key === current?.key;
+      button.classList.toggle('is-active', on);
+      button.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+    chosenName.textContent = current?.key || '';
+  };
+  infographicPanelSyncers.push(sync);
+  field.append(label, row, chosenName);
+  sync();
+  return field;
 }
 
 // Drag a photo slot on the canvas to move that photo inside its frame.
