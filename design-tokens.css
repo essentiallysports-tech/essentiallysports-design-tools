@@ -24,7 +24,7 @@
   --es-line-2: #d3d7de;
   --es-ink: #0e1014;
   --es-ink-2: #464c57;
-  --es-ink-3: #6b7280;
+  --es-ink-3: #646a76; /* 4.5:1+ on white and on the sunk greys */
   --es-placeholder: #9aa0aa;
   --es-good: #0e7a3d;
   --es-good-soft: #e9f6ee;
@@ -72,8 +72,8 @@
 
   /* Radius: chips/crests · controls · containers · pills */
   --es-radius-chip: 10px;
-  --es-radius-control: 14px;
-  --es-radius-container: 20px;
+  --es-radius-control: 12px;
+  --es-radius-container: 16px;
   --es-radius-pill: 999px;
 
   /* Sizing */
@@ -522,7 +522,7 @@ html:not([data-theme="dark"]) :is(.frame-hero-cta.is-primary, .frame-cta, .faq-c
 html:not([data-theme="dark"]) :is(.frame-hero-cta:not(.is-primary), .faq-cta-action:not(.is-primary)){
   border: 0 !important;
   background: var(--es-bg) !important;
-  box-shadow: inset 0 0 0 1.5px var(--es-line-2) !important;
+  box-shadow: inset 0 0 0 1px var(--es-line-2) !important;
   color: var(--es-ink) !important;
 }
 
@@ -577,7 +577,7 @@ html:not([data-theme="dark"])[data-studio-shell="on"] .studio-inspector-tab.is-a
 
 /* Fields: 14px radius, 1.5px line-2 outline, ink-3 on hover, brand outline on focus / open */
 html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input){
-  border: 1.5px solid var(--es-line-2) !important;
+  border: 1px solid var(--es-line-2) !important;
   border-radius: var(--es-radius-control) !important;
   background-color: var(--es-bg);
   color: var(--es-ink);
@@ -711,7 +711,7 @@ html:not([data-theme="dark"]) :is(.btn, .primary-btn, .secondary-btn, .feedback-
 
 /* Fields: white (sunk means disabled), 14px radius, line-2 outline, ink focus. */
 html:not([data-theme="dark"]) :is(.request-input, .request-select, .request-textarea, .request-dropdown-trigger:not([class*="priority-"]), .feedback-textarea, .feedback-dropdown-trigger, .reels-native-select, .reels-choice-trigger, .account-main input:not([type="checkbox"]):not([type="radio"]), .account-main select, .account-main textarea){
-  border: 1.5px solid var(--es-line-2) !important;
+  border: 1px solid var(--es-line-2) !important;
   border-radius: var(--es-radius-control) !important;
   background-color: var(--es-bg) !important;
   color: var(--es-ink) !important;
@@ -723,8 +723,8 @@ html:not([data-theme="dark"]) :is(.request-input, .request-select, .request-text
 
 html:not([data-theme="dark"]) :is(.request-input, .request-select, .request-textarea, .feedback-textarea, .reels-native-select, .account-main input:not([type="checkbox"]):not([type="radio"]), .account-main select, .account-main textarea):focus,
 html:not([data-theme="dark"]) :is(.request-dropdown, .feedback-dropdown, .reels-choice).is-open > :is(.request-dropdown-trigger, .feedback-dropdown-trigger, .reels-choice-trigger){
-  border-color: var(--es-ink) !important;
-  box-shadow: inset 0 0 0 .5px var(--es-ink), 0 0 0 4px rgb(14 16 20 / .08) !important;
+  border-color: var(--es-brand) !important;
+  box-shadow: 0 0 0 1px var(--es-brand) !important;
   outline: none !important;
 }
 
@@ -2219,4 +2219,251 @@ svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
 :is(.auth-state-icon, .canvas-empty-hint) > svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
   width: 28px !important;
   height: 28px !important;
+}
+
+/* ------------------------------------------------------------------------
+ * Clean & outlined, site-wide (same system as the editor's right panel).
+ * ---------------------------------------------------------------------- */
+
+/* Tool buttons and single-line fields on pages: 40px on desktop. Phones keep
+   their larger touch targets. Marketing CTAs keep 48px. */
+@media (min-width: 901px) {
+  html :is(.btn, .primary-btn, .secondary-btn, .danger-btn, .feedback-submit, .feedback-back-link, .reels-btn, .workspace-cta){
+    min-height: 40px !important;
+    height: auto;
+  }
+
+  html :is(.btn, .primary-btn, .secondary-btn, .danger-btn, .feedback-submit, .reels-btn, .workspace-cta):not(.feedback-back-link){
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  html :is(input.request-input, select.request-select, .request-dropdown-trigger, .feedback-dropdown-trigger, .reels-native-select, .reels-choice-trigger, .account-main input:not([type="checkbox"]):not([type="radio"]), .account-main select){
+    min-height: 40px !important;
+    height: 40px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+}
+
+/* Field labels: the field-label role everywhere. */
+html :is(.request-label, .feedback-label, .es-field__label, .account-main label:not(:has(input))){
+  font-size: var(--es-type-field-label-size) !important;
+  line-height: var(--es-type-field-label-line) !important;
+  font-weight: var(--es-type-field-label-weight) !important;
+  color: var(--es-text-secondary) !important;
+  letter-spacing: 0 !important;
+}
+
+html[data-theme="dark"] :is(.request-label, .feedback-label, .es-field__label, .account-main label:not(:has(input))){
+  color: #b6b6b6 !important;
+}
+
+/* Page cards: hairline, no shadow, 16px radius. */
+html:not([data-theme="dark"]) :is(.request-card, .feedback-card, .es-card){
+  border: 0 !important;
+  border-radius: var(--es-radius-container) !important;
+  box-shadow: inset 0 0 0 1px var(--es-line) !important;
+}
+
+/* Choice cards (feedback type …): outlined; selected = ink ring. */
+html:not([data-theme="dark"]) .feedback-type-card{
+  border-radius: var(--es-radius-control) !important;
+}
+
+html:not([data-theme="dark"]) .feedback-type-option input:checked + .feedback-type-card{
+  border-color: var(--es-ink) !important;
+  background: var(--es-bg) !important;
+  box-shadow: inset 0 0 0 .5px var(--es-ink) !important;
+  color: var(--es-ink) !important;
+}
+
+html[data-theme="dark"] .feedback-type-option input:checked + .feedback-type-card{
+  border-color: #f3f5f7 !important;
+  background: transparent !important;
+  box-shadow: inset 0 0 0 .5px #f3f5f7 !important;
+}
+
+/* Selected chips (es-chip): ink ring, not a blue fill. */
+html:not([data-theme="dark"]) .es-chip[aria-pressed="true"]{
+  background: var(--es-bg);
+  box-shadow: inset 0 0 0 1.5px var(--es-ink);
+  color: var(--es-ink);
+}
+
+/* Search fields on pages: white and outlined, brand ring on focus. The
+   sidebar's search launcher stays a grey button. */
+html:not([data-theme="dark"]) .es-search:not(.es-sidebar__search){
+  background: var(--es-bg);
+  box-shadow: inset 0 0 0 1px var(--es-line-2);
+  transition: box-shadow var(--es-dur) var(--es-ease);
+}
+
+@media (hover: hover) {
+  html:not([data-theme="dark"]) .es-search:not(.es-sidebar__search):hover{
+    background: var(--es-bg);
+    box-shadow: inset 0 0 0 1px var(--es-ink-3);
+  }
+}
+
+html .es-search:not(.es-sidebar__search):focus-within{
+  box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand) !important;
+}
+
+/* es-input: 1px outline, brand ring on focus (matches every other field). */
+html:not([data-theme="dark"]) .es-input{
+  box-shadow: inset 0 0 0 1px var(--es-line-2);
+}
+
+html:not([data-theme="dark"]) .es-input:hover{
+  box-shadow: inset 0 0 0 1px var(--es-ink-3);
+}
+
+html .es-input:focus{
+  box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand);
+}
+
+/* Empty states sit on the page, not in a grey box with a large radius. */
+html:not([data-theme="dark"]) .es-empty{
+  border-radius: var(--es-radius-container);
+}
+
+/* Generate: the brief box is a white outlined field like every other. */
+html:not([data-theme="dark"]) .gen-brief textarea{
+  border-radius: var(--es-radius-control) !important;
+  background: var(--es-bg) !important;
+  box-shadow: inset 0 0 0 1px var(--es-line-2) !important;
+}
+
+html .gen-brief textarea:focus{
+  box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand) !important;
+}
+
+html :is(.gen-row__label){
+  font-size: var(--es-type-field-label-size) !important;
+  font-weight: var(--es-type-field-label-weight) !important;
+  color: var(--es-text-secondary) !important;
+}
+
+html[data-theme="dark"] .gen-row__label{
+  color: #b6b6b6 !important;
+}
+
+html:not([data-theme="dark"]) .gen-brief{
+  border-radius: var(--es-radius-container) !important;
+  box-shadow: inset 0 0 0 1px var(--es-line) !important;
+}
+
+/* Reel Captions: hairline panels, 16px radius, no drop shadows. */
+html:not([data-theme="dark"]) :is(.reels-timeline-card, .reels-brand-card, .reels-bottom-panel){
+  border-radius: var(--es-radius-container) !important;
+  box-shadow: none !important;
+}
+
+html :is(.reels-icon-btn){
+  border-radius: 10px !important;
+}
+
+/* Home: workspace cards and the guide card are hairline tiles; hover lifts. */
+html:not([data-theme="dark"]) :is(.frame-card, .home-start__card){
+  border: 0 !important;
+  border-radius: var(--es-radius-container) !important;
+  box-shadow: inset 0 0 0 1px var(--es-line) !important;
+  transition: box-shadow var(--es-dur) var(--es-ease), transform var(--es-dur) var(--es-ease);
+}
+
+@media (hover: hover) {
+  html:not([data-theme="dark"]) .frame-card:hover{
+    box-shadow: inset 0 0 0 1px var(--es-line-2), 0 10px 24px -14px rgb(14 16 20 / .35) !important;
+  }
+}
+
+/* Dropdown values read like typed values (control role); empty = placeholder grey. */
+html :is(.request-dropdown-trigger, .feedback-dropdown-trigger, .reels-choice-trigger){
+  font-size: var(--es-type-control-size) !important;
+  font-weight: var(--es-type-control-weight) !important;
+}
+
+html:not([data-theme="dark"]) .request-dropdown-trigger.is-placeholder{
+  color: var(--es-placeholder, #8a8f98) !important;
+}
+
+/* Dark mode: muted text and blue text that stay readable (4.5:1+ on #080808–#232323). */
+html[data-theme="dark"]{
+  --es-ink-3: #8b919c;
+  --es-brand-text: #8ec2ff;
+}
+
+/* Brand-tinted pills switch to a dark tint so the light blue text reads. */
+html[data-theme="dark"]{
+  --es-brand-soft: rgb(26 115 224 / .22);
+}
+
+/* Reel Captions keeps a light timeline in dark mode: its muted text stays dark. */
+html[data-theme="dark"] .reels-bottom-panel{
+  --es-ink-3: #646a76;
+  --es-text-muted: #646a76;
+  --es-text-subtle: #646a76;
+  --es-brand-soft: #eaf3ff;
+  --reels-muted: #646a76;
+  --reels-soft: #eaf3ff;
+}
+
+/* Login in dark mode: the note's lead-in and "Forgot password?" were near-black. */
+html[data-theme="dark"] .login-note strong{
+  color: #f3f5f7 !important;
+}
+
+html[data-theme="dark"] .login-forgot{
+  color: #8ec2ff !important;
+}
+
+html[data-theme="dark"] :is(.request-required, .home-start__more, .template-browse-btn, .es-link){
+  color: #8ec2ff !important;
+}
+
+/* Keyboard focus that is always visible (these removed the outline with no replacement). */
+.prompt-shell:focus-within{
+  border-color: var(--es-brand) !important;
+  box-shadow: 0 0 0 1px var(--es-brand), var(--shadow-blue, none) !important;
+}
+
+.navbar-icon-btn:focus-visible{
+  outline: 2px solid var(--es-brand) !important;
+  outline-offset: 2px;
+}
+
+/* Dark mode, light surfaces that stay light: keep their text dark. */
+html[data-theme="dark"] .canvas-empty-hint > span{
+  color: #646a76 !important;
+}
+
+html[data-theme="dark"] .canvas-empty-hint .es-btn--ghost{
+  color: #464c57 !important;
+}
+
+html[data-theme="dark"] #ai-sidebar :is(.history-label, .history-empty){
+  color: #646a76 !important;
+}
+
+/* Dark mode: trend text bright enough on dark cards. */
+html[data-theme="dark"] .es-stat__trend{
+  color: #4cc985;
+}
+
+html[data-theme="dark"] .es-stat__trend.is-down{
+  color: #ff8a80;
+}
+
+/* Press feedback on every button (movement only when motion is welcome). */
+@media (prefers-reduced-motion: no-preference) {
+  html :is(.es-btn, .btn, .primary-btn, .secondary-btn, .feedback-submit, .reels-btn, .workspace-cta, .frame-hero-cta, .frame-cta, .es-chip, .template-filter):active:not(:disabled){
+    transform: scale(.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html :is(.es-btn, .btn, .primary-btn, .secondary-btn, .feedback-submit, .reels-btn, .workspace-cta, .frame-hero-cta, .frame-cta, .es-chip):active{
+    transform: none !important;
+  }
 }

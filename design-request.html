@@ -2369,10 +2369,10 @@
   } }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20261111-p5">
-<link rel="stylesheet" href="theme.css?v=20261111-p5">
+<link rel="stylesheet" href="theme.css?v=20261112-a11y1">
   <link rel="stylesheet" href="site-chrome.css?v=20261111-icons3">
 <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
-<link rel="stylesheet" href="design-tokens.css?v=20261111-picker1">
+<link rel="stylesheet" href="design-tokens.css?v=20261112-a11y6">
 <link rel="stylesheet" href="es-ui.css?v=20261111-p4">
 <script src="theme.js?v=20261111-icons2"></script>
 <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
@@ -3867,6 +3867,7 @@ function syncRequestDropdown(select) {
   const trigger = dropdown.querySelector('.request-dropdown-trigger');
   const effectivelyDisabled = select.disabled || Boolean(select.closest('fieldset')?.disabled);
   trigger.textContent = selected?.textContent || 'Select an option';
+  trigger.classList.toggle('is-placeholder', !select.value);
   trigger.classList.remove('priority-normal', 'priority-high', 'priority-urgent');
   const selectedPriorityClass = select.id === 'request-priority' ? priorityClass(select.value) : '';
   if (selectedPriorityClass) trigger.classList.add(selectedPriorityClass);

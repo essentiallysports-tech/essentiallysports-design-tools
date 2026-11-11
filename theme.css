@@ -12,8 +12,9 @@
   --theme-dark-text: #F3F5F7;
   --theme-dark-text-muted: #B6B6B6;
   --theme-dark-text-subtle: #8F8F8F;
-  --theme-dark-accent: #2586F7;
-  --theme-dark-accent-soft: rgba(37, 134, 247, .17);
+  /* #1A73E0: white labels on it pass 4.5:1 (was #2586F7, 3.6:1). */
+  --theme-dark-accent: #1A73E0;
+  --theme-dark-accent-soft: rgba(26, 115, 224, .22);
 }
 
 .theme-switcher {
