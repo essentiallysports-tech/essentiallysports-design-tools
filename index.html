@@ -1340,6 +1340,21 @@
     transform: translateY(0) scale(1);
     pointer-events: auto;
   }
+  .select-dropdown-group {
+    padding: 10px 12px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--es-ink-3, #6B7280);
+  }
+  .select-dropdown-group:first-child,
+  .select-dropdown-search + .select-dropdown-empty + .select-dropdown-group {
+    padding-top: 4px;
+  }
+  .select-dropdown-group[hidden] {
+    display: none;
+  }
   .select-dropdown-option {
     position: relative;
     width: 100%;
@@ -2163,7 +2178,8 @@
   body[data-current-page="newsletter"][data-newsletter-asset="youtube-fi"] #newsletter-brand-card,
   body[data-current-page="newsletter"][data-newsletter-asset="tag-fi"] #newsletter-brand-card,
   body[data-current-page="newsletter"][data-newsletter-asset="widgets"] #newsletter-brand-card,
-  body[data-current-page="newsletter"][data-newsletter-asset="trivia"] #newsletter-brand-card {
+  body[data-current-page="newsletter"][data-newsletter-asset="trivia"] #newsletter-brand-card,
+  body[data-current-page="newsletter"][data-newsletter-infographic="on"] #newsletter-brand-card {
     display: block;
   }
   body[data-current-page="newsletter"][data-newsletter-asset="youtube-fi"] .text-card,
@@ -8059,16 +8075,23 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="card" id="newsletter-asset-card">
         <div class="card-title">Newsletter Asset</div>
         <select id="newsletter-asset-select" aria-label="Newsletter asset type">
-          <option value="feature-image" data-tag="locked">Feature Image</option>
-          <option value="youtube-fi">Video FI</option>
-          <option value="tag-fi">Tag FI</option>
-          <option value="section-header">Header Option 1</option>
-          <option value="section-header-2">Header Option 2</option>
-          <option value="widgets" data-tag="locked">Desktop News Layout</option>
-          <option value="trivia">Trivia Design</option>
-          <option value="ticker">Financial Ticker</option>
-          <option value="list">List Widget</option>
-          <option value="list2">List Widget V2</option>
+          <optgroup label="Feature images">
+            <option value="feature-image" data-tag="locked">Feature Image</option>
+            <option value="youtube-fi">Video FI</option>
+            <option value="tag-fi">Tag FI</option>
+          </optgroup>
+          <optgroup label="Infographic FIs" id="newsletter-infographic-group"></optgroup>
+          <optgroup label="Section headers">
+            <option value="section-header">Header Option 1</option>
+            <option value="section-header-2">Header Option 2</option>
+          </optgroup>
+          <optgroup label="HTML widgets">
+            <option value="widgets" data-tag="locked">Desktop News Layout</option>
+            <option value="trivia">Trivia Design</option>
+            <option value="ticker">Financial Ticker</option>
+            <option value="list">List Widget</option>
+            <option value="list2">List Widget V2</option>
+          </optgroup>
         </select>
       </div>
       <div class="card" id="newsletter-brand-card">
@@ -9643,7 +9666,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 <script src="listicle-data.js"></script>
 <script src="listicle-type2-data.js"></script>
 <script src="asap-template-data.js"></script>
-<script src="infographic-templates.js?v=20261110-golf11"></script>
+<script src="infographic-templates.js?v=20261111-brand1"></script>
 <script>
 
 // â”€â”€â”€ EMBEDDED DATA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -10608,6 +10631,15 @@ function syncCustomSelect(select, rebuild = true) {
         button.hidden = !match;
         if (match) shown += 1;
       });
+      menu.querySelectorAll('.select-dropdown-group').forEach(heading => {
+        let next = heading.nextElementSibling;
+        let any = false;
+        while (next && !next.classList.contains('select-dropdown-group')) {
+          if (next.classList.contains('select-dropdown-option') && !next.hidden) any = true;
+          next = next.nextElementSibling;
+        }
+        heading.hidden = !any;
+      });
       empty.hidden = shown > 0;
     });
     search.addEventListener('keydown', event => {
@@ -10617,7 +10649,17 @@ function syncCustomSelect(select, rebuild = true) {
     });
     menu.append(search, empty);
   }
+  let lastGroup = null;
   Array.from(select.options).forEach(option => {
+    const group = option.parentElement?.tagName === 'OPTGROUP' ? option.parentElement : null;
+    if (group && group !== lastGroup && group.label) {
+      const heading = document.createElement('div');
+      heading.className = 'select-dropdown-group';
+      heading.setAttribute('role', 'presentation');
+      heading.textContent = group.label;
+      menu.appendChild(heading);
+    }
+    lastGroup = group;
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'select-dropdown-option';
@@ -12071,6 +12113,7 @@ function initUI() {
       state.newsletterBrand = event.target.value;
       applyNewsletterBrandPalette();
       render();
+      if (isInfographicAsset()) syncInfographicPanel();
     });
   }
   document.getElementById('youtube-quote-toggle').addEventListener('click', () => {
@@ -13758,23 +13801,26 @@ ${picksHtml}
 }
 
 const NEWSLETTER_BRANDS = [
-  { id: 'essentiallysports', label: 'EssentiallySports', background: '#0A7DFA', foreground: '#FFFFFF' },
+  { id: 'essentiallysports', label: 'EssentiallySports', background: '#0A7DFA', foreground: '#FFFFFF', fi: { primary: '#0066FF', onPrimary: '#FFFFFF', secondary: '#033162', onSecondary: '#FFFFFF', ink: '#033162' } },
   {
     id: 'es-daily-evening-send',
     label: 'ES Daily Evening Send',
     background: '#404060',
     foreground: '#FFF5EF',
   },
-  { id: 'es-daily-morning', label: 'ES Daily Morning', background: '#DAEBFE', foreground: '#033162' },
+  { id: 'es-daily-morning', label: 'ES Daily Morning', background: '#DAEBFE', foreground: '#033162', fi: { primary: '#0066FF', onPrimary: '#FFFFFF', secondary: '#033162', onSecondary: '#FFFFFF', ink: '#033162' } },
   // Tag FI only: a see-through tag with a white outline and white text.
   { id: 'es-daily-new', label: 'ES Daily New', background: '#FFFFFF', foreground: '#FFFFFF', tagStyle: 'outline', assets: ['tag-fi'] },
-  { id: 'essentially-cfb', label: 'Essentially CFB', background: '#C9A874', foreground: '#762222' },
-  { id: 'essentially-dunk', label: 'Essentially Dunk', background: '#263F7A', foreground: '#FFFFFF' },
-  { id: 'essentially-golf', label: 'Essentially Golf', background: '#008F05', foreground: '#FFFFFF' },
+  { id: 'essentially-cfb', label: 'Essentially CFB', background: '#C9A874', foreground: '#762222', fi: { primary: '#6D2020', onPrimary: '#CDB286', secondary: '#CDB286', onSecondary: '#6D2020', ink: '#22130F' } },
+  // fi = infographic palette (pill + pill text, second pill + its text, dark
+  // ink), taken from the Newsletter Hub brand pills and each newsletter's page
+  // (essentiallysports.com/newsletter-hub, Nov 2026). Headers use background/foreground.
+  { id: 'essentially-dunk', label: 'Essentially Dunk', background: '#253B73', foreground: '#FFFFFF', fi: { primary: '#253B73', onPrimary: '#FFFFFF', secondary: '#C61130', onSecondary: '#FFFFFF', ink: '#0E1A3A' } },
+  { id: 'essentially-golf', label: 'Essentially Golf', background: '#008F00', foreground: '#FFFFFF', fi: { primary: '#008F00', onPrimary: '#FFFFFF', secondary: '#0B3316', onSecondary: '#FFFFFF', ink: '#003008' } },
   { id: 'es-golf-evening', label: 'ES Golf Evening', background: '#396123', foreground: '#FFFFFF' },
   { id: 'inside-talks', label: 'Inside Talks', background: '#073968', foreground: '#FFFFFF' },
-  { id: 'lucky-dog-on-track', label: 'Lucky Dog On Track', background: '#FFD938', foreground: '#000000' },
-  { id: 'she-got-game', label: 'Essentially W', background: '#FF3B05', foreground: '#FFFFFF' },
+  { id: 'lucky-dog-on-track', label: 'Lucky Dog On Track', background: '#FCD53D', foreground: '#000000', fi: { primary: '#FCD53D', onPrimary: '#210909', secondary: '#210909', onSecondary: '#FCD53D', ink: '#210909' } },
+  { id: 'she-got-game', label: 'Essentially W', background: '#F74600', foreground: '#FFFFFF', fi: { primary: '#F74600', onPrimary: '#FFFFFF', secondary: '#000000', onSecondary: '#FFFFFF', ink: '#212121' } },
   {
     id: 'essentially-w-ncaa',
     label: 'Essentially W NCAA',
@@ -13784,14 +13830,15 @@ const NEWSLETTER_BRANDS = [
     playButton: '#009CDE',
     assets: ['youtube-fi', 'tag-fi'],
   },
-  { id: 'break-point', label: 'Break Point', background: '#DFFB35', foreground: '#133A58' },
+  { id: 'break-point', label: 'Break Point', background: '#DFFB35', foreground: '#133A58', fi: { primary: '#10314C', onPrimary: '#CDD95E', secondary: '#DFEF4A', onSecondary: '#10314C', ink: '#0C283E' } },
   { id: 'buckeye-daily', label: 'Buckeye Daily', background: '#C70837', foreground: '#FFFFFF' },
-  { id: 'steelers-huddle', label: 'Steelers Huddle', background: '#F4B000', foreground: '#000000' },
-  { id: 'chiefs-huddle', label: 'Chiefs Huddle', background: '#ED143B', foreground: '#FFFBE0' },
-  { id: 'cowboys-huddle', label: 'Cowboys Huddle', background: '#E7F0F4', foreground: '#063162' },
+  { id: 'steelers-huddle', label: 'Steelers Huddle', background: '#F4B000', foreground: '#000000', fi: { primary: '#000000', onPrimary: '#F0AE00', secondary: '#F0AE00', onSecondary: '#000000', ink: '#000000' } },
+  { id: 'chiefs-huddle', label: 'Chiefs Huddle', background: '#E31836', foreground: '#FFFBE0', fi: { primary: '#E31836', onPrimary: '#FFFFFF', secondary: '#040404', onSecondary: '#FFFFFF', ink: '#040404' } },
+  { id: 'cowboys-huddle', label: 'Cowboys Huddle', background: '#E7F0F4', foreground: '#063162', fi: { primary: '#002A5B', onPrimary: '#C0CED5', secondary: '#C0CED5', onSecondary: '#002A5B', ink: '#001C3B' } },
   { id: 'essentially-mma', label: 'Essentially MMA', background: '#D90606', foreground: '#FFFFFF' },
-  { id: 'essentially-athletics', label: 'Essentially Athletics', background: '#0E8CC3', foreground: '#FFFFFF' },
-  { id: 'the-huddle', label: 'The Huddle', background: '#27324C', foreground: '#FFFFFF' },
+  { id: 'essentially-athletics', label: 'Essentially Athletics', background: '#0E8CC3', foreground: '#FFFFFF', fi: { primary: '#0D47A1', onPrimary: '#FFFFFF', secondary: '#0A2B5E', onSecondary: '#FFFFFF', ink: '#0A2B5E' } },
+  { id: 'the-huddle', label: 'The Huddle', background: '#252D47', foreground: '#FFFFFF', fi: { primary: '#252D47', onPrimary: '#FFFFFF', secondary: '#E31836', onSecondary: '#FFFFFF', ink: '#131B35' } },
+  { id: 'es-think-tank', label: 'ES Think Tank', background: '#005AAE', foreground: '#FFFFFF', fi: { primary: '#005AAE', onPrimary: '#FFFFFF', secondary: '#033162', onSecondary: '#FFFFFF', ink: '#033162' } },
 ];
 const INSTAGRAM_POST_TYPES = {
   cover: {
@@ -18363,7 +18410,7 @@ function registerInfographicTemplates() {
       const option = document.createElement('option');
       option.value = assetType;
       option.textContent = template.draft ? `${template.label} (draft)` : template.label;
-      select.appendChild(option);
+      (document.getElementById('newsletter-infographic-group') || select).appendChild(option);
     }
   });
 }
@@ -18373,6 +18420,13 @@ function isInfographicStillLoading() {
   const template = isInfographicAsset() ? getInfographicTemplate() : null;
   if (!template) return false;
   ensureInfographicImages(template);
+  const recolorPending = template.layers.some(layer => {
+    const recolor = layer.type === 'image' ? layer.recolor : layer.type === 'photo' ? layer.placeholder?.recolor : null;
+    if (!recolor) return false;
+    const src = layer.type === 'image' ? layer.src : layer.placeholder.src;
+    return !getRecoloredInfographicImage(src, recolor);
+  });
+  if (recolorPending) return true;
   return template.layers.some(layer => {
     const src = layer.type === 'image' ? layer.src : layer.type === 'photo' ? layer.placeholder?.src : '';
     const img = src && infographicStaticImages.get(src);
@@ -18430,11 +18484,19 @@ function syncInfographicAfterHistory() {
 // (pill colour + text colour). Stored like text, so Undo covers it.
 function getInfographicSwatchOptions(layer) {
   const sport = layer.options || 'Tennis';
-  return BRAND_KIT.filter(entry => entry.sport === sport && entry.primary).map(entry => ({
+  const options = BRAND_KIT.filter(entry => entry.sport === sport && entry.primary).map(entry => ({
     key: entry.variation || entry.team,
     fill: entry.primary.background,
     text: entry.primary.foreground,
   }));
+  if (layer.brandOption) {
+    const theme = getInfographicTheme();
+    options.unshift(
+      { key: 'Brand colour', fill: theme.primary, text: theme.onPrimary },
+      { key: 'Brand second', fill: theme.secondary, text: theme.onSecondary },
+    );
+  }
+  return options;
 }
 
 function getInfographicSwatch(template, id) {
@@ -18520,9 +18582,9 @@ function drawInfographicBoxText(ctx, layer, text, scale, swatch) {
     : layer.x * scale;
   const top = layer.y * scale;
   recordInfographicExtent(layer, left, left + boxW);
-  ctx.fillStyle = swatch?.fill || box.fill || '#FFFFFF';
+  ctx.fillStyle = swatch?.fill || resolveInfographicColor(box.fill) || '#FFFFFF';
   ctx.fillRect(left, top, boxW, boxH);
-  ctx.fillStyle = swatch?.text || layer.color || '#000000';
+  ctx.fillStyle = swatch?.text || resolveInfographicColor(layer.color) || '#000000';
   ctx.textAlign = 'left';
   // Baseline sits a fixed distance above the box bottom; scales with the font.
   const baselineFromBottom = (box.baselineFromBottom ?? 0) * scale * (size / startSize);
@@ -18583,7 +18645,7 @@ function drawInfographicText(ctx, template, layer, scale) {
 
   const align = layer.align || 'left';
   ctx.textAlign = align;
-  ctx.fillStyle = layer.color || '#FFFFFF';
+  ctx.fillStyle = resolveInfographicColor(layer.color) || '#FFFFFF';
   const capHeight = ctx.measureText('H').actualBoundingBoxAscent || size * .7;
   const step = size * lineHeight;
   let firstBaseline;
@@ -18652,6 +18714,100 @@ function getInfographicLayerBounds(layer) {
   return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
 }
 
+// ─── INFOGRAPHIC BRAND THEME ─────────────────────────────────
+// Every infographic FI follows the Newsletter Brand. Templates use colour
+// tokens instead of hex: 'theme.primary' (pills, accents), 'theme.onPrimary'
+// (text on pills), 'theme.ink' (dark headings/numbers, a deep shade of the
+// brand), 'theme.bg' (shared light grey), 'theme.card', 'theme.muted',
+// 'theme.rule', 'theme.photoBg'. Add '@0.4' for transparency, e.g. 'theme.ink@0'.
+const INFOGRAPHIC_NEUTRALS = {
+  bg: '#EEEFF1',
+  card: '#FFFFFF',
+  muted: '#5F6368',
+  rule: '#D5D8DD',
+  photoBg: '#E3E5E8',
+  shadow: 'rgba(15,23,42,0.10)',
+};
+
+function hexToRgbTuple(hex) {
+  const value = String(hex || '').replace('#', '');
+  const full = value.length === 3 ? value.split('').map(c => c + c).join('') : value.padEnd(6, '0').slice(0, 6);
+  return [0, 2, 4].map(i => parseInt(full.slice(i, i + 2), 16) || 0);
+}
+
+function mixHex(a, b, amount) {
+  const x = hexToRgbTuple(a);
+  const y = hexToRgbTuple(b);
+  return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * amount).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+function hexLuminance(hex) {
+  const [r, g, b] = hexToRgbTuple(hex).map(v => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+let infographicThemeCache = { key: '', theme: null };
+function getInfographicTheme() {
+  const brand = getNewsletterBrand(state.newsletterBrand);
+  if (infographicThemeCache.key === brand.id) return infographicThemeCache.theme;
+  const fi = brand.fi || {};
+  const primary = fi.primary || brand.background || '#0A7DFA';
+  const onPrimary = fi.onPrimary || brand.foreground || '#FFFFFF';
+  // Ink: the brand's darker colour, deepened so headings and numbers read
+  // strongly on white cards (e.g. Golf green → deep green, ES blue → navy).
+  const darker = hexLuminance(primary) <= hexLuminance(onPrimary) ? primary : onPrimary;
+  const ink = fi.ink || (hexLuminance(darker) < 0.05 ? darker : mixHex(darker, '#000000', 0.55));
+  // Strong: the brand colour when it reads on white (contrast ≥ 3), else ink.
+  const strong = (1.05 / (hexLuminance(primary) + 0.05)) >= 3 ? primary : ink;
+  const secondary = fi.secondary || ink;
+  const onSecondary = fi.onSecondary || (hexLuminance(secondary) > 0.45 ? '#111418' : '#FFFFFF');
+  const theme = { ...INFOGRAPHIC_NEUTRALS, primary, onPrimary, ink, strong, secondary, onSecondary, accent: brand.accent || primary };
+  infographicThemeCache = { key: brand.id, theme };
+  return theme;
+}
+
+function resolveInfographicColor(value) {
+  if (typeof value !== 'string' || !value.startsWith('theme.')) return value;
+  const match = value.match(/^theme\.(\w+)(?:@([\d.]+))?$/);
+  if (!match) return value;
+  const color = getInfographicTheme()[match[1]];
+  if (!color) return value;
+  if (match[2] == null) return color;
+  if (!color.startsWith('#')) return color;
+  const [r, g, b] = hexToRgbTuple(color);
+  return `rgba(${r},${g},${b},${match[2]})`;
+}
+
+// SVG icons can be recoloured to the brand: recolor: { '#003008': 'theme.ink' }.
+const infographicSvgText = new Map();
+const infographicRecolored = new Map();
+function getRecoloredInfographicImage(src, recolor) {
+  const pairs = Object.entries(recolor || {}).map(([from, to]) => [from, resolveInfographicColor(to)]);
+  const key = src + '|' + pairs.map(pair => pair.join('>')).join(',');
+  const cached = infographicRecolored.get(key);
+  if (cached) return cached.complete && cached.naturalWidth ? cached : null;
+  const build = text => {
+    let out = text;
+    pairs.forEach(([from, to]) => { out = out.split(new RegExp(from.replace('#', '#'), 'gi')).join(to); });
+    const img = new Image();
+    img.onload = () => { if (isInfographicAsset()) render(); };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(out);
+    infographicRecolored.set(key, img);
+  };
+  if (infographicSvgText.has(src)) build(infographicSvgText.get(src));
+  else if (!infographicSvgText.has(src + '#loading')) {
+    infographicSvgText.set(src + '#loading', true);
+    fetch(src).then(response => response.text()).then(text => {
+      infographicSvgText.set(src, text);
+      build(text);
+    }).catch(() => {});
+  }
+  return null;
+}
+
 // Flow layout: a layer with flowAfter: '<id>' starts flowGap px to the right of
 // where that layer actually ended (e.g. result pills of varying width, a unit
 // after a number). Extents are recorded as layers draw, in canvas units.
@@ -18675,7 +18831,7 @@ function recordInfographicExtent(layer, left, right) {
 function createInfographicGradient(ctx, gradientSpec, scale) {
   const g = gradientSpec;
   const gradient = ctx.createLinearGradient(g.from[0] * scale, g.from[1] * scale, g.to[0] * scale, g.to[1] * scale);
-  g.stops.forEach(([offset, color]) => gradient.addColorStop(offset, color));
+  g.stops.forEach(([offset, color]) => gradient.addColorStop(offset, resolveInfographicColor(color)));
   return gradient;
 }
 
@@ -18688,7 +18844,7 @@ function drawInfographicRect(ctx, layer, scale) {
     // shadow: { blur, x, y, color } in design px. Canvas shadows ignore the
     // current transform, so scale them by it (the preview's density).
     const device = ctx.getTransform?.().a || 1;
-    ctx.shadowColor = layer.shadow.color || 'rgba(0,0,0,.2)';
+    ctx.shadowColor = resolveInfographicColor(layer.shadow.color) || 'rgba(0,0,0,.2)';
     ctx.shadowBlur = (layer.shadow.blur || 0) * scale * device;
     ctx.shadowOffsetX = (layer.shadow.x || 0) * scale * device;
     ctx.shadowOffsetY = (layer.shadow.y || 0) * scale * device;
@@ -18697,12 +18853,12 @@ function drawInfographicRect(ctx, layer, scale) {
     ctx.fillStyle = createInfographicGradient(ctx, layer.gradient, scale);
     ctx.fill();
   } else if (layer.fill) {
-    ctx.fillStyle = layer.fill;
+    ctx.fillStyle = resolveInfographicColor(layer.fill);
     ctx.fill();
   }
   ctx.shadowColor = 'rgba(0,0,0,0)';
   if (layer.stroke) {
-    ctx.strokeStyle = layer.stroke;
+    ctx.strokeStyle = resolveInfographicColor(layer.stroke);
     ctx.lineWidth = (layer.strokeWidth || 1) * scale;
     ctx.stroke();
   }
@@ -18723,7 +18879,7 @@ function drawInfographicPath(ctx, template, layer, scale) {
   ctx.beginPath();
   layer.points.forEach(([px, py], index) => ctx[index ? 'lineTo' : 'moveTo'](px * scale, py * scale));
   if (layer.closed || layer.outside) ctx.closePath();
-  ctx.strokeStyle = layer.stroke || '#FFFFFF';
+  ctx.strokeStyle = resolveInfographicColor(layer.stroke) || '#FFFFFF';
   ctx.lineWidth = (layer.strokeWidth || 1) * scale;
   ctx.lineJoin = 'miter';
   ctx.stroke();
@@ -18778,7 +18934,9 @@ function drawInfographicPhoto(ctx, template, layer, scale) {
 
 function paintInfographicPhoto(ctx, template, layer, scale, clipToShape) {
   const uploaded = layer.main ? state.photo : getInfographicPhoto(template, layer)?.img;
-  const placeholder = !uploaded && layer.placeholder ? getReadyInfographicImage(layer.placeholder.src) : null;
+  const placeholder = !uploaded && layer.placeholder
+    ? (layer.placeholder.recolor ? getRecoloredInfographicImage(layer.placeholder.src, layer.placeholder.recolor) : getReadyInfographicImage(layer.placeholder.src))
+    : null;
   ctx.save();
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
@@ -18793,7 +18951,7 @@ function paintInfographicPhoto(ctx, template, layer, scale, clipToShape) {
   const bh = bounds.h * scale;
   recordInfographicExtent(layer, bx, bx + bw);
   if (layer.fill || (!uploaded && !placeholder && layer.emptyFill)) {
-    ctx.fillStyle = layer.fill || layer.emptyFill;
+    ctx.fillStyle = resolveInfographicColor(layer.fill || layer.emptyFill);
     ctx.fillRect(bx, by, bw, bh);
   }
   if (layer.main && uploaded) {
@@ -18841,7 +18999,7 @@ function drawInfographic(ctx, W, H, scale) {
   if (!template) return;
   ensureInfographicFonts(template);
   ensureInfographicImages(template);
-  ctx.fillStyle = template.background || '#FFFFFF';
+  ctx.fillStyle = resolveInfographicColor(template.background) || '#FFFFFF';
   ctx.fillRect(0, 0, W, H);
   infographicFlowExtents = new Map();
   template.layers.forEach(layer => {
@@ -18851,7 +19009,7 @@ function drawInfographic(ctx, W, H, scale) {
       ctx.translate(infographicFlowDx, 0);
     }
     if (layer.type === 'image') {
-      const img = getReadyInfographicImage(layer.src);
+      const img = layer.recolor ? getRecoloredInfographicImage(layer.src, layer.recolor) : getReadyInfographicImage(layer.src);
       const ix = (layer.x || 0) * scale;
       const iw = (layer.w || template.width) * scale;
       recordInfographicExtent(layer, ix, ix + iw);
@@ -19286,6 +19444,17 @@ function buildInfographicSwatchField(template, layer) {
   chosenName.className = 'ig-swatch-name';
   const sync = () => {
     const current = getInfographicSwatch(template, layer.id);
+    // Brand swatches change colour when the Newsletter Brand changes.
+    const fresh = getInfographicSwatchOptions(layer);
+    buttons.forEach(({ button, option }) => {
+      const latest = fresh.find(item => item.key === option.key);
+      if (latest && (latest.fill !== option.fill || latest.text !== option.text)) {
+        option.fill = latest.fill;
+        option.text = latest.text;
+        button.style.setProperty('--swatch-fill', option.fill);
+        button.style.setProperty('--swatch-text', option.text);
+      }
+    });
     buttons.forEach(({ button, option }) => {
       const on = option.key === current?.key;
       button.classList.toggle('is-active', on);

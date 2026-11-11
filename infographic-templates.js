@@ -76,13 +76,18 @@
   // ── Golf card designs (Figma section 2188:941): drawn at 960 × 640, 1×.
   const GW = 960;
   const GH = 640;
-  const GOLF_BG = { type: 'image', src: DIR + 'golf-bg.webp' };
-  const CARD_SHADOW = { blur: 18, y: 6, color: 'rgba(0,48,8,0.12)' };
-  const GREEN = '#008F00';
-  const INK = '#090A0C';
-  const DEEP = '#003008';
-  const MUTED = '#5F655A';
-  const RULE = '#C6D3B8';
+  // Colours come from the chosen Newsletter Brand (see "INFOGRAPHIC BRAND
+  // THEME" in index.html): primary = pills/accents, onPrimary = pill text,
+  // ink = deep brand shade for headings and numbers, strong = brand colour that
+  // reads on white. Every FI shares one light-grey background (theme.bg).
+  const CARD_SHADOW = { blur: 18, y: 6, color: 'theme.shadow' };
+  const GREEN = 'theme.primary';
+  const INK = '#111418';
+  const DEEP = 'theme.ink';
+  const MUTED = 'theme.muted';
+  const RULE = 'theme.rule';
+  const STRONG = 'theme.strong';
+  const PHOTO_BG = 'theme.photoBg';
   const RC = 'Roboto Condensed';
   const rc = (weight, size, minSize) => ({ family: RC, weight, size, minSize });
   // Roboto Condensed with line-height 1: the baseline sits 0.8418 em below the line top.
@@ -90,7 +95,7 @@
   // A pill: solid box hugging one line of white uppercase text.
   const pill = (fill, size, padX, padY) => ({
     uppercase: true,
-    color: '#FFFFFF',
+    color: 'theme.onPrimary',
     font: rc(900, size, Math.max(12, Math.round(size * 0.55))),
     box: { fill, padL: padX, padR: padX, height: size + padY * 2, baselineFromBottom: size + padY * 2 - padY - 0.8418 * size },
   });
@@ -101,7 +106,7 @@
   // the pill and text colours from.
   const framePill = (h, fill, swatch) => ({
     uppercase: true,
-    color: '#FFFFFF',
+    color: 'theme.onPrimary',
     font: { size: h * (130 / 122) * 0.955, minSize: Math.round(h * 0.55), scaleX: 1 },
     box: { fill, padL: h * (18.4 / 122), padR: h * (21.88 / 122), height: h, baselineFromBottom: h * (5.15 / 34) },
     ...(swatch ? { swatch } : {}),
@@ -120,7 +125,7 @@
     const columns = [0, 83, 166].map(offset => x + 16 + offset);
     return [
       { type: 'rect', x, y: top, w: 280, h: 528, radius: 12, fill: '#FFFFFF', shadow: CARD_SHADOW },
-      { type: 'photo', id: `p${n}Photo`, label: 'Photo', group, x, y: top, w: 280, h: 380, radius: [12, 12, 0, 0], fill: '#E4EBD8', placeholder: photo },
+      { type: 'photo', id: `p${n}Photo`, label: 'Photo', group, x, y: top, w: 280, h: 380, radius: [12, 12, 0, 0], fill: PHOTO_BG, placeholder: photo },
       { type: 'text', id: `p${n}Name`, label: 'Name', group, default: name, x: x + 16, y: 440, w: 248, h: 38, maxLength: 40, ...pill(GREEN, 28, 12, 5) },
       { type: 'rect', x: x + 16 + 82, y: 495, w: 1, h: 56, fill: RULE },
       { type: 'rect', x: x + 16 + 165, y: 495, w: 1, h: 56, fill: RULE },
@@ -134,7 +139,7 @@
     const group = `Winner ${n}`;
     return [
       { type: 'rect', x, y: 40, w: 280, h: 539, radius: 12, fill: '#FFFFFF', shadow: CARD_SHADOW },
-      { type: 'photo', id: `w${n}Photo`, label: 'Photo', group, x, y: 40, w: 280, h: 400, radius: [12, 12, 0, 0], fill: '#E4EBD8', placeholder: photo },
+      { type: 'photo', id: `w${n}Photo`, label: 'Photo', group, x, y: 40, w: 280, h: 400, radius: [12, 12, 0, 0], fill: PHOTO_BG, placeholder: photo },
       // FrameUp's own pill: Acumin Post black, post-pill padding, stacked flush.
       { type: 'text', id: `w${n}First`, label: 'First name', group, default: first, x: x + 14, y: 452, w: 150, h: 34, maxLength: 20, ...FRAMEUP_PILL },
       { type: 'text', id: `w${n}Last`, label: 'Last name', group, default: last, x: x + 14, y: 452 + FRAMEUP_PILL_STEP, w: 150, h: 34, maxLength: 20, ...FRAMEUP_PILL },
@@ -154,9 +159,9 @@
   const fieldColumn = (k, x, palette, side, titles, players) => {
     const colorId = `c${k}Color`;
     const layers = [
-      { type: 'swatches', id: colorId, label: 'Pill colour', group: `${side} tournament`, options: 'Tennis', default: palette },
-      { type: 'text', id: `c${k}Title1`, label: 'Title line 1', group: `${side} tournament`, default: titles[0], x, y: 40, w: 420, h: 48, maxLength: 30, ...framePill(48, '#5A2A82', colorId) },
-      { type: 'text', id: `c${k}Title2`, label: 'Title line 2', group: `${side} tournament`, default: titles[1], x, y: 40 + pillStep(48), w: 420, h: 48, maxLength: 30, ...framePill(48, '#5A2A82', colorId) },
+      { type: 'swatches', id: colorId, label: 'Pill colour', group: `${side} tournament`, options: 'Tennis', brandOption: true, default: palette },
+      { type: 'text', id: `c${k}Title1`, label: 'Title line 1', group: `${side} tournament`, default: titles[0], x, y: 40, w: 420, h: 48, maxLength: 30, ...framePill(48, GREEN, colorId) },
+      { type: 'text', id: `c${k}Title2`, label: 'Title line 2', group: `${side} tournament`, default: titles[1], x, y: 40 + pillStep(48), w: 420, h: 48, maxLength: 30, ...framePill(48, GREEN, colorId) },
     ];
     players.forEach((player, j) => {
       const y = 156 + 140 * j;
@@ -164,12 +169,12 @@
       const idBase = `c${k}p${j + 1}`;
       layers.push(
         { type: 'rect', x, y, w: 420, h: 124, radius: 12, fill: '#FFFFFF', shadow: CARD_SHADOW },
-        { type: 'photo', id: `${idBase}Photo`, label: 'Photo', group, x, y, w: 128, h: 124, radius: [12, 0, 0, 12], fill: '#EEF3E6', placeholder: person(player.person, { x, y, w: 128, h: 124 }, 0.5, 0.45, 2.4) },
+        { type: 'photo', id: `${idBase}Photo`, label: 'Photo', group, x, y, w: 128, h: 124, radius: [12, 0, 0, 12], fill: PHOTO_BG, placeholder: person(player.person, { x, y, w: 128, h: 124 }, 0.5, 0.45, 2.4) },
         { type: 'text', id: `${idBase}Name`, label: 'Name', group, default: player.name, x: x + 144, y: y + 20.5, w: 260, h: 28, baseline: bl(y + 20.5, 28), uppercase: true, color: INK, font: rc(900, 28, 16), maxLength: 30 },
         { type: 'text', text: 'Last 3 Finishes', x: x + 144, y: y + 54.5, w: 200, h: 15, baseline: bl(y + 54.5, 15), color: MUTED, font: rc(600, 15, 15) },
         ...player.results.map((result, r) => ({
           type: 'text', id: `${idBase}R${r + 1}`, label: `Result ${r + 1}`, group, default: result,
-          x: x + 144, y: y + 75.5, w: 120, h: 28, maxLength: 6, ...framePill(28, '#5A2A82', colorId),
+          x: x + 144, y: y + 75.5, w: 120, h: 28, maxLength: 6, ...framePill(28, GREEN, colorId),
           ...(r ? { flowAfter: `${idBase}R${r}`, flowGap: 6 } : {}),
         })),
       );
@@ -242,9 +247,9 @@
       background: '#FFFFFF',
       layers: [
         { type: 'photo', id: 'photo', label: 'Photo', x: 0, y: 0, w: W, h: H, placeholder: person(PEOPLE.b, { x: 0, y: 0, w: W, h: H }, 0.5, 0.3, 1) },
-        { type: 'rect', x: 0, y: 0, w: W, h: H, gradient: { from: [0, 213.7 + EXTRA], to: [0, 338.2 + EXTRA], stops: [[0, 'rgba(16,61,16,0)'], [1, '#103D10']] } },
-        { type: 'text', id: 'line1', label: 'Headline line 1', default: 'How to Play', x: 106, y: 207 + EXTRA, w: 518, h: 50.63, uppercase: true, color: '#003008', letterSpacing: -0.739, font: { size: 60, minSize: 30, scaleX: 0.955 }, box: { fill: '#FFFFFF', padL: 6.167, padR: 5.482, height: 50.63, baselineFromBottom: 5.3 }, maxLength: 40 },
-        { type: 'text', id: 'line2', label: 'Headline line 2', default: 'the Island Green', x: 139, y: 257 + EXTRA, w: 485, h: 50.63, uppercase: true, color: '#003008', letterSpacing: -0.739, font: { size: 60, minSize: 30, scaleX: 0.955 }, box: { fill: '#FFFFFF', padL: 6.167, padR: 5.482, height: 50.63, baselineFromBottom: 5.3 }, maxLength: 40 },
+        { type: 'rect', x: 0, y: 0, w: W, h: H, gradient: { from: [0, 213.7 + EXTRA], to: [0, 338.2 + EXTRA], stops: [[0, 'theme.ink@0'], [1, DEEP]] } },
+        { type: 'text', id: 'line1', label: 'Headline line 1', default: 'How to Play', x: 106, y: 207 + EXTRA, w: 518, h: 50.63, uppercase: true, color: DEEP, letterSpacing: -0.739, font: { size: 60, minSize: 30, scaleX: 0.955 }, box: { fill: '#FFFFFF', padL: 6.167, padR: 5.482, height: 50.63, baselineFromBottom: 5.3 }, maxLength: 40 },
+        { type: 'text', id: 'line2', label: 'Headline line 2', default: 'the Island Green', x: 139, y: 257 + EXTRA, w: 485, h: 50.63, uppercase: true, color: DEEP, letterSpacing: -0.739, font: { size: 60, minSize: 30, scaleX: 0.955 }, box: { fill: '#FFFFFF', padL: 6.167, padR: 5.482, height: 50.63, baselineFromBottom: 5.3 }, maxLength: 40 },
       ],
     },
 
@@ -254,10 +259,9 @@
       label: 'Player Season Stats FI',
       width: GW,
       height: GH,
-      background: '#DDE5C9',
+      background: 'theme.bg',
       groups: ['Player 1', 'Player 2', 'Player 3', 'Column labels', ''],
       layers: [
-        GOLF_BG,
         ...seasonCard(1, 40, person(PEOPLE.a, { x: 40, y: 44, w: 280, h: 380 }), 'J.T. Poston', ['16', '02', '01']),
         ...seasonCard(2, 340, person(PEOPLE.b, { x: 340, y: 44, w: 280, h: 380 }), 'Eric Cole', ['17', '04', '0']),
         ...seasonCard(3, 640, person(PEOPLE.a, { x: 640, y: 44, w: 280, h: 380 }), 'Zach Johnson', ['03', '0', '0']),
@@ -269,10 +273,9 @@
       label: 'Weekend Winners FI',
       width: GW,
       height: GH,
-      background: '#DDE5C9',
+      background: 'theme.bg',
       groups: ['Winner 1', 'Winner 2', 'Winner 3'],
       layers: [
-        GOLF_BG,
         ...winnerCard(1, 40, person(PEOPLE.a, { x: 40, y: 40, w: 280, h: 400 }), 'Grant', 'Forrest', 'Open de France', { src: DIR + 'logo-dp-world-tour.webp', x: 40 + 188, y: 469.5, w: 78, h: 78, anchor: 'fill' }),
         ...winnerCard(2, 340, person(PEOPLE.b, { x: 340, y: 40, w: 280, h: 400 }), 'Miyu', 'Yamashita', 'Aramco Korea Championship', { src: DIR + 'logo-let.webp', x: 340 + 213.89, y: 476.5, w: 52.11, h: 64, anchor: 'fill' }),
         ...winnerCard(3, 640, person(PEOPLE.a, { x: 640, y: 40, w: 280, h: 400 }), 'Vaughn', 'Taylor', 'Constellation Furyk & Friends', { src: DIR + 'logo-pga-tour-champions.webp', x: 640 + 195.31, y: 487.66, w: 70.87, h: 41.67, anchor: 'fill' }),
@@ -283,16 +286,15 @@
       label: 'Tournament Fields FI',
       width: GW,
       height: GH,
-      background: '#DDE5C9',
+      background: 'theme.bg',
       groups: ['Left tournament', 'Left player 1', 'Left player 2', 'Left player 3', 'Right tournament', 'Right player 1', 'Right player 2', 'Right player 3'],
       layers: [
-        GOLF_BG,
-        ...fieldColumn(1, 40, 'Wimbledon', 'Left', ['Amundi Evian', 'Championship'], [
+        ...fieldColumn(1, 40, 'Brand colour', 'Left', ['Amundi Evian', 'Championship'], [
           { person: PEOPLE.a, name: 'Nelly Korda', results: ['T43', 'T26', 'T9'] },
           { person: PEOPLE.b, name: 'Jeeno Thitikul', results: ['02', 'MC', 'T9'] },
           { person: PEOPLE.a, name: 'Haeran Ryu', results: ['MC', '05', 'T42'] },
         ]),
-        ...fieldColumn(2, 500, 'US Open', 'Right', ['Genesis', 'Scottish Open'], [
+        ...fieldColumn(2, 500, 'Brand second', 'Right', ['Genesis', 'Scottish Open'], [
           { person: PEOPLE.b, name: 'Chris Gotterup', results: ['Win', 'MC', 'DNP'] },
           { person: PEOPLE.a, name: 'Ludvig Aberg', results: ['T8', 'T4', 'MC'] },
           { person: PEOPLE.b, name: 'Rory McIlroy', results: ['T2', 'T4', 'Win'] },
@@ -304,27 +306,26 @@
       label: 'Defending Champion FI',
       width: GW,
       height: GH,
-      background: '#DDE5C9',
+      background: 'theme.bg',
       groups: ['Champion', 'Course stats', 'Weather'],
       layers: [
-        GOLF_BG,
-        { type: 'rect', x: 40, y: 40, w: 380, h: 340, radius: 12, fill: '#E4EBD8', shadow: CARD_SHADOW },
+        { type: 'rect', x: 40, y: 40, w: 380, h: 340, radius: 12, fill: PHOTO_BG, shadow: CARD_SHADOW },
         { type: 'photo', id: 'photo', label: 'Photo', group: 'Champion', main: true, x: 40, y: 40, w: 380, h: 340, radius: 12, placeholder: person(PEOPLE.b, { x: 40, y: 40, w: 380, h: 340 }, 0.5, 0.3, 1.1) },
         { type: 'text', id: 'name', label: 'Champion', group: 'Champion', default: 'Ben Griffin', x: 460, y: 40, w: 480, h: 80, maxLength: 30, ...pill(GREEN, 64, 18, 8) },
         { type: 'text', id: 'subtitle', label: 'Subtitle', group: 'Champion', default: 'Defending Champion', x: 460, y: 134, w: 460, h: 26, baseline: bl(134, 26), color: INK, font: rc(600, 26, 16), maxLength: 40 },
-        { type: 'rect', x: 460, y: 174, w: 460, h: 1, fill: 'rgba(0,48,8,0.3)' },
+        { type: 'rect', x: 460, y: 174, w: 460, h: 1, fill: 'theme.ink@0.25' },
         // Labels first, then values, so each set sits side by side in the panel.
         ...COURSE_STATS.map(([x, w, label], i) => ({ type: 'text', id: `stat${i + 1}Label`, label: `Stat ${i + 1} label`, group: 'Course stats', default: label, x, y: 237, w, h: 16, baseline: bl(237, 16), color: MUTED, font: rc(600, 16, 10), maxLength: 18 })),
         ...COURSE_STATS.map(([x, w, label, value], i) => ({ type: 'text', id: `stat${i + 1}`, label: `Stat ${i + 1}`, labelFrom: `stat${i + 1}Label`, group: 'Course stats', default: value, x, y: 195, w, h: 40, baseline: bl(195, 40), color: DEEP, font: rc(700, 40, 20), maxLength: 12 })),
         { type: 'rect', x: 515, y: 195, w: 1, h: 64, fill: RULE },
         { type: 'rect', x: 635, y: 195, w: 1, h: 64, fill: RULE },
         { type: 'rect', x: 769, y: 195, w: 1, h: 64, fill: RULE },
-        { type: 'rect', x: 40, y: 420, w: 880, h: 180, radius: 12, fill: 'rgba(255,255,255,0.75)' },
-        { type: 'photo', id: 'weatherIcon', label: 'Weather icon', group: 'Weather', x: 68, y: 469.6, w: 84.31, h: 81.43, fit: 'contain', placeholder: { src: DIR + 'weather-sunny.svg', x: 68.16, y: 469.77, w: 84, h: 81.1, anchor: 'fill' } },
-        { type: 'text', id: 'condition', label: 'Conditions', group: 'Weather', default: 'Mostly Sunny', x: 176.31, y: 468, w: 321.69, h: 30, baseline: bl(468, 30), uppercase: true, color: GREEN, font: rc(900, 30, 18), maxLength: 30 },
+        { type: 'rect', x: 40, y: 420, w: 880, h: 180, radius: 12, fill: 'theme.card' },
+        { type: 'photo', id: 'weatherIcon', label: 'Weather icon', group: 'Weather', x: 68, y: 469.6, w: 84.31, h: 81.43, fit: 'contain', placeholder: { src: DIR + 'weather-sunny.svg', x: 68.16, y: 469.77, w: 84, h: 81.1, anchor: 'fill', recolor: { '#003008': DEEP } } },
+        { type: 'text', id: 'condition', label: 'Conditions', group: 'Weather', default: 'Mostly Sunny', x: 176.31, y: 468, w: 321.69, h: 30, baseline: bl(468, 30), uppercase: true, color: STRONG, font: rc(900, 30, 18), maxLength: 30 },
         { type: 'text', id: 'detail', label: 'Details', group: 'Weather', default: 'With an average 30% chance of rain, and winds averaging 6.8 to 11.3 MPH', x: 176.31, y: 508.6, w: 321.69, h: 48, maxLines: 2, lineHeight: 1.2, color: INK, font: rc(500, 20, 14), maxLength: 120 },
         { type: 'rect', x: 522, y: 455, w: 1, h: 110, fill: RULE },
-        { type: 'image', src: DIR + 'weather-thermo.svg', x: 565.86, y: 483.77, w: 27.25, h: 54.77 },
+        { type: 'image', src: DIR + 'weather-thermo.svg', x: 565.86, y: 483.77, w: 27.25, h: 54.77, recolor: { '#003008': DEEP, '#008F00': STRONG } },
         { type: 'text', id: 'temp', label: 'Temperature', group: 'Weather', default: '70.8° – 88.3°', x: 635, y: 488, w: 260, h: 44, baseline: bl(488, 44), color: DEEP, font: rc(700, 44, 24), maxLength: 20 },
         { type: 'text', id: 'unit', label: 'Unit', group: 'Weather', default: 'F', x: 879, y: 503, w: 40, h: 26, baseline: bl(488, 44), color: DEEP, font: rc(600, 26, 14), maxLength: 3, flowAfter: 'temp', flowGap: 6 },
       ],
@@ -350,7 +351,7 @@
       label: 'Three Panel Collage FI',
       width: GW,
       height: GH,
-      background: '#0B1F0B',
+      background: DEEP,
       groups: ['Left player', 'Middle player', 'Right player'],
       layers: [
         ...[
@@ -361,8 +362,8 @@
           // Badge centred in its panel.
           const bx = x + (316 - 168.66) / 2;
           return [
-            { type: 'photo', id: `p${i + 1}Photo`, label: 'Photo', group, x, y: 0, w: 316, h: GH, fill: '#0B1F0B', placeholder: person(p, { x, y: 0, w: 316, h: GH }, 0.5, 0.25, 1.15) },
-            { type: 'rect', x, y: 0, w: 316, h: GH, gradient: { from: [0, 402.9], to: [0, 637.1], stops: [[0, 'rgba(16,61,16,0)'], [1, '#000000']] } },
+            { type: 'photo', id: `p${i + 1}Photo`, label: 'Photo', group, x, y: 0, w: 316, h: GH, fill: DEEP, placeholder: person(p, { x, y: 0, w: 316, h: GH }, 0.5, 0.25, 1.15) },
+            { type: 'rect', x, y: 0, w: 316, h: GH, gradient: { from: [0, 402.9], to: [0, 637.1], stops: [[0, 'theme.ink@0'], [1, '#000000']] } },
             { type: 'photo', id: `p${i + 1}Logo`, label: 'Logo', group, x: bx, y: 448.85, w: 168.66, h: 167.15, shape: 'circle', fill: '#FFFFFF', fit: 'contain', fitPadding: 18, placeholder: { src: DIR + badge, x: bx, y: 448.85, w: 168.66, h: 167.15, anchor: 'fill' } },
           ];
         }),
@@ -379,9 +380,9 @@
         { type: 'photo', id: 'right', label: 'Right photo', x: 481.88, y: 0, w: 478.12, h: GH, fill: '#FFFFFF', placeholder: person(PEOPLE.b, { x: 481.88, y: 0, w: 478.12, h: GH }, 0.55, 0.27, 1.15) },
         { type: 'rect', x: 476.24, y: 0, w: 7.53, h: GH, fill: '#FFFFFF' },
         { type: 'photo', id: 'logo1', label: 'Top logo', x: 353.88, y: 52.71, w: 248.77, h: 248.77, shape: 'circle', fill: '#FFFFFF', fit: 'contain', fitPadding: 40, placeholder: { src: DIR + 'logo-pga-tour.webp', x: 416.4, y: 93.99, w: 130.04, h: 166.34, anchor: 'fill' } },
-        { type: 'rect', x: 355.56, y: 54.39, w: 245.41, h: 245.41, shape: 'circle', stroke: '#2F832B', strokeWidth: 3.36 },
+        { type: 'rect', x: 355.56, y: 54.39, w: 245.41, h: 245.41, shape: 'circle', stroke: GREEN, strokeWidth: 3.36 },
         { type: 'photo', id: 'logo2', label: 'Bottom logo', x: 355.76, y: 336.94, w: 248.77, h: 248.77, shape: 'circle', fill: '#FFFFFF', fit: 'contain', fitPadding: 40, placeholder: { src: DIR + 'logo-let.webp', x: 384.72, y: 347.46, w: 188.39, h: 231.35, anchor: 'fill' } },
-        { type: 'rect', x: 357.44, y: 338.62, w: 245.41, h: 245.41, shape: 'circle', stroke: '#2F832B', strokeWidth: 3.36 },
+        { type: 'rect', x: 357.44, y: 338.62, w: 245.41, h: 245.41, shape: 'circle', stroke: GREEN, strokeWidth: 3.36 },
       ],
     },
   ];

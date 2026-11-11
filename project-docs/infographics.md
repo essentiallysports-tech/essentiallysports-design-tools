@@ -74,6 +74,29 @@ FI, Four Photo Sequence FI, Headline Photo FI.
 
 Section 2188:941 (golf cards, 960 × 640): Player Season Stats FI, Weekend
 Winners FI, Tournament Fields FI, Defending Champion FI, Player Quote FI, Three
-Panel Collage FI, Two Up Collage FI. The card designs share `golf-bg.webp` (the
-gradient plus texture, composed once) and Roboto Condensed, which the page
-already loads.
+Panel Collage FI, Two Up Collage FI.
+
+## Brands
+
+Every infographic FI follows the **Newsletter Brand** picker (shown on all FIs).
+Templates never hard-code brand colours; they use tokens resolved from the
+brand in `NEWSLETTER_BRANDS` (index.html, "INFOGRAPHIC BRAND THEME"):
+
+| Token | Meaning |
+|---|---|
+| `theme.primary` / `theme.onPrimary` | brand colour and the text on it (pills, rings, accents) |
+| `theme.ink` | deep shade of the brand for headings and numbers |
+| `theme.strong` | brand colour if it reads on white, else ink (accent text) |
+| `theme.bg` | shared light grey background (same for all brands) |
+| `theme.card`, `theme.muted`, `theme.rule`, `theme.photoBg`, `theme.shadow` | neutrals |
+
+Add `@0.4` for transparency (`theme.ink@0`). SVG icons can be recoloured with
+`recolor: { "#003008": "theme.ink" }`. A colour-choice field
+(`type: "swatches"`, `brandOption: true`) offers Brand colour, Brand second (the brand's second pill colour) and a
+Social sport's variations (e.g. Tennis). To add a brand, add it to
+`NEWSLETTER_BRANDS` once; every FI picks it up.
+
+FI colours come from each brand's `fi` palette (primary + text, second + text,
+ink), copied from the Newsletter Hub pills (essentiallysports.com/newsletter-hub)
+and each newsletter's page. Brands without `fi` fall back to the header colours
+(`background` / `foreground`).
