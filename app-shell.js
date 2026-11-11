@@ -28,6 +28,7 @@
     trophy: icon('<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M9 20h6"/>'),
     search: icon('<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/>'),
     collapse: icon('<rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M9 4v16"/><path d="m15 10-2 2 2 2"/>'),
+    news: icon('<path d="M4 10.5v3a1 1 0 0 0 1 1h2.5l5.5 4V5.5l-5.5 4H5a1 1 0 0 0-1 1z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/>'),
   };
 
   // One source of truth for navigation, breadcrumbs and the command palette.
@@ -69,6 +70,7 @@
         { id: 'social-guidelines', label: 'Social Guidelines', href: 'index.html#social-guidelines', icon: 'guide', sidebar: false },
         { id: 'video-guidelines', label: 'Video Guidelines', href: 'index.html#video-guidelines', icon: 'video', sidebar: false },
         { id: 'faq', label: 'FAQ', href: 'index.html#faq', icon: 'faq', sidebar: false },
+        { id: 'whats-new', label: "What's new", short: 'New', href: '#whats-new', icon: 'news', palette: false, action: 'whats-new' },
         { id: 'feedback', label: 'Tool Feedback', short: 'Feedback', href: 'tool-feedback.html', icon: 'feedback' },
         { id: 'library', label: 'UI Library', href: 'design-system.html', icon: 'library', sidebar: false },
       ],
@@ -152,8 +154,121 @@
 
     aside.querySelector('.es-sidebar__collapse').addEventListener('click', () => setCollapsed(!document.documentElement.classList.contains('es-sidebar-collapsed'), true));
     aside.querySelector('[data-shell-palette]').addEventListener('click', openPalette);
+    const news = aside.querySelector('[data-shell-id="whats-new"]');
+    if (news) {
+      news.addEventListener('click', event => { event.preventDefault(); openWhatsNew(); });
+      syncWhatsNewDot();
+    }
     return aside;
   }
+
+  // ─── What's new ────────────────────────────────────────────────────────
+  // Newest first. `templates` (workspace + dropdown value) get a "New" tag in
+  // the template dropdowns and picker for 30 days from `date`.
+  const WHATS_NEW = [
+    { id: '2026-11-11-basics', date: '2026-11-11', items: [
+      ['Your work is saved as you go', 'Refresh or close the tab and everything comes back: every slide, layout and newsletter asset, with photos. "Start fresh" clears it.'],
+      ['Reopen past designs', 'The clock button next to Undo lists your last 30 exports. In Gallery, "Open in editor" opens a copy of posts you exported on this browser.'],
+      ['Browse templates with previews', '"Browse" next to Post Type and Newsletter Asset shows every template as a picture, with search.'],
+      ['Check before export', 'Export warns when sample photos, sample text or an empty headline are still in the design.'],
+      ['Spell check', 'Headlines, quotes and names are now spell checked. Numbers, stats and links are not.'],
+      ['Keyboard shortcuts', 'Ctrl/⌘ + E exports, Ctrl/⌘ + Shift + L copies the link. Press ? to see them all.'],
+      ['Newsletter brand colours', 'Infographic FIs use each newsletter\'s colours from the Newsletter Hub, on one light grey background.'],
+    ] },
+    { id: '2026-11-10-golf-fis', date: '2026-11-10', items: [
+      ['7 golf infographic FIs', 'Player Season Stats, Weekend Winners, Tournament Fields, Defending Champion, Player Quote and two collages, in Newsletter.'],
+    ], templates: [
+      ['newsletter', 'ig-player-season-stats'], ['newsletter', 'ig-weekend-winners'], ['newsletter', 'ig-tournament-fields'],
+      ['newsletter', 'ig-defending-champion'], ['newsletter', 'ig-player-quote'], ['newsletter', 'ig-three-panel-collage'], ['newsletter', 'ig-two-up-collage'],
+    ] },
+    { id: '2026-11-09-social', date: '2026-11-09', items: [
+      ['Multiple Tweets', 'Up to three tweets on one Social post, over your photo.'],
+      ['Golf and Neutral colours', 'Golf is a Social sport with its own colour sets, plus a Neutral option.'],
+      ['Essentially W NCAA', 'New brand in Video FI, Trivia and the widgets.'],
+    ], templates: [['instagram', 'twitter-multi']] },
+    { id: '2026-11-07-widgets', date: '2026-11-07', items: [
+      ['Financial Ticker and List widgets', 'Three new HTML widgets for newsletters: Financial Ticker, List Widget and List Widget V2.'],
+    ], templates: [['newsletter', 'ticker'], ['newsletter', 'list'], ['newsletter', 'list2']] },
+  ];
+  const WHATS_NEW_SEEN_KEY = 'frameup.whatsNew.seen';
+  const NEW_FOR_DAYS = 30;
+
+  function whatsNewSeen() {
+    try { return window.localStorage.getItem(WHATS_NEW_SEEN_KEY) || ''; } catch (error) { return WHATS_NEW[0].id; }
+  }
+
+  function syncWhatsNewDot() {
+    const link = document.querySelector('[data-shell-id="whats-new"]');
+    if (!link) return;
+    const unread = whatsNewSeen() !== WHATS_NEW[0].id;
+    link.classList.toggle('has-unread', unread);
+    link.querySelector('.es-nav-item__dot')?.remove();
+    if (unread) link.insertAdjacentHTML('beforeend', '<span class="es-nav-item__dot" aria-label="Unread"></span>');
+  }
+
+  function isNewTemplate(workspace, value) {
+    const cutoff = Date.now() - NEW_FOR_DAYS * 24 * 60 * 60 * 1000;
+    return WHATS_NEW.some(entry => new Date(`${entry.date}T12:00:00`).getTime() >= cutoff
+      && (entry.templates || []).some(([ws, id]) => ws === workspace && id === value));
+  }
+
+  function openWhatsNew() {
+    document.querySelectorAll('.whats-new-dialog').forEach(stale => stale.remove());
+    const dialog = document.createElement('dialog');
+    dialog.className = 'es-dialog whats-new-dialog';
+    dialog.setAttribute('aria-labelledby', 'whats-new-title');
+    const format = date => new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
+    dialog.innerHTML = `
+      <div class="whats-new-head">
+        <h2 id="whats-new-title">What's new</h2>
+        <button class="whats-new-close" type="button" aria-label="Close">${'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'}</button>
+      </div>
+      <div class="whats-new-list"></div>`;
+    const list = dialog.querySelector('.whats-new-list');
+    const seen = whatsNewSeen();
+    let reachedSeen = false;
+    WHATS_NEW.forEach(entry => {
+      if (entry.id === seen) reachedSeen = true;
+      const section = document.createElement('section');
+      section.className = 'whats-new-entry';
+      if (!reachedSeen && seen) section.classList.add('is-unread');
+      const date = document.createElement('h3');
+      date.textContent = format(entry.date);
+      if (section.classList.contains('is-unread')) date.insertAdjacentHTML('beforeend', '<span class="es-badge es-badge--new">New</span>');
+      const items = document.createElement('ul');
+      entry.items.forEach(([title, text]) => {
+        const item = document.createElement('li');
+        const strong = document.createElement('strong');
+        strong.textContent = title;
+        const copy = document.createElement('span');
+        copy.textContent = text;
+        item.append(strong, copy);
+        items.appendChild(item);
+      });
+      section.append(date, items);
+      list.appendChild(section);
+    });
+    dialog.querySelector('.whats-new-close').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+    dialog.addEventListener('close', () => dialog.remove());
+    document.body.appendChild(dialog);
+    dialog.showModal();
+    try { window.localStorage.setItem(WHATS_NEW_SEEN_KEY, WHATS_NEW[0].id); } catch (error) { /* per browser only */ }
+    syncWhatsNewDot();
+  }
+
+  // "New" tag on recently added templates in the editor's dropdowns.
+  function tagNewTemplates() {
+    [['instagram', 'instagram-post-type-select'], ['newsletter', 'newsletter-asset-select']].forEach(([workspace, id]) => {
+      const select = document.getElementById(id);
+      if (!select) return;
+      [...select.options].forEach(option => {
+        if (!option.dataset.tag && isNewTemplate(workspace, option.value)) option.dataset.tag = 'new';
+      });
+    });
+    try { if (typeof window.syncAllCustomSelects === 'function') window.syncAllCustomSelects(); } catch (error) { /* labels only */ }
+  }
+  window.FrameUpWhatsNew = Object.freeze({ open: openWhatsNew, isNewTemplate, entries: WHATS_NEW });
 
   // Collapsed state is remembered separately for editors and for other pages.
   function collapseKey() {
@@ -456,7 +571,7 @@
   }
 
   // site-chrome.js builds the account menu first; wait for it.
-  function start() { setTimeout(boot, 0); setTimeout(startTickerIfAuthed, 0); }
+  function start() { setTimeout(boot, 0); setTimeout(startTickerIfAuthed, 0); setTimeout(tagNewTemplates, 0); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
   desktop.addEventListener?.('change', event => { if (event.matches) boot(); });

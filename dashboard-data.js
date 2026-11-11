@@ -1155,6 +1155,7 @@
   }
 
   async function recordDesignExport(payload = {}) {
+    const design = payload.design && typeof payload.design === 'object' ? payload.design : null;
     const user = await getCurrentUser();
     const designs = readDesigns();
     const createdAt = new Date().toISOString();
@@ -1197,7 +1198,7 @@
     if (task.previewDataUrl) task.metadata = { ...task.metadata, previewPath: fullPreviewPath(task.id) };
     writeTasks(mergeTasks([task], readTasks()).slice(0, 750));
     queuePendingTask(task);
-    await upsertSupabaseTask(task)
+    await upsertSupabaseTask(design ? { ...task, metadata: { ...task.metadata, design } } : task)
       .then(saved => {
         if (saved) {
           removePendingTask(task.id);
@@ -1564,6 +1565,8 @@
       creator: cleanString(item.creator_name || item.creatorName || ''),
       filename: cleanString(item.filename || ''),
       outputSize: cleanString(item.output_size || item.outputSize || item.metadata?.outputSize || ''),
+      workspace: cleanString(item.workspace || GALLERY_WORKSPACE),
+      hasDesign: item.has_design === true || item.hasDesign === true || Boolean(item.metadata?.design),
       exportedAt: cleanString(item.exported_at || item.exportedAt || item.metadata?.exportedAt || item.createdAt || item.created_at || ''),
       previewDataUrl: cleanString(item.previewDataUrl || item.metadata?.previewDataUrl || ''),
     };
@@ -1736,6 +1739,25 @@
     return readTasks().find(task => task.id === cleanId)?.previewDataUrl || '';
   }
 
+  // The shareable copy of an exported design (text, settings, web photo
+  // links), used by "Open in editor" in the Gallery.
+  async function fetchGalleryDesign(id) {
+    const cleanId = cleanString(id);
+    if (!cleanId) return null;
+    const client = getSupabaseClient();
+    const session = await getAuthenticatedSession();
+    if (!client || !session?.user?.email) return null;
+    const { data, error } = await client.rpc('get_frameup_gallery_design', { p_id: cleanId });
+    if (error) {
+      if (!isGalleryRpcMissing(error)) console.warn('[gallery] get_frameup_gallery_design failed:', error);
+      return null;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || typeof row !== 'object') return null;
+    const payload = row.design && typeof row.design === 'object' ? row.design : null;
+    return payload ? { payload, title: cleanString(row.title || ''), workspace: cleanString(row.workspace || '') } : null;
+  }
+
   window.ESDashboardData = Object.freeze({
     REQUESTS_KEY,
     DESIGNS_KEY,
@@ -1775,6 +1797,7 @@
     fetchTaskPreview,
     fetchGalleryExports,
     fetchGalleryPreview,
+    fetchGalleryDesign,
     fetchGalleryThumbs,
     emitDashboardChange,
   });

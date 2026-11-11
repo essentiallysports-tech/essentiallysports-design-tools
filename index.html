@@ -9,7 +9,7 @@
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script">
 <script src="es-auth-config.js?v=20260707-auth4"></script>
 <script src="es-auth.js?v=20261025-perf1"></script>
-  <script src="dashboard-data.js?v=20261030-previews2"></script>
+  <script src="dashboard-data.js?v=20261111-basics2"></script>
 <script>
   (() => {
     window.ESAuth?.requireAuth(`index.html${window.location.search}${window.location.hash}`);
@@ -1739,6 +1739,16 @@
   .select-option-tag svg {
     width: 11px;
     height: 11px;
+  }
+  /* "New" in dropdowns: the shared badge (es-ui.css), spaced like the Locked tag. */
+  .select-option-badge {
+    flex: none;
+    margin-left: 8px;
+  }
+  .select-dropdown-option:has(.select-option-badge),
+  .select-dropdown-trigger:has(.select-option-badge) {
+    display: flex;
+    align-items: center;
   }
   .select-dropdown-option:has(.select-option-tag),
   .select-dropdown-trigger:has(.select-option-tag) {
@@ -5249,6 +5259,52 @@ body[data-current-page="faq"] .faq-cta-art img {
     transition: border-color .16s var(--es-ease), background-color .16s var(--es-ease);
   }
   .studio-link-btn svg { width: 16px; height: 16px; }
+  .studio-export-options-btn {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 8px;
+    border: 1px solid var(--es-line-2, #D5D8DD);
+    border-radius: var(--es-radius-control, 10px);
+    background: #FFFFFF;
+    color: var(--es-ink-2, #4B5563);
+    cursor: pointer;
+  }
+  .studio-export-options-btn svg { width: 18px; height: 18px; }
+  .studio-export-options-btn:hover,
+  .studio-export-options-btn:focus-visible,
+  .studio-export-options-btn[aria-expanded="true"] { outline: none; border-color: var(--es-brand); background: var(--es-brand-soft, #EEF5FF); color: var(--es-brand-text, #0A63C8); }
+  .studio-export-options-badge { font-size: 11px; font-weight: 800; letter-spacing: .02em; color: var(--es-brand-text, #0A63C8); }
+  .studio-export-options-badge[hidden] { display: none; }
+  /* HTML widgets copy HTML instead of exporting an image: no export options. */
+  body[data-current-page="newsletter"]:is([data-newsletter-asset="widgets"], [data-newsletter-asset="trivia"], [data-newsletter-asset="ticker"], [data-newsletter-asset="list"], [data-newsletter-asset="list2"]) #studio-export-options-btn { display: none !important; }
+  html[data-theme="dark"] .studio-export-options-btn { background: #1A1A1A; border-color: #333; color: #C9CDD3; }
+  .export-options-menu {
+    position: fixed;
+    z-index: 3500;
+    width: 280px;
+    padding: 12px;
+    border-radius: 14px;
+    background: var(--es-surface, #FFFFFF);
+    box-shadow: 0 18px 48px rgb(14 16 20 / .22), 0 0 0 1px var(--es-line, #E5E7EB);
+    color: var(--es-ink, #111418);
+    font-family: var(--es-font-ui, Inter, sans-serif);
+  }
+  .export-options-menu[hidden] { display: none; }
+  .export-options-menu h3 { margin: 2px 4px 8px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--es-ink-2, #4B5563); }
+  .export-option { display: flex; align-items: flex-start; gap: 10px; padding: 8px; border-radius: 10px; cursor: pointer; }
+  .export-option:hover { background: var(--es-sunk, #F4F5F7); }
+  .export-option input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--es-brand, #0A7DFA); flex: none; }
+  .export-option strong { display: block; font-size: 14px; font-weight: 700; }
+  .export-option small { display: block; margin-top: 2px; color: var(--es-ink-2, #4B5563); font-size: 12.5px; line-height: 1.35; }
+  .export-options-size { margin: 6px 8px 2px; color: var(--es-ink-2, #4B5563); font-size: 12.5px; }
+  html[data-theme="dark"] .export-options-menu { background: #151515; color: #F3F5F7; box-shadow: 0 18px 48px rgb(0 0 0 / .5), 0 0 0 1px #2E2E2E; }
+  html[data-theme="dark"] .export-option:hover { background: #222; }
   .studio-link-btn:hover,
   .studio-link-btn:focus-visible { outline: none; border-color: var(--es-brand); background: var(--es-brand-soft, #EEF5FF); }
   .studio-link-btn:disabled { cursor: wait; opacity: .7; }
@@ -7765,12 +7821,12 @@ body[data-current-page="faq"] .faq-cta-art img {
 <link rel="stylesheet" href="site-chrome.css?v=20261023-ux1">
 <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
 <link rel="stylesheet" href="how-it-works.css?v=20261023-ux1">
-<link rel="stylesheet" href="design-tokens.css?v=20261104-focus1">
-<link rel="stylesheet" href="es-ui.css?v=20261104-ux5">
+<link rel="stylesheet" href="design-tokens.css?v=20261111-basics2">
+<link rel="stylesheet" href="es-ui.css?v=20261111-basics2">
 <script src="theme.js?v=20260712-darkmode12"></script>
 <script src="site-mobile-chrome.js?v=20260723-profile2"></script>
 <script src="site-chrome.js?v=20261104-ux4"></script>
-<script src="app-shell.js?v=20261104-ux5"></script>
+<script src="app-shell.js?v=20261111-basics2"></script>
 </head>
 <body>
 
@@ -8019,6 +8075,10 @@ body[data-current-page="faq"] .faq-cta-art img {
       </svg>
       <span data-export-label>Export</span>
     </button>
+    <button class="studio-export-options-btn" id="studio-export-options-btn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Export options" title="Export options: PNG, double size">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="17" r="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      <span class="studio-export-options-badge" data-export-options-badge hidden></span>
+    </button>
     <button class="studio-link-btn" id="studio-link-btn" type="button" aria-label="Upload this design and copy its image link" title="Upload this design and copy a shareable image link">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1.5 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span data-link-label>Copy link</span>
@@ -8160,14 +8220,14 @@ body[data-current-page="faq"] .faq-cta-art img {
         <span class="tod-label" id="tod-label">Text On Design</span>
       </div>
       <div class="input-wrap" style="margin-bottom:10px">
-        <textarea id="pill-text" class="pill-entry" placeholder="Your Quote Text Goes Here" spellcheck="false" aria-labelledby="tod-label" aria-describedby="pill-text-hint"></textarea>
+        <textarea id="pill-text" class="pill-entry" placeholder="Your Quote Text Goes Here" spellcheck="true" aria-labelledby="tod-label" aria-describedby="pill-text-hint"></textarea>
         <p class="field-hint" id="pill-text-hint" aria-live="polite"></p>
       </div>
       <div class="input-wrap long-quote-name-field" id="long-quote-name-field">
-        <input id="long-quote-name" class="pill-entry" type="text" placeholder="Name tag" spellcheck="false">
+        <input id="long-quote-name" class="pill-entry" type="text" placeholder="Name tag" spellcheck="true">
       </div>
       <div class="input-wrap quote-name-field" id="quote-name-field">
-        <input id="quote-name" class="pill-entry" type="text" placeholder="Name (optional)" maxlength="60" spellcheck="false">
+        <input id="quote-name" class="pill-entry" type="text" placeholder="Name (optional)" maxlength="60" spellcheck="true">
       </div>
       <div class="twitter-quote-fields" id="twitter-quote-fields" aria-label="Twitter quote controls">
         <div class="tweet-fetch-row">
@@ -8178,7 +8238,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           <button class="tweet-fetch-button" id="tweet-fetch-btn" type="button">Generate</button>
         </div>
         <div class="input-wrap">
-          <input id="tweet-headline-input" class="pill-entry" type="text" placeholder="Headline pill above the tweet (optional)" spellcheck="false" aria-label="Optional headline above the tweet">
+          <input id="tweet-headline-input" class="pill-entry" type="text" placeholder="Headline pill above the tweet (optional)" spellcheck="true" aria-label="Optional headline above the tweet">
         </div>
         <div class="tweet-generated-fields" aria-hidden="true">
           <div class="twitter-quote-grid">
@@ -8228,7 +8288,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           <div class="twitter-quote-status" data-multi-tweet-status="2" aria-live="polite"></div>
         </div>
         <div class="input-wrap">
-          <input id="multi-tweet-headline" class="pill-entry" type="text" placeholder="Headline pill above the tweets (optional)" spellcheck="false" aria-label="Optional headline above the tweets">
+          <input id="multi-tweet-headline" class="pill-entry" type="text" placeholder="Headline pill above the tweets (optional)" spellcheck="true" aria-label="Optional headline above the tweets">
         </div>
         <div class="slider-row">
           <div class="slider-label-row">
@@ -8242,33 +8302,33 @@ body[data-current-page="faq"] .faq-cta-art img {
         <section class="double-entity-quote-group" aria-labelledby="double-entity-quote-1-title">
           <div class="double-entity-section-title" id="double-entity-quote-1-title">Quote 1</div>
           <div class="input-wrap">
-            <textarea id="double-quote-primary" class="pill-entry" placeholder="Your Quote Text Goes Here" spellcheck="false" rows="3"></textarea>
+            <textarea id="double-quote-primary" class="pill-entry" placeholder="Your Quote Text Goes Here" spellcheck="true" rows="3"></textarea>
           </div>
           <div class="input-wrap">
-            <input id="double-name-primary" class="pill-entry" type="text" placeholder="Entity name" spellcheck="false">
+            <input id="double-name-primary" class="pill-entry" type="text" placeholder="Entity name" spellcheck="true">
           </div>
           <div class="input-wrap">
-            <textarea id="double-description-primary" class="pill-entry" placeholder="Small description" spellcheck="false" rows="2"></textarea>
+            <textarea id="double-description-primary" class="pill-entry" placeholder="Small description" spellcheck="true" rows="2"></textarea>
           </div>
         </section>
         <div class="double-entity-separator" role="separator"></div>
         <section class="double-entity-quote-group" aria-labelledby="double-entity-quote-2-title">
           <div class="double-entity-section-title" id="double-entity-quote-2-title">Quote 2</div>
           <div class="input-wrap">
-            <textarea id="double-quote-secondary" class="pill-entry" placeholder="Your Quote Text Goes Here" spellcheck="false" rows="3"></textarea>
+            <textarea id="double-quote-secondary" class="pill-entry" placeholder="Your Quote Text Goes Here" spellcheck="true" rows="3"></textarea>
           </div>
           <div class="input-wrap">
-            <input id="double-name-secondary" class="pill-entry" type="text" placeholder="Entity name" spellcheck="false">
+            <input id="double-name-secondary" class="pill-entry" type="text" placeholder="Entity name" spellcheck="true">
           </div>
           <div class="input-wrap">
-            <textarea id="double-description-secondary" class="pill-entry" placeholder="Small description" spellcheck="false" rows="2"></textarea>
+            <textarea id="double-description-secondary" class="pill-entry" placeholder="Small description" spellcheck="true" rows="2"></textarea>
           </div>
         </section>
       </div>
       <div class="stats-post-fields" id="stats-post-fields">
         <div class="stats-single-fields" id="stats-single-fields">
           <div class="input-wrap stats-headline-field">
-            <input id="stats-headline" class="pill-entry" type="text" placeholder="Record Alert!" spellcheck="false">
+            <input id="stats-headline" class="pill-entry" type="text" placeholder="Record Alert!" spellcheck="true">
           </div>
           <span class="section-label stats-entry-grid-label">Stats</span>
           <div class="stats-entry-grid">
@@ -8290,7 +8350,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           <section class="stats-double-post-section" aria-labelledby="stats-double-main-title">
             <label class="section-label" id="stats-double-main-title" for="stats-double-headline">Post Title</label>
             <div class="input-wrap">
-              <input id="stats-double-headline" class="pill-entry" type="text" placeholder="Who won the trade?" spellcheck="false">
+              <input id="stats-double-headline" class="pill-entry" type="text" placeholder="Who won the trade?" spellcheck="true">
             </div>
           </section>
           <div class="double-entity-separator" role="separator"></div>
@@ -8298,10 +8358,10 @@ body[data-current-page="faq"] .faq-cta-art img {
             <div class="double-entity-section-title" id="stats-double-entity-1-title" data-entity-index="1">Player 1</div>
             <div class="stats-double-name-grid">
               <div class="input-wrap">
-                <input id="stats-double-first-name-primary" class="pill-entry" type="text" placeholder="Luka" spellcheck="false" aria-label="Entity 1 first name">
+                <input id="stats-double-first-name-primary" class="pill-entry" type="text" placeholder="Luka" spellcheck="true" aria-label="Entity 1 first name">
               </div>
               <div class="input-wrap">
-                <input id="stats-double-last-name-primary" class="pill-entry" type="text" placeholder="Doncic" spellcheck="false" aria-label="Entity 1 last name">
+                <input id="stats-double-last-name-primary" class="pill-entry" type="text" placeholder="Doncic" spellcheck="true" aria-label="Entity 1 last name">
               </div>
             </div>
             <div class="stats-double-team-row">
@@ -8343,10 +8403,10 @@ body[data-current-page="faq"] .faq-cta-art img {
             <div class="double-entity-section-title" id="stats-double-entity-2-title" data-entity-index="2">Player 2</div>
             <div class="stats-double-name-grid">
               <div class="input-wrap">
-                <input id="stats-double-first-name-secondary" class="pill-entry" type="text" placeholder="Victor" spellcheck="false" aria-label="Entity 2 first name">
+                <input id="stats-double-first-name-secondary" class="pill-entry" type="text" placeholder="Victor" spellcheck="true" aria-label="Entity 2 first name">
               </div>
               <div class="input-wrap">
-                <input id="stats-double-last-name-secondary" class="pill-entry" type="text" placeholder="Wembanyama" spellcheck="false" aria-label="Entity 2 last name">
+                <input id="stats-double-last-name-secondary" class="pill-entry" type="text" placeholder="Wembanyama" spellcheck="true" aria-label="Entity 2 last name">
               </div>
             </div>
             <div class="stats-double-team-row">
@@ -8388,20 +8448,20 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="listicle-fields" id="listicle-fields" aria-label="Listicle Type 1 data">
         <label class="listicle-field-label" for="listicle-title">
           Post Title
-          <textarea id="listicle-title" class="pill-entry listicle-title-input" rows="2" maxlength="80" placeholder="Worst MLB Record in Last Decade" spellcheck="false" data-listicle-field="title"></textarea>
+          <textarea id="listicle-title" class="pill-entry listicle-title-input" rows="2" maxlength="80" placeholder="Worst MLB Record in Last Decade" spellcheck="true" data-listicle-field="title"></textarea>
         </label>
         <div class="listicle-header-grid" aria-label="Column labels">
           <label class="listicle-field-label" for="listicle-entity-header">
             Name
-            <input id="listicle-entity-header" class="pill-entry" type="text" maxlength="18" placeholder="Team" spellcheck="false" data-listicle-field="entityHeader">
+            <input id="listicle-entity-header" class="pill-entry" type="text" maxlength="18" placeholder="Team" spellcheck="true" data-listicle-field="entityHeader">
           </label>
           <label class="listicle-field-label" for="listicle-metric-1-header">
             Metric 1
-            <input id="listicle-metric-1-header" class="pill-entry" type="text" maxlength="18" placeholder="Record" spellcheck="false" data-listicle-field="metric1Header">
+            <input id="listicle-metric-1-header" class="pill-entry" type="text" maxlength="18" placeholder="Record" spellcheck="true" data-listicle-field="metric1Header">
           </label>
           <label class="listicle-field-label" for="listicle-metric-2-header">
             Metric 2
-            <input id="listicle-metric-2-header" class="pill-entry" type="text" maxlength="18" placeholder="Win %" spellcheck="false" data-listicle-field="metric2Header">
+            <input id="listicle-metric-2-header" class="pill-entry" type="text" maxlength="18" placeholder="Win %" spellcheck="true" data-listicle-field="metric2Header">
           </label>
         </div>
         <div class="listicle-row-list" id="listicle-row-list" aria-label="Five listicle rows"></div>
@@ -8410,7 +8470,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="listicle-fields" id="listicle-type2-fields" aria-label="Listicle Type 2 data">
         <label class="listicle-field-label" for="listicle-type2-title">
           Post Title
-          <textarea id="listicle-type2-title" class="pill-entry listicle-title-input" rows="2" maxlength="80" placeholder="MVP Ladder&#10;Update" spellcheck="false" data-listicle-type2-field="title"></textarea>
+          <textarea id="listicle-type2-title" class="pill-entry listicle-title-input" rows="2" maxlength="80" placeholder="MVP Ladder&#10;Update" spellcheck="true" data-listicle-type2-field="title"></textarea>
         </label>
         <div class="listicle-row-list" id="listicle-type2-row-list" aria-label="Five player listicle rows"></div>
         <p class="listicle-note">Exactly five ranked players are kept. Team logos stay square and player images are fitted safely without stretching.</p>
@@ -8418,7 +8478,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="listicle-fields" id="asap-template1-fields" aria-label="ASAP Template 1 data">
         <label class="listicle-field-label" for="asap-template1-title">
           Headline
-          <textarea id="asap-template1-title" class="pill-entry listicle-title-input" rows="2" maxlength="140" placeholder="Aaron Donald has already completed 2 workouts with Rams" spellcheck="false" data-asap-template1-field="title"></textarea>
+          <textarea id="asap-template1-title" class="pill-entry listicle-title-input" rows="2" maxlength="140" placeholder="Aaron Donald has already completed 2 workouts with Rams" spellcheck="true" data-asap-template1-field="title"></textarea>
         </label>
         <div class="listicle-row-list" id="asap-template1-row-list" aria-label="Up to six update rows"></div>
         <p class="listicle-note">Add up to six dated updates. Leave a row blank to skip it — the card sizes itself to however many rows you fill in.</p>
@@ -8532,7 +8592,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     <div id="widget-main-fields">
       <div class="widget-field-group">
         <label class="widget-field-label">Header Image Link</label>
-        <input type="text" class="widget-text-input" data-widget-field="headerImages.main" placeholder="https://... (leave blank to use the default brand header)">
+        <input spellcheck="false" type="text" class="widget-text-input" data-widget-field="headerImages.main" placeholder="https://... (leave blank to use the default brand header)">
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Image</label>
@@ -8548,7 +8608,7 @@ body[data-current-page="faq"] .faq-cta-art img {
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="widget-link-row-main" data-widget-link-row="main">
-              <input type="text" class="widget-paste-link-input" data-widget-field="main.imageUrl" placeholder="https://...">
+              <input spellcheck="false" type="text" class="widget-paste-link-input" data-widget-field="main.imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               </button>
@@ -8566,14 +8626,14 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Link</label>
-        <input type="text" class="widget-text-input" data-widget-field="main.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-widget-field="main.link" placeholder="https://www.essentiallysports.com/...">
       </div>
     </div>
 
     <div id="widget-picks-fields">
       <div class="widget-field-group">
         <label class="widget-field-label">Header Image Link</label>
-        <input type="text" class="widget-text-input" data-widget-field="headerImages.picks" placeholder="https://... (leave blank to use the default brand header)">
+        <input spellcheck="false" type="text" class="widget-text-input" data-widget-field="headerImages.picks" placeholder="https://... (leave blank to use the default brand header)">
       </div>
       <div class="widget-field-group" data-widget-pick-group="0">
         <div class="widget-pick-head">
@@ -8595,7 +8655,7 @@ body[data-current-page="faq"] .faq-cta-art img {
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="widget-link-row-pick0" data-widget-link-row="pick0">
-              <input type="text" class="widget-paste-link-input" data-widget-field="picks.0.imageUrl" placeholder="https://...">
+              <input spellcheck="false" type="text" class="widget-paste-link-input" data-widget-field="picks.0.imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               </button>
@@ -8605,7 +8665,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.0.headline" placeholder="Headline">
         <label class="widget-field-label">Link</label>
-        <input type="text" class="widget-text-input" data-widget-field="picks.0.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-widget-field="picks.0.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group" data-widget-pick-group="1">
         <div class="widget-pick-head">
@@ -8627,7 +8687,7 @@ body[data-current-page="faq"] .faq-cta-art img {
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="widget-link-row-pick1" data-widget-link-row="pick1">
-              <input type="text" class="widget-paste-link-input" data-widget-field="picks.1.imageUrl" placeholder="https://...">
+              <input spellcheck="false" type="text" class="widget-paste-link-input" data-widget-field="picks.1.imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               </button>
@@ -8637,7 +8697,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.1.headline" placeholder="Headline">
         <label class="widget-field-label">Link</label>
-        <input type="text" class="widget-text-input" data-widget-field="picks.1.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-widget-field="picks.1.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group" data-widget-pick-group="2">
         <div class="widget-pick-head">
@@ -8659,7 +8719,7 @@ body[data-current-page="faq"] .faq-cta-art img {
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="widget-link-row-pick2" data-widget-link-row="pick2">
-              <input type="text" class="widget-paste-link-input" data-widget-field="picks.2.imageUrl" placeholder="https://...">
+              <input spellcheck="false" type="text" class="widget-paste-link-input" data-widget-field="picks.2.imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               </button>
@@ -8669,7 +8729,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.2.headline" placeholder="Headline">
         <label class="widget-field-label">Link</label>
-        <input type="text" class="widget-text-input" data-widget-field="picks.2.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-widget-field="picks.2.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group" data-widget-pick-group="3">
         <div class="widget-pick-head">
@@ -8691,7 +8751,7 @@ body[data-current-page="faq"] .faq-cta-art img {
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="widget-link-row-pick3" data-widget-link-row="pick3">
-              <input type="text" class="widget-paste-link-input" data-widget-field="picks.3.imageUrl" placeholder="https://...">
+              <input spellcheck="false" type="text" class="widget-paste-link-input" data-widget-field="picks.3.imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               </button>
@@ -8701,13 +8761,13 @@ body[data-current-page="faq"] .faq-cta-art img {
         <label class="widget-field-label">Headline</label>
         <input type="text" class="widget-text-input" data-widget-field="picks.3.headline" placeholder="Headline">
         <label class="widget-field-label">Link</label>
-        <input type="text" class="widget-text-input" data-widget-field="picks.3.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-widget-field="picks.3.link" placeholder="https://www.essentiallysports.com/...">
       </div>
     </div>
     <div id="trivia-fields">
       <div class="widget-field-group">
         <label class="widget-field-label">Header Banner Link</label>
-        <input type="text" class="widget-text-input" data-trivia-field="headerImage" placeholder="https://... (leave blank to use the brand's default banner)">
+        <input spellcheck="false" type="text" class="widget-text-input" data-trivia-field="headerImage" placeholder="https://... (leave blank to use the brand's default banner)">
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Trivia Image</label>
@@ -8723,7 +8783,7 @@ body[data-current-page="faq"] .faq-cta-art img {
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="trivia-link-row" data-trivia-link-row>
-              <input type="text" class="widget-paste-link-input" data-trivia-field="imageUrl" placeholder="https://...">
+              <input spellcheck="false" type="text" class="widget-paste-link-input" data-trivia-field="imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               </button>
@@ -8753,7 +8813,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Trivia Link</label>
-        <input type="text" class="widget-text-input" data-trivia-field="link" placeholder="https://www.essentiallysports.com/es-playzone/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-trivia-field="link" placeholder="https://www.essentiallysports.com/es-playzone/...">
       </div>
       <input type="file" id="trivia-upload-input" accept="image/*" hidden>
     </div>
@@ -8772,7 +8832,7 @@ body[data-current-page="faq"] .faq-cta-art img {
               <span>Paste Link</span>
             </button>
             <div class="widget-paste-link-field" id="ticker-link-row" data-ticker-link-row>
-              <input type="text" class="widget-paste-link-input" data-ticker-field="imageUrl" placeholder="https://...">
+              <input spellcheck="false" type="text" class="widget-paste-link-input" data-ticker-field="imageUrl" placeholder="https://...">
               <button type="button" class="widget-paste-link-collapse" aria-label="Collapse link field">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               </button>
@@ -8790,7 +8850,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Article Link</label>
-        <input type="text" class="widget-text-input" data-ticker-field="link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-ticker-field="link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Ticker Label</label>
@@ -8813,54 +8873,54 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="widget-field-group">
         <label class="widget-field-label">Item 1</label>
         <input type="text" class="widget-text-input" data-list-field="items.0.text" placeholder="Headline for item 1">
-        <input type="text" class="widget-text-input" data-list-field="items.0.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-list-field="items.0.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Item 2</label>
         <input type="text" class="widget-text-input" data-list-field="items.1.text" placeholder="Headline for item 2">
-        <input type="text" class="widget-text-input" data-list-field="items.1.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-list-field="items.1.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Item 3</label>
         <input type="text" class="widget-text-input" data-list-field="items.2.text" placeholder="Headline for item 3">
-        <input type="text" class="widget-text-input" data-list-field="items.2.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-list-field="items.2.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Item 4</label>
         <input type="text" class="widget-text-input" data-list-field="items.3.text" placeholder="Headline for item 4">
-        <input type="text" class="widget-text-input" data-list-field="items.3.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-list-field="items.3.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Item 5</label>
         <input type="text" class="widget-text-input" data-list-field="items.4.text" placeholder="Headline for item 5">
-        <input type="text" class="widget-text-input" data-list-field="items.4.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-list-field="items.4.link" placeholder="https://www.essentiallysports.com/...">
       </div>
     </div>
     <div id="list2-fields">
       <div class="widget-field-group">
         <label class="widget-field-label">Item 1</label>
         <input type="text" class="widget-text-input" data-list2-field="items.0.text" placeholder="Headline for item 1">
-        <input type="text" class="widget-text-input" data-list2-field="items.0.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-list2-field="items.0.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Item 2</label>
         <input type="text" class="widget-text-input" data-list2-field="items.1.text" placeholder="Headline for item 2">
-        <input type="text" class="widget-text-input" data-list2-field="items.1.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-list2-field="items.1.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Item 3</label>
         <input type="text" class="widget-text-input" data-list2-field="items.2.text" placeholder="Headline for item 3">
-        <input type="text" class="widget-text-input" data-list2-field="items.2.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-list2-field="items.2.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Item 4</label>
         <input type="text" class="widget-text-input" data-list2-field="items.3.text" placeholder="Headline for item 4">
-        <input type="text" class="widget-text-input" data-list2-field="items.3.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-list2-field="items.3.link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group">
         <label class="widget-field-label">Item 5</label>
         <input type="text" class="widget-text-input" data-list2-field="items.4.text" placeholder="Headline for item 5">
-        <input type="text" class="widget-text-input" data-list2-field="items.4.link" placeholder="https://www.essentiallysports.com/...">
+        <input spellcheck="false" type="text" class="widget-text-input" data-list2-field="items.4.link" placeholder="https://www.essentiallysports.com/...">
       </div>
     </div>
     <div id="infographic-fields" aria-label="Infographic content"></div>
@@ -8911,6 +8971,11 @@ body[data-current-page="faq"] .faq-cta-art img {
               <button class="studio-zoom-btn" type="button" data-history="redo" aria-label="Redo" title="Redo (Shift+Ctrl/Cmd+Z)" disabled>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="m15 7 5 5-5 5M20 12H9a5 5 0 0 0 0 10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <button class="studio-zoom-btn" type="button" data-recent-designs aria-label="Recent designs" title="Recent designs: reopen what you exported">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6M3.5 4v4h4M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </button>
             </div>
@@ -10584,6 +10649,11 @@ function fillSelectLabel(target, option) {
     tag.className = 'studio-locked-chip select-option-tag';
     tag.innerHTML = `${LOCK_TAG_ICON}Locked · view only`;
     target.appendChild(tag);
+  } else if (option?.dataset.tag === 'new') {
+    const tag = document.createElement('span');
+    tag.className = 'es-badge es-badge--new select-option-badge';
+    tag.textContent = 'New';
+    target.appendChild(tag);
   }
 }
 
@@ -11391,6 +11461,7 @@ function getAsapTemplate1Payload() {
 }
 
 function createListicleInput(labelText, key, value, maxLength, rowIndex) {
+  const checkSpelling = key === 'entity';
   const label = document.createElement('label');
   label.className = 'listicle-field-label';
   label.textContent = labelText;
@@ -11399,7 +11470,7 @@ function createListicleInput(labelText, key, value, maxLength, rowIndex) {
   input.type = 'text';
   input.value = value;
   input.maxLength = maxLength;
-  input.spellcheck = false;
+  input.spellcheck = checkSpelling;
   input.dataset.listicleRow = String(rowIndex);
   input.dataset.listicleKey = key;
   label.appendChild(input);
@@ -11704,6 +11775,7 @@ function getListicleType2Payload() {
 }
 
 function createListicleType2Input(labelText, key, value, maxLength, rowIndex) {
+  const checkSpelling = key === 'entity' || key === 'subtitle';
   const label = document.createElement('label');
   label.className = 'listicle-field-label';
   label.textContent = labelText;
@@ -11712,7 +11784,7 @@ function createListicleType2Input(labelText, key, value, maxLength, rowIndex) {
   input.type = 'text';
   input.value = value;
   input.maxLength = maxLength;
-  input.spellcheck = false;
+  input.spellcheck = checkSpelling;
   input.dataset.listicleType2Row = String(rowIndex);
   input.dataset.listicleType2Key = key;
   label.appendChild(input);
@@ -11918,7 +11990,7 @@ function buildAsapTemplate1RowControls() {
     input.type = 'text';
     input.value = row.text;
     input.maxLength = ESAsapTemplate1.LIMITS.row;
-    input.spellcheck = false;
+    input.spellcheck = true;
     input.placeholder = 'Ex. 5th August - 1st workout with Rams';
     input.dataset.asapTemplate1Row = String(rowIndex);
     label.appendChild(input);
@@ -17293,6 +17365,7 @@ let lastRenderedTextContextKey = null;
 function render() {
   if (activeWorkspace === 'instagram') updateCarouselContentDots();
   scheduleDesignHistory();
+  window.FrameUpAutosave?.schedule();
   if (!postFontLoaded) return;
   clearTimeout(renderTimer);
   renderTimer = setTimeout(_render, 16);
@@ -17948,9 +18021,36 @@ function getWorkspaceExportDurationMs() {
 
 // Draws the current design at full export size and names the file. Shared by
 // Export (download) and Copy link (upload), so both produce the same image.
+// Export options (button next to Export, saved per browser). Defaults keep the
+// template's own format and size. PNG is offered instead of JPG, never the
+// other way round, so transparent designs (headers) never turn black.
+const EXPORT_OPTIONS_KEY = 'frameup.exportOptions.v1';
+function getExportOptions() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(EXPORT_OPTIONS_KEY) || '{}') || {};
+    return { png: saved.png === true, double: saved.double === true };
+  } catch (error) {
+    return { png: false, double: false };
+  }
+}
+
+function setExportOptions(options) {
+  try { localStorage.setItem(EXPORT_OPTIONS_KEY, JSON.stringify({ png: options.png === true, double: options.double === true })); } catch (error) { /* per browser only */ }
+}
+
+function applyExportOptions(workspace) {
+  const options = getExportOptions();
+  const out = { ...workspace, exportScale: (workspace.exportScale || EXPORT_SCALE) * (options.double ? 2 : 1) };
+  if (options.png) {
+    out.exportType = 'image/png';
+    out.exportExtension = 'png';
+  }
+  return out;
+}
+
 function renderExportImage() {
-  const workspace = getWorkspace();
-  const scale = workspace.exportScale || EXPORT_SCALE;
+  const workspace = applyExportOptions(getWorkspace());
+  const scale = workspace.exportScale;
   const W = Math.round(workspace.width * scale);
   const H = Math.round(workspace.height * scale);
   const offscreen = document.createElement('canvas');
@@ -18064,6 +18164,15 @@ function isDuplicateUploadError(error) {
 
 // Uploads the exported image to a public Storage folder and copies its
 // permanent link. Uploading needs an approved, signed-in FrameUp account.
+function requestImageLink() {
+  if (blockLockedExport()) return;
+  if (isInfographicStillLoading() || isBrandLogoLoading() || isNewsletterSampleLoading()) {
+    showToast('The design is still loading. Try again in a moment.', 'error');
+    return;
+  }
+  confirmExportIssues(copyImageLink, { verb: 'Copy link' });
+}
+
 async function copyImageLink() {
   const button = document.getElementById('studio-link-btn');
   const label = button?.querySelector('[data-link-label]');
@@ -18129,6 +18238,7 @@ function downloadImage() {
     : document.getElementById('download-btn');
   const finishExportFeedback = startExportFeedback(exportButton);
   const { workspace, scale, W, H, offscreen, filename, mainTextSlug, exportQuality } = renderExportImage();
+  const designCopy = window.FrameUpDesigns?.capture?.() || null;
 
   saveCanvasDownload(offscreen, filename, workspace.exportType, exportQuality, error => {
     finishExportFeedback();
@@ -18143,10 +18253,12 @@ function downloadImage() {
         : activeWorkspace === 'newsletter'
           ? (NEWSLETTER_ASSET_TYPES[activeNewsletterAsset]?.label || activeNewsletterAsset || 'Feature Image')
           : (state.youtubeQuote ? 'Quote Thumbnail' : activeYoutubeVariation.replace('variation-', 'Variation '));
-      window.ESDashboardData?.recordDesignExport?.({
+      const previewDataUrl = makeDashboardPreviewDataUrl(offscreen);
+      const exportTitle = getCurrentCanvasName() || (state.lines || []).filter(Boolean).join(' ') || mainTextSlug || filename;
+      const recorded = window.ESDashboardData?.recordDesignExport?.({
         workspace: workspaceLabels[activeWorkspace] || activeWorkspace,
         workspaceVariant,
-        title: getCurrentCanvasName() || (state.lines || []).filter(Boolean).join(' ') || mainTextSlug || filename,
+        title: exportTitle,
         sport: state.sport || '',
         teamOrLeague: state.team || state.newsletterBrand || '',
         filename,
@@ -18157,13 +18269,22 @@ function downloadImage() {
         outputSize: `${W} × ${H}px`,
         exportScale: scale,
         mimeType: workspace.exportType,
-        previewDataUrl: makeDashboardPreviewDataUrl(offscreen),
+        previewDataUrl,
+        // Shareable copy of the design (text, settings, web photo links) so
+        // it can be reopened from the Gallery. Kept out of local caches.
+        design: designCopy?.cloud || null,
         metadata: {
           workspaceId: activeWorkspace,
           canvasName: getCurrentCanvasName() || '',
           outputSize: `${W} × ${H}px`,
         },
       });
+      // Device copy (with photos) for Recent designs, keyed like the Gallery.
+      Promise.resolve(recorded).catch(() => null).then(record => window.FrameUpDesigns?.storeLocal?.(
+        record?.id ? `task-design-${record.id}` : `local-${Date.now()}`,
+        designCopy,
+        { title: exportTitle, variant: workspaceVariant, size: `${W} × ${H}px`, thumb: previewDataUrl },
+      ));
     }
   });
 }
@@ -18417,7 +18538,7 @@ function registerInfographicTemplates() {
 
 // Export waits until the template's own images have loaded.
 function isInfographicStillLoading() {
-  const template = isInfographicAsset() ? getInfographicTemplate() : null;
+  const template = activeWorkspace === 'newsletter' && isInfographicAsset() ? getInfographicTemplate() : null;
   if (!template) return false;
   ensureInfographicImages(template);
   const recolorPending = template.layers.some(layer => {
@@ -19108,6 +19229,7 @@ function getInfographicPhotoSrc(template, layer) {
 function buildInfographicPhotoField(template, layer) {
   const wrap = document.createElement('div');
   wrap.className = 'ig-photo';
+  wrap.dataset.igLayer = layer.id;
   const row = document.createElement('div');
   row.className = 'ig-photo-row';
   const thumb = document.createElement('button');
@@ -19205,6 +19327,9 @@ function buildInfographicTextInput(template, layer) {
   input.id = `infographic-${template.id}-${layer.id}`;
   input.value = getInfographicText(template, layer);
   input.placeholder = String(layer.default || '').replace(/\n/g, ' ');
+  // Spell check words; skip numbers, scores and short codes (T43, MC, WIN).
+  const sample = String(layer.default || '');
+  input.spellcheck = sample.trim().length > 3 && /[a-z]{3,}/i.test(sample) && !/^[A-Z0-9\s.,%°+\-–:/#]+$/.test(sample);
   if (layer.maxLength) input.maxLength = layer.maxLength;
   if (multiline) input.rows = Math.min(4, layer.maxLines);
   input.addEventListener('input', () => {
@@ -19560,7 +19685,7 @@ function showToast(message, tone = 'neutral') {
   setTimeout(() => toast.remove(), 3000);
 }
 
-function showEsDialog({ title, body, actions, field, onClose }) {
+function showEsDialog({ title, body, items, actions, field, onClose }) {
   document.querySelectorAll('.es-dialog:not([open])').forEach(stale => stale.remove());
   const dialog = document.createElement('dialog');
   dialog.className = 'es-dialog';
@@ -19617,7 +19742,18 @@ function showEsDialog({ title, body, actions, field, onClose }) {
     });
     row.appendChild(button);
   });
-  dialog.append(heading, copy, ...(fieldWrap ? [fieldWrap] : []), row);
+  let list = null;
+  if (Array.isArray(items) && items.length) {
+    list = document.createElement('ul');
+    list.className = 'es-dialog-list';
+    items.forEach(text => {
+      const item = document.createElement('li');
+      item.textContent = text;
+      list.appendChild(item);
+    });
+  }
+  if (!body) copy.hidden = true;
+  dialog.append(heading, copy, ...(list ? [list] : []), ...(fieldWrap ? [fieldWrap] : []), row);
   dialog.addEventListener('close', () => {
     dialog.remove();
     onClose?.();
@@ -19643,6 +19779,105 @@ function exportInstagramSlides(indices) {
   });
 }
 
+// ─── CHECK BEFORE EXPORT ─────────────────────────────────────────────────────
+// Things that usually mean a design isn't finished. Each issue has the text
+// shown in the dialog and, where possible, a fix that takes you there.
+function isSampleInfographicPhoto(layer) {
+  return /\/sample-[^/]*$/.test(String(layer?.placeholder?.src || layer?.placeholder?.image || ''));
+}
+
+function openInfographicField(selector) {
+  const contentTab = [...document.querySelectorAll('.studio-inspector-tab')].find(tab => tab.textContent.trim() === 'Content');
+  if (contentTab && contentTab.getAttribute('aria-selected') !== 'true') contentTab.click();
+  const target = document.querySelector(selector);
+  if (!target) return null;
+  const card = target.closest('details');
+  if (card) card.open = true;
+  target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  return target;
+}
+
+function getExportIssues() {
+  const issues = [];
+  const template = activeWorkspace === 'newsletter' && isInfographicAsset() ? getInfographicTemplate() : null;
+  const missing = getMissingExportImage();
+  if (missing) {
+    const sampleShown = activeWorkspace === 'newsletter'
+      && (NEWSLETTER_SAMPLE_PHOTOS[activeNewsletterAsset] || (template && isSampleInfographicPhoto(getInfographicMainPhotoLayer(template))));
+    const role = template ? (NEWSLETTER_ASSET_TYPES[activeNewsletterAsset]?.photoRole || 'photo') : missing.label;
+    issues.push({
+      text: sampleShown
+        ? `The sample ${role === 'background image' ? 'photo' : role} is still in place.`
+        : `There's no ${missing.label} yet, so it will export with the placeholder background.`,
+      fix: { label: 'Add image', run: () => { selectImageTool(missing.tool, true); openImageToolUpload(missing.tool); } },
+    });
+  }
+  if (template) {
+    const samplePhotos = template.layers.filter(layer => layer.type === 'photo' && layer.id && !layer.main
+      && isSampleInfographicPhoto(layer) && !getInfographicPhoto(template, layer));
+    if (samplePhotos.length) {
+      const total = template.layers.filter(layer => layer.type === 'photo' && layer.id && !layer.main && isSampleInfographicPhoto(layer)).length;
+      issues.push({
+        text: samplePhotos.length === total
+          ? `All ${total === 1 ? 'the' : total} player photo${total === 1 ? ' is the sample' : 's are the samples'}.`
+          : `${samplePhotos.length} of ${total} player photos are still the samples.`,
+        fix: {
+          label: 'Add photos',
+          run: () => {
+            const field = openInfographicField(`.ig-photo[data-ig-layer="${samplePhotos[0].id}"]`);
+            field?.querySelector('input[type="file"]')?.click();
+          },
+        },
+      });
+    }
+    const textLayers = template.layers.filter(layer => layer.type === 'text' && layer.id && String(layer.default || '').trim());
+    const untouched = textLayers.length && textLayers.every(layer => getInfographicText(template, layer) === String(layer.default || ''));
+    if (untouched) {
+      issues.push({
+        text: 'The text is still the sample text.',
+        fix: { label: 'Edit text', run: () => openInfographicField(`#infographic-${template.id}-${textLayers[0].id}`)?.focus() },
+      });
+    }
+  }
+  if (contextUsesPillLayout() && !isLockedDesign() && !(state.lines || []).some(line => String(line).trim())) {
+    issues.push({
+      text: 'There is no headline text yet.',
+      fix: {
+        label: 'Add text',
+        run: () => {
+          const contentTab = [...document.querySelectorAll('.studio-inspector-tab')].find(tab => tab.textContent.trim() === 'Content');
+          if (contentTab && contentTab.getAttribute('aria-selected') !== 'true') contentTab.click();
+          const textarea = document.getElementById('pill-text');
+          textarea?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          textarea?.focus();
+        },
+      },
+    });
+  }
+  return issues;
+}
+
+// Shows the issues (if any) and calls proceed() when the person continues.
+function confirmExportIssues(proceed, { verb = 'Export', extraActions = [], intro = '' } = {}) {
+  const issues = getExportIssues();
+  if (!issues.length && !extraActions.length) {
+    proceed();
+    return;
+  }
+  const fix = issues.find(issue => issue.fix)?.fix;
+  const actions = [{ label: 'Cancel', variant: 'quiet' }];
+  if (fix) actions.push({ label: fix.label, variant: 'secondary', onClick: fix.run });
+  if (extraActions.length) actions.push(...extraActions);
+  else actions.push({ label: `${verb} anyway`, variant: 'primary', onClick: proceed });
+  setStatus('', 'ok');
+  showEsDialog({
+    title: issues.length ? 'Before you export' : `${verb} your carousel`,
+    body: [intro, issues.length ? `This ${intro ? 'slide' : 'design'} still looks unfinished:` : ''].filter(Boolean).join(' '),
+    items: issues.map(issue => issue.text),
+    actions,
+  });
+}
+
 function requestExport() {
   if (blockLockedExport()) return;
   if (isInfographicStillLoading() || isBrandLogoLoading() || isNewsletterSampleLoading()) {
@@ -19650,43 +19885,21 @@ function requestExport() {
     return;
   }
   const filledSlides = getFilledInstagramSlides();
-  const offerAllSlides = filledSlides.length > 1;
-  const missing = getMissingExportImage();
-  if (!offerAllSlides && !missing) {
-    downloadImage();
+  if (filledSlides.length > 1) {
+    confirmExportIssues(downloadImage, {
+      intro: `${filledSlides.length} of your carousel slides have content. Empty slides are skipped.`,
+      extraActions: [
+        { label: 'This slide only', variant: 'secondary', onClick: downloadImage },
+        { label: `Export all ${filledSlides.length} slides`, variant: 'primary', onClick: () => exportInstagramSlides(filledSlides) },
+      ],
+    });
     return;
   }
-
-  const actions = [{ label: 'Cancel', variant: 'quiet' }];
-  if (missing) {
-    actions.push({
-      label: 'Add image',
-      variant: 'secondary',
-      onClick: () => {
-        selectImageTool(missing.tool, true);
-        openImageToolUpload(missing.tool);
-      },
-    });
-  }
-  if (offerAllSlides) {
-    actions.push({ label: 'This slide only', variant: 'secondary', onClick: downloadImage });
-    actions.push({ label: `Export all ${filledSlides.length} slides`, variant: 'primary', onClick: () => exportInstagramSlides(filledSlides) });
-  } else {
-    actions.push({ label: 'Export anyway', variant: 'primary', onClick: downloadImage });
-  }
-
-  setStatus('', 'ok');
-  const missingCopy = missing ? `This slide has no ${missing.label} yet, so it will export with the placeholder background.` : '';
-  const slidesCopy = offerAllSlides ? `${filledSlides.length} of your carousel slides have content. Empty slides are skipped.` : '';
-  showEsDialog({
-    title: offerAllSlides ? 'Export your carousel' : `Export without a ${missing.label}?`,
-    body: [slidesCopy, missingCopy].filter(Boolean).join(' '),
-    actions,
-  });
+  confirmExportIssues(downloadImage);
 }
 
 window.ESDownloadCurrentDesign = requestExport;
-document.getElementById('studio-link-btn')?.addEventListener('click', copyImageLink);
+document.getElementById('studio-link-btn')?.addEventListener('click', requestImageLink);
 
 // â”€â”€â”€ DESIGN REQUESTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DESIGN_REQUEST_STORAGE_KEY = 'es.designRequests.v1';
@@ -21330,6 +21543,7 @@ function buildActiveWidgetHtml(preview) {
 let widgetPreviewRenderTimer = null;
 let widgetPreviewResizeObserver = null;
 function renderWidgetPreview() {
+  window.FrameUpAutosave?.schedule();
   clearTimeout(widgetPreviewRenderTimer);
   widgetPreviewRenderTimer = setTimeout(() => {
     const iframe = document.getElementById('widget-canvas-preview-frame');
@@ -23241,6 +23455,10 @@ loadFont().then(() => render());
 })();
 </script>
 <script src="how-it-works.js?v=20260813-sync1"></script>
-<script src="frameup-spec.js?v=20261027-gen11"></script>
+<script src="frameup-autosave.js?v=20261111-basics2"></script>
+<script src="frameup-designs.js?v=20261111-basics2"></script>
+<script src="frameup-templates.js?v=20261111-basics2"></script>
+<script src="frameup-extras.js?v=20261111-basics2"></script>
+<script src="frameup-spec.js?v=20261111-basics2"></script>
 </body>
 </html>

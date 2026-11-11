@@ -284,7 +284,16 @@
       spec = null;
     }
     if (!spec) return;
-    apply(spec)
+    const restored = window.FrameUpAutosave?.restored || Promise.resolve(null);
+    restored
+      .then(record => {
+        if (!record) return;
+        const empty = instagramSlideStates.findIndex(slide => !slideHasContent(slide));
+        if (activeWorkspace !== 'instagram') activateWorkspace('instagram');
+        if (empty > 0 && empty !== activeInstagramSlide) switchInstagramSlide(empty);
+      })
+      .catch(() => {})
+      .then(() => apply(spec))
       .then(() => setStatus('Opened from Generate. Edit anything, then export.', 'ok'))
       .catch(error => setStatus(error.message || 'This design could not be opened.', 'err'));
   }

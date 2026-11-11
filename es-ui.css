@@ -532,6 +532,10 @@ html.es-shell-ready .es-sidebar { transition: width var(--es-dur-step) var(--es-
 }
 .es-nav-item[aria-current="page"] svg { color: var(--es-brand); }
 .es-nav-item .es-badge { margin-left: auto; }
+/* Unread dot (What's new). */
+.es-nav-item { position: relative; }
+.es-nav-item__dot { width: 8px; height: 8px; margin-left: auto; border-radius: 50%; background: #F5A524; box-shadow: 0 0 0 2px var(--es-surface, #fff); flex: none; }
+html.es-sidebar-collapsed .es-nav-item__dot { position: absolute; top: 6px; right: 14px; margin: 0; }
 .es-nav-item__short { display: none; }
 .es-sidebar__foot {
   display: grid;

@@ -918,3 +918,26 @@ and what's still uncommitted.
 - **Not in this push**: separate local Listicle Type 2 / Infographic 1 work stays unpushed until Suhail
   approves it; it gets its own entry when it ships.
 - **Rollback point: `1afec65`**.
+
+### 2026-11-11 — Editor basics: autosave, reopen designs, template picker, export check, spell check, What's new, shortcuts
+- Status: `[local, awaiting "push"]`
+- Asked for: "check what basics we're missing … go all in, work cleanly with a checklist, utter safety".
+  Working checklist: `project-docs/basics-checklist.md` (local). Feature guide: `project-docs/editor-basics.md`.
+- New files: `frameup-autosave.js`, `frameup-designs.js`, `frameup-templates.js`, `frameup-extras.js`,
+  `assets/template-thumbs/*.webp` (28), no database migration.
+- Changed: `index.html` (render hooks for autosave, export capture, export check + Copy link check,
+  spell check attributes, export options, "New" tag in dropdowns, Recent + options buttons),
+  `dashboard-data.js` (design copy goes to the cloud record only; `fetchGalleryDesign`; Gallery asks for
+  every workspace and falls back), `gallery.html` (workspace filter, landscape thumbs, Open in editor),
+  `app-shell.js` (What's new), `design-tokens.css` / `es-ui.css` (styles), `frameup-spec.js` (Generate
+  "Edit" waits for the restore and uses an empty slide). Cache-busting bumped on every page that loads them.
+- Fixed on the way: the export "still loading" check looked at the Newsletter template while exporting
+  from Social Media; Pill colour swatches now follow a brand change (earlier today).
+- Verified locally: restore of every workspace incl. photos and widget forms; broken-save recovery; Start
+  fresh; export check on 9 newsletter assets + Social/YouTube; reopen from Recent and from Gallery; shared
+  copy (8 KB, no files); picker on desktop and 375 px; What's new dot; shortcuts; export options; dark theme;
+  every page console-clean; 476 renders across all brands error-free; 32 designs pixel-identical to the
+  previous version (remaining differences are the browser's own image cache/anti-aliasing, reproduced in
+  the old version too).
+- Gallery stays Social Media only (Suhail, 2026-11-11): no database change. Reopen works for posts exported on the same browser.
+- "New" badges made uniform: picker, dropdowns and What's new use the sidebar's .es-badge--new; Locked / Current tags match its size.
