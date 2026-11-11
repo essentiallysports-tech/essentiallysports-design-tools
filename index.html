@@ -21889,7 +21889,9 @@ function buildTickerHtml(state) {
   const brand = getTickerBrand(state.brandId);
   const cardBorder = brand.cardBorder ? `border:1px solid ${escapeWidgetAttr(brand.cardBorder)};` : '';
   const link = escapeWidgetAttr(state.link);
-  return `<!-- MONEY MATTERS - FINANCIAL TICKER --><table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;font-family:Roboto,Inter,Arial,sans-serif;background-color:#FFFFFF;">
+  // A bordered card needs separate borders, or the rounded corners are lost.
+  const tableBorders = brand.cardBorder ? 'border-collapse:separate;border-spacing:0;' : 'border-collapse:collapse;';
+  return `<!-- MONEY MATTERS - FINANCIAL TICKER --><table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;${tableBorders}font-family:Roboto,Inter,Arial,sans-serif;background-color:#FFFFFF;">
 
   <!-- MAIN CARD -->
   <tr>
