@@ -54,6 +54,7 @@
   ],
   "functions": {
     "api/es-generate.js": { "maxDuration": 60 },
+    "api/es-generate-image.js": { "maxDuration": 60 },
     "api/trend-design.js": { "maxDuration": 30 }
   }
 }

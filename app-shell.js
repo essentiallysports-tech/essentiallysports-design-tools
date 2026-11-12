@@ -95,6 +95,7 @@
     'tool-feedback.html': 'feedback',
     'design-system.html': 'library',
     'how-frameup-works.html': 'how',
+    'trend-design.html': 'trends',
   };
 
   function currentId() {

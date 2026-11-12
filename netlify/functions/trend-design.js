@@ -12,7 +12,8 @@
 // the function and at the CDN), so the page refreshes every 5 minutes without
 // hitting Google on every visit.
 
-const { verifyEsUser } = require('./_supabase-auth.js');
+const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
+const { gatewayConfigured, aiText } = require('./_ai-gateway.js');
 
 const CACHE_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 6000;
@@ -259,18 +260,47 @@ function aiProvider() {
   return null;
 }
 
+const TITLES_SYSTEM = 'You write headlines for EssentiallySports social media graphics (US sports fans). Each headline goes in a bold two-line pill, so it must be 3 to 7 words and at most 42 characters. Be punchy and factual. Every claim must be stated in the story: never add opponents, seeds, outcomes, numbers, quotes or predictions that are not there. Questions are fine only about what the story itself raises. No emojis, hashtags or clickbait. Use names fans know. Reply with JSON only: {"titles": ["...", "...", "...", "..."]} with 4 different angles: straight news, name-led, a question the story raises, and a short punchy version (3 to 5 words) that still reads as a complete headline with a subject and a verb.';
+
+function parseTitles(text) {
+  const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+  const titles = (parsed.titles || [])
+    .map(t => String(t || '').replace(/[#\u{1F300}-\u{1FAFF}]/gu, '').replace(/\s+/g, ' ').trim().replace(/[.]+$/, ''))
+    .filter(t => words(t).length >= 2 && t.length <= 48)
+    .slice(0, 4);
+  if (!titles.length) throw new Error('No usable headlines.');
+  return titles;
+}
+
 const titleCache = new Map();
-async function aiTitles({ title, related = [], sport = '' }) {
+function rememberTitles(cacheKey, titles) {
+  titleCache.set(cacheKey, titles);
+  if (titleCache.size > 500) titleCache.delete(titleCache.keys().next().value);
+  return titles;
+}
+
+async function aiTitles({ title, related = [], sport = '' }, track) {
   const provider = aiProvider();
-  if (!provider) return null;
+  const useGateway = gatewayConfigured();
+  if (!provider && !useGateway) return null;
   const cacheKey = `${sport}|${title}`;
   if (titleCache.has(cacheKey)) return titleCache.get(cacheKey);
   const story = [`Headline: ${title}`, ...related.slice(0, 3).map(r => `Related: ${r}`), sport ? `Sport: ${sport}` : ''].filter(Boolean).join('\n');
+  let lastError = null;
+  // Vercel AI Gateway first (light tier: small, frequent job); Groq is the backup.
+  if (useGateway) {
+    try {
+      const { text } = await aiText({ tier: 'light', system: TITLES_SYSTEM, messages: [{ role: 'user', content: story }], json: true, maxTokens: 1500, timeoutMs: 15000, track });
+      return rememberTitles(cacheKey, parseTitles(text));
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  if (!provider) throw lastError || new Error('AI headlines unavailable.');
   const messages = [
-    { role: 'system', content: 'You write headlines for EssentiallySports social media graphics (US sports fans). Each headline goes in a bold two-line pill, so it must be 3 to 7 words and at most 42 characters. Be punchy and factual. Every claim must be stated in the story: never add opponents, seeds, outcomes, numbers, quotes or predictions that are not there. Questions are fine only about what the story itself raises. No emojis, hashtags or clickbait. Use names fans know. Reply with JSON only: {"titles": ["...", "...", "...", "..."]} with 4 different angles: straight news, name-led, a question the story raises, and a short punchy version (3 to 5 words) that still reads as a complete headline with a subject and a verb.' },
+    { role: 'system', content: TITLES_SYSTEM },
     { role: 'user', content: story },
   ];
-  let lastError = null;
   for (const model of provider.models) {
     try {
       const response = await fetch(provider.url, {
@@ -281,16 +311,7 @@ async function aiTitles({ title, related = [], sport = '' }) {
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) { lastError = new Error(data?.error?.message || `AI request failed: ${response.status}`); if (response.status === 429 || response.status === 400) continue; throw lastError; }
-      const text = String(data?.choices?.[0]?.message?.content || '');
-      const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
-      const titles = (parsed.titles || [])
-        .map(t => String(t || '').replace(/[#\u{1F300}-\u{1FAFF}]/gu, '').replace(/\s+/g, ' ').trim().replace(/[.]+$/, ''))
-        .filter(t => words(t).length >= 2 && t.length <= 48)
-        .slice(0, 4);
-      if (!titles.length) throw new Error('No usable headlines.');
-      titleCache.set(cacheKey, titles);
-      if (titleCache.size > 500) titleCache.delete(titleCache.keys().next().value);
-      return titles;
+      return rememberTitles(cacheKey, parseTitles(String(data?.choices?.[0]?.message?.content || '')));
     } catch (error) {
       lastError = error;
     }
@@ -426,7 +447,7 @@ async function buildTrends() {
     updatedAt: new Date().toISOString(),
     refreshSeconds: CACHE_MS / 1000,
     region: 'US',
-    aiTitles: Boolean(aiProvider()),
+    aiTitles: Boolean(aiProvider()) || gatewayConfigured(),
     categories: CATEGORIES.map(c => ({ ...c, count: categories[c.id].length })),
     items: CATEGORIES.flatMap(c => categories[c.id]),
     sourcesFailed: errors,
@@ -476,7 +497,7 @@ exports.handler = async event => {
     if (title.length < 3) return json(400, { ok: false, error: 'Missing headline.' }, 'no-store');
     const related = (Array.isArray(body.related) ? body.related : []).map(r => String(r || '').slice(0, 300)).slice(0, 3);
     try {
-      const titles = await aiTitles({ title, related, sport: String(body.sport || '').slice(0, 40) });
+      const titles = await aiTitles({ title, related, sport: String(body.sport || '').slice(0, 40) }, { feature: 'trend-headlines', email: auth.user.email, token: bearerToken(event.headers) });
       if (!titles) return json(200, { ok: true, ai: false, titles: suggestTitles({ title, related: related.map(t => ({ title: t })) }) }, 'no-store');
       return json(200, { ok: true, ai: true, titles }, 'no-store');
     } catch (error) {

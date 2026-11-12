@@ -1739,6 +1739,26 @@
     return readTasks().find(task => task.id === cleanId)?.previewDataUrl || '';
   }
 
+  // AI spend (admins only): one row per AI call, written by the server.
+  // Returns { rows, ready }; ready is false until the frameup_ai_usage
+  // migration has been applied.
+  async function fetchAiUsage({ sinceIso } = {}) {
+    const client = getSupabaseClient();
+    const session = await getAuthenticatedSession();
+    if (!client || !session?.user?.email) return { rows: [], ready: false };
+    let query = client.from('frameup_ai_usage')
+      .select('created_at,user_email,feature,model,ok,input_tokens,output_tokens,images,cost_usd')
+      .order('created_at', { ascending: false })
+      .limit(5000);
+    if (sinceIso) query = query.gte('created_at', sinceIso);
+    const { data, error } = await query;
+    if (error) {
+      console.warn('[ai spend] frameup_ai_usage read failed:', error.message || error);
+      return { rows: [], ready: false };
+    }
+    return { rows: data || [], ready: true };
+  }
+
   // The shareable copy of an exported design (text, settings, web photo
   // links), used by "Open in editor" in the Gallery.
   async function fetchGalleryDesign(id) {
@@ -1798,6 +1818,7 @@
     fetchGalleryExports,
     fetchGalleryPreview,
     fetchGalleryDesign,
+    fetchAiUsage,
     fetchGalleryThumbs,
     emitDashboardChange,
   });

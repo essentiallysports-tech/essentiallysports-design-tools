@@ -27,69 +27,133 @@
   <script src="site-chrome.js?v=20261111-icons2"></script>
 <script src="app-shell.js?v=20261112-notop1"></script>
   <style>
+    html:not([data-theme="dark"]) body.gen-body { background: #fff; }
     .gen-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 32px 0 72px; font-family: var(--es-font-ui); color: var(--es-ink); }
-    .gen-brief { display: grid; gap: 14px; padding: 20px; border-radius: 20px; background: #fff; box-shadow: inset 0 0 0 1px var(--es-line), 0 1px 2px rgb(14 16 20 / .04); }
-    .gen-brief textarea { box-sizing: border-box; width: 100%; min-height: 96px; resize: vertical; padding: 14px 16px; border: 0; border-radius: 14px; background: var(--es-sunk); color: var(--es-ink); font: 400 16px/1.5 var(--es-font-ui); box-shadow: inset 0 0 0 1px transparent; transition: box-shadow .15s var(--es-ease), background .15s var(--es-ease); }
-    .gen-brief textarea:focus { outline: none; background: #fff; box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 3px rgb(var(--es-brand-rgb) / .15); }
+    .gen-brief { display: grid; gap: 12px; padding: 20px; border-radius: 16px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
+    .gen-brief textarea { box-sizing: border-box; width: 100%; min-height: 96px; resize: vertical; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--es-sunk); color: var(--es-ink); font: 400 16px/1.5 var(--es-font-ui); box-shadow: inset 0 0 0 1px transparent; transition: box-shadow var(--es-dur) var(--es-ease), background var(--es-dur) var(--es-ease); }
+    .gen-brief textarea:focus { outline: none; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand); }
     .gen-brief textarea::placeholder { color: var(--es-placeholder, #8a8f98); }
     .gen-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     .gen-row__label { margin-right: 4px; color: var(--es-ink-3); font-size: 13px; font-weight: 500; }
     .gen-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-    .gen-actions__hint { color: var(--es-ink-3); font-size: 13px; }
+    .gen-actions__hint { flex: 1 1 280px; color: var(--es-ink-3); font-size: 13px; line-height: 1.45; }
     .gen-actions__buttons { display: flex; gap: 8px; margin-left: auto; }
     .gen-actions__buttons .es-btn[hidden] { display: none; }
-    .gen-examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-    .gen-examples button { padding: 6px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--es-ink-3); font: 500 13px/1.3 var(--es-font-ui); box-shadow: inset 0 0 0 1px var(--es-line); cursor: pointer; text-align: left; }
-    .gen-examples button:hover { background: var(--es-sunk); color: var(--es-ink); }
+    .gen-kbd { margin-left: 2px; padding: 1px 6px; border-radius: 6px; background: rgb(255 255 255 / .18); font: 500 12px/1.4 var(--es-font-ui); }
 
-    .gen-status { display: flex; align-items: center; gap: 10px; margin: 28px 0 14px; min-height: 24px; color: var(--es-ink-2, #3f4450); font-size: 14px; }
-    .gen-status[hidden] { display: none; }
-    .gen-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--es-line); border-top-color: var(--es-brand); animation: genSpin .8s linear infinite; }
+    .gen-quick { display: grid; gap: 8px; margin-top: 12px; }
+    .gen-quick[hidden] { display: none; }
+    .gen-quick__group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+    .gen-quick__label { display: inline-flex; align-items: center; gap: 6px; margin-right: 2px; color: var(--es-ink-3); font-size: 13px; font-weight: 500; }
+    .gen-quick__label svg { width: 16px; height: 16px; }
+    .gen-quick button { max-width: min(360px, 100%); min-height: 32px; overflow: hidden; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--es-ink-2, #3f4450); font: 500 13px/32px var(--es-font-ui); text-align: left; text-overflow: ellipsis; white-space: nowrap; box-shadow: inset 0 0 0 1px var(--es-line-2, var(--es-line)); cursor: pointer; transition: background var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease); }
+    .gen-quick button:hover { background: var(--es-sunk); color: var(--es-ink); }
+    .gen-quick button:focus-visible, .gen-thumb:focus-visible { outline: 2px solid var(--es-focus-color, var(--es-ink)); outline-offset: 2px; }
+
+    /* Progress: three honest steps while the server works. */
+    .gen-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin: 28px 0 16px; padding: 0; list-style: none; color: var(--es-ink-3); font-size: 14px; }
+    .gen-progress[hidden] { display: none; }
+    .gen-progress li { display: inline-flex; align-items: center; gap: 8px; }
+    .gen-progress li.is-active { color: var(--es-ink); font-weight: 500; }
+    .gen-progress li.is-done { color: var(--es-ink-2, #3f4450); }
+    .gen-progress svg { width: 16px; height: 16px; color: var(--es-good, #1a7f37); }
+    .gen-progress__dot { width: 8px; height: 8px; margin: 0 4px; border-radius: 50%; background: var(--es-line-2, var(--es-line)); }
+    .gen-progress__time { margin-left: auto; color: var(--es-ink-3); font-variant-numeric: tabular-nums; }
+    .gen-spinner { flex: 0 0 auto; width: 16px; height: 16px; box-sizing: border-box; border-radius: 50%; border: 2px solid var(--es-line); border-top-color: var(--es-brand); animation: genSpin .8s linear infinite; }
     @keyframes genSpin { to { transform: rotate(360deg); } }
-    .gen-mode { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; white-space: nowrap; padding: 3px 10px; border-radius: 999px; background: var(--es-sunk); color: var(--es-ink-3); font-size: 12px; font-weight: 600; }
+
+    .gen-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 28px 0 16px; min-height: 24px; color: var(--es-ink-2, #3f4450); font-size: 14px; }
+    .gen-summary[hidden] { display: none; }
+    .gen-summary strong { color: var(--es-ink); font-weight: 700; }
+    .gen-mode { display: inline-flex; flex: 0 0 auto; align-items: center; min-height: 22px; padding: 0 8px; border-radius: 999px; background: var(--es-sunk); color: var(--es-ink-2, #3f4450); font-size: 12px; font-weight: 700; white-space: nowrap; }
     .gen-mode.is-ai { background: var(--es-brand-soft); color: var(--es-brand-text); }
     .gen-notice { margin: 0 0 16px; }
     .gen-notice[hidden] { display: none; }
+    .gen-notice.is-warn { background: var(--es-warn-soft, #fff4d6); }
+
+    .gen-empty { display: grid; gap: 6px; justify-items: center; margin-top: 28px; padding: 40px 24px; border-radius: 16px; background: var(--es-sunk); text-align: center; }
+    .gen-empty[hidden] { display: none; }
+    .gen-empty svg { width: 24px; height: 24px; color: var(--es-ink-3); }
+    .gen-empty h2 { margin: 6px 0 0; font: 800 18px/1.2 var(--es-font-display); color: var(--es-ink); }
+    .gen-empty p { max-width: 520px; margin: 0; color: var(--es-ink-3); font-size: 13px; line-height: 1.45; }
 
     .gen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
-    .gen-card { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; min-width: 0; overflow: hidden; border-radius: 20px; background: #fff; box-shadow: inset 0 0 0 1px var(--es-line), 0 1px 2px rgb(14 16 20 / .04); }
+    .gen-card { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; min-width: 0; overflow: hidden; border-radius: 16px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
     .gen-card__media { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: var(--es-sunk); }
     .gen-card__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-    .gen-card__media:not(.is-ready)::before { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / .6) 50%, transparent 80%); transform: translateX(-100%); animation: genShimmer 1.4s ease-in-out infinite; }
+    .gen-card__media img:not([src]) { visibility: hidden; }
+    .gen-card__media:not(.is-ready)::before { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / .6) 50%, transparent 80%); transform: translateX(-100%); animation: genShimmer 1.4s ease-in-out infinite; }
+    .gen-card__media.is-busy img { opacity: .55; }
     @keyframes genShimmer { to { transform: translateX(100%); } }
     .gen-card__body { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px 16px 16px; }
-    .gen-card__type { align-self: flex-start; padding: 2px 8px; border-radius: 6px; background: var(--es-brand-soft); color: var(--es-brand-text); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .gen-card__type { align-self: flex-start; display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: 999px; background: var(--es-brand-soft); color: var(--es-brand-text); font-size: 12px; font-weight: 700; }
     .gen-card__why { margin: 0; color: var(--es-ink-2, #3f4450); font-size: 13px; line-height: 1.45; }
     .gen-card__source { margin: 0; overflow: hidden; color: var(--es-ink-3); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
     .gen-card__source a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-    .gen-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
-    .gen-card__actions .es-btn { flex: 1 1 auto; }
+    .gen-card__actions { display: flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 6px; }
+    .gen-card__actions .es-btn--primary { flex: 1 1 auto; min-width: 0; }
+    .gen-card__actions .es-icon-btn { flex: 0 0 auto; width: 32px; height: 32px; border-radius: 10px; }
+    .gen-card__actions .es-icon-btn svg { width: 16px; height: 16px; }
+    .gen-card__actions .es-icon-btn[aria-expanded="true"] { color: var(--es-ink); box-shadow: inset 0 0 0 1.5px var(--es-ink); }
+    .gen-card__actions .es-icon-btn[hidden] { display: none; }
+    .gen-card__actions .es-icon-btn:disabled .gen-spinner { display: block; }
     .gen-card.is-skeleton .gen-card__body span { display: block; height: 12px; border-radius: 6px; background: var(--es-sunk); }
     .gen-card.is-skeleton .gen-card__body span:first-child { width: 40%; }
     .gen-card.is-skeleton .gen-card__body span:last-child { width: 80%; }
-    .gen-card.is-failed .gen-card__media::after { content: 'Preview unavailable'; position: absolute; inset: 0; display: grid; place-items: center; color: var(--es-ink-3); font-size: 13px; }
+    .gen-card.is-failed .gen-card__media::after { content: 'Preview unavailable. Edit still works.'; position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; color: var(--es-ink-3); font-size: 13px; text-align: center; }
+
+    /* Photo panel: ES photos of the person, plus an optional AI scene. */
+    .gen-photos { display: grid; gap: 8px; padding-top: 4px; }
+    .gen-photos[hidden] { display: none; }
+    .gen-photos__label { color: var(--es-ink-3); font-size: 12px; font-weight: 500; }
+    .gen-photos__strip { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px; }
+    .gen-thumb { position: relative; flex: 0 0 44px; height: 55px; padding: 0; overflow: hidden; border: 0; border-radius: 8px; background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); cursor: pointer; }
+    .gen-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .gen-thumb[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--es-bg), 0 0 0 4px var(--es-ink); }
+    .gen-thumb.is-ai::after { content: 'AI'; position: absolute; right: 2px; bottom: 2px; padding: 0 4px; border-radius: 999px; background: rgb(14 16 20 / .72); color: #fff; font: 700 10px/16px var(--es-font-ui); }
+    .gen-photos__none { margin: 0; color: var(--es-ink-3); font-size: 12px; }
+    .gen-photos .es-btn { justify-self: start; }
+    .gen-photos__hint { margin: -2px 0 0; color: var(--es-ink-3); font-size: 12px; line-height: 1.4; }
 
     .gen-research { margin-top: 28px; color: var(--es-ink-3); font-size: 13px; }
     .gen-research[hidden] { display: none; }
-    .gen-research summary { cursor: pointer; font-weight: 600; }
+    .gen-research summary { cursor: pointer; font-weight: 700; }
     .gen-research ul { margin: 10px 0 0; padding-left: 18px; line-height: 1.7; }
     .gen-research a { color: var(--es-ink-2, #3f4450); }
     .gen-renderer { position: fixed; left: -12000px; top: 0; width: 1280px; height: 900px; border: 0; visibility: hidden; pointer-events: none; }
+    .gen-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
     html[data-theme="dark"] :is(.gen-brief, .gen-card) { background: #151515; box-shadow: inset 0 0 0 1px #2e2e2e; }
     html[data-theme="dark"] .gen-brief textarea { background: #1f1f1f; color: #f3f5f7; }
     html[data-theme="dark"] .gen-brief textarea:focus { background: #1a1a1a; }
-    html[data-theme="dark"] :is(.gen-card__media, .gen-card.is-skeleton .gen-card__body span, .gen-mode) { background: #1f1f1f; }
+    html[data-theme="dark"] :is(.gen-card__media, .gen-card.is-skeleton .gen-card__body span, .gen-mode, .gen-empty, .gen-thumb) { background: #1f1f1f; }
+    html[data-theme="dark"] .gen-mode { color: #c9cdd3; }
+    html[data-theme="dark"] .gen-mode.is-ai { background: rgb(26 115 224 / .22); color: #8cc2ff; }
     html[data-theme="dark"] .gen-card__media:not(.is-ready)::before { background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / .06) 50%, transparent 80%); }
-    html[data-theme="dark"] :is(.gen-card__why, .gen-status, .gen-research a) { color: #c9cdd3; }
-    html[data-theme="dark"] .gen-examples button:hover { background: #1f1f1f; color: #f3f5f7; }
+    html[data-theme="dark"] :is(.gen-card__why, .gen-summary, .gen-research a, .gen-progress li.is-done) { color: #c9cdd3; }
+    html[data-theme="dark"] :is(.gen-summary strong, .gen-progress li.is-active, .gen-empty h2) { color: #f3f5f7; }
+    html[data-theme="dark"] .gen-quick button { color: #c9cdd3; box-shadow: inset 0 0 0 1px #3a3a3a; }
+    html[data-theme="dark"] .gen-quick button:hover { background: #1f1f1f; color: #f3f5f7; }
+    html[data-theme="dark"] .gen-thumb[aria-pressed="true"] { box-shadow: 0 0 0 2px #151515, 0 0 0 4px #f3f5f7; }
+    html[data-theme="dark"] .gen-card__actions .es-icon-btn[aria-expanded="true"] { color: #f3f5f7; box-shadow: inset 0 0 0 1.5px #f3f5f7; }
+    html[data-theme="dark"] .gen-notice.is-warn { background: #2a2414; }
     @media (prefers-reduced-motion: reduce) { .gen-card__media::before, .gen-spinner { animation: none !important; } }
     @media (max-width: 900px) {
       .gen-page { width: auto; padding: 20px 16px 56px; }
-      .gen-brief { padding: 14px; }
-      .gen-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+      .gen-brief { padding: 16px; }
+      .gen-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
       .gen-actions__buttons { width: 100%; }
-      .gen-actions__buttons .es-btn { flex: 1 1 auto; }
+      .gen-actions__buttons .es-btn { flex: 1 1 auto; min-height: 48px; }
+      .gen-kbd { display: none; }
+    }
+    @media (max-width: 560px) {
+      .gen-grid { grid-template-columns: minmax(0, 1fr); }
+      .gen-card__actions .es-btn--primary { min-height: 44px; }
+      .gen-card__actions .es-icon-btn { width: 44px; height: 44px; }
+      .gen-thumb { flex-basis: 52px; height: 65px; }
+      .gen-progress__time { margin-left: 0; }
+      .gen-quick button { min-height: 44px; line-height: 44px; }
+      #gen-formats .es-chip, .gen-photos .es-btn { min-height: 44px; }
     }
   </style>
 </head>
@@ -138,11 +202,12 @@
   <main class="gen-page" id="main">
     <header class="es-page-head">
       <h1>Generate</h1>
-      <p>Write a brief or your post text. FrameUp understands it, checks ES coverage for the facts and the current team, and designs on-brand options you can edit.</p>
+      <p>Write a brief or your post text. FrameUp checks ES coverage for the facts, the current team and a photo, then designs on-brand posts you can edit and export.</p>
     </header>
 
     <form class="gen-brief" id="gen-form" novalidate>
-      <textarea id="gen-brief" maxlength="1500" aria-label="Brief" placeholder="e.g. Patrick Mahomes after the Chiefs win: &quot;We are not done yet.&quot; 320 YDS, 3 TD, 1 INT"></textarea>
+      <label class="gen-sr" for="gen-brief">Brief</label>
+      <textarea id="gen-brief" maxlength="1500" placeholder="e.g. Patrick Mahomes after the Chiefs win: &quot;We are not done yet.&quot; 320 YDS, 3 TD, 1 INT"></textarea>
       <div class="gen-row" id="gen-formats" role="group" aria-label="Formats">
         <span class="gen-row__label">Formats</span>
       </div>
@@ -150,15 +215,21 @@
         <span class="gen-actions__hint">Your own words are kept as written; anything else comes only from ES coverage. Check every post before you publish.</span>
         <div class="gen-actions__buttons">
           <button class="es-btn" type="button" id="gen-trending" hidden>Suggest topics</button>
-          <button class="es-btn es-btn--primary" type="submit" id="gen-submit">Generate</button>
+          <button class="es-btn es-btn--primary" type="submit" id="gen-submit"><span id="gen-submit-label">Generate</span><kbd class="gen-kbd" id="gen-kbd" aria-hidden="true">Ctrl ↵</kbd></button>
         </div>
       </div>
     </form>
-    <div class="gen-examples" id="gen-examples" aria-label="Example briefs"></div>
+    <div class="gen-quick" id="gen-quick"></div>
 
-    <p class="gen-status" id="gen-status" role="status" hidden></p>
-    <div class="es-callout gen-notice" id="gen-notice" hidden></div>
-    <div class="gen-grid" id="gen-grid"></div>
+    <ol class="gen-progress" id="gen-progress" aria-label="Progress" hidden></ol>
+    <p class="gen-summary" id="gen-summary" role="status" aria-live="polite" hidden></p>
+    <div class="es-callout gen-notice" id="gen-notice" role="alert" hidden></div>
+    <div class="gen-empty" id="gen-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>
+      <h2>Your designs appear here</h2>
+      <p>Paste a quote, a stat line or a headline, or just name the story. You get up to four editable posts in about ten seconds.</p>
+    </div>
+    <div class="gen-grid" id="gen-grid" aria-live="polite"></div>
     <details class="gen-research" id="gen-research" hidden>
       <summary>Based on these ES stories</summary>
       <ul id="gen-research-list"></ul>
@@ -166,41 +237,45 @@
   </main>
 
   <script>
-    // FrameUp Generate: brief → /api/es-generate (research + plan + checks) →
-    // each design rendered by the real editor in a hidden frame (frameup-spec.js).
+    // FrameUp Generate: brief → /api/es-generate (ES research + AI copy +
+    // template checks + ES photo) → each design rendered by the real editor in
+    // a hidden frame (frameup-spec.js). Scene images are made only on a click.
     (() => {
       const FORMATS = [
         ['cover', 'Cover'], ['quote', 'Quote'], ['long-quote', 'Long Quote'], ['double-entity-quote', 'Two-Person Quote'],
         ['stats-single-ent', 'Player Stats'], ['stats-double-ent', 'Head-to-Head'],
       ];
+      const PHOTO_TYPES = new Set(['cover', 'quote', 'long-quote', 'stats-single-ent']);
       const EXAMPLES = [
         'Patrick Mahomes after the Chiefs win: "We are not done yet." 320 YDS, 3 TD, 1 INT',
         'Caitlin Clark scores 30 PTS 9 AST 6 REB against the Sky',
         'Make a post about the Lakers losing streak',
       ];
-      const els = {
-        form: document.getElementById('gen-form'),
-        brief: document.getElementById('gen-brief'),
-        formats: document.getElementById('gen-formats'),
-        submit: document.getElementById('gen-submit'),
-        trending: document.getElementById('gen-trending'),
-        examples: document.getElementById('gen-examples'),
-        status: document.getElementById('gen-status'),
-        notice: document.getElementById('gen-notice'),
-        grid: document.getElementById('gen-grid'),
-        research: document.getElementById('gen-research'),
-        researchList: document.getElementById('gen-research-list'),
+      const RECENT_KEY = 'frameup.generate.recent.v1';
+      const svg = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+      // Lucide icons (ISC licence).
+      const ICON = {
+        pencil: svg('<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>'),
+        download: svg('<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>'),
+        image: svg('<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>'),
+        refresh: svg('<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'),
+        sparkles: svg('<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>'),
+        history: svg('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>'),
+        lightbulb: svg('<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>'),
+        check: svg('<path d="M20 6 9 17l-5-5"/>'),
+        alert: svg('<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>'),
       };
+      const $ = id => document.getElementById(id);
+      const els = {
+        form: $('gen-form'), brief: $('gen-brief'), formats: $('gen-formats'), submit: $('gen-submit'), submitLabel: $('gen-submit-label'),
+        kbd: $('gen-kbd'), trending: $('gen-trending'), quick: $('gen-quick'), progress: $('gen-progress'), summary: $('gen-summary'),
+        notice: $('gen-notice'), empty: $('gen-empty'), grid: $('gen-grid'), research: $('gen-research'), researchList: $('gen-research-list'),
+      };
+      if (/Mac|iPhone|iPad/.test(navigator.platform || '')) els.kbd.textContent = '⌘ ↵';
       const picked = new Set();
       let busy = false;
       let lastBrief = '';
-
-      // A brief passed in the link (Trend Design "Design this") fills the box.
-      const linkedBrief = new URLSearchParams(window.location.search).get('brief');
-      if (linkedBrief && !els.brief.value) {
-        els.brief.value = linkedBrief.slice(0, 1500);
-        requestAnimationFrame(() => els.brief.focus({ preventScroll: true }));
-      }
+      const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
       // ── Renderer: the real editor in a hidden frame ───────────────────────
       let rendererPromise = null;
@@ -234,32 +309,111 @@
         return rendererPromise;
       }
 
-      // ── UI helpers ─────────────────────────────────────────────────────────
-      function setStatus(text, spinning = false) {
-        els.status.hidden = !text;
-        els.status.innerHTML = spinning ? '<span class="gen-spinner" aria-hidden="true"></span>' : '';
-        els.status.append(document.createTextNode(text || ''));
+      // ── Recent briefs (this browser only) ─────────────────────────────────
+      function readRecent() {
+        try {
+          const list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+          return Array.isArray(list) ? list.filter(item => typeof item === 'string').slice(0, 6) : [];
+        } catch (error) {
+          return [];
+        }
       }
-      function setNotice(title, body) {
+      function rememberBrief(brief) {
+        const list = [brief, ...readRecent().filter(item => item !== brief)].slice(0, 6);
+        try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); } catch (error) { /* private mode */ }
+        renderQuick();
+      }
+
+      function quickGroup(label, icon, list) {
+        const group = document.createElement('div');
+        group.className = 'gen-quick__group';
+        group.setAttribute('role', 'group');
+        group.setAttribute('aria-label', label);
+        group.innerHTML = `<span class="gen-quick__label">${icon}${esc(label)}</span>`;
+        list.forEach(text => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = text.replace(/\s*\n\s*/g, ' · ');
+          button.title = text;
+          button.addEventListener('click', () => { els.brief.value = text; els.brief.focus(); });
+          group.appendChild(button);
+        });
+        return group;
+      }
+      let topics = null;
+      function renderQuick() {
+        const recent = readRecent();
+        const groups = [];
+        if (topics?.length) groups.push(quickGroup('Trending', ICON.sparkles, topics));
+        if (recent.length) groups.push(quickGroup('Recent', ICON.history, recent.slice(0, 3)));
+        groups.push(quickGroup('Try', ICON.lightbulb, EXAMPLES.filter(text => !recent.includes(text)).slice(0, recent.length ? 2 : 3)));
+        els.quick.replaceChildren(...groups);
+      }
+
+      // ── Status, progress and notices ──────────────────────────────────────
+      function setNotice(title, body = '', tone = '') {
         els.notice.hidden = !title;
+        els.notice.className = `es-callout gen-notice${tone ? ` is-${tone}` : ''}`;
         els.notice.innerHTML = '';
         if (!title) return;
         const wrap = document.createElement('div');
         const strong = document.createElement('strong');
         strong.textContent = title;
-        wrap.append(strong, document.createTextNode(body || ''));
+        wrap.append(strong, document.createTextNode(body));
+        els.notice.insertAdjacentHTML('afterbegin', ICON.alert);
         els.notice.appendChild(wrap);
       }
+      function setSummary(html) {
+        els.summary.hidden = !html;
+        els.summary.innerHTML = html || '';
+      }
+
+      // Three steps. Research usually takes ~2s, then the AI writes (~5s);
+      // the last step starts when the designs arrive.
+      const STEPS = ['Reading ES coverage', 'Writing on-brand copy', 'Designing your posts'];
+      let progressTimer = null;
+      function startProgress() {
+        const started = performance.now();
+        let step = 0;
+        const draw = () => {
+          const seconds = Math.round((performance.now() - started) / 1000);
+          els.progress.innerHTML = STEPS.map((label, index) => {
+            const state = index < step ? 'is-done' : index === step ? 'is-active' : '';
+            const mark = index < step ? ICON.check : index === step ? '<span class="gen-spinner" aria-hidden="true"></span>' : '<span class="gen-progress__dot" aria-hidden="true"></span>';
+            return `<li class="${state}"${index === step ? ' aria-current="step"' : ''}>${mark}${label}</li>`;
+          }).join('') + `<li class="gen-progress__time" aria-hidden="true">${seconds}s</li>`;
+        };
+        els.progress.hidden = false;
+        setSummary('');
+        draw();
+        clearInterval(progressTimer);
+        progressTimer = setInterval(() => {
+          if (step === 0 && performance.now() - started > 2400) step = 1;
+          draw();
+        }, 500);
+        return {
+          designing() { step = 2; draw(); },
+          stop() {
+            clearInterval(progressTimer);
+            els.progress.hidden = true;
+            return (performance.now() - started) / 1000;
+          },
+        };
+      }
+
       function setBusy(value) {
         busy = value;
         els.submit.disabled = value;
         els.trending.disabled = value;
-        els.submit.textContent = value ? 'Generating…' : 'Generate';
+        els.submitLabel.textContent = value ? 'Generating…' : 'Generate';
+        els.kbd.hidden = value;
       }
 
+      // ── Cards ─────────────────────────────────────────────────────────────
       function skeletonCard() {
         const card = document.createElement('article');
         card.className = 'gen-card is-skeleton';
+        card.setAttribute('aria-hidden', 'true');
         card.innerHTML = '<div class="gen-card__media"></div><div class="gen-card__body"><span></span><span></span></div>';
         return card;
       }
@@ -274,10 +428,12 @@
             <p class="gen-card__why"></p>
             <p class="gen-card__source" hidden>Source: <a target="_blank" rel="noopener"></a></p>
             <div class="gen-card__actions">
-              <button class="es-btn es-btn--primary es-btn--sm" type="button" data-act="edit">Edit</button>
-              <button class="es-btn es-btn--sm" type="button" data-act="download">Download</button>
-              <button class="es-btn es-btn--sm" type="button" data-act="again" title="Try this format again">Retry</button>
+              <button class="es-btn es-btn--primary es-btn--sm" type="button" data-act="edit">${ICON.pencil}Edit</button>
+              <button class="es-icon-btn" type="button" data-act="download" aria-label="Download PNG" title="Download">${ICON.download}</button>
+              <button class="es-icon-btn" type="button" data-act="photos" aria-label="Change photo" title="Change photo" aria-expanded="false">${ICON.image}</button>
+              <button class="es-icon-btn" type="button" data-act="again" aria-label="Try this format again" title="Try again">${ICON.refresh}</button>
             </div>
+            <div class="gen-photos" hidden></div>
           </div>`;
         fillCard(card, spec);
         return card;
@@ -286,9 +442,10 @@
       function fillCard(card, spec) {
         card._spec = spec;
         card.classList.remove('is-skeleton', 'is-failed');
+        card.removeAttribute('aria-hidden');
         card.querySelector('.gen-card__type').textContent = spec.label;
         card.querySelector('.gen-card__why').textContent = spec.why || spec.title;
-        card.querySelector('img').alt = `${spec.label}: ${spec.title}`;
+        card.querySelector('img').alt = `${spec.label}: ${(spec.lines || []).join(' ') || spec.title}`;
         const source = spec.sources?.[0];
         const sourceRow = card.querySelector('.gen-card__source');
         sourceRow.hidden = !source;
@@ -297,6 +454,10 @@
           link.href = source.url;
           link.textContent = source.title || source.url.replace(/^https?:\/\/(www\.)?/, '');
         }
+        const photoButton = card.querySelector('[data-act="photos"]');
+        photoButton.hidden = !PHOTO_TYPES.has(spec.postType);
+        photoButton.setAttribute('aria-expanded', 'false');
+        card.querySelector('.gen-photos').hidden = true;
       }
 
       async function paint(card) {
@@ -306,31 +467,49 @@
         try {
           const api = await renderer();
           img.src = await api.renderToDataUrl(card._spec);
-          media.classList.add('is-ready');
+          card.classList.remove('is-failed');
         } catch (error) {
           card.classList.add('is-failed');
+        } finally {
           media.classList.add('is-ready');
         }
       }
 
-      async function callApi(body) {
+      // The photo panel: ES photos of the person (best first) and the
+      // optional AI scene image (only made when this button is clicked).
+      function renderPhotos(card) {
+        const spec = card._spec;
+        const panel = card.querySelector('.gen-photos');
+        const photos = spec.photos || [];
+        const strip = photos.map((photo, index) => {
+          const active = spec.photo?.url === photo.url;
+          return `<button class="gen-thumb${photo.ai ? ' is-ai' : ''}" type="button" data-act="pick" data-index="${index}" aria-pressed="${active}" aria-label="${esc(photo.ai ? 'AI scene image' : `ES photo: ${photo.title || index + 1}`)}" title="${esc(photo.ai ? 'AI scene image' : photo.title || '')}"><img src="${esc(photo.url)}" alt="" loading="lazy"></button>`;
+        }).join('');
+        panel.innerHTML = `
+          <span class="gen-photos__label">${photos.some(p => !p.ai) ? 'ES photos' : 'Photo'}</span>
+          ${strip ? `<div class="gen-photos__strip">${strip}</div>` : '<p class="gen-photos__none">No ES photo found for this design.</p>'}
+          <button class="es-btn es-btn--sm" type="button" data-act="scene">${ICON.sparkles}Scene image</button>
+          <p class="gen-photos__hint">AI background (a place, no people or logos). Made only when you click.</p>`;
+      }
+
+      async function callApi(path, body) {
         if (!window.ESAuth?.fetchWithAuth) throw new Error('Sign-in is still loading. Try again in a moment.');
-        const response = await window.ESAuth.fetchWithAuth('/api/es-generate', {
+        const response = await window.ESAuth.fetchWithAuth(path, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });
         const data = await response.json().catch(() => null);
-        if (!response.ok) throw new Error(data?.detail || data?.error || `Generate failed (${response.status}).`);
+        if (!response.ok) throw Object.assign(new Error(data?.error || data?.detail || `Request failed (${response.status}).`), { reason: data?.reason || '' });
         return data;
       }
 
-      // Who planned the designs (AI or your text as written) and where team,
-      // colours and photos came from.
-      function showMode(connection = {}, brain = 'draft') {
+      // Who wrote the copy and where the facts came from, as small badges.
+      function modeBadges(data) {
+        const ai = data.brain && data.brain !== 'draft';
+        const connection = data.connection || {};
         const live = connection.mcpConfigured && !connection.mcpError;
-        const ai = brain && brain !== 'draft';
-        return `${ai ? '<span class="gen-mode is-ai">AI</span> ' : ''}<span class="gen-mode${live ? ' is-ai' : ''}">${live ? 'ES MCP' : 'ES site search'}</span>`;
+        return `${ai ? '<span class="gen-mode is-ai">AI copy</span>' : '<span class="gen-mode">Your words</span>'}<span class="gen-mode">${live ? 'ES MCP' : 'ES coverage'}</span>`;
       }
 
       // ── Generate ──────────────────────────────────────────────────────────
@@ -339,51 +518,47 @@
         const brief = els.brief.value.trim();
         if (brief.length < 3) {
           els.brief.focus();
-          setStatus('Write a brief first: who, what happened, and any numbers or quotes.');
+          setNotice('Write a brief first', ' Who it is about, what happened, and any numbers or quotes.');
           return;
         }
         if (busy) return;
         setBusy(true);
         lastBrief = brief;
         setNotice('');
+        els.empty.hidden = true;
         els.research.hidden = true;
         els.grid.replaceChildren(...Array.from({ length: 4 }, skeletonCard));
-        setStatus('Reading ES coverage and planning designs…', true);
+        els.grid.setAttribute('aria-busy', 'true');
+        const progress = startProgress();
         renderer().catch(() => {});
         try {
-          const data = await callApi({ brief, formats: [...picked], count: 4 });
+          const data = await callApi('/api/es-generate', { brief, formats: [...picked], count: 4 });
           if (!data.designs?.length) {
             els.grid.replaceChildren();
-            setStatus('');
+            progress.stop();
+            els.empty.hidden = false;
             setNotice('No designs this time', ' Add who it is about and the key facts (numbers, a quote), or pick a different format.');
             return;
           }
-          setStatus('Designing your posts…', true);
+          progress.designing();
           const cards = data.designs.map(buildCard);
           els.grid.replaceChildren(...cards);
+          rememberBrief(brief);
           for (const card of cards) await paint(card);
-          els.status.innerHTML = showMode(data.connection, data.brain);
-          els.status.append(document.createTextNode(` ${cards.length} design${cards.length === 1 ? '' : 's'} ready. Edit opens it in the Social Media editor.`));
-          const aiFailed = data.connection?.ai && data.brain === 'draft';
-          const problem = mcpProblem(data.connection);
-          if (aiFailed) setNotice('AI was unavailable', ' These were built from your text as written. Try again in a minute (the free AI tier has a per-minute limit).');
-          else if (problem) setNotice('Limited ES data', ` ${problem}`);
+          const seconds = progress.stop();
+          setSummary(`${modeBadges(data)}<span><strong>${cards.length} design${cards.length === 1 ? '' : 's'}</strong> in ${Math.max(1, Math.round(seconds))}s. Edit opens one in the editor; the download button saves a PNG.</span>`);
+          if (data.ai?.fallback === 'budget' && data.brain !== 'draft') setNotice('Backup AI wrote these', " This week's AI budget is used up, so a backup model wrote the copy. Check the wording closely.", 'warn');
+          else if (data.brain === 'draft' && (data.ai?.failed || data.connection?.ai)) setNotice('AI is unavailable right now', data.ai?.fallback === 'budget' ? " This week's AI budget is used up, so these use your words as written. They still check ES coverage for the team and photo." : ' These use your words as written. Try again in a minute for AI copy.', 'warn');
           showResearch(data.research?.articles || []);
         } catch (error) {
+          progress.stop();
           els.grid.replaceChildren();
-          setStatus('');
-          setNotice('Could not generate', ` ${error.message || 'Something went wrong.'}`);
+          els.empty.hidden = false;
+          setNotice('Could not generate', ` ${error.message || 'Something went wrong.'} Your brief is still here; try again.`);
         } finally {
+          els.grid.removeAttribute('aria-busy');
           setBusy(false);
         }
-      }
-
-      // Says exactly why no AI ran, from what the server found.
-      // Only worth a notice when ES MCP is missing or failing (less accurate teams and photos).
-      function mcpProblem(connection = {}) {
-        if (!connection.mcpConfigured) return 'ES MCP is not set up on the server yet, so team colours and photos come from ES site search and may be less accurate.';
-        if (connection.mcpError) return `ES MCP could not be reached (${connection.mcpError}), so team colours and photos come from ES site search.`;
-        return '';
       }
 
       function showResearch(articles) {
@@ -404,38 +579,69 @@
       els.grid.addEventListener('click', async event => {
         const button = event.target.closest('[data-act]');
         const card = button?.closest('.gen-card');
-        if (!card?._spec) return;
+        if (!card?._spec || button.disabled) return;
         const spec = card._spec;
-        if (button.dataset.act === 'edit') {
+        const act = button.dataset.act;
+        if (act === 'edit') {
           try {
-            sessionStorage.setItem('frameup.openSpec.v1', JSON.stringify(spec));
+            const { photos, ...open } = spec;
+            sessionStorage.setItem('frameup.openSpec.v1', JSON.stringify(open));
           } catch (error) {
             setNotice('Could not open the editor', ' Your browser blocked session storage.');
             return;
           }
           window.location.href = 'index.html#instagram';
-        } else if (button.dataset.act === 'download') {
+        } else if (act === 'download') {
           button.disabled = true;
           try {
             await (await renderer()).exportSpec(spec);
           } catch (error) {
             setNotice('Download failed', ` ${error.message || ''}`);
           } finally {
-            setTimeout(() => { button.disabled = false; }, 1500);
+            setTimeout(() => { button.disabled = false; }, 1200);
           }
-        } else if (button.dataset.act === 'again') {
+        } else if (act === 'photos') {
+          const panel = card.querySelector('.gen-photos');
+          const open = panel.hidden;
+          if (open) renderPhotos(card);
+          panel.hidden = !open;
+          button.setAttribute('aria-expanded', String(open));
+        } else if (act === 'pick') {
+          const photo = spec.photos?.[Number(button.dataset.index)];
+          if (!photo || spec.photo?.url === photo.url) return;
+          spec.photo = { ...photo };
+          renderPhotos(card);
+          await paint(card);
+        } else if (act === 'scene') {
+          button.disabled = true;
+          button.innerHTML = '<span class="gen-spinner" aria-hidden="true"></span>Making scene…';
+          card.querySelector('.gen-card__media').classList.add('is-busy');
+          try {
+            const data = await callApi('/api/es-generate-image', { scene: spec.scene, sport: spec.sport });
+            const scene = { url: data.dataUrl, title: 'AI scene image', ai: true };
+            spec.photos = [scene, ...(spec.photos || [])];
+            spec.photo = { ...scene };
+            await paint(card);
+          } catch (error) {
+            setNotice(error.reason === 'budget' ? 'Scene images are paused' : 'No scene image', ` ${error.message || ''}`, error.reason === 'budget' ? 'warn' : '');
+          } finally {
+            card.querySelector('.gen-card__media').classList.remove('is-busy');
+            renderPhotos(card);
+          }
+        } else if (act === 'again') {
           if (busy) return;
           button.disabled = true;
           const media = card.querySelector('.gen-card__media');
           media.classList.remove('is-ready');
           try {
-            const data = await callApi({ brief: lastBrief, formats: [spec.postType], count: 1 });
+            const data = await callApi('/api/es-generate', { brief: lastBrief, formats: [spec.postType], count: 1, avoid: spec.lines || [] });
             const next = data.designs?.[0];
             if (next) {
               fillCard(card, next);
               await paint(card);
             } else {
               media.classList.add('is-ready');
+              setNotice('No new version', ' Nothing else true to say in this format. Try another format.');
             }
           } catch (error) {
             media.classList.add('is-ready');
@@ -450,28 +656,17 @@
       els.trending.addEventListener('click', async () => {
         if (busy) return;
         setBusy(true);
-        setStatus('Finding trending ES topics…', true);
         try {
-          const data = await callApi({ mode: 'trending' });
-          renderExamples(data.topics?.length ? data.topics : EXAMPLES);
-          setStatus(data.topics?.length ? 'Pick a topic to use it as your brief.' : 'No trending topics right now.');
+          const data = await callApi('/api/es-generate', { mode: 'trending' });
+          topics = data.topics?.length ? data.topics : null;
+          renderQuick();
+          if (!topics) setNotice('No trending topics right now', ' Try Trend Design for live US sports stories.');
         } catch (error) {
-          setStatus('');
           setNotice('Could not load topics', ` ${error.message || ''}`);
         } finally {
           setBusy(false);
         }
       });
-
-      function renderExamples(list) {
-        els.examples.replaceChildren(...list.map(text => {
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.textContent = text;
-          button.addEventListener('click', () => { els.brief.value = text; els.brief.focus(); });
-          return button;
-        }));
-      }
 
       FORMATS.forEach(([type, label]) => {
         const chip = document.createElement('button');
@@ -485,14 +680,28 @@
         });
         els.formats.appendChild(chip);
       });
-      renderExamples(EXAMPLES);
+      renderQuick();
       els.form.addEventListener('submit', generate);
       els.brief.addEventListener('keydown', event => {
         if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) generate(event);
       });
 
-      // Show "Suggest topics" only when ES MCP offers a trending tool.
+      // A brief in the link (Trend Design "Design this") starts right away:
+      // the click there was the request. The link is cleaned so a reload
+      // doesn't run it again.
+      const params = new URLSearchParams(window.location.search);
+      const linkedBrief = params.get('brief');
+      if (linkedBrief) {
+        els.brief.value = linkedBrief.slice(0, 1500);
+        params.delete('brief');
+        const rest = params.toString();
+        history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
+      }
+
       window.addEventListener('load', async () => {
+        if (linkedBrief && params.get('autorun') !== '0') generate();
+        else (window.requestIdleCallback || (fn => setTimeout(fn, 1200)))(() => renderer().catch(() => {}));
+        // Show "Suggest topics" only when ES MCP offers a trending tool.
         try {
           const response = await window.ESAuth?.fetchWithAuth?.('/api/es-generate');
           const data = response?.ok ? await response.json() : null;

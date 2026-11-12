@@ -12,6 +12,7 @@
 const { verifyEsUser } = require('./_supabase-auth.js');
 const { loadPastDesigns, selectExamples, formatExamples } = require('./_generate-examples.js');
 const { isMcpConfigured, createSession } = require('./_es-mcp.js');
+const { gatewayConfigured, aiText, isBudgetError, MODELS: AI_MODELS } = require('./_ai-gateway.js');
 
 const ES_WP_API = 'https://www.essentiallysports.com/wp-json/wp/v2';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
@@ -32,6 +33,10 @@ const AI_PROVIDERS = {
 function pickProvider() {
   if (GENERATE_AI === 'rules') return null;
   if (GENERATE_AI === 'openai' && USE_OPENAI) return { name: 'openai', ...AI_PROVIDERS.openai };
+  // Vercel AI Gateway (main tier: Claude Haiku) is preferred when its key is set; Groq stays as the backup.
+  if (GENERATE_AI !== 'groq' && gatewayConfigured()) {
+    return { name: 'gateway', model: AI_MODELS.main, backup: GROQ_API_KEY ? { name: 'groq', ...AI_PROVIDERS.groq } : null };
+  }
   if (GROQ_API_KEY) return { name: 'groq', ...AI_PROVIDERS.groq };
   if (USE_OPENAI) return { name: 'openai', ...AI_PROVIDERS.openai };
   return null;
@@ -227,6 +232,16 @@ function isEsUrl(value) {
   }
 }
 
+// A background scene for the optional AI image ("Scene image" button): places
+// and objects only. Every word with a capital letter (names, teams, leagues,
+// brands) is dropped, so an image is never asked for a real person or a logo.
+function sceneText(value) {
+  const text = clean(value).replace(/^[A-Z](?=[a-z])/, c => c.toLowerCase());
+  const words = text.split(' ').filter(word => word && !/[A-Z]/.test(word) && !/\d{2,}/.test(word));
+  const scene = words.join(' ').replace(/[^a-z0-9 ,'-]/g, '').replace(/\s+/g, ' ').trim();
+  return scene.length >= 8 ? scene.slice(0, 140) : '';
+}
+
 function checkSpec(raw, index, allowedTypes) {
   const postType = String(raw?.postType || '').trim();
   if (!TEMPLATES[postType]) return { error: `design ${index + 1}: unsupported post type "${postType}"` };
@@ -245,6 +260,7 @@ function checkSpec(raw, index, allowedTypes) {
       lines: checked.lines,
       listicle: checked.listicle || null,
       photoQuery: TEMPLATES[postType].photo ? (within(raw.photoQuery, 2, 80) || '') : '',
+      scene: TEMPLATES[postType].photo ? sceneText(raw.scene) : '',
       photo: null,
       why: within(raw.why, 1, 220) || '',
       sources: (Array.isArray(raw.sources) ? raw.sources : [])
@@ -367,6 +383,120 @@ async function searchEsArticlesOnce(query, timeoutMs = 20000) {
   })).filter(article => article.title && isEsUrl(article.url));
 }
 
+// ─── Fast research: ES tags ────────────────────────────────────────────────
+// Every ES story is tagged with the people and teams in it. A tag lookup plus
+// "posts with that tag" takes ~3s, against ~15s for a full-text search, and
+// finds stories actually about the person (newest first).
+const NAME_STOP = new Set(('a an the and or but of in on at to for with from by as is are was were be been can could will would should does do did has have had not no yes why how what when where who which this that these those it its his her their our my your '
+  + 'after before just new big top best worst make create post headline story context sport breaking report reports says said fans season game games week today tonight again still now here there anyone everyone nobody '
+  + 'stop stops win wins won lose loses lost beat beats over vs versus against i we he she they you if all every more most first last next one two three back off out up down into than then').split(' '));
+
+// Likely names in a brief, most specific first: runs of capitalised words
+// ("Caitlin Clark", "Indiana Fever"), then single names ("Lakers"). Labels
+// from Trend Design ("Headline:", "Story:", "Sport: NBA") are skipped.
+function nameCandidates(brief) {
+  const multi = [];
+  const single = [];
+  // A Title Case headline makes every word look like a name: its words come
+  // last, one by one ("Are The Lakers Already Cooked?" -> "Lakers").
+  const late = [];
+  String(brief || '').split('\n').forEach(rawLine => {
+    if (/^\s*sport\s*:/i.test(rawLine)) return;
+    const headline = /^\s*headline\s*:/i.test(rawLine);
+    const line = rawLine.replace(/^\s*(?:headline|story|context)\s*:\s*/i, '').replace(/["“”][^"“”]*["“”]/g, ' , ');
+    let run = [];
+    const flush = () => {
+      if (headline) late.push(...run.filter(word => word.length >= 4));
+      else if (run.length >= 2) multi.push(run.slice(0, 3).join(' '));
+      else if (run.length === 1 && run[0].length >= 4) single.push(run[0]);
+      run = [];
+    };
+    line.split(/\s+/).forEach(token => {
+      const word = token.replace(/(?:['’]s|['’])$/i, '').replace(/^[^A-Za-z]+|[^A-Za-z.'’-]+$/g, '');
+      const breaks = /[,.;:!?()]$/.test(token) && !/^[A-Z]\.$/.test(token);
+      const isName = /^[A-Z][a-zA-Z.'’-]*$/.test(word) && !NAME_STOP.has(word.toLowerCase()) && !/^[A-Z]{2,4}$/.test(word);
+      if (isName) run.push(word); else flush();
+      if (breaks) flush();
+    });
+    flush();
+  });
+  if (!multi.length && !single.length && !late.length) {
+    const words = keyTerms(brief).split(' ').filter(word => word.length > 2);
+    if (words.length >= 2) multi.push(words.slice(0, 2).join(' '));
+    single.push(...words.slice(0, 2));
+  }
+  return [...new Set([...multi, ...single, ...late])].slice(0, 4);
+}
+
+const normName = text => clean(text).toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const WP_HEADERS = { 'User-Agent': 'ES-Designer/1.0 (+https://www.essentiallysports.com/)', Accept: 'application/json' };
+
+// The best ES tag for one candidate name: an exact name, or a team whose
+// full name ends with it ("Lakers" -> "Los Angeles Lakers"); most used wins.
+async function esTagFor(candidate) {
+  const url = new URL(`${ES_WP_API}/tags`);
+  url.searchParams.set('search', candidate);
+  url.searchParams.set('orderby', 'count');
+  url.searchParams.set('order', 'desc');
+  url.searchParams.set('per_page', '6');
+  url.searchParams.set('_fields', 'id,name,count');
+  const response = await fetch(url, { headers: WP_HEADERS, signal: AbortSignal.timeout(6000) });
+  const tags = await response.json().catch(() => null);
+  if (!response.ok || !Array.isArray(tags)) return null;
+  const want = normName(candidate);
+  const match = tags.filter(tag => Number(tag?.count) >= 3).find(tag => {
+    const name = normName(tag.name);
+    return name === want || name.endsWith(` ${want}`) || (want.endsWith(` ${name}`) && name.includes(' '));
+  });
+  return match ? { id: match.id, name: clean(match.name), count: Number(match.count) } : null;
+}
+
+const toArticle = post => ({
+  title: clean(post?.title?.rendered),
+  url: post?.link || '',
+  date: String(post?.date || '').slice(0, 10),
+  excerpt: clean(post?.excerpt?.rendered).slice(0, 400),
+  image: String(post?.yoast_head_json?.og_image?.[0]?.url || ''),
+});
+
+async function esPostsByTags(ids) {
+  if (!ids.length) return [];
+  const url = new URL(`${ES_WP_API}/posts`);
+  url.searchParams.set('tags', ids.join(','));
+  url.searchParams.set('per_page', '6');
+  url.searchParams.set('_fields', 'id,date,link,title,excerpt,yoast_head_json.og_image');
+  const response = await fetch(url, { headers: WP_HEADERS, signal: AbortSignal.timeout(8000) });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !Array.isArray(data)) return [];
+  return data.map(toArticle).filter(article => article.title && isEsUrl(article.url));
+}
+
+// Research results are reused for 10 minutes (Retry, the same brief again).
+const COVERAGE_CACHE = new Map();
+const COVERAGE_TTL_MS = 10 * 60 * 1000;
+
+// ES coverage for a brief: tagged stories (fast) about up to two people or
+// teams, else the slow full-text search. Returns { articles, tags }.
+async function esCoverage(brief) {
+  const candidates = nameCandidates(brief);
+  const key = candidates.join('|') || keyTerms(brief);
+  const hit = COVERAGE_CACHE.get(key);
+  if (hit && Date.now() - hit.at < COVERAGE_TTL_MS) return hit.value;
+  const found = await Promise.all(candidates.map(name => esTagFor(name).catch(() => null)));
+  const tags = [];
+  found.forEach(tag => {
+    if (tag && !tags.some(t => t.id === tag.id) && tags.length < 2) tags.push(tag);
+  });
+  let articles = await esPostsByTags(tags.map(tag => tag.id)).catch(() => []);
+  if (!articles.length) articles = await searchEsArticles(keyTerms(brief)).catch(() => []);
+  const value = { articles, tags };
+  if (articles.length) {
+    if (COVERAGE_CACHE.size > 100) COVERAGE_CACHE.delete(COVERAGE_CACHE.keys().next().value);
+    COVERAGE_CACHE.set(key, { at: Date.now(), value });
+  }
+  return value;
+}
+
 function imageUrlsFromMcp(text) {
   const urls = String(text).match(/https?:\/\/[^\s"'<>)\]]+/g) || [];
   const s3 = [...String(text).matchAll(/s3:\/\/([^/\s"']+)\/([^\s"'<>)]+)/g)]
@@ -399,7 +529,7 @@ async function findPhoto(query, mcp, tools, articles = []) {
     const terms = keyTerms(query) || query;
     const surname = mainWord(terms);
     const known = articles.find(a => canProxy(a.image) && surname && `${a.title} ${a.excerpt}`.toLowerCase().includes(surname));
-    const article = known || (await searchEsArticlesOnce(terms, 15000).catch(() => [])).find(a => canProxy(a.image));
+    const article = known || (await esCoverage(query).catch(() => ({ articles: [] }))).articles.find(a => canProxy(a.image));
     return article ? { title: article.title, sourceUrl: article.image, url: proxied(article.image) } : null;
   } catch (error) {
     return null;
@@ -441,7 +571,7 @@ async function queryEsArticles(mcp, tool, name) {
 }
 
 async function research(brief, mcp, tools, notes) {
-  const out = { articles: [], digest: '', sources: [] };
+  const out = { articles: [], tags: [], digest: '', sources: [] };
   const sections = [];
   const name = keyTerms(brief).split(' ').slice(0, 2).join(' ');
   const tryTool = async (role, label) => {
@@ -474,15 +604,18 @@ async function research(brief, mcp, tools, notes) {
   await Promise.all([
     tryTool('articles', 'ES articles'),
     tryTool('stats', 'Stats'),
-    // The public site search is slow (~15s); skip it when ES MCP's
-    // query_articles supplies tagged articles instead.
-    (mcp && tools.articles?.name === 'query_articles' ? Promise.resolve([]) : searchEsArticles(keyTerms(brief)))
-      .then(articles => { out.articles = articles; }).catch(() => {}),
+    // ES stories tagged with the people in the brief (fast). Skipped when
+    // ES MCP's query_articles supplies tagged articles instead.
+    (mcp && tools.articles?.name === 'query_articles' ? Promise.resolve({ articles: [], tags: [] }) : esCoverage(brief))
+      .then(coverage => { out.articles = coverage.articles; out.tags = coverage.tags; }).catch(() => {}),
   ]);
   if (!out.mcpArticles?.length && !out.articles.length && mcp && tools.articles?.name === 'query_articles') {
-    out.articles = await searchEsArticles(keyTerms(brief)).catch(() => []);
+    const coverage = await esCoverage(brief).catch(() => ({ articles: [], tags: [] }));
+    out.articles = coverage.articles;
+    out.tags = coverage.tags;
   }
   if (out.articles.length) {
+    if (out.tags.length) sections.push(`ES tags (who the stories are about): ${out.tags.map(tag => tag.name).join(', ')}`);
     sections.push(`## Latest ES coverage\n${out.articles.map(a => `- ${a.title} (${a.date}) ${a.url}\n  ${a.excerpt}`).join('\n')}`);
     out.sources.push(...out.articles.map(a => a.url));
   }
@@ -556,7 +689,7 @@ function goldExamplesText() {
   return GOLD_EXAMPLES.map(example => `Brief: ${example.brief.replace(/\n/g, ' / ')}\nAnswer: ${JSON.stringify({ designs: example.designs })}`).join('\n\n');
 }
 
-function buildPrompt(brief, found, allowedTypes, count, pastExamples = '') {
+function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid = []) {
   const catalog = Object.entries(TEMPLATES)
     .filter(([type]) => !allowedTypes.length || allowedTypes.includes(type))
     .map(([type, t]) => `- ${type} (${t.label}): ${t.use}\n  fields: ${t.shape}`)
@@ -576,12 +709,16 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '') {
     '- Player Stats headlines are a short reaction, not a label: e.g. "Statement Made", "No One Can Stop Her", "Mahomes Delivers".',
     '- Respect every character limit exactly; anything longer is rejected. Shorter is better.',
     '- Vary the templates when the story allows it.',
+    '- Give the editor choices: whenever the brief has a real story, return at least 2 designs. When only Covers fit (no quote, no game numbers), return 3 Covers with clearly different hooks built on the brief\'s facts (a headline from the brief comes first, word for word). A different hook is an opinion or question, not a new fact.',
+    '- Every design is about the brief\'s own story or moment. The ES research is for facts, the current team and context; never switch to a different story from the research (a book, an injury, a trade) unless the brief is only a name or a topic.',
     '- If the brief is a ranking, table or top-N list (even pasted with one value per line), make ONE listicle-type-1 (Rankings Table, when rows have number columns) or listicle-type-2 (Ranked List) design with all rows in order, using the exact names and values. Never split a list into one post per row. You may add one Cover with the headline as a second option. Fill every row\'s "team" with the team that person or pair did it with (e.g. Tom Brady & Bill Belichick: New England Patriots); each row is coloured in its team\'s brand colours.',
     '- Work out the person\'s CURRENT team and league from the ES research (newest coverage wins; players change teams). sport is the league: NFL, NBA, WNBA, MLB, CFB (college football), CBB Men, CBB Women, Tennis. team is that person\'s own team, full name, e.g. "Kansas City Chiefs" (never the opponent). Our templates use the team\'s brand colours, so get the team right.',
     '- A team named in the brief (e.g. "Dream duo", "after the Chiefs win") is the team; it beats anything you remember, since players move.',
     '- Every design about the same person uses the same CURRENT team; a duo or list from one team uses that team on every design. If unsure of a team, leave it empty rather than guess an old team.',
-    '- If the brief gives you nothing true to say (no facts, no quote, nothing in the ES research), return {"designs": []}.',
+    '- What the brief states counts as true: "a post about the Lakers losing streak" lets you write Cover hooks about that streak (no invented numbers). Only if the brief gives you nothing true to say (no story, no facts, no quote, nothing in the ES research, e.g. "a stats post on a random player"), return {"designs": []}.',
     '- photoQuery is 2-5 words: the person plus their current team, e.g. "Patrick Mahomes Chiefs".',
+    '- scene (photo templates only) is 5-14 lowercase words for an optional AI background image: a place or objects that fit the story, with NO people, faces, names, teams, logos, jerseys or text, e.g. "empty football stadium at night under bright floodlights".',
+    '- A brief from Trend Design has labelled lines. "Headline:" is the headline the editor picked: put it word for word on a Cover (split into pills of max 20 chars; fix capitalisation only). "Story:" and "Context:" are the news to work from. "Sport:" is the league.',
     '',
     `Templates:\n${catalog}`,
     '',
@@ -589,11 +726,12 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '') {
     '',
     ...(pastExamples ? [`Real ES posts on similar topics (style and template choice only; never reuse their facts, names or numbers):\n${pastExamples}`, ''] : []),
     `Brief: ${brief}`,
+    ...(avoid.length ? ['', `The editor asked for a fresh take: do not reuse these lines: ${avoid.map(line => JSON.stringify(line)).join(', ')}`] : []),
     '',
     `ES research:\n${found.digest || '(no ES coverage found)'}`,
     '',
     'Reply with JSON only, no prose:',
-    '{"designs": [{"postType": "...", "title": "short name", "sport": "...", "team": "...", "fields": {...}, "photoQuery": "...", "why": "one sentence on why this template fits", "sources": ["ES article URLs you used"]}]}',
+    '{"designs": [{"postType": "...", "title": "short name", "sport": "...", "team": "...", "fields": {...}, "photoQuery": "...", "scene": "...", "why": "one short sentence on why this template fits", "sources": ["ES article URLs you used"]}]}',
   ].join('\n');
 }
 
@@ -625,6 +763,29 @@ async function thinkWithMcp(prompt, mcp, tool) {
 // model hits its rate limit, the provider's backup models are tried in order
 // (each Groq model has its own free allowance); provider.used records which ran.
 async function chat(provider, messages) {
+  if (provider.name === 'gateway' && provider.fallback) {
+    if (!provider.backup) throw new Error('The AI is unavailable.');
+    const text = await chat(provider.backup, messages);
+    provider.used = provider.backup.used;
+    return text;
+  }
+  if (provider.name === 'gateway' && !provider.fallback) {
+    try {
+      const { text, model, cost } = await aiText({ tier: 'main', messages, effort: 'low', maxTokens: 6000, timeoutMs: 25000, track: provider.track });
+      provider.used = model;
+      provider.cost = (provider.cost || 0) + cost;
+      return text;
+    } catch (error) {
+      // Claude failed (e.g. the weekly AI budget ran out): this and any later
+      // call in the request run on Groq, reported as the brain.
+      provider.fallback = isBudgetError(error) ? 'budget' : 'error';
+      if (!provider.backup) throw error;
+      const text = await chat(provider.backup, messages);
+      provider.usedProvider = provider.backup.name;
+      provider.used = provider.backup.used;
+      return text;
+    }
+  }
   // Each model is tried in strict JSON mode, then (if the provider rejects its
   // JSON) in plain mode, which extractJson can still read.
   let lastError = null;
@@ -871,13 +1032,50 @@ function brandHints(spec, brief, articles) {
   };
 }
 
+// ─── Photos of real people ─────────────────────────────────────────────────
+// Candidates come only from ES (agency images via ES MCP, and the lead images
+// of ES stories tagged with the person). AI never draws a real person.
+async function photoCandidates(person, mcp, tools, articles) {
+  const out = [];
+  const add = (sourceUrl, title) => {
+    if (sourceUrl && !out.some(c => c.sourceUrl === sourceUrl) && out.length < 6) out.push({ title: clean(title || person).slice(0, 120), sourceUrl, url: proxied(sourceUrl) });
+  };
+  if (person && mcp && tools.images) {
+    try {
+      const args = buildArgs(tools.images, person, { type: 'agency' }) || buildArgs(tools.images, person);
+      if (args) imageUrlsFromMcp(resultText(await mcp.callTool(tools.images.name, args, { timeoutMs: 8000 }))).slice(0, 3).forEach(url => add(url, person));
+    } catch (error) { /* ES story images below */ }
+  }
+  articles.filter(a => canProxy(a.image)).forEach(a => add(a.image, a.title));
+  return out;
+}
+
+// Claude (main tier, it can see images) picks the photo that shows the person
+// best. Runs alongside the design call, so it adds no waiting. Returns the
+// index of the best candidate (0 when unsure or on any failure).
+const PHOTO_PICK_MAX = 5;
+async function pickPhoto(person, candidates, track) {
+  if (!person || candidates.length < 2 || !gatewayConfigured()) return { index: 0, cost: 0, picked: false };
+  const shown = candidates.slice(0, PHOTO_PICK_MAX);
+  const content = [{ type: 'text', text: `Which photo best shows ${person} for a sports Instagram post? Prefer ${person} clearly visible and recognisable (ideally alone, face visible, sharp). Avoid graphics, collages, text-heavy images and photos of other people. Reply with JSON only: {"best": <photo number, or 0 if none shows ${person}>}` }];
+  shown.forEach((candidate, index) => content.push({ type: 'text', text: `Photo ${index + 1}:` }, { type: 'image', source: { type: 'url', url: candidate.sourceUrl } }));
+  try {
+    const { text, cost } = await aiText({ tier: 'main', messages: [{ role: 'user', content }], effort: 'low', maxTokens: 2000, timeoutMs: 15000, track: { ...track, feature: 'generate-photo-pick' } });
+    const best = Number(extractJson(text)?.best);
+    return { index: best >= 1 && best <= shown.length ? best - 1 : 0, cost, picked: best >= 1 && best <= shown.length };
+  } catch (error) {
+    return { index: 0, cost: 0, picked: false };
+  }
+}
+
 const brainName = tools => {
   if (tools.think) return `es-mcp:${tools.think.name}`;
   const provider = pickProvider();
   return provider ? `${provider.name}:${provider.model}` : 'draft';
 };
 
-async function generate({ brief, formats, count, token }) {
+async function generate({ brief, formats, count, avoid, token, email }) {
+  const started = Date.now();
   const notes = [];
   const allowedTypes = (Array.isArray(formats) ? formats : []).filter(type => TEMPLATES[type]);
   const want = Math.min(Math.max(parseInt(count, 10) || MAX_DESIGNS, 1), MAX_DESIGNS);
@@ -885,11 +1083,24 @@ async function generate({ brief, formats, count, token }) {
   // Past team designs (background learning) load alongside the research.
   const [found, pastDesigns] = await Promise.all([research(brief, mcp, tools, notes), loadPastDesigns(token).catch(() => [])]);
   const pastExamples = formatExamples(selectExamples(brief, pastDesigns, allowedTypes));
+  const researchMs = Date.now() - started;
+  // The main person (or team): the top ES tag, else the names in the brief.
+  const person = found.tags?.[0]?.name || nameCandidates(brief)[0] || '';
+  const wantsPhoto = !allowedTypes.length || allowedTypes.some(type => TEMPLATES[type].photo);
+  // Photo candidates and Claude's pick run while the designs are written.
+  const photoTrack = { email, token };
+  const photoWork = wantsPhoto
+    ? photoCandidates(person, mcp, tools, found.articles)
+      .then(async candidates => ({ candidates, pick: await pickPhoto(person, candidates, photoTrack) }))
+      .catch(() => ({ candidates: [], pick: { index: 0, cost: 0, picked: false } }))
+    : Promise.resolve({ candidates: [], pick: { index: 0, cost: 0, picked: false } });
 
   let brain = brainName(tools);
   const provider = tools.think ? null : pickProvider();
+  if (provider) provider.track = { feature: 'generate', email, token };
   let aiFailed = false;
-  const prompt = buildPrompt(brief, found, allowedTypes, want, pastExamples);
+  const avoidLines = (Array.isArray(avoid) ? avoid : []).map(line => clean(line).slice(0, 120)).filter(Boolean).slice(0, 12);
+  const prompt = buildPrompt(brief, found, allowedTypes, want, pastExamples, avoidLines);
   const designs = [];
   const seen = new Set();
   // Quotes must be real: their words have to appear in the brief or the ES research.
@@ -955,8 +1166,17 @@ async function generate({ brief, formats, count, token }) {
     brain = 'draft';
     notes.push(...skipped(keepValid(draftPlan(brief, found, allowedTypes))));
   }
+  const aiMs = Date.now() - started - researchMs;
+  const { candidates, pick } = await photoWork;
+  const ordered = candidates.length ? [candidates[pick.index], ...candidates.filter((_, i) => i !== pick.index)] : [];
+  const personWord = mainWord(keyTerms(person) || person);
   await Promise.all(designs.map(async spec => {
-    spec.photo = await findPhoto(spec.photoQuery, mcp, tools, found.articles);
+    // Designs about the main person use the picked ES photo; anyone else
+    // (e.g. the other side of a rivalry) gets their own ES photo.
+    const aboutPerson = !spec.photoQuery || (personWord && squash(spec.photoQuery).includes(` ${personWord} `));
+    spec.photo = !TEMPLATES[spec.postType].photo ? null
+      : (aboutPerson && ordered[0]) ? { ...ordered[0] } : await findPhoto(spec.photoQuery, mcp, tools, found.articles);
+    spec.photos = TEMPLATES[spec.postType].photo ? (aboutPerson ? ordered : [spec.photo, ...ordered].filter(Boolean)).slice(0, 6) : [];
     spec.hints = brandHints(spec, brief, found.articles);
     spec.brief = brief.slice(0, 600);
     if (!spec.sport) spec.sport = spec.hints.sport;
@@ -964,10 +1184,13 @@ async function generate({ brief, formats, count, token }) {
   }));
 
   return {
-    brain: brain !== 'draft' && provider?.used ? `${provider.name}:${provider.used}` : brain,
+    brain: brain !== 'draft' && provider?.used ? `${provider.usedProvider || provider.name}:${provider.used}` : brain,
     designs,
     research: { articles: found.articles.map(({ title, url, date }) => ({ title, url, date })) },
     connection: connectionInfo(tools, toolNames, mcpError),
+    ai: { fallback: provider?.fallback || '', failed: aiFailed },
+    photo: { person, candidates: candidates.length, picked: pick.picked },
+    meta: { ms: { research: researchMs, ai: aiMs, total: Date.now() - started }, costUsd: Number(((provider?.cost || 0) + (pick.cost || 0)).toFixed(5)) },
     learning: { pastDesigns: pastDesigns.length, examplesUsed: pastExamples ? pastExamples.split('\n').length : 0 },
     notes,
   };
@@ -1009,11 +1232,11 @@ exports.handler = async function handler(event) {
     const brief = String(body.brief || '').replace(/<[^>]*>/g, ' ').replace(/[^\S\n\t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1500);
     if (brief.length < 3) return json(400, { error: 'Write a brief of at least a few words.' });
     const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
-    return json(200, await generate({ brief, formats: body.formats, count: body.count, token }));
+    return json(200, await generate({ brief, formats: body.formats, count: body.count, avoid: body.avoid, token, email: auth.user.email }));
   } catch (error) {
     return json(500, { error: 'Generate failed.', detail: String(error.message || error).slice(0, 200) });
   }
 };
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
-exports._test = { TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt };
+exports._test = { TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE };

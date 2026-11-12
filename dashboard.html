@@ -9,7 +9,7 @@
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261025-perf1"></script>
-  <script src="dashboard-data.js?v=20261111-basics2"></script>
+  <script src="dashboard-data.js?v=20261112-aispend1"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -379,6 +379,17 @@
     .pill.is-high { background: var(--es-warn-soft); border-color: #FAD79B; color: var(--es-warn); }
     .pill.is-done { background: var(--es-good-soft); border-color: #B7DEC4; color: var(--success); }
 
+    .ai-spend-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .ai-spend-stat { display: grid; gap: 4px; }
+    .ai-spend-stat strong { font: 800 28px/1 var(--es-font-display, inherit); font-variant-numeric: tabular-nums; color: var(--es-ink, #0e1014); }
+    .ai-spend-stat span { font-size: 14px; color: var(--es-ink-3, #646a76); }
+    .ai-spend-budget { height: 8px; border-radius: 999px; background: var(--es-sunk, #f5f6f8); overflow: hidden; margin: 4px 0 20px; }
+    .ai-spend-budget > span { display: block; height: 100%; border-radius: inherit; background: var(--es-brand-fill, #0a6bd8); }
+    .ai-spend-budget.is-high > span { background: var(--es-warn, #b25e09); }
+    .ai-spend-budget.is-over > span { background: var(--es-bad, #c42323); }
+    .ai-spend-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; }
+    .ai-spend-groups h3 { margin: 0 0 10px; font: 700 14px/1.4 var(--es-font-ui, inherit); color: var(--es-text-secondary, #464c57); }
+    .ai-spend-note { margin: 16px 0 0; font-size: 14px; color: var(--es-ink-3, #646a76); }
     .empty {
       padding: 28px 22px;
       color: var(--es-muted);
@@ -603,6 +614,13 @@
               </div>
               <div id="overview-exports-list"></div>
             </section>
+          </section>
+
+          <section class="panel ai-spend-panel" data-view-section="overview" data-dashboard-panel="ai-spend">
+            <div class="panel-head">
+              <div><h2 class="panel-title">AI spend</h2><p class="panel-subtitle">Last 7 days of AI calls (headline ideas, Generate) against the $20 weekly key limit.</p></div>
+            </div>
+            <div id="ai-spend"><div class="empty">Loading AI spend…</div></div>
           </section>
 
           <section class="panel" data-view-section="people" data-dashboard-panel="people">
@@ -1609,6 +1627,72 @@
       target.innerHTML = `<div class="workspace-bar-chart">${barsHtml}</div>`;
     }
 
+    // AI spend: rolling 7 days vs the key's $20 weekly limit (set by the dev team in Vercel).
+    const AI_WEEKLY_BUDGET = 20;
+    const AI_FEATURE_LABELS = { 'trend-headlines': 'Trend Design headlines', generate: 'Generate', 'photo-pick': 'Photo picking', 'image-gen': 'Image generation' };
+    const money = value => '$' + (value >= 1 ? value.toFixed(2) : value.toFixed(value >= 0.01 ? 3 : 4));
+    let aiSpendLoading = false;
+    async function renderAiSpend() {
+      const target = document.getElementById('ai-spend');
+      if (!target || aiSpendLoading || !window.ESDashboardData.fetchAiUsage) return;
+      aiSpendLoading = true;
+      try {
+        const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { rows, ready } = await window.ESDashboardData.fetchAiUsage({ sinceIso: since });
+        if (!ready) {
+          target.innerHTML = '<div class="empty">AI spend tracking isn’t switched on yet (the usage table hasn’t been created).</div>';
+          return;
+        }
+        if (!rows.length) {
+          target.innerHTML = '<div class="empty">No AI calls in the last 7 days.</div>';
+          return;
+        }
+        const total = rows.reduce((sum, row) => sum + Number(row.cost_usd || 0), 0);
+        const calls = rows.length;
+        const failed = rows.filter(row => row.ok === false).length;
+        const pct = Math.min(100, (total / AI_WEEKLY_BUDGET) * 100);
+        const group = key => {
+          const map = new Map();
+          rows.forEach(row => {
+            const label = key(row);
+            const entry = map.get(label) || { label, cost: 0, calls: 0 };
+            entry.cost += Number(row.cost_usd || 0);
+            entry.calls += 1;
+            map.set(label, entry);
+          });
+          return Array.from(map.values()).sort((a, b) => b.cost - a.cost || b.calls - a.calls).slice(0, 6);
+        };
+        const bars = (title, list) => {
+          const max = Math.max(...list.map(item => item.cost), 0.000001);
+          return `<div><h3>${escapeHtml(title)}</h3><div class="workspace-bar-chart">${list.map(item => `
+            <div class="workspace-bar-row">
+              <span class="workspace-bar-label">${escapeHtml(item.label)}</span>
+              <span class="workspace-bar-track"><span class="workspace-bar-fill" style="width:${Math.max(4, Math.round((item.cost / max) * 100))}%"></span></span>
+              <span class="workspace-bar-count">${money(item.cost)}</span>
+            </div>`).join('')}</div></div>`;
+        };
+        const budgetClass = pct >= 100 ? ' is-over' : pct >= 80 ? ' is-high' : '';
+        target.innerHTML = `
+          <div class="ai-spend-summary">
+            <div class="ai-spend-stat"><strong>${money(total)}</strong><span>spent of ${money(AI_WEEKLY_BUDGET)} this week</span></div>
+            <div class="ai-spend-stat"><strong>${calls.toLocaleString()}</strong><span>AI calls${failed ? ` · ${failed} failed` : ''}</span></div>
+            <div class="ai-spend-stat"><strong>${money(total / calls)}</strong><span>average per call</span></div>
+          </div>
+          <div class="ai-spend-budget${budgetClass}" role="meter" aria-label="Share of the weekly AI limit used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><span style="width:${pct.toFixed(1)}%"></span></div>
+          <div class="ai-spend-groups">
+            ${bars('By feature', group(row => AI_FEATURE_LABELS[row.feature] || row.feature))}
+            ${bars('By model', group(row => String(row.model || '').replace(/^[a-z-]+\//, '')))}
+            ${bars('By person', group(row => personDisplayName('', row.user_email)))}
+          </div>
+          <p class="ai-spend-note">Costs are worked out from token counts at list prices, so they can differ slightly from the Vercel bill. When the weekly limit is used up, FrameUp falls back to its free drafts until it resets.</p>`;
+      } catch (error) {
+        console.warn('[ai spend]', error);
+        target.innerHTML = '<div class="empty">Couldn’t load AI spend right now.</div>';
+      } finally {
+        aiSpendLoading = false;
+      }
+    }
+
     function renderDesigns(state) {
       const target = document.getElementById('designs-table');
       if (!target) return;
@@ -1932,6 +2016,7 @@
       renderAccessRequests();
       renderActivity(state);
       renderLiveActivity(state);
+      renderAiSpend();
       bindDashboardChoiceControls();
     }
 
