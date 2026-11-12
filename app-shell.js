@@ -35,6 +35,7 @@
     upload: icon('<path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'),
     clock: icon('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>'),
     keyboard: icon('<path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/>'),
+    trending: icon('<path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/>'),
     sliders: icon('<path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/>'),
   };
 
@@ -55,6 +56,7 @@
       label: 'Create',
       items: [
         { id: 'generate', label: 'Generate', href: 'generate.html', icon: 'sparkle', badge: 'New', desc: 'Turn a brief into on-brand, editable Social Media posts.' },
+        { id: 'trends', label: 'Trend Design', short: 'Trends', href: 'trend-design.html', icon: 'trending', badge: 'New', desc: 'What US sports fans are searching and reading now, by sport. Turn any trend into a design.' },
         { id: 'instagram', label: 'Social Media', short: 'Social', href: 'index.html#instagram', icon: 'social', editor: true },
         { id: 'youtube', label: 'YouTube', href: 'index.html#youtube', icon: 'youtube', editor: true },
         { id: 'newsletter', label: 'Newsletter', href: 'index.html#newsletter', icon: 'newsletter', editor: true },
@@ -173,6 +175,11 @@
   // Newest first. `templates` (workspace + dropdown value) get a "New" tag in
   // the template dropdowns and picker for 30 days from `date`.
   const WHATS_NEW = [
+    { id: '2026-11-12-trends', date: '2026-11-12', items: [
+      ['Trend Design', 'A new page in Create: what US sports fans are searching on Google and reading right now, sorted into Golf, Tennis, NFL, College Football, MLB and Others. It refreshes every 5 minutes. Each story comes with headline ideas; click one, or "Design this", to open Generate with it as your brief.'],
+      ['Cleaner pages', 'Design Request, Tool Feedback, Gallery, Generate and Reel Captions use the same clean fields, labels and cards as the editor.'],
+      ['Easier to read', 'Small grey text and dark mode colours were adjusted so every page meets accessibility contrast levels.'],
+    ] },
     { id: '2026-11-11-round2', date: '2026-11-11', items: [
       ['Content · Photos · Style', 'The right panel has three tabs: text in Content, photos and the ES Image Pool together in Photos, placement and colours in Style. Tabs with nothing in them hide.'],
       ['Search finds templates and actions', 'Press ⌘K / Ctrl+K and type: jump to any template, reopen a recent design, or Export, Copy link, Upload a photo.'],
