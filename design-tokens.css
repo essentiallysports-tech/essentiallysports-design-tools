@@ -2399,15 +2399,6 @@ html[data-theme="dark"]{
   --es-brand-soft: rgb(26 115 224 / .22);
 }
 
-/* Reel Captions keeps a light timeline in dark mode: its muted text stays dark. */
-html[data-theme="dark"] .reels-bottom-panel{
-  --es-ink-3: #646a76;
-  --es-text-muted: #646a76;
-  --es-text-subtle: #646a76;
-  --es-brand-soft: #eaf3ff;
-  --reels-muted: #646a76;
-  --reels-soft: #eaf3ff;
-}
 
 /* Login in dark mode: the note's lead-in and "Forgot password?" were near-black. */
 html[data-theme="dark"] .login-note strong{
@@ -2480,3 +2471,339 @@ html[data-theme="dark"] .es-stat__trend.is-down{
   white-space: nowrap;
   border: 0;
 }
+
+/* Pages sit flush with the window (no browser-default 8px body margin).
+   Zero specificity: a page that sets its own body margin still wins. */
+:where(body){
+  margin: 0;
+}
+
+/* ========================================================================
+ * Dark mode audit (2026-11-12): every surface that showed light in dark mode.
+ * ====================================================================== */
+
+/* Shared dark values, reused below. */
+html[data-theme="dark"] {
+  --dk-base: #080808;
+  --dk-surface: #121212;
+  --dk-raised: #1a1a1a;
+  --dk-sunk: #161616;
+  --dk-hover: #232323;
+  --dk-line: #2a2a2a;
+  --dk-line-2: #3a3a3a;
+  --dk-ink: #f3f5f7;
+  --dk-ink-2: #c9cdd3;
+  --dk-ink-3: #8b919c;
+}
+
+/* Sidebar section dividers */
+html[data-theme="dark"] .es-sidebar__section { border-top-color: var(--dk-line) !important; }
+
+/* ── Home ── */
+html[data-theme="dark"] .frame-hero {
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgb(10 125 250 / .16), transparent 55%),
+    radial-gradient(90% 120% at 100% 0%, rgb(124 77 255 / .12), transparent 60%),
+    var(--dk-surface) !important;
+  border-color: var(--dk-line) !important;
+}
+html[data-theme="dark"] .frame-hero-cta:not(.is-primary) {
+  background: var(--dk-raised) !important;
+  border-color: var(--dk-line-2) !important;
+  box-shadow: inset 0 0 0 1px var(--dk-line-2) !important;
+  color: var(--dk-ink) !important;
+}
+html[data-theme="dark"] .frame-hero-cta:not(.is-primary):hover { background: var(--dk-hover) !important; }
+html[data-theme="dark"] .frame-hero-arrow {
+  background: rgb(26 26 26 / .9) !important;
+  box-shadow: inset 0 0 0 1px var(--dk-line-2) !important;
+  color: var(--dk-ink) !important;
+}
+html[data-theme="dark"] .frame-thumbnail { background: var(--dk-raised) !important; }
+html[data-theme="dark"] .home-start__foot { border-top-color: var(--dk-line) !important; }
+
+/* ── Generate ── */
+html[data-theme="dark"] .gen-examples button {
+  background: var(--dk-raised) !important;
+  box-shadow: inset 0 0 0 1px var(--dk-line-2) !important;
+  color: var(--dk-ink-2) !important;
+}
+html[data-theme="dark"] .gen-examples button:hover { color: var(--dk-ink) !important; background: var(--dk-hover) !important; }
+
+/* ── Tool Feedback ── */
+html[data-theme="dark"] :is(.feedback-panel-head) { border-bottom-color: var(--dk-line) !important; }
+html[data-theme="dark"] :is(.feedback-type-card, .feedback-dropdown-trigger) { border-color: var(--dk-line-2) !important; }
+
+/* ── Icon tiles (How it works, Home, UI Library): dark tints, bright marks ── */
+html[data-theme="dark"] .es-tile { background: rgb(255 255 255 / .06) !important; color: #c9cdd3 !important; }
+html[data-theme="dark"] .es-tile--blue { background: rgb(10 125 250 / .18) !important; color: #8ec2ff !important; }
+html[data-theme="dark"] .es-tile--purple { background: rgb(124 77 255 / .2) !important; color: #c4b5fd !important; }
+html[data-theme="dark"] .es-tile--green { background: rgb(22 163 74 / .18) !important; color: #6fd39a !important; }
+html[data-theme="dark"] .es-tile--pink { background: rgb(219 39 119 / .18) !important; color: #f9a8d4 !important; }
+html[data-theme="dark"] .es-tile--amber { background: rgb(217 119 6 / .2) !important; color: #fcd34d !important; }
+
+/* ── Buttons that fall back to light greys in dark ── */
+html[data-theme="dark"] .es-btn:disabled,
+html[data-theme="dark"] .es-btn[aria-disabled="true"] { background: var(--dk-raised) !important; box-shadow: inset 0 0 0 1px var(--dk-line) !important; color: #6b7280 !important; }
+html[data-theme="dark"] .es-btn:not(.es-btn--primary):not(.es-btn--ghost) { background: var(--dk-raised); box-shadow: inset 0 0 0 1px var(--dk-line-2); color: var(--dk-ink); }
+html[data-theme="dark"] .es-btn:not(.es-btn--primary):not(.es-btn--ghost):hover { background: var(--dk-hover); }
+html[data-theme="dark"] .es-chip { background: var(--dk-raised); box-shadow: inset 0 0 0 1px var(--dk-line-2); color: var(--dk-ink); }
+html[data-theme="dark"] .es-chip[aria-pressed="true"] { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dk-ink); color: var(--dk-ink); }
+html[data-theme="dark"] .es-input { background: var(--dk-surface); box-shadow: inset 0 0 0 1px var(--dk-line-2); color: var(--dk-ink); }
+html[data-theme="dark"] .es-card { background: var(--dk-surface) !important; box-shadow: inset 0 0 0 1px var(--dk-line) !important; }
+html[data-theme="dark"] .es-empty { background: var(--dk-surface); }
+
+/* ── Editor: Photos tab (upload box, AI image search) ── */
+html[data-theme="dark"] :is(.image-context-empty, .studio-ai-empty) {
+  background: var(--dk-sunk) !important;
+  border-color: var(--dk-line-2) !important;
+  color: var(--dk-ink-2) !important;
+}
+html[data-theme="dark"] :is(.image-context-empty, .studio-ai-empty) :is(span, p, small) { color: var(--dk-ink-3) !important; }
+html[data-theme="dark"] :is(.image-context-empty, .studio-ai-empty) :is(strong, b) { color: var(--dk-ink) !important; }
+html[data-theme="dark"] .image-context-ai {
+  background: var(--dk-raised) !important;
+  border-color: var(--dk-line-2) !important;
+  color: var(--dk-ink) !important;
+}
+html[data-theme="dark"] .image-context-ai:hover { background: var(--dk-hover) !important; }
+html[data-theme="dark"] .studio-ai-section { border-top-color: var(--dk-line) !important; }
+html[data-theme="dark"] .studio-ai-search { box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; background: var(--dk-surface) !important; }
+html[data-theme="dark"] .studio-ai-search:focus-within { box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand) !important; }
+
+/* Editor: accordion sections (all four sides) */
+html[data-theme="dark"][data-studio-shell="on"] .studio-accordion-section,
+html[data-theme="dark"][data-studio-shell="on"] .studio-accordion-section.is-open { border-top-color: transparent !important; border-left-color: transparent !important; border-right-color: transparent !important; }
+
+/* Editor: listicle rows, stats rows, locked chip, widget fields */
+html[data-theme="dark"] :is(.listicle-row-card, .listicle-logo-control, .stats-entry) {
+  background: var(--dk-surface) !important;
+  border-color: var(--dk-line-2) !important;
+  color: var(--dk-ink) !important;
+}
+html[data-theme="dark"] .listicle-row-editor { background: var(--dk-sunk) !important; border-color: var(--dk-line) !important; }
+html[data-theme="dark"] :is(.listicle-row-hide-toggle, .listicle-logo-button) {
+  background: var(--dk-raised) !important;
+  border-color: var(--dk-line-2) !important;
+  color: var(--dk-ink) !important;
+}
+html[data-theme="dark"] .stats-entry-label-input { border-left-color: var(--dk-line-2) !important; }
+html[data-theme="dark"] .studio-locked-chip {
+  background: var(--dk-raised) !important;
+  border-color: var(--dk-line-2) !important;
+  color: var(--dk-ink-2) !important;
+}
+html[data-theme="dark"] :is(.widget-image-thumb, .widget-paste-link-field) {
+  background: var(--dk-surface) !important;
+  border-color: var(--dk-line-2) !important;
+  color: var(--dk-ink) !important;
+}
+html[data-theme="dark"] .post-type-option {
+  background: var(--dk-raised) !important;
+  border-color: var(--dk-line-2) !important;
+  color: var(--dk-ink) !important;
+}
+html[data-theme="dark"] .post-type-option.is-active {
+  background: transparent !important;
+  border-color: var(--dk-ink) !important;
+  box-shadow: inset 0 0 0 .5px var(--dk-ink) !important;
+}
+
+/* ── Reel Captions: a real dark palette (reels.css forced its light one) ── */
+html[data-theme="dark"] body.reels-page {
+  --reels-bg: var(--dk-base);
+  --reels-surface: var(--dk-surface);
+  --reels-panel: var(--dk-surface);
+  --reels-canvas-soft: var(--dk-sunk);
+  --reels-ink: var(--dk-ink);
+  --reels-muted: var(--dk-ink-3);
+  --reels-soft: rgb(26 115 224 / .2);
+  --reels-line: var(--dk-line);
+  --reels-line-strong: var(--dk-line-2);
+  --reels-focus: rgba(37, 134, 247, .24);
+  --reels-shadow: 0 12px 28px rgba(0, 0, 0, .35);
+  background: var(--dk-base);
+  color: var(--dk-ink);
+}
+html[data-theme="dark"] body.reels-page :is(.reels-task-panel, .reels-side-panel, .reels-bottom-panel, .reels-tool-section, .reels-brand-card, .reels-brand-card > summary, .reels-brand-body, .reels-timeline) {
+  background: var(--dk-surface) !important;
+  border-color: var(--dk-line) !important;
+  color: var(--dk-ink) !important;
+}
+html[data-theme="dark"] body.reels-page .reels-timeline-card {
+  background: var(--dk-sunk) !important;
+  border-color: var(--dk-line) !important;
+}
+html[data-theme="dark"] body.reels-page .reels-transcript-list {
+  background: var(--dk-sunk) !important;
+  border-color: var(--dk-line-2) !important;
+  color: var(--dk-ink-2) !important;
+}
+html[data-theme="dark"] body.reels-page :is(.reels-btn.is-secondary.reels-empty-upload, .reels-icon-btn, .reels-choice-trigger, .reels-native-select) {
+  background: var(--dk-raised) !important;
+  border-color: var(--dk-line-2) !important;
+  color: var(--dk-ink) !important;
+}
+html[data-theme="dark"] body.reels-page #reels-caption-count { background: rgb(26 115 224 / .22) !important; color: #8ec2ff !important; }
+html[data-theme="dark"] body.reels-page .reels-top-export { border-color: transparent !important; }
+
+/* ── Auth state pages (404, reset password, confirmation) ── */
+html[data-theme="dark"] .auth-state-card {
+  background: var(--dk-surface) !important;
+  border-color: var(--dk-line) !important;
+  box-shadow: 0 24px 60px rgb(0 0 0 / .45) !important;
+  color: var(--dk-ink) !important;
+}
+html[data-theme="dark"] .auth-state-card :is(h1, h2, strong) { color: var(--dk-ink) !important; }
+html[data-theme="dark"] .auth-state-card :is(p, small, span:not([class*="icon"])) { color: var(--dk-ink-2) !important; }
+html[data-theme="dark"] .auth-state-button:not(.is-primary):not([class*="primary"]) {
+  background: var(--dk-raised) !important;
+  border-color: var(--dk-line-2) !important;
+  color: var(--dk-ink) !important;
+}
+
+/* ── Login ── */
+html[data-theme="dark"] .login-mode-tabs { background: var(--dk-raised) !important; border-color: var(--dk-line) !important; }
+html[data-theme="dark"] :is(#login-email, #login-password, .login-form input:not([type="checkbox"])) { box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; }
+
+/* ── Account pages (profile, settings) ── */
+html[data-theme="dark"] .account-kicker { color: #8ec2ff !important; }
+html[data-theme="dark"] .large-avatar { border-color: var(--dk-line-2) !important; }
+html[data-theme="dark"] .danger-btn {
+  background: rgb(220 38 38 / .1) !important;
+  border-color: rgb(248 113 113 / .45) !important;
+  color: #fca5a5 !important;
+}
+html[data-theme="dark"] .settings-section { border-bottom-color: var(--dk-line) !important; }
+html[data-theme="dark"] .settings-choice { background: var(--dk-raised) !important; }
+html[data-theme="dark"] .settings-choice button { color: var(--dk-ink-2) !important; background: transparent !important; }
+html[data-theme="dark"] .settings-choice button:is([aria-pressed="true"], [aria-checked="true"], .is-active, .active) { background: var(--dk-hover) !important; color: var(--dk-ink) !important; box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; }
+html[data-theme="dark"] .setting-row {
+  background: var(--dk-surface) !important;
+  border-color: var(--dk-line) !important;
+  color: var(--dk-ink) !important;
+}
+html[data-theme="dark"] .setting-row :is(span, small, p) { color: var(--dk-ink-3) !important; }
+html[data-theme="dark"] .setting-row :is(strong, b) { color: var(--dk-ink) !important; }
+
+/* ── ES AI page ── */
+html[data-theme="dark"] body:has(#ai-sidebar) { background: var(--dk-base) !important; color: var(--dk-ink); }
+html[data-theme="dark"] body:has(#ai-sidebar) .navbar { background: var(--dk-surface) !important; border-bottom-color: var(--dk-line) !important; }
+html[data-theme="dark"] #ai-sidebar.sidebar {
+  background: #0d0d0d !important;
+  border-right-color: var(--dk-line) !important;
+  color: var(--dk-ink-2) !important;
+}
+html[data-theme="dark"] #ai-sidebar :is(.history-label, .history-empty) { color: var(--dk-ink-3) !important; }
+html[data-theme="dark"] #ai-sidebar .search-wrap { background: var(--dk-raised) !important; border-color: var(--dk-line-2) !important; color: var(--dk-ink-3) !important; }
+html[data-theme="dark"] #ai-sidebar .search-input { color: var(--dk-ink) !important; }
+html[data-theme="dark"] body:has(#ai-sidebar) main.main { background: var(--dk-base) !important; color: var(--dk-ink) !important; }
+html[data-theme="dark"] body:has(#ai-sidebar) main.main :is(h1, h2, h3) { color: var(--dk-ink) !important; }
+html[data-theme="dark"] body:has(#ai-sidebar) main.main p { color: var(--dk-ink-2) !important; }
+html[data-theme="dark"] body:has(#ai-sidebar) .icon-button {
+  background: var(--dk-raised) !important;
+  border-color: var(--dk-line-2) !important;
+  color: var(--dk-ink) !important;
+}
+html[data-theme="dark"] .prompt-shell {
+  background: var(--dk-surface) !important;
+  border-color: var(--dk-line-2) !important;
+  box-shadow: 0 12px 30px -18px rgb(0 0 0 / .8) !important;
+}
+html[data-theme="dark"] .prompt-shell:focus-within { border-color: var(--es-brand) !important; box-shadow: 0 0 0 1px var(--es-brand) !important; }
+html[data-theme="dark"] .prompt-input { color: var(--dk-ink) !important; }
+html[data-theme="dark"] .prompt-input::placeholder { color: var(--dk-ink-3) !important; }
+html[data-theme="dark"] .quick-action {
+  background: var(--dk-surface) !important;
+  border-color: var(--dk-line-2) !important;
+  color: var(--dk-ink) !important;
+}
+html[data-theme="dark"] .quick-action:hover { background: var(--dk-hover) !important; }
+html[data-theme="dark"] body:has(#ai-sidebar) .footer-bottom { border-top-color: var(--dk-line) !important; }
+
+/* Reel Captions and ES AI are fully dark in dark mode: their shared tokens switch too. */
+html[data-theme="dark"] :is(body.reels-page, body:has(#ai-sidebar)) {
+  --es-bg: #121212;
+  --es-sunk: #161616;
+  --es-stage: #0d0d0d;
+  --es-line: #2a2a2a;
+  --es-line-2: #3a3a3a;
+  --es-ink: #f3f5f7;
+  --es-ink-2: #c9cdd3;
+  --es-ink-3: #8b919c;
+  --es-placeholder: #7d838d;
+  --es-text-strong: #f3f5f7;
+  --es-text-primary: #f3f5f7;
+  --es-text-secondary: #c9cdd3;
+  --es-text-muted: #8b919c;
+  --es-text-subtle: #8b919c;
+  --es-band-tint: #141a24;
+  --text-primary: #f3f5f7;
+  --text-secondary: #c9cdd3;
+  --text-muted: #8b919c;
+}
+html[data-theme="dark"] body:has(#ai-sidebar) :is(.nav-trigger, .navbar-menu a, .profile-name, .side-title, .new-chat, .setting-link) { color: var(--dk-ink-2) !important; }
+html[data-theme="dark"] body:has(#ai-sidebar) :is(.profile-name, .side-title, .new-chat) { color: var(--dk-ink) !important; }
+html[data-theme="dark"] body:has(#ai-sidebar) button.quick-action { background: var(--dk-surface) !important; }
+html[data-theme="dark"] body:has(#ai-sidebar) .site-footer { background: #0d0f12 !important; border-top: 1px solid var(--dk-line); }
+/* Reel Captions: the video stage and the tool rail stay near-black (they used the ink token). */
+html[data-theme="dark"] body.reels-page :is(.reels-stage-frame, .reels-tool-rail) { background: #0b0d10 !important; }
+html[data-theme="dark"] body.reels-page .reels-tool-rail { border-right-color: var(--dk-line) !important; }
+/* Auth state pages (404, reset password, confirmation) in dark mode. */
+html[data-theme="dark"] {
+  --auth-page: #080808;
+  --auth-surface: #121212;
+  --auth-text: #f3f5f7;
+  --auth-muted: #9aa1ab;
+  --auth-border: #2a2a2a;
+}
+html[data-theme="dark"] body.auth-state-page { color-scheme: dark; }
+
+/* Editor, round 2 of the dark audit */
+html[data-theme="dark"][data-studio-shell="on"]:root body .studio-accordion-section:not([hidden]) ~ .studio-accordion-section:not([hidden]) { border-top-color: var(--dk-line) !important; }
+html[data-theme="dark"] .panel #stats-single-fields .stats-entry,
+html[data-theme="dark"] .panel .stats-entry { border-color: var(--dk-line-2) !important; background: var(--dk-surface) !important; }
+html[data-theme="dark"] .image-asset-tabs { background: var(--dk-raised) !important; border-color: var(--dk-line) !important; }
+html[data-theme="dark"] .image-asset-tabs :is(button, [role="tab"]) { color: var(--dk-ink-2) !important; background: transparent !important; }
+html[data-theme="dark"] .image-asset-tabs :is(button, [role="tab"]):is(.is-active, [aria-selected="true"], [aria-pressed="true"]) { background: var(--dk-hover) !important; color: var(--dk-ink) !important; box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; }
+html[data-theme="dark"] :is(.listicle-row-block-label, .listicle-asset-name) { color: var(--dk-ink) !important; }
+html[data-theme="dark"] .listicle-add-row-button { border-color: var(--dk-line-2) !important; color: #8ec2ff !important; background: transparent !important; }
+html[data-theme="dark"] .listicle-add-row-button:hover { background: var(--dk-hover) !important; }
+html[data-theme="dark"] .panel .slider-label-row span { color: var(--dk-ink-2) !important; }
+html[data-theme="dark"] .panel .slider-label-row .slider-val { color: var(--dk-ink) !important; }
+html[data-theme="dark"][data-studio-shell="on"] body .panel #stats-single-fields .stats-entry .stats-entry-label-input { border-left-color: var(--dk-line-2) !important; }
+html[data-theme="dark"] body .post-type-option[data-ticker-direction]:not(.is-active) { background: var(--dk-raised) !important; border-color: var(--dk-line-2) !important; color: var(--dk-ink) !important; }
+/* YouTube Quote switch row (and any other quote-switch) */
+html[data-theme="dark"] .quote-switch { background: var(--dk-raised) !important; border-color: var(--dk-line-2) !important; color: var(--dk-ink) !important; }
+html[data-theme="dark"] .quote-switch .quote-switch-track { background: #3a3a3a !important; }
+html[data-theme="dark"] .quote-switch.is-active .quote-switch-track { background: var(--theme-dark-accent, #1a73e0) !important; }
+/* Canvas holder and carousel slide picker (phone + desktop) */
+/* theme.css keeps the canvas white via an ID selector; the holder around it goes dark (the canvas itself stays white). */
+html[data-theme="dark"] body :is(#__canvas-stack-dark, .canvas-stack) { background: transparent !important; }
+html[data-theme="dark"] .carousel-slide-button:not(.carousel-slide-arrow) { background: #262626 !important; color: var(--dk-ink-2) !important; box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; }
+html[data-theme="dark"] .carousel-slide-button.is-active { background: var(--dk-ink) !important; color: #111418 !important; box-shadow: none !important; }
+html[data-theme="dark"] .carousel-slide-arrow { color: var(--dk-ink-2) !important; }
+html[data-theme="dark"] .carousel-slide-arrow:disabled { color: #4b5058 !important; }
+/* Reel Captions on phones */
+html[data-theme="dark"] body.reels-page :is(main, .reels-shell, .reels-stage-workspace) { background: var(--dk-base) !important; }
+html[data-theme="dark"] body.reels-page :is(.reels-mobile-topbar, .reels-mobile-nav, .reels-mobile-sheet-head, .reels-mobile-sheet) { background: rgb(18 18 18 / .98) !important; border-color: var(--dk-line) !important; color: var(--dk-ink) !important; }
+html[data-theme="dark"] body.reels-page .reels-mobile-topbar :is(h1, strong, .reels-mobile-title) { color: var(--dk-ink) !important; }
+html[data-theme="dark"] body.reels-page .reels-field { border-color: var(--dk-line) !important; }
+/* Phone header bar and menu (theme.css kept the old navbar light) */
+@media (max-width: 900px) {
+  html[data-theme="dark"] .navbar { background: rgb(18 18 18 / .97) !important; border-bottom-color: var(--dk-line) !important; }
+  html[data-theme="dark"] .mobile-menu-toggle { color: var(--dk-ink) !important; }
+  html[data-theme="dark"] .mobile-menu-toggle:is(:hover, :focus-visible) { background: var(--dk-hover) !important; }
+  html[data-theme="dark"] .navbar-menu { background: var(--dk-surface) !important; border-color: var(--dk-line) !important; color: var(--dk-ink) !important; box-shadow: 0 24px 60px rgb(0 0 0 / .55) !important; }
+  html[data-theme="dark"] .es-mobile-nav__group + .es-mobile-nav__group { border-top-color: var(--dk-line) !important; }
+  html[data-theme="dark"] .es-mobile-nav__label { color: var(--dk-ink-3) !important; }
+  html[data-theme="dark"] .es-mobile-nav__item { color: var(--dk-ink) !important; }
+  html[data-theme="dark"] .es-mobile-nav__item svg { color: var(--dk-ink-2) !important; }
+  html[data-theme="dark"] .es-mobile-nav__item:is(:hover, :focus-visible) { background: var(--dk-hover) !important; }
+  html[data-theme="dark"] .es-mobile-nav__item[aria-current="page"] { background: rgb(26 115 224 / .22) !important; color: #8ec2ff !important; }
+  html[data-theme="dark"] .es-mobile-nav__item[aria-current="page"] svg { color: #8ec2ff !important; }
+  html[data-theme="dark"] .mobile-menu-account { border-color: var(--dk-line) !important; color: var(--dk-ink) !important; }
+}
+html[data-theme="dark"] #ai-sidebar.sidebar { border-bottom-color: var(--dk-line) !important; }
+html[data-theme="dark"] .feedback-hero { border-bottom-color: var(--dk-line) !important; }
+html[data-theme="dark"] :is(.mobile-menu-account, .profile-menu) .profile-name { color: var(--dk-ink) !important; }
