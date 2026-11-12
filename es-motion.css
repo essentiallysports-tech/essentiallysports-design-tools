@@ -1,0 +1,97 @@
+/* FrameUp micro-motion layer.
+   Small, quick feedback on shared components. Loads after es-ui.css on every page.
+   Rules:
+   - Uses the existing motion tokens (--es-ease, --es-ease-entrance, --es-dur*).
+   - Everything sits inside prefers-reduced-motion: no-preference, so people who
+     turn motion off get the static UI (brand rulebook requirement).
+   - Hover effects sit inside (hover: hover) so touch screens don't get stuck states.
+   - Entrance animations use fill-mode "backwards" only: once they finish they leave
+     no transform behind, so hover transforms and fixed-position menus still work.
+   - Legacy CTA classes in cta-hover.css (stroke-only hover) are not given transforms. */
+
+@keyframes esRise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes esPillIn {
+  from { opacity: .4; transform: scale(.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes esPop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes esDotPulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--es-surface, #fff), 0 0 0 2px rgb(245 165 36 / .5); }
+  50% { box-shadow: 0 0 0 2px var(--es-surface, #fff), 0 0 0 6px rgb(245 165 36 / 0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* ── Press feedback: everything tappable gives a little under the finger ── */
+  .es-icon-btn,
+  .es-chip,
+  .es-nav-item,
+  .es-search,
+  .home-recent__card {
+    transition-property: background-color, color, box-shadow, transform;
+    transition-duration: var(--es-dur);
+    transition-timing-function: var(--es-ease);
+  }
+  .es-icon-btn:active,
+  .es-chip:active,
+  .es-nav-item:active,
+  .es-search:active { transform: scale(.97); transition-duration: var(--es-dur-press); }
+  .home-recent__card:active { transform: scale(.985); transition-duration: var(--es-dur-press); }
+  .gallery-card:active .gallery-card__thumb { transform: scale(.985); }
+
+  /* A chip that was just switched on pops once. */
+  .es-chip[aria-pressed="true"] { animation: esPop var(--es-dur-step) var(--es-ease); }
+
+  /* ── Sidebar ── */
+  .es-nav-item svg { transition: transform var(--es-dur-fill) var(--es-ease-entrance), color var(--es-dur) var(--es-ease); }
+  .es-nav-item[aria-current="page"] { animation: esPillIn var(--es-dur-step) var(--es-ease-entrance) backwards; }
+  .es-nav-item__dot { animation: esDotPulse 2.4s var(--es-ease) 3; }
+
+  /* ── Page content arrives in a short cascade ── */
+  .es-page-head,
+  .frame-grid > *,
+  .home-recent__grid > *,
+  .gallery-grid > *,
+  .gen-grid > .gen-card:not(.is-skeleton) {
+    animation: esRise var(--es-dur-progress) var(--es-ease-entrance) backwards;
+  }
+  :is(.frame-grid, .home-recent__grid, .gallery-grid, .gen-grid) > :nth-child(2) { animation-delay: 40ms; }
+  :is(.frame-grid, .home-recent__grid, .gallery-grid, .gen-grid) > :nth-child(3) { animation-delay: 80ms; }
+  :is(.frame-grid, .home-recent__grid, .gallery-grid, .gen-grid) > :nth-child(4) { animation-delay: 120ms; }
+  :is(.frame-grid, .home-recent__grid, .gallery-grid, .gen-grid) > :nth-child(5) { animation-delay: 160ms; }
+  :is(.frame-grid, .home-recent__grid, .gallery-grid, .gen-grid) > :nth-child(6) { animation-delay: 200ms; }
+  :is(.frame-grid, .home-recent__grid, .gallery-grid, .gen-grid) > :nth-child(n+7) { animation-delay: 240ms; }
+
+  /* ── Workspace cards and thumbnails ── */
+  .frame-thumbnail img,
+  .gallery-card__thumb img,
+  .gen-card__media img,
+  .home-recent__thumb img { transition: transform .5s var(--es-ease-entrance); }
+}
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .es-nav-item:hover svg { transform: scale(1.08); }
+
+  /* Images inside cards drift in slightly; the card frame itself stays still. */
+  .frame-card:hover .frame-thumbnail img { transform: scale(1.035); }
+  .gallery-card:hover .gallery-card__thumb img { transform: scale(1.03); }
+  .gen-card:hover .gen-card__media img { transform: scale(1.02); }
+  .home-recent__card:hover .home-recent__thumb img { transform: scale(1.06); }
+
+  /* "Create Now" arrow nudges toward where it goes. */
+  .frame-card .ui-arrow-right { transition: transform var(--es-dur-fill) var(--es-ease); }
+  .frame-card:hover .ui-arrow-right { transform: translateX(3px); }
+
+  /* Generate's sparkle turns a touch when you are about to press it. */
+  #gen-submit svg { transition: transform var(--es-dur-step) var(--es-ease-entrance); }
+  #gen-submit:hover:not(:disabled) svg { transform: rotate(14deg) scale(1.08); }
+}

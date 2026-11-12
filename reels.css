@@ -276,6 +276,7 @@ body.reels-page .site-footer {
 .reels-caption-text:focus,
 .reels-field select:focus,
 .reels-intel-box textarea:focus,
+.reels-task-section textarea:focus,
 .reels-style-card:focus-visible,
 .reels-swatch:focus-visible,
 .reels-lt-card:focus-visible,
@@ -661,6 +662,10 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
   color: var(--es-ink-2);
   cursor: pointer;
   font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .reels-row-delete:hover {

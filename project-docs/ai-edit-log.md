@@ -1014,3 +1014,56 @@ and what's still uncommitted.
 - Verified (browser, mocked API): page scripts parse; spinner node identical across ticks, seconds update, focus
   returns to Generate after a failed run; photo pick keeps focus on the same thumb. Not verified: real Download /
   Scene button flows (need a logged-in session), screen-reader announcements.
+
+### 2026-11-13 — Full FrameUp UI/UX pass, micro-motion, long inspector menu, Layers collapse, Tweet team colours
+- Status: `[pushed to main on Suhail's "push"]` (worked on branch ui-pass/uipro-frameup).
+- **UI/UX Pro Max skill**: security-reviewed (ui-ux-pro-max-cli v2.15.0: default `init --ai claude` copies bundled
+  files, no network, no install scripts, no hooks/settings). Only the core skill was copied to
+  `.claude/skills/ui-ux-pro-max/` (68 files, local Python search, no network). The 6 sub-skills were NOT installed
+  (`design` loads `.env` and calls Gemini/MUAPI/AtlasCloud; `brand` sync writes design-tokens files; `ui-styling`
+  runs shadcn). Used as reference only; FrameUp's rulebook stayed the source of truth.
+- **Audit fixes (≈60 findings, 4 batches)**: focus rings restored where `outline:none` beat the global ring
+  (navbar icons, Jump back in, toggles, feedback cards, prompt box, chips, menus); 44px tap targets on coarse
+  pointers; keyboard support (custom select arrows/Home/End/Escape, inspector tabs, ⌘K palette ARIA, hero dots);
+  dark-mode fixes (reset-password inputs, AI spend panel, login); radii/labels moved to tokens
+  (`--es-radius-control`/`--es-radius-container`, field-label tokens); icon sizes (logout 28px, prompt chip remove
+  16px); request-list Status/Assignee menus no longer clipped (dashboardViewEnter keyframe ends on
+  `transform:none`); Design Request has a real page header; swatches are buttons with `aria-pressed`.
+- **New today on top of the audit**:
+  1. `es-motion.css` (new, linked after es-ui.css on every shell page): press feedback on icon buttons/chips/nav/
+     search/cards, a one-time chip pop, active nav pill settle, unread-dot pulse (3×), short cascade on card grids
+     (Home, Jump back in, Gallery, Generate results), image drift on card hover, "Create Now" arrow nudge, Generate
+     sparkle turn. All inside `prefers-reduced-motion: no-preference`; hovers inside `(hover: hover)`; entrances
+     use fill-mode `backwards` so no transform is left behind. Legacy cta-hover.css classes untouched.
+  2. Sidebar: 4px between nav rows; the native "Generate" tooltip only shows in the collapsed rail
+     (`data-tip` → `title` in `setCollapsed`). Collapsed rail: 8px side insets, full-size expand button, centred
+     account avatar, more air at dividers.
+  3. Editor undo/redo/history float to the right of the Layers column instead of over the "LAYERS" heading.
+  4. **Layers panel collapse** (index.html): button in the Layers header, 48px rail when collapsed, remembered in
+     `localStorage['frameup.layers.collapsed']`.
+  5. **One long inspector menu on desktop** (≥901px): `setStudioInspectorMode` keeps
+     `body[data-studio-inspector="all"]`; the Content/Photos/Style tab bar is hidden; order is Export + Post Type →
+     folding sections (Content, Photo Layers, Text Placement, Brand & Colors) → photo tools → ES Image Pool
+     (editor-polish.css unwraps `.studio-control-dock` with `display:contents`). Requests for a tab
+     (`'ai'`/`'image'`/`'style'`) scroll to that block. Canvas image editing is allowed in "all".
+     Phones keep their bottom tabs. `scripts/test-image-controls-contextual.mjs` updated to the new rule.
+  6. **Tweet / X Post team colours**: the colour card (Sport, Team, Pill & Text) now shows for `twitter-quote`
+     (removed from the hide list in JS and CSS); its headline pill already used `state.pillPalette`.
+     Multiple Tweets still hides it (no pill).
+  7. `logUsage` in `_ai-gateway.js`: `authConfig()` moved inside the try (fixes test-es-generate-flow; production
+     robustness — tracking can never break a feature).
+- Cache keys: changed assets bumped to `?v=20261113-uipass1/2/3`, `es-motion.css?v=20261113-motion1`.
+- Tests (on the exact pushed files): 21 pass / 7 fail. All 7 failed before this work (auth-security, canvas-action-dock, color-swatch-states,
+  newsletter-header-options, reels-transcription, check-dashboard-ui and check-site-chrome both pin old cache keys).
+- Not verified: Dashboard with real data (needs login), screen readers, Safari. Left alone: Suhail's uncommitted
+  Listicle Type 2 / infographic work in index.html, listicle-type2-data.js and its tests.
+- Open choice: settings/profile field labels use the 13px field-label token; the dashboard rule asks ≥14px.
+  8. **Clean right menu (beehiiv-style)**: Export / settings / Copy link row is sticky; Post Type sits 16px below
+     it; Sport is a dropdown like Team (was 10 chips); the swipe-arrow toggle and the photo block are flat rows, not
+     boxes; ES Image Pool shows title + search only until there are results; quieter field hints.
+  9. **Final sweep fixes**: canvas bottom bar may wrap to 2–3 rows on 1024–1300px screens (old fixed 54px height
+     hid Upload / slide arrows); Layers column dark in dark mode; How It Works phone "On this page" strip fits the
+     16px gutter with a fade edge. Overflow/clipped-text sweep of every page at 1440 / 820 / 375 px came back clean.
+- Pushed without Suhail's local Listicle Type 2 column toggles / Infographic 1 work (index.html hunks,
+  listicle-type2-data.js, its tests and its log entry stay local, uncommitted).
+- **Rollback point:** `main` at 736ce0b (the commit before this UI pass).

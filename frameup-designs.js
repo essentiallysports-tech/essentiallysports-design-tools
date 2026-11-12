@@ -312,6 +312,8 @@
       text.className = 'recent-design__text';
       const title = document.createElement('strong');
       title.textContent = record.title;
+      // Long names are cut with an ellipsis; the tooltip shows the full name.
+      title.title = record.title || '';
       const meta = document.createElement('small');
       meta.textContent = [WORKSPACE_LABELS[record.workspace] || record.workspace, record.variant, timeAgo(record.savedAt)].filter(Boolean).join(' · ');
       text.append(title, meta);
@@ -385,6 +387,8 @@
       text.className = 'home-recent__text';
       const title = document.createElement('strong');
       title.textContent = record.title;
+      // Long names are cut with an ellipsis; the tooltip shows the full name.
+      title.title = record.title || '';
       const meta = document.createElement('small');
       meta.textContent = [WORKSPACE_LABELS[record.workspace] || record.workspace, timeAgo(record.savedAt)].filter(Boolean).join(' · ');
       text.append(title, meta);

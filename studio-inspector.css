@@ -61,8 +61,8 @@ body[data-current-page="newsletter"][data-newsletter-infographic="on"] #infograp
 }
 .ig-card-chevron { flex: 0 0 auto; color: var(--es-ink-3); transition: transform var(--es-dur) var(--es-ease); }
 .ig-card-chevron svg, .ig-icon-btn svg, .ig-chip svg, .ig-reset svg {
-  width: 18px;
-  height: 18px;
+  width: var(--es-icon);
+  height: var(--es-icon);
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -91,7 +91,7 @@ body[data-current-page="newsletter"][data-newsletter-infographic="on"] #infograp
   margin: 0;
   padding: 0 12px;
   border: 1px solid var(--es-line-2);
-  border-radius: 10px;
+  border-radius: var(--es-radius-control);
   background: var(--es-bg);
   color: var(--es-ink);
   font: 500 14px/1.3 var(--es-font-ui);
@@ -140,7 +140,7 @@ textarea.ig-input { padding: 10px 12px; resize: vertical; }
   transition: background-color var(--es-dur) var(--es-ease), border-color var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease);
 }
 .ig-chip { padding: 0 10px; }
-.ig-chip svg { width: 16px; height: 16px; }
+.ig-chip svg { width: var(--es-icon-sm); height: var(--es-icon-sm); }
 .ig-icon-btn { width: 34px; padding: 0; }
 .ig-chip:hover, .ig-icon-btn:hover, .ig-reset:hover { background: var(--es-sunk); color: var(--es-ink); }
 .ig-icon-btn.is-active { border-color: var(--es-brand); background: var(--es-brand-soft, #eaf3ff); color: var(--es-brand-text, #0a62c7); }
@@ -162,7 +162,7 @@ textarea.ig-input { padding: 10px 12px; resize: vertical; }
   color: var(--es-ink-3);
   font-weight: 500;
 }
-.ig-reset svg { width: 15px; height: 15px; }
+.ig-reset svg { width: var(--es-icon-sm); height: var(--es-icon-sm); }
 
 /* ─── Desktop inspector ─────────────────────────────────────────────── */
 @media (min-width: 901px) {
@@ -192,12 +192,12 @@ textarea.ig-input { padding: 10px 12px; resize: vertical; }
     text-transform: none !important;
   }
 
-  /* Controls: 40px tall, 14px text, 10px corners. Only the standalone field
+  /* Controls: 40px tall, 14px text, --es-radius-control corners. Only the standalone field
      types; the compound stat / list / tweet editors (.pill-entry) keep their
      own purpose-built sizes. */
   html[data-studio-shell="on"] .panel :is(.widget-text-input, .select-dropdown-trigger) {
     min-height: 40px !important;
-    border-radius: 10px !important;
+    border-radius: var(--es-radius-control) !important;
     font-size: 14px !important;
   }
   html[data-studio-shell="on"] .panel .widget-text-input {
@@ -211,7 +211,7 @@ textarea.ig-input { padding: 10px 12px; resize: vertical; }
   }
   html[data-studio-shell="on"] .panel textarea.widget-text-area {
     padding: 10px 12px !important;
-    border-radius: 10px !important;
+    border-radius: var(--es-radius-control) !important;
     font-size: 14px !important;
     line-height: 1.4 !important;
   }
@@ -421,8 +421,8 @@ html[data-studio-shell="on"] body .panel :is(#trivia-fields, #ticker-fields, #li
   border: 0;
 }
 html[data-studio-shell="on"] body .panel :is(#trivia-fields, #ticker-fields, #list-fields, #list2-fields, #widget-main-fields, #widget-picks-fields) .widget-field-group:last-child { margin-bottom: 0; }
-/* Inside a field group, each further label starts a new field: 14px above it. */
-html[data-studio-shell="on"] body .panel .widget-field-group > .widget-field-label:not(:first-child) { margin-top: 14px !important; }
+/* Inside a field group, each further label starts a new field: 16px above it. */
+html[data-studio-shell="on"] body .panel .widget-field-group > .widget-field-label:not(:first-child) { margin-top: 16px !important; }
 html[data-studio-shell="on"] body .panel .widget-field-group > .widget-image-row { margin-top: 2px; }
 /* Each Top Pick is its own soft card, titled "Top Pick N" with its Show switch. */
 html[data-studio-shell="on"] body .panel #widget-picks-fields .widget-field-group:has(> .widget-pick-head) {

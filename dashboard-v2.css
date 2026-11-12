@@ -287,7 +287,6 @@ body {
   height: 16px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -1517,7 +1516,6 @@ html.has-dashboard-admin .navbar-menu [data-admin-only].is-admin-visible {
   height: 18px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -1921,9 +1919,13 @@ body[data-dashboard-view="activity"] .grid {
 
 body[data-dashboard-view="people"] .dashboard-overview-grid { grid-template-columns: 1fr; }
 
+/* Ends on transform:none, not translateY(0): the animation fills forwards,
+   and a lingering transform makes the section the containing block for the
+   position:fixed Status/Assignee menus, which then land in the wrong place
+   and get clipped by the panel's overflow. */
 @keyframes dashboardViewEnter {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2092,7 +2094,6 @@ body[data-dashboard-view="activity"] .activity-list {
 .sidebar-nav svg {
   width: 24px;
   height: 24px;
-  stroke-width: 1.8;
 }
 
 .sidebar-nav button.is-active {
@@ -2189,7 +2190,6 @@ body[data-dashboard-view="activity"] .activity-list {
 .metric-icon svg {
   width: 22px;
   height: 22px;
-  stroke-width: 1.8;
 }
 
 .metric-label {
@@ -3672,7 +3672,6 @@ body[data-dashboard-view="designs"] .stack {
 .sidebar-nav svg {
   width: 23px;
   height: 23px;
-  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -6539,6 +6538,22 @@ body.dashboard-page .chart-x-label {
   font-size: 15px !important;
   line-height: 1;
   white-space: nowrap;
+}
+
+/* Phones: six date labels collide, so keep every other one. The labels are
+   absolutely positioned, so hiding some never moves the rest. */
+@media (max-width: 620px) {
+  body.dashboard-page .chart-x-label {
+    font-size: var(--es-type-meta-size) !important;
+  }
+
+  body.dashboard-page .chart-x-label:nth-child(even) {
+    visibility: hidden;
+  }
+
+  body.dashboard-page .chart-range-toggle .task-quick-filter {
+    min-height: var(--es-tap);
+  }
 }
 
 body.dashboard-page .chart-tooltip {

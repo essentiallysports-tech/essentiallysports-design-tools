@@ -2020,6 +2020,13 @@ html[data-theme="dark"] .es-dialog-list {
   outline: none;
 }
 
+@media (pointer: coarse) {
+  .es-toast-action {
+    height: auto;
+    min-height: var(--es-tap);
+  }
+}
+
 .es-toast.is-leaving {
   opacity: 0;
   transform: translateX(12px);
@@ -2115,6 +2122,11 @@ html[data-theme="dark"] .es-toast-action {
     flex-wrap: wrap !important;
     justify-content: center !important;
     row-gap: 6px;
+    /* Older rules fixed the bar at 54px with hidden overflow, which cut the
+       wrapped rows (Upload buttons, slide arrows) off on 1024–1300px screens. */
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 }
 
@@ -2210,14 +2222,15 @@ svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
   .es-badge,
   .ft-tag,
   .feedback-page-version,
-  .gen-card__actions .es-icon-btn
+  .gen-card__actions .es-icon-btn,
+  .prompt-mode-remove
 ) svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
   width: var(--es-icon-sm) !important;
   height: var(--es-icon-sm) !important;
   min-width: var(--es-icon-sm);
 }
 
-:is(.auth-state-icon, .canvas-empty-hint) > svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
+:is(.auth-state-icon, .login-confirmation-icon, .canvas-empty-hint, .logout-icon) > svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
   width: 28px !important;
   height: 28px !important;
 }
@@ -2665,7 +2678,9 @@ html[data-theme="dark"] .auth-state-button:not(.is-primary):not([class*="primary
 
 /* ── Login ── */
 html[data-theme="dark"] .login-mode-tabs { background: var(--dk-raised) !important; border-color: var(--dk-line) !important; }
-html[data-theme="dark"] :is(#login-email, #login-password, .login-form input:not([type="checkbox"])) { box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; }
+html[data-theme="dark"] :is(#login-email, #login-password, .login-form input:not([type="checkbox"])) { box-shadow: inset 0 0 0 1.5px var(--dk-line-2) !important; }
+html[data-theme="dark"] :is(#login-email, #login-password, .login-form input:not([type="checkbox"])):focus { box-shadow: inset 0 0 0 2px #5aa8ff !important; }
+html[data-theme="dark"] .login-mode-tab.is-active { background: var(--dk-hover) !important; box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; }
 
 /* ── Account pages (profile, settings) ── */
 html[data-theme="dark"] .account-kicker { color: #8ec2ff !important; }

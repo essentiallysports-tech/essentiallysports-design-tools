@@ -16,16 +16,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261111-p5">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261113-uipass1">
   <link rel="stylesheet" href="theme.css?v=20261112-a11y1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261111-icons3">
-  <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261113-genicons1">
-<link rel="stylesheet" href="es-ui.css?v=20261112-notop3">
+  <link rel="stylesheet" href="site-chrome.css?v=20261113-uipass1">
+  <link rel="stylesheet" href="cta-hover.css?v=20261113-uipass1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261113-uipass2">
+<link rel="stylesheet" href="es-ui.css?v=20261113-uipass2">
+  <link rel="stylesheet" href="es-motion.css?v=20261113-motion1">
   <script src="theme.js?v=20261111-icons2"></script>
-  <script src="site-mobile-chrome.js?v=20261112-notop1"></script>
+  <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261111-icons2"></script>
-<script src="app-shell.js?v=20261112-notop1"></script>
+<script src="app-shell.js?v=20261113-uipass2"></script>
   <style>
     html:not([data-theme="dark"]) body.gen-body { background: #fff; }
     .gen-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 32px 0 72px; font-family: var(--es-font-ui); color: var(--es-ink); }
@@ -143,11 +144,11 @@
       .gen-actions__buttons { width: 100%; }
       .gen-actions__buttons .es-btn { flex: 1 1 auto; min-height: 48px; }
       .gen-kbd { display: none; }
+      .gen-card__actions .es-btn--primary { min-height: var(--es-tap); }
+      .gen-card__actions .es-icon-btn { width: var(--es-tap); height: var(--es-tap); }
     }
     @media (max-width: 560px) {
       .gen-grid { grid-template-columns: minmax(0, 1fr); }
-      .gen-card__actions .es-btn--primary { min-height: 44px; }
-      .gen-card__actions .es-icon-btn { width: 44px; height: 44px; }
       .gen-thumb { flex-basis: 52px; height: 65px; }
       .gen-progress__time { margin-left: 0; }
       .gen-quick button { min-height: 44px; line-height: 44px; }
@@ -219,7 +220,7 @@
     </form>
     <div class="gen-quick" id="gen-quick"></div>
 
-    <ol class="gen-progress" id="gen-progress" aria-label="Progress" hidden></ol>
+    <ol class="gen-progress" id="gen-progress" aria-label="Progress" aria-live="polite" hidden></ol>
     <p class="gen-summary" id="gen-summary" role="status" aria-live="polite" hidden></p>
     <div class="es-callout gen-notice" id="gen-notice" role="alert" hidden></div>
     <div class="gen-empty" id="gen-empty">
@@ -227,7 +228,7 @@
       <h2>Your designs appear here</h2>
       <p>Paste a quote, a stat line or a headline, or just name the story. You get up to four editable posts in about ten seconds.</p>
     </div>
-    <div class="gen-grid" id="gen-grid" aria-live="polite"></div>
+    <div class="gen-grid" id="gen-grid"></div>
     <details class="gen-research" id="gen-research" hidden>
       <summary>Based on these ES stories</summary>
       <ul id="gen-research-list"></ul>
@@ -655,6 +656,10 @@
         } else if (act === 'again') {
           if (busy) return;
           button.disabled = true;
+          // Lock the card's other actions while the retry is in flight (only
+          // the ones this retry disables, so an in-flight download keeps its own state).
+          const locked = [...card.querySelectorAll('[data-act]')].filter(other => other !== button && !other.disabled);
+          locked.forEach(other => { other.disabled = true; });
           const media = card.querySelector('.gen-card__media');
           media.classList.remove('is-ready');
           try {
@@ -672,6 +677,7 @@
             setNotice('Retry failed', ` ${error.message || ''}`);
           } finally {
             button.disabled = false;
+            locked.forEach(other => { other.disabled = false; });
             restoreFocus(button.isConnected ? button : card.querySelector('[data-act="again"]'));
           }
         }

@@ -89,7 +89,11 @@
     });
 
     document.addEventListener('keydown', event => {
-      if (event.key === 'Escape') close();
+      if (event.key !== 'Escape') return;
+      const wasOpen = navbar.classList.contains('is-mobile-menu-open');
+      close();
+      // Don't leave focus on a link inside the now-hidden menu.
+      if (wasOpen && navbar.contains(document.activeElement) && document.activeElement !== toggle) toggle.focus();
     });
 
     window.addEventListener('resize', () => {

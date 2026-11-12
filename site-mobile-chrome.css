@@ -172,7 +172,7 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
     overflow-x: hidden !important;
     box-sizing: border-box;
     border: 1px solid var(--es-line);
-    border-radius: 20px;
+    border-radius: var(--es-radius-container);
     background: #fff;
     box-shadow: 0 16px 38px rgba(14, 16, 20, .14);
     color: var(--es-ink);
@@ -233,8 +233,6 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
 
   .es-mobile-nav__item svg {
     flex: none;
-    width: 20px;
-    height: 20px;
     color: var(--es-ink-2);
   }
 

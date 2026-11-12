@@ -78,9 +78,11 @@ assert(
   'The canvas must expose a selected-image frame and compact zoom toolbar.',
 );
 assert(
-  /function isCanvasImageEditAvailable\(\)[\s\S]*?studioInspector !== 'image'/.test(html)
+  // 2026-11-13: desktop shows one long inspector menu (mode "all"), so image
+  // editing is available there too; on phones it still needs the Photos tab.
+  /function isCanvasImageEditAvailable\(\)[\s\S]*?\['image', 'all'\]\.includes\(document\.body\.dataset\.studioInspector\)/.test(html)
     && /function setupCanvasImageEditing\(\)/.test(html),
-  'Direct canvas image editing must only activate in the Image Controls inspector.',
+  'Direct canvas image editing must only activate in the Photos inspector or the desktop long menu.',
 );
 assert(
   /registerImageEditBounds\(ctx, img/.test(html)

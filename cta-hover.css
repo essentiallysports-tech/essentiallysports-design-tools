@@ -97,7 +97,6 @@
   .canvas-upload-button-secondary,
   .image-context-ai,
   .topbar-button:not(.is-primary),
-  .login-secondary-button,
   .secondary-btn,
   .quick-action,
   .avatar-upload-label,
@@ -119,12 +118,6 @@
 
 .login-button {
   border: 1px solid transparent !important;
-}
-
-.auth-state-button:not(.is-primary):not(:disabled):hover {
-  border-color: var(--es-brand) !important;
-  background-color: #FFFFFF !important;
-  color: var(--es-ink) !important;
 }
 
 .danger-btn:not(:disabled):hover {

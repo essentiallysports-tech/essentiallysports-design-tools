@@ -17,16 +17,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261111-p5">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261113-uipass1">
   <link rel="stylesheet" href="theme.css?v=20261112-a11y1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261111-icons3">
-  <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261112-dark14">
-<link rel="stylesheet" href="es-ui.css?v=20261112-notop3">
+  <link rel="stylesheet" href="site-chrome.css?v=20261113-uipass1">
+  <link rel="stylesheet" href="cta-hover.css?v=20261113-uipass1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261113-uipass2">
+<link rel="stylesheet" href="es-ui.css?v=20261113-uipass2">
+  <link rel="stylesheet" href="es-motion.css?v=20261113-motion1">
   <script src="theme.js?v=20261111-icons2"></script>
-  <script src="site-mobile-chrome.js?v=20261112-notop1"></script>
+  <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261111-icons2"></script>
-<script src="app-shell.js?v=20261112-notop1"></script>
+<script src="app-shell.js?v=20261113-uipass2"></script>
   <style>
     .gallery-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 32px 0 72px; font-family: var(--es-font-ui); color: var(--es-ink); }
     .gallery-toolbar { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
@@ -47,8 +48,6 @@
     .gallery-workspaces[hidden] { display: none; }
     .gallery-card__thumb.is-missing::after { content: 'No preview'; position: absolute; inset: 0; display: grid; place-items: center; color: var(--es-ink-3); font-size: 13px; }
     .gallery-card:hover .gallery-card__thumb { transform: translateY(-2px); box-shadow: 0 10px 24px rgb(14 16 20 / .12), inset 0 0 0 1px var(--es-line); }
-    .gallery-card:focus-visible { outline: none; }
-    .gallery-card:focus-visible .gallery-card__thumb { box-shadow: var(--es-focus); }
     .gallery-card__body { display: grid; gap: 2px; min-width: 0; padding: 0 2px; }
     .gallery-card__body strong { overflow: hidden; color: var(--es-ink); font-size: 14px; font-weight: 600; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
     .gallery-card__body small { overflow: hidden; color: var(--es-ink-3); font-size: 12px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
@@ -349,7 +348,24 @@
           .some(value => String(value || '').toLowerCase().includes(state.query));
       }
 
+      // Chip rows are rebuilt when their counts change; keep keyboard focus on
+      // the equivalent chip so a rebuild never drops it to <body>.
+      function focusedChipKey(container, key) {
+        const active = document.activeElement;
+        return active && container.contains(active) ? active.dataset[key] : null;
+      }
+      function refocusChip(container, key, value) {
+        if (value == null) return;
+        const chip = [...container.querySelectorAll('.es-chip')].find(node => node.dataset[key] === value)
+          || container.querySelector('.es-chip');
+        chip?.focus();
+      }
+      function setPressed(container, key, value) {
+        container.querySelectorAll('.es-chip').forEach(chip => chip.setAttribute('aria-pressed', String(chip.dataset[key] === value)));
+      }
+
       function renderWorkspaces() {
+        const refocus = focusedChipKey(els.workspaces, 'workspace');
         const counts = new Map();
         state.items.forEach(item => counts.set(item.workspace, (counts.get(item.workspace) || 0) + 1));
         const names = ['Social Media', 'YouTube', 'Newsletter'].filter(name => counts.has(name));
@@ -361,14 +377,18 @@
           const chip = document.createElement('button');
           chip.type = 'button';
           chip.className = 'es-chip';
+          chip.dataset.workspace = name;
           chip.setAttribute('aria-pressed', String(name === state.workspace));
           chip.textContent = name === 'All' ? 'All workspaces' : `${name} ${counts.get(name)}`;
-          chip.addEventListener('click', () => { state.workspace = name; state.filter = 'All'; renderWorkspaces(); renderFilters(); renderGrid(); });
+          // Workspace counts don't depend on the selection: toggle in place.
+          chip.addEventListener('click', () => { state.workspace = name; state.filter = 'All'; setPressed(els.workspaces, 'workspace', name); renderFilters(); renderGrid(); });
           els.workspaces.appendChild(chip);
         });
+        refocusChip(els.workspaces, 'workspace', refocus);
       }
 
       function renderFilters() {
+        const refocus = focusedChipKey(els.filters, 'type');
         const counts = new Map();
         const scoped = state.items.filter(item => state.workspace === 'All' || item.workspace === state.workspace);
         scoped.forEach(item => { if (item.variant) counts.set(item.variant, (counts.get(item.variant) || 0) + 1); });
@@ -379,12 +399,15 @@
           const chip = document.createElement('button');
           chip.type = 'button';
           chip.className = 'es-chip';
+          chip.dataset.type = type;
           chip.setAttribute('aria-pressed', String(type === state.filter));
           chip.textContent = type === 'All' ? `All ${scoped.length}` : `${type} ${counts.get(type)}`;
-          chip.addEventListener('click', () => { state.filter = type; renderFilters(); renderGrid(); });
+          // Type counts don't change when picking a type: toggle in place.
+          chip.addEventListener('click', () => { state.filter = type; setPressed(els.filters, 'type', type); renderGrid(); });
           els.filters.appendChild(chip);
         });
         els.filters.hidden = types.length < 3;
+        if (!els.filters.hidden) refocusChip(els.filters, 'type', refocus);
       }
 
       function renderGrid() {
@@ -516,7 +539,16 @@
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => { state.query = els.search.value.trim().toLowerCase(); renderGrid(); }, 120);
       });
-      els.more.addEventListener('click', loadPage);
+      // Load more: move focus to the first newly loaded card so keyboard users
+      // continue where the new page starts (and aren't stranded when the
+      // button hides after the last page).
+      els.more.addEventListener('click', async () => {
+        const oldLen = els.grid.children.length;
+        const hadFocus = document.activeElement === els.more;
+        await loadPage();
+        const next = els.grid.children[oldLen];
+        if (next && (hadFocus || els.more.hidden)) next.focus();
+      });
       els.viewerOpen.addEventListener('click', event => {
         if (els.viewerOpen.getAttribute('aria-disabled') === 'true') event.preventDefault();
       });

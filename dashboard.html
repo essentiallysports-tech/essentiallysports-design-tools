@@ -381,15 +381,18 @@
 
     .ai-spend-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
     .ai-spend-stat { display: grid; gap: 4px; }
-    .ai-spend-stat strong { font: 800 28px/1 var(--es-font-display, inherit); font-variant-numeric: tabular-nums; color: var(--es-ink, #0e1014); }
-    .ai-spend-stat span { font-size: 14px; color: var(--es-ink-3, #646a76); }
+    #ai-spend:not(:has(> .empty)) { padding: var(--es-space-5, 24px); }
+    .ai-spend-stat strong { font: 800 28px/1 var(--es-font-display, inherit); font-variant-numeric: tabular-nums; color: var(--es-text-strong, #0e1014); }
+    .ai-spend-stat span { font-size: 14px; color: var(--es-text-muted, #646a76); }
     .ai-spend-budget { height: 8px; border-radius: 999px; background: var(--es-sunk, #f5f6f8); overflow: hidden; margin: 4px 0 20px; }
+    html[data-theme="dark"] .ai-spend-budget { background: var(--theme-dark-border, #303030); }
     .ai-spend-budget > span { display: block; height: 100%; border-radius: inherit; background: var(--es-brand-fill, #0a6bd8); }
     .ai-spend-budget.is-high > span { background: var(--es-warn, #b25e09); }
     .ai-spend-budget.is-over > span { background: var(--es-bad, #c42323); }
     .ai-spend-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; }
     .ai-spend-groups h3 { margin: 0 0 10px; font: 700 14px/1.4 var(--es-font-ui, inherit); color: var(--es-text-secondary, #464c57); }
-    .ai-spend-note { margin: 16px 0 0; font-size: 14px; color: var(--es-ink-3, #646a76); }
+    body.dashboard-page .ai-spend-groups .workspace-bar-chart { padding: 0; }
+    .ai-spend-note { margin: 16px 0 0; font-size: 14px; color: var(--es-text-muted, #646a76); }
     .empty {
       padding: 28px 22px;
       color: var(--es-muted);
@@ -446,18 +449,19 @@
       table { min-width: 780px; }
     }
   </style>
-  <link rel="stylesheet" href="dashboard-v2.css?v=20261111-icons2">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261111-p5">
-  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261031-range1">
+  <link rel="stylesheet" href="dashboard-v2.css?v=20261113-uipass1">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261113-uipass1">
+  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261113-uipass1">
 <link rel="stylesheet" href="theme.css?v=20261112-a11y1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261111-icons3">
-<link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261112-dark14">
-<link rel="stylesheet" href="es-ui.css?v=20261112-notop3">
+  <link rel="stylesheet" href="site-chrome.css?v=20261113-uipass1">
+<link rel="stylesheet" href="cta-hover.css?v=20261113-uipass1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261113-uipass2">
+<link rel="stylesheet" href="es-ui.css?v=20261113-uipass2">
+  <link rel="stylesheet" href="es-motion.css?v=20261113-motion1">
   <script src="theme.js?v=20261111-icons2"></script>
-  <script src="site-mobile-chrome.js?v=20261112-notop1"></script>
+  <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261111-icons2"></script>
-<script src="app-shell.js?v=20261112-notop1"></script>
+<script src="app-shell.js?v=20261113-uipass2"></script>
 </head>
 <body class="dashboard-page" data-dashboard-view="overview">
   <nav class="navbar" aria-label="Global navigation">
@@ -1567,7 +1571,7 @@
 
       target.innerHTML = `
         <div class="exports-trend-chart-wrap">
-          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Exports over the last ${rangeDays} days">
+          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Exports over the last ${rangeDays} days: ${total} total">
             <defs>
               <linearGradient id="exportsTrendGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stop-color="var(--dash-blue)" stop-opacity="0.18" />

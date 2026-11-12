@@ -771,6 +771,16 @@
       padding: 0 11px 0 41px;
     }
 
+    /* The input itself has no outline, so the shell carries the focus ring. */
+    .prompt-shell:has(.prompt-input:focus-visible) {
+      outline: 2px solid var(--es-ink);
+      outline-offset: 2px;
+    }
+
+    html[data-theme="dark"] .prompt-shell:has(.prompt-input:focus-visible) {
+      outline-color: #5aa8ff;
+    }
+
     .prompt-entry {
       min-width: 0;
       height: 100%;
@@ -811,8 +821,8 @@
     }
 
     .prompt-mode-remove {
-      width: 18px;
-      height: 18px;
+      width: var(--es-space-5, 24px);
+      height: var(--es-space-5, 24px);
       border: 0;
       border-radius: 50%;
       background: rgba(3, 49, 98, .1);
@@ -1775,13 +1785,13 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="../site-mobile-chrome.css?v=20261028-mobile2">
+  <link rel="stylesheet" href="../site-mobile-chrome.css?v=20261113-uipass1">
 <link rel="stylesheet" href="../theme.css?v=20261112-a11y1">
-  <link rel="stylesheet" href="../site-chrome.css?v=20261111-icons3">
-  <link rel="stylesheet" href="../cta-hover.css?v=20261022-es1">
-  <link rel="stylesheet" href="../design-tokens.css?v=20261112-dark14">
+  <link rel="stylesheet" href="../site-chrome.css?v=20261113-uipass1">
+  <link rel="stylesheet" href="../cta-hover.css?v=20261113-uipass1">
+  <link rel="stylesheet" href="../design-tokens.css?v=20261113-uipass2">
   <script src="../theme.js?v=20261111-icons2"></script>
-  <script src="../site-mobile-chrome.js?v=20261112-notop1"></script>
+  <script src="../site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="../site-chrome.js?v=20261111-icons2"></script>
 </head>
 <body>

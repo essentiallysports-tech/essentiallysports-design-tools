@@ -86,7 +86,7 @@
     padding: clamp(26px, 3vw, 38px);
     min-height: 560px;
     border: 1px solid var(--es-line);
-    border-radius: 20px;
+    border-radius: var(--es-radius-container);
     background: rgba(255, 255, 255, .94);
     box-shadow: 0 22px 60px rgba(14, 16, 20, .08);
     overflow: hidden;
@@ -135,13 +135,13 @@
     gap: 8px;
     padding: 5px;
     border: 1px solid var(--es-line);
-    border-radius: 14px;
+    border-radius: var(--es-radius-control);
     background: var(--es-stage);
   }
   .login-mode-tab {
     min-height: 42px;
     border: 0;
-    border-radius: 14px;
+    border-radius: var(--es-radius-control);
     background: transparent;
     color: var(--text-blue);
     cursor: pointer;
@@ -166,16 +166,16 @@
     transition: opacity .26s var(--es-ease), transform .26s var(--es-ease);
   }
   .login-field label {
-    color: #000000;
-    font-size: 18px;
-    font-weight: 400;
-    line-height: 1;
+    color: var(--es-text-secondary);
+    font-size: var(--es-type-field-label-size);
+    font-weight: var(--es-type-field-label-weight);
+    line-height: var(--es-type-field-label-line);
   }
   .login-field input {
     width: 100%;
     height: 56px;
     border: 0;
-    border-radius: 14px;
+    border-radius: var(--es-radius-control);
     background: var(--white);
     color: var(--es-ink);
     font-family: var(--es-font-ui);
@@ -200,23 +200,17 @@
     width: 100%;
     height: 56px;
     border: 0;
-    border-radius: 14px;
+    border-radius: var(--es-radius-control);
     background: var(--es-brand-fill);
     color: var(--white);
-    font-family: var(--font-heading);
-    font-size: clamp(14px, .78vw, 16px);
-    font-weight: 500;
-    line-height: 1;
+    font: 700 15px/1 var(--es-font-ui);
     cursor: pointer;
     box-shadow: 0 12px 24px rgba(14, 16, 20, 0.18);
     transition: transform .16s var(--es-ease), box-shadow .16s var(--es-ease), background-color .16s var(--es-ease);
   }
   .login-button:hover,
   .login-button:focus-visible {
-    background: var(--es-ink);
-    transform: translateY(-2px);
-    box-shadow: 0 16px 28px rgba(14, 16, 20, 0.24);
-    outline: none;
+    background: var(--es-brand-fill-press);
   }
   .login-button:active {
     transform: translateY(1px);
@@ -240,6 +234,13 @@
     color: var(--accent);
     text-decoration: underline;
     outline: none;
+  }
+  @media (pointer: coarse) {
+    .login-forgot {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--es-tap);
+    }
   }
   .login-forgot[disabled] {
     cursor: wait;
@@ -281,10 +282,6 @@
     background: var(--es-brand-soft);
     color: var(--accent);
   }
-  .login-confirmation-icon svg {
-    width: 22px;
-    height: 22px;
-  }
   .login-confirmation h2 {
     margin: 0;
     color: #000;
@@ -317,16 +314,16 @@
   .login-secondary-button {
     min-height: 44px;
     border: 1px solid var(--es-line-2);
-    border-radius: 14px;
+    border-radius: var(--es-radius-control);
     background: #FFFFFF;
     color: var(--es-ink);
-    font: 500 clamp(14px, .78vw, 16px)/1 var(--font-heading);
+    font: 700 15px/1 var(--es-font-ui);
     cursor: pointer;
   }
   .login-secondary-button:hover,
   .login-secondary-button:focus-visible {
     border-color: var(--es-ink-3);
-    outline: none;
+    background: var(--es-sunk);
   }
   .login-secondary-button[disabled] {
     cursor: wait;
@@ -892,13 +889,13 @@
     }
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20261111-p5">
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20261113-uipass1">
 <link rel="stylesheet" href="theme.css?v=20261112-a11y1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261111-icons3">
-<link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
-<link rel="stylesheet" href="design-tokens.css?v=20261112-dark14">
+  <link rel="stylesheet" href="site-chrome.css?v=20261113-uipass1">
+<link rel="stylesheet" href="cta-hover.css?v=20261113-uipass1">
+<link rel="stylesheet" href="design-tokens.css?v=20261113-uipass2">
 <script src="theme.js?v=20261111-icons2"></script>
-<script src="site-mobile-chrome.js?v=20261112-notop1"></script>
+<script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
 <script src="site-chrome.js?v=20261111-icons2"></script>
 </head>
 <body>

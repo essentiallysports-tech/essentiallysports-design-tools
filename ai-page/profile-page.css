@@ -190,11 +190,11 @@ body.profile-page {
 }
 
 .profile-page .field label {
-  color: var(--profile-ink);
+  color: var(--es-text-secondary);
   font-family: var(--es-font-ui);
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.2;
+  font-size: var(--es-type-field-label-size);
+  font-weight: var(--es-type-field-label-weight);
+  line-height: var(--es-type-field-label-line);
 }
 
 .profile-page .field input,

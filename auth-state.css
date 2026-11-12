@@ -43,7 +43,7 @@ body.auth-state-page {
   justify-items: start;
   padding: clamp(30px, 6vw, 52px);
   border: 1px solid var(--auth-border);
-  border-radius: 20px;
+  border-radius: var(--es-radius-container);
   background: var(--auth-surface);
   box-shadow: 0 22px 60px rgba(14, 16, 20, .08);
 }
@@ -64,11 +64,6 @@ body.auth-state-page {
   border-radius: 50%;
   background: var(--es-brand-soft);
   color: var(--auth-accent);
-}
-
-.auth-state-icon svg {
-  width: 23px;
-  height: 23px;
 }
 
 .auth-state-icon.is-error {
@@ -121,9 +116,10 @@ body.auth-state-page {
 .auth-state-field {
   display: grid;
   gap: 8px;
-  color: var(--auth-text);
-  font-size: 15px;
-  font-weight: 700;
+  color: var(--es-text-secondary);
+  font-size: var(--es-type-field-label-size);
+  font-weight: var(--es-type-field-label-weight);
+  line-height: var(--es-type-field-label-line);
 }
 
 .auth-state-input-wrap {
@@ -134,16 +130,21 @@ body.auth-state-page {
   width: 100%;
   height: 52px;
   padding: 0 48px 0 15px;
-  border: 1px solid var(--auth-border);
-  border-radius: 14px;
-  background: #fff;
+  border: 1.5px solid var(--es-line-2);
+  border-radius: var(--es-radius-control);
+  background: var(--auth-surface);
   color: var(--auth-text);
   font: 500 16px/1 var(--auth-font-ui);
   outline: none;
   transition: border-color .16s var(--es-ease), box-shadow .16s var(--es-ease);
 }
 
-.auth-state-input:focus {
+html[data-theme="dark"] .auth-state-input {
+  border-color: var(--dk-line-2);
+}
+
+.auth-state-input:focus,
+html[data-theme="dark"] .auth-state-input:focus {
   border-color: var(--auth-accent);
   box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
 }
@@ -167,14 +168,21 @@ body.auth-state-page {
 
 .auth-state-password-toggle:hover,
 .auth-state-password-toggle:focus-visible {
-  background: #f1f5f9;
+  background: var(--es-sunk);
   color: var(--auth-text);
-  outline: none;
 }
 
-.auth-state-password-toggle svg {
-  width: 20px;
-  height: 20px;
+html[data-theme="dark"] .auth-state-password-toggle:hover,
+html[data-theme="dark"] .auth-state-password-toggle:focus-visible {
+  background: var(--dk-hover);
+}
+
+@media (pointer: coarse) {
+  .auth-state-password-toggle {
+    right: 4px;
+    width: var(--es-tap);
+    height: var(--es-tap);
+  }
 }
 
 .auth-state-actions {
@@ -192,10 +200,10 @@ body.auth-state-page {
   justify-content: center;
   padding: 0 22px;
   border: 1px solid var(--auth-border);
-  border-radius: 14px;
+  border-radius: var(--es-radius-control);
   background: #fff;
   color: var(--auth-text);
-  font: 600 16px/1 var(--auth-font-ui);
+  font: 700 15px/1 var(--es-font-ui);
   text-decoration: none;
   cursor: pointer;
   transition: background-color .16s var(--es-ease), border-color .16s var(--es-ease), color .16s var(--es-ease);
@@ -203,9 +211,8 @@ body.auth-state-page {
 
 .auth-state-button:hover,
 .auth-state-button:focus-visible {
-  border-color: var(--es-line-2);
+  border-color: var(--es-ink-3);
   background: var(--es-sunk);
-  outline: none;
 }
 
 .auth-state-button.is-primary {
@@ -254,7 +261,7 @@ body.auth-state-page {
   .auth-state-card {
     min-height: 0;
     padding: 30px 24px;
-    border-radius: 20px;
+    border-radius: var(--es-radius-container);
   }
 
   .auth-state-brand {

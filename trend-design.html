@@ -17,16 +17,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261111-p5">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261113-uipass1">
   <link rel="stylesheet" href="theme.css?v=20261112-a11y1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261111-icons3">
-  <link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261112-dark14">
-  <link rel="stylesheet" href="es-ui.css?v=20261112-notop3">
+  <link rel="stylesheet" href="site-chrome.css?v=20261113-uipass1">
+  <link rel="stylesheet" href="cta-hover.css?v=20261113-uipass1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261113-uipass2">
+  <link rel="stylesheet" href="es-ui.css?v=20261113-uipass2">
+  <link rel="stylesheet" href="es-motion.css?v=20261113-motion1">
   <script src="theme.js?v=20261111-icons2"></script>
-  <script src="site-mobile-chrome.js?v=20261112-notop1"></script>
+  <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261111-icons2"></script>
-  <script src="app-shell.js?v=20261112-notop1"></script>
+  <script src="app-shell.js?v=20261113-uipass2"></script>
   <style>
     /* ── Page ───────────────────────────────────────────────────────────── */
     body.trends-body { background: var(--es-bg, #ffffff); }
@@ -60,13 +61,8 @@
     .is-stale .td-live-dot { background: #d97706; } .is-stale .td-live-dot::after { border-color: rgb(217 119 6 / .45); }
     .is-error .td-live-dot { background: var(--es-bad, #c0392b); } .is-error .td-live-dot::after { animation: none; border-color: transparent; }
     @keyframes tdPulse { 0% { transform: scale(.6); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
-    .td-hero h1 { margin: 12px 0 6px; font-family: var(--es-font-display, 'Roboto Condensed', sans-serif); font-size: 40px; font-weight: 800; line-height: 1.05; letter-spacing: -.01em; }
-    .td-hero h1 span { background: linear-gradient(90deg, var(--td-accent), var(--td-accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    .td-hero p { margin: 0; max-width: 620px; color: var(--es-ink-2); font-size: 15px; line-height: 1.5; }
-    .td-refresh { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; border: 0; border-radius: 12px; background: #ffffff; box-shadow: inset 0 0 0 1px var(--es-line-2), 0 1px 2px rgb(14 16 20 / .06); color: var(--es-ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: box-shadow 160ms var(--td-ease), transform 140ms var(--td-ease); }
-    .td-refresh:hover { box-shadow: inset 0 0 0 1px var(--es-ink-3), 0 4px 12px -6px rgb(14 16 20 / .25); }
-    .td-refresh:active { transform: scale(.97); }
-    .td-refresh:focus-visible { outline: 2px solid var(--es-brand); outline-offset: 2px; }
+    .td-hero .es-page-head { margin: 12px 0 0; }
+    .td-hero .es-page-head p { max-width: 620px; }
     .td-refresh[aria-busy="true"] svg { animation: tdSpin .9s linear infinite; }
     @keyframes tdSpin { to { transform: rotate(360deg); } }
     .td-stats { display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--es-ink-3); font-size: 13px; }
@@ -82,7 +78,7 @@
     .td-sport-dot { width: 10px; height: 10px; border-radius: 3px; background: var(--sport, #4b4f58); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sport, #4b4f58) 18%, transparent); }
     .trends-group__more { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; padding: 6px 2px; color: var(--es-brand-text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
     .trends-group__more:hover { text-decoration: underline; }
-    .trends-group__more:focus-visible { outline: 2px solid var(--es-brand); outline-offset: 2px; border-radius: 6px; }
+    .trends-group__more:focus-visible { border-radius: 6px; }
     .trends-list { display: grid; gap: 12px; }
 
     [data-sport="golf"] { --sport: #15803d; --sport-2: #0f5132; }
@@ -124,7 +120,7 @@
     .td-source { display: inline-flex; align-items: center; gap: 6px; color: var(--es-ink-2); font-weight: 600; }
     .td-source img { width: 16px; height: 16px; border-radius: 4px; box-shadow: 0 0 0 1px var(--es-line); background: #ffffff; }
     .trend-tag { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 999px; background: var(--es-sunk); color: var(--es-ink-2); font-size: 12px; font-weight: 600; white-space: nowrap; }
-    .trend-tag svg[viewBox] { width: 12px !important; height: 12px !important; min-width: 12px; }
+    .trend-tag svg[viewBox] { width: var(--es-icon-sm) !important; height: var(--es-icon-sm) !important; min-width: var(--es-icon-sm); }
     .trend-tag.is-search { background: linear-gradient(90deg, rgb(10 125 250 / .12), rgb(124 77 255 / .12)); color: var(--es-brand-text); }
     .trend-tag.is-search .td-live-dot { width: 6px; height: 6px; background: var(--td-accent); }
     .trend-tag.is-search .td-live-dot::after { inset: -3px; border-color: rgb(10 125 250 / .45); }
@@ -139,7 +135,7 @@
     /* Headline ideas */
     .trend-ideas { display: grid; gap: 8px; margin-top: 4px; padding-top: 12px; border-top: 1px dashed var(--es-line-2); }
     .trend-ideas__label { display: flex; align-items: center; gap: 6px; color: var(--es-text-secondary); font-size: 12px; font-weight: 600; letter-spacing: .01em; }
-    .trend-ideas__label svg[viewBox] { width: 14px !important; height: 14px !important; min-width: 14px; color: var(--td-accent-2); }
+    .trend-ideas__label svg[viewBox] { width: var(--es-icon-sm) !important; height: var(--es-icon-sm) !important; min-width: var(--es-icon-sm); color: var(--td-accent-2); }
     .trend-ideas__label small { color: var(--es-ink-3); font-weight: 500; }
     .trend-ideas__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
     .trend-idea {
@@ -148,32 +144,21 @@
       color: var(--es-ink); font: inherit; font-size: 13px; font-weight: 500; line-height: 1.35; text-align: left; text-decoration: none; cursor: pointer;
       transition: box-shadow 180ms var(--td-ease), background 180ms var(--td-ease), transform 140ms var(--td-ease);
     }
-    .trend-idea svg[viewBox] { width: 14px !important; height: 14px !important; min-width: 14px; color: var(--td-accent); opacity: 0; transform: translateX(-4px); transition: opacity 180ms var(--td-ease), transform 180ms var(--td-ease); }
+    .trend-idea svg[viewBox] { width: var(--es-icon-sm) !important; height: var(--es-icon-sm) !important; min-width: var(--es-icon-sm); color: var(--td-accent); opacity: 0; transform: translateX(-4px); transition: opacity 180ms var(--td-ease), transform 180ms var(--td-ease); }
     @media (hover: hover) {
       .trend-idea:hover { background: linear-gradient(90deg, rgb(10 125 250 / .07), rgb(124 77 255 / .06)); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .45); }
       .trend-idea:hover svg[viewBox] { opacity: 1; transform: none; }
     }
     .trend-idea:active { transform: scale(.98); }
-    .trend-idea:focus-visible { outline: 2px solid var(--es-brand); outline-offset: 2px; }
     .trend-idea:focus-visible svg[viewBox] { opacity: 1; transform: none; }
-    .trend-idea.is-skeleton, .td-sk { color: transparent; box-shadow: none; pointer-events: none; background: linear-gradient(90deg, var(--es-sunk) 0%, color-mix(in srgb, var(--es-sunk) 55%, #ffffff) 50%, var(--es-sunk) 100%); background-size: 200% 100%; animation: tdShimmer 1.4s linear infinite; }
+    .trend-idea.is-skeleton, .td-sk { color: transparent; box-shadow: none; pointer-events: none; background: linear-gradient(90deg, var(--es-sunk) 0%, color-mix(in srgb, var(--es-sunk) 55%, var(--es-line-2)) 50%, var(--es-sunk) 100%); background-size: 200% 100%; animation: tdShimmer 1.4s linear infinite; }
     @keyframes tdShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
     .trend-ideas__empty { color: var(--es-ink-3); font-size: 13px; }
 
     /* Actions */
     .trend-actions { display: grid; gap: 8px; justify-items: stretch; width: 152px; }
-    .td-design {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 12px;
-      background: linear-gradient(135deg, #0a7dfa, #2563eb 55%, #4f46e5); color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none;
-      box-shadow: 0 1px 0 rgb(255 255 255 / .25) inset, 0 8px 18px -10px rgb(37 99 235 / .9);
-      transition: box-shadow 180ms var(--td-ease), transform 140ms var(--td-ease), filter 180ms var(--td-ease);
-    }
-    .td-design svg[viewBox] { width: 16px !important; height: 16px !important; min-width: 16px; }
-    @media (hover: hover) { .td-design:hover { filter: brightness(1.06); box-shadow: 0 1px 0 rgb(255 255 255 / .25) inset, 0 12px 24px -12px rgb(37 99 235 / 1); } }
-    .td-design:active { transform: scale(.97); }
     .trend-actions .trend-read { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; color: var(--es-ink-2); font-size: 13px; font-weight: 600; text-decoration: none; border-radius: 10px; }
     .trend-actions .trend-read:hover { color: var(--es-ink); background: var(--es-sunk); }
-    .trend-row :is(a):focus-visible { outline: 2px solid var(--es-brand); outline-offset: 2px; }
 
     /* Entrance: cards rise in one after another (first render only) */
     @media (prefers-reduced-motion: no-preference) {
@@ -204,9 +189,9 @@
     @media (max-width: 640px) {
       .trends-page { width: calc(100% - 32px); padding-top: 16px; }
       .td-hero { padding: 20px 18px 18px; border-radius: 18px; }
-      .td-hero h1 { font-size: 32px; }
       .td-refresh span { display: none; }
-      .td-refresh { width: 40px; padding: 0; justify-content: center; }
+      .td-refresh { width: var(--es-tap); min-height: var(--es-tap); padding: 0; }
+      .trends-filters .es-chip { min-height: var(--es-tap); }
       .trend-row { grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 14px; }
       .trend-visual { width: 64px; height: 64px; border-radius: 12px; }
       .td-fallback { gap: 0; }
@@ -219,17 +204,16 @@
       .trend-ideas__list { grid-template-columns: 1fr; }
       .td-design { flex: 1; min-height: 44px; }
       .trend-actions .trend-read { min-height: 44px; }
-      .trend-idea { min-height: 38px; }
+      .trend-idea { min-height: var(--es-tap); }
+      .trends-group__more { min-height: var(--es-tap); }
+      /* Let "Trending on Google · N searches" wrap in the narrow card body. */
+      .trend-tag { height: auto; min-height: 22px; padding-top: 2px; padding-bottom: 2px; white-space: normal; }
     }
 
     /* ── Dark ───────────────────────────────────────────────────────────── */
     html[data-theme="dark"] .trends-page { --es-ink: #f3f5f7; --es-ink-2: #c9cdd3; --es-bg: #121212; --es-line: #262626; --es-line-2: #363636; --es-sunk: #1d1d1d; --es-text-secondary: #c9cdd3; }
     html[data-theme="dark"] .td-hero { background: radial-gradient(120% 140% at 0% 0%, rgb(10 125 250 / .18), transparent 55%), radial-gradient(90% 120% at 100% 0%, rgb(124 77 255 / .16), transparent 60%), linear-gradient(180deg, #141414, #0f0f10); }
     html[data-theme="dark"] .td-kicker { background: rgb(20 20 20 / .7); }
-    html[data-theme="dark"] .td-hero h1 span { background: linear-gradient(90deg, #6fb2ff, #b39dff); -webkit-background-clip: text; background-clip: text; }
-    html[data-theme="dark"] .td-refresh { background: #1a1a1a; box-shadow: inset 0 0 0 1px #363636; color: #f3f5f7; }
-    html[data-theme="dark"] .trends-page .template-filter:not([aria-pressed="true"]) { background: #121212; color: #c9cdd3; box-shadow: inset 0 0 0 1px #363636; }
-    html[data-theme="dark"] .trends-page .template-filter[aria-pressed="true"] { background: #f3f5f7; color: #111418; }
     html[data-theme="dark"] .trend-row:hover { box-shadow: inset 0 0 0 1px #3a3a3a, 0 14px 32px -18px rgb(0 0 0 / .8); }
     html[data-theme="dark"] .trend-tag.is-search { color: #9cc9ff; }
     html[data-theme="dark"] .trend-idea:hover { background: linear-gradient(90deg, rgb(10 125 250 / .14), rgb(124 77 255 / .12)); box-shadow: inset 0 0 0 1px rgb(111 178 255 / .5); }
@@ -259,10 +243,12 @@
       <div class="td-hero__top">
         <div>
           <span class="td-kicker" id="trends-live"><span class="td-live-dot" aria-hidden="true"></span><span id="trends-updated">Loading live trends…</span></span>
-          <h1 id="td-title">Trend <span>Design</span></h1>
-          <p>What US sports fans are searching and reading right now, with headline ideas for each story. Pick one and turn it into a design.</p>
+          <header class="es-page-head">
+            <h1 id="td-title">Trend Design</h1>
+            <p>What US sports fans are searching and reading right now, with headline ideas for each story. Pick one and turn it into a design.</p>
+          </header>
         </div>
-        <button class="td-refresh" type="button" id="trends-refresh" aria-label="Refresh trends">
+        <button class="es-btn td-refresh" type="button" id="trends-refresh" aria-label="Refresh trends">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
           <span>Refresh</span>
         </button>
@@ -377,7 +363,7 @@
             <div class="trend-ideas" data-ideas="${esc(item.id)}">${ideasHtml(item)}</div>
           </div>
           <div class="trend-actions">
-            <a class="td-design" href="${esc(designUrl(item))}">${ICON.wand}Design this</a>
+            <a class="es-btn es-btn--primary td-design" href="${esc(designUrl(item))}">${ICON.wand}Design this</a>
             <a class="trend-read" href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer">Read story ${ICON.external}<span class="es-sr-only"> (opens in a new tab)</span></a>
           </div>
         </article>`;
@@ -387,10 +373,14 @@
         return `<div class="trends-list" aria-hidden="true">${Array.from({ length: n }, () => `<div class="trend-row is-skeleton"><span class="td-sk" style="width:100%;aspect-ratio:1;border-radius:14px"></span><div class="trend-body"><span class="td-sk" style="width:220px;height:22px"></span><span class="td-sk" style="height:18px"></span><span class="td-sk" style="width:60%;height:18px"></span><span class="td-sk" style="width:80%;height:34px;margin-top:8px"></span></div><span class="td-sk" style="width:152px;height:40px"></span></div>`).join('')}</div>`;
       }
 
+      const focusActiveChip = () => els.filters.querySelector(`[data-sport="${CSS.escape(active)}"]`)?.focus();
       function renderFilters() {
         const total = data ? data.items.length : 0;
         const chips = [{ id: 'all', label: 'All', count: total }, ...(data?.categories || [])];
-        els.filters.innerHTML = chips.map(c => `<button type="button" class="template-filter" data-sport="${c.id}" aria-pressed="${c.id === active}"><span>${esc(c.label)}</span><span class="template-filter__count">${c.count}</span></button>`).join('');
+        // The chips are rebuilt (counts change on refresh): keep keyboard focus.
+        const hadFocus = els.filters.contains(document.activeElement);
+        els.filters.innerHTML = chips.map(c => `<button type="button" class="es-chip" data-sport="${c.id}" aria-pressed="${c.id === active}"><span>${esc(c.label)}</span><span class="template-filter__count">${c.count}</span></button>`).join('');
+        if (hadFocus) focusActiveChip();
       }
 
       function renderStats() {
@@ -503,7 +493,9 @@
           els.live.classList.remove('is-error');
           els.notice.hidden = !(json.sourcesFailed?.length);
           if (json.sourcesFailed?.length) els.notice.textContent = 'Some sources didn’t respond this time, so a few trends may be missing. They’ll be back on the next refresh.';
-          render();
+          // A background refresh must not wipe the cards while someone is
+          // tabbing through them: keep the list, update stats and status.
+          if (!force && els.body.contains(document.activeElement)) { renderFilters(); renderStats(); } else render();
           setLive();
         } catch (error) {
           els.live.classList.add('is-error');
@@ -538,7 +530,8 @@
         history.replaceState(null, '', `?sport=${encodeURIComponent(active)}`);
         entered = false;
         render();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Move focus to the now-active sport chip (focusing scrolls it into view).
+        focusActiveChip();
       });
       els.refresh.addEventListener('click', () => load(true));
 

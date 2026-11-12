@@ -126,7 +126,7 @@
   // ─── Sidebar ───────────────────────────────────────────────────────────
   function navItemMarkup(item) {
     const badge = item.badge ? `<span class="es-badge es-badge--new">${item.badge}</span>` : '';
-    return `<a class="es-nav-item" href="${base}${item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''} title="${item.label}">${ICONS[item.icon]}<span class="es-nav-item__text">${item.label}</span><span class="es-nav-item__short" aria-hidden="true">${item.short || item.label}</span>${badge}</a>`;
+    return `<a class="es-nav-item" href="${base}${item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''} data-tip="${item.label}">${ICONS[item.icon]}<span class="es-nav-item__text">${item.label}</span><span class="es-nav-item__short" aria-hidden="true">${item.short || item.label}</span>${badge}</a>`;
   }
 
   function buildSidebar() {
@@ -316,6 +316,11 @@
       button.title = label;
       button.setAttribute('aria-expanded', String(!collapsed));
     }
+    // Tooltips only help when the labels are hidden (icon-only sidebar).
+    document.querySelectorAll('.es-nav-item[data-tip]').forEach(link => {
+      if (collapsed) link.title = link.dataset.tip;
+      else link.removeAttribute('title');
+    });
     if (remember) {
       try { window.localStorage.setItem(collapseKey(), collapsed ? 'collapsed' : 'expanded'); } catch (error) { /* ignore */ }
     }
@@ -420,8 +425,8 @@
     palette.className = 'es-palette';
     palette.setAttribute('aria-label', 'Search FrameUp');
     palette.innerHTML = `
-      <div class="es-palette__search">${ICONS.search}<input type="text" placeholder="Search pages, templates and actions…" aria-label="Search" autocomplete="off"><kbd class="es-kbd">Esc</kbd></div>
-      <div class="es-palette__list" role="listbox"></div>`;
+      <div class="es-palette__search">${ICONS.search}<input type="text" placeholder="Search pages, templates and actions…" aria-label="Search" autocomplete="off" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="es-palette-list"><kbd class="es-kbd">Esc</kbd></div>
+      <div class="es-palette__list" id="es-palette-list" role="listbox" aria-label="Results"></div>`;
     document.body.appendChild(palette);
     const input = palette.querySelector('input');
     input.addEventListener('input', () => renderPalette(input.value));
@@ -431,7 +436,7 @@
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault();
         const next = event.key === 'ArrowDown' ? Math.min(items.length - 1, current + 1) : Math.max(0, current - 1);
-        items.forEach((item, index) => item.classList.toggle('is-active', index === next));
+        setActivePaletteItem(items, next);
         items[next]?.scrollIntoView({ block: 'nearest' });
       } else if (event.key === 'Enter') {
         event.preventDefault();
@@ -439,6 +444,20 @@
       }
     });
     palette.addEventListener('click', event => { if (event.target === palette) palette.close(); });
+  }
+
+  // Marks one option active for keyboard users and screen readers alike.
+  function setActivePaletteItem(items, activeIndex) {
+    items.forEach((item, index) => {
+      const active = index === activeIndex;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-selected', String(active));
+    });
+    const input = palette?.querySelector('input');
+    const activeItem = items[activeIndex];
+    if (!input) return;
+    if (activeItem?.id) input.setAttribute('aria-activedescendant', activeItem.id);
+    else input.removeAttribute('aria-activedescendant');
   }
 
   // Extra groups from the page (templates, actions, recent designs).
@@ -475,11 +494,12 @@
     const shown = groups.filter(group => group.items.length);
     if (!shown.length) {
       list.innerHTML = '<p class="es-palette__empty">No matches</p>';
+      setActivePaletteItem([], -1);
       return;
     }
     const runs = [];
     list.innerHTML = shown.map(group => `
-      <div class="es-menu__label">${escapeHtml(group.label)}</div>
+      <div class="es-menu__label" role="presentation">${escapeHtml(group.label)}</div>
       ${group.items.map(item => {
         const iconMarkup = ICONS[item.icon] || (String(item.icon || '').startsWith('<svg') ? item.icon : ICONS.template);
         const text = `<span>${escapeHtml(item.label)}</span>${item.hint ? `<small class="es-palette__hint">${escapeHtml(item.hint)}</small>` : ''}`;
@@ -489,8 +509,10 @@
         }
         return `<a class="es-menu__item" role="option" href="${escapeHtml(item.href || '#')}">${iconMarkup}${text}</a>`;
       }).join('')}`).join('');
-    list.querySelector('.es-menu__item')?.classList.add('is-active');
-    list.querySelectorAll('.es-menu__item').forEach(link => link.addEventListener('click', event => {
+    const options = [...list.querySelectorAll('.es-menu__item')];
+    options.forEach((option, index) => { option.id = `es-palette-option-${index}`; });
+    setActivePaletteItem(options, 0);
+    options.forEach(link => link.addEventListener('click', event => {
       palette.close();
       const index = link.dataset.paletteRun;
       if (index != null) {

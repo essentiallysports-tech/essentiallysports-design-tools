@@ -609,9 +609,7 @@
     appearance: none;
   }
   input[type="text"]::placeholder, input[type="url"]::placeholder, textarea::placeholder {
-    color: var(--text-secondary);
     font-weight: 400;
-    opacity: 0.7;
   }
   input[type="text"]:focus, input[type="url"]:focus, textarea:focus {
     border-color: var(--accent);
@@ -882,7 +880,8 @@
   }
   body:is([data-instagram-post-type="twitter-quote"], [data-instagram-post-type="twitter-multi"]) .text-card > .tod-row,
   body:is([data-instagram-post-type="twitter-quote"], [data-instagram-post-type="twitter-multi"]) .text-card > .input-wrap,
-  body:is([data-instagram-post-type="twitter-quote"], [data-instagram-post-type="twitter-multi"]) .color-card,
+  /* Tweet / X Post keeps team colours: they colour its headline pill. */
+  body[data-instagram-post-type="twitter-multi"] .color-card,
   body:is([data-instagram-post-type="twitter-quote"], [data-instagram-post-type="twitter-multi"]) #pill-position-card,
   body:is([data-instagram-post-type="twitter-quote"], [data-instagram-post-type="twitter-multi"]) .advanced-card {
     display: none !important;
@@ -1479,9 +1478,14 @@
     transition: border-color .16s, transform .16s, box-shadow .16s;
     flex-shrink: 0;
     position: relative;
+    padding: 0;
+    background: transparent;
   }
   .swatch:hover { transform: scale(1.1); box-shadow: var(--shadow-md); }
   .swatch.active { border-color: transparent !important; box-shadow: none; }
+  /* The chosen pair gets a ring outside the box, so it shows on any colour. */
+  .swatch.active,
+  .swatch[aria-pressed="true"] { outline: 2px solid var(--es-selected); outline-offset: 2px; }
   /* Colour fills the rounded box exactly, so the 2 px outline is even all round. */
   .swatch { overflow: hidden; }
   .swatch .swatch-inner { border-radius: 12px; }
@@ -1913,10 +1917,6 @@
     backdrop-filter: blur(2px);
     transition: background-color .2s var(--motion-smooth), border-color .2s var(--motion-smooth), transform .2s var(--motion-smooth), opacity .2s var(--motion-smooth);
   }
-  .frame-hero-arrow svg {
-    width: 20px;
-    height: 20px;
-  }
   .frame-hero-arrow:hover,
   .frame-hero-arrow:focus-visible {
     background: #FFFFFF;
@@ -1933,6 +1933,9 @@
   .frame-hero-pause {
     width: 20px;
     height: 20px;
+    /* 24px minimum target; the icon stays the same size. */
+    min-width: 24px;
+    min-height: 24px;
     display: grid;
     place-items: center;
     margin-left: 6px;
@@ -1946,10 +1949,6 @@
   }
   .frame-hero-pause:hover {
     color: var(--es-ink);
-  }
-  .frame-hero-pause svg {
-    width: 12px;
-    height: 12px;
   }
   .frame-hero-pause .frame-hero-play-icon,
   .frame-hero-pause.is-paused .frame-hero-pause-icon {
@@ -1978,6 +1977,13 @@
     box-shadow: none;
     cursor: pointer;
     transition: background-color var(--es-dur) var(--es-ease), width var(--es-dur) var(--es-ease);
+    position: relative;
+  }
+  /* Invisible 24px hit area around the 6px dot; it looks the same. */
+  .frame-hero-dot::after {
+    content: "";
+    position: absolute;
+    inset: -9px;
   }
   .frame-hero-dot:hover {
     background: var(--es-ink-3);
@@ -5524,7 +5530,11 @@ body[data-current-page="faq"] .faq-cta-art img {
     }
 
     .layers-panel-head {
-      padding: 16px 16px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px 8px 8px 16px;
       color: var(--es-ink);
       font-family: var(--es-font-ui);
       font-size: 13px;
@@ -5532,6 +5542,33 @@ body[data-current-page="faq"] .faq-cta-art img {
       letter-spacing: .02em;
       text-transform: uppercase;
     }
+
+    /* Collapse / expand the Layers column (remembered per browser). */
+    .layers-panel-collapse {
+      display: inline-grid;
+      place-items: center;
+      flex: none;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: 0;
+      border-radius: var(--es-radius-control, 12px);
+      background: transparent;
+      color: var(--es-ink-3);
+      cursor: pointer;
+      transition: background-color var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease);
+    }
+    .layers-panel-collapse:hover { background: var(--es-hover); color: var(--es-ink); }
+    .layers-panel-collapse svg { width: 18px; height: 18px; transition: transform var(--es-dur-step) var(--es-ease); }
+
+    html[data-studio-shell="on"] .app[data-workspace].has-layers-panel.layers-collapsed {
+      grid-template-columns: 48px minmax(0, 1fr) minmax(370px, 26vw);
+    }
+    .app.layers-collapsed .layers-panel { overflow: hidden; }
+    .app.layers-collapsed .layers-panel-head { justify-content: center; padding: 12px 0 8px; }
+    .app.layers-collapsed .layers-panel-head > span,
+    .app.layers-collapsed .layers-panel-list { display: none; }
+    .app.layers-collapsed .layers-panel-collapse svg { transform: scaleX(-1); }
 
     .layers-panel-list {
       display: flex;
@@ -7211,8 +7248,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     html[data-studio-shell="on"] .canvas-bottom-actions .canvas-upload-button,
     html[data-studio-shell="on"] .canvas-bottom-actions .studio-zoom-btn,
     html[data-studio-shell="on"] .canvas-bottom-actions .carousel-slide-button {
-      min-height: 40px;
-      height: 40px;
+      min-height: var(--es-tap);
+      height: var(--es-tap);
     }
 
     html[data-studio-shell="on"] .panel {
@@ -7679,6 +7716,10 @@ body[data-current-page="faq"] .faq-cta-art img {
   .widget-builder-hint.is-error {
     color: var(--es-bad);
   }
+  /* Only shows while an upload status message is set. */
+  body .widget-builder-hint:empty {
+    display: none;
+  }
   .widget-paste-link-input.is-flash-success {
     background: var(--es-good-soft);
     border-color: var(--es-good);
@@ -7756,19 +7797,20 @@ body[data-current-page="faq"] .faq-cta-art img {
     pointer-events: none;
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20261111-p5">
-<link rel="stylesheet" href="studio-inspector.css?v=20261110-swatch1">
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20261113-uipass1">
+<link rel="stylesheet" href="studio-inspector.css?v=20261113-uipass1">
 <link rel="stylesheet" href="theme.css?v=20261112-a11y1">
-<link rel="stylesheet" href="site-chrome.css?v=20261111-icons3">
-<link rel="stylesheet" href="cta-hover.css?v=20261022-es1">
+<link rel="stylesheet" href="site-chrome.css?v=20261113-uipass1">
+<link rel="stylesheet" href="cta-hover.css?v=20261113-uipass1">
 <link rel="stylesheet" href="how-it-works.css?v=20261111-icons2">
-<link rel="stylesheet" href="design-tokens.css?v=20261112-dark14">
-<link rel="stylesheet" href="es-ui.css?v=20261112-notop3">
-<link rel="stylesheet" href="editor-polish.css?v=20261112-a11y5">
+<link rel="stylesheet" href="design-tokens.css?v=20261113-uipass2">
+<link rel="stylesheet" href="es-ui.css?v=20261113-uipass2">
+  <link rel="stylesheet" href="es-motion.css?v=20261113-motion1">
+<link rel="stylesheet" href="editor-polish.css?v=20261113-uipass8">
 <script src="theme.js?v=20261111-icons2"></script>
-<script src="site-mobile-chrome.js?v=20261112-notop1"></script>
+<script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
 <script src="site-chrome.js?v=20261111-icons2"></script>
-<script src="app-shell.js?v=20261112-notop1"></script>
+<script src="app-shell.js?v=20261113-uipass2"></script>
 </head>
 <body>
 
@@ -7845,9 +7887,9 @@ body[data-current-page="faq"] .faq-cta-art img {
         <button type="button" class="frame-hero-arrow frame-hero-arrow--next" data-hero-next aria-label="Next slide">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
-        <div class="frame-hero-dots" data-hero-dots role="tablist" aria-label="Hero banner slides">
-          <button type="button" class="frame-hero-dot is-active" data-hero-dot="0" role="tab" aria-selected="true" aria-label="Show slide 1"></button>
-          <button type="button" class="frame-hero-dot" data-hero-dot="1" role="tab" aria-selected="false" aria-label="Show slide 2"></button>
+        <div class="frame-hero-dots" data-hero-dots role="group" aria-label="Hero banner slides">
+          <button type="button" class="frame-hero-dot is-active" data-hero-dot="0" aria-current="true" aria-label="Show slide 1"></button>
+          <button type="button" class="frame-hero-dot" data-hero-dot="1" aria-label="Show slide 2"></button>
           <button type="button" class="frame-hero-pause" data-hero-pause aria-label="Pause slideshow" aria-pressed="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="frame-hero-pause-icon" aria-hidden="true"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="frame-hero-play-icon" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
@@ -8042,6 +8084,9 @@ body[data-current-page="faq"] .faq-cta-art img {
   <aside class="layers-panel" id="layers-panel" aria-label="Layers" hidden>
     <div class="layers-panel-head">
       <span>Layers</span>
+      <button type="button" class="layers-panel-collapse" data-layers-collapse aria-label="Collapse layers panel" aria-expanded="true" aria-controls="layers-panel-list" title="Collapse layers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/></svg>
+      </button>
     </div>
     <div class="layers-panel-list" id="layers-panel-list"></div>
   </aside>
@@ -8103,6 +8148,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         <div class="card-title">Newsletter Brand</div>
         <select id="newsletter-brand-select" aria-label="Newsletter brand"></select>
       </div>
+      <p class="widget-builder-hint" id="widget-builder-hint" role="status" aria-live="polite"></p>
     </div>
 
     <div class="post-type-control" id="post-type-control" aria-label="Instagram post type">
@@ -8449,7 +8495,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="field-row" style="margin-bottom: 14px;">
         <div class="field-group">
           <div class="section-label">Sport</div>
-          <select id="sport-select" aria-label="Sport" data-ui="chips"></select>
+          <select id="sport-select" aria-label="Sport"></select>
         </div>
         <div class="field-group">
           <div class="section-label" id="brand-choice-label">Team</div>
@@ -10663,6 +10709,8 @@ function syncCustomSelect(select, rebuild = true) {
       select.dispatchEvent(new Event('change', { bubbles: true }));
       closeCustomSelects();
       syncCustomSelect(select);
+      // The clicked option is rebuilt away, so hand focus back to the trigger.
+      select._customDropdown?.querySelector('.select-dropdown-trigger')?.focus({ preventScroll: true });
     });
     menu.appendChild(button);
   });
@@ -10716,6 +10764,38 @@ function enhanceCustomSelects() {
         syncCustomSelect(select);
         menu.querySelector('.select-dropdown-search')?.focus({ preventScroll: true });
       }
+    });
+
+    // Keyboard: Escape closes and returns to the trigger; arrows walk the options.
+    dropdown.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && dropdown.classList.contains('is-open')) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeCustomSelects();
+        trigger.focus({ preventScroll: true });
+        return;
+      }
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+      if ((event.key === 'Home' || event.key === 'End') && event.target.matches('.select-dropdown-search')) return;
+      if (!dropdown.classList.contains('is-open')) {
+        if (event.target !== trigger || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
+        event.preventDefault();
+        trigger.click();
+        if (menu.querySelector('.select-dropdown-search')) return;
+        const options = [...menu.querySelectorAll('.select-dropdown-option:not([hidden]):not(:disabled)')];
+        (options.find(option => option.classList.contains('is-selected')) || options[0])?.focus({ preventScroll: false });
+        return;
+      }
+      const options = [...menu.querySelectorAll('.select-dropdown-option:not([hidden]):not(:disabled)')];
+      if (!options.length) return;
+      event.preventDefault();
+      const current = options.indexOf(document.activeElement);
+      let next;
+      if (event.key === 'Home') next = 0;
+      else if (event.key === 'End') next = options.length - 1;
+      else if (current === -1) next = event.key === 'ArrowUp' ? options.length - 1 : 0;
+      else next = Math.min(options.length - 1, Math.max(0, current + (event.key === 'ArrowDown' ? 1 : -1)));
+      options[next].focus();
     });
 
     dropdown.append(trigger, menu);
@@ -10829,7 +10909,7 @@ function getSelectedImageEditBounds() {
 }
 
 function isCanvasImageEditAvailable() {
-  if (document.body.dataset.studioInspector !== 'image' || isListicleImageControlLocked()) return false;
+  if (!['image', 'all'].includes(document.body.dataset.studioInspector) || isListicleImageControlLocked()) return false;
   if (!getAvailableImageTools().includes(activeImageTool)) return false;
   return !!getImageToolDescriptor(activeImageTool).image;
 }
@@ -12368,11 +12448,14 @@ function renderPaletteRow(entry) {
   const row = document.getElementById('palette-row');
   row.innerHTML = '';
   getPaletteForWorkspace(entry).forEach((p, i) => {
-    const sw = document.createElement('div');
+    const sw = document.createElement('button');
+    sw.type = 'button';
     sw.className = 'swatch' + (i === state.pillPaletteIdx ? ' active' : '');
     sw.classList.toggle('is-light', contrastRatio(p.background, '#FFFFFF') < 1.35);
     sw.title = `Pill ${p.background} / Text ${getTextColorForPair(p, entry)} / Mist ${getMistColorForPair(p, entry)}`;
-    const inner = document.createElement('div');
+    sw.setAttribute('aria-label', `Pill ${p.background}, text ${getTextColorForPair(p, entry)}`);
+    sw.setAttribute('aria-pressed', i === state.pillPaletteIdx ? 'true' : 'false');
+    const inner = document.createElement('span');
     inner.className = 'swatch-inner';
     inner.style.background = p.background;
     inner.style.color = getTextColorForPair(p, entry);
@@ -17467,7 +17550,33 @@ function updateLayersPanel() {
   if (active) renderLayersPanelRows();
 }
 
+function setLayersCollapsed(collapsed, remember) {
+  const app = document.querySelector('.app[data-workspace]');
+  const button = document.querySelector('[data-layers-collapse]');
+  if (!app) return;
+  app.classList.toggle('layers-collapsed', collapsed);
+  if (button) {
+    const label = collapsed ? 'Expand layers panel' : 'Collapse layers panel';
+    button.setAttribute('aria-label', label);
+    button.title = collapsed ? 'Expand layers' : 'Collapse layers';
+    button.setAttribute('aria-expanded', String(!collapsed));
+  }
+  if (remember) {
+    try { localStorage.setItem('frameup.layers.collapsed', collapsed ? '1' : '0'); } catch (error) { /* storage unavailable */ }
+  }
+  window.dispatchEvent(new Event('resize'));
+}
+
 function setupLayersPanel() {
+  const collapseButton = document.querySelector('[data-layers-collapse]');
+  if (collapseButton) {
+    let stored = false;
+    try { stored = localStorage.getItem('frameup.layers.collapsed') === '1'; } catch (error) { /* storage unavailable */ }
+    setLayersCollapsed(stored, false);
+    collapseButton.addEventListener('click', () => {
+      setLayersCollapsed(!document.querySelector('.app[data-workspace]')?.classList.contains('layers-collapsed'), true);
+    });
+  }
   const list = document.getElementById('layers-panel-list');
   if (!list) return;
   let draggedId = null;
@@ -19344,7 +19453,7 @@ function renderInfographicFields() {
   document.body.dataset.newsletterInfographic = isOn ? 'on' : 'off';
   document.body.dataset.infographicPhoto = isOn && getInfographicMainPhotoLayer(template) ? 'on' : 'off';
   // Photo slots live in the panel, so the Photos / Image Pool tabs are hidden: show Content.
-  if (isOn && document.body.dataset.infographicPhoto === 'off' && document.body.dataset.studioInspector !== 'content') {
+  if (isOn && document.body.dataset.infographicPhoto === 'off' && !['content', 'all'].includes(document.body.dataset.studioInspector)) {
     window.ESSetStudioInspectorMode?.('content');
   }
   if (!container || !template || renderedInfographicFieldsFor === template.id) return;
@@ -20638,7 +20747,7 @@ function syncPostTypeControls() {
         activeType === 'double-entity-quote' ||
         activeType === 'listicle-type-1' ||
         activeType === 'listicle-type-2' ||
-        activeType === 'twitter-quote' ||
+        // Tweet / X Post keeps the card: its headline pill uses the team colours.
         activeType === 'twitter-multi'
       )) || (activeWorkspace === 'youtube' && !!state.youtubeQuote) || (isReels && activeType === 'quote')
     );
@@ -22494,7 +22603,23 @@ loadFont().then(() => render());
 
   const studioDesktopTabs = window.matchMedia('(min-width: 901px)');
   function setStudioInspectorMode(mode) {
-    let nextMode = ['image', 'content', 'ai', 'style'].includes(mode) ? mode : 'content';
+    let nextMode = ['image', 'content', 'ai', 'style', 'all'].includes(mode) ? mode : 'content';
+    // Desktop: one long settings menu (no Content / Photos / Style tabs). A request
+    // for a group scrolls to it instead of switching what is shown.
+    if (studioDesktopTabs.matches) {
+      const target = nextMode === 'ai' ? '.studio-ai-section'
+        : nextMode === 'image' ? '.studio-dock-section'
+        : nextMode === 'style' ? '[data-studio-tab="style"]' : null;
+      const wasAll = document.body.dataset.studioInspector === 'all';
+      document.body.dataset.studioInspector = 'all';
+      if (!wasAll) window.ESResumeCanvasImageEditMode?.();
+      if (target && wasAll) {
+        setTimeout(() => document.querySelector(target)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 60);
+      }
+      window.ESSyncCanvasImageEditMode?.();
+      return;
+    }
+    if (nextMode === 'all') nextMode = 'content';
     if (nextMode === 'ai' && studioDesktopTabs.matches) {
       nextMode = 'image';
       setTimeout(() => document.querySelector('.studio-ai-section')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 60);
@@ -22505,7 +22630,11 @@ loadFont().then(() => render());
       const isActive = tab.dataset.studioInspectorTab === nextMode;
       tab.classList.toggle('is-active', isActive);
       tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      tab.tabIndex = isActive ? 0 : -1;
     });
+    if (document.getElementById(`studio-inspector-tab-${nextMode}`)) {
+      document.getElementById('studio-inspector-panel')?.setAttribute('aria-labelledby', `studio-inspector-tab-${nextMode}`);
+    }
     if (nextMode === 'image' && previousMode !== 'image') {
       window.ESResumeCanvasImageEditMode?.();
     }
@@ -22513,6 +22642,8 @@ loadFont().then(() => render());
   }
 
   window.ESSetStudioInspectorMode = setStudioInspectorMode;
+  // Crossing the desktop / phone breakpoint switches between the long menu and the phone tabs.
+  studioDesktopTabs.addEventListener?.('change', event => setStudioInspectorMode(event.matches ? 'all' : 'content'));
 
   const studioSectionLabels = {
     content: 'Content',
@@ -22818,6 +22949,14 @@ loadFont().then(() => render());
     syncMobileEditorGroups(panelName);
     syncMobileEditorDetentControls();
     scheduleCanvasFit();
+    // Opened from a tab-bar button: move focus into the sheet header.
+    if (trigger && !wasOpen) {
+      requestAnimationFrame(() => {
+        const headButton = [...document.querySelectorAll('.mobile-editor-sheet-head button')]
+          .find(button => button.offsetParent !== null && !button.disabled);
+        headButton?.focus({ preventScroll: true });
+      });
+    }
   }
 
   function closeMobileEditorPanel(options = {}) {
@@ -23031,6 +23170,10 @@ loadFont().then(() => render());
     contentRoot = document.createElement('div');
     contentRoot.className = 'studio-content-sections';
     contentRoot.dataset.studioContentSections = 'true';
+    // The Content · Photos · Style tabs filter these sections.
+    contentRoot.id = 'studio-inspector-panel';
+    contentRoot.setAttribute('role', 'tabpanel');
+    contentRoot.setAttribute('aria-labelledby', `studio-inspector-tab-${document.body.dataset.studioInspector || 'content'}`);
     contentRoot.innerHTML = `
       <div class="studio-accordion-list" data-studio-accordion-list></div>
     `;
@@ -23089,9 +23232,9 @@ loadFont().then(() => render());
         <div class="studio-export-section" data-studio-export-section></div>
         <div class="studio-primary-controls" data-studio-primary-controls aria-label="Workspace format controls"></div>
         <div class="studio-inspector-tabs" role="tablist" aria-label="Inspector groups">
-          <button class="studio-inspector-tab is-active" type="button" role="tab" data-studio-inspector-tab="content" aria-selected="true">Content</button>
-          <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="image" aria-selected="false">Photos</button>
-          <button class="studio-inspector-tab" type="button" role="tab" data-studio-inspector-tab="style" aria-selected="false">Style</button>
+          <button class="studio-inspector-tab is-active" type="button" role="tab" id="studio-inspector-tab-content" data-studio-inspector-tab="content" aria-selected="true" aria-controls="studio-inspector-panel" tabindex="0">Content</button>
+          <button class="studio-inspector-tab" type="button" role="tab" id="studio-inspector-tab-image" data-studio-inspector-tab="image" aria-selected="false" aria-controls="studio-inspector-panel" tabindex="-1">Photos</button>
+          <button class="studio-inspector-tab" type="button" role="tab" id="studio-inspector-tab-style" data-studio-inspector-tab="style" aria-selected="false" aria-controls="studio-inspector-panel" tabindex="-1">Style</button>
         </div>
         <div class="studio-dock-section">
           <div class="studio-dock-tools"></div>
@@ -23161,6 +23304,21 @@ loadFont().then(() => render());
 
     document.querySelectorAll('[data-studio-inspector-tab]').forEach(tab => {
       tab.addEventListener('click', () => setStudioInspectorMode(tab.dataset.studioInspectorTab));
+      // Arrow keys move between tabs (roving tabindex, like the select chips).
+      tab.addEventListener('keydown', event => {
+        const tabs = [...document.querySelectorAll('[data-studio-inspector-tab]')].filter(item => !item.disabled && item.offsetParent !== null);
+        const index = tabs.indexOf(tab);
+        if (index === -1) return;
+        let next = null;
+        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = tabs[(index + 1) % tabs.length];
+        else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = tabs[(index - 1 + tabs.length) % tabs.length];
+        else if (event.key === 'Home') next = tabs[0];
+        else if (event.key === 'End') next = tabs[tabs.length - 1];
+        if (!next) return;
+        event.preventDefault();
+        next.click();
+        next.focus();
+      });
     });
 
     document.getElementById('studio-canvas-name')?.addEventListener('input', event => {
@@ -23261,7 +23419,8 @@ loadFont().then(() => render());
       dots.forEach((dot, i) => {
         const isActive = i === active;
         dot.classList.toggle('is-active', isActive);
-        dot.setAttribute('aria-selected', String(isActive));
+        if (isActive) dot.setAttribute('aria-current', 'true');
+        else dot.removeAttribute('aria-current');
       });
     }
 
@@ -23447,7 +23606,7 @@ loadFont().then(() => render());
 </script>
 <script src="how-it-works.js?v=20260813-sync1"></script>
 <script src="frameup-autosave.js?v=20261111-basics2"></script>
-<script src="frameup-designs.js?v=20261111-icons2"></script>
+<script src="frameup-designs.js?v=20261113-uipass1"></script>
 <script src="frameup-templates.js?v=20261111-picker1"></script>
 <script src="frameup-extras.js?v=20261111-export2"></script>
 <script src="frameup-spec.js?v=20261111-basics2"></script>

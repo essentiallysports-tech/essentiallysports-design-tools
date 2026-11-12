@@ -220,8 +220,12 @@ body.feedback-page *::after {
 }
 
 .feedback-type-option input:focus-visible + .feedback-type-card {
-  outline:  none;
+  outline: 2px solid var(--es-ink);
   outline-offset: 2px;
+}
+
+html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-type-card {
+  outline-color: #5aa8ff;
 }
 
 .feedback-select {

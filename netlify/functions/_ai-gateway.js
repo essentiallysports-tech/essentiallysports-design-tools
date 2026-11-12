@@ -54,8 +54,8 @@ function costUsd(model, usage = {}) {
 // Saves one usage row. Never throws: tracking must not break the feature.
 async function logUsage(track, row) {
   if (!track?.token || !track?.email) return;
-  const config = authConfig();
   try {
+    const config = authConfig();
     await fetch(`${config.url}/rest/v1/${USAGE_TABLE}`, {
       method: 'POST',
       headers: {

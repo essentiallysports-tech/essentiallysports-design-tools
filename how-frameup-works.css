@@ -11,11 +11,11 @@
 }
 .how-page h1,
 .how-page h2,
-.how-page h3 { margin: 0; color: var(--es-ink); font-family: var(--es-font-display); letter-spacing: -0.01em; }
+.how-page h3 { margin: 0; color: var(--es-ink); font-family: var(--es-font-display); letter-spacing: 0; }
 .how-page p { margin: 0; }
 .how-page a:not(.es-btn) { color: var(--es-brand-text); text-decoration: none; }
 .how-page a:not(.es-btn):hover { text-decoration: underline; }
-.how-page svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.how-page svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ─── Hero ─── */
 .how-hero {
@@ -302,7 +302,18 @@
   .how-hero { grid-template-columns: minmax(0, 1fr); padding: 24px; }
   .how-hero__art { order: -1; }
   .how-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .how-toc { top: 64px; justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  /* Fits the page gutter exactly; a soft right edge says "scroll for more". */
+  .how-toc {
+    top: 64px;
+    box-sizing: border-box;
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
   .how-toc a { white-space: nowrap; }
   .how-tour, .how-custom { grid-template-columns: minmax(0, 1fr); }
   .how-custom { padding: 24px; gap: 24px; }

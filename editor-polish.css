@@ -15,7 +15,7 @@
  */
 @media (min-width: 901px) {
   /* ── Type roles (design-plans 01–03) ─────────────────────────────────── */
-  html[data-studio-shell="on"]:root body .panel :is(.card-title, .ig-label, .ig-cell-label, .widget-field-label) {
+  html[data-studio-shell="on"]:root body .panel :is(.card-title, .ig-label, .ig-cell-label, .widget-field-label, .tod-label, .section-label, .color-group-label, .listicle-field-label, .listicle-asset-label) {
     font-size: var(--es-type-field-label-size) !important;
     line-height: var(--es-type-field-label-line) !important;
     font-weight: var(--es-type-field-label-weight) !important;
@@ -52,7 +52,7 @@
 
   html:not([data-theme="dark"])[data-studio-shell="on"]:root body .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input) {
     border: 1px solid var(--es-line-2) !important;
-    border-radius: 12px !important;
+    border-radius: var(--es-radius-control) !important;
     background-color: var(--es-bg);
     transition: border-color 140ms var(--es-ease), box-shadow 140ms var(--es-ease);
   }
@@ -93,8 +93,8 @@
   }
 
   html[data-studio-shell="on"]:root body :is(#studio-export-btn, #studio-export-options-btn, #studio-link-btn, #widget-copy-btn, .studio-zoom-btn) svg {
-    width: 18px;
-    height: 18px;
+    width: var(--es-icon);
+    height: var(--es-icon);
   }
 
   html[data-studio-shell="on"]:root body .panel :is(.tweet-fetch-button, .listicle-add-row-button) {
@@ -123,8 +123,8 @@
   }
 
   html[data-studio-shell="on"]:root body .panel :is(.ig-chip, .ig-icon-btn, .ig-reset, .widget-image-action-btn, .listicle-logo-button) svg {
-    width: 16px;
-    height: 16px;
+    width: var(--es-icon-sm);
+    height: var(--es-icon-sm);
   }
 
   /* ── Chips and logo tiles: outlined; selected = ink ring ───────────────── */
@@ -136,6 +136,11 @@
   html:not([data-theme="dark"])[data-studio-shell="on"]:root body .panel :is(.select-chip, .brand-logo-option) {
     border: 1px solid var(--es-line-2);
     background: var(--es-bg);
+  }
+
+  /* Same 1px chip outline in both themes (dark only changes its colour). */
+  html[data-studio-shell="on"]:root body .panel :is(.select-chip, .brand-logo-option) {
+    border-width: 1px;
   }
 
   html:not([data-theme="dark"])[data-studio-shell="on"]:root body .panel :is(.select-chip, .brand-logo-option)[aria-checked="true"] {
@@ -212,8 +217,9 @@
   /* ── Sections: hairline separated, no cards ────────────────────────────── */
   html[data-studio-shell="on"]:root body .studio-accordion-section,
   html[data-studio-shell="on"]:root body .studio-accordion-section.is-open {
+    /* No line of its own: studio-inspector.css draws one hairline above each
+       visible section after the first, so a bottom border here doubled it. */
     border: 0 !important;
-    border-bottom: 1px solid var(--es-line) !important;
     border-radius: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
@@ -231,8 +237,6 @@
       color: var(--es-ink);
     }
   }
-
-  html[data-theme="dark"][data-studio-shell="on"]:root body .studio-accordion-section { border-bottom-color: #2e2e2e !important; }
 
   /* Photo rows: the short hint wraps instead of being cut off. */
   html[data-studio-shell="on"]:root body .panel .ig-photo-info span {
@@ -303,6 +307,108 @@
     display: none !important;
   }
 
+  /* One long menu (2026-11-13): desktop shows every group in one scrolling
+     column, Content first, then Photos, then Style; each section folds on its own.
+     setStudioInspectorMode() keeps body[data-studio-inspector="all"] on desktop. */
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-inspector-tabs {
+    display: none !important;
+  }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .panel > .studio-content-sections {
+    display: grid !important;
+  }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-dock-section {
+    display: grid !important;
+  }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-ai-section {
+    display: grid !important;
+    gap: 12px;
+    margin-top: 6px;
+    padding-top: 18px;
+    border-top: 1px solid var(--es-line, #E5E7EB);
+  }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-content-sections > [data-studio-tab="image"] { order: 1; }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-content-sections > [data-studio-tab="style"] { order: 2; }
+
+  /* Order: Export + Post Type, then the folding sections, then photo tools and
+     the ES Image Pool. The dock is unwrapped so its parts can be ordered with the
+     sections; its old 16px padding moves onto each part. */
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .app[data-workspace] .panel > .studio-control-dock {
+    display: contents !important;
+  }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-control-dock > :is(.studio-primary-controls, .studio-dock-section, .studio-ai-section) {
+    margin-inline: 16px !important;
+  }
+  /* Export · settings · Copy link stay pinned while the long menu scrolls.
+     (Its white / #121212 background and bottom line come from the base rules.) */
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-control-dock > .studio-export-section {
+    order: 0;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin: 0 !important;
+    padding: 14px 16px !important;
+  }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-control-dock > .studio-primary-controls {
+    order: 0;
+    padding: 16px 0 !important;
+  }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .app[data-workspace] .panel > .studio-content-sections {
+    order: 1;
+    border-top: 1px solid var(--es-line, #E5E7EB);
+  }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-control-dock > .studio-dock-section {
+    order: 2;
+    margin-top: 0;
+    padding-top: 18px;
+    border-top: 1px solid var(--es-line, #E5E7EB);
+  }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-control-dock > .studio-ai-section {
+    order: 3;
+    margin-bottom: 24px;
+  }
+
+  /* ── Clean menu (beehiiv-style, FrameUp tokens) ─────────────────────────
+     Flat sections split by one hairline, no boxes inside boxes, quiet labels,
+     helper copy only where it prevents a mistake. Desktop long menu only. */
+  /* Toggle rows sit flat in the list instead of in their own bordered box. */
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .swipe-button-control .quote-switch {
+    min-height: 40px;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  /* Photos: a plain section, not a grey card. */
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-dock-section .image-context-empty {
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-dock-section .image-context-empty strong {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--es-ink);
+  }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-dock-section .image-context-empty span {
+    color: var(--es-ink-3);
+    font-size: 13px;
+  }
+  /* ES Image Pool: title + search only until there are results. */
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-ai-section :is(.studio-dock-kicker, .studio-ai-helper, .studio-ai-empty) {
+    display: none !important;
+  }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-ai-section .studio-dock-title {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  /* Quieter helper text under fields. */
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .studio-content-sections .field-hint {
+    color: var(--es-ink-3);
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+
   /* No Style sections for this template: no Style tab. */
   html[data-studio-shell="on"] body[data-style-tab="off"] [data-studio-inspector-tab="style"] {
     display: none !important;
@@ -328,4 +434,24 @@
 html[data-theme="dark"][data-studio-shell="on"] .studio-export-section {
   background: #121212;
   border-bottom-color: #2e2e2e;
+}
+
+/* Dark mode: the Layers column was hard-coded white. Match the inspector panel. */
+html[data-theme="dark"][data-studio-shell="on"] .layers-panel {
+  background: #121212;
+  border-right-color: #2e2e2e;
+}
+html[data-theme="dark"][data-studio-shell="on"] :is(.layers-panel-head, .layers-panel-label) { color: var(--theme-dark-text, #f3f5f7); }
+html[data-theme="dark"][data-studio-shell="on"] .layers-panel-row:hover { background: #1f1f1f; border-color: #2e2e2e; }
+html[data-theme="dark"][data-studio-shell="on"] .layers-panel-row.is-drop-target { background: rgb(90 168 255 / .12); border-color: #2e2e2e; }
+html[data-theme="dark"][data-studio-shell="on"] .layers-panel-collapse:hover { background: #1f1f1f; color: var(--theme-dark-text, #f3f5f7); }
+
+/* Long menu: the swipe-arrow toggle row has no box of its own in either theme. */
+@media (min-width: 901px) {
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .swipe-button-control {
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
 }

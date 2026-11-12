@@ -1135,14 +1135,17 @@
           '<input type="number" step="0.1" min="0" value="' + caption.end.toFixed(1) + '" data-field="end" aria-label="Caption end time">' +
         '</div>' +
         '<textarea class="reels-caption-text" data-field="text" aria-label="Caption text">' + escapeHtml(caption.text) + '</textarea>' +
-        '<button type="button" class="reels-row-delete" data-action="delete" aria-label="Delete caption">x</button>' +
+        '<button type="button" class="reels-row-delete" data-action="delete" aria-label="Delete caption"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>' +
       '</div>';
     }).join('');
 
     els.transcriptList.querySelectorAll('.reels-caption-row').forEach(function (row) {
       var id = Number(row.dataset.id);
       row.addEventListener('click', function (event) {
-        if (event.target.dataset.action === 'delete') return;
+        if (event.target.closest('[data-action="delete"]')) return;
+        // Clicking into a field of the already-selected row is an edit, not
+        // a re-select (re-selecting would seek the playhead mid-edit).
+        if (event.target.closest('[data-field]') && state.selectedCaptionId === id) return;
         selectCaption(id, true);
       });
       row.querySelectorAll('[data-field]').forEach(function (input) {
@@ -1261,7 +1264,7 @@
     var card = document.querySelector('.reels-timeline-card');
     if (card) card.classList.toggle('has-captions', !!state.captions.length);
     els.captionTimeline.innerHTML = state.captions.map(function (caption) {
-      return '<button type="button" class="reels-timeline-seg' + (caption.id === state.selectedCaptionId ? ' is-selected' : '') + '" data-id="' + caption.id + '">' +
+      return '<button type="button" class="reels-timeline-seg' + (caption.id === state.selectedCaptionId ? ' is-selected' : '') + '" data-id="' + caption.id + '" aria-label="Caption: ' + escapeHtml(caption.text) + '">' +
         '<i class="reels-seg-handle" data-edge="start"></i><span>' + escapeHtml(caption.text) + '</span><i class="reels-seg-handle" data-edge="end"></i>' +
       '</button>';
     }).join('');
@@ -1605,8 +1608,14 @@
       var caption = findCaption(id);
       if (caption && state.videoLoaded) els.video.currentTime = caption.start;
     }
-    renderTranscript();
-    renderTimeline();
+    // Toggle selection in place rather than rebuilding the transcript and
+    // timeline: a rebuild would destroy the field/segment that has focus.
+    els.transcriptList.querySelectorAll('.reels-caption-row').forEach(function (row) {
+      row.classList.toggle('is-selected', Number(row.dataset.id) === id);
+    });
+    els.captionTimeline.querySelectorAll('.reels-timeline-seg').forEach(function (segment) {
+      segment.classList.toggle('is-selected', Number(segment.dataset.id) === id);
+    });
     drawFrame();
     setStatus(els.intelStatus, id ? 'Caption selected.' : '');
   }
@@ -1623,6 +1632,7 @@
   }
 
   function deleteCaption(id) {
+    var index = state.captions.findIndex(function (caption) { return caption.id === id; });
     state.captions = state.captions.filter(function (caption) { return caption.id !== id; });
     if (state.selectedCaptionId === id) state.selectedCaptionId = state.captions[0] ? state.captions[0].id : null;
     els.downloadSrtBtn.disabled = !state.captions.length;
@@ -1630,6 +1640,13 @@
     renderTranscript();
     renderTimeline();
     drawFrame();
+    // Keep keyboard focus in the list: move to the caption that took the
+    // deleted one's place (or the previous one), else to Add caption.
+    var next = state.captions[Math.min(Math.max(index, 0), state.captions.length - 1)];
+    var nextField = next ? els.transcriptList.querySelector('.reels-caption-row[data-id="' + next.id + '"] [data-field="text"]') : null;
+    var addBtn = document.getElementById('reels-add-caption-btn');
+    if (nextField) nextField.focus();
+    else if (addBtn) addBtn.focus();
   }
 
   // Guarded so this (now running every animation frame during playback
