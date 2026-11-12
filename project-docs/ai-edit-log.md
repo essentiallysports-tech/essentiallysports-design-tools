@@ -951,3 +951,48 @@ and what's still uncommitted.
 - Template names: Section Header (Left / Centred), Video FI (Play Button), Tag FI (Corner Label), Trivia, Headline List (Big Numbers / Simple).
 - ESPN 500px team logos resized to 240px for the listicle placeholders (Suhail approved the download).
 - Verified: 476 renders error-free, all pages console-clean, desktop + phone. Details: project-docs/editor-basics.md.
+
+### 2026-11-13 — Generate: prompt caching, backup-AI spend tracking, dashboard label fix
+- Status: `[local, awaiting "push"]` (nothing committed). Files: `netlify/functions/_ai-gateway.js`,
+  `netlify/functions/es-generate.js`, `netlify/functions/trend-design.js`, `dashboard.html`.
+- Ask (Suhail): make Generate the hero — best designs in our style (Generate + Trend angles), an engine that
+  learns from mistakes, routes models by task level, and a Dashboard that tracks every AI spend. Only ~8% of the
+  weekly Claude budget was left, so this is the small, safe first slice; the rest is planned below.
+- Also: removed Generate's four dead page-level icon sizes (`generate.html`) and added `.gen-card__actions .es-icon-btn`
+  to the compact-control icon list in `design-tokens.css` (32px buttons → 16px icons, others 18px), from the
+  `improve-ui` audit; `design-tokens.css` link bumped to `?v=20261113-genicons1` on generate.html only.
+- Done:
+  1. **Prompt caching.** `buildPrompt` now ends its unchanging part (rules, templates, model answers) with
+     `PROMPT_CACHE_BREAK`; `chat()` splits there (`splitPrompt`) and sends that part as a cached `system` block
+     (`aiText({ system, cacheSystem: true })` → `cache_control: ephemeral`). Groq/backup calls strip the marker
+     and get the same text as before. `anthropicCall` retries once without the cache hint if the Gateway
+     returns 400. The "Plan up to N designs" count moved after the break (`Return up to N designs.`) so the
+     cached prefix is identical for every request (including "Again").
+  2. **Backup AI is now tracked.** New `logBackupCall()` in `_ai-gateway.js`; Generate's Groq/OpenAI fallback
+     and Trend Design's Groq/OpenAI fallback log rows as `generate-backup` / `trend-headlines-backup`
+     (model `groq/<model>`, tokens recorded, cost 0 while Groq is free tier). No schema change.
+  3. **Dashboard labels.** `AI_FEATURE_LABELS` now maps the real feature names (`generate-photo-pick`,
+     `generate-scene-image`) plus the two new backup features.
+- Verified (no Node here, so in the browser): all three function files + dashboard scripts parse; with a mocked
+  network, `aiText` sends `system` as `[{text, cache_control}]`, retries as a plain string on a 400, and costs
+  cache reads at the cache-read price; `splitPrompt` splits correctly and passes through un-marked/multi-message
+  prompts. NOT verified live: real Gateway caching (needs a live, logged-in Generate run — check that
+  `cacheRead` tokens appear / cost per click drops), the Dashboard rows (login-gated).
+- Still untracked: transcription (`es-video-intelligence.js`: Groq Whisper, OpenAI transcribe, ES MCP) and the
+  ES MCP "think" path — need audio-seconds + a `track` through that handler.
+- **Plan for the rest (not started)**: (1) usage table columns (request id, provider, workspace, template,
+  tier, fallback reason, cache tokens, audio seconds) + SQL aggregation functions/indexes + dashboard range
+  picker, daily trend, per-request drill-down, CSV, editable budget/alerts; (2) model router — Light
+  (`openai/gpt-oss-20b`) / Main (Haiku 5.5) / escalate to Sonnet 5.5 only when repair fails or on a "best
+  quality" click, `pickTier()` from brief shape/research size/retries, shared response cache, "Again" skips
+  research, A/B gpt-6-luna / deepseek-v4.1-flash / qwen3.8-flash on past briefs before any swap; (3) learning
+  loop — `frameup_generate_events` table (request id, per-card id, shown/exported/edited diff/Again/thumbs/
+  validation failures/trend origin) + distilled "lessons" injected after the rules (keep lesson text in the DB,
+  not the repo — it's public); (4) hero features — Trend angle/traffic/source links in the brief, parallel card
+  rendering, per-card refine-by-chat, widget auto-fill from article links, more formats.
+- Models (Gateway list, USD/1M in/out, 2026-11): Haiku 5.5 0.10/0.50 (current main), Sonnet 5.5 2/10,
+  gpt-oss-20b 0.03/0.14 (light), gpt-6-luna 0.10/0.50, deepseek-v4.1-flash 0.30/1.20, qwen3.8-flash 0.15/0.47,
+  flux-3-image-klein $0.009/image (current), recraft-v4.1-flash $0.007/image.
+- Also noted: a read-only `improve-ui` design audit of the Generate page was run as a separate agent (no files
+  changed); its findings go to Suhail for selection.
+- **Rollback point:** current `origin/main` HEAD at the time of the push.

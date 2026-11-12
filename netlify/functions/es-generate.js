@@ -12,7 +12,17 @@
 const { verifyEsUser } = require('./_supabase-auth.js');
 const { loadPastDesigns, selectExamples, formatExamples } = require('./_generate-examples.js');
 const { isMcpConfigured, createSession } = require('./_es-mcp.js');
-const { gatewayConfigured, aiText, isBudgetError, MODELS: AI_MODELS } = require('./_ai-gateway.js');
+const { gatewayConfigured, aiText, isBudgetError, logBackupCall, MODELS: AI_MODELS } = require('./_ai-gateway.js');
+
+// Marks where buildPrompt's unchanging part (rules, templates, model answers) ends and the
+// per-request part begins. The Gateway call caches everything before it; Groq just drops it.
+const PROMPT_CACHE_BREAK = '\n<<<REQUEST>>>\n';
+function splitPrompt(messages) {
+  const first = messages.length === 1 ? String(messages[0]?.content || '') : '';
+  const at = first.indexOf(PROMPT_CACHE_BREAK);
+  if (at < 0) return { system: undefined, messages };
+  return { system: first.slice(0, at), messages: [{ role: 'user', content: first.slice(at + PROMPT_CACHE_BREAK.length) }] };
+}
 
 const ES_WP_API = 'https://www.essentiallysports.com/wp-json/wp/v2';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
@@ -696,7 +706,7 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid
     .join('\n');
   return [
     'You are the senior social designer at EssentiallySports (ES), a US sports media brand.',
-    `Plan up to ${count} distinct Instagram post designs for the brief below, each using one of our templates.`,
+    'Plan distinct Instagram post designs for the brief below, each using one of our templates.',
     'First understand the brief: who or what it is about, and what the person wants.',
     '- If the brief already contains the post text (words in quotation marks, a headline, numbers), use those exact words and numbers. You may only split them into lines and fix capitalisation.',
     '- If the brief is an instruction (e.g. "stats post on Mahomes\' last game"), write the copy yourself using ONLY facts from the ES research below.',
@@ -724,8 +734,10 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid
     '',
     `Model answers (copy the format, template choice and voice; not the facts):\n${goldExamplesText()}`,
     '',
+    PROMPT_CACHE_BREAK,
     ...(pastExamples ? [`Real ES posts on similar topics (style and template choice only; never reuse their facts, names or numbers):\n${pastExamples}`, ''] : []),
     `Brief: ${brief}`,
+    `Return up to ${count} designs.`,
     ...(avoid.length ? ['', `The editor asked for a fresh take: do not reuse these lines: ${avoid.map(line => JSON.stringify(line)).join(', ')}`] : []),
     '',
     `ES research:\n${found.digest || '(no ES coverage found)'}`,
@@ -763,6 +775,7 @@ async function thinkWithMcp(prompt, mcp, tool) {
 // model hits its rate limit, the provider's backup models are tried in order
 // (each Groq model has its own free allowance); provider.used records which ran.
 async function chat(provider, messages) {
+  const plain = list => list.map(m => ({ ...m, content: String(m.content).split(PROMPT_CACHE_BREAK).join('\n') }));
   if (provider.name === 'gateway' && provider.fallback) {
     if (!provider.backup) throw new Error('The AI is unavailable.');
     const text = await chat(provider.backup, messages);
@@ -771,7 +784,8 @@ async function chat(provider, messages) {
   }
   if (provider.name === 'gateway' && !provider.fallback) {
     try {
-      const { text, model, cost } = await aiText({ tier: 'main', messages, effort: 'low', maxTokens: 6000, timeoutMs: 25000, track: provider.track });
+      const split = splitPrompt(messages);
+      const { text, model, cost } = await aiText({ tier: 'main', system: split.system, messages: split.messages, cacheSystem: Boolean(split.system), effort: 'low', maxTokens: 6000, timeoutMs: 25000, track: provider.track });
       provider.used = model;
       provider.cost = (provider.cost || 0) + cost;
       return text;
@@ -791,6 +805,7 @@ async function chat(provider, messages) {
   let lastError = null;
   for (const model of [provider.model, ...(provider.fallbacks || [])]) {
     for (const json of [true, false]) {
+      const started = Date.now();
       const response = await fetch(provider.url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${provider.key}`, 'Content-Type': 'application/json' },
@@ -798,16 +813,18 @@ async function chat(provider, messages) {
           model,
           temperature: 0.4,
           ...(json ? { response_format: { type: 'json_object' } } : {}),
-          messages,
+          messages: plain(messages),
         }),
         signal: AbortSignal.timeout(25000),
       });
       const data = await response.json().catch(() => null);
       if (response.ok) {
         provider.used = model;
+        await logBackupCall(provider.track, { provider: provider.name, model, ok: true, usage: data?.usage, started });
         return String(data?.choices?.[0]?.message?.content || '');
       }
       lastError = new Error(data?.error?.message || `${provider.name} request failed: ${response.status}`);
+      await logBackupCall(provider.track, { provider: provider.name, model, ok: false, started, error: lastError.message });
       const badJson = response.status === 400 && /json/i.test(lastError.message);
       if (badJson && json) continue; // same model, plain mode
       if (response.status === 429 || badJson) break; // next model
@@ -1097,7 +1114,10 @@ async function generate({ brief, formats, count, avoid, token, email }) {
 
   let brain = brainName(tools);
   const provider = tools.think ? null : pickProvider();
-  if (provider) provider.track = { feature: 'generate', email, token };
+  if (provider) {
+    provider.track = { feature: 'generate', email, token };
+    if (provider.backup) provider.backup.track = provider.track;
+  }
   let aiFailed = false;
   const avoidLines = (Array.isArray(avoid) ? avoid : []).map(line => clean(line).slice(0, 120)).filter(Boolean).slice(0, 12);
   const prompt = buildPrompt(brief, found, allowedTypes, want, pastExamples, avoidLines);

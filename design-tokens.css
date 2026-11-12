@@ -2209,7 +2209,8 @@ svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
   .es-toast-action,
   .es-badge,
   .ft-tag,
-  .feedback-page-version
+  .feedback-page-version,
+  .gen-card__actions .es-icon-btn
 ) svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
   width: var(--es-icon-sm) !important;
   height: var(--es-icon-sm) !important;

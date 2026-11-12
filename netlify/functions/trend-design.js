@@ -13,7 +13,7 @@
 // hitting Google on every visit.
 
 const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
-const { gatewayConfigured, aiText } = require('./_ai-gateway.js');
+const { gatewayConfigured, aiText, logBackupCall } = require('./_ai-gateway.js');
 
 const CACHE_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 6000;
@@ -302,6 +302,7 @@ async function aiTitles({ title, related = [], sport = '' }, track) {
     { role: 'user', content: story },
   ];
   for (const model of provider.models) {
+    const started = Date.now();
     try {
       const response = await fetch(provider.url, {
         method: 'POST',
@@ -310,7 +311,9 @@ async function aiTitles({ title, related = [], sport = '' }, track) {
         signal: AbortSignal.timeout(15000),
       });
       const data = await response.json().catch(() => null);
-      if (!response.ok) { lastError = new Error(data?.error?.message || `AI request failed: ${response.status}`); if (response.status === 429 || response.status === 400) continue; throw lastError; }
+      const backupName = provider.url.includes('groq') ? 'groq' : 'openai';
+      if (!response.ok) { lastError = new Error(data?.error?.message || `AI request failed: ${response.status}`); await logBackupCall(track, { provider: backupName, model, ok: false, started, error: lastError.message }); if (response.status === 429 || response.status === 400) continue; throw lastError; }
+      await logBackupCall(track, { provider: backupName, model, ok: true, usage: data?.usage, started });
       return rememberTitles(cacheKey, parseTitles(String(data?.choices?.[0]?.message?.content || '')));
     } catch (error) {
       lastError = error;

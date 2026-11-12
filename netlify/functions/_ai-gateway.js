@@ -70,6 +70,24 @@ async function logUsage(track, row) {
   } catch { /* tracking is best effort */ }
 }
 
+// Backup providers (Groq, opt-in OpenAI) are called directly, not through the
+// Gateway, so they log here instead. Tokens are recorded so the Dashboard counts
+// every call; cost stays 0 while Groq is on its free tier (OpenAI is opt-in and
+// not priced here). Rows use the feature name plus "-backup".
+async function logBackupCall(track, { provider, model, ok, usage, started, error }) {
+  if (!track) return;
+  await logUsage(track, {
+    feature: `${track.feature || 'other'}-backup`,
+    model: `${provider}/${model}`,
+    ok,
+    input_tokens: usage?.prompt_tokens || 0,
+    output_tokens: usage?.completion_tokens || 0,
+    cost_usd: 0,
+    duration_ms: Date.now() - started,
+    ...(error ? { error: String(error).slice(0, 200) } : {}),
+  });
+}
+
 // True when the Gateway refused because the key's spend cap (or credit) ran
 // out, so callers can say so calmly instead of showing a raw error.
 function isBudgetError(error) {
@@ -77,19 +95,25 @@ function isBudgetError(error) {
   return status === 402 || /budget|spend|quota|credit|insufficient|spending limit|usage limit/i.test(String(error?.message || ''));
 }
 
-async function anthropicCall({ model, system, messages, effort, maxTokens, timeoutMs }) {
-  const response = await fetch(`${GATEWAY}/messages`, {
+async function anthropicCall({ model, system, messages, effort, maxTokens, timeoutMs, cacheSystem }) {
+  const send = cache => fetch(`${GATEWAY}/messages`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': process.env.AI_GATEWAY_API_KEY, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
       model,
       max_tokens: maxTokens,
       output_config: { effort },
-      ...(system ? { system } : {}),
+      // cacheSystem marks the (large, unchanging) system prompt as cacheable: cached
+      // reads cost 10% of normal input and come back faster. Below the model's
+      // minimum size the hint is simply ignored.
+      ...(system ? { system: cache ? [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }] : system } : {}),
       messages,
     }),
     signal: AbortSignal.timeout(timeoutMs),
   });
+  let response = await send(Boolean(cacheSystem && system));
+  // If the Gateway rejects the cache hint, retry once as a plain request.
+  if (cacheSystem && system && response.status === 400) response = await send(false);
   const data = await response.json().catch(() => null);
   if (!response.ok) throw Object.assign(new Error(data?.error?.message || `AI request failed: ${response.status}`), { status: response.status });
   // A refusal or a cut-off reply counts as a failure so the caller falls back.
@@ -127,13 +151,13 @@ async function openaiCall({ model, system, messages, json, maxTokens, timeoutMs 
 // tier: 'light' | 'main'. messages: [{ role: 'user' | 'assistant', content }].
 // track: { feature, email, token } for spend tracking (optional).
 // Returns { text, model, cost }. Throws on any failure.
-async function aiText({ tier = 'light', system, messages, json = false, effort = 'low', maxTokens = 4000, timeoutMs = 25000, track } = {}) {
+async function aiText({ tier = 'light', system, messages, json = false, effort = 'low', maxTokens = 4000, timeoutMs = 25000, track, cacheSystem = false } = {}) {
   if (!process.env.AI_GATEWAY_API_KEY) throw new Error('AI_GATEWAY_API_KEY is not set.');
   const model = MODELS[tier] || MODELS.light;
   const started = Date.now();
   try {
     const call = model.startsWith('anthropic/') ? anthropicCall : openaiCall;
-    const result = await call({ model, system, messages, json, effort, maxTokens, timeoutMs });
+    const result = await call({ model, system, messages, json, effort, maxTokens, timeoutMs, cacheSystem });
     if (!result.text.trim()) throw new Error('The AI returned an empty reply.');
     const cost = costUsd(model, result.usage);
     await logUsage(track, {
@@ -188,4 +212,4 @@ async function aiImage({ prompt, model = MODELS.image, size = '1024x1280', timeo
   }
 }
 
-module.exports = { gatewayConfigured, aiText, aiImage, costUsd, isBudgetError, MODELS, IMAGE_PRICES };
+module.exports = { gatewayConfigured, aiText, aiImage, costUsd, isBudgetError, logBackupCall, MODELS, IMAGE_PRICES };
