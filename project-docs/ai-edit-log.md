@@ -996,3 +996,21 @@ and what's still uncommitted.
 - Also noted: a read-only `improve-ui` design audit of the Generate page was run as a separate agent (no files
   changed); its findings go to Suhail for selection.
 - **Rollback point:** current `origin/main` HEAD at the time of the push.
+
+### 2026-11-13 — Generate: keyboard focus, steady progress spinner, download feedback (interaction + UI-engineering review)
+- Status: `[local, awaiting "push"]`. File: `generate.html` only.
+- From a read-only review of the Generate page against the supplied `interaction-design` and
+  `frontend-ui-engineering` guidance (FrameUp's own rulebook took precedence; nothing new invented):
+  1. **Focus no longer lost.** New `restoreFocus()`; after results render focus goes to the first card's Edit button
+     (or Generate if none), and Download / Try again return focus to their button after re-enabling. Picking a photo
+     or making a scene image re-focuses the same thumb / Scene button after the panel re-renders (it used to drop to
+     `<body>`). Only acts when focus was actually lost, so it never steals focus the person moved elsewhere.
+  2. **Progress spinner steady.** The "Generating…" rows were rebuilt every 500 ms, restarting the spinner mid-turn;
+     they now rebuild only when the step changes and each tick only updates the seconds.
+  3. **Download feedback.** The button shows the existing `.gen-spinner` while exporting and the status line says
+     "PNG downloaded." for 3 s, then restores the results summary.
+- Not done: dark-mode override colours in generate.html (:124-137 area) that restate tokens — needs a rendered
+  before/after dark check.
+- Verified (browser, mocked API): page scripts parse; spinner node identical across ticks, seconds update, focus
+  returns to Generate after a failed run; photo pick keeps focus on the same thumb. Not verified: real Download /
+  Scene button flows (need a logged-in session), screen-reader announcements.

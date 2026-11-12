@@ -373,13 +373,21 @@
       function startProgress() {
         const started = performance.now();
         let step = 0;
+        let drawnStep = -1;
         const draw = () => {
           const seconds = Math.round((performance.now() - started) / 1000);
-          els.progress.innerHTML = STEPS.map((label, index) => {
+          // Rows are rebuilt only when the step changes; rebuilding every tick
+          // restarted the spinner's rotation mid-turn.
+          if (drawnStep !== step) {
+            drawnStep = step;
+            els.progress.innerHTML = STEPS.map((label, index) => {
             const state = index < step ? 'is-done' : index === step ? 'is-active' : '';
             const mark = index < step ? ICON.check : index === step ? '<span class="gen-spinner" aria-hidden="true"></span>' : '<span class="gen-progress__dot" aria-hidden="true"></span>';
             return `<li class="${state}"${index === step ? ' aria-current="step"' : ''}>${mark}${label}</li>`;
-          }).join('') + `<li class="gen-progress__time" aria-hidden="true">${seconds}s</li>`;
+          }).join('') + '<li class="gen-progress__time" aria-hidden="true"></li>';
+          }
+          const time = els.progress.querySelector('.gen-progress__time');
+          if (time) time.textContent = `${seconds}s`;
         };
         els.progress.hidden = false;
         setSummary('');
@@ -397,6 +405,13 @@
             return (performance.now() - started) / 1000;
           },
         };
+      }
+
+      // A pressed button that gets disabled or re-rendered drops keyboard focus
+      // to <body>; put it back (only when focus was actually lost).
+      function restoreFocus(target) {
+        const active = document.activeElement;
+        if ((!active || active === document.body) && target) target.focus({ preventScroll: true });
       }
 
       function setBusy(value) {
@@ -556,6 +571,8 @@
         } finally {
           els.grid.removeAttribute('aria-busy');
           setBusy(false);
+          // Keep keyboard users in the flow: first design's Edit button, or Generate if there are none.
+          restoreFocus(els.grid.querySelector('[data-act="edit"]') || els.submit);
         }
       }
 
@@ -591,12 +608,19 @@
           window.location.href = 'index.html#instagram';
         } else if (act === 'download') {
           button.disabled = true;
+          const icon = button.innerHTML;
+          button.innerHTML = '<span class="gen-spinner" aria-hidden="true"></span>';
           try {
             await (await renderer()).exportSpec(spec);
+            // Say it worked, then bring the results summary back.
+            const previous = els.summary.innerHTML;
+            setSummary('<span><strong>PNG downloaded.</strong></span>');
+            setTimeout(() => { if (els.summary.textContent.startsWith('PNG downloaded')) setSummary(previous); }, 3000);
           } catch (error) {
             setNotice('Download failed', ` ${error.message || ''}`);
           } finally {
-            setTimeout(() => { button.disabled = false; }, 1200);
+            button.innerHTML = icon;
+            setTimeout(() => { button.disabled = false; restoreFocus(button); }, 1200);
           }
         } else if (act === 'photos') {
           const panel = card.querySelector('.gen-photos');
@@ -609,6 +633,7 @@
           if (!photo || spec.photo?.url === photo.url) return;
           spec.photo = { ...photo };
           renderPhotos(card);
+          card.querySelector(`[data-act="pick"][data-index="${button.dataset.index}"]`)?.focus({ preventScroll: true });
           await paint(card);
         } else if (act === 'scene') {
           button.disabled = true;
@@ -625,6 +650,7 @@
           } finally {
             card.querySelector('.gen-card__media').classList.remove('is-busy');
             renderPhotos(card);
+            card.querySelector('[data-act="scene"]')?.focus({ preventScroll: true });
           }
         } else if (act === 'again') {
           if (busy) return;
@@ -646,6 +672,7 @@
             setNotice('Retry failed', ` ${error.message || ''}`);
           } finally {
             button.disabled = false;
+            restoreFocus(button.isConnected ? button : card.querySelector('[data-act="again"]'));
           }
         }
       });
