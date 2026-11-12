@@ -685,7 +685,14 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
-  desktop.addEventListener?.('change', event => { if (event.matches) boot(); });
+  desktop.addEventListener?.('change', event => {
+    if (!event.matches) return;
+    boot();
+    // Back on desktop: the account menu belongs in the sidebar.
+    const slot = document.querySelector('.es-sidebar [data-shell-account]');
+    const profile = document.querySelector('.profile-menu');
+    if (slot && profile && profile.parentElement !== slot) slot.appendChild(profile);
+  });
 
   window.FrameUpShell = { openPalette, setCollapsed, nav: NAV, addPaletteSource };
 })();

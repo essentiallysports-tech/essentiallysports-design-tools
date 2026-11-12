@@ -31,7 +31,9 @@
 
     const place = () => {
       const isMobile = window.matchMedia('(max-width: 900px)').matches;
-      const destination = isMobile ? account : navbarRight;
+      // Desktop: the sidebar's account slot (app-shell) when it exists, else the old navbar.
+      const sidebarSlot = document.querySelector('.es-sidebar [data-shell-account]');
+      const destination = isMobile ? account : (sidebarSlot || navbarRight);
       if (profileMenu.parentElement !== destination) destination.prepend(profileMenu);
       if (!isMobile) window.FrameUpProfileMenu?.close?.();
     };

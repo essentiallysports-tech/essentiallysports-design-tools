@@ -573,6 +573,31 @@ html.es-sidebar-collapsed .es-sidebar__collapse svg { transform: scaleX(-1); }
   font-family: var(--es-font-ui);
 }
 .es-topbar__actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+/* No top bar (2026-11-12): pages start at the top. Breadcrumbs are hidden
+   everywhere; in the editors only undo / redo / history remain, floating at
+   the top-left of the canvas area with no bar or divider. */
+@media (min-width: 901px) {
+  html.es-shell { --es-topbar-h: 0px; }
+  html.es-shell:not(.es-editor) .es-topbar { display: none !important; }
+  html.es-shell.es-editor .es-topbar:not(:has(.studio-history-group)) { display: none !important; }
+  html.es-shell.es-editor .es-topbar {
+    position: fixed;
+    top: calc(var(--es-ticker-h) + 12px);
+    left: calc(var(--es-shell-offset) + 16px);
+    height: auto;
+    padding: 0;
+    border: 0 !important;
+    background: none !important;
+    backdrop-filter: none;
+    box-shadow: none;
+    pointer-events: none;
+  }
+  html.es-shell.es-editor .es-topbar :is(.es-breadcrumbs, .es-topbar__actions) { display: none; }
+  html.es-shell.es-editor .es-topbar .studio-history-group { pointer-events: auto; }
+  /* Room above the canvas for the floating undo / redo / history buttons. */
+  html.es-shell.es-editor .canvas-card { padding-top: 60px !important; }
+}
 .es-breadcrumbs {
   display: flex;
   align-items: center;
