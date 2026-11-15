@@ -243,6 +243,7 @@
       const FORMATS = [
         ['cover', 'Cover'], ['quote', 'Quote'], ['long-quote', 'Long Quote'], ['double-entity-quote', 'Two-Person Quote'],
         ['stats-single-ent', 'Player Stats'], ['stats-double-ent', 'Head-to-Head'],
+        ['listicle-type-1', 'Rankings Table'], ['listicle-type-2', 'Ranked List'],
       ];
       const PHOTO_TYPES = new Set(['cover', 'quote', 'long-quote', 'stats-single-ent']);
       const EXAMPLES = [
@@ -664,7 +665,11 @@
           const media = card.querySelector('.gen-card__media');
           media.classList.remove('is-ready');
           try {
-            const data = await callApi('/api/es-generate', { brief: lastBrief, formats: [spec.postType], count: 1, avoid: spec.lines || [] });
+            // Listicles keep their copy in spec.listicle (lines is empty): avoid
+            // their title and names so "Try again" really is a fresh take.
+            const avoid = spec.lines?.length ? spec.lines
+              : [spec.listicle?.title?.replace(/\n/g, ' '), ...(spec.listicle?.rows || []).map(row => row.entity)].filter(Boolean);
+            const data = await callApi('/api/es-generate', { brief: lastBrief, formats: [spec.postType], count: 1, avoid });
             const next = data.designs?.[0];
             if (next) {
               fillCard(card, next);

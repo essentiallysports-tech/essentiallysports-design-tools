@@ -200,5 +200,7 @@ BRAND_KIT.push(
     ]
   }
 );
-  window.ES_BRAND_KIT = BRAND_KIT;
+  if (typeof window !== "undefined") window.ES_BRAND_KIT = BRAND_KIT;
+  // Server code (Generate's brand checker) reads the same kit.
+  if (typeof module === "object" && module.exports) module.exports = BRAND_KIT;
 })();

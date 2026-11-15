@@ -104,14 +104,23 @@
     return guess ? { sport: guess.sport, team: guess.team } : { sport, team: '' };
   }
 
-  // Unknown sports/teams keep the current brand rather than failing.
+  // Every design gets a definite brand. Previews render one after another in
+  // the same editor, so "keep the current brand" used to hand a card the
+  // previous card's team colours. Now: a known team -> that team's colours;
+  // anything less (no team, or only a league) -> the neutral ES brand, never
+  // a team picked at random (a generic NFL post must not wear Bears colours).
+  function neutralSport() {
+    return getSports().find(sport => /^neutral$/i.test(sport)) || '';
+  }
+
   function applyBrand(spec) {
-    const { sport, team } = resolveBrand(spec);
+    const resolved = resolveBrand(spec);
+    const known = Boolean(resolved.sport && resolved.team);
+    const sport = known ? resolved.sport : neutralSport();
+    const team = known ? resolved.team : '';
     if (!sport) return;
-    if (sport !== state.sport) {
-      document.getElementById('sport-select').value = sport;
-      onSportChange(sport);
-    }
+    document.getElementById('sport-select').value = sport;
+    onSportChange(sport); // resets team + palette to the sport's default
     if (team && team !== state.team) {
       document.getElementById('team-select').value = team;
       onTeamChange(team);

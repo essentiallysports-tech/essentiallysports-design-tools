@@ -17,7 +17,7 @@ const ARTICLE = {
   date: '2026-10-20T10:00:00',
   link: 'https://www.essentiallysports.com/nfl-news-mahomes-chiefs-win/',
   title: { rendered: 'Patrick Mahomes Leads Chiefs Past Raiders' },
-  excerpt: { rendered: '<p>Mahomes threw for 320 yards.</p>' },
+  excerpt: { rendered: '<p>Mahomes threw for 320 yards, 3 touchdowns and 1 interception.</p>' },
   yoast_head_json: { og_image: [{ url: IMAGE }] },
 };
 const AI_DESIGNS = {

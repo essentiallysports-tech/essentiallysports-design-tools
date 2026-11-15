@@ -13,6 +13,8 @@ const { verifyEsUser } = require('./_supabase-auth.js');
 const { loadPastDesigns, selectExamples, formatExamples } = require('./_generate-examples.js');
 const { isMcpConfigured, createSession } = require('./_es-mcp.js');
 const { gatewayConfigured, aiText, isBudgetError, logBackupCall, userOverHourlyLimit, MODELS: AI_MODELS } = require('./_ai-gateway.js');
+const RULES = require('../../frameup-rules.js');
+const { lintSpec, applyPatch } = require('./_lint-spec.js');
 
 // Marks where buildPrompt's unchanging part (rules, templates, model answers) ends and the
 // per-request part begins. The Gateway call caches everything before it; Groq just drops it.
@@ -252,7 +254,9 @@ function sceneText(value) {
   return scene.length >= 8 ? scene.slice(0, 140) : '';
 }
 
-function checkSpec(raw, index, allowedTypes) {
+// researchUrls (optional Set): only articles research actually returned may be
+// cited as a design's source.
+function checkSpec(raw, index, allowedTypes, researchUrls = null) {
   const postType = String(raw?.postType || '').trim();
   if (!TEMPLATES[postType]) return { error: `design ${index + 1}: unsupported post type "${postType}"` };
   if (allowedTypes.length && !allowedTypes.includes(postType)) return { error: `design ${index + 1}: format not requested` };
@@ -275,7 +279,7 @@ function checkSpec(raw, index, allowedTypes) {
       why: within(raw.why, 1, 220) || '',
       sources: (Array.isArray(raw.sources) ? raw.sources : [])
         .map(source => (typeof source === 'string' ? { url: source, title: '' } : source))
-        .filter(source => isEsUrl(source?.url))
+        .filter(source => isEsUrl(source?.url) && (!researchUrls || researchUrls.has(source.url)))
         .slice(0, 3)
         .map(source => ({ url: source.url, title: clean(source.title).slice(0, 120) })),
     },
@@ -466,6 +470,8 @@ const toArticle = post => ({
   url: post?.link || '',
   date: String(post?.date || '').slice(0, 10),
   excerpt: clean(post?.excerpt?.rendered).slice(0, 400),
+  // The article body backs the fact check (numbers and quotes deep in a story).
+  body: clean(post?.content?.rendered).slice(0, 9000),
   image: String(post?.yoast_head_json?.og_image?.[0]?.url || ''),
 });
 
@@ -474,7 +480,7 @@ async function esPostsByTags(ids) {
   const url = new URL(`${ES_WP_API}/posts`);
   url.searchParams.set('tags', ids.join(','));
   url.searchParams.set('per_page', '6');
-  url.searchParams.set('_fields', 'id,date,link,title,excerpt,yoast_head_json.og_image');
+  url.searchParams.set('_fields', 'id,date,link,title,excerpt,content,yoast_head_json.og_image');
   const response = await fetch(url, { headers: WP_HEADERS, signal: AbortSignal.timeout(8000) });
   const data = await response.json().catch(() => null);
   if (!response.ok || !Array.isArray(data)) return [];
@@ -581,7 +587,7 @@ async function queryEsArticles(mcp, tool, name) {
 }
 
 async function research(brief, mcp, tools, notes) {
-  const out = { articles: [], tags: [], digest: '', sources: [] };
+  const out = { articles: [], tags: [], digest: '', corpus: '', sources: [] };
   const sections = [];
   const name = keyTerms(brief).split(' ').slice(0, 2).join(' ');
   const tryTool = async (role, label) => {
@@ -635,8 +641,14 @@ async function research(brief, mcp, tools, notes) {
     out.articles = [...out.mcpArticles, ...out.articles.filter(a => !seen.has(a.url))];
   }
   out.sources = [...new Set(out.sources)];
-  // Kept short to stay inside free-tier token limits (Groq).
-  out.digest = sections.join('\n\n').slice(0, 4500);
+  // The prompt gets a digest plus the opening of the top stories (facts the
+  // model can use); kept to ~7k chars so the backup models' limits hold.
+  const leads = out.articles.filter(a => a.body).slice(0, 3)
+    .map(a => `## From "${a.title}" (${a.url})\n${a.body.slice(0, 900)}`);
+  out.digest = [sections.join('\n\n').slice(0, 5000), ...leads].join('\n\n').slice(0, 7500);
+  // The fact check uses everything research saw, not the shortened digest, so
+  // a real quote or number deep in an article is not mistaken for invented.
+  out.corpus = [...sections, ...out.articles.map(a => `${a.title}. ${a.excerpt} ${a.body || ''}`)].join('\n').slice(0, 80000);
   return out;
 }
 
@@ -681,16 +693,20 @@ function fakeQuote(spec, source) {
 }
 
 // The short follow-up for rejected designs: errors, the designs, the shapes.
-function repairPrompt(brief, broken) {
+function repairPrompt(brief, broken, found = null) {
   const shapes = [...new Set(broken.map(p => p.raw?.postType).filter(type => TEMPLATES[type]))]
     .map(type => `- ${type}: ${TEMPLATES[type].shape}`).join('\n');
+  // Number or quote problems need the facts to fix them with.
+  const needsFacts = broken.some(p => (p.lint || []).some(issue => /unsourced/.test(issue.code)));
   return [
     'Our brand checker rejected these EssentiallySports Instagram designs. Fix each so it passes, or leave it out.',
-    'Keep the person\'s exact words and numbers. Quotes must be words that appear in the brief. Respect every character limit.',
+    'Keep the person\'s exact words and numbers. Quotes must be words that appear in the brief or the facts. Respect every character limit; shorter lines look bigger on the design.',
+    ...RULES.VOICE.map(line => `- ${line}`),
     `Brief: ${brief.slice(0, 600)}`,
-    `Errors:\n- ${broken.map(p => p.error).join('\n- ')}`,
+    `Errors (each says how to fix it):\n- ${broken.map(p => p.error).join('\n- ')}`,
     `Rejected designs:\n${JSON.stringify(broken.map(p => p.raw)).slice(0, 2500)}`,
     shapes ? `Template fields:\n${shapes}` : '',
+    needsFacts && found?.digest ? `Facts you may use (ES research):\n${found.digest.slice(0, 2500)}` : '',
     'Reply with JSON only: {"designs": [...]}',
   ].filter(Boolean).join('\n');
 }
@@ -714,7 +730,8 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid
     '- Never invent numbers, quotes or results. If a fact is missing, choose a template that does not need it, or return fewer designs.',
     '- Quotes must be real (from the brief or the research). Quote and Long Quote show no name, so use them ONLY for words said BY the post\'s main person. Words said about them by someone else need the Two-Person Quote (which names both speakers) or no quote at all.',
     '- Player Stats and Head-to-Head are ONLY for real game or season performance numbers with standard labels (PTS, REB, AST, YDS, TD, INT, HR, RBI, AVG, G, GOALS...). Never use ages, years, dates, contract money, deficits or rankings as stats. No such numbers: skip the stats templates.',
-    '- Write like ES: punchy, confident, plain American sports English. Title Case for pills and headlines. No emojis, no hashtags.',
+    ...RULES.VOICE.map(line => `- ${line}`),
+    '- Title Case for pills and headlines.',
     '- ES Covers are HOOKS, not summaries: a bold claim or a curious question in 2-8 words, e.g. "Does Patrick Mahomes Really Deserve This?", "Warriors\' $40M Gamble Just Got Worse", "Are Steelers Doomed at QB?". Never just list the facts on a Cover.',
     '- Player Stats headlines are a short reaction, not a label: e.g. "Statement Made", "No One Can Stop Her", "Mahomes Delivers".',
     '- Respect every character limit exactly; anything longer is rejected. Shorter is better.',
@@ -1071,19 +1088,23 @@ async function photoCandidates(person, mcp, tools, articles) {
 
 // Claude (main tier, it can see images) picks the photo that shows the person
 // best. Runs alongside the design call, so it adds no waiting. Returns the
-// index of the best candidate (0 when unsure or on any failure).
+// index of the best candidate (0 when the pick could not run). rejected: the
+// model looked and none shows the person, so no photo is used (the card offers
+// the photo picker instead of putting someone else on the post).
 const PHOTO_PICK_MAX = 5;
 async function pickPhoto(person, candidates, track) {
-  if (!person || candidates.length < 2 || !gatewayConfigured()) return { index: 0, cost: 0, picked: false };
+  if (!person || candidates.length < 2 || !gatewayConfigured()) return { index: 0, cost: 0, picked: false, rejected: false };
   const shown = candidates.slice(0, PHOTO_PICK_MAX);
   const content = [{ type: 'text', text: `Which photo best shows ${person} for a sports Instagram post? Prefer ${person} clearly visible and recognisable (ideally alone, face visible, sharp). Avoid graphics, collages, text-heavy images and photos of other people. Reply with JSON only: {"best": <photo number, or 0 if none shows ${person}>}` }];
   shown.forEach((candidate, index) => content.push({ type: 'text', text: `Photo ${index + 1}:` }, { type: 'image', source: { type: 'url', url: candidate.sourceUrl } }));
   try {
     const { text, cost } = await aiText({ tier: 'main', messages: [{ role: 'user', content }], effort: 'low', maxTokens: 2000, timeoutMs: 15000, track: { ...track, feature: 'generate-photo-pick' } });
-    const best = Number(extractJson(text)?.best);
-    return { index: best >= 1 && best <= shown.length ? best - 1 : 0, cost, picked: best >= 1 && best <= shown.length };
+    const parsed = extractJson(text);
+    const best = Number(parsed?.best);
+    const picked = best >= 1 && best <= shown.length;
+    return { index: picked ? best - 1 : 0, cost, picked, rejected: Boolean(!picked && parsed && Number(parsed.best) === 0) };
   } catch (error) {
-    return { index: 0, cost: 0, picked: false };
+    return { index: 0, cost: 0, picked: false, rejected: false };
   }
 }
 
@@ -1125,18 +1146,56 @@ async function generate({ brief, formats, count, avoid, token, email }) {
   const prompt = buildPrompt(brief, found, allowedTypes, want, pastExamples, avoidLines);
   const designs = [];
   const seen = new Set();
-  // Quotes must be real: their words have to appear in the brief or the ES research.
-  const sourceText = squash(`${brief} ${found.digest}`);
-  const keepValid = (list, offset = 0) => {
+  const leads = new Set();
+  // The brand checker sees everything research found (numbers and quotes must
+  // be real), and only research URLs count as sources.
+  const researchUrls = new Set([...found.sources, ...found.articles.map(a => a.url)]);
+  const lintCtx = () => ({ brief, corpus: found.corpus || found.digest, leads });
+  const lintStats = { checked: 0, passedFirst: 0, autoSplit: 0, repaired: 0, dropped: 0 };
+  // A Cover/Quote that only fails on length is re-split into more, shorter
+  // lines (same words) before spending an AI call on it.
+  const resplit = spec => {
+    if (spec.postType !== 'cover' && spec.postType !== 'quote') return null;
+    const words = spec.lines.join(' ');
+    const lines = chunkWords(words, spec.postType === 'cover' ? 16 : 14, spec.postType === 'cover' ? 4 : 3);
+    if (!lines.length || lines.join(' ') !== words.replace(/\s+/g, ' ').trim()) return null;
+    const checked = checkFields(spec.postType, spec.postType === 'cover' ? { pills: lines } : { lines });
+    return checked.error ? null : { ...spec, lines: checked.lines, fields: checked.fields };
+  };
+  const keepValid = (list, offset = 0, { repairRound = false } = {}) => {
     const problems = [];
     list.forEach((raw, index) => {
-      const checked = checkSpec(raw, index + offset, allowedTypes);
-      const fake = checked.error ? '' : fakeQuote(checked.spec, sourceText);
-      if (checked.error || fake) return problems.push({ error: checked.error || `design ${index + offset + 1}: ${fake}`, raw });
-      const key = `${checked.spec.postType}|${checked.spec.lines.join('|')}`;
+      const checked = checkSpec(raw, index + offset, allowedTypes, researchUrls);
+      if (checked.error) return problems.push({ error: checked.error, raw });
+      let spec = checked.spec;
+      let lint = lintSpec(spec, lintCtx());
+      lintStats.checked += 1;
+      if (!lint.ok && lint.errors.every(issue => issue.code === 'too-long')) {
+        const split = resplit(spec);
+        const splitLint = split && lintSpec(split, lintCtx());
+        if (splitLint?.ok) {
+          spec = split;
+          lint = { ...splitLint, warnings: [...splitLint.warnings, { field: 'lines', code: 'auto-split', msg: 'long lines were split so the text stays big' }] };
+          lintStats.autoSplit += 1;
+        }
+      }
+      if (!lint.ok) {
+        const label = `design ${index + offset + 1} (${spec.postType})`;
+        return problems.push({
+          error: `${label}: ${lint.errors.map(issue => `${issue.msg}; fix: ${issue.fix}`).join(' | ')}`,
+          raw,
+          lint: lint.errors,
+        });
+      }
+      if (repairRound) lintStats.repaired += 1;
+      else if (!lint.warnings.some(w => w.code === 'auto-split')) lintStats.passedFirst += 1;
+      applyPatch(spec, lint.patch);
+      spec.lint = { warnings: lint.warnings.map(({ field, code, msg }) => ({ field, code, msg })), rules: RULES.VERSION };
+      const key = `${spec.postType}|${spec.lines.join('|')}`;
       if (!seen.has(key) && designs.length < want) {
         seen.add(key);
-        designs.push(checked.spec);
+        if (lint.lead) leads.add(lint.lead);
+        designs.push(spec);
       }
     });
     return problems;
@@ -1151,10 +1210,12 @@ async function generate({ brief, formats, count, avoid, token, email }) {
       const problems = keepValid(designsFrom(extractJson(reply)));
       notes.push(...skipped(problems.filter(p => !fixable(p))));
       const broken = problems.filter(fixable);
-      // One small repair round: only the broken designs and the rules they
-      // broke (not the whole research again), to stay inside free-tier limits.
+      // One targeted repair round: only the designs that failed the template or
+      // brand checks, with each problem and how to fix it (not the whole
+      // research again). Whatever still fails is dropped, never shown.
       if (broken.length && designs.length < want) {
-        const fixed = keepValid(designsFrom(extractJson(await chat(provider, [{ role: 'user', content: repairPrompt(brief, broken) }]))), 10);
+        const fixed = keepValid(designsFrom(extractJson(await chat(provider, [{ role: 'user', content: repairPrompt(brief, broken, found) }]))), 10, { repairRound: true });
+        lintStats.dropped += fixed.length;
         notes.push(...skipped(fixed));
       }
     }
@@ -1194,10 +1255,17 @@ async function generate({ brief, formats, count, avoid, token, email }) {
   const personWord = mainWord(keyTerms(person) || person);
   await Promise.all(designs.map(async spec => {
     // Designs about the main person use the picked ES photo; anyone else
-    // (e.g. the other side of a rivalry) gets their own ES photo.
+    // (e.g. the other side of a rivalry) gets their own ES photo. When the
+    // photo check saw none that shows the person, the card gets no photo and
+    // the candidates go to the photo picker.
     const aboutPerson = !spec.photoQuery || (personWord && squash(spec.photoQuery).includes(` ${personWord} `));
     spec.photo = !TEMPLATES[spec.postType].photo ? null
-      : (aboutPerson && ordered[0]) ? { ...ordered[0] } : await findPhoto(spec.photoQuery, mcp, tools, found.articles);
+      : aboutPerson ? (pick.rejected ? null : (ordered[0] ? { ...ordered[0] } : null))
+        : await findPhoto(spec.photoQuery, mcp, tools, found.articles);
+    if (TEMPLATES[spec.postType].photo && !spec.photo) {
+      spec.lint = spec.lint || { warnings: [] };
+      spec.lint.warnings.push({ field: 'photo', code: 'pick-photo', msg: pick.rejected ? `no ES photo clearly shows ${person}; pick one` : 'no ES photo found; pick one' });
+    }
     spec.photos = TEMPLATES[spec.postType].photo ? (aboutPerson ? ordered : [spec.photo, ...ordered].filter(Boolean)).slice(0, 6) : [];
     spec.hints = brandHints(spec, brief, found.articles);
     spec.brief = brief.slice(0, 600);
@@ -1211,7 +1279,8 @@ async function generate({ brief, formats, count, avoid, token, email }) {
     research: { articles: found.articles.map(({ title, url, date }) => ({ title, url, date })) },
     connection: connectionInfo(tools, toolNames, mcpError),
     ai: { fallback: provider?.fallback || '', failed: aiFailed },
-    photo: { person, candidates: candidates.length, picked: pick.picked },
+    photo: { person, candidates: candidates.length, picked: pick.picked, rejected: pick.rejected },
+    checks: { ...lintStats, rules: RULES.VERSION },
     meta: { ms: { research: researchMs, ai: aiMs, total: Date.now() - started }, costUsd: Number(((provider?.cost || 0) + (pick.cost || 0)).toFixed(5)) },
     learning: { pastDesigns: pastDesigns.length, examplesUsed: pastExamples ? pastExamples.split('\n').length : 0 },
     notes,
