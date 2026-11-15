@@ -620,17 +620,20 @@ async function transcribeVideo(payload) {
 exports.handler = async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return json(204, {});
   const params = event.queryStringParameters || {};
-  if (event.httpMethod === 'GET' && (params.health === '1' || params.health === 'true')) {
-    return json(200, await getDiagnosticState({ probe: false }));
-  }
-  if (event.httpMethod === 'GET' && shouldPublicProbeHealth(params.health)) {
-    return json(200, await getPublicProbeState());
-  }
   if (!['GET', 'POST'].includes(event.httpMethod)) return json(405, { error: 'Method not allowed.' });
 
   try {
+    // Every route, health checks included, needs a signed-in ES user: the
+    // probes refresh the server's MCP token and list its tools.
     const auth = await verifyEsUser(event);
     if (!auth.ok) return json(auth.statusCode, { error: auth.error });
+
+    if (event.httpMethod === 'GET' && (params.health === '1' || params.health === 'true')) {
+      return json(200, await getDiagnosticState({ probe: false }));
+    }
+    if (event.httpMethod === 'GET' && shouldPublicProbeHealth(params.health)) {
+      return json(200, await getPublicProbeState());
+    }
 
     if (event.httpMethod === 'GET' && shouldProbeHealth(params.health)) {
       return json(200, await getDiagnosticState({ probe: true }));

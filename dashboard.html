@@ -6,9 +6,9 @@
   <meta name="description" content="FrameUp admin dashboard for requests, exports, owners, and activity.">
   <title>Dashboard | FrameUp</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script">
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
-  <script src="es-auth.js?v=20261115-authfix1"></script>
+  <script src="es-auth.js?v=20261115-sec1"></script>
   <script src="dashboard-data.js?v=20261112-aispend1"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2098,7 +2098,8 @@
         exportSection.hidden = !exportDetailsHtml;
         exportDetails.innerHTML = exportDetailsHtml;
       }
-      const links = task.referenceLinks || [];
+      // Only http(s) links: a "javascript:" reference would run when clicked.
+      const links = (task.referenceLinks || []).filter(link => /^https?:\/\//i.test(String(link || '').trim()));
       document.getElementById('drawer-links').innerHTML = links.length ? links.map((link, index) => `<a href="${attr(link)}" target="_blank" rel="noopener">Reference ${index + 1}</a>`).join('') : '—';
       const state = window.ESDashboardData.getDashboardState();
       const taskActivity = (state.activity || [])

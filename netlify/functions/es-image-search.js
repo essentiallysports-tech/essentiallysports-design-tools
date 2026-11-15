@@ -84,12 +84,22 @@ function mediaResult(media) {
   };
 }
 
+// Only https, only the ES hosts, and only the ES bucket itself, in either S3
+// address style: <bucket>.s3[.<region>].amazonaws.com/... or
+// s3[.<region>].amazonaws.com/<bucket>/... (a name merely containing the
+// bucket name, or the name in a path on another bucket, is refused).
+const S3_REGION_HOST = /^s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com$/;
 function isAllowedImageUrl(parsed) {
-  if (ALLOWED_IMAGE_HOSTS.has(parsed.hostname)) return true;
-  const hostAndPath = `${parsed.hostname}${parsed.pathname}`;
-  return parsed.hostname.endsWith('.amazonaws.com')
-    && hostAndPath.includes(ES_IMAGE_BUCKET);
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.port) return false;
+  const host = parsed.hostname.toLowerCase();
+  if (ALLOWED_IMAGE_HOSTS.has(host)) return true;
+  if (host.startsWith(`${ES_IMAGE_BUCKET}.`) && S3_REGION_HOST.test(host.slice(ES_IMAGE_BUCKET.length + 1))) return true;
+  return S3_REGION_HOST.test(host) && parsed.pathname.startsWith(`/${ES_IMAGE_BUCKET}/`);
 }
+
+// Raster images only: an SVG served from FrameUp's origin could run script.
+const PROXY_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
+const PROXY_MAX_BYTES = 15 * 1024 * 1024;
 
 async function proxyImage(imageUrl) {
   let parsed;
@@ -103,29 +113,46 @@ async function proxyImage(imageUrl) {
     return json(403, { error: 'Image host is not approved.' });
   }
 
-  const response = await fetch(parsed.toString(), {
-    headers: {
-      'User-Agent': 'ES-Designer/1.0 (+https://www.essentiallysports.com/)',
-      Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-    },
-  });
-
-  if (!response.ok) {
-    return json(response.status, { error: 'Image could not be fetched.' });
+  let response;
+  try {
+    response = await fetch(parsed.toString(), {
+      // Redirects could lead off the approved hosts, so they are refused.
+      redirect: 'error',
+      headers: {
+        'User-Agent': 'ES-Designer/1.0 (+https://www.essentiallysports.com/)',
+        Accept: 'image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.9',
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch (error) {
+    return json(502, { error: 'Image could not be fetched.' });
   }
 
-  const contentType = response.headers.get('content-type') || 'image/jpeg';
-  if (!contentType.startsWith('image/')) {
-    return json(415, { error: 'URL did not return an image.' });
+  if (!response.ok) {
+    return json(response.status >= 500 ? 502 : 404, { error: 'Image could not be fetched.' });
+  }
+
+  const contentType = String(response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+  if (!PROXY_IMAGE_TYPES.has(contentType)) {
+    return json(415, { error: 'URL did not return a supported image.' });
+  }
+  if (Number(response.headers.get('content-length') || 0) > PROXY_MAX_BYTES) {
+    return json(413, { error: 'Image is too large.' });
   }
 
   const arrayBuffer = await response.arrayBuffer();
+  if (arrayBuffer.byteLength > PROXY_MAX_BYTES) {
+    return json(413, { error: 'Image is too large.' });
+  }
   return {
     statusCode: 200,
     headers: {
       'Content-Type': contentType,
       'Cache-Control': 'public, max-age=86400',
       'Access-Control-Allow-Origin': '*',
+      'X-Content-Type-Options': 'nosniff',
+      // Even if opened directly, the response can never act as a page.
+      'Content-Security-Policy': "default-src 'none'; sandbox",
     },
     body: Buffer.from(arrayBuffer).toString('base64'),
     isBase64Encoded: true,
@@ -541,9 +568,8 @@ exports.handler = async function handler(event) {
   try {
     const params = event.queryStringParameters || {};
     const probeHealth = shouldProbeHealth(params.health);
-    if ((params.health === '1' || params.health === 'true') && !probeHealth) {
-      return json(200, await getMcpDiagnosticState({ probe: false }));
-    }
+    // Image bytes load through <img> tags, which cannot send a login token;
+    // proxyImage() itself only serves raster images from the ES bucket/hosts.
     if (params.image) return proxyImage(params.image);
 
     const auth = await verifyEsUser(event);
@@ -551,6 +577,10 @@ exports.handler = async function handler(event) {
       return json(auth.statusCode, { error: auth.error });
     }
 
+    // Config / health details are for signed-in staff only.
+    if ((params.health === '1' || params.health === 'true') && !probeHealth) {
+      return json(200, await getMcpDiagnosticState({ probe: false }));
+    }
     if (probeHealth) {
       return json(200, await getMcpDiagnosticState({ probe: shouldProbeHealth(params.health) }));
     }

@@ -1,3 +1,5 @@
+const { verifyEsUser } = require('./_supabase-auth.js');
+
 const OEMBED_ENDPOINT = 'https://publish.twitter.com/oembed';
 const SYNDICATION_ENDPOINT = 'https://cdn.syndication.twimg.com/tweet-result';
 const FXTWITTER_ENDPOINT = 'https://api.fxtwitter.com';
@@ -108,18 +110,31 @@ function avatarOriginalUrl(value) {
   return String(value || '').replace(/_normal(\.[a-z]+)$/i, '_400x400$1');
 }
 
+// Avatars come from a third-party API, so only X's own image host is fetched,
+// only raster images, no redirects, and nothing over 5 MB.
+const AVATAR_HOSTS = new Set(['pbs.twimg.com', 'abs.twimg.com']);
+const AVATAR_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+
 async function imageToDataUrl(url) {
   if (!url) return '';
   try {
-    const response = await fetch(url, {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:' || !AVATAR_HOSTS.has(parsed.hostname.toLowerCase())) return '';
+    const response = await fetch(parsed.toString(), {
+      redirect: 'error',
       headers: {
-        Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        Accept: 'image/webp,image/png,image/jpeg,image/gif;q=0.9',
         'User-Agent': 'FrameUp Tweet Quote Renderer',
       },
+      signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) return '';
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const contentType = String(response.headers.get('content-type') || 'image/jpeg').split(';')[0].trim().toLowerCase();
+    if (!AVATAR_TYPES.has(contentType)) return '';
+    if (Number(response.headers.get('content-length') || 0) > AVATAR_MAX_BYTES) return '';
     const arrayBuffer = await response.arrayBuffer();
+    if (arrayBuffer.byteLength > AVATAR_MAX_BYTES) return '';
     const base64 = Buffer.from(arrayBuffer).toString('base64');
     return `data:${contentType};base64,${base64}`;
   } catch (error) {
@@ -225,6 +240,9 @@ async function parseSyndication(payload, canonicalUrl) {
 exports.handler = async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return json(204, {});
   if (event.httpMethod !== 'GET') return json(405, { ok: false, error: 'Method not allowed.' });
+  // Signed-in staff only: this endpoint fetches third-party content on request.
+  const auth = await verifyEsUser(event);
+  if (!auth.ok) return json(auth.statusCode, { ok: false, error: auth.error });
 
   try {
     const url = normalizeTweetUrl(event.queryStringParameters?.url);

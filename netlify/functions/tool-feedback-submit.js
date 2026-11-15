@@ -169,8 +169,12 @@ async function appendToSheet(record, config) {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
+    // Text typed into the form must never run as a Sheets formula (=IMPORTXML…):
+    // a leading apostrophe stores it as plain text.
     body: JSON.stringify({
-      values: [toSheetRow(record)],
+      values: [toSheetRow(record).map(value => (
+        typeof value === 'string' && /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
+      ))],
     }),
   });
 

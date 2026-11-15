@@ -6,3 +6,5 @@ project-docs
 scripts
 supabase
 *.md
+.claude
+bg-remove-service

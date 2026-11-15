@@ -33,9 +33,9 @@ module.exports = async function esGenerate(request, response) {
     const result = await handler(toNetlifyEvent(request));
     sendNetlifyResult(response, result);
   } catch (error) {
+    console.error(error);
     response.status(500).json({
       error: 'Generate failed.',
-      detail: error instanceof Error ? error.message : String(error),
     });
   }
 };

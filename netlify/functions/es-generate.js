@@ -12,7 +12,7 @@
 const { verifyEsUser } = require('./_supabase-auth.js');
 const { loadPastDesigns, selectExamples, formatExamples } = require('./_generate-examples.js');
 const { isMcpConfigured, createSession } = require('./_es-mcp.js');
-const { gatewayConfigured, aiText, isBudgetError, logBackupCall, MODELS: AI_MODELS } = require('./_ai-gateway.js');
+const { gatewayConfigured, aiText, isBudgetError, logBackupCall, userOverHourlyLimit, MODELS: AI_MODELS } = require('./_ai-gateway.js');
 
 // Marks where buildPrompt's unchanging part (rules, templates, model answers) ends and the
 // per-request part begins. The Gateway call caches everything before it; Groq just drops it.
@@ -812,6 +812,8 @@ async function chat(provider, messages) {
         body: JSON.stringify({
           model,
           temperature: 0.4,
+          // Same ceiling as the main model, so a backup reply can't run away.
+          max_tokens: 6000,
           ...(json ? { response_format: { type: 'json_object' } } : {}),
           messages: plain(messages),
         }),
@@ -1252,9 +1254,14 @@ exports.handler = async function handler(event) {
     const brief = String(body.brief || '').replace(/<[^>]*>/g, ' ').replace(/[^\S\n\t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1500);
     if (brief.length < 3) return json(400, { error: 'Write a brief of at least a few words.' });
     const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
+    if (await userOverHourlyLimit(token)) {
+      return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
+    }
     return json(200, await generate({ brief, formats: body.formats, count: body.count, avoid: body.avoid, token, email: auth.user.email }));
   } catch (error) {
-    return json(500, { error: 'Generate failed.', detail: String(error.message || error).slice(0, 200) });
+    // Details stay in the server log; the browser gets a plain message.
+    console.error('es-generate failed:', error);
+    return json(500, { error: 'Generate failed. Try again in a moment.' });
   }
 };
 

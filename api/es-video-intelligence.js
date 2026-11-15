@@ -27,9 +27,9 @@ module.exports = async function esVideoIntelligence(request, response) {
     const result = await handler(toNetlifyEvent(request));
     sendNetlifyResult(response, result);
   } catch (error) {
+    console.error(error);
     response.status(500).json({
       error: 'ES video intelligence failed.',
-      detail: error instanceof Error ? error.message : String(error),
     });
   }
 };

@@ -33,9 +33,9 @@ module.exports = async function esImageSearch(request, response) {
     const result = await handler(toNetlifyEvent(request));
     sendNetlifyResult(response, result);
   } catch (error) {
+    console.error(error);
     response.status(500).json({
       error: 'ES image search failed.',
-      detail: error instanceof Error ? error.message : String(error),
     });
   }
 };

@@ -10,6 +10,8 @@
   const AUTH_CALLBACK_TYPES = new Set(['email', 'email_change', 'invite', 'magiclink', 'recovery', 'signup']);
   // Pinned (same bytes the @2 alias served) so browsers can cache it for a year.
   const SUPABASE_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js';
+  // Subresource integrity for exactly that file (update both together).
+  const SUPABASE_SDK_INTEGRITY = 'sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp';
   const config = window.ES_AUTH_CONFIG || {};
   const supabaseConfig = config.supabase || {};
 
@@ -295,7 +297,8 @@
       const target = new URL(String(returnTo), window.location.origin);
       if (target.origin !== window.location.origin) return fallback;
       if (/\/(?:auth-callback|login)\.html$/i.test(target.pathname)) return fallback;
-      const path = target.pathname.replace(/^\//, '') || fallback;
+      // Strip every leading slash: "//evil.example" would leave the site.
+      const path = target.pathname.replace(/^[/\\]+/, '') || fallback;
       return `${path}${target.search}${target.hash}`;
     } catch (error) {
       return fallback;
@@ -352,6 +355,11 @@
       };
 
       const script = existingScript || document.createElement('script');
+      if (!existingScript) {
+        // The browser refuses the file if the CDN ever serves different bytes.
+        script.integrity = SUPABASE_SDK_INTEGRITY;
+        script.crossOrigin = 'anonymous';
+      }
       script.src = SUPABASE_SDK_URL;
       script.async = true;
       script.onload = () => complete(true);
@@ -688,6 +696,8 @@
   async function logout() {
     try {
       window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+      // Personal details shouldn't outlive the session on a shared machine.
+      [PROFILE_STORAGE_KEY, ACCESS_REQUESTS_KEY, KNOWN_EMAILS_KEY].forEach(key => window.localStorage.removeItem(key));
     } catch (error) {
       // Ignore storage failures.
     }

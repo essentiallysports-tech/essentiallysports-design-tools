@@ -295,8 +295,17 @@ async function postToSlack(record, config) {
   return responseText;
 }
 
+// Text typed into the form must never run as a Sheets formula (=IMPORTXML…).
+// A leading apostrophe makes Sheets store it as plain text; dates and numbers
+// written by FrameUp itself are untouched.
+function sheetSafeCell(value) {
+  if (typeof value !== 'string') return value;
+  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+}
+
+const MAX_FIELD_CHARS = 5000;
 function cleanString(value) {
-  const result = String(value ?? '').trim();
+  const result = String(value ?? '').trim().slice(0, MAX_FIELD_CHARS);
   return result || undefined;
 }
 
@@ -372,7 +381,7 @@ async function appendToSheet(record, config) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      values: [toSheetRow(record)],
+      values: [toSheetRow(record).map(sheetSafeCell)],
     }),
   });
 
@@ -412,6 +421,15 @@ exports.handler = async event => {
     if (!payload.record?.id) {
       return json(400, { ok: false, error: 'Missing design request record' });
     }
+    if (String(event.body || '').length > 200000) {
+      return json(413, { ok: false, error: 'Design request is too large' });
+    }
+    // The requester is whoever is signed in, not whatever the form says.
+    payload.record.requester = {
+      ...(payload.record.requester || {}),
+      name: String(payload.record.requester?.name || '').trim().slice(0, 120),
+      email: auth.user.email,
+    };
 
     const sheetConfig = requiredConfig();
     const slack = slackConfig();

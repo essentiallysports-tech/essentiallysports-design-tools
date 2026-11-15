@@ -70,6 +70,34 @@ async function logUsage(track, row) {
   } catch { /* tracking is best effort */ }
 }
 
+// Per-person hourly cap on AI calls (all features), counted in the database so
+// it holds across servers and cold starts. Uses the caller's own session and
+// the frameup_my_ai_calls_last_hour() function. Fails open: if the count can't
+// be read (function missing, timeout) the call goes ahead, so a database hiccup
+// never blocks work. The weekly Gateway cap stays the hard limit.
+const USER_HOURLY_CALL_LIMIT = Number(process.env.AI_USER_HOURLY_LIMIT || 120);
+async function userOverHourlyLimit(token, limit = USER_HOURLY_CALL_LIMIT) {
+  if (!token || !(limit > 0)) return false;
+  try {
+    const config = authConfig();
+    const response = await fetch(`${config.url}/rest/v1/rpc/frameup_my_ai_calls_last_hour`, {
+      method: 'POST',
+      headers: {
+        apikey: config.publishableKey,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+      signal: AbortSignal.timeout(2500),
+    });
+    if (!response.ok) return false;
+    const count = Number(await response.json());
+    return Number.isFinite(count) && count >= limit;
+  } catch {
+    return false;
+  }
+}
+
 // Backup providers (Groq, opt-in OpenAI) are called directly, not through the
 // Gateway, so they log here instead. Tokens are recorded so the Dashboard counts
 // every call; cost stays 0 while Groq is on its free tier (OpenAI is opt-in and
@@ -212,4 +240,4 @@ async function aiImage({ prompt, model = MODELS.image, size = '1024x1280', timeo
   }
 }
 
-module.exports = { gatewayConfigured, aiText, aiImage, costUsd, isBudgetError, logBackupCall, MODELS, IMAGE_PRICES };
+module.exports = { gatewayConfigured, aiText, aiImage, costUsd, isBudgetError, logBackupCall, userOverHourlyLimit, MODELS, IMAGE_PRICES };

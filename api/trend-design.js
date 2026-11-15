@@ -16,10 +16,10 @@ module.exports = async function trendDesign(request, response) {
     Object.entries(result.headers || {}).forEach(([name, value]) => response.setHeader(name, value));
     response.status(result.statusCode || 200).send(result.body || '');
   } catch (error) {
+    console.error(error);
     response.status(500).json({
       ok: false,
       error: 'Trends are unavailable right now.',
-      detail: error instanceof Error ? error.message : String(error),
     });
   }
 };

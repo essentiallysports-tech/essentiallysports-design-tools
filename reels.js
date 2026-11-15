@@ -417,7 +417,9 @@
   }
 
   function refreshSpeechBackendStatus() {
-    fetch(videoIntelligenceUrl('?health=public-probe'), { cache: 'no-store' })
+    // The health check needs the login token like every other call.
+    var authedfetch = window.ESAuth && window.ESAuth.fetchWithAuth ? window.ESAuth.fetchWithAuth : fetch;
+    authedfetch(videoIntelligenceUrl('?health=public-probe'), { cache: 'no-store' })
       .then(function (response) { return response.ok ? response.json() : null; })
       .then(function (config) {
         if (!config) return;

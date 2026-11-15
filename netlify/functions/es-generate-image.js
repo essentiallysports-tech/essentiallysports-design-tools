@@ -4,7 +4,7 @@
 // those come from the ES Image Pool. Every image is logged to
 // frameup_ai_usage (images: 1, cost) through _ai-gateway.js.
 const { verifyEsUser } = require('./_supabase-auth.js');
-const { gatewayConfigured, aiImage, isBudgetError } = require('./_ai-gateway.js');
+const { gatewayConfigured, aiImage, isBudgetError, userOverHourlyLimit } = require('./_ai-gateway.js');
 const { _test: { sceneText } } = require('./es-generate.js');
 
 // A soft per-user cap on each warm server (the weekly Gateway cap is the hard one).
@@ -51,14 +51,19 @@ exports.handler = async function handler(event) {
   const scene = sceneText(body.scene) || sceneText(`empty ${String(body.sport || 'sports').toLowerCase().replace(/[^a-z ]/g, '')} stadium at night under bright floodlights`);
   if (!scene) return json(400, { error: 'Describe a scene first.' });
   const email = auth.user?.email || 'unknown';
-  if (!underLimit(email)) return json(429, { error: 'That is a lot of scene images this hour. Try again later.', reason: 'limit' });
   const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
+  // The per-server counter is a quick first check; the database-backed
+  // per-person limit holds across servers and restarts.
+  if (!underLimit(email) || await userOverHourlyLimit(token)) {
+    return json(429, { error: 'That is a lot of scene images this hour. Try again later.', reason: 'limit' });
+  }
   try {
     const image = await aiImage({ prompt: scenePrompt(scene), track: { feature: 'generate-scene-image', email, token } });
     return json(200, { ok: true, scene, dataUrl: image.dataUrl, model: image.model, cost: image.cost });
   } catch (error) {
     if (isBudgetError(error)) return json(503, { error: "This week's AI budget is used up, so scene images are paused until it resets. ES photos still work.", reason: 'budget' });
-    return json(502, { error: 'The scene image could not be made. Try again in a moment.', detail: String(error.message || error).slice(0, 160) });
+    console.error('es-generate-image failed:', error);
+    return json(502, { error: 'The scene image could not be made. Try again in a moment.' });
   }
 };
 

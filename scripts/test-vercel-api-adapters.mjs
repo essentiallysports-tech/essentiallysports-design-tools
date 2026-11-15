@@ -42,10 +42,20 @@ function createResponse() {
     query: { health: '1' },
   }, response);
 
-  assert.equal(response.statusCode, 200);
-  const payload = JSON.parse(response.payload);
-  assert.equal(payload.endpoint, 'https://mcp.essentiallysports.com/mcp');
-  assert.equal(typeof payload.mcpConfigured, 'boolean');
+  // Health/config details need a signed-in ES user (2026-11-15 security pass).
+  assert.equal(response.statusCode, 401);
+}
+
+{
+  const response = createResponse();
+  await tweetOembedHandler({
+    method: 'GET',
+    headers: {},
+    query: { url: 'https://twitter.com/d__raptis/status/1458761091195064325' },
+  }, response);
+
+  // The tweet fetcher is for signed-in staff only.
+  assert.equal(response.statusCode, 401);
 }
 
 {
@@ -64,6 +74,12 @@ function createResponse() {
 {
   globalThis.fetch = async (url) => {
     const value = String(url);
+    if (value.includes('/auth/v1/user')) {
+      return new Response(JSON.stringify({ id: 'user-1', email: 'designer@essentiallysports.com' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
     if (value.includes('cdn.syndication.twimg.com/tweet-result')) {
       return new Response(JSON.stringify({
         favorite_count: 514,
@@ -98,7 +114,7 @@ function createResponse() {
   const response = createResponse();
   await tweetOembedHandler({
     method: 'GET',
-    headers: {},
+    headers: { Authorization: 'Bearer test-user-token' },
     query: { url: 'https://twitter.com/d__raptis/status/1458761091195064325' },
   }, response);
 

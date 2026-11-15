@@ -128,10 +128,16 @@ globalThis.fetch = async (url, options = {}) => {
 const require = createRequire(import.meta.url);
 const { handler } = require('../netlify/functions/es-video-intelligence.js');
 
+// Health checks need a signed-in ES user (2026-11-15 security pass).
+for (const health of ['1', 'public-probe']) {
+  const anonymous = await handler({ httpMethod: 'GET', headers: {}, queryStringParameters: { health } });
+  assert.equal(anonymous.statusCode, 401);
+}
+
 {
   const response = await handler({
     httpMethod: 'GET',
-    headers: {},
+    headers: { Authorization: 'Bearer test-user-token' },
     queryStringParameters: { health: '1' },
   });
 
@@ -146,7 +152,7 @@ const { handler } = require('../netlify/functions/es-video-intelligence.js');
 {
   const response = await handler({
     httpMethod: 'GET',
-    headers: {},
+    headers: { Authorization: 'Bearer test-user-token' },
     queryStringParameters: { health: 'public-probe' },
   });
 
@@ -239,7 +245,7 @@ const { handler: groqHandler } = require('../netlify/functions/es-video-intellig
 {
   const response = await groqHandler({
     httpMethod: 'GET',
-    headers: {},
+    headers: { Authorization: 'Bearer test-user-token' },
     queryStringParameters: { health: '1' },
   });
 

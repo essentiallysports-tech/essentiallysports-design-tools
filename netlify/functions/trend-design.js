@@ -13,7 +13,7 @@
 // hitting Google on every visit.
 
 const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
-const { gatewayConfigured, aiText, logBackupCall } = require('./_ai-gateway.js');
+const { gatewayConfigured, aiText, logBackupCall, userOverHourlyLimit } = require('./_ai-gateway.js');
 
 const CACHE_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 6000;
@@ -307,7 +307,7 @@ async function aiTitles({ title, related = [], sport = '' }, track) {
       const response = await fetch(provider.url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${provider.key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, temperature: 0.4, response_format: { type: 'json_object' }, messages }),
+        body: JSON.stringify({ model, temperature: 0.4, max_tokens: 1200, response_format: { type: 'json_object' }, messages }),
         signal: AbortSignal.timeout(15000),
       });
       const data = await response.json().catch(() => null);
@@ -499,6 +499,10 @@ exports.handler = async event => {
     const title = String(body.title || '').slice(0, 300).trim();
     if (title.length < 3) return json(400, { ok: false, error: 'Missing headline.' }, 'no-store');
     const related = (Array.isArray(body.related) ? body.related : []).map(r => String(r || '').slice(0, 300)).slice(0, 3);
+    // Over the hourly AI limit: fall back to the free rule-based headlines.
+    if (await userOverHourlyLimit(bearerToken(event.headers))) {
+      return json(200, { ok: true, ai: false, titles: suggestTitles({ title, related: related.map(t => ({ title: t })) }) }, 'no-store');
+    }
     try {
       const titles = await aiTitles({ title, related, sport: String(body.sport || '').slice(0, 40) }, { feature: 'trend-headlines', email: auth.user.email, token: bearerToken(event.headers) });
       if (!titles) return json(200, { ok: true, ai: false, titles: suggestTitles({ title, related: related.map(t => ({ title: t })) }) }, 'no-store');
@@ -511,7 +515,8 @@ exports.handler = async event => {
   try {
     return json(200, await getTrends(false));
   } catch (error) {
-    return json(502, { ok: false, error: 'Trends are unavailable right now.', detail: error instanceof Error ? error.message : String(error) }, 'no-store');
+    console.error('trend-design failed:', error);
+    return json(502, { ok: false, error: 'Trends are unavailable right now.' }, 'no-store');
   }
 };
 

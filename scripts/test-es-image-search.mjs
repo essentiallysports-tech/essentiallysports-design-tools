@@ -124,8 +124,16 @@ Folders: Imago`,
 const require = createRequire(import.meta.url);
 const { handler } = require('../netlify/functions/es-image-search.js');
 
+// Health/config details are for signed-in staff only (2026-11-15 security pass).
+const anonymousHealth = await handler({
+  httpMethod: 'GET',
+  queryStringParameters: { health: '1' },
+});
+assert.equal(anonymousHealth.statusCode, 401);
+
 const healthResponse = await handler({
   httpMethod: 'GET',
+  headers: { Authorization: 'Bearer test-user-token' },
   queryStringParameters: { health: '1' },
 });
 const healthPayload = JSON.parse(healthResponse.body);

@@ -23,10 +23,10 @@ module.exports = async function tweetOembed(request, response) {
     const result = await handler(toNetlifyEvent(request));
     sendNetlifyResult(response, result);
   } catch (error) {
+    console.error(error);
     response.status(500).json({
       ok: false,
       error: 'Tweet lookup failed.',
-      detail: error instanceof Error ? error.message : String(error),
     });
   }
 };
