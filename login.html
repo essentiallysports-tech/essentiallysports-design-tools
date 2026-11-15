@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script">
   <script src="es-auth-config.js?v=20260714-authcallback1"></script>
-  <script src="es-auth.js?v=20261025-perf1"></script>
+  <script src="es-auth.js?v=20261115-authfix1"></script>
 <style>
   @font-face {
     font-family: 'Acumin Pro Condensed Local';
@@ -1144,11 +1144,14 @@
   });
 
   async function bootLoginPage() {
-    if (await window.ESAuth?.isValidSession?.()) {
+    const params = new URLSearchParams(window.location.search);
+    // Sent back because the sign-in check could not finish (slow connection or
+    // the login service did not answer): explain it rather than bouncing.
+    const checkFailed = params.get('reason') === 'check-failed';
+    if (!checkFailed && await window.ESAuth?.isValidSession?.()) {
       window.location.replace(getRedirectTarget());
       return;
     }
-    const params = new URLSearchParams(window.location.search);
     const requestedMode = params.get('mode');
     const accountDeleted = params.get('account') === 'deleted';
     setMode(
@@ -1163,6 +1166,8 @@
       setError('Email confirmed. Log in with your password to continue.', 'success');
     } else if (accountDeleted) {
       setError('Your account was deleted. You can create a new account anytime with an approved ES email.', 'success');
+    } else if (checkFailed) {
+      setError('We couldn\'t confirm your login: the connection was slow or the login service didn\'t answer. Check your connection and log in again.');
     }
   }
 

@@ -480,6 +480,11 @@
     });
 
     if (error) throw friendlyAuthError(error, 'Unable to log in.');
+    // Signed in, but if the browser could not save the session every next page
+    // would bounce back here with no message. Say so instead.
+    if (data?.session && !hasStoredSupabaseSession()) {
+      throw new Error('You were signed in, but this browser could not save the login (its storage for FrameUp is full or blocked). Clear this site\'s data in your browser settings, or use a private window, then log in again.');
+    }
 
     const user = data?.user;
     const displayName = user?.user_metadata?.name || normalizedEmail.split('@')[0] || 'Frameup User';
@@ -747,20 +752,42 @@
   function requireAuth(returnTo) {
     document.documentElement.style.visibility = 'hidden';
     return (async () => {
-      try {
-        if (await withTimeout(isValidSession(), 8000, 'Authentication check timed out.')) {
-          document.documentElement.style.visibility = '';
-          window.dispatchEvent(new CustomEvent('es:auth-ready'));
-          return true;
+      // A slow network or a slow CDN must not sign people out. The check gets a
+      // second, longer try; the session is only cleared when the check
+      // definitely says it is invalid. The page stays hidden until it passes.
+      let checkFailed = false;
+      for (const timeoutMs of [10000, 20000]) {
+        try {
+          if (await withTimeout(isValidSession(), timeoutMs, 'Authentication check timed out.')) {
+            document.documentElement.style.visibility = '';
+            window.dispatchEvent(new CustomEvent('es:auth-ready'));
+            return true;
+          }
+          checkFailed = false;
+          break;
+        } catch (error) {
+          checkFailed = true;
         }
-      } catch (error) {
-        // Treat auth service failures as signed-out rather than exposing a
-        // protected page with an unverified session.
       }
-      await logout();
-      window.location.replace(loginUrl(returnTo));
+      if (!checkFailed) await logout();
+      // reason=check-failed tells the login page to explain, not bounce back.
+      window.location.replace(`${loginUrl(returnTo)}${checkFailed ? '&reason=check-failed' : ''}`);
       return false;
     })();
+  }
+
+  // True when the browser actually stored the Supabase session (it can fail
+  // silently when this site's storage is full or blocked).
+  function hasStoredSupabaseSession() {
+    try {
+      for (let index = 0; index < window.localStorage.length; index += 1) {
+        const key = window.localStorage.key(index) || '';
+        if (key.startsWith('sb-') && key.endsWith('-auth-token') && window.localStorage.getItem(key)) return true;
+      }
+    } catch (error) {
+      return false;
+    }
+    return false;
   }
 
   window.ESAuth = Object.freeze({
