@@ -1445,3 +1445,7 @@ html:not([data-theme="dark"]) .va-panel { -webkit-backdrop-filter: none; backdro
 /* A card head with no visible button is just its title: no 32px button row. */
 .va-card__head:not(:has(button:not([hidden]))) { min-height: 0; }
 .va-panel__scroll > .va-pane > :last-child { margin-bottom: 0; }
+
+/* Research error: the follow-up hint gets the stacked-control gap below the
+   alert instead of sitting tight under it. */
+.va-panel .va-alert + .va-hint { margin-top: var(--es-space-3, 12px); }
