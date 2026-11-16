@@ -15,9 +15,9 @@
   --fb-radius-sm: 10px;
   --fb-radius-md: 14px;
   --fb-radius-lg: 14px;
-  --fb-font-ui: var(--es-font-ui, "Roboto Condensed", "Roboto", Arial, sans-serif);
-  --fb-font-body: var(--es-font-body, "Roboto", Arial, sans-serif);
-  --fb-font-display: var(--es-font-display, "FrameUp Acumin", "Acumin Post", "Arial Narrow", sans-serif);
+  --fb-font-ui: var(--es-font-ui, "Roboto Condensed", "Roboto", sans-serif);
+  --fb-font-body: var(--es-font-body, "Roboto", sans-serif);
+  --fb-font-display: var(--es-font-display, "FrameUp Acumin", "Acumin Post", "Roboto Condensed", sans-serif);
   --fb-motion: var(--es-ease);
 }
 
@@ -38,19 +38,20 @@ body.feedback-page *::after {
 
 .feedback-main {
   min-height: calc(100vh - 69px);
-  padding: 48px 0 112px;
+  padding: var(--es-space-8, 32px) 0 var(--es-space-12, 48px);
   background: var(--fb-white);
 }
 
 .feedback-hero,
 .feedback-shell {
-  width: min(840px, calc(100% - 48px));
+  width: min(840px, calc(100% - 2 * var(--es-space-8, 32px)));
   margin-inline: auto;
 }
 
+/* No rule under the page head: the card's own border is the separation
+   (matches the desktop shell treatment in es-ui.css). */
 .feedback-hero {
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--fb-border);
+  padding-bottom: 0;
 }
 
 .feedback-page-title {
@@ -66,13 +67,13 @@ body.feedback-page *::after {
 .feedback-page-version {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin: 12px 0 0;
+  gap: var(--es-space-2, 8px);
+  margin: var(--es-space-1, 4px) 0 0;
   color: var(--fb-muted);
   font-family: var(--fb-font-body);
-  font-size: var(--es-type-helper-size, 12px);
+  font-size: var(--es-type-lede-size, 15px);
   font-weight: 400;
-  line-height: 1.4;
+  line-height: var(--es-type-lede-line, 1.55);
 }
 
 .feedback-page-version svg {
@@ -88,12 +89,12 @@ body.feedback-page *::after {
 }
 
 .feedback-shell {
-  margin-top: 24px;
+  margin-top: var(--es-space-6, 24px);
 }
 
 .feedback-card {
   width: 100%;
-  padding: 24px;
+  padding: var(--es-card-pad-lg, 24px);
   border: 1px solid var(--fb-border);
   border-radius: var(--fb-radius-lg);
   background: var(--fb-white);
@@ -101,8 +102,8 @@ body.feedback-page *::after {
 }
 
 .feedback-panel-head {
-  padding-bottom: 20px;
-  margin-bottom: 24px;
+  padding-bottom: var(--es-space-5, 20px);
+  margin-bottom: var(--es-space-5, 20px);
   border-bottom: 1px solid var(--fb-border);
 }
 
@@ -117,7 +118,7 @@ body.feedback-page *::after {
 }
 
 .feedback-panel-head p {
-  margin: 8px 0 0;
+  margin: var(--es-space-1, 4px) 0 0;
   color: var(--fb-muted);
   font-family: var(--fb-font-body);
   font-size: var(--es-type-body-size, 14px);
@@ -126,7 +127,7 @@ body.feedback-page *::after {
 }
 
 .feedback-field {
-  margin-bottom: 22px;
+  margin-bottom: var(--es-space-5, 20px);
 }
 
 .feedback-field:last-of-type {
@@ -135,7 +136,7 @@ body.feedback-page *::after {
 
 .feedback-label {
   display: block;
-  margin: 0 0 9px;
+  margin: 0 0 var(--es-space-2, 8px);
   color: var(--fb-text);
   font-family: var(--fb-font-ui);
   font-size: var(--es-type-field-label-size, 12px);
@@ -149,8 +150,12 @@ body.feedback-page *::after {
   font-weight: 400;
 }
 
+.feedback-label:has(+ .feedback-field-helper) {
+  margin-bottom: var(--es-space-1, 4px);
+}
+
 .feedback-field-helper {
-  margin: -2px 0 10px;
+  margin: 0 0 var(--es-space-3, 12px);
   color: var(--fb-muted);
   font-family: var(--fb-font-body);
   font-size: var(--es-type-helper-size, 12px);
@@ -161,7 +166,7 @@ body.feedback-page *::after {
 .feedback-type-group {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--es-space-2, 8px);
 }
 
 .feedback-type-option {
@@ -178,11 +183,11 @@ body.feedback-page *::after {
 }
 
 .feedback-type-card {
-  min-height: 52px;
+  min-height: 48px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 13px;
+  gap: var(--es-space-2, 8px);
+  padding: 0 var(--es-space-3, 12px);
   border: 1px solid var(--fb-border);
   border-radius: var(--fb-radius-md);
   background: var(--fb-white);
@@ -225,7 +230,7 @@ body.feedback-page *::after {
 }
 
 html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-type-card {
-  outline-color: #5aa8ff;
+  outline-color: #54A4FB;
 }
 
 .feedback-select {
@@ -248,8 +253,8 @@ html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-ty
 .feedback-dropdown-trigger {
   position: relative;
   width: 100%;
-  min-height: 46px;
-  padding: 12px 42px 12px 14px;
+  min-height: var(--es-field-h, 40px);
+  padding: var(--es-space-2, 8px) var(--es-space-10, 40px) var(--es-space-2, 8px) var(--es-field-pad-x, 12px);
   border: 1px solid var(--fb-border);
   border-radius: var(--fb-radius-md);
   background: var(--fb-white);
@@ -266,7 +271,7 @@ html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-ty
 .feedback-dropdown-trigger::after {
   content: "";
   position: absolute;
-  right: 14px;
+  right: var(--es-space-3, 12px);
   top: 50%;
   width: 14px;
   height: 9px;
@@ -296,7 +301,7 @@ html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-ty
   z-index: 80;
   max-height: 250px;
   overflow-y: auto;
-  padding: 6px;
+  padding: var(--es-space-1, 4px);
   border: 1px solid var(--fb-border);
   border-radius: var(--fb-radius-md);
   background: var(--fb-white);
@@ -346,7 +351,7 @@ html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-ty
   width: 100%;
   min-height: 180px;
   display: block;
-  padding: 14px 14px 36px;
+  padding: var(--es-space-3, 12px) var(--es-field-pad-x, 12px) var(--es-space-8, 32px);
   border: 1px solid var(--fb-border);
   border-radius: var(--fb-radius-md);
   background: var(--fb-white);
@@ -373,7 +378,7 @@ html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-ty
 .feedback-charcount {
   position: absolute;
   right: 12px;
-  bottom: 10px;
+  bottom: var(--es-space-3, 12px);
   color: var(--fb-muted);
   font-family: var(--fb-font-ui);
   font-size: var(--es-type-meta-size, 11px);
@@ -386,51 +391,18 @@ html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-ty
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-top: 24px;
+  gap: var(--es-space-2, 8px);
+  margin-top: var(--es-space-6, 24px);
 }
 
 .feedback-submit,
 .feedback-back-link,
 .feedback-reset {
-  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  border-radius: var(--fb-radius-md);
-  font-family: var(--fb-font-ui);
-  font-size: var(--es-type-control-size, 14px);
-  font-weight: 700;
-  line-height: 1;
   text-decoration: none;
   cursor: pointer;
-}
-
-.feedback-submit {
-  padding: 0 20px;
-  border: 1px solid var(--fb-accent);
-  background: var(--fb-accent);
-  color: var(--fb-white);
-}
-
-.feedback-submit svg,
-.feedback-back-link svg {
-  width: 17px;
-  height: 17px;
-  flex: 0 0 17px;
-}
-
-.feedback-submit:hover:not(:disabled),
-.feedback-submit:focus-visible:not(:disabled) {
-  border-color: var(--es-brand);
-  background: var(--es-brand-fill);
-  outline: none;
-}
-
-.feedback-submit:disabled {
-  opacity: .58;
-  cursor: not-allowed;
 }
 
 .feedback-submit .feedback-spinner {
@@ -455,23 +427,10 @@ html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-ty
   to { transform: rotate(360deg); }
 }
 
-.feedback-back-link {
-  padding: 0 4px;
-  border: 0;
-  background: transparent;
-  color: var(--fb-muted);
-}
-
-.feedback-back-link:hover,
-.feedback-back-link:focus-visible {
-  color: var(--fb-accent);
-  outline: none;
-}
-
 .feedback-status {
   display: none;
-  margin: 16px 0 0;
-  padding: 12px 14px;
+  margin: var(--es-space-4, 16px) 0 0;
+  padding: var(--es-space-3, 12px) var(--es-space-4, 16px);
   border-radius: var(--fb-radius-md);
   font-family: var(--fb-font-body);
   font-size: var(--es-type-helper-size, 12px);
@@ -496,7 +455,7 @@ html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-ty
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  padding: 32px 16px;
+  padding: var(--es-space-8, 32px) var(--es-space-4, 16px);
   text-align: center;
 }
 
@@ -509,7 +468,7 @@ html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-ty
   height: 52px;
   display: grid;
   place-items: center;
-  margin: 0 auto 18px;
+  margin: 0 auto var(--es-space-5, 20px);
   border-radius: var(--fb-radius-lg);
   background: var(--fb-success-soft);
   color: var(--fb-success);
@@ -521,8 +480,14 @@ html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-ty
   stroke: currentColor;
 }
 
+/* The check draws in when the feedback is sent (es-motion.css esDraw). */
+.feedback-success-icon path { stroke-dasharray: 1; stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .feedback-card.is-submitted .feedback-success-icon path { animation: esDraw 420ms var(--es-ease-entrance, ease-out) 120ms backwards; }
+}
+
 .feedback-success-title {
-  margin: 0 0 8px;
+  margin: 0 0 var(--es-space-2, 8px);
   color: var(--fb-ink);
   font-family: var(--fb-font-display);
   font-size: var(--es-type-page-title-size, 36px);
@@ -538,19 +503,6 @@ html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-ty
   font-size: var(--es-type-body-size, 14px);
   font-weight: 400;
   line-height: 1.5;
-}
-
-.feedback-reset {
-  padding: 0 18px;
-  border: 1px solid var(--fb-border-strong);
-  background: var(--fb-white);
-  color: var(--fb-ink);
-}
-
-.feedback-reset:hover,
-.feedback-reset:focus-visible {
-  border-color: var(--fb-accent);
-  outline: none;
 }
 
 html[data-theme="dark"] body.feedback-page,
@@ -570,16 +522,14 @@ html[data-theme="dark"] .feedback-label,
 html[data-theme="dark"] .feedback-dropdown-trigger,
 html[data-theme="dark"] .feedback-dropdown-option,
 html[data-theme="dark"] .feedback-textarea,
-html[data-theme="dark"] .feedback-success-title,
-html[data-theme="dark"] .feedback-reset {
+html[data-theme="dark"] .feedback-success-title {
   color: #ffffff;
 }
 
 html[data-theme="dark"] .feedback-type-card,
 html[data-theme="dark"] .feedback-dropdown-trigger,
 html[data-theme="dark"] .feedback-dropdown-menu,
-html[data-theme="dark"] .feedback-textarea,
-html[data-theme="dark"] .feedback-reset {
+html[data-theme="dark"] .feedback-textarea {
   background-color: var(--es-ink);
 }
 
@@ -589,20 +539,21 @@ html[data-theme="dark"] .feedback-type-option input:checked + .feedback-type-car
 
 @media (max-width: 680px) {
   .feedback-main {
-    padding: 28px 0 76px;
+    padding: var(--es-space-6, 24px) 0 var(--es-space-10, 40px);
   }
 
   .feedback-hero,
   .feedback-shell {
-    width: calc(100% - 32px);
+    width: calc(100% - 2 * var(--es-page-gutter-phone, 16px));
   }
 
-  .feedback-hero {
-    padding-bottom: 20px;
+  .feedback-shell {
+
+    margin-top: var(--es-space-5, 20px);
   }
 
   .feedback-page-title {
-    font-size: 36px;
+    font-size: var(--es-type-page-title-size-sm, 28px);
   }
 
   .feedback-page-version {
@@ -611,12 +562,7 @@ html[data-theme="dark"] .feedback-type-option input:checked + .feedback-type-car
   }
 
   .feedback-card {
-    padding: 20px;
-  }
-
-  .feedback-panel-head {
-    padding-bottom: 18px;
-    margin-bottom: 20px;
+    padding: var(--es-card-pad-md, 20px);
   }
 
   .feedback-panel-title {
@@ -625,7 +571,7 @@ html[data-theme="dark"] .feedback-type-option input:checked + .feedback-type-car
 
   .feedback-type-group {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: var(--es-space-2, 8px);
   }
 
   .feedback-type-card {
@@ -641,7 +587,7 @@ html[data-theme="dark"] .feedback-type-option input:checked + .feedback-type-car
   .feedback-footer-row {
     flex-direction: column-reverse;
     align-items: stretch;
-    gap: 8px;
+    gap: var(--es-space-2, 8px);
   }
 
   .feedback-submit,

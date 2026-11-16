@@ -40,6 +40,13 @@ const SOURCES = [
   { id: 'golf', kind: 'news', category: 'golf', url: `${NEWS}/search?q=${encodeURIComponent('"PGA Tour" OR "LIV Golf" OR LPGA OR "DP World Tour" when:1d')}&${US}` },
   { id: 'tennis', kind: 'news', category: 'tennis', url: `${NEWS}/search?q=${encodeURIComponent('ATP OR WTA tennis when:1d')}&${US}` },
 ];
+// Video Ads looks back two days, and only at the sports it makes ads for.
+const SOURCES_2D = [
+  { id: 'nfl', kind: 'news', category: 'nfl', url: `${NEWS}/search?q=${encodeURIComponent('NFL when:2d')}&${US}` },
+  { id: 'cfb', kind: 'news', category: 'cfb', url: `${NEWS}/search?q=${encodeURIComponent('"college football" OR CFP OR Heisman when:2d')}&${US}` },
+  { id: 'mlb', kind: 'news', category: 'mlb', url: `${NEWS}/search?q=${encodeURIComponent('MLB when:2d')}&${US}` },
+  { id: 'trends', kind: 'search', url: 'https://trends.google.com/trending/rss?geo=US' },
+];
 
 // ── Classifier ─────────────────────────────────────────────────────────────
 // [pattern, weight]. League words weigh most; team and player names next;
@@ -383,12 +390,12 @@ const MATCH_LISTING = / - Match (WTA|ATP|ITF) - /i;
 const PER_SOURCE = 3;
 const NOISE = /\b(tickets?|promo code|betting odds|odds, picks|picks and predictions|prediction, odds|best bets|sale|discount|horoscope|obituary)\b/i;
 
-async function buildTrends() {
-  const results = await Promise.allSettled(SOURCES.map(source => fetchText(source.url).then(xml => ({ source, xml }))));
+async function buildTrends(sources = SOURCES) {
+  const results = await Promise.allSettled(sources.map(source => fetchText(source.url).then(xml => ({ source, xml }))));
   const errors = [];
   const pool = [];
   results.forEach((result, index) => {
-    if (result.status !== 'fulfilled') { errors.push(SOURCES[index].id); return; }
+    if (result.status !== 'fulfilled') { errors.push(sources[index].id); return; }
     const { source, xml } = result.value;
     const parsed = source.kind === 'search' ? parseTrends(xml) : parseNews(xml);
     parsed.forEach(item => pool.push({ ...item, from: source.id, hint: source.category || null }));
@@ -457,18 +464,23 @@ async function buildTrends() {
   };
 }
 
-let cache = null;
-let inflight = null;
+// One cache per window ('1d' = Trend Design, '2d' = Video Ads).
+const caches = {};
+const inflights = {};
 
-async function getTrends(force) {
+async function getTrends(force, { window = '1d' } = {}) {
+  const id = window === '2d' ? '2d' : '1d';
+  const cache = caches[id];
   if (!force && cache && Date.now() - cache.at < CACHE_MS) return cache.data;
-  if (!inflight) {
-    inflight = buildTrends().then(data => { cache = { at: Date.now(), data }; return data; }).finally(() => { inflight = null; });
+  if (!inflights[id]) {
+    inflights[id] = buildTrends(id === '2d' ? SOURCES_2D : SOURCES)
+      .then(data => { caches[id] = { at: Date.now(), data }; return data; })
+      .finally(() => { inflights[id] = null; });
   }
   try {
-    return await inflight;
+    return await inflights[id];
   } catch (error) {
-    if (cache) return { ...cache.data, stale: true };
+    if (caches[id]) return { ...caches[id].data, stale: true };
     throw error;
   }
 }
@@ -520,4 +532,5 @@ exports.handler = async event => {
   }
 };
 
+exports.getTrends = getTrends;
 exports._test = { classify, parseNews, parseTrends, key, suggestTitles, aiTitles };

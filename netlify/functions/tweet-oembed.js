@@ -285,3 +285,6 @@ exports.handler = async function handler(event) {
     });
   }
 };
+
+// Shared with Video Ads (clip lookup from an X post link).
+exports._helpers = { extractTweetId, normalizeTweetUrl, FXTWITTER_ENDPOINT, SYNDICATION_ENDPOINT };

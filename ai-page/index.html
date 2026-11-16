@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="../es-auth-config.js?v=20260707-auth4"></script>
-  <script src="../es-auth.js?v=20261115-sec1"></script>
+  <script src="../es-auth.js?v=20261115-auth2"></script>
   <script src="../dashboard-data.js?v=20261030-previews2"></script>
   <script>
     window.ESAuth?.requireAuth(`ai-page/index.html${window.location.search}${window.location.hash}`);
@@ -103,6 +103,7 @@
       min-height: 100vh;
       display: grid;
       grid-template-rows: 69px 1fr auto;
+      grid-template-columns: minmax(0, 1fr);
       background: var(--white);
     }
 
@@ -821,8 +822,8 @@
     }
 
     .prompt-mode-remove {
-      width: var(--es-space-5, 24px);
-      height: var(--es-space-5, 24px);
+      width: var(--es-space-6, 24px);
+      height: var(--es-space-6, 24px);
       border: 0;
       border-radius: 50%;
       background: rgba(3, 49, 98, .1);
@@ -894,28 +895,11 @@
     }
 
     .quick-action {
-      height: 46px;
       min-width: 170px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: rgba(245,250,255,.78);
-      color: var(--es-text-muted);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 16px;
-      padding: 0 20px;
-      font-family: Roboto, var(--font-ui);
-      font-size: 15px;
-      font-weight: 500;
       cursor: pointer;
-      box-shadow: var(--shadow-blue);
-    }
-
-    .quick-action svg {
-      width: 20px;
-      height: 20px;
-      flex: 0 0 auto;
     }
 
     .quick-separator {
@@ -1091,47 +1075,10 @@
 
     .workspace-cta {
       width: 100%;
-      min-height: 42px;
-      border: 1.5px solid var(--es-blue);
-      border-radius: var(--button-radius);
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 10px;
-      background: var(--es-blue);
-      color: var(--white);
-      font: 500 clamp(14px, .78vw, 16px)/1 var(--font-heading);
-      letter-spacing: 0;
       text-decoration: none;
-      text-transform: none;
-      box-shadow: 0 18px 36px rgba(14, 16, 20, .08);
-      transition: transform .16s var(--es-ease), box-shadow .16s var(--es-ease), background-color .16s var(--es-ease), border-color .16s var(--es-ease);
-    }
-
-    .workspace-cta:hover,
-    .workspace-cta:focus-visible {
-      background: var(--es-brand-fill);
-      border-color: var(--es-brand);
-      transform: translateY(-2px);
-      box-shadow: 0 22px 42px rgba(14, 16, 20, .18);
-      outline: none;
-    }
-
-    .workspace-cta.is-disabled {
-      background: var(--white);
-      border-color: var(--border);
-      color: var(--es-text-muted);
-      cursor: default;
-      box-shadow: 0 16px 30px rgba(14, 16, 20, .06);
-    }
-
-    .workspace-arrow {
-      width: 16px;
-      height: 10px;
-      flex: 0 0 16px;
-      background: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjQgNyAxNiAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtNiA5IDYgNiA2LTYiIHN0cm9rZT0iIzBBN0RGQSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=") center / contain no-repeat;
-      filter: brightness(0) invert(1);
-      transform: rotate(-90deg);
     }
 
     .conversation {
@@ -1636,9 +1583,7 @@
       }
       .quick-action {
         width: 100%;
-        min-height: 46px;
         justify-content: center;
-        font-size: 15px;
       }
       .workspace-cards {
         margin-top: 38px;
@@ -1653,10 +1598,6 @@
         width: 100%;
         min-width: 0;
         max-width: 100%;
-      }
-      .workspace-cta {
-        min-height: 42px;
-        font-size: 15px;
       }
       .workspace-pill {
         font-size: 15px;
@@ -1784,13 +1725,73 @@
         gap: 24px;
       }
     }
+
+    /* ─── Spacing system (2026-11-16) ─────────────────────────────────────
+       One 4px scale (design-tokens.css --es-space-*): panel 20 (sides 16 on
+       phones), heading -> helper 4, inline controls 8, groups 20, cards md 20,
+       page sections 48. Controls 40 tall; the send button sits 4px inside the
+       prompt field. Overrides the older values above. */
+    .sidebar { padding: var(--es-space-5, 20px); }
+    .workspace.is-sidebar-collapsed .sidebar { padding-left: 0; padding-right: 0; }
+    .side-head { gap: var(--es-space-3, 12px); margin-bottom: var(--es-space-3, 12px); }
+    .icon-button { width: 40px; height: 40px; }
+    .sidebar-toggle { width: 32px; height: 32px; }
+    .new-chat { min-height: var(--es-field-h, 40px); gap: var(--es-space-2, 8px); padding: 0 var(--es-space-3, 12px); }
+    .search-wrap { margin-bottom: var(--es-space-5, 20px); }
+    .search-wrap svg { left: var(--es-space-3, 12px); }
+    .search-input { height: var(--es-field-h, 40px); padding: 0 var(--es-field-pad-x, 12px) 0 var(--es-space-10, 40px); }
+    .history-label { margin-bottom: var(--es-space-2, 8px); }
+    .history-list { gap: var(--es-space-2, 8px); }
+
+    .assistant-panel { width: min(794px, calc(100% - 2 * var(--es-space-8, 32px))); margin-top: var(--es-space-12, 48px); }
+    /* theme.css paints .assistant-panel as a dark card with no padding, so the
+       logo and prompt touched its edges. It is not a card in light mode either. */
+    html[data-theme="dark"] body .assistant-panel { background: transparent !important; box-shadow: none !important; }
+    .ai-logo-wrap { margin-bottom: var(--es-space-6, 24px); }
+    .greeting { margin-bottom: var(--es-space-1, 4px); }
+    .headline { margin-bottom: var(--es-space-8, 32px); }
+    .prompt-shell { height: 56px; grid-template-columns: 1fr 48px; padding: 0 var(--es-field-inset, 4px) 0 var(--es-space-10, 40px); }
+    .prompt-entry { gap: var(--es-space-2, 8px); }
+    .prompt-mode-tag { height: 32px; gap: var(--es-space-2, 8px); padding: 0 var(--es-space-3, 12px); }
+    .send-button { width: 48px; height: 48px; }
+    .quick-actions { gap: var(--es-space-2, 8px); margin-top: var(--es-space-6, 24px); }
+    .conversation { margin-top: var(--es-space-6, 24px); gap: var(--es-space-3, 12px); }
+    .message { padding: var(--es-space-4, 16px) var(--es-space-5, 20px); }
+
+    .workspace-cards { margin-top: var(--es-space-12, 48px); margin-bottom: var(--es-space-12, 48px); }
+    .workspace-section-title { margin-bottom: var(--es-space-5, 20px); }
+    .workspace-card-grid { gap: var(--es-space-5, 20px); }
+    .workspace-status { left: var(--es-space-3, 12px); top: var(--es-space-3, 12px); padding: var(--es-space-1, 4px) var(--es-space-2, 8px); }
+    .workspace-card-body { padding: var(--es-card-pad-md, 20px); }
+    .workspace-card-subtitle { margin-top: var(--es-space-1, 4px); }
+    .workspace-card-details { gap: var(--es-space-2, 8px); margin-top: var(--es-space-3, 12px); }
+    .workspace-pill { padding: var(--es-space-1, 4px) var(--es-space-2, 8px); }
+    .workspace-card-action { padding-top: var(--es-space-5, 20px); }
+
+    @media (max-width: 1080px) {
+      .assistant-panel { margin-top: var(--es-space-12, 48px); }
+    }
+    @media (max-width: 820px) {
+      .assistant-panel { margin-top: var(--es-space-10, 40px); }
+      .quick-actions { gap: var(--es-space-2, 8px); }
+      .workspace-cards { margin-top: var(--es-space-10, 40px); }
+      .side-bottom { margin-top: var(--es-space-3, 12px); }
+    }
+    @media (max-width: 680px) {
+      /* The chat panel stacks above; match its 20px so the rule between them
+         has even space on both sides. */
+      .main { padding-top: 0; }
+      .assistant-panel { width: calc(100% - 2 * var(--es-page-gutter-phone, 16px)); margin-top: var(--es-space-6, 24px); }
+      .sidebar { padding: var(--es-space-5, 20px) var(--es-space-4, 16px); }
+      .prompt-shell { padding-left: var(--es-space-5, 20px); }
+    }
   </style>
-  <link rel="stylesheet" href="../site-mobile-chrome.css?v=20261113-uipass1">
-<link rel="stylesheet" href="../theme.css?v=20261112-a11y1">
-  <link rel="stylesheet" href="../site-chrome.css?v=20261113-uipass1">
-  <link rel="stylesheet" href="../cta-hover.css?v=20261113-uipass1">
-  <link rel="stylesheet" href="../design-tokens.css?v=20261113-uipass2">
-  <script src="../theme.js?v=20261111-icons2"></script>
+  <link rel="stylesheet" href="../site-mobile-chrome.css?v=20261116-sp1">
+<link rel="stylesheet" href="../theme.css?v=20261116-sp1">
+  <link rel="stylesheet" href="../site-chrome.css?v=20261115-g3">
+  <link rel="stylesheet" href="../cta-hover.css?v=20261115-btn1">
+  <link rel="stylesheet" href="../design-tokens.css?v=20261116-sp1">
+  <script src="../theme.js?v=20261115-pol2"></script>
   <script src="../site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="../site-chrome.js?v=20261111-icons2"></script>
 </head>
@@ -1933,7 +1934,7 @@
                 <h3 class="workspace-card-title">Social Media</h3>
                 <p class="workspace-card-subtitle">Create Eye-catching posts that stop the scroll.</p>
                 <div class="workspace-card-action">
-                  <a class="workspace-cta" href="../index.html#instagram">Create Now <span class="workspace-arrow" aria-hidden="true"></span></a>
+                  <a class="workspace-cta" href="../index.html#instagram">Create Now <span class="ui-arrow-right" aria-hidden="true"></span></a>
                 </div>
               </div>
             </article>
@@ -1946,7 +1947,7 @@
                 <h3 class="workspace-card-title">YouTube</h3>
                 <p class="workspace-card-subtitle">Design Bold Thumbnails to maximize your CTR.</p>
                 <div class="workspace-card-action">
-                  <a class="workspace-cta" href="../index.html#youtube">Create Now <span class="workspace-arrow" aria-hidden="true"></span></a>
+                  <a class="workspace-cta" href="../index.html#youtube">Create Now <span class="ui-arrow-right" aria-hidden="true"></span></a>
                 </div>
               </div>
             </article>
@@ -1959,7 +1960,7 @@
                 <h3 class="workspace-card-title">Newsletter</h3>
                 <p class="workspace-card-subtitle">Create Headers, widgets &amp; feature visuals.</p>
                 <div class="workspace-card-action">
-                  <a class="workspace-cta" href="../index.html#newsletter">Create Now <span class="workspace-arrow" aria-hidden="true"></span></a>
+                  <a class="workspace-cta" href="../index.html#newsletter">Create Now <span class="ui-arrow-right" aria-hidden="true"></span></a>
                 </div>
               </div>
             </article>

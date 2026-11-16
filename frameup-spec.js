@@ -90,6 +90,12 @@
   // stories about the person. Unknown brands keep the current one.
   function resolveBrand(spec) {
     const sports = getSports();
+    // A team the designer picked on the Generate card wins over every guess.
+    if (spec.teamLocked) {
+      const lockedSport = findOption(sports, spec.sport);
+      const lockedTeam = lockedSport ? findOption(getTeams(lockedSport), spec.team) : '';
+      if (lockedSport && lockedTeam) return { sport: lockedSport, team: lockedTeam };
+    }
     // A single team named in the brief itself ("Dream duo", "after the Chiefs
     // win") wins over the AI, whose memory of rosters can be out of date.
     // Opponents ("against the Sky") never count.
@@ -307,6 +313,9 @@
       .catch(error => setStatus(error.message || 'This design could not be opened.', 'err'));
   }
 
-  window.FrameUpSpec = Object.freeze({ PENDING_KEY, SUPPORTED, ready: whenReady, apply, renderToDataUrl, exportSpec, generatedFor });
+  // The brand kit's leagues and teams, for Generate's per-card team picker.
+  const brandOptions = () => getSports().map(sport => ({ sport, teams: getTeams(sport) }));
+
+  window.FrameUpSpec = Object.freeze({ PENDING_KEY, SUPPORTED, ready: whenReady, apply, renderToDataUrl, exportSpec, generatedFor, brandOptions });
   openPending();
 })();

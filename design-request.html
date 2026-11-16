@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
 <script src="es-auth-config.js?v=20260707-auth4"></script>
-<script src="es-auth.js?v=20261115-sec1"></script>
+<script src="es-auth.js?v=20261115-auth2"></script>
   <script src="dashboard-data.js?v=20261111-basics2"></script>
 <script>
   (() => {
@@ -59,7 +59,7 @@
     --font-ui:  var(--es-font-ui);
     --font-heading:  var(--es-font-display);
     --font-display:  var(--es-font-display);
-    --font-post: 'Acumin Post', 'Acumin Pro Condensed', 'Arial Narrow', sans-serif;
+    --font-post: 'Acumin Post', 'Acumin Pro Condensed', 'Roboto Condensed', sans-serif;
     --radius-sm: 10px;
     --radius-md: 14px;
     --radius-lg: 14px;
@@ -904,52 +904,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    min-height: clamp(38px, 2.55vw, 50px);
-    padding: 0 18px;
-    border-radius: var(--button-radius);
-    font-family: var(--font-heading);
-    font-size: clamp(14px, .78vw, 16px);
-    font-weight: 500;
-    line-height: 1;
     cursor: pointer;
-    border: 1.5px solid transparent;
-    transition: transform .16s var(--motion-smooth), box-shadow .16s var(--motion-smooth), background-color .16s var(--motion-smooth), border-color .16s var(--motion-smooth), color .16s var(--motion-smooth);
     white-space: nowrap;
-    letter-spacing: 0;
-    text-transform: none;
   }
-  .btn:hover,
-  .btn:focus-visible {
-    transform: translateY(-2px);
-    box-shadow: 0 22px 42px rgba(14, 16, 20, .18);
-    outline: none;
-  }
-  .btn:active { transform: translateY(0) scale(.98); }
   .btn-primary {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
     flex: 1;
-    box-shadow: 0 18px 36px rgba(14, 16, 20, .08);
   }
   .btn-secondary {
-    background: var(--white);
-    color: var(--text-primary);
-    border: 1.5px solid var(--border-strong);
     flex: 1;
-    box-shadow: 0 16px 30px rgba(14, 16, 20, .06);
-  }
-  .btn-primary:hover,
-  .btn-primary:focus-visible {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
-  }
-  .btn-secondary:hover,
-  .btn-secondary:focus-visible {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--accent-light);
   }
   .btn-row {
     display: flex;
@@ -964,9 +926,6 @@
   .canvas-card .btn {
     flex: none;
     width: auto;
-    padding: 10px 14px;
-    gap: 10px;
-    font-size: 15px;
   }
   .canvas-card .export-button {
     width: max-content;
@@ -1174,27 +1133,11 @@
   .tag-format { background: var(--tag-blue-04); color: var(--es-ink-2); border: 1px solid var(--es-line-2); }
   .frame-card-action { margin-top: auto; padding-top: 18px; }
   .frame-cta {
-    width: 100%; min-height: 42px; border: 1.5px solid var(--accent);
-    border-radius: var(--button-radius); display: flex; justify-content: center;
-    align-items: center; gap: 10px; background: var(--accent); color: var(--white);
-    font-family: var(--font-heading); font-size: clamp(14px, .78vw, 16px);
-    font-weight: 500; line-height: 1; letter-spacing: 0;
-    text-decoration: none; text-transform: none;
-    box-shadow: 0 18px 36px rgba(14, 16, 20, .08);
-    transition: transform .16s var(--motion-smooth), box-shadow .16s var(--motion-smooth), background-color .16s var(--motion-smooth), border-color .16s var(--motion-smooth);
-  }
-  .frame-cta:hover,
-  .frame-cta:focus-visible {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 22px 42px rgba(14, 16, 20, .18);
-    outline: none;
-  }
-  .frame-cta.is-disabled {
-    background: var(--white); border-color: var(--border-strong);
-    color: var(--text-secondary); cursor: default;
-    box-shadow: 0 16px 30px rgba(14, 16, 20, .06);
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
   }
   .ui-arrow-right {
     width: 16px;
@@ -1565,12 +1508,10 @@
   }
   .request-actions .btn {
     width: auto;
-    min-height: 44px;
   }
   .request-submit {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
   }
   .request-submit-chevron {
     width: 8px;
@@ -2265,12 +2206,6 @@
       object-fit: cover;
       object-position: center;
     }
-    .frame-cta,
-    .btn,
-    .request-submit {
-      min-height: 42px;
-      font-size: 15px;
-    }
     .frame-section-head {
       margin-bottom: 14px;
       gap: 10px;
@@ -2380,18 +2315,122 @@
   html:not(.es-shell) .request-page > .es-page-head p {
     color: var(--es-text-muted);
   }
+
+  /* ─── Spacing system (2026-11-16) ─────────────────────────────────────
+     One 4px scale (design-tokens.css --es-space-*). Cards md 20 (sm 16 on
+     phones), heading -> helper 4, heading/helper -> first field 12,
+     label -> control 8, control -> help/error 8, field -> field 20,
+     button row 8, card -> card 20. Scoped to .request-page so it wins over
+     the older rules above (incl. the bare input[type="text"] rule that gave
+     text inputs 20px side padding and bold text). */
+  .request-page {
+    width: min(1030px, calc(100% - 2 * var(--es-space-8, 32px)));
+    padding-bottom: var(--es-space-12, 48px);
+    gap: var(--es-space-6, 24px);
+  }
+  .request-page :is(.request-form, .request-sidebar) {
+    gap: var(--es-space-5, 20px);
+  }
+  .request-page :is(.request-card, .request-note, .request-intro) {
+    padding: var(--es-card-pad-md, 20px);
+  }
+  .request-page .request-card-head {
+    margin-bottom: var(--es-space-3, 12px);
+  }
+  .request-page .request-card-copy {
+    margin-top: var(--es-space-1, 4px);
+  }
+  .request-page .request-grid {
+    gap: var(--es-space-5, 20px) var(--es-space-3, 12px);
+  }
+  .request-page .request-label {
+    margin-bottom: var(--es-space-2, 8px);
+  }
+  .request-page :is(.request-input, .request-select, .request-textarea) {
+    padding: var(--es-space-3, 12px) var(--es-field-pad-x, 12px);
+    font-weight: 500;
+  }
+  .request-page .request-textarea {
+    display: block; /* no inline baseline gap under the field */
+  }
+  .request-page :is(input.request-input, select.request-select) {
+    min-height: var(--es-field-h, 40px);
+    height: var(--es-field-h, 40px);
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .request-page .request-select {
+    padding-right: var(--es-space-10, 40px);
+    background-position: right var(--es-space-3, 12px) center;
+  }
+  .request-page .request-dropdown-trigger {
+    min-height: var(--es-field-h, 40px);
+    padding: 0 var(--es-space-10, 40px) 0 var(--es-field-pad-x, 12px);
+  }
+  .request-page .request-dropdown-menu {
+    padding: var(--es-space-1, 4px);
+  }
+  .request-page :is(.request-help, .request-field-error) {
+    margin-top: var(--es-space-2, 8px);
+  }
+  .request-page .request-field-error {
+    gap: var(--es-space-2, 8px);
+  }
+  .request-page .request-type-guide {
+    padding: var(--es-space-3, 12px) var(--es-space-4, 16px);
+  }
+  .request-page .request-file {
+    padding: var(--es-space-3, 12px);
+  }
+  .request-page .request-actions {
+    gap: var(--es-space-2, 8px);
+  }
+  /* --es-bad on the dark card was 3.25:1; this red is 7:1 there. */
+  html[data-theme="dark"] .request-page .request-status.is-error {
+    color: #FF8A8A;
+  }
+  .request-page .request-note p {
+    margin-top: var(--es-space-1, 4px);
+  }
+  .request-page .request-note ol {
+    margin: var(--es-space-3, 12px) 0 0 var(--es-space-5, 20px);
+  }
+  .request-page .request-record-list {
+    gap: var(--es-space-2, 8px);
+  }
+  .request-page :is(.request-record-title, .request-record-meta) {
+    margin-top: var(--es-space-1, 4px);
+  }
+  @media (max-width: 680px) {
+    .request-page {
+      width: calc(100% - 2 * var(--es-page-gutter-phone, 16px));
+      max-width: none;
+    }
+    .request-page .request-grid {
+      gap: var(--es-space-5, 20px);
+    }
+    /* Full-bleed banner: site-mobile-chrome.css caps sections at 100%, which
+       left it 16px short on the left and 32px short on the right. */
+    .request-page .request-hero {
+      max-width: none;
+    }
+    .request-page :is(.request-card, .request-note, .request-intro) {
+      padding: var(--es-card-pad-sm, 16px);
+    }
+  }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20261113-uipass1">
-<link rel="stylesheet" href="theme.css?v=20261112-a11y1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261113-uipass1">
-<link rel="stylesheet" href="cta-hover.css?v=20261113-uipass1">
-<link rel="stylesheet" href="design-tokens.css?v=20261113-uipass2">
-<link rel="stylesheet" href="es-ui.css?v=20261113-uipass2">
-  <link rel="stylesheet" href="es-motion.css?v=20261113-motion1">
-<script src="theme.js?v=20261111-icons2"></script>
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20261116-sp1">
+<link rel="stylesheet" href="theme.css?v=20261116-sp1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261115-g3">
+<link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
+<link rel="stylesheet" href="design-tokens.css?v=20261116-sp1">
+<link rel="stylesheet" href="es-ui.css?v=20261116-sp2">
+  <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
+<script src="theme.js?v=20261115-pol2"></script>
 <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
 <script src="site-chrome.js?v=20261111-icons2"></script>
-<script src="app-shell.js?v=20261113-uipass2"></script>
+<script src="app-shell.js?v=20261115-pol7"></script>
+<script src="es-motion.js?v=20261115-ds1"></script>
 </head>
 <body>
 
@@ -2768,12 +2807,11 @@
 
   <aside class="request-sidebar">
     <section class="request-note">
-      <h2 class="request-note-title">What Happens Next</h2>
+      <h2 class="request-note-title">What happens next</h2>
       <ol>
         <li>The request receives a tracking ID.</li>
         <li>Its starting status is New.</li>
         <li>Assignment stays with design operations.</li>
-        <li>A future Slack and dashboard workflow will manage delivery.</li>
       </ol>
     </section>
   </aside>
@@ -3405,7 +3443,7 @@ const PILL_EDGE_TO_TEXT_GAP = 1;
 const PILL_ROW_GAP = 1;
 
 function getPillFont(scale=1) {
-  return `900 ${Math.round(PILL_FONT_SIZE * scale)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  return `900 ${Math.round(PILL_FONT_SIZE * scale)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
 }
 
 function getPillXOffset(rowIdx, totalRows) {
@@ -3486,7 +3524,7 @@ function drawPills(ctx, W, H, scale, pill_h, pill_spacing, pill_pad_left, pill_p
   let activeFontSize = Math.round(pill_font_size * (activePillH / pill_h));
 
   // Set font once for all measurements
-  ctx.font = `900 ${activeFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${activeFontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   ctx.textAlign = 'center';
 
   let maxTextW = 0;
@@ -3496,7 +3534,7 @@ function drawPills(ctx, W, H, scale, pill_h, pill_spacing, pill_pad_left, pill_p
   const maxTextAvailable = Math.max(1, maxCanvasW - pill_pad_left - pill_pad_right);
   if (maxTextW > maxTextAvailable) {
     activeFontSize = Math.max(Math.round(14 * scale), Math.floor(activeFontSize * (maxTextAvailable / maxTextW)));
-    ctx.font = `900 ${activeFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${activeFontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   }
 
   // Measure actual text bounds for uppercase 'A' (all-caps — no descenders)
@@ -3583,7 +3621,7 @@ function drawPills(ctx, W, H, scale, pill_h, pill_spacing, pill_pad_left, pill_p
     ctx.fillRect(p.x, p.y, p.w, p.h);
 
     ctx.fillStyle = fgColor;
-    ctx.font = `900 ${activeFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${activeFontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(lines[i].toUpperCase(), p.x + pill_pad_left, p.y + textBaselineFromTop);

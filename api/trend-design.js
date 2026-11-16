@@ -1,11 +1,15 @@
 const { handler } = require('../netlify/functions/trend-design.js');
 
+// The request body is passed through (the AI headline-ideas POST needs it).
 function toNetlifyEvent(request) {
+  const body = request.body == null
+    ? null
+    : (typeof request.body === 'string' ? request.body : JSON.stringify(request.body));
   return {
     httpMethod: request.method,
     headers: request.headers || {},
     queryStringParameters: request.query || {},
-    body: null,
+    body,
     isBase64Encoded: false,
   };
 }

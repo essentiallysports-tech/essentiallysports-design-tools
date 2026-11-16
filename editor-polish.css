@@ -70,37 +70,8 @@
     }
   }
 
-  /* ── Buttons ───────────────────────────────────────────────────────────── */
-  html[data-studio-shell="on"]:root body :is(#studio-export-btn, #studio-export-options-btn, #studio-link-btn, #widget-copy-btn) {
-    height: 40px !important;
-    min-height: 40px !important;
-    border-radius: 12px !important;
-  }
-
   html[data-studio-shell="on"]:root body #studio-export-options-btn {
     min-width: 40px;
-  }
-
-  html[data-studio-shell="on"]:root body #studio-link-btn {
-    padding: 0 14px;
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  html:not([data-theme="dark"])[data-studio-shell="on"]:root body :is(#studio-export-options-btn, #studio-link-btn) {
-    border: 1px solid var(--es-line-2);
-    background: var(--es-bg);
-  }
-
-  html[data-studio-shell="on"]:root body :is(#studio-export-btn, #studio-export-options-btn, #studio-link-btn, #widget-copy-btn, .studio-zoom-btn) svg {
-    width: var(--es-icon);
-    height: var(--es-icon);
-  }
-
-  html[data-studio-shell="on"]:root body .panel :is(.tweet-fetch-button, .listicle-add-row-button) {
-    height: 40px;
-    min-height: 40px;
-    border-radius: 12px;
   }
 
   html[data-studio-shell="on"]:root body :is(.panel .quote-switch, #youtube-quote-toggle) {
@@ -109,7 +80,7 @@
     border-radius: 12px;
   }
 
-  html[data-studio-shell="on"]:root body .panel :is(.ig-chip, .ig-reset, .widget-image-action-btn, .listicle-logo-button) {
+  html[data-studio-shell="on"]:root body .panel :is(.ig-chip, .ig-reset, .listicle-logo-button) {
     height: 32px;
     min-height: 32px;
     border-radius: 10px;
@@ -120,11 +91,6 @@
     height: 32px;
     min-height: 32px;
     border-radius: 10px;
-  }
-
-  html[data-studio-shell="on"]:root body .panel :is(.ig-chip, .ig-icon-btn, .ig-reset, .widget-image-action-btn, .listicle-logo-button) svg {
-    width: var(--es-icon-sm);
-    height: var(--es-icon-sm);
   }
 
   /* ── Chips and logo tiles: outlined; selected = ink ring ───────────────── */
@@ -151,10 +117,10 @@
   }
 
   html[data-theme="dark"][data-studio-shell="on"]:root body .panel :is(.select-chip, .brand-logo-option)[aria-checked="true"] {
-    border-color: #f3f5f7;
+    border-color: #FFFFFF;
     background: transparent;
-    box-shadow: inset 0 0 0 0.5px #f3f5f7;
-    color: #f3f5f7;
+    box-shadow: inset 0 0 0 0.5px #FFFFFF;
+    color: #FFFFFF;
   }
 
   html[data-studio-shell="on"]:root body .panel .brand-logo-option {
@@ -210,9 +176,9 @@
     }
   }
 
-  html[data-theme="dark"][data-studio-shell="on"]:root body .studio-inspector-tab.is-active { color: #f3f5f7 !important; }
+  html[data-theme="dark"][data-studio-shell="on"]:root body .studio-inspector-tab.is-active { color: #FFFFFF !important; }
   html[data-theme="dark"][data-studio-shell="on"]:root body .studio-inspector-tab.is-active::after { background: #f3f5f7; }
-  html[data-theme="dark"][data-studio-shell="on"]:root body .studio-inspector-tabs { border-bottom-color: #2e2e2e !important; }
+  html[data-theme="dark"][data-studio-shell="on"]:root body .studio-inspector-tabs { border-bottom-color: #2A2D34 !important; }
 
   /* ── Sections: hairline separated, no cards ────────────────────────────── */
   html[data-studio-shell="on"]:root body .studio-accordion-section,
@@ -245,15 +211,14 @@
   }
 
   /* ── Motion: quick press feedback; colours only when motion is reduced ─── */
-  html[data-studio-shell="on"]:root body :is(#studio-export-btn, #studio-export-options-btn, #studio-link-btn, #widget-copy-btn, .template-browse-btn) ,
-  html[data-studio-shell="on"]:root body .panel :is(.select-chip, .post-type-option, .brand-logo-option, .ig-chip, .ig-icon-btn, .ig-reset, .widget-image-action-btn, .listicle-add-row-button, .tweet-fetch-button, .swatch, .ig-swatch) {
+  html[data-studio-shell="on"]:root body .template-browse-btn,
+  html[data-studio-shell="on"]:root body .panel :is(.select-chip, .post-type-option, .brand-logo-option, .ig-chip, .ig-icon-btn, .ig-reset, .swatch, .ig-swatch) {
     transition: transform 140ms var(--es-ease), background-color 140ms var(--es-ease), border-color 140ms var(--es-ease), box-shadow 140ms var(--es-ease), color 140ms var(--es-ease);
     -webkit-tap-highlight-color: transparent;
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    html[data-studio-shell="on"]:root body :is(#studio-export-btn, #studio-export-options-btn, #studio-link-btn, #widget-copy-btn):active:not(:disabled):not(.is-locked),
-    html[data-studio-shell="on"]:root body .panel :is(.select-chip, .post-type-option, .brand-logo-option, .ig-chip, .ig-icon-btn, .ig-reset, .widget-image-action-btn, .listicle-add-row-button, .tweet-fetch-button, .swatch, .ig-swatch):active:not(:disabled) {
+    html[data-studio-shell="on"]:root body .panel :is(.select-chip, .post-type-option, .brand-logo-option, .ig-chip, .ig-icon-btn, .ig-reset, .swatch, .ig-swatch):active:not(:disabled) {
       transform: scale(.97);
     }
 
@@ -296,7 +261,6 @@
     padding-top: 18px;
     border-top: 1px solid var(--es-line, #E5E7EB);
   }
-
 
   /* Style: Text Placement and Brand & Colors only. */
   html[data-studio-shell="on"] body[data-studio-inspector="style"] :is(.studio-dock-section, .studio-ai-section) {
@@ -432,19 +396,19 @@
 
 /* Dark mode: the export row matches the panel (it was hard-coded white). */
 html[data-theme="dark"][data-studio-shell="on"] .studio-export-section {
-  background: #121212;
-  border-bottom-color: #2e2e2e;
+  background: #1F2126;
+  border-bottom-color: #2A2D34;
 }
 
 /* Dark mode: the Layers column was hard-coded white. Match the inspector panel. */
 html[data-theme="dark"][data-studio-shell="on"] .layers-panel {
-  background: #121212;
-  border-right-color: #2e2e2e;
+  background: #1F2126;
+  border-right-color: #2A2D34;
 }
-html[data-theme="dark"][data-studio-shell="on"] :is(.layers-panel-head, .layers-panel-label) { color: var(--theme-dark-text, #f3f5f7); }
-html[data-theme="dark"][data-studio-shell="on"] .layers-panel-row:hover { background: #1f1f1f; border-color: #2e2e2e; }
-html[data-theme="dark"][data-studio-shell="on"] .layers-panel-row.is-drop-target { background: rgb(90 168 255 / .12); border-color: #2e2e2e; }
-html[data-theme="dark"][data-studio-shell="on"] .layers-panel-collapse:hover { background: #1f1f1f; color: var(--theme-dark-text, #f3f5f7); }
+html[data-theme="dark"][data-studio-shell="on"] :is(.layers-panel-head, .layers-panel-label) { color: var(--theme-dark-text, #FFFFFF); }
+html[data-theme="dark"][data-studio-shell="on"] .layers-panel-row:hover { background: #2A2D34; border-color: #2A2D34; }
+html[data-theme="dark"][data-studio-shell="on"] .layers-panel-row.is-drop-target { background: rgb(90 168 255 / .12); border-color: #2A2D34; }
+html[data-theme="dark"][data-studio-shell="on"] .layers-panel-collapse:hover { background: #2A2D34; color: var(--theme-dark-text, #FFFFFF); }
 
 /* Long menu: the swipe-arrow toggle row has no box of its own in either theme. */
 @media (min-width: 901px) {
@@ -454,4 +418,416 @@ html[data-theme="dark"][data-studio-shell="on"] .layers-panel-collapse:hover { b
     background: transparent !important;
     box-shadow: none !important;
   }
+}
+
+/* ── Spacing system (2026-11-16, tokens in design-tokens.css) ────────────────
+ * One rhythm for the whole right panel, desktop long menu:
+ *   section       20px top + bottom, 16px sides; a hairline between sections
+ *                 has the same 20px above and below it
+ *   heading → helper 4px · heading/helper → first control 12px
+ *   field label → field 8px · stacked fields/controls 12px · button row 8px
+ *   search field  40px, 12px text inset, embedded button inset 4px
+ * Loaded after index.html's inline styles; !important only where those set the
+ * same property with !important. */
+@media (min-width: 901px) {
+  /* Sticky Export row: a 20px section like the rest, so its hairline has 20px on both sides. */
+  html[data-studio-shell="on"]:root body .studio-control-dock > .studio-export-section {
+    padding: var(--es-section-pad-y) var(--es-section-pad-x) !important;
+  }
+  html[data-studio-shell="on"]:root body .studio-export-section .studio-topbar-right { gap: var(--es-space-2) !important; }
+
+  /* Post type / format pickers: a normal 20px section. */
+  html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .studio-control-dock > .studio-primary-controls {
+    gap: var(--es-space-3) !important;
+    padding: var(--es-section-pad-y) 0 !important;
+  }
+  html[data-studio-shell="on"]:root body .studio-primary-controls :is(.youtube-control-row, .newsletter-control-row) { gap: var(--es-space-3) !important; }
+
+  /* Folding sections: the header row carries the section's 20px top; 12px from
+     an open header to its first field; 20px under the last field. The list adds
+     no extra bottom space (it left a 52px gap above the photo section). */
+  html[data-studio-shell="on"]:root body .studio-accordion-list {
+    padding: 0 var(--es-section-pad-x) !important;
+  }
+  html[data-studio-shell="on"]:root body .studio-accordion-trigger {
+    min-height: 0 !important;
+    padding: var(--es-section-pad-y) 2px !important;
+  }
+  html[data-studio-shell="on"]:root body .studio-accordion-section.is-open .studio-accordion-trigger {
+    padding-bottom: var(--es-space-3) !important;
+  }
+  html[data-studio-shell="on"]:root body .studio-accordion-body { gap: var(--es-space-3) !important; }
+  html[data-studio-shell="on"]:root body .studio-accordion-section.is-open .studio-accordion-body {
+    padding-bottom: var(--es-section-pad-y) !important;
+  }
+  html[data-studio-shell="on"]:root body .studio-accordion-list.is-single .studio-accordion-body {
+    padding-top: var(--es-section-pad-y) !important;
+  }
+
+  /* Fields: label 8px above its field, fields 12px apart. */
+  html[data-studio-shell="on"]:root body .panel :is(.card-title, .widget-field-label, .tod-label, .section-label, .color-group-label) {
+    margin: 0 0 var(--es-space-2) !important;
+  }
+  html[data-studio-shell="on"]:root body .panel .text-card,
+  html[data-studio-shell="on"]:root body .panel .color-card:not(.is-hidden-for-post-type):not(.is-hidden-for-newsletter-brand) { gap: var(--es-space-3); }
+  html[data-studio-shell="on"]:root body .panel :is(.stats-single-fields, .stats-double-fields).is-visible,
+  html[data-studio-shell="on"]:root body .panel .color-card .field-row { gap: var(--es-space-3) !important; }
+  /* A label that is its own grid item: pull its field up to 8px (12 − 4). */
+  html[data-studio-shell="on"]:root body .panel .text-card > .tod-row,
+  html[data-studio-shell="on"]:root body .panel .color-card > .color-group-label,
+  html[data-studio-shell="on"]:root body .panel .stats-single-fields > .stats-entry-grid-label {
+    margin: 0 0 calc(var(--es-space-1) * -1) !important;
+  }
+  html[data-studio-shell="on"]:root body .panel .field-hint { margin: var(--es-space-2) 0 0 !important; }
+  html[data-studio-shell="on"]:root body .panel .field-hint:empty { display: none; }
+  html[data-studio-shell="on"]:root body .panel :is(#trivia-fields, #ticker-fields, #list-fields, #list2-fields, #widget-main-fields, #widget-picks-fields) .widget-field-group { margin-bottom: var(--es-space-3); }
+  html[data-studio-shell="on"]:root body .panel .widget-field-group > .widget-field-label:not(:first-child) { margin-top: var(--es-space-3) !important; }
+  html[data-studio-shell="on"]:root body .panel .widget-field-group > .widget-image-row { margin-top: 0; }
+  html[data-studio-shell="on"]:root body .panel #widget-picks-fields .widget-field-group:has(> .widget-pick-head) { padding: var(--es-card-pad-sm); }
+  html[data-studio-shell="on"]:root body .panel .widget-pick-head { margin-bottom: var(--es-space-3); }
+  html[data-studio-shell="on"]:root body .select-chips { gap: var(--es-space-2); }
+
+  /* Photo section: 20px top and bottom; title → helper 4px → buttons 12px → 8px apart. */
+  html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .studio-control-dock > .studio-dock-section {
+    gap: var(--es-space-3) !important;
+    padding: var(--es-section-pad-y) 0 !important;
+  }
+  html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .studio-dock-section .image-tool-rail { gap: var(--es-space-3); }
+  html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .studio-dock-section .image-context-empty {
+    display: grid !important;
+    justify-content: stretch;
+    gap: var(--es-space-3) !important;
+    min-height: 0 !important;
+  }
+  html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .studio-dock-section .image-context-empty > div:first-child { gap: var(--es-space-1) !important; }
+  html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .studio-dock-section .image-context-empty-actions { gap: var(--es-space-2) !important; justify-content: flex-start; }
+  /* One entry point to the ES Image Pool: the search section right below. The
+     empty state's "ES Image Pool" button only focused that search and repeated
+     its heading, so the long menu drops it. */
+  html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .studio-dock-section .image-context-empty .image-context-ai { display: none !important; }
+  html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .studio-dock-section .image-context-content { gap: var(--es-space-3); }
+
+  /* ES Image Pool section: same 20px section, equal space around its hairline. */
+  html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .studio-control-dock > .studio-ai-section {
+    gap: var(--es-space-3) !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding: var(--es-section-pad-y) 0 !important;
+  }
+  html[data-studio-shell="on"]:root body .studio-ai-section .studio-dock-title { line-height: 1.3; }
+
+  /* Search field: 40px, 12px text inset, the Search button 4px in from every edge. */
+  html[data-studio-shell="on"]:root body .studio-ai-search {
+    min-height: var(--es-field-h) !important;
+    height: var(--es-field-h);
+    gap: var(--es-space-2) !important;
+    padding: 0 var(--es-field-inset) 0 var(--es-field-pad-x) !important;
+  }
+  html[data-studio-shell="on"]:root body .studio-ai-search button {
+    min-height: var(--es-field-h-sm) !important;
+    height: var(--es-field-h-sm) !important;
+  }
+}
+@media (min-width: 901px) {
+  /* Flat toggle rows (label + switch) are as tall as the switch, so a section
+     that ends with one still gets exactly 20px under it. */
+  html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .swipe-button-control .quote-switch {
+    height: auto !important;
+    min-height: 24px !important;
+  }
+}
+
+/* ── Canvas action dock (2026-11-16) ─────────────────────────────────────────
+ * One toolbar under the canvas: zoom segmented control | Upload / ES Image Pool
+ * (secondary sm buttons) | slide pager segmented control. Every control is
+ * 32px. 8px dock padding, 12px radius; groups 12px apart with a 1px × 20px
+ * divider; wraps to two centred rows (8px apart) when the canvas column is
+ * narrow: zoom + pager on top, the image buttons below. CSS only. */
+@media (min-width: 901px) {
+  /* A grid shrink-wraps its rows, so the card hugs the controls (a wrapped
+     flex row kept the full max-width and left empty space at the sides).
+     Narrow column: stacked zoom / pager / image buttons. */
+  html[data-studio-shell="on"]:root body .canvas-stack > .canvas-bottom-actions {
+    display: grid !important;
+    grid-template-columns: auto !important;
+    justify-content: center !important;
+    justify-items: center !important;
+    align-items: center !important;
+    gap: var(--es-space-2) var(--es-space-3) !important;
+    width: max-content !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: var(--es-space-2) !important;
+    border: 1px solid var(--es-line) !important;
+    border-radius: 12px !important;
+    background: var(--es-bg) !important;
+    box-shadow: 0 1px 2px rgb(14 16 20 / .04), 0 8px 24px -12px rgb(14 16 20 / .18) !important;
+    overflow: visible !important;
+  }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions > * { margin: 0 !important; }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions > .carousel-workspace-nav { order: 1; }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions > .canvas-primary-actions { order: 2; }
+
+  /* Zoom: one outlined segmented control. */
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions .studio-zoom-group:not(.studio-history-group) {
+    display: inline-flex !important;
+    align-items: stretch !important;
+    gap: 0 !important;
+    height: 32px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--es-line-2) !important;
+    border-radius: 10px !important;
+    background: var(--es-bg) !important;
+    overflow: hidden;
+  }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions .studio-zoom-group:not(.studio-history-group) .studio-zoom-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 32px !important;
+    min-width: 0 !important;
+    height: 30px !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--es-ink-2) !important;
+    transform: none !important;
+    transition: background-color 140ms var(--es-ease), color 140ms var(--es-ease);
+  }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions .studio-zoom-group:not(.studio-history-group) .studio-zoom-btn + .studio-zoom-btn {
+    border-left: 1px solid var(--es-line-2) !important;
+  }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions .studio-zoom-group:not(.studio-history-group) .studio-zoom-value {
+    width: auto !important;
+    min-width: 52px !important;
+    padding: 0 var(--es-space-2) !important;
+    color: var(--es-ink) !important;
+    font: 500 13px/1 "Roboto", var(--es-font-ui), sans-serif !important;
+    font-variant-numeric: tabular-nums;
+  }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions .studio-zoom-btn svg { width: 16px !important; height: 16px !important; stroke: currentColor; }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions .studio-zoom-group:not(.studio-history-group) .studio-zoom-btn:hover:not(:disabled) {
+    background: var(--es-sunk) !important;
+    color: var(--es-ink) !important;
+  }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions .studio-zoom-group:not(.studio-history-group) .studio-zoom-btn:focus-visible {
+    outline: none !important;
+    box-shadow: inset 0 0 0 2px var(--es-brand) !important;
+  }
+
+  /* Upload Image / ES Image Pool: secondary sm buttons (sizes from the button system). */
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions .canvas-primary-actions {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: var(--es-space-2) !important;
+    padding: 0 !important;
+  }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions .canvas-upload-button { min-width: 0 !important; }
+  /* The collapsed search form is 0px wide but still took a flex gap. */
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions:not(.is-ai-search-expanded) .canvas-ai-search-form { display: none !important; }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions.is-ai-search-expanded .canvas-ai-search-form { height: 32px !important; }
+  /* Search open: the field replaces the two buttons (they used to shrink to
+     0px, which the button system's fixed padding no longer allows). */
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions.is-ai-search-expanded .canvas-primary-actions > .canvas-upload-button { display: none !important; }
+
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions > .canvas-primary-actions { position: relative; }
+}
+/* Slide pager (every screen size). */
+/* Slide pager: a segmented control on a grey track. */
+html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-workspace-nav:not(.view-hidden) {
+  position: relative;
+  display: inline-flex !important;
+  gap: 0 !important;
+  padding: 0 !important;
+}
+html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-switcher {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+  height: 32px !important;
+  max-width: 100%;
+  padding: 2px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: var(--es-sunk) !important;
+  box-shadow: none !important;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-switcher::-webkit-scrollbar { display: none; }
+html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-button {
+  flex: 0 0 auto;
+  width: 32px !important;
+  min-width: 0 !important;
+  height: 28px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--es-ink-2) !important;
+  font: 500 13px/1 "Roboto", var(--es-font-ui), sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  transform: none !important;
+  transition: background-color 140ms var(--es-ease), color 140ms var(--es-ease), box-shadow 140ms var(--es-ease);
+}
+html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-button:hover:not(:disabled):not(.is-active) { color: var(--es-ink) !important; background: rgb(14 16 20 / .05) !important; }
+html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-button.is-active {
+  background: var(--es-bg) !important;
+  color: var(--es-ink) !important;
+  box-shadow: 0 1px 2px rgb(14 16 20 / .12), 0 1px 1px rgb(14 16 20 / .04) !important;
+}
+html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-button:focus-visible {
+  outline: none !important;
+  box-shadow: inset 0 0 0 2px var(--es-brand) !important;
+}
+html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-button.has-content::after {
+  top: 4px; right: 4px; width: 5px; height: 5px;
+}
+html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-button.is-active.has-content::after { background: var(--es-brand); }
+/* Chevrons: 16px currentColor icons; muted but visible at the ends. */
+html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-arrow::before {
+  left: 50% !important;
+  top: 50% !important;
+  width: 16px !important;
+  height: 16px !important;
+  border: 0 !important;
+  background: currentColor;
+  transform: translate(-50%, -50%) !important;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-next::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E");
+}
+html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-arrow:disabled {
+  opacity: 1 !important;
+  color: #7E848E !important; /* >= 3:1 on the grey track */
+  cursor: default;
+  background: transparent !important;
+}
+
+
+/* Column wide enough for two groups side by side: zoom | pager on top, the
+   image buttons centred below (or zoom | image buttons when there is no pager).
+   Dividers only between groups that share a row. */
+@media (min-width: 1248px) {
+  html[data-studio-shell="on"]:root body .canvas-stack > .canvas-bottom-actions:has(> .carousel-workspace-nav:not(.view-hidden)) {
+    grid-template-columns: auto auto !important;
+  }
+  html[data-studio-shell="on"]:root body .canvas-stack > .canvas-bottom-actions:has(> .carousel-workspace-nav:not(.view-hidden)) > .canvas-primary-actions { grid-column: 1 / -1; }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions > .carousel-workspace-nav:not(.view-hidden)::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--es-space-3) / -2 - .5px);
+    top: 50%;
+    width: 1px;
+    height: 20px;
+    background: var(--es-line);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+}
+@media (min-width: 1280px) {
+  html[data-studio-shell="on"]:root body .canvas-stack > .canvas-bottom-actions:not(:has(> .carousel-workspace-nav:not(.view-hidden))) {
+    grid-template-columns: auto auto !important;
+  }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions:not(:has(> .carousel-workspace-nav:not(.view-hidden))) > .canvas-primary-actions::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--es-space-3) / -2 - .5px);
+    top: 50%;
+    width: 1px;
+    height: 20px;
+    background: var(--es-line);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+}
+/* Wide column: one row, zoom | image buttons | pager. */
+@media (min-width: 1600px) {
+  html[data-studio-shell="on"]:root body .canvas-stack > .canvas-bottom-actions:has(> .carousel-workspace-nav:not(.view-hidden)) {
+    grid-template-columns: auto auto auto !important;
+  }
+  html[data-studio-shell="on"]:root body .canvas-stack > .canvas-bottom-actions:has(> .carousel-workspace-nav:not(.view-hidden)) > .canvas-primary-actions { grid-column: auto !important; }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions > .carousel-workspace-nav { order: 3; }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions > .canvas-primary-actions::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--es-space-3) / -2 - .5px);
+    top: 50%;
+    width: 1px;
+    height: 20px;
+    background: var(--es-line);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+}
+/* Search open: the dock is one row of zoom + search, as before. */
+@media (min-width: 901px) {
+  html[data-studio-shell="on"]:root body .canvas-stack > .canvas-bottom-actions.is-ai-search-expanded { grid-template-columns: auto auto !important; }
+}
+
+/* Dark */
+@media (min-width: 901px) {
+  html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-stack > .canvas-bottom-actions {
+    border-color: #2A2D34 !important;
+    background: #17191D !important;
+    box-shadow: 0 8px 24px -12px rgb(0 0 0 / .6) !important;
+  }
+  html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-bottom-actions .studio-zoom-group:not(.studio-history-group) {
+    border-color: #3B4049 !important;
+    background: #1F2126 !important;
+  }
+  html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-bottom-actions .studio-zoom-group:not(.studio-history-group) .studio-zoom-btn + .studio-zoom-btn { border-left-color: #3B4049 !important; }
+  html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-bottom-actions .studio-zoom-group:not(.studio-history-group) .studio-zoom-btn { color: #BFC8D9 !important; }
+  html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-bottom-actions .studio-zoom-group:not(.studio-history-group) .studio-zoom-value { color: #FFFFFF !important; }
+  html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-bottom-actions .studio-zoom-group:not(.studio-history-group) .studio-zoom-btn:hover:not(:disabled) { background: #2A2D34 !important; color: #FFFFFF !important; }
+  html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-bottom-actions > :is(.carousel-workspace-nav, .canvas-primary-actions)::before { background: #3B4049 !important; }
+}
+/* Pager colours, desktop and phone. */
+html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-switcher { background: #1F2126 !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-button:not(.carousel-slide-arrow) { background: transparent !important; color: #BFC8D9 !important; box-shadow: none !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-arrow { color: #BFC8D9 !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-button.is-active { background: #2A2D34 !important; color: #FFFFFF !important; box-shadow: 0 1px 2px rgb(0 0 0 / .4) !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-button:hover:not(:disabled):not(.is-active) { background: rgb(255 255 255 / .06) !important; color: #FFFFFF !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-arrow:disabled { color: #6F7785 !important; }
+/* Phones: the pager is the dock's only control; full width, 40px for touch,
+   segments share the track evenly. No card behind it in either theme. */
+@media (max-width: 900px) {
+  html[data-studio-shell="on"]:root body.is-mobile-workspace-active .canvas-bottom-actions {
+    border-color: transparent !important;
+    background: transparent !important;
+  }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-switcher { height: 40px !important; width: 100%; }
+  html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-button { flex: 1 1 0 !important; width: auto !important; height: 36px !important; }
+}
+@media (min-width: 901px) {
+  /* Section bodies and headers line up with the 16px section sides exactly. */
+  html[data-studio-shell="on"]:root body .studio-accordion-body { padding-left: 0 !important; padding-right: 0 !important; }
+  html[data-studio-shell="on"]:root body .studio-accordion-trigger { padding-left: 0 !important; padding-right: 0 !important; }
+  /* Canvas card around the artwork: 32px sides, 24px under the dock. */
+  html[data-studio-shell="on"]:root body .canvas-panel > .canvas-card { padding-left: var(--es-space-8) !important; padding-right: var(--es-space-8) !important; padding-bottom: var(--es-space-6) !important; }
+  /* Layers list: rows 4px apart. */
+  html[data-studio-shell="on"]:root body .layers-panel-list { gap: var(--es-space-1) !important; }
+}
+@media (min-width: 901px) {
+  /* Dark long menu: these were lighter #2A2D34 bands with no padding, so their
+     labels touched the band's edge. Flat on the panel, like light mode. */
+  html[data-theme="dark"][data-studio-shell="on"]:root body[data-studio-inspector="all"] .panel :is(.studio-dock-section, .youtube-control-row, .newsletter-control-row, .swipe-button-control, .swipe-button-control .quote-switch, .image-tool-panel) {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  /* No folding sections (some newsletter assets): no empty hairline doubling
+     the photo section's line. Dark: the hairline uses the dark line colour. */
+  html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .app[data-workspace] .panel > .studio-content-sections:not(:has([data-studio-accordion-section]:not([hidden]))) { border-top: 0 !important; }
+  html[data-theme="dark"][data-studio-shell="on"]:root body[data-studio-inspector="all"] .app[data-workspace] .panel > .studio-content-sections,
+  html[data-theme="dark"][data-studio-shell="on"]:root body[data-studio-inspector="all"] .studio-control-dock > :is(.studio-dock-section, .studio-ai-section) { border-top-color: #2A2D34 !important; }
 }

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
-  <script src="es-auth.js?v=20261115-sec1"></script>
+  <script src="es-auth.js?v=20261115-auth2"></script>
   <script src="dashboard-data.js?v=20261112-aispend1"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,7 +52,7 @@
       --success: var(--es-good);
       --font-ui:  var(--es-font-ui);
       --font-display:  var(--es-font-display);
-      --font-post: 'Acumin Post', 'Acumin Pro Condensed', 'Arial Narrow', sans-serif;
+      --font-post: 'Acumin Post', 'Acumin Pro Condensed', 'Roboto Condensed', sans-serif;
       --shadow: 0 24px 54px rgba(3, 49, 98, .08);
     }
 
@@ -156,37 +156,11 @@
     }
 
     .btn {
-      min-height: 52px;
-      border: 1.5px solid var(--es-line);
-      border-radius: 14px;
-      padding: 0 24px;
-      background: var(--es-white);
-      color: var(--es-navy);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--font-display);
-      font-size: 22px;
-      font-weight: 800;
       cursor: pointer;
-      transition: transform .2s var(--es-ease), box-shadow .2s var(--es-ease), background .2s var(--es-ease), border-color .2s var(--es-ease);
     }
-
-    .btn-primary {
-      background: var(--es-blue);
-      border-color: var(--es-blue);
-      color: var(--es-white);
-      box-shadow: 0 16px 36px rgba(14, 16, 20, .18);
-    }
-
-    .btn:hover, .btn:focus-visible {
-      outline: none;
-      transform: translateY(-2px);
-      border-color: var(--es-blue);
-      box-shadow: 0 18px 38px rgba(14, 16, 20, .12);
-    }
-
-    .btn-primary:hover, .btn-primary:focus-visible { background: var(--es-blue-dark); }
 
     .notice {
       border: 1.5px solid var(--es-line);
@@ -381,7 +355,7 @@
 
     .ai-spend-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
     .ai-spend-stat { display: grid; gap: 4px; }
-    #ai-spend:not(:has(> .empty)) { padding: var(--es-space-5, 24px); }
+    #ai-spend:not(:has(> .empty)) { padding: var(--es-space-6, 24px); }
     .ai-spend-stat strong { font: 800 28px/1 var(--es-font-display, inherit); font-variant-numeric: tabular-nums; color: var(--es-text-strong, #0e1014); }
     .ai-spend-stat span { font-size: 14px; color: var(--es-text-muted, #646a76); }
     .ai-spend-budget { height: 8px; border-radius: 999px; background: var(--es-sunk, #f5f6f8); overflow: hidden; margin: 4px 0 20px; }
@@ -449,19 +423,20 @@
       table { min-width: 780px; }
     }
   </style>
-  <link rel="stylesheet" href="dashboard-v2.css?v=20261113-uipass1">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261113-uipass1">
-  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261113-uipass1">
-<link rel="stylesheet" href="theme.css?v=20261112-a11y1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261113-uipass1">
-<link rel="stylesheet" href="cta-hover.css?v=20261113-uipass1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261113-uipass2">
-<link rel="stylesheet" href="es-ui.css?v=20261113-uipass2">
-  <link rel="stylesheet" href="es-motion.css?v=20261113-motion1">
-  <script src="theme.js?v=20261111-icons2"></script>
+  <link rel="stylesheet" href="dashboard-v2.css?v=20261115-btn1">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261116-sp1">
+  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261116-dash1">
+<link rel="stylesheet" href="theme.css?v=20261116-sp1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261115-g3">
+<link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261116-sp1">
+<link rel="stylesheet" href="es-ui.css?v=20261116-sp2">
+  <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
+  <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261111-icons2"></script>
-<script src="app-shell.js?v=20261113-uipass2"></script>
+<script src="app-shell.js?v=20261115-pol7"></script>
+<script src="es-motion.js?v=20261115-ds1"></script>
 </head>
 <body class="dashboard-page" data-dashboard-view="overview">
   <nav class="navbar" aria-label="Global navigation">
@@ -509,8 +484,8 @@
       <nav class="sidebar-nav">
         <button class="is-active" type="button" data-dashboard-view="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Overview</span></button>
         <button type="button" data-dashboard-view="board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v14"/><path d="M12 3v8"/><path d="M19 3v18"/></svg><span>Request Board</span><span class="nav-count" data-request-count>0</span></button>
-        <button type="button" data-dashboard-view="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg><span>Request List</span></button>
-        <button type="button" data-dashboard-view="designs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg><span>Review Exports</span></button>
+        <button type="button" data-dashboard-view="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg><span>Request List</span><span class="nav-count" data-open-request-count>0</span></button>
+        <button type="button" data-dashboard-view="designs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg><span>Review Exports</span><span class="nav-count" data-design-count>0</span></button>
         <button type="button" data-dashboard-view="feedback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M7 11h10"/><path d="M7 15h6"/><path d="M7 7h8"/></svg><span>Tool Feedback</span><span class="nav-count" data-feedback-count>0</span></button>
         <button type="button" data-dashboard-view="people"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg><span>People</span><span class="nav-count" data-online-count>1</span></button>
         <button type="button" data-dashboard-view="access"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg><span>Access Requests</span><span class="nav-count" data-access-count>0</span></button>
@@ -519,43 +494,159 @@
 
     <div class="dashboard-main">
       <header class="dashboard-topbar">
-        <div>
-          <h1>FrameUp Dashboard</h1>
+        <div class="dash-head-copy">
+          <h1>Dashboard</h1>
+          <p class="dash-head-meta" id="dash-head-meta"><span data-greeting>Good morning</span>, <span data-welcome-name>Design team</span></p>
         </div>
         <div class="topbar-actions">
           <label class="command-search">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="command-search-icon" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
-            <input type="search" id="dashboard-search" placeholder="Search tasks, people, notes">
+            <input type="search" id="dashboard-search" placeholder="Search tasks, people, notes" aria-label="Search tasks, people and notes">
             <kbd data-shortcut-hint>⌘ K</kbd>
           </label>
+          <button class="es-btn es-btn--primary dash-head-primary" type="button" data-dashboard-view="designs" data-view-section="overview">Review exports</button>
         </div>
       </header>
 
       <main class="dashboard-shell">
         <div class="dashboard-content">
-          <section class="dashboard-welcome" data-view-section="overview">
-            <div class="welcome-copy">
-              <p class="welcome-kicker" data-greeting>Good morning</p>
-              <h2><span data-welcome-name>Design team</span>, here’s the studio pulse.</h2>
-              <p>See export volume, visitor activity, live presence, and recent design output without mixing it with request management.</p>
+          <div class="dov" data-view-section="overview">
+            <div class="dov-rangebar">
+              <p class="dov-rangebar-text" id="dov-range-text">Showing the last 24 hours, compared with the previous 24 hours</p>
+              <div class="dov-segment" role="group" aria-label="Time range for the overview">
+                <button type="button" data-metric-range="1" aria-pressed="true">24h</button>
+                <button type="button" data-metric-range="7" aria-pressed="false">7d</button>
+                <button type="button" data-metric-range="30" aria-pressed="false">30d</button>
+                <button type="button" data-metric-range="90" aria-pressed="false">90d</button>
+              </div>
             </div>
-          </section>
 
-          <div class="metrics-range" data-view-section="overview">
-            <div class="chart-range-toggle" role="group" aria-label="Metrics time range">
-              <button class="task-quick-filter is-active" type="button" data-metric-range="1" aria-pressed="true">1d</button>
-              <button class="task-quick-filter" type="button" data-metric-range="7" aria-pressed="false">7d</button>
-              <button class="task-quick-filter" type="button" data-metric-range="30" aria-pressed="false">30d</button>
-              <button class="task-quick-filter" type="button" data-metric-range="90" aria-pressed="false">90d</button>
-            </div>
+            <section class="dov-kpis" aria-labelledby="dov-kpis-title">
+              <h2 class="sr-only" id="dov-kpis-title">Key metrics</h2>
+              <article class="dov-kpi" data-kpi="exports">
+                <h3 class="dov-kpi-label es-type-eyebrow">Exports</h3>
+                <p class="dov-kpi-value"><span data-metric="exportsRange">0</span></p>
+                <p class="dov-kpi-delta" data-kpi-delta="exports"></p>
+                <div class="dov-kpi-spark" data-kpi-spark="exports" aria-hidden="true"></div>
+                <p class="dov-kpi-meta" data-kpi-meta="exports"></p>
+              </article>
+              <article class="dov-kpi" data-kpi="creators">
+                <h3 class="dov-kpi-label es-type-eyebrow">Active creators</h3>
+                <p class="dov-kpi-value"><span data-metric="creatorsRange">0</span></p>
+                <p class="dov-kpi-delta" data-kpi-delta="creators"></p>
+                <div class="dov-kpi-spark" data-kpi-spark="creators" aria-hidden="true"></div>
+                <p class="dov-kpi-meta" data-kpi-meta="creators"></p>
+              </article>
+              <article class="dov-kpi" data-kpi="visitors">
+                <h3 class="dov-kpi-label es-type-eyebrow">Visitors</h3>
+                <p class="dov-kpi-value"><span data-metric="visitorsRange">0</span></p>
+                <p class="dov-kpi-delta is-flat" data-kpi-delta="visitors"></p>
+                <div class="dov-kpi-spark" data-kpi-spark="visitors" aria-hidden="true"></div>
+                <p class="dov-kpi-meta" data-kpi-meta="visitors"></p>
+              </article>
+              <article class="dov-kpi" data-kpi="requests">
+                <h3 class="dov-kpi-label es-type-eyebrow">Open requests</h3>
+                <p class="dov-kpi-value"><span data-metric="openRequests">0</span></p>
+                <p class="dov-kpi-delta is-flat" data-kpi-delta="requests"></p>
+                <div class="dov-kpi-spark" data-kpi-spark="requests" aria-hidden="true"></div>
+                <p class="dov-kpi-meta" data-kpi-meta="requests"></p>
+              </article>
+            </section>
+
+            <section class="dov-section" aria-labelledby="dov-activity-title">
+              <h2 class="dov-section-title es-type-section" id="dov-activity-title">Activity</h2>
+              <div class="dov-grid is-2-1">
+                <article class="dov-card">
+                  <header class="dov-card-head">
+                    <div><h3 class="dov-card-title es-type-card-title">Exports over time</h3><p class="dov-card-meta" id="dov-trend-meta">Daily exports</p></div>
+                  </header>
+                  <div class="dov-card-body" id="exports-trend-chart"></div>
+                </article>
+                <article class="dov-card">
+                  <header class="dov-card-head">
+                    <div><h3 class="dov-card-title es-type-card-title">Latest activity</h3><p class="dov-card-meta">Exports, requests, feedback and changes</p></div>
+                    <button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-dashboard-view="activity">View all</button>
+                  </header>
+                  <div class="dov-card-body is-flush" id="dov-activity-feed"></div>
+                </article>
+              </div>
+              <article class="dov-card">
+                <header class="dov-card-head">
+                  <div><h3 class="dov-card-title es-type-card-title">Recent exports</h3><p class="dov-card-meta" id="dov-exports-meta">Newest first</p></div>
+                  <button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-dashboard-view="designs" id="dov-exports-all">View all</button>
+                </header>
+                <div class="dov-card-body is-flush" id="overview-exports-list"></div>
+              </article>
+            </section>
+
+            <section class="dov-section" aria-labelledby="dov-queue-title">
+              <h2 class="dov-section-title es-type-section" id="dov-queue-title">Review queue</h2>
+              <div class="dov-grid is-2-1">
+                <article class="dov-card">
+                  <header class="dov-card-head">
+                    <div><h3 class="dov-card-title es-type-card-title">Requests and exports by status</h3><p class="dov-card-meta" id="dov-queue-meta">All time</p></div>
+                    <button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-dashboard-view="board">Open board</button>
+                  </header>
+                  <div class="dov-card-body" id="dov-queue"></div>
+                </article>
+                <article class="dov-card">
+                  <header class="dov-card-head">
+                    <div><h3 class="dov-card-title es-type-card-title">Tool feedback</h3><p class="dov-card-meta" id="dov-feedback-meta">All time</p></div>
+                    <button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-dashboard-view="feedback">View all</button>
+                  </header>
+                  <div class="dov-card-body is-flush" id="dov-feedback"></div>
+                </article>
+              </div>
+            </section>
+
+            <section class="dov-section" aria-labelledby="dov-people-title">
+              <h2 class="dov-section-title es-type-section" id="dov-people-title">Access and team</h2>
+              <div class="dov-grid is-1-2">
+                <article class="dov-card">
+                  <header class="dov-card-head">
+                    <div><h3 class="dov-card-title es-type-card-title">Access requests</h3><p class="dov-card-meta">People outside ES asking to use FrameUp</p></div>
+                    <button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-dashboard-view="access">Manage</button>
+                  </header>
+                  <div class="dov-card-body is-flush" id="dov-access"></div>
+                </article>
+                <article class="dov-card">
+                  <header class="dov-card-head">
+                    <div><h3 class="dov-card-title es-type-card-title">Team</h3><p class="dov-card-meta" id="live-summary">People who use FrameUp</p></div>
+                    <button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-dashboard-view="people" id="dov-team-all">View all</button>
+                  </header>
+                  <div class="dov-card-body is-flush" id="live-list"></div>
+                </article>
+              </div>
+            </section>
+
+            <section class="dov-section" aria-labelledby="dov-usage-title">
+              <h2 class="dov-section-title es-type-section" id="dov-usage-title">Usage</h2>
+              <div class="dov-grid is-1-1">
+                <article class="dov-card">
+                  <header class="dov-card-head">
+                    <div><h3 class="dov-card-title es-type-card-title">Exports by workspace</h3><p class="dov-card-meta" id="dov-workspace-meta">Same time range as above</p></div>
+                  </header>
+                  <div class="dov-card-body" id="exports-workspace-chart"></div>
+                </article>
+                <article class="dov-card">
+                  <header class="dov-card-head">
+                    <div><h3 class="dov-card-title es-type-card-title">Most used templates</h3><p class="dov-card-meta" id="dov-templates-meta">Same time range as above</p></div>
+                  </header>
+                  <div class="dov-card-body" id="dov-templates"></div>
+                </article>
+              </div>
+            </section>
+
+            <section class="dov-section" aria-labelledby="dov-ai-title" data-dashboard-panel="ai-spend">
+              <h2 class="dov-section-title es-type-section" id="dov-ai-title">AI usage</h2>
+              <article class="dov-card">
+                <header class="dov-card-head">
+                  <div><h3 class="dov-card-title es-type-card-title">AI spend · last 7 days</h3><p class="dov-card-meta">Headline ideas, Generate and image calls against the $20 weekly key limit</p></div>
+                </header>
+                <div class="dov-card-body" id="ai-spend"></div>
+              </article>
+            </section>
           </div>
-
-          <section class="metrics" aria-label="Dashboard metrics">
-            <article class="metric-card is-primary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 11-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16"/><path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2"/><circle cx="13" cy="7" r="1" fill="currentColor"/><rect x="8" y="2" width="14" height="14" rx="2"/></svg></span></span><span class="metric-value" data-metric="designs">0</span><span class="metric-label">Designs exported · all time</span></article>
-            <article class="metric-card is-primary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span></span><span class="metric-value" data-metric="exportsRange">0</span><span class="metric-label">Exports · <span data-metric-range-label>last 24h</span></span></article>
-            <article class="metric-card is-secondary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg></span></span><span class="metric-value" data-metric="visitorsRange">0</span><span class="metric-label">Visitors · <span data-metric-range-label>last 24h</span></span></article>
-            <article class="metric-card is-secondary"><span class="metric-top"><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg></span></span><span class="metric-value" data-metric="visitorsTotal">0</span><span class="metric-label">Visitors · all time</span></article>
-          </section>
 
           <section class="task-view-toolbar" data-view-section="board list" aria-label="Request view controls">
             <div class="task-quick-filters" role="group" aria-label="Quick filters">
@@ -581,50 +672,6 @@
               <div><h2 class="panel-title">Request list</h2><p class="panel-subtitle">Design requests with admin controls. Exports stay in Review Exports.</p></div>
             </div>
             <div id="tasks-table"></div>
-          </section>
-
-          <section class="dashboard-charts-grid" data-view-section="overview">
-            <section class="panel chart-panel" data-dashboard-panel="overview-exports-trend">
-              <div class="panel-head">
-                <div><h2 class="panel-title">Exports over time</h2><p class="panel-subtitle">Daily export volume.</p></div>
-                <div class="chart-range-toggle" role="group" aria-label="Chart time range">
-                  <button class="task-quick-filter" type="button" data-chart-range="7" aria-pressed="false">7d</button>
-                  <button class="task-quick-filter is-active" type="button" data-chart-range="30" aria-pressed="true">30d</button>
-                  <button class="task-quick-filter" type="button" data-chart-range="90" aria-pressed="false">90d</button>
-                </div>
-              </div>
-              <div id="exports-trend-chart"></div>
-            </section>
-
-            <section class="panel chart-panel" data-dashboard-panel="overview-exports-by-workspace">
-              <div class="panel-head">
-                <div><h2 class="panel-title">Exports by workspace</h2><p class="panel-subtitle">Same range as the chart on the left.</p></div>
-              </div>
-              <div id="exports-workspace-chart"></div>
-            </section>
-          </section>
-
-          <section class="dashboard-overview-grid" data-view-section="overview">
-            <section class="panel live-panel">
-              <div class="panel-head">
-                <div><h2 class="panel-title">Live activity</h2><p class="panel-subtitle">Who is online and where they are working.</p></div>
-                <span class="live-summary" id="live-summary"></span>
-              </div>
-              <div class="live-list" id="live-list"></div>
-            </section>
-            <section class="panel" data-dashboard-panel="overview-exports">
-              <div class="panel-head">
-                <div><h2 class="panel-title">Recent exports</h2><p class="panel-subtitle">Latest downloaded designs with creator, size, workspace, and review access.</p></div>
-              </div>
-              <div id="overview-exports-list"></div>
-            </section>
-          </section>
-
-          <section class="panel ai-spend-panel" data-view-section="overview" data-dashboard-panel="ai-spend">
-            <div class="panel-head">
-              <div><h2 class="panel-title">AI spend</h2><p class="panel-subtitle">Last 7 days of AI calls (headline ideas, Generate) against the $20 weekly key limit.</p></div>
-            </div>
-            <div id="ai-spend"><div class="empty">Loading AI spend…</div></div>
           </section>
 
           <section class="panel" data-view-section="people" data-dashboard-panel="people">
@@ -728,7 +775,6 @@
     let canAssignDashboardRoles = false;
     let selectedTaskId = '';
     let activeTaskQuickFilter = 'all';
-    let activeChartRangeDays = 30;
     const METRIC_RANGES = [1, 7, 30, 90];
     const METRIC_RANGE_KEY = 'frameup.dashboard.metricRange';
     let activeMetricRangeDays = (() => {
@@ -740,6 +786,7 @@
       }
     })();
     let accessRequests = [];
+    let accessRequestsStatus = 'loading'; // 'loading' | 'ready' | 'error'
     let dashboardLiveSyncTimer = 0;
 
     function escapeHtml(value) {
@@ -982,9 +1029,12 @@
         seen.requests = computeMetrics(state || {}).requests || 0;
       }
       if (view === 'people') {
-        const people = [{ ...dashboardUser, online: true, workspace: 'Dashboard board' }]
+        const people = [{ ...dashboardUser, online: true, workspace: 'Dashboard' }]
           .concat((state?.people || []).filter(person => person.email && person.email !== dashboardUser.email));
-        seen.online = people.filter(person => person.online).length;
+        seen.people = people.length;
+      }
+      if (view === 'designs') {
+        seen.designs = (state?.tasks || []).filter(task => task.type === 'exported_design').length;
       }
       if (view === 'access') {
         seen.access = accessRequests.filter(request => request.status === 'Pending').length;
@@ -995,10 +1045,15 @@
       saveSeenBadgeState(seen);
     }
 
+    // Tab counts are always shown (muted); a count that grew since the
+    // admin last opened that tab is highlighted instead of hidden.
     function setNavBadge(selector, value, seenValue = 0) {
       document.querySelectorAll(selector).forEach(el => {
-        el.textContent = value;
-        el.hidden = Number(value || 0) <= Number(seenValue || 0);
+        // Tab counts tick when they change (es-motion.js).
+        const label = Number(value || 0).toLocaleString('en-US');
+        if (window.FrameUpMotion) window.FrameUpMotion.setCount(el, label); else el.textContent = label;
+        el.hidden = false;
+        el.classList.toggle('is-new', seenValue != null && Number(value || 0) > Number(seenValue || 0));
       });
     }
 
@@ -1147,8 +1202,9 @@
         openRequests: requests.filter(task => task.status !== 'Done').length,
         urgent: requests.filter(task => String(task.priority || '').toLowerCase() === 'urgent').length,
         designs: designs.length,
-        exportsRange: designs.filter(task => isWithinHours(exportCreatedAt(task), activeMetricRangeDays * 24)).length,
-        visitorsRange: uniqueVisitorCount(state.people || [], value => isWithinHours(value, activeMetricRangeDays * 24)),
+        exportsRange: exportsBetween(designs, rangeWindow().start, Infinity).length,
+        creatorsRange: new Set(exportsBetween(designs, rangeWindow().start, Infinity).map(creatorKey).filter(Boolean)).size,
+        visitorsRange: uniqueVisitorCount(state.people || [], inRangeSince),
         visitorsTotal: uniqueVisitorCount(state.people || []),
         activity: state.activity.length,
         feedback: (state.toolFeedback || []).length,
@@ -1178,14 +1234,17 @@
         button.classList.toggle('is-active', active);
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
       });
-      const rangeLabel = activeMetricRangeDays === 1 ? 'last 24h' : `last ${activeMetricRangeDays} days`;
-      document.querySelectorAll('[data-metric-range-label]').forEach(el => { el.textContent = rangeLabel; });
+      const loading = ['loading', 'error'].includes(overviewPhase(state));
       Object.entries(metrics).forEach(([key, value]) => {
         const el = document.querySelector(`[data-metric="${key}"]`);
-        if (el) el.textContent = value;
+        if (!el) return;
+        const label = loading ? '—' : Number(value || 0).toLocaleString('en-US');
+        if (window.FrameUpMotion) window.FrameUpMotion.setCount(el, label); else el.textContent = label;
       });
       document.querySelectorAll('[data-task-count]').forEach(el => { el.textContent = metrics.tasks; });
       setNavBadge('[data-request-count]', metrics.requests, seen.requests);
+      setNavBadge('[data-open-request-count]', metrics.openRequests, null);
+      setNavBadge('[data-design-count]', metrics.designs, seen.designs ?? metrics.designs);
       setNavBadge('[data-access-count]', accessRequests.filter(request => request.status === 'Pending').length, seen.access);
       setNavBadge('[data-feedback-count]', metrics.feedback, seen.feedback);
     }
@@ -1353,6 +1412,9 @@
         const title = button.closest('.export-list-row')?.querySelector('.export-list-title strong')?.textContent || 'Exported design';
         button.innerHTML = `<img src="${attr(preview)}" alt="${attr(title)}">`;
       });
+      document.querySelectorAll(`[data-preview-task="${CSS.escape(id)}"].dov-thumb`).forEach(button => {
+        if (!button.querySelector('img')) button.innerHTML = `<img src="${attr(preview)}" alt="">`;
+      });
     }
 
     function queueExportPreview(id) {
@@ -1383,7 +1445,7 @@
 
     function hydrateExportPreviews() {
       exportPreviewObserver?.disconnect();
-      document.querySelectorAll('.export-list-preview[data-preview-task]').forEach(button => {
+      document.querySelectorAll('.export-list-preview[data-preview-task], .dov-thumb[data-preview-task]').forEach(button => {
         if (button.querySelector('img')) return;
         const id = button.dataset.previewTask;
         if (exportPreviewCache.has(id)) {
@@ -1407,17 +1469,318 @@
         .sort((a, b) => taskTime(b) - taskTime(a));
     }
 
+    /* ---------- Overview (admin summary) ----------
+       Everything below reads the state dashboard-data.js already loads
+       (tasks, people, activity, feedback), the access requests from
+       ESAuth.getAccessRequests() and AI usage from fetchAiUsage(). Nothing
+       here writes to Supabase. */
+    const KNOWN_WORKSPACES = ['Social Media', 'YouTube', 'Newsletter'];
+    const STATUS_TONE = { Backlog: 'neutral', Assigned: 'info', Doing: 'info', Review: 'warn', Done: 'good' };
+    const fmt = value => Number(value || 0).toLocaleString('en-US');
+
+    function rangeText(days, word = 'last') {
+      return days === 1 ? `${word} 24 hours` : `${word} ${days} days`;
+    }
+
+    function relTime(value) {
+      const time = Date.parse(value || '');
+      if (!Number.isFinite(time)) return 'Never';
+      const diff = Math.max(0, Date.now() - time);
+      const minutes = Math.round(diff / 60000);
+      if (minutes < 1) return 'Just now';
+      if (minutes < 60) return `${minutes} min ago`;
+      const hours = Math.round(minutes / 60);
+      if (hours < 24) return `${hours} h ago`;
+      const days = Math.round(hours / 24);
+      if (days === 1) return 'Yesterday';
+      if (days < 7) return `${days} days ago`;
+      return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: new Date(time).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }).format(new Date(time));
+    }
+
+    function timeTag(value) {
+      const time = Date.parse(value || '');
+      if (!Number.isFinite(time)) return '<span>Never</span>';
+      return `<time datetime="${attr(new Date(time).toISOString())}" title="${attr(dateText(value))}">${escapeHtml(relTime(value))}</time>`;
+    }
+
+    function pill(label, tone = 'neutral', extra = '') {
+      return `<span class="dov-pill is-${attr(tone)}${extra ? ` ${attr(extra)}` : ''}">${escapeHtml(label)}</span>`;
+    }
+
+    function overviewPhase(state) {
+      if (state.cloudSyncStatus?.ok === false) return (state.tasks || []).length ? 'stale' : 'error';
+      if (state.cloudSyncStatus?.ok == null && !(state.tasks || []).length) return 'loading';
+      return 'ready';
+    }
+
+    function skeletonRows(count = 4, kind = 'row') {
+      return `<div class="dov-skel is-${kind}" aria-busy="true" aria-label="Loading">${Array.from({ length: count }, () => `
+        <div class="dov-skel-row"><span class="es-skeleton dov-skel-dot"></span><span class="dov-skel-lines"><span class="es-skeleton"></span><span class="es-skeleton"></span></span></div>`).join('')}</div>`;
+    }
+
+    function emptyState(title, body = '') {
+      return `<div class="dov-empty"><p class="dov-empty-title">${escapeHtml(title)}</p>${body ? `<p class="dov-empty-text">${escapeHtml(body)}</p>` : ''}</div>`;
+    }
+
+    function errorState(message) {
+      return `<div class="dov-error" role="alert"><p>${escapeHtml(message)}</p><button class="es-btn es-btn--sm" type="button" data-dov-retry>Try again</button></div>`;
+    }
+
+    // Returns markup for a not-ready section, or '' when data can render.
+    function sectionGate(state, { rows = 4, kind = 'row' } = {}) {
+      const phase = overviewPhase(state);
+      if (phase === 'loading') return skeletonRows(rows, kind);
+      if (phase === 'error') return errorState('Couldn’t load this from Supabase.');
+      return '';
+    }
+
+    function allExports(state) {
+      return (state.tasks || []).filter(task => task.type === 'exported_design');
+    }
+
+    function exportsBetween(designs, from, to) {
+      return designs.filter(task => {
+        const time = Date.parse(exportCreatedAt(task));
+        return Number.isFinite(time) && time >= from && time < to;
+      });
+    }
+
+    function inRangeSince(value) {
+      const time = Date.parse(value || '');
+      return Number.isFinite(time) && time >= rangeWindow().start;
+    }
+
+    function creatorKey(task = {}) {
+      return String(task.creatorEmail || task.ownerEmail || task.creatorName || '').trim().toLowerCase();
+    }
+
+    // 24h = the last 24 clock hours (rolling); 7/30/90d = whole calendar
+    // days including today, so the KPIs, the chart and the tables agree.
+    function rangeWindow(days = activeMetricRangeDays) {
+      const end = Date.now();
+      if (days === 1) {
+        const top = new Date(end);
+        top.setMinutes(0, 0, 0);
+        const start = top.getTime() - 23 * 3600000;
+        return { start, end, prevStart: start - 24 * 3600000 };
+      }
+      const startDate = startOfLocalDay(new Date(end));
+      startDate.setDate(startDate.getDate() - (days - 1));
+      const prevDate = new Date(startDate);
+      prevDate.setDate(prevDate.getDate() - days);
+      return { start: startDate.getTime(), end, prevStart: prevDate.getTime() };
+    }
+
+    // Hourly buckets for 24h, local days otherwise; the last bucket is "now".
+    function rangeBuckets(days = activeMetricRangeDays) {
+      const buckets = [];
+      if (days === 1) {
+        const top = new Date();
+        top.setMinutes(0, 0, 0);
+        for (let i = 23; i >= 0; i -= 1) {
+          const start = top.getTime() - i * 3600000;
+          buckets.push({ start, end: start + 3600000, date: new Date(start), hourly: true });
+        }
+        return buckets;
+      }
+      const today = startOfLocalDay(new Date());
+      for (let i = days - 1; i >= 0; i -= 1) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const next = new Date(d);
+        next.setDate(next.getDate() + 1);
+        buckets.push({ start: d.getTime(), end: next.getTime(), date: d, hourly: false });
+      }
+      return buckets;
+    }
+
+    function bucketSeries(designs, buckets) {
+      return buckets.map(bucket => {
+        const inBucket = exportsBetween(designs, bucket.start, bucket.end);
+        return { ...bucket, count: inBucket.length, creators: new Set(inBucket.map(creatorKey).filter(Boolean)).size };
+      });
+    }
+
+    function bucketLabel(bucket) {
+      return bucket.hourly
+        ? bucket.date.toLocaleTimeString('en-US', { hour: 'numeric' })
+        : formatChartDayLabel(bucket.date);
+    }
+
+    function sparkline(values = []) {
+      if (values.length < 2) return '';
+      const max = Math.max(1, ...values);
+      const w = 120;
+      const h = 32;
+      const step = w / (values.length - 1);
+      const pts = values.map((v, i) => [i * step, h - 2 - (v / max) * (h - 4)]);
+      const line = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+      return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" focusable="false"><path class="dov-spark-area" d="${line} L${w} ${h} L0 ${h} Z"/><path class="dov-spark-line" d="${line}"/></svg>`;
+    }
+
+    function deltaMarkup(current, previous, days) {
+      const vs = days === 1 ? 'previous 24 hours' : `previous ${days} days`;
+      if (!previous && !current) return `<span class="dov-delta is-flat">No change</span><span class="dov-delta-vs">vs ${vs}</span>`;
+      if (!previous) return `<span class="dov-delta is-up"><span aria-hidden="true">↑</span> Up from 0</span><span class="dov-delta-vs">in the ${vs}</span>`;
+      const pct = Math.round(((current - previous) / previous) * 100);
+      if (pct === 0) return `<span class="dov-delta is-flat">No change</span><span class="dov-delta-vs">vs ${fmt(previous)} in the ${vs}</span>`;
+      const up = pct > 0;
+      return `<span class="dov-delta is-${up ? 'up' : 'down'}"><span aria-hidden="true">${up ? '↑' : '↓'}</span> ${up ? 'Up' : 'Down'} ${Math.abs(pct)}%</span><span class="dov-delta-vs">vs ${fmt(previous)} in the ${vs}</span>`;
+    }
+
+    function setHtml(selector, html) {
+      const el = typeof selector === 'string' ? document.querySelector(selector) : selector;
+      if (el && el.innerHTML !== html) el.innerHTML = html;
+    }
+
+    function renderKpis(state) {
+      const days = activeMetricRangeDays;
+      const { start, end, prevStart } = rangeWindow(days);
+      const designs = allExports(state);
+      const current = exportsBetween(designs, start, end);
+      const previous = exportsBetween(designs, prevStart, start);
+      const series = bucketSeries(designs, rangeBuckets(days));
+      const phase = overviewPhase(state);
+      const loading = phase === 'loading' || phase === 'error';
+      document.querySelectorAll('.dov-kpi').forEach(card => card.classList.toggle('is-loading', loading));
+      if (loading) return;
+
+      setHtml('[data-kpi-delta="exports"]', deltaMarkup(current.length, previous.length, days));
+      setHtml('[data-kpi-spark="exports"]', sparkline(series.map(b => b.count)));
+      setHtml('[data-kpi-meta="exports"]', `${fmt(designs.length)} all time`);
+
+      const byCreator = new Map();
+      current.forEach(task => {
+        const key = creatorKey(task);
+        if (!key) return;
+        const entry = byCreator.get(key) || { name: exportCreatorText(task), count: 0 };
+        entry.count += 1;
+        byCreator.set(key, entry);
+      });
+      const prevCreators = new Set(previous.map(creatorKey).filter(Boolean)).size;
+      const top = Array.from(byCreator.values()).sort((a, b) => b.count - a.count)[0];
+      setHtml('[data-kpi-delta="creators"]', deltaMarkup(byCreator.size, prevCreators, days));
+      setHtml('[data-kpi-spark="creators"]', sparkline(series.map(b => b.creators)));
+      setHtml('[data-kpi-meta="creators"]', top ? `Most active: ${escapeHtml(top.name)} · ${fmt(top.count)}` : 'Nobody exported in this range');
+
+      const people = state.people || [];
+      const visitors = uniqueVisitorCount(people, inRangeSince);
+      const online = people.filter(person => person.online).length;
+      const share = people.length ? Math.round((visitors / people.length) * 100) : 0;
+      setHtml('[data-kpi-delta="visitors"]', `<span class="dov-delta is-flat">${fmt(share)}% of ${fmt(people.length)} people</span>`);
+      setHtml('[data-kpi-spark="visitors"]', `<span class="dov-meter"><span style="width:${share}%"></span></span>`);
+      setHtml('[data-kpi-meta="visitors"]', `${fmt(online)} online now · by last seen`);
+
+      const requests = (state.tasks || []).filter(task => task.type === 'design_request');
+      const open = requests.filter(task => task.status !== 'Done');
+      const urgent = open.filter(task => String(task.priority || '').toLowerCase() === 'urgent').length;
+      const overdue = open.filter(task => taskDueState(task) === 'overdue').length;
+      setHtml('[data-kpi-delta="requests"]', overdue
+        ? `<span class="dov-delta is-down">${fmt(overdue)} overdue</span><span class="dov-delta-vs">${fmt(urgent)} urgent</span>`
+        : `<span class="dov-delta is-flat">None overdue</span><span class="dov-delta-vs">${fmt(urgent)} urgent</span>`);
+      const counts = STATUS_OPTIONS.map(status => ({ status, n: requests.filter(task => task.status === status).length }));
+      setHtml('[data-kpi-spark="requests"]', requests.length
+        ? `<span class="dov-stack">${counts.filter(c => c.n).map(c => `<span class="is-${STATUS_TONE[c.status]}" style="flex:${c.n}"></span>`).join('')}</span>`
+        : '<span class="dov-stack"></span>');
+      setHtml('[data-kpi-meta="requests"]', `${fmt(counts.find(c => c.status === 'Review').n)} in review · ${fmt(counts.find(c => c.status === 'Done').n)} done · ${fmt(requests.length)} total`);
+    }
+
+    function renderOverviewHeader(state) {
+      const rangeEl = document.getElementById('dov-range-text');
+      if (rangeEl) rangeEl.textContent = activeMetricRangeDays === 1
+        ? 'Showing the last 24 hours, compared with the 24 hours before'
+        : `Showing the last ${activeMetricRangeDays} days (including today), compared with the ${activeMetricRangeDays} days before`;
+      const meta = document.getElementById('dash-head-meta');
+      if (!meta) return;
+      const sync = state.cloudSyncStatus || {};
+      const online = (state.people || []).filter(person => person.online).length;
+      const parts = [];
+      if (sync.ok === false) parts.push((state.tasks || []).length
+        ? '<span class="dash-head-warn">Couldn’t refresh · showing saved data</span>'
+        : '<span class="dash-head-warn">Couldn’t load dashboard data</span>');
+      else if (sync.checkedAt) parts.push(`Updated ${escapeHtml(new Date(sync.checkedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))}`);
+      else parts.push('Loading the latest data…');
+      parts.push(`<span class="dash-head-live"><span class="es-live-dot" aria-hidden="true"></span>${fmt(online)} online</span>`);
+      const greeting = meta.querySelector('[data-greeting]')?.outerHTML || '';
+      const name = meta.querySelector('[data-welcome-name]')?.outerHTML || '';
+      setHtml(meta, `<span>${greeting}, ${name}</span> · ${parts.join(' · ')}`);
+    }
+
+    function exportRowsTable(designs) {
+      return `
+        <table class="dov-table is-exports">
+          <thead><tr>
+            <th scope="col"><span class="sr-only">Preview</span></th>
+            <th scope="col">Design</th>
+            <th scope="col">Workspace</th>
+            <th scope="col">Created by</th>
+            <th scope="col" class="is-num">Build time</th>
+            <th scope="col">Exported</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr></thead>
+          <tbody>
+            ${designs.map(task => {
+              const preview = getPreviewSource(task);
+              const title = plainText(task.title, 'Untitled export');
+              return `
+              <tr data-task-id="${attr(task.id)}">
+                <td class="dov-td-thumb"><button class="dov-thumb" type="button" data-preview-task="${attr(task.id)}" aria-label="Preview ${attr(title)}">${preview ? `<img src="${attr(preview)}" alt="">` : '<span class="es-skeleton"></span>'}</button></td>
+                <td class="dov-td-main"><span class="dov-cell-title" title="${attr(title)}">${escapeHtml(title)}</span><span class="dov-cell-meta">${text(task.filename, 'No file name')}</span></td>
+                <td class="dov-td-ws"><span class="dov-cell-strong">${text(task.workspace, 'Other')}</span><span class="dov-cell-meta">${text(task.workspaceVariant, '—')}</span></td>
+                <td class="dov-td-who">${text(exportCreatorText(task))}</td>
+                <td class="dov-td-dur is-num">${text(exportDurationText(task))}</td>
+                <td class="dov-td-when">${timeTag(exportCreatedAt(task))}</td>
+                <td class="dov-td-actions"><span class="dov-actions"><button class="es-btn es-btn--sm" type="button" data-preview-task="${attr(task.id)}">View</button><button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-open-task="${attr(task.id)}">Details</button></span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>`;
+    }
+
     function renderOverviewExports(state) {
       const target = document.getElementById('overview-exports-list');
       if (!target) return;
-      const designs = (state.tasks || [])
-        .filter(task => task.type === 'exported_design')
-        .sort((a, b) => taskTime(b) - taskTime(a))
-        .slice(0, 8);
-      target.innerHTML = designs.length
-        ? renderExportList(designs, { compact: true })
-        : '<div class="empty">No exported designs yet.</div>';
-      hydrateExportPreviews(designs);
+      const gate = sectionGate(state, { rows: 5 });
+      if (gate) { setHtml(target, gate); return; }
+      const designs = allExports(state).sort((a, b) => taskTime(b) - taskTime(a));
+      const { start, end } = rangeWindow();
+      const inRange = exportsBetween(designs, start, end).length;
+      setHtml('#dov-exports-meta', `${fmt(inRange)} in the ${rangeText(activeMetricRangeDays)} · newest first`);
+      const allButton = document.getElementById('dov-exports-all');
+      if (allButton) allButton.textContent = `View all ${fmt(designs.length)}`;
+      if (!designs.length) {
+        setHtml(target, emptyState('No exported designs yet', 'Downloads from Social Media, YouTube and Newsletter show up here.'));
+        return;
+      }
+      setHtml(target, exportRowsTable(designs.slice(0, 6)));
+      hydrateExportPreviews();
+    }
+
+    const ACTIVITY_ICONS = {
+      design_exported: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+      request_submitted: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+      task_updated: '<path d="M12 20h9"/><path d="M16.38 3.62a1 1 0 0 1 3 3L7.37 18.64a2 2 0 0 1-.86.5l-2.87.84a.5.5 0 0 1-.62-.62l.84-2.87a2 2 0 0 1 .5-.86z"/>',
+      tool_feedback_submitted: '<path d="M22 17a2 2 0 0 1-2 2H6.83a2 2 0 0 0-1.42.59l-2.2 2.2A.71.71 0 0 1 2 21.29V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/>',
+      person_role_updated: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+    };
+
+    function renderActivityFeed(state) {
+      const target = document.getElementById('dov-activity-feed');
+      if (!target) return;
+      const gate = sectionGate(state, { rows: 6 });
+      if (gate) { setHtml(target, gate); return; }
+      const items = (state.activity || []).slice()
+        .sort((a, b) => (Date.parse(b.createdAt || '') || 0) - (Date.parse(a.createdAt || '') || 0))
+        .slice(0, 7);
+      if (!items.length) {
+        setHtml(target, emptyState('No activity yet', 'Exports, requests and changes are logged here.'));
+        return;
+      }
+      setHtml(target, `<ol class="dov-feed">${items.map(item => {
+        const icon = ACTIVITY_ICONS[item.type] || '<circle cx="12" cy="12" r="3"/>';
+        const workspace = item.meta?.workspace ? ` · ${text(item.meta.workspace)}` : '';
+        return `<li class="dov-feed-item"><span class="dov-feed-icon is-${attr(String(item.type || 'other').replace(/_/g, '-'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon}</svg></span><span class="dov-feed-copy"><span class="dov-cell-title">${text(item.label || item.message, 'Update')}</span><span class="dov-cell-meta">${text(personDisplayName(item.actorName, item.actorEmail, 'FrameUp'))}${workspace} · ${timeTag(item.createdAt)}</span></span></li>`;
+      }).join('')}</ol>`);
     }
 
     function startOfLocalDay(date) {
@@ -1426,33 +1789,8 @@
       return d;
     }
 
-    function chartDayKey(date) {
-      const d = startOfLocalDay(date);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    }
-
     function formatChartDayLabel(date) {
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
-
-    function buildExportsTrendSeries(state, rangeDays) {
-      const today = startOfLocalDay(new Date());
-      const days = [];
-      for (let i = rangeDays - 1; i >= 0; i -= 1) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        days.push({ date: d, key: chartDayKey(d), count: 0 });
-      }
-      const byKey = new Map(days.map(day => [day.key, day]));
-      (state.tasks || [])
-        .filter(task => task.type === 'exported_design')
-        .forEach(task => {
-          const ts = Date.parse(exportCreatedAt(task));
-          if (!Number.isFinite(ts)) return;
-          const bucket = byKey.get(chartDayKey(new Date(ts)));
-          if (bucket) bucket.count += 1;
-        });
-      return days;
     }
 
     function bindExportsTrendHover(container, points, viewBoxWidth) {
@@ -1461,240 +1799,381 @@
       const tooltip = container.querySelector('.chart-tooltip');
       const wrap = container.querySelector('.exports-trend-chart-wrap');
       if (!svg || !hoverLine || !tooltip || !wrap) return;
-
       const showPoint = index => {
         const p = points[index];
         if (!p) return;
-        // Moved via a CSS transform (not by rewriting x1/x2 on every pointer
-        // event) so the built-in CSS transition below can animate it - a
-        // plain attribute change has nothing to interpolate between.
         hoverLine.style.transform = `translateX(${p.x}px)`;
         hoverLine.setAttribute('opacity', '1');
-        tooltip.innerHTML = `<strong>${p.count} export${p.count === 1 ? '' : 's'}</strong><span>${escapeHtml(formatChartDayLabel(p.date))}</span>`;
-        // Position in real pixels relative to the wrap (which has its own
-        // padding around the svg), not percentages, so the tooltip lands
-        // exactly on the hovered point regardless of container padding.
+        tooltip.innerHTML = `<strong>${fmt(p.count)} export${p.count === 1 ? '' : 's'}</strong><span>${escapeHtml(bucketLabel(p))}</span>`;
         const svgRect = svg.getBoundingClientRect();
         const wrapRect = wrap.getBoundingClientRect();
         const scale = svgRect.width / viewBoxWidth;
-        const left = (svgRect.left - wrapRect.left) + p.x * scale;
-        const top = (svgRect.top - wrapRect.top) + p.y * scale;
-        tooltip.style.left = `${left}px`;
-        tooltip.style.top = `${top}px`;
+        tooltip.style.left = `${(svgRect.left - wrapRect.left) + p.x * scale}px`;
+        tooltip.style.top = `${(svgRect.top - wrapRect.top) + p.y * (svgRect.height / Number(svg.viewBox.baseVal.height || 1))}px`;
         tooltip.classList.add('is-visible');
       };
-
       const hide = () => {
         hoverLine.setAttribute('opacity', '0');
         tooltip.classList.remove('is-visible');
       };
-
       svg.addEventListener('pointermove', event => {
         const rect = svg.getBoundingClientRect();
         if (!rect.width) return;
         const relX = ((event.clientX - rect.left) / rect.width) * viewBoxWidth;
-        let nearestIndex = 0;
-        let nearestDist = Infinity;
-        points.forEach((p, i) => {
-          const dist = Math.abs(p.x - relX);
-          if (dist < nearestDist) {
-            nearestDist = dist;
-            nearestIndex = i;
-          }
-        });
-        showPoint(nearestIndex);
+        let nearest = 0;
+        points.forEach((p, i) => { if (Math.abs(p.x - relX) < Math.abs(points[nearest].x - relX)) nearest = i; });
+        showPoint(nearest);
       });
       svg.addEventListener('pointerleave', hide);
     }
 
-    function renderExportsTrendChart(state, rangeDays = activeChartRangeDays) {
+    function renderExportsTrendChart(state) {
       const target = document.getElementById('exports-trend-chart');
       if (!target) return;
-
-      document.querySelectorAll('[data-chart-range]').forEach(button => {
-        const active = Number(button.dataset.chartRange) === rangeDays;
-        button.classList.toggle('is-active', active);
-        button.setAttribute('aria-pressed', active ? 'true' : 'false');
-      });
-
-      const days = buildExportsTrendSeries(state, rangeDays);
-      const total = days.reduce((sum, day) => sum + day.count, 0);
-
+      const gate = sectionGate(state, { rows: 1, kind: 'chart' });
+      if (gate) { setHtml(target, gate); return; }
+      const days = activeMetricRangeDays;
+      const series = bucketSeries(allExports(state), rangeBuckets(days));
+      const total = series.reduce((sum, b) => sum + b.count, 0);
+      const peak = series.reduce((best, b) => (b.count > best.count ? b : best), series[0]);
+      setHtml('#dov-trend-meta', total
+        ? `${fmt(total)} exports · ${days === 1 ? 'hourly' : 'daily'} · peak ${fmt(peak.count)} on ${escapeHtml(bucketLabel(peak))}`
+        : `${days === 1 ? 'Hourly' : 'Daily'} exports in the ${rangeText(days)}`);
       if (!total) {
-        target.innerHTML = '<div class="empty">No exports in this range yet.</div>';
+        setHtml(target, emptyState(`No exports in the ${rangeText(days)}`, 'Pick a longer range above to see the trend.'));
         return;
       }
-
-      const width = 480;
-      const height = 130;
-      const padLeft = 10;
-      const padRight = 10;
-      const padTop = 16;
-      const padBottom = 10;
-      const plotW = width - padLeft - padRight;
-      const plotH = height - padTop - padBottom;
-
-      const maxCount = Math.max(1, ...days.map(day => day.count));
-      const stepX = days.length > 1 ? plotW / (days.length - 1) : 0;
-
-      const points = days.map((day, i) => ({
-        ...day,
-        x: padLeft + stepX * i,
-        y: padTop + (1 - day.count / maxCount) * plotH,
-      }));
-
-      const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
-      const floorY = (padTop + plotH).toFixed(1);
-      const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${floorY} L ${points[0].x.toFixed(1)} ${floorY} Z`;
-
-      const gridLines = [0, 1 / 3, 2 / 3, 1].map(t => {
-        const y = (padTop + (1 - t) * plotH).toFixed(1);
-        return `<line x1="${padLeft}" y1="${y}" x2="${(padLeft + plotW).toFixed(1)}" y2="${y}" stroke="var(--dash-line)" stroke-width="1" />`;
-      }).join('');
-
-      const tickCount = Math.min(6, points.length);
+      const width = 640;
+      const height = 180;
+      const pad = { l: 8, r: 8, t: 16, b: 8 };
+      const plotW = width - pad.l - pad.r;
+      const plotH = height - pad.t - pad.b;
+      const max = Math.max(1, ...series.map(b => b.count));
+      const stepX = series.length > 1 ? plotW / (series.length - 1) : 0;
+      const points = series.map((b, i) => ({ ...b, x: pad.l + stepX * i, y: pad.t + (1 - b.count / max) * plotH }));
+      const line = points.map((p, i) => `${i ? 'L' : 'M'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+      const floorY = (pad.t + plotH).toFixed(1);
+      const area = `${line} L ${points.at(-1).x.toFixed(1)} ${floorY} L ${points[0].x.toFixed(1)} ${floorY} Z`;
+      const grid = [0, .5, 1].map(t => `<line x1="${pad.l}" x2="${pad.l + plotW}" y1="${(pad.t + (1 - t) * plotH).toFixed(1)}" y2="${(pad.t + (1 - t) * plotH).toFixed(1)}" class="dov-chart-grid"/>`).join('');
+      const tickCount = Math.min(days === 90 ? 7 : 6, points.length);
       const tickStep = tickCount > 1 ? (points.length - 1) / (tickCount - 1) : 0;
-      const tickPoints = Array.from({ length: tickCount }, (_, i) => points[Math.round(i * tickStep)]);
-      // Real HTML labels, not SVG <text>: an SVG font-size is in viewBox
-      // units, so it scales up with the panel's rendered width and no
-      // longer matches the rest of the dashboard's actual 14px text once
-      // the chart is wider than its viewBox. A plain CSS font-size avoids
-      // that entirely and always matches the rest of the UI exactly.
-      const xLabels = tickPoints.map(p => (
-        `<span class="chart-x-label" style="left:${((p.x / width) * 100).toFixed(2)}%">${escapeHtml(formatChartDayLabel(p.date))}</span>`
-      )).join('');
-
-      const dots = points.map((p, i) => {
-        const isLast = i === points.length - 1;
-        return `<circle data-chart-index="${i}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${isLast ? 5 : 3}" fill="${isLast ? 'var(--dash-blue)' : '#fff'}" stroke="var(--dash-blue)" stroke-width="2" />`;
-      }).join('');
-
-      target.innerHTML = `
-        <div class="exports-trend-chart-wrap">
-          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Exports over the last ${rangeDays} days: ${total} total">
-            <defs>
-              <linearGradient id="exportsTrendGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="var(--dash-blue)" stop-opacity="0.18" />
-                <stop offset="100%" stop-color="var(--dash-blue)" stop-opacity="0" />
-              </linearGradient>
-            </defs>
-            ${gridLines}
-            <path d="${areaPath}" fill="url(#exportsTrendGradient)" stroke="none" />
-            <path d="${linePath}" fill="none" stroke="var(--dash-blue)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+      const ticks = Array.from({ length: tickCount }, (_, i) => points[Math.round(i * tickStep)]);
+      const dots = points.length <= 31
+        ? points.map((p, i) => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${i === points.length - 1 ? 4 : 2.5}" class="dov-chart-dot${i === points.length - 1 ? ' is-last' : ''}"/>`).join('')
+        : `<circle cx="${points.at(-1).x.toFixed(1)}" cy="${points.at(-1).y.toFixed(1)}" r="4" class="dov-chart-dot is-last"/>`;
+      setHtml(target, `
+        <div class="exports-trend-chart-wrap dov-chart">
+          <span class="dov-chart-max" aria-hidden="true">${fmt(max)}</span>
+          <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="Exports in the ${attr(rangeText(days))}: ${total} in total, peak ${peak.count} on ${attr(bucketLabel(peak))}">
+            ${grid}
+            <path d="${area}" class="dov-chart-area"/>
+            <path d="${line}" class="dov-chart-line"/>
             ${dots}
-            <line class="chart-hover-line" x1="0" y1="${padTop}" x2="0" y2="${floorY}" stroke="var(--dash-muted)" stroke-width="1" opacity="0" />
+            <line class="chart-hover-line" x1="0" y1="${pad.t}" x2="0" y2="${floorY}" opacity="0"/>
           </svg>
-          <div class="chart-x-axis">${xLabels}</div>
+          <div class="chart-x-axis dov-chart-axis">${ticks.map(p => `<span class="chart-x-label" style="left:${((p.x / width) * 100).toFixed(2)}%">${escapeHtml(bucketLabel(p))}</span>`).join('')}</div>
           <div class="chart-tooltip"></div>
-        </div>
-      `;
-
+        </div>`);
       bindExportsTrendHover(target, points, width);
     }
 
-    function renderExportsByWorkspaceChart(state, rangeDays = activeChartRangeDays) {
+    function barList(rows, { valueText = row => fmt(row.count), shareOf = 0 } = {}) {
+      const max = Math.max(1, ...rows.map(row => row.count));
+      return `<ul class="dov-bars${shareOf ? ' has-share' : ''}">${rows.map(row => `
+        <li class="dov-bar-row${row.count ? '' : ' is-zero'}">
+          <span class="dov-bar-label"><span class="dov-cell-strong">${escapeHtml(row.label)}</span>${row.meta ? `<span class="dov-cell-meta">${escapeHtml(row.meta)}</span>` : ''}</span>
+          <span class="dov-bar-track" aria-hidden="true"><span style="width:${row.count ? Math.max(2, (row.count / max) * 100).toFixed(1) : 0}%"></span></span>
+          <span class="dov-bar-value">${valueText(row)}</span>${shareOf ? `<span class="dov-bar-share">${Math.round((row.count / shareOf) * 100)}%</span>` : ''}
+        </li>`).join('')}</ul>`;
+    }
+
+    function renderExportsByWorkspaceChart(state) {
       const target = document.getElementById('exports-workspace-chart');
       if (!target) return;
-
-      const cutoff = Date.now() - rangeDays * 24 * 60 * 60 * 1000;
-      const counts = new Map();
-      (state.tasks || [])
-        .filter(task => task.type === 'exported_design')
-        .forEach(task => {
-          const ts = Date.parse(exportCreatedAt(task));
-          if (!Number.isFinite(ts) || ts < cutoff) return;
-          const label = String(task.workspace || 'Other').trim() || 'Other';
-          counts.set(label, (counts.get(label) || 0) + 1);
-        });
-
-      const rows = Array.from(counts.entries())
-        .map(([label, count]) => ({ label, count }))
-        .sort((a, b) => b.count - a.count);
-
-      if (!rows.length) {
-        target.innerHTML = '<div class="empty">No exports in this range yet.</div>';
+      const gate = sectionGate(state, { rows: 3 });
+      if (gate) { setHtml(target, gate); return; }
+      const { start, end } = rangeWindow();
+      const inRange = exportsBetween(allExports(state), start, end);
+      setHtml('#dov-workspace-meta', `${fmt(inRange.length)} exports in the ${rangeText(activeMetricRangeDays)}`);
+      const counts = new Map(KNOWN_WORKSPACES.map(name => [name, 0]));
+      inRange.forEach(task => {
+        const label = String(task.workspace || 'Other').trim() || 'Other';
+        counts.set(label, (counts.get(label) || 0) + 1);
+      });
+      if (!inRange.length) {
+        setHtml(target, emptyState(`No exports in the ${rangeText(activeMetricRangeDays)}`, 'Try a longer range.'));
         return;
       }
+      const rows = Array.from(counts, ([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
+      setHtml(target, `${barList(rows, { shareOf: inRange.length })}<p class="dov-note">Reels, Generate and Video Ads don’t log exports here yet. Generate calls show under AI usage.</p>`);
+    }
 
-      const maxCount = Math.max(1, ...rows.map(row => row.count));
-      const barsHtml = rows.map(row => {
-        const pct = Math.max(4, Math.round((row.count / maxCount) * 100));
-        return `
-          <div class="workspace-bar-row">
-            <span class="workspace-bar-label">${escapeHtml(row.label)}</span>
-            <span class="workspace-bar-track"><span class="workspace-bar-fill" style="width:${pct}%"></span></span>
-            <span class="workspace-bar-count">${row.count}</span>
-          </div>
-        `;
-      }).join('');
+    function renderTemplates(state) {
+      const target = document.getElementById('dov-templates');
+      if (!target) return;
+      const gate = sectionGate(state, { rows: 4 });
+      if (gate) { setHtml(target, gate); return; }
+      const { start, end } = rangeWindow();
+      const counts = new Map();
+      exportsBetween(allExports(state), start, end).forEach(task => {
+        const name = String(task.workspaceVariant || '').trim();
+        if (!name) return;
+        const key = `${name}|${task.workspace || ''}`;
+        const entry = counts.get(key) || { label: name, meta: task.workspace || '', count: 0 };
+        entry.count += 1;
+        counts.set(key, entry);
+      });
+      const rows = Array.from(counts.values()).sort((a, b) => b.count - a.count);
+      setHtml('#dov-templates-meta', rows.length ? `Top ${Math.min(6, rows.length)} of ${fmt(rows.length)} templates used in the ${rangeText(activeMetricRangeDays)}` : `Templates used in the ${rangeText(activeMetricRangeDays)}`);
+      setHtml(target, rows.length
+        ? barList(rows.slice(0, 6))
+        : emptyState(`No templates used in the ${rangeText(activeMetricRangeDays)}`, 'Try a longer range.'));
+    }
 
-      target.innerHTML = `<div class="workspace-bar-chart">${barsHtml}</div>`;
+    function statusStrip(title, tasks, { exportsMode = false } = {}) {
+      return `<div class="dov-strip">
+        <p class="dov-strip-head"><span class="dov-eyebrow">${escapeHtml(title)}</span><span class="dov-cell-meta">${fmt(tasks.length)} total</span></p>
+        <ul class="dov-strip-cells">${STATUS_OPTIONS.map(status => {
+          const n = tasks.filter(task => task.status === status).length;
+          return `<li class="dov-strip-cell${n ? '' : ' is-zero'}"><span class="dov-strip-num">${fmt(n)}</span>${pill(exportsMode && status === 'Backlog' ? 'New' : status, STATUS_TONE[status])}</li>`;
+        }).join('')}</ul>
+      </div>`;
+    }
+
+    function priorityTone(value) {
+      const p = String(value || '').toLowerCase();
+      return p === 'urgent' ? 'bad' : p === 'high' ? 'warn' : 'neutral';
+    }
+
+    function renderQueue(state) {
+      const target = document.getElementById('dov-queue');
+      if (!target) return;
+      const gate = sectionGate(state, { rows: 3 });
+      if (gate) { setHtml(target, gate); return; }
+      const requests = (state.tasks || []).filter(task => task.type === 'design_request');
+      const designs = allExports(state);
+      const open = requests.filter(task => task.status !== 'Done').sort((a, b) =>
+        priorityWeight(b.priority) - priorityWeight(a.priority)
+        || (Date.parse(a.designDueAt || '') || Infinity) - (Date.parse(b.designDueAt || '') || Infinity));
+      setHtml('#dov-queue-meta', `${fmt(open.length)} open request${open.length === 1 ? '' : 's'} · ${fmt(designs.filter(task => task.status !== 'Done').length)} exports not marked done`);
+      const list = open.length
+        ? `<table class="dov-table is-queue">
+            <caption class="sr-only">Open design requests</caption>
+            <thead><tr><th scope="col">Request</th><th scope="col">Priority</th><th scope="col">Due</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>${open.slice(0, 5).map(task => {
+              const due = taskDueState(task);
+              const who = (task.requesterName || task.requesterEmail) ? personDisplayName(task.requesterName, task.requesterEmail) : (task.workspace || 'FrameUp');
+              return `<tr data-task-id="${attr(task.id)}">
+                <td class="dov-td-main"><span class="dov-cell-title">${text(task.title, 'Untitled request')}</span><span class="dov-cell-meta">${text(who)} · ${timeTag(task.createdAt)}</span></td>
+                <td class="dov-td-pri">${pill(plainText(task.priority, 'Normal'), priorityTone(task.priority))}</td>
+                <td class="dov-td-due">${due === 'overdue' ? pill('Overdue', 'bad') : task.designDueAt ? escapeHtml(dateText(task.designDueAt)) : '<span class="dov-cell-meta">No due date</span>'}</td>
+                <td class="dov-td-status">${pill(task.status || 'Backlog', STATUS_TONE[task.status] || 'neutral')}</td>
+                <td class="dov-td-actions"><button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-open-task="${attr(task.id)}">Details</button></td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table>${open.length > 5 ? `<p class="dov-note">${fmt(open.length - 5)} more on the board.</p>` : ''}`
+        : emptyState('No open requests', 'New requests from the Design Request page land here.');
+      setHtml(target, `<div class="dov-strips">${statusStrip('Design requests', requests)}${statusStrip('Exports', designs, { exportsMode: true })}</div><div class="dov-subhead"><h4 class="dov-eyebrow es-type-eyebrow">Open requests</h4></div>${list}`);
+    }
+
+    function renderFeedbackSummary(state) {
+      const target = document.getElementById('dov-feedback');
+      if (!target) return;
+      const gate = sectionGate(state, { rows: 3 });
+      if (gate) { setHtml(target, gate); return; }
+      const feedback = (state.toolFeedback || []).slice().sort((a, b) => (Date.parse(b.createdAt || '') || 0) - (Date.parse(a.createdAt || '') || 0));
+      const bugs = feedback.filter(item => item.feedbackType === 'Bug').length;
+      const ideas = feedback.filter(item => item.feedbackType === 'Idea').length;
+      setHtml('#dov-feedback-meta', `${fmt(feedback.length)} total · ${fmt(bugs)} bug${bugs === 1 ? '' : 's'} · ${fmt(ideas)} idea${ideas === 1 ? '' : 's'}`);
+      if (!feedback.length) {
+        setHtml(target, emptyState('No feedback yet', 'Notes sent from the Tool Feedback page show up here.'));
+        return;
+      }
+      const tone = type => (type === 'Bug' ? 'bad' : type === 'Idea' ? 'info' : 'neutral');
+      setHtml(target, `<ul class="dov-list">${feedback.slice(0, 4).map(item => `
+        <li class="dov-list-item is-stacked">
+          <span class="dov-list-top">${pill(plainText(item.feedbackType, 'Other'), tone(item.feedbackType))}<span class="dov-cell-strong">${text(feedbackToolLabel(item.tool))}</span></span>
+          <span class="dov-clamp">${text(item.message)}</span>
+          <span class="dov-cell-meta">${text(personDisplayName(item.submitterName, item.submitterEmail))} · ${timeTag(item.createdAt)}</span>
+        </li>`).join('')}</ul>`);
+    }
+
+    function renderAccessSummary() {
+      const target = document.getElementById('dov-access');
+      if (!target) return;
+      if (accessRequestsStatus === 'loading') { setHtml(target, skeletonRows(3)); return; }
+      if (accessRequestsStatus === 'error') { setHtml(target, errorState('Couldn’t load access requests.')); return; }
+      const count = status => accessRequests.filter(request => (request.status || 'Pending') === status).length;
+      const stats = `<ul class="dov-stats">
+        <li><span class="dov-stat-num">${fmt(count('Pending'))}</span>${pill('Pending', 'warn')}</li>
+        <li><span class="dov-stat-num">${fmt(count('Approved'))}</span>${pill('Approved', 'good')}</li>
+        <li><span class="dov-stat-num">${fmt(count('Rejected'))}</span>${pill('Rejected', 'bad')}</li>
+      </ul>`;
+      const sorted = [...accessRequests].sort((a, b) =>
+        Number((b.status || 'Pending') === 'Pending') - Number((a.status || 'Pending') === 'Pending')
+        || new Date(b.requestedAt || b.updatedAt || 0) - new Date(a.requestedAt || a.updatedAt || 0));
+      if (!sorted.length) {
+        setHtml(target, stats + emptyState('No access requests', 'Non-ES emails that ask to use FrameUp appear here.'));
+        return;
+      }
+      const tone = { Pending: 'warn', Approved: 'good', Rejected: 'bad' };
+      setHtml(target, stats + `<ul class="dov-list">${sorted.slice(0, 4).map(request => {
+        const status = request.status || 'Pending';
+        const name = personDisplayName(request.name, request.email);
+        return `<li class="dov-list-item" data-access-email="${attr(request.email)}">
+          <span class="dov-avatar" aria-hidden="true">${text(initials(name), 'ES')}</span>
+          <span class="dov-list-copy"><span class="dov-cell-title" title="${attr(name)}">${text(name)}</span><span class="dov-cell-meta" title="${attr(request.email)}">${text(request.email)} · ${timeTag(request.requestedAt || request.updatedAt)}</span></span>
+          ${status === 'Pending'
+            ? `<span class="dov-actions"><button class="es-btn es-btn--sm" type="button" data-access-action="Approved" aria-label="Approve ${attr(name)}">Approve</button><button class="es-btn es-btn--danger es-btn--sm" type="button" data-access-action="Rejected" aria-label="Reject ${attr(name)}">Reject</button></span>`
+            : pill(status, tone[status] || 'neutral')}
+        </li>`;
+      }).join('')}</ul>`);
+    }
+
+    // Team: everyone FrameUp knows about, online first, then most exports.
+    function renderLiveActivity(state) {
+      const target = document.getElementById('live-list');
+      if (!target) return;
+      const people = [{ ...dashboardUser, online: true, workspace: 'Dashboard' }]
+        .concat((state.people || []).filter(person => person.email && person.email !== dashboardUser.email));
+      const onlineCount = people.filter(person => person.online).length;
+      setNavBadge('[data-online-count]', people.length, getSeenBadgeState().people ?? people.length);
+      const gate = sectionGate(state, { rows: 6 });
+      if (gate) { setHtml(target, gate); return; }
+      const { start, end } = rangeWindow();
+      const exportsBy = new Map();
+      exportsBetween(allExports(state), start, end).forEach(task => {
+        const key = creatorKey(task);
+        if (key) exportsBy.set(key, (exportsBy.get(key) || 0) + 1);
+      });
+      // "Last active" = the latest of presence, an export or a logged action,
+      // since presence is only recorded on some pages.
+      const lastActive = new Map();
+      const bump = (email, value) => {
+        const key = String(email || '').trim().toLowerCase();
+        const time = Date.parse(value || '');
+        if (key && Number.isFinite(time) && time > (lastActive.get(key) || 0)) lastActive.set(key, time);
+      };
+      people.forEach(person => bump(person.email, person.lastSeenAt));
+      allExports(state).forEach(task => bump(task.creatorEmail || task.ownerEmail, exportCreatedAt(task)));
+      (state.activity || []).forEach(item => bump(item.actorEmail, item.createdAt));
+      const activeAt = person => lastActive.get(String(person.email || '').toLowerCase()) || 0;
+      const seenInRange = people.filter(person => person.online || inRangeSince(person.lastSeenAt)).length;
+      setHtml('#live-summary', `${fmt(onlineCount)} online · ${fmt(seenInRange)} seen in the ${rangeText(activeMetricRangeDays)} · ${fmt(people.length)} people`);
+      const allButton = document.getElementById('dov-team-all');
+      if (allButton) allButton.textContent = `View all ${fmt(people.length)}`;
+      const ordered = people.slice().sort((a, b) =>
+        Number(Boolean(b.online)) - Number(Boolean(a.online))
+        || (exportsBy.get(String(b.email).toLowerCase()) || 0) - (exportsBy.get(String(a.email).toLowerCase()) || 0)
+        || activeAt(b) - activeAt(a));
+      if (!ordered.length) {
+        setHtml(target, emptyState('No people yet', 'People appear after they sign in to FrameUp.'));
+        return;
+      }
+      setHtml(target, `<table class="dov-table is-team">
+        <caption class="sr-only">Team members</caption>
+        <thead><tr><th scope="col">Person</th><th scope="col">Role</th><th scope="col" class="is-num">Exports</th><th scope="col">Last active</th><th scope="col">Status</th></tr></thead>
+        <tbody>${ordered.slice(0, 8).map(person => {
+          const name = personDisplayName(person.name, person.email);
+          return `<tr>
+            <td class="dov-td-main"><span class="dov-person"><span class="dov-avatar" aria-hidden="true">${text(initials(name), 'ES')}</span><span class="dov-list-copy"><span class="dov-cell-title">${text(name)}</span><span class="dov-cell-meta">${text(person.designation || 'Designer')}</span></span></span></td>
+            <td class="dov-td-role">${text(accessRoleLabel(person.accessRole || person.role))}</td>
+            <td class="dov-td-num is-num" data-label="Exports">${fmt(exportsBy.get(String(person.email).toLowerCase()) || 0)}</td>
+            <td class="dov-td-when">${person.online ? 'Now' : activeAt(person) ? timeTag(new Date(activeAt(person)).toISOString()) : '<span class="dov-cell-meta">Never</span>'}</td>
+            <td class="dov-td-status">${person.online ? pill('Online', 'good', 'has-dot') : pill('Offline', 'neutral')}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`);
     }
 
     // AI spend: rolling 7 days vs the key's $20 weekly limit (set by the dev team in Vercel).
     const AI_WEEKLY_BUDGET = 20;
     const AI_FEATURE_LABELS = { 'trend-headlines': 'Trend Design headlines', generate: 'Generate', 'generate-backup': 'Generate (backup AI)', 'trend-headlines-backup': 'Trend Design headlines (backup AI)', 'generate-photo-pick': 'Photo picking', 'photo-pick': 'Photo picking', 'generate-scene-image': 'Image generation', 'image-gen': 'Image generation' };
-    const money = value => '$' + (value >= 1 ? value.toFixed(2) : value.toFixed(value >= 0.01 ? 3 : 4));
+    const money = value => '$' + (value >= 1 ? value.toFixed(2) : value.toFixed(value >= 0.01 ? 3 : value > 0 ? 4 : 2));
+    const AI_REFRESH_MS = 60000;
     let aiSpendLoading = false;
-    async function renderAiSpend() {
+    let aiSpendCache = null; // { at, ready, rows } | { at, error: true }
+
+    function aiSpendMarkup(cache) {
+      if (!cache) return skeletonRows(3);
+      if (cache.error) return errorState('AI spend couldn’t load right now.');
+      if (!cache.ready) return emptyState('AI usage tracking isn’t switched on yet', 'The usage table hasn’t been created in Supabase.');
+      const rows = cache.rows;
+      const total = rows.reduce((sum, row) => sum + Number(row.cost_usd || 0), 0);
+      const calls = rows.length;
+      const failed = rows.filter(row => row.ok === false).length;
+      const pct = Math.min(100, (total / AI_WEEKLY_BUDGET) * 100);
+      const level = pct >= 100 ? ['bad', 'Limit reached'] : pct >= 80 ? ['warn', 'Near the limit'] : ['good', 'Within the limit'];
+      const summary = `
+        <ul class="dov-ai-stats">
+          <li><span class="dov-eyebrow">Spent</span><span class="dov-stat-big">${money(total)}</span><span class="dov-cell-meta">of ${money(AI_WEEKLY_BUDGET)} weekly limit</span></li>
+          <li><span class="dov-eyebrow">AI calls</span><span class="dov-stat-big">${fmt(calls)}</span><span class="dov-cell-meta">${failed ? `${fmt(failed)} failed` : 'None failed'}</span></li>
+          <li><span class="dov-eyebrow">Average per call</span><span class="dov-stat-big">${calls ? money(total / calls) : '—'}</span><span class="dov-cell-meta">List-price estimate</span></li>
+        </ul>
+        <div class="dov-budget">
+          <p class="dov-budget-head">${pill(level[1], level[0])}<span class="dov-cell-meta">${Math.round(pct)}% of the weekly limit used</span></p>
+          <span class="dov-meter is-${level[0]}" role="meter" aria-label="Share of the weekly AI limit used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><span style="width:${pct.toFixed(1)}%"></span></span>
+        </div>`;
+      if (!calls) return summary + emptyState('No AI calls in the last 7 days', 'Generate, Trends headlines and image calls appear here once someone uses them.');
+      const group = key => {
+        const map = new Map();
+        rows.forEach(row => {
+          const label = key(row) || 'Unknown';
+          const entry = map.get(label) || { label, cost: 0, count: 0 };
+          entry.cost += Number(row.cost_usd || 0);
+          entry.count += 1;
+          map.set(label, entry);
+        });
+        return Array.from(map.values()).sort((a, b) => b.cost - a.cost || b.count - a.count).slice(0, 5)
+          .map(entry => ({ ...entry, meta: `${fmt(entry.count)} call${entry.count === 1 ? '' : 's'}`, count: entry.cost }));
+      };
+      const block = (title, list) => `<div class="dov-ai-group"><h4 class="dov-eyebrow es-type-eyebrow">${escapeHtml(title)}</h4>${barList(list, { valueText: row => money(row.count) })}</div>`;
+      return summary + `<div class="dov-ai-groups">
+          ${block('By feature', group(row => AI_FEATURE_LABELS[row.feature] || row.feature))}
+          ${block('By model', group(row => String(row.model || '').replace(/^[a-z-]+\//, '')))}
+          ${block('By person', group(row => personDisplayName('', row.user_email)))}
+        </div>
+        <p class="dov-note">Costs are worked out from token counts at list prices, so they can differ slightly from the Vercel bill. When the weekly limit is used up, FrameUp falls back to its free drafts until it resets.</p>`;
+    }
+
+    async function renderAiSpend({ force = false } = {}) {
       const target = document.getElementById('ai-spend');
-      if (!target || aiSpendLoading || !window.ESDashboardData.fetchAiUsage) return;
+      if (!target || !window.ESDashboardData.fetchAiUsage) return;
+      setHtml(target, aiSpendMarkup(aiSpendCache));
+      const fresh = aiSpendCache && Date.now() - aiSpendCache.at < AI_REFRESH_MS;
+      if (aiSpendLoading || (fresh && !force)) return;
       aiSpendLoading = true;
       try {
         const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
         const { rows, ready } = await window.ESDashboardData.fetchAiUsage({ sinceIso: since });
-        if (!ready) {
-          target.innerHTML = '<div class="empty">AI spend tracking isn’t switched on yet (the usage table hasn’t been created).</div>';
-          return;
-        }
-        if (!rows.length) {
-          target.innerHTML = '<div class="empty">No AI calls in the last 7 days.</div>';
-          return;
-        }
-        const total = rows.reduce((sum, row) => sum + Number(row.cost_usd || 0), 0);
-        const calls = rows.length;
-        const failed = rows.filter(row => row.ok === false).length;
-        const pct = Math.min(100, (total / AI_WEEKLY_BUDGET) * 100);
-        const group = key => {
-          const map = new Map();
-          rows.forEach(row => {
-            const label = key(row);
-            const entry = map.get(label) || { label, cost: 0, calls: 0 };
-            entry.cost += Number(row.cost_usd || 0);
-            entry.calls += 1;
-            map.set(label, entry);
-          });
-          return Array.from(map.values()).sort((a, b) => b.cost - a.cost || b.calls - a.calls).slice(0, 6);
-        };
-        const bars = (title, list) => {
-          const max = Math.max(...list.map(item => item.cost), 0.000001);
-          return `<div><h3>${escapeHtml(title)}</h3><div class="workspace-bar-chart">${list.map(item => `
-            <div class="workspace-bar-row">
-              <span class="workspace-bar-label">${escapeHtml(item.label)}</span>
-              <span class="workspace-bar-track"><span class="workspace-bar-fill" style="width:${Math.max(4, Math.round((item.cost / max) * 100))}%"></span></span>
-              <span class="workspace-bar-count">${money(item.cost)}</span>
-            </div>`).join('')}</div></div>`;
-        };
-        const budgetClass = pct >= 100 ? ' is-over' : pct >= 80 ? ' is-high' : '';
-        target.innerHTML = `
-          <div class="ai-spend-summary">
-            <div class="ai-spend-stat"><strong>${money(total)}</strong><span>spent of ${money(AI_WEEKLY_BUDGET)} this week</span></div>
-            <div class="ai-spend-stat"><strong>${calls.toLocaleString()}</strong><span>AI calls${failed ? ` · ${failed} failed` : ''}</span></div>
-            <div class="ai-spend-stat"><strong>${money(total / calls)}</strong><span>average per call</span></div>
-          </div>
-          <div class="ai-spend-budget${budgetClass}" role="meter" aria-label="Share of the weekly AI limit used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><span style="width:${pct.toFixed(1)}%"></span></div>
-          <div class="ai-spend-groups">
-            ${bars('By feature', group(row => AI_FEATURE_LABELS[row.feature] || row.feature))}
-            ${bars('By model', group(row => String(row.model || '').replace(/^[a-z-]+\//, '')))}
-            ${bars('By person', group(row => personDisplayName('', row.user_email)))}
-          </div>
-          <p class="ai-spend-note">Costs are worked out from token counts at list prices, so they can differ slightly from the Vercel bill. When the weekly limit is used up, FrameUp falls back to its free drafts until it resets.</p>`;
+        aiSpendCache = { at: Date.now(), ready, rows: rows || [] };
       } catch (error) {
         console.warn('[ai spend]', error);
-        target.innerHTML = '<div class="empty">Couldn’t load AI spend right now.</div>';
+        aiSpendCache = { at: Date.now(), error: true };
       } finally {
         aiSpendLoading = false;
       }
+      setHtml(target, aiSpendMarkup(aiSpendCache));
+    }
+
+    function renderOverview(state) {
+      const phase = overviewPhase(state);
+      if (phase === 'loading' || phase === 'error') {
+        ['#dov-trend-meta', '#dov-exports-meta', '#dov-queue-meta', '#dov-feedback-meta', '#live-summary', '#dov-workspace-meta', '#dov-templates-meta']
+          .forEach(id => setHtml(id, phase === 'loading' ? 'Loading…' : 'Not available'));
+      }
+      renderOverviewHeader(state);
+      renderKpis(state);
+      renderExportsTrendChart(state);
+      renderActivityFeed(state);
+      renderOverviewExports(state);
+      renderQueue(state);
+      renderFeedbackSummary(state);
+      renderAccessSummary();
+      renderLiveActivity(state);
+      renderExportsByWorkspaceChart(state);
+      renderTemplates(state);
+      renderAiSpend();
     }
 
     function renderDesigns(state) {
@@ -1828,7 +2307,7 @@
             </span>
             <span class="access-request-status is-${attr(status.toLowerCase())}">${text(status)}</span>
             <span class="access-request-actions">
-              <button class="topbar-button is-primary" type="button" data-access-action="Approved"${isPending ? '' : ' disabled'}>Approve</button>
+              <button class="topbar-button" type="button" data-access-action="Approved"${isPending ? '' : ' disabled'}>Approve</button>
               <button class="topbar-button" type="button" data-access-action="Rejected"${isPending ? '' : ' disabled'}>Reject</button>
             </span>
           </article>
@@ -1839,10 +2318,13 @@
     async function refreshAccessRequests() {
       try {
         accessRequests = await window.ESAuth?.getAccessRequests?.() || [];
+        accessRequestsStatus = 'ready';
       } catch (error) {
         accessRequests = [];
+        accessRequestsStatus = 'error';
       }
       renderAccessRequests();
+      renderAccessSummary();
       renderMetrics(window.ESDashboardData.getDashboardState());
       return accessRequests;
     }
@@ -1886,35 +2368,6 @@
       target.innerHTML = state.activity.slice(0, 40).map(activity => `
         <article class="activity"><strong>${text(activity.label)}</strong><span>${dateText(activity.createdAt)} · ${text(personDisplayName(activity.actorName, activity.actorEmail))}</span></article>
       `).join('');
-    }
-
-    function renderLiveActivity(state) {
-      const target = document.getElementById('live-list');
-      if (!target) return;
-      const people = [{ ...dashboardUser, online: true, workspace: 'Dashboard board' }]
-        .concat(state.people.filter(person => person.email && person.email !== dashboardUser.email));
-      const onlineCount = people.filter(person => person.online).length;
-      setNavBadge('[data-online-count]', onlineCount, getSeenBadgeState().online);
-      const ordered = people.slice().sort((a, b) => Number(Boolean(b.online)) - Number(Boolean(a.online))
-        || personDisplayName(a.name, a.email).localeCompare(personDisplayName(b.name, b.email)));
-      const expanded = target.dataset.expanded === 'true';
-      const visible = expanded ? ordered : ordered.slice(0, 6);
-      const summary = document.getElementById('live-summary');
-      if (summary) summary.textContent = `${onlineCount} online · ${people.length} people`;
-      target.innerHTML = visible.map(person => `
-        <article class="live-person${person.online ? ' is-online' : ''}"><span class="live-avatar">${initials(personDisplayName(person.name, person.email, 'ES'))}</span><span><strong>${text(personDisplayName(person.name, person.email))}</strong><small>${text(person.workspace, person.online ? 'FrameUp' : 'Not currently active')}${person.designation ? ` · ${text(person.designation)}` : ''}</small></span><span class="presence-state ${person.online ? 'is-online' : 'is-offline'}">${person.online ? 'Online' : 'Offline'}</span></article>
-      `).join('') || '<div class="empty">No active users yet.</div>';
-      if (ordered.length > 6) {
-        const toggle = document.createElement('button');
-        toggle.type = 'button';
-        toggle.className = 'live-toggle';
-        toggle.textContent = expanded ? 'Show fewer' : `Show all ${ordered.length} people`;
-        toggle.addEventListener('click', () => {
-          target.dataset.expanded = String(!expanded);
-          renderLiveActivity(state);
-        });
-        target.appendChild(toggle);
-      }
     }
 
     function renderIdentity() {
@@ -2000,9 +2453,13 @@
       if (shouldMarkSeen) markDashboardViewSeen(view);
       document.body.dataset.dashboardView = view;
       syncDashboardViewSections(view);
-      document.querySelectorAll('[data-dashboard-view]').forEach(item => item.classList.toggle('is-active', item.dataset.dashboardView === view));
-      const title = document.querySelector('.dashboard-topbar h1');
-      if (title) title.textContent = 'FrameUp Dashboard';
+      // Only the section tabs carry the active state (the body and the
+      // in-page "View all" buttons also have data-dashboard-view).
+      document.querySelectorAll('.sidebar-nav [data-dashboard-view]').forEach(item => {
+        const active = item.dataset.dashboardView === view;
+        item.classList.toggle('is-active', active);
+        if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current');
+      });
     }
 
     function renderDashboard() {
@@ -2013,14 +2470,10 @@
       renderTaskList(state);
       renderDesigns(state);
       renderFeedback(state);
-      renderOverviewExports(state);
-      renderExportsTrendChart(state);
-      renderExportsByWorkspaceChart(state);
+      renderOverview(state);
       renderPeople(state);
       renderAccessRequests();
       renderActivity(state);
-      renderLiveActivity(state);
-      renderAiSpend();
       bindDashboardChoiceControls();
     }
 
@@ -2335,7 +2788,11 @@
           closeExportPreview();
         }
       });
-      document.querySelectorAll('[data-dashboard-view]').forEach(button => {
+      // Section tabs: the underline slides to the active one (es-motion.js).
+      window.FrameUpMotion?.tabs(document.querySelector('.dashboard-sidebar .sidebar-nav'), 'button');
+      // Buttons only: <body> also carries data-dashboard-view, and binding it
+      // re-rendered the whole dashboard on every click anywhere on the page.
+      document.querySelectorAll('button[data-dashboard-view], a[data-dashboard-view]').forEach(button => {
         button.addEventListener('click', () => {
           const view = button.dataset.dashboardView || 'overview';
           setDashboardView(view, true);
@@ -2356,15 +2813,9 @@
           if (!METRIC_RANGES.includes(days)) return;
           activeMetricRangeDays = days;
           try { window.localStorage.setItem(METRIC_RANGE_KEY, String(days)); } catch (error) { /* ignore */ }
-          renderMetrics(window.ESDashboardData.getDashboardState());
-        });
-      });
-      document.querySelectorAll('[data-chart-range]').forEach(button => {
-        button.addEventListener('click', () => {
-          activeChartRangeDays = Number(button.dataset.chartRange) || 30;
           const state = window.ESDashboardData.getDashboardState();
-          renderExportsTrendChart(state, activeChartRangeDays);
-          renderExportsByWorkspaceChart(state, activeChartRangeDays);
+          renderMetrics(state);
+          renderOverview(state);
         });
       });
       document.addEventListener('click', event => {
@@ -2388,6 +2839,16 @@
         }
         if (!event.target.closest('.dashboard-choice')) closeDashboardChoices();
         if (!event.target.closest('.nav-dropdown')) closeDashboardNavMenus();
+        if (event.target.closest('[data-dov-retry]')) {
+          const retry = event.target.closest('[data-dov-retry]');
+          retry.disabled = true;
+          Promise.allSettled([
+            window.ESDashboardData.refreshCloudDashboardData?.(),
+            refreshAccessRequests(),
+            renderAiSpend({ force: true }),
+          ]).finally(renderDashboard);
+          return;
+        }
         const previewButton = event.target.closest('[data-preview-task]');
         if (previewButton && !previewButton.disabled) {
           event.preventDefault();
@@ -2603,8 +3064,12 @@
         // after another (up to ~24s of timeouts stacked, and several real
         // seconds in the common case); firing them together cuts boot time
         // to roughly the slowest single call instead of the sum of all four.
+        // 'valid' | 'no-session' | 'not-approved'; throws when the check cannot
+        // finish (shown as a boot error, never a silent bounce to login).
         const sessionPromise = withBootTimeout(
-          window.ESAuth?.isValidSession?.(),
+          window.ESAuth?.sessionStatus
+            ? window.ESAuth.sessionStatus()
+            : Promise.resolve(window.ESAuth?.isValidSession?.()).then(ok => (ok ? 'valid' : 'no-session')),
           9000,
           'Authentication check timed out.'
         );
@@ -2624,9 +3089,11 @@
           'Dashboard role permission check timed out.'
         );
 
-        const hasValidSession = await sessionPromise;
-        if (!hasValidSession) {
-          window.location.replace(window.ESAuth?.loginUrl?.('dashboard.html') || 'login.html?redirect=dashboard.html');
+        const sessionState = await sessionPromise;
+        if (sessionState !== 'valid') {
+          if (sessionState === 'not-approved') await window.ESAuth?.logout?.();
+          const loginTarget = window.ESAuth?.loginUrl?.('dashboard.html') || 'login.html?redirect=dashboard.html';
+          window.location.replace(`${loginTarget}&reason=${encodeURIComponent(sessionState || 'no-session')}`);
           return;
         }
 

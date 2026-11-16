@@ -16,8 +16,15 @@
 
   function applyTheme(theme) {
     const normalizedTheme = theme === DARK_THEME ? DARK_THEME : LIGHT_THEME;
+    // Switch instantly: without this, every colour transition on the page
+    // runs at once and the switch smears for a moment.
+    const freeze = document.createElement('style');
+    freeze.textContent = '*,*::before,*::after{transition:none!important}';
+    document.head.appendChild(freeze);
     document.documentElement.dataset.theme = normalizedTheme;
     document.documentElement.style.colorScheme = normalizedTheme;
+    void document.documentElement.offsetHeight; // apply the new colours now
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => freeze.remove()));
     try {
       localStorage.setItem(STORAGE_KEY, normalizedTheme);
     } catch {}

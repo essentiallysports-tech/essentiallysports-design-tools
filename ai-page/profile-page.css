@@ -18,7 +18,7 @@ body.profile-page {
 .profile-page .account-main {
   min-width: 0;
   background: var(--profile-canvas);
-  padding: clamp(30px, 3vw, 48px) clamp(24px, 4vw, 64px) 64px;
+  padding: var(--es-space-8, 32px) var(--es-space-8, 32px) var(--es-space-12, 48px);
 }
 
 .profile-page .account-shell {
@@ -29,8 +29,8 @@ body.profile-page {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 32px;
-  margin-bottom: 28px;
+  gap: var(--es-space-8, 32px);
+  margin-bottom: var(--es-space-6, 24px);
 }
 
 .profile-page-heading {
@@ -38,7 +38,7 @@ body.profile-page {
 }
 
 .profile-page .account-kicker {
-  margin: 0 0 7px;
+  margin: 0 0 var(--es-space-1, 4px);
   color: var(--profile-blue);
   font-size: 15px;
   letter-spacing: .08em;
@@ -62,34 +62,10 @@ body.profile-page {
 }
 
 .profile-back-link {
-  min-height: 42px;
   flex: 0 0 auto;
-  border: 1px solid var(--profile-line);
-  border-radius: 14px;
-  background: var(--profile-surface);
-  color: var(--profile-ink);
-  padding: 0 16px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-family: var(--es-font-ui);
-  font-size: 15px;
-  font-weight: 700;
   text-decoration: none;
-  transition: border-color .16s var(--es-ease), background-color .16s var(--es-ease), transform .16s var(--es-ease);
-}
-
-.profile-back-link svg {
-  width: 18px;
-  height: 18px;
-}
-
-.profile-back-link:hover,
-.profile-back-link:focus-visible {
-  border-color: var(--es-ink-3);
-  background: var(--es-sunk);
-  outline: none;
-  transform: translateY(-1px);
 }
 
 .profile-page .account-card {
@@ -110,9 +86,9 @@ body.profile-page {
 .profile-page .profile-summary {
   align-content: start;
   justify-items: center;
-  gap: 14px;
+  gap: var(--es-space-3, 12px);
   border-right: 1px solid var(--profile-line);
-  padding: 32px 26px;
+  padding: var(--es-card-pad-lg, 24px);
 }
 
 .profile-page .large-avatar {
@@ -138,7 +114,7 @@ body.profile-page {
 }
 
 .profile-page .summary-meta {
-  margin: 7px 0 0;
+  margin: var(--es-space-1, 4px) 0 0;
   color: var(--profile-muted);
   font-family: var(--es-font-ui);
   font-size: 15px;
@@ -147,25 +123,8 @@ body.profile-page {
 }
 
 .profile-page .avatar-upload {
-  gap: 7px;
-  margin-top: 4px;
-}
-
-.profile-page .avatar-upload-label {
-  min-height: 42px;
-  border: 1px solid var(--profile-line);
-  border-radius: 14px;
-  color: var(--profile-ink);
-  font-family: var(--es-font-ui);
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.profile-page .avatar-upload-label:hover,
-.profile-page .avatar-upload-label:focus-within {
-  border-color: var(--es-ink-3);
-  background: var(--es-sunk);
-  color: var(--profile-ink);
+  gap: var(--es-space-2, 8px);
+  margin-top: var(--es-space-2, 8px);
 }
 
 .profile-page .avatar-help {
@@ -178,15 +137,15 @@ body.profile-page {
 
 .profile-form-card {
   min-width: 0;
-  padding: 32px;
+  padding: var(--es-card-pad-lg, 24px);
 }
 
 .profile-page .field-grid {
-  gap: 18px 20px;
+  gap: var(--es-space-5, 20px) var(--es-space-3, 12px);
 }
 
 .profile-page .field {
-  gap: 7px;
+  gap: var(--es-space-2, 8px);
 }
 
 .profile-page .field label {
@@ -200,11 +159,11 @@ body.profile-page {
 .profile-page .field input,
 .profile-page .field select,
 .profile-page .field textarea {
-  min-height: 52px;
+  min-height: var(--es-field-h, 40px);
   border: 1px solid var(--es-line-2);
   border-radius: 14px;
   color: var(--profile-ink);
-  padding: 0 15px;
+  padding: 0 var(--es-field-pad-x, 12px);
   font-family: var(--es-font-ui);
   font-size: 15px;
   font-weight: 400;
@@ -212,7 +171,7 @@ body.profile-page {
 
 .profile-page .field textarea {
   min-height: 120px;
-  padding: 14px 15px;
+  padding: var(--es-space-3, 12px) var(--es-field-pad-x, 12px);
 }
 
 .profile-page .field input:focus,
@@ -223,43 +182,23 @@ body.profile-page {
 }
 
 .profile-page .actions {
-  margin-top: 20px;
-  gap: 10px;
-}
-
-.profile-page .primary-btn,
-.profile-page .secondary-btn {
-  min-height: 44px;
-  border-radius: 14px;
-  padding: 0 20px;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.profile-page .primary-btn {
-  box-shadow: none;
-}
-
-.profile-page .primary-btn:hover,
-.profile-page .primary-btn:focus-visible,
-.profile-page .secondary-btn:hover,
-.profile-page .secondary-btn:focus-visible {
-  box-shadow: none;
+  margin-top: var(--es-space-5, 20px);
+  gap: var(--es-space-2, 8px);
 }
 
 .profile-page .status-note {
   min-height: 18px;
-  margin-top: 9px;
+  margin-top: var(--es-space-2, 8px);
   font-size: 15px;
 }
 
 .profile-page .danger-zone {
   min-height: 92px;
-  margin-top: 16px;
-  gap: 24px;
+  margin-top: var(--es-space-5, 20px);
+  gap: var(--es-space-6, 24px);
   border-color: var(--profile-line);
   box-shadow: none;
-  padding: 22px 26px;
+  padding: var(--es-card-pad-lg, 24px);
 }
 
 .profile-page .danger-zone h2 {
@@ -271,22 +210,14 @@ body.profile-page {
 }
 
 .profile-page .danger-zone p {
-  margin-top: 5px;
+  margin-top: var(--es-space-1, 4px);
   color: var(--profile-muted);
   font-size: 15px;
   line-height: 1.45;
 }
 
-.profile-page .danger-btn {
-  min-height: 42px;
-  border-color: #E0A8AD;
-  border-radius: 14px;
-  padding: 0 16px;
-  font-size: 15px;
-}
-
 html[data-theme="dark"] body.profile-page {
-  --profile-ink: #F5F7FA;
+  --profile-ink: #FFFFFF;
   --profile-muted: var(--es-ink-3);
   --profile-line: var(--es-ink);
   --profile-surface: var(--es-ink);
@@ -297,8 +228,6 @@ html[data-theme="dark"] .profile-page .account-main {
   background: var(--profile-canvas) !important;
 }
 
-html[data-theme="dark"] .profile-page .profile-back-link,
-html[data-theme="dark"] .profile-page .avatar-upload-label,
 html[data-theme="dark"] .profile-page .field input,
 html[data-theme="dark"] .profile-page .field select,
 html[data-theme="dark"] .profile-page .field textarea {
@@ -307,15 +236,9 @@ html[data-theme="dark"] .profile-page .field textarea {
   color: var(--profile-ink);
 }
 
-html[data-theme="dark"] .profile-page .profile-back-link:hover,
-html[data-theme="dark"] .profile-page .avatar-upload-label:hover {
-  border-color: var(--es-ink);
-  background: var(--es-ink);
-}
-
 @media (max-width: 900px) {
   .profile-page .account-main {
-    padding: 32px 20px 52px;
+    padding: var(--es-space-8, 32px) var(--es-space-6, 24px) var(--es-space-12, 48px);
   }
 
   .profile-page-header {
@@ -328,7 +251,7 @@ html[data-theme="dark"] .profile-page .avatar-upload-label:hover {
 
   .profile-page .profile-summary,
   .profile-form-card {
-    padding: 26px 22px;
+    padding: var(--es-card-pad-lg, 24px);
   }
 
   .profile-page .field-grid {
@@ -342,14 +265,14 @@ html[data-theme="dark"] .profile-page .avatar-upload-label:hover {
 
 @media (max-width: 760px) {
   .profile-page .account-main {
-    padding: 26px 14px 44px;
+    padding: var(--es-space-6, 24px) var(--es-page-gutter-phone, 16px) var(--es-space-12, 48px);
   }
 
   .profile-page-header {
     align-items: stretch;
     flex-direction: column;
-    gap: 18px;
-    margin-bottom: 20px;
+    gap: var(--es-space-5, 20px);
+    margin-bottom: var(--es-space-5, 20px);
   }
 
   .profile-page .account-title {
@@ -399,7 +322,7 @@ html[data-theme="dark"] .profile-page .avatar-upload-label:hover {
 
   .profile-page .danger-zone {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: var(--es-space-4, 16px);
   }
 
   .profile-page .danger-zone .danger-btn {
@@ -410,7 +333,7 @@ html[data-theme="dark"] .profile-page .avatar-upload-label:hover {
 @media (max-width: 520px) {
   .profile-page .profile-summary {
     grid-template-columns: 72px minmax(0, 1fr);
-    padding: 22px 18px;
+    padding: var(--es-card-pad-md, 20px);
   }
 
   .profile-page .large-avatar {
@@ -427,8 +350,9 @@ html[data-theme="dark"] .profile-page .avatar-upload-label:hover {
     grid-column: 1 / -1;
   }
 
-  .profile-form-card {
-    padding: 22px 18px;
+  .profile-form-card,
+  .profile-page .danger-zone {
+    padding: var(--es-card-pad-md, 20px);
   }
 
   .profile-page .actions {

@@ -256,7 +256,7 @@ function createEnvironment({
   const { documentElement, location, window } = createEnvironment({ session: null });
   assert.equal(documentElement.style.visibility, undefined);
   await window.ESAuth.requireAuth('dashboard.html');
-  assert.match(location.replaceTarget, /^login\.html\?redirect=dashboard\.html$/);
+  assert.match(location.replaceTarget, /^login\.html\?redirect=dashboard\.html&reason=no-session$/);
   assert.equal(documentElement.style.visibility, 'hidden');
 }
 

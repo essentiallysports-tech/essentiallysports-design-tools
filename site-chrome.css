@@ -90,7 +90,7 @@ html::-webkit-scrollbar {
     box-shadow: none !important;
     color: var(--es-ink-2) !important;
     font-family: var(--es-font-ui) !important;
-    font-size: 15px !important;
+    font-size: var(--es-type-nav-size, 15px) !important;
     font-weight: 500 !important;
     line-height: 1 !important;
     white-space: nowrap !important;
@@ -187,7 +187,7 @@ html::-webkit-scrollbar {
     border-radius: var(--es-radius-control) !important;
     color: var(--chrome-navy) !important;
     font-family: var(--chrome-ui) !important;
-    font-size: 15px !important;
+    font-size: var(--es-type-nav-size, 15px) !important;
     font-weight: 700 !important;
     line-height: 1.1 !important;
     text-decoration: none !important;
@@ -409,7 +409,7 @@ html::-webkit-scrollbar {
     box-shadow: none !important;
     color: var(--es-ink) !important;
     font-family: var(--chrome-ui) !important;
-    font-size: 15px !important;
+    font-size: var(--es-type-nav-size, 15px) !important;
     font-weight: 500 !important;
     line-height: 1.2 !important;
     text-align: left !important;
@@ -616,7 +616,7 @@ html::-webkit-scrollbar {
 .profile-menu[data-profile-popover-version="2"] .profile-identity-copy strong {
   color: var(--es-ink) !important;
   font-family: var(--chrome-ui) !important;
-  font-size: 15px !important;
+  font-size: var(--es-type-nav-size, 15px) !important;
   font-weight: 700 !important;
   line-height: 1.15 !important;
 }
@@ -624,7 +624,7 @@ html::-webkit-scrollbar {
 .profile-menu[data-profile-popover-version="2"] .profile-identity-copy span {
   color: var(--es-ink-3) !important;
   font-family: var(--chrome-ui) !important;
-  font-size: 15px !important;
+  font-size: var(--es-type-meta-size, 13px) !important;
   font-weight: 400 !important;
   line-height: 1.15 !important;
 }
@@ -650,7 +650,7 @@ html::-webkit-scrollbar {
   box-shadow: none !important;
   color: var(--es-ink) !important;
   font-family: var(--chrome-ui) !important;
-  font-size: 15px !important;
+  font-size: var(--es-type-nav-size, 15px) !important;
   font-weight: 500 !important;
   line-height: 1.2 !important;
   text-align: left !important;
@@ -682,7 +682,7 @@ html::-webkit-scrollbar {
 .profile-menu[data-profile-popover-version="2"] .profile-appearance-label {
   color: var(--es-ink) !important;
   font-family: var(--chrome-ui) !important;
-  font-size: 15px !important;
+  font-size: var(--es-type-nav-size, 15px) !important;
   font-weight: 500 !important;
 }
 
@@ -706,7 +706,7 @@ html::-webkit-scrollbar {
   box-shadow: none !important;
   color: var(--es-ink-3) !important;
   font-family: var(--chrome-ui) !important;
-  font-size: 13px !important;
+  font-size: var(--es-type-chip-size, 13px) !important;
   font-weight: 500 !important;
   line-height: 1 !important;
   cursor: pointer !important;
@@ -741,62 +741,62 @@ html::-webkit-scrollbar {
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] > .profile-trigger {
-  color: var(--es-stage) !important;
+  color: #FFFFFF !important;
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] > .profile-trigger:hover,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] > .profile-trigger:focus-visible,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"].is-open > .profile-trigger {
-  background: var(--es-ink) !important;
+  background: var(--es-slate-800, #1F2126) !important;
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-identity-copy strong,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-appearance-label {
-  color: var(--es-stage) !important;
+  color: #FFFFFF !important;
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] > .profile-dropdown {
-  border-color: var(--es-ink) !important;
-  background: var(--es-ink) !important;
+  border-color: var(--es-slate-700, #2A2D34) !important;
+  background: var(--es-slate-800, #1F2126) !important;
   box-shadow: 0 18px 42px rgba(0, 0, 0, .34) !important;
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-avatar,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-identity-avatar {
-  border-color: var(--es-ink) !important;
-  background-color: var(--es-ink) !important;
+  border-color: var(--es-slate-700, #2A2D34) !important;
+  background-color: var(--es-slate-700, #2A2D34) !important;
   filter: none !important;
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-identity,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-appearance,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option--logout {
-  border-color: var(--es-ink) !important;
+  border-color: var(--es-slate-700, #2A2D34) !important;
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-identity-copy span {
-  color: var(--es-ink-3) !important;
+  color: var(--es-slate-200, #98A6BF) !important;
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option:hover,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option:focus-visible,
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-option[aria-current="page"] {
-  background: var(--es-ink) !important;
+  background: var(--es-slate-700, #2A2D34) !important;
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] .profile-theme-segment {
-  border-color: var(--es-ink) !important;
-  background: var(--es-ink) !important;
+  border-color: var(--es-slate-700, #2A2D34) !important;
+  background: var(--es-black, #101114) !important;
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] [data-profile-theme-choice] {
-  color: var(--es-ink-3) !important;
+  color: var(--es-slate-200, #98A6BF) !important;
 }
 
 html[data-theme="dark"] .profile-menu[data-profile-popover-version="2"] [data-profile-theme-choice][aria-pressed="true"] {
-  background: var(--es-ink) !important;
-  color: #72b5ff !important;
+  background: var(--es-slate-700, #2A2D34) !important;
+  color: #9DCBFD !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, .3) !important;
 }
 

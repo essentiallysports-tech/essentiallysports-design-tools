@@ -12,19 +12,19 @@
 
 :root {
   /* Font families. Titles and numbers: Condensed 700/800. Reading text: Roboto. */
-  --es-font-display: "Roboto Condensed", "Roboto", Arial, sans-serif;
-  --es-font-ui: "Roboto", Arial, sans-serif;
-  --es-font-body: "Roboto", Arial, sans-serif;
+  --es-font-display: "Roboto Condensed", "Roboto", sans-serif;
+  --es-font-ui: "Roboto", sans-serif;
+  --es-font-body: "Roboto", sans-serif;
 
   /* Neutrals (shared) */
   --es-bg: #ffffff;
-  --es-stage: #f3f4f6;
-  --es-sunk: #f5f6f8;
-  --es-line: #e5e7eb;
-  --es-line-2: #d3d7de;
+  --es-stage: #eef0f3;
+  --es-sunk: #f0f2f5;
+  --es-line: #dfe2e7;
+  --es-line-2: #c8cdd5;
   --es-ink: #0e1014;
-  --es-ink-2: #464c57;
-  --es-ink-3: #646a76; /* 4.5:1+ on white and on the sunk greys */
+  --es-ink-2: #3a3f48;
+  --es-ink-3: #565c67; /* 4.5:1+ on white and on the sunk greys */
   --es-placeholder: #9aa0aa;
   --es-good: #0e7a3d;
   --es-good-soft: #e9f6ee;
@@ -60,15 +60,33 @@
   --es-action-soft: var(--es-brand-soft);
   --es-focus-ring: rgba(14, 16, 20, .08);
 
-  /* Spacing: 4 · 8 · 12 · 16 · 24 · 32 · 48 · 72 */
+  /* Spacing (2026-11-16): one 4px scale for every padding, margin and gap in UI
+     chrome. Artwork/canvas internals and ad renders are excluded.
+       heading -> helper 4 · label -> field 8 · button row 8 · heading/helper -> first
+       control 12 · stacked controls 12 · panel section 20 (sides 16) · groups 20-24 ·
+       cards sm 16 / md 20 / lg 24 · page gutter 32 (phone 16) · page sections 32-48.
+     A divider has equal space above and below it, never less than 12px. */
   --es-space-1: 4px;
   --es-space-2: 8px;
   --es-space-3: 12px;
   --es-space-4: 16px;
-  --es-space-5: 24px;
-  --es-space-6: 32px;
-  --es-space-7: 48px;
-  --es-space-8: 72px;
+  --es-space-5: 20px;
+  --es-space-6: 24px;
+  --es-space-8: 32px;
+  --es-space-10: 40px;
+  --es-space-12: 48px;
+  /* Roles built on the scale */
+  --es-section-pad-y: var(--es-space-5);   /* panel / inspector section, top + bottom */
+  --es-section-pad-x: var(--es-space-4);   /* panel / inspector section, sides */
+  --es-card-pad-sm: var(--es-space-4);
+  --es-card-pad-md: var(--es-space-5);
+  --es-card-pad-lg: var(--es-space-6);
+  --es-field-h: 40px;
+  --es-field-h-sm: 32px;
+  --es-field-pad-x: var(--es-space-3);
+  --es-field-inset: var(--es-space-1);     /* embedded button inside a field */
+  --es-page-gutter: var(--es-space-8);
+  --es-page-gutter-phone: var(--es-space-4);
 
   /* Radius: chips/crests · controls · containers · pills */
   --es-radius-chip: 10px;
@@ -96,14 +114,70 @@
   --es-dur-step: 300ms;
   --es-dur-progress: 420ms;
 
-  /* Semantic type scale (tool density: 13 · 15 · 18 · 22 · 28 · 36) */
+  /* Semantic type scale (15px base: 11 · 13 · 15 · 18 · 22/24 · 36).
+     Families: Roboto for everything people read, Roboto Condensed 800 only for
+     UPPERCASE section titles, numbers and the editor's workspace titles,
+     Acumin only inside artwork. No other family, no mono, no system stack. */
   --es-type-display-size: 48px;
   --es-type-display-line: .98;
   --es-type-display-weight: 800;
 
+  /* Page title (h1): Roboto 700, sentence case, tight tracking. */
+  --es-type-page-title-family: var(--es-font-ui);
   --es-type-page-title-size: 36px;
-  --es-type-page-title-line: 1.05;
-  --es-type-page-title-weight: 800;
+  --es-type-page-title-size-sm: 28px;
+  --es-type-page-title-line: 1.1;
+  --es-type-page-title-weight: 700;
+  --es-type-page-title-tracking: -.02em;
+
+  /* Kicker above a title ("Good afternoon, Suhail"). */
+  --es-type-kicker-size: 15px;
+  --es-type-kicker-line: 1.4;
+  --es-type-kicker-weight: 400;
+
+  /* Lede under a title. Use sparingly. */
+  --es-type-lede-size: 15px;
+  --es-type-lede-line: 1.55;
+  --es-type-lede-weight: 400;
+  --es-type-lede-measure: 70ch;
+
+  /* Section title ("THE PULSE"): Condensed 800, UPPERCASE. */
+  --es-type-section-family: var(--es-font-display);
+  --es-type-section-size: 24px;
+  --es-type-section-size-sm: 22px;
+  --es-type-section-line: 1;
+  --es-type-section-weight: 800;
+  --es-type-section-tracking: .005em;
+
+  /* Eyebrow / small caps label ("YOUR ANGLE"). */
+  --es-type-eyebrow-size: 11px;
+  --es-type-eyebrow-line: 1.3;
+  --es-type-eyebrow-weight: 600;
+  --es-type-eyebrow-tracking: .08em;
+
+  /* Card / item title. */
+  --es-type-card-title-size: 18px;
+  --es-type-card-title-line: 1.3;
+  --es-type-card-title-weight: 500;
+
+  /* Tabs, counts, chips, buttons, the big prompt box, sidebar nav, steps. */
+  --es-type-tab-size: 15px;
+  --es-type-tab-weight: 500;
+  --es-type-count-size: 13px;
+  --es-type-chip-size: 13px;
+  --es-type-chip-weight: 500;
+  --es-type-button-size: 15px;
+  --es-type-button-weight: 500;
+  --es-type-prompt-size: 18px;
+  --es-type-prompt-line: 1.5;
+  --es-type-prompt-weight: 400;
+  --es-type-nav-size: 15px;
+  --es-type-nav-weight: 400;
+  --es-type-nav-group-size: 12px;
+  --es-type-nav-group-weight: 600;
+  --es-type-step-size: 13px;
+  --es-type-step-weight: 500;
+  --es-step-circle: 22px;
 
   --es-type-workspace-title-size: 22px;
   --es-type-workspace-title-line: 1.1;
@@ -117,36 +191,130 @@
   --es-type-section-title-line: 1.3;
   --es-type-section-title-weight: 700;
 
+  /* Form field label in dense editor panels (stays 13px for legibility;
+     eyebrows above use the 11px UPPERCASE role). */
   --es-type-field-label-size: 13px;
   --es-type-field-label-line: 1.4;
-  --es-type-field-label-weight: 700;
+  --es-type-field-label-weight: 600;
 
   --es-type-control-size: 15px;
   --es-type-control-line: 1.4;
   --es-type-control-weight: 500;
 
   --es-type-body-size: 15px;
-  --es-type-body-line: 1.5;
+  --es-type-body-line: 1.55;
   --es-type-body-weight: 400;
 
   --es-type-helper-size: 13px;
   --es-type-helper-line: 1.45;
   --es-type-helper-weight: 400;
 
+  /* Meta line: items joined with " · ". */
   --es-type-meta-size: 13px;
-  --es-type-meta-line: 1.5;
-  --es-type-meta-weight: 500;
+  --es-type-meta-line: 1.45;
+  --es-type-meta-weight: 400;
+
+  /* ── Buttons (FrameUp button system, end of this file) ──
+     Only colours change between themes; size, radius, padding, font, rim
+     width and motion are the same in both. */
+  --es-btn-rim-width: 1.5px;
+  --es-btn-rim-turn: 5s;
+  --es-rim-stops: #0A6FDE, #0A7DFA 18%, #54A4FB 36%, #00B3E6 52%, #9DCBFD 64%, #54A4FB 80%, #0A6FDE;
+  --es-rim-stops-bright: #54A4FB, #9DCBFD 18%, #CEE5FE 32%, #00B3E6 50%, #9DCBFD 66%, #54A4FB 82%, #54A4FB;
+  /* Light: a deeper rim so it reads on white and on the #EEF0F3 stage (every stop 3:1+ on white). */
+  --es-btn-rim: #0A6FDE, #0A7DFA 18%, #3D95F7 36%, #0099CC 52%, #3D95F7 66%, #0A7DFA 82%, #0A6FDE;
+  --es-btn-rim-hover: #0A7DFA, #3D95F7 18%, #00B3E6 34%, #0099CC 50%, #54A4FB 66%, #3D95F7 82%, #0A7DFA;
+  --es-btn-primary-bg: #FFFFFF;
+  --es-btn-primary-bg-hover: #F7F9FC;
+  --es-btn-primary-ink: #0E1014;
+  --es-btn-bg: #FFFFFF;
+  --es-btn-bg-hover: #F0F2F5;
+  --es-btn-line: #C8CDD5;
+  --es-btn-line-hover: #8A919E;
+  --es-btn-ink: #0E1014;
+  --es-btn-ghost-ink: var(--es-ink-2, #3A3F48);
+  --es-btn-sunk: #F0F2F5;
+  --es-btn-danger-ink: #B91C1C;       /* 6.5:1 on white */
+  --es-btn-danger-line: #D46A6A;      /* 3.5:1 on white */
+  --es-btn-focus: #0A62C7;
+  --es-btn-disabled-bg: #F0F2F5;
+  --es-btn-disabled-ink: #565C67;     /* 6.0:1 on #F0F2F5 */
+
+  /* ── AI gradients (moved up from ai-studio.css so every page can use them;
+     ai-studio.css keeps the same names). ES blues + cyan, no purple. ── */
+  --ais-blue: #0a7dfa;
+  --ais-cyan: #00b3e6;
+  --ais-gradient: linear-gradient(120deg, #0a6fde 0%, #0a7dfa 28%, #54a4fb 58%, #9dcbfd 80%, #00b3e6 100%);
+  --ais-gradient-text: linear-gradient(100deg, #54a4fb 0%, #9dcbfd 28%, #00b3e6 52%, #9dcbfd 76%, #54a4fb 100%);
+  --ais-gradient-text-on-light: linear-gradient(100deg, #0a6fde 0%, #085ebc 50%, #0a6fde 100%);
+  --ais-gradient-stroke: linear-gradient(120deg, #0a7dfa 0%, #54a4fb 35%, #00b3e6 65%, #9dcbfd 100%);
+  --ais-gradient-fill: linear-gradient(120deg, #085ebc 0%, #0a6fde 60%, #0a6fde 100%);
+  --ais-gradient-soft: linear-gradient(120deg, rgb(10 125 250 / .08), rgb(84 164 251 / .07) 50%, rgb(0 179 230 / .08));
+  --ais-sheen: linear-gradient(100deg, transparent 20%, rgb(84 164 251 / .24) 42%, rgb(0 179 230 / .18) 56%, transparent 78%);
+  --ais-glow: 0 12px 32px -16px rgb(10 125 250 / .6), 0 0 40px -20px rgb(0 179 230 / .5);
+  --ais-glow-strong: 0 22px 44px -22px rgb(10 125 250 / .55), 0 0 48px -20px rgb(0 179 230 / .45);
 }
+
+html[data-theme="dark"] {
+  --es-btn-rim: var(--es-rim-stops);
+  --es-btn-rim-hover: var(--es-rim-stops-bright);
+  --es-btn-primary-bg: #101114;
+  --es-btn-primary-bg-hover: #1C1E23;
+  --es-btn-primary-ink: #FFFFFF;
+  --es-btn-bg: #1F2126;
+  --es-btn-bg-hover: #2A2D34;
+  --es-btn-line: #3B4049;
+  --es-btn-line-hover: #5C6373;
+  --es-btn-ink: #FFFFFF;
+  --es-btn-ghost-ink: #BFC8D9;
+  --es-btn-sunk: #2A2D34;
+  --es-btn-danger-ink: #FF8A8A;       /* 7.1:1 on #1F2126 */
+  --es-btn-danger-line: #B54C4C;      /* 3.9:1 on ES Black */
+  --es-btn-focus: #54A4FB;
+  --es-btn-disabled-bg: #2A2D34;
+  --es-btn-disabled-ink: #98A6BF;     /* 5.6:1 on #2A2D34 */
+  --ais-gradient-soft: linear-gradient(120deg, rgb(10 125 250 / .18), rgb(84 164 251 / .14) 50%, rgb(0 179 230 / .16));
+  --ais-glow: 0 12px 32px -14px rgb(10 125 250 / .55), 0 0 40px -18px rgb(0 179 230 / .45);
+}
+
+/* Surfaces that stay light in dark mode (the editor's white canvas) keep
+   the light button colours. */
+html[data-theme="dark"] .canvas-empty-hint {
+  --es-btn-rim: #0A6FDE, #0A7DFA 18%, #3D95F7 36%, #0099CC 52%, #3D95F7 66%, #0A7DFA 82%, #0A6FDE;
+  --es-btn-primary-bg: #FFFFFF;
+  --es-btn-primary-bg-hover: #F7F9FC;
+  --es-btn-primary-ink: #0E1014;
+  --es-btn-bg: #FFFFFF;
+  --es-btn-bg-hover: #F0F2F5;
+  --es-btn-line: #C8CDD5;
+  --es-btn-line-hover: #8A919E;
+  --es-btn-ink: #0E1014;
+  --es-btn-ghost-ink: #3A3F48;
+  --es-btn-sunk: #F0F2F5;
+  --es-btn-focus: #0A62C7;
+  --es-btn-disabled-bg: #F0F2F5;
+  --es-btn-disabled-ink: #565C67;
+}
+
+/* The rim's angle is a registered <angle> so it can animate smoothly. Browsers
+   without @property animate it discretely (0deg → 360deg looks identical), so
+   they get a still gradient rim. */
+@property --es-rim-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes esRimSpin { to { --es-rim-angle: 360deg; } }
 
 /* Dark mode is owned by theme.css, which deliberately keeps some surfaces
    (the site navbar, artwork cards) light. The neutrals therefore stay light
    here; only the semantic text roles used by dark-aware components flip. */
 html[data-theme="dark"] {
-  --es-text-strong: #f5f7fa;
-  --es-text-primary: #e4e7ec;
-  --es-text-secondary: #c4cbd4;
-  --es-text-muted: #98a2b3;
-  --es-text-subtle: #7b8794;
+  --es-text-strong: #FFFFFF;
+  --es-text-primary: #FFFFFF;
+  --es-text-secondary: #BFC8D9;
+  --es-text-muted: #BFC8D9;
+  --es-text-subtle: #98A6BF;
 }
 
 /* Visible focus everywhere: a white gap, then an ink ring. */
@@ -157,7 +325,7 @@ html[data-theme="dark"] {
 
 /* In dark mode a mid blue ring reads on both dark and kept-light surfaces. */
 html[data-theme="dark"] :is(a, button, summary, [role="button"], [role="tab"], [tabindex]:not(input, select, textarea)):focus-visible {
-  outline-color: #5aa8ff !important;
+  outline-color: #54A4FB !important;
 }
 
 ::placeholder {
@@ -193,9 +361,69 @@ html[data-theme="dark"] :is(a, button, summary, [role="button"], [role="tab"], [
 }
 
 .es-type-page-title {
+  font-family: var(--es-type-page-title-family);
   font-size: var(--es-type-page-title-size);
   font-weight: var(--es-type-page-title-weight);
   line-height: var(--es-type-page-title-line);
+  letter-spacing: var(--es-type-page-title-tracking);
+}
+
+/* Reference-scale roles (kicker → title → lede, section, eyebrow, card, meta). */
+.es-type-kicker,
+.es-type-lede,
+.es-type-eyebrow,
+.es-type-card-title,
+.es-type-section {
+  margin: 0;
+  font-family: var(--es-font-ui);
+  letter-spacing: 0;
+}
+.es-type-kicker {
+  color: var(--es-ink-2);
+  font-size: var(--es-type-kicker-size);
+  font-weight: var(--es-type-kicker-weight);
+  line-height: var(--es-type-kicker-line);
+}
+.es-type-lede {
+  max-width: var(--es-type-lede-measure);
+  color: var(--es-text-secondary);
+  font-size: var(--es-type-lede-size);
+  font-weight: var(--es-type-lede-weight);
+  line-height: var(--es-type-lede-line);
+}
+.es-type-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--es-text-strong);
+  font-family: var(--es-type-section-family);
+  font-size: var(--es-type-section-size);
+  font-weight: var(--es-type-section-weight);
+  line-height: var(--es-type-section-line);
+  letter-spacing: var(--es-type-section-tracking);
+  text-transform: uppercase;
+}
+.es-type-eyebrow {
+  color: var(--es-text-muted);
+  font-size: var(--es-type-eyebrow-size);
+  font-weight: var(--es-type-eyebrow-weight);
+  line-height: var(--es-type-eyebrow-line);
+  letter-spacing: var(--es-type-eyebrow-tracking);
+  text-transform: uppercase;
+}
+.es-type-card-title {
+  color: var(--es-text-strong);
+  font-size: var(--es-type-card-title-size);
+  font-weight: var(--es-type-card-title-weight);
+  line-height: var(--es-type-card-title-line);
+}
+/* Meta items joined with " · ". */
+.es-meta-list { display: flex; flex-wrap: wrap; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; color: var(--es-text-muted); font: var(--es-type-meta-weight) var(--es-type-meta-size)/var(--es-type-meta-line) var(--es-font-ui); }
+.es-meta-list > * + *::before { content: "·"; margin: 0 6px; }
+html[data-theme="dark"] .es-type-kicker { color: var(--es-slate-200, #98A6BF); }
+@media (max-width: 640px) {
+  .es-type-page-title { font-size: var(--es-type-page-title-size-sm); }
+  .es-type-section { font-size: var(--es-type-section-size-sm); }
 }
 
 .es-type-workspace-title {
@@ -490,52 +718,8 @@ body.dashboard-page .dashboard-app .panel-subtitle {
   }
 }
 
-/* ------------------------------------------------------------------------
- * ES components: one standard per control family.
- * Primary = brand fill, white 700 label. Secondary = white, line-2 outline.
- * Tool controls 40px, marketing CTAs 48px, fields 44px+ with a 14px radius.
- * ---------------------------------------------------------------------- */
-
-/* Marketing CTAs (home hero, workspace cards, FAQ, how-it-works) */
-html:not([data-theme="dark"]) :is(.frame-hero-cta, .frame-cta, .faq-cta-action, .how-button){
-  min-height: 48px !important;
-  padding: 0 24px !important;
-  border-radius: var(--es-radius-control) !important;
-  font-family: var(--es-font-ui) !important;
-  font-size: 15px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0 !important;
-  transition: background-color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease), transform var(--es-dur-press) var(--es-ease) !important;
-}
-
-html:not([data-theme="dark"]) :is(.frame-hero-cta.is-primary, .frame-cta, .faq-cta-action.is-primary, .how-button--primary){
-  border-color: var(--es-brand-fill) !important;
-  background: var(--es-brand-fill) !important;
-  color: #ffffff !important;
-}
-
-html:not([data-theme="dark"]) :is(.frame-hero-cta.is-primary, .frame-cta, .faq-cta-action.is-primary, .how-button--primary):hover{
-  border-color: var(--es-brand-fill-press) !important;
-  background: var(--es-brand-fill-press) !important;
-}
-
-html:not([data-theme="dark"]) :is(.frame-hero-cta:not(.is-primary), .faq-cta-action:not(.is-primary)){
-  border: 0 !important;
-  background: var(--es-bg) !important;
-  box-shadow: inset 0 0 0 1px var(--es-line-2) !important;
-  color: var(--es-ink) !important;
-}
-
-html:not([data-theme="dark"]) :is(.frame-hero-cta:not(.is-primary), .faq-cta-action:not(.is-primary)):hover{
-  background: var(--es-sunk) !important;
-}
-
-html:not([data-theme="dark"]) :is(.frame-hero-cta, .frame-cta, .faq-cta-action, .how-button):active{
-  transform: scale(.98);
-}
-
-/* Builder tool buttons */
-html:not([data-theme="dark"])[data-studio-shell="on"] :is(.studio-export-btn, .image-context-upload, .image-context-ai, .canvas-upload-button, .quote-switch){
+/* Builder switch rows (buttons come from the button system at the end). */
+html:not([data-theme="dark"])[data-studio-shell="on"] .quote-switch{
   min-height: 40px !important;
   border-radius: var(--es-radius-control) !important;
   font-family: var(--es-font-ui) !important;
@@ -543,24 +727,13 @@ html:not([data-theme="dark"])[data-studio-shell="on"] :is(.studio-export-btn, .i
   font-weight: 700 !important;
 }
 
-html:not([data-theme="dark"])[data-studio-shell="on"] :is(.studio-export-btn:not(.is-export-complete), .image-context-upload, .canvas-upload-button:not(.canvas-upload-button-secondary)){
-  border-color: var(--es-brand-fill) !important;
-  background: var(--es-brand-fill) !important;
-  color: #ffffff !important;
-}
-
-html:not([data-theme="dark"])[data-studio-shell="on"] :is(.studio-export-btn:not(.is-export-complete), .image-context-upload, .canvas-upload-button:not(.canvas-upload-button-secondary)):hover{
-  border-color: var(--es-brand-fill-press) !important;
-  background: var(--es-brand-fill-press) !important;
-}
-
-html:not([data-theme="dark"])[data-studio-shell="on"] :is(.image-context-ai, .canvas-upload-button-secondary, .quote-switch){
+html:not([data-theme="dark"])[data-studio-shell="on"] .quote-switch{
   border-color: var(--es-line-2) !important;
   background: var(--es-bg) !important;
   color: var(--es-ink) !important;
 }
 
-html:not([data-theme="dark"])[data-studio-shell="on"] :is(.image-context-ai, .canvas-upload-button-secondary, .quote-switch):hover{
+html:not([data-theme="dark"])[data-studio-shell="on"] .quote-switch:hover{
   border-color: var(--es-ink-3) !important;
   background: var(--es-sunk) !important;
 }
@@ -597,7 +770,7 @@ html:not([data-theme="dark"])[data-studio-shell="on"] .panel .select-dropdown.is
 
 html[data-theme="dark"][data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input):focus,
 html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown.is-open > .select-dropdown-trigger{
-  border-color: var(--theme-dark-accent, #2586f7) !important;
+  border-color: var(--theme-dark-accent, #54A4FB) !important;
   box-shadow: none !important;
   outline: none !important;
 }
@@ -664,51 +837,6 @@ html:not([data-theme="dark"]) .select-dropdown-option.is-selected{
   font-weight: 700 !important;
 }
 
-/* ---- Page-level controls (design request, feedback, account, AI, reels) ---- */
-
-/* Buttons read in Roboto 700 at 15px. */
-html:not([data-theme="dark"]) :is(.btn, .primary-btn, .secondary-btn, .danger-btn, .workspace-cta, .feedback-submit, .feedback-back-link, .reels-btn){
-  border-radius: var(--es-radius-control) !important;
-  font-family: var(--es-font-ui) !important;
-  font-size: 15px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0 !important;
-}
-
-/* Primary: brand fill, white label, no glow. */
-html:not([data-theme="dark"]) :is(.btn-primary, .primary-btn, .workspace-cta, .feedback-submit, .reels-btn.is-primary, .reels-btn.is-secondary):not(:disabled){
-  border-color: var(--es-brand-fill) !important;
-  background: var(--es-brand-fill) !important;
-  box-shadow: none !important;
-  color: #ffffff !important;
-}
-
-html:not([data-theme="dark"]) :is(.btn-primary, .primary-btn, .workspace-cta, .feedback-submit, .reels-btn.is-primary, .reels-btn.is-secondary):not(:disabled):hover{
-  border-color: var(--es-brand-fill-press) !important;
-  background: var(--es-brand-fill-press) !important;
-}
-
-/* Secondary / quiet: white, line-2 outline, ink label. */
-html:not([data-theme="dark"]) :is(.btn-secondary:not(.feedback-back-link), .secondary-btn, .reels-btn.is-quiet):not(:disabled){
-  border-color: var(--es-line-2) !important;
-  background: var(--es-bg) !important;
-  color: var(--es-ink) !important;
-}
-
-html:not([data-theme="dark"]) :is(.btn-secondary:not(.feedback-back-link), .secondary-btn, .reels-btn.is-quiet):not(:disabled):hover{
-  border-color: var(--es-ink-3) !important;
-  background: var(--es-sunk) !important;
-}
-
-/* Disabled: sunk fill, ink-3 label, hairline. */
-html:not([data-theme="dark"]) :is(.btn, .primary-btn, .secondary-btn, .feedback-submit, .reels-btn, .studio-export-btn):disabled{
-  border-color: var(--es-line) !important;
-  background: var(--es-sunk) !important;
-  box-shadow: none !important;
-  color: var(--es-ink-3) !important;
-  cursor: not-allowed;
-}
-
 /* Fields: white (sunk means disabled), 14px radius, line-2 outline, ink focus. */
 html:not([data-theme="dark"]) :is(.request-input, .request-select, .request-textarea, .request-dropdown-trigger:not([class*="priority-"]), .feedback-textarea, .feedback-dropdown-trigger, .reels-native-select, .reels-choice-trigger, .account-main input:not([type="checkbox"]):not([type="radio"]), .account-main select, .account-main textarea){
   border: 1px solid var(--es-line-2) !important;
@@ -743,10 +871,6 @@ html:not([data-theme="dark"]) .footer-blurb{
 
 html:not([data-theme="dark"]) .feedback-label small{
   font-size: 13px !important;
-}
-
-html:not([data-theme="dark"]) .quick-action{
-  background: var(--es-bg) !important;
 }
 
 /* Disabled fields (directly or inside a disabled fieldset) read as sunk. */
@@ -828,11 +952,6 @@ html[data-theme="dark"] body:has(#ai-workspace) {
 html[data-theme="dark"] body.reels-page :is(.section-label, .color-group-label),
 html[data-theme="dark"] body:has(#ai-workspace) :is(.side-title, .workspace-section-title) {
   color: var(--es-ink) !important;
-}
-
-html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
-  background: var(--es-bg) !important;
-  color: var(--es-ink-2) !important;
 }
 
 /* Searchable dropdowns (long lists such as teams). */
@@ -1789,58 +1908,58 @@ html[data-theme="dark"] body:has(#ai-workspace) .quick-action {
 
 /* Dark theme: the dialog follows the theme instead of staying white. */
 html[data-theme="dark"] .es-dialog {
-  background: #151515;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, .55), inset 0 0 0 1px #2e2e2e;
-  color: #f3f5f7;
+  background: #1F2126;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .55), inset 0 0 0 1px #2A2D34;
+  color: #FFFFFF;
 }
 
 html[data-theme="dark"] .es-dialog p {
-  color: #b6b6b6;
+  color: #BFC8D9;
 }
 
 html[data-theme="dark"] .es-dialog-field-label {
-  color: #f3f5f7;
+  color: #FFFFFF;
 }
 
 html[data-theme="dark"] .es-dialog-input {
-  background: #1f1f1f;
-  box-shadow: inset 0 0 0 1.5px #3a3a3a;
-  color: #f3f5f7;
+  background: #2A2D34;
+  box-shadow: inset 0 0 0 1.5px #3B4049;
+  color: #FFFFFF;
 }
 
 html[data-theme="dark"] .es-dialog-field-hint {
-  color: #b6b6b6;
+  color: #BFC8D9;
 }
 
 html[data-theme="dark"] .es-dialog-button.is-secondary {
-  background: #1f1f1f;
-  box-shadow: inset 0 0 0 1.5px #3a3a3a;
-  color: #f3f5f7;
+  background: #2A2D34;
+  box-shadow: inset 0 0 0 1.5px #3B4049;
+  color: #FFFFFF;
 }
 
 html[data-theme="dark"] .es-dialog-button:is(.is-secondary, .is-quiet):hover {
-  background: #262626;
+  background: #3B4049;
 }
 
 html[data-theme="dark"] .es-dialog-button.is-quiet {
-  color: #c9cdd3;
+  color: #BFC8D9;
 }
 
 /* Dark theme for the editor's newer dialogs: their parts use the colour
    tokens, so the tokens switch to dark values inside them. */
 html[data-theme="dark"] :is(.template-picker, .recent-designs-dialog, .whats-new-dialog, .shortcuts-dialog) {
-  --es-ink: #f3f5f7;
-  --es-ink-2: #b6b6b6;
-  --es-bg: #1f1f1f;
-  --es-sunk: #262626;
-  --es-line: #2e2e2e;
-  --es-line-2: #3a3a3a;
+  --es-ink: #FFFFFF;
+  --es-ink-2: #BFC8D9;
+  --es-bg: #2A2D34;
+  --es-sunk: #3B4049;
+  --es-line: #2A2D34;
+  --es-line-2: #3B4049;
   --es-brand-soft: rgb(10 125 250 / .2);
-  --es-brand-text: #8EC2FF;
+  --es-brand-text: #9DCBFD;
 }
 
 html[data-theme="dark"] .es-dialog-list {
-  color: #f3f5f7;
+  color: #FFFFFF;
 }
 
 /* Keyboard shortcuts (press ? in the editor). */
@@ -1999,32 +2118,6 @@ html[data-theme="dark"] .es-dialog-list {
 .es-toast-action {
   flex: none;
   margin-left: auto;
-  height: 32px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--es-surface, #ffffff);
-  box-shadow: inset 0 0 0 1px var(--es-line-2, #d5d8dd);
-  color: var(--es-brand-text, #0a62c7);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.es-toast-action:hover,
-.es-toast-action:focus-visible {
-  background: var(--es-brand-soft, #eaf3ff);
-  box-shadow: inset 0 0 0 1px var(--es-brand, #0a7dfa);
-  outline: none;
-}
-
-@media (pointer: coarse) {
-  .es-toast-action {
-    height: auto;
-    min-height: var(--es-tap);
-  }
 }
 
 .es-toast.is-leaving {
@@ -2058,9 +2151,9 @@ html[data-theme="dark"] .es-dialog-list {
 }
 
 html[data-theme="dark"] .es-toast {
-  background: #1a1a1a;
-  box-shadow: 0 16px 40px rgb(0 0 0 / .5), inset 0 0 0 1px #2e2e2e;
-  color: #f3f5f7;
+  background: #2A2D34;
+  box-shadow: 0 16px 40px rgb(0 0 0 / .5), inset 0 0 0 1px #2A2D34;
+  color: #FFFFFF;
 }
 
 html[data-theme="dark"] .es-toast.is-error {
@@ -2069,11 +2162,6 @@ html[data-theme="dark"] .es-toast.is-error {
 
 html[data-theme="dark"] .es-toast.is-error::before { background: #3a1717; color: #ff8a80; }
 
-html[data-theme="dark"] .es-toast-action {
-  background: #1f1f1f;
-  box-shadow: inset 0 0 0 1px #3a3a3a;
-  color: #8ec2ff;
-}
 
 /* Carousel slide buttons show a dot once the slide has content. */
 .carousel-slide-button[data-carousel-slide] {
@@ -2154,23 +2242,52 @@ html[data-theme="dark"] .es-toast-action {
 }
 
 /* ─── Typography rule (site-wide) ──────────────────────────────────────────
- * Headings: Roboto Condensed (800 for page/section, 700 for smaller).
+ * Page title (h1): Roboto 700, sentence case, -0.02em (--es-type-page-title-*).
+ * Other headings: Roboto Condensed (800 for h2 sections, 700 for smaller).
  * Subtext and everything people read: Roboto.
  * Artwork previews and illustrations inside the UI are left untouched. */
-:is(h1, h2, h3, h4, h5, h6, .es-empty__title):not(:is([class*="brief-ui"], [class*="hero-art"], [class*="preview"], [class*="snap"], [class*="artwork"]) *) {
+:is(h2, h3, h4, h5, h6, .es-empty__title):not(.es-type-card-title, .es-type-eyebrow, .es-type-page-title, .es-type-section):not(:is([class*="brief-ui"], [class*="hero-art"], [class*="preview"], [class*="snap"], [class*="artwork"]) *) {
   font-family: var(--es-font-display) !important;
   letter-spacing: 0;
 }
 
-:is(h1, h2):not(:is([class*="brief-ui"], [class*="hero-art"], [class*="preview"], [class*="snap"], [class*="artwork"]) *) {
+h1:not(.frame-section-title, .es-type-section):not(:is([class*="brief-ui"], [class*="hero-art"], [class*="preview"], [class*="snap"], [class*="artwork"]) *) {
+  font-family: var(--es-type-page-title-family) !important;
+  font-weight: var(--es-type-page-title-weight) !important;
+  letter-spacing: var(--es-type-page-title-tracking) !important;
+  text-transform: none !important;
+}
+
+/* Section titles ("JUMP BACK IN", "CHOOSE A WORKSPACE", "THE PULSE"):
+   Condensed 800, UPPERCASE, 24px (22px on phones). */
+:is(.frame-section-title, .es-type-section):not(:is([class*="preview"], [class*="artwork"]) *) {
+  font-family: var(--es-type-section-family) !important;
+  font-size: var(--es-type-section-size) !important;
+  font-weight: var(--es-type-section-weight) !important;
+  line-height: var(--es-type-section-line) !important;
+  letter-spacing: var(--es-type-section-tracking) !important;
+  text-transform: uppercase;
+}
+@media (max-width: 640px) {
+  :is(.frame-section-title, .es-type-section):not(:is([class*="preview"], [class*="artwork"]) *) {
+    font-size: var(--es-type-section-size-sm) !important;
+  }
+}
+
+h2:not(.es-type-card-title, .es-type-eyebrow, .es-type-page-title, .es-type-section):not(:is([class*="brief-ui"], [class*="hero-art"], [class*="preview"], [class*="snap"], [class*="artwork"]) *) {
   font-weight: 800 !important;
 }
 
-:is(h3, h4, h5, h6, .es-empty__title):not(:is([class*="brief-ui"], [class*="hero-art"], [class*="preview"], [class*="snap"], [class*="artwork"]) *) {
+:is(h3, h4, h5, h6, .es-empty__title):not(.es-type-card-title, .es-type-eyebrow, .es-type-page-title, .es-type-section):not(:is([class*="brief-ui"], [class*="hero-art"], [class*="preview"], [class*="snap"], [class*="artwork"]) *) {
   font-weight: 700 !important;
 }
 
 :where(p, li, label, small, dd, dt, figcaption, td, th, blockquote, input, textarea, select) {
+  font-family: var(--es-font-ui);
+}
+
+/* No monospace anywhere: code samples and key hints use Roboto too. */
+:where(code, kbd, pre, samp, tt) {
   font-family: var(--es-font-ui);
 }
 
@@ -2181,8 +2298,24 @@ html[data-theme="dark"] .es-toast-action {
   font-family: var(--es-font-ui) !important;
 }
 
-.request-label {
-  font-weight: 700 !important;
+/* Field labels on page forms use the eyebrow role ("YOUR ANGLE"). */
+.request-label,
+.feedback-label {
+  font-size: var(--es-type-eyebrow-size) !important;
+  font-weight: var(--es-type-eyebrow-weight) !important;
+  line-height: var(--es-type-eyebrow-line) !important;
+  letter-spacing: var(--es-type-eyebrow-tracking) !important;
+  text-transform: uppercase;
+}
+.request-label small,
+.feedback-label small { letter-spacing: 0; text-transform: none; }
+
+/* Card section titles on Design Request: section role, 22px. */
+.request-page .request-card-title {
+  font-size: var(--es-type-section-size-sm) !important;
+  line-height: var(--es-type-section-line) !important;
+  letter-spacing: var(--es-type-section-tracking) !important;
+  text-transform: uppercase;
 }
 
 .faq-item p {
@@ -2225,8 +2358,6 @@ svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
   .gen-card__actions .es-icon-btn,
   .prompt-mode-remove
 ) svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
-  width: var(--es-icon-sm) !important;
-  height: var(--es-icon-sm) !important;
   min-width: var(--es-icon-sm);
 }
 
@@ -2239,19 +2370,9 @@ svg[viewBox="0 0 24 24"][stroke-linejoin="round"] {
  * Clean & outlined, site-wide (same system as the editor's right panel).
  * ---------------------------------------------------------------------- */
 
-/* Tool buttons and single-line fields on pages: 40px on desktop. Phones keep
-   their larger touch targets. Marketing CTAs keep 48px. */
+/* Single-line fields on pages: 40px on desktop. Phones keep their larger
+   touch targets. */
 @media (min-width: 901px) {
-  html :is(.btn, .primary-btn, .secondary-btn, .danger-btn, .feedback-submit, .feedback-back-link, .reels-btn, .workspace-cta){
-    min-height: 40px !important;
-    height: auto;
-  }
-
-  html :is(.btn, .primary-btn, .secondary-btn, .danger-btn, .feedback-submit, .reels-btn, .workspace-cta):not(.feedback-back-link){
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-  }
-
   html :is(input.request-input, select.request-select, .request-dropdown-trigger, .feedback-dropdown-trigger, .reels-native-select, .reels-choice-trigger, .account-main input:not([type="checkbox"]):not([type="radio"]), .account-main select){
     min-height: 40px !important;
     height: 40px !important;
@@ -2270,7 +2391,7 @@ html :is(.request-label, .feedback-label, .es-field__label, .account-main label:
 }
 
 html[data-theme="dark"] :is(.request-label, .feedback-label, .es-field__label, .account-main label:not(:has(input))){
-  color: #b6b6b6 !important;
+  color: #BFC8D9 !important;
 }
 
 /* Page cards: hairline, no shadow, 16px radius. */
@@ -2293,9 +2414,9 @@ html:not([data-theme="dark"]) .feedback-type-option input:checked + .feedback-ty
 }
 
 html[data-theme="dark"] .feedback-type-option input:checked + .feedback-type-card{
-  border-color: #f3f5f7 !important;
+  border-color: #FFFFFF !important;
   background: transparent !important;
-  box-shadow: inset 0 0 0 .5px #f3f5f7 !important;
+  box-shadow: inset 0 0 0 .5px #FFFFFF !important;
 }
 
 /* Selected chips (es-chip): ink ring, not a blue fill. */
@@ -2360,7 +2481,7 @@ html :is(.gen-row__label){
 }
 
 html[data-theme="dark"] .gen-row__label{
-  color: #b6b6b6 !important;
+  color: #BFC8D9 !important;
 }
 
 html:not([data-theme="dark"]) .gen-brief{
@@ -2399,32 +2520,31 @@ html :is(.request-dropdown-trigger, .feedback-dropdown-trigger, .reels-choice-tr
 }
 
 html:not([data-theme="dark"]) .request-dropdown-trigger.is-placeholder{
-  color: var(--es-placeholder, #8a8f98) !important;
+  color: var(--es-placeholder, #98A6BF) !important;
 }
 
 /* Dark mode: muted text and blue text that stay readable (4.5:1+ on #080808–#232323). */
 html[data-theme="dark"]{
-  --es-ink-3: #8b919c;
-  --es-brand-text: #8ec2ff;
+  --es-ink-3: #98A6BF;
+  --es-brand-text: #9DCBFD;
 }
 
 /* Brand-tinted pills switch to a dark tint so the light blue text reads. */
 html[data-theme="dark"]{
-  --es-brand-soft: rgb(26 115 224 / .22);
+  --es-brand-soft: rgb(10 125 250 / .22);
 }
-
 
 /* Login in dark mode: the note's lead-in and "Forgot password?" were near-black. */
 html[data-theme="dark"] .login-note strong{
-  color: #f3f5f7 !important;
+  color: #FFFFFF !important;
 }
 
 html[data-theme="dark"] .login-forgot{
-  color: #8ec2ff !important;
+  color: #9DCBFD !important;
 }
 
 html[data-theme="dark"] :is(.request-required, .home-start__more, .template-browse-btn, .es-link){
-  color: #8ec2ff !important;
+  color: #9DCBFD !important;
 }
 
 /* Keyboard focus that is always visible (these removed the outline with no replacement). */
@@ -2440,15 +2560,11 @@ html[data-theme="dark"] :is(.request-required, .home-start__more, .template-brow
 
 /* Dark mode, light surfaces that stay light: keep their text dark. */
 html[data-theme="dark"] .canvas-empty-hint > span{
-  color: #646a76 !important;
-}
-
-html[data-theme="dark"] .canvas-empty-hint .es-btn--ghost{
-  color: #464c57 !important;
+  color: #98A6BF !important;
 }
 
 html[data-theme="dark"] #ai-sidebar :is(.history-label, .history-empty){
-  color: #646a76 !important;
+  color: #98A6BF !important;
 }
 
 /* Dark mode: trend text bright enough on dark cards. */
@@ -2460,15 +2576,15 @@ html[data-theme="dark"] .es-stat__trend.is-down{
   color: #ff8a80;
 }
 
-/* Press feedback on every button (movement only when motion is welcome). */
+/* Press feedback on chips (buttons get theirs from the button system). */
 @media (prefers-reduced-motion: no-preference) {
-  html :is(.es-btn, .btn, .primary-btn, .secondary-btn, .feedback-submit, .reels-btn, .workspace-cta, .frame-hero-cta, .frame-cta, .es-chip, .template-filter):active:not(:disabled){
-    transform: scale(.97);
+  html :is(.es-chip, .template-filter):active:not(:disabled){
+    transform: scale(.96);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html :is(.es-btn, .btn, .primary-btn, .secondary-btn, .feedback-submit, .reels-btn, .workspace-cta, .frame-hero-cta, .frame-cta, .es-chip):active{
+  html :is(.es-chip, .template-filter):active{
     transform: none !important;
   }
 }
@@ -2496,18 +2612,61 @@ html[data-theme="dark"] .es-stat__trend.is-down{
  * Dark mode audit (2026-11-12): every surface that showed light in dark mode.
  * ====================================================================== */
 
+/* ES dark palette (2026-11-15): the "UI colors over dark" scale with the ES
+   logo blue. Black page, Slate 800 cards/panels, Slate 700/600 inputs, lines
+   and hover, Slate 200–100/White text, ES Blue accents. Contrast notes:
+   white on Blue 500 is ~4:1 (large text only), so filled buttons use Blue 600;
+   blue text/icons on dark use Blue 400/300; muted text is Slate 200 (≥4.8:1 on
+   every surface; Slate 300/400 only on Black, for non-essential text). */
+:root {
+  --es-blue-100: #E8F2FF;
+  --es-blue-200: #CEE5FE;
+  --es-blue-300: #9DCBFD;
+  --es-blue-400: #54A4FB;
+  --es-blue-500: #0A7DFA; /* ES logo blue */
+  --es-blue-600: #0A6FDE; /* brand hover; white labels 4.8:1 */
+  --es-blue-700: #085EBC;
+  --es-black: #101114;
+  --es-slate-800: #1F2126;
+  --es-slate-700: #2A2D34;
+  --es-slate-600: #3B4049;
+  --es-slate-500: #5C6373;
+  --es-slate-400: #707A8C;
+  --es-slate-300: #8490A6;
+  --es-slate-200: #98A6BF;
+  --es-slate-100: #BFC8D9;
+  --es-white: #FFFFFF;
+}
+
 /* Shared dark values, reused below. */
 html[data-theme="dark"] {
-  --dk-base: #080808;
-  --dk-surface: #121212;
-  --dk-raised: #1a1a1a;
-  --dk-sunk: #161616;
-  --dk-hover: #232323;
-  --dk-line: #2a2a2a;
-  --dk-line-2: #3a3a3a;
-  --dk-ink: #f3f5f7;
-  --dk-ink-2: #c9cdd3;
-  --dk-ink-3: #8b919c;
+  --dk-base: var(--es-black);
+  --dk-surface: var(--es-slate-800);
+  --dk-raised: var(--es-slate-700);
+  --dk-sunk: var(--es-black);
+  --dk-hover: var(--es-slate-600);
+  --dk-line: var(--es-slate-700);
+  --dk-line-2: var(--es-slate-600);
+  --dk-ink: var(--es-white);
+  --dk-ink-2: var(--es-slate-100);
+  --dk-ink-3: var(--es-slate-200);
+  /* theme.css values, remapped onto the same palette. */
+  --theme-dark-base: var(--es-black);
+  --theme-dark-surface: var(--es-slate-800);
+  --theme-dark-surface-raised: var(--es-slate-700);
+  --theme-dark-surface-hover: var(--es-slate-600);
+  --theme-dark-border: var(--es-slate-700);
+  --theme-dark-border-strong: var(--es-slate-600);
+  --theme-dark-text: var(--es-white);
+  --theme-dark-text-muted: var(--es-slate-100);
+  --theme-dark-text-subtle: var(--es-slate-200);
+  --theme-dark-accent: var(--es-blue-600);
+  --theme-dark-accent-soft: rgb(10 125 250 / .22);
+  /* Brand roles in dark: filled buttons Blue 600, blue text Blue 300. */
+  --es-brand: var(--es-blue-500);
+  --es-brand-fill: var(--es-blue-600);
+  --es-brand-fill-press: var(--es-blue-700);
+  --es-focus-color: var(--es-blue-400);
 }
 
 /* Sidebar section dividers */
@@ -2517,17 +2676,10 @@ html[data-theme="dark"] .es-sidebar__section { border-top-color: var(--dk-line) 
 html[data-theme="dark"] .frame-hero {
   background:
     radial-gradient(120% 140% at 0% 0%, rgb(10 125 250 / .16), transparent 55%),
-    radial-gradient(90% 120% at 100% 0%, rgb(124 77 255 / .12), transparent 60%),
+    radial-gradient(90% 120% at 100% 0%, rgb(0 179 230 / .1), transparent 60%),
     var(--dk-surface) !important;
   border-color: var(--dk-line) !important;
 }
-html[data-theme="dark"] .frame-hero-cta:not(.is-primary) {
-  background: var(--dk-raised) !important;
-  border-color: var(--dk-line-2) !important;
-  box-shadow: inset 0 0 0 1px var(--dk-line-2) !important;
-  color: var(--dk-ink) !important;
-}
-html[data-theme="dark"] .frame-hero-cta:not(.is-primary):hover { background: var(--dk-hover) !important; }
 html[data-theme="dark"] .frame-hero-arrow {
   background: rgb(26 26 26 / .9) !important;
   box-shadow: inset 0 0 0 1px var(--dk-line-2) !important;
@@ -2549,18 +2701,12 @@ html[data-theme="dark"] :is(.feedback-panel-head) { border-bottom-color: var(--d
 html[data-theme="dark"] :is(.feedback-type-card, .feedback-dropdown-trigger) { border-color: var(--dk-line-2) !important; }
 
 /* ── Icon tiles (How it works, Home, UI Library): dark tints, bright marks ── */
-html[data-theme="dark"] .es-tile { background: rgb(255 255 255 / .06) !important; color: #c9cdd3 !important; }
-html[data-theme="dark"] .es-tile--blue { background: rgb(10 125 250 / .18) !important; color: #8ec2ff !important; }
-html[data-theme="dark"] .es-tile--purple { background: rgb(124 77 255 / .2) !important; color: #c4b5fd !important; }
+html[data-theme="dark"] .es-tile { background: rgb(255 255 255 / .06) !important; color: #BFC8D9 !important; }
+html[data-theme="dark"] .es-tile--blue { background: rgb(10 125 250 / .18) !important; color: #9DCBFD !important; }
+html[data-theme="dark"] .es-tile--purple { background: rgb(0 179 230 / .16) !important; color: #7fdbf5 !important; }
 html[data-theme="dark"] .es-tile--green { background: rgb(22 163 74 / .18) !important; color: #6fd39a !important; }
 html[data-theme="dark"] .es-tile--pink { background: rgb(219 39 119 / .18) !important; color: #f9a8d4 !important; }
 html[data-theme="dark"] .es-tile--amber { background: rgb(217 119 6 / .2) !important; color: #fcd34d !important; }
-
-/* ── Buttons that fall back to light greys in dark ── */
-html[data-theme="dark"] .es-btn:disabled,
-html[data-theme="dark"] .es-btn[aria-disabled="true"] { background: var(--dk-raised) !important; box-shadow: inset 0 0 0 1px var(--dk-line) !important; color: #6b7280 !important; }
-html[data-theme="dark"] .es-btn:not(.es-btn--primary):not(.es-btn--ghost) { background: var(--dk-raised); box-shadow: inset 0 0 0 1px var(--dk-line-2); color: var(--dk-ink); }
-html[data-theme="dark"] .es-btn:not(.es-btn--primary):not(.es-btn--ghost):hover { background: var(--dk-hover); }
 html[data-theme="dark"] .es-chip { background: var(--dk-raised); box-shadow: inset 0 0 0 1px var(--dk-line-2); color: var(--dk-ink); }
 html[data-theme="dark"] .es-chip[aria-pressed="true"] { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dk-ink); color: var(--dk-ink); }
 html[data-theme="dark"] .es-input { background: var(--dk-surface); box-shadow: inset 0 0 0 1px var(--dk-line-2); color: var(--dk-ink); }
@@ -2575,12 +2721,6 @@ html[data-theme="dark"] :is(.image-context-empty, .studio-ai-empty) {
 }
 html[data-theme="dark"] :is(.image-context-empty, .studio-ai-empty) :is(span, p, small) { color: var(--dk-ink-3) !important; }
 html[data-theme="dark"] :is(.image-context-empty, .studio-ai-empty) :is(strong, b) { color: var(--dk-ink) !important; }
-html[data-theme="dark"] .image-context-ai {
-  background: var(--dk-raised) !important;
-  border-color: var(--dk-line-2) !important;
-  color: var(--dk-ink) !important;
-}
-html[data-theme="dark"] .image-context-ai:hover { background: var(--dk-hover) !important; }
 html[data-theme="dark"] .studio-ai-section { border-top-color: var(--dk-line) !important; }
 html[data-theme="dark"] .studio-ai-search { box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; background: var(--dk-surface) !important; }
 html[data-theme="dark"] .studio-ai-search:focus-within { box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand) !important; }
@@ -2631,10 +2771,10 @@ html[data-theme="dark"] body.reels-page {
   --reels-canvas-soft: var(--dk-sunk);
   --reels-ink: var(--dk-ink);
   --reels-muted: var(--dk-ink-3);
-  --reels-soft: rgb(26 115 224 / .2);
+  --reels-soft: rgb(10 125 250 / .2);
   --reels-line: var(--dk-line);
   --reels-line-strong: var(--dk-line-2);
-  --reels-focus: rgba(37, 134, 247, .24);
+  --reels-focus: rgb(10 125 250 / .24);
   --reels-shadow: 0 12px 28px rgba(0, 0, 0, .35);
   background: var(--dk-base);
   color: var(--dk-ink);
@@ -2653,12 +2793,12 @@ html[data-theme="dark"] body.reels-page .reels-transcript-list {
   border-color: var(--dk-line-2) !important;
   color: var(--dk-ink-2) !important;
 }
-html[data-theme="dark"] body.reels-page :is(.reels-btn.is-secondary.reels-empty-upload, .reels-icon-btn, .reels-choice-trigger, .reels-native-select) {
+html[data-theme="dark"] body.reels-page :is(.reels-icon-btn, .reels-choice-trigger, .reels-native-select) {
   background: var(--dk-raised) !important;
   border-color: var(--dk-line-2) !important;
   color: var(--dk-ink) !important;
 }
-html[data-theme="dark"] body.reels-page #reels-caption-count { background: rgb(26 115 224 / .22) !important; color: #8ec2ff !important; }
+html[data-theme="dark"] body.reels-page #reels-caption-count { background: rgb(10 125 250 / .22) !important; color: #9DCBFD !important; }
 html[data-theme="dark"] body.reels-page .reels-top-export { border-color: transparent !important; }
 
 /* ── Auth state pages (404, reset password, confirmation) ── */
@@ -2670,26 +2810,16 @@ html[data-theme="dark"] .auth-state-card {
 }
 html[data-theme="dark"] .auth-state-card :is(h1, h2, strong) { color: var(--dk-ink) !important; }
 html[data-theme="dark"] .auth-state-card :is(p, small, span:not([class*="icon"])) { color: var(--dk-ink-2) !important; }
-html[data-theme="dark"] .auth-state-button:not(.is-primary):not([class*="primary"]) {
-  background: var(--dk-raised) !important;
-  border-color: var(--dk-line-2) !important;
-  color: var(--dk-ink) !important;
-}
 
 /* ── Login ── */
 html[data-theme="dark"] .login-mode-tabs { background: var(--dk-raised) !important; border-color: var(--dk-line) !important; }
 html[data-theme="dark"] :is(#login-email, #login-password, .login-form input:not([type="checkbox"])) { box-shadow: inset 0 0 0 1.5px var(--dk-line-2) !important; }
-html[data-theme="dark"] :is(#login-email, #login-password, .login-form input:not([type="checkbox"])):focus { box-shadow: inset 0 0 0 2px #5aa8ff !important; }
+html[data-theme="dark"] :is(#login-email, #login-password, .login-form input:not([type="checkbox"])):focus { box-shadow: inset 0 0 0 2px #54A4FB !important; }
 html[data-theme="dark"] .login-mode-tab.is-active { background: var(--dk-hover) !important; box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; }
 
 /* ── Account pages (profile, settings) ── */
-html[data-theme="dark"] .account-kicker { color: #8ec2ff !important; }
+html[data-theme="dark"] .account-kicker { color: #9DCBFD !important; }
 html[data-theme="dark"] .large-avatar { border-color: var(--dk-line-2) !important; }
-html[data-theme="dark"] .danger-btn {
-  background: rgb(220 38 38 / .1) !important;
-  border-color: rgb(248 113 113 / .45) !important;
-  color: #fca5a5 !important;
-}
 html[data-theme="dark"] .settings-section { border-bottom-color: var(--dk-line) !important; }
 html[data-theme="dark"] .settings-choice { background: var(--dk-raised) !important; }
 html[data-theme="dark"] .settings-choice button { color: var(--dk-ink-2) !important; background: transparent !important; }
@@ -2706,7 +2836,7 @@ html[data-theme="dark"] .setting-row :is(strong, b) { color: var(--dk-ink) !impo
 html[data-theme="dark"] body:has(#ai-sidebar) { background: var(--dk-base) !important; color: var(--dk-ink); }
 html[data-theme="dark"] body:has(#ai-sidebar) .navbar { background: var(--dk-surface) !important; border-bottom-color: var(--dk-line) !important; }
 html[data-theme="dark"] #ai-sidebar.sidebar {
-  background: #0d0d0d !important;
+  background: #101114 !important;
   border-right-color: var(--dk-line) !important;
   color: var(--dk-ink-2) !important;
 }
@@ -2729,49 +2859,42 @@ html[data-theme="dark"] .prompt-shell {
 html[data-theme="dark"] .prompt-shell:focus-within { border-color: var(--es-brand) !important; box-shadow: 0 0 0 1px var(--es-brand) !important; }
 html[data-theme="dark"] .prompt-input { color: var(--dk-ink) !important; }
 html[data-theme="dark"] .prompt-input::placeholder { color: var(--dk-ink-3) !important; }
-html[data-theme="dark"] .quick-action {
-  background: var(--dk-surface) !important;
-  border-color: var(--dk-line-2) !important;
-  color: var(--dk-ink) !important;
-}
-html[data-theme="dark"] .quick-action:hover { background: var(--dk-hover) !important; }
 html[data-theme="dark"] body:has(#ai-sidebar) .footer-bottom { border-top-color: var(--dk-line) !important; }
 
 /* Reel Captions and ES AI are fully dark in dark mode: their shared tokens switch too. */
 html[data-theme="dark"] :is(body.reels-page, body:has(#ai-sidebar)) {
-  --es-bg: #121212;
-  --es-sunk: #161616;
-  --es-stage: #0d0d0d;
-  --es-line: #2a2a2a;
-  --es-line-2: #3a3a3a;
-  --es-ink: #f3f5f7;
-  --es-ink-2: #c9cdd3;
-  --es-ink-3: #8b919c;
-  --es-placeholder: #7d838d;
-  --es-text-strong: #f3f5f7;
-  --es-text-primary: #f3f5f7;
-  --es-text-secondary: #c9cdd3;
-  --es-text-muted: #8b919c;
-  --es-text-subtle: #8b919c;
-  --es-band-tint: #141a24;
-  --text-primary: #f3f5f7;
-  --text-secondary: #c9cdd3;
-  --text-muted: #8b919c;
+  --es-bg: #1F2126;
+  --es-sunk: #101114;
+  --es-stage: #101114;
+  --es-line: #2A2D34;
+  --es-line-2: #3B4049;
+  --es-ink: #FFFFFF;
+  --es-ink-2: #BFC8D9;
+  --es-ink-3: #98A6BF;
+  --es-placeholder: #98A6BF;
+  --es-text-strong: #FFFFFF;
+  --es-text-primary: #FFFFFF;
+  --es-text-secondary: #BFC8D9;
+  --es-text-muted: #98A6BF;
+  --es-text-subtle: #98A6BF;
+  --es-band-tint: #3B4049;
+  --text-primary: #FFFFFF;
+  --text-secondary: #BFC8D9;
+  --text-muted: #98A6BF;
 }
 html[data-theme="dark"] body:has(#ai-sidebar) :is(.nav-trigger, .navbar-menu a, .profile-name, .side-title, .new-chat, .setting-link) { color: var(--dk-ink-2) !important; }
 html[data-theme="dark"] body:has(#ai-sidebar) :is(.profile-name, .side-title, .new-chat) { color: var(--dk-ink) !important; }
-html[data-theme="dark"] body:has(#ai-sidebar) button.quick-action { background: var(--dk-surface) !important; }
-html[data-theme="dark"] body:has(#ai-sidebar) .site-footer { background: #0d0f12 !important; border-top: 1px solid var(--dk-line); }
+html[data-theme="dark"] body:has(#ai-sidebar) .site-footer { background: #1F2126 !important; border-top: 1px solid var(--dk-line); }
 /* Reel Captions: the video stage and the tool rail stay near-black (they used the ink token). */
-html[data-theme="dark"] body.reels-page :is(.reels-stage-frame, .reels-tool-rail) { background: #0b0d10 !important; }
+html[data-theme="dark"] body.reels-page :is(.reels-stage-frame, .reels-tool-rail) { background: #101114 !important; }
 html[data-theme="dark"] body.reels-page .reels-tool-rail { border-right-color: var(--dk-line) !important; }
 /* Auth state pages (404, reset password, confirmation) in dark mode. */
 html[data-theme="dark"] {
-  --auth-page: #080808;
-  --auth-surface: #121212;
-  --auth-text: #f3f5f7;
-  --auth-muted: #9aa1ab;
-  --auth-border: #2a2a2a;
+  --auth-page: #101114;
+  --auth-surface: #1F2126;
+  --auth-text: #FFFFFF;
+  --auth-muted: #98A6BF;
+  --auth-border: #2A2D34;
 }
 html[data-theme="dark"] body.auth-state-page { color-scheme: dark; }
 
@@ -2783,31 +2906,29 @@ html[data-theme="dark"] .image-asset-tabs { background: var(--dk-raised) !import
 html[data-theme="dark"] .image-asset-tabs :is(button, [role="tab"]) { color: var(--dk-ink-2) !important; background: transparent !important; }
 html[data-theme="dark"] .image-asset-tabs :is(button, [role="tab"]):is(.is-active, [aria-selected="true"], [aria-pressed="true"]) { background: var(--dk-hover) !important; color: var(--dk-ink) !important; box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; }
 html[data-theme="dark"] :is(.listicle-row-block-label, .listicle-asset-name) { color: var(--dk-ink) !important; }
-html[data-theme="dark"] .listicle-add-row-button { border-color: var(--dk-line-2) !important; color: #8ec2ff !important; background: transparent !important; }
-html[data-theme="dark"] .listicle-add-row-button:hover { background: var(--dk-hover) !important; }
 html[data-theme="dark"] .panel .slider-label-row span { color: var(--dk-ink-2) !important; }
 html[data-theme="dark"] .panel .slider-label-row .slider-val { color: var(--dk-ink) !important; }
 html[data-theme="dark"][data-studio-shell="on"] body .panel #stats-single-fields .stats-entry .stats-entry-label-input { border-left-color: var(--dk-line-2) !important; }
 html[data-theme="dark"] body .post-type-option[data-ticker-direction]:not(.is-active) { background: var(--dk-raised) !important; border-color: var(--dk-line-2) !important; color: var(--dk-ink) !important; }
 /* YouTube Quote switch row (and any other quote-switch) */
 html[data-theme="dark"] .quote-switch { background: var(--dk-raised) !important; border-color: var(--dk-line-2) !important; color: var(--dk-ink) !important; }
-html[data-theme="dark"] .quote-switch .quote-switch-track { background: #3a3a3a !important; }
-html[data-theme="dark"] .quote-switch.is-active .quote-switch-track { background: var(--theme-dark-accent, #1a73e0) !important; }
+html[data-theme="dark"] .quote-switch .quote-switch-track { background: #5C6373 !important; }
+html[data-theme="dark"] .quote-switch.is-active .quote-switch-track { background: var(--theme-dark-accent, #0A6FDE) !important; }
 /* Canvas holder and carousel slide picker (phone + desktop) */
 /* theme.css keeps the canvas white via an ID selector; the holder around it goes dark (the canvas itself stays white). */
 html[data-theme="dark"] body :is(#__canvas-stack-dark, .canvas-stack) { background: transparent !important; }
-html[data-theme="dark"] .carousel-slide-button:not(.carousel-slide-arrow) { background: #262626 !important; color: var(--dk-ink-2) !important; box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; }
+html[data-theme="dark"] .carousel-slide-button:not(.carousel-slide-arrow) { background: #3B4049 !important; color: var(--dk-ink-2) !important; box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; }
 html[data-theme="dark"] .carousel-slide-button.is-active { background: var(--dk-ink) !important; color: #111418 !important; box-shadow: none !important; }
 html[data-theme="dark"] .carousel-slide-arrow { color: var(--dk-ink-2) !important; }
 html[data-theme="dark"] .carousel-slide-arrow:disabled { color: #4b5058 !important; }
 /* Reel Captions on phones */
 html[data-theme="dark"] body.reels-page :is(main, .reels-shell, .reels-stage-workspace) { background: var(--dk-base) !important; }
-html[data-theme="dark"] body.reels-page :is(.reels-mobile-topbar, .reels-mobile-nav, .reels-mobile-sheet-head, .reels-mobile-sheet) { background: rgb(18 18 18 / .98) !important; border-color: var(--dk-line) !important; color: var(--dk-ink) !important; }
+html[data-theme="dark"] body.reels-page :is(.reels-mobile-topbar, .reels-mobile-nav, .reels-mobile-sheet-head, .reels-mobile-sheet) { background: rgb(16 17 20 / .98) !important; border-color: var(--dk-line) !important; color: var(--dk-ink) !important; }
 html[data-theme="dark"] body.reels-page .reels-mobile-topbar :is(h1, strong, .reels-mobile-title) { color: var(--dk-ink) !important; }
 html[data-theme="dark"] body.reels-page .reels-field { border-color: var(--dk-line) !important; }
 /* Phone header bar and menu (theme.css kept the old navbar light) */
 @media (max-width: 900px) {
-  html[data-theme="dark"] .navbar { background: rgb(18 18 18 / .97) !important; border-bottom-color: var(--dk-line) !important; }
+  html[data-theme="dark"] .navbar { background: rgb(16 17 20 / .97) !important; border-bottom-color: var(--dk-line) !important; }
   html[data-theme="dark"] .mobile-menu-toggle { color: var(--dk-ink) !important; }
   html[data-theme="dark"] .mobile-menu-toggle:is(:hover, :focus-visible) { background: var(--dk-hover) !important; }
   html[data-theme="dark"] .navbar-menu { background: var(--dk-surface) !important; border-color: var(--dk-line) !important; color: var(--dk-ink) !important; box-shadow: 0 24px 60px rgb(0 0 0 / .55) !important; }
@@ -2816,10 +2937,246 @@ html[data-theme="dark"] body.reels-page .reels-field { border-color: var(--dk-li
   html[data-theme="dark"] .es-mobile-nav__item { color: var(--dk-ink) !important; }
   html[data-theme="dark"] .es-mobile-nav__item svg { color: var(--dk-ink-2) !important; }
   html[data-theme="dark"] .es-mobile-nav__item:is(:hover, :focus-visible) { background: var(--dk-hover) !important; }
-  html[data-theme="dark"] .es-mobile-nav__item[aria-current="page"] { background: rgb(26 115 224 / .22) !important; color: #8ec2ff !important; }
-  html[data-theme="dark"] .es-mobile-nav__item[aria-current="page"] svg { color: #8ec2ff !important; }
+  html[data-theme="dark"] .es-mobile-nav__item[aria-current="page"] { background: rgb(10 125 250 / .22) !important; color: #9DCBFD !important; }
+  html[data-theme="dark"] .es-mobile-nav__item[aria-current="page"] svg { color: #9DCBFD !important; }
   html[data-theme="dark"] .mobile-menu-account { border-color: var(--dk-line) !important; color: var(--dk-ink) !important; }
 }
 html[data-theme="dark"] #ai-sidebar.sidebar { border-bottom-color: var(--dk-line) !important; }
 html[data-theme="dark"] .feedback-hero { border-bottom-color: var(--dk-line) !important; }
 html[data-theme="dark"] :is(.mobile-menu-account, .profile-menu) .profile-name { color: var(--dk-ink) !important; }
+
+/* Moving gradient stroke for the few rings that keep one. */
+:root { --es-rim-conic: conic-gradient(from var(--es-rim-angle, 0deg), var(--es-rim-stops)); }
+@media (prefers-reduced-motion: no-preference) {
+  .es-rim-live { animation: esRimSpin var(--es-btn-rim-turn, 5s) linear infinite; }
+}
+
+/* ── Skills polish pass (2026-11-15) ─────────────────────────────────
+ * iOS Safari zooms the page when a focused field's text is under 16px.
+ * Text fields render at 16px on phones. A cascade layer is used because
+ * layered !important outranks the many unlayered !important field sizes. */
+@layer es-field-floor {
+  @media (max-width: 640px) {
+    :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="button"], [type="submit"], [type="reset"], [type="image"], [type="hidden"]), textarea, select) {
+      font-size: 16px !important;
+    }
+  }
+}
+
+/* ═══ FrameUp button system (2026-11-15) ════════════════════════════════
+ * The ONE source of truth for buttons, on every page. Page CSS sets layout
+ * only (display, width, margin, flex); everything you see is set here.
+ *
+ *   Primary   .es-btn--primary   the single key action on a view. 1.5px moving
+ *                                conic rim of ES blues + cyan. Light: white
+ *                                fill, ink label. Dark: #101114, white label.
+ *                                Hover: brighter rim + --ais-glow.
+ *   Secondary .es-btn            the default for every other action.
+ *   Tertiary  .es-btn--tertiary  (alias .es-btn--ghost) transparent, ink-2.
+ *   Danger    .es-btn--danger    secondary shape, red label + red-tinted line.
+ *   Sizes     .es-btn--sm 32 / md 40 (default) / .es-btn--lg 48; radius 10.
+ *             Touch screens: sm and md grow to 44.
+ *   Icons     16px (sm) / 18px, 8px gap, always currentColor.
+ *
+ * Only colours change between themes (tokens near the top of this file).
+ * Legacy page classes are mapped to a variant below, so old markup renders
+ * the same buttons. Everything sits in one cascade layer with !important:
+ * layered !important outranks every unlayered rule, including the inline
+ * page styles in index.html, so nothing else can restyle a button. */
+@layer es-buttons {
+  /* ── Every button: shape, type, icon, motion (secondary colours) ── */
+  html :where(.es-btn, .workspace-cta, .frame-cta, .frame-hero-cta, .faq-cta-action, .how-button, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .feedback-back-link, .reels-btn, .topbar-button, .login-button, .login-secondary-button, .auth-state-button, .studio-export-btn, .studio-export-options-btn, .studio-link-btn, .va-btn, .ais-btn, .export-review-cta, .canvas-upload-button, .image-context-upload, .image-context-ai, .quick-action, .avatar-upload-label, .profile-back-link, .td-design, .tweet-fetch-button, .listicle-add-row-button, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .mobile-editor-export, .es-toast-action) {
+    --es-btn-h: 40px;
+    --es-btn-icon: 18px;
+    box-sizing: border-box !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    height: var(--es-btn-h) !important;
+    min-height: var(--es-btn-h) !important;
+    max-height: none !important;
+    padding: 0 16px !important;
+    border: 1px solid var(--es-btn-line) !important;
+    border-radius: 10px !important;
+    background: var(--es-btn-bg) !important;
+    box-shadow: none !important;
+    color: var(--es-btn-ink) !important;
+    font-family: "Roboto", var(--es-font-ui, sans-serif) !important;
+    font-size: 14px !important;
+    font-style: normal !important;
+    font-weight: 500 !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    text-decoration: none !important;
+    text-shadow: none !important;
+    white-space: nowrap !important;
+    opacity: 1 !important;
+    filter: none !important;
+    outline: none !important;
+    animation: none !important;
+    cursor: pointer !important;
+    transform: none !important;
+    -webkit-text-fill-color: currentColor !important;
+    -webkit-tap-highlight-color: transparent !important;
+    transition-property: background-color, border-color, color, box-shadow, transform !important;
+    transition-duration: 160ms !important;
+    transition-timing-function: var(--es-ease, cubic-bezier(.2, 0, 0, 1)) !important;
+  }
+
+  /* Icons follow the label: size, gap and currentColor. */
+  html :where(.es-btn, .workspace-cta, .frame-cta, .frame-hero-cta, .faq-cta-action, .how-button, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .feedback-back-link, .reels-btn, .topbar-button, .login-button, .login-secondary-button, .auth-state-button, .studio-export-btn, .studio-export-options-btn, .studio-link-btn, .va-btn, .ais-btn, .export-review-cta, .canvas-upload-button, .image-context-upload, .image-context-ai, .quick-action, .avatar-upload-label, .profile-back-link, .td-design, .tweet-fetch-button, .listicle-add-row-button, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .mobile-editor-export, .es-toast-action) :where(svg) {
+    flex: 0 0 auto !important;
+    width: var(--es-btn-icon) !important;
+    height: var(--es-btn-icon) !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    color: inherit !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+  html :where(.es-btn, .workspace-cta, .frame-cta, .frame-hero-cta, .faq-cta-action, .how-button, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .feedback-back-link, .reels-btn, .topbar-button, .login-button, .login-secondary-button, .auth-state-button, .studio-export-btn, .studio-export-options-btn, .studio-link-btn, .va-btn, .ais-btn, .export-review-cta, .canvas-upload-button, .image-context-upload, .image-context-ai, .quick-action, .avatar-upload-label, .profile-back-link, .td-design, .tweet-fetch-button, .listicle-add-row-button, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .mobile-editor-export, .es-toast-action) :where(svg[stroke]:not([stroke="none"])) { stroke: currentColor !important; }
+  html :where(.es-btn, .workspace-cta, .frame-cta, .frame-hero-cta, .faq-cta-action, .how-button, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .feedback-back-link, .reels-btn, .topbar-button, .login-button, .login-secondary-button, .auth-state-button, .studio-export-btn, .studio-export-options-btn, .studio-link-btn, .va-btn, .ais-btn, .export-review-cta, .canvas-upload-button, .image-context-upload, .image-context-ai, .quick-action, .avatar-upload-label, .profile-back-link, .td-design, .tweet-fetch-button, .listicle-add-row-button, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .mobile-editor-export, .es-toast-action) :where(svg[fill]:not([fill="none"])) { fill: currentColor !important; }
+  html :where(.es-btn, .workspace-cta, .frame-cta, .frame-hero-cta, .faq-cta-action, .how-button, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .feedback-back-link, .reels-btn, .topbar-button, .login-button, .login-secondary-button, .auth-state-button, .studio-export-btn, .studio-export-options-btn, .studio-link-btn, .va-btn, .ais-btn, .export-review-cta, .canvas-upload-button, .image-context-upload, .image-context-ai, .quick-action, .avatar-upload-label, .profile-back-link, .td-design, .tweet-fetch-button, .listicle-add-row-button, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .mobile-editor-export, .es-toast-action) :where(svg *:not([stroke="none"])) { stroke: inherit !important; }
+  html :where(.es-btn, .workspace-cta, .frame-cta, .frame-hero-cta, .faq-cta-action, .how-button, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .feedback-back-link, .reels-btn, .topbar-button, .login-button, .login-secondary-button, .auth-state-button, .studio-export-btn, .studio-export-options-btn, .studio-link-btn, .va-btn, .ais-btn, .export-review-cta, .canvas-upload-button, .image-context-upload, .image-context-ai, .quick-action, .avatar-upload-label, .profile-back-link, .td-design, .tweet-fetch-button, .listicle-add-row-button, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .mobile-editor-export, .es-toast-action) :where(svg *:not([fill="none"])) { fill: inherit !important; }
+  /* The CSS-drawn chevron (.ui-arrow-right) is a mask filled with currentColor. */
+  html :where(.es-btn, .workspace-cta, .frame-cta, .frame-hero-cta, .faq-cta-action, .how-button, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .reels-btn, .topbar-button, .va-btn, .export-review-cta, .quick-action) .ui-arrow-right {
+    flex: 0 0 var(--es-btn-icon) !important;
+    width: var(--es-btn-icon) !important;
+    height: var(--es-btn-icon) !important;
+    background: currentColor !important;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") center / contain no-repeat !important;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") center / contain no-repeat !important;
+    filter: none !important;
+    transform: none !important;
+  }
+  /* Keyboard hints inside a button (Generate's ⌘↵) take the label colour. */
+  html :where(.es-btn, .va-btn) :where(kbd) { color: inherit !important; border-color: currentColor !important; background: transparent !important; opacity: .72 !important; }
+
+  /* ── Sizes ── */
+  html :where(.es-btn--sm, .va-btn--sm, .va-btn--quiet, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .es-toast-action, .canvas-bottom-actions .canvas-upload-button) {
+    --es-btn-h: 32px;
+    --es-btn-icon: 16px;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+  }
+  html :where(.es-btn--lg, .va-btn--lg, .frame-hero-cta, .faq-cta-action, .how-button, .login-button) {
+    --es-btn-h: 48px;
+    --es-btn-icon: 18px;
+    padding: 0 20px !important;
+    font-size: 15px !important;
+  }
+  /* Icon-only button (export options) is a square. */
+  html :where(.studio-export-options-btn) { width: var(--es-btn-h) !important; min-width: var(--es-btn-h) !important; padding: 0 !important; }
+  @media (pointer: coarse) {
+    html :where(.es-btn, .workspace-cta, .frame-cta, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .feedback-back-link, .reels-btn, .topbar-button, .login-secondary-button, .auth-state-button, .studio-export-btn, .studio-export-options-btn, .studio-link-btn, .va-btn, .ais-btn, .export-review-cta, .canvas-upload-button, .image-context-upload, .image-context-ai, .quick-action, .avatar-upload-label, .profile-back-link, .td-design, .tweet-fetch-button, .listicle-add-row-button, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .mobile-editor-export, .es-toast-action):not(:where(.es-btn--lg, .va-btn--lg)) {
+      --es-btn-h: 44px;
+    }
+  }
+
+  /* ── Secondary: hover, pressed toggles ── */
+  html :where(.es-btn, .workspace-cta, .frame-cta, .frame-hero-cta, .faq-cta-action, .how-button, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .feedback-back-link, .reels-btn, .topbar-button, .login-button, .login-secondary-button, .auth-state-button, .studio-export-btn, .studio-export-options-btn, .studio-link-btn, .va-btn, .ais-btn, .export-review-cta, .canvas-upload-button, .image-context-upload, .image-context-ai, .quick-action, .avatar-upload-label, .profile-back-link, .td-design, .tweet-fetch-button, .listicle-add-row-button, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .mobile-editor-export, .es-toast-action):is(:hover, [aria-pressed="true"], [aria-expanded="true"]) {
+    border-color: var(--es-btn-line-hover) !important;
+    background: var(--es-btn-bg-hover) !important;
+    box-shadow: none !important;
+    color: var(--es-btn-ink) !important;
+  }
+
+  /* ── Tertiary / ghost ── */
+  html :where(.es-btn--tertiary, .es-btn--ghost, .va-btn--ghost, .reels-btn.is-quiet, .export-row-details) {
+    border-color: transparent !important;
+    background: transparent !important;
+    color: var(--es-btn-ghost-ink) !important;
+  }
+  html :where(.es-btn--tertiary, .es-btn--ghost, .va-btn--ghost, .reels-btn.is-quiet, .export-row-details):is(:hover, [aria-pressed="true"], [aria-expanded="true"]) {
+    border-color: transparent !important;
+    background: var(--es-btn-sunk) !important;
+    box-shadow: none !important;
+    color: var(--es-btn-ink) !important;
+  }
+
+  /* ── Danger ── */
+  html :where(.es-btn--danger, .danger-btn, .va-btn.is-cancel) {
+    border-color: var(--es-btn-danger-line) !important;
+    background: var(--es-btn-bg) !important;
+    color: var(--es-btn-danger-ink) !important;
+  }
+  html :where(.es-btn--danger, .danger-btn, .va-btn.is-cancel):hover {
+    border-color: var(--es-btn-danger-ink) !important;
+    background: var(--es-btn-bg-hover) !important;
+    box-shadow: none !important;
+    color: var(--es-btn-danger-ink) !important;
+  }
+
+  /* ── Primary: the one key action per view ──
+     Repeats on the same view are secondary: workspace cards, per-item
+     "primary" actions in Video Ads, the editor's empty-canvas upload, the
+     home "Request a design", and anything marked .es-btn--static.
+     .es-btn--still keeps the primary look without motion (UI Library
+     specimens only). */
+  html :where(.es-btn--primary, .ais-btn, .frame-hero-cta.is-primary, .faq-cta-action.is-primary, .how-button--primary, .btn-primary, .primary-btn, .request-submit, .feedback-submit, .reels-btn.is-primary, .topbar-button.is-primary, .login-button, .auth-state-button.is-primary, .studio-export-btn, .mobile-editor-export, .va-btn--primary):not(:where(.es-btn--static, .va-btn--sm, .is-export-complete, .home-start__cta *, .canvas-empty-hint *)) {
+    border: var(--es-btn-rim-width) solid transparent !important;
+    background:
+      linear-gradient(var(--es-btn-primary-bg), var(--es-btn-primary-bg)) padding-box,
+      conic-gradient(from var(--es-rim-angle, 0deg), var(--es-btn-rim)) border-box !important;
+    color: var(--es-btn-primary-ink) !important;
+  }
+  html :where(.es-btn--primary, .ais-btn, .frame-hero-cta.is-primary, .faq-cta-action.is-primary, .how-button--primary, .btn-primary, .primary-btn, .request-submit, .feedback-submit, .reels-btn.is-primary, .topbar-button.is-primary, .login-button, .auth-state-button.is-primary, .studio-export-btn, .mobile-editor-export, .va-btn--primary):not(:where(.es-btn--static, .va-btn--sm, .is-export-complete, .home-start__cta *, .canvas-empty-hint *)):is(:hover, [aria-expanded="true"]) {
+    border-color: transparent !important;
+    background:
+      linear-gradient(var(--es-btn-primary-bg-hover), var(--es-btn-primary-bg-hover)) padding-box,
+      conic-gradient(from var(--es-rim-angle, 0deg), var(--es-btn-rim-hover)) border-box !important;
+    box-shadow: var(--ais-glow) !important;
+    color: var(--es-btn-primary-ink) !important;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html :where(.es-btn--primary, .ais-btn, .frame-hero-cta.is-primary, .faq-cta-action.is-primary, .how-button--primary, .btn-primary, .primary-btn, .request-submit, .feedback-submit, .reels-btn.is-primary, .topbar-button.is-primary, .login-button, .auth-state-button.is-primary, .studio-export-btn, .mobile-editor-export, .va-btn--primary):not(:where(.es-btn--static, .va-btn--sm, .is-export-complete, .home-start__cta *, .canvas-empty-hint *, .es-btn--still)) {
+      animation: esRimSpin var(--es-btn-rim-turn) linear infinite !important;
+    }
+  }
+  /* Busy: the rim keeps turning and a soft sheen sweeps across. */
+  html :where(.es-btn--primary, .va-btn--primary):is(.is-busy, [aria-busy="true"]) {
+    position: relative !important;
+    isolation: isolate !important;
+    overflow: hidden !important;
+    cursor: progress !important;
+  }
+  html :where(.es-btn--primary, .va-btn--primary):is(.is-busy, [aria-busy="true"])::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: -1 !important;
+    background: var(--ais-sheen) !important;
+    transform: translateX(-100%) !important;
+    pointer-events: none !important;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html :where(.es-btn--primary, .va-btn--primary):is(.is-busy, [aria-busy="true"])::after { animation: esSheen 1.6s linear infinite !important; }
+  }
+
+  /* ── Focus-visible: 2px outline, 2px offset ── */
+  html :where(.es-btn, .workspace-cta, .frame-cta, .frame-hero-cta, .faq-cta-action, .how-button, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .feedback-back-link, .reels-btn, .topbar-button, .login-button, .login-secondary-button, .auth-state-button, .studio-export-btn, .studio-export-options-btn, .studio-link-btn, .va-btn, .ais-btn, .export-review-cta, .canvas-upload-button, .image-context-upload, .image-context-ai, .quick-action, .avatar-upload-label, .profile-back-link, .td-design, .tweet-fetch-button, .listicle-add-row-button, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .mobile-editor-export, .es-toast-action):focus-visible,
+  html :where(.avatar-upload-label):focus-within {
+    outline: 2px solid var(--es-btn-focus) !important;
+    outline-offset: 2px !important;
+  }
+
+  /* ── Press: scale(.96), only when motion is welcome, never when disabled ── */
+  @media (prefers-reduced-motion: no-preference) {
+    html :where(.es-btn, .workspace-cta, .frame-cta, .frame-hero-cta, .faq-cta-action, .how-button, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .feedback-back-link, .reels-btn, .topbar-button, .login-button, .login-secondary-button, .auth-state-button, .studio-export-btn, .studio-export-options-btn, .studio-link-btn, .va-btn, .ais-btn, .export-review-cta, .canvas-upload-button, .image-context-upload, .image-context-ai, .quick-action, .avatar-upload-label, .profile-back-link, .td-design, .tweet-fetch-button, .listicle-add-row-button, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .mobile-editor-export, .es-toast-action):not(:disabled, [aria-disabled="true"], .is-disabled):active {
+      transform: scale(.96) !important;
+    }
+  }
+
+  /* ── Disabled (last, so it wins over every variant and hover) ── */
+  html body :where(.es-btn, .workspace-cta, .frame-cta, .frame-hero-cta, .faq-cta-action, .how-button, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .feedback-back-link, .reels-btn, .topbar-button, .login-button, .login-secondary-button, .auth-state-button, .studio-export-btn, .studio-export-options-btn, .studio-link-btn, .va-btn, .ais-btn, .export-review-cta, .canvas-upload-button, .image-context-upload, .image-context-ai, .quick-action, .avatar-upload-label, .profile-back-link, .td-design, .tweet-fetch-button, .listicle-add-row-button, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .mobile-editor-export, .es-toast-action):is(:disabled, [aria-disabled="true"], .is-disabled):not(.is-busy, [aria-busy="true"]) {
+    border-color: var(--es-btn-disabled-bg) !important;
+    background: var(--es-btn-disabled-bg) !important;
+    box-shadow: none !important;
+    color: var(--es-btn-disabled-ink) !important;
+    cursor: not-allowed !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
+@keyframes esSheen { from { transform: translateX(-100%); } to { transform: translateX(100%); } }

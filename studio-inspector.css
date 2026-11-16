@@ -356,32 +356,32 @@ textarea.ig-input { padding: 10px 12px; resize: vertical; }
 .select-chip:disabled { opacity: .45; cursor: not-allowed; }
 #youtube-variation-select + .select-chips,
 #quote-logo-placement + .select-chips { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
-html[data-theme="dark"] .select-chip { border-color: var(--theme-dark-border, #303030); background: var(--theme-dark-surface, #121212); color: var(--theme-dark-text-muted, #b6b6b6); }
-html[data-theme="dark"] .select-chip[aria-checked="true"] { border-color: var(--theme-dark-accent, #2586f7); background: var(--theme-dark-accent-soft, rgba(37, 134, 247, .17)); color: var(--theme-dark-text, #f3f5f7); }
+html[data-theme="dark"] .select-chip { border-color: var(--theme-dark-border, #2A2D34); background: var(--theme-dark-surface, #1F2126); color: var(--theme-dark-text-muted, #BFC8D9); }
+html[data-theme="dark"] .select-chip[aria-checked="true"] { border-color: var(--theme-dark-accent, #54A4FB); background: var(--theme-dark-accent-soft, rgb(10 125 250 / .17)); color: var(--theme-dark-text, #FFFFFF); }
 
 /* Dark theme (colours from theme.css) */
 html[data-theme="dark"] .ig-card,
 html[data-theme="dark"] .ig-input,
 html[data-theme="dark"] :is(.ig-chip, .ig-icon-btn) {
-  background: var(--theme-dark-surface, #121212);
-  border-color: var(--theme-dark-border, #303030);
-  color: var(--theme-dark-text, #f3f5f7);
+  background: var(--theme-dark-surface, #1F2126);
+  border-color: var(--theme-dark-border, #2A2D34);
+  color: var(--theme-dark-text, #FFFFFF);
 }
-html[data-theme="dark"] .ig-card[open] { border-color: var(--theme-dark-border-strong, #444); }
+html[data-theme="dark"] .ig-card[open] { border-color: var(--theme-dark-border-strong, #3B4049); }
 html[data-theme="dark"] :is(.ig-card-head:hover, .ig-adjust, .ig-card-thumb, .ig-photo-thumb, .ig-chip:hover, .ig-icon-btn:hover, .ig-reset:hover) {
-  background: var(--theme-dark-surface-hover, #232323);
+  background: var(--theme-dark-surface-hover, #3B4049);
 }
-html[data-theme="dark"] :is(.ig-card-titles strong, .ig-photo-info strong) { color: var(--theme-dark-text, #f3f5f7); }
+html[data-theme="dark"] :is(.ig-card-titles strong, .ig-photo-info strong) { color: var(--theme-dark-text, #FFFFFF); }
 html[data-theme="dark"] :is(.ig-card-titles span, .ig-photo-info span, .ig-label, .ig-cell-label, .ig-reset, .ig-card-chevron, .ig-card-thumb, .ig-adjust .infographic-slider) {
-  color: var(--theme-dark-text-muted, #b6b6b6) !important;
+  color: var(--theme-dark-text-muted, #BFC8D9) !important;
 }
-html[data-theme="dark"] .ig-icon-btn.is-active { background: var(--theme-dark-accent-soft, rgba(37, 134, 247, .17)); border-color: var(--theme-dark-accent, #2586f7); color: #fff; }
+html[data-theme="dark"] .ig-icon-btn.is-active { background: var(--theme-dark-accent-soft, rgb(10 125 250 / .17)); border-color: var(--theme-dark-accent, #54A4FB); color: #FFFFFF; }
 @media (min-width: 901px) {
   html[data-theme="dark"][data-studio-shell="on"] .studio-content-sections { background: transparent !important; }
-  html[data-theme="dark"][data-studio-shell="on"] .studio-accordion-section { border-top-color: var(--theme-dark-border, #303030) !important; }
-  html[data-theme="dark"][data-studio-shell="on"] .studio-export-section { border-bottom-color: var(--theme-dark-border, #303030); }
+  html[data-theme="dark"][data-studio-shell="on"] .studio-accordion-section { border-top-color: var(--theme-dark-border, #2A2D34) !important; }
+  html[data-theme="dark"][data-studio-shell="on"] .studio-export-section { border-bottom-color: var(--theme-dark-border, #2A2D34); }
   html[data-theme="dark"][data-studio-shell="on"] .panel :is(.card-title, .widget-field-label, .tod-label) {
-    color: var(--theme-dark-text-muted, #b6b6b6) !important;
+    color: var(--theme-dark-text-muted, #BFC8D9) !important;
   }
 }
 
@@ -410,9 +410,9 @@ html[data-studio-shell="on"] body .panel .double-entity-section-title {
 }
 /* Timeline: its fields carry their own labels, so no extra heading above them. */
 body[data-instagram-post-type="asap-template-1"] .text-card > .tod-row { display: none; }
-html[data-theme="dark"][data-studio-shell="on"] body .panel :is(.listicle-field-label, .listicle-asset-label) { color: var(--theme-dark-text-muted, #b6b6b6); }
+html[data-theme="dark"][data-studio-shell="on"] body .panel :is(.listicle-field-label, .listicle-asset-label) { color: var(--theme-dark-text-muted, #BFC8D9); }
 html[data-theme="dark"][data-studio-shell="on"] body .panel .listicle-field-label > :is(input, textarea),
-html[data-theme="dark"][data-studio-shell="on"] body .panel .double-entity-section-title { color: var(--theme-dark-text, #f3f5f7); }
+html[data-theme="dark"][data-studio-shell="on"] body .panel .double-entity-section-title { color: var(--theme-dark-text, #FFFFFF); }
 
 /* Newsletter widget / trivia fields: same 16px rhythm, no lines between fields. */
 html[data-studio-shell="on"] body .panel :is(#trivia-fields, #ticker-fields, #list-fields, #list2-fields, #widget-main-fields, #widget-picks-fields) .widget-field-group {
@@ -432,8 +432,8 @@ html[data-studio-shell="on"] body .panel #widget-picks-fields .widget-field-grou
 }
 html[data-studio-shell="on"] body .panel .widget-pick-head { margin-bottom: 10px; }
 html[data-studio-shell="on"] body .panel .widget-pick-label { color: var(--es-ink) !important; font-size: 13px !important; font-weight: 600 !important; margin: 0 !important; }
-html[data-theme="dark"][data-studio-shell="on"] body .panel #widget-picks-fields .widget-field-group:has(> .widget-pick-head) { background: var(--theme-dark-surface-raised, #1a1a1a); }
-html[data-theme="dark"][data-studio-shell="on"] body .panel .widget-pick-label { color: var(--theme-dark-text, #f3f5f7) !important; }
+html[data-theme="dark"][data-studio-shell="on"] body .panel #widget-picks-fields .widget-field-group:has(> .widget-pick-head) { background: var(--theme-dark-surface-raised, #2A2D34); }
+html[data-theme="dark"][data-studio-shell="on"] body .panel .widget-pick-label { color: var(--theme-dark-text, #FFFFFF) !important; }
 
 /* Phones: the sheet already has its header line; no extra lines inside it. */
 @media (max-width: 900px) {
@@ -458,7 +458,7 @@ html[data-theme="dark"][data-studio-shell="on"] body .panel .widget-pick-label {
   border-radius: 8px;
   background: var(--swatch-fill);
   color: var(--swatch-text);
-  font: 800 13px/1 var(--es-font-ui, Roboto, Arial, sans-serif);
+  font: 800 13px/1 var(--es-font-ui, Roboto, sans-serif);
   cursor: pointer;
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .12);
   transition: transform .12s, border-color .12s;

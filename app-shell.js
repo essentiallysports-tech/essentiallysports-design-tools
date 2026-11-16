@@ -53,10 +53,19 @@
       ],
     },
     {
-      label: 'Create',
+      // The AI features share one page family and one look (ai-studio.css):
+      // Generate and Trends are two views of generate.html.
+      id: 'ai',
+      label: 'AI Studio',
       items: [
         { id: 'generate', label: 'Generate', href: 'generate.html', icon: 'sparkle', badge: 'New', desc: 'Turn a brief into on-brand, editable Social Media posts.' },
-        { id: 'trends', label: 'Trend Design', short: 'Trends', href: 'trend-design.html', icon: 'trending', badge: 'New', desc: 'What US sports fans are searching and reading now, by sport. Turn any trend into a design.' },
+        { id: 'trends', label: 'Trends', href: 'generate.html?view=trends', icon: 'trending', badge: 'New', desc: 'What US sports fans are searching and reading now, by sport. Turn any trend into a design.' },
+        { id: 'video-ads', label: 'Video Ads', short: 'Ads', href: 'video-ads.html', icon: 'video', badge: 'New', desc: 'Newsletter sign-up video ads: a trending clip, ES copy styles and a CTA, exported as MP4.' },
+      ],
+    },
+    {
+      label: 'Create',
+      items: [
         { id: 'instagram', label: 'Social Media', short: 'Social', href: 'index.html#instagram', icon: 'social', editor: true },
         { id: 'youtube', label: 'YouTube', href: 'index.html#youtube', icon: 'youtube', editor: true },
         { id: 'newsletter', label: 'Newsletter', href: 'index.html#newsletter', icon: 'newsletter', editor: true },
@@ -88,6 +97,7 @@
 
   const PAGE_IDS = {
     'reels.html': 'reels',
+    'video-ads.html': 'video-ads',
     'design-request.html': 'request',
     'dashboard.html': 'dashboard',
     'gallery.html': 'gallery',
@@ -100,6 +110,11 @@
 
   function currentId() {
     const file = window.location.pathname.split('/').pop() || 'index.html';
+    // generate.html has two views; Trends is ?view=trends (a brief opens Generate).
+    if (file === 'generate.html') {
+      const query = new URLSearchParams(window.location.search);
+      return query.get('view') === 'trends' && !query.get('brief') ? 'trends' : 'generate';
+    }
     if (PAGE_IDS[file]) return PAGE_IDS[file];
     if (file === 'index.html' || file === '') {
       const hash = window.location.hash.replace('#', '');
@@ -125,7 +140,8 @@
 
   // ─── Sidebar ───────────────────────────────────────────────────────────
   function navItemMarkup(item) {
-    const badge = item.badge ? `<span class="es-badge es-badge--new">${item.badge}</span>` : '';
+    // "New" badges shimmer once, the first time they are seen (es-motion.js).
+    const badge = item.badge ? `<span class="es-badge es-badge--new es-new-shine" data-es-new-key="nav-${item.id}">${item.badge}</span>` : '';
     return `<a class="es-nav-item" href="${base}${item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''} data-tip="${item.label}">${ICONS[item.icon]}<span class="es-nav-item__text">${item.label}</span><span class="es-nav-item__short" aria-hidden="true">${item.short || item.label}</span>${badge}</a>`;
   }
 
@@ -139,15 +155,14 @@
           <img src="${base}brand-logo-blue.svg" alt="EssentiallySports">
           <img class="es-sidebar__logo-mark" src="${base}favicon.ico" alt="">
         </a>
-        <button type="button" class="es-icon-btn es-icon-btn--plain es-sidebar__collapse" aria-label="Collapse sidebar" title="Collapse sidebar">${ICONS.collapse}</button>
       </div>
       <button type="button" class="es-search es-sidebar__search" data-shell-palette aria-label="Search FrameUp" title="Search (Ctrl/Cmd+K)">
         ${ICONS.search}<span>Search</span><kbd class="es-kbd">⌘K</kbd>
       </button>
       <nav class="es-sidebar__scroll" aria-label="Primary">
         ${NAV.map(group => `
-          <div class="es-sidebar__section">
-            ${group.label ? `<span class="es-sidebar__label">${group.label}</span>` : ''}
+          <div class="es-sidebar__section${group.id ? ` es-sidebar__section--${group.id}` : ''}">
+            ${group.label ? `<span class="es-sidebar__label">${group.id === 'ai' ? '<span class="es-ai-mark" aria-hidden="true"></span>' : ''}${group.label}</span>` : ''}
             ${group.items.filter(item => item.sidebar !== false).map(navItemMarkup).join('')}
           </div>`).join('')}
       </nav>
@@ -162,7 +177,6 @@
     const profile = document.querySelector('.navbar .profile-menu');
     if (profile) aside.querySelector('[data-shell-account]').appendChild(profile);
 
-    aside.querySelector('.es-sidebar__collapse').addEventListener('click', () => setCollapsed(!document.documentElement.classList.contains('es-sidebar-collapsed'), true));
     aside.querySelector('[data-shell-palette]').addEventListener('click', openPalette);
     const news = aside.querySelector('[data-shell-id="whats-new"]');
     if (news) {
@@ -176,6 +190,10 @@
   // Newest first. `templates` (workspace + dropdown value) get a "New" tag in
   // the template dropdowns and picker for 30 days from `date`.
   const WHATS_NEW = [
+    { id: '2026-11-15-ai-studio', date: '2026-11-15', items: [
+      ['AI Studio', 'Generate, Trends and Video Ads now live together under AI Studio in the sidebar, with their own look. Switch between them at the top of the page.'],
+      ['Trends inside Generate', 'Trend Design is now the Trends view of Generate. Pick a headline idea or "Design this" and Generate starts on it right away, without leaving the page. Old Trend Design links still work.'],
+    ] },
     { id: '2026-11-12-trends', date: '2026-11-12', items: [
       ['Trend Design', 'A new page in Create: what US sports fans are searching on Google and reading right now, sorted into Golf, Tennis, NFL, College Football, MLB and Others. It refreshes every 5 minutes. Each story comes with headline ideas; click one, or "Design this", to open Generate with it as your brief.'],
       ['Cleaner pages', 'Design Request, Tool Feedback, Gallery, Generate and Reel Captions use the same clean fields, labels and cards as the editor.'],
@@ -299,12 +317,10 @@
     return entry?.item.editor ? 'frameup-sidebar-editor' : 'frameup-sidebar-page';
   }
 
+  // The sidebar no longer collapses (Suhail, 2026-11-15): it is always open,
+  // in a narrower width. Old "collapsed" preferences are ignored.
   function readCollapsed() {
-    try {
-      const stored = window.localStorage.getItem(collapseKey());
-      if (stored) return stored === 'collapsed';
-    } catch (error) { /* storage unavailable */ }
-    return Boolean(findItem(currentId())?.item.editor);
+    return false;
   }
 
   function setCollapsed(collapsed, remember) {
@@ -339,7 +355,7 @@
       list.innerHTML = NAV.map(group => {
         const items = group.items.filter(item => item.sidebar !== false);
         if (!items.length) return '';
-        return `<div class="es-mobile-nav__group">${group.label ? `<span class="es-mobile-nav__label">${group.label}</span>` : ''}${items.map(item => `<a class="es-mobile-nav__item" href="${item.action ? '#' : base + item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''}>${ICONS[item.icon]}<span>${item.label}</span>${item.badge ? `<span class="es-badge es-badge--new">${item.badge}</span>` : ''}</a>`).join('')}</div>`;
+        return `<div class="es-mobile-nav__group${group.id ? ` es-mobile-nav__group--${group.id}` : ''}">${group.label ? `<span class="es-mobile-nav__label">${group.label}</span>` : ''}${items.map(item => `<a class="es-mobile-nav__item" href="${item.action ? '#' : base + item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''}>${ICONS[item.icon]}<span>${item.label}</span>${item.badge ? `<span class="es-badge es-badge--new">${item.badge}</span>` : ''}</a>`).join('')}</div>`;
       }).join('');
       menu.prepend(list);
       menu.classList.add('has-es-mobile-nav');
@@ -590,17 +606,31 @@
     return node;
   }
 
+  // Google-style avatar: the first name's initial on a solid colour picked
+  // from the name, so each person always gets the same colour. Every colour
+  // keeps white text at 4.5:1 or better; no purple (ES palette rule).
+  const AVATAR_COLORS = ['#0A6FDE', '#0B8043', '#C5221F', '#B06000', '#00796B', '#5F6368', '#1A6B8A', '#A1361B'];
   function starInitials(name) {
-    return name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || '★';
+    const first = name.trim().charAt(0);
+    return first ? first.toUpperCase() : '★';
+  }
+  function avatarColor(name) {
+    let hash = 0;
+    for (const ch of name.toLowerCase()) hash = (hash * 31 + ch.codePointAt(0)) >>> 0;
+    return AVATAR_COLORS[hash % AVATAR_COLORS.length];
   }
 
   function tickerItem(star, rank) {
     const item = el('span', `es-ticker__item is-rank-${rank}`);
+    const rankBadge = el('span', 'es-ticker__rank', String(rank));
+    rankBadge.dataset.rank = String(rank);
+    const avatar = el('span', 'es-ticker__avatar', starInitials(star.name));
+    avatar.style.backgroundColor = avatarColor(star.name);
     const stat = el('span', 'es-ticker__stat');
     stat.append(el('b', '', String(star.count)), ` design${star.count === 1 ? '' : 's'}`);
     item.append(
-      el('span', 'es-ticker__rank', `#${rank}`),
-      el('span', 'es-ticker__avatar', starInitials(star.name)),
+      rankBadge,
+      avatar,
       el('span', 'es-ticker__name', star.name),
       stat,
     );
@@ -659,7 +689,14 @@
   function startTicker() {
     if (tickerStarted || !isMainIndexPage()) return;
     tickerStarted = true;
-    fetchStarUsers().then(stars => { if (stars.length) buildTicker(stars); }).catch(() => {});
+    // Auth can confirm (from cache) while the page is still parsing; build only
+    // once the body and the shell exist, after boot() has run.
+    fetchStarUsers().then(stars => {
+      if (!stars.length) return;
+      const build = () => setTimeout(() => buildTicker(stars), 0);
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build, { once: true });
+      else build();
+    }).catch(() => { tickerStarted = false; });
   }
 
   window.addEventListener('es:auth-ready', startTicker);
@@ -703,6 +740,11 @@
     setTimeout(tagNewTemplates, 0);
     setTimeout(buildMobileNav, 0);
     window.addEventListener('hashchange', syncMobileNavCurrent);
+    // Pages that switch views in place (AI Studio) change the URL without a
+    // reload: re-read it so the highlight and breadcrumbs follow.
+    const syncRoute = () => { if (built) syncActive(); syncMobileNavCurrent(); };
+    window.addEventListener('popstate', syncRoute);
+    window.addEventListener('frameup:routechange', syncRoute);
     // The admin link is revealed after the role check.
     setTimeout(() => { if (isAdmin()) document.querySelectorAll('.es-mobile-nav [data-shell-admin]').forEach(link => { link.hidden = false; }); }, 2500);
   }

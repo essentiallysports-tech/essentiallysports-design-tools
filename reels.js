@@ -412,6 +412,8 @@
 
   function setStatus(el, text, kind) {
     el.textContent = text || '';
+    // Success gets a check whose stroke draws in (es-motion.js / es-motion.css).
+    if (kind === 'good' && text && window.FrameUpMotion) el.insertAdjacentHTML('afterbegin', window.FrameUpMotion.check() + ' ');
     el.classList.toggle('is-error', kind === 'error');
     el.classList.toggle('is-good', kind === 'good');
   }
@@ -1925,11 +1927,11 @@
     var maxTextWidth = STAGE_W - safe * 2 - PILL_PAD_LEFT - PILL_PAD_RIGHT;
     var text = String(word.text || '').toUpperCase();
 
-    ctx.font = '900 ' + fontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+    ctx.font = '900 ' + fontSize + 'px "' + POST_FONT_FAMILY + '", "Roboto Condensed", sans-serif';
     var textWidth = ctx.measureText(text).width;
     if (textWidth > maxTextWidth) {
       fontSize = Math.max(48, Math.floor(fontSize * (maxTextWidth / textWidth)));
-      ctx.font = '900 ' + fontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+      ctx.font = '900 ' + fontSize + 'px "' + POST_FONT_FAMILY + '", "Roboto Condensed", sans-serif';
       textWidth = ctx.measureText(text).width;
     }
 
@@ -1949,7 +1951,7 @@
     roundRect(ctx, -pillW / 2, -pillH / 2, pillW, pillH, 0);
     ctx.fill();
 
-    ctx.font = '900 ' + fontSize + 'px "' + POST_FONT_FAMILY + '", "Arial Narrow", Arial, sans-serif';
+    ctx.font = '900 ' + fontSize + 'px "' + POST_FONT_FAMILY + '", "Roboto Condensed", sans-serif';
     ctx.fillStyle = fgColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
@@ -2024,9 +2026,9 @@
     ctx.fill();
     ctx.fillStyle = item.foreground || '#fff';
     ctx.textAlign = 'left';
-    ctx.font = '900 44px "Roboto Condensed", Arial, sans-serif';
+    ctx.font = '900 44px "Roboto Condensed", sans-serif';
     ctx.fillText(item.primary, x + 28, y + 48);
-    ctx.font = '700 28px "Roboto Condensed", Arial, sans-serif';
+    ctx.font = '700 28px "Roboto Condensed", sans-serif';
     ctx.globalAlpha = .86;
     ctx.fillText(item.secondary, x + 28, y + 86);
     ctx.restore();

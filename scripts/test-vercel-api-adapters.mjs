@@ -342,4 +342,20 @@ function createResponse() {
   globalThis.fetch = originalFetch;
 }
 
+// Trend Design and Video Ads pass the POST body through (Trend Design used to
+// drop it, so its AI headline ideas never worked on Vercel).
+{
+  const trendHandler = require('../api/trend-design.js');
+  const response = createResponse();
+  await trendHandler({ method: 'POST', headers: {}, query: {}, body: { mode: 'nope' } }, response);
+  assert.equal(response.statusCode, 400, 'the body reached the function (unknown mode), not "Invalid request"');
+  assert.match(String(response.payload), /Unknown request/);
+}
+{
+  const videoAdsHandler = require('../api/video-ads.js');
+  const response = createResponse();
+  await videoAdsHandler({ method: 'POST', headers: {}, query: {}, body: { mode: 'trends' } }, response);
+  assert.equal(response.statusCode, 401, 'Video Ads needs a signed-in ES user');
+}
+
 console.log('Vercel API adapter regression tests passed.');

@@ -128,13 +128,21 @@
       approvalCheck = { data: false, error: true };
     }
     if (!approvalCheck.error) return Boolean(approvalCheck.data);
-    const { data, error } = await client
-      .from(ACCESS_REQUESTS_TABLE)
-      .select('email,status')
-      .eq('email', normalized)
-      .eq('status', 'Approved')
-      .maybeSingle();
-    return Boolean(!error && data?.email);
+    let fallback;
+    try {
+      fallback = await client
+        .from(ACCESS_REQUESTS_TABLE)
+        .select('email,status')
+        .eq('email', normalized)
+        .eq('status', 'Approved')
+        .maybeSingle();
+    } catch {
+      fallback = { data: null, error: true };
+    }
+    // null = "could not check" (both lookups failed). Callers treat it as
+    // not approved, but requireAuth never signs anyone out because of it.
+    if (fallback.error) return null;
+    return Boolean(fallback.data?.email);
   }
 
   async function isAllowedEmailAsync(email) {
@@ -759,29 +767,51 @@
     return `${loginPath}?redirect=${encodeURIComponent(returnTo || 'index.html')}`;
   }
 
+  // What the page guard knows about the current visitor:
+  //   'valid'        signed in and approved
+  //   'no-session'   no saved login in this browser
+  //   'not-approved' signed in, but the email is not approved for FrameUp
+  // It throws when it cannot tell (login service not loaded, lookups failed):
+  // that is never a reason to sign anyone out.
+  async function sessionStatus() {
+    if (!await ensureSupabaseReady()) throw authUnavailableError();
+    const client = getSupabaseClient();
+    if (!client) throw authUnavailableError();
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    const supabaseSession = data?.session;
+    if (!supabaseSession?.access_token) return 'no-session';
+    const allowed = await isAllowedEmailAsync(supabaseSession.user?.email);
+    if (allowed === null) throw new Error('The approval check could not be completed.');
+    if (!allowed) return 'not-approved';
+    await getSession(); // keep the mirrored session and profile in sync
+    return 'valid';
+  }
+
   function requireAuth(returnTo) {
     document.documentElement.style.visibility = 'hidden';
     return (async () => {
-      // A slow network or a slow CDN must not sign people out. The check gets a
-      // second, longer try; the session is only cleared when the check
-      // definitely says it is invalid. The page stays hidden until it passes.
-      let checkFailed = false;
+      // A slow network, a slow CDN or a failed lookup must not sign people
+      // out. The check gets a second, longer try; the session is only cleared
+      // when the account is definitely not approved. Every trip back to the
+      // login page carries a reason so the page can explain what happened.
+      let reason = 'check-failed';
       for (const timeoutMs of [10000, 20000]) {
         try {
-          if (await withTimeout(isValidSession(), timeoutMs, 'Authentication check timed out.')) {
+          const status = await withTimeout(sessionStatus(), timeoutMs, 'Authentication check timed out.');
+          if (status === 'valid') {
             document.documentElement.style.visibility = '';
             window.dispatchEvent(new CustomEvent('es:auth-ready'));
             return true;
           }
-          checkFailed = false;
+          reason = status;
           break;
         } catch (error) {
-          checkFailed = true;
+          reason = 'check-failed';
         }
       }
-      if (!checkFailed) await logout();
-      // reason=check-failed tells the login page to explain, not bounce back.
-      window.location.replace(`${loginUrl(returnTo)}${checkFailed ? '&reason=check-failed' : ''}`);
+      if (reason === 'not-approved') await logout();
+      window.location.replace(`${loginUrl(returnTo)}&reason=${reason}`);
       return false;
     })();
   }
@@ -827,6 +857,7 @@
     requestPasswordReset,
     requireAuth,
     reviewAccessRequest,
+    sessionStatus,
     updatePassword,
   });
 })();

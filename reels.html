@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
-  <script src="es-auth.js?v=20261115-sec1"></script>
+  <script src="es-auth.js?v=20261115-auth2"></script>
   <script>
     window.ESAuth?.requireAuth(`reels.html${window.location.search}${window.location.hash}`);
   </script>
@@ -16,18 +16,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@500;600;700;800;900&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261113-uipass1">
-  <link rel="stylesheet" href="theme.css?v=20261112-a11y1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261113-uipass1">
-  <link rel="stylesheet" href="cta-hover.css?v=20261113-uipass1">
-  <link rel="stylesheet" href="reels.css?v=20261113-uipass1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261113-uipass2">
-<link rel="stylesheet" href="es-ui.css?v=20261113-uipass2">
-  <link rel="stylesheet" href="es-motion.css?v=20261113-motion1">
-  <script src="theme.js?v=20261111-icons2"></script>
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261116-sp1">
+  <link rel="stylesheet" href="theme.css?v=20261116-sp1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261115-g3">
+  <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
+  <link rel="stylesheet" href="reels.css?v=20261116-sp-rgd">
+  <link rel="stylesheet" href="design-tokens.css?v=20261116-sp1">
+<link rel="stylesheet" href="es-ui.css?v=20261116-sp2">
+  <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
+  <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261111-icons2"></script>
-<script src="app-shell.js?v=20261113-uipass2"></script>
+<script src="app-shell.js?v=20261115-pol7"></script>
+<script src="es-motion.js?v=20261115-ds1"></script>
 </head>
 <body class="reels-page">
   <nav class="navbar">
@@ -72,6 +73,7 @@
   </nav>
 
   <main>
+    <h1 class="es-sr-only">Reel Captions</h1>
     <div class="reels-mobile-topbar" aria-label="Mobile Reels workspace bar">
       <a class="reels-mobile-back" href="index.html#frames" aria-label="Back to Design Tools" title="Back to Design Tools">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
@@ -80,14 +82,14 @@
         <span>FrameUp</span>
         <strong>Reel Captions</strong>
       </div>
-      <button type="button" data-reels-mobile-export>Export</button>
+      <button class="reels-btn is-secondary reels-mobile-export" type="button" data-reels-mobile-export>Export</button>
     </div>
     <section class="reels-shell" aria-label="Reels caption editor">
       <aside class="reels-task-panel" aria-label="Active Reels tool">
         <section class="reels-task-section is-active" data-reels-panel="captions">
           <span id="reels-transcript-source" hidden>No speech recognition yet</span>
           <div class="reels-command-bar">
-            <button type="button" class="reels-btn is-primary" id="reels-transcribe-btn" disabled>Auto-caption</button>
+            <button type="button" class="reels-btn is-primary es-btn--static" id="reels-transcribe-btn" disabled>Auto-caption</button>
             <button type="button" class="reels-btn is-quiet" id="reels-add-caption-btn" disabled>Add Caption</button>
             <button type="button" class="reels-btn is-quiet" id="reels-download-srt-btn" disabled>Download SRT</button>
           </div>
@@ -264,6 +266,6 @@
 
   <footer class="site-footer" aria-label="Site footer"></footer>
   <script src="brand-kit.js?v=20261111-tennis1"></script>
-  <script src="reels.js?v=20261115-sec1"></script>
+  <script src="reels.js?v=20261115-ds1"></script>
 </body>
 </html>

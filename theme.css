@@ -61,13 +61,13 @@
 .theme-switch-thumb { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: #111111; color: #fff; transform: translateX(0); transition: transform .24s cubic-bezier(.2,.9,.2,1), background-color .22s ease, color .22s ease; }
 
 html[data-theme="dark"] .theme-switch {
-  border-color: #3B4856;
-  background: #1B222A;
-  color: #fff;
+  border-color: #5C6373;
+  background: #3B4049;
+  color: #FFFFFF;
   box-shadow: none;
 }
 
-html[data-theme="dark"] .theme-switch-sun { color: #7F8B99; }
+html[data-theme="dark"] .theme-switch-sun { color: #98A6BF; }
 html[data-theme="dark"] .theme-switch-thumb { background: #F2F2F2; color: #111111; transform: translateX(-22px); }
 
 html[data-theme="dark"],
@@ -135,8 +135,8 @@ html[data-theme="dark"] :is(.site-footer a, .site-footer h2, .site-footer h3) {
 
 html[data-theme="dark"] .person-avatar,
 html[data-theme="dark"] .live-avatar {
-  background: #292929 !important;
-  color: #fff !important;
+  background: #3B4049 !important;
+  color: #FFFFFF !important;
 }
 
 html[data-theme="dark"] .profile-avatar:not(.has-image) {
@@ -337,21 +337,10 @@ html[data-theme="dark"] :is(input, textarea, select)::placeholder {
   color: var(--theme-dark-text-subtle) !important;
 }
 
-html[data-theme="dark"] :is(.btn-secondary, .secondary-btn, .topbar-button:not(.is-primary), .canvas-upload-button-secondary, .studio-home-btn, .studio-zoom-btn, .image-tool-button) {
+html[data-theme="dark"] :is(.studio-home-btn, .studio-zoom-btn, .image-tool-button) {
   background: var(--theme-dark-surface-raised) !important;
   color: var(--theme-dark-text) !important;
   border-color: var(--theme-dark-border-strong) !important;
-}
-
-html[data-theme="dark"] :is(.btn-primary, .login-button, .topbar-button.is-primary, .studio-export-btn, .canvas-upload-button, .workspace-cta) {
-  background: var(--theme-dark-accent) !important;
-  border-color: var(--theme-dark-accent) !important;
-  color: #fff !important;
-}
-
-html[data-theme="dark"] :is(.btn-primary, .login-button, .topbar-button.is-primary, .studio-export-btn, .canvas-upload-button, .workspace-cta) :is(svg, path) {
-  color: #fff !important;
-  stroke: currentColor;
 }
 
 html[data-theme="dark"] :is(.post-type-option, .studio-inspector-tab, .select-dropdown-option, .dashboard-choice-option) {
@@ -362,8 +351,8 @@ html[data-theme="dark"] :is(.post-type-option, .studio-inspector-tab, .select-dr
 
 html[data-theme="dark"] :is(.post-type-option.is-active, .studio-inspector-tab.is-active, .select-dropdown-option.is-selected, .dashboard-choice-option.is-selected, .sidebar-nav button.is-active) {
   background: var(--theme-dark-accent-soft) !important;
-  color: #fff !important;
-  border-color: rgba(37, 134, 247, .52) !important;
+  color: #FFFFFF !important;
+  border-color: rgb(10 125 250 / .52) !important;
 }
 
 html[data-theme="dark"] :is(.table-control, .filter, .dashboard-choice-trigger, .role-select, .drawer-grid select, .drawer-grid input, .drawer-notes textarea) {
@@ -509,7 +498,7 @@ html[data-theme="dark"] body.dashboard-page .role-choice.is-server-owner .dashbo
   border-radius: 10px !important;
   background: transparent !important;
   color: #111111 !important;
-  font-family: "Roboto Condensed", "Roboto", Arial, sans-serif !important;
+  font-family: "Roboto Condensed", "Roboto", sans-serif !important;
   font-size: 14px !important;
   font-weight: 500 !important;
   line-height: 1.2 !important;
@@ -571,7 +560,7 @@ html[data-theme="dark"] .profile-dropdown .profile-theme-label {
 }
 
 html[data-theme="dark"] .profile-theme-icon {
-  color: #69AEFF !important;
+  color: #9DCBFD !important;
 }
 
 /* Homepage feature tags remain intentionally light cards in dark mode. */
@@ -596,7 +585,7 @@ html[data-theme="dark"] body.dashboard-page .command-search input::placeholder {
 body[data-current-page="faq"] .faq-contact {
   grid-column: 2;
   display: block;
-  margin: 24px 0 0;
+  margin: var(--es-space-8, 32px) 0 0;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -604,7 +593,7 @@ body[data-current-page="faq"] .faq-contact {
 }
 
 body[data-current-page="faq"] .faq-contact h2 {
-  margin: 0 0 6px;
+  margin: 0 0 var(--es-space-1, 4px);
   color: #111111;
   font-family: var(--font-display);
   font-size: 22px;
@@ -623,16 +612,18 @@ body[data-current-page="faq"] .faq-contact a {
 body[data-current-page="faq"] .faq-contact p { color: var(--es-ink-2); }
 body[data-current-page="faq"] .faq-contact a { color: var(--es-brand-text); }
 
+/* Dark: the generic dark card surface gave this plain text block a box with no padding. */
+html[data-theme="dark"] body[data-current-page="faq"] .faq-contact { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
 html[data-theme="dark"] body[data-current-page="faq"] .faq-contact h2 { color: var(--theme-dark-text) !important; }
 html[data-theme="dark"] body[data-current-page="faq"] .faq-contact p { color: var(--theme-dark-text-muted) !important; }
-html[data-theme="dark"] body[data-current-page="faq"] .faq-contact a { color: #69AEFF !important; }
+html[data-theme="dark"] body[data-current-page="faq"] .faq-contact a { color: #9DCBFD !important; }
 
 /* Preserve the dashboard's time-of-day cue after the generic dark-card layer
    is applied. The tint stays restrained, while the greeting carries the
    clearer semantic color. */
 html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-morning {
-  background: linear-gradient(135deg, #171717 0%, #101010 100%) !important;
-  border-color: #353535 !important;
+  background: linear-gradient(135deg, #101114 0%, #101114 100%) !important;
+  border-color: #3B4049 !important;
 }
 
 html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-afternoon {
@@ -641,11 +632,11 @@ html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-afternoon {
 }
 
 html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-evening {
-  background: linear-gradient(135deg, #171717 0%, #101010 100%) !important;
-  border-color: #353535 !important;
+  background: linear-gradient(135deg, #101114 0%, #101114 100%) !important;
+  border-color: #3B4049 !important;
 }
 
-html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-morning .welcome-kicker { color: #69AEFF !important; }
+html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-morning .welcome-kicker { color: #9DCBFD !important; }
 html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-afternoon .welcome-kicker { color: #F5A524 !important; }
 html[data-theme="dark"] body.dashboard-page .dashboard-welcome.is-evening .welcome-kicker { color: #C4B5FD !important; }
 
@@ -682,12 +673,12 @@ html[data-theme="dark"][data-studio-shell="on"] .panel .swipe-button-control .qu
 
 html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown-option:hover,
 html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown-option:focus-visible {
-  background: rgba(37, 134, 247, .12) !important;
+  background: rgb(10 125 250 / .12) !important;
   color: var(--theme-dark-text) !important;
 }
 
 html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown-option.is-selected {
-  background: rgba(37, 134, 247, .18) !important;
+  background: rgb(10 125 250 / .18) !important;
   color: #FFFFFF !important;
 }
 
@@ -744,7 +735,7 @@ html[data-theme="dark"][data-studio-shell="on"] .panel .swipe-button-control .qu
 }
 
 html[data-theme="dark"][data-studio-shell="on"] .canvas-bottom-actions {
-  background: #101010 !important;
+  background: #101114 !important;
   border-color: var(--theme-dark-border-strong) !important;
   box-shadow: none !important;
 }

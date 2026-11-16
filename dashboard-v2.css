@@ -168,7 +168,7 @@ body {
   width: 22px;
   text-align: center;
   color: currentColor;
-  font-family: Arial, sans-serif;
+  font-family: var(--es-font-ui, "Roboto", sans-serif);
   font-size: 16px;
   font-weight: 400;
 }
@@ -316,23 +316,9 @@ body {
 }
 
 .topbar-button {
-  min-height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 13px;
-  border: 1px solid var(--dash-line-strong);
-  border-radius: 14px;
-  background: #fff;
-  color: var(--dash-ink);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.topbar-button.is-primary {
-  border-color: var(--dash-blue);
-  background: var(--dash-blue);
-  color: #fff;
 }
 
 .dashboard-shell {
@@ -1462,7 +1448,6 @@ html.has-dashboard-admin .navbar-menu [data-admin-only].is-admin-visible {
   font-family: var(--es-font-ui);
 }
 
-.topbar-button,
 .sidebar-nav button,
 .sidebar-nav a,
 .filter,
@@ -2045,7 +2030,6 @@ body[data-dashboard-view="activity"] .activity-list {
 .sidebar-workspace strong,
 .sidebar-nav button,
 .sidebar-nav a,
-.topbar-button,
 .segmented-control button,
 .filter,
 .table-control,
@@ -2149,15 +2133,6 @@ body[data-dashboard-view="activity"] .activity-list {
   font-family: var(--font-ui);
   font-size: 16px;
   font-weight: 700;
-}
-
-.topbar-button {
-  min-height: 48px;
-  border-color: var(--es-line);
-  border-radius: 14px;
-  padding: 0 20px;
-  font-size: 18px;
-  font-weight: 800;
 }
 
 .welcome-kicker {
@@ -2386,17 +2361,6 @@ body[data-dashboard-view="activity"] .activity-list {
   flex-wrap: wrap;
   justify-content: flex-start;
   margin-top: 4px;
-}
-
-.export-review-actions .topbar-button {
-  min-height: 40px;
-  border-radius: 14px;
-  padding-inline: 14px;
-  font-size: 15px;
-}
-
-.export-review-cta {
-  gap: 10px;
 }
 
 .export-review-chevron {
@@ -2812,7 +2776,6 @@ body[data-dashboard-view="list"] .dashboard-control-row {
 .panel,
 .sidebar-workspace,
 .command-search,
-.topbar-button,
 .segmented-control,
 .filter,
 .kanban-column,
@@ -3015,7 +2978,6 @@ body[data-dashboard-view="list"] .dashboard-control-row {
 
 .sidebar-nav button,
 .sidebar-nav a,
-.topbar-button,
 .segmented-control button,
 .filter,
 .table-control {
@@ -3029,7 +2991,6 @@ body[data-dashboard-view="list"] .dashboard-control-row {
   font-size: 16px;
 }
 
-.topbar-button,
 .segmented-control button,
 .filter {
   font-size: 15px;
@@ -3868,7 +3829,6 @@ body,
 }
 
 .command-search,
-.topbar-button,
 .filter,
 .table-control,
 .drawer-grid select,
@@ -3887,15 +3847,6 @@ body,
 .command-search:focus-within {
   border-color: var(--es-brand-tint);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, .08), 0 12px 28px rgba(14, 16, 20, .05);
-}
-
-.topbar-button:not(.is-primary) {
-  background: var(--dash-surface-1);
-}
-
-.topbar-button.is-primary {
-  border-color: var(--es-brand);
-  background: var(--es-brand-fill);
 }
 
 .dashboard-welcome h2 {
@@ -4199,12 +4150,6 @@ body[data-dashboard-view="list"] .task-list-panel {
   font-size: 15px;
 }
 
-.export-review-actions .topbar-button {
-  min-height: 36px;
-  padding-inline: 12px;
-  font-size: 15px;
-}
-
 .dashboard-app .panel-head {
   min-height: 84px;
   padding: 22px 30px 18px;
@@ -4294,9 +4239,6 @@ body[data-dashboard-view="list"] .task-list-panel {
 }
 
 .add-person-form .topbar-button {
-  min-height: 36px;
-  padding-inline: 16px;
-  font-size: 14px;
   flex: 0 0 auto;
 }
 
@@ -4364,17 +4306,6 @@ body[data-dashboard-view="list"] .task-list-panel {
   display: inline-flex;
   justify-content: flex-end;
   gap: 10px;
-}
-
-.access-request-actions .topbar-button {
-  min-height: 36px;
-  padding-inline: 14px;
-  font-size: 15px;
-}
-
-.access-request-actions .topbar-button[disabled] {
-  cursor: default;
-  opacity: .45;
 }
 
 @media (max-width: 760px) {
@@ -5222,12 +5153,6 @@ body.dashboard-page .export-list-actions {
   gap: 8px;
 }
 
-body.dashboard-page .export-list-actions .topbar-button {
-  min-height: 38px;
-  padding-inline: 13px;
-  font-size: 15px;
-}
-
 body.dashboard-page .export-list.is-compact .export-list-head,
 body.dashboard-page .export-list.is-compact .export-list-row {
   min-width: 980px;
@@ -5427,7 +5352,6 @@ body.dashboard-page .role-badge,
 body.dashboard-page .role-select,
 body.dashboard-page .filter,
 body.dashboard-page .table-control,
-body.dashboard-page .topbar-button,
 body.dashboard-page .dashboard-choice-trigger,
 body.dashboard-page .dashboard-choice-option {
   font-size: 15px !important;
@@ -6648,3 +6572,9 @@ body.dashboard-page:not([data-dashboard-view="overview"]) .dashboard-welcome,
 body.dashboard-page:not([data-dashboard-view="overview"]) .dashboard-overview-grid {
   display: none !important;
 }
+
+/* Dark mode: these used light neutrals (--es-stage / --es-sunk) that stay
+   light in dark mode, leaving light text on a light grey. */
+html[data-theme="dark"] body.dashboard-page .export-list-preview { border-color: var(--es-slate-700, #2A2D34) !important; background: var(--es-slate-800, #1F2126) !important; }
+html[data-theme="dark"] body.dashboard-page .export-list-preview span { color: var(--es-slate-200, #98A6BF) !important; }
+html[data-theme="dark"] .command-search kbd { background: var(--es-slate-700, #2A2D34) !important; border-color: var(--es-slate-600, #3B4049) !important; color: var(--es-slate-100, #BFC8D9) !important; }

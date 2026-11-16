@@ -54,7 +54,7 @@ npm run es:mcp:token -- ${escapeHtml(code || '<callback code>')}</pre>
       place-items: center;
       background: #F5FAFF;
       color: #033162;
-      font-family: Arial, sans-serif;
+      font-family: var(--es-font-ui, "Roboto", sans-serif);
     }
     main {
       width: min(760px, calc(100vw - 40px));
@@ -86,7 +86,7 @@ npm run es:mcp:token -- ${escapeHtml(code || '<callback code>')}</pre>
       border-radius: 10px;
       background: #F7FBFF;
       color: #033162;
-      font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font: 13px/1.45 "Roboto", sans-serif;
       white-space: pre-wrap;
       word-break: break-all;
     }

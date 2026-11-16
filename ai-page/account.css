@@ -482,7 +482,7 @@ textarea {
   background:
     radial-gradient(circle at 88% 0%, rgba(10,125,250,.12), transparent 26%),
     linear-gradient(180deg, #FFFFFF 0%, var(--es-sunk) 100%);
-  padding: clamp(34px, 4.5vw, 58px) clamp(22px, 5vw, 88px) 76px;
+  padding: var(--es-space-8, 32px) var(--es-space-8, 32px) var(--es-space-12, 48px);
 }
 
 .account-shell {
@@ -497,11 +497,11 @@ textarea {
   font-weight: 800;
   letter-spacing: .02em;
   text-transform: uppercase;
-  margin-bottom: 10px;
+  margin-bottom: var(--es-space-1, 4px);
 }
 
 .account-title {
-  margin: 0 0 10px;
+  margin: 0 0 var(--es-space-2, 8px);
   font-family: var(--font-display);
   font-size: clamp(48px, 5.4vw, 78px);
   line-height: .88;
@@ -531,7 +531,7 @@ textarea {
   border: 1.5px solid var(--line);
   border-radius: 20px;
   box-shadow: 0 20px 45px rgba(14, 16, 20,.08);
-  padding: clamp(24px, 2.2vw, 34px);
+  padding: var(--es-card-pad-lg, 24px);
 }
 
 .profile-summary {
@@ -598,29 +598,10 @@ textarea {
 }
 
 .avatar-upload-label {
-  min-height: 52px;
-  border: 1.5px solid var(--line);
-  border-radius: var(--button-radius);
-  background: var(--white);
-  color: var(--es-navy);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 14px;
-  font-family: var(--font-display);
-  font-size: clamp(18px, 1.15vw, 22px);
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 0;
-  text-transform: none;
   cursor: pointer;
-  transition: border-color .16s var(--es-ease), background-color .16s var(--es-ease), color .16s var(--es-ease);
-}
-
-.avatar-upload-label:hover {
-  border-color: var(--es-blue);
-  background: var(--accent-light);
-  color: var(--es-blue);
 }
 
 .avatar-help {
@@ -635,7 +616,7 @@ textarea {
 .field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--es-space-5, 20px) var(--es-space-3, 12px);
 }
 
 .field {
@@ -701,63 +682,26 @@ textarea {
 
 .primary-btn,
 .secondary-btn {
-  min-height: clamp(38px, 2.55vw, 50px);
-  border-radius: var(--button-radius);
-  padding: 0 28px;
-  font-family: var(--font-heading);
-  font-size: clamp(14px, .78vw, 16px);
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: 0;
-  text-transform: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  transition: transform .16s var(--es-ease), box-shadow .16s var(--es-ease), background-color .16s var(--es-ease), border-color .16s var(--es-ease), color .16s var(--es-ease);
-}
-
-.primary-btn {
-  border: 1.5px solid var(--es-blue);
-  background: var(--es-blue);
-  color: var(--white);
-  box-shadow: 0 16px 36px rgba(14, 16, 20,.18);
-}
-
-.secondary-btn {
-  border: 1.5px solid var(--line);
-  background: var(--white);
-  color: var(--es-navy);
-}
-
-.primary-btn:hover,
-.primary-btn:focus-visible,
-.secondary-btn:hover,
-.secondary-btn:focus-visible {
-  transform: translateY(-2px);
-  box-shadow: 0 22px 42px rgba(14, 16, 20,.18);
-  outline: none;
-}
-
-.primary-btn:hover,
-.primary-btn:focus-visible {
-  background: var(--es-brand-fill-press);
-  border-color: var(--es-brand-fill-press);
-}
-
-.secondary-btn:hover,
-.secondary-btn:focus-visible {
-  background: var(--accent-light);
-  border-color: var(--es-blue);
-  color: var(--es-blue);
 }
 
 .status-note {
   min-height: 20px;
-  margin-top: 12px;
+  margin-top: var(--es-space-3, 12px);
   color: var(--es-good);
   font-family: var(--es-font-ui);
+}
+
+/* An empty status line takes no room, so card padding stays even top and
+   bottom; it grows when a message is written into it (aria-live stays). */
+.status-note:empty,
+.profile-page .status-note:empty {
+  min-height: 0;
+  margin-top: 0;
 }
 
 .danger-zone {
@@ -803,37 +747,13 @@ textarea {
 }
 
 .danger-btn {
-  min-height: 48px;
-  border: 1px solid var(--es-bad);
-  border-radius: var(--button-radius);
-  background: #FFFFFF;
-  color: var(--es-bad);
-  padding: 0 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--es-font-ui);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1;
   cursor: pointer;
-  transition: color .2s var(--es-ease), background-color .2s var(--es-ease), border-color .2s var(--es-ease), transform .2s var(--es-ease);
-}
-
-.danger-btn:hover,
-.danger-btn:focus-visible {
-  border-color: var(--es-bad);
-  background: var(--es-bad);
-  color: #FFFFFF;
-  outline: none;
-  transform: translateY(-1px);
 }
 
 .danger-btn:disabled {
-  border-color: var(--es-line);
-  background: var(--es-stage);
-  color: var(--es-ink-3);
-  cursor: not-allowed;
   transform: none;
 }
 
@@ -930,29 +850,24 @@ textarea {
   gap: 10px;
 }
 
-.account-dialog-actions .secondary-btn,
-.account-dialog-actions .danger-btn {
-  min-height: 46px;
-}
-
 .settings-list {
   display: grid;
-  gap: 14px;
+  gap: var(--es-space-3, 12px);
 }
 
 .setting-row {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--white);
-  padding: 16px;
+  padding: var(--es-space-4, 16px);
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 18px;
+  gap: var(--es-space-4, 16px);
   align-items: center;
 }
 
 .setting-copy p {
-  margin: 5px 0 0;
+  margin: var(--es-space-1, 4px) 0 0;
   color: var(--es-text-muted);
   font-family: var(--es-font-ui);
 }
@@ -1005,7 +920,7 @@ textarea {
 }
 
 html[data-theme="dark"] .toggle input:focus-visible + span {
-  outline-color: #5aa8ff;
+  outline-color: #54A4FB;
 }
 
 .logout-card {
@@ -1206,8 +1121,8 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 28px;
-  margin-bottom: 24px;
+  gap: var(--es-space-8, 32px);
+  margin-bottom: var(--es-space-6, 24px);
 }
 
 .account-header-action {
@@ -1215,12 +1130,12 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 }
 
 .settings-page .account-main {
-  padding: 38px clamp(22px, 4vw, 56px) 64px;
+  padding: var(--es-space-8, 32px) var(--es-space-8, 32px) var(--es-space-12, 48px);
 }
 
 .settings-page .account-kicker,
 .logout-page .account-kicker {
-  margin-bottom: 8px;
+  margin-bottom: var(--es-space-1, 4px);
   color: var(--es-ink-3);
   font-family: var(--es-font-ui);
   font-size: 13px;
@@ -1229,7 +1144,7 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 }
 
 .settings-page .account-title {
-  margin-bottom: 10px;
+  margin-bottom: var(--es-space-2, 8px);
   font-size: clamp(42px, 5vw, 58px);
   line-height: 0.95;
 }
@@ -1256,8 +1171,8 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 .settings-section {
   display: grid;
   grid-template-columns: minmax(220px, 0.75fr) minmax(0, 1fr);
-  gap: 36px;
-  padding: 28px 30px;
+  gap: var(--es-space-8, 32px);
+  padding: var(--es-section-pad-y, 20px) var(--es-space-5, 20px);
   border-bottom: 1px solid var(--es-line);
 }
 
@@ -1267,11 +1182,11 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
   font-family: var(--font-display);
   font-size: 28px;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .settings-section p {
-  margin: 7px 0 0;
+  margin: var(--es-space-1, 4px) 0 0;
   color: var(--es-ink-3);
   font-family: var(--es-font-ui);
   font-size: 15px;
@@ -1283,13 +1198,13 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-self: start;
-  padding: 4px;
+  padding: var(--es-field-inset, 4px);
   border-radius: 14px;
   background: var(--es-stage);
 }
 
 .settings-choice button {
-  min-height: 44px;
+  min-height: var(--es-field-h, 40px);
   border: 0;
   border-radius: 10px;
   background: transparent;
@@ -1313,7 +1228,7 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 
 .settings-section-controls {
   display: grid;
-  gap: 14px;
+  gap: var(--es-space-3, 12px);
 }
 
 .settings-page .field label {
@@ -1325,8 +1240,8 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 }
 
 .settings-page .field select {
-  min-height: 48px;
-  padding: 0 42px 0 14px;
+  min-height: var(--es-field-h, 40px);
+  padding: 0 var(--es-space-10, 40px) 0 var(--es-field-pad-x, 12px);
   border: 1px solid var(--es-line-2);
   border-radius: 14px;
   font-family: var(--es-font-ui);
@@ -1335,7 +1250,7 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 }
 
 .setting-row--compact {
-  padding: 14px 16px;
+  padding: var(--es-space-3, 12px) var(--es-space-4, 16px);
   border: 1px solid var(--es-line);
   border-radius: 14px;
   background: #fff;
@@ -1343,7 +1258,7 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 
 .setting-row--compact .setting-copy {
   display: grid;
-  gap: 4px;
+  gap: var(--es-space-1, 4px);
   color: var(--es-ink-3);
   font-family: var(--es-font-ui);
   font-size: 15px;
@@ -1362,34 +1277,19 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 .settings-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 20px 30px;
+  gap: var(--es-space-2, 8px);
+  padding: var(--es-section-pad-y, 20px) var(--es-space-5, 20px);
 }
 
 .settings-actions .status-note {
   min-height: 0;
-  margin: 0 0 0 6px;
+  margin: 0 0 0 var(--es-space-1, 4px);
 }
 
 .settings-page .primary-btn,
 .settings-page .secondary-btn,
 .logout-page .primary-btn,
 .logout-page .secondary-btn {
-  min-height: 44px;
-  padding: 0 20px;
-  border-width: 1px;
-  font-family: var(--es-font-ui);
-  font-size: 15px;
-  font-weight: 500;
-  box-shadow: none;
-  transform: none;
-}
-
-.settings-page .primary-btn:hover,
-.settings-page .secondary-btn:hover,
-.logout-page .primary-btn:hover,
-.logout-page .secondary-btn:hover {
-  box-shadow: none;
   transform: none;
 }
 
@@ -1400,7 +1300,7 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 .logout-page .account-main {
   display: grid;
   min-height: calc(100vh - 69px);
-  padding: 48px 22px;
+  padding: var(--es-space-12, 48px) var(--es-space-6, 24px);
   place-items: center;
 }
 
@@ -1410,7 +1310,7 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 
 .logout-page .logout-card {
   max-width: none;
-  padding: 34px;
+  padding: var(--es-space-10, 40px);
   border: 1px solid var(--es-line);
   border-radius: 20px;
   background: #fff;
@@ -1418,7 +1318,7 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 }
 
 .logout-page .account-title {
-  margin-bottom: 16px;
+  margin-bottom: var(--es-space-2, 8px);
   font-size: clamp(42px, 7vw, 60px);
   line-height: 0.95;
 }
@@ -1426,7 +1326,7 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 .logout-page .logout-icon {
   width: 52px;
   height: 52px;
-  margin-bottom: 24px;
+  margin-bottom: var(--es-space-5, 20px);
   border-radius: 14px;
   background: var(--es-stage);
   color: var(--es-ink);
@@ -1438,8 +1338,8 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 }
 
 .logout-page .actions {
-  gap: 10px;
-  margin-top: 28px;
+  gap: var(--es-space-2, 8px);
+  margin-top: var(--es-space-6, 24px);
 }
 
 .logout-page #confirm-logout {
@@ -1467,7 +1367,7 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
   .account-page-header {
     display: grid;
     align-items: start;
-    gap: 18px;
+    gap: var(--es-space-5, 20px);
   }
 
   .account-header-action {
@@ -1476,19 +1376,19 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 
   .settings-section {
     grid-template-columns: 1fr;
-    gap: 18px;
-    padding: 24px;
+    gap: var(--es-space-3, 12px);
+    padding: var(--es-section-pad-y, 20px) var(--es-section-pad-x, 16px);
   }
 
   .settings-actions {
     flex-wrap: wrap;
-    padding: 18px 24px;
+    padding: var(--es-section-pad-y, 20px) var(--es-section-pad-x, 16px);
   }
 }
 
 @media (max-width: 520px) {
   .settings-page .account-main {
-    padding: 30px 14px 48px;
+    padding: var(--es-space-6, 24px) var(--es-page-gutter-phone, 16px) var(--es-space-12, 48px);
   }
 
   .settings-page .primary-btn,
@@ -1504,7 +1404,7 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
   }
 
   .logout-page .logout-card {
-    padding: 26px 20px;
+    padding: var(--es-card-pad-lg, 24px);
   }
 }
 
@@ -1603,7 +1503,7 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
     line-height: 1;
   }
   .account-grid {
-    gap: 18px;
+    gap: var(--es-space-5, 20px);
     width: min(100%, calc(100vw - 28px));
     min-width: 0;
     max-width: calc(100vw - 28px);
@@ -1612,26 +1512,27 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 
 @media (max-width: 640px) {
   .account-main {
-    padding: 44px 14px 52px;
+    padding: var(--es-space-6, 24px) var(--es-page-gutter-phone, 16px) var(--es-space-12, 48px);
     width: 100%;
     max-width: 100vw;
     overflow-x: hidden;
   }
-  .account-card,
+  /* Not the settings card: its sections carry their own padding. */
+  .account-card:not(.settings-editor),
   .avatar-card {
-    padding: 16px;
+    padding: var(--es-card-pad-md, 20px);
     min-width: 0;
     max-width: 100%;
   }
   .danger-zone {
     grid-template-columns: 1fr;
-    gap: 18px;
+    gap: var(--es-space-4, 16px);
   }
   .danger-zone .danger-btn {
     width: 100%;
   }
   .account-dialog-card {
-    padding: 28px 20px 20px;
+    padding: var(--es-space-6, 24px) var(--es-space-5, 20px) var(--es-space-5, 20px);
   }
   .account-dialog-actions {
     flex-direction: column-reverse;
@@ -1651,14 +1552,12 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
     font-size: 16px;
   }
   .form-actions {
-    gap: 10px;
+    gap: var(--es-space-2, 8px);
   }
   .primary-btn,
   .secondary-btn,
   .avatar-upload-label {
     width: 100%;
-    min-height: 42px;
-    font-size: 15px;
   }
   .setting-row {
     grid-template-columns: 1fr;

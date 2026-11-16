@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
-  <script src="es-auth.js?v=20261115-sec1"></script>
+  <script src="es-auth.js?v=20261115-auth2"></script>
   <script>
     window.ESAuth?.requireAuth(`design-system.html${window.location.search}${window.location.hash}`);
   </script>
@@ -16,56 +16,84 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261113-uipass1">
-  <link rel="stylesheet" href="theme.css?v=20261112-a11y1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261113-uipass1">
-  <link rel="stylesheet" href="cta-hover.css?v=20261113-uipass1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261113-uipass2">
-<link rel="stylesheet" href="es-ui.css?v=20261113-uipass2">
-  <link rel="stylesheet" href="es-motion.css?v=20261113-motion1">
-  <script src="theme.js?v=20261111-icons2"></script>
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261116-sp1">
+  <link rel="stylesheet" href="theme.css?v=20261116-sp1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261115-g3">
+  <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261116-sp1">
+<link rel="stylesheet" href="es-ui.css?v=20261116-sp2">
+  <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
+  <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261111-icons2"></script>
-<script src="app-shell.js?v=20261113-uipass2"></script>
+<script src="app-shell.js?v=20261115-pol7"></script>
+<script src="es-motion.js?v=20261115-ds1"></script>
   <style>
-    .ds-page { max-width: 1040px; margin: 0 auto; padding: 32px 32px 72px; display: grid; gap: 24px; font-family: var(--es-font-ui); color: var(--es-ink); }
-    .ds-hero h1 { margin: 4px 0 8px; font-family: var(--es-font-display); font-size: 36px; font-weight: 800; line-height: 1.05; }
-    .ds-kicker { margin: 0; color: var(--es-brand-text); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-    .ds-lede { margin: 0 0 16px; max-width: 46em; color: var(--es-ink-2); font-size: 15px; line-height: 1.5; }
-    .ds-lede code, .ds-code code { padding: 2px 6px; border-radius: 6px; background: #efeff1; color: var(--es-ink-2); font-size: 13px; }
+    /* No global box-sizing reset on this page: without it .es-input (width:100%
+       + padding) ran 28px past its column into the next field. */
+    .ds-page, .ds-page *, .ds-page *::before, .ds-page *::after { box-sizing: border-box; }
+    .ds-page { max-width: 1040px; margin: 0 auto; padding: var(--es-space-8, 32px) var(--es-space-8, 32px) var(--es-space-12, 48px); display: grid; gap: var(--es-space-8, 32px); font-family: var(--es-font-ui); color: var(--es-ink); }
+    .ds-hero h1 { margin: var(--es-space-1, 4px) 0 var(--es-space-2, 8px); font-family: var(--es-type-page-title-family); font-size: var(--es-type-page-title-size); font-weight: var(--es-type-page-title-weight); line-height: var(--es-type-page-title-line); letter-spacing: var(--es-type-page-title-tracking); }
+    .ds-kicker { margin: 0; color: var(--es-brand-text); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
+    .ds-lede { margin: 0 0 var(--es-space-5, 20px); max-width: var(--es-type-lede-measure); color: var(--es-ink-2); font-size: var(--es-type-lede-size); line-height: var(--es-type-lede-line); }
+    .ds-lede code, .ds-code code { padding: 2px var(--es-space-2, 8px); border-radius: 6px; background: #efeff1; color: var(--es-ink-2); font-size: 13px; }
     .ds-note { max-width: 46em; }
     .ds-toc { position: sticky; top: calc(var(--es-topbar-h) + 12px); z-index: 5; justify-self: start; text-decoration: none; }
     .ds-toc a { text-decoration: none; }
     .ds-section { scroll-margin-top: calc(var(--es-topbar-h) + 72px); }
-    .ds-h3 { margin: 0 0 12px; color: var(--es-ink-2); font-size: 13px; font-weight: 700; }
-    .ds-stack { display: grid; gap: 16px; }
-    .ds-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0; }
+    .ds-h3 { margin: 0 0 var(--es-space-3, 12px); color: var(--es-ink-2); font-size: 13px; font-weight: 700; }
+    .ds-page { grid-template-columns: minmax(0, 1fr); }
+    .ds-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--es-space-6, 24px); }
+    .ds-stack > .es-segmented { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+    .ds-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); margin: 0; }
+    .ds-btn-table-wrap { overflow-x: auto; }
+    .ds-btn-table { border-collapse: collapse; width: 100%; min-width: 620px; }
+    .ds-btn-table th, .ds-btn-table td { padding: var(--es-space-3, 12px) var(--es-space-3, 12px) var(--es-space-3, 12px) 0; text-align: left; vertical-align: middle; }
+    .ds-btn-table thead th { color: var(--es-ink-3); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
+    .ds-btn-table tbody th { font-size: 14px; font-weight: 600; color: var(--es-ink); }
+    .ds-btn-table tbody th span { display: block; margin-top: var(--es-space-1, 4px); color: var(--es-ink-3); font-size: 12px; font-weight: 400; }
+    html .ds-btn-table :is(thead, tbody, tr, th, td) { border: 0 !important; background: transparent !important; }
+    html[data-theme="dark"] .ds-btn-table tbody th { color: #FFFFFF; }
+    html[data-theme="dark"] :is(.ds-btn-table thead th, .ds-btn-table tbody th span) { color: #98A6BF; }
     .ds-gap { width: 16px; }
     .ds-muted { color: var(--es-ink-3); font-size: 13px; }
-    .ds-code { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
-    .ds-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
-    .ds-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .ds-code { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); margin: 0; }
+    .ds-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-5, 20px); align-items: start; }
+    .ds-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--es-space-4, 16px); }
     .ds-span-2 { grid-column: 1 / -1; }
-    .ds-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
-    .ds-swatch { display: grid; gap: 4px; font-size: 13px; }
+    .ds-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--es-space-3, 12px); }
+    .ds-swatch { display: grid; gap: var(--es-space-1, 4px); font-size: 13px; }
     .ds-swatch span { height: 56px; border-radius: 14px; box-shadow: inset 0 0 0 1px rgb(14 16 20 / .08); }
     .ds-swatch b { font-weight: 500; }
     .ds-swatch code { color: var(--es-ink-3); font-size: 12px; }
-    .ds-type { display: grid; gap: 10px; }
+    .ds-type { display: grid; gap: var(--es-space-3, 12px); }
     .ds-type p { margin: 0; }
     .ds-type__display { font-family: var(--es-font-display); font-size: 48px; font-weight: 800; line-height: .98; }
-    .ds-type__h1 { font-family: var(--es-font-display); font-size: 36px; font-weight: 800; line-height: 1.05; }
-    .ds-type__h2 { font-size: 18px; font-weight: 700; }
-    .ds-type__body { font-size: 15px; line-height: 1.5; color: var(--es-ink-2); }
-    .ds-type__small { font-size: 13px; color: var(--es-ink-3); }
-    .ds-radii { display: flex; flex-wrap: wrap; gap: 16px; }
-    .ds-radii div { display: grid; justify-items: center; gap: 6px; }
+    .ds-type__body { font-size: var(--es-type-body-size); line-height: var(--es-type-body-line); color: var(--es-ink-2); }
+    .ds-type__small { font-size: var(--es-type-meta-size); color: var(--es-ink-3); }
+    .ds-type__row { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: baseline; gap: var(--es-space-1, 4px) var(--es-space-4, 16px); }
+    .ds-type__row > code { color: var(--es-ink-3); font-size: 12px; }
+    .ds-motion { display: grid; gap: var(--es-space-3, 12px); }
+    @media (max-width: 640px) { .ds-type__row { grid-template-columns: minmax(0, 1fr); } }
+    .ds-radii { display: flex; flex-wrap: wrap; gap: var(--es-space-4, 16px); }
+    .ds-radii div { display: grid; justify-items: center; gap: var(--es-space-2, 8px); }
     .ds-radii span { width: 72px; height: 56px; background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px var(--es-brand-tint); }
     .ds-radii code { color: var(--es-ink-3); font-size: 12px; }
-    .ds-sidebar-demo { width: 260px; display: grid; gap: 2px; padding: 8px; border-radius: 16px; background: var(--es-sidebar-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
-    .ds-cell { display: inline-flex; align-items: center; gap: 10px; }
+    .ds-space { display: grid; gap: var(--es-space-2, 8px); margin: 0; padding: 0; list-style: none; }
+    .ds-space li { display: grid; grid-template-columns: 120px 48px minmax(0, 1fr); align-items: center; gap: var(--es-space-4, 16px); font-size: 13px; }
+    .ds-space code { color: var(--es-ink-3); font-size: 12px; }
+    .ds-space i { display: block; height: 12px; border-radius: 2px; background: var(--es-brand); }
+    .ds-space span { color: var(--es-ink-2); }
+    .ds-space b { font-weight: 500; color: var(--es-ink); }
+    html[data-theme="dark"] .ds-space b { color: #FFFFFF; }
+    html[data-theme="dark"] .ds-space span { color: #BFC8D9; }
+    html[data-theme="dark"] .ds-space code { color: #98A6BF; }
+    .ds-space + .ds-muted { margin: var(--es-space-3, 12px) 0 0; }
+    .ds-sidebar-demo { width: 260px; display: grid; gap: var(--es-space-1, 4px); padding: var(--es-space-2, 8px); border-radius: 16px; background: var(--es-sidebar-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
+    .ds-cell { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); }
     @media (max-width: 900px) {
-      .ds-page { padding: 20px 16px 56px; }
+      .ds-page { padding: var(--es-space-6, 24px) var(--es-page-gutter-phone, 16px) var(--es-space-12, 48px); }
+      .ds-space li { grid-template-columns: 96px 48px minmax(0, 1fr); gap: var(--es-space-3, 12px); }
       .ds-grid-2, .ds-grid-3 { grid-template-columns: minmax(0, 1fr); }
       .ds-toc { position: static; max-width: 100%; overflow-x: auto; }
     }
@@ -156,42 +184,73 @@
         <hr class="es-divider es-divider--dotted">
         <h3 class="ds-h3">Type</h3>
         <div class="ds-type">
-          <p class="ds-type__display">Display · Condensed 800</p>
-          <p class="ds-type__h1">Page title · Condensed 800 · 36</p>
-          <p class="ds-type__h2">Card title · Roboto 700 · 18</p>
-          <p class="ds-type__body">Body · Roboto 400 · 15. Everything people read uses Roboto; Condensed is for titles and numbers.</p>
-          <p class="ds-type__small">Helper · Roboto 400 · 13</p>
+          <div class="ds-type__row"><code>Kicker · 15/400</code><p class="es-type-kicker">Good afternoon, Suhail</p></div>
+          <div class="ds-type__row"><code>Page title · 36/700</code><p class="es-type-page-title">What should fans feel today?</p></div>
+          <div class="ds-type__row"><code>Lede · 15/400</code><p class="es-type-lede">One short line under a title, when it helps.</p></div>
+          <div class="ds-type__row"><code>Section · Cond. 24/800</code><p class="es-type-section">The pulse <svg class="es-pulse-glyph" viewBox="0 0 30 16" aria-hidden="true" focusable="false"><path pathLength="1" d="M1 8h6l2.5-6 4 12 3.5-9 2.5 3H29"/></svg></p></div>
+          <div class="ds-type__row"><code>Eyebrow · 11/600</code><p class="es-type-eyebrow">Your angle</p></div>
+          <div class="ds-type__row"><code>Card title · 18/500</code><p class="es-type-card-title">Bills and Jets meet again, with Buffalo fans watching closely</p></div>
+          <div class="ds-type__row"><code>Body · 15/400</code><p class="ds-type__body"><strong>Fans feel restless.</strong> Everything people read uses Roboto; Condensed is for UPPERCASE section titles and numbers.</p></div>
+          <div class="ds-type__row"><code>Meta · 13/400</code><ul class="es-meta-list"><li>Google Trends via Buffalo Bills</li><li>Trending since today</li></ul></div>
         </div>
+
+        <hr class="es-divider es-divider--dotted">
+        <h3 class="ds-h3">Motion</h3>
+        <div class="ds-motion">
+          <p class="ds-row"><span class="es-live-dot" aria-hidden="true"></span><span class="ds-muted">Live · Updated 2 min ago</span><span class="ds-gap"></span><button class="es-btn es-btn--sm es-refresh" type="button" aria-busy="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Refreshing</button><span class="ds-gap"></span><span class="ds-muted"><svg class="es-check" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path pathLength="1" d="M4.5 10.5l3.5 3.5 7.5-8"/></svg> Saved</span></p>
+          <ol class="es-steps" aria-label="Example steps"><li class="es-step is-done"><span class="es-step__num">1</span>Moment</li><li class="es-step" aria-current="step"><span class="es-step__num">2</span>Copy</li><li class="es-step"><span class="es-step__num">3</span>Export</li></ol>
+          <div class="es-tabs" role="tablist" aria-label="Example underline tabs" data-ds-tabs><button class="es-tab" role="tab" aria-selected="true" type="button">For you <span class="es-tab__count is-hot">12</span></button><button class="es-tab" role="tab" aria-selected="false" type="button">NFL <span class="es-tab__count">8</span></button><button class="es-tab" role="tab" aria-selected="false" type="button">College <span class="es-tab__count">4</span></button></div>
+          <div class="ds-row"><span class="es-skeleton" style="width:180px;height:14px"></span><span class="es-skeleton" style="width:120px;height:14px"></span></div>
+        </div>
+        <p class="ds-code"><code>.es-live-dot</code> <code>.es-pulse-glyph</code> <code>.es-refresh</code> <code>.es-steps</code> <code>.es-check</code> <code>.es-tabs</code> <code>.es-skeleton</code> <code>.es-stagger</code> <code>FrameUpMotion.tick()</code></p>
 
         <hr class="es-divider es-divider--dotted">
         <h3 class="ds-h3">Radius</h3>
         <div class="ds-radii">
-          <div><span style="border-radius:10px"></span><code>10 · chips</code></div>
-          <div><span style="border-radius:12px"></span><code>12 · buttons</code></div>
-          <div><span style="border-radius:14px"></span><code>14 · fields</code></div>
-          <div><span style="border-radius:20px"></span><code>20 · cards</code></div>
+          <div><span style="border-radius:10px"></span><code>10 · chips, buttons</code></div>
+          <div><span style="border-radius:12px"></span><code>12 · fields</code></div>
+          <div><span style="border-radius:16px"></span><code>16 · cards</code></div>
           <div><span style="border-radius:999px"></span><code>999 · pills</code></div>
         </div>
+
+        <hr class="es-divider es-divider--dotted">
+        <h3 class="ds-h3">Spacing</h3>
+        <ul class="ds-space" aria-label="Spacing scale">
+          <li><code>--es-space-1</code><i style="width:4px"></i><span><b>4</b> · heading to helper text, field inset</span></li>
+          <li><code>--es-space-2</code><i style="width:8px"></i><span><b>8</b> · label to field, button rows, chips</span></li>
+          <li><code>--es-space-3</code><i style="width:12px"></i><span><b>12</b> · heading to first control, stacked controls, field side padding</span></li>
+          <li><code>--es-space-4</code><i style="width:16px"></i><span><b>16</b> · small card padding, panel sides, phone gutter</span></li>
+          <li><code>--es-space-5</code><i style="width:20px"></i><span><b>20</b> · panel section top and bottom, medium card, groups</span></li>
+          <li><code>--es-space-6</code><i style="width:24px"></i><span><b>24</b> · large card padding, groups</span></li>
+          <li><code>--es-space-8</code><i style="width:32px"></i><span><b>32</b> · page gutter, page sections</span></li>
+          <li><code>--es-space-10</code><i style="width:40px"></i><span><b>40</b> · hero and auth panels</span></li>
+          <li><code>--es-space-12</code><i style="width:48px"></i><span><b>48</b> · page sections</span></li>
+        </ul>
+        <p class="ds-muted">A divider always has the same space above and below it, never less than 12px. Fields are 40px tall (32px small).</p>
       </div>
     </section>
 
     <!-- BUTTONS -->
     <section class="es-card ds-section" id="buttons" aria-labelledby="buttons-title">
-      <div class="es-card__head"><div><h2 class="es-card__title" id="buttons-title">Buttons</h2><p class="es-card__sub">One primary action per view, in ES blue. Everything else is secondary or ghost.</p></div></div>
+      <div class="es-card__head"><div><h2 class="es-card__title" id="buttons-title">Buttons</h2><p class="es-card__sub">Four variants, three sizes, one family. One primary per view; everything else is secondary, tertiary or danger.</p></div></div>
       <div class="es-card__body ds-stack">
-        <div class="ds-row">
-          <button class="es-btn es-btn--primary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export</button>
-          <button class="es-btn" type="button">Secondary</button>
-          <button class="es-btn es-btn--ghost" type="button">Ghost</button>
-          <button class="es-btn es-btn--danger" type="button">Delete</button>
-          <button class="es-btn es-btn--primary" type="button" disabled>Disabled</button>
+        <div class="ds-btn-table-wrap">
+          <table class="ds-btn-table">
+            <thead><tr><th scope="col">Variant</th><th scope="col">Small · 32</th><th scope="col">Default · 40</th><th scope="col">Large · 48</th><th scope="col">Disabled</th></tr></thead>
+            <tbody>
+            <tr><th scope="row">Primary<span>The key action. Moving ES rim.</span></th><td><button class="es-btn es-btn--primary es-btn--sm es-btn--still" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export</button></td><td><button class="es-btn es-btn--primary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export</button></td><td><button class="es-btn es-btn--primary es-btn--lg es-btn--still" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export</button></td><td><button class="es-btn es-btn--primary es-btn--still" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export</button></td></tr>
+            <tr><th scope="row">Secondary<span>Every other action.</span></th><td><button class="es-btn es-btn--sm" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Continue</button></td><td><button class="es-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Continue</button></td><td><button class="es-btn es-btn--lg" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Continue</button></td><td><button class="es-btn" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Continue</button></td></tr>
+            <tr><th scope="row">Tertiary<span>Low emphasis.</span></th><td><button class="es-btn es-btn--tertiary es-btn--sm" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Skip</button></td><td><button class="es-btn es-btn--tertiary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Skip</button></td><td><button class="es-btn es-btn--tertiary es-btn--lg" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Skip</button></td><td><button class="es-btn es-btn--tertiary" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Skip</button></td></tr>
+            <tr><th scope="row">Danger<span>Destructive.</span></th><td><button class="es-btn es-btn--danger es-btn--sm" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button></td><td><button class="es-btn es-btn--danger" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button></td><td><button class="es-btn es-btn--danger es-btn--lg" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button></td><td><button class="es-btn es-btn--danger" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button></td></tr>
+            </tbody>
+          </table>
         </div>
         <div class="ds-row">
-          <button class="es-btn es-btn--primary es-btn--lg" type="button">Large · 48</button>
-          <button class="es-btn" type="button">Default · 40</button>
-          <button class="es-btn es-btn--sm" type="button">Small · 32</button>
+          <button class="es-btn es-btn--primary es-btn--still is-busy" type="button" aria-busy="true">Working…</button>
+          <span class="ds-muted">Busy primary: the rim keeps turning and a sheen sweeps across.</span>
         </div>
-        <p class="ds-code"><code>.es-btn</code> <code>.es-btn--primary</code> <code>.es-btn--ghost</code> <code>.es-btn--danger</code> <code>.es-btn--sm</code> <code>.es-btn--lg</code></p>
+        <p class="ds-muted">Radius 10px · Roboto 500 · icons 16px (small) or 18px, 8px gap, always the label colour · focus: 2px blue outline, 2px offset · press: scale .96 · touch screens: small and default grow to 44px. Light and dark change colours only. The primary is white with an ink label in light mode and ES Black with a white label in dark mode. <code>.es-btn--still</code> is for specimens on this page only: the primary look without motion.</p>
+        <p class="ds-code"><code>.es-btn</code> <code>.es-btn--primary</code> <code>.es-btn--tertiary</code> <code>.es-btn--ghost</code> <code>.es-btn--danger</code> <code>.es-btn--sm</code> <code>.es-btn--lg</code> <code>.is-busy</code> <code>.es-btn--still</code></p>
 
         <hr class="es-divider es-divider--dotted">
         <h3 class="ds-h3">Icon and tool buttons</h3>
@@ -276,7 +335,7 @@
       <div class="es-card__body ds-grid-2">
         <div class="ds-stack">
           <div class="es-callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><div><strong>Label speakers for better results</strong>Assign speakers in the transcript panel to help us generate better captions.</div></div>
-          <div class="es-empty"><p class="es-empty__title">No designs yet</p><p class="es-empty__copy">Pick a workspace to start your first design. Exports appear here.</p><button class="es-btn es-btn--primary es-btn--sm" type="button">Create a design</button></div>
+          <div class="es-empty"><p class="es-empty__title">No designs yet</p><p class="es-empty__copy">Pick a workspace to start your first design. Exports appear here.</p><button class="es-btn es-btn--sm" type="button">Create a design</button></div>
           <div class="ds-row"><button class="es-btn" type="button" data-ds-toast>Show a toast</button></div>
         </div>
         <div class="es-menu" role="menu" aria-label="Example menu">

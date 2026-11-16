@@ -88,10 +88,110 @@
   .home-recent__card:hover .home-recent__thumb img { transform: scale(1.06); }
 
   /* "Create Now" arrow nudges toward where it goes. */
-  .frame-card .ui-arrow-right { transition: transform var(--es-dur-fill) var(--es-ease); }
-  .frame-card:hover .ui-arrow-right { transform: translateX(3px); }
+  .frame-card .ui-arrow-right { transition: translate var(--es-dur-fill) var(--es-ease); }
+  .frame-card:hover .ui-arrow-right { translate: 3px 0; }
 
   /* Generate's sparkle turns a touch when you are about to press it. */
   #gen-submit svg { transition: transform var(--es-dur-step) var(--es-ease-entrance); }
   #gen-submit:hover:not(:disabled) svg { transform: rotate(14deg) scale(1.08); }
+}
+
+/* ══ Purposeful micro-animations (2026-11-15 design system) ════════════════
+   Each one tells the person something. 150–400ms UI transitions on the
+   --es-dur* / --es-ease* tokens; ES blues and cyan only. Static with
+   prefers-reduced-motion: reduce. JS hooks: es-motion.js (FrameUpMotion). */
+
+@keyframes esLivePulse { 0% { transform: scale(.6); opacity: 1; } 100% { transform: scale(1.7); opacity: 0; } }
+@keyframes esDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes esSpin { to { transform: rotate(360deg); } }
+@keyframes esStepFill {
+  0% { transform: scale(.82); box-shadow: 0 0 0 0 rgb(84 164 251 / .65); }
+  55% { transform: scale(1.08); box-shadow: 0 0 0 6px rgb(84 164 251 / 0); }
+  100% { transform: none; box-shadow: 0 0 0 6px rgb(84 164 251 / 0); }
+}
+@keyframes esShimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@keyframes esTick {
+  0% { transform: none; }
+  35% { transform: scale(1.16); color: var(--es-tick-color, #0A6FDE); }
+  100% { transform: none; }
+}
+@keyframes esNewShine { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+
+/* 1. Live dot: "Live · Updated 2 min ago". Green = fresh, amber = stale, red = failed. */
+.es-live-dot { position: relative; display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: #22C55E; vertical-align: middle; }
+.es-live-dot::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid rgb(34 197 94 / .45); opacity: 0; }
+.is-stale .es-live-dot { background: #F59E0B; }
+.is-stale .es-live-dot::after { border-color: rgb(245 158 11 / .45); }
+.is-error .es-live-dot { background: #F87171; }
+
+/* 2. Pulse line glyph beside a live section title: draws once on arrival. */
+.es-pulse-glyph { display: inline-block; flex: none; width: 30px; height: 16px; color: #0A7DFA; overflow: visible; }
+.es-pulse-glyph path { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+html[data-theme="dark"] .es-pulse-glyph { color: #54A4FB; }
+
+/* 3. Refresh icons spin while refreshing (aria-busy="true" or .is-refreshing). */
+.es-refresh svg { transform-origin: 50% 50%; }
+
+/* 4. Step indicator: numbered 22px circles joined by short lines. */
+.es-steps { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; padding: 0; list-style: none; color: var(--es-text-muted, #646A76); font: var(--es-type-step-weight, 500) var(--es-type-step-size, 13px)/1.2 var(--es-font-ui); }
+.es-step { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.es-step + .es-step::before { content: ""; flex: none; width: 16px; height: 1px; margin-right: 0; background: currentColor; opacity: .45; }
+.es-step__num { display: inline-grid; flex: none; place-items: center; width: var(--es-step-circle, 22px); height: var(--es-step-circle, 22px); border-radius: 50%; box-shadow: inset 0 0 0 1px currentColor; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; }
+.es-step[aria-current="step"], .es-step.is-active { color: var(--es-text-strong, #0E1014); }
+.es-step[aria-current="step"] .es-step__num, .es-step.is-active .es-step__num { background: #0A6FDE; box-shadow: none; color: #FFFFFF; }
+.es-step.is-done .es-step__num { box-shadow: inset 0 0 0 1px #0A6FDE; color: #0A6FDE; }
+.es-step__num .es-check { width: 12px; height: 12px; color: inherit; vertical-align: 0; }
+html[data-theme="dark"] .es-step.is-done .es-step__num { box-shadow: inset 0 0 0 1px #54A4FB; color: #54A4FB; }
+
+/* 5. Success check: the stroke draws in (export done, copied, saved, rated). */
+.es-check { display: inline-block; flex: none; width: 16px; height: 16px; color: var(--es-good, #0E7A3D); vertical-align: -3px; }
+.es-check path { fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+html[data-theme="dark"] .es-check { color: #4CC985; }
+
+/* 6. Skeleton shimmer on loading cards: ES blues at low opacity. */
+.es-skeleton { position: relative; overflow: hidden; border-radius: 8px; background: var(--es-sunk, #F5F6F8); color: transparent !important; pointer-events: none; }
+.es-skeleton::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 15%, rgb(84 164 251 / .16) 45%, rgb(0 179 230 / .12) 60%, transparent 85%); transform: translateX(-100%); }
+html[data-theme="dark"] .es-skeleton { background: #2A2D34; }
+html[data-theme="dark"] .es-skeleton::after { background: linear-gradient(90deg, transparent 15%, rgb(84 164 251 / .2) 45%, rgb(0 179 230 / .14) 60%, transparent 85%); }
+
+/* 8. Number tick: a count that changed scales and flashes blue once. */
+.es-tick { display: inline-block; }
+html[data-theme="dark"] { --es-tick-color: #54A4FB; }
+
+/* 10. "NEW" badge: a single shimmer the first time it is seen. */
+.es-new-shine.is-shining { background-image: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / .55) 50%, transparent 70%); background-size: 250% 100%; background-repeat: no-repeat; background-position: -50% 0; }
+
+/* 9. Underline tabs (.es-tabs in es-ui.css): the ink slides between tabs. */
+.es-tabs__ink { transition: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .es-live-dot::after { animation: esLivePulse 2s var(--es-ease) infinite; }
+  .is-error .es-live-dot::after { animation: none; }
+  .es-pulse-glyph path { animation: esDraw 900ms var(--es-ease-entrance) 150ms backwards; }
+  :is(.es-refresh[aria-busy="true"], .es-refresh.is-refreshing, .es-refresh.is-spinning) svg { animation: esSpin .9s linear infinite; }
+  :is(.es-step[aria-current="step"], .es-step.is-active) .es-step__num { animation: esStepFill var(--es-dur-step) var(--es-ease-entrance); }
+  .es-check path { animation: esDraw 360ms var(--es-ease-entrance) 60ms backwards; }
+  .es-skeleton::after { animation: esShimmer 1.4s ease-in-out infinite; }
+  .es-tick.is-ticking { animation: esTick 380ms var(--es-ease-entrance); }
+  .es-new-shine.is-shining { animation: esNewShine 900ms var(--es-ease) 400ms 1 backwards; }
+  .es-tabs__ink { transition: transform var(--es-dur-step) var(--es-ease), width var(--es-dur-step) var(--es-ease); }
+
+  /* 7. New results fade in, 40ms apart, at most 8 staggered. */
+  .es-stagger > * { animation: esRise var(--es-dur-step) var(--es-ease-entrance) backwards; }
+  .es-stagger > :nth-child(2) { animation-delay: 40ms; }
+  .es-stagger > :nth-child(3) { animation-delay: 80ms; }
+  .es-stagger > :nth-child(4) { animation-delay: 120ms; }
+  .es-stagger > :nth-child(5) { animation-delay: 160ms; }
+  .es-stagger > :nth-child(6) { animation-delay: 200ms; }
+  .es-stagger > :nth-child(7) { animation-delay: 240ms; }
+  .es-stagger > :nth-child(n+8) { animation-delay: 280ms; }
+
+  /* Chips and tabs give a little under the finger. */
+  :is(.es-chip, .es-tab, .es-segmented__item, .ais-switch__item, .va-tab, [role="tab"]) { transition-property: background-color, color, box-shadow, transform; transition-duration: var(--es-dur); transition-timing-function: var(--es-ease); }
+  :is(.es-chip, .es-tab, .es-segmented__item, .ais-switch__item, .va-tab, [role="tab"]):active { transform: scale(.97); transition-duration: var(--es-dur-press); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .es-live-dot::after, .es-pulse-glyph path, .es-refresh svg, .es-step__num, .es-check path, .es-skeleton::after, .es-tick, .es-new-shine, .es-stagger > * { animation: none !important; }
+  .es-tabs__ink { transition: none !important; }
 }

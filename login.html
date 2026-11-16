@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260714-authcallback1"></script>
-  <script src="es-auth.js?v=20261115-sec1"></script>
+  <script src="es-auth.js?v=20261115-auth2"></script>
 <style>
   @font-face {
     font-family: 'Acumin Pro Condensed Local';
@@ -72,10 +72,10 @@
   a { color: inherit; }
   [hidden] { display: none !important; }
   .login-shell {
-    width: min(1040px, calc(100% - 80px));
-    min-height: 520px;
+    width: min(1040px, calc(100% - 2 * var(--es-space-8, 32px)));
+    min-height: max(520px, 100vh);
     margin: 0 auto;
-    padding: 78px 0 112px;
+    padding: var(--es-space-12, 48px) 0;
     display: grid;
     grid-template-columns: 1fr;
     align-items: center;
@@ -83,7 +83,7 @@
   .login-panel {
     width: 100%;
     max-width: 960px;
-    padding: clamp(26px, 3vw, 38px);
+    padding: var(--es-space-10, 40px);
     min-height: 560px;
     border: 1px solid var(--es-line);
     border-radius: var(--es-radius-container);
@@ -93,7 +93,7 @@
     display: grid;
     grid-template-columns: minmax(240px, 330px) minmax(360px, 1fr);
     align-items: center;
-    gap: clamp(38px, 5vw, 76px);
+    gap: var(--es-space-12, 48px);
   }
   .login-copy {
     min-width: 0;
@@ -102,7 +102,7 @@
     display: block;
     width: min(260px, 86%);
     height: auto;
-    margin: 0 0 22px;
+    margin: 0 0 var(--es-space-5, 20px);
   }
   .login-title {
     display: block;
@@ -121,7 +121,7 @@
     min-height: 410px;
     margin-top: 0;
     display: grid;
-    gap: 18px;
+    gap: var(--es-space-5, 20px);
     align-content: center;
     transition: opacity .28s var(--es-ease), transform .28s var(--es-ease);
   }
@@ -132,14 +132,14 @@
   .login-mode-tabs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    padding: 5px;
+    gap: var(--es-space-2, 8px);
+    padding: var(--es-space-1, 4px);
     border: 1px solid var(--es-line);
     border-radius: var(--es-radius-control);
     background: var(--es-stage);
   }
   .login-mode-tab {
-    min-height: 42px;
+    min-height: var(--es-field-h, 40px);
     border: 0;
     border-radius: var(--es-radius-control);
     background: transparent;
@@ -154,7 +154,6 @@
     background: var(--white);
     color: #000000;
     box-shadow: 0 10px 28px rgba(14, 16, 20, .08);
-    transform: translateY(-1px);
   }
   .login-mode-tab:focus-visible {
     outline: 2px solid rgba(10, 125, 250, .28);
@@ -162,7 +161,7 @@
   }
   .login-field {
     display: grid;
-    gap: 12px;
+    gap: var(--es-space-2, 8px);
     transition: opacity .26s var(--es-ease), transform .26s var(--es-ease);
   }
   .login-field label {
@@ -173,16 +172,16 @@
   }
   .login-field input {
     width: 100%;
-    height: 56px;
+    height: var(--es-field-h, 40px);
     border: 0;
     border-radius: var(--es-radius-control);
     background: var(--white);
     color: var(--es-ink);
     font-family: var(--es-font-ui);
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 400;
     line-height: 1;
-    padding: 0 16px;
+    padding: 0 var(--es-field-pad-x, 12px);
     outline: none;
     box-shadow: inset 0 0 0 1.5px var(--es-line-2);
     transition: box-shadow .16s var(--es-ease);
@@ -198,30 +197,11 @@
   }
   .login-button {
     width: 100%;
-    height: 56px;
-    border: 0;
-    border-radius: var(--es-radius-control);
-    background: var(--es-brand-fill);
-    color: var(--white);
-    font: 700 15px/1 var(--es-font-ui);
     cursor: pointer;
-    box-shadow: 0 12px 24px rgba(14, 16, 20, 0.18);
-    transition: transform .16s var(--es-ease), box-shadow .16s var(--es-ease), background-color .16s var(--es-ease);
-  }
-  .login-button:hover,
-  .login-button:focus-visible {
-    background: var(--es-brand-fill-press);
-  }
-  .login-button:active {
-    transform: translateY(1px);
-  }
-  .login-button[disabled] {
-    cursor: wait;
-    opacity: .78;
   }
   .login-forgot {
     justify-self: end;
-    margin-top: -8px;
+    margin-top: calc(var(--es-space-3, 12px) - var(--es-space-5, 20px));
     padding: 0;
     border: 0;
     background: transparent;
@@ -277,7 +257,7 @@
     height: 44px;
     display: grid;
     place-items: center;
-    margin-bottom: 20px;
+    margin-bottom: var(--es-space-5, 20px);
     border-radius: 50%;
     background: var(--es-brand-soft);
     color: var(--accent);
@@ -293,7 +273,7 @@
   }
   .login-confirmation p {
     max-width: 480px;
-    margin: 16px 0 0;
+    margin: var(--es-space-2, 8px) 0 0;
     color: var(--es-ink-3);
     font-size: 16px;
     font-weight: 400;
@@ -304,34 +284,22 @@
     font-weight: 700;
     overflow-wrap: anywhere;
   }
+  html[data-theme="dark"] .login-confirmation strong {
+    color: #FFFFFF;
+  }
   .login-confirmation-actions {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 26px;
+    gap: var(--es-space-2, 8px);
+    margin-top: var(--es-space-6, 24px);
   }
   .login-secondary-button {
-    min-height: 44px;
-    border: 1px solid var(--es-line-2);
-    border-radius: var(--es-radius-control);
-    background: #FFFFFF;
-    color: var(--es-ink);
-    font: 700 15px/1 var(--es-font-ui);
     cursor: pointer;
-  }
-  .login-secondary-button:hover,
-  .login-secondary-button:focus-visible {
-    border-color: var(--es-ink-3);
-    background: var(--es-sunk);
-  }
-  .login-secondary-button[disabled] {
-    cursor: wait;
-    opacity: .65;
   }
   .login-confirmation-status {
     min-height: 18px;
-    margin-top: 14px;
+    margin-top: var(--es-space-3, 12px);
     color: var(--es-good);
     font-size: 15px;
     font-weight: 500;
@@ -801,14 +769,18 @@
   }
   @media (max-width: 960px) {
     .login-shell {
-      width: min(720px, calc(100% - 40px));
-      padding: 56px 0 104px;
+      width: min(720px, calc(100% - 2 * var(--es-space-6, 24px)));
+      padding: var(--es-space-10, 40px) 0;
     }
     .login-panel {
       max-width: 560px;
-      min-height: 620px;
+      min-height: 0;
       grid-template-columns: 1fr;
-      gap: 28px;
+      gap: var(--es-space-8, 32px);
+    }
+    .login-form,
+    .login-confirmation {
+      min-height: 0;
     }
     .selection-box {
       left: 22px;
@@ -840,9 +812,14 @@
   }
   @media (max-width: 680px) {
     .login-shell {
-      width: calc(100% - 32px);
+      width: calc(100% - 2 * var(--es-page-gutter-phone, 16px));
       min-height: 0;
-      padding: 38px 0 78px;
+      /* 48px top clears the fixed theme toggle (top-right). */
+      padding: var(--es-space-12, 48px) 0 var(--es-space-8, 32px);
+    }
+    .login-panel {
+      padding: var(--es-card-pad-lg, 24px);
+      gap: var(--es-space-6, 24px);
     }
     .login-title {
       font-size: 36px;
@@ -889,12 +866,12 @@
     }
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20261113-uipass1">
-<link rel="stylesheet" href="theme.css?v=20261112-a11y1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261113-uipass1">
-<link rel="stylesheet" href="cta-hover.css?v=20261113-uipass1">
-<link rel="stylesheet" href="design-tokens.css?v=20261113-uipass2">
-<script src="theme.js?v=20261111-icons2"></script>
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20261116-sp1">
+<link rel="stylesheet" href="theme.css?v=20261116-sp1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261115-g3">
+<link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
+<link rel="stylesheet" href="design-tokens.css?v=20261116-sp1">
+<script src="theme.js?v=20261115-pol2"></script>
 <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
 <script src="site-chrome.js?v=20261111-icons2"></script>
 </head>
@@ -1136,6 +1113,20 @@
       }
 
       await window.ESAuth.login({ email, password });
+      // Make sure the login actually holds before leaving this page; otherwise
+      // the next page would send the person straight back here.
+      let status = 'valid';
+      try {
+        status = await window.ESAuth.sessionStatus?.() || 'valid';
+      } catch (statusError) {
+        status = 'valid'; // could not double-check: let the next page retry
+      }
+      if (status === 'no-session') {
+        throw new Error('You were signed in, but this browser did not keep the login. Allow site data for FrameUp (or turn off strict tracking protection for this site), then log in again.');
+      }
+      if (status === 'not-approved') {
+        throw new Error('This account is not approved for FrameUp yet. Ask the design team to approve your email.');
+      }
       goToApp();
     } catch (error) {
       setError(error.message || 'Unable to log in right now.');
@@ -1148,8 +1139,10 @@
     const params = new URLSearchParams(window.location.search);
     // Sent back because the sign-in check could not finish (slow connection or
     // the login service did not answer): explain it rather than bouncing.
-    const checkFailed = params.get('reason') === 'check-failed';
-    if (!checkFailed && await window.ESAuth?.isValidSession?.()) {
+    const reason = params.get('reason') || '';
+    const checkFailed = reason === 'check-failed';
+    // Any reason means a page just sent the person here: explain, never bounce.
+    if (!reason && await window.ESAuth?.isValidSession?.()) {
       window.location.replace(getRedirectTarget());
       return;
     }
@@ -1169,6 +1162,10 @@
       setError('Your account was deleted. You can create a new account anytime with an approved ES email.', 'success');
     } else if (checkFailed) {
       setError('We couldn\'t confirm your login: the connection was slow or the login service didn\'t answer. Check your connection and log in again.');
+    } else if (reason === 'not-approved') {
+      setError('This account is not approved for FrameUp yet. Ask the design team to approve your email.');
+    } else if (reason === 'no-session') {
+      setError('Please log in to continue.', 'success');
     }
   }
 

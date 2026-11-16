@@ -123,7 +123,9 @@ assert.equal(res.body.photo.picked, true);
 assert.equal(res.body.ai.fallback, '');
 assert.ok(res.body.meta.costUsd > 0 && res.body.meta.costUsd < 0.01, 'a run costs well under a cent');
 assert.ok(res.body.meta.ms.total >= 0);
-assert.deepEqual(usageRows.map(row => row.feature).sort(), ['generate', 'generate-photo-pick'], 'both AI calls are tracked');
+// Writer, photo pick and the art-director review are each tracked (the review
+// is a separate, cheaper model from a different family).
+assert.deepEqual(usageRows.map(row => row.feature).filter(f => f !== 'generate-escalate').sort(), ['generate', 'generate-photo-pick', 'generate-review'], 'every AI call is tracked');
 
 // 5. Retry asks for a fresh take.
 let prompt = '';

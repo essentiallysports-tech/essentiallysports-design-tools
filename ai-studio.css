@@ -1,0 +1,159 @@
+/* FrameUp AI Studio: the shared look for the AI features (Generate, Trends,
+   Video Ads). Google-Gemini-style light: soft, luminous multi-stop sweeps on
+   the ES blue scale (Blue 300–600 + cyan #00B3E6 as a highlight) over ES Black
+   #101114 and Slate. No purple (brand rule). White text sits only on
+   --ais-gradient-fill (#085EBC→#0A6FDE, ≥4.8:1); gradient text only on dark.
+   Fonts: ES tokens only (--es-font-ui / --es-font-display).
+   Load after es-ui.css / es-motion.css. Only .ais-* classes are defined here.
+
+   Tokens for every AI Studio page (Video Ads too):
+     --ais-gradient          luminous sweep for marks, bars, decorative fills
+     --ais-gradient-text     shimmering text gradient (dark surfaces only)
+     --ais-gradient-text-on-light  text gradient for white surfaces (AA)
+     --ais-gradient-stroke   thin gradient border (use with a mask or border-box)
+     --ais-gradient-fill     filled AI button behind white text
+     --ais-gradient-soft     tint for selected chips / soft tags
+     --ais-sheen             moving sheen for loading states
+     --ais-glow              luminous blue/cyan glow (box-shadow)
+   Older names (--ais-grad, --ais-grad-fill, --ais-grad-soft, --ais-ring,
+   --ais-ring-quiet, --ais-glow-strong) stay as aliases. */
+
+/* The --ais-gradient* / --ais-sheen / --ais-glow(-strong) tokens now live in
+   design-tokens.css (global, light + dark). Only aliases and AI-page extras here. */
+:root {
+  /* Aliases kept for pages already using them. */
+  --ais-grad: var(--ais-gradient);
+  --ais-grad-fill: var(--ais-gradient-fill);
+  --ais-grad-soft: var(--ais-gradient-soft);
+  --ais-ring: linear-gradient(120deg, rgb(10 125 250 / .75), rgb(84 164 251 / .65) 40%, rgb(0 179 230 / .65) 70%, rgb(157 203 253 / .7));
+  --ais-ring-quiet: linear-gradient(120deg, rgb(10 125 250 / .32), rgb(84 164 251 / .26) 40%, rgb(0 179 230 / .28) 70%, rgb(157 203 253 / .3));
+  --ais-soft-text: #0a6fde;
+}
+
+html[data-theme="dark"] {
+  --ais-soft-text: #9dcbfd;
+}
+
+/* Shimmering gradient text (dark surfaces) and its light-surface variant. */
+.ais-gradient-text { background: var(--ais-gradient-text); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ais-gradient-text--on-light { background-image: var(--ais-gradient-text-on-light); }
+html[data-theme="dark"] .ais-gradient-text--on-light { background-image: var(--ais-gradient-text); }
+
+/* ── "AI" badge and soft AI tag ───────────────────────────────────────── */
+.ais-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; padding: 0 var(--es-space-2, 8px); border-radius: 999px; background: var(--ais-grad-fill); color: #ffffff; font: 700 11px/1 var(--es-font-ui); letter-spacing: 0; white-space: nowrap; }
+.ais-tag { display: inline-flex; align-items: center; gap: var(--es-space-1, 4px); min-height: 22px; padding: 0 var(--es-space-2, 8px); border-radius: 999px; background: var(--ais-grad-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .22); color: var(--ais-soft-text); font-size: var(--es-type-meta-size); font-weight: 500; white-space: nowrap; }
+
+/* ── Cards: gradient ring + soft glow on hover / keyboard focus ───────── */
+.ais-card { position: relative; isolation: isolate; transition: box-shadow var(--es-dur-fill, 200ms) var(--es-ease, ease), transform var(--es-dur-fill, 200ms) var(--es-ease, ease); }
+.ais-card::before,
+.ais-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  padding: 1px;
+  border-radius: inherit;
+  background: var(--es-rim-conic, var(--ais-ring));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--es-dur-fill, 200ms) var(--es-ease, ease);
+}
+.ais-card:focus-within::before { opacity: 1; }
+@media (hover: hover) {
+  .ais-card:hover::before { opacity: 1; }
+  .ais-card:hover { box-shadow: inset 0 0 0 1px transparent, var(--ais-glow-strong); }
+}
+
+/* The prompt box: always a quiet ring, full ring + glow while typing. */
+.ais-surface { position: relative; isolation: isolate; box-shadow: var(--ais-glow); }
+.ais-surface::before { background: rgb(132 144 166 / .35); opacity: 1; }
+.ais-surface:focus-within { box-shadow: var(--ais-glow-strong); }
+.ais-surface:focus-within::before { background: var(--es-rim-conic, var(--ais-ring)); }
+@media (prefers-reduced-motion: no-preference) {
+  .ais-card::before, .ais-surface:focus-within::before { animation: esRimSpin var(--es-btn-rim-turn, 5s) linear infinite; }
+}
+
+/* Selected chips on AI pages: soft blue → cyan. */
+.ais-page .es-chip[aria-pressed="true"] { background: var(--ais-grad-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .45); color: var(--ais-soft-text); }
+html[data-theme="dark"] .ais-page .es-chip[aria-pressed="true"] { background: var(--ais-grad-soft); box-shadow: inset 0 0 0 1px rgb(56 151 255 / .55); color: var(--ais-soft-text); }
+
+/* ── Motion ───────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ais-card, .ais-card::before, .ais-surface::before { animation: none !important; transition: none !important; }
+}
+
+/* ── Phones and touch ─────────────────────────────────────────────────── */
+/* ══ AI Studio workspace: the column and the tool's top spacing. ═══════ */
+.ais-wrap { width: min(1120px, calc(100% - 64px)); margin-inline: auto; }
+
+/* The tool. */
+.ais-work { padding-top: var(--es-space-8, 32px); } /* the content gutter every page uses */
+
+/* Motion: low aurora drift, view cross-fade, scroll-in fades (ai-studio.js
+   adds html.ais-motion). Nothing moves with reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .ais-studio [data-ais-panel] { animation: aisFadeIn 360ms var(--es-ease-entrance, ease-out) both; }
+  .ais-gradient-text { animation: aisShimmer 9s ease-in-out infinite alternate; }
+  html.ais-motion [data-ais-reveal] { transition: opacity 500ms var(--es-ease-entrance, ease-out), transform 500ms var(--es-ease-entrance, ease-out); }
+  html.ais-motion [data-ais-reveal]:not(.is-in) { opacity: 0; transform: translateY(12px); }
+}
+@keyframes aisShimmer { from { background-position: 0% 0; } to { background-position: 100% 0; } }
+@keyframes aisSheen { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@keyframes aisFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .ais-studio [data-ais-panel], .ais-gradient-text { animation: none !important; }
+}
+
+@media (max-width: 640px) {
+  .ais-wrap { width: auto; margin-inline: 16px; }
+  .ais-work { padding-top: var(--es-space-5, 20px); }
+}
+
+/* ── Alive: motion for the AI pages (Suhail, 2026-11-15) ──────────────
+   Purposeful and calm: things arrive in order, respond to the pointer and
+   show that the AI is ready or working. All of it stops with reduced motion. */
+@keyframes aisArrive { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes aisFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes aisBreath { 0%, 100% { box-shadow: 0 0 0 0 rgb(10 125 250 / 0); } 50% { box-shadow: 0 0 0 6px rgb(10 125 250 / .18); } }
+@keyframes aisSweep { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 1. Arrival: the workspace builds in, top to bottom. */
+  .gen-brief, .gen-quick, .gen-empty, .td-toolbar, .trends-group,
+  .va-steps li, .va-stage, .va-panel, .va-pane:not([hidden]) > * {
+    animation: aisArrive 520ms var(--es-ease-entrance, cubic-bezier(.16, 1, .3, 1)) both;
+  }
+  .va-steps li:nth-child(1) { animation-delay: 60ms; }
+  .gen-brief, .va-steps li:nth-child(2) { animation-delay: 110ms; }
+  .gen-quick, .td-toolbar, .va-steps li:nth-child(3) { animation-delay: 160ms; }
+  .gen-empty, .trends-group, .va-steps li:nth-child(4), .va-stage { animation-delay: 210ms; }
+  .va-steps li:nth-child(5), .va-panel { animation-delay: 260ms; }
+  .va-pane:not([hidden]) > :nth-child(2) { animation-delay: 60ms; }
+  .va-pane:not([hidden]) > :nth-child(3) { animation-delay: 120ms; }
+  .va-pane:not([hidden]) > :nth-child(n + 4) { animation-delay: 180ms; }
+
+  /* 2. Ready signals: the AI sparkle twinkles, the empty state floats. */
+  .gen-empty svg, .gen-empty img, .va-empty svg { animation: aisFloat 4s ease-in-out infinite; }
+
+  /* 3. Response: cards and chips lift toward the pointer. */
+  .gen-card, .trend-idea, .va-trend, .va-variant, .va-card, .va-chip, .es-chip {
+    transition: transform 220ms var(--es-ease, ease), box-shadow 220ms var(--es-ease, ease), background-color 160ms, border-color 160ms;
+  }
+  @media (hover: hover) {
+    .gen-card:hover, .va-trend:hover, .va-variant:not(.va-variant--skeleton):hover { transform: translateY(-3px); }
+    .trend-idea:hover, .va-chip:hover, .ais-page .es-chip:hover { transform: translateY(-1px); }
+  }
+  :is(.va-chip, .es-chip):active { transform: scale(.97); }
+
+  /* 4. Progress: the current step breathes; working states sweep. */
+  .va-step[aria-current="step"] .va-step__num, .va-step.is-current .va-step__num { animation: aisBreath 2.4s ease-in-out infinite; }
+  .gen-card.is-skeleton, .va-variant--skeleton, .td-sk {
+    background-image: linear-gradient(100deg, transparent 30%, rgb(84 164 251 / .10) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: aisSweep 1.6s linear infinite;
+  }
+}

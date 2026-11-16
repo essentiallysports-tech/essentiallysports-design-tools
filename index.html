@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
 <script src="es-auth-config.js?v=20260707-auth4"></script>
-<script src="es-auth.js?v=20261115-sec1"></script>
+<script src="es-auth.js?v=20261115-auth2"></script>
   <script src="dashboard-data.js?v=20261111-basics2"></script>
 <script>
   (() => {
@@ -74,8 +74,8 @@
     --font-ui:  var(--es-font-ui);
     --font-heading:  var(--es-font-display);
     --font-display:  var(--es-font-display);
-    --font-post: 'Acumin Post', 'Acumin Pro Condensed', 'Arial Narrow', sans-serif;
-    --font-acumin-web: 'Acumin Pro Condensed Web', 'Roboto Condensed', 'Arial Narrow', sans-serif;
+    --font-post: 'Acumin Post', 'Acumin Pro Condensed', 'Roboto Condensed', sans-serif;
+    --font-acumin-web: 'Acumin Pro Condensed Web', 'Roboto Condensed', sans-serif;
     --radius-sm: 10px;
     --radius-md: 14px;
     --radius-lg: 14px;
@@ -4559,7 +4559,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     background: transparent;
     color: var(--es-ink-3);
     cursor: pointer;
-    font-family: Arial, sans-serif;
+    font-family: var(--es-font-ui, "Roboto", sans-serif);
     font-size: 20px;
     line-height: 1;
     transform: translateY(-50%);
@@ -5298,7 +5298,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     background: var(--es-surface, #FFFFFF);
     box-shadow: 0 18px 48px rgb(14 16 20 / .22), 0 0 0 1px var(--es-line, #E5E7EB);
     color: var(--es-ink, #111418);
-    font-family: var(--es-font-ui, Inter, sans-serif);
+    font-family: var(--es-font-ui, "Roboto", sans-serif);
   }
   .export-options-menu[hidden] { display: none; }
   .export-options-menu { display: grid; gap: 14px; padding: 16px; }
@@ -7133,7 +7133,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     html[data-studio-shell="on"] .mobile-editor-title span {
       color: var(--es-ink-3);
-      font-family: var(--font-ui, "Roboto", Arial, sans-serif);
+      font-family: var(--font-ui, "Roboto", sans-serif);
       font-size: 13px;
       font-weight: 700;
       line-height: 1;
@@ -7797,20 +7797,21 @@ body[data-current-page="faq"] .faq-cta-art img {
     pointer-events: none;
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20261113-uipass1">
-<link rel="stylesheet" href="studio-inspector.css?v=20261113-uipass1">
-<link rel="stylesheet" href="theme.css?v=20261112-a11y1">
-<link rel="stylesheet" href="site-chrome.css?v=20261113-uipass1">
-<link rel="stylesheet" href="cta-hover.css?v=20261113-uipass1">
-<link rel="stylesheet" href="how-it-works.css?v=20261111-icons2">
-<link rel="stylesheet" href="design-tokens.css?v=20261113-uipass2">
-<link rel="stylesheet" href="es-ui.css?v=20261113-uipass2">
-  <link rel="stylesheet" href="es-motion.css?v=20261113-motion1">
-<link rel="stylesheet" href="editor-polish.css?v=20261113-uipass8">
-<script src="theme.js?v=20261111-icons2"></script>
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20261116-sp1">
+<link rel="stylesheet" href="studio-inspector.css?v=20261115-g1">
+<link rel="stylesheet" href="theme.css?v=20261116-sp1">
+<link rel="stylesheet" href="site-chrome.css?v=20261115-g3">
+<link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
+<link rel="stylesheet" href="how-it-works.css?v=20261115-btn1">
+<link rel="stylesheet" href="design-tokens.css?v=20261116-sp1">
+<link rel="stylesheet" href="es-ui.css?v=20261116-sp2">
+  <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
+<link rel="stylesheet" href="editor-polish.css?v=20261116-sp1">
+<script src="theme.js?v=20261115-pol2"></script>
 <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
 <script src="site-chrome.js?v=20261111-icons2"></script>
-<script src="app-shell.js?v=20261113-uipass2"></script>
+<script src="app-shell.js?v=20261115-pol7"></script>
+<script src="es-motion.js?v=20261115-ds1"></script>
 </head>
 <body>
 
@@ -10411,7 +10412,7 @@ function getWorkspace() {
 // â”€â”€â”€ FONT LOADING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const POST_FONT_FAMILY = 'Acumin Post';
 // Tweet cards (Tweet / X Post, Multiple Tweets) use Roboto.
-const TWEET_FONT = 'Roboto, Arial, sans-serif';
+const TWEET_FONT = 'Roboto, sans-serif';
 let fontFace = null;
 let postFontLoaded = false;
 
@@ -13760,13 +13761,13 @@ function renderWidgetPickItem(pick, brand) {
     <td valign="top">
       <!-- Article title -->
       <a href="${escapeWidgetAttr(pick.link)}" style="text-decoration: none;">
-        <div style="font-size: 16px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family:Roboto,Inter,Arial,sans-serif; margin-bottom: 0px; margin-top: 0px">${escapeWidgetHtml(pick.headline)}</div>
+        <div style="font-size: 16px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family:Roboto,Arial,sans-serif; margin-bottom: 0px; margin-top: 0px">${escapeWidgetHtml(pick.headline)}</div>
       </a>
       <!--Article button -->
-      <a href="${escapeWidgetAttr(pick.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family:Roboto,Inter,Arial,sans-serif;">
+      <a href="${escapeWidgetAttr(pick.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family:Roboto,Arial,sans-serif;">
   <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
     <tr>
-      <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family:Roboto,Inter,Arial,sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.accent || brand.background)};">
+      <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family:Roboto,Arial,sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.accent || brand.background)};">
         Read More &#8599;
       </td>
     </tr>
@@ -13821,16 +13822,16 @@ function buildWidgetHtml(state) {
 
       <!-- Article title -->
       <a href="${escapeWidgetAttr(main.link)}" style="text-decoration: none;">
-        <div style="font-size: 20px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family:Roboto,Inter,Arial,sans-serif; margin-bottom: 0px; margin-top: 0px">${escapeWidgetHtml(main.headline)}</div>
+        <div style="font-size: 20px; font-weight: bold; line-height: 1.4; color: #1a1a1a; font-family:Roboto,Arial,sans-serif; margin-bottom: 0px; margin-top: 0px">${escapeWidgetHtml(main.headline)}</div>
       </a>
-  <p style="font-size: 16px; font-weight: normal; line-height: 1.4; color: #1a1a1a; font-family:Roboto,Inter,Arial,sans-serif; margin-bottom: 0px; margin-top: 0px">
+  <p style="font-size: 16px; font-weight: normal; line-height: 1.4; color: #1a1a1a; font-family:Roboto,Arial,sans-serif; margin-bottom: 0px; margin-top: 0px">
         ${escapeWidgetHtml(main.description)}
       </p>
       <!--Article button -->
-      <a href="${escapeWidgetAttr(main.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family:Roboto,Inter,Arial,sans-serif;">
+      <a href="${escapeWidgetAttr(main.link)}" style="display: inline-block; font-size: 12px; font-weight: bold; text-decoration: none; text-align: center; font-family:Roboto,Arial,sans-serif;">
   <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
     <tr>
-     <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family:Roboto,Inter,Arial,sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.accent || brand.background)};">
+     <td style="padding: 6px 0px 6px 0px; color: #19191E; font-family:Roboto,Arial,sans-serif; font-size: 14px; font-weight: bold; letter-spacing: 0px; border-bottom:1.5px solid ${escapeWidgetAttr(brand.accent || brand.background)};">
         Read More &#8599;
       </td>
     </tr>
@@ -14040,7 +14041,7 @@ function getReelsFormatConfig() {
 }
 
 function getPillFont(scale=1) {
-  return `900 ${Math.round(PILL_FONT_SIZE * scale)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  return `900 ${Math.round(PILL_FONT_SIZE * scale)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
 }
 
 function getPillXOffset(rowIdx, totalRows) {
@@ -14420,13 +14421,13 @@ function drawNewsletterTagFI(ctx, W, H, scale) {
   const height = 130 * scale;
   // Side padding matches the space above and below the capitals, so the
   // text has the same breathing room on all four sides.
-  ctx.font = `900 ${Math.round(100 * scale)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(100 * scale)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   const fullCapHeight = ctx.measureText('H').actualBoundingBoxAscent || 72 * scale;
   const padX = Math.max(12 * scale, (height - fullCapHeight) / 2);
   const maxWidth = W - x - 29 * scale;
   const maxTextWidth = Math.max(1, maxWidth - padX * 2);
   const fontSize = fitCanvasFont(ctx, label, maxTextWidth, 100 * scale, 42 * scale);
-  ctx.font = `900 ${Math.round(fontSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(fontSize)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
 
@@ -14479,7 +14480,7 @@ function drawNewsletterSectionHeader(ctx, W, H, scale) {
   const fontSize = 37 * scale;
 
   ctx.clearRect(0, 0, W, H);
-  ctx.font = `700 ${fontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `700 ${fontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
 
@@ -14524,13 +14525,13 @@ function drawNewsletterSectionHeaderOption2(ctx, W, H, scale) {
   ctx.clearRect(0, 0, W, H);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.font = `700 ${fontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `700 ${fontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
 
   let textWidth = ctx.measureText(line).width;
   const maxTextWidth = Math.max(1, maxFrameWidth - horizontalPadding * 2);
   if (textWidth > maxTextWidth) {
     fontSize = Math.max(minimumFontSize, fontSize * (maxTextWidth / textWidth));
-    ctx.font = `700 ${fontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `700 ${fontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     textWidth = ctx.measureText(line).width;
   }
 
@@ -14572,7 +14573,7 @@ function drawPills(ctx, W, H, scale, pill_h, pill_spacing, pill_pad_left, pill_p
   let activeFontSize = Math.round(pill_font_size * (activePillH / pill_h));
 
   // Set font once for all measurements
-  ctx.font = `900 ${activeFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${activeFontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
 
@@ -14583,7 +14584,7 @@ function drawPills(ctx, W, H, scale, pill_h, pill_spacing, pill_pad_left, pill_p
   const maxTextAvailable = Math.max(1, maxCanvasW - pill_pad_left - pill_pad_right);
   if (maxTextW > maxTextAvailable) {
     activeFontSize = Math.max(Math.round(14 * scale), Math.floor(activeFontSize * (maxTextAvailable / maxTextW)));
-    ctx.font = `900 ${activeFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${activeFontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   }
 
   // Measure actual text bounds for uppercase 'A' (all-caps — no descenders)
@@ -14671,7 +14672,7 @@ function drawPills(ctx, W, H, scale, pill_h, pill_spacing, pill_pad_left, pill_p
     ctx.fillRect(p.x, p.y, p.w, p.h);
 
     ctx.fillStyle = fgColor;
-    ctx.font = `900 ${activeFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${activeFontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(lines[i].toUpperCase(), p.x + pill_pad_left, p.y + textBaselineFromTop);
@@ -14946,7 +14947,7 @@ function fitCanvasFont(ctx, text, maxWidth, startSize, minSize, family = POST_FO
   let size = startSize;
   const value = String(text || '').toUpperCase();
   while (size > minSize) {
-    ctx.font = `900 ${Math.round(size)}px "${family}", "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${Math.round(size)}px "${family}", "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     if (ctx.measureText(value).width <= maxWidth) break;
     size -= 2;
   }
@@ -15073,7 +15074,7 @@ function drawTweetAvatar(ctx, tweet, x, y, size, scale) {
     ctx.fillStyle = '#EEF4FA';
     ctx.fillRect(x, y, size, size);
     ctx.fillStyle = '#0A7DFA';
-    ctx.font = `900 ${Math.round(23 * scale)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${Math.round(23 * scale)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(getTweetInitials(tweet.authorName), x + size / 2, y + size / 2 + Math.round(2 * scale));
@@ -15154,12 +15155,12 @@ function drawTwitterQuotePost(ctx, W, H, scale) {
     const pillPadLeft = sx(PILL_PAD_LEFT * pillScale);
     const pillPadRight = sx(PILL_PAD_RIGHT * pillScale);
     let pillFontSize = sx(PILL_FONT_SIZE * pillScale);
-    ctx.font = `900 ${pillFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${pillFontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     const maxPillTextW = cardW - pillPadLeft - pillPadRight;
     let textW = ctx.measureText(headlineText).width;
     while (textW > maxPillTextW && pillFontSize > sx(16)) {
       pillFontSize -= sx(1);
-      ctx.font = `900 ${pillFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+      ctx.font = `900 ${pillFontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
       textW = ctx.measureText(headlineText).width;
     }
     const capMetrics = ctx.measureText('A');
@@ -15420,11 +15421,11 @@ function drawTwitterMultiPost(ctx, W, H, scale) {
     const pillPadLeft = sx(PILL_PAD_LEFT * pillScale);
     const pillPadRight = sx(PILL_PAD_RIGHT * pillScale);
     let pillFontSize = sx(PILL_FONT_SIZE * pillScale);
-    ctx.font = `900 ${pillFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${pillFontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     let textW = ctx.measureText(headlineText).width;
     while (textW > cardW - pillPadLeft - pillPadRight && pillFontSize > sx(16)) {
       pillFontSize -= Math.max(1, sx(1));
-      ctx.font = `900 ${pillFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+      ctx.font = `900 ${pillFontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
       textW = ctx.measureText(headlineText).width;
     }
     const capAscent = ctx.measureText('H').actualBoundingBoxAscent || Math.round(pillFontSize * 0.72);
@@ -15476,7 +15477,7 @@ function fitListicleHeaderFont(ctx, text, maxWidth, startSize, minSize) {
   let size = startSize;
   const value = String(text || '').toUpperCase();
   while (size > minSize) {
-    ctx.font = `500 ${Math.round(size)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `500 ${Math.round(size)}px "Roboto Condensed", "Roboto Condensed", sans-serif`;
     if (ctx.measureText(value).width <= maxWidth) break;
     size -= 2;
   }
@@ -15508,13 +15509,13 @@ function fitListicleBlock(ctx, text, maxWidth, maxLines, startSize, minSize) {
   let size = startSize;
   let lines = [];
   while (size >= minSize) {
-    ctx.font = `900 ${Math.round(size)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${Math.round(size)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     lines = wrapListicleWords(ctx, value, maxWidth);
     if (lines.length <= maxLines) break;
     size -= 2;
   }
   size = Math.max(minSize, size);
-  ctx.font = `900 ${Math.round(size)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(size)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   lines = wrapListicleWords(ctx, value, maxWidth);
   if (lines.length > maxLines) {
     const visible = lines.slice(0, maxLines);
@@ -15536,7 +15537,7 @@ function fitListicleTwoLineEntity(ctx, text, maxWidth, startSize, minSize) {
   let size = startSize;
   let lines = [words[0], words.slice(1).join(' ')];
   while (size >= minSize) {
-    ctx.font = `900 ${Math.round(size)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${Math.round(size)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     let bestSplit = 1;
     let bestScore = Number.POSITIVE_INFINITY;
     for (let split = 1; split < words.length; split += 1) {
@@ -15567,7 +15568,7 @@ function fitListicleBlockInBox(ctx, text, boxWidth, boxHeight, maxLines, startSi
   let lineHeight = 0;
 
   while (size >= minSize) {
-    ctx.font = `900 ${Math.round(size)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${Math.round(size)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     lines = value.split('\n').slice(0, maxLines).flatMap(line => wrapListicleWords(ctx, line, boxWidth));
     const capMetrics = ctx.measureText('A');
     capAscent = capMetrics.actualBoundingBoxAscent || Math.round(size * 0.72);
@@ -15580,7 +15581,7 @@ function fitListicleBlockInBox(ctx, text, boxWidth, boxHeight, maxLines, startSi
   }
 
   size = Math.max(minSize, size);
-  ctx.font = `900 ${Math.round(size)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(size)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   lines = value.split('\n').slice(0, maxLines).flatMap(line => wrapListicleWords(ctx, line, boxWidth));
   if (lines.length > maxLines) {
     const visible = lines.slice(0, maxLines);
@@ -15645,7 +15646,7 @@ function drawListicleHeading(ctx, W, scale, titleText) {
   ctx.fillStyle = '#08090A';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.font = `900 ${Math.round(title.size)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(title.size)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   const firstLineMetrics = ctx.measureText(title.lines[0] || 'A');
   const firstLineAscent = firstLineMetrics.actualBoundingBoxAscent || title.capAscent;
   const titleBaselineY = titleBox.y + firstLineAscent;
@@ -15739,7 +15740,7 @@ function drawListicleLogo(ctx, row, x, y, width, height, scale) {
   ctx.lineWidth = Math.max(2, 2 * scale);
   ctx.stroke();
   ctx.fillStyle = row.accent;
-  ctx.font = `900 ${Math.round(34 * scale)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(34 * scale)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(initials, centerX, centerY + scale);
@@ -15774,7 +15775,7 @@ function drawListicleType1Post(ctx, W, H, scale) {
   ];
   headers.forEach(header => {
     const size = fitListicleHeaderFont(ctx, header.text, sx(header.width), 38 * scale, 26 * scale);
-    ctx.font = `500 ${Math.round(size)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `500 ${Math.round(size)}px "Roboto Condensed", "Roboto Condensed", sans-serif`;
     ctx.fillText(String(header.text).toUpperCase(), sx(header.x), sx(LISTICLE_TYPE1_TABLE_LAYOUT.headerY));
   });
 
@@ -15804,7 +15805,7 @@ function drawListicleType1Post(ctx, W, H, scale) {
     const entityLineHeight = entity.size * 0.88;
     const entityBlockHeight = entity.lines.length * entityLineHeight;
     ctx.fillStyle = '#08090A';
-    ctx.font = `900 ${Math.round(entity.size)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${Math.round(entity.size)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     entity.lines.forEach((line, lineIndex) => {
@@ -15880,11 +15881,11 @@ function fitAsapTemplate1RowText(ctx, text, maxWidth, startSize, minSize) {
   const value = String(text || '').toUpperCase();
   let size = startSize;
   while (size > minSize) {
-    ctx.font = `700 ${Math.round(size)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `700 ${Math.round(size)}px "Roboto Condensed", "Roboto Condensed", sans-serif`;
     if (ctx.measureText(value).width <= maxWidth) break;
     size -= 1;
   }
-  ctx.font = `700 ${Math.round(size)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `700 ${Math.round(size)}px "Roboto Condensed", "Roboto Condensed", sans-serif`;
   let display = value;
   if (ctx.measureText(display).width > maxWidth) {
     while (display.length > 1 && ctx.measureText(`${display}…`).width > maxWidth) {
@@ -15930,7 +15931,7 @@ function wrapAsapTemplate1Words(ctx, text, maxWidth) {
 
 function fitAsapTemplate1Title(ctx, text, maxWidth, fontSize) {
   const value = String(text || '').toUpperCase();
-  ctx.font = `900 ${Math.round(fontSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(fontSize)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   const lines = wrapAsapTemplate1Words(ctx, value, maxWidth);
   const capMetrics = ctx.measureText('A');
   const capAscent = Number.isFinite(capMetrics.actualBoundingBoxAscent) ? capMetrics.actualBoundingBoxAscent : fontSize * 0.72;
@@ -16009,7 +16010,7 @@ function drawAsapTemplate1Post(ctx, W, H, scale) {
   ctx.fillRect(contentX, textTop, sx(L.accentLineWidth), title.renderedHeight);
 
   ctx.fillStyle = '#0A0A0A';
-  ctx.font = `900 ${Math.round(title.size)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(title.size)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   const titleBaselineY = textTop + title.capAscent;
@@ -16028,7 +16029,7 @@ function drawAsapTemplate1Post(ctx, W, H, scale) {
     ctx.fillRect(bulletX, bulletY, bulletSize, bulletSize);
 
     ctx.fillStyle = '#0A0A0A';
-    ctx.font = `700 ${Math.round(row.size)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `700 ${Math.round(row.size)}px "Roboto Condensed", "Roboto Condensed", sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
     const rowMetrics = ctx.measureText(row.text);
@@ -16071,7 +16072,7 @@ function drawListicleType2Rank(ctx, rank, accent, x, y, width, height, scale) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   while (fontSize > minSize) {
-    ctx.font = `900 ${Math.round(fontSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${Math.round(fontSize)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     textMetrics = ctx.measureText(value);
     referenceMetrics = ctx.measureText(widthReference);
     const glyphWidth = Math.max(
@@ -16186,7 +16187,7 @@ function drawListicleType2Post(ctx, W, H, scale) {
     const nameMaxWidth = sx(430);
     const nameSize = fitCanvasFont(ctx, name, nameMaxWidth, 60 * scale * contentScale, 36 * scale * contentScale);
     ctx.save();
-    ctx.font = `900 ${Math.round(nameSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${Math.round(nameSize)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     ctx.fillStyle = '#090A0C';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
@@ -16201,7 +16202,7 @@ function drawListicleType2Post(ctx, W, H, scale) {
       21 * scale * contentScale,
       'Roboto Condensed'
     );
-    ctx.font = `600 ${Math.round(subtitleSize)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `600 ${Math.round(subtitleSize)}px "Roboto Condensed", "Roboto Condensed", sans-serif`;
     ctx.fillStyle = row.accent;
     ctx.fillText(subtitle, textX, top + sx(112) * contentScale);
     ctx.restore();
@@ -16239,7 +16240,7 @@ function drawListicleRankPill(ctx, rank, accent, x, centerY, scale, rowScale = 1
   // rank glyphs into the badge's top-right corner.
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   const textMetrics = ctx.measureText(value);
   const pillWidth = textMetrics.width + pillPadLeft + pillPadRight;
 
@@ -16262,7 +16263,7 @@ function drawListicleRankPill(ctx, rank, accent, x, centerY, scale, rowScale = 1
 function drawStatsText(ctx, text, x, y, maxWidth, fontSize, minFontSize, color, align = 'center') {
   const value = String(text || '').toUpperCase();
   const size = fitCanvasFont(ctx, value, maxWidth, fontSize, minFontSize);
-  ctx.font = `900 ${Math.round(size)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(size)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   ctx.fillStyle = color;
   ctx.textAlign = align;
   ctx.textBaseline = 'middle';
@@ -16354,7 +16355,7 @@ function drawStatsSingleEntPost(ctx, W, H, scale) {
     PILL_FONT_SIZE * scale,
     14 * scale
   );
-  ctx.font = `900 ${Math.round(headlineFontSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(headlineFontSize)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   const headlineTextW = ctx.measureText(headlineText || 'A').width;
@@ -16399,12 +16400,12 @@ function drawStatsDoubleName(ctx, firstName, lastName, box, scale) {
   ctx.textBaseline = 'top';
   if (firstLine) {
     const firstSize = box.firstFontSize * scale;
-    ctx.font = `400 ${Math.round(firstSize)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `400 ${Math.round(firstSize)}px "Roboto Condensed", "Roboto Condensed", sans-serif`;
     ctx.fillText(firstLine, x, y);
     y += Math.round(firstSize + box.lineGap * scale);
   }
   const secondSize = box.lastFontSize * scale;
-  ctx.font = `700 ${Math.round(secondSize)}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `700 ${Math.round(secondSize)}px "Roboto Condensed", "Roboto Condensed", sans-serif`;
   ctx.fillText(secondLine, x, y);
   ctx.restore();
 }
@@ -16424,7 +16425,7 @@ function drawStatsDoubleGrid(ctx, stats, grid, scale, color) {
     const label = String(stat.label || '').toUpperCase();
     const labelSize = fitCanvasFont(ctx, label, boxW, 36 * scale, 24 * scale, POST_FONT_FAMILY);
     ctx.save();
-    ctx.font = `700 ${Math.round(labelSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `700 ${Math.round(labelSize)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     ctx.fillStyle = color;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
@@ -16587,7 +16588,7 @@ function drawStatsDoubleEntPost(ctx, W, H, scale) {
   const headline = String(data.headline || '').toUpperCase();
   const headlineSize = fitCanvasFont(ctx, headline, t.headline.width * scale, t.headline.fontSize * scale, t.headline.minFontSize * scale);
   ctx.save();
-  ctx.font = `900 ${Math.round(headlineSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(headlineSize)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   ctx.fillStyle = t.headline.color;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
@@ -16808,7 +16809,7 @@ function drawLongQuoteByline(ctx, cardX, cardY, scale) {
   const y = cardY + Math.round(byline.y * scale);
   let fontSize = Math.round(byline.fontSize * scale);
   ctx.save();
-  ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   const text = getLongQuoteName().toUpperCase();
   const padX = Math.round(byline.paddingX * scale);
   const tagW = Math.ceil(ctx.measureText(text).width + padX * 2);
@@ -16835,7 +16836,7 @@ function drawLongQuoteText(ctx, cardX, cardY, scale, quoteText) {
 
   ctx.save();
   while (fontSize >= minFontSize) {
-    ctx.font = `${textConfig.fontWeight || 700} ${fontSize}px "${textConfig.fontFamily || POST_FONT_FAMILY}", "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `${textConfig.fontWeight || 700} ${fontSize}px "${textConfig.fontFamily || POST_FONT_FAMILY}", "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     lineHeight = Math.round(fontSize * (textConfig.lineHeight / textConfig.fontSize));
     lines = wrapLongQuoteText(ctx, quoteText, textW, fontSize);
     if (lines.length * lineHeight <= maxH) break;
@@ -16949,7 +16950,7 @@ function wrapDoubleEntityText(ctx, text, maxWidth, fontSize, minFontSize, lineHe
   let activeSize = fontSize;
   let lines = [];
   while (activeSize >= minFontSize) {
-    ctx.font = `900 ${Math.round(activeSize)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${Math.round(activeSize)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     lines = wrapLongQuoteText(ctx, String(text || '').toUpperCase(), maxWidth, activeSize);
     if (lines.every(line => ctx.measureText(line).width <= maxWidth)) break;
     activeSize -= 2;
@@ -17008,7 +17009,7 @@ function drawDoubleEntityContext(ctx, text, box, scale) {
   ctx.save();
   if ('letterSpacing' in ctx) ctx.letterSpacing = `${box.letterSpacing * scale}px`;
   while (fontSize >= minFontSize) {
-    ctx.font = `600 ${fontSize}px "Roboto Condensed", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `600 ${fontSize}px "Roboto Condensed", "Roboto Condensed", sans-serif`;
     lines = wrapLongQuoteText(ctx, text, w, fontSize);
     const lineHeight = Math.round(fontSize * lineHeightRatio);
     if (lines.length * lineHeight <= maxH) break;
@@ -17033,7 +17034,7 @@ function drawDoubleEntityNameTag(ctx, text, tag, scale) {
   const fontSize = Math.round(tag.fontSize * scale);
   const label = String(text || '').trim().toUpperCase();
   ctx.save();
-  ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   const width = Math.ceil(ctx.measureText(label || 'A').width + padX * 2);
   const baseline = y + Math.round(((tag.paddingTop ?? 5) + 19) * scale);
   ctx.fillStyle = tag.fill;
@@ -17058,7 +17059,7 @@ function drawDoubleEntityQuoteMark(ctx, key, mark, scale) {
   ctx.save();
   ctx.globalAlpha = 0.8;
   ctx.fillStyle = '#000000';
-  ctx.font = `900 ${Math.round(180 * scale)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(180 * scale)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   ctx.fillText(key === 'open' ? '“' : '”', x, y);
   ctx.restore();
 }
@@ -17098,7 +17099,7 @@ function drawQuoteTextGroup(ctx, W, H, scale, lines) {
   let stripH = Math.round(template.stripHeight * scale);
 
   ctx.save();
-  ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   ctx.textBaseline = 'alphabetic';
   const upperLines = lines.map(line => line.toUpperCase());
   let maxTextW = Math.max(...upperLines.map(line => ctx.measureText(line).width));
@@ -17106,7 +17107,7 @@ function drawQuoteTextGroup(ctx, W, H, scale, lines) {
     const fitRatio = (maxStripW - padX * 2) / maxTextW;
     fontSize = Math.max(Math.round(52 * scale), Math.floor(fontSize * fitRatio));
     stripH = Math.max(Math.round(56 * scale), Math.round(stripH * Math.min(1, fitRatio)));
-    ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     maxTextW = Math.max(...upperLines.map(line => ctx.measureText(line).width));
   }
 
@@ -17195,7 +17196,7 @@ function drawQuoteTextGroup(ctx, W, H, scale, lines) {
   const nameFontSize = Math.round(34 * scale);
   let nameMetrics = null;
   if (quoteName) {
-    ctx.font = `500 ${nameFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `500 ${nameFontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     const measured = ctx.measureText(quoteName);
     const nameAscent = measured.actualBoundingBoxAscent || Math.round(nameFontSize * 0.72);
     const nameDescent = measured.actualBoundingBoxDescent || Math.round(nameFontSize * 0.08);
@@ -17236,7 +17237,7 @@ function drawQuoteTextGroup(ctx, W, H, scale, lines) {
     if (nameMetrics) state.textHitRects.push({ x: nameMetrics.x, y: nameMetrics.y, w: nameMetrics.w, h: nameMetrics.h });
   }
 
-  ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${fontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   stripPositions.forEach(strip => {
     ctx.fillStyle = template.fill;
     ctx.fillRect(strip.x, strip.y, strip.w, strip.h);
@@ -17261,7 +17262,7 @@ function drawQuoteTextGroup(ctx, W, H, scale, lines) {
   }
 
   if (nameMetrics) {
-    ctx.font = `500 ${nameFontSize}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+    ctx.font = `500 ${nameFontSize}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
     ctx.fillStyle = '#FFFFFF';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
@@ -17292,7 +17293,7 @@ function drawQuoteWordmark(ctx, W, H, scale) {
   ctx.fillStyle = '#0A7DFA';
   ctx.fillRect(x, y, logoW, logoH);
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `900 ${Math.round(46 * scale)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(46 * scale)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('ESSENTIALLYSPORTS', W / 2, y + logoH / 2);
@@ -17319,7 +17320,7 @@ function drawSwipeButton(ctx, W, H, scale, force = false) {
   ctx.fillStyle = '#000000';
   ctx.fillRect(x, y, buttonW, buttonH);
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `900 ${Math.round(44 * scale)}px "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  ctx.font = `900 ${Math.round(44 * scale)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText('SWIPE >>', x + Math.round(8 * scale), y + buttonH / 2);
@@ -17349,7 +17350,7 @@ function drawEsLogoMark(ctx, x, y, width, height, align = 'right') {
     ctx.fill(new Path2D('M78.0299 67.9531C78.4659 74.1651 80.2329 78.4391 85.4259 78.4391C90.4709 78.4391 92.0879 75.0431 92.0879 70.7441C92.0879 65.5101 89.4569 62.4321 80.5609 57.8731C67.4239 51.0901 62.4629 45.3651 62.4629 34.2501C62.4629 21.3121 70.3689 12.8281 85.3519 12.8281C102.977 12.8281 108.02 23.8411 108.164 35.4551H91.4339C91.1449 30.1881 90.1819 25.6621 85.2459 25.6621C81.3809 25.6621 79.6519 28.1691 79.6519 32.3891C79.6519 36.7211 81.3409 38.9551 89.5659 43.0661C103.584 50.1251 109.535 56.0941 109.535 68.8101C109.535 81.3121 102.228 91.2741 85.2519 91.2741C66.8589 91.2741 61.2479 80.7941 60.8789 67.9541H78.0289L78.0299 67.9531Z'));
   } else {
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = '900 64px "Arial Narrow", Arial, sans-serif';
+    ctx.font = '900 64px "Roboto Condensed", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('ES', baseW / 2, baseH / 2 + 2);
@@ -18517,7 +18518,7 @@ function getReadyInfographicImage(src) {
 
 function infographicFontFamily(layer) {
   const family = layer.font?.family || POST_FONT_FAMILY;
-  return family.includes(',') ? family : `"${family}", "${POST_FONT_FAMILY}", "Arial Narrow", Arial, sans-serif`;
+  return family.includes(',') ? family : `"${family}", "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
 }
 
 function infographicFont(layer, size) {
@@ -21411,7 +21412,7 @@ function wrapWidgetPreviewDoc(html) {
   // copied HTML's own font-family list still falls back to Arial Narrow.
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Inter:wght@400;500;700&display=swap"><style>
     @font-face { font-family: 'Acumin Post'; src: url('fonts/acumin-post-legacy.otf') format('opentype'); font-style: normal; font-weight: 700; font-display: swap; }
-    html,body{margin:0;background:#ffffff;font-family:Roboto,Inter,Arial,sans-serif;overflow:hidden;}
+    html,body{margin:0;background:#ffffff;font-family:Roboto,Arial,sans-serif;overflow:hidden;}
     img{max-width:100%;}
   </style></head><body>${html}</body></html>`;
 }
@@ -21824,9 +21825,9 @@ function renderTriviaOption(letter, text, link, brand) {
   return `        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border-spacing:0;">
           <tr>
             <td width="100%" valign="middle" style="width:100%;background-color:#FFFFFE;border:1px solid ${escapeWidgetAttr(brand.border)};border-radius:36px;padding:0;">
-              <a href="${link}" style="display:block;width:100%;box-sizing:border-box;padding:10px 16px;font-family:Roboto,Inter,Arial,sans-serif;font-size:15px;line-height:20px;font-weight:700;color:${escapeWidgetAttr(brand.text)};text-decoration:none;border-radius:36px;">
+              <a href="${link}" style="display:block;width:100%;box-sizing:border-box;padding:10px 16px;font-family:Roboto,Arial,sans-serif;font-size:15px;line-height:20px;font-weight:700;color:${escapeWidgetAttr(brand.text)};text-decoration:none;border-radius:36px;">
                 <span style="color:${escapeWidgetAttr(brand.text)};">${letter}) ${escapeWidgetHtml(text)}</span>&nbsp;&nbsp;
-                <span style="color:${escapeWidgetAttr(brand.accent)};font-family:Roboto,Inter,Arial,sans-serif;">&#8599;&#65038;</span>
+                <span style="color:${escapeWidgetAttr(brand.accent)};font-family:Roboto,Arial,sans-serif;">&#8599;&#65038;</span>
               </a>
             </td>
           </tr>
@@ -21838,9 +21839,9 @@ function renderTriviaOption(letter, text, link, brand) {
 function renderTriviaSidePill(text, link, brand) {
   return `                    <tr>
                       <td valign="middle" style="background-color:#FFFFFE;border:1px solid ${escapeWidgetAttr(brand.border)};border-radius:36px;padding:0;">
-                        <a href="${link}" style="display:block;width:100%;box-sizing:border-box;padding:6px 10px;font-family:Roboto,Inter,Arial,sans-serif;font-size:13px;line-height:16px;font-weight:700;color:${escapeWidgetAttr(brand.text)};text-decoration:none;border-radius:36px;">
+                        <a href="${link}" style="display:block;width:100%;box-sizing:border-box;padding:6px 10px;font-family:Roboto,Arial,sans-serif;font-size:13px;line-height:16px;font-weight:700;color:${escapeWidgetAttr(brand.text)};text-decoration:none;border-radius:36px;">
                           <span style="color:${escapeWidgetAttr(brand.text)};">${escapeWidgetHtml(text)}</span>
-                          <span style="color:${escapeWidgetAttr(brand.accent)};font-family:Roboto,Inter,Arial,sans-serif;">&nbsp;&#8599;&#65038;</span>
+                          <span style="color:${escapeWidgetAttr(brand.accent)};font-family:Roboto,Arial,sans-serif;">&nbsp;&#8599;&#65038;</span>
                         </a>
                       </td>
                     </tr>`;
@@ -21896,7 +21897,7 @@ ${imageCell}              <td width="${columnWidth}" valign="top" style="width:$
                   <tbody>
 
                     <tr>
-                      <td align="left" valign="top" style="padding:0 0 17px 0;margin:0;font-family:Roboto,Inter,Arial,sans-serif;font-size:18px;line-height:24px;font-weight:700;color:${escapeWidgetAttr(brand.question)};vertical-align:top;">
+                      <td align="left" valign="top" style="padding:0 0 17px 0;margin:0;font-family:Roboto,Arial,sans-serif;font-size:18px;line-height:24px;font-weight:700;color:${escapeWidgetAttr(brand.question)};vertical-align:top;">
                         ${escapeWidgetHtml(state.question)}
                       </td>
                     </tr>
@@ -21960,8 +21961,8 @@ function buildTriviaHtml(state) {
 ${banner}${image}        <!-- QUESTION -->
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">
           <tr>
-            <td align="left" style="padding:20px 4px 0 4px;font-family:Roboto,Inter,Arial,sans-serif;font-size:18px;line-height:24px;font-weight:700;color:${escapeWidgetAttr(brand.question)};">
-              <a href="${link}" style="display:block;color:${escapeWidgetAttr(brand.question)};text-decoration:none;font-family:Roboto,Inter,Arial,sans-serif;font-size:18px;line-height:24px;font-weight:700;">
+            <td align="left" style="padding:20px 4px 0 4px;font-family:Roboto,Arial,sans-serif;font-size:18px;line-height:24px;font-weight:700;color:${escapeWidgetAttr(brand.question)};">
+              <a href="${link}" style="display:block;color:${escapeWidgetAttr(brand.question)};text-decoration:none;font-family:Roboto,Arial,sans-serif;font-size:18px;line-height:24px;font-weight:700;">
                 ${escapeWidgetHtml(state.question)}
               </a>
             </td>
@@ -22132,7 +22133,7 @@ function buildTickerHtml(state) {
   const link = escapeWidgetAttr(state.link);
   // A bordered card needs separate borders, or the rounded corners are lost.
   const tableBorders = brand.cardBorder ? 'border-collapse:separate;border-spacing:0;' : 'border-collapse:collapse;';
-  return `<!-- MONEY MATTERS - FINANCIAL TICKER --><table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;${tableBorders}font-family:Roboto,Inter,Arial,sans-serif;background-color:#FFFFFF;">
+  return `<!-- MONEY MATTERS - FINANCIAL TICKER --><table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;${tableBorders}font-family:Roboto,Arial,sans-serif;background-color:#FFFFFF;">
 
   <!-- MAIN CARD -->
   <tr>
@@ -22158,12 +22159,12 @@ function buildTickerHtml(state) {
           <!-- CONTENT -->
           <td valign="top" style="padding:0;">
             <!-- EDITABLE HEADLINE -->
-            <a href="${link}" target="_blank" style="font-family:Roboto,Inter,Arial,sans-serif;font-size:16px;line-height:22px;font-weight:700;color:${escapeWidgetAttr(brand.headline)};text-decoration:underline;">
+            <a href="${link}" target="_blank" style="font-family:Roboto,Arial,sans-serif;font-size:16px;line-height:22px;font-weight:700;color:${escapeWidgetAttr(brand.headline)};text-decoration:underline;">
               ${escapeWidgetHtml(state.headline)}
             </a>
 
             <!-- EDITABLE SUMMARY -->
-            <div style="font-family:Roboto,Inter,Arial,sans-serif;font-size:15px;line-height:20px;font-weight:400;color:#333333;padding-top:10px;">
+            <div style="font-family:Roboto,Arial,sans-serif;font-size:15px;line-height:20px;font-weight:400;color:#333333;padding-top:10px;">
               ${escapeWidgetHtml(state.summary)}
             </div>
 
@@ -22181,11 +22182,11 @@ function buildTickerHtml(state) {
       <!-- FINANCIAL TICKER -->
       <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;background-color:${tone.background};border-radius:5px;">
         <tr>
-          <td align="left" valign="middle" style="padding:9px 10px;font-family:Roboto,Inter,Arial,sans-serif;font-size:12px;line-height:17px;font-weight:800;color:${tone.color};">
+          <td align="left" valign="middle" style="padding:9px 10px;font-family:Roboto,Arial,sans-serif;font-size:12px;line-height:17px;font-weight:800;color:${tone.color};">
             <span style="font-size:17px;">${tone.arrow}</span>
             &nbsp;${escapeWidgetHtml(state.label)}
           </td>
-          <td align="right" valign="middle" style="padding:9px 10px;font-family:Roboto,Inter,Arial,sans-serif;font-size:11px;line-height:17px;font-weight:700;color:${tone.color};">
+          <td align="right" valign="middle" style="padding:9px 10px;font-family:Roboto,Arial,sans-serif;font-size:11px;line-height:17px;font-weight:700;color:${tone.color};">
             ${escapeWidgetHtml(state.category)}
           </td>
         </tr>
@@ -22317,16 +22318,16 @@ function buildListHtml(state) {
     return `  <!-- ITEM ${String(index + 1).padStart(2, '0')} -->
   <tr>
     <td width="28" valign="middle" style="width:28px;padding:${topPad} 8px 12px 4px;${border}">
-      <span style="font-family:Roboto,Inter,Arial,sans-serif;font-size:32px;line-height:40px;font-weight:900;color:#D6E8FC;">${index + 1}</span>
+      <span style="font-family:Roboto,Arial,sans-serif;font-size:32px;line-height:40px;font-weight:900;color:#D6E8FC;">${index + 1}</span>
     </td>
     <td valign="middle" style="padding:${topPad} 4px 12px 0;${border}">
-      <a href="${escapeWidgetAttr(item.link)}" style="font-family:Roboto,Inter,Arial,sans-serif;font-size:16px;line-height:24px;font-weight:700;color:#000000;text-decoration:underline;display:block;">
+      <a href="${escapeWidgetAttr(item.link)}" style="font-family:Roboto,Arial,sans-serif;font-size:16px;line-height:24px;font-weight:700;color:#000000;text-decoration:underline;display:block;">
         ${escapeWidgetHtml(item.text)}
       </a>
     </td>
   </tr>`;
   }).join('\n\n');
-  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;font-family:Roboto,Inter,Arial,sans-serif;">
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;font-family:Roboto,Arial,sans-serif;">
 ${rows}
 
 </table>`;
@@ -22361,17 +22362,17 @@ function buildList2Html(state) {
     const border = last ? '' : 'border-bottom:1px dashed #E8E8E8;';
     return `  <!-- ITEM ${String(index + 1).padStart(2, '0')} -->
   <tr>
-    <td width="24" valign="top" style="width:24px;padding:${topPad} 0 ${bottomPad} 6px;${border}font-family:Roboto,Inter,Arial,sans-serif;font-size:16px;line-height:24px;font-weight:700;color:#000000;">
+    <td width="24" valign="top" style="width:24px;padding:${topPad} 0 ${bottomPad} 6px;${border}font-family:Roboto,Arial,sans-serif;font-size:16px;line-height:24px;font-weight:700;color:#000000;">
       ${index + 1}.
     </td>
     <td valign="top" style="padding:${topPad} 6px ${bottomPad} 0;${border}">
-      <a href="${escapeWidgetAttr(item.link)}" style="font-family:Roboto,Inter,Arial,sans-serif;font-size:16px;line-height:24px;font-weight:700;color:#000000;text-decoration:underline;">
+      <a href="${escapeWidgetAttr(item.link)}" style="font-family:Roboto,Arial,sans-serif;font-size:16px;line-height:24px;font-weight:700;color:#000000;text-decoration:underline;">
         ${escapeWidgetHtml(item.text)}
       </a>
     </td>
   </tr>`;
   }).join('\n\n');
-  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;font-family:Roboto,Inter,Arial,sans-serif;">
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;border-collapse:collapse;font-family:Roboto,Arial,sans-serif;">
 
 ${rows}
 
@@ -23609,6 +23610,6 @@ loadFont().then(() => render());
 <script src="frameup-designs.js?v=20261113-uipass1"></script>
 <script src="frameup-templates.js?v=20261111-picker1"></script>
 <script src="frameup-extras.js?v=20261111-export2"></script>
-<script src="frameup-spec.js?v=20261115-gen2"></script>
+<script src="frameup-spec.js?v=20261115-gen3"></script>
 </body>
 </html>

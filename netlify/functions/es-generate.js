@@ -261,7 +261,17 @@ function checkSpec(raw, index, allowedTypes, researchUrls = null) {
   if (!TEMPLATES[postType]) return { error: `design ${index + 1}: unsupported post type "${postType}"` };
   if (allowedTypes.length && !allowedTypes.includes(postType)) return { error: `design ${index + 1}: format not requested` };
   const checked = checkFields(postType, raw.fields || raw);
-  if (checked.error) return { error: `design ${index + 1}: ${checked.error}` };
+  // Alternatives the writer offered (same template, same facts): kept only
+  // when they pass the template's limits; the brand checker sees them later.
+  const alts = (Array.isArray(raw.alts) ? raw.alts : []).slice(0, 3)
+    .map(alt => checkFields(postType, alt?.fields || alt))
+    .filter(alt => !alt.error)
+    .map(alt => ({ fields: alt.fields, lines: alt.lines, listicle: alt.listicle || null }));
+  if (checked.error) {
+    // The main version broke a limit but an alternative did not: use that.
+    if (!alts.length) return { error: `design ${index + 1}: ${checked.error}` };
+    Object.assign(checked, alts.shift());
+  }
   return {
     spec: {
       id: `gen-${Date.now().toString(36)}-${index}`,
@@ -273,6 +283,7 @@ function checkSpec(raw, index, allowedTypes, researchUrls = null) {
       fields: checked.fields,
       lines: checked.lines,
       listicle: checked.listicle || null,
+      alts: alts.filter(alt => alt.lines.join('|') !== checked.lines.join('|')),
       photoQuery: TEMPLATES[postType].photo ? (within(raw.photoQuery, 2, 80) || '') : '',
       scene: TEMPLATES[postType].photo ? sceneText(raw.scene) : '',
       photo: null,
@@ -759,8 +770,10 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid
     '',
     `ES research:\n${found.digest || '(no ES coverage found)'}`,
     '',
+    'For every design except listicles, add "alts": up to 2 alternative versions of the same template built on the same facts, each a clearly different hook or wording (fields objects only). The editor can switch between them with one click.',
+    '',
     'Reply with JSON only, no prose:',
-    '{"designs": [{"postType": "...", "title": "short name", "sport": "...", "team": "...", "fields": {...}, "photoQuery": "...", "scene": "...", "why": "one short sentence on why this template fits", "sources": ["ES article URLs you used"]}]}',
+    '{"designs": [{"postType": "...", "title": "short name", "sport": "...", "team": "...", "fields": {...}, "alts": [{...fields}, {...fields}], "photoQuery": "...", "scene": "...", "why": "one short sentence on why this template fits", "sources": ["ES article URLs you used"]}]}',
   ].join('\n');
 }
 
@@ -1108,6 +1121,97 @@ async function pickPhoto(person, candidates, track) {
   }
 }
 
+// ─── Art-director review and escalation ────────────────────────────────────
+// What a design says, as one line of text (for the reviewer and rewrites).
+function designText(postType, option) {
+  const f = option.fields || {};
+  switch (postType) {
+    case 'double-entity-quote': return `${f.a?.name}: "${f.a?.quote}" vs ${f.b?.name}: "${f.b?.quote}"`;
+    case 'stats-single-ent': return `${f.headline} — ${(f.stats || []).map(s => `${s.value} ${s.label}`).join(', ')}`;
+    case 'stats-double-ent': return `${f.headline} — ${f.a?.name} vs ${f.b?.name}`;
+    case 'listicle-type-1':
+    case 'listicle-type-2': return `${String(f.title || '').replace(/\n/g, ' ')} — ${(f.rows || []).slice(0, 3).map(r => r.entity).join(', ')}…`;
+    default: return (option.lines || []).join(' / ');
+  }
+}
+
+const REVIEW_PASS = 3.5;
+const ESCALATE_MAX = 2;
+
+// One cheap call scores every card and picks its best option (main or an
+// alternative). A model from a different family than the writer, so it judges
+// the copy rather than recognising its own style.
+async function reviewDesigns(brief, designs, track) {
+  if (!designs.length || !gatewayConfigured()) return { cost: 0, reviewed: false };
+  const cards = designs.map((spec, index) => {
+    const options = [spec, ...(spec.alts || [])].map((option, n) => `  option ${n}: ${designText(spec.postType, option)}`).join('\n');
+    return `card ${index + 1} (${spec.label}):\n${options}`;
+  }).join('\n');
+  const prompt = [
+    'You are the art director of EssentiallySports (ES), a US sports media brand, reviewing Instagram designs before they are posted.',
+    'For each card, pick the best option and score it 1-5 on: hook (a bold claim or a curious question, not a summary), specific (concrete to this story), voice (punchy, confident, plain American sports English), glance (understood in one second on a phone).',
+    'score is the average of the four. note is one short sentence on what would make the chosen option stronger (empty if it is already great).',
+    `Brief: ${brief.slice(0, 600)}`,
+    cards,
+    'Reply with JSON only: {"cards": [{"card": 1, "best": 0, "score": 4.2, "note": "..."}]}',
+  ].join('\n');
+  try {
+    const { text, cost, model } = await aiText({ tier: 'review', messages: [{ role: 'user', content: prompt }], json: true, maxTokens: 1200, timeoutMs: 12000, track: { ...track, feature: 'generate-review' } });
+    const verdicts = Array.isArray(extractJson(text)?.cards) ? extractJson(text).cards : [];
+    verdicts.forEach(verdict => {
+      const spec = designs[Number(verdict?.card) - 1];
+      if (!spec) return;
+      const best = Number(verdict.best);
+      if (best >= 1 && spec.alts?.[best - 1]) {
+        // The reviewer preferred an alternative: it becomes the main version.
+        const chosen = spec.alts[best - 1];
+        const previous = { fields: spec.fields, lines: spec.lines, listicle: spec.listicle };
+        spec.alts = [previous, ...spec.alts.filter((_, i) => i !== best - 1)];
+        Object.assign(spec, chosen);
+      }
+      const score = Math.max(1, Math.min(5, Number(verdict.score) || 0));
+      spec.review = { score: Number(score.toFixed(1)), note: clean(verdict.note).slice(0, 200), model };
+    });
+    return { cost, reviewed: true };
+  } catch (error) {
+    return { cost: 0, reviewed: false };
+  }
+}
+
+// Cards the reviewer scored low get one rewrite from the best model (Sonnet),
+// with the reviewer's note and the facts. Kept only if it passes every check.
+async function escalateDesigns({ brief, designs, found, check, track }) {
+  const low = designs.filter(spec => spec.review && spec.review.score < REVIEW_PASS)
+    .sort((a, b) => a.review.score - b.review.score).slice(0, ESCALATE_MAX);
+  if (!low.length || !gatewayConfigured()) return { cost: 0, improved: 0 };
+  const prompt = [
+    'You are the best social editor at EssentiallySports (ES). Rewrite each Instagram design below so it is clearly stronger, keeping the same template.',
+    ...RULES.VOICE.map(line => `- ${line}`),
+    '- Covers are hooks: a bold claim or a curious question in 2-8 words. Never invent numbers, quotes or results.',
+    `Brief: ${brief.slice(0, 600)}`,
+    ...low.map((spec, i) => `Design ${i + 1} (${spec.postType}): ${JSON.stringify(spec.fields)}\n  Art director: ${spec.review.note || 'not strong enough'}\n  Fields: ${TEMPLATES[spec.postType].shape}`),
+    `Facts you may use (ES research):\n${String(found.digest || '').slice(0, 3000)}`,
+    'Reply with JSON only: {"designs": [{"postType": "...", "fields": {...}}]} in the same order.',
+  ].join('\n');
+  try {
+    const { text, cost } = await aiText({ tier: 'best', messages: [{ role: 'user', content: prompt }], effort: 'medium', maxTokens: 3000, timeoutMs: 25000, track: { ...track, feature: 'generate-escalate' } });
+    let improved = 0;
+    designsFrom(extractJson(text)).forEach((raw, i) => {
+      const spec = low[i];
+      if (!spec || raw?.postType !== spec.postType) return;
+      const better = check({ ...raw, title: spec.title, sport: spec.sport, team: spec.team, photoQuery: spec.photoQuery, why: spec.why }, spec);
+      if (!better) return;
+      spec.alts = [{ fields: spec.fields, lines: spec.lines, listicle: spec.listicle }, ...(spec.alts || [])].slice(0, 2);
+      Object.assign(spec, { fields: better.fields, lines: better.lines, listicle: better.listicle });
+      spec.review = { ...spec.review, escalated: true };
+      improved += 1;
+    });
+    return { cost, improved };
+  } catch (error) {
+    return { cost: 0, improved: 0 };
+  }
+}
+
 const brainName = tools => {
   if (tools.think) return `es-mcp:${tools.think.name}`;
   const provider = pickProvider();
@@ -1179,6 +1283,21 @@ async function generate({ brief, formats, count, avoid, token, email }) {
           lintStats.autoSplit += 1;
         }
       }
+      // Alternatives pass the same checks (fit, facts, style) or are dropped.
+      const altCtx = { brief, corpus: found.corpus || found.digest, leads: new Set() };
+      let goodAlts = (spec.alts || []).filter(alt => lintSpec({ ...spec, ...alt }, altCtx).ok);
+      if (!lint.ok && goodAlts.length) {
+        // The main version failed but an alternative passed: use it (no AI call).
+        const promoted = { ...spec, ...goodAlts[0] };
+        const promotedLint = lintSpec(promoted, lintCtx());
+        if (promotedLint.ok) {
+          spec = promoted;
+          lint = promotedLint;
+          goodAlts = goodAlts.slice(1);
+          lintStats.altPromoted = (lintStats.altPromoted || 0) + 1;
+        }
+      }
+      spec.alts = goodAlts.slice(0, 2).map(({ fields, lines, listicle }) => ({ fields, lines, listicle }));
       if (!lint.ok) {
         const label = `design ${index + offset + 1} (${spec.postType})`;
         return problems.push({
@@ -1249,6 +1368,27 @@ async function generate({ brief, formats, count, avoid, token, email }) {
     brain = 'draft';
     notes.push(...skipped(keepValid(draftPlan(brief, found, allowedTypes))));
   }
+  // Art-director pass (cheap, different model family) and, for cards that still
+  // score low, one rewrite from the best model. Skipped on backup models, in
+  // draft mode, and when the weekly budget has run out.
+  const quality = { reviewed: false, improved: 0, cost: 0 };
+  if (provider?.name === 'gateway' && !provider.fallback && brain !== 'draft' && designs.length) {
+    const track = { email, token };
+    const review = await reviewDesigns(brief, designs, track);
+    quality.reviewed = review.reviewed;
+    quality.cost += review.cost;
+    if (review.reviewed) {
+      const check = (raw, current) => {
+        const checked = checkSpec(raw, 0, [], researchUrls);
+        if (checked.error) return null;
+        const others = new Set(designs.filter(other => other !== current).map(other => squash(other.lines?.[0] || other.listicle?.title || '').trim()).filter(Boolean));
+        return lintSpec(checked.spec, { brief, corpus: found.corpus || found.digest, leads: others }).ok ? checked.spec : null;
+      };
+      const escalation = await escalateDesigns({ brief, designs, found, check, track });
+      quality.improved = escalation.improved;
+      quality.cost += escalation.cost;
+    }
+  }
   const aiMs = Date.now() - started - researchMs;
   const { candidates, pick } = await photoWork;
   const ordered = candidates.length ? [candidates[pick.index], ...candidates.filter((_, i) => i !== pick.index)] : [];
@@ -1281,7 +1421,8 @@ async function generate({ brief, formats, count, avoid, token, email }) {
     ai: { fallback: provider?.fallback || '', failed: aiFailed },
     photo: { person, candidates: candidates.length, picked: pick.picked, rejected: pick.rejected },
     checks: { ...lintStats, rules: RULES.VERSION },
-    meta: { ms: { research: researchMs, ai: aiMs, total: Date.now() - started }, costUsd: Number(((provider?.cost || 0) + (pick.cost || 0)).toFixed(5)) },
+    quality: { reviewed: quality.reviewed, improved: quality.improved },
+    meta: { ms: { research: researchMs, ai: aiMs, total: Date.now() - started }, costUsd: Number(((provider?.cost || 0) + (pick.cost || 0) + quality.cost).toFixed(5)) },
     learning: { pastDesigns: pastDesigns.length, examplesUsed: pastExamples ? pastExamples.split('\n').length : 0 },
     notes,
   };
@@ -1295,6 +1436,57 @@ async function trending() {
   const text = resultText(await mcp.callTool(tools.trending.name, args, { timeoutMs: 9000 }));
   const topics = text.split(/\n+/).map(line => clean(line.replace(/^[-*\d.)\s]+/, ''))).filter(line => line.length > 8 && line.length < 140).slice(0, 8);
   return { topics, notes };
+}
+
+// ─── One-card rewrite (Generate's quick fixes) ─────────────────────────────
+const REWRITES = {
+  punchier: { tier: 'main', ask: 'Make it punchier and bolder: a stronger hook in fewer words.' },
+  shorter: { tier: 'main', ask: 'Make every line shorter so the text sits bigger on the design; keep the meaning.' },
+  angle: { tier: 'main', ask: 'Take a clearly different angle on the same story: a new hook or question, same facts.' },
+  best: { tier: 'best', ask: 'Write the strongest version an expert ES social editor would post.' },
+};
+
+async function rewriteDesign({ brief, spec, instruction, token, email }) {
+  const how = REWRITES[instruction];
+  if (!how) return { status: 400, body: { error: 'Unknown rewrite.' } };
+  if (!spec || !TEMPLATES[spec.postType] || typeof spec.fields !== 'object') return { status: 400, body: { error: 'Missing design.' } };
+  if (!gatewayConfigured()) return { status: 503, body: { error: 'AI rewrites are not available right now.', reason: 'off' } };
+  // Facts for the checker: ES coverage of the brief (cached for 10 minutes).
+  const found = await research(brief, null, {}, []).catch(() => ({ digest: '', corpus: '', sources: [], articles: [] }));
+  const prompt = [
+    'You are the senior social editor at EssentiallySports (ES). Rewrite this Instagram design.',
+    how.ask,
+    ...RULES.VOICE.map(line => `- ${line}`),
+    '- Keep the same template. Never invent numbers, quotes or results; quotes must stay the person\'s exact words.',
+    `Brief: ${brief.slice(0, 600)}`,
+    `Current design (${spec.postType}): ${JSON.stringify(spec.fields).slice(0, 1500)}`,
+    `Fields: ${TEMPLATES[spec.postType].shape}`,
+    `Facts you may use (ES research):\n${String(found.digest || '').slice(0, 3000)}`,
+    'Reply with JSON only: {"fields": {...}}',
+  ].join('\n');
+  try {
+    const { text, cost, model } = await aiText({ tier: how.tier, messages: [{ role: 'user', content: prompt }], effort: how.tier === 'best' ? 'medium' : 'low', maxTokens: 2500, timeoutMs: 25000, track: { feature: `generate-rewrite-${instruction}`, email, token } });
+    const parsed = extractJson(text);
+    const checked = checkSpec({ postType: spec.postType, fields: parsed?.fields || parsed, title: spec.title, sport: spec.sport, team: spec.team, photoQuery: spec.photoQuery, why: spec.why }, 0, []);
+    if (checked.error) return { status: 422, body: { error: 'That rewrite did not fit the template. Try again.' } };
+    const lint = lintSpec(checked.spec, { brief, corpus: found.corpus || found.digest, leads: new Set() });
+    if (!lint.ok) return { status: 422, body: { error: 'That rewrite broke an ES rule, so it was not used. Try again.', issues: lint.errors.map(issue => issue.msg).slice(0, 3) } };
+    const same = checked.spec.lines.join('|') === (Array.isArray(spec.lines) ? spec.lines : []).join('|')
+      && JSON.stringify(checked.spec.listicle) === JSON.stringify(spec.listicle || null);
+    if (same) return { status: 422, body: { error: 'No better version this time. Try a different fix.' } };
+    return {
+      status: 200,
+      body: {
+        design: { fields: checked.spec.fields, lines: checked.spec.lines, listicle: checked.spec.listicle, lint: { warnings: lint.warnings.map(({ field, code, msg }) => ({ field, code, msg })) } },
+        model,
+        costUsd: Number(cost.toFixed(5)),
+      },
+    };
+  } catch (error) {
+    if (isBudgetError(error)) return { status: 503, body: { error: "This week's AI budget is used up, so rewrites are paused until it resets.", reason: 'budget' } };
+    console.error('es-generate rewrite failed:', error);
+    return { status: 502, body: { error: 'The rewrite failed. Try again in a moment.' } };
+  }
 }
 
 exports.handler = async function handler(event) {
@@ -1319,6 +1511,13 @@ exports.handler = async function handler(event) {
 
     const body = JSON.parse(event.body || '{}');
     if (body.mode === 'trending') return json(200, await trending());
+    if (body.mode === 'rewrite') {
+      const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
+      if (await userOverHourlyLimit(token)) return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
+      const rewriteBrief = String(body.brief || '').replace(/<[^>]*>/g, ' ').trim().slice(0, 1500);
+      const result = await rewriteDesign({ brief: rewriteBrief, spec: body.spec, instruction: String(body.instruction || ''), token, email: auth.user.email });
+      return json(result.status, result.body);
+    }
     // Keep line breaks: a pasted table is only readable row by row.
     const brief = String(body.brief || '').replace(/<[^>]*>/g, ' ').replace(/[^\S\n\t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1500);
     if (brief.length < 3) return json(400, { error: 'Write a brief of at least a few words.' });

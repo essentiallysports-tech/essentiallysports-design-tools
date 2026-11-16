@@ -19,6 +19,11 @@ const GATEWAY = 'https://ai-gateway.vercel.sh/v1';
 const MODELS = {
   light: process.env.AI_LIGHT_MODEL || 'openai/gpt-oss-20b',
   main: process.env.AI_MAIN_MODEL || 'anthropic/claude-haiku-5.5',
+  // Generate's art-director review: a different model family from the writer,
+  // so it does not just approve its own style.
+  review: process.env.AI_REVIEW_MODEL || 'openai/gpt-6-luna',
+  // Only for designs that still score low, or when someone asks for the best version.
+  best: process.env.AI_BEST_MODEL || 'anthropic/claude-sonnet-5.5',
   // Scene/background images, only on an explicit click. Cheapest good model.
   image: process.env.AI_IMAGE_MODEL || 'bfl/flux-3-image-klein',
 };
@@ -32,6 +37,7 @@ const IMAGE_PRICES = {
 // USD per 1M tokens (Gateway list prices, 2026-11). Unknown models count at main rates.
 const PRICES = {
   'openai/gpt-oss-20b': { input: 0.03, output: 0.14 },
+  'openai/gpt-6-luna': { input: 0.10, output: 0.50 },
   'anthropic/claude-haiku-5.5': { input: 0.10, output: 0.50, cacheRead: 0.01, cacheWrite: 0.125 },
   'anthropic/claude-sonnet-5.5': { input: 2, output: 10, cacheRead: 0.20, cacheWrite: 2.5 },
   'anthropic/claude-opus-5.5': { input: 4, output: 20, cacheRead: 0.20, cacheWrite: 5 },
@@ -176,12 +182,13 @@ async function openaiCall({ model, system, messages, json, maxTokens, timeoutMs 
   };
 }
 
-// tier: 'light' | 'main'. messages: [{ role: 'user' | 'assistant', content }].
+// tier: 'light' | 'main' | 'review' | 'best'. messages: [{ role: 'user' | 'assistant', content }].
 // track: { feature, email, token } for spend tracking (optional).
 // Returns { text, model, cost }. Throws on any failure.
 async function aiText({ tier = 'light', system, messages, json = false, effort = 'low', maxTokens = 4000, timeoutMs = 25000, track, cacheSystem = false } = {}) {
   if (!process.env.AI_GATEWAY_API_KEY) throw new Error('AI_GATEWAY_API_KEY is not set.');
   const model = MODELS[tier] || MODELS.light;
+  if (model === MODELS.image) throw new Error('Use aiImage for image models.');
   const started = Date.now();
   try {
     const call = model.startsWith('anthropic/') ? anthropicCall : openaiCall;
@@ -196,6 +203,68 @@ async function aiText({ tier = 'light', system, messages, json = false, effort =
     return { text: result.text, model, cost };
   } catch (error) {
     await logUsage(track, { model, ok: false, input_tokens: 0, output_tokens: 0, cost_usd: 0, duration_ms: Date.now() - started, error: String(error.message || error).slice(0, 200) });
+    throw error;
+  }
+}
+
+// Web research: Claude with the built-in web search tool (Video Ads uses it to
+// find what happened in a trending moment and where its clips live). maxUses
+// caps the searches (each costs about $0.01 on top of tokens). Returns
+// { text, urls:[{url,title}], searches, model, cost }. Throws on failure.
+const WEB_SEARCH_USD = 0.01;
+async function aiWebResearch({ tier = 'main', system, prompt, maxUses = 4, maxTokens = 3000, timeoutMs = 45000, track } = {}) {
+  if (!process.env.AI_GATEWAY_API_KEY) throw new Error('AI_GATEWAY_API_KEY is not set.');
+  const model = MODELS[tier] || MODELS.main;
+  if (!model.startsWith('anthropic/')) throw new Error('Web research needs a Claude model.');
+  const started = Date.now();
+  const messages = [{ role: 'user', content: prompt }];
+  const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+  const texts = [];
+  const urls = [];
+  let searches = 0;
+  try {
+    // A long search can pause mid-turn; it is continued once.
+    for (let round = 0; round < 2; round += 1) {
+      const response = await fetch(`${GATEWAY}/messages`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': process.env.AI_GATEWAY_API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model,
+          max_tokens: maxTokens,
+          ...(system ? { system } : {}),
+          messages,
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: maxUses }],
+        }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw Object.assign(new Error(data?.error?.message || `AI request failed: ${response.status}`), { status: response.status });
+      const u = data?.usage || {};
+      usage.input += u.input_tokens || 0;
+      usage.output += u.output_tokens || 0;
+      usage.cacheRead += u.cache_read_input_tokens || 0;
+      usage.cacheWrite += u.cache_creation_input_tokens || 0;
+      searches += Number(u.server_tool_use?.web_search_requests || 0);
+      (data?.content || []).forEach(block => {
+        if (block.type === 'text' && block.text) texts.push(block.text);
+        if (block.type === 'web_search_tool_result' && Array.isArray(block.content)) {
+          block.content.forEach(item => { if (item?.url) urls.push({ url: item.url, title: String(item.title || '').slice(0, 200) }); });
+        }
+      });
+      if (data?.stop_reason !== 'pause_turn') break;
+      messages.push({ role: 'assistant', content: data.content });
+    }
+    const text = texts.join('\n').trim();
+    if (!text) throw new Error('The research returned no answer.');
+    const cost = costUsd(model, usage) + searches * WEB_SEARCH_USD;
+    await logUsage(track, {
+      model, ok: true,
+      input_tokens: usage.input, output_tokens: usage.output,
+      cost_usd: Number(cost.toFixed(6)), duration_ms: Date.now() - started,
+    });
+    return { text, urls, searches, model, cost };
+  } catch (error) {
+    await logUsage(track, { model, ok: false, input_tokens: usage.input, output_tokens: usage.output, cost_usd: 0, duration_ms: Date.now() - started, error: String(error.message || error).slice(0, 200) });
     throw error;
   }
 }
@@ -240,4 +309,4 @@ async function aiImage({ prompt, model = MODELS.image, size = '1024x1280', timeo
   }
 }
 
-module.exports = { gatewayConfigured, aiText, aiImage, costUsd, isBudgetError, logBackupCall, userOverHourlyLimit, MODELS, IMAGE_PRICES };
+module.exports = { gatewayConfigured, aiText, aiImage, aiWebResearch, costUsd, isBudgetError, logBackupCall, logUsage, userOverHourlyLimit, MODELS, IMAGE_PRICES };

@@ -20,7 +20,7 @@
   --reels-radius-md: 14px;
   --reels-font-ui:  var(--es-font-ui);
   --reels-font-heading:  var(--es-font-display);
-  --reels-font-display: "Acumin Post", "Acumin Pro Condensed Local", "Arial Narrow", sans-serif;
+  --reels-font-display: "Acumin Post", "Acumin Pro Condensed Local", "Roboto Condensed", sans-serif;
 }
 
 @font-face {
@@ -240,7 +240,6 @@ body.reels-page .site-footer {
   flex: 1 1 auto;
 }
 
-.reels-btn,
 .reels-icon-btn {
   min-height: 40px;
   border-radius: 14px;
@@ -256,12 +255,9 @@ body.reels-page .site-footer {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  gap: 8px;
   min-width: 0;
-  padding: 0 14px;
 }
 
-.reels-btn:hover:not(:disabled),
 .reels-icon-btn:hover:not(:disabled) {
   border-color: var(--reels-blue);
   background: var(--reels-soft);
@@ -269,7 +265,6 @@ body.reels-page .site-footer {
   transform: translateY(-1px);
 }
 
-.reels-btn:focus-visible,
 .reels-icon-btn:focus-visible,
 .reels-scrub:focus-visible,
 .reels-caption-time input:focus,
@@ -286,56 +281,20 @@ body.reels-page .site-footer {
   box-shadow: 0 0 0 3px var(--reels-focus);
 }
 
-.reels-btn:disabled,
 .reels-icon-btn:disabled {
   cursor: not-allowed;
   opacity: 1;
   transform: none;
 }
 
-.reels-btn:disabled {
-  border-color: #dfe7f0;
-  background: var(--es-sunk);
-  color: var(--es-ink-3);
-}
-
-.reels-btn.is-primary:disabled {
-  border-color: var(--es-brand-tint);
-  background: var(--es-brand-soft);
-  color: var(--es-ink-3);
-  box-shadow: none;
-}
-
-.reels-btn.is-secondary:disabled,
-.reels-btn.is-quiet:disabled {
-  background: #fff;
-}
-
 .reels-icon-btn:disabled::before {
   border-left-color: var(--es-ink-3);
 }
 
-.reels-btn.is-primary {
-  border-color: var(--reels-blue);
-  background: var(--reels-blue);
-  color: #fff;
-  box-shadow: 0 18px 36px rgba(14, 16, 20, .08);
-}
-
-.reels-btn.is-primary:hover:not(:disabled) {
-  border-color: var(--reels-blue-deep);
-  background: var(--reels-blue-deep);
-  color: #fff;
-}
-
 .reels-btn.is-secondary {
   width: 100%;
-  border-color: var(--es-brand-tint);
-  background: #fff;
-  color: var(--reels-ink);
 }
 
-.reels-btn.is-quiet,
 .reels-icon-btn {
   background: #fff;
   color: var(--reels-ink);
@@ -350,21 +309,11 @@ body.reels-page .site-footer {
   justify-content: center;
 }
 
-.reels-btn:disabled,
-.reels-btn.is-primary:disabled,
-.reels-btn.is-secondary:disabled,
-.reels-btn.is-quiet:disabled,
 .reels-icon-btn:disabled {
   border-color: #dfe7f0;
   background: var(--es-sunk);
   color: var(--es-ink-3);
   box-shadow: none;
-}
-
-.reels-btn.is-primary:disabled {
-  border-color: var(--es-brand-tint);
-  background: var(--es-brand-soft);
-  color: var(--es-ink-3);
 }
 
 .reels-icon-btn svg {
@@ -1081,19 +1030,19 @@ html[data-theme="dark"] body.reels-page {
   --reels-line-strong: var(--es-ink);
   --reels-blue: var(--es-brand-fill);
   --reels-blue-deep: var(--es-brand-fill);
-  --reels-focus: rgba(37, 134, 247, .24);
+  --reels-focus: rgb(10 125 250 / .24);
   --reels-shadow: 0 12px 28px rgba(0, 0, 0, .24);
 }
 
-html[data-theme="dark"] body.reels-page :is(.reels-btn.is-quiet, .reels-icon-btn, .reels-btn.is-secondary, .reels-caption-row, .reels-caption-time input, .reels-caption-text, .reels-field select, .reels-intel-box textarea, .reels-style-card, .reels-tool-section, .reels-intel-box, .reels-lower-thirds, .reels-lt-card, .reels-lt-item) {
+html[data-theme="dark"] body.reels-page :is(.reels-icon-btn, .reels-caption-row, .reels-caption-time input, .reels-caption-text, .reels-field select, .reels-intel-box textarea, .reels-style-card, .reels-tool-section, .reels-intel-box, .reels-lower-thirds, .reels-lt-card, .reels-lt-item) {
   background-color: var(--reels-surface);
   color: var(--reels-ink);
   border-color: var(--reels-line);
 }
 
 html[data-theme="dark"] body.reels-page .reels-provider-pill {
-  background: rgba(37, 134, 247, .17);
-  border-color: rgba(37, 134, 247, .52);
+  background: rgb(10 125 250 / .17);
+  border-color: rgb(10 125 250 / .52);
 }
 
 html[data-theme="dark"] body.reels-page :is(.reels-flowbar, .reels-timeline, .reels-step.is-active, .reels-step.is-done, .reels-caption-row.is-selected) {
@@ -1565,21 +1514,6 @@ body.reels-page:not(.reels-has-captions) .reels-transcript-list {
   background: var(--es-sunk);
 }
 
-.reels-btn.reels-empty-upload {
-  min-height: 38px;
-  border-color: var(--reels-blue);
-  background: var(--reels-blue);
-  color: #fff;
-  font-weight: 700;
-  box-shadow: 0 10px 22px rgba(14, 16, 20, .16);
-}
-
-.reels-btn.reels-empty-upload:hover:not(:disabled) {
-  border-color: var(--reels-blue-deep);
-  background: var(--reels-blue-deep);
-  color: #fff;
-}
-
 body.reels-page:not(.reels-has-clip) .reels-transcript-list .reels-empty-note {
   font-size: 0;
 }
@@ -1686,8 +1620,8 @@ body.reels-page.reels-has-clip:not(.reels-has-captions) .reels-transcript-list .
 .reels-stage-frame {
   align-self: center;
   justify-self: center;
-  width: min(350px, 34vw, calc((100dvh - 380px) * .5625));
-  max-height: calc(100dvh - 380px);
+  width: min(350px, 34vw, calc((100dvh - 420px) * .5625));
+  max-height: calc(100dvh - 420px);
   margin: 0 0 28px;
   border: 0;
   border-radius: 0;
@@ -2380,21 +2314,11 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
   margin-top: 12px;
 }
 
-.reels-btn:disabled,
-.reels-btn.is-primary:disabled,
-.reels-btn.is-secondary:disabled,
-.reels-btn.is-quiet:disabled,
 .reels-icon-btn:disabled {
   border-color: #dfe7f0;
   background: var(--es-sunk);
   color: var(--es-ink-3);
   box-shadow: none;
-}
-
-.reels-btn.is-primary:disabled {
-  border-color: var(--es-brand-tint);
-  background: var(--es-brand-soft);
-  color: var(--es-ink-3);
 }
 
 @media (min-width: 1024px) {
@@ -2613,7 +2537,6 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
     white-space: nowrap;
   }
 
-  .reels-mobile-topbar button,
   .reels-mobile-nav button,
   .reels-mobile-sheet-head button {
     min-height: 44px;
@@ -2625,12 +2548,9 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
     cursor: pointer;
   }
 
-  .reels-mobile-topbar button {
+  .reels-mobile-topbar .reels-btn {
+    width: auto;
     min-width: 92px;
-    border: 1px solid var(--reels-blue);
-    background: var(--reels-blue);
-    color: #fff;
-    box-shadow: 0 12px 26px rgba(14, 16, 20, .18);
   }
 
   .reels-shell,
@@ -2850,10 +2770,8 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
     padding: 6px 10px;
   }
 
-  .reels-mobile-topbar button {
+  .reels-mobile-topbar .reels-btn {
     min-width: 88px;
-    min-height: 42px;
-    box-shadow: none;
   }
 
   .reels-shell,
@@ -2870,8 +2788,10 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 
   .reels-stage-frame,
   body.reels-page.reels-has-captions .reels-stage-frame {
-    width: min(calc(100vw - 32px), 330px);
-    max-height: calc(100dvh - var(--mobile-editor-header-height, 56px) - var(--mobile-editor-toolbar-height, 66px) - 176px);
+    /* Budget = header + toolbar + the real controls/timeline panel (~250px),
+       so the frame no longer runs under the play controls; width follows 9:16. */
+    width: min(calc(100vw - 32px), 330px, calc((100dvh - var(--mobile-editor-header-height, 56px) - var(--mobile-editor-toolbar-height, 66px) - 250px) * .5625));
+    max-height: calc(100dvh - var(--mobile-editor-header-height, 56px) - var(--mobile-editor-toolbar-height, 66px) - 250px);
   }
 
   .reels-bottom-panel {
@@ -3119,13 +3039,221 @@ body.reels-page.reels-has-clip .reels-first-step {
 }
 
 html[data-theme="dark"] .reels-first-step {
-  color: #c4cbd4;
+  color: #BFC8D9;
 }
 
 /* Mobile web, Phase 1: 44px touch targets on phones (Export, Play, Fit). */
 @media (max-width: 900px) {
-  body.reels-page :is([data-reels-mobile-export], #reels-play-btn, #reels-zoom-level) {
+  body.reels-page :is(#reels-play-btn, #reels-zoom-level) {
     min-width: 44px;
     min-height: 44px;
   }
+}
+
+/* Skills polish pass (2026-11-15): the stage column is ~276px at 1280, so the
+   timeline title wrapped to three lines and was clipped by the card. Stack the
+   head (title, then tools) and drop the hint line, as narrower screens do. */
+@media (min-width: 901px) {
+  .reels-timeline-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .reels-timeline-head strong {
+    white-space: nowrap;
+  }
+  .reels-timeline-head > div > span {
+    display: none;
+  }
+  .reels-timeline-tools {
+    justify-content: space-between;
+  }
+}
+
+/* Desktop shell has no top navbar (the sidebar replaces it), so the editor
+   fills the full height instead of leaving a 69px empty band at the bottom.
+   The stage has two placed children: the frame flexes and the bottom panel
+   keeps its height (it used to land in the 1fr row and get squeezed). */
+@media (min-width: 901px) {
+  html.es-shell body.reels-page {
+    --site-header-height: 0px;
+  }
+}
+@media (min-width: 1181px) {
+  .reels-stage-workspace {
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+}
+
+
+/* ─── Spacing system (2026-11-16, sp-rgd) ─────────────────────────────
+   One 4px scale (--es-space-*): panel sections 20px, stacked controls 12px,
+   inline controls 8px, inputs 40px with 12px inner padding. Placed last so it
+   wins over the older layered rules above. Canvas/caption artwork untouched. */
+body.reels-page .reels-status:empty { display: none; }
+
+body.reels-page .reels-task-section {
+  gap: var(--es-space-3, 12px);
+  padding: var(--es-space-5, 20px);
+}
+body.reels-page .reels-first-step { margin: 0; }
+body.reels-page .reels-panel-head { margin-bottom: 0; }
+body.reels-page .reels-panel-head p { margin: var(--es-space-1, 4px) 0 0; }
+body.reels-page .reels-command-bar { gap: var(--es-space-2, 8px); }
+body.reels-page .reels-transcript-list { gap: var(--es-space-2, 8px); }
+body.reels-page .reels-caption-row { padding: var(--es-space-3, 12px); gap: var(--es-space-2, 8px); }
+
+body.reels-page .reels-stage-workspace {
+  gap: var(--es-space-4, 16px);
+  padding: var(--es-space-4, 16px);
+}
+body.reels-page .reels-stage-frame { margin: 0; }
+body.reels-page .reels-stage-empty { gap: var(--es-space-2, 8px); padding: var(--es-space-8, 32px) var(--es-space-6, 24px); }
+body.reels-page .reels-stage-empty .reels-stage-upload { margin-top: var(--es-space-3, 12px); }
+body.reels-page .reels-bottom-panel {
+  gap: var(--es-space-3, 12px);
+  padding: var(--es-space-4, 16px);
+}
+body.reels-page .reels-stage-controls { gap: var(--es-space-2, 8px); }
+body.reels-page .reels-timeline-card {
+  gap: var(--es-space-3, 12px);
+  padding: var(--es-space-3, 12px);
+}
+body.reels-page .reels-timeline-head { gap: var(--es-space-2, 8px); }
+body.reels-page .reels-timeline-tools { gap: var(--es-space-2, 8px); }
+
+body.reels-page .reels-tool-section {
+  gap: var(--es-space-3, 12px);
+  padding: var(--es-space-5, 20px);
+}
+body.reels-page .reels-inspector-actions { gap: var(--es-space-2, 8px); }
+body.reels-page .reels-field { gap: var(--es-space-3, 12px); }
+body.reels-page .reels-field select,
+body.reels-page .reels-choice-trigger {
+  min-height: 40px;
+  padding: 0 var(--es-space-3, 12px);
+  gap: var(--es-space-2, 8px);
+}
+body.reels-page .reels-tool-section .reels-brand-card { margin-top: var(--es-space-2, 8px); }
+body.reels-page .reels-brand-card > summary { padding: 0 var(--es-space-4, 16px); gap: var(--es-space-3, 12px); min-height: 48px; }
+body.reels-page .reels-brand-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--es-space-5, 20px);
+  padding: var(--es-space-4, 16px);
+}
+body.reels-page .reels-brand-body .field-row { gap: var(--es-space-3, 12px); margin: 0; }
+body.reels-page .reels-brand-body .section-label { margin-bottom: var(--es-space-2, 8px); }
+body.reels-page .reels-brand-body .color-group-label { margin: 0 0 var(--es-space-3, 12px); }
+body.reels-page .reels-brand-body .reels-choice-trigger {
+  min-width: 0;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 40px 0 var(--es-space-3, 12px);
+}
+body.reels-page .reels-brand-body .reels-choice-trigger::after { right: var(--es-space-4, 16px); }
+body.reels-page .reels-palette-row { gap: var(--es-space-2, 8px); }
+
+/* 901–1180px: the inspector used to drop under the task panel at ~96px wide
+   and the stage got half the height. Now: one left column (task panel, then
+   inspector, each scrolling), the stage spans the full height on the right. */
+@media (min-width: 901px) and (max-width: 1180px) {
+  body.reels-page .reels-shell,
+  body.reels-page:not(.reels-has-captions) .reels-shell {
+    grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  body.reels-page .reels-shell > .reels-task-panel {
+    grid-column: 1;
+    grid-row: 1;
+    max-height: 50dvh;
+    overflow: auto;
+    border-bottom: 1px solid var(--reels-line, var(--es-line));
+  }
+  body.reels-page .reels-shell > .reels-side-panel,
+  body.reels-page.reels-tool-style .reels-shell > .reels-side-panel,
+  body.reels-page:not(.reels-has-captions) .reels-shell > .reels-side-panel {
+    display: grid;
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+    overflow: auto;
+    border-top: 0;
+  }
+  body.reels-page .reels-shell > .reels-stage-workspace {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  body.reels-page .reels-stage-frame,
+  body.reels-page.reels-has-captions .reels-stage-frame {
+    width: auto;
+    height: 100%;
+    max-height: 100%;
+    max-width: 100%;
+    aspect-ratio: 9 / 16;
+  }
+}
+
+/* Phones: the 9:16 frame fills its row instead of a fixed budget, so it no
+   longer rides up under the top bar; 16px gutter, 12px panel padding. */
+@media (max-width: 900px) {
+  body.reels-page .reels-stage-workspace {
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: var(--es-space-3, 12px);
+    padding: var(--es-space-4, 16px);
+  }
+  body.reels-page .reels-stage-frame,
+  body.reels-page.reels-has-captions .reels-stage-frame {
+    width: auto;
+    height: 100%;
+    max-height: 100%;
+    max-width: 100%;
+    aspect-ratio: 9 / 16;
+  }
+  body.reels-page .reels-bottom-panel {
+    gap: var(--es-space-3, 12px);
+    padding: var(--es-space-3, 12px);
+  }
+  body.reels-page .reels-timeline-card { padding: var(--es-space-3, 12px); }
+  body.reels-page .reels-task-section,
+  body.reels-page .reels-tool-section {
+    padding: var(--es-space-4, 16px);
+  }
+  body.reels-page .reels-field {
+    padding: var(--es-space-3, 12px) 0;
+  }
+  body.reels-page .reels-mobile-topbar { padding: var(--es-space-1, 4px) var(--es-space-3, 12px); }
+  body.reels-page .reels-mobile-sheet-head { padding: var(--es-space-4, 16px) var(--es-space-2, 8px) var(--es-space-1, 4px) var(--es-space-4, 16px); }
+}
+body.reels-page .reels-stage-controls .reels-time-row { min-width: 0; }
+body.reels-page .reels-stage-controls .reels-scrub { margin: 0; }
+@media (min-width: 901px) and (max-width: 1180px) {
+  body.reels-page .reels-shell > .reels-side-panel { grid-template-columns: minmax(0, 1fr); }
+}
+@media (min-width: 901px) {
+  body.reels-page .reels-stage-controls { grid-template-columns: 44px minmax(0, 1fr) auto; }
+}
+@media (max-width: 900px) {
+  body.reels-page .reels-stage-controls { grid-template-columns: 44px minmax(0, 1fr) auto; gap: var(--es-space-2, 8px); }
+  body.reels-page .reels-stage-controls .reels-time-row { grid-column: auto; justify-content: end; }
+  body.reels-page .reels-timeline-head strong { white-space: nowrap; }
+  body.reels-page .reels-mobile-nav { gap: var(--es-space-1, 4px); padding: var(--es-space-1, 4px) var(--es-space-2, 8px); }
+}
+/* Phone inspector sheet: rows carry their own 12px padding + divider, so the
+   section adds no extra gap; "Brand & Colors" is a plain label over its body. */
+@media (max-width: 900px) {
+  body.reels-page .reels-tool-section { gap: 0; }
+  body.reels-page .reels-tool-section .reels-brand-card { margin: 0; }
+  body.reels-page .reels-brand-card > summary { min-height: 0; padding: var(--es-space-5, 20px) 0 0; }
+  body.reels-page .reels-brand-body {
+    gap: var(--es-space-5, 20px);
+    padding: var(--es-space-3, 12px) 0 0 !important;
+    border-top: 0;
+  }
+  body.reels-page .reels-brand-body .field-row { gap: var(--es-space-2, 8px); }
+}
+@media (max-width: 900px) {
+  /* first row already has 12px of its own padding: 4 + 12 = 16 under the sheet head's divider */
+  body.reels-page .reels-tool-section { padding-top: var(--es-space-1, 4px); }
 }
