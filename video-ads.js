@@ -587,7 +587,9 @@
     setBusy(true, 'Downloading the clip…', 0);
     setClipStatus('Downloading the clip…');
     try {
-      const response = await fetch(variant.url, { mode: 'cors' });
+      // X's video host refuses requests that carry a Referer from our site (403),
+      // so send none; no cookies either.
+      const response = await fetch(variant.url, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
       if (!response.ok || !response.body) throw new Error(`download failed (${response.status})`);
       const total = Number(response.headers.get('content-length') || 0);
       const reader = response.body.getReader();
