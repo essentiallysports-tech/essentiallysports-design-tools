@@ -3,6 +3,7 @@
 //   Brands, sizes, styles: video-ads-brands.js (window.VideoAdsBrands)
 //   Style rules (fields, suggestion, grid names, safe zones): video-ads-styles.js (window.VideoAdsStyles)
 //   Team colours: video-ads-teams.js (window.VideoAdsTeams)
+//   Sound (muted by default, library music, uploads, mix): video-ads-audio.js (window.VideoAdsAudio)
 //   AI + trends + X clips: POST /api/video-ads { mode: trends | find-clips | clip | copy | chat }
 //   Learning events: POST /api/ad-learning { event } (fire-and-forget)
 (() => {
@@ -10,6 +11,7 @@
   const R = window.VideoAdsRender;
   const B = window.VideoAdsBrands;
   const S = window.VideoAdsStyles;
+  const A = window.VideoAdsAudio; // sound: muted by default (video-ads-audio.js)
   // The colour data ships in video-ads-teams.js; without it the picker still
   // shows the colours (no team preview) and the server matches the teams.
   const T = window.VideoAdsTeams || {
@@ -47,7 +49,7 @@
     safeToggle: $('va-safe-toggle'), safe: $('va-safe'), grid: $('va-grid'), gridStyles: $('va-grid-styles'), gridNames: $('va-grid-names'), rightsRow: $('va-rights-row'),
     exsizes: $('va-exsizes'), exmode: $('va-exmode'), exmodeRow: $('va-exmode-row'), gridRow: $('va-grid-row'),
     set: $('va-set'), setBody: $('va-set-body'), setMake: $('va-set-make'), setMakeText: $('va-set-make-text'), setBrand: $('va-set-brand'), setEditing: $('va-set-editing'),
-    placement: $('va-placement'), metaFill: $('va-meta-fill'), metaNote: $('va-meta-note'),
+    metaFill: $('va-meta-fill'), metaNote: $('va-meta-note'),
     check: $('va-check'), preflightOut: $('va-preflight-out'), metaToggle: $('va-meta-toggle'), ready: $('va-ready'), rights: $('va-rights'), exportBtn: $('va-export'), exportProgress: $('va-export-progress'), exportStatus: $('va-export-status'), files: $('va-files'), again: $('va-again'),
     toasts: $('va-toasts'),
   };
@@ -125,7 +127,8 @@
     // Today's ad set (see "Today's ad set" below) and the Meta preview placement
     // (null = by size: 9:16 Reels, 4:5 / 1:1 Feed).
     set: { status: 'idle', error: '', angles: [], editing: -1, mode: 'set' },
-    placement: null,
+    // Sound in the MP4 and the preview (video-ads-audio.js): muted unless chosen.
+    sound: { ...A.DEFAULTS },
     version: 0,
   };
   let railReady = false; // the Frame + Tint rail is wired up (near the end)
@@ -366,28 +369,21 @@
     more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
     chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
   };
-  // Placement: Feed, Story or Reels (state.placement; null = by size).
-  // A 9:16 in the feed is cropped to 4:5 (Meta's feed maximum); a 4:5 or 1:1
-  // in Stories or Reels sits small on a blurred fill. Both say so.
-  const placementNow = () => state.placement || (state.size === '9x16' ? 'reel' : 'feed');
-  const metaFit = mode => (mode === 'feed' && state.size === '9x16' ? 'crop' : (mode === 'story' || mode === 'reel') && state.size !== '9x16' ? 'letterbox' : '');
-  function setPlacement(place) {
-    state.placement = ['feed', 'story', 'reel'].includes(place) ? place : null;
-    renderMeta();
-    fitCanvasDisplay();
-    draw();
-    saveDefaults();
-  }
+  // Placement follows the size (owner, 2026-11-18: no Feed / Story / Reels
+  // switch): 9:16 shows in Reels, 4:5 and 1:1 in the feed. metaFit stays as
+  // the guard: a 9:16 in the feed would be cropped to 4:5 (Meta's feed
+  // maximum) and a 4:5 or 1:1 in Reels would sit small on a blurred fill; the
+  // note then says which size to export.
+  const placementNow = () => (state.size === '9x16' ? 'reel' : 'feed');
+  const metaFit = mode => (mode === 'feed' && state.size === '9x16' ? 'crop' : mode === 'reel' && state.size !== '9x16' ? 'letterbox' : '');
   function renderMeta() {
     const mode = !metaPreview ? 'off' : placementNow();
     const fit = mode === 'off' ? '' : metaFit(mode);
     els.device.dataset.meta = mode;
     els.device.dataset.fit = fit;
-    els.placement.hidden = mode === 'off';
-    if (mode !== 'off') markRadios(els.placement, 'place', mode);
     els.metaNote.hidden = !fit;
     els.metaNote.textContent = fit === 'crop' ? 'The feed crops 9:16 to 4:5: the top and bottom are cut. Export a 4:5 for the feed.'
-      : fit === 'letterbox' ? `${state.size.replace('x', ':')} shows small in ${mode === 'story' ? 'Stories' : 'Reels'}, on a blurred fill. Export a 9:16 for it.` : '';
+      : fit === 'letterbox' ? `${state.size.replace('x', ':')} shows small in Reels, on a blurred fill. Export a 9:16 for it.` : '';
     if (mode === 'off') { els.metaHead.innerHTML = ''; els.metaOver.innerHTML = ''; els.metaFoot.innerHTML = ''; return; }
     // Ads run from the EssentiallySports page, whichever newsletter they promote.
     const name = 'EssentiallySports';
@@ -405,16 +401,6 @@
           <p class="va-meta-caption">${caption}</p>
           ${cta}
         </div>`;
-      return;
-    }
-    if (mode === 'story') {
-      // Stories: progress bars and the profile row on top, a "Sign up" link
-      // at the bottom; no action rail and no caption.
-      els.metaHead.innerHTML = '';
-      els.metaFoot.innerHTML = '';
-      els.metaOver.innerHTML = `
-        <div class="va-meta-story-top"><div class="va-meta-bars"><i class="is-on"></i><i></i><i></i></div><div class="va-meta-row">${who}<span class="va-meta-more">${META_ICON.more}</span></div></div>
-        <div class="va-meta-story-cta"><span class="va-meta-up">${META_ICON.chevron}</span><span class="va-meta-link">Sign up</span></div>`;
       return;
     }
     els.metaOver.innerHTML = '';
@@ -537,6 +523,7 @@
     if (els.video.currentTime >= state.trimOut - 0.03) els.video.currentTime = state.trimIn;
     draw();
     syncTime();
+    soundSync();
     if (els.video.requestVideoFrameCallback) els.video.requestVideoFrameCallback(frameLoop);
     else requestAnimationFrame(frameLoop);
   }
@@ -545,12 +532,15 @@
     if (playing) state.previewAt = 'playhead';
     if (playing) {
       if (els.video.currentTime < state.trimIn || els.video.currentTime >= state.trimOut) els.video.currentTime = state.trimIn;
-      els.video.play().catch(() => { playing = false; renderPlay(); });
+      // Play is a click: the moment the browser lets a chosen sound start.
+      if (soundOn()) { audioGraph(); audioCtx.resume().catch(() => {}); }
+      els.video.play().catch(() => { playing = false; renderPlay(); soundSync(); });
       frameLoop();
     } else {
       els.video.pause();
       draw();
     }
+    soundSync();
     renderPlay();
   }
   function renderPlay() {
@@ -695,6 +685,7 @@
     els.strip.classList.remove('is-ready');
     els.video.src = clipUrl;
     els.video.load();
+    soundClipChanged();
   }
   // ─── No clip: animated background or photo (StillClip) ───────────────────
   // A media clock with the parts of the <video> API the editor uses (play,
@@ -808,6 +799,7 @@
       : `Photo with a slow zoom, ${stillSeconds} s. Check you may use it before publishing.`);
     still.load();
     renderNoClip();
+    soundClipChanged();
   }
   // Photo: any still the browser can read; it stays on this device.
   const photoInput = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', hidden: true });
@@ -1020,8 +1012,11 @@
   function bestVariant(variants) {
     const list = (variants || []).filter(v => v && v.url);
     if (!list.length) return null;
-    const sized = list.filter(v => longEdge(v) > 0).sort((a, b) => longEdge(b) - longEdge(a));
-    return sized.find(v => longEdge(v) <= 1280) || sized[sized.length - 1] || list[0];
+    const sized = list.filter(v => longEdge(v) > 0).sort((a, b) => longEdge(b) - longEdge(a) || (Number(b.bitrate) || 0) - (Number(a.bitrate) || 0));
+    // The highest version up to 1080p (1920 long edge) that stays a reasonable
+    // download: under ~12 Mbps when the bitrate is known (a 60 s clip ~ 90 MB max).
+    const ok = v => longEdge(v) <= 1920 && (!(Number(v.bitrate) > 0) || Number(v.bitrate) <= 12e6);
+    return sized.find(ok) || sized[sized.length - 1] || list[0];
   }
 
   async function loadXPost(url, button) {
@@ -1160,12 +1155,19 @@
 
   // ─── 1 Clip ──────────────────────────────────────────────────────────────
   // Tabs: By colour / By moment / Link or upload.
-  const clipTabs = [...els.clipTabs.querySelectorAll('[role="tab"]')];
+  // The Library is an icon button at the right of the pane header (not a tab),
+  // but it switches panels the same way.
+  const tabStrip = [...els.clipTabs.querySelectorAll('[role="tab"]')];
+  const libraryBtn = document.getElementById('va-tab-library');
+  const clipTabs = libraryBtn ? [...tabStrip, libraryBtn] : tabStrip;
   function selectClipTab(tab, focus) {
     clipTabs.forEach(t => {
       const on = t === tab;
-      t.setAttribute('aria-selected', String(on));
-      t.tabIndex = on ? 0 : -1;
+      if (t === libraryBtn) t.setAttribute('aria-pressed', String(on));
+      else {
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on || (tab === libraryBtn && t === tabStrip[0]) ? 0 : -1;
+      }
       $(t.getAttribute('aria-controls')).hidden = !on;
     });
     state.clipTab = tab.dataset.tab;
@@ -1179,10 +1181,15 @@
   const clipTab = name => clipTabs.find(t => t.dataset.tab === name);
   els.clipTabs.addEventListener('click', event => { const tab = event.target.closest('[role="tab"]'); if (tab) { state.clipTabPicked = true; selectClipTab(tab); } });
   els.clipTabs.addEventListener('keydown', event => {
-    const i = clipTabs.indexOf(document.activeElement);
+    const i = tabStrip.indexOf(document.activeElement);
     if (i < 0) return;
-    if (event.key === 'ArrowRight') { event.preventDefault(); selectClipTab(clipTabs[(i + 1) % clipTabs.length], true); }
-    if (event.key === 'ArrowLeft') { event.preventDefault(); selectClipTab(clipTabs[(i - 1 + clipTabs.length) % clipTabs.length], true); }
+    if (event.key === 'ArrowRight') { event.preventDefault(); selectClipTab(tabStrip[(i + 1) % tabStrip.length], true); }
+    if (event.key === 'ArrowLeft') { event.preventDefault(); selectClipTab(tabStrip[(i - 1 + tabStrip.length) % tabStrip.length], true); }
+  });
+  libraryBtn?.addEventListener('click', () => {
+    state.clipTabPicked = true;
+    // A second click goes back to By team.
+    selectClipTab(state.clipTab === 'library' ? tabStrip[0] : libraryBtn);
   });
 
   // Colour picker: sport above, swatches below, then Find clips.
@@ -1301,7 +1308,7 @@
   // Every card says where the clip is from (platform + Official / League /
   // Network), how fresh it is, and when it is a labelled fallback.
   const PAGE = 9;
-  const newView = () => ({ shown: PAGE, sort: 'best', team: '' });
+  const newView = () => ({ shown: PAGE, sort: 'trending', team: '' });
   const views = { team: newView(), color: newView(), moment: newView() };
   const PLATFORM = { x: 'X', reddit: 'Reddit', bluesky: 'Bluesky', streamable: 'Streamable' };
   const VIA_LABEL = { older: ['Older', 'Older than 5 days, from the clip library'], sport: ['Same league', 'Another team in this league, from the clip library'], colorx: ['Same colour', 'A team of the same colour in another sport, from the clip library'], color: ['Same colour', 'A team of the same colour'] };
@@ -1309,7 +1316,6 @@
     const hours = Number.isFinite(Number(c.ageHours)) && c.ageHours !== null && c.ageHours !== '' ? Number(c.ageHours) : (c.postedAt ? (Date.now() - new Date(c.postedAt).getTime()) / 3600e3 : NaN);
     return Number.isFinite(hours) ? (hours < 1 ? 'Just now' : hours < 24 ? `${Math.round(hours)}h ago` : `${Math.round(hours / 24)} day${Math.round(hours / 24) === 1 ? '' : 's'} ago`) : '';
   };
-  const popularity = c => (Number(c.views) > 0 ? Math.log10(1 + Number(c.views)) : 0) + (Number(c.likes) > 0 ? 1.2 * Math.log10(1 + Number(c.likes)) : 0);
   // attr: the data attribute the "Use clip" button carries (each list has its own).
   function clipCard(c, i, attr = 'data-clip') {
     const inAd = Boolean(state.clip?.url) && state.clip.url === c.url;
@@ -1345,16 +1351,6 @@
     const text = `${c.text || ''} ${c.handle || ''}`.toLowerCase();
     return (teams || []).filter(t => [t.name, t.short].filter(Boolean).some(n => text.includes(String(n).toLowerCase()))).map(t => t.name);
   }
-  // A tab's clips after its filter and sort -> [{ c, i }] (i = index in f.clips).
-  function viewClips(kind) {
-    const f = finds[kind];
-    const v = views[kind] || newView();
-    let list = (f?.clips || []).map((c, i) => ({ c, i }));
-    if (v.team) list = list.filter(x => clipTeamNames(x.c, f.teams).includes(v.team));
-    if (v.sort === 'newest') list.sort((a, b) => new Date(b.c.postedAt || 0) - new Date(a.c.postedAt || 0));
-    if (v.sort === 'popular') list.sort((a, b) => popularity(b.c) - popularity(a.c));
-    return list;
-  }
   const sortChips = (current, attr = 'data-sort', options = [['best', 'Best'], ['newest', 'Newest'], ['popular', 'Most popular']]) => `<div class="va-chips va-cliptools__sort" role="group" aria-label="Sort clips">${options.map(([id, label]) => `<button class="va-chip" type="button" ${attr}="${id}" aria-pressed="${current === id}">${label}</button>`).join('')}</div>`;
   function clipTools(kind) {
     const f = finds[kind];
@@ -1365,12 +1361,100 @@
     const teamSelect = teamOpts.length > 1
       ? `<label class="va-cliptools__team"><span class="va-sr">Team</span><select class="es-select va-select-sm" data-filter="team" aria-label="Filter clips by team"><option value="">All teams</option>${teamOpts.map(([name, n]) => `<option value="${esc(name)}"${v.team === name ? ' selected' : ''}>${esc(name)} (${n})</option>`).join('')}</select></label>`
       : '';
-    return f.clips.length > 3 || teamSelect ? `<div class="va-cliptools">${teamSelect}${sortChips(v.sort)}</div>` : '';
+    return f.clips.length > 3 || teamSelect ? `<div class="va-cliptools">${teamSelect}${sortChips(v.sort, 'data-sort', MO_SORTS)}</div>` : '';
   }
   function clipGrid(list, attr) {
     return `<div class="va-clipgrid va-clipgrid--3">${list.map(x => clipCard(x.c, x.i, attr)).join('')}</div>`;
   }
   const moreButton = (left, act) => (left > 0 ? `<button class="es-btn es-btn--sm es-btn--secondary va-more" type="button" data-act="${act}">Load more <span class="va-hint">(${left} more)</span></button>` : '');
+
+  // ─── Moments: every clip list is shown as plays ──────────────────────────
+  // The same play posted by several accounts is one card (best version first,
+  // "+N angles" opens the others). Sorted Trending (default) / Newest / Most
+  // viewed (video-ads-moments.js, shared with the server).
+  const MO = window.VideoAdsMoments || null;
+  const MO_SORTS = [['trending', 'Trending'], ['newest', 'Newest'], ['views', 'Most viewed']];
+  // Clips -> moments (client side, for By team / By colour / Library).
+  function momentsOf(clips, sport = '') {
+    const list = (clips || []).filter(c => c && Array.isArray(c.variants) && c.variants.some(v => v && v.url)).map(c => ({ ...c, sport: c.sport || sport }));
+    if (!MO) return list.map((c, i) => ({ id: `c${i}`, title: '', titleBy: 'post', sport: c.sport, teams: c.teams || [], clips: [c], angles: 0, views: Number(c.views) || 0, likes: Number(c.likes) || 0, engagement: Number(c.views) || 0, postedAt: c.postedAt, latestAt: c.postedAt, score: Number(c.score) || 0, ...(c.via ? { via: c.via } : {}) }));
+    return MO.buildMoments(list, { windowHours: 168 }).moments.map(m => (m.clips.every(c => c.via) ? { ...m, via: m.clips[0].via } : m));
+  }
+  const sortMoments = (list, sort) => (MO ? MO.sortMoments(list, sort) : list);
+  const teamObj = (t, sport) => {
+    if (t && typeof t === 'object') return t;
+    try { return (typeof T.findTeam === 'function' && T.findTeam(t, sport)) || { name: String(t || ''), short: String(t || '') }; } catch (error) { return { name: String(t || ''), short: String(t || '') }; }
+  };
+  // The cards each grid shows, by scope, so a click maps back to its moment.
+  const shownMoments = {};
+  const openAngles = {};
+  function momentCard(m, i, scope) {
+    const c = m.clips[0] || {};
+    const inAd = Boolean(state.clip?.url) && m.clips.some(x => x.url === state.clip.url);
+    const busy = Boolean(loadingClip) && m.clips.some(x => x.url === loadingClip);
+    const thumb = safeUrl(c.thumb || c.thumbnail);
+    const secs = Number(c.duration) > 600 ? Number(c.duration) / 1000 : Number(c.duration || (c.durationMs ? c.durationMs / 1000 : 0));
+    const kind = c.sourceKind || c.source;
+    const tag = kind === 'official' ? 'Official' : kind === 'league' ? 'League' : kind === 'media' ? 'Network' : '';
+    const quality = /^\d{3,4}p$/.test(String(c.quality || '')) ? c.quality : '';
+    const platform = String(c.platform || 'x');
+    const platformLabel = PLATFORM[platform] || platform.replace(/^\w/, ch => ch.toUpperCase());
+    const handle = String(c.handle || '').replace(/^@/, '');
+    const age = clipAge({ postedAt: m.latestAt || c.postedAt });
+    const eng = MO ? MO.engagementLabel({ views: m.views, likes: m.likes }) : '';
+    const teams = (m.teams || []).slice(0, 3).map(t => teamObj(t, m.sport)).filter(t => t.name);
+    const via = VIA_LABEL[m.via];
+    const title = m.title || (c.text ? String(c.text).slice(0, 90) : `${SPORT_LABEL[m.sport] || ''} highlight`.trim());
+    const open = openAngles[scope] === m.id;
+    return `<article class="va-clip va-mo${inAd ? ' is-in' : ''}${busy ? ' is-busy' : ''}${via ? ' is-fallback' : ''}${open ? ' is-open' : ''}" style="--i:${i}" aria-label="${esc(title)}">
+      <span class="va-clip__thumb"${thumb ? ` style="background-image:url('${esc(thumb)}')"` : ''}>${tag && !inAd ? `<span class="va-clip__tag va-clip__tag--${kind === 'official' ? 'official' : 'verified'}">${ICON.check}${tag}</span>` : ''}${quality ? `<span class="va-clip__q" title="Best version">${esc(quality)}</span>` : ''}${secs ? `<span class="va-clip__dur">${esc(fmt(secs))}</span>` : ''}${c.hasAudio === false && !inAd ? '<span class="va-clip__mute" title="This file has no sound">No sound</span>' : ''}${inAd ? `<span class="va-clip__in">${ICON.check}In the ad</span>` : ''}</span>
+      ${via ? `<span class="va-clip__via" title="${esc(via[1])}">${esc(via[0])}</span>` : ''}
+      <span class="va-mo__title"${m.titleBy === 'ai' ? ' title="Short title written from the post text"' : ''}>${esc(title)}</span>
+      ${teams.length ? `<span class="va-mo__teams">${teams.map(t => `<span class="va-mo__team" title="${esc(t.name)}">${teamMark(t, 18)}<span>${esc(t.short || t.name)}</span></span>`).join('')}</span>` : ''}
+      <span class="va-mo__meta"><span class="va-clip__plat va-clip__plat--${esc(platform.replace(/[^a-z]/g, ''))}" title="From ${esc(platformLabel)}${handle ? ` · @${esc(handle)}` : ''}">${esc(platformLabel)}</span>${age ? `<span>${esc(age)}</span>` : ''}${eng ? `<span class="va-mo__eng">${esc(eng)}</span>` : ''}</span>
+      <span class="va-clip__actions">
+        <button class="es-btn es-btn--sm es-btn--still${inAd || busy ? '' : ' es-btn--primary'}" type="button" data-mo-use="${i}"${busy || inAd ? ' disabled' : ''}>${busy ? 'Loading…' : inAd ? 'Using it' : 'Use clip'}</button>
+        ${safeUrl(c.url) ? `<a class="va-icon-btn va-icon-btn--sm" href="${esc(c.url)}" target="_blank" rel="noopener" aria-label="Open the post${handle ? ` by @${esc(handle)}` : ''}" title="Open the post">${ICON.external}</a>` : ''}
+      </span>
+      ${m.angles > 0 ? `<button class="va-mo__angles" type="button" data-mo-angles="${i}" aria-expanded="${open}">${open ? 'Hide angles' : `+${m.angles} more angle${m.angles === 1 ? '' : 's'}`}</button>` : ''}
+    </article>`;
+  }
+  // The other versions of an open moment: a full-width row under its card.
+  function anglesRow(m, i, scope) {
+    return `<div class="va-mo-alts" role="region" aria-label="Other angles of ${esc(m.title || 'this moment')}">
+      <div class="va-found__head"><h4>${m.angles} more angle${m.angles === 1 ? '' : 's'}</h4><button class="va-link" type="button" data-mo-angles="${i}">Hide</button></div>
+      <div class="va-clipgrid va-clipgrid--3">${m.clips.slice(1).map((c, k) => clipCard(c, `${i}:${k}`, 'data-mo-alt')).join('')}</div>
+    </div>`;
+  }
+  function momentGrid(list, scope) {
+    shownMoments[scope] = list;
+    return `<div class="va-clipgrid va-clipgrid--3 va-mogrid">${list.map((m, i) => momentCard(m, i, scope) + (openAngles[scope] === m.id ? anglesRow(m, i, scope) : '')).join('')}</div>`;
+  }
+  const momentSkeleton = (n = 6) => `<div class="va-clipgrid va-clipgrid--3" aria-hidden="true">${Array.from({ length: n }, (_, i) => `<div class="va-clip va-clip--skeleton" style="--i:${i}"><span class="va-clip__thumb va-shimmer"></span><span class="va-line va-shimmer"></span><span class="va-line va-shimmer" style="width:60%"></span><span class="va-line va-shimmer" style="width:40%"></span></div>`).join('')}</div>`;
+  // Clicks inside a moment grid. onUse(clip, moment). -> true when handled.
+  function momentClick(event, scope, onUse, rerender) {
+    const use = event.target.closest('[data-mo-use]');
+    if (use) { const m = shownMoments[scope]?.[Number(use.dataset.moUse)]; if (m) onUse(m.clips[0], m); return true; }
+    const alt = event.target.closest('[data-mo-alt]');
+    if (alt) {
+      const [i, k] = alt.dataset.moAlt.split(':').map(Number);
+      const m = shownMoments[scope]?.[i];
+      if (m && m.clips[k + 1]) onUse(m.clips[k + 1], m);
+      return true;
+    }
+    const ang = event.target.closest('[data-mo-angles]');
+    if (ang) {
+      const i = Number(ang.dataset.moAngles);
+      const m = shownMoments[scope]?.[i];
+      if (!m) return true;
+      openAngles[scope] = openAngles[scope] === m.id ? '' : m.id;
+      rerender();
+      const card = document.querySelector(`[data-mo-angles="${i}"]`);
+      card?.focus();
+      return true;
+    }
+    return false;
+  }
 
   // No fresh clips for a search: the newest clips of the sport from the library,
   // labelled, before ever saying "No fresh clips".
@@ -1443,22 +1527,28 @@
       els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}<div class="va-empty-state">${ICON.film}<strong>${title}</strong><span>${where} ${another}, or make the ad without a clip.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="${pick[0]}">${pick[1]}</button></div>${noClipBlock()}</div>`;
       return;
     }
-    const list = viewClips(kind);
+    // Plays, not copies: the same play from several accounts is one card.
     const v = views[kind];
-    const shown = list.slice(0, v.shown);
+    let moments = momentsOf(f.clips, f.params.sport);
+    const total = moments.length;
+    if (v.team) moments = moments.filter(m => m.clips.some(c => clipTeamNames(c, f.teams).includes(v.team)));
+    moments = sortMoments(moments, v.sort);
+    const shown = moments.slice(0, v.shown);
     const fresh = f.clips.filter(c => !VIA_LABEL[c.via] || c.via === 'color').length;
+    const angles = f.clips.length - total;
     els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}
-      <div class="va-found__head"><h3>${f.clips.length} clip${f.clips.length === 1 ? '' : 's'}</h3><span class="va-hint">${fresh === f.clips.length ? 'Last 5 days' : `${fresh} from the last 5 days`}</span></div>
+      <div class="va-found__head"><h3>${total} play${total === 1 ? '' : 's'}</h3><span class="va-hint">${fresh === f.clips.length ? 'Last 5 days' : `${fresh} from the last 5 days`}${angles > 0 ? ` · ${angles} more angle${angles === 1 ? '' : 's'}` : ''}</span></div>
       ${f.note ? `<p class="va-found__note">${esc(f.note)}</p>` : ''}
       ${clipTools(kind)}
-      ${shown.length ? clipGrid(shown, 'data-clip') : '<p class="va-hint">No clips for that team in these results. Pick “All teams”.</p>'}
-      ${moreButton(list.length - shown.length, 'more-clips')}`;
+      ${shown.length ? momentGrid(shown, `found-${kind}`) : '<p class="va-hint">No clips for that team in these results. Pick “All teams”.</p>'}
+      ${moreButton(moments.length - shown.length, 'more-clips')}`;
   }
   // Pick a clip (any list) -> download it into the ad.
   function useListedClip(c) {
     if (c) downloadClip(bestVariant(c.variants), { handle: c.handle, url: c.url, platform: c.platform, from: 'search' });
   }
   els.found.addEventListener('click', event => {
+    if (momentClick(event, `found-${state.clipTab}`, c => useListedClip(c), renderFound)) return;
     const use = event.target.closest('[data-clip]');
     if (use) {
       useListedClip(finds[state.clipTab]?.clips?.[Number(use.dataset.clip)]);
@@ -1473,7 +1563,7 @@
       const at = views[state.clipTab].shown;
       views[state.clipTab].shown += PAGE;
       renderFound();
-      els.found.querySelectorAll('[data-clip]')[at]?.focus();
+      els.found.querySelectorAll('[data-mo-use]')[at]?.focus();
       return;
     }
     if (noClipAct(event)) return;
@@ -1498,7 +1588,7 @@
 
   // ─── Clip library tab: everything fresh for a sport, no search needed ────
   // POST { mode: 'library', sport, team, sort, offset, limit } (free, no AI).
-  const lib = { sport: '', team: '', sort: 'newest', clips: [], total: 0, teams: [], status: 'idle', error: '', token: 0 };
+  const lib = { sport: '', team: '', sort: 'trending', clips: [], total: 0, teams: [], status: 'idle', error: '', token: 0 };
   async function loadLibrary({ more = false, force = false } = {}) {
     const sport = lib.sport || state.teamSport || 'nfl';
     if (!more && !force && lib.sport === sport && lib.status === 'done') { renderLibrary(); return; }
@@ -1509,7 +1599,7 @@
     if (!more) { lib.clips = []; lib.total = 0; }
     renderLibrary();
     try {
-      const data = await callApi({ mode: 'library', sport, team: lib.team, sort: lib.sort, offset: more ? lib.clips.length : 0, limit: 18 });
+      const data = await callApi({ mode: 'library', sport, team: lib.team, sort: lib.sort === 'views' ? 'popular' : lib.sort, offset: more ? lib.clips.length : 0, limit: 36 });
       if (token !== lib.token) return;
       const clips = (Array.isArray(data.clips) ? data.clips : []).filter(c => c && Array.isArray(c.variants) && c.variants.some(v => v && v.url));
       lib.clips = more ? [...lib.clips, ...clips] : clips;
@@ -1529,7 +1619,7 @@
     if (lib.status === 'loading') {
       els.libStatus.textContent = `Loading the ${sportName} clip library…`;
       els.libFound.setAttribute('aria-busy', 'true');
-      els.libFound.innerHTML = `<div class="va-clipgrid va-clipgrid--3" aria-hidden="true">${Array.from({ length: 6 }, (_, i) => `<div class="va-clip va-clip--skeleton" style="--i:${i}"><span class="va-clip__thumb va-shimmer"></span><span class="va-line va-shimmer" style="width:46%"></span><span class="va-line va-shimmer"></span></div>`).join('')}</div>`;
+      els.libFound.innerHTML = momentSkeleton();
       return;
     }
     els.libFound.removeAttribute('aria-busy');
@@ -1541,14 +1631,14 @@
     const teamSelect = lib.teams.length
       ? `<label class="va-cliptools__team"><span class="va-sr">Team</span><select class="es-select va-select-sm" data-lib-filter="team" aria-label="Filter the library by team"><option value="">All teams</option>${lib.teams.map(t => `<option value="${esc(t.name)}"${lib.team === t.name ? ' selected' : ''}>${esc(t.short || t.name)} (${Number(t.count) || 0})</option>`).join('')}</select></label>`
       : '';
-    const tools = `<div class="va-cliptools">${teamSelect}${sortChips(lib.sort, 'data-lib-sort', [['newest', 'Newest'], ['popular', 'Most popular']])}</div>`;
+    const tools = `<div class="va-cliptools">${teamSelect}${sortChips(lib.sort, 'data-lib-sort', MO_SORTS)}</div>`;
     if (!lib.clips.length) {
       els.libStatus.textContent = '';
       els.libFound.innerHTML = `${lib.team ? tools : ''}<div class="va-empty-state">${ICON.film}<strong>The ${esc(sportName)} library is empty right now</strong><span>It fills every morning and with every search. Find clips by team, or make the ad without a clip.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="lib-to-team">By team</button></div>${noClipBlock()}</div>`;
       return;
     }
     els.libStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b>${lib.total}</b> fresh ${esc(sportName)} clip${lib.total === 1 ? '' : 's'}${lib.team ? ` for ${esc(lib.team)}` : ''}, last 5 days</span>`;
-    els.libFound.innerHTML = `${tools}${clipGrid(lib.clips.map((c, i) => ({ c, i })), 'data-libclip')}
+    els.libFound.innerHTML = `${tools}${momentGrid(sortMoments(momentsOf(lib.clips, lib.sport), lib.sort), 'library')}
       ${lib.status === 'more' ? `<p class="va-working">${dots}Loading more…</p>` : moreButton(lib.total - lib.clips.length, 'lib-more')}`;
   }
   if (els.libSport) {
@@ -1560,6 +1650,11 @@
       loadLibrary({ force: true });
     });
     els.libFound.addEventListener('click', event => {
+      const libUse = c => {
+        state.context = { kind: 'library', sport: lib.sport, color: '', colorLabel: '', teams: (c.teams || []).slice(0, 3), trend: null };
+        useListedClip(c);
+      };
+      if (momentClick(event, 'library', libUse, renderLibrary)) return;
       const use = event.target.closest('[data-libclip]');
       if (use) {
         const c = lib.clips[Number(use.dataset.libclip)];
@@ -1640,192 +1735,176 @@
     if (event.key === 'ArrowDown') { event.preventDefault(); els.teamList.querySelector('[tabindex="0"]')?.focus(); }
   });
 
-  // By moment: trending moments that already have fresh clips
-  // (POST { mode: 'moments-with-clips', sport }). Picking one shows its clips
-  // straight from that response. If the check fails (AI off, server error),
-  // the full trends board comes back with a note, and picking a moment
-  // searches X for it as before.
+  // By moment: the most popular clips of the last 5 days (owner, 2026-11-18:
+  // "Moments are the recent 5 days' trending clips, and clips can be
+  // distributed according to teams and colours"). POST { mode:
+  // 'moments-with-clips', sport } returns plays, clustered and ranked on the
+  // server; the Team and Colour filters and the sort work on that pool here.
+  // The Trends hand-off (frameup.videoAdMoment.v1) pre-filters to its team.
   let trendItems = [];
-  let trendsError = '';
   state.trendsStatus = 'idle';
-  // moments-with-clips, one entry per sport filter: { status, items, error }
+  // One entry per sport chip: { status, items, ranking, note, error, fallback }
   const fresh = {};
   let freshToken = 0;
-  let freshFallback = false; // the check failed: show the old board
+  const mo = { team: '', color: '', sort: 'trending', shown: PAGE, handoff: null };
   const usableClips = list => (Array.isArray(list) ? list : []).filter(c => c && Array.isArray(c.variants) && c.variants.some(v => v && v.url));
   async function loadFreshMoments({ force = false } = {}) {
     const sport = state.sport;
     if (!force && fresh[sport] && fresh[sport].status !== 'error') { renderTrends(); return; }
     const token = ++freshToken;
     fresh[sport] = { status: 'loading', items: [] };
-    freshFallback = false;
     els.refresh.classList.add('is-spinning');
     renderTrends();
     try {
       const data = await callApi({ mode: 'moments-with-clips', sport });
       if (token !== freshToken) return;
       const items = (Array.isArray(data.moments) ? data.moments : [])
-        .map(m => ({ ...m, id: String(m.id || m.title || ''), clips: usableClips(m.clips) }))
-        .filter(m => m.id && m.title && m.clips.length && (sport === 'all' || !m.sport || m.sport === sport));
-      // No moment has clips: the server sends the sport's newest library clips.
-      const fallback = usableClips(data.fallback?.clips).map(c => ({ ...c, via: c.via || 'sport' }));
-      fresh[sport] = { status: items.length ? 'done' : 'empty', items, fallback, fallbackNote: typeof data.fallback?.note === 'string' ? data.fallback.note : '' };
-      if (!items.length && !fallback.length) loadMomentFallback(sport, token);
+        .map(m => ({ ...m, id: String(m.id || ''), clips: usableClips(m.clips), angles: Math.max(0, usableClips(m.clips).length - 1) }))
+        .filter(m => m.id && m.clips.length && (sport === 'all' || !m.sport || m.sport === sport));
+      fresh[sport] = { status: items.length ? 'done' : 'empty', items, ranking: data.ranking === 'newest' ? 'newest' : 'trending', note: typeof data.note === 'string' ? data.note : '' };
+      if (!items.length) loadMomentFallback(sport, token);
     } catch (error) {
       if (token !== freshToken) return;
       fresh[sport] = { status: 'error', items: [], error: error.message || '' };
-      freshFallback = true;
-      if (state.trendsStatus !== 'done') { els.refresh.classList.remove('is-spinning'); loadTrends(); return; }
+      loadMomentFallback(sport, token);
     }
     els.refresh.classList.remove('is-spinning');
     renderTrends();
   }
-  // Moments came back empty and the server had no fallback: ask the library directly.
+  // Nothing came back (or the check failed): the library's newest clips, as plays, labelled.
   async function loadMomentFallback(sport, token) {
     const sports = SPORT_LABEL[sport] ? [sport] : ['nfl', 'cfb', 'mlb'];
     try {
-      const pages = await Promise.all(sports.map(s => callApi({ mode: 'library', sport: s, limit: 9 }).then(d => usableClips(d.clips)).catch(() => [])));
+      const pages = await Promise.all(sports.map(s => callApi({ mode: 'library', sport: s, sort: 'newest', limit: 18 }).then(d => usableClips(d.clips).map(c => ({ ...c, sport: s, via: 'sport' }))).catch(() => [])));
       if (token !== freshToken || !fresh[sport]) return;
-      const clips = pages.flat().sort((a, b) => new Date(b.postedAt || 0) - new Date(a.postedAt || 0)).slice(0, 9).map(c => ({ ...c, via: 'sport' }));
-      if (!clips.length) return;
-      fresh[sport].fallback = clips;
+      const items = momentsOf(pages.flat()).map(m => ({ ...m, via: 'sport' }));
+      if (!items.length) return;
+      fresh[sport].fallback = items;
       renderTrends();
     } catch (error) { /* the empty state stands */ }
   }
-  const skeletonRows = () => Array.from({ length: 5 }, (_, i) => `<li class="va-trend-item" aria-hidden="true" style="--i:${i}"><div class="va-trend va-trend--skeleton"><span class="va-trend__img va-shimmer"></span><span class="va-trend__body"><span class="va-line va-shimmer" style="width:42%"></span><span class="va-line va-shimmer"></span><span class="va-line va-shimmer" style="width:72%"></span></span></div></li>`).join('');
-  function trendRow(item, index, count = 0) {
-    const firstThumb = count ? safeUrl(item.clips[0]?.thumb || item.clips[0]?.thumbnail) : '';
-    const img = safeUrl(item.image) || firstThumb;
-    const on = state.trend?.id === item.id;
-    const meta = [ago(item.publishedAt), item.source].filter(Boolean).map(esc).join('<i aria-hidden="true">·</i>');
-    const countHtml = count ? `<span class="va-trend__count">${count} clip${count === 1 ? '' : 's'}</span>` : '';
-    return `<li class="va-trend-item" style="--i:${index}">
-        <button class="va-trend${on ? ' is-on' : ''}" type="button" data-id="${esc(item.id)}" aria-pressed="${on}">
-          ${img ? `<span class="va-trend__img" style="background-image:url('${esc(img)}')"></span>` : leagueTile(item.sport, 'va-trend__img is-league')}
-          <span class="va-trend__body">
-            <span class="va-trend__meta">${leagueTile(item.sport)}<span>${esc(SPORT_LABEL[item.sport] || '')}</span>${meta ? `<i aria-hidden="true">·</i>${meta}` : ''}${countHtml}</span>
-            <span class="va-trend__title">${esc(item.title)}</span>
-          </span>
-          <span class="va-trend__go" aria-hidden="true">${on ? ICON.check : ICON.chevron}</span>
-        </button>
-      </li>`;
+  const teamNamesOf = m => (m.teams || []).map(t => (typeof t === 'string' ? t : t?.name)).filter(Boolean);
+  // The pool after the sport chip, then the Team / Colour filters, sorted.
+  function momentView(items) {
+    const filtered = MO ? MO.filterMoments(items, { team: mo.team, color: mo.color }) : items.filter(m => !mo.team || teamNamesOf(m).includes(mo.team));
+    return sortMoments(filtered, mo.sort);
   }
+  function momentTools(items) {
+    const facets = MO ? MO.momentFacets(items.map(m => ({ ...m, teams: teamNamesOf(m) }))) : { teams: [], colors: [] };
+    // A hand-off team with no clips yet still shows in the list (with 0).
+    if (mo.team && !facets.teams.some(t => t.name === mo.team)) facets.teams.unshift({ name: mo.team, short: teamObj(mo.team).short || mo.team, count: 0 });
+    if (mo.color && !facets.colors.some(c => c.id === mo.color)) { const c = colorById(mo.color); facets.colors.unshift({ id: c.id, label: c.label, hex: c.hex, count: 0 }); }
+    const teamSel = facets.teams.length ? `<label class="va-mo-filter"><span class="va-sr">Team</span><select class="es-select va-select-sm" data-mo-filter="team" aria-label="Filter moments by team"><option value="">All teams</option>${facets.teams.map(t => `<option value="${esc(t.name)}"${mo.team === t.name ? ' selected' : ''}>${esc(t.short || t.name)} (${Number(t.count) || 0})</option>`).join('')}</select></label>` : '';
+    const swatch = mo.color ? colorById(mo.color).hex : '';
+    const colorSel = facets.colors.length ? `<label class="va-mo-filter va-mo-filter--color"${swatch ? ` style="--sw:${esc(swatch)}"` : ''}><span class="va-sr">Colour</span><select class="es-select va-select-sm" data-mo-filter="color" aria-label="Filter moments by team colour"><option value="">All colours</option>${facets.colors.map(c => `<option value="${esc(c.id)}"${mo.color === c.id ? ' selected' : ''}>${esc(c.label)} (${Number(c.count) || 0})</option>`).join('')}</select></label>` : '';
+    return `<div class="va-cliptools va-mo-tools">${teamSel}${colorSel}${sortChips(mo.sort, 'data-mo-sort', MO_SORTS)}</div>`;
+  }
+  const skeletonRows = () => `<li class="va-mo-wrap" aria-hidden="true">${momentSkeleton(6)}</li>`;
   function renderTrends() {
     els.boardBar.hidden = !state.momentOpen;
     els.trendsStatus.classList.remove('is-error');
-    // A picked moment: just that one, with Change.
+    // A picked moment (the older story flow, kept for VideoAdsPage.selectMoment): just that one, with Change.
     if (!state.momentOpen && state.trend) {
       const t = state.trend;
       els.trends.removeAttribute('aria-busy');
       els.trendsStatus.textContent = '';
-      els.trends.innerHTML = `<li class="va-picked">${leagueTile(t.sport)}<p>${esc(t.title)}</p><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="change-moment">Change</button></li>`;
+      els.trends.innerHTML = `<li class="va-picked">${leagueTile(t.sport)}<p>${esc(t.title)}</p><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="change-moment">Back to moments</button></li>`;
       return;
     }
     const f = fresh[state.sport];
-    if (f && !freshFallback) {
-      if (f.status === 'loading') {
-        els.trendsStatus.textContent = 'Finding moments with fresh clips…';
-        els.trends.innerHTML = skeletonRows();
-        els.trends.setAttribute('aria-busy', 'true');
-        return;
-      }
-      els.trends.removeAttribute('aria-busy');
-      if (f.status === 'empty' || !f.items.length) {
-        els.trendsStatus.textContent = '';
-        const all = state.sport === 'all' || !SPORT_LABEL[state.sport];
-        const tries = all
-          ? `${['nfl', 'cfb', 'mlb'].map(id => `<button class="es-btn es-btn--sm" type="button" data-act="sport-${id}">${SPORT_LABEL[id]}</button>`).join('')}<button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-team">By team</button>`
-          : `<button class="es-btn es-btn--sm" type="button" data-act="sport-all">All sports</button><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-team">By team</button>`;
-        const why = all
-          ? 'None of today’s top moments has a video from the last 5 days yet. Try one sport at a time, or search by team.'
-          : `None of the top ${esc(SPORT_LABEL[state.sport])} moments has a video from the last 5 days yet. Try all sports, or search by team.`;
-        // Never "No fresh clips" while the library has some: show them, labelled.
-        if (f.fallback?.length) {
-          const label = all ? 'the newest clips we have' : `the newest ${esc(SPORT_LABEL[state.sport])} clips we have`;
-          els.trends.innerHTML = `<li class="va-lib-fallback"><div class="va-found__head"><h3>From the clip library</h3><span class="va-hint">${f.fallback.length} clip${f.fallback.length === 1 ? '' : 's'}</span></div><p class="va-found__note">No video for today’s top moments yet — here are ${label} instead.</p>${clipGrid(f.fallback.map((c, i) => ({ c, i })), 'data-mclip')}<div class="va-empty-state__actions">${tries}</div>${noClipBlock()}</li>`;
-          return;
-        }
-        els.trends.innerHTML = `<li class="va-empty-state">${ICON.film}<strong>No fresh clips for these moments yet</strong><span>${why}</span><div class="va-empty-state__actions">${tries}</div>${noClipBlock()}</li>`;
-        return;
-      }
-      els.trends.innerHTML = f.items.map((item, i) => trendRow(item, i, item.clips.length)).join('');
-      els.trendsStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b data-es-tick="va-moments">${f.items.length}</b> moment${f.items.length === 1 ? '' : 's'} with clips from the last 5 days</span>`;
-      return;
-    }
-    // The old board: every trend (Copy step, or the clip check failed).
-    if (state.trendsStatus === 'loading' || state.trendsStatus === 'idle') {
-      els.trendsStatus.textContent = 'Loading the last 48 hours…';
+    if (!f || f.status === 'loading') {
+      els.trendsStatus.textContent = 'Finding the most popular clips of the last 5 days…';
       els.trends.innerHTML = skeletonRows();
       els.trends.setAttribute('aria-busy', 'true');
       return;
     }
     els.trends.removeAttribute('aria-busy');
-    if (state.trendsStatus === 'error') {
+    const all = state.sport === 'all' || !SPORT_LABEL[state.sport];
+    const sportName = all ? '' : SPORT_LABEL[state.sport];
+    const tries = all
+      ? `${['nfl', 'cfb', 'mlb'].map(id => `<button class="es-btn es-btn--sm" type="button" data-act="sport-${id}">${SPORT_LABEL[id]}</button>`).join('')}<button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-team">By team</button>`
+      : `<button class="es-btn es-btn--sm" type="button" data-act="sport-all">All sports</button><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-team">By team</button>`;
+    const fromLibrary = !f.items.length && f.fallback?.length;
+    const items = f.items.length ? f.items : (f.fallback || []);
+    if (!items.length) {
       els.trendsStatus.textContent = '';
-      els.trends.innerHTML = `<li class="va-empty-state va-empty-state--bad">${ICON.alert}<strong>Trends didn’t load</strong><span>${esc(trendsError)}</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="retry-trends">${ICON.retry}Try again</button><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-color">Search by colour</button></div></li>`;
+      const why = f.status === 'error'
+        ? `The check didn’t finish${f.error ? ` (${esc(f.error)})` : ''}. Try again, or search by team.`
+        : `Nothing ${sportName ? `in ${esc(sportName)} ` : ''}has a verified 720p game clip from the last 5 days yet. Try ${all ? 'one sport at a time' : 'all sports'}, or search by team.`;
+      els.trends.innerHTML = `<li class="va-empty-state${f.status === 'error' ? ' va-empty-state--bad' : ''}">${ICON.film}<strong>No trending clips yet</strong><span>${why}</span><div class="va-empty-state__actions">${f.status === 'error' ? `<button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="retry-moments">${ICON.retry}Try again</button>` : ''}${tries}</div>${noClipBlock()}</li>`;
       return;
     }
-    const list = trendItems.filter(item => state.sport === 'all' || item.sport === state.sport);
-    if (!list.length) {
-      els.trends.innerHTML = `<li class="va-empty-state">${ICON.search}<strong>Nothing for ${esc(SPORT_LABEL[state.sport] || 'this sport')} right now</strong><span>Try another sport, or search by colour.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="to-color">Search by colour</button></div></li>`;
-      els.trendsStatus.textContent = '';
-      return;
-    }
-    els.trends.innerHTML = list.map((item, i) => trendRow(item, i)).join('');
-    els.trendsStatus.innerHTML = freshFallback
-      ? `<span>Clips not checked; some moments may have no video</span>`
-      : `<span class="es-live-dot" aria-hidden="true"></span><span><b data-es-tick="va-moments">${list.length}</b> trending in the last 48 hours</span>`;
+    const view = momentView(items);
+    const shown = view.slice(0, mo.shown);
+    const ranking = fromLibrary ? 'newest' : f.ranking;
+    const filterLabel = [mo.team ? (teamObj(mo.team).short || mo.team) : '', mo.color ? colorById(mo.color).label.toLowerCase() + ' teams' : ''].filter(Boolean).join(' · ');
+    els.trendsStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b data-es-tick="va-moments">${view.length}</b> ${view.length === 1 ? 'play' : 'plays'}${filterLabel ? ` for ${esc(filterLabel)}` : ''}, last 5 days · ${ranking === 'newest' ? 'newest first' : 'ranked by views per hour'}</span>`;
+    const note = fromLibrary
+      ? `<p class="va-found__note">${f.status === 'error' ? 'The trending check didn’t finish' : 'No trending clips yet'} — here are the newest ${esc(sportName)} clips from the clip library.</p>`
+      : f.note ? `<p class="va-found__note">${esc(f.note)}</p>` : '';
+    const handoff = mo.handoff ? `<p class="va-mo-handoff">From Trends: <b>${esc(mo.handoff.title)}</b> <button class="va-link" type="button" data-act="mo-clear">Show all teams</button></p>` : '';
+    const empty = !view.length
+      ? `<div class="va-empty-state">${ICON.film}<strong>No ${esc(filterLabel || 'matching')} plays in the last 5 days yet</strong><span>Clear the filter, or search that team directly.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="mo-clear">Show all</button>${mo.team ? `<button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="mo-find-team">Find ${esc(teamObj(mo.team).short || mo.team)} clips</button>` : ''}</div>${noClipBlock({ compact: true })}</div>`
+      : '';
+    els.trends.innerHTML = `<li class="va-mo-wrap">${handoff}${momentTools(items)}${note}${empty || momentGrid(shown, 'moment')}${moreButton(view.length - shown.length, 'mo-more')}${view.length ? noClipBlock({ compact: true }) : ''}</li>`;
   }
   async function loadTrends() {
     state.trendsStatus = 'loading';
-    els.refresh.classList.add('is-spinning');
-    renderTrends();
     try {
       const data = await callApi({ mode: 'trends' });
       trendItems = data.items || [];
       state.trendsStatus = 'done';
     } catch (error) {
       state.trendsStatus = 'error';
-      trendsError = error.message || '';
-      els.trendsStatus.textContent = '';
     }
-    els.refresh.classList.remove('is-spinning');
-    renderTrends();
     renderMoments();
   }
   els.sports.addEventListener('click', event => {
     const chip = event.target.closest('[data-sport]');
     if (!chip) return;
     state.sport = chip.dataset.sport;
+    mo.shown = PAGE;
     [...els.sports.children].forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
-    if (freshFallback) renderTrends();
-    else loadFreshMoments();
+    loadFreshMoments();
   });
+  // Use a moment's clip: the ad is about that play (its title grounds the copy).
+  function useMomentClip(c, m) {
+    const teams = teamNamesOf(m);
+    const trend = { id: m.id, title: m.title || '', sport: m.sport || c.sport || '', related: [] };
+    state.context = { kind: m.via ? 'library' : 'moment', sport: trend.sport, color: '', colorLabel: '', teams: teams.slice(0, 3), trend: m.via ? null : trend };
+    useListedClip(c);
+  }
   els.trends.addEventListener('click', event => {
-    const mclip = event.target.closest('[data-mclip]');
-    if (mclip) {
-      const c = fresh[state.sport]?.fallback?.[Number(mclip.dataset.mclip)];
-      if (c) {
-        state.context = { kind: 'library', sport: c.sport || (SPORT_LABEL[state.sport] ? state.sport : ''), color: '', colorLabel: '', teams: (c.teams || []).slice(0, 3), trend: null };
-        useListedClip(c);
-      }
-      return;
-    }
+    if (momentClick(event, 'moment', useMomentClip, renderTrends)) return;
+    const sort = event.target.closest('[data-mo-sort]');
+    if (sort) { mo.sort = sort.dataset.moSort; mo.shown = PAGE; renderTrends(); els.trends.querySelector(`[data-mo-sort="${mo.sort}"]`)?.focus(); return; }
     const act = event.target.closest('[data-act]')?.dataset.act;
     if (noClipAct(event)) return;
     if (act && act.startsWith('sport-')) { els.sports.querySelector(`[data-sport="${act.slice(6)}"]`)?.click(); return; }
-    if (act === 'retry-trends') { loadTrends(); return; }
+    if (act === 'retry-moments') { loadFreshMoments({ force: true }); return; }
+    if (act === 'mo-more') { const at = mo.shown; mo.shown += PAGE; renderTrends(); els.trends.querySelectorAll('[data-mo-use]')[at]?.focus(); return; }
+    if (act === 'mo-clear') { mo.team = ''; mo.color = ''; mo.handoff = null; mo.shown = PAGE; renderTrends(); return; }
+    if (act === 'mo-find-team') {
+      const t = teamObj(mo.team, state.sport);
+      if (t?.sport) { state.teamSport = t.sport; markRadios(els.teamSport, 'sport', t.sport); }
+      state.team = t?.name || mo.team;
+      selectClipTab(clipTab('team'));
+      findByTeam();
+      return;
+    }
     if (act === 'to-color') { selectClipTab(clipTab('color')); return; }
     if (act === 'to-team') { selectClipTab(clipTab('team')); return; }
     if (act === 'to-link') { selectClipTab(clipTab('link')); els.xurl.focus(); return; }
-    if (act === 'change-moment') { state.momentOpen = true; renderTrends(); renderFound(); els.trends.querySelector('.va-trend.is-on, .va-trend')?.focus(); return; }
-    const button = event.target.closest('.va-trend[data-id]');
-    if (!button) return;
-    const f = fresh[state.sport];
-    const withClips = !freshFallback && f?.items?.find(t => t.id === button.dataset.id);
-    if (withClips) { selectMoment(withClips, { clips: withClips.clips }); return; }
-    const item = trendItems.find(t => t.id === button.dataset.id);
-    if (item) selectMoment(item);
+    if (act === 'change-moment') { state.momentOpen = true; renderTrends(); renderFound(); return; }
+  });
+  els.trends.addEventListener('change', event => {
+    const sel = event.target.closest('[data-mo-filter]');
+    if (!sel) return;
+    mo[sel.dataset.moFilter] = sel.value;
+    if (sel.dataset.moFilter === 'team' && !sel.value) mo.handoff = null;
+    mo.shown = PAGE;
+    renderTrends();
+    els.trends.querySelector(`[data-mo-filter="${sel.dataset.moFilter}"]`)?.focus();
   });
   els.refresh.addEventListener('click', () => loadFreshMoments({ force: true }));
   // clips: the moment's clips from moments-with-clips (no extra search).
@@ -2841,14 +2920,17 @@
     if (!hasClip()) notes.push(`<div class="va-notice">${ICON.film}<span><b>No clip yet.</b> Add one, or use an animated background: ${S.isNew(state.style) ? 'this style needs no footage.' : 'no footage needed.'}</span><span class="va-notice__acts"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="make-animated">Animated background</button><button class="es-btn es-btn--sm" type="button" data-act="to-clip">Find a clip</button></span></div>`);
     if (notReady.length) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>${esc(B.STYLES[notReady[0].st].label)} needs ${esc(notReady[0].r.missing)}.</b></span><button class="es-btn es-btn--sm" type="button" data-act="to-copy">Add it</button></div>`);
     if (tooLong.length) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>Copy is too long</b> for ${esc(tooLong.slice(0, 3).join(', '))}.</span><button class="es-btn es-btn--sm" type="button" data-act="to-copy">Shorten</button></div>`);
+    const soundWait = A.usesMusic(state.sound) && !soundBuffer();
+    if (soundWait) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>Sound:</b> ${state.sound.mode === 'library' ? 'pick a track' : 'upload an audio file'}, or choose Muted.</span></div>`);
     if (n > 6) notes.push(`<div class="va-notice">${ICON.alert}<span>${n} files record at once, in one ${adDuration().toFixed(0)}-second pass. Keep this tab visible; a slower computer may drop frames, so export fewer sizes if it stutters.</span></div>`);
     els.ready.innerHTML = notes.join('');
     els.ready.hidden = !notes.length;
     // No footage, nothing to license: the optional rights reminder only shows for a clip or photo.
     els.rightsRow.hidden = !hasClip() || state.clip?.source === 'animated';
     els.metaToggle.setAttribute('aria-pressed', String(metaPreview));
+    if (soundReady) renderSound();
     if (!exporting) {
-      els.exportBtn.disabled = !hasClip() || notReady.length > 0 || n === 0;
+      els.exportBtn.disabled = !hasClip() || notReady.length > 0 || n === 0 || soundWait;
       els.exportBtn.innerHTML = `${ICON.download}<span>Export ${n === 1 ? 'MP4' : `${n} MP4s`}</span>`;
       els.exportBtn.title = !hasClip() ? 'Add a clip, a photo or the animated background first' : '';
     }
@@ -2920,7 +3002,7 @@
           logEvent('export', {
             copy: copyForLog(src), style: item.style, sizes: [...state.exportIds], angle: item.angle, gridId, gridKind: 'daily-set',
             files: (files || []).filter(f => f.angle === item.angle).map(f => f.fileName),
-            clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), safeZone: S.isNew(item.style) ? 'meta' : state.safeZone,
+            clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), sound: soundRecord(), safeZone: S.isNew(item.style) ? 'meta' : state.safeZone,
             context: { kind: state.context.kind, color: state.context.color, trend: state.context.trend?.title || '' },
           });
         });
@@ -2943,7 +3025,7 @@
         logEvent('export', {
           copy, style: st, sizes: [...state.exportIds], angle: angle(), ...(gridId ? { gridId, gridStyles: styles } : {}),
           files: (files || []).filter(f => f.style === st).map(f => f.fileName),
-          clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), safeZone: S.isNew(st) ? 'meta' : state.safeZone,
+          clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), sound: soundRecord(), safeZone: S.isNew(st) ? 'meta' : state.safeZone,
           context: { kind: state.context.kind, color: state.context.color, trend: state.context.trend?.title || '' },
         });
       });
@@ -2953,21 +3035,26 @@
   }
   els.exportBtn.addEventListener('click', startExport);
 
-  // MediaRecorder; the clip's audio goes through Web Audio.
-  let audioCtx = null;
-  let audioSource = null;
-  let monitor = null;
-  let previewMuted = true;
+  // MediaRecorder; sound goes through one Web Audio graph (video-ads-audio.js
+  // createMixer) that feeds the preview speaker and the recorder alike, so the
+  // preview plays the same mix as the export. var: setPlaying() can run first.
+  var audioCtx = null; // eslint-disable-line no-var
+  var audioSource = null; // eslint-disable-line no-var
+  var mixer = null; // eslint-disable-line no-var
+  var monitor = null; // eslint-disable-line no-var
+  var previewMuted = true; // eslint-disable-line no-var
   function audioGraph() {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       audioSource = audioCtx.createMediaElementSource(realVideo);
+      mixer = A.createMixer(audioCtx, { mediaSource: audioSource });
       monitor = audioCtx.createGain();
       monitor.gain.value = previewMuted ? 0 : 1;
-      audioSource.connect(monitor).connect(audioCtx.destination);
-      // A muted element sends silence into Web Audio too: unmute it and let the
-      // monitor gain decide what the speaker hears.
+      mixer.bus.connect(monitor).connect(audioCtx.destination);
+      // A muted element sends silence into Web Audio too: unmute it. The
+      // mixer's clip gain (0 unless the sound choice uses the clip) decides.
       realVideo.muted = false;
+      applySound();
     }
     return audioCtx;
   }
@@ -2989,10 +3076,17 @@
     if (!mimeType) { els.exportStatus.textContent = 'This browser cannot record video. Use Chrome or Edge.'; return null; }
     await document.fonts.ready;
     setPlaying(false);
-    const ac = audioGraph();
-    await ac.resume();
-    const audioDest = ac.createMediaStreamDestination();
-    audioSource.connect(audioDest);
+    // Muted (the default): no audio track at all. Otherwise the mixer's bus,
+    // the same mix the preview plays.
+    const withSound = soundAudible();
+    let audioDest = null;
+    if (withSound) {
+      const ac = audioGraph();
+      await ac.resume();
+      applySound();
+      audioDest = ac.createMediaStreamDestination();
+      mixer.bus.connect(audioDest);
+    }
     const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
     const list = items && items.length ? items : styles.map(style => ({ style, copy: null, angle: angle() }));
     const targets = list.flatMap(item => sizeIds.map(id => ({ id, ...item }))).map(({ id, style, copy, angle: ang }) => {
@@ -3001,8 +3095,8 @@
       canvas.width = s.width;
       canvas.height = s.height;
       const stream = canvas.captureStream(30);
-      audioDest.stream.getAudioTracks().forEach(track => stream.addTrack(track.clone()));
-      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: id === '9x16' ? 12e6 : 10e6, audioBitsPerSecond: 128000 });
+      if (audioDest) audioDest.stream.getAudioTracks().forEach(track => stream.addTrack(track.clone()));
+      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: id === '9x16' ? 12e6 : 10e6, ...(audioDest ? { audioBitsPerSecond: 128000 } : {}) });
       const chunks = [];
       recorder.ondataavailable = e => { if (e.data?.size) chunks.push(e.data); };
       return { id, style, angle: ang, s, canvas, ctx: canvas.getContext('2d'), blur: document.createElement('canvas'), layout: layoutFor(id, { ...state, ...(copy || {}), style }), recorder, chunks, stream };
@@ -3028,6 +3122,7 @@
       if (finished) return;
       finished = true;
       els.video.pause();
+      soundSync();
       targets.forEach(t => { if (t.recorder.state !== 'inactive') t.recorder.stop(); });
     };
     exporting = { cancel: () => { cancelled = true; stopAll(); } };
@@ -3043,8 +3138,8 @@
       targets.forEach(x => R.drawFrame(x.ctx, { width: x.s.width, height: x.s.height, video: els.video, bg: bg(), ops: x.layout.ops, logoImage: logo.img, blurCanvas: x.blur, source: still ? still.source() : undefined, t, duration: span }));
     };
     const onVisibility = () => {
-      if (document.hidden && !finished) { els.video.pause(); targets.forEach(t => t.recorder.state === 'recording' && t.recorder.pause()); els.exportStatus.textContent = 'Paused: come back to this tab to keep recording.'; }
-      else if (!finished) { targets.forEach(t => t.recorder.state === 'paused' && t.recorder.resume()); els.video.play(); els.exportStatus.textContent = 'Recording in real time. Keep this tab open and visible.'; }
+      if (document.hidden && !finished) { els.video.pause(); soundSync(); targets.forEach(t => t.recorder.state === 'recording' && t.recorder.pause()); els.exportStatus.textContent = 'Paused: come back to this tab to keep recording.'; }
+      else if (!finished) { targets.forEach(t => t.recorder.state === 'paused' && t.recorder.resume()); els.video.play(); soundSync(); els.exportStatus.textContent = 'Recording in real time. Keep this tab open and visible.'; }
     };
     document.addEventListener('visibilitychange', onVisibility);
 
@@ -3056,6 +3151,7 @@
       drawAll();
       draw();
       syncTime();
+      soundSync();
       const progress = (els.video.currentTime - state.trimIn) / span;
       bar.style.width = `${Math.min(100, Math.round(progress * 100))}%`;
       if (els.video.currentTime >= state.trimOut - 0.04 || els.video.ended) { stopAll(); return; }
@@ -3063,12 +3159,13 @@
       else requestAnimationFrame(tick);
     };
     await els.video.play();
+    soundSync();
     tick();
     await done;
     document.removeEventListener('visibilitychange', onVisibility);
     els.video.removeEventListener('timeupdate', guard);
     els.video.removeEventListener('ended', guard);
-    audioSource.disconnect(audioDest);
+    if (audioDest) { try { mixer.bus.disconnect(audioDest); } catch (error) { /* already gone */ } }
     targets.forEach(t => t.stream.getTracks().forEach(track => track.stop()));
     exporting = null;
     els.exportBtn.classList.remove('es-btn--danger');
@@ -3095,9 +3192,9 @@
     });
     els.files.hidden = false;
     els.files.innerHTML = rows.map(r => `<li><span class="va-files__icon" aria-hidden="true">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="va-files__name">${esc(r.fileName)}</span><span class="va-meta">${r.mb.toFixed(1)} MB</span><a class="va-link" href="${r.href}" download="${esc(r.fileName)}">Download again</a></li>`).join('');
-    els.exportStatus.textContent = ext === 'mp4'
+    els.exportStatus.textContent = (ext === 'mp4'
       ? `Downloaded ${targets.length} MP4${targets.length > 1 ? 's' : ''} (${span.toFixed(1)}s).`
-      : 'Downloaded as WebM: this browser can’t record MP4. Use Chrome or Edge for MP4.';
+      : 'Downloaded as WebM: this browser can’t record MP4. Use Chrome or Edge for MP4.') + (withSound ? '' : ' No sound (Muted).');
     state.exported = true;
     renderSteps();
     toast(`Exported ${targets.length} ${ext.toUpperCase()}${targets.length > 1 ? 's' : ''}`, { tone: 'good' });
@@ -3196,19 +3293,15 @@
     fitCanvasDisplay();
     draw();
   });
-  radioGroup(els.placement, 'place', place => setPlacement(place));
 
   // Transport
   els.play.addEventListener('click', () => setPlaying(!playing));
   // Preview sound only: once Web Audio owns the clip (after the first export),
   // muting turns the speaker down but the recording keeps the clip's audio.
+  // The speaker only: what the MP4 carries is the Sound choice in Export.
   els.mute.addEventListener('click', () => {
-    previewMuted = !previewMuted;
-    if (monitor) monitor.gain.value = previewMuted ? 0 : 1;
-    else els.video.muted = previewMuted;
-    els.mute.setAttribute('aria-pressed', String(previewMuted));
-    els.mute.setAttribute('aria-label', previewMuted ? 'Unmute preview' : 'Mute preview');
-    els.mute.innerHTML = previewMuted ? ICON.soundOff : ICON.soundOn;
+    setPreviewMuted(!previewMuted);
+    if (!previewMuted && state.sound.mode === 'muted') toast('This ad is Muted. Pick a sound in Export to hear one.', { action: { label: 'Sound', fn: () => { goStep('export'); $('va-sound')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }, timeout: 4200 });
   });
   els.mini.addEventListener('click', () => {
     const on = !els.stage.classList.contains('is-mini');
@@ -3732,7 +3825,7 @@
       all.brands[state.brandId] = {
         style: state.style, exportIds: [...state.exportIds], ...(setReady() ? { setSizes: [...state.exportIds] } : { setSizes: all.brands[state.brandId]?.setSizes }),
         safeZone: state.safeZone, tintId: state.tintId, tintAmount: state.tintAmount, tintCustom: state.tintCustom,
-        unsubscribe: state.unsubscribe, cta: state.cta, placement: state.placement || '', at: Date.now(),
+        unsubscribe: state.unsubscribe, cta: state.cta, sound: A.persistable(state.sound), at: Date.now(),
       };
       writeDefaults(all);
     }, 500);
@@ -3751,7 +3844,7 @@
     if (/^#[0-9a-f]{6}$/i.test(d.tintCustom || '')) state.tintCustom = d.tintCustom;
     if (typeof d.unsubscribe === 'boolean') state.unsubscribe = d.unsubscribe;
     if (typeof d.cta === 'string') state.cta = d.cta.slice(0, 40);
-    state.placement = ['feed', 'story', 'reel'].includes(d.placement) ? d.placement : null;
+    restoreSound(d.sound);
     syncFields();
     if (railReady) syncRail();
     relayout();
@@ -3761,7 +3854,8 @@
     const all = readDefaults();
     delete all.brands[state.brandId];
     writeDefaults(all);
-    Object.assign(state, { style: B.DEFAULT_STYLE, exportIds: ['9x16'], safeZone: 'meta', unsubscribe: true, cta: '', placement: null, tintId: FRAME_DEFAULTS.tintId, tintAmount: FRAME_DEFAULTS.tintAmount });
+    Object.assign(state, { style: B.DEFAULT_STYLE, exportIds: ['9x16'], safeZone: 'meta', unsubscribe: true, cta: '', tintId: FRAME_DEFAULTS.tintId, tintAmount: FRAME_DEFAULTS.tintAmount });
+    restoreSound(null);
     syncFields();
     if (railReady) syncRail();
     relayout();
@@ -3896,6 +3990,284 @@
     }
   });
 
+  // ─── Sound: Muted (default) / Original / Music / Upload ──────────────────
+  // The choice lives in state.sound (remembered per newsletter, never the
+  // file). Library tracks come from audio-library.json (same origin, shared
+  // with Reels Studio); an upload stays in this tab only, like an uploaded clip.
+  var soundReady = false; // eslint-disable-line no-var
+  var soundLibrary = null; // eslint-disable-line no-var -- parsed audio-library.json, once loaded
+  var soundLibraryLoading = null; // eslint-disable-line no-var
+  var soundUpload = null; // eslint-disable-line no-var -- { name, size, buffer, loading, error }
+  var soundRights = false; // eslint-disable-line no-var -- "I have the rights to this audio" (upload)
+  var soundError = ''; // eslint-disable-line no-var
+  var trackBuffers = new Map(); // eslint-disable-line no-var -- track id -> { buffer, loading, error }
+  const snd = {
+    root: $('va-sound'), sum: $('va-sound-sum'), modes: $('va-sound-mode'), body: $('va-sound-body'), mix: $('va-sound-mix'), file: $('va-sound-file'),
+    keepRow: $('va-sound-keep-row'), keep: $('va-sound-keep'), loopRow: $('va-sound-loop-row'), loop: $('va-sound-loop'),
+    music: $('va-sound-music'), musicVal: $('va-sound-music-val'), musicRow: $('va-sound-music-row'),
+    orig: $('va-sound-orig'), origVal: $('va-sound-orig-val'), origRow: $('va-sound-orig-row'),
+    fade: $('va-sound-fade'), fadeVal: $('va-sound-fade-val'), fadeRow: $('va-sound-fade-row'),
+    offset: $('va-sound-offset'), offsetVal: $('va-sound-offset-val'), offsetRow: $('va-sound-offset-row'),
+  };
+  const soundOn = () => state.sound.mode !== 'muted';
+  const clipHasAudio = () => !still && Boolean(realVideo.getAttribute('src')) && state.clip?.hasAudio !== false;
+  const soundTrack = () => soundLibrary?.tracks.find(t => t.id === state.sound.trackId) || null;
+  function soundBuffer() {
+    if (state.sound.mode === 'library') return trackBuffers?.get(state.sound.trackId)?.buffer || null;
+    if (state.sound.mode === 'upload') return soundUpload?.buffer || null;
+    return null;
+  }
+  const soundAudible = () => A.audible(state.sound, { clipHasAudio: clipHasAudio(), hasMusic: Boolean(soundBuffer()) });
+  function soundRecord() {
+    return A.record(state.sound, { track: soundTrack(), upload: soundUpload?.buffer ? soundUpload : null, clip: { source: state.clip?.source || '', url: safeUrl(state.clip?.url) }, rightsTicked: soundRights, clipHasAudio: clipHasAudio() });
+  }
+  function applySound() {
+    if (mixer) mixer.apply(state.sound, { buffer: soundBuffer(), clipHasAudio: clipHasAudio() });
+  }
+  // Follows the video: starts, restarts after a seek or loop, stops on pause.
+  function soundSync() {
+    if (!mixer) return;
+    mixer.sync(els.video.currentTime - state.trimIn, !els.video.paused && !els.video.ended, adDuration());
+  }
+  function setPreviewMuted(on) {
+    previewMuted = on;
+    if (!on && soundOn()) { audioGraph(); audioCtx.resume().catch(() => {}); }
+    if (monitor) monitor.gain.value = previewMuted ? 0 : 1;
+    els.mute.setAttribute('aria-pressed', String(previewMuted));
+    els.mute.setAttribute('aria-label', previewMuted ? 'Unmute preview' : 'Mute preview');
+    els.mute.title = previewMuted ? 'Preview sound: off' : 'Preview sound: on';
+    els.mute.innerHTML = previewMuted ? ICON.soundOff : ICON.soundOn;
+  }
+  function soundClipChanged() {
+    applySound();
+    if (soundReady) renderSound();
+  }
+  function ensureLibrary() {
+    if (soundLibrary) return Promise.resolve(soundLibrary);
+    if (!soundLibraryLoading) {
+      soundLibraryLoading = A.loadLibrary((url, opts) => fetch(url, opts)).then(lib => {
+        soundLibrary = lib;
+        // A remembered track that left the library: back to Muted.
+        if (state.sound.mode === 'library' && state.sound.trackId && !soundTrack()) { state.sound.mode = 'muted'; applySound(); }
+        if (state.sound.mode === 'library' && soundTrack()) loadTrack(soundTrack());
+        renderSound();
+        return lib;
+      });
+    }
+    return soundLibraryLoading;
+  }
+  async function decode(arrayBuffer) {
+    const ac = audioGraph();
+    // Safari's decodeAudioData is callback-only.
+    return new Promise((resolve, reject) => { const p = ac.decodeAudioData(arrayBuffer, resolve, reject); if (p && p.then) p.then(resolve, reject); });
+  }
+  async function loadTrack(track) {
+    if (!track || trackBuffers.get(track.id)?.buffer || trackBuffers.get(track.id)?.loading) return;
+    trackBuffers.set(track.id, { loading: true });
+    renderSound();
+    try {
+      const res = await fetch(track.file, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(String(res.status));
+      const buffer = await decode(await res.arrayBuffer());
+      trackBuffers.set(track.id, { buffer });
+    } catch (error) {
+      trackBuffers.set(track.id, { error: `“${track.title}” could not be loaded.` });
+    }
+    if (state.sound.trackId === track.id) { applySound(); soundSync(); }
+    renderSound();
+    if (state.step === 'export') renderExport();
+  }
+  async function takeAudio(file) {
+    if (!file) return;
+    const check = A.validateUpload(file);
+    if (!check.ok) { soundError = check.error; toast(check.error, { tone: 'bad' }); renderSound(); return; }
+    soundError = '';
+    soundUpload = { name: file.name, size: file.size, buffer: null, loading: true };
+    soundRights = false;
+    state.sound.mode = 'upload';
+    state.sound.offset = 0;
+    renderSound();
+    try {
+      const buffer = await decode(await file.arrayBuffer());
+      if (!buffer || !(buffer.duration > 0)) throw new Error('empty');
+      soundUpload = { name: file.name, size: file.size, buffer };
+    } catch (error) {
+      soundUpload = null;
+      soundError = 'That audio file could not be read. Try an MP3 or WAV.';
+      toast(soundError, { tone: 'bad' });
+    }
+    applySound();
+    soundSync();
+    renderSound();
+    if (state.step === 'export') renderExport();
+  }
+  function setSoundMode(mode) {
+    if (!A.MODES.includes(mode)) return;
+    state.sound.mode = mode;
+    soundError = '';
+    if (mode !== 'muted') {
+      // A click: the browser lets audio start now. Turn the preview speaker on
+      // so the choice is heard straight away.
+      audioGraph();
+      audioCtx.resume().catch(() => {});
+      if (previewMuted) setPreviewMuted(false);
+    }
+    if (mode === 'library') ensureLibrary();
+    if (mode === 'library' && soundTrack()) loadTrack(soundTrack());
+    if (mode === 'upload' && !soundUpload) snd.file.click();
+    applySound();
+    soundSync();
+    renderSound();
+    renderExport();
+    renderSteps();
+    saveDefaults();
+  }
+  // Restores a newsletter's remembered sound (null = the default, Muted).
+  function restoreSound(saved) {
+    state.sound = A.normalize(saved, { library: soundLibrary, hasUpload: false });
+    if (state.sound.mode === 'library') ensureLibrary().then(() => { if (soundTrack()) loadTrack(soundTrack()); });
+    applySound();
+    if (soundReady) renderSound();
+  }
+
+  const fmtDb = db => (db <= A.DB_MIN ? 'Off' : `${db > 0 ? '+' : db < 0 ? '−' : ''}${Math.abs(db)} dB`);
+  const fmtMb = bytes => `${(bytes / 1048576).toFixed(1)} MB`;
+  function paintRange(input) {
+    const min = Number(input.min);
+    const max = Number(input.max);
+    input.style.setProperty('--p', `${max > min ? ((Number(input.value) - min) / (max - min)) * 100 : 0}%`);
+  }
+  function renderSoundValues() {
+    const s = state.sound;
+    const ducked = A.usesMusic(s) && s.keepOriginal;
+    snd.music.value = String(s.musicDb);
+    snd.musicVal.textContent = fmtDb(s.musicDb);
+    snd.orig.value = String(ducked ? s.duckDb : s.originalDb);
+    snd.origVal.textContent = fmtDb(ducked ? s.duckDb : s.originalDb);
+    snd.fade.value = String(s.fade);
+    snd.fadeVal.textContent = `${s.fade.toFixed(1)} s`;
+    const buf = soundBuffer();
+    const maxOffset = buf ? Math.max(0, Math.floor((buf.duration - 0.5) * 10) / 10) : 0;
+    snd.offset.max = String(maxOffset);
+    snd.offset.disabled = !maxOffset;
+    snd.offset.value = String(Math.min(s.offset, maxOffset));
+    snd.offsetVal.textContent = fmtFine(Math.min(s.offset, maxOffset));
+    snd.keep.checked = s.keepOriginal;
+    snd.loop.checked = s.loop;
+    [snd.music, snd.orig, snd.fade, snd.offset].forEach(paintRange);
+  }
+  function trackMeta(t) {
+    return [t.mood && t.mood[0].toUpperCase() + t.mood.slice(1), t.bpm ? `${t.bpm} BPM` : '', t.durationSec ? fmt(t.durationSec) : ''].filter(Boolean).join(' · ');
+  }
+  function renderSound() {
+    if (!snd.root) return;
+    const s = state.sound;
+    markRadios(snd.modes, 'sound', s.mode);
+    const realClip = clipHasAudio();
+    const music = A.usesMusic(s);
+    let html = '';
+    if (s.mode === 'muted') {
+      html = '<p class="va-hint">No audio track in the MP4. Most people scroll feeds with the sound off; the copy carries the ad.</p>';
+    } else if (s.mode === 'original') {
+      html = still
+        ? `<p class="va-notice">${ICON.alert}<span>An ${state.clip?.source === 'photo' ? 'photo' : 'animated background'} has no sound of its own. Pick music or upload a track.</span></p>`
+        : !realVideo.getAttribute('src') ? '<p class="va-hint">The clip’s own sound, once you add a clip.</p>'
+          : state.clip?.hasAudio === false ? `<p class="va-notice">${ICON.alert}<span>This clip has no sound. Pick music or upload a track.</span></p>`
+            : '<p class="va-hint">The clip’s own sound. Make sure you have the rights to it.</p>';
+    } else if (s.mode === 'library') {
+      if (!soundLibrary) html = '<p class="va-hint">Loading the FrameUp audio library…</p>';
+      else if (soundLibrary.empty) {
+        html = `<div class="es-empty va-sound__empty"><p class="es-empty__copy">${esc(A.EMPTY_LIBRARY)}</p><button class="es-btn es-btn--sm es-btn--secondary" type="button" data-sound-act="pick">Upload audio</button></div>`;
+      } else {
+        const t = soundTrack();
+        const st = t ? trackBuffers.get(t.id) : null;
+        html = `<div class="va-sound__tracks" role="radiogroup" aria-label="Library tracks">${soundLibrary.tracks.map(x => `<button type="button" role="radio" data-track="${esc(x.id)}" aria-checked="${x.id === s.trackId}" tabindex="${x.id === s.trackId || (!t && x === soundLibrary.tracks[0]) ? 0 : -1}"><span class="va-sound__tname">${esc(x.title)}</span><span class="va-sound__tmeta">${esc(trackMeta(x))}</span><span class="es-badge ${x.licence.paid ? 'es-badge--good' : ''}" title="${esc(x.licence.note)}">${esc(A.licenceLabel(x.licence))}</span></button>`).join('')}</div>`
+          + (st?.loading ? `<p class="va-hint">Loading “${esc(t.title)}”…</p>` : '')
+          + (st?.error ? `<p class="va-warn" role="alert">${esc(st.error)}</p>` : '')
+          + (t && !t.licence.paid ? `<p class="va-notice va-notice--warn">${ICON.alert}<span><b>Organic posts only.</b> This track isn’t cleared for paid ads. Use it for an organic post, or pick a track cleared for paid.</span></p>` : '');
+      }
+    } else if (s.mode === 'upload') {
+      if (soundUpload?.loading) html = `<p class="va-hint">Reading ${esc(soundUpload.name)}…</p>`;
+      else if (soundUpload?.buffer) {
+        html = `<div class="va-sound__file">${ICON.soundOn}<span class="va-sound__fname">${esc(soundUpload.name)}</span><span class="va-meta">${fmt(soundUpload.buffer.duration)} · ${fmtMb(soundUpload.size)}</span><span class="va-sound__facts"><button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-sound-act="pick">Replace</button><button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-sound-act="remove">Remove</button></span></div>`
+          + `<label class="va-check va-sound__rights"><input type="checkbox" data-sound-rights${soundRights ? ' checked' : ''}><span>I have the rights to use this audio <span class="va-hint">Optional; saved with the export</span></span></label>`;
+      } else {
+        html = '<div class="va-sound__pick"><button class="es-btn es-btn--sm es-btn--secondary" type="button" data-sound-act="pick">Choose an audio file</button><span class="va-hint">MP3, M4A or WAV, up to 15 MB. Kept in this tab only.</span></div>';
+      }
+    }
+    if (soundError) html += `<p class="va-warn" role="alert">${esc(soundError)}</p>`;
+    // Keep focus on a track button across the re-render.
+    const focusTrack = document.activeElement?.dataset?.track;
+    snd.body.innerHTML = html;
+    if (focusTrack) snd.body.querySelector(`[data-track="${CSS.escape(focusTrack)}"]`)?.focus();
+    const hasMusic = music && Boolean(soundBuffer());
+    snd.mix.hidden = !(hasMusic || (s.mode === 'original' && realClip));
+    snd.keepRow.hidden = !hasMusic || !realClip;
+    snd.musicRow.hidden = !hasMusic;
+    snd.origRow.hidden = !(s.mode === 'original' || (hasMusic && s.keepOriginal && realClip));
+    snd.origRow.querySelector('.va-sound__row > span').textContent = hasMusic ? 'Clip under music' : 'Clip volume';
+    snd.fadeRow.hidden = !hasMusic;
+    snd.offsetRow.hidden = !hasMusic;
+    snd.loopRow.hidden = !hasMusic;
+    renderSoundValues();
+    snd.sum.textContent = A.describe(s, { track: soundTrack(), upload: soundUpload?.buffer ? soundUpload : null, clipHasAudio: realClip });
+  }
+
+  radioGroup(snd.modes, 'sound', mode => { if (!exporting) setSoundMode(mode); });
+  snd.body.addEventListener('click', event => {
+    if (exporting) return;
+    const track = event.target.closest('[data-track]');
+    if (track) {
+      state.sound.trackId = track.dataset.track;
+      state.sound.offset = 0;
+      loadTrack(soundTrack());
+      applySound();
+      renderSound();
+      renderExport();
+      saveDefaults();
+      return;
+    }
+    const act = event.target.closest('[data-sound-act]')?.dataset.soundAct;
+    if (act === 'pick') snd.file.click();
+    if (act === 'remove') {
+      soundUpload = null;
+      soundRights = false;
+      state.sound.mode = 'muted';
+      applySound();
+      soundSync();
+      renderSound();
+      renderExport();
+      saveDefaults();
+    }
+  });
+  snd.body.addEventListener('keydown', event => {
+    const list = [...snd.body.querySelectorAll('[data-track]')];
+    const i = list.indexOf(document.activeElement);
+    const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
+    if (i < 0 || !step) return;
+    event.preventDefault();
+    const next = list[(i + step + list.length) % list.length];
+    next.focus();
+    next.click();
+  });
+  snd.body.addEventListener('change', event => { if (event.target.matches('[data-sound-rights]')) soundRights = event.target.checked; });
+  snd.file.addEventListener('change', () => { takeAudio(snd.file.files?.[0]); snd.file.value = ''; });
+  const soundInput = (input, fn) => {
+    input.addEventListener('input', () => { fn(Number(input.value)); applySound(); renderSoundValues(); });
+    input.addEventListener('change', () => { soundSync(); renderSound(); saveDefaults(); });
+  };
+  soundInput(snd.music, v => { state.sound.musicDb = v; });
+  soundInput(snd.orig, v => { if (A.usesMusic(state.sound) && state.sound.keepOriginal) state.sound.duckDb = v; else state.sound.originalDb = v; });
+  soundInput(snd.fade, v => { state.sound.fade = v; });
+  soundInput(snd.offset, v => { state.sound.offset = v; });
+  snd.keep.addEventListener('change', () => { state.sound.keepOriginal = snd.keep.checked; applySound(); renderSound(); saveDefaults(); });
+  snd.loop.addEventListener('change', () => { state.sound.loop = snd.loop.checked; applySound(); soundSync(); saveDefaults(); });
+  // The clip's own sound can start or stop with the element (seek, load, end).
+  ['play', 'pause', 'seeked', 'ended'].forEach(type => realVideo.addEventListener(type, () => soundSync()));
+  realVideo.addEventListener('loadedmetadata', () => soundClipChanged());
+  soundReady = true;
+  renderSound();
+
   // ─── Start ───────────────────────────────────────────────────────────────
   renderNoClip();
   $('va-empty-animated')?.addEventListener('click', () => useStill('animated'));
@@ -3922,6 +4294,14 @@
       setBrand(B.forSport(m.sport).id);
       state.copyTrend = { id: m.id, sport: m.sport, title: String(m.title || '').slice(0, 200), url: m.url || '', image: m.image || '', related: Array.isArray(m.related) ? m.related : [] };
       if (m.team) { state.team = String(m.team).slice(0, 80); state.teamSport = m.sport; }
+      // By moment opens on that story's sport and team (named, or the team its title names first).
+      const hf = window.VideoAdsMoments?.handoffFilter?.(m);
+      if (hf) {
+        state.sport = hf.sport;
+        [...els.sports.children].forEach(c => c.setAttribute('aria-pressed', String(c.dataset.sport === hf.sport)));
+        mo.team = hf.team;
+        mo.handoff = hf.team ? { title: hf.title } : null;
+      }
       els.momentFold.open = true;
       renderMoments();
       sessionStorage.removeItem('frameup.videoAdMoment.v1');
@@ -3937,5 +4317,5 @@
   relayout();
   defaultsReady = true;
   loadClaims();
-  window.VideoAdsPage = { state, syncRail, bg, finds, relayout, layoutFor, exportSizes, startExport, useClip, goStep, findClips, findByColor, selectMoment, sendChat, generateDrafts, checkGrammar, lintText, openAi, closeAi, applyCopy, undo, setTrim, logEvent, pickStyle, useStill, renderSafe, localSuggestion, resolvedCopy, renderExport, makeSet, setFromCurrentCopy, editAngle, runPreflight, scoreAd, applyDefaults, resetDefaults, readDefaults, setPlacement, loadClaims };
+  window.VideoAdsPage = { state, syncRail, bg, finds, relayout, layoutFor, exportSizes, startExport, useClip, goStep, findClips, findByColor, selectMoment, sendChat, generateDrafts, checkGrammar, lintText, openAi, closeAi, applyCopy, undo, setTrim, logEvent, pickStyle, useStill, renderSafe, localSuggestion, resolvedCopy, renderExport, makeSet, setFromCurrentCopy, editAngle, runPreflight, scoreAd, applyDefaults, resetDefaults, readDefaults, loadClaims };
 })();

@@ -17,6 +17,24 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-18 — Video Ads: clip sound muted by default, Sound control, shared audio library; toolbar back to one row (branch feature/va-audio)
+- Status: `[committed on feature/va-audio — not pushed]`. Based on feature/va-library-icon.
+- **Muted by default**: the clip's own audio is off in the preview and in every export (single, Export 3 styles, Today's set). A muted export has NO audio track. New `video-ads-audio.js` (UMD, `window.VideoAdsAudio`): library parsing, upload validation (mp3/m4a/wav, 15 MB), levels (music -6 dB, clip ducked to -12 dB under music), fade / loop / trim-start maths, rights record, and `createMixer(ac)` (one Web Audio bus feeds the preview speaker and the recorder, so the preview hears the export mix).
+- **Sound control** in Export (under Sizes / Export 3 styles): Muted | Original | Music | Upload; music volume, clip volume, fade in/out (0.5 s), start-the-track-at, loop to length, "Keep the clip's sound underneath". Remembered per newsletter in the brand defaults (`sound`); uploads stay in this tab only (like uploaded clips). Upload has an optional "I have the rights to use this audio" tick. Library tracks not cleared for paid ads show a warning (non-blocking).
+- **Shared library** `audio-library.json` (EMPTY; "about" says how to add tracks) + `assets/audio/`. Empty state: "No tracks yet. Upload your own, or ask an admin to add library tracks." Reels Studio can point at the same file later (reel-* files untouched).
+- Learning event `export` gets `sound` (mode, audible, clip source, track id + licence, or upload name + rights tick, levels).
+- **Toolbar** (owner: "no need of Feed/Story/Reels"): Meta preview and Safe zone back in the top row with newsletter + size; the Feed / Story / Reels switch, its state, persistence and the Stories mock are removed. Meta preview follows the size: 9:16 → Reels, 4:5 / 1:1 → Feed. Narrow stages (1024–1199) use text-only segments; labels show when the toolbar has room. Phones keep their two-row grid.
+- Tests: new `scripts/test-video-ads-audio.mjs`; `test-video-ads-hero.mjs` updated (no #va-placement). Cache key `20261118-va-audio`.
+### 2026-11-18 — Video Ads clips: By moment = trending plays of the last 5 days; 720p and game action everywhere (branch feature/va-moments)
+- Status: `[committed on feature/va-moments — not pushed]`. Based on `feature/va-library-icon`. Docs: `project-docs/clips-library.md` (new last section).
+- **By moment** is no longer news headlines: the most popular clips of the last 5 days, one card per play (near-duplicates clustered: media key, soft key, shared player name + team / words + time), best version first, "+N angles" opens the others. Sport chips + **Team** and **Colour** filters + **Trending / Newest / Most viewed**. Trends hand-off (`frameup.videoAdMoment.v1`) pre-filters to the story's team.
+- New shared UMD `video-ads-moments.js` (cluster, velocity, trend score, title cleaning, grounded AI-title check, filters, facets, hand-off) + `video-ads-moments.css` (moment cards, kept apart from video-ads.css for merging).
+- Server `moments-with-clips` reworked (name kept): library first, free top-up, one capped paid round; optional light-tier titles (≤ $0.005/refresh, cached 6 h, gated). Library mode defaults to Trending.
+- **720p floor** everywhere (`CLIP_MIN_SHORT_SIDE`); **game action only** (`_clip-classify.js`: Haiku 5.5 vision in the daily prefetch, ≤ $0.30/day, `ai` column via migration `20261118121800_frameup_clip_library_ai.sql`, rules fallback). Prefetch also refreshes likes / views (free). Page picks the 1080p variant when there is one.
+- By team / By colour / Library cards are moment cards too (clustered, Trending default).
+- Tests: new `scripts/test-video-ads-moments.mjs` (in `test:clips`); moments sections of `test-video-ads.mjs` and `test-clip-library.mjs` rewritten for the new contract; fixtures given game wording / 720p.
+- Cache key `20261118-va-moments` (video-ads.js, video-ads.css, new moments js/css).
+
 ### 2026-11-19 — Generate asset service: AI backgrounds and concept art, cut-outs, varied ES photos (branch feature/gen-assets)
 - Status: `[committed on feature/gen-assets — not pushed]`. Spec: `scratchpad/gen-creative-contract.md` (agent gen-assets). Docs: `project-docs/gen-assets.md`.
 - New `netlify/functions/_asset-service.js` (`generateBackground`, `generateConceptArt`, `cutout`, `findPhotos`, `status`), `netlify/functions/gen-assets.js` + `api/gen-assets.js` (`GET/POST /api/gen-assets`, vercel.json maxDuration 60), browser client `frameup-assets.js` (`window.FrameUpAssets`, not loaded by any page yet: the gen-creative composer loads it).

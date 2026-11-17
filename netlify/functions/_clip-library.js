@@ -31,10 +31,19 @@ const MEMORY_MAX = 3000;
 const RETRY_MS = 10 * 60e3;
 const TIMEOUT_MS = 4000;
 const SOURCE_KINDS = ['official', 'league', 'media', 'fan'];
+// The quality floor for every Video Ads clip (owner, 2026-11-18): the best
+// version's short side must be at least 720 px. Shared by video-ads.js, the
+// sources and the library reads, so an older 480p row never comes back.
+const CLIP_MIN_SHORT_SIDE = 720;
+const shortSideOf = row => (row.width && row.height ? Math.min(row.width, row.height) : 0);
 
 const memory = new Map(); // url -> row
 const memoryRuns = [];
-const state = { installed: null, checkedAt: 0, lastError: '' };
+const state = { installed: null, checkedAt: 0, lastError: '', aiColumn: null, aiCheckedAt: 0 };
+// The `ai` column (migration 20261118121800) may not exist yet: rows are then
+// written without it (the verdict stays in memory) and it is retried every 10 minutes.
+const aiColumnOn = () => state.aiColumn !== false || Date.now() - state.aiCheckedAt >= RETRY_MS;
+const missingColumn = error => /PGRST204|42703|column/i.test(`${error?.code || ''} ${error?.message || ''} ${error?.body || ''} ${JSON.stringify(error?.details || '')}`);
 
 const isOff = value => /^(off|0|false|no|disabled)$/i.test(String(value ?? '').trim());
 const enabled = (env = process.env) => !isOff(env.CLIPS_LIBRARY);
@@ -106,6 +115,7 @@ function toRow(clip, { sport, teams = [], players = [], foundBy = '' } = {}) {
     views: int(clip.views),
     last_checked: new Date().toISOString(),
     dead: false,
+    ...(clip.ai && typeof clip.ai === 'object' && typeof clip.ai.isGameAction === 'boolean' ? { ai: clip.ai } : {}),
   };
 }
 
@@ -139,6 +149,9 @@ function fromRow(row, now = Date.now()) {
     foundBy: row.found_by || '',
     mediaKey: row.media_key || '',
     firstSeen: isoOf(row.first_seen),
+    // When likes / views were last read (velocity = engagement per hour up to then).
+    checkedAt: isoOf(row.last_checked),
+    ...(row.ai && typeof row.ai === 'object' ? { ai: row.ai } : {}),
     score: Number(row.score || 0),
     fromLibrary: true,
   };
@@ -181,6 +194,7 @@ async function read({ sport, teams = [], sinceHours = KEEP_DAYS * 24, limit = 30
   }
   const now = Date.now();
   return [...rows.values()]
+    .filter(r => shortSideOf(r) >= CLIP_MIN_SHORT_SIDE)
     .sort((a, b) => new Date(b.posted_at) - new Date(a.posted_at))
     .slice(0, limit)
     .map(r => fromRow(r, now));
@@ -196,18 +210,71 @@ async function write(items = []) {
     if (!item?.clip?.url || !SPORTS.includes(item.sport)) return;
     const row = toRow(item.clip, item);
     if (!row.posted_at || !row.variants.length || seen.has(row.url)) return;
-    // Merge the teams of an earlier row for the same url.
+    // Merge the teams (and a stored AI verdict) of an earlier row for the same url.
     const had = memory.get(row.url);
     if (had) row.teams = [...new Set([...(had.teams || []), ...row.teams])].slice(0, 8);
+    if (had?.ai && !row.ai) row.ai = had.ai;
     seen.add(row.url);
     rows.push(row);
     memoryPut(row);
   });
   if (!rows.length || !canWrite()) return { written: rows.length, remote: false };
-  const got = await rest(`${TABLE}?on_conflict=url`, {
-    method: 'POST', service: true, body: rows, prefer: 'resolution=merge-duplicates,return=minimal',
+  // Rows without a verdict never send `ai` (an upsert would wipe a stored one).
+  const strip = list => list.map(({ ai, ...r }) => r);
+  const send = list => rest(`${TABLE}?on_conflict=url`, {
+    method: 'POST', service: true, body: list, prefer: 'resolution=merge-duplicates,return=minimal',
   });
-  return { written: rows.length, remote: got.ok };
+  const withAi = rows.filter(r => r.ai);
+  const without = strip(rows.filter(r => !r.ai));
+  let ok = true;
+  if (without.length) ok = (await send(without)).ok && ok;
+  if (withAi.length) {
+    let got = aiColumnOn() ? await send(withAi) : { ok: false, error: { code: 'PGRST204' } };
+    if (!got.ok && missingColumn(got.error)) {
+      state.aiColumn = false; state.aiCheckedAt = Date.now();
+      got = await send(strip(withAi));
+    } else if (got.ok && withAi.length) state.aiColumn = true;
+    ok = got.ok && ok;
+  }
+  return { written: rows.length, remote: ok };
+}
+
+// Stores AI verdicts ({ url -> verdict }) on existing rows. Memory always; the
+// database when the `ai` column exists. -> count stored remotely
+async function setAi(verdicts) {
+  const list = [...(verdicts instanceof Map ? verdicts.entries() : Object.entries(verdicts || {}))].filter(([url, v]) => url && v).slice(0, 200);
+  if (!enabled() || !list.length) return 0;
+  list.forEach(([url, v]) => { const row = memory.get(url); if (row) row.ai = v; });
+  if (!canWrite() || !aiColumnOn()) return 0;
+  let stored = 0;
+  for (let i = 0; i < list.length; i += 10) {
+    const results = await Promise.all(list.slice(i, i + 10).map(([url, v]) => rest(`${TABLE}?url=${inList([url])}`, {
+      method: 'PATCH', service: true, body: { ai: v }, prefer: 'return=minimal',
+    })));
+    if (results.some(r => !r.ok && missingColumn(r.error))) { state.aiColumn = false; state.aiCheckedAt = Date.now(); return stored; }
+    state.aiColumn = true;
+    stored += results.filter(r => r.ok).length;
+  }
+  return stored;
+}
+
+// Fresh likes / views for existing rows ([{ url, likes, views }]); stamps
+// last_checked, which is when the numbers were read. -> count
+async function setEngagement(items = []) {
+  const list = (items || []).filter(x => x && x.url).slice(0, 100);
+  if (!enabled() || !list.length) return 0;
+  const at = new Date().toISOString();
+  list.forEach(x => {
+    const row = memory.get(x.url);
+    if (row) { row.likes = Math.max(int(row.likes), int(x.likes)); row.views = Math.max(int(row.views), int(x.views)); row.last_checked = at; }
+  });
+  if (!canWrite()) return list.length;
+  for (let i = 0; i < list.length; i += 10) {
+    await Promise.all(list.slice(i, i + 10).map(x => rest(`${TABLE}?url=${inList([x.url])}`, {
+      method: 'PATCH', service: true, body: { likes: int(x.likes), views: int(x.views), last_checked: at }, prefer: 'return=minimal',
+    })));
+  }
+  return list.length;
 }
 
 // Marks links dead (the post or file is gone). -> count
@@ -289,11 +356,14 @@ async function recentRuns({ hours = 24, limit = 60 } = {}) {
 }
 
 // AI spend of the prefetch runs today (UTC), for the daily cap.
-async function spentToday() {
+// pick(run) -> the part of a run's spend to count (default: the search spend,
+// summary.searchCost, falling back to cost_usd for runs from before it existed).
+const searchSpend = r => Number(r.summary?.searchCost ?? r.cost_usd ?? 0);
+async function spentToday({ pick = searchSpend } = {}) {
   const midnight = new Date();
   midnight.setUTCHours(0, 0, 0, 0);
   const runs = await recentRuns({ hours: (Date.now() - midnight.getTime()) / 3600e3, limit: 200 });
-  return runs.reduce((sum, r) => sum + Number(r.cost_usd || 0), 0);
+  return runs.reduce((sum, r) => sum + (Number(pick(r)) || 0), 0);
 }
 
 // Counts for the admin diagnostics: per sport, team, platform, source kind.
@@ -342,11 +412,13 @@ function _reset() {
   state.installed = null;
   state.checkedAt = 0;
   state.lastError = '';
+  state.aiColumn = null;
+  state.aiCheckedAt = 0;
 }
 
 module.exports = {
-  TABLE, RUNS, KEEP_DAYS, FRESH_HOURS,
-  enabled, read, write, markDead, touch, staleRows, purge, recordRun, recentRuns, spentToday, stats, status,
+  TABLE, RUNS, KEEP_DAYS, FRESH_HOURS, CLIP_MIN_SHORT_SIDE,
+  enabled, read, write, setAi, setEngagement, markDead, touch, staleRows, purge, recordRun, recentRuns, spentToday, stats, status,
   toRow, fromRow,
   _test: { memory, memoryRuns, state, reset: _reset },
 };

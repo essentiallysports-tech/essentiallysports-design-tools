@@ -26,7 +26,8 @@
   <link rel="stylesheet" href="es-ui.css?v=20261119-rel3">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="video-ads.css?v=20261119-rel3">
+  <link rel="stylesheet" href="video-ads.css?v=20261119-va-combined">
+  <link rel="stylesheet" href="video-ads-moments.css?v=20261119-va-combined">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
@@ -93,16 +94,11 @@
             <button type="button" role="radio" data-size="1x1" aria-checked="false"><span class="va-ratio va-ratio--1x1" aria-hidden="true"></span>1:1</button>
           </div>
           <div class="va-toolbar__end">
-            <button class="es-btn es-btn--sm" type="button" id="va-meta-toggle" aria-pressed="false" title="See the ad as it shows on Instagram and Facebook">
+            <button class="es-btn es-btn--sm" type="button" id="va-meta-toggle" aria-pressed="false" aria-label="Meta preview" title="Meta preview: the ad as it shows on Instagram and Facebook (9:16 in Reels, 4:5 and 1:1 in the feed)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
               <span>Meta preview</span>
             </button>
-            <div class="va-seg va-seg--sm" role="radiogroup" aria-label="Meta placement" id="va-placement" hidden>
-              <button type="button" role="radio" data-place="feed" aria-checked="false" title="Instagram / Facebook feed">Feed</button>
-              <button type="button" role="radio" data-place="story" aria-checked="false" title="Stories">Story</button>
-              <button type="button" role="radio" data-place="reel" aria-checked="true" title="Reels">Reels</button>
-            </div>
-            <button class="es-btn es-btn--sm" type="button" id="va-safe-toggle" aria-pressed="false" title="Show the areas Meta's Reels buttons, profile row and caption cover">
+            <button class="es-btn es-btn--sm" type="button" id="va-safe-toggle" aria-pressed="false" aria-label="Safe zone" title="Safe zone: the areas Meta's Reels buttons, profile row and caption cover">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" stroke-dasharray="3 2.4"/><path d="M5 15h14"/><path d="M5 6h14"/></svg>
               <span>Safe zone</span>
             </button>
@@ -339,15 +335,19 @@
 
         <!-- 2 Clip -->
         <section class="va-pane" data-pane="clip" aria-labelledby="va-h-clip" hidden>
-          <header class="va-pane__head">
-            <h2 id="va-h-clip" tabindex="-1">Find a clip</h2>
-            <p>Team videos posted on X in the last 5 days.</p>
+          <header class="va-pane__head va-pane__head--action">
+            <div class="va-pane__titles">
+              <h2 id="va-h-clip" tabindex="-1">Find a clip</h2>
+              <p>Game clips from the last 5 days, 720p and up, most popular first.</p>
+            </div>
+            <button class="va-icon-btn va-lib-btn" type="button" id="va-tab-library" data-tab="library" aria-controls="va-by-library" aria-pressed="false" aria-label="Clip library: every fresh clip we've found" title="Clip library">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></svg>
+            </button>
           </header>
           <div class="va-tabs es-tabs" role="tablist" aria-label="How to find a clip" id="va-clip-tabs">
             <button class="va-tab es-tab" type="button" role="tab" id="va-tab-team" data-tab="team" aria-controls="va-by-team" aria-selected="true">By team</button>
             <button class="va-tab es-tab" type="button" role="tab" id="va-tab-color" data-tab="color" aria-controls="va-by-color" aria-selected="false" tabindex="-1">By colour</button>
             <button class="va-tab es-tab" type="button" role="tab" id="va-tab-moment" data-tab="moment" aria-controls="va-by-moment" aria-selected="false" tabindex="-1">By moment</button>
-            <button class="va-tab es-tab" type="button" role="tab" id="va-tab-library" data-tab="library" aria-controls="va-by-library" aria-selected="false" tabindex="-1">Library</button>
             <button class="va-tab es-tab" type="button" role="tab" id="va-tab-link" data-tab="link" aria-controls="va-by-link" aria-selected="false" tabindex="-1">Link / upload</button>
           </div>
 
@@ -390,12 +390,12 @@
                 <button class="va-chip" type="button" data-sport="cfb" aria-pressed="false">CFB</button>
                 <button class="va-chip" type="button" data-sport="mlb" aria-pressed="false">MLB</button>
               </div>
-              <button class="va-icon-btn es-refresh" type="button" id="va-refresh" aria-label="Refresh trends" title="Refresh trends">
+              <button class="va-icon-btn es-refresh" type="button" id="va-refresh" aria-label="Refresh trending clips" title="Refresh trending clips">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
               </button>
             </div>
-            <p class="va-hint" id="va-trends-status" role="status">Loading the last 48 hours…</p>
-            <ul class="va-trends" id="va-trends" aria-label="Trending moments"></ul>
+            <p class="va-hint" id="va-trends-status" role="status">Finding the most popular clips of the last 5 days…</p>
+            <ul class="va-trends" id="va-trends" aria-label="Trending clips, one card per play"></ul>
           </div>
 
           <div class="va-tabpanel" id="va-by-library" role="tabpanel" aria-labelledby="va-tab-library" hidden>
@@ -435,7 +435,7 @@
         <section class="va-pane" data-pane="export" aria-labelledby="va-h-export" hidden>
           <header class="va-pane__head">
             <h2 id="va-h-export" tabindex="-1">Export</h2>
-            <p>MP4 with sound. Records in real time.</p>
+            <p>MP4, recorded in real time. Sound is off unless you add it.</p>
           </header>
           <div class="va-field" id="va-exmode-row" hidden>
             <span class="va-label" id="va-exmode-label">What to export</span>
@@ -457,6 +457,30 @@
             <div class="va-grid-styles" id="va-grid-styles" role="group" aria-label="Styles in the test set" hidden></div>
             <p class="va-hint va-grid-names" id="va-grid-names"></p>
           </div>
+          <section class="va-field va-sound" id="va-sound" aria-labelledby="va-sound-label">
+            <div class="va-field__top">
+              <span class="va-label" id="va-sound-label">Sound</span>
+              <span class="va-hint va-sound__sum" id="va-sound-sum" aria-live="polite">Muted</span>
+            </div>
+            <div class="va-seg va-seg--full va-sound__modes" role="radiogroup" aria-labelledby="va-sound-label" id="va-sound-mode">
+              <button type="button" role="radio" data-sound="muted" aria-checked="true">Muted</button>
+              <button type="button" role="radio" data-sound="original" aria-checked="false">Original</button>
+              <button type="button" role="radio" data-sound="library" aria-checked="false">Music</button>
+              <button type="button" role="radio" data-sound="upload" aria-checked="false">Upload</button>
+            </div>
+            <div class="va-sound__body" id="va-sound-body"></div>
+            <div class="va-sound__mix" id="va-sound-mix" hidden>
+              <label class="va-switch va-sound__keep" id="va-sound-keep-row"><input type="checkbox" id="va-sound-keep"><span class="va-switch__track" aria-hidden="true"></span><span>Keep the clip’s sound underneath <span class="va-hint">Ducked to −12 dB under the music</span></span></label>
+              <div class="va-sound__sliders">
+                <label class="va-sound__slider" id="va-sound-music-row"><span class="va-sound__row"><span>Music volume</span><output id="va-sound-music-val">−6 dB</output></span><input class="va-rail__range" type="range" id="va-sound-music" min="-40" max="6" step="1" value="-6"></label>
+                <label class="va-sound__slider" id="va-sound-orig-row"><span class="va-sound__row"><span>Clip volume</span><output id="va-sound-orig-val">0 dB</output></span><input class="va-rail__range" type="range" id="va-sound-orig" min="-40" max="6" step="1" value="0"></label>
+                <label class="va-sound__slider" id="va-sound-fade-row"><span class="va-sound__row"><span>Fade in and out</span><output id="va-sound-fade-val">0.5 s</output></span><input class="va-rail__range" type="range" id="va-sound-fade" min="0" max="3" step="0.1" value="0.5"></label>
+                <label class="va-sound__slider" id="va-sound-offset-row"><span class="va-sound__row"><span>Start the track at</span><output id="va-sound-offset-val">0:00.0</output></span><input class="va-rail__range" type="range" id="va-sound-offset" min="0" max="0" step="0.1" value="0"></label>
+              </div>
+              <label class="va-switch" id="va-sound-loop-row"><input type="checkbox" id="va-sound-loop" checked><span class="va-switch__track" aria-hidden="true"></span><span>Loop to the ad’s length <span class="va-hint">Off: silence after the track ends</span></span></label>
+            </div>
+            <input type="file" id="va-sound-file" accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/x-wav" hidden>
+          </section>
           <div class="va-ready" id="va-ready"></div>
           <section class="va-preflight" id="va-preflight" aria-labelledby="va-preflight-title">
             <div class="va-field__top">
@@ -495,10 +519,12 @@
   <script src="video-ads-brands.js?v=20261119-rel3"></script>
   <script src="video-ads-styles.js?v=20261119-rel3"></script>
   <script src="video-ads-teams.js?v=20261117-tlogo1"></script>
+  <script src="video-ads-moments.js?v=20261119-va-combined"></script>
   <script src="video-ads-render.js?v=20261119-rel3"></script>
   <script src="video-ads-rating.js?v=20261118-hero-video-ads"></script>
+  <script src="video-ads-audio.js?v=20261118-va-audio"></script>
   <script src="es-motion.js?v=20261115-ds1"></script>
   <script src="league-logos.js?v=20261117-logo1"></script>
-  <script src="video-ads.js?v=20261119-rel3"></script>
+  <script src="video-ads.js?v=20261119-va-combined"></script>
 </body>
 </html>

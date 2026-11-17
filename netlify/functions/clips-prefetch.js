@@ -33,7 +33,7 @@
 const crypto = require('node:crypto');
 const { authConfig, bearerToken } = require('./_supabase-auth.js');
 const { request, serviceRoleKey } = require('./_supabase-rest.js');
-const { gatewayConfigured, featureDisabled } = require('./_ai-gateway.js');
+const { gatewayConfigured, featureDisabled, aiSpendGate } = require('./_ai-gateway.js');
 const TEAMS = require('../../video-ads-teams.js');
 const { clipPipeline: P } = require('./video-ads.js');
 
@@ -49,7 +49,13 @@ const CONFIG = {
   aiEstimateUsd: 0.06, // reserve per AI team before spending
   webUses: 2, webCostUsd: 0.03,
   recheck: 15, recheckAfterHours: 20,
+  // Engagement: re-read likes / views of the newest X clips (free, fxtwitter /
+  // syndication), so By moment ranks by views per hour with no extra calls.
+  engagement: 24, engagementMaxAgeHours: 72, engagementAfterHours: 3,
+  // AI "is it game action?" verdicts for unclassified fresh clips, per batch.
+  classifyPerBatch: 48, classifyMs: 30000,
 };
+const CLASSIFY_FEATURE = 'clips-classify';
 
 function json(statusCode, body) {
   return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) };
@@ -60,6 +66,9 @@ function header(headers, name) {
   return Array.isArray(value) ? String(value[0] || '') : String(value || '');
 }
 const isOff = value => /^(off|0|false|no|disabled)$/i.test(String(value ?? '').trim());
+
+// Today's classification spend (summary.classify.cost of today's runs).
+const classifySpentToday = () => LIB.spentToday({ pick: r => r.summary?.classify?.cost || 0 });
 
 // Constant-time comparison of the presented secret with CRON_SECRET.
 function cronAuthorized(headers, secret = process.env.CRON_SECRET) {
@@ -91,11 +100,13 @@ async function isAdmin(token) {
   }
 }
 
+const usdEnv = (value, fallback) => (Number.isFinite(Number(value)) && value !== '' && value != null ? Math.max(0, Number(value)) : fallback);
 const settings = (env = process.env) => {
   const batches = Math.max(1, Math.min(24, Math.floor(Number(env.CLIPS_PREFETCH_BATCHES) || 10)));
-  const maxUsd = Number.isFinite(Number(env.CLIPS_PREFETCH_MAX_USD)) && env.CLIPS_PREFETCH_MAX_USD !== '' && env.CLIPS_PREFETCH_MAX_USD != null
-    ? Math.max(0, Number(env.CLIPS_PREFETCH_MAX_USD)) : 0.75;
-  return { batches, maxUsd };
+  const maxUsd = usdEnv(env.CLIPS_PREFETCH_MAX_USD, 0.75);
+  // Classification has its own daily cap (owner: <= $0.30/day).
+  const classifyUsd = usdEnv(env.CLIPS_CLASSIFY_MAX_USD, 0.3);
+  return { batches, maxUsd, classifyUsd };
 };
 
 // Every team, in a stable order (sport, then name).
@@ -136,12 +147,12 @@ async function trendingTeams(max = CONFIG.maxTrending) {
 
 // AI spend by the cron, logged like any other AI call (service role, as the
 // cron has no user session). Best effort.
-async function logAiUsage(cost, { model = 'clips-prefetch', ok = true, ms = 0 } = {}) {
+async function logAiUsage(cost, { model = 'clips-prefetch', ok = true, ms = 0, feature = FEATURE } = {}) {
   if (!(cost > 0) || !serviceRoleKey()) return;
   try {
     await request('frameup_ai_usage', {
       method: 'POST', service: true, prefer: 'return=minimal',
-      body: { user_email: 'clips-prefetch@essentiallysports.com', feature: FEATURE, model, ok, cost_usd: Number(cost.toFixed(6)), duration_ms: ms },
+      body: { user_email: 'clips-prefetch@essentiallysports.com', feature, model, ok, cost_usd: Number(cost.toFixed(6)), duration_ms: ms },
     }, (u, init) => fetch(u, { ...init, signal: AbortSignal.timeout(3000) }));
   } catch { /* tracking is best effort */ }
 }
@@ -209,10 +220,11 @@ async function recheckLinks(limit = CONFIG.recheck) {
   const rows = await withTimeout(LIB.staleRows({ olderThanHours: CONFIG.recheckAfterHours, limit }), 4000, []);
   const dead = [];
   const alive = [];
+  const counts = [];
   await Promise.all(rows.map(async row => {
     if (row.platform === 'x' || P.isXPost(row.url)) {
       const result = await withTimeout(P.clipFromPost(row.url), 6000, { ok: false, reason: 'timeout' });
-      if (result.ok) alive.push(row.url);
+      if (result.ok) { alive.push(row.url); counts.push({ url: row.url, likes: result.likes, views: result.views }); }
       else if (result.reason === 'no-video' || result.status === 400) dead.push(row.url);
       return;
     }
@@ -222,7 +234,55 @@ async function recheckLinks(limit = CONFIG.recheck) {
   }));
   await LIB.markDead(dead);
   await LIB.touch(alive);
+  if (counts.length) await LIB.setEngagement(counts);
   return { checked: rows.length, dead: dead.length, alive: alive.length };
+}
+
+// Fresh likes / views for the newest X clips (posted in the last 72 h, not
+// read for 3 h), newest first. Free: fxtwitter, then X syndication. -> summary
+async function refreshEngagement({ limit = CONFIG.engagement, now = Date.now() } = {}) {
+  const rows = (await Promise.all(P.AD_SPORTS.map(sport => withTimeout(LIB.read({ sport, sinceHours: CONFIG.engagementMaxAgeHours }), 3500, []))))
+    .flat()
+    .filter(c => (c.platform === 'x' || P.isXPost(c.url)) && (!c.checkedAt || now - new Date(c.checkedAt).getTime() >= CONFIG.engagementAfterHours * 3600e3))
+    .sort((a, b) => new Date(b.postedAt) - new Date(a.postedAt))
+    .slice(0, limit);
+  const counts = [];
+  await Promise.all(rows.map(async c => {
+    const result = await withTimeout(P.clipFromPost(c.url), 6000, { ok: false });
+    if (result.ok) counts.push({ url: c.url, likes: result.likes, views: result.views });
+  }));
+  const updated = counts.length ? await withTimeout(LIB.setEngagement(counts), 6000, 0) : 0;
+  return { checked: rows.length, updated };
+}
+
+// AI verdicts (game action? quality 1-5) for fresh library clips that have
+// none yet, newest first, within today's classification budget. -> summary
+async function classifyPass({ capUsd, runId, limit = CONFIG.classifyPerBatch }) {
+  const out = { candidates: 0, classified: 0, notGame: 0, cost: 0, skipped: 0, calls: 0, stored: 0 };
+  if (!(capUsd > 0) || !gatewayConfigured() || featureDisabled(CLASSIFY_FEATURE)) { out.off = true; return out; }
+  const gate = await withTimeout(aiSpendGate('', { feature: CLASSIFY_FEATURE }), 3000, null);
+  if (gate) { out.off = gate.reason || true; return out; }
+  // Read without the game-action filter: rows the rules would hide still get an AI verdict.
+  const rows = (await Promise.all(P.AD_SPORTS.map(sport => withTimeout(LIB.read({ sport, sinceHours: P.FIND_CLIPS.maxAgeHours }), 3500, []))))
+    .flat()
+    .filter(c => !(c.ai && typeof c.ai.isGameAction === 'boolean') && !P.CLASSIFY._test.MEMO.has(c.url))
+    .sort((a, b) => new Date(b.postedAt) - new Date(a.postedAt))
+    .slice(0, limit);
+  out.candidates = rows.length;
+  if (!rows.length) return out;
+  const started = Date.now();
+  const result = await withTimeout(P.CLASSIFY.classifyClips(rows, {
+    maxUsd: capUsd, track: { feature: CLASSIFY_FEATURE, runId },
+    onCost: (cost, model) => logAiUsage(cost, { model, feature: CLASSIFY_FEATURE, ms: Date.now() - started }),
+  }), CONFIG.classifyMs, null);
+  if (!result) { out.timeout = true; return out; }
+  out.classified = result.verdicts.size;
+  out.notGame = [...result.verdicts.values()].filter(v => !v.isGameAction).length;
+  out.cost = result.cost;
+  out.skipped = result.skipped;
+  out.calls = result.calls;
+  out.stored = await withTimeout(LIB.setAi(result.verdicts), 6000, 0);
+  return out;
 }
 
 // Runs `jobs` with a concurrency limit; no job starts after `cutoffAt`.
@@ -244,7 +304,7 @@ async function runPool(jobs, worker, { concurrency, cutoffAt }) {
 
 async function runBatch({ batch, env = process.env, now = Date.now() } = {}) {
   const started = Date.now();
-  const { batches, maxUsd } = settings(env);
+  const { batches, maxUsd, classifyUsd } = settings(env);
   const runId = `cp-${new Date(now).toISOString().slice(0, 10)}-${batch}`;
   const trending = batch === 1 ? await trendingTeams() : [];
   const jobs = planBatch({ batch, batches, trending });
@@ -255,11 +315,21 @@ async function runBatch({ batch, env = process.env, now = Date.now() } = {}) {
   const cap = persisted ? Math.max(0, maxUsd - spent) : maxUsd / batches;
   const budget = makeBudget(cap);
   const aiOn = gatewayConfigured() && !featureDisabled(FEATURE) && cap > 0;
+  // Classification budget: today's cap minus what earlier batches spent on it.
+  const classifySpent = persisted ? await withTimeout(classifySpentToday(), 4000, classifyUsd) : 0;
+  const classifyCap = persisted ? Math.max(0, classifyUsd - classifySpent) : classifyUsd / batches;
+  // Engagement and classification of clips already in the library run
+  // alongside the team refresh (new finds are judged by the next batch).
+  const sidePasses = Promise.all([
+    withTimeout(refreshEngagement({ now }), 15000, { checked: 0, updated: 0, timeout: true }),
+    classifyPass({ capUsd: classifyCap, runId }),
+  ]);
   const { results, skipped } = await runPool(jobs, job => withTimeout(
     refreshTeam(job, { budget, aiOn, runId }),
     CONFIG.teamMs,
     { team: job.team.name, sport: job.team.sport, trending: job.trending, timeout: true, free: 0, ai: 0, saved: 0, cost: 0, sources: {} },
   ), { concurrency: CONFIG.concurrency, cutoffAt: started + CONFIG.startCutoffMs });
+  const [engagement, classify] = await sidePasses;
   const recheck = Date.now() - started < CONFIG.deadlineMs - 8000 ? await recheckLinks() : { checked: 0, dead: 0, alive: 0 };
   const purged = await withTimeout(LIB.purge(), 4000, { memory: 0, remote: false });
   const cost = results.reduce((sum, r) => sum + (r.cost || 0), 0);
@@ -280,7 +350,11 @@ async function runBatch({ batch, env = process.env, now = Date.now() } = {}) {
     saved: results.reduce((n, r) => n + (r.saved || 0), 0),
     sources,
     budget: { capToday: maxUsd, availableThisBatch: Number(cap.toFixed(4)), spent: Number(cost.toFixed(5)) },
-    cost: Number(cost.toFixed(5)),
+    // Search + classification: what this batch spent in all (the run's cost_usd).
+    cost: Number((cost + (classify.cost || 0)).toFixed(5)),
+    searchCost: Number(cost.toFixed(5)),
+    classify: { ...classify, capToday: classifyUsd, availableThisBatch: Number(classifyCap.toFixed(4)) },
+    engagement,
     recheck,
     purged,
     store: LIB.status(env).store,
@@ -380,4 +454,4 @@ exports.handler = async function handler(event) {
   }
 };
 
-exports._test = { cronAuthorized, planBatch, allTeams, settings, makeBudget, refreshTeam, runBatch, recheckLinks, diagnostics, trendingTeams, chainNext, CONFIG, CRON_SCHEDULE };
+exports._test = { refreshEngagement, classifyPass, classifySpentToday, cronAuthorized, planBatch, allTeams, settings, makeBudget, refreshTeam, runBatch, recheckLinks, diagnostics, trendingTeams, chainNext, CONFIG, CRON_SCHEDULE };

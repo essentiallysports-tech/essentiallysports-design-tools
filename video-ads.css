@@ -714,6 +714,57 @@ html[data-theme="dark"] .va-tab[aria-selected="true"] { background: #2a2a2a; }
 .va-files__icon { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--va-good); color: var(--va-on-good); --es-icon: 13px; }
 .va-files__name { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; color: var(--va-ink); font-weight: 600; }
 
+/* Sound: Muted (default) / Original / Music / Upload (video-ads-audio.js) */
+.va-sound { --rail-accent: var(--va-accent); --rail-track: var(--va-line-2); gap: var(--es-space-3, 12px); }
+.va-sound__sum { overflow: hidden; max-width: 60%; text-overflow: ellipsis; white-space: nowrap; }
+.va-sound__modes button { min-width: 0; }
+.va-sound__body { display: grid; gap: var(--es-space-2, 8px); }
+.va-sound__body:empty { display: none; }
+.va-sound__empty { padding: var(--es-space-5, 20px) var(--es-space-4, 16px); background: var(--va-sunk); }
+.va-sound__empty .es-empty__copy { color: var(--va-ink-2); }
+.va-sound__tracks { display: grid; gap: var(--es-space-1, 4px); max-height: 264px; overflow-y: auto; padding: 2px; }
+.va-sound__tracks button { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name badge" "meta badge"; align-items: center; column-gap: var(--es-space-2, 8px); min-height: 52px; padding: var(--es-space-2, 8px) var(--es-space-3, 12px); border: 0; border-radius: 12px; background: transparent; box-shadow: inset 0 0 0 1px var(--va-line); color: var(--va-ink); font: inherit; text-align: left; cursor: pointer; transition: box-shadow var(--es-dur, 160ms), background-color var(--es-dur, 160ms); }
+.va-sound__tracks button:hover { box-shadow: inset 0 0 0 1px var(--va-ink-3); }
+.va-sound__tracks button[aria-checked="true"] { background: var(--va-accent-soft); box-shadow: inset 0 0 0 1.5px var(--va-accent); }
+.va-sound__tracks button:focus-visible { outline: var(--es-focus-ring-width, 2px) solid var(--es-focus-ring-color, var(--va-accent)); outline-offset: 2px; }
+.va-sound__tname { grid-area: name; overflow: hidden; font-weight: 600; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.va-sound__tmeta { grid-area: meta; color: var(--va-ink-3); font-size: 12.5px; }
+.va-sound__tracks .es-badge { grid-area: badge; }
+.va-sound__pick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px) var(--es-space-3, 12px); }
+.va-sound__file { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-1, 4px) var(--es-space-2, 8px); padding: var(--es-space-2, 8px) var(--es-space-2, 8px) var(--es-space-2, 8px) var(--es-space-3, 12px); border-radius: 12px; box-shadow: inset 0 0 0 1px var(--va-line); color: var(--va-ink); font-size: 13px; --es-icon: 16px; }
+.va-sound__file > svg { flex: none; width: 16px; height: 16px; color: var(--va-accent-text); }
+.va-sound__fname { flex: 1 1 120px; min-width: 0; overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.va-sound__file .va-meta { color: var(--va-ink-3); font-variant-numeric: tabular-nums; }
+.va-sound__facts { display: flex; gap: var(--es-space-1, 4px); margin-left: auto; }
+.va-sound__mix { display: grid; gap: var(--es-space-2, 8px); padding: var(--es-space-3, 12px) var(--es-space-4, 16px); border-radius: 14px; background: var(--va-sunk); }
+.va-sound__mix .va-switch { min-height: 36px; font-size: 13.5px; }
+.va-sound__sliders { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-2, 8px) var(--es-space-4, 16px); }
+.va-sound__slider { display: grid; gap: 2px; min-width: 0; }
+.va-sound__row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--es-space-2, 8px); color: var(--va-ink); font-size: 13px; font-weight: 500; }
+.va-sound__row output { color: var(--va-ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.va-sound .va-rail__range:disabled { opacity: .45; cursor: default; }
+.va-sound .va-rail__range:focus-visible { outline: var(--es-focus-ring-width, 2px) solid var(--es-focus-ring-color, var(--va-accent)); outline-offset: 2px; border-radius: 4px; }
+html:not([data-theme="dark"]) .va-sound { --rail-track: rgb(14 16 20 / .14); }
+@media (max-width: 480px) { .va-sound__sliders { grid-template-columns: minmax(0, 1fr); } }
+
+/* Toolbar: one row on desktop (newsletter, size, Meta preview, Safe zone).
+   Meta preview and Safe zone are icon buttons with tooltips; their labels
+   show when the toolbar has room. Phones keep their own grid (below).
+   (Button padding comes from the es-buttons layer, !important.) */
+.va-toolbar { container: va-toolbar / inline-size; }
+@media (min-width: 901px) { .va-toolbar { flex-wrap: nowrap; } .va-toolbar > .va-seg { flex: none; } }
+#va-meta-toggle > span, #va-safe-toggle > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* A narrow stage (about 1024-1200 wide windows): tighter, text-only segments so the one row still fits. */
+@media (min-width: 901px) and (max-width: 1199px) { .va-stage .va-toolbar, .va-stage .va-toolbar__end { gap: 4px; } .va-stage .va-toolbar { padding-inline: 10px; } }
+@media (min-width: 901px) {
+  @container va-toolbar (max-width: 540px) {
+    .va-toolbar .va-seg button { gap: 4px; padding-inline: 5px; font-size: 12.5px; }
+    #va-brands .va-dot, #va-sizes .va-ratio { display: none; }
+  }
+}
+@container va-toolbar (min-width: 630px) { #va-meta-toggle > span { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; } }
+@container va-toolbar (min-width: 720px) { #va-safe-toggle > span { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; } }
+
 /* ── Dialog + toasts ───────────────────────────────────────────────── */
 .va-toasts { position: fixed; left: 50%; top: 20px; z-index: 3000; display: grid; justify-items: center; gap: 8px; width: max-content; max-width: calc(100vw - 32px); transform: translateX(-50%); pointer-events: none; }
 .va-toast { display: flex; align-items: center; gap: var(--es-space-3, 12px); padding: var(--es-space-2, 8px) var(--es-space-2, 8px) var(--es-space-2, 8px) var(--es-space-4, 16px); border-radius: 14px; background: #1F2126; box-shadow: 0 16px 40px -12px rgb(0 0 0 / .5), inset 0 0 0 1px rgb(255 255 255 / .08); color: #fff; font: 500 14px/1.35 var(--es-font-ui); pointer-events: auto; animation: vaToast var(--es-dur-step, 300ms) var(--va-ease-in) backwards; }
@@ -1826,7 +1877,6 @@ html[data-theme="dark"] #va-safe-toggle[aria-pressed="true"] { outline-color: va
 
 /* Meta preview placements */
 .va-seg--sm button { min-height: 32px; padding: 0 var(--es-space-2, 8px); font-size: 12.5px; }
-#va-placement[hidden] { display: none; }
 .va-meta-fill { display: none; }
 .va-device[data-fit] .va-device__media { display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 12px; }
 .va-device[data-fit=""] .va-device__media { display: block; overflow: visible; border-radius: 0; }
@@ -1835,14 +1885,6 @@ html[data-theme="dark"] #va-safe-toggle[aria-pressed="true"] { outline-color: va
 .va-device[data-fit="letterbox"] #va-canvas { position: relative; z-index: 1; border-radius: 0; }
 .va-device[data-fit="crop"] #va-canvas { flex: none; border-radius: 0; box-shadow: none; }
 .va-device[data-meta="feed"][data-fit="crop"] .va-device__media { border-radius: 0; }
-.va-meta-story-top { position: absolute; top: 8px; right: 10px; left: 10px; display: grid; gap: 8px; text-shadow: 0 1px 2px rgb(0 0 0 / .5); }
-.va-meta-story-top .va-meta-more { margin-left: auto; }
-.va-meta-bars { display: flex; gap: 3px; }
-.va-meta-bars i { flex: 1; height: 2px; border-radius: 2px; background: rgb(255 255 255 / .4); }
-.va-meta-bars i.is-on { background: #fff; }
-.va-meta-story-cta { position: absolute; right: 0; bottom: 14px; left: 0; display: grid; justify-items: center; gap: 2px; }
-.va-meta-up svg { width: 18px; height: 18px; transform: rotate(-90deg); filter: drop-shadow(0 1px 2px rgb(0 0 0 / .5)); }
-html body .va-page .va-meta-over .va-meta-link { padding: 6px 14px; border-radius: 999px; background: #fff; color: #0e1014; font: 600 12.5px/1 var(--es-font-ui); }
 .va-meta-note { position: absolute; top: var(--es-space-2, 8px); left: 50%; z-index: 3; max-width: min(92%, 420px); margin: 0; padding: 6px 10px; border-radius: 10px; background: rgb(16 17 20 / .86); color: #fff; font-size: 12.5px; line-height: 1.35; text-align: center; transform: translateX(-50%); }
 .va-meta-note[hidden] { display: none; }
 
@@ -1902,9 +1944,6 @@ html body .va-page .va-meta-over .va-meta-link { padding: 6px 14px; border-radiu
   .va-angle__style { flex: 1; min-width: 0; }
 }
 
-/* The placement picker wraps with the other toolbar buttons; phones give it its own row. */
-@media (min-width: 601px) { .va-toolbar__end { flex-wrap: wrap; justify-content: flex-end; } }
-@media (max-width: 600px) { .va-stage #va-placement { grid-column: 1 / -1; grid-row: 3; justify-self: start; } }
 @media (max-width: 600px) { .va-meta-note { top: 2px; padding: 3px 8px; font-size: 11px; } }
 /* ── Find a clip: more results, sources, the clip library (feature/clips-library) ── */
 .va-found, .va-lib-found, .va-lib-fallback { container-type: inline-size; }
@@ -1922,6 +1961,7 @@ html body .va-page .va-meta-over .va-meta-link { padding: 6px 14px; border-radiu
   .va-clipgrid--3 :is(.va-clip__tag, .va-clip__q, .va-clip__dur, .va-clip__mute) { font-size: 10px; }
   .va-clipgrid--3 .va-clip__plat { padding-inline: 4px; font-size: 10px; }
   .va-clipgrid--3 .va-clip__age { font-size: 11px; }
+}
 /* Source line in the grid: platform + freshness, then the handle on its own row. */
 .va-clipgrid--3 .va-clip__who { flex-wrap: wrap; row-gap: 2px; }
 .va-clipgrid--3 .va-clip__age { margin-left: auto; }
@@ -1951,3 +1991,10 @@ html body .va-page .va-meta-over .va-meta-link { padding: 6px 14px; border-radiu
    the panel at 1280+; narrower panels scroll the row sideways (es-tabs behaviour). */
 #va-clip-tabs { gap: 6px; }
 #va-clip-tabs .es-tab { font-size: 13px; }
+
+/* Clip library: an icon button at the right of the "Find a clip" header. */
+.va-pane__head--action { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--es-space-3, 12px); }
+.va-pane__titles { display: grid; gap: var(--es-space-1, 4px); min-width: 0; }
+.va-lib-btn { flex: none; width: 40px; height: 40px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--va-line); }
+.va-lib-btn svg { width: 20px; height: 20px; }
+.va-lib-btn[aria-pressed="true"] { background: var(--va-accent-soft); color: var(--va-accent-text); box-shadow: inset 0 0 0 1px var(--va-accent-text); }
