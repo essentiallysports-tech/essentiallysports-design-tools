@@ -1,6 +1,7 @@
 // Video Ads page: three steps (Clip → Copy → Export) around one big live preview.
 //   Layout + drawing: video-ads-render.js (window.VideoAdsRender)
 //   Brands, sizes, styles: video-ads-brands.js (window.VideoAdsBrands)
+//   Style rules (fields, suggestion, grid names, safe zones): video-ads-styles.js (window.VideoAdsStyles)
 //   Team colours: video-ads-teams.js (window.VideoAdsTeams)
 //   AI + trends + X clips: POST /api/video-ads { mode: trends | find-clips | clip | copy | chat }
 //   Learning events: POST /api/ad-learning { event } (fire-and-forget)
@@ -8,6 +9,7 @@
   'use strict';
   const R = window.VideoAdsRender;
   const B = window.VideoAdsBrands;
+  const S = window.VideoAdsStyles;
   // The colour data ships in video-ads-teams.js; without it the picker still
   // shows the colours (no team preview) and the server matches the teams.
   const T = window.VideoAdsTeams || {
@@ -40,6 +42,8 @@
     aiProgress: $('va-ai-progress'), aiProgressText: $('va-ai-progress-text'), aiOut: $('va-ai-out'), grammar: $('va-grammar'),
     headline: $('va-headline'), highlight: $('va-highlight'), highlightRow: $('va-highlight-row'), highlightWarn: $('va-highlight-warn'),
     bodies: [$('va-body-1'), $('va-body-2'), $('va-body-3')], addPara: $('va-add-para'), cta: $('va-cta'), unsub: $('va-unsub'),
+    styleFields: $('va-style-fields'), classicFields: $('va-classic-fields'), suggest: $('va-suggest'), styleCount: $('va-style-count'), zone: $('va-zone'), zoneRow: $('va-zone-row'),
+    safeToggle: $('va-safe-toggle'), safe: $('va-safe'), grid: $('va-grid'), gridStyles: $('va-grid-styles'), gridNames: $('va-grid-names'), rightsRow: $('va-rights-row'),
     exsizes: $('va-exsizes'), metaToggle: $('va-meta-toggle'), ready: $('va-ready'), rights: $('va-rights'), exportBtn: $('va-export'), exportProgress: $('va-export-progress'), exportStatus: $('va-export-status'), files: $('va-files'), again: $('va-again'),
     toasts: $('va-toasts'),
   };
@@ -69,6 +73,19 @@
     body: ['Nobody picks their first team. A dad passes it to his son: the same seats, the same Saturdays. Keep up with the program you were handed, then all of college football. Free. Join 100,000+ fans today.', '', ''],
     cta: '',
     unsubscribe: true,
+    // The no-footage styles' fields (video-ads-styles.js). Empty = the default
+    // for the offer / title / "your feed" lines; `us` null = the brand's
+    // first approved claims. Numbers and quotes are never filled in for you.
+    offer: '', stat: '', statLabel: '', statSource: '', listTitle: '', items: ['', '', ''],
+    them: ['', '', ''], us: null, quote: '', speaker: '', quoteContext: '',
+    // 'meta' keeps the classic styles inside Meta's Reels safe zone (new ads);
+    // 'classic' is the original Figma margins. The new styles always use 'meta'.
+    safeZone: 'meta',
+    // Paused preview: the finished frame while editing ('final'), or the
+    // frame at the playhead after play / scrub ('playhead').
+    previewAt: 'final',
+    suggestion: null, // { style, why, text, alternatives } for this brief
+    grid: { on: false, styles: [] }, // Export 3 styles
     align: 'auto', // 'auto' follows the style (see layoutFor); 'left' / 'center' force it
     anchor: 'center',
     scrim: 0.45, blur: 0, zoom: 1, panX: 0, panY: 0, fade: null, vignette: 0,
@@ -183,6 +200,7 @@
       error.status = response.status;
       error.reason = data?.reason;
       error.issues = Array.isArray(data?.issues) ? data.issues : [];
+      error.data = data;
       throw error;
     }
     return data;
@@ -202,7 +220,17 @@
         .catch(() => {});
     } catch (error) { /* learning is best-effort */ }
   }
-  const copyForLog = (src = state) => ({ style: src.style, headline: plain(src.headline), highlight: src.style === 'highlight' ? plain(src.highlight) : '', body: (src.body || []).map(s => plain(s).trim()).filter(Boolean), cta: src.cta || brand().cta });
+  // What an ad says, for the learning log: the classic fields always, the
+  // no-footage style's own fields when it is one.
+  const copyForLog = (src = state) => {
+    const out = { style: src.style, headline: plain(src.headline), highlight: src.style === 'highlight' ? plain(src.highlight) : '', body: (src.body || []).map(s => plain(s).trim()).filter(Boolean), cta: src.cta || brand().cta };
+    if (!S.isNew(src.style)) return out;
+    const c = resolvedCopy(src);
+    ({
+      stat: ['stat', 'statLabel', 'statSource'], today3: ['listTitle', 'items'], versus: ['them', 'us'], quote: ['quote', 'speaker', 'quoteContext'],
+    }[src.style] || []).concat('offer').forEach(k => { out[k] = Array.isArray(c[k]) ? c[k].filter(x => String(x).trim()) : String(c[k] || ''); });
+    return out;
+  };
 
   // ─── Logos: upload > brand file > drawn wordmark > ES logo ───────────────
   const LOGO_KEY = 'frameup.videoAds.logos.v1';
@@ -280,18 +308,47 @@
 
 
   // ─── Layout + drawing ────────────────────────────────────────────────────
-  const copyOf = (src = state) => ({ style: src.style, headline: src.headline, highlight: src.highlight, body: [...src.body], cta: src.cta, unsubscribe: src.unsubscribe });
-  const layoutFor = (sizeId, src = state) => R.fitLayout(measure, {
-    style: src.style,
-    headline: src.headline,
-    highlight: src.highlight,
-    body: src.body,
-    cta: src.cta || brand().cta,
-    unsubscribe: src.unsubscribe,
-    // As in the Figma ads: Simple and Condensed are centred, Highlight is set flush left.
-    align: state.align === 'auto' ? (src.style === 'highlight' ? 'left' : 'center') : state.align,
-    anchor: state.anchor,
-  }, brand(), B.SIZES[sizeId], logo.img ? logo : null);
+  const STYLE_KEYS = ['offer', 'stat', 'statLabel', 'statSource', 'listTitle', 'items', 'them', 'us', 'quote', 'speaker', 'quoteContext'];
+  const copyOf = (src = state) => ({
+    style: src.style, headline: src.headline, highlight: src.highlight, body: [...src.body], cta: src.cta, unsubscribe: src.unsubscribe,
+    ...Object.fromEntries(STYLE_KEYS.map(k => [k, Array.isArray(src[k]) ? [...src[k]] : src[k]])),
+  });
+  // The copy with the style defaults filled in (offer, title, "your feed", claims).
+  function resolvedCopy(src = state) {
+    const d = S.defaultsFor(brand(), src.style);
+    const filled = list => (list || []).map(x => String(x || '').trim()).filter(Boolean);
+    return {
+      ...src,
+      offer: String(src.offer || '').trim() || d.offer,
+      listTitle: String(src.listTitle || '').trim() || d.listTitle,
+      themLabel: d.themLabel,
+      items: filled(src.items),
+      them: filled(src.them).length ? filled(src.them) : d.them,
+      us: Array.isArray(src.us) ? filled(src.us) : d.us,
+    };
+  }
+  const layoutFor = (sizeId, src = state) => {
+    const c = resolvedCopy(src);
+    return R.fitLayout(measure, {
+      ...c,
+      cta: src.cta || brand().cta,
+      // As in the Figma ads: Simple and Condensed are centred, Highlight is set flush left.
+      align: state.align === 'auto' ? (src.style === 'highlight' ? 'left' : 'center') : state.align,
+      anchor: state.anchor,
+      safeZone: state.safeZone,
+    }, brand(), B.SIZES[sizeId], logo.img ? logo : null);
+  };
+  // The ad's own clock for the timed entrances: seconds since the trim start.
+  const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const adDuration = () => Math.max(0.5, (state.trimOut - state.trimIn) || (still ? still.duration : 0) || R.STILL.defaultSeconds);
+  // Preview only: reduced motion (or editing while paused) shows the finished
+  // frame. Exports always run the full timeline.
+  function previewClock() {
+    if (reducedMotion() || !hasClip()) return {};
+    if (!playing && state.previewAt !== 'playhead') return {};
+    return { t: Math.max(0, els.video.currentTime - state.trimIn), duration: adDuration() };
+  }
+  const settlePreview = () => { state.previewAt = 'final'; };
   let current = null;
   // Everything the renderer needs to draw the clip; the preview and the MP4 export both use it.
   const bg = () => ({ scrim: state.scrim, blur: state.blur, zoom: state.zoom, panX: state.panX, panY: state.panY, fit: state.fit, tint: { color: tintColor(), amount: state.tintAmount }, fade: state.fade, vignette: state.vignette });
@@ -340,6 +397,30 @@
       <p class="va-meta-caption"><b>${name}</b> ${caption}</p>`;
   }
 
+  // ─── Safe zone overlay (display only) ──────────────────────────────
+  // 9:16: Meta's Reels/Stories UI (profile row on top, caption + CTA in the
+  // bottom 35%, the action rail on the right). Feed sizes: the copy margins.
+  let safeOverlay = false;
+  function renderSafe() {
+    if (!els.safe) return;
+    els.safe.hidden = !safeOverlay;
+    els.safeToggle?.setAttribute('aria-pressed', String(safeOverlay));
+    if (!safeOverlay) { els.safe.innerHTML = ''; return; }
+    const sz = size();
+    const z = S.safeZoneRects(sz, 'meta');
+    const pct = (v, total) => `${(v / total) * 100}%`;
+    const box = (r, cls, label = '') => `<div class="va-safe__area va-safe__area--${cls}" style="left:${pct(r.x, sz.width)};top:${pct(r.y, sz.height)};width:${pct(r.w, sz.width)};height:${pct(r.h, sz.height)}">${label ? `<span>${label}</span>` : ''}</div>`;
+    const reel = Boolean(z.rects.rail);
+    els.safe.innerHTML = [
+      box(z.rects.top, 'top', reel ? 'Profile row' : ''),
+      box(z.rects.bottom, 'bottom', reel ? `Caption + CTA · ${Math.round(z.share.bottom * 100)}%` : ''),
+      box(z.rects.left, 'side'),
+      box(z.rects.right, 'side'),
+      reel ? box(z.rects.rail, 'rail', 'Buttons') : '',
+      `<div class="va-safe__band" style="top:${pct(z.band.top, sz.height)};height:${pct(z.band.bottom - z.band.top, sz.height)}"><span>${reel ? `Copy band y ${z.band.top}–${z.band.bottom}` : 'Copy area'}</span></div>`,
+    ].join('');
+  }
+
   function fitCanvasDisplay() {
     const s = size();
     const cs = getComputedStyle(els.drop);
@@ -373,10 +454,14 @@
     renderMeta();
     fitCanvasDisplay();
     current = layoutFor(state.size, previewCopy ? { ...state, ...previewCopy } : state);
-    els.fit.textContent = !current.fits ? 'Too much copy for this size' : current.scale < 0.72 ? 'Long copy: set smaller' : '';
-    els.fit.classList.toggle('is-on', !current.fits || current.scale < 0.72);
+    // A no-footage style without its facts says what it needs, not "too long".
+    const need = S.isNew(state.style) ? S.styleReady(state.style, resolvedCopy(previewCopy ? { ...state, ...previewCopy } : state)) : { ok: true };
+    els.fit.textContent = !need.ok ? `${B.STYLES[state.style].label} needs ${need.missing}` : !current.fits ? 'Too much copy for this size' : current.scale < 0.72 ? 'Long copy: set smaller' : '';
+    els.fit.classList.toggle('is-on', !need.ok || !current.fits || current.scale < 0.72);
     els.fit.classList.toggle('is-bad', !current.fits);
     els.highlightRow.hidden = state.style !== 'highlight';
+    renderSafe();
+    if (els.styles.childElementCount) { syncStyles(); renderThumbs(); }
     const lit = state.highlight.trim();
     els.highlightWarn.hidden = !lit || state.headline.toLowerCase().includes(lit.toLowerCase());
     els.highlight.setAttribute('aria-invalid', String(!els.highlightWarn.hidden));
@@ -402,7 +487,7 @@
   function draw() {
     if (!current) return;
     const s = size();
-    R.drawFrame(ctx, { width: s.width, height: s.height, video: hasClip() ? els.video : placeholder, bg: bg(), ops: current.ops, logoImage: logo.img, blurCanvas, source: still ? still.source() : undefined });
+    R.drawFrame(ctx, { width: s.width, height: s.height, video: hasClip() ? els.video : placeholder, bg: bg(), ops: current.ops, logoImage: logo.img, blurCanvas, source: still ? still.source() : undefined, ...previewClock() });
     sampleGlow();
   }
 
@@ -418,6 +503,7 @@
   }
   function setPlaying(on) {
     playing = on && hasClip();
+    if (playing) state.previewAt = 'playhead';
     if (playing) {
       if (els.video.currentTime < state.trimIn || els.video.currentTime >= state.trimOut) els.video.currentTime = state.trimIn;
       els.video.play().catch(() => { playing = false; renderPlay(); });
@@ -469,7 +555,7 @@
     state.trimIn = Math.round(a * 10) / 10;
     state.trimOut = Math.round(Math.min(b, d) * 10) / 10;
     syncTrim();
-    if (seekTarget != null) els.video.currentTime = Math.max(0, Math.min(d, seekTarget));
+    if (seekTarget != null) { state.previewAt = 'playhead'; els.video.currentTime = Math.max(0, Math.min(d, seekTarget)); }
     changed();
   }
   const timeAt = clientX => {
@@ -510,6 +596,7 @@
     });
   });
   els.seek.addEventListener('input', () => {
+    state.previewAt = 'playhead';
     const d = clipDuration();
     els.video.currentTime = (Number(els.seek.value) / 1000) * d;
     syncTime();
@@ -1483,13 +1570,247 @@
     if (state.step === 'copy') renderVariants();
     toast('Undone.', { timeout: 2000 });
   }
+  // ─── Style picker: one radio per style, each with a live thumbnail ──────
+  const STYLE_IDS = Object.keys(B.STYLES);
+  els.styles.innerHTML = STYLE_IDS.map(id => {
+    const st = B.STYLES[id];
+    return `<button type="button" role="radio" data-style="${esc(id)}" aria-checked="false" tabindex="-1">
+      <span class="va-style-thumb"><canvas width="120" height="150" aria-hidden="true"></canvas>${st.needsFootage ? '' : '<span class="va-style-tag">No clip needed</span>'}</span>
+      <span class="va-style-name">${esc(st.label)}</span>
+      <span class="va-style-note">${esc(st.note)}</span>
+    </button>`;
+  }).join('');
   function syncStyles() {
     [...els.styles.querySelectorAll('[role="radio"]')].forEach(b => {
       const on = b.dataset.style === state.style;
       b.setAttribute('aria-checked', String(on));
       b.tabIndex = on ? 0 : -1;
+      const ready = S.styleReady(b.dataset.style, resolvedCopy({ ...state, style: b.dataset.style }));
+      b.classList.toggle('is-unready', !ready.ok);
+      b.title = ready.ok ? B.STYLES[b.dataset.style].note : `${B.STYLES[b.dataset.style].note}. Needs ${ready.missing}.`;
     });
+    els.styleCount.textContent = B.STYLES[state.style]?.needsFootage === false ? 'Works without a clip' : '';
+    els.zoneRow.hidden = S.isNew(state.style);
+    markRadios(els.zone, 'zone', state.safeZone);
   }
+  // Thumbnails: each style drawn by the renderer at 4:5, small, over the
+  // animated background. Real copy when the style is ready; else neutral
+  // placeholder words (never a made-up number: "00").
+  const THUMB_SAMPLE = {
+    stat: { stat: '00', statLabel: 'What the number counts' },
+    today3: { items: ['First headline here', 'Second headline here', 'Third headline here'] },
+    versus: {},
+    quote: { quote: 'Their words, exactly as they said them.', speaker: 'Speaker' },
+  };
+  let thumbTimer = 0;
+  function renderThumbs() {
+    clearTimeout(thumbTimer);
+    thumbTimer = setTimeout(() => {
+      const size4x5 = B.SIZES['4x5'];
+      const colors = stillColors();
+      els.styles.querySelectorAll('[data-style]').forEach(b => {
+        const id = b.dataset.style;
+        const canvas = b.querySelector('canvas');
+        if (!canvas) return;
+        let src = { ...state, style: id };
+        if (!S.styleReady(id, resolvedCopy(src)).ok) src = { ...src, ...(THUMB_SAMPLE[id] || {}) };
+        if (B.STYLES[id].classic && !String(src.headline || '').trim()) src = { ...src, headline: 'Your headline here', body: ['A short line about the newsletter.'] };
+        const layout = layoutFor('4x5', src);
+        const c = canvas.getContext('2d');
+        c.setTransform(canvas.width / size4x5.width, 0, 0, canvas.height / size4x5.height, 0, 0);
+        try {
+          R.drawFrame(c, { width: size4x5.width, height: size4x5.height, video: null, bg: { tint: { color: '#000000', amount: 0.25 } }, ops: layout.ops, logoImage: logo.img, source: { kind: 'generated', colors, t: 2, duration: 8 } });
+        } catch (error) { /* a thumbnail never breaks the page */ }
+        c.setTransform(1, 0, 0, 1, 0, 0);
+      });
+    }, 220);
+  }
+
+  // ─── Fields of the no-footage styles ─────────────────────────────────────
+  const L = S.LIMITS;
+  const words = text => String(text || '').split(/\s+/).filter(Boolean).length;
+  const countText = (text, max) => { const n = words(text); return `${n} / ${max} word${max === 1 ? '' : 's'}`; };
+  // One labelled input. data-f = the state key, data-i = the index in a list.
+  function fieldHtml({ key, index, label, value, placeholder = '', max, area = false, chars = 0, hint = '' }) {
+    const id = `va-f-${key}${index != null ? `-${index}` : ''}`;
+    const attrs = `class="va-input" id="${id}" data-f="${esc(key)}"${index != null ? ` data-i="${index}"` : ''} placeholder="${esc(placeholder)}" spellcheck="true" lang="en-US"${chars ? ` maxlength="${chars}"` : ''} aria-describedby="${id}-count"`;
+    const count = max ? `<span class="va-count" id="${id}-count" data-count="${max}">${countText(value, max)}</span>` : (chars ? `<span class="va-count" id="${id}-count">${String(value || '').length} / ${chars}</span>` : `<span class="va-count" id="${id}-count"></span>`);
+    return `<div class="va-field va-field--tight">
+      <div class="va-field__top"><label class="va-label" for="${id}">${esc(label)}</label>${count}</div>
+      ${area ? `<textarea ${attrs} rows="3">${esc(value)}</textarea>` : `<input type="text" ${attrs} value="${esc(value)}">`}
+      ${hint ? `<p class="va-hint">${hint}</p>` : ''}
+    </div>`;
+  }
+  // Headlines Today's 3 can use: the moment's related stories, then other trending titles for this sport.
+  function relatedTitles() {
+    const sport = brand().sport;
+    const own = (state.copyTrend?.related || []).map(r => (typeof r === 'string' ? r : r?.title)).filter(Boolean);
+    const trending = trendItems.filter(t => t.sport === sport && t.id !== state.copyTrend?.id).flatMap(t => [t.title, ...(t.related || []).map(r => r.title)]);
+    return [...new Set([...own, ...(state.copyTrend?.title ? [state.copyTrend.title] : []), ...trending].map(x => String(x || '').trim()).filter(Boolean))].slice(0, 12);
+  }
+  let renderedFields = '';
+  function renderStyleFields({ force = false } = {}) {
+    const isNew = S.isNew(state.style);
+    els.classicFields.hidden = isNew;
+    els.styleFields.hidden = !isNew;
+    const key = `${state.style}|${state.brandId}`;
+    if (!isNew) { renderedFields = ''; return; }
+    if (!force && key === renderedFields) { renderStyleReady(); return; }
+    renderedFields = key;
+    const b = brand();
+    const d = S.defaultsFor(b, state.style);
+    const parts = [];
+    if (state.style === 'stat') {
+      parts.push(fieldHtml({ key: 'stat', label: 'The number', value: state.stat, placeholder: 'e.g. .412 or 6', chars: L.statChars, hint: 'Only a number from your notes, the moment or the clip. It shows exactly as typed.' }));
+      parts.push(fieldHtml({ key: 'statLabel', label: 'What it counts', value: state.statLabel, placeholder: 'e.g. his on-base percentage this month', max: L.statLabelWords }));
+      parts.push(fieldHtml({ key: 'statSource', label: 'Source (optional)', value: state.statSource, placeholder: 'e.g. MLB.com', max: L.statSourceWords }));
+    } else if (state.style === 'today3') {
+      parts.push(fieldHtml({ key: 'listTitle', label: 'Title', value: state.listTitle, placeholder: d.listTitle, max: L.listTitleWords }));
+      parts.push(`<div class="va-field va-field--tight"><div class="va-field__top"><span class="va-label" id="va-items-label">Three headlines</span><button class="va-link" type="button" data-act="fill-items">${ICON.sparkle}Fill from trends</button></div>
+        <div class="va-items" role="group" aria-labelledby="va-items-label">${[0, 1, 2].map(i => `<div class="va-item"><span class="va-item__n" aria-hidden="true">${i + 1}</span><input type="text" class="va-input" id="va-f-items-${i}" data-f="items" data-i="${i}" value="${esc(state.items[i] || '')}" placeholder="A real headline, plainly put" aria-label="Headline ${i + 1}" aria-describedby="va-items-hint" spellcheck="true" lang="en-US"></div>`).join('')}</div>
+        <p class="va-hint" id="va-items-hint">Real stories only, ${L.itemWords} words or fewer each. No rumours as facts.</p></div>`);
+    } else if (state.style === 'versus') {
+      const them = [0, 1, 2].map(i => `<input type="text" class="va-input" id="va-f-them-${i}" data-f="them" data-i="${i}" value="${esc(state.them[i] || '')}" placeholder="${esc(d.them[i] || '')}" aria-label="Your feed, line ${i + 1}" spellcheck="true" lang="en-US">`).join('');
+      const chosen = resolvedCopy().us;
+      const claims = (b.verifiedClaims || []).map(c => `<button class="va-chip" type="button" data-claim="${esc(c)}" aria-pressed="${chosen.includes(c)}">${esc(c)}</button>`).join('');
+      parts.push(`<div class="va-field va-field--tight"><div class="va-field__top"><span class="va-label" id="va-them-label">Your feed (crossed out)</span><span class="va-count">${L.themWords} words max, no names</span></div><div class="va-them" role="group" aria-labelledby="va-them-label">${them}</div></div>`);
+      parts.push(`<div class="va-field va-field--tight"><div class="va-field__top"><span class="va-label" id="va-us-label">${esc(b.label)} (ticked)</span><span class="va-count">Pick 2–3</span></div>
+        <div class="va-claims" role="group" aria-labelledby="va-us-label">${claims}</div>
+        ${b.claimsApproved ? '<p class="va-hint">Only approved claims can appear here.</p>' : `<p class="va-warn va-claims__todo">${ICON.alert}<span>Placeholder claims: the owner still has to approve this list before paid use.</span></p>`}</div>`);
+    } else if (state.style === 'quote') {
+      parts.push(fieldHtml({ key: 'quote', label: 'Quote, word for word', value: state.quote, placeholder: 'Paste the exact words', max: L.quoteWords, area: true, hint: 'Never reword a quote. Say it was said “after…”, never that they read the newsletter.' }));
+      parts.push(fieldHtml({ key: 'speaker', label: 'Who said it', value: state.speaker, placeholder: 'e.g. Andy Reid', max: L.speakerWords }));
+      parts.push(fieldHtml({ key: 'quoteContext', label: 'When (optional)', value: state.quoteContext, placeholder: 'e.g. after Sunday’s win', max: L.quoteContextWords }));
+    }
+    parts.push(fieldHtml({ key: 'offer', label: 'Offer', value: state.offer, placeholder: d.offer, max: L.offerWords, hint: 'Say it’s free.' }));
+    parts.push('<p class="va-warn va-style-ready" id="va-style-ready" role="status" hidden></p>');
+    els.styleFields.innerHTML = parts.join('');
+    renderStyleReady();
+  }
+  function renderStyleReady() {
+    const box = document.getElementById('va-style-ready');
+    if (!box) return;
+    const r = S.styleReady(state.style, resolvedCopy());
+    box.hidden = r.ok;
+    box.innerHTML = r.ok ? '' : `${ICON.alert}<span>${esc(B.STYLES[state.style].label)} needs ${esc(r.missing)}.</span>`;
+  }
+  // Typing in a style field.
+  els.styleFields.addEventListener('beforeinput', event => { if (event.target.closest('[data-f]')) snapOnFirstKey(); });
+  els.styleFields.addEventListener('input', event => {
+    const el = event.target.closest('[data-f]');
+    if (!el) return;
+    const k = el.dataset.f;
+    if (el.dataset.i != null) {
+      const list = Array.isArray(state[k]) ? [...state[k]] : ['', '', ''];
+      list[Number(el.dataset.i)] = el.value;
+      state[k] = list;
+    } else state[k] = el.value;
+    const count = document.getElementById(`${el.id}-count`);
+    if (count?.dataset.count) {
+      const max = Number(count.dataset.count);
+      count.textContent = countText(el.value, max);
+      count.classList.toggle('is-over', words(el.value) > max);
+    } else if (count && el.maxLength > 0) count.textContent = `${el.value.length} / ${el.maxLength}`;
+    state.copyEdited = true;
+    settlePreview();
+    relayout();
+    changed();
+    renderStyleReady();
+    suggestSoon();
+  });
+  els.styleFields.addEventListener('click', event => {
+    const claim = event.target.closest('[data-claim]');
+    if (claim) {
+      snapshot();
+      const now = resolvedCopy().us;
+      const c = claim.dataset.claim;
+      let next = now.includes(c) ? now.filter(x => x !== c) : [...now, c];
+      if (next.length > 3) { toast('Up to 3 claims.', { timeout: 2000 }); return; }
+      // Keep the brand's order.
+      next = (brand().verifiedClaims || []).filter(x => next.includes(x));
+      state.us = next;
+      claim.setAttribute('aria-pressed', String(next.includes(c)));
+      state.copyEdited = true;
+      settlePreview();
+      relayout();
+      changed();
+      renderStyleReady();
+      return;
+    }
+    if (event.target.closest('[data-act="fill-items"]')) fillItems();
+  });
+  // Today's 3 from Trends: the moment's related stories, then other trending titles.
+  async function fillItems() {
+    if (state.trendsStatus !== 'done') await loadTrends();
+    const titles = relatedTitles();
+    if (!titles.length) { toast('No trending headlines right now. Type three real ones.', { tone: 'bad' }); return; }
+    snapshot();
+    const empty = state.items.map((x, i) => (String(x || '').trim() ? -1 : i)).filter(i => i >= 0);
+    const slots = empty.length ? empty : [0, 1, 2];
+    const used = new Set(state.items.map(x => String(x || '').trim()));
+    const fresh = titles.filter(t => !used.has(t));
+    const items = [...state.items];
+    slots.forEach((slot, i) => { if (fresh[i]) items[slot] = fresh[i]; });
+    state.items = items;
+    state.copyEdited = true;
+    renderStyleFields({ force: true });
+    settlePreview();
+    relayout();
+    changed();
+    toast(`Added ${Math.min(slots.length, fresh.length)} trending headline${Math.min(slots.length, fresh.length) === 1 ? '' : 's'}. Shorten them to ${L.itemWords} words.`, { action: { label: 'Undo', fn: undo } });
+  }
+
+  // ─── Style suggestion: rules first (here, instantly), then the server's
+  // version with this brand's export ranking (suggest-style, no AI cost). ──
+  const ranking = {}; // brandId -> [{ style, score }]
+  function localSuggestion() {
+    const c = copyContext();
+    const facts = S.briefFacts({
+      notes: els.notes.value.trim(),
+      clipText: clipText(),
+      trendTitle: c.trend?.title || '',
+      related: relatedTitles(),
+      copy: state,
+      brand: brand(),
+      hasClip: Boolean(realVideo.videoWidth) && !still,
+    });
+    return S.suggestStyles(facts, { ranking: ranking[state.brandId] || [], brand: brand() });
+  }
+  function renderSuggest() {
+    const sug = state.suggestion || localSuggestion();
+    if (!sug) { els.suggest.hidden = true; return; }
+    const here = sug.style === state.style;
+    const alts = sug.alternatives.filter(a => a.style !== state.style).slice(0, 2);
+    els.suggest.hidden = false;
+    els.suggest.classList.toggle('is-current', here);
+    els.suggest.innerHTML = `${ICON.sparkle}<span class="va-suggest__text">${here ? `${esc(sug.label)} fits this brief — ${esc(sug.why)}` : esc(sug.text)}</span>`
+      + (here ? '' : `<button class="es-btn es-btn--sm es-btn--secondary" type="button" data-pick="${esc(sug.style)}">Use ${esc(sug.label)}</button>`)
+      + (alts.length ? `<span class="va-suggest__alts">Also: ${alts.map(a => `<button class="va-link" type="button" data-pick="${esc(a.style)}" title="${esc(a.why)}">${esc(a.label)}</button>`).join(', ')}</span>` : '');
+  }
+  let suggestTimer = 0;
+  let suggestKey = '';
+  function suggestSoon() {
+    clearTimeout(suggestTimer);
+    suggestTimer = setTimeout(() => {
+      state.suggestion = localSuggestion();
+      renderSuggest();
+      // The brand's ranking: once per brand (and again when the brief changes a lot).
+      const key = state.brandId;
+      if (suggestKey === key || !window.ESAuth?.fetchWithAuth) return;
+      suggestKey = key;
+      callApi({ mode: 'suggest-style', brandId: state.brandId, sport: brand().sport })
+        .then(data => {
+          ranking[key] = Array.isArray(data.ranking) ? data.ranking : [];
+          if (state.brandId === key) { state.suggestion = localSuggestion(); renderSuggest(); }
+        })
+        .catch(() => { suggestKey = ''; });
+    }, 300);
+  }
+  els.suggest.addEventListener('click', event => {
+    const b = event.target.closest('[data-pick]');
+    if (b) pickStyle(b.dataset.pick, { from: 'suggestion' });
+  });
+
   function syncFields() {
     els.headline.value = state.headline;
     els.highlight.value = state.highlight;
@@ -1502,12 +1823,15 @@
     els.cta.placeholder = brand().cta;
     els.unsub.checked = state.unsubscribe;
     syncStyles();
+    renderStyleFields({ force: true });
     requestAnimationFrame(() => [els.headline, ...els.bodies].forEach(fitBox));
     lintAll();
   }
   // Editor textareas grow with their text.
   function fitBox(box) { if (box.hidden || !box.offsetParent) return; box.style.height = 'auto'; box.style.height = `${box.scrollHeight + 2}px`; }
-  // Applies copy fields (from an option or the assistant) with undo.
+  const hasValue = v => (Array.isArray(v) ? v.some(x => String(x || '').trim()) : typeof v === 'string' && v.trim() !== '');
+  // Applies copy fields (from an option or the assistant) with undo. The
+  // no-footage fields only replace what's there when they have a value.
   function applyCopy(fields, { label = 'Copy updated', silent = false } = {}) {
     snapshot();
     if (fields.style && B.STYLES[fields.style]) state.style = fields.style;
@@ -1515,39 +1839,68 @@
     if (typeof fields.highlight === 'string') state.highlight = fields.highlight;
     if (Array.isArray(fields.body)) state.body = [0, 1, 2].map(i => String(fields.body[i] || ''));
     if (typeof fields.cta === 'string') state.cta = fields.cta.trim().toUpperCase() === brand().cta ? '' : fields.cta;
+    STYLE_KEYS.forEach(k => {
+      if (!hasValue(fields[k])) return;
+      state[k] = Array.isArray(fields[k]) ? (k === 'us' ? fields[k].map(String) : [0, 1, 2].map(i => String(fields[k][i] || ''))) : String(fields[k]);
+    });
     state.copyEdited = true;
     previewCopy = null;
     els.stage.classList.remove('is-previewing');
+    settlePreview();
     syncFields();
     relayout();
     changed();
     if (!silent) toast(label, { action: { label: 'Undo', fn: undo } });
   }
-  const variantFields = v => ({ style: v.style || state.style, headline: v.headline || '', highlight: (v.style || state.style) === 'highlight' ? (v.highlight || '') : '', body: Array.isArray(v.body) ? v.body : [], cta: v.cta || '' });
+  const variantFields = v => {
+    const style = v.style || state.style;
+    const out = { style, headline: v.headline || '', highlight: style === 'highlight' ? (v.highlight || '') : '', body: Array.isArray(v.body) ? v.body : [], cta: v.cta || '' };
+    STYLE_KEYS.forEach(k => { if (hasValue(v[k])) out[k] = v[k]; });
+    return out;
+  };
 
-  radioGroupStyles();
-  function radioGroupStyles() {
-    els.styles.addEventListener('click', event => {
-      const button = event.target.closest('[data-style]');
-      if (!button || button.dataset.style === state.style) return;
-      snapshot();
-      state.style = button.dataset.style;
-      syncStyles();
-      relayout();
-      changed();
-      renderCopyAction();
-      lintField('highlight');
-    });
-    els.styles.addEventListener('keydown', event => {
-      const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
-      if (!(event.key in keys)) return;
-      event.preventDefault();
-      const ids = Object.keys(B.STYLES);
-      const target = els.styles.querySelector(`[data-style="${ids[(ids.indexOf(state.style) + keys[event.key] + ids.length) % ids.length]}"]`);
-      target.click();
-      target.focus();
-    });
+  function pickStyle(id, { from = 'picker' } = {}) {
+    if (!B.STYLES[id] || id === state.style) return;
+    snapshot();
+    state.style = id;
+    settlePreview();
+    syncStyles();
+    renderStyleFields();
+    relayout();
+    changed();
+    renderCopyAction();
+    lintField('highlight');
+    renderSuggest();
+    if (from === 'suggestion') toast(`Style: ${B.STYLES[id].label}`, { action: { label: 'Undo', fn: undo }, timeout: 3000 });
   }
+  els.styles.addEventListener('click', event => {
+    const button = event.target.closest('[data-style]');
+    if (button) pickStyle(button.dataset.style);
+  });
+  els.styles.addEventListener('keydown', event => {
+    const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+    if (!(event.key in keys)) return;
+    event.preventDefault();
+    const target = els.styles.querySelector(`[data-style="${STYLE_IDS[(STYLE_IDS.indexOf(state.style) + keys[event.key] + STYLE_IDS.length) % STYLE_IDS.length]}"]`);
+    target.click();
+    target.focus();
+  });
+  // Classic styles: Meta Reels safe zone or the original Figma margins (9:16).
+  els.zone.addEventListener('click', event => {
+    const b = event.target.closest('[data-zone]');
+    if (!b || b.dataset.zone === state.safeZone) return;
+    state.safeZone = b.dataset.zone === 'classic' ? 'classic' : 'meta';
+    markRadios(els.zone, 'zone', state.safeZone);
+    relayout();
+    changed();
+  });
+  els.zone.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    const next = els.zone.querySelector(`[data-zone="${state.safeZone === 'meta' ? 'classic' : 'meta'}"]`);
+    next.click();
+    next.focus();
+  });
 
   function headlineHtml(v) {
     const text = v.style === 'highlight' ? plain(v.headline).toUpperCase() : plain(v.headline);
@@ -1556,13 +1909,24 @@
     if (at < 0) return esc(text);
     return `${esc(text.slice(0, at))}<mark>${esc(text.slice(at, at + lit.length))}</mark>${esc(text.slice(at + lit.length))}`;
   }
+  // An option card: the classic headline, or the style's own fields.
+  function variantSummary(v, style) {
+    const list = items => `<ol class="va-variant__list">${items.filter(Boolean).map(x => `<li>${esc(x)}</li>`).join('')}</ol>`;
+    if (style === 'stat') return `<p class="va-variant__stat"><b>${esc(v.stat)}</b> ${esc(v.statLabel || '')}</p>`;
+    if (style === 'today3') return `${v.listTitle ? `<p class="va-variant__headline va-variant__headline--condensed">${esc(v.listTitle)}</p>` : ''}${list(v.items || [])}`;
+    if (style === 'versus') return `<p class="va-variant__vs"><s>${esc((v.them || []).join(' · '))}</s></p><p class="va-variant__vs">${ICON.check}${esc((v.us || []).join(' · '))}</p>`;
+    if (style === 'quote') return `<p class="va-variant__headline va-variant__headline--condensed">“${esc(v.quote)}”</p><p class="va-variant__body">— ${esc([v.speaker, v.quoteContext].filter(Boolean).join(', '))}</p>`;
+    return '';
+  }
   function variantCard(v, i, { scope = 'drafts', applied = false } = {}) {
     const body = (v.body || []).filter(Boolean);
     const style = v.style || state.style;
+    const own = S.isNew(style) ? variantSummary(v, style) : '';
     return `<article class="va-variant${applied ? ' is-applied' : ''}" data-scope="${scope}" data-v="${i}" style="--i:${i}">
-      <p class="va-variant__headline va-variant__headline--${esc(style)}">${headlineHtml({ ...v, style })}</p>
-      ${body.length ? `<p class="va-variant__body">${esc(plain(body[0]))}</p>` : ''}
+      ${own || `<p class="va-variant__headline va-variant__headline--${esc(style)}">${headlineHtml({ ...v, style })}</p>`}
+      ${own ? (v.offer ? `<p class="va-variant__body">${esc(v.offer)}</p>` : '') : (body.length ? `<p class="va-variant__body">${esc(plain(body[0]))}</p>` : '')}
       <div class="va-variant__foot">
+        <span class="va-variant__style">${esc(B.STYLES[style]?.label || '')}</span>
         ${applied
           ? `<span class="va-variant__state">${ICON.check}In the ad</span>`
           : `<button class="es-btn es-btn--sm${state.appliedVariant < 0 ? ' es-btn--primary es-btn--still' : ''}" type="button" data-use="${i}">Use this</button>`}
@@ -1584,6 +1948,11 @@
       trend: state.copyTrend || (color ? null : fallback.trend),
     };
   }
+  // The clip's post text (grounds quotes and numbers), when the clip came from a search.
+  function clipText() {
+    const c = copyContext();
+    return (finds[c.kind]?.clips || []).find(clip => clip.url && clip.url === state.clip?.url)?.text || '';
+  }
   function contextLabel() {
     const c = copyContext();
     if (c.kind === 'moment' && c.trend) return c.trend.title;
@@ -1592,6 +1961,7 @@
   }
   function renderCopy() {
     syncFields();
+    suggestSoon();
     markRadios(els.brands, 'brand', state.brandId);
     renderCopySwatches();
     renderMoments();
@@ -1677,10 +2047,16 @@
       els.variants.innerHTML = Array.from({ length: 3 }, (_, i) => `<div class="va-variant va-variant--skeleton" style="--i:${i}" aria-hidden="true"><span class="va-line va-line--lg va-shimmer"></span><span class="va-line va-line--lg va-shimmer" style="width:70%"></span><span class="va-line va-shimmer"></span></div>`).join('');
       return;
     }
-    if (state.draftsStatus === 'error') { els.variants.innerHTML = aiError(state.draftsError, 'retry-drafts'); return; }
+    if (state.draftsStatus === 'error') {
+      const sug = state.suggestion;
+      els.variants.innerHTML = aiError(state.draftsError, 'retry-drafts') + (sug && sug.style !== state.style ? `<p class="va-suggest va-suggest--ai">${ICON.sparkle}<span class="va-suggest__text">${esc(sug.text)}</span><button class="es-btn es-btn--sm es-btn--secondary" type="button" data-pick="${esc(sug.style)}">Use ${esc(sug.label)}</button></p>` : '');
+      return;
+    }
     if (!state.variants.length) { els.variants.innerHTML = ''; return; }
     const fixed = state.autoFixed || [];
-    els.variants.innerHTML = `<p class="va-ai__label">Pick one to use. Hover to preview.</p>`
+    const sug = state.suggestion;
+    const sugLine = sug && sug.style !== state.style ? `<p class="va-suggest va-suggest--ai">${ICON.sparkle}<span class="va-suggest__text">${esc(sug.text)}</span><button class="es-btn es-btn--sm es-btn--secondary" type="button" data-pick="${esc(sug.style)}">Use ${esc(sug.label)}</button></p>` : '';
+    els.variants.innerHTML = sugLine + `<p class="va-ai__label">Pick one to use. Hover to preview.</p>`
       + state.variants.map((v, i) => variantCard(v, i, { applied: state.appliedVariant === i })).join('')
       + (fixed.length ? `<p class="va-hint va-autofixed">${ICON.check}<span>Auto-fixed: ${esc(fixed.slice(0, 2).join(' · '))}</span></p>` : '');
   }
@@ -1704,14 +2080,21 @@
       colorLabel: c.colorLabel || undefined,
       teams: c.teams.length ? c.teams.slice(0, 12) : undefined,
       team: c.teams[0] || undefined,
-      trend: c.trend ? { id: c.trend.id, title: c.trend.title, sport: c.trend.sport, url: c.trend.url || '' } : undefined,
+      trend: c.trend ? { id: c.trend.id, title: c.trend.title, sport: c.trend.sport, url: c.trend.url || '', related: (c.trend.related || []).slice(0, 4).map(r => ({ title: typeof r === 'string' ? r : r?.title })) } : undefined,
       title: c.trend?.title || undefined,
-      clip: (() => { const text = (finds[c.kind]?.clips || []).find(clip => clip.url && clip.url === state.clip?.url)?.text; return text ? { text } : undefined; })(),
+      clip: clipText() ? { text: clipText() } : undefined,
       notes: notes || undefined,
+      // Facts for the no-footage styles: other trending headlines, what the editor typed.
+      headlines: relatedTitles().slice(0, 8),
+      items: state.items.filter(x => String(x || '').trim()),
+      stat: state.stat || undefined,
+      quote: state.quote || undefined,
+      hasClip: Boolean(realVideo.videoWidth) && !still,
     };
     try {
       const data = await callApi(body);
-      state.variants = (data.variants || []).filter(v => v && v.headline).slice(0, 3);
+      if (data.suggestion) { state.suggestion = data.suggestion; renderSuggest(); }
+      state.variants = (data.variants || []).filter(v => v && (v.headline || (S.isNew(v.style) && S.styleReady(v.style, resolvedCopy({ ...state, ...variantFields(v) })).ok))).slice(0, 3);
       state.appliedVariant = -1;
       state.autoFixed = (Array.isArray(data.autoFixed) ? data.autoFixed : []).map(f => (typeof f === 'string' ? f : f?.note)).filter(Boolean);
       state.draftsStatus = state.variants.length ? 'done' : 'error';
@@ -1727,11 +2110,12 @@
     } catch (error) {
       state.draftsStatus = 'error';
       state.draftsError = error.message;
+      if (error.data?.suggestion) { state.suggestion = error.data.suggestion; renderSuggest(); }
     }
     renderVariants();
     renderSteps();
   }
-  els.notes.addEventListener('input', renderAi);
+  els.notes.addEventListener('input', () => { renderAi(); suggestSoon(); });
   els.notes.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); generateDrafts(); } });
   els.aiActions.addEventListener('click', event => {
     const b = event.target.closest('[data-ai]');
@@ -1770,6 +2154,8 @@
     root.addEventListener('click', event => {
       const act = event.target.closest('[data-act]')?.dataset.act;
       if (act === 'retry-drafts') { generateDrafts(); return; }
+      const pick = event.target.closest('[data-pick]');
+      if (pick) { pickStyle(pick.dataset.pick, { from: 'suggestion' }); renderVariants(); return; }
       const use = event.target.closest('[data-use]');
       if (!use) return;
       const card = use.closest('.va-variant');
@@ -2014,7 +2400,7 @@
         trend: c.trend ? { id: c.trend.id, title: c.trend.title, sport: c.trend.sport } : (contextLabel() ? { title: contextLabel(), sport: c.sport } : undefined),
         color: c.color || undefined, teams: c.teams.length ? c.teams.slice(0, 12) : undefined,
         notes: notes || undefined,
-        layout: { style: state.style, headline: state.headline, highlight: state.highlight, body: state.body.filter(s => s.trim()), cta: state.cta || brand().cta },
+        layout: { ...copyForLog(), style: state.style, headline: state.headline, highlight: state.highlight, body: state.body.filter(s => s.trim()), cta: state.cta || brand().cta },
         messages,
       });
       const msg = { role: 'assistant', content: data.reply || 'Done.', variants: (data.variants || []).filter(v => v && v.headline) };
@@ -2058,7 +2444,7 @@
   const snapOnFirstKey = () => { if (Date.now() - typingSnap > 4000) snapshot(); typingSnap = Date.now(); };
   const editField = (el, fn) => {
     el.addEventListener('beforeinput', snapOnFirstKey);
-    el.addEventListener('input', () => { fn(); state.copyEdited = true; if (el.tagName === 'TEXTAREA') fitBox(el); relayout(); changed(); lintSoon(); });
+    el.addEventListener('input', () => { fn(); state.copyEdited = true; settlePreview(); if (el.tagName === 'TEXTAREA') fitBox(el); relayout(); changed(); lintSoon(); });
   };
   editField(els.headline, () => { state.headline = els.headline.value; });
   editField(els.highlight, () => { state.highlight = els.highlight.value; });
@@ -2131,21 +2517,77 @@
 
   // ─── 3 Export ────────────────────────────────────────────────────────────
   let exporting = null;
+  // The test set: the chosen copy in 2–3 styles (only styles it can fill).
+  const gridReady = id => S.styleReady(id, resolvedCopy({ ...state, style: id }));
+  function gridStyles() {
+    if (!state.grid.on) return [state.style];
+    const picked = state.grid.styles.filter(id => B.STYLES[id] && gridReady(id).ok);
+    return picked.length ? picked : [state.style];
+  }
+  // Default set: this style, then the suggestion's picks, then any ready style.
+  function defaultGrid() {
+    const sug = state.suggestion || localSuggestion();
+    const order = [state.style, sug?.style, ...(sug?.alternatives || []).map(a => a.style), ...STYLE_IDS].filter(Boolean);
+    return [...new Set(order)].filter(id => gridReady(id).ok).slice(0, 3);
+  }
+  const angle = () => (state.appliedVariant >= 0 ? state.appliedVariant + 1 : 0);
+  function renderGrid() {
+    els.grid.checked = state.grid.on;
+    els.gridStyles.hidden = !state.grid.on;
+    if (!state.grid.on) { els.gridNames.textContent = ''; return; }
+    els.gridStyles.innerHTML = STYLE_IDS.map(id => {
+      const r = gridReady(id);
+      const on = state.grid.styles.includes(id) && r.ok;
+      return `<button class="va-chip" type="button" data-grid="${esc(id)}" aria-pressed="${on}"${r.ok ? '' : ` aria-disabled="true" title="Needs ${esc(r.missing)}"`}>${esc(B.STYLES[id].label)}${r.ok ? '' : `<span class="va-sr"> (needs ${esc(r.missing)})</span>`}</button>`;
+    }).join('');
+    const styles = gridStyles();
+    const first = S.fileName({ brand: brand(), style: styles[0], angle: angle(), size: B.SIZES[state.exportIds[0]] });
+    els.gridNames.innerHTML = `${styles.length} style${styles.length === 1 ? '' : 's'} × ${state.exportIds.length} size${state.exportIds.length === 1 ? '' : 's'} = ${styles.length * state.exportIds.length} files, named like <code>${esc(first)}</code>. Use the same name for the Meta ad.`;
+  }
   function renderExport() {
     [...els.exsizes.querySelectorAll('[data-ex]')].forEach(b => b.setAttribute('aria-pressed', String(state.exportIds.includes(b.dataset.ex))));
-    const n = state.exportIds.length;
-    const tooLong = state.exportIds.filter(id => !layoutFor(id).fits).map(id => id.replace('x', ':'));
+    renderGrid();
+    const styles = gridStyles();
+    const n = state.exportIds.length * styles.length;
+    const tooLong = styles.flatMap(st => state.exportIds.filter(id => !layoutFor(id, { ...state, style: st }).fits).map(id => `${B.STYLES[st].label} ${id.replace('x', ':')}`));
+    const notReady = styles.map(st => ({ st, r: gridReady(st) })).filter(x => !x.r.ok);
     const notes = [];
-    if (!hasClip()) notes.push(`<div class="va-notice">${ICON.film}<span><b>No clip yet.</b> Add one to export.</span><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="to-clip">Find a clip</button></div>`);
-    if (tooLong.length) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>Copy is too long</b> for ${esc(tooLong.join(', '))}.</span><button class="es-btn es-btn--sm" type="button" data-act="to-copy">Shorten</button></div>`);
+    if (!hasClip()) notes.push(`<div class="va-notice">${ICON.film}<span><b>No clip yet.</b> Add one, or use an animated background: ${S.isNew(state.style) ? 'this style needs no footage.' : 'no footage needed.'}</span><span class="va-notice__acts"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="make-animated">Animated background</button><button class="es-btn es-btn--sm" type="button" data-act="to-clip">Find a clip</button></span></div>`);
+    if (notReady.length) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>${esc(B.STYLES[notReady[0].st].label)} needs ${esc(notReady[0].r.missing)}.</b></span><button class="es-btn es-btn--sm" type="button" data-act="to-copy">Add it</button></div>`);
+    if (tooLong.length) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>Copy is too long</b> for ${esc(tooLong.slice(0, 3).join(', '))}.</span><button class="es-btn es-btn--sm" type="button" data-act="to-copy">Shorten</button></div>`);
+    if (n > 6) notes.push(`<div class="va-notice">${ICON.alert}<span>${n} files record at once. Keep this tab visible; a slower computer may drop frames, so export fewer sizes if it stutters.</span></div>`);
     els.ready.innerHTML = notes.join('');
     els.ready.hidden = !notes.length;
+    // No footage, nothing to license: the rights box only shows for a clip or photo.
+    els.rightsRow.hidden = state.clip?.source === 'animated';
     els.metaToggle.setAttribute('aria-pressed', String(metaPreview));
     if (!exporting) {
-      els.exportBtn.disabled = !hasClip();
+      els.exportBtn.disabled = !hasClip() || notReady.length > 0;
       els.exportBtn.innerHTML = `${ICON.download}<span>Export ${n === 1 ? 'MP4' : `${n} MP4s`}</span>`;
     }
   }
+  els.grid.addEventListener('change', () => {
+    state.grid.on = els.grid.checked;
+    if (state.grid.on && !state.grid.styles.filter(id => gridReady(id).ok).length) state.grid.styles = defaultGrid();
+    if (state.grid.on && state.grid.styles.length < 2) toast('Only one style can use this copy so far. Fill in another style’s fields to test more.', { timeout: 4200 });
+    renderExport();
+    renderSteps();
+  });
+  els.gridStyles.addEventListener('click', event => {
+    const b = event.target.closest('[data-grid]');
+    if (!b || exporting) return;
+    const id = b.dataset.grid;
+    const r = gridReady(id);
+    if (!r.ok) { toast(`${B.STYLES[id].label} needs ${r.missing}. Add it in Copy.`, { timeout: 3000 }); return; }
+    const now = state.grid.styles.filter(x => gridReady(x).ok);
+    if (now.includes(id)) {
+      if (now.length > 1) state.grid.styles = now.filter(x => x !== id);
+      else toast('Keep at least one style.', { timeout: 2000 });
+    } else if (now.length >= 3) toast('Up to 3 styles in a test set.', { timeout: 2200 });
+    else state.grid.styles = STYLE_IDS.filter(x => x === id || now.includes(x));
+    renderExport();
+    renderSteps();
+  });
   els.exsizes.addEventListener('click', event => {
     const b = event.target.closest('[data-ex]');
     if (!b || exporting) return;
@@ -2160,7 +2602,12 @@
   els.ready.addEventListener('click', event => {
     const act = event.target.closest('[data-act]')?.dataset.act;
     if (act === 'to-clip') goStep('clip');
-    if (act === 'to-copy') { goStep('copy'); reveal(els.editor); els.headline.focus({ preventScroll: true }); }
+    if (act === 'make-animated') { useStill('animated'); return; }
+    if (act === 'to-copy') {
+      goStep('copy');
+      reveal(els.editor);
+      (S.isNew(state.style) ? els.styleFields.querySelector('input, textarea') : els.headline)?.focus({ preventScroll: true });
+    }
   });
   els.again.addEventListener('click', () => {
     els.files.hidden = true;
@@ -2172,7 +2619,7 @@
   async function startExport() {
     if (exporting) { exporting.cancel(); return; }
     if (!hasClip()) { els.exportStatus.textContent = 'Add a clip first.'; return; }
-    if (!els.rights.checked) {
+    if (!els.rights.checked && state.clip?.source !== 'animated') {
       els.exportStatus.textContent = 'Tick the footage box first.';
       const box = els.rights.closest('.va-check');
       els.rights.focus();
@@ -2181,13 +2628,24 @@
       box.classList.add('is-nudge');
       return;
     }
-    await exportSizes(state.exportIds);
+    const styles = gridStyles();
+    const gridId = styles.length > 1 ? Math.random().toString(36).slice(2, 6) : '';
+    const files = await exportSizes(state.exportIds, { styles });
     if (state.exported) {
-      // Learn from what shipped, and from any edits to the AI's version.
+      // Learn from what shipped (one export event per style, with its style),
+      // and from any edits to the AI's version.
       const final = copyForLog();
       const fields = ({ style, ...rest }) => rest;
-      if (state.aiCopy && JSON.stringify(state.aiCopy) !== JSON.stringify(final)) logEvent('copy_edited', { before: fields(state.aiCopy), after: fields(final) });
-      logEvent('export', { copy: final, style: final.style, sizes: [...state.exportIds], clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), context: { kind: state.context.kind, color: state.context.color, trend: state.context.trend?.title || '' } });
+      if (state.aiCopy && JSON.stringify(state.aiCopy) !== JSON.stringify(final)) logEvent('copy_edited', { style: final.style, before: fields(state.aiCopy), after: fields(final) });
+      styles.forEach(st => {
+        const copy = copyForLog({ ...state, style: st });
+        logEvent('export', {
+          copy, style: st, sizes: [...state.exportIds], angle: angle(), ...(gridId ? { gridId, gridStyles: styles } : {}),
+          files: (files || []).filter(f => f.style === st).map(f => f.fileName),
+          clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), safeZone: S.isNew(st) ? 'meta' : state.safeZone,
+          context: { kind: state.context.kind, color: state.context.color, trend: state.context.trend?.title || '' },
+        });
+      });
       els.again.hidden = false;
       reveal(els.exportStatus);
     }
@@ -2216,16 +2674,17 @@
     const options = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm'];
     return options.find(type => window.MediaRecorder?.isTypeSupported?.(type)) || '';
   }
-  const slug = text => String(text || 'ad').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'ad';
   let fileUrls = [];
 
 
-  async function exportSizes(sizeIds) {
-    if (exporting) { exporting.cancel(); return; }
-    if (!hasClip()) { els.exportStatus.textContent = 'Add a clip first.'; return; }
-    if (!els.rights.checked) { els.exportStatus.textContent = 'Tick the footage confirmation first.'; els.rights.focus(); return; }
+  // Records every (style × size) target in one real-time pass over the clip.
+  // Resolves to the files written: [{ style, sizeId, fileName, href, mb }].
+  async function exportSizes(sizeIds, { styles = [state.style] } = {}) {
+    if (exporting) { exporting.cancel(); return null; }
+    if (!hasClip()) { els.exportStatus.textContent = 'Add a clip first.'; return null; }
+    if (!els.rights.checked && state.clip?.source !== 'animated') { els.exportStatus.textContent = 'Tick the footage confirmation first.'; els.rights.focus(); return null; }
     const mimeType = pickFormat();
-    if (!mimeType) { els.exportStatus.textContent = 'This browser cannot record video. Use Chrome or Edge.'; return; }
+    if (!mimeType) { els.exportStatus.textContent = 'This browser cannot record video. Use Chrome or Edge.'; return null; }
     await document.fonts.ready;
     setPlaying(false);
     const ac = audioGraph();
@@ -2233,7 +2692,7 @@
     const audioDest = ac.createMediaStreamDestination();
     audioSource.connect(audioDest);
     const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
-    const targets = sizeIds.map(id => {
+    const targets = styles.flatMap(style => sizeIds.map(id => ({ id, style }))).map(({ id, style }) => {
       const s = B.SIZES[id];
       const canvas = document.createElement('canvas');
       canvas.width = s.width;
@@ -2243,7 +2702,7 @@
       const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: id === '9x16' ? 12e6 : 10e6, audioBitsPerSecond: 128000 });
       const chunks = [];
       recorder.ondataavailable = e => { if (e.data?.size) chunks.push(e.data); };
-      return { id, s, canvas, ctx: canvas.getContext('2d'), blur: document.createElement('canvas'), layout: layoutFor(id), recorder, chunks, stream };
+      return { id, style, s, canvas, ctx: canvas.getContext('2d'), blur: document.createElement('canvas'), layout: layoutFor(id, { ...state, style }), recorder, chunks, stream };
     });
     const span = Math.max(0.5, state.trimOut - state.trimIn);
     const bar = els.exportProgress.querySelector('span');
@@ -2275,7 +2734,11 @@
     els.video.addEventListener('timeupdate', guard);
     els.video.addEventListener('ended', guard);
 
-    const drawAll = () => targets.forEach(t => R.drawFrame(t.ctx, { width: t.s.width, height: t.s.height, video: els.video, bg: bg(), ops: t.layout.ops, logoImage: logo.img, blurCanvas: t.blur, source: still ? still.source() : undefined }));
+    // The export always runs the timeline (reduced motion only calms the preview).
+    const drawAll = () => {
+      const t = Math.max(0, els.video.currentTime - state.trimIn);
+      targets.forEach(x => R.drawFrame(x.ctx, { width: x.s.width, height: x.s.height, video: els.video, bg: bg(), ops: x.layout.ops, logoImage: logo.img, blurCanvas: x.blur, source: still ? still.source() : undefined, t, duration: span }));
+    };
     const onVisibility = () => {
       if (document.hidden && !finished) { els.video.pause(); targets.forEach(t => t.recorder.state === 'recording' && t.recorder.pause()); els.exportStatus.textContent = 'Paused: come back to this tab to keep recording.'; }
       else if (!finished) { targets.forEach(t => t.recorder.state === 'paused' && t.recorder.resume()); els.video.play(); els.exportStatus.textContent = 'Recording in real time. Keep this tab open and visible.'; }
@@ -2309,22 +2772,23 @@
     els.stage.classList.remove('is-recording');
     els.exportProgress.hidden = true;
     renderExport();
-    if (cancelled) { els.exportStatus.textContent = 'Export cancelled.'; draw(); return; }
-    const name = `${brand().id}-${slug(state.trend?.title || state.headline)}`;
+    if (cancelled) { els.exportStatus.textContent = 'Export cancelled.'; draw(); return null; }
+    // {brand}_{style}_{angle}_{WxH}_{yyyymmdd}: the Meta ad name, so results join back later.
+    const when = new Date();
     fileUrls.forEach(url => URL.revokeObjectURL(url));
     fileUrls = [];
     const rows = targets.map(t => {
       const blob = new Blob(t.chunks, { type: mimeType.split(';')[0] });
       const href = URL.createObjectURL(blob);
       fileUrls.push(href);
-      const fileName = `${name}-${t.s.width}x${t.s.height}.${ext}`;
+      const fileName = S.fileName({ brand: brand(), style: t.style, angle: angle(), size: t.s, date: when, ext });
       const a = document.createElement('a');
       a.href = href;
       a.download = fileName;
       document.body.append(a);
       a.click();
       setTimeout(() => a.remove(), 1000);
-      return { fileName, href, mb: blob.size / 1048576 };
+      return { style: t.style, sizeId: t.id, fileName, href, mb: blob.size / 1048576 };
     });
     els.files.hidden = false;
     els.files.innerHTML = rows.map(r => `<li><span class="va-files__icon" aria-hidden="true">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="va-files__name">${esc(r.fileName)}</span><span class="va-meta">${r.mb.toFixed(1)} MB</span><a class="va-link" href="${r.href}" download="${esc(r.fileName)}">Download again</a></li>`).join('');
@@ -2335,6 +2799,7 @@
     renderSteps();
     toast(`Exported ${targets.length} ${ext.toUpperCase()}${targets.length > 1 ? 's' : ''}`, { tone: 'good' });
     draw();
+    return rows;
   }
 
   // ─── Brand, sizes, Meta preview ──────────────────────────────────────────
@@ -2348,6 +2813,9 @@
     els.stage.closest('.va-page')?.style.setProperty('--va-mark', brand().highlight.bg);
     paintPlaceholder();
     refreshLogo();
+    // Claims belong to a brand: back to the new brand's approved list.
+    state.us = null;
+    if (els.styles.childElementCount) { renderStyleFields({ force: true }); suggestSoon(); }
     changed();
     if (railReady) syncRail();
   }
@@ -2402,6 +2870,9 @@
   document.querySelectorAll('#va-team-sport [data-sport], #va-color-sport [data-sport], #va-sports [data-sport]').forEach(b => { if (b.dataset.sport !== 'all') b.insertAdjacentHTML('afterbegin', leagueTile(b.dataset.sport)); });
   markRadios(els.sizes, 'size', state.size);
   markRadios(els.colorSport, 'sport', state.colorSport);
+
+  // Safe zone overlay: where Meta's UI covers the ad.
+  els.safeToggle.addEventListener('click', () => { safeOverlay = !safeOverlay; renderSafe(); });
 
   // Meta preview: frames the canvas as the placement it will run in.
   els.metaToggle.addEventListener('click', () => {
@@ -2679,5 +3150,5 @@
     document.fonts.load('700 40px Roboto'),
   ]).catch(() => {}).finally(() => refreshLogo());
   relayout();
-  window.VideoAdsPage = { state, syncRail, bg, finds, relayout, layoutFor, exportSizes, startExport, useClip, goStep, findClips, findByColor, selectMoment, sendChat, generateDrafts, checkGrammar, lintText, openAi, closeAi, applyCopy, undo, setTrim, logEvent };
+  window.VideoAdsPage = { state, syncRail, bg, finds, relayout, layoutFor, exportSizes, startExport, useClip, goStep, findClips, findByColor, selectMoment, sendChat, generateDrafts, checkGrammar, lintText, openAi, closeAi, applyCopy, undo, setTrim, logEvent, pickStyle, useStill, renderSafe, localSuggestion, resolvedCopy, renderExport };
 })();

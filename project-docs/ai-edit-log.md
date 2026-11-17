@@ -17,6 +17,35 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-17 — Video Ads: four no-footage styles, motion, safe zones, test sets (branch `feature/video-ad-styles`)
+- Status: `[committed on feature/video-ad-styles — not pushed; coordinator merges after Suhail approves]`
+- Brief: Phase 1 of `project-docs/video-ad-styles-research.md`.
+- **Motion base** (`video-ads-render.js`): ops may carry `anim` (fade / rise / scale / pop / wipe, with optional exit);
+  `drawOps` / `drawFrame` take the ad clock `{ t, duration }`. Times scale so every entrance ends by 40% of the ad;
+  the CTA then holds to the last frame. No clock (or no `anim`) draws exactly as before. The preview honours
+  reduced motion and shows the finished frame while you edit; play / scrub shows the timeline. Exports always run it.
+- **Four styles**, each with a spec per size, always inside Meta's Reels safe zone (9:16 copy band y 270–1250, CTA
+  clear of the action rail): Stat Card, Today's 3, Us vs Them, Quote Card. They work on the animated background,
+  a photo or a clip. Shared rules live in the new `video-ads-styles.js` (browser + server).
+- **Facts**: stats must be a number from the brief (or typed by the editor); quotes verbatim with a named speaker;
+  Today's 3 headlines must restate real stories; Us vs Them "us" lines only from `verifiedClaims` per brand.
+  **The claims in `video-ads-brands.js` are placeholders (`claimsApproved: false`, TODO) — Suhail must approve them.**
+- **Copy server** (`netlify/functions/video-ads.js`): per-style fields, checks and code repairs; a style asked for
+  without its facts skips before any AI call; every reply carries a `suggestion`; new `suggest-style` mode (no model).
+- **Suggestion**: "Suggested: Stat Card — your brief has a number (412)". Rules first; the brand's export ranking
+  (`_ad-learning.js` `styleRankingFor`: export share × edit distance) and the AI's pick only break near-ties (≤ 0.09).
+- **Export 3 styles**: the chosen copy in 2–3 styles × sizes, one pass; files named
+  `{brand}_{style}_{angle}_{WxH}_{yyyymmdd}.mp4` (all exports use this now). One `export` event per style with
+  `style`, `angle`, `gridId`, file names.
+- **Safe zones**: "Safe zone" toolbar overlay; classic styles get `safeZone: 'meta' | 'classic'` (default meta);
+  "Unsubscribe anytime" ≥ 32px (34px in the new styles).
+- **Rating** (`_ad-rating.js`): PROMPT_VERSION v1.1.0 — knows the styles, backgrounds and timed reveals; never
+  penalises a missing clip. Rubric, weights and RUBRIC_VERSION unchanged.
+- Tests: new `scripts/test-video-ads-styles.mjs`; additions to `test-video-ads.mjs`, `test-video-ads-render.mjs`,
+  `test-ad-learning.mjs`, `test-ad-rating.mjs`. No migration, no new env vars.
+- Not done: `style_selected` / `grid_created` events (the events table's type check would reject them; needs a
+  migration), What's new / tour copy (shared files across pages).
+
 ### 2026-09-10 — Fix a regression from this same day's earlier fixes: concurrent profile upsert race
 - Status: `[pushed - see rollback point below]`
 - Files touched: `dashboard-data.js`. No database changes this time.

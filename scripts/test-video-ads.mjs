@@ -485,6 +485,10 @@ _test.useLearning({});
   assert.deepEqual(c.errors, []);
   assert.equal(c.variant.stat, '', 'a bad extra is emptied, not an error');
   assert.equal(c.variant.quote, 'We never stopped believing in this group', 'a good extra rides along');
+  // A number or quote the editor typed is their input: it counts as a fact.
+  const typedCtx = _test.copyContext({ brandId: 'the-huddle', notes: 'Big win.', stat: '6', quote: 'One game at a time, always.' });
+  assert.deepEqual(_test.checkVariant({ style: 'stat', stat: '6', statLabel: 'straight wins', offer: 'Free.' }, huddle, typedCtx.facts, 'stat').errors, []);
+  assert.ok(typedCtx.quotes.includes('One game at a time, always.'));
   // Skip: asked for a style without its facts.
   const bare = _test.copyContext({ brandId: 'the-huddle', notes: 'The Chiefs keep winning.' });
   const brief = STYLES_FOR_TEST.briefFacts({ notes: bare.notes, brand: bare.brand });

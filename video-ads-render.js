@@ -616,9 +616,9 @@
       blocks.push({ h: textHeight(quote, CAP.condensed, 1.1), gap: 18 * s, emit: (ops, y) => ops.push(...textOps(quote, { x: c.left, y, maxWidth: c.maxWidth, cap: CAP.condensed, lineHeight: 1.1, shadow: SHADOW.headline, boost: quote.px * BASE.boost, role: 'display' })) });
       const who = [str(c.layout.speaker), str(c.layout.quoteContext)].filter(Boolean).join(', ');
       if (!str(c.layout.speaker)) ok = false;
-      const attr = fitText(c.measure, `— ${who}`, { weight: 700, family: LABEL_FONT, size: px(sp.attr, s, FLOOR.label), min: FLOOR.label, maxLines: 2, maxWidth: c.maxWidth, upper: true });
+      const attr = fitText(c.measure, who ? `— ${who}` : '', { weight: 700, family: LABEL_FONT, size: px(sp.attr, s, FLOOR.label), min: FLOOR.label, maxLines: 2, maxWidth: c.maxWidth, upper: true });
       if (!attr.ok) ok = false;
-      blocks.push({ h: textHeight(attr, CAP.body, 1.15), gap: 40 * s, emit: (ops, y) => ops.push(...textOps(attr, { x: c.left, y, maxWidth: c.maxWidth, role: 'label', alpha: 0.92, anim: { at: TIMING.quote.attr, dur: ENTER, kind: 'fade' } })) });
+      if (who) blocks.push({ h: textHeight(attr, CAP.body, 1.15), gap: 40 * s, emit: (ops, y) => ops.push(...textOps(attr, { x: c.left, y, maxWidth: c.maxWidth, role: 'label', alpha: 0.92, anim: { at: TIMING.quote.attr, dur: ENTER, kind: 'fade' } })) });
       const offer = fitText(c.measure, str(c.layout.offer), { weight: 500, family: BODY, size: px(sp.offer, s, FLOOR.body), min: FLOOR.body, maxLines: sp.offerLines, maxWidth: c.maxWidth });
       if (!offer.ok) ok = false;
       if (offer.lines.length) blocks.push({ h: textHeight(offer, CAP.body, 1.15), gap: 56 * s, emit: (ops, y) => ops.push(...textOps(offer, { x: c.left, y, maxWidth: c.maxWidth, anim: { at: TIMING.quote.offer, dur: ENTER, kind: 'rise', dy: 20 } })) });

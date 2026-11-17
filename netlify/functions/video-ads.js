@@ -781,12 +781,15 @@ function copyContext(body) {
   // Headlines the editor already has (Today's 3), and other trending titles the page sent.
   const typedItems = strings(body.items, 3, 200);
   const headlines = [...new Set([...trend.related.map(r => r.title), ...strings(body.headlines, 8, 200), ...typedItems].filter(Boolean))].slice(0, 10);
-  const factsText = [trend.title, ...headlines, ...teams, notes, clipText].filter(Boolean).join(' ');
-  const quotes = STYLE_RULES.extractQuotes([notes, clipText].join(' ')).slice(0, 3);
+  // A number or quote the editor typed into the style's fields is their input too.
+  const typedQuote = clean(body.quote, 400);
+  const typed = [clean(body.stat, 24), typedQuote].filter(Boolean);
+  const factsText = [trend.title, ...headlines, ...teams, notes, clipText, ...typed].filter(Boolean).join(' ');
+  const quotes = [...(typedQuote ? [typedQuote] : []), ...STYLE_RULES.extractQuotes([notes, clipText].join(' '))].slice(0, 3);
   const facts = {
     text: factsText,
     // Verbatim sources for quotes and grounding for headlines.
-    sources: [notes, clipText, trend.title, ...headlines].filter(Boolean),
+    sources: [notes, clipText, trend.title, ...headlines, ...typed].filter(Boolean),
     headlines: [trend.title, ...headlines].filter(Boolean),
     claims: (brand.verifiedClaims || []).slice(0, 12),
     teams,

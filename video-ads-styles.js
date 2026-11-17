@@ -159,7 +159,7 @@
       stat: () => `your brief has a number (${facts.numbers[0]})`,
       quote: () => 'your brief has a quote',
       today3: () => `there are ${facts.relatedCount} headlines to work with`,
-      versus: () => `${name || 'the newsletter'} has ${facts.claims} approved claims`,
+      versus: () => 'no footage needed, it runs all season',
       highlight: () => (facts.hasClip ? 'your clip carries it, one phrase stands out' : 'a classic layout'),
       condensed: () => (facts.hasClip ? 'your clip carries it' : 'a classic layout'),
       simple: () => (facts.hasClip ? 'plain words over your clip' : 'a classic layout'),
