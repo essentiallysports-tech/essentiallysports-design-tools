@@ -307,6 +307,14 @@
   let lastSaveFailed = false;
   let dirty = false;
   let defaultContentSignature = '';
+  let lastSavedAt = 0;
+
+  // The editor's save chip (frameup-editor-assist.js) listens for this.
+  // state: 'ready' (autosave is on) | 'pending' (a change is waiting) | 'saving'
+  //        | 'saved' | 'failed'
+  function announce(state, extra = {}) {
+    try { window.dispatchEvent(new CustomEvent('frameup:autosave-state', { detail: { state, savedAt: lastSavedAt, ...extra } })); } catch (error) { /* optional */ }
+  }
 
   async function saveNow() {
     clearTimeout(saveTimer);
@@ -336,15 +344,19 @@
       lastSavedSignature = signature;
       lastSaveFailed = false;
       dirty = false;
+      lastSavedAt = Date.now();
       pruneImages().catch(() => {});
       // Cloud drafts (frameup-cloud-drafts.js) copy each confirmed local save.
       try { window.dispatchEvent(new CustomEvent('frameup:autosaved', { detail: { savedAt: Date.now() } })); } catch (error) { /* optional */ }
     })();
+    announce('saving');
     try {
       await saving;
+      announce('saved');
     } catch (error) {
       lastSaveFailed = true;
       console.warn('[autosave] could not save:', error);
+      announce('failed', { message: error?.name === 'QuotaExceededError' ? 'This browser is out of storage space.' : '' });
     } finally {
       saving = null;
     }
@@ -352,6 +364,7 @@
 
   function schedule() {
     if (!enabled) return;
+    if (!dirty) announce('pending');
     dirty = true;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveNow, SAVE_DELAY_MS);
@@ -671,6 +684,7 @@
       restoredRecord = await restore();
       if (restoredRecord) {
         lastSavedSignature = signatureOf(restoredRecord.payload);
+        lastSavedAt = Number(restoredRecord.savedAt) || 0;
         if (contentSignatureOf(restoredRecord.payload) !== contentSignatureOf(defaultPayload)) showRestoredNote(restoredRecord.savedAt);
       }
     } catch (error) {
@@ -693,6 +707,7 @@
     }
     try { sessionStorage.removeItem('frameup.autosave.recovered'); } catch (error) { /* ignore */ }
     enabled = true;
+    announce('ready');
     window.addEventListener('beforeunload', onBeforeUnload);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden' && (dirty || saveTimer)) saveNow();
@@ -705,6 +720,7 @@
     schedule,
     saveNow,
     restored,
+    status: () => ({ enabled, dirty, saving: Boolean(saving), failed: lastSaveFailed, savedAt: lastSavedAt }),
     // Shared with Recent designs / Gallery reopen.
     encodeValue,
     decodeValue,

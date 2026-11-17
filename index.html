@@ -7902,6 +7902,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 <link rel="stylesheet" href="frameup-posted.css?v=20261118-rel1">
 <link rel="stylesheet" href="editor-polish.css?v=20261117-focus1">
 <link rel="stylesheet" href="frameup-quick-wins.css?v=20261118-rel1">
+<link rel="stylesheet" href="frameup-editor-assist.css?v=20261118-hero-editor">
 <script src="theme.js?v=20261115-pol2"></script>
 <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
 <script src="site-chrome.js?v=20261117-usage1"></script>
@@ -15174,8 +15175,12 @@ function drawPills(ctx, W, H, scale, pill_h, pill_spacing, pill_pad_left, pill_p
   const rawMaxY = Math.max(...pillPositions.map(p => p.y + p.h));
   let shiftX = 0;
   let shiftY = 0;
+  // The staggered group can be wider than the safe area (long lines plus
+  // their offsets). Then each pill is nudged back inside on its own, so no
+  // pill runs off the canvas (it used to be cut off at the right edge).
+  const groupTooWide = rawMaxX - rawMinX > W - safe * 2;
 
-  if (rawMaxX - rawMinX <= W - safe * 2) {
+  if (!groupTooWide) {
     if (rawMinX < safe) shiftX = safe - rawMinX;
     if (rawMaxX + shiftX > W - safe) shiftX = W - safe - rawMaxX;
   } else {
@@ -15193,6 +15198,9 @@ function drawPills(ctx, W, H, scale, pill_h, pill_spacing, pill_pad_left, pill_p
     blockCenterX += shiftX;
     blockTopY += shiftY;
     pillPositions = pillPositions.map(p => ({ ...p, x: p.x + shiftX, y: p.y + shiftY }));
+  }
+  if (groupTooWide) {
+    pillPositions = pillPositions.map(p => ({ ...p, x: clamp(p.x, safe, Math.max(safe, W - safe - p.w)) }));
   }
 
   if (scale === 1) {
@@ -20738,6 +20746,8 @@ function getExportIssues() {
       },
     });
   }
+  // ES guideline nudges (font, copy, text size): frameup-editor-assist.js.
+  issues.push(...(window.FrameUpEditorAssist?.exportIssues?.({ workspace: activeWorkspace, state }) || []));
   return issues;
 }
 
@@ -20756,7 +20766,10 @@ function confirmExportIssues(proceed, { verb = 'Export', extraActions = [], intr
   setStatus('', 'ok');
   showEsDialog({
     title: issues.length ? 'Before you export' : `${verb} your carousel`,
-    body: [intro, issues.length ? `This ${intro ? 'slide' : 'design'} still looks unfinished:` : ''].filter(Boolean).join(' '),
+    body: [intro, !issues.length ? ''
+      : issues.every(issue => issue.rule) ? `This ${intro ? 'slide' : 'design'} doesn't quite match the ES guidelines:`
+      : issues.some(issue => issue.rule) ? 'Check these first:'
+      : `This ${intro ? 'slide' : 'design'} still looks unfinished:`].filter(Boolean).join(' '),
     items: issues.map(issue => issue.text),
     actions,
   });
@@ -24470,16 +24483,19 @@ loadFont().then(() => render());
 })();
 </script>
 <script src="how-it-works.js?v=20260813-sync1"></script>
-<script src="frameup-autosave.js?v=20261118-rel1"></script>
+<script src="frameup-autosave.js?v=20261118-hero-editor"></script>
 <script src="frameup-designs.js?v=20261118-rel1"></script>
-<script src="frameup-cloud-drafts.js?v=20261118-rel1"></script>
-<script src="frameup-templates.js?v=20261118-rel2"></script>
+<script src="frameup-cloud-drafts.js?v=20261118-hero-editor"></script>
+<script src="frameup-templates.js?v=20261118-hero-editor"></script>
 <script src="frameup-spec.js?v=20261118-rel2"></script>
 <script src="frameup-impact.js?v=20261118-rel1"></script>
 <script src="frameup-posted.js?v=20261118-rel1"></script>
 <script src="frameup-zip.js?v=20261118-rel1"></script>
 <script src="frameup-size-pack.js?v=20261118-rel1"></script>
 <script src="frameup-cutout.js?v=20261118-rel1"></script>
-<script src="frameup-extras.js?v=20261118-rel1"></script>
+<script src="frameup-extras.js?v=20261118-hero-editor"></script>
+<script src="frameup-rules.js?v=20261118-hero-editor"></script>
+<script src="es-guidelines.js?v=20261118-hero-editor"></script>
+<script src="frameup-editor-assist.js?v=20261118-hero-editor"></script>
 </body>
 </html>

@@ -418,7 +418,12 @@
       isOnline: () => win.navigator.onLine !== false,
       onConflict: ({ remote, local }) => askWhichDraft(remote, local.savedAt),
       onApplyRemote: applyRemote,
-      onStatus: next => { lastStatus = next; statusListeners.forEach(fn => { try { fn(next); } catch (error) { /* UI only */ } }); },
+      onStatus: next => {
+        lastStatus = next;
+        statusListeners.forEach(fn => { try { fn(next); } catch (error) { /* UI only */ } });
+        // The editor's save chip (frameup-editor-assist.js) shows this too.
+        try { win.dispatchEvent(new win.CustomEvent('frameup:cloud-status', { detail: { status: next } })); } catch (error) { /* optional */ }
+      },
     });
 
     // Every successful local save goes up (debounced).
@@ -643,6 +648,7 @@
       renderInto,
       flush: () => sync.flush(),
       status: () => ({ ...sync.status(), deviceId }),
+      statusText: () => statusText()[0],
     });
   }
 

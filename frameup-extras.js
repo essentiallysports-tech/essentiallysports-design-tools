@@ -2,6 +2,7 @@
 //   Ctrl/⌘ + E          Export (same as the Export button, with its checks)
 //   Ctrl/⌘ + Shift + L  Copy link
 //   ?                   List of shortcuts
+// Ctrl/⌘ + S (save now) and T (templates) live in frameup-editor-assist.js.
 // Undo / Redo (Ctrl/⌘ + Z, Shift + Ctrl/⌘ + Z) and ⌘K search already exist.
 (() => {
   'use strict';
@@ -13,7 +14,9 @@
 
   const SHORTCUTS = [
     ['Export', [MOD, 'E']],
+    ['Save now', [MOD, 'S']],
     ['Copy link', [MOD, 'Shift', 'L']],
+    ['Browse templates', ['T']],
     ['Undo', [MOD, 'Z']],
     ['Redo', [MOD, 'Shift', 'Z']],
     ['Search FrameUp', [MOD, 'K']],
@@ -252,7 +255,8 @@
     const optionsButton = visibleButton('studio-export-options-btn');
     if (optionsButton) items.push({ label: 'Export options', hint: 'PNG, 2×', icon: 'sliders', keywords: 'png size double', run: () => optionsButton.click() });
     if (window.FrameUpSizePack?.available?.()) items.push({ label: 'Export size pack', hint: 'ZIP', icon: 'download', keywords: 'resize sizes story square x twitter youtube zip pack', run: () => window.FrameUpSizePack.open() });
-    items.push({ label: 'Browse templates', icon: 'template', keywords: 'change template post type asset picker', run: () => window.FrameUpTemplates?.openForPage?.() });
+    if (window.FrameUpEditorAssist?.saveNow) items.push({ label: 'Save now', hint: `${MOD}+S`, icon: 'clock', keywords: 'save draft autosave sync cloud', run: () => window.FrameUpEditorAssist.saveNow() });
+    items.push({ label: 'Browse templates', hint: 'T', icon: 'template', keywords: 'change template post type asset picker', run: () => window.FrameUpTemplates?.openForPage?.() });
     items.push({ label: 'Recent designs', icon: 'clock', keywords: 'reopen past exports history', run: () => window.FrameUpDesigns?.showRecentDesigns?.() });
     items.push({ label: 'Keyboard shortcuts', hint: '?', icon: 'keyboard', keywords: 'keys hotkeys', run: showShortcuts });
     return [{ label: 'Actions', first: true, items }];
