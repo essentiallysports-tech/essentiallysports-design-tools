@@ -17,6 +17,16 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-19 — Reels Studio: Story step UI, no page header, disclosure headers (branch feature/reels-ui)
+- Status: `[committed on feature/reels-ui — not pushed]`. Files: `reel-maker.html/css/js` only (UI), `tours/updates.json` (release note), new `scripts/test-reels-story-ui.mjs`. No render/export/server/flow-logic changes; `reel-flow.js` untouched.
+- Page header ("AI Studio" + "Reels Studio") removed; the h1 stays as `.es-sr-only`. `.rm-head` keeps the steps + tour "?" (tour target `#rm-steps` unchanged). Page top padding 32→24, stage height +50px.
+- Story step: trend list now lives in `#rm-trendbox` (one bordered scroller) with the league filter as a sticky header (hairline + soft shadow once scrolled; single scrolling row on phones). Compact rows: 40px logo tile, 2-line title, meta + `.es-badge--brand` format tag, quiet 1px blue ring when picked; roving tabindex, arrows/Home/End, focus kept after a pick.
+- "Reel about" is a summary card (eyebrow, title, meta, Change / Clear). The chip row became a Settings summary: four tiles Style · Voice · Clips · Format (consistent case), each opens All settings at that section and focuses its control. The fold is now "All settings" (meta: script quality + fact check).
+- Make my reel: stays a filled primary while busy (`aria-disabled` + `aria-busy`, not `disabled`, so no outline fallback), spinner + "Making your reel · 2 of 4". Progress is a stepper (done / in progress / to do / skipped / needs a look, joined by a rail, `aria-current="step"`, polite live region); while it runs it replaces the trend list, settings and fold, so it never clips.
+- Bugs fixed: the empty sticky footer (`.rm-pane-nav`) covered the panel bottom (its `:has()` matched hidden buttons' children); the picked card stayed visible after switching to Brief; the label reset to "Make my reel" even when AI was off.
+- Every `.rm-fold` header (Settings, Revise, Voice, Style, Music, Sources) and the cost fold: inset rounded row (4px from the card edge, radius-chip), subtle tint on hover, chevron rotates when open, ES focus ring. Previously the hover filled edge to edge and hid the card outline.
+- Spacing on the 8px grid (pane padding 24, gaps 16/8). Tests: `scripts/test-reels-story-ui.mjs` (10 checks); suite at baseline; tour tests pass.
+
 ### 2026-11-19 — Generate asset service: AI backgrounds and concept art, cut-outs, varied ES photos (branch feature/gen-assets)
 - Status: `[committed on feature/gen-assets — not pushed]`. Spec: `scratchpad/gen-creative-contract.md` (agent gen-assets). Docs: `project-docs/gen-assets.md`.
 - New `netlify/functions/_asset-service.js` (`generateBackground`, `generateConceptArt`, `cutout`, `findPhotos`, `status`), `netlify/functions/gen-assets.js` + `api/gen-assets.js` (`GET/POST /api/gen-assets`, vercel.json maxDuration 60), browser client `frameup-assets.js` (`window.FrameUpAssets`, not loaded by any page yet: the gen-creative composer loads it).
