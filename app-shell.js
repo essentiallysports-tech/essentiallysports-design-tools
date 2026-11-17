@@ -15,6 +15,7 @@
     youtube: icon('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"/>'),
     newsletter: icon('<path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/>'),
     reels: icon('<path d="m12.296 3.464 3.02 3.956"/><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3z"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="m6.18 5.276 3.1 3.899"/>'),
+    inbox: icon('<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>'),
     request: icon('<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>'),
     dashboard: icon('<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>'),
     feedback: icon('<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M7 11h10"/><path d="M7 15h6"/><path d="M7 7h8"/>'),
@@ -78,6 +79,7 @@
       label: 'Work',
       items: [
         { id: 'request', label: 'Design Request', short: 'Request', href: 'design-request.html', icon: 'request', desc: 'Send the design team one clear brief with context, copy, deadline and references.' },
+        { id: 'my-requests', label: 'My requests', short: 'Mine', href: 'requests.html', icon: 'inbox', count: true, desc: 'Track your design requests; designers work their queue and admins assign.' },
         { id: 'gallery', label: 'Gallery', href: 'gallery.html', icon: 'gallery', badge: 'New', desc: 'Browse every Social Media post the team has exported.' },
         { id: 'dashboard', label: 'Dashboard', href: 'dashboard.html', icon: 'dashboard', adminOnly: true },
       ],
@@ -102,6 +104,7 @@
     'reels.html': 'reels',
     'video-ads.html': 'video-ads',
     'design-request.html': 'request',
+    'requests.html': 'my-requests',
     'dashboard.html': 'dashboard',
     'gallery.html': 'gallery',
     'generate.html': 'generate',
@@ -157,8 +160,13 @@
     return Boolean(shellId) && (shellId === id || shellId === owner?.id);
   }
 
+  // Open-request count (e.g. "3") next to My requests; filled by startRequestCount().
+  function countBadgeMarkup(item) {
+    return item.count ? `<span class="es-badge es-badge--brand" data-shell-count="${item.id}" hidden></span>` : '';
+  }
+
   function navItemMarkup(item) {
-    const badge = newBadgeMarkup(item);
+    const badge = newBadgeMarkup(item) + countBadgeMarkup(item);
     return `<a class="es-nav-item" href="${base}${item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''} data-tip="${item.label}">${ICONS[item.icon]}<span class="es-nav-item__text">${item.label}</span><span class="es-nav-item__short" aria-hidden="true">${item.short || item.label}</span>${badge}</a>`;
   }
 
@@ -199,6 +207,7 @@
     syncScrollEnd();
     setTimeout(syncScrollEnd, 2600); // after the admin link may appear
     startUsage(aside.querySelector('[data-shell-usage]'));
+    startRequestCount();
 
     if (isAdmin()) aside.querySelectorAll('[data-shell-admin]').forEach(link => { link.hidden = false; });
 
@@ -369,6 +378,58 @@
     setInterval(() => { if (document.visibilityState === 'visible') loadUsage({ force: true }); }, USAGE_REFRESH_MS);
     loadUsage();
   }
+  // ─── Open design requests (sidebar badge) ──────────────────────────────
+  // frameup_my_open_request_count(): my open requests as a requester, my
+  // queue as a designer, plus unassigned ones for admins. Hidden until the
+  // request workflow migration exists, or when the count is 0.
+  const REQUEST_COUNT_KEY = 'frameup.requestCount.v1';
+  const REQUEST_COUNT_MS = 60 * 1000;
+  let requestCountStarted = false;
+  let requestCountLoading = false;
+
+  function paintRequestCount(count) {
+    document.querySelectorAll('[data-shell-count="my-requests"]').forEach(badge => {
+      const show = Number.isFinite(count) && count > 0;
+      badge.hidden = !show;
+      badge.textContent = show ? (count > 99 ? '99+' : String(count)) : '';
+      badge.setAttribute('aria-label', show ? `${count} open` : '');
+    });
+  }
+
+  async function loadRequestCount({ force = false } = {}) {
+    if (!force) {
+      try {
+        const cached = JSON.parse(window.sessionStorage.getItem(REQUEST_COUNT_KEY) || 'null');
+        if (cached && Date.now() - cached.at < REQUEST_COUNT_MS) { paintRequestCount(cached.count); return; }
+      } catch (error) { /* storage blocked */ }
+    }
+    if (requestCountLoading) return;
+    let client = null;
+    try { client = window.ESAuth?.getSupabaseClient?.(); } catch (error) { client = null; }
+    if (!client) return;
+    requestCountLoading = true;
+    try {
+      const { data, error } = await client.rpc('frameup_my_open_request_count');
+      if (error || typeof data !== 'number') { paintRequestCount(null); return; }
+      try { window.sessionStorage.setItem(REQUEST_COUNT_KEY, JSON.stringify({ at: Date.now(), count: data })); } catch (error) { /* storage blocked */ }
+      paintRequestCount(data);
+    } catch (error) {
+      paintRequestCount(null);
+    } finally {
+      requestCountLoading = false;
+    }
+  }
+
+  function startRequestCount() {
+    if (requestCountStarted) { loadRequestCount(); return; }
+    requestCountStarted = true;
+    window.addEventListener('es:auth-ready', () => loadRequestCount());
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadRequestCount(); });
+    setInterval(() => { if (document.visibilityState === 'visible') loadRequestCount({ force: true }); }, 5 * REQUEST_COUNT_MS);
+    loadRequestCount();
+  }
+  window.FrameUpRequestCount = Object.freeze({ refresh: () => loadRequestCount({ force: true }) });
+
   window.FrameUpUsage = Object.freeze({ refresh: () => loadUsage({ force: true }), limit: AI_WEEKLY_USER_LIMIT_USD });
 
   // ─── What's new ────────────────────────────────────────────────────────
@@ -553,7 +614,7 @@
       list.innerHTML = NAV.map(group => {
         const items = group.items.filter(item => item.sidebar !== false);
         if (!items.length) return '';
-        return `<div class="es-mobile-nav__group${group.id ? ` es-mobile-nav__group--${group.id}` : ''}">${group.label ? `<span class="es-mobile-nav__label">${group.label}</span>` : ''}${items.map(item => `<a class="es-mobile-nav__item" href="${item.action ? '#' : base + item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''}>${ICONS[item.icon]}<span>${item.label}</span>${newBadgeMarkup(item)}</a>`).join('')}</div>`;
+        return `<div class="es-mobile-nav__group${group.id ? ` es-mobile-nav__group--${group.id}` : ''}">${group.label ? `<span class="es-mobile-nav__label">${group.label}</span>` : ''}${items.map(item => `<a class="es-mobile-nav__item" href="${item.action ? '#' : base + item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''}>${ICONS[item.icon]}<span>${item.label}</span>${newBadgeMarkup(item)}${countBadgeMarkup(item)}</a>`).join('')}</div>`;
       }).join('');
       menu.prepend(list);
       menu.classList.add('has-es-mobile-nav');
@@ -565,6 +626,7 @@
       if (isAdmin()) list.querySelectorAll('[data-shell-admin]').forEach(link => { link.hidden = false; });
     });
     syncMobileNavCurrent();
+    startRequestCount();
   }
 
   function syncMobileNavCurrent() {

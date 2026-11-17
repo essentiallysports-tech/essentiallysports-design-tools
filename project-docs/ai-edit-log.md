@@ -85,6 +85,16 @@ and what's still uncommitted.
   skipped, the Impact view shows a note and uses tasks, requests and AI usage.
 - Logic is pure and tested: `frameup-impact.js`, `scripts/test-impact.mjs` (`npm run test:impact`).
 - Verified locally with a stubbed sign-in and Supabase client (light/dark, 1280 and 375).
+### 2026-11-18 — Design Requests become a tracked workflow, with Slack threads (branch `feature/requests-slack`)
+- Status: `[committed on feature/requests-slack, not pushed; migration NOT applied]`
+- Brief: item 7 of `project-docs/frameup-opportunities-research.md`.
+- **Lifecycle** (`request-lifecycle.js`, shared by browser, functions and tests): New → (Assigned) → In progress → In review → Done, plus **Declined**. Designers claim unassigned work, hand back their own, and move their own one step at a time; admins do anything; requesters comment and can withdraw before work starts.
+- **Migration** `supabase/migrations/20261118120000_request_workflow.sql` (idempotent, Undo in header): `Declined` status + `status_changed_at`; `frameup_request_designers` (admin-managed); designers read all design requests (one SELECT policy, extended); `frameup_request_events` (history + comments, written by a trigger on every status/assignee/due/priority change); `frameup_request_deliveries`; RPCs `frameup_request_update / _comment / _attach / _detach / _set_slack_thread / _claim_notifications`, `frameup_my_open_request_count`. Everything degrades before it runs (read-only list + notice).
+- **My requests** page (`requests.html/.css/.js`, data in `design-requests.js`): Mine / My queue / All / Designers views, Open/Overdue/Done/Declined filters, search, progress steps, facts, manage panel, brief, delivered designs (attach a FrameUp export or link; In progress auto-moves to In review), activity + comments. NAV "My requests" under Work with an open-count badge (`app-shell.js`).
+- **Slack** (`netlify/functions/_slack.js`): bot mode (`SLACK_BOT_TOKEN` + `SLACK_DESIGN_REQUEST_CHANNEL`) posts with chat.postMessage and stores the ts in task metadata, so updates/comments reply in-thread; webhook mode (existing `SLACK_DESIGN_REQUEST_WEBHOOK_URL`) posts standalone updates. `/api/design-request-update` runs changes as the user and posts DB-claimed events. `/api/slack-command` (`/frameup request|status|help`) verifies `SLACK_SIGNING_SECRET`, refuses without it; filing directly needs bot + `SUPABASE_SERVICE_ROLE_KEY`, otherwise replies with a pre-filled form link. Owner steps: `project-docs/slack-app-setup.md`.
+- **Request form**: clearer labels/help, email locked to the sign-in, collision-safe IDs (`DR-YYYYMMDD-XXXX`; the old per-browser counter could collide across people), success screen with "Track this request", Slack-link prefill (`?brief=&priority=&due=`). No file upload exists, so references stay links.
+- **Dashboard**: status filter (incl. Open/Declined), Declined column only when needed, "History and comments" link in the task drawer, Declined no longer counted as open, edits ask the server to post to the Slack thread.
+- Tests: `scripts/test-request-workflow.mjs` (33 checks, fetch mocked; no real Slack).
 
 
 ### 2026-09-10 — Fix a regression from this same day's earlier fixes: concurrent profile upsert race
