@@ -40,10 +40,12 @@ const MAX_AGE_H = { '1d': { news: 48, search: 24 }, '2d': { news: 48, search: 48
 const FUTURE_SKEW_MS = 15 * 60 * 1000;
 const HALF_LIFE_H = { news: 8, search: 12 };
 const CORE_SPORTS = new Set(['nfl', 'cfb', 'mlb', 'golf', 'tennis']);
-const ENRICH_TTL_MS = 45 * 60 * 1000;
+// A trend id is a hash of the story's words, so its angles stay right as long
+// as the story is on the board (48 h at most): keep them for 6 h per instance.
+const ENRICH_TTL_MS = 6 * 60 * 60 * 1000;
 const ENRICH_BATCH = 6;
 const FETCH_TIMEOUT_MS = 6000;
-const PER_CATEGORY = 14;
+const PER_CATEGORY = 16; // more per sport now that storylines fold repeats
 const UA = 'Mozilla/5.0 (compatible; FrameUpTrends/1.0; +https://frameup.essentiallysports.com)';
 
 const CATEGORIES = [
@@ -82,14 +84,15 @@ const w = (list, weight) => list.map(word => [word, weight]);
 const RULES = {
   nfl: [
     ...w(['nfl', 'super bowl', 'afc', 'nfc', 'pro bowl', 'nfl draft', 'trade deadline'], 6),
+    ...w(['qb'], 3),
     ...w(['quarterback', 'touchdown', 'wide receiver', 'running back', 'tight end', 'linebacker', 'sack', 'interception', 'field goal', 'snap count', 'depth chart', 'fantasy football'], 2),
     ...w(['chiefs', 'eagles', 'cowboys', '49ers', 'niners', 'bills', 'ravens', 'bengals', 'steelers', 'browns', 'packers', 'bears', 'lions', 'vikings', 'commanders', 'seahawks', 'rams', 'chargers', 'raiders', 'broncos', 'dolphins', 'patriots', 'texans', 'colts', 'titans', 'jaguars', 'saints', 'falcons', 'buccaneers', 'bucs'], 4),
     ...w(['giants', 'cardinals', 'jets', 'panthers'], 1),
-    ...w(['mahomes', 'josh allen', 'lamar jackson', 'joe burrow', 'travis kelce', 'jalen hurts', 'aaron rodgers', 'dak prescott', 'c.j. stroud', 'cj stroud', 'brock purdy', 'jayden daniels', 'caleb williams', 'justin jefferson', 'saquon barkley', 'kirk cousins', 'tua tagovailoa', 'micah parsons', 'ja\'marr chase', 'patrick mahomes'], 5),
+    ...w(['mahomes', 'josh allen', 'lamar jackson', 'joe burrow', 'travis kelce', 'jalen hurts', 'aaron rodgers', 'dak prescott', 'c.j. stroud', 'cj stroud', 'brock purdy', 'jayden daniels', 'caleb williams', 'justin jefferson', 'saquon barkley', 'kirk cousins', 'tua tagovailoa', 'micah parsons', 'ja\'marr chase', 'patrick mahomes', 'derrick henry', 'geno smith', 'aidan hutchinson', 'dan campbell', 'andy reid', 'sean payton', 'myles garrett', 'trevor lawrence', 'bo nix', 'drake maye', 'puka nacua', 'ceedee lamb', 'jahmyr gibbs', 'travis hunter'], 5),
   ],
   cfb: [
     ...w(['college football', 'ncaaf', 'cfp', 'heisman', 'sec', 'big ten', 'big 12', 'acc', 'bowl game', 'signing day', 'transfer portal', 'playoff rankings', 'ap poll'], 6),
-    ...w(['ohio state', 'buckeyes', 'alabama', 'crimson tide', 'georgia bulldogs', 'michigan', 'wolverines', 'texas longhorns', 'longhorns', 'lsu', 'oregon', 'ducks', 'notre dame', 'clemson', 'penn state', 'nittany lions', 'usc trojans', 'florida state', 'seminoles', 'tennessee vols', 'volunteers', 'oklahoma sooners', 'sooners', 'miami hurricanes', 'ole miss', 'auburn', 'texas a&m', 'aggies', 'mississippi state', 'nebraska', 'cornhuskers', 'iowa hawkeyes', 'wisconsin badgers', 'utah utes', 'colorado buffaloes', 'deion sanders', 'boise state', 'smu', 'byu', 'indiana hoosiers', 'missouri tigers'], 4),
+    ...w(['ohio state', 'buckeyes', 'alabama', 'crimson tide', 'georgia bulldogs', 'michigan', 'wolverines', 'texas longhorns', 'longhorns', 'lsu', 'oregon', 'ducks', 'notre dame', 'clemson', 'penn state', 'nittany lions', 'usc trojans', 'florida state', 'seminoles', 'tennessee vols', 'volunteers', 'oklahoma sooners', 'sooners', 'miami hurricanes', 'ole miss', 'auburn', 'texas a&m', 'aggies', 'mississippi state', 'nebraska', 'cornhuskers', 'iowa hawkeyes', 'wisconsin badgers', 'utah utes', 'colorado buffaloes', 'deion sanders', 'boise state', 'smu', 'byu', 'indiana hoosiers', 'missouri tigers', 'arch manning', 'dan lanning', 'kirby smart', 'ryan day', 'lane kiffin', 'jeremiah smith'], 4),
     ...w(['tigers'], 1),
     ...w(['football'], 1),
   ],
@@ -228,6 +231,7 @@ const WEAK_END = /\s(?:a|an|the|of|to|for|in|on|at|with|and|or|but|as|by|from|af
 const NOT_NAMES = new Set(['The', 'A', 'An', 'How', 'Why', 'What', 'When', 'Who', 'Where', 'After', 'Before', 'With', 'Week', 'Day', 'Report', 'Watch', 'Live', 'Best', 'Top', 'New', 'Latest', 'Here', 'This', 'That', 'These', 'It', 'Is', 'Are', 'Will', 'Can', 'Should', 'Could', 'Breaking', 'Video', 'Photos', 'Ranking', 'Rankings', 'Every', 'All', 'Our', 'Your', 'His', 'Her', 'Their', 'Former', 'Latest', 'Takeaways', 'Grades', 'Player', 'Bizarre', 'Down', 'Up', 'In', 'On', 'At', 'For', 'From', 'To', 'Of', 'And', 'But', 'Or', 'Bay', 'Area']);
 
 const words = s => s.split(/\s+/).filter(Boolean);
+const FRAGMENT_LEAD = /^(?:here['’]?s|here is|see (?:where|how|what)|plus|best of|latest|live|watch|full|every|he|she|they|it|his|her|their|but|and|or|as)\b/i;
 function tidy(text) {
   return String(text || '')
     .replace(LEAD_NOISE, '')
@@ -263,9 +267,21 @@ function suggestTitles(item) {
   // two-line pill. Nothing is cut mid-phrase and nothing is invented.
   const ideas = [];
   const fits = t => { const n = words(t).length; return n >= 2 && n <= 8 && t.length <= 46 && !WEAK_END.test(t); };
-  const push = text => {
-    const t = String(text || '').replace(/^["']|["']$/g, m => m).replace(/\s+/g, ' ').trim().replace(/[.,;:]+$/, '');
-    if (!fits(t.replace(/"/g, ''))) return;
+  // Not a headline: a publication's name, a bare name ("Tiger Woods"), a
+  // fragment that leans on the rest of the sentence ("Here's When He'll Play
+  // Next") or a broken bit of markup ("Instagram Story)").
+  const sourceNames = new Set([item.source, ...(item.related || []).map(r => r.source)].filter(Boolean).map(n => n.toLowerCase()));
+  const standsAlone = (t, quoted) => {
+    const plain = t.replace(/"/g, '');
+    if (sourceNames.has(plain.toLowerCase())) return false;
+    if ((plain.match(/\(/g) || []).length !== (plain.match(/\)/g) || []).length || /\w\/\w/.test(plain)) return false;
+    if (FRAGMENT_LEAD.test(plain)) return false;
+    if (quoted) return true;
+    return /(^|\s)[a-z][a-z'’]{2,}/.test(plain) || words(plain).length >= 4;
+  };
+  const push = (text, quoted = false) => {
+    const t = String(text || '').replace(/\s+/g, ' ').trim().replace(/[.,;:]+$/, '');
+    if (!fits(t.replace(/"/g, '')) || !standsAlone(t, quoted)) return;
     if (ideas.some(i => i.toLowerCase() === t.toLowerCase())) return;
     ideas.push(t);
   };
@@ -275,7 +291,7 @@ function suggestTitles(item) {
   // 1. A direct quote.
   for (const text of [clean, ...related]) {
     const quote = (text.match(/"([^"]{10,60})"/) || [])[1];
-    if (quote && fits(quote)) { push(`"${quote}"`); break; }
+    if (quote && fits(quote)) { push(`"${quote}"`, true); break; }
   }
   // 2. The headline itself, or its first clause.
   push(clean.replace(/"/g, ''));
@@ -377,14 +393,23 @@ async function aiTitles({ title, related = [], sport = '' }, track) {
 }
 
 // ── AI enrichment: "why fans care" + 3 headlines, several trends per call ──
-const ENRICH_SYSTEM = 'You help EssentiallySports social editors (US sports fans). For each story write "why": one plain line of at most 14 words on why fans care right now, and "titles": 3 headlines for a bold two-line graphic pill, each 3 to 7 words and at most 42 characters, with different angles (straight news, name-led, short and punchy). Use only what the story says: never add opponents, numbers, quotes, outcomes or predictions. No emojis, hashtags or clickbait. Reply with JSON only: {"items":[{"id":"<id>","why":"...","titles":["...","...","..."]}]} with one entry per story id.';
+const ENRICH_SYSTEM = [
+  'You write for EssentiallySports (ES) social editors; the readers are US sports fans.',
+  'ES voice: fan-first and direct, the name fans know up front, present tense, confident, never clickbait. No "BREAKING", no "you won\'t believe", no emojis or hashtags.',
+  'For each story return:',
+  '- "why": one plain line, at most 14 words, on why fans care right now;',
+  '- "titles": 3 headlines for a bold two-line graphic pill, each 3 to 7 words and at most 42 characters, with different angles: straight news, name-led, and short and punchy with a verb;',
+  '- "hook": the opening line of a 9:16 reel, at most 12 words, that makes a fan keep watching (the question the story raises, or a tease of its key fact).',
+  'Facts: use only what the story says. Never add opponents, numbers, quotes, outcomes or predictions. Any number you write must appear in the story.',
+  'Reply with JSON only: {"items":[{"id":"<id>","why":"...","titles":["...","...","..."],"hook":"..."}]} with one entry per story id.',
+].join('\n');
 
 const enrichCache = new Map(); // trend id -> { at, why, titles }
 function cachedEnrichment(id, now = Date.now()) {
   const hit = enrichCache.get(id);
   if (!hit) return null;
   if (now - hit.at > ENRICH_TTL_MS) { enrichCache.delete(id); return null; }
-  return { why: hit.why, titles: hit.titles };
+  return { why: hit.why, titles: hit.titles, hook: hit.hook || '' };
 }
 function rememberEnrichment(id, value, now = Date.now()) {
   enrichCache.set(id, { at: now, ...value });
@@ -392,18 +417,33 @@ function rememberEnrichment(id, value, now = Date.now()) {
 }
 
 const cleanLine = (text, max) => String(text || '').replace(/[#\u{1F300}-\u{1FAFF}]/gu, '').replace(/\s+/g, ' ').trim().slice(0, max);
-function parseEnrichment(text, ids) {
+// Every number in the AI's line must be in the story (no invented stats,
+// scores or dates); clickbait words are dropped too.
+const numbersIn = text => (String(text || '').replace(/,(?=\d{3})/g, '').match(/\d+(?:\.\d+)?/g) || []);
+const CLICKBAIT = /\b(?:breaking|you won['’]t believe|shocking|insane|must[- ]see|jaw[- ]dropping)\b/i;
+function grounded(line, source) {
+  if (!line || CLICKBAIT.test(line)) return false;
+  if (source == null) return true;
+  const known = new Set(numbersIn(source));
+  return numbersIn(line).every(n => known.has(n));
+}
+// sources: optional { id: story text } to check numbers against.
+function parseEnrichment(text, ids, sources = null) {
   const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
   const out = {};
   for (const entry of Array.isArray(parsed.items) ? parsed.items : []) {
     const id = String(entry?.id || '');
     if (!ids.includes(id) || out[id]) continue;
+    const source = sources ? sources[id] ?? '' : null;
     const titles = (Array.isArray(entry.titles) ? entry.titles : [])
       .map(t => cleanLine(t, 60).replace(/[.]+$/, ''))
-      .filter(t => words(t).length >= 2 && t.length <= 48)
+      .filter(t => words(t).length >= 2 && t.length <= 48 && grounded(t, source))
       .slice(0, 3);
-    const why = cleanLine(entry.why, 140).replace(/^why fans care:?\s*/i, '');
-    if (titles.length || why) out[id] = { why, titles };
+    let why = cleanLine(entry.why, 140).replace(/^why fans care:?\s*/i, '');
+    if (!grounded(why, source) || words(why).length > 18) why = '';
+    let hook = cleanLine(entry.hook, 100).replace(/^hook:?\s*/i, '');
+    if (!grounded(hook, source) || words(hook).length > 14) hook = '';
+    if (titles.length || why || hook) out[id] = { why, titles, hook };
   }
   return out;
 }
@@ -411,7 +451,7 @@ function storyBlock(story) {
   return [`id: ${story.id}`, `Headline: ${story.title}`, ...(story.related || []).slice(0, 2).map(r => `Related: ${r}`), story.sport ? `Sport: ${story.sport}` : ''].filter(Boolean).join('\n');
 }
 // Output budget: the light model reasons before it answers, so leave room.
-const enrichMaxTokens = n => Math.min(3000, 900 + 300 * n);
+const enrichMaxTokens = n => Math.min(3200, 900 + 340 * n); // +hook
 
 // stories: [{ id, title, related: [string], sport }] (already de-duplicated).
 // Returns { items: { id: { why, titles, ai, cached } }, calls, cost }.
@@ -425,7 +465,7 @@ async function enrich(stories, track, { now = Date.now() } = {}) {
   }
   if (!misses.length) return { items, calls: 0, cost: 0 };
   const { text, cost } = await lightJson({ system: ENRICH_SYSTEM, user: misses.map(storyBlock).join('\n\n'), maxTokens: enrichMaxTokens(misses.length) }, track);
-  const parsed = parseEnrichment(text, misses.map(s => s.id));
+  const parsed = parseEnrichment(text, misses.map(s => s.id), Object.fromEntries(misses.map(s => [s.id, [s.title, ...(s.related || [])].join(' · ')])));
   for (const story of misses) {
     const value = parsed[story.id];
     if (!value) continue;
@@ -451,7 +491,11 @@ async function wikiImage(name) {
     const response = await fetch(`https://en.wikipedia.org/w/rest.php/v1/search/title?q=${encodeURIComponent(name)}&limit=1`, { headers: { 'User-Agent': WIKI_UA, Accept: 'application/json' }, signal: AbortSignal.timeout(3000) });
     const page = (await response.json())?.pages?.[0];
     const thumb = page?.thumbnail?.url;
-    if (thumb && page.description && !/referred to by the same term/i.test(page.description) && SPORT_DESC.test(page.description)) {
+    // The page must be about the name we asked for (Wikipedia's title search
+    // is fuzzy: "Ramey Saves" finds "Saved game").
+    const asked = new Set(words(String(name).toLowerCase()).filter(w => w.length >= 4));
+    const sameName = words(String(page?.title || '').toLowerCase().replace(/[()]/g, '')).some(w => asked.has(w));
+    if (thumb && sameName && page.description && !/referred to by the same term/i.test(page.description) && SPORT_DESC.test(page.description)) {
       const url = (thumb.startsWith('//') ? `https:${thumb}` : thumb).replace(/\/\d+px-/, '/330px-');
       hit = { url, title: page.title, logo: /logo|\.svg|wordmark|emblem|crest|seal/i.test(thumb) };
     }
@@ -485,7 +529,7 @@ async function addImages(list, budgetMs = 4000) {
       const item = todo[index++];
       for (const name of imageCandidates(item)) {
         const hit = await wikiImage(name);
-        if (hit) { item.image = hit.url; item.imageKind = hit.logo ? 'logo' : 'photo'; item.imageCredit = `Wikipedia: ${hit.title}`; break; }
+        if (hit) { item.image = hit.url; item.imageKind = hit.logo ? 'logo' : 'photo'; item.imageCredit = `Wikipedia: ${hit.title}`; Object.defineProperty(item, 'imageSubject', { value: hit.title, enumerable: false, configurable: true }); break; }
       }
     }
   }
@@ -496,7 +540,7 @@ async function addImages(list, budgetMs = 4000) {
 const key = title => String(title).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(word => word.length > 2).slice(0, 7).join(' ');
 const MATCH_LISTING = / - Match (WTA|ATP|ITF) - /i;
 const PER_SOURCE = 3;
-const NOISE = /\b(tickets?|promo code|betting odds|odds, picks|picks and predictions|prediction, odds|best bets|sale|discount|horoscope|obituary)\b/i;
+const NOISE = /\b(tickets?|promo code|betting odds|odds, picks|picks and predictions|prediction, odds|best bets|expert picks|sale|discount|horoscope|obituary|where to watch|how to watch|live stream(?:ing)?|tv channel|photo galler(?:y|ies)|prospects chat|mlb the show|madden \d+|ea sports fc|jobs pay)\b/i;
 
 // Stable id from the story's words (the same story keeps its id across
 // refreshes and sources, so the AI cache and saved trends keep working).
@@ -581,6 +625,157 @@ function teamFor(item) {
   return { name: team.name, short: team.short, logo: TEAMS.logoFor(team) || '' };
 }
 
+// ── Storylines: the same story told by several outlets ────────────────────
+// Title similarity (dedupe) only merges near-identical headlines. A storyline
+// is wider: stories in one sport that share a person, team or a named running
+// story ("Bryson DeChambeau", "Power rankings"). The board then shows one lead
+// card per storyline with the rest folded under it.
+const STORY_PHRASES = [
+  [/\bpower rankings?\b/i, 'Power rankings'],
+  [/\b(?:cfp|college football playoff|playoff) (?:rankings?|picture|race|bubble)\b|\bplayoff picture\b/i, 'Playoff picture'],
+  [/\bmock drafts?\b|\bdraft order\b/i, 'The draft'],
+  [/\bfree agen(?:t|ts|cy)\b|\bhot stove\b/i, 'Free agency'],
+  [/\btrade (?:rumors?|deadline|idea)\b|\brumors? tracker\b/i, 'Trade talk'],
+  [/\bheisman\b/i, 'Heisman race'],
+  [/\bwaiver wire\b|\bfantasy football\b/i, 'Fantasy'],
+  [/\bcoaching (?:search|carousel|hot seat)\b|\bfired\b|\bfires\b/i, 'Coaching moves'],
+];
+const NOT_STORY = new Set('nfl mlb nba nhl wnba pga lpga atp wta liv tour world golf tennis college football baseball basketball playoff playoffs week season draft rankings ranking power finals final championship open cup game games team teams news update updates report reports rumors rumor free agency agent agents top best first last year years day days fantasy odds picks title titles win wins loss losses coach coaches players player star stars league sports sport cfp heisman ncaa ncaaf espn athletic dp ryder mvp series american national state university city united north south east west new york los angeles san bay sunday monday tuesday wednesday thursday friday saturday january february march april may june july august september october november december'.split(' '));
+function storyKeys(item) {
+  const text = item.type === 'search' ? `${item.query || item.title} · ${item.title}` : item.title;
+  const keys = new Map(); // key -> label hint
+  for (const [re, label] of STORY_PHRASES) if (re.test(text)) keys.set(`p:${label.toLowerCase().replace(/\s+/g, '-')}`, [label]);
+  for (const run of names(tidy(text).replace(/['’]s\b/g, ''))) {
+    const parts = run.split(/[\s-]+/).filter(Boolean);
+    parts.forEach((part, index) => {
+      const clean = part.replace(/['’]$/, '');
+      const k = clean.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (k.length < 4 || NOT_STORY.has(k) || NOT_NAMES.has(clean) || /^\d/.test(k)) return;
+      // Label: the name with its neighbour ("Tiger" -> "Tiger Woods",
+      // "DeChambeau" -> "Bryson DeChambeau"); buildStorylines keeps the
+      // version most members agree on.
+      const nameish = w => w && /^[A-Z][a-z'’.]+$/.test(w) && !NOT_NAMES.has(w) && !NOT_STORY.has(w.toLowerCase()) && !TITLE_WORDS.has(w);
+      const prev = parts[index - 1];
+      const next = parts[index + 1]?.replace(/['’]$/, '');
+      const label = nameish(prev) ? `${prev} ${clean}` : nameish(next) ? `${clean} ${next}` : clean;
+      const list = keys.get(`n:${k}`) || [];
+      keys.set(`n:${k}`, [...list, label]);
+    });
+  }
+  return keys;
+}
+// items: one sport's stories, best first. Returns [{ id, label, ids }] and
+// sets item.storyline = { id, label, size, lead } on every member.
+function buildStorylines(list, category) {
+  const index = new Map(); // key -> { label, members: Set }
+  list.forEach((item, i) => {
+    for (const [key, labels] of storyKeys(item)) {
+      if (!index.has(key)) index.set(key, { labels: new Map(), members: new Set() });
+      const entry = index.get(key);
+      entry.members.add(i);
+      new Set(labels).forEach(label => entry.labels.set(label, (entry.labels.get(label) || 0) + 1));
+    }
+  });
+  // A key on most of the sport's stories is not a storyline, it's the sport.
+  const tooCommon = n => list.length >= 5 && n > list.length * 0.6;
+  const candidates = [...index.entries()]
+    .filter(([, e]) => e.members.size >= 2 && !tooCommon(e.members.size))
+    .sort((a, b) => b[1].members.size - a[1].members.size || Math.min(...a[1].members) - Math.min(...b[1].members) || (a[0] < b[0] ? -1 : 1));
+  const taken = new Set();
+  const out = [];
+  for (const [key, entry] of candidates) {
+    const members = [...entry.members].filter(i => !taken.has(i)).sort((a, b) => a - b);
+    if (members.length < 2) continue;
+    members.forEach(i => taken.add(i));
+    // The most common label; ties go to the two-word one ("Bryson DeChambeau").
+    const label = [...entry.labels.entries()].sort((a, b) => b[1] - a[1] || words(b[0]).length - words(a[0]).length || b[0].length - a[0].length)[0][0];
+    const id = `s-${category}-${key.slice(2).replace(/[^a-z0-9-]/g, '')}`.slice(0, 40);
+    out.push({ id, label, category, ids: members.map(i => list[i].id) });
+    members.forEach((i, n) => { list[i].storyline = { id, label, size: members.length, lead: n === 0 }; });
+  }
+  return out;
+}
+
+// ── Signals: hot, rising, new ───────────────────────────────────────────────
+// Deterministic, from the feed itself (and the previous build on this
+// instance when there is one): no AI.
+//   hot:    50K+ Google searches, or 6+ outlets on one storyline within 12 h
+//   rising: more outlets or searches than the last build, or 2+ outlets /
+//           a 3-story storyline / a search trend within 3 h
+// Only a storyline's lead (or a story on its own) carries a signal.
+function signalFor(item, { now = Date.now(), size = 1, prev = null } = {}) {
+  const ageH = (now - Date.parse(item.publishedAt)) / 3600e3;
+  if (!Number.isFinite(ageH)) return null;
+  const searches = trafficValue(item.traffic);
+  const outlets = (item.coverage || 1) + Math.max(0, size - 1);
+  if (item.type === 'search' && searches >= 50000) return 'hot';
+  if (outlets >= 6 && ageH <= 12) return 'hot';
+  if (prev && ((item.coverage || 1) > (prev.coverage || 1) || searches > trafficValue(prev.traffic))) return 'rising';
+  if (ageH <= 3 && ((item.coverage || 1) >= 2 || size >= 3 || item.type === 'search')) return 'rising';
+  return null;
+}
+
+// ── ES relevance per sport and newsletter brand ────────────────────────────
+// 0–100. Core ES sports first, the three flagship newsletters (The Huddle,
+// Essentially CFB, ES Dugout) next, then a team we have a logo for, a star in
+// the classifier's player lists, Google search volume and a big storyline.
+let BRANDS = null;
+try { BRANDS = require('../../video-ads-brands.js'); } catch (error) { /* brands are optional */ }
+const BRAND_SPORTS = new Set(['nfl', 'cfb', 'mlb']);
+function brandFor(category) {
+  if (!BRAND_SPORTS.has(category)) return '';
+  const brand = BRANDS?.AD_BRANDS?.find(b => b.sport === category);
+  return brand ? brand.id : '';
+}
+function esFit(item, { size = 1 } = {}) {
+  let score = CORE_SPORTS.has(item.category) ? 50 : 25;
+  if (BRAND_SPORTS.has(item.category)) score += 15;
+  if (item.team) score += 10;
+  if ((item.score || 0) >= 9) score += 10; else if ((item.score || 0) >= 6) score += 5;
+  if (item.type === 'search') score += 10;
+  score += Math.min(15, 5 * Math.max(0, size - 1));
+  return { score: Math.min(100, score), brand: brandFor(item.category) };
+}
+
+// ── Post kit, the free part: template, photo query ─────────────────────────
+// Template ids are the Generate formats (generate.html FORMATS).
+const TEMPLATE_LABEL = { cover: 'Cover', quote: 'Quote', 'long-quote': 'Long Quote', 'stats-single-ent': 'Player Stats', 'listicle-type-2': 'Ranked List' };
+const STAT_UNITS = /\b\d+(?:\.\d+)?\s?(?:yards|yds|points|pts|touchdowns|tds?|td passes|home runs|hrs?|strikeouts|ks|rbis?|sacks|aces|birdies|eagles|under par|-under|rebounds|assists|goals|saves|era)\b/i;
+const LIST_WORDS = /\b(?:power rankings?|rankings?|ranked|top \d+|\d+ (?:best|players|teams|takeaways|things|questions|landing spots)|landing spots|mock draft|draft order|waiver wire|winners and losers|grades)\b/i;
+function suggestTemplate(item) {
+  const title = tidy(item.title);
+  const quote = (title.match(/["“]([^"”]{10,140})["”]/) || [])[1] || '';
+  if (quote) return quote.length > 60 ? { id: 'long-quote', label: TEMPLATE_LABEL['long-quote'], why: 'The story leads with a quote.' } : { id: 'quote', label: TEMPLATE_LABEL.quote, why: 'The story leads with a quote.' };
+  if (LIST_WORDS.test(title)) return { id: 'listicle-type-2', label: TEMPLATE_LABEL['listicle-type-2'], why: 'It is a ranking or a list.' };
+  if (STAT_UNITS.test(title)) return { id: 'stats-single-ent', label: TEMPLATE_LABEL['stats-single-ent'], why: 'The headline has a player stat.' };
+  return { id: 'cover', label: TEMPLATE_LABEL.cover, why: 'A bold headline over a photo fits a news story.' };
+}
+// What to search for in the photo library: the main person, else the team,
+// else the storyline, else the league.
+const TITLE_WORDS = new Set('Announces Announced Interest Could Would Should Take Takes Top Questions Players Entering Lose Loses Latest Free Updated Early Fresh Five Three Four Ten Sell Buy Total Did Does Week Joins Signs Says Set Gets Makes Wins Beats Leads Rises Drops Names Hires Fires Reveals Confirms Reacts Return Returns Comeback News Report Rumors Odds Picks Predictions Projection Prediction Rankings Ranking Power Playoff Draft Mock Observations Simulator Takeaways Grades Live Watch Today Tonight Game Games Season Team Teams Star Stars Coach Hype Alarm Reveal Reveals Get Say Comes Metrics Interest Outlines Says'.split(' '));
+const NOT_PEOPLE = /^(?:NFL|MLB|NBA|NHL|WTA|ATP|PGA|LPGA|LIV|CFP|DP|College|Playoff|Power|Free|World|Tour|Week|Draft|Super|Pro|Ryder|Grand|Heisman|Hall|Tennis|Golf|Finals?|Open|Masters|Championship)\b/;
+function photoQuery(item) {
+  const wiki = String(item.imageSubject || '').replace(/\s*\([^)]*\)$/, '');
+  const text = item.type === 'search' ? `${item.query || item.title} · ${(item.related || []).map(r => r.title).join(' · ')}` : item.title;
+  // 2. A star from the classifier's player lists, as written in the story.
+  const lower = text.toLowerCase();
+  const star = (RULES[item.category] || []).filter(([, weight]) => weight === 5).map(([name]) => name).filter(name => name.includes(' ') && lower.includes(name)).sort((a, b) => b.length - a.length)[0];
+  if (star) { const at = lower.indexOf(star); return { query: text.slice(at, at + star.length), kind: 'person' }; }
+  // The person Wikipedia confirmed for the card photo (a sports page).
+  if (wiki && item.imageKind !== 'logo' && words(wiki).length >= 2 && words(wiki).length <= 3) return { query: wiki, kind: 'person' };
+  // 3. A two-word name ("Dan Lanning"), not a Title Case headline fragment.
+  const person = names(tidy(text).replace(/['’]s\b/g, ''))
+    .flatMap(n => { const w = words(n); return w.map((_, i) => w.slice(i, i + 2)).filter(pair => pair.length === 2); })
+    .find(([a, b]) => /^[A-Z][a-z'’.-]+$/.test(a) && /^[A-Z][a-zA-Z'’.-]+$/.test(b) && !NOT_NAMES.has(a) && !TITLE_WORDS.has(a) && !TITLE_WORDS.has(b) && !NOT_STORY.has(a.toLowerCase()) && !NOT_STORY.has(b.toLowerCase()) && !NOT_PEOPLE.test(a));
+  if (person) return { query: person.join(' '), kind: 'person' };
+  if (item.team?.name) return { query: item.team.name, kind: 'team' };
+  if (item.storyline?.label) return { query: item.storyline.label, kind: 'story' };
+  return { query: CATEGORIES.find(c => c.id === item.category)?.label || 'Sports', kind: 'league' };
+}
+
+// The last build per window: id -> { coverage, traffic }, for "rising".
+const previousBuild = {};
+
 async function buildTrends(sources = SOURCES, { window = '1d', now = Date.now() } = {}) {
   const maxAge = MAX_AGE_H[window] || MAX_AGE_H['1d'];
   const results = await Promise.allSettled(sources.map(source => fetchText(source.url).then(xml => ({ source, xml }))));
@@ -639,6 +834,7 @@ async function buildTrends(sources = SOURCES, { window = '1d', now = Date.now() 
     shaped.rank = Number(rankScore({ ...shaped, score: item.score }, now).toFixed(4));
     const team = teamFor(shaped);
     if (team) shaped.team = team;
+    Object.defineProperty(shaped, 'score', { value: item.score, enumerable: false });
     return shaped;
   });
 
@@ -653,7 +849,25 @@ async function buildTrends(sources = SOURCES, { window = '1d', now = Date.now() 
       .filter(item => { const src = (item.source || '').toLowerCase().replace(/^www./, ''); perSource[src] = (perSource[src] || 0) + 1; return item.type === 'search' || perSource[src] <= PER_SOURCE; })
       .slice(0, PER_CATEGORY);
   }
+  // Storylines per sport; a storyline's lead ranks higher the more outlets
+  // tell it (capped), then signals, ES fit and the free half of the post kit.
+  const prev = previousBuild[window] || null;
+  const storylines = [];
+  for (const { id } of CATEGORIES) {
+    storylines.push(...buildStorylines(categories[id], id));
+    for (const item of categories[id]) {
+      const size = item.storyline?.size || 1;
+      if (item.storyline?.lead) item.rank = Number((item.rank * Math.min(1.6, 1 + 0.12 * (size - 1))).toFixed(4));
+      const signal = item.storyline && !item.storyline.lead ? null : signalFor(item, { now, size, prev: prev?.get(item.id) });
+      if (signal) item.signal = signal;
+      item.fit = esFit(item, { size: item.storyline?.lead ? size : 1 });
+      item.template = suggestTemplate(item);
+    }
+    categories[id].sort((a, b) => b.rank - a.rank);
+  }
+  previousBuild[window] = new Map(CATEGORIES.flatMap(c => categories[c.id]).map(item => [item.id, { coverage: item.coverage, traffic: item.traffic }]));
   await addImages(CATEGORIES.flatMap(c => categories[c.id]));
+  CATEGORIES.forEach(c => categories[c.id].forEach(item => { item.photo = photoQuery(item); }));
   return {
     ok: true,
     updatedAt: new Date(now).toISOString(),
@@ -666,6 +880,8 @@ async function buildTrends(sources = SOURCES, { window = '1d', now = Date.now() 
     aiOff: featureDisabled('trend-enrich'),
     categories: CATEGORIES.map(c => ({ ...c, count: categories[c.id].length })),
     items: CATEGORIES.flatMap(c => categories[c.id]),
+    storylines,
+    brands: (BRANDS?.AD_BRANDS || []).map(b => ({ id: b.id, label: b.label, sport: b.sport, accent: b.accent })),
     sourcesFailed: errors,
   };
 }
@@ -748,7 +964,7 @@ function storiesFrom(body) {
   }
   return out;
 }
-const rulesFor = story => ({ why: '', titles: story.fallback?.length ? story.fallback : suggestTitles({ title: story.title, related: story.related.map(t => ({ title: t })) }), ai: false });
+const rulesFor = story => ({ why: '', hook: '', titles: story.fallback?.length ? story.fallback : suggestTitles({ title: story.title, related: story.related.map(t => ({ title: t })) }), ai: false });
 
 async function handleEnrich(event, body) {
   const auth = await verifyEsUser(event);
@@ -824,7 +1040,8 @@ exports._test = {
   classify, parseNews, parseTrends, key, suggestTitles, aiTitles,
   publishTime, withinCutoff, tokens, sameStory, dedupe, rankScore, trafficValue, trendId, teamFor,
   buildTrends, enrich, parseEnrichment, enrichMaxTokens, cachedEnrichment, withCachedEnrichment,
-  reset() { Object.keys(caches).forEach(k => delete caches[k]); Object.keys(inflights).forEach(k => delete inflights[k]); enrichCache.clear(); titleCache.clear(); imageCache.clear(); },
+  storyKeys, buildStorylines, signalFor, esFit, suggestTemplate, photoQuery, grounded, ENRICH_SYSTEM,
+  reset() { Object.keys(previousBuild).forEach(k => delete previousBuild[k]); Object.keys(caches).forEach(k => delete caches[k]); Object.keys(inflights).forEach(k => delete inflights[k]); enrichCache.clear(); titleCache.clear(); imageCache.clear(); },
   setCacheAge(window, ms) { if (caches[window]) caches[window].at = Date.now() - ms; },
   FRESH_MS, STALE_MAX_MS, ENRICH_TTL_MS, ENRICH_BATCH, MAX_AGE_H,
 };

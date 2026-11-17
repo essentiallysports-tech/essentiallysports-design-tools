@@ -105,13 +105,14 @@
   Tour.register({
     id: 'trends',
     label: 'Trends',
-    description: 'Live US sports trends, by league.',
+    description: 'What to post now: live US sports trends, storylines and a post kit per story.',
     kicker: 'Trends',
     icon: I.trending,
     steps: [
       { page: 'generate.html', target: '#trends-live', icon: I.trending, title: 'Live trends', text: 'What US fans search and read, kept fresh.' },
-      { page: 'generate.html', target: '#trends-filters', icon: I.filter, title: 'By league', text: 'Filter to the sport you cover.' },
-      { page: 'generate.html', target: ['#trends-body .trend-row', '#trends-body', '#trends-empty'], icon: I.sparkles, title: 'Design this', text: 'Pick a headline idea and Generate starts on it.' },
+      { page: 'generate.html', target: '#trends-filters', icon: I.filter, title: 'By league', text: 'Filter to the sport you cover. Pick your newsletter in the menu above.' },
+      { page: 'generate.html', target: ['#trends-body .trends-picks', '#trends-body', '#trends-empty'], icon: I.trending, title: 'Post now', text: 'The top stories across sports, one per storyline, with why they matter now.' },
+      { page: 'generate.html', target: ['#trends-body .td-kit-btn', '#trends-body .trend-row', '#trends-body', '#trends-empty'], icon: I.sparkles, title: 'Post kit', text: 'Headlines, the template, a photo, a reel hook and a video ad moment in one click.' },
     ],
   });
 

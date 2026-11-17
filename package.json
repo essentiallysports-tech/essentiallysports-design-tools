@@ -25,7 +25,7 @@
     "test:listicle-type2": "node scripts/test-listicle-type2-data.mjs && node scripts/test-listicle-type2-ui.mjs",
     "es:mcp:register": "node scripts/es-mcp-register-client.mjs",
     "es:mcp:token": "node scripts/es-mcp-exchange-token.mjs",
-    "test:trend-design": "node scripts/test-trend-design.mjs",
+    "test:trend-design": "node scripts/test-trend-design.mjs && node scripts/test-trends-hero.mjs",
     "test:impact": "node scripts/test-impact.mjs",
     "test:ai-guardrails": "node scripts/test-ai-guardrails.mjs && node scripts/test-ai-weekly-limit.mjs"
   }

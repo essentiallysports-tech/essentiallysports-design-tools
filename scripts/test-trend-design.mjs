@@ -279,7 +279,7 @@ feeds = {
 
   // Cache expires after its TTL.
   assert.ok(T.cachedEnrichment('t-x0'));
-  assert.equal(T.cachedEnrichment('t-x0', Date.now() + T.ENRICH_TTL_MS + 1000), null, 'expired after 45 minutes');
+  assert.equal(T.cachedEnrichment('t-x0', Date.now() + T.ENRICH_TTL_MS + 1000), null, 'expired after the TTL (6 h)');
 
   // Gates: hourly → free rules, no call; weekly → 429 with free rules.
   T.reset();
