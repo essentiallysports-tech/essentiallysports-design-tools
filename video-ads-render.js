@@ -64,10 +64,15 @@
     bodyLine: 1.11,
     gapCta: 120, // last baseline → CTA top
     cta: 51.73,
-    unsubscribe: 24.89,
+    unsubscribe: 24.89, // the Figma size; drawn at UNSUB_MIN at least (55+ readers, research §3.2)
     gapUnsub: 23, // CTA bottom → unsubscribe cap top
     boost: 0.025, // × size: stroke that brings our Acumin Bold close to Figma's Acumin Black
   };
+
+  // "Unsubscribe anytime" is a trust line: at least 32px on the 1080 canvas in
+  // the classic styles (the Figma 24.9px is ~9pt on a phone), 34px in the new ones.
+  const UNSUB_MIN = 32;
+  const UNSUB_NEW = 34;
 
   // Text shadows from the templates (a little deeper: the ads run over video).
   const SHADOW = {
@@ -145,6 +150,46 @@
     .map(text => text.replace(/[ \t]+\n/g, '\n').trim())
     .filter(Boolean);
 
+  // The white CTA pill (mail icon + label) and the unsubscribe line, sized for
+  // one scale. Shared by every style. Returns null without CTA text.
+  function ctaBlock(measure, layout, brand, maxWidth, scale, { gapBefore = 0, unsubMin = UNSUB_MIN, maxW = maxWidth } = {}) {
+    const ctaText = String(layout.cta || brand.cta || '').trim();
+    if (!ctaText) return null;
+    const fontSize = BASE.cta * Math.max(0.82, scale);
+    const ctaFont = font(700, fontSize, CONDENSED);
+    const icon = fontSize * 0.98; // 50.7px mail icon beside a 51.7px label
+    const iconGap = fontSize * 0.5475; // 28.32px
+    const padX = fontSize * 0.764; // 39.5px (Sign up ES CFB button)
+    const h = fontSize * 1.916; // 99.1px
+    const labelW = measure(ctaText.toUpperCase(), ctaFont) + fontSize * BASE.boost;
+    const w = Math.min(maxW, padX * 2 + icon + iconGap + labelW);
+    let height = gapBefore + h;
+    const unsub = layout.unsubscribe !== false;
+    const unsubSize = Math.max(unsubMin, BASE.unsubscribe * Math.max(0.85, scale));
+    const unsubGap = BASE.gapUnsub * Math.max(0.85, scale);
+    if (unsub) height += unsubGap + unsubSize * CAP.body;
+    return { kind: 'cta', text: ctaText.toUpperCase(), font: ctaFont, fontSize, icon, iconGap, labelW, w, h, gapBefore, unsub, unsubSize, unsubGap, height };
+  }
+
+  // Draw ops for a CTA block whose button top is at y. Returns the new y.
+  function emitCta(ops, measure, block, brand, x, y, align) {
+    const content = block.icon + block.iconGap + block.labelW;
+    const padX = (block.w - content) / 2;
+    ops.push({ type: 'button', x, y, w: block.w, h: block.h, r: block.fontSize * 0.264, fill: '#FFFFFF', role: 'cta' });
+    ops.push({ type: 'mail', x: x + padX, y: y + (block.h - block.icon) / 2, w: block.icon, h: block.icon, fill: brand.accent, role: 'cta' });
+    ops.push({ type: 'text', text: block.text, x: x + padX + block.icon + block.iconGap + block.fontSize * BASE.boost / 2, y: y + block.h / 2 + block.fontSize * CAP.condensed / 2, font: block.font, fill: '#000000', boost: block.fontSize * BASE.boost, role: 'cta' });
+    y += block.h;
+    if (block.unsub) {
+      y += block.unsubGap;
+      const unsubFont = font(600, block.unsubSize, BODY);
+      const text = 'Unsubscribe anytime';
+      const w = measure(text, unsubFont);
+      ops.push({ type: 'text', text, x: align === 'left' ? x : x + (block.w - w) / 2, y: y + block.unsubSize * CAP.body, font: unsubFont, fill: '#FFFFFF', shadow: SHADOW.body, role: 'unsub' });
+      y += block.unsubSize * CAP.body;
+    }
+    return y;
+  }
+
   // The whole stack at one scale: headline, body, CTA, unsubscribe. Heights are
   // cap-top to baseline, as in Figma.
   function stackAt(measure, layout, brand, size, logo, scale) {
@@ -197,23 +242,10 @@
     });
     if (paragraphs.length) blocks.push({ kind: 'text', paragraphs });
 
-    const ctaText = String(layout.cta || brand.cta || '').trim();
-    if (ctaText) {
-      const fontSize = BASE.cta * Math.max(0.82, scale);
-      const ctaFont = font(700, fontSize, CONDENSED);
-      const icon = fontSize * 0.98; // 50.7px mail icon beside a 51.7px label
-      const iconGap = fontSize * 0.5475; // 28.32px
-      const padX = fontSize * 0.764; // 39.5px (Sign up ES CFB button)
-      const h = fontSize * 1.916; // 99.1px
-      const labelW = measure(ctaText.toUpperCase(), ctaFont) + fontSize * BASE.boost;
-      const w = Math.min(maxWidth, padX * 2 + icon + iconGap + labelW);
-      const gapBefore = paragraphs.length ? BASE.gapCta * scale : 0;
-      height += gapBefore + h;
-      const unsub = layout.unsubscribe !== false;
-      const unsubSize = BASE.unsubscribe * Math.max(0.85, scale);
-      const unsubGap = BASE.gapUnsub * Math.max(0.85, scale);
-      if (unsub) height += unsubGap + unsubSize * CAP.body;
-      blocks.push({ kind: 'cta', text: ctaText.toUpperCase(), font: ctaFont, fontSize, icon, iconGap, labelW, w, h, gapBefore, unsub, unsubSize, unsubGap });
+    const cta = ctaBlock(measure, layout, brand, maxWidth, scale, { gapBefore: paragraphs.length ? BASE.gapCta * scale : 0 });
+    if (cta) {
+      height += cta.height;
+      blocks.push(cta);
     }
     return { blocks, height, maxWidth };
   }
@@ -224,7 +256,11 @@
   // reported as not fitting rather than shrunk into unreadable text.
   const MIN_SCALE = 0.68;
   const MAX_SCALE = 1;
-  function fitLayout(measure, layout, brand, size, logo = null) {
+  function fitLayout(measure, layout, brand, sizeIn, logo = null) {
+    if (STYLE_LAYOUTS[layout.style]) return layoutStyle(measure, layout, brand, sizeIn, logo);
+    // Classic styles: the original Figma margins unless the ad uses Meta's
+    // Reels safe zone (layout.safeZone 'meta'; see zoneSize).
+    const size = zoneSize(sizeIn, layout.safeZone === 'meta' ? 'meta' : 'classic');
     // The logo is pinned near the top of the frame; the copy starts below it.
     let logoOp = null;
     let top = size.safe.top;
@@ -304,24 +340,405 @@
         });
       } else if (block.kind === 'cta') {
         y += block.gapBefore;
-        const x = xFor(block.w);
-        const content = block.icon + block.iconGap + block.labelW;
-        const padX = (block.w - content) / 2;
-        ops.push({ type: 'button', x, y, w: block.w, h: block.h, r: block.fontSize * 0.264, fill: '#FFFFFF' });
-        ops.push({ type: 'mail', x: x + padX, y: y + (block.h - block.icon) / 2, w: block.icon, h: block.icon, fill: brand.accent });
-        ops.push({ type: 'text', text: block.text, x: x + padX + block.icon + block.iconGap + block.fontSize * BASE.boost / 2, y: y + block.h / 2 + block.fontSize * CAP.condensed / 2, font: block.font, fill: '#000000', boost: block.fontSize * BASE.boost });
-        y += block.h;
-        if (block.unsub) {
-          y += block.unsubGap;
-          const unsubFont = font(600, block.unsubSize, BODY);
-          const text = 'Unsubscribe anytime';
-          const w = measure(text, unsubFont);
-          ops.push({ type: 'text', text, x: align === 'left' ? x : x + (block.w - w) / 2, y: y + block.unsubSize * CAP.body, font: unsubFont, fill: '#FFFFFF', shadow: SHADOW.body });
-          y += block.unsubSize * CAP.body;
-        }
+        y = emitCta(ops, measure, block, brand, xFor(block.w), y, align);
       }
     });
-    return { ops, scale, fits, height: best.height, available };
+    return { ops, scale, fits, height: best.height, available, zone: size.zone || 'classic' };
+  }
+
+  // ─── Safe zones ──────────────────────────────────────────────────────────
+  // 'meta': Meta's Reels/Stories ad safe zone from the size's `safeMeta`
+  // (9:16: copy band y 270–1250, sides 65, the action rail on the right below
+  // y 1000). 'classic': the original Figma margins. Feed sizes have no
+  // safeMeta, so both modes match there. (video-ads-brands.js safeFor is the
+  // same rule for the page; the renderer keeps its own copy so it stays
+  // dependency-free.)
+  function zoneSize(size, zone) {
+    if (!size || zone !== 'meta' || !size.safeMeta) return size;
+    const { rail, ...safe } = size.safeMeta;
+    const centerY = size.centerY ? Math.round((safe.top + size.height - safe.bottom) / 2) : size.centerY;
+    return { ...size, safe, centerY, rail: rail || null, zone: 'meta' };
+  }
+
+  // ─── Styles without footage (Stat Card, Today's 3, Us vs Them, Quote) ──
+  // Each style is a stack of blocks laid out in the content band, centred,
+  // at the largest scale (MIN_SCALE_NEW…1) that fits. Sizes per canvas size
+  // follow the research spec (project-docs/video-ad-styles-research.md §4);
+  // no text goes under FLOOR (body 44, label 38, unsubscribe 34) however
+  // long the copy: copy that still does not fit is reported (fits: false).
+  // Every op carries `role` (display, body, label, cta, unsub, deco) and
+  // most carry `anim` (see Motion below). Frame 0 always shows the hook.
+  const LABEL_FONT = '"Roboto Condensed", sans-serif';
+  const FLOOR = { body: 44, label: 38, unsub: UNSUB_NEW };
+  const MIN_SCALE_NEW = 0.8;
+  const SPEC = {
+    stat: {
+      '9x16': { eyebrow: 40, number: 360, numberMin: 220, label: 56, labelLines: 2, offer: 49, offerLines: 2, source: 38 },
+      '4x5': { eyebrow: 40, number: 300, numberMin: 200, label: 50, labelLines: 2, offer: 46, offerLines: 2, source: 38 },
+      '1x1': { eyebrow: 0, number: 250, numberMin: 170, label: 46, labelLines: 1, offer: 44, offerLines: 2, source: 0 },
+    },
+    today3: {
+      '9x16': { title: 84, titleMin: 72, titleLines: 2, row: 50, rowLines: 2, disc: 72, offer: 48, offerLines: 2, maxItems: 3 },
+      '4x5': { title: 72, titleMin: 64, titleLines: 2, row: 46, rowLines: 2, disc: 64, offer: 46, offerLines: 2, maxItems: 3 },
+      '1x1': { title: 64, titleMin: 56, titleLines: 1, row: 44, rowLines: 2, disc: 56, offer: 44, offerLines: 2, maxItems: 2, more: true }, // 2 rows + "+1 more" (research §S2)
+    },
+    versus: {
+      '9x16': { label: 40, them: 46, us: 48, itemLines: 2, offer: 46, offerLines: 2, maxThem: 3, maxUs: 3, pad: 40 },
+      '4x5': { label: 38, them: 44, us: 46, itemLines: 1, offer: 44, offerLines: 2, maxThem: 2, maxUs: 3, pad: 34 },
+      '1x1': { label: 38, them: 44, us: 44, itemLines: 1, offer: 44, offerLines: 2, maxThem: 2, maxUs: 2, pad: 28 },
+    },
+    quote: {
+      '9x16': { mark: 260, quote: 76, quoteMin: 60, quoteLines: 4, attr: 40, offer: 46, offerLines: 2 },
+      '4x5': { mark: 200, quote: 68, quoteMin: 56, quoteLines: 4, attr: 40, offer: 44, offerLines: 2 },
+      '1x1': { mark: 150, quote: 60, quoteMin: 50, quoteLines: 3, attr: 38, offer: 44, offerLines: 2 },
+    },
+  };
+  // Entrances in nominal seconds (scaled down for short ads, see animScale).
+  const TIMING = {
+    stat: { number: 0, label: 0.3, rule: 0.6, offer: 1.2, cta: 1.6 },
+    today3: { rows: [0.4, 1.1, 1.8], offer: 2.4, cta: 2.6 },
+    versus: { strikes: [0.6, 0.9, 1.2], ticks: [1.6, 1.9, 2.2], offer: 2.5, cta: 2.8 },
+    quote: { attr: 0.6, offer: 1.0, cta: 1.4 },
+  };
+  const ENTER = 0.35;
+  const ctaAnim = at => ({ at, dur: ENTER, kind: 'rise', dy: 30 });
+
+  const strList = (value, max) => (Array.isArray(value) ? value : []).map(v => String(v || '').replace(/\*\*/g, '').trim()).filter(Boolean).slice(0, max);
+  const str = value => String(value || '').replace(/\*\*/g, '').trim();
+  // Plain text in one font, wrapped; steps the size down to `min` to stay
+  // within maxLines. -> { px, font, lines: [{ text, width }], ok }
+  function fitText(measure, text, { weight, family, size, min = size, maxLines = 99, maxWidth, upper = false }) {
+    const value = upper ? text.toUpperCase() : text;
+    let px = size;
+    const run = () => {
+      const f = font(weight, px, family);
+      const lines = wrapTokens(measure, tokensFor(value, { fontFor: () => f }), maxWidth)
+        .map(line => { const t = line.tokens.map(k => k.text).join(' '); return { text: t, width: measure(t, f) }; })
+        .filter(line => line.text);
+      return { px, font: f, lines };
+    };
+    let out = run();
+    while (out.lines.length > maxLines && px > min + 0.01) {
+      px = Math.max(min, px * 0.95);
+      out = run();
+    }
+    return { ...out, ok: out.lines.length <= maxLines && out.lines.every(l => l.width <= maxWidth + 0.5) };
+  }
+  // Height of wrapped text, cap top to last baseline (as in Figma).
+  const textHeight = (fit, cap, lineHeight) => (fit.lines.length ? fit.px * cap + (fit.lines.length - 1) * fit.px * lineHeight : 0);
+  // Text ops for a fitted block whose cap top is at y.
+  function textOps(fit, { x, y, maxWidth, align = 'left', cap = CAP.body, lineHeight = 1.15, fill = '#FFFFFF', shadow = SHADOW.body, boost = 0, role = 'body', anim = null, alpha }) {
+    return fit.lines.map((line, i) => ({
+      type: 'text', text: line.text, font: fit.font, fill, shadow, role,
+      x: align === 'center' ? x + (maxWidth - line.width) / 2 : x,
+      y: y + fit.px * cap + i * fit.px * lineHeight,
+      w: line.width,
+      ...(boost ? { boost } : {}),
+      ...(alpha != null ? { alpha } : {}),
+      ...(anim ? { anim } : {}),
+    }));
+  }
+  const px = (base, scale, floor) => Math.max(floor, base * scale);
+
+  // A pill label (brand highlight colours): { w, h, emit(x, y) }.
+  function pillBlock(measure, text, brand, size, anim = null) {
+    const f = font(700, size, LABEL_FONT);
+    const label = text.toUpperCase();
+    const padX = size * 0.45;
+    const padY = size * 0.34;
+    const w = measure(label, f) + padX * 2;
+    const h = size * CAP.body + padY * 2;
+    return {
+      w, h,
+      emit: (ops, x, y) => {
+        ops.push({ type: 'box', x, y, w, h, r: size * 0.2, fill: brand.highlight.bg, role: 'deco', ...(anim ? { anim } : {}) });
+        ops.push({ type: 'text', text: label, x: x + padX, y: y + padY + size * CAP.body, w: w - padX * 2, font: f, fill: brand.highlight.fg, role: 'label', ...(anim ? { anim } : {}) });
+      },
+    };
+  }
+
+  // Each builder: (ctx, scale) -> { blocks: [{ h, gap, emit(ops, y) }], ok }.
+  const STYLE_LAYOUTS = {
+    stat(c, s) {
+      const sp = c.spec;
+      const blocks = [];
+      let ok = true;
+      const eyebrowText = str(c.layout.statEyebrow) || 'By the numbers';
+      if (sp.eyebrow) {
+        const pill = pillBlock(c.measure, eyebrowText, c.brand, px(sp.eyebrow, s, FLOOR.label));
+        blocks.push({ h: pill.h, gap: 0, emit: (ops, y) => pill.emit(ops, c.left + (c.maxWidth - pill.w) / 2, y) });
+      }
+      // The number: as big as fits the width (never shrunk below numberMin).
+      const stat = str(c.layout.stat);
+      let numPx = sp.number * Math.max(s, 0.9);
+      const numFont = () => font(700, numPx, CONDENSED);
+      while (c.measure(stat, numFont()) > c.maxWidth && numPx > sp.numberMin) numPx = Math.max(sp.numberMin, numPx * 0.95);
+      const numW = c.measure(stat, numFont());
+      if (!stat || numW > c.maxWidth + 0.5) ok = false;
+      const numCap = numPx * CAP.condensed;
+      blocks.push({
+        h: numCap, gap: sp.eyebrow ? 46 * s : 0,
+        emit: (ops, y) => {
+          const x = c.left + (c.maxWidth - numW) / 2;
+          ops.push({ type: 'text', text: stat, x, y: y + numCap, w: numW, font: numFont(), fill: '#FFFFFF', shadow: SHADOW.headline, boost: numPx * BASE.boost, role: 'display', anim: { at: TIMING.stat.number, dur: 0.4, kind: 'scale', from: 1.12, origin: [x + numW / 2, y + numCap / 2] } });
+        },
+      });
+      const label = fitText(c.measure, str(c.layout.statLabel), { weight: 700, family: BODY, size: px(sp.label, s, FLOOR.body), min: FLOOR.body, maxLines: sp.labelLines, maxWidth: c.maxWidth });
+      if (!label.ok || !label.lines.length) ok = false;
+      blocks.push({ h: textHeight(label, CAP.body, 1.15), gap: 56 * s, emit: (ops, y) => ops.push(...textOps(label, { x: c.left, y, maxWidth: c.maxWidth, align: 'center', role: 'body', anim: { at: TIMING.stat.label, dur: ENTER, kind: 'rise', dy: 24 } })) });
+      const ruleW = 120 * s;
+      const ruleH = Math.max(4, 6 * s);
+      blocks.push({ h: ruleH, gap: 36 * s, emit: (ops, y) => ops.push({ type: 'box', x: c.left + (c.maxWidth - ruleW) / 2, y, w: ruleW, h: ruleH, r: ruleH / 2, fill: c.brand.highlight.bg, role: 'deco', anim: { at: TIMING.stat.rule, dur: 0.4, kind: 'wipe' } }) });
+      const offer = fitText(c.measure, str(c.layout.offer), { weight: 500, family: BODY, size: px(sp.offer, s, FLOOR.body), min: FLOOR.body, maxLines: sp.offerLines, maxWidth: c.maxWidth });
+      if (!offer.ok) ok = false;
+      if (offer.lines.length) blocks.push({ h: textHeight(offer, CAP.body, 1.15), gap: 36 * s, emit: (ops, y) => ops.push(...textOps(offer, { x: c.left, y, maxWidth: c.maxWidth, align: 'center', anim: { at: TIMING.stat.offer, dur: ENTER, kind: 'rise', dy: 20 } })) });
+      const source = str(c.layout.statSource);
+      if (source && sp.source) {
+        const src = fitText(c.measure, `Source: ${source}`, { weight: 700, family: LABEL_FONT, size: px(sp.source, s, FLOOR.label), min: FLOOR.label, maxLines: 1, maxWidth: c.maxWidth, upper: true });
+        if (!src.ok) ok = false;
+        blocks.push({ h: textHeight(src, CAP.body, 1.1), gap: 24 * s, emit: (ops, y) => ops.push(...textOps(src, { x: c.left, y, maxWidth: c.maxWidth, align: 'center', role: 'label', alpha: 0.85, anim: { at: TIMING.stat.offer, dur: ENTER, kind: 'fade' } })) });
+      }
+      return { blocks, ok, ctaAt: TIMING.stat.cta };
+    },
+
+    today3(c, s) {
+      const sp = c.spec;
+      const blocks = [];
+      let ok = true;
+      const title = fitText(c.measure, str(c.layout.listTitle), { weight: 700, family: CONDENSED, size: px(sp.title, s, sp.titleMin), min: sp.titleMin, maxLines: sp.titleLines, maxWidth: c.maxWidth });
+      if (!title.ok) ok = false;
+      if (title.lines.length) blocks.push({ h: textHeight(title, CAP.condensed, 1.08), gap: 0, emit: (ops, y) => ops.push(...textOps(title, { x: c.left, y, maxWidth: c.maxWidth, cap: CAP.condensed, lineHeight: 1.08, shadow: SHADOW.headline, boost: title.px * BASE.boost, role: 'display' })) });
+      const all = strList(c.layout.items, 3);
+      const items = all.slice(0, sp.maxItems);
+      if (items.length < 2) ok = false;
+      const disc = sp.disc * Math.max(s, 0.9);
+      const gapX = disc * 0.4;
+      const textW = c.maxWidth - disc - gapX;
+      items.forEach((item, i) => {
+        const fit = fitText(c.measure, item, { weight: 700, family: BODY, size: px(sp.row, s, FLOOR.body), min: FLOOR.body, maxLines: sp.rowLines, maxWidth: textW });
+        if (!fit.ok) ok = false;
+        const cap = fit.px * CAP.body;
+        const textTop = Math.max(0, disc / 2 - cap / 2);
+        const h = Math.max(disc, textTop + textHeight(fit, CAP.body, 1.15));
+        const anim = { at: TIMING.today3.rows[i] ?? 1.8, dur: ENTER, kind: 'rise', dy: 20 };
+        blocks.push({
+          h, gap: (i === 0 ? 64 : 44) * s,
+          emit: (ops, y) => {
+            const digitPx = Math.max(FLOOR.label, disc * 0.6);
+            const digitFont = font(700, digitPx, LABEL_FONT);
+            const digit = String(i + 1);
+            const dw = c.measure(digit, digitFont);
+            ops.push({ type: 'box', x: c.left, y, w: disc, h: disc, r: disc / 2, fill: c.brand.highlight.bg, role: 'deco', anim });
+            ops.push({ type: 'text', text: digit, x: c.left + (disc - dw) / 2, y: y + disc / 2 + digitPx * CAP.body / 2, w: dw, font: digitFont, fill: c.brand.highlight.fg, role: 'label', anim });
+            ops.push(...textOps(fit, { x: c.left + disc + gapX, y: y + textTop, maxWidth: textW, anim }));
+          },
+        });
+      });
+      if (sp.more && all.length > items.length) {
+        const more = fitText(c.measure, `+${all.length - items.length} more in the newsletter`, { weight: 700, family: LABEL_FONT, size: px(40, s, FLOOR.label), min: FLOOR.label, maxLines: 1, maxWidth: textW, upper: true });
+        blocks.push({ h: textHeight(more, CAP.body, 1.1), gap: 28 * s, emit: (ops, y) => ops.push(...textOps(more, { x: c.left + disc + gapX, y, maxWidth: textW, role: 'label', alpha: 0.85, anim: { at: TIMING.today3.rows[items.length] ?? 1.8, dur: ENTER, kind: 'fade' } })) });
+      }
+      const offer = fitText(c.measure, str(c.layout.offer), { weight: 500, family: BODY, size: px(sp.offer, s, FLOOR.body), min: FLOOR.body, maxLines: sp.offerLines, maxWidth: c.maxWidth });
+      if (!offer.ok) ok = false;
+      if (offer.lines.length) blocks.push({ h: textHeight(offer, CAP.body, 1.15), gap: 64 * s, emit: (ops, y) => ops.push(...textOps(offer, { x: c.left, y, maxWidth: c.maxWidth, align: 'center', anim: { at: TIMING.today3.offer, dur: ENTER, kind: 'rise', dy: 20 } })) });
+      return { blocks, ok, ctaAt: TIMING.today3.cta };
+    },
+
+    versus(c, s) {
+      const sp = c.spec;
+      const blocks = [];
+      let ok = true;
+      const pad = sp.pad * Math.max(s, 0.9);
+      const inner = c.maxWidth - pad * 2;
+      const labelPx = px(sp.label, s, FLOOR.label);
+      const labelFont = font(700, labelPx, LABEL_FONT);
+      // One card: a label, then items (struck through, or ticked).
+      const card = ({ label, labelFill, items, itemPx, weight, fill, kind }) => {
+        const tick = kind === 'us' ? itemPx * 0.82 : 0;
+        const tickGap = tick ? itemPx * 0.42 : 0;
+        const fits = items.map(item => fitText(c.measure, item, { weight, family: BODY, size: itemPx, min: FLOOR.body, maxLines: sp.itemLines, maxWidth: inner - tick - tickGap }));
+        if (fits.some(f => !f.ok)) ok = false;
+        const labelH = labelPx * CAP.body;
+        const itemGap = 30 * s;
+        const itemsH = fits.reduce((n, f, i) => n + (i ? itemGap : 0) + textHeight(f, CAP.body, 1.15), 0);
+        const h = pad + labelH + 32 * s + itemsH + pad;
+        return {
+          h,
+          emit: (ops, y) => {
+            ops.push({ type: 'box', x: c.left, y, w: c.maxWidth, h, r: 22 * s, fill, role: 'deco' });
+            const lw = c.measure(label.toUpperCase(), labelFont);
+            ops.push({ type: 'text', text: label.toUpperCase(), x: c.left + pad, y: y + pad + labelH, w: lw, font: labelFont, fill: labelFill, role: 'label' });
+            let iy = y + pad + labelH + 32 * s;
+            fits.forEach((f, i) => {
+              const x = c.left + pad + tick + tickGap;
+              if (kind === 'them') {
+                ops.push(...textOps(f, { x, y: iy, maxWidth: inner, shadow: false, fill: 'rgba(255,255,255,0.92)' }));
+                // The strike wipes across each line of the item.
+                const at = TIMING.versus.strikes[i] ?? 1.2;
+                f.lines.forEach((line, j) => {
+                  const base = iy + f.px * CAP.body + j * f.px * 1.15;
+                  const th = Math.max(5, f.px * 0.13);
+                  ops.push({ type: 'box', x: x - 6, y: base - f.px * 0.36 - th / 2, w: line.width + 12, h: th, r: th / 2, fill: c.brand.highlight.bg, role: 'deco', anim: { at, dur: 0.4, kind: 'wipe' } });
+                });
+              } else {
+                const at = TIMING.versus.ticks[i] ?? 2.2;
+                const anim = { at, dur: ENTER, kind: 'pop', origin: [c.left + pad + tick / 2, iy + f.px * CAP.body / 2] };
+                ops.push({ type: 'tick', x: c.left + pad, y: iy + f.px * CAP.body / 2 - tick / 2, w: tick, h: tick, fill: '#FFFFFF', role: 'deco', anim });
+                ops.push(...textOps(f, { x, y: iy, maxWidth: inner, shadow: false, anim: { at, dur: ENTER, kind: 'fade' } }));
+              }
+              iy += textHeight(f, CAP.body, 1.15) + itemGap;
+            });
+          },
+        };
+      };
+      const them = strList(c.layout.them, sp.maxThem);
+      const us = strList(c.layout.us, sp.maxUs);
+      if (them.length < 2 || us.length < 2) ok = false;
+      const themCard = card({ label: str(c.layout.themLabel) || 'Your feed', labelFill: 'rgba(255,255,255,0.85)', items: them, itemPx: px(sp.them, s, FLOOR.body), weight: 500, fill: 'rgba(42,47,58,0.88)', kind: 'them' });
+      const usCard = card({ label: c.brand.label || 'The newsletter', labelFill: c.brand.wordmark?.fg || '#FFFFFF', items: us, itemPx: px(sp.us, s, FLOOR.body), weight: 700, fill: c.brand.wordmark?.bg || c.brand.accent, kind: 'us' });
+      blocks.push({ h: themCard.h, gap: 0, emit: themCard.emit });
+      blocks.push({ h: usCard.h, gap: 28 * s, emit: usCard.emit });
+      const offer = fitText(c.measure, str(c.layout.offer), { weight: 500, family: BODY, size: px(sp.offer, s, FLOOR.body), min: FLOOR.body, maxLines: sp.offerLines, maxWidth: c.maxWidth });
+      if (!offer.ok) ok = false;
+      if (offer.lines.length) blocks.push({ h: textHeight(offer, CAP.body, 1.15), gap: 44 * s, emit: (ops, y) => ops.push(...textOps(offer, { x: c.left, y, maxWidth: c.maxWidth, align: 'center', anim: { at: TIMING.versus.offer, dur: ENTER, kind: 'rise', dy: 20 } })) });
+      return { blocks, ok, ctaAt: TIMING.versus.cta };
+    },
+
+    quote(c, s) {
+      const sp = c.spec;
+      const blocks = [];
+      let ok = true;
+      const markPx = sp.mark * Math.max(s, 0.9);
+      const markH = markPx * 0.36; // the visible part of the “ glyph
+      blocks.push({ h: markH, gap: 0, emit: (ops, y) => ops.push({ type: 'text', text: '“', x: c.left - markPx * 0.04, y: y + markPx * 0.62, w: markPx * 0.4, font: font(700, markPx, CONDENSED), fill: c.brand.highlight.bg, alpha: 0.5, role: 'deco' }) });
+      const quote = fitText(c.measure, str(c.layout.quote), { weight: 700, family: CONDENSED, size: px(sp.quote, s, sp.quoteMin), min: sp.quoteMin, maxLines: sp.quoteLines, maxWidth: c.maxWidth });
+      if (!quote.ok || !quote.lines.length) ok = false;
+      blocks.push({ h: textHeight(quote, CAP.condensed, 1.1), gap: 18 * s, emit: (ops, y) => ops.push(...textOps(quote, { x: c.left, y, maxWidth: c.maxWidth, cap: CAP.condensed, lineHeight: 1.1, shadow: SHADOW.headline, boost: quote.px * BASE.boost, role: 'display' })) });
+      const who = [str(c.layout.speaker), str(c.layout.quoteContext)].filter(Boolean).join(', ');
+      if (!str(c.layout.speaker)) ok = false;
+      const attr = fitText(c.measure, `— ${who}`, { weight: 700, family: LABEL_FONT, size: px(sp.attr, s, FLOOR.label), min: FLOOR.label, maxLines: 2, maxWidth: c.maxWidth, upper: true });
+      if (!attr.ok) ok = false;
+      blocks.push({ h: textHeight(attr, CAP.body, 1.15), gap: 40 * s, emit: (ops, y) => ops.push(...textOps(attr, { x: c.left, y, maxWidth: c.maxWidth, role: 'label', alpha: 0.92, anim: { at: TIMING.quote.attr, dur: ENTER, kind: 'fade' } })) });
+      const offer = fitText(c.measure, str(c.layout.offer), { weight: 500, family: BODY, size: px(sp.offer, s, FLOOR.body), min: FLOOR.body, maxLines: sp.offerLines, maxWidth: c.maxWidth });
+      if (!offer.ok) ok = false;
+      if (offer.lines.length) blocks.push({ h: textHeight(offer, CAP.body, 1.15), gap: 56 * s, emit: (ops, y) => ops.push(...textOps(offer, { x: c.left, y, maxWidth: c.maxWidth, anim: { at: TIMING.quote.offer, dur: ENTER, kind: 'rise', dy: 20 } })) });
+      return { blocks, ok, ctaAt: TIMING.quote.cta };
+    },
+  };
+
+  // Lays out one of the styles above. Always in the Meta safe zone.
+  function layoutStyle(measure, layout, brand, sizeIn, logo) {
+    const size = zoneSize(sizeIn, 'meta');
+    const spec = (SPEC[layout.style] || {})[size.id] || SPEC[layout.style]['9x16'];
+    let logoOp = null;
+    let top = size.safe.top;
+    if (logo && logo.width && logo.height) {
+      const k = Math.min(BASE.logoBox.w / logo.width, BASE.logoBox.h / logo.height, 1);
+      const w = logo.width * k;
+      const h = logo.height * k;
+      const logoTop = size.logoTop ?? BASE.logoTop;
+      logoOp = { type: 'logo', x: (size.width - w) / 2, y: logoTop, w, h, role: 'logo' };
+      top = Math.max(top, logoTop + h + BASE.gapLogo);
+    }
+    const bottomEdge = size.height - size.safe.bottom;
+    const available = bottomEdge - top;
+    const left = size.safe.side;
+    const maxWidth = size.width - 2 * left;
+    // The CTA keeps clear of the Reels action rail (right 120px below y 1000).
+    const ctaMax = size.rail ? size.width - 2 * size.rail.width : maxWidth;
+    const plan = scale => {
+      const built = STYLE_LAYOUTS[layout.style]({ measure, layout, brand, size, spec, left, maxWidth }, scale);
+      const cta = ctaBlock(measure, layout, brand, maxWidth, scale, { gapBefore: 64 * scale, unsubMin: UNSUB_NEW, maxW: ctaMax });
+      const height = built.blocks.reduce((n, b, i) => n + (i ? b.gap : 0) + b.h, 0) + (cta ? cta.height : 0);
+      return { ...built, cta, height };
+    };
+    let scale = 1;
+    let best = plan(1);
+    if (best.height > available) {
+      let lo = MIN_SCALE_NEW;
+      let hi = 1;
+      best = plan(lo);
+      scale = lo;
+      if (best.height <= available) {
+        for (let i = 0; i < 14; i += 1) {
+          const mid = (lo + hi) / 2;
+          const p = plan(mid);
+          if (p.height <= available) { lo = mid; best = p; scale = mid; } else { hi = mid; }
+        }
+      }
+    }
+    const fits = best.ok && best.height <= available + 0.5;
+    let y = top + Math.max(0, (available - best.height) / 2);
+    const ops = [];
+    if (logoOp) ops.push(logoOp);
+    best.blocks.forEach((block, i) => {
+      if (i) y += block.gap;
+      block.emit(ops, y);
+      y += block.h;
+    });
+    if (best.cta) {
+      y += best.cta.gapBefore;
+      const from = ops.length;
+      emitCta(ops, measure, best.cta, brand, left + (maxWidth - best.cta.w) / 2, y, 'center');
+      const anim = ctaAnim(best.ctaAt);
+      for (let i = from; i < ops.length; i += 1) ops[i].anim = anim;
+    }
+    return { ops, scale, fits, height: best.height, available, zone: 'meta', style: layout.style };
+  }
+
+  // ─── Motion ──────────────────────────────────────────────────────────────
+  // An op may carry anim: { at, dur, kind, dy?, from?, origin?, out? }
+  //   kind 'fade'   alpha 0 → 1
+  //        'rise'   fade + slide up `dy` px (default 24)
+  //        'scale'  visible from the first frame, size `from` (1.12) → 1
+  //        'pop'    fade + scale 0.6 → 1 (ticks)
+  //        'wipe'   revealed left to right (strike lines, rules)
+  //   out: { at, dur } fades the op out again (an exit); between the entrance
+  //   and the exit the op holds.
+  // Times are seconds on the ad's own clock (0 = the trim start). drawOps
+  // gets { t, duration }: when the ad is short, every time is scaled so the
+  // last entrance ends by 40% of the duration (the CTA must be up by then and
+  // hold to the last frame). With no clock (t undefined) every op is drawn
+  // settled, exactly as before: ops without anim never change.
+  const CTA_BY = 0.4;
+  const easeOut = p => 1 - (1 - p) ** 3;
+  function lastEntrance(ops) {
+    let last = 0;
+    (ops || []).forEach(op => { if (op.anim) last = Math.max(last, (Number(op.anim.at) || 0) + (Number(op.anim.dur) || 0)); });
+    return last;
+  }
+  function animScale(ops, duration) {
+    const last = lastEntrance(ops);
+    if (!(duration > 0) || !(last > 0)) return 1;
+    return last > CTA_BY * duration ? (CTA_BY * duration) / last : 1;
+  }
+  // The state of one op at time t (k from animScale): { alpha, dy, scale, wipe }.
+  function animAt(op, t, k = 1) {
+    const a = op && op.anim;
+    if (!a || t == null || !Number.isFinite(Number(t))) return { alpha: 1, dy: 0, scale: 1, wipe: 1 };
+    const at = (Number(a.at) || 0) * k;
+    const dur = Math.max(0.001, (Number(a.dur) || ENTER) * k);
+    const raw = Math.max(0, Math.min(1, (Number(t) - at) / dur));
+    const p = easeOut(raw);
+    let alpha = 1;
+    let dy = 0;
+    let scale = 1;
+    let wipe = 1;
+    if (a.kind === 'fade') alpha = p;
+    else if (a.kind === 'rise') { alpha = p; dy = (1 - p) * (a.dy ?? 24); }
+    else if (a.kind === 'scale') scale = (a.from ?? 1.12) + (1 - (a.from ?? 1.12)) * p;
+    else if (a.kind === 'pop') { alpha = p; scale = 0.6 + 0.4 * p; }
+    else if (a.kind === 'wipe') { wipe = p; alpha = raw > 0 ? 1 : 0; }
+    if (a.out) {
+      const q = Math.max(0, Math.min(1, (Number(t) - (Number(a.out.at) || 0) * k) / Math.max(0.001, (Number(a.out.dur) || ENTER) * k)));
+      alpha *= 1 - easeOut(q);
+    }
+    return { alpha, dy, scale, wipe };
+  }
+  // Every op's state at time t (for tests and the rating frame picker).
+  function frameState(ops, t, duration) {
+    const k = animScale(ops, duration);
+    return (ops || []).map(op => animAt(op, t, k));
   }
 
   // ─── Drawing ─────────────────────────────────────────────────────────────
@@ -401,60 +818,106 @@
   const MAIL_PATHS = typeof Path2D === 'function' ? MAIL_D.map(d => new Path2D(d)) : null;
 
 
-  function drawOps(ctx, ops, logoImage) {
+  // A white check mark in a w × h box (Us vs Them ticks).
+  function drawTick(ctx, op) {
+    ctx.strokeStyle = op.fill || '#FFFFFF';
+    ctx.lineWidth = Math.max(3, op.h * 0.16);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(op.x + op.w * 0.12, op.y + op.h * 0.54);
+    ctx.lineTo(op.x + op.w * 0.4, op.y + op.h * 0.8);
+    ctx.lineTo(op.x + op.w * 0.9, op.y + op.h * 0.2);
+    ctx.stroke();
+  }
+
+  // clock: { t, duration } for timed entrances (see Motion); omit it to draw
+  // every op settled. Ops without anim or alpha are drawn exactly as before.
+  function drawOps(ctx, ops, logoImage, clock = null) {
+    const t = clock && clock.t != null && Number.isFinite(Number(clock.t)) ? Number(clock.t) : null;
+    const k = t == null ? 1 : animScale(ops, clock.duration);
     ops.forEach(op => {
-      if (op.type === 'logo' && logoImage) {
-        ctx.drawImage(logoImage, op.x, op.y, op.w, op.h);
-      } else if (op.type === 'box' || op.type === 'button') {
-        ctx.fillStyle = op.fill;
-        roundRect(ctx, op.x, op.y, op.w, op.h, op.r ?? 6);
-        ctx.fill();
-      } else if (op.type === 'mail' && MAIL_PATHS) {
-        // The "email 1" icon from the ES ad templates (50.7 × 50.7 box).
-        ctx.save();
-        ctx.translate(op.x, op.y);
-        ctx.scale(op.w / 50.6983, op.h / 50.6983);
-        ctx.fillStyle = op.fill;
-        MAIL_PATHS.forEach(path => ctx.fill(path));
-        ctx.restore();
-      } else if (op.type === 'mail') {
-        // Fallback without Path2D: filled envelope with a white flap.
-        ctx.fillStyle = op.fill;
-        roundRect(ctx, op.x, op.y, op.w, op.h, op.h * 0.14);
-        ctx.fill();
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = Math.max(2, op.h * 0.12);
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(op.x + op.w * 0.12, op.y + op.h * 0.2);
-        ctx.lineTo(op.x + op.w / 2, op.y + op.h * 0.58);
-        ctx.lineTo(op.x + op.w * 0.88, op.y + op.h * 0.2);
-        ctx.stroke();
-      } else if (op.type === 'text') {
-        ctx.font = op.font;
-        ctx.fillStyle = op.fill;
-        ctx.textBaseline = 'alphabetic';
-        ctx.textAlign = 'left';
-        if (op.shadow) {
-          // Template shadows (0 3.5px 34.5px body, 0 6px 60px headline), a little deeper over video.
-          const shadow = op.shadow === true ? { color: 'rgba(0,0,0,0.32)', blur: 34.5, y: 3.5 } : op.shadow;
-          ctx.shadowColor = shadow.color;
-          ctx.shadowBlur = shadow.blur;
-          ctx.shadowOffsetY = shadow.y;
-        }
-        ctx.fillText(op.text, op.x, op.y);
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
-        if (op.boost) {
-          // Thickens Acumin Bold towards the Black weight used in the templates.
-          ctx.strokeStyle = op.fill;
-          ctx.lineWidth = op.boost;
-          ctx.lineJoin = 'round';
-          ctx.strokeText(op.text, op.x, op.y);
-        }
+      const timed = t != null && op.anim;
+      if (!timed && op.alpha == null) { drawOp(ctx, op, logoImage); return; }
+      const st = timed ? animAt(op, t, k) : { alpha: 1, dy: 0, scale: 1, wipe: 1 };
+      const alpha = st.alpha * (op.alpha ?? 1);
+      if (alpha <= 0.001 || st.wipe <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha *= alpha;
+      if (st.dy) ctx.translate(0, st.dy);
+      if (st.scale !== 1) {
+        const [ox, oy] = op.anim?.origin || [op.x + (op.w || 0) / 2, op.y + (op.h || 0) / 2];
+        ctx.translate(ox, oy);
+        ctx.scale(st.scale, st.scale);
+        ctx.translate(-ox, -oy);
       }
+      if (st.wipe < 1) {
+        // Reveal from the left edge of the op.
+        const w = (op.w || 0) * st.wipe;
+        const top = op.type === 'text' ? op.y - 400 : op.y - 4;
+        ctx.beginPath();
+        ctx.rect(op.x - 2, top, w + 2, op.type === 'text' ? 800 : (op.h || 0) + 8);
+        ctx.clip();
+      }
+      drawOp(ctx, op, logoImage);
+      ctx.restore();
     });
+  }
+
+  function drawOp(ctx, op, logoImage) {
+    if (op.type === 'logo' && logoImage) {
+      ctx.drawImage(logoImage, op.x, op.y, op.w, op.h);
+    } else if (op.type === 'box' || op.type === 'button') {
+      ctx.fillStyle = op.fill;
+      roundRect(ctx, op.x, op.y, op.w, op.h, op.r ?? 6);
+      ctx.fill();
+    } else if (op.type === 'mail' && MAIL_PATHS) {
+      // The "email 1" icon from the ES ad templates (50.7 × 50.7 box).
+      ctx.save();
+      ctx.translate(op.x, op.y);
+      ctx.scale(op.w / 50.6983, op.h / 50.6983);
+      ctx.fillStyle = op.fill;
+      MAIL_PATHS.forEach(path => ctx.fill(path));
+      ctx.restore();
+    } else if (op.type === 'mail') {
+      // Fallback without Path2D: filled envelope with a white flap.
+      ctx.fillStyle = op.fill;
+      roundRect(ctx, op.x, op.y, op.w, op.h, op.h * 0.14);
+      ctx.fill();
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = Math.max(2, op.h * 0.12);
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(op.x + op.w * 0.12, op.y + op.h * 0.2);
+      ctx.lineTo(op.x + op.w / 2, op.y + op.h * 0.58);
+      ctx.lineTo(op.x + op.w * 0.88, op.y + op.h * 0.2);
+      ctx.stroke();
+    } else if (op.type === 'tick') {
+      drawTick(ctx, op);
+    } else if (op.type === 'text') {
+      ctx.font = op.font;
+      ctx.fillStyle = op.fill;
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'left';
+      if (op.shadow) {
+        // Template shadows (0 3.5px 34.5px body, 0 6px 60px headline), a little deeper over video.
+        const shadow = op.shadow === true ? { color: 'rgba(0,0,0,0.32)', blur: 34.5, y: 3.5 } : op.shadow;
+        ctx.shadowColor = shadow.color;
+        ctx.shadowBlur = shadow.blur;
+        ctx.shadowOffsetY = shadow.y;
+      }
+      ctx.fillText(op.text, op.x, op.y);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+      if (op.boost) {
+        // Thickens Acumin Bold towards the Black weight used in the templates.
+        ctx.strokeStyle = op.fill;
+        ctx.lineWidth = op.boost;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(op.text, op.x, op.y);
+      }
+    }
   }
 
   const hexRgb = hex => {
@@ -591,7 +1054,7 @@
   }
 
   // Video (optionally blurred), scrim, vignette, bottom fade, overlay.
-  function drawClipFrame(ctx, { width, height, video, bg = {}, ops = [], logoImage = null, blurCanvas = null, generated = null }) {
+  function drawClipFrame(ctx, { width, height, video, bg = {}, ops = [], logoImage = null, blurCanvas = null, generated = null, t, duration }) {
     ctx.save();
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, width, height);
@@ -668,9 +1131,9 @@
       ctx.fillStyle = g;
       ctx.fillRect(0, start, width, height - start);
     }
-    drawOps(ctx, ops, logoImage);
+    drawOps(ctx, ops, logoImage, t == null ? null : { t, duration });
     ctx.restore();
   }
 
-  return { BASE, MIN_SCALE, MAX_SCALE, CAP, CONDENSED, BODY, ZOOM_MAX, TINT_MAX, TINT_MAX_FADE, STILL, KEN_BURNS, parseRuns, tokensFor, wrapTokens, fitLayout, drawFrame, drawOps, drawVideo, videoRect, tintLayers, luminance, roundRect, kenBurnsFrame, generatedState, generatedColors, drawGenerated };
+  return { BASE, MIN_SCALE, MAX_SCALE, MIN_SCALE_NEW, CAP, CONDENSED, BODY, LABEL_FONT, FLOOR, SPEC, TIMING, CTA_BY, UNSUB_MIN, UNSUB_NEW, STYLE_IDS: Object.keys(STYLE_LAYOUTS), zoneSize, animAt, animScale, frameState, lastEntrance, layoutStyle, ZOOM_MAX, TINT_MAX, TINT_MAX_FADE, STILL, KEN_BURNS, parseRuns, tokensFor, wrapTokens, fitLayout, drawFrame, drawOps, drawVideo, videoRect, tintLayers, luminance, roundRect, kenBurnsFrame, generatedState, generatedColors, drawGenerated };
 }));
