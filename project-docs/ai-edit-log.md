@@ -17,6 +17,16 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-19 — Generate v2 brain: director critique, learning model, AI design assistant (branch feature/gen-brain)
+- Status: `[UNCOMMITTED in ds-branches/gen-brain: the commit was blocked by the permission classifier; browser QA not run]`. Contract: scratchpad `gen-v2-contract.md` (agent B).
+- **Critique** (`_composer.js`): director JSON and vision judge return `strengths`, `improvements` (each with `fix`: `{op:'fix',name}` free in code, or `{op:'assist',instruction}`) and `nextTime`; free code checks (number without a unit, long headline, missing team logo, photo layouts with no photo). `publicDirection.critique`, judge `verdict.critique`; page merges with `FrameUpAssistant.designCritique(dir.critique, verdict.critique, scene)`.
+- **Count 1-8** (default 4): `budgetFor` → 3 candidates up to 4 designs, 2 above; judge takes up to 8 sets (max 16 images); director/judge max tokens scale. `plan.budget`. `FrameUpAssistant.costEstimate(n)` for the UI.
+- **Learning model** `netlify/functions/_creative-memory.js`: signals → topic observations (17 topics) per scope (global / archetype / sport / brand) → lessons (deduped by key, evidence decays with a 21-day half-life, active at 1.75), top 6 injected into director and judge prompts; hits / recurrences / hit rate; `adminView`. Storage: new table via migration `20261118130000_frameup_creative_lessons.sql` (team read, writes only via security-definer RPC with capped deltas; Undo note); instance memory before the migration. Exports / picks / thumbs / edits / fixes also go to `frameup_generate_direction_events` (types that fit).
+- **Assistant** `netlify/functions/_design-assistant.js` + `generate-assistant.js` (UMD: patch engine + `window.FrameUpAssistant`): local intents free; Haiku (main) first, Sonnet (best) for layout changes; feature `generate-assistant` (aiSpendGate + hourly cap + logUsage; label added in `_ai-gateway.js`). Every op re-checked by `checkScene` + fact check (invented numbers skipped). Undo/redo per design, `frameup:design-changed` events, chat UI mounts into `#gen-assistant-slot`.
+- **es-generate.js** modes: `creative-assist`, `creative-signal`, `creative-lessons`; `creative` passes lessons and count ≤ 8; `creative-judge` takes `sport`, injects lessons, learns from the critique.
+- **generate-creative.js** (small, grouped): `data-design-id`, `card._critique`, `FrameUpAssistant.register`, export / edit signals, history commits for another / swap / text, `sport` on the judge call. `generate.html`: includes `generate-assistant.js`; cache key `20261118-gen-brain`.
+- Tests: `scripts/test-gen-brain.mjs` (in `test:generate`). Full suite: baseline failures only.
+
 ### 2026-11-19 — Generate asset service: AI backgrounds and concept art, cut-outs, varied ES photos (branch feature/gen-assets)
 - Status: `[committed on feature/gen-assets — not pushed]`. Spec: `scratchpad/gen-creative-contract.md` (agent gen-assets). Docs: `project-docs/gen-assets.md`.
 - New `netlify/functions/_asset-service.js` (`generateBackground`, `generateConceptArt`, `cutout`, `findPhotos`, `status`), `netlify/functions/gen-assets.js` + `api/gen-assets.js` (`GET/POST /api/gen-assets`, vercel.json maxDuration 60), browser client `frameup-assets.js` (`window.FrameUpAssets`, not loaded by any page yet: the gen-creative composer loads it).

@@ -156,6 +156,12 @@
     card._verdict = verdict || {};
     card._index = Math.max(0, dir.candidates.findIndex(s => s.id === verdict?.best));
     card._scene = verdict?.scene || dir.candidates[card._index];
+    // gen-brain: the critique ("what could be better") and the assistant's
+    // undo history for this design (generate-assistant.js).
+    const A = window.FrameUpAssistant;
+    card.dataset.designId = `${state.run?.plan?.runId || 'run'}:${dir.id}`;
+    card._critique = A?.designCritique ? A.designCritique(dir.critique, verdict?.critique, card._scene) : (verdict?.critique || dir.critique || null);
+    A?.register?.(card.dataset.designId, { getScene: () => card._scene, setScene: scene => { card._scene = scene; fill(card); preview(card); }, runId: state.run?.plan?.runId || '', critique: card._critique });
     fill(card);
     return card;
   }
@@ -229,8 +235,9 @@
       }
       let judged = { directions: [], cost: 0, source: 'heuristic' };
       try {
-        judged = await g.callApi('/api/es-generate', { mode: 'creative-judge', brief, runId: plan.runId, sets, heuristics });
+        judged = await g.callApi('/api/es-generate', { mode: 'creative-judge', brief, runId: plan.runId, sport: plan.read?.sport || '', sets, heuristics });
       } catch (error) { /* the heuristic picks below */ }
+      state.run = { brief, plan, judged };
       const cards = plan.directions.map(dir => {
         const verdict = (judged.directions || []).find(v => v.id === dir.id) || {};
         const ranked = [...dir.candidates].sort((a, b) => (heuristics[b.id]?.score || 0) - (heuristics[a.id]?.score || 0));
@@ -316,6 +323,7 @@
     } catch (error) { /* the download still happened */ }
     window.FrameUpPosted?.exported?.({ source: 'generate', title: card._dir.name || scene.archetypeName, template: `Creative · ${scene.archetypeName}`, style: scene.archetype, brand: 'essentiallysports', aiMade: 'generate' });
     G().track('design_exported', { runId: state.run?.plan?.runId, directionId: card._dir.id, postType: `creative:${scene.archetype}`, payload: { look: 'creative', fix: scene.fixApplied || '' } });
+    window.FrameUpAssistant?.signal?.('export', card.dataset.designId);
   }
 
   function photosPanel(card) {
@@ -345,8 +353,16 @@
     if (stray.length) return;
     clearTimeout(typing);
     typing = setTimeout(() => {
+      const before = C().editableText(card._scene).find(f => f.index === Number(input.dataset.index))?.text || '';
       card._scene = C().setText(card._scene, Number(input.dataset.index), input.value);
       preview(card);
+      window.FrameUpAssistant?.commit?.(card.dataset.designId, card._scene, 'Edited text');
+      clearTimeout(card._editSignal);
+      if (card._editBefore == null) card._editBefore = before;
+      card._editSignal = setTimeout(() => {
+        window.FrameUpAssistant?.signal?.('edit', card.dataset.designId, { before: card._editBefore, after: input.value });
+        card._editBefore = null;
+      }, 4000);
     }, 250);
   });
   document.addEventListener('submit', event => {
@@ -375,6 +391,7 @@
       card._scene = card._index < dir.candidates.length ? dir.candidates[card._index] : C().applyFix(dir.candidates[0], 'swap-palette');
       fill(card);
       await preview(card);
+      window.FrameUpAssistant?.commit?.(card.dataset.designId, card._scene, 'Another composition');
       G().track('direction_more', { runId: state.run?.plan?.runId, directionId: dir.id, payload: { look: 'creative', candidate: card._scene.id || 'palette' } });
     } else if (act === 'photos' || act === 'text') {
       const panel = card.querySelector(act === 'photos' ? '.gen-cc__photos' : '.gen-cc__text');
@@ -390,6 +407,7 @@
       card._scene = C().swapPhoto(card._scene, { from, to: photo.src, cutout: photo.cutout || '' });
       photosPanel(card);
       await preview(card);
+      window.FrameUpAssistant?.commit?.(card.dataset.designId, card._scene, 'Swapped photo');
       card.querySelector(`[data-cc="pick"][data-index="${button.dataset.index}"]`)?.focus({ preventScroll: true });
     }
   });
