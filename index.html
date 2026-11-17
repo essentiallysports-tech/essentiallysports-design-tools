@@ -13,6 +13,10 @@
 <script>
   (() => {
     window.ESAuth?.requireAuth(`index.html${window.location.search}${window.location.hash}`);
+    // Opening an editor link: keep Home out of the first layout so its
+    // banner and card images (about 0.5 MB) aren't fetched for nothing.
+    // Ends as soon as the router sets body[data-current-page].
+    if (/^#(instagram|youtube|newsletter)$/.test(window.location.hash)) document.documentElement.classList.add('boot-editor-route');
   })();
 </script>
 <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -7813,10 +7817,10 @@ body[data-current-page="faq"] .faq-cta-art img {
 <script src="site-chrome.js?v=20261117-usage1"></script>
 <script src="app-shell.js?v=20261117-tour2"></script>
 <link rel="stylesheet" href="frameup-tour.css?v=20261117-tour1">
-<script src="frameup-tour.js?v=20261117-tour1"></script>
-<script src="tours/updates.js?v=20261117-tour1"></script>
-<script src="tours/tours.js?v=20261117-tour1"></script>
-<script src="tours/tour-launcher.js?v=20261117-tour1"></script>
+<script defer src="frameup-tour.js?v=20261117-tour1"></script>
+<script defer src="tours/updates.js?v=20261117-tour1"></script>
+<script defer src="tours/tours.js?v=20261117-tour1"></script>
+<script defer src="tours/tour-launcher.js?v=20261117-tour1"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
 </head>
 <body>
@@ -7881,7 +7885,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           </div>
           <div class="frame-hero-slide" data-hero-slide="1">
             <picture class="frame-hero-picture">
-              <img class="frame-banner" src="home-hero-banner-reels.webp?v=20260815-heroart4" alt="Try In-house Reel Captions Creator">
+              <img class="frame-banner" loading="lazy" decoding="async" src="home-hero-banner-reels.webp?v=20260815-heroart4" alt="Try In-house Reel Captions Creator">
             </picture>
             <div class="frame-hero-actions frame-hero-actions--single">
               <a class="frame-hero-cta is-primary" href="reels.html">Create Now</a>
@@ -7921,7 +7925,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     <div class="frame-grid">
     <article class="frame-card" id="frame-instagram">
       <div class="frame-thumbnail">
-        <img decoding="async" src="workspace-card-social-media.webp" alt="Social Media">
+        <img loading="lazy" decoding="async" src="workspace-card-social-media.webp" alt="Social Media">
       </div>
       <div class="frame-card-body">
         <h2 class="frame-card-title">Social Media</h2>
@@ -7934,7 +7938,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     <article class="frame-card" id="frame-youtube">
       <div class="frame-thumbnail">
-        <img decoding="async" src="workspace-card-youtube-thumbnail.webp" alt="YouTube">
+        <img loading="lazy" decoding="async" src="workspace-card-youtube-thumbnail.webp" alt="YouTube">
       </div>
       <div class="frame-card-body">
         <h2 class="frame-card-title">YouTube</h2>
@@ -7947,7 +7951,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     <article class="frame-card" id="frame-newsletters">
       <div class="frame-thumbnail">
-        <img decoding="async" src="workspace-card-newsletter-assets.webp" alt="Newsletter">
+        <img loading="lazy" decoding="async" src="workspace-card-newsletter-assets.webp" alt="Newsletter">
       </div>
       <div class="frame-card-body">
         <h2 class="frame-card-title">Newsletter</h2>
@@ -7960,7 +7964,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     <article class="frame-card" id="frame-reels">
       <div class="frame-thumbnail">
-        <img decoding="async" src="workspace-card-reel-captions.webp" alt="Reel Captions">
+        <img loading="lazy" decoding="async" src="workspace-card-reel-captions.webp" alt="Reel Captions">
       </div>
       <div class="frame-card-body">
         <h2 class="frame-card-title">Reel Captions</h2>
