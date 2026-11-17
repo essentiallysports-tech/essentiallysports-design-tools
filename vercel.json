@@ -68,6 +68,8 @@
     "api/trend-design.js": { "maxDuration": 30 },
     "api/video-ads.js": { "maxDuration": 60 },
     "api/ad-rating.js": { "maxDuration": 60 },
-    "api/ad-learning.js": { "maxDuration": 15 }
+    "api/ad-learning.js": { "maxDuration": 15 },
+    "api/design-request-update.js": { "maxDuration": 15 },
+    "api/slack-command.js": { "maxDuration": 10 }
   }
 }

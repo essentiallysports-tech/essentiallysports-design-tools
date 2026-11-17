@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { verifyEsUser } = require('./_supabase-auth.js');
+const slack = require('./_slack.js');
 
 const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -53,10 +54,9 @@ function requiredConfig() {
   };
 }
 
+// Bot token (threads) or the original incoming webhook; see _slack.js.
 function slackConfig() {
-  return {
-    webhookUrl: process.env.SLACK_DESIGN_REQUEST_WEBHOOK_URL,
-  };
+  return slack.slackConfig(process.env);
 }
 
 function emailConfig() {
@@ -272,7 +272,7 @@ function buildSlackPayload(record) {
             elements: [
               {
                 type: 'mrkdwn',
-                text: `Submitted ${slackDate(record.createdAt)} via ${slackText(record.source || 'ES Designer')}`,
+                text: `Submitted ${slackDate(record.createdAt)} via ${slackText(record.source || 'ES Designer')} · <${slack.trackUrl(slack.slackConfig(process.env), record.id)}|Track in FrameUp>${slack.slackConfig(process.env).mode === 'bot' ? ' · Status updates reply in this thread' : ''}`,
               },
             ],
           },
@@ -283,16 +283,8 @@ function buildSlackPayload(record) {
 }
 
 async function postToSlack(record, config) {
-  const response = await fetch(config.webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildSlackPayload(record)),
-  });
-  const responseText = await response.text();
-  if (!response.ok) {
-    throw new Error(responseText || `Slack webhook failed with status ${response.status}`);
-  }
-  return responseText;
+  // Bot mode returns { channel, ts }: the thread later status updates reply in.
+  return slack.postMessage(buildSlackPayload(record), config);
 }
 
 // Text typed into the form must never run as a Sheets formula (=IMPORTXML…).
@@ -432,7 +424,7 @@ exports.handler = async event => {
     };
 
     const sheetConfig = requiredConfig();
-    const slack = slackConfig();
+    const slackSettings = slackConfig();
     const email = emailConfig();
     const integrations = {
       googleSheets: {
@@ -441,7 +433,8 @@ exports.handler = async event => {
       },
       slack: {
         ok: false,
-        skipped: !slack.webhookUrl,
+        skipped: slackSettings.mode === 'off',
+        mode: slackSettings.mode,
       },
       email: {
         ok: false,
@@ -464,10 +457,17 @@ exports.handler = async event => {
 
     if (!integrations.slack.skipped) {
       try {
-        await postToSlack(payload.record, slack);
-        integrations.slack = { ok: true, skipped: false };
+        const posted = await postToSlack(payload.record, slackSettings);
+        integrations.slack = {
+          ok: true,
+          skipped: false,
+          mode: posted.mode,
+          // The browser stores these on the request so updates can thread.
+          channel: posted.channel || undefined,
+          ts: posted.ts || undefined,
+        };
       } catch (error) {
-        integrations.slack.error = error.message || 'Slack webhook failed';
+        integrations.slack.error = error.message || 'Slack post failed';
       }
     }
 
@@ -498,3 +498,6 @@ exports.handler = async event => {
     });
   }
 };
+
+// Reused by slack-command.js so Slack-filed requests look the same.
+exports.buildSlackPayload = buildSlackPayload;
