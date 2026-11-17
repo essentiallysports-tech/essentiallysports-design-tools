@@ -1,0 +1,44 @@
+{
+ "ok": true,
+ "athleteId": "2330",
+ "angle": "5 best moments",
+ "cost": 0,
+ "_note": "Shape fixture. No ES articles or photos are recorded here (none were fetched), so the candidates come from stat rows only: the thin-coverage path.",
+ "articles": [],
+ "photos": [],
+ "candidates": [
+  {
+   "id": "m1",
+   "year": 2001,
+   "title": "2001 season",
+   "line": "2,843 yards, 18 TD, 12 INT",
+   "stat": {
+    "value": "2,843",
+    "label": "YDS"
+   },
+   "cite": [
+    "stat:s2001"
+   ],
+   "photoId": null
+  },
+  {
+   "id": "m2",
+   "year": 2022,
+   "title": "2022 season",
+   "line": "4,694 yards, 25 TD, 9 INT",
+   "stat": {
+    "value": "4,694",
+    "label": "YDS"
+   },
+   "cite": [
+    "stat:s2022"
+   ],
+   "photoId": null
+  }
+ ],
+ "coverage": {
+  "articles": 0,
+  "photos": 0,
+  "thin": true
+ }
+}

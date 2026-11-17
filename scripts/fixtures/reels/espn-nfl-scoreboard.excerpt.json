@@ -1,0 +1,145 @@
+{
+ "_note": "Trimmed ESPN site API scoreboard",
+ "keys": [
+  "leagues",
+  "season",
+  "week",
+  "events",
+  "provider"
+ ],
+ "events.count": 14,
+ "event0": {
+  "id": "401873052",
+  "name": "Washington Commanders at New York Giants",
+  "date": "2026-11-13T01:15Z",
+  "competition0.keys": [
+   "id",
+   "uid",
+   "date",
+   "attendance",
+   "type",
+   "timeValid",
+   "neutralSite",
+   "conferenceCompetition",
+   "playByPlayAvailable",
+   "recent",
+   "venue",
+   "competitors",
+   "notes",
+   "status",
+   "broadcasts",
+   "leaders",
+   "format",
+   "startDate",
+   "broadcast",
+   "geoBroadcasts",
+   "highlights",
+   "headlines"
+  ],
+  "status": {
+   "clock": 0.0,
+   "displayClock": "0:00",
+   "period": 4,
+   "type": {
+    "id": "3",
+    "name": "STATUS_FINAL",
+    "state": "post",
+    "completed": true,
+    "description": "Final",
+    "detail": "Final",
+    "shortDetail": "Final"
+   },
+   "isTBDFlex": false
+  },
+  "competitors": [
+   {
+    "homeAway": "home",
+    "score": "21",
+    "linescores": [
+     {
+      "value": 0.0,
+      "displayValue": "0",
+      "period": 1
+     },
+     {
+      "value": 7.0,
+      "displayValue": "7",
+      "period": 2
+     },
+     {
+      "value": 7.0,
+      "displayValue": "7",
+      "period": 3
+     },
+     {
+      "value": 7.0,
+      "displayValue": "7",
+      "period": 4
+     }
+    ],
+    "records": [
+     {
+      "name": "overall",
+      "abbreviation": "Game",
+      "type": "total",
+      "summary": "5-3-1"
+     },
+     {
+      "name": "Home",
+      "type": "home",
+      "summary": "3-2"
+     },
+     {
+      "name": "Road",
+      "type": "road",
+      "summary": "2-1-1"
+     }
+    ]
+   },
+   {
+    "homeAway": "away",
+    "score": "24",
+    "linescores": [
+     {
+      "value": 0.0,
+      "displayValue": "0",
+      "period": 1
+     },
+     {
+      "value": 10.0,
+      "displayValue": "10",
+      "period": 2
+     },
+     {
+      "value": 7.0,
+      "displayValue": "7",
+      "period": 3
+     },
+     {
+      "value": 7.0,
+      "displayValue": "7",
+      "period": 4
+     }
+    ],
+    "records": [
+     {
+      "name": "overall",
+      "abbreviation": "Game",
+      "type": "total",
+      "summary": "3-5-1"
+     },
+     {
+      "name": "Home",
+      "type": "home",
+      "summary": "2-2-1"
+     },
+     {
+      "name": "Road",
+      "type": "road",
+      "summary": "1-3"
+     }
+    ]
+   }
+  ]
+ }
+}

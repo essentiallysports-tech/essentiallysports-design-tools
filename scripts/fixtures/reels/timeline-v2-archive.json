@@ -1,0 +1,258 @@
+{
+ "v": 2,
+ "canvas": {
+  "w": 1080,
+  "h": 1920
+ },
+ "size": [
+  1080,
+  1920
+ ],
+ "outputs": [
+  "reel",
+  "carousel"
+ ],
+ "format": "archive",
+ "tag": "FROM THE ARCHIVE",
+ "style": "countdown",
+ "sport": "nfl",
+ "title": "Brady by the seasons",
+ "durationMs": 8000,
+ "data": {
+  "game": null,
+  "athlete": {
+   "v": 1,
+   "provider": "espn",
+   "sport": "nfl",
+   "athleteId": "2330",
+   "name": "Tom Brady",
+   "position": "QB",
+   "fetchedAt": "2026-11-18T03:34:00Z",
+   "source": {
+    "name": "ESPN",
+    "url": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/2330/stats"
+   },
+   "trimmed": true,
+   "stats": {
+    "category": "passing",
+    "labels": [
+     "GP",
+     "CMP",
+     "ATT",
+     "CMP%",
+     "YDS",
+     "AVG",
+     "TD",
+     "INT",
+     "LNG",
+     "SACK",
+     "RTG",
+     "QBR"
+    ],
+    "names": [
+     "gamesPlayed",
+     "completions",
+     "passingAttempts",
+     "completionPct",
+     "passingYards",
+     "yardsPerPassAttempt",
+     "passingTouchdowns",
+     "interceptions",
+     "longPassing",
+     "sacks",
+     "QBRating",
+     "adjQBR"
+    ],
+    "seasons": [
+     {
+      "id": "s2000",
+      "year": 2000,
+      "teamId": "17",
+      "team": "new-england-patriots",
+      "stats": [
+       "1",
+       "1",
+       "3",
+       "33.3",
+       "6",
+       "2.0",
+       "0",
+       "0",
+       "6",
+       "0",
+       "42.4",
+       "-"
+      ]
+     },
+     {
+      "id": "s2001",
+      "year": 2001,
+      "teamId": "17",
+      "team": "new-england-patriots",
+      "stats": [
+       "15",
+       "264",
+       "413",
+       "63.9",
+       "2,843",
+       "6.9",
+       "18",
+       "12",
+       "91",
+       "41",
+       "86.5",
+       "-"
+      ]
+     },
+     {
+      "id": "s2022",
+      "year": 2022,
+      "teamId": "27",
+      "team": "tampa-bay-buccaneers",
+      "stats": [
+       "17",
+       "490",
+       "733",
+       "66.8",
+       "4,694",
+       "6.4",
+       "25",
+       "9",
+       "63",
+       "22",
+       "90.7",
+       "54.6"
+      ]
+     }
+    ],
+    "totals": [
+     "335",
+     "7753",
+     "12050",
+     "64.3",
+     "89,214",
+     "7.4",
+     "649",
+     "212",
+     "99",
+     "565",
+     "97.2",
+     "-"
+    ]
+   }
+  },
+  "archive": {
+   "athleteId": "2330",
+   "angle": "5 best moments",
+   "sources": [],
+   "photos": [],
+   "moments": [
+    {
+     "id": "m1",
+     "year": 2001,
+     "title": "2001 season",
+     "line": "2,843 yards, 18 TD, 12 INT",
+     "cite": [
+      "stat:s2001"
+     ]
+    },
+    {
+     "id": "m2",
+     "year": 2022,
+     "title": "2022 season",
+     "line": "4,694 yards, 25 TD, 9 INT",
+     "cite": [
+      "stat:s2022"
+     ]
+    }
+   ],
+   "thin": true
+  }
+ },
+ "replay": null,
+ "beats": [
+  {
+   "id": "b1",
+   "kind": "hook",
+   "inMs": 0,
+   "outMs": 2000,
+   "text": "Two seasons, two eras",
+   "vo": "",
+   "refs": []
+  },
+  {
+   "id": "b2",
+   "kind": "moment",
+   "inMs": 2000,
+   "outMs": 4500,
+   "text": "2001: 2,843 yards",
+   "vo": "",
+   "refs": [
+    "stat:s2001"
+   ]
+  },
+  {
+   "id": "b3",
+   "kind": "moment",
+   "inMs": 4500,
+   "outMs": 7000,
+   "text": "2022: 4,694 yards",
+   "vo": "",
+   "refs": [
+    "stat:s2022"
+   ]
+  },
+  {
+   "id": "b4",
+   "kind": "cta",
+   "inMs": 7000,
+   "outMs": 8000,
+   "text": "Greatest ever?",
+   "vo": "",
+   "refs": []
+  }
+ ],
+ "slides": [
+  {
+   "id": "s1",
+   "kind": "cover",
+   "text": "Brady by the seasons",
+   "refs": []
+  },
+  {
+   "id": "s2",
+   "kind": "moment",
+   "text": "2001: 2,843 yards",
+   "refs": [
+    "stat:s2001"
+   ],
+   "beat": "b2"
+  },
+  {
+   "id": "s3",
+   "kind": "moment",
+   "text": "2022: 4,694 yards",
+   "refs": [
+    "stat:s2022"
+   ],
+   "beat": "b3"
+  },
+  {
+   "id": "s4",
+   "kind": "cta",
+   "text": "Greatest ever?",
+   "refs": []
+  }
+ ],
+ "tracks": {
+  "video": [],
+  "graphics": [],
+  "captions": {
+   "style": "highlight",
+   "words": [],
+   "cards": []
+  },
+  "audio": []
+ },
+ "assets": {}
+}

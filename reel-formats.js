@@ -89,10 +89,120 @@
       maxSeconds: 60,
     },
   };
+  // The news formats (trend-first path; the format picker lists these).
   const FORMAT_IDS = Object.keys(FORMATS);
 
+  // ─── Data formats (Phase 0 contract: project-docs/reels-formats-contract.md) ─
+  // Built from live game data, a clip, or a player's career, not from a trend.
+  // They sit BESIDE the trend-first path (a format gallery), so FORMAT_IDS
+  // above stays the four news formats and the existing picker is unchanged.
+  // Every server and renderer check that clamps an unknown format to
+  // 'explainer' reads FORMATS, so registering them here is the whole "enum"
+  // change (the DB column is char_length <= 40, no migration).
+  //
+  // Data beat kinds the new formats add (drawn by reel-render.js once Agent B
+  // lands them; until then buildTimeline treats them as 'point'):
+  //   play    one play of a game: scorebug state + play caption over a clip or photo
+  //           { playRef: 'play:<id>' } (score, clock, WP come from timeline.data.game, never the model)
+  //   wpline  the win-probability line (full-screen payoff or a band under the scorebug)
+  //           { from: <seq>, to: <seq>, marks: ['play:<id>'] }
+  //   moment  one career moment on a year rail { year, title, line, cite: ['src:a1'|'stat:2001'] }
+  //   panel3  the 3-frame strip (setup / play / reaction) { frames: ['frame:setup', 'frame:play', 'frame:reaction'] }
+  const DATA_KINDS = ['play', 'wpline', 'moment', 'panel3'];
+  const ALL_KINDS = [...KINDS, ...DATA_KINDS];
+  // Carousel slide kinds (1080x1350, timeline.slides[]).
+  const SLIDE_KINDS = ['cover', 'panel', 'moment', 'data', 'cta'];
+  // Where a format's material comes from (reel-flow.js SOURCE_KINDS has the step).
+  const SOURCE_KINDS = ['trend', 'game', 'clip', 'player'];
+  const OUTPUTS = ['reel', 'carousel'];
+
+  const DATA_FORMATS = {
+    gameswing: {
+      id: 'gameswing',
+      family: 'data',
+      label: 'Game Swing',
+      short: 'Game Swing',
+      tag: 'GAME SWING',
+      blurb: 'The plays that swung the game, with a live scorebug, the win-probability line and the clock over the clips.',
+      description: 'Pick a finished or live game. FrameUp picks the biggest win-probability swings and the scoring plays, draws an ES scorebug, clock and win-probability line over each clip, and writes short captions from the play-by-play.',
+      source: 'game',
+      sports: ['nfl', 'cfb', 'mlb'],
+      defaultStyle: 'series', // ES Analytics Series (owner, 2026-11-18)
+      outputs: ['reel'],
+      beats: { min: 4, max: 8 },
+      // Story kinds keep today's director and renderer working; dataKinds are
+      // what the format is really made of once the data agents land.
+      kinds: ['hook', 'context', 'point', 'stat', 'payoff', 'cta'],
+      dataKinds: ['play', 'wpline'],
+      targetSeconds: [18, 30],
+      maxSeconds: 45,
+      voice: 'off', // music only by default; VO optional
+      attribution: 'Win probability: ESPN Analytics', // on screen whenever a wpline or WP number shows
+      cost: { data: true, framePick: false, archiveResearch: false, hint: 'about $0.002 per reel' },
+      rights: { footage: 'organic', paidWithLeagueFootage: 'warn' },
+    },
+    replay: {
+      id: 'replay',
+      family: 'data',
+      label: 'Moment Replay',
+      short: 'Replay',
+      tag: 'MOMENT REPLAY',
+      blurb: 'One moment as three frames: the setup, the play, the reaction. A reel and a swipeable carousel from one clip.',
+      description: 'Paste an X clip, pick one from the clip library, or upload an ES clip. FrameUp finds the setup, the play and the reaction frames (code first, an optional AI pick), lays them out as a 3-panel strip, and exports a short reel and a 1080x1350 carousel.',
+      source: 'clip',
+      sports: ['nfl', 'cfb', 'mlb', 'golf'],
+      defaultStyle: 'classic', // ES Classic
+      outputs: ['reel', 'carousel'],
+      beats: { min: 3, max: 5 },
+      kinds: ['hook', 'point', 'payoff', 'cta'],
+      dataKinds: ['panel3'],
+      targetSeconds: [8, 15],
+      maxSeconds: 20,
+      voice: 'off',
+      attribution: '',
+      cost: { data: false, framePick: true, archiveResearch: false, hint: 'about $0.002 per reel with the AI frame pick, free without' },
+      // X / library / upload are allowed for organic posts (existing rights
+      // checks apply); a paid export with league footage warns.
+      rights: { footage: 'organic', paidWithLeagueFootage: 'warn', clipSources: ['x', 'library', 'upload'] },
+      carousel: { slides: { min: 4, max: 5 } },
+    },
+    archive: {
+      id: 'archive',
+      family: 'data',
+      label: 'Hall-of-Fame Archive',
+      short: 'Archive',
+      tag: 'FROM THE ARCHIVE',
+      blurb: 'A career told in moments, each one cited to ES coverage or a stat row.',
+      description: 'Search a player. FrameUp gathers ES articles, ES photos and career stats, proposes the best moments with a source for every year and number, and builds a year-by-year reel and a carousel.',
+      source: 'player',
+      sports: ['nfl', 'cfb', 'mlb', 'golf'],
+      defaultStyle: 'countdown', // ES Countdown
+      outputs: ['reel', 'carousel'],
+      beats: { min: 5, max: 8 },
+      kinds: ['hook', 'context', 'point', 'stat', 'payoff', 'cta'],
+      dataKinds: ['moment'],
+      targetSeconds: [30, 50],
+      maxSeconds: 60,
+      voice: 'optional',
+      attribution: '',
+      cost: { data: true, framePick: false, archiveResearch: true, hint: 'about $0.003 per reel' },
+      rights: { footage: 'none', photos: 'es-pool-only' },
+      carousel: { slides: { min: 4, max: 10 } },
+    },
+  };
+  Object.assign(FORMATS, DATA_FORMATS);
+  const DATA_FORMAT_IDS = Object.keys(DATA_FORMATS);
+  const ALL_FORMAT_IDS = [...FORMAT_IDS, ...DATA_FORMAT_IDS];
+  const isDataFormat = id => Object.prototype.hasOwnProperty.call(DATA_FORMATS, id);
+  // A beat kind the format may hold (story kinds, the style components the
+  // director already writes, and the format's own data kinds).
+  function formatKinds(id) {
+    const f = FORMATS[id] || FORMATS.explainer;
+    return [...new Set([...f.kinds, ...(f.dataKinds || [])])];
+  }
+
   // Labels drawn above context / point / payoff beats.
-  const KIND_LABELS = { context: 'WHAT HAPPENED', point: 'THE DETAIL', payoff: 'WHY IT MATTERS', stat: '', rank: '', quote: '', hook: '', cta: '', bars: '', versus: '', dotrank: '', chips: '', steps: '', tiles: '', roles: '', mystery: '' };
+  const KIND_LABELS = { context: 'WHAT HAPPENED', point: 'THE DETAIL', payoff: 'WHY IT MATTERS', stat: '', rank: '', quote: '', hook: '', cta: '', bars: '', versus: '', dotrank: '', chips: '', steps: '', tiles: '', roles: '', mystery: '', play: '', wpline: '', moment: '', panel3: '' };
 
   // Pacing (research §1.3): about 2.6 words a second for VO, a visual change
   // every 1.5-3 s, one idea per beat. On-screen text 1-9 words; VO up to 28.
@@ -117,6 +227,19 @@
     { format: 'quote', re: /[“"][^”"]{12,}[”"]|\b(?:said|says|slams|responds|blasts|admits|reveals|told reporters|press conference)\b/i },
     { format: 'explainer', re: /\b(?:trade[ds]?|injur(?:y|ed|ies)|contract|extension|signs?|signed|fired|firing|suspend(?:ed|ion)|release[ds]?|waive[ds]?|benched|explained|why)\b/i },
   ];
+  // Data-format hints for a trend card ("this story could be a Game Swing").
+  // Kept apart from ROUTES: routeFormat() only ever returns a news format, so
+  // the trend-first path behaves exactly as before.
+  const DATA_ROUTES = [
+    { format: 'gameswing', re: /\b(?:comeback|rall(?:y|ied|ies)|walk[\s-]?off|game[\s-]?winn(?:er|ing)|buzzer[\s-]?beater|overtime|ot thriller|last[\s-]second|late[\s-]game|collapse|blew a \d+)\b/i },
+    { format: 'replay', re: /\b(?:catch of the (?:year|season)|one[\s-]handed|highlight|viral (?:play|catch|clip)|insane (?:catch|throw|play)|ace|hole[\s-]in[\s-]one|robbed|diving)\b/i },
+    { format: 'archive', re: /\b(?:hall of fame|hof|retire[ds]?|retirement|legacy|career|anniversary|years? ago|throwback|on this day|goat)\b/i },
+  ];
+  function suggestDataFormat(text) {
+    const source = String(text || '');
+    const hit = DATA_ROUTES.find(route => route.re.test(source));
+    return hit ? hit.format : '';
+  }
   function routeFormat(text) {
     const source = String(text || '');
     const hits = ROUTES.filter(route => route.re.test(source)).map(route => route.format);
@@ -197,6 +320,7 @@
   // ─── Cost estimate per reel (research §7.1, Gateway list prices 2026-11) ─
   // Shown in the UI before anything is spent. Real costs come back from the
   // server on every call and are logged in frameup_ai_usage (feature reels-*).
+  const money = usd => (usd < 0.01 ? `$${(Math.max(0, usd)).toFixed(3)}` : `$${usd.toFixed(2)}`);
   const PRICES = {
     directorHaiku: 0.002,
     directorSonnet: 0.02,
@@ -217,12 +341,22 @@
     sceneImage: 0.011, // bfl/flux-3-image-klein, one AI scene still
     aiClipPerSecond: 0.03, // google/veo-3.1-lite-generate-001, 720p, no audio
     aiClipSeconds: 4,
+    // Data formats (research §D.3, §G.2): game data and ES coverage cost $0
+    // in fees; the AI frame pick is one small vision call, hard-capped.
+    data: 0,
+    archiveResearch: 0,
+    framePick: 0.002, // google/gemini-3.5-flash-lite, 9 frames at 320 px
+    framePickCap: 0.02,
   };
-  function estimateCost({ tier = 'standard', factCheck = false, voiceMode = 'off', voiceModel = '', voChars = 450, revisions = 0, musicSeconds = 0, clipSearches = 0, scenes = 0, aiClips = 0, longForm = false, clipJudge = 0 } = {}) {
+  function estimateCost({ tier = 'standard', factCheck = false, voiceMode = 'off', voiceModel = '', voChars = 450, revisions = 0, musicSeconds = 0, clipSearches = 0, scenes = 0, aiClips = 0, longForm = false, clipJudge = 0, data = false, framePick = 0, archiveResearch = false } = {}) {
     const base = tier === 'economy' ? PRICES.directorHaiku : PRICES.directorHaiku + 0.35 * PRICES.directorSonnet; // standard escalates to Sonnet only on a weak plan
     const director = longForm ? base * 2.2 : base; // a 90-120 s script is about twice the tokens
     const perChar = voiceMode === 'off' ? 0 : (PRICES.voiceModels[voiceModel] ?? PRICES.voicePerChar[voiceMode] ?? 0);
     const lines = [
+      // Data-format lines first (only when asked for, so news reels are unchanged).
+      ...(data ? [{ id: 'data', label: 'Game and stats data (free)', usd: PRICES.data }] : []),
+      ...(archiveResearch ? [{ id: 'archive', label: 'ES articles and photos search (free)', usd: PRICES.archiveResearch }] : []),
+      ...(framePick ? [{ id: 'framepick', label: `Pick the 3 frames with AI (capped at ${money(PRICES.framePickCap)})`, usd: Math.min(PRICES.framePickCap, framePick * PRICES.framePick) }] : []),
       { id: 'director', label: tier === 'economy' ? 'Script (Haiku)' : 'Script (Haiku, Sonnet if weak)', usd: director },
       { id: 'factcheck', label: 'Fact check (2 searches, capped)', usd: factCheck ? PRICES.factCheckCap : 0 },
       { id: 'voice', label: voiceMode === 'off' ? 'Voiceover (captions only)' : 'Voiceover + caption timing', usd: perChar * Math.max(0, voChars) + (PRICES.alignPerSecond[voiceMode] || 0) * (Math.max(0, voChars) / 15) },
@@ -237,7 +371,16 @@
     const total = lines.reduce((sum, line) => sum + line.usd, 0);
     return { lines, total: Math.round(total * 10000) / 10000 };
   }
-  const money = usd => (usd < 0.01 ? `$${(Math.max(0, usd)).toFixed(3)}` : `$${usd.toFixed(2)}`);
+
+  // estimateCost() options for a format's defaults (the gallery card and the
+  // Make step pass these, plus the editor's own choices).
+  function formatCostOptions(id, { aiFramePick = true } = {}) {
+    const f = FORMATS[id];
+    if (!f || !f.cost) return {};
+    const out = { data: Boolean(f.cost.data), archiveResearch: Boolean(f.cost.archiveResearch), framePick: f.cost.framePick && aiFramePick ? 1 : 0 };
+    if (f.voice === 'off') out.voiceMode = 'off';
+    return out;
+  }
 
   // ─── Music library ───────────────────────────────────────────────────────
   // The shared FrameUp audio library (audio-library.json, tracks in
@@ -405,6 +548,8 @@
 
   return {
     SPORTS, KINDS, STORY_KINDS, COMPONENT_KINDS, VISUALS, SCENES, FORMATS, FORMAT_IDS, KIND_LABELS, PACE, ROUTES, PRICES,
+    DATA_KINDS, ALL_KINDS, SLIDE_KINDS, SOURCE_KINDS, OUTPUTS, DATA_FORMATS, DATA_FORMAT_IDS, ALL_FORMAT_IDS, DATA_ROUTES,
+    isDataFormat, formatKinds, suggestDataFormat, formatCostOptions,
     routeFormat, numbersIn, numberSet, normNumber, unsourcedNumbers, structuralNumbers, numberFields, planNumberFields, unsourcedPlanNumbers,
     planVisualMix, scenePrompt, colorWord,
     MUSIC_FILES, musicTracks,

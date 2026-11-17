@@ -35,6 +35,17 @@
 //             own session (RLS). Before the migration runs they answer
 //             { cloud: false } and the page keeps its local autosave.
 //
+// Data formats (Game Swing, Moment Replay, Archive; Phase 0 contract in
+// project-docs/reels-formats-contract.md §2). One dispatch table,
+// FORMAT_MODES, registers:
+//   games             { sport, when, date? }          -> { games: [GameSummary] }      data (free)
+//   game-data         { sport, eventId }              -> { digest: GameDigest }        data (free)
+//   athlete           { sport, query } | { sport, athleteId } -> { candidates } | { athlete }  data (free)
+//   archive-research  { sport, athleteId, angle }     -> { articles, photos, candidates, coverage }  mcp
+//   frame-pick        { clipUrl, segment, frames, times } -> { setup, play, reaction, captions }  ai
+// Until Agent A lands each handler (run: null) the mode answers 501
+// { reason: 'coming-soon' } before any gate or network call.
+//
 // Every request needs a signed-in ES user. AI modes count toward the hourly
 // and weekly caps and are logged in frameup_ai_usage (features reels-*).
 const crypto = require('node:crypto');
@@ -57,7 +68,7 @@ const PLAN_CACHE = new Map();
 const MAX_BODY = 220 * 1024; // a project's timeline is capped at 200 KB; a clip-judge batch (3 clips x 3 small JPEGs) is ~120 KB
 const PROJECTS = 'frameup_reel_projects';
 const EVENTS = 'frameup_reel_events';
-const EVENT_TYPES = ['plan', 'revise', 'voice', 'edit', 'export', 'lint_blocked', 'make', 'visuals'];
+const EVENT_TYPES = ['plan', 'revise', 'voice', 'edit', 'export', 'lint_blocked', 'make', 'visuals', 'data', 'frames', 'carousel_export'];
 
 function json(statusCode, body) {
   return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) };
@@ -287,6 +298,44 @@ async function recordEvent(body, auth, token) {
   } catch { return { ok: true, cloud: false }; }
 }
 
+// ─── Data-format modes (one dispatch table; contract §2) ────────────────
+// gate:  'data' free, signed-in, rate-limited per user (Agent A adds the
+//               30/min limiter in _reel-games.js);
+//        'mcp'  ES MCP calls, no Gateway spend: counts toward the hourly limit;
+//        'ai'   a Gateway call: aiSpendGate(feature) + hourly + weekly caps.
+// run:   async (body, ctx) -> { ok, ...result } | { ok:false, status, reason, error }
+//        ctx = { auth, token, track }. null = not built yet (501).
+const FORMAT_MODES = {
+  games: { gate: 'data', label: 'Game list', run: null },
+  'game-data': { gate: 'data', label: 'Game data', run: null },
+  athlete: { gate: 'data', label: 'Player search', run: null },
+  'archive-research': { gate: 'mcp', label: 'Archive research', run: null },
+  'frame-pick': { gate: 'ai', feature: 'reels-frame-pick', label: 'AI frame pick', run: null },
+};
+const comingSoon = (mode, entry) => ({ ok: false, status: 501, reason: 'coming-soon', mode, error: `${entry.label} is coming soon to Reels Studio.` });
+async function formatMode(mode, body, ctx, gates = {}) {
+  const entry = FORMAT_MODES[mode];
+  if (!entry) return { ok: false, status: 400, error: 'Unknown request.' };
+  if (typeof entry.run !== 'function') return comingSoon(mode, entry);
+  const { token } = ctx;
+  if (entry.gate === 'ai') {
+    const gate = await (gates.aiSpendGate || aiSpendGate)(token, { feature: entry.feature });
+    if (gate) return { ok: false, status: gate.status, reason: gate.reason, error: gate.error };
+  }
+  if (entry.gate === 'ai' || entry.gate === 'mcp') {
+    const [weekly, hourly] = await Promise.all([(gates.weekly || userOverWeeklyLimit)(token), (gates.hourly || userOverHourlyLimit)(token)]);
+    if (entry.gate === 'ai' && weekly) return { ok: false, status: 429, reason: 'weekly-limit', error: weeklyLimitMessage() };
+    if (hourly) return { ok: false, status: 429, reason: 'limit', error: "You've used a lot of AI this hour. Take a short break and try again soon." };
+  }
+  try {
+    return await entry.run(body, ctx);
+  } catch (error) {
+    if (isBudgetError(error)) return { ok: false, status: 503, reason: 'budget', error: "This week's AI budget is used up, so AI features are paused until it resets." };
+    console.error(`reel-maker ${mode} failed:`, error);
+    return { ok: false, status: 502, error: `${entry.label} is unavailable right now. Try again in a moment.` };
+  }
+}
+
 const AI_MODES = { plan, revise, voice: speak, music, 'voice-sample': voiceSample, scene: sceneImage, 'ai-clip-start': aiClipStart };
 // ai-clip-status only reads a job that was already billed and capped.
 const DATA_MODES = { 'ai-clip-status': aiClipStatus, projects, 'project-save': projectSave, 'project-load': projectLoad, event: recordEvent };
@@ -316,6 +365,8 @@ exports.handler = async function handler(event) {
         music: (({ ready, perSecond, rights, reason }) => ({ ready, perSecond, rights, reason }))(voice.musicStatus()),
         factCheck: { maxSearches: director.FACT_CHECK.maxUses, maxCostUsd: director.FACT_CHECK.maxCostUsd },
         formats: F.FORMAT_IDS, prices: F.PRICES, styles: STYLES.STYLE_IDS,
+        dataFormats: F.DATA_FORMAT_IDS,
+        formatModes: Object.fromEntries(Object.entries(FORMAT_MODES).map(([id, m]) => [id, typeof m.run === 'function'])),
         aiClips: (({ ready, model, max, seconds, perClip, reason }) => ({ ready, model, max, seconds, perClip, reason }))(media.clipsStatus()),
         scenes: { ready: gatewayConfigured(), perImage: F.PRICES.sceneImage },
         clipJudge: { ready: gatewayConfigured(), model: process.env.REELS_CLIP_JUDGE_MODEL || CLIPS.JUDGE.model, maxUsdPerReel: CLIPS.JUDGE.maxUsdPerReel },
@@ -328,6 +379,10 @@ exports.handler = async function handler(event) {
       if (await userOverHourlyLimit(token)) return json(429, { ok: false, reason: 'limit', error: 'Clips are ranked without the AI check this hour.' });
       const result = await clipJudge.judgeClips({ clips: body.clips, subjects: body.subjects, budgetUsd: Number(body.budgetUsd ?? CLIPS.JUDGE.maxUsdPerReel), track });
       return json(result.ok ? 200 : (result.status || (result.reason === 'off' || result.reason === 'feature-off' ? 503 : 502)), result);
+    }
+    if (FORMAT_MODES[body.mode]) {
+      const result = await formatMode(body.mode, body, { auth, token, track });
+      return json(result.ok ? 200 : (result.status || 400), result);
     }
     if (DATA_MODES[body.mode]) {
       const result = await DATA_MODES[body.mode](body, auth, token);
@@ -358,4 +413,4 @@ exports.handler = async function handler(event) {
   }
 };
 
-exports._test = { isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf };
+exports._test = { FORMAT_MODES, formatMode, EVENT_TYPES, isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf };

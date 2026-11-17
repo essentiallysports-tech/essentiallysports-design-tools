@@ -1,0 +1,37 @@
+{
+ "ok": true,
+ "sport": "nfl",
+ "when": "date",
+ "date": "20261112",
+ "updatedAt": "2026-11-17T22:01:16Z",
+ "ttlSec": 60,
+ "games": [
+  {
+   "id": "401873052",
+   "sport": "nfl",
+   "name": "Washington Commanders at New York Giants",
+   "startsAt": "2026-11-13T01:15Z",
+   "status": {
+    "state": "post",
+    "final": true,
+    "detail": "Final",
+    "period": 4,
+    "clock": "0:00"
+   },
+   "teams": {
+    "home": {
+     "abbr": "NYG",
+     "name": "New York Giants",
+     "score": 21
+    },
+    "away": {
+     "abbr": "WSH",
+     "name": "Washington Commanders",
+     "score": 24
+    }
+   },
+   "drama": null,
+   "wpSpark": null
+  }
+ ]
+}

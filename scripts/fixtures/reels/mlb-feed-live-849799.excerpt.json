@@ -1,0 +1,308 @@
+{
+ "_note": "Trimmed from GET https://statsapi.mlb.com/api/v1.1/game/849799/feed/live (2026 World Series G5, MIL 4 at TB 1). Full response 756 KB; cache-control max-age=10, stale-while-revalidate=30.",
+ "copyright": "Copyright 2026 MLB Advanced Media, L.P.  Use of any content on this page acknowledges agreement to the terms posted here http://gdx.mlb.com/components/copyright.txt",
+ "liveData.keys": [
+  "plays",
+  "linescore",
+  "boxscore",
+  "decisions",
+  "leaders"
+ ],
+ "linescore": {
+  "currentInning": 9,
+  "inningHalf": "Bottom",
+  "teams": {
+   "home": {
+    "runs": 1,
+    "hits": 4,
+    "errors": 0,
+    "leftOnBase": 6
+   },
+   "away": {
+    "runs": 4,
+    "hits": 8,
+    "errors": 2,
+    "leftOnBase": 5
+   }
+  },
+  "innings": [
+   {
+    "num": 1,
+    "ordinalNum": "1st",
+    "home": {
+     "runs": 0,
+     "hits": 1,
+     "errors": 0,
+     "leftOnBase": 1
+    },
+    "away": {
+     "runs": 0,
+     "hits": 0,
+     "errors": 0,
+     "leftOnBase": 0
+    }
+   },
+   {
+    "num": 2,
+    "ordinalNum": "2nd",
+    "home": {
+     "runs": 0,
+     "hits": 0,
+     "errors": 0,
+     "leftOnBase": 0
+    },
+    "away": {
+     "runs": 1,
+     "hits": 2,
+     "errors": 0,
+     "leftOnBase": 1
+    }
+   },
+   {
+    "num": 3,
+    "ordinalNum": "3rd",
+    "home": {
+     "runs": 0,
+     "hits": 0,
+     "errors": 0,
+     "leftOnBase": 1
+    },
+    "away": {
+     "runs": 0,
+     "hits": 0,
+     "errors": 0,
+     "leftOnBase": 0
+    }
+   },
+   {
+    "num": 4,
+    "ordinalNum": "4th",
+    "home": {
+     "runs": 0,
+     "hits": 1,
+     "errors": 0,
+     "leftOnBase": 2
+    },
+    "away": {
+     "runs": 0,
+     "hits": 0,
+     "errors": 1,
+     "leftOnBase": 0
+    }
+   },
+   {
+    "num": 5,
+    "ordinalNum": "5th",
+    "home": {
+     "runs": 0,
+     "hits": 0,
+     "errors": 0,
+     "leftOnBase": 0
+    },
+    "away": {
+     "runs": 1,
+     "hits": 3,
+     "errors": 0,
+     "leftOnBase": 2
+    }
+   },
+   {
+    "num": 6,
+    "ordinalNum": "6th",
+    "home": {
+     "runs": 0,
+     "hits": 0,
+     "errors": 0,
+     "leftOnBase": 0
+    },
+    "away": {
+     "runs": 2,
+     "hits": 2,
+     "errors": 0,
+     "leftOnBase": 2
+    }
+   },
+   {
+    "num": 7,
+    "ordinalNum": "7th",
+    "home": {
+     "runs": 0,
+     "hits": 0,
+     "errors": 0,
+     "leftOnBase": 1
+    },
+    "away": {
+     "runs": 0,
+     "hits": 1,
+     "errors": 1,
+     "leftOnBase": 0
+    }
+   },
+   {
+    "num": 8,
+    "ordinalNum": "8th",
+    "home": {
+     "runs": 0,
+     "hits": 0,
+     "errors": 0,
+     "leftOnBase": 0
+    },
+    "away": {
+     "runs": 0,
+     "hits": 0,
+     "errors": 0,
+     "leftOnBase": 0
+    }
+   },
+   {
+    "num": 9,
+    "ordinalNum": "9th",
+    "home": {
+     "runs": 1,
+     "hits": 2,
+     "errors": 0,
+     "leftOnBase": 1
+    },
+    "away": {
+     "runs": 0,
+     "hits": 0,
+     "errors": 0,
+     "leftOnBase": 0
+    }
+   }
+  ]
+ },
+ "allPlays.count": 70,
+ "allPlays.sample": [
+  {
+   "result": {
+    "type": "atBat",
+    "event": "Single",
+    "eventType": "single",
+    "description": "Cooper Pratt singles on a line drive to center fielder Jonny DeLuca. Brice Turang scores. Cooper Pratt out at 2nd on the throw, center fielder Jonny DeLuca to third baseman Junior Caminero to second baseman Ben Williamson to first baseman Jonathan Aranda to shortstop Taylor Walls. Sal Frelick to 3rd.",
+    "rbi": 1,
+    "awayScore": 1,
+    "homeScore": 0,
+    "isOut": true
+   },
+   "about": {
+    "atBatIndex": 10,
+    "halfInning": "top",
+    "isTopInning": true,
+    "inning": 2,
+    "startTime": "2026-10-29T00:31:30.252Z",
+    "endTime": "2026-10-29T00:31:50.415Z",
+    "isComplete": true,
+    "isScoringPlay": true,
+    "hasReview": false,
+    "hasOut": true,
+    "captivatingIndex": 60
+   },
+   "count": {
+    "balls": 0,
+    "strikes": 0,
+    "outs": 2
+   },
+   "lastEvent": {
+    "details": {
+     "call": {
+      "code": "E",
+      "description": "In play, run(s)"
+     },
+     "description": "In play, run(s)",
+     "code": "E",
+     "ballColor": "rgba(26, 86, 190, 1.0)",
+     "trailColor": "rgba(152, 0, 101, 1.0)",
+     "isInPlay": true,
+     "isStrike": false,
+     "isBall": false,
+     "type": {
+      "code": "FC",
+      "description": "Cutter"
+     },
+     "isOut": true,
+     "hasReview": false
+    },
+    "hitData": {
+     "launchSpeed": 94.3,
+     "launchAngle": 10.0,
+     "totalDistance": 192.0,
+     "trajectory": "line_drive",
+     "hardness": "medium",
+     "location": "8",
+     "coordinates": {
+      "coordX": 149.14,
+      "coordY": 81.88
+     }
+    },
+    "startTime": "2026-10-29T00:31:32.491Z",
+    "endTime": "2026-10-29T00:31:50.415Z"
+   }
+  },
+  {
+   "result": {
+    "type": "atBat",
+    "event": "Single",
+    "eventType": "single",
+    "description": "David Hamilton singles on a sharp ground ball to right fielder Ryan Vilade. Cooper Pratt scores. Garrett Mitchell to 2nd.",
+    "rbi": 1,
+    "awayScore": 2,
+    "homeScore": 0,
+    "isOut": false
+   },
+   "about": {
+    "atBatIndex": 33,
+    "halfInning": "top",
+    "isTopInning": true,
+    "inning": 5,
+    "startTime": "2026-10-29T01:27:59.997Z",
+    "endTime": "2026-10-29T01:28:50.876Z",
+    "isComplete": true,
+    "isScoringPlay": true,
+    "hasReview": false,
+    "hasOut": false,
+    "captivatingIndex": 70
+   },
+   "count": {
+    "balls": 1,
+    "strikes": 1,
+    "outs": 1
+   },
+   "lastEvent": {
+    "details": {
+     "call": {
+      "code": "E",
+      "description": "In play, run(s)"
+     },
+     "description": "In play, run(s)",
+     "code": "E",
+     "ballColor": "rgba(26, 86, 190, 1.0)",
+     "trailColor": "rgba(0, 85, 254, 1.0)",
+     "isInPlay": true,
+     "isStrike": false,
+     "isBall": false,
+     "type": {
+      "code": "CH",
+      "description": "Changeup"
+     },
+     "isOut": false,
+     "hasReview": false
+    },
+    "hitData": {
+     "launchSpeed": 106.9,
+     "launchAngle": 4.0,
+     "totalDistance": 89.0,
+     "trajectory": "ground_ball",
+     "hardness": "hard",
+     "location": "9",
+     "coordinates": {
+      "coordX": 145.56,
+      "coordY": 126.63
+     }
+    },
+    "startTime": "2026-10-29T01:28:40.394Z",
+    "endTime": "2026-10-29T01:28:50.876Z"
+   }
+  }
+ ]
+}

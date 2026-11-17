@@ -1,0 +1,26 @@
+{
+ "ok": true,
+ "setup": 1,
+ "play": 4,
+ "reaction": 7,
+ "clarity": [
+  6,
+  8,
+  7,
+  5,
+  9,
+  7,
+  6,
+  8,
+  4
+ ],
+ "captions": {
+  "setup": "The setup",
+  "play": "The play",
+  "reaction": "The reaction"
+ },
+ "notes": "Shape fixture: indices into the 9 candidate frames the page sent.",
+ "model": "google/gemini-3.5-flash-lite",
+ "cost": 0.0016,
+ "cached": false
+}

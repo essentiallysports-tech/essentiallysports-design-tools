@@ -1,0 +1,156 @@
+{
+ "_note": "Trimmed ESPN site API scoreboard",
+ "keys": [
+  "leagues",
+  "groups",
+  "events",
+  "provider",
+  "week"
+ ],
+ "events.count": 55,
+ "event0": {
+  "id": "401856883",
+  "name": "Missouri Tigers at Georgia Bulldogs",
+  "date": "2026-11-14T20:30Z",
+  "competition0.keys": [
+   "id",
+   "uid",
+   "date",
+   "attendance",
+   "type",
+   "timeValid",
+   "dateValid",
+   "neutralSite",
+   "conferenceCompetition",
+   "playByPlayAvailable",
+   "recent",
+   "venue",
+   "competitors",
+   "notes",
+   "status",
+   "broadcasts",
+   "leaders",
+   "groups",
+   "format",
+   "startDate",
+   "broadcast",
+   "geoBroadcasts",
+   "highlights",
+   "headlines"
+  ],
+  "status": {
+   "clock": 0.0,
+   "displayClock": "0:00",
+   "period": 4,
+   "type": {
+    "id": "3",
+    "name": "STATUS_FINAL",
+    "state": "post",
+    "completed": true,
+    "description": "Final",
+    "detail": "Final",
+    "shortDetail": "Final"
+   }
+  },
+  "competitors": [
+   {
+    "homeAway": "home",
+    "score": "48",
+    "linescores": [
+     {
+      "value": 21.0,
+      "displayValue": "21",
+      "period": 1
+     },
+     {
+      "value": 10.0,
+      "displayValue": "10",
+      "period": 2
+     },
+     {
+      "value": 10.0,
+      "displayValue": "10",
+      "period": 3
+     },
+     {
+      "value": 7.0,
+      "displayValue": "7",
+      "period": 4
+     }
+    ],
+    "records": [
+     {
+      "name": "overall",
+      "abbreviation": "Game",
+      "type": "total",
+      "summary": "9-1"
+     },
+     {
+      "name": "Home",
+      "type": "home",
+      "summary": "5-1"
+     },
+     {
+      "name": "Road",
+      "type": "road",
+      "summary": "3-0"
+     },
+     {
+      "name": "vs. Conf.",
+      "type": "vsconf",
+      "summary": "7-1"
+     }
+    ]
+   },
+   {
+    "homeAway": "away",
+    "score": "21",
+    "linescores": [
+     {
+      "value": 0.0,
+      "displayValue": "0",
+      "period": 1
+     },
+     {
+      "value": 7.0,
+      "displayValue": "7",
+      "period": 2
+     },
+     {
+      "value": 7.0,
+      "displayValue": "7",
+      "period": 3
+     },
+     {
+      "value": 7.0,
+      "displayValue": "7",
+      "period": 4
+     }
+    ],
+    "records": [
+     {
+      "name": "overall",
+      "abbreviation": "Game",
+      "type": "total",
+      "summary": "6-4"
+     },
+     {
+      "name": "Home",
+      "type": "home",
+      "summary": "4-1"
+     },
+     {
+      "name": "Road",
+      "type": "road",
+      "summary": "2-3"
+     },
+     {
+      "name": "vs. Conf.",
+      "type": "vsconf",
+      "summary": "3-4"
+     }
+    ]
+   }
+  ]
+ }
+}
