@@ -1,0 +1,172 @@
+/* FrameUp editor quick wins: Size pack dialog and Remove background.
+   Tokens only (design-tokens.css); buttons come from the es-buttons layer. */
+
+/* ── Size pack ─────────────────────────────────────────────────────────── */
+.es-dialog.size-pack-dialog {
+  width: min(880px, calc(100vw - 32px));
+  max-height: min(760px, calc(100dvh - 32px));
+  display: flex;
+  flex-direction: column;
+  padding: var(--es-space-6);
+}
+.es-dialog.size-pack-dialog:not([open]) { display: none; }
+
+/* Dark theme: same token switch as the editor's other dialogs
+   (design-tokens.css, template picker / recent designs). */
+html[data-theme="dark"] .size-pack-dialog {
+  --es-ink: #FFFFFF;
+  --es-ink-2: #BFC8D9;
+  --es-bg: #2A2D34;
+  --es-surface: #2A2D34;
+  --es-sunk: #2A2D34;
+  --es-line: #3B4049;
+  --es-line-2: #707A8C;
+  --es-brand-soft: rgb(10 125 250 / .2);
+  --es-brand-text: #9DCBFD;
+}
+html[data-theme="dark"] .size-pack-method:not(.is-relayout, .is-original) { background: #3B4049; color: #FFFFFF; }
+
+.size-pack-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--es-space-3);
+  margin-bottom: var(--es-space-1);
+}
+.size-pack-head h2 { margin: 0; }
+
+.size-pack-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--es-ink-2);
+  cursor: pointer;
+}
+.size-pack-close:hover,
+.size-pack-close:focus-visible {
+  outline: none;
+  background: var(--es-sunk);
+  color: var(--es-ink);
+}
+.size-pack-close:focus-visible { box-shadow: var(--es-focus-ring); }
+
+.es-dialog .size-pack-copy {
+  margin: 0 0 var(--es-space-4);
+  font-size: 14px;
+}
+
+.size-pack-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--es-space-4);
+  min-height: 0;
+  margin: 0;
+  padding: var(--es-space-1);
+  overflow-y: auto;
+  list-style: none;
+}
+
+.size-pack-item {
+  display: grid;
+  gap: var(--es-space-2);
+  min-width: 0;
+}
+
+/* Every preview sits in the same box; the image keeps its real shape. */
+.size-pack-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 200px;
+  padding: var(--es-space-2);
+  overflow: hidden;
+  border-radius: var(--es-radius-chip);
+  background: var(--es-sunk);
+  box-shadow: inset 0 0 0 1px var(--es-line);
+}
+.size-pack-thumb {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgb(14 16 20 / .18);
+}
+
+.size-pack-label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--es-space-2);
+  align-items: center;
+  cursor: pointer;
+}
+.size-pack-label input {
+  grid-row: span 2;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--es-brand);
+}
+.size-pack-name {
+  overflow: hidden;
+  color: var(--es-ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.size-pack-meta {
+  color: var(--es-ink-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.size-pack-method { justify-self: start; }
+.size-pack-method.is-relayout,
+.size-pack-method.is-original { background: var(--es-brand-soft); color: var(--es-brand-text); }
+
+.size-pack-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--es-space-2);
+  margin-top: var(--es-space-5);
+}
+.size-pack-total {
+  margin-right: auto;
+  color: var(--es-ink-2);
+  font-size: 13px;
+}
+
+/* Phones and small tablets: the shared bottom sheet (design-tokens.css). */
+@media (max-width: 900px) {
+  .es-dialog.size-pack-dialog[open] { width: 100%; max-height: calc(100dvh - 24px); }
+}
+@media (max-width: 760px) {
+  .size-pack-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .size-pack-frame { height: 160px; }
+}
+@media (max-width: 420px) {
+  .es-dialog.size-pack-dialog { padding: var(--es-space-4); }
+  .size-pack-actions { flex-wrap: wrap; }
+  .size-pack-total { flex-basis: 100%; }
+}
+
+.export-options-pack .es-btn { justify-self: start; }
+
+/* ── Remove background ─────────────────────────────────────────────────── */
+.image-context-actions [data-image-slot-cutout][aria-busy="true"] { cursor: progress; }
+
+/* ── Faster editor links ───────────────────────────────────────────────────
+   index.html#instagram (etc.) adds .boot-editor-route before first paint, so
+   Home's lazy banner and card images are never laid out and never fetched.
+   The rule ends once the router sets body[data-current-page]. */
+html.boot-editor-route body:not([data-current-page]) .frame-home { display: none !important; }

@@ -97,7 +97,7 @@
     if (linkButton && !/Shift\+L/.test(linkButton.title)) linkButton.title = `${linkButton.title || 'Copy link'} (${MOD}+Shift+L)`;
   }
 
-  // ─── Export options (PNG, 2×) ────────────────────────────────────────────
+  // ─── Export options (PNG, 2×, size pack) ────────────────────────────────────────────
   // The setting itself lives in index.html (getExportOptions), used by every
   // export; this is the small menu that changes it.
   let menu = null;
@@ -152,8 +152,18 @@
           </div>
           <p class="export-setting__hint" data-export-hint="double"></p>
         </div>
-        <p class="export-options-size" data-export-options-size></p>`;
+        <p class="export-options-size" data-export-options-size></p>
+        <div class="export-setting export-options-pack" data-size-pack-row hidden>
+          <span class="export-setting__label">Other sizes</span>
+          <button type="button" class="es-btn es-btn--sm" data-size-pack-open>Size pack</button>
+          <p class="export-setting__hint">Feed, square, story, X and YouTube from this design, in one ZIP.</p>
+        </div>`;
       menu.addEventListener('click', event => {
+        if (event.target.closest('[data-size-pack-open]')) {
+          closeMenu();
+          window.FrameUpSizePack?.open?.();
+          return;
+        }
         const choice = event.target.closest('[data-export-choice]');
         if (!choice) return;
         setExportOptions({ ...getExportOptions(), [choice.dataset.exportChoice]: choice.dataset.value === 'true' });
@@ -206,6 +216,8 @@
       hint.textContent = EXPORT_HINTS[hint.dataset.exportHint][String(Boolean(options[hint.dataset.exportHint]))];
     });
     menu.querySelector('[data-export-options-size]').textContent = exportSizeText();
+    const packRow = menu.querySelector('[data-size-pack-row]');
+    if (packRow) packRow.hidden = !window.FrameUpSizePack?.available?.();
   }
 
   function setupExportOptions() {
@@ -239,6 +251,7 @@
     if (upload && upload.offsetParent) items.push({ label: 'Upload a photo', icon: 'upload', keywords: 'image picture background', run: () => upload.click() });
     const optionsButton = visibleButton('studio-export-options-btn');
     if (optionsButton) items.push({ label: 'Export options', hint: 'PNG, 2×', icon: 'sliders', keywords: 'png size double', run: () => optionsButton.click() });
+    if (window.FrameUpSizePack?.available?.()) items.push({ label: 'Export size pack', hint: 'ZIP', icon: 'download', keywords: 'resize sizes story square x twitter youtube zip pack', run: () => window.FrameUpSizePack.open() });
     items.push({ label: 'Browse templates', icon: 'template', keywords: 'change template post type asset picker', run: () => window.FrameUpTemplates?.openForPage?.() });
     items.push({ label: 'Recent designs', icon: 'clock', keywords: 'reopen past exports history', run: () => window.FrameUpDesigns?.showRecentDesigns?.() });
     items.push({ label: 'Keyboard shortcuts', hint: '?', icon: 'keyboard', keywords: 'keys hotkeys', run: showShortcuts });
