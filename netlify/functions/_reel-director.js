@@ -15,6 +15,7 @@
 //   revisePlan      one Haiku call for "shorter / punchier / …" edits, same checks.
 //   factCheck       capped web research (2 searches, $0.03 cap) whose text
 //                   joins the sources, so its numbers can be used.
+const crypto = require('node:crypto');
 const F = require('../../reel-formats.js');
 const STYLES = require('../../reel-styles.js');
 const RULES = require('../../frameup-rules.js');
@@ -434,8 +435,178 @@ async function factCheck({ topic = '', sport = '', track = null } = {}) {
   return { text: clean(research.text, 4000), urls: (research.urls || []).slice(0, 8), cost: Number(research.cost) || 0, capped: Boolean(research.capped) };
 }
 
+// ─── Data formats: Game Swing, Moment Replay, Archive ───────────────────
+// Contract §3, §6. Code plans the reel (reel-data.js): which plays, which
+// moments, which frames, and every beat's refs into timeline.data. The
+// model only rewrites the words (one Haiku call, optional): it never adds,
+// drops or reorders a beat, never touches refs, and a line with a number
+// that FACTS do not contain keeps the code's own line. With AI off, over a
+// cap or on any failure the code plan ships as it is (free).
+const T = require('../../reel-timeline.js');
+const DATA = require('../../reel-data.js');
+
+const DATA_SYSTEM = [
+  'You write the on-screen lines for an EssentiallySports (ES) data reel: a 9:16 sports reel built from real game data, ES coverage or a clip.',
+  'The beats are fixed. Return one entry per beat id given, in the same order. Do not add, remove or reorder beats.',
+  'Return JSON only: {"title":"...","beats":[{"id":"b1","text":"...","vo":"..."}],"hooks":["alt hook","alt hook"]}',
+  '- text: the on-screen line, 2-9 words, punchy, no full stop. It must describe the beat\'s DATA (the play, the moment, the frames).',
+  '- vo: what the ES voice says over the beat, 6-22 words, or "" when VOICE is off.',
+  'Rules:',
+  '1. Every number (score, yards, year, percent, stat) must appear in FACTS exactly. Never invent, round or estimate. If unsure, leave numbers out.',
+  '2. Name only people named in FACTS. No quotes. No emojis, hashtags, links, "Breaking" or hype words (shocking, insane, unbelievable).',
+  '3. The hook (first beat) carries the story in 5-7 words. The last beat is a question to fans with no numbers.',
+  '4. A win-probability beat must not restate the attribution; the renderer draws "Win probability: ESPN Analytics" itself.',
+].join('\n');
+
+const DATA_CACHE = new Map();
+const DATA_TTL_MS = 45 * 60 * 1000;
+
+// The facts text for a data plan: what the lint and the model may use.
+function dataFacts({ format, digest, athlete, archive, captions }) {
+  const parts = [];
+  if (digest) parts.push(T.digestFacts(digest));
+  if (format === 'archive') parts.push(DATA.archiveFacts(archive, athlete));
+  if (captions && typeof captions === 'object') parts.push(['setup', 'play', 'reaction'].map(r => clean(captions[r], 60)).filter(Boolean).join('. '));
+  return parts.filter(Boolean).join('\n');
+}
+
+// What a beat shows, in words, for the prompt (resolved from its refs).
+function beatBrief(beat, tl) {
+  const lines = (beat.refs || []).map(ref => {
+    const hit = T.resolveRef(tl, ref);
+    if (!hit) return '';
+    if (ref.startsWith('play:')) return `play: ${hit.text} (score after: ${tl.data.game.teams.away.abbr} ${hit.score.away}, ${tl.data.game.teams.home.abbr} ${hit.score.home})`;
+    if (ref.startsWith('wp:')) return '';
+    if (ref.startsWith('src:')) return `ES article: ${hit.title} (${String(hit.date || '').slice(0, 4)})`;
+    if (ref.startsWith('stat:')) return `stat row ${ref.slice(5)}`;
+    if (ref.startsWith('frame:')) return `frame: ${ref.slice(6)}`;
+    return '';
+  }).filter(Boolean);
+  return { id: beat.id, kind: beat.kind, current: beat.text, shows: lines.join(' | ') || (beat.kind === 'wpline' ? 'the win-probability line of the whole game' : '') };
+}
+
+// Request body -> trusted data inputs. Digests are re-validated (or taken
+// from this server's cache for the same game); archive moments are
+// re-verified against the articles and stat rows they cite.
+function readDataInput(body, { cachedDigest = null } = {}) {
+  const b = body || {};
+  const format = F.isDataFormat(b.format) ? b.format : '';
+  let digest = null;
+  const sent = b.digest && typeof b.digest === 'object' ? b.digest : null;
+  if (sent && cachedDigest) digest = cachedDigest(sent.sport, sent.eventId) || null;
+  if (!digest && sent && T.validateDigest(sent).ok) digest = sent;
+  let athlete = null;
+  const sentAthlete = b.athlete && typeof b.athlete === 'object' ? b.athlete : (b.archive && typeof b.archive.athlete === 'object' ? b.archive.athlete : null);
+  if (sentAthlete && T.validateTimeline({ v: 2, beats: [], data: { athlete: sentAthlete } }).ok) athlete = sentAthlete;
+  let archive = null;
+  if (format === 'archive' && b.archive && typeof b.archive === 'object') {
+    const ARCH = require('./_reel-archive.js');
+    const sources = (Array.isArray(b.archive.articles) ? b.archive.articles : (Array.isArray(b.archive.sources) ? b.archive.sources : []))
+      .filter(s => s && /^a\d{1,3}$/.test(String(s.id)) && /^https:\/\/(?:www\.)?essentiallysports\.com\//.test(String(s.url)) && T.validateTimeline({ v: 2, beats: [], data: { archive: { sources: [s] } } }).ok)
+      .slice(0, T.LIMITS.sources);
+    const photos = (Array.isArray(b.archive.photos) ? b.archive.photos : []).filter(p => p && /^p\d{1,3}$/.test(String(p.id)) && ARCH.isEsPhoto(p.url)).slice(0, T.LIMITS.photos);
+    const pool = (Array.isArray(b.archive.candidates) ? b.archive.candidates : (Array.isArray(b.archive.moments) ? b.archive.moments : [])).slice(0, T.LIMITS.moments);
+    const { kept } = ARCH.verifyCandidates(pool, { articles: sources, stats: athlete && athlete.stats });
+    archive = {
+      athleteId: clean(b.archive.athleteId || (athlete && athlete.athleteId), 32), angle: clean(b.angle || b.archive.angle, 120),
+      sources, photos, candidates: kept.map(m => ({ ...m, photoId: photos.some(p => p.id === m.photoId) ? m.photoId : null })),
+      thin: Boolean(b.archive.thin || (b.archive.coverage && b.archive.coverage.thin)),
+    };
+  }
+  let replay = null;
+  if (format === 'replay' && b.replay && typeof b.replay === 'object' && T.validateTimeline({ v: 2, beats: [], replay: b.replay }).ok) replay = b.replay;
+  const captions = b.captions && typeof b.captions === 'object' ? Object.fromEntries(['setup', 'play', 'reaction'].map(r => [r, clean(b.captions[r], 60)])) : null;
+  const clips = (Array.isArray(b.clips) ? b.clips : []).slice(0, 40).filter(c => c && /^https:\/\//.test(String(c.url || ''))).map(c => ({ url: clean(c.url, 400), handle: clean(c.handle, 40), text: clean(c.text, 280), postedAt: clean(c.postedAt, 40) }));
+  return { format, digest, athlete, archive, replay, captions, clips, angle: clean(b.angle, 120), name: clean(b.name, 80), playId: clean(b.playId, 40), title: clean(b.title, 90) };
+}
+function hasDataInput(input) {
+  if (!input || !input.format) return false;
+  if (input.format === 'gameswing') return Boolean(input.digest);
+  if (input.format === 'archive') return Boolean(input.archive && input.archive.candidates.length);
+  if (input.format === 'replay') return Boolean(input.replay);
+  return false;
+}
+
+function codeDataPlan(input, { style = '' } = {}) {
+  const S = style || F.FORMATS[input.format].defaultStyle;
+  if (input.format === 'gameswing') {
+    const handles = input.digest ? require('./_reel-games.js').teamHandles(input.digest) : {};
+    return DATA.planFromGame(input.digest, { style: S, clips: input.clips, ...handles, title: input.title });
+  }
+  if (input.format === 'archive') return DATA.planFromArchive(input.archive, input.athlete, { style: S, angle: input.angle, name: input.name, sport: input.athlete && input.athlete.sport });
+  if (input.format === 'replay') return DATA.planFromReplay(input.replay, { style: S, captions: input.captions, title: input.title, game: input.digest, playId: input.playId });
+  return null;
+}
+// A plan as a timeline, to resolve refs (the same check the page runs).
+const planTimeline = plan => ({ v: 2, canvas: { w: 1080, h: 1920 }, outputs: plan.outputs, format: plan.format, beats: plan.beats, data: plan.data, replay: plan.replay, slides: plan.slides });
+
+function validateDataCopy(parsed, plan, facts, { voice = false } = {}) {
+  const sourceSet = F.numberSet(facts);
+  const issues = [];
+  const byId = new Map((Array.isArray(parsed && parsed.beats) ? parsed.beats : []).filter(b => b && b.id).map(b => [String(b.id), b]));
+  let changed = 0;
+  const beats = plan.beats.map((beat, i) => {
+    const got = byId.get(beat.id);
+    if (!got) return beat;
+    const text = F.trimWords(clean(got.text, 90), 12).replace(/[.]$/, '');
+    const vo = voice ? F.trimWords(clean(got.vo, 220), 30) : '';
+    const next = { ...beat, text: text || beat.text, vo: vo || beat.vo };
+    const last = i === plan.beats.length - 1;
+    const bad = F.unsourcedNumbers({ text: next.text, vo: next.vo }, sourceSet, plan.format);
+    if (bad.length || (last && F.numbersIn(`${next.text} ${next.vo}`).length)) { issues.push(`Beat ${i + 1}: kept the data line (the rewrite had ${bad.join(', ') || 'a number'}).`); return beat; }
+    if (RULES.BANNED.some(rule => rule.re.test(`${next.text} ${next.vo}`))) { issues.push(`Beat ${i + 1}: kept the data line (banned wording).`); return beat; }
+    if (next.text !== beat.text || next.vo !== beat.vo) changed += 1;
+    return next;
+  });
+  const title = clean(parsed && parsed.title, 120);
+  const hooks = (Array.isArray(parsed && parsed.hooks) ? parsed.hooks : []).map(h => clean(h, 60)).filter(h => h && !F.unsourcedNumbers({ text: h }, sourceSet).length).slice(0, 3);
+  return { beats, title: title && !F.unsourcedNumbers({ text: title }, sourceSet).length ? title : plan.title, hooks, issues, changed };
+}
+
+// The data-format director. input = readDataInput(body). Never throws.
+async function runDataDirector(input, { style = '', tier = 'standard', steer = '', voice = false, blocked = '', track = null, timeoutMs = 18000 } = {}) {
+  const plan = codeDataPlan(input, { style });
+  if (!plan) return { plan: null, source: 'draft', reason: 'no-data', cost: 0, model: '', issues: ['No usable data for this format.'], corpus: '' };
+  const facts = dataFacts({ format: input.format, digest: plan.data.game, athlete: plan.data.athlete, archive: input.archive, captions: input.captions });
+  const tl = planTimeline(plan);
+  const check = T.validateTimeline(tl);
+  const base = { plan, source: 'data', reason: blocked || '', cost: 0, model: '', issues: check.errors.map(e => `${e.path}: ${e.msg}`).slice(0, 8), corpus: facts, refsOk: check.ok };
+  if (blocked || tier === 'off') return base;
+  let api;
+  try { api = gateway(); } catch { api = null; }
+  if (!api || !api.gatewayConfigured()) return { ...base, reason: 'off' };
+  const key = crypto.createHash('sha256').update(JSON.stringify([input.format, plan.beats.map(b => [b.id, b.kind, b.text, b.refs]), facts, steer, voice])).digest('hex');
+  const hit = DATA_CACHE.get(key);
+  if (hit && Date.now() - hit.at < DATA_TTL_MS) return { ...base, ...hit.value, plan: { ...plan, ...hit.value.planPatch }, cost: 0, cached: true };
+  const request = [
+    `FORMAT: ${F.FORMATS[input.format].label}`,
+    `VOICE: ${voice ? 'on' : 'off'}`,
+    steer ? `EDITOR NOTE: ${clean(steer, 300)}` : '',
+    'BEATS (id, kind, what it shows, the current line):',
+    ...plan.beats.map(b => { const x = beatBrief(b, tl); return `- ${x.id} ${x.kind}: ${x.shows || '-'} | current: "${x.current}"`; }),
+    'FACTS (the only facts you may use):',
+    '<<<', facts || '(none)', '>>>',
+  ].filter(Boolean).join('\n');
+  try {
+    const reply = await api.aiText({
+      tier: 'main', system: DATA_SYSTEM, cacheSystem: true, json: true,
+      messages: [{ role: 'user', content: request }], effort: 'low', maxTokens: 1400, timeoutMs,
+      track: track ? { ...track, feature: 'reels-director' } : undefined,
+    });
+    const copy = validateDataCopy(extractJson(reply.text), plan, facts, { voice });
+    const planPatch = { beats: copy.beats, title: copy.title, hooks: copy.hooks };
+    const value = { source: copy.changed ? 'director' : 'data', model: reply.model || '', issues: [...base.issues, ...copy.issues].slice(0, 8), planPatch };
+    DATA_CACHE.set(key, { at: Date.now(), value });
+    if (DATA_CACHE.size > 200) DATA_CACHE.delete(DATA_CACHE.keys().next().value);
+    return { ...base, ...value, plan: { ...plan, ...planPatch }, cost: Number(reply.cost) || 0 };
+  } catch (error) {
+    return { ...base, reason: api.isBudgetError && api.isBudgetError(error) ? 'budget' : 'error' };
+  }
+}
+
 module.exports = {
   readReelBrief, directorRequest, styleRequest, validatePlan, runReelDirector, COMPONENT_SPEC, revisePlan, factCheck, teamInfo,
   DIRECTOR_SYSTEM, REVISE_PRESETS, FACT_CHECK, KIT_SPORT,
-  _test: { extractJson, clean, squash },
+  DATA_SYSTEM, runDataDirector, readDataInput, hasDataInput, codeDataPlan, dataFacts, validateDataCopy, planTimeline, DATA_CACHE,
+  _test: { extractJson, clean, squash, beatBrief },
 };
