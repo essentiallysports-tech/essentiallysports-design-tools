@@ -7,6 +7,11 @@
 //       "ads we shipped".
 //     rules: plain extra instructions derived, deterministically, from the
 //       last 200 events: recurring check failures and consistent edits.
+//   styleRankingFor({ brandId, sport, token }) -> [{ style, exports, share,
+//       edits, editDistance, score }] best first: which ad styles this brand
+//       ships (export share) and how much people rewrite the AI copy in each
+//       (word edit distance after copy_applied). Ask AI uses it as a
+//       tiebreak between near-equal styles (video-ads-styles.js).
 //
 // Both never throw. Until the migration has run (table missing) or when
 // Supabase is down, recordEvent quietly does nothing and lessonsFor returns
@@ -15,6 +20,7 @@
 // there yet, they fall back to the caller's own rows (RLS).
 const { authConfig } = require('./_supabase-auth.js');
 const RULES = require('../../frameup-rules.js');
+const BRANDS = require('../../video-ads-brands.js');
 
 const TABLE = 'frameup_video_ad_events';
 const EVENT_TYPES = ['copy_generated', 'copy_applied', 'copy_edited', 'export', 'clip_failed', 'check_failed'];
@@ -26,7 +32,12 @@ const MAX_RULE_CHARS = 120;
 const RULE_EVENT_WINDOW = 200;
 const CACHE_MS = 10 * 60 * 1000;
 const FAIL_CACHE_MS = 60 * 1000;
-const EMPTY = Object.freeze({ examples: [], rules: [] });
+const EMPTY = Object.freeze({ examples: [], rules: [], styles: [] });
+const STYLE_IDS = Object.keys(BRANDS.STYLES);
+// Fields of the no-footage styles kept in an example (video-ads-styles.js).
+const EXTRA_TEXT = ['offer', 'stat', 'statLabel', 'statSource', 'listTitle', 'quote', 'speaker', 'quoteContext'];
+const EXTRA_LISTS = ['items', 'them', 'us'];
+const MIN_STYLE_EXPORTS = 2;
 
 const cache = new Map();
 let tableMissingUntil = 0;
@@ -92,18 +103,28 @@ async function recordEvent({ token, email, event } = {}) {
 }
 
 // ─── Examples: the latest exported ads ────────────────────────────────────
+function styleOfRow(payload) {
+  const source = payload?.copy && typeof payload.copy === 'object' ? payload.copy : (payload || {});
+  return STYLE_IDS.includes(source.style) ? source.style : (STYLE_IDS.includes(payload?.style) ? payload.style : 'condensed');
+}
+
 function copyOf(payload) {
   const source = payload?.copy && typeof payload.copy === 'object' ? payload.copy : (payload || {});
-  const style = ['simple', 'condensed', 'highlight'].includes(source.style) ? source.style
-    : (['simple', 'condensed', 'highlight'].includes(payload?.style) ? payload.style : 'condensed');
+  const style = styleOfRow(payload);
   const body = (Array.isArray(source.body) ? source.body : [source.body]).map(p => clean(p, 400)).filter(Boolean).slice(0, 3);
-  return {
+  const ad = {
     style,
     headline: clean(source.headline, 220),
     highlight: style === 'highlight' ? clean(source.highlight, 120) : '',
     body,
     cta: clean(source.cta, 40),
   };
+  // A no-footage style keeps its own fields (only those that are set).
+  if (BRANDS.STYLES[style] && !BRANDS.STYLES[style].classic) {
+    EXTRA_TEXT.forEach(k => { const v = clean(source[k], 220); if (v) ad[k] = v; });
+    EXTRA_LISTS.forEach(k => { const v = (Array.isArray(source[k]) ? source[k] : []).map(x => clean(x, 120)).filter(Boolean).slice(0, 3); if (v.length) ad[k] = v; });
+  }
+  return ad;
 }
 
 function deriveExamples(rows) {
@@ -112,14 +133,73 @@ function deriveExamples(rows) {
   for (const row of rows || []) {
     if (row?.type !== 'export') continue;
     const ad = copyOf(row.payload);
-    if (!ad.headline && !ad.body.length) continue;
-    const key = [ad.headline, ...ad.body].join(' ').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const text = allText(ad);
+    if (!text) continue;
+    const key = text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     if (seen.has(key)) continue;
     seen.add(key);
     examples.push(ad);
     if (examples.length >= MAX_EXAMPLES) break;
   }
   return examples;
+}
+
+// Every word an ad shows, in reading order (any style).
+function allText(ad) {
+  if (!ad || typeof ad !== 'object') return '';
+  const parts = [ad.headline, ...(Array.isArray(ad.body) ? ad.body : [ad.body]), ad.offer, ad.stat, ad.statLabel, ad.listTitle,
+    ...(Array.isArray(ad.items) ? ad.items : []), ...(Array.isArray(ad.them) ? ad.them : []), ...(Array.isArray(ad.us) ? ad.us : []), ad.quote, ad.speaker];
+  return parts.map(p => clean(p, 600)).filter(Boolean).join(' ');
+}
+
+// Word-level edit distance, 0 (same) .. 1 (rewritten), over the ad's text.
+function editDistance(before, after) {
+  const a = wordList(String(before || '').toLowerCase());
+  const b = wordList(String(after || '').toLowerCase());
+  if (!a.length && !b.length) return 0;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i += 1) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j += 1) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length] / Math.max(a.length, b.length);
+}
+
+// ─── Style ranking: export share and edit distance per style ─────────────
+// score = share of exports × (1 − ½ × mean edit distance), scaled so the best
+// style is 1. Needs MIN_STYLE_EXPORTS exports for the brand; [] before that
+// (too little to learn from). Explainable: every number is returned.
+function deriveStyleRanking(rows) {
+  const exports = new Map();
+  const edits = new Map();
+  let total = 0;
+  for (const row of rows || []) {
+    if (row?.type === 'export') {
+      const style = styleOfRow(row.payload);
+      exports.set(style, (exports.get(style) || 0) + 1);
+      total += 1;
+    } else if (row?.type === 'copy_edited') {
+      const payload = row.payload || {};
+      const style = STYLE_IDS.includes(payload.style) ? payload.style : (STYLE_IDS.includes(payload.after?.style) ? payload.after.style : '');
+      if (!style) continue;
+      const d = editDistance(allText(payload.before), allText(payload.after));
+      const list = edits.get(style) || [];
+      list.push(d);
+      edits.set(style, list);
+    }
+  }
+  if (total < MIN_STYLE_EXPORTS) return [];
+  const raw = [...exports.entries()].map(([style, n]) => {
+    const list = edits.get(style) || [];
+    const mean = list.length ? list.reduce((x, y) => x + y, 0) / list.length : 0;
+    const share = n / total;
+    return { style, exports: n, share: Math.round(share * 1000) / 1000, edits: list.length, editDistance: Math.round(mean * 1000) / 1000, raw: share * (1 - 0.5 * mean) };
+  });
+  const top = Math.max(...raw.map(r => r.raw), 0);
+  return raw
+    .map(({ raw: value, ...r }) => ({ ...r, score: top > 0 ? Math.round((value / top) * 1000) / 1000 : 0 }))
+    .sort((x, y) => y.score - x.score || y.exports - x.exports || x.style.localeCompare(y.style));
 }
 
 // ─── Rules: recurring check failures and consistent edits ─────────────────
@@ -329,15 +409,16 @@ async function fetchOwnRows(token, brand) {
   return { recent, exports };
 }
 
-async function lessonsFor({ brandId, sport, token } = {}) {
+// The derived lessons for one brand (and sport), cached. Never throws.
+async function loadLessons({ brandId, sport, token } = {}) {
   try {
     const brand = String(brandId || '').trim().toLowerCase();
-    if (!token || !/^[a-z0-9-]{1,40}$/.test(brand)) return { examples: [], rules: [] };
-    if (Date.now() < tableMissingUntil) return { examples: [], rules: [] };
+    if (!token || !/^[a-z0-9-]{1,40}$/.test(brand)) return EMPTY;
+    if (Date.now() < tableMissingUntil) return EMPTY;
     const sportId = SPORTS.includes(String(sport || '').toLowerCase()) ? String(sport).toLowerCase() : '';
     const key = `${brand}|${sportId}`; // team-wide: the same lessons for everyone
     const hit = cache.get(key);
-    if (hit && hit.expires > Date.now()) return { examples: [...hit.value.examples], rules: [...hit.value.rules] };
+    if (hit && hit.expires > Date.now()) return hit.value;
 
     let value = EMPTY;
     let ttl = CACHE_MS;
@@ -352,16 +433,31 @@ async function lessonsFor({ brandId, sport, token } = {}) {
         ttl = FAIL_CACHE_MS;
       }
       const examples = deriveExamples(exports);
-      value = { examples, rules: deriveRules(recent, { examples }) };
+      // Exports for the share: the recent window plus older exports not in it.
+      const rowKey = row => `${row?.created_at || ''}|${row?.type || ''}|${JSON.stringify(row?.payload || {})}`;
+      const seen = new Set(recent.map(rowKey));
+      const styleRows = [...recent, ...exports.filter(row => !seen.has(rowKey(row)))];
+      value = { examples, rules: deriveRules(recent, { examples }), styles: deriveStyleRanking(styleRows) };
     } catch {
       ttl = FAIL_CACHE_MS;
     }
     if (cache.size > 200) cache.delete(cache.keys().next().value);
     cache.set(key, { expires: Date.now() + ttl, value });
-    return { examples: [...value.examples], rules: [...value.rules] };
+    return value;
   } catch {
-    return { examples: [], rules: [] };
+    return EMPTY;
   }
+}
+
+async function lessonsFor(args = {}) {
+  const value = await loadLessons(args);
+  return { examples: [...value.examples], rules: [...value.rules] };
+}
+
+// This brand's styles, best first ([] until there are enough exports).
+async function styleRankingFor(args = {}) {
+  const value = await loadLessons(args);
+  return (value.styles || []).map(r => ({ ...r }));
 }
 
 function resetLearningCache() {
@@ -371,6 +467,10 @@ function resetLearningCache() {
 
 module.exports = {
   EVENT_TYPES,
+  MIN_STYLE_EXPORTS,
+  deriveStyleRanking,
+  editDistance,
+  styleRankingFor,
   MAX_PAYLOAD_CHARS,
   classifyIssue,
   deriveExamples,

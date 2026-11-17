@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261117-ready1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="video-ads.css?v=20261117-clips2">
+  <link rel="stylesheet" href="video-ads.css?v=20261118-video-ad-styles">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
@@ -97,6 +97,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
               <span>Meta preview</span>
             </button>
+            <button class="es-btn es-btn--sm" type="button" id="va-safe-toggle" aria-pressed="false" title="Show the areas Meta's Reels buttons, profile row and caption cover">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" stroke-dasharray="3 2.4"/><path d="M5 15h14"/><path d="M5 6h14"/></svg>
+              <span>Safe zone</span>
+            </button>
             <button class="va-icon-btn va-only-mobile" type="button" id="va-mini" aria-pressed="false" aria-label="Shrink preview" title="Shrink preview">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 10 7-7"/><path d="M20 10h-6V4"/><path d="m3 21 7-7"/><path d="M4 14h6v6"/></svg>
             </button>
@@ -157,6 +161,7 @@
             <div class="va-device__media">
               <canvas id="va-canvas" width="1080" height="1920" role="img" aria-label="Ad preview" tabindex="0" aria-describedby="va-pan-hint" aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown"></canvas>
               <div class="va-meta-over" id="va-meta-over" aria-hidden="true"></div>
+              <div class="va-safe" id="va-safe" aria-hidden="true" hidden></div>
             </div>
             <div class="va-meta-foot" id="va-meta-foot" aria-hidden="true"></div>
           </div>
@@ -215,6 +220,19 @@
             <h2 id="va-h-copy" tabindex="-1">Write the copy</h2>
             <p>Type your own, or Ask AI to write and check it.</p>
           </header>
+          <div class="va-field va-style-pick">
+            <div class="va-field__top"><span class="va-label" id="va-style-label">Style</span><span class="va-count" id="va-style-count"></span></div>
+            <p class="va-suggest" id="va-suggest" role="status" aria-live="polite" hidden></p>
+            <!-- Filled by video-ads.js: one radio per style, each with a live thumbnail. -->
+            <div class="va-styles" role="radiogroup" aria-labelledby="va-style-label" id="va-styles"></div>
+            <div class="va-zone" id="va-zone-row">
+              <span class="va-hint" id="va-zone-label">9:16 safe zone</span>
+              <div class="va-seg" role="radiogroup" aria-labelledby="va-zone-label" id="va-zone">
+                <button type="button" role="radio" data-zone="meta" aria-checked="true" title="Keep the copy in y 270–1250, clear of Meta's Reels UI">Meta Reels</button>
+                <button type="button" role="radio" data-zone="classic" aria-checked="false" title="The original Figma margins">Classic</button>
+              </div>
+            </div>
+          </div>
           <section class="va-editor" id="va-editor" aria-labelledby="va-editor-title">
             <div class="va-editor__head">
               <h3 id="va-editor-title">Your copy</h3>
@@ -265,6 +283,7 @@
                 </form>
               </div>
             </section>
+            <div class="va-classic-fields" id="va-classic-fields">
             <div class="va-field">
               <div class="va-field__top"><label class="va-label" for="va-headline">Headline</label><span class="va-count" id="va-headline-count" aria-live="polite"></span></div>
               <textarea class="va-input" id="va-headline" rows="2" spellcheck="true" lang="en-US" aria-describedby="va-headline-count va-lint-headline"></textarea>
@@ -284,6 +303,9 @@
               <ul class="va-lint" id="va-lint-body" data-lint="body" aria-live="polite" hidden></ul>
               <button class="va-link va-add-para" type="button" id="va-add-para">+ Add paragraph</button>
             </div>
+            </div>
+            <!-- The fields of a no-footage style (Stat Card, Today's 3, Us vs Them, Quote Card). -->
+            <div class="va-style-fields" id="va-style-fields" hidden></div>
             <div class="va-field">
               <div class="va-field__top"><label class="va-label" for="va-cta">Button</label><span class="va-count" id="va-cta-count" aria-live="polite"></span></div>
               <input class="va-input" id="va-cta" type="text" maxlength="40" spellcheck="true" lang="en-US" aria-describedby="va-cta-count va-lint-cta">
@@ -291,23 +313,6 @@
             </div>
             <label class="va-switch"><input type="checkbox" id="va-unsub" checked><span class="va-switch__track" aria-hidden="true"></span><span>Show “Unsubscribe anytime”</span></label>
           </section>
-          <div class="va-field">
-            <span class="va-label" id="va-style-label">Style</span>
-            <div class="va-styles" role="radiogroup" aria-labelledby="va-style-label" id="va-styles">
-              <button type="button" role="radio" data-style="simple" aria-checked="false">
-                <span class="va-style-art va-style-art--simple" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-                <span class="va-style-name">Simple</span>
-              </button>
-              <button type="button" role="radio" data-style="condensed" aria-checked="false">
-                <span class="va-style-art va-style-art--condensed" aria-hidden="true"><b>Big idea</b><i></i><i></i></span>
-                <span class="va-style-name">Condensed</span>
-              </button>
-              <button type="button" role="radio" data-style="highlight" aria-checked="true">
-                <span class="va-style-art va-style-art--highlight" aria-hidden="true"><b>BIG <mark>IDEA</mark></b><i></i><i></i></span>
-                <span class="va-style-name">Highlight</span>
-              </button>
-            </div>
-          </div>
         </section>
 
         <!-- 2 Clip -->
@@ -407,8 +412,13 @@
               <button type="button" data-ex="1x1" aria-pressed="false"><span class="va-ratio va-ratio--1x1 va-ratio--lg" aria-hidden="true"></span><strong>1:1</strong><span>Square</span></button>
             </div>
           </div>
+          <div class="va-field va-grid" id="va-grid-row">
+            <label class="va-switch"><input type="checkbox" id="va-grid"><span class="va-switch__track" aria-hidden="true"></span><span>Export 3 styles <span class="va-hint">A test set: the same copy in 3 styles</span></span></label>
+            <div class="va-grid-styles" id="va-grid-styles" role="group" aria-label="Styles in the test set" hidden></div>
+            <p class="va-hint va-grid-names" id="va-grid-names"></p>
+          </div>
           <div class="va-ready" id="va-ready"></div>
-          <label class="va-check"><input type="checkbox" id="va-rights"><span>We can use this footage in a paid ad.</span></label>
+          <label class="va-check" id="va-rights-row"><input type="checkbox" id="va-rights"><span>We can use this footage in a paid ad.</span></label>
           <button class="es-btn es-btn--primary es-btn--lg va-block" type="button" id="va-export" disabled>Export MP4</button>
           <div class="va-progress" id="va-export-progress" hidden><span></span></div>
           <p class="va-hint" id="va-export-status" role="status" aria-live="polite"></p>
@@ -434,9 +444,10 @@
   <div class="va-toasts" id="va-toasts" aria-live="polite"></div>
 
   <video id="va-video" playsinline muted preload="auto" hidden></video>
-  <script src="video-ads-brands.js?v=20261115-fig1"></script>
+  <script src="video-ads-brands.js?v=20261118-video-ad-styles"></script>
+  <script src="video-ads-styles.js?v=20261118-video-ad-styles"></script>
   <script src="video-ads-teams.js?v=20261117-tlogo1"></script>
-  <script src="video-ads-render.js?v=20261117-clips2"></script>
+  <script src="video-ads-render.js?v=20261118-video-ad-styles"></script>
   <script src="es-motion.js?v=20261115-ds1"></script>
   <script src="league-logos.js?v=20261117-logo1"></script>
   <script src="video-ads.js?v=20261118-impact-posted-links"></script>

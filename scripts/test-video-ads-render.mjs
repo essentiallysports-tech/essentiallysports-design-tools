@@ -133,8 +133,9 @@ assert.ok(Math.abs(btn.y - Math.max(...bodyOps.map(op => op.y)) - 120) < 0.5, 'b
 assert.ok(Math.abs(btn.h - 99.1) < 0.2 && Math.abs(btn.r - 13.66) < 0.05, 'CTA 99px tall, radius 13.7');
 const unsub = nflAd.ops.find(op => op.text === 'Unsubscribe anytime');
 assert.equal(unsub.fill, '#FFFFFF');
-assert.ok(/^600 24\.9px Roboto/.test(unsub.font), 'unsubscribe is Roboto SemiBold 24.9px');
-assert.ok(Math.abs(unsub.y - 24.89 * R.CAP.body - (btn.y + btn.h) - 23) < 0.5, 'unsubscribe 23px under the CTA');
+// Was the Figma 24.9px; raised to 32px for 55+ readers (research §3.2).
+assert.ok(/^600 32px Roboto/.test(unsub.font), 'unsubscribe is Roboto SemiBold, at least 32px');
+assert.ok(Math.abs(unsub.y - R.UNSUB_MIN * R.CAP.body - (btn.y + btn.h) - 23) < 0.5, 'unsubscribe 23px under the CTA');
 // The ES logo is drawn at its Figma size and centred, 107px from the top.
 const mark = nflAd.ops.find(op => op.type === 'logo');
 assert.ok(Math.abs(mark.w - 270.45) < 0.01 && mark.y === 107 && Math.abs(mark.x + mark.w / 2 - 540) < 0.01);

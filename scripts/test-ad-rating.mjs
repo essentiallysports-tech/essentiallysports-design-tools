@@ -374,4 +374,26 @@ assert.equal(res.body.attempts, 2);
   assert.equal((await client.requestRating({ frames: [JPEG], context: CONTEXT, fetchImpl: okFetch })).score, 8);
 }
 
+// ── No-footage styles: the reviewer is told, the context carries the style ──
+{
+  assert.equal(rating.PROMPT_VERSION, 'frameup-video-ads-review-v1.1.0', 'prompt version bumped');
+  assert.equal(rating.RUBRIC_VERSION, 'frameup-newsletter-v1.0.0', 'rubric unchanged: scores stay comparable');
+  assert.deepEqual(rating.WEIGHTS, { headlineOffer: 20, cta: 20, readability55Plus: 15, trust: 15, stopScroll: 10, audienceFit: 10, simplicity: 5, placementFit: 5 }, 'weights unchanged');
+  const p = rating.SYSTEM_PROMPT;
+  assert.match(p, /never penalise an ad, or list a weakness or fix, for having no clip/);
+  ['Stat Card', 'Today\'s 3', 'Us vs Them', 'Quote Card', 'animated gradient', 'slow zoom'].forEach(t => assert.ok(p.includes(t), `prompt mentions ${t}`));
+  assert.match(p, /do not mark the CTA as missing because an early frame does not show it yet/);
+  assert.doesNotMatch(p, /a trending sports clip \(NFL, college football or MLB\) under a dark scrim/, 'no longer assumes a clip');
+  const ctx = rating.buildContext({ brandId: 'the-huddle', placement: '9x16', style: 'stat', background: 'animated', styleCopy: { stat: '.412', statLabel: '<b>on-base</b> this month', items: ['a', '', 'b'], junk: 'x' } }, 2);
+  assert.equal(ctx.style, 'stat');
+  assert.equal(ctx.styleLabel, 'Stat Card');
+  assert.equal(ctx.background, 'animated');
+  assert.deepEqual(ctx.styleCopy, { stat: '.412', statLabel: 'on-base this month', items: ['a', 'b'] });
+  const old = rating.buildContext({ brandId: 'the-huddle', headline: 'x' }, 1);
+  assert.equal(old.background, 'clip', 'older callers: a clip ad');
+  assert.equal(old.style, '');
+  assert.equal((await post({ frames: [JPEG], context: { ...CONTEXT, background: 'cartoon' } })).status, 400);
+  assert.equal((await post({ frames: [JPEG], context: { ...CONTEXT, styleCopy: ['x'] } })).status, 400);
+}
+
 console.log('Ad rating tests passed.');
