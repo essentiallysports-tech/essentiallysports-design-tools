@@ -55,8 +55,10 @@
   <style>
     html:not([data-theme="dark"]) body.gen-body { background: #fff; }
     .gen-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 32px 0 72px; font-family: var(--es-font-ui); color: var(--es-ink); }
-    .gen-brief { display: grid; gap: 12px; padding: 20px; border-radius: 16px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
-    .gen-brief textarea { box-sizing: border-box; width: 100%; min-height: 96px; resize: vertical; padding: var(--es-space-3, 12px); border: 0; border-radius: 12px; background: var(--es-sunk); color: var(--es-ink); font: var(--es-type-prompt-weight) var(--es-type-prompt-size)/var(--es-type-prompt-line) var(--es-font-ui); box-shadow: inset 0 0 0 1px transparent; transition: box-shadow var(--es-dur) var(--es-ease), background var(--es-dur) var(--es-ease); }
+    /* Composer card (2026-11-17 v2): brief → found → format → action bar.
+       One rhythm: 24 card padding, 12 field → pills, 20 around each divider. */
+    .gen-brief { --gen-pad: var(--es-space-6, 24px); display: grid; gap: 0; padding: var(--gen-pad) var(--gen-pad) 0; border-radius: var(--es-radius-container, 16px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
+    .gen-brief textarea { box-sizing: border-box; width: 100%; min-height: 104px; resize: vertical; padding: var(--es-space-3, 12px) var(--es-space-4, 16px); border: 0; border-radius: 12px; background: var(--es-sunk); color: var(--es-ink); font: var(--es-type-prompt-weight) var(--es-type-prompt-size)/var(--es-type-prompt-line) var(--es-font-ui); box-shadow: inset 0 0 0 1px transparent; transition: box-shadow var(--es-dur) var(--es-ease), background var(--es-dur) var(--es-ease); }
     .gen-brief textarea:focus { outline: none; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo); }
     .gen-brief textarea::placeholder { color: var(--es-placeholder, #8a8f98); }
     /* Light: the prompt is a white input with a grey outline (light-site inputs). */
@@ -68,19 +70,26 @@
     :is(.gen-empty__title, .trend-title, .trends-group__head h2) { text-wrap: balance; }
     :is(.gen-card__why, .trends-note, .gen-summary) { text-wrap: pretty; }
     .gen-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-    .gen-row__label { margin-right: var(--es-space-1, 4px); color: var(--es-ink-3); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
-    .gen-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-    .gen-actions__hint { flex: 1 1 280px; color: var(--es-ink-3); font-size: 13px; line-height: 1.45; }
-    .gen-actions__buttons { display: flex; gap: 8px; margin-left: auto; }
+    .gen-row__label { color: var(--es-ink-3); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); line-height: 16px; letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
+    /* Action bar: a quiet band across the card's foot, the one primary on the right. */
+    .gen-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--es-space-3, 12px) var(--es-space-4, 16px); margin: var(--es-space-6, 24px) calc(-1 * var(--gen-pad)) 0; padding: var(--es-space-4, 16px) var(--gen-pad); border-top: 1px solid var(--es-line); border-radius: 0 0 var(--es-radius-container, 16px) var(--es-radius-container, 16px); background: color-mix(in srgb, var(--es-sunk) 55%, var(--es-bg)); }
+    .gen-actions__hint { display: inline-flex; flex: 1 1 240px; align-items: center; gap: var(--es-space-2, 8px); min-width: 0; color: var(--es-ink-3); font-size: var(--es-type-meta-size, 13px); line-height: var(--es-type-meta-line, 1.45); }
+    .gen-actions__hint svg { flex: none; width: var(--es-icon-sm, 16px); height: var(--es-icon-sm, 16px); color: var(--es-ink-3); }
+    .gen-actions__buttons { display: flex; align-items: center; gap: var(--es-space-2, 8px); margin-left: auto; }
     .gen-actions__buttons .es-btn[hidden] { display: none; }
-    .gen-kbd { margin-left: 2px; padding: 1px 6px; border-radius: 6px; background: rgb(255 255 255 / .18); font: 500 12px/1.4 var(--es-font-ui); }
+    .gen-actions__buttons #gen-submit { min-width: 168px; padding-inline: var(--es-space-5, 20px); }
+    .gen-kbd { margin-left: var(--es-space-1, 4px); padding: 0 6px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--es-line); color: var(--es-ink-3); font: 500 11px/18px var(--es-font-ui); letter-spacing: .02em; }
 
-    .gen-quick { display: grid; gap: var(--es-space-2, 8px); margin-top: var(--es-space-3, 12px); }
-    .gen-quick[hidden] { display: none; }
-    .gen-quick__group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
-    .gen-quick__label { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); margin-right: 0; color: var(--es-ink-3); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
-    .gen-quick button { max-width: min(360px, 100%); min-height: 32px; overflow: hidden; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--es-ink-2, #3f4450); font: var(--es-type-chip-weight) var(--es-type-chip-size)/32px var(--es-font-ui); text-align: left; text-overflow: ellipsis; white-space: nowrap; box-shadow: inset 0 0 0 1px var(--es-line-2, var(--es-line)); cursor: pointer; transition: background var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease); }
-    .gen-quick button:hover { background: var(--es-sunk); color: var(--es-ink); }
+    /* Recent + Try: quiet one-line chips under the composer, label column on the left. */
+    .gen-quick { display: grid; gap: var(--es-space-2, 8px); margin-top: var(--es-space-4, 16px); padding-inline: var(--es-space-1, 4px); }
+    .gen-quick[hidden], .gen-quick:empty { display: none; }
+    .gen-quick__group { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: start; gap: var(--es-space-2, 8px); min-width: 0; }
+    .gen-quick__list { display: flex; gap: var(--es-space-2, 8px); min-width: 0; margin: -4px; padding: 4px; overflow: hidden; } /* one line; chips shrink and ellipsize */
+    .gen-quick__label { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; color: var(--es-ink-3); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
+    .gen-quick__label svg { flex: none; width: 14px; height: 14px; }
+    .gen-quick button { display: inline-flex; flex: 0 1 auto; align-items: center; max-width: 320px; min-width: 0; height: 28px; overflow: hidden; padding: 0 var(--es-space-3, 12px) 0 10px; border: 0; border-radius: 8px; background: var(--es-sunk); color: var(--es-ink-2, #3f4450); font: 400 var(--es-type-chip-size, 13px)/28px var(--es-font-ui); text-align: left; white-space: nowrap; cursor: pointer; transition: background var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease); }
+    .gen-quick__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .gen-quick button:hover { background: color-mix(in srgb, var(--es-sunk) 60%, var(--es-line)); color: var(--es-ink); }
     .gen-quick button:focus-visible, .gen-thumb:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
 
     /* Progress: three honest steps while the server works. */
@@ -106,10 +115,10 @@
     .gen-notice.is-warn { background: var(--es-warn-soft, #fff4d6); }
 
     /* Empty state: live trends to start from (no big empty box). */
-    .gen-empty { display: grid; gap: var(--es-space-3, 12px); margin-top: var(--es-space-8, 32px); }
+    .gen-empty { display: grid; gap: var(--es-space-3, 12px); margin-top: var(--es-space-10, 40px); }
     .gen-empty[hidden] { display: none; }
-    .gen-empty__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--es-space-2, 8px); }
-    .gen-empty__title { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); margin: 0; color: var(--es-ink); font: var(--es-type-section-weight, 800) 18px/1.2 var(--es-type-section-family, var(--es-font-display)); letter-spacing: var(--es-type-section-tracking, .005em); text-transform: uppercase; }
+    .gen-empty__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--es-space-2, 8px); min-height: 32px; }
+    .gen-empty__title { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); margin: 0; color: var(--es-ink); font: var(--es-type-panel-title-weight, 800) var(--es-type-panel-title-size, 18px)/1.2 var(--es-font-display); letter-spacing: var(--es-type-section-tracking, .005em); text-transform: uppercase; }
     .gen-empty__link { display: inline-flex; align-items: center; gap: var(--es-space-1, 4px); min-height: 32px; padding: 0 var(--es-space-2, 8px); border-radius: var(--es-radius-control, 12px); color: var(--ais-soft-text); font-size: var(--es-type-meta-size); font-weight: 600; text-decoration: none; }
     .gen-empty__link:hover { background: var(--ais-grad-soft); text-decoration: underline; text-underline-offset: 3px; }
     .gen-empty__link:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
@@ -117,12 +126,14 @@
     .gen-live { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--es-space-3, 12px); }
     .gen-live:empty { display: none; }
     .gen-empty.is-offline .es-live-dot { display: none; }
-    .gen-trend { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: var(--es-space-3, 12px); min-width: 0; min-height: 64px; padding: var(--es-space-3, 12px); border: 0; border-radius: 14px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); color: var(--es-ink); font: 500 var(--es-type-meta-size)/1.35 var(--es-font-ui); text-align: left; cursor: pointer; transition: box-shadow var(--es-dur, .18s) var(--es-ease, ease), transform var(--es-dur, .18s) var(--es-ease, ease); }
-    .gen-trend:hover { box-shadow: inset 0 0 0 1px var(--es-ink-3); }
+    .gen-trend { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: var(--es-space-3, 12px); min-width: 0; min-height: 72px; padding: var(--es-space-3, 12px) var(--es-space-4, 16px) var(--es-space-3, 12px) var(--es-space-3, 12px); border: 0; border-radius: var(--es-radius-container, 16px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); color: var(--es-ink); font: 500 14px/1.35 var(--es-font-ui); text-align: left; cursor: pointer; transition: box-shadow var(--es-dur, .18s) var(--es-ease, ease), transform var(--es-dur, .18s) var(--es-ease, ease); }
+    .gen-trend:hover { box-shadow: inset 0 0 0 1px var(--es-line-2); }
     .gen-trend:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
-    .gen-trend__art { display: grid; place-items: center; width: 40px; height: 40px; overflow: hidden; border-radius: 10px; background: var(--league-bg, #F2F4F7); box-shadow: inset 0 0 0 1px rgb(14 16 20 / .08); }
+    .gen-trend__art { display: grid; place-items: center; width: 48px; height: 48px; overflow: hidden; border-radius: 10px; background: var(--league-bg, #F2F4F7); box-shadow: inset 0 0 0 1px rgb(14 16 20 / .08); }
     .gen-trend__art img { width: 100%; height: 100%; object-fit: cover; }
-    .gen-trend__art img.is-logo { width: 64%; height: 64%; object-fit: contain; }
+    .gen-trend__art img.is-logo { width: 62%; height: 62%; object-fit: contain; }
+    .gen-trend__body { display: grid; gap: 2px; min-width: 0; }
+    .gen-trend__meta { overflow: hidden; color: var(--es-ink-3); font-size: var(--es-type-eyebrow-size, 11px); font-weight: var(--es-type-eyebrow-weight, 600); letter-spacing: var(--es-type-eyebrow-tracking, .08em); line-height: 16px; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
     .gen-trend__text { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
     .gen-trend.is-skeleton { cursor: default; }
     .gen-trend.is-skeleton .gen-trend__art, .gen-trend.is-skeleton .gen-trend__text { background: var(--es-sunk); box-shadow: none; }
@@ -130,37 +141,53 @@
     @media (hover: hover) and (prefers-reduced-motion: no-preference) { .gen-trend:hover { transform: translateY(-1px); } }
 
     /* Brief: what we found in it (Who · Quote · Stats · List). */
-    .gen-found { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); margin: 0; padding: 0; list-style: none; }
-    .gen-found li { display: inline-flex; align-items: center; gap: var(--es-space-1, 4px); max-width: 100%; min-height: 28px; padding: 0 var(--es-space-3, 12px) 0 var(--es-space-2, 8px); border-radius: 999px; box-shadow: inset 0 0 0 1px var(--es-line-2, #c8cdd5); color: var(--es-ink-3); font: var(--es-type-chip-weight, 500) 12px/1 var(--es-font-ui); white-space: nowrap; transition: background var(--es-dur, .18s) var(--es-ease, ease), color var(--es-dur, .18s) var(--es-ease, ease), box-shadow var(--es-dur, .18s) var(--es-ease, ease); }
+    .gen-found { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); min-height: 28px; margin: var(--es-space-3, 12px) 0 0; padding: 0; list-style: none; }
+    .gen-found li { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 28px; padding: 0 var(--es-space-3, 12px) 0 10px; border-radius: var(--es-radius-pill, 999px); background: var(--es-sunk); color: var(--es-ink-3); font: var(--es-type-chip-weight, 500) 12px/1 var(--es-font-ui); white-space: nowrap; transition: background var(--es-dur, .18s) var(--es-ease, ease), color var(--es-dur, .18s) var(--es-ease, ease), box-shadow var(--es-dur, .18s) var(--es-ease, ease); }
     .gen-found li > span { overflow: hidden; text-overflow: ellipsis; }
     .gen-found li svg { flex: none; width: 14px; height: 14px; }
-    .gen-found li.is-on { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .3); color: var(--es-brand-text); }
-    .gen-found li b { color: inherit; font-weight: 700; }
+    /* Not found yet: a small hollow ring (not a dashed placeholder icon). */
+    .gen-found__dot { flex: none; width: 8px; height: 8px; box-sizing: border-box; margin: 0 2px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--es-line-2, #8A919E); }
+    .gen-found li.is-on { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .24); color: var(--es-brand-text); }
+    .gen-found li b { color: inherit; font-weight: 600; }
     .gen-found__logo { flex: none; width: 16px; height: 16px; padding: 1px; border-radius: 4px; background: #fff; object-fit: contain; }
 
-    /* Format: Auto + the real ES template art as a radiogroup. */
-    .gen-format { display: grid; gap: var(--es-space-2, 8px); min-width: 0; padding-top: var(--es-space-2, 8px); border-top: 1px solid var(--es-line); }
-    .gen-format__list { display: grid; grid-template-columns: repeat(9, minmax(0, 96px)); gap: var(--es-space-2, 8px); min-width: 0; padding: var(--es-space-1, 4px); margin: calc(-1 * var(--es-space-1, 4px)); }
-    .gen-fcard { position: relative; display: grid; grid-template-rows: auto 1fr; align-content: start; gap: var(--es-space-2, 8px); min-width: 0; padding: var(--es-space-1, 4px) var(--es-space-1, 4px) var(--es-space-2, 8px); border: 0; border-radius: 12px; background: transparent; color: var(--es-ink-2, #3f4450); font: 500 12px/1.25 var(--es-font-ui); text-align: center; cursor: pointer; transition: background var(--es-dur, .18s) var(--es-ease, ease), box-shadow var(--es-dur, .18s) var(--es-ease, ease), color var(--es-dur, .18s) var(--es-ease, ease); }
-    .gen-fcard__art { position: relative; display: grid; place-items: center; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 8px; background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); }
+    /* Format: Auto + the real ES template art as a radiogroup. Nine equal
+       cards fill the row when there is room; otherwise the row scrolls. */
+    .gen-format { container-type: inline-size; display: grid; gap: var(--es-space-3, 12px); min-width: 0; margin-top: var(--es-space-5, 20px); padding-top: var(--es-space-5, 20px); border-top: 1px solid var(--es-line); }
+    .gen-format__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--es-space-1, 4px) var(--es-space-3, 12px); min-width: 0; }
+    .gen-format__list { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: var(--es-space-3, 12px); min-width: 0; padding: var(--es-space-2, 8px); margin: calc(-1 * var(--es-space-2, 8px)); }
+    .gen-fcard { position: relative; display: grid; grid-template-rows: auto auto; align-content: start; gap: var(--es-space-2, 8px); min-width: 0; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--es-ink-2, #3f4450); font: 500 12px/16px var(--es-font-ui); text-align: center; cursor: pointer; transition: color var(--es-dur, .18s) var(--es-ease, ease); }
+    .gen-fcard__name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gen-fcard__art { position: relative; display: grid; place-items: center; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 10px; background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); outline: 1px solid transparent; outline-offset: 2px; transition: outline-color var(--es-dur, .18s) var(--es-ease, ease); }
     .gen-fcard__art img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .3s var(--es-ease, ease); }
-    .gen-fcard__art.is-auto { background: var(--ais-grad); color: #fff; box-shadow: inset 0 1px 0 rgb(255 255 255 / .3); }
-    .gen-fcard__art.is-auto svg { width: 40%; height: auto; }
-    .gen-fcard:hover { background: var(--es-sunk); color: var(--es-ink); }
-    .gen-fcard[aria-checked="true"] { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .4); color: var(--es-brand-text, #0A62C7); font-weight: 700; } /* calm selected: soft fill + text colour */
-    .gen-fcard:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    /* Auto: a 2×2 of the real template art with a small AI mark, so it sits
+       in the same family as the thumbnails instead of a loud gradient tile. */
+    .gen-fcard__art.is-auto { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px; place-items: stretch; padding: 6px; }
+    .gen-fcard__art.is-auto img { min-height: 0; border-radius: 4px; opacity: .9; }
+    .gen-fcard__mark { position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--es-bg); box-shadow: 0 1px 2px rgb(14 16 20 / .14), inset 0 0 0 1px var(--es-line); color: var(--es-brand-text, #0A62C7); transform: translate(-50%, -50%); }
+    .gen-fcard__mark svg { width: 16px; height: 16px; }
+    .gen-fcard:hover { color: var(--es-ink); }
+    .gen-fcard:hover .gen-fcard__art { outline-color: var(--es-line-2); }
+    /* Selected: a 2px ES-blue ring around the art (2px gap) and a blue label. */
+    .gen-fcard[aria-checked="true"] { color: var(--es-brand-text, #0A62C7); font-weight: 600; }
+    .gen-fcard[aria-checked="true"] .gen-fcard__art { outline: 2px solid var(--es-brand, #0A7DFA); }
+    .gen-fcard:focus-visible { outline: var(--es-focus-outline); outline-offset: 6px; } /* clear of the selected ring */
     /* Fits what you typed: a small blue dot on the art. */
-    .gen-fcard.is-fit .gen-fcard__art::after { content: ''; position: absolute; top: 6px; left: 6px; width: 10px; height: 10px; border-radius: 50%; background: #0A7DFA; box-shadow: 0 0 0 2px #fff; }
-    @media (hover: hover) and (prefers-reduced-motion: no-preference) { .gen-fcard:hover .gen-fcard__art img { transform: scale(1.04); } }
-    .gen-format__note { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--es-space-1, 4px); min-height: 20px; margin: 0; color: var(--es-ink-3); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); }
-    .gen-format__note strong { color: var(--es-ink); font-weight: 700; }
+    .gen-fcard.is-fit .gen-fcard__art::after { content: ''; position: absolute; top: 8px; left: 8px; z-index: 1; width: 10px; height: 10px; border-radius: 50%; background: #0A7DFA; box-shadow: 0 0 0 2px #fff; }
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) { .gen-fcard:hover .gen-fcard__art:not(.is-auto) img { transform: scale(1.04); } }
+    @container (max-width: 930px) {
+      .gen-format__list { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 96px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding-inline: var(--es-space-2, 8px); scrollbar-width: thin; }
+      .gen-fcard { scroll-snap-align: start; }
+    }
+    .gen-format__note { display: flex; flex: 1 1 260px; flex-wrap: wrap; align-items: baseline; gap: 0 var(--es-space-1, 4px); min-width: 0; margin: 0; color: var(--es-ink-3); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); }
+    .gen-format__note strong { color: var(--es-ink); font-weight: 600; }
     .gen-format__note .is-need { display: inline-flex; align-items: center; gap: var(--es-space-1, 4px); color: var(--es-ink-2, #3f4450); font-weight: 500; }
     .gen-format__note .is-need svg { width: 14px; height: 14px; color: #B45309; }
     .gen-format__note .is-fit-key { display: inline-flex; align-items: center; gap: var(--es-space-1, 4px); }
     .gen-format__note .is-fit-key::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #0A7DFA; }
     .gen-actions__hint strong { color: var(--es-ink); font-weight: 600; }
-    .gen-quick button { max-width: min(300px, 100%); }
-    .gen-quick__tag { flex: none; margin-right: var(--es-space-2, 8px); color: var(--ais-soft-text); font-weight: 700; }
+    .gen-quick__tag { flex: none; margin-right: 6px; color: var(--es-brand-text, #0A62C7); font-weight: 600; }
+    .gen-quick__tag::after { content: '·'; margin-left: 6px; color: var(--es-ink-3); font-weight: 400; }
     .gen-notice__action { margin-top: var(--es-space-2, 8px); }
 
     .gen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
@@ -225,28 +252,32 @@
     .gen-renderer { position: fixed; left: -12000px; top: 0; width: 1280px; height: 900px; border: 0; visibility: hidden; pointer-events: none; }
     .gen-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
+    /* Dark: the Generate view states its roles once (as .td-view does), so the
+       composer, chips and cards below read the same tokens in both themes. */
+    html[data-theme="dark"] #ais-view-generate { --es-ink: #FFFFFF; --es-ink-2: #BFC8D9; --es-ink-3: #98A6BF; --es-bg: #1F2126; --es-line: #2A2D34; --es-line-2: #707A8C; --es-sunk: #2A2D34; --es-brand: #54A4FB; --es-brand-text: #9DCBFD; }
     html[data-theme="dark"] .gen-brief { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
-    html[data-theme="dark"] .gen-quick button { color: #BFC8D9; box-shadow: inset 0 0 0 1px #3B4049; }
-    html[data-theme="dark"] .gen-quick button:hover { background: #2A2D34; color: #FFFFFF; }
+    html[data-theme="dark"] .gen-actions { background: #24272D; }
+    html[data-theme="dark"] .gen-quick button { background: #2A2D34; color: #BFC8D9; }
+    html[data-theme="dark"] .gen-quick button:hover { background: #3B4049; color: #FFFFFF; }
+    html[data-theme="dark"] .gen-fcard__mark { background: #1F2126; box-shadow: 0 1px 2px rgb(0 0 0 / .4), inset 0 0 0 1px #3B4049; }
     html[data-theme="dark"] .gen-card { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
     @media (hover: hover) { html[data-theme="dark"] .gen-card.ais-card:hover { box-shadow: inset 0 0 0 1px transparent, var(--ais-glow-strong); } }
     html[data-theme="dark"] :is(.gen-card__media, .gen-card.is-skeleton .gen-card__body span, .gen-mode, .gen-thumb) { background: #2A2D34; }
     html[data-theme="dark"] .gen-trend { background: #1F2126; }
-    html[data-theme="dark"] .gen-fcard[aria-checked="true"] { background: rgb(84 164 251 / .14); }
     html[data-theme="dark"] .gen-trend { box-shadow: inset 0 0 0 1px #3B4049; color: #FFFFFF; }
     html[data-theme="dark"] .gen-trend:hover { box-shadow: inset 0 0 0 1px #6B7488; }
     html[data-theme="dark"] .gen-trend.is-skeleton :is(.gen-trend__art, .gen-trend__text) { background: #2A2D34; }
     html[data-theme="dark"] .gen-format { border-top-color: #2A2D34; }
     html[data-theme="dark"] .gen-fcard { color: #BFC8D9; }
-    html[data-theme="dark"] .gen-fcard:hover { background: #2A2D34; color: #FFFFFF; }
-    html[data-theme="dark"] .gen-fcard[aria-checked="true"] { box-shadow: inset 0 0 0 1px rgb(84 164 251 / .45); color: #FFFFFF; }
-    html[data-theme="dark"] .gen-fcard__art:not(.is-auto) { background: #2A2D34; box-shadow: inset 0 0 0 1px #3B4049; }
+    html[data-theme="dark"] .gen-fcard:hover { color: #FFFFFF; }
+    html[data-theme="dark"] .gen-fcard[aria-checked="true"] { color: #9DCBFD; }
+    html[data-theme="dark"] .gen-fcard__art { background: #2A2D34; box-shadow: inset 0 0 0 1px #3B4049; }
     html[data-theme="dark"] .gen-fcard.is-fit .gen-fcard__art::after { background: #54A4FB; box-shadow: 0 0 0 2px #1F2126; }
     html[data-theme="dark"] .gen-format__note .is-fit-key::before { background: #54A4FB; }
     html[data-theme="dark"] .gen-format__note .is-need { color: #BFC8D9; }
     html[data-theme="dark"] .gen-format__note .is-need svg { color: #FBBF24; }
     html[data-theme="dark"] :is(.gen-format__note, .gen-actions__hint) { color: #98A6BF; }
-    html[data-theme="dark"] .gen-found li { box-shadow: inset 0 0 0 1px #3B4049; color: #98A6BF; }
+    html[data-theme="dark"] .gen-found li { background: #2A2D34; color: #98A6BF; }
     html[data-theme="dark"] .gen-found li.is-on { background: rgb(10 125 250 / .2); box-shadow: inset 0 0 0 1px rgb(84 164 251 / .45); color: #9DCBFD; }
     html[data-theme="dark"] .gen-mode { color: #BFC8D9; }
     html[data-theme="dark"] .gen-mode.is-ai { background: var(--ais-grad-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .35); color: var(--ais-soft-text); }
@@ -258,22 +289,15 @@
     html[data-theme="dark"] .gen-card__actions .es-icon-btn[aria-expanded="true"] { color: #FFFFFF; box-shadow: inset 0 0 0 1.5px #FFFFFF; }
     html[data-theme="dark"] .gen-notice.is-warn { background: #2a2414; }
     @media (prefers-reduced-motion: reduce) { .gen-card__media::before, .gen-spinner { animation: none !important; } }
-    /* Narrower screens: the format art scrolls sideways inside its row. */
-    @media (max-width: 1180px) {
-      .gen-format__list { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 88px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: thin; }
-      .gen-fcard { scroll-snap-align: start; }
-    }
+    /* Narrower screens: the format row scrolls sideways (container query above). */
     @media (max-width: 900px) {
       .gen-live { grid-template-columns: minmax(0, 1fr); gap: var(--es-space-2, 8px); }
-      .gen-trend { min-height: 56px; }
-      .gen-format__list { grid-auto-columns: 76px; }
+      .gen-trend { min-height: 64px; }
     }
     @media (max-width: 900px) {
       .gen-page { width: auto; padding: 20px 16px 56px; }
-      .gen-brief { padding: var(--es-space-4, 16px); }
+      .gen-brief { --gen-pad: var(--es-space-4, 16px); }
       .gen-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--es-space-4, 16px); }
-      .gen-actions__buttons { width: 100%; }
-      .gen-actions__buttons .es-btn { flex: 1 1 auto; }
       .gen-kbd { display: none; }
       .gen-card__actions [data-act="edit"] { min-height: var(--es-tap); }
       .gen-card__actions .es-icon-btn { width: var(--es-tap); height: var(--es-tap); }
@@ -282,9 +306,17 @@
       .gen-grid { grid-template-columns: minmax(0, 1fr); }
       .gen-thumb { flex-basis: 52px; height: 65px; }
       .gen-progress__time { margin-left: 0; }
-      .gen-quick button { min-height: 44px; line-height: 44px; }
+      .gen-format__list { grid-auto-columns: 84px; }
+      .gen-actions__hint { flex-basis: 100%; }
+      .gen-actions__buttons { width: 100%; }
+      .gen-actions__buttons .es-btn { flex: 1 1 auto; }
+      .gen-quick__group { grid-template-columns: minmax(0, 1fr); gap: var(--es-space-1, 4px); }
+      .gen-quick__label { min-height: 20px; }
+      .gen-quick__list { overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+      .gen-quick__list::-webkit-scrollbar { display: none; }
+      .gen-quick button { flex: none; max-width: 260px; height: 40px; line-height: 40px; }
       .gen-brief textarea { min-height: 128px; } /* the two-line example placeholder wraps to four */
-      .gen-found li { min-height: 32px; }
+      .gen-found li { height: 32px; }
       .gen-refine__team select { font-size: 16px; } /* no iOS zoom on focus */
       .gen-page.ais-studio { padding: 0 0 56px; }
     }
@@ -529,16 +561,18 @@
         <textarea id="gen-brief" maxlength="1500" aria-describedby="gen-brief-hint gen-found" placeholder="Who, what happened, and a quote or stats&#10;e.g. Caitlin Clark scores 30 PTS 9 AST against the Sky"></textarea>
         <ul class="gen-found" id="gen-found" aria-label="Found in your brief" aria-live="polite"></ul>
         <div class="gen-format">
-          <span class="gen-row__label" id="gen-format-label">Format</span>
+          <div class="gen-format__head">
+            <span class="gen-row__label" id="gen-format-label">Format</span>
+            <p class="gen-format__note" id="gen-format-note" aria-live="polite"></p>
+          </div>
           <div class="gen-format__list" id="gen-formats" role="radiogroup" aria-labelledby="gen-format-label" aria-describedby="gen-format-note"></div>
-          <p class="gen-format__note" id="gen-format-note" aria-live="polite"></p>
         </div>
         <div class="gen-actions">
           <span class="gen-sr" id="gen-brief-hint">Your own words are kept as written; facts come only from ES coverage. Check every post before you publish.</span>
-          <span class="gen-actions__hint" id="gen-expect"><strong>Up to 4 designs</strong> · edit any in the editor</span>
+          <span class="gen-actions__hint" id="gen-expect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg><span><strong>Up to 4 designs</strong> · edit any in the editor</span></span>
           <div class="gen-actions__buttons">
             <button class="es-btn" type="button" id="gen-trending" hidden>Suggest topics</button>
-            <button class="es-btn es-btn--primary es-btn--lg ais-btn" type="submit" id="gen-submit"><span id="gen-submit-label">Generate</span><kbd class="gen-kbd" id="gen-kbd" aria-hidden="true">Ctrl ↵</kbd></button>
+            <button class="es-btn es-btn--primary es-btn--lg ais-btn" type="submit" id="gen-submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg><span id="gen-submit-label">Generate</span><kbd class="gen-kbd" id="gen-kbd" aria-hidden="true">Ctrl ↵</kbd></button>
           </div>
         </div>
       </form>
@@ -1247,7 +1281,8 @@
         group.className = 'gen-quick__group';
         group.setAttribute('role', 'group');
         group.setAttribute('aria-label', label);
-        group.innerHTML = `<span class="gen-quick__label">${icon}${esc(label)}</span>`;
+        group.innerHTML = `<span class="gen-quick__label">${icon}${esc(label)}</span><div class="gen-quick__list"></div>`;
+        const chips = group.lastElementChild;
         list.forEach(item => {
           const [tag, text] = Array.isArray(item) ? item : ['', item];
           const button = document.createElement('button');
@@ -1258,10 +1293,13 @@
             tagEl.textContent = tag;
             button.append(tagEl);
           }
-          button.append(document.createTextNode(text.replace(/\s*\n\s*/g, ' · ')));
+          const textEl = document.createElement('span');
+          textEl.className = 'gen-quick__text';
+          textEl.textContent = text.replace(/\s*\n\s*/g, ' · ');
+          button.append(textEl);
           button.title = text;
           button.addEventListener('click', () => setBrief(text));
-          group.appendChild(button);
+          chips.appendChild(button);
         });
         return group;
       }
@@ -1784,9 +1822,11 @@
         card.dataset.type = type;
         card.setAttribute('role', 'radio');
         const art = type === 'auto'
-          ? `<span class="gen-fcard__art is-auto" aria-hidden="true">${ICON.sparkles}</span>`
+          ? `<span class="gen-fcard__art is-auto" aria-hidden="true">${['cover', 'quote', 'stats-single-ent', 'listicle-type-1'].map(t => `<img src="assets/template-thumbs/instagram-${t}.webp" width="360" height="450" alt="" loading="lazy" decoding="async">`).join('')}<span class="gen-fcard__mark">${ICON.sparkles}</span></span>`
           : `<span class="gen-fcard__art" aria-hidden="true"><img src="assets/template-thumbs/instagram-${type}.webp" width="360" height="450" alt="" loading="lazy" decoding="async"></span>`;
-        card.innerHTML = `${art}<span class="gen-fcard__name">${esc(label)}</span>`;
+        // One-line card names; the note above the row keeps the full name.
+        card.dataset.label = label;
+        card.innerHTML = `${art}<span class="gen-fcard__name">${esc(label.replace(/^Two-Person\b/, '2-Person'))}</span>`;
         card.addEventListener('click', () => selectFormat(type));
         card.addEventListener('pointerenter', () => renderFormatNote(type));
         card.addEventListener('pointerleave', () => renderFormatNote());
@@ -1913,7 +1953,7 @@
       }
       let briefFound = readBrief('');
       function pill(on, label, value = '', logo = '') {
-        return `<li class="${on ? 'is-on' : ''}">${on ? ICON.check : ICON.dashed}${logo}<span>${on && value ? `<b>${esc(value)}</b>` : esc(label)}</span><span class="es-sr-only">${on ? ' found' : ' not found yet'}</span></li>`;
+        return `<li class="${on ? 'is-on' : ''}">${on ? ICON.check : '<span class="gen-found__dot" aria-hidden="true"></span>'}${logo}<span>${on && value ? `<b>${esc(value)}</b>` : esc(label)}</span><span class="es-sr-only">${on ? ' found' : ' not found yet'}</span></li>`;
       }
       // Team pill logo: the team's logo from video-ads-teams.js (NFL, MLB, CFB),
       // loaded once, with the brief hints, and only if the page lacks it.
@@ -1976,7 +2016,7 @@
         formatCards.forEach(card => {
           const fit = fits.has(card.dataset.type);
           card.classList.toggle('is-fit', fit);
-          card.setAttribute('aria-label', `${card.textContent.trim()}${fit ? ', fits your brief' : ''}`);
+          card.setAttribute('aria-label', `${card.dataset.label || card.textContent.trim()}${fit ? ', fits your brief' : ''}`);
         });
         renderFormatNote();
       }
@@ -2022,9 +2062,9 @@
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'gen-trend';
-            button.innerHTML = `${trendArt(item)}<span class="gen-trend__text">${esc(item.title)}</span>`;
-            button.title = item.title;
             const sport = labelOf(item.category);
+            button.innerHTML = `${trendArt(item)}<span class="gen-trend__body">${sport ? `<span class="gen-trend__meta">${esc(sport)}</span>` : ''}<span class="gen-trend__text">${esc(item.title)}</span></span>`;
+            button.title = item.title;
             button.setAttribute('aria-label', `Use trend: ${item.title}${sport ? ` (${sport})` : ''}`);
             const photo = button.querySelector('.gen-trend__art img:not(.is-logo)');
             // A broken story photo falls back to the league logo.

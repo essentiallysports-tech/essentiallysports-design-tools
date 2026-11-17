@@ -2294,6 +2294,9 @@
     const name = tintOptions().find(o => o.id === state.tintId)?.label || 'Black';
     rail.tint.setAttribute('aria-valuetext', `${t}%, ${name}`);
     rail.tintVal.textContent = `${t}%`;
+    // Filled part of the custom slider tracks.
+    rail.zoom.style.setProperty('--p', `${((z - 100) / (R.ZOOM_MAX * 100 - 100)) * 100}%`);
+    rail.tint.style.setProperty('--p', `${t}%`);
     markRadios(rail.fit, 'fit', state.fit);
     const room = panRoom();
     const movable = room.roomX > 0.5 || room.roomY > 0.5;

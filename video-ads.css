@@ -1609,3 +1609,51 @@ html:not([data-theme="dark"]) #va-canvas:focus-visible { outline-color: var(--es
   .va-rail__tabs { flex-direction: column; }
   .va-view .va-canvas-wrap { padding: 0 56px; }
 }
+
+/* ── Frame + Tint rail, polish (2026-11-17, rail2) ─────────────────────
+   Same quiet selected state as the other segmented controls, thin slider
+   tracks with a blue fill, one ghost style for the step buttons (disabled
+   only fades the icon), and smaller swatches whose selected ring is never
+   clipped by the scrolling column. */
+.va-rail { --rail-track: rgb(255 255 255 / .14); --rail-seg: rgb(255 255 255 / .06); --rail-seg-on: rgb(255 255 255 / .16); --rail-seg-on-ink: #FFFFFF; --rail-ring: var(--es-blue-400, #54A4FB); }
+html:not([data-theme="dark"]) .va-rail { --rail-track: rgb(14 16 20 / .12); --rail-seg: rgb(14 16 20 / .05); --rail-seg-on: #FFFFFF; --rail-seg-on-ink: var(--va-ink, #0e1014); --rail-ring: var(--es-blue-600, #0A6FDE); }
+.va-rail__body { padding-inline: 4px; margin-inline: -4px; }
+
+/* Fill / Fit */
+.va-rail__fit { background: var(--rail-seg); box-shadow: none; }
+.va-rail__fit button[aria-checked="true"] { background: var(--rail-seg-on); color: var(--rail-seg-on-ink); box-shadow: 0 1px 2px rgb(14 16 20 / .12); }
+html[data-theme="dark"] .va-rail__fit button[aria-checked="true"] { box-shadow: none; }
+
+/* Sliders */
+.va-rail__range { -webkit-appearance: none; appearance: none; height: 20px; background: transparent; }
+.va-rail__range::-webkit-slider-runnable-track { height: 4px; border-radius: 999px; background: linear-gradient(var(--rail-accent), var(--rail-accent)) 0 / var(--p, 0%) 100% no-repeat, var(--rail-track); }
+.va-rail__range::-moz-range-track { height: 4px; border-radius: 999px; background: var(--rail-track); }
+.va-rail__range::-moz-range-progress { height: 4px; border-radius: 999px; background: var(--rail-accent); }
+.va-rail__range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border: 0; border-radius: 50%; background: #FFFFFF; box-shadow: 0 0 0 1px rgb(14 16 20 / .2), 0 1px 3px rgb(14 16 20 / .3); }
+.va-rail__range::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: #FFFFFF; box-shadow: 0 0 0 1px rgb(14 16 20 / .2), 0 1px 3px rgb(14 16 20 / .3); }
+
+/* − + centre: one ghost style */
+.va-rail__btn { background: transparent; box-shadow: inset 0 0 0 1px var(--rail-line); }
+.va-rail__btn:disabled { opacity: 1; color: var(--rail-ink); cursor: default; }
+.va-rail__btn:disabled svg { opacity: .35; }
+
+/* Swatches: 3 per row, quiet blue ring when picked */
+.va-rail__swatches { grid-template-columns: repeat(3, 24px); row-gap: var(--es-space-3, 12px); padding: 3px 3px 0; }
+.va-rail__sw { width: 24px; height: 24px; }
+.va-rail__sw[aria-checked="true"],
+html:not([data-theme="dark"]) .va-rail__sw[aria-checked="true"] { box-shadow: 0 0 0 2px var(--va-stage-bg, #1F2126), 0 0 0 3.5px var(--rail-ring); }
+html:not([data-theme="dark"]) .va-rail__sw[aria-checked="true"] { box-shadow: 0 0 0 2px var(--es-stage, #eef0f3), 0 0 0 3.5px var(--rail-ring); }
+.va-rail__sw--custom:not([aria-checked="true"]) { box-shadow: inset 0 0 0 1px var(--rail-line); }
+.va-rail__sw--custom svg { width: 12px; height: 12px; }
+
+/* Reset: a quiet text action under the controls */
+.va-rail__reset { align-self: flex-start; margin-left: -8px; }
+@media (pointer: coarse) {
+  .va-rail__sw { width: 32px; height: 32px; }
+  .va-rail__swatches { grid-template-columns: repeat(3, 32px); }
+}
+@media (max-width: 900px) {
+  .va-rail__body { padding-inline: var(--es-space-3, 12px); margin-inline: 0; }
+  .va-rail__swatches { grid-template-columns: repeat(6, 32px); }
+  .va-rail__reset { margin-left: 0; }
+}
