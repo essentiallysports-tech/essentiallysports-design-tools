@@ -114,7 +114,22 @@
     { id: 'real-facts', level: 'must', area: 'copy', rule: 'Every number, quote and result comes from the brief, the source design or ES research. Stats use real stat labels.', source: 'CODE (_lint-spec.js)', enforced: 'check' },
     { id: 'text-fit', level: 'must', area: 'copy', rule: 'Text fits the template at a readable size (shorter lines sit bigger).', source: 'CODE (frameup-rules.js FIT)', enforced: 'check' },
   ];
-  const RULES_BY_ID = Object.fromEntries(RULE_LIST.map(rule => [rule.id, rule]));
+  // Composed designs (Generate "Creative", owner request 2026-11-19: "make new
+  // things, not just an image with text on it"). Free composition inside the
+  // brand: frameup-compose.js builds from proven archetypes, and its checkScene
+  // gate and renderer enforce these in code. Kept apart from RULE_LIST so the
+  // template checks and the on-brand critique are unchanged.
+  const COMPOSED_RULES = [
+    { id: 'composed-archetype', level: 'must', area: 'composed', rule: 'A composed design is built from an ES composition archetype (hero cut-out + number, prize focus, big number, split screen, magazine cover, scoreboard, by the numbers, compare bars, quote + portrait, typographic, collage strip, duotone hero, record badge, unit chart).', source: 'Owner 2026-11-19; frameup-compose.js ARCHETYPES', enforced: 'check' },
+    { id: 'composed-fonts', level: 'must', area: 'composed', rule: 'Only Acumin Pro Condensed (display), Roboto Condensed (labels, pills) and Roboto (body). No stroked or outlined type.', source: 'SM-07; frameup-compose.js checkScene', enforced: 'check' },
+    { id: 'composed-palette', level: 'must', area: 'composed', rule: 'Every colour comes from the team brand-kit / logo-library colours, a league or ES golf kit, or the ES colours, plus their shades. Off-palette colours snap to the nearest allowed colour.', source: 'SM-04, SM-06; frameup-compose.js checkScene', enforced: 'check' },
+    { id: 'composed-logo', level: 'must', area: 'composed', rule: 'The ES mark is never a free layer: it is drawn last, 122x104, 50px in, top-right (top-left with a swipe button), black when the area under it is ES blue.', source: 'SM-02, BL-02, BL-06; frameup-compose.js render', enforced: 'template' },
+    { id: 'composed-safe-area', level: 'must', area: 'composed', rule: 'Text, numbers, pills and charts stay inside the 50px safe area and out of the logo clear space.', source: 'SM-03, SM-02; frameup-compose.js checkScene', enforced: 'check' },
+    { id: 'composed-numbers', level: 'must', area: 'composed', rule: 'Every number on a composed design (and every unit chart) is a fact from the brief or cited ES research.', source: 'CODE (_composer.js, checkScene)', enforced: 'check' },
+    { id: 'composed-cutout', level: 'must', area: 'composed', rule: 'Cut-outs are real ES photos of the person the brief names; the mask is applied to the original pixels. Never generated or altered athletes.', source: 'Owner 2026-11-19; remove-bg.js likeness rule', enforced: 'check' },
+    { id: 'composed-ai-art', level: 'must', area: 'composed', rule: 'AI art is backgrounds and objects only (trophies, balls, stadium light, money, weather, motion): never people, faces, jerseys, logos or text.', source: 'Owner 2026-11-19; _asset-service.js never-people guard', enforced: 'check' },
+  ];
+  const RULES_BY_ID = Object.fromEntries([...RULE_LIST, ...COMPOSED_RULES].map(rule => [rule.id, rule]));
 
   // Anything the images do not say confidently (for Suhail to confirm).
   const UNCLEAR = [
@@ -138,6 +153,19 @@
       '- Colours are the team\'s official brand-kit palette (pills, highlight text, 90% mist); no off-palette accent words or colours.',
       '- ES logo top-right (top-left with a swipe button), 50px clear space and safe area; never moved or restyled.',
       '- Real ES photos with the subject dominant; no halftone, cut-out or generated athletes.',
+    ];
+  }
+
+  // The same rules for the Creative art director (composed designs).
+  function composedLines() {
+    return [
+      'ES rules for composed designs (enforced in code; plan inside them):',
+      '- Fonts: Acumin Pro Condensed for display, Roboto Condensed for labels; no outlined or stroked type.',
+      '- Colours: the team\'s official colours (or the league / ES golf kit / ES colours) and their shades only.',
+      '- The ES logo is placed for you (top-right, 50px in); never ask for it, never put text in its corner.',
+      '- 50px safe area on every side.',
+      '- Cut-outs only from real ES photos of the person the brief names; AI art is objects and places, never people, faces, jerseys, logos or text.',
+      '- Every number is a fact from the brief (by id).',
     ];
   }
 
@@ -250,6 +278,6 @@
   return {
     VERSION, CANVAS, FONTS, COLORS, LOGO, SAFE_AREA, SWIPE, MIST, TEMPLATES,
     RULES: RULE_LIST, RULES_BY_ID, UNCLEAR,
-    directorLines, critiqueRulesText, checkDesign, mapSlides, stripStyleKeys,
+    COMPOSED_RULES, directorLines, composedLines, critiqueRulesText, checkDesign, mapSlides, stripStyleKeys,
   };
 }));

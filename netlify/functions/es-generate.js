@@ -12,6 +12,7 @@
 const { verifyEsUser } = require('./_supabase-auth.js');
 const { selectExamples, formatExamples, loadCorpus, normalizeCorpus, pickPastPosts, formatPastPosts, houseStyle, LABELS: POST_LABELS } = require('./_generate-examples.js');
 const director = require('./_creative-director.js');
+const composer = require('./_composer.js');
 const directionMemory = require('./_direction-memory.js');
 const onBrandKit = require('./_onbrand.js');
 const GUIDE = require('../../es-guidelines.js');
@@ -1907,6 +1908,34 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
   };
 }
 
+// ─── Creative (composed designs) ───────────────────────────────────────────
+// mode 'creative': ES research, then the composer (_composer.js): stories,
+// facts, photos (a different one per design), cut-outs and concept art when the
+// asset service is there, the art director's directions and 2-3 candidate
+// scenes each. The page renders the candidates and calls mode 'creative-judge'.
+async function creative({ brief, steer = {}, token, email, count = 4 }) {
+  const started = clock.now();
+  const runId = newRunId();
+  const notes = [];
+  const { mcp, tools } = await discover(notes);
+  const found = await research(brief, mcp, tools, notes);
+  // ES photos of one person: MCP image search, then ES story images that name them.
+  const localFind = async person => {
+    const surname = squash(String(person).split(' ').pop());
+    const articles = (found.articles || []).filter(a => squash(a.title).includes(surname));
+    return (await photoCandidates(person, mcp, tools, articles)).map(c => ({ url: c.url, title: c.title }));
+  };
+  const want = Math.min(Math.max(parseInt(count, 10) || 4, 1), 4);
+  const result = await composer.plan({ brief, found, steer, want, track: { email, token, runId }, localFind, nameCandidates });
+  return {
+    ...result,
+    runId,
+    research: { articles: (found.articles || []).map(({ title, url, date }) => ({ title, url, date })) },
+    notes,
+    meta: { ms: { total: clock.now() - started, plan: result.ms }, costUsd: result.cost.total },
+  };
+}
+
 async function trending() {
   const notes = [];
   const { mcp, tools } = await discover(notes);
@@ -2030,6 +2059,18 @@ exports.handler = async function handler(event) {
     }
     // Bring it on-brand: images (data URLs) of a design made elsewhere. Same
     // spend gate (weekly, team, switches) and hourly cap as Generate.
+    // Creative step 2: the art director's vision pass over the page's renders.
+    if (body.mode === 'creative-judge') {
+      const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
+      const gate = await aiSpendGate(token, { feature: 'generate-creative' });
+      if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
+      const result = await composer.judge({
+        brief: String(body.brief || '').slice(0, 1500), sets: Array.isArray(body.sets) ? body.sets : [],
+        heuristics: body.heuristics && typeof body.heuristics === 'object' ? body.heuristics : {},
+        track: { email: auth.user.email, token, runId: String(body.runId || '').slice(0, 40) },
+      });
+      return json(200, result);
+    }
     if (body.mode === 'onbrand') {
       const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
       const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: 'generate-onbrand' }), userOverHourlyLimit(token)]);
@@ -2042,7 +2083,7 @@ exports.handler = async function handler(event) {
     const brief = String(body.brief || '').replace(/<[^>]*>/g, ' ').replace(/[^\S\n\t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1500);
     if (brief.length < 3) return json(400, { error: 'Write a brief of at least a few words.' });
     const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
-    const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: 'generate' }), userOverHourlyLimit(token)]);
+    const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: body.mode === 'creative' ? 'generate-creative' : 'generate' }), userOverHourlyLimit(token)]);
     if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
     if (overHour) {
       return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
@@ -2050,6 +2091,10 @@ exports.handler = async function handler(event) {
     // Optional (all backward compatible): an editor steer (the old hook string,
     // or { hook, tone, audience, more, less }).
     const steer = director.normalizeSteer(body.steer);
+    // Creative: composed designs (the page renders and judges the candidates).
+    if (body.mode === 'creative') {
+      return json(200, await creative({ brief, steer, token, email: auth.user.email, count: body.count }));
+    }
     // Director-first step 1: the named directions only (no designs yet).
     if (body.mode === 'direct') {
       return json(200, await directions({ brief, formats: body.formats, count: body.count, token, email: auth.user.email, steer }));
@@ -2069,4 +2114,4 @@ exports.handler = async function handler(event) {
 };
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
-exports._test = { onBrand, searchPhotos, IMAGE_SEARCH_CACHE, PHOTO_PICK_CACHE, readBrief: readBriefFor, directorAllowed, directorNote, designsPerDirection, pastPostCard, REWRITES, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE, pickProvider, chat };
+exports._test = { creative, onBrand, searchPhotos, IMAGE_SEARCH_CACHE, PHOTO_PICK_CACHE, readBrief: readBriefFor, directorAllowed, directorNote, designsPerDirection, pastPostCard, REWRITES, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE, pickProvider, chat };
