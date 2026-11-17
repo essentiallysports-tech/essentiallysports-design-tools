@@ -41,6 +41,44 @@
       ]
     },
     {
+      "id": "2026-11-18-reels-studio",
+      "date": "2026-11-18",
+      "title": "Reels Studio",
+      "commit": "150ab31",
+      "items": [
+        {
+          "title": "Reels Studio",
+          "text": "Turn a trend or a brief into a 20–45 second 9:16 reel. No game footage: ES photos, team logos and stat cards.",
+          "page": "reel-maker.html",
+          "target": "#rm-steps"
+        },
+        {
+          "title": "Four formats",
+          "text": "Explained in 30s, Stat alert, Top-5 countdown and Quote reel. Auto picks the one that fits the story.",
+          "page": "reel-maker.html",
+          "target": "#rm-formats"
+        },
+        {
+          "title": "Every number has a source",
+          "text": "The script only uses numbers from the trend, your brief or a capped fact check. Quality checks block anything unsourced.",
+          "page": "reel-maker.html",
+          "target": "#rm-write"
+        },
+        {
+          "title": "Voice, captions and music",
+          "text": "The ES house voice (when set up) or captions only, word-level captions, and licensed music ducked under the voice.",
+          "page": "reel-maker.html",
+          "target": ".rm-step[data-step=\"edit\"]"
+        },
+        {
+          "title": "Rights and cost before export",
+          "text": "See where every asset comes from and what the reel cost, then export MP4 in your browser.",
+          "page": "reel-maker.html",
+          "target": ".rm-step[data-step=\"export\"]"
+        }
+      ]
+    },
+    {
       "id": "2026-11-17-video-ads-v2",
       "date": "2026-11-17",
       "title": "Video Ads v2, Trends hub, Ask AI and tours",

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "about": "Reels Studio music library (reel-maker.html). EMPTY ON PURPOSE. TODO (owner): add only tracks bought under a licence that covers social posts AND paid ads on every platform (Epidemic Sound Business/Enterprise, Soundstripe or Artlist; research doc §3.4). Never add trending commercial songs. Host each file in FrameUp (same origin, e.g. assets/reels-music/<id>.mp3) so the browser can mix it into the export. Until then, people upload a track they have the rights to and type its licence.",
+  "fields": {
+    "id": "short slug, unique",
+    "title": "track title",
+    "artist": "artist or library",
+    "src": "same-origin path to an mp3/m4a/wav",
+    "bpm": "number (optional)",
+    "mood": "hype | tension | calm | celebration | analysis",
+    "sports": ["nfl", "cfb", "mlb", "golf"],
+    "licence": "licence name and number, e.g. Epidemic Sound Enterprise #1234",
+    "organic": "true if cleared for organic social posts",
+    "paid": "true only if cleared for paid ads"
+  },
+  "tracks": []
+}

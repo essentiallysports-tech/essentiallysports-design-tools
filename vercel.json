@@ -1,85 +1,183 @@
 {
   "redirects": [
-    { "source": "/netlify/:path*", "destination": "/404.html", "permanent": false },
-    { "source": "/netlify.toml", "destination": "/404.html", "permanent": false },
-    { "source": "/package.json", "destination": "/404.html", "permanent": false },
-    { "source": "/package-lock.json", "destination": "/404.html", "permanent": false },
-    { "source": "/vercel.json", "destination": "/404.html", "permanent": false }
+    {
+      "source": "/netlify/:path*",
+      "destination": "/404.html",
+      "permanent": false
+    },
+    {
+      "source": "/netlify.toml",
+      "destination": "/404.html",
+      "permanent": false
+    },
+    {
+      "source": "/package.json",
+      "destination": "/404.html",
+      "permanent": false
+    },
+    {
+      "source": "/package-lock.json",
+      "destination": "/404.html",
+      "permanent": false
+    },
+    {
+      "source": "/vercel.json",
+      "destination": "/404.html",
+      "permanent": false
+    }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "Permissions-Policy", "value": "camera=(), geolocation=(), microphone=()" },
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" },
-        { "key": "Content-Security-Policy", "value": "object-src 'none'; base-uri 'self'; frame-ancestors 'self'" },
-        { "key": "Content-Security-Policy-Report-Only", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: data:; connect-src 'self' https://video.twimg.com https://xtdusejokbhtjlmijdca.supabase.co wss://xtdusejokbhtjlmijdca.supabase.co https://api.cloudinary.com https://essentiallysports-design-tools.vercel.app https://cdn.jsdelivr.net https://unpkg.com https://huggingface.co https://*.huggingface.co https://*.hf.co; frame-src 'self'; form-action 'self'" }
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), geolocation=(), microphone=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
+        },
+        {
+          "key": "Content-Security-Policy-Report-Only",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: data:; connect-src 'self' https://video.twimg.com https://xtdusejokbhtjlmijdca.supabase.co wss://xtdusejokbhtjlmijdca.supabase.co https://api.cloudinary.com https://essentiallysports-design-tools.vercel.app https://cdn.jsdelivr.net https://unpkg.com https://huggingface.co https://*.huggingface.co https://*.hf.co; frame-src 'self'; form-action 'self'"
+        }
       ]
     },
     {
       "source": "/:path*.html",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/:path*.svg",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/:path*.webp",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/:path*.otf",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/:path*.woff2",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/:path*.css",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/:path*.js",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
       ]
     }
   ],
   "functions": {
-    "api/es-generate.js": { "maxDuration": 60 },
-    "api/es-generate-image.js": { "maxDuration": 60 },
-    "api/trend-design.js": { "maxDuration": 30 },
-    "api/video-ads.js": { "maxDuration": 60 },
-    "api/ad-rating.js": { "maxDuration": 60 },
-    "api/ad-learning.js": { "maxDuration": 15 },
-    "api/generate-direction-events.js": { "maxDuration": 15 },
-    "api/impact-stats.js": { "maxDuration": 15 },
-    "api/design-request-update.js": { "maxDuration": 15 },
-    "api/slack-command.js": { "maxDuration": 10 },
-    "api/client-errors.js": { "maxDuration": 10 },
-    "api/health.js": { "maxDuration": 10 },
-    "api/ai-budget-watch.js": { "maxDuration": 30 },
-    "api/ai-status.js": { "maxDuration": 10 },
-    "api/remove-bg.js": { "maxDuration": 60 }
+    "api/es-generate.js": {
+      "maxDuration": 60
+    },
+    "api/es-generate-image.js": {
+      "maxDuration": 60
+    },
+    "api/trend-design.js": {
+      "maxDuration": 30
+    },
+    "api/video-ads.js": {
+      "maxDuration": 60
+    },
+    "api/ad-rating.js": {
+      "maxDuration": 60
+    },
+    "api/ad-learning.js": {
+      "maxDuration": 15
+    },
+    "api/generate-direction-events.js": {
+      "maxDuration": 15
+    },
+    "api/impact-stats.js": {
+      "maxDuration": 15
+    },
+    "api/design-request-update.js": {
+      "maxDuration": 15
+    },
+    "api/slack-command.js": {
+      "maxDuration": 10
+    },
+    "api/client-errors.js": {
+      "maxDuration": 10
+    },
+    "api/health.js": {
+      "maxDuration": 10
+    },
+    "api/ai-budget-watch.js": {
+      "maxDuration": 30
+    },
+    "api/ai-status.js": {
+      "maxDuration": 10
+    },
+    "api/remove-bg.js": {
+      "maxDuration": 60
+    },
+    "api/reel-maker.js": {
+      "maxDuration": 60
+    }
   },
   "crons": [
-    { "path": "/api/ai-budget-watch", "schedule": "0 13 * * *" }
+    {
+      "path": "/api/ai-budget-watch",
+      "schedule": "0 13 * * *"
+    }
   ]
 }

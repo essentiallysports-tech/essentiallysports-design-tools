@@ -37,6 +37,7 @@
     clock: icon('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>'),
     keyboard: icon('<path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/>'),
     trending: icon('<path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/>'),
+    film: icon('<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/>'),
     sliders: icon('<path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/>'),
   };
 
@@ -62,6 +63,7 @@
         { id: 'generate', label: 'Generate', href: 'generate.html', icon: 'sparkle', badge: 'New', desc: 'Turn a brief into on-brand, editable Social Media posts.' },
         { id: 'trends', label: 'Trends', href: 'generate.html?view=trends', icon: 'trending', badge: 'New', desc: 'What US sports fans are searching and reading now, by sport. Turn any trend into a design.' },
         { id: 'video-ads', label: 'Video Ads', short: 'Ads', href: 'video-ads.html', icon: 'video', badge: 'New', desc: 'Newsletter sign-up video ads: a trending clip, ES copy styles and a CTA, exported as MP4.' },
+        { id: 'reel-maker', label: 'Reels Studio', short: 'Studio', href: 'reel-maker.html', icon: 'film', badge: 'New', desc: 'Turn a trend or a brief into a 20–45 s 9:16 reel: script, ES photos, stat cards, voiceover and captions. No game footage.' },
       ],
     },
     {
@@ -103,6 +105,7 @@
   const PAGE_IDS = {
     'reels.html': 'reels',
     'video-ads.html': 'video-ads',
+    'reel-maker.html': 'reel-maker',
     'design-request.html': 'request',
     'requests.html': 'my-requests',
     'dashboard.html': 'dashboard',
@@ -238,6 +241,7 @@
     [/^generate/, 'Generate'],
     [/^trend/, 'Trends'],
     [/^video-ads/, 'Video Ads'],
+    [/^reels/, 'Reels Studio'],
   ];
   let usageSlot = null;
   let usageLoading = false;
