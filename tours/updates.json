@@ -3,6 +3,44 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-19-gen-ui",
+      "date": "2026-11-19",
+      "title": "Generate: open any design and keep working on it",
+      "commit": "1503d36",
+      "items": [
+        {
+          "title": "Open a design",
+          "text": "Click any Creative design to open it big: the AI assistant, the art director's suggestions with Apply, layers and text, swap photo, and every version with undo and redo.",
+          "page": "generate.html",
+          "target": "#gen-grid"
+        },
+        {
+          "title": "Pick how many",
+          "text": "Choose 1, 2, 4, 6 or 8 designs next to Generate. The estimated cost of each choice is shown before you run.",
+          "page": "generate.html",
+          "target": "#gen-expect"
+        },
+        {
+          "title": "What could be better",
+          "text": "Each card's director note now opens to what works, what could be better (one click to apply) and the lesson for next time.",
+          "page": "generate.html",
+          "target": "#gen-grid"
+        },
+        {
+          "title": "Trending, Recent and Try",
+          "text": "Live trends with their league and freshness, your recent briefs with Run again, and example briefs as format cards.",
+          "page": "generate.html",
+          "target": "#gen-quick"
+        },
+        {
+          "title": "Every size",
+          "text": "Switch a design between 4:5, 9:16 and 1:1 in the open view; the layout follows and still passes the ES check.",
+          "page": "generate.html",
+          "target": "#gen-grid"
+        }
+      ]
+    },
+    {
       "id": "2026-11-19-hero-generate",
       "date": "2026-11-19",
       "title": "Generate: stat lines, records, carousels and no blank photos",

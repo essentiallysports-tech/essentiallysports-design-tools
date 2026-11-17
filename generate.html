@@ -58,10 +58,11 @@
 <link rel="stylesheet" href="frameup-posted.css?v=20261118-rel1">
 <script src="frameup-impact.js?v=20261118-rel1"></script>
 <script src="frameup-posted.js?v=20261118-rel1"></script>
-<link rel="stylesheet" href="generate-creative.css?v=20261120-rel4">
-<script src="frameup-compose.js?v=20261118-gen-styles" defer></script>
-<script src="generate-creative.js?v=20261118-gen-brain" defer></script>
-<script src="generate-assistant.js?v=20261118-gen-brain" defer></script>
+<link rel="stylesheet" href="generate-creative.css?v=20261119-gen-v2">
+<script src="frameup-compose.js?v=20261119-gen-v2" defer></script>
+<script src="generate-focus.js?v=20261119-gen-v2" defer></script>
+<script src="generate-assistant.js?v=20261119-gen-v2" defer></script>
+<script src="generate-creative.js?v=20261119-gen-v2" defer></script>
   <style>
     html:not([data-theme="dark"]) body.gen-body { background: #fff; }
     .gen-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 32px 0 72px; font-family: var(--es-font-ui); color: var(--es-ink); }
@@ -90,17 +91,65 @@
     .gen-actions__buttons #gen-submit { min-width: 168px; padding-inline: var(--es-space-5, 20px); }
     .gen-kbd { margin-left: var(--es-space-1, 4px); padding: 0 6px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--es-line); color: var(--es-ink-3); font: 500 11px/18px var(--es-font-ui); letter-spacing: .02em; }
 
-    /* Recent + Try: quiet one-line chips under the composer, label column on the left. */
-    .gen-quick { display: grid; gap: var(--es-space-2, 8px); margin-top: var(--es-space-4, 16px); padding-inline: var(--es-space-1, 4px); }
+    /* Trending · Recent · Try (2026-11-19): three rows, three jobs, three looks.
+       Each is a <details>; the header is the label (no fixed label column, so
+       nothing clips). Trending = outlined live chips; Recent = a compact list
+       with Run again; Try = format cards with the template art. */
+    .gen-quick { display: grid; gap: var(--es-space-4, 16px); margin-top: var(--es-space-6, 24px); }
     .gen-quick[hidden], .gen-quick:empty { display: none; }
-    .gen-quick__group { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: start; gap: var(--es-space-2, 8px); min-width: 0; }
-    .gen-quick__list { display: flex; gap: var(--es-space-2, 8px); min-width: 0; margin: -4px; padding: 4px; overflow: hidden; } /* one line; chips shrink and ellipsize */
-    .gen-quick__label { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; color: var(--es-ink-3); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
-    .gen-quick__label svg { flex: none; width: 14px; height: 14px; }
-    .gen-quick button { display: inline-flex; flex: 0 1 auto; align-items: center; max-width: 320px; min-width: 0; height: 28px; overflow: hidden; padding: 0 var(--es-space-3, 12px) 0 10px; border: 0; border-radius: 8px; background: var(--es-sunk); color: var(--es-ink-2, #3f4450); font: 400 var(--es-type-chip-size, 13px)/28px var(--es-font-ui); text-align: left; white-space: nowrap; cursor: pointer; transition: background var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease); }
-    .gen-quick__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-    .gen-quick button:hover { background: color-mix(in srgb, var(--es-sunk) 60%, var(--es-line)); color: var(--es-ink); }
-    .gen-quick button:focus-visible, .gen-thumb:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .gen-quick__split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--es-space-4, 16px) var(--es-space-6, 24px); align-items: start; }
+    .gen-quick__split.is-single { grid-template-columns: minmax(0, 1fr); }
+    .gen-quick__split:empty { display: none; }
+    .gen-qs { min-width: 0; }
+    .gen-qs__head { display: flex; align-items: center; gap: var(--es-space-2, 8px); min-height: 28px; margin-bottom: var(--es-space-2, 8px); list-style: none; cursor: pointer; border-radius: 8px; }
+    .gen-qs__head::-webkit-details-marker { display: none; }
+    .gen-qs__head:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .gen-qs:not([open]) > .gen-qs__head { margin-bottom: 0; }
+    .gen-qs__label { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); color: var(--es-ink-2, #3f4450); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); line-height: 16px; text-transform: uppercase; white-space: nowrap; }
+    .gen-qs__label svg { flex: none; width: 16px; height: 16px; color: var(--es-ink-3); }
+    .gen-qs--trend .gen-qs__label svg { color: var(--es-brand-text, #0A62C7); }
+    .gen-qs__hint { overflow: hidden; color: var(--es-ink-3); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .gen-qs__action { margin-left: auto; min-height: 28px; padding: 0 var(--es-space-2, 8px); border: 0; border-radius: 8px; background: transparent; color: var(--es-ink-3); font: 500 12px var(--es-font-ui); cursor: pointer; }
+    .gen-qs__action:hover { background: var(--es-sunk); color: var(--es-ink); }
+    .gen-qs__action:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .gen-qs__chev { display: none; margin-left: auto; color: var(--es-ink-3); transition: transform var(--es-dur) var(--es-ease); }
+    .gen-qs__action + .gen-qs__chev { margin-left: 0; }
+    .gen-qs__chev svg { width: 16px; height: 16px; }
+    .gen-qs[open] .gen-qs__chev { transform: rotate(180deg); }
+    /* Trending: outlined pills; logo, rising dot, the story, its age. */
+    .gen-tchips { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); min-width: 0; }
+    .gen-tchip { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); max-width: min(100%, 420px); min-width: 0; height: 36px; padding: 0 var(--es-space-3, 12px) 0 var(--es-space-2, 8px); border: 0; border-radius: var(--es-radius-pill, 999px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line-2, #c8cdd5); color: var(--es-ink); font: 500 13px/1 var(--es-font-ui); cursor: pointer; transition: box-shadow var(--es-dur) var(--es-ease), background-color var(--es-dur) var(--es-ease); }
+    .gen-tchip:hover { box-shadow: inset 0 0 0 1px var(--es-ink-3); }
+    .gen-tchip:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .gen-tchip__logo { flex: none; width: 22px; height: 22px; box-sizing: border-box; padding: 3px; border-radius: 50%; background: var(--league-bg, #F2F4F7); object-fit: contain; }
+    .gen-tchip__tag { flex: none; padding-left: 4px; color: var(--es-brand-text, #0A62C7); font-weight: 600; }
+    .gen-tchip__rising { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #E5484D; box-shadow: 0 0 0 3px rgb(229 72 77 / .16); }
+    .gen-tchip__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gen-tchip__age { flex: none; color: var(--es-ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+    /* Recent: a compact list in a quiet well. */
+    .gen-recent { display: grid; margin: 0; padding: var(--es-space-1, 4px); border-radius: var(--es-radius-control, 12px); background: var(--es-sunk); list-style: none; }
+    .gen-recent__row { display: flex; align-items: center; gap: var(--es-space-1, 4px); min-width: 0; }
+    .gen-recent__row + .gen-recent__row { border-top: 1px solid color-mix(in srgb, var(--es-line) 80%, transparent); }
+    .gen-recent__fill { display: flex; flex: 1 1 auto; align-items: baseline; gap: var(--es-space-3, 12px); min-width: 0; min-height: 40px; padding: 0 var(--es-space-3, 12px); border: 0; border-radius: 8px; background: transparent; color: var(--es-ink-2, #3f4450); font: 400 13px/40px var(--es-font-ui); text-align: left; cursor: pointer; }
+    .gen-recent__fill:hover { background: var(--es-bg); color: var(--es-ink); }
+    .gen-recent__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gen-recent__age { flex: none; margin-left: auto; color: var(--es-ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+    .gen-recent__run { display: inline-flex; flex: none; align-items: center; gap: 4px; height: 32px; padding: 0 var(--es-space-2, 8px); border: 0; border-radius: 8px; background: transparent; color: var(--es-brand-text, #0A62C7); font: 600 12px var(--es-font-ui); cursor: pointer; }
+    .gen-recent__run svg { width: 14px; height: 14px; }
+    .gen-recent__run:hover { background: var(--es-bg); }
+    :is(.gen-recent__fill, .gen-recent__run):focus-visible { outline: var(--es-focus-outline); outline-offset: -2px; }
+    /* Try: format cards with the ES template art. */
+    .gen-try { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: var(--es-space-2, 8px); }
+    .gen-try__card { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: var(--es-space-3, 12px); min-width: 0; padding: var(--es-space-2, 8px) var(--es-space-3, 12px) var(--es-space-2, 8px) var(--es-space-2, 8px); border: 0; border-radius: var(--es-radius-control, 12px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); color: var(--es-ink); text-align: left; cursor: pointer; transition: box-shadow var(--es-dur) var(--es-ease); }
+    .gen-try__card:hover { box-shadow: inset 0 0 0 1px var(--es-line-2); }
+    .gen-try__card:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .gen-try__art { display: block; width: 40px; height: 50px; overflow: hidden; border-radius: 6px; background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); }
+    .gen-try__art img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .gen-try__body { display: grid; gap: 2px; min-width: 0; }
+    .gen-try__tag { color: var(--es-brand-text, #0A62C7); font: 600 12px/16px var(--es-font-ui); }
+    .gen-try__text { overflow: hidden; color: var(--es-ink-2, #3f4450); font: 400 13px/18px var(--es-font-ui); text-overflow: ellipsis; white-space: nowrap; }
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) { .gen-try__card:hover .gen-try__art img { transform: scale(1.06); } .gen-try__art img { transition: transform .3s var(--es-ease, ease); } }
+    .gen-thumb:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
 
     /* Progress: three honest steps while the server works. */
     .gen-progress { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px) var(--es-space-3, 12px); margin: var(--es-space-8, 32px) 0 var(--es-space-4, 16px); padding: 0; list-style: none; color: var(--es-ink-3); font-size: var(--es-type-step-size); }
@@ -152,7 +201,7 @@
 
     /* Brief: what we found in it (Who · Quote · Stats · List). */
     .gen-found { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); min-height: 28px; margin: var(--es-space-3, 12px) 0 0; padding: 0; list-style: none; }
-    .gen-found li { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 28px; padding: 0 var(--es-space-3, 12px) 0 10px; border-radius: var(--es-radius-pill, 999px); background: var(--es-sunk); color: var(--es-ink-3); font: var(--es-type-chip-weight, 500) 12px/1 var(--es-font-ui); white-space: nowrap; transition: background var(--es-dur, .18s) var(--es-ease, ease), color var(--es-dur, .18s) var(--es-ease, ease), box-shadow var(--es-dur, .18s) var(--es-ease, ease); }
+    .gen-found li { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 28px; padding: 0 var(--es-space-3, 12px) 0 var(--es-space-2, 8px); border-radius: var(--es-radius-pill, 999px); background: var(--es-sunk); color: var(--es-ink-3); font: var(--es-type-chip-weight, 500) 12px/1 var(--es-font-ui); white-space: nowrap; transition: background var(--es-dur, .18s) var(--es-ease, ease), color var(--es-dur, .18s) var(--es-ease, ease), box-shadow var(--es-dur, .18s) var(--es-ease, ease); }
     .gen-found li > span { overflow: hidden; text-overflow: ellipsis; }
     .gen-found li svg { flex: none; width: 14px; height: 14px; }
     /* Not found yet: a small hollow ring (not a dashed placeholder icon). */
@@ -196,11 +245,9 @@
     .gen-format__note .is-fit-key { display: inline-flex; align-items: center; gap: var(--es-space-1, 4px); }
     .gen-format__note .is-fit-key::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #0A7DFA; }
     .gen-actions__hint strong { color: var(--es-ink); font-weight: 600; }
-    .gen-quick__tag { flex: none; margin-right: 6px; color: var(--es-brand-text, #0A62C7); font-weight: 600; }
-    .gen-quick__tag::after { content: '·'; margin-left: 6px; color: var(--es-ink-3); font-weight: 400; }
     .gen-notice__action { margin-top: var(--es-space-2, 8px); }
 
-    .gen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+    .gen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--es-space-6, 24px); }
     .gen-card { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; min-width: 0; overflow: hidden; border-radius: 16px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
     .gen-card__media { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: var(--es-sunk); }
     .gen-card__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -291,8 +338,15 @@
     html[data-theme="dark"] #ais-view-generate { --es-ink: #FFFFFF; --es-ink-2: #BFC8D9; --es-ink-3: #98A6BF; --es-bg: #1F2126; --es-line: #2A2D34; --es-line-2: #707A8C; --es-sunk: #2A2D34; --es-brand: #54A4FB; --es-brand-text: #9DCBFD; }
     html[data-theme="dark"] .gen-brief { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
     html[data-theme="dark"] .gen-actions { background: #24272D; }
-    html[data-theme="dark"] .gen-quick button { background: #2A2D34; color: #BFC8D9; }
-    html[data-theme="dark"] .gen-quick button:hover { background: #3B4049; color: #FFFFFF; }
+    html[data-theme="dark"] .gen-tchip { background: #1F2126; box-shadow: inset 0 0 0 1px #3B4049; }
+    html[data-theme="dark"] .gen-tchip:hover { box-shadow: inset 0 0 0 1px #6B7488; }
+    html[data-theme="dark"] .gen-tchip__rising { background: #FF6369; box-shadow: 0 0 0 3px rgb(255 99 105 / .2); }
+    html[data-theme="dark"] .gen-recent { background: #24272D; }
+    html[data-theme="dark"] :is(.gen-recent__fill, .gen-recent__run, .gen-qs__action):hover { background: #2A2D34; }
+    html[data-theme="dark"] .gen-recent__row + .gen-recent__row { border-top-color: #2A2D34; }
+    html[data-theme="dark"] .gen-try__card { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
+    html[data-theme="dark"] .gen-try__card:hover { box-shadow: inset 0 0 0 1px #3B4049; }
+    html[data-theme="dark"] .gen-qs__label { color: #BFC8D9; }
     html[data-theme="dark"] .gen-fcard__mark { background: #1F2126; box-shadow: 0 1px 2px rgb(0 0 0 / .4), inset 0 0 0 1px #3B4049; }
     html[data-theme="dark"] .gen-card { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
     @media (hover: hover) { html[data-theme="dark"] .gen-card.ais-card:hover { box-shadow: inset 0 0 0 1px transparent, var(--ais-glow-strong); } }
@@ -325,6 +379,7 @@
     @media (prefers-reduced-motion: reduce) { .gen-card__media::before, .gen-spinner { animation: none !important; } }
     /* Narrower screens: the format row scrolls sideways (container query above). */
     @media (max-width: 900px) {
+      .gen-quick__split { grid-template-columns: minmax(0, 1fr); }
       .gen-live { grid-template-columns: minmax(0, 1fr); gap: var(--es-space-2, 8px); }
       .gen-trend { min-height: 64px; }
     }
@@ -344,11 +399,17 @@
       .gen-actions__hint { flex-basis: 100%; }
       .gen-actions__buttons { width: 100%; }
       .gen-actions__buttons .es-btn { flex: 1 1 auto; }
-      .gen-quick__group { grid-template-columns: minmax(0, 1fr); gap: var(--es-space-1, 4px); }
-      .gen-quick__label { min-height: 20px; }
-      .gen-quick__list { overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
-      .gen-quick__list::-webkit-scrollbar { display: none; }
-      .gen-quick button { flex: none; max-width: 260px; height: 40px; line-height: 40px; }
+      .gen-quick { gap: var(--es-space-2, 8px); margin-top: var(--es-space-4, 16px); }
+      .gen-qs { border-bottom: 1px solid var(--es-line); padding-bottom: var(--es-space-2, 8px); }
+      .gen-qs__head { min-height: var(--es-tap, 44px); }
+      .gen-qs__chev { display: inline-grid; }
+      .gen-qs__hint { display: none; }
+      .gen-tchips { flex-wrap: nowrap; margin: 0 calc(-1 * var(--es-space-4, 16px)); padding: 2px var(--es-space-4, 16px); overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; scroll-snap-type: x proximity; }
+      .gen-tchips::-webkit-scrollbar { display: none; }
+      .gen-tchip { flex: none; max-width: 280px; height: var(--es-tap, 44px); scroll-snap-align: start; }
+      .gen-recent__fill { min-height: var(--es-tap, 44px); }
+      .gen-recent__run { height: var(--es-tap, 44px); }
+      .gen-try { grid-template-columns: minmax(0, 1fr); }
       .gen-brief textarea { min-height: 128px; } /* the two-line example placeholder wraps to four */
       .gen-found li { height: 32px; }
       .gen-refine__team select { font-size: 16px; } /* no iOS zoom on focus */
@@ -379,8 +440,8 @@
        states (thin blue ring, soft tint); tokens only. */
     .gen-steer { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-3, 12px) var(--es-space-6, 24px); margin-top: var(--es-space-5, 20px); padding-top: var(--es-space-5, 20px); border-top: 1px solid var(--es-line); }
     .gen-steer__group { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px) var(--es-space-3, 12px); min-width: 0; }
-    .gen-chips { display: flex; flex-wrap: wrap; gap: var(--es-space-1, 4px); padding: 3px; border-radius: 12px; background: var(--es-sunk); }
-    .gen-chip { display: inline-flex; align-items: center; min-height: 30px; padding: 0 var(--es-space-3, 12px); border: 0; border-radius: 9px; background: transparent; color: var(--es-ink-3); cursor: pointer; font: 500 var(--es-type-meta-size, 13px)/1 var(--es-font-ui); white-space: nowrap; transition: background-color var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease); }
+    .gen-chips { display: flex; flex-wrap: wrap; gap: 2px; padding: 2px; border-radius: 10px; background: var(--es-sunk); } /* 2 + 32 + 2 = 36, same as Designs */
+    .gen-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 var(--es-space-3, 12px); border: 0; border-radius: 8px; background: transparent; color: var(--es-ink-3); cursor: pointer; font: 500 var(--es-type-meta-size, 13px)/1 var(--es-font-ui); white-space: nowrap; transition: background-color var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease); }
     .gen-chip:hover { color: var(--es-ink); }
     .gen-chip[aria-checked="true"] { background: var(--es-bg); box-shadow: 0 1px 2px rgb(14 16 20 / .08), inset 0 0 0 1px var(--es-line); color: var(--es-ink); font-weight: 600; }
     .gen-chip:focus-visible, .gen-switch:focus-visible, .gen-dir__pick:focus-visible, .gen-dir__edit-btn:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
@@ -467,7 +528,7 @@
     .gen-card__dir:empty { display: none; }
     .gen-note { display: grid; gap: var(--es-space-2, 8px); padding: var(--es-space-3, 12px); border-radius: 12px; background: var(--es-sunk); }
     .gen-note[hidden] { display: none; }
-    .gen-note p { margin: 0; color: var(--es-ink-2); font-size: 12.5px; line-height: 1.45; }
+    .gen-note p { margin: 0; color: var(--es-ink-2); font-size: 13px; line-height: 1.45; }
     .gen-note__who { display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; color: var(--es-brand-text); font-weight: 700; }
     .gen-note__who svg { width: 14px; height: 14px; }
     .gen-note__fix b { color: var(--es-ink); font-weight: 600; }
@@ -785,15 +846,15 @@
         ['listicle-type-2', 'Ranked List', 'A top-N list of names', 'Paste a ranked list, one row per line'],
       ];
       const PHOTO_TYPES = new Set(['cover', 'quote', 'long-quote', 'stats-single-ent', 'player-stat-line', 'team-record']);
-      // Starter prompts, each tagged with what it makes.
+      // Starter prompts: [what it makes, the brief, the format (its template art)].
       const EXAMPLES = [
-        ['Quote + stats', 'Patrick Mahomes after the Chiefs win: "We are not done yet." 320 YDS, 3 TD, 1 INT'],
-        ['Player stats', 'Caitlin Clark scores 30 PTS 9 AST 6 REB against the Sky'],
-        ['Stat line', 'Luka Doncic drops 43 PTS 11 REB 9 AST 4 STL in 36 MIN against the Suns'],
-        ['Ranked list', 'Top 5 QBs right now\n1. Patrick Mahomes\n2. Josh Allen\n3. Lamar Jackson\n4. Joe Burrow\n5. Jalen Hurts'],
-        ['Cover hooks', 'Make a post about the Lakers losing streak'],
+        ['Quote + stats', 'Patrick Mahomes after the Chiefs win: "We are not done yet." 320 YDS, 3 TD, 1 INT', 'quote'],
+        ['Player stats', 'Caitlin Clark scores 30 PTS 9 AST 6 REB against the Sky', 'stats-single-ent'],
+        ['Stat line', 'Luka Doncic drops 43 PTS 11 REB 9 AST 4 STL in 36 MIN against the Suns', 'player-stat-line'],
+        ['Ranked list', 'Top 5 QBs right now\n1. Patrick Mahomes\n2. Josh Allen\n3. Lamar Jackson\n4. Joe Burrow\n5. Jalen Hurts', 'listicle-type-2'],
+        ['Cover hooks', 'Make a post about the Lakers losing streak', 'cover'],
       ];
-      const RECENT_KEY = 'frameup.generate.recent.v1';
+      const RECENT_KEY = 'frameup.generate.recent.v2';
       const svg = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
       // Lucide icons (ISC licence).
       const ICON = {
@@ -810,6 +871,7 @@
         thumbUp: svg('<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>'),
         thumbDown: svg('<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>'),
         clapper: svg('<path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>'),
+        chevron: svg('<path d="m6 9 6 6 6-6"/>'),
         dashed: svg('<path d="M10.1 2.182a10 10 0 0 1 3.8 0"/><path d="M13.9 21.818a10 10 0 0 1-3.8 0"/><path d="M17.609 3.721a10 10 0 0 1 2.69 2.7"/><path d="M2.182 13.9a10 10 0 0 1 0-3.8"/><path d="M20.279 17.609a10 10 0 0 1-2.7 2.69"/><path d="M21.818 10.1a10 10 0 0 1 0 3.8"/><path d="M3.721 6.391a10 10 0 0 1 2.7-2.69"/><path d="M6.391 20.279a10 10 0 0 1-2.69-2.7"/>'),
       };
       const $ = id => document.getElementById(id);
@@ -863,60 +925,139 @@
         return rendererPromise;
       }
 
-      // ── Recent briefs (this browser only) ─────────────────────────────────
+      // ── Recent briefs (this browser only): { brief, at }. v1 kept plain
+      // strings; they are read once and carried over without a time.
+      const RECENT_V1 = 'frameup.generate.recent.v1';
       function readRecent() {
         try {
-          const list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
-          return Array.isArray(list) ? list.filter(item => typeof item === 'string').slice(0, 6) : [];
+          let raw = localStorage.getItem(RECENT_KEY);
+          if (raw == null) raw = localStorage.getItem(RECENT_V1) || '[]';
+          const list = JSON.parse(raw);
+          if (!Array.isArray(list)) return [];
+          return list
+            .map(item => (typeof item === 'string' ? { brief: item, at: 0 } : item && typeof item.brief === 'string' ? { brief: item.brief, at: Number(item.at) || 0 } : null))
+            .filter(item => item && item.brief.trim())
+            .slice(0, 6);
         } catch (error) {
           return [];
         }
       }
       function rememberBrief(brief) {
-        const list = [brief, ...readRecent().filter(item => item !== brief)].slice(0, 6);
+        const list = [{ brief, at: Date.now() }, ...readRecent().filter(item => item.brief !== brief)].slice(0, 6);
         try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); } catch (error) { /* private mode */ }
         renderQuick();
       }
+      function forgetRecent() {
+        try { localStorage.setItem(RECENT_KEY, '[]'); } catch (error) { /* private mode */ }
+        renderQuick();
+      }
 
-      // A list item is a brief, or [tag, brief] where the tag says what it makes.
-      function quickGroup(label, icon, list) {
-        const group = document.createElement('div');
-        group.className = 'gen-quick__group';
-        group.setAttribute('role', 'group');
-        group.setAttribute('aria-label', label);
-        group.innerHTML = `<span class="gen-quick__label">${icon}${esc(label)}</span><div class="gen-quick__list"></div>`;
-        const chips = group.lastElementChild;
+      // "12m", "3h", "2d" (a trend's freshness, a recent brief's age).
+      function ago(then) {
+        const t = typeof then === 'number' ? then : Date.parse(then || '');
+        if (!t || !Number.isFinite(t)) return '';
+        const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+        if (m < 1) return 'now';
+        if (m < 60) return `${m}m`;
+        const h = Math.round(m / 60);
+        return h < 48 ? `${h}h` : `${Math.round(h / 24)}d`;
+      }
+      // A labelled trend brief shows its story only ("Story: …" lines).
+      const briefTitle = text => (/^Story: /.test(text) ? text.split('\n')[0].replace(/^Story: /, '') : text).replace(/\s*\n\s*/g, ' · ');
+
+      // Three rows, three jobs (2026-11-19):
+      //   Trending  live chips: league logo, a "rising" dot, freshness;
+      //   Recent    a compact history: the brief, its age, Run again;
+      //   Try       example briefs as format cards with the template art.
+      // Each is a <details> (collapsible on phones; Recent and Try start closed there).
+      const phone = window.matchMedia('(max-width: 600px)');
+      const quickOpen = {};
+      function quickSection(key, label, icon, body, { hint = '', action = null } = {}) {
+        const box = document.createElement('details');
+        box.className = `gen-qs gen-qs--${key}`;
+        box.open = key in quickOpen ? quickOpen[key] : (key === 'trend' || !phone.matches);
+        box.addEventListener('toggle', () => { quickOpen[key] = box.open; });
+        const summary = document.createElement('summary');
+        summary.className = 'gen-qs__head';
+        summary.innerHTML = `<span class="gen-qs__label">${icon}<span>${esc(label)}</span></span>${hint ? `<span class="gen-qs__hint">${esc(hint)}</span>` : ''}<span class="gen-qs__chev" aria-hidden="true">${ICON.chevron}</span>`;
+        if (action) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'gen-qs__action';
+          b.textContent = action.label;
+          b.addEventListener('click', event => { event.preventDefault(); action.run(); });
+          summary.insertBefore(b, summary.lastElementChild);
+        }
+        box.append(summary, body);
+        return box;
+      }
+      function trendChips(list) {
+        const wrap = document.createElement('div');
+        wrap.className = 'gen-qs__body gen-tchips';
         list.forEach(item => {
-          const [tag, text] = Array.isArray(item) ? item : ['', item];
           const button = document.createElement('button');
           button.type = 'button';
-          if (tag) {
-            const tagEl = document.createElement('span');
-            tagEl.className = 'gen-quick__tag';
-            tagEl.textContent = tag;
-            button.append(tagEl);
-          }
-          const textEl = document.createElement('span');
-          textEl.className = 'gen-quick__text';
-          // Labelled trend briefs show their story only ("Story: …" lines).
-          const shown = /^Story: /.test(text) ? text.split('\n')[0].replace(/^Story: /, '') : text;
-          textEl.textContent = shown.replace(/\s*\n\s*/g, ' · ');
-          button.append(textEl);
-          button.title = text;
-          button.addEventListener('click', () => setBrief(text));
-          chips.appendChild(button);
+          button.className = 'gen-tchip';
+          const league = window.LeagueLogos?.logoFor?.(window.LeagueLogos?.idFor?.(item.category) || item.category || item.label);
+          const fresh = ago(item.at);
+          button.innerHTML = `${league ? `<img class="gen-tchip__logo" src="${esc(league.src)}" alt="" width="16" height="16" style="--league-bg:${esc(league.bg || '#F2F4F7')}">` : `<span class="gen-tchip__tag">${esc(item.label || 'Trend')}</span>`}${item.rising ? '<span class="gen-tchip__rising" title="Rising in search"><span class="gen-sr">Rising: </span></span>' : ''}<span class="gen-tchip__text">${esc(item.title)}</span>${fresh ? `<span class="gen-tchip__age">${esc(fresh)}</span>` : ''}`;
+          button.title = item.title;
+          button.setAttribute('aria-label', `${item.title}${item.label ? `, ${item.label}` : ''}${item.rising ? ', rising' : ''}${fresh ? `, ${fresh} ago` : ''}. Fill the brief`);
+          button.addEventListener('click', () => setBrief(item.brief));
+          wrap.append(button);
         });
-        return group;
+        return wrap;
       }
+      function recentList(list) {
+        const ol = document.createElement('ol');
+        ol.className = 'gen-qs__body gen-recent';
+        list.forEach(item => {
+          const li = document.createElement('li');
+          li.className = 'gen-recent__row';
+          const title = briefTitle(item.brief);
+          const when = ago(item.at);
+          li.innerHTML = `<button type="button" class="gen-recent__fill" title="${esc(item.brief)}"><span class="gen-recent__text">${esc(title)}</span>${when ? `<span class="gen-recent__age">${esc(when === 'now' ? 'just now' : `${when} ago`)}</span>` : ''}</button><button type="button" class="gen-recent__run" aria-label="Run again: ${esc(title)}" title="Run again">${ICON.refresh}<span>Run</span></button>`;
+          li.querySelector('.gen-recent__fill').addEventListener('click', () => setBrief(item.brief));
+          li.querySelector('.gen-recent__run').addEventListener('click', () => {
+            setBrief(item.brief);
+            if (!busy) generate();
+          });
+          ol.append(li);
+        });
+        return ol;
+      }
+      function tryCards(list) {
+        const wrap = document.createElement('div');
+        wrap.className = 'gen-qs__body gen-try';
+        list.forEach(([tag, text, type]) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'gen-try__card';
+          button.innerHTML = `<span class="gen-try__art" aria-hidden="true"><img src="assets/template-thumbs/instagram-${esc(type)}.webp" alt="" loading="lazy" width="40" height="50"></span><span class="gen-try__body"><span class="gen-try__tag">${esc(tag)}</span><span class="gen-try__text">${esc(briefTitle(text))}</span></span>`;
+          button.title = text;
+          button.addEventListener('click', () => {
+            setBrief(text);
+            // ES templates: the example's format too (Creative picks its own).
+            if (!window.FrameUpCreative?.isOn?.() && FORMATS.some(([id]) => id === type)) selectFormat(type);
+          });
+          wrap.append(button);
+        });
+        return wrap;
+      }
+      // Trending: [{ title, brief, label, category, at, rising }]
       let topics = null;
       function renderQuick() {
         const recent = readRecent();
-        const groups = [];
-        if (topics?.length) groups.push(quickGroup('Trending', ICON.sparkles, topics));
-        if (recent.length) groups.push(quickGroup('Recent', ICON.history, recent.slice(0, 3)));
-        const starters = EXAMPLES.filter(([, text]) => !recent.includes(text));
-        if (starters.length) groups.push(quickGroup('Try', ICON.lightbulb, starters));
-        els.quick.replaceChildren(...groups);
+        const sections = [];
+        if (topics?.length) sections.push(quickSection('trend', 'Trending now', ICON.sparkles, trendChips(topics), { hint: 'Live from ES coverage' }));
+        const split = document.createElement('div');
+        split.className = 'gen-quick__split';
+        if (recent.length) split.append(quickSection('recent', 'Recent', ICON.history, recentList(recent.slice(0, 3)), { action: { label: 'Clear', run: forgetRecent } }));
+        const starters = EXAMPLES.filter(([, text]) => !recent.some(item => item.brief === text));
+        if (starters.length) split.append(quickSection('try', 'Try a format', ICON.lightbulb, tryCards(starters)));
+        if (split.children.length) sections.push(split);
+        split.classList.toggle('is-single', split.children.length === 1);
+        els.quick.replaceChildren(...sections);
       }
 
       // Fill the brief (a starter, a trend), update the hints and place the
@@ -1395,6 +1536,8 @@
 
       function paintPlan() {
         els.plan.setAttribute('aria-checked', String(plan));
+        // The Designs control (generate-creative.js) owns this line once mounted.
+        if (els.expect.classList.contains('gen-count-wrap')) return;
         els.expect.querySelector('span').innerHTML = plan
           ? '<strong>Director first</strong> · 2–4 directions, then designs'
           : '<strong>Up to 4 designs</strong> · edit any in the editor';
@@ -1578,7 +1721,7 @@
         const progress = startProgress(['Reading ES coverage', 'Director thinking', 'Directions ready'], [2400]);
         let data = null;
         try {
-          data = await callApi('/api/es-generate', { mode: 'direct', brief, formats: session.formats, count: 4, steer: steerBody({ ...(more.length ? { more } : {}), ...(less.length ? { less } : {}) }) });
+          data = await callApi('/api/es-generate', { mode: 'direct', brief, formats: session.formats, count: window.FrameUpCreative?.count?.() || 4, steer: steerBody({ ...(more.length ? { more } : {}), ...(less.length ? { less } : {}) }) });
         } catch (error) {
           progress.stop();
           els.directions.removeAttribute('aria-busy');
@@ -2032,7 +2175,7 @@
           }));
         }
         try {
-          const body = { brief, formats: session.formats, count: 4, steer: steerBody() };
+          const body = { brief, formats: session.formats, count: window.FrameUpCreative?.count?.() || 4, steer: steerBody() };
           if (picked) body.directions = picked.map(dirPayload);
           const data = await callApi('/api/es-generate', body);
           if (!data.designs?.length) {
@@ -2414,7 +2557,8 @@
         setBusy(true);
         try {
           const data = await callApi('/api/es-generate', { mode: 'trending' });
-          topics = data.topics?.length ? data.topics : null;
+          // [tag, brief] pairs from ES MCP's trending tool.
+          topics = data.topics?.length ? data.topics.map(t => (Array.isArray(t) ? { label: t[0], brief: t[1], title: briefTitle(t[1]) } : { label: t.label || 'Trend', brief: t.brief || t.title, title: briefTitle(t.title || t.brief || '') })).filter(t => t.brief) : null;
           renderQuick();
           if (!topics) setNotice('No trending topics right now', ' Open Trends (top of the page) for live US sports stories.');
         } catch (error) {
@@ -2708,9 +2852,12 @@
           // Smart starters: the next live trends join the quick chips (when
           // ES MCP has no trending tool of its own).
           if (!topics) {
-            const more = items.filter(item => !picks.includes(item)).slice(0, 3);
+            const more = items.filter(item => !picks.includes(item)).slice(0, 6);
             if (more.length) {
-              topics = more.map(item => [labelOf(item.category) || 'Trend', trendBrief(item, labelOf(item.category))]);
+              topics = more.map(item => ({
+                title: item.title, brief: trendBrief(item, labelOf(item.category)), label: labelOf(item.category) || 'Trend', category: item.category,
+                at: item.publishedAt || '', rising: item.type === 'search' || Boolean(item.traffic),
+              }));
               renderQuick();
             }
           }
