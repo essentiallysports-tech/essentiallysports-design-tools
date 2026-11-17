@@ -598,3 +598,13 @@ html[data-theme="dark"][data-studio-shell] body.is-mobile-workspace-active .mobi
 @media (prefers-reduced-motion: reduce) {
   .fu-layer-twisty svg, .fu-layer-toggle, .fu-format-chip, .fu-view-btn, .fu-layers-resize::after { transition: none !important; }
 }
+
+/* Phone header: the template · size kicker stays on one line. */
+.mobile-editor-title { min-width: 0; }
+[data-mobile-editor-kicker] {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
