@@ -7,6 +7,8 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+// These cases pin the Sonnet-only director path (the default is now auto).
+process.env.GENERATE_DIRECTOR_MODEL = process.env.GENERATE_DIRECTOR_MODEL || 'best';
 const require = createRequire(import.meta.url);
 const fnDir = path.resolve('netlify/functions');
 const genPath = path.join(fnDir, 'es-generate.js');

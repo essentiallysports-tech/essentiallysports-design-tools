@@ -181,7 +181,7 @@ const brief = 'Caitlin Clark after the Fever beat the Sky: "We are building some
 
 // ─── 3. Model tier: Sonnet by default, Haiku-first behind =auto ───────────
 {
-  assert.equal(director.directorTier(''), 'best', 'the default stays Sonnet');
+  assert.equal(director.directorTier(''), 'auto', 'the default is Haiku first, Sonnet on escalation');
   assert.equal(director.directorTier('auto'), 'auto');
   assert.equal(director.directorTier('AUTO '), 'auto');
   const { readBrief, TEMPLATES } = gen._test;

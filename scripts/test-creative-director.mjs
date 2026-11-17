@@ -3,6 +3,8 @@
 // and failing soft (no concepts = the old single-call path). Network mocked.
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+// The Sonnet-first scenarios below pin the tier (the default is now auto).
+process.env.GENERATE_DIRECTOR_MODEL = process.env.GENERATE_DIRECTOR_MODEL || 'best';
 
 const require = createRequire(import.meta.url);
 process.env.AI_GATEWAY_API_KEY = 'gw-test';
@@ -151,7 +153,8 @@ assert.match(request, /Steer from the editor: question/);
 assert.match(request, /Return 3 concepts/);
 assert.ok(request.length < 2500 + brief.length + 1500, 'the research digest is capped at 2,500 characters');
 assert.doesNotMatch(directorRequest({ brief, read, steer: 'viral' }), /Steer from the editor/, 'unknown steers are ignored');
-assert.equal(directorTier(''), 'best', 'Sonnet by default');
+assert.equal(directorTier(''), 'auto', 'Haiku first with Sonnet escalation by default');
+assert.equal(directorTier('best'), 'best', 'Sonnet override');
 assert.equal(directorTier('haiku'), 'main');
 assert.equal(directorTier('main'), 'main');
 assert.equal(directorTier('sonnet'), 'best');
