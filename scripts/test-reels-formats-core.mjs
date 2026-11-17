@@ -397,20 +397,27 @@ await test('clamps: server plan, project save and event accept the data formats;
     // Dispatch stubs.
     assert.deepEqual(Object.keys(_test.FORMAT_MODES), ['games', 'game-data', 'athlete', 'archive-research', 'frame-pick']);
     assert.deepEqual(Object.fromEntries(Object.entries(_test.FORMAT_MODES).map(([k, v]) => [k, v.gate])), { games: 'data', 'game-data': 'data', athlete: 'data', 'archive-research': 'mcp', 'frame-pick': 'ai' });
-    for (const mode of Object.keys(_test.FORMAT_MODES)) {
-      const out = await _test.formatMode(mode, {}, { token: 't' });
-      assert.deepEqual([out.ok, out.status, out.reason, out.mode], [false, 501, 'coming-soon', mode]);
+    // Phase 1 (Agent A): every mode is landed; a null run still answers 501.
+    for (const mode of Object.keys(_test.FORMAT_MODES)) assert.equal(typeof _test.FORMAT_MODES[mode].run, 'function', mode);
+    const games = _test.FORMAT_MODES.games;
+    const savedRun = games.run;
+    try {
+      games.run = null;
+      const out = await _test.formatMode('games', {}, { token: 't' });
+      assert.deepEqual([out.ok, out.status, out.reason, out.mode], [false, 501, 'coming-soon', 'games']);
       assert.match(out.error, /coming soon/);
-    }
+    } finally { games.run = savedRun; }
+    // Landed data modes validate input before any network call.
+    assert.equal((await _test.formatMode('game-data', {}, { token: 't' })).status, 400);
     assert.equal((await _test.formatMode('nope', {}, {})).status, 400);
-    // Through the handler (signed in): 501 with the JSON body.
+    // Through the handler (signed in): ESPN unreachable (fetch is mocked) -> soft fail.
     const res = await api.handler({ httpMethod: 'POST', headers: { authorization: 'Bearer good' }, body: JSON.stringify({ mode: 'game-data', sport: 'nfl', eventId: '401873063' }) });
-    assert.equal(res.statusCode, 501);
-    assert.equal(JSON.parse(res.body).reason, 'coming-soon');
+    assert.equal(res.statusCode, 502);
+    assert.equal(JSON.parse(res.body).reason, 'data-unavailable');
     const cfg = JSON.parse((await api.handler({ httpMethod: 'POST', headers: { authorization: 'Bearer good' }, body: JSON.stringify({ mode: 'config' }) })).body);
     assert.deepEqual(cfg.formats, F.FORMAT_IDS);
     assert.deepEqual(cfg.dataFormats, F.DATA_FORMAT_IDS);
-    assert.deepEqual(cfg.formatModes, { games: false, 'game-data': false, athlete: false, 'archive-research': false, 'frame-pick': false });
+    assert.deepEqual(cfg.formatModes, { games: true, 'game-data': true, athlete: true, 'archive-research': true, 'frame-pick': true });
 
     // A landed handler goes through its gate (ai: spend gate, then caps).
     const entry = _test.FORMAT_MODES['frame-pick'];
