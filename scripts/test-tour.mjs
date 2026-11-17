@@ -139,7 +139,7 @@ test('pendingEntry: newest unseen and fresh only; drafts ignored', () => {
   assert.equal(Updates.pendingEntry([...entries].reverse(), '2026-11-15-ai-studio', now).id, '2026-11-17-tours', 'order in the file does not matter');
 });
 
-test('buildUpdateTour: one step per item, this page first, centred fallback, nav target', () => {
+test('buildUpdateTour: one step per item, this page first, notes without a target last, centred fallback, nav target', () => {
   const tour = Updates.buildUpdateTour({
     id: 'x', title: 'Release', items: [
       { title: 'On Generate', text: 'a', page: 'generate.html', target: '#gen-form' },
@@ -150,7 +150,7 @@ test('buildUpdateTour: one step per item, this page first, centred fallback, nav
     ],
   }, 'index.html');
   assert.equal(tour.kicker, "What's new");
-  assert.deepEqual(tour.steps.map(step => step.title), ['Anywhere', 'Here', 'Page but no target', 'Legacy', 'On Generate']);
+  assert.deepEqual(tour.steps.map(step => step.title), ['Here', 'On Generate', 'Anywhere', 'Page but no target', 'Legacy'], 'highlights here, then other pages, then centred notes');
   assert.ok(tour.steps.every(step => step.fallback === 'center'), 'missing targets still show, centred');
   const generate = tour.steps.find(step => step.title === 'On Generate');
   assert.equal(generate.page, 'generate.html');
@@ -196,6 +196,45 @@ test('tours/tours.js: Welcome + page tours register; copy stays short', () => {
   const welcome = registered.find(def => def.id === 'welcome');
   const pages = [...new Set(welcome.steps.map(step => step.page).filter(Boolean))];
   assert.deepEqual(pages, ['index.html', 'generate.html', 'video-ads.html'], 'Welcome visits Home, Generate, Video Ads in order');
+});
+
+test('tour targets exist in the current markup (ids and classes), and every step has an icon', () => {
+  const registered = [];
+  globalThis.window = { FrameUpTour: { register: def => registered.push(def) }, location: { hash: '' } };
+  delete require.cache[require.resolve('../tours/tours.js')];
+  require('../tours/tours.js');
+  delete globalThis.window;
+  const shared = ['app-shell.js', 'site-chrome.js', 'site-mobile-chrome.js', 'tours/tour-launcher.js']
+    .map(file => fs.readFileSync(path.join(ROOT, file), 'utf8')).join('\n')
+    // app-shell builds `es-sidebar__section--${group.id}` from its NAV ids.
+    + (/es-sidebar__section--\$\{group\.id\}/.test(fs.readFileSync(path.join(ROOT, 'app-shell.js'), 'utf8'))
+      ? ['ai', 'create', 'work', 'help'].map(id => ` es-sidebar__section--${id}`).join('') : '');
+  const source = page => fs.readFileSync(path.join(ROOT, page), 'utf8') + shared;
+  const allPages = ['index.html', 'generate.html', 'video-ads.html'].map(source).join('\n');
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'tours/updates.json'), 'utf8'));
+  const checks = [
+    ...registered.flatMap(def => def.steps.map(step => ({ where: `${def.id} "${step.title}"`, step }))),
+    ...manifest.entries.slice(0, 1).flatMap(entry => entry.items.map(step => ({ where: `note "${step.title}"`, step }))),
+  ];
+  checks.forEach(({ where, step }) => {
+    const targets = [].concat(step.target || [], step.navTarget || []);
+    if (!targets.length) return;
+    const text = step.page ? source(step.page) : allPages;
+    // At least one selector in the fallback list must be fully backed by markup.
+    const ok = targets.some(selector => {
+      const ids = [...selector.matchAll(/#([\w-]+)/g)].map(m => m[1]);
+      const classes = [...selector.matchAll(/\.([\w-]+)/g)].map(m => m[1]);
+      const attrs = [...selector.matchAll(/\[([\w-]+)/g)].map(m => m[1]);
+      return ids.every(id => text.includes(`id="${id}"`) || text.includes(`'${id}'`) || text.includes(`"${id}"`))
+        && classes.every(name => text.includes(name))
+        && attrs.every(name => text.includes(name));
+    });
+    assert.ok(ok, `${where}: none of ${JSON.stringify(targets)} found in ${step.page || 'the pages'}`);
+  });
+  registered.forEach(def => {
+    assert.ok(def.description, `${def.id} has a picker description`);
+    def.steps.forEach(step => assert.match(step.icon || '', /^<svg/, `${def.id} "${step.title}" has an icon`));
+  });
 });
 
 test('every app-shell page loads the tour CSS + scripts right after app-shell.js', () => {

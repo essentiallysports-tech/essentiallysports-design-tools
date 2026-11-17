@@ -1,24 +1,32 @@
-/* FrameUp tour: spotlight, coach-mark card, "What's new" toast and the "?"
-   help button. Engine: frameup-tour.js. Tokens: design-tokens.css.
-   Fonts are Roboto only; colours are ES ink, greys and blues (no purple). */
+/* FrameUp tours: spotlight, coach-mark card, Welcome offer, tour picker,
+   "What's new" toast and the "?" help button. Engine: frameup-tour.js.
+   Tokens and buttons: design-tokens.css (the @layer es-buttons system and the
+   global quiet focus rules; nothing here restyles focus). Roboto only; ES
+   ink, slate and blues only (no purple). */
 
 .fu-tour,
 .fu-tour-toast,
-.fu-tour-help {
+.fu-tour-help,
+.fu-offer,
+.fu-picker {
   --fu-surface: var(--es-bg, #ffffff);
   --fu-ink: var(--es-ink, #0e1014);
   --fu-ink-2: var(--es-ink-2, #3a3f48);
   --fu-ink-3: var(--es-ink-3, #565c67);
   --fu-line: var(--es-line, #dfe2e7);
-  --fu-track: var(--es-sunk, #f0f2f5);
+  --fu-track: var(--es-line, #dfe2e7);
   --fu-brand: var(--es-brand, #0a7dfa);
   --fu-brand-text: var(--es-brand-text, #0a62c7);
-  --fu-dim: rgb(14 16 20 / .56);
-  --fu-shadow: 0 1px 2px rgb(14 16 20 / .06), 0 18px 48px -12px rgb(14 16 20 / .32);
-  --fu-ease: var(--es-ease, cubic-bezier(.22, .8, .24, 1));
+  --fu-tile: var(--es-brand-soft, #eaf3ff);
+  --fu-dim: rgb(14 16 20 / .5);
+  --fu-ring: rgb(84 164 251 / .95);
+  --fu-halo: rgb(10 125 250 / .16);
+  --fu-shadow: 0 1px 2px rgb(14 16 20 / .06), 0 20px 48px -16px rgb(14 16 20 / .34);
+  --fu-ease: var(--es-ease-entrance, cubic-bezier(.16, 1, .3, 1));
+  --fu-move: 420ms;
 }
 
-html[data-theme="dark"] :is(.fu-tour, .fu-tour-toast, .fu-tour-help) {
+html[data-theme="dark"] :is(.fu-tour, .fu-tour-toast, .fu-tour-help, .fu-offer, .fu-picker) {
   --fu-surface: #2A2D34;
   --fu-ink: #FFFFFF;
   --fu-ink-2: #BFC8D9;
@@ -27,9 +35,11 @@ html[data-theme="dark"] :is(.fu-tour, .fu-tour-toast, .fu-tour-help) {
   --fu-track: #3B4049;
   --fu-brand: #54A4FB;
   --fu-brand-text: #9DCBFD;
-  --fu-dim: rgb(0 0 0 / .62);
-  --fu-shadow: 0 18px 48px -10px rgb(0 0 0 / .7);
-  /* The card is a raised dark surface: buttons follow it. */
+  --fu-tile: rgb(10 125 250 / .2);
+  --fu-dim: rgb(0 0 0 / .6);
+  --fu-halo: rgb(84 164 251 / .2);
+  --fu-shadow: 0 20px 48px -12px rgb(0 0 0 / .72);
+  /* Raised dark surface: secondary buttons sit on it, not on the page. */
   --es-btn-bg: #2A2D34;
   --es-btn-bg-hover: #3B4049;
   --es-btn-line: #5C6373;
@@ -57,24 +67,27 @@ html[data-theme="dark"] :is(.fu-tour, .fu-tour-toast, .fu-tour-help) {
 }
 
 .fu-tour::backdrop { background: transparent; }
-
 .fu-tour[hidden] { display: none; }
 
-/* Catches clicks so the page under the tour can't be changed mid-step. */
+/* Catches clicks so the page under the tour can't change mid-step. */
 .fu-tour__blocker {
   position: absolute;
   inset: 0;
 }
 
-/* The cut-out: a box with a page-sized shadow that dims everything else. */
+/* The cut-out: a soft rounded box whose page-sized shadow dims the rest. */
 .fu-tour__spot {
   position: fixed;
-  border-radius: var(--es-radius-control, 12px);
-  box-shadow: 0 0 0 2px var(--fu-brand), 0 0 0 6px rgb(10 125 250 / .22), 0 0 0 200vmax var(--fu-dim);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 1.5px var(--fu-ring),
+    0 0 0 6px var(--fu-halo),
+    0 0 0 200vmax var(--fu-dim);
   pointer-events: none;
 }
 
 .fu-tour__spot.is-empty {
+  border-radius: 50%;
   box-shadow: 0 0 0 200vmax var(--fu-dim);
 }
 
@@ -83,7 +96,7 @@ html[data-theme="dark"] :is(.fu-tour, .fu-tour-toast, .fu-tour-help) {
 .fu-tour__card {
   position: fixed;
   box-sizing: border-box;
-  width: min(352px, calc(100vw - 32px));
+  width: min(360px, calc(100vw - 32px));
   padding: var(--es-space-5, 20px);
   border-radius: var(--es-radius-container, 16px);
   background: var(--fu-surface);
@@ -97,15 +110,32 @@ html[data-theme="dark"] :is(.fu-tour, .fu-tour-toast, .fu-tour-help) {
   width: min(400px, calc(100vw - 32px));
 }
 
-.fu-tour__top {
+.fu-tour__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--es-space-2, 8px);
-  min-height: 28px;
-  margin: -6px -8px var(--es-space-2, 8px) 0;
+  min-height: 32px;
+  margin: -4px -8px var(--es-space-3, 12px) 0;
 }
 
+/* Small step illustration: a Lucide icon on a soft blue tile. */
+.fu-tour__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--es-radius-chip, 10px);
+  background: var(--fu-tile);
+  color: var(--fu-brand-text);
+}
+
+.fu-tour__icon svg {
+  width: var(--es-icon, 18px);
+  height: var(--es-icon, 18px);
+}
+
+.fu-tour__kicker,
 .fu-tour__count {
   color: var(--fu-ink-3);
   font-size: var(--es-type-eyebrow-size, 11px);
@@ -113,15 +143,23 @@ html[data-theme="dark"] :is(.fu-tour, .fu-tour-toast, .fu-tour-help) {
   line-height: var(--es-type-eyebrow-line, 1.3);
   letter-spacing: var(--es-type-eyebrow-tracking, .08em);
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.fu-tour__kicker { color: var(--fu-brand-text); }
+
+.fu-tour__count {
+  margin-left: auto;
   font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
 }
 
 .fu-tour__close {
   display: grid;
+  flex: none;
   place-items: center;
   width: 32px;
   height: 32px;
-  margin-left: auto;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -130,13 +168,15 @@ html[data-theme="dark"] :is(.fu-tour, .fu-tour-toast, .fu-tour-help) {
   cursor: pointer;
 }
 
+.fu-tour__count:empty + .fu-tour__close { margin-left: auto; }
+
 .fu-tour__close svg {
   width: var(--es-icon-sm, 16px);
   height: var(--es-icon-sm, 16px);
 }
 
 .fu-tour__close:hover {
-  background: var(--fu-track);
+  background: var(--es-btn-sunk, #f0f2f5);
   color: var(--fu-ink);
 }
 
@@ -145,7 +185,7 @@ html[data-theme="dark"] :is(.fu-tour, .fu-tour-toast, .fu-tour-help) {
   color: var(--fu-ink);
   font-family: var(--es-font-ui, "Roboto", sans-serif);
   font-size: var(--es-type-card-title-size, 18px);
-  font-weight: var(--es-type-card-title-weight, 500);
+  font-weight: 600;
   line-height: var(--es-type-card-title-line, 1.3);
   letter-spacing: 0;
 }
@@ -155,31 +195,41 @@ html[data-theme="dark"] :is(.fu-tour, .fu-tour-toast, .fu-tour-help) {
   color: var(--fu-ink-2);
   font-size: var(--es-type-body-size, 15px);
   font-weight: var(--es-type-body-weight, 400);
-  line-height: var(--es-type-body-line, 1.55);
+  line-height: 1.5;
 }
 
-.fu-tour__bar {
-  height: 3px;
-  margin: var(--es-space-4, 16px) 0;
-  overflow: hidden;
+/* Step dots: done, current (a short pill), to come. */
+.fu-tour__dots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: var(--es-space-4, 16px) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fu-tour__dots[hidden] { display: none; }
+
+.fu-tour__dots li {
+  width: 6px;
+  height: 6px;
   border-radius: var(--es-radius-pill, 999px);
   background: var(--fu-track);
 }
 
-.fu-tour__bar span {
-  display: block;
-  width: 0;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--fu-brand);
-}
+.fu-tour__dots li.is-done { background: var(--fu-brand); opacity: .45; }
+.fu-tour__dots li.is-current { width: 18px; background: var(--fu-brand); }
 
 .fu-tour__actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--es-space-2, 8px);
+  margin-top: var(--es-space-4, 16px);
 }
+
+.fu-tour__skip { margin-left: -8px; }
 
 .fu-tour__nav {
   display: inline-flex;
@@ -188,15 +238,6 @@ html[data-theme="dark"] :is(.fu-tour, .fu-tour-toast, .fu-tour-help) {
 }
 
 .fu-tour [hidden] { display: none !important; }
-
-.fu-tour :is(.fu-tour__close, .es-btn):focus-visible {
-  outline: 2px solid var(--es-btn-focus, #0a62c7) !important;
-  outline-offset: 2px !important;
-}
-
-html[data-theme="dark"] .fu-tour :is(.fu-tour__close, .es-btn):focus-visible {
-  outline-color: #54A4FB !important;
-}
 
 /* Screen-reader-only step announcements. */
 .fu-tour__live {
@@ -217,6 +258,7 @@ html[data-theme="dark"] .fu-tour :is(.fu-tour__close, .es-btn):focus-visible {
   position: absolute;
   width: 12px;
   height: 12px;
+  border-radius: 2px;
   background: var(--fu-surface);
   box-shadow: inset 1px 1px 0 0 var(--fu-line);
 }
@@ -242,29 +284,182 @@ html[data-theme="dark"] .fu-tour :is(.fu-tour__close, .es-btn):focus-visible {
     top: calc(12px + env(safe-area-inset-top, 0px)) !important;
     bottom: auto;
   }
-
-  .fu-tour__bar { margin: var(--es-space-3, 12px) 0; }
-
-  .fu-tour .es-btn { --es-btn-h: 40px; }
 }
 
-/* Motion: only when the person hasn't asked for less. */
+/* Motion: the spotlight glides between targets, the card follows and fades
+   up on each step. Only when the person hasn't asked for less motion. */
 @media (prefers-reduced-motion: no-preference) {
   .fu-tour:not(.is-reduced) .fu-tour__spot {
-    transition: top 300ms var(--fu-ease), left 300ms var(--fu-ease), width 300ms var(--fu-ease), height 300ms var(--fu-ease), box-shadow 200ms var(--fu-ease);
+    transition:
+      top var(--fu-move) var(--fu-ease),
+      left var(--fu-move) var(--fu-ease),
+      width var(--fu-move) var(--fu-ease),
+      height var(--fu-move) var(--fu-ease),
+      border-radius var(--fu-move) var(--fu-ease);
   }
 
   .fu-tour:not(.is-reduced) .fu-tour__card {
-    transition: top 300ms var(--fu-ease), left 300ms var(--fu-ease), opacity 160ms var(--fu-ease);
-    animation: fuTourIn 240ms var(--fu-ease) both;
+    transition: top var(--fu-move) var(--fu-ease), left var(--fu-move) var(--fu-ease);
   }
+
+  .fu-tour:not(.is-reduced) .fu-tour__card.is-entering :is(.fu-tour__icon, .fu-tour__title, .fu-tour__text) {
+    animation: fuTourStep 320ms var(--fu-ease) backwards;
+  }
+
+  .fu-tour:not(.is-reduced) .fu-tour__card.is-entering .fu-tour__text { animation-delay: 40ms; }
+
+  .fu-tour:not(.is-reduced) .fu-tour__card {
+    animation: fuTourIn 260ms var(--fu-ease) backwards;
+  }
+
+  .fu-tour__dots li { transition: width 240ms var(--fu-ease), background-color 240ms var(--fu-ease); }
 }
 
 @keyframes fuTourIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
 }
 
-/* ─── "What's new" toast ───────────────────────────────────────────── */
+@keyframes fuTourStep {
+  from { opacity: 0; transform: translateY(4px); }
+}
+
+/* ─── Welcome offer (first visit) ──────────────────────────────────── */
+
+/* New people: a small centred dialog. Existing people: the corner card
+   (.fu-tour-toast) instead, so nothing takes over the page. */
+.es-dialog.fu-offer {
+  width: min(400px, calc(100vw - 32px));
+  padding: var(--es-space-6, 24px);
+  background: var(--fu-surface);
+  color: var(--fu-ink);
+  text-align: left;
+}
+
+.es-dialog.fu-offer:not([open]) { display: none; }
+
+.fu-offer__art {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--es-space-4, 16px);
+  border-radius: var(--es-radius-control, 12px);
+  background: var(--ais-gradient-fill, linear-gradient(120deg, #085ebc, #0a6fde));
+  color: #FFFFFF;
+}
+
+.fu-offer__art svg { width: 22px; height: 22px; }
+
+.es-dialog.fu-offer h2 {
+  color: var(--fu-ink);
+  margin: 0 0 var(--es-space-1, 4px);
+  font-family: var(--es-font-ui, "Roboto", sans-serif);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.es-dialog.fu-offer p {
+  margin: 0;
+  color: var(--fu-ink-2);
+  font-size: var(--es-type-body-size, 15px);
+  line-height: 1.5;
+}
+
+.fu-offer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--es-space-2, 8px);
+  margin-top: var(--es-space-6, 24px);
+}
+
+.fu-offer__never {
+  display: block;
+  margin: var(--es-space-3, 12px) 0 0 -8px;
+}
+
+/* ─── Tour picker (profile menu → Tours) ───────────────────────────── */
+
+.es-dialog.fu-picker {
+  width: min(440px, calc(100vw - 32px));
+  background: var(--fu-surface);
+  color: var(--fu-ink);
+}
+
+.es-dialog.fu-picker:not([open]) { display: none; }
+
+.fu-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--es-space-3, 12px);
+  margin-bottom: var(--es-space-3, 12px);
+}
+
+.es-dialog.fu-picker h2 {
+  color: var(--fu-ink);
+  margin: 0;
+  font-family: var(--es-font-ui, "Roboto", sans-serif);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.fu-picker__list {
+  display: grid;
+  gap: var(--es-space-1, 4px);
+  margin: 0 -8px;
+  padding: 0;
+  list-style: none;
+}
+
+.fu-picker__item {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: var(--es-space-3, 12px);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--es-space-2, 8px);
+  border: 0;
+  border-radius: var(--es-radius-control, 12px);
+  background: transparent;
+  color: var(--fu-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fu-picker__item:hover { background: var(--es-btn-sunk, #f0f2f5); }
+
+.fu-picker__item .fu-tour__icon { width: 32px; height: 32px; }
+
+.fu-picker__name {
+  display: block;
+  font-size: var(--es-type-body-size, 15px);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.fu-picker__desc {
+  display: block;
+  margin-top: 2px;
+  color: var(--fu-ink-3);
+  font-size: var(--es-type-meta-size, 13px);
+  line-height: var(--es-type-meta-line, 1.45);
+}
+
+.fu-picker__tag {
+  padding: 2px 8px;
+  border-radius: var(--es-radius-pill, 999px);
+  background: var(--fu-tile);
+  color: var(--fu-brand-text);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ─── Corner card: "What's new" toast and the existing-user offer ───── */
 
 .fu-tour-toast {
   position: fixed;
@@ -295,21 +490,15 @@ html[data-theme="dark"] .fu-tour :is(.fu-tour__close, .es-btn):focus-visible {
   border: 0;
 }
 
-@media (max-width: 900px) {
-  .fu-tour-toast[popover] { inset: auto 16px calc(16px + env(safe-area-inset-bottom, 0px)) 16px; }
-}
-
 .fu-tour-toast__icon {
   display: grid;
   place-items: center;
   width: 36px;
   height: 36px;
   border-radius: var(--es-radius-chip, 10px);
-  background: var(--es-brand-soft, #eaf3ff);
+  background: var(--fu-tile);
   color: var(--fu-brand-text);
 }
-
-html[data-theme="dark"] .fu-tour-toast__icon { background: rgb(10 125 250 / .2); }
 
 .fu-tour-toast__icon svg {
   width: var(--es-icon, 18px);
@@ -330,7 +519,7 @@ html[data-theme="dark"] .fu-tour-toast__icon { background: rgb(10 125 250 / .2);
   margin: 2px 0 0;
   color: var(--fu-ink);
   font-size: var(--es-type-body-size, 15px);
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.35;
 }
 
@@ -343,19 +532,18 @@ html[data-theme="dark"] .fu-tour-toast__icon { background: rgb(10 125 250 / .2);
 
 .fu-tour-toast__actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--es-space-2, 8px);
   margin-top: var(--es-space-3, 12px);
 }
 
+.fu-tour-toast__never { margin-left: -4px; }
+
 .fu-tour-toast .fu-tour__close { margin: -6px -6px 0 0; }
 
-.fu-tour-toast :is(.fu-tour__close, .es-btn):focus-visible {
-  outline: 2px solid var(--es-btn-focus, #0a62c7) !important;
-  outline-offset: 2px !important;
-}
-
 @media (prefers-reduced-motion: no-preference) {
-  .fu-tour-toast { animation: fuToastIn 260ms var(--fu-ease) both; }
+  .fu-tour-toast { animation: fuToastIn 320ms var(--fu-ease) both; }
 }
 
 @keyframes fuToastIn {
@@ -369,6 +557,8 @@ html[data-theme="dark"] .fu-tour-toast__icon { background: rgb(10 125 250 / .2);
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     width: auto;
   }
+
+  .fu-tour-toast[popover] { inset: auto 16px calc(16px + env(safe-area-inset-bottom, 0px)) 16px; }
 
   body:has([data-mobile-editor-nav]) .fu-tour-toast {
     bottom: calc(84px + env(safe-area-inset-bottom, 0px));
@@ -402,29 +592,13 @@ html[data-theme="dark"] .fu-tour-toast__icon { background: rgb(10 125 250 / .2);
   color: var(--fu-ink);
 }
 
-.fu-tour-help:focus-visible {
-  outline: 2px solid var(--es-btn-focus, #0a62c7);
-  outline-offset: 2px;
-}
-
 @media (pointer: coarse) {
   .fu-tour-help { width: 44px; height: 44px; }
 }
 
-/* Floating fallback when a page has no natural slot for it. */
-.fu-tour-help--float {
-  position: fixed;
-  right: 20px;
-  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-  z-index: 3000;
-  box-shadow: var(--es-shadow-float);
-}
-
-html.fu-tour-open .fu-tour-help--float { display: none; }
-
 /* ─── Entry points ─────────────────────────────────────────────────── */
 
-/* "Take the tour" in the account menu is a <button> styled like its links. */
+/* "Tours" in the account menu is a <button> styled like its links. */
 .profile-menu .fu-tour-menu-option { cursor: pointer; }
 
 /* What's new panel: "Show me" under a note, and the tours row at the end. */
@@ -443,18 +617,7 @@ html.fu-tour-open .fu-tour-help--float { display: none; }
 }
 
 .fu-whats-new-foot > span {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--es-space-2, 8px);
   margin-right: auto;
   color: var(--es-ink-2, #3a3f48);
-  font-size: var(--es-type-eyebrow-size, 11px);
-  font-weight: var(--es-type-eyebrow-weight, 600);
-  letter-spacing: var(--es-type-eyebrow-tracking, .08em);
-  text-transform: uppercase;
-}
-
-.fu-whats-new-foot > span svg {
-  width: var(--es-icon-sm, 16px);
-  height: var(--es-icon-sm, 16px);
+  font-size: var(--es-type-meta-size, 13px);
 }

@@ -177,18 +177,20 @@
       <div class="fu-tour__blocker" aria-hidden="true"></div>
       <div class="fu-tour__spot" aria-hidden="true"></div>
       <section class="fu-tour__card" role="dialog" aria-modal="true" aria-labelledby="fu-tour-title" aria-describedby="fu-tour-text" tabindex="-1">
-        <div class="fu-tour__top">
+        <div class="fu-tour__head">
+          <span class="fu-tour__icon" data-tour-icon aria-hidden="true" hidden></span>
+          <span class="fu-tour__kicker" data-tour-kicker></span>
           <span class="fu-tour__count" data-tour-count></span>
-          <button class="fu-tour__close" type="button" data-tour-skip aria-label="Close tour">${ICON_CLOSE}</button>
+          <button class="fu-tour__close" type="button" data-tour-skip aria-label="Close tour (Esc)" title="Close (Esc)">${ICON_CLOSE}</button>
         </div>
-        <h2 class="fu-tour__title" id="fu-tour-title" data-tour-title></h2>
+        <h2 class="fu-tour__title es-type-card-title" id="fu-tour-title" data-tour-title></h2>
         <p class="fu-tour__text" id="fu-tour-text" data-tour-text></p>
-        <div class="fu-tour__bar" aria-hidden="true"><span data-tour-progress></span></div>
+        <ol class="fu-tour__dots" data-tour-dots aria-hidden="true"></ol>
         <div class="fu-tour__actions">
-          <button class="es-btn es-btn--ghost es-btn--sm fu-tour__skip" type="button" data-tour-skip>Skip</button>
+          <button class="es-btn es-btn--tertiary es-btn--sm fu-tour__skip" type="button" data-tour-skip>Skip tour</button>
           <span class="fu-tour__nav">
             <button class="es-btn es-btn--sm" type="button" data-tour-back>Back</button>
-            <button class="es-btn es-btn--primary es-btn--static es-btn--sm" type="button" data-tour-next>Next</button>
+            <button class="es-btn es-btn--primary es-btn--sm fu-tour__next" type="button" data-tour-next>Next</button>
           </span>
         </div>
         <p class="fu-tour__live" aria-live="polite" aria-atomic="true" data-tour-live></p>
@@ -208,9 +210,11 @@
       spot: layer.querySelector('.fu-tour__spot'),
       card: layer.querySelector('.fu-tour__card'),
       count: layer.querySelector('[data-tour-count]'),
+      kicker: layer.querySelector('[data-tour-kicker]'),
+      icon: layer.querySelector('[data-tour-icon]'),
+      dots: layer.querySelector('[data-tour-dots]'),
       title: layer.querySelector('[data-tour-title]'),
       text: layer.querySelector('[data-tour-text]'),
-      progress: layer.querySelector('[data-tour-progress]'),
       back: layer.querySelector('[data-tour-back]'),
       next: layer.querySelector('[data-tour-next]'),
       skipButtons: [...layer.querySelectorAll('[data-tour-skip]')],
@@ -342,9 +346,11 @@
     const { h, w } = viewport();
     const narrow = mediaMatches(NARROW);
     const reserve = narrow ? Math.min(ui.card.offsetHeight + MARGIN * 2, h * 0.5) : 0;
-    if (r.top >= 8 && r.bottom <= h - 8 - reserve && r.left >= 0 && r.right <= w) return;
+    // Phones keep a sticky header at the top: leave room for it.
+    const top = narrow ? 72 : 8;
+    if (r.top >= top && r.bottom <= h - 8 - reserve && r.left >= 0 && r.right <= w) return;
     try {
-      el.scrollIntoView({ block: narrow ? 'start' : 'center', inline: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+      el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     } catch (error) {
       el.scrollIntoView();
     }
@@ -397,7 +403,7 @@
 
   function normalize(def) {
     const steps = Array.isArray(def.steps) ? def.steps.filter(Boolean) : [];
-    return { id: def.id || 'tour', label: def.label || def.title || 'Tour', kicker: def.kicker || '', steps, onEnd: def.onEnd };
+    return { id: def.id || 'tour', label: def.label || def.title || 'Tour', description: def.description || '', kicker: def.kicker || '', icon: def.icon || '', steps, onEnd: def.onEnd };
   }
 
   function toTour(idOrDef) {
@@ -407,7 +413,8 @@
   }
 
   /**
-   * Start a tour. Options: startAt (index), onEnd(result), source (string).
+   * Start a tour. Options: startAt (index), onEnd(result), autoNavigate (go
+ * straight to the first step's page instead of asking first).
    * Returns false when the tour has no usable steps.
    */
   function start(idOrDef, options = {}) {
@@ -432,7 +439,15 @@
       busy: false,
       // After a page load the target may still be building: wait longer once.
       waitBoost: resumed,
+      autoNavigate: Boolean(options.autoNavigate),
     };
+    // Page-independent steps (sidebar, search) whose target isn't here now
+    // won't appear later either: drop them up front so "3 of 12" stays true.
+    tour.steps.forEach((step, i) => {
+      if (step.target && !step.page && !step.route && step.fallback !== 'center' && stepApplies(step) && !resolveTarget(step.target)) {
+        run.skipped.add(i);
+      }
+    });
     ui.layer.hidden = false;
     if (supportsPopover()) { try { ui.layer.showPopover(); } catch (error) { /* already open */ } }
     ui.layer.classList.toggle('is-reduced', prefersReducedMotion());
@@ -486,8 +501,18 @@
     run.navEl = null;
     run.interstitial = false;
 
-    // The step lives on another page: offer to go there.
-    if (!samePage(step.page)) return showInterstitial(next, step, dir);
+    // The step lives on another page: offer to go there (or just go, when the
+    // person picked this tour from a list on another page).
+    const autoNavigate = run.autoNavigate;
+    run.autoNavigate = false;
+    if (!samePage(step.page)) {
+      if (autoNavigate) {
+        saveResume(next, step);
+        win.location.href = pageUrl(step.page, resolveRoute(step));
+        return undefined;
+      }
+      return showInterstitial(next, step, dir);
+    }
 
     run.busy = true;
     ui.layer.classList.add('is-moving');
@@ -516,20 +541,49 @@
     focusCard();
   }
 
+  // Icons are trusted SVG strings from tours/tours.js (never from the manifest).
+  function iconFor(step, overrides) {
+    const icon = overrides.icon || step.icon || run.tour.icon || '';
+    return typeof icon === 'string' && icon.trim().startsWith('<svg') ? icon : '';
+  }
+
+  function renderDots(position, total) {
+    const dots = ui.dots;
+    dots.hidden = total < 2;
+    if (dots.childElementCount !== total) {
+      dots.innerHTML = Array.from({ length: total }, () => '<li></li>').join('');
+    }
+    [...dots.children].forEach((dot, i) => {
+      dot.classList.toggle('is-done', i < position - 1);
+      dot.classList.toggle('is-current', i === position - 1);
+    });
+  }
+
   function fill(step, index, overrides = {}) {
     const { position, total } = progress(index);
     const last = isLastUsable(index);
-    ui.count.textContent = [run.tour.kicker, total > 1 ? `${position} of ${total}` : ''].filter(Boolean).join(' · ');
+    const icon = iconFor(step, overrides);
+    ui.icon.innerHTML = icon;
+    ui.icon.hidden = !icon;
+    ui.kicker.textContent = run.tour.kicker || '';
+    ui.count.textContent = total > 1 ? `${position} of ${total}` : '';
     ui.title.textContent = overrides.title || step.title || '';
     ui.text.textContent = overrides.text || step.text || '';
     ui.text.hidden = !ui.text.textContent;
-    ui.progress.style.width = total ? `${Math.round((position / total) * 100)}%` : '0%';
+    renderDots(position, total);
     ui.back.hidden = isFirstUsable(index);
     ui.next.textContent = overrides.next || step.nextLabel || (last ? 'Done' : 'Next');
+    // "Skip tour" on every step but the last (Done ends it there).
     ui.skipButtons[1].hidden = last && !overrides.next;
     ui.live.textContent = `Step ${position} of ${total}. ${ui.title.textContent}. ${ui.text.textContent}`;
     ui.card.dataset.kind = overrides.kind || (step.target ? 'anchored' : 'centered');
+    // Replay the entrance on every step (CSS keys off this attribute).
+    ui.card.dataset.step = String(index);
+    ui.card.classList.remove('is-entering');
+    void ui.card.offsetWidth;
+    ui.card.classList.add('is-entering');
   }
+
 
   function showInterstitial(index, step, dir) {
     const label = step.pageLabel || String(step.page).replace(/\.html.*$/, '').replace(/[-_]/g, ' ');
@@ -663,7 +717,11 @@
   };
 
   // Resume a multi-page tour once the page (and the tour data) has loaded.
-  if (doc && typeof doc.addEventListener === 'function') {
+  // Never inside a frame: Generate renders designs in an iframe of the editor,
+  // which must not pick up (and use up) the tour state meant for the page.
+  let framed = false;
+  try { framed = win.top !== win; } catch (error) { framed = true; }
+  if (doc && typeof doc.addEventListener === 'function' && !framed) {
     const boot = () => win.setTimeout(() => { resume(); }, 350);
     if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', boot, { once: true });
     else boot();

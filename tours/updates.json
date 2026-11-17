@@ -3,25 +3,48 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
-      "id": "2026-11-17-tours",
+      "id": "2026-11-17-video-ads-v2",
       "date": "2026-11-17",
-      "title": "Guided tours",
-      "commit": "f9b8fc8",
+      "title": "Video Ads v2, Ask AI and tours",
+      "commit": "0443bbb",
       "items": [
         {
-          "title": "Take the tour",
-          "text": "A one-minute look around FrameUp. Replay it any time from your profile menu.",
-          "target": ".es-sidebar__account, .navbar .profile-trigger"
+          "title": "Video Ads in three steps",
+          "text": "Copy, Clip, Export. Research and rating are gone; the copy comes first.",
+          "page": "video-ads.html",
+          "target": ".va-steps"
         },
         {
-          "title": "Help on every tool",
-          "text": "The ? button on Generate, Video Ads and the editor walks you through that page.",
+          "title": "Ask AI",
+          "text": "Write 3 options, check grammar with instant fixes, shorten or punch it up. ⌘J.",
+          "page": "video-ads.html",
+          "target": "#va-ask-ai"
+        },
+        {
+          "title": "Clips by team, colour, moment or link",
+          "text": "With team logos, and only fresh clips from the last 72 hours. Trends shows league logos too.",
+          "page": "video-ads.html",
+          "target": ".va-step[data-step=\"clip\"]"
+        },
+        {
+          "title": "Generate format cards",
+          "text": "Real thumbnails, Auto by default, and it spots who, quotes and stats as you type.",
           "page": "generate.html",
-          "target": "[data-tour-help]"
+          "target": "#gen-formats"
         },
         {
-          "title": "New here after every update",
-          "text": "When FrameUp changes, a short note like this one shows you what's new and where."
+          "title": "Your AI usage",
+          "text": "The sidebar shows your AI spend this week, out of $20. It resets every Monday.",
+          "target": ".es-sidebar [data-shell-usage]"
+        },
+        {
+          "title": "Calmer focus and a live UI Library",
+          "text": "One quiet focus style everywhere. The UI Library (profile menu) shows the whole design system, live."
+        },
+        {
+          "title": "Tours",
+          "text": "Replay a tour any time from Tours in your profile menu, or the ? on a tool.",
+          "target": ".es-sidebar__account, .navbar .profile-trigger"
         }
       ]
     },

@@ -72,9 +72,10 @@
   }
 
   /**
-   * Builds a tour definition from one manifest entry. Items on the current
-   * page (or on no page) come first, then other pages grouped, so the tour
-   * travels as little as possible. Items without a target never navigate.
+   * Builds a tour definition from one manifest entry. Highlights on this
+   * page (or on any page) come first, then other pages grouped, so the tour
+   * travels as little as possible; items without a target come last as
+   * centred cards and never navigate.
    */
   function buildUpdateTour(entry, currentPage = 'index.html') {
     const items = (entry.items || [])
@@ -85,8 +86,11 @@
       const page = item.target && item.page ? item.page : null;
       if (page && page !== currentPage && !pages.includes(page)) pages.push(page);
     });
+    // Highlights here (or on any page) first, then other pages in order, and
+    // notes with nothing to point at last, as centred cards.
     const rank = item => {
-      const page = item.target && item.page ? item.page : null;
+      if (!item.target) return pages.length;
+      const page = item.page || null;
       return !page || page === currentPage ? -1 : pages.indexOf(page);
     };
     const ordered = items.map((item, index) => ({ item, index }))
@@ -106,7 +110,7 @@
       }
       return step;
     });
-    return { id: `update:${entry.id}`, label: entry.title || "What's new", kicker: "What's new", steps };
+    return { id: `update:${entry.id}`, label: entry.title || "What's new", kicker: "What's new", icon: ICON_SPARKLE, steps };
   }
 
   /** First line of a commit message, trimmed for a card. */
@@ -132,7 +136,9 @@
 
   /**
    * Small, non-blocking card in the corner. Never steals focus.
-   * options: { kicker, title, text, primary, secondary, onPrimary, onSecondary }
+   * options: { kicker, title, text, icon, primary, secondary, tertiary,
+   *            onPrimary, onSecondary, onTertiary, onClose }
+   * Close (×) and Esc run onClose, or onSecondary when there is none.
    */
   function showToast(options) {
     const doc = win.document;
@@ -142,17 +148,20 @@
     toast.setAttribute('role', 'region');
     toast.setAttribute('aria-label', options.kicker || "What's new");
     toast.innerHTML = `
-      <span class="fu-tour-toast__icon">${ICON_SPARKLE}</span>
+      <span class="fu-tour-toast__icon" aria-hidden="true"></span>
       <div>
         <p class="fu-tour-toast__kicker"></p>
         <p class="fu-tour-toast__title" aria-live="polite"></p>
         <p class="fu-tour-toast__text"></p>
         <div class="fu-tour-toast__actions">
-          <button class="es-btn es-btn--primary es-btn--static es-btn--sm" type="button" data-toast-primary></button>
-          <button class="es-btn es-btn--ghost es-btn--sm" type="button" data-toast-secondary></button>
+          <button class="es-btn es-btn--primary es-btn--sm" type="button" data-toast-primary></button>
+          <button class="es-btn es-btn--sm" type="button" data-toast-secondary></button>
+          <button class="es-btn es-btn--tertiary es-btn--sm fu-tour-toast__never" type="button" data-toast-tertiary hidden></button>
         </div>
       </div>
-      <button class="fu-tour__close" type="button" data-toast-close aria-label="Dismiss">${ICON_CLOSE}</button>`;
+      <button class="fu-tour__close" type="button" data-toast-close aria-label="Dismiss (Esc)" title="Dismiss (Esc)">${ICON_CLOSE}</button>`;
+    const icon = typeof options.icon === 'string' && options.icon.trim().startsWith('<svg') ? options.icon : ICON_SPARKLE;
+    toast.querySelector('.fu-tour-toast__icon').innerHTML = icon;
     toast.querySelector('.fu-tour-toast__kicker').textContent = options.kicker || "What's new";
     toast.querySelector('.fu-tour-toast__title').textContent = options.title || '';
     const text = toast.querySelector('.fu-tour-toast__text');
@@ -166,12 +175,25 @@
       toast.remove();
       if (typeof callback === 'function') callback();
     };
+    const tertiary = toast.querySelector('[data-toast-tertiary]');
+    tertiary.textContent = options.tertiary || '';
+    tertiary.hidden = !options.tertiary;
+    const onClose = options.onClose || options.onSecondary;
     primary.addEventListener('click', () => close(options.onPrimary));
     secondary.addEventListener('click', () => close(options.onSecondary));
-    toast.querySelector('[data-toast-close]').addEventListener('click', () => close(options.onSecondary));
-    toast.addEventListener('keydown', event => {
-      if (event.key === 'Escape') { event.stopPropagation(); close(options.onSecondary); }
-    });
+    tertiary.addEventListener('click', () => close(options.onTertiary));
+    toast.querySelector('[data-toast-close]').addEventListener('click', () => close(onClose));
+    // Esc dismisses it from anywhere on the page (it never takes focus itself).
+    const onKey = event => {
+      if (event.key !== 'Escape' || !toast.isConnected) return;
+      if (doc.querySelector('dialog[open]') || (win.FrameUpTour && win.FrameUpTour.isRunning())) return;
+      close(onClose);
+    };
+    doc.addEventListener('keydown', onKey);
+    const observer = typeof MutationObserver === 'function' ? new MutationObserver(() => {
+      if (!toast.isConnected) { doc.removeEventListener('keydown', onKey); observer.disconnect(); }
+    }) : null;
+    observer?.observe(doc.body, { childList: true });
     // Top layer when supported (a transform on <body> would break
     // position: fixed); otherwise on <html>, outside the transformed <body>.
     const popover = typeof toast.showPopover === 'function';

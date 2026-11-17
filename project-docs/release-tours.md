@@ -60,15 +60,27 @@ people can read.
 
 ## Who sees what
 
-- **First visit** (per person, keyed by a hash of the signed-in email, or the
-  device): the Welcome tour, once. Notes up to that day count as seen.
+Nothing starts on its own; people are always asked, and every step has
+"Skip tour", a close button and Esc.
+
+- **New to FrameUp** (per person, keyed by a hash of the signed-in email, or
+  the device): a small "Welcome to FrameUp" choice: **Take the tour** /
+  **Not now**, plus **Don't show again**. "Not now" asks once more on a later
+  day, then stops. Notes up to that day count as seen.
+- **Already using FrameUp** (this browser has FrameUp data from before): a
+  quiet corner card, once, with the same three choices. Their next visit gets
+  the What's new toast for the newest note.
 - **Later visits**: the toast for the newest unseen note, if it's under 30
   days old. "Show me" or "Not now" both mark it seen.
-- **Any time**: "Take the tour" in the profile menu (this page's tour, or
-  Welcome), the "?" on Generate / Trends / Video Ads / the editor, the Tours
-  row in What's new, and "Take the tour" in ⌘K search.
+- **Any time**: **Tours** in the profile menu opens a picker with every tour
+  (Welcome, Generate, Trends, Video Ads, Editor, latest What's new); a tour
+  for another page opens that page and starts there. Also the "?" on
+  Generate / Trends / Video Ads / the editor, the Tours button in What's new,
+  and "Tours" in ⌘K search.
+- Pages inside frames (Generate renders designs in a hidden editor iframe)
+  never offer, toast or resume a tour.
 - Testing: `FrameUpTours.reset()` in the console forgets your tour history;
-  `FrameUpTours.startWelcome()` replays it.
+  `FrameUpTours.openPicker()` / `FrameUpTours.startWelcome()` replay.
 
 ## Files
 

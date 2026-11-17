@@ -1068,24 +1068,30 @@ and what's still uncommitted.
   listicle-type2-data.js, its tests and its log entry stay local, uncommitted).
 - **Rollback point:** `main` at 736ce0b (the commit before this UI pass).
 
-### 2026-11-17 — FrameUp tours: Welcome tour, page tours, automatic What's new tour on every update
-- Status: `[branch feature/frameup-tour, not pushed; owner review first]` (from `f9b8fc8`).
-- Asked (Suhail): "the best possible tour of FrameUp; whenever we push a new update, it should automatically
-  reflect as a new tour."
-- New: `frameup-tour.js` + `frameup-tour.css` (vanilla spotlight/coach-mark engine, top-layer popover, keyboard,
-  focus trap, aria-live, reduced motion, dark, bottom-docked card on phones, multi-page resume via sessionStorage,
-  missing targets skipped), `tours/tours.js` (Welcome, Generate, Trends, Video Ads, Editor), `tours/updates.json`
-  (release notes, newest first), `tours/updates.js` (comparison, generated tour, toast, deploy check),
-  `tours/tour-launcher.js` (first visit per person, toast, profile-menu "Take the tour", "?" buttons, What's new
-  "Show me" + Tours row, ⌘K entry), `api/version.js` + `netlify/functions/version.js` (signed-in only, live commit
-  sha + subject), `scripts/add-release-note.mjs`, `scripts/test-tour.mjs`, `project-docs/release-tours.md`.
+### 2026-11-17 — FrameUp tours: Welcome offer, page tours, Tours picker, automatic What's new tour on every update
+- Status: `[branch feature/frameup-tour, not pushed; owner review first]`, rebased on `0443bbb` (Video Ads v2,
+  Generate format cards, AI usage card, quiet focus, UI Library).
+- Asked (Suhail): "the best possible tour of FrameUp; whenever we push a new update, it should automatically reflect
+  as a new tour", then "keep options to skip as well, a nice tour experience, make it look the best."
+- New: `frameup-tour.js` + `frameup-tour.css` (vanilla spotlight engine: soft rounded cut-out that glides between
+  targets, card with a Lucide icon tile, Roboto 600 title, step dots, "Skip tour" on every step, Back / Next with the
+  es-btn system, Esc always exits; top-layer popover, focus trap, aria-live, reduced motion, dark, bottom-docked on
+  phones; multi-page resume via sessionStorage; missing targets skipped; never runs inside iframes),
+  `tours/tours.js` (Welcome, Generate, Trends, Video Ads v2, Editor; targets checked against today's markup),
+  `tours/updates.json` (release notes, newest first; today's "Video Ads v2, Ask AI and tours" note),
+  `tours/updates.js` (comparison, generated tour, corner card, deploy check), `tours/tour-launcher.js` (Welcome
+  offer: new people get a small "Take the tour / Not now / Don't show again" choice, existing people a corner card
+  once; "Tours" picker in the profile menu, "?" buttons, What's new "Show me" + Tours, ⌘K), `api/version.js` +
+  `netlify/functions/version.js` (signed-in only, live commit sha + subject), `scripts/add-release-note.mjs`,
+  `scripts/test-tour.mjs`, `project-docs/release-tours.md`.
 - Changed: `app-shell.js` — WHATS_NEW moved to `tours/updates.json` (fetched with `cache: no-cache`), What's new
   panel unchanged otherwise, fires `frameup:whatsnew-open`; NAV groups got ids `create`/`work`/`help` (sidebar
   classes for tour targets). All 13 app-shell pages (incl. index.html, include lines only) load the tour CSS +
   4 scripts right after app-shell.js. app-shell.js's own `?v=` was not bumped (files are served must-revalidate).
 - Release workflow: `node scripts/add-release-note.mjs`, edit, remove `"draft": true`, push. See release-tours.md.
-- Verified locally (auth stripped in a scratch mirror): Welcome end to end across Home → editor → Generate →
-  Video Ads, What's new toast → generated tour across pages, page tours, keyboard only, light/dark, 1280 and 375.
-  Not verified: real login (ESAuth session key), `/api/version` on Vercel, Safari/Firefox, screen readers.
-- Noticed, not changed: the sidebar Dashboard link carries `hidden` but `.es-nav-item { display:flex }` shows it
-  anyway, so non-admins may see it on desktop (the tour treats it as hidden).
+- Verified locally (auth stripped in a scratch mirror, headless Chrome): Welcome offer (Take / Not now / Esc /
+  Don't show again, new and existing person), Welcome end to end Home → editor → Generate → Video Ads, Skip tour and
+  Esc at every step of the Generate and Video Ads tours, keyboard only, replay from the Tours picker (navigates to
+  the tour's page), What's new toast → generated tour across pages, light/dark, 1280 and 375.
+  Not verified: real login (ESAuth session key), the AI usage step with real data, `/api/version` on Vercel,
+  Safari/Firefox, screen readers.
