@@ -1,0 +1,623 @@
+/* FrameUp tours: spotlight, coach-mark card, Welcome offer, tour picker,
+   "What's new" toast and the "?" help button. Engine: frameup-tour.js.
+   Tokens and buttons: design-tokens.css (the @layer es-buttons system and the
+   global quiet focus rules; nothing here restyles focus). Roboto only; ES
+   ink, slate and blues only (no purple). */
+
+.fu-tour,
+.fu-tour-toast,
+.fu-tour-help,
+.fu-offer,
+.fu-picker {
+  --fu-surface: var(--es-bg, #ffffff);
+  --fu-ink: var(--es-ink, #0e1014);
+  --fu-ink-2: var(--es-ink-2, #3a3f48);
+  --fu-ink-3: var(--es-ink-3, #565c67);
+  --fu-line: var(--es-line, #dfe2e7);
+  --fu-track: var(--es-line, #dfe2e7);
+  --fu-brand: var(--es-brand, #0a7dfa);
+  --fu-brand-text: var(--es-brand-text, #0a62c7);
+  --fu-tile: var(--es-brand-soft, #eaf3ff);
+  --fu-dim: rgb(14 16 20 / .5);
+  --fu-ring: rgb(84 164 251 / .95);
+  --fu-halo: rgb(10 125 250 / .16);
+  --fu-shadow: 0 1px 2px rgb(14 16 20 / .06), 0 20px 48px -16px rgb(14 16 20 / .34);
+  --fu-ease: var(--es-ease-entrance, cubic-bezier(.16, 1, .3, 1));
+  --fu-move: 420ms;
+}
+
+html[data-theme="dark"] :is(.fu-tour, .fu-tour-toast, .fu-tour-help, .fu-offer, .fu-picker) {
+  --fu-surface: #2A2D34;
+  --fu-ink: #FFFFFF;
+  --fu-ink-2: #BFC8D9;
+  --fu-ink-3: #98A6BF;
+  --fu-line: #3B4049;
+  --fu-track: #3B4049;
+  --fu-brand: #54A4FB;
+  --fu-brand-text: #9DCBFD;
+  --fu-tile: rgb(10 125 250 / .2);
+  --fu-dim: rgb(0 0 0 / .6);
+  --fu-halo: rgb(84 164 251 / .2);
+  --fu-shadow: 0 20px 48px -12px rgb(0 0 0 / .72);
+  /* Raised dark surface: secondary buttons sit on it, not on the page. */
+  --es-btn-bg: #2A2D34;
+  --es-btn-bg-hover: #3B4049;
+  --es-btn-line: #5C6373;
+  --es-btn-sunk: #3B4049;
+}
+
+/* ─── Layer, blocker and spotlight ─────────────────────────────────── */
+
+.fu-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  /* Undo the browser's popover box so the layer covers the viewport. */
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  color: var(--fu-ink);
+  font-family: var(--es-font-ui, "Roboto", sans-serif);
+}
+
+.fu-tour::backdrop { background: transparent; }
+.fu-tour[hidden] { display: none; }
+
+/* Catches clicks so the page under the tour can't change mid-step. */
+.fu-tour__blocker {
+  position: absolute;
+  inset: 0;
+}
+
+/* The cut-out: a soft rounded box whose page-sized shadow dims the rest. */
+.fu-tour__spot {
+  position: fixed;
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 1.5px var(--fu-ring),
+    0 0 0 6px var(--fu-halo),
+    0 0 0 200vmax var(--fu-dim);
+  pointer-events: none;
+}
+
+.fu-tour__spot.is-empty {
+  border-radius: 50%;
+  box-shadow: 0 0 0 200vmax var(--fu-dim);
+}
+
+/* ─── Card ─────────────────────────────────────────────────────────── */
+
+.fu-tour__card {
+  position: fixed;
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 32px));
+  padding: var(--es-space-5, 20px);
+  border-radius: var(--es-radius-container, 16px);
+  background: var(--fu-surface);
+  box-shadow: var(--fu-shadow), inset 0 0 0 1px var(--fu-line);
+  color: var(--fu-ink);
+  outline: none;
+}
+
+.fu-tour__card[data-kind="centered"],
+.fu-tour__card[data-kind="interstitial"] {
+  width: min(400px, calc(100vw - 32px));
+}
+
+.fu-tour__head {
+  display: flex;
+  align-items: center;
+  gap: var(--es-space-2, 8px);
+  min-height: 32px;
+  margin: -4px -8px var(--es-space-3, 12px) 0;
+}
+
+/* Small step illustration: a Lucide icon on a soft blue tile. */
+.fu-tour__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--es-radius-chip, 10px);
+  background: var(--fu-tile);
+  color: var(--fu-brand-text);
+}
+
+.fu-tour__icon svg {
+  width: var(--es-icon, 18px);
+  height: var(--es-icon, 18px);
+}
+
+.fu-tour__kicker,
+.fu-tour__count {
+  color: var(--fu-ink-3);
+  font-size: var(--es-type-eyebrow-size, 11px);
+  font-weight: var(--es-type-eyebrow-weight, 600);
+  line-height: var(--es-type-eyebrow-line, 1.3);
+  letter-spacing: var(--es-type-eyebrow-tracking, .08em);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.fu-tour__kicker { color: var(--fu-brand-text); }
+
+.fu-tour__count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
+}
+
+.fu-tour__close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fu-ink-3);
+  cursor: pointer;
+}
+
+.fu-tour__count:empty + .fu-tour__close { margin-left: auto; }
+
+.fu-tour__close svg {
+  width: var(--es-icon-sm, 16px);
+  height: var(--es-icon-sm, 16px);
+}
+
+.fu-tour__close:hover {
+  background: var(--es-btn-sunk, #f0f2f5);
+  color: var(--fu-ink);
+}
+
+.fu-tour__title {
+  margin: 0;
+  color: var(--fu-ink);
+  font-family: var(--es-font-ui, "Roboto", sans-serif);
+  font-size: var(--es-type-card-title-size, 18px);
+  font-weight: 600;
+  line-height: var(--es-type-card-title-line, 1.3);
+  letter-spacing: 0;
+}
+
+.fu-tour__text {
+  margin: var(--es-space-1, 4px) 0 0;
+  color: var(--fu-ink-2);
+  font-size: var(--es-type-body-size, 15px);
+  font-weight: var(--es-type-body-weight, 400);
+  line-height: 1.5;
+}
+
+/* Step dots: done, current (a short pill), to come. */
+.fu-tour__dots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: var(--es-space-4, 16px) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fu-tour__dots[hidden] { display: none; }
+
+.fu-tour__dots li {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--es-radius-pill, 999px);
+  background: var(--fu-track);
+}
+
+.fu-tour__dots li.is-done { background: var(--fu-brand); opacity: .45; }
+.fu-tour__dots li.is-current { width: 18px; background: var(--fu-brand); }
+
+.fu-tour__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--es-space-2, 8px);
+  margin-top: var(--es-space-4, 16px);
+}
+
+.fu-tour__skip { margin-left: -8px; }
+
+.fu-tour__nav {
+  display: inline-flex;
+  gap: var(--es-space-2, 8px);
+  margin-left: auto;
+}
+
+.fu-tour [hidden] { display: none !important; }
+
+/* Screen-reader-only step announcements. */
+.fu-tour__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Arrow pointing at the target. */
+.fu-tour__card:is([data-side="right"], [data-side="left"], [data-side="top"], [data-side="bottom"])::before {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--fu-surface);
+  box-shadow: inset 1px 1px 0 0 var(--fu-line);
+}
+
+.fu-tour__card[data-side="bottom"]::before { top: -6px; left: calc(var(--fu-arrow, 50%) - 6px); transform: rotate(45deg); }
+.fu-tour__card[data-side="top"]::before { bottom: -6px; left: calc(var(--fu-arrow, 50%) - 6px); transform: rotate(225deg); }
+.fu-tour__card[data-side="right"]::before { left: -6px; top: calc(var(--fu-arrow, 50%) - 6px); transform: rotate(-45deg); }
+.fu-tour__card[data-side="left"]::before { right: -6px; top: calc(var(--fu-arrow, 50%) - 6px); transform: rotate(135deg); }
+
+/* Phones: the card docks to the bottom (or top) edge, full width. */
+@media (max-width: 600px) {
+  .fu-tour__card,
+  .fu-tour__card[data-kind] {
+    top: auto !important;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    left: 12px !important;
+    width: auto;
+    padding: var(--es-space-4, 16px);
+  }
+
+  .fu-tour__card[data-dock="top"] {
+    top: calc(12px + env(safe-area-inset-top, 0px)) !important;
+    bottom: auto;
+  }
+}
+
+/* Motion: the spotlight glides between targets, the card follows and fades
+   up on each step. Only when the person hasn't asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .fu-tour:not(.is-reduced) .fu-tour__spot {
+    transition:
+      top var(--fu-move) var(--fu-ease),
+      left var(--fu-move) var(--fu-ease),
+      width var(--fu-move) var(--fu-ease),
+      height var(--fu-move) var(--fu-ease),
+      border-radius var(--fu-move) var(--fu-ease);
+  }
+
+  .fu-tour:not(.is-reduced) .fu-tour__card {
+    transition: top var(--fu-move) var(--fu-ease), left var(--fu-move) var(--fu-ease);
+  }
+
+  .fu-tour:not(.is-reduced) .fu-tour__card.is-entering :is(.fu-tour__icon, .fu-tour__title, .fu-tour__text) {
+    animation: fuTourStep 320ms var(--fu-ease) backwards;
+  }
+
+  .fu-tour:not(.is-reduced) .fu-tour__card.is-entering .fu-tour__text { animation-delay: 40ms; }
+
+  .fu-tour:not(.is-reduced) .fu-tour__card {
+    animation: fuTourIn 260ms var(--fu-ease) backwards;
+  }
+
+  .fu-tour__dots li { transition: width 240ms var(--fu-ease), background-color 240ms var(--fu-ease); }
+}
+
+@keyframes fuTourIn {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+}
+
+@keyframes fuTourStep {
+  from { opacity: 0; transform: translateY(4px); }
+}
+
+/* ─── Welcome offer (first visit) ──────────────────────────────────── */
+
+/* New people: a small centred dialog. Existing people: the corner card
+   (.fu-tour-toast) instead, so nothing takes over the page. */
+.es-dialog.fu-offer {
+  width: min(400px, calc(100vw - 32px));
+  padding: var(--es-space-6, 24px);
+  background: var(--fu-surface);
+  color: var(--fu-ink);
+  text-align: left;
+}
+
+.es-dialog.fu-offer:not([open]) { display: none; }
+
+.fu-offer__art {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--es-space-4, 16px);
+  border-radius: var(--es-radius-control, 12px);
+  background: var(--ais-gradient-fill, linear-gradient(120deg, #085ebc, #0a6fde));
+  color: #FFFFFF;
+}
+
+.fu-offer__art svg { width: 22px; height: 22px; }
+
+.es-dialog.fu-offer h2 {
+  color: var(--fu-ink);
+  margin: 0 0 var(--es-space-1, 4px);
+  font-family: var(--es-font-ui, "Roboto", sans-serif);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.es-dialog.fu-offer p {
+  margin: 0;
+  color: var(--fu-ink-2);
+  font-size: var(--es-type-body-size, 15px);
+  line-height: 1.5;
+}
+
+.fu-offer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--es-space-2, 8px);
+  margin-top: var(--es-space-6, 24px);
+}
+
+.fu-offer__never {
+  display: block;
+  margin: var(--es-space-3, 12px) 0 0 -8px;
+}
+
+/* ─── Tour picker (profile menu → Tours) ───────────────────────────── */
+
+.es-dialog.fu-picker {
+  width: min(440px, calc(100vw - 32px));
+  background: var(--fu-surface);
+  color: var(--fu-ink);
+}
+
+.es-dialog.fu-picker:not([open]) { display: none; }
+
+.fu-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--es-space-3, 12px);
+  margin-bottom: var(--es-space-3, 12px);
+}
+
+.es-dialog.fu-picker h2 {
+  color: var(--fu-ink);
+  margin: 0;
+  font-family: var(--es-font-ui, "Roboto", sans-serif);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.fu-picker__list {
+  display: grid;
+  gap: var(--es-space-1, 4px);
+  margin: 0 -8px;
+  padding: 0;
+  list-style: none;
+}
+
+.fu-picker__item {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: var(--es-space-3, 12px);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--es-space-2, 8px);
+  border: 0;
+  border-radius: var(--es-radius-control, 12px);
+  background: transparent;
+  color: var(--fu-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fu-picker__item:hover { background: var(--es-btn-sunk, #f0f2f5); }
+
+.fu-picker__item .fu-tour__icon { width: 32px; height: 32px; }
+
+.fu-picker__name {
+  display: block;
+  font-size: var(--es-type-body-size, 15px);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.fu-picker__desc {
+  display: block;
+  margin-top: 2px;
+  color: var(--fu-ink-3);
+  font-size: var(--es-type-meta-size, 13px);
+  line-height: var(--es-type-meta-line, 1.45);
+}
+
+.fu-picker__tag {
+  padding: 2px 8px;
+  border-radius: var(--es-radius-pill, 999px);
+  background: var(--fu-tile);
+  color: var(--fu-brand-text);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ─── Corner card: "What's new" toast and the existing-user offer ───── */
+
+.fu-tour-toast {
+  position: fixed;
+  right: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 4100;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--es-space-3, 12px);
+  width: min(380px, calc(100vw - 32px));
+  padding: var(--es-space-4, 16px);
+  border-radius: var(--es-radius-container, 16px);
+  background: var(--fu-surface);
+  box-shadow: var(--fu-shadow), inset 0 0 0 1px var(--fu-line);
+  color: var(--fu-ink);
+  font-family: var(--es-font-ui, "Roboto", sans-serif);
+}
+
+.fu-tour-toast[hidden] { display: none; }
+
+/* Undo the browser's popover box (the toast uses the top layer). */
+.fu-tour-toast[popover] {
+  inset: auto 24px calc(24px + env(safe-area-inset-bottom, 0px)) auto;
+  margin: 0;
+  overflow: visible;
+  border: 0;
+}
+
+.fu-tour-toast__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--es-radius-chip, 10px);
+  background: var(--fu-tile);
+  color: var(--fu-brand-text);
+}
+
+.fu-tour-toast__icon svg {
+  width: var(--es-icon, 18px);
+  height: var(--es-icon, 18px);
+}
+
+.fu-tour-toast__kicker {
+  margin: 0;
+  color: var(--fu-brand-text);
+  font-size: var(--es-type-eyebrow-size, 11px);
+  font-weight: var(--es-type-eyebrow-weight, 600);
+  line-height: var(--es-type-eyebrow-line, 1.3);
+  letter-spacing: var(--es-type-eyebrow-tracking, .08em);
+  text-transform: uppercase;
+}
+
+.fu-tour-toast__title {
+  margin: 2px 0 0;
+  color: var(--fu-ink);
+  font-size: var(--es-type-body-size, 15px);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.fu-tour-toast__text {
+  margin: 2px 0 0;
+  color: var(--fu-ink-2);
+  font-size: var(--es-type-meta-size, 13px);
+  line-height: var(--es-type-meta-line, 1.45);
+}
+
+.fu-tour-toast__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--es-space-2, 8px);
+  margin-top: var(--es-space-3, 12px);
+}
+
+.fu-tour-toast__never { margin-left: -4px; }
+
+.fu-tour-toast .fu-tour__close { margin: -6px -6px 0 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .fu-tour-toast { animation: fuToastIn 320ms var(--fu-ease) both; }
+}
+
+@keyframes fuToastIn {
+  from { opacity: 0; transform: translateY(10px); }
+}
+
+@media (max-width: 900px) {
+  .fu-tour-toast {
+    right: 16px;
+    left: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+  }
+
+  .fu-tour-toast[popover] { inset: auto 16px calc(16px + env(safe-area-inset-bottom, 0px)) 16px; }
+
+  body:has([data-mobile-editor-nav]) .fu-tour-toast {
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ─── "?" help button (pages with their own tour) ──────────────────── */
+
+.fu-tour-help {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--fu-line);
+  border-radius: 50%;
+  background: var(--fu-surface);
+  color: var(--fu-ink-2);
+  cursor: pointer;
+}
+
+.fu-tour-help svg {
+  width: var(--es-icon-sm, 16px);
+  height: var(--es-icon-sm, 16px);
+}
+
+.fu-tour-help:hover {
+  border-color: var(--es-line-2, #c8cdd5);
+  color: var(--fu-ink);
+}
+
+@media (pointer: coarse) {
+  .fu-tour-help { width: 44px; height: 44px; }
+}
+
+/* ─── Entry points ─────────────────────────────────────────────────── */
+
+/* "Tours" in the account menu is a <button> styled like its links. */
+.profile-menu .fu-tour-menu-option { cursor: pointer; }
+
+/* What's new panel: "Show me" under a note, and the tours row at the end. */
+.whats-new-entry .fu-whats-new-show {
+  margin-top: var(--es-space-3, 12px);
+}
+
+.fu-whats-new-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--es-space-2, 8px);
+  margin-top: var(--es-space-4, 16px);
+  padding-top: var(--es-space-4, 16px);
+  border-top: 1px solid var(--es-line, #dfe2e7);
+}
+
+.fu-whats-new-foot > span {
+  margin-right: auto;
+  color: var(--es-ink-2, #3a3f48);
+  font-size: var(--es-type-meta-size, 13px);
+}

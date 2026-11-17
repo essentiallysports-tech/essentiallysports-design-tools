@@ -64,6 +64,7 @@
       ],
     },
     {
+      id: 'create',
       label: 'Create',
       items: [
         { id: 'instagram', label: 'Social Media', short: 'Social', href: 'index.html#instagram', icon: 'social', editor: true },
@@ -73,6 +74,7 @@
       ],
     },
     {
+      id: 'work',
       label: 'Work',
       items: [
         { id: 'request', label: 'Design Request', short: 'Request', href: 'design-request.html', icon: 'request', desc: 'Send the design team one clear brief with context, copy, deadline and references.' },
@@ -81,6 +83,7 @@
       ],
     },
     {
+      id: 'help',
       label: 'Help',
       items: [
         { id: 'guidelines', label: 'Guidelines', short: 'Guides', href: 'index.html#logo-guidelines', icon: 'guide', covers: GUIDE_IDS, palette: false },
@@ -369,61 +372,60 @@
   window.FrameUpUsage = Object.freeze({ refresh: () => loadUsage({ force: true }), limit: AI_WEEKLY_USER_LIMIT_USD });
 
   // ─── What's new ────────────────────────────────────────────────────────
-  // Newest first. `templates` (workspace + dropdown value) get a "New" tag in
-  // the template dropdowns and picker for 30 days from `date`.
-  const WHATS_NEW = [
-    { id: '2026-11-15-ai-studio', date: '2026-11-15', items: [
-      ['AI Studio', 'Generate, Trends and Video Ads now live together under AI Studio in the sidebar, with their own look. Switch between them at the top of the page.'],
-      ['Trends inside Generate', 'Trend Design is now the Trends view of Generate. Pick a headline idea or "Design this" and Generate starts on it right away, without leaving the page. Old Trend Design links still work.'],
-    ] },
-    { id: '2026-11-12-trends', date: '2026-11-12', items: [
-      ['Trend Design', 'A new page in Create: what US sports fans are searching on Google and reading right now, sorted into Golf, Tennis, NFL, College Football, MLB and Others. It refreshes every 5 minutes. Each story comes with headline ideas; click one, or "Design this", to open Generate with it as your brief.'],
-      ['Cleaner pages', 'Design Request, Tool Feedback, Gallery, Generate and Reel Captions use the same clean fields, labels and cards as the editor.'],
-      ['Easier to read', 'Small grey text and dark mode colours were adjusted so every page meets accessibility contrast levels.'],
-    ] },
-    { id: '2026-11-11-round2', date: '2026-11-11', items: [
-      ['Content · Photos · Style', 'The right panel has three tabs: text in Content, photos and the ES Image Pool together in Photos, placement and colours in Style. Tabs with nothing in them hide.'],
-      ['Search finds templates and actions', 'Press ⌘K / Ctrl+K and type: jump to any template, reopen a recent design, or Export, Copy link, Upload a photo.'],
-      ['Jump back in', 'Home shows your last four designs; one click reopens them.'],
-      ['Clearer template names', 'Section Header (Left / Centred), Video FI (Play Button), Tag FI (Corner Label), Headline List (Big Numbers / Simple), Trivia.'],
-      ['One look for icons and controls', 'Every icon shares one style, and fields and buttons in the right panel line up at the same sizes.'],
-      ['Phone menu', 'On phones the menu now matches the sidebar.'],
-    ] },
-    { id: '2026-11-11-basics', date: '2026-11-11', items: [
-      ['Your work is saved as you go', 'Refresh or close the tab and everything comes back: every slide, layout and newsletter asset, with photos. "Start fresh" clears it.'],
-      ['Reopen past designs', 'The clock button next to Undo lists your last 30 exports. In Gallery, "Open in editor" opens a copy of posts you exported on this browser.'],
-      ['Browse templates with previews', '"Browse" next to Post Type and Newsletter Asset shows every template as a picture, with search.'],
-      ['Check before export', 'Export warns when sample photos, sample text or an empty headline are still in the design.'],
-      ['Spell check', 'Headlines, quotes and names are now spell checked. Numbers, stats and links are not.'],
-      ['Keyboard shortcuts', 'Ctrl/⌘ + E exports, Ctrl/⌘ + Shift + L copies the link. Press ? to see them all.'],
-      ['Newsletter brand colours', 'Infographic FIs use each newsletter\'s colours from the Newsletter Hub, on one light grey background.'],
-    ] },
-    { id: '2026-11-10-golf-fis', date: '2026-11-10', items: [
-      ['7 golf infographic FIs', 'Player Season Stats, Weekend Winners, Tournament Fields, Defending Champion, Player Quote and two collages, in Newsletter.'],
-    ], templates: [
-      ['newsletter', 'ig-player-season-stats'], ['newsletter', 'ig-weekend-winners'], ['newsletter', 'ig-tournament-fields'],
-      ['newsletter', 'ig-defending-champion'], ['newsletter', 'ig-player-quote'], ['newsletter', 'ig-three-panel-collage'], ['newsletter', 'ig-two-up-collage'],
-    ] },
-    { id: '2026-11-09-social', date: '2026-11-09', items: [
-      ['Multiple Tweets', 'Up to three tweets on one Social post, over your photo.'],
-      ['Golf and Neutral colours', 'Golf is a Social sport with its own colour sets, plus a Neutral option.'],
-      ['Essentially W NCAA', 'New brand in Video FI, Trivia and the widgets.'],
-    ], templates: [['instagram', 'twitter-multi']] },
-    { id: '2026-11-07-widgets', date: '2026-11-07', items: [
-      ['Financial Ticker and Headline Lists', 'Three new HTML widgets for newsletters: Financial Ticker and two Headline Lists (big numbers or simple).'],
-    ], templates: [['newsletter', 'ticker'], ['newsletter', 'list'], ['newsletter', 'list2']] },
-  ];
+  // One source for release notes: tours/updates.json (newest first). The
+  // same file drives the "What's new" tour (tours/updates.js). Entries:
+  // { id, date, title, items: [{ title, text, page?, route?, target? }],
+  //   templates?: [[workspace, dropdown value]] }; `templates` get a "New"
+  // tag in the template dropdowns and picker for 30 days from `date`.
+  const WHATS_NEW_URL = `${base}tours/updates.json`;
   const WHATS_NEW_SEEN_KEY = 'frameup.whatsNew.seen';
   const NEW_FOR_DAYS = 30;
+  let WHATS_NEW = [];
+
+  // Older notes stored items as [title, text]; accept both shapes.
+  function normalizeWhatsNew(data) {
+    const entries = Array.isArray(data) ? data : (data && Array.isArray(data.entries) ? data.entries : []);
+    return entries
+      .filter(entry => entry && entry.id && entry.date && !entry.draft)
+      .map(entry => ({
+        ...entry,
+        items: (entry.items || []).map(item => (Array.isArray(item) ? { title: item[0], text: item[1] } : item)).filter(item => item && (item.title || item.text)),
+      }));
+  }
+
+  // Fetched once per page; `no-cache` revalidates, so a new push shows up on
+  // the next page load without a cache-busting query.
+  const whatsNewReady = (typeof fetch === 'function'
+    ? fetch(WHATS_NEW_URL, { cache: 'no-cache', headers: { Accept: 'application/json' } })
+      .then(response => (response.ok ? response.json() : []))
+      .catch(() => [])
+    : Promise.resolve([]))
+    .then(data => {
+      WHATS_NEW = normalizeWhatsNew(data);
+      const refresh = () => { syncWhatsNewDot(); tagNewTemplates(); };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(refresh, 0), { once: true });
+      else setTimeout(refresh, 0);
+      return WHATS_NEW;
+    });
+
+  function newestWhatsNewId() {
+    return WHATS_NEW[0]?.id || '';
+  }
 
   function whatsNewSeen() {
-    try { return window.localStorage.getItem(WHATS_NEW_SEEN_KEY) || ''; } catch (error) { return WHATS_NEW[0].id; }
+    try { return window.localStorage.getItem(WHATS_NEW_SEEN_KEY) || ''; } catch (error) { return newestWhatsNewId(); }
+  }
+
+  function markWhatsNewSeen() {
+    if (!newestWhatsNewId()) return;
+    try { window.localStorage.setItem(WHATS_NEW_SEEN_KEY, newestWhatsNewId()); } catch (error) { /* per browser only */ }
+    syncWhatsNewDot();
   }
 
   function syncWhatsNewDot() {
     const link = document.querySelector('[data-shell-id="whats-new"]');
     if (!link) return;
-    const unread = whatsNewSeen() !== WHATS_NEW[0].id;
+    const unread = Boolean(newestWhatsNewId()) && whatsNewSeen() !== newestWhatsNewId();
     link.classList.toggle('has-unread', unread);
     link.querySelector('.es-nav-item__dot')?.remove();
     if (unread) link.insertAdjacentHTML('beforeend', '<span class="es-nav-item__dot" aria-label="Unread"></span>');
@@ -435,7 +437,8 @@
       && (entry.templates || []).some(([ws, id]) => ws === workspace && id === value));
   }
 
-  function openWhatsNew() {
+  async function openWhatsNew() {
+    await whatsNewReady;
     document.querySelectorAll('.whats-new-dialog').forEach(stale => stale.remove());
     const dialog = document.createElement('dialog');
     dialog.className = 'es-dialog whats-new-dialog';
@@ -450,21 +453,27 @@
     const list = dialog.querySelector('.whats-new-list');
     const seen = whatsNewSeen();
     let reachedSeen = false;
+    if (!WHATS_NEW.length) {
+      const empty = document.createElement('p');
+      empty.textContent = 'Release notes could not load. Try again in a moment.';
+      list.appendChild(empty);
+    }
     WHATS_NEW.forEach(entry => {
       if (entry.id === seen) reachedSeen = true;
       const section = document.createElement('section');
       section.className = 'whats-new-entry';
+      section.dataset.entryId = entry.id;
       if (!reachedSeen && seen) section.classList.add('is-unread');
       const date = document.createElement('h3');
       date.textContent = format(entry.date);
       if (section.classList.contains('is-unread')) date.insertAdjacentHTML('beforeend', '<span class="es-badge es-badge--new">New</span>');
       const items = document.createElement('ul');
-      entry.items.forEach(([title, text]) => {
+      entry.items.forEach(({ title, text }) => {
         const item = document.createElement('li');
         const strong = document.createElement('strong');
-        strong.textContent = title;
+        strong.textContent = title || '';
         const copy = document.createElement('span');
-        copy.textContent = text;
+        copy.textContent = text || '';
         item.append(strong, copy);
         items.appendChild(item);
       });
@@ -475,9 +484,10 @@
     dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
     dialog.addEventListener('close', () => dialog.remove());
     document.body.appendChild(dialog);
+    // Tours add "Show me" and "Take the tour" here (tours/tour-launcher.js).
+    window.dispatchEvent(new CustomEvent('frameup:whatsnew-open', { detail: { dialog, entries: WHATS_NEW } }));
     dialog.showModal();
-    try { window.localStorage.setItem(WHATS_NEW_SEEN_KEY, WHATS_NEW[0].id); } catch (error) { /* per browser only */ }
-    syncWhatsNewDot();
+    markWhatsNewSeen();
   }
 
   // "New" tag on recently added templates in the editor's dropdowns.
@@ -491,7 +501,13 @@
     });
     try { if (typeof window.syncAllCustomSelects === 'function') window.syncAllCustomSelects(); } catch (error) { /* labels only */ }
   }
-  window.FrameUpWhatsNew = Object.freeze({ open: openWhatsNew, isNewTemplate, entries: WHATS_NEW });
+  window.FrameUpWhatsNew = Object.freeze({
+    open: openWhatsNew,
+    isNewTemplate,
+    ready: whatsNewReady,
+    markSeen: markWhatsNewSeen,
+    get entries() { return WHATS_NEW; },
+  });
 
   // Collapsed state is remembered separately for editors and for other pages.
   function collapseKey() {
