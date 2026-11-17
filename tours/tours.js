@@ -59,14 +59,15 @@
     kicker: 'Welcome',
     icon: I.map,
     steps: [
-      { target: '.es-sidebar__section--ai', media: DESKTOP, placement: 'right', icon: I.sparkles, title: 'AI Studio', text: 'Posts from a brief, live trends and video ads.' },
+      { target: '.es-sidebar__section--ai', media: DESKTOP, placement: 'right', icon: I.sparkles, title: 'AI Studio', text: 'Posts from a brief, live trends, video ads and reels.' },
       { target: '.es-sidebar__section--create', media: DESKTOP, placement: 'right', icon: I.grid, title: 'Create', text: 'The editors: Social Media, YouTube, Newsletter and Reels.' },
-      { target: '.es-sidebar__section--work', media: DESKTOP, placement: 'right', icon: I.briefcase, title: 'Work', text: 'Request a design from the team, or browse the Gallery.' },
+      { target: '.es-sidebar__section--work', media: DESKTOP, placement: 'right', icon: I.briefcase, title: 'Work', text: 'Request a design, follow your requests, or browse the Gallery.' },
       { target: '.navbar .mobile-menu-toggle', media: PHONE, icon: I.menu, title: 'Menu', text: 'Every tool lives here.' },
       { target: '[data-shell-palette]', media: DESKTOP, placement: 'right', icon: I.search, title: 'Search', text: 'Jump to any page, template or action. Press ⌘K or /.' },
       { target: '.es-sidebar [data-shell-usage]', media: DESKTOP, placement: 'right', icon: I.gauge, title: 'AI usage', text: 'Your AI spend this week, out of $20. It resets every Monday.' },
       { target: ['.es-sidebar__account', '.navbar .profile-trigger'], placement: 'right', icon: I.user, title: 'Your profile', text: 'Profile, light or dark, the UI Library, and these tours.' },
-      { page: 'index.html', pageLabel: 'Home', route: '#frames', navTarget: '.es-sidebar [data-shell-id="frames"]', target: '#frame-instagram', icon: I.home, title: 'Pick a workspace', text: 'Each card opens an editor with the approved sizes and layouts.' },
+      { page: 'index.html', pageLabel: 'Home', route: '#frames', navTarget: '.es-sidebar [data-shell-id="frames"]', target: ['#home-today', '#frame-instagram'], icon: I.home, title: 'Today', text: 'Your requests, drafts, team exports and live trends, one glance each morning.' },
+      { page: 'index.html', route: '#frames', target: '#frame-instagram', icon: I.grid, title: 'Pick a workspace', text: 'Each card opens an editor with the approved sizes and layouts.' },
       { page: 'index.html', route: '#instagram', target: ['.canvas-wrap', '.canvas-stage'], icon: I.image, title: 'Canvas', text: 'Your design, live. Click any text or photo to edit it.' },
       { page: 'index.html', target: ['.app > .panel', '.studio-control-dock'], media: DESKTOP, placement: 'left', icon: I.sliders, title: 'Inspector', text: 'Post type, text, photos and colours. Changes show instantly.' },
       { page: 'index.html', target: '.mobile-editor-nav', media: PHONE, icon: I.sliders, title: 'Edit', text: 'Content, photos, format and brand. Tap a tab to open it.' },
@@ -75,7 +76,7 @@
       { page: 'generate.html', target: ['.es-sidebar [data-shell-id="trends"]', '#gen-empty'], placement: 'right', icon: I.trending, title: 'Trends', text: 'What US fans read right now. Turn any trend into a design.' },
       { page: 'video-ads.html', pageLabel: 'Video Ads', navTarget: '.es-sidebar [data-shell-id="video-ads"]', target: '.va-steps', icon: I.video, title: 'Video Ads', text: 'Copy, Clip, Export. Ask AI writes and checks the copy.' },
       // Only admins see the Dashboard link; hidden links are skipped.
-      { target: '.es-sidebar [data-shell-id="dashboard"]', media: DESKTOP, placement: 'right', icon: I.dashboard, title: 'Dashboard', text: 'Team activity, exports and AI spend. Admins only.' },
+      { target: '.es-sidebar [data-shell-id="dashboard"]', media: DESKTOP, placement: 'right', icon: I.dashboard, title: 'Dashboard', text: 'What needs attention, team activity, exports and AI spend. Admins only.' },
       { icon: I.flag, title: 'You’re all set', text: 'Replay this or any page tour from your profile menu.', nextLabel: 'Done' },
     ],
   });

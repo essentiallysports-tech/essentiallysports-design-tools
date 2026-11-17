@@ -17,6 +17,27 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-19 — Team workflow heroes: Today on Home, Gallery filters, request next steps, Needs attention (branch feature/hero-workflow)
+- Status: `[committed on feature/hero-workflow - not pushed]`
+- Audit: `project-docs/hero-audit-hero-workflow.md`.
+- **Home → Today** (`frameup-home-today.js` + `.css`, one section added inside the Home `<main>` of index.html; editor untouched). It has quick actions (Generate, Video Ads, Reels Studio, Request a design) and four cards:
+  - Trending now: free `GET /api/trend-design`, sport chips remembered per browser, and "Design this" opens Generate with `autorun=0`.
+  - My requests: open requests I filed or am assigned, overdue first.
+  - Team exports: Gallery RPC, 6 thumbnails.
+  - My drafts: `frameup_drafts`; the button opens the existing drafts dialog.
+
+  It loads after first paint, only on Home, with session caches of 2–10 min.
+- **Gallery** (`frameup-gallery-query.js`):
+  - every-word search, a Created-by select, and Posted / Not posted yet chips;
+  - filters in the URL (`?q=&ws=&type=&by=&posted=`), Clear filters, `/` to search;
+  - "Make another like this" in the viewer: Generate with a brief from the post's own fields, `autorun=0`.
+- **Requests:** `request-lifecycle.js` `nextStep()` drives a "Next step" bar (claim / assign / start / attach / send for review / mark done / ask for a change) and a "Your move" badge in the list. Also added: Due soon, Up/Down keys, and a refresh when you return to the tab after 60 s or more. "Save changes" is now secondary.
+- **Dashboard → Overview → Needs attention** (`dashboard-insights.js` + `.css`): overdue, unassigned, due in 24 h, stuck in review, pending access, bug reports, error spikes, export swings (only with enough volume) and quiet regulars. All counts come from data already loaded.
+- **Sidebar:** NEW tags come from each item's `added` date (14 days). Generate and Gallery lost theirs; My requests gained one.
+- **Performance:** the presence heartbeat is throttled (8 → 2 writes in the first 6 s of a page view). Dashboard live sync no longer repeats the presence upsert, and has a 10 s minimum gap.
+- **Tours:** the welcome tour mentions Today, reels, My requests and Needs attention. Release note `2026-11-19-hero-workflow` added.
+- Cache keys `20261118-hero-workflow`: app-shell, dashboard-data, request-lifecycle, requests.js/css and tours.js on every page **except reel-maker.html** (owned by the Reels branch; bump it at release).
+- Tests: `scripts/test-hero-workflow.mjs` (22).
 ### 2026-11-18 — Generate: the creative director first, ES guidelines, Bring it on-brand (branch feature/generate-director)
 - Status: `[committed on feature/generate-director - not pushed]`
 - **Director first.** Generate now asks the director for 2-4 named directions (`POST /api/es-generate {mode:'direct'}`):
