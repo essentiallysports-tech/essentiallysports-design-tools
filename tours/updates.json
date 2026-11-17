@@ -3,6 +3,38 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-19-hero-trends",
+      "date": "2026-11-19",
+      "title": "Trends: what to post now",
+      "commit": "6cde4b7",
+      "items": [
+        {
+          "title": "Post now",
+          "text": "Trends opens on the top stories across sports, one per storyline, with Hot and Rising badges and why each matters now.",
+          "page": "generate.html",
+          "target": "#trends-body"
+        },
+        {
+          "title": "Storylines",
+          "text": "Seven outlets on the same story are now one card, with the rest folded under it.",
+          "page": "generate.html",
+          "target": "#trends-body"
+        },
+        {
+          "title": "Post kit",
+          "text": "One click: 3 headlines, the best template, a photo search, a reel hook and the video ad moment, with Make a reel, Video ad and Copy kit.",
+          "page": "generate.html",
+          "target": "#trends-body"
+        },
+        {
+          "title": "Your newsletter, your way",
+          "text": "Pick The Huddle, Essentially CFB or ES Dugout, switch to a compact list, and use the keyboard (press ? for shortcuts). Saved is now a Shortlist you can copy for the team.",
+          "page": "generate.html",
+          "target": "#trends-brand"
+        }
+      ]
+    },
+    {
       "id": "2026-11-18-director",
       "date": "2026-11-18",
       "title": "The creative director, ES guidelines and Bring it on-brand",

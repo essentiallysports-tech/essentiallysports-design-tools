@@ -17,6 +17,23 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-18 — Trends becomes the morning board: Post now, storylines, post kit (branch `feature/hero-trends`)
+- Status: `[committed on feature/hero-trends, not pushed]`
+- Audit: `project-docs/hero-audit-trends.md` (one real feed walked as a social editor).
+- **Server** (`netlify/functions/trend-design.js`, all additive to the feed):
+  - **Storylines**: stories in one sport sharing a person, team or running story ("Bryson DeChambeau", "Power rankings") get `storyline {id,label,size,lead}`; leads rank up to 1.6× by size; `storylines[]` in the reply.
+  - **Signals**: `signal: 'hot' | 'rising'` (50K+ searches / 6+ outlets in 12 h; more outlets than the last build, or 2+ outlets within 3 h). Leads only. Rules, no AI.
+  - **ES fit**: `fit {score 0-100, brand}` (The Huddle / Essentially CFB / ES Dugout from `video-ads-brands.js`); `brands[]` in the reply.
+  - **Post kit, free half**: `template {id,label,why}` (Generate format ids: cover / quote / long-quote / stats-single-ent / listicle-type-2) and `photo {query,kind}` (Wikipedia-confirmed subject, star list, two-word name, team, storyline).
+  - **AI** (`mode:'enrich'`, light tier, batched, unchanged contract + `hook`): ES-voice prompt, adds a reel hook; every number in AI copy must be in the story and clickbait words are dropped (`grounded`); cache 45 min → 6 h (ids are content hashes).
+  - Quality: quick ideas reject source names, bare names and dependent fragments; noise filter drops TV listings, photo galleries, video games, expert picks; classifier knows QB and more coaches/players; Wikipedia images must match the asked name (no more "Saved game" for "Chad Ramey Saves").
+- **Page**: the Trends script and CSS moved out of `generate.html` into `trends-view.js`, `trends-logic.js` (UMD, pure) and `trends.css` (the Generate view is untouched; the toolbar markup changed).
+  - **Post now** (top 5 across sports, one per storyline, max 2 per sport, "why now" line), then each sport with storylines folded under their lead.
+  - **Post kit** per card (button or P): 3 headlines (AI or quick ideas; copy / use), template with its thumbnail and "Design as …" (selects Generate's format card), photo query + team logo, reel hook + **Make a reel** (`frameup.reelMoment.v1` + `?moment=&sport=&team=&trend=`), video ad moment + brand, **Copy kit**.
+  - Newsletter filter, Cards / compact list toggle (remembered), Hot / Rising badges, age colours, keyboard (J/K, P, D, R, V, S, C, O, ?), "Saved" → **Shortlist** (same storage key) with Copy list / Clear + Undo.
+  - **AI cost**: no AI on load (unchanged) and **no AI on hover/focus any more**; only an opened kit (1 story), a card's AI angles, or the toolbar (≤6 stories, picks first). Browser cache sessionStorage → localStorage 6 h.
+- Tours: Trends tour steps updated (Post now, Post kit); `tours/tours.js` key bumped to `20261118-hero-trends` on 11 pages (not `reel-maker.html`, owned by the Reels branch). Release note `2026-11-19-hero-trends`.
+- Tests: `scripts/test-trends-hero.mjs` (18 checks, chained into `npm run test:trend-design`). No migration, no new env vars.
 ### 2026-11-18 — Generate: the creative director first, ES guidelines, Bring it on-brand (branch feature/generate-director)
 - Status: `[committed on feature/generate-director - not pushed]`
 - **Director first.** Generate now asks the director for 2-4 named directions (`POST /api/es-generate {mode:'direct'}`):
