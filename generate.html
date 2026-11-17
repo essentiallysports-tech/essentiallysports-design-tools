@@ -52,6 +52,9 @@
 <script src="tours/tours.js?v=20261117-tour1"></script>
 <script src="tours/tour-launcher.js?v=20261117-tour1"></script>
 <script src="league-logos.js?v=20261117-logo1"></script>
+<link rel="stylesheet" href="frameup-posted.css?v=20261118-impact-posted-links">
+<script src="frameup-impact.js?v=20261118-impact-posted-links"></script>
+<script src="frameup-posted.js?v=20261118-impact-posted-links"></script>
   <style>
     html:not([data-theme="dark"]) body.gen-body { background: #fff; }
     .gen-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 32px 0 72px; font-family: var(--es-font-ui); color: var(--es-ink); }
@@ -1611,6 +1614,7 @@
           const cards = data.designs.map(buildCard);
           els.grid.replaceChildren(...cards);
           rememberBrief(brief);
+          window.FrameUpPosted?.markGenerateRun?.({ count: cards.length, format: chosen });
           for (const card of cards) await paint(card);
           const seconds = progress.stop();
           setSummary(`${modeBadges(data)}<span><strong data-es-tick="gen-count">${cards.length} design${cards.length === 1 ? '' : 's'}</strong> · ${Math.max(1, Math.round(seconds))}s</span>`);
@@ -1666,6 +1670,8 @@
           button.innerHTML = '<span class="gen-spinner" aria-hidden="true"></span>';
           try {
             await (await renderer()).exportSpec(spec);
+            // "Posted it?" card + export event (frameup-posted.js).
+            window.FrameUpPosted?.exported?.({ source: 'generate', title: (spec.lines || []).join(' ') || spec.title || spec.label, template: spec.label || spec.postType, style: spec.postType, brand: 'essentiallysports', aiMade: 'generate' });
             // Say it worked, then bring the results summary back.
             const previous = els.summary.innerHTML;
             setSummary(`<span>${window.FrameUpMotion ? window.FrameUpMotion.check() : ''}<strong>PNG downloaded.</strong></span>`);

@@ -2235,6 +2235,10 @@
     setStatus(els.exportStatus, format.ext === 'mp4'
       ? 'Downloaded ' + filename
       : 'Downloaded ' + filename + ' — this browser can\'t encode MP4 directly, so it fell back to WebM.', 'good');
+    // "Posted it?" card + export event (frameup-posted.js).
+    if (window.FrameUpPosted && window.FrameUpPosted.exported) {
+      window.FrameUpPosted.exported({ source: 'reels', title: filename, template: 'Captioned reel', style: 'captions', brand: 'essentiallysports', filename: filename });
+    }
   }
 
   function downloadSrt() {
