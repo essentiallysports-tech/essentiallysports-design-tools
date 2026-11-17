@@ -277,6 +277,35 @@
       ]
     },
     {
+      "id": "2026-11-19-reels-quality",
+      "date": "2026-11-19",
+      "title": "Reels Studio: the real ES logo, the best clips, sharper styles",
+      "commit": "1503d36",
+      "items": [
+        {
+          "title": "The real ES logo",
+          "text": "Every reel carries the official ES mark top-right at its guideline size and clear space, and end cards use the official wordmark. A check stops export if the logo is missing or moved.",
+          "page": "reel-maker.html"
+        },
+        {
+          "title": "Best clip for each beat",
+          "text": "Clips are ranked for each beat: who is on screen, how fresh, how sharp, official first. With AI on, a vision check looks at a few frames (about a cent a reel) and the best part of the clip is used.",
+          "page": "reel-maker.html"
+        },
+        {
+          "title": "Pro motion",
+          "text": "Headlines rise in word by word, beats push, wipe or flip into each other, numbers count up, and a light grain and vignette finish every frame.",
+          "page": "reel-maker.html"
+        },
+        {
+          "title": "Clip sound is muted",
+          "text": "Clips play muted under the voice and music. Turn on Original clip audio under Music to keep their sound, low and ducked under the voice.",
+          "page": "reel-maker.html",
+          "target": "#rm-clip-audio"
+        }
+      ]
+    },
+    {
       "id": "2026-11-18-director",
       "date": "2026-11-18",
       "title": "The creative director, ES guidelines and Bring it on-brand",

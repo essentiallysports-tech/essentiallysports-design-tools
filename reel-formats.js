@@ -218,7 +218,7 @@
     aiClipPerSecond: 0.03, // google/veo-3.1-lite-generate-001, 720p, no audio
     aiClipSeconds: 4,
   };
-  function estimateCost({ tier = 'standard', factCheck = false, voiceMode = 'off', voiceModel = '', voChars = 450, revisions = 0, musicSeconds = 0, clipSearches = 0, scenes = 0, aiClips = 0, longForm = false } = {}) {
+  function estimateCost({ tier = 'standard', factCheck = false, voiceMode = 'off', voiceModel = '', voChars = 450, revisions = 0, musicSeconds = 0, clipSearches = 0, scenes = 0, aiClips = 0, longForm = false, clipJudge = 0 } = {}) {
     const base = tier === 'economy' ? PRICES.directorHaiku : PRICES.directorHaiku + 0.35 * PRICES.directorSonnet; // standard escalates to Sonnet only on a weak plan
     const director = longForm ? base * 2.2 : base; // a 90-120 s script is about twice the tokens
     const perChar = voiceMode === 'off' ? 0 : (PRICES.voiceModels[voiceModel] ?? PRICES.voicePerChar[voiceMode] ?? 0);
@@ -227,6 +227,7 @@
       { id: 'factcheck', label: 'Fact check (2 searches, capped)', usd: factCheck ? PRICES.factCheckCap : 0 },
       { id: 'voice', label: voiceMode === 'off' ? 'Voiceover (captions only)' : 'Voiceover + caption timing', usd: perChar * Math.max(0, voChars) + (PRICES.alignPerSecond[voiceMode] || 0) * (Math.max(0, voChars) / 15) },
       ...(clipSearches ? [{ id: 'clips', label: `Find official X clips (${clipSearches} search${clipSearches > 1 ? 'es' : ''}, often cached)`, usd: clipSearches * PRICES.clipSearch }] : []),
+      ...(clipJudge ? [{ id: 'clipjudge', label: 'Pick the best clips (vision check, capped at $0.10, cached per clip)', usd: clipJudge }] : []),
       ...(aiClips ? [{ id: 'aiclips', label: `AI b-roll clips (${aiClips} × ${PRICES.aiClipSeconds} s)`, usd: aiClips * PRICES.aiClipSeconds * PRICES.aiClipPerSecond }] : []),
       ...(scenes ? [{ id: 'scenes', label: `AI scene images (${scenes})`, usd: scenes * PRICES.sceneImage }] : []),
       { id: 'revise', label: 'Revisions', usd: revisions * PRICES.revise },
@@ -237,6 +238,33 @@
     return { lines, total: Math.round(total * 10000) / 10000 };
   }
   const money = usd => (usd < 0.01 ? `$${(Math.max(0, usd)).toFixed(3)}` : `$${usd.toFixed(2)}`);
+
+  // ─── Music library ───────────────────────────────────────────────────────
+  // The shared FrameUp audio library (audio-library.json, tracks in
+  // assets/audio/, licence { organic, paid }) first, else reels-music.json
+  // (licence text + organic / paid flags). Either shape becomes
+  //   { id, title, artist, src, mood, sports, licence: text, organic, paid }
+  // and a track without a licence or a same-origin file is dropped, so the
+  // rights checks (organic / paid) always have something to read.
+  const MUSIC_FILES = ['audio-library.json', 'reels-music.json'];
+  function musicTracks(data) {
+    const list = Array.isArray(data) ? data : (data && Array.isArray(data.tracks) ? data.tracks : []);
+    return list.map(t => {
+      if (!t || !t.id || !t.src) return null;
+      const src = String(t.src);
+      if (/^(?:[a-z]+:)?\/\//i.test(src) || /^data:/i.test(src)) return null; // same origin only (the mix reads the bytes)
+      const lic = t.licence && typeof t.licence === 'object' ? t.licence : null;
+      const text = String(lic ? (lic.name || lic.text || lic.label || lic.source || lic.id || '') : (t.licence || '')).trim();
+      const organic = lic ? lic.organic === true : t.organic !== false;
+      const paid = lic ? lic.paid === true : t.paid === true;
+      const licence = text || (lic ? 'FrameUp audio library' : '');
+      if (!licence) return null;
+      return {
+        id: String(t.id).slice(0, 60), title: String(t.title || t.name || t.id).slice(0, 80), artist: String(t.artist || t.library || '').slice(0, 60),
+        src, mood: String(t.mood || ''), sports: Array.isArray(t.sports) ? t.sports : [], licence, organic, paid,
+      };
+    }).filter(Boolean);
+  }
 
   // ─── Clips vs images (Suhail: "80% clips and 20% images") ─────────────
   // Decides per beat whether the picture is a clip or a still, so about
@@ -379,6 +407,7 @@
     SPORTS, KINDS, STORY_KINDS, COMPONENT_KINDS, VISUALS, SCENES, FORMATS, FORMAT_IDS, KIND_LABELS, PACE, ROUTES, PRICES,
     routeFormat, numbersIn, numberSet, normNumber, unsourcedNumbers, structuralNumbers, numberFields, planNumberFields, unsourcedPlanNumbers,
     planVisualMix, scenePrompt, colorWord,
+    MUSIC_FILES, musicTracks,
     words, wordCount, estimateVoMs, estimateCost, money, statsIn, sentences, trimWords, fallbackPlan,
   };
 }));

@@ -81,7 +81,7 @@
       palette: { bg: '#ECEAE6', paper: '#ECEAE6', panel: '#FFFFFF', ink: '#111214', muted: '#62656D', line: '#C9C6C0', accent: '#1F6FEB', hi: '#FFD23F', hiInk: '#111214', good: '#1E9E5A', bad: '#D93A2F', chip: '#111214', chipInk: '#FFFFFF', mystery: '#D6D3CD', rule: '#1F6FEB', texture: 'dots' },
       type: { display: CONDENSED, label: LABEL, body: BODY, headline: [104, 72], stat: [320, 160], cardValue: [96, 64], labelSize: 32, eyebrow: 28, bodySize: 32, caption: [68, 52] },
       caption: { mode: 'block', box: '#111214', ink: '#FFFFFF', active: '#FFD23F' },
-      motion: { enter: 'rise', durMs: 420, stagger: 40, transition: 'slide', transitionMs: 260 },
+      motion: { enter: 'rise', durMs: 420, stagger: 40, transition: 'slide', transitionMs: 420 }, // a push: out-going beat leaves left, the next arrives composed
       chrome: { bug: false, eyebrow: true, badge: 'top-right', seriesTag: false, strip: false, rail: false },
       emphasis: 'highlight', // one word on a yellow highlight
       visual: 'inset', cutout: true,
@@ -100,7 +100,7 @@
       palette: { bg: '#E8E7E3', paper: '#E8E7E3', panel: '#FFFFFF', ink: '#111214', muted: '#5E6168', line: '#111214', accent: '#1F6FEB', hi: '#FFD23F', hiInk: '#111214', good: '#1E9E5A', bad: '#D93A2F', chip: '#FFD23F', chipInk: '#111214', mystery: '#D3D1CB', rule: '#111214', texture: 'grid' },
       type: { display: CONDENSED, label: LABEL, body: BODY, headline: [96, 68], stat: [300, 150], cardValue: [112, 68], labelSize: 30, eyebrow: 26, bodySize: 30, caption: [64, 50] },
       caption: { mode: 'block', box: '#111214', ink: '#FFFFFF', active: '#FFD23F' },
-      motion: { enter: 'wipe', durMs: 420, stagger: 60, transition: 'wipe', transitionMs: 260 },
+      motion: { enter: 'wipe', durMs: 420, stagger: 60, transition: 'wipe', transitionMs: 380 }, // a left-to-right wipe behind an ink bar
       chrome: { bug: false, eyebrow: false, badge: 'top-right', seriesTag: true, strip: true, rail: false },
       emphasis: 'color', // the emphasis word (or the second line) turns red
       visual: 'inset', cutout: true,
@@ -119,7 +119,7 @@
       palette: { bg: '#0D1220', paper: '#0D1220', panel: '#161D30', ink: '#FFFFFF', muted: 'rgba(255,255,255,0.74)', line: 'rgba(255,255,255,0.2)', accent: '#2F80ED', hi: '#F2B33D', hiInk: '#0D1220', good: '#2FB36B', bad: '#E5484D', chip: '#F2B33D', chipInk: '#0D1220', mystery: '#232B40', rule: '#F2B33D', texture: 'lines' },
       type: { display: CONDENSED, label: LABEL, body: BODY, headline: [104, 72], stat: [300, 150], cardValue: [104, 68], labelSize: 32, eyebrow: 28, bodySize: 34, caption: [88, 62] },
       caption: { mode: 'highlight' },
-      motion: { enter: 'flip', durMs: 460, stagger: 50, transition: 'flip', transitionMs: 300 },
+      motion: { enter: 'flip', durMs: 460, stagger: 50, transition: 'flip', transitionMs: 380 }, // the last card lifts away, the next flips in
       chrome: { bug: false, eyebrow: false, badge: 'top-right', seriesTag: false, strip: false, rail: true },
       emphasis: 'highlight',
       visual: 'card', cutout: false,
