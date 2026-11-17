@@ -1029,6 +1029,8 @@
     }
     if (id === 'copy') {
       if (state.draftsStatus === 'loading') return 'Writing…';
+      const need = S.isNew(state.style) ? S.styleReady(state.style, resolvedCopy()) : { ok: true };
+      if (!need.ok) return `Needs ${need.missing}`;
       if (current && !current.fits) return 'Too long';
       return stepDone('copy') ? (B.STYLES[state.style]?.label || 'Done') : 'Write the words';
     }
@@ -2549,7 +2551,8 @@
     renderGrid();
     const styles = gridStyles();
     const n = state.exportIds.length * styles.length;
-    const tooLong = styles.flatMap(st => state.exportIds.filter(id => !layoutFor(id, { ...state, style: st }).fits).map(id => `${B.STYLES[st].label} ${id.replace('x', ':')}`));
+    // A style missing its facts says so below; "too long" is only for styles that are ready.
+    const tooLong = styles.filter(st => gridReady(st).ok).flatMap(st => state.exportIds.filter(id => !layoutFor(id, { ...state, style: st }).fits).map(id => `${B.STYLES[st].label} ${id.replace('x', ':')}`));
     const notReady = styles.map(st => ({ st, r: gridReady(st) })).filter(x => !x.r.ok);
     const notes = [];
     if (!hasClip()) notes.push(`<div class="va-notice">${ICON.film}<span><b>No clip yet.</b> Add one, or use an animated background: ${S.isNew(state.style) ? 'this style needs no footage.' : 'no footage needed.'}</span><span class="va-notice__acts"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="make-animated">Animated background</button><button class="es-btn es-btn--sm" type="button" data-act="to-clip">Find a clip</button></span></div>`);

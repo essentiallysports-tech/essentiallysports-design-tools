@@ -1760,7 +1760,8 @@ html:not([data-theme="dark"]) .va-rail__sw[aria-checked="true"] { box-shadow: 0 
 .va-grid-styles[hidden] { display: none; }
 .va-grid-styles .va-chip[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
 .va-grid-names code { padding: 1px 5px; border-radius: 5px; background: var(--va-sunk); color: var(--va-ink); font: 500 12px/1.4 var(--es-font-ui); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.va-notice__acts { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); }
+.va-notice:has(.va-notice__acts) { flex-wrap: wrap; }
+.va-notice > .va-notice__acts { display: flex; flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-end; gap: var(--es-space-2, 8px); }
 #va-rights-row[hidden] { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
