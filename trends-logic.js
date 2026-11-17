@@ -259,6 +259,35 @@
     return hit[1];
   }
 
+  // ── Row actions (UI): one fixed set, in one order, on every card and list
+  // row, in both layouts. An action that doesn't apply stays in its slot,
+  // disabled, with the reason, so the columns never shift.
+  const ROW_ACTIONS = [
+    { id: 'kit', label: 'Post kit', key: 'p', tip: 'Headlines, template, photo, reel hook' },
+    { id: 'reel', label: 'Reel', key: 'r', tip: 'Make a reel' },
+    { id: 'video', label: 'Video ad', key: 'v', tip: 'Make a video ad' },
+    { id: 'shortlist', label: 'Shortlist', key: 's', tip: 'Add to the shortlist' },
+    { id: 'open', label: 'Read', key: 'o', tip: 'Read the story' },
+  ];
+  const VIDEO_NA = 'Video ads are made for NFL, College Football and MLB.';
+  function rowActions(item, { saved = false } = {}) {
+    return ROW_ACTIONS.map(a => {
+      const out = { ...a, available: true, reason: '' };
+      if (a.id === 'video' && !AD_SPORTS.includes(item && item.category)) { out.available = false; out.reason = VIDEO_NA; }
+      if (a.id === 'shortlist' && saved) { out.label = 'Shortlisted'; out.tip = 'Remove from the shortlist'; }
+      if (a.id === 'open' && !/^https?:\/\//i.test(String((item && item.url) || ''))) { out.available = false; out.reason = 'No link for this story.'; }
+      return out;
+    });
+  }
+  // A Wikipedia "photo" that is really a crest or wordmark (an SVG render, or
+  // "logo" in the file name) is shown whole on a light tile, never cropped.
+  function isLogoImage(item) {
+    if (!item || !item.image) return false;
+    if (item.imageKind === 'logo') return true;
+    if (item.imageKind === 'photo') return /(?:^|[\/_.-])(?:logo|crest|wordmark|emblem)s?(?:[_.-]|$)|\.svg(?:\.png)?(?:[?#]|$)/i.test(String(item.image).split('?')[0]);
+    return false;
+  }
+
   return {
     SHORT, AD_SPORTS, REEL_SPORTS, KEYS, BRANDS, TEMPLATES, AI_TTL_MS, SHORTCUTS,
     isFresh, ago, agoLong, freshness, brandList, brandOf, matchesBrand,
@@ -266,5 +295,6 @@
     briefFor, videoHandoff, reelHandoff,
     templateFor, photoFor, kitFor, kitText, shortlistText,
     readAiCache, writeAiCache, shortcut,
+    ROW_ACTIONS, VIDEO_NA, rowActions, isLogoImage,
   };
 });

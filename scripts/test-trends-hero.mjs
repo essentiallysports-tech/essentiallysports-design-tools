@@ -127,6 +127,31 @@ ok('keyboard shortcuts never fire while typing or with modifiers', () => {
   assert.equal(L.shortcut(ev('x')), null);
 });
 
+ok('row actions: one fixed set and order; n/a stays in its slot', () => {
+  const ids = item => L.rowActions(item).map(a => a.id);
+  const order = ['kit', 'reel', 'video', 'shortlist', 'open'];
+  assert.deepEqual(ids(story('a', 'golf', 1)), order);
+  assert.deepEqual(ids(story('b', 'nfl', 1)), order, 'same slots for every sport');
+  const golf = L.rowActions(story('a', 'golf', 1));
+  assert.equal(golf.find(a => a.id === 'video').available, false);
+  assert.match(golf.find(a => a.id === 'video').reason, /NFL, College Football and MLB/);
+  assert.equal(L.rowActions(story('b', 'nfl', 1)).find(a => a.id === 'video').available, true);
+  assert.equal(L.rowActions(story('c', 'mlb', 1), { saved: true }).find(a => a.id === 'shortlist').label, 'Shortlisted');
+  assert.equal(L.rowActions(story('d', 'nfl', 1, { url: 'javascript:alert(1)' })).find(a => a.id === 'open').available, false);
+  // Every action's key is a real shortcut with the same meaning.
+  for (const a of L.ROW_ACTIONS) assert.equal(L.SHORTCUTS.find(([k]) => k === a.key)[1], a.id === 'shortlist' ? 'shortlist' : a.id, a.id);
+});
+
+ok('logo images are shown whole, photos are cropped', () => {
+  const wiki = f => `https://upload.wikimedia.org/wikipedia/commons/thumb/x/${f}/330px-${f}.png?utm_source=x`;
+  assert.equal(L.isLogoImage({ image: wiki('Los_Angeles_Chargers_logo.svg'), imageKind: 'photo' }), true);
+  assert.equal(L.isLogoImage({ image: wiki('Nd_athletics_gold_logo_2015.svg'), imageKind: 'photo' }), true);
+  assert.equal(L.isLogoImage({ image: 'https://x/Tiger_Woods_2018.jpg', imageKind: 'photo' }), false);
+  assert.equal(L.isLogoImage({ image: 'https://x/Catalogue_2019.jpg', imageKind: 'photo' }), false, '"logo" inside a word is not a logo');
+  assert.equal(L.isLogoImage({ image: 'https://x/a.jpg', imageKind: 'logo' }), true);
+  assert.equal(L.isLogoImage({ imageKind: 'logo' }), false, 'no image, no logo');
+});
+
 // ── 2. trend-design.js ──────────────────────────────────────────────────
 ok('storylines: shared people and running stories, labels, leads', () => {
   const list = [
@@ -229,6 +254,19 @@ ok('generate.html loads the Trends view and its CSS with the branch cache key', 
   for (const tag of [/trends\.css\?v=[\w-]+/, /trends-logic\.js\?v=[\w-]+/, /trends-view\.js\?v=[\w-]+/]) assert.match(html, tag);
   for (const id of ['trends-live', 'trends-filters', 'trends-body', 'trends-empty', 'trends-brand', 'trends-density', 'trends-keys', 'trends-keys-panel', 'trends-ai', 'trends-refresh']) assert.ok(html.includes(`id="${id}"`), id);
   assert.ok(html.indexOf('trends-logic.js') < html.indexOf('trends-view.js'));
+});
+
+ok('Trends UI: one action set in both layouts, menu, storyline toggle', () => {
+  const view = fs.readFileSync(path.join(ROOT, 'trends-view.js'), 'utf8');
+  assert.match(view, /L\.rowActions\(item/);
+  assert.ok(!/canVideo \?/.test(view), 'no action is dropped per row');
+  assert.match(view, /aria-haspopup="menu"/);
+  assert.match(view, /data-story-toggle aria-expanded/);
+  assert.ok(!/class="trend-row ais-card/.test(view), 'no always-on gradient rim');
+  const css = fs.readFileSync(path.join(ROOT, 'trends.css'), 'utf8');
+  assert.match(css, /\.trend-title \{[^}]*-webkit-line-clamp: 2/);
+  assert.match(css, /@container \(max-width: 800px\)[\s\S]*td-more-btn/);
+  assert.match(css, /\.td-toolbar \.es-btn \{ --es-btn-h: var\(--td-ctl\)/);
 });
 
 ok('AI never on load or hover: only a kit, a card button or the toolbar asks', () => {
