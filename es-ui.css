@@ -1973,3 +1973,10 @@ html .es-sidebar__foot { border-top: 0 !important; }
 /* Admin-only links (data-shell-admin) carry the hidden attribute until the
    role check passes; .es-nav-item's display:flex must not override it. */
 .es-nav-item[hidden], .es-mobile-nav__item[hidden], [data-shell-admin][hidden] { display: none !important; }
+
+/* Design requests paused (app-shell.js FEATURES.requests): hide every entry point. */
+html.fu-requests-off a[href$="design-request.html"],
+html.fu-requests-off a[href*="design-request.html?"],
+html.fu-requests-off a[href$="requests.html"],
+html.fu-requests-off a[href*="requests.html?"],
+html.fu-requests-off [data-today="requests"] { display: none !important; }

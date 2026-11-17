@@ -266,7 +266,7 @@
       const user = await me();
       const jobs = {
         trends: async () => { setBusy('trends', true); trendData = await loadTrends(); renderTrends(); setBusy('trends', false); },
-        requests: async () => { setBusy('requests', true); renderRequests(await loadRequests(user), user); setBusy('requests', false); },
+        requests: async () => { if (window.FrameUpFeatures?.requests === false) return; setBusy('requests', true); renderRequests(await loadRequests(user), user); setBusy('requests', false); },
         exports: async () => { setBusy('exports', true); renderExports(await loadExports()); setBusy('exports', false); },
         drafts: async () => { setBusy('drafts', true); renderDrafts(await loadDrafts(user)); setBusy('drafts', false); },
       };

@@ -7,6 +7,21 @@
   const base = window.location.pathname.includes('/ai-page/') ? '../' : '';
   const desktop = window.matchMedia('(min-width: 901px)');
 
+  // Feature switches. Design requests are paused for now (owner, 2026-11-19):
+  // every entry point is hidden and the request pages send people Home. The
+  // code, data and Slack routes stay in place; set requests: true to bring
+  // them back.
+  const FEATURES = Object.freeze({ requests: false });
+  window.FrameUpFeatures = FEATURES;
+  const PAUSED_NAV_IDS = FEATURES.requests ? [] : ['request', 'my-requests'];
+  if (!FEATURES.requests) {
+    document.documentElement.classList.add('fu-requests-off');
+    const page = window.location.pathname.split('/').pop();
+    if (page === 'design-request.html' || page === 'requests.html') {
+      window.location.replace(`${base}index.html?paused=requests`);
+    }
+  }
+
   const icon = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
   const ICONS = {
     guideMap: icon('<circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/>'),
@@ -104,6 +119,7 @@
       ],
     },
   ];
+  NAV.forEach(group => { group.items = group.items.filter(item => !PAUSED_NAV_IDS.includes(item.id)); });
 
   const PAGE_IDS = {
     'reels.html': 'reels',
@@ -411,6 +427,7 @@
   }
 
   async function loadRequestCount({ force = false } = {}) {
+    if (!FEATURES.requests) return;
     if (!force) {
       try {
         const cached = JSON.parse(window.sessionStorage.getItem(REQUEST_COUNT_KEY) || 'null');
