@@ -27,8 +27,8 @@ const EMOTIONS = ['hype', 'awe', 'tension', 'debate', 'celebration', 'heartbreak
 const SHOTS = ['action', 'celebration', 'portrait', 'dejection', 'duo', 'any'];
 const PALETTES = ['auto', 'primary', 'inverted'];
 const STEERS = ['claim', 'question', 'stats', 'emotion', 'debate'];
-const POST_TYPES = ['cover', 'quote', 'long-quote', 'double-entity-quote', 'stats-single-ent', 'stats-double-ent', 'listicle-type-1', 'listicle-type-2'];
-const STATS_TYPES = new Set(['stats-single-ent', 'stats-double-ent']);
+const POST_TYPES = ['cover', 'quote', 'long-quote', 'double-entity-quote', 'stats-single-ent', 'stats-double-ent', 'listicle-type-1', 'listicle-type-2', 'player-stat-line', 'team-record'];
+const STATS_TYPES = new Set(['stats-single-ent', 'stats-double-ent', 'player-stat-line']);
 
 // Which model directs. GENERATE_DIRECTOR_MODEL (GENERATE_DIRECTOR_TIER is read
 // too, the name used in the research doc):
@@ -250,6 +250,8 @@ function readBrief(brief, found = {}, allowedTypes = [], tools = {}) {
     }
   }
   const ranking = table || /\btop\s+\d+\b|\branked\b|\brankings?\b/i.test(text);
+  // A record or final score stated in the brief (10-0, 31-28), not a date or a range of years.
+  const record = (text.replace(/[–—]/g, '-').match(/(?:^|[^\d/.-])(\d{1,3}-\d{1,3})(?![\d/.-])/) || [])[1] || '';
   const kind = ranking ? 'ranking'
     : quotes.length ? 'quote'
       : briefStats.length >= 3 ? 'stats'
@@ -262,6 +264,7 @@ function readBrief(brief, found = {}, allowedTypes = [], tools = {}) {
     statsCount: stats.length,
     list: ranking,
     headline: Boolean(trendHeadline),
+    record: Boolean(record),
   };
   const allow = type => !allowedTypes.length || allowedTypes.includes(type);
   const fits = {
@@ -273,6 +276,9 @@ function readBrief(brief, found = {}, allowedTypes = [], tools = {}) {
     'stats-double-ent': subjects.length >= 2 && stats.length >= 8,
     'listicle-type-1': ranking,
     'listicle-type-2': ranking,
+    // One player's game line (3-7 numbers); a team's record or score.
+    'player-stat-line': subjects.length >= 1 && stats.length >= 3,
+    'team-record': Boolean(record && (team || subjects.length)),
   };
   Object.keys(fits).forEach(type => { fits[type] = Boolean(fits[type] && allow(type)); });
   return {
@@ -284,6 +290,7 @@ function readBrief(brief, found = {}, allowedTypes = [], tools = {}) {
     quotes,
     stats,
     table,
+    record,
     trendHeadline,
     instruction,
     has,
@@ -313,6 +320,7 @@ function DIRECTOR_SYSTEM(templates = {}) {
     '- Covers are hooks: a bold claim or a curious question in 2-8 words, never a summary of facts.',
     '- Quote and Long Quote only for words the main person said. Words said about them need the Two-Person Quote, or no quote.',
     '- Player Stats needs 3 real game or season numbers with standard labels; Head-to-Head needs 4 per player. Never ages, years, money or rankings as stats.',
+    '- Player Stat Line is one player\'s full game line (3-7 numbers, each with its own label); prefer it to Player Stats when there are 4 or more. Team Record / Score shows a record or final score the brief states (10-0, 31-28), under the team badge.',
     '- A ranking or table in the brief is ONE Rankings Table (number columns) or Ranked List concept with all rows, plus at most one Cover.',
     '- Use only templates listed under "Allowed" and marked true under "Fits".',
     '- team is the person\'s CURRENT team (newest coverage wins; a team named in the brief wins), full brand name. Empty if unsure. It sets the brand colours.',
@@ -344,7 +352,7 @@ const STEER_TEXT = {
 function compactRead(read = {}) {
   return JSON.stringify({
     subjects: read.subjects || [], team: read.team || '', sport: read.sport || '', kind: read.kind || '',
-    has: read.has || {}, stats: (read.stats || []).map(stat => `${stat.value} ${stat.label}`), quote: read.quote || null,
+    has: read.has || {}, stats: (read.stats || []).map(stat => `${stat.value} ${stat.label}`), quote: read.quote || null, ...(read.record ? { record: read.record } : {}),
   });
 }
 
@@ -420,6 +428,8 @@ function validateConcepts(parsed, { read = {}, allowedTypes = [], want = 4, brie
       .filter(fact => squash(fact).trim().length >= 2 && source.includes(squash(fact)))
       .slice(0, 6);
     if (STATS_TYPES.has(postType) && factsUsed.filter(fact => /\d/.test(fact)).length < 3) continue;
+    // A record or score card stands on the stated record (10-0, 31-28).
+    if (postType === 'team-record' && !factsUsed.some(fact => /\d{1,3}\s?[-–]\s?\d{1,3}/.test(fact))) continue;
     if (!chosen) {
       // Distinct: never the same template + hook twice, never a look-alike angle.
       if (kept.some(other => other.postType === postType && other.hook === hook)) continue;

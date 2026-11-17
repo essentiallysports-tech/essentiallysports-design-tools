@@ -79,7 +79,10 @@ function load() {
   require.cache[mcpPath] = { id: mcpPath, filename: mcpPath, loaded: true, exports: { isMcpConfigured: () => false, createSession: () => null } };
   return { gen: require(genPath), img: require(imgPath) };
 }
-const post = (handler, body) => handler({ httpMethod: 'POST', headers: { authorization: 'Bearer tok' }, body: JSON.stringify(body) }).then(r => ({ status: r.statusCode, body: JSON.parse(r.body) }));
+// Each request starts cold: the photo caches would otherwise answer a later
+// scenario with an earlier one's pick.
+const coldCaches = () => { gen?._test?.PHOTO_PICK_CACHE?.clear(); gen?._test?.IMAGE_SEARCH_CACHE?.clear(); };
+const post = (handler, body) => (coldCaches(), handler)({ httpMethod: 'POST', headers: { authorization: 'Bearer tok' }, body: JSON.stringify(body) }).then(r => ({ status: r.statusCode, body: JSON.parse(r.body) }));
 
 let { gen, img } = load();
 const t = gen._test;
