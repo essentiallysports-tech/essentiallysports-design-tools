@@ -17,6 +17,43 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-18 — Editor quick wins: smaller link images, Remove background, size packs, P1 fixes, faster editor links
+- Status: `[committed on feature/editor-quick-wins - not pushed, not merged]`
+- Branch/worktree: `feature/editor-quick-wins` in `ds-branches/editor-quick-wins` (from origin/main 150ab31).
+- **Smaller newsletter link images (egress).** `copyImageLink()` now encodes JPEG link uploads at 0.85
+  (downloads stay 0.94) and caps newsletter link images at 1200 px wide (2x a 600 px email column; only
+  the 2x export option is affected). Measured on the newsletter templates in the browser: Feature Image
+  146→98 KB (−33%), Video FI 111→73 KB (−35%), Tag FI 106→68 KB (−36%). Side-by-side checks showed no
+  visible difference at 100%. Helpers: `linkImagePlan()`, `resizeCanvasForLink()` (index.html).
+- **Remove background** (`frameup-cutout.js`, `netlify/functions/remove-bg.js`, `api/remove-bg.js`): a
+  "Remove background" action on each photo in the Photos panel. Server: signed-in ES only, 6 MB cap
+  (bytes checked to be PNG/JPEG/WebP), per-person hourly cap (`REMOVE_BG_HOURLY_LIMIT`, default 30) plus
+  the shared hourly/weekly AI caps, logged via `logUsage` as `remove-bg` at $0.018. **Off unless
+  `BRIA_API_KEY` is set**; then the button explains it isn't set up. Free fallback with no downloads: a
+  "plain backdrop" flood fill in the browser, offered only when the photo's edges are a plain studio
+  backdrop (refuses busy photos instead of guessing). Results cached per photo for the session; Undo works.
+  Bria endpoint/response shape is from Bria's docs and **unverified live** (no key here).
+- **Size packs** (`frameup-size-pack.js`, `frameup-zip.js`, `frameup-quick-wins.css`): Export settings →
+  "Size pack" (and ⌘K "Export size pack") in the Social Media workspace: feed 1080×1350, square 1080×1080,
+  story 1080×1920, X 1600×900, YouTube 1280×720, preview grid, tick sizes, one ZIP (tiny stored-ZIP writer,
+  no CDN). Cover Image is re-laid out at every size (story/YouTube use the Reels/YouTube workspaces' own
+  fade and text anchor). Every other template was checked at each size and does NOT re-lay out cleanly
+  (fixed-coordinate cards overlap the wordmark), so they are shown whole on a blurred backdrop ("Fitted"),
+  with a centred crop only when ≤6% would be lost. Each preview is labelled Original / Re-laid out /
+  Cropped / Fitted.
+- **Launch-readiness P1s:** the ES Image Pool inputs already had `aria-label` (no change); added a visually
+  hidden `h1#studio-route-heading` kept in sync with the workspace name; Reels phone Export now mirrors the
+  desktop button's `disabled` (MutationObserver) and starts disabled.
+- **Performance:** tour scripts (4 files, ~78 KB) are `defer`; Home's second banner and four workspace
+  cards are `loading="lazy"`, and opening an editor link (`#instagram|#youtube|#newsletter`) keeps Home out
+  of the first layout until the router runs, so those images are never fetched there: same-origin images
+  on an editor deep link went 588 KB → 106 KB. Local (cached, localhost) parse/DCL timings were within
+  noise before and after (~60–80 ms).
+- Tests: `scripts/test-remove-bg.mjs`, `test-size-pack.mjs` (ZIP bytes + `unzip -t`), `test-cutout.mjs`,
+  `test-editor-quick-wins.mjs`. Full suite: only the 7 known baseline failures.
+- New env vars (all optional, feature is off without the key): `BRIA_API_KEY`, `BRIA_REMOVE_BG_URL`,
+  `REMOVE_BG_HOURLY_LIMIT`, `REMOVE_BG_COST_USD`. No migrations.
+
 ### 2026-09-10 — Fix a regression from this same day's earlier fixes: concurrent profile upsert race
 - Status: `[pushed - see rollback point below]`
 - Files touched: `dashboard-data.js`. No database changes this time.
