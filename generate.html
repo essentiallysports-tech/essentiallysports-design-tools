@@ -49,7 +49,7 @@
 <link rel="stylesheet" href="frameup-tour.css?v=20261117-tour1">
 <script src="frameup-tour.js?v=20261117-tour1"></script>
 <script src="tours/updates.js?v=20261117-tour1"></script>
-<script src="tours/tours.js?v=20261117-tour1"></script>
+<script src="tours/tours.js?v=20261118-generate-director"></script>
 <script src="tours/tour-launcher.js?v=20261117-tour1"></script>
 <script src="league-logos.js?v=20261117-logo1"></script>
   <style>
@@ -506,6 +506,198 @@
     html[data-theme="dark"] :is(.trend-ideas__label, .trend-ideas__ai, .trend-why) svg[viewBox] { color: #9DCBFD; }
     html[data-theme="dark"] .trend-tag.is-search .es-live-dot { background: #54A4FB; }
     html[data-theme="dark"] .td-icon-btn:hover { background: #2A2D34; }
+
+    /* ── Creative director (2026-11-18): steer row, directions, notes ──────
+       Director first: tone + audience in the composer, then 2-4 named
+       directions to pick / edit / steer, then designs grouped by direction,
+       each with the director's note and a one-click fix. Quiet selected
+       states (thin blue ring, soft tint); tokens only. */
+    .gen-steer { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-3, 12px) var(--es-space-6, 24px); margin-top: var(--es-space-5, 20px); padding-top: var(--es-space-5, 20px); border-top: 1px solid var(--es-line); }
+    .gen-steer__group { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px) var(--es-space-3, 12px); min-width: 0; }
+    .gen-chips { display: flex; flex-wrap: wrap; gap: var(--es-space-1, 4px); padding: 3px; border-radius: 12px; background: var(--es-sunk); }
+    .gen-chip { display: inline-flex; align-items: center; min-height: 30px; padding: 0 var(--es-space-3, 12px); border: 0; border-radius: 9px; background: transparent; color: var(--es-ink-3); cursor: pointer; font: 500 var(--es-type-meta-size, 13px)/1 var(--es-font-ui); white-space: nowrap; transition: background-color var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease); }
+    .gen-chip:hover { color: var(--es-ink); }
+    .gen-chip[aria-checked="true"] { background: var(--es-bg); box-shadow: 0 1px 2px rgb(14 16 20 / .08), inset 0 0 0 1px var(--es-line); color: var(--es-ink); font-weight: 600; }
+    .gen-chip:focus-visible, .gen-switch:focus-visible, .gen-dir__pick:focus-visible, .gen-dir__edit-btn:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .gen-switch { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); min-height: 32px; margin-left: auto; padding: 0 var(--es-space-1, 4px); border: 0; border-radius: 10px; background: transparent; color: var(--es-ink-2); cursor: pointer; font: 500 var(--es-type-meta-size, 13px)/1.2 var(--es-font-ui); }
+    .gen-switch__track { position: relative; flex: none; width: 34px; height: 20px; border-radius: 999px; background: var(--es-line-2, #c8cdd5); transition: background-color var(--es-dur) var(--es-ease); }
+    .gen-switch__track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(14 16 20 / .25); transition: transform var(--es-dur) var(--es-ease); }
+    .gen-switch[aria-checked="true"] .gen-switch__track { background: var(--es-brand, #0A7DFA); }
+    .gen-switch[aria-checked="true"] .gen-switch__track::after { transform: translateX(14px); }
+    .gen-switch svg { width: 16px; height: 16px; color: var(--es-brand-text, #0A62C7); }
+
+    .gen-director { display: grid; gap: var(--es-space-4, 16px); margin: var(--es-space-6, 24px) 0 var(--es-space-8, 32px); padding: var(--es-space-5, 20px); border-radius: var(--es-radius-container, 16px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
+    .gen-director[hidden] { display: none; }
+    .gen-director__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--es-space-2, 8px) var(--es-space-4, 16px); }
+    .gen-director__titles { display: grid; gap: var(--es-space-1, 4px); min-width: 0; flex: 1 1 280px; }
+    .gen-director__title { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); margin: 0; color: var(--es-ink); font: var(--es-type-panel-title-weight, 800) var(--es-type-panel-title-size, 18px)/1.2 var(--es-font-display); }
+    .gen-director__mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: var(--es-brand-soft); color: var(--es-brand-text); }
+    .gen-director__mark svg { width: 16px; height: 16px; }
+    .gen-director__read { margin: 0; color: var(--es-ink-3); font-size: var(--es-type-meta-size, 13px); line-height: var(--es-type-meta-line, 1.45); }
+    .gen-director__read:empty { display: none; }
+    .gen-director__chosen { display: none; flex-wrap: wrap; gap: var(--es-space-1, 4px); }
+    .gen-director.is-collapsed .gen-director__chosen { display: flex; }
+    .gen-director.is-collapsed :is(.gen-directions, .gen-director__foot, .gen-director__read) { display: none; }
+    .gen-directions { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 248px), 1fr)); gap: var(--es-space-3, 12px); }
+    .gen-director__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--es-space-3, 12px); padding-top: var(--es-space-4, 16px); border-top: 1px solid var(--es-line); }
+    .gen-director__count { margin: 0; color: var(--es-ink-3); font-size: var(--es-type-meta-size, 13px); }
+    .gen-director__count strong { color: var(--es-ink); font-weight: 600; }
+    .gen-director__buttons { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); margin-left: auto; }
+
+    .gen-dir { position: relative; display: flex; flex-direction: column; gap: var(--es-space-3, 12px); min-width: 0; padding: var(--es-space-4, 16px); border-radius: 14px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line-2, #d8dce3); cursor: pointer; transition: box-shadow var(--es-dur) var(--es-ease), background-color var(--es-dur) var(--es-ease); }
+    .gen-dir:hover { box-shadow: inset 0 0 0 1px var(--es-ink-3); }
+    .gen-dir.is-selected { background: color-mix(in srgb, var(--es-brand-soft) 55%, var(--es-bg)); box-shadow: inset 0 0 0 2px var(--es-brand, #0A7DFA); }
+    .gen-dir.is-skeleton { cursor: default; }
+    .gen-dir.is-skeleton span { display: block; height: 12px; border-radius: 6px; background: var(--es-sunk); }
+    .gen-dir.is-skeleton span:nth-child(1) { width: 55%; height: 16px; }
+    .gen-dir.is-skeleton span:nth-child(3) { width: 70%; }
+    .gen-dir__top { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: var(--es-space-3, 12px); }
+    .gen-dir__thumb { width: 36px; height: 45px; border-radius: 6px; background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); object-fit: cover; }
+    .gen-dir__titles { display: grid; gap: 2px; min-width: 0; }
+    .gen-dir__name { display: -webkit-box; margin: 0; overflow: hidden; color: var(--es-ink); font: 700 15px/1.25 var(--es-font-ui); -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .gen-dir__meta { overflow: hidden; color: var(--es-ink-3); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .gen-dir__pick { display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: var(--es-bg); box-shadow: inset 0 0 0 1.5px var(--es-line-2, #c8cdd5); color: transparent; cursor: pointer; }
+    .gen-dir__pick svg { width: 16px; height: 16px; }
+    .gen-dir__pick[aria-pressed="true"] { background: var(--es-brand, #0A7DFA); box-shadow: none; color: #fff; }
+    .gen-dir__angle { margin: 0; color: var(--es-ink); font-size: 15px; font-weight: 500; line-height: 1.4; }
+    .gen-dir__headline { margin: 0; color: var(--es-ink-2); font-size: 13px; font-style: italic; line-height: 1.4; }
+    .gen-dir__headline:empty { display: none; }
+    .gen-dir__why { margin: 0; color: var(--es-ink-2); font-size: 13px; line-height: 1.45; }
+    .gen-dir__why strong, .gen-dir__label { color: var(--es-ink-3); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
+    .gen-dir__why strong { display: block; margin-bottom: 2px; }
+    .gen-dir__conf { display: inline-flex; align-items: center; gap: 6px; min-height: 22px; padding: 0 8px; border-radius: 999px; background: var(--es-sunk); color: var(--es-ink-2); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .gen-dir__conf i { width: 26px; height: 4px; border-radius: 999px; background: var(--es-line-2, #c8cdd5); overflow: hidden; }
+    .gen-dir__conf i::before { content: ''; display: block; width: var(--conf, 50%); height: 100%; border-radius: inherit; background: var(--es-ink-3); }
+    .gen-dir__conf.is-high { background: var(--es-good-soft, #e9f6ee); color: var(--es-good, #0e7a3d); }
+    .gen-dir__conf.is-high i::before { background: var(--es-good, #0e7a3d); }
+    .gen-dir__conf.is-low { background: var(--es-warn-soft, #fff4d6); color: var(--es-warn, #b45309); }
+    .gen-dir__conf.is-low i::before { background: var(--es-warn, #b45309); }
+    .gen-dir__inspired { display: grid; gap: var(--es-space-1, 4px); }
+    .gen-dir__inspired ul { display: grid; gap: var(--es-space-1, 4px); margin: 0; padding: 0; list-style: none; }
+    .gen-dir__inspired li { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: center; gap: var(--es-space-2, 8px); min-width: 0; color: var(--es-ink-2); font-size: 12px; line-height: 1.35; }
+    .gen-dir__inspired img { width: 24px; height: 30px; border-radius: 4px; background: var(--es-sunk); object-fit: cover; }
+    .gen-dir__inspired li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gen-dir__inspired b { color: var(--es-ink-3); font-weight: 600; }
+    .gen-dir__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); margin-top: auto; padding-top: var(--es-space-1, 4px); }
+    .gen-dir__actions .es-icon-btn { width: 32px; height: 32px; }
+    .gen-dir__actions .es-icon-btn svg, .gen-note .es-icon-btn svg { width: 16px; height: 16px; }
+    .gen-dir__edited { color: var(--es-brand-text); font-size: 12px; font-weight: 600; }
+    .gen-dir__edited[hidden] { display: none; }
+    .gen-dir__form { display: grid; gap: var(--es-space-2, 8px); cursor: default; }
+    .gen-dir__form[hidden] { display: none; }
+    .gen-dir__form textarea, .gen-dir__form input, .gen-dir__form select { box-sizing: border-box; width: 100%; padding: var(--es-space-2, 8px) var(--es-space-3, 12px); border: 0; border-radius: 10px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line-2, #c8cdd5); color: var(--es-ink); font: 500 14px/1.4 var(--es-font-ui); }
+    .gen-dir__form textarea { min-height: 64px; resize: vertical; }
+    .gen-dir__form :is(textarea, input, select):focus { outline: none; box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo); }
+    .gen-dir__form-row { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); }
+    .gen-dir__form-row select { flex: 1 1 120px; width: auto; min-height: 36px; }
+    .gen-dir__form .gen-dir__label { margin-top: 2px; }
+
+    /* Results grouped by direction: a full-width header row per direction. */
+    .gen-group { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--es-space-1, 4px) var(--es-space-3, 12px); margin-top: var(--es-space-2, 8px); padding-bottom: var(--es-space-2, 8px); border-bottom: 1px solid var(--es-line); }
+    .gen-group:first-child { margin-top: 0; }
+    .gen-group__name { margin: 0; color: var(--es-ink); font: 700 16px/1.3 var(--es-font-ui); }
+    .gen-group__angle { flex: 1 1 260px; min-width: 0; margin: 0; color: var(--es-ink-3); font-size: 13px; line-height: 1.4; }
+    .gen-card__tags { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-1, 4px) var(--es-space-2, 8px); min-width: 0; }
+    .gen-card__dir { min-width: 0; overflow: hidden; color: var(--es-ink-2); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .gen-card__dir:empty { display: none; }
+    .gen-note { display: grid; gap: var(--es-space-2, 8px); padding: var(--es-space-3, 12px); border-radius: 12px; background: var(--es-sunk); }
+    .gen-note[hidden] { display: none; }
+    .gen-note p { margin: 0; color: var(--es-ink-2); font-size: 12.5px; line-height: 1.45; }
+    .gen-note__who { display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; color: var(--es-brand-text); font-weight: 700; }
+    .gen-note__who svg { width: 14px; height: 14px; }
+    .gen-note__fix b { color: var(--es-ink); font-weight: 600; }
+    .gen-note__done { color: var(--es-good, #0e7a3d); font-weight: 600; }
+    .gen-note__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); }
+    .gen-note__row .es-icon-btn { width: 32px; height: 32px; }
+    .gen-note__row .gen-note__steer { display: inline-flex; gap: var(--es-space-1, 4px); margin-left: auto; }
+    .gen-note .es-icon-btn[aria-pressed="true"] { color: var(--es-brand-text); box-shadow: inset 0 0 0 1.5px var(--es-brand, #0A7DFA); }
+
+    @media (pointer: coarse) { .gen-chip, .gen-switch { min-height: 44px; } .gen-dir__pick { width: 44px; height: 44px; } }
+    @media (max-width: 640px) {
+      .gen-director { padding: var(--es-space-4, 16px); }
+      .gen-switch { margin-left: 0; }
+      .gen-director__buttons { width: 100%; margin-left: 0; }
+      .gen-director__buttons .es-btn { flex: 1 1 auto; }
+      .gen-steer__group { width: 100%; }
+      .gen-chips { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { .gen-switch__track, .gen-switch__track::after, .gen-chip, .gen-dir { transition: none; } }
+    html[data-theme="dark"] .gen-steer, html[data-theme="dark"] .gen-director__foot { border-top-color: #2A2D34; }
+    html[data-theme="dark"] .gen-chips, html[data-theme="dark"] .gen-note { background: #2A2D34; }
+    html[data-theme="dark"] .gen-chip[aria-checked="true"] { background: #3B4049; box-shadow: none; color: #FFFFFF; }
+    html[data-theme="dark"] .gen-director { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
+    html[data-theme="dark"] .gen-dir { background: #24272D; box-shadow: inset 0 0 0 1px #3B4049; }
+    html[data-theme="dark"] .gen-dir:hover { box-shadow: inset 0 0 0 1px #707A8C; }
+    html[data-theme="dark"] .gen-dir.is-selected { background: rgb(84 164 251 / .12); box-shadow: inset 0 0 0 2px #54A4FB; }
+    html[data-theme="dark"] .gen-dir__pick { background: #1F2126; box-shadow: inset 0 0 0 1.5px #707A8C; }
+    html[data-theme="dark"] .gen-dir__pick[aria-pressed="true"] { background: #54A4FB; color: #101114; }
+    html[data-theme="dark"] .gen-dir__conf { background: #3B4049; color: #BFC8D9; }
+    html[data-theme="dark"] .gen-dir__conf.is-high { background: var(--es-good-soft-on-dark); color: var(--es-good-on-dark); }
+    html[data-theme="dark"] .gen-dir__conf.is-high i::before { background: var(--es-good-on-dark); }
+    html[data-theme="dark"] .gen-dir__conf.is-low { background: rgb(245 158 11 / .16); color: #FBBF24; }
+    html[data-theme="dark"] .gen-dir__conf.is-low i::before { background: #FBBF24; }
+    html[data-theme="dark"] .gen-dir__form :is(textarea, input, select) { background: #1F2126; box-shadow: inset 0 0 0 1px #3B4049; color: #FFFFFF; }
+    html[data-theme="dark"] .gen-switch__track { background: #3B4049; }
+    html[data-theme="dark"] .gen-switch[aria-checked="true"] .gen-switch__track { background: #54A4FB; }
+    html[data-theme="dark"] .gen-group { border-bottom-color: #2A2D34; }
+    html[data-theme="dark"] .gen-note__done { color: var(--es-good-on-dark); }
+
+    /* Bring it on-brand + the director's guideline check + the card chip. */
+    .gen-onbrand, .gen-critique { display: grid; gap: var(--es-space-4, 16px); margin: var(--es-space-4, 16px) 0 0; padding: var(--es-space-5, 20px); border-radius: var(--es-radius-container, 16px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
+    .gen-critique { margin: var(--es-space-6, 24px) 0 0; }
+    .gen-onbrand[hidden], .gen-critique[hidden] { display: none; }
+    .gen-onbrand__note { box-sizing: border-box; width: 100%; min-height: 56px; resize: vertical; padding: var(--es-space-3, 12px) var(--es-space-4, 16px); border: 0; border-radius: 12px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line-2, #c8cdd5); color: var(--es-ink); font: 500 14px/1.45 var(--es-font-ui); }
+    .gen-onbrand__note:focus { outline: none; box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo); }
+    .gen-drop { display: grid; justify-items: center; gap: var(--es-space-1, 4px); padding: var(--es-space-6, 24px) var(--es-space-4, 16px); border-radius: 14px; background: var(--es-sunk); box-shadow: inset 0 0 0 1.5px var(--es-line-2, #c8cdd5); color: var(--es-ink-2); cursor: pointer; text-align: center; transition: background-color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease); }
+    .gen-drop svg { width: 22px; height: 22px; color: var(--es-brand-text); }
+    .gen-drop:hover, .gen-drop.is-over { background: color-mix(in srgb, var(--es-brand-soft) 60%, var(--es-sunk)); box-shadow: inset 0 0 0 1.5px var(--es-brand, #0A7DFA); }
+    .gen-drop:focus-within { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .gen-drop__main { font-size: 14px; font-weight: 600; color: var(--es-ink); }
+    .gen-drop__main u { color: var(--es-brand-text); text-underline-offset: 3px; }
+    .gen-drop__sub { font-size: 12px; color: var(--es-ink-3); }
+    .gen-slides { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); margin: 0; padding: 0; list-style: none; }
+    .gen-slides:empty { display: none; }
+    .gen-slides li { position: relative; width: 72px; }
+    .gen-slides img { display: block; width: 72px; height: 90px; border-radius: 8px; background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); object-fit: cover; }
+    .gen-slides span { position: absolute; left: 4px; top: 4px; min-width: 18px; padding: 0 4px; border-radius: 999px; background: rgb(14 16 20 / .72); color: #fff; font: 700 11px/18px var(--es-font-ui); text-align: center; }
+    .gen-slides button { position: absolute; right: -6px; top: -6px; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: var(--es-bg); box-shadow: 0 1px 2px rgb(14 16 20 / .2), inset 0 0 0 1px var(--es-line); color: var(--es-ink-2); cursor: pointer; }
+    .gen-slides button svg { width: 14px; height: 14px; }
+    .gen-slides button:focus-visible { outline: var(--es-focus-outline); outline-offset: 2px; }
+    .gen-critique__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px) var(--es-space-3, 12px); }
+    .gen-critique__verdict { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: 999px; background: var(--es-warn-soft, #fff4d6); color: var(--es-warn, #b45309); font-size: 12px; font-weight: 700; }
+    .gen-critique__verdict.is-good { background: var(--es-good-soft, #e9f6ee); color: var(--es-good, #0e7a3d); }
+    .gen-critique__cols { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--es-space-6, 24px); }
+    .gen-critique__cols > div { display: grid; align-content: start; gap: var(--es-space-2, 8px); min-width: 0; }
+    .gen-critique__issues, .gen-critique__keep, .gen-critique__map { display: grid; gap: var(--es-space-2, 8px); margin: 0 0 var(--es-space-2, 8px); padding: 0; list-style: none; }
+    .gen-critique__issues li { display: grid; gap: 2px; padding: var(--es-space-3, 12px); border-radius: 12px; background: var(--es-sunk); color: var(--es-ink-2); font-size: 13px; line-height: 1.45; }
+    .gen-critique__issues b { color: var(--es-ink); font-weight: 700; }
+    .gen-critique__issues cite { color: var(--es-ink-3); font-size: 11.5px; font-style: normal; }
+    .gen-critique__issues .is-must { color: var(--es-bad, #b42318); font-weight: 700; }
+    .gen-critique__keep li, .gen-critique__map li { color: var(--es-ink-2); font-size: 13px; line-height: 1.45; }
+    .gen-critique__map b { color: var(--es-ink); }
+    .gen-critique__empty { color: var(--es-ink-3); font-size: 13px; }
+    .gen-card__guide { display: inline-flex; align-items: center; gap: 4px; min-height: 22px; padding: 0 8px; border-radius: 999px; background: var(--es-good-soft, #e9f6ee); color: var(--es-good, #0e7a3d); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .gen-card__guide svg { width: 12px; height: 12px; }
+    .gen-card__guide[hidden], .gen-card__fixes[hidden] { display: none; }
+    .gen-card__fixes { margin: 0; color: var(--es-ink-3); font-size: 12px; line-height: 1.4; }
+    .gen-steer, .gen-steer__group, .gen-chips { min-width: 0; }
+    .gen-onbrand .gen-director__titles { flex: 1 1 0; }
+    @media (max-width: 760px) { .gen-critique__cols { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) {
+      .gen-actions__buttons { width: 100%; margin-left: 0; }
+      .gen-actions__buttons .es-btn { flex: 1 1 auto; min-width: 0; }
+      .gen-actions__buttons #gen-submit { min-width: 0; }
+      .gen-steer__group .gen-chips { flex: 1 1 auto; }
+    }
+    @media (max-width: 640px) { .gen-onbrand, .gen-critique { padding: var(--es-space-4, 16px); } }
+    html[data-theme="dark"] :is(.gen-onbrand, .gen-critique) { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
+    html[data-theme="dark"] .gen-drop, html[data-theme="dark"] .gen-critique__issues li { background: #2A2D34; box-shadow: inset 0 0 0 1.5px #3B4049; }
+    html[data-theme="dark"] .gen-critique__issues li { box-shadow: none; }
+    html[data-theme="dark"] .gen-onbrand__note { background: #1F2126; box-shadow: inset 0 0 0 1px #3B4049; color: #FFFFFF; }
+    html[data-theme="dark"] .gen-slides button { background: #2A2D34; color: #FFFFFF; }
+    html[data-theme="dark"] :is(.gen-card__guide, .gen-critique__verdict.is-good) { background: var(--es-good-soft-on-dark); color: var(--es-good-on-dark); }
+    html[data-theme="dark"] .gen-critique__verdict { background: rgb(245 158 11 / .16); color: #FBBF24; }
+    html[data-theme="dark"] .gen-critique__issues .is-must { color: #FF8A80; }
   </style>
 </head>
 <body class="gen-body">
@@ -567,19 +759,95 @@
           </div>
           <div class="gen-format__list" id="gen-formats" role="radiogroup" aria-labelledby="gen-format-label" aria-describedby="gen-format-note"></div>
         </div>
+        <!-- Creative director: steer the directions (tone, audience), and
+             whether the director shows its directions first. -->
+        <div class="gen-steer" id="gen-steer">
+          <div class="gen-steer__group">
+            <span class="gen-row__label" id="gen-tone-label">Tone</span>
+            <div class="gen-chips" id="gen-tone" role="radiogroup" aria-labelledby="gen-tone-label"></div>
+          </div>
+          <div class="gen-steer__group">
+            <span class="gen-row__label" id="gen-audience-label">Audience</span>
+            <div class="gen-chips" id="gen-audience" role="radiogroup" aria-labelledby="gen-audience-label"></div>
+          </div>
+          <button class="gen-switch" type="button" id="gen-plan" role="switch" aria-checked="true"><span class="gen-switch__track" aria-hidden="true"></span>Directions first</button>
+        </div>
         <div class="gen-actions">
           <span class="gen-sr" id="gen-brief-hint">Your own words are kept as written; facts come only from ES coverage. Check every post before you publish.</span>
           <span class="gen-actions__hint" id="gen-expect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg><span><strong>Up to 4 designs</strong> · edit any in the editor</span></span>
           <div class="gen-actions__buttons">
             <button class="es-btn" type="button" id="gen-trending" hidden>Suggest topics</button>
+            <button class="es-btn" type="button" id="gen-onbrand-open" aria-expanded="false" aria-controls="gen-onbrand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>Bring it on-brand</button>
             <button class="es-btn es-btn--primary es-btn--lg ais-btn" type="submit" id="gen-submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg><span id="gen-submit-label">Generate</span><kbd class="gen-kbd" id="gen-kbd" aria-hidden="true">Ctrl ↵</kbd></button>
           </div>
         </div>
       </form>
+      <!-- Bring it on-brand: a design made elsewhere (one image or carousel
+           slides) is checked against the ES guidelines and remade as ES posts. -->
+      <section class="gen-onbrand" id="gen-onbrand" aria-labelledby="gen-onbrand-title" hidden>
+        <div class="gen-director__head">
+          <div class="gen-director__titles">
+            <h2 class="gen-director__title" id="gen-onbrand-title"><span class="gen-director__mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>Bring it on-brand</h2>
+            <p class="gen-director__read">The director checks any design against the ES guidelines, then remakes it with ES templates.</p>
+          </div>
+          <button class="es-icon-btn" type="button" id="gen-onbrand-close" aria-label="Close Bring it on-brand" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
+        <label class="gen-drop" id="gen-drop" for="gen-onbrand-file">
+          <input class="gen-sr" type="file" id="gen-onbrand-file" accept="image/png,image/jpeg,image/webp" multiple>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+          <span class="gen-drop__main">Drop a design or carousel slides, paste with <kbd class="es-kbd">⌘V</kbd>, or <u>choose files</u></span>
+          <span class="gen-drop__sub">PNG, JPG or WebP · up to 6 slides, in order</span>
+        </label>
+        <ol class="gen-slides" id="gen-onbrand-slides" aria-label="Slides to check"></ol>
+        <label class="gen-sr" for="gen-onbrand-note">Story note</label>
+        <textarea class="gen-onbrand__note" id="gen-onbrand-note" maxlength="400" rows="2" placeholder="Optional: the story, or numbers the image doesn't show"></textarea>
+        <div class="gen-director__foot">
+          <p class="gen-director__count" id="gen-onbrand-count" aria-live="polite"></p>
+          <div class="gen-director__buttons">
+            <button class="es-btn" type="button" id="gen-onbrand-run" disabled>Check and remake</button>
+          </div>
+        </div>
+      </section>
       <div class="gen-quick" id="gen-quick"></div>
     <ol class="gen-progress es-steps" id="gen-progress" aria-label="Progress" aria-live="polite" hidden></ol>
     <p class="gen-summary" id="gen-summary" role="status" aria-live="polite" hidden></p>
     <div class="es-callout gen-notice" id="gen-notice" role="alert" hidden></div>
+    <section class="gen-critique" id="gen-critique" aria-labelledby="gen-critique-title" hidden>
+      <div class="gen-critique__head">
+        <h2 class="gen-director__title" id="gen-critique-title">Director's guideline check</h2>
+        <span class="gen-critique__verdict" id="gen-critique-verdict"></span>
+      </div>
+      <div class="gen-critique__cols">
+        <div>
+          <span class="gen-dir__label">Off-guide</span>
+          <ul class="gen-critique__issues" id="gen-critique-issues"></ul>
+        </div>
+        <div>
+          <span class="gen-dir__label">Worth keeping</span>
+          <ul class="gen-critique__keep" id="gen-critique-keep"></ul>
+          <span class="gen-dir__label">Remade as</span>
+          <ol class="gen-critique__map" id="gen-critique-map"></ol>
+        </div>
+      </div>
+    </section>
+    <section class="gen-director" id="gen-director" aria-labelledby="gen-director-title" hidden>
+      <div class="gen-director__head">
+        <div class="gen-director__titles">
+          <h2 class="gen-director__title" id="gen-director-title"><span class="gen-director__mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>Creative director</h2>
+          <p class="gen-director__read" id="gen-director-read"></p>
+          <div class="gen-director__chosen" id="gen-director-chosen"></div>
+        </div>
+        <button class="es-btn es-btn--sm es-btn--tertiary" type="button" id="gen-director-toggle" aria-controls="gen-directions" aria-expanded="true">New directions</button>
+      </div>
+      <div class="gen-directions" id="gen-directions" role="list" aria-label="Creative directions"></div>
+      <div class="gen-director__foot">
+        <p class="gen-director__count" id="gen-director-count" aria-live="polite"></p>
+        <div class="gen-director__buttons">
+          <button class="es-btn es-btn--tertiary" type="button" id="gen-director-auto">Skip · Auto</button>
+          <button class="es-btn" type="button" id="gen-director-make">Make all</button>
+        </div>
+      </div>
+    </section>
     <section class="gen-empty" id="gen-empty" aria-labelledby="gen-live-title" data-ais-reveal>
       <div class="gen-empty__head">
         <h2 class="gen-empty__title" id="gen-live-title"><span class="es-live-dot" aria-hidden="true"></span>Start from a live trend</h2>
@@ -1213,6 +1481,9 @@
         check: svg('<path d="M20 6 9 17l-5-5"/>'),
         wand: svg('<path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/>'),
         alert: svg('<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>'),
+        thumbUp: svg('<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>'),
+        thumbDown: svg('<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>'),
+        clapper: svg('<path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>'),
         dashed: svg('<path d="M10.1 2.182a10 10 0 0 1 3.8 0"/><path d="M13.9 21.818a10 10 0 0 1-3.8 0"/><path d="M17.609 3.721a10 10 0 0 1 2.69 2.7"/><path d="M2.182 13.9a10 10 0 0 1 0-3.8"/><path d="M20.279 17.609a10 10 0 0 1-2.7 2.69"/><path d="M21.818 10.1a10 10 0 0 1 0 3.8"/><path d="M3.721 6.391a10 10 0 0 1 2.7-2.69"/><path d="M6.391 20.279a10 10 0 0 1-2.69-2.7"/>'),
       };
       const $ = id => document.getElementById(id);
@@ -1221,6 +1492,9 @@
         kbd: $('gen-kbd'), trending: $('gen-trending'), quick: $('gen-quick'), progress: $('gen-progress'), summary: $('gen-summary'),
         notice: $('gen-notice'), empty: $('gen-empty'), grid: $('gen-grid'), research: $('gen-research'), researchList: $('gen-research-list'),
         found: $('gen-found'), formatNote: $('gen-format-note'), live: $('gen-live'),
+        tone: $('gen-tone'), audience: $('gen-audience'), plan: $('gen-plan'), expect: $('gen-expect'),
+        director: $('gen-director'), directions: $('gen-directions'), directorRead: $('gen-director-read'), directorChosen: $('gen-director-chosen'),
+        directorToggle: $('gen-director-toggle'), directorCount: $('gen-director-count'), directorAuto: $('gen-director-auto'), directorMake: $('gen-director-make'),
       };
       if (/Mac|iPhone|iPad/.test(navigator.platform || '')) els.kbd.textContent = '⌘ ↵';
       let chosen = 'auto'; // the selected format card ('auto' = the AI picks)
@@ -1358,7 +1632,9 @@
       // the last step starts when the designs arrive.
       const STEPS = ['Reading ES coverage', 'Writing on-brand copy', 'Designing your posts'];
       let progressTimer = null;
-      function startProgress() {
+      // steps: the labels (the last starts with designing()). auto: when each
+      // next step starts by itself (ms), e.g. research ~2.4s, the director ~8s.
+      function startProgress(steps = STEPS, auto = [2400]) {
         const started = performance.now();
         let step = 0;
         let drawnStep = -1;
@@ -1370,7 +1646,7 @@
             drawnStep = step;
             // Step indicator (es-motion.css): numbered circles, the current one
             // fills blue with a quick ring; done steps draw a check.
-            els.progress.innerHTML = STEPS.map((label, index) => {
+            els.progress.innerHTML = steps.map((label, index) => {
             const state = index < step ? ' is-done' : index === step ? ' is-active' : '';
             const num = index < step ? (window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check) : String(index + 1);
             const spinner = index === step ? '<span class="gen-spinner" aria-hidden="true"></span>' : '';
@@ -1385,11 +1661,12 @@
         draw();
         clearInterval(progressTimer);
         progressTimer = setInterval(() => {
-          if (step === 0 && performance.now() - started > 2400) step = 1;
+          const ms = performance.now() - started;
+          while (step < steps.length - 2 && auto[step] != null && ms > auto[step]) step += 1;
           draw();
         }, 500);
         return {
-          designing() { step = 2; draw(); },
+          designing() { step = steps.length - 1; draw(); },
           stop() {
             clearInterval(progressTimer);
             els.progress.hidden = true;
@@ -1410,6 +1687,10 @@
         els.submit.disabled = value;
         els.submit.classList.toggle('is-busy', value);
         els.trending.disabled = value;
+        [els.directorAuto, els.directorMake, els.directorToggle].forEach(button => { button.disabled = value; });
+        const run = document.getElementById('gen-onbrand-run');
+        if (run) run.disabled = value || !run.closest('.gen-onbrand')?.querySelector('.gen-slides li');
+        if (!value) updateDirectorCount();
         els.submitLabel.textContent = value ? 'Generating…' : 'Generate';
         els.kbd.hidden = value;
       }
@@ -1429,8 +1710,9 @@
         card.innerHTML = `
           <div class="gen-card__media"><img alt=""></div>
           <div class="gen-card__body">
-            <span class="gen-card__type"></span>
+            <div class="gen-card__tags"><span class="gen-card__type"></span><span class="gen-card__guide" hidden></span><span class="gen-card__dir"></span></div>
             <p class="gen-card__why"></p>
+            <p class="gen-card__fixes" hidden></p>
             <p class="gen-card__source" hidden>Source: <a target="_blank" rel="noopener"></a></p>
             <p class="gen-card__hint" hidden></p>
             <div class="gen-card__actions">
@@ -1440,6 +1722,7 @@
               <button class="es-icon-btn" type="button" data-act="photos" aria-label="Change photo" title="Change photo" aria-expanded="false">${ICON.image}</button>
               <button class="es-icon-btn" type="button" data-act="again" aria-label="Try this format again" title="Try again">${ICON.refresh}</button>
             </div>
+            <div class="gen-note" hidden></div>
             <div class="gen-refine" hidden></div>
             <div class="gen-photos" hidden></div>
           </div>`;
@@ -1452,6 +1735,18 @@
         card.classList.remove('is-skeleton', 'is-failed');
         card.removeAttribute('aria-hidden');
         card.querySelector('.gen-card__type').textContent = spec.label;
+        card.querySelector('.gen-card__dir').textContent = spec.direction?.name ? String(spec.direction.name) : '';
+        // Guideline check (es-guidelines.js): "On-brand" and any fixes it made.
+        const guide = card.querySelector('.gen-card__guide');
+        const fixesRow = card.querySelector('.gen-card__fixes');
+        const fixes = Array.isArray(spec.guideline?.fixes) ? spec.guideline.fixes.map(fix => String(fix?.what || '')).filter(Boolean) : [];
+        guide.hidden = !spec.guideline?.ok;
+        guide.innerHTML = `${ICON.check}<span></span>`;
+        guide.querySelector('span').textContent = fixes.length ? `On-brand · ${fixes.length} fix${fixes.length === 1 ? '' : 'es'}` : 'On-brand';
+        guide.title = fixes.length ? `Passed the ES guideline check after: ${fixes.join('; ')}` : 'Passed every ES guideline check';
+        fixesRow.hidden = !fixes.length || !spec.guideline?.ok;
+        fixesRow.textContent = fixes.length ? `Guideline fixes: ${fixes.join('; ')}` : '';
+        renderNote(card);
         // The creative director's angle when there is one ("Angle: …"), else the
         // writer's note. Built from text nodes, never HTML.
         const why = card.querySelector('.gen-card__why');
@@ -1574,6 +1869,686 @@
         return `${ai ? '<span class="gen-mode is-ai">AI copy</span>' : '<span class="gen-mode">Your words</span>'}<span class="gen-mode">${live ? 'ES MCP' : 'ES coverage'}</span>`;
       }
 
+      // ── Creative director: steer, directions, notes, memory ───────────────
+      // Director first: Generate asks for 2-4 named directions (mode 'direct'),
+      // the editor picks / edits / steers them, then the designs are written
+      // for exactly those directions. "Directions first" off, "Skip · Auto",
+      // or any director failure = today's one-step Generate.
+      const TONES = [['', 'Auto'], ['hype', 'Hype'], ['analytical', 'Analytical'], ['emotional', 'Emotional'], ['witty', 'Witty']];
+      const AUDIENCES = [['', 'Auto'], ['casual', 'Casual fan'], ['diehard', 'Die-hard']];
+      const HOOKS = [['question', 'Question'], ['claim', 'Bold claim'], ['reaction', 'Reaction'], ['quote', 'Quote'], ['numbers', 'Numbers'], ['ranking', 'Ranking']];
+      const hookName = hook => HOOKS.find(([id]) => id === hook)?.[1] || 'Hook';
+      const PREFS_KEY = 'frameup.generate.director.v1';
+      function readPrefs() {
+        try {
+          const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
+          return prefs && typeof prefs === 'object' ? prefs : {};
+        } catch (error) {
+          return {};
+        }
+      }
+      const prefs = readPrefs();
+      const steer = {
+        tone: TONES.some(([id]) => id === prefs.tone) ? prefs.tone : '',
+        audience: AUDIENCES.some(([id]) => id === prefs.audience) ? prefs.audience : '',
+      };
+      let plan = prefs.plan !== false;
+      function savePrefs() {
+        try { localStorage.setItem(PREFS_KEY, JSON.stringify({ ...steer, plan })); } catch (error) { /* private mode */ }
+      }
+      // This brief's director session: its directions, picks and push-backs.
+      const session = { brief: '', runId: '', formats: [], directions: [], selected: new Set(), less: [], more: [] };
+      const dirKey = dir => String(dir?.ref || dir?.id || '');
+      const steerBody = (extra = {}) => {
+        const body = { tone: steer.tone, audience: steer.audience, ...extra };
+        if (session.less.length && !body.less) body.less = session.less.slice(-3);
+        return Object.fromEntries(Object.entries(body).filter(([, value]) => (Array.isArray(value) ? value.length : value)));
+      };
+      // What the server needs to write a picked (maybe edited) direction.
+      const dirPayload = dir => ({
+        ref: dirKey(dir), name: dir.name, postType: dir.postType, angle: dir.angle, hook: dir.hook, emotion: dir.emotion,
+        headlineIdea: dir.headlineIdea, factsUsed: dir.factsUsed || [], photo: dir.photo || {}, team: dir.team || '', palette: dir.palette || 'auto',
+        why: dir.why || '', confidence: dir.confidence, ...(dir.edited ? { edited: true } : {}),
+      });
+
+      // Fire-and-forget learning events (_direction-memory.js). Never blocks
+      // or breaks the page; does nothing until the migration is applied.
+      function track(type, extra = {}) {
+        try {
+          const event = { type, runId: extra.runId || session.runId || undefined, ...extra };
+          window.ESAuth?.fetchWithAuth?.('/api/generate-direction-events', {
+            method: 'POST',
+            keepalive: true,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event }),
+          })?.catch?.(() => {});
+        } catch (error) { /* learning is optional */ }
+      }
+      const designEvent = (spec, payload = {}) => ({
+        runId: spec.runId, directionId: spec.direction?.ref || spec.direction?.conceptId, postType: spec.postType,
+        hook: spec.direction?.hook || undefined, sport: spec.sport || undefined, angle: spec.direction?.angle || undefined,
+        payload: { specId: spec.id, text: versionText(spec.postType, spec).slice(0, 200), ...payload },
+      });
+
+      // Tone and audience: two small radiogroups (roving tabindex, arrows).
+      function chipGroup(container, options, key) {
+        const chips = options.map(([id, label]) => {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'gen-chip';
+          chip.setAttribute('role', 'radio');
+          chip.dataset.value = id;
+          chip.textContent = label;
+          chip.addEventListener('click', () => choose(id));
+          return chip;
+        });
+        const paint = () => chips.forEach(chip => {
+          const on = chip.dataset.value === steer[key];
+          chip.setAttribute('aria-checked', String(on));
+          chip.tabIndex = on ? 0 : -1;
+        });
+        function choose(id, focus = false) {
+          steer[key] = id;
+          savePrefs();
+          paint();
+          if (focus) chips.find(chip => chip.dataset.value === id)?.focus();
+        }
+        container.addEventListener('keydown', event => {
+          const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+          const index = chips.findIndex(chip => chip.dataset.value === steer[key]);
+          let next = -1;
+          if (event.key in keys) next = (index + keys[event.key] + chips.length) % chips.length;
+          else if (event.key === 'Home') next = 0;
+          else if (event.key === 'End') next = chips.length - 1;
+          if (next < 0) return;
+          event.preventDefault();
+          choose(chips[next].dataset.value, true);
+        });
+        container.replaceChildren(...chips);
+        paint();
+      }
+      chipGroup(els.tone, TONES, 'tone');
+      chipGroup(els.audience, AUDIENCES, 'audience');
+
+      function paintPlan() {
+        els.plan.setAttribute('aria-checked', String(plan));
+        els.expect.querySelector('span').innerHTML = plan
+          ? '<strong>Director first</strong> · 2–4 directions, then designs'
+          : '<strong>Up to 4 designs</strong> · edit any in the editor';
+      }
+      els.plan.addEventListener('click', () => {
+        plan = !plan;
+        savePrefs();
+        paintPlan();
+      });
+      paintPlan();
+
+      // ── The directions panel ───────────────────────────────────────────
+      function confidenceBadge(value) {
+        const n = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+        const tier = n >= 75 ? 'high' : n >= 50 ? 'mid' : 'low';
+        const label = tier === 'high' ? 'High' : tier === 'mid' ? 'Medium' : 'Low';
+        const badge = document.createElement('span');
+        badge.className = `gen-dir__conf is-${tier}`;
+        badge.style.setProperty('--conf', `${n}%`);
+        badge.title = `Director's confidence: ${n}% (${label})`;
+        badge.setAttribute('aria-label', `Confidence ${n}%, ${label.toLowerCase()}`);
+        badge.innerHTML = `<i aria-hidden="true"></i>${n}%`;
+        return badge;
+      }
+      function textEl(tag, className, text) {
+        const node = document.createElement(tag);
+        node.className = className;
+        node.textContent = text;
+        return node;
+      }
+      function skeletonDirection() {
+        const card = document.createElement('div');
+        card.className = 'gen-dir is-skeleton';
+        card.setAttribute('aria-hidden', 'true');
+        card.innerHTML = '<span class="es-skeleton"></span><span class="es-skeleton"></span><span class="es-skeleton"></span>';
+        return card;
+      }
+      function directionCard(dir) {
+        const key = dirKey(dir);
+        const card = document.createElement('article');
+        card.className = 'gen-dir';
+        card.setAttribute('role', 'listitem');
+        card.dataset.key = key;
+        card._dir = dir;
+        const top = document.createElement('div');
+        top.className = 'gen-dir__top';
+        const thumb = document.createElement('img');
+        thumb.className = 'gen-dir__thumb';
+        thumb.src = `assets/template-thumbs/instagram-${encodeURIComponent(dir.postType)}.webp`;
+        thumb.alt = '';
+        thumb.width = 36;
+        thumb.height = 45;
+        thumb.loading = 'lazy';
+        const titles = document.createElement('div');
+        titles.className = 'gen-dir__titles';
+        const name = textEl('h3', 'gen-dir__name', dir.name || 'Direction');
+        name.id = `gen-dir-name-${key}`;
+        titles.append(name, textEl('span', 'gen-dir__meta', `${dir.label || dir.postType} · ${hookName(dir.hook)}${dir.emotion ? ` · ${dir.emotion}` : ''}`));
+        const pick = document.createElement('button');
+        pick.type = 'button';
+        pick.className = 'gen-dir__pick';
+        pick.dataset.dirAct = 'pick';
+        pick.setAttribute('aria-pressed', String(session.selected.has(key)));
+        pick.setAttribute('aria-labelledby', name.id);
+        pick.title = 'Select this direction';
+        pick.innerHTML = ICON.check;
+        top.append(thumb, titles, pick);
+
+        const angle = textEl('p', 'gen-dir__angle', dir.angle);
+        const headline = textEl('p', 'gen-dir__headline', dir.headlineIdea ? `“${dir.headlineIdea}”` : '');
+        const edited = textEl('span', 'gen-dir__edited', 'Edited');
+        edited.hidden = !dir.edited;
+
+        const form = document.createElement('div');
+        form.className = 'gen-dir__form';
+        form.hidden = true;
+        const angleLabel = textEl('label', 'gen-dir__label', 'Angle');
+        const angleInput = document.createElement('textarea');
+        angleInput.maxLength = 120;
+        angleInput.id = `gen-dir-angle-${key}`;
+        angleLabel.htmlFor = angleInput.id;
+        const hookLabel = textEl('label', 'gen-dir__label', 'Hook');
+        const headlineInput = document.createElement('input');
+        headlineInput.type = 'text';
+        headlineInput.maxLength = 60;
+        headlineInput.placeholder = 'Headline idea (optional)';
+        headlineInput.id = `gen-dir-headline-${key}`;
+        hookLabel.htmlFor = headlineInput.id;
+        const hookSelect = document.createElement('select');
+        hookSelect.setAttribute('aria-label', 'Hook type');
+        hookSelect.innerHTML = HOOKS.map(([id, label]) => `<option value="${esc(id)}">${esc(label)}</option>`).join('');
+        const row = document.createElement('div');
+        row.className = 'gen-dir__form-row';
+        row.innerHTML = '<button class="es-btn es-btn--sm" type="button" data-dir-act="save">Save</button><button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-dir-act="cancel">Cancel</button>';
+        row.prepend(hookSelect);
+        form.append(angleLabel, angleInput, hookLabel, headlineInput, row);
+
+        const why = document.createElement('p');
+        why.className = 'gen-dir__why';
+        if (dir.why) why.append(textEl('strong', '', 'Why it works'), document.createTextNode(dir.why));
+        else why.hidden = true;
+
+        const nodes = [top, angle, headline, edited, form, why];
+        const inspired = (dir.inspiredBy || []).filter(post => post?.text);
+        if (inspired.length) {
+          const box = document.createElement('div');
+          box.className = 'gen-dir__inspired';
+          const list = document.createElement('ul');
+          inspired.slice(0, 3).forEach(post => {
+            const li = document.createElement('li');
+            const img = document.createElement('img');
+            img.alt = '';
+            img.loading = 'lazy';
+            img.src = post.photo && /^\/api\/es-image-search\?/.test(post.photo) ? post.photo : `assets/template-thumbs/instagram-${encodeURIComponent(post.postType || 'cover')}.webp`;
+            img.addEventListener('error', () => { img.src = `assets/template-thumbs/instagram-${encodeURIComponent(post.postType || 'cover')}.webp`; }, { once: true });
+            const span = document.createElement('span');
+            span.title = post.text;
+            span.append(textEl('b', '', `${post.label || 'Post'}${post.stars ? ` ★${post.stars}` : ''} · `), document.createTextNode(post.text));
+            li.append(img, span);
+            list.append(li);
+          });
+          box.append(textEl('span', 'gen-dir__label', 'Inspired by past ES posts'), list);
+          nodes.push(box);
+        }
+        const actions = document.createElement('div');
+        actions.className = 'gen-dir__actions';
+        actions.innerHTML = `
+          <button class="es-btn es-btn--sm es-btn--tertiary gen-dir__edit-btn" type="button" data-dir-act="edit">${ICON.pencil}Edit</button>
+          <button class="es-icon-btn" type="button" data-dir-act="more" aria-label="More like this" title="More like this">${ICON.thumbUp}</button>
+          <button class="es-icon-btn" type="button" data-dir-act="less" aria-label="Less like this" title="Less like this">${ICON.thumbDown}</button>`;
+        top.append(confidenceBadge(dir.confidence));
+        top.style.gridTemplateColumns = '36px minmax(0, 1fr) auto auto';
+        nodes.push(actions);
+        card.append(...nodes);
+        card.classList.toggle('is-selected', session.selected.has(key));
+        return card;
+      }
+
+      function updateDirectorCount() {
+        const total = session.directions.length;
+        const picked = session.directions.filter(dir => session.selected.has(dirKey(dir))).length;
+        els.directorMake.textContent = picked ? `Make ${picked} selected` : total ? `Make all ${total}` : 'Make all';
+        els.directorMake.disabled = busy || !total;
+        els.directorCount.innerHTML = total
+          ? (picked ? `<strong>${picked} of ${total}</strong> picked` : `<strong>${total} directions</strong> · pick any, or make them all`)
+          : '';
+      }
+
+      function renderDirections(data, { keepSelection = false } = {}) {
+        if (!keepSelection) session.selected = new Set([...session.selected].filter(key => session.directions.some(dir => dirKey(dir) === key)));
+        els.director.hidden = false;
+        els.director.classList.remove('is-collapsed');
+        els.directorToggle.textContent = 'New directions';
+        els.directorToggle.setAttribute('aria-expanded', 'true');
+        const moment = data?.read?.moment ? String(data.read.moment) : '';
+        els.directorRead.textContent = moment;
+        els.directions.removeAttribute('aria-busy');
+        els.directions.replaceChildren(...session.directions.map(directionCard));
+        updateDirectorCount();
+      }
+
+      // The page's one-line summary of what was made, when the panel folds.
+      function collapseDirector(chosen) {
+        els.director.classList.add('is-collapsed');
+        els.directorToggle.textContent = 'Change directions';
+        els.directorToggle.setAttribute('aria-expanded', 'false');
+        els.directorChosen.replaceChildren(...chosen.map(dir => textEl('span', 'es-badge es-badge--brand', dir.name || 'Direction')));
+      }
+
+      // Ask the director for directions (a new brief, New directions, or a
+      // more/less steer). keep: directions to keep at the top (more like this).
+      async function requestDirections({ more = [], less = [], keep = [] } = {}) {
+        const brief = lastBrief;
+        setBusy(true);
+        setNotice('');
+        els.empty.hidden = true;
+        els.director.hidden = false;
+        els.director.classList.remove('is-collapsed');
+        els.directions.setAttribute('aria-busy', 'true');
+        els.directions.replaceChildren(...keep.map(directionCard), ...Array.from({ length: Math.max(1, 3 - keep.length) }, skeletonDirection));
+        const progress = startProgress(['Reading ES coverage', 'Director thinking', 'Directions ready'], [2400]);
+        let data = null;
+        try {
+          data = await callApi('/api/es-generate', { mode: 'direct', brief, formats: session.formats, count: 4, steer: steerBody({ ...(more.length ? { more } : {}), ...(less.length ? { less } : {}) }) });
+        } catch (error) {
+          progress.stop();
+          els.directions.removeAttribute('aria-busy');
+          if (error.reason === 'weekly-limit' || error.reason === 'limit') {
+            els.director.hidden = true;
+            els.empty.hidden = false;
+            setNotice('Could not generate', ` ${error.message}`, 'warn');
+            setBusy(false);
+            return;
+          }
+          // Any other failure: today's one-step Generate.
+          els.director.hidden = true;
+          setBusy(false);
+          await makeDesigns(null, { note: 'The director is unavailable right now, so these were made the usual way.' });
+          return;
+        }
+        progress.stop();
+        const fresh = (data.directions || []).filter(dir => !keep.some(kept => kept.angle === dir.angle));
+        if (!keep.length && !fresh.length) {
+          els.director.hidden = true;
+          setBusy(false);
+          const why = data.source === 'off' || data.source === 'budget'
+            ? 'The director is off right now, so these were made the usual way.'
+            : 'The director had no clear directions for this brief, so these were made the usual way.';
+          await makeDesigns(null, { note: why });
+          return;
+        }
+        // Each request has its own run; keys stay unique across steers.
+        const prefix = (data.runId || 'run').slice(-4);
+        fresh.forEach(dir => { dir.ref = `${prefix}${dir.id}`.replace(/[^\w-]/g, ''); dir.runId = data.runId; });
+        session.runId = data.runId || session.runId;
+        session.directions = [...keep, ...fresh].slice(0, 4);
+        renderDirections(data, { keepSelection: Boolean(keep.length) });
+        setBusy(false);
+        track('directions_shown', {
+          runId: data.runId,
+          payload: { brief: brief.slice(0, 600), source: data.source, model: data.model, steer: data.steer || {}, directions: fresh.map(dir => ({ id: dir.id, name: dir.name, angle: dir.angle, hook: dir.hook, postType: dir.postType, confidence: dir.confidence })) },
+        });
+        els.directions.querySelector('.gen-dir__pick')?.focus({ preventScroll: true });
+        if (els.director.getBoundingClientRect().top > window.innerHeight * 0.7) els.director.scrollIntoView({ block: 'start', behavior: reducedMotion.matches ? 'auto' : 'smooth' });
+      }
+
+      // Panel clicks: pick, edit / save / cancel, more / less like this.
+      els.directions.addEventListener('click', event => {
+        const card = event.target.closest('.gen-dir');
+        if (!card?._dir || busy) return;
+        const dir = card._dir;
+        const key = dirKey(dir);
+        const button = event.target.closest('[data-dir-act]');
+        const act = button?.dataset.dirAct || (event.target.closest('.gen-dir__form, a, input, textarea, select, button') ? '' : 'pick');
+        const form = card.querySelector('.gen-dir__form');
+        if (act === 'pick') {
+          if (session.selected.has(key)) session.selected.delete(key);
+          else session.selected.add(key);
+          card.classList.toggle('is-selected', session.selected.has(key));
+          card.querySelector('.gen-dir__pick').setAttribute('aria-pressed', String(session.selected.has(key)));
+          updateDirectorCount();
+        } else if (act === 'edit') {
+          form.querySelector('textarea').value = dir.angle;
+          form.querySelector('input').value = dir.headlineIdea || '';
+          form.querySelector('select').value = dir.hook;
+          form.hidden = false;
+          card.querySelector('.gen-dir__angle').hidden = true;
+          card.querySelector('.gen-dir__headline').hidden = true;
+          button.hidden = true;
+          form.querySelector('textarea').focus();
+        } else if (act === 'cancel' || act === 'save') {
+          if (act === 'save') {
+            const angle = form.querySelector('textarea').value.replace(/\s+/g, ' ').trim();
+            const headlineIdea = form.querySelector('input').value.replace(/\s+/g, ' ').trim().slice(0, 60);
+            const hook = form.querySelector('select').value;
+            if (angle.length < 6) {
+              form.querySelector('textarea').focus();
+              setNotice('Angle is too short', ' Say the one idea this post sells, in a few words.');
+              return;
+            }
+            const before = { angle: dir.angle, hook: dir.hook, headlineIdea: dir.headlineIdea || '' };
+            if (angle !== dir.angle || hook !== dir.hook || headlineIdea !== (dir.headlineIdea || '')) {
+              Object.assign(dir, { angle, hook, headlineIdea, edited: true });
+              track('direction_edited', { runId: dir.runId, directionId: key, postType: dir.postType, hook, angle, payload: { before, after: { angle, hook, headlineIdea } } });
+            }
+            session.selected.add(key);
+          }
+          const next = directionCard(dir);
+          card.replaceWith(next);
+          next.querySelector('[data-dir-act="edit"]')?.focus({ preventScroll: true });
+          updateDirectorCount();
+        } else if (act === 'more') {
+          track('more_like_this', { runId: dir.runId, directionId: key, postType: dir.postType, hook: dir.hook, angle: dir.angle, payload: { on: 'direction' } });
+          session.more = [dir.angle];
+          session.selected.add(key);
+          requestDirections({ more: [dir.angle], keep: [dir] });
+        } else if (act === 'less') {
+          track('less_like_this', { runId: dir.runId, directionId: key, postType: dir.postType, hook: dir.hook, angle: dir.angle, payload: { on: 'direction' } });
+          session.less = [...session.less.filter(angle => angle !== dir.angle), dir.angle].slice(-3);
+          session.selected.delete(key);
+          const keep = session.directions.filter(other => dirKey(other) !== key);
+          requestDirections({ less: session.less, keep });
+        }
+      });
+      els.directions.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && event.target.closest('.gen-dir__form')) event.target.closest('.gen-dir').querySelector('[data-dir-act="cancel"]')?.click();
+        if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && event.target.closest('.gen-dir__form')) {
+          event.preventDefault();
+          event.target.closest('.gen-dir').querySelector('[data-dir-act="save"]')?.click();
+        }
+      });
+      els.directorMake.addEventListener('click', () => {
+        if (busy || !session.directions.length) return;
+        const picked = session.directions.filter(dir => session.selected.has(dirKey(dir)));
+        makeDesigns(picked.length ? picked : session.directions);
+      });
+      els.directorAuto.addEventListener('click', () => {
+        if (busy) return;
+        track('direction_skipped', { payload: { shown: session.directions.length } });
+        els.director.hidden = true;
+        makeDesigns(null);
+      });
+      els.directorToggle.addEventListener('click', () => {
+        if (busy) return;
+        if (els.director.classList.contains('is-collapsed')) {
+          els.director.classList.remove('is-collapsed');
+          els.directorToggle.textContent = 'New directions';
+          els.directorToggle.setAttribute('aria-expanded', 'true');
+          els.directions.querySelector('.gen-dir__pick')?.focus({ preventScroll: true });
+          return;
+        }
+        session.selected.clear();
+        requestDirections();
+      });
+
+      // The director's note on a design card: what is strong, one fix, and
+      // More / Less like this. Built from text nodes, never HTML from the AI.
+      function renderNote(card) {
+        const spec = card._spec;
+        const note = card.querySelector('.gen-note');
+        const critique = spec.critique;
+        note.replaceChildren();
+        note.hidden = !critique;
+        if (!critique) return;
+        const strong = document.createElement('p');
+        const who = document.createElement('span');
+        who.className = 'gen-note__who';
+        who.innerHTML = `${ICON.clapper}Director`;
+        strong.append(who, document.createTextNode(critique.strong || ''));
+        note.append(strong);
+        if (critique.applied) note.append(textEl('p', 'gen-note__done', 'Fix applied.'));
+        else if (critique.fix?.text) {
+          const fix = document.createElement('p');
+          fix.className = 'gen-note__fix';
+          fix.append(textEl('b', '', 'One fix: '), document.createTextNode(critique.fix.text));
+          note.append(fix);
+        }
+        const row = document.createElement('div');
+        row.className = 'gen-note__row';
+        if (critique.fix?.text && !critique.applied) {
+          const apply = document.createElement('button');
+          apply.type = 'button';
+          apply.className = 'es-btn es-btn--sm';
+          apply.dataset.act = 'fix';
+          apply.innerHTML = `${ICON.wand}<span>${critique.fix.how === 'photo' ? 'Pick photo' : 'Apply fix'}</span>`;
+          row.append(apply);
+        }
+        const steerButtons = document.createElement('span');
+        steerButtons.className = 'gen-note__steer';
+        steerButtons.innerHTML = `
+          <button class="es-icon-btn" type="button" data-act="more" aria-label="More like this" title="More like this">${ICON.thumbUp}</button>
+          <button class="es-icon-btn" type="button" data-act="less" aria-label="Less like this" title="Less like this">${ICON.thumbDown}</button>`;
+        row.append(steerButtons);
+        note.append(row);
+      }
+
+      // Results, grouped by direction (in the director's order), each group
+      // under its name and angle. Designs with no direction come last.
+      function renderResults(data) {
+        const concepts = data.direction?.concepts || [];
+        const keyOf = spec => String(spec.direction?.ref || spec.direction?.conceptId || '');
+        const order = [...concepts.map(c => String(c.ref || c.id)), ''];
+        const byKey = new Map(order.map(key => [key, []]));
+        const cards = [];
+        data.designs.forEach(spec => {
+          const card = buildCard(spec);
+          const concept = concepts.find(c => String(c.ref || c.id) === keyOf(spec));
+          if (concept) card._dir = { ...concept, ref: String(concept.ref || concept.id), runId: data.runId };
+          cards.push(card);
+          (byKey.get(keyOf(spec)) || byKey.get('')).push(card);
+        });
+        const nodes = [];
+        const grouped = concepts.length > 0;
+        order.forEach(key => {
+          const list = byKey.get(key) || [];
+          if (!list.length) return;
+          const concept = concepts.find(c => String(c.ref || c.id) === key);
+          if (grouped && (concept || key === '')) {
+            const head = document.createElement('div');
+            head.className = 'gen-group';
+            head.setAttribute('role', 'heading');
+            head.setAttribute('aria-level', '2');
+            head.append(textEl('span', 'gen-group__name', concept ? concept.name : 'More from your brief'));
+            if (concept) head.append(textEl('span', 'gen-group__angle', `${concept.label || ''} · ${concept.angle}`));
+            nodes.push(head);
+          }
+          nodes.push(...list);
+        });
+        els.grid.replaceChildren(...nodes);
+        return cards;
+      }
+
+      // ── Bring it on-brand ─────────────────────────────────────────────────
+      // A design made elsewhere (one image, or up to 6 carousel slides) goes
+      // to the director (mode 'onbrand'): a vision read against the ES rules,
+      // then the same story remade with ES templates. Images are downscaled
+      // here (max 1080px, JPEG) so a carousel stays well under the API limit.
+      const onbrand = {
+        open: $('gen-onbrand-open'), panel: $('gen-onbrand'), close: $('gen-onbrand-close'), drop: $('gen-drop'), file: $('gen-onbrand-file'),
+        slides: $('gen-onbrand-slides'), note: $('gen-onbrand-note'), run: $('gen-onbrand-run'), count: $('gen-onbrand-count'),
+        critique: $('gen-critique'), verdict: $('gen-critique-verdict'), issues: $('gen-critique-issues'), keep: $('gen-critique-keep'), map: $('gen-critique-map'),
+        list: [],
+      };
+      const MAX_SLIDES = 6;
+      const TEMPLATE_NAMES = Object.fromEntries(FORMATS.map(([id, label]) => [id, label]));
+      function paintSlides() {
+        onbrand.slides.replaceChildren(...onbrand.list.map((slide, index) => {
+          const li = document.createElement('li');
+          const img = document.createElement('img');
+          img.src = slide.dataUrl;
+          img.alt = `Slide ${index + 1}${slide.name ? `: ${slide.name}` : ''}`;
+          const n = textEl('span', '', String(index + 1));
+          n.setAttribute('aria-hidden', 'true');
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.dataset.index = String(index);
+          remove.setAttribute('aria-label', `Remove slide ${index + 1}`);
+          remove.innerHTML = svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
+          li.append(img, n, remove);
+          return li;
+        }));
+        const n = onbrand.list.length;
+        onbrand.run.disabled = busy || !n;
+        onbrand.run.textContent = n > 1 ? `Check and remake ${n} slides` : 'Check and remake';
+        onbrand.count.textContent = n ? `${n} of ${MAX_SLIDES} slide${n === 1 ? '' : 's'}` : '';
+      }
+      // A File (or Blob) -> a JPEG data URL, longest side at most 1080px.
+      async function shrink(file) {
+        const url = URL.createObjectURL(file);
+        try {
+          const img = await new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error('That file is not an image we can read.'));
+            image.src = url;
+          });
+          const scale = Math.min(1, 1080 / Math.max(img.naturalWidth, img.naturalHeight));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          let quality = 0.85;
+          let data = canvas.toDataURL('image/jpeg', quality);
+          while (data.length > 600000 && quality > 0.45) {
+            quality -= 0.1;
+            data = canvas.toDataURL('image/jpeg', quality);
+          }
+          return data;
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      }
+      async function addImages(files) {
+        const images = [...files].filter(file => /^image\/(png|jpe?g|webp|gif)$/i.test(file.type));
+        if (!images.length) {
+          setNotice('Not an image', ' Use a PNG, JPG or WebP of the design.');
+          return;
+        }
+        const room = MAX_SLIDES - onbrand.list.length;
+        if (images.length > room) setNotice('Up to 6 slides', ` Only the first ${Math.max(0, room)} were added.`);
+        for (const file of images.slice(0, Math.max(0, room))) {
+          try {
+            onbrand.list.push({ dataUrl: await shrink(file), name: file.name || '' });
+          } catch (error) {
+            setNotice('Could not read that image', ` ${error.message || ''}`);
+          }
+        }
+        paintSlides();
+      }
+      function showOnbrand(open, { focus = true } = {}) {
+        onbrand.panel.hidden = !open;
+        onbrand.open.setAttribute('aria-expanded', String(open));
+        if (open && focus) onbrand.drop.querySelector('input').focus({ preventScroll: true });
+        if (open && onbrand.panel.getBoundingClientRect().top > window.innerHeight * 0.75) onbrand.panel.scrollIntoView({ block: 'nearest', behavior: reducedMotion.matches ? 'auto' : 'smooth' });
+        if (!open) onbrand.open.focus({ preventScroll: true });
+      }
+      onbrand.open.addEventListener('click', () => showOnbrand(onbrand.panel.hidden));
+      onbrand.close.addEventListener('click', () => showOnbrand(false));
+      onbrand.file.addEventListener('change', async () => {
+        await addImages(onbrand.file.files || []);
+        onbrand.file.value = '';
+      });
+      onbrand.slides.addEventListener('click', event => {
+        const button = event.target.closest('button[data-index]');
+        if (!button || busy) return;
+        onbrand.list.splice(Number(button.dataset.index), 1);
+        paintSlides();
+        (onbrand.slides.querySelector('button') || onbrand.drop.querySelector('input')).focus({ preventScroll: true });
+      });
+      ['dragenter', 'dragover'].forEach(type => onbrand.drop.addEventListener(type, event => {
+        event.preventDefault();
+        onbrand.drop.classList.add('is-over');
+      }));
+      ['dragleave', 'drop'].forEach(type => onbrand.drop.addEventListener(type, () => onbrand.drop.classList.remove('is-over')));
+      onbrand.drop.addEventListener('drop', event => {
+        event.preventDefault();
+        addImages(event.dataTransfer?.files || []);
+      });
+      // Pasting an image anywhere on Generate (the brief, or the panel) opens
+      // Bring it on-brand with it.
+      document.addEventListener('paste', event => {
+        if (root.dataset.aisView === 'trends') return;
+        const files = [...(event.clipboardData?.items || [])].filter(item => item.kind === 'file' && item.type.startsWith('image/')).map(item => item.getAsFile()).filter(Boolean);
+        if (!files.length) return;
+        event.preventDefault();
+        showOnbrand(true, { focus: false });
+        addImages(files);
+      });
+
+      function renderCritique(critique, mapping = []) {
+        if (!critique) { onbrand.critique.hidden = true; return; }
+        const must = critique.issues.filter(issue => issue.level === 'must').length;
+        onbrand.verdict.className = `gen-critique__verdict${critique.issues.length ? '' : ' is-good'}`;
+        onbrand.verdict.textContent = critique.issues.length ? `${critique.issues.length} off-guide${must ? ` · ${must} must-fix` : ''}` : 'On-guide';
+        onbrand.issues.replaceChildren(...(critique.issues.length ? critique.issues.map(issue => {
+          const li = document.createElement('li');
+          const head = document.createElement('span');
+          head.append(textEl('b', '', `${issue.slide ? `Slide ${issue.slide} · ` : ''}${issue.what}`));
+          if (issue.level === 'must') head.append(document.createTextNode(' '), textEl('span', 'is-must', 'Must fix'));
+          li.append(head, textEl('span', '', issue.why), textEl('cite', '', `ES rule: ${issue.title} (${issue.source})`));
+          return li;
+        }) : [textEl('li', 'gen-critique__empty', 'Nothing off-guide found.')]));
+        onbrand.keep.replaceChildren(...(critique.keep.length ? critique.keep : ['The story']).map(item => textEl('li', '', item)));
+        onbrand.map.replaceChildren(...mapping.map(item => {
+          const li = document.createElement('li');
+          li.append(textEl('b', '', `Slide ${item.slide} → ${TEMPLATE_NAMES[item.template] || item.template}`), document.createTextNode(`: ${item.why}`));
+          return li;
+        }));
+        onbrand.critique.hidden = false;
+      }
+
+      onbrand.run.addEventListener('click', async () => {
+        if (busy || !onbrand.list.length) return;
+        setBusy(true);
+        onbrand.run.disabled = true;
+        setNotice('');
+        els.empty.hidden = true;
+        els.research.hidden = true;
+        els.director.hidden = true;
+        onbrand.critique.hidden = true;
+        els.grid.replaceChildren(...Array.from({ length: Math.min(4, Math.max(2, onbrand.list.length)) }, skeletonCard));
+        els.grid.setAttribute('aria-busy', 'true');
+        const progress = startProgress(['Reading the design', 'Checking ES guidelines', 'Remaking it the ES way', 'Designing your posts'], [3500, 9000]);
+        renderer().catch(() => {});
+        try {
+          const data = await callApi('/api/es-generate', { mode: 'onbrand', images: onbrand.list.map(slide => slide.dataUrl), note: onbrand.note.value.trim(), steer: steerBody() });
+          renderCritique(data.critique, data.carousel || []);
+          lastBrief = data.brief || lastBrief;
+          Object.assign(session, { brief: lastBrief, runId: data.runId || '', directions: [], selected: new Set(), less: [], more: [] });
+          if (!data.designs?.length) {
+            progress.stop();
+            els.grid.replaceChildren();
+            setNotice('No ES version this time', ' The director read the design but found nothing true to remake. Add the story or numbers in the note and try again.');
+            return;
+          }
+          progress.designing();
+          const cards = renderResults(data);
+          for (const card of cards) await paint(card);
+          const seconds = progress.stop();
+          setSummary(`${modeBadges(data)}<span class="gen-mode is-ai">On-brand remake</span><span><strong data-es-tick="gen-count">${cards.length} design${cards.length === 1 ? '' : 's'}</strong> · ${Math.max(1, Math.round(seconds))}s</span>`);
+          onbrand.critique.scrollIntoView({ block: 'start', behavior: reducedMotion.matches ? 'auto' : 'smooth' });
+        } catch (error) {
+          progress.stop();
+          els.grid.replaceChildren();
+          setNotice(error.reason === 'budget' || error.reason === 'weekly-limit' ? 'On-brand checks are paused' : 'Could not check that design', ` ${error.message || 'Something went wrong.'}`, error.reason ? 'warn' : '', error.reason ? null : { label: 'Try again', run: () => onbrand.run.click() });
+        } finally {
+          els.grid.removeAttribute('aria-busy');
+          setBusy(false);
+          paintSlides();
+          restoreFocus(els.grid.querySelector('[data-act="edit"]') || onbrand.run);
+        }
+      });
+      paintSlides();
+
       // ── Generate ──────────────────────────────────────────────────────────
       async function generate(event) {
         event?.preventDefault();
@@ -1584,17 +2559,48 @@
           return;
         }
         if (busy) return;
-        setBusy(true);
+        if (brief !== session.brief) Object.assign(session, { brief, runId: '', directions: [], selected: new Set(), less: [], more: [] });
+        session.formats = chosen === 'auto' ? [] : [chosen];
         lastBrief = brief;
+        document.getElementById('gen-critique').hidden = true;
+        els.research.hidden = true;
+        if (plan) {
+          els.grid.replaceChildren();
+          session.selected.clear();
+          await requestDirections();
+        } else {
+          els.director.hidden = true;
+          await makeDesigns(null);
+        }
+      }
+
+      // Step 2 (or the one step): write the designs. picked: the directions
+      // to write (null = the director decides inside one call, today's path).
+      async function makeDesigns(picked, { note = '' } = {}) {
+        const brief = lastBrief;
+        if (busy || !brief) return;
+        setBusy(true);
         setNotice('');
         els.empty.hidden = true;
         els.research.hidden = true;
-        els.grid.replaceChildren(...Array.from({ length: 4 }, skeletonCard));
+        const count = picked ? Math.min(4, picked.length === 1 ? 2 : picked.length === 2 ? 4 : picked.length) : 4;
+        els.grid.replaceChildren(...Array.from({ length: count }, skeletonCard));
         els.grid.setAttribute('aria-busy', 'true');
-        const progress = startProgress();
+        if (picked) collapseDirector(picked);
+        const progress = picked
+          ? startProgress(['Writing your directions', 'Director’s notes', 'Designing your posts'], [7000])
+          : startProgress(['Reading ES coverage', 'Director choosing angles', 'Writing on-brand copy', 'Designing your posts'], [2400, 9000]);
         renderer().catch(() => {});
+        if (picked) {
+          picked.forEach(dir => track('direction_chosen', {
+            runId: dir.runId, directionId: dirKey(dir), postType: dir.postType, hook: dir.hook, angle: dir.angle,
+            payload: { name: dir.name, edited: Boolean(dir.edited), confidence: dir.confidence, of: session.directions.length },
+          }));
+        }
         try {
-          const data = await callApi('/api/es-generate', { brief, formats: chosen === 'auto' ? [] : [chosen], count: 4 });
+          const body = { brief, formats: session.formats, count: 4, steer: steerBody() };
+          if (picked) body.directions = picked.map(dirPayload);
+          const data = await callApi('/api/es-generate', body);
           if (!data.designs?.length) {
             els.grid.replaceChildren();
             progress.stop();
@@ -1607,21 +2613,24 @@
             }
             return;
           }
+          session.runId = data.runId || session.runId;
           progress.designing();
-          const cards = data.designs.map(buildCard);
-          els.grid.replaceChildren(...cards);
+          const cards = renderResults(data);
           rememberBrief(brief);
           for (const card of cards) await paint(card);
           const seconds = progress.stop();
-          setSummary(`${modeBadges(data)}<span><strong data-es-tick="gen-count">${cards.length} design${cards.length === 1 ? '' : 's'}</strong> · ${Math.max(1, Math.round(seconds))}s</span>`);
+          const directed = data.direction?.concepts?.length ? `<span class="gen-mode is-ai">Director · ${data.direction.concepts.length} direction${data.direction.concepts.length === 1 ? '' : 's'}</span>` : '';
+          setSummary(`${modeBadges(data)}${directed}<span><strong data-es-tick="gen-count">${cards.length} design${cards.length === 1 ? '' : 's'}</strong> · ${Math.max(1, Math.round(seconds))}s</span>`);
           if (data.ai?.fallback === 'budget' && data.brain !== 'draft') setNotice('Backup AI wrote these', " This week's AI budget is used up, so a backup model wrote the copy. Check the wording closely.", 'warn');
           else if (data.brain === 'draft' && (data.ai?.failed || data.connection?.ai)) setNotice('AI is unavailable right now', data.ai?.fallback === 'budget' ? " This week's AI budget is used up, so these use your words as written. They still check ES coverage for the team and photo." : ' These use your words as written. Try again in a minute for AI copy.', 'warn');
+          else if (note) setNotice('Made without directions', ` ${note}`);
           showResearch(data.research?.articles || []);
         } catch (error) {
           progress.stop();
           els.grid.replaceChildren();
-          els.empty.hidden = false;
-          setNotice('Could not generate', ` ${error.message || 'Something went wrong.'} Your brief is still here.`, '', { label: 'Try again', run: () => generate() });
+          els.empty.hidden = !els.director.hidden;
+          if (picked) els.director.classList.remove('is-collapsed');
+          setNotice('Could not generate', ` ${error.message || 'Something went wrong.'} Your brief is still here.`, '', { label: 'Try again', run: () => (picked ? makeDesigns(picked) : generate()) });
         } finally {
           els.grid.removeAttribute('aria-busy');
           setBusy(false);
@@ -1659,6 +2668,7 @@
             setNotice('Could not open the editor', ' Your browser blocked session storage.');
             return;
           }
+          track('design_opened', designEvent(spec));
           window.location.href = 'index.html#instagram';
         } else if (act === 'download') {
           button.disabled = true;
@@ -1666,6 +2676,7 @@
           button.innerHTML = '<span class="gen-spinner" aria-hidden="true"></span>';
           try {
             await (await renderer()).exportSpec(spec);
+            track('design_exported', designEvent(spec, { score: spec.review?.score ?? null, fixApplied: Boolean(spec.critique?.applied) }));
             // Say it worked, then bring the results summary back.
             const previous = els.summary.innerHTML;
             setSummary(`<span>${window.FrameUpMotion ? window.FrameUpMotion.check() : ''}<strong>PNG downloaded.</strong></span>`);
@@ -1715,6 +2726,73 @@
             card.querySelector(`[data-act="rewrite"][data-how="${how}"]`)?.focus({ preventScroll: true });
             button.innerHTML = label;
           }
+        } else if (act === 'fix') {
+          // The director's one-click fix: a checked rewrite (or the photo picker).
+          const fix = spec.critique?.fix;
+          if (!fix) return;
+          if (fix.how === 'photo') {
+            const photoButton = card.querySelector('[data-act="photos"]');
+            if (photoButton && photoButton.getAttribute('aria-expanded') !== 'true') photoButton.click();
+            card.querySelector('.gen-photos [data-act="pick"]')?.focus({ preventScroll: true });
+            return;
+          }
+          button.disabled = true;
+          const label = button.innerHTML;
+          button.innerHTML = '<span class="gen-spinner" aria-hidden="true"></span>Fixing…';
+          card.querySelector('.gen-card__media').classList.add('is-busy');
+          try {
+            const { photos, ...current } = spec;
+            const data = await callApi('/api/es-generate', { mode: 'rewrite', instruction: fix.how, fix: fix.text, brief: lastBrief, spec: current });
+            const previous = { fields: spec.fields, lines: spec.lines, listicle: spec.listicle };
+            spec.alts = [previous, ...(spec.alts || [])].slice(0, 3);
+            Object.assign(spec, { fields: data.design.fields, lines: data.design.lines, listicle: data.design.listicle });
+            spec.critique = { ...spec.critique, applied: true };
+            track('fix_applied', designEvent(spec, { how: fix.how, fix: fix.text }));
+            renderNote(card);
+            await paint(card);
+            restoreFocus(card.querySelector('[data-act="more"]'));
+          } catch (error) {
+            button.disabled = false;
+            button.innerHTML = label;
+            setNotice(error.reason === 'budget' ? 'Fixes are paused' : 'Fix not applied', ` ${error.message || ''}`, error.reason === 'budget' ? 'warn' : '');
+          } finally {
+            card.querySelector('.gen-card__media').classList.remove('is-busy');
+          }
+        } else if (act === 'more') {
+          // More like this: two fresh takes on the same direction and template, next to it.
+          if (busy) return;
+          track('more_like_this', designEvent(spec, { on: 'design' }));
+          button.disabled = true;
+          button.setAttribute('aria-pressed', 'true');
+          const placeholders = [skeletonCard(), skeletonCard()];
+          card.after(...placeholders);
+          try {
+            const avoid = spec.lines?.length ? spec.lines : [spec.listicle?.title?.replace(/\n/g, ' ')].filter(Boolean);
+            const dir = card._dir ? [dirPayload(card._dir)] : undefined;
+            const data = await callApi('/api/es-generate', { brief: lastBrief, formats: [spec.postType], count: 2, avoid, steer: steerBody({ more: spec.direction?.angle ? [spec.direction.angle] : [] }), ...(dir ? { directions: dir } : {}) });
+            const fresh = (data.designs || []).slice(0, 2).map(next => {
+              const nextCard = buildCard(next);
+              if (card._dir) nextCard._dir = card._dir;
+              return nextCard;
+            });
+            placeholders.forEach(node => node.remove());
+            if (!fresh.length) setNotice('Nothing more like this', ' The director found no other true take in this format.');
+            card.after(...fresh);
+            for (const nextCard of fresh) await paint(nextCard);
+          } catch (error) {
+            placeholders.forEach(node => node.remove());
+            setNotice('More like this failed', ` ${error.message || ''}`, '', { label: 'Try again', run: () => button.isConnected && button.click() });
+          } finally {
+            button.disabled = false;
+          }
+        } else if (act === 'less') {
+          // Less like this: remembered for this brief's next directions, and the card goes.
+          track('less_like_this', designEvent(spec, { on: 'design' }));
+          if (spec.direction?.angle) session.less = [...session.less.filter(angle => angle !== spec.direction.angle), spec.direction.angle].slice(-3);
+          const next = card.nextElementSibling?.querySelector?.('[data-act="edit"]') || card.previousElementSibling?.querySelector?.('[data-act="edit"]') || els.submit;
+          card.remove();
+          setNotice('Got it', ' The director will steer away from that angle for this brief.');
+          next.focus({ preventScroll: true });
         } else if (act === 'photos') {
           const panel = card.querySelector('.gen-photos');
           const open = panel.hidden;
@@ -1760,7 +2838,8 @@
             // their title and names so "Try again" really is a fresh take.
             const avoid = spec.lines?.length ? spec.lines
               : [spec.listicle?.title?.replace(/\n/g, ' '), ...(spec.listicle?.rows || []).map(row => row.entity)].filter(Boolean);
-            const data = await callApi('/api/es-generate', { brief: lastBrief, formats: [spec.postType], count: 1, avoid });
+            // A design from a direction keeps it: a fresh take on the same angle.
+            const data = await callApi('/api/es-generate', { brief: lastBrief, formats: [spec.postType], count: 1, avoid, steer: steerBody(), ...(card._dir ? { directions: [dirPayload(card._dir)] } : {}) });
             const next = data.designs?.[0];
             if (next) {
               fillCard(card, next);

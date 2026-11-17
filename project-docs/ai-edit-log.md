@@ -17,6 +17,43 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-18 — Generate: the creative director first, ES guidelines, Bring it on-brand (branch feature/generate-director)
+- Status: `[committed on feature/generate-director - not pushed]`
+- **Director first.** Generate now asks the director for 2-4 named directions (`POST /api/es-generate {mode:'direct'}`):
+  name, angle, hook, template, why it works, past ES posts that inspired it (corpus ids P1..Pn, validated) and a
+  confidence score (model's, tempered by verified facts). The page lets editors pick one or several, edit an
+  angle/hook/headline inline, More / Less like this, Make selected / all, or Skip · Auto (the old one-step path,
+  also used whenever the director fails). Picked directions go back as `directions: [...]`, are re-checked in
+  code (template fit, real facts) and written without a second director call (one direction = 2 takes).
+  Results are grouped by direction; each card shows its direction name and angle.
+- **Steering:** tone (Hype / Analytical / Emotional / Witty) and audience (Casual fan / Die-hard) chips, saved
+  per browser; `steer` now also accepts `{hook, tone, audience, more, less}` (the old string still works).
+- **Director's note per design:** what works + one fix (from the art-director review, now also returning
+  `strong`, the brand checks and the diversity guard). "Apply fix" calls `mode:'rewrite', instruction:'fix'`
+  (or opens the photo picker). Rewrites keep the direction's angle.
+- **Memory:** new migration `supabase/migrations/20261118121500_frameup_generate_direction_events.sql` (RLS: own
+  insert/read, admins read all; `frameup_generate_direction_signals()` security definer, no user ids) and
+  `/api/generate-direction-events`. The page logs directions shown/chosen/edited/skipped, more/less, fix
+  applied, opened, exported. Signals feed the director and the past-posts ranking (rated and exported posts,
+  and posts from runs the team exported, rank higher). Exports now carry runId/angle/hook/aiText
+  (`frameup-spec.js`, `index.html` cache key bumped).
+- **Model:** Sonnet stays the default. `GENERATE_DIRECTOR_MODEL=auto` = Haiku first, one Sonnet call when Haiku
+  fails or fewer than 2 concepts validate (source `sonnet-escalated`). Costs log under `generate-director`.
+- **ES guidelines (Suhail's follow-up):** `es-guidelines.js` (UMD) is a machine-readable spec extracted from
+  `social-media-guide-01..11`, `brand-logo-guide-01..11`, `video-brand-guide-01..05`, the guideline pages and
+  `frameup-rules.js`; every rule cites its image; `UNCLEAR` lists what needs Suhail. The director and writer
+  plan inside it; every design passes a Guideline check (hard gate after `_lint-spec.js`) and shows
+  "On-brand" or the fixes it made.
+- **Bring it on-brand:** composer button + panel: drop / paste / choose up to 6 slides (downscaled in the
+  browser), optional note. `mode:'onbrand'`: one vision read (main tier, feature `generate-onbrand`) critiques
+  against the rule ids (validated), maps each slide to an ES template (`mapSlides`: viewership numbers become
+  a Cover hook, real stat labels become Player Stats, lists become rankings, quotes become Quote), and remakes
+  them from the image's own words and numbers. Carousel export as one multi-slide file is not built (each
+  slide is its own ES design).
+- Tests: `scripts/test-generate-director-mode.mjs`, `scripts/test-es-guidelines.mjs` (added to `test:generate`).
+- Owner to do: run the migration; optionally set `GENERATE_DIRECTOR_MODEL=auto` (vercel.json already has
+  `api/generate-direction-events.js`). Confirm the UNCLEAR guideline items in `es-guidelines.js`.
+
 ### 2026-09-10 — Fix a regression from this same day's earlier fixes: concurrent profile upsert race
 - Status: `[pushed - see rollback point below]`
 - Files touched: `dashboard-data.js`. No database changes this time.
