@@ -766,6 +766,7 @@
 .fa-chat__form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--es-space-2,8px);align-items:end}
 .fa-chat__form textarea{min-height:44px;max-height:140px;padding:10px 14px;resize:vertical;line-height:1.4}
 .fa-chat__hint{margin:0;color:var(--es-ink-3);font-size:var(--es-type-helper-size,12px);line-height:1.4}
+.fa-chat [hidden]{display:none!important}
 .fa-chat__sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media (max-width:480px){.fa-chat__form{grid-template-columns:1fr}.fa-chat__form .es-btn{justify-self:end}}
 @media (prefers-reduced-motion:reduce){.fa-chat__log{scroll-behavior:auto}}`;

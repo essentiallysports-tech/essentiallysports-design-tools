@@ -254,7 +254,8 @@ html.gfx-open { overflow: hidden; }
 .gfx-source a { color: inherit; }
 
 /* The assistant slot: generate-assistant.js renders its chat inside. */
-.gfx-slot { display: flex; flex-direction: column; min-height: 100%; }
+.gfx-slot { display: flex; flex-direction: column; min-height: 100%; box-sizing: border-box; padding: var(--es-space-4, 16px); }
+.gfx-slot:has(> .gfx-slot__off) { padding: 0; }
 .gfx-slot.is-loading::before { content: ''; margin: var(--es-space-6, 24px) auto; width: 20px; height: 20px; box-sizing: border-box; border-radius: 50%; border: 2px solid var(--gfx-line); border-top-color: var(--es-brand, #0A7DFA); animation: genSpin .8s linear infinite; }
 .gfx-slot__off { display: grid; justify-items: start; gap: var(--es-space-3, 12px); margin: var(--es-space-4, 16px); padding: var(--es-space-5, 20px); border-radius: 12px; background: var(--gfx-sunk); }
 .gfx-slot__mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--ais-grad-soft, var(--es-brand-soft)); color: var(--es-brand-text); }
@@ -319,7 +320,7 @@ html.gfx-open { overflow: hidden; }
 .gfx-version__meta { color: var(--gfx-ink-3); font-size: 11px; }
 
 /* Dark: the editor-style dark surfaces. */
-html[data-theme="dark"] .gfx { --gfx-canvas-bg: #121316; --gfx-surface: #1A1C20; --gfx-ink: #FFFFFF; --gfx-ink-2: #BFC8D9; --gfx-ink-3: #98A6BF; --gfx-line: #2A2D34; --gfx-sunk: #2A2D34; --es-brand-soft: rgb(84 164 251 / .16); --es-brand-text: #9DCBFD; }
+html[data-theme="dark"] .gfx { --es-sunk: #2A2D34; --gfx-canvas-bg: #121316; --gfx-surface: #1A1C20; --gfx-ink: #FFFFFF; --gfx-ink-2: #BFC8D9; --gfx-ink-3: #98A6BF; --gfx-line: #2A2D34; --gfx-sunk: #2A2D34; --es-brand-soft: rgb(84 164 251 / .16); --es-brand-text: #9DCBFD; }
 html[data-theme="dark"] .gfx-stage { background-image: radial-gradient(circle, rgb(255 255 255 / .06) 1px, transparent 1.2px); }
 html[data-theme="dark"] .gfx-canvas { box-shadow: 0 0 0 1px #2A2D34, 0 24px 64px -24px rgb(0 0 0 / .8); }
 html[data-theme="dark"] .gfx-seg__item[aria-checked="true"] { background: #3B4049; box-shadow: none; }
