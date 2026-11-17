@@ -34,6 +34,7 @@ globalThis.fetch = async (url, options = {}) => {
     return reply(200, { content: [{ type: 'text', text: next.text }], stop_reason: 'end_turn', usage: { input_tokens: 4000, output_tokens: 1000 } });
   }
   if (href.endsWith('/rest/v1/rpc/frameup_my_ai_calls_last_hour')) return reply(200, callsLastHour);
+  if (href.endsWith('/rest/v1/rpc/frameup_my_ai_spend')) return reply(200, [{ total_usd: 0, by_feature: {}, calls: 0 }]);
   if (href.includes('/rest/v1/frameup_ai_usage')) { usageRows.push(JSON.parse(options.body)); return reply(201, {}); }
   throw new Error(`unexpected fetch ${href}`);
 };

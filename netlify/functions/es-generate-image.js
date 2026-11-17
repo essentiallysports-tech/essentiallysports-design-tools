@@ -4,7 +4,7 @@
 // those come from the ES Image Pool. Every image is logged to
 // frameup_ai_usage (images: 1, cost) through _ai-gateway.js.
 const { verifyEsUser } = require('./_supabase-auth.js');
-const { gatewayConfigured, aiImage, isBudgetError, userOverHourlyLimit } = require('./_ai-gateway.js');
+const { gatewayConfigured, aiImage, isBudgetError, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage } = require('./_ai-gateway.js');
 const { _test: { sceneText } } = require('./es-generate.js');
 
 // A soft per-user cap on each warm server (the weekly Gateway cap is the hard one).
@@ -54,6 +54,7 @@ exports.handler = async function handler(event) {
   const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
   // The per-server counter is a quick first check; the database-backed
   // per-person limit holds across servers and restarts.
+  if (await userOverWeeklyLimit(token)) return json(429, { error: weeklyLimitMessage(), reason: 'weekly-limit' });
   if (!underLimit(email) || await userOverHourlyLimit(token)) {
     return json(429, { error: 'That is a lot of scene images this hour. Try again later.', reason: 'limit' });
   }

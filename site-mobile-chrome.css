@@ -534,8 +534,8 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
 
   :is(.mobile-editor-back, .reels-mobile-back):focus-visible,
   :is(.mobile-editor-sheet-actions, .reels-mobile-sheet-actions) button:focus-visible {
-    outline: 3px solid rgba(10, 125, 250, .22);
-    outline-offset: 1px;
+    outline: var(--es-focus-outline, 2px solid #0A6FDE);
+    outline-offset: var(--es-focus-offset, 2px);
   }
 
   :is(.mobile-editor-nav, .reels-mobile-nav) {
@@ -585,7 +585,6 @@ html[data-studio-shell="on"] .mobile-editor-more-actions {
   :is(.mobile-editor-nav, .reels-mobile-nav) button:is(.is-active, :focus-visible) {
     background: var(--es-brand-soft) !important;
     color: var(--es-brand-text) !important;
-    outline: 0 !important;
   }
 
   :is(.mobile-editor-nav-icon, .reels-mobile-nav-icon) {

@@ -59,8 +59,8 @@
 
   html[data-studio-shell="on"]:root body .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, .select-dropdown-trigger):not(.studio-ai-search input):focus,
   html[data-studio-shell="on"]:root body .panel .select-dropdown.is-open > .select-dropdown-trigger {
-    border-color: var(--es-brand) !important;
-    box-shadow: 0 0 0 1px var(--es-brand) !important;
+    border-color: var(--es-focus-color) !important;
+    box-shadow: var(--es-focus-halo) !important;
     outline: none !important;
   }
 
@@ -616,8 +616,8 @@ html[data-theme="dark"][data-studio-shell="on"] .layers-panel-collapse:hover { b
     color: var(--es-ink) !important;
   }
   html[data-studio-shell="on"]:root body .canvas-bottom-actions .studio-zoom-group:not(.studio-history-group) .studio-zoom-btn:focus-visible {
-    outline: none !important;
-    box-shadow: inset 0 0 0 2px var(--es-brand) !important;
+    outline: var(--es-focus-outline) !important;
+    outline-offset: var(--es-focus-offset) !important;
   }
 
   /* Upload Image / ES Image Pool: secondary sm buttons (sizes from the button system). */
@@ -684,8 +684,8 @@ html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-bu
   box-shadow: 0 1px 2px rgb(14 16 20 / .12), 0 1px 1px rgb(14 16 20 / .04) !important;
 }
 html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-button:focus-visible {
-  outline: none !important;
-  box-shadow: inset 0 0 0 2px var(--es-brand) !important;
+  outline: var(--es-focus-outline) !important;
+  outline-offset: var(--es-focus-offset) !important;
 }
 html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-button.has-content::after {
   top: 4px; right: 4px; width: 5px; height: 5px;
@@ -830,4 +830,20 @@ html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-bottom-actions
   html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .app[data-workspace] .panel > .studio-content-sections:not(:has([data-studio-accordion-section]:not([hidden]))) { border-top: 0 !important; }
   html[data-theme="dark"][data-studio-shell="on"]:root body[data-studio-inspector="all"] .app[data-workspace] .panel > .studio-content-sections,
   html[data-theme="dark"][data-studio-shell="on"]:root body[data-studio-inspector="all"] .studio-control-dock > :is(.studio-dock-section, .studio-ai-section) { border-top-color: #2A2D34 !important; }
+}
+
+/* Focus system (2026-11-17): the editor's search fields use the shared focus
+   tokens (blue border + one soft halo), replacing index.html's 2px ink ring and
+   grey 4px halo. The bare inputs inside never add a ring of their own. */
+html[data-studio-shell="on"]:root body .studio-ai-search:focus-within {
+  border-color: transparent !important;
+  box-shadow: inset 0 0 0 1.5px var(--es-focus-color), var(--es-focus-halo) !important;
+}
+html[data-studio-shell="on"]:root body .canvas-ai-search-form:focus-within {
+  border-color: var(--es-focus-color) !important;
+  box-shadow: var(--es-focus-halo) !important;
+}
+html[data-studio-shell="on"]:root body :is(.studio-ai-search, .canvas-ai-search-form) input:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }

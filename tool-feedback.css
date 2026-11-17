@@ -7,7 +7,7 @@
   --fb-border: var(--es-line);
   --fb-border-strong: var(--es-line-2);
   --fb-accent: var(--es-action-primary, var(--es-brand-fill));
-  --fb-focus: var(--es-focus-ring, rgba(10, 125, 250, .16));
+  --fb-focus: var(--es-focus-ring, rgb(10 125 250 / .16));
   --fb-success: var(--es-good);
   --fb-success-soft: var(--es-good-soft);
   --fb-error: var(--es-bad);
@@ -225,12 +225,8 @@ body.feedback-page *::after {
 }
 
 .feedback-type-option input:focus-visible + .feedback-type-card {
-  outline: 2px solid var(--es-ink);
-  outline-offset: 2px;
-}
-
-html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-type-card {
-  outline-color: #54A4FB;
+  outline: var(--es-focus-outline);
+  outline-offset: var(--es-focus-offset);
 }
 
 .feedback-select {
@@ -286,8 +282,8 @@ html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-ty
 
 .feedback-dropdown.is-open .feedback-dropdown-trigger,
 .feedback-dropdown-trigger:focus-visible {
-  border-color: var(--fb-accent);
-  box-shadow: 0 0 0 3px var(--fb-focus);
+  border-color: var(--es-focus-color);
+  box-shadow: var(--es-focus-halo);
   outline: none;
 }
 
@@ -371,8 +367,9 @@ html[data-theme="dark"] .feedback-type-option input:focus-visible + .feedback-ty
 }
 
 .feedback-textarea:focus {
-  border-color: var(--fb-accent);
-  box-shadow: 0 0 0 3px var(--fb-focus);
+  outline: none;
+  border-color: var(--es-focus-color);
+  box-shadow: var(--es-focus-halo);
 }
 
 .feedback-charcount {

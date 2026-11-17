@@ -6,7 +6,7 @@
 // are computed here (see _ad-rating.js), never taken from the model.
 // Needs a signed-in ES user; counts toward the per-person hourly AI limit.
 const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
-const { gatewayConfigured, isBudgetError, userOverHourlyLimit } = require('./_ai-gateway.js');
+const { gatewayConfigured, isBudgetError, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage } = require('./_ai-gateway.js');
 const { rateCreative, parseDataUrl } = require('./_ad-rating.js');
 const { SIZES } = require('../../video-ads-brands.js');
 
@@ -69,7 +69,9 @@ exports.handler = async function handler(event) {
 
   if (!gatewayConfigured()) return json(503, { ok: false, error: 'Ad rating is not available right now.', reason: 'off' });
   const token = bearerToken(event.headers);
-  if (await userOverHourlyLimit(token)) {
+  const [overWeek, overHour] = await Promise.all([userOverWeeklyLimit(token), userOverHourlyLimit(token)]);
+  if (overWeek) return json(429, { ok: false, error: weeklyLimitMessage(), reason: 'weekly-limit' });
+  if (overHour) {
     return json(429, { ok: false, error: "You've used a lot of AI this hour. Take a short break and rate again soon.", reason: 'limit' });
   }
 

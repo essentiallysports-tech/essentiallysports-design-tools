@@ -19,6 +19,9 @@ const GATEWAY = 'https://ai-gateway.vercel.sh/v1';
 const MODELS = {
   light: process.env.AI_LIGHT_MODEL || 'openai/gpt-oss-20b',
   main: process.env.AI_MAIN_MODEL || 'anthropic/claude-haiku-5.5',
+  // Cheap web search (Video Ads clip finding). Web search needs a Claude model,
+  // so the cheapest Claude tier, not the (non-Claude) light model.
+  search: process.env.AI_SEARCH_MODEL || 'anthropic/claude-haiku-5.5',
   // Generate's art-director review: a different model family from the writer,
   // so it does not just approve its own style.
   review: process.env.AI_REVIEW_MODEL || 'openai/gpt-6-luna',
@@ -99,6 +102,47 @@ async function userOverHourlyLimit(token, limit = USER_HOURLY_CALL_LIMIT) {
     if (!response.ok) return false;
     const count = Number(await response.json());
     return Number.isFinite(count) && count >= limit;
+  } catch {
+    return false;
+  }
+}
+
+// Per-person weekly $ cap on AI spend (all features). The week starts Monday
+// 00:00 UTC, the same period the sidebar's "AI usage" card shows. Reads the
+// caller's own spend with frameup_my_ai_spend(p_since) and the caller's own
+// session. Fails open like the hourly check: if the function is missing or the
+// call fails, the request goes ahead. Set AI_USER_WEEKLY_LIMIT_USD to change
+// the cap (0 turns it off).
+const USER_WEEKLY_LIMIT_USD = Number(String(process.env.AI_USER_WEEKLY_LIMIT_USD ?? '').trim() || 20);
+function weeklyLimitMessage(limit = USER_WEEKLY_LIMIT_USD) {
+  const amount = Number.isInteger(limit) ? String(limit) : Number(limit).toFixed(2);
+  return `You've reached this week's $${amount} AI limit. It resets Monday.`;
+}
+// Monday 00:00 UTC on or before `now`.
+function weekStartUtc(now = new Date()) {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7));
+  return start;
+}
+async function userOverWeeklyLimit(token, limit = USER_WEEKLY_LIMIT_USD) {
+  if (!token || !(limit > 0)) return false;
+  try {
+    const config = authConfig();
+    const response = await fetch(`${config.url}/rest/v1/rpc/frameup_my_ai_spend`, {
+      method: 'POST',
+      headers: {
+        apikey: config.publishableKey,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_since: weekStartUtc().toISOString() }),
+      signal: AbortSignal.timeout(2500),
+    });
+    if (!response.ok) return false;
+    const data = await response.json();
+    const row = Array.isArray(data) ? data[0] : data;
+    const total = Number(row?.total_usd);
+    return Number.isFinite(total) && total >= limit;
   } catch {
     return false;
   }
@@ -211,8 +255,13 @@ async function aiText({ tier = 'light', system, messages, json = false, effort =
 // find what happened in a trending moment and where its clips live). maxUses
 // caps the searches (each costs about $0.01 on top of tokens). Returns
 // { text, urls:[{url,title}], searches, model, cost }. Throws on failure.
+// maxCostUsd (optional): a hard per-call cap. A paused search is only continued
+// while the spend so far is under the cap and searches are left, so one call
+// never runs past maxUses searches; the result carries capped: true when it
+// stopped early. With the cap set, a reply with cited links but no text is
+// returned (text '') instead of throwing.
 const WEB_SEARCH_USD = 0.01;
-async function aiWebResearch({ tier = 'main', system, prompt, maxUses = 4, maxTokens = 3000, timeoutMs = 45000, track } = {}) {
+async function aiWebResearch({ tier = 'main', system, prompt, maxUses = 4, maxTokens = 3000, timeoutMs = 45000, track, maxCostUsd } = {}) {
   if (!process.env.AI_GATEWAY_API_KEY) throw new Error('AI_GATEWAY_API_KEY is not set.');
   const model = MODELS[tier] || MODELS.main;
   if (!model.startsWith('anthropic/')) throw new Error('Web research needs a Claude model.');
@@ -222,6 +271,8 @@ async function aiWebResearch({ tier = 'main', system, prompt, maxUses = 4, maxTo
   const texts = [];
   const urls = [];
   let searches = 0;
+  let capped = false;
+  const hasCap = Number.isFinite(maxCostUsd) && maxCostUsd > 0;
   try {
     // A long search can pause mid-turn; it is continued once.
     for (let round = 0; round < 2; round += 1) {
@@ -252,17 +303,18 @@ async function aiWebResearch({ tier = 'main', system, prompt, maxUses = 4, maxTo
         }
       });
       if (data?.stop_reason !== 'pause_turn') break;
+      if (hasCap && (costUsd(model, usage) + searches * WEB_SEARCH_USD >= maxCostUsd || searches >= maxUses)) { capped = true; break; }
       messages.push({ role: 'assistant', content: data.content });
     }
     const text = texts.join('\n').trim();
-    if (!text) throw new Error('The research returned no answer.');
+    if (!text && !(hasCap && urls.length)) throw new Error('The research returned no answer.');
     const cost = costUsd(model, usage) + searches * WEB_SEARCH_USD;
     await logUsage(track, {
       model, ok: true,
       input_tokens: usage.input, output_tokens: usage.output,
       cost_usd: Number(cost.toFixed(6)), duration_ms: Date.now() - started,
     });
-    return { text, urls, searches, model, cost };
+    return { text, urls, searches, model, cost, ...(hasCap ? { capped } : {}) };
   } catch (error) {
     await logUsage(track, { model, ok: false, input_tokens: usage.input, output_tokens: usage.output, cost_usd: 0, duration_ms: Date.now() - started, error: String(error.message || error).slice(0, 200) });
     throw error;
@@ -309,4 +361,4 @@ async function aiImage({ prompt, model = MODELS.image, size = '1024x1280', timeo
   }
 }
 
-module.exports = { gatewayConfigured, aiText, aiImage, aiWebResearch, costUsd, isBudgetError, logBackupCall, logUsage, userOverHourlyLimit, MODELS, IMAGE_PRICES };
+module.exports = { gatewayConfigured, aiText, aiImage, aiWebResearch, costUsd, isBudgetError, logBackupCall, logUsage, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage, weekStartUtc, MODELS, IMAGE_PRICES };

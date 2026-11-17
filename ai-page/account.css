@@ -669,8 +669,9 @@ textarea {
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  border-color: var(--es-blue);
-  box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
+  outline: none;
+  border-color: var(--es-focus-color);
+  box-shadow: var(--es-focus-halo);
 }
 
 .actions {
@@ -915,12 +916,8 @@ textarea {
 
 /* The real checkbox is invisible, so its focus ring goes on the track. */
 .toggle input:focus-visible + span {
-  outline: 2px solid var(--es-ink);
-  outline-offset: 2px;
-}
-
-html[data-theme="dark"] .toggle input:focus-visible + span {
-  outline-color: #54A4FB;
+  outline: var(--es-focus-outline);
+  outline-offset: var(--es-focus-offset);
 }
 
 .logout-card {
@@ -1222,8 +1219,8 @@ html[data-theme="dark"] .toggle input:focus-visible + span {
 }
 
 .settings-choice button:focus-visible {
-  outline: 2px solid var(--es-blue);
-  outline-offset: 2px;
+  outline: var(--es-focus-outline);
+  outline-offset: var(--es-focus-offset);
 }
 
 .settings-section-controls {

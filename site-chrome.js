@@ -68,7 +68,10 @@
     return `
       <button class="profile-trigger" type="button" id="profile-trigger" aria-expanded="false" aria-controls="${popoverId}" aria-label="Open account options">
         <span class="profile-avatar" data-profile-initial aria-hidden="true"></span>
-        <span class="profile-name" data-profile-name>Guest User</span>
+        <span class="profile-copy">
+          <span class="profile-name" data-profile-name>Guest User</span>
+          <span class="profile-sub" data-profile-sub hidden></span>
+        </span>
         <svg class="profile-chevron" viewBox="4 7 16 10" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <section class="profile-dropdown" id="${popoverId}" aria-label="Account options" aria-hidden="true" inert>
@@ -119,11 +122,29 @@
       element.textContent = role;
       element.hidden = !role;
     });
+    document.querySelectorAll('.profile-menu [data-profile-sub]').forEach(element => {
+      element.textContent = email || role;
+      element.hidden = !(email || role);
+    });
+    const initial = (name.match(/\p{L}|\p{N}/u) || ['?'])[0].toUpperCase();
     document.querySelectorAll('.profile-menu [data-profile-initial], .profile-menu [data-profile-popover-avatar]').forEach(element => {
+      // Drawn with CSS (attr(data-initial)), so page scripts that clear the
+      // avatar's text don't remove it.
+      element.dataset.initial = initial;
+      element.style.setProperty('--profile-avatar-bg', avatarColor(name));
       element.classList.toggle('has-image', Boolean(avatar));
       if (avatar) element.style.backgroundImage = `url("${avatar.replace(/"/g, '%22')}")`;
       else element.style.removeProperty('background-image');
     });
+  }
+
+  // Google-style avatar: the first letter on a colour picked from the name.
+  // Every colour keeps white text at 4.5:1 or more.
+  const AVATAR_COLORS = ['#0A6BD8', '#00796B', '#2E7D32', '#C2410C', '#0E7490', '#475569', '#B91C1C'];
+  function avatarColor(name) {
+    let hash = 0;
+    for (const ch of String(name || '')) hash = (hash * 31 + ch.codePointAt(0)) >>> 0;
+    return AVATAR_COLORS[hash % AVATAR_COLORS.length];
   }
 
   function setProfileOpen(menu, open, options = {}) {

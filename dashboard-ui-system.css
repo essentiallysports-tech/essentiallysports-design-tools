@@ -153,8 +153,8 @@ body.dashboard-page .command-search {
 }
 
 body.dashboard-page .command-search:focus-within {
-  border-color: var(--es-brand-fill);
-  box-shadow: 0 0 0 3px var(--fu-focus);
+  border-color: var(--es-focus-color);
+  box-shadow: var(--es-focus-halo);
 }
 
 body.dashboard-page .command-search input {
@@ -516,7 +516,7 @@ body.dashboard-page .drawer-grid select:focus,
 body.dashboard-page .drawer-notes textarea:focus {
   border-color: var(--es-brand-tint);
   outline: 0;
-  box-shadow: 0 0 0 3px var(--fu-focus);
+  box-shadow: var(--es-focus-halo);
 }
 
 /* Focus needs a border that clears 3:1; the tint alone is about 1.5:1.
@@ -528,7 +528,7 @@ body.dashboard-page .table-control:focus,
 body.dashboard-page .drawer-grid input:focus,
 body.dashboard-page .drawer-grid select:focus,
 body.dashboard-page .drawer-notes textarea:focus {
-  border-color: var(--es-brand-fill);
+  border-color: var(--es-focus-color);
 }
 
 body.dashboard-page .task-card {
@@ -1104,10 +1104,9 @@ body.dashboard-page .task-quick-filter.is-active {
 }
 
 body.dashboard-page .task-quick-filter:focus-visible,
-body.dashboard-page .task-filter-reset:focus-visible,
-body.dashboard-page .task-filter-controls .filter:focus-visible {
-  outline: 2px solid rgba(25, 128, 244, .28);
-  outline-offset: 2px;
+body.dashboard-page .task-filter-reset:focus-visible {
+  outline: var(--es-focus-outline);
+  outline-offset: var(--es-focus-offset);
 }
 
 body.dashboard-page .task-filter-controls {
@@ -1854,8 +1853,8 @@ html body.dashboard-page .dashboard-sidebar .sidebar-nav .nav-count.is-new {
   font-weight: 600 !important;
 }
 html body.dashboard-page .dashboard-sidebar .sidebar-nav :is(button, a):focus-visible {
-  outline: 2px solid var(--dov-brand) !important;
-  outline-offset: 2px;
+  outline: var(--es-focus-outline) !important;
+  outline-offset: var(--es-focus-offset);
 }
 
 /* ---- Overview shell ---- */
@@ -1902,7 +1901,7 @@ body.dashboard-page .dov-segment button {
 }
 body.dashboard-page .dov-segment button:hover { color: var(--dov-ink); }
 body.dashboard-page .dov-segment button[aria-pressed="true"] { background: var(--dov-ink); color: var(--dov-surface); }
-body.dashboard-page .dov-segment button:focus-visible { outline: 2px solid var(--dov-brand); outline-offset: 2px; }
+body.dashboard-page .dov-segment button:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
 @media (pointer: coarse) { body.dashboard-page .dov-segment button { min-height: 40px; } }
 
 /* ---- KPI row ---- */
@@ -2140,7 +2139,7 @@ body.dashboard-page .dov-thumb {
 }
 body.dashboard-page .dov-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
 body.dashboard-page .dov-thumb .es-skeleton { display: block; width: 100%; height: 100%; border-radius: 0; }
-body.dashboard-page .dov-thumb:focus-visible { outline: 2px solid var(--dov-brand); outline-offset: 2px; }
+body.dashboard-page .dov-thumb:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
 
 body.dashboard-page .dov-person { display: flex; align-items: center; gap: var(--es-space-3); min-width: 0; }
 body.dashboard-page .dov-avatar {

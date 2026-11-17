@@ -1,34 +1,47 @@
-// Video Ads page: a guided pipeline (Moment → Research & clip → Copy → Rate →
-// Export) around one big live preview.
+// Video Ads page: three steps (Clip → Copy → Export) around one big live preview.
 //   Layout + drawing: video-ads-render.js (window.VideoAdsRender)
 //   Brands, sizes, styles: video-ads-brands.js (window.VideoAdsBrands)
-//   Rating helpers: video-ads-rating.js (window.VideoAdsRating, /api/ad-rating)
-//   AI + trends + X clips: POST /api/video-ads { mode: trends | clip | research | copy | chat }
+//   Team colours: video-ads-teams.js (window.VideoAdsTeams)
+//   AI + trends + X clips: POST /api/video-ads { mode: trends | find-clips | clip | copy | chat }
+//   Learning events: POST /api/ad-learning { event } (fire-and-forget)
 (() => {
   'use strict';
   const R = window.VideoAdsRender;
   const B = window.VideoAdsBrands;
-  const RT = window.VideoAdsRating;
+  // The colour data ships in video-ads-teams.js; without it the picker still
+  // shows the colours (no team preview) and the server matches the teams.
+  const T = window.VideoAdsTeams || {
+    COLORS: [
+      { id: 'red', label: 'Red', hex: '#C8102E' }, { id: 'blue', label: 'Blue', hex: '#0057B8' }, { id: 'green', label: 'Green', hex: '#0B7A3E' },
+      { id: 'gold', label: 'Gold / Yellow', hex: '#FFB81C' }, { id: 'orange', label: 'Orange', hex: '#FA4616' }, { id: 'navy', label: 'Navy', hex: '#0B2265' },
+      { id: 'black', label: 'Black', hex: '#101820' }, { id: 'silver', label: 'Silver / White', hex: '#A5ACAF' },
+    ],
+    TEAMS: [],
+    teamsFor: () => [],
+  };
+  const hasTeamData = Boolean(window.VideoAdsTeams && Array.isArray(T.TEAMS) && T.TEAMS.length);
   const $ = id => document.getElementById(id);
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   const els = {
     stage: $('va-stage'), canvas: $('va-canvas'), video: $('va-video'), drop: $('va-drop'), empty: $('va-empty'), fit: $('va-fit'),
     busy: $('va-busy'), busyArc: $('va-busy-arc'), busyPct: $('va-busy-pct'), busyText: $('va-busy-text'),
     play: $('va-play'), mute: $('va-mute'), seek: $('va-seek'), trimIn: $('va-in'), trimOut: $('va-out'), time: $('va-time'), trimText: $('va-trimtext'),
     track: $('va-track'), strip: $('va-strip'), sel: $('va-sel'), head: $('va-head'), dimL: $('va-dim-l'), dimR: $('va-dim-r'),
-    brands: $('va-brands'), sizes: $('va-sizes'), metaToggle: $('va-meta-toggle'), device: $('va-device'), metaHead: $('va-meta-head'), metaOver: $('va-meta-over'), metaFoot: $('va-meta-foot'), mini: $('va-mini'),
+    sizes: $('va-sizes'), device: $('va-device'), metaHead: $('va-meta-head'), metaOver: $('va-meta-over'), metaFoot: $('va-meta-foot'), mini: $('va-mini'),
     steps: $('va-steps'), panelScroll: $('va-panel-scroll'), back: $('va-back'), next: $('va-next'), nextText: $('va-next-text'),
-    trends: $('va-trends'), trendsStatus: $('va-trends-status'), refresh: $('va-refresh'), sports: $('va-sports'), own: $('va-own'), ownText: $('va-own-text'), ownSport: $('va-own-sport'),
-    moment: $('va-moment'), researchBody: $('va-research-body'), researchMore: $('va-research-more'), researchMoreCard: $('va-research-more-card'), researchRun: $('va-research-run'), clips: $('va-clips'), clipsCount: $('va-clips-count'),
+    clipTabs: $('va-clip-tabs'), teamSport: $('va-team-sport'), teamQ: $('va-team-q'), teamHint: $('va-team-hint'), teamList: $('va-team-list'), teamFind: $('va-team-find'), teamFindText: $('va-team-find-text'), colorSport: $('va-color-sport'), swatches: $('va-swatches'), find: $('va-find'), findText: $('va-find-text'), found: $('va-found'),
+    trends: $('va-trends'), trendsStatus: $('va-trends-status'), refresh: $('va-refresh'), sports: $('va-sports'), boardBar: document.querySelector('.va-board-bar'),
     upload: $('va-upload'), file: $('va-file'), xform: $('va-xform'), xurl: $('va-xurl'), xget: $('va-xget'), qualities: $('va-qualities'), clipStatus: $('va-clip-status'),
-    styles: $('va-styles'), copyTabs: $('va-copy-tabs'), notesForm: $('va-notes-form'), notes: $('va-notes'), draftsRun: $('va-drafts-run'), angles: $('va-angles'), variants: $('va-variants'),
-    thread: $('va-thread'), suggest: $('va-suggest'), compose: $('va-compose'), ask: $('va-ask'), send: $('va-send'),
+    brands: $('va-brands'), styles: $('va-styles'), copySwatches: $('va-copy-swatches'), momentFold: $('va-moment-fold'), momentSum: $('va-moment-sum'), copyMoments: $('va-copy-moments'), notes: $('va-notes'),
+    variants: $('va-variants'), editor: $('va-editor'), headlineCount: $('va-headline-count'), bodyCount: $('va-body-count'), ctaCount: $('va-cta-count'), stepsN: $('va-steps-n'), stepsName: $('va-steps-name'), stepsBar: $('va-steps-bar'),
+    thread: $('va-thread'), compose: $('va-compose'), ask: $('va-ask'), send: $('va-send'),
+    // Ask AI: the one place for everything AI (options, grammar, chat).
+    ai: $('va-ai'), aiBtn: $('va-ask-ai'), aiClose: $('va-ai-close'), aiActions: $('va-ai-actions'), aiWriteText: $('va-ai-write-text'), aiContext: $('va-ai-context'), aiContextSum: $('va-ai-context-sum'),
+    aiProgress: $('va-ai-progress'), aiProgressText: $('va-ai-progress-text'), aiOut: $('va-ai-out'), grammar: $('va-grammar'),
     headline: $('va-headline'), highlight: $('va-highlight'), highlightRow: $('va-highlight-row'), highlightWarn: $('va-highlight-warn'),
     bodies: [$('va-body-1'), $('va-body-2'), $('va-body-3')], addPara: $('va-add-para'), cta: $('va-cta'), unsub: $('va-unsub'),
-    rate: $('va-rate'),
-    exsizes: $('va-exsizes'), checklist: $('va-checklist'), rights: $('va-rights'), exportBtn: $('va-export'), exportProgress: $('va-export-progress'), exportStatus: $('va-export-status'), files: $('va-files'),
-    confirm: $('va-confirm'), confirmText: $('va-confirm-text'), toasts: $('va-toasts'),
+    exsizes: $('va-exsizes'), metaToggle: $('va-meta-toggle'), ready: $('va-ready'), rights: $('va-rights'), exportBtn: $('va-export'), exportProgress: $('va-export-progress'), exportStatus: $('va-export-status'), files: $('va-files'), again: $('va-again'),
+    toasts: $('va-toasts'),
   };
   const ctx = els.canvas.getContext('2d');
   const measureCtx = document.createElement('canvas').getContext('2d');
@@ -37,9 +50,10 @@
 
   // A worked example (the Essentially CFB template) so the page never starts blank.
   const state = {
-    step: 'moment',
+    step: 'copy',
     size: '9x16',
     brandId: 'essentially-cfb',
+    brandChosen: false,
     style: 'highlight',
     headline: 'The college football team you were handed, from your dad to your son. Keep up with it, free.',
     highlight: 'Keep up with it, free.',
@@ -48,17 +62,33 @@
     unsubscribe: true,
     align: 'auto', // 'auto' follows the style (see layoutFor); 'left' / 'center' force it
     anchor: 'center',
-    scrim: 0.45, blur: 0, zoom: 1, panX: 0, panY: 0, fade: null, vignette: 0, preset: 'darken',
+    scrim: 0.45, blur: 0, zoom: 1, panX: 0, panY: 0, fade: null, vignette: 0,
     trimIn: 0, trimOut: 0,
     clip: null, // { name, source: 'upload'|'x', url }
+    // Clip step
+    clipTab: 'team',
+    clipTabPicked: false,
+    teamSport: 'cfb',
+    team: '', // full team name picked in By team
+    teamQuery: '',
+    colorSport: 'cfb',
+    color: 'red',
+    sport: 'all', // trend board filter
     trend: null,
-    sport: 'all',
+    momentOpen: true, // the trend list (false once a moment is picked: just that one shows)
     trendsStatus: 'loading',
-    research: null, researchStatus: 'idle', researchError: '',
-    angles: new Set(),
-    variants: [], draftsStatus: 'idle', draftsError: '', draftsIssues: [], draftsFor: '', appliedVariant: -1, styleChosen: false, copyEdited: false,
+    // What the ad is about (from the last search): grounds the copy.
+    context: { kind: '', sport: '', color: '', colorLabel: '', teams: [], trend: null },
+    // Copy step
+    variants: [], draftsStatus: 'idle', draftsError: '', appliedVariant: -1, copyEdited: false,
+    copyColor: '', // optional team colour picked in Copy (feeds the copy, then the clip search)
+    copyTrend: null, // optional trending moment picked in Copy
+    clipPicked: false, // the clip colour/sport was changed by hand
+    aiCopy: null, // the AI version last applied, to learn from edits
     chat: [], chatBusy: false,
-    rating: null, ratingSig: '', ratingStatus: 'idle', ratingError: '', ratingFrames: [], fixState: {},
+    grammar: { status: 'idle', issues: [], error: '' }, // the last AI grammar check
+    aiView: 'options', // which Ask AI result shows: options | grammar | chat
+    // Export step
     exportIds: ['9x16'], exported: false,
     version: 0,
   };
@@ -67,14 +97,18 @@
   // ─── Small helpers ───────────────────────────────────────────────────────
   const esc = text => String(text ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const safeUrl = url => (/^https:\/\//i.test(String(url || '')) ? String(url) : '');
-  const domainOf = url => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch (error) { return ''; } };
   const plain = text => String(text || '').replace(/\*\*/g, '');
   const brand = () => B.byId(state.brandId);
   const size = () => B.SIZES[state.size];
   const hasClip = () => Boolean(els.video.videoWidth);
   const SPORT_LABEL = { nfl: 'NFL', cfb: 'CFB', mlb: 'MLB' };
-  const STEPS = ['moment', 'research', 'copy', 'rate', 'export'];
-  const STEP_LABEL = { moment: 'Moment', research: 'Research & clip', copy: 'Copy', rate: 'Rate', export: 'Export' };
+  const STEPS = ['copy', 'clip', 'export'];
+  // League logo tile (league-logos.js); text badge if the helper is missing.
+  const leagueTile = (sport, cls = 'va-league') => {
+    const l = window.LeagueLogos?.logoFor(sport);
+    return l ? `<span class="${cls}" style="--league-bg:${esc(l.bg)}" role="img" aria-label="${esc(SPORT_LABEL[sport] || l.label)}"><img src="${esc(l.src)}" alt=""></span>` : `<span class="va-sport va-sport--${esc(sport)}">${esc(SPORT_LABEL[sport] || '')}</span>`;
+  };
+  const STEP_LABEL = { clip: 'Clip', copy: 'Copy', export: 'Export' };
   const svg = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
   const ICON = {
     check: svg('<path d="M20 6 9 17l-5-5"/>'),
@@ -84,14 +118,12 @@
     play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l11.05-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></svg>',
     pause: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4.5" width="4.2" height="15" rx="1.2"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1.2"/></svg>',
     x: svg('<path d="M4 4l11.733 16h4.267l-11.733 -16z"/><path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"/>'),
-    youtube: svg('<path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/>'),
     search: svg('<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>'),
     undo: svg('<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/>'),
     download: svg('<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>'),
     retry: svg('<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'),
     film: svg('<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/>'),
-    gauge: svg('<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>'),
-    wand: svg('<path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/>'),
+    link: svg('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'),
     chevron: svg('<path d="m9 18 6-6-6-6"/>'),
     soundOff: svg('<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/>'),
     soundOn: svg('<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/>'),
@@ -125,9 +157,10 @@
 
   function friendlyError(status, data) {
     if (status === 429 || data?.reason === 'limit') return 'You’ve hit this hour’s AI limit. Try again in a little while.';
-    if (data?.reason === 'budget') return 'The team’s AI budget is used up for now. Ask an admin, or try later.';
+    if (data?.reason === 'budget') return 'The team’s AI budget is used up for now. Try again later.';
     if (data?.reason === 'off') return 'The AI tools are switched off right now.';
-    return data?.error || `Request failed (${status}).`;
+    if (status === 401) return 'Your sign-in expired. Refresh the page and try again.';
+    return data?.error || `Something went wrong (${status}). Try again.`;
   }
   async function callApi(body) {
     if (!window.ESAuth?.fetchWithAuth) throw new Error('Sign-in is still loading. Try again in a moment.');
@@ -142,6 +175,22 @@
     }
     return data;
   }
+
+  // Learning events: fire-and-forget, never blocks or surfaces anything.
+  // /api/ad-learning stores them so the copy model learns what we ship and fix.
+  function logEvent(type, payload = {}) {
+    try {
+      const fetcher = window.ESAuth?.fetchWithAuth;
+      if (!fetcher) return;
+      const event = { type, brandId: state.brandId, sport: brand().sport || state.context.sport || '', payload };
+      const body = JSON.stringify({ event });
+      if (body.length > 18000) return; // the endpoint caps bodies at 20KB
+      Promise.resolve()
+        .then(() => fetcher('/api/ad-learning', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }))
+        .catch(() => {});
+    } catch (error) { /* learning is best-effort */ }
+  }
+  const copyForLog = (src = state) => ({ style: src.style, headline: plain(src.headline), highlight: src.style === 'highlight' ? plain(src.highlight) : '', body: (src.body || []).map(s => plain(s).trim()).filter(Boolean), cta: src.cta || brand().cta });
 
   // ─── Logos: upload > brand file > drawn wordmark > ES logo ───────────────
   const LOGO_KEY = 'frameup.videoAds.logos.v1';
@@ -217,6 +266,7 @@
     for (let y = 60; y < 1100; y += 80) { c.beginPath(); c.moveTo(0, y); c.lineTo(540, y - 120); c.stroke(); }
   }
 
+
   // ─── Layout + drawing ────────────────────────────────────────────────────
   const copyOf = (src = state) => ({ style: src.style, headline: src.headline, highlight: src.highlight, body: [...src.body], cta: src.cta, unsubscribe: src.unsubscribe });
   const layoutFor = (sizeId, src = state) => R.fitLayout(measure, {
@@ -232,17 +282,6 @@
   }, brand(), B.SIZES[sizeId], logo.img ? logo : null);
   let current = null;
   const bg = () => ({ scrim: state.scrim, blur: state.blur, zoom: state.zoom, panX: state.panX, panY: state.panY, fade: state.fade, vignette: state.vignette });
-  // Background presets. "Black bottom" / "Navy bottom" follow the rated ES ads
-  // in the Figma file (AD1 Brick Black Bottom, AD5 Brick Navy Bottom): a bright
-  // clip on top that melts into a solid colour behind bottom-anchored copy:
-  // no flat scrim, the 0.87 vignette, and a fade from just above the copy
-  // (56% of the 4:5 frame) to solid at 83%.
-  const PRESETS = {
-    darken: { scrim: 0.45, blur: 0, fade: null, vignette: 0, anchor: 'center' },
-    'black-bottom': { scrim: 0, blur: 0, fade: { color: '#000000', height: 0.44 }, vignette: 0.87, anchor: 'bottom' },
-    'navy-bottom': { scrim: 0, blur: 0, fade: { color: '#0B1B3A', height: 0.44 }, vignette: 0.87, anchor: 'bottom' },
-    blur: { scrim: 0.38, blur: 0.45, fade: null, vignette: 0, anchor: 'center' },
-  };
 
   // Shows the canvas as large as the stage allows, keeping its shape.
   let metaPreview = false;
@@ -261,7 +300,6 @@
   function renderMeta() {
     const mode = !metaPreview ? 'off' : state.size === '9x16' ? 'reel' : 'feed';
     els.device.dataset.meta = mode;
-    els.metaToggle?.setAttribute('aria-pressed', String(metaPreview));
     if (mode === 'off') { els.metaHead.innerHTML = ''; els.metaOver.innerHTML = ''; els.metaFoot.innerHTML = ''; return; }
     // Ads run from the EssentiallySports page, whichever newsletter they promote.
     const name = 'EssentiallySports';
@@ -328,6 +366,8 @@
     els.highlightRow.hidden = state.style !== 'highlight';
     const lit = state.highlight.trim();
     els.highlightWarn.hidden = !lit || state.headline.toLowerCase().includes(lit.toLowerCase());
+    els.highlight.setAttribute('aria-invalid', String(!els.highlightWarn.hidden));
+    renderCounts();
     draw();
   }
 
@@ -504,6 +544,7 @@
     v.load();
   }
 
+
   // ─── Clip in ─────────────────────────────────────────────────────────────
   let clipUrl = '';
   function useClip(blob, meta) {
@@ -541,16 +582,16 @@
     els.video.currentTime = Math.min(0.03, d);
     buildFilmstrip(clipUrl, d);
     changed();
-    renderClips();
-    if (state.clip) toast(`Clip ready: ${state.clip.name}`, state.step === 'research' ? { action: { label: 'Next: Copy', fn: () => goStep('copy') } } : {});
+    renderFound();
+    if (state.clip) toast('Clip ready', state.step === 'clip' ? { tone: 'good', action: { label: 'Next: Copy', fn: () => goStep('copy') } } : { tone: 'good' });
   });
   els.video.addEventListener('seeked', () => { draw(); syncTime(); });
   els.video.addEventListener('error', () => { if (els.video.getAttribute('src')) setClipStatus('That video could not be played. Try an MP4 (H.264).'); });
-  const setClipStatus = text => { els.clipStatus.textContent = text; els.clipStatus.title = text || ''; };
+  const setClipStatus = text => { els.clipStatus.textContent = text; };
 
   function takeFile(file) {
     if (!file) return;
-    if (!/^video\//.test(file.type)) { setClipStatus('Drop a video file (MP4 works best).'); toast('That isn’t a video file.', { tone: 'bad' }); return; }
+    if (!/^video\//.test(file.type)) { setClipStatus('Choose a video file (MP4 works best).'); toast('That isn’t a video file.', { tone: 'bad' }); return; }
     useClip(file, { name: file.name, source: 'upload' });
     setClipStatus(`Using ${file.name}`);
   }
@@ -582,14 +623,17 @@
   // in between), with progress on the preview.
   let loadingClip = '';
   async function downloadClip(variant, meta) {
+    if (!variant?.url) { toast('That clip has no video file. Try another one.', { tone: 'bad' }); return; }
     loadingClip = meta.url || variant.url;
-    renderClips();
+    renderFound();
     setBusy(true, 'Downloading the clip…', 0);
-    setClipStatus('Downloading the clip…');
+    setClipStatus('');
+    let status = 0;
     try {
       // X's video host refuses requests that carry a Referer from our site (403),
       // so send none; no cookies either.
       const response = await fetch(variant.url, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
+      status = response.status;
       if (!response.ok || !response.body) throw new Error(`download failed (${response.status})`);
       const total = Number(response.headers.get('content-length') || 0);
       const reader = response.body.getReader();
@@ -604,17 +648,25 @@
       }
       const who = meta.handle ? `@${String(meta.handle).replace(/^@/, '')}` : 'X';
       useClip(new Blob(parts, { type: 'video/mp4' }), { name: `X post by ${who}`, source: 'x', url: meta.url || '' });
-      setClipStatus(`Clip from ${who} (${variant.height || '?'}p). Check you may use it before publishing.`);
+      setClipStatus(`Clip from ${who}. Check you may use it before publishing.`);
     } catch (error) {
-      setClipStatus("FrameUp couldn't download that clip. Open the post, save the video, and drop it here.");
-      toast('Couldn’t download that clip. Save it from the post and drop it on the preview.', { tone: 'bad' });
+      logEvent('clip_failed', { height: Number(variant.height) || 0, status, post: safeUrl(meta.url) });
+      setClipStatus('Couldn’t download that clip. Try another one, or save it from the post and upload it.');
+      toast('Couldn’t download that clip. Try another one.', { tone: 'bad' });
     } finally {
       loadingClip = '';
       setBusy(false);
-      renderClips();
+      renderFound();
     }
   }
-  const bestVariant = variants => (variants || []).find(v => Math.max(v.width, v.height) <= 1280) || (variants || [])[variants.length - 1];
+  // The largest version up to 1280px on the long edge (fast, sharp enough at 1080 wide).
+  const longEdge = v => Math.max(Number(v?.width) || 0, Number(v?.height) || 0);
+  function bestVariant(variants) {
+    const list = (variants || []).filter(v => v && v.url);
+    if (!list.length) return null;
+    const sized = list.filter(v => longEdge(v) > 0).sort((a, b) => longEdge(b) - longEdge(a));
+    return sized.find(v => longEdge(v) <= 1280) || sized[sized.length - 1] || list[0];
+  }
 
   async function loadXPost(url, button) {
     if (button) button.disabled = true;
@@ -622,10 +674,9 @@
     els.qualities.hidden = true;
     try {
       const data = await callApi({ mode: 'clip', url });
-      // Default: the largest version up to 1280px on the long edge (fast, sharp enough at 1080 wide).
       const best = bestVariant(data.variants);
       els.qualities.innerHTML = `<span class="va-hint">Quality</span>${data.variants.slice(0, 4).map((v, i) => `<button class="va-chip" type="button" data-q="${i}" aria-pressed="${v === best}">${v.height ? `${v.height}p` : `Version ${i + 1}`}</button>`).join('')}`;
-      els.qualities.hidden = false;
+      els.qualities.hidden = data.variants.length < 2;
       els.qualities.onclick = e => {
         const chip = e.target.closest('[data-q]');
         if (!chip) return;
@@ -643,38 +694,28 @@
   els.xform.addEventListener('submit', event => {
     event.preventDefault();
     const url = els.xurl.value.trim();
-    if (!url) { els.xurl.focus(); return; }
+    if (!url) { els.xurl.focus(); setClipStatus('Paste a link to an X post first.'); return; }
     loadXPost(url, els.xget);
   });
 
   // ─── Steps ───────────────────────────────────────────────────────────────
   const stepButtons = [...els.steps.querySelectorAll('.va-step')];
   function stepDone(id) {
-    if (id === 'moment') return Boolean(state.trend);
-    if (id === 'research') return state.researchStatus === 'done' || Boolean(state.clip);
+    if (id === 'clip') return hasClip();
     if (id === 'copy') return state.appliedVariant >= 0 || state.copyEdited;
-    if (id === 'rate') return Boolean(state.rating) && !ratingStale();
     if (id === 'export') return state.exported;
     return false;
   }
   function stepSub(id) {
-    if (id === 'moment') return state.trend ? state.trend.title : 'Pick a trend';
-    if (id === 'research') {
-      if (state.researchStatus === 'loading') return 'Researching…';
-      const facts = state.research?.keyFacts?.length || 0;
-      const bits = [];
-      if (state.researchStatus === 'done') bits.push(`${facts} fact${facts === 1 ? '' : 's'}`);
-      bits.push(state.clip ? 'clip in' : 'no clip yet');
-      return bits.join(' · ');
+    if (id === 'clip') {
+      if (hasClip()) return state.clip?.source === 'upload' ? 'Your upload' : 'Clip in';
+      const f = finds[state.clipTab];
+      return f?.status === 'loading' ? 'Searching…' : 'Find a video';
     }
     if (id === 'copy') {
-      if (state.draftsStatus === 'loading') return 'Writing drafts…';
-      return `${B.STYLES[state.style]?.label || ''}${current && !current.fits ? ' · too long' : ''}`;
-    }
-    if (id === 'rate') {
-      if (state.ratingStatus === 'loading') return 'Rating…';
-      if (!state.rating) return 'Score and fixes';
-      return `${Number(state.rating.score).toFixed(1)} · ${ratingStale() ? 'changed since' : state.rating.verdict}`;
+      if (state.draftsStatus === 'loading') return 'Writing…';
+      if (current && !current.fits) return 'Too long';
+      return stepDone('copy') ? (B.STYLES[state.style]?.label || 'Done') : 'Write the words';
     }
     if (id === 'export') return state.exported ? 'Exported' : `${state.exportIds.length} size${state.exportIds.length === 1 ? '' : 's'} · MP4`;
     return '';
@@ -685,15 +726,21 @@
       if (id === state.step) button.setAttribute('aria-current', 'step'); else button.removeAttribute('aria-current');
       const done = stepDone(id);
       button.dataset.state = done ? 'done' : '';
-      button.classList.toggle('is-busy', (id === 'research' && state.researchStatus === 'loading') || (id === 'rate' && state.ratingStatus === 'loading') || (id === 'copy' && (state.draftsStatus === 'loading' || state.chatBusy)));
+      button.classList.toggle('is-busy', (id === 'clip' && (finds[state.clipTab]?.status === 'loading' || Boolean(loadingClip))) || (id === 'copy' && (state.draftsStatus === 'loading' || state.chatBusy)));
       const sub = button.querySelector('.va-step__sub');
       sub.textContent = stepSub(id);
       button.setAttribute('aria-label', `Step ${STEPS.indexOf(id) + 1}, ${STEP_LABEL[id]}: ${sub.textContent}${done ? ' (done)' : ''}`);
     });
     const i = STEPS.indexOf(state.step);
+    stepButtons.forEach(b => b.closest('li').classList.toggle('is-done', stepDone(b.dataset.step)));
+    els.stepsN.textContent = String(i + 1);
+    els.stepsName.textContent = STEP_LABEL[state.step];
+    els.stepsBar.style.width = `${((i + 1) / STEPS.length) * 100}%`;
     els.back.hidden = i === 0;
     els.next.hidden = i === STEPS.length - 1;
     if (i < STEPS.length - 1) els.nextText.textContent = `Next: ${STEP_LABEL[STEPS[i + 1]]}`;
+    // The footer's Next is the primary action once this step is done.
+    els.next.classList.toggle('es-btn--primary', stepDone(state.step));
   }
   function goStep(id, { focus = true } = {}) {
     if (!STEPS.includes(id)) return;
@@ -701,13 +748,23 @@
     state.step = id;
     document.querySelectorAll('.va-pane').forEach(pane => { pane.hidden = pane.dataset.pane !== id; });
     els.panelScroll.scrollTop = 0;
+    if (changedStep && window.matchMedia('(max-width: 900px)').matches) reveal($('va-panel'));
     renderSteps();
-    if (id === 'research') { renderResearch(); renderClips(); }
-    if (id === 'copy') {
-      renderCopy();
-      if (state.trend && state.draftsFor !== state.trend.id && state.draftsStatus !== 'loading') generateDrafts();
+    if (id === 'clip') {
+      // By colour starts from the Copy choices until changed by hand.
+      if (!state.clipPicked) {
+        state.colorSport = brand().sport || state.colorSport;
+        state.teamSport = state.colorSport;
+        if (state.copyColor) state.color = state.copyColor;
+        markRadios(els.colorSport, 'sport', state.colorSport);
+        markRadios(els.teamSport, 'sport', state.teamSport);
+      }
+      if (!state.clipTabPicked) selectClipTab(clipTab(state.copyColor ? 'color' : 'team'));
+      renderTeamPicker();
+      renderSwatches();
+      renderFound();
     }
-    if (id === 'rate') renderRate();
+    if (id === 'copy') renderCopy();
     if (id === 'export') renderExport();
     if (focus && changedStep) document.getElementById(`va-h-${id}`)?.focus({ preventScroll: true });
   }
@@ -718,19 +775,296 @@
   els.back.addEventListener('click', () => goStep(STEPS[Math.max(0, STEPS.indexOf(state.step) - 1)]));
   els.next.addEventListener('click', () => goStep(STEPS[Math.min(STEPS.length - 1, STEPS.indexOf(state.step) + 1)]));
 
-  // Anything that changes the ad: re-check rating freshness and step labels.
+  // Scrolls something into view inside the panel (desktop), or the page (phones).
+  function reveal(el) {
+    const sc = els.panelScroll;
+    if (getComputedStyle(sc).overflowY === 'visible') {
+      // Phones: the preview is sticky above the panel, so land just below it.
+      const below = Math.max(0, els.stage.getBoundingClientRect().bottom);
+      window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - below - 12), behavior: 'smooth' });
+      return;
+    }
+    const top = sc.scrollTop + el.getBoundingClientRect().top - sc.getBoundingClientRect().top - 16;
+    sc.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }
+
+  // Anything that changes the ad.
   function changed() {
     state.version += 1;
     state.exported = false;
     renderSteps();
-    if (state.step === 'rate') renderRateStale();
     if (state.step === 'export') renderExport();
   }
 
-  // ─── 1 Moment ────────────────────────────────────────────────────────────
+  // ─── 1 Clip ──────────────────────────────────────────────────────────────
+  // Tabs: By colour / By moment / Link or upload.
+  const clipTabs = [...els.clipTabs.querySelectorAll('[role="tab"]')];
+  function selectClipTab(tab, focus) {
+    clipTabs.forEach(t => {
+      const on = t === tab;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      $(t.getAttribute('aria-controls')).hidden = !on;
+    });
+    state.clipTab = tab.dataset.tab;
+    if (focus) tab.focus();
+    if (state.clipTab === 'team') renderTeamPicker();
+    if (state.clipTab === 'moment' && state.trendsStatus === 'idle') loadTrends();
+    renderFound();
+    renderSteps();
+  }
+  const clipTab = name => clipTabs.find(t => t.dataset.tab === name);
+  els.clipTabs.addEventListener('click', event => { const tab = event.target.closest('[role="tab"]'); if (tab) { state.clipTabPicked = true; selectClipTab(tab); } });
+  els.clipTabs.addEventListener('keydown', event => {
+    const i = clipTabs.indexOf(document.activeElement);
+    if (i < 0) return;
+    if (event.key === 'ArrowRight') { event.preventDefault(); selectClipTab(clipTabs[(i + 1) % clipTabs.length], true); }
+    if (event.key === 'ArrowLeft') { event.preventDefault(); selectClipTab(clipTabs[(i - 1 + clipTabs.length) % clipTabs.length], true); }
+  });
+
+  // Colour picker: sport above, swatches below, then Find clips.
+  const colorById = id => T.COLORS.find(c => c.id === id) || T.COLORS[0];
+  const teamsFor = (sport, color) => { try { return T.teamsFor({ sport, color }) || []; } catch (error) { return []; } };
+  const availableColors = sport => (hasTeamData ? T.COLORS.filter(c => teamsFor(sport, c.id).length) : T.COLORS);
+  const swatchTeams = document.createElement('p');
+  swatchTeams.className = 'va-hint va-swatch-teams';
+  els.swatches.after(swatchTeams);
+  function renderSwatches() {
+    const colors = availableColors(state.colorSport);
+    if (!colors.some(c => c.id === state.color)) state.color = colors[0]?.id || '';
+    els.swatches.innerHTML = colors.map(c => {
+      const on = c.id === state.color;
+      return `<button class="va-swatch" type="button" role="radio" data-color="${esc(c.id)}" aria-checked="${on}" tabindex="${on ? 0 : -1}" style="--sw:${esc(c.hex)}"><span class="va-swatch__dot" aria-hidden="true"></span><span class="va-swatch__label">${esc(c.label)}</span></button>`;
+    }).join('');
+    const teams = teamsFor(state.colorSport, state.color);
+    swatchTeams.innerHTML = teams.length ? `${teams.slice(0, 3).map(t => `<span class="va-swatch-team" title="${esc(t.name)}">${teamMark(t, 20)}<span>${esc(t.short || t.name)}</span></span>`).join('')}${teams.length > 3 ? `<span class="va-swatch-team va-swatch-team--more">+${teams.length - 3} more</span>` : ''}` : '';
+    swatchTeams.hidden = !teams.length;
+    renderFindButton();
+  }
+  const colorKey = () => JSON.stringify({ sport: state.colorSport, color: state.color });
+  function renderFindButton() {
+    const f = finds.color;
+    // Once this exact search has results, the clips are the next action.
+    const fresh = f && f.key === colorKey() && f.status !== 'error';
+    const same = f && f.key === colorKey();
+    els.find.classList.toggle('es-btn--primary', !same);
+    // The result chips already name the teams.
+    swatchTeams.hidden = Boolean(same) || !swatchTeams.textContent;
+    els.find.disabled = f?.status === 'loading' || !state.color;
+    els.findText.textContent = f?.status === 'loading' ? 'Finding clips…' : fresh ? 'Search again' : 'Find clips';
+    els.find.toggleAttribute('aria-busy', f?.status === 'loading');
+  }
+
+  // Searches: one per tab, so switching tabs keeps each tab's results.
+  const finds = { team: null, color: null, moment: null };
+  const findTokens = { team: 0, color: 0, moment: 0 };
+  async function findClips(kind, params, { label = '', teams: previewTeams = [] } = {}) {
+    const key = kind === 'color' ? colorKey() : kind === 'team' ? teamKey() : JSON.stringify(params);
+    const token = ++findTokens[kind];
+    finds[kind] = { key, status: 'loading', teams: previewTeams, clips: [], error: '', label, params };
+    // The search is what the ad is about: it grounds the copy.
+    const color = kind === 'color' ? colorById(params.color) : null;
+    state.context = {
+      kind,
+      sport: params.sport || '',
+      color: color?.id || '',
+      colorLabel: color?.label || '',
+      teams: previewTeams.map(t => t.name).filter(Boolean),
+      trend: kind === 'moment' ? state.trend : null,
+    };
+    renderFound();
+    renderSteps();
+    if (kind === 'color') renderFindButton();
+    if (kind === 'team') renderTeamFind();
+    try {
+      const data = await callApi({ mode: 'find-clips', ...params });
+      if (token !== findTokens[kind]) return;
+      const clips = (Array.isArray(data.clips) ? data.clips : []).filter(c => c && Array.isArray(c.variants) && c.variants.some(v => v && v.url));
+      const teams = Array.isArray(data.teams) && data.teams.length ? data.teams : previewTeams;
+      finds[kind] = { ...finds[kind], status: clips.length ? 'done' : 'empty', clips, teams, cached: Boolean(data.cached), note: typeof data.note === 'string' ? data.note : '' };
+      if (state.context.kind === kind) state.context.teams = teams.map(t => t.name).filter(Boolean);
+    } catch (error) {
+      if (token !== findTokens[kind]) return;
+      finds[kind] = { ...finds[kind], status: 'error', error: error.message };
+    }
+    renderFound();
+    renderSteps();
+    if (kind === 'color') renderFindButton();
+    if (kind === 'team') renderTeamFind();
+    if (state.clipTab === kind && finds[kind]?.status !== 'loading') reveal(els.found);
+  }
+  function findByColor() {
+    if (!state.color) return;
+    findClips('color', { sport: state.colorSport, color: state.color }, { label: colorById(state.color).label, teams: teamsFor(state.colorSport, state.color) });
+  }
+  els.find.addEventListener('click', findByColor);
+
+  // Team mark: the team logo (hot-linked, see video-ads-teams.js) in a fixed
+  // square white tile, so layout never shifts and dark logos stay visible in
+  // dark mode. Teams from the server may lack the logo field, so look it up by
+  // name. No logo, or one that fails to load: the two-colour dot instead.
+  const teamColors = t => {
+    const c = (Array.isArray(t.colors) ? t.colors : []).filter(x => /^#[0-9a-f]{3,8}$/i.test(String(x)));
+    return [c[0] || '#8490A6', c[1] || c[0] || '#8490A6'];
+  };
+  const teamLogo = t => {
+    if (!t) return '';
+    const own = safeUrl(t.logo);
+    if (own) return own;
+    try {
+      const known = typeof T.findTeam === 'function' ? T.findTeam(t.name, t.sport) || T.findTeam(t.short, t.sport) : null;
+      return safeUrl(typeof T.logoFor === 'function' ? T.logoFor(known) : known?.logo);
+    } catch (error) { return ''; }
+  };
+  const teamMark = (t, size = 20) => {
+    const [a, b] = teamColors(t);
+    const logo = teamLogo(t);
+    const img = logo ? `<img src="${esc(logo)}" alt="" width="${size}" height="${size}" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-team-logo>` : '';
+    return `<span class="va-logo${logo ? '' : ' va-logo--dot'}" style="--a:${esc(a)};--b:${esc(b)};--logo:${size}px" aria-hidden="true">${img}</span>`;
+  };
+  // A logo that fails to load turns back into the dot (error doesn't bubble,
+  // so listen in the capture phase). Never leave a broken image.
+  document.addEventListener('error', event => {
+    const img = event.target;
+    if (!(img instanceof HTMLImageElement) || !img.hasAttribute('data-team-logo')) return;
+    img.parentElement?.classList.add('va-logo--dot');
+    img.remove();
+  }, true);
+  function clipCard(c, i) {
+    const inAd = Boolean(state.clip?.url) && state.clip.url === c.url;
+    const busy = Boolean(loadingClip) && loadingClip === c.url;
+    const thumb = safeUrl(c.thumb || c.thumbnail);
+    const handle = String(c.handle || '').replace(/^@/, '');
+    const hours = Number.isFinite(Number(c.ageHours)) && c.ageHours !== null && c.ageHours !== '' ? Number(c.ageHours) : (c.postedAt ? (Date.now() - new Date(c.postedAt).getTime()) / 3600e3 : NaN);
+    const age = Number.isFinite(hours) ? (hours < 1 ? 'Just now' : hours < 24 ? `${Math.round(hours)}h ago` : `${Math.round(hours / 24)} day${Math.round(hours / 24) === 1 ? '' : 's'} ago`) : '';
+    const secs = Number(c.duration) > 600 ? Number(c.duration) / 1000 : Number(c.duration || (c.durationMs ? c.durationMs / 1000 : 0));
+    return `<article class="va-clip${inAd ? ' is-in' : ''}${busy ? ' is-busy' : ''}" style="--i:${i}">
+      <span class="va-clip__thumb"${thumb ? ` style="background-image:url('${esc(thumb)}')"` : ''}>${secs ? `<span class="va-clip__dur">${esc(fmt(secs))}</span>` : ''}${inAd ? `<span class="va-clip__in">${ICON.check}In the ad</span>` : ''}</span>
+      <span class="va-clip__who"><span>${handle ? `@${esc(handle)}` : 'X post'}</span>${age ? `<span class="va-clip__age">${esc(age)}</span>` : ''}</span>
+      ${c.text ? `<span class="va-clip__text">${esc(c.text)}</span>` : ''}
+      <span class="va-clip__actions">
+        <button class="es-btn es-btn--sm es-btn--still${inAd || busy ? '' : ' es-btn--primary'}" type="button" data-clip="${i}"${busy || inAd ? ' disabled' : ''}>${busy ? 'Loading…' : inAd ? 'Using it' : 'Use clip'}</button>
+        ${safeUrl(c.url) ? `<a class="va-icon-btn va-icon-btn--sm" href="${esc(c.url)}" target="_blank" rel="noopener" aria-label="Open the post by ${esc(handle || 'X')}" title="Open the post">${ICON.external}</a>` : ''}
+      </span>
+    </article>`;
+  }
+  function renderFound() {
+    const kind = state.clipTab;
+    if (kind === 'link') { els.found.hidden = true; return; }
+    els.found.hidden = false;
+    const f = finds[kind];
+    if (!f) { els.found.innerHTML = ''; return; }
+    const what = kind === 'color'
+      ? `${String(f.label || '').toLowerCase()} ${SPORT_LABEL[f.params.sport] || ''} teams`
+      : kind === 'team' ? (f.label || 'this team') : 'this moment';
+    const allTeams = f.teams || [];
+    const teams = allTeams.slice(0, 6);
+    const more = allTeams.length - teams.length;
+    const teamsHtml = teams.length ? `<ul class="va-teams" aria-label="Matched teams">${teams.map(t => `<li class="va-team" aria-label="${esc(t.name || t.short)}">${teamMark(t, 20)}<span>${esc(t.short || t.name)}</span></li>`).join('')}${more > 0 ? `<li class="va-team va-team--more" title="${esc(allTeams.slice(6).map(t => t.short || t.name).join(', '))}">+${more} more</li>` : ''}</ul>` : '';
+    const linkBtn = '<button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-link">Paste a link</button>';
+    if (f.status === 'loading') {
+      els.found.innerHTML = `${teamsHtml}<p class="va-working">${dots}Looking for clips from the last 3 days…</p>
+        <div class="va-clipgrid" aria-hidden="true">${Array.from({ length: 4 }, (_, i) => `<div class="va-clip va-clip--skeleton" style="--i:${i}"><span class="va-clip__thumb va-shimmer"></span><span class="va-line va-shimmer" style="width:46%"></span><span class="va-line va-shimmer"></span></div>`).join('')}</div>`;
+      els.found.setAttribute('aria-busy', 'true');
+      return;
+    }
+    els.found.removeAttribute('aria-busy');
+    if (f.status === 'error') {
+      els.found.innerHTML = `${teamsHtml}<div class="va-empty-state va-empty-state--bad" role="alert">${ICON.alert}<strong>The search didn’t finish</strong><span>${esc(f.error)}</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="retry-find">${ICON.retry}Try again</button>${linkBtn}</div></div>`;
+      return;
+    }
+    if (f.status === 'empty') {
+      const another = { team: 'Try another team', color: 'Try another colour', moment: 'Try another moment' }[kind];
+      const pick = { team: ['other-team', 'Pick a team'], color: ['other-color', 'Pick a colour'], moment: ['other-moment', 'Pick a moment'] }[kind];
+      els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}<div class="va-empty-state">${ICON.film}<strong>No recent clips</strong><span>No clips from the last 3 days for ${esc(what)}. ${another} or paste an X link.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="${pick[0]}">${pick[1]}</button>${linkBtn}</div></div>`;
+      return;
+    }
+    els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}
+      <div class="va-found__head"><h3>${f.clips.length} clip${f.clips.length === 1 ? '' : 's'}</h3><span class="va-hint">Last 3 days</span></div>
+      ${f.note ? `<p class="va-found__note">${esc(f.note)}</p>` : ''}
+      <div class="va-clipgrid">${f.clips.map(clipCard).join('')}</div>`;
+  }
+  els.found.addEventListener('click', event => {
+    const use = event.target.closest('[data-clip]');
+    if (use) {
+      const c = finds[state.clipTab]?.clips?.[Number(use.dataset.clip)];
+      if (c) downloadClip(bestVariant(c.variants), { handle: c.handle, url: c.url });
+      return;
+    }
+    const act = event.target.closest('[data-act]')?.dataset.act;
+    if (act === 'retry-find') {
+      const f = finds[state.clipTab];
+      if (state.clipTab === 'color') findByColor();
+      else if (state.clipTab === 'team') findByTeam();
+      else if (f) findClips('moment', f.params, { label: f.label });
+    }
+    if (act === 'to-link') { selectClipTab(clipTab('link')); els.xurl.focus(); }
+    if (act === 'other-team') { els.teamQ.focus(); }
+    if (act === 'other-color') els.swatches.querySelector('[aria-checked="true"]')?.focus();
+    if (act === 'other-moment') { state.momentOpen = true; renderTrends(); els.trends.querySelector('.va-trend')?.focus(); }
+  });
+
+  // By team: every team for the sport, type to filter, then Find clips.
+  const allTeams = sport => (Array.isArray(T.TEAMS) ? T.TEAMS : []).filter(t => t.sport === sport);
+  const teamKey = () => JSON.stringify({ sport: state.teamSport, team: state.team });
+  function renderTeamPicker() {
+    const sport = state.teamSport;
+    const q = state.teamQuery.trim().toLowerCase();
+    let teams = allTeams(sport);
+    // A colour picked in Copy: its teams come first.
+    const fam = state.copyColor;
+    const inColor = t => fam && Array.isArray(t.families) && t.families.includes(fam);
+    teams = [...teams].sort((a, b) => (inColor(b) - inColor(a)) || a.name.localeCompare(b.name));
+    const shown = q ? teams.filter(t => `${t.name} ${t.short || ''}`.toLowerCase().includes(q)) : teams;
+    if (state.team && !teams.some(t => t.name === state.team)) state.team = '';
+    const nColor = fam ? teams.filter(inColor).length : 0;
+    els.teamHint.textContent = !teams.length ? '' : nColor && !q ? `${colorById(fam).label} teams first` : '';
+    els.teamHint.hidden = !els.teamHint.textContent;
+    if (!teams.length) {
+      els.teamList.innerHTML = '<p class="va-hint">Team list is still loading. Try By colour, or paste a link.</p>';
+    } else if (!shown.length) {
+      els.teamList.innerHTML = `<p class="va-hint">No team matches “${esc(state.teamQuery)}”.</p>`;
+    } else {
+      const focusable = shown.some(t => t.name === state.team) ? state.team : shown[0].name;
+      els.teamList.innerHTML = shown.map(t => {
+        const on = t.name === state.team;
+        return `<button class="va-teamchip${inColor(t) ? ' is-suggested' : ''}" type="button" role="radio" data-team="${esc(t.name)}" aria-checked="${on}" tabindex="${t.name === focusable ? 0 : -1}" title="${esc(t.name)}" aria-label="${esc(t.name)}">${teamMark(t, 24)}<span>${esc(t.short || t.name)}</span></button>`;
+      }).join('');
+    }
+    renderTeamFind();
+  }
+  function renderTeamFind() {
+    const f = finds.team;
+    const loading = f?.status === 'loading';
+    const same = f && f.key === teamKey();
+    els.teamFind.disabled = loading || !state.team;
+    els.teamFind.classList.toggle('es-btn--primary', !same);
+    els.teamFind.toggleAttribute('aria-busy', loading);
+    const t = allTeams(state.teamSport).find(x => x.name === state.team);
+    els.teamFindText.textContent = loading ? 'Finding clips…' : !state.team ? 'Pick a team' : same && f.status !== 'error' ? 'Search again' : `Find ${t?.short || 'team'} clips`;
+  }
+  function findByTeam() {
+    if (!state.team) { els.teamQ.focus(); return; }
+    const t = allTeams(state.teamSport).find(x => x.name === state.team);
+    findClips('team', { sport: state.teamSport, team: state.team }, { label: t?.short || state.team, teams: t ? [t] : [] });
+  }
+  els.teamFind.addEventListener('click', findByTeam);
+  els.teamQ.addEventListener('input', () => { state.teamQuery = els.teamQ.value; renderTeamPicker(); });
+  els.teamQ.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const first = els.teamList.querySelector('[data-team]');
+      if (first) { state.team = first.dataset.team; state.clipPicked = true; renderTeamPicker(); els.teamList.querySelector(`[data-team="${CSS.escape(state.team)}"]`)?.focus(); }
+    }
+    if (event.key === 'ArrowDown') { event.preventDefault(); els.teamList.querySelector('[tabindex="0"]')?.focus(); }
+  });
+
+  // By moment: the free trends board. Picking one searches X for it.
   let trendItems = [];
   let trendsError = '';
+  state.trendsStatus = 'idle';
   function renderTrends() {
+    els.boardBar.hidden = !state.momentOpen;
     if (state.trendsStatus === 'loading') {
       els.trends.innerHTML = Array.from({ length: 5 }, (_, i) => `<li class="va-trend-item" aria-hidden="true" style="--i:${i}"><div class="va-trend va-trend--skeleton"><span class="va-trend__img va-shimmer"></span><span class="va-trend__body"><span class="va-line va-shimmer" style="width:42%"></span><span class="va-line va-shimmer"></span><span class="va-line va-shimmer" style="width:72%"></span></span></div></li>`).join('');
       els.trends.setAttribute('aria-busy', 'true');
@@ -738,35 +1072,39 @@
     }
     els.trends.removeAttribute('aria-busy');
     if (state.trendsStatus === 'error') {
-      els.trends.innerHTML = `<li class="va-empty-state">${ICON.alert}<strong>Trends didn’t load</strong><span>${esc(trendsError)}</span><button class="va-btn va-btn--sm" type="button" data-act="retry-trends">${ICON.retry}Try again</button></li>`;
+      els.trends.innerHTML = `<li class="va-empty-state va-empty-state--bad">${ICON.alert}<strong>Trends didn’t load</strong><span>${esc(trendsError)}</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="retry-trends">${ICON.retry}Try again</button><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-color">Search by colour</button></div></li>`;
+      return;
+    }
+    // A picked moment: just that one, with Change.
+    if (!state.momentOpen && state.trend) {
+      const t = state.trend;
+      els.trendsStatus.textContent = '';
+      els.trends.innerHTML = `<li class="va-picked">${leagueTile(t.sport)}<p>${esc(t.title)}</p><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="change-moment">Change</button></li>`;
       return;
     }
     const list = trendItems.filter(item => state.sport === 'all' || item.sport === state.sport);
     if (!list.length) {
-      els.trends.innerHTML = `<li class="va-empty-state">${ICON.search}<strong>Nothing for ${esc(SPORT_LABEL[state.sport] || 'this sport')} right now</strong><span>Try another sport, or describe your own moment above.</span></li>`;
+      els.trends.innerHTML = `<li class="va-empty-state">${ICON.search}<strong>Nothing for ${esc(SPORT_LABEL[state.sport] || 'this sport')} right now</strong><span>Try another sport, or search by colour.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="to-color">Search by colour</button></div></li>`;
       els.trendsStatus.textContent = '';
       return;
     }
     els.trends.innerHTML = list.map((item, index) => {
       const img = safeUrl(item.image);
-      const story = safeUrl(item.url);
       const on = state.trend?.id === item.id;
-      const meta = [ago(item.publishedAt), item.traffic ? `${item.traffic} searches` : '', item.source].filter(Boolean).map(esc).join('<i aria-hidden="true">·</i>');
+      const meta = [ago(item.publishedAt), item.source].filter(Boolean).map(esc).join('<i aria-hidden="true">·</i>');
       return `<li class="va-trend-item" style="--i:${index}">
         <button class="va-trend${on ? ' is-on' : ''}" type="button" data-id="${esc(item.id)}" aria-pressed="${on}">
-          <span class="va-trend__img va-sport-bg--${esc(item.sport)}"${img ? ` style="background-image:url('${esc(img)}')"` : ''}>${img ? '' : `<b>${esc(SPORT_LABEL[item.sport] || '')}</b>`}</span>
+          ${img ? `<span class="va-trend__img" style="background-image:url('${esc(img)}')"></span>` : leagueTile(item.sport, 'va-trend__img is-league')}
           <span class="va-trend__body">
-            <span class="va-trend__meta"><span class="va-sport va-sport--${esc(item.sport)}">${esc(SPORT_LABEL[item.sport] || '')}</span>${meta}</span>
+            <span class="va-trend__meta">${leagueTile(item.sport)}<span>${esc(SPORT_LABEL[item.sport] || '')}</span><i aria-hidden="true">·</i>${meta}</span>
             <span class="va-trend__title">${esc(item.title)}</span>
           </span>
           <span class="va-trend__go" aria-hidden="true">${on ? ICON.check : ICON.chevron}</span>
         </button>
-        ${story ? `<a class="va-trend__story" href="${esc(story)}" target="_blank" rel="noopener" aria-label="Open the story: ${esc(item.title)}" title="Open the story">${ICON.external}</a>` : ''}
       </li>`;
     }).join('');
-    // Live dot + count (the count ticks when a refresh changes it).
     els.trendsStatus.classList.remove('is-error');
-    els.trendsStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b data-es-tick="va-moments">${list.length}</b> moment${list.length === 1 ? '' : 's'} from the last 48 hours</span>`;
+    els.trendsStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b data-es-tick="va-moments">${list.length}</b> trending in the last 48 hours</span>`;
   }
   async function loadTrends() {
     state.trendsStatus = 'loading';
@@ -780,11 +1118,11 @@
     } catch (error) {
       state.trendsStatus = 'error';
       trendsError = error.message || '';
-      els.trendsStatus.classList.add('is-error');
-      els.trendsStatus.textContent = 'Trends are unavailable right now.';
+      els.trendsStatus.textContent = '';
     }
     els.refresh.classList.remove('is-spinning');
     renderTrends();
+    renderMoments();
   }
   els.sports.addEventListener('click', event => {
     const chip = event.target.closest('[data-sport]');
@@ -794,190 +1132,24 @@
     renderTrends();
   });
   els.trends.addEventListener('click', event => {
-    if (event.target.closest('[data-act="retry-trends"]')) { loadTrends(); return; }
+    const act = event.target.closest('[data-act]')?.dataset.act;
+    if (act === 'retry-trends') { loadTrends(); return; }
+    if (act === 'to-color') { selectClipTab(clipTab('color')); return; }
+    if (act === 'change-moment') { state.momentOpen = true; renderTrends(); els.trends.querySelector('.va-trend.is-on, .va-trend')?.focus(); return; }
     const button = event.target.closest('.va-trend[data-id]');
     if (!button) return;
     const item = trendItems.find(t => t.id === button.dataset.id);
     if (item) selectMoment(item);
   });
   els.refresh.addEventListener('click', loadTrends);
-  let ownSport = 'cfb';
-  els.own.addEventListener('submit', event => {
-    event.preventDefault();
-    const title = els.ownText.value.trim();
-    if (!title) { els.ownText.focus(); toast('Describe the moment first.'); return; }
-    selectMoment({ id: `own-${Date.now()}`, title, sport: ownSport, url: '', related: [], own: true });
-    els.ownText.value = '';
-  });
   function selectMoment(item) {
-    if (state.trend?.id === item.id) { goStep('research'); return; }
     state.trend = item;
-    state.research = null;
-    state.researchStatus = 'idle';
-    state.angles = new Set();
-    state.variants = [];
-    state.draftsStatus = 'idle';
-    state.draftsFor = '';
-    state.appliedVariant = -1;
-    setBrand(B.forSport(item.sport).id);
+    state.momentOpen = false;
     renderTrends();
-    goStep('research');
-    runResearch();
+    findClips('moment', { sport: item.sport, query: item.title }, { label: item.title });
   }
 
-  // ─── 2 Research & clip ───────────────────────────────────────────────────
-  let researchToken = 0;
-  const RESEARCH_STAGES = ['Reading the coverage', 'Checking the facts', 'Finding what fans care about', 'Looking for clips on X and YouTube'];
-  async function runResearch() {
-    if (!state.trend) return;
-    const token = ++researchToken;
-    state.researchStatus = 'loading';
-    state.researchError = '';
-    renderResearch();
-    renderClips();
-    renderSteps();
-    const { id, title, sport, url, related } = state.trend;
-    try {
-      const data = await callApi({ mode: 'research', trend: { id, title, sport, url: url || '', related: (related || []).map(r => ({ title: r.title, url: r.url })) } });
-      if (token !== researchToken) return;
-      state.research = data;
-      state.researchStatus = 'done';
-    } catch (error) {
-      if (token !== researchToken) return;
-      state.researchStatus = 'error';
-      state.researchError = error.message;
-    }
-    renderResearch();
-    renderClips();
-    renderSteps();
-    if (state.step === 'copy') renderCopy();
-  }
-  els.researchRun.addEventListener('click', runResearch);
-
-  function renderMomentCard() {
-    const t = state.trend;
-    els.moment.innerHTML = t
-      ? `<div class="va-moment__card"><span class="va-sport va-sport--${esc(t.sport)}">${esc(SPORT_LABEL[t.sport] || '')}</span><p>${esc(t.title)}</p><button class="va-btn va-btn--sm va-btn--ghost" type="button" data-act="change-moment">Change</button></div>`
-      : `<div class="va-moment__card is-empty"><p>No moment yet. Research needs one, but you can still add a clip below.</p><button class="va-btn va-btn--sm" type="button" data-act="change-moment">Pick a moment</button></div>`;
-  }
-  els.moment.addEventListener('click', event => { if (event.target.closest('[data-act="change-moment"]')) goStep('moment'); });
-
-  let stageTimer = 0;
-  function renderResearch() {
-    renderMomentCard();
-    clearInterval(stageTimer);
-    els.researchRun.hidden = !(state.trend && (state.researchStatus === 'done' || state.researchStatus === 'error'));
-    els.researchMoreCard.hidden = true;
-    const body = els.researchBody;
-    if (!state.trend) {
-      body.innerHTML = '<p class="va-hint">Pick a moment and the AI pulls the key facts, why fans care, and angles for the ad.</p>';
-      return;
-    }
-    if (state.researchStatus === 'loading') {
-      body.innerHTML = `<ol class="va-stages">${RESEARCH_STAGES.map((s, i) => `<li data-i="${i}"${i === 0 ? ' class="is-on"' : ''}><span class="va-stages__dot" aria-hidden="true"></span>${esc(s)}</li>`).join('')}</ol>
-        <div class="va-skel" aria-hidden="true"><span class="va-line va-shimmer"></span><span class="va-line va-shimmer"></span><span class="va-line va-shimmer" style="width:62%"></span></div>`;
-      let at = 0;
-      stageTimer = setInterval(() => {
-        at = Math.min(RESEARCH_STAGES.length - 1, at + 1);
-        body.querySelectorAll('.va-stages li').forEach(li => {
-          const i = Number(li.dataset.i);
-          li.classList.toggle('is-done', i < at);
-          li.classList.toggle('is-on', i === at);
-        });
-        if (at === RESEARCH_STAGES.length - 1) clearInterval(stageTimer);
-      }, 1800);
-      return;
-    }
-    if (state.researchStatus === 'error') {
-      body.innerHTML = `<div class="va-alert" role="alert">${ICON.alert}<div><strong>Research didn’t finish</strong><span>${esc(state.researchError)}</span></div><button class="va-btn va-btn--sm" type="button" data-act="retry-research">${ICON.retry}Try again</button></div>
-        <p class="va-hint">You can still add a clip below and write the copy yourself.</p>`;
-      return;
-    }
-    const r = state.research;
-    if (!r) { body.innerHTML = '<p class="va-hint">Research starts when you pick a moment.</p>'; return; }
-    const facts = (r.keyFacts || []).filter(f => f && f.fact);
-    const angles = (r.angles || []).filter(Boolean);
-    const phrases = (r.searchPhrases || []).filter(Boolean).slice(0, 4);
-    body.innerHTML = `
-      ${r.webSearch === false ? `<p class="va-soft-note">${ICON.alert}<span>Based on the headline only: web search wasn’t available for this one, so check the facts.</span></p>` : ''}
-      ${r.summary ? `<p class="va-summary">${esc(r.summary)}</p>` : ''}
-      ${r.whyFansCare ? `<div class="va-why"><span class="va-why__label">Why fans care</span><p>${esc(r.whyFansCare)}</p></div>` : ''}
-      <p class="va-meta">${r.cached ? 'From the last 30 minutes · free' : r.cost != null ? `Research cost $${Number(r.cost).toFixed(3)}` : ''}${facts.length || angles.length ? ' · facts and angles are below the clips' : ''}</p>`;
-    els.researchMoreCard.hidden = !(facts.length || angles.length || phrases.length);
-    els.researchMore.innerHTML = `
-      ${facts.length ? `<div class="va-block"><h4>Key facts</h4><ol class="va-facts">${facts.map(f => {
-        const src = safeUrl(f.sourceUrl);
-        return `<li><span>${esc(f.fact)}</span>${src ? `<a href="${esc(src)}" target="_blank" rel="noopener" class="va-source">${esc(domainOf(src))}${ICON.external}</a>` : ''}</li>`;
-      }).join('')}</ol></div>` : ''}
-      ${angles.length ? `<div class="va-block"><h4>Ad angles <span class="va-optional">Tap to steer the drafts</span></h4><div class="va-chips va-chips--wrap">${angles.map((a, i) => `<button class="va-chip va-chip--angle" type="button" data-angle="${i}" aria-pressed="${state.angles.has(a)}">${esc(a)}</button>`).join('')}</div></div>` : ''}
-      ${phrases.length ? `<div class="va-block"><h4>Search X yourself</h4><div class="va-chips va-chips--wrap">${phrases.map(p => `<a class="va-chip va-chip--link" href="https://x.com/search?q=${encodeURIComponent(p)}&amp;f=live" target="_blank" rel="noopener">${ICON.search}${esc(p)}</a>`).join('')}</div></div>` : ''}
-`;
-  }
-  function toggleAngle(chip) {
-    const angle = (state.research?.angles || [])[Number(chip.dataset.angle)];
-    if (!angle) return;
-    if (state.angles.has(angle)) state.angles.delete(angle); else state.angles.add(angle);
-    document.querySelectorAll(`[data-angle="${chip.dataset.angle}"]`).forEach(c => c.setAttribute('aria-pressed', String(state.angles.has(angle))));
-  }
-  [els.researchBody, els.researchMore].forEach(root => root.addEventListener('click', event => {
-    if (event.target.closest('[data-act="retry-research"]')) { runResearch(); return; }
-    const chip = event.target.closest('[data-angle]');
-    if (chip) toggleAngle(chip);
-  }));
-
-  const verifiedClips = () => (state.research?.verifiedClips || []).filter(c => c && Array.isArray(c.variants) && c.variants.length);
-  function renderClips() {
-    const r = state.research;
-    const verified = verifiedClips();
-    const verifiedUrls = new Set(verified.map(c => c.url));
-    const xPosts = (r?.xPosts || []).filter(u => safeUrl(u) && !verifiedUrls.has(u)).slice(0, 4);
-    const youtube = (r?.youtube || []).filter(safeUrl).slice(0, 3);
-    const count = verified.length + xPosts.length + youtube.length;
-    els.clipsCount.textContent = count ? `${count} found` : '';
-    if (state.researchStatus === 'loading') {
-      els.clips.innerHTML = `<div class="va-clipgrid" aria-hidden="true">${Array.from({ length: 2 }, () => '<div class="va-clip va-clip--skeleton"><span class="va-clip__thumb va-shimmer"></span><span class="va-line va-shimmer"></span><span class="va-line va-shimmer" style="width:60%"></span></div>').join('')}</div>`;
-      return;
-    }
-    if (!r || state.researchStatus !== 'done') { els.clips.innerHTML = ''; return; }
-    const parts = [];
-    if (verified.length) {
-      parts.push(`<div class="va-clipgrid">${verified.map((c, i) => {
-        const inAd = Boolean(state.clip?.url) && state.clip.url === c.url;
-        const busy = Boolean(loadingClip) && loadingClip === c.url;
-        const thumb = safeUrl(c.thumbnail);
-        const handle = String(c.handle || '').replace(/^@/, '');
-        return `<article class="va-clip${inAd ? ' is-in' : ''}${busy ? ' is-busy' : ''}">
-          <span class="va-clip__thumb"${thumb ? ` style="background-image:url('${esc(thumb)}')"` : ''}>${c.durationMs ? `<span class="va-clip__dur">${esc(fmt(c.durationMs / 1000))}</span>` : ''}<span class="va-clip__x">${ICON.x}</span></span>
-          <span class="va-clip__who">${handle ? `@${esc(handle)}` : 'X post'}</span>
-          ${c.text ? `<span class="va-clip__text">${esc(c.text)}</span>` : ''}
-          <span class="va-clip__actions">
-            <button class="va-btn va-btn--sm${inAd ? '' : ' va-btn--primary'}" type="button" data-clip="${i}"${busy || inAd ? ' disabled' : ''}>${busy ? 'Loading…' : inAd ? `${ICON.check}In the ad` : 'Use clip'}</button>
-            ${safeUrl(c.url) ? `<a class="va-icon-btn va-icon-btn--sm" href="${esc(c.url)}" target="_blank" rel="noopener" aria-label="Open the post by ${esc(handle || 'X')}" title="Open the post">${ICON.external}</a>` : ''}
-          </span>
-        </article>`;
-      }).join('')}</div>`);
-    }
-    if (xPosts.length || youtube.length) {
-      parts.push(`<ul class="va-links">
-        ${xPosts.map(u => `<li><span class="va-links__icon">${ICON.x}</span><a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.replace(/^https:\/\/(www\.)?/, '').slice(0, 46))}</a><button class="va-btn va-btn--sm" type="button" data-xpost="${esc(u)}">Get video</button></li>`).join('')}
-        ${youtube.map(u => `<li><span class="va-links__icon va-links__icon--yt">${ICON.youtube}</span><a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.replace(/^https:\/\/(www\.)?/, '').slice(0, 46))}</a><span class="va-tag">Open only</span></li>`).join('')}
-      </ul>${youtube.length ? '<p class="va-hint">YouTube clips can’t load here: save the clip, then drop it on the preview.</p>' : ''}`);
-    }
-    if (!parts.length) parts.push('<p class="va-hint">No downloadable clips turned up for this moment. Paste an X post below or upload your own.</p>');
-    els.clips.innerHTML = parts.join('');
-  }
-  els.clips.addEventListener('click', event => {
-    const use = event.target.closest('[data-clip]');
-    if (use) {
-      const c = verifiedClips()[Number(use.dataset.clip)];
-      if (c) downloadClip(bestVariant(c.variants), { handle: c.handle, url: c.url });
-      return;
-    }
-    const x = event.target.closest('[data-xpost]');
-    if (x) loadXPost(x.dataset.xpost, x);
-  });
-
-  // ─── 3 Copy ──────────────────────────────────────────────────────────────
+  // ─── 2 Copy ──────────────────────────────────────────────────────────────
   const undoStack = [];
   function snapshot() { undoStack.push(copyOf()); if (undoStack.length > 30) undoStack.shift(); }
   function undo() {
@@ -1009,8 +1181,12 @@
     els.cta.placeholder = brand().cta;
     els.unsub.checked = state.unsubscribe;
     syncStyles();
+    requestAnimationFrame(() => [els.headline, ...els.bodies].forEach(fitBox));
+    lintAll();
   }
-  // Applies copy fields (from a draft, the assistant or a fix) with undo.
+  // Editor textareas grow with their text.
+  function fitBox(box) { if (box.hidden || !box.offsetParent) return; box.style.height = 'auto'; box.style.height = `${box.scrollHeight + 2}px`; }
+  // Applies copy fields (from an option or the assistant) with undo.
   function applyCopy(fields, { label = 'Copy updated', silent = false } = {}) {
     snapshot();
     if (fields.style && B.STYLES[fields.style]) state.style = fields.style;
@@ -1026,47 +1202,31 @@
     changed();
     if (!silent) toast(label, { action: { label: 'Undo', fn: undo } });
   }
-  const variantFields = v => ({ style: v.style, headline: v.headline || '', highlight: v.style === 'highlight' ? (v.highlight || '') : '', body: Array.isArray(v.body) ? v.body : [], cta: v.cta || '' });
+  const variantFields = v => ({ style: v.style || state.style, headline: v.headline || '', highlight: (v.style || state.style) === 'highlight' ? (v.highlight || '') : '', body: Array.isArray(v.body) ? v.body : [], cta: v.cta || '' });
 
-  els.styles.addEventListener('click', event => {
-    const button = event.target.closest('[data-style]');
-    if (!button || button.dataset.style === state.style) return;
-    snapshot();
-    state.style = button.dataset.style;
-    state.styleChosen = true;
-    syncStyles();
-    relayout();
-    changed();
-  });
-  els.styles.addEventListener('keydown', event => {
-    const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
-    if (!(event.key in keys)) return;
-    event.preventDefault();
-    const ids = Object.keys(B.STYLES);
-    const target = els.styles.querySelector(`[data-style="${ids[(ids.indexOf(state.style) + keys[event.key] + ids.length) % ids.length]}"]`);
-    target.click();
-    target.focus();
-  });
-
-  // Tabs inside Copy.
-  const copyTabs = [...els.copyTabs.querySelectorAll('[role="tab"]')];
-  function selectTab(tab, focus) {
-    copyTabs.forEach(t => {
-      const on = t === tab;
-      t.setAttribute('aria-selected', String(on));
-      t.tabIndex = on ? 0 : -1;
-      $(t.getAttribute('aria-controls')).hidden = !on;
+  radioGroupStyles();
+  function radioGroupStyles() {
+    els.styles.addEventListener('click', event => {
+      const button = event.target.closest('[data-style]');
+      if (!button || button.dataset.style === state.style) return;
+      snapshot();
+      state.style = button.dataset.style;
+      syncStyles();
+      relayout();
+      changed();
+      renderCopyAction();
+      lintField('highlight');
     });
-    if (focus) tab.focus();
-    if (tab.id === 'va-tab-chat') renderThread();
+    els.styles.addEventListener('keydown', event => {
+      const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+      if (!(event.key in keys)) return;
+      event.preventDefault();
+      const ids = Object.keys(B.STYLES);
+      const target = els.styles.querySelector(`[data-style="${ids[(ids.indexOf(state.style) + keys[event.key] + ids.length) % ids.length]}"]`);
+      target.click();
+      target.focus();
+    });
   }
-  els.copyTabs.addEventListener('click', event => { const tab = event.target.closest('[role="tab"]'); if (tab) selectTab(tab); });
-  els.copyTabs.addEventListener('keydown', event => {
-    const i = copyTabs.indexOf(document.activeElement);
-    if (i < 0) return;
-    if (event.key === 'ArrowRight') { event.preventDefault(); selectTab(copyTabs[(i + 1) % copyTabs.length], true); }
-    if (event.key === 'ArrowLeft') { event.preventDefault(); selectTab(copyTabs[(i - 1 + copyTabs.length) % copyTabs.length], true); }
-  });
 
   function headlineHtml(v) {
     const text = v.style === 'highlight' ? plain(v.headline).toUpperCase() : plain(v.headline);
@@ -1077,65 +1237,190 @@
   }
   function variantCard(v, i, { scope = 'drafts', applied = false } = {}) {
     const body = (v.body || []).filter(Boolean);
+    const style = v.style || state.style;
     return `<article class="va-variant${applied ? ' is-applied' : ''}" data-scope="${scope}" data-v="${i}" style="--i:${i}">
-      <div class="va-variant__top"><span class="va-tag va-tag--${esc(v.style)}">${esc(B.STYLES[v.style]?.label || v.style)}</span>${applied ? `<span class="va-variant__state">${ICON.check}In the preview</span>` : ''}</div>
-      <p class="va-variant__headline va-variant__headline--${esc(v.style)}">${headlineHtml(v)}</p>
-      ${body.length ? `<p class="va-variant__body">${esc(plain(body[0]))}${body.length > 1 ? ` <span class="va-optional">+${body.length - 1} more</span>` : ''}</p>` : ''}
-      ${v.why ? `<p class="va-variant__why">${ICON.sparkle}<span>${esc(v.why)}</span></p>` : ''}
-      <button class="va-btn va-btn--sm${applied ? '' : ' va-btn--primary'}" type="button" data-use="${i}"${applied ? ' disabled' : ''}>${applied ? 'Using this draft' : 'Use this draft'}</button>
+      <p class="va-variant__headline va-variant__headline--${esc(style)}">${headlineHtml({ ...v, style })}</p>
+      ${body.length ? `<p class="va-variant__body">${esc(plain(body[0]))}</p>` : ''}
+      <div class="va-variant__foot">
+        ${applied
+          ? `<span class="va-variant__state">${ICON.check}In the ad</span>`
+          : `<button class="es-btn es-btn--sm${state.appliedVariant < 0 ? ' es-btn--primary es-btn--still' : ''}" type="button" data-use="${i}">Use this</button>`}
+      </div>
     </article>`;
+  }
+  // The context line under the Copy title: what the AI writes about.
+  // What the copy is about: the colour / moment picked in Copy, else the last clip search.
+  function copyContext() {
+    const sport = brand().sport || '';
+    const color = state.copyColor ? colorById(state.copyColor) : null;
+    const fallback = state.context;
+    return {
+      kind: state.copyTrend ? 'moment' : color ? 'color' : fallback.kind,
+      sport,
+      color: color?.id || (state.copyTrend ? '' : fallback.color),
+      colorLabel: color?.label || (state.copyTrend ? '' : fallback.colorLabel),
+      teams: color ? teamsFor(sport, color.id).map(t => t.name) : (state.copyTrend ? [] : fallback.teams),
+      trend: state.copyTrend || (color ? null : fallback.trend),
+    };
+  }
+  function contextLabel() {
+    const c = copyContext();
+    if (c.kind === 'moment' && c.trend) return c.trend.title;
+    if (c.kind === 'color' && c.colorLabel) return `${c.colorLabel} ${SPORT_LABEL[c.sport] || ''} teams`;
+    return '';
   }
   function renderCopy() {
     syncFields();
-    const angles = (state.research?.angles || []).filter(Boolean);
-    els.angles.hidden = !angles.length;
-    els.angles.innerHTML = angles.length ? `<span class="va-label">Angles from the research</span><div class="va-chips va-chips--wrap">${angles.map((a, i) => `<button class="va-chip va-chip--angle" type="button" data-angle="${i}" aria-pressed="${state.angles.has(a)}">${esc(a)}</button>`).join('')}</div>` : '';
+    markRadios(els.brands, 'brand', state.brandId);
+    renderCopySwatches();
+    renderMoments();
     renderVariants();
     renderThread();
   }
+  // ─── Ask AI: one panel for options, grammar and chat ────────────────────
+  // Only the latest kind of result shows (options, grammar or the chat thread).
+  const aiReduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const aiOpen = () => !els.ai.hidden;
+  function openAi({ focus = true } = {}) {
+    if (!aiOpen()) {
+      els.ai.hidden = false;
+      els.aiBtn.setAttribute('aria-expanded', 'true');
+      if (!aiReduced()) {
+        els.ai.classList.remove('is-entering');
+        void els.ai.offsetWidth;
+        els.ai.classList.add('is-entering');
+      }
+      renderMoments();
+    }
+    if (focus) els.aiActions.querySelector('button:not(:disabled)')?.focus({ preventScroll: true });
+    reveal(els.aiBtn.closest('.va-editor__head') || els.ai);
+  }
+  function closeAi({ focus = true } = {}) {
+    if (!aiOpen()) return;
+    els.ai.hidden = true;
+    els.ai.classList.remove('is-entering');
+    els.aiBtn.setAttribute('aria-expanded', 'false');
+    if (previewCopy) previewDraft(null);
+    if (focus) els.aiBtn.focus();
+  }
+  els.aiBtn.addEventListener('click', () => (aiOpen() ? closeAi() : openAi()));
+  els.aiClose.addEventListener('click', () => closeAi());
+  els.ai.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || event.defaultPrevented) return;
+    // Esc inside an open context fold closes the panel too: one key, one exit.
+    event.preventDefault();
+    closeAi();
+  });
+  // ⌘J / Ctrl+J opens Ask AI from anywhere in the Copy step (⌘K is search).
+  document.addEventListener('keydown', event => {
+    if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.key.toLowerCase() !== 'j') return;
+    event.preventDefault();
+    if (state.step !== 'copy') goStep('copy', { focus: false });
+    if (aiOpen() && els.ai.contains(document.activeElement)) closeAi(); else openAi();
+  });
+
+  function aiBusyText() {
+    if (state.draftsStatus === 'loading') return 'Writing 3 options…';
+    if (state.grammar.status === 'loading') return 'Checking grammar…';
+    if (state.chatBusy) return 'Working on it…';
+    return '';
+  }
+  function renderAi() {
+    const busy = aiBusyText();
+    els.aiProgress.hidden = !busy;
+    els.aiProgressText.textContent = busy;
+    els.ai.toggleAttribute('aria-busy', Boolean(busy));
+    els.aiActions.querySelectorAll('button').forEach(b => {
+      const mine = (b.dataset.ai === 'write' && state.draftsStatus === 'loading') || (b.dataset.ai === 'grammar' && state.grammar.status === 'loading');
+      b.disabled = Boolean(busy);
+      b.classList.toggle('is-busy', mine);
+    });
+    els.send.disabled = Boolean(busy);
+    const view = state.aiView;
+    els.variants.hidden = view !== 'options';
+    els.grammar.hidden = view !== 'grammar';
+    els.thread.hidden = view !== 'chat';
+    // Context summary: what the AI will write about.
+    const bits = [state.copyTrend?.title, els.notes.value.trim() ? 'note' : ''].filter(Boolean);
+    els.aiContextSum.textContent = bits.length ? `Context: ${bits.join(' + ')}` : 'Add context';
+  }
+  function renderCopyAction() {
+    const has = state.variants.length > 0;
+    els.aiWriteText.textContent = has ? 'Write 3 more' : 'Write 3 options';
+    renderAi();
+  }
+  const aiError = (text, act) => `<div class="va-ai-error" role="alert">${ICON.alert}<span>${esc(text)}</span><button class="va-link" type="button" data-act="${act}">${ICON.retry}Try again</button></div>`;
   function renderVariants() {
-    els.draftsRun.disabled = state.draftsStatus === 'loading';
-    els.draftsRun.innerHTML = `${ICON.sparkle}<span>${state.variants.length ? 'New drafts' : 'Write drafts'}</span>`;
+    renderCopyAction();
     if (state.draftsStatus === 'loading') {
-      els.variants.innerHTML = `<p class="va-working">${dots}Writing three drafts in the ES styles…</p>${Array.from({ length: 3 }, (_, i) => `<div class="va-variant va-variant--skeleton" style="--i:${i}" aria-hidden="true"><span class="va-line va-shimmer" style="width:28%"></span><span class="va-line va-line--lg va-shimmer"></span><span class="va-line va-line--lg va-shimmer" style="width:70%"></span><span class="va-line va-shimmer"></span></div>`).join('')}`;
+      els.variants.innerHTML = Array.from({ length: 3 }, (_, i) => `<div class="va-variant va-variant--skeleton" style="--i:${i}" aria-hidden="true"><span class="va-line va-line--lg va-shimmer"></span><span class="va-line va-line--lg va-shimmer" style="width:70%"></span><span class="va-line va-shimmer"></span></div>`).join('');
       return;
     }
-    if (state.draftsStatus === 'error') {
-      els.variants.innerHTML = `<div class="va-alert" role="alert">${ICON.alert}<div><strong>No drafts this time</strong><span>${esc(state.draftsError)}</span>${state.draftsIssues.length ? `<ul>${state.draftsIssues.slice(0, 4).map(i => `<li>${esc(typeof i === 'string' ? i : i.message || i.issue || JSON.stringify(i))}</li>`).join('')}</ul>` : ''}</div><button class="va-btn va-btn--sm" type="button" data-act="retry-drafts">${ICON.retry}Try again</button></div>`;
-      return;
-    }
-    if (!state.variants.length) {
-      els.variants.innerHTML = state.trend
-        ? `<div class="va-empty-state va-empty-state--soft">${ICON.sparkle}<strong>Drafts appear here</strong><span>Three takes on the moment. Hover one to try it in the preview.</span></div>`
-        : `<div class="va-empty-state va-empty-state--soft">${ICON.sparkle}<strong>Pick a moment for AI drafts</strong><span>Or edit the example in Edit text, or ask the assistant.</span><button class="va-btn va-btn--sm" type="button" data-act="to-moment">Pick a moment</button></div>`;
-      return;
-    }
-    els.variants.innerHTML = state.variants.map((v, i) => variantCard(v, i, { applied: state.appliedVariant === i })).join('');
+    if (state.draftsStatus === 'error') { els.variants.innerHTML = aiError(state.draftsError, 'retry-drafts'); return; }
+    if (!state.variants.length) { els.variants.innerHTML = ''; return; }
+    const fixed = state.autoFixed || [];
+    els.variants.innerHTML = `<p class="va-ai__label">Pick one to use. Hover to preview.</p>`
+      + state.variants.map((v, i) => variantCard(v, i, { applied: state.appliedVariant === i })).join('')
+      + (fixed.length ? `<p class="va-hint va-autofixed">${ICON.check}<span>Auto-fixed: ${esc(fixed.slice(0, 2).join(' · '))}</span></p>` : '');
   }
   async function generateDrafts() {
-    if (!state.trend) { toast('Pick a moment first, or edit the copy yourself.'); return; }
+    if (state.draftsStatus === 'loading' || aiBusyText()) return;
+    openAi({ focus: false });
+    state.aiView = 'options';
     state.draftsStatus = 'loading';
-    state.draftsFor = state.trend.id;
+    state.autoFixed = [];
     renderVariants();
     renderSteps();
-    const notes = [els.notes.value.trim(), ...[...state.angles].map(a => `Angle: ${a}`)].filter(Boolean).join('\n');
+    const c = copyContext();
+    const notes = els.notes.value.trim();
+    const sport = c.sport || brand().sport || '';
+    const body = {
+      mode: 'copy',
+      brandId: state.brandId,
+      sport,
+      style: state.style,
+      color: c.color || undefined,
+      colorLabel: c.colorLabel || undefined,
+      teams: c.teams.length ? c.teams.slice(0, 12) : undefined,
+      team: c.teams[0] || undefined,
+      trend: c.trend ? { id: c.trend.id, title: c.trend.title, sport: c.trend.sport, url: c.trend.url || '' } : undefined,
+      title: c.trend?.title || undefined,
+      clip: (() => { const text = (finds[c.kind]?.clips || []).find(clip => clip.url && clip.url === state.clip?.url)?.text; return text ? { text } : undefined; })(),
+      notes: notes || undefined,
+    };
     try {
-      const data = await callApi({ mode: 'copy', brandId: state.brandId, trend: state.trend, research: state.research, style: state.styleChosen ? state.style : undefined, notes: notes || undefined });
-      state.variants = (data.variants || []).filter(v => v && v.headline);
+      const data = await callApi(body);
+      state.variants = (data.variants || []).filter(v => v && v.headline).slice(0, 3);
       state.appliedVariant = -1;
-      state.draftsStatus = 'done';
+      state.autoFixed = (Array.isArray(data.autoFixed) ? data.autoFixed : []).map(f => (typeof f === 'string' ? f : f?.note)).filter(Boolean);
+      state.draftsStatus = state.variants.length ? 'done' : 'error';
+      if (!state.variants.length) state.draftsError = 'The AI came back empty.';
+      logEvent('copy_generated', {
+        style: state.style,
+        context: { kind: c.kind, color: c.color, teams: c.teams.slice(0, 12), trend: c.trend?.title || '' },
+        notes,
+        variants: state.variants.map(v => copyForLog(variantFields(v))),
+        issues: Array.isArray(data.issues) ? data.issues.slice(0, 10) : [],
+        autoFixed: Array.isArray(data.autoFixed) ? data.autoFixed.slice(0, 10) : [],
+      });
     } catch (error) {
       state.draftsStatus = 'error';
       state.draftsError = error.message;
-      state.draftsIssues = error.issues || [];
     }
     renderVariants();
     renderSteps();
   }
-  els.notesForm.addEventListener('submit', event => { event.preventDefault(); generateDrafts(); });
-  els.angles.addEventListener('click', event => { const chip = event.target.closest('[data-angle]'); if (chip) toggleAngle(chip); });
+  els.notes.addEventListener('input', renderAi);
+  els.notes.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); generateDrafts(); } });
+  els.aiActions.addEventListener('click', event => {
+    const b = event.target.closest('[data-ai]');
+    if (!b || b.disabled) return;
+    if (b.dataset.ai === 'write') generateDrafts();
+    else if (b.dataset.ai === 'grammar') checkGrammar();
+    else sendChat(b.dataset.say || b.textContent);
+  });
 
-  // Hover or focus a draft: show it in the preview. "Use this draft" keeps it.
+  // Hover or focus an option: show it in the preview. "Use this" keeps it.
   function draftFrom(card) {
     if (card.dataset.scope === 'drafts') return state.variants[Number(card.dataset.v)];
     const [, m, j] = card.dataset.scope.split(':').map(Number);
@@ -1162,43 +1447,237 @@
     root.addEventListener('focusin', event => { const card = event.target.closest('.va-variant[data-v]'); if (card && !card.classList.contains('is-applied')) previewDraft(card); });
     root.addEventListener('focusout', event => { if (!root.contains(event.relatedTarget) && previewCopy) previewDraft(null); });
     root.addEventListener('click', event => {
-      if (event.target.closest('[data-act="retry-drafts"]')) { generateDrafts(); return; }
-      if (event.target.closest('[data-act="to-moment"]')) { goStep('moment'); return; }
+      const act = event.target.closest('[data-act]')?.dataset.act;
+      if (act === 'retry-drafts') { generateDrafts(); return; }
       const use = event.target.closest('[data-use]');
       if (!use) return;
       const card = use.closest('.va-variant');
       const v = draftFrom(card);
       if (!v) return;
-      applyCopy(variantFields(v), { label: 'Draft in the preview' });
+      const fields = variantFields(v);
+      applyCopy(fields, { label: 'Copy in the ad' });
       state.appliedVariant = card.dataset.scope === 'drafts' ? Number(card.dataset.v) : -1;
+      state.aiCopy = copyForLog({ ...state });
+      logEvent('copy_applied', { index: state.appliedVariant, from: card.dataset.scope === 'drafts' ? 'options' : 'assistant', copy: state.aiCopy });
       renderVariants();
       renderSteps();
     });
   });
 
-  // Assistant chat.
+  // ─── Grammar: AI check (cheapest model), each fix one click ─────────────
+  const FIELD_NAME = { headline: 'Headline', highlight: 'Highlight', body: 'Body', cta: 'Button' };
+  const issueField = i => (i.field === 'body' ? `${FIELD_NAME.body}${state.body.filter(s => s.trim()).length > 1 ? ` ¶${i.index + 1}` : ''}` : FIELD_NAME[i.field] || i.field);
+  const fieldText = (field, index) => (field === 'body' ? state.body[index] || '' : state[field] || '');
+  // Writes one field and refreshes the preview, counts and checks (with undo).
+  function setFieldText(field, index, text) {
+    snapshot();
+    if (field === 'body') state.body[index] = text; else state[field] = text;
+    state.copyEdited = true;
+    syncFields();
+    relayout();
+    changed();
+  }
+  function applyGrammarIssue(issue) {
+    const now = fieldText(issue.field, issue.index);
+    if (!now.includes(issue.original)) { issue.state = 'stale'; return false; }
+    if (issue.field === 'body') state.body[issue.index] = now.replace(issue.original, issue.suggestion);
+    else state[issue.field] = now.replace(issue.original, issue.suggestion);
+    issue.state = 'fixed';
+    return true;
+  }
+  function fixGrammar(indexes) {
+    const before = copyForLog(state);
+    snapshot();
+    const fixed = indexes.map(i => state.grammar.issues[i]).filter(issue => issue && !issue.state && applyGrammarIssue(issue)).length;
+    if (!fixed) { undoStack.pop(); renderGrammar(); return; }
+    state.copyEdited = true;
+    syncFields();
+    relayout();
+    changed();
+    renderGrammar();
+    lintAll();
+    toast(fixed === 1 ? 'Fixed.' : `Fixed ${fixed} issues.`, { action: { label: 'Undo', fn: () => { undo(); state.grammar.issues.forEach(i => { if (i.state === 'fixed') i.state = ''; }); renderGrammar(); } } });
+    logEvent('copy_edited', { before, after: copyForLog(state), from: 'grammar', fixes: fixed });
+  }
+  function renderGrammar() {
+    const g = state.grammar;
+    if (g.status === 'error') { els.grammar.innerHTML = aiError(g.error, 'retry-grammar'); return; }
+    if (g.status !== 'done') { els.grammar.innerHTML = ''; return; }
+    if (!g.issues.length) { els.grammar.innerHTML = `<p class="va-gram__clean">${ICON.check}<span>No grammar issues found</span></p>`; return; }
+    const open = g.issues.filter(i => !i.state).length;
+    els.grammar.innerHTML = `<div class="va-gram__head"><p class="va-ai__label">${open ? `${open} suggestion${open === 1 ? '' : 's'}` : `${ICON.check}All fixed`}</p>${open > 1 ? '<button class="es-btn es-btn--sm" type="button" data-gfix="all">Fix all</button>' : ''}</div>
+      <ul class="va-gram__list">${g.issues.map((i, n) => `<li class="va-gram__item${i.state ? ` is-${i.state}` : ''}">
+        <div class="va-gram__main">
+          <span class="va-gram__field">${esc(issueField(i))}</span>
+          <span class="va-gram__diff"><del>${esc(i.original)}</del><span aria-hidden="true">→</span><span class="va-sr">should be</span><ins>${esc(i.suggestion)}</ins></span>
+          <span class="va-gram__why">${esc(i.reason)}</span>
+        </div>
+        ${i.state === 'fixed' ? `<span class="va-gram__done">${ICON.check}Fixed</span>` : i.state === 'stale' ? '<span class="va-gram__done is-stale">Text changed</span>' : `<button class="es-btn es-btn--sm" type="button" data-gfix="${n}" aria-label="Fix: ${esc(i.original)} to ${esc(i.suggestion)}">Fix</button>`}
+      </li>`).join('')}</ul>`;
+  }
+  async function checkGrammar() {
+    if (aiBusyText()) return;
+    openAi({ focus: false });
+    state.aiView = 'grammar';
+    const copy = { headline: state.headline, highlight: state.style === 'highlight' ? state.highlight : '', body: state.body.filter(s => s.trim()), cta: state.cta || '' };
+    if (![copy.headline, copy.highlight, ...copy.body, copy.cta].some(s => s.trim())) {
+      state.grammar = { status: 'error', issues: [], error: 'Write some copy first, then check it.' };
+      renderGrammar(); renderAi();
+      return;
+    }
+    // Body indexes from the server refer to the non-empty paragraphs sent.
+    const bodyMap = state.body.map((s, i) => (s.trim() ? i : -1)).filter(i => i >= 0);
+    state.grammar = { status: 'loading', issues: [], error: '' };
+    renderGrammar(); renderAi(); renderSteps();
+    try {
+      const data = await callApi({ mode: 'grammar', brandId: state.brandId, copy });
+      const issues = (Array.isArray(data.issues) ? data.issues : [])
+        .filter(i => i && typeof i.original === 'string' && typeof i.suggestion === 'string' && FIELD_NAME[i.field])
+        .map(i => ({ field: i.field, index: i.field === 'body' ? bodyMap[Number(i.index) || 0] : undefined, original: i.original, suggestion: i.suggestion, reason: String(i.reason || ''), state: '' }))
+        .filter(i => i.field !== 'body' || Number.isInteger(i.index))
+        .slice(0, 8);
+      issues.forEach(i => { if (!fieldText(i.field, i.index).includes(i.original)) i.state = 'stale'; });
+      state.grammar = { status: 'done', issues, error: '' };
+    } catch (error) {
+      state.grammar = { status: 'error', issues: [], error: error.message };
+    }
+    renderGrammar(); renderAi(); renderSteps();
+  }
+  els.grammar.addEventListener('click', event => {
+    if (event.target.closest('[data-act="retry-grammar"]')) { checkGrammar(); return; }
+    const b = event.target.closest('[data-gfix]');
+    if (!b) return;
+    const which = b.dataset.gfix === 'all' ? state.grammar.issues.map((_, i) => i) : [Number(b.dataset.gfix)];
+    fixGrammar(which);
+    // Keep focus in the list: the next Fix, else Fix all's slot, else the panel.
+    (els.grammar.querySelector('[data-gfix]') || els.aiActions.querySelector('[data-ai="grammar"]'))?.focus({ preventScroll: true });
+  });
+
+  // ─── Instant checks while typing (free, in the browser) ─────────────────
+  // Conservative on purpose: each rule only fires on clear mistakes. ALL-CAPS
+  // is fine (ad headlines), and the button is uppercase by design.
+  const ABBREV = /(?:^|\s)(?:vs|etc|e\.g|i\.e|a\.m|p\.m|mr|mrs|ms|dr|jr|sr|st|no|approx)\.$/i;
+  const A_EXCEPT = /^(?:u[bcfhklmnprstvz][aeiouy]|uni|use|usu|uti|eu|ewe|one|once|ufo|uk\b)/i;
+  const AN_EXCEPT = /^(?:hour|honest|honor|honour|heir|herb)/i;
+  const DOUBLE_OK = new Set(['that', 'had', 'is', 'do', 'bye', 'very', 'go', 'ha', 'no', 'so']);
+  const caseLike = (src, word) => (src[0] === src[0].toUpperCase() ? word[0].toUpperCase() + word.slice(1) : word);
+  function lintText(text, field) {
+    const out = [];
+    const add = (at, len, msg, fix) => out.push({ at, len, msg, fix });
+    if (!text || !text.trim()) return out;
+    let m;
+    // Repeated words: "the the".
+    const rep = /\b([A-Za-z']+)(\s+)\1\b/gi;
+    while ((m = rep.exec(text))) {
+      if (DOUBLE_OK.has(m[1].toLowerCase())) continue;
+      add(m.index, m[0].length, `Repeated word “${m[1]}”`, m[1]);
+    }
+    // Double spaces.
+    const dbl = / {2,}/g;
+    while ((m = dbl.exec(text))) add(m.index, m[0].length, 'Double space', ' ');
+    // Space before punctuation: "free ,".
+    const before = /([^\s.])( +)([,.!?;:])(?=\s|$)/g;
+    while ((m = before.exec(text))) add(m.index + 1, m[2].length + 1, `Space before “${m[3]}”`, m[3]);
+    // Missing space after punctuation: "free,every" / "today.Sign".
+    const after = /([,;!?])(?=[A-Za-z])|(?<=[a-z]{2})(\.)(?=[A-Z][a-z])/g;
+    while ((m = after.exec(text))) add(m.index, 1, `Add a space after “${m[0]}”`, `${m[0]} `);
+    if (field !== 'cta' && field !== 'highlight') {
+      // Sentence start: lowercase after . ! ? (or at the very start).
+      const cap = /(^|[.!?]["'”’)]?\s+)(["'“‘(]?)([a-z])(?=[a-z]*[\s,.!?;:'’]|[a-z]*$)/g;
+      while ((m = cap.exec(text))) {
+        const lead = text.slice(0, m.index + m[1].length).trimEnd();
+        if (m[1] && ABBREV.test(lead)) continue;
+        // Brand-style words with inner capitals ("iPhone") are left alone.
+        const word = text.slice(m.index + m[1].length + m[2].length).match(/^[\p{L}']+/u)?.[0] || '';
+        if (/\p{Lu}/u.test(word)) continue;
+        add(m.index + m[1].length + m[2].length, 1, 'Start the sentence with a capital', m[3].toUpperCase());
+      }
+    }
+    if (field !== 'cta') {
+      // "i" as a pronoun.
+      const pron = /(^|[\s"“(])(i)(?=$|[\s,.!?;:]|['’](?:m|ve|ll|d)\b)/g;
+      while ((m = pron.exec(text))) add(m.index + m[1].length, 1, 'Capitalize “I”', 'I');
+      // a / an before a vowel sound (conservative; acronyms and ALL-CAPS words are skipped).
+      const art = /(^|[^\p{L}'’])(a|an|A|An)\s+([\p{L}][\p{L}'’-]*)/gu;
+      while ((m = art.exec(text))) {
+        const [, pre, article, word] = m;
+        art.lastIndex = m.index + pre.length + article.length; // allow "a an apple" overlaps
+        if (word.length > 1 && word === word.toUpperCase()) continue;
+        if (/^A/.test(article) && pre && !/[.!?]\s*$/.test(text.slice(0, m.index + pre.length))) continue; // "Plan A ..."
+        const vowel = /^[aeiou]/i.test(word);
+        const at = m.index + pre.length;
+        if (article.toLowerCase() === 'a' && vowel && !A_EXCEPT.test(word)) add(at, article.length, `Use “${caseLike(article, 'an')}” before “${word}”`, caseLike(article, 'an'));
+        if (article.toLowerCase() === 'an' && !vowel && !AN_EXCEPT.test(word)) add(at, article.length, `Use “${caseLike(article, 'a')}” before “${word}”`, caseLike(article, 'a'));
+      }
+    }
+    // Unmatched brackets and quotes (no automatic fix: the right spot is a judgement call).
+    const pairs = [['(', ')', 'bracket'], ['[', ']', 'bracket'], ['“', '”', 'quote']];
+    pairs.forEach(([o, c, kind]) => {
+      const n = text.split(o).length - text.split(c).length;
+      if (n) add(-1, 0, `Unmatched ${kind} “${n > 0 ? o : c}”`, null);
+    });
+    if ((text.match(/"/g) || []).length % 2) add(-1, 0, 'Unmatched quote “"”', null);
+    // No duplicates, in reading order (bracket notes last), at most 3 per field.
+    const seen = new Set();
+    return out.filter(i => { const k = `${i.at}|${i.msg}`; return seen.has(k) ? false : Boolean(seen.add(k)); }).sort((a, b) => (a.at < 0) - (b.at < 0) || a.at - b.at).slice(0, 3);
+  }
+  const lintEls = { headline: $('va-lint-headline'), highlight: $('va-lint-highlight'), body: $('va-lint-body'), cta: $('va-lint-cta') };
+  const lintSig = {};
+  function lintField(field) {
+    const box = lintEls[field];
+    if (!box) return;
+    const sources = field === 'body' ? state.body.map((t, i) => ({ text: t, index: i })) : [{ text: state[field] || '', index: undefined }];
+    if (field === 'highlight' && state.style !== 'highlight') sources.length = 0;
+    const multi = field === 'body' && state.body.filter(s => s.trim()).length > 1;
+    const items = sources.flatMap(s => lintText(s.text, field).map(i => ({ ...i, index: s.index, multi })));
+    const sig = JSON.stringify(items.map(i => [i.index, i.at, i.msg]));
+    if (sig === lintSig[field]) return; // unchanged: don't re-announce
+    lintSig[field] = sig;
+    box.hidden = !items.length;
+    box.innerHTML = items.map(i => `<li class="va-warn va-lint__item"><span>${i.multi ? `¶${i.index + 1} · ` : ''}${esc(i.msg)}</span>${i.fix != null ? `<button class="va-link" type="button" data-lfix="${esc(field)}" data-index="${i.index ?? ''}" data-at="${i.at}" data-len="${i.len}" data-with="${esc(i.fix)}" aria-label="Fix: ${esc(i.msg)}">Fix</button>` : ''}</li>`).join('');
+  }
+  function lintAll() { Object.keys(lintEls).forEach(lintField); }
+  let lintTimer = 0;
+  const lintSoon = field => { clearTimeout(lintTimer); lintTimer = setTimeout(() => (field ? lintField(field) : lintAll()), 350); };
+  Object.values(lintEls).forEach(box => box?.addEventListener('click', event => {
+    const b = event.target.closest('[data-lfix]');
+    if (!b) return;
+    const field = b.dataset.lfix;
+    const index = b.dataset.index === '' ? undefined : Number(b.dataset.index);
+    const text = fieldText(field, index);
+    const at = Number(b.dataset.at);
+    const len = Number(b.dataset.len);
+    const next = text.slice(0, at) + b.dataset.with + text.slice(at + len);
+    setFieldText(field, index, next);
+    lintField(field);
+    toast('Fixed.', { action: { label: 'Undo', fn: () => { undo(); lintAll(); } }, timeout: 2600 });
+    const input = field === 'body' ? els.bodies[index] : els[field];
+    (box.querySelector('[data-lfix]') || input)?.focus({ preventScroll: true });
+  }));
+
+  // Chat (inside Ask AI).
   const lastPatchIndex = () => { for (let i = state.chat.length - 1; i >= 0; i -= 1) if (state.chat[i].patch) return i; return -1; };
   function renderThread() {
-    const intro = `<li class="va-msg va-msg--assistant"><span class="va-msg__avatar" aria-hidden="true">${ICON.sparkle}</span><div class="va-msg__bubble"><p>I know ${state.trend ? `the moment (“${esc(state.trend.title)}”)` : 'your ad'}${state.research ? ', the research' : ''} and what’s in the preview. Ask me to rewrite, shorten, switch style or split the paragraphs, and I’ll change the ad for you.</p></div></li>`;
     const last = lastPatchIndex();
-    els.thread.innerHTML = intro + state.chat.map((m, mi) => {
-      if (m.pending) return `<li class="va-msg va-msg--assistant"><span class="va-msg__avatar" aria-hidden="true">${ICON.sparkle}</span><div class="va-msg__bubble va-msg__bubble--typing"><span class="va-sr">The assistant is writing</span>${dots}</div></li>`;
+    els.thread.innerHTML = state.chat.map((m, mi) => {
+      if (m.pending) return `<li class="va-msg va-msg--assistant"><span class="va-msg__avatar" aria-hidden="true">${ICON.sparkle}</span><div class="va-msg__bubble va-msg__bubble--typing"><span class="va-sr">Ask AI is writing</span>${dots}</div></li>`;
       if (m.role === 'user') return `<li class="va-msg va-msg--user"><div class="va-msg__bubble"><p>${esc(m.content)}</p></div></li>`;
       const fields = m.patch ? Object.keys(m.patch).filter(k => m.patch[k] != null) : [];
       return `<li class="va-msg va-msg--assistant${m.error ? ' is-error' : ''}"><span class="va-msg__avatar" aria-hidden="true">${m.error ? ICON.alert : ICON.sparkle}</span><div class="va-msg__bubble">
         ${String(m.content || '').split(/\n{2,}/).map(p => `<p>${esc(p)}</p>`).join('')}
         ${fields.length ? `<p class="va-msg__applied">${ICON.check}<span>Changed ${esc(fields.join(', '))}${m.undone ? ' (undone)' : ''}</span>${!m.undone && mi === last ? `<button class="va-link" type="button" data-undo="${mi}">${ICON.undo}Undo</button>` : ''}</p>` : ''}
-        ${m.retry ? `<button class="va-btn va-btn--sm" type="button" data-retry="${mi}">${ICON.retry}Try again</button>` : ''}
+        ${m.retry ? `<button class="va-link" type="button" data-retry="${mi}">${ICON.retry}Try again</button>` : ''}
       </div></li>
       ${(m.variants || []).length ? `<li class="va-msg va-msg--cards">${m.variants.map((v, j) => variantCard(v, j, { scope: `chat:${mi}:${j}` })).join('')}</li>` : ''}`;
     }).join('');
     els.thread.scrollTop = els.thread.scrollHeight;
-    els.send.disabled = state.chatBusy;
-    els.suggest.hidden = state.chat.length > 4;
+    renderAi();
   }
-  async function sendChat(text, { fromFix } = {}) {
+  async function sendChat(text) {
     const content = String(text || '').trim();
-    if (!content || state.chatBusy) return null;
+    if (!content || aiBusyText()) return null;
+    openAi({ focus: false });
+    state.aiView = 'chat';
     state.chat.push({ role: 'user', content });
     state.chat.push({ role: 'assistant', pending: true });
     state.chatBusy = true;
@@ -1206,14 +1685,23 @@
     renderSteps();
     let result = null;
     try {
+      const c = copyContext();
+      const notes = els.notes.value.trim();
       const messages = state.chat.filter(m => !m.pending && !m.error).map(m => ({ role: m.role, content: m.content })).slice(-12);
-      const data = await callApi({ mode: 'chat', brandId: state.brandId, trend: state.trend, research: state.research, layout: { style: state.style, headline: state.headline, highlight: state.highlight, body: state.body.filter(s => s.trim()), cta: state.cta || brand().cta }, messages });
+      const data = await callApi({
+        mode: 'chat', brandId: state.brandId, sport: c.sport || brand().sport || '',
+        trend: c.trend ? { id: c.trend.id, title: c.trend.title, sport: c.trend.sport } : (contextLabel() ? { title: contextLabel(), sport: c.sport } : undefined),
+        color: c.color || undefined, teams: c.teams.length ? c.teams.slice(0, 12) : undefined,
+        notes: notes || undefined,
+        layout: { style: state.style, headline: state.headline, highlight: state.highlight, body: state.body.filter(s => s.trim()), cta: state.cta || brand().cta },
+        messages,
+      });
       const msg = { role: 'assistant', content: data.reply || 'Done.', variants: (data.variants || []).filter(v => v && v.headline) };
       const patch = data.patch && typeof data.patch === 'object' && Object.keys(data.patch).length ? data.patch : null;
       state.chat[state.chat.length - 1] = msg;
       if (patch) {
         msg.patch = patch;
-        applyCopy(patch, { label: fromFix ? 'Fix applied to the ad' : 'The assistant changed the ad' });
+        applyCopy(patch, { label: 'Ask AI changed the ad' });
       }
       result = msg;
     } catch (error) {
@@ -1228,6 +1716,7 @@
   els.compose.addEventListener('submit', event => {
     event.preventDefault();
     const text = els.ask.value;
+    if (!text.trim() || aiBusyText()) return;
     els.ask.value = '';
     autoGrow();
     sendChat(text);
@@ -1236,7 +1725,6 @@
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); els.compose.requestSubmit(); }
   });
   els.ask.addEventListener('input', autoGrow);
-  els.suggest.addEventListener('click', event => { const chip = event.target.closest('.va-chip'); if (chip) sendChat(chip.textContent); });
   els.thread.addEventListener('click', event => {
     const u = event.target.closest('[data-undo]');
     if (u) { const m = state.chat[Number(u.dataset.undo)]; undo(); if (m) m.undone = true; renderThread(); return; }
@@ -1244,12 +1732,12 @@
     if (r) { const i = Number(r.dataset.retry); const text = state.chat[i]?.retry; state.chat.splice(i - 1, 2); sendChat(text); }
   });
 
-  // Edit text fields.
+  // Inline editor.
   let typingSnap = 0;
   const snapOnFirstKey = () => { if (Date.now() - typingSnap > 4000) snapshot(); typingSnap = Date.now(); };
   const editField = (el, fn) => {
     el.addEventListener('beforeinput', snapOnFirstKey);
-    el.addEventListener('input', () => { fn(); state.copyEdited = true; state.appliedVariant = -1; relayout(); changed(); });
+    el.addEventListener('input', () => { fn(); state.copyEdited = true; if (el.tagName === 'TEXTAREA') fitBox(el); relayout(); changed(); lintSoon(); });
   };
   editField(els.headline, () => { state.headline = els.headline.value; });
   editField(els.highlight, () => { state.highlight = els.highlight.value; });
@@ -1265,214 +1753,76 @@
     els.addPara.hidden = els.bodies.every(b => !b.hidden);
   });
 
-  // ─── 4 Rate ──────────────────────────────────────────────────────────────
-  const adSignature = () => JSON.stringify([state.brandId, state.style, state.headline, state.highlight, state.body, state.cta, state.unsubscribe, state.align, state.anchor,
-    state.scrim, state.blur, state.zoom, state.panX, state.panY, state.fade?.color || '', state.vignette, state.trimIn, state.trimOut, state.clip?.name || '', clipUrl, els.logoThumb.src.length]);
-  const ratingStale = () => Boolean(state.rating) && state.ratingSig !== adSignature();
-  const isRedesign = verdict => /redesign/i.test(String(verdict || ''));
-  const toneOf = verdict => RT.VERDICT_TONES[verdict] || (isRedesign(verdict) ? 'bad' : 'warn');
-
-  function seekTo(t) {
-    return new Promise(resolve => {
-      if (Math.abs(els.video.currentTime - t) < 0.01) { resolve(); return; }
-      const timer = setTimeout(resolve, 2000);
-      els.video.addEventListener('seeked', () => { clearTimeout(timer); resolve(); }, { once: true });
-      els.video.currentTime = t;
-    });
+  // Copy step: optional team colour (an "Any" swatch clears it).
+  function renderCopySwatches() {
+    if (!els.copySwatches) return; // colour now lives only in the Clip step
+    const sport = brand().sport || 'cfb';
+    const colors = availableColors(sport);
+    if (state.copyColor && !colors.some(c => c.id === state.copyColor)) state.copyColor = '';
+    const any = !state.copyColor;
+    els.copySwatches.innerHTML = `<button class="va-swatch va-swatch--any" type="button" role="radio" data-copycolor="" aria-checked="${any}" tabindex="${any ? 0 : -1}"><span class="va-swatch__dot" aria-hidden="true"></span><span class="va-swatch__label">Any</span></button>`
+      + colors.map(c => {
+        const on = c.id === state.copyColor;
+        return `<button class="va-swatch" type="button" role="radio" data-copycolor="${esc(c.id)}" aria-checked="${on}" tabindex="${on ? 0 : -1}" style="--sw:${esc(c.hex)}"><span class="va-swatch__dot" aria-hidden="true"></span><span class="va-swatch__label">${esc(c.label)}</span></button>`;
+      }).join('');
   }
-  function ratingContext() {
-    const b = brand();
-    return {
-      brandId: b.id,
-      brandLabel: b.label,
-      sport: state.trend?.sport || b.sport,
-      objective: 'newsletter_signup',
-      placement: state.size,
-      headline: plain(state.headline),
-      body: state.body.map(s => plain(s).trim()).filter(Boolean),
-      cta: (state.cta || b.cta).toUpperCase(),
-    };
+  // Copy step: optional trending moment (inside a fold; loads on open).
+  function renderMoments() {
+    const t = state.copyTrend;
+    els.momentSum.textContent = t ? `Moment: ${t.title}` : 'Trending moment';
+    renderAi();
+    if (!els.momentFold.open) return;
+    if (state.trendsStatus === 'loading' || state.trendsStatus === 'idle') { els.copyMoments.innerHTML = `<li class="va-working">${dots}Loading trends…</li>`; return; }
+    if (state.trendsStatus === 'error') { els.copyMoments.innerHTML = `<li class="va-moment-row va-moment-row--note">Trends didn’t load. <button class="va-link" type="button" data-act="retry-trends">Try again</button></li>`; return; }
+    const sport = brand().sport;
+    const list = [...trendItems].sort((a, b) => (b.sport === sport) - (a.sport === sport)).slice(0, 8);
+    if (!list.length) { els.copyMoments.innerHTML = '<li class="va-moment-row va-moment-row--note">Nothing trending right now. A team colour works too.</li>'; return; }
+    els.copyMoments.innerHTML = list.map(item => {
+      const on = t?.id === item.id;
+      return `<li><button class="va-moment-row${on ? ' is-on' : ''}" type="button" data-moment="${esc(item.id)}" aria-pressed="${on}">${leagueTile(item.sport)}<span class="va-moment-row__title">${esc(item.title)}</span>${on ? ICON.check : ''}</button></li>`;
+    }).join('');
   }
-  let ratingRun = null;
-  // Draws the ad full size at the hook / middle / end of the trim (seeking the
-  // hidden video) and asks /api/ad-rating for a score.
-  function rateAd() {
-    if (ratingRun) return ratingRun;
-    if (!hasClip()) return Promise.reject(new Error('Add a clip first: the reviewer needs to see the footage.'));
-    ratingRun = (async () => {
-      state.ratingStatus = 'loading';
-      state.ratingError = '';
-      state.ratingFrames = [];
-      renderRate();
-      renderSteps();
-      if (state.step === 'export') renderExport();
-      const sig = adSignature();
-      try {
-        setPlaying(false);
-        const restore = els.video.currentTime;
-        const s = size();
-        const off = document.createElement('canvas');
-        off.width = s.width;
-        off.height = s.height;
-        const octx = off.getContext('2d');
-        const offBlur = document.createElement('canvas');
-        const lay = layoutFor(state.size);
-        const span = Math.max(0.5, state.trimOut - state.trimIn);
-        const times = RT.pickFrameTimes(span, 3).map(t => Math.min(state.trimOut - 0.05, state.trimIn + t));
-        const frames = await RT.captureFrames(async t => {
-          await seekTo(t);
-          R.drawFrame(octx, { width: s.width, height: s.height, video: els.video, bg: bg(), ops: lay.ops, logoImage: logo.img, blurCanvas: offBlur });
-          return off;
-        }, times);
-        await seekTo(restore);
-        state.ratingFrames = frames;
-        renderRate();
-        const result = await RT.requestRating({ frames, context: ratingContext() });
-        state.rating = result;
-        state.ratingSig = sig;
-        state.ratingStatus = 'done';
-        state.fixState = {};
-        return result;
-      } catch (error) {
-        state.ratingStatus = 'error';
-        state.ratingError = error.status === 429 || error.reason === 'limit' ? friendlyError(429, {}) : error.message;
-        throw error;
-      } finally {
-        ratingRun = null;
-        renderRate();
-        renderSteps();
-        if (state.step === 'export') renderExport();
-      }
-    })();
-    return ratingRun;
-  }
-
-  function gauge(score, tone) {
-    const r = 46;
-    const circ = 2 * Math.PI * r;
-    const frac = Math.max(0, Math.min(1, score / 10));
-    return `<div class="va-gauge va-gauge--${tone}" style="--circ:${circ.toFixed(1)};--off:${(circ * (1 - frac)).toFixed(1)}">
-      <svg viewBox="0 0 108 108" aria-hidden="true"><circle class="va-gauge__track" cx="54" cy="54" r="${r}"/><circle class="va-gauge__arc" cx="54" cy="54" r="${r}" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${(circ * (1 - frac)).toFixed(1)}"/></svg>
-      <span class="va-gauge__num"><strong>${esc(score.toFixed(1))}</strong><small>out of 10</small></span>
-    </div>`;
-  }
-  function framesRow(frames, scanning) {
-    const labels = ['Hook', 'Middle', 'End'];
-    return `<div class="va-frames va-frames--${state.size}${scanning ? ' is-scanning' : ''}">${[0, 1, 2].map(i => `<figure class="va-frame"><span class="va-frame__pic">${frames[i] ? `<img src="${frames[i]}" alt="${labels[i]} frame">` : '<span class="va-frame__empty"></span>'}</span><figcaption>${labels[i]}</figcaption></figure>`).join('')}</div>`;
-  }
-  function renderRateStale() {
-    const banner = els.rate.querySelector('.va-stale');
-    if (banner) banner.hidden = !ratingStale();
-  }
-  function renderRate() {
-    const area = els.rate;
-    if (state.ratingStatus === 'loading') {
-      area.innerHTML = `<div class="va-card va-card--ai va-rate-loading">${framesRow(state.ratingFrames, true)}<p class="va-working">${dots}${state.ratingFrames.length ? 'Reviewing the hook, the middle and the end…' : 'Capturing three frames from your trim…'}</p></div>`;
-      return;
-    }
-    if (!hasClip() && !state.rating) {
-      area.innerHTML = `<div class="va-empty-state">${ICON.film}<strong>Add a clip first</strong><span>The reviewer scores the whole ad, footage included.</span><button class="va-btn va-btn--sm va-btn--primary" type="button" data-act="to-research">Find a clip</button></div>`;
-      return;
-    }
-    const errorHtml = state.ratingStatus === 'error' ? `<div class="va-alert" role="alert">${ICON.alert}<div><strong>Rating didn’t finish</strong><span>${esc(state.ratingError)}</span></div></div>` : '';
-    if (!state.rating) {
-      area.innerHTML = `${errorHtml}<div class="va-card va-card--ai va-rate-intro">
-        ${framesRow([], false)}
-        <ul class="va-rate-what"><li>${ICON.check}Headline and offer clarity</li><li>${ICON.check}CTA visibility</li><li>${ICON.check}Readability for fans 55+</li><li>${ICON.check}Stop-scroll hook and placement fit</li></ul>
-        <button class="va-btn va-btn--ai va-btn--lg va-btn--block" type="button" data-act="rate">${ICON.gauge}<span>Rate this ad</span></button>
-        <p class="va-meta va-center">About 10 seconds · roughly $0.001 · it rates again by itself before export if you change the ad</p>
-      </div>`;
-      return;
-    }
-    const r = state.rating;
-    const score = Math.min(10, Math.max(1, Number(r.score) || 1));
-    const tone = toneOf(r.verdict);
-    const fixes = (Array.isArray(r.fixes) ? r.fixes : []).slice(0, 3);
-    const caps = Array.isArray(r.caps) ? r.caps : [];
-    const factors = r.factors || {};
-    const fixRow = (f, i) => {
-      const st = state.fixState[i] || '';
-      let actions = `<button class="va-btn va-btn--sm va-btn--ai" type="button" data-fix-apply="${i}">${ICON.wand}<span>Fix it</span></button><button class="va-btn va-btn--sm va-btn--ghost" type="button" data-fix-ignore="${i}">Ignore</button>`;
-      if (st === 'applied') actions = `<span class="va-fix__state">${ICON.check}Applied</span><button class="va-link" type="button" data-fix-undo="${i}">${ICON.undo}Undo</button>`;
-      if (st === 'ignored') actions = `<span class="va-fix__state">Ignored</span><button class="va-link" type="button" data-fix-restore="${i}">Restore</button>`;
-      if (st === 'fixing') actions = `<span class="va-working">${dots}Fixing…</span>`;
-      if (st === 'manual') actions = `<span class="va-fix__state">The assistant replied in Copy</span><button class="va-link" type="button" data-fix-open="${i}">Open</button>`;
-      return `<li class="va-fix${st ? ` is-${st}` : ''}">
-        <div class="va-fix__head">${f.priority ? `<span class="va-tag va-tag--${esc(String(f.priority).toLowerCase())}">${esc(f.priority)}</span>` : ''}<p class="va-fix__change">${esc(f.change)}</p></div>
-        ${f.performanceHypothesis && st !== 'ignored' ? `<p class="va-fix__why">${esc(f.performanceHypothesis)}</p>` : ''}
-        <div class="va-fix__actions">${actions}</div>
-      </li>`;
-    };
-    area.innerHTML = `${errorHtml}
-      <div class="va-stale" role="status"${ratingStale() ? '' : ' hidden'}>${ICON.alert}<span>You’ve changed the ad since this rating.</span><button class="va-btn va-btn--sm" type="button" data-act="rate">Rate again</button></div>
-      <div class="va-card va-score va-score--${tone}">
-        <div class="va-score__top">
-          ${gauge(score, tone)}
-          <div class="va-score__text">
-            <span class="va-verdict va-verdict--${tone}">${esc(r.verdict || '')}</span>
-            <p>${tone === 'good' ? 'Strong enough to put a test budget behind.' : tone === 'bad' ? 'The reviewer would rework this before spending on it.' : 'Close. Apply a fix or two, then rate again.'}</p>
-            ${r.confidence ? `<span class="va-meta">Confidence: ${esc(r.confidence)}</span>` : ''}
-          </div>
-        </div>
-        ${state.ratingFrames.length ? framesRow(state.ratingFrames, false) : ''}
-      </div>
-      ${caps.length ? `<div class="va-caps">${caps.map(c => `<p>${ICON.alert}<span>${esc(c.reason)} <b>Capped at ${esc(Number(c.cap).toFixed(1))}</b></span></p>`).join('')}</div>` : ''}
-      ${fixes.length ? `<div class="va-block"><h4>Top fixes</h4><ol class="va-fixes">${fixes.map(fixRow).join('')}</ol></div>` : ''}
-      <details class="va-factors"><summary>All factors</summary><ul>${RT.FACTOR_ORDER.filter(k => factors[k]).map(k => {
-        const f = factors[k];
-        const rating = Math.min(10, Math.max(1, Number(f.rating) || 1));
-        const label = f.label || RT.FACTOR_LABELS[k] || k;
-        return `<li><div class="va-factor__head"><span>${esc(label)}</span><b>${esc(rating.toFixed(1))}</b></div><div class="va-bar va-bar--${rating >= 7 ? 'good' : rating >= 5 ? 'warn' : 'bad'}" role="meter" aria-valuemin="1" aria-valuemax="10" aria-valuenow="${rating}" aria-label="${esc(`${label}: ${rating.toFixed(1)} out of 10`)}"><span style="width:${rating * 10}%"></span></div>${f.evidence?.[0] ? `<p>${esc(f.evidence[0])}</p>` : ''}</li>`;
-      }).join('')}</ul></details>
-      <div class="va-rate-foot"><button class="va-btn va-btn--sm va-btn--ghost" type="button" data-act="rate">${ICON.retry}<span>Rate again</span></button><span class="va-meta">${esc(RT.NOTE)}${r.cost != null ? ` Cost ${esc(RT.formatCost(r.cost))}.` : ''}</span></div>`;
-  }
-  els.rate.addEventListener('click', async event => {
-    const t = event.target;
-    if (t.closest('[data-act="to-research"]')) { goStep('research'); return; }
-    if (t.closest('[data-act="rate"]')) { rateAd().catch(() => {}); return; }
-    const fixes = state.rating?.fixes || [];
-    const apply = t.closest('[data-fix-apply]');
-    if (apply) {
-      const i = Number(apply.dataset.fixApply);
-      state.fixState[i] = 'fixing';
-      renderRate();
-      const msg = await sendChat(`Apply this fix from the ad rating and keep everything else the same: ${fixes[i]?.change || ''}`, { fromFix: true });
-      state.fixState[i] = msg?.patch ? 'applied' : msg ? 'manual' : '';
-      if (!msg) toast('The assistant couldn’t apply that. Try again, or edit the text yourself.', { tone: 'bad' });
-      renderRate();
-      return;
-    }
-    const ignore = t.closest('[data-fix-ignore]');
-    if (ignore) { state.fixState[Number(ignore.dataset.fixIgnore)] = 'ignored'; renderRate(); return; }
-    const restore = t.closest('[data-fix-restore]');
-    if (restore) { delete state.fixState[Number(restore.dataset.fixRestore)]; renderRate(); return; }
-    const fixUndo = t.closest('[data-fix-undo]');
-    if (fixUndo) { undo(); delete state.fixState[Number(fixUndo.dataset.fixUndo)]; renderRate(); return; }
-    if (t.closest('[data-fix-open]')) { goStep('copy'); selectTab($('va-tab-chat')); }
+  els.momentFold.addEventListener('toggle', () => {
+    if (els.momentFold.open && state.trendsStatus === 'idle') loadTrends();
+    renderMoments();
+  });
+  els.copyMoments.addEventListener('click', event => {
+    if (event.target.closest('[data-act="retry-trends"]')) { loadTrends(); return; }
+    const b = event.target.closest('[data-moment]');
+    if (!b) return;
+    const item = trendItems.find(x => x.id === b.dataset.moment);
+    state.copyTrend = state.copyTrend?.id === item?.id ? null : item;
+    renderMoments();
   });
 
-  // ─── 5 Export ────────────────────────────────────────────────────────────
+  // Live hints under the editor fields.
+  const wordCount = text => plain(text).trim().split(/\s+/).filter(Boolean).length;
+  function renderCounts() {
+    const hw = wordCount(state.headline);
+    els.headlineCount.textContent = `${hw} word${hw === 1 ? '' : 's'}${hw > 22 ? ' · keep it under 22' : ''}`;
+    els.headlineCount.classList.toggle('is-over', hw > 22);
+    const bw = state.body.reduce((n, p) => n + wordCount(p), 0);
+    els.bodyCount.textContent = `${bw} word${bw === 1 ? '' : 's'}${bw > 95 ? ' · keep it under 95' : ''}`;
+    els.bodyCount.classList.toggle('is-over', bw > 95);
+    const cl = (state.cta || '').length;
+    els.ctaCount.textContent = cl ? `${cl} / 40` : `Default: ${brand().cta}`;
+  }
+
+  // ─── 3 Export ────────────────────────────────────────────────────────────
   let exporting = null;
   function renderExport() {
     [...els.exsizes.querySelectorAll('[data-ex]')].forEach(b => b.setAttribute('aria-pressed', String(state.exportIds.includes(b.dataset.ex))));
     const n = state.exportIds.length;
-    const span = Math.max(0, state.trimOut - state.trimIn);
     const tooLong = state.exportIds.filter(id => !layoutFor(id).fits).map(id => id.replace('x', ':'));
-    const items = [];
-    items.push(hasClip()
-      ? { tone: 'ok', text: `<b>Clip</b> ${esc(state.clip?.name || 'Loaded')} · ${span.toFixed(1)}s` }
-      : { tone: 'todo', text: '<b>Clip</b> None yet', act: '<button class="va-link" type="button" data-act="to-research">Add one</button>' });
-    items.push(tooLong.length
-      ? { tone: 'warn', text: `<b>Copy</b> Too long for ${esc(tooLong.join(', '))}`, act: '<button class="va-link" type="button" data-act="to-copy">Shorten</button>' }
-      : { tone: 'ok', text: '<b>Copy</b> Fits every size you picked' });
-    if (state.ratingStatus === 'loading') items.push({ tone: 'busy', text: '<b>Rating</b> Rating the ad…' });
-    else if (!state.rating) items.push({ tone: 'warn', text: '<b>Rating</b> Not rated yet: FrameUp rates it first' });
-    else if (ratingStale()) items.push({ tone: 'warn', text: `<b>Rating</b> ${esc(Number(state.rating.score).toFixed(1))} before your last change: rates again first` });
-    else items.push({ tone: toneOf(state.rating.verdict) === 'bad' ? 'warn' : 'ok', text: `<b>Rating</b> ${esc(Number(state.rating.score).toFixed(1))} · ${esc(state.rating.verdict)}`, act: '<button class="va-link" type="button" data-act="to-rate">See it</button>' });
-    els.checklist.innerHTML = items.map(item => `<li class="is-${item.tone}"><span class="va-checklist__icon" aria-hidden="true">${item.tone === 'ok' ? ICON.check : item.tone === 'busy' ? '<span class="va-spin"></span>' : ICON.alert}</span><span class="va-checklist__text">${item.text}</span>${item.act || ''}</li>`).join('');
+    const notes = [];
+    if (!hasClip()) notes.push(`<div class="va-notice">${ICON.film}<span><b>No clip yet.</b> Add one to export.</span><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="to-clip">Find a clip</button></div>`);
+    if (tooLong.length) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>Copy is too long</b> for ${esc(tooLong.join(', '))}.</span><button class="es-btn es-btn--sm" type="button" data-act="to-copy">Shorten</button></div>`);
+    els.ready.innerHTML = notes.join('');
+    els.ready.hidden = !notes.length;
+    els.metaToggle.setAttribute('aria-pressed', String(metaPreview));
     if (!exporting) {
-      els.exportBtn.disabled = !hasClip() || state.ratingStatus === 'loading';
-      els.exportBtn.innerHTML = `${ICON.download}<span>Export ${n} MP4${n === 1 ? '' : 's'}</span>`;
+      els.exportBtn.disabled = !hasClip();
+      els.exportBtn.innerHTML = `${ICON.download}<span>Export ${n === 1 ? 'MP4' : `${n} MP4s`}</span>`;
     }
   }
   els.exsizes.addEventListener('click', event => {
@@ -1486,29 +1836,23 @@
     renderExport();
     renderSteps();
   });
-  els.checklist.addEventListener('click', event => {
-    if (event.target.closest('[data-act="to-research"]')) goStep('research');
-    if (event.target.closest('[data-act="to-copy"]')) { goStep('copy'); selectTab($('va-tab-edit')); }
-    if (event.target.closest('[data-act="to-rate"]')) goStep('rate');
+  els.ready.addEventListener('click', event => {
+    const act = event.target.closest('[data-act]')?.dataset.act;
+    if (act === 'to-clip') goStep('clip');
+    if (act === 'to-copy') { goStep('copy'); reveal(els.editor); els.headline.focus({ preventScroll: true }); }
+  });
+  els.again.addEventListener('click', () => {
+    els.files.hidden = true;
+    els.again.hidden = true;
+    els.exportStatus.textContent = '';
+    goStep('copy');
   });
 
-  function confirmRedesign(result) {
-    return new Promise(resolve => {
-      if (typeof els.confirm.showModal !== 'function') { resolve(window.confirm('The rating says this ad needs a redesign. Export anyway?') ? 'export' : 'fix'); return; }
-      const top = result.fixes?.[0]?.change;
-      els.confirmText.textContent = `The reviewer scored it ${Number(result.score).toFixed(1)} out of 10 (${result.verdict}).${top ? ` Top fix: ${top}` : ''} Export anyway?`;
-      els.confirm.returnValue = '';
-      els.confirm.addEventListener('close', () => resolve(els.confirm.returnValue || 'fix'), { once: true });
-      els.confirm.showModal();
-    });
-  }
-
-  // Rate → (confirm) → export. The rating never blocks: if it fails, export goes ahead.
   async function startExport() {
     if (exporting) { exporting.cancel(); return; }
     if (!hasClip()) { els.exportStatus.textContent = 'Add a clip first.'; return; }
     if (!els.rights.checked) {
-      els.exportStatus.textContent = 'Tick the footage confirmation first.';
+      els.exportStatus.textContent = 'Tick the footage box first.';
       const box = els.rights.closest('.va-check');
       els.rights.focus();
       box.classList.remove('is-nudge');
@@ -1516,17 +1860,16 @@
       box.classList.add('is-nudge');
       return;
     }
-    let note = '';
-    if (!state.rating || ratingStale()) {
-      els.exportStatus.textContent = 'Rating the ad before export…';
-      try { await rateAd(); els.exportStatus.textContent = ''; } catch (error) { note = ' Rating was unavailable, so it exported without one.'; }
-    }
-    if (state.rating && !ratingStale() && isRedesign(state.rating.verdict)) {
-      const choice = await confirmRedesign(state.rating);
-      if (choice !== 'export') { els.exportStatus.textContent = ''; goStep('rate'); return; }
-    }
     await exportSizes(state.exportIds);
-    if (note && state.exported) els.exportStatus.textContent += note;
+    if (state.exported) {
+      // Learn from what shipped, and from any edits to the AI's version.
+      const final = copyForLog();
+      const fields = ({ style, ...rest }) => rest;
+      if (state.aiCopy && JSON.stringify(state.aiCopy) !== JSON.stringify(final)) logEvent('copy_edited', { before: fields(state.aiCopy), after: fields(final) });
+      logEvent('export', { copy: final, style: final.style, sizes: [...state.exportIds], clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), context: { kind: state.context.kind, color: state.context.color, trend: state.context.trend?.title || '' } });
+      els.again.hidden = false;
+      reveal(els.exportStatus);
+    }
   }
   els.exportBtn.addEventListener('click', startExport);
 
@@ -1554,6 +1897,7 @@
   }
   const slug = text => String(text || 'ad').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'ad';
   let fileUrls = [];
+
 
   async function exportSizes(sizeIds) {
     if (exporting) { exporting.cancel(); return; }
@@ -1586,7 +1930,7 @@
     bar.style.width = '0%';
     els.exportBtn.disabled = false;
     els.exportBtn.innerHTML = '<span>Cancel export</span>';
-    els.exportBtn.classList.add('is-cancel');
+    els.exportBtn.classList.add('es-btn--danger');
     els.stage.classList.add('is-recording');
     els.files.hidden = true;
     els.exportStatus.textContent = 'Recording in real time. Keep this tab open and visible.';
@@ -1640,7 +1984,7 @@
     audioSource.disconnect(audioDest);
     targets.forEach(t => t.stream.getTracks().forEach(track => track.stop()));
     exporting = null;
-    els.exportBtn.classList.remove('is-cancel');
+    els.exportBtn.classList.remove('es-btn--danger');
     els.stage.classList.remove('is-recording');
     els.exportProgress.hidden = true;
     renderExport();
@@ -1672,8 +2016,8 @@
     draw();
   }
 
-  // ─── Stage toolbar: brand, size, Look ────────────────────────────────────
-  els.brands.innerHTML = B.AD_BRANDS.map(b => `<button type="button" role="radio" data-brand="${esc(b.id)}" aria-checked="false" title="${esc(b.label)}" aria-label="${esc(b.label)}"><span class="va-dot" style="--c:${esc(b.wordmark?.bg || b.accent)}" aria-hidden="true"></span><span>${esc(b.short || b.label)}</span></button>`).join('');
+  // ─── Brand, sizes, Meta preview ──────────────────────────────────────────
+  els.brands.innerHTML = B.AD_BRANDS.map(b => `<button type="button" role="radio" data-brand="${esc(b.id)}" aria-checked="false" title="${esc(b.label)} (${esc(SPORT_LABEL[b.sport] || '')})" aria-label="${esc(b.label)}, ${esc(SPORT_LABEL[b.sport] || '')}"><span class="va-dot" style="--c:${esc(b.wordmark?.bg || b.accent)}" aria-hidden="true"></span><span>${esc(b.short || b.label)}</span></button>`).join('');
   const markRadios = (group, attr, value) => [...group.querySelectorAll('[role="radio"]')].forEach(b => { const on = b.dataset[attr] === value; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; });
   function setBrand(id) {
     state.brandId = B.byId(id).id;
@@ -1699,11 +2043,13 @@
       if (i < 0) return;
       event.preventDefault();
       const next = list[(i + keys[event.key] + list.length) % list.length];
-      next.focus();
       next.click();
+      // Re-rendered groups (swatches) replace their buttons: focus the new one.
+      (group.querySelector(`[data-${attr}="${CSS.escape(next.dataset[attr])}"]`) || next).focus();
     });
   }
-  radioGroup(els.brands, 'brand', id => setBrand(id));
+  radioGroup(els.brands, 'brand', id => { state.brandChosen = true; setBrand(id); if (state.step === 'copy') { renderCopySwatches(); renderMoments(); } });
+  if (els.copySwatches) radioGroup(els.copySwatches, 'copycolor', color => { state.copyColor = color; renderCopySwatches(); });
   radioGroup(els.sizes, 'size', id => {
     state.size = id;
     markRadios(els.sizes, 'size', id);
@@ -1712,9 +2058,28 @@
     renderSteps();
     if (state.step === 'export') renderExport();
   });
-  radioGroup(els.ownSport, 'sport', v => { ownSport = v; markRadios(els.ownSport, 'sport', v); });
+  radioGroup(els.colorSport, 'sport', sport => {
+    state.colorSport = sport;
+    state.clipPicked = true;
+    markRadios(els.colorSport, 'sport', sport);
+    renderSwatches();
+  });
+  radioGroup(els.swatches, 'color', color => {
+    state.color = color;
+    state.clipPicked = true;
+    renderSwatches();
+  });
+  radioGroup(els.teamSport, 'sport', sport => {
+    state.teamSport = sport;
+    state.clipPicked = true;
+    markRadios(els.teamSport, 'sport', sport);
+    renderTeamPicker();
+  });
+  radioGroup(els.teamList, 'team', name => { state.team = name; state.clipPicked = true; renderTeamPicker(); });
+  // Sport radios and chips: league logo before the text (not on "All").
+  document.querySelectorAll('#va-team-sport [data-sport], #va-color-sport [data-sport], #va-sports [data-sport]').forEach(b => { if (b.dataset.sport !== 'all') b.insertAdjacentHTML('afterbegin', leagueTile(b.dataset.sport)); });
   markRadios(els.sizes, 'size', state.size);
-  markRadios(els.ownSport, 'sport', ownSport);
+  markRadios(els.colorSport, 'sport', state.colorSport);
 
   // Meta preview: frames the canvas as the placement it will run in.
   els.metaToggle.addEventListener('click', () => {
@@ -1764,7 +2129,8 @@
   // ─── Start ───────────────────────────────────────────────────────────────
   setBrand(state.brandId);
   syncFields();
-  goStep('moment', { focus: false });
+  renderSwatches();
+  goStep('copy', { focus: false });
   Promise.all([
     document.fonts.load(`700 80px ${R.CONDENSED}`),
     document.fonts.load('400 40px Roboto'),
@@ -1772,6 +2138,5 @@
     document.fonts.load('700 40px Roboto'),
   ]).catch(() => {}).finally(() => refreshLogo());
   relayout();
-  loadTrends();
-  window.VideoAdsPage = { state, relayout, layoutFor, exportSizes, startExport, useClip, goStep, rateAd, selectMoment, sendChat, generateDrafts, applyCopy, undo, setTrim, adSignature, ratingStale };
+  window.VideoAdsPage = { state, finds, relayout, layoutFor, exportSizes, startExport, useClip, goStep, findClips, findByColor, selectMoment, sendChat, generateDrafts, checkGrammar, lintText, openAi, closeAi, applyCopy, undo, setTrim, logEvent };
 })();

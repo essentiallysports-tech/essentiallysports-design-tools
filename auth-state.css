@@ -150,8 +150,8 @@ html[data-theme="dark"] .auth-state-input {
 
 .auth-state-input:focus,
 html[data-theme="dark"] .auth-state-input:focus {
-  border-color: var(--auth-accent);
-  box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
+  border-color: var(--es-focus-color);
+  box-shadow: var(--es-focus-halo);
 }
 
 .auth-state-password-toggle {

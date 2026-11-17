@@ -36,7 +36,7 @@ body[data-current-page="newsletter"][data-newsletter-infographic="on"] #infograp
 }
 .ig-card-head::-webkit-details-marker { display: none; }
 .ig-card-head:hover { background: var(--es-sunk); }
-.ig-card-head:focus-visible { outline: none; box-shadow: var(--es-focus, 0 0 0 3px rgba(10, 125, 250, .35)); }
+.ig-card-head:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
 .ig-card-thumb {
   flex: 0 0 40px;
   width: 40px;
@@ -99,7 +99,7 @@ body[data-current-page="newsletter"][data-newsletter-infographic="on"] #infograp
 }
 textarea.ig-input { padding: 10px 12px; resize: vertical; }
 .ig-input:hover { border-color: #b9bfc9; }
-.ig-input:focus { outline: none; border-color: var(--es-brand); box-shadow: none; }
+.ig-input:focus { outline: none; border-color: var(--es-focus-color); box-shadow: var(--es-focus-halo); }
 .ig-input::placeholder { color: var(--es-placeholder, #9aa1ad); }
 .ig-cells { display: grid; gap: 8px; }
 .ig-cell { display: grid; gap: 4px; min-width: 0; }
@@ -329,7 +329,7 @@ textarea.ig-input { padding: 10px 12px; resize: vertical; }
     border-radius: 12px !important;
     overflow: hidden;
   }
-  html[data-studio-shell="on"] .panel #stats-single-fields .stats-entry:focus-within { border-color: var(--es-brand) !important; }
+  html[data-studio-shell="on"] .panel #stats-single-fields .stats-entry:focus-within { border-color: var(--es-focus-color) !important; box-shadow: var(--es-focus-halo); }
 }
 
 /* ─── Short choices as buttons (select[data-ui="chips"]) ───────────────── */
@@ -351,13 +351,13 @@ textarea.ig-input { padding: 10px 12px; resize: vertical; }
   transition: border-color var(--es-dur) var(--es-ease), background-color var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease);
 }
 .select-chip:hover:not(:disabled) { border-color: var(--es-ink-3); color: var(--es-ink); }
-.select-chip[aria-checked="true"] { border-color: var(--es-brand); background: var(--es-brand-soft); color: var(--es-ink); font-weight: 600; }
-.select-chip:focus-visible { outline: none; border-color: var(--es-brand); }
+.select-chip[aria-checked="true"] { border-color: rgb(10 125 250 / .4); background: var(--es-brand-soft); color: var(--es-brand-text, #0A62C7); font-weight: 600; }
+.select-chip:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
 .select-chip:disabled { opacity: .45; cursor: not-allowed; }
 #youtube-variation-select + .select-chips,
 #quote-logo-placement + .select-chips { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
 html[data-theme="dark"] .select-chip { border-color: var(--theme-dark-border, #2A2D34); background: var(--theme-dark-surface, #1F2126); color: var(--theme-dark-text-muted, #BFC8D9); }
-html[data-theme="dark"] .select-chip[aria-checked="true"] { border-color: var(--theme-dark-accent, #54A4FB); background: var(--theme-dark-accent-soft, rgb(10 125 250 / .17)); color: var(--theme-dark-text, #FFFFFF); }
+html[data-theme="dark"] .select-chip[aria-checked="true"] { border-color: rgb(84 164 251 / .45); background: var(--theme-dark-accent-soft, rgb(10 125 250 / .17)); color: var(--theme-dark-text, #FFFFFF); }
 
 /* Dark theme (colours from theme.css) */
 html[data-theme="dark"] .ig-card,

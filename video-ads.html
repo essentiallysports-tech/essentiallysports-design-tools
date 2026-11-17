@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Video Ads | FrameUp</title>
-  <meta name="description" content="Newsletter sign-up video ads: pick a trending moment, let AI research it and draft the copy, rate the ad, export MP4.">
+  <meta name="description" content="Newsletter sign-up video ads: find a team clip by colour or moment, let AI write the copy, export MP4.">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
@@ -16,19 +16,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261116-sp1">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-focus1">
   <link rel="stylesheet" href="theme.css?v=20261116-sp1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261115-g3">
+  <link rel="stylesheet" href="site-chrome.css?v=20261117-usage1">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261116-sp1">
-  <link rel="stylesheet" href="es-ui.css?v=20261116-sp2">
+  <link rel="stylesheet" href="design-tokens.css?v=20261117-focus1">
+  <link rel="stylesheet" href="es-ui.css?v=20261117-adm1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="video-ads.css?v=20261116-ra1">
+  <link rel="stylesheet" href="video-ads.css?v=20261117-focus1">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
-  <script src="site-chrome.js?v=20261111-icons2"></script>
-  <script src="app-shell.js?v=20261115-pol7"></script>
+  <script src="site-chrome.js?v=20261117-usage1"></script>
+  <script src="app-shell.js?v=20261117-usage1"></script>
 </head>
 <body class="va-body">
   <nav class="navbar">
@@ -56,19 +56,20 @@
   </nav>
 
   <main class="va-page ais-page" id="main">
-    <div class="va-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
     <!-- No top bar (Suhail): the sidebar's AI Studio group links the AI pages. -->
     <h1 class="es-sr-only" id="va-title">Video Ads</h1>
 
-    <!-- The five steps of this workspace, under the bar. -->
+    <!-- Three steps: Copy (the hero), Clip, Export. -->
     <nav class="va-steps" aria-label="Ad steps">
       <ol id="va-steps">
-        <li><button class="va-step" type="button" data-step="moment"><span class="va-step__num" aria-hidden="true"><span>1</span></span><span class="va-step__text"><span class="va-step__name" data-short="Moment">Moment</span><span class="va-step__sub" data-sub="moment">Pick a trend</span></span></button></li>
-        <li><button class="va-step" type="button" data-step="research"><span class="va-step__num" aria-hidden="true"><span>2</span></span><span class="va-step__text"><span class="va-step__name" data-short="Clip">Research &amp; clip</span><span class="va-step__sub" data-sub="research">Facts and footage</span></span></button></li>
-        <li><button class="va-step" type="button" data-step="copy"><span class="va-step__num" aria-hidden="true"><span>3</span></span><span class="va-step__text"><span class="va-step__name" data-short="Copy">Copy</span><span class="va-step__sub" data-sub="copy">Drafts and edits</span></span></button></li>
-        <li><button class="va-step" type="button" data-step="rate"><span class="va-step__num" aria-hidden="true"><span>4</span></span><span class="va-step__text"><span class="va-step__name" data-short="Rate">Rate</span><span class="va-step__sub" data-sub="rate" data-es-tick="va-rate-sub">Score and fixes</span></span></button></li>
-        <li><button class="va-step" type="button" data-step="export"><span class="va-step__num" aria-hidden="true"><span>5</span></span><span class="va-step__text"><span class="va-step__name" data-short="Export">Export</span><span class="va-step__sub" data-sub="export">MP4 in 3 sizes</span></span></button></li>
+        <li class="va-steps__item"><button class="va-step" type="button" data-step="copy"><span class="va-step__num" aria-hidden="true"><span>1</span></span><span class="va-step__name">Copy</span><span class="va-step__sub va-sr"></span></button></li>
+        <li class="va-steps__item"><button class="va-step" type="button" data-step="clip"><span class="va-step__num" aria-hidden="true"><span>2</span></span><span class="va-step__name">Clip</span><span class="va-step__sub va-sr"></span></button></li>
+        <li class="va-steps__item"><button class="va-step" type="button" data-step="export"><span class="va-step__num" aria-hidden="true"><span>3</span></span><span class="va-step__name">Export</span><span class="va-step__sub va-sr"></span></button></li>
       </ol>
+      <div class="va-steps__compact" aria-hidden="true">
+        <p class="va-steps__now">Step <b id="va-steps-n">1</b> of 3 · <span id="va-steps-name">Copy</span></p>
+        <div class="va-steps__bar"><span id="va-steps-bar"></span></div>
+      </div>
     </nav>
 
     <div class="va-work">
@@ -76,13 +77,13 @@
       <section class="va-stage" id="va-stage" aria-label="Ad preview">
         <div class="va-toolbar">
           <div class="va-seg va-seg--brand" role="radiogroup" aria-label="Newsletter" id="va-brands"></div>
-          <div class="va-seg" role="radiogroup" aria-label="Ad size" id="va-sizes">
+          <div class="va-seg" role="radiogroup" aria-label="Preview size" id="va-sizes">
             <button type="button" role="radio" data-size="9x16" aria-checked="true"><span class="va-ratio va-ratio--9x16" aria-hidden="true"></span>9:16</button>
             <button type="button" role="radio" data-size="4x5" aria-checked="false"><span class="va-ratio va-ratio--4x5" aria-hidden="true"></span>4:5</button>
             <button type="button" role="radio" data-size="1x1" aria-checked="false"><span class="va-ratio va-ratio--1x1" aria-hidden="true"></span>1:1</button>
           </div>
           <div class="va-toolbar__end">
-            <button class="va-btn va-btn--quiet" type="button" id="va-meta-toggle" aria-pressed="false" title="See the ad as it shows on Instagram and Facebook">
+            <button class="es-btn es-btn--sm" type="button" id="va-meta-toggle" aria-pressed="false" title="See the ad as it shows on Instagram and Facebook">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
               <span>Meta preview</span>
             </button>
@@ -92,9 +93,7 @@
           </div>
         </div>
 
-
         <div class="va-canvas-wrap" id="va-drop">
-          <div class="va-glow" aria-hidden="true"></div>
           <!-- Meta preview: the ad framed as an Instagram/Facebook placement
                (Reels/Stories for 9:16, feed post for 4:5 and 1:1). Display only;
                nothing here is drawn into the exported MP4. -->
@@ -134,9 +133,9 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
             <div class="va-noclip__text">
               <strong>No clip yet</strong>
-              <span>Drop a video here or find one in Research.</span>
+              <span>Drop a video here</span>
             </div>
-            <button class="va-btn va-btn--sm va-btn--light" type="button" id="va-empty-upload">Upload</button>
+            <button class="es-btn es-btn--sm" type="button" id="va-empty-upload">Upload</button>
           </div>
           <button class="va-icon-btn" type="button" id="va-mute" aria-label="Unmute preview" aria-pressed="true" title="Preview sound" disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>
@@ -153,184 +152,190 @@
       <section class="va-panel" id="va-panel" aria-label="Steps">
         <div class="va-panel__scroll" id="va-panel-scroll">
 
-        <!-- 1 Moment -->
-        <section class="va-pane" data-pane="moment" aria-labelledby="va-h-moment">
-          <header class="va-pane__head">
-            <h2 id="va-h-moment" tabindex="-1">Pick the moment</h2>
-            <p>Trending in the last 48 hours.</p>
-          </header>
-          <form class="va-own" id="va-own">
-            <label class="va-label" for="va-own-text">Got your own moment?</label>
-            <div class="va-own__row">
-              <input class="va-input" id="va-own-text" type="text" placeholder="e.g. Ohio State’s walk-off field goal vs Michigan" autocomplete="off">
-              <button class="va-btn va-btn--ai" type="submit">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
-                Research
-              </button>
-            </div>
-            <div class="va-own__sport">
-              <span class="va-hint" id="va-own-sport-label">Sport</span>
-              <div class="va-seg va-seg--mini" role="radiogroup" aria-labelledby="va-own-sport-label" id="va-own-sport">
-                <button type="button" role="radio" data-sport="nfl" aria-checked="false">NFL</button>
-                <button type="button" role="radio" data-sport="cfb" aria-checked="true">CFB</button>
-                <button type="button" role="radio" data-sport="mlb" aria-checked="false">MLB</button>
-              </div>
-            </div>
-          </form>
-          <div class="va-board-bar">
-            <div class="va-chips" role="group" aria-label="Filter by sport" id="va-sports">
-              <button class="va-chip" type="button" data-sport="all" aria-pressed="true">All</button>
-              <button class="va-chip" type="button" data-sport="nfl" aria-pressed="false">NFL</button>
-              <button class="va-chip" type="button" data-sport="cfb" aria-pressed="false">CFB</button>
-              <button class="va-chip" type="button" data-sport="mlb" aria-pressed="false">MLB</button>
-            </div>
-            <button class="va-icon-btn es-refresh" type="button" id="va-refresh" aria-label="Refresh trends" title="Refresh trends">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-            </button>
-          </div>
-          <p class="va-hint" id="va-trends-status" role="status">Loading the last 48 hours…</p>
-          <ul class="va-trends" id="va-trends" aria-label="Trending moments"></ul>
-        </section>
-
-        <!-- 2 Research & clip -->
-        <section class="va-pane" data-pane="research" aria-labelledby="va-h-research" hidden>
-          <header class="va-pane__head">
-            <h2 id="va-h-research" tabindex="-1">Research &amp; clip</h2>
-          </header>
-          <div class="va-moment" id="va-moment"></div>
-          <section class="va-card va-card--ai" id="va-research" aria-labelledby="va-research-title">
-            <div class="va-card__head">
-              <h3 id="va-research-title"><span class="va-ai-dot" aria-hidden="true"></span>AI research</h3>
-              <button class="va-btn va-btn--sm va-btn--ghost" type="button" id="va-research-run" hidden>Research again</button>
-            </div>
-            <div id="va-research-body" aria-live="polite"></div>
-          </section>
-          <section class="va-card" aria-labelledby="va-clips-title">
-            <div class="va-card__head"><h3 id="va-clips-title">Clips</h3><span class="va-count" id="va-clips-count" data-es-tick="va-clips"></span></div>
-            <div id="va-clips" class="va-clips"></div>
-            <div class="va-own-clip">
-              <div class="va-dropbox" id="va-dropbox">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
-                <div><strong>Your own clip</strong><span>MP4 works best. You can also drop it on the preview.</span></div>
-                <button class="va-btn va-btn--sm" type="button" id="va-upload">Upload</button>
-                <input type="file" id="va-file" accept="video/*" hidden>
-              </div>
-              <form class="va-xform" id="va-xform">
-                <label class="va-label" for="va-xurl">Paste an X post with a video</label>
-                <div class="va-own__row">
-                  <input class="va-input" id="va-xurl" type="url" placeholder="https://x.com/…/status/…" autocomplete="off">
-                  <button class="va-btn" type="submit" id="va-xget">Get video</button>
-                </div>
-              </form>
-              <div class="va-qualities" id="va-qualities" role="group" aria-label="Clip quality" hidden></div>
-              <p class="va-hint" id="va-clip-status" role="status"></p>
-            </div>
-          </section>
-          <section class="va-card" id="va-research-more-card" aria-labelledby="va-more-title" hidden>
-            <div class="va-card__head"><h3 id="va-more-title">Facts &amp; angles</h3></div>
-            <div id="va-research-more" class="va-research-more"></div>
-          </section>
-        </section>
-
-        <!-- 3 Copy -->
-        <section class="va-pane" data-pane="copy" aria-labelledby="va-h-copy" hidden>
+        <!-- 1 Copy -->
+        <section class="va-pane" data-pane="copy" aria-labelledby="va-h-copy">
           <header class="va-pane__head">
             <h2 id="va-h-copy" tabindex="-1">Write the copy</h2>
+            <p>Type your own, or Ask AI to write and check it.</p>
           </header>
+          <section class="va-editor" id="va-editor" aria-labelledby="va-editor-title">
+            <div class="va-editor__head">
+              <h3 id="va-editor-title">Your copy</h3>
+              <button class="va-ask-ai" type="button" id="va-ask-ai" aria-controls="va-ai" aria-expanded="false" aria-keyshortcuts="Meta+J Control+J" title="Ask AI to write, check or change the copy (⌘J / Ctrl+J)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>
+                <span>Ask AI</span>
+              </button>
+            </div>
+            <section class="va-ai" id="va-ai" aria-labelledby="va-ai-title" hidden>
+              <div class="va-ai__inner">
+                <div class="va-ai__head">
+                  <h4 class="va-ai__title" id="va-ai-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>Ask AI</h4>
+                  <button class="va-icon-btn va-ai__close" type="button" id="va-ai-close" aria-label="Close Ask AI (Esc)" title="Close (Esc)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </button>
+                </div>
+                <div class="va-ai__actions" id="va-ai-actions" role="group" aria-label="Quick actions">
+                  <button class="va-ai__act" type="button" data-ai="write"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg><span id="va-ai-write-text">Write 3 options</span></button>
+                  <button class="va-ai__act" type="button" data-ai="grammar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 15 4-8 4 8"/><path d="M4 13h6"/><path d="m15 13 2 2 4-4"/></svg><span>Check grammar</span></button>
+                  <button class="va-ai__act" type="button" data-ai="shorten" data-say="Shorten the copy. Keep the hook and that it’s free."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 6H3"/><path d="M21 12H3"/><path d="M11 18H3"/></svg><span>Shorten</span></button>
+                  <button class="va-ai__act" type="button" data-ai="punchier" data-say="Make the headline punchier."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg><span>Make it punchier</span></button>
+                </div>
+                <details class="va-ai__context" id="va-ai-context">
+                  <summary><span id="va-ai-context-sum">Add context</span><span class="va-ai__optional">Optional</span></summary>
+                  <div class="va-ai__context-body">
+                    <div class="va-field">
+                      <label class="va-label" for="va-notes">Note for the AI</label>
+                      <input class="va-input" id="va-notes" type="text" placeholder="e.g. mention it’s free" autocomplete="off" spellcheck="true" lang="en-US">
+                    </div>
+                    <details class="va-fold va-fold--quiet va-ai__moments" id="va-moment-fold">
+                      <summary><span id="va-moment-sum">Trending moment</span></summary>
+                      <ul class="va-moments" id="va-copy-moments" aria-label="Trending moments"></ul>
+                    </details>
+                  </div>
+                </details>
+                <div class="va-ai__progress" id="va-ai-progress" hidden><span class="va-ai__bar" aria-hidden="true"></span><span class="va-ai__progress-text" id="va-ai-progress-text">Working…</span></div>
+                <div class="va-ai__out" id="va-ai-out" aria-live="polite">
+                  <div id="va-variants" class="va-variants"></div>
+                  <div id="va-grammar" class="va-gram"></div>
+                  <ol class="va-thread" id="va-thread" aria-label="Conversation with Ask AI"></ol>
+                </div>
+                <form class="va-compose" id="va-compose">
+                  <label class="va-sr" for="va-ask">Ask for a change</label>
+                  <textarea class="va-input" id="va-ask" rows="1" placeholder="Ask for a change…" spellcheck="true" lang="en-US"></textarea>
+                  <button class="va-send" type="submit" id="va-send" aria-label="Send">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                  </button>
+                </form>
+              </div>
+            </section>
+            <div class="va-field">
+              <div class="va-field__top"><label class="va-label" for="va-headline">Headline</label><span class="va-count" id="va-headline-count" aria-live="polite"></span></div>
+              <textarea class="va-input" id="va-headline" rows="2" spellcheck="true" lang="en-US" aria-describedby="va-headline-count va-lint-headline"></textarea>
+              <ul class="va-lint" id="va-lint-headline" data-lint="headline" aria-live="polite" hidden></ul>
+            </div>
+            <div class="va-field" id="va-highlight-row">
+              <div class="va-field__top"><label class="va-label" for="va-highlight">Highlight</label><span class="va-count">Words from the headline</span></div>
+              <input class="va-input" id="va-highlight" type="text" spellcheck="true" lang="en-US" aria-describedby="va-highlight-warn va-lint-highlight">
+              <p class="va-warn" id="va-highlight-warn" role="alert" hidden>Those words aren’t in the headline, so nothing is highlighted.</p>
+              <ul class="va-lint" id="va-lint-highlight" data-lint="highlight" aria-live="polite" hidden></ul>
+            </div>
+            <div class="va-field">
+              <div class="va-field__top"><label class="va-label" for="va-body-1">Body</label><span class="va-count" id="va-body-count" aria-live="polite"></span></div>
+              <textarea class="va-input" id="va-body-1" rows="3" data-body="0" spellcheck="true" lang="en-US" aria-describedby="va-body-count va-lint-body"></textarea>
+              <textarea class="va-input" id="va-body-2" rows="2" data-body="1" placeholder="Second paragraph" aria-label="Body paragraph 2" spellcheck="true" lang="en-US" aria-describedby="va-lint-body" hidden></textarea>
+              <textarea class="va-input" id="va-body-3" rows="2" data-body="2" placeholder="Third paragraph" aria-label="Body paragraph 3" spellcheck="true" lang="en-US" aria-describedby="va-lint-body" hidden></textarea>
+              <ul class="va-lint" id="va-lint-body" data-lint="body" aria-live="polite" hidden></ul>
+              <button class="va-link va-add-para" type="button" id="va-add-para">+ Add paragraph</button>
+            </div>
+            <div class="va-field">
+              <div class="va-field__top"><label class="va-label" for="va-cta">Button</label><span class="va-count" id="va-cta-count" aria-live="polite"></span></div>
+              <input class="va-input" id="va-cta" type="text" maxlength="40" spellcheck="true" lang="en-US" aria-describedby="va-cta-count va-lint-cta">
+              <ul class="va-lint" id="va-lint-cta" data-lint="cta" aria-live="polite" hidden></ul>
+            </div>
+            <label class="va-switch"><input type="checkbox" id="va-unsub" checked><span class="va-switch__track" aria-hidden="true"></span><span>Show “Unsubscribe anytime”</span></label>
+          </section>
           <div class="va-field">
             <span class="va-label" id="va-style-label">Style</span>
             <div class="va-styles" role="radiogroup" aria-labelledby="va-style-label" id="va-styles">
               <button type="button" role="radio" data-style="simple" aria-checked="false">
                 <span class="va-style-art va-style-art--simple" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-                <span class="va-style-name">Simple</span><span class="va-style-note">Plain paragraphs</span>
+                <span class="va-style-name">Simple</span>
               </button>
               <button type="button" role="radio" data-style="condensed" aria-checked="false">
                 <span class="va-style-art va-style-art--condensed" aria-hidden="true"><b>Big idea</b><i></i><i></i></span>
-                <span class="va-style-name">Condensed</span><span class="va-style-note">Bold headline</span>
+                <span class="va-style-name">Condensed</span>
               </button>
               <button type="button" role="radio" data-style="highlight" aria-checked="true">
                 <span class="va-style-art va-style-art--highlight" aria-hidden="true"><b>BIG <mark>IDEA</mark></b><i></i><i></i></span>
-                <span class="va-style-name">Highlight</span><span class="va-style-note">Boxed phrase</span>
+                <span class="va-style-name">Highlight</span>
               </button>
             </div>
-          </div>
-          <div class="va-tabs es-tabs" role="tablist" aria-label="Copy tools" id="va-copy-tabs">
-            <button class="va-tab es-tab" type="button" role="tab" id="va-tab-drafts" aria-controls="va-drafts" aria-selected="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>Drafts</button>
-            <button class="va-tab es-tab" type="button" role="tab" id="va-tab-chat" aria-controls="va-chat" aria-selected="false" tabindex="-1">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>Assistant</button>
-            <button class="va-tab es-tab" type="button" role="tab" id="va-tab-edit" aria-controls="va-edit" aria-selected="false" tabindex="-1">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>Edit text</button>
-          </div>
-
-          <div class="va-tabpanel" id="va-drafts" role="tabpanel" aria-labelledby="va-tab-drafts">
-            <form class="va-notes" id="va-notes-form">
-              <label class="va-label" for="va-notes">Steer the drafts <span class="va-optional">Optional</span></label>
-              <div class="va-own__row">
-                <input class="va-input" id="va-notes" type="text" placeholder="e.g. lean on the rivalry, say it’s free" autocomplete="off">
-                <button class="va-btn va-btn--ai" type="submit" id="va-drafts-run">Write drafts</button>
-              </div>
-            </form>
-            <div class="va-angles" id="va-angles" role="group" aria-label="Angles from the research" hidden></div>
-            <div id="va-variants" class="va-variants" aria-live="polite"></div>
-          </div>
-
-          <div class="va-tabpanel" id="va-chat" role="tabpanel" aria-labelledby="va-tab-chat" hidden>
-            <ol class="va-thread" id="va-thread" aria-live="polite" aria-label="Conversation with the assistant"></ol>
-            <div class="va-suggest" id="va-suggest" role="group" aria-label="Suggestions">
-              <button class="va-chip" type="button">Punchier headline</button>
-              <button class="va-chip" type="button">Shorter body</button>
-              <button class="va-chip" type="button">Split into two paragraphs</button>
-              <button class="va-chip" type="button">Write it for fans 55+</button>
-              <button class="va-chip" type="button">Pick the best style</button>
-            </div>
-            <form class="va-compose" id="va-compose">
-              <label class="va-sr" for="va-ask">Message the assistant</label>
-              <textarea class="va-input" id="va-ask" rows="1" placeholder="Ask for a change, e.g. “punchier headline”"></textarea>
-              <button class="va-send" type="submit" id="va-send" aria-label="Send">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
-              </button>
-            </form>
-          </div>
-
-          <div class="va-tabpanel" id="va-edit" role="tabpanel" aria-labelledby="va-tab-edit" hidden>
-            <div class="va-field">
-              <label class="va-label" for="va-headline">Headline</label>
-              <textarea class="va-input" id="va-headline" rows="3"></textarea>
-            </div>
-            <div class="va-field" id="va-highlight-row">
-              <label class="va-label" for="va-highlight">Boxed phrase <span class="va-optional">Must be in the headline</span></label>
-              <input class="va-input" id="va-highlight" type="text">
-              <p class="va-warn" id="va-highlight-warn" hidden>Those words aren’t in the headline, so nothing is boxed.</p>
-            </div>
-            <div class="va-field">
-              <label class="va-label" for="va-body-1">Body</label>
-              <textarea class="va-input" id="va-body-1" rows="4" data-body="0"></textarea>
-              <textarea class="va-input" id="va-body-2" rows="2" data-body="1" placeholder="Second paragraph" aria-label="Body paragraph 2" hidden></textarea>
-              <textarea class="va-input" id="va-body-3" rows="2" data-body="2" placeholder="Third paragraph" aria-label="Body paragraph 3" hidden></textarea>
-              <div class="va-edit-foot">
-                <button class="va-btn va-btn--sm va-btn--ghost" type="button" id="va-add-para">Add paragraph</button>
-                <span class="va-hint">Wrap words in **double stars** to bold them.</span>
-              </div>
-            </div>
-            <div class="va-field">
-              <label class="va-label" for="va-cta">Button text</label>
-              <input class="va-input" id="va-cta" type="text" maxlength="40">
-            </div>
-            <label class="va-switch"><input type="checkbox" id="va-unsub" checked><span class="va-switch__track" aria-hidden="true"></span><span>Show “Unsubscribe anytime”</span></label>
           </div>
         </section>
 
-        <!-- 4 Rate -->
-        <section class="va-pane" data-pane="rate" aria-labelledby="va-h-rate" hidden>
+        <!-- 2 Clip -->
+        <section class="va-pane" data-pane="clip" aria-labelledby="va-h-clip" hidden>
           <header class="va-pane__head">
-            <h2 id="va-h-rate" tabindex="-1">Rate the ad</h2>
-            <p>Scores the hook, middle and end of your trim.</p>
+            <h2 id="va-h-clip" tabindex="-1">Find a clip</h2>
+            <p>Team videos posted on X in the last 3 days.</p>
           </header>
-          <div id="va-rate" class="va-rate-area" aria-live="polite"></div>
+          <div class="va-tabs es-tabs" role="tablist" aria-label="How to find a clip" id="va-clip-tabs">
+            <button class="va-tab es-tab" type="button" role="tab" id="va-tab-team" data-tab="team" aria-controls="va-by-team" aria-selected="true">By team</button>
+            <button class="va-tab es-tab" type="button" role="tab" id="va-tab-color" data-tab="color" aria-controls="va-by-color" aria-selected="false" tabindex="-1">By colour</button>
+            <button class="va-tab es-tab" type="button" role="tab" id="va-tab-moment" data-tab="moment" aria-controls="va-by-moment" aria-selected="false" tabindex="-1">By moment</button>
+            <button class="va-tab es-tab" type="button" role="tab" id="va-tab-link" data-tab="link" aria-controls="va-by-link" aria-selected="false" tabindex="-1">Link / upload</button>
+          </div>
+
+          <div class="va-tabpanel" id="va-by-team" role="tabpanel" aria-labelledby="va-tab-team">
+            <div class="va-seg va-seg--full" role="radiogroup" aria-label="Sport" id="va-team-sport">
+              <button type="button" role="radio" data-sport="nfl" aria-checked="false">NFL</button>
+              <button type="button" role="radio" data-sport="cfb" aria-checked="true">CFB</button>
+              <button type="button" role="radio" data-sport="mlb" aria-checked="false">MLB</button>
+            </div>
+            <div class="va-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+              <input class="va-input" id="va-team-q" type="search" placeholder="Search teams" autocomplete="off" aria-label="Search teams" aria-controls="va-team-list">
+            </div>
+            <p class="va-hint" id="va-team-hint"></p>
+            <div class="va-teampick" role="radiogroup" aria-label="Team" id="va-team-list"></div>
+            <button class="es-btn es-btn--primary es-btn--lg va-block" type="button" id="va-team-find">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+              <span id="va-team-find-text">Find clips</span>
+            </button>
+          </div>
+
+          <div class="va-tabpanel" id="va-by-color" role="tabpanel" aria-labelledby="va-tab-color" hidden>
+            <div class="va-seg va-seg--full" role="radiogroup" aria-label="Sport" id="va-color-sport">
+              <button type="button" role="radio" data-sport="nfl" aria-checked="false">NFL</button>
+              <button type="button" role="radio" data-sport="cfb" aria-checked="true">CFB</button>
+              <button type="button" role="radio" data-sport="mlb" aria-checked="false">MLB</button>
+            </div>
+            <div class="va-swatches" role="radiogroup" aria-label="Team colour" id="va-swatches"></div>
+            <button class="es-btn es-btn--primary es-btn--lg va-block" type="button" id="va-find">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+              <span id="va-find-text">Find clips</span>
+            </button>
+          </div>
+
+          <div class="va-tabpanel" id="va-by-moment" role="tabpanel" aria-labelledby="va-tab-moment" hidden>
+            <div class="va-board-bar">
+              <div class="va-chips" role="group" aria-label="Filter by sport" id="va-sports">
+                <button class="va-chip" type="button" data-sport="all" aria-pressed="true">All</button>
+                <button class="va-chip" type="button" data-sport="nfl" aria-pressed="false">NFL</button>
+                <button class="va-chip" type="button" data-sport="cfb" aria-pressed="false">CFB</button>
+                <button class="va-chip" type="button" data-sport="mlb" aria-pressed="false">MLB</button>
+              </div>
+              <button class="va-icon-btn es-refresh" type="button" id="va-refresh" aria-label="Refresh trends" title="Refresh trends">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              </button>
+            </div>
+            <p class="va-hint" id="va-trends-status" role="status">Loading the last 48 hours…</p>
+            <ul class="va-trends" id="va-trends" aria-label="Trending moments"></ul>
+          </div>
+
+          <div class="va-tabpanel" id="va-by-link" role="tabpanel" aria-labelledby="va-tab-link" hidden>
+            <form class="va-xform" id="va-xform">
+              <label class="va-label" for="va-xurl">X post with a video</label>
+              <div class="va-row">
+                <input class="va-input" id="va-xurl" type="url" placeholder="https://x.com/…/status/…" autocomplete="off">
+                <button class="es-btn es-btn--primary" type="submit" id="va-xget">Get video</button>
+              </div>
+            </form>
+            <div class="va-or" aria-hidden="true"><span>or</span></div>
+            <div class="va-dropbox" id="va-dropbox">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+              <div><strong>Upload a video</strong><span>MP4 works best. Or drop it on the preview.</span></div>
+              <button class="es-btn es-btn--sm" type="button" id="va-upload">Choose file</button>
+              <input type="file" id="va-file" accept="video/*" hidden>
+            </div>
+            <div class="va-qualities" id="va-qualities" role="group" aria-label="Clip quality" hidden></div>
+          </div>
+
+          <div class="va-found" id="va-found" aria-live="polite"></div>
+          <p class="va-hint va-clip-status" id="va-clip-status" role="status"></p>
         </section>
 
-        <!-- 5 Export -->
+        <!-- 3 Export -->
         <section class="va-pane" data-pane="export" aria-labelledby="va-h-export" hidden>
           <header class="va-pane__head">
             <h2 id="va-h-export" tabindex="-1">Export</h2>
@@ -339,26 +344,27 @@
           <div class="va-field">
             <span class="va-label" id="va-exsizes-label">Sizes</span>
             <div class="va-exsizes" role="group" aria-labelledby="va-exsizes-label" id="va-exsizes">
-              <button type="button" data-ex="9x16" aria-pressed="true"><span class="va-ratio va-ratio--9x16 va-ratio--lg" aria-hidden="true"></span><strong>9:16</strong><span>Story, Reel</span><small>1080×1920</small></button>
-              <button type="button" data-ex="4x5" aria-pressed="false"><span class="va-ratio va-ratio--4x5 va-ratio--lg" aria-hidden="true"></span><strong>4:5</strong><span>Feed</span><small>1080×1350</small></button>
-              <button type="button" data-ex="1x1" aria-pressed="false"><span class="va-ratio va-ratio--1x1 va-ratio--lg" aria-hidden="true"></span><strong>1:1</strong><span>Square</span><small>1080×1080</small></button>
+              <button type="button" data-ex="9x16" aria-pressed="true"><span class="va-ratio va-ratio--9x16 va-ratio--lg" aria-hidden="true"></span><strong>9:16</strong><span>Reel, Story</span></button>
+              <button type="button" data-ex="4x5" aria-pressed="false"><span class="va-ratio va-ratio--4x5 va-ratio--lg" aria-hidden="true"></span><strong>4:5</strong><span>Feed</span></button>
+              <button type="button" data-ex="1x1" aria-pressed="false"><span class="va-ratio va-ratio--1x1 va-ratio--lg" aria-hidden="true"></span><strong>1:1</strong><span>Square</span></button>
             </div>
           </div>
-          <ul class="va-checklist" id="va-checklist" aria-label="Before you export"></ul>
-          <label class="va-check"><input type="checkbox" id="va-rights"><span>I’ve confirmed we can use this footage in a paid ad.<small>League and broadcast footage is usually copyrighted. FrameUp never posts anything for you.</small></span></label>
-          <button class="va-btn va-btn--primary va-btn--lg va-btn--block" type="button" id="va-export" disabled>Export MP4</button>
+          <div class="va-ready" id="va-ready"></div>
+          <label class="va-check"><input type="checkbox" id="va-rights"><span>We can use this footage in a paid ad.</span></label>
+          <button class="es-btn es-btn--primary es-btn--lg va-block" type="button" id="va-export" disabled>Export MP4</button>
           <div class="va-progress" id="va-export-progress" hidden><span></span></div>
           <p class="va-hint" id="va-export-status" role="status" aria-live="polite"></p>
           <ul class="va-files" id="va-files" aria-label="Downloaded files" hidden></ul>
+          <button class="es-btn es-btn--ghost va-block" type="button" id="va-again" hidden>Make another ad</button>
         </section>
         </div>
 
         <footer class="va-pane-nav" id="va-pane-nav">
-          <button class="va-btn va-btn--ghost" type="button" id="va-back">
+          <button class="es-btn es-btn--ghost" type="button" id="va-back">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
             <span>Back</span>
           </button>
-          <button class="va-btn va-btn--primary" type="button" id="va-next">
+          <button class="es-btn" type="button" id="va-next">
             <span id="va-next-text">Next</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
           </button>
@@ -367,26 +373,14 @@
     </div>
   </main>
 
-  <dialog class="va-dialog" id="va-confirm" aria-labelledby="va-confirm-title" aria-describedby="va-confirm-text">
-    <form method="dialog">
-      <span class="va-dialog__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-      </span>
-      <h2 id="va-confirm-title">The rating says redesign</h2>
-      <p id="va-confirm-text">The reviewer thinks this ad needs a redesign before it runs. Export anyway?</p>
-      <div class="va-dialog__actions">
-        <button class="va-btn va-btn--ghost" value="fix" type="submit">See the fixes</button>
-        <button class="va-btn va-btn--primary" value="export" type="submit">Export anyway</button>
-      </div>
-    </form>
-  </dialog>
   <div class="va-toasts" id="va-toasts" aria-live="polite"></div>
 
   <video id="va-video" playsinline muted preload="auto" hidden></video>
   <script src="video-ads-brands.js?v=20261115-fig1"></script>
+  <script src="video-ads-teams.js?v=20261117-tlogo1"></script>
   <script src="video-ads-render.js?v=20261115-fig1"></script>
-  <script src="video-ads-rating.js?v=20261115-va1"></script>
   <script src="es-motion.js?v=20261115-ds1"></script>
-  <script src="video-ads.js?v=20261116-clip1"></script>
+  <script src="league-logos.js?v=20261117-logo1"></script>
+  <script src="video-ads.js?v=20261117-gram1"></script>
 </body>
 </html>

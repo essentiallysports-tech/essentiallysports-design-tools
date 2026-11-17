@@ -177,8 +177,9 @@ body.profile-page {
 .profile-page .field input:focus,
 .profile-page .field select:focus,
 .profile-page .field textarea:focus {
-  border-color: var(--profile-blue);
-  box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
+  outline: none;
+  border-color: var(--es-focus-color);
+  box-shadow: var(--es-focus-halo);
 }
 
 .profile-page .actions {

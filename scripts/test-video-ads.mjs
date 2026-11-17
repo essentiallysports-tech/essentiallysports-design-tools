@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 // Video Ads server (netlify/functions/video-ads.js), every network call mocked:
 // trends (last 48h, NFL/CFB/MLB only), clip lookup from an X post (fxtwitter
-// first, syndication fallback, only video.twimg.com MP4s), auth.
+// first, syndication fallback, only video.twimg.com MP4s), auth, the team-colour
+// data (video-ads-teams.js), find-clips (cheap web search, verification, cache,
+// cost cap, 401/429), copy (lessons, auto-fix, retry), chat, grammar (light
+// model, exact-substring / number / brand checks, cache, 401/429), research removed.
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -18,13 +21,18 @@ let fxReply = null;
 let synReply = null;
 let callsThisHour = 0;
 let messagesHandler = null;
+let chatHandler = () => { throw new Error('unexpected light-model call'); };
 const reply = (status, body) => ({ ok: status < 400, status, json: async () => body });
 globalThis.fetch = async (url, options = {}) => {
   const href = String(url);
   if (href.includes('/rest/v1/rpc/frameup_my_ai_calls_last_hour')) return reply(200, callsThisHour);
   if (href.includes('/rest/v1/frameup_ai_usage')) return reply(201, {});
   if (href.startsWith('https://ai-gateway.vercel.sh/v1/messages')) return messagesHandler(JSON.parse(options.body));
-  if (href.startsWith('https://api.fxtwitter.com/')) return fxReply ? reply(200, fxReply) : reply(404, {});
+  if (href.startsWith('https://ai-gateway.vercel.sh/v1/chat/completions')) return chatHandler(JSON.parse(options.body));
+  if (href.startsWith('https://api.fxtwitter.com/')) {
+    const body = typeof fxReply === 'function' ? fxReply(href) : fxReply;
+    return body ? reply(200, body) : reply(404, {});
+  }
   if (href.startsWith('https://cdn.syndication.twimg.com/')) return synReply ? reply(200, synReply) : reply(404, {});
   if (href.startsWith('https://video.twimg.com/')) throw new Error('the server must never download video bytes');
   throw new Error(`unexpected fetch ${href}`);
@@ -108,90 +116,398 @@ assert.equal((await post({ mode: 'trends' })).status, 401);
 signedIn = true;
 assert.equal((await post({ mode: 'publish-everything' })).status, 400);
 
-// 6. Research: Claude with web search; facts, links, and which X posts carry
-//    downloadable video. Search fees are part of the cost.
-const usage = { input_tokens: 4000, output_tokens: 700, server_tool_use: { web_search_requests: 2 } };
-const researchJson = {
-  summary: 'Tarik Skubal became a free agent on Nov 3.',
-  keyFacts: [{ fact: 'Skubal won the 2025 AL Cy Young.', sourceUrl: 'https://www.mlb.com/news/skubal' }],
-  whyFansCare: 'Every contender wants him.',
-  angles: ['Hot stove moves fast'],
-  xPosts: ['https://x.com/MLB/status/1111', 'https://example.com/not-x'],
-  youtube: ['https://www.youtube.com/watch?v=abc123', 'https://vimeo.com/1'],
-  searchPhrases: ['Skubal free agency'],
-};
+// 6. Team colours: every NFL and MLB team, ~40+ CFB programs, valid data,
+//    primary-family teams first, max 12.
+const TEAMS = require(path.resolve('video-ads-teams.js'));
+const count = sport => TEAMS.TEAMS.filter(t => t.sport === sport).length;
+assert.equal(count('nfl'), 32);
+assert.equal(count('mlb'), 30);
+assert.ok(count('cfb') >= 40, `CFB programs: ${count('cfb')}`);
+const colorIds = TEAMS.COLORS.map(c => c.id);
+assert.deepEqual(colorIds, ['red', 'blue', 'green', 'gold', 'orange', 'purple', 'navy', 'maroon', 'black', 'silver', 'teal']);
+TEAMS.COLORS.forEach(c => assert.match(c.hex, /^#[0-9A-F]{6}$/));
+const names = new Set();
+TEAMS.TEAMS.forEach(t => {
+  assert.ok(!names.has(`${t.sport}|${t.name}`), `duplicate ${t.name}`);
+  names.add(`${t.sport}|${t.name}`);
+  assert.equal(t.colors.length, 2, t.name);
+  t.colors.forEach(hex => assert.match(hex, /^#[0-9A-F]{6}$/, t.name));
+  assert.ok(t.families.length >= 1 && t.families.every(f => colorIds.includes(f)), `${t.name} families`);
+  // Every team has a hot-linked ESPN logo (https, the sport's logo path).
+  const logoPath = { nfl: 'nfl', mlb: 'mlb', cfb: 'ncaa' }[t.sport];
+  assert.match(t.logo, new RegExp(`^https://a\\.espncdn\\.com/i/teamlogos/${logoPath}/500/[a-z0-9]+\\.png$`), `${t.name} logo`);
+  assert.equal(TEAMS.logoFor(t), t.logo);
+});
+assert.equal(new Set(TEAMS.TEAMS.map(t => t.logo)).size, TEAMS.TEAMS.length, 'one logo per team');
+assert.equal(TEAMS.logoFor(null), '');
+assert.equal(TEAMS.findTeam('Alabama', 'cfb').logo, 'https://a.espncdn.com/i/teamlogos/ncaa/500/333.png');
+assert.equal(TEAMS.findTeam('Yankees', 'mlb').logo, 'https://a.espncdn.com/i/teamlogos/mlb/500/nyy.png');
+assert.equal(TEAMS.findTeam('Chiefs', 'nfl').logo, 'https://a.espncdn.com/i/teamlogos/nfl/500/kc.png');
+const chiefs = TEAMS.TEAMS.find(t => t.name === 'Kansas City Chiefs');
+assert.deepEqual(chiefs.colors, ['#E31837', '#FFB81C']);
+assert.deepEqual(chiefs.families, ['red', 'gold']);
+const redNfl = TEAMS.teamsFor({ sport: 'nfl', color: 'red' });
+assert.ok(redNfl.length > 3 && redNfl.length <= 12 && redNfl.every(t => t.sport === 'nfl'));
+const firstSecondary = redNfl.findIndex(t => t.families[0] !== 'red');
+assert.ok(firstSecondary > 0 && redNfl.slice(firstSecondary).every(t => t.families[0] !== 'red'), 'primary-red teams come first');
+assert.ok(redNfl.some(t => t.short === 'Bills'), 'secondary red teams follow');
+assert.deepEqual(TEAMS.teamsFor({ sport: 'nfl', color: 'purple' }).map(t => t.short), ['Ravens', 'Vikings']);
+assert.ok(TEAMS.teamsFor({ sport: 'cfb', color: 'purple' }).some(t => t.short === 'LSU'));
+assert.ok(TEAMS.teamsFor({ sport: 'mlb', color: 'red' }).length <= 12);
+assert.deepEqual(TEAMS.teamsFor({ sport: 'nfl', color: 'pink' }), []);
+assert.equal(TEAMS.findTeam('chiefs', 'nfl').name, 'Kansas City Chiefs');
+
+// 7. Find clips by colour: one cheap web search (Haiku, 2 searches max),
+//    candidates verified like `clip`, old posts and posts without video dropped.
+const { _test } = require(adsPath);
+let searchCalls = 0;
+let searchPrompt = '';
+const tid = id => `https://x.com/NFL/status/${id}`;
+const clipUsage = { input_tokens: 6000, output_tokens: 300, server_tool_use: { web_search_requests: 2 } };
 messagesHandler = body => {
-  assert.equal(body.model, 'anthropic/claude-haiku-5.5');
-  assert.equal(body.tools?.[0]?.type, 'web_search_20250305', 'research uses the web search tool');
-  assert.equal(body.tools[0].max_uses, 4);
-  return reply(200, { stop_reason: 'end_turn', usage, content: [
-    { type: 'web_search_tool_result', content: [{ url: 'https://x.com/Tigers/status/2222', title: 'Tigers' }] },
-    { type: 'text', text: JSON.stringify(researchJson) },
+  searchCalls += 1;
+  searchPrompt = body.messages[0].content;
+  assert.equal(body.model, 'anthropic/claude-haiku-5.5', 'cheapest Claude model for search');
+  assert.equal(body.tools?.[0]?.type, 'web_search_20250305');
+  assert.equal(body.tools[0].max_uses, 2, 'at most 2 searches');
+  assert.ok(body.max_tokens <= 1000, 'short reply');
+  return reply(200, { stop_reason: 'end_turn', usage: clipUsage, content: [
+    { type: 'web_search_tool_result', content: [{ url: 'https://twitter.com/Chiefs/status/301', title: 'Chiefs' }, { url: 'https://www.espn.com/nfl/story', title: 'ESPN' }] },
+    { type: 'text', text: JSON.stringify({ posts: [tid(101), { url: tid(102), date: 'today' }, tid(103), tid(104), { url: tid(105), date: '2026-11-17' }, tid(106), 'https://example.com/not-x', tid(101)] }) },
   ] });
 };
-fxReply = { code: 200, tweet: { text: 'Skubal', author: { name: 'MLB', screen_name: 'MLB' }, media: { videos: [{ url: VIDEO(720, 1280), formats: [{ url: VIDEO(720, 1280), container: 'mp4' }] }] } } };
-const trend = { id: 't1', title: 'Skubal hits free agency', sport: 'mlb', url: 'https://www.mlb.com/news/skubal', related: [] };
-res = await post({ mode: 'research', trend });
+const nowSec = Math.floor(Date.now() / 1000);
+fxReply = href => {
+  const id = href.match(/status\/(\d+)/)[1];
+  if (id === '102') return { code: 200, tweet: { text: 'No video here', author: { screen_name: 'NFL' }, media: {} } };
+  // 103: 20 days old; 104: 73h old; 105: no timestamp (the model's date is not trusted); 106: throwback; 301: 5h old.
+  const created = { 103: nowSec - 20 * 86400, 104: nowSec - 73 * 3600, 105: undefined, 301: nowSec - 5 * 3600 }[id];
+  const text = id === '106' ? '#TBT to the 2019 AFC title game' : `Clip ${id}`;
+  return { code: 200, tweet: { text, created_timestamp: id in { 103: 1, 104: 1, 105: 1, 301: 1 } ? created : nowSec - 3600, author: { name: 'NFL', screen_name: id === '301' ? 'Chiefs' : 'NFL' }, media: { videos: [{
+    url: VIDEO(720, 1280), thumbnail_url: `https://pbs.twimg.com/${id}.jpg`, duration: 12.3, width: 720, height: 1280,
+    formats: [{ url: VIDEO(720, 1280), container: 'mp4', bitrate: 2176000 }, { url: VIDEO(320, 568), container: 'mp4', bitrate: 632000 }, { url: 'https://evil.example/x.mp4', container: 'mp4' }],
+  }] } } };
+};
+synReply = null;
+res = await post({ mode: 'find-clips', sport: 'nfl', color: 'red' });
+assert.equal(res.status, 200, JSON.stringify(res.body));
+assert.equal(searchCalls, 1);
+assert.ok(res.body.teams.length > 3 && res.body.teams[0].name && res.body.teams[0].short && res.body.teams[0].colors.length === 2);
+assert.equal(res.body.teams[0].families, undefined, 'teams carry name, short, colors');
+assert.match(searchPrompt, /Kansas City Chiefs/, 'the colour teams are in the prompt');
+assert.match(searchPrompt, /last 72 hours/);
+assert.deepEqual(res.body.clips.map(c => c.url), [tid(101), 'https://x.com/Chiefs/status/301'], 'no-video, 20-day-old, 73h-old, untimestamped and throwback posts dropped; duplicates merged; cited posts kept; newest first');
+assert.deepEqual(res.body.clips.map(c => c.ageHours), [1, 5], 'verified age in hours');
+assert.ok(res.body.clips.every(c => c.postedAt && !Number.isNaN(Date.parse(c.postedAt))));
+assert.equal(res.body.note, 'Only 2 clips from the last 3 days.', 'fewer than 3 fresh clips: a note, no padding');
+const clip0 = res.body.clips[0];
+assert.equal(clip0.handle, 'NFL');
+assert.equal(clip0.thumb, 'https://pbs.twimg.com/101.jpg');
+assert.equal(clip0.duration, 12.3);
+assert.deepEqual(clip0.variants.map(v => v.height), [1280, 568]);
+assert.ok(clip0.variants.every(v => v.url.startsWith('https://video.twimg.com/') && v.bitrate >= 0));
+assert.equal(res.body.cached, false);
+assert.ok(res.body.cost > 0.02 && res.body.cost <= _test.FIND_CLIPS.maxCostUsd, `cost within the cap (${res.body.cost})`);
+
+// 8. Cache: the same (sport, colour, query) for 30 minutes, free, and served even
+//    over the hourly limit; a different colour searches again.
+callsThisHour = 500;
+res = await post({ mode: 'find-clips', sport: 'nfl', color: 'red' });
 assert.equal(res.status, 200);
-assert.equal(res.body.webSearch, true);
-assert.equal(res.body.keyFacts[0].sourceUrl, 'https://www.mlb.com/news/skubal');
-assert.deepEqual(res.body.xPosts, ['https://x.com/MLB/status/1111', 'https://x.com/Tigers/status/2222'], 'only X post links, incl. cited ones');
-assert.deepEqual(res.body.youtube, ['https://www.youtube.com/watch?v=abc123']);
-assert.equal(res.body.verifiedClips.length, 2, 'both X posts have downloadable video');
-assert.ok(res.body.cost > 0.02 && res.body.cost < 0.03, `cost includes 2 searches (${res.body.cost})`);
-res = await post({ mode: 'research', trend });
-assert.equal(res.body.cached, true, 'the same moment is served from cache for 30 minutes');
+assert.equal(res.body.cached, true);
 assert.equal(res.body.cost, 0);
+assert.equal(searchCalls, 1, 'no new search');
+assert.equal(res.body.clips.length, 2);
+// 429 over the hourly limit on a cache miss, before any AI call.
+res = await post({ mode: 'find-clips', sport: 'nfl', color: 'green' });
+assert.equal(res.status, 429);
+assert.equal(searchCalls, 1);
+callsThisHour = 0;
+// Expired cache entries search again.
+for (const entry of _test.CLIP_CACHE.values()) entry.at -= 16 * 60 * 1000; // 15-minute TTL
+res = await post({ mode: 'find-clips', sport: 'nfl', color: 'red' });
+assert.equal(res.body.cached, false);
+assert.equal(searchCalls, 2);
 
-// 7. Web search unavailable: plain answer from the trend, marked as such.
-messagesHandler = body => (body.tools ? reply(400, { error: { message: 'tools not supported' } })
-  : reply(200, { stop_reason: 'end_turn', usage: { input_tokens: 900, output_tokens: 300 }, content: [{ type: 'text', text: JSON.stringify({ summary: 'Mahomes led a comeback.', keyFacts: [], angles: [] }) }] }));
-res = await post({ mode: 'research', trend: { title: 'Mahomes comeback against the Bills', sport: 'nfl' } });
-assert.equal(res.status, 200);
-assert.equal(res.body.webSearch, false);
-assert.equal(res.body.verifiedClips.length, 0);
+// 9. Find clips by moment (query), the hard cost cap (a paused search is not
+//    continued once the cap or the 2 searches are used), 401, bad input, AI off.
+let pauseCalls = 0;
+messagesHandler = body => {
+  pauseCalls += 1;
+  searchPrompt = body.messages[0].content;
+  return reply(200, { stop_reason: 'pause_turn', usage: { input_tokens: 9000, output_tokens: 200, server_tool_use: { web_search_requests: 2 } }, content: [
+    { type: 'web_search_tool_result', content: [{ url: tid(101), title: 'NFL' }] },
+  ] });
+};
+res = await post({ mode: 'find-clips', sport: 'nfl', query: 'Mahomes rallies the Chiefs' });
+assert.equal(res.status, 200, JSON.stringify(res.body));
+assert.equal(pauseCalls, 1, 'paused search not continued past the cap');
+assert.match(searchPrompt, /Mahomes rallies the Chiefs/);
+assert.deepEqual(res.body.teams, []);
+assert.deepEqual(res.body.clips.map(c => c.url), [tid(101)], 'cited posts are used when the reply has no text');
+assert.ok(res.body.cost <= _test.FIND_CLIPS.maxCostUsd);
+assert.equal((await post({ mode: 'find-clips', sport: 'nba', color: 'red' })).status, 400);
+assert.equal((await post({ mode: 'find-clips', sport: 'nfl' })).status, 400, 'a colour or a query is required');
+res = await post({ mode: 'find-clips', sport: 'cfb', color: 'teal' });
+if (TEAMS.teamsFor({ sport: 'cfb', color: 'teal' }).length === 0) {
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body.clips, []);
+  assert.equal(pauseCalls, 1, 'no teams in that colour: no search');
+}
+signedIn = false;
+assert.equal((await post({ mode: 'find-clips', sport: 'nfl', color: 'red' })).status, 401);
+signedIn = true;
+messagesHandler = () => reply(500, { error: { message: 'search down' } });
+res = await post({ mode: 'find-clips', sport: 'mlb', color: 'blue' });
+assert.equal(res.status, 502);
+assert.match(res.body.error, /Clip search is unavailable/);
+messagesHandler = () => reply(402, { error: { message: 'spend limit reached' } });
+res = await post({ mode: 'find-clips', sport: 'mlb', color: 'orange' });
+assert.equal(res.status, 503);
+assert.equal(res.body.reason, 'budget');
+delete process.env.AI_GATEWAY_API_KEY;
+res = await post({ mode: 'find-clips', sport: 'mlb', color: 'green' });
+assert.equal(res.status, 503);
+assert.equal(res.body.reason, 'off');
+res = await post({ mode: 'find-clips', sport: 'nfl', color: 'red' });
+assert.equal(res.status, 200, 'cached results still served while AI is off');
+process.env.AI_GATEWAY_API_KEY = 'gw-test';
 
-// 8. Copy: an invented number and a highlight not in the headline are caught,
-//    the AI gets one retry with the problems, good variants come back.
+// 9b. Find clips for ONE team: team beats colour and query, resolved by
+//     findTeam, cached per (sport, team); unknown teams refused; freshness helpers.
+let teamPrompt = '';
+let teamCalls = 0;
+messagesHandler = body => {
+  teamCalls += 1;
+  teamPrompt = body.messages[0].content;
+  return reply(200, { stop_reason: 'end_turn', usage: clipUsage, content: [{ type: 'text', text: JSON.stringify({ posts: [{ url: tid(101), date: '2026-11-17' }, tid(201), tid(202)] }) }] });
+};
+res = await post({ mode: 'find-clips', sport: 'nfl', team: 'Chiefs', color: 'green', query: 'something else' });
+assert.equal(res.status, 200, JSON.stringify(res.body));
+assert.deepEqual(res.body.teams, [{ name: 'Kansas City Chiefs', short: 'Chiefs', colors: ['#E31837', '#FFB81C'] }]);
+assert.match(teamPrompt, /Kansas City Chiefs \(only this team\)/);
+assert.doesNotMatch(teamPrompt, /Green Bay|something else/, 'team takes precedence over colour and query');
+assert.equal(res.body.clips.length, 3);
+assert.equal(res.body.note, undefined, '3 fresh clips: no note');
+assert.ok(res.body.clips.every(c => typeof c.ageHours === 'number'));
+res = await post({ mode: 'find-clips', sport: 'nfl', team: { name: 'Kansas City Chiefs' } });
+assert.equal(res.body.cached, true, 'cached per (sport, team), by short or full name');
+assert.equal(teamCalls, 1);
+assert.ok([..._test.CLIP_CACHE.keys()].includes('nfl|team:kansas city chiefs'), 'the cache key includes the team');
+res = await post({ mode: 'find-clips', sport: 'nfl', color: 'red' });
+assert.notDeepEqual(res.body.teams.length, 1, 'a colour search is cached separately from the team');
+res = await post({ mode: 'find-clips', sport: 'nfl', team: 'Toronto Argonauts' });
+assert.equal(res.status, 400);
+assert.equal(teamCalls, 1);
+assert.equal(_test.looksOld('#TBT to this catch'), true);
+assert.equal(_test.looksOld('On this day: the Helmet Catch'), true);
+assert.equal(_test.looksOld('Mahomes in the 2022 AFC title game', new Date('2026-11-17')), true);
+assert.equal(_test.looksOld('What a catch in Week 11. He has 2,024 yards. Final: 20-17', new Date('2026-11-17')), false);
+assert.equal(_test.looksOld('2026 is his year', new Date('2026-11-17')), false);
+assert.equal(_test.ageHoursOf(''), null);
+assert.equal(_test.ageHoursOf('not a date'), null);
+assert.equal(_test.ageHoursOf(new Date(Date.now() + 5 * 3600e3).toISOString()), null, 'a future timestamp is not trusted');
+
+// 10. Research was removed.
+res = await post({ mode: 'research', trend: { title: 'Skubal hits free agency', sport: 'mlb' } });
+assert.equal(res.status, 410);
+assert.match(res.body.error, /Research was removed/);
+
+// 11. Copy: no research needed; grounded in brand, sport, team, moment and
+//     colour; lessons injected as shipped ads + rules; check failures recorded.
+let lessonArgs = null;
+const recorded = [];
+_test.useLearning({
+  lessonsFor: async args => {
+    lessonArgs = args;
+    return { examples: [{ style: 'condensed', headline: 'Every Chiefs win, explained.', body: ['One free email.'], cta: 'SIGN UP THE HUDDLE' }], rules: ['Keep headlines under 10 words.', 'Never use the word "dynasty".'] };
+  },
+  recordEvent: async args => { recorded.push(args); return true; },
+});
 let copyCalls = 0;
+let copyAsk = '';
+let copyVariants = [];
 messagesHandler = body => {
   copyCalls += 1;
+  copyAsk = body.messages[0].content;
   assert.ok(String(body.system?.[0]?.text || body.system).includes('newsletter sign-up video ads'), 'copy rules in the (cached) system prompt');
-  const variants = copyCalls === 1 ? [
-    { style: 'simple', headline: 'The offseason moves fast.', body: ['Join 250,000 fans who read ES Dugout.'], cta: 'SIGN UP ES DUGOUT' },
-    { style: 'highlight', headline: 'Skubal is a free agent. Keep up, free.', highlight: 'Never miss a move', body: ['One email a morning.'] },
-  ] : [
-    { style: 'simple', headline: 'The offseason moves fast.', body: ['Skubal is a free agent and every contender is calling. ES Dugout keeps you up to speed, free.'] },
-    { style: 'highlight', headline: 'Skubal is a free agent. Keep up, free.', highlight: 'Keep up, free.', body: ['One email a morning.'] },
-    { style: 'condensed', headline: 'Never miss a move this winter.', body: ['Every MLB story that matters, in one free email.'] },
-  ];
+  assert.equal(body.tools, undefined, 'copy never searches');
+  const variants = typeof copyVariants === 'function' ? copyVariants(copyCalls) : copyVariants;
   return reply(200, { stop_reason: 'end_turn', usage: { input_tokens: 1500, output_tokens: 500 }, content: [{ type: 'text', text: JSON.stringify({ variants }) }] });
 };
-res = await post({ mode: 'copy', brandId: 'es-dugout', trend, research: researchJson });
-assert.equal(res.status, 200);
-assert.equal(copyCalls, 2, 'one retry after the checks failed');
+const longHeadline = 'The Chiefs are rolling in red and every Sunday brings a new reason to watch this team closely, all season long. Stay with us.';
+copyVariants = [
+  // Auto-fixed: hype word swapped, over-long headline trimmed, lowercase CTA.
+  { style: 'condensed', headline: `An insane run. ${longHeadline}`, body: ['The Huddle brings you every NFL story that matters, free.'], cta: 'sign up the huddle' },
+  // Auto-fixed: highlight not in the headline -> the closest headline phrase.
+  { style: 'highlight', headline: 'RED SUNDAYS ARE BACK IN KANSAS CITY', highlight: 'red sundays are back', body: ['One free email. Every NFL moment.'] },
+  // Auto-fixed: an invented subscriber count is dropped with its sentence; a "Click" paragraph is dropped.
+  { style: 'simple', headline: 'Chiefs fans, this one is for you.', body: ['Join 250,000 fans who read The Huddle. It is free.', 'Click the link to join.'] },
+];
+res = await post({ mode: 'copy', brandId: 'the-huddle', sport: 'nfl', team: 'Chiefs', color: 'red', trend: { title: 'Mahomes rallies the Chiefs', sport: 'nfl' } });
+assert.equal(res.status, 200, JSON.stringify(res.body));
+assert.equal(copyCalls, 1, 'auto-fix repaired everything: no retry');
+assert.deepEqual(lessonArgs, { brandId: 'the-huddle', sport: 'nfl', token: 'tok' });
+assert.match(copyAsk, /Ads we shipped/);
+assert.match(copyAsk, /Every Chiefs win, explained/);
+assert.match(copyAsk, /Keep headlines under 10 words/);
+assert.match(copyAsk, /Kansas City Chiefs/, 'the team is grounded by its full name');
+assert.match(copyAsk, /red teams/, 'the colour theme');
+assert.match(copyAsk, /Mahomes rallies the Chiefs/);
+assert.doesNotMatch(copyAsk, /What happened|Facts:/, 'no research block');
 assert.equal(res.body.variants.length, 3);
-assert.deepEqual(res.body.variants.map(v => v.style), ['simple', 'highlight', 'condensed']);
-assert.equal(res.body.variants[1].highlight, 'Keep up, free.');
-assert.equal(res.body.variants[0].cta, 'SIGN UP ES DUGOUT', 'the brand default button when none is given');
-assert.ok(res.body.variants.every(v => !/250/.test(JSON.stringify(v))), 'invented subscriber count never returned');
+const [v1, v2, v3] = res.body.variants;
+assert.doesNotMatch(v1.headline, /insane/i);
+assert.match(v1.headline, /^A wild run\./);
+assert.ok(v1.headline.split(/\s+/).length <= 22);
+assert.equal(v1.cta, 'SIGN UP THE HUDDLE');
+assert.equal(v2.highlight, 'RED SUNDAYS ARE BACK', 'exact headline casing');
+assert.ok(v2.headline.includes(v2.highlight));
+assert.ok(!/250/.test(JSON.stringify(v3)), 'invented number never returned');
+assert.deepEqual(v3.body, ['It is free.']);
+const kinds = new Set(res.body.autoFixed.map(f => f.kind));
+['banned', 'headline_length', 'cta', 'highlight', 'invented_number'].forEach(k => assert.ok(kinds.has(k), `autoFixed has ${k}`));
+assert.ok(res.body.autoFixed.every(f => typeof f.note === 'string' && f.note));
+assert.deepEqual(res.body.lessons, { examples: 1, rules: 2 });
+assert.equal(recorded.length, 1, 'the fixes feed the learning loop');
+assert.equal(recorded[0].event.type, 'check_failed');
+assert.equal(recorded[0].event.brandId, 'the-huddle');
+assert.equal(recorded[0].email, 'a@essentiallysports.com');
 
-// 9. Chat: a valid change comes back as a patch; an invalid one is refused with a note.
+// 12. Copy: what can't be fixed in code (an invented number in a one-sentence
+//     headline) goes back to the model once; a broken learning module never blocks.
+_test.useLearning({ lessonsFor: async () => { throw new Error('db down'); }, recordEvent: async () => { throw new Error('db down'); } });
+copyCalls = 0;
+copyVariants = n => (n === 1 ? [
+  { style: 'condensed', headline: 'Skubal threw 99 mph.', body: ['ES Dugout, free.'] },
+  { style: 'simple', headline: 'Skubal is a free agent and 30 teams are calling.', body: ['One email a morning.'] },
+] : [
+  { style: 'condensed', headline: 'Never miss a move this winter.', body: ['Every MLB story that matters, in one free email.'] },
+  { style: 'highlight', headline: 'Skubal is a free agent. Keep up, free.', highlight: 'Keep up, free.', body: ['One email a morning.'] },
+]);
+res = await post({ mode: 'copy', brandId: 'es-dugout', sport: 'mlb', trend: { title: 'Skubal hits free agency', sport: 'mlb' } });
+assert.equal(res.status, 200, JSON.stringify(res.body));
+assert.equal(copyCalls, 2, 'one retry for problems code cannot fix');
+assert.equal(res.body.variants.length, 2);
+assert.equal(res.body.variants[0].cta, 'SIGN UP ES DUGOUT', 'the brand default button when none is given');
+assert.deepEqual(res.body.lessons, { examples: 0, rules: 0 });
+
+// Nothing passes after the retry: 422 with the issues.
+copyCalls = 0;
+copyVariants = [{ style: 'condensed', headline: 'Skubal threw 99 mph.', body: ['Free.'] }];
+res = await post({ mode: 'copy', brandId: 'es-dugout', sport: 'mlb', trend: { title: 'Skubal hits free agency' } });
+assert.equal(res.status, 422);
+assert.equal(copyCalls, 2);
+assert.match(res.body.issues.join(' '), /the number 99/);
+// Nothing to ground the copy in: 400 before any AI call.
+copyCalls = 0;
+res = await post({ mode: 'copy', brandId: 'es-dugout' });
+assert.equal(res.status, 400);
+assert.equal(copyCalls, 0);
+// The colour theme alone is enough to write from.
+copyVariants = [{ style: 'simple', headline: 'Red teams, big moments.', body: ['The Huddle, free every morning.'] }, { style: 'condensed', headline: 'Bleed red every Sunday.', body: ['One free NFL email.'] }];
+res = await post({ mode: 'copy', brandId: 'the-huddle', sport: 'nfl', color: 'red' });
+assert.equal(res.status, 200);
+_test.useLearning({});
+
+// 13. Auto-fix helpers directly.
+const huddle = require(path.resolve('video-ads-brands.js')).byId('the-huddle');
+assert.equal(_test.trimToWords('One two three four five. Six seven eight nine ten eleven.', 6), 'One two three four five.');
+assert.equal(_test.trimToWords('one two three four five six seven and the rest', 8), 'one two three four five six seven.');
+assert.equal(_test.swapBanned('BREAKING: An insane catch!! #Chiefs'), 'A wild catch! Chiefs');
+let fixed = _test.autoFix({ style: 'highlight', headline: 'The Chiefs are back in red', highlight: 'never miss a move', body: ['Free.'], cta: 'CLICK HERE TO SIGN UP' }, huddle, '', 'highlight');
+assert.ok(fixed.raw.headline.includes(fixed.raw.highlight) && fixed.raw.highlight.length > 0);
+assert.equal(fixed.raw.cta, huddle.cta, 'a banned CTA falls back to the brand button');
+fixed = _test.autoFix({ style: 'simple', headline: 'Short.', body: Array.from({ length: 3 }, () => 'word '.repeat(40).trim() + '.') }, huddle, '', '');
+assert.equal(_test.checkVariant(fixed.raw, huddle, '', '').errors.length, 0, 'over-long ads are cut to fit');
+assert.ok(fixed.fixes.some(f => f.kind === 'total_length'));
+
+// 14. Chat: a valid change comes back as a patch; an invalid one is refused with a note.
+const trend = { id: 't1', title: 'Skubal hits free agency', sport: 'mlb', related: [] };
 messagesHandler = () => reply(200, { stop_reason: 'end_turn', usage: { input_tokens: 800, output_tokens: 200 }, content: [{ type: 'text', text: JSON.stringify({ reply: 'Made it punchier.', patch: { headline: 'Never miss a move.' } }) }] });
 const layout = { style: 'condensed', headline: 'The offseason moves fast.', highlight: '', body: ['One free email.'], cta: 'SIGN UP ES DUGOUT' };
-res = await post({ mode: 'chat', brandId: 'es-dugout', trend, research: researchJson, layout, messages: [{ role: 'user', content: 'Make the headline punchier' }] });
+res = await post({ mode: 'chat', brandId: 'es-dugout', trend, layout, messages: [{ role: 'user', content: 'Make the headline punchier' }] });
 assert.equal(res.status, 200);
 assert.deepEqual(res.body.patch, { headline: 'Never miss a move.' });
 messagesHandler = () => reply(200, { stop_reason: 'end_turn', usage: { input_tokens: 800, output_tokens: 200 }, content: [{ type: 'text', text: JSON.stringify({ reply: 'Added a stat.', patch: { headline: 'Skubal threw 99 mph.' } }) }] });
-res = await post({ mode: 'chat', brandId: 'es-dugout', trend, research: researchJson, layout, messages: [{ role: 'user', content: 'Add a stat' }] });
+res = await post({ mode: 'chat', brandId: 'es-dugout', trend, layout, messages: [{ role: 'user', content: 'Add a stat' }] });
 assert.equal(res.body.patch, undefined);
 assert.match(res.body.reply, /couldn't apply that change: the number 99/);
 
-// 10. Over the hourly AI limit: 429 before any AI call.
+// 15. Over the hourly AI limit: 429 before any AI call.
 callsThisHour = 500;
 messagesHandler = () => { throw new Error('no AI call over the limit'); };
 res = await post({ mode: 'copy', brandId: 'es-dugout', trend });
 assert.equal(res.status, 429);
 callsThisHour = 0;
+
+// 16. Grammar: the light (cheapest) model, strict checks on every suggestion, a 10-minute cache.
+let grammarCalls = 0;
+let grammarReply = [];
+let grammarRequest = null;
+chatHandler = request => {
+  grammarCalls += 1;
+  grammarRequest = request;
+  return reply(200, { choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({ issues: grammarReply }) } }], usage: { prompt_tokens: 420, completion_tokens: 180 } });
+};
+const gCopy = { headline: 'Their back in the the playoffs', highlight: '', body: ['Get every story , free.', 'Skubal threw 99 pitches in ES Dugout'], cta: 'SIGN UP ES DUGOUT' };
+grammarReply = [
+  { field: 'headline', original: 'Their back', suggestion: "They're back", reason: 'Wrong word: they are' },
+  { field: 'headline', original: 'the the', suggestion: 'the', reason: 'Repeated word' },
+  { field: 'body', index: 0, original: 'story , free', suggestion: 'story, free', reason: 'No space before comma' },
+  // Dropped: not an exact substring of the field.
+  { field: 'headline', original: 'There back', suggestion: "They're back", reason: 'Wrong word' },
+  // Dropped: changes a number.
+  { field: 'body', index: 1, original: 'threw 99 pitches', suggestion: 'threw 98 pitches', reason: 'Typo' },
+  // Dropped: changes a brand word.
+  { field: 'body', index: 1, original: 'in ES Dugout', suggestion: 'in Es Dugout.', reason: 'Missing period' },
+  // Dropped: identical, and lowercasing the ALL-CAPS button.
+  { field: 'body', index: 0, original: 'free.', suggestion: 'free.', reason: 'Nothing' },
+  { field: 'cta', original: 'SIGN UP', suggestion: 'Sign up', reason: 'Casing' },
+];
+res = await post({ mode: 'grammar', brandId: 'es-dugout', copy: gCopy });
+assert.equal(res.status, 200, JSON.stringify(res.body));
+assert.equal(grammarCalls, 1);
+assert.equal(grammarRequest.model, 'openai/gpt-oss-20b', 'the light tier (cheapest model)');
+assert.deepEqual(grammarRequest.response_format, { type: 'json_object' }, 'strict JSON output');
+assert.match(grammarRequest.messages[0].content, /grammar, spelling and punctuation ONLY/);
+assert.deepEqual(res.body.issues.map(i => i.original), ['Their back', 'the the', 'story , free']);
+assert.equal(res.body.issues[2].index, 0);
+assert.equal(res.body.dropped, 5);
+assert.ok(res.body.cost > 0 && res.body.cost < 0.001, `a grammar check costs well under a tenth of a cent (${res.body.cost})`);
+// Identical request: served from the cache, no AI call, no cost.
+res = await post({ mode: 'grammar', brandId: 'es-dugout', copy: gCopy });
+assert.equal(res.status, 200);
+assert.equal(res.body.cached, true);
+assert.equal(res.body.cost, 0);
+assert.equal(grammarCalls, 1);
+// Direct checks: substring and number drops.
+assert.equal(_test.checkGrammarIssues([{ field: 'headline', original: 'missing', suggestion: 'x', reason: 'r' }], { headline: 'Hello', highlight: '', body: [], cta: '' }).issues.length, 0, 'original must be an exact substring');
+assert.equal(_test.checkGrammarIssues([{ field: 'headline', original: 'won 3 games', suggestion: 'won three games', reason: 'r' }], { headline: 'They won 3 games', highlight: '', body: [], cta: '' }).issues.length, 0, 'a number change is dropped');
+assert.equal(_test.checkGrammarIssues([{ field: 'body', index: 4, original: 'a', suggestion: 'an', reason: 'r' }], { headline: '', highlight: '', body: ['a'], cta: '' }).issues.length, 0, 'a body index out of range is dropped');
+// Clean copy: an empty list.
+grammarReply = [];
+res = await post({ mode: 'grammar', brandId: 'es-dugout', copy: { headline: 'Never miss a move.', body: ['One free email.'], cta: 'SIGN UP ES DUGOUT' } });
+assert.equal(res.status, 200);
+assert.deepEqual(res.body.issues, []);
+// Nothing to check: 400 before any AI call.
+grammarCalls = 0;
+res = await post({ mode: 'grammar', brandId: 'es-dugout', copy: { headline: '  ', body: [] } });
+assert.equal(res.status, 400);
+assert.equal(grammarCalls, 0);
+// Signed out: 401.
+signedIn = false;
+assert.equal((await post({ mode: 'grammar', brandId: 'es-dugout', copy: { headline: 'Fresh copy here' } })).status, 401);
+signedIn = true;
+// Over the hourly limit on a cache miss: 429 before any AI call.
+callsThisHour = 500;
+res = await post({ mode: 'grammar', brandId: 'es-dugout', copy: { headline: 'Another new headline' } });
+assert.equal(res.status, 429);
+assert.equal(grammarCalls, 0);
+callsThisHour = 0;
+// AI off: 503.
+delete process.env.AI_GATEWAY_API_KEY;
+assert.equal((await post({ mode: 'grammar', brandId: 'es-dugout', copy: { headline: 'Yet another headline' } })).status, 503);
+process.env.AI_GATEWAY_API_KEY = 'gw-test';
 
 console.log('Video Ads server tests passed.');

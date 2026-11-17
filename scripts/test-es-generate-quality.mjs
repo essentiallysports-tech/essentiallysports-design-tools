@@ -36,6 +36,7 @@ globalThis.fetch = async (url, options = {}) => {
   if (href.includes('/wp-json/wp/v2/posts')) return reply(200, new URL(href).searchParams.get('tags') ? POSTS : []);
   if (href.includes('/rest/v1/frameup_ai_usage')) return reply(201, {});
   if (href.includes('/rest/v1/rpc/frameup_my_ai_calls_last_hour')) return reply(200, 0);
+  if (href.endsWith('/rest/v1/rpc/frameup_my_ai_spend')) return reply(200, [{ total_usd: 0, by_feature: {}, calls: 0 }]);
   if (href.startsWith('https://ai-gateway.vercel.sh/v1/chat/completions')) {
     // The art director (OpenAI family, not the Claude writer).
     const body = JSON.parse(options.body);

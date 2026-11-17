@@ -329,7 +329,7 @@ html[data-theme="dark"] .es-tabs__ink { background: #54A4FB; }
 }
 textarea.es-input { min-height: 96px; padding: 12px 14px; resize: vertical; line-height: 1.5; }
 .es-input:hover { box-shadow: inset 0 0 0 1.5px var(--es-ink-3); }
-.es-input:focus { box-shadow: inset 0 0 0 1.5px var(--es-brand); }
+.es-input:focus { box-shadow: inset 0 0 0 1.5px var(--es-focus-color), var(--es-focus-halo); }
 
 /* ─── Menus (context menus, dropdowns) ────────────────────────────────── */
 .es-menu {
@@ -1728,3 +1728,170 @@ html.es-shell .home-recent__text { gap: var(--es-space-1) !important; }
 .es-menu hr, .es-menu__sep, .es-menu [role="separator"] { margin: var(--es-space-1, 4px) 0; }
 .es-segmented { gap: var(--es-space-1, 4px); }
 .es-input { box-sizing: border-box; }
+
+/* ── Sidebar footer: scroll fade, AI usage card, account row (2026-11-17) ──
+   1. A 24px fade at the bottom of the scrolling nav, so items slide under the
+      footer instead of being cut off. Hidden once the nav is scrolled to the
+      end (app-shell.js toggles .es-sidebar--at-end).
+   2. "AI usage": this week's personal AI spend against the $20 cap.
+   3. The account trigger reads as one row: avatar, name over email, chevron. */
+.es-sidebar__foot { position: relative; grid-template-columns: minmax(0, 1fr); }
+.es-sidebar__foot > * { min-width: 0; }
+.es-sidebar__foot::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* the foot's 12px top margin + its 1px divider */
+  bottom: calc(100% + var(--es-space-3) + 1px);
+  height: var(--es-space-6);
+  background: linear-gradient(to bottom, transparent, var(--es-sidebar-bg));
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity var(--es-dur, 160ms) var(--es-ease, ease);
+}
+.es-sidebar--at-end .es-sidebar__foot::before { opacity: 0; }
+
+.es-usage { position: relative; margin-bottom: var(--es-space-1); }
+.es-usage[hidden] { display: none; }
+.es-usage__card {
+  box-sizing: border-box;
+  width: 100%;
+  display: grid;
+  gap: var(--es-space-1);
+  margin: 0;
+  padding: var(--es-space-2) var(--es-space-3);
+  border: 1px solid var(--es-line);
+  border-radius: 10px;
+  background: var(--es-bg);
+  color: var(--es-ink);
+  font: var(--es-type-meta-weight, 400) var(--es-type-meta-size, 13px)/16px var(--es-font-ui);
+  text-align: left;
+  appearance: none;
+}
+button.es-usage__card { cursor: pointer; transition: border-color var(--es-dur, 160ms) var(--es-ease, ease), background-color var(--es-dur, 160ms) var(--es-ease, ease); }
+button.es-usage__card:hover,
+button.es-usage__card[aria-expanded="true"] { border-color: #C9CED6; }
+button.es-usage__card:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+.es-usage__row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--es-space-2); }
+.es-usage__label { color: var(--es-ink-2); font-weight: 500; }
+.es-usage__amount { color: var(--es-ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.es-usage__amount strong { color: var(--es-ink); font-weight: 600; }
+.es-usage__bar { display: block; height: 4px; overflow: hidden; border-radius: 999px; background: var(--es-line); }
+.es-usage__fill { display: block; height: 100%; min-width: 2px; border-radius: inherit; background: var(--es-brand-fill, #0a6bd8); transition: width var(--es-dur-step, 240ms) var(--es-ease, ease); }
+.es-usage__reset { color: var(--es-ink-3); font-size: 12px; line-height: 14px; font-variant-numeric: tabular-nums; }
+.es-usage[data-state="warn"] .es-usage__fill { background: #D97706; }
+.es-usage[data-state="warn"] .es-usage__amount strong { color: var(--es-warn, #b45309); }
+.es-usage[data-state="over"] .es-usage__fill { background: var(--es-bad, #c42323); }
+.es-usage[data-state="over"] .es-usage__amount strong,
+.es-usage[data-state="over"] .es-usage__reset { color: var(--es-bad, #c42323); }
+
+.es-usage__pop {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + var(--es-space-2));
+  z-index: 20;
+  box-sizing: border-box;
+  padding: var(--es-space-3);
+  border: 1px solid var(--es-line);
+  border-radius: 12px;
+  background: var(--es-bg);
+  box-shadow: 0 16px 40px rgb(14 16 20 / .12);
+  color: var(--es-ink);
+  font: var(--es-type-meta-weight, 400) var(--es-type-meta-size, 13px)/var(--es-type-meta-line, 1.45) var(--es-font-ui);
+}
+.es-usage__pop[hidden] { display: none; }
+.es-usage__pop p { margin: 0; }
+.es-usage__pop-head { display: flex; justify-content: space-between; gap: var(--es-space-2); padding-bottom: var(--es-space-2); border-bottom: 1px solid var(--es-line); color: var(--es-ink-2); font-weight: 500; }
+.es-usage__pop-head strong { color: var(--es-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.es-usage__list { display: grid; gap: var(--es-space-1); margin: 0; padding: var(--es-space-2) 0; list-style: none; }
+.es-usage__list li { display: flex; justify-content: space-between; gap: var(--es-space-2); color: var(--es-ink-2); }
+.es-usage__list li span:last-child { color: var(--es-ink); font-variant-numeric: tabular-nums; }
+.es-usage__pop-note { color: var(--es-ink-3); font-size: 12px; }
+
+/* Account row */
+.es-sidebar .es-sidebar__account { min-height: 44px; }
+.es-sidebar .profile-menu[data-profile-popover-version="2"] > .profile-trigger,
+.es-sidebar .profile-trigger {
+  width: 100% !important;
+  max-width: none !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  gap: var(--es-space-2) !important;
+  padding: 0 var(--es-space-2) !important;
+  border-radius: 10px !important;
+}
+.es-sidebar .profile-menu[data-profile-popover-version="2"] > .profile-trigger:hover,
+.es-sidebar .profile-menu[data-profile-popover-version="2"] > .profile-trigger:focus-visible,
+.es-sidebar .profile-menu[data-profile-popover-version="2"].is-open > .profile-trigger {
+  /* --es-sunk is the same grey as the sidebar, so the nav hover tint is used */
+  background: var(--es-hover) !important;
+}
+.es-sidebar .profile-menu[data-profile-popover-version="2"] .profile-avatar {
+  width: 28px !important;
+  height: 28px !important;
+  flex: 0 0 28px !important;
+}
+.es-sidebar .profile-menu[data-profile-popover-version="2"] .profile-avatar:not(.has-image)::before { font-size: 13px; }
+.es-sidebar .profile-menu[data-profile-popover-version="2"] .profile-copy { flex: 1 1 auto !important; gap: 1px; }
+.es-sidebar .profile-menu[data-profile-popover-version="2"] .profile-name {
+  max-width: 100% !important;
+  color: var(--es-ink) !important;
+  font-family: "Roboto", var(--es-font-ui) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 18px !important;
+}
+.es-sidebar .profile-menu[data-profile-popover-version="2"] .profile-sub {
+  display: block !important;
+  overflow: hidden;
+  color: var(--es-ink-3);
+  font: 400 12px/16px "Roboto", var(--es-font-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.es-sidebar .profile-menu[data-profile-popover-version="2"] .profile-sub[hidden] { display: none !important; }
+/* Small, quiet chevron: up when closed (the menu opens upward), down when open. */
+.es-sidebar .profile-menu[data-profile-popover-version="2"] .profile-chevron {
+  width: 10px !important;
+  height: 6px !important;
+  flex: 0 0 10px !important;
+  margin-left: auto !important;
+  color: var(--es-ink-3) !important;
+  transform: rotate(180deg) !important;
+}
+.es-sidebar .profile-menu[data-profile-popover-version="2"].is-open .profile-chevron { transform: none !important; }
+
+html[data-theme="dark"] .es-usage__card,
+html[data-theme="dark"] .es-usage__pop { border-color: #2A2D34; background: #1F2126; }
+html[data-theme="dark"] .es-usage__pop { box-shadow: 0 18px 42px rgb(0 0 0 / .4); }
+html[data-theme="dark"] button.es-usage__card:hover,
+html[data-theme="dark"] button.es-usage__card[aria-expanded="true"] { border-color: #3B4049; }
+html[data-theme="dark"] .es-usage__label,
+html[data-theme="dark"] .es-usage__list li { color: #BFC8D9; }
+html[data-theme="dark"] .es-usage__amount,
+html[data-theme="dark"] .es-usage__reset,
+html[data-theme="dark"] .es-usage__pop-note { color: #98A6BF; }
+html[data-theme="dark"] :is(.es-usage__amount strong, .es-usage__pop-head strong, .es-usage__list li span:last-child) { color: #FFFFFF; }
+html[data-theme="dark"] .es-usage__pop-head { border-bottom-color: #2A2D34; color: #BFC8D9; }
+html[data-theme="dark"] .es-usage__bar { background: #2A2D34; }
+html[data-theme="dark"] .es-usage__fill { background: #54A4FB; }
+html[data-theme="dark"] .es-usage[data-state="warn"] .es-usage__fill { background: #F5A524; }
+html[data-theme="dark"] .es-usage[data-state="warn"] .es-usage__amount strong { color: #F5B547; }
+html[data-theme="dark"] .es-usage[data-state="over"] .es-usage__fill { background: #FF6B6B; }
+html[data-theme="dark"] .es-usage[data-state="over"] :is(.es-usage__amount strong, .es-usage__reset) { color: #FF9999; }
+html[data-theme="dark"] .es-sidebar .profile-menu[data-profile-popover-version="2"] .profile-name { color: #FFFFFF !important; }
+html[data-theme="dark"] .es-sidebar .profile-menu[data-profile-popover-version="2"] .profile-sub { color: #98A6BF; }
+html[data-theme="dark"] .es-sidebar .profile-menu[data-profile-popover-version="2"] .profile-chevron { color: #98A6BF !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .es-sidebar__foot::before, button.es-usage__card, .es-usage__fill { transition: none; }
+}
+
+/* No divider above the account area (Suhail): the scroll fade separates it. */
+html .es-sidebar__foot { border-top: 0 !important; }
+
+/* Admin-only links (data-shell-admin) carry the hidden attribute until the
+   role check passes; .es-nav-item's display:flex must not override it. */
+.es-nav-item[hidden], .es-mobile-nav__item[hidden], [data-shell-admin][hidden] { display: none !important; }

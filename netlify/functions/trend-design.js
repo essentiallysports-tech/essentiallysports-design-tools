@@ -13,7 +13,7 @@
 // hitting Google on every visit.
 
 const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
-const { gatewayConfigured, aiText, logBackupCall, userOverHourlyLimit } = require('./_ai-gateway.js');
+const { gatewayConfigured, aiText, logBackupCall, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage } = require('./_ai-gateway.js');
 
 const CACHE_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 6000;
@@ -511,8 +511,12 @@ exports.handler = async event => {
     const title = String(body.title || '').slice(0, 300).trim();
     if (title.length < 3) return json(400, { ok: false, error: 'Missing headline.' }, 'no-store');
     const related = (Array.isArray(body.related) ? body.related : []).map(r => String(r || '').slice(0, 300)).slice(0, 3);
+    // Over the weekly $ limit: 429 like the other AI modes (the page keeps its
+    // free rule-based ideas).
+    const [overWeek, overHour] = await Promise.all([userOverWeeklyLimit(bearerToken(event.headers)), userOverHourlyLimit(bearerToken(event.headers))]);
+    if (overWeek) return json(429, { ok: false, error: weeklyLimitMessage(), reason: 'weekly-limit' }, 'no-store');
     // Over the hourly AI limit: fall back to the free rule-based headlines.
-    if (await userOverHourlyLimit(bearerToken(event.headers))) {
+    if (overHour) {
       return json(200, { ok: true, ai: false, titles: suggestTitles({ title, related: related.map(t => ({ title: t })) }) }, 'no-store');
     }
     try {

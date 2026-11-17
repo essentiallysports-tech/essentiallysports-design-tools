@@ -167,9 +167,21 @@
           </div>`).join('')}
       </nav>
       <div class="es-sidebar__foot">
+        <div class="es-usage" data-shell-usage hidden></div>
         <div class="es-sidebar__account" data-shell-account></div>
       </div>`;
     document.body.prepend(aside);
+
+    // Soft fade above the footer while there is more nav below.
+    const scroller = aside.querySelector('.es-sidebar__scroll');
+    const syncScrollEnd = () => {
+      aside.classList.toggle('es-sidebar--at-end', scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2);
+    };
+    scroller.addEventListener('scroll', syncScrollEnd, { passive: true });
+    window.addEventListener('resize', syncScrollEnd);
+    syncScrollEnd();
+    setTimeout(syncScrollEnd, 2600); // after the admin link may appear
+    startUsage(aside.querySelector('[data-shell-usage]'));
 
     if (isAdmin()) aside.querySelectorAll('[data-shell-admin]').forEach(link => { link.hidden = false; });
 
@@ -185,6 +197,162 @@
     }
     return aside;
   }
+
+  // ─── Personal AI usage (sidebar footer) ────────────────────────────────
+  // The signed-in person's AI spend this week (Monday 00:00 UTC onward), read
+  // with the frameup_my_ai_spend() database function. The server enforces the
+  // same cap (netlify/functions/_ai-gateway.js, AI_USER_WEEKLY_LIMIT_USD).
+  // Until that function exists, or if it errors, the card stays hidden.
+  const AI_WEEKLY_USER_LIMIT_USD = 20;
+  const USAGE_CACHE_KEY = 'frameup.aiUsage.v1';
+  const USAGE_CACHE_MS = 60 * 1000;
+  const USAGE_REFRESH_MS = 5 * 60 * 1000;
+  const USAGE_FEATURES = [
+    [/^generate-scene-image/, 'Scene images'],
+    [/^generate/, 'Generate'],
+    [/^trend/, 'Trends'],
+    [/^video-ads/, 'Video Ads'],
+  ];
+  let usageSlot = null;
+  let usageLoading = false;
+
+  function weekStartUtc(now = new Date()) {
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7));
+    return start;
+  }
+
+  // "Resets Mon" style text, relative so it is right in every time zone
+  // (Monday 00:00 UTC is Sunday evening in the US).
+  function resetText(now = new Date()) {
+    const next = weekStartUtc(now);
+    next.setUTCDate(next.getUTCDate() + 7);
+    const hours = (next - now) / 3600e3;
+    if (hours < 1) return 'in under an hour';
+    if (hours < 24) return `in ${Math.floor(hours)}h`;
+    const days = Math.ceil(hours / 24);
+    return days === 1 ? 'tomorrow' : `in ${days} days`;
+  }
+
+  function featureLabel(key) {
+    const match = USAGE_FEATURES.find(([pattern]) => pattern.test(key));
+    if (match) return match[1];
+    const words = String(key || 'Other').replace(/[-_]+/g, ' ').trim();
+    return words.charAt(0).toUpperCase() + words.slice(1);
+  }
+
+  const money = value => `$${(Math.round(value * 100) / 100).toFixed(2)}`;
+  const escapeText = value => String(value).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+
+  function readUsageCache(since) {
+    try {
+      const cached = JSON.parse(window.sessionStorage.getItem(USAGE_CACHE_KEY) || 'null');
+      if (cached && cached.since === since && Date.now() - cached.at < USAGE_CACHE_MS) return cached;
+    } catch (error) { /* storage blocked */ }
+    return null;
+  }
+
+  function writeUsageCache(since, data) {
+    try { window.sessionStorage.setItem(USAGE_CACHE_KEY, JSON.stringify({ at: Date.now(), since, data })); } catch (error) { /* storage blocked */ }
+  }
+
+  function hideUsage() {
+    if (!usageSlot) return;
+    usageSlot.hidden = true;
+    usageSlot.innerHTML = '';
+  }
+
+  function renderUsage(data) {
+    if (!usageSlot) return;
+    const total = Number(data?.total_usd);
+    if (!data || !Number.isFinite(total)) { hideUsage(); return; }
+    const limit = AI_WEEKLY_USER_LIMIT_USD;
+    const ratio = Math.max(0, total / limit);
+    const state = ratio >= 1 ? 'over' : ratio >= 0.8 ? 'warn' : 'ok';
+    const reset = resetText();
+    const nextReset = weekStartUtc();
+    nextReset.setUTCDate(nextReset.getUTCDate() + 7);
+    const resetTitle = `Resets ${nextReset.toLocaleString(undefined, { weekday: 'long', hour: 'numeric', minute: '2-digit' })} (Monday 00:00 UTC)`;
+    const features = Object.entries(data.by_feature || {})
+      .reduce((sum, [key, usd]) => {
+        const label = featureLabel(key);
+        sum[label] = (sum[label] || 0) + (Number(usd) || 0);
+        return sum;
+      }, {});
+    const rows = Object.entries(features).filter(([, usd]) => usd >= 0.005).sort((a, b) => b[1] - a[1]);
+    const clickable = rows.length > 0;
+    const wasOpen = usageSlot.querySelector('.es-usage__card[aria-expanded="true"]');
+    const tag = clickable ? 'button' : 'div';
+    const percent = Math.min(100, Math.round(ratio * 100));
+    usageSlot.dataset.state = state;
+    usageSlot.innerHTML = `
+      <${tag} class="es-usage__card"${clickable ? ` type="button" aria-expanded="false" aria-controls="es-usage-pop" aria-label="AI usage: ${money(total)} of $${limit} this week. Show breakdown"` : ''} title="${escapeText(resetTitle)}">
+        <span class="es-usage__row">
+          <span class="es-usage__label">AI usage</span>
+          <span class="es-usage__amount"><strong>${money(total)}</strong> of $${limit}</span>
+        </span>
+        <span class="es-usage__bar" role="progressbar" aria-label="AI usage this week" aria-valuemin="0" aria-valuemax="${limit}" aria-valuenow="${Math.min(limit, Math.round(total * 100) / 100)}" aria-valuetext="${money(total)} of $${limit}"><span class="es-usage__fill" style="width:${percent}%"></span></span>
+        <span class="es-usage__reset">${state === 'over' ? `Limit reached · resets ${reset}` : `Resets ${reset}`}</span>
+      </${tag}>
+      ${clickable ? `<div class="es-usage__pop" id="es-usage-pop" role="group" aria-label="AI usage by feature" hidden>
+        <p class="es-usage__pop-head"><span>This week</span><strong>${money(total)}</strong></p>
+        <ul class="es-usage__list">${rows.map(([label, usd]) => `<li><span>${escapeText(label)}</span><span>${money(usd)}</span></li>`).join('')}</ul>
+        <p class="es-usage__pop-note">${data.calls ? `${Number(data.calls)} AI ${Number(data.calls) === 1 ? 'call' : 'calls'} · ` : ''}$${limit} weekly limit</p>
+      </div>` : ''}`;
+    usageSlot.hidden = false;
+    if (clickable && wasOpen) setUsageOpen(true);
+  }
+
+  function setUsageOpen(open) {
+    const card = usageSlot?.querySelector('button.es-usage__card');
+    const pop = usageSlot?.querySelector('.es-usage__pop');
+    if (!card || !pop) return;
+    card.setAttribute('aria-expanded', String(open));
+    pop.hidden = !open;
+  }
+
+  async function loadUsage({ force = false } = {}) {
+    if (!usageSlot || usageLoading) return;
+    const since = weekStartUtc().toISOString();
+    const cached = force ? null : readUsageCache(since);
+    if (cached) { if (cached.data) renderUsage(cached.data); else hideUsage(); return; }
+    let client = null;
+    try { client = window.ESAuth?.getSupabaseClient?.(); } catch (error) { client = null; }
+    if (!client || typeof client.rpc !== 'function') return; // auth not ready yet
+    usageLoading = true;
+    let data = null;
+    try {
+      const result = await client.rpc('frameup_my_ai_spend', { p_since: since });
+      if (!result?.error) data = Array.isArray(result?.data) ? result.data[0] || null : result?.data || null;
+    } catch (error) {
+      data = null; // function missing or offline: keep the card hidden
+    } finally {
+      usageLoading = false;
+    }
+    writeUsageCache(since, data);
+    if (data) renderUsage(data); else hideUsage();
+  }
+
+  function startUsage(slot) {
+    usageSlot = slot;
+    if (!slot) return;
+    slot.addEventListener('click', event => {
+      if (!event.target.closest('button.es-usage__card')) return;
+      setUsageOpen(slot.querySelector('.es-usage__pop')?.hidden !== false);
+    });
+    document.addEventListener('click', event => { if (!slot.contains(event.target)) setUsageOpen(false); });
+    document.addEventListener('keydown', event => {
+      if (event.key !== 'Escape' || slot.querySelector('.es-usage__pop')?.hidden !== false) return;
+      setUsageOpen(false);
+      slot.querySelector('button.es-usage__card')?.focus();
+    });
+    window.addEventListener('es:auth-ready', () => loadUsage());
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadUsage(); });
+    window.addEventListener('focus', () => loadUsage());
+    setInterval(() => { if (document.visibilityState === 'visible') loadUsage({ force: true }); }, USAGE_REFRESH_MS);
+    loadUsage();
+  }
+  window.FrameUpUsage = Object.freeze({ refresh: () => loadUsage({ force: true }), limit: AI_WEEKLY_USER_LIMIT_USD });
 
   // ─── What's new ────────────────────────────────────────────────────────
   // Newest first. `templates` (workspace + dropdown value) get a "New" tag in

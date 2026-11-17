@@ -16,12 +16,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261116-sp1">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-focus1">
   <link rel="stylesheet" href="theme.css?v=20261116-sp1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261115-g3">
+  <link rel="stylesheet" href="site-chrome.css?v=20261117-usage1">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261116-sp1">
-<link rel="stylesheet" href="es-ui.css?v=20261116-sp2">
+  <link rel="stylesheet" href="design-tokens.css?v=20261117-focus1">
+<link rel="stylesheet" href="es-ui.css?v=20261117-adm1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
   <script src="ai-studio.js?v=20261115-ds2" defer></script>
@@ -44,23 +44,24 @@
   </script>
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
-  <script src="site-chrome.js?v=20261111-icons2"></script>
-<script src="app-shell.js?v=20261115-pol7"></script>
+  <script src="site-chrome.js?v=20261117-usage1"></script>
+<script src="app-shell.js?v=20261117-usage1"></script>
+<script src="league-logos.js?v=20261117-logo1"></script>
   <style>
     html:not([data-theme="dark"]) body.gen-body { background: #fff; }
     .gen-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 32px 0 72px; font-family: var(--es-font-ui); color: var(--es-ink); }
     .gen-brief { display: grid; gap: 12px; padding: 20px; border-radius: 16px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
     .gen-brief textarea { box-sizing: border-box; width: 100%; min-height: 96px; resize: vertical; padding: var(--es-space-3, 12px); border: 0; border-radius: 12px; background: var(--es-sunk); color: var(--es-ink); font: var(--es-type-prompt-weight) var(--es-type-prompt-size)/var(--es-type-prompt-line) var(--es-font-ui); box-shadow: inset 0 0 0 1px transparent; transition: box-shadow var(--es-dur) var(--es-ease), background var(--es-dur) var(--es-ease); }
-    .gen-brief textarea:focus { outline: none; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand); }
+    .gen-brief textarea:focus { outline: none; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo); }
     .gen-brief textarea::placeholder { color: var(--es-placeholder, #8a8f98); }
     /* Light: the prompt is a white input with a grey outline (light-site inputs). */
     html:not([data-theme="dark"]) .gen-brief textarea { background: #fff; box-shadow: inset 0 0 0 1px var(--es-line-2, #c8cdd5); }
     html:not([data-theme="dark"]) .gen-brief textarea:hover { box-shadow: inset 0 0 0 1px var(--es-ink-3, #565c67); }
-    html:not([data-theme="dark"]) .gen-brief textarea:focus { box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand); }
+    html:not([data-theme="dark"]) .gen-brief textarea:focus { box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo); }
     html:not([data-theme="dark"]) .gen-brief textarea::placeholder { color: var(--es-ink-3, #565c67); } /* 6.6:1; the site token is 2.6:1 */
     /* Wrapping: balanced headings, no lone last words in short copy. */
-    :is(.gen-empty h2, .trend-title, .trends-group__head h2) { text-wrap: balance; }
-    :is(.gen-empty p, .gen-card__why, .trends-note, .gen-summary) { text-wrap: pretty; }
+    :is(.gen-empty__title, .trend-title, .trends-group__head h2) { text-wrap: balance; }
+    :is(.gen-card__why, .trends-note, .gen-summary) { text-wrap: pretty; }
     .gen-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     .gen-row__label { margin-right: var(--es-space-1, 4px); color: var(--es-ink-3); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
     .gen-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
@@ -75,7 +76,7 @@
     .gen-quick__label { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); margin-right: 0; color: var(--es-ink-3); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
     .gen-quick button { max-width: min(360px, 100%); min-height: 32px; overflow: hidden; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--es-ink-2, #3f4450); font: var(--es-type-chip-weight) var(--es-type-chip-size)/32px var(--es-font-ui); text-align: left; text-overflow: ellipsis; white-space: nowrap; box-shadow: inset 0 0 0 1px var(--es-line-2, var(--es-line)); cursor: pointer; transition: background var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease); }
     .gen-quick button:hover { background: var(--es-sunk); color: var(--es-ink); }
-    .gen-quick button:focus-visible, .gen-thumb:focus-visible { outline: 2px solid var(--es-focus-color, var(--es-ink)); outline-offset: 2px; }
+    .gen-quick button:focus-visible, .gen-thumb:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
 
     /* Progress: three honest steps while the server works. */
     .gen-progress { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px) var(--es-space-3, 12px); margin: var(--es-space-8, 32px) 0 var(--es-space-4, 16px); padding: 0; list-style: none; color: var(--es-ink-3); font-size: var(--es-type-step-size); }
@@ -95,18 +96,72 @@
     .gen-summary strong { color: var(--es-ink); font-weight: 700; }
     .gen-mode { display: inline-flex; flex: 0 0 auto; align-items: center; min-height: 22px; padding: 0 8px; border-radius: 999px; background: var(--es-sunk); color: var(--es-ink-2, #3f4450); font-size: 12px; font-weight: 700; white-space: nowrap; }
     .gen-mode.is-ai { background: var(--ais-grad-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .22); color: var(--ais-soft-text); }
-    .gen-notice { margin: 0 0 16px; }
+    .gen-notice { margin: var(--es-space-6, 24px) 0 var(--es-space-4, 16px); }
     .gen-notice[hidden] { display: none; }
     .gen-notice.is-warn { background: var(--es-warn-soft, #fff4d6); }
 
-    .gen-empty { display: grid; gap: var(--es-space-1, 4px); justify-items: center; margin-top: var(--es-space-8, 32px); padding: var(--es-space-10, 40px) var(--es-space-6, 24px); border-radius: 18px; background: var(--ais-grad-soft), var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); text-align: center; }
+    /* Empty state: live trends to start from (no big empty box). */
+    .gen-empty { display: grid; gap: var(--es-space-3, 12px); margin-top: var(--es-space-8, 32px); }
     .gen-empty[hidden] { display: none; }
-    .gen-empty__mark { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--ais-grad); box-shadow: 0 10px 22px -10px rgb(0 179 230 / .75), inset 0 1px 0 rgb(255 255 255 / .3); color: #fff; }
-    .gen-empty__link { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); min-height: 36px; margin-top: var(--es-space-2, 8px); padding: 0 var(--es-space-3, 12px); border-radius: var(--es-radius-control, 12px); color: var(--ais-soft-text); font-size: 14px; font-weight: 600; text-decoration: none; }
+    .gen-empty__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--es-space-2, 8px); }
+    .gen-empty__title { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); margin: 0; color: var(--es-ink); font: var(--es-type-section-weight, 800) 18px/1.2 var(--es-type-section-family, var(--es-font-display)); letter-spacing: var(--es-type-section-tracking, .005em); text-transform: uppercase; }
+    .gen-empty__link { display: inline-flex; align-items: center; gap: var(--es-space-1, 4px); min-height: 32px; padding: 0 var(--es-space-2, 8px); border-radius: var(--es-radius-control, 12px); color: var(--ais-soft-text); font-size: var(--es-type-meta-size); font-weight: 600; text-decoration: none; }
     .gen-empty__link:hover { background: var(--ais-grad-soft); text-decoration: underline; text-underline-offset: 3px; }
-    .gen-empty__link svg { width: var(--es-icon-sm); height: var(--es-icon-sm); }
-    .gen-empty h2 { margin: var(--es-space-2, 8px) 0 0; font: 800 18px/1.2 var(--es-font-display); color: var(--es-ink); }
-    .gen-empty p { max-width: 520px; margin: 0; color: var(--es-ink-3); font-size: 13px; line-height: 1.45; }
+    .gen-empty__link:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .gen-empty__link svg { width: var(--es-icon-sm, 16px); height: var(--es-icon-sm, 16px); }
+    .gen-live { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--es-space-3, 12px); }
+    .gen-live:empty { display: none; }
+    .gen-empty.is-offline .es-live-dot { display: none; }
+    .gen-trend { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: var(--es-space-3, 12px); min-width: 0; min-height: 64px; padding: var(--es-space-3, 12px); border: 0; border-radius: 14px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); color: var(--es-ink); font: 500 var(--es-type-meta-size)/1.35 var(--es-font-ui); text-align: left; cursor: pointer; transition: box-shadow var(--es-dur, .18s) var(--es-ease, ease), transform var(--es-dur, .18s) var(--es-ease, ease); }
+    .gen-trend:hover { box-shadow: inset 0 0 0 1px var(--es-ink-3); }
+    .gen-trend:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .gen-trend__art { display: grid; place-items: center; width: 40px; height: 40px; overflow: hidden; border-radius: 10px; background: var(--league-bg, #F2F4F7); box-shadow: inset 0 0 0 1px rgb(14 16 20 / .08); }
+    .gen-trend__art img { width: 100%; height: 100%; object-fit: cover; }
+    .gen-trend__art img.is-logo { width: 64%; height: 64%; object-fit: contain; }
+    .gen-trend__text { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+    .gen-trend.is-skeleton { cursor: default; }
+    .gen-trend.is-skeleton .gen-trend__art, .gen-trend.is-skeleton .gen-trend__text { background: var(--es-sunk); box-shadow: none; }
+    .gen-trend.is-skeleton .gen-trend__text { height: 12px; border-radius: 6px; }
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) { .gen-trend:hover { transform: translateY(-1px); } }
+
+    /* Brief: what we found in it (Who · Quote · Stats · List). */
+    .gen-found { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); margin: 0; padding: 0; list-style: none; }
+    .gen-found li { display: inline-flex; align-items: center; gap: var(--es-space-1, 4px); max-width: 100%; min-height: 28px; padding: 0 var(--es-space-3, 12px) 0 var(--es-space-2, 8px); border-radius: 999px; box-shadow: inset 0 0 0 1px var(--es-line-2, #c8cdd5); color: var(--es-ink-3); font: var(--es-type-chip-weight, 500) 12px/1 var(--es-font-ui); white-space: nowrap; transition: background var(--es-dur, .18s) var(--es-ease, ease), color var(--es-dur, .18s) var(--es-ease, ease), box-shadow var(--es-dur, .18s) var(--es-ease, ease); }
+    .gen-found li > span { overflow: hidden; text-overflow: ellipsis; }
+    .gen-found li svg { flex: none; width: 14px; height: 14px; }
+    .gen-found li.is-on { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .3); color: var(--es-brand-text); }
+    .gen-found li b { color: inherit; font-weight: 700; }
+    .gen-found__logo { flex: none; width: 16px; height: 16px; padding: 1px; border-radius: 4px; background: #fff; object-fit: contain; }
+    /* Team pill: the team logo (video-ads-teams.js) on a fixed white circle; a logo that fails to load turns into the team's two-colour dot. */
+    .gen-found__team { display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px var(--es-line, #dfe2e7); overflow: hidden; }
+    .gen-found__team img { display: block; width: 100%; height: 100%; padding: 2px; box-sizing: border-box; object-fit: contain; }
+    .gen-found__team.is-dot { background: transparent; box-shadow: none; }
+    .gen-found__team.is-dot::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%); box-shadow: inset 0 0 0 1px rgb(127 127 127 / .35); }
+
+    /* Format: Auto + the real ES template art as a radiogroup. */
+    .gen-format { display: grid; gap: var(--es-space-2, 8px); min-width: 0; padding-top: var(--es-space-2, 8px); border-top: 1px solid var(--es-line); }
+    .gen-format__list { display: grid; grid-template-columns: repeat(9, minmax(0, 96px)); gap: var(--es-space-2, 8px); min-width: 0; padding: var(--es-space-1, 4px); margin: calc(-1 * var(--es-space-1, 4px)); }
+    .gen-fcard { position: relative; display: grid; grid-template-rows: auto 1fr; align-content: start; gap: var(--es-space-2, 8px); min-width: 0; padding: var(--es-space-1, 4px) var(--es-space-1, 4px) var(--es-space-2, 8px); border: 0; border-radius: 12px; background: transparent; color: var(--es-ink-2, #3f4450); font: 500 12px/1.25 var(--es-font-ui); text-align: center; cursor: pointer; transition: background var(--es-dur, .18s) var(--es-ease, ease), box-shadow var(--es-dur, .18s) var(--es-ease, ease), color var(--es-dur, .18s) var(--es-ease, ease); }
+    .gen-fcard__art { position: relative; display: grid; place-items: center; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 8px; background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); }
+    .gen-fcard__art img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .3s var(--es-ease, ease); }
+    .gen-fcard__art.is-auto { background: var(--ais-grad); color: #fff; box-shadow: inset 0 1px 0 rgb(255 255 255 / .3); }
+    .gen-fcard__art.is-auto svg { width: 40%; height: auto; }
+    .gen-fcard:hover { background: var(--es-sunk); color: var(--es-ink); }
+    .gen-fcard[aria-checked="true"] { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .4); color: var(--es-brand-text, #0A62C7); font-weight: 700; } /* calm selected: soft fill + text colour */
+    .gen-fcard:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    /* Fits what you typed: a small blue dot on the art. */
+    .gen-fcard.is-fit .gen-fcard__art::after { content: ''; position: absolute; top: 6px; left: 6px; width: 10px; height: 10px; border-radius: 50%; background: #0A7DFA; box-shadow: 0 0 0 2px #fff; }
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) { .gen-fcard:hover .gen-fcard__art img { transform: scale(1.04); } }
+    .gen-format__note { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--es-space-1, 4px); min-height: 20px; margin: 0; color: var(--es-ink-3); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); }
+    .gen-format__note strong { color: var(--es-ink); font-weight: 700; }
+    .gen-format__note .is-need { display: inline-flex; align-items: center; gap: var(--es-space-1, 4px); color: var(--es-ink-2, #3f4450); font-weight: 500; }
+    .gen-format__note .is-need svg { width: 14px; height: 14px; color: #B45309; }
+    .gen-format__note .is-fit-key { display: inline-flex; align-items: center; gap: var(--es-space-1, 4px); }
+    .gen-format__note .is-fit-key::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #0A7DFA; }
+    .gen-actions__hint strong { color: var(--es-ink); font-weight: 600; }
+    .gen-quick button { max-width: min(300px, 100%); }
+    .gen-quick__tag { flex: none; margin-right: var(--es-space-2, 8px); color: var(--ais-soft-text); font-weight: 700; }
+    .gen-notice__action { margin-top: var(--es-space-2, 8px); }
 
     .gen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
     .gen-card { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; min-width: 0; overflow: hidden; border-radius: 16px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
@@ -175,16 +230,42 @@
     html[data-theme="dark"] .gen-card { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
     @media (hover: hover) { html[data-theme="dark"] .gen-card.ais-card:hover { box-shadow: inset 0 0 0 1px transparent, var(--ais-glow-strong); } }
     html[data-theme="dark"] :is(.gen-card__media, .gen-card.is-skeleton .gen-card__body span, .gen-mode, .gen-thumb) { background: #2A2D34; }
-    html[data-theme="dark"] .gen-empty { background: var(--ais-grad-soft), #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
+    html[data-theme="dark"] .gen-trend { background: #1F2126; }
+    html[data-theme="dark"] .gen-fcard[aria-checked="true"] { background: rgb(84 164 251 / .14); }
+    html[data-theme="dark"] .gen-trend { box-shadow: inset 0 0 0 1px #3B4049; color: #FFFFFF; }
+    html[data-theme="dark"] .gen-trend:hover { box-shadow: inset 0 0 0 1px #6B7488; }
+    html[data-theme="dark"] .gen-trend.is-skeleton :is(.gen-trend__art, .gen-trend__text) { background: #2A2D34; }
+    html[data-theme="dark"] .gen-format { border-top-color: #2A2D34; }
+    html[data-theme="dark"] .gen-fcard { color: #BFC8D9; }
+    html[data-theme="dark"] .gen-fcard:hover { background: #2A2D34; color: #FFFFFF; }
+    html[data-theme="dark"] .gen-fcard[aria-checked="true"] { box-shadow: inset 0 0 0 1px rgb(84 164 251 / .45); color: #FFFFFF; }
+    html[data-theme="dark"] .gen-fcard__art:not(.is-auto) { background: #2A2D34; box-shadow: inset 0 0 0 1px #3B4049; }
+    html[data-theme="dark"] .gen-fcard.is-fit .gen-fcard__art::after { background: #54A4FB; box-shadow: 0 0 0 2px #1F2126; }
+    html[data-theme="dark"] .gen-format__note .is-fit-key::before { background: #54A4FB; }
+    html[data-theme="dark"] .gen-format__note .is-need { color: #BFC8D9; }
+    html[data-theme="dark"] .gen-format__note .is-need svg { color: #FBBF24; }
+    html[data-theme="dark"] :is(.gen-format__note, .gen-actions__hint) { color: #98A6BF; }
+    html[data-theme="dark"] .gen-found li { box-shadow: inset 0 0 0 1px #3B4049; color: #98A6BF; }
+    html[data-theme="dark"] .gen-found li.is-on { background: rgb(10 125 250 / .2); box-shadow: inset 0 0 0 1px rgb(84 164 251 / .45); color: #9DCBFD; }
     html[data-theme="dark"] .gen-mode { color: #BFC8D9; }
     html[data-theme="dark"] .gen-mode.is-ai { background: var(--ais-grad-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .35); color: var(--ais-soft-text); }
     html[data-theme="dark"] .gen-card__media:not(.is-ready)::before { background: var(--ais-sheen); }
     html[data-theme="dark"] :is(.gen-card__why, .gen-summary, .gen-research a, .gen-progress li.is-done) { color: #BFC8D9; }
-    html[data-theme="dark"] :is(.gen-summary strong, .gen-progress li.is-active, .gen-empty h2) { color: #FFFFFF; }
+    html[data-theme="dark"] :is(.gen-summary strong, .gen-progress li.is-active, .gen-empty__title, .gen-format__note strong, .gen-actions__hint strong) { color: #FFFFFF; }
     html[data-theme="dark"] .gen-thumb[aria-pressed="true"] { box-shadow: 0 0 0 2px #1F2126, 0 0 0 4px #FFFFFF; }
     html[data-theme="dark"] .gen-card__actions .es-icon-btn[aria-expanded="true"] { color: #FFFFFF; box-shadow: inset 0 0 0 1.5px #FFFFFF; }
     html[data-theme="dark"] .gen-notice.is-warn { background: #2a2414; }
     @media (prefers-reduced-motion: reduce) { .gen-card__media::before, .gen-spinner { animation: none !important; } }
+    /* Narrower screens: the format art scrolls sideways inside its row. */
+    @media (max-width: 1180px) {
+      .gen-format__list { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 88px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: thin; }
+      .gen-fcard { scroll-snap-align: start; }
+    }
+    @media (max-width: 900px) {
+      .gen-live { grid-template-columns: minmax(0, 1fr); gap: var(--es-space-2, 8px); }
+      .gen-trend { min-height: 56px; }
+      .gen-format__list { grid-auto-columns: 76px; }
+    }
     @media (max-width: 900px) {
       .gen-page { width: auto; padding: 20px 16px 56px; }
       .gen-brief { padding: var(--es-space-4, 16px); }
@@ -200,8 +281,9 @@
       .gen-thumb { flex-basis: 52px; height: 65px; }
       .gen-progress__time { margin-left: 0; }
       .gen-quick button { min-height: 44px; line-height: 44px; }
+      .gen-brief textarea { min-height: 128px; } /* the two-line example placeholder wraps to four */
+      .gen-found li { min-height: 32px; }
       .gen-refine__team select { font-size: 16px; } /* no iOS zoom on focus */
-      #gen-formats .es-chip { min-height: 44px; }
       .gen-page.ais-studio { padding: 0 0 56px; }
     }
     /* ── AI Studio views: Generate and Trends share this page ──────────── */
@@ -212,9 +294,11 @@
     .gen-page.ais-studio { width: auto; padding: 0 0 72px; }
 
     /* The brief: the usual outlined card, plus a thin luminous gradient ring
-       (.ais-surface) that glows while you type. design-tokens.css sets the
-       card outline with !important, so the glow is restated here. */
-    html body .gen-brief.ais-surface:focus-within { box-shadow: var(--ais-glow-strong), inset 0 0 0 1px transparent !important; }
+       (.ais-surface) that lights up while you type. The field inside already
+       shows focus (blue border + halo), so the card keeps its resting glow
+       instead of a second, stronger one. design-tokens.css sets the card
+       outline with !important, so the glow is restated here. */
+    html body .gen-brief.ais-surface:focus-within { box-shadow: var(--ais-glow), inset 0 0 0 1px transparent !important; }
     .gen-brief.ais-surface::before { background: rgb(132 144 166 / .35); }
     .gen-brief.ais-surface:focus-within::before { background: var(--es-rim-conic, var(--ais-gradient-stroke)); }
 
@@ -241,19 +325,17 @@
     .trends-group__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
     .trends-group__head h2 { display: flex; align-items: center; gap: var(--es-space-2, 8px); margin: 0; color: var(--es-ink); font-size: var(--es-type-section-size-sm); font-weight: var(--es-type-section-weight); line-height: var(--es-type-section-line); letter-spacing: var(--es-type-section-tracking); text-transform: uppercase; }
     .trends-group__head h2 .template-picker__count { color: var(--es-ink-3); font: 400 var(--es-type-count-size)/1 var(--es-font-ui); letter-spacing: 0; }
-    .td-sport-dot { width: 10px; height: 10px; border-radius: 3px; background: var(--sport, #4b4f58); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sport, #4b4f58) 18%, transparent); }
+    /* League marks (league-logos.js): a flat light tile, the same in both
+       themes so official logo colours stay readable. */
+    .td-league { display: inline-grid; flex: none; place-items: center; border-radius: 6px; background: var(--league-bg, #fff); box-shadow: inset 0 0 0 1px var(--es-line); }
+    .td-league img { display: block; width: 70%; height: 70%; object-fit: contain; }
+    .td-league--head { width: 28px; height: 28px; border-radius: 8px; }
+    .td-league--chip { width: 20px; height: 20px; border-radius: 5px; margin-left: -4px; }
     .trends-group__more { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; padding: var(--es-space-2, 8px) var(--es-space-1, 4px); color: var(--es-brand-text); font: inherit; font-size: var(--es-type-chip-size); font-weight: 500; cursor: pointer; }
     .trends-group__more svg { width: var(--es-icon-sm); height: var(--es-icon-sm); }
     .trends-group__more:hover { text-decoration: underline; }
     .trends-group__more:focus-visible { border-radius: 6px; }
     .trends-list { display: grid; gap: 12px; }
-
-    [data-sport="golf"] { --sport: #15803d; --sport-2: #0f5132; }
-    [data-sport="tennis"] { --sport: #c2410c; --sport-2: #7c2d12; }
-    [data-sport="nfl"] { --sport: #1d4ed8; --sport-2: #013369; }
-    [data-sport="cfb"] { --sport: #b45309; --sport-2: #7c2d12; }
-    [data-sport="mlb"] { --sport: #be123c; --sport-2: #7f1d1d; }
-    [data-sport="others"] { --sport: #475569; --sport-2: #1e293b; }
 
     .trend-row { display: grid; grid-template-columns: 128px minmax(0, 1fr) auto; gap: 20px; align-items: start; padding: 16px; border-radius: 18px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line), 0 1px 2px rgb(14 16 20 / .04); }
     @media (hover: hover) { .trend-row.ais-card:hover { transform: translateY(-2px); } }
@@ -261,17 +343,17 @@
     .trend-row.is-search::before { opacity: .7; }
     .trend-row.is-search { box-shadow: 0 10px 30px -22px rgb(10 125 250 / .6); }
 
-    .trend-visual { position: relative; width: 128px; height: 128px; border-radius: 14px; overflow: hidden; background: linear-gradient(145deg, var(--sport, #475569), var(--sport-2, #1e293b)); isolation: isolate; }
+    .trend-visual { position: relative; width: 128px; height: 128px; border-radius: 14px; overflow: hidden; background: var(--es-sunk); isolation: isolate; }
     .trend-visual::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12); pointer-events: none; }
     .trend-visual img.td-photo { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; transition: transform 400ms var(--td-ease); }
     @media (hover: hover) { .trend-row:hover .trend-visual img.td-photo { transform: scale(1.04); } }
     .trend-visual.is-logo { background: #fff; box-shadow: inset 0 0 0 1px var(--es-line); }
     .trend-visual.is-logo img.td-photo { object-fit: contain; padding: 16px; }
-    .td-fallback { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: var(--es-space-2, 8px); color: #fff; }
-    .td-fallback::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(80% 80% at 30% 20%, rgb(255 255 255 / .22), transparent 60%); }
-    .td-fallback__logo { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: #fff; box-shadow: 0 6px 16px -6px rgb(0 0 0 / .45); }
-    .td-fallback__logo img { width: 30px; height: 30px; border-radius: 6px; }
-    .td-fallback__label { font-size: 11px; font-weight: 700; text-transform: uppercase; opacity: .9; }
+    /* No photo: the league logo, centred at 60% on its flat tile colour. */
+    .trend-visual.is-league { background: var(--league-bg, #fff); }
+    .trend-visual.is-league::after { box-shadow: inset 0 0 0 1px var(--es-line); }
+    .td-fallback { position: absolute; inset: 0; display: grid; place-items: center; }
+    .td-fallback img { display: block; width: 60%; height: 60%; object-fit: contain; }
     .td-src-badge { position: absolute; right: 6px; bottom: 6px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: #fff; box-shadow: 0 2px 8px rgb(0 0 0 / .25); }
     .td-src-badge img { width: 16px; height: 16px; border-radius: 4px; }
 
@@ -305,7 +387,7 @@
       .trend-idea:hover svg[viewBox] { opacity: 1; transform: none; }
     }
     .trend-idea:active { transform: scale(.98); }
-    .trend-idea:focus-visible { outline: 2px solid var(--es-focus-color, var(--es-ink)); outline-offset: 2px; }
+    .trend-idea:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
     .trend-idea:focus-visible svg[viewBox] { opacity: 1; transform: none; }
     .trend-idea.is-skeleton, .td-sk { color: transparent; box-shadow: none; pointer-events: none; }
     .trend-ideas__empty { color: var(--es-ink-3); font-size: 13px; }
@@ -340,10 +422,7 @@
       .trends-filters .es-chip { min-height: var(--es-tap); }
       .trend-row { grid-template-columns: 64px minmax(0, 1fr); gap: var(--es-space-3, 12px); padding: var(--es-space-4, 16px); }
       .trend-visual { width: 64px; height: 64px; border-radius: 12px; }
-      .td-fallback { gap: 0; }
-      .td-fallback__logo { width: 34px; height: 34px; border-radius: 10px; }
-      .td-fallback__logo img { width: 20px; height: 20px; }
-      .td-fallback__label, .td-src-badge { display: none; }
+      .td-src-badge { display: none; }
       .trend-visual.is-logo img.td-photo { padding: 8px; }
       .trend-title { font-size: 16px; -webkit-line-clamp: 3; }
       .trend-ideas, .trend-actions { grid-column: 1 / -1; }
@@ -414,12 +493,16 @@
     <section class="ais-wrap ais-work" id="ais-view-generate" data-ais-panel="generate" aria-labelledby="ais-title">
       <form class="gen-brief ais-surface" id="gen-form" novalidate>
         <label class="gen-sr" for="gen-brief">Brief</label>
-        <textarea id="gen-brief" maxlength="1500" aria-describedby="gen-brief-hint" placeholder="A quote, a stat line or a headline…"></textarea>
-        <div class="gen-row" id="gen-formats" role="group" aria-label="Formats">
-          <span class="gen-row__label">Formats</span>
+        <textarea id="gen-brief" maxlength="1500" aria-describedby="gen-brief-hint gen-found" placeholder="Who, what happened, and a quote or stats&#10;e.g. Caitlin Clark scores 30 PTS 9 AST against the Sky"></textarea>
+        <ul class="gen-found" id="gen-found" aria-label="Found in your brief" aria-live="polite"></ul>
+        <div class="gen-format">
+          <span class="gen-row__label" id="gen-format-label">Format</span>
+          <div class="gen-format__list" id="gen-formats" role="radiogroup" aria-labelledby="gen-format-label" aria-describedby="gen-format-note"></div>
+          <p class="gen-format__note" id="gen-format-note" aria-live="polite"></p>
         </div>
         <div class="gen-actions">
           <span class="gen-sr" id="gen-brief-hint">Your own words are kept as written; facts come only from ES coverage. Check every post before you publish.</span>
+          <span class="gen-actions__hint" id="gen-expect"><strong>Up to 4 designs</strong> · edit any in the editor</span>
           <div class="gen-actions__buttons">
             <button class="es-btn" type="button" id="gen-trending" hidden>Suggest topics</button>
             <button class="es-btn es-btn--primary es-btn--lg ais-btn" type="submit" id="gen-submit"><span id="gen-submit-label">Generate</span><kbd class="gen-kbd" id="gen-kbd" aria-hidden="true">Ctrl ↵</kbd></button>
@@ -430,11 +513,13 @@
     <ol class="gen-progress es-steps" id="gen-progress" aria-label="Progress" aria-live="polite" hidden></ol>
     <p class="gen-summary" id="gen-summary" role="status" aria-live="polite" hidden></p>
     <div class="es-callout gen-notice" id="gen-notice" role="alert" hidden></div>
-    <div class="gen-empty" id="gen-empty" data-ais-reveal>
-      <span class="gen-empty__mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg></span>
-      <h2>Your designs appear here</h2>
-      <a class="gen-empty__link" href="generate.html?view=trends">Start from a live trend<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
-    </div>
+    <section class="gen-empty" id="gen-empty" aria-labelledby="gen-live-title" data-ais-reveal>
+      <div class="gen-empty__head">
+        <h2 class="gen-empty__title" id="gen-live-title"><span class="es-live-dot" aria-hidden="true"></span>Start from a live trend</h2>
+        <a class="gen-empty__link" href="generate.html?view=trends">All trends<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+      </div>
+      <div class="gen-live" id="gen-live" aria-busy="true"></div>
+    </section>
     <div class="gen-grid" id="gen-grid"></div>
     <details class="gen-research" id="gen-research" data-ais-reveal hidden>
       <summary>Based on these ES stories</summary>
@@ -511,6 +596,15 @@
       const labelOf = id => data?.categories.find(c => c.id === id)?.label || id;
       const byId = id => data?.items.find(item => item.id === id);
       const favicon = domain => domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64` : '';
+      // League marks (league-logos.js): a flat tile with the logo, never the
+      // league name as text. The name is the tile's aria-label.
+      const league = id => window.LeagueLogos?.logoFor(id) || { id: 'sports', label: SHORT[id] || 'Sports', src: 'assets/league-logos/sports.svg', bg: '#F2F4F7' };
+      const leagueName = id => SHORT[id] || league(id).label;
+      const leagueImg = id => `<img src="${esc(league(id).src)}" alt="" decoding="async">`;
+      const leagueTile = (id, cls) => `<span class="td-league ${cls}" style="--league-bg:${esc(league(id).bg)}" aria-hidden="true">${leagueImg(id)}</span>`;
+      const leagueVisual = id => `<div class="trend-visual is-league" data-sport="${esc(id)}" role="img" aria-label="${esc(leagueName(id))}" style="--league-bg:${esc(league(id).bg)}"><span class="td-fallback">${leagueImg(id)}</span></div>`;
+      // A story photo that fails to load falls back to the league tile.
+      window.AIStudioTrendPhotoError = img => { const visual = img.closest('.trend-visual'); if (visual) visual.outerHTML = leagueVisual(visual.dataset.sport); };
       const iconImg = (domain, size) => domain ? `<img src="${esc(favicon(domain))}" alt="" width="${size}" height="${size}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
 
       function briefFor(item, headline) {
@@ -534,12 +628,11 @@
       }
 
       function visualHtml(item) {
-        const sport = SHORT[item.category] || 'Sports';
         if (item.image) {
           const badge = item.sourceDomain ? `<span class="td-src-badge" title="${esc(item.source)}">${iconImg(item.sourceDomain, 16)}</span>` : '';
-          return `<div class="trend-visual${item.imageKind === 'logo' ? ' is-logo' : ''}" data-sport="${esc(item.category)}"><img class="td-photo" src="${esc(item.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" ${item.imageCredit ? `title="${esc(item.imageCredit)}"` : ''} onerror="this.closest('.trend-visual').classList.remove('is-logo');this.remove()">${badge}</div>`;
+          return `<div class="trend-visual${item.imageKind === 'logo' ? ' is-logo' : ''}" data-sport="${esc(item.category)}"><img class="td-photo" src="${esc(item.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" ${item.imageCredit ? `title="${esc(item.imageCredit)}"` : ''} onerror="window.AIStudioTrendPhotoError?.(this)">${badge}</div>`;
         }
-        return `<div class="trend-visual" data-sport="${esc(item.category)}"><span class="td-fallback"><span class="td-fallback__logo">${iconImg(item.sourceDomain, 30)}</span><span class="td-fallback__label">${esc(sport)}</span></span></div>`;
+        return leagueVisual(item.category);
       }
 
       function row(item, index) {
@@ -575,7 +668,7 @@
         const chips = [{ id: 'all', label: 'All', count: total }, ...(data?.categories || [])];
         // The chips are rebuilt (counts change on refresh): keep keyboard focus.
         const hadFocus = els.filters.contains(document.activeElement);
-        els.filters.innerHTML = chips.map(c => `<button type="button" class="es-chip" data-sport="${esc(c.id)}" aria-pressed="${c.id === active}"><span>${esc(c.label)}</span><span class="template-filter__count">${c.count}</span></button>`).join('');
+        els.filters.innerHTML = chips.map(c => `<button type="button" class="es-chip" data-sport="${esc(c.id)}" aria-pressed="${c.id === active}">${c.id === 'all' ? '' : leagueTile(c.id, 'td-league--chip')}<span>${esc(c.label)}</span><span class="template-filter__count">${c.count}</span></button>`).join('');
         if (hadFocus) focusActiveChip();
       }
 
@@ -594,7 +687,7 @@
         const listClass = `trends-list${entered ? '' : ' is-entering'}`;
         if (active === 'all') {
           els.body.innerHTML = data.categories.filter(c => c.count).map(c => `<section class="trends-group" data-sport="${esc(c.id)}"${entered ? '' : ' data-ais-reveal'} aria-labelledby="tg-${esc(c.id)}">
-            <div class="trends-group__head"><h2 id="tg-${esc(c.id)}"><span class="td-sport-dot" aria-hidden="true"></span>${esc(c.label)} <span class="template-picker__count">${c.count}</span></h2>${c.count > PER_GROUP ? `<button class="trends-group__more" type="button" data-sport="${esc(c.id)}">See all ${c.count}${ICON.chevron}</button>` : ''}</div>
+            <div class="trends-group__head"><h2 id="tg-${esc(c.id)}">${leagueTile(c.id, 'td-league--head')}${esc(c.label)} <span class="template-picker__count">${c.count}</span></h2>${c.count > PER_GROUP ? `<button class="trends-group__more" type="button" data-sport="${esc(c.id)}">See all ${c.count}${ICON.chevron}</button>` : ''}</div>
             <div class="${listClass}">${byCat(c.id).slice(0, PER_GROUP).map((item, i) => row(item, i)).join('')}</div>
           </section>`).join('');
           els.empty.hidden = data.items.length > 0;
@@ -781,16 +874,27 @@
     // template checks + ES photo) → each design rendered by the real editor in
     // a hidden frame (frameup-spec.js). Scene images are made only on a click.
     (() => {
+      // [type, name, what it makes, what it needs from the brief (shown when missing)].
+      // Art: the real ES templates (assets/template-thumbs). 'auto' sends no
+      // formats, so the server lets the AI pick (es-generate.js buildPrompt).
       const FORMATS = [
-        ['cover', 'Cover'], ['quote', 'Quote'], ['long-quote', 'Long Quote'], ['double-entity-quote', 'Two-Person Quote'],
-        ['stats-single-ent', 'Player Stats'], ['stats-double-ent', 'Head-to-Head'],
-        ['listicle-type-1', 'Rankings Table'], ['listicle-type-2', 'Ranked List'],
+        ['auto', 'Auto', 'AI picks the best mix for your brief', ''],
+        ['cover', 'Cover', 'Bold headline over a photo', ''],
+        ['quote', 'Quote', 'A short, punchy quote over a photo', 'Works best with a quote in your brief'],
+        ['long-quote', 'Long Quote', 'A full one or two sentence quote', 'Works best with a quote in your brief'],
+        ['double-entity-quote', 'Two-Person Quote', 'Two people quoted side by side', 'Needs quotes from two people'],
+        ['stats-single-ent', 'Player Stats', 'One player, three big numbers', 'Needs game numbers (PTS, YDS, HR…)'],
+        ['stats-double-ent', 'Head-to-Head', 'Two players, four stats each', 'Needs numbers for two players'],
+        ['listicle-type-1', 'Rankings Table', 'A top-N table with two number columns', 'Paste a ranked list, one row per line'],
+        ['listicle-type-2', 'Ranked List', 'A top-N list of names', 'Paste a ranked list, one row per line'],
       ];
       const PHOTO_TYPES = new Set(['cover', 'quote', 'long-quote', 'stats-single-ent']);
+      // Starter prompts, each tagged with what it makes.
       const EXAMPLES = [
-        'Patrick Mahomes after the Chiefs win: "We are not done yet." 320 YDS, 3 TD, 1 INT',
-        'Caitlin Clark scores 30 PTS 9 AST 6 REB against the Sky',
-        'Make a post about the Lakers losing streak',
+        ['Quote + stats', 'Patrick Mahomes after the Chiefs win: "We are not done yet." 320 YDS, 3 TD, 1 INT'],
+        ['Player stats', 'Caitlin Clark scores 30 PTS 9 AST 6 REB against the Sky'],
+        ['Ranked list', 'Top 5 QBs right now\n1. Patrick Mahomes\n2. Josh Allen\n3. Lamar Jackson\n4. Joe Burrow\n5. Jalen Hurts'],
+        ['Cover hooks', 'Make a post about the Lakers losing streak'],
       ];
       const RECENT_KEY = 'frameup.generate.recent.v1';
       const svg = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
@@ -806,15 +910,17 @@
         check: svg('<path d="M20 6 9 17l-5-5"/>'),
         wand: svg('<path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/>'),
         alert: svg('<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>'),
+        dashed: svg('<path d="M10.1 2.182a10 10 0 0 1 3.8 0"/><path d="M13.9 21.818a10 10 0 0 1-3.8 0"/><path d="M17.609 3.721a10 10 0 0 1 2.69 2.7"/><path d="M2.182 13.9a10 10 0 0 1 0-3.8"/><path d="M20.279 17.609a10 10 0 0 1-2.7 2.69"/><path d="M21.818 10.1a10 10 0 0 1 0 3.8"/><path d="M3.721 6.391a10 10 0 0 1 2.7-2.69"/><path d="M6.391 20.279a10 10 0 0 1-2.69-2.7"/>'),
       };
       const $ = id => document.getElementById(id);
       const els = {
         form: $('gen-form'), brief: $('gen-brief'), formats: $('gen-formats'), submit: $('gen-submit'), submitLabel: $('gen-submit-label'),
         kbd: $('gen-kbd'), trending: $('gen-trending'), quick: $('gen-quick'), progress: $('gen-progress'), summary: $('gen-summary'),
         notice: $('gen-notice'), empty: $('gen-empty'), grid: $('gen-grid'), research: $('gen-research'), researchList: $('gen-research-list'),
+        found: $('gen-found'), formatNote: $('gen-format-note'), live: $('gen-live'),
       };
       if (/Mac|iPhone|iPad/.test(navigator.platform || '')) els.kbd.textContent = '⌘ ↵';
-      const picked = new Set();
+      let chosen = 'auto'; // the selected format card ('auto' = the AI picks)
       let busy = false;
       let lastBrief = '';
       const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -866,18 +972,26 @@
         renderQuick();
       }
 
+      // A list item is a brief, or [tag, brief] where the tag says what it makes.
       function quickGroup(label, icon, list) {
         const group = document.createElement('div');
         group.className = 'gen-quick__group';
         group.setAttribute('role', 'group');
         group.setAttribute('aria-label', label);
         group.innerHTML = `<span class="gen-quick__label">${icon}${esc(label)}</span>`;
-        list.forEach(text => {
+        list.forEach(item => {
+          const [tag, text] = Array.isArray(item) ? item : ['', item];
           const button = document.createElement('button');
           button.type = 'button';
-          button.textContent = text.replace(/\s*\n\s*/g, ' · ');
+          if (tag) {
+            const tagEl = document.createElement('span');
+            tagEl.className = 'gen-quick__tag';
+            tagEl.textContent = tag;
+            button.append(tagEl);
+          }
+          button.append(document.createTextNode(text.replace(/\s*\n\s*/g, ' · ')));
           button.title = text;
-          button.addEventListener('click', () => { els.brief.value = text; els.brief.focus(); });
+          button.addEventListener('click', () => setBrief(text));
           group.appendChild(button);
         });
         return group;
@@ -888,12 +1002,24 @@
         const groups = [];
         if (topics?.length) groups.push(quickGroup('Trending', ICON.sparkles, topics));
         if (recent.length) groups.push(quickGroup('Recent', ICON.history, recent.slice(0, 3)));
-        groups.push(quickGroup('Starter prompts', ICON.lightbulb, EXAMPLES.filter(text => !recent.includes(text)).slice(0, recent.length ? 2 : 3)));
+        const starters = EXAMPLES.filter(([, text]) => !recent.includes(text));
+        if (starters.length) groups.push(quickGroup('Try', ICON.lightbulb, starters));
         els.quick.replaceChildren(...groups);
       }
 
+      // Fill the brief (a starter, a trend), update the hints and place the
+      // caret at the end so typing continues the brief.
+      function setBrief(text) {
+        els.brief.value = text;
+        analyzeBrief();
+        els.brief.focus({ preventScroll: true });
+        els.brief.setSelectionRange(text.length, text.length);
+        if (els.form.getBoundingClientRect().top < 0) els.form.scrollIntoView({ block: 'start', behavior: reducedMotion.matches ? 'auto' : 'smooth' });
+      }
+
       // ── Status, progress and notices ──────────────────────────────────────
-      function setNotice(title, body = '', tone = '') {
+      // action: { label, run } adds the one-click next step (Try again, Use Auto).
+      function setNotice(title, body = '', tone = '', action = null) {
         els.notice.hidden = !title;
         els.notice.className = `es-callout gen-notice${tone ? ` is-${tone}` : ''}`;
         els.notice.innerHTML = '';
@@ -902,6 +1028,17 @@
         const strong = document.createElement('strong');
         strong.textContent = title;
         wrap.append(strong, document.createTextNode(body));
+        if (action) {
+          const row = document.createElement('div');
+          row.className = 'gen-notice__action';
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'es-btn es-btn--sm';
+          button.textContent = action.label;
+          button.addEventListener('click', action.run, { once: true });
+          row.append(button);
+          wrap.append(row);
+        }
         els.notice.insertAdjacentHTML('afterbegin', ICON.alert);
         els.notice.appendChild(wrap);
       }
@@ -1138,12 +1275,17 @@
         const progress = startProgress();
         renderer().catch(() => {});
         try {
-          const data = await callApi('/api/es-generate', { brief, formats: [...picked], count: 4 });
+          const data = await callApi('/api/es-generate', { brief, formats: chosen === 'auto' ? [] : [chosen], count: 4 });
           if (!data.designs?.length) {
             els.grid.replaceChildren();
             progress.stop();
             els.empty.hidden = false;
-            setNotice('No designs this time', ' Add who it is about and the key facts (numbers, a quote), or pick a different format.');
+            if (chosen !== 'auto') {
+              const name = FORMATS.find(([type]) => type === chosen)?.[1] || 'This format';
+              setNotice('No designs this time', ` ${name} didn't fit this brief. Let the AI pick a format, or add the key facts (numbers, a quote).`, '', { label: 'Use Auto and retry', run: () => { selectFormat('auto'); generate(); } });
+            } else {
+              setNotice('No designs this time', ' Add who it is about and the key facts (numbers, a quote), then try again.');
+            }
             return;
           }
           progress.designing();
@@ -1160,7 +1302,7 @@
           progress.stop();
           els.grid.replaceChildren();
           els.empty.hidden = false;
-          setNotice('Could not generate', ` ${error.message || 'Something went wrong.'} Your brief is still here; try again.`);
+          setNotice('Could not generate', ` ${error.message || 'Something went wrong.'} Your brief is still here.`, '', { label: 'Try again', run: () => generate() });
         } finally {
           els.grid.removeAttribute('aria-busy');
           setBusy(false);
@@ -1352,18 +1494,278 @@
         }
       });
 
-      FORMATS.forEach(([type, label]) => {
-        const chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = 'es-chip';
-        chip.textContent = label;
-        chip.setAttribute('aria-pressed', 'false');
-        chip.addEventListener('click', () => {
-          if (picked.has(type)) picked.delete(type); else picked.add(type);
-          chip.setAttribute('aria-pressed', String(picked.has(type)));
-        });
-        els.formats.appendChild(chip);
+      // ── Format cards: Auto + the real ES templates, one radiogroup ────────
+      // Arrow keys move and select (radio pattern); one card is in the tab order.
+      const formatCards = FORMATS.map(([type, label]) => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'gen-fcard';
+        card.dataset.type = type;
+        card.setAttribute('role', 'radio');
+        const art = type === 'auto'
+          ? `<span class="gen-fcard__art is-auto" aria-hidden="true">${ICON.sparkles}</span>`
+          : `<span class="gen-fcard__art" aria-hidden="true"><img src="assets/template-thumbs/instagram-${type}.webp" width="360" height="450" alt="" loading="lazy" decoding="async"></span>`;
+        card.innerHTML = `${art}<span class="gen-fcard__name">${esc(label)}</span>`;
+        card.addEventListener('click', () => selectFormat(type));
+        card.addEventListener('pointerenter', () => renderFormatNote(type));
+        card.addEventListener('pointerleave', () => renderFormatNote());
+        return card;
       });
+      els.formats.append(...formatCards);
+      function selectFormat(type, { focus = false } = {}) {
+        chosen = FORMATS.some(([id]) => id === type) ? type : 'auto';
+        formatCards.forEach(card => {
+          const on = card.dataset.type === chosen;
+          card.setAttribute('aria-checked', String(on));
+          card.tabIndex = on ? 0 : -1;
+          if (on && focus) card.focus();
+        });
+        renderFormatNote();
+      }
+      els.formats.addEventListener('keydown', event => {
+        const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+        const index = formatCards.findIndex(card => card.dataset.type === chosen);
+        let next = -1;
+        if (event.key in keys) next = (index + keys[event.key] + formatCards.length) % formatCards.length;
+        else if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = formatCards.length - 1;
+        if (next < 0) return;
+        event.preventDefault();
+        selectFormat(formatCards[next].dataset.type, { focus: true });
+      });
+
+      // ── Brief hints: what we found (who, team, quote, stats, list) ────────
+      // Cheap client-side guesses only; the server does the real research.
+      const STAT_RE = /\b\d+(?:\.\d+)?%?\s*(?:PTS|POINTS|REB|REBS|REBOUNDS|AST|ASTS|ASSISTS|STL|BLK|TOV|3PM|YDS|YARDS|TDS?|TOUCHDOWNS|INTS?|REC|CAR|SACKS?|TKLS?|HR|HRS|RBI|RBIS|AVG|ERA|SO|HITS|SB|GOALS|SAVES|ACES|BIRDIES)\b/gi;
+      const NFL_HINT = /\b(?:YDS|YARDS|TDS?|TOUCHDOWNS|INTS?|SACKS?|NFL)\b/i;
+      const MLB_HINT = /\b(?:HRS?|RBIS?|ERA|MLB)\b/i;
+      const HOOP_HINT = /\b(?:PTS|REB|AST|NBA|WNBA)\b/i;
+      const NOT_NAME = new Set(['The', 'A', 'An', 'After', 'Before', 'Make', 'Post', 'Headline', 'Story', 'Context', 'Sport', 'Top', 'Most', 'Best', 'Worst', 'All', 'Time', 'This', 'That', 'Why', 'How', 'What', 'Who', 'When', 'Does', 'Is', 'Are', 'Game', 'Week', 'Season', 'Super', 'Bowl', 'World', 'Series', 'Finals']);
+      let teams = null;
+      let brandKitLoading = false;
+      // brand-kit.js (83 KB) loads on the first keystroke, not with the page.
+      function loadTeams() {
+        if (teams || brandKitLoading) return;
+        const build = () => {
+          const kit = Array.isArray(window.ES_BRAND_KIT) ? window.ES_BRAND_KIT : [];
+          const byNick = new Map();
+          // The kit's names are hand-typed (CHIEFS, red sox, SEAHWAKS): tidy them.
+          const FIX = { Seahwaks: 'Seahawks', Bengal: 'Bengals', 'MLB|Rockets': 'Rockies' };
+          const title = text => text.toLowerCase().replace(/(^|[\s-])([a-z])/g, (m, a, b) => a + b.toUpperCase());
+          teams = kit.filter(entry => ['NFL', 'NBA', 'WNBA', 'MLB'].includes(entry.sport) && entry.team).map(entry => {
+            let team = title(entry.team.trim());
+            team = FIX[`${entry.sport}|${team}`] || FIX[team] || team;
+            const words = team.split(/\s+/);
+            const nick = /^(Sox|Jays|Blazers)$/.test(words.at(-1)) ? words.slice(-2).join(' ') : words.at(-1);
+            byNick.set(nick, [...(byNick.get(nick) || []), entry.sport]);
+            // Everyday words (Dream duo, Heat check) count only as "the Dream" or the full name.
+            const loose = entry.sport === 'WNBA' || /^(Heat|Magic|Jazz|Thunder|Suns|Kings|Nets)$/.test(nick);
+            return { team, sport: entry.sport, nick, loose };
+          });
+          teams.forEach(entry => { entry.shared = byNick.get(entry.nick).length > 1; });
+          analyzeBrief();
+        };
+        if (window.ES_BRAND_KIT) { build(); return; }
+        brandKitLoading = true;
+        const script = document.createElement('script');
+        script.src = 'brand-kit.js?v=20261111-tennis1';
+        script.async = true;
+        script.onload = build;
+        script.onerror = () => { teams = []; };
+        document.head.appendChild(script);
+      }
+      const wordRe = (text, prefix = '') => new RegExp(`(^|[^A-Za-z])${prefix}${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z])`);
+      function findTeam(text) {
+        if (!teams?.length) return null;
+        const lower = text.toLowerCase();
+        const full = teams.find(entry => entry.team.includes(' ') && lower.includes(entry.team.toLowerCase()));
+        if (full) return full;
+        // The team named first in the brief wins.
+        const at = entry => text.search(wordRe(entry.nick, entry.loose ? '[Tt]he ' : ''));
+        const hits = teams.filter(entry => at(entry) >= 0);
+        if (!hits.length) return null;
+        const first = Math.min(...hits.map(at));
+        hits.splice(0, hits.length, ...hits.filter(entry => at(entry) === first));
+        if (hits.length === 1) return hits[0];
+        // Same nickname in two leagues (Giants, Cardinals…): the stat words decide.
+        const hint = NFL_HINT.test(text) ? 'NFL' : MLB_HINT.test(text) ? 'MLB' : HOOP_HINT.test(text) ? 'NBA' : '';
+        return hits.find(entry => entry.sport === hint) || { ...hits[0], sport: '', team: hits[0].nick };
+      }
+      function findName(text, team) {
+        // Capitalised words with at least one lower-case letter (LeBron, A'ja; not PTS).
+        const word = "[A-Z](?=[A-Za-z'’.-]*[a-z])[A-Za-z'’.-]+";
+        const re = new RegExp(`\\b(${word}(?:\\s+${word}){1,2})\\b`, 'g');
+        for (const match of text.matchAll(re)) {
+          const words = match[1].split(/\s+/);
+          while (words.length && NOT_NAME.has(words[0])) words.shift();
+          while (words.length && NOT_NAME.has(words.at(-1))) words.pop();
+          if (words.length < 2) continue;
+          const name = words.join(' ');
+          if (teams?.some(entry => name.endsWith(entry.nick) || entry.team === name)) continue;
+          return name;
+        }
+        return '';
+      }
+      function readBrief(text) {
+        const quotes = [...text.matchAll(/["“]([^"”]{3,})["”]/g)].map(match => match[1].trim());
+        const stats = (text.match(STAT_RE) || []).length;
+        const rows = text.split('\n').filter(line => /^\s*#?\d{1,2}\s*[.):-]?\s+\S/.test(line));
+        const list = rows.length >= 3 ? rows.length : 0;
+        const table = list && rows.filter(line => (line.replace(/^\s*#?\d{1,2}/, '').match(/\d+(?:[.,-]\d+)?/g) || []).length >= 2).length >= Math.ceil(list / 2);
+        const team = findTeam(text);
+        const name = findName(text, team);
+        const versus = /\b(?:vs\.?|versus|head[- ]to[- ]head|compared?)\b/i.test(text);
+        return { text, quotes, stats, list, table, team, name, versus };
+      }
+      function fitsFor(found) {
+        const fits = new Set();
+        if (found.text.length < 3) return fits;
+        if (found.list) {
+          fits.add(found.table ? 'listicle-type-1' : 'listicle-type-2');
+          return fits;
+        }
+        fits.add('cover');
+        if (found.quotes.length >= 2) fits.add('double-entity-quote');
+        if (found.quotes.length) fits.add(found.quotes[0].length <= 48 ? 'quote' : 'long-quote');
+        if (found.stats) fits.add(found.versus ? 'stats-double-ent' : 'stats-single-ent');
+        return fits;
+      }
+      let briefFound = readBrief('');
+      function pill(on, label, value = '', logo = '') {
+        return `<li class="${on ? 'is-on' : ''}">${on ? ICON.check : ICON.dashed}${logo}<span>${on && value ? `<b>${esc(value)}</b>` : esc(label)}</span><span class="es-sr-only">${on ? ' found' : ' not found yet'}</span></li>`;
+      }
+      // Team pill logo: the team's logo from video-ads-teams.js (NFL, MLB, CFB),
+      // loaded once, with the brief hints, and only if the page lacks it.
+      let teamLogosLoading = false;
+      function loadTeamLogos() {
+        if (window.VideoAdsTeams || teamLogosLoading) return;
+        teamLogosLoading = true;
+        const script = document.createElement('script');
+        script.src = 'video-ads-teams.js?v=20261117-tlogo1';
+        script.async = true;
+        script.onload = () => { if (briefFound.team) analyzeBrief(); };
+        document.head.appendChild(script);
+      }
+      function teamLogoMark(team) {
+        const data = window.VideoAdsTeams;
+        if (!team?.team || typeof data?.findTeam !== 'function') return '';
+        const sport = String(team.sport || '').toLowerCase();
+        let match = null;
+        try {
+          if (sport === 'nfl' || sport === 'mlb') match = data.findTeam(team.team, sport) || data.findTeam(team.nick, sport);
+          else if (!sport) {
+            // League unknown (Giants, Cardinals…): only a name no other team shares.
+            const key = team.team.toLowerCase();
+            const hits = (data.TEAMS || []).filter(entry => entry.name.toLowerCase() === key || entry.short.toLowerCase() === key);
+            match = hits.length === 1 ? hits[0] : null;
+          }
+        } catch (error) { match = null; }
+        const src = typeof data.logoFor === 'function' ? data.logoFor(match) : '';
+        if (!/^https:\/\//.test(src)) return '';
+        const [a, b] = Array.isArray(match.colors) ? match.colors : [];
+        return `<span class="gen-found__team" style="--a:${esc(a || '#8490A6')};--b:${esc(b || a || '#8490A6')}" aria-hidden="true"><img src="${esc(src)}" alt="" width="20" height="20" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-team-logo></span>`;
+      }
+      // error doesn't bubble: catch it in the capture phase, show the dot instead.
+      els.found.addEventListener('error', event => {
+        const img = event.target;
+        if (!(img instanceof HTMLImageElement) || !img.hasAttribute('data-team-logo')) return;
+        img.parentElement?.classList.add('is-dot');
+        img.remove();
+      }, true);
+      function analyzeBrief() {
+        const text = els.brief.value.trim();
+        if (text && !teams) loadTeams();
+        if (text) loadTeamLogos();
+        briefFound = readBrief(text);
+        const { quotes, stats, list, team, name } = briefFound;
+        const who = name || team?.team || '';
+        const leagueId = team?.sport && window.LeagueLogos?.idFor?.(team.sport);
+        const logo = leagueId ? `<img class="gen-found__logo" src="${esc(window.LeagueLogos.logoFor(leagueId).src)}" alt="${esc(team.sport)}" width="16" height="16">` : '';
+        const items = [];
+        // A ranked list is about many names: the list is the one thing to show.
+        if (list) items.push(pill(true, 'List', `Ranked list · ${list} rows`));
+        else {
+          items.push(pill(Boolean(who), 'Who', who, name ? '' : logo));
+          if (team && name) items.push(pill(true, 'Team', team.team, teamLogoMark(team) || logo));
+          items.push(pill(quotes.length > 0, 'Quote', quotes.length > 1 ? `${quotes.length} quotes` : 'Quote'));
+          items.push(pill(stats > 0, 'Stats', `${stats} stat${stats === 1 ? '' : 's'}`));
+        }
+        els.found.innerHTML = items.join('');
+        const fits = fitsFor(briefFound);
+        formatCards.forEach(card => {
+          const fit = fits.has(card.dataset.type);
+          card.classList.toggle('is-fit', fit);
+          card.setAttribute('aria-label', `${card.textContent.trim()}${fit ? ', fits your brief' : ''}`);
+        });
+        renderFormatNote();
+      }
+      let briefTimer = null;
+      els.brief.addEventListener('input', () => {
+        clearTimeout(briefTimer);
+        briefTimer = setTimeout(analyzeBrief, 120);
+      });
+      els.brief.addEventListener('focus', loadTeams, { once: true });
+
+      // One line under the cards: what the chosen (or hovered) format makes,
+      // and whether the brief has what it needs.
+      function renderFormatNote(type = chosen) {
+        const [, label, makes, needs] = FORMATS.find(([id]) => id === type) || FORMATS[0];
+        const fits = fitsFor(briefFound);
+        let extra = '';
+        if (type !== 'auto' && needs && briefFound.text.length >= 3 && !fits.has(type)) extra = `<span class="is-need">${ICON.alert}${esc(needs)}</span>`;
+        else if (fits.size) extra = '<span class="is-fit-key">fits your brief</span>';
+        els.formatNote.innerHTML = `<strong>${esc(label)}</strong><span>· ${esc(makes)}</span>${extra ? `<span aria-hidden="true">·</span>${extra}` : ''}`;
+      }
+
+      // ── Empty state: three live trends to start from ──────────────────────
+      function trendArt(item) {
+        const leagueId = window.LeagueLogos?.idFor?.(item.category) || '';
+        const league = window.LeagueLogos?.logoFor?.(leagueId || item.category);
+        const logo = league ? `<img class="is-logo" src="${esc(league.src)}" alt="" width="24" height="24">` : '';
+        const photo = item.image && /^https?:\/\//i.test(item.image) ? `<img src="${esc(item.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : '';
+        return `<span class="gen-trend__art" style="--league-bg:${esc(league?.bg || '#F2F4F7')}" aria-hidden="true">${photo || logo}</span>`;
+      }
+      async function loadLiveTrends() {
+        els.live.innerHTML = '<span class="gen-trend is-skeleton es-skeleton" aria-hidden="true"><span class="gen-trend__art"></span><span class="gen-trend__text"></span></span>'.repeat(3);
+        try {
+          const response = await fetch('/api/trend-design', { headers: { Accept: 'application/json' } });
+          const data = response.ok ? await response.json() : null;
+          const items = Array.isArray(data?.items) ? data.items.filter(item => item?.title) : [];
+          // One story from each of the first three sports, so the row feels live and varied.
+          const picks = [];
+          const seen = new Set();
+          items.forEach(item => { if (picks.length < 3 && !seen.has(item.category)) { seen.add(item.category); picks.push(item); } });
+          items.forEach(item => { if (picks.length < 3 && !picks.includes(item)) picks.push(item); });
+          const labelOf = id => data?.categories?.find(c => c.id === id)?.label || window.LeagueLogos?.logoFor?.(id)?.label || '';
+          els.live.replaceChildren(...picks.map(item => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'gen-trend';
+            button.innerHTML = `${trendArt(item)}<span class="gen-trend__text">${esc(item.title)}</span>`;
+            button.title = item.title;
+            const sport = labelOf(item.category);
+            button.setAttribute('aria-label', `Use trend: ${item.title}${sport ? ` (${sport})` : ''}`);
+            const photo = button.querySelector('.gen-trend__art img:not(.is-logo)');
+            // A broken story photo falls back to the league logo.
+            photo?.addEventListener('error', () => {
+              const tile = document.createElement('span');
+              tile.innerHTML = trendArt({ ...item, image: '' });
+              photo.replaceWith(tile.querySelector('img') || document.createTextNode(''));
+            }, { once: true });
+            button.addEventListener('click', () => setBrief([item.title, sport ? `Sport: ${sport}` : ''].filter(Boolean).join('\n')));
+            return button;
+          }));
+        } catch (error) {
+          els.live.replaceChildren();
+        } finally {
+          els.live.removeAttribute('aria-busy');
+          // No trends: no "live" dot over an empty row; the link still opens Trends.
+          els.empty.classList.toggle('is-offline', !els.live.children.length);
+        }
+      }
+
+      selectFormat('auto');
+      analyzeBrief();
       renderQuick();
       els.form.addEventListener('submit', generate);
       els.brief.addEventListener('keydown', event => {
@@ -1431,6 +1833,7 @@
         if (!brief) return;
         setView('generate');
         els.brief.value = brief;
+        analyzeBrief();
         window.scrollTo({ top: 0, behavior: reducedMotion.matches ? 'auto' : 'smooth' });
         if (busy) {
           setNotice('Brief ready', ' Press Generate when the current designs finish.');
@@ -1449,6 +1852,7 @@
       const linkedBrief = params.get('brief');
       if (linkedBrief) {
         els.brief.value = linkedBrief.slice(0, 1500);
+        analyzeBrief();
         ['brief', 'view', 'sport'].forEach(key => params.delete(key));
         const rest = params.toString();
         history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
@@ -1459,6 +1863,7 @@
       window.addEventListener('load', async () => {
         if (linkedBrief && params.get('autorun') !== '0') generate();
         else (window.requestIdleCallback || (fn => setTimeout(fn, 1200)))(() => renderer().catch(() => {}));
+        loadLiveTrends();
         // Show "Suggest topics" only when ES MCP offers a trending tool.
         try {
           const response = await window.ESAuth?.fetchWithAuth?.('/api/es-generate');

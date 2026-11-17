@@ -265,20 +265,26 @@ body.reels-page .site-footer {
   transform: translateY(-1px);
 }
 
-.reels-icon-btn:focus-visible,
-.reels-scrub:focus-visible,
+/* Focus: fields get a blue border + one soft halo; buttons and cards get the
+   keyboard-only 2px outline (design-tokens.css), never both. */
 .reels-caption-time input:focus,
 .reels-caption-text:focus,
 .reels-field select:focus,
 .reels-intel-box textarea:focus,
-.reels-task-section textarea:focus,
+.reels-task-section textarea:focus {
+  border-color: var(--es-focus-color);
+  outline: 0;
+  box-shadow: var(--es-focus-halo);
+}
+
+.reels-icon-btn:focus-visible,
+.reels-scrub:focus-visible,
 .reels-style-card:focus-visible,
 .reels-swatch:focus-visible,
 .reels-lt-card:focus-visible,
 .reels-row-delete:focus-visible {
-  border-color: var(--es-brand-tint);
-  outline: 0;
-  box-shadow: 0 0 0 3px var(--reels-focus);
+  outline: var(--es-focus-outline);
+  outline-offset: var(--es-focus-offset);
 }
 
 .reels-icon-btn:disabled {
@@ -1878,13 +1884,13 @@ body.reels-page:not(.reels-has-captions) .reels-timeline-viewport {
 }
 
 .reels-timeline-seg:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--reels-focus);
+  outline: var(--es-focus-outline);
+  outline-offset: var(--es-focus-offset);
 }
 
 .reels-timeline-seg.is-selected {
   background: linear-gradient(180deg, var(--es-brand-fill) 0%, var(--reels-blue-deep) 100%);
-  box-shadow: 0 0 0 2px var(--reels-line-strong), 0 0 0 5px var(--reels-focus);
+  box-shadow: 0 0 0 3px var(--reels-focus);
 }
 
 .reels-timeline-seg.is-playing-now {
@@ -2113,7 +2119,7 @@ body.reels-page:not(.reels-has-captions) .reels-side-panel {
 }
 
 .reels-brand-card summary:focus-visible {
-  outline: 2px solid rgba(10, 125, 250, .42);
+  outline: var(--es-focus-outline);
   outline-offset: -3px;
 }
 

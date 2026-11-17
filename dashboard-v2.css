@@ -292,8 +292,8 @@ body {
 }
 
 .command-search:focus-within {
-  border-color: var(--dash-blue);
-  box-shadow: 0 0 0 4px rgba(14, 16, 20, .08);
+  border-color: var(--es-focus-color);
+  box-shadow: var(--es-focus-halo);
 }
 
 .command-search input {
@@ -3845,8 +3845,8 @@ body,
 }
 
 .command-search:focus-within {
-  border-color: var(--es-brand-tint);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, .08), 0 12px 28px rgba(14, 16, 20, .05);
+  border-color: var(--es-focus-color);
+  box-shadow: var(--es-focus-halo);
 }
 
 .dashboard-welcome h2 {
@@ -4232,10 +4232,10 @@ body[data-dashboard-view="list"] .task-list-panel {
   font-size: 14px;
 }
 
-.add-person-form input:focus-visible {
+.add-person-form input:focus {
   outline: 0;
-  border-color: var(--es-blue, #2F6FED);
-  box-shadow: 0 0 0 3px rgba(47, 111, 237, .12);
+  border-color: var(--es-focus-color);
+  box-shadow: var(--es-focus-halo);
 }
 
 .add-person-form .topbar-button {
@@ -6112,8 +6112,8 @@ body.dashboard-page .dashboard-role-summary::-webkit-details-marker {
 body.dashboard-page .dashboard-role-summary:focus-visible,
 body.dashboard-page details.role-choice[open] .dashboard-role-summary {
   outline: 0;
-  border-color: var(--es-brand-tint);
-  box-shadow: 0 0 0 3px rgba(167, 207, 255, .28);
+  border-color: var(--es-focus-color);
+  box-shadow: var(--es-focus-halo);
 }
 
 body.dashboard-page .dashboard-role-summary > span:first-child {

@@ -58,7 +58,7 @@
   --es-action-primary: var(--es-brand-fill);
   --es-action-primary-hover: var(--es-brand-fill-press);
   --es-action-soft: var(--es-brand-soft);
-  --es-focus-ring: rgba(14, 16, 20, .08);
+  --es-focus-ring: rgb(10 125 250 / .16);   /* legacy name: the halo colour */
 
   /* Spacing (2026-11-16): one 4px scale for every padding, margin and gap in UI
      chrome. Artwork/canvas internals and ad renders are excluded.
@@ -103,7 +103,16 @@
   --es-outline: inset 0 0 0 1.5px var(--es-line-2);
   --es-shadow-float: 0 1px 1px rgb(14 16 20 / .04), 0 12px 32px -12px rgb(14 16 20 / .22);
   --es-shadow-bar: 0 -8px 24px -16px rgb(14 16 20 / .18);
-  --es-focus: 0 0 0 3px #ffffff, 0 0 0 5px var(--es-ink);
+  /* Focus (2026-11-17): one quiet system, defined once.
+     Fields: border turns ES blue (same 1px width) + one soft halo; no outline.
+     Buttons/links/chips/tabs: keyboard only (:focus-visible), one 2px outline,
+     2px offset. #0A6FDE is 4.8:1 on white, 4.3:1 on #F0F2F5; dark #54A4FB is
+     7.2:1 on #101114 and 6.2:1 on #1F2126. */
+  --es-focus-color: #0A6FDE;                              /* = --es-blue-600 */
+  --es-focus-halo: 0 0 0 3px rgb(10 125 250 / .16);
+  --es-focus-outline: 2px solid var(--es-focus-color);
+  --es-focus-offset: 2px;
+  --es-focus: var(--es-focus-halo);                       /* legacy alias */
 
   /* Motion */
   --es-ease: cubic-bezier(.22, .8, .24, 1);
@@ -236,7 +245,7 @@
   --es-btn-sunk: #F0F2F5;
   --es-btn-danger-ink: #B91C1C;       /* 6.5:1 on white */
   --es-btn-danger-line: #D46A6A;      /* 3.5:1 on white */
-  --es-btn-focus: #0A62C7;
+  --es-btn-focus: var(--es-focus-color);
   --es-btn-disabled-bg: #F0F2F5;
   --es-btn-disabled-ink: #565C67;     /* 6.0:1 on #F0F2F5 */
 
@@ -270,7 +279,7 @@ html[data-theme="dark"] {
   --es-btn-sunk: #2A2D34;
   --es-btn-danger-ink: #FF8A8A;       /* 7.1:1 on #1F2126 */
   --es-btn-danger-line: #B54C4C;      /* 3.9:1 on ES Black */
-  --es-btn-focus: #54A4FB;
+  --es-btn-focus: var(--es-focus-color);
   --es-btn-disabled-bg: #2A2D34;
   --es-btn-disabled-ink: #98A6BF;     /* 5.6:1 on #2A2D34 */
   --ais-gradient-soft: linear-gradient(120deg, rgb(10 125 250 / .18), rgb(84 164 251 / .14) 50%, rgb(0 179 230 / .16));
@@ -317,15 +326,44 @@ html[data-theme="dark"] {
   --es-text-subtle: #98A6BF;
 }
 
-/* Visible focus everywhere: a white gap, then an ink ring. */
-:is(a, button, summary, [role="button"], [role="tab"], [tabindex]:not(input, select, textarea)):focus-visible {
-  outline: 2px solid var(--es-ink) !important;
-  outline-offset: 2px !important;
+/* Focus, non-text controls: keyboard only, one 2px ES-blue outline with a 2px
+   offset. A mouse click shows no ring. */
+:is(a, button, summary, [role="button"], [role="tab"], [role="radio"], [role="checkbox"], [role="switch"], [role="option"], [role="menuitem"], [tabindex]:not(input, select, textarea), input:is([type="range"], [type="checkbox"], [type="radio"], [type="color"], [type="file"])):focus-visible {
+  outline: var(--es-focus-outline) !important;
+  outline-offset: var(--es-focus-offset) !important;
+}
+:is(a, button, summary, [role="button"], [role="tab"], [tabindex]:not(input, select, textarea)):focus:not(:focus-visible) {
+  outline: none;
 }
 
-/* In dark mode a mid blue ring reads on both dark and kept-light surfaces. */
-html[data-theme="dark"] :is(a, button, summary, [role="button"], [role="tab"], [tabindex]:not(input, select, textarea)):focus-visible {
-  outline-color: #54A4FB !important;
+/* Dropdown triggers styled as fields are buttons, but they take the field
+   focus (blue border + halo), not the button outline, so they never double up. */
+html:root body :is(.select-dropdown-trigger, .request-dropdown-trigger, .feedback-dropdown-trigger, .reels-choice-trigger, .dashboard-choice-trigger, .dashboard-role-summary):focus-visible {
+  outline: none !important;
+  border-color: var(--es-focus-color) !important;
+  box-shadow: var(--es-focus-halo) !important;
+}
+
+/* Focus, text fields: never an outline (that made the white-gap double ring);
+   each field's own rule turns its border blue and adds --es-focus-halo, and a
+   bare input inside a search wrapper leaves the ring to the wrapper. The
+   zero-specificity fallback below only tints a plain field's border. */
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="button"], [type="submit"], [type="reset"], [type="image"]), textarea, select):focus {
+  border-color: var(--es-focus-color);
+}
+
+/* Dark mode: theme.css paints every field border with !important, which hid
+   the blue focus border. Restore the colour on focus (width unchanged). */
+html:root[data-theme="dark"] body :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="button"], [type="submit"], [type="reset"], [type="image"]), textarea, select):focus,
+html:root[data-theme="dark"] body .command-search:focus-within {
+  border-color: var(--es-focus-color) !important;
+}
+
+/* Dark twin of the light field group further down (request, feedback, reels,
+   account fields): halo, no browser outline. */
+html[data-theme="dark"] :is(.request-input, .request-select, .request-textarea, .feedback-textarea, .reels-native-select, .account-main input:not([type="checkbox"]):not([type="radio"]), .account-main select, .account-main textarea):focus {
+  outline: none !important;
+  box-shadow: var(--es-focus-halo) !important;
 }
 
 ::placeholder {
@@ -763,15 +801,15 @@ html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="tex
 
 html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input):focus,
 html:not([data-theme="dark"])[data-studio-shell="on"] .panel .select-dropdown.is-open > .select-dropdown-trigger{
-  border-color: var(--es-brand) !important;
-  box-shadow: none !important;
+  border-color: var(--es-focus-color) !important;
+  box-shadow: var(--es-focus-halo) !important;
   outline: none !important;
 }
 
 html[data-theme="dark"][data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input):focus,
 html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown.is-open > .select-dropdown-trigger{
-  border-color: var(--theme-dark-accent, #54A4FB) !important;
-  box-shadow: none !important;
+  border-color: var(--es-focus-color) !important;
+  box-shadow: var(--es-focus-halo) !important;
   outline: none !important;
 }
 
@@ -850,9 +888,10 @@ html:not([data-theme="dark"]) :is(.request-input, .request-select, .request-text
 }
 
 html:not([data-theme="dark"]) :is(.request-input, .request-select, .request-textarea, .feedback-textarea, .reels-native-select, .account-main input:not([type="checkbox"]):not([type="radio"]), .account-main select, .account-main textarea):focus,
-html:not([data-theme="dark"]) :is(.request-dropdown, .feedback-dropdown, .reels-choice).is-open > :is(.request-dropdown-trigger, .feedback-dropdown-trigger, .reels-choice-trigger){
-  border-color: var(--es-brand) !important;
-  box-shadow: 0 0 0 1px var(--es-brand) !important;
+html:not([data-theme="dark"]) :is(.request-dropdown, .feedback-dropdown, .reels-choice).is-open > :is(.request-dropdown-trigger, .feedback-dropdown-trigger, .reels-choice-trigger),
+html:not([data-theme="dark"]) body :is(.request-dropdown, .feedback-dropdown, .reels-choice) > :is(.request-dropdown-trigger, .feedback-dropdown-trigger, .reels-choice-trigger):focus-visible{
+  border-color: var(--es-focus-color) !important;
+  box-shadow: var(--es-focus-halo) !important;
   outline: none !important;
 }
 
@@ -1355,7 +1394,7 @@ html[data-theme="dark"] body:has(#ai-workspace) :is(.side-title, .workspace-sect
 }
 
 .template-picker__search:focus-within {
-  box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand);
+  box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo);
 }
 
 .template-picker__search input {
@@ -1425,8 +1464,8 @@ html[data-theme="dark"] body:has(#ai-workspace) :is(.side-title, .workspace-sect
 }
 
 .template-filter:focus-visible {
-  outline: 2px solid var(--es-brand);
-  outline-offset: 2px;
+  outline: var(--es-focus-outline);
+  outline-offset: var(--es-focus-offset);
 }
 
 @media (hover: hover) {
@@ -1505,8 +1544,8 @@ html[data-theme="dark"] body:has(#ai-workspace) :is(.side-title, .workspace-sect
 }
 
 .template-card:focus-visible {
-  outline: 2px solid var(--es-brand);
-  outline-offset: 2px;
+  outline: var(--es-focus-outline);
+  outline-offset: var(--es-focus-offset);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1839,7 +1878,7 @@ html[data-theme="dark"] body:has(#ai-workspace) :is(.side-title, .workspace-sect
 
 .es-dialog-input:focus {
   outline: none;
-  box-shadow: inset 0 0 0 2px var(--es-brand);
+  box-shadow: inset 0 0 0 1.5px var(--es-focus-color), var(--es-focus-halo);
 }
 
 .es-dialog-field-hint {
@@ -2442,7 +2481,13 @@ html:not([data-theme="dark"]) .es-search:not(.es-sidebar__search){
 }
 
 html .es-search:not(.es-sidebar__search):focus-within{
-  box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand) !important;
+  box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo) !important;
+}
+
+/* The wrapper shows the focus; the bare input inside it never adds its own. */
+html .es-search :is(input, textarea):focus{
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* es-input: 1px outline, brand ring on focus (matches every other field). */
@@ -2455,7 +2500,8 @@ html:not([data-theme="dark"]) .es-input:hover{
 }
 
 html .es-input:focus{
-  box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand);
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo);
 }
 
 /* Empty states sit on the page, not in a grey box with a large radius. */
@@ -2471,7 +2517,8 @@ html:not([data-theme="dark"]) .gen-brief textarea{
 }
 
 html .gen-brief textarea:focus{
-  box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand) !important;
+  outline: none !important;
+  box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo) !important;
 }
 
 html :is(.gen-row__label){
@@ -2549,13 +2596,13 @@ html[data-theme="dark"] :is(.request-required, .home-start__more, .template-brow
 
 /* Keyboard focus that is always visible (these removed the outline with no replacement). */
 .prompt-shell:focus-within{
-  border-color: var(--es-brand) !important;
-  box-shadow: 0 0 0 1px var(--es-brand), var(--shadow-blue, none) !important;
+  border-color: var(--es-focus-color) !important;
+  box-shadow: var(--es-focus-halo) !important;
 }
 
 .navbar-icon-btn:focus-visible{
-  outline: 2px solid var(--es-brand) !important;
-  outline-offset: 2px;
+  outline: var(--es-focus-outline) !important;
+  outline-offset: var(--es-focus-offset);
 }
 
 /* Dark mode, light surfaces that stay light: keep their text dark. */
@@ -2667,6 +2714,9 @@ html[data-theme="dark"] {
   --es-brand-fill: var(--es-blue-600);
   --es-brand-fill-press: var(--es-blue-700);
   --es-focus-color: var(--es-blue-400);
+  --es-focus-halo: 0 0 0 3px rgb(84 164 251 / .22);
+  --es-focus-outline: 2px solid var(--es-focus-color);
+  --es-focus-ring: rgb(84 164 251 / .22);
 }
 
 /* Sidebar section dividers */
@@ -2723,7 +2773,7 @@ html[data-theme="dark"] :is(.image-context-empty, .studio-ai-empty) :is(span, p,
 html[data-theme="dark"] :is(.image-context-empty, .studio-ai-empty) :is(strong, b) { color: var(--dk-ink) !important; }
 html[data-theme="dark"] .studio-ai-section { border-top-color: var(--dk-line) !important; }
 html[data-theme="dark"] .studio-ai-search { box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; background: var(--dk-surface) !important; }
-html[data-theme="dark"] .studio-ai-search:focus-within { box-shadow: inset 0 0 0 1px var(--es-brand), 0 0 0 1px var(--es-brand) !important; }
+html[data-theme="dark"] .studio-ai-search:focus-within { box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo) !important; }
 
 /* Editor: accordion sections (all four sides) */
 html[data-theme="dark"][data-studio-shell="on"] .studio-accordion-section,
@@ -2814,7 +2864,7 @@ html[data-theme="dark"] .auth-state-card :is(p, small, span:not([class*="icon"])
 /* ── Login ── */
 html[data-theme="dark"] .login-mode-tabs { background: var(--dk-raised) !important; border-color: var(--dk-line) !important; }
 html[data-theme="dark"] :is(#login-email, #login-password, .login-form input:not([type="checkbox"])) { box-shadow: inset 0 0 0 1.5px var(--dk-line-2) !important; }
-html[data-theme="dark"] :is(#login-email, #login-password, .login-form input:not([type="checkbox"])):focus { box-shadow: inset 0 0 0 2px #54A4FB !important; }
+html[data-theme="dark"] :is(#login-email, #login-password, .login-form input:not([type="checkbox"])):focus { outline: none !important; box-shadow: inset 0 0 0 1.5px var(--es-focus-color), var(--es-focus-halo) !important; }
 html[data-theme="dark"] .login-mode-tab.is-active { background: var(--dk-hover) !important; box-shadow: inset 0 0 0 1px var(--dk-line-2) !important; }
 
 /* ── Account pages (profile, settings) ── */
@@ -2856,7 +2906,7 @@ html[data-theme="dark"] .prompt-shell {
   border-color: var(--dk-line-2) !important;
   box-shadow: 0 12px 30px -18px rgb(0 0 0 / .8) !important;
 }
-html[data-theme="dark"] .prompt-shell:focus-within { border-color: var(--es-brand) !important; box-shadow: 0 0 0 1px var(--es-brand) !important; }
+html[data-theme="dark"] .prompt-shell:focus-within { border-color: var(--es-focus-color) !important; box-shadow: var(--es-focus-halo) !important; }
 html[data-theme="dark"] .prompt-input { color: var(--dk-ink) !important; }
 html[data-theme="dark"] .prompt-input::placeholder { color: var(--dk-ink-3) !important; }
 html[data-theme="dark"] body:has(#ai-sidebar) .footer-bottom { border-top-color: var(--dk-line) !important; }
@@ -3156,9 +3206,9 @@ html[data-theme="dark"] :is(.mobile-menu-account, .profile-menu) .profile-name {
 
   /* ── Focus-visible: 2px outline, 2px offset ── */
   html :where(.es-btn, .workspace-cta, .frame-cta, .frame-hero-cta, .faq-cta-action, .how-button, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .feedback-back-link, .reels-btn, .topbar-button, .login-button, .login-secondary-button, .auth-state-button, .studio-export-btn, .studio-export-options-btn, .studio-link-btn, .va-btn, .ais-btn, .export-review-cta, .canvas-upload-button, .image-context-upload, .image-context-ai, .quick-action, .avatar-upload-label, .profile-back-link, .td-design, .tweet-fetch-button, .listicle-add-row-button, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .mobile-editor-export, .es-toast-action):focus-visible,
-  html :where(.avatar-upload-label):focus-within {
+  html :where(.avatar-upload-label):has(:focus-visible) {
     outline: 2px solid var(--es-btn-focus) !important;
-    outline-offset: 2px !important;
+    outline-offset: var(--es-focus-offset, 2px) !important;
   }
 
   /* ── Press: scale(.96), only when motion is welcome, never when disabled ── */
