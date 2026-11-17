@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My requests | FrameUp</title>
+  <meta name="description" content="Track design requests: status, history, comments and the delivered designs.">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
+  <script src="es-auth-config.js?v=20260707-auth4"></script>
+  <script src="es-auth.js?v=20261115-auth2"></script>
+  <script src="dashboard-data.js?v=20261118-requests-slack"></script>
+  <script>
+    window.ESAuth?.requireAuth(`requests.html${window.location.search}${window.location.hash}`);
+  </script>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
+  <link rel="stylesheet" href="theme.css?v=20261117-ready1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261117-ready1">
+  <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261117-ready1">
+  <link rel="stylesheet" href="es-ui.css?v=20261117-ready1">
+  <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
+  <link rel="stylesheet" href="requests.css?v=20261118-requests-slack">
+  <script src="theme.js?v=20261115-pol2"></script>
+  <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
+  <script src="site-chrome.js?v=20261117-usage1"></script>
+  <script src="request-lifecycle.js?v=20261118-requests-slack"></script>
+  <script src="design-requests.js?v=20261118-requests-slack"></script>
+  <script src="app-shell.js?v=20261118-requests-slack"></script>
+  <link rel="stylesheet" href="frameup-tour.css?v=20261117-tour1">
+  <script src="frameup-tour.js?v=20261117-tour1"></script>
+  <script src="tours/updates.js?v=20261117-tour1"></script>
+  <script src="tours/tours.js?v=20261117-tour1"></script>
+  <script src="tours/tour-launcher.js?v=20261117-tour1"></script>
+  <script src="es-motion.js?v=20261115-ds1"></script>
+</head>
+<body class="requests-page">
+  <nav class="navbar">
+    <a class="navbar-logo" href="index.html" aria-label="EssentiallySports home">
+      <img src="brand-logo-blue.svg" alt="EssentiallySports">
+    </a>
+    <div class="navbar-menu">
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#frames" data-route="frames" aria-haspopup="true" aria-expanded="false">Design Tools</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Design workspaces">
+          <a href="index.html#frames" role="menuitem">Home</a>
+          <a href="index.html#instagram" role="menuitem">Social Media</a>
+          <a href="index.html#youtube" role="menuitem">YouTube</a>
+          <a href="index.html#newsletter" role="menuitem">Newsletter</a>
+          <a href="reels.html" role="menuitem">Reel Captions</a>
+        </div>
+      </div>
+      <a href="design-request.html">Design Request</a>
+      <a href="requests.html" aria-current="page">My requests</a>
+      <a href="generate.html">Generate</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="dashboard.html" data-admin-only hidden aria-hidden="true">Dashboard</a>
+      <a href="tool-feedback.html">Tool Feedback</a>
+    </div>
+    <div class="navbar-right">
+      <div class="profile-menu" id="profile-menu"></div>
+    </div>
+  </nav>
+
+  <main class="rq-page" id="main">
+    <header class="es-page-head rq-head">
+      <div>
+        <h1>My requests</h1>
+        <p id="rq-intro">Where every design request stands, who has it, and what was delivered.</p>
+      </div>
+      <a class="es-btn es-btn--secondary" href="design-request.html">New request</a>
+    </header>
+
+    <div class="es-callout rq-notice" id="rq-notice" role="status" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      <div><strong id="rq-notice-title">Tracking is almost ready</strong><span id="rq-notice-copy">Status, history and comments switch on once an admin applies the request workflow update. You can still see your requests below.</span></div>
+    </div>
+
+    <div class="rq-toolbar">
+      <div class="es-segmented rq-views" role="tablist" aria-label="Which requests" id="rq-views">
+        <button class="es-segmented__item" type="button" role="tab" data-view="mine" aria-selected="true">Mine <span class="es-badge" data-view-count="mine"></span></button>
+        <button class="es-segmented__item" type="button" role="tab" data-view="queue" aria-selected="false" hidden>My queue <span class="es-badge" data-view-count="queue"></span></button>
+        <button class="es-segmented__item" type="button" role="tab" data-view="all" aria-selected="false" hidden>All <span class="es-badge" data-view-count="all"></span></button>
+        <button class="es-segmented__item" type="button" role="tab" data-view="designers" aria-selected="false" hidden>Designers</button>
+      </div>
+      <label class="es-search rq-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        <span class="es-sr-only">Search requests</span>
+        <input type="search" id="rq-search" placeholder="Search by title, ID or person" autocomplete="off">
+      </label>
+    </div>
+
+    <div class="rq-filters" role="group" aria-label="Status" id="rq-filters">
+      <button class="es-chip" type="button" data-filter="open" aria-pressed="true">Open</button>
+      <button class="es-chip" type="button" data-filter="overdue" aria-pressed="false">Overdue</button>
+      <button class="es-chip" type="button" data-filter="Done" aria-pressed="false">Done</button>
+      <button class="es-chip" type="button" data-filter="Declined" aria-pressed="false">Declined</button>
+      <button class="es-chip" type="button" data-filter="all" aria-pressed="false">All</button>
+    </div>
+
+    <div class="es-error-state" id="rq-error" role="alert" hidden>
+      <span class="es-error-state__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
+      <p class="es-error-state__title">Couldn’t load requests</p>
+      <p class="es-error-state__copy" id="rq-error-copy">Check your connection and try again.</p>
+      <button class="es-btn es-btn--sm" type="button" id="rq-retry">Try again</button>
+    </div>
+
+    <div class="rq-layout" id="rq-layout">
+      <section class="rq-list" aria-label="Requests" id="rq-list-wrap">
+        <ul class="rq-items" id="rq-list" aria-busy="true"></ul>
+        <div class="es-empty rq-empty" id="rq-empty" hidden>
+          <p class="es-empty__title" id="rq-empty-title">No requests yet</p>
+          <p class="es-empty__copy" id="rq-empty-copy">When you send the design team a request, you can follow it here.</p>
+          <a class="es-btn es-btn--sm" href="design-request.html">Request a design</a>
+        </div>
+      </section>
+
+      <section class="rq-detail" id="rq-detail" aria-live="polite" aria-label="Request details" tabindex="-1">
+        <div class="es-empty rq-detail-empty" id="rq-detail-empty">
+          <p class="es-empty__title">Pick a request</p>
+          <p class="es-empty__copy">Its status, history, comments and delivered designs show here.</p>
+        </div>
+        <div id="rq-detail-body" hidden></div>
+      </section>
+
+      <section class="rq-designers" id="rq-designers" aria-labelledby="rq-designers-title" hidden>
+        <div class="es-card">
+          <div class="es-card__head">
+            <div>
+              <h2 class="es-card__title" id="rq-designers-title">Designers</h2>
+              <p class="es-card__sub">People who work on requests. They see every request, take unassigned ones and move their own through review. Admins are designers too.</p>
+            </div>
+          </div>
+          <div class="es-card__body">
+            <form class="rq-designer-form" id="rq-designer-form" autocomplete="off">
+              <label class="es-field"><span class="es-field__label">Work email</span><input class="es-input" type="email" id="rq-designer-email" placeholder="name@essentiallysports.com" required></label>
+              <label class="es-field"><span class="es-field__label">Name (optional)</span><input class="es-input" type="text" id="rq-designer-name" maxlength="120"></label>
+              <button class="es-btn es-btn--secondary" type="submit">Add designer</button>
+            </form>
+            <p class="rq-form-status" id="rq-designer-status" role="status" aria-live="polite"></p>
+            <ul class="rq-designer-list" id="rq-designer-list"></ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="rq-toast" id="rq-toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="requests.js?v=20261118-requests-slack"></script>
+</body>
+</html>
