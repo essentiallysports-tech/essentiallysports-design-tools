@@ -255,12 +255,14 @@ await test('style ranking: export share, discounted by how much people rewrite t
   const exp = style => ({ type: 'export', payload: { style, copy: { style, headline: `${style} ad ${Math.random()}`, body: ['Free.'] } } });
   const edited = (style, before, after) => ({ type: 'copy_edited', payload: { style, before: { headline: before }, after: { headline: after } } });
   rpcRows = [
-    exp('stat'), exp('stat'), exp('stat'), exp('versus'), exp('versus'), exp('versus'), exp('condensed'),
-    edited('stat', 'One number that tells the story', 'One number that tells the story'),
+    exp('today3'), exp('today3'), exp('today3'), exp('versus'), exp('versus'), exp('versus'), exp('condensed'),
+    // Stat Card and Quote Card were removed: their old exports never count.
+    exp('stat'), exp('stat'), exp('stat'), exp('stat'), exp('quote'),
+    edited('today3', 'Three stories that tell the day', 'Three stories that tell the day'),
     edited('versus', 'Your feed is noise and nothing else', 'Get the news without the noise today'),
   ];
   const ranking = await learning.styleRankingFor({ brandId: 'the-huddle', sport: 'nfl', token: jwt('u1') });
-  assert.deepEqual(ranking.map(r => r.style), ['stat', 'versus', 'condensed'], 'equal exports: the lightly edited style wins');
+  assert.deepEqual(ranking.map(r => r.style), ['today3', 'versus', 'condensed'], 'equal exports: the lightly edited style wins; removed styles are skipped');
   assert.equal(ranking[0].score, 1);
   assert.equal(ranking[0].exports, 3);
   assert.equal(ranking[0].share, 0.429);
@@ -273,7 +275,7 @@ await test('style ranking: export share, discounted by how much people rewrite t
 await test('style ranking: empty until there are enough exports, and on any failure', async () => {
   reset();
   rpcStatus = 200;
-  rpcRows = [{ type: 'export', payload: { style: 'stat', copy: { style: 'stat', stat: '412', statLabel: 'yards' } } }];
+  rpcRows = [{ type: 'export', payload: { style: 'today3', copy: { style: 'today3', items: ['a', 'b'] } } }];
   assert.deepEqual(await learning.styleRankingFor({ brandId: 'the-huddle', token: jwt('u1') }), [], `under ${learning.MIN_STYLE_EXPORTS} exports`);
   reset();
   readThrows = true;
@@ -282,9 +284,17 @@ await test('style ranking: empty until there are enough exports, and on any fail
 });
 await test('new-style exports become examples with their own fields', async () => {
   reset();
-  rowsExports = [{ type: 'export', payload: { style: 'stat', copy: { style: 'stat', headline: '', body: [], stat: '.412', statLabel: 'on-base this month', offer: 'Free.', cta: 'SIGN UP', items: [] } } }];
+  rowsExports = [
+    { type: 'export', payload: { style: 'today3', copy: { style: 'today3', headline: '', body: [], listTitle: 'What fans need today', offer: 'Free.', cta: 'SIGN UP', items: ['One', 'Two'] } } },
+    { type: 'export', payload: { style: 'stat', copy: { style: 'stat', headline: 'An old Stat Card', body: ['Free.'], stat: '.412', statLabel: 'on-base this month', cta: 'SIGN UP' } } },
+  ];
   const { examples } = await learning.lessonsFor({ brandId: 'es-dugout', token: jwt('u1') });
-  assert.deepEqual(examples[0], { style: 'stat', headline: '', highlight: '', body: [], cta: 'SIGN UP', offer: 'Free.', stat: '.412', statLabel: 'on-base this month' });
+  const t3 = examples.find(e => e.style === 'today3');
+  assert.equal(t3.listTitle, 'What fans need today');
+  assert.deepEqual(t3.items, ['One', 'Two']);
+  const old = examples.find(e => e.headline === 'An old Stat Card');
+  assert.equal(old.style, 'highlight', 'a removed style becomes Highlight');
+  assert.equal(old.stat, undefined, 'its own fields are dropped');
   assert.equal(learning.editDistance('a b c d', 'a b c d'), 0);
   assert.equal(learning.editDistance('a b c d', 'a x c d'), 0.25);
   assert.equal(learning.editDistance('', 'new words'), 1);

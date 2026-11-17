@@ -35,7 +35,15 @@ const FAIL_CACHE_MS = 60 * 1000;
 const EMPTY = Object.freeze({ examples: [], rules: [], styles: [] });
 const STYLE_IDS = Object.keys(BRANDS.STYLES);
 // Fields of the no-footage styles kept in an example (video-ads-styles.js).
-const EXTRA_TEXT = ['offer', 'stat', 'statLabel', 'statSource', 'listTitle', 'quote', 'speaker', 'quoteContext'];
+const EXTRA_TEXT = ['offer', 'listTitle'];
+// Stat Card and Quote Card were removed (2026-11-18): their past exports are
+// examples in Highlight (their own fields dropped) and don't count toward the
+// style ranking.
+const REMOVED_STYLES = ['stat', 'quote'];
+const rawStyleOf = payload => {
+  const source = payload?.copy && typeof payload.copy === 'object' ? payload.copy : (payload || {});
+  return String(source.style || payload?.style || '');
+};
 const EXTRA_LISTS = ['items', 'them', 'us'];
 const MIN_STYLE_EXPORTS = 2;
 
@@ -105,7 +113,9 @@ async function recordEvent({ token, email, event } = {}) {
 // ─── Examples: the latest exported ads ────────────────────────────────────
 function styleOfRow(payload) {
   const source = payload?.copy && typeof payload.copy === 'object' ? payload.copy : (payload || {});
-  return STYLE_IDS.includes(source.style) ? source.style : (STYLE_IDS.includes(payload?.style) ? payload.style : 'condensed');
+  if (STYLE_IDS.includes(source.style)) return source.style;
+  if (STYLE_IDS.includes(payload?.style)) return payload.style;
+  return REMOVED_STYLES.includes(rawStyleOf(payload)) ? 'highlight' : 'condensed';
 }
 
 function copyOf(payload) {
@@ -147,8 +157,8 @@ function deriveExamples(rows) {
 // Every word an ad shows, in reading order (any style).
 function allText(ad) {
   if (!ad || typeof ad !== 'object') return '';
-  const parts = [ad.headline, ...(Array.isArray(ad.body) ? ad.body : [ad.body]), ad.offer, ad.stat, ad.statLabel, ad.listTitle,
-    ...(Array.isArray(ad.items) ? ad.items : []), ...(Array.isArray(ad.them) ? ad.them : []), ...(Array.isArray(ad.us) ? ad.us : []), ad.quote, ad.speaker];
+  const parts = [ad.headline, ...(Array.isArray(ad.body) ? ad.body : [ad.body]), ad.offer, ad.listTitle,
+    ...(Array.isArray(ad.items) ? ad.items : []), ...(Array.isArray(ad.them) ? ad.them : []), ...(Array.isArray(ad.us) ? ad.us : [])];
   return parts.map(p => clean(p, 600)).filter(Boolean).join(' ');
 }
 
@@ -176,6 +186,7 @@ function deriveStyleRanking(rows) {
   let total = 0;
   for (const row of rows || []) {
     if (row?.type === 'export') {
+      if (REMOVED_STYLES.includes(rawStyleOf(row.payload))) continue;
       const style = styleOfRow(row.payload);
       exports.set(style, (exports.get(style) || 0) + 1);
       total += 1;

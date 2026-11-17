@@ -360,7 +360,7 @@
     return { ...size, safe, centerY, rail: rail || null, zone: 'meta' };
   }
 
-  // ─── Styles without footage (Stat Card, Today's 3, Us vs Them, Quote) ──
+  // ─── Styles without footage (Today's 3, Us vs Them) ──
   // Each style is a stack of blocks laid out in the content band, centred,
   // at the largest scale (MIN_SCALE_NEW…1) that fits. Sizes per canvas size
   // follow the research spec (project-docs/video-ad-styles-research.md §4);
@@ -372,11 +372,6 @@
   const FLOOR = { body: 44, label: 38, unsub: UNSUB_NEW };
   const MIN_SCALE_NEW = 0.8;
   const SPEC = {
-    stat: {
-      '9x16': { eyebrow: 40, number: 360, numberMin: 220, label: 56, labelLines: 2, offer: 49, offerLines: 2, source: 38 },
-      '4x5': { eyebrow: 40, number: 300, numberMin: 200, label: 50, labelLines: 2, offer: 46, offerLines: 2, source: 38 },
-      '1x1': { eyebrow: 0, number: 250, numberMin: 170, label: 46, labelLines: 1, offer: 44, offerLines: 2, source: 0 },
-    },
     today3: {
       '9x16': { title: 84, titleMin: 72, titleLines: 2, row: 50, rowLines: 2, disc: 72, offer: 48, offerLines: 2, maxItems: 3 },
       '4x5': { title: 72, titleMin: 64, titleLines: 2, row: 46, rowLines: 2, disc: 64, offer: 46, offerLines: 2, maxItems: 3 },
@@ -387,18 +382,11 @@
       '4x5': { label: 38, them: 44, us: 46, itemLines: 1, offer: 44, offerLines: 2, maxThem: 2, maxUs: 3, pad: 34 },
       '1x1': { label: 38, them: 44, us: 44, itemLines: 1, offer: 44, offerLines: 2, maxThem: 2, maxUs: 2, pad: 28 },
     },
-    quote: {
-      '9x16': { mark: 260, quote: 76, quoteMin: 60, quoteLines: 4, attr: 40, offer: 46, offerLines: 2 },
-      '4x5': { mark: 200, quote: 68, quoteMin: 56, quoteLines: 4, attr: 40, offer: 44, offerLines: 2 },
-      '1x1': { mark: 150, quote: 60, quoteMin: 50, quoteLines: 3, attr: 38, offer: 44, offerLines: 2 },
-    },
   };
   // Entrances in nominal seconds (scaled down for short ads, see animScale).
   const TIMING = {
-    stat: { number: 0, label: 0.3, rule: 0.6, offer: 1.2, cta: 1.6 },
     today3: { rows: [0.4, 1.1, 1.8], offer: 2.4, cta: 2.6 },
     versus: { strikes: [0.6, 0.9, 1.2], ticks: [1.6, 1.9, 2.2], offer: 2.5, cta: 2.8 },
-    quote: { attr: 0.6, offer: 1.0, cta: 1.4 },
   };
   const ENTER = 0.35;
   const ctaAnim = at => ({ at, dur: ENTER, kind: 'rise', dy: 30 });
@@ -440,67 +428,8 @@
   }
   const px = (base, scale, floor) => Math.max(floor, base * scale);
 
-  // A pill label (brand highlight colours): { w, h, emit(x, y) }.
-  function pillBlock(measure, text, brand, size, anim = null) {
-    const f = font(700, size, LABEL_FONT);
-    const label = text.toUpperCase();
-    const padX = size * 0.45;
-    const padY = size * 0.34;
-    const w = measure(label, f) + padX * 2;
-    const h = size * CAP.body + padY * 2;
-    return {
-      w, h,
-      emit: (ops, x, y) => {
-        ops.push({ type: 'box', x, y, w, h, r: size * 0.2, fill: brand.highlight.bg, role: 'deco', ...(anim ? { anim } : {}) });
-        ops.push({ type: 'text', text: label, x: x + padX, y: y + padY + size * CAP.body, w: w - padX * 2, font: f, fill: brand.highlight.fg, role: 'label', ...(anim ? { anim } : {}) });
-      },
-    };
-  }
-
   // Each builder: (ctx, scale) -> { blocks: [{ h, gap, emit(ops, y) }], ok }.
   const STYLE_LAYOUTS = {
-    stat(c, s) {
-      const sp = c.spec;
-      const blocks = [];
-      let ok = true;
-      const eyebrowText = str(c.layout.statEyebrow) || 'By the numbers';
-      if (sp.eyebrow) {
-        const pill = pillBlock(c.measure, eyebrowText, c.brand, px(sp.eyebrow, s, FLOOR.label));
-        blocks.push({ h: pill.h, gap: 0, emit: (ops, y) => pill.emit(ops, c.left + (c.maxWidth - pill.w) / 2, y) });
-      }
-      // The number: as big as fits the width (never shrunk below numberMin).
-      const stat = str(c.layout.stat);
-      let numPx = sp.number * Math.max(s, 0.9);
-      const numFont = () => font(700, numPx, CONDENSED);
-      while (c.measure(stat, numFont()) > c.maxWidth && numPx > sp.numberMin) numPx = Math.max(sp.numberMin, numPx * 0.95);
-      const numW = c.measure(stat, numFont());
-      if (!stat || numW > c.maxWidth + 0.5) ok = false;
-      const numCap = numPx * CAP.condensed;
-      blocks.push({
-        h: numCap, gap: sp.eyebrow ? 46 * s : 0,
-        emit: (ops, y) => {
-          const x = c.left + (c.maxWidth - numW) / 2;
-          ops.push({ type: 'text', text: stat, x, y: y + numCap, w: numW, font: numFont(), fill: '#FFFFFF', shadow: SHADOW.headline, boost: numPx * BASE.boost, role: 'display', anim: { at: TIMING.stat.number, dur: 0.4, kind: 'scale', from: 1.12, origin: [x + numW / 2, y + numCap / 2] } });
-        },
-      });
-      const label = fitText(c.measure, str(c.layout.statLabel), { weight: 700, family: BODY, size: px(sp.label, s, FLOOR.body), min: FLOOR.body, maxLines: sp.labelLines, maxWidth: c.maxWidth });
-      if (!label.ok || !label.lines.length) ok = false;
-      blocks.push({ h: textHeight(label, CAP.body, 1.15), gap: 56 * s, emit: (ops, y) => ops.push(...textOps(label, { x: c.left, y, maxWidth: c.maxWidth, align: 'center', role: 'body', anim: { at: TIMING.stat.label, dur: ENTER, kind: 'rise', dy: 24 } })) });
-      const ruleW = 120 * s;
-      const ruleH = Math.max(4, 6 * s);
-      blocks.push({ h: ruleH, gap: 36 * s, emit: (ops, y) => ops.push({ type: 'box', x: c.left + (c.maxWidth - ruleW) / 2, y, w: ruleW, h: ruleH, r: ruleH / 2, fill: c.brand.highlight.bg, role: 'deco', anim: { at: TIMING.stat.rule, dur: 0.4, kind: 'wipe' } }) });
-      const offer = fitText(c.measure, str(c.layout.offer), { weight: 500, family: BODY, size: px(sp.offer, s, FLOOR.body), min: FLOOR.body, maxLines: sp.offerLines, maxWidth: c.maxWidth });
-      if (!offer.ok) ok = false;
-      if (offer.lines.length) blocks.push({ h: textHeight(offer, CAP.body, 1.15), gap: 36 * s, emit: (ops, y) => ops.push(...textOps(offer, { x: c.left, y, maxWidth: c.maxWidth, align: 'center', anim: { at: TIMING.stat.offer, dur: ENTER, kind: 'rise', dy: 20 } })) });
-      const source = str(c.layout.statSource);
-      if (source && sp.source) {
-        const src = fitText(c.measure, `Source: ${source}`, { weight: 700, family: LABEL_FONT, size: px(sp.source, s, FLOOR.label), min: FLOOR.label, maxLines: 1, maxWidth: c.maxWidth, upper: true });
-        if (!src.ok) ok = false;
-        blocks.push({ h: textHeight(src, CAP.body, 1.1), gap: 24 * s, emit: (ops, y) => ops.push(...textOps(src, { x: c.left, y, maxWidth: c.maxWidth, align: 'center', role: 'label', alpha: 0.85, anim: { at: TIMING.stat.offer, dur: ENTER, kind: 'fade' } })) });
-      }
-      return { blocks, ok, ctaAt: TIMING.stat.cta };
-    },
-
     today3(c, s) {
       const sp = c.spec;
       const blocks = [];
@@ -604,26 +533,6 @@
       return { blocks, ok, ctaAt: TIMING.versus.cta };
     },
 
-    quote(c, s) {
-      const sp = c.spec;
-      const blocks = [];
-      let ok = true;
-      const markPx = sp.mark * Math.max(s, 0.9);
-      const markH = markPx * 0.36; // the visible part of the “ glyph
-      blocks.push({ h: markH, gap: 0, emit: (ops, y) => ops.push({ type: 'text', text: '“', x: c.left - markPx * 0.04, y: y + markPx * 0.62, w: markPx * 0.4, font: font(700, markPx, CONDENSED), fill: c.brand.highlight.bg, alpha: 0.5, role: 'deco' }) });
-      const quote = fitText(c.measure, str(c.layout.quote), { weight: 700, family: CONDENSED, size: px(sp.quote, s, sp.quoteMin), min: sp.quoteMin, maxLines: sp.quoteLines, maxWidth: c.maxWidth });
-      if (!quote.ok || !quote.lines.length) ok = false;
-      blocks.push({ h: textHeight(quote, CAP.condensed, 1.1), gap: 18 * s, emit: (ops, y) => ops.push(...textOps(quote, { x: c.left, y, maxWidth: c.maxWidth, cap: CAP.condensed, lineHeight: 1.1, shadow: SHADOW.headline, boost: quote.px * BASE.boost, role: 'display' })) });
-      const who = [str(c.layout.speaker), str(c.layout.quoteContext)].filter(Boolean).join(', ');
-      if (!str(c.layout.speaker)) ok = false;
-      const attr = fitText(c.measure, who ? `— ${who}` : '', { weight: 700, family: LABEL_FONT, size: px(sp.attr, s, FLOOR.label), min: FLOOR.label, maxLines: 2, maxWidth: c.maxWidth, upper: true });
-      if (!attr.ok) ok = false;
-      if (who) blocks.push({ h: textHeight(attr, CAP.body, 1.15), gap: 40 * s, emit: (ops, y) => ops.push(...textOps(attr, { x: c.left, y, maxWidth: c.maxWidth, role: 'label', alpha: 0.92, anim: { at: TIMING.quote.attr, dur: ENTER, kind: 'fade' } })) });
-      const offer = fitText(c.measure, str(c.layout.offer), { weight: 500, family: BODY, size: px(sp.offer, s, FLOOR.body), min: FLOOR.body, maxLines: sp.offerLines, maxWidth: c.maxWidth });
-      if (!offer.ok) ok = false;
-      if (offer.lines.length) blocks.push({ h: textHeight(offer, CAP.body, 1.15), gap: 56 * s, emit: (ops, y) => ops.push(...textOps(offer, { x: c.left, y, maxWidth: c.maxWidth, anim: { at: TIMING.quote.offer, dur: ENTER, kind: 'rise', dy: 20 } })) });
-      return { blocks, ok, ctaAt: TIMING.quote.cta };
-    },
   };
 
   // Lays out one of the styles above. Always in the Meta safe zone.

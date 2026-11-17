@@ -385,7 +385,11 @@ assert.match(copyAsk, /red teams/, 'the colour theme');
 assert.match(copyAsk, /Mahomes rallies the Chiefs/);
 assert.doesNotMatch(copyAsk, /What happened|Facts:/, 'no research block');
 assert.equal(res.body.variants.length, 3);
-const [v1, v2, v3] = res.body.variants;
+// Variants come back best-first by the free rubric checks; find them by style.
+const byStyle = st => res.body.variants.find(v => v.style === st);
+const [v1, v2, v3] = [byStyle('condensed'), byStyle('highlight'), byStyle('simple')];
+const passedOf = v => STYLES_FOR_TEST.copyChecks(v, BRANDS_FOR_TEST.byId('the-huddle')).passed;
+res.body.variants.slice(1).forEach((v, i) => assert.ok(passedOf(res.body.variants[i]) >= passedOf(v), 'ranked by the rubric checks'));
 assert.doesNotMatch(v1.headline, /insane/i);
 assert.match(v1.headline, /^A wild run\./);
 assert.ok(v1.headline.split(/\s+/).length <= 22);
@@ -443,26 +447,16 @@ _test.useLearning({});
 //      repaired in code; facts only from the brief; the style suggestion.
 {
   const huddle = BRANDS_FOR_TEST.byId('the-huddle');
-  const notes = 'Mahomes threw for 412 yards. Reid said “we never stopped believing in this group” after the game.';
+  const notes = 'Mahomes threw for 412 yards. The Chiefs rallied late.';
   const ctx = _test.copyContext({ brandId: 'the-huddle', sport: 'nfl', notes, trend: { title: 'Mahomes rallies the Chiefs', related: [{ title: 'Chiefs beat the Broncos in overtime' }, { title: 'Bears fire their offensive coordinator' }, { title: 'Lions clinch the NFC North' }] } });
   const facts = ctx.facts;
   assert.ok(facts.claims.length >= 2 && facts.headlines.length === 4 && facts.sources.includes(notes));
-  // Stat Card: the number must be in the facts.
-  let c = _test.checkVariant({ style: 'stat', stat: '412', statLabel: 'passing yards for Mahomes on Sunday', offer: 'Get numbers like this in The Huddle. Free.' }, huddle, facts, 'stat');
-  assert.deepEqual(c.errors, []);
-  assert.equal(c.variant.stat, '412');
-  c = _test.checkVariant({ style: 'stat', stat: '450', statLabel: 'passing yards', offer: 'Free.' }, huddle, facts, 'stat');
-  assert.match(c.errors.join(' '), /stat 450 is not in/);
-  let fixed = _test.autoFix({ style: 'stat', stat: '450', statLabel: 'passing yards', offer: 'Numbers like this, every day' }, huddle, facts, 'stat');
-  assert.equal(fixed.raw.stat, '', 'an invented stat is dropped, never kept');
-  assert.match(fixed.raw.offer, /Free\.$/, 'the offer always says free');
-  assert.ok(fixed.fixes.some(f => f.kind === 'invented_number'));
   // Today's 3: real stories only, 9 words max.
-  c = _test.checkVariant({ style: 'today3', listTitle: '3 things NFL fans need to know', items: ['Chiefs beat the Broncos in overtime', 'Bears fire their offensive coordinator', 'Lions clinch the NFC North'], offer: 'The stories that matter, in The Huddle. Free.' }, huddle, facts, 'today3');
+  let c = _test.checkVariant({ style: 'today3', listTitle: '3 things NFL fans need to know', items: ['Chiefs beat the Broncos in overtime', 'Bears fire their offensive coordinator', 'Lions clinch the NFC North'], offer: 'The stories that matter, in The Huddle. Free.' }, huddle, facts, 'today3');
   assert.deepEqual(c.errors, [], 'the title may say 3');
   c = _test.checkVariant({ style: 'today3', items: ['Chiefs beat the Broncos in overtime', 'Aliens land at Arrowhead stadium tonight', 'Lions clinch the NFC North'], offer: 'Free.' }, huddle, facts, 'today3');
   assert.match(c.errors.join(' '), /headline 2 is not one of the stories/);
-  fixed = _test.autoFix({ style: 'today3', items: ['Chiefs beat the Broncos in overtime in a game nobody will forget for years', 'Aliens land at Arrowhead stadium tonight'], offer: 'Free.' }, huddle, facts, 'today3');
+  let fixed = _test.autoFix({ style: 'today3', items: ['Chiefs beat the Broncos in overtime in a game nobody will forget for years', 'Aliens land at Arrowhead stadium tonight'], offer: 'Free.' }, huddle, facts, 'today3');
   assert.deepEqual(fixed.raw.items, ['Chiefs beat the Broncos in overtime in a game'], 'cut to 9 words, the made-up story dropped');
   // Us vs Them: generic "them", approved claims only.
   c = _test.checkVariant({ style: 'versus', them: ['Endless hot takes', 'Rumours from ESPN'], us: ['Free to sign up', 'Read by 2 million fans'], offer: 'Switch to The Huddle. It’s free.' }, huddle, facts, 'versus');
@@ -472,65 +466,65 @@ _test.useLearning({});
   assert.deepEqual(fixed.raw.them, ['Endless hot takes', 'Too many apps']);
   assert.ok(fixed.raw.us.every(u => huddle.verifiedClaims.includes(u)) && fixed.raw.us.length >= 2, 'only approved claims, word for word');
   assert.deepEqual(_test.checkVariant(fixed.raw, huddle, facts, 'versus').errors, []);
-  // Quote Card: word for word from the notes, by someone the notes name.
-  c = _test.checkVariant({ style: 'quote', quote: 'We never stopped believing in this group', speaker: 'Andy Reid', quoteContext: 'after the win', offer: 'Every word that matters, in The Huddle. Free.' }, huddle, facts, 'quote');
-  assert.match(c.errors.join(' '), /speaker "Andy Reid" is not named/, 'Andy is not in the notes');
-  c = _test.checkVariant({ style: 'quote', quote: 'We never stopped believing in this group', speaker: 'Reid', quoteContext: 'after the win', offer: 'Every word that matters, in The Huddle. Free.' }, huddle, facts, 'quote');
-  assert.deepEqual(c.errors, []);
-  fixed = _test.autoFix({ style: 'quote', quote: 'We always believed in this team', speaker: 'Reid', offer: 'Free.' }, huddle, facts, 'quote');
-  assert.equal(fixed.raw.quote, '', 'a reworded quote is dropped');
-  assert.match(_test.checkVariant(fixed.raw, huddle, facts, 'quote').errors.join(' '), /quote is missing/);
   // Extras on a classic variant ride along only when they pass.
-  c = _test.checkVariant({ style: 'condensed', headline: 'Mahomes threw for 412 yards.', body: ['The Huddle, free.'], stat: '999', statLabel: 'made up', quote: 'We never stopped believing in this group', speaker: 'Reid' }, huddle, facts, 'condensed');
+  c = _test.checkVariant({ style: 'condensed', headline: 'Mahomes threw for 412 yards.', body: ['The Huddle, free.'], items: ['Aliens land at Arrowhead stadium tonight', 'Bears fire their offensive coordinator'], them: ['Endless hot takes', 'Too many apps'], us: ['Free to sign up', 'Unsubscribe anytime'] }, huddle, facts, 'condensed');
   assert.deepEqual(c.errors, []);
-  assert.equal(c.variant.stat, '', 'a bad extra is emptied, not an error');
-  assert.equal(c.variant.quote, 'We never stopped believing in this group', 'a good extra rides along');
-  // A number or quote the editor typed is their input: it counts as a fact.
-  const typedCtx = _test.copyContext({ brandId: 'the-huddle', notes: 'Big win.', stat: '6', quote: 'One game at a time, always.' });
-  assert.deepEqual(_test.checkVariant({ style: 'stat', stat: '6', statLabel: 'straight wins', offer: 'Free.' }, huddle, typedCtx.facts, 'stat').errors, []);
-  assert.ok(typedCtx.quotes.includes('One game at a time, always.'));
+  assert.deepEqual(c.variant.items, [], 'a bad extra is emptied, not an error');
+  assert.deepEqual(c.variant.them, ['Endless hot takes', 'Too many apps'], 'a good extra rides along');
+  // Removed styles: their fields are no longer read; a removed style is a classic one.
+  c = _test.checkVariant({ style: 'stat', headline: 'Every Chiefs win, in one free email.', body: ['The Huddle, free.'], stat: '999', quote: 'made up words here' }, huddle, facts, '');
+  assert.equal(c.variant.style, 'condensed', 'stat is not a style any more');
+  assert.equal(c.variant.stat, undefined);
+  assert.equal(c.variant.quote, undefined);
   // Skip: asked for a style without its facts.
   const bare = _test.copyContext({ brandId: 'the-huddle', notes: 'The Chiefs keep winning.' });
   const brief = STYLES_FOR_TEST.briefFacts({ notes: bare.notes, brand: bare.brand });
-  assert.equal(_test.skipReason('stat', brief).skip, 'no number');
-  assert.equal(_test.skipReason('quote', brief).skip, 'no quote');
+  assert.equal(_test.skipReason('stat', brief), null, 'removed styles never skip (they are not asked for)');
   assert.equal(_test.skipReason('today3', brief).skip, 'no headlines');
   assert.equal(_test.skipReason('versus', brief), null);
 
-  // Through the endpoint: Stat Card with no number skips before any AI call.
+  // Through the endpoint: Today's 3 with no headlines skips before any AI call.
   _test.useLearning({ styleRankingFor: async () => [{ style: 'versus', score: 1, exports: 4 }] });
   copyCalls = 0;
-  res = await post({ mode: 'copy', brandId: 'the-huddle', sport: 'nfl', style: 'stat', notes: 'The Chiefs keep winning.' });
+  res = await post({ mode: 'copy', brandId: 'the-huddle', sport: 'nfl', style: 'today3', notes: 'The Chiefs keep winning.' });
   assert.equal(res.status, 422);
   assert.equal(res.body.reason, 'skip');
-  assert.match(res.body.error, /Stat Card needs a number/);
+  assert.match(res.body.error, /Today’s 3 needs 3 real headlines/);
   assert.equal(copyCalls, 0);
-  assert.equal(res.body.suggestion.style, 'versus');
-  // Stat Card with a number: the ask carries the claims and the shape; the
-  // invented stat is dropped and only the grounded variants come back.
+  assert.equal(res.body.suggestion.style, 'highlight', 'placeholder claims are never suggested first');
+  // A removed style asked for by an old page: treated as no style (3 classic variants).
   copyVariants = [
-    { style: 'stat', stat: '412', statLabel: 'passing yards for Mahomes on Sunday', offer: 'Get numbers like this in The Huddle', headline: 'Mahomes threw for 412.', body: ['The Huddle, free.'] },
-    { style: 'stat', stat: '412', statLabel: 'yards through the air for Kansas City', offer: 'One free email. Every number that matters.' },
-    { style: 'stat', stat: '35', statLabel: 'points', offer: 'Free.' },
+    { style: 'condensed', headline: 'Every Chiefs win, in one free email.', body: ['The Huddle, free every morning.'] },
+    { style: 'highlight', headline: 'ONE FREE EMAIL FOR CHIEFS FANS', highlight: 'ONE FREE EMAIL', body: ['The Huddle has it.'] },
   ];
   res = await post({ mode: 'copy', brandId: 'the-huddle', sport: 'nfl', style: 'stat', notes, hasClip: false, trend: { title: 'Mahomes rallies the Chiefs', related: [{ title: 'Chiefs beat the Broncos in overtime' }] } });
   assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.match(copyAsk, /all in the "stat" style/);
+  assert.doesNotMatch(copyAsk, /"stat" style|Stat Card|Quote Card/);
   assert.match(copyAsk, /Approved claims about The Huddle/);
   assert.match(copyAsk, /"bestStyle"/);
-  assert.equal(res.body.variants.length, 2, 'the made-up 35 never comes back');
-  assert.ok(res.body.variants.every(v => v.stat === '412' && /free/i.test(v.offer)));
-  assert.equal(res.body.suggestion.style, 'stat');
-  assert.equal(res.body.suggestion.text, 'Suggested: Stat Card — your brief has a number (412)');
+  // Daily set: one call asks for 3 angles in mixed styles.
+  copyCalls = 0;
+  res = await post({ mode: 'copy', brandId: 'the-huddle', sport: 'nfl', set: true, notes: 'A different brief for the set.', trend: { title: 'Mahomes rallies the Chiefs' } });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(copyCalls, 1);
+  assert.match(copyAsk, /today's ad set: write 3 variants, each a clearly different angle/);
+  assert.match(copyAsk, /at least two different styles/);
+  // The same request again is free (10-minute cache), and skips the AI gates.
+  callsThisHour = 500;
+  res = await post({ mode: 'copy', brandId: 'the-huddle', sport: 'nfl', set: true, notes: 'A different brief for the set.', trend: { title: 'Mahomes rallies the Chiefs' } });
+  callsThisHour = 0;
+  assert.equal(res.status, 200);
+  assert.equal(res.body.cached, true);
+  assert.equal(res.body.cost, 0);
+  assert.equal(copyCalls, 1, 'no second model call');
   // suggest-style: no model call, no AI gate.
   copyCalls = 0;
   delete process.env.AI_GATEWAY_API_KEY;
-  res = await post({ mode: 'suggest-style', brandId: 'the-huddle', notes: 'Reid said “we never stopped believing in this group” after the game.' });
+  res = await post({ mode: 'suggest-style', brandId: 'the-huddle', notes: 'Mahomes threw for 412 yards.' });
   process.env.AI_GATEWAY_API_KEY = 'gw-test';
   assert.equal(res.status, 200);
   assert.equal(copyCalls, 0);
-  assert.ok(res.body.suggestion.scores.some(x => x.style === 'quote'));
-  assert.ok(!res.body.suggestion.scores.some(x => x.style === 'stat'), 'no number, no Stat Card');
+  assert.ok(!res.body.suggestion.scores.some(x => x.style === 'stat' || x.style === 'quote'), 'removed styles are never suggested');
   _test.useLearning({});
 }
 
@@ -565,14 +559,15 @@ res = await post({ mode: 'copy', brandId: 'es-dugout', trend });
 assert.equal(res.status, 429);
 callsThisHour = 0;
 
-// 16. Grammar: the light (cheapest) model, strict checks on every suggestion, a 10-minute cache.
+// 16. Grammar: Haiku (the main tier, "Haiku only"), strict checks on every suggestion, a 10-minute cache.
 let grammarCalls = 0;
 let grammarReply = [];
 let grammarRequest = null;
-chatHandler = request => {
+chatHandler = () => { throw new Error('grammar must not use the light (non-Claude) model'); };
+messagesHandler = request => {
   grammarCalls += 1;
   grammarRequest = request;
-  return reply(200, { choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({ issues: grammarReply }) } }], usage: { prompt_tokens: 420, completion_tokens: 180 } });
+  return reply(200, { stop_reason: 'end_turn', usage: { input_tokens: 420, output_tokens: 180 }, content: [{ type: 'text', text: JSON.stringify({ issues: grammarReply }) }] });
 };
 const gCopy = { headline: 'Their back in the the playoffs', highlight: '', body: ['Get every story , free.', 'Skubal threw 99 pitches in ES Dugout'], cta: 'SIGN UP ES DUGOUT' };
 grammarReply = [
@@ -592,9 +587,8 @@ grammarReply = [
 res = await post({ mode: 'grammar', brandId: 'es-dugout', copy: gCopy });
 assert.equal(res.status, 200, JSON.stringify(res.body));
 assert.equal(grammarCalls, 1);
-assert.equal(grammarRequest.model, 'openai/gpt-oss-20b', 'the light tier (cheapest model)');
-assert.deepEqual(grammarRequest.response_format, { type: 'json_object' }, 'strict JSON output');
-assert.match(grammarRequest.messages[0].content, /grammar, spelling and punctuation ONLY/);
+assert.equal(grammarRequest.model, 'anthropic/claude-haiku-5.5', 'Haiku (main tier)');
+assert.match(String(grammarRequest.system), /grammar, spelling and punctuation ONLY/);
 assert.deepEqual(res.body.issues.map(i => i.original), ['Their back', 'the the', 'story , free']);
 assert.equal(res.body.issues[2].index, 0);
 assert.equal(res.body.dropped, 5);

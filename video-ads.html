@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261117-ready1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="video-ads.css?v=20261118-rel1">
+  <link rel="stylesheet" href="video-ads.css?v=20261118-hero-video-ads">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
@@ -97,6 +97,11 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
               <span>Meta preview</span>
             </button>
+            <div class="va-seg va-seg--sm" role="radiogroup" aria-label="Meta placement" id="va-placement" hidden>
+              <button type="button" role="radio" data-place="feed" aria-checked="false" title="Instagram / Facebook feed">Feed</button>
+              <button type="button" role="radio" data-place="story" aria-checked="false" title="Stories">Story</button>
+              <button type="button" role="radio" data-place="reel" aria-checked="true" title="Reels">Reels</button>
+            </div>
             <button class="es-btn es-btn--sm" type="button" id="va-safe-toggle" aria-pressed="false" title="Show the areas Meta's Reels buttons, profile row and caption cover">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" stroke-dasharray="3 2.4"/><path d="M5 15h14"/><path d="M5 6h14"/></svg>
               <span>Safe zone</span>
@@ -160,12 +165,14 @@
             <div class="va-meta-head" id="va-meta-head" aria-hidden="true"></div>
             <div class="va-device__media">
               <canvas id="va-canvas" width="1080" height="1920" role="img" aria-label="Ad preview" tabindex="0" aria-describedby="va-pan-hint" aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown"></canvas>
+              <canvas class="va-meta-fill" id="va-meta-fill" width="54" height="96" aria-hidden="true"></canvas>
               <div class="va-meta-over" id="va-meta-over" aria-hidden="true"></div>
               <div class="va-safe" id="va-safe" aria-hidden="true" hidden></div>
             </div>
             <div class="va-meta-foot" id="va-meta-foot" aria-hidden="true"></div>
           </div>
           <div class="va-fit" id="va-fit" role="status"></div>
+          <p class="va-meta-note" id="va-meta-note" role="status" hidden></p>
           <div class="va-busy" id="va-busy" hidden>
             <div class="va-busy__ring"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="19"/><circle class="va-busy__arc" cx="22" cy="22" r="19" id="va-busy-arc"/></svg><span id="va-busy-pct"></span></div>
             <p id="va-busy-text">Downloading the clip…</p>
@@ -220,6 +227,21 @@
             <h2 id="va-h-copy" tabindex="-1">Write the copy</h2>
             <p>Type your own, or Ask AI to write and check it.</p>
           </header>
+          <!-- Today's ad set: 3 angles × 3 sizes from one Ask AI call, reviewed here, exported in one pass. -->
+          <section class="va-set" id="va-set" aria-labelledby="va-set-title">
+            <div class="va-set__head">
+              <div class="va-set__intro">
+                <h3 class="va-set__title" id="va-set-title">Today’s ad set</h3>
+                <p class="va-hint" id="va-set-sub">3 angles × 3 sizes for <b id="va-set-brand">The Huddle</b>, ready to review and export.</p>
+              </div>
+              <button class="es-btn es-btn--primary" type="button" id="va-set-make">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>
+                <span id="va-set-make-text">Make my daily set</span>
+              </button>
+            </div>
+            <div class="va-set__body" id="va-set-body" aria-live="polite"></div>
+          </section>
+          <p class="va-set-editing" id="va-set-editing" role="status" hidden></p>
           <div class="va-field va-style-pick">
             <div class="va-field__top"><span class="va-label" id="va-style-label">Style</span><span class="va-count" id="va-style-count"></span></div>
             <p class="va-suggest" id="va-suggest" role="status" aria-live="polite" hidden></p>
@@ -404,6 +426,13 @@
             <h2 id="va-h-export" tabindex="-1">Export</h2>
             <p>MP4 with sound. Records in real time.</p>
           </header>
+          <div class="va-field" id="va-exmode-row" hidden>
+            <span class="va-label" id="va-exmode-label">What to export</span>
+            <div class="va-seg va-seg--full" role="radiogroup" aria-labelledby="va-exmode-label" id="va-exmode">
+              <button type="button" role="radio" data-exmode="set" aria-checked="true">Today’s set</button>
+              <button type="button" role="radio" data-exmode="single" aria-checked="false">This ad only</button>
+            </div>
+          </div>
           <div class="va-field">
             <span class="va-label" id="va-exsizes-label">Sizes</span>
             <div class="va-exsizes" role="group" aria-labelledby="va-exsizes-label" id="va-exsizes">
@@ -418,7 +447,15 @@
             <p class="va-hint va-grid-names" id="va-grid-names"></p>
           </div>
           <div class="va-ready" id="va-ready"></div>
-          <label class="va-check" id="va-rights-row"><input type="checkbox" id="va-rights"><span>We can use this footage in a paid ad.</span></label>
+          <section class="va-preflight" id="va-preflight" aria-labelledby="va-preflight-title">
+            <div class="va-field__top">
+              <h3 class="va-label" id="va-preflight-title">Check before you export</h3>
+              <button class="es-btn es-btn--sm" type="button" id="va-check">Check this ad</button>
+            </div>
+            <p class="va-hint" id="va-preflight-hint">Free and instant: offer, 55+ readability, trust, fit and safe zones. An AI score is optional.</p>
+            <div class="va-preflight__out" id="va-preflight-out" aria-live="polite"></div>
+          </section>
+          <label class="va-check" id="va-rights-row"><input type="checkbox" id="va-rights"><span>I have the rights to use this footage <span class="va-hint">Optional reminder</span></span></label>
           <button class="es-btn es-btn--primary es-btn--lg va-block" type="button" id="va-export" disabled>Export MP4</button>
           <div class="va-progress" id="va-export-progress" hidden><span></span></div>
           <p class="va-hint" id="va-export-status" role="status" aria-live="polite"></p>
@@ -444,12 +481,13 @@
   <div class="va-toasts" id="va-toasts" aria-live="polite"></div>
 
   <video id="va-video" playsinline muted preload="auto" hidden></video>
-  <script src="video-ads-brands.js?v=20261118-rel1"></script>
-  <script src="video-ads-styles.js?v=20261118-rel1"></script>
+  <script src="video-ads-brands.js?v=20261118-hero-video-ads"></script>
+  <script src="video-ads-styles.js?v=20261118-hero-video-ads"></script>
   <script src="video-ads-teams.js?v=20261117-tlogo1"></script>
-  <script src="video-ads-render.js?v=20261118-rel1"></script>
+  <script src="video-ads-render.js?v=20261118-hero-video-ads"></script>
+  <script src="video-ads-rating.js?v=20261118-hero-video-ads"></script>
   <script src="es-motion.js?v=20261115-ds1"></script>
   <script src="league-logos.js?v=20261117-logo1"></script>
-  <script src="video-ads.js?v=20261118-rel1"></script>
+  <script src="video-ads.js?v=20261118-hero-video-ads"></script>
 </body>
 </html>

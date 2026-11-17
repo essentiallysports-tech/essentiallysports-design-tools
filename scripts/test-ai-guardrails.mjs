@@ -370,14 +370,15 @@ for (const [name, handler, body, feature] of cases) {
   assert.equal(retried.text, 'plain');
   assert.equal(aiCalls(), 2, 'one plain retry');
   assert.equal(guardEvents('cache-hint-rejected').length, 1, 'the rejected cache hint is logged');
-  // Video Ads copy: COPY_SYSTEM is under the minimum, so it is never marked.
-  assert.ok(videoAds.COPY_SYSTEM.length < 4096, 'COPY_SYSTEM stays near the cache minimum (not worth a cache hint)');
+  // Video Ads copy (hero pass, 2026-11-18): COPY_SYSTEM now carries the rating
+  // rubric, is static and well over the minimum, so it is marked cacheable.
+  assert.ok(videoAds.COPY_SYSTEM.length >= gw.CACHE_MIN_CHARS * 2, 'COPY_SYSTEM is long enough to cache');
   reset();
   gatewayReply = () => ({ body: { content: [{ type: 'text', text: '{"variants": []}' }], usage: { input_tokens: 10, output_tokens: 10 }, stop_reason: 'end_turn' } });
   await videoAds.copy({ ...AD }, { email: 'designer@essentiallysports.com', token: 'tok' });
   const copySystems = fetched(h => h.endsWith('/messages')).map(c => c.body.system);
   assert.ok(copySystems.length >= 1);
-  assert.ok(copySystems.every(system => typeof system === 'string'), 'Video Ads copy sends no cache_control');
+  assert.ok(copySystems.every(system => Array.isArray(system) && system[0].cache_control?.type === 'ephemeral'), 'Video Ads copy marks its static system prompt cacheable');
   // Generate: the cached prefix is the same whatever formats the editor picks.
   const gen = require(path.join(fnDir, 'es-generate.js'))._test;
   const found = { digest: 'Clark scored 30.' };

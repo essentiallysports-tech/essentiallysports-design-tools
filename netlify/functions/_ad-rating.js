@@ -22,7 +22,9 @@ const RUBRIC_VERSION = 'frameup-newsletter-v1.0.0';
 // so an ad without a clip is not marked down for "missing footage". The
 // rubric (factors, weights, caps, verdicts) is unchanged, so RUBRIC_VERSION
 // stays and scores remain comparable with v1.0.0 ratings.
-const PROMPT_VERSION = 'frameup-video-ads-review-v1.1.0';
+// v1.2.0: Stat Card and Quote Card were removed from Video Ads (owner, 2026-11-18);
+// the style list below no longer describes them. Rubric unchanged.
+const PROMPT_VERSION = 'frameup-video-ads-review-v1.2.0';
 const PERFORMANCE_CLAIM = 'Hypothesis only; no CTR, conversion rate, or CAC is predicted.';
 
 const FACTORS = Object.freeze([
@@ -325,14 +327,12 @@ const SYSTEM_PROMPT = `You are a senior Meta performance creative reviewer for f
 
 ## What you are reviewing
 EssentiallySports newsletter-signup VIDEO ads made in FrameUp for NFL, college football or MLB newsletters. Every ad has the newsletter's logo, copy, a white CTA button such as "SIGN UP ES CFB" and the line "Unsubscribe anytime". The objective is direct newsletter subscription.
-The background is one of: a sports clip, an animated gradient in team or brand colours, or a still photo with a slow zoom. The context's "background" says which. An animated or photo background is a deliberate choice (paid ads avoid league footage): never penalise an ad, or list a weakness or fix, for having no clip, no game footage or no action shot; judge whether the copy and the layout carry the message on their own.
+The background is one of: a sports clip, an animated gradient in team or brand colours, or a still photo with a slow zoom. The context's "background" says which. An animated or photo background is a deliberate choice: never penalise an ad, or list a weakness or fix, for having no clip, no game footage or no action shot; judge whether the copy and the layout carry the message on their own.
 The context's "style" says which layout it is:
 - simple / condensed / highlight: a centred block of copy (a headline plus short body paragraphs; condensed = bold condensed headline; highlight = one phrase on a coloured box).
-- stat (Stat Card): one big number with a line saying what it counts and an offer line. The number comes from the editor's brief.
 - today3 (Today's 3): a title and three real headlines that appear one after another, then the offer.
 - versus (Us vs Them): a "Your feed" card with struck-through lines vs a card in the newsletter's colour with ticked claims (claims come from an approved list).
-- quote (Quote Card): a verbatim, attributed quote, then the offer.
-These styles reveal their parts over time: early frames may show only the hook (the number, the title, the quote, the two cards) while later frames add the rows, ticks, offer and CTA; the CTA is up by 40% of the duration and holds to the end. Judge the hook on the first frame and the full message on the last frame; do not mark the CTA as missing because an early frame does not show it yet.
+These styles reveal their parts over time: early frames may show only the hook (the title, the two cards) while later frames add the rows, ticks, offer and CTA; the CTA is up by 40% of the duration and holds to the end. Judge the hook on the first frame and the full message on the last frame; do not mark the CTA as missing because an early frame does not show it yet.
 You receive a few still frames sampled from the exported video (in time order, labeled with their time), downscaled to about 540px wide. A phone shows the full-width ad at roughly 390pt wide, so these frames are close to real phone size: judge legibility as you see it. You also receive the campaign context as JSON: brand, sport, audience, placement with its safe zones, the style and background, the copy the designer typed (styleCopy for the no-footage styles), and any verified claims.
 Do NOT claim to have seen anything not supplied: no audio, no landing page, no metrics. Rate only what is visible in the frames. If the typed copy is not visible in the frames, say so as evidence. For video, judge the first-frame hook, sound-off comprehension (the copy must work with no audio), whether the background reads at a glance, and whether the copy stays readable over it.
 
@@ -385,7 +385,7 @@ const BACKGROUNDS = ['clip', 'animated', 'photo'];
 function styleCopyOf(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
   const out = {};
-  ['offer', 'stat', 'statLabel', 'statSource', 'listTitle', 'quote', 'speaker', 'quoteContext'].forEach(k => { const v = sanitizeText(input[k], 300); if (v) out[k] = v; });
+  ['offer', 'listTitle'].forEach(k => { const v = sanitizeText(input[k], 300); if (v) out[k] = v; });
   ['items', 'them', 'us'].forEach(k => { const v = (Array.isArray(input[k]) ? input[k] : []).map(x => sanitizeText(x, 200)).filter(Boolean).slice(0, 3); if (v.length) out[k] = v; });
   return out;
 }
