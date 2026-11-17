@@ -8057,6 +8057,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
 <div class="studio-topbar view-hidden" data-workspace aria-label="Studio workspace toolbar">
   <div class="studio-topbar-left">
+    <h1 class="es-sr-only" id="studio-route-heading">Social Media editor</h1>
     <span class="studio-title" id="studio-workspace-title">Social Media</span>
     <input class="studio-name-field" id="studio-canvas-name" type="text" autocomplete="off" spellcheck="false" aria-label="Canvas export name" placeholder="Untitled canvas">
   </div>
@@ -22625,6 +22626,8 @@ loadFont().then(() => render());
     const modeNode = document.getElementById('studio-mode-badge');
     const safeNode = document.getElementById('studio-safe-badge');
     if (titleNode) titleNode.textContent = title;
+    const routeHeading = document.getElementById('studio-route-heading');
+    if (routeHeading) routeHeading.textContent = `${title} editor`;
     if (sizeNode && workspace) sizeNode.textContent = `${workspace.width} × ${workspace.height} px`;
     if (modeNode) modeNode.textContent = workspaceName === 'instagram' ? 'Carousel Studio' : 'Canvas Studio';
     if (safeNode) {
