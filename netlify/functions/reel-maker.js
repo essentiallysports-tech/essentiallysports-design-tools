@@ -12,6 +12,16 @@
 //             45-minute cache per (topic, format, tier, steer).
 //   revise    "shorter / punchier / stronger hook / calmer" or free text
 //   music     optional generated instrumental bed (REELS_MUSIC=gateway), organic-only rights
+//   voice-sample  a ~2 s preview of one of the four voices (cached)
+//   scene     one AI scene still for the fill chain (no people, names or logos)
+//   ai-clip-start / ai-clip-status
+//             one AI b-roll clip as an async Gateway job (REELS_AI_CLIPS=gateway,
+//             capped by REELS_AI_CLIPS_MAX, default 2 per reel); the page polls
+//
+// GET ?diag=voice (dashboard admins only, is_es_designer_admin(), fails
+// closed): one tiny real synthesis ("Test.", well under a cent) to verify the
+// live Gateway speech route after a deploy. Returns ok, model, format and the
+// byte length, or the error text and the reply's keys. Never audio or keys.
 //   voice     one beat's voiceover (<= 400 chars) as base64 audio + word
 //             timings (_reel-voice.js); one beat per request keeps every
 //             response far under Vercel's 4.5 MB body limit
@@ -25,6 +35,8 @@
 // and weekly caps and are logged in frameup_ai_usage (features reels-*).
 const crypto = require('node:crypto');
 const { verifyEsUser, bearerToken, authConfig } = require('./_supabase-auth.js');
+const media = require('./_reel-media.js');
+const STYLES = require('../../reel-styles.js');
 const { getTrends } = require('./trend-design.js');
 const { gatewayConfigured, isBudgetError, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage } = require('./_ai-gateway.js');
 const director = require('./_reel-director.js');
@@ -39,7 +51,7 @@ const PLAN_CACHE = new Map();
 const MAX_BODY = 220 * 1024; // a project's timeline is capped at 200 KB
 const PROJECTS = 'frameup_reel_projects';
 const EVENTS = 'frameup_reel_events';
-const EVENT_TYPES = ['plan', 'revise', 'voice', 'edit', 'export', 'lint_blocked'];
+const EVENT_TYPES = ['plan', 'revise', 'voice', 'edit', 'export', 'lint_blocked', 'make', 'visuals'];
 
 function json(statusCode, body) {
   return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) };
@@ -94,7 +106,10 @@ async function plan(body, track, gates) {
   const tier = body.tier === 'economy' ? 'economy' : 'standard';
   const sport = REEL_SPORTS.includes(body.sport) ? body.sport : '';
   const steer = clean(body.steer, 300);
-  const key = planKey([trend?.id || trend?.title || '', brief, format, tier, steer, sport, Boolean(body.factCheck)]);
+  // Style: the editor's pick, or 'auto' = the code suggestion (free).
+  const suggested = STYLES.suggestStyle({ format, text: [trend?.title, ...(trend?.related || []).map(r => r.title), brief].filter(Boolean).join(' ') });
+  const style = STYLES.STYLES[body.style] ? body.style : suggested.id;
+  const key = planKey([trend?.id || trend?.title || '', brief, format, tier, steer, sport, Boolean(body.factCheck), style]);
   const hit = PLAN_CACHE.get(key);
   if (hit && Date.now() - hit.at < PLAN_TTL_MS) return { ...hit.value, cached: true, cost: 0, costs: { director: 0, factCheck: 0 } };
 
@@ -116,9 +131,10 @@ async function plan(body, track, gates) {
     const read = director.readReelBrief({ brief, trend, sport, format });
     const draft = F.fallbackPlan({ brief: read.text, title: trend ? trend.title : '', format: read.format, sport: read.sport });
     draft.team = read.team;
+    draft.style = style;
     result = { plan: draft, read, source: 'draft', cost: 0, model: '', issues: [] };
   } else {
-    result = await director.runReelDirector({ brief, trend, format, sport, tier, steer, track, facts: facts?.text || '' });
+    result = await director.runReelDirector({ brief, trend, format, sport, tier, steer, style, track, facts: facts?.text || '' });
   }
   const corpus = result.read.corpus;
   const value = {
@@ -133,6 +149,7 @@ async function plan(body, track, gates) {
     corpus: corpus.slice(0, 12000),
     sources: sourcesOf(trend, brief, facts),
     route: result.read.route,
+    style, suggestedStyle: suggested,
     lint: lintPlan(result.plan, { corpus }),
     costs: { director: money(result.cost), factCheck: money(factCost) },
     cost: money(result.cost + factCost),
@@ -153,9 +170,44 @@ async function revise(body, track) {
 }
 
 async function speak(body, track) {
-  const out = await voice.synthesize({ text: clean(body.text, voice.MAX_CHARS + 1), track });
+  const out = await voice.synthesize({ text: clean(body.text, voice.MAX_CHARS + 1), voiceOption: clean(body.voice, 12), hook: body.hook === true, track });
   if (!out.ok) return { ok: false, status: out.reason === 'off' ? 503 : (out.reason === 'budget' ? 503 : (out.reason === 'error' ? 502 : 400)), reason: out.reason, error: out.error };
-  return { ok: true, beat: clean(body.beat, 12), audio: out.audio, mime: out.mime, durationMs: out.durationMs, words: out.words, alignedBy: out.alignedBy || '', cost: out.cost, costs: out.costs, cached: out.cached, mode: out.mode, model: out.model };
+  return { ok: true, beat: clean(body.beat, 24), audio: out.audio, mime: out.mime, durationMs: out.durationMs, words: out.words, alignedBy: out.alignedBy || '', cost: out.cost, costs: out.costs, cached: out.cached, mode: out.mode, model: out.model, voice: out.voice || '' };
+}
+async function voiceSample(body, track) {
+  const out = await voice.sample({ voiceOption: clean(body.voice, 12), track });
+  if (!out.ok) return { ok: false, status: out.reason === 'off' || out.reason === 'budget' ? 503 : (out.reason === 'voice' ? 400 : 502), reason: out.reason, error: out.error };
+  return { ok: true, voice: clean(body.voice, 12), audio: out.audio, mime: out.mime, cost: out.cost, cached: out.cached, model: out.model };
+}
+const COLORS = list => (Array.isArray(list) ? list : []).filter(c => /^#[0-9a-f]{6}$/i.test(String(c))).slice(0, 2);
+async function sceneImage(body, track) {
+  const out = await media.scene({ scene: clean(body.scene, 16), sport: clean(body.sport, 8), colors: COLORS(body.colors), track });
+  if (!out.ok) return { ok: false, status: out.reason === 'off' || out.reason === 'budget' ? 503 : 502, reason: out.reason, error: out.error };
+  return out;
+}
+async function aiClipStart(body, track) {
+  const out = await media.clipStart({ scene: clean(body.scene, 16), sport: clean(body.sport, 8), colors: COLORS(body.colors), used: Number(body.used) || 0, track });
+  if (!out.ok) return { ok: false, status: ['off', 'budget'].includes(out.reason) ? 503 : (out.reason === 'cap' ? 429 : 502), reason: out.reason, error: out.error };
+  return out;
+}
+async function aiClipStatus(body) {
+  const out = await media.clipStatus({ job: clean(body.job, 64), operation: body.operation && typeof body.operation === 'object' ? body.operation : (typeof body.operation === 'string' ? body.operation.slice(0, 2000) : null) });
+  if (!out.ok) return { ok: false, status: out.reason === 'off' ? 503 : 200, reason: out.reason, error: out.error, state: out.status || 'error' };
+  return out;
+}
+
+// Dashboard admin? The database decides (the function RLS uses); any failure
+// means no.
+async function isAdmin(token) {
+  if (!token) return false;
+  try {
+    const config = authConfig();
+    const response = await fetch(`${config.url}/rest/v1/rpc/is_es_designer_admin`, {
+      method: 'POST', headers: { apikey: config.publishableKey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(2500),
+    });
+    if (!response.ok) return false;
+    return (await response.json()) === true;
+  } catch { return false; }
 }
 
 async function music(body, track) {
@@ -229,11 +281,20 @@ async function recordEvent(body, auth, token) {
   } catch { return { ok: true, cloud: false }; }
 }
 
-const AI_MODES = { plan, revise, voice: speak, music };
-const DATA_MODES = { projects, 'project-save': projectSave, 'project-load': projectLoad, event: recordEvent };
+const AI_MODES = { plan, revise, voice: speak, music, 'voice-sample': voiceSample, scene: sceneImage, 'ai-clip-start': aiClipStart };
+// ai-clip-status only reads a job that was already billed and capped.
+const DATA_MODES = { 'ai-clip-status': aiClipStatus, projects, 'project-save': projectSave, 'project-load': projectLoad, event: recordEvent };
 
 exports.handler = async function handler(event) {
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'POST, OPTIONS' }, body: '' };
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' }, body: '' };
+  if (event.httpMethod === 'GET' && String(event.queryStringParameters?.diag || '') === 'voice') {
+    const auth = await verifyEsUser(event);
+    if (!auth.ok) return json(auth.statusCode, { ok: false, error: auth.error });
+    const token = bearerToken(event.headers);
+    if (!(await isAdmin(token))) return json(403, { ok: false, error: 'Admins only.' });
+    const out = await voice.diagnose({ track: { email: auth.user.email, token } });
+    return json(200, { diag: 'voice', ...out });
+  }
   if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'Method not allowed.' });
   if (String(event.body || '').length > MAX_BODY) return json(413, { ok: false, error: 'That request is too large.' });
   const auth = await verifyEsUser(event);
@@ -248,7 +309,9 @@ exports.handler = async function handler(event) {
         ok: true, ai: gatewayConfigured(), voice: voice.publicStatus(voice.voiceStatus()),
         music: (({ ready, perSecond, rights, reason }) => ({ ready, perSecond, rights, reason }))(voice.musicStatus()),
         factCheck: { maxSearches: director.FACT_CHECK.maxUses, maxCostUsd: director.FACT_CHECK.maxCostUsd },
-        formats: F.FORMAT_IDS, prices: F.PRICES,
+        formats: F.FORMAT_IDS, prices: F.PRICES, styles: STYLES.STYLE_IDS,
+        aiClips: (({ ready, model, max, seconds, perClip, reason }) => ({ ready, model, max, seconds, perClip, reason }))(media.clipsStatus()),
+        scenes: { ready: gatewayConfigured(), perImage: F.PRICES.sceneImage },
       });
     }
     if (body.mode === 'trends') return json(200, await trends());
@@ -281,4 +344,4 @@ exports.handler = async function handler(event) {
   }
 };
 
-exports._test = { trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf };
+exports._test = { isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf };

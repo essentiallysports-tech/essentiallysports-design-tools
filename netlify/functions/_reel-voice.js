@@ -8,10 +8,28 @@
 //            ai-speech-model-specification-version: 4, ai-model-id: <model>
 //   body:    { text, voice, outputFormat, instructions?, providerOptions? }
 //   reply:   { audio: <base64>, warnings: [] }   (no word timings)
-//   REELS_TTS_MODEL (default elevenlabs/eleven-flash-v2.5; e.g. elevenlabs/eleven-v3
-//   for hype, google/gemini-3.8-flash-tts for the cheapest), REELS_TTS_VOICE
-//   (default: ElevenLabs "Roger", a public library voice; Charon for Google,
-//   onyx for OpenAI).
+//   The speech path has never been called live from FrameUp, so the reply is
+//   read defensively: base64 in `audio`, `audio.base64`, `audio.data`, `data`
+//   or `audioBase64`; mp3 or wav (sniffed from the bytes). On a reply with no
+//   audio the top-level keys are logged (never the audio, never secrets).
+//   GET /api/reel-maker?diag=voice (admins) runs one tiny real synthesis.
+//
+//   Model (2026-11-18, Suhail: "a much better, more human voice"): Eleven v4,
+//   ElevenLabs' "most emotive, high quality" model, $0.00008/char on the
+//   Gateway (about $0.04 for a 30 s reel). It reads [excited]-style audio tags
+//   as delivery directions (Gateway docs: v4 and v3), so the hook line of the
+//   game-day voice gets one. If v4 fails (not a budget error), Multilingual v2
+//   and then Flash v2.5 are tried once each, unless REELS_TTS_MODEL pins one.
+//   REELS_TTS_VOICE pins the default voice (else Brian).
+//
+//   Four voices (all ElevenLabs "premade" library voices, never clones; ids
+//   checked against https://api.elevenlabs.io/v1/voices on 2026-11-18, every
+//   one category "premade", accent "american"):
+//     brian  Brian  nPczCjzI2devNBz1zQrb  "Deep, Resonant and Comforting" (male)
+//     liam   Liam   TX3LPaxmHKxFdv7VOQHJ  "Energetic, Social Media Creator" (male)
+//     sarah  Sarah  EXAVITQu4vr4xnSDxMaL  "Mature, Reassuring, Confident" (female)
+//     bella  Bella  hpp4J3VqNfWAUOO0d1Us  "Professional, Bright, Warm" (female)
+//   The browser sends only the option id; the server maps it to the voice id.
 //
 // Word timings (docs: https://vercel.com/docs/ai-gateway/modalities/speech-to-text)
 //   The speech reply has none, so the voiced audio is transcribed once with
@@ -48,14 +66,26 @@ const GATEWAY_SPEECH = 'https://ai-gateway.vercel.sh/v4/ai/speech-model';
 const GATEWAY_TRANSCRIBE = 'https://ai-gateway.vercel.sh/v4/ai/transcription-model';
 const ELEVEN = 'https://api.elevenlabs.io/v1';
 const MAX_CHARS = 400;
-const DEFAULT_MODEL = 'elevenlabs/eleven-flash-v2.5';
+const DEFAULT_MODEL = 'elevenlabs/eleven-v4';
+const FALLBACK_MODELS = ['elevenlabs/eleven-multilingual-v2', 'elevenlabs/eleven-flash-v2.5'];
+// The four voices offered in the page (option id -> library voice).
+const VOICES = [
+  { id: 'brian', name: 'Brian', line: 'Warm documentary narrator', gender: 'male', voice: 'nPczCjzI2devNBz1zQrb', settings: { stability: 0.5, similarityBoost: 0.75, style: 0.3 } },
+  { id: 'liam', name: 'Liam', line: 'Energetic game-day host', gender: 'male', voice: 'TX3LPaxmHKxFdv7VOQHJ', settings: { stability: 0.5, similarityBoost: 0.75, style: 0.55 }, hookTag: '[excited]' },
+  { id: 'sarah', name: 'Sarah', line: 'Calm, confident analyst', gender: 'female', voice: 'EXAVITQu4vr4xnSDxMaL', settings: { stability: 0.5, similarityBoost: 0.8, style: 0.2 } },
+  { id: 'bella', name: 'Bella', line: 'Bright studio presenter', gender: 'female', voice: 'hpp4J3VqNfWAUOO0d1Us', settings: { stability: 0.5, similarityBoost: 0.75, style: 0.4 } },
+];
+const DEFAULT_VOICE_OPTION = 'brian';
+const SAMPLE_LINE = "Here's what the numbers really say.";
+const voiceOption = id => VOICES.find(v => v.id === id) || null;
 const DEFAULT_ALIGN_MODEL = 'elevenlabs/scribe-v2';
 const MUSIC_MODEL = 'elevenlabs/music-v2.5';
 // ElevenLabs "Roger" (CwhRBWXzGAHq8TQ4Fs17): a public library voice (used in
 // Vercel's Gateway speech docs), confident and resonant; reads sports well.
-const DEFAULT_VOICES = { elevenlabs: 'CwhRBWXzGAHq8TQ4Fs17', google: 'Charon', openai: 'onyx', microsoft: 'en-US-Ethan' };
+const DEFAULT_VOICES = { elevenlabs: 'nPczCjzI2devNBz1zQrb', google: 'Charon', openai: 'onyx', microsoft: 'en-US-Ethan' };
 // ElevenLabs public library ("premade") voices, usable without a clone check.
 const LIBRARY_VOICES = new Set([
+  // (the four page voices are in this list: Brian, Liam, Sarah, Bella)
   'CwhRBWXzGAHq8TQ4Fs17', 'hpp4J3VqNfWAUOO0d1Us', 'nPczCjzI2devNBz1zQrb', 'pNInz6obpgDQGcFmaJgB', 'JBFqnCBsd6RMkjVDRZzb',
   'onwK4e9ZLuTAKqWW03F9', 'cjVigY5qzO86Huf0OWal', 'iP95p4xoKVk53GoZ742B', 'TX3LPaxmHKxFdv7VOQHJ', 'bIHbv24MWmeRgasZH58o',
   'IKne3meq5aSn9XLyUdCD', 'N2lVS1w4EtoT3dr4eOWO', 'EXAVITQu4vr4xnSDxMaL', 'FGY2WhTYpPnrIDTdsKH5', 'Xb7hH8MSUJpSbSDYk0k2',
@@ -95,7 +125,7 @@ const normModel = model => {
   return m.includes('/') ? m : (/^eleven/.test(m) ? `elevenlabs/${m}` : m);
 };
 
-function voiceStatus(env = process.env) {
+function voiceStatus(env = process.env, optionId = '') {
   const flag = String(env.REELS_TTS || '').trim().toLowerCase();
   const hasGateway = Boolean(env.AI_GATEWAY_API_KEY);
   const hasEleven = Boolean(env.ELEVENLABS_API_KEY && env.ELEVENLABS_VOICE_ID);
@@ -106,14 +136,27 @@ function voiceStatus(env = process.env) {
     if (!hasGateway) return off('REELS_TTS=elevenlabs needs ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID.');
   }
   if (!hasGateway) return off('No voice is set up yet (AI_GATEWAY_API_KEY is missing). Reels export with captions and music only.');
+  const pinned = Boolean(String(env.REELS_TTS_MODEL || '').trim());
   const model = normModel(env.REELS_TTS_MODEL);
   const provider = providerOf(model);
-  const voice = String(env.REELS_TTS_VOICE || DEFAULT_VOICES[provider] || '').trim();
+  // A picked option (ElevenLabs models only) wins over the env default voice.
+  const option = provider === 'elevenlabs' ? voiceOption(optionId) : null;
+  const voice = option ? option.voice : String(env.REELS_TTS_VOICE || DEFAULT_VOICES[provider] || '').trim();
   if (!voice) return off(`Set REELS_TTS_VOICE for ${model}.`);
-  return { mode: 'gateway', ready: true, provider: 'gateway', model, voice, align: normModel(env.REELS_ALIGN_MODEL || DEFAULT_ALIGN_MODEL), label: 'ES house voice (AI Gateway)' };
+  const chosen = option || VOICES.find(v => v.voice === voice) || null;
+  return {
+    mode: 'gateway', ready: true, provider: 'gateway', model, pinned, voice, option: chosen ? chosen.id : '', settings: chosen ? chosen.settings : null, hookTag: chosen ? chosen.hookTag || '' : '',
+    align: normModel(env.REELS_ALIGN_MODEL || DEFAULT_ALIGN_MODEL), label: chosen ? `${chosen.name}, ${chosen.line.toLowerCase()} (ES house voice)` : 'ES house voice (AI Gateway)',
+  };
 }
-// What the browser may see (no voice ids, no keys).
-const publicStatus = status => ({ mode: status.mode, ready: status.ready, label: status.label, reason: status.reason || '', model: status.ready ? status.model : '' });
+// What the browser may see (no voice ids, no keys): the four options, the
+// model and its price per character for the cost estimate.
+const publicStatus = status => ({
+  mode: status.mode, ready: status.ready, label: status.label, reason: status.reason || '', model: status.ready ? status.model : '',
+  perChar: status.ready ? (VOICE_PRICES[status.model] || {}).perChar || 0 : 0,
+  voices: status.ready && providerOf(status.model) === 'elevenlabs' && status.mode === 'gateway' ? VOICES.map(({ id, name, line, gender }) => ({ id, name, line, gender })) : [],
+  defaultVoice: status.option || DEFAULT_VOICE_OPTION,
+});
 
 function musicStatus(env = process.env) {
   const on = String(env.REELS_MUSIC || '').trim().toLowerCase() === 'gateway' && Boolean(env.AI_GATEWAY_API_KEY);
@@ -211,6 +254,27 @@ function wavDurationMs(buffer) {
   return 0;
 }
 
+// Text as it should be spoken: money and multipliers read naturally, the
+// script (and its captions) keep their own spelling.
+function speakable(text, { tag = '' } = {}) {
+  let t = String(text || '');
+  t = t.replace(/([−-])\$(\d[\d,.]*)\s?([MBK])\b/g, (m, s, n, u) => `minus $${n} ${{ M: 'million', B: 'billion', K: 'thousand' }[u]}`);
+  t = t.replace(/\$(\d[\d,.]*)\s?([MBK])\b/g, (m, n, u) => `$${n} ${{ M: 'million', B: 'billion', K: 'thousand' }[u]}`);
+  t = t.replace(/(\d)\s?[×x](?=\s|$|[.,!?])/g, '$1 times');
+  t = t.replace(/~\s?(?=[$#\d])/g, 'about ');
+  t = t.replace(/#(\d+)/g, 'number $1');
+  t = t.replace(/\s+/g, ' ').trim();
+  return tag ? `${tag} ${t}` : t;
+}
+// The audio in a Gateway speech reply, whichever key it came in.
+function audioFromReply(data) {
+  if (!data || typeof data !== 'object') return '';
+  const pick = [data.audio, data.audio && data.audio.base64, data.audio && data.audio.data, data.data, data.audioBase64, data.audio_base64];
+  const b64 = pick.find(v => typeof v === 'string' && v.length > 16);
+  return b64 ? String(b64).replace(/^data:audio\/[a-z0-9.+-]+;base64,/i, '') : '';
+}
+const replyKeys = data => (data && typeof data === 'object' ? Object.keys(data).concat(data.audio && typeof data.audio === 'object' ? Object.keys(data.audio).map(k => `audio.${k}`) : []).slice(0, 12) : [typeof data]);
+
 const sniffMime = buffer => {
   if (!buffer || buffer.length < 4) return 'application/octet-stream';
   if (buffer.toString('ascii', 0, 4) === 'RIFF') return 'audio/wav';
@@ -270,16 +334,39 @@ async function gatewayJson(url, init) {
   return data;
 }
 
-async function speakGateway(status, text, env) {
-  const provider = providerOf(status.model);
-  const body = { text, voice: status.voice, outputFormat: provider === 'google' ? 'wav' : 'mp3' };
+const EXPRESSIVE = new Set(['elevenlabs/eleven-v4', 'elevenlabs/eleven-v3', 'elevenlabs/eleven-v3-conversational', 'elevenlabs/eleven-v4-turbo']);
+async function speakGateway(status, text, env, { model = status.model, hook = false } = {}) {
+  const provider = providerOf(model);
+  const tag = hook && status.hookTag && EXPRESSIVE.has(model) ? status.hookTag : '';
+  const body = { text: provider === 'elevenlabs' ? speakable(text, { tag }) : speakable(text), voice: status.voice, outputFormat: provider === 'google' ? 'wav' : 'mp3' };
   if (provider === 'google') body.instructions = 'A confident sports-news narrator: brisk, clear, warm, never shouting.';
-  if (provider === 'elevenlabs') body.providerOptions = { elevenlabs: { voiceSettings: { stability: 0.45, similarityBoost: 0.8, style: 0.2, useSpeakerBoost: true } } };
-  const data = await gatewayJson(GATEWAY_SPEECH, { method: 'POST', headers: gatewayHeaders(env, status.model, 'speech'), body: JSON.stringify(body), signal: AbortSignal.timeout(25000) });
-  if (!data.audio) throw new Error('The voice model returned no audio.');
-  const buffer = Buffer.from(String(data.audio), 'base64');
+  if (provider === 'elevenlabs') {
+    const v = status.settings || { stability: 0.5, similarityBoost: 0.75, style: 0.3 };
+    body.providerOptions = { elevenlabs: { voiceSettings: { stability: v.stability, similarityBoost: v.similarityBoost, style: v.style, useSpeakerBoost: true } } };
+  }
+  const data = await gatewayJson(GATEWAY_SPEECH, { method: 'POST', headers: gatewayHeaders(env, model, 'speech'), body: JSON.stringify(body), signal: AbortSignal.timeout(25000) });
+  const b64 = audioFromReply(data);
+  if (!b64) {
+    console.warn('reels voice: speech reply had no audio; keys:', replyKeys(data).join(','));
+    throw Object.assign(new Error('The voice model returned no audio.'), { keys: replyKeys(data) });
+  }
+  const buffer = Buffer.from(b64, 'base64');
   const mime = sniffMime(buffer);
-  return { audio: buffer.toString('base64'), mime, durationMs: mime === 'audio/wav' ? wavDurationMs(buffer) : 0 };
+  if (mime === 'application/octet-stream') console.warn('reels voice: unrecognised audio bytes', buffer.length);
+  return { audio: buffer.toString('base64'), mime, durationMs: mime === 'audio/wav' ? wavDurationMs(buffer) : 0, model, bytes: buffer.length };
+}
+// v4 first; on a non-budget failure try the next model once (unless pinned).
+async function speakWithFallback(status, text, env, opts = {}) {
+  const chain = status.pinned || providerOf(status.model) !== 'elevenlabs' ? [status.model] : [status.model, ...FALLBACK_MODELS.filter(m => m !== status.model)];
+  let last;
+  for (const model of chain) {
+    try { return await speakGateway(status, text, env, { ...opts, model }); } catch (error) {
+      last = error;
+      if (gateway().isBudgetError(error) || error.status === 401 || error.status === 429) break;
+      console.warn(`reels voice: ${model} failed (${error.status || ''} ${String(error.message || error).slice(0, 120)})`);
+    }
+  }
+  throw last;
 }
 
 async function transcribeGateway(model, audioB64, mime, env) {
@@ -313,13 +400,14 @@ const remember = (key, value) => { if (CACHE.size >= CACHE_MAX) CACHE.delete(CAC
 
 // Returns { ok, audio (base64), mime, durationMs, words, cost, costs, model, cached }
 // or { ok: false, reason, error }. Never throws.
-async function synthesize({ text, track = null, env = process.env } = {}) {
+async function synthesize({ text, voiceOption: optionId = '', hook = false, align = true, feature = 'reels-voice', track = null, env = process.env } = {}) {
   const line = String(text || '').replace(/\s+/g, ' ').trim();
   if (!line) return { ok: false, reason: 'empty', error: 'This beat has no voiceover line.' };
   if (line.length > MAX_CHARS) return { ok: false, reason: 'too-long', error: `Keep a beat's voiceover under ${MAX_CHARS} characters.` };
-  const status = voiceStatus(env);
+  if (optionId && !voiceOption(optionId)) return { ok: false, reason: 'voice', error: 'Pick one of the four ES voices.' };
+  const status = voiceStatus(env, optionId);
   if (!status.ready) return { ok: false, reason: 'off', error: status.reason };
-  const key = cacheKey(status.mode, status.model, status.voice, status.align, line);
+  const key = cacheKey(status.mode, status.model, status.voice, status.align, hook ? 'hook' : '', align ? 'a' : 'n', line);
   if (CACHE.has(key)) return { ...CACHE.get(key), cached: true, cost: 0, costs: { voice: 0, align: 0 } };
   const allowed = await voiceAllowed(status, env);
   if (!allowed.ok) return { ok: false, reason: 'voice-check', error: allowed.reason };
@@ -328,17 +416,18 @@ async function synthesize({ text, track = null, env = process.env } = {}) {
   const logModel = status.mode === 'elevenlabs' ? `elevenlabs-direct/${status.model}` : status.model;
   let out;
   try {
-    out = status.mode === 'gateway' ? await speakGateway(status, line, env) : await speakEleven(status, line, env);
+    out = status.mode === 'gateway' ? await speakWithFallback(status, line, env, { hook }) : await speakEleven(status, line, env);
   } catch (error) {
-    await log({ feature: 'reels-voice', model: logModel, ok: false, cost_usd: 0, duration_ms: Date.now() - started, error: String(error.message || error).slice(0, 200) });
+    await log({ feature, model: logModel, ok: false, cost_usd: 0, duration_ms: Date.now() - started, error: String(error.message || error).slice(0, 200) });
     const budget = gateway().isBudgetError(error);
-    return { ok: false, reason: budget ? 'budget' : 'error', error: budget ? "This week's AI budget is used up, so voiceover is paused." : 'The voiceover could not be made right now. Try again, or export with captions only.' };
+    return { ok: false, reason: budget ? 'budget' : 'error', error: budget ? "This week's AI budget is used up, so voiceover is paused." : 'The voiceover could not be made right now. Try again, or export with captions only.', detail: String(error.message || error).slice(0, 200), keys: error.keys || undefined };
   }
+  const usedModel = out.model || status.model;
   const voiceMs = Date.now() - started;
   let alignUsd = 0;
   let words = out.words || [];
   let alignedBy = words.length ? 'native' : '';
-  if (!words.length && status.mode === 'gateway') {
+  if (align && !words.length && status.mode === 'gateway') {
     // Word timings from Gateway transcription (Scribe v2).
     const alignStarted = Date.now();
     try {
@@ -347,7 +436,7 @@ async function synthesize({ text, track = null, env = process.env } = {}) {
       const seconds = Number(data.durationInSeconds) || out.durationMs / 1000 || line.length / 15;
       if (!out.durationMs) out.durationMs = Math.round(seconds * 1000);
       alignUsd = voiceCost(status.align, 0, seconds);
-      words = heard.length ? alignScript(line, heard, out.durationMs) : [];
+      words = heard.length ? alignScript(line, heard.filter(w => !/^\[.*\]$/.test(w.w)), out.durationMs) : [];
       alignedBy = words.length ? status.align : '';
       await log({ feature: 'reels-voice-align', model: status.align, ok: true, cost_usd: Number(alignUsd.toFixed(6)), duration_ms: Date.now() - alignStarted });
     } catch (error) {
@@ -356,12 +445,37 @@ async function synthesize({ text, track = null, env = process.env } = {}) {
     }
   }
   // Gemini also bills seconds of audio (known now from the WAV or the alignment).
-  const voiceUsd = voiceCost(status.model, line.length, out.durationMs / 1000);
-  await log({ feature: 'reels-voice', model: logModel, ok: true, cost_usd: Number(voiceUsd.toFixed(6)), duration_ms: voiceMs });
+  const spoken = status.mode === 'gateway' ? speakable(line, { tag: hook && status.hookTag && EXPRESSIVE.has(usedModel) ? status.hookTag : '' }) : line;
+  const voiceUsd = voiceCost(usedModel, spoken.length, out.durationMs / 1000);
+  await log({ feature, model: status.mode === 'elevenlabs' ? logModel : usedModel, ok: true, cost_usd: Number(voiceUsd.toFixed(6)), duration_ms: voiceMs });
   const cost = Number((voiceUsd + alignUsd).toFixed(6));
-  const result = { ok: true, ...out, words, alignedBy, model: status.model, mode: status.mode, cost, costs: { voice: Number(voiceUsd.toFixed(6)), align: Number(alignUsd.toFixed(6)) }, cached: false };
+  const result = { ok: true, ...out, words, alignedBy, model: usedModel, voice: status.option || '', mode: status.mode, cost, costs: { voice: Number(voiceUsd.toFixed(6)), align: Number(alignUsd.toFixed(6)) }, cached: false };
   remember(key, result);
   return result;
+}
+
+// A short preview of one voice (no alignment), cached like any line.
+async function sample({ voiceOption: optionId = DEFAULT_VOICE_OPTION, track = null, env = process.env } = {}) {
+  if (!voiceOption(optionId)) return { ok: false, reason: 'voice', error: 'Pick one of the four ES voices.' };
+  return synthesize({ text: SAMPLE_LINE, voiceOption: optionId, align: false, feature: 'reels-voice-sample', track, env });
+}
+// Admin check after a deploy: one tiny real synthesis ("Test.", about
+// $0.0004 on v4). Returns what came back (model, format, bytes) or the
+// error text and the reply's keys. Never the audio, never a key.
+async function diagnose({ track = null, env = process.env } = {}) {
+  const status = voiceStatus(env);
+  if (!status.ready) return { ok: false, configured: false, reason: status.reason };
+  if (status.mode !== 'gateway') return { ok: false, configured: true, mode: status.mode, reason: 'Diag covers the Gateway route only.' };
+  const started = Date.now();
+  try {
+    const out = await speakWithFallback(status, 'Test.', env);
+    const usd = voiceCost(out.model, 5);
+    await gateway().logUsage(track, { feature: 'reels-voice-diag', model: out.model, ok: true, input_tokens: 0, output_tokens: 0, cost_usd: Number(usd.toFixed(6)), duration_ms: Date.now() - started });
+    return { ok: true, configured: true, model: out.model, requested: status.model, voice: status.option || 'env', format: out.mime, bytes: out.bytes, ms: Date.now() - started, cost: Number(usd.toFixed(6)) };
+  } catch (error) {
+    await gateway().logUsage(track, { feature: 'reels-voice-diag', model: status.model, ok: false, input_tokens: 0, output_tokens: 0, cost_usd: 0, duration_ms: Date.now() - started, error: String(error.message || error).slice(0, 200) });
+    return { ok: false, configured: true, model: status.model, status: error.status || 0, error: String(error.message || error).slice(0, 300), keys: error.keys || [], ms: Date.now() - started };
+  }
 }
 
 // ─── Music bed (REELS_MUSIC=gateway) ─────────────────────────────────────
@@ -387,10 +501,11 @@ async function makeMusic({ mood = 'hype', seconds = 30, track = null, env = proc
       body: JSON.stringify({ text: prompt, outputFormat: 'mp3', providerOptions: { elevenlabs: { musicLengthMs: length * 1000, forceInstrumental: true } } }),
       signal: AbortSignal.timeout(55000),
     });
-    if (!data.audio) throw new Error('The music model returned no audio.');
+    const b64 = audioFromReply(data);
+    if (!b64) { console.warn('reels music: reply had no audio; keys:', replyKeys(data).join(',')); throw new Error('The music model returned no audio.'); }
     const cost = Number(voiceCost(MUSIC_MODEL, 0, length).toFixed(6));
     await gateway().logUsage(track, { feature: 'reels-music', model: MUSIC_MODEL, ok: true, input_tokens: 0, output_tokens: 0, cost_usd: cost, duration_ms: Date.now() - started });
-    const result = { ok: true, audio: String(data.audio), mime: sniffMime(Buffer.from(String(data.audio).slice(0, 16), 'base64')), seconds: length, mood: MOODS[mood] ? mood : 'hype', cost, rights: MUSIC_RIGHTS, cached: false };
+    const result = { ok: true, audio: b64, mime: sniffMime(Buffer.from(b64.slice(0, 16), 'base64')), seconds: length, mood: MOODS[mood] ? mood : 'hype', cost, rights: MUSIC_RIGHTS, cached: false };
     remember(key, result);
     return result;
   } catch (error) {
@@ -401,7 +516,7 @@ async function makeMusic({ mood = 'hype', seconds = 30, track = null, env = proc
 }
 
 module.exports = {
-  voiceStatus, publicStatus, musicStatus, synthesize, makeMusic, wordsFromAlignment, wordsFromTranscript, alignScript, wavDurationMs, voiceCost, verifyElevenVoice,
-  MAX_CHARS, VOICE_PRICES, GATEWAY_SPEECH, GATEWAY_TRANSCRIBE, DEFAULT_MODEL, DEFAULT_ALIGN_MODEL, DEFAULT_VOICES, LIBRARY_VOICES, MUSIC_MODEL, MUSIC_RIGHTS, MOODS,
+  voiceStatus, publicStatus, musicStatus, synthesize, sample, diagnose, makeMusic, speakable, audioFromReply, wordsFromAlignment, wordsFromTranscript, alignScript, wavDurationMs, voiceCost, verifyElevenVoice,
+  MAX_CHARS, VOICES, DEFAULT_VOICE_OPTION, SAMPLE_LINE, FALLBACK_MODELS, VOICE_PRICES, GATEWAY_SPEECH, GATEWAY_TRANSCRIBE, DEFAULT_MODEL, DEFAULT_ALIGN_MODEL, DEFAULT_VOICES, LIBRARY_VOICES, MUSIC_MODEL, MUSIC_RIGHTS, MOODS,
   _test: { CACHE, verified, sniffMime },
 };
