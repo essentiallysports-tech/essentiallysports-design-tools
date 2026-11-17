@@ -160,6 +160,37 @@ and what's still uncommitted.
   x_search bills $0.005 per post fetched, so a call costs about $0.03-0.11. Details are in `project-docs/clips-grok.md`.
 - New env: `CLIPS_GROK` (off), `CLIPS_GROK_MODEL`, `CLIPS_GROK_DIRECT_MODEL`, `CLIPS_GROK_MAX_USD`, `CLIPS_GROK_MAX_TURNS`, `CLIPS_GROK_FALLBACK`, `CLIPS_GROK_FALLBACK_MODEL`, and optional `XAI_API_KEY`.
 - Tests: `scripts/test-clip-source-grok.mjs` (all mocked). `video-ads.js` and `video-ads-sources.js` are untouched.
+### 2026-11-18 — Video Ads: shared clip library, daily prefetch, library-first clip search (branch feature/clips-library)
+- Status: `[committed on feature/clips-library - not pushed]`
+- **Library**: new `netlify/functions/_clip-library.js` and migration
+  `supabase/migrations/20261118121700_frameup_clip_library.sql`.
+  - One row per verified clip (X, Bluesky, Reddit, Streamable…).
+  - ES users read; the server writes with `SUPABASE_SERVICE_ROLE_KEY`.
+  - Before the migration it runs in memory.
+- **Daily prefetch**: `/api/clips-prefetch` (`netlify/functions/clips-prefetch.js`, `api/clips-prefetch.js`).
+  - Ten daily Vercel crons, `?batch=1..10`, from 10:00 UTC; every team once a day, trending teams first.
+  - Free sources first, then AI within `CLIPS_PREFETCH_MAX_USD` (default $0.75 per day).
+  - Re-checks links (marking dead ones) and purges posts older than 7 days.
+  - `CRON_SECRET` is required. `?diag=1` is for admins only.
+- **find-clips / moments-with-clips** (`netlify/functions/video-ads.js`):
+  - read the library first, so 9 or more clips means instant and free;
+  - otherwise top up from the web search or X API plus `_clip-source-grok.js` / `_clip-source-public.js`
+    (loaded defensively);
+  - dedupe across platforms, write back, and add labelled never-empty fallbacks;
+  - when AI is gated, still answer from the library and the free sources;
+  - new free `library` mode.
+- **Page** (`video-ads.js` clip panel, `video-ads.html`, `video-ads.css`; cache keys `20261118-clips-library`):
+  - 3-column results, 9 at a time with Load more;
+  - team filter; Best / Newest / Most popular;
+  - platform and source badges, freshness, "No sound";
+  - new **Library** tab;
+  - library fallbacks instead of "No fresh clips".
+- Docs: `project-docs/clips-library.md`. Tests: `scripts/test-clip-library.mjs` (`npm run test:clips`).
+- Owner to do:
+  - run the migration;
+  - make sure `CRON_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` are set in the Enterprise project;
+  - optionally set `CLIPS_PREFETCH_MAX_USD`;
+  - after the first morning, check `?diag=1`.
 ### 2026-11-18 — Generate: the creative director first, ES guidelines, Bring it on-brand (branch feature/generate-director)
 - Status: `[committed on feature/generate-director - not pushed]`
 - **Director first.** Generate now asks the director for 2-4 named directions (`POST /api/es-generate {mode:'direct'}`):

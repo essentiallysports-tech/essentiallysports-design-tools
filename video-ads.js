@@ -32,6 +32,7 @@
     sizes: $('va-sizes'), device: $('va-device'), metaHead: $('va-meta-head'), metaOver: $('va-meta-over'), metaFoot: $('va-meta-foot'), mini: $('va-mini'),
     steps: $('va-steps'), panelScroll: $('va-panel-scroll'), back: $('va-back'), next: $('va-next'), nextText: $('va-next-text'),
     clipTabs: $('va-clip-tabs'), teamSport: $('va-team-sport'), teamQ: $('va-team-q'), teamHint: $('va-team-hint'), teamList: $('va-team-list'), teamFind: $('va-team-find'), teamFindText: $('va-team-find-text'), colorSport: $('va-color-sport'), swatches: $('va-swatches'), find: $('va-find'), findText: $('va-find-text'), found: $('va-found'),
+    libSport: $('va-lib-sport'), libStatus: $('va-lib-status'), libFound: $('va-lib-found'),
     trends: $('va-trends'), trendsStatus: $('va-trends-status'), refresh: $('va-refresh'), sports: $('va-sports'), boardBar: document.querySelector('.va-board-bar'),
     upload: $('va-upload'), file: $('va-file'), xform: $('va-xform'), xurl: $('va-xurl'), xget: $('va-xget'), qualities: $('va-qualities'), clipStatus: $('va-clip-status'),
     brands: $('va-brands'), styles: $('va-styles'), copySwatches: $('va-copy-swatches'), momentFold: $('va-moment-fold'), momentSum: $('va-moment-sum'), copyMoments: $('va-copy-moments'), notes: $('va-notes'),
@@ -972,8 +973,9 @@
     els.busyPct.textContent = fraction == null ? '' : `${Math.round(fraction * 100)}%`;
   }
 
-  // Downloads a clip straight from X's video host into the browser (no server
-  // in between), with progress on the preview.
+  // Downloads a clip straight from its video host (X, Reddit, Bluesky,
+  // Streamable: all CORS-open) into the browser (no server in between), with
+  // progress on the preview.
   let loadingClip = '';
   async function downloadClip(variant, meta) {
     if (!variant?.url) { toast('That clip has no video file. Try another one.', { tone: 'bad' }); return; }
@@ -999,8 +1001,9 @@
         got += value.length;
         setBusy(true, 'Downloading the clip…', total ? got / total : null);
       }
-      const who = meta.handle ? `@${String(meta.handle).replace(/^@/, '')}` : 'X';
-      useClip(new Blob(parts, { type: 'video/mp4' }), { name: `X post by ${who}`, source: meta.from === 'search' ? 'search' : 'x', url: meta.url || '' });
+      const platform = { x: 'X', reddit: 'Reddit', bluesky: 'Bluesky', streamable: 'Streamable' }[meta.platform || 'x'] || 'Web';
+      const who = meta.handle ? `@${String(meta.handle).replace(/^@/, '')}` : platform;
+      useClip(new Blob(parts, { type: 'video/mp4' }), { name: `${platform} post by ${who}`, source: meta.from === 'search' ? 'search' : 'x', url: meta.url || '' });
       setClipStatus(`Clip from ${who}. Check you may use it before publishing.`);
     } catch (error) {
       logEvent('clip_failed', { height: Number(variant.height) || 0, status, post: safeUrl(meta.url) });
@@ -1169,6 +1172,7 @@
     if (focus) tab.focus();
     if (state.clipTab === 'team') renderTeamPicker();
     if (state.clipTab === 'moment') loadFreshMoments();
+    if (state.clipTab === 'library') loadLibrary();
     renderFound();
     renderSteps();
   }
@@ -1221,6 +1225,7 @@
     const key = kind === 'color' ? colorKey() : kind === 'team' ? teamKey() : JSON.stringify(params);
     const token = ++findTokens[kind];
     finds[kind] = { key, status: 'loading', teams: previewTeams, clips: [], error: '', label, params };
+    views[kind] = newView();
     // The search is what the ad is about: it grounds the copy.
     const color = kind === 'color' ? colorById(params.color) : null;
     state.context = {
@@ -1242,9 +1247,12 @@
       const teams = Array.isArray(data.teams) && data.teams.length ? data.teams : previewTeams;
       finds[kind] = { ...finds[kind], status: clips.length ? 'done' : 'empty', clips, teams, cached: Boolean(data.cached), note: typeof data.note === 'string' ? data.note : '' };
       if (state.context.kind === kind) state.context.teams = teams.map(t => t.name).filter(Boolean);
+      // Nothing fresh: the nearest clips from the shared library before "No fresh clips".
+      if (!clips.length && params.sport) loadFindFallback(kind, token);
     } catch (error) {
       if (token !== findTokens[kind]) return;
       finds[kind] = { ...finds[kind], status: 'error', error: error.message, off: error.reason === 'feature-off' };
+      if (params.sport) loadFindFallback(kind, token);
     }
     renderFound();
     renderSteps();
@@ -1289,33 +1297,105 @@
     img.parentElement?.classList.add('va-logo--dot');
     img.remove();
   }, true);
-  function clipCard(c, i) {
+  // Clip results: 9 at a time ("Load more"), a team filter and a sort, per tab.
+  // Every card says where the clip is from (platform + Official / League /
+  // Network), how fresh it is, and when it is a labelled fallback.
+  const PAGE = 9;
+  const newView = () => ({ shown: PAGE, sort: 'best', team: '' });
+  const views = { team: newView(), color: newView(), moment: newView() };
+  const PLATFORM = { x: 'X', reddit: 'Reddit', bluesky: 'Bluesky', streamable: 'Streamable' };
+  const VIA_LABEL = { older: ['Older', 'Older than 5 days, from the clip library'], sport: ['Same league', 'Another team in this league, from the clip library'], colorx: ['Same colour', 'A team of the same colour in another sport, from the clip library'], color: ['Same colour', 'A team of the same colour'] };
+  const clipAge = c => {
+    const hours = Number.isFinite(Number(c.ageHours)) && c.ageHours !== null && c.ageHours !== '' ? Number(c.ageHours) : (c.postedAt ? (Date.now() - new Date(c.postedAt).getTime()) / 3600e3 : NaN);
+    return Number.isFinite(hours) ? (hours < 1 ? 'Just now' : hours < 24 ? `${Math.round(hours)}h ago` : `${Math.round(hours / 24)} day${Math.round(hours / 24) === 1 ? '' : 's'} ago`) : '';
+  };
+  const popularity = c => (Number(c.views) > 0 ? Math.log10(1 + Number(c.views)) : 0) + (Number(c.likes) > 0 ? 1.2 * Math.log10(1 + Number(c.likes)) : 0);
+  // attr: the data attribute the "Use clip" button carries (each list has its own).
+  function clipCard(c, i, attr = 'data-clip') {
     const inAd = Boolean(state.clip?.url) && state.clip.url === c.url;
     const busy = Boolean(loadingClip) && loadingClip === c.url;
     const thumb = safeUrl(c.thumb || c.thumbnail);
     const handle = String(c.handle || '').replace(/^@/, '');
-    const hours = Number.isFinite(Number(c.ageHours)) && c.ageHours !== null && c.ageHours !== '' ? Number(c.ageHours) : (c.postedAt ? (Date.now() - new Date(c.postedAt).getTime()) / 3600e3 : NaN);
-    const age = Number.isFinite(hours) ? (hours < 1 ? 'Just now' : hours < 24 ? `${Math.round(hours)}h ago` : `${Math.round(hours / 24)} day${Math.round(hours / 24) === 1 ? '' : 's'} ago`) : '';
+    const age = clipAge(c);
     const secs = Number(c.duration) > 600 ? Number(c.duration) / 1000 : Number(c.duration || (c.durationMs ? c.durationMs / 1000 : 0));
     // Verified sources (video-ads-sources.js on the server): the team's own
-    // account is "Official"; league, conference and network accounts "Verified".
-    const tag = c.source === 'official' ? 'Official' : (c.source === 'league' || c.source === 'media') ? 'Verified' : '';
+    // account is "Official"; league / conference accounts "League"; networks "Network".
+    const kind = c.sourceKind || c.source;
+    const tag = kind === 'official' ? 'Official' : kind === 'league' ? 'League' : kind === 'media' ? 'Network' : '';
+    const tagTitle = { Official: 'Posted by the team’s own account', League: 'Posted by a league or conference account', Network: 'Posted by a TV network or highlights account' }[tag] || '';
     const quality = /^\d{3,4}p$/.test(String(c.quality || '')) ? c.quality : '';
-    return `<article class="va-clip${inAd ? ' is-in' : ''}${busy ? ' is-busy' : ''}" style="--i:${i}">
-      <span class="va-clip__thumb"${thumb ? ` style="background-image:url('${esc(thumb)}')"` : ''}>${tag && !inAd ? `<span class="va-clip__tag va-clip__tag--${c.source === 'official' ? 'official' : 'verified'}" title="${tag === 'Official' ? 'Posted by the team’s own account' : 'Posted by a league, conference or network account'}">${ICON.check}${tag}</span>` : ''}${quality ? `<span class="va-clip__q" title="Best version on X">${esc(quality)}</span>` : ''}${secs ? `<span class="va-clip__dur">${esc(fmt(secs))}</span>` : ''}${inAd ? `<span class="va-clip__in">${ICON.check}In the ad</span>` : ''}</span>
-      <span class="va-clip__who"><span>${handle ? `@${esc(handle)}` : 'X post'}</span>${age ? `<span class="va-clip__age">${esc(age)}</span>` : ''}</span>
+    const platform = String(c.platform || 'x');
+    const platformLabel = PLATFORM[platform] || platform.replace(/^\w/, ch => ch.toUpperCase());
+    const via = VIA_LABEL[c.via];
+    return `<article class="va-clip${inAd ? ' is-in' : ''}${busy ? ' is-busy' : ''}${via ? ' is-fallback' : ''}" style="--i:${i}">
+      <span class="va-clip__thumb"${thumb ? ` style="background-image:url('${esc(thumb)}')"` : ''}>${tag && !inAd ? `<span class="va-clip__tag va-clip__tag--${kind === 'official' ? 'official' : 'verified'}" title="${tagTitle}">${ICON.check}${tag}</span>` : ''}${quality ? `<span class="va-clip__q" title="Best version">${esc(quality)}</span>` : ''}${secs ? `<span class="va-clip__dur">${esc(fmt(secs))}</span>` : ''}${c.hasAudio === false && !inAd ? '<span class="va-clip__mute" title="This file has no sound">No sound</span>' : ''}${inAd ? `<span class="va-clip__in">${ICON.check}In the ad</span>` : ''}</span>
+      ${via ? `<span class="va-clip__via" title="${esc(via[1])}">${esc(via[0])}</span>` : ''}
+      <span class="va-clip__who"><span class="va-clip__plat va-clip__plat--${esc(platform.replace(/[^a-z]/g, ''))}" title="From ${esc(platformLabel)}">${esc(platformLabel)}</span><span class="va-clip__handle">${handle ? `@${esc(handle)}` : 'Post'}</span>${age ? `<span class="va-clip__age">${esc(age)}</span>` : ''}</span>
       ${c.text ? `<span class="va-clip__text">${esc(c.text)}</span>` : ''}
       <span class="va-clip__actions">
-        <button class="es-btn es-btn--sm es-btn--still${inAd || busy ? '' : ' es-btn--primary'}" type="button" data-clip="${i}"${busy || inAd ? ' disabled' : ''}>${busy ? 'Loading…' : inAd ? 'Using it' : 'Use clip'}</button>
-        ${safeUrl(c.url) ? `<a class="va-icon-btn va-icon-btn--sm" href="${esc(c.url)}" target="_blank" rel="noopener" aria-label="Open the post by ${esc(handle || 'X')}" title="Open the post">${ICON.external}</a>` : ''}
+        <button class="es-btn es-btn--sm es-btn--still${inAd || busy ? '' : ' es-btn--primary'}" type="button" ${attr}="${i}"${busy || inAd ? ' disabled' : ''}>${busy ? 'Loading…' : inAd ? 'Using it' : 'Use clip'}</button>
+        ${safeUrl(c.url) ? `<a class="va-icon-btn va-icon-btn--sm" href="${esc(c.url)}" target="_blank" rel="noopener" aria-label="Open the post by ${esc(handle || platformLabel)}" title="Open the post">${ICON.external}</a>` : ''}
       </span>
     </article>`;
   }
+  // The teams a clip is about: its library tags, else the searched teams it names.
+  function clipTeamNames(c, teams) {
+    const named = (Array.isArray(c.teams) ? c.teams : []).filter(Boolean);
+    if (named.length) return named;
+    const text = `${c.text || ''} ${c.handle || ''}`.toLowerCase();
+    return (teams || []).filter(t => [t.name, t.short].filter(Boolean).some(n => text.includes(String(n).toLowerCase()))).map(t => t.name);
+  }
+  // A tab's clips after its filter and sort -> [{ c, i }] (i = index in f.clips).
+  function viewClips(kind) {
+    const f = finds[kind];
+    const v = views[kind] || newView();
+    let list = (f?.clips || []).map((c, i) => ({ c, i }));
+    if (v.team) list = list.filter(x => clipTeamNames(x.c, f.teams).includes(v.team));
+    if (v.sort === 'newest') list.sort((a, b) => new Date(b.c.postedAt || 0) - new Date(a.c.postedAt || 0));
+    if (v.sort === 'popular') list.sort((a, b) => popularity(b.c) - popularity(a.c));
+    return list;
+  }
+  const sortChips = (current, attr = 'data-sort', options = [['best', 'Best'], ['newest', 'Newest'], ['popular', 'Most popular']]) => `<div class="va-chips va-cliptools__sort" role="group" aria-label="Sort clips">${options.map(([id, label]) => `<button class="va-chip" type="button" ${attr}="${id}" aria-pressed="${current === id}">${label}</button>`).join('')}</div>`;
+  function clipTools(kind) {
+    const f = finds[kind];
+    const v = views[kind];
+    const counts = new Map();
+    f.clips.forEach(c => clipTeamNames(c, f.teams).forEach(name => counts.set(name, (counts.get(name) || 0) + 1)));
+    const teamOpts = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    const teamSelect = teamOpts.length > 1
+      ? `<label class="va-cliptools__team"><span class="va-sr">Team</span><select class="es-select va-select-sm" data-filter="team" aria-label="Filter clips by team"><option value="">All teams</option>${teamOpts.map(([name, n]) => `<option value="${esc(name)}"${v.team === name ? ' selected' : ''}>${esc(name)} (${n})</option>`).join('')}</select></label>`
+      : '';
+    return f.clips.length > 3 || teamSelect ? `<div class="va-cliptools">${teamSelect}${sortChips(v.sort)}</div>` : '';
+  }
+  function clipGrid(list, attr) {
+    return `<div class="va-clipgrid va-clipgrid--3">${list.map(x => clipCard(x.c, x.i, attr)).join('')}</div>`;
+  }
+  const moreButton = (left, act) => (left > 0 ? `<button class="es-btn es-btn--sm es-btn--secondary va-more" type="button" data-act="${act}">Load more <span class="va-hint">(${left} more)</span></button>` : '');
+
+  // No fresh clips for a search: the newest clips of the sport from the library,
+  // labelled, before ever saying "No fresh clips".
+  async function loadFindFallback(kind, token) {
+    const f = finds[kind];
+    if (!f) return;
+    f.fallbackStatus = 'loading';
+    try {
+      const data = await callApi({ mode: 'library', sport: f.params.sport, limit: PAGE });
+      if (token !== findTokens[kind]) return;
+      f.fallback = (Array.isArray(data.clips) ? data.clips : []).filter(c => c && Array.isArray(c.variants) && c.variants.some(v => v && v.url)).map(c => ({ ...c, via: 'sport' }));
+    } catch (error) {
+      if (token !== findTokens[kind]) return;
+      f.fallback = [];
+    }
+    f.fallbackStatus = 'done';
+    if (state.clipTab === kind) renderFound();
+  }
+
   function renderFound() {
     const kind = state.clipTab;
     if (kind !== 'link') renderNoClip(); // its colours follow the current team / colour
     // By moment with the list open: no moment chosen, so no clips under it.
-    if (kind === 'link' || (kind === 'moment' && state.momentOpen)) { els.found.hidden = true; return; }
+    // Library and Link have their own areas.
+    if (kind === 'link' || kind === 'library' || (kind === 'moment' && state.momentOpen)) { els.found.hidden = true; return; }
     els.found.hidden = false;
     const f = finds[kind];
     if (!f) { els.found.innerHTML = ''; return; }
@@ -1328,11 +1408,26 @@
     const teamsHtml = teams.length ? `<ul class="va-teams" aria-label="Matched teams">${teams.map(t => `<li class="va-team" aria-label="${esc(t.name || t.short)}">${teamMark(t, 20)}<span>${esc(t.short || t.name)}</span></li>`).join('')}${more > 0 ? `<li class="va-team va-team--more" title="${esc(allTeams.slice(6).map(t => t.short || t.name).join(', '))}">+${more} more</li>` : ''}</ul>` : '';
     if (f.status === 'loading') {
       els.found.innerHTML = `${teamsHtml}<p class="va-working">${dots}Looking for clips from the last 5 days…</p>
-        <div class="va-clipgrid" aria-hidden="true">${Array.from({ length: 4 }, (_, i) => `<div class="va-clip va-clip--skeleton" style="--i:${i}"><span class="va-clip__thumb va-shimmer"></span><span class="va-line va-shimmer" style="width:46%"></span><span class="va-line va-shimmer"></span></div>`).join('')}</div>`;
+        <div class="va-clipgrid va-clipgrid--3" aria-hidden="true">${Array.from({ length: 6 }, (_, i) => `<div class="va-clip va-clip--skeleton" style="--i:${i}"><span class="va-clip__thumb va-shimmer"></span><span class="va-line va-shimmer" style="width:46%"></span><span class="va-line va-shimmer"></span></div>`).join('')}</div>`;
       els.found.setAttribute('aria-busy', 'true');
       return;
     }
     els.found.removeAttribute('aria-busy');
+    // Empty or failed, but the library has clips for the sport: show those, labelled.
+    const fb = (f.status === 'empty' || f.status === 'error') && f.fallback?.length ? f.fallback : null;
+    if (fb) {
+      const why = f.status === 'error' ? 'The live search didn’t finish' : `Nothing from the last 5 days for ${esc(what)} yet`;
+      els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}
+        <div class="va-found__head"><h3>From the clip library</h3><span class="va-hint">${esc(SPORT_LABEL[f.params.sport] || '')}</span></div>
+        <p class="va-found__note">${why} — here are the newest ${esc(SPORT_LABEL[f.params.sport] || '')} clips we have instead.</p>
+        ${clipGrid(fb.map((c, i) => ({ c, i })), 'data-fbclip')}
+        ${noClipBlock()}`;
+      return;
+    }
+    if ((f.status === 'empty' || f.status === 'error') && f.fallbackStatus === 'loading') {
+      els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}<p class="va-working">${dots}Checking the clip library…</p>`;
+      return;
+    }
     if (f.status === 'error') {
       // Switched off (AI_DISABLE): a calm note and the no-clip options, no retry.
       els.found.innerHTML = f.off
@@ -1344,23 +1439,43 @@
       const another = { team: 'Try another team', color: 'Try another colour', moment: 'Try another moment' }[kind];
       const pick = { team: ['other-team', 'Pick a team'], color: ['other-color', 'Pick a colour'], moment: ['other-moment', 'Pick a moment'] }[kind];
       const title = { team: `No fresh ${esc(f.label || 'team')} clips yet`, color: `No fresh clips for ${esc(what)} yet`, moment: 'No fresh clips for this moment yet' }[kind];
-      const where = kind === 'moment' ? 'We checked X for a video of it from the last 5 days.' : 'We checked the official team, league and network accounts on X, and everyone else, for the last 5 days.';
+      const where = kind === 'moment' ? 'We checked X and the clip library for a video of it from the last 5 days.' : 'We checked the clip library, the official team, league and network accounts, and everyone else, for the last 5 days.';
       els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}<div class="va-empty-state">${ICON.film}<strong>${title}</strong><span>${where} ${another}, or make the ad without a clip.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="${pick[0]}">${pick[1]}</button></div>${noClipBlock()}</div>`;
       return;
     }
+    const list = viewClips(kind);
+    const v = views[kind];
+    const shown = list.slice(0, v.shown);
+    const fresh = f.clips.filter(c => !VIA_LABEL[c.via] || c.via === 'color').length;
     els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}
-      <div class="va-found__head"><h3>${f.clips.length} clip${f.clips.length === 1 ? '' : 's'}</h3><span class="va-hint">Last 5 days</span></div>
+      <div class="va-found__head"><h3>${f.clips.length} clip${f.clips.length === 1 ? '' : 's'}</h3><span class="va-hint">${fresh === f.clips.length ? 'Last 5 days' : `${fresh} from the last 5 days`}</span></div>
       ${f.note ? `<p class="va-found__note">${esc(f.note)}</p>` : ''}
-      <div class="va-clipgrid">${f.clips.map(clipCard).join('')}</div>`;
+      ${clipTools(kind)}
+      ${shown.length ? clipGrid(shown, 'data-clip') : '<p class="va-hint">No clips for that team in these results. Pick “All teams”.</p>'}
+      ${moreButton(list.length - shown.length, 'more-clips')}`;
+  }
+  // Pick a clip (any list) -> download it into the ad.
+  function useListedClip(c) {
+    if (c) downloadClip(bestVariant(c.variants), { handle: c.handle, url: c.url, platform: c.platform, from: 'search' });
   }
   els.found.addEventListener('click', event => {
     const use = event.target.closest('[data-clip]');
     if (use) {
-      const c = finds[state.clipTab]?.clips?.[Number(use.dataset.clip)];
-      if (c) downloadClip(bestVariant(c.variants), { handle: c.handle, url: c.url, from: 'search' });
+      useListedClip(finds[state.clipTab]?.clips?.[Number(use.dataset.clip)]);
       return;
     }
+    const fbUse = event.target.closest('[data-fbclip]');
+    if (fbUse) { useListedClip(finds[state.clipTab]?.fallback?.[Number(fbUse.dataset.fbclip)]); return; }
+    const sort = event.target.closest('[data-sort]');
+    if (sort && views[state.clipTab]) { views[state.clipTab] = { ...views[state.clipTab], sort: sort.dataset.sort, shown: PAGE }; renderFound(); els.found.querySelector(`[data-sort="${sort.dataset.sort}"]`)?.focus(); return; }
     const act = event.target.closest('[data-act]')?.dataset.act;
+    if (act === 'more-clips' && views[state.clipTab]) {
+      const at = views[state.clipTab].shown;
+      views[state.clipTab].shown += PAGE;
+      renderFound();
+      els.found.querySelectorAll('[data-clip]')[at]?.focus();
+      return;
+    }
     if (noClipAct(event)) return;
     if (act === 'retry-find') {
       const f = finds[state.clipTab];
@@ -1373,6 +1488,102 @@
     if (act === 'other-color') els.swatches.querySelector('[aria-checked="true"]')?.focus();
     if (act === 'other-moment') { state.momentOpen = true; renderTrends(); renderFound(); els.trends.querySelector('.va-trend')?.focus(); }
   });
+  els.found.addEventListener('change', event => {
+    const select = event.target.closest('[data-filter="team"]');
+    if (!select || !views[state.clipTab]) return;
+    views[state.clipTab] = { ...views[state.clipTab], team: select.value, shown: PAGE };
+    renderFound();
+    els.found.querySelector('[data-filter="team"]')?.focus();
+  });
+
+  // ─── Clip library tab: everything fresh for a sport, no search needed ────
+  // POST { mode: 'library', sport, team, sort, offset, limit } (free, no AI).
+  const lib = { sport: '', team: '', sort: 'newest', clips: [], total: 0, teams: [], status: 'idle', error: '', token: 0 };
+  async function loadLibrary({ more = false, force = false } = {}) {
+    const sport = lib.sport || state.teamSport || 'nfl';
+    if (!more && !force && lib.sport === sport && lib.status === 'done') { renderLibrary(); return; }
+    lib.sport = sport;
+    markRadios(els.libSport, 'sport', sport);
+    const token = ++lib.token;
+    lib.status = more ? 'more' : 'loading';
+    if (!more) { lib.clips = []; lib.total = 0; }
+    renderLibrary();
+    try {
+      const data = await callApi({ mode: 'library', sport, team: lib.team, sort: lib.sort, offset: more ? lib.clips.length : 0, limit: 18 });
+      if (token !== lib.token) return;
+      const clips = (Array.isArray(data.clips) ? data.clips : []).filter(c => c && Array.isArray(c.variants) && c.variants.some(v => v && v.url));
+      lib.clips = more ? [...lib.clips, ...clips] : clips;
+      lib.total = Number(data.total) || lib.clips.length;
+      lib.teams = Array.isArray(data.teams) ? data.teams : [];
+      lib.status = 'done';
+    } catch (error) {
+      if (token !== lib.token) return;
+      lib.status = 'error';
+      lib.error = error.message || '';
+    }
+    renderLibrary();
+  }
+  function renderLibrary() {
+    if (!els.libFound) return;
+    const sportName = SPORT_LABEL[lib.sport] || '';
+    if (lib.status === 'loading') {
+      els.libStatus.textContent = `Loading the ${sportName} clip library…`;
+      els.libFound.setAttribute('aria-busy', 'true');
+      els.libFound.innerHTML = `<div class="va-clipgrid va-clipgrid--3" aria-hidden="true">${Array.from({ length: 6 }, (_, i) => `<div class="va-clip va-clip--skeleton" style="--i:${i}"><span class="va-clip__thumb va-shimmer"></span><span class="va-line va-shimmer" style="width:46%"></span><span class="va-line va-shimmer"></span></div>`).join('')}</div>`;
+      return;
+    }
+    els.libFound.removeAttribute('aria-busy');
+    if (lib.status === 'error') {
+      els.libStatus.textContent = '';
+      els.libFound.innerHTML = `<div class="va-empty-state va-empty-state--bad" role="alert">${ICON.alert}<strong>The clip library didn’t load</strong><span>${esc(lib.error)}</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="lib-retry">${ICON.retry}Try again</button></div>${noClipBlock()}</div>`;
+      return;
+    }
+    const teamSelect = lib.teams.length
+      ? `<label class="va-cliptools__team"><span class="va-sr">Team</span><select class="es-select va-select-sm" data-lib-filter="team" aria-label="Filter the library by team"><option value="">All teams</option>${lib.teams.map(t => `<option value="${esc(t.name)}"${lib.team === t.name ? ' selected' : ''}>${esc(t.short || t.name)} (${Number(t.count) || 0})</option>`).join('')}</select></label>`
+      : '';
+    const tools = `<div class="va-cliptools">${teamSelect}${sortChips(lib.sort, 'data-lib-sort', [['newest', 'Newest'], ['popular', 'Most popular']])}</div>`;
+    if (!lib.clips.length) {
+      els.libStatus.textContent = '';
+      els.libFound.innerHTML = `${lib.team ? tools : ''}<div class="va-empty-state">${ICON.film}<strong>The ${esc(sportName)} library is empty right now</strong><span>It fills every morning and with every search. Find clips by team, or make the ad without a clip.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="lib-to-team">By team</button></div>${noClipBlock()}</div>`;
+      return;
+    }
+    els.libStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b>${lib.total}</b> fresh ${esc(sportName)} clip${lib.total === 1 ? '' : 's'}${lib.team ? ` for ${esc(lib.team)}` : ''}, last 5 days</span>`;
+    els.libFound.innerHTML = `${tools}${clipGrid(lib.clips.map((c, i) => ({ c, i })), 'data-libclip')}
+      ${lib.status === 'more' ? `<p class="va-working">${dots}Loading more…</p>` : moreButton(lib.total - lib.clips.length, 'lib-more')}`;
+  }
+  if (els.libSport) {
+    radioGroup(els.libSport, 'sport', sport => {
+      if (sport === lib.sport) return;
+      lib.sport = sport;
+      lib.team = '';
+      markRadios(els.libSport, 'sport', sport);
+      loadLibrary({ force: true });
+    });
+    els.libFound.addEventListener('click', event => {
+      const use = event.target.closest('[data-libclip]');
+      if (use) {
+        const c = lib.clips[Number(use.dataset.libclip)];
+        if (c) {
+          state.context = { kind: 'library', sport: lib.sport, color: '', colorLabel: '', teams: (c.teams || []).slice(0, 3), trend: null };
+          useListedClip(c);
+        }
+        return;
+      }
+      const sort = event.target.closest('[data-lib-sort]');
+      if (sort) { lib.sort = sort.dataset.libSort; loadLibrary({ force: true }); return; }
+      const act = event.target.closest('[data-act]')?.dataset.act;
+      if (act === 'lib-more') { loadLibrary({ more: true }); return; }
+      if (act === 'lib-retry') { loadLibrary({ force: true }); return; }
+      if (act === 'lib-to-team') { selectClipTab(clipTab('team')); return; }
+      noClipAct(event);
+    });
+    els.libFound.addEventListener('change', event => {
+      const select = event.target.closest('[data-lib-filter="team"]');
+      if (!select) return;
+      lib.team = select.value;
+      loadLibrary({ force: true });
+    });
+  }
 
   // By team: every team for the sport, type to filter, then Find clips.
   const allTeams = sport => (Array.isArray(T.TEAMS) ? T.TEAMS : []).filter(t => t.sport === sport);
@@ -1456,7 +1667,10 @@
       const items = (Array.isArray(data.moments) ? data.moments : [])
         .map(m => ({ ...m, id: String(m.id || m.title || ''), clips: usableClips(m.clips) }))
         .filter(m => m.id && m.title && m.clips.length && (sport === 'all' || !m.sport || m.sport === sport));
-      fresh[sport] = { status: items.length ? 'done' : 'empty', items };
+      // No moment has clips: the server sends the sport's newest library clips.
+      const fallback = usableClips(data.fallback?.clips).map(c => ({ ...c, via: c.via || 'sport' }));
+      fresh[sport] = { status: items.length ? 'done' : 'empty', items, fallback, fallbackNote: typeof data.fallback?.note === 'string' ? data.fallback.note : '' };
+      if (!items.length && !fallback.length) loadMomentFallback(sport, token);
     } catch (error) {
       if (token !== freshToken) return;
       fresh[sport] = { status: 'error', items: [], error: error.message || '' };
@@ -1465,6 +1679,18 @@
     }
     els.refresh.classList.remove('is-spinning');
     renderTrends();
+  }
+  // Moments came back empty and the server had no fallback: ask the library directly.
+  async function loadMomentFallback(sport, token) {
+    const sports = SPORT_LABEL[sport] ? [sport] : ['nfl', 'cfb', 'mlb'];
+    try {
+      const pages = await Promise.all(sports.map(s => callApi({ mode: 'library', sport: s, limit: 9 }).then(d => usableClips(d.clips)).catch(() => [])));
+      if (token !== freshToken || !fresh[sport]) return;
+      const clips = pages.flat().sort((a, b) => new Date(b.postedAt || 0) - new Date(a.postedAt || 0)).slice(0, 9).map(c => ({ ...c, via: 'sport' }));
+      if (!clips.length) return;
+      fresh[sport].fallback = clips;
+      renderTrends();
+    } catch (error) { /* the empty state stands */ }
   }
   const skeletonRows = () => Array.from({ length: 5 }, (_, i) => `<li class="va-trend-item" aria-hidden="true" style="--i:${i}"><div class="va-trend va-trend--skeleton"><span class="va-trend__img va-shimmer"></span><span class="va-trend__body"><span class="va-line va-shimmer" style="width:42%"></span><span class="va-line va-shimmer"></span><span class="va-line va-shimmer" style="width:72%"></span></span></div></li>`).join('');
   function trendRow(item, index, count = 0) {
@@ -1513,6 +1739,12 @@
         const why = all
           ? 'None of today’s top moments has a video from the last 5 days yet. Try one sport at a time, or search by team.'
           : `None of the top ${esc(SPORT_LABEL[state.sport])} moments has a video from the last 5 days yet. Try all sports, or search by team.`;
+        // Never "No fresh clips" while the library has some: show them, labelled.
+        if (f.fallback?.length) {
+          const label = all ? 'the newest clips we have' : `the newest ${esc(SPORT_LABEL[state.sport])} clips we have`;
+          els.trends.innerHTML = `<li class="va-lib-fallback"><div class="va-found__head"><h3>From the clip library</h3><span class="va-hint">${f.fallback.length} clip${f.fallback.length === 1 ? '' : 's'}</span></div><p class="va-found__note">No video for today’s top moments yet — here are ${label} instead.</p>${clipGrid(f.fallback.map((c, i) => ({ c, i })), 'data-mclip')}<div class="va-empty-state__actions">${tries}</div>${noClipBlock()}</li>`;
+          return;
+        }
         els.trends.innerHTML = `<li class="va-empty-state">${ICON.film}<strong>No fresh clips for these moments yet</strong><span>${why}</span><div class="va-empty-state__actions">${tries}</div>${noClipBlock()}</li>`;
         return;
       }
@@ -1570,6 +1802,15 @@
     else loadFreshMoments();
   });
   els.trends.addEventListener('click', event => {
+    const mclip = event.target.closest('[data-mclip]');
+    if (mclip) {
+      const c = fresh[state.sport]?.fallback?.[Number(mclip.dataset.mclip)];
+      if (c) {
+        state.context = { kind: 'library', sport: c.sport || (SPORT_LABEL[state.sport] ? state.sport : ''), color: '', colorLabel: '', teams: (c.teams || []).slice(0, 3), trend: null };
+        useListedClip(c);
+      }
+      return;
+    }
     const act = event.target.closest('[data-act]')?.dataset.act;
     if (noClipAct(event)) return;
     if (act && act.startsWith('sport-')) { els.sports.querySelector(`[data-sport="${act.slice(6)}"]`)?.click(); return; }
