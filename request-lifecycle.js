@@ -188,6 +188,49 @@
     return 'later';
   }
 
+  // The one thing that moves this request forward, for this person: the
+  // My requests page shows it as the "Next step" bar above the details.
+  //   key:    what is going on (copy lives in the page)
+  //   action: claim | assign | start | attach | review | done | comment | ''
+  //   status: the status the action sets, when it is a status move
+  //   tone:   'act' (it's on you) | 'wait' | 'warn' (overdue) | 'good' | 'muted'
+  // Only actions the person is allowed to take are offered
+  // (checkStatusChange / checkAssign decide, exactly as on the server).
+  function nextStep(request = {}, user = {}, { deliveries = 0, now = Date.now() } = {}) {
+    const status = normalizeStatus(request.status);
+    const role = roleFor(user);
+    const me = normalizeEmail(user.email);
+    const assignee = assigneeOf(request);
+    const overdue = dueState(request, now) === 'overdue';
+    const step = (key, tone, action = '', nextStatus = '') => ({
+      key, tone: overdue && tone !== 'good' && tone !== 'muted' ? 'warn' : tone, action, status: nextStatus, assignee, overdue,
+    });
+    if (status === 'Done') return step('done', 'good');
+    if (status === 'Declined') return step('declined', 'muted');
+    const can = to => checkStatusChange(request, user, to).ok;
+    // Staff who filed a request someone else is designing see it as a requester.
+    if (role !== 'requester' && isRequester(request, user) && assignee && assignee !== me && status === 'Review') {
+      return step('requester-review', 'act', 'comment');
+    }
+    if (role === 'requester') {
+      if (status === 'Review') return step('requester-review', 'act', 'comment');
+      if (status === 'Doing') return step('requester-doing', 'wait');
+      return step(assignee ? 'requester-assigned' : 'requester-new', 'wait');
+    }
+    if (!assignee) {
+      if (role === 'admin') return step('unassigned-admin', 'act', 'assign');
+      return checkAssign(request, user, me).ok ? step('unassigned', 'act', 'claim') : step('unassigned', 'wait');
+    }
+    if (assignee !== me) return step('with-someone', 'wait');
+    if ((status === 'Backlog' || status === 'Assigned') && can('Doing')) return step('mine-start', 'act', 'start', 'Doing');
+    if (status === 'Doing') {
+      if (Number(deliveries) > 0 && can('Review')) return step('mine-send', 'act', 'review', 'Review');
+      return step('mine-attach', 'act', 'attach');
+    }
+    if (status === 'Review' && can('Done')) return step('mine-review', 'act', 'done', 'Done');
+    return step('with-someone', 'wait');
+  }
+
   // Request IDs: DR-YYYYMMDD-XXXX. The random tail keeps two browsers that
   // file on the same day from colliding (the old per-browser counter could).
   const ID_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
@@ -231,6 +274,7 @@
     inQueue,
     openCount,
     dueState,
+    nextStep,
     makeRequestId,
     isRequestId,
     taskIdFor,
