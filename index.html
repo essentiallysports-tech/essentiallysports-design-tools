@@ -7806,6 +7806,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 <link rel="stylesheet" href="design-tokens.css?v=20261117-ready1">
 <link rel="stylesheet" href="es-ui.css?v=20261117-ready1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
+<link rel="stylesheet" href="frameup-posted.css?v=20261118-impact-posted-links">
 <link rel="stylesheet" href="editor-polish.css?v=20261117-focus1">
 <script src="theme.js?v=20261115-pol2"></script>
 <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
@@ -18255,11 +18256,15 @@ async function copyImageLink() {
       if (!error) break;
       if (!isDuplicateUploadError(error) || attempt === 5) throw error;
     }
-    const url = client.storage.from(FRAMEUP_LINKS_BUCKET).getPublicUrl(path).data.publicUrl;
+    const publicUrl = client.storage.from(FRAMEUP_LINKS_BUCKET).getPublicUrl(path).data.publicUrl;
+    // Optional UTM tags (frameup-posted.js toggle); the stored file and its path don't change.
+    const utmContext = { brand: activeWorkspace === 'newsletter' ? state.newsletterBrand : 'essentiallysports', designId: path.split('/').pop().replace(/\.[a-z0-9]+$/i, ''), workspace: activeWorkspace };
+    const url = window.FrameUpPosted?.decorateLink?.(publicUrl, utmContext) || publicUrl;
     if (await copyTextToClipboard(url)) {
       showToast('Image link copied', 'success');
       setStatus('Link copied: ' + url, 'ok');
       if (label) label.textContent = 'Link copied';
+      window.FrameUpPosted?.afterCopy?.({ kind: 'link', raw: publicUrl, ctx: utmContext, copy: copyTextToClipboard, title: name });
     } else {
       showImageLinkDialog(url);
     }
@@ -21423,7 +21428,12 @@ function wrapWidgetPreviewDoc(html) {
 }
 
 function copyWidgetHtml(html, button) {
+  // Optional UTM tags on the widget's links (frameup-posted.js); image src stays as is.
+  const rawHtml = html;
+  const utmContext = { brand: state.newsletterBrand || 'essentiallysports', designId: activeNewsletterAsset || 'widget', workspace: 'newsletter' };
+  html = window.FrameUpPosted?.decorateHtml?.(rawHtml, utmContext) ?? rawHtml;
   const onCopied = () => {
+    window.FrameUpPosted?.afterCopy?.({ kind: 'html', raw: rawHtml, ctx: utmContext, title: 'Newsletter widget' });
     if (!button) return;
     const label = button.querySelector('span');
     const previousLabel = label ? label.textContent : '';
@@ -23616,5 +23626,7 @@ loadFont().then(() => render());
 <script src="frameup-templates.js?v=20261111-picker1"></script>
 <script src="frameup-extras.js?v=20261111-export2"></script>
 <script src="frameup-spec.js?v=20261118-generate-director"></script>
+<script src="frameup-impact.js?v=20261118-impact-posted-links"></script>
+<script src="frameup-posted.js?v=20261118-impact-posted-links"></script>
 </body>
 </html>

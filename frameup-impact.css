@@ -1,0 +1,81 @@
+/* Dashboard → Impact (frameup-impact-view.js). Builds on the dashboard
+   overview system (dashboard-ui-system.css, `dov-` classes); only the bits
+   that view doesn't have live here. Type and space come from tokens. */
+
+body.dashboard-page .impact-view { display: grid; gap: var(--es-space-4); min-width: 0; }
+body.dashboard-page .impact-view[hidden] { display: none; }
+body.dashboard-page .impact-view .dov-section { margin-top: var(--es-space-4); }
+body.dashboard-page .impact-view .ip-kpis-2 { margin-top: 0; }
+
+body.dashboard-page .ip-rangebar-actions { display: flex; align-items: center; gap: var(--es-space-2); flex-wrap: wrap; }
+body.dashboard-page .ip-callout code,
+body.dashboard-page .impact-view code { font-size: var(--es-type-meta-size); overflow-wrap: anywhere; }
+body.dashboard-page .ip-callout strong { display: block; margin-bottom: var(--es-space-1); }
+
+/* KPI values that are words ("4.2 min", "$0.031") keep the number style. */
+body.dashboard-page .impact-view .dov-kpi-value { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* No sparkline here: drop the page's paragraph spacing and keep the meta line at the bottom. */
+body.dashboard-page .impact-view .dov-kpi > p { margin-bottom: 0 !important; }
+body.dashboard-page .impact-view .dov-kpi-meta { display: -webkit-box; margin-top: auto !important; padding-top: var(--es-space-3); white-space: normal; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+body.dashboard-page .impact-view .dov-section-title,
+body.dashboard-page .impact-view .dov-rangebar-text { margin-bottom: 0 !important; }
+
+/* Weekly bars: one colour, this week a little deeper; values on top. */
+body.dashboard-page .ip-chart { display: block; width: 100%; height: auto; overflow: visible; color: var(--dov-brand); }
+body.dashboard-page .ip-bar__hit { fill: transparent; }
+body.dashboard-page .ip-bar__fill { fill: currentColor; opacity: .55; transition: opacity var(--es-dur) var(--es-ease); }
+body.dashboard-page .ip-bar.is-current .ip-bar__fill { opacity: 1; }
+body.dashboard-page .ip-bar:hover .ip-bar__fill { opacity: .85; }
+body.dashboard-page .ip-bar__zero { fill: var(--dov-line); }
+body.dashboard-page .ip-bar__value { fill: var(--dov-ink-2); font: 500 var(--es-type-meta-size)/1 var(--es-font-ui); font-variant-numeric: tabular-nums; }
+body.dashboard-page .ip-bar__label { fill: var(--dov-muted); font: 400 var(--es-type-meta-size)/1 var(--es-font-ui); }
+body.dashboard-page .ip-chart-skeleton { height: 180px; border-radius: var(--es-radius-control); }
+
+/* Tables scroll inside themselves on narrow screens. */
+body.dashboard-page .ip-table-wrap { max-width: 100%; overflow-x: auto; }
+body.dashboard-page .ip-table-leaderboard th:nth-child(n+2) { width: 96px; }
+body.dashboard-page .ip-table-leaderboard th:nth-child(6) { width: 120px; }
+body.dashboard-page .ip-table-creators th:nth-child(2) { width: 96px; }
+body.dashboard-page .ip-table-links th:nth-child(1) { width: 128px; }
+body.dashboard-page .ip-table-links th:nth-child(3) { width: 88px; }
+body.dashboard-page .ip-table-preview th:nth-child(2) { width: 136px; }
+body.dashboard-page .ip-table-preview th:nth-child(3) { width: 88px; }
+body.dashboard-page .ip-link { display: block; overflow: hidden; color: var(--dov-ink); text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+body.dashboard-page .ip-link:hover { color: var(--dov-brand-text); }
+body.dashboard-page .ip-link:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); border-radius: 4px; }
+body.dashboard-page .ip-empty { margin: var(--es-space-3) var(--es-space-6) var(--es-space-4); }
+
+/* Import */
+body.dashboard-page .ip-import-start,
+body.dashboard-page .ip-import { display: grid; gap: var(--es-space-3); min-width: 0; }
+body.dashboard-page .ip-import-start .dov-note,
+body.dashboard-page .ip-import .dov-note { margin-top: 0 !important; }
+body.dashboard-page .ip-file { justify-self: start; cursor: pointer; }
+body.dashboard-page .ip-file:focus-within { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+body.dashboard-page .ip-import-file { display: grid; gap: 2px; min-width: 0; }
+body.dashboard-page .ip-kind { max-width: 280px; }
+body.dashboard-page .ip-mapping summary {
+  color: var(--dov-ink-2);
+  font: 500 var(--es-type-meta-size)/var(--es-type-meta-line) var(--es-font-ui);
+  cursor: pointer;
+}
+body.dashboard-page .ip-mapping summary:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); border-radius: 4px; }
+body.dashboard-page .ip-mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--es-space-3);
+  margin-top: var(--es-space-3);
+}
+body.dashboard-page .ip-mapping-grid .es-select { width: 100%; }
+body.dashboard-page .ip-import .ip-table-wrap { max-width: none; margin: 0 calc(-1 * var(--es-space-6)); }
+body.dashboard-page .ip-import-actions { display: flex; flex-wrap: wrap; gap: var(--es-space-2); }
+
+@media (max-width: 600px) {
+  body.dashboard-page .ip-rangebar-actions { width: 100%; justify-content: space-between; }
+  body.dashboard-page .ip-table-leaderboard th:nth-child(3),
+  body.dashboard-page .ip-table-leaderboard td:nth-child(3),
+  body.dashboard-page .ip-table-leaderboard th:nth-child(6),
+  body.dashboard-page .ip-table-leaderboard td:nth-child(6) { display: none; }
+  body.dashboard-page .ip-table-leaderboard th:nth-child(n+2) { width: 72px; }
+  body.dashboard-page .ip-mapping-grid { grid-template-columns: minmax(0, 1fr); }
+}

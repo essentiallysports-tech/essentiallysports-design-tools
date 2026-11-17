@@ -34,6 +34,9 @@
 <script src="tours/tours.js?v=20261118-generate-director"></script>
 <script src="tours/tour-launcher.js?v=20261117-tour1"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
+<link rel="stylesheet" href="frameup-posted.css?v=20261118-impact-posted-links">
+<script src="frameup-impact.js?v=20261118-impact-posted-links"></script>
+<script src="frameup-posted.js?v=20261118-impact-posted-links"></script>
   <style>
     .gallery-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: var(--es-space-8, 32px) 0 var(--es-space-12, 48px); font-family: var(--es-font-ui); color: var(--es-ink); }
     .gallery-toolbar { display: flex; align-items: center; gap: var(--es-space-4, 16px); margin-bottom: var(--es-space-3, 12px); }
@@ -229,6 +232,7 @@
         <a class="es-btn es-btn--primary es-btn--sm" id="gallery-viewer-open" href="index.html">Open in editor</a>
         <small id="gallery-viewer-open-note"></small>
       </div>
+      <div id="gallery-viewer-posted"></div>
       <p class="gallery-viewer__position" id="gallery-viewer-position"></p>
     </div>
   </dialog>
@@ -258,6 +262,7 @@
         viewerActions: document.getElementById('gallery-viewer-actions'),
         viewerOpen: document.getElementById('gallery-viewer-open'),
         viewerOpenNote: document.getElementById('gallery-viewer-open-note'),
+        viewerPosted: document.getElementById('gallery-viewer-posted'),
         workspaces: document.getElementById('gallery-workspaces'),
         intro: document.getElementById('gallery-intro'),
         error: document.getElementById('gallery-error'),
@@ -296,6 +301,19 @@
       }
       const previews = new Map();
       const thumbs = new Map();
+      // Posted state per post ("Posted · Instagram" on the card), from frameup-posted.js.
+      const posted = new Map();
+      function postedBadge(card, id) {
+        card.querySelector('.fp-card-badge')?.remove();
+        const badge = window.FrameUpPosted?.badge?.(posted.get(id));
+        if (badge) card.querySelector('.gallery-card__thumb').appendChild(badge);
+      }
+      async function loadPosted(ids) {
+        const map = await window.FrameUpPosted?.fetchStatus?.(ids).catch(() => null);
+        if (!map) return;
+        map.forEach((entry, id) => posted.set(id, entry));
+        els.grid.querySelectorAll('.gallery-card[data-id]').forEach(card => { if (map.has(card.dataset.id)) postedBadge(card, card.dataset.id); });
+      }
 
       const timeAgo = iso => {
         const then = new Date(iso).getTime();
@@ -440,6 +458,10 @@
           card.querySelector('strong').textContent = item.title;
           card.querySelector('.gallery-card__meta').textContent = meta;
           card.querySelector('.gallery-card__by').textContent = by;
+          if (posted.has(item.id)) {
+            postedBadge(card, item.id);
+            card.setAttribute('aria-label', `${card.getAttribute('aria-label')}, posted`);
+          }
           card.addEventListener('click', () => openViewer(index));
           els.grid.appendChild(card);
           if (observer) observer.observe(card); else hydrateCard(card);
@@ -476,6 +498,7 @@
           const signed = await window.ESDashboardData.fetchGalleryThumbs?.(fresh.map(item => item.id)) || {};
           Object.entries(signed).forEach(([id, url]) => thumbs.set(id, url));
           state.items.push(...fresh);
+          loadPosted(fresh.map(item => item.id));
           state.exhausted = items.length < PAGE_SIZE || source === 'admin' || source === 'local';
         } catch (error) {
           console.error('[gallery]', error);
@@ -540,6 +563,13 @@
             els.viewerDetails.append(dt, dd);
           });
         els.viewerPosition.textContent = `${index + 1} of ${state.visible.length}`;
+        window.FrameUpPosted?.mount?.(els.viewerPosted, {
+          taskId: item.id,
+          title: item.title,
+          template: item.variant,
+          source: 'gallery',
+          onChange: () => loadPosted([item.id]),
+        });
         els.viewer.querySelector('.is-prev').disabled = index === 0;
         els.viewer.querySelector('.is-next').disabled = index === state.visible.length - 1;
         els.viewerImage.removeAttribute('src');

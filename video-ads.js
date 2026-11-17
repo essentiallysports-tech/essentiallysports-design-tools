@@ -2335,6 +2335,13 @@
     renderSteps();
     toast(`Exported ${targets.length} ${ext.toUpperCase()}${targets.length > 1 ? 's' : ''}`, { tone: 'good' });
     draw();
+    // "Posted it?" card with Meta ad names per size, plus the export event (frameup-posted.js).
+    try {
+      const sizes = targets.map(t => `${t.s.width}x${t.s.height}`);
+      const angle = state.context?.kind || (state.trend ? 'moment' : 'general');
+      const adNames = window.FrameUpImpact ? sizes.map(size => window.FrameUpImpact.adName({ brand: brand().id, style: state.style, angle, size, date: new Date() })) : [];
+      window.FrameUpPosted?.exported?.({ source: 'video-ads', title: plain(state.headline).slice(0, 120), template: state.style, style: state.style, angle, brand: brand().id, sizes, adNames, aiMade: state.aiCopy ? 'video-ads' : '', count: targets.length });
+    } catch (error) { /* never block an export */ }
   }
 
   // ─── Brand, sizes, Meta preview ──────────────────────────────────────────

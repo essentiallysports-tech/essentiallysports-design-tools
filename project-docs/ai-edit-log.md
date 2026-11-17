@@ -53,6 +53,39 @@ and what's still uncommitted.
 - Tests: `scripts/test-generate-director-mode.mjs`, `scripts/test-es-guidelines.mjs` (added to `test:generate`).
 - Owner to do: run the migration; optionally set `GENERATE_DIRECTOR_MODEL=auto` (vercel.json already has
   `api/generate-direction-events.js`). Confirm the UNCLEAR guideline items in `es-guidelines.js`.
+### 2026-11-18 — Impact loop: "Posted it? Paste the link", UTM tags, results import, admin Impact view
+- Status: `[committed on feature/impact-posted-links, not pushed]`
+- Brief: items 2 and 10 plus quick wins 3 and 5 of `project-docs/frameup-opportunities-research.md`.
+- **Posted links** (`frameup-posted.js` + `.css`): after every export (editor, Generate download, Video Ads,
+  Reels) a quiet floating card asks "Posted it? Paste the link". The platform is detected from the URL
+  (Instagram, X, Facebook, Threads, YouTube, Beehiiv issue, Meta ad id or Ads Library / Ads Manager link).
+  The same form sits in the Gallery viewer and the Dashboard export drawer; Gallery cards show
+  "Posted · Instagram". Video Ads also shows the Meta ad name per size
+  (`{brand}_{style}_{angle}_{WxH}_{yyyymmdd}`) with Copy buttons. Tools without a task row give the
+  export a reference id (`gen-…`, `vad-…`, `reel-…`) so links, events and results all join on `task_id`.
+- **UTM**: "Copy link" in the editor and newsletter widget "Copy HTML" add utm_source/medium/campaign
+  (campaign = brand + design id) when a toggle is on (off by default, remembered per browser; the toggle
+  appears in the card after a copy and re-copies). The hosted image path is never changed; in widget HTML
+  only `<a href>` links are tagged, never `img src`.
+- **Events**: `design_started` (first real interaction after open / after the last export),
+  `export_done` (with `elapsed_ms`), `generate_run`, `posted_link_added` go to a new `frameup_events`
+  table, not `es_designer_activity`, so the dashboard feed stays readable.
+- **Dashboard → Impact** (`frameup-impact-view.js` + `frameup-impact.css`, new sidebar tab): exports this
+  week (north-star proxy), active users, median time to export, posted rate, Generate run → export,
+  AI cost per export (and per AI-made export), requests on time, imported results; exports per week
+  (12-week bar chart), exports per creator, template leaderboard (exports, creators, posted %, clicks,
+  impressions/opens), CSV import (Meta Ads / Beehiiv: auto-detect, column mapping, match preview,
+  upsert), recently posted links.
+- **Stats API groundwork**: `/api/impact-stats` (admin only) reports whether `BEEHIIV_API_KEY` /
+  `META_ACCESS_TOKEN` are set; the pull itself returns 501 until built. Documented in `.env.example`.
+- **Migration (owner runs it)**: `supabase/migrations/20261118124600_frameup_post_links.sql` —
+  `frameup_post_links` (own insert/read/delete, admin read all), `list_frameup_post_status(ids)` for the
+  Gallery, `frameup_post_results` (admin only, unique per source/row/period), `frameup_events` (own
+  insert, admin read). Before it is applied: links are kept on the device and saved later, events are
+  skipped, the Impact view shows a note and uses tasks, requests and AI usage.
+- Logic is pure and tested: `frameup-impact.js`, `scripts/test-impact.mjs` (`npm run test:impact`).
+- Verified locally with a stubbed sign-in and Supabase client (light/dark, 1280 and 375).
+
 
 ### 2026-09-10 — Fix a regression from this same day's earlier fixes: concurrent profile upsert race
 - Status: `[pushed - see rollback point below]`
