@@ -47,6 +47,10 @@
   const MARGIN = 84; // text column x 84–996, inside the safe zone
   const COL = W - 2 * MARGIN;
   const ZONE = { graphicTop: 360, graphicBottom: 1250, captionBaseline: 1500, captionTop: 1330 };
+  // Captions stay clear of the like / comment / share rail (x > ~960 from
+  // y ~1150 on Reels, TikTok and Shorts) and above the caption-and-handle
+  // block (y > 1500): an 820 px measure, centred.
+  const CAPTION_W = 820;
   const CONDENSED = (VA && VA.CONDENSED) || '"Acumin Pro Condensed Local", "Roboto Condensed", sans-serif';
   const BODY = 'Roboto, sans-serif';
   const font = (weight, size, family) => `${weight} ${Math.round(size * 10) / 10}px ${family}`;
@@ -54,6 +58,25 @@
   const XFADE_MS = 220;
   const ES_BLUE = '#0A6FDE';
   const WHITE = '#FFFFFF';
+
+  // ─── ES brand (the official vectors, never type in a box) ───────────────
+  // Path data copied from the brand files (src), so the mark is the real
+  // asset at any size and in any guideline colourway, with no image to load.
+  // Video guide (VB-02, SM-02, BL-02..06; es-guidelines.js LOGO): the ES mark
+  // top-right, fixed size and place on every frame, 50 px clear space, blue
+  // (white type on #0A7DFA) or black when what is under it is ES blue; never
+  // effects, never re-typeset. On 9:16 the top 270 px sit under the app's own
+  // UI, so the mark is pinned at the top-right of the platform safe zone,
+  // where the published ES reels carry it. End cards add the official
+  // wordmark (417 px wide, the BL guide size); golf reels the Essentially
+  // Golf wordmark.
+  const BRAND = {
+    mark: { src: "assets/brand-logos/essentiallysports-mark.svg", w: 122.332, h: 104.066, box: "#0A7DFA", d: "M54.1567 57.7938H31.2568V75.8168H57.1807L55.1537 89.8498H14.2188V14.2178H55.1977V28.4348H31.2568V43.6498H54.1567V57.7938Z M78.0299 67.9531C78.4659 74.1651 80.2329 78.4391 85.4259 78.4391C90.4709 78.4391 92.0879 75.0431 92.0879 70.7441C92.0879 65.5101 89.4569 62.4321 80.5609 57.8731C67.4239 51.0901 62.4629 45.3651 62.4629 34.2501C62.4629 21.3121 70.3689 12.8281 85.3519 12.8281C102.977 12.8281 108.02 23.8411 108.164 35.4551H91.4339C91.1449 30.1881 90.1819 25.6621 85.2459 25.6621C81.3809 25.6621 79.6519 28.1691 79.6519 32.3891C79.6519 36.7211 81.3409 38.9551 89.5659 43.0661C103.584 50.1251 109.535 56.0941 109.535 68.8101C109.535 81.3121 102.228 91.2741 85.2519 91.2741C66.8589 91.2741 61.2479 80.7941 60.8789 67.9541H78.0289L78.0299 67.9531Z M78.0299 67.9531C78.4679 74.1651 80.2349 78.4391 85.4259 78.4391C90.4729 78.4391 92.0899 75.0431 92.0899 70.7441C92.0899 65.5101 89.4589 62.4321 80.5629 57.8731C67.4239 51.0901 62.4629 45.3651 62.4629 34.2501C62.4629 21.3121 70.3689 12.8281 85.3539 12.8281C102.977 12.8281 108.019 23.8411 108.164 35.4551H91.4359C91.1449 30.1881 90.1819 25.6621 85.2479 25.6621C81.3809 25.6621 79.6519 28.1691 79.6519 32.3891C79.6519 36.7211 81.3409 38.9551 89.5659 43.0661C103.586 50.1251 109.537 56.0941 109.537 68.8101C109.537 81.3121 102.228 91.2741 85.2539 91.2741C66.8609 91.2741 61.2479 80.7941 60.8789 67.9541H78.0289L78.0299 67.9531Z" },
+    wordmark: { src: "brand-logo-blue.svg", w: 258, h: 30.6864, box: "#0A7DFA", d: "M15.7625 16.9716H9.00991V22.2688H16.6542L16.0565 26.3933H3.98584V4.16406H16.0695V8.34263H9.00991V12.8145H15.7625V16.9716Z M22.7979 19.9598C22.9265 21.7856 23.4475 23.0418 24.9788 23.0418C26.4665 23.0418 26.9433 22.0436 26.9433 20.7801C26.9433 19.2418 26.1675 18.3371 23.5443 16.9971C19.6705 15.0035 18.2076 13.3209 18.2076 10.054C18.2076 6.25137 20.5389 3.75781 24.957 3.75781C30.1542 3.75781 31.6412 6.99468 31.6837 10.4082H26.7504C26.6652 8.86015 26.3812 7.5299 24.9257 7.5299C23.7861 7.5299 23.2762 8.26674 23.2762 9.50705C23.2762 10.7803 23.7743 11.4369 26.1996 12.6452C30.3332 14.7199 32.0879 16.4743 32.0879 20.2117C32.0879 23.8862 29.9333 26.8141 24.9275 26.8141C19.5039 26.8141 17.8493 23.7339 17.7405 19.9601H22.7976L22.7979 19.9598Z M38.5253 19.9598C38.6539 21.7856 39.1749 23.0418 40.7062 23.0418C42.1938 23.0418 42.6706 22.0436 42.6706 20.7801C42.6706 19.2418 41.8948 18.3371 39.2716 16.9971C35.3978 15.0035 33.935 13.3209 33.935 10.054C33.935 6.25137 36.2663 3.75781 40.6844 3.75781C45.8815 3.75781 47.3686 6.99468 47.411 10.4082H42.4778C42.3926 8.86015 42.1086 7.5299 40.6531 7.5299C39.5134 7.5299 39.0036 8.26674 39.0036 9.50705C39.0036 10.7803 39.5016 11.4369 41.927 12.6452C46.0605 14.7199 47.8153 16.4743 47.8153 20.2117C47.8153 23.8862 45.6607 26.8141 40.6549 26.8141C35.2312 26.8141 33.5767 23.7339 33.4679 19.9601H38.525L38.5253 19.9598Z M61.6666 16.9716H54.914V22.2688H62.5583L61.9606 26.3933H49.8896V4.16406H61.9735V8.34263H54.914V12.8145H61.6666V16.9716Z M64.4897 26.3933V4.16406H70.097C73.4875 14.6412 74.2748 17.16 74.5039 18.1752H74.595C74.3739 15.378 74.3043 11.7147 74.3043 8.24564V4.16406H78.8294V26.3936H73.3047C69.7824 14.8393 69.1207 12.5994 68.87 11.6386H68.7674C68.9438 14.3132 69.0369 18.4309 69.0369 22.0672V26.3936H64.49L64.4897 26.3933Z M84.8904 8.34263H80.4927V4.16406H94.3789V8.34263H90.0041V26.3936H84.8904V8.34263Z M101.146 4.16406V26.3936H96.0216V4.16406H101.146Z M108.565 21.6355L107.806 26.3936H102.68L107.08 4.16406H114.282L118.738 26.3936H113.416L112.634 21.6355H108.565ZM111.955 17.3396C111.449 14.0963 110.96 10.4782 110.678 8.43462H110.51C110.292 10.5664 109.747 14.0945 109.219 17.3396H111.955Z M120.36 4.16406H125.485V22.2444H132.561L132.084 26.3936H120.36V4.16406Z M134.134 4.16406H139.259V22.2444H146.335L145.858 26.3936H134.134V4.16406Z M149.185 26.3936V19.178C149.185 18.8568 149.153 18.5206 149.008 18.1552L143.777 4.16406H149.432C150.355 7.5182 151.382 11.3802 151.927 14.1116C152.544 11.5948 153.652 7.43444 154.477 4.16406H159.775L154.466 18.2093C154.388 18.4547 154.322 18.7063 154.322 19.0916V26.3936H149.185Z M165.334 19.9598C165.463 21.7856 165.984 23.0418 167.515 23.0418C169.003 23.0418 169.48 22.0436 169.48 20.7801C169.48 19.2418 168.704 18.3371 166.081 16.9971C162.207 15.0035 160.744 13.3209 160.744 10.054C160.744 6.25137 163.075 3.75781 167.494 3.75781C172.69 3.75781 174.177 6.99468 174.22 10.4082H169.287C169.201 8.86015 168.917 7.5299 167.462 7.5299C166.322 7.5299 165.812 8.26674 165.812 9.50705C165.812 10.7803 166.31 11.4369 168.736 12.6452C172.87 14.7199 174.625 16.4743 174.625 20.2117C174.625 23.8862 172.469 26.8141 167.464 26.8141C162.041 26.8141 160.385 23.7339 160.277 19.9601H165.334L165.334 19.9598Z M176.705 4.16406H184.023C187.894 4.16406 190.676 6.30023 190.676 10.9026C190.676 15.5467 188.181 17.7158 183.795 17.7158H181.795V26.3936H176.705V4.16406H176.705ZM181.795 13.8079H183.126C184.892 13.8079 185.563 12.9494 185.563 10.8597C185.563 8.79114 184.673 8.00022 183.232 8.00022H181.795V13.8082L181.795 13.8079Z M207.325 15.1396C207.325 23.2863 205.095 26.8141 199.552 26.8141C194.384 26.8141 192.09 23.2269 192.09 15.0276C192.09 7.15104 194.64 3.75781 199.761 3.75781C205.019 3.75781 207.325 7.40557 207.325 15.1396ZM197.442 15.0294C197.442 20.5168 197.939 22.7999 199.697 22.7999C201.553 22.7999 201.974 20.6758 201.974 15.0294C201.974 9.75277 201.532 7.79354 199.697 7.79354C197.93 7.79354 197.442 9.84799 197.442 15.0294Z M214.756 17.2973V26.3933H209.699V4.16406H217.23C221.533 4.16406 223.725 6.29376 223.725 10.3195C223.725 13.3971 222.207 14.8372 220.863 15.3677C222.608 16.1446 223.431 17.5733 223.431 20.7708V21.544C223.431 24.0156 223.529 25.4166 223.671 26.3936H218.699C218.438 25.5351 218.349 23.5574 218.349 21.3839V20.6185C218.349 17.9898 217.818 17.2973 215.859 17.2973H214.756ZM214.768 13.4726H215.955C217.871 13.4726 218.61 12.7819 218.61 10.6096C218.61 8.77791 217.962 7.977 216.28 7.977H214.768V13.4726Z M229.381 8.34263H224.983V4.16406H238.869V8.34263H234.494V26.3936H229.381V8.34263Z M244.729 19.9598C244.858 21.7856 245.379 23.0418 246.91 23.0418C248.398 23.0418 248.875 22.0436 248.875 20.7801C248.875 19.2418 248.099 18.3371 245.476 16.9971C241.602 15.0035 240.139 13.3209 240.139 10.054C240.139 6.25137 242.47 3.75781 246.889 3.75781C252.085 3.75781 253.572 6.99468 253.615 10.4082H248.682C248.596 8.86015 248.312 7.5299 246.858 7.5299C245.717 7.5299 245.207 8.26674 245.207 9.50705C245.207 10.7803 245.705 11.4369 248.131 12.6452C252.265 14.7199 254.02 16.4743 254.02 20.2117C254.02 23.8862 251.865 26.8141 246.859 26.8141C241.436 26.8141 239.781 23.7339 239.672 19.9601H244.729L244.729 19.9598Z" },
+    golf: { src: "assets/brand-logos/essentially-golf-wordmark.svg", w: 1318.35, h: 177.884, box: "#008F00", d: "M92.7824 74.5834V98.1091H54.8456V127.933H97.7789L94.4479 151.088H26.7168V26.05H94.4479V49.5757H54.8456V74.5834H92.7824ZM106.646 114.781H134.959C135.7 125.155 138.476 132.193 147.173 132.193C155.501 132.193 158.091 126.637 158.091 119.412C158.091 110.891 153.836 105.704 139.031 98.1091C117.38 86.9946 109.236 77.5472 109.236 59.2084C109.236 37.7203 122.191 23.6418 146.988 23.6418C176.227 23.6418 184.555 41.9808 184.74 61.0607H157.166C156.612 52.3544 154.946 44.9448 146.803 44.9448C140.511 44.9448 137.551 49.0201 137.551 56.0593C137.551 63.2836 140.326 66.9885 154.02 73.6572C177.153 85.3275 186.961 95.3306 186.961 116.263C186.961 137.01 174.932 153.496 146.803 153.496C116.454 153.496 107.201 136.084 106.646 114.781ZM196.826 114.781H225.139C225.88 125.155 228.655 132.193 237.353 132.193C245.681 132.193 248.271 126.637 248.271 119.412C248.271 110.891 244.015 105.704 229.21 98.1091C207.558 86.9946 199.416 77.5472 199.416 59.2084C199.416 37.7203 212.37 23.6418 237.168 23.6418C266.407 23.6418 274.735 41.9808 274.919 61.0607H247.346C246.79 52.3544 245.125 44.9448 236.983 44.9448C230.691 44.9448 227.73 49.0201 227.73 56.0593C227.73 63.2836 230.506 66.9885 244.2 73.6572C267.332 85.3275 277.141 95.3306 277.141 116.263C277.141 137.01 265.112 153.496 236.983 153.496C206.633 153.496 197.38 136.084 196.826 114.781ZM356.815 74.5834V98.1091H318.878V127.933H361.811L358.48 151.088H290.749V26.05H358.48V49.5757H318.878V74.5834H356.815ZM399.78 151.088H374.242V26.05H405.702C424.763 84.957 429.019 99.2206 430.315 104.777H430.87C429.574 89.0323 429.204 68.4705 429.204 49.0201V26.05H454.557V151.088H423.652C403.851 86.0684 400.15 73.472 398.855 68.1H398.299C399.225 83.1046 399.78 106.26 399.78 126.637V151.088ZM489.755 151.088V49.5757H465.143V26.05H542.867V49.5757H518.439V151.088H489.755ZM554.059 26.05H582.742V151.088H554.059V26.05ZM648.959 124.229H626.196L621.94 151.088H593.256L617.869 26.05H658.212L683.195 151.088H653.4L648.959 124.229ZM629.898 100.147H645.258C642.296 81.8079 639.52 61.4313 638.04 49.9462H637.115C635.819 61.9869 632.859 81.8079 629.898 100.147ZM692.852 151.088V26.05H721.536V127.748H761.138L758.548 151.088H692.852ZM771.103 151.088V26.05H799.787V127.748H839.391L836.799 151.088H771.103ZM883.181 151.088H854.497V110.521C854.497 108.668 854.312 106.815 853.387 104.777L824.147 26.05H855.792C860.974 44.9448 866.711 66.618 869.857 81.9931C873.188 67.7294 879.479 44.389 884.106 26.05H913.715L884.106 104.963C883.551 106.445 883.181 107.742 883.181 109.964V151.088ZM1032.49 79.3997V151.088H1011.39C1010.84 147.754 1010.47 144.605 1010.28 141.271C1004.91 150.904 995.475 153.496 985.668 153.496C960.87 153.496 949.396 134.787 949.396 89.4028C949.396 39.7579 966.421 23.8271 993.81 23.8271C1028.97 23.8271 1031.93 51.7986 1032.12 61.4313H1003.43C1003.06 55.3182 1002.32 46.4266 992.885 46.4266C982.151 46.4266 979.561 60.5051 979.561 89.588C979.561 119.597 981.967 130.897 992.33 130.897C1001.03 130.897 1003.62 123.488 1003.62 109.964V101.999H991.404V79.3997H1032.49ZM1089.92 23.6418C1119.34 23.6418 1132.3 44.2037 1132.3 87.7356C1132.3 133.676 1119.9 153.496 1088.81 153.496C1059.75 153.496 1046.99 133.305 1046.99 87.1799C1046.99 42.7219 1061.24 23.6418 1089.92 23.6418ZM1089.55 46.4266C1079.74 46.4266 1076.97 57.9117 1076.97 87.1799C1076.97 117.93 1079.74 130.897 1089.55 130.897C1099.92 130.897 1102.32 118.856 1102.32 87.1799C1102.32 57.356 1099.92 46.4266 1089.55 46.4266ZM1147.91 151.088V26.05H1176.59V127.748H1216.19L1213.6 151.088H1147.91ZM1226.16 151.088V26.05H1293.89V49.3906H1254.65V76.4359H1291.3V99.5911H1254.65V151.088H1226.16Z" },
+  };
+  const ES_MARK = { w: 122, h: 104, x: 870, y: 288, clear: 50 };
+  const WORDMARK = { w: 417, h: Math.round((417 * 30.6864) / 258) };
 
   // ─── Easing ─────────────────────────────────────────────────────────────
   const clamp01 = v => Math.max(0, Math.min(1, Number(v) || 0));
@@ -63,6 +86,10 @@
     outQuint: t => 1 - (1 - clamp01(t)) ** 5,
     inOutSine: t => 0.5 - 0.5 * Math.cos(Math.PI * clamp01(t)),
     outBack: t => { const x = clamp01(t); const c = 1.2; return 1 + (c + 1) * (x - 1) ** 3 + c * (x - 1) ** 2; },
+    // Fast start, long soft landing: the kinetic-type curve (masked rises, pushes).
+    outExpo: t => { const x = clamp01(t); return x >= 1 ? 1 : 1 - 2 ** (-10 * x); },
+    inOutCubic: t => { const x = clamp01(t); return x < 0.5 ? 4 * x ** 3 : 1 - (-2 * x + 2) ** 3 / 2; },
+    inOutQuart: t => { const x = clamp01(t); return x < 0.5 ? 8 * x ** 4 : 1 - (-2 * x + 2) ** 4 / 2; },
   };
   const progress = (t, start, dur) => clamp01((t - start) / Math.max(1, dur));
 
@@ -274,7 +301,14 @@
         const odd = (index + k) % 2 === 1;
         video.push({
           id: `${id}s${k + 1}`, beat: id, asset, inMs, outMs,
-          clip: asset && isClip(asset) ? { inSec: Math.max(0, Number(assets[asset].clipIn) || 0), durSec: Math.max(0.5, (Number(assets[asset].durationMs) || 6000) / 1000) } : null,
+          // clipIn / clipOut: the best segment the clip picker chose (else from 0.4 s to the end).
+          clip: asset && isClip(asset) ? (() => {
+            const a = assets[asset];
+            const end = Math.max(0.5, (Number(a.durationMs) || 6000) / 1000);
+            const inSec = Math.max(0, Math.min(end - 0.5, Number(a.clipIn) || 0));
+            const out = Number(a.clipOut) > inSec + 0.5 ? Math.min(end, Number(a.clipOut)) : end;
+            return { inSec, durSec: out };
+          })() : null,
           // Push-ins only, at most +8% (rule: <= 10%); a repeated photo punches
           // in tighter on a different focus instead of repeating the move.
           motion: asset && isClip(asset) ? { from: 1.0, to: 1.03, focus: [0.5, 0.42], drift: [0, 0] } : sameAgain
@@ -302,6 +336,23 @@
     });
 
     const durationMs = t;
+    // Clip sound is MUTED by default (owner, 2026-11-18): the mix is voice
+    // plus music. With opts.clipAudio on, each clip shot adds its own sound
+    // from the shot's trim point, low (-12 dB) and ducked to -26 dB under the
+    // voice. The page decodes it into buffers['clipaudio:<asset>'].
+    if (opts.clipAudio) {
+      const voClips = audio.filter(a => a.kind === 'vo');
+      const envelope = duckPoints(voClips, durationMs, { baseDb: -12, duckDb: -26, fadeInMs: 0, fadeOutMs: 300 });
+      // true, or the list of clip assets that have a sound track.
+      const withSound = Array.isArray(opts.clipAudio) ? new Set(opts.clipAudio) : null;
+      video.forEach(shot => {
+        if (!shot.clip || !shot.asset || (withSound && !withSound.has(shot.asset))) return;
+        const id = `clipaudio:${shot.asset}`;
+        const src = assets[shot.asset];
+        assets[id] = { kind: 'clip-audio', label: `Sound of ${src.label || 'a clip'}`, rights: src.rights ? { ...src.rights } : null };
+        audio.push({ id: `ca-${shot.id}`, kind: 'clip', beat: shot.beat, asset: id, inMs: shot.inMs, durMs: shot.outMs - shot.inMs, offsetSec: shot.clip.inSec, loopEndSec: shot.clip.durSec, gainDb: -12, envelope });
+      });
+    }
     if (opts.music && opts.music.asset && assets[opts.music.asset]) {
       const voClips = audio.filter(a => a.kind === 'vo');
       audio.push({ id: 'music', kind: 'music', asset: opts.music.asset, inMs: 0, gainDb: MUSIC.baseDb, duck: true, envelope: duckPoints(voClips, durationMs) });
@@ -360,12 +411,30 @@
       card.words.forEach(i => { if (t >= words[i].s) active = i; });
     }
     const music = timeline.tracks.audio.find(a => a.kind === 'music');
+    // Styled engines move between beats with the style's transition (push,
+    // wipe, lift); the outgoing beat is drawn whole until it has left, so it
+    // does not fade first. Classic keeps its 180 ms fade and photo cross-fade.
+    const st = S.get(timeline.style);
+    const pushes = st.engine !== 'classic' && ['slide', 'wipe', 'flip'].includes(st.motion.transition);
+    const trMs = st.motion.transitionMs || 0;
+    let transition = null;
+    if (pushes && graphic && gi > 0 && gLocal < trMs) {
+      const from = timeline.tracks.graphics[gi - 1];
+      const fromShots = shots.filter(s => s.beat === from.beat);
+      const fromShot = fromShots[fromShots.length - 1] || null;
+      transition = {
+        kind: st.motion.transition, p: progress(gLocal, 0, trMs),
+        from: { ...from, local: from.outMs - from.inMs + gLocal, exit: 0 },
+        fromShot: fromShot ? { ...fromShot, local: fromShot.outMs - fromShot.inMs, p: 1 } : null,
+      };
+    }
     return {
       t,
       shot: shot ? { ...shot, local: t - shot.inMs, p: progress(t, shot.inMs, shot.outMs - shot.inMs) } : null,
       prev: prev && mix < 1 ? { ...prev, local: t - prev.inMs, p: progress(t, prev.inMs, prev.outMs - prev.inMs) } : null,
       mix,
-      graphic: graphic ? { ...graphic, local: gLocal, exit: isLast ? 0 : 1 - clamp01(gLeft / 180) } : null,
+      graphic: graphic ? { ...graphic, local: gLocal, exit: isLast || pushes ? 0 : 1 - clamp01(gLeft / 180) } : null,
+      transition,
       beatIndex: gi,
       caption: card ? { ...card, active, local: t - card.s } : null,
       musicDb: music ? musicGainDbAt(music.envelope, t) : null,
@@ -488,11 +557,12 @@
     } else if (graphic.template === 'cta') {
       const fit = fitText(m, d.text, { max: 120, min: 80, maxLines: 3 });
       const block = fit.size * CAP + (fit.lines.length - 1) * fit.size * 0.96;
-      const top = Math.round((ZONE.graphicTop + bottom) / 2 - block / 2 + 60);
-      ops.push({ type: 'esmark', role: 'es-mark', x: (W - 168) / 2, y: top - 210, w: 168, h: 143, delay: 0 });
+      const top = Math.round((ZONE.graphicTop + bottom) / 2 - block / 2 + 20);
+      ops.push({ type: 'bar', role: 'rule', x: (W - 120) / 2, y: top - 72, w: 120, h: 10, delay: 0 });
       ops.push(...linesOps(fit, top, { lineHeight: 0.96, emphasis: d.emphasis, align: 'center', delayStep: 45, baseDelay: 140 }).ops);
-      const sub = 'ESSENTIALLYSPORTS';
-      ops.push({ type: 'word', role: 'sub', text: sub, font: font(700, 34, BODY), size: 34, x: (W - measure(sub, font(700, 34, BODY))) / 2, y: top + block + 84, w: measure(sub, font(700, 34, BODY)), color: 'rgba(255,255,255,0.8)', delay: 420 });
+      // The official wordmark (not type set to look like it).
+      const wm = wordmarkFor(timeline);
+      ops.push({ type: 'wordmark', role: 'wordmark', brand: wm.id, x: (W - wm.w) / 2, y: top + block + 72, w: wm.w, h: wm.h, delay: 420 });
     } else {
       const fit = fitText(m, d.text, { max: 116, min: 78, maxLines: 4 });
       const block = fit.size * CAP + (fit.lines.length - 1) * fit.size * 0.96;
@@ -509,7 +579,7 @@
     const style = timeline.captionStyle;
     const list = card.words.map(i => ({ i, text: words[i].w.replace(/^[“"]|[”"]$/g, '') }));
     if (style === 'box') {
-      const fit = fitText(measure, list.map(w => w.text).join(' '), { family: BODY, weight: 700, max: 56, min: 44, maxLines: 2, width: COL - 60 });
+      const fit = fitText(measure, list.map(w => w.text).join(' '), { family: BODY, weight: 700, max: 56, min: 44, maxLines: 2, width: CAPTION_W - 60 });
       const lineH = fit.size * 1.18;
       const ops = [];
       let k = 0;
@@ -523,7 +593,7 @@
       return { style, ops, box: { x: (W - widest) / 2 - 30, y: top - 26, w: widest + 60, h: blockH + 52 } };
     }
     const m = upperMeasure(measure);
-    const fit = fitText(m, list.map(w => w.text).join(' '), { max: 96, min: 64, maxLines: 2, width: COL });
+    const fit = fitText(m, list.map(w => w.text).join(' '), { max: 96, min: 64, maxLines: 2, width: CAPTION_W });
     const ops = [];
     let k = 0;
     const lineH = fit.size * 1.0;
@@ -579,6 +649,56 @@
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
     return undefined;
+  }
+
+  // ─── ES brand drawing ───────────────────────────────────────────────────
+  const brandPaths = {};
+  function brandPath(id) {
+    if (typeof Path2D === 'undefined' || !BRAND[id]) return null;
+    if (!brandPaths[id]) brandPaths[id] = new Path2D(BRAND[id].d);
+    return brandPaths[id];
+  }
+  // Guideline colourways (BL-02): box colour, type colour.
+  const MARK_COLOURS = { blue: ['#0A7DFA', '#FFFFFF'], black: ['#000000', '#FFFFFF'] };
+  // Black when what sits under the mark is ES blue (or a blue close to it,
+  // where the blue box would vanish); blue everywhere else.
+  function markVariant(bg) {
+    if (!HEX6.test(String(bg || ''))) return 'blue';
+    return contrast(bg, '#0A7DFA') < 1.6 ? 'black' : 'blue';
+  }
+  // Draws an official brand vector (mark, wordmark, golf) in a box. Without
+  // Path2D (Node tests) it falls back to the loaded image of the same file.
+  function drawBrand(ctx, id, x, y, w, h, variant = 'blue', env = {}, alpha = 1) {
+    const art = BRAND[id];
+    if (!art) return false;
+    const [box, type] = id === 'golf' ? [art.box, '#FFFFFF'] : (MARK_COLOURS[variant] || MARK_COLOURS.blue);
+    const path = brandPath(id);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    if (path) {
+      ctx.translate(x, y);
+      ctx.scale(w / art.w, h / art.h);
+      ctx.fillStyle = box;
+      ctx.fillRect(0, 0, art.w, art.h);
+      ctx.fillStyle = type;
+      ctx.fill(path);
+      ctx.restore();
+      return true;
+    }
+    const img = env.images && env.images[id === 'mark' ? 'logo:es' : `logo:${id}`];
+    const ok = Boolean(mediaSize(img));
+    if (ok) ctx.drawImage(img, x, y, w, h);
+    ctx.restore();
+    return ok;
+  }
+  // The wordmark for the end card: Essentially Golf on golf reels, else ES.
+  function wordmarkFor(timeline) {
+    const id = timeline && timeline.sport === 'golf' ? 'golf' : 'wordmark';
+    const art = BRAND[id];
+    return { id, w: WORDMARK.w, h: Math.round((WORDMARK.w * art.h) / art.w) };
   }
 
   // ─── Visuals: photo, AI scene, upload, clip, team tile, designed bg ─────
@@ -731,10 +851,16 @@
       const p = ease.outCubic(progress(local, 0, dur));
       // Frame 0 of the reel is never empty: the hook's first words and pill start visible.
       const floor = g.template === 'hook' && g.inMs === 0 && (op.delay || 0) <= 80 ? 0.55 : 0;
-      const a = Math.max(floor, p) * exitA;
+      // Headline words rise out of their own line box (a mask, out-expo):
+      // the kinetic-type entrance. Labels, pills and lines keep the soft rise.
+      const masked = op.type === 'word' && op.role === 'text' && !op.lit;
+      const e = masked ? Math.max(floor, ease.outExpo(progress(local, 0, 560))) : 0;
+      let a = Math.max(floor, p) * exitA;
+      if (masked) a = (local >= 0 || floor ? 1 : 0) * exitA;
       if (a <= 0.001) return;
-      const dy = (1 - Math.max(floor, p)) * 34 + exitY;
+      const dy = masked ? (1 - e) * op.size * 1.05 + exitY : (1 - Math.max(floor, p)) * 34 + exitY;
       ctx.save();
+      if (masked) { ctx.beginPath(); ctx.rect(op.x - op.size * 0.2, op.y - op.size * (CAP + 0.2) + exitY, op.w + op.size * 0.4, op.size * (CAP + 0.44)); ctx.clip(); }
       ctx.globalAlpha = a;
       if (op.type === 'pill') {
         ctx.font = op.font;
@@ -796,23 +922,18 @@
         ctx.fillStyle = WHITE;
         ctx.fillText('“', op.x, op.y + dy + op.size * 0.12);
       } else if (op.type === 'logo') {
+        // The team's real logo (logo library) on a white disc, or nothing: never a made-up badge.
         const img = env.images && env.images['logo:team'];
-        ctx.fillStyle = WHITE;
-        ctx.beginPath();
-        ctx.arc(op.x + op.w / 2, op.y + dy + op.h / 2, op.w / 2, 0, Math.PI * 2);
-        ctx.fill();
-        if (img && (img.naturalWidth || img.width)) ctx.drawImage(img, op.x + 12, op.y + dy + 12, op.w - 24, op.h - 24);
-        else if (timeline.team && timeline.team.colors.length) {
-          const [a, b] = [timeline.team.colors[0], timeline.team.colors[1] || timeline.team.colors[0]];
-          ctx.fillStyle = a; ctx.beginPath(); ctx.arc(op.x + op.w / 2, op.y + dy + op.h / 2, op.w / 2 - 10, Math.PI * 0.75, Math.PI * 1.75); ctx.fill();
-          ctx.fillStyle = b; ctx.beginPath(); ctx.arc(op.x + op.w / 2, op.y + dy + op.h / 2, op.w / 2 - 10, Math.PI * 1.75, Math.PI * 2.75); ctx.fill();
-        }
-      } else if (op.type === 'esmark') {
-        const img = env.images && env.images['logo:es'];
         if (img && (img.naturalWidth || img.width)) {
-          const s = 0.9 + 0.1 * ease.outBack(progress(local, 0, 420));
-          ctx.drawImage(img, op.x + op.w * (1 - s) / 2, op.y + dy + op.h * (1 - s) / 2, op.w * s, op.h * s);
+          ctx.fillStyle = WHITE;
+          ctx.beginPath();
+          ctx.arc(op.x + op.w / 2, op.y + dy + op.h / 2, op.w / 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.drawImage(img, op.x + 12, op.y + dy + 12, op.w - 24, op.h - 24);
         }
+      } else if (op.type === 'wordmark') {
+        // Fades and rises in; never scaled or skewed.
+        drawBrand(ctx, op.brand || 'wordmark', op.x, op.y + dy, op.w, op.h, 'blue', env, a);
       }
       ctx.restore();
     });
@@ -866,16 +987,40 @@
     ctx.restore();
   }
 
-  function drawBug(ctx, frame, timeline, env) {
-    // The ES mark stays top-left (inside the safe zone); on the end card it
-    // is drawn big instead.
-    if (frame.graphic && frame.graphic.template === 'cta') return;
-    const img = env.images && env.images['logo:es'];
-    if (!img || !(img.naturalWidth || img.width)) return;
-    ctx.save();
-    ctx.globalAlpha = 0.95;
-    ctx.drawImage(img, MARGIN, 290, 76, 65);
-    ctx.restore();
+  // ─── The ES mark: the same size and place on every frame, drawn last ───
+  // What is under the mark decides its colourway: the style's paper on the
+  // designed styles, the picture itself on Classic (read once per shot from
+  // the canvas, so a blue jersey or a blue team tile turns it black).
+  const hex2 = v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  function markBackground(ctx, frame, timeline, env) {
+    const style = S.get(timeline.style);
+    if (style.engine !== 'classic') return style.palette.paper;
+    if (typeof ctx.getImageData !== 'function' || env.probeMark === false) return '#101114';
+    const key = `${frame.shot ? frame.shot.id : ''}|${frame.shot && frame.shot.local > 400 ? 1 : 0}`;
+    const cache = env.markCache || (env.markCache = new Map());
+    if (cache.has(key)) return cache.get(key);
+    let bg = '#101114';
+    try {
+      const data = ctx.getImageData(ES_MARK.x, ES_MARK.y, ES_MARK.w, ES_MARK.h).data;
+      let r = 0; let g = 0; let b = 0; let n = 0;
+      for (let i = 0; i < data.length; i += 64) { r += data[i]; g += data[i + 1]; b += data[i + 2]; n += 1; }
+      if (n) bg = `#${hex2(r / n)}${hex2(g / n)}${hex2(b / n)}`;
+    } catch { /* a tainted canvas: keep the default */ }
+    if (cache.size > 400) cache.clear();
+    cache.set(key, bg);
+    return bg;
+  }
+  function drawEsMark(ctx, frame, timeline, env) {
+    const variant = markVariant(markBackground(ctx, frame, timeline, env));
+    drawBrand(ctx, 'mark', ES_MARK.x, ES_MARK.y, ES_MARK.w, ES_MARK.h, variant, env);
+    return variant;
+  }
+  // Where the brand sits on each beat (the lint and the tests read this).
+  function logoPlacements(timeline) {
+    return (timeline.tracks.graphics || []).map(g => ({
+      beat: g.beat, kind: 'mark', x: ES_MARK.x, y: ES_MARK.y, w: ES_MARK.w, h: ES_MARK.h, clear: ES_MARK.clear,
+      endcard: g.template === 'cta' || g.template === 'endcard',
+    }));
   }
 
   // ─── Styled engine (explainer, series, countdown; components in classic) ─
@@ -888,30 +1033,68 @@
   // colour or any CSS colour passes through.
   const tone = (pal, c) => (c && pal[c]) || c || pal.ink;
 
-  function textOp(measure, text, family, weight, size, x, y, { color = 'ink', role = 'text', upper = true, delay = 0, anim, bg, align = 'left', width } = {}) {
+  // track: letter spacing in px (labels and chips read better a little open);
+  // widths include it, so boxes stay honest.
+  const tracked = (measure, t, f, track) => measure(t, f) + (track ? track * Math.max(0, t.length - 1) : 0);
+  function textOp(measure, text, family, weight, size, x, y, { color = 'ink', role = 'text', upper = true, delay = 0, anim, bg, align = 'left', width, track = 0 } = {}) {
     const t = upper ? String(text).toUpperCase() : String(text);
     const f = font(weight, size, family);
-    const w = measure(t, f);
+    const w = tracked(measure, t, f, track);
     const x0 = align === 'center' ? (width != null ? x + (width - w) / 2 : x - w / 2) : (align === 'right' ? x - w : x);
-    return { type: 'text', role, text: t, font: f, size, x: x0, y, w, color, delay, anim, bg };
+    return { type: 'text', role, text: t, font: f, size, x: x0, y, w, color, delay, anim, bg, track };
   }
   function chipOp(measure, text, x, y, { fill = 'chip', ink = 'chipInk', size = 24, h = 44, role = 'chip', delay = 0, anim } = {}) {
     const t = String(text).toUpperCase();
     const f = font(700, size, S.LABEL);
-    const w = measure(t, f) + 32;
+    const track = Math.round(size * 0.06 * 10) / 10;
+    const tw = tracked(measure, t, f, track);
+    const padX = Math.round(h * 0.36);
+    const w = tw + padX * 2;
     return [
-      { type: 'rect', role: `${role}-bg`, x, y, w, h, fill, r: 4, delay, anim },
-      { type: 'text', role, text: t, font: f, size, x: x + 16, y: y + h / 2 + size * 0.36, w: w - 32, color: ink, delay, anim },
+      { type: 'rect', role: `${role}-bg`, x, y, w, h, fill, r: 3, delay, anim },
+      { type: 'text', role, text: t, font: f, size, x: x + padX, y: y + h / 2 + size * 0.36, w: tw, color: ink, delay, anim, track },
     ];
   }
-  // The headline: up to 3 lines; the emphasis word on a yellow highlight
-  // (explainer, countdown) or in red (series; text after a colon turns red).
+  // The logo's clear space (50 px round the mark): text lines that start
+  // above its bottom edge stop short of its left edge.
+  const LOGO_CLEAR = { left: ES_MARK.x - ES_MARK.clear, bottom: ES_MARK.y + ES_MARK.h + ES_MARK.clear };
+  function wrapVar(measure, text, fontStr, widthAt) {
+    const list = String(text || '').split(/\s+/).filter(Boolean);
+    const space = measure(' ', fontStr);
+    const lines = [];
+    let line = [];
+    let width = 0;
+    list.forEach(word => {
+      const w = measure(word, fontStr);
+      if (line.length && width + space + w > widthAt(lines.length)) { lines.push({ words: line, width }); line = []; width = 0; }
+      line.push({ text: word, x: line.length ? width + space : 0, w });
+      width = line.length > 1 ? width + space + w : w;
+    });
+    if (line.length) lines.push({ words: line, width });
+    return lines;
+  }
+  // The headline: up to 3 lines, tight leading; the emphasis word on a yellow
+  // highlight (explainer, countdown) or in red (series; text after a colon
+  // turns red). Each word rises out of a mask, one after another.
+  const HEAD_LH = 0.94;
   function headlineOps(measure, d, top, style, { width = CW, maxLines = 3, align = 'left' } = {}) {
     const m = upperMeasure(measure);
     const [max, min] = style.type.headline;
-    const fit = fitText(m, d.text || '', { family: style.type.display, weight: 700, max, min, maxLines, width });
+    let size = max;
+    let lines;
+    const build = () => {
+      const f = font(700, size, style.type.display);
+      const widthAt = i => {
+        const lineTop = top + i * size * HEAD_LH - size * 0.14;
+        return align === 'left' && lineTop < LOGO_CLEAR.bottom ? Math.min(width, LOGO_CLEAR.left - G.left - size * 0.12) : width;
+      };
+      lines = wrapVar(m, d.text || '', f, widthAt);
+      return lines.length <= maxLines && lines.every((l, i) => l.width <= widthAt(i));
+    };
+    while (!build() && size > min) size = Math.max(min, size * 0.95);
+    const fit = { size, lines, font: font(700, size, style.type.display) };
     const ops = [];
-    const lh = fit.size * 0.98;
+    const lh = fit.size * HEAD_LH;
     let y = top + fit.size * CAP;
     let n = 0;
     const colon = style.emphasis === 'color' ? String(d.text || '').indexOf(':') : -1;
@@ -926,7 +1109,7 @@
         const afterColon = colon >= 0 && seenChars > colon;
         seenChars += word.text.length + 1;
         const red = style.emphasis === 'color' && (lit || afterColon);
-        ops.push({ type: 'text', role: 'headline', text: word.text.toUpperCase(), font: fit.font, size: fit.size, x: x0 + word.x, y, w: word.w, color: red ? 'bad' : 'ink', bg: lit && style.emphasis !== 'color' ? 'hi' : '', bgInk: 'hiInk', delay: n * style.motion.stagger, anim: 'rise' });
+        ops.push({ type: 'text', role: 'headline', text: word.text.toUpperCase(), font: fit.font, size: fit.size, x: x0 + word.x, y, w: word.w, color: red ? 'bad' : 'ink', bg: lit && style.emphasis !== 'color' ? 'hi' : '', bgInk: 'hiInk', delay: n * style.motion.stagger, anim: 'mask' });
         n += 1;
       });
       y += lh;
@@ -951,6 +1134,19 @@
   }
   // The number in a value like "-$12.3M", "2×", "+50%", "#31" (NaN if none).
   const num = v => { const m = String(v == null ? '' : v).replace(/[$,]/g, '').replace('−', '-').match(/-?\d+(?:\.\d+)?/); return m ? Number(m[0]) : NaN; };
+  // Ink that reads on a colour: white when it clears 3:1 (large type), else near-black.
+  const inkOn = hex => (HEX6.test(String(hex)) && contrast('#FFFFFF', hex) < 3 ? '#111214' : '#FFFFFF');
+  // The reel's team colour when a label names that team (content, never
+  // chrome), and only when it stands off the paper.
+  function teamColour(timeline, label, paper) {
+    const team = timeline && timeline.team;
+    if (!team || !team.colors || !team.colors.length || !label) return '';
+    const norm = v => String(v).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+    const want = norm(label);
+    const names = norm(team.name);
+    if (!want.length || !want.some(w => names.includes(w))) return '';
+    return team.colors.find(c => HEX6.test(String(c)) && contrast(c, paper) >= 1.8) || '';
+  }
 
   function layoutStyled(measure, graphic, timeline) {
     const style = S.get(timeline.style);
@@ -1040,12 +1236,14 @@
       bars.forEach((b, i) => {
         const v = Math.abs(num(b.value));
         const wBar = Math.round(240 + (CW - valueW - 240 - 24) * (Number.isFinite(v) ? v / max : 0.5));
-        const fill = i === 0 ? 'accent' : 'ink';
+        // The reel's team keeps its own colour (content, not chrome).
+        const team = teamColour(timeline, b.label, style.palette.paper);
+        const fill = team || (i === 0 ? 'accent' : 'ink');
         ops.push({ type: 'rect', role: 'bar', x: G.left, y, w: wBar, h: rowH - 24, fill, r: 4, delay: delay0 + i * 160, anim: 'grow' });
         const lf = fitText(upperMeasure(measure), b.label, { family: S.LABEL, weight: 700, max: 36, min: 24, maxLines: 1, width: wBar - 40 });
-        ops.push({ type: 'text', role: 'bar-label', text: b.label.toUpperCase(), font: lf.font, size: lf.size, x: G.left + 20, y: y + (rowH - 24) / 2 + lf.size * 0.36, w: lf.lines[0] ? lf.lines[0].width : 0, color: i === 0 ? '#FFFFFF' : 'paper', delay: delay0 + i * 160 + 120, anim: 'fade' });
+        ops.push({ type: 'text', role: 'bar-label', text: b.label.toUpperCase(), font: lf.font, size: lf.size, x: G.left + 20, y: y + (rowH - 24) / 2 + lf.size * 0.36, w: lf.lines[0] ? lf.lines[0].width : 0, color: team ? inkOn(team) : (i === 0 ? '#FFFFFF' : 'paper'), delay: delay0 + i * 160 + 120, anim: 'fade', track: 1 });
         const vf = fitText(measure, b.value, { family: style.type.display, weight: 700, max: 80, min: 48, maxLines: 1, width: valueW });
-        ops.push({ type: 'text', role: 'bar-value', text: b.value, font: vf.font, size: vf.size, x: G.left + wBar + 24, y: y + (rowH - 24) / 2 + vf.size * 0.36, w: vf.lines[0] ? vf.lines[0].width : 0, color: i === 0 ? 'accent' : 'ink', delay: delay0 + i * 160 + 200, anim: 'rise' });
+        ops.push({ type: 'count', role: 'bar-value', text: b.value, spec: parseStatValue(b.value), font: vf.font, size: vf.size, x: G.left + wBar + 24, y: y + (rowH - 24) / 2 + vf.size * 0.36, w: vf.lines[0] ? vf.lines[0].width : 0, color: i === 0 ? 'accent' : 'ink', delay: delay0 + i * 160 + 120, anim: 'rise', countMs: 700 });
         y += rowH;
       });
       if (box.bottom - y > 300) ops.push(...visualOps(style, { x: G.left, y: y + 24, w: CW, h: Math.min(480, box.bottom - y - 48) }, { delay: delay0 + 500 }, measure));
@@ -1064,10 +1262,11 @@
           return;
         }
         ops.push({ type: 'visual', role: 'headshot', slot: v.asset || '', x, y: box.y, w: cw, h: vh, r: style.visual === 'card' ? 24 : 0, delay: dl, anim: style.motion.enter === 'flip' ? 'flip' : 'rise', stroke: style.id === 'series' ? 'ink' : '', lw: 4 });
-        ops.push(...chipOp(measure, v.name, x + 12, box.y + vh - 56, { fill: 'ink', ink: 'paper', size: 24, h: 44, role: 'versus-name', delay: dl + 120 }));
+        const team = teamColour(timeline, v.name, style.palette.paper);
+        ops.push(...chipOp(measure, v.name, x + 12, box.y + vh - 56, { fill: team || 'ink', ink: team ? inkOn(team) : 'paper', size: 24, h: 44, role: 'versus-name', delay: dl + 120 }));
         if (v.value) {
           const vf = fitText(measure, v.value, { family: style.type.display, weight: 700, max: style.type.cardValue[0], min: style.type.cardValue[1] - 16, maxLines: 1, width: cw });
-          ops.push({ type: 'text', role: 'versus-value', text: v.value, font: vf.font, size: vf.size, x, y: box.y + vh + 24 + vf.size * CAP, w: vf.lines[0] ? vf.lines[0].width : 0, color: i === 0 ? 'accent' : 'ink', delay: dl + 200, anim: 'rise' });
+          ops.push({ type: 'count', role: 'versus-value', text: v.value, spec: parseStatValue(v.value), font: vf.font, size: vf.size, x, y: box.y + vh + 24 + vf.size * CAP, w: vf.lines[0] ? vf.lines[0].width : 0, color: i === 0 ? 'accent' : 'ink', delay: dl + 200, anim: 'rise', countMs: 700 });
           if (v.note) {
             const nf = fitText(measure, v.note, { family: style.type.body, weight: 500, max: 26, min: 22, maxLines: 2, width: cw });
             ops.push(...linesOps(nf, box.y + vh + 24 + vf.size * CAP + 24, { lineHeight: 1.2, upper: false, role: 'versus-note', color: 'muted', baseDelay: dl + 260, delayStep: 0 }).ops);
@@ -1081,12 +1280,15 @@
       const R1 = Math.min(340, (box.h - 120) / 2);
       const cx = W / 2;
       const cy = box.y + R1 + 8;
-      ops.push({ type: 'dotring', role: 'dots', cx, cy, r0: 104, r1: R1, n: Math.min(total, 1200), total, rank, x: cx - R1, y: cy - R1, w: R1 * 2, h: R1 * 2, delay: delay0 });
+      const rr = 104 + (R1 - 104) * Math.sqrt(total > 1 ? (rank - 1) / (total - 1) : 0);
+      ops.push({ type: 'dotring', role: 'dots', cx, cy, r0: 104, r1: R1, rr, n: Math.min(total, 1200), total, rank, x: cx - R1, y: cy - R1, w: R1 * 2, h: R1 * 2, delay: delay0 });
       ops.push({ type: 'visual', role: 'avatar', slot: 'shot', x: cx - 88, y: cy - 88, w: 176, h: 176, r: 88, stroke: 'accent', lw: 6, delay: delay0 + 200, anim: 'pop' });
       const callout = `#${r.rank}${r.label ? ` ${r.label}` : ''}`;
       const cf = font(700, 28, S.LABEL);
       const cwid = Math.min(CW, measure(callout.toUpperCase(), cf) + 32);
       const cxL = Math.min(G.right - cwid, cx + 104);
+      // A leader line from the rank's place on its ring to the callout.
+      ops.push({ type: 'line', role: 'leader', x1: cx, y1: cy - rr, x2: cxL, y2: cy - R1 + 40, color: 'bad', lw: 3, delay: delay0 + 820, anim: 'draw' });
       ops.push({ type: 'rect', role: 'callout-bg', x: cxL, y: cy - R1 - 8, w: cwid, h: 48, fill: 'bad', r: 4, delay: delay0 + 900, anim: 'pop' });
       ops.push({ type: 'text', role: 'callout', text: callout.toUpperCase(), font: cf, size: 28, x: cxL + 16, y: cy - R1 - 8 + 34, w: cwid - 32, color: '#FFFFFF', delay: delay0 + 900, anim: 'fade' });
       if (r.note) {
@@ -1109,10 +1311,12 @@
         ops.push({ type: 'rect', role: 'tile', x, y, w: tw, h: th, fill: t.colors[0] || 'panel', r: style.visual === 'card' ? 24 : 4, delay: dl, anim: style.motion.enter === 'flip' ? 'flip' : 'wipe' });
         if (t.asset) ops.push({ type: 'logo', role: 'tile-logo', slot: t.asset, x: x + tw - 128, y: y + 24, w: 104, h: 104, delay: dl + 80, anim: 'pop' });
         const nf = fitText(upperMeasure(measure), t.team, { family: style.type.display, weight: 700, max: 64, min: 40, maxLines: 1, width: tw - 48 });
-        ops.push({ type: 'text', role: 'tile-name', text: t.team.toUpperCase(), font: nf.font, size: nf.size, x: x + 24, y: y + th - 104, w: nf.lines[0] ? nf.lines[0].width : 0, color: '#FFFFFF', delay: dl + 120, anim: 'rise' });
+        // White on dark team colours, ink on light ones (Steelers gold).
+        const tInk = t.colors[0] ? inkOn(t.colors[0]) : '#FFFFFF';
+        ops.push({ type: 'text', role: 'tile-name', text: t.team.toUpperCase(), font: nf.font, size: nf.size, x: x + 24, y: y + th - 104, w: nf.lines[0] ? nf.lines[0].width : 0, color: tInk, delay: dl + 120, anim: 'rise' });
         if (t.label) {
           const lf = fitText(measure, t.label, { family: style.type.body, weight: 500, max: 24, min: 20, maxLines: 1, width: tw - 48 });
-          ops.push({ type: 'text', role: 'tile-label', text: t.label, font: lf.font, size: lf.size, x: x + 24, y: y + th - 64, w: lf.lines[0] ? lf.lines[0].width : 0, color: 'rgba(255,255,255,0.88)', delay: dl + 160, anim: 'fade' });
+          ops.push({ type: 'text', role: 'tile-label', text: t.label, font: lf.font, size: lf.size, x: x + 24, y: y + th - 64, w: lf.lines[0] ? lf.lines[0].width : 0, color: tInk === '#FFFFFF' ? 'rgba(255,255,255,0.88)' : 'rgba(17,18,20,0.82)', delay: dl + 160, anim: 'fade' });
         }
         if (t.chip) ops.push(...chipOp(measure, t.chip, x + 24, y + 24, { fill: 'hi', ink: 'hiInk', size: 22, h: 40, role: 'tile-chip', delay: dl + 200 }));
       });
@@ -1142,10 +1346,13 @@
         ops.push(...linesOps(df, box.y + h + 40, { lineHeight: 1.2, upper: false, role: 'detail', color: 'muted', baseDelay: delay0 + 300, delayStep: 0 }).ops);
       }
     } else if (layout === 'endcard') {
-      const head2 = headlineOps(measure, d, 760, style, { align: 'center', maxLines: 3 });
-      ops.push({ type: 'esmark', role: 'es-mark', x: (W - 168) / 2, y: 520, w: 168, h: 143, delay: 0 });
+      // The question, centred, then the official wordmark (the corner mark
+      // stays where it is on every frame).
+      const head2 = headlineOps(measure, d, 700, style, { align: 'center', maxLines: 3 });
+      ops.push({ type: 'rect', role: 'rule', x: (W - 120) / 2, y: 620, w: 120, h: 10, fill: 'accent', r: 2, delay: 0, anim: 'grow' });
       ops.push(...head2.ops);
-      ops.push(textOp(measure, 'ESSENTIALLYSPORTS', S.LABEL, 700, 32, 0, head2.bottom + 80, { role: 'sub', color: 'muted', align: 'center', width: W, delay: 420, anim: 'fade' }));
+      const wm = wordmarkFor(timeline);
+      ops.push({ type: 'wordmark', role: 'wordmark', brand: wm.id, x: (W - wm.w) / 2, y: snap(head2.bottom + 88), w: wm.w, h: wm.h, delay: 380, anim: 'rise' });
     }
     // Every op gets the style's entrance unless the layout chose one.
     ops.forEach(op => { if (!op.anim) op.anim = style.motion.enter; });
@@ -1179,37 +1386,40 @@
   // Chrome drawn on every frame: eyebrow, ES badge, series tag, data strip, rail.
   function layoutChrome(measure, timeline, frame) {
     const style = S.get(timeline.style);
-    const ops = [];
+    // The ES mark (drawn last by drawEsMark; listed here for the boxes).
+    const ops = [{ type: 'esmark', role: 'es-mark', x: ES_MARK.x, y: ES_MARK.y, w: ES_MARK.w, h: ES_MARK.h }];
     if (style.engine === 'classic') return ops;
     const c = style.chrome;
-    if (c.badge) {
-      ops.push({ type: 'rect', role: 'badge', x: G.right - 64, y: G.top, w: 64, h: 64, fill: 'accent', r: 4 });
-      ops.push(textOp(measure, 'ES', style.type.display, 700, 40, G.right - 64, G.top + 46, { role: 'badge-text', color: '#FFFFFF', align: 'center', width: 64, upper: false }));
-    }
+    const beside = LOGO_CLEAR.left - G.left; // the width left of the logo's clear space
     if (c.seriesTag && timeline.series) ops.push(...chipOp(measure, timeline.series.tag, G.left, G.top + 10, { fill: 'chip', ink: 'chipInk', size: 24, h: 44, role: 'series-tag' }));
     else if (c.eyebrow && (timeline.eyebrow || timeline.title)) {
       const t = String(timeline.eyebrow || timeline.title).toUpperCase();
-      const fit = fitText(measure, t, { family: S.LABEL, weight: 700, max: style.type.eyebrow, min: 20, maxLines: 1, width: CW - 96 });
-      ops.push({ type: 'text', role: 'eyebrow', text: t, font: fit.font, size: fit.size, x: G.left, y: G.top + 40, w: fit.lines[0] ? fit.lines[0].width : 0, color: 'muted' });
+      const fit = fitText(measure, t, { family: S.LABEL, weight: 700, max: style.type.eyebrow, min: 20, maxLines: 1, width: beside - 48 });
+      const track = 1.5;
+      const w = (fit.lines[0] ? fit.lines[0].width : 0) + track * Math.max(0, t.length - 1);
+      // A short accent tick before the eyebrow, like a lower-third.
+      ops.push({ type: 'rect', role: 'eyebrow-tick', x: G.left, y: G.top + 22, w: 24, h: 6, fill: 'accent', r: 1 });
+      ops.push({ type: 'text', role: 'eyebrow', text: t, font: fit.font, size: fit.size, x: G.left + 36, y: G.top + 34, w: Math.min(w, beside - 84), color: 'muted', track });
     }
     if (c.rail) {
       const ranks = timeline.beats.filter(b => b.kind === 'rank').map(b => b.rank).sort((a, b) => b - a);
       const cur = frame && frame.graphic ? (timeline.beats[frame.beatIndex] || {}).rank : null;
-      ranks.forEach((r, i) => {
+      ranks.slice(0, 10).forEach((r, i) => {
         const on = r === cur;
-        ops.push({ type: 'rect', role: 'rail', x: G.left + i * 72, y: G.top + 8, w: 60, h: 48, fill: on ? 'hi' : 'panel', r: 8 });
-        ops.push(textOp(measure, `#${r}`, style.type.display, 700, 32, G.left + i * 72, G.top + 8 + 36, { role: 'rail-text', color: on ? 'hiInk' : 'muted', align: 'center', width: 60, upper: false }));
+        const done = cur != null && r > cur;
+        ops.push({ type: 'rect', role: 'rail', x: G.left + i * 68, y: G.top + 8, w: 56, h: 48, fill: on ? 'hi' : 'panel', stroke: done ? 'hi' : '', lw: 2, r: 6 });
+        ops.push(textOp(measure, `#${r}`, style.type.display, 700, 30, G.left + i * 68, G.top + 8 + 35, { role: 'rail-text', color: on ? 'hiInk' : (done ? 'hi' : 'muted'), align: 'center', width: 56, upper: false }));
       });
     }
     if (c.strip && timeline.strip) {
       const sp = timeline.strip;
       const y = 1192;
       ops.push({ type: 'rect', role: 'strip', x: G.left, y, w: CW, h: 104, fill: 'panel', stroke: 'ink', lw: 3, r: 4 });
-      ops.push(textOp(measure, sp.label || '', S.LABEL, 700, 22, G.left + 24, y + 32, { role: 'strip-label', color: 'muted' }));
+      ops.push(textOp(measure, sp.label || '', S.LABEL, 700, 22, G.left + 24, y + 32, { role: 'strip-label', color: 'muted', track: 1.2 }));
       const vf = font(700, 60, style.type.display);
       ops.push({ type: 'count', role: 'strip-value', text: sp.value, spec: parseStatValue(sp.value), font: vf, size: 60, x: G.left + 24, y: y + 86, w: measure(sp.value, vf), color: sp.tone, delay: 0, once: true });
       const ratio = sp.of && Number.isFinite(num(sp.value)) && num(sp.of) ? Math.max(0, Math.min(1, Math.abs(num(sp.value)) / Math.abs(num(sp.of)))) : null;
-      if (sp.note) ops.push(textOp(measure, sp.note, S.LABEL, 700, 20, G.left + 520, y + 32, { role: 'strip-note', color: 'muted' }));
+      if (sp.note) ops.push(textOp(measure, sp.note, S.LABEL, 700, 20, G.left + 520, y + 32, { role: 'strip-note', color: 'muted', track: 1 }));
       ops.push({ type: 'rect', role: 'strip-track', x: G.left + 520, y: y + 52, w: 360, h: 28, fill: 'mystery', r: 4 });
       if (ratio != null) ops.push({ type: 'rect', role: 'strip-fill', x: G.left + 520, y: y + 52, w: Math.max(8, 360 * ratio), h: 28, fill: sp.tone, r: 4, anim: 'grow', once: true });
     }
@@ -1232,7 +1442,7 @@
       let width = 0;
       list.forEach(w => {
         const ww = measure(w.text, f) + pad * 2;
-        if (out[out.length - 1].length && width + gap + ww > 860) { out.push([]); width = 0; }
+        if (out[out.length - 1].length && width + gap + ww > CAPTION_W) { out.push([]); width = 0; }
         out[out.length - 1].push({ ...w, w: ww });
         width += (out[out.length - 1].length > 1 ? gap : 0) + ww;
       });
@@ -1258,11 +1468,20 @@
   }
 
   // ─── Styled drawing ─────────────────────────────────────────────────────
+  // Entrances: rise (32 px, out-cubic), mask (a word slides up out of its own
+  // line box, out-expo, the kinetic-type look), pop, flip, wipe, grow, draw.
+  const MASK_MS = 620;
   function animState(op, local, style, exitP) {
-    const dur = style.motion.durMs;
-    const p = ease.outCubic(progress(local - (op.delay || 0), 0, dur));
-    const exitA = 1 - ease.outCubic(exitP);
-    return { p, a: p * exitA, dy: op.anim === 'rise' || op.anim === 'fade' ? (op.anim === 'rise' ? (1 - p) * 32 : 0) - 16 * ease.outCubic(exitP) : -16 * ease.outCubic(exitP) };
+    const l = local - (op.delay || 0);
+    const exitE = ease.outCubic(exitP);
+    const exitA = 1 - exitE;
+    if (op.anim === 'mask') {
+      const e = ease.outExpo(progress(l, 0, MASK_MS));
+      return { p: e, a: l >= 0 ? exitA : 0, dy: (1 - e) * (op.size || 40) * 1.05 - 16 * exitE, local: l };
+    }
+    const p = ease.outCubic(progress(l, 0, style.motion.durMs));
+    const dy = op.anim === 'rise' ? (1 - p) * 36 - 16 * exitE : -16 * exitE;
+    return { p, a: p * exitA, dy, local: l };
   }
   function withAnim(ctx, op, st, fn) {
     if (st.a <= 0.001) return;
@@ -1270,7 +1489,11 @@
     ctx.globalAlpha *= st.a;
     const cx = op.x + (op.w || 0) / 2;
     const cy = (op.type === 'text' || op.type === 'count') ? op.y - op.size * CAP / 2 : op.y + (op.h || 0) / 2;
-    if (op.anim === 'flip') { ctx.translate(cx, 0); ctx.scale(Math.max(0.02, st.p), 1); ctx.translate(-cx, 0); } else if (op.anim === 'pop') {
+    if (op.anim === 'mask' && (op.type === 'text' || op.type === 'count')) {
+      ctx.beginPath();
+      ctx.rect(op.x - op.size * 0.2, op.y - op.size * (CAP + 0.2), op.w + op.size * 0.4, op.size * (CAP + 0.44));
+      ctx.clip();
+    } else if (op.anim === 'flip') { ctx.translate(cx, 0); ctx.scale(Math.max(0.02, st.p), 1); ctx.translate(-cx, 0); } else if (op.anim === 'pop') {
       const k = 0.86 + 0.14 * ease.outBack(st.p);
       ctx.translate(cx, cy); ctx.scale(k, k); ctx.translate(-cx, -cy);
     } else if (op.anim === 'wipe' && (op.type === 'rect' || op.type === 'visual')) {
@@ -1283,8 +1506,8 @@
   function fillRound(ctx, x, y, w, h, r) {
     if (r > 0) { roundRect(ctx, x, y, w, h, r); ctx.fill(); } else ctx.fillRect(x, y, w, h);
   }
+  const setTrack = (ctx, px) => { if ('letterSpacing' in ctx) ctx.letterSpacing = `${px || 0}px`; };
   function drawStyledOp(ctx, op, st, timeline, env, frame, pal, style) {
-    const hl = timeline.highlight || ES_BLUE;
     if (op.type === 'rect') {
       ctx.fillStyle = tone(pal, op.fill);
       const w = op.anim === 'grow' ? op.w * ease.outQuint(st.p) : op.w;
@@ -1293,20 +1516,33 @@
     } else if (op.type === 'text' || op.type === 'word') {
       ctx.font = op.font;
       if (op.bg) {
+        // The highlight box sweeps in from the left once the word has landed.
         const padX = op.size * 0.1;
-        const reveal = ease.outQuint(progress((st.p * style.motion.durMs) - 60, 0, 320));
+        const reveal = ease.outQuint(progress(st.local == null ? st.p * 400 : st.local - 180, 0, 380));
         ctx.fillStyle = tone(pal, op.bg);
-        fillRound(ctx, op.x - padX, op.y - op.size * CAP - op.size * 0.12, (op.w + padX * 2) * Math.max(reveal, st.p >= 1 ? 1 : 0), op.size * (CAP + 0.24), op.size * 0.06);
+        fillRound(ctx, op.x - padX, op.y - op.size * CAP - op.size * 0.12, (op.w + padX * 2) * reveal, op.size * (CAP + 0.24), op.size * 0.04);
       }
       if (op.stroke) { ctx.lineJoin = 'round'; ctx.lineWidth = op.size * 0.05; ctx.strokeStyle = tone(pal, op.stroke); ctx.strokeText(op.text, op.x, op.y); }
-      ctx.fillStyle = op.bg ? tone(pal, op.bgInk || 'ink') : tone(pal, op.color);
+      const lit = op.bg && progress(st.local == null ? 999 : st.local - 180, 0, 380) > 0.35;
+      ctx.fillStyle = lit ? tone(pal, op.bgInk || 'ink') : tone(pal, op.color);
       if (style.theme === 'dark' && !op.bg) textShadow(ctx, true);
+      if (op.track) setTrack(ctx, op.track);
       ctx.fillText(op.text, op.x, op.y);
+      if (op.track) setTrack(ctx, 0);
     } else if (op.type === 'count') {
       ctx.font = op.font;
       ctx.fillStyle = tone(pal, op.color);
-      const c = op.once ? ease.outQuint(progress(frame.t, 200, 900)) : ease.outQuint(progress(st.p * style.motion.durMs * 2.2, 0, 900));
+      if (style.theme === 'dark') textShadow(ctx, true);
+      const c = op.once ? ease.outQuint(progress(frame.t, 200, 900)) : ease.outQuint(progress(st.local == null ? 900 : st.local, 0, op.countMs || 900));
       ctx.fillText(op.spec ? formatStat(op.spec, op.spec.num * c) : op.text, op.x, op.y);
+    } else if (op.type === 'line') {
+      const e = op.anim === 'draw' ? ease.outCubic(st.p) : 1;
+      ctx.strokeStyle = tone(pal, op.color);
+      ctx.lineWidth = op.lw || 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(op.x1, op.y1); ctx.lineTo(op.x1 + (op.x2 - op.x1) * e, op.y1 + (op.y2 - op.y1) * e); ctx.stroke();
+    } else if (op.type === 'wordmark') {
+      drawBrand(ctx, op.brand || 'wordmark', op.x, op.y, op.w, op.h, 'blue', env, ctx.globalAlpha);
     } else if (op.type === 'visual' || op.type === 'logo') {
       const slot = op.slot === 'shot' ? (frame.shot && frame.shot.asset) || '' : op.slot;
       ctx.save();
@@ -1325,48 +1561,56 @@
       const cutId = op.cutout && env.cutouts ? (op.cutoutAsset && env.cutouts[op.cutoutAsset] ? op.cutoutAsset : (slot && env.cutouts[slot] ? slot : '')) : '';
       const cut = cutId ? env.cutouts[cutId] : null;
       const inset = cut && cutId === slot ? ((frame.shot && timeline.tracks.video.find(s => s.beat === frame.shot.beat && s.asset && s.asset !== slot)) || {}).asset || slot : slot;
-      const kind = drawVisual(ctx, inset, op, timeline, env, { p: frame.shot ? frame.shot.p : 0, motion: frame.shot ? frame.shot.motion : null, tMs: frame.t });
+      drawVisual(ctx, inset, op, timeline, env, { p: frame.shot ? frame.shot.p : 0, motion: frame.shot ? frame.shot.motion : null, tMs: frame.t });
       if (cut && inset === slot) { ctx.fillStyle = 'rgba(10,12,16,0.45)'; ctx.fillRect(op.x, op.y, op.w, op.h); }
-      if (kind === 'empty' && style.theme === 'light') { /* plain black until a visual is picked */ }
+      // A soft inner shade at the bottom so chips and names on the picture read.
+      if (op.h > 200 && typeof ctx.createLinearGradient === 'function') {
+        const sh = ctx.createLinearGradient(0, op.y + op.h * 0.6, 0, op.y + op.h);
+        sh.addColorStop(0, 'rgba(0,0,0,0)');
+        sh.addColorStop(1, 'rgba(0,0,0,0.28)');
+        ctx.fillStyle = sh;
+        ctx.fillRect(op.x, op.y + op.h * 0.6, op.w, op.h * 0.4);
+      }
       ctx.restore();
-      if (op.stroke) { ctx.strokeStyle = tone(pal, op.stroke) === pal.accent ? pal.accent : tone(pal, op.stroke); ctx.lineWidth = op.lw || 4; ctx.beginPath(); if (op.r) roundRect(ctx, op.x, op.y, op.w, op.h, op.r); else ctx.rect(op.x, op.y, op.w, op.h); ctx.stroke(); }
+      if (op.stroke) { ctx.strokeStyle = tone(pal, op.stroke); ctx.lineWidth = op.lw || 4; ctx.beginPath(); if (op.r) roundRect(ctx, op.x, op.y, op.w, op.h, op.r); else ctx.rect(op.x, op.y, op.w, op.h); ctx.stroke(); }
       if (cut) {
         const size = mediaSize(cut);
         if (size) {
           const h = op.h * 1.32;
           const w = (size[0] / size[1]) * h;
+          // The player rises out of the frame, then breathes in slowly.
           const lift = (1 - st.p) * 40;
-          ctx.drawImage(cut, op.x + op.w * 0.62 - w / 2, op.y + op.h - h + lift, w, h);
+          const k = 1 + 0.025 * ease.inOutSine(progress(frame.t - (frame.graphic ? frame.graphic.inMs : 0), 0, 4000));
+          ctx.drawImage(cut, op.x + op.w * 0.62 - (w * k) / 2, op.y + op.h - h * k + lift, w * k, h * k);
         }
       }
     } else if (op.type === 'dotring') {
-      // Phyllotaxis: n dots from r0 to r1, rank 1 nearest the centre.
+      // Phyllotaxis: n dots from r0 to r1, rank 1 nearest the centre; dots
+      // bloom outwards, then the rank's ring sweeps round and its dot lands.
       const shown = Math.floor(op.n * ease.outCubic(st.p));
       const ga = Math.PI * (3 - Math.sqrt(5));
-      const rankAt = op.total > 1 ? (op.rank - 1) / (op.total - 1) : 0;
       ctx.fillStyle = tone(pal, 'muted');
+      ctx.globalAlpha = 0.5 * st.a;
       for (let i = 0; i < shown; i += 1) {
         const f = op.n > 1 ? i / (op.n - 1) : 0;
         const rr = op.r0 + (op.r1 - op.r0) * Math.sqrt(f);
         const a = i * ga;
-        ctx.globalAlpha = 0.5 * st.a;
         ctx.fillRect(op.cx + Math.cos(a) * rr - 2.5, op.cy + Math.sin(a) * rr - 2.5, 5, 5);
       }
       ctx.globalAlpha = st.a;
-      const rr = op.r0 + (op.r1 - op.r0) * Math.sqrt(rankAt);
+      const rr = op.rr != null ? op.rr : op.r0 + (op.r1 - op.r0) * Math.sqrt(op.total > 1 ? (op.rank - 1) / (op.total - 1) : 0);
+      const sweep = ease.inOutCubic(progress(st.local == null ? 1200 : st.local, 300, 700));
       ctx.strokeStyle = tone(pal, 'accent');
       ctx.lineWidth = 4;
       if (ctx.setLineDash) ctx.setLineDash([14, 10]);
-      ctx.beginPath(); ctx.arc(op.cx, op.cy, rr * ease.outCubic(progress(st.p, 0.4, 0.6)), 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(op.cx, op.cy, rr, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * sweep); ctx.stroke();
       if (ctx.setLineDash) ctx.setLineDash([]);
-      ctx.fillStyle = tone(pal, 'bad');
-      ctx.beginPath(); ctx.arc(op.cx + rr, op.cy, 10, 0, Math.PI * 2); ctx.fill();
-    } else if (op.type === 'esmark') {
-      const img = env.images && env.images['logo:es'];
-      if (mediaSize(img)) ctx.drawImage(img, op.x, op.y, op.w, op.h);
-      else { ctx.fillStyle = pal.accent; ctx.fillRect(op.x, op.y, op.w, op.h); }
+      if (sweep > 0.98) {
+        const pop = 1 + 0.4 * (1 - ease.outBack(progress(st.local, 1000, 300)));
+        ctx.fillStyle = tone(pal, 'bad');
+        ctx.beginPath(); ctx.arc(op.cx, op.cy - rr, 11 * pop, 0, Math.PI * 2); ctx.fill();
+      }
     }
-    void hl;
   }
   function drawBackground(ctx, timeline, frame, env, style, pal) {
     const layout = frame.graphic ? frame.graphic.template : '';
@@ -1382,6 +1626,15 @@
       ctx.fillStyle = pal.paper;
       ctx.fillRect(0, 0, W, H);
       ctx.restore();
+    }
+    // Depth: light papers catch a soft light from the top-left; the navy gets
+    // a low accent glow behind the content.
+    if (typeof ctx.createRadialGradient === 'function') {
+      const glow = ctx.createRadialGradient(W * 0.2, H * 0.12, 0, W * 0.2, H * 0.12, H * 0.9);
+      glow.addColorStop(0, style.theme === 'light' ? 'rgba(255,255,255,0.55)' : 'rgba(47,128,237,0.16)');
+      glow.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
     }
     // Texture: dots (explainer), a grid (series), diagonal lines (countdown).
     ctx.save();
@@ -1400,50 +1653,138 @@
     }
     ctx.restore();
   }
+  // Styles with a push transition hold their entrances 300 ms ahead, so the
+  // incoming beat arrives already composed and then settles.
+  const leadFor = style => (style.engine !== 'classic' && ['slide', 'wipe', 'flip'].includes(style.motion.transition) ? 300 : 0);
   function drawStyledGraphic(ctx, frame, timeline, env, style, pal) {
     const g = frame.graphic;
     if (!g) return;
     const ops = env.layoutCache ? env.layoutCache(g) : layoutGraphic(env.measure, g, timeline);
+    const lead = g.inMs === 0 ? 0 : leadFor(style);
     ctx.save();
     ctx.textBaseline = 'alphabetic';
     ctx.textAlign = 'left';
     ops.forEach(op => {
-      const st = animState(op, g.local + (g.inMs === 0 && (op.delay || 0) <= 80 ? 200 : 0), style, g.exit);
+      // Frame 0 is the cover in every feed: the hook's headline is already
+      // set (its highlight swept), the rest of the beat still builds in.
+      const cover = g.inMs === 0 ? (op.role === 'headline' ? 1200 : ((op.delay || 0) <= 80 ? 200 : 0)) : 0;
+      const st = animState(op, g.local + lead + cover, style, g.exit);
       withAnim(ctx, op, st, () => drawStyledOp(ctx, op, st, timeline, env, frame, pal, style));
     });
     ctx.restore();
   }
   function drawChrome(ctx, frame, timeline, env, style, pal) {
-    const ops = layoutChrome(env.measure, timeline, frame);
+    const ops = layoutChrome(env.measure, timeline, frame).filter(op => op.type !== 'esmark');
     ctx.save();
     ctx.textBaseline = 'alphabetic';
-    ops.forEach(op => drawStyledOp(ctx, op, { p: 1, a: 1, dy: 0 }, timeline, env, frame, pal, style));
+    ops.forEach(op => drawStyledOp(ctx, op, { p: 1, a: 1, dy: 0, local: frame.t }, timeline, env, frame, pal, style));
     ctx.restore();
   }
+  // Block captions: each word in a dark box; the spoken word turns yellow
+  // with a small pop; the card rises in.
   function drawBlockCaption(ctx, frame, timeline, env, style, pal) {
     const card = frame.caption;
     if (!card) return;
     const layout = env.captionCache ? env.captionCache(card) : layoutCaption(env.measure, card, timeline);
-    const appear = ease.outCubic(progress(card.local, 0, 140));
+    const appear = ease.outCubic(progress(card.local, 0, 120));
+    const words = timeline.tracks.captions.words;
     ctx.save();
     ctx.globalAlpha = appear;
-    const dy = (1 - appear) * 12;
+    const dy = (1 - appear) * 14;
     layout.ops.forEach(op => {
       const on = op.i === card.active;
+      const k = on ? 1 + 0.07 * (1 - ease.outCubic(progress(frame.t - words[op.i].s, 0, 180))) : 1;
+      ctx.save();
+      const cx = op.box.x + op.box.w / 2;
+      const cy = op.box.y + dy + op.box.h / 2;
+      ctx.translate(cx, cy); ctx.scale(k, k); ctx.translate(-cx, -cy);
       ctx.fillStyle = style.caption.box || '#111214';
       ctx.fillRect(op.box.x, op.box.y + dy, op.box.w, op.box.h);
       ctx.font = op.font;
       ctx.fillStyle = on ? (style.caption.active || '#FFD23F') : (style.caption.ink || '#FFFFFF');
       ctx.fillText(op.text, op.x, op.y + dy);
+      ctx.restore();
     });
     ctx.restore();
+    void pal;
+  }
+
+  // ─── Finish: vignette, light leak, grain (pros' last pass) ─────────────
+  // Under the ES mark, never over it (no effects on the logo). Leaks only on
+  // dark looks, only at a beat change, at most 16%: used sparingly.
+  const LEAK_MS = 640;
+  function drawFinish(ctx, frame, timeline, env) {
+    const style = S.get(timeline.style);
+    const dark = style.theme === 'dark';
+    ctx.save();
+    if (typeof ctx.createRadialGradient === 'function') {
+      const v = ctx.createRadialGradient(W / 2, H * 0.46, H * 0.3, W / 2, H * 0.5, H * 0.82);
+      v.addColorStop(0, 'rgba(0,0,0,0)');
+      v.addColorStop(1, dark ? 'rgba(0,0,0,0.38)' : 'rgba(40,34,24,0.10)');
+      ctx.fillStyle = v;
+      ctx.fillRect(0, 0, W, H);
+      const g = frame.graphic;
+      const leakAt = g ? g.local : Infinity;
+      if (dark && g && leakAt < LEAK_MS && (frame.beatIndex > 0 || g.local < LEAK_MS)) {
+        const a = 0.16 * Math.sin(Math.PI * progress(leakAt, 0, LEAK_MS));
+        const right = frame.beatIndex % 2 === 1;
+        const x = right ? W * 1.02 : -W * 0.02;
+        const leak = ctx.createRadialGradient(x, H * 0.28, 0, x, H * 0.28, H * 0.62);
+        leak.addColorStop(0, `rgba(255,178,102,${a.toFixed(3)})`);
+        leak.addColorStop(0.45, `rgba(255,120,64,${(a * 0.45).toFixed(3)})`);
+        leak.addColorStop(1, 'rgba(255,120,64,0)');
+        ctx.globalCompositeOperation = 'screen';
+        ctx.fillStyle = leak;
+        ctx.fillRect(0, 0, W, H);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+    }
+    if (env.grain && typeof ctx.createPattern === 'function') {
+      const pattern = ctx.createPattern(env.grain, 'repeat');
+      if (pattern) {
+        const n = Math.floor((frame.t || 0) / 42);
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalAlpha = dark ? 0.08 : 0.05;
+        ctx.translate((n * 37) % 128, (n * 61) % 128);
+        ctx.fillStyle = pattern;
+        ctx.fillRect(-128, -128, W + 256, H + 256);
+      }
+    }
+    ctx.restore();
+  }
+
+  // Beat to beat: push (explainer), wipe with an ink bar (series), lift and
+  // flip (countdown). The outgoing beat is drawn whole; chrome stays put.
+  function drawStyledGraphics(ctx, frame, timeline, env, style, pal) {
+    const tr = frame.transition;
+    if (!tr) { drawStyledGraphic(ctx, frame, timeline, env, style, pal); return; }
+    const e = ease.inOutQuart(tr.p);
+    const out = { ...frame, graphic: tr.from, shot: tr.fromShot || frame.shot };
+    if (tr.kind === 'slide') {
+      ctx.save(); ctx.translate(-W * e, 0); drawStyledGraphic(ctx, out, timeline, env, style, pal); ctx.restore();
+      ctx.save(); ctx.translate(W * (1 - e), 0); drawStyledGraphic(ctx, frame, timeline, env, style, pal); ctx.restore();
+    } else if (tr.kind === 'wipe') {
+      drawStyledGraphic(ctx, out, timeline, env, style, pal);
+      const x = W * e;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, x, H); ctx.clip();
+      drawBackground(ctx, timeline, frame, env, style, pal);
+      drawStyledGraphic(ctx, frame, timeline, env, style, pal);
+      ctx.restore();
+      if (e > 0 && e < 1) { ctx.fillStyle = tone(pal, 'ink'); ctx.fillRect(x - 18, 0, 18, H); ctx.fillStyle = tone(pal, 'hi'); ctx.fillRect(x - 24, 0, 6, H); }
+    } else {
+      // Lift: the outgoing card clears in the first 40% before the next flips in.
+      const gone = ease.outCubic(progress(tr.p, 0, 0.4));
+      if (gone < 1) { ctx.save(); ctx.globalAlpha = 1 - gone; ctx.translate(0, -90 * gone); drawStyledGraphic(ctx, out, timeline, env, style, pal); ctx.restore(); }
+      ctx.save(); ctx.translate(0, 70 * (1 - e)); drawStyledGraphic(ctx, frame, timeline, env, style, pal); ctx.restore();
+    }
   }
   function drawStyledFrame(ctx, timeline, frame, env) {
     const style = S.get(timeline.style);
     const pal = style.palette;
     drawBackground(ctx, timeline, frame, env, style, pal);
+    drawStyledGraphics(ctx, frame, timeline, env, style, pal);
     drawChrome(ctx, frame, timeline, env, style, pal);
-    drawStyledGraphic(ctx, frame, timeline, env, style, pal);
     if (timeline.captionStyle === 'block') drawBlockCaption(ctx, frame, timeline, env, style, pal);
     else drawCaption(ctx, frame, timeline, env);
   }
@@ -1454,17 +1795,17 @@
     ctx.save();
     if (S.get(timeline.style).engine !== 'classic') {
       drawStyledFrame(ctx, timeline, frame, env);
-      ctx.restore();
-      return frame;
+    } else {
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, W, H);
+      if (frame.prev) drawShot(ctx, frame.prev, timeline, env, 1);
+      drawShot(ctx, frame.shot, timeline, env, frame.prev ? frame.mix : 1);
+      drawGrade(ctx, timeline);
+      drawGraphic(ctx, frame, timeline, env);
+      drawCaption(ctx, frame, timeline, env);
     }
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, W, H);
-    if (frame.prev) drawShot(ctx, frame.prev, timeline, env, 1);
-    drawShot(ctx, frame.shot, timeline, env, frame.prev ? frame.mix : 1);
-    drawGrade(ctx, timeline);
-    drawBug(ctx, frame, timeline, env);
-    drawGraphic(ctx, frame, timeline, env);
-    drawCaption(ctx, frame, timeline, env);
+    drawFinish(ctx, frame, timeline, env);
+    drawEsMark(ctx, frame, timeline, env);
     ctx.restore();
     return frame;
   }
@@ -1475,5 +1816,6 @@
     estimateWordTimes, captionCards, duckPoints, musicGainDbAt, dbToGain, parseStatValue, formatStat,
     buildTimeline, frameAt, wrap, fitText, layoutGraphic, layoutCaption, layoutChrome, textBoxes, drawFrame,
     clipTimes, clipTime, drawVisual, allBoxes, CHART_LAYOUTS,
+    BRAND, ES_MARK, WORDMARK, CAPTION_W, LOGO_CLEAR, markVariant, drawBrand, logoPlacements, wordmarkFor, drawFinish,
   };
 }));
