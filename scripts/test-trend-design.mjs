@@ -71,8 +71,15 @@ const cases = [
   ['College Football Playoff rankings: Tennessee climbs', 'cfb'],
   ['Stephen Curry injured versus Rockets', 'others'],
   ['Lakers win 7th straight', 'others'],
+  // A college name with another sport is not college football.
+  ['Notre Dame Basketball', 'others'],
+  ['Michigan hockey sweeps Wisconsin', 'others'],
+  ['Notre Dame football: Marcus Freeman on the playoff race', 'cfb'],
+  ['Ohio State Buckeyes', 'cfb'],
 ];
 for (const [text, expected] of cases) assert.equal(classify(text).category, expected, `${text} → ${expected}`);
+// Strong enough that a College Football search hint (score < 6) can't pull it back.
+assert.ok(classify('Notre Dame basketball tops Purdue').score >= 6);
 for (const text of ['Game Of Thrones', 'Cathay Pacific', 'Kylie Jenner lawsuit', 'PS6 release date']) {
   assert.equal(classify(text).category, null, `${text} should not be a sport`);
 }

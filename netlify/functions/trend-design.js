@@ -128,6 +128,12 @@ const GENERIC = ['vs', 'score', 'game', 'match', 'coach', 'season', 'playoff', '
 const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const COMPILED = Object.fromEntries(Object.entries(RULES).map(([cat, rules]) => [cat, rules.map(([word, weight]) => [new RegExp(`(^|[^a-z0-9])${escapeRe(word)}([^a-z0-9]|$)`, 'i'), weight])]));
 
+// A college name next to another sport ("Notre Dame Basketball", "Michigan
+// hockey") is not college football: it goes to Others, with a score strong
+// enough that a College Football search hint can't pull it back.
+const NOT_FOOTBALL = /(^|[^a-z])(basketball|hoops|hockey|volleyball|soccer|softball|lacrosse|wrestling|gymnastics|ncaab|march madness|final four)([^a-z]|$)/i;
+const FOOTBALL = /(^|[^a-z])(football|cfp|heisman|bowl game|quarterback|touchdown|ncaaf)([^a-z]|$)/i;
+
 function classify(text) {
   const t = ` ${String(text || '').toLowerCase()} `;
   const scores = {};
@@ -140,6 +146,7 @@ function classify(text) {
   }
   const ranked = Object.entries(scores).filter(([cat]) => cat !== 'others').sort((a, b) => b[1] - a[1]);
   const [bestCat, best] = ranked[0];
+  if (bestCat === 'cfb' && NOT_FOOTBALL.test(t) && !FOOTBALL.test(t)) return { category: 'others', score: Math.max(best, scores.others, 6) };
   if (best >= 4) return { category: bestCat, score: best };
   if (scores.others >= 3 || best >= 3) return { category: best >= scores.others ? bestCat : 'others', score: Math.max(best, scores.others) };
   return { category: null, score: Math.max(best, scores.others) };
