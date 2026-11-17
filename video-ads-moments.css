@@ -1,0 +1,54 @@
+/* Video Ads: moment cards (one card per play, "+N angles") for By moment,
+   By team, By colour and the Clip library. Builds on the .va-clip card in
+   video-ads.css; kept in its own file so it merges cleanly. Tokens only. */
+
+.va-mo-wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--es-space-3, 12px); list-style: none; container-type: inline-size; }
+.va-mogrid { grid-auto-flow: row dense; }
+
+/* Card */
+.va-mo { position: relative; gap: 6px; }
+.va-mo__title { display: -webkit-box; overflow: hidden; color: var(--va-ink); font: 700 13px/1.3 var(--es-font-ui); -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.va-mo__teams { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.va-mo__team { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; padding: 2px 8px 2px 2px; border-radius: var(--es-radius-pill, 999px); background: var(--va-sunk); color: var(--va-ink-2); font: 500 11.5px/1.2 var(--es-font-ui); }
+.va-mo__team > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.va-mo__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; color: var(--va-ink-2); font: 500 11.5px/1.3 var(--es-font-ui); font-variant-numeric: tabular-nums; }
+.va-mo__meta > span:not(:first-child)::before { content: "·"; margin-right: 6px; color: var(--va-ink-3); }
+.va-mo__eng { flex-basis: 100%; color: var(--va-ink); font-weight: 700; }
+.va-mo__meta > .va-mo__eng::before { content: none; }
+.va-mo__angles {
+  justify-self: start; min-height: 28px; padding: 0 var(--es-space-2, 8px); border: 0; border-radius: var(--es-radius-sm, 8px);
+  background: transparent; box-shadow: inset 0 0 0 1px var(--va-line); color: var(--va-accent-text); font: 600 12px/1 var(--es-font-ui); cursor: pointer;
+}
+.va-mo__angles:hover { background: var(--va-accent-soft); }
+.va-mo__angles:focus-visible { outline: var(--es-focus-ring-width, 2px) solid var(--es-focus-ring-color, #0A7DFA); outline-offset: 2px; }
+.va-mo.is-open { box-shadow: inset 0 0 0 1.5px rgb(10 125 250 / .55); }
+.va-mo.is-open .va-mo__angles { background: var(--va-accent-soft); }
+
+/* The other angles of an open moment: a full row under its card. */
+.va-mo-alts { grid-column: 1 / -1; display: grid; gap: var(--es-space-2, 8px); padding: var(--es-space-3, 12px); border-radius: 14px; background: var(--va-sunk); }
+.va-mo-alts .va-found__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--es-space-2, 8px); margin: 0; }
+.va-mo-alts h4 { margin: 0; color: var(--va-ink); font: 700 13px/1.2 var(--es-font-ui); }
+
+/* Filters: Team, Colour (with its swatch), sort chips. */
+.va-mo-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); }
+.va-mo-filter { position: relative; display: inline-flex; min-width: 0; flex: 1 1 130px; max-width: 220px; }
+.va-mo-filter .es-select { width: 100%; }
+.va-mo-filter--color[style] .es-select { padding-left: 28px; }
+.va-mo-filter--color[style]::before { content: ""; position: absolute; left: 10px; top: 50%; z-index: 1; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: var(--sw); box-shadow: inset 0 0 0 1px rgb(127 127 127 / .4); pointer-events: none; }
+.va-mo-handoff { margin: 0; color: var(--va-ink-2); font: 500 12.5px/1.4 var(--es-font-ui); overflow-wrap: anywhere; }
+.va-mo-handoff b { color: var(--va-ink); font-weight: 600; }
+
+/* Skeleton lines under the thumb. */
+.va-mo-wrap .va-clip--skeleton { gap: 8px; }
+
+@container (min-width: 336px) {
+  .va-clipgrid--3 .va-mo__title { font-size: 12.5px; }
+  .va-clipgrid--3 .va-mo__meta { font-size: 11px; }
+}
+@media (max-width: 480px) {
+  .va-mo-filter { max-width: none; flex-basis: calc(50% - 4px); }
+  .va-mo-tools .va-cliptools__sort { flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .va-mo, .va-mo__angles { transition: none; }
+}

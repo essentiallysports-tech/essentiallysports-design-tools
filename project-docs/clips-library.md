@@ -56,7 +56,7 @@ one shared, always-warm library of verified clips that every search reads first.
    - Direct MP4s get a HEAD request (or a 2-byte range GET when HEAD is refused), and only on allow-listed hosts:
      `video.twimg.com`, `v.redd.it`, `*.streamable.com`, `*.bsky.network`, `bsky.social`, plus
      `CLIPS_MEDIA_HOSTS`. Any other host is never fetched.
-   - The same quality and freshness rules apply to every source: ≥ 480p, 4–120 s, verified time under 120 h,
+   - The same quality and freshness rules apply to every source: ≥ 720p (`CLIP_MIN_SHORT_SIDE`, unknown size dropped), 4–120 s, game action only, verified time under 120 h,
      no throwbacks.
 4. **Dedupe across platforms**, keeping the best copy:
    - the same URL;
@@ -74,7 +74,7 @@ one shared, always-warm library of verified clips that every search reads first.
    2. the same sport, `via: 'sport'`;
    3. teams of the same colour in the other sports, `via: 'colorx'`.
 
-   The `note` says what was added. `moments-with-clips` returns `fallback.clips`, the sport's newest library
+   The `note` says what was added. `moments-with-clips` (By moment, see below) fills with older library clips, labelled; earlier it returned the sport's newest library
    clips, when no moment has any.
 8. **AI blocked** (switched off, not configured, over a limit, budget used up, or the search failed): the library
    and the free sources still answer.
@@ -191,7 +191,7 @@ console, the page's own authenticated fetch helper (`ESAuth.fetchWithAuth`, whic
   - a grid that is 3 columns when the panel is at least 336 px wide (desktop), 2 on phones;
   - 9 clips at a time, then **Load more** (up to 36);
   - a **team filter** (from the clips' teams);
-  - **Best / Newest / Most popular** sorting.
+  - **Trending / Newest / Most viewed** sorting (Trending by default), clips clustered by play ("+N angles").
 - **Cards** show:
   - the platform chip (X, Bluesky, Reddit, Streamable);
   - Official / League / Network on X;
@@ -259,3 +259,45 @@ Not measured live yet: there are no AI or X keys locally. These are estimates:
   `CLIPS_EXTRA_SOURCES=off`, so they keep testing the live search on its own.
 - `scripts/test-ai-guardrails.mjs` now accepts other daily crons next to the budget watch, and checks that every
   cron runs once a day.
+
+## By moment, game-action check and trending (branch `feature/va-moments`, 2026-11-18)
+Owner's definition: "Moments are the recent 5 days' trending clips, and clips can be distributed according to teams
+and colours." Final spec: only great game clips, 720p and up, trending, sorted, found through the AI Gateway.
+
+**What a clip must pass to appear anywhere** (By moment, By team, By colour, Library):
+1. A verified link and post time (fxtwitter / X syndication / X API, or a checked MP4 on an allowed host).
+2. Posted in the last 5 days (120 h), no throwback wording.
+3. The best version is at least 720p on its short side (`CLIP_MIN_SHORT_SIDE = 720`, `_clip-library.js`); 4–120 s.
+4. Game action. The AI verdict when the daily job has one (`ai` jsonb on the library row), else the rules in
+   `_clip-classify.js` (official / league / network source and 6–90 s, or game words; never podcasts, pressers,
+   interviews, promos, ticket posts, memes or reaction videos).
+
+**Classification** (`_clip-classify.js`): Claude Haiku 5.5 vision on the Gateway ($0.10 / $0.50 per M tokens; on the
+live model list nothing cheaper with vision that FrameUp prices), batches of 8 posts with a small thumbnail each,
+`{ isGameAction, quality 1-5, subject, label }`, cached forever per URL. Run by the daily prefetch only
+(`classifyPass`, up to 48 clips per batch, 3 calls at a time), with its own cap `CLIPS_CLASSIFY_MAX_USD` (default
+$0.30/day; about $0.0015 per 8 clips, so the cap is far above real use). Logged as `clips-classify`;
+`AI_DISABLE=clips-classify` switches it off (the rules apply). Migration `20261118121800_frameup_clip_library_ai.sql`
+adds the `ai` column; before it, verdicts live in memory per instance.
+
+**Trending** (`video-ads-moments.js`, shared by server and page):
+- Velocity = views (or likes × 25 when a platform gives no views) per hour from posting to when the numbers were read.
+  The daily prefetch re-reads likes / views for the newest X clips (`refreshEngagement`, free), so ranking needs no
+  calls at search time.
+- Score ≈ velocity 30 + reach 20 + recency 20 + source 15 + quality 10 + 3 per extra angle (max 9), plus the AI
+  quality score (±6) on the clip score.
+- Fewer than 3 plays with engagement numbers: newest first, labelled.
+
+**Clustering**: one card per play. The same media id or soft key, or (same sport, compatible teams, within 6 h) a
+shared player name plus either the same team within 90 minutes, two shared names within 90 minutes, or two shared
+caption words including one that is not a name. Best version first (official, then quality, then reach); "+N angles"
+opens the others.
+
+**`moments-with-clips`** (name kept): library pool for the sport(s) → if fewer than 12 plays, free top-up (X API when
+set, public sources), then one paid round for the thinnest sport (Haiku x.com search ≤ $0.03 + Grok within its own
+cap) → cluster, rank → titles from the post text (cleaned); long or empty ones get one light-tier call per refresh
+(≤ 12 moments, ≈ $0.0003 on gpt-oss-20b, kept only when every name and number is in the post; cached 6 h, rejections
+too; gated by the hourly limit and `aiSpendGate`; `VIDEO_ADS_MOMENT_TITLES=off`) → older library clips fill in when
+fewer than 3 plays. Reply `{ ok, moments:[{ id, title, titleBy, sport, teams[], score, velocity, views, likes,
+postedAt, latestAt, ageHours, angles, clips:[best, ...alts] }], ranking, note, facets, diag, cost }`; 30-min cache per
+sport.

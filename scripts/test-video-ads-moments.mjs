@@ -53,6 +53,12 @@ assert.ok(groupOf(td1).includes(td2) && groupOf(td1).includes(td3) && groupOf(td
 assert.equal(groupOf(otherGame).length, 1, 'another play stays apart');
 assert.equal(groupOf(sameWordsDayLater).length, 1, 'same words a day later is not the same play');
 assert.equal(groupOf(otherTeam).length, 1, 'different teams are never merged');
+const gibbsA = clip(27, { handle: 'Lions', text: 'GIBBS. GONE. 70 yards to the house 🏎️ #OnePride', teams: ['Detroit Lions'], ageH: 6.2, sourceKind: 'official' });
+const gibbsB = clip(28, { handle: 'NFL', text: 'Jahmyr Gibbs breaks loose for a 70-yard touchdown run', teams: ['Detroit Lions'], ageH: 6 });
+const gibbsLater = clip(29, { handle: 'NFL', text: 'Jahmyr Gibbs again, short touchdown', teams: ['Detroit Lions'], ageH: 3 });
+const gGroups = M.clusterClips([gibbsA, gibbsB, gibbsLater]);
+assert.equal(gGroups.find(g => g.includes(gibbsA)).length, 2, 'same player + team within 90 min: one play, even with different words');
+assert.equal(gGroups.find(g => g.includes(gibbsLater)).length, 1, 'three hours later is another play');
 built = M.buildMoments([td1, td2, td3, repost, otherGame], { now });
 const tdMoment = built.moments.find(m => m.clips.length === 4);
 assert.equal(tdMoment.angles, 3, '+3 angles');

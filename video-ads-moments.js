@@ -34,6 +34,7 @@
     clusterHours: 6, // two posts of one play are this close in time
     minShared: 2, // distinctive caption words two posts must share
     minOverlap: 0.5, // ... as a share of the shorter caption
+    sameNameHours: 1.5, // same player + same team within this: one play
     likesToViews: 25, // a like is worth ~25 views when a platform gives no view count
     minEngaged: 3, // fewer moments with engagement numbers than this: rank by newest
     titleMax: 72,
@@ -158,15 +159,20 @@
     const wa = a._words || captionWords(a.text, a.sport);
     const wb = b._words || captionWords(b.text, b.sport);
     if (!wa.size || !wb.size) return false;
-    let shared = 0;
-    wa.forEach(w => { if (wb.has(w)) shared += 1; });
-    if (shared < CONFIG.minShared) return false;
     // At least one shared name (a player), not just common words.
     const na = a._names || nameWords(a.text, a.sport);
     const nb = b._names || nameWords(b.text, b.sport);
     let names = 0;
     na.forEach(w => { if (nb.has(w)) names += 1; });
     if (!names) return false;
+    // The same player, the same team, posted within the hour and a half: one play
+    // ("GIBBS. GONE." and "Jahmyr Gibbs breaks loose for a 70-yard touchdown").
+    // Without team tags on both, two shared names (passer and receiver) will do.
+    if (gap <= CONFIG.sameNameHours && ((ta.length && tb.length) || names >= 2)) return true;
+    let shared = 0;
+    let other = 0; // shared words that are not names: what happened, not just who
+    wa.forEach(w => { if (wb.has(w)) { shared += 1; if (!na.has(w) && !nb.has(w)) other += 1; } });
+    if (shared < CONFIG.minShared || !other) return false;
     return shared / Math.min(wa.size, wb.size) >= CONFIG.minOverlap || shared >= 4;
   }
 
@@ -334,10 +340,11 @@
       // Title: the best version's text, else the next one with usable text.
       let titled = { title: '', cut: false, empty: true };
       let sourceText = '';
-      for (const c of ordered) {
-        const t = cleanTitle(c.text);
-        if (!t.empty) { titled = t; sourceText = c.text; break; }
-      }
+      // Prefer a calm caption (not ALL CAPS, not cut) from any version; else the first usable one.
+      const shouty = text => { const l = String(text || '').match(/\p{L}/gu) || []; const u = String(text || '').match(/\p{Lu}/gu) || []; return l.length > 10 && u.length / l.length > 0.7; };
+      const usable = ordered.map(c => ({ c, t: cleanTitle(c.text) })).filter(x => !x.t.empty);
+      const pick = usable.find(x => !shouty(x.c.text) && !x.t.cut) || usable.find(x => !shouty(x.c.text)) || usable[0];
+      if (pick) { titled = pick.t; sourceText = pick.c.text; }
       const via = group.every(c => c.via) ? best.via : undefined;
       return {
         id: `mo_${hash(ordered.map(c => mediaKey(c)).sort()[0])}`,

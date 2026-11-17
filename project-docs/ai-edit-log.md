@@ -17,6 +17,16 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-18 — Video Ads clips: By moment = trending plays of the last 5 days; 720p and game action everywhere (branch feature/va-moments)
+- Status: `[committed on feature/va-moments — not pushed]`. Based on `feature/va-library-icon`. Docs: `project-docs/clips-library.md` (new last section).
+- **By moment** is no longer news headlines: the most popular clips of the last 5 days, one card per play (near-duplicates clustered: media key, soft key, shared player name + team / words + time), best version first, "+N angles" opens the others. Sport chips + **Team** and **Colour** filters + **Trending / Newest / Most viewed**. Trends hand-off (`frameup.videoAdMoment.v1`) pre-filters to the story's team.
+- New shared UMD `video-ads-moments.js` (cluster, velocity, trend score, title cleaning, grounded AI-title check, filters, facets, hand-off) + `video-ads-moments.css` (moment cards, kept apart from video-ads.css for merging).
+- Server `moments-with-clips` reworked (name kept): library first, free top-up, one capped paid round; optional light-tier titles (≤ $0.005/refresh, cached 6 h, gated). Library mode defaults to Trending.
+- **720p floor** everywhere (`CLIP_MIN_SHORT_SIDE`); **game action only** (`_clip-classify.js`: Haiku 5.5 vision in the daily prefetch, ≤ $0.30/day, `ai` column via migration `20261118121800_frameup_clip_library_ai.sql`, rules fallback). Prefetch also refreshes likes / views (free). Page picks the 1080p variant when there is one.
+- By team / By colour / Library cards are moment cards too (clustered, Trending default).
+- Tests: new `scripts/test-video-ads-moments.mjs` (in `test:clips`); moments sections of `test-video-ads.mjs` and `test-clip-library.mjs` rewritten for the new contract; fixtures given game wording / 720p.
+- Cache key `20261118-va-moments` (video-ads.js, video-ads.css, new moments js/css).
+
 ### 2026-11-19 — Generate asset service: AI backgrounds and concept art, cut-outs, varied ES photos (branch feature/gen-assets)
 - Status: `[committed on feature/gen-assets — not pushed]`. Spec: `scratchpad/gen-creative-contract.md` (agent gen-assets). Docs: `project-docs/gen-assets.md`.
 - New `netlify/functions/_asset-service.js` (`generateBackground`, `generateConceptArt`, `cutout`, `findPhotos`, `status`), `netlify/functions/gen-assets.js` + `api/gen-assets.js` (`GET/POST /api/gen-assets`, vercel.json maxDuration 60), browser client `frameup-assets.js` (`window.FrameUpAssets`, not loaded by any page yet: the gen-creative composer loads it).
