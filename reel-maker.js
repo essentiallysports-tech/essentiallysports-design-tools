@@ -102,13 +102,13 @@
     plan: null, planSource: '', notice: '', corpus: '', sources: [], extraSource: '',
     photos: {}, assets: {}, images: {}, voice: {}, buffers: {},
     music: null, musicLibrary: [], captionStyle: 'highlight', target: 'organic',
-    spent: { director: 0, factCheck: 0, revise: 0, voice: 0 },
+    spent: { director: 0, factCheck: 0, revise: 0, voice: 0, clipJudge: 0 },
     timeline: null, lint: null, t: 0, playing: false, busy: '',
     cloud: true,
     // reels-styles
     style: 'auto', styleSuggested: { id: 'classic', why: '' },
     voiceOn: true, voiceId: 'brian', voiceError: '', voiceMaking: false,
-    useClips: true, aiClips: false, aiClipsUsed: 0,
+    useClips: true, aiClips: false, aiClipsUsed: 0, clipAudio: false,
     videos: {}, cutouts: {}, visualSrc: {}, clipPool: [], clipPoolKey: '', selected: '',
     flow: FLOW.initial(),
   };
@@ -530,6 +530,19 @@
   [els.voiceTopic, els.voiceEdit].forEach(root => { root.addEventListener('click', onVoiceUi); root.addEventListener('change', onVoiceToggle); });
   els.clipsOn.addEventListener('change', () => { state.useClips = els.clipsOn.checked; renderAutoline(); renderCost(); });
   els.aiclipsOn.addEventListener('change', () => { state.aiClips = els.aiclipsOn.checked; renderCost(); });
+  // Original clip audio: off by default (clips are muted in preview and export).
+  const clipAudioBox = document.getElementById('rm-clip-audio');
+  if (clipAudioBox) {
+    clipAudioBox.checked = false;
+    clipAudioBox.addEventListener('change', async () => {
+      state.clipAudio = clipAudioBox.checked;
+      if (state.clipAudio) {
+        const n = await clipSounds();
+        if (!n) toast('These clips have no sound to add. They stay muted.');
+      }
+      rebuild();
+    });
+  }
   els.brief.addEventListener('input', debounce(() => { renderFormats(); renderStyles(); renderCost(); }, 250));
   els.sport.addEventListener('change', () => { state.sport = els.sport.value; });
   els.tier.addEventListener('click', event => {
@@ -554,6 +567,7 @@
       tier: state.tier, factCheck: state.factCheck, voiceMode: v.ready && state.voiceOn ? v.mode : 'off', voiceModel: v.model, voChars: voChars() || (long ? 1100 : 450),
       clipSearches: state.useClips && ai ? 1 : 0, aiClips: state.useClips && state.aiClips && state.config.aiClips?.ready ? Math.min(state.config.aiClips.max, Math.max(1, sceneBeats)) : 0,
       scenes: ai ? Math.min(2, sceneBeats) : 0, longForm: long,
+      clipJudge: state.useClips && ai && CLIPS && state.config.clipJudge?.ready !== false ? CLIPS.reelJudgeEstimate(CLIPS.JUDGE.maxClips) : 0,
     });
   }
   function costHtml(title = 'Estimated cost for this reel') {
@@ -795,6 +809,20 @@
     });
   }
   const clipBlobs = new Map();
+  // Decodes the sound of every clip in use (once), for "Original clip audio".
+  // A clip with no audio track just stays muted.
+  async function clipSounds() {
+    let n = 0;
+    for (const [id, asset] of Object.entries(state.assets)) {
+      if (asset.kind !== 'clip' || !asset.src) continue;
+      const key = `clipaudio:${id}`;
+      if (!(key in state.buffers)) {
+        try { state.buffers[key] = await audioContext().decodeAudioData(await (await fetch(asset.src)).arrayBuffer()); } catch { state.buffers[key] = null; }
+      }
+      if (state.buffers[key]) n += 1;
+    }
+    return n;
+  }
   async function addClipAsset(id, { blob, url = '', label, rights, remote = '', post = '' }) {
     let src = url;
     if (blob) src = URL.createObjectURL(blob);
@@ -812,28 +840,88 @@
     state.assets[id] = { kind: 'clip', label, src, remote, post, durationMs, clipIn, rights };
     return true;
   }
-  async function useXClip(beatId, clip) {
+  async function useXClip(beatId, clip, segment = null) {
+    const id = await loadClip(clip);
+    if (!id) return false;
+    let use = id;
+    // The picker's best segment for this beat (the same clip on two beats plays two different parts).
+    if (segment && segment.outSec > segment.inSec) {
+      use = `${id}@${Math.round(segment.inSec * 10)}`;
+      state.assets[use] = { ...state.assets[id], clipIn: segment.inSec, clipOut: segment.outSec };
+      state.videos[use] = state.videos[id];
+      if (state.images[id]) state.images[use] = state.images[id];
+    }
+    setVisual(beatId, [use], 'x-clip');
+    return true;
+  }
+  // Downloads an X clip once (browser side, no referrer) -> its asset id.
+  async function loadClip(clip) {
     const variant = pickVariant(clip.variants || []);
-    if (!variant) return false;
+    if (!variant) return '';
     const id = `clip:${slugOf(clip.url || variant.url).slice(-24)}`;
     if (!state.assets[id]) {
       let blob = clipBlobs.get(variant.url);
       if (!blob) {
         try {
           const response = await fetch(variant.url, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
-          if (!response.ok) return false;
+          if (!response.ok) return '';
           blob = await response.blob();
           clipBlobs.set(variant.url, blob);
-        } catch { return false; }
+        } catch { return ''; }
       }
       const ok = await addClipAsset(id, {
         blob, remote: variant.url, post: clip.url, label: `Clip from @${clip.handle || 'x'}`,
         rights: { source: `Official X post (${clip.url})`, licence: 'Official team, league or network post on X. ES clears these for organic posts and Meta paid ads; keep the source link.', organic: true, paid: true, x: true, credit: clip.handle ? `@${clip.handle}` : '' },
       });
-      if (!ok) return false;
+      if (!ok) return '';
     }
-    setVisual(beatId, [id], 'x-clip');
-    return true;
+    return id;
+  }
+  // Best clip per beat (reel-clips.js): the strongest candidates are
+  // downloaded and sampled here (frames + motion), a vision model rates them
+  // when AI is on (capped per reel, cached per clip URL), then each beat gets
+  // its best free clip and the best segment of it for the beat's length.
+  const CLIPS = window.ReelClips || null;
+  let judgeCache = null;
+  async function pickClips(pool, beats, plan, used) {
+    if (!CLIPS || !pool.length || !beats.length) return {};
+    const cands = CLIPS.preselect(pool, beats, plan, CLIPS.JUDGE.maxClips);
+    const samples = {};
+    const judgeTimes = {};
+    const frames = {};
+    const loaded = [];
+    for (let i = 0; i < cands.length; i += 3) {
+      await Promise.all(cands.slice(i, i + 3).map(async clip => {
+        const id = await loadClip(clip).catch(() => '');
+        if (!id || !state.videos[id]) return;
+        loaded.push(clip);
+        const sm = await CLIPS.sampleClip(state.videos[id]).catch(() => null);
+        if (!sm) return;
+        samples[clip.url] = sm.samples;
+        judgeTimes[clip.url] = sm.times;
+        frames[clip.url] = sm.frames;
+      }));
+    }
+    const subjects = [...new Map(beats.map(b => CLIPS.subjectFor(b, plan)).map(sub => [sub.key, { key: sub.key, label: sub.players[0] || sub.team || sub.key }])).values()];
+    const judgements = {};
+    try { judgeCache = judgeCache || CLIPS.makeCache(window.localStorage); } catch { judgeCache = CLIPS.makeCache(null); }
+    loaded.forEach(c => { const j = judgeCache.get(c.url); if (j && subjects.every(sub => sub.key in j.relevance)) judgements[c.url] = j; });
+    const ai = state.config.ai && !state.config.offline && state.config.clipJudge?.ready !== false;
+    const todo = loaded.filter(c => !judgements[c.url] && frames[c.url]?.length);
+    state.spent.clipJudge = Number(state.spent.clipJudge) || 0;
+    for (let i = 0; ai && i < todo.length; i += CLIPS.JUDGE.perCall) {
+      const left = CLIPS.JUDGE.maxUsdPerReel - state.spent.clipJudge;
+      if (left <= 0) break;
+      const batch = todo.slice(i, i + CLIPS.JUDGE.perCall);
+      try {
+        const data = await api({ mode: 'clip-judge', budgetUsd: left, subjects, clips: batch.map(c => ({ url: c.url, text: c.text, handle: c.handle, frames: frames[c.url], times: judgeTimes[c.url] })) });
+        state.spent.clipJudge += Number(data.cost) || 0;
+        Object.entries(data.judgements || {}).forEach(([url, raw]) => { const j = CLIPS.validateJudgement(raw); if (j) { judgements[url] = j; judgeCache.set(url, j); } });
+        if (data.capped) break;
+      } catch { break; } // AI off, over a cap or failing: the free ranking decides
+    }
+    state.clipPicks = CLIPS.assign(loaded, beats, plan, { judgements, samples, judgeTimes, used });
+    return state.clipPicks;
   }
   function nextClip(pool, beat, used) {
     const words = String(`${beat.photo} ${beat.text}`).toLowerCase().split(/\W+/).filter(w => w.length > 3);
@@ -960,6 +1048,8 @@
     const inUse = () => new Set(plan.beats.flatMap(b => state.photos[b.id] || []).map(id => state.assets[id]?.post).filter(Boolean));
     const usedClips = inUse();
     const usedPhotos = new Set(Object.values(state.photos).flat());
+    const clipBeats = beats.filter(b => b.kind !== 'cta' && mix.mode[b.id] === 'clip' && (force || !state.photos[b.id]?.length)).map(b => ({ ...b, durMs: (durs.find(d => d.id === b.id) || {}).durMs || 2500 }));
+    const picks = state.useClips && pool.length ? await pickClips(pool, clipBeats, plan, usedClips).catch(() => ({})) : {};
     let n = 0;
     for (const beat of beats) {
       if (state.plan !== plan) return { note: '' };
@@ -968,7 +1058,9 @@
       if (beat.kind === 'cta') { setVisual(beat.id, [designAsset()], 'design'); continue; }
       let done = false;
       if (mix.mode[beat.id] === 'clip') {
-        const clip = nextClip(pool, beat, usedClips);
+        const pick = picks[beat.id];
+        if (pick) { usedClips.add(pick.clip.url); done = await useXClip(beat.id, pick.clip, pick.segment); }
+        const clip = done ? null : nextClip(pool, beat, usedClips);
         if (clip) { usedClips.add(clip.url); done = await useXClip(beat.id, clip); }
         if (!done && beat.visual === 'scene' && state.aiClips && state.config.aiClips?.ready && state.aiClipsUsed < state.config.aiClips.max) done = await aiClip(beat);
       }
@@ -1038,7 +1130,8 @@
         const pool = await clipPool(state.plan);
         const current = (state.photos[beatId] || []).map(id => state.assets[id]?.post).filter(Boolean);
         const used = new Set([...current, ...state.plan.beats.flatMap(b => state.photos[b.id] || []).map(id => state.assets[id]?.post).filter(Boolean)]);
-        const clip = nextClip(pool, beat, used) || pool.find(c => !current.includes(c.url));
+        const ranked = CLIPS ? pool.filter(c => !used.has(c.url)).sort((a, b) => CLIPS.heuristicScore(b, CLIPS.subjectFor(beat, state.plan)).score - CLIPS.heuristicScore(a, CLIPS.subjectFor(beat, state.plan)).score) : [];
+        const clip = ranked[0] || nextClip(pool, beat, used) || pool.find(c => !current.includes(c.url));
         if (!clip || !await useXClip(beatId, clip)) toast(pool.length ? 'No other clip loaded. Try a photo or upload one.' : 'No official clips found for this story. Try a photo, a team graphic or an upload.', { tone: 'error' });
       } else if (action === 'ai-clip') {
         if (!await aiClip({ ...beat, scene: beat.scene || 'stadium' })) toast(state.config.aiClips?.ready ? `This reel already has ${state.config.aiClips.max} AI clips.` : 'AI b-roll is off for now.', { tone: 'error' });
@@ -1142,11 +1235,15 @@
     state.timeline = R.buildTimeline(state.plan, {
       style: styleId(), voice, photos: state.photos, assets: { ...state.assets }, team: state.plan.team, captionStyle: state.captionStyle,
       voiceMode, music: state.music ? { asset: 'music' } : null, sources: state.sources, corpus: state.corpus,
+      // Clip sound is muted unless "Original clip audio" is on (then only clips that have a sound track).
+      clipAudio: state.clipAudio ? Object.keys(state.buffers).filter(k => k.startsWith('clipaudio:') && state.buffers[k]).map(k => k.slice(10)) : false,
     });
     layoutCache = new Map();
     captionCache = new Map();
     state.lint = L.lintTimeline(state.timeline, { boxes: R.textBoxes(measure, state.timeline), target: state.target, extraSources: els.extraSource.value });
     state.mix = null;
+    // A clip added while "Original clip audio" is on gets its sound decoded, then the mix is rebuilt.
+    if (state.clipAudio && Object.entries(state.assets).some(([id, a]) => a.kind === 'clip' && a.src && !(`clipaudio:${id}` in state.buffers))) clipSounds().then(n => { if (n) rebuild(); });
     els.emptyStage.hidden = true;
     els.play.disabled = false;
     els.scrub.disabled = false;
@@ -1611,11 +1708,15 @@
   }
 
   async function loadMusicLibrary() {
-    try {
-      const response = await fetch('reels-music.json', { cache: 'no-cache' });
-      const data = await response.json();
-      state.musicLibrary = (data.tracks || []).filter(t => t && t.id && t.src && t.licence);
-    } catch { state.musicLibrary = []; }
+    state.musicLibrary = [];
+    for (const file of F.MUSIC_FILES || ['reels-music.json']) {
+      try {
+        const response = await fetch(file, { cache: 'no-cache' });
+        if (!response.ok) continue;
+        const tracks = F.musicTracks ? F.musicTracks(await response.json()) : [];
+        if (tracks.length) { state.musicLibrary = tracks; break; }
+      } catch { /* try the next file */ }
+    }
     els.musicPick.innerHTML = `<option value="">No music</option>${state.musicLibrary.map(t => `<option value="${esc(t.id)}">${esc(t.title)}${t.artist ? ` · ${esc(t.artist)}` : ''}</option>`).join('')}${state.music?.source === 'upload' ? `<option value="__upload" selected>${esc(state.music.title)} (uploaded)</option>` : ''}`;
     els.musicPick.disabled = false;
     if (!state.musicLibrary.length) $('rm-music-hint').textContent = 'The ES music library is empty for now. Upload a track you have the rights to. It sits under the voice, 14 dB down.';
@@ -1640,7 +1741,7 @@
       const bytes = await (await fetch(track.src)).arrayBuffer();
       const buffer = await audioContext().decodeAudioData(bytes);
       setMusic({ buffer, title: track.title, source: 'library', licence: track.licence, paid: track.paid === true });
-      state.assets.music.rights.organic = track.organic !== false;
+      state.assets.music.rights.organic = track.organic === true;
       rebuild();
     } catch { toast('That track could not be loaded.', { tone: 'error' }); }
   });
@@ -1685,8 +1786,9 @@
       const src = off.createBufferSource();
       src.buffer = state.buffers[clip.asset];
       const gain = off.createGain();
-      if (clip.kind === 'music') {
-        src.loop = src.buffer.duration < tl.durationMs / 1000;
+      if (clip.kind === 'music' || (clip.kind === 'clip' && clip.envelope)) {
+        if (clip.kind === 'music') src.loop = src.buffer.duration < tl.durationMs / 1000;
+        else if (clip.loopEndSec > (clip.offsetSec || 0) + 0.5 && clip.loopEndSec <= src.buffer.duration) { src.loop = true; src.loopStart = clip.offsetSec || 0; src.loopEnd = clip.loopEndSec; }
         const env = clip.envelope || [];
         gain.gain.setValueAtTime(R.dbToGain(env[0]?.db ?? -60), 0);
         env.forEach(p => gain.gain.linearRampToValueAtTime(R.dbToGain(p.db), p.t / 1000));
@@ -1694,7 +1796,8 @@
         gain.gain.value = R.dbToGain(clip.gainDb || 0);
       }
       src.connect(gain).connect(off.destination);
-      src.start(clip.inMs / 1000);
+      if (clip.kind === 'clip') src.start(clip.inMs / 1000, Math.min(clip.offsetSec || 0, Math.max(0, src.buffer.duration - 0.05)), (clip.durMs || 0) / 1000);
+      else src.start(clip.inMs / 1000);
     });
     // A gentle limiter so VO peaks stay under -1 dBTP.
     const mix = await off.startRendering();
