@@ -3,6 +3,44 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-19-hero-generate",
+      "date": "2026-11-19",
+      "title": "Generate: stat lines, records, carousels and no blank photos",
+      "commit": "6cde4b7",
+      "items": [
+        {
+          "title": "Player Stat Line and Team Record",
+          "text": "Generate now makes both new templates: a full game line (3–7 numbers) and a record or final score under the team badge. Numbers stay with their own labels.",
+          "page": "generate.html",
+          "target": "#gen-formats"
+        },
+        {
+          "title": "Never a blank photo",
+          "text": "No ES photo? The design uses the team graphic, and the photo panel can search ES photos by name or team.",
+          "page": "generate.html",
+          "target": "#gen-grid"
+        },
+        {
+          "title": "Same idea, new template",
+          "text": "Refine on any design now remakes the same idea in another template that fits your brief.",
+          "page": "generate.html",
+          "target": "#gen-grid"
+        },
+        {
+          "title": "Carousels",
+          "text": "Open every design as one carousel in the editor, or download them all as a numbered ZIP.",
+          "page": "generate.html",
+          "target": "#gen-grid"
+        },
+        {
+          "title": "Faster by keyboard",
+          "text": "Press / to write a brief, 1–4 to pick directions and Ctrl or ⌘ + Enter to make them. A live trend makes posts in one click.",
+          "page": "generate.html",
+          "target": "#gen-form"
+        }
+      ]
+    },
+    {
       "id": "2026-11-18-director",
       "date": "2026-11-18",
       "title": "The creative director, ES guidelines and Bring it on-brand",

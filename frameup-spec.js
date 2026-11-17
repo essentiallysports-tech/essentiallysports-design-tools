@@ -9,8 +9,10 @@
   'use strict';
 
   const PENDING_KEY = 'frameup.openSpec.v1';
-  const SUPPORTED = ['cover', 'quote', 'long-quote', 'double-entity-quote', 'stats-single-ent', 'stats-double-ent', 'listicle-type-1', 'listicle-type-2'];
-  const PHOTO_TYPES = ['cover', 'quote', 'long-quote', 'stats-single-ent'];
+  const PENDING_SET_KEY = 'frameup.openSpecSet.v1';
+  const SUPPORTED = ['cover', 'quote', 'long-quote', 'double-entity-quote', 'stats-single-ent', 'stats-double-ent', 'listicle-type-1', 'listicle-type-2', 'player-stat-line', 'team-record'];
+  const PHOTO_TYPES = ['cover', 'quote', 'long-quote', 'stats-single-ent', 'player-stat-line', 'team-record'];
+  const STAT_TEMPLATE_TYPES = ['player-stat-line', 'team-record'];
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
   // Animation frames pause in background tabs; the timer keeps work moving.
   const nextFrame = () => new Promise(resolve => {
@@ -193,9 +195,32 @@
     }
   }
 
+  // Player Stat Line / Team Record: the template's own data model
+  // (social-stat-templates.js), built whole and normalised, never partial.
+  // The logo follows the Sport + Team selects ('auto'), set by applyBrand.
+  function applyStatTemplate(spec) {
+    const f = spec.fields || {};
+    if (spec.postType === 'player-stat-line') {
+      const stats = (Array.isArray(f.stats) ? f.stats : []).slice(0, 7);
+      state.playerStatLineData = ESStatTemplates.playerStatLine.normalizeData({
+        firstName: f.firstName, lastName: f.lastName, opponent: f.opponent || '',
+        statCount: Math.max(1, stats.length),
+        stats: stats.map(stat => ({ value: stat.value, label: stat.label })),
+        logo: { mode: 'auto' },
+      });
+    } else {
+      state.teamRecordData = ESStatTemplates.teamRecord.normalizeData({ record: f.record, subline: f.subline || '', logo: { mode: 'auto' } });
+    }
+    if (typeof syncStatTemplateControls === 'function') syncStatTemplateControls(spec.postType);
+  }
+
   function applyLines(spec) {
     const lines = spec.lines.map(line => String(line ?? ''));
     switch (spec.postType) {
+      case 'player-stat-line':
+      case 'team-record':
+        applyStatTemplate(spec);
+        break;
       case 'listicle-type-1':
       case 'listicle-type-2':
         applyListicle(spec);
@@ -230,7 +255,80 @@
     }
   }
 
+  // ── Team graphic: the photo slot is never blank ──────────────────────
+  // A design with no usable ES photo gets its team's graphic instead: the
+  // team's primary colour with its library logo, large and centred. Built
+  // once per team and reused. Returns an <img> or null (no team, no logo
+  // library, or a logo that will not load cross-origin).
+  const graphicCache = new Map();
+  function loadLogo(src) {
+    return new Promise(resolve => {
+      const img = new Image();
+      if (window.FrameUpLogos?.needsCors?.(src)) img.crossOrigin = 'anonymous';
+      const timer = setTimeout(() => resolve(null), 4000);
+      img.onload = () => { clearTimeout(timer); resolve(img); };
+      img.onerror = () => { clearTimeout(timer); resolve(null); };
+      img.src = src;
+    });
+  }
+  const shade = (hex, amount) => {
+    const n = parseInt(String(hex).replace('#', ''), 16);
+    if (!Number.isFinite(n)) return '#101114';
+    const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => Math.max(0, Math.min(255, Math.round(v * (1 - amount)))));
+    return `#${c.map(v => v.toString(16).padStart(2, '0')).join('')}`;
+  };
+  async function teamGraphic(teamName, sport) {
+    const library = window.FrameUpLogos;
+    if (!teamName || !library) return null;
+    const entry = library.findTeam(teamName, sport) || library.findTeam(teamName);
+    if (!entry) return null;
+    if (graphicCache.has(entry.id)) return graphicCache.get(entry.id);
+    const work = (async () => {
+      const logo = await loadLogo(library.srcFor(entry));
+      if (!logo) return null;
+      const W = 1080;
+      const H = 1350;
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      const primary = /^#[0-9a-f]{6}$/i.test(entry.colors?.[0] || '') ? entry.colors[0] : '#1F2126';
+      const base = ctx.createLinearGradient(0, 0, 0, H);
+      base.addColorStop(0, shade(primary, -0.08));
+      base.addColorStop(0.55, primary);
+      base.addColorStop(1, shade(primary, 0.55));
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, W, H);
+      // A soft light behind the badge, then the badge itself.
+      const glow = ctx.createRadialGradient(W / 2, H * 0.4, 40, W / 2, H * 0.4, W * 0.62);
+      glow.addColorStop(0, 'rgba(255,255,255,0.22)');
+      glow.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+      const box = 600;
+      const ratio = Math.min(box / logo.naturalWidth, box / logo.naturalHeight);
+      const w = logo.naturalWidth * ratio;
+      const h = logo.naturalHeight * ratio;
+      ctx.drawImage(logo, (W - w) / 2, H * 0.4 - h / 2, w, h);
+      try {
+        const img = new Image();
+        img.src = canvas.toDataURL('image/jpeg', 0.92);
+        await img.decode();
+        return img;
+      } catch (error) {
+        return null; // a tainted canvas: no graphic
+      }
+    })();
+    graphicCache.set(entry.id, work);
+    return work;
+  }
+
+  // What the last applied spec showed in its photo slot: 'photo' (an ES
+  // photo), 'team-graphic', 'none' (no photo, no team graphic) or '' (a
+  // template without a photo).
+  let lastPhotoKind = '';
   async function applyPhoto(spec) {
+    lastPhotoKind = '';
     if (!PHOTO_TYPES.includes(spec.postType)) return;
     let img = null;
     if (spec.photo?.url) {
@@ -240,8 +338,14 @@
         img = null;
       }
     }
+    let graphic = false;
+    if (!img && spec.photoFallback !== false) {
+      img = await teamGraphic(state.team, state.sport).catch(() => null);
+      graphic = Boolean(img);
+    }
+    lastPhotoKind = img ? (graphic ? 'team-graphic' : 'photo') : 'none';
     state.photo = img;
-    state.photoName = img ? (spec.photo.title || 'ES image') : '';
+    state.photoName = img ? (graphic ? `${state.team} team graphic` : (spec.photo.title || 'ES image')) : '';
     state.photoOffsetX = 0;
     state.photoOffsetY = 0;
     state.photoScale = 1;
@@ -301,6 +405,12 @@
     await applyPhoto(spec);
     saveTextContext();
     render();
+    // Stat templates draw the team logo; wait for it (as export does) so the
+    // preview never shows the "LOGO" placeholder.
+    if (STAT_TEMPLATE_TYPES.includes(spec.postType) && typeof isStatTemplateLogoLoading === 'function') {
+      for (let i = 0; i < 50 && isStatTemplateLogoLoading(); i += 1) await wait(80);
+      render();
+    }
     flushPendingRender();
     await nextFrame();
   }
@@ -312,14 +422,84 @@
     return document.getElementById('preview').toDataURL(type, quality);
   });
 
+  // The preview plus what filled its photo slot (see lastPhotoKind).
+  const renderWithInfo = (spec, type = 'image/jpeg', quality = 0.88) => serial(async () => {
+    await applySpec(spec);
+    return { dataUrl: document.getElementById('preview').toDataURL(type, quality), photo: lastPhotoKind };
+  });
+
   // Full-size export through the normal export path (also logs the export).
   const exportSpec = spec => serial(async () => {
     await applySpec(spec);
     downloadImage();
   });
 
+  // A set (a carousel): every design rendered by the same export path as a
+  // single download (same size, type and quality, so each file's bytes match
+  // its own download), named 01-..., 02-... in order, saved as one ZIP.
+  // Returns { filename, count, files }.
+  const exportSet = (specs, name = 'frameup-set') => serial(async () => {
+    if (!window.FrameUpZip) throw new Error('The ZIP writer did not load. Reload and try again.');
+    const list = (Array.isArray(specs) ? specs : []).filter(spec => spec && SUPPORTED.includes(spec.postType)).slice(0, 10);
+    if (!list.length) throw new Error('Nothing to export.');
+    const files = [];
+    for (const [index, spec] of list.entries()) {
+      await applySpec(spec);
+      const { offscreen, filename, workspace, exportQuality } = renderExportImage();
+      const blob = await new Promise((resolve, reject) => offscreen.toBlob(b => (b ? resolve(b) : reject(new Error('Export failed.'))), workspace.exportType, exportQuality));
+      const clean = filename.replace(/-slide-\d+/, '');
+      files.push({ name: `${String(index + 1).padStart(2, '0')}-${clean}`, data: new Uint8Array(await blob.arrayBuffer()), date: new Date() });
+    }
+    const bytes = window.FrameUpZip.zip(files);
+    const slug = String(name || 'frameup-set').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'frameup-set';
+    const filename = `${slug}.zip`;
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    return { filename, count: files.length, files: files.map(file => file.name) };
+  });
+
+  // "Open as carousel" on Generate: several specs fill the empty carousel
+  // slides in order (slides with work in them are never overwritten).
+  function openPendingSet() {
+    let specs = null;
+    try {
+      specs = JSON.parse(sessionStorage.getItem(PENDING_SET_KEY) || 'null');
+      sessionStorage.removeItem(PENDING_SET_KEY);
+    } catch (error) {
+      specs = null;
+    }
+    if (!Array.isArray(specs) || !specs.length) return false;
+    const restored = window.FrameUpAutosave?.restored || Promise.resolve(null);
+    restored.catch(() => null).then(async () => {
+      await whenReady();
+      if (activeWorkspace !== 'instagram') activateWorkspace('instagram');
+      const empty = instagramSlideStates.map((slide, index) => (slideHasContent(slide) ? -1 : index)).filter(index => index >= 0);
+      const placed = specs.slice(0, empty.length);
+      for (const [i, spec] of placed.entries()) {
+        await serial(async () => {
+          switchInstagramSlide(empty[i]);
+          await applySpec(spec);
+        });
+      }
+      if (placed.length) await serial(async () => { switchInstagramSlide(empty[0]); render(); });
+      if (typeof updateCarouselContentDots === 'function') updateCarouselContentDots();
+      const left = specs.length - placed.length;
+      if (!placed.length) setStatus('Your carousel slides are full. Clear a slide, then open the set again from Generate.', 'err');
+      else setStatus(left ? `Opened ${placed.length} slides from Generate. ${left} didn't fit: clear a slide for the rest.` : `Opened ${placed.length} slides from Generate. Edit any, then export.`, left ? 'err' : 'ok');
+    }).catch(error => setStatus(error.message || 'The set could not be opened.', 'err'));
+    return true;
+  }
+
   // "Edit" on the Generate page stores the spec, then opens the editor.
   function openPending() {
+    if (openPendingSet()) return;
     let spec = null;
     try {
       spec = JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null');
@@ -345,6 +525,6 @@
   // The brand kit's leagues and teams, for Generate's per-card team picker.
   const brandOptions = () => getSports().map(sport => ({ sport, teams: getTeams(sport) }));
 
-  window.FrameUpSpec = Object.freeze({ PENDING_KEY, SUPPORTED, ready: whenReady, apply, renderToDataUrl, exportSpec, generatedFor, brandOptions });
+  window.FrameUpSpec = Object.freeze({ PENDING_KEY, PENDING_SET_KEY, SUPPORTED, ready: whenReady, apply, renderToDataUrl, renderWithInfo, exportSpec, exportSet, generatedFor, brandOptions });
   openPending();
 })();
