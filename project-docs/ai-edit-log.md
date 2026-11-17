@@ -17,6 +17,16 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-19 — Trends board UI pass: compact rows, fixed action slots, tidy toolbar (branch feature/trends-ui)
+- Status: `[committed on feature/trends-ui — not pushed]`. Asked by Suhail ("please fix this UI", list and cards screenshots). Audit: `project-docs/hero-audit-trends-ui.md`.
+- **Rows (cards + list, one markup):** title first (2-line clamp), one meta line (Hot/Rising, Google volume, source, age, sources), storyline as an inline "N more" toggle (list opens below), why-now stats in secondary ink. Card media 96px (was 112), list tile 40px; crests/wordmarks shown whole (`TrendsLogic.isLogoImage`, Wikipedia SVG/"logo" files) on a padded white tile. No always-on gradient rim (`ais-card` dropped): quiet border, hover lift, blue ring only for the open kit, focus ring for keyboard focus.
+- **Actions:** Design post + five icon buttons in fixed slots, same order everywhere (`TrendsLogic.rowActions`): Post kit, Reel, Video ad, Shortlist, Read. Video ad stays in its slot, disabled with the reason, for non-NFL/CFB/MLB; tooltips (`data-tip`) with the shortcut. Labels show on wide cards and fold into tooltips when narrow; "⋯" menu (role=menu, arrows/Home/End/Esc) holds Reel/Video/Read (and Shortlist on phones). Container queries on `.trends-list`, so it follows the column, not the window.
+- **Headline ideas:** hidden until they exist; a ghost "Headline ideas" button asks (same `[data-ai]` path, no new AI call site); then 3 compact rows with copy. Quick (rule) ideas only after AI says limited/off/error. Post kit unchanged.
+- **Toolbar:** status + counts left; newsletter, layout toggle + shortcuts (now one group), AI angles and Refresh (both secondary) at 40px; labels fold to icon+tooltip below 860px of toolbar width. Phone: status + AI/Refresh/help, then newsletter + layout, then counts.
+- **Chips:** light 12px counts, no separator; Shortlist is a normal filter chip with a bookmark (count only when > 0); right-edge fade where they scroll. **Headings:** ES section-title scale (15/700, sentence case), "See all" never clipped.
+- `generate.html`: only the three `?v=` cache keys (trends.css, trends-logic.js, trends-view.js → `20261118-trends-ui`). Toolbar class tweaks are done from trends-view.js so the shared markup stays with gen-ui.
+- Tests: `scripts/test-trends-hero.mjs` +3 checks (row actions, logo detection, UI wiring). Suite at baseline. Release note `2026-11-19-trends-ui`.
+
 ### 2026-11-19 — Generate asset service: AI backgrounds and concept art, cut-outs, varied ES photos (branch feature/gen-assets)
 - Status: `[committed on feature/gen-assets — not pushed]`. Spec: `scratchpad/gen-creative-contract.md` (agent gen-assets). Docs: `project-docs/gen-assets.md`.
 - New `netlify/functions/_asset-service.js` (`generateBackground`, `generateConceptArt`, `cutout`, `findPhotos`, `status`), `netlify/functions/gen-assets.js` + `api/gen-assets.js` (`GET/POST /api/gen-assets`, vercel.json maxDuration 60), browser client `frameup-assets.js` (`window.FrameUpAssets`, not loaded by any page yet: the gen-creative composer loads it).
