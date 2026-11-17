@@ -183,44 +183,8 @@
       "schedule": "0 13 * * *"
     },
     {
-      "path": "/api/clips-prefetch?batch=1",
+      "path": "/api/clips-prefetch?batch=1&chain=1",
       "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/clips-prefetch?batch=2",
-      "schedule": "5 10 * * *"
-    },
-    {
-      "path": "/api/clips-prefetch?batch=3",
-      "schedule": "10 10 * * *"
-    },
-    {
-      "path": "/api/clips-prefetch?batch=4",
-      "schedule": "15 10 * * *"
-    },
-    {
-      "path": "/api/clips-prefetch?batch=5",
-      "schedule": "20 10 * * *"
-    },
-    {
-      "path": "/api/clips-prefetch?batch=6",
-      "schedule": "25 10 * * *"
-    },
-    {
-      "path": "/api/clips-prefetch?batch=7",
-      "schedule": "30 10 * * *"
-    },
-    {
-      "path": "/api/clips-prefetch?batch=8",
-      "schedule": "35 10 * * *"
-    },
-    {
-      "path": "/api/clips-prefetch?batch=9",
-      "schedule": "40 10 * * *"
-    },
-    {
-      "path": "/api/clips-prefetch?batch=10",
-      "schedule": "45 10 * * *"
     }
   ]
 }

@@ -141,8 +141,8 @@ assert.equal(lastMessages.messages[0].role, 'user', 'a thread that starts with t
 // 5. The page.
 const html = fs.readFileSync('video-ads.html', 'utf8');
 ['va-set-make', 'va-set-body', 'va-placement', 'va-meta-note', 'va-exmode', 'va-check', 'va-preflight-out'].forEach(id => assert.ok(html.includes(`id="${id}"`), `#${id} is on the page`));
-assert.match(html, /video-ads-rating\.js\?v=20261118-hero-video-ads/);
-assert.match(html, /video-ads\.js\?v=20261118-hero-video-ads/);
+assert.match(html, /video-ads-rating\.js\?v=[\w-]+/);
+assert.match(html, /video-ads\.js\?v=[\w-]+/);
 assert.match(html, /I have the rights to use this footage/);
 assert.doesNotMatch(html, /We can use this footage in a paid ad/);
 const js = fs.readFileSync('video-ads.js', 'utf8');

@@ -433,13 +433,14 @@ const { batches, maxUsd } = C.settings({});
 assert.equal(batches, 10);
 assert.equal(maxUsd, 0.75, 'default daily AI cap');
 assert.equal(C.settings({ CLIPS_PREFETCH_MAX_USD: '0' }).maxUsd, 0, 'a cap of 0 means no AI');
-assert.equal(crons.length, batches, 'one cron per batch');
-crons.forEach((c, i) => {
-  assert.equal(c.path, `/api/clips-prefetch?batch=${i + 1}`);
-  const [min, hour, dom, mon, dow] = c.schedule.split(' ');
-  assert.ok(/^\d+$/.test(min) && /^\d+$/.test(hour) && dom === '*' && mon === '*' && dow === '*', `${c.schedule} runs once a day (Hobby-safe)`);
-  assert.ok(Number(hour) >= 9 && Number(hour) <= 11, 'about 5-6am ET');
-});
+// One daily cron starts batch 1 and each batch chains the next (Hobby allows 2 crons).
+assert.equal(crons.length, 1, 'one daily cron that chains the batches');
+assert.equal(crons[0].path, '/api/clips-prefetch?batch=1&chain=1');
+{
+  const [min, hour, dom, mon, dow] = crons[0].schedule.split(' ');
+  assert.ok(/^\d+$/.test(min) && /^\d+$/.test(hour) && dom === '*' && mon === '*' && dow === '*', `${crons[0].schedule} runs once a day (Hobby-safe)`);
+}
+assert.ok(vercel.crons.length <= 2, 'Hobby plan allows 2 crons');
 assert.equal(crons[0].schedule, '0 10 * * *');
 assert.equal(vercel.functions['api/clips-prefetch.js'].maxDuration, 60);
 assert.ok(fs.existsSync('api/clips-prefetch.js'));

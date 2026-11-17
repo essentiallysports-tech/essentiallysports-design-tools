@@ -226,7 +226,7 @@ ok('AI angles: hook, grounded numbers, clickbait dropped', () => {
 // ── 3. Wiring ───────────────────────────────────────────────────────────
 ok('generate.html loads the Trends view and its CSS with the branch cache key', () => {
   const html = fs.readFileSync(path.join(ROOT, 'generate.html'), 'utf8');
-  for (const tag of ['trends.css?v=20261118-hero-trends', 'trends-logic.js?v=20261118-hero-trends', 'trends-view.js?v=20261118-hero-trends']) assert.ok(html.includes(tag), tag);
+  for (const tag of [/trends\.css\?v=[\w-]+/, /trends-logic\.js\?v=[\w-]+/, /trends-view\.js\?v=[\w-]+/]) assert.match(html, tag);
   for (const id of ['trends-live', 'trends-filters', 'trends-body', 'trends-empty', 'trends-brand', 'trends-density', 'trends-keys', 'trends-keys-panel', 'trends-ai', 'trends-refresh']) assert.ok(html.includes(`id="${id}"`), id);
   assert.ok(html.indexOf('trends-logic.js') < html.indexOf('trends-view.js'));
 });

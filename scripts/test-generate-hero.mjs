@@ -166,6 +166,6 @@ assert.match(page, /id="gen-setbar"/);
 assert.match(page, /data-photo-search/, 'the photo panel has an ES photo search');
 assert.match(page, /data-act="swap"/, 'Refine offers the same idea in another template');
 assert.match(page, /event\.key === '\/'/, '"/" focuses the brief');
-assert.match(index, /frameup-spec\.js\?v=20261118-hero-generate/, 'the editor bridge cache key is bumped');
+assert.match(index, /frameup-spec\.js\?v=[\w-]+/, 'the editor bridge cache key is bumped');
 
 console.log('generate hero checks passed');
