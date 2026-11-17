@@ -57,6 +57,9 @@
 <link rel="stylesheet" href="frameup-posted.css?v=20261118-rel1">
 <script src="frameup-impact.js?v=20261118-rel1"></script>
 <script src="frameup-posted.js?v=20261118-rel1"></script>
+<link rel="stylesheet" href="generate-creative.css?v=20261118-gen-creative">
+<script src="frameup-compose.js?v=20261118-gen-creative" defer></script>
+<script src="generate-creative.js?v=20261118-gen-creative" defer></script>
   <style>
     html:not([data-theme="dark"]) body.gen-body { background: #fff; }
     .gen-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 32px 0 72px; font-family: var(--es-font-ui); color: var(--es-ink); }
@@ -2697,6 +2700,13 @@
           return;
         }
         if (busy) return;
+        // Creative look (generate-creative.js): composed designs, art-directed.
+        if (window.FrameUpCreative?.isOn?.()) {
+          lastBrief = brief;
+          els.director.hidden = true;
+          document.getElementById('gen-critique').hidden = true;
+          return window.FrameUpCreative.run(brief);
+        }
         if (brief !== session.brief) Object.assign(session, { brief, runId: '', directions: [], selected: new Set(), less: [], more: [] });
         session.formats = chosen === 'auto' ? [] : [chosen];
         lastBrief = brief;
@@ -3456,6 +3466,11 @@
         }
       });
 
+      // The page's pieces the Creative look reuses (generate-creative.js).
+      window.FrameUpGenerate = Object.freeze({
+        els, ICON, esc, callApi, setBusy, setNotice, setSummary, startProgress, restoreFocus, showResearch, rememberBrief, track,
+        steer: () => steerBody(), isBusy: () => busy, rendererFrame: () => document.querySelector('iframe.gen-renderer'), renderer,
+      });
       selectFormat('auto');
       analyzeBrief();
       renderQuick();
