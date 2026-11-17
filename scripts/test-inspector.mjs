@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Inspector (frameup-inspector.js + .css): the pure helpers (layer → section,
+// Inspector (frameup-inspector.js + the redesign section of studio-inspector.css): the pure helpers (layer → section,
 // the selection strip's words, panel width, keyboard resize, scrub, roving
 // focus) and the wiring in index.html. Also checks that the inspector never
 // draws on the canvas or touches export / state code, and that it leaves the
@@ -83,11 +83,14 @@ assert.equal(I.nextIndex(0, 'ArrowDown', 0), -1);
 // ─── wiring and boundaries ───────────────────────────────────────────────
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const js = fs.readFileSync(path.join(root, 'frameup-inspector.js'), 'utf8');
-const css = fs.readFileSync(path.join(root, 'frameup-inspector.css'), 'utf8');
-assert.match(html, /<link rel="stylesheet" href="frameup-inspector\.css\?v=[^"]+">/, 'CSS is linked');
+const fullCss = fs.readFileSync(path.join(root, 'studio-inspector.css'), 'utf8');
+const css = fullCss.slice(fullCss.indexOf('Inspector redesign (2026-11-20'));
+assert.ok(css.length > 1000, 'the redesign section is in studio-inspector.css');
+assert.match(html, /<link rel="stylesheet" href="studio-inspector\.css\?v=[^"]+">/, 'CSS is linked');
+assert.doesNotMatch(html, /frameup-inspector\.css/, 'no extra stylesheet request before first paint');
 assert.match(html, /<script src="frameup-inspector\.js\?v=[^"]+" defer><\/script>/, 'JS is deferred');
 assert.ok(html.indexOf('frameup-inspector.js') > html.indexOf('frameup-editor-ui.js'), 'loads after the editor UI (it reads its selection)');
-assert.ok(html.indexOf('frameup-inspector.css') < html.indexOf('</head>'), 'CSS in the head: no restyle flash');
+assert.ok(html.indexOf('studio-inspector.css') < html.indexOf('</head>'), 'CSS in the head: no restyle flash');
 // Never draws, exports or writes design state.
 assert.doesNotMatch(js, /getContext\(|toDataURL|toBlob|renderExportImage|drawCanvas/);
 assert.doesNotMatch(js, /\bstate\.[a-zA-Z]+\s*=(?!=)/, 'no writes to editor state');

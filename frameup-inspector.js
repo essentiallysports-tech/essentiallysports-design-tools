@@ -1,5 +1,5 @@
 // FrameUp inspector (the editor's right-hand panel on Social Media, YouTube
-// and Newsletter). Styling lives in frameup-inspector.css; this file adds:
+// and Newsletter). Styling lives in studio-inspector.css; this file adds:
 //
 //   1. Selection first: a strip at the top of the panel says what you are
 //      editing (the whole design, or the layer picked in the Layers panel or
@@ -174,7 +174,9 @@
       handle.setAttribute('aria-valuemin', String(WIDTH.min));
       handle.setAttribute('aria-valuemax', String(WIDTH.max));
       handle.title = 'Drag to resize · double-click to reset';
-      panel().insertAdjacentElement('beforebegin', handle); // tab order: canvas, handle, panel
+      // In <body>: .app keeps an identity transform from its entry animation,
+      // which would make it the box a fixed element is placed in.
+      doc.body.appendChild(handle);
       handle.addEventListener('pointerdown', event => {
         if (event.button !== 0) return;
         event.preventDefault();
@@ -207,7 +209,13 @@
       handle.hidden = !show;
       if (!show) { handle.style.display = 'none'; return; }
       const r = p.getBoundingClientRect();
-      handle.style.cssText = `position:fixed;display:block;top:${Math.round(r.top)}px;height:${Math.round(r.height)}px;left:${Math.round(r.left - 4)}px;`;
+      const place = (left, top) => { handle.style.cssText = `position:fixed;display:block;top:${Math.round(top)}px;height:${Math.round(r.height)}px;left:${Math.round(left)}px;`; };
+      place(r.left - 4, r.top);
+      // A transformed ancestor becomes the box "fixed" is measured from: correct by what landed.
+      const got = handle.getBoundingClientRect();
+      const dx = got.left - (r.left - 4);
+      const dy = got.top - r.top;
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) place(r.left - 4 - dx, r.top - dy);
       handle.setAttribute('aria-valuenow', String(Math.round(r.width)));
     }
 
