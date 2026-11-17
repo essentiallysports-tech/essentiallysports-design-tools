@@ -18,16 +18,22 @@
 //               team or moment and colour theme, plus lessons from past ads;
 //               common problems are repaired in code before the model retries.
 //               Each variant also carries the fields of the no-footage styles
-//               (stat, headlines, claims, quote…) when the brief supports them,
-//               and the reply has a style `suggestion`
+//               (Today's 3 headlines, Us vs Them claims) when the brief supports
+//               them, and the reply has a style `suggestion`. `set: true` asks for
+//               a daily set: 3 angles, each in the style that fits it best.
+//               Variants are ranked by the free rubric checks (copyChecks).
+//               Identical requests are served from a 10-minute cache.
 //   suggest-style  the style suggestion alone, no model call (rules + what
 //               this brand's exports favour)
 //   chat        the Video Ads assistant: a reply, plus an optional change to the ad
-//   grammar     grammar / spelling / punctuation fixes from the cheapest model;
+//   grammar     grammar / spelling / punctuation fixes from Haiku (main tier);
 //               each must quote its field exactly and keep numbers and brand
 //               words; 10-minute cache
 //   moments-with-clips  the top ~10 trending moments that have fresh, verified
 //               clips (one capped search for all of them, shared 30-min cache)
+//   claims      the Us vs Them claims per brand (admin overrides from
+//               frameup_video_ad_claims, else video-ads-brands.js) + canEdit
+//   save-claims an admin edits / approves one brand's claims (RLS: admins only)
 //   research    removed (410)
 //
 // Every request needs a signed-in ES user; AI modes count toward the hourly limit.
@@ -36,6 +42,7 @@ const { getTrends } = require('./trend-design.js');
 const { _helpers: tweet } = require('./tweet-oembed.js');
 const { aiText, aiWebResearch, gatewayConfigured, isBudgetError, userOverHourlyLimit, aiSpendGate, featureDisabled, featureOffMessage } = require('./_ai-gateway.js');
 const RULES = require('../../frameup-rules.js');
+const rest = require('./_supabase-rest.js');
 const BRANDS = require('../../video-ads-brands.js');
 const TEAMS = require('../../video-ads-teams.js');
 const STYLE_RULES = require('../../video-ads-styles.js');
@@ -764,9 +771,9 @@ const SL = STYLE_RULES.LIMITS;
 const words = text => String(text || '').split(/\s+/).filter(Boolean).length;
 
 // What the ad is about: brand, sport, team(s) or moment, colour theme, notes.
-// Only this text may supply numbers, quotes and headlines; claims about the
+// Only this text may supply numbers and headlines; claims about the
 // newsletter come only from the brand's approved list.
-function copyContext(body) {
+function copyContext(body, { claims = null } = {}) {
   const brand = BRANDS.byId(body.brandId);
   const sport = AD_SPORTS.includes(body.sport) ? body.sport : brand.sport;
   const trend = trendInput(body.trend || (body.title ? { title: body.title } : {}));
@@ -781,20 +788,17 @@ function copyContext(body) {
   // Headlines the editor already has (Today's 3), and other trending titles the page sent.
   const typedItems = strings(body.items, 3, 200);
   const headlines = [...new Set([...trend.related.map(r => r.title), ...strings(body.headlines, 8, 200), ...typedItems].filter(Boolean))].slice(0, 10);
-  // A number or quote the editor typed into the style's fields is their input too.
-  const typedQuote = clean(body.quote, 400);
-  const typed = [clean(body.stat, 24), typedQuote].filter(Boolean);
-  const factsText = [trend.title, ...headlines, ...teams, notes, clipText, ...typed].filter(Boolean).join(' ');
-  const quotes = [...(typedQuote ? [typedQuote] : []), ...STYLE_RULES.extractQuotes([notes, clipText].join(' '))].slice(0, 3);
+  const factsText = [trend.title, ...headlines, ...teams, notes, clipText].filter(Boolean).join(' ');
   const facts = {
     text: factsText,
-    // Verbatim sources for quotes and grounding for headlines.
-    sources: [notes, clipText, trend.title, ...headlines, ...typed].filter(Boolean),
+    // Grounding for headlines.
+    sources: [notes, clipText, trend.title, ...headlines].filter(Boolean),
     headlines: [trend.title, ...headlines].filter(Boolean),
-    claims: (brand.verifiedClaims || []).slice(0, 12),
+    // The brand's claims: an admin's saved list (claimsFor) or the file's.
+    claims: (Array.isArray(claims) ? claims : brand.verifiedClaims || []).slice(0, 12),
     teams,
   };
-  return { brand, sport, trend, teams, color, notes, clipText, factsText, facts, headlines, quotes, typedItems };
+  return { brand, sport, trend, teams, color, notes, clipText, factsText, facts, headlines, typedItems };
 }
 
 function contextLines(ctx) {
@@ -828,44 +832,21 @@ const cutWords = (text, max) => {
 function styleFieldsOf(raw) {
   return {
     offer: clean(raw?.offer, 200),
-    stat: clean(raw?.stat, 24),
-    statLabel: clean(raw?.statLabel, 160),
-    statSource: clean(raw?.statSource, 80),
     listTitle: clean(raw?.listTitle, 120),
     items: strings(raw?.items, 3, 200),
     them: strings(raw?.them, 3, 80),
     us: strings(raw?.us, 3, 80),
-    quote: clean(raw?.quote, 400),
-    speaker: clean(raw?.speaker, 80),
-    quoteContext: clean(raw?.quoteContext, 80),
   };
 }
 const GROUP_FIELDS = {
-  stat: ['stat', 'statLabel', 'statSource'],
   today3: ['listTitle', 'items'],
   versus: ['them', 'us'],
-  quote: ['quote', 'speaker', 'quoteContext'],
 };
 const emptyOf = field => (['items', 'them', 'us'].includes(field) ? [] : '');
-// The speaker must be named in the brief (never attribute words to someone new).
-const speakerKnown = (speaker, facts) => {
-  const names = String(speaker || '').split(/\s+/).filter(w => /^\p{Lu}/u.test(w));
-  const hay = facts.sources.join(' ').toLowerCase();
-  return names.length > 0 && names.every(n => hay.includes(n.toLowerCase().replace(/[^\p{L}'’-]/gu, '')));
-};
-
 // Problems with one style's fields ([] = fine). `known` = numbers in the facts.
 function groupErrors(group, f, facts, known) {
   const errors = [];
   const numbersOk = text => STYLE_RULES.numberTokens(text).every(n => known.has(n));
-  if (group === 'stat') {
-    if (!f.stat || !STYLE_RULES.numberTokens(f.stat).length) errors.push('stat must be a number from the moment or your notes');
-    else if (f.stat.length > SL.statChars) errors.push(`stat "${f.stat}" is over ${SL.statChars} characters`);
-    else if (!numbersOk(f.stat)) errors.push(`the stat ${f.stat} is not in the moment or your notes`);
-    if (!f.statLabel) errors.push('statLabel must say what the number counts');
-    else if (words(f.statLabel) > SL.statLabelWords) errors.push(`statLabel has ${words(f.statLabel)} words (max ${SL.statLabelWords})`);
-    if (!numbersOk(f.statLabel)) errors.push('statLabel has a number that is not in the facts');
-  }
   if (group === 'today3') {
     if (f.items.length < 3) errors.push(`today3 needs 3 headlines (got ${f.items.length})`);
     if (words(f.listTitle) > SL.listTitleWords) errors.push(`listTitle has ${words(f.listTitle)} words (max ${SL.listTitleWords})`);
@@ -884,14 +865,6 @@ function groupErrors(group, f, facts, known) {
       if (STYLE_RULES.numberTokens(t).length) errors.push(`"${t}" has a number`);
     });
     f.us.forEach(u => { if (!STYLE_RULES.approvedClaim(u, facts.claims)) errors.push(`"${u}" is not an approved claim`); });
-  }
-  if (group === 'quote') {
-    if (!f.quote) errors.push('quote is missing');
-    else if (words(f.quote) > SL.quoteWords) errors.push(`quote has ${words(f.quote)} words (max ${SL.quoteWords})`);
-    else if (!STYLE_RULES.isVerbatim(f.quote, facts.sources)) errors.push('quote must be copied word for word from the notes or the clip');
-    if (!f.speaker) errors.push('speaker is missing');
-    else if (!speakerKnown(f.speaker, facts)) errors.push(`speaker "${f.speaker}" is not named in the brief`);
-    if (words(f.quoteContext) > SL.quoteContextWords) errors.push(`quoteContext has ${words(f.quoteContext)} words (max ${SL.quoteContextWords})`);
   }
   return errors;
 }
@@ -937,13 +910,13 @@ function checkVariant(raw, brand, factsIn, wantStyle) {
     else if (words(f.offer) > SL.offerWords) errors.push(`offer has ${words(f.offer)} words (max ${SL.offerWords})`);
     else if (!/\bfree\b/i.test(f.offer)) errors.push('offer must say it is free');
   }
-  const texts = [headline, ...body, f.offer, f.statLabel, f.listTitle, ...f.items, ...f.them, f.quoteContext];
+  const texts = [headline, ...body, f.offer, f.listTitle, ...f.items, ...f.them];
   texts.filter(Boolean).forEach(text => {
     const hit = RULES.BANNED.find(rule => rule.re.test(text));
     if (hit) errors.push(`"${text.slice(0, 60)}" breaks the ES style (${hit.why})`);
   });
   // Today's 3 titles may say "3" ("3 things NFL fans need to know").
-  [headline, ...body, f.offer, f.listTitle, f.quoteContext].forEach(text => numberTokens(text).forEach(n => {
+  [headline, ...body, f.offer, f.listTitle].forEach(text => numberTokens(text).forEach(n => {
     if (!known.has(n) && !(text === f.listTitle && n === '3')) errors.push(`the number ${n} is not in the moment or your notes`);
   }));
   return { variant: { style, headline, highlight, body, cta, ...f, why: clean(raw?.why, 200) }, errors: [...new Set(errors)] };
@@ -1102,9 +1075,8 @@ function autoFix(input, brand, factsIn, wantStyle) {
   const f = styleFieldsOf(input);
   // (known: the numbers in the facts, from above.)
   const own = GROUP_FIELDS[style] ? style : '';
-  const ownOr = (group, note) => (group === own ? note : '');
   const scrubField = (text, field) => (text ? scrub(text, field, true) : text);
-  ['offer', 'statLabel', 'listTitle', 'quoteContext'].forEach(k => { f[k] = scrubField(f[k], k); });
+  ['offer', 'listTitle'].forEach(k => { f[k] = scrubField(f[k], k); });
   ['items', 'them'].forEach(k => { f[k] = f[k].map(t => scrubField(t, k)).filter(Boolean); });
   // Offer: short, and it says free (the default offer when there is none).
   if (!CLASSIC.includes(style)) {
@@ -1112,20 +1084,6 @@ function autoFix(input, brand, factsIn, wantStyle) {
     if (words(f.offer) > SL.offerWords) { f.offer = trimToWords(f.offer, SL.offerWords); fix('offer', `Trimmed the offer to ${words(f.offer)} words`); }
     if (!/\bfree\b/i.test(f.offer)) { f.offer = `${f.offer.replace(/[.!\s]*$/, '')}. Free.`; fix('offer', 'Added “Free.” to the offer'); }
   }
-  // Stat: an exact number from the facts, or nothing.
-  if (f.stat) {
-    const tokens = STYLE_RULES.numberTokens(f.stat);
-    if (!tokens.length || tokens.some(n => !known.has(n))) {
-      f.stat = '';
-      const note = ownOr('stat', 'Dropped a stat that is not in the input');
-      if (note) fix('invented_number', note);
-    } else if (f.stat.length > SL.statChars) {
-      const m = f.stat.match(/[.\d][\d,]*(?:\.\d+)?%?/);
-      if (m && m[0].length <= SL.statChars) { f.statLabel = f.statLabel || f.stat.replace(m[0], '').trim(); f.stat = m[0]; fix('stat', `Kept just the number: ${m[0]}`); }
-    }
-  }
-  if (words(f.statLabel) > SL.statLabelWords) { f.statLabel = cutWords(f.statLabel, SL.statLabelWords); if (own === 'stat') fix('stat', 'Shortened what the number counts'); }
-  if (f.statSource && (words(f.statSource) > SL.statSourceWords || !STYLE_RULES.groundedIn(f.statSource, facts.sources))) f.statSource = '';
   // Today's 3: short, real stories only.
   if (words(f.listTitle) > SL.listTitleWords) f.listTitle = cutWords(f.listTitle, SL.listTitleWords);
   const items = f.items.map(t => cutWords(t, SL.itemWords));
@@ -1142,22 +1100,21 @@ function autoFix(input, brand, factsIn, wantStyle) {
     f.us = [...new Set([...f.us, ...facts.claims])].slice(0, SL.sideItems);
     fix('claims', 'Used the approved claims');
   }
-  // Quote: word for word from the brief, said by someone it names; else nothing.
-  if (f.quote && !STYLE_RULES.isVerbatim(f.quote, facts.sources)) {
-    f.quote = '';
-    if (own === 'quote') fix('quote', 'Dropped a quote that is not in the notes or the clip');
-  }
-  if (f.speaker && !speakerKnown(f.speaker, facts)) { f.speaker = ''; if (own === 'quote') fix('quote', 'Dropped a speaker the brief does not name'); }
-  if (words(f.quoteContext) > SL.quoteContextWords) f.quoteContext = cutWords(f.quoteContext, SL.quoteContextWords);
   return { raw: { ...input, style, headline, body, highlight, cta, ...f }, fixes };
 }
 
+// The static system prompt (≥ 1,024 characters, identical on every call) is
+// marked cacheable: repeat calls within 5 minutes read it at 10% of the price.
+// The rules mirror the rating rubric in _ad-rating.js (offer clarity, CTA,
+// 55+ readability, trust), so the copy is written to score well.
 const COPY_SYSTEM = [
-  'You write newsletter sign-up video ads for EssentiallySports (ES) newsletters. The ad plays over a sports clip, an animated background in team colours or a photo.',
-  'Formula: hook on the moment or team fans are talking about -> what the newsletter gives them -> it is free. Warm, punchy, plain American English. Second person ("you") or a fan\'s first person ("That\'s why I read ES Dugout").',
+  'You write newsletter sign-up video ads for EssentiallySports (ES) newsletters. The ad plays over a sports clip, an animated background in team colours or a photo. The goal is one thing: a free newsletter sign-up.',
+  'Formula: hook on the moment or team fans are talking about -> what the newsletter gives them -> it is free. Warm, plain American English. Second person ("you") or a fan\'s first person ("That\'s why I read ES Dugout").',
+  'Write to score well with a reviewer who checks: (1) the offer is unmistakable: say it is a free newsletter or a free email and name it; (2) easy reading for fans aged 55+: short common words, sentences of 14 words or fewer, one idea per sentence, no slang, no abbreviations a casual fan would not know; (3) trust: calm and specific, no clickbait questions, no superlatives you cannot back up, no urgency tricks, at most one exclamation mark; (4) the button asks for the sign-up.',
   'Styles: "simple" = all plain paragraphs; "condensed" = a bold condensed headline then plain paragraphs; "highlight" = an uppercase condensed headline where one phrase (copied exactly from the headline) sits on a coloured box, then plain paragraphs.',
-  'Styles that need no footage: "stat" (Stat Card) = one number copied exactly from the facts (stat, max 10 characters), what it counts (statLabel, max 10 words), an optional source named in the notes (statSource); "today3" (Today\'s 3) = a short title (listTitle, max 9 words) and three real stories from the related headlines or notes, each rewritten plainly and calmly in max 9 words (items), no rumours as facts, no "Breaking"; "versus" (Us vs Them) = 2-3 generic things fans put up with (them, max 5 words each, never a named outlet, person or brand) and 2-3 claims about the newsletter copied exactly from the approved claims (us); "quote" (Quote Card) = a quote copied word for word from the notes or the clip text (max 22 words), the speaker named there, and a short context (quoteContext, max 8 words, e.g. "after Sunday\'s win"). Every no-footage style also has an offer line (offer, max 16 words) that says it is free.',
-  'Headline up to 22 words, 1-3 short paragraphs, under 95 words in all. Never invent stats, scores, quotes, headlines or subscriber counts: use numbers and quotes only if they appear in the moment, the clip or the editor\'s notes, and leave a style\'s fields empty when its facts are missing. Never imply a player or coach endorses the newsletter. No emojis, hashtags, links, "Breaking" or hype words.',
+  'Styles that need no footage: "today3" (Today\'s 3) = a short title (listTitle, max 9 words) and three real stories from the related headlines or notes, each rewritten plainly and calmly in max 9 words (items), no rumours as facts, no "Breaking"; "versus" (Us vs Them) = 2-3 generic things fans put up with (them, max 5 words each, never a named outlet, person or brand) and 2-3 claims about the newsletter copied exactly from the approved claims (us). Every no-footage style also has an offer line (offer, max 16 words) that says it is free.',
+  'Headline up to 22 words, 1-3 short paragraphs, under 95 words in all. Never invent stats, scores, quotes, headlines or subscriber counts: use numbers only if they appear in the moment, the clip or the editor\'s notes, and leave a style\'s fields empty when its facts are missing. Never imply a player or coach endorses the newsletter. No emojis, hashtags, links, "Breaking" or hype words.',
+  'Angles that work for these ads: the moment (what just happened and why it matters to fans), save time (one email instead of many apps and feeds), belonging (your team, your Saturday or Sunday ritual), stay ahead (know before your friends). Each variant uses a different angle and says which in "why".',
   'The button text is a short call to sign up (e.g. "SIGN UP ES CFB"); it is separate from the copy.',
 ].join('\n');
 
@@ -1167,7 +1124,7 @@ async function lessons(brand, sport, token, style = '') {
   const got = await withTimeout(learning.lessonsFor({ brandId: brand.id, sport, token }), 3000, null);
   const examples = (Array.isArray(got?.examples) ? got.examples : []).slice(0, 5).map(ex => {
     const out = {
-      style: STYLES.includes(ex?.style) ? ex.style : 'condensed',
+      style: BRANDS.styleOr(ex?.style),
       headline: clean(ex?.headline, 220),
       highlight: clean(ex?.highlight, 120),
       body: strings(Array.isArray(ex?.body) ? ex.body : [ex?.body], 3, 400),
@@ -1201,7 +1158,7 @@ function factsForSuggestion(ctx, body = {}) {
     clipText: ctx.clipText,
     trendTitle: ctx.trend.title,
     related: ctx.headlines,
-    copy: { stat: clean(body.stat, 24), quote: clean(body.quote, 400), items: ctx.typedItems },
+    copy: { items: ctx.typedItems },
     brand: ctx.brand,
     hasClip: body.hasClip === true,
   });
@@ -1212,19 +1169,40 @@ function suggestionFor(ctx, body, ranking, aiPick = '') {
 }
 // A no-footage style asked for without its facts: say so before any AI call.
 function skipReason(style, facts) {
-  if (style === 'stat' && !facts.numbers.length) return { skip: 'no number', error: 'Stat Card needs a number from your notes, the moment or the clip. Add one to the note, or pick another style.' };
-  if (style === 'quote' && !facts.quotes.length) return { skip: 'no quote', error: 'Quote Card needs a quote in your note (in quotation marks) or the clip text. The AI never writes quotes.' };
   if (style === 'today3' && facts.relatedCount < 3) return { skip: 'no headlines', error: 'Today’s 3 needs 3 real headlines: pick a trending moment, or type them into the style’s fields.' };
   if (style === 'versus' && facts.claims < 2) return { skip: 'no claims', error: 'Us vs Them needs at least 2 approved claims for this newsletter.' };
   return null;
 }
 
-const VARIANT_SHAPE = '{"style": "...", "headline": "...", "highlight": "exact words from the headline (highlight style only)", "body": ["...", "..."], "cta": "...", "offer": "...", "stat": "", "statLabel": "", "statSource": "", "listTitle": "", "items": [], "them": [], "us": [], "quote": "", "speaker": "", "quoteContext": "", "why": "one short line on the angle"}';
+const VARIANT_SHAPE = '{"style": "...", "headline": "...", "highlight": "exact words from the headline (highlight style only)", "body": ["...", "..."], "cta": "...", "offer": "...", "listTitle": "", "items": [], "them": [], "us": [], "why": "the angle, in 2-4 words"}';
+
+// Identical copy requests (same brief, style and set flag) within 10 minutes
+// are served free. Saving a brand's claims clears it.
+const COPY_CACHE = new Map();
+const COPY_TTL_MS = 10 * 60 * 1000;
+function copyKey(body) {
+  const pick = k => (Array.isArray(body[k]) ? body[k].slice(0, 12).map(x => (typeof x === 'string' ? x : JSON.stringify(x))) : clean(typeof body[k] === 'object' ? JSON.stringify(body[k]) : body[k], 600));
+  return JSON.stringify(['brandId', 'sport', 'style', 'set', 'trend', 'title', 'team', 'teams', 'color', 'notes', 'clip', 'items', 'headlines', 'hasClip'].map(k => (k === 'set' || k === 'hasClip' ? body[k] === true : pick(k))));
+}
+function copyCached(body) {
+  const hit = COPY_CACHE.get(copyKey(body));
+  return hit && Date.now() - hit.at < COPY_TTL_MS ? { ...hit.value, cached: true, cost: 0 } : null;
+}
+// Best first by the free rubric checks (clear offer, 55+ readability, trust,
+// button); ties keep the model's order.
+function rankVariants(list, brand) {
+  return list.map((v, i) => ({ v, i, n: STYLE_RULES.copyChecks(v, brand).passed })).sort((a, b) => b.n - a.n || a.i - b.i).map(x => x.v);
+}
 
 async function copy(body, track) {
-  const ctx = copyContext(body);
+  const cached = copyCached(body);
+  if (cached) return cached;
+  const claims = await claimsFor(BRANDS.byId(body.brandId), track.token);
+  const ctx = copyContext(body, { claims: claims.claims });
+  ctx.brand = { ...ctx.brand, verifiedClaims: claims.claims, claimsApproved: claims.approved };
   const { brand, facts } = ctx;
   const wantStyle = STYLES.includes(body.style) ? body.style : '';
+  const dailySet = body.set === true && !wantStyle;
   if (!ctx.trend.title && !ctx.teams.length && !ctx.notes && !ctx.color && !ctx.typedItems.length) {
     return { ok: false, status: 400, error: 'Pick a clip, a moment or a colour first, or write a note about the ad.' };
   }
@@ -1236,10 +1214,12 @@ async function copy(body, track) {
   const ask = [
     ...contextLines(ctx),
     ...lessonLines(learned),
-    wantStyle ? `Write 3 variants, all in the "${wantStyle}" style, each a clearly different angle.` : 'Write 3 variants: one "simple", one "condensed", one "highlight", each a clearly different angle.',
+    wantStyle ? `Write 3 variants, all in the "${wantStyle}" style, each a clearly different angle.`
+      : dailySet ? 'This is today\'s ad set: write 3 variants, each a clearly different angle from the list above. For each, choose the style that fits that angle best (use "today3" or "versus" only when their facts are given); use at least two different styles.'
+        : 'Write 3 variants: one "simple", one "condensed", one "highlight", each a clearly different angle.',
     isNew
       ? 'Also give each variant a headline and 1-2 short body paragraphs on the same angle, so it can run in a classic style too.'
-      : 'Also fill the no-footage fields (stat, statLabel, listTitle, items, them, us, quote, speaker, offer) on the same angle wherever the facts support them, so the same copy can run as a Stat Card, Today\'s 3, Us vs Them or Quote Card. Leave a field empty when its facts are missing.',
+      : 'Also fill the no-footage fields (listTitle, items, them, us, offer) on the same angle wherever the facts support them, so the same copy can run as Today\'s 3 or Us vs Them. Leave a field empty when its facts are missing.',
     `Then name the one style that fits this brief best as "bestStyle" (one of: ${STYLES.join(', ')}), with "bestWhy" in under 10 words.`,
     `Reply with JSON only: {"variants": [${VARIANT_SHAPE}], "bestStyle": "...", "bestWhy": "..."}`,
   ].join('\n');
@@ -1251,9 +1231,8 @@ async function copy(body, track) {
   let allErrors = [];
   let aiPick = '';
   for (let attempt = 0; attempt < 2 && good.length < 2; attempt += 1) {
-    // COPY_SYSTEM (~515 tokens) sits at Haiku's cache minimum, so a cache hint
-    // would mostly add write attempts; it is not marked cacheable.
-    const result = await aiText({ tier: 'main', system: COPY_SYSTEM, messages, json: true, maxTokens: 3200, timeoutMs: 30000, track: { ...track, feature: 'video-ads-copy' } });
+    // COPY_SYSTEM is static and over the cache minimum: cached reads cost 10%.
+    const result = await aiText({ tier: 'main', system: COPY_SYSTEM, cacheSystem: true, messages, json: true, maxTokens: 3200, timeoutMs: 30000, track: { ...track, feature: 'video-ads-copy' } });
     cost += result.cost;
     const parsed = extractJson(result.text);
     if (parsed?.skip && !Array.isArray(parsed?.variants)) { lastErrors = [`the AI skipped: ${clean(parsed.skip, 80)}`]; allErrors = [...allErrors, ...lastErrors]; break; }
@@ -1285,12 +1264,80 @@ async function copy(body, track) {
   const lessonsUsed = { examples: learned.examples.length, rules: learned.rules.length };
   const suggestion = suggestionFor(ctx, body, ranking, aiPick);
   if (!good.length) return { ok: false, status: 422, error: 'The AI copy did not pass the ES checks. Try again or add a note.', issues: lastErrors.slice(0, 5), autoFixed, lessons: lessonsUsed, suggestion, cost: money(cost) };
-  return { ok: true, variants: good, autoFixed, lessons: lessonsUsed, suggestion, cost: money(cost) };
+  const value = { ok: true, variants: rankVariants(good, brand), autoFixed, lessons: lessonsUsed, suggestion };
+  if (COPY_CACHE.size > 200) COPY_CACHE.delete(COPY_CACHE.keys().next().value);
+  COPY_CACHE.set(copyKey(body), { at: Date.now(), value });
+  return { ...value, cached: false, cost: money(cost) };
+}
+
+// ─── Us vs Them claims: admin-editable, owner-approved ─────────────────────
+// video-ads-brands.js holds the placeholder claims (claimsApproved: false).
+// An admin can replace them and mark them approved from the page; the row
+// lives in frameup_video_ad_claims (migration 20261118124800, RLS: everyone
+// signed in reads, only is_es_designer_admin() writes). Before the migration
+// runs, or on any error, the file's claims are used.
+const CLAIMS_TTL_MS = 5 * 60 * 1000;
+let claimsCache = { at: 0, rows: null };
+const CLAIM_LIMITS = { min: 2, max: 6, chars: 60 };
+async function claimRows(token) {
+  if (claimsCache.rows && Date.now() - claimsCache.at < CLAIMS_TTL_MS) return claimsCache.rows;
+  try {
+    const rows = await withTimeout(rest.request('frameup_video_ad_claims?select=brand_id,claims,approved,updated_at', { token }), 2500, null);
+    if (!Array.isArray(rows)) return claimsCache.rows || [];
+    claimsCache = { at: Date.now(), rows };
+    return rows;
+  } catch (error) {
+    return claimsCache.rows || [];
+  }
+}
+async function claimsFor(brand, token) {
+  const rows = token ? await claimRows(token) : [];
+  const row = (rows || []).find(r => r && r.brand_id === brand.id);
+  const saved = row && Array.isArray(row.claims) ? row.claims.map(c => clean(c, CLAIM_LIMITS.chars)).filter(Boolean) : [];
+  if (saved.length >= CLAIM_LIMITS.min) return { claims: saved, approved: row.approved === true, source: 'saved', updatedAt: row.updated_at || '' };
+  return { claims: (brand.verifiedClaims || []).slice(), approved: brand.claimsApproved === true, source: 'file', updatedAt: '' };
+}
+async function isAdmin(token) {
+  try { return (await withTimeout(rest.request('rpc/is_es_designer_admin', { method: 'POST', token, body: {} }), 2500, false)) === true; } catch (error) { return false; }
+}
+async function claimsMode(body, track) {
+  const [canEdit, ...lists] = await Promise.all([isAdmin(track.token), ...BRANDS.AD_BRANDS.map(b => claimsFor(b, track.token))]);
+  return { ok: true, canEdit, claims: Object.fromEntries(BRANDS.AD_BRANDS.map((b, i) => [b.id, lists[i]])) };
+}
+function checkClaims(list) {
+  const claims = [...new Set((Array.isArray(list) ? list : []).map(c => clean(c, 200)).filter(Boolean))];
+  if (claims.length < CLAIM_LIMITS.min || claims.length > CLAIM_LIMITS.max) return { error: `Give ${CLAIM_LIMITS.min}-${CLAIM_LIMITS.max} claims.` };
+  const long = claims.find(c => c.length > CLAIM_LIMITS.chars);
+  if (long) return { error: `“${long.slice(0, 40)}…” is over ${CLAIM_LIMITS.chars} characters.` };
+  const banned = claims.find(c => RULES.BANNED.some(rule => rule.re.test(c)));
+  if (banned) return { error: `“${banned}” breaks the ES style.` };
+  return { claims };
+}
+async function saveClaims(body, track) {
+  const brand = BRANDS.AD_BRANDS.find(b => b.id === body.brandId);
+  if (!brand) return { ok: false, status: 400, error: 'Pick a newsletter.' };
+  const checked = checkClaims(body.claims);
+  if (checked.error) return { ok: false, status: 400, error: checked.error };
+  if (!(await isAdmin(track.token))) return { ok: false, status: 403, error: 'Only an admin can change the claims.' };
+  try {
+    await rest.request('frameup_video_ad_claims?on_conflict=brand_id', {
+      method: 'POST', token: track.token, prefer: 'resolution=merge-duplicates,return=minimal',
+      body: [{ brand_id: brand.id, claims: checked.claims, approved: body.approved === true, updated_by: track.email || '' }],
+    });
+  } catch (error) {
+    if (error?.code === 'not_installed') return { ok: false, status: 503, reason: 'not-installed', error: 'Claim editing needs the frameup_video_ad_claims migration. Ask the owner to run it.' };
+    return { ok: false, status: error?.status === 403 ? 403 : 502, error: error?.status === 403 ? 'Only an admin can change the claims.' : 'Couldn’t save the claims. Try again.' };
+  }
+  claimsCache = { at: 0, rows: null };
+  COPY_CACHE.clear();
+  return { ok: true, brandId: brand.id, claims: checked.claims, approved: body.approved === true };
 }
 
 // The style suggestion on its own: no model call, so no AI gate.
 async function suggestStyle(body, track) {
-  const ctx = copyContext(body);
+  const claims = await claimsFor(BRANDS.byId(body.brandId), track.token);
+  const ctx = copyContext(body, { claims: claims.claims });
+  ctx.brand = { ...ctx.brand, verifiedClaims: claims.claims, claimsApproved: claims.approved };
   const ranking = await styleRanking(ctx.brand, ctx.sport, track.token);
   return { ok: true, suggestion: suggestionFor(ctx, body, ranking), ranking };
 }
@@ -1311,17 +1358,25 @@ async function chat(body, track) {
     .filter(m => m.content);
   if (!history.length || history[history.length - 1].role !== 'user') return { ok: false, status: 400, error: 'Write a message first.' };
   const factsText = [ctx.factsText, ...history.filter(m => m.role === 'user').map(m => m.content)].join(' ');
-  const system = [
-    COPY_SYSTEM,
-    'You are the Video Ads assistant inside FrameUp: help the editor shape this ad. Be brief and practical.',
-    'When the editor asks for a change to the ad, include "patch" with only the fields to change (style, headline, highlight, body, cta, offer, stat, statLabel, statSource, listTitle, items, them, us, quote, speaker, quoteContext). For several options, include "variants" (same shape as the copy variants). Otherwise only reply.',
-    'Reply with JSON only: {"reply": "...", "patch": {...} or null, "variants": [...] or null}',
-    '',
+  const claimInfo = await claimsFor(brand, track.token);
+  ctx.facts.claims = claimInfo.claims.slice(0, 12);
+  // The static part (rules + assistant role) is cached; this ad's context
+  // rides in front of the conversation as the first user turn.
+  const context = [
     ...contextLines(ctx),
     ctx.trend.title || ctx.teams.length ? '' : 'No clip or moment picked yet.',
     `Current ad: ${JSON.stringify({ style: layout.style, headline: clean(layout.headline, 300), highlight: clean(layout.highlight, 120), body: strings(layout.body, 3, 500), cta: clean(layout.cta, 40), ...currentStyleFields(layout) })}`,
   ].filter(Boolean).join('\n');
-  const result = await aiText({ tier: 'main', system, messages: history, json: true, maxTokens: 1800, timeoutMs: 25000, track: { ...track, feature: 'video-ads-chat' } });
+  const turns = history[0].role === 'user'
+    ? [{ ...history[0], content: `About this ad:\n${context}\n\n${history[0].content}` }, ...history.slice(1)]
+    : [{ role: 'user', content: `About this ad:\n${context}` }, ...history];
+  const system = [
+    COPY_SYSTEM,
+    'You are the Video Ads assistant inside FrameUp: help the editor shape this ad. Be brief and practical.',
+    'When the editor asks for a change to the ad, include "patch" with only the fields to change (style, headline, highlight, body, cta, offer, listTitle, items, them, us). For several options, include "variants" (same shape as the copy variants). Otherwise only reply.',
+    'Reply with JSON only: {"reply": "...", "patch": {...} or null, "variants": [...] or null}',
+  ].join('\n');
+  const result = await aiText({ tier: 'main', system, cacheSystem: true, messages: turns, json: true, maxTokens: 1800, timeoutMs: 25000, track: { ...track, feature: 'video-ads-chat' } });
   const parsed = extractJson(result.text) || { reply: clean(result.text, 1500) };
   const out = { ok: true, reply: clean(parsed.reply, 1500) || 'Done.', cost: money(result.cost) };
   // A change to the ad passes the same checks as AI copy; fields that fail are dropped and said so.
@@ -1338,7 +1393,7 @@ async function chat(body, track) {
   return out;
 }
 
-// ─── Grammar check (the cheapest model) ────────────────────────────────────
+// ─── Grammar check (Haiku, the main tier) ──────────────────────────────────
 // Grammar, spelling and punctuation only. Every suggestion is checked in code:
 // its `original` must be an exact substring of that field, and it may not
 // change a number or a brand / team name, or simply repeat the original.
@@ -1437,7 +1492,7 @@ async function grammar(body, track) {
     `Newsletter: ${brand.label}.`,
     `Ad copy: ${JSON.stringify({ headline: copyIn.headline, highlight: copyIn.highlight, body: copyIn.body, cta: copyIn.cta })}`,
   ].join('\n');
-  const result = await aiText({ tier: 'light', system: GRAMMAR_SYSTEM, messages: [{ role: 'user', content: ask }], json: true, maxTokens: GRAMMAR.maxTokens, timeoutMs: 20000, track: { ...track, feature: 'video-ads-grammar' } });
+  const result = await aiText({ tier: 'main', system: GRAMMAR_SYSTEM, messages: [{ role: 'user', content: ask }], json: true, maxTokens: GRAMMAR.maxTokens, timeoutMs: 20000, track: { ...track, feature: 'video-ads-grammar' } });
   const parsed = extractJson(result.text);
   const list = Array.isArray(parsed) ? parsed : parsed?.issues;
   const { issues, dropped } = checkGrammarIssues(list, copyIn);
@@ -1466,6 +1521,12 @@ exports.handler = async function handler(event) {
     }
     if (body.mode === 'research') return json(410, { ok: false, error: 'Research was removed.' });
     if (body.mode === 'suggest-style') return json(200, await suggestStyle(body, { email: auth.user.email, token: bearerToken(event.headers) }));
+    // Claims: no model call, so no AI gate. Writes are checked by RLS (admins only).
+    if (body.mode === 'claims') return json(200, await claimsMode(body, { email: auth.user.email, token: bearerToken(event.headers) }));
+    if (body.mode === 'save-claims') {
+      const result = await saveClaims(body, { email: auth.user.email, token: bearerToken(event.headers) });
+      return json(result.ok ? 200 : result.status, result);
+    }
     if (AI_MODES[body.mode]) {
       const token = bearerToken(event.headers);
       // One run id per request: a copy run's retry shares it with the first try.
@@ -1481,6 +1542,11 @@ exports.handler = async function handler(event) {
       // Same for moments-with-clips (shared 30-minute cache).
       if (body.mode === 'moments-with-clips') {
         const cached = await momentsWithClips(body, { ...track, skipAi: true }).catch(() => null);
+        if (cached) return json(200, cached);
+      }
+      // Same for a repeated copy request (10-minute cache).
+      if (body.mode === 'copy') {
+        const cached = copyCached(body);
         if (cached) return json(200, cached);
       }
       // Same for a repeated grammar check (10-minute cache).
@@ -1518,7 +1584,7 @@ exports.handler = async function handler(event) {
 
 exports._test = {
   variantsFrom, isVideoUrl, sizeFromUrl, clipFromPost, trends, checkVariant, autoFix, trimToWords, swapBanned, closestPhrase, copyContext, suggestStyle, skipReason, styleFieldsOf,
-  MODE_FEATURES, COPY_SYSTEM, findClips, momentsWithClips, teamInTitle, MOMENT_CACHE, MOMENTS, looksOld, ageHoursOf, copy, chat, CLIP_CACHE, FIND_CLIPS, grammar, checkGrammarIssues, GRAMMAR_CACHE,
+  MODE_FEATURES, COPY_SYSTEM, COPY_CACHE, copyKey, rankVariants, claimsFor, checkClaims, saveClaims, claimsMode, resetClaims() { claimsCache = { at: 0, rows: null }; }, findClips, momentsWithClips, teamInTitle, MOMENT_CACHE, MOMENTS, looksOld, ageHoursOf, copy, chat, CLIP_CACHE, FIND_CLIPS, grammar, checkGrammarIssues, GRAMMAR_CACHE,
   searchPlan, webPrompt, xQueryFor, xApiSearch, assessClip, freshClip, scoreClip, rankClips, mediaKey, qualityLabel, CLIP_TTL_MS, SOURCES,
   useLearning(mod) { learning = { lessonsFor: async () => ({ examples: [], rules: [] }), styleRankingFor: async () => [], recordEvent: async () => false, ...mod }; },
 };

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Video Ads styles without footage (Stat Card, Today's 3, Us vs Them, Quote
-// Card): layout per size, draw order, the motion timeline, the Meta safe
+// Video Ads styles without footage (Today's 3, Us vs Them; Stat Card and
+// Quote Card were removed on 2026-11-18): layout per size, draw order, the motion timeline, the Meta safe
 // zone, minimum type sizes, contrast, file names for the variant grid and
 // the style suggestion. Text is measured with a stub (width = characters ×
 // size × 0.5) so the test needs no canvas.
@@ -15,9 +15,13 @@ const S = require('../video-ads-styles.js');
 const sizeOf = font => Number(String(font).match(/([\d.]+)px/)[1]);
 const measure = (text, font) => [...String(text)].length * sizeOf(font) * 0.5;
 const logo = { width: 270.45, height: 74.93 };
-const NEW = ['stat', 'today3', 'versus', 'quote'];
+const NEW = ['today3', 'versus'];
 
-assert.deepEqual(B.NEW_STYLES, NEW, 'four new styles, in order');
+assert.deepEqual(B.NEW_STYLES, NEW, 'two no-footage styles, in order');
+assert.ok(!B.STYLES.stat && !B.STYLES.quote, 'Stat Card and Quote Card are gone');
+assert.equal(B.styleOr('stat'), 'highlight', 'saved state naming a removed style falls back to Highlight');
+assert.equal(B.styleOr('quote'), 'highlight');
+assert.equal(B.styleOr('today3'), 'today3');
 assert.deepEqual(B.CLASSIC_STYLES, ['simple', 'condensed', 'highlight']);
 assert.deepEqual(R.STYLE_IDS, NEW, 'the renderer has a layout for each new style');
 NEW.forEach(id => {
@@ -27,20 +31,16 @@ NEW.forEach(id => {
 
 const copyFor = brand => ({
   cta: brand.cta, unsubscribe: true,
-  stat: '.412', statLabel: 'Ohtani’s on-base percentage this month', statSource: 'MLB.com',
-  offer: `Get numbers like this in ${brand.label}. Free.`,
+  offer: `Get the day’s news in ${brand.label}. Free.`,
   listTitle: 'What fans need to know today',
   items: ['Mahomes rallies the Chiefs late in Denver', 'Bears name a new offensive coordinator', 'Lions clinch the NFC North with two weeks left'],
   them: ['Endless hot takes', 'Rumours dressed as news', 'Too many apps'],
   us: brand.verifiedClaims.slice(0, 3),
-  quote: 'We just kept believing in each other, every single snap tonight.', speaker: 'Patrick Mahomes', quoteContext: 'after Sunday’s win',
 });
 const longCopy = brand => ({
   ...copyFor(brand),
-  statLabel: 'His on-base percentage across the whole of the month of September this year',
   offer: `Get every number like this one in ${brand.label}, the free email for fans who want the real story.`,
   items: ['The Kansas City Chiefs rally late again in Denver to stay alive in the race for the top seed', 'Chicago names a brand new offensive coordinator after a long and difficult search', 'Detroit clinches the NFC North with two full weeks of the regular season still left'],
-  quote: 'We just kept believing in each other, every single snap tonight, and that is what this whole group has been about since the first day of camp.',
 });
 
 // ── 1. Layout: every style, size, brand; short and long copy ─────────────
@@ -151,24 +151,6 @@ for (const style of NEW) {
   assert.equal(square.ops.filter(op => op.type === 'box' && Math.abs(op.r - op.w / 2) < 0.01).length, 2, '1:1: two rows');
   assert.ok(square.ops.some(op => op.text === '+1 MORE IN THE NEWSLETTER'), '1:1: "+1 more" for the third');
 }
-{
-  const { ops } = L('stat');
-  const number = ops.find(op => op.role === 'display');
-  assert.equal(number.text, '.412', 'the number exactly as typed');
-  assert.ok(sizeOf(number.font) >= 220, 'the number is huge');
-  assert.ok(Math.abs(number.x + number.w / 2 - 540) < 1, 'and centred');
-  assert.ok(ops.some(op => op.text === 'SOURCE: MLB.COM'), 'the source line');
-  // A 1:1 drops the eyebrow.
-  assert.ok(!R.fitLayout(measure, { ...copyFor(huddle), style: 'stat' }, huddle, B.SIZES['1x1'], logo).ops.some(op => op.text === 'BY THE NUMBERS'));
-  // No number: reported, never drawn as a blank card that passes.
-  assert.equal(L('stat', huddle, B.SIZES['9x16'], { stat: '' }).fits, false);
-}
-{
-  const { ops } = L('quote');
-  assert.ok(ops.some(op => op.text === '“' && op.alpha < 1), 'a soft quote mark');
-  assert.ok(ops.some(op => op.text === '— PATRICK MAHOMES, AFTER SUNDAY’S WIN'), 'attribution');
-  assert.equal(L('quote', huddle, B.SIZES['9x16'], { speaker: '' }).fits, false, 'a quote needs its speaker');
-}
 
 // ── 3. Motion timeline ────────────────────────────────────────────────────
 const D = 8;
@@ -215,13 +197,6 @@ for (const style of NEW) {
   });
 }
 {
-  // Stat Card: the number is the true value from frame 0, with a scale punch.
-  const { ops } = L('stat');
-  const number = ops.find(op => op.role === 'display');
-  const s0 = R.animAt(number, 0, 1);
-  assert.equal(s0.alpha, 1);
-  assert.ok(Math.abs(s0.scale - 1.12) < 1e-9, 'punches in from 1.12');
-  assert.ok(Math.abs(R.animAt(number, 0.5, 1).scale - 1) < 1e-9);
   // Us vs Them: the strikes wipe, the ticks pop.
   const v = L('versus').ops;
   const strike = v.find(op => op.anim?.kind === 'wipe');
@@ -332,7 +307,7 @@ assert.ok(contrast('#FFFFFF', '#000000') >= 4.5, 'white copy over the default bl
 // ── 7. Variant grid file names ────────────────────────────────────────────
 {
   const date = new Date(2026, 10, 18);
-  assert.equal(S.fileName({ brand: huddle, style: 'stat', angle: 1, size: B.SIZES['9x16'], date }), 'huddle_stat_a1_1080x1920_20261118.mp4');
+  assert.equal(S.fileName({ brand: huddle, style: 'versus', angle: 1, size: B.SIZES['9x16'], date }), 'huddle_versus_a1_1080x1920_20261118.mp4');
   assert.equal(S.fileName({ brand: cfb, style: 'today3', angle: 2, size: B.SIZES['4x5'], date }), 'cfb_today3_a2_1080x1350_20261118.mp4');
   assert.equal(S.fileName({ brand: B.byId('es-dugout'), style: 'highlight', angle: 0, size: B.SIZES['1x1'], date, ext: 'webm' }), 'dugout_highlight_a0_1080x1080_20261118.webm');
   const slugs = B.AD_BRANDS.map(S.brandSlug);
@@ -353,17 +328,10 @@ assert.ok(contrast('#FFFFFF', '#000000') >= 4.5, 'white copy over the default bl
 
 // ── 8. Style readiness and the fact helpers ───────────────────────────────
 {
-  assert.deepEqual(S.styleReady('stat', { stat: '', statLabel: 'x' }), { ok: false, missing: 'a number' });
-  assert.deepEqual(S.styleReady('stat', { stat: 'six', statLabel: 'x' }), { ok: false, missing: 'a number' }, 'a stat must be a number');
-  assert.equal(S.styleReady('stat', { stat: '41', statLabel: 'points' }).ok, true);
   assert.equal(S.styleReady('today3', { items: ['a', ''] }).ok, false);
   assert.equal(S.styleReady('today3', { items: ['a', 'b'] }).ok, true);
   assert.equal(S.styleReady('versus', { them: ['a', 'b'], us: ['c'] }).ok, false);
-  assert.equal(S.styleReady('quote', { quote: 'Hi there', speaker: '' }).missing, 'who said it');
   assert.equal(S.styleReady('condensed', { headline: 'Hi' }).ok, true);
-  assert.deepEqual(S.extractQuotes('He said “we never stopped believing” after the game, and "short" too.'), ['we never stopped believing']);
-  assert.ok(S.isVerbatim('We never stopped believing.', 'Reid: “We never stopped believing,” he said.'));
-  assert.ok(!S.isVerbatim('We always believed', 'Reid: “We never stopped believing,” he said.'));
   assert.ok(S.groundedIn('Mahomes rallies Chiefs in Denver', ['Mahomes rallies the Chiefs late in Denver']));
   assert.ok(!S.groundedIn('Aliens land at Arrowhead', ['Mahomes rallies the Chiefs late in Denver']));
   assert.ok(S.namesSomeone('Hot takes from ESPN'));
@@ -374,7 +342,7 @@ assert.ok(contrast('#FFFFFF', '#000000') >= 4.5, 'white copy over the default bl
     assert.ok(brand.verifiedClaims.length >= 2, `${brand.id}: approved claims for Us vs Them`);
     assert.equal(brand.claimsApproved, false, `${brand.id}: placeholder claims stay flagged until the owner approves them`);
     brand.verifiedClaims.forEach(claim => assert.equal(S.numberTokens(claim).length, 0, 'no unverified numbers in the placeholder claims'));
-    const d = S.defaultsFor(brand, 'stat');
+    const d = S.defaultsFor(brand, 'versus');
     assert.match(d.offer, /free/i, 'the default offer says free');
     [d.offer, d.listTitle, ...d.them].forEach(text => assert.equal(S.numberTokens(text).length, 0, `defaults carry no numbers: ${text}`));
   });
@@ -382,39 +350,82 @@ assert.ok(contrast('#FFFFFF', '#000000') >= 4.5, 'white copy over the default bl
 
 // ── 9. Style suggestion: rules first, learning and AI only break ties ─────
 {
-  const base = { brand: huddle, hasClip: false };
-  let facts = S.briefFacts({ ...base, notes: 'Ohtani reached base at a .412 clip this month.' });
-  let s = S.suggestStyles(facts, { brand: huddle });
-  assert.equal(s.style, 'stat');
-  assert.equal(s.text, 'Suggested: Stat Card — your brief has a number (412)');
+  const approved = { ...huddle, claimsApproved: true };
+  const base = { brand: approved, hasClip: false };
+  // Approved claims, no clip: Us vs Them leads (it needs no footage).
+  let facts = S.briefFacts({ ...base, notes: 'The Chiefs keep winning close games.' });
+  let s = S.suggestStyles(facts, { brand: approved });
+  assert.equal(s.style, 'versus', 'approved claims make Us vs Them the default with no clip');
   assert.equal(s.alternatives.length, 2);
-  // No number and no quote: Stat and Quote are not offered.
-  facts = S.briefFacts({ ...base, notes: 'The Chiefs keep winning close games.' });
+  assert.ok(!s.scores.some(x => x.style === 'stat' || x.style === 'quote'), 'removed styles are never suggested');
+  // Placeholder claims (not owner-approved): never suggested first.
+  facts = S.briefFacts({ brand: huddle, hasClip: false, notes: 'The Chiefs keep winning close games.' });
+  assert.equal(facts.claimsApproved, false);
   s = S.suggestStyles(facts, { brand: huddle });
-  assert.ok(!s.scores.some(x => x.style === 'stat' || x.style === 'quote'), 'no stat or quote without the facts');
-  assert.equal(s.style, 'versus', 'claims make Us vs Them the default with no clip');
-  // A quote in the notes unlocks Quote Card.
-  facts = S.briefFacts({ ...base, notes: 'Reid said “we never stopped believing in this group” after the game.' });
-  assert.ok(S.suggestStyles(facts, { brand: huddle }).scores.some(x => x.style === 'quote'));
+  assert.equal(s.style, 'highlight', 'unapproved claims lose to a classic layout');
+  assert.ok(s.scores.some(x => x.style === 'versus'), 'Us vs Them stays available');
   // Three related headlines unlock Today's 3.
   facts = S.briefFacts({ ...base, trendTitle: 'Chiefs win', related: ['Mahomes rallies the Chiefs', 'Bears fire their coordinator', 'Lions clinch the North'] });
-  assert.ok(S.suggestStyles(facts, { brand: huddle }).scores.some(x => x.style === 'today3'));
+  assert.ok(S.suggestStyles(facts, { brand: approved }).scores.some(x => x.style === 'today3'));
   // Today's 3 and Us vs Them tie on the prior; the brand's exports break it.
-  const tie = S.suggestStyles(facts, { brand: huddle, ranking: [{ style: 'today3', score: 1 }, { style: 'versus', score: 0.2 }] });
+  const tie = S.suggestStyles(facts, { brand: approved, ranking: [{ style: 'today3', score: 1 }, { style: 'versus', score: 0.2 }] });
   assert.equal(tie.style, 'today3');
   assert.match(tie.text, /Huddle’s most-used style/);
-  const tie2 = S.suggestStyles(facts, { brand: huddle, ranking: [{ style: 'versus', score: 1 }] });
+  const tie2 = S.suggestStyles(facts, { brand: approved, ranking: [{ style: 'versus', score: 1 }] });
   assert.equal(tie2.style, 'versus');
-  // Learning + the AI pick never overturn a clear rule-based lead (Stat 8.7 vs Today's 3 8.6 is a tie band; a 0.3 gap is not).
-  facts = S.briefFacts({ ...base, notes: 'A .412 month.', related: ['a b c', 'd e f', 'g h i'] });
-  const lead = S.suggestStyles(facts, { brand: huddle, ranking: [{ style: 'simple', score: 1 }], aiPick: 'simple' });
-  assert.equal(lead.style, 'stat', 'a 0.9 lead stands');
+  // Learning + the AI pick never overturn a clear rule-based lead.
+  const lead = S.suggestStyles(facts, { brand: approved, ranking: [{ style: 'simple', score: 1 }], aiPick: 'simple' });
+  assert.notEqual(lead.style, 'simple', 'a clear lead stands');
   assert.ok(S.LEARNED_WEIGHT + S.AI_WEIGHT < 0.1);
   // With a clip the classic styles lose their no-footage penalty.
   const withClip = S.suggestStyles(S.briefFacts({ brand: { ...huddle, verifiedClaims: [] }, hasClip: true, notes: 'Big win.' }), { brand: huddle });
   assert.equal(withClip.style, 'highlight');
-  // Typed fields count as facts: a typed stat makes Stat Card eligible.
-  assert.ok(S.briefFacts({ copy: { stat: '6' } }).numbers.includes('6'));
+}
+
+// ── 10. Copy checks (the rating rubric, free) ─────────────────────────────
+{
+  const good = S.copyChecks({ style: 'condensed', headline: 'Your team. Your Sunday. Your inbox.', body: ['Get The Huddle, one free email with the NFL news that matters.'], cta: 'SIGN UP THE HUDDLE' }, huddle);
+  assert.equal(good.passed, 4, JSON.stringify(good.checks));
+  const bad = S.copyChecks({ style: 'condensed', headline: 'You won’t believe this INSANE comeback!!', body: ['The Chiefs did something last night that absolutely nobody who has watched this league for decades could have predicted at all.'], cta: 'CLICK' }, huddle);
+  const failed = bad.checks.filter(c => !c.ok).map(c => c.id).sort();
+  assert.deepEqual(failed, ['cta', 'offer', 'readable', 'trust']);
+  bad.checks.forEach(c => assert.ok(c.tip.length > 5, 'each check has a tip'));
+  // Us vs Them on placeholder claims is flagged for trust.
+  const vs = S.copyChecks({ style: 'versus', them: ['Endless hot takes', 'Too many apps'], us: huddle.verifiedClaims.slice(0, 2), offer: 'Switch to The Huddle. It’s free.' }, huddle);
+  assert.equal(vs.checks.find(c => c.id === 'trust').ok, false);
+  assert.equal(S.copyChecks({ ...vs, style: 'versus', them: ['Endless hot takes', 'Too many apps'], us: huddle.verifiedClaims.slice(0, 2), offer: 'Switch to The Huddle. It’s free.' }, { ...huddle, claimsApproved: true }).checks.find(c => c.id === 'trust').ok, true);
+}
+
+// ── 11. Daily set planning ────────────────────────────────────────────────
+{
+  const plan = S.planDailySet([
+    { style: 'highlight', headline: 'One free email has it all', highlight: 'one free email', body: ['x'] },
+    { style: 'highlight', headline: 'No box here', highlight: 'missing words', body: ['x'] },
+    { style: 'today3', headline: 'h', body: [], items: ['only one'] },
+    { style: 'stat', headline: 'Old style', body: ['x'] },
+    { style: 'condensed', headline: 'one free email has it all!', body: ['dupe'] },
+  ]);
+  assert.equal(plan.length, 3, 'three angles at most');
+  assert.equal(plan[0].style, 'highlight', 'a ready style is kept');
+  assert.equal(plan[1].style, 'condensed', 'a highlight without its phrase becomes Condensed');
+  assert.equal(plan[2].style, 'condensed', 'Today’s 3 without headlines falls back to a classic style');
+  assert.ok(!plan.some(a => a.copy.headline === 'Old style'), 'only three, in order');
+  assert.equal(S.planDailySet([{ style: 'stat', headline: 'Old style', body: ['x'] }])[0].style, 'condensed', 'a removed style becomes a classic one');
+  assert.deepEqual(S.planDailySet(null), []);
+}
+
+// ── 12. Pre-export check ──────────────────────────────────────────────────
+{
+  const copy = { style: 'condensed', headline: 'Your team. Your inbox.', body: ['Get The Huddle, one free email.'], cta: 'SIGN UP THE HUDDLE' };
+  assert.deepEqual(S.preflight({ copy, brand: huddle, sizes: [{ id: '9x16', fits: true, scale: 1 }], hasMedia: true }), [], 'a clean ad has nothing to fix');
+  const issues = S.preflight({ copy: { ...copy, body: [] }, brand: huddle, sizes: [{ id: '9x16', fits: false, scale: 0.68 }, { id: '4x5', fits: true, scale: 0.7 }], hasMedia: false, safeZone: 'classic', unsubscribe: false });
+  const ids = issues.map(i => i.id);
+  ['media', 'fit', 'small', 'zone', 'unsub', 'copy-offer'].forEach(id => assert.ok(ids.includes(id), `flags ${id}`));
+  assert.equal(issues.find(i => i.id === 'media').fix, 'make-animated');
+  assert.equal(issues.find(i => i.id === 'fit').text, 'Too much copy for 9:16.');
+  assert.equal(issues.find(i => i.id === 'small').text.includes('4:5'), true);
+  assert.equal(issues.find(i => i.id === 'copy-offer').fix, 'add-free');
+  issues.forEach(i => assert.ok(['bad', 'warn'].includes(i.level)));
 }
 
 console.log('Video Ads styles tests passed.');

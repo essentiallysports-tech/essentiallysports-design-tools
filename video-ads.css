@@ -636,7 +636,6 @@ html[data-theme="dark"] .va-tab[aria-selected="true"] { background: #2a2a2a; }
 }
 .va-variant.is-applied { background: var(--ais-grad-soft, var(--va-accent-soft)); box-shadow: inset 0 0 0 2px var(--va-accent); }
 .va-variant.is-applied::before { display: none; }
-.va-variant__state { display: inline-flex; align-items: center; gap: 4px; color: var(--va-accent-text); font: 700 12px/1 var(--es-font-ui); --es-icon: 14px; }
 .va-variant__headline { margin: 0; color: var(--va-ink); font: 700 21px/1.05 var(--va-cond); letter-spacing: .005em; }
 .va-variant__headline--simple { font: 500 16px/1.35 var(--es-font-ui); letter-spacing: 0; }
 .va-variant__headline mark { padding: 0 3px; border-radius: 3px; background: var(--va-mark); color: #1a1206; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
@@ -1104,7 +1103,6 @@ html:not([data-theme="dark"]) .va-swatch[aria-checked="true"] .va-swatch__dot { 
 .va-variants:empty { display: none; }
 .va-variant { gap: var(--es-space-2); }
 .va-variant__foot { display: flex; align-items: center; justify-content: flex-start; min-height: 32px; margin-top: var(--es-space-1); }
-.va-variant__state { font-size: 13px; }
 .va-editor { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--es-space-4); padding-top: var(--es-space-5); border-top: 1px solid var(--va-line); }
 .va-editor__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--es-space-2); }
 .va-editor__head h3 { margin: 0; color: var(--va-white); font: 600 15px/1.3 var(--es-font-ui); }
@@ -1735,8 +1733,6 @@ html:not([data-theme="dark"]) .va-rail__sw[aria-checked="true"] { box-shadow: 0 
 .va-style-ready[hidden] { display: none; }
 
 /* Option cards for the new styles */
-.va-variant__stat { margin: 0; color: var(--va-white); font-size: 14px; line-height: 1.35; }
-.va-variant__stat b { display: block; font: 700 34px/1 var(--va-cond); }
 .va-variant__list { display: grid; gap: 2px; margin: 0; padding-left: 1.3em; color: var(--va-ink); font-size: 13.5px; line-height: 1.35; }
 .va-variant__vs { display: flex; align-items: flex-start; gap: var(--es-space-1, 4px); margin: 0; color: var(--va-ink); font-size: 13.5px; line-height: 1.35; }
 .va-variant__vs s { color: var(--va-ink-2); text-decoration-color: var(--va-mark); text-decoration-thickness: 2px; }

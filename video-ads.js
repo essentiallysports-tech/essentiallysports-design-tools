@@ -75,9 +75,9 @@
     unsubscribe: true,
     // The no-footage styles' fields (video-ads-styles.js). Empty = the default
     // for the offer / title / "your feed" lines; `us` null = the brand's
-    // first approved claims. Numbers and quotes are never filled in for you.
-    offer: '', stat: '', statLabel: '', statSource: '', listTitle: '', items: ['', '', ''],
-    them: ['', '', ''], us: null, quote: '', speaker: '', quoteContext: '',
+    // first approved claims. Headlines are never filled in for you.
+    offer: '', listTitle: '', items: ['', '', ''],
+    them: ['', '', ''], us: null,
     // 'meta' keeps the classic styles inside Meta's Reels safe zone (new ads);
     // 'classic' is the original Figma margins. The new styles always use 'meta'.
     safeZone: 'meta',
@@ -229,7 +229,7 @@
     if (!S.isNew(src.style)) return out;
     const c = resolvedCopy(src);
     ({
-      stat: ['stat', 'statLabel', 'statSource'], today3: ['listTitle', 'items'], versus: ['them', 'us'], quote: ['quote', 'speaker', 'quoteContext'],
+      today3: ['listTitle', 'items'], versus: ['them', 'us'],
     }[src.style] || []).concat('offer').forEach(k => { out[k] = Array.isArray(c[k]) ? c[k].filter(x => String(x).trim()) : String(c[k] || ''); });
     return out;
   };
@@ -286,31 +286,20 @@
 
   // ─── Placeholder background (until a clip lands) ─────────────────────────
   const placeholder = document.createElement('canvas');
+  // No clip, photo or animated background chosen yet: plain black (owner,
+  // 2026-11-18). The animated background stays an explicit choice.
   function paintPlaceholder() {
-    const b = brand();
     placeholder.width = 540;
     placeholder.height = 960;
     const c = placeholder.getContext('2d');
-    const g = c.createLinearGradient(0, 0, 540, 960);
-    g.addColorStop(0, b.wordmark?.bg || b.accent);
-    g.addColorStop(0.55, '#0b0f17');
-    g.addColorStop(1, '#05070b');
-    c.fillStyle = g;
+    c.fillStyle = '#000000';
     c.fillRect(0, 0, 540, 960);
-    const glow = c.createRadialGradient(420, 180, 10, 420, 180, 520);
-    glow.addColorStop(0, 'rgba(255,255,255,0.16)');
-    glow.addColorStop(1, 'rgba(255,255,255,0)');
-    c.fillStyle = glow;
-    c.fillRect(0, 0, 540, 960);
-    // Faint yard lines, so the empty ad still reads as sport.
-    c.strokeStyle = 'rgba(255,255,255,0.06)';
-    c.lineWidth = 2;
-    for (let y = 60; y < 1100; y += 80) { c.beginPath(); c.moveTo(0, y); c.lineTo(540, y - 120); c.stroke(); }
   }
 
 
+
   // ─── Layout + drawing ────────────────────────────────────────────────────
-  const STYLE_KEYS = ['offer', 'stat', 'statLabel', 'statSource', 'listTitle', 'items', 'them', 'us', 'quote', 'speaker', 'quoteContext'];
+  const STYLE_KEYS = ['offer', 'listTitle', 'items', 'them', 'us'];
   const copyOf = (src = state) => ({
     style: src.style, headline: src.headline, highlight: src.highlight, body: [...src.body], cta: src.cta, unsubscribe: src.unsubscribe,
     ...Object.fromEntries(STYLE_KEYS.map(k => [k, Array.isArray(src[k]) ? [...src[k]] : src[k]])),
@@ -1604,10 +1593,8 @@
   // animated background. Real copy when the style is ready; else neutral
   // placeholder words (never a made-up number: "00").
   const THUMB_SAMPLE = {
-    stat: { stat: '00', statLabel: 'What the number counts' },
     today3: { items: ['First headline here', 'Second headline here', 'Third headline here'] },
     versus: {},
-    quote: { quote: 'Their words, exactly as they said them.', speaker: 'Speaker' },
   };
   let thumbTimer = 0;
   function renderThumbs() {
@@ -1667,11 +1654,7 @@
     const b = brand();
     const d = S.defaultsFor(b, state.style);
     const parts = [];
-    if (state.style === 'stat') {
-      parts.push(fieldHtml({ key: 'stat', label: 'The number', value: state.stat, placeholder: 'e.g. .412 or 6', chars: L.statChars, hint: 'Only a number from your notes, the moment or the clip. It shows exactly as typed.' }));
-      parts.push(fieldHtml({ key: 'statLabel', label: 'What it counts', value: state.statLabel, placeholder: 'e.g. his on-base percentage this month', max: L.statLabelWords }));
-      parts.push(fieldHtml({ key: 'statSource', label: 'Source (optional)', value: state.statSource, placeholder: 'e.g. MLB.com', max: L.statSourceWords }));
-    } else if (state.style === 'today3') {
+    if (state.style === 'today3') {
       parts.push(fieldHtml({ key: 'listTitle', label: 'Title', value: state.listTitle, placeholder: d.listTitle, max: L.listTitleWords }));
       parts.push(`<div class="va-field va-field--tight"><div class="va-field__top"><span class="va-label" id="va-items-label">Three headlines</span><button class="va-link" type="button" data-act="fill-items">${ICON.sparkle}Fill from trends</button></div>
         <div class="va-items" role="group" aria-labelledby="va-items-label">${[0, 1, 2].map(i => `<div class="va-item"><span class="va-item__n" aria-hidden="true">${i + 1}</span><input type="text" class="va-input" id="va-f-items-${i}" data-f="items" data-i="${i}" value="${esc(state.items[i] || '')}" placeholder="A real headline, plainly put" aria-label="Headline ${i + 1}" aria-describedby="va-items-hint" spellcheck="true" lang="en-US"></div>`).join('')}</div>
@@ -1684,10 +1667,6 @@
       parts.push(`<div class="va-field va-field--tight"><div class="va-field__top"><span class="va-label" id="va-us-label">${esc(b.label)} (ticked)</span><span class="va-count">Pick 2–3</span></div>
         <div class="va-claims" role="group" aria-labelledby="va-us-label">${claims}</div>
         ${b.claimsApproved ? '<p class="va-hint">Only approved claims can appear here.</p>' : `<p class="va-warn va-claims__todo">${ICON.alert}<span>Placeholder claims: the owner still has to approve this list before paid use.</span></p>`}</div>`);
-    } else if (state.style === 'quote') {
-      parts.push(fieldHtml({ key: 'quote', label: 'Quote, word for word', value: state.quote, placeholder: 'Paste the exact words', max: L.quoteWords, area: true, hint: 'Never reword a quote. Say it was said “after…”, never that they read the newsletter.' }));
-      parts.push(fieldHtml({ key: 'speaker', label: 'Who said it', value: state.speaker, placeholder: 'e.g. Andy Reid', max: L.speakerWords }));
-      parts.push(fieldHtml({ key: 'quoteContext', label: 'When (optional)', value: state.quoteContext, placeholder: 'e.g. after Sunday’s win', max: L.quoteContextWords }));
     }
     parts.push(fieldHtml({ key: 'offer', label: 'Offer', value: state.offer, placeholder: d.offer, max: L.offerWords, hint: 'Say it’s free.' }));
     parts.push('<p class="va-warn va-style-ready" id="va-style-ready" role="status" hidden></p>');
@@ -1919,10 +1898,8 @@
   // An option card: the classic headline, or the style's own fields.
   function variantSummary(v, style) {
     const list = items => `<ol class="va-variant__list">${items.filter(Boolean).map(x => `<li>${esc(x)}</li>`).join('')}</ol>`;
-    if (style === 'stat') return `<p class="va-variant__stat"><b>${esc(v.stat)}</b> ${esc(v.statLabel || '')}</p>`;
     if (style === 'today3') return `${v.listTitle ? `<p class="va-variant__headline va-variant__headline--condensed">${esc(v.listTitle)}</p>` : ''}${list(v.items || [])}`;
     if (style === 'versus') return `<p class="va-variant__vs"><s>${esc((v.them || []).join(' · '))}</s></p><p class="va-variant__vs">${ICON.check}${esc((v.us || []).join(' · '))}</p>`;
-    if (style === 'quote') return `<p class="va-variant__headline va-variant__headline--condensed">“${esc(v.quote)}”</p><p class="va-variant__body">— ${esc([v.speaker, v.quoteContext].filter(Boolean).join(', '))}</p>`;
     return '';
   }
   function variantCard(v, i, { scope = 'drafts', applied = false } = {}) {
@@ -1955,7 +1932,7 @@
       trend: state.copyTrend || (color ? null : fallback.trend),
     };
   }
-  // The clip's post text (grounds quotes and numbers), when the clip came from a search.
+  // The clip's post text (grounds numbers), when the clip came from a search.
   function clipText() {
     const c = copyContext();
     return (finds[c.kind]?.clips || []).find(clip => clip.url && clip.url === state.clip?.url)?.text || '';
@@ -2094,8 +2071,6 @@
       // Facts for the no-footage styles: other trending headlines, what the editor typed.
       headlines: relatedTitles().slice(0, 8),
       items: state.items.filter(x => String(x || '').trim()),
-      stat: state.stat || undefined,
-      quote: state.quote || undefined,
       hasClip: Boolean(realVideo.videoWidth) && !still,
     };
     try {
@@ -2627,15 +2602,8 @@
   async function startExport() {
     if (exporting) { exporting.cancel(); return; }
     if (!hasClip()) { els.exportStatus.textContent = 'Add a clip first.'; return; }
-    if (!els.rights.checked && state.clip?.source !== 'animated') {
-      els.exportStatus.textContent = 'Tick the footage box first.';
-      const box = els.rights.closest('.va-check');
-      els.rights.focus();
-      box.classList.remove('is-nudge');
-      void box.offsetWidth;
-      box.classList.add('is-nudge');
-      return;
-    }
+    // The rights tick is a reminder only (owner, 2026-11-18: licensed and
+    // copyrighted clips may run in Meta paid ads); it never blocks an export.
     const styles = gridStyles();
     const gridId = styles.length > 1 ? Math.random().toString(36).slice(2, 6) : '';
     const files = await exportSizes(state.exportIds, { styles });
@@ -2650,7 +2618,7 @@
         logEvent('export', {
           copy, style: st, sizes: [...state.exportIds], angle: angle(), ...(gridId ? { gridId, gridStyles: styles } : {}),
           files: (files || []).filter(f => f.style === st).map(f => f.fileName),
-          clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), safeZone: S.isNew(st) ? 'meta' : state.safeZone,
+          clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), safeZone: S.isNew(st) ? 'meta' : state.safeZone,
           context: { kind: state.context.kind, color: state.context.color, trend: state.context.trend?.title || '' },
         });
       });
@@ -2690,7 +2658,6 @@
   async function exportSizes(sizeIds, { styles = [state.style] } = {}) {
     if (exporting) { exporting.cancel(); return null; }
     if (!hasClip()) { els.exportStatus.textContent = 'Add a clip first.'; return null; }
-    if (!els.rights.checked && state.clip?.source !== 'animated') { els.exportStatus.textContent = 'Tick the footage confirmation first.'; els.rights.focus(); return null; }
     const mimeType = pickFormat();
     if (!mimeType) { els.exportStatus.textContent = 'This browser cannot record video. Use Chrome or Edge.'; return null; }
     await document.fonts.ready;

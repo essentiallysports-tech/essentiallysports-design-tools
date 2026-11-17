@@ -120,16 +120,18 @@
     simple: { id: 'simple', label: 'Simple', note: 'Plain paragraphs', classic: true, needsFootage: true, prior: 8.2, fields: ['headline', 'body', 'cta'] },
     condensed: { id: 'condensed', label: 'Condensed', note: 'Condensed headline + simple body', classic: true, needsFootage: true, prior: 8.4, fields: ['headline', 'body', 'cta'] },
     highlight: { id: 'highlight', label: 'Highlight', note: 'Condensed headline with a highlighted phrase', classic: true, needsFootage: true, prior: 8.5, fields: ['headline', 'highlight', 'body', 'cta'] },
-    stat: { id: 'stat', label: 'Stat Card', note: 'One verified number', slug: 'stat', needsFootage: false, prior: 8.7, fields: ['stat', 'statLabel', 'statSource', 'offer', 'cta'] },
     today3: { id: 'today3', label: 'Today’s 3', note: 'Three headlines, one by one', slug: 'today3', needsFootage: false, prior: 8.6, fields: ['listTitle', 'items', 'offer', 'cta'] },
     versus: { id: 'versus', label: 'Us vs Them', note: 'Your feed vs the newsletter', slug: 'versus', needsFootage: false, prior: 8.6, fields: ['them', 'us', 'offer', 'cta'] },
-    quote: { id: 'quote', label: 'Quote Card', note: 'A verbatim quote', slug: 'quote', needsFootage: false, prior: 8.5, fields: ['quote', 'speaker', 'quoteContext', 'offer', 'cta'] },
   };
   const CLASSIC_STYLES = Object.keys(STYLES).filter(id => STYLES[id].classic);
   const NEW_STYLES = Object.keys(STYLES).filter(id => !STYLES[id].classic);
 
+  // Styles that no longer exist (Stat Card and Quote Card were removed on
+  // 2026-11-18) and anything unknown fall back to Highlight.
+  const DEFAULT_STYLE = 'highlight';
+  const styleOr = id => (STYLES[id] ? id : DEFAULT_STYLE);
   const byId = id => AD_BRANDS.find(brand => brand.id === id) || AD_BRANDS[0];
   const forSport = sport => AD_BRANDS.find(brand => brand.sport === sport) || AD_BRANDS[0];
 
-  return { ES_LOGO, AD_BRANDS, SIZES, SAFE_ZONES, STYLES, CLASSIC_STYLES, NEW_STYLES, safeFor, byId, forSport };
+  return { ES_LOGO, AD_BRANDS, SIZES, SAFE_ZONES, STYLES, CLASSIC_STYLES, NEW_STYLES, DEFAULT_STYLE, styleOr, safeFor, byId, forSport };
 }));

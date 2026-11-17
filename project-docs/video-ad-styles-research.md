@@ -1,5 +1,7 @@
 # FrameUp Video Ads: which new ad styles to add
 
+> **Update 2026-11-18 (owner decision):** Stat Card and Quote Card were removed from Video Ads. The live styles are Simple, Condensed, Highlight, Today's 3 and Us vs Them. The Stat Card and Quote Card sections below are kept as research history only.
+
 *Research only, 2026-11-17 (agent `ad-styles-research`). No product code, git, env or config was changed. Estimates are marked **(est.)**. Anything I could not check is marked **(unverified)**.*
 
 Inputs:

@@ -1,20 +1,24 @@
 // Video Ads styles: the rules shared by the page and the server for the ad
-// styles that work without footage (Stat Card, Today's 3, Us vs Them, Quote
-// Card), plus the style suggestion, the variant-grid file names and the
+// styles that work without footage (Today's 3, Us vs Them), plus the style suggestion, the variant-grid file names and the
 // safe-zone maths. Pure functions, no DOM. One file for the browser
 // (window.VideoAdsStyles) and the server (require), like video-ads-brands.js.
 //
 //   LIMITS                         word / character limits per field
 //   defaultsFor(brand, styleId)    starter copy for a style's fields
 //   styleReady(styleId, copy)      { ok, missing } can this style render?
-//   briefFacts(input)              what the brief supports (numbers, quotes, headlines…)
+//   briefFacts(input)              what the brief supports (numbers, headlines, claims…)
+//   copyChecks(copy, brand)        free rubric checks (_ad-rating.js): clear offer,
+//                                  55+ readability, trust, sign-up button
+//   planDailySet(variants, opts)   3 AI variants -> 3 angles, each in a style it can fill
+//   preflight(input)               the pre-export check: problems, each with a fix id
 //   suggestStyles(facts, opts)     { style, why, text, alternatives, scores }
 //   fileName({...}) / parseFileName(name)
 //                                  {brand}_{style}_{angle}_{WxH}_{yyyymmdd}
 //   safeZoneRects(size, zone)      Meta UI areas on the canvas, for the overlay
 //
-// Facts rule (research §4.0): numbers, quotes and headlines come from the
-// editor's input or the brief, never from the model. Claims about the
+// Facts rule (research §4.0): numbers and headlines come from the editor's
+// input or the brief, never from the model. (Stat Card and Quote Card were
+// removed on 2026-11-18, owner's decision.) Claims about the
 // newsletter come only from the brand's `verifiedClaims`.
 (function (root, factory) {
   const brands = typeof module === 'object' && module.exports ? require('./video-ads-brands.js') : root.VideoAdsBrands;
@@ -25,10 +29,9 @@
   'use strict';
 
   const LIMITS = {
-    statChars: 10, statLabelWords: 10, statSourceWords: 6, offerWords: 16,
+    offerWords: 16,
     listTitleWords: 9, itemWords: 9, items: 3,
     themWords: 5, usWords: 6, sideItems: 3, themLabelWords: 3,
-    quoteWords: 22, speakerWords: 6, quoteContextWords: 8,
   };
 
   const words = text => String(text || '').split(/\s+/).filter(Boolean).length;
@@ -42,14 +45,11 @@
   function defaultsFor(brand = {}, styleId = '') {
     const name = brand.label || 'the newsletter';
     const offers = {
-      stat: `Get numbers like this in ${name}. Free.`,
       today3: `${name} brings you the stories that matter. Free.`,
       versus: `Switch to ${name}. It’s free.`,
-      quote: `Every word that matters, in ${name}. Free.`,
     };
     return {
       offer: offers[styleId] || `Sign up for ${name}. Free.`,
-      statEyebrow: 'By the numbers',
       listTitle: `What ${brand.audience || 'fans'} need to know today`,
       themLabel: 'Your feed',
       them: ['Endless hot takes', 'Rumours dressed as news', 'Too many apps'],
@@ -60,48 +60,20 @@
   // Can this style render with this copy? missing: what to add, in words.
   function styleReady(styleId, copy = {}) {
     const has = value => String(value || '').trim().length > 0;
-    if (styleId === 'stat') {
-      if (!has(copy.stat) || !numberTokens(copy.stat).length) return { ok: false, missing: 'a number' };
-      if (!has(copy.statLabel)) return { ok: false, missing: 'what the number counts' };
-      return { ok: true, missing: '' };
-    }
     if (styleId === 'today3') return list(copy.items).length >= 2 ? { ok: true, missing: '' } : { ok: false, missing: 'at least 2 headlines' };
     if (styleId === 'versus') {
       if (list(copy.them).length < 2) return { ok: false, missing: '2 “your feed” lines' };
       if (list(copy.us).length < 2) return { ok: false, missing: '2 approved claims' };
       return { ok: true, missing: '' };
     }
-    if (styleId === 'quote') {
-      if (!has(copy.quote)) return { ok: false, missing: 'a quote' };
-      if (!has(copy.speaker)) return { ok: false, missing: 'who said it' };
-      return { ok: true, missing: '' };
-    }
     return has(copy.headline) || list(copy.body).length ? { ok: true, missing: '' } : { ok: false, missing: 'a headline' };
   }
 
-  // Quoted passages in a text: “…”, "…" or ‘…’ with at least 3 words.
-  function extractQuotes(text) {
-    const out = [];
-    const re = /[“"‘]([^“”"‘’]{8,400})[”"’]/g;
-    let m;
-    while ((m = re.exec(String(text || '')))) {
-      const q = m[1].trim();
-      if (words(q) >= 3 && !out.includes(q)) out.push(q);
-    }
-    return out;
-  }
-
-  // Comparison form for verbatim checks: quotes, dashes, spaces and case folded.
+  // Comparison form: quotes, dashes, spaces and case folded.
   const fold = text => String(text || '').toLowerCase()
     .replace(/[“”«»„]/g, '"').replace(/[‘’`]/g, "'").replace(/[–—]/g, '-')
     .replace(/\s+/g, ' ').trim();
   const trimEnds = text => fold(text).replace(/^[\s"'(\[.,;:!?-]+|[\s"')\].,;:!?-]+$/g, '');
-  function isVerbatim(quote, sources) {
-    const q = trimEnds(quote);
-    if (!q) return false;
-    return (Array.isArray(sources) ? sources : [sources]).some(src => fold(src).includes(q));
-  }
-
   // Words that carry meaning (for "this headline restates a real story").
   const STOP = new Set(('a an and are as at be but by for from has have he her his i if in into is it its me my of on or our '
     + 'she so that the their them they this to was we were what when who will with you your after over new than just more').split(' '));
@@ -131,33 +103,35 @@
   // What the brief supports. Every input is optional.
   //   notes, clipText, trendTitle: free text from the brief
   //   related: headline strings (Trends `related`, other trending titles)
-  //   copy: what the editor has typed (stat, quote, items count as facts)
+  //   copy: what the editor has typed (Today's 3 items count as facts)
   function briefFacts({ notes = '', clipText = '', trendTitle = '', related = [], copy = {}, brand = null, hasClip = false } = {}) {
     const factsText = [trendTitle, ...list(related, 12), notes, clipText].filter(Boolean).join(' ');
-    const typedStat = numberTokens(copy.stat).length ? String(copy.stat).trim() : '';
-    const numbers = [...new Set([...(typedStat ? [typedStat] : []), ...numberTokens([notes, clipText, trendTitle].join(' '))])];
-    const quotes = [...(String(copy.quote || '').trim() ? [String(copy.quote).trim()] : []), ...extractQuotes([notes, clipText].join(' '))];
+    const numbers = [...new Set(numberTokens([notes, clipText, trendTitle].join(' ')))];
     const headlines = [...new Set([...list(copy.items, 3), ...list(related, 12)])];
     const claims = list(brand?.verifiedClaims, 12);
-    return { numbers, quotes, headlines, relatedCount: headlines.length, claims: claims.length, hasClip: Boolean(hasClip), factsText };
+    // Placeholder claims (claimsApproved false) still render, but the
+    // suggestion never pushes them (UNAPPROVED_PENALTY below).
+    const claimsApproved = Boolean(brand && brand.claimsApproved);
+    return { numbers, headlines, relatedCount: headlines.length, claims: claims.length, claimsApproved, hasClip: Boolean(hasClip), factsText };
   }
 
   // Ranks the styles for a brief. Rule-based first (eligibility from facts,
   // then the research prior); the learned ranking (export share and edits,
   // _ad-learning.js) and the AI's pick only break near-ties:
-  //   score = prior − footage penalty + 0.06 × learned (0..1) + 0.03 × AI pick
+  //   score = prior − footage penalty − unapproved-claims penalty
+  //           + 0.06 × learned (0..1) + 0.03 × AI pick
   // Together they add at most 0.09, so they reorder near-ties (styles whose
   // priors differ by less than 0.1) but never lift an ineligible style or
   // overturn a prior gap of 0.1 or more.
   const LEARNED_WEIGHT = 0.06;
   const AI_WEIGHT = 0.03;
   const NO_CLIP_PENALTY = 0.4;
+  // Us vs Them on claims the owner hasn't approved yet: still allowed, never suggested first.
+  const UNAPPROVED_PENALTY = 0.6;
   function suggestStyles(facts = {}, { ranking = [], aiPick = '', brand = null } = {}) {
     const learned = new Map((Array.isArray(ranking) ? ranking : []).map(r => [r?.style, Math.max(0, Math.min(1, Number(r?.score) || 0))]));
     const name = brand?.short || brand?.label || '';
     const why = {
-      stat: () => `your brief has a number (${facts.numbers[0]})`,
-      quote: () => 'your brief has a quote',
       today3: () => `there are ${facts.relatedCount} headlines to work with`,
       versus: () => 'no footage needed, it runs all season',
       highlight: () => (facts.hasClip ? 'your clip carries it, one phrase stands out' : 'a classic layout'),
@@ -165,15 +139,14 @@
       simple: () => (facts.hasClip ? 'plain words over your clip' : 'a classic layout'),
     };
     const eligible = {
-      stat: (facts.numbers || []).length > 0,
-      quote: (facts.quotes || []).length > 0,
       today3: (facts.relatedCount || 0) >= 3,
       versus: (facts.claims || 0) >= 2,
       simple: true, condensed: true, highlight: true,
     };
     const scores = Object.keys(eligible).filter(id => eligible[id] && styleOf(id)).map(id => {
       const s = styleOf(id);
-      const penalty = s.needsFootage && !facts.hasClip ? NO_CLIP_PENALTY : 0;
+      const penalty = (s.needsFootage && !facts.hasClip ? NO_CLIP_PENALTY : 0)
+        + (id === 'versus' && facts.claimsApproved === false ? UNAPPROVED_PENALTY : 0);
       const l = learned.get(id) || 0;
       const score = s.prior - penalty + LEARNED_WEIGHT * l + (aiPick === id ? AI_WEIGHT : 0);
       return { style: id, label: s.label, score: Math.round(score * 1000) / 1000, learned: l, why: why[id]() };
@@ -194,8 +167,94 @@
     };
   }
 
+  // ─── Copy checks: the rating rubric, free and instant ───────────────────
+  // The four things _ad-rating.js weighs most that text alone can show:
+  // a clear free-newsletter offer (headlineOffer), short plain sentences for
+  // 55+ readers (readability55Plus), no hype or bait (trust) and a sign-up
+  // button (cta). Not a score: a list of passes, each with a tip.
+  const HYPE = /\b(shocking|shocked|insane|unbelievable|jaw[- ]?dropping|mind[- ]?blowing|must[- ]see|you won['’]?t believe|secret|guaranteed|best ever|greatest ever|crazy|epic|breaking)\b/i;
+  const sentencesOf = text => String(text || '').replace(/\*\*/g, '').match(/[^.!?]+[.!?]*/g)?.map(x => x.trim()).filter(Boolean) || [];
+  function copyText(copy = {}) {
+    const style = copy.style || 'condensed';
+    if (isNew(style)) {
+      const parts = style === 'today3' ? [copy.listTitle, ...list(copy.items)] : [...list(copy.them), ...list(copy.us)];
+      return { main: parts.filter(Boolean).join('. '), offer: String(copy.offer || ''), all: [...parts, copy.offer].filter(Boolean).join(' ') };
+    }
+    const body = list(copy.body).join(' ');
+    return { main: [copy.headline, body].filter(Boolean).join(' '), offer: [copy.headline, body].join(' '), all: [copy.headline, body].filter(Boolean).join(' ') };
+  }
+  function copyChecks(copy = {}, brand = {}) {
+    const t = copyText(copy);
+    const all = t.all.replace(/\*\*/g, '');
+    const names = [brand.label, brand.short, 'newsletter', 'email', 'inbox'].filter(Boolean).map(n => n.toLowerCase());
+    const offerOk = /\bfree\b/i.test(t.offer || all) && names.some(n => all.toLowerCase().includes(n));
+    const sentences = sentencesOf(t.main);
+    const lengths = sentences.map(words);
+    const longest = lengths.length ? Math.max(...lengths) : 0;
+    const longWords = (all.match(/[A-Za-z]{13,}/g) || []).length;
+    const readOk = longest <= 18 && longWords <= 1 && words(t.main) <= 60;
+    const bangs = (all.match(/!/g) || []).length;
+    const shouting = (all.replace(/\b[A-Z]{2,5}\b/g, '').match(/\b[A-Z]{4,}\b/g) || []).length;
+    const unapproved = copy.style === 'versus' && brand && brand.claimsApproved === false;
+    const trustOk = !HYPE.test(all) && bangs <= 1 && (copy.style === 'highlight' || shouting === 0) && !unapproved;
+    const cta = String(copy.cta || brand.cta || '');
+    const ctaOk = /\b(sign\s*up|join|subscribe|get)\b/i.test(cta);
+    const checks = [
+      { id: 'offer', label: 'Clear offer', ok: offerOk, tip: offerOk ? 'Says it’s a free newsletter' : 'Say plainly that it’s a free newsletter (e.g. “one free email”).' },
+      { id: 'readable', label: 'Easy to read', ok: readOk, tip: readOk ? 'Short, plain sentences' : `Shorten it: the longest sentence has ${longest} words. Aim for 14 or fewer for 55+ readers.` },
+      { id: 'trust', label: 'Trustworthy', ok: trustOk, tip: trustOk ? 'Calm, no hype' : unapproved ? 'The claims aren’t owner-approved yet.' : 'Drop the hype words, extra “!” and capitals.' },
+      { id: 'cta', label: 'Sign-up button', ok: ctaOk, tip: ctaOk ? 'The button asks for the sign-up' : 'Make the button a sign-up, e.g. “SIGN UP THE HUDDLE”.' },
+    ];
+    return { checks, passed: checks.filter(c => c.ok).length, total: checks.length };
+  }
+
+  // ─── Daily set: 3 AI variants -> 3 angles ───────────────────────────────
+  // Each angle keeps the variant's style when it can fill it, else the
+  // closest classic style (Highlight when the variant has a highlight phrase,
+  // else Condensed). Duplicate headlines are dropped. Pure; the page draws them.
+  function planDailySet(variants = [], { max = 3 } = {}) {
+    const seen = new Set();
+    const out = [];
+    (Array.isArray(variants) ? variants : []).forEach(v => {
+      if (!v || out.length >= max) return;
+      const key = String(v.headline || v.listTitle || list(v.items).join('|') || list(v.them).join('|')).toLowerCase().replace(/\W+/g, ' ').trim();
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      const wanted = styleOf(v.style) ? v.style : 'highlight';
+      const phrase = String(v.highlight || '').trim().toLowerCase();
+      const hasPhrase = Boolean(phrase) && String(v.headline || '').toLowerCase().includes(phrase);
+      let style = wanted;
+      if (!styleReady(style, v).ok || (style === 'highlight' && !hasPhrase)) style = hasPhrase ? 'highlight' : 'condensed';
+      if (!styleReady(style, v).ok) return;
+      out.push({ style, copy: { ...v, style }, why: String(v.why || '').slice(0, 80) });
+    });
+    return out;
+  }
+
+  // ─── Pre-export check ───────────────────────────────────────────────────
+  // input: { copy, brand, sizes: [{ id, fits, scale }], hasMedia, background
+  // ('clip' | 'animated' | 'photo' | ''), safeZone, unsubscribe }
+  // -> [{ id, level: 'bad' | 'warn' | 'ok', text, fix }] (fix: an action id the page knows)
+  function preflight({ copy = {}, brand = {}, sizes = [], hasMedia = false, safeZone = 'meta', unsubscribe = true } = {}) {
+    const out = [];
+    const style = copy.style || 'condensed';
+    if (!hasMedia) out.push({ id: 'media', level: 'bad', text: 'No background yet: add a clip, a photo or the animated background.', fix: 'make-animated' });
+    const ready = styleReady(style, copy);
+    if (!ready.ok) out.push({ id: 'ready', level: 'bad', text: `${styleOf(style)?.label || 'This style'} needs ${ready.missing}.`, fix: 'to-copy' });
+    const tooLong = sizes.filter(x => x && x.fits === false).map(x => x.id.replace('x', ':'));
+    if (tooLong.length) out.push({ id: 'fit', level: 'bad', text: `Too much copy for ${tooLong.join(', ')}.`, fix: 'shorten' });
+    const small = sizes.filter(x => x && x.fits !== false && Number(x.scale) < 0.8).map(x => x.id.replace('x', ':'));
+    if (small.length) out.push({ id: 'small', level: 'warn', text: `Text is set small on ${small.join(', ')}: hard for 55+ viewers.`, fix: 'shorten' });
+    if (!isNew(style) && safeZone === 'classic' && sizes.some(x => x && x.id === '9x16')) out.push({ id: 'zone', level: 'warn', text: 'Classic margins on 9:16: Meta’s Reels buttons may cover the copy.', fix: 'meta-zone' });
+    if (!unsubscribe) out.push({ id: 'unsub', level: 'warn', text: '“Unsubscribe anytime” is off. It builds trust with older readers.', fix: 'unsub-on' });
+    copyChecks(copy, brand).checks.forEach(c => {
+      if (!c.ok) out.push({ id: `copy-${c.id}`, level: 'warn', text: c.tip, fix: c.id === 'offer' ? 'add-free' : c.id === 'cta' ? 'cta-default' : c.id === 'readable' ? 'shorten' : (style === 'versus' && brand.claimsApproved === false ? '' : 'calm') });
+    });
+    return out;
+  }
+
   // ─── Variant grid file names ────────────────────────────────────────────
-  // {brand}_{style}_{angle}_{WxH}_{yyyymmdd}, e.g. huddle_stat_a1_1080x1920_20261118.
+  // {brand}_{style}_{angle}_{WxH}_{yyyymmdd}, e.g. huddle_today3_a1_1080x1920_20261118.
   // Meta ad names use the same string, so results can be joined back later.
   const brandSlug = brand => String(brand?.short || brand?.label || brand?.id || 'ad').toLowerCase().replace(/[^a-z0-9]+/g, '') || 'ad';
   const styleSlug = id => String(styleOf(id)?.slug || id || 'style').toLowerCase().replace(/[^a-z0-9]+/g, '') || 'style';
@@ -245,8 +304,8 @@
   }
 
   return {
-    LIMITS, LEARNED_WEIGHT, AI_WEIGHT, NO_CLIP_PENALTY,
-    words, numberTokens, isNew, defaultsFor, styleReady, extractQuotes, isVerbatim, groundedIn, contentWords, namesSomeone, approvedClaim,
-    briefFacts, suggestStyles, brandSlug, styleSlug, ymd, fileName, parseFileName, safeZoneRects, insideSafe,
+    LIMITS, LEARNED_WEIGHT, AI_WEIGHT, NO_CLIP_PENALTY, UNAPPROVED_PENALTY, HYPE,
+    words, numberTokens, isNew, defaultsFor, styleReady, groundedIn, contentWords, namesSomeone, approvedClaim,
+    briefFacts, suggestStyles, copyChecks, planDailySet, preflight, brandSlug, styleSlug, ymd, fileName, parseFileName, safeZoneRects, insideSafe,
   };
 }));
