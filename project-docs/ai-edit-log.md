@@ -17,6 +17,20 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-18 — Video Ads clips: Grok X-search source (branch feature/clips-grok)
+- Status: `[committed on feature/clips-grok - not pushed]`
+- New `netlify/functions/_clip-source-grok.js` (source interface from the clips contract: `id`, `configured(env)`, `search()` -> `{candidates, cost, diag}`).
+  It calls xAI's `x_search` tool (Responses API) on the official team, league and network handles from `video-ads-sources.js`.
+  Handles go in batches of 20, `from_date` is set to the last 120 h, and `max_turns: 1`.
+- Routes: `XAI_API_KEY` sends it direct to api.x.ai. Otherwise it goes through the Gateway `/v1/responses` with `spacexai/grok-4.20-non-reasoning`.
+  The Gateway does not document x_search, and it could not be tested without a key. If the Gateway rejects or ignores the tool, the module falls back to `perplexity/sonar` (x.com, last week).
+- Only cited URLs become candidates. Model-written URLs without a citation are dropped (`diag.invented`). `postedAt` is decoded from the status-id snowflake, and the throwback rule is copied from `video-ads.js`.
+  Candidates are `platform:'x'` with `mediaUrl:null`, so `clipFromPost` verifies them downstream.
+- Cost: every call is logged with `logUsage` under feature `video-ads-find-clips-grok`. `aiSpendGate` runs first, and the per-search budget is `CLIPS_GROK_MAX_USD` (default 0.03).
+  x_search bills $0.005 per post fetched, so a call costs about $0.03-0.11. Details are in `project-docs/clips-grok.md`.
+- New env: `CLIPS_GROK` (off), `CLIPS_GROK_MODEL`, `CLIPS_GROK_DIRECT_MODEL`, `CLIPS_GROK_MAX_USD`, `CLIPS_GROK_MAX_TURNS`, `CLIPS_GROK_FALLBACK`, `CLIPS_GROK_FALLBACK_MODEL`, and optional `XAI_API_KEY`.
+- Tests: `scripts/test-clip-source-grok.mjs` (all mocked). `video-ads.js` and `video-ads-sources.js` are untouched.
+
 ### 2026-11-18 — Generate: the creative director first, ES guidelines, Bring it on-brand (branch feature/generate-director)
 - Status: `[committed on feature/generate-director - not pushed]`
 - **Director first.** Generate now asks the director for 2-4 named directions (`POST /api/es-generate {mode:'direct'}`):
