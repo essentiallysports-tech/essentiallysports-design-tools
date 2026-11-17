@@ -17,6 +17,29 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-18 — Editor hero: save chip, Best for this story, Brand check, pills stay on canvas (branch `feature/hero-editor`)
+- Status: `[committed on feature/hero-editor, not pushed]`
+- Audit: `project-docs/hero-audit-editor.md`.
+- **Save chip** (`frameup-editor-assist.js` + `.css`, new): next to Undo / Redo: Saving…, Saved, Syncing…, Synced,
+  Offline, Saved here, Couldn't save (with a toast). Click = Recent designs / drafts. Ctrl/⌘+S saves now (autosave
+  `saveNow` + cloud `flush`). `frameup-autosave.js` now fires `frameup:autosave-state` and exposes `status()`;
+  `frameup-cloud-drafts.js` fires `frameup:cloud-status` and exposes `statusText()`. A failed local save used to be
+  silent.
+- **Brand check**: `getExportIssues()` in index.html appends `FrameUpEditorAssist.exportIssues({workspace, state})`:
+  the ES headline font failed or is loading (fix: Load the font), banned copy from `frameup-rules.js` BANNED (quotes:
+  format rules only; tweets: none), Cover lines below FIT.cover minSize (84px). Sources from `es-guidelines.js`.
+  Never blocks; the dialog intro reads "doesn't quite match the ES guidelines" / "Check these first".
+  index.html now loads `frameup-rules.js` and `es-guidelines.js`.
+- **Template picker** (`frameup-templates.js`): "best for" line per template, keyword search with word-prefix
+  matching, **Best for this story** (reads the Cover headline or a 3+ word search; `suggestTemplates`, pure
+  regex, no AI), **Recent** (per workspace, localStorage `frameup.templates.recent.<ws>`), arrow-key grid
+  navigation, T opens it. Shortcut sheet and ⌘K list Save now and Browse templates (`frameup-extras.js`).
+- **Pill fix (deliberate export change)**: `drawPills` used to pin an over-wide staggered group to the left, so the
+  last pill ran off the right edge. Now each pill is clamped inside the safe area, only in that case. All other
+  exports are byte-identical.
+- No Listicle Type 2 code touched. No AI, no migration, no env vars.
+- Tests: `scripts/test-editor-assist.mjs`. Release note `2026-11-19-hero-editor`.
+
 ### 2026-11-18 — Generate: the creative director first, ES guidelines, Bring it on-brand (branch feature/generate-director)
 - Status: `[committed on feature/generate-director - not pushed]`
 - **Director first.** Generate now asks the director for 2-4 named directions (`POST /api/es-generate {mode:'direct'}`):
