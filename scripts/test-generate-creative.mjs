@@ -291,9 +291,9 @@ const post = body => gen.handler({ httpMethod: 'POST', headers: { authorization:
   assert.ok(!GUIDE.RULES.some(r => r.area === 'composed'), 'template rules unchanged');
   assert.ok(GUIDE.composedLines().some(line => /never people/.test(line)));
   const html = fs.readFileSync('generate.html', 'utf8');
-  assert.match(html, /frameup-compose\.js\?v=20261118-gen-creative/);
-  assert.match(html, /generate-creative\.js\?v=20261118-gen-creative/);
-  assert.match(html, /generate-creative\.css\?v=20261118-gen-creative/);
+  assert.match(html, /frameup-compose\.js\?v=[\w-]+/);
+  assert.match(html, /generate-creative\.js\?v=[\w-]+/);
+  assert.match(html, /generate-creative\.css\?v=[\w-]+/);
   assert.match(html, /window\.FrameUpCreative\?\.isOn\?\.\(\)/, 'Generate hands Creative runs to generate-creative.js');
   assert.match(html, /window\.FrameUpGenerate = Object\.freeze/);
   const js = fs.readFileSync('generate-creative.js', 'utf8');

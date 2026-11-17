@@ -211,9 +211,8 @@
       if (!plan?.directions?.length) {
         progress.stop();
         els.grid.replaceChildren();
-        els.empty.hidden = false;
-        g.setNotice('No composed designs this time', ' Add who it is about and the key facts (numbers, a quote), or switch the Look to ES templates.');
-        return;
+        // Never leave someone empty-handed: Generate falls back to ES templates.
+        return 'fallback';
       }
       progress.designing?.();
       // Every candidate small, with the free check.
@@ -256,8 +255,14 @@
     } catch (error) {
       progress.stop();
       els.grid.replaceChildren();
-      els.empty.hidden = false;
-      g.setNotice('Could not compose designs', ` ${error.message || 'Something went wrong.'} Your brief is still here.`, '', { label: 'Try again', run: () => run(brief) });
+      // A limit or switched-off reply is shown as is; any other failure falls
+      // back to ES templates so Generate always produces something.
+      if (error?.status === 429 || error?.status === 503 || /limit|budget|switched off/i.test(String(error?.message || ''))) {
+        els.empty.hidden = false;
+        g.setNotice('Could not compose designs', ` ${error.message || 'Something went wrong.'} Your brief is still here.`, '', { label: 'Try again', run: () => run(brief) });
+        return 'stop';
+      }
+      return 'fallback';
     } finally {
       els.grid.removeAttribute('aria-busy');
       g.setBusy(false);
