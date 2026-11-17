@@ -243,10 +243,11 @@ t('projects: v1 snapshots load through normalizeTimeline unchanged', () => {
 
 t('page: script tags, panes, steps and tour targets', () => {
   // B: timeline, replay and data load before the renderer; the zip writer before the exporter.
-  const order = ['reel-timeline.js?v=20261118-reels-fmt-ui', 'reel-replay.js?v=20261118-reels-fmt-ui', 'reel-data.js?v=20261118-reels-fmt-ui', 'reel-render.js', 'frameup-zip.js', 'reel-export.js', 'reel-flow.js', 'reel-gallery.js?v=20261118-reels-fmt-ui', 'reel-maker.js?v=20261118-reels-fmt-ui'].map(s => html.indexOf(`src="${s}`));
+  // Any cache key: the release bumps them (?v=...).
+  const order = ['reel-timeline.js?v=', 'reel-replay.js?v=', 'reel-data.js?v=', 'reel-render.js', 'frameup-zip.js', 'reel-export.js', 'reel-flow.js', 'reel-gallery.js?v=', 'reel-maker.js?v='].map(s => html.indexOf(`src="${s}`));
   order.forEach(i => assert.ok(i > 0));
   assert.deepEqual([...order].sort((a, b) => a - b), order, 'script load order');
-  assert.match(html, /reel-maker\.css\?v=20261118-reels-fmt-ui/);
+  assert.match(html, /reel-maker\.css\?v=[\w-]+/);
   for (const id of ['rm-pane-format', 'rm-pane-source', 'rm-gallery', 'rm-fmt-entry', 'rm-data-story', 'rm-data-review', 'rm-view', 'rm-slidenav', 'rm-carousel-out', 'rm-export-carousel']) assert.ok(html.includes(`id="${id}"`), id);
   assert.equal((html.match(/<li data-dataflow hidden>/g) || []).length, 2, 'Format and Source steps, hidden for the news flow');
   assert.match(html, /<nav class="rm-steps" id="rm-steps"/, 'existing tour target stays');

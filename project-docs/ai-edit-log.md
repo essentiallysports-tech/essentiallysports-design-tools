@@ -17,6 +17,14 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-19 — Reels Studio data formats: integration (branch feature/reels-formats)
+- Status: `[committed on feature/reels-formats — not pushed]`. Integrates A/B/C (merged at 53d1e89). Contract §9 lists the agreed deviations.
+- Game Swing `plan` honours `playIds` (server keeps ids in the digest, strongest 5 when more, 422 `no-plays` when none); the page's keepPickedPlays workaround is gone; the picker caps ticks at 5.
+- Clips: the page asks `game-data` with `clips:true`; `clipMatches` carry text/variants; `planFromGame` matches each clip across all plays; play beats show only their sure-matched clip, else a photo/tile of the team that made the play. Fixed: `readDataInput` stripped clip URLs (clean() removes URLs), so matched clips never reached a beat.
+- Live data fixes (real ESPN GETs 2026-11-18): `shortenText` no longer cuts at "Sr."/initials; play headlines drop ESPN college formation/jersey noise and dangling last words.
+- Live check: NFL SF–DAL 401873063 (7,994 B digest), LAC–BAL 401873065 (8,073 B), CFB TEX–LSU 401856885 (8,076 B), MLB MIL–TB 401908046 (6,339 B): digests valid ≤ 8 KB, plans/timelines valid, no lint blockers; one frame sheet + MP4 per sport rendered through reel-maker.html in headless Chrome. Archive tested with a mocked ES MCP only.
+- Hash gate: news reels byte-identical to origin/main a2b9762 (275,630 draw calls, 1b18adf9…). Cache keys `reel-data.js`, `reel-maker.js` → `20261119-reels-fmt`. Suite at the 7 baseline failures.
+
 ### 2026-11-18 — Reels Studio data formats, Phase 1 Agent A: game data, archive, frame pick, director (branch feature/reels-fmt-data)
 - Status: `[committed on feature/reels-fmt-data — not pushed]`. Server + pure modules only; no UI, no migration. Contract §2/§3 shapes kept (additive fields only).
 - New `netlify/functions/_reel-games.js` (ESPN public site API, no key, UA `FrameUp-Reels/1.0`; a UA with a URL in it gets 403 from ESPN's edge): `games` (live / recent 48 h / date; drama-sorted, null last; warms ≤ 6 digests per list in a 4.5 s budget), `game-data` (GameDigest per §3.2; golden fixture byte-identical; schema-checked, soft fail `data-unavailable`), `athlete` (search with a retired-player top-up, career stats). Caches: list 15 s live / 60 s, digest 20 s live / 2 min fresh final / 7 d final, athlete 24 h; one fetch in flight per URL; 30/min per-user limiter. MLB StatsAPI fallback behind `REELS_DATA_MLB_STATSAPI=fallback` (needs `gamePk`), CFBD stubbed off. Optional `clips:true` on game-data returns clip-library matches.
