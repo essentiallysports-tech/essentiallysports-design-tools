@@ -304,7 +304,7 @@ await test('library clips: matched by wallclock window + team handle; unsure cli
     assert.equal(sport, 'nfl');
     assert.deepEqual(teams, ['Dallas Cowboys', 'San Francisco 49ers']);
     return [
-      { url: 'https://x.com/49ers/status/1', handle: '49ers', text: 'McCaffrey to the house!', postedAt: new Date(at + 150e3).toISOString() },
+      { url: 'https://x.com/49ers/status/1', handle: '49ers', text: 'McCaffrey to the house!', postedAt: new Date(at + 150e3).toISOString(), variants: [{ url: 'https://video.twimg.com/a.mp4', width: 720, height: 1280 }, { url: 'javascript:x' }], durationMs: 12000, sourceKind: 'team' },
       { url: 'https://x.com/someone/status/2', handle: 'someone', text: 'wow', postedAt: new Date(at + 3600e3).toISOString() },
     ];
   } };
@@ -312,6 +312,17 @@ await test('library clips: matched by wallclock window + team handle; unsure cli
   assert.equal(out.length, 1);
   assert.equal(out[0].playId, td.id);
   assert.ok(out[0].confidence >= 0.6);
+  // The page loads the clip from these (variants) and the plan re-matches it (text).
+  assert.equal(out[0].text, 'McCaffrey to the house!');
+  assert.deepEqual(out[0].variants.map(v => v.url), ['https://video.twimg.com/a.mp4']);
+  assert.deepEqual([out[0].durationMs, out[0].sourceKind], [12000, 'team']);
+});
+
+await test('shortenText: abbreviations ("Sr.", initials) are not sentence ends (live 2026-11-18 digests)', () => {
+  const t = 'Deebo Samuel Sr. 11 Yd pass from Brock Purdy (Eddy Pineiro Kick)';
+  assert.equal(G.shortenText(t, 80), t);
+  assert.equal(G.shortenText(t, 60), 'Deebo Samuel Sr. 11 Yd pass from Brock Purdy (Eddy Pineiro…');
+  assert.equal(G.shortenText('Pass to J. Smith for 5 yards. Tackled by K. Jones at the 20 and more words here.', 60), 'Pass to J. Smith for 5 yards.');
 });
 
 console.log(`\n${passed} passed`);

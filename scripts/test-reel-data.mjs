@@ -278,4 +278,59 @@ await test('reel-maker plan hand-off: a data format with its data plans from the
   assert.equal(brief.source, 'draft');
 });
 
+await test('planFromGame honours the ticked plays (playIds): digest ids only, <= MAX_KEY_PLAYS, else key plays', () => {
+  const playBeats = plan => plan.beats.filter(b => b.kind === 'play').map(b => b.refs.find(r => r.startsWith('play:')).slice(5));
+  const tagged = FULL.plays.filter(p => !p.scoring && !(p.tags || []).includes('lead-change')).slice(0, 2).map(p => p.id);
+  assert.ok(tagged.length >= 1, 'fixture has low-weight plays');
+  // Low-weight plays the auto pick would skip are kept when ticked.
+  const plan = D.planFromGame(FULL, { playIds: [...tagged, 'nope'] });
+  assert.deepEqual(playBeats(plan), tagged.slice().sort((a, b) => FULL.plays.find(p => p.id === a).seq - FULL.plays.find(p => p.id === b).seq));
+  assert.ok(T.validateTimeline(DIR.planTimeline(plan)).ok);
+  // More than the cap: the strongest MAX_KEY_PLAYS, in game order.
+  const all = FULL.plays.map(p => p.id);
+  const capped = playBeats(D.planFromGame(FULL, { playIds: all }));
+  assert.equal(capped.length, D.MAX_KEY_PLAYS);
+  const seqs = capped.map(id => FULL.plays.find(p => p.id === id).seq);
+  assert.deepEqual(seqs, seqs.slice().sort((a, b) => a - b));
+  // None valid or none sent: the key plays.
+  assert.deepEqual(playBeats(D.planFromGame(FULL, { playIds: ['nope'] })), D.keyPlays(FULL, 4).map(p => p.id));
+  assert.deepEqual(playBeats(D.planFromGame(FULL)), D.keyPlays(FULL, 4).map(p => p.id));
+});
+
+await test('reel-maker plan: Game Swing honours playIds (validated against the digest; at least one)', async () => {
+  delete process.env.AI_GATEWAY_API_KEY;
+  const { _test } = require('../netlify/functions/reel-maker.js');
+  const none = await _test.plan({ format: 'gameswing', digest: FULL, playIds: [] }, { email: 'e' }, { off: true });
+  assert.deepEqual([none.ok, none.status, none.reason], [false, 422, 'no-plays']);
+  const bogus = await _test.plan({ format: 'gameswing', digest: FULL, playIds: ['123', { x: 1 }] }, { email: 'e' }, { off: true });
+  assert.deepEqual([bogus.ok, bogus.reason], [false, 'no-plays']);
+  const pick = FULL.plays[FULL.plays.length - 2].id;
+  const one = await _test.plan({ format: 'gameswing', digest: FULL, playIds: [pick, 'zzz'] }, { email: 'e' }, { off: true });
+  assert.equal(one.ok, true);
+  assert.deepEqual(one.plan.beats.filter(b => b.kind === 'play').map(b => b.refs[0]), [`play:${pick}`]);
+  const many = await _test.plan({ format: 'gameswing', digest: FULL, playIds: FULL.plays.map(p => p.id) }, { email: 'e' }, { off: true });
+  assert.equal(many.plan.beats.filter(b => b.kind === 'play').length, D.MAX_KEY_PLAYS);
+  assert.ok(many.issues.some(i => /strongest/.test(i)));
+});
+
+await test('planFromGame clips: a clip goes to the play it matches across the game, never a neighbour', () => {
+  const opts = { teams: { home: { handles: ['dallascowboys'] }, away: { handles: ['49ers'] } }, neutralHandles: ['NFL'] };
+  const [fg, td] = GOLD.plays;
+  // A Cowboys post 3 min after the SF TD matches Dallas's own FG (13 min earlier), not the TD.
+  const at = Date.parse(td.wallclock);
+  const clip = { url: 'https://x.com/dallascowboys/status/9', handle: 'dallascowboys', text: '', postedAt: new Date(at + 180e3).toISOString() };
+  const m = D.matchClipToPlay(clip, GOLD.plays, opts);
+  const plan = D.planFromGame(GOLD, { ...opts, clips: [clip], playIds: [fg.id, td.id] });
+  const beatOf = id => plan.beats.find(b => b.refs.includes(`play:${id}`));
+  assert.equal(beatOf(td.id).visual, 'photo', 'the TD beat never gets the other team’s clip');
+  assert.equal(beatOf(fg.id).visual, m && m.sure && m.playId === fg.id ? 'clip' : 'photo');
+});
+
+await test('playHeadline: no formation / jersey noise, no cut at "Sr.", no dangling last word (live CFB/NFL text)', () => {
+  assert.equal(D.playHeadline({ text: 'Shotgun #16 A.Manning pass complete short right to #1…' }), 'A.Manning pass complete short right');
+  assert.equal(D.playHeadline({ text: 'No Huddle-Shotgun #10 S.Leavitt pass intercepted by #4…' }), 'S.Leavitt pass intercepted');
+  assert.equal(D.playHeadline({ text: 'Deebo Samuel Sr. 11 Yd pass from Brock Purdy (Eddy Pineiro…' }), 'Deebo Samuel Sr. 11 Yd pass from Brock Purdy');
+  assert.equal(D.playHeadline({ text: 'Pratt singled to center, Turang scored, Pratt thrown out' }), 'Pratt singled to center, Turang scored, Pratt thrown out');
+});
+
 console.log(`\n${passed} passed`);

@@ -132,10 +132,12 @@ async function dataPlan(input, body, track, gates) {
   const tier = body.tier === 'economy' ? 'economy' : 'standard';
   const out = await director.runDataDirector(input, { style, tier: body.aiCopy === false ? 'off' : tier, steer: clean(body.steer, 300), voice: body.voice === true, blocked, track });
   if (!out.plan) return { ok: false, status: 422, reason: 'no-data', error: 'There is not enough data for this reel; use the brief.' };
+  const MAXP = require('../../reel-data.js').MAX_KEY_PLAYS;
+  const dropped = input.playIds && input.playIds.length > MAXP ? [`Kept the ${MAXP} strongest of your ${input.playIds.length} ticked plays.`] : [];
   return {
     ok: true, plan: out.plan, source: out.source, reason: out.reason || '',
     notice: blocked === 'weekly-limit' ? `${weeklyLimitMessage()} Here is the reel built from the data.` : blocked === 'limit' ? "You've used a lot of AI this hour. Here is the reel built from the data." : '',
-    escalated: false, model: out.model || '', issues: (out.issues || []).slice(0, 8), corpus: out.corpus.slice(0, 12000),
+    escalated: false, model: out.model || '', issues: [...dropped, ...(out.issues || [])].slice(0, 8), corpus: out.corpus.slice(0, 12000),
     sources: [], route: null, style, suggestedStyle: STYLES.suggestStyle({ format: input.format }),
     lint: lintPlan(out.plan, { corpus: out.corpus }),
     costs: { director: money(out.cost), factCheck: 0 }, cost: money(out.cost), factCheck: null, cached: Boolean(out.cached),
@@ -145,6 +147,10 @@ async function dataPlan(input, body, track, gates) {
 async function plan(body, track, gates) {
   if (F.isDataFormat(body.format)) {
     const input = director.readDataInput(body, { cachedDigest: games.cachedDigest });
+    // Game Swing honours the editor's ticked key plays: at least one must be a play of this game.
+    if (input.format === 'gameswing' && input.digest && input.playIdsSent && !input.playIds.length) {
+      return { ok: false, status: 422, reason: 'no-plays', error: 'Tick at least one key play from this game.' };
+    }
     if (director.hasDataInput(input)) return dataPlan(input, body, track, gates);
   }
   const brief = clean(body.brief, 2400);

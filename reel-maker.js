@@ -1151,7 +1151,9 @@
     const inUse = () => new Set(plan.beats.flatMap(b => state.photos[b.id] || []).map(id => state.assets[id]?.post).filter(Boolean));
     const usedClips = inUse();
     const usedPhotos = new Set(Object.values(state.photos).flat());
-    const clipBeats = beats.filter(b => b.kind !== 'cta' && mix.mode[b.id] === 'clip' && (force || !state.photos[b.id]?.length)).map(b => ({ ...b, durMs: (durs.find(d => d.id === b.id) || {}).durMs || 2500 }));
+    // Game Swing plays show only the clip matched to that play (sure matches), else a photo.
+    const swingPlay = b => plan.format === 'gameswing' && b.kind === 'play';
+    const clipBeats = beats.filter(b => b.kind !== 'cta' && !swingPlay(b) && mix.mode[b.id] === 'clip' && (force || !state.photos[b.id]?.length)).map(b => ({ ...b, durMs: (durs.find(d => d.id === b.id) || {}).durMs || 2500 }));
     const picks = state.useClips && pool.length ? await pickClips(pool, clipBeats, plan, usedClips).catch(() => ({})) : {};
     let n = 0;
     for (const beat of beats) {
@@ -1160,7 +1162,10 @@
       if (!force && state.photos[beat.id]?.length) continue;
       if (beat.kind === 'cta') { setVisual(beat.id, [designAsset()], 'design'); continue; }
       let done = false;
-      if (mix.mode[beat.id] === 'clip') {
+      if (swingPlay(beat)) {
+        const m = state.useClips && beat.clip?.url ? state.clipMatches.find(c => c.url === beat.clip.url) : null;
+        if (m && !usedClips.has(m.url)) { usedClips.add(m.url); done = await useXClip(beat.id, m); }
+      } else if (mix.mode[beat.id] === 'clip') {
         const pick = picks[beat.id];
         if (pick) { usedClips.add(pick.clip.url); done = await useXClip(beat.id, pick.clip, pick.segment); }
         const clip = done ? null : nextClip(pool, beat, usedClips);
@@ -2372,7 +2377,7 @@
     gp: { sport: 'nfl', tab: 'recent', query: '', date: '', status: 'idle', list: [], error: '', selected: '', updatedAt: '', seq: 0 },
     pp: { sport: 'nfl', query: '', status: 'idle', list: [], error: '', selected: '', candidate: null, angle: '5 best moments', custom: '', seq: 0 },
     cp: { origin: 'x', link: '', status: 'idle', error: '', clip: null, list: [], libSport: 'nfl', libStatus: 'idle', libError: '', asset: '', duration: 0, segment: null, rightsOk: false, file: null },
-    keyPlays: [], digestState: 'idle', digestError: '', researchState: 'idle', view: 'reel', slide: 0, slides: null,
+    keyPlays: [], clipMatches: [], digestState: 'idle', digestError: '', researchState: 'idle', view: 'reel', slide: 0, slides: null,
   });
 
   // ── Gallery ──
@@ -2467,7 +2472,7 @@
   }
   function resetSources() {
     state.data = { game: null, athlete: null, archive: null };
-    state.research = null; state.replay = null; state.keyPlays = []; state.digestState = 'idle'; state.researchState = 'idle';
+    state.research = null; state.replay = null; state.keyPlays = []; state.clipMatches = []; state.digestState = 'idle'; state.researchState = 'idle';
     state.gp.selected = ''; state.pp.selected = ''; state.pp.candidate = null; state.cp.clip = null; state.cp.asset = ''; state.cp.segment = null;
   }
   els.gallery.addEventListener('click', onGalleryClick);
@@ -2673,7 +2678,7 @@
     g.selected = id;
     renderGameList();
     $('rm-games')?.querySelector(`[data-game="${CSS.escape(id)}"]`)?.focus();
-    if (state.data.game?.eventId !== id) { state.data.game = null; state.keyPlays = []; state.digestState = 'idle'; }
+    if (state.data.game?.eventId !== id) { state.data.game = null; state.keyPlays = []; state.clipMatches = []; state.digestState = 'idle'; }
     state.gameSummary = game;
     setSource({ kind: 'game', sport: game.sport || g.sport, eventId: id, label: G.gameLabel(game) });
     loadDigest().catch(() => {}).then(() => renderDataStory());
@@ -2685,16 +2690,20 @@
     if (!src || src.kind !== 'game') return null;
     const key = `${src.sport}|${src.eventId}`;
     const hit = digestCache.get(key);
-    if (hit && (hit.final || Date.now() - hit.at < 20000)) { state.data.game = hit.digest; state.digestState = 'ready'; if (!state.keyPlays.length) state.keyPlays = keyPlaysOf(hit.digest); return hit.digest; }
+    if (hit && (hit.final || Date.now() - hit.at < 20000)) { state.data.game = hit.digest; state.clipMatches = hit.clips; state.digestState = 'ready'; if (!state.keyPlays.length) state.keyPlays = keyPlaysOf(hit.digest); return hit.digest; }
     state.digestState = 'loading';
     renderDataStory();
     try {
-      const data = await api({ mode: 'game-data', sport: src.sport, eventId: src.eventId });
+      // clips: true -> sure clip-library matches per play (Game Swing plays them under the scorebug).
+      const data = await api({ mode: 'game-data', sport: src.sport, eventId: src.eventId, clips: true });
       const check = TL.validateDigest(data.digest);
       if (!check.ok) throw Object.assign(new Error('The game data came back incomplete. Try another game, or use a brief.'), { reason: 'bad-digest' });
-      digestCache.set(key, { at: Date.now(), digest: data.digest, final: Boolean(data.digest.status?.final) });
+      const ids = new Set(data.digest.plays.map(p => p.id));
+      const clips = (Array.isArray(data.clipMatches) ? data.clipMatches : []).filter(c => c && ids.has(c.playId) && /^https:\/\//.test(String(c.url || '')) && c.variants?.length);
+      digestCache.set(key, { at: Date.now(), digest: data.digest, clips, final: Boolean(data.digest.status?.final) });
       if (state.flow.source?.eventId !== src.eventId) return null;
       state.data.game = data.digest;
+      state.clipMatches = clips;
       state.digestState = 'ready';
       state.keyPlays = keyPlaysOf(data.digest);
       return data.digest;
@@ -3072,6 +3081,13 @@
     const box = event.target.closest('[data-keyplay]');
     if (!box) return;
     const id = box.dataset.keyplay;
+    const max = window.ReelData?.MAX_KEY_PLAYS || 5;
+    if (box.checked && state.keyPlays.length >= max) {
+      box.checked = false;
+      els.writeStatus.textContent = `A Game Swing reel covers up to ${max} plays. Untick one first.`;
+      return;
+    }
+    els.writeStatus.textContent = '';
     state.keyPlays = box.checked ? [...new Set([...state.keyPlays, id])] : state.keyPlays.filter(x => x !== id);
     const order = (state.data.game?.plays || []).map(p => p.id);
     state.keyPlays.sort((a, b) => order.indexOf(a) - order.indexOf(b));
@@ -3175,7 +3191,6 @@
         state.spent.director += Number(data.costs?.director) || 0;
         if (data.suggestedStyle) state.styleSuggested = data.suggestedStyle;
         data.plan.format = fmt;
-        keepPickedPlays(data.plan);
         applyPlan(data, { brief: run.brief, go: false });
         done('script', `${data.plan.beats.length} beats · ${S.get(data.plan.style).label} · ${F.money(Number(data.costs?.director) || 0)}`);
       } catch (error) {
@@ -3215,7 +3230,7 @@
   // the digest, the archive and athlete, or the replay frames and captions.
   function planData(fmt) {
     const src = state.flow.source || {};
-    if (fmt === 'gameswing') return { digest: state.data.game, playIds: state.keyPlays.slice() };
+    if (fmt === 'gameswing') return { digest: state.data.game, playIds: state.keyPlays.slice(), clips: state.useClips ? state.clipMatches.map(c => ({ url: c.url, handle: c.handle, text: c.text || '', postedAt: c.postedAt })) : [] };
     if (fmt === 'archive') {
       const a = state.data.archive || {};
       return { angle: src.angle, name: src.name, athlete: state.data.athlete, archive: { athleteId: a.athleteId, angle: a.angle, articles: a.sources || [], photos: a.photos || [], candidates: a.moments || [], coverage: state.research?.coverage || null, thin: Boolean(a.thin) } };
@@ -3223,20 +3238,25 @@
     if (fmt === 'replay' && state.replay) return { replay: { origin: state.replay.origin, clipAsset: state.replay.clipAsset, clipUrl: state.replay.clipUrl, segment: state.replay.segment, picker: state.replay.picker, frames: state.replay.frames }, captions: state.replay.captions || undefined };
     return {};
   }
-  // The data director picks its own key plays: the ones the editor unticked
-  // are dropped from the plan (as long as one play stays).
-  function keepPickedPlays(plan) {
-    if (dataFmt() !== 'gameswing' || !state.keyPlays.length || !Array.isArray(plan?.beats)) return;
-    const playOf = b => (b.refs || []).find(r => r.startsWith('play:'));
-    const isPlay = b => b.kind === 'play' && playOf(b);
-    const kept = plan.beats.filter(b => !isPlay(b) || state.keyPlays.includes(playOf(b).slice(5)));
-    if (kept.some(isPlay)) plan.beats = kept;
+  // Offline draft: the server's sure clip matches go on their plays (the
+  // server re-matches them itself when it plans).
+  function attachMatchedClips(plan) {
+    if (!state.useClips || !Array.isArray(plan?.beats)) return;
+    const used = new Set();
+    plan.beats.forEach(b => {
+      const ref = b.kind === 'play' && (b.refs || []).find(r => r.startsWith('play:'));
+      const m = ref && state.clipMatches.find(c => c.playId === ref.slice(5) && !used.has(c.url));
+      if (!m) return;
+      used.add(m.url);
+      b.visual = 'clip';
+      b.clip = { url: m.url, handle: m.handle || '', lagSec: m.lagSec, confidence: m.confidence, matchedBy: 'time' };
+    });
   }
   function localPlan(fmt, run) {
     const RD = window.ReelData;
     let plan = null;
     try {
-      if (fmt === 'gameswing' && RD?.planFromGame && state.data.game) { plan = RD.planFromGame(state.data.game, { title: run.title }); keepPickedPlays(plan); }
+      if (fmt === 'gameswing' && RD?.planFromGame && state.data.game) { plan = RD.planFromGame(state.data.game, { title: run.title, playIds: state.keyPlays.slice() }); attachMatchedClips(plan); }
       if (fmt === 'archive' && RD?.planFromArchive && state.data.archive) plan = RD.planFromArchive(state.data.archive, state.data.athlete, { angle: state.flow.source?.angle, name: state.flow.source?.name, momentIds: state.data.archive.moments.map(m => m.id) });
       if (fmt === 'replay' && RD?.planFromReplay && state.replay) plan = RD.planFromReplay(state.replay, { captions: state.replay.captions || undefined, title: run.title });
     } catch { plan = null; }

@@ -517,7 +517,11 @@ function readDataInput(body, { cachedDigest = null } = {}) {
   if (format === 'replay' && b.replay && typeof b.replay === 'object' && T.validateTimeline({ v: 2, beats: [], replay: b.replay }).ok) replay = b.replay;
   const captions = b.captions && typeof b.captions === 'object' ? Object.fromEntries(['setup', 'play', 'reaction'].map(r => [r, clean(b.captions[r], 60)])) : null;
   const clips = (Array.isArray(b.clips) ? b.clips : []).slice(0, 40).filter(c => c && /^https:\/\//.test(String(c.url || ''))).map(c => ({ url: clean(c.url, 400), handle: clean(c.handle, 40), text: clean(c.text, 280), postedAt: clean(c.postedAt, 40) }));
-  return { format, digest, athlete, archive, replay, captions, clips, angle: clean(b.angle, 120), name: clean(b.name, 80), playId: clean(b.playId, 40), title: clean(b.title, 90) };
+  // Game Swing: the editor's ticked key plays, kept only when the digest has them.
+  const playIdsSent = Array.isArray(b.playIds);
+  const known = new Set(digest ? digest.plays.map(p => String(p.id)) : []);
+  const playIds = playIdsSent ? [...new Set(b.playIds.slice(0, 60).map(id => clean(id, 40)).filter(id => known.has(id)))] : [];
+  return { format, digest, athlete, archive, replay, captions, clips, playIds, playIdsSent, angle: clean(b.angle, 120), name: clean(b.name, 80), playId: clean(b.playId, 40), title: clean(b.title, 90) };
 }
 function hasDataInput(input) {
   if (!input || !input.format) return false;
@@ -531,7 +535,7 @@ function codeDataPlan(input, { style = '' } = {}) {
   const S = style || F.FORMATS[input.format].defaultStyle;
   if (input.format === 'gameswing') {
     const handles = input.digest ? require('./_reel-games.js').teamHandles(input.digest) : {};
-    return DATA.planFromGame(input.digest, { style: S, clips: input.clips, ...handles, title: input.title });
+    return DATA.planFromGame(input.digest, { style: S, clips: input.clips, playIds: input.playIds, ...handles, title: input.title });
   }
   if (input.format === 'archive') return DATA.planFromArchive(input.archive, input.athlete, { style: S, angle: input.angle, name: input.name, sport: input.athlete && input.athlete.sport });
   if (input.format === 'replay') return DATA.planFromReplay(input.replay, { style: S, captions: input.captions, title: input.title, game: input.digest, playId: input.playId });

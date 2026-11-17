@@ -118,6 +118,26 @@
       .sort((a, b) => a.seq - b.seq);
   }
 
+  // The plays a Game Swing reel covers: the editor's ticked ids (only ids in
+  // the digest; at most MAX_KEY_PLAYS, the strongest kept), else keyPlays.
+  const MAX_KEY_PLAYS = 5;
+  function pickPlays(d, opts = {}) {
+    const ids = arr(opts.playIds).map(String);
+    if (ids.length) {
+      const want = new Set(ids);
+      const got = arr(d && d.plays).filter(p => p && want.has(String(p.id)));
+      if (got.length) {
+        return got
+          .map(p => ({ p, w: playWeight(p, d) }))
+          .sort((a, b) => b.w - a.w || a.p.seq - b.p.seq)
+          .slice(0, MAX_KEY_PLAYS)
+          .map(x => x.p)
+          .sort((a, b) => a.seq - b.seq);
+      }
+    }
+    return keyPlays(d, Math.max(1, Math.min(MAX_KEY_PLAYS, Number(opts.maxPlays) || 4)));
+  }
+
   // ─── Scorebug ───────────────────────────────────────────────────────────
   function periodLabel(sport, period, half) {
     if (!Number.isInteger(period)) return '';
@@ -226,14 +246,22 @@
 
   // ─── Text helpers (numbers only from the play text or the digest) ───────
   function playHeadline(p) {
-    const base = String(p && p.text || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s*\([^)]*$/, '').replace(/…$/, '').replace(/\s+/g, ' ').trim().replace(/[.!,]+$/, '');
-    const first = base.split(/(?<=[a-z]{2})[.;]\s+/)[0];
-    return trimWords(first, 9);
+    // ESPN college play text leads with the formation and jersey numbers
+    // ("No Huddle-Shotgun #16 A.Manning pass ..."): the headline keeps the play.
+    const base = String(p && p.text || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s*\([^)]*$/, '').replace(/…$/, '')
+      .replace(/^\s*(?:(?:No Huddle|Shotgun|Pistol|Under Center)[-\s]*)+/i, '').replace(/#\d{1,2}\s*/g, '')
+      .replace(/\s+/g, ' ').trim().replace(/[.!,]+$/, '');
+    // A sentence end, not "Sr." / "Jr." / an initial.
+    const first = base.split(/(?<=[a-z]{2})(?<!\b(?:Jr|Sr|St|vs))[.;]\s+/)[0];
+    // A cut line never ends on a dangling word ("... short right to").
+    let words = trimWords(first, 9).split(' ');
+    while (words.length > 3 && /^(?:to|by|for|at|the|of|and|from|on|in|a)$/i.test(words[words.length - 1])) words = words.slice(0, -1);
+    return words.join(' ');
   }
   const plural = name => /s$/i.test(name);
 
   // ─── Game Swing ─────────────────────────────────────────────────────────
-  // opts: { maxPlays = 4, clips: [{ url, handle, text, postedAt }], teams:
+  // opts: { playIds (the editor's ticked plays), maxPlays = 4 (without playIds), clips: [{ url, handle, text, postedAt }], teams:
   // { home: { handles }, away: { handles } }, neutralHandles, style, title }
   function planFromGame(d, opts = {}) {
     if (!isObj(d) || !isObj(d.teams) || !isObj(d.status)) return null;
@@ -242,7 +270,8 @@
     const final = Boolean(d.status.final);
     const points = d.wp && arr(d.wp.points);
     const hasWp = Boolean(points && points.length >= 2 && d.attribution);
-    const plays = keyPlays(d, Math.max(1, Math.min(5, Number(opts.maxPlays) || 4)));
+    // The editor's ticked plays (opts.playIds) when given, else the key plays.
+    const plays = pickPlays(d, opts);
     const beats = [];
     const add = beat => beats.push({ id: `b${beats.length + 1}`, vo: '', emphasis: '', photo: '', ...beat, refs: arr(beat.refs).slice(0, 8) });
     const homeWon = H.score > A.score;
@@ -267,19 +296,21 @@
     }
 
     // One beat per key play: scorebug state + caption over a clip or photo.
-    const clips = arr(opts.clips);
+    // Each clip is matched against every play of the game (so a clip goes to
+    // the play it shows, not the first one in its time window); only sure
+    // matches count.
+    const matched = arr(opts.clips).map(c => ({ c, m: c && c.url ? matchClipToPlay(c, arr(d.plays), opts) : null })).filter(x => x.m && x.m.sure);
     const used = new Set();
     plays.forEach(p => {
       const refs = [`play:${p.id}`];
       if (p.wpHome != null && hasWp && points.some(pt => pt[0] === p.seq)) refs.push(`wp:${p.seq}`);
       const team = p.team === 'home' ? H : (p.team === 'away' ? A : null);
       const beat = { kind: 'play', text: playHeadline(p), refs, playRef: `play:${p.id}`, visual: 'photo', photo: team ? team.name : '', holdMs: 3200 };
-      // Clip: the best sure match not already used; else the photo stays.
+      // Clip: the best sure match for this play not already used; else the photo stays.
       let best = null;
-      clips.forEach(c => {
-        if (!c || used.has(c.url)) return;
-        const m = matchClipToPlay(c, [p], opts);
-        if (m && m.sure && (!best || m.confidence > best.m.confidence)) best = { c, m };
+      matched.forEach(({ c, m }) => {
+        if (used.has(c.url) || m.playId !== String(p.id)) return;
+        if (!best || m.confidence > best.m.confidence) best = { c, m };
       });
       if (best) {
         used.add(best.c.url);
@@ -466,7 +497,7 @@
   const factsText = d => (T && T.digestFacts ? T.digestFacts(d) : '');
 
   return {
-    dramaScore, dramaParts, wpSpark, keyPlays, scorebugAt, scorebugForPlay, periodLabel, matchClipToPlay, surnames,
+    dramaScore, dramaParts, wpSpark, keyPlays, pickPlays, MAX_KEY_PLAYS, scorebugAt, scorebugForPlay, periodLabel, matchClipToPlay, surnames,
     planFromGame, planFromArchive, planFromReplay, factsText, archiveFacts, playHeadline, momentText, careerStat, angleCount,
     ATTRIBUTION, MIN_LAG, MAX_LAG,
   };

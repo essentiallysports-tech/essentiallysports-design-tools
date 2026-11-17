@@ -112,7 +112,9 @@ function shortenText(raw, max = T.LIMITS.playText) {
   const text = clean(raw, 2000);
   if (text.length <= max) return text;
   let cut = -1;
-  for (let i = 0; i < max; i += 1) if (/[.!?]/.test(text[i]) && (i + 1 === text.length || text[i + 1] === ' ')) cut = i;
+  // A sentence end, not an abbreviation: "Deebo Samuel Sr. 11 Yd pass" or "D. Greenlaw" keep going.
+  const abbrev = i => text[i] === '.' && /(?:^|[\s(#-])(?:[A-Z]|Jr|Sr|St|Mt|vs|II|III|IV)$/.test(text.slice(Math.max(0, i - 5), i));
+  for (let i = 0; i < max; i += 1) if (/[.!?]/.test(text[i]) && (i + 1 === text.length || text[i + 1] === ' ') && !abbrev(i)) cut = i;
   if (cut > 0) return text.slice(0, cut + 1);
   const head = text.slice(0, max - 1);
   const space = head.lastIndexOf(' ');
@@ -619,7 +621,15 @@ async function matchLibraryClips(digest, ctx = {}) {
   const out = [];
   (Array.isArray(clips) ? clips : []).forEach(c => {
     const m = D.matchClipToPlay(c, digest.plays, hint);
-    if (m && m.sure) out.push({ playId: m.playId, url: c.url, handle: c.handle || '', postedAt: c.postedAt, lagSec: m.lagSec, confidence: m.confidence, reasons: m.reasons });
+    // What the page needs to load the clip (variants) and the plan to re-match it (text).
+    if (m && m.sure) {
+      out.push({
+        playId: m.playId, url: c.url, handle: c.handle || '', text: String(c.text || '').slice(0, 280), postedAt: c.postedAt,
+        lagSec: m.lagSec, confidence: m.confidence, reasons: m.reasons,
+        variants: (Array.isArray(c.variants) ? c.variants : []).filter(v => v && /^https:\/\//.test(String(v.url || ''))).slice(0, 6),
+        thumb: c.thumb || '', durationMs: Number(c.durationMs) || 0, sourceKind: c.sourceKind || c.source || '',
+      });
+    }
   });
   return out.sort((a, b) => b.confidence - a.confidence).slice(0, 30);
 }
