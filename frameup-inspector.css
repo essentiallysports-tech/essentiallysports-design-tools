@@ -1,0 +1,700 @@
+/* FrameUp inspector: the editor's right-hand properties panel on Social Media,
+   YouTube and Newsletter (index.html), restyled to match Generate / Trends /
+   Video Ads. Research and the rules applied: project-docs/inspector-research.md.
+
+   Only the panel chrome changes. Nothing here touches the canvas, the export
+   renderers or the editor state. frameup-inspector.js adds the selection
+   strip, section icons for the photo block, the resize handle, keyboard
+   movement between sections and drag-to-scrub on number fields.
+
+   Rhythm (8px grid, --es-space-*): 16px panel gutter · 12px between stacked
+   fields · 6px label to field · 20px under an open section · 36px controls.
+   Type: section titles 11px/700 caps (the Video Ads "FRAME" / "TINT" eyebrow),
+   field labels 12px/500, control text 14px, help text 12px.
+
+   Listicle Type 2 (#listicle-type2-fields) and infographic (#infographic-fields)
+   are not restyled here (owner work in progress elsewhere). */
+
+/* ─── Tokens ─────────────────────────────────────────────────────────────── */
+:root {
+  --fi-w: 370px;              /* inspector column; 320 on narrow laptops */
+  --fi-gutter: var(--es-space-4, 16px);
+  --fi-ctl-h: 36px;
+  --fi-ctl-radius: 10px;
+  --fi-ctl-font: 14px;
+  --fi-label: 12px;
+  --fi-help: 12px;
+  --fi-stack: var(--es-space-3, 12px);
+  --fi-head-h: 44px;
+  --fi-icon: 16px;
+  --fi-ink: var(--es-ink, #0e1014);
+  --fi-ink-3: var(--es-ink-3, #565c67);
+  --fi-bg: var(--es-bg, #ffffff);
+  --fi-line: var(--es-line, #dfe2e7);
+  --fi-ink-label: var(--es-ink-2, #3a3f48);
+  --fi-field-line: var(--es-line-2, #8a919e);
+  --fi-well: var(--es-sunk, #f0f2f5);
+  --fi-track: #eceef2;
+}
+@media (max-width: 1279px) { :root { --fi-w: 320px; } }
+html[data-theme="dark"] {
+  --fi-ink: #FFFFFF;
+  --fi-ink-3: #A3AEC2;
+  --fi-bg: var(--theme-dark-surface, #1F2126);
+  --fi-line: var(--theme-dark-border, #2A2D34);
+  --fi-ink-label: #BFC8D9;
+  --fi-field-line: #4A505C;
+  --fi-well: #2A2D34;
+  --fi-track: #2A2D34;
+}
+
+/* Icons used by the section titles (Lucide, 24px grid, drawn with currentColor
+   through a mask so they follow light and dark). */
+:root {
+  --fi-i-template: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='7' height='7' x='3' y='3' rx='1'/%3E%3Crect width='7' height='7' x='14' y='3' rx='1'/%3E%3Crect width='7' height='7' x='14' y='14' rx='1'/%3E%3Crect width='7' height='7' x='3' y='14' rx='1'/%3E%3C/svg%3E");
+  --fi-i-content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7V4h16v3'/%3E%3Cpath d='M9 20h6'/%3E%3Cpath d='M12 4v16'/%3E%3C/svg%3E");
+  --fi-i-layout: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 9-3 3 3 3'/%3E%3Cpath d='m9 5 3-3 3 3'/%3E%3Cpath d='m15 19-3 3-3-3'/%3E%3Cpath d='m19 9 3 3-3 3'/%3E%3Cpath d='M2 12h20'/%3E%3Cpath d='M12 2v20'/%3E%3C/svg%3E");
+  --fi-i-brand: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='13.5' cy='6.5' r='1'/%3E%3Ccircle cx='17.5' cy='10.5' r='1'/%3E%3Ccircle cx='8.5' cy='7.5' r='1'/%3E%3Ccircle cx='6.5' cy='12.5' r='1'/%3E%3Cpath d='M12 2a10 10 0 0 0 0 20c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.83-.44-1.12-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.67h2A5.56 5.56 0 0 0 22 10.83C22 6 17.46 2 12 2z'/%3E%3C/svg%3E");
+  --fi-i-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21'/%3E%3C/svg%3E");
+  --fi-i-players: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='9' cy='7' r='4'/%3E%3Cpath d='M22 21v-2a4 4 0 0 0-3-3.87'/%3E%3Cpath d='M16 3.13a4 4 0 0 1 0 7.75'/%3E%3C/svg%3E");
+  --fi-i-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+  --fi-i-news: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2'/%3E%3Cpath d='M18 14h-8'/%3E%3Cpath d='M15 18h-5'/%3E%3Cpath d='M10 6h8v4h-8V6Z'/%3E%3C/svg%3E");
+  --fi-i-list: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h.01M3 12h.01M3 18h.01M8 6h13M8 12h13M8 18h13'/%3E%3C/svg%3E");
+  --fi-i-help: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E");
+  --fi-i-trend: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m22 7-8.5 8.5-5-5L2 17'/%3E%3Cpath d='M16 7h6v6'/%3E%3C/svg%3E");
+  --fi-i-layers: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z'/%3E%3Cpath d='m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65'/%3E%3Cpath d='m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65'/%3E%3C/svg%3E");
+}
+
+/* ─── Column width: 370 (1280+) / 320 (narrower), drag the left edge to resize
+   (300–440, remembered as frameup.inspector.width; --fi-w-user). ─────────── */
+@media (min-width: 901px) {
+  html[data-studio-shell="on"] body .app[data-workspace] {
+    grid-template-columns: minmax(0, 1fr) var(--fi-w-user, var(--fi-w)) !important;
+  }
+  html[data-studio-shell="on"] body .app[data-workspace].has-layers-panel {
+    grid-template-columns: minmax(200px, 240px) minmax(0, 1fr) var(--fi-w-user, var(--fi-w)) !important;
+  }
+  html[data-studio-shell="on"] body .app[data-workspace].has-layers-panel:not(.layers-collapsed) {
+    grid-template-columns: var(--fu-layers-w, 240px) minmax(0, 1fr) var(--fi-w-user, var(--fi-w)) !important;
+  }
+  html[data-studio-shell="on"] body .app[data-workspace].has-layers-panel.layers-collapsed {
+    grid-template-columns: 48px minmax(0, 1fr) var(--fi-w-user, var(--fi-w)) !important;
+  }
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel { position: relative; }
+}
+
+.fi-resize {
+  position: fixed;
+  z-index: 30;
+  display: none;
+  width: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+.fi-resize[hidden] { display: none !important; }
+.fi-resize::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: transparent;
+  transition: background-color var(--es-dur, .16s) var(--es-ease, ease);
+}
+.fi-resize:hover::before,
+.fi-resize:focus-visible::before,
+html.fi-is-resizing .fi-resize::before { background: var(--es-brand, #0a7dfa); }
+.fi-resize:focus-visible { outline: none; }
+html.fi-is-resizing, html.fi-is-resizing * { cursor: col-resize !important; user-select: none !important; }
+
+/* ─── Pinned actions: Export · options · Copy link (always in view) ───────── */
+@media (min-width: 901px) {
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-control-dock > .studio-export-section {
+    padding: 12px var(--fi-gutter) !important;
+    background: color-mix(in srgb, var(--fi-bg) 94%, transparent) !important;
+    -webkit-backdrop-filter: saturate(1.4) blur(8px);
+    backdrop-filter: saturate(1.4) blur(8px);
+  }
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-export-section .studio-topbar-right {
+    gap: var(--es-space-2, 8px) !important;
+  }
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-export-section :is(.studio-export-btn, .studio-export-options-btn, .studio-link-btn) {
+    min-height: 40px !important;
+    height: 40px !important;
+    border-radius: var(--es-radius-control, 12px) !important;
+    font-size: 14px !important;
+  }
+  /* The newsletter's "what you get" line under the buttons. */
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-export-section :is(.fu-nl-copy-hint, [data-fu-nl-hint]) {
+    margin-top: var(--es-space-2, 8px) !important;
+    color: var(--fi-ink-3) !important;
+    font-size: var(--fi-help) !important;
+    line-height: 1.45 !important;
+  }
+}
+
+/* ─── Selection strip: what the panel is editing ────────────────────────── */
+.fi-context {
+  display: none;
+  align-items: center;
+  gap: var(--es-space-3, 12px);
+  min-height: 52px;
+  margin: 0;
+  padding: 10px var(--fi-gutter);
+  border-bottom: 1px solid var(--fi-line);
+  background: var(--fi-bg);
+  font-family: var(--es-font-ui);
+}
+.fi-context:not([hidden]) { display: flex; }
+.fi-context__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--fi-ctl-radius);
+  background: var(--fi-well);
+  color: var(--es-ink-2);
+}
+.fi-context__icon::before {
+  content: "";
+  width: var(--fi-icon);
+  height: var(--fi-icon);
+  background: currentColor;
+  -webkit-mask: var(--fi-i-layers) center / contain no-repeat;
+  mask: var(--fi-i-layers) center / contain no-repeat;
+}
+.fi-context[data-kind="text"] .fi-context__icon::before { -webkit-mask-image: var(--fi-i-content); mask-image: var(--fi-i-content); }
+.fi-context[data-kind="photo"] .fi-context__icon::before { -webkit-mask-image: var(--fi-i-image); mask-image: var(--fi-i-image); }
+.fi-context[data-kind="logo"] .fi-context__icon::before { -webkit-mask-image: var(--fi-i-brand); mask-image: var(--fi-i-brand); }
+.fi-context[data-kind="button"] .fi-context__icon::before { -webkit-mask-image: var(--fi-i-layout); mask-image: var(--fi-i-layout); }
+.fi-context.is-selection .fi-context__icon {
+  background: var(--es-brand-soft);
+  color: var(--es-brand-text, #0a62c7);
+}
+html[data-theme="dark"] .fi-context.is-selection .fi-context__icon { color: #8FC2FF; }
+.fi-context__copy { display: grid; flex: 1 1 auto; gap: 2px; min-width: 0; }
+.fi-context__title {
+  overflow: hidden;
+  color: var(--fi-ink);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fi-context__sub {
+  overflow: hidden;
+  color: var(--fi-ink-3);
+  font-size: var(--fi-help);
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fi-context__actions { display: flex; flex: none; gap: var(--es-space-1, 4px); }
+.fi-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--fi-ctl-radius);
+  background: transparent;
+  color: var(--fi-ink-3);
+  cursor: pointer;
+  transition: background-color var(--es-dur, .16s) var(--es-ease, ease), color var(--es-dur, .16s) var(--es-ease, ease);
+}
+.fi-icon-btn:hover { background: var(--fi-well); color: var(--fi-ink); }
+.fi-icon-btn:focus-visible { outline: var(--es-focus-outline); outline-offset: 1px; }
+.fi-icon-btn svg { width: 16px; height: 16px; }
+.fi-icon-btn[hidden] { display: none; }
+
+/* ─── Section titles: icon + 11px caps label + chevron ──────────────────── */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-trigger {
+  align-items: center !important;
+  gap: 10px !important;
+  min-height: var(--fi-head-h) !important;
+  margin: 0 -8px !important;
+  padding: 0 8px !important;
+  border-radius: var(--fi-ctl-radius) !important;
+  color: var(--fi-ink-label) !important;
+  font-family: var(--es-font-ui) !important;
+  font-size: var(--es-type-eyebrow-size, 11px) !important;
+  font-weight: 700 !important;
+  letter-spacing: var(--es-type-eyebrow-tracking, .08em) !important;
+  line-height: 1.3 !important;
+  text-transform: uppercase !important;
+  transition: background-color var(--es-dur, .16s) var(--es-ease, ease), color var(--es-dur, .16s) var(--es-ease, ease);
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-trigger > [data-studio-accordion-label] {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit !important;
+  letter-spacing: inherit !important;
+  text-align: left;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-trigger:hover {
+  background: var(--fi-well) !important;
+  color: var(--fi-ink) !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-trigger:focus-visible {
+  outline: var(--es-focus-outline) !important;
+  outline-offset: -2px !important;
+}
+@media (min-width: 901px) {
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-list:not(.is-single) .studio-accordion-trigger { display: flex !important; }
+}
+/* Section icon (one per section key; generic "layers" otherwise). */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(.studio-accordion-trigger, .fi-section-title)::before {
+  content: "";
+  flex: none;
+  width: var(--fi-icon);
+  height: var(--fi-icon);
+  background: currentColor;
+  -webkit-mask: var(--fi-section-icon, var(--fi-i-layers)) center / contain no-repeat;
+  mask: var(--fi-section-icon, var(--fi-i-layers)) center / contain no-repeat;
+  opacity: .9;
+}
+[data-studio-accordion-section="content"] { --fi-section-icon: var(--fi-i-content); }
+[data-studio-accordion-section="layout"] { --fi-section-icon: var(--fi-i-layout); }
+[data-studio-accordion-section="brand"] { --fi-section-icon: var(--fi-i-brand); }
+[data-studio-accordion-section="images"] { --fi-section-icon: var(--fi-i-players); }
+[data-studio-accordion-section="widgetMain"] { --fi-section-icon: var(--fi-i-news); }
+:is([data-studio-accordion-section="widgetPicks"], [data-studio-accordion-section="list"], [data-studio-accordion-section="list2"]) { --fi-section-icon: var(--fi-i-list); }
+[data-studio-accordion-section="trivia"] { --fi-section-icon: var(--fi-i-help); }
+[data-studio-accordion-section="ticker"] { --fi-section-icon: var(--fi-i-trend); }
+
+/* Chevron: 16px Lucide chevron, turns when open. */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-chevron {
+  flex: none;
+  width: 16px !important;
+  height: 16px !important;
+  border: 0 !important;
+  background: currentColor !important;
+  color: var(--fi-ink-3);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat !important;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat !important;
+  transform: rotate(0deg) !important;
+  transition: transform var(--es-dur-step, .2s) var(--es-ease, ease);
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-chevron::before,
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-chevron::after { display: none !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-section.is-open .studio-accordion-chevron { transform: rotate(180deg) !important; }
+
+/* The section the selected layer lives in: a quiet blue title and a short
+   tint on its body (no tint with reduced motion: the title alone shows it). */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel [data-fi-active] > .studio-accordion-trigger,
+html[data-studio-shell="on"] body .app[data-workspace] > .panel [data-fi-active] > .fi-section-title {
+  color: var(--es-brand-text, #0a62c7) !important;
+}
+html[data-theme="dark"][data-studio-shell="on"] body .app[data-workspace] > .panel [data-fi-active] > :is(.studio-accordion-trigger, .fi-section-title) { color: #8FC2FF !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel [data-fi-active] > .studio-accordion-trigger::after {
+  content: "Selected";
+  flex: none;
+  order: 2;
+  padding: 2px 8px;
+  border-radius: var(--es-radius-pill, 999px);
+  background: var(--es-brand-soft);
+  color: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-trigger > .studio-accordion-chevron { order: 3; }
+@media (prefers-reduced-motion: no-preference) {
+  [data-fi-flash] { animation: fi-flash 1.2s var(--es-ease, ease) 1; }
+}
+@keyframes fi-flash {
+  0%, 30% { box-shadow: 0 0 0 6px rgb(10 125 250 / .10); background-color: rgb(10 125 250 / .05); }
+  100% { box-shadow: 0 0 0 6px rgb(10 125 250 / 0); background-color: transparent; }
+}
+[data-fi-flash] { border-radius: var(--fi-ctl-radius); }
+
+/* ─── Section spacing on the 8px grid ───────────────────────────────────── */
+@media (min-width: 901px) {
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-list {
+    padding: 4px var(--fi-gutter) 4px !important;
+  }
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-section:not([hidden]) ~ .studio-accordion-section:not([hidden]) {
+    border-top: 1px solid var(--fi-line) !important;
+  }
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-body {
+    gap: var(--es-space-4, 16px) !important;
+    padding: 4px 0 0 !important;
+  }
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-section.is-open .studio-accordion-body { padding-bottom: 20px !important; }
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-list.is-single .studio-accordion-body { padding-top: 16px !important; }
+
+  /* Template block (Post type / Layout / Newsletter asset + brand). */
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .app[data-workspace] > .panel .studio-control-dock > .studio-primary-controls {
+    margin-inline: var(--fi-gutter) !important;
+    padding: 16px 0 !important;
+    gap: var(--fi-stack) !important;
+  }
+  html[data-studio-shell="on"] body[data-studio-inspector="all"] .app[data-workspace] > .panel .studio-control-dock > :is(.studio-dock-section, .studio-ai-section) {
+    margin-inline: var(--fi-gutter) !important;
+    padding-top: 16px !important;
+    padding-bottom: 20px !important;
+    gap: var(--fi-stack) !important;
+  }
+}
+
+/* The first label of the Template block and the photo / ES Image Pool titles
+   read as section titles too, so every block starts the same way. */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-primary-controls :is(#post-type-control .card-title, #youtube-variation-card > .card-title, .newsletter-control-row > .card:first-child > .card-title),
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-ai-section > .studio-dock-title,
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .fi-section-title {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  min-height: 24px;
+  margin: 0 0 4px !important;
+  color: var(--fi-ink-label) !important;
+  font-family: var(--es-font-ui) !important;
+  font-size: var(--es-type-eyebrow-size, 11px) !important;
+  font-weight: 700 !important;
+  letter-spacing: var(--es-type-eyebrow-tracking, .08em) !important;
+  line-height: 1.3 !important;
+  text-transform: uppercase !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-primary-controls :is(#post-type-control .card-title, #youtube-variation-card > .card-title, .newsletter-control-row > .card:first-child > .card-title)::before,
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-ai-section > .studio-dock-title::before {
+  content: "";
+  flex: none;
+  width: var(--fi-icon);
+  height: var(--fi-icon);
+  background: currentColor;
+  -webkit-mask: var(--fi-i-template) center / contain no-repeat;
+  mask: var(--fi-i-template) center / contain no-repeat;
+  opacity: .9;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-ai-section > .studio-dock-title::before { -webkit-mask-image: var(--fi-i-search); mask-image: var(--fi-i-search); }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-dock-section { --fi-section-icon: var(--fi-i-image); }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-ai-section > .studio-dock-title .studio-dock-kicker {
+  margin-left: auto;
+  color: var(--fi-ink-3);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+/* "Browse" sits at the right of the Template title. */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .card-title.has-browse .template-browse-btn {
+  margin-left: auto !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  font-size: 12px !important;
+}
+
+/* ─── Field labels and help text ───────────────────────────────────────── */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(.text-card, .color-card, #brand-logo-control, .stat-template-fields, #widget-main-fields, #widget-picks-fields, #trivia-fields, #ticker-fields, #list-fields, #list2-fields, .newsletter-control-row, #quote-logo-control, .pill-position-card, #stats-single-fields, .stats-double-fields, .double-entity-fields, .twitter-quote-fields) :is(.card-title, .widget-field-label, .tod-label, .section-label, .color-group-label, .stats-entry-grid-label),
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .stat-template-fields > .listicle-field-label {
+  color: var(--fi-ink-label) !important;
+  font-family: var(--es-font-ui) !important;
+  font-size: var(--fi-label) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.35 !important;
+  text-transform: none !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .stat-template-fields > .listicle-field-label {
+  display: grid !important;
+  gap: 6px !important;
+  margin: 0 !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(.field-hint, .stat-template-fields .listicle-note, .widget-field-hint, .studio-ai-helper, .pill-position-empty):not(:is(#listicle-type2-fields, #infographic-fields) *) {
+  margin: 6px 0 0 !important;
+  color: var(--fi-ink-3) !important;
+  font-family: var(--es-font-ui) !important;
+  font-size: var(--fi-help) !important;
+  font-weight: 400 !important;
+  line-height: 1.45 !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .stat-template-fields .listicle-note {
+  margin: 0 !important;
+  padding: 10px 12px;
+  border-radius: var(--fi-ctl-radius);
+  background: var(--fi-well);
+}
+
+/* ─── Text fields and selects: one 36px control ─────────────────────────── */
+@media (min-width: 901px) {
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(.widget-text-input:not(.widget-paste-link-input), .stat-template-fields .pill-entry, .select-dropdown-trigger):not(:is(#listicle-type2-fields, #infographic-fields) *) {
+    min-height: var(--fi-ctl-h) !important;
+    height: var(--fi-ctl-h) !important;
+    font-size: var(--fi-ctl-font) !important;
+  }
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(.widget-text-input:not(.widget-paste-link-input), .stat-template-fields .pill-entry, .select-dropdown-trigger):not(:is(#listicle-type2-fields, #infographic-fields) *) {
+  border-radius: var(--fi-ctl-radius) !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(.widget-text-input:not(.widget-paste-link-input), .stat-template-fields .pill-entry) {
+  padding: 0 12px !important;
+  border: 1px solid var(--fi-field-line) !important;
+  background: var(--fi-bg) !important;
+  color: var(--fi-ink) !important;
+  font-family: var(--es-font-ui) !important;
+  transition: border-color var(--es-dur, .16s) var(--es-ease, ease), box-shadow var(--es-dur, .16s) var(--es-ease, ease);
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(.widget-text-input:not(.widget-paste-link-input), .stat-template-fields .pill-entry):hover { border-color: var(--fi-ink-3) !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(.widget-text-input:not(.widget-paste-link-input), .stat-template-fields .pill-entry, .text-card textarea, textarea.widget-text-area):focus {
+  border-color: var(--es-focus-color) !important;
+  box-shadow: var(--es-focus-halo) !important;
+  outline: none !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .select-dropdown-trigger:not(:is(#listicle-type2-fields, #infographic-fields) *) {
+  padding-right: 10px !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .select-dropdown-trigger:not(:is(#listicle-type2-fields, #infographic-fields) *) .select-option-name {
+  font-size: var(--fi-ctl-font) !important;
+  font-weight: 500 !important;
+}
+/* The main headline box keeps its height (several lines), on the same radius. */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .text-card textarea.pill-entry,
+html[data-studio-shell="on"] body .app[data-workspace] > .panel textarea.widget-text-area {
+  min-height: 88px !important;
+  padding: 10px 12px !important;
+  border-radius: var(--fi-ctl-radius) !important;
+  font-size: var(--fi-ctl-font) !important;
+  line-height: 1.45 !important;
+}
+
+/* ─── Toggles: label left, switch right, no box ─────────────────────────── */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(#swipe-button-card, #youtube-quote-control) .quote-switch {
+  min-height: var(--fi-ctl-h) !important;
+  height: auto !important;
+  padding: 4px 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(#swipe-button-card, #youtube-quote-control) .quote-switch > span:first-child {
+  color: var(--fi-ink) !important;
+  font-family: var(--es-font-ui) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1.3 !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(#swipe-button-card, #youtube-quote-control) .quote-switch:focus-visible {
+  outline: var(--es-focus-outline) !important;
+  outline-offset: 2px !important;
+  border-radius: 6px !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(#swipe-button-card, #youtube-quote-control) .quote-switch .quote-switch-track {
+  width: 36px !important;
+  height: 20px !important;
+  flex: 0 0 36px !important;
+  background: var(--fi-field-line) !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(#swipe-button-card, #youtube-quote-control) .quote-switch .quote-switch-track::before {
+  top: 2px !important;
+  left: 2px !important;
+  width: 16px !important;
+  height: 16px !important;
+  background: #fff !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(#swipe-button-card, #youtube-quote-control) .quote-switch:is(.is-active, [aria-checked="true"]) .quote-switch-track { background: var(--es-brand-fill, #0a6fde) !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(#swipe-button-card, #youtube-quote-control) .quote-switch:is(.is-active, [aria-checked="true"]) .quote-switch-track::before { transform: translateX(16px) !important; }
+
+/* ─── Segmented controls: Layout chips, stat count, ticker direction ─────
+   Grey track, white raised pill for the chosen one (es-ui .es-segmented). */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(#youtube-variation-card .select-chips, .stat-template-count) {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 2px !important;
+  padding: 3px !important;
+  border-radius: 12px !important;
+  background: var(--fi-track) !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(#youtube-variation-card .select-chip, .stat-template-count .post-type-option) {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  min-height: 32px !important;
+  padding: 6px 8px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--fi-ink-3) !important;
+  font: 500 13px/1.2 var(--es-font-ui) !important;
+  text-align: center;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(#youtube-variation-card .select-chip, .stat-template-count .post-type-option):hover { color: var(--fi-ink) !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(#youtube-variation-card .select-chip:is([aria-checked="true"], [aria-pressed="true"], .is-selected), .stat-template-count .post-type-option:is([aria-pressed="true"], .is-active)) {
+  background: var(--fi-bg) !important;
+  box-shadow: var(--es-shadow-pill, 0 1px 2px rgb(14 16 20 / .12), 0 0 0 1px rgb(14 16 20 / .04)) !important;
+  color: var(--fi-ink) !important;
+  font-weight: 600 !important;
+}
+html[data-theme="dark"][data-studio-shell="on"] body .app[data-workspace] > .panel :is(#youtube-variation-card .select-chip:is([aria-checked="true"], [aria-pressed="true"], .is-selected), .stat-template-count .post-type-option:is([aria-pressed="true"], .is-active)) {
+  background: #3B4049 !important;
+  color: #FFFFFF !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(#youtube-variation-card .select-chip, .stat-template-count .post-type-option):focus-visible {
+  outline: var(--es-focus-outline) !important;
+  outline-offset: 0 !important;
+}
+
+/* ─── Stat rows (Player Stat Line): # · value · label on one line ───────── */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .stat-template-row {
+  grid-template-columns: 16px minmax(0, .7fr) minmax(0, 1.6fr) !important;
+  gap: var(--es-space-2, 8px) !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .stat-template-rows { gap: 6px !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .stat-template-index { color: var(--fi-ink-3) !important; font-size: 12px !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .stat-template-pair { gap: var(--es-space-2, 8px) !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .stat-template-fields { gap: var(--es-space-4, 16px) !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .stat-template-colors { gap: var(--es-space-2, 8px) var(--es-space-3, 12px) !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .stat-template-color {
+  color: var(--fi-ink-label) !important;
+  font-size: 13px !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .stat-template-color input[type="color"] {
+  width: 32px !important;
+  height: 28px !important;
+  border-color: var(--fi-field-line) !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .logo-slot {
+  padding: 8px 10px !important;
+  border: 1px solid var(--fi-line) !important;
+  border-radius: var(--es-radius-control, 12px) !important;
+  background: var(--fi-bg) !important;
+}
+html[data-theme="dark"][data-studio-shell="on"] body .app[data-workspace] > .panel .logo-slot { border-color: #3B4049 !important; }
+
+/* ─── Swatches and logo choices: quiet ring for the chosen one ──────────── */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .palette-row {
+  gap: var(--es-space-2, 8px) !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .palette-row .swatch {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: var(--fi-ctl-radius) !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .palette-row .swatch .swatch-inner { border-radius: 8px !important; font-size: 12px !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .palette-row .swatch:hover { transform: none !important; box-shadow: 0 0 0 1px var(--fi-ink-3) !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .palette-row .swatch:is(.active, [aria-pressed="true"]) {
+  outline: 2px solid var(--es-brand-fill, #0a6fde) !important;
+  outline-offset: 2px !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .palette-row .swatch:focus-visible {
+  outline: var(--es-focus-outline) !important;
+  outline-offset: 3px !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .brand-logo-options { gap: var(--es-space-2, 8px) !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .brand-logo-option {
+  min-height: 44px !important;
+  height: 44px !important;
+  border: 1px solid var(--fi-line) !important;
+  border-radius: var(--fi-ctl-radius) !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .brand-logo-option img { max-height: 24px !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .brand-logo-option:is([aria-checked="true"], [aria-pressed="true"], .is-active) {
+  border-color: var(--es-brand-fill, #0a6fde) !important;
+  background: var(--es-brand-soft) !important;
+  box-shadow: inset 0 0 0 1px var(--es-brand-fill, #0a6fde) !important;
+}
+
+/* ─── Photo block: title, empty drop area, precise X / Y / Zoom ─────────── */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-dock-section > .fi-section-title { margin-bottom: 0 !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .image-context-empty {
+  display: grid !important;
+  gap: var(--fi-stack) !important;
+  padding: 16px !important;
+  border: 1px dashed var(--fi-field-line) !important;
+  border-radius: var(--es-radius-control, 12px) !important;
+  background: var(--fi-well) !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .image-context-empty strong {
+  display: block;
+  color: var(--fi-ink) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .image-context-empty span {
+  display: block;
+  margin-top: 2px;
+  color: var(--fi-ink-3) !important;
+  font-size: var(--fi-help) !important;
+  line-height: 1.45 !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .image-context-empty-actions { display: flex !important; flex-wrap: wrap; gap: var(--es-space-2, 8px) !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .image-context-empty-actions button {
+  min-height: var(--fi-ctl-h) !important;
+  padding: 0 14px !important;
+  border-radius: var(--fi-ctl-radius) !important;
+  font-size: 13px !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .image-context-precision label > span:first-child {
+  cursor: ew-resize;
+  user-select: none;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .image-context-precision label > span:first-child:hover { color: var(--fi-ink); }
+html.fi-is-scrubbing, html.fi-is-scrubbing * { cursor: ew-resize !important; user-select: none !important; }
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .image-asset-tabs {
+  padding: 3px !important;
+  border-radius: 12px !important;
+  background: var(--fi-track) !important;
+}
+
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .widget-image-row .widget-paste-link-field {
+  min-height: var(--fi-ctl-h) !important;
+  border-radius: var(--fi-ctl-radius) !important;
+}
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .fi-section-title[hidden] { display: none !important; }
+
+/* ES Image Pool search: same 36px field. */
+html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-ai-search {
+  min-height: 40px !important;
+  border-radius: var(--es-radius-control, 12px) !important;
+}
+
+/* ─── Dark mode: panel surfaces ─────────────────────────────────────────── */
+html[data-theme="dark"] .fi-context { border-bottom-color: var(--theme-dark-border, #2A2D34); background: transparent; }
+html[data-theme="dark"][data-studio-shell="on"] body .app[data-workspace] > .panel .studio-control-dock > .studio-export-section {
+  background: color-mix(in srgb, var(--theme-dark-surface, #1F2126) 92%, transparent) !important;
+}
+html[data-theme="dark"][data-studio-shell="on"] body .app[data-workspace] > .panel :is(.widget-text-input:not(.widget-paste-link-input), .stat-template-fields .pill-entry) {
+  border-color: var(--fi-field-line) !important;
+  background: var(--theme-dark-surface, #1F2126) !important;
+  color: #FFFFFF !important;
+}
+html[data-theme="dark"][data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-section:not([hidden]) ~ .studio-accordion-section:not([hidden]) {
+  border-top-color: var(--theme-dark-border, #2A2D34) !important;
+}
+html[data-theme="dark"][data-studio-shell="on"] body .app[data-workspace] > .panel .image-context-empty { background: rgb(255 255 255 / .03) !important; }
+html[data-theme="dark"][data-studio-shell="on"] body .app[data-workspace] > .panel .brand-logo-option { border-color: #3B4049 !important; }
+html[data-theme="dark"][data-studio-shell="on"] body .app[data-workspace] > .panel .brand-logo-option:is([aria-checked="true"], [aria-pressed="true"], .is-active) { border-color: #54A4FB !important; box-shadow: inset 0 0 0 1px #54A4FB !important; background: rgb(10 125 250 / .17) !important; }
+html[data-theme="dark"][data-studio-shell="on"] body .app[data-workspace] > .panel .palette-row .swatch:is(.active, [aria-pressed="true"]) { outline-color: #54A4FB !important; }
+
+/* ─── Phone: the panel is a bottom sheet (index.html keeps its grip, detents
+   and tabs). Fields grow to 44px touch targets with 16px text (no iOS zoom). */
+@media (max-width: 900px) {
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(.widget-text-input:not(.widget-paste-link-input), .stat-template-fields .pill-entry) {
+    min-height: 44px !important;
+    height: 44px !important;
+    font-size: 16px !important; /* no iOS zoom on focus */
+  }
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .select-dropdown-trigger {
+    min-height: 44px !important;
+    height: auto !important;
+  }
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-dock-section > .fi-section-title { display: none !important; }
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .text-card textarea.pill-entry { font-size: 16px !important; }
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel :is(#youtube-variation-card .select-chip, .stat-template-count .post-type-option) { min-height: 40px !important; }
+  .fi-context { display: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-studio-shell="on"] body .app[data-workspace] > .panel .studio-accordion-chevron,
+  .fi-resize::before { transition: none !important; }
+}
