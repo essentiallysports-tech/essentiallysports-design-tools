@@ -168,7 +168,7 @@
       { page: 'index.html', target: '.canvas-bottom-actions', placement: 'top', icon: I.zoom, title: 'Zoom, slides and photos', text: 'Zoom, switch slides (⋯ duplicates or moves one), or add a photo.' },
       { page: 'index.html', target: ['.fu-canvas-bar', '.studio-history-group'], media: DESKTOP, icon: I.grid, title: 'Format and safe zones', text: 'The template and size you are on. Click to switch. Safe zones show what gets covered.' },
       { page: 'index.html', target: '.studio-history-group', media: DESKTOP, icon: I.history, title: 'Undo and recent', text: 'Undo, redo, and reopen anything you exported.' },
-      { page: 'index.html', target: ['.app > .panel', '.studio-control-dock'], media: DESKTOP, placement: 'left', icon: I.sliders, title: 'Inspector', text: 'Text, photos, brand and colours, top to bottom.' },
+      { page: 'index.html', target: ['.app > .panel', '.studio-control-dock'], media: DESKTOP, placement: 'left', icon: I.sliders, title: 'Inspector', text: 'Pick a layer and its settings open here. Drag the left edge to resize.' },
       { page: 'index.html', target: '.mobile-editor-nav', media: PHONE, icon: I.sliders, title: 'Edit', text: 'Content, photos, format and brand. Tap a tab to open it.' },
       { page: 'index.html', target: ['[data-studio-export-section]', '#studio-export-btn', '.mobile-editor-export'], icon: I.download, title: 'Export', text: 'Download or copy a share link. ⌘E exports. Your work autosaves.' },
     ],

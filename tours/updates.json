@@ -3,6 +3,35 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-20-inspector",
+      "date": "2026-11-20",
+      "title": "Editor: a cleaner settings panel that follows your selection",
+      "commit": "1503d36",
+      "items": [
+        {
+          "title": "Settings follow your selection",
+          "text": "Pick a layer in Layers or on the canvas and the panel opens its settings and marks them Selected. With nothing picked, the top line says you are editing the whole design.",
+          "page": "index.html",
+          "route": "#instagram",
+          "target": ".app > .panel"
+        },
+        {
+          "title": "One look for every control",
+          "text": "Clear section titles with icons, the same field, toggle and switcher styles as Generate and Video Ads, and Export always pinned at the top. Collapse or expand every section in one click.",
+          "page": "index.html",
+          "route": "#youtube",
+          "target": ".app > .panel"
+        },
+        {
+          "title": "Make it wider, or drag a number",
+          "text": "Drag the panel's left edge to resize it (it remembers). Drag the X, Y or Zoom label on a photo to change the number; hold Shift for bigger steps.",
+          "page": "index.html",
+          "route": "#instagram",
+          "target": ".app > .panel"
+        }
+      ]
+    },
+    {
       "id": "2026-11-19-hero-generate",
       "date": "2026-11-19",
       "title": "Generate: stat lines, records, carousels and no blank photos",
