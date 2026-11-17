@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>UI Library | FrameUp</title>
-  <meta name="description" content="FrameUp UI component library: the building blocks of the FrameUp website interface.">
+  <meta name="description" content="FrameUp design system: the live tokens, components and patterns of the FrameUp website interface.">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
@@ -15,87 +15,325 @@
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261116-sp1">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-focus1">
   <link rel="stylesheet" href="theme.css?v=20261116-sp1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261115-g3">
+  <link rel="stylesheet" href="site-chrome.css?v=20261117-usage1">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261116-sp1">
-<link rel="stylesheet" href="es-ui.css?v=20261116-sp2">
+  <link rel="stylesheet" href="design-tokens.css?v=20261117-focus1">
+<link rel="stylesheet" href="es-ui.css?v=20261117-adm1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
+  <!-- Component sources for the AI, Video Ads and logo specimens below. -->
+  <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
+  <link rel="stylesheet" href="video-ads.css?v=20261117-ask1">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
-  <script src="site-chrome.js?v=20261111-icons2"></script>
-<script src="app-shell.js?v=20261115-pol7"></script>
+  <script src="site-chrome.js?v=20261117-usage1"></script>
+<script src="app-shell.js?v=20261117-usage1"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
+  <script src="league-logos.js?v=20261117-logo1" defer></script>
+  <script src="video-ads-teams.js?v=20261117-tlogo1" defer></script>
   <style>
-    /* No global box-sizing reset on this page: without it .es-input (width:100%
-       + padding) ran 28px past its column into the next field. */
+    /* ── UI Library page only (.ds-*). Components come from the real CSS. ── */
     .ds-page, .ds-page *, .ds-page *::before, .ds-page *::after { box-sizing: border-box; }
-    .ds-page { max-width: 1040px; margin: 0 auto; padding: var(--es-space-8, 32px) var(--es-space-8, 32px) var(--es-space-12, 48px); display: grid; gap: var(--es-space-8, 32px); font-family: var(--es-font-ui); color: var(--es-ink); }
-    .ds-hero h1 { margin: var(--es-space-1, 4px) 0 var(--es-space-2, 8px); font-family: var(--es-type-page-title-family); font-size: var(--es-type-page-title-size); font-weight: var(--es-type-page-title-weight); line-height: var(--es-type-page-title-line); letter-spacing: var(--es-type-page-title-tracking); }
-    .ds-kicker { margin: 0; color: var(--es-brand-text); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
-    .ds-lede { margin: 0 0 var(--es-space-5, 20px); max-width: var(--es-type-lede-measure); color: var(--es-ink-2); font-size: var(--es-type-lede-size); line-height: var(--es-type-lede-line); }
-    .ds-lede code, .ds-code code { padding: 2px var(--es-space-2, 8px); border-radius: 6px; background: #efeff1; color: var(--es-ink-2); font-size: 13px; }
-    .ds-note { max-width: 46em; }
-    .ds-toc { position: sticky; top: calc(var(--es-topbar-h) + 12px); z-index: 5; justify-self: start; text-decoration: none; }
-    .ds-toc a { text-decoration: none; }
-    .ds-section { scroll-margin-top: calc(var(--es-topbar-h) + 72px); }
-    .ds-h3 { margin: 0 0 var(--es-space-3, 12px); color: var(--es-ink-2); font-size: 13px; font-weight: 700; }
-    .ds-page { grid-template-columns: minmax(0, 1fr); }
-    .ds-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--es-space-6, 24px); }
-    .ds-stack > .es-segmented { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-    .ds-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); margin: 0; }
-    .ds-btn-table-wrap { overflow-x: auto; }
-    .ds-btn-table { border-collapse: collapse; width: 100%; min-width: 620px; }
-    .ds-btn-table th, .ds-btn-table td { padding: var(--es-space-3, 12px) var(--es-space-3, 12px) var(--es-space-3, 12px) 0; text-align: left; vertical-align: middle; }
-    .ds-btn-table thead th { color: var(--es-ink-3); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
-    .ds-btn-table tbody th { font-size: 14px; font-weight: 600; color: var(--es-ink); }
-    .ds-btn-table tbody th span { display: block; margin-top: var(--es-space-1, 4px); color: var(--es-ink-3); font-size: 12px; font-weight: 400; }
-    html .ds-btn-table :is(thead, tbody, tr, th, td) { border: 0 !important; background: transparent !important; }
-    html[data-theme="dark"] .ds-btn-table tbody th { color: #FFFFFF; }
-    html[data-theme="dark"] :is(.ds-btn-table thead th, .ds-btn-table tbody th span) { color: #98A6BF; }
-    .ds-gap { width: 16px; }
-    .ds-muted { color: var(--es-ink-3); font-size: 13px; }
-    .ds-code { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); margin: 0; }
-    .ds-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-5, 20px); align-items: start; }
-    .ds-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--es-space-4, 16px); }
-    .ds-span-2 { grid-column: 1 / -1; }
-    .ds-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--es-space-3, 12px); }
-    .ds-swatch { display: grid; gap: var(--es-space-1, 4px); font-size: 13px; }
-    .ds-swatch span { height: 56px; border-radius: 14px; box-shadow: inset 0 0 0 1px rgb(14 16 20 / .08); }
-    .ds-swatch b { font-weight: 500; }
-    .ds-swatch code { color: var(--es-ink-3); font-size: 12px; }
-    .ds-type { display: grid; gap: var(--es-space-3, 12px); }
-    .ds-type p { margin: 0; }
-    .ds-type__display { font-family: var(--es-font-display); font-size: 48px; font-weight: 800; line-height: .98; }
-    .ds-type__body { font-size: var(--es-type-body-size); line-height: var(--es-type-body-line); color: var(--es-ink-2); }
-    .ds-type__small { font-size: var(--es-type-meta-size); color: var(--es-ink-3); }
-    .ds-type__row { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: baseline; gap: var(--es-space-1, 4px) var(--es-space-4, 16px); }
-    .ds-type__row > code { color: var(--es-ink-3); font-size: 12px; }
-    .ds-motion { display: grid; gap: var(--es-space-3, 12px); }
-    @media (max-width: 640px) { .ds-type__row { grid-template-columns: minmax(0, 1fr); } }
-    .ds-radii { display: flex; flex-wrap: wrap; gap: var(--es-space-4, 16px); }
-    .ds-radii div { display: grid; justify-items: center; gap: var(--es-space-2, 8px); }
-    .ds-radii span { width: 72px; height: 56px; background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px var(--es-brand-tint); }
-    .ds-radii code { color: var(--es-ink-3); font-size: 12px; }
-    .ds-space { display: grid; gap: var(--es-space-2, 8px); margin: 0; padding: 0; list-style: none; }
-    .ds-space li { display: grid; grid-template-columns: 120px 48px minmax(0, 1fr); align-items: center; gap: var(--es-space-4, 16px); font-size: 13px; }
-    .ds-space code { color: var(--es-ink-3); font-size: 12px; }
+    .ds-page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: var(--es-space-8) var(--es-space-8) var(--es-space-12);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--es-space-8);
+      font-family: var(--es-font-ui);
+      color: var(--es-ink);
+    }
+    /* Dark: the same remap the fully dark pages use (Reel Captions, ES AI), so
+       every token-based specimen shows its dark value. */
+    html[data-theme="dark"] .ds-page {
+      --es-bg: #1F2126; --es-sunk: #101114; --es-stage: #101114;
+      --es-line: #2A2D34; --es-line-2: #3B4049;
+      --es-ink: #FFFFFF; --es-ink-2: #BFC8D9; --es-ink-3: #98A6BF; --es-placeholder: #98A6BF;
+      --es-brand-text: #9DCBFD; --es-brand-soft: rgb(10 125 250 / .2); --es-brand-tint: rgb(84 164 251 / .45);
+      --es-canvas: #101114;
+      /* --es-hairline / --es-outline resolve their colour on :root, so they are restated here. */
+      --es-hairline: inset 0 0 0 1px #2A2D34; --es-outline: inset 0 0 0 1.5px #3B4049;
+    }
+    /* theme.css mutes every p / small / li in dark with !important; specimens on fixed light surfaces keep their own ink. */
+    html[data-theme="dark"] .ds-page .ds-on-light > p { color: #565C67 !important; }
+    html[data-theme="dark"] .ds-page .va-device[data-meta="feed"] :is(p, b) { color: #0E1014 !important; }
+    html[data-theme="dark"] .ds-page .va-device[data-meta="feed"] small { color: #565C67 !important; }
+    html[data-theme="dark"] .ds-page .es-badge--ink { background: #FFFFFF; color: #101114; }
+    .ds-page code { font-family: var(--es-font-ui); }
+
+    /* Hero */
+    .ds-hero { display: grid; gap: var(--es-space-2); }
+    .ds-hero h1 { margin: 0; font-family: var(--es-type-page-title-family); font-size: var(--es-type-page-title-size); font-weight: var(--es-type-page-title-weight); line-height: var(--es-type-page-title-line); letter-spacing: var(--es-type-page-title-tracking); }
+    .ds-lede { margin: 0; max-width: var(--es-type-lede-measure); color: var(--es-ink-2); font-size: var(--es-type-lede-size); line-height: var(--es-type-lede-line); }
+    .ds-hero .es-callout { margin-top: var(--es-space-3); max-width: 46em; }
+
+    /* Sticky in-page nav */
+    .ds-toc-bar { position: sticky; top: calc(var(--es-topbar-h, 0px) + var(--es-space-3)); z-index: 40; display: flex; margin: calc(-1 * var(--es-space-4)) 0; padding: var(--es-space-2) 0; background: var(--es-canvas); }
+    html.es-shell .ds-toc-bar { top: 0; }
+    .ds-toc { max-width: 100%; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+    .ds-toc::-webkit-scrollbar { display: none; }
+    .ds-toc a { flex: 0 0 auto; text-decoration: none; }
+    .ds-section { scroll-margin-top: 80px; }
+
+    /* Section card */
+    .ds-section > .es-card__head { padding: var(--es-space-6) var(--es-space-6) 0; }
+    .ds-section > .es-card__body { padding: var(--es-space-5) var(--es-space-6) var(--es-space-6); }
+    .ds-section h2.es-type-section { margin: 0; }
+    .ds-section .es-card__sub { max-width: 70ch; margin-top: var(--es-space-2); color: var(--es-ink-2); }
+    .ds-sub + .ds-sub { margin-top: var(--es-space-6); padding-top: var(--es-space-6); border-top: 1px solid var(--es-line); }
+    .ds-sub > h3 { margin: 0 0 var(--es-space-1); color: var(--es-ink); font: var(--es-type-section-title-weight) var(--es-type-section-title-size)/var(--es-type-section-title-line) var(--es-font-ui); }
+    .ds-rule { margin: 0 0 var(--es-space-3); max-width: 70ch; color: var(--es-ink-2); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); }
+    .ds-rule b { color: var(--es-ink); font-weight: 600; }
+    .ds-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--es-space-3); }
+    .ds-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2); margin: 0; }
+    .ds-row--lg { gap: var(--es-space-5); align-items: flex-start; }
+    .ds-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-5); align-items: start; }
+    .ds-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--es-space-4); align-items: start; }
+    .ds-demo { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--es-space-3); min-width: 0; padding: var(--es-space-5); border-radius: var(--es-radius-container); background: var(--es-canvas); box-shadow: var(--es-hairline); }
+    .ds-cap { margin: 0; color: var(--es-ink-3); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); }
+    .ds-cap b { color: var(--es-ink-2); font-weight: 600; }
+    .ds-mt { margin-top: var(--es-space-3); }
+
+    /* Copyable token / class names */
+    .ds-tokens { display: flex; flex-wrap: wrap; gap: var(--es-space-2); margin: var(--es-space-3) 0 0; padding: 0; list-style: none; }
+    .ds-tok { display: inline-flex; align-items: center; min-height: 24px; padding: 0 var(--es-space-2); border: 0; border-radius: 6px; background: var(--es-sunk); color: var(--es-ink-2); font: 500 12px/1.2 var(--es-font-ui); text-align: left; overflow-wrap: anywhere; cursor: copy; }
+    .ds-tok:hover { background: var(--es-brand-soft); color: var(--es-brand-text); }
+    html[data-theme="dark"] .ds-tok { background: #2A2D34; }
+    html[data-theme="dark"] .ds-tok:hover { background: rgb(10 125 250 / .2); color: #9DCBFD; }
+
+    /* Do / don't */
+    .ds-dd { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-3); margin-top: var(--es-space-3); }
+    .ds-dd > div { padding: var(--es-space-3) var(--es-space-4); border-radius: var(--es-radius-control); background: var(--es-sunk); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); color: var(--es-ink-2); box-shadow: inset 3px 0 0 var(--es-good); }
+    .ds-dd > .ds-dont { box-shadow: inset 3px 0 0 var(--es-bad); }
+    .ds-dd strong { display: block; margin-bottom: var(--es-space-1); color: var(--es-ink); font-weight: 600; }
+    html[data-theme="dark"] .ds-dd > div { background: #2A2D34; box-shadow: inset 3px 0 0 #4CC985; }
+    html[data-theme="dark"] .ds-dd > .ds-dont { box-shadow: inset 3px 0 0 #FF8A8A; }
+
+    /* Colour */
+    .ds-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--es-space-3); }
+    .ds-swatch { display: grid; gap: var(--es-space-1); min-width: 0; font-size: var(--es-type-meta-size); }
+    .ds-swatch > span { display: grid; place-items: end start; height: 56px; padding: var(--es-space-2); border-radius: var(--es-radius-control); box-shadow: inset 0 0 0 1px rgb(127 127 127 / .25); font-size: 12px; font-weight: 600; }
+    .ds-swatch b { font-weight: 600; color: var(--es-ink); }
+    .ds-swatch small { color: var(--es-ink-3); font-size: 12px; overflow-wrap: anywhere; }
+    .ds-modes { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: var(--es-space-2) var(--es-space-3); align-items: center; font-size: var(--es-type-meta-size); color: var(--es-ink-2); }
+    .ds-modes > .ds-modes__head { color: var(--es-ink-3); font: var(--es-type-eyebrow-weight) var(--es-type-eyebrow-size)/var(--es-type-eyebrow-line) var(--es-font-ui); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
+    .ds-modes b { display: block; font-weight: 600; color: var(--es-ink); }
+    .ds-modes small { color: var(--es-ink-3); font-size: 12px; }
+    .ds-chipswatch { display: flex; align-items: center; gap: var(--es-space-2); min-width: 0; }
+    .ds-chipswatch i { flex: none; width: 28px; height: 28px; border-radius: 8px; box-shadow: inset 0 0 0 1px rgb(127 127 127 / .3); }
+    .ds-contrast { display: grid; gap: var(--es-space-2); margin: 0; padding: 0; list-style: none; }
+    .ds-contrast li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2) var(--es-space-3); font-size: var(--es-type-meta-size); color: var(--es-ink-2); }
+    .ds-contrast__pill { display: inline-flex; align-items: center; min-height: 28px; padding: 0 var(--es-space-3); border-radius: 8px; font-weight: 600; }
+
+    /* Typography */
+    .ds-type { display: grid; gap: 0; }
+    .ds-type__row { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: baseline; gap: var(--es-space-1) var(--es-space-5); padding: var(--es-space-3) 0; border-top: 1px solid var(--es-line); }
+    .ds-type__row:first-child { border-top: 0; padding-top: 0; }
+    .ds-type__spec { display: grid; gap: 2px; color: var(--es-ink-3); font-size: 12px; line-height: 1.4; }
+    .ds-type__spec b { color: var(--es-ink); font-size: var(--es-type-meta-size); font-weight: 600; }
+    .ds-type__sample { min-width: 0; overflow-wrap: anywhere; }
+    .ds-type__sample > * { margin: 0; }
+    .ds-type__nav { display: inline-flex; align-items: center; gap: var(--es-space-2); color: var(--es-ink-2); font-size: 14px; }
+    .ds-type__group { color: var(--es-ink-3); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+    .ds-families { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--es-space-3); margin-bottom: var(--es-space-5); }
+    .ds-family { display: grid; gap: var(--es-space-1); padding: var(--es-space-4); border-radius: var(--es-radius-control); background: var(--es-sunk); }
+    html[data-theme="dark"] .ds-family { background: #2A2D34; }
+    .ds-family span { font-size: 32px; line-height: 1; color: var(--es-ink); }
+    .ds-family b { font-size: var(--es-type-meta-size); font-weight: 600; color: var(--es-ink); }
+    .ds-family small { color: var(--es-ink-3); font-size: 12px; line-height: 1.4; }
+
+    /* Spacing */
+    .ds-space { display: grid; gap: var(--es-space-2); margin: 0; padding: 0; list-style: none; }
+    .ds-space li { display: grid; grid-template-columns: 112px 52px minmax(0, 1fr); align-items: center; gap: var(--es-space-4); font-size: var(--es-type-meta-size); color: var(--es-ink-2); }
     .ds-space i { display: block; height: 12px; border-radius: 2px; background: var(--es-brand); }
-    .ds-space span { color: var(--es-ink-2); }
-    .ds-space b { font-weight: 500; color: var(--es-ink); }
-    html[data-theme="dark"] .ds-space b { color: #FFFFFF; }
-    html[data-theme="dark"] .ds-space span { color: #BFC8D9; }
-    html[data-theme="dark"] .ds-space code { color: #98A6BF; }
-    .ds-space + .ds-muted { margin: var(--es-space-3, 12px) 0 0; }
-    .ds-sidebar-demo { width: 260px; display: grid; gap: var(--es-space-1, 4px); padding: var(--es-space-2, 8px); border-radius: 16px; background: var(--es-sidebar-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
-    .ds-cell { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); }
+    .ds-space b { color: var(--es-ink); font-weight: 600; }
+    .ds-rhythm { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; margin: 0; padding: 0; list-style: none; }
+    .ds-rhythm li { display: flex; justify-content: space-between; gap: var(--es-space-3); padding: var(--es-space-2) 0; border-bottom: 1px solid var(--es-line); font-size: var(--es-type-meta-size); color: var(--es-ink-2); }
+    .ds-rhythm b { flex: none; color: var(--es-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .ds-panel { display: grid; gap: 0; max-width: 360px; border-radius: var(--es-radius-container); background: var(--es-bg); box-shadow: var(--es-hairline); }
+    .ds-panel__sec { display: grid; gap: var(--es-space-3); padding: var(--es-section-pad-y) var(--es-section-pad-x); }
+    .ds-panel__sec + .ds-panel__sec { border-top: 1px solid var(--es-line); }
+    .ds-panel__sec > .ds-panel__title { margin: 0; color: var(--es-ink); font-size: var(--es-type-section-title-size); font-weight: 700; }
+
+    /* Radii, elevation */
+    .ds-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--es-space-4); }
+    .ds-tile { display: grid; gap: var(--es-space-2); min-width: 0; font-size: 12px; color: var(--es-ink-3); overflow-wrap: anywhere; }
+    .ds-tile > span { height: 72px; background: var(--es-bg); }
+    .ds-tile b { color: var(--es-ink); font-size: var(--es-type-meta-size); font-weight: 600; }
+    .ds-radius > span { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px var(--es-brand-tint); }
+    .ds-elev { padding: var(--es-space-5); border-radius: var(--es-radius-container); background: var(--es-canvas); }
+    .ds-elev .ds-tile > span { border-radius: var(--es-radius-control); }
+
+    /* Motion */
+    .ds-motion-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-3); }
+    .ds-motion-item { display: grid; align-content: start; gap: var(--es-space-2); min-width: 0; padding: var(--es-space-4); border-radius: var(--es-radius-control); background: var(--es-bg); box-shadow: var(--es-hairline); }
+    .ds-motion-item > .ds-row:first-child { min-height: 32px; }
+    .ds-motion-item h4 { margin: 0; color: var(--es-ink); font-size: var(--es-type-meta-size); font-weight: 600; }
+
+    /* Buttons */
+    .ds-btn-table { width: 100%; min-width: 640px; border-collapse: collapse; }
+    .ds-btn-table th, .ds-btn-table td { padding: var(--es-space-3) var(--es-space-3) var(--es-space-3) 0; text-align: left; vertical-align: middle; }
+    .ds-btn-table thead th { color: var(--es-ink-3); font: var(--es-type-eyebrow-weight) var(--es-type-eyebrow-size)/var(--es-type-eyebrow-line) var(--es-font-ui); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
+    .ds-btn-table tbody th { color: var(--es-ink); font-size: 14px; font-weight: 600; }
+    .ds-btn-table tbody th span { display: block; margin-top: var(--es-space-1); color: var(--es-ink-3); font-size: 12px; font-weight: 400; }
+    html .ds-btn-table :is(thead, tbody, tr, th, td) { border: 0 !important; background: transparent !important; }
+    html[data-theme="dark"] .ds-btn-table tbody th { color: #FFFFFF !important; }
+    html[data-theme="dark"] .ds-btn-table :is(thead th, tbody th span) { color: #98A6BF !important; }
+    .ds-scroll { overflow-x: auto; padding: var(--es-space-1); margin: calc(-1 * var(--es-space-1)); }
+    /* Forced states for specimens (the real ones need a keyboard or pointer). */
+    /* The button layer's !important outline: none wins over page CSS, so the ring is drawn on a wrapper. */
+    .ds-focus-ring { display: inline-flex; border-radius: 10px; outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .ds-on-dark .ds-focus-ring { outline-color: #54A4FB; }
+    .ds-page .ds-force-focus { outline: var(--es-focus-outline) !important; outline-offset: var(--es-focus-offset) !important; }
+    .ds-page .ds-force-field-focus { box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo) !important; }
+    /* Primary in light vs dark, side by side, whatever the page theme. */
+    .ds-modepanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-3); }
+    .ds-modepane { display: grid; gap: var(--es-space-3); padding: var(--es-space-5); border-radius: var(--es-radius-container); }
+    .ds-modepane > p { margin: 0; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+    .ds-on-light {
+      background: #FFFFFF; box-shadow: inset 0 0 0 1px #DFE2E7; color: #0E1014;
+      --es-btn-rim: #0A6FDE, #0A7DFA 18%, #3D95F7 36%, #0099CC 52%, #3D95F7 66%, #0A7DFA 82%, #0A6FDE;
+      --es-btn-rim-hover: #0A7DFA, #3D95F7 18%, #00B3E6 34%, #0099CC 50%, #54A4FB 66%, #3D95F7 82%, #0A7DFA;
+      --es-btn-primary-bg: #FFFFFF; --es-btn-primary-bg-hover: #F7F9FC; --es-btn-primary-ink: #0E1014;
+      --es-btn-bg: #FFFFFF; --es-btn-bg-hover: #F0F2F5; --es-btn-line: #C8CDD5; --es-btn-line-hover: #8A919E;
+      --es-btn-ink: #0E1014; --es-btn-ghost-ink: #3A3F48; --es-btn-sunk: #F0F2F5; --es-btn-focus: #0A6FDE;
+      --es-btn-danger-ink: #B91C1C; --es-btn-danger-line: #D46A6A; --es-btn-disabled-bg: #F0F2F5; --es-btn-disabled-ink: #565C67;
+    }
+    .ds-on-light > p { color: #565C67; }
+    .ds-on-dark {
+      background: #101114; box-shadow: inset 0 0 0 1px #2A2D34; color: #FFFFFF;
+      --es-btn-rim: var(--es-rim-stops); --es-btn-rim-hover: var(--es-rim-stops-bright);
+      --es-btn-primary-bg: #101114; --es-btn-primary-bg-hover: #1C1E23; --es-btn-primary-ink: #FFFFFF;
+      --es-btn-bg: #1F2126; --es-btn-bg-hover: #2A2D34; --es-btn-line: #3B4049; --es-btn-line-hover: #5C6373;
+      --es-btn-ink: #FFFFFF; --es-btn-ghost-ink: #BFC8D9; --es-btn-sunk: #2A2D34; --es-btn-focus: #54A4FB;
+      --es-btn-danger-ink: #FF8A8A; --es-btn-danger-line: #B54C4C; --es-btn-disabled-bg: #2A2D34; --es-btn-disabled-ink: #98A6BF;
+    }
+    .ds-on-dark > p { color: #98A6BF; }
+    html .ds-on-dark .va-ask-ai { --ask-fill: #1F2126; --ask-ink: #FFFFFF; --ask-base: rgb(84 164 251 / .35); }
+    html .ds-on-dark .va-ask-ai svg { color: #54A4FB; }
+    html .ds-on-light .va-ask-ai { --ask-fill: #FFFFFF; --ask-ink: #0E1014; --ask-base: rgb(10 111 222 / .35); }
+    html .ds-on-light .va-ask-ai svg { color: #0A6FDE; }
+    html .ds-on-light .va-ask-ai[aria-expanded="true"] { --ask-fill: #EAF3FF; color: #0A62C7; }
+    html .ds-on-dark .va-ask-ai[aria-expanded="true"] { --ask-fill: #23324a; color: #9DCBFD; }
+
+    /* The library remaps --es-ink to white in dark; keep the pressed tool readable. */
+    html[data-theme="dark"] .ds-page .es-tool[aria-pressed="true"] .es-tool__icon { background: #FFFFFF; color: #101114; }
+
+    /* Forms */
+    .ds-page .es-input[aria-invalid="true"] { box-shadow: inset 0 0 0 1px var(--es-bad); }
+    .ds-error-text { display: flex; align-items: center; gap: var(--es-space-1); margin: 0; color: var(--es-bad); font-size: var(--es-type-helper-size); line-height: var(--es-type-helper-line); }
+    .ds-error-text svg { width: 16px !important; height: 16px !important; min-width: 16px; }
+    html[data-theme="dark"] .ds-page .es-input[aria-invalid="true"] { box-shadow: inset 0 0 0 1px #FF8A8A; }
+    html[data-theme="dark"] .ds-error-text { color: #FF8A8A; }
+    .ds-span-2 { grid-column: 1 / -1; }
+
+    /* Video Ads / AI specimens: the studio's own tokens, without its page frame. */
+    .ds-va.va-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--es-space-3); height: auto; min-height: 0; padding: 0; background: transparent; isolation: auto; }
+    .ds-va-card { display: grid; gap: var(--es-space-5); min-width: 0; padding: var(--es-space-4); border-radius: var(--es-radius-container); background: var(--va-solid); box-shadow: inset 0 0 0 1px var(--va-line); }
+    .ds-va .va-steps { height: auto; min-height: 48px; }
+    .ds-va > .va-seg { justify-self: start; max-width: 100%; }
+
+    /* Navigation: a static copy of the app sidebar (the live one is on the left). */
+    html body .ds-sidebar.es-sidebar { position: relative !important; inset: auto !important; top: auto !important; bottom: auto !important; z-index: auto; display: flex !important; flex: none; width: var(--es-sidebar-w); height: auto !important; max-height: none; border-radius: var(--es-radius-container); border: 1px solid var(--es-line); }
+    .ds-sidebar .es-sidebar__scroll { height: 372px; flex: none; }
+    .ds-sidebar .profile-menu, .ds-sidebar .es-usage { pointer-events: none; }
+    html[data-theme="dark"] .ds-sidebar.es-sidebar { border-color: #2A2D34; }
+    .ds-anatomy { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--es-space-6); align-items: start; }
+    .ds-anatomy ol { display: grid; gap: var(--es-space-3); margin: 0; padding-left: var(--es-space-5); color: var(--es-ink-2); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); }
+    .ds-anatomy li b { color: var(--es-ink); font-weight: 600; }
+    .ds-usage-row { display: grid; grid-template-columns: repeat(3, minmax(0, 200px)); gap: var(--es-space-3); }
+    .ds-usage-row .es-usage { margin: 0; }
+
+    /* Data display */
+    .ds-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--es-space-4); }
+    .ds-kpi { display: flex; flex-direction: column; min-width: 0; padding: var(--es-space-5) var(--es-space-6); border-radius: var(--es-radius-container); background: var(--es-bg); box-shadow: var(--es-hairline), 0 1px 2px rgb(14 16 20 / .04), 0 8px 24px -16px rgb(14 16 20 / .12); }
+    .ds-kpi__value { margin: var(--es-space-2) 0 0; color: var(--es-ink); font: 700 36px/1.1 var(--es-font-ui); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+    .ds-kpi__delta { display: flex; flex-wrap: wrap; gap: 0 var(--es-space-2); min-height: 20px; margin: var(--es-space-1) 0 0; font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); color: var(--es-ink-3); }
+    .ds-kpi__delta b { font-weight: 600; color: var(--es-good); }
+    .ds-kpi__delta b.is-down { color: var(--es-bad); }
+    .ds-kpi__spark { height: 32px; margin-top: var(--es-space-3); color: #0A6FDE; }
+    .ds-kpi__spark svg { display: block; width: 100%; height: 32px; overflow: visible; }
+    .ds-kpi__meta { margin: var(--es-space-3) 0 0; overflow: hidden; color: var(--es-ink-3); font-size: var(--es-type-meta-size); text-overflow: ellipsis; white-space: nowrap; }
+    html[data-theme="dark"] .ds-kpi { box-shadow: inset 0 0 0 1px #2A2D34; }
+    html[data-theme="dark"] .ds-kpi__spark { color: #54A4FB; }
+    html[data-theme="dark"] .ds-kpi__delta b { color: #4CC985; }
+    html[data-theme="dark"] .ds-kpi__delta b.is-down { color: #FF8A8A; }
+    /* Skeletons are Sunk, the same grey as .es-empty, so the loading specimen sits on the surface. */
+    .ds-empty-loading { background: var(--es-bg); box-shadow: var(--es-hairline); }
+    .ds-cell { display: inline-flex; align-items: center; gap: var(--es-space-2); }
+    .ds-toasts { display: grid; gap: var(--es-space-2); max-width: 400px; }
+    .ds-toasts .es-toast { animation: none; }
+    .ds-ticker.es-ticker { --es-ticker-h: 44px; border: 1px solid var(--es-line); border-radius: var(--es-radius-control); }
+    html[data-theme="dark"] .ds-ticker.es-ticker { border-color: #2A2D34; }
+
+    /* Brand and logos */
+    .ds-logo-grid { display: flex; flex-wrap: wrap; gap: var(--es-space-4); }
+    .ds-logo-item { display: grid; justify-items: center; gap: var(--es-space-2); min-width: 72px; color: var(--es-ink-3); font-size: 12px; }
+    .ds-logo-item .is-league { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; }
+    .ds-marks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--es-space-3); }
+    .ds-mark { display: grid; place-items: center; gap: var(--es-space-2); min-height: 96px; padding: var(--es-space-4); border-radius: var(--es-radius-control); box-shadow: inset 0 0 0 1px rgb(127 127 127 / .25); font-size: 12px; text-align: center; overflow-wrap: anywhere; }
+    .ds-mark img { max-width: 100%; height: 28px; width: auto; }
+    .ds-mark.is-light { background: #FFFFFF; color: #565C67; }
+    .ds-mark.is-dark { background: #101114; color: #98A6BF; }
+    .ds-mark.is-blue { background: #0A6FDE; color: #FFFFFF; }
+
+    /* AI patterns */
+    .ds-grad { display: grid; gap: var(--es-space-1); min-width: 0; font-size: 12px; color: var(--es-ink-3); overflow-wrap: anywhere; }
+    .ds-grad > span { display: block; height: 40px; border-radius: 10px; box-shadow: inset 0 0 0 1px rgb(127 127 127 / .2); }
+    .ds-grad b { color: var(--es-ink); font-size: var(--es-type-meta-size); font-weight: 600; }
+    .ds-ai-fcards { display: grid; grid-template-columns: repeat(4, minmax(0, 96px)); gap: var(--es-space-2); }
+    .ds-fcard { display: grid; gap: var(--es-space-2); min-width: 0; padding: var(--es-space-1) var(--es-space-1) var(--es-space-2); border: 0; border-radius: 12px; background: transparent; color: var(--es-ink-2); font: 500 12px/1.25 var(--es-font-ui); text-align: center; cursor: pointer; }
+    .ds-fcard__art { position: relative; display: grid; place-items: center; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 8px; background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); color: #FFFFFF; }
+    .ds-fcard__art img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .ds-fcard__art.is-auto { background: var(--ais-grad); }
+    .ds-fcard:hover { background: var(--es-sunk); color: var(--es-ink); }
+    .ds-fcard[aria-checked="true"] { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .4); color: var(--es-brand-text); font-weight: 700; }
+    .ds-fcard.is-fit .ds-fcard__art::after { content: ""; position: absolute; top: 6px; left: 6px; width: 10px; height: 10px; border-radius: 50%; background: #0A7DFA; box-shadow: 0 0 0 2px #FFFFFF; }
+    .ds-found { display: flex; flex-wrap: wrap; gap: var(--es-space-2); margin: 0; padding: 0; list-style: none; }
+    .ds-found li { display: inline-flex; align-items: center; gap: var(--es-space-1); min-height: 28px; padding: 0 var(--es-space-3) 0 var(--es-space-2); border-radius: 999px; box-shadow: inset 0 0 0 1px var(--es-line-2); color: var(--es-ink-3); font: 500 12px/1 var(--es-font-ui); }
+    .ds-found li.is-on { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .3); color: var(--es-brand-text); }
+    .ds-found li > svg { width: 14px !important; height: 14px !important; min-width: 14px; }
+    .ds-found li b { font-weight: 700; }
+
+    /* Layout */
+    .ds-layout { display: grid; grid-template-columns: 56px minmax(0, 1fr); height: 160px; overflow: hidden; border-radius: var(--es-radius-control); box-shadow: var(--es-hairline); background: var(--es-canvas); }
+    .ds-layout__side { background: var(--es-sidebar-bg); border-right: 1px solid var(--es-line); }
+    .ds-layout__main { display: grid; align-content: start; gap: var(--es-space-2); padding: var(--es-space-4) var(--es-space-6); }
+    .ds-layout__main i { display: block; height: 12px; border-radius: 4px; background: var(--es-line); }
+    .ds-layout__main i:first-child { width: 40%; height: 20px; background: var(--es-line-2); }
+    .ds-bp { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--es-space-3); }
+    .ds-bp > div { display: grid; align-content: start; gap: var(--es-space-1); padding: var(--es-space-4); border-radius: var(--es-radius-control); background: var(--es-sunk); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); color: var(--es-ink-2); }
+    html[data-theme="dark"] .ds-bp > div { background: #2A2D34; }
+    .ds-bp b { color: var(--es-ink); font-size: var(--es-type-card-title-size); font-weight: 700; }
+
+    @media (max-width: 1100px) {
+      .ds-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .ds-anatomy { grid-template-columns: minmax(0, 1fr); }
+    }
     @media (max-width: 900px) {
-      .ds-page { padding: var(--es-space-6, 24px) var(--es-page-gutter-phone, 16px) var(--es-space-12, 48px); }
-      .ds-space li { grid-template-columns: 96px 48px minmax(0, 1fr); gap: var(--es-space-3, 12px); }
-      .ds-grid-2, .ds-grid-3 { grid-template-columns: minmax(0, 1fr); }
-      .ds-toc { position: static; max-width: 100%; overflow-x: auto; }
+      /* overflow-x: hidden on html and body (site-mobile-chrome.css) breaks position: sticky; clip keeps the no-sideways-scroll guarantee. */
+      html:has(> body.ds-body), body.ds-body { overflow-x: clip; }
+      .ds-page { padding: var(--es-space-6) var(--es-page-gutter-phone) var(--es-space-12); gap: var(--es-space-6); }
+      html .ds-toc-bar, html.es-shell .ds-toc-bar { top: 64px; }
+      .ds-toc-bar { margin: calc(-1 * var(--es-space-3)) calc(-1 * var(--es-page-gutter-phone)); padding: var(--es-space-2) var(--es-page-gutter-phone); }
+      .ds-section { scroll-margin-top: 136px; }
+      .ds-section > .es-card__head { padding: var(--es-space-5) var(--es-space-4) 0; }
+      .ds-section > .es-card__body { padding: var(--es-space-4) var(--es-space-4) var(--es-space-5); }
+      .ds-grid-2, .ds-grid-3, .ds-dd, .ds-modepanes, .ds-motion-grid, .ds-families, .ds-bp { grid-template-columns: minmax(0, 1fr); }
+      .ds-type__row { grid-template-columns: minmax(0, 1fr); }
+      .ds-modes { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .ds-modes > .ds-modes__role { grid-column: 1 / -1; padding-top: var(--es-space-2); }
+      .ds-modes > .ds-modes__head:first-child { display: none; }
+      .ds-usage-row { grid-template-columns: minmax(0, 1fr); max-width: 224px; }
+      .ds-demo { padding: var(--es-space-4); }
+    }
+    @media (max-width: 640px) {
+      .ds-kpis { grid-template-columns: minmax(0, 1fr); }
+      .ds-space li { grid-template-columns: 96px 48px minmax(0, 1fr); gap: var(--es-space-3); }
+      .ds-ai-fcards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
   </style>
 </head>
@@ -143,251 +381,1023 @@
 
   <main class="ds-page" id="main">
     <header class="ds-hero">
-      <p class="ds-kicker">FrameUp UI Library</p>
-      <h1>Components for the FrameUp website</h1>
-      <p class="ds-lede">Every building block used across FrameUp's interface: one place to copy from, so new pages look and behave like the rest of the product. Styles live in <code>design-tokens.css</code> and <code>es-ui.css</code>.</p>
-      <div class="es-callout ds-note">
+      <p class="es-type-kicker">FrameUp UI Library</p>
+      <h1>FrameUp design system</h1>
+      <p class="ds-lede">The live spec of FrameUp's interface. Every token and component below is rendered with the real classes from <code>design-tokens.css</code>, <code>es-ui.css</code>, <code>es-motion.css</code>, <code>ai-studio.css</code> and <code>video-ads.css</code>. Click any name to copy it.</p>
+      <div class="es-callout">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-        <div><strong>Website UI only</strong>These components style FrameUp's interface. Exported designs (posts, thumbnails, newsletter assets, reels) keep their own templates and brand kits and never use these styles.</div>
+        <div><strong>Website UI only</strong>These styles are for FrameUp's interface. Exported artwork (posts, thumbnails, newsletter assets, reels, video ads) keeps its own templates, brand kits and the Acumin typeface.</div>
       </div>
     </header>
 
-    <nav class="ds-toc es-segmented" aria-label="Library sections">
-      <a class="es-segmented__item is-active" href="#foundations">Foundations</a>
-      <a class="es-segmented__item" href="#buttons">Buttons</a>
-      <a class="es-segmented__item" href="#navigation">Navigation</a>
-      <a class="es-segmented__item" href="#inputs">Inputs</a>
-      <a class="es-segmented__item" href="#data">Data</a>
-      <a class="es-segmented__item" href="#feedback">Feedback</a>
-    </nav>
+    <div class="ds-toc-bar">
+      <nav class="ds-toc es-segmented" aria-label="Library sections">
+        <a class="es-segmented__item is-active" href="#foundations">Foundations</a>
+        <a class="es-segmented__item" href="#buttons">Buttons</a>
+        <a class="es-segmented__item" href="#focus">Focus</a>
+        <a class="es-segmented__item" href="#forms">Forms</a>
+        <a class="es-segmented__item" href="#navigation">Navigation</a>
+        <a class="es-segmented__item" href="#data">Data</a>
+        <a class="es-segmented__item" href="#brand">Brand</a>
+        <a class="es-segmented__item" href="#ai">AI</a>
+        <a class="es-segmented__item" href="#layout">Layout</a>
+      </nav>
+    </div>
 
-    <!-- FOUNDATIONS -->
+    <!-- ═══ 1 FOUNDATIONS ═══════════════════════════════════════════════ -->
     <section class="es-card ds-section" id="foundations" aria-labelledby="foundations-title">
-      <div class="es-card__head"><div><h2 class="es-card__title" id="foundations-title">Foundations</h2><p class="es-card__sub">Colour, type, radius and spacing tokens every component is built from.</p></div></div>
+      <div class="es-card__head"><div><h2 class="es-type-section" id="foundations-title">Foundations</h2><p class="es-card__sub">Colour, type, spacing, radius, elevation and motion. Every component is built from these tokens; page CSS never invents new ones for the same job.</p></div></div>
       <div class="es-card__body">
-        <h3 class="ds-h3">Colour</h3>
-        <div class="ds-swatches">
-          <div class="ds-swatch"><span style="background:var(--es-brand-fill)"></span><b>Brand fill</b><code>--es-brand-fill</code></div>
-          <div class="ds-swatch"><span style="background:var(--es-brand)"></span><b>Brand</b><code>--es-brand</code></div>
-          <div class="ds-swatch"><span style="background:var(--es-brand-soft)"></span><b>Brand soft</b><code>--es-brand-soft</code></div>
-          <div class="ds-swatch"><span style="background:var(--es-ink)"></span><b>Ink</b><code>--es-ink</code></div>
-          <div class="ds-swatch"><span style="background:var(--es-ink-2)"></span><b>Ink 2</b><code>--es-ink-2</code></div>
-          <div class="ds-swatch"><span style="background:var(--es-ink-3)"></span><b>Ink 3</b><code>--es-ink-3</code></div>
-          <div class="ds-swatch"><span style="background:var(--es-line-2)"></span><b>Line 2</b><code>--es-line-2</code></div>
-          <div class="ds-swatch"><span style="background:var(--es-line)"></span><b>Line</b><code>--es-line</code></div>
-          <div class="ds-swatch"><span style="background:var(--es-canvas)"></span><b>Canvas</b><code>--es-canvas</code></div>
-          <div class="ds-swatch"><span style="background:var(--es-good)"></span><b>Good</b><code>--es-good</code></div>
-          <div class="ds-swatch"><span style="background:var(--es-bad)"></span><b>Bad</b><code>--es-bad</code></div>
-          <div class="ds-swatch"><span style="background:var(--es-warn)"></span><b>Warn</b><code>--es-warn</code></div>
+
+        <div class="ds-sub" id="colour">
+          <h3>Colour: ES Blue</h3>
+          <p class="ds-rule">One brand colour. <b>Blue 500</b> is the logo blue; <b>Blue 600</b> fills anything with a white label; <b>Blue 400 and 300</b> are for text and icons on dark only. No purple anywhere in the UI.</p>
+          <div class="ds-swatches">
+            <div class="ds-swatch"><span style="background:var(--es-blue-100);color:#0E1014">Aa</span><b>Blue 100</b><small>--es-blue-100 · #E8F2FF</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-blue-200);color:#0E1014">Aa</span><b>Blue 200</b><small>--es-blue-200 · #CEE5FE</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-blue-300);color:#0E1014">Aa</span><b>Blue 300</b><small>--es-blue-300 · #9DCBFD</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-blue-400);color:#101114">Aa</span><b>Blue 400</b><small>--es-blue-400 · #54A4FB</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-blue-500);color:#101114">Aa</span><b>Blue 500</b><small>--es-blue-500 · #0A7DFA</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-blue-600);color:#FFFFFF">Aa</span><b>Blue 600</b><small>--es-blue-600 · #0A6FDE</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-blue-700);color:#FFFFFF">Aa</span><b>Blue 700</b><small>--es-blue-700 · #085EBC</small></div>
+          </div>
+          <ul class="ds-tokens" aria-label="Blue tokens"><li><button class="ds-tok" type="button">--es-brand</button></li><li><button class="ds-tok" type="button">--es-brand-fill</button></li><li><button class="ds-tok" type="button">--es-brand-text</button></li><li><button class="ds-tok" type="button">--es-brand-soft</button></li><li><button class="ds-tok" type="button">--es-brand-tint</button></li><li><button class="ds-tok" type="button">--ais-cyan</button></li></ul>
         </div>
 
-        <hr class="es-divider es-divider--dotted">
-        <h3 class="ds-h3">Type</h3>
-        <div class="ds-type">
-          <div class="ds-type__row"><code>Kicker · 15/400</code><p class="es-type-kicker">Good afternoon, Suhail</p></div>
-          <div class="ds-type__row"><code>Page title · 36/700</code><p class="es-type-page-title">What should fans feel today?</p></div>
-          <div class="ds-type__row"><code>Lede · 15/400</code><p class="es-type-lede">One short line under a title, when it helps.</p></div>
-          <div class="ds-type__row"><code>Section · Cond. 24/800</code><p class="es-type-section">The pulse <svg class="es-pulse-glyph" viewBox="0 0 30 16" aria-hidden="true" focusable="false"><path pathLength="1" d="M1 8h6l2.5-6 4 12 3.5-9 2.5 3H29"/></svg></p></div>
-          <div class="ds-type__row"><code>Eyebrow · 11/600</code><p class="es-type-eyebrow">Your angle</p></div>
-          <div class="ds-type__row"><code>Card title · 18/500</code><p class="es-type-card-title">Bills and Jets meet again, with Buffalo fans watching closely</p></div>
-          <div class="ds-type__row"><code>Body · 15/400</code><p class="ds-type__body"><strong>Fans feel restless.</strong> Everything people read uses Roboto; Condensed is for UPPERCASE section titles and numbers.</p></div>
-          <div class="ds-type__row"><code>Meta · 13/400</code><ul class="es-meta-list"><li>Google Trends via Buffalo Bills</li><li>Trending since today</li></ul></div>
+        <div class="ds-sub">
+          <h3>Colour: black and slate</h3>
+          <p class="ds-rule">The dark theme's scale. Black is the page, Slate 800 the cards and panels, 700 and 600 the fields, lines and hover; Slate 200, 100 and white are text.</p>
+          <div class="ds-swatches">
+            <div class="ds-swatch"><span style="background:var(--es-black);color:#FFFFFF">Aa</span><b>Black</b><small>--es-black · #101114</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-slate-800);color:#FFFFFF">Aa</span><b>Slate 800</b><small>--es-slate-800 · #1F2126</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-slate-700);color:#FFFFFF">Aa</span><b>Slate 700</b><small>--es-slate-700 · #2A2D34</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-slate-600);color:#FFFFFF">Aa</span><b>Slate 600</b><small>--es-slate-600 · #3B4049</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-slate-500);color:#FFFFFF">Aa</span><b>Slate 500</b><small>--es-slate-500 · #5C6373</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-slate-400);color:#101114">Aa</span><b>Slate 400</b><small>--es-slate-400 · #707A8C</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-slate-300);color:#101114">Aa</span><b>Slate 300</b><small>--es-slate-300 · #8490A6</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-slate-200);color:#101114">Aa</span><b>Slate 200</b><small>--es-slate-200 · #98A6BF</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-slate-100);color:#101114">Aa</span><b>Slate 100</b><small>--es-slate-100 · #BFC8D9</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-white);color:#101114">Aa</span><b>White</b><small>--es-white · #FFFFFF</small></div>
+          </div>
         </div>
 
-        <hr class="es-divider es-divider--dotted">
-        <h3 class="ds-h3">Motion</h3>
-        <div class="ds-motion">
-          <p class="ds-row"><span class="es-live-dot" aria-hidden="true"></span><span class="ds-muted">Live · Updated 2 min ago</span><span class="ds-gap"></span><button class="es-btn es-btn--sm es-refresh" type="button" aria-busy="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Refreshing</button><span class="ds-gap"></span><span class="ds-muted"><svg class="es-check" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path pathLength="1" d="M4.5 10.5l3.5 3.5 7.5-8"/></svg> Saved</span></p>
-          <ol class="es-steps" aria-label="Example steps"><li class="es-step is-done"><span class="es-step__num">1</span>Moment</li><li class="es-step" aria-current="step"><span class="es-step__num">2</span>Copy</li><li class="es-step"><span class="es-step__num">3</span>Export</li></ol>
-          <div class="es-tabs" role="tablist" aria-label="Example underline tabs" data-ds-tabs><button class="es-tab" role="tab" aria-selected="true" type="button">For you <span class="es-tab__count is-hot">12</span></button><button class="es-tab" role="tab" aria-selected="false" type="button">NFL <span class="es-tab__count">8</span></button><button class="es-tab" role="tab" aria-selected="false" type="button">College <span class="es-tab__count">4</span></button></div>
-          <div class="ds-row"><span class="es-skeleton" style="width:180px;height:14px"></span><span class="es-skeleton" style="width:120px;height:14px"></span></div>
+        <div class="ds-sub">
+          <h3>Colour: neutrals in light and dark</h3>
+          <p class="ds-rule">Use the role token, never the hex. The dark column is what fully dark pages (and this page) map each role to.</p>
+          <div class="ds-modes">
+            <span class="ds-modes__head">Role</span><span class="ds-modes__head">Light</span><span class="ds-modes__head">Dark</span>
+            <div class="ds-modes__role"><b>Page canvas</b><small>--es-canvas</small></div>
+            <span class="ds-chipswatch"><i style="background:#F7F7F8"></i>#F7F7F8</span><span class="ds-chipswatch"><i style="background:#101114"></i>#101114</span>
+            <div class="ds-modes__role"><b>Surface (cards, fields)</b><small>--es-bg</small></div>
+            <span class="ds-chipswatch"><i style="background:#FFFFFF"></i>#FFFFFF</span><span class="ds-chipswatch"><i style="background:#1F2126"></i>#1F2126</span>
+            <div class="ds-modes__role"><b>Stage (around artwork)</b><small>--es-stage</small></div>
+            <span class="ds-chipswatch"><i style="background:#EEF0F3"></i>#EEF0F3</span><span class="ds-chipswatch"><i style="background:#101114"></i>#101114</span>
+            <div class="ds-modes__role"><b>Sunk (tracks, hover)</b><small>--es-sunk</small></div>
+            <span class="ds-chipswatch"><i style="background:#F0F2F5"></i>#F0F2F5</span><span class="ds-chipswatch"><i style="background:#2A2D34"></i>#2A2D34</span>
+            <div class="ds-modes__role"><b>Sidebar</b><small>--es-sidebar-bg</small></div>
+            <span class="ds-chipswatch"><i style="background:#F2F3F5"></i>#F2F3F5</span><span class="ds-chipswatch"><i style="background:#101114"></i>#101114</span>
+            <div class="ds-modes__role"><b>Line (dividers)</b><small>--es-line</small></div>
+            <span class="ds-chipswatch"><i style="background:#DFE2E7"></i>#DFE2E7</span><span class="ds-chipswatch"><i style="background:#2A2D34"></i>#2A2D34</span>
+            <div class="ds-modes__role"><b>Line 2 (field outlines)</b><small>--es-line-2</small></div>
+            <span class="ds-chipswatch"><i style="background:#C8CDD5"></i>#C8CDD5</span><span class="ds-chipswatch"><i style="background:#3B4049"></i>#3B4049</span>
+            <div class="ds-modes__role"><b>Ink (titles, values)</b><small>--es-ink</small></div>
+            <span class="ds-chipswatch"><i style="background:#0E1014"></i>#0E1014</span><span class="ds-chipswatch"><i style="background:#FFFFFF"></i>#FFFFFF</span>
+            <div class="ds-modes__role"><b>Ink 2 (body, labels)</b><small>--es-ink-2</small></div>
+            <span class="ds-chipswatch"><i style="background:#3A3F48"></i>#3A3F48</span><span class="ds-chipswatch"><i style="background:#BFC8D9"></i>#BFC8D9</span>
+            <div class="ds-modes__role"><b>Ink 3 (meta, helper)</b><small>--es-ink-3</small></div>
+            <span class="ds-chipswatch"><i style="background:#565C67"></i>#565C67</span><span class="ds-chipswatch"><i style="background:#98A6BF"></i>#98A6BF</span>
+          </div>
         </div>
-        <p class="ds-code"><code>.es-live-dot</code> <code>.es-pulse-glyph</code> <code>.es-refresh</code> <code>.es-steps</code> <code>.es-check</code> <code>.es-tabs</code> <code>.es-skeleton</code> <code>.es-stagger</code> <code>FrameUpMotion.tick()</code></p>
 
-        <hr class="es-divider es-divider--dotted">
-        <h3 class="ds-h3">Radius</h3>
-        <div class="ds-radii">
-          <div><span style="border-radius:10px"></span><code>10 · chips, buttons</code></div>
-          <div><span style="border-radius:12px"></span><code>12 · fields</code></div>
-          <div><span style="border-radius:16px"></span><code>16 · cards</code></div>
-          <div><span style="border-radius:999px"></span><code>999 · pills</code></div>
+        <div class="ds-sub">
+          <h3>Colour: status</h3>
+          <p class="ds-rule">Status is always colour plus a word or icon, never colour alone. Text sits on the matching soft fill.</p>
+          <div class="ds-swatches">
+            <div class="ds-swatch"><span style="background:var(--es-good-soft);color:var(--es-good)">Done</span><b>Good</b><small>--es-good #0E7A3D · --es-good-soft</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-warn-soft);color:var(--es-warn)">Due soon</span><b>Warn</b><small>--es-warn #B45309 · --es-warn-soft</small></div>
+            <div class="ds-swatch"><span style="background:var(--es-bad-soft);color:var(--es-bad)">Overdue</span><b>Bad</b><small>--es-bad #C42323 · --es-bad-soft</small></div>
+            <div class="ds-swatch"><span style="background:#FDF3C8;color:#8A6100">New</span><b>New tag</b><small>.es-badge--new · sidebar only</small></div>
+          </div>
         </div>
 
-        <hr class="es-divider es-divider--dotted">
-        <h3 class="ds-h3">Spacing</h3>
-        <ul class="ds-space" aria-label="Spacing scale">
-          <li><code>--es-space-1</code><i style="width:4px"></i><span><b>4</b> · heading to helper text, field inset</span></li>
-          <li><code>--es-space-2</code><i style="width:8px"></i><span><b>8</b> · label to field, button rows, chips</span></li>
-          <li><code>--es-space-3</code><i style="width:12px"></i><span><b>12</b> · heading to first control, stacked controls, field side padding</span></li>
-          <li><code>--es-space-4</code><i style="width:16px"></i><span><b>16</b> · small card padding, panel sides, phone gutter</span></li>
-          <li><code>--es-space-5</code><i style="width:20px"></i><span><b>20</b> · panel section top and bottom, medium card, groups</span></li>
-          <li><code>--es-space-6</code><i style="width:24px"></i><span><b>24</b> · large card padding, groups</span></li>
-          <li><code>--es-space-8</code><i style="width:32px"></i><span><b>32</b> · page gutter, page sections</span></li>
-          <li><code>--es-space-10</code><i style="width:40px"></i><span><b>40</b> · hero and auth panels</span></li>
-          <li><code>--es-space-12</code><i style="width:48px"></i><span><b>48</b> · page sections</span></li>
-        </ul>
-        <p class="ds-muted">A divider always has the same space above and below it, never less than 12px. Fields are 40px tall (32px small).</p>
+        <div class="ds-sub">
+          <h3>Contrast</h3>
+          <p class="ds-rule">Body text 4.5:1, large text and non-text 3:1, in both themes.</p>
+          <ul class="ds-contrast">
+            <li><span class="ds-contrast__pill" style="background:#0A6FDE;color:#FFFFFF">White on Blue 600</span>4.8:1. The blue that takes a white label.</li>
+            <li><span class="ds-contrast__pill" style="background:#0A7DFA;color:#FFFFFF">White on Blue 500</span>3.9:1. Large text only; never a button label.</li>
+            <li><span class="ds-contrast__pill" style="background:#101114;color:#54A4FB">Blue 400 on Black</span>7.3:1 (6.2:1 on Slate 800). Blue text on dark only: on white it is 2.6:1.</li>
+            <li><span class="ds-contrast__pill" style="background:#FFFFFF;color:#0A62C7;box-shadow:inset 0 0 0 1px #DFE2E7">Brand text on white</span>5.9:1 (<code>--es-brand-text</code>).</li>
+            <li><span class="ds-contrast__pill" style="background:#FFFFFF;color:#565C67;box-shadow:inset 0 0 0 1px #DFE2E7">Ink 3 on white</span>6.7:1; Slate 200 on Slate 800 is 6.6:1.</li>
+          </ul>
+          <div class="ds-dd">
+            <div class="ds-do"><strong>Do</strong>Fill buttons and badges with Blue 600 when the label is white.</div>
+            <div class="ds-dont"><strong>Don't</strong>Use Blue 400 for text on white, or any purple or violet in UI chrome.</div>
+          </div>
+        </div>
+
+        <div class="ds-sub" id="type">
+          <h3>Typography</h3>
+          <p class="ds-rule">Two UI families. <b>Roboto</b> for everything people read; <b>Roboto Condensed 800</b> only for UPPERCASE section titles and big numbers. Acumin is for artwork only. Letter spacing stays 0 except page title, section title and eyebrow.</p>
+          <div class="ds-families">
+            <div class="ds-family"><span style="font-family:var(--es-font-ui);font-weight:500">Aa</span><b>Roboto 400 · 500 · 600 · 700</b><small>--es-font-ui. Titles, body, labels, tabs, chips, buttons, nav.</small></div>
+            <div class="ds-family"><span style="font-family:var(--es-font-display);font-weight:800">AA</span><b>Roboto Condensed 700 · 800</b><small>--es-font-display. Section titles (uppercase), stats, editor workspace titles.</small></div>
+            <div class="ds-family"><span style="font-family:'Acumin Pro Condensed Local','Roboto Condensed',sans-serif;font-weight:700">Aa</span><b>Acumin Pro Condensed</b><small>Artwork only: posts, ads, thumbnails. Never in UI chrome.</small></div>
+          </div>
+          <div class="ds-type">
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Page title</b>Roboto 700 · 36 (28 phone) · 1.1 · −0.02em<span>.es-type-page-title</span></div><div class="ds-type__sample"><p class="es-type-page-title">What should fans feel today?</p></div></div>
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Kicker</b>Roboto 400 · 15<span>.es-type-kicker</span></div><div class="ds-type__sample"><p class="es-type-kicker">Good afternoon, Alex</p></div></div>
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Lede</b>Roboto 400 · 15 · 1.55 · max 70ch<span>.es-type-lede</span></div><div class="ds-type__sample"><p class="es-type-lede">One short line under a page title, only when it helps.</p></div></div>
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Section title</b>Roboto Condensed 800 · 24 (22 phone) · uppercase · 0.005em<span>.es-type-section</span></div><div class="ds-type__sample"><p class="es-type-section">The pulse <svg class="es-pulse-glyph" viewBox="0 0 30 16" aria-hidden="true" focusable="false"><path pathLength="1" d="M1 8h6l2.5-6 4 12 3.5-9 2.5 3H29"/></svg></p></div></div>
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Eyebrow</b>Roboto 600 · 11 · uppercase · 0.08em<span>.es-type-eyebrow</span></div><div class="ds-type__sample"><p class="es-type-eyebrow">Your angle</p></div></div>
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Card title</b>Roboto 500 · 18 · 1.3<span>.es-type-card-title</span></div><div class="ds-type__sample"><p class="es-type-card-title">Bills and Jets meet again, with Buffalo watching closely</p></div></div>
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Body</b>Roboto 400 · 15 · 1.55<span>.es-type-body</span></div><div class="ds-type__sample"><p class="es-type-body"><strong>Fans feel restless.</strong> A bold lead-in sentence is fine; the rest stays regular.</p></div></div>
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Meta</b>Roboto 400 · 13 · muted · " · " between items<span>.es-meta-list</span></div><div class="ds-type__sample"><ul class="es-meta-list"><li>Google Trends</li><li>Buffalo Bills</li><li>2h ago</li></ul></div></div>
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Field label / helper</b>Roboto 600 · 13 / Roboto 400 · 13<span>.es-field__label · .es-field__hint</span></div><div class="ds-type__sample"><p class="es-type-field-label">Headline</p><p class="es-type-helper">Each line becomes its own text block.</p></div></div>
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Tabs</b>Roboto 500 · 15 · count 13<span>.es-tab · .es-tab__count</span></div><div class="ds-type__sample"><span class="es-tab is-active" style="min-height:0">For you <span class="es-tab__count is-hot">12</span></span></div></div>
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Chips</b>Roboto 500 · 13<span>.es-chip</span></div><div class="ds-type__sample"><span class="es-chip">Captions</span></div></div>
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Buttons</b>Roboto 500 · 14 (13 small, 15 large)<span>.es-btn</span></div><div class="ds-type__sample"><button class="es-btn" type="button">Continue</button></div></div>
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Sidebar nav / group</b>Roboto 400 · 14 / Roboto 600 · 11<span>.es-nav-item · .es-sidebar__label</span></div><div class="ds-type__sample"><span class="ds-type__group">Create</span><br><span class="ds-type__nav">Social Media</span></div></div>
+            <div class="ds-type__row"><div class="ds-type__spec"><b>Big number</b>Roboto Condensed 800 · 36 · tabular<span>.es-stat__value</span></div><div class="ds-type__sample"><p class="es-stat__value">1,284</p></div></div>
+          </div>
+          <ul class="ds-tokens" aria-label="Type tokens"><li><button class="ds-tok" type="button">--es-type-page-title-size</button></li><li><button class="ds-tok" type="button">--es-type-section-size</button></li><li><button class="ds-tok" type="button">--es-type-body-size</button></li><li><button class="ds-tok" type="button">--es-type-meta-size</button></li><li><button class="ds-tok" type="button">--es-type-eyebrow-tracking</button></li><li><button class="ds-tok" type="button">--es-font-ui</button></li><li><button class="ds-tok" type="button">--es-font-display</button></li></ul>
+          <div class="ds-dd">
+            <div class="ds-do"><strong>Do</strong>Write page titles in sentence case and pick an existing role before adding a size.</div>
+            <div class="ds-dont"><strong>Don't</strong>Use Condensed for body text, a monospace face, or weight 800 to fake hierarchy.</div>
+          </div>
+        </div>
+
+        <div class="ds-sub" id="spacing">
+          <h3>Spacing</h3>
+          <p class="ds-rule">A 4px scale. Use the token, not a literal; anything off the scale needs a reason.</p>
+          <ul class="ds-space" aria-label="Spacing scale">
+            <li><button class="ds-tok" type="button">--es-space-1</button><i style="width:4px"></i><span><b>4</b> · heading to helper, list items, field inset</span></li>
+            <li><button class="ds-tok" type="button">--es-space-2</button><i style="width:8px"></i><span><b>8</b> · label to control, button rows, chip gaps</span></li>
+            <li><button class="ds-tok" type="button">--es-space-3</button><i style="width:12px"></i><span><b>12</b> · stacked controls, heading to first control</span></li>
+            <li><button class="ds-tok" type="button">--es-space-4</button><i style="width:16px"></i><span><b>16</b> · small card padding, phone gutter</span></li>
+            <li><button class="ds-tok" type="button">--es-space-5</button><i style="width:20px"></i><span><b>20</b> · panel section padding, groups</span></li>
+            <li><button class="ds-tok" type="button">--es-space-6</button><i style="width:24px"></i><span><b>24</b> · large card padding, groups</span></li>
+            <li><button class="ds-tok" type="button">--es-space-8</button><i style="width:32px"></i><span><b>32</b> · page gutter, page sections</span></li>
+            <li><button class="ds-tok" type="button">--es-space-10</button><i style="width:40px"></i><span><b>40</b> · hero and auth panels</span></li>
+            <li><button class="ds-tok" type="button">--es-space-12</button><i style="width:48px"></i><span><b>48</b> · page sections</span></li>
+          </ul>
+          <div class="ds-grid-2 ds-mt">
+            <ul class="ds-rhythm" aria-label="Rhythm rules">
+              <li>Panel section padding, top and bottom<b>20</b></li>
+              <li>Divider: same space above and below<b>≥ 12</b></li>
+              <li>Label → control<b>8</b></li>
+              <li>Stacked controls<b>12</b></li>
+              <li>Button row<b>8</b></li>
+              <li>Groups<b>20–24</b></li>
+              <li>Page sections<b>32–48</b></li>
+            </ul>
+            <div class="ds-panel" aria-label="Rhythm example">
+              <div class="ds-panel__sec">
+                <p class="ds-panel__title">Headline</p>
+                <label class="es-field"><span class="es-field__label">Line 1</span><input class="es-input" type="text" value="Warriors win Game 7"></label>
+                <label class="es-field"><span class="es-field__label">Line 2</span><input class="es-input" type="text" placeholder="Optional"></label>
+              </div>
+              <div class="ds-panel__sec">
+                <div class="ds-row"><button class="es-btn es-btn--sm" type="button">Reset</button><button class="es-btn es-btn--sm es-btn--tertiary" type="button">Cancel</button></div>
+              </div>
+            </div>
+          </div>
+          <ul class="ds-tokens" aria-label="Layout spacing tokens"><li><button class="ds-tok" type="button">--es-section-pad-y</button></li><li><button class="ds-tok" type="button">--es-section-pad-x</button></li><li><button class="ds-tok" type="button">--es-card-pad-sm</button></li><li><button class="ds-tok" type="button">--es-card-pad-md</button></li><li><button class="ds-tok" type="button">--es-card-pad-lg</button></li><li><button class="ds-tok" type="button">--es-field-h</button></li></ul>
+        </div>
+
+        <div class="ds-sub" id="radii">
+          <h3>Radii</h3>
+          <p class="ds-rule">Small things are tighter, containers are rounder. Pills only for tags, counts and team chips.</p>
+          <div class="ds-tiles">
+            <div class="ds-tile ds-radius"><span style="border-radius:var(--es-radius-chip)"></span><b>10</b>--es-radius-chip · buttons, chips, nav items</div>
+            <div class="ds-tile ds-radius"><span style="border-radius:var(--es-radius-control)"></span><b>12</b>--es-radius-control · fields, toasts</div>
+            <div class="ds-tile ds-radius"><span style="border-radius:var(--es-radius-container)"></span><b>16</b>--es-radius-container · panels, menus, tables</div>
+            <div class="ds-tile ds-radius"><span style="border-radius:var(--es-radius-card)"></span><b>20</b>--es-radius-card · .es-card</div>
+            <div class="ds-tile ds-radius"><span style="border-radius:var(--es-radius-pill)"></span><b>999</b>--es-radius-pill · badges, team chips</div>
+          </div>
+        </div>
+
+        <div class="ds-sub" id="elevation">
+          <h3>Elevation and shadows</h3>
+          <p class="ds-rule">Hairlines everywhere; a real shadow only for things that float (menus, toasts, popovers). Dark mode swaps shadows for 1px Slate lines.</p>
+          <div class="ds-elev">
+            <div class="ds-tiles">
+              <div class="ds-tile"><span style="box-shadow:var(--es-hairline)"></span><b>Hairline</b>--es-hairline · cards, panels</div>
+              <div class="ds-tile"><span style="box-shadow:var(--es-outline)"></span><b>Outline</b>--es-outline · 1.5px, legacy fields</div>
+              <div class="ds-tile"><span style="box-shadow:var(--es-shadow-pill)"></span><b>Pill</b>--es-shadow-pill · selected segment, nav item</div>
+              <div class="ds-tile"><span style="box-shadow:var(--es-shadow-soft), inset 0 0 0 1px var(--es-line)"></span><b>Soft</b>--es-shadow-soft · .es-card</div>
+              <div class="ds-tile"><span style="box-shadow:var(--es-shadow-float), inset 0 0 0 1px var(--es-line)"></span><b>Float</b>--es-shadow-float · menus, toasts</div>
+              <div class="ds-tile"><span style="box-shadow:var(--ais-glow), inset 0 0 0 1px var(--es-line)"></span><b>AI glow</b>--ais-glow · primary hover, AI surfaces</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ds-sub" id="motion">
+          <h3>Motion</h3>
+          <p class="ds-rule">Small, quick and meaningful: 140–420ms on the shared easing. Every effect below is static when the system asks for reduced motion.</p>
+          <p class="ds-cap">Reduced motion on this device: <b data-ds-rm-state>checking…</b></p>
+          <div class="ds-motion-grid ds-mt">
+            <div class="ds-motion-item">
+              <div class="ds-row"><span class="es-live-dot" aria-hidden="true"></span><span class="ds-cap">Live · Updated 2 min ago</span><span class="is-stale ds-row"><span class="es-live-dot" aria-hidden="true"></span><span class="ds-cap">Stale</span></span><span class="is-error ds-row"><span class="es-live-dot" aria-hidden="true"></span><span class="ds-cap">Failed</span></span></div>
+              <h4>Live dot</h4><p class="ds-cap">Green fresh, amber stale, red failed. <code>.es-live-dot</code></p>
+            </div>
+            <div class="ds-motion-item">
+              <div class="ds-row"><span class="es-type-section" style="font-size:var(--es-type-section-size-sm)" data-ds-glyph>Trending now <svg class="es-pulse-glyph" viewBox="0 0 30 16" aria-hidden="true" focusable="false"><path pathLength="1" d="M1 8h6l2.5-6 4 12 3.5-9 2.5 3H29"/></svg></span><button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-ds-replay="glyph">Replay</button></div>
+              <h4>Pulse glyph</h4><p class="ds-cap">Draws once beside a live section title. <code>.es-pulse-glyph</code> · <code>FrameUpMotion.glyph()</code></p>
+            </div>
+            <div class="ds-motion-item">
+              <div class="ds-row"><button class="es-btn es-btn--sm es-refresh" type="button" aria-busy="true" data-ds-refresh><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg><span>Refreshing</span></button></div>
+              <h4>Refresh spin</h4><p class="ds-cap">The icon spins while <code>aria-busy="true"</code>. Click to toggle. <code>.es-refresh</code> · <code>FrameUpMotion.busy()</code></p>
+            </div>
+            <div class="ds-motion-item">
+              <div class="ds-row"><span class="ds-cap" data-ds-check><svg class="es-check" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path pathLength="1" d="M4.5 10.5l3.5 3.5 7.5-8"/></svg> Saved</span><button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-ds-replay="check">Replay</button></div>
+              <h4>Check draw</h4><p class="ds-cap">Export done, copied, saved. <code>.es-check</code> · <code>FrameUpMotion.check()</code></p>
+            </div>
+            <div class="ds-motion-item">
+              <div class="ds-row"><span class="es-stat__value" style="font-size:28px" data-ds-count>39</span><button class="es-btn es-btn--sm" type="button" data-ds-tick>Add one</button></div>
+              <h4>Number tick</h4><p class="ds-cap">A count that changed scales and flashes blue once. <code>FrameUpMotion.setCount()</code> · <code>[data-es-tick]</code></p>
+            </div>
+            <div class="ds-motion-item">
+              <div class="ds-row"><span class="es-skeleton" style="width:140px;height:14px"></span><span class="es-skeleton" style="width:88px;height:14px"></span></div>
+              <h4>Shimmer</h4><p class="ds-cap">Loading cards: ES blues at low opacity. <code>.es-skeleton</code></p>
+            </div>
+            <div class="ds-motion-item">
+              <div class="ds-row"><ul class="ds-row es-stagger" data-ds-stagger style="padding:0;list-style:none"><li class="es-badge">1</li><li class="es-badge">2</li><li class="es-badge">3</li><li class="es-badge">4</li><li class="es-badge">5</li></ul><button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-ds-replay="stagger">Replay</button></div>
+              <h4>Stagger</h4><p class="ds-cap">New results rise in 40ms apart, at most 8. <code>.es-stagger</code></p>
+            </div>
+            <div class="ds-motion-item">
+              <div class="ds-row"><span class="es-badge es-badge--new es-new-shine is-shining" data-ds-new>New</span><button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-ds-replay="new">Replay</button></div>
+              <h4>NEW shine</h4><p class="ds-cap">One shimmer, the first time a tag is seen. <code>.es-new-shine[data-es-new-key]</code></p>
+            </div>
+            <div class="ds-motion-item">
+              <div class="ds-row"><ol class="es-steps" aria-label="Example steps" data-ds-steps><li class="es-step is-done"><span class="es-step__num">1</span>Moment</li><li class="es-step" aria-current="step"><span class="es-step__num">2</span>Copy</li><li class="es-step"><span class="es-step__num">3</span>Export</li></ol></div>
+              <div class="ds-row"><button class="es-btn es-btn--sm" type="button" data-ds-step>Next step</button></div>
+              <h4>Step ring</h4><p class="ds-cap">The current step fills Blue 600 with a quick ring. <code>.es-steps</code></p>
+            </div>
+            <div class="ds-motion-item">
+              <div class="es-tabs" role="tablist" aria-label="Sliding ink example" data-ds-tabs><button class="es-tab" role="tab" aria-selected="true" type="button">For you</button><button class="es-tab" role="tab" aria-selected="false" type="button">NFL</button><button class="es-tab" role="tab" aria-selected="false" type="button">College</button></div>
+              <h4>Sliding tab ink</h4><p class="ds-cap">The underline slides to the chosen tab (added by es-motion.js). Press: chips, tabs and buttons scale to .96–.97.</p>
+            </div>
+          </div>
+          <ul class="ds-tokens" aria-label="Motion tokens"><li><button class="ds-tok" type="button">--es-ease</button></li><li><button class="ds-tok" type="button">--es-ease-entrance</button></li><li><button class="ds-tok" type="button">--es-dur</button></li><li><button class="ds-tok" type="button">--es-dur-press</button></li><li><button class="ds-tok" type="button">--es-dur-fill</button></li><li><button class="ds-tok" type="button">--es-dur-step</button></li><li><button class="ds-tok" type="button">--es-dur-progress</button></li></ul>
+          <p class="ds-cap ds-mt"><b>Durations:</b> 140 press · 160 hover and colour · 200 fills · 300 steps and tabs · 420 progress. Hover motion sits inside <code>(hover: hover)</code>; entrances use fill-mode <code>backwards</code> so they leave no transform behind.</p>
+        </div>
       </div>
     </section>
 
-    <!-- BUTTONS -->
+    <!-- ═══ 2 BUTTONS ═══════════════════════════════════════════════════ -->
     <section class="es-card ds-section" id="buttons" aria-labelledby="buttons-title">
-      <div class="es-card__head"><div><h2 class="es-card__title" id="buttons-title">Buttons</h2><p class="es-card__sub">Four variants, three sizes, one family. One primary per view; everything else is secondary, tertiary or danger.</p></div></div>
-      <div class="es-card__body ds-stack">
-        <div class="ds-btn-table-wrap">
-          <table class="ds-btn-table">
-            <thead><tr><th scope="col">Variant</th><th scope="col">Small · 32</th><th scope="col">Default · 40</th><th scope="col">Large · 48</th><th scope="col">Disabled</th></tr></thead>
-            <tbody>
-            <tr><th scope="row">Primary<span>The key action. Moving ES rim.</span></th><td><button class="es-btn es-btn--primary es-btn--sm es-btn--still" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export</button></td><td><button class="es-btn es-btn--primary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export</button></td><td><button class="es-btn es-btn--primary es-btn--lg es-btn--still" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export</button></td><td><button class="es-btn es-btn--primary es-btn--still" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export</button></td></tr>
-            <tr><th scope="row">Secondary<span>Every other action.</span></th><td><button class="es-btn es-btn--sm" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Continue</button></td><td><button class="es-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Continue</button></td><td><button class="es-btn es-btn--lg" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Continue</button></td><td><button class="es-btn" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Continue</button></td></tr>
-            <tr><th scope="row">Tertiary<span>Low emphasis.</span></th><td><button class="es-btn es-btn--tertiary es-btn--sm" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Skip</button></td><td><button class="es-btn es-btn--tertiary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Skip</button></td><td><button class="es-btn es-btn--tertiary es-btn--lg" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Skip</button></td><td><button class="es-btn es-btn--tertiary" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Skip</button></td></tr>
-            <tr><th scope="row">Danger<span>Destructive.</span></th><td><button class="es-btn es-btn--danger es-btn--sm" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button></td><td><button class="es-btn es-btn--danger" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button></td><td><button class="es-btn es-btn--danger es-btn--lg" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button></td><td><button class="es-btn es-btn--danger" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button></td></tr>
-            </tbody>
-          </table>
+      <div class="es-card__head"><div><h2 class="es-type-section" id="buttons-title">Buttons</h2><p class="es-card__sub">Four variants, three sizes, one family. Everything you see comes from the <code>@layer es-buttons</code> block in design-tokens.css; page CSS sets layout only.</p></div></div>
+      <div class="es-card__body">
+        <div class="ds-sub">
+          <h3>Variants, sizes and states</h3>
+          <p class="ds-rule"><b>One animated primary per view.</b> Repeats of the key action are secondary or <code>.es-btn--static</code>. Everything else is secondary; tertiary for low emphasis; danger for destructive actions.</p>
+          <div class="ds-scroll">
+            <table class="ds-btn-table">
+              <thead><tr><th scope="col">Variant</th><th scope="col">Small · 32</th><th scope="col">Default · 40</th><th scope="col">Large · 48</th><th scope="col">Focus</th><th scope="col">Disabled</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Primary<span>The key action. Moving rim.</span></th>
+                  <td><button class="es-btn es-btn--primary es-btn--sm es-btn--still" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export</button></td>
+                  <td><button class="es-btn es-btn--primary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export</button></td>
+                  <td><button class="es-btn es-btn--primary es-btn--lg es-btn--still" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export</button></td>
+                  <td><span class="ds-focus-ring"><button class="es-btn es-btn--primary es-btn--still" type="button" tabindex="-1">Export</button></span></td>
+                  <td><button class="es-btn es-btn--primary es-btn--still" type="button" disabled>Export</button></td></tr>
+                <tr><th scope="row">Secondary<span>Every other action.</span></th>
+                  <td><button class="es-btn es-btn--sm" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Continue</button></td>
+                  <td><button class="es-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Continue</button></td>
+                  <td><button class="es-btn es-btn--lg" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Continue</button></td>
+                  <td><span class="ds-focus-ring"><button class="es-btn" type="button" tabindex="-1">Continue</button></span></td>
+                  <td><button class="es-btn" type="button" disabled>Continue</button></td></tr>
+                <tr><th scope="row">Tertiary<span>Low emphasis. Alias --ghost.</span></th>
+                  <td><button class="es-btn es-btn--tertiary es-btn--sm" type="button">Skip</button></td>
+                  <td><button class="es-btn es-btn--tertiary" type="button">Skip</button></td>
+                  <td><button class="es-btn es-btn--tertiary es-btn--lg" type="button">Skip</button></td>
+                  <td><span class="ds-focus-ring"><button class="es-btn es-btn--tertiary" type="button" tabindex="-1">Skip</button></span></td>
+                  <td><button class="es-btn es-btn--tertiary" type="button" disabled>Skip</button></td></tr>
+                <tr><th scope="row">Danger<span>Destructive.</span></th>
+                  <td><button class="es-btn es-btn--danger es-btn--sm" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button></td>
+                  <td><button class="es-btn es-btn--danger" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button></td>
+                  <td><button class="es-btn es-btn--danger es-btn--lg" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button></td>
+                  <td><span class="ds-focus-ring"><button class="es-btn es-btn--danger" type="button" tabindex="-1">Delete</button></span></td>
+                  <td><button class="es-btn es-btn--danger" type="button" disabled>Delete</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="ds-row ds-mt">
+            <button class="es-btn es-btn--primary es-btn--still is-busy" type="button" aria-busy="true">Exporting…</button>
+            <span class="ds-cap"><b>Busy</b> (<code>.is-busy</code> or <code>aria-busy</code>, primary only): the rim keeps turning and a sheen sweeps across. Ignore clicks, keep the label.</span>
+          </div>
+          <p class="ds-cap ds-mt"><b>Hover:</b> secondary darkens its line and fills Sunk; tertiary fills Sunk; danger darkens to the label red; primary brightens its rim and adds <code>--ais-glow</code>. <b>Press:</b> scale .96 (not when disabled or with reduced motion). <b>Touch:</b> small and default grow to 44px. Radius 10 · Roboto 500.</p>
+          <ul class="ds-tokens" aria-label="Button classes"><li><button class="ds-tok" type="button">.es-btn</button></li><li><button class="ds-tok" type="button">.es-btn--primary</button></li><li><button class="ds-tok" type="button">.es-btn--tertiary</button></li><li><button class="ds-tok" type="button">.es-btn--danger</button></li><li><button class="ds-tok" type="button">.es-btn--sm</button></li><li><button class="ds-tok" type="button">.es-btn--lg</button></li><li><button class="ds-tok" type="button">.es-btn--static</button></li><li><button class="ds-tok" type="button">.es-btn--still</button></li><li><button class="ds-tok" type="button">.is-busy</button></li></ul>
         </div>
-        <div class="ds-row">
-          <button class="es-btn es-btn--primary es-btn--still is-busy" type="button" aria-busy="true">Working…</button>
-          <span class="ds-muted">Busy primary: the rim keeps turning and a sheen sweeps across.</span>
-        </div>
-        <p class="ds-muted">Radius 10px · Roboto 500 · icons 16px (small) or 18px, 8px gap, always the label colour · focus: 2px blue outline, 2px offset · press: scale .96 · touch screens: small and default grow to 44px. Light and dark change colours only. The primary is white with an ink label in light mode and ES Black with a white label in dark mode. <code>.es-btn--still</code> is for specimens on this page only: the primary look without motion.</p>
-        <p class="ds-code"><code>.es-btn</code> <code>.es-btn--primary</code> <code>.es-btn--tertiary</code> <code>.es-btn--ghost</code> <code>.es-btn--danger</code> <code>.es-btn--sm</code> <code>.es-btn--lg</code> <code>.is-busy</code> <code>.es-btn--still</code></p>
 
-        <hr class="es-divider es-divider--dotted">
-        <h3 class="ds-h3">Icon and tool buttons</h3>
-        <div class="ds-row">
-          <button class="es-icon-btn" type="button" aria-label="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg></button>
-          <button class="es-icon-btn" type="button" aria-label="Redo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg></button>
-          <button class="es-icon-btn es-icon-btn--plain" type="button" aria-label="More"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
-          <span class="ds-gap"></span>
-          <button class="es-tool" type="button" aria-pressed="true"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12h9a4 4 0 010 8H7a1 1 0 01-1-1V5a1 1 0 011-1h7a4 4 0 010 8"/></svg></span>Bold</button>
-          <button class="es-tool" type="button"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></svg></span>Italic</button>
-          <button class="es-tool" type="button"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span>Image</button>
-          <button class="es-tool" type="button"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>Link</button>
+        <div class="ds-sub">
+          <h3>Primary in light and dark</h3>
+          <p class="ds-rule">Only colours change between themes. Light: white fill, ink label, a deeper blue rim. Dark: ES Black fill, white label, the bright rim.</p>
+          <div class="ds-modepanes">
+            <div class="ds-modepane ds-on-light"><p>Light</p><div class="ds-row"><button class="es-btn es-btn--primary es-btn--still" type="button">Export MP4</button><button class="es-btn" type="button">Preview</button><button class="es-btn es-btn--tertiary" type="button">Cancel</button></div></div>
+            <div class="ds-modepane ds-on-dark"><p>Dark</p><div class="ds-row"><button class="es-btn es-btn--primary es-btn--still" type="button">Export MP4</button><button class="es-btn" type="button">Preview</button><button class="es-btn es-btn--tertiary" type="button">Cancel</button></div></div>
+          </div>
+          <div class="ds-dd">
+            <div class="ds-do"><strong>Do</strong>Give each view one key action, at the end of its button row.</div>
+            <div class="ds-dont"><strong>Don't</strong>Put two moving rims on screen, or restyle buttons in page CSS.</div>
+          </div>
         </div>
-        <p class="ds-code"><code>.es-icon-btn</code> <code>.es-icon-btn--plain</code> <code>.es-tool</code> <code>.es-tool__icon</code></p>
+
+        <div class="ds-sub">
+          <h3>Icons in buttons</h3>
+          <p class="ds-rule">Lucide icons, stroke 2, always <code>currentColor</code>: 16px in small buttons, 18px everywhere else, 8px from the label. Icon-only buttons need an <code>aria-label</code>.</p>
+          <div class="ds-row">
+            <button class="es-btn es-btn--sm" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Copy link · 16</button>
+            <button class="es-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>Upload · 18</button>
+            <button class="es-icon-btn" type="button" aria-label="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg></button>
+            <button class="es-icon-btn" type="button" aria-label="Redo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg></button>
+            <button class="es-icon-btn es-icon-btn--plain" type="button" aria-label="More"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+            <button class="es-tool" type="button" aria-pressed="true"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12h9a4 4 0 010 8H7a1 1 0 01-1-1V5a1 1 0 011-1h7a4 4 0 010 8"/></svg></span>Bold</button>
+            <button class="es-tool" type="button"><span class="es-tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span>Image</button>
+          </div>
+          <ul class="ds-tokens" aria-label="Icon tokens"><li><button class="ds-tok" type="button">--es-icon</button></li><li><button class="ds-tok" type="button">--es-icon-sm</button></li><li><button class="ds-tok" type="button">.es-icon-btn</button></li><li><button class="ds-tok" type="button">.es-icon-btn--plain</button></li><li><button class="ds-tok" type="button">.es-tool</button></li></ul>
+        </div>
+
+        <div class="ds-sub">
+          <h3>Ask AI</h3>
+          <p class="ds-rule">Its own small button, outside the button layer: a blue to light-blue trail travels around the outline. One per AI panel; it opens the Ask AI card and shows a tinted fill while open.</p>
+          <div class="ds-modepanes">
+            <div class="ds-modepane ds-on-light"><p>Light</p><div class="ds-row"><button class="va-ask-ai" type="button" aria-expanded="false" data-ds-ask><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>Ask AI</button><button class="va-ask-ai" type="button" aria-expanded="true" data-ds-ask><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>Open</button></div></div>
+            <div class="ds-modepane ds-on-dark"><p>Dark</p><div class="ds-row"><button class="va-ask-ai" type="button" aria-expanded="false" data-ds-ask><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>Ask AI</button><button class="va-ask-ai" type="button" aria-expanded="true" data-ds-ask><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>Open</button></div></div>
+          </div>
+          <ul class="ds-tokens" aria-label="Ask AI classes"><li><button class="ds-tok" type="button">.va-ask-ai</button></li><li><button class="ds-tok" type="button">aria-expanded</button></li><li><button class="ds-tok" type="button">--es-rim-angle</button></li></ul>
+        </div>
       </div>
     </section>
 
-    <!-- NAVIGATION -->
+    <!-- ═══ 3 FOCUS AND SELECTION ═══════════════════════════════════════ -->
+    <section class="es-card ds-section" id="focus" aria-labelledby="focus-title">
+      <div class="es-card__head"><div><h2 class="es-type-section" id="focus-title">Focus and selection</h2><p class="es-card__sub">One quiet focus system, defined once in design-tokens.css, and one calm selected style.</p></div></div>
+      <div class="es-card__body">
+        <div class="ds-sub">
+          <h3>Focus</h3>
+          <p class="ds-rule"><b>Fields:</b> the outline turns ES blue (same width) plus one soft halo; no outline ring. <b>Buttons, links, chips, tabs:</b> keyboard only (<code>:focus-visible</code>), one 2px outline with a 2px offset. A mouse click shows nothing.</p>
+          <div class="ds-grid-2">
+            <div class="ds-demo">
+              <label class="es-field"><span class="es-field__label">Field, focused</span><input class="es-input ds-force-field-focus" type="text" value="Warriors win Game 7" tabindex="-1" readonly></label>
+              <label class="es-field"><span class="es-field__label">Try it: click or tab in</span><input class="es-input" type="text" placeholder="Type here"></label>
+            </div>
+            <div class="ds-demo">
+              <p class="ds-cap"><b>Control, keyboard focus</b></p>
+              <div class="ds-row"><span class="ds-focus-ring"><button class="es-btn" type="button" tabindex="-1">Continue</button></span><button class="es-chip ds-force-focus" type="button" tabindex="-1">Captions</button><span class="es-segmented"><span class="es-segmented__item is-active ds-force-focus">Feed</span><span class="es-segmented__item">Reel</span></span></div>
+              <p class="ds-cap">Press Tab through the buttons on this page to see the real ring.</p>
+            </div>
+          </div>
+          <ul class="ds-tokens" aria-label="Focus tokens"><li><button class="ds-tok" type="button">--es-focus-color</button></li><li><button class="ds-tok" type="button">--es-focus-halo</button></li><li><button class="ds-tok" type="button">--es-focus-outline</button></li><li><button class="ds-tok" type="button">--es-focus-offset</button></li></ul>
+          <p class="ds-cap ds-mt"><b>Values:</b> light <code>#0A6FDE</code> (Blue 600; 4.8:1 on white) with a 3px halo at 16%; dark <code>#54A4FB</code> (Blue 400; 7.2:1 on Black) with a 3px halo at 22%. Offset 2px in both.</p>
+          <div class="ds-dd">
+            <div class="ds-do"><strong>Do</strong>Use the tokens and let the global rule handle buttons, links and tabs.</div>
+            <div class="ds-dont"><strong>Don't</strong>Stack an outline and a halo, show a ring on mouse click, or remove focus with no replacement.</div>
+          </div>
+        </div>
+        <div class="ds-sub">
+          <h3>Selected</h3>
+          <p class="ds-rule">Selection is calm: a white pill on a grey track for segments, an ink ring for chips (a soft blue tint on AI pages), a white pill with a blue icon for the current nav item.</p>
+          <div class="ds-row ds-row--lg">
+            <div class="es-segmented" role="radiogroup" aria-label="Selected segment example" data-ds-seg><button class="es-segmented__item" role="radio" aria-checked="true" aria-selected="true" type="button">Feed</button><button class="es-segmented__item" role="radio" aria-checked="false" aria-selected="false" type="button">Reel</button><button class="es-segmented__item" role="radio" aria-checked="false" aria-selected="false" type="button">Square</button></div>
+            <div class="ds-row" data-ds-chips><button class="es-chip" type="button" aria-pressed="true">Captions</button><button class="es-chip" type="button" aria-pressed="false">Newsletter</button><button class="es-chip" type="button" aria-pressed="false">Quotes</button></div>
+            <div class="ds-row ais-page" data-ds-chips><button class="es-chip" type="button" aria-pressed="true">AI pick</button><button class="es-chip" type="button" aria-pressed="false">Stats</button></div>
+          </div>
+          <ul class="ds-tokens" aria-label="Selection attributes"><li><button class="ds-tok" type="button">.es-chip[aria-pressed="true"]</button></li><li><button class="ds-tok" type="button">.es-segmented__item[aria-selected="true"]</button></li><li><button class="ds-tok" type="button">.ais-page .es-chip</button></li><li><button class="ds-tok" type="button">.es-nav-item[aria-current="page"]</button></li></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 4 FORMS ═════════════════════════════════════════════════════ -->
+    <section class="es-card ds-section" id="forms" aria-labelledby="forms-title">
+      <div class="es-card__head"><div><h2 class="es-type-section" id="forms-title">Forms</h2><p class="es-card__sub">White fields with a 1px Line 2 outline, Ink 3 on hover, blue plus halo on focus. 44px tall, with 16px text on phones so iOS never zooms.</p></div></div>
+      <div class="es-card__body">
+        <div class="ds-sub">
+          <h3>Fields</h3>
+          <p class="ds-rule">Label above, 8px to the control; helper or error text 8px below. Placeholders show an example, never the instruction.</p>
+          <div class="ds-grid-2">
+            <label class="es-field"><span class="es-field__label">Headline</span><input class="es-input" type="text" placeholder="Warriors win Game 7"><span class="es-field__hint">Each line becomes its own text block.</span></label>
+            <div class="es-field"><span class="es-field__label">Search</span><label class="es-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg><input type="search" placeholder="Search entity, team, topic…" aria-label="Search"><kbd class="es-kbd">/</kbd></label></div>
+            <label class="es-field"><span class="es-field__label">Workspace</span><select class="es-input"><option>Social Media</option><option>YouTube</option><option>Newsletter</option></select></label>
+            <label class="es-field"><span class="es-field__label">Deadline</span><input class="es-input" type="text" value="Today, 6pm" aria-invalid="true" aria-describedby="ds-err-1"><span class="ds-error-text" id="ds-err-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Pick a time at least 4 hours from now.</span></label>
+            <label class="es-field ds-span-2"><span class="es-field__label">Notes for the designer</span><textarea class="es-input" placeholder="Keep the headline bold and mobile-safe."></textarea></label>
+          </div>
+          <ul class="ds-tokens" aria-label="Field classes"><li><button class="ds-tok" type="button">.es-field</button></li><li><button class="ds-tok" type="button">.es-field__label</button></li><li><button class="ds-tok" type="button">.es-field__hint</button></li><li><button class="ds-tok" type="button">.es-input</button></li><li><button class="ds-tok" type="button">.es-search</button></li><li><button class="ds-tok" type="button">.es-kbd</button></li><li><button class="ds-tok" type="button">aria-invalid="true"</button></li></ul>
+          <p class="ds-cap ds-mt"><b>Error:</b> a red outline plus one sentence that says how to fix it, linked with <code>aria-describedby</code>. The shared library has no error class yet, so this specimen uses page-scoped styles.</p>
+        </div>
+        <div class="ds-sub">
+          <h3>Counts and inline fixes</h3>
+          <p class="ds-rule">Counts sit right of the label and turn warn when over. Writing checks appear under the field as short dotted lines with one fix link; AI auto-fixes say what changed.</p>
+          <div class="va-page ds-va">
+            <div class="ds-va-card">
+              <div class="va-field">
+                <div class="va-field__top"><label class="va-label" for="ds-va-headline">Headline</label><span class="va-count">6 / 8 words</span></div>
+                <textarea class="va-input" id="ds-va-headline" rows="2">Chiefs fans feel this one coming</textarea>
+                <ul class="va-lint" aria-label="Writing checks"><li class="va-lint__item"><span>"Feel" repeats the word in the body.</span><button class="va-link" type="button">Fix</button></li></ul>
+              </div>
+              <div class="va-field">
+                <div class="va-field__top"><label class="va-label" for="ds-va-body">Body</label><span class="va-count is-over">142 / 125 chars</span></div>
+                <textarea class="va-input" id="ds-va-body" rows="3">Kansas City is rolling and the whole league can feel it. Get the one newsletter that tells you why, every morning, before kickoff talk starts.</textarea>
+                <p class="va-hint va-autofixed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Fixed "it's" to "its".</p>
+              </div>
+            </div>
+          </div>
+          <ul class="ds-tokens" aria-label="Count and lint classes"><li><button class="ds-tok" type="button">.va-count</button></li><li><button class="ds-tok" type="button">.va-count.is-over</button></li><li><button class="ds-tok" type="button">.va-lint</button></li><li><button class="ds-tok" type="button">.va-lint__item</button></li><li><button class="ds-tok" type="button">.va-autofixed</button></li></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 5 NAVIGATION ════════════════════════════════════════════════ -->
     <section class="es-card ds-section" id="navigation" aria-labelledby="navigation-title">
-      <div class="es-card__head"><div><h2 class="es-card__title" id="navigation-title">Navigation</h2><p class="es-card__sub">Segmented tabs switch views; breadcrumbs show where you are; the sidebar holds primary destinations.</p></div></div>
-      <div class="es-card__body ds-stack">
-        <div class="es-segmented" role="tablist" aria-label="Example tabs" data-ds-tabs>
-          <button class="es-segmented__item" role="tab" aria-selected="true" type="button">Content</button>
-          <button class="es-segmented__item" role="tab" aria-selected="false" type="button">Image Controls</button>
-          <button class="es-segmented__item" role="tab" aria-selected="false" type="button">Templates <span class="es-badge">4</span></button>
+      <div class="es-card__head"><div><h2 class="es-type-section" id="navigation-title">Navigation</h2><p class="es-card__sub">The sidebar holds every destination; tabs, segments and the step rail move within a page.</p></div></div>
+      <div class="es-card__body">
+        <div class="ds-sub">
+          <h3>Sidebar</h3>
+          <p class="ds-rule">224px and always open on desktop (a drawer on phones). Built once by app-shell.js from one nav list; never hand-write a sidebar on a page.</p>
+          <div class="ds-anatomy">
+            <aside class="es-sidebar ds-sidebar" aria-label="Sidebar example" data-ds-sidebar>
+              <div class="es-sidebar__brand"><span class="es-sidebar__logo"><img src="brand-logo-blue.svg" alt="EssentiallySports" width="120" height="18"></span></div>
+              <button type="button" class="es-search es-sidebar__search" data-ds-palette aria-label="Search FrameUp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg><span>Search</span><kbd class="es-kbd">⌘K</kbd></button>
+              <nav class="es-sidebar__scroll" aria-label="Sidebar example links">
+                <div class="es-sidebar__section">
+                  <a class="es-nav-item" href="#navigation" data-shell-id="ds-demo-home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="es-nav-item__text">Home</span></a>
+                </div>
+                <div class="es-sidebar__section es-sidebar__section--ai">
+                  <span class="es-sidebar__label"><span class="es-ai-mark" aria-hidden="true"></span>AI Studio</span>
+                  <a class="es-nav-item" href="#navigation" data-shell-id="ds-demo-generate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></svg><span class="es-nav-item__text">Generate</span><span class="es-badge es-badge--new">New</span></a>
+                  <a class="es-nav-item" href="#navigation" data-shell-id="ds-demo-video-ads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg><span class="es-nav-item__text">Video Ads</span><span class="es-badge es-badge--new">New</span></a>
+                </div>
+                <div class="es-sidebar__section">
+                  <span class="es-sidebar__label">Create</span>
+                  <a class="es-nav-item" href="#navigation" data-shell-id="ds-demo-social"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span class="es-nav-item__text">Social Media</span></a>
+                  <a class="es-nav-item" href="#navigation" data-shell-id="ds-demo-newsletter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span class="es-nav-item__text">Newsletter</span></a>
+                </div>
+                <div class="es-sidebar__section">
+                  <span class="es-sidebar__label">Help</span>
+                  <a class="es-nav-item" href="#navigation" data-shell-id="library" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/></svg><span class="es-nav-item__text">UI Library</span></a>
+                  <a class="es-nav-item" href="#navigation" data-shell-id="ds-demo-feedback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M7 11h10"/><path d="M7 15h6"/></svg><span class="es-nav-item__text">Tool Feedback</span></a>
+                </div>
+              </nav>
+              <div class="es-sidebar__foot">
+                <div class="es-usage" data-state="ok"><div class="es-usage__card"><span class="es-usage__row"><span class="es-usage__label">AI usage</span><span class="es-usage__amount"><strong>$3.00</strong> of $20</span></span><span class="es-usage__bar" role="progressbar" aria-label="AI usage this week" aria-valuemin="0" aria-valuemax="20" aria-valuenow="3"><span class="es-usage__fill" style="width:15%"></span></span><span class="es-usage__reset">Resets Monday</span></div></div>
+                <div class="es-sidebar__account" data-ds-account></div>
+              </div>
+            </aside>
+            <ol>
+              <li><b>Brand and search.</b> Logo, then a search launcher that opens the ⌘K palette.</li>
+              <li><b>Categories.</b> Grouped links under an 11px label; a very light 1px line, 12px above and below, separates categories. AI Studio gets the blue mark, blue icons and a gradient bar on its active item.</li>
+              <li><b>NEW tag.</b> Yellow <code>.es-badge--new</code>, in the sidebar only, shimmering once. Don't add yellow tags inside pages.</li>
+              <li><b>Current page.</b> White pill with the pill shadow and a blue icon (a Slate 700 pill in dark).</li>
+              <li><b>Scroll fade.</b> A 24px fade above the footer while more links sit below; it hides at the end of the list.</li>
+              <li><b>AI usage card.</b> This week's AI spend against the $20 cap; amber from 80%, red at 100%. Click it for the per-feature breakdown.</li>
+              <li><b>Profile row.</b> Initials avatar on a colour picked from the name, name over email, a quiet chevron. Opens the account menu upward.</li>
+            </ol>
+          </div>
+          <div class="ds-usage-row ds-mt" aria-label="AI usage states">
+            <div class="es-usage" data-state="ok"><div class="es-usage__card"><span class="es-usage__row"><span class="es-usage__label">AI usage</span><span class="es-usage__amount"><strong>$3.00</strong> of $20</span></span><span class="es-usage__bar" role="progressbar" aria-label="15% used" aria-valuemin="0" aria-valuemax="20" aria-valuenow="3"><span class="es-usage__fill" style="width:15%"></span></span><span class="es-usage__reset">15% · Resets Monday</span></div></div>
+            <div class="es-usage" data-state="warn"><div class="es-usage__card"><span class="es-usage__row"><span class="es-usage__label">AI usage</span><span class="es-usage__amount"><strong>$17.00</strong> of $20</span></span><span class="es-usage__bar" role="progressbar" aria-label="85% used" aria-valuemin="0" aria-valuemax="20" aria-valuenow="17"><span class="es-usage__fill" style="width:85%"></span></span><span class="es-usage__reset">85% · Resets Monday</span></div></div>
+            <div class="es-usage" data-state="over"><div class="es-usage__card"><span class="es-usage__row"><span class="es-usage__label">AI usage</span><span class="es-usage__amount"><strong>$20.00</strong> of $20</span></span><span class="es-usage__bar" role="progressbar" aria-label="100% used" aria-valuemin="0" aria-valuemax="20" aria-valuenow="20"><span class="es-usage__fill" style="width:100%"></span></span><span class="es-usage__reset">Limit reached · resets Monday</span></div></div>
+          </div>
+          <ul class="ds-tokens" aria-label="Sidebar classes"><li><button class="ds-tok" type="button">--es-sidebar-w</button></li><li><button class="ds-tok" type="button">.es-sidebar__section</button></li><li><button class="ds-tok" type="button">.es-sidebar__label</button></li><li><button class="ds-tok" type="button">.es-nav-item</button></li><li><button class="ds-tok" type="button">.es-badge--new</button></li><li><button class="ds-tok" type="button">.es-usage[data-state]</button></li><li><button class="ds-tok" type="button">.es-sidebar--at-end</button></li></ul>
+          <p class="ds-cap ds-mt ds-row">Press <kbd class="es-kbd">⌘</kbd><kbd class="es-kbd">K</kbd> or <kbd class="es-kbd">/</kbd> anywhere to jump to a page. <button class="es-btn es-btn--sm" type="button" data-ds-palette>Try it</button></p>
         </div>
-        <ol class="es-breadcrumbs" aria-label="Example breadcrumb"><li><a href="#navigation">FrameUp</a></li><li>Create</li><li><span aria-current="page">Social Media</span></li></ol>
-        <div class="ds-sidebar-demo">
-          <a class="es-nav-item" href="#navigation" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Home</span></a>
-          <a class="es-nav-item" href="#navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg><span>Design Request</span></a>
-          <a class="es-nav-item" href="#navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/></svg><span>UI Library</span><span class="es-badge es-badge--new">New</span></a>
+
+        <div class="ds-sub">
+          <h3>Tabs</h3>
+          <p class="ds-rule">Underline tabs switch views inside a page: 15/500, the active one gets primary text and a 2px blue line that slides. Counts are 13px muted, blue when something is new.</p>
+          <div class="es-tabs" role="tablist" aria-label="Tabs with counts" data-ds-tabs><button class="es-tab" role="tab" aria-selected="true" type="button">For you <span class="es-tab__count is-hot">12</span></button><button class="es-tab" role="tab" aria-selected="false" type="button">NFL <span class="es-tab__count">8</span></button><button class="es-tab" role="tab" aria-selected="false" type="button">College <span class="es-tab__count">4</span></button><button class="es-tab" role="tab" aria-selected="false" type="button">MLB <span class="es-tab__count">0</span></button></div>
+          <ul class="ds-tokens" aria-label="Tab classes"><li><button class="ds-tok" type="button">.es-tabs</button></li><li><button class="ds-tok" type="button">.es-tab</button></li><li><button class="ds-tok" type="button">.es-tab__count</button></li><li><button class="ds-tok" type="button">.is-hot</button></li><li><button class="ds-tok" type="button">.es-tabs__ink</button></li><li><button class="ds-tok" type="button">FrameUpMotion.tabs()</button></li></ul>
         </div>
-        <p class="ds-row ds-muted">Press <kbd class="es-kbd">⌘</kbd><kbd class="es-kbd">K</kbd> or <kbd class="es-kbd">/</kbd> anywhere to jump to a page. <button class="es-btn es-btn--sm" type="button" data-ds-palette>Try it</button></p>
-        <p class="ds-code"><code>.es-segmented</code> <code>.es-breadcrumbs</code> <code>.es-nav-item</code> <code>.es-kbd</code></p>
+
+        <div class="ds-sub">
+          <h3>Step rail</h3>
+          <p class="ds-rule">For guided flows of 3–5 steps. Current: filled ink (white in dark). Done: a blue check, clickable to go back. Upcoming: outline. Phones show "Step 2 of 3 · Clip" with a thin bar.</p>
+          <div class="va-page ds-va">
+            <nav class="va-steps" aria-label="Step rail example">
+              <ol>
+                <li class="va-steps__item is-done"><button class="va-step" type="button" data-state="done"><span class="va-step__num"><span>1</span></span><span class="va-step__name">Copy</span></button></li>
+                <li class="va-steps__item"><button class="va-step" type="button" aria-current="step"><span class="va-step__num"><span>2</span></span><span class="va-step__name">Clip</span></button></li>
+                <li class="va-steps__item"><button class="va-step" type="button"><span class="va-step__num"><span>3</span></span><span class="va-step__name">Export</span></button></li>
+              </ol>
+              <div class="va-steps__compact"><p class="va-steps__now">Step <b>2</b> of 3 · <span>Clip</span></p><div class="va-steps__bar"><span style="width:66%"></span></div></div>
+            </nav>
+          </div>
+          <ul class="ds-tokens" aria-label="Step classes"><li><button class="ds-tok" type="button">.va-steps</button></li><li><button class="ds-tok" type="button">.va-step[aria-current="step"]</button></li><li><button class="ds-tok" type="button">.va-step[data-state="done"]</button></li><li><button class="ds-tok" type="button">.es-steps</button></li></ul>
+          <p class="ds-cap ds-mt"><code>.es-steps</code> (in Motion above) is the compact shared version for inline progress.</p>
+        </div>
+
+        <div class="ds-sub">
+          <h3>Segmented control</h3>
+          <p class="ds-rule">For 2–4 mutually exclusive options that change the same view (size, mode). More than four, or different views, use tabs.</p>
+          <div class="ds-row ds-row--lg">
+            <div class="es-segmented" role="radiogroup" aria-label="Size" data-ds-seg><button class="es-segmented__item" role="radio" aria-checked="true" aria-selected="true" type="button">9:16</button><button class="es-segmented__item" role="radio" aria-checked="false" aria-selected="false" type="button">4:5</button><button class="es-segmented__item" role="radio" aria-checked="false" aria-selected="false" type="button">1:1</button></div>
+            <div class="es-segmented" role="radiogroup" aria-label="Panel" data-ds-seg><button class="es-segmented__item" role="radio" aria-checked="true" aria-selected="true" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></svg>Content</button><button class="es-segmented__item" role="radio" aria-checked="false" aria-selected="false" type="button">Templates <span class="es-badge">4</span></button></div>
+          </div>
+          <ul class="ds-tokens" aria-label="Segmented classes"><li><button class="ds-tok" type="button">.es-segmented</button></li><li><button class="ds-tok" type="button">.es-segmented--full</button></li><li><button class="ds-tok" type="button">.es-segmented__item</button></li></ul>
+        </div>
       </div>
     </section>
 
-    <!-- INPUTS -->
-    <section class="es-card ds-section" id="inputs" aria-labelledby="inputs-title">
-      <div class="es-card__head"><div><h2 class="es-card__title" id="inputs-title">Inputs</h2><p class="es-card__sub">White fields with a 1.5px outline; ink outline and a soft halo on focus.</p></div></div>
-      <div class="es-card__body ds-grid-2">
-        <label class="es-field"><span class="es-field__label">Headline</span><input class="es-input" type="text" placeholder="Warriors win Game 7"><span class="es-field__hint">Each line becomes its own text block.</span></label>
-        <div class="es-field"><span class="es-field__label">Search</span><label class="es-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg><input type="search" placeholder="Search entity, team, topic…" aria-label="Search"><kbd class="es-kbd">/</kbd></label></div>
-        <label class="es-field ds-span-2"><span class="es-field__label">Notes for the designer</span><textarea class="es-input" placeholder="Keep the headline bold and mobile-safe."></textarea></label>
-        <p class="ds-code ds-span-2"><code>.es-field</code> <code>.es-input</code> <code>.es-search</code></p>
-      </div>
-    </section>
-
-    <!-- DATA -->
+    <!-- ═══ 6 DATA DISPLAY ══════════════════════════════════════════════ -->
     <section class="es-card ds-section" id="data" aria-labelledby="data-title">
-      <div class="es-card__head"><div><h2 class="es-card__title" id="data-title">Data display</h2><p class="es-card__sub">Stat cards, tables with letter tiles, badges and chips.</p></div></div>
-      <div class="es-card__body ds-stack">
-        <div class="ds-grid-3">
-          <div class="es-card es-stat"><span class="es-tile es-tile--blue" style="width:48px;height:48px;border-radius:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span><div><p class="es-stat__value">39</p><p class="es-stat__label">Designs exported</p><span class="es-stat__trend">+4.5% vs last week</span></div></div>
-          <div class="es-card es-stat"><span class="es-tile es-tile--purple" style="width:48px;height:48px;border-radius:14px">R</span><div><p class="es-stat__value">12</p><p class="es-stat__label">Open requests</p><span class="es-stat__trend is-down">−2 vs last week</span></div></div>
-          <div class="es-card es-stat"><span class="es-tile es-tile--green" style="width:48px;height:48px;border-radius:14px">✓</span><div><p class="es-stat__value">86%</p><p class="es-stat__label">On-time delivery</p><span class="es-stat__trend">+3% vs last week</span></div></div>
+      <div class="es-card__head"><div><h2 class="es-type-section" id="data-title">Data display</h2><p class="es-card__sub">Cards, numbers, tables, status and the three states every list needs: empty, loading and error.</p></div></div>
+      <div class="es-card__body">
+        <div class="ds-sub">
+          <h3>Cards</h3>
+          <p class="ds-rule">One card per idea: title 18/500, a muted subline, 20–24px padding. Don't nest bordered cards inside bordered cards.</p>
+          <div class="ds-grid-2">
+            <div class="es-card"><div class="es-card__head"><div><h4 class="es-card__title">Recent exports</h4><p class="es-card__sub">Your last 4 designs on this browser.</p></div><button class="es-btn es-btn--sm es-btn--tertiary" type="button">View all</button></div><div class="es-card__body"><ul class="es-meta-list"><li>12 exports</li><li>Updated 2 min ago</li></ul></div></div>
+            <div class="es-card es-stat"><span class="es-tile" style="width:48px;height:48px;border-radius:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></span><div><p class="es-stat__value">39</p><p class="es-stat__label">Designs exported</p><span class="es-stat__trend">+4.5% vs last week</span></div></div>
+          </div>
+          <ul class="ds-tokens" aria-label="Card classes"><li><button class="ds-tok" type="button">.es-card</button></li><li><button class="ds-tok" type="button">.es-card__head</button></li><li><button class="ds-tok" type="button">.es-card__title</button></li><li><button class="ds-tok" type="button">.es-card__sub</button></li><li><button class="ds-tok" type="button">.es-card__body</button></li><li><button class="ds-tok" type="button">.es-stat</button></li></ul>
         </div>
-        <div class="es-table-wrap">
-          <table class="es-table">
-            <thead><tr><th>Request</th><th>Workspace</th><th>Status</th><th>Due</th></tr></thead>
-            <tbody>
-              <tr><td><span class="ds-cell"><span class="es-tile es-tile--purple">N</span>NBA Finals carousel</span></td><td>Social Media</td><td><span class="es-badge es-badge--brand">In progress</span></td><td>Today</td></tr>
-              <tr><td><span class="ds-cell"><span class="es-tile es-tile--pink">M</span>MLB weekly recap header</span></td><td>Newsletter</td><td><span class="es-badge es-badge--good">Done</span></td><td>Yesterday</td></tr>
-              <tr><td><span class="ds-cell"><span class="es-tile es-tile--amber">C</span>CFB rankings thumbnail</span></td><td>YouTube</td><td><span class="es-badge es-badge--bad">Overdue</span></td><td>Mon</td></tr>
-            </tbody>
-          </table>
+
+        <div class="ds-sub">
+          <h3>KPI cards</h3>
+          <p class="ds-rule">The dashboard's number row: eyebrow label, a 36px number, the change against the same-length period before, a sparkline and one meta line. 4 → 2 → 1 columns.</p>
+          <div class="ds-kpis">
+            <article class="ds-kpi"><h4 class="es-type-eyebrow">Exports</h4><p class="ds-kpi__value">1,284</p><p class="ds-kpi__delta"><b>▲ 12%</b><span>vs previous 7 days</span></p><div class="ds-kpi__spark" aria-hidden="true"><svg viewBox="0 0 120 32" preserveAspectRatio="none"><path d="M0 26 L17 22 L34 24 L51 15 L68 18 L85 9 L102 12 L120 4 L120 32 L0 32Z" fill="currentColor" opacity=".12"/><path d="M0 26 L17 22 L34 24 L51 15 L68 18 L85 9 L102 12 L120 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></div><p class="ds-kpi__meta">18,902 all time</p></article>
+            <article class="ds-kpi"><h4 class="es-type-eyebrow">Active creators</h4><p class="ds-kpi__value">46</p><p class="ds-kpi__delta"><b class="is-down">▼ 3%</b><span>vs previous 7 days</span></p><div class="ds-kpi__spark" aria-hidden="true"><svg viewBox="0 0 120 32" preserveAspectRatio="none"><path d="M0 10 L17 12 L34 8 L51 14 L68 13 L85 18 L102 16 L120 19 L120 32 L0 32Z" fill="currentColor" opacity=".12"/><path d="M0 10 L17 12 L34 8 L51 14 L68 13 L85 18 L102 16 L120 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></div><p class="ds-kpi__meta">Most active: Social team</p></article>
+            <article class="ds-kpi"><h4 class="es-type-eyebrow">Open requests</h4><p class="ds-kpi__value">12</p><p class="ds-kpi__delta"><span>3 due today</span></p><div class="ds-kpi__spark" aria-hidden="true"></div><p class="ds-kpi__meta">2 overdue · 1 urgent</p></article>
+          </div>
+          <p class="ds-cap ds-mt">Live in <code>dashboard-ui-system.css</code> as <code>.dov-kpi</code> (scoped to the dashboard); shown here with page-scoped copies.</p>
         </div>
-        <div class="ds-row">
-          <span class="es-badge">4</span><span class="es-badge es-badge--new">New</span><span class="es-badge es-badge--brand">Brand</span><span class="es-badge es-badge--good">Done</span><span class="es-badge es-badge--bad">Overdue</span><span class="es-badge es-badge--ink">2</span>
-          <span class="ds-gap"></span>
-          <button class="es-chip" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/></svg>Popular</button>
-          <button class="es-chip" type="button" aria-pressed="true">Captions</button>
-          <button class="es-chip" type="button">Newsletter</button>
+
+        <div class="ds-sub">
+          <h3>Tables, badges and status</h3>
+          <p class="ds-rule">Tabular numbers, row hover, small tertiary actions. Status is a pill with colour and a word. Use a logo instead of a text badge whenever one exists.</p>
+          <div class="es-table-wrap">
+            <table class="es-table">
+              <thead><tr><th>Request</th><th>League</th><th>Status</th><th>Due</th></tr></thead>
+              <tbody>
+                <tr><td><span class="ds-cell"><span class="es-tile">N</span>NFL Week 12 carousel</span></td><td><span class="ds-cell" data-ds-league="nfl">NFL</span></td><td><span class="es-badge es-badge--brand">In progress</span></td><td>Today</td></tr>
+                <tr><td><span class="ds-cell"><span class="es-tile es-tile--green">M</span>MLB weekly recap header</span></td><td><span class="ds-cell" data-ds-league="mlb">MLB</span></td><td><span class="es-badge es-badge--good">Done</span></td><td>Yesterday</td></tr>
+                <tr><td><span class="ds-cell"><span class="es-tile es-tile--amber">C</span>CFB rankings thumbnail</span></td><td><span class="ds-cell" data-ds-league="cfb">CFB</span></td><td><span class="es-badge es-badge--bad">Overdue</span></td><td>Mon</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="ds-row ds-mt"><span class="es-badge">4</span><span class="es-badge es-badge--brand">In progress</span><span class="es-badge es-badge--good">Done</span><span class="es-badge es-badge--bad">Overdue</span><span class="es-badge es-badge--ink">2</span><span class="ais-badge">AI</span><span class="ais-tag">Suggested</span></div>
+          <ul class="ds-tokens" aria-label="Table and badge classes"><li><button class="ds-tok" type="button">.es-table-wrap</button></li><li><button class="ds-tok" type="button">.es-table</button></li><li><button class="ds-tok" type="button">.es-tile</button></li><li><button class="ds-tok" type="button">.es-badge--brand</button></li><li><button class="ds-tok" type="button">.es-badge--good</button></li><li><button class="ds-tok" type="button">.es-badge--bad</button></li><li><button class="ds-tok" type="button">.es-badge--ink</button></li><li><button class="ds-tok" type="button">.es-meta-list</button></li></ul>
         </div>
-        <p class="ds-code"><code>.es-stat</code> <code>.es-table</code> <code>.es-tile</code> <code>.es-badge</code> <code>.es-chip</code></p>
+
+        <div class="ds-sub">
+          <h3>Empty, loading and error</h3>
+          <p class="ds-rule">Every list has all three. Empty says what will appear and offers the first step; loading keeps the layout with skeletons; error says what failed and offers Try again.</p>
+          <div class="ds-grid-3">
+            <div class="es-empty"><p class="es-empty__title">No designs yet</p><p class="es-empty__copy">Pick a workspace to start. Your exports appear here.</p><button class="es-btn es-btn--sm" type="button">Create a design</button></div>
+            <div class="es-empty ds-empty-loading" aria-busy="true" aria-label="Loading"><span class="es-skeleton" style="width:60%;height:14px"></span><span class="es-skeleton" style="width:80%;height:12px"></span><span class="es-skeleton" style="width:40%;height:32px;border-radius:10px"></span></div>
+            <div class="es-empty"><p class="es-empty__title ds-row" style="justify-content:center"><span class="is-error"><span class="es-live-dot" aria-hidden="true"></span></span>Couldn't load exports</p><p class="es-empty__copy">The connection dropped. Nothing was lost.</p><button class="es-btn es-btn--sm" type="button">Try again</button></div>
+          </div>
+        </div>
+
+        <div class="ds-sub">
+          <h3>Toasts, callouts and menus</h3>
+          <p class="ds-rule">Toasts confirm what just happened (bottom right, about 3s, one optional action). Callouts are for tips. Menus float with the float shadow.</p>
+          <div class="ds-grid-2">
+            <div class="ds-stack">
+              <div class="ds-toasts">
+                <div class="es-toast"><svg class="es-check" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path pathLength="1" d="M4.5 10.5l3.5 3.5 7.5-8"/></svg><span>Downloaded es-ig-warriors-win.jpeg</span></div>
+                <div class="es-toast es-toast--action"><span>Restored your last session</span><button class="es-btn es-toast-action" type="button">Start fresh</button></div>
+                <div class="es-toast is-error"><span>Export failed. Try again in a moment.</span></div>
+              </div>
+              <div class="ds-row"><button class="es-btn" type="button" data-ds-toast>Show a toast</button></div>
+              <div class="es-callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><div><strong>Label speakers for better results</strong>Assign speakers in the transcript panel to get better captions.</div></div>
+            </div>
+            <div class="es-menu" role="menu" aria-label="Example menu">
+              <div class="es-menu__label">Actions</div>
+              <button class="es-menu__item" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Duplicate design<kbd class="es-kbd">⌘D</kbd></button>
+              <button class="es-menu__item" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export all slides</button>
+              <div class="es-menu__sep"></div>
+              <div class="es-menu__label">Rewrite <span class="ais-badge">AI</span></div>
+              <button class="es-menu__item" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 16 6-12 6 12"/><path d="M8 12h8"/><path d="m16 20 2 2 4-4"/></svg>Fix grammar</button>
+              <button class="es-menu__item" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>Make it punchier</button>
+            </div>
+          </div>
+          <ul class="ds-tokens" aria-label="Feedback classes"><li><button class="ds-tok" type="button">.es-toast</button></li><li><button class="ds-tok" type="button">.es-toast.is-error</button></li><li><button class="ds-tok" type="button">.es-toast-action</button></li><li><button class="ds-tok" type="button">.es-callout</button></li><li><button class="ds-tok" type="button">.es-empty</button></li><li><button class="ds-tok" type="button">.es-skeleton</button></li><li><button class="ds-tok" type="button">.es-menu</button></li><li><button class="ds-tok" type="button">.es-menu__item</button></li></ul>
+        </div>
+
+        <div class="ds-sub">
+          <h3>Stars of the week</h3>
+          <p class="ds-rule">Home only: a quiet leaderboard strip at the top of the page, medal-ranked, scrolling slowly and pausing on hover.</p>
+          <div data-ds-ticker-slot></div>
+          <ul class="ds-tokens" aria-label="Ticker classes"><li><button class="ds-tok" type="button">.es-ticker</button></li><li><button class="ds-tok" type="button">.es-ticker__item.is-rank-1</button></li><li><button class="ds-tok" type="button">.es-ticker__avatar</button></li></ul>
+        </div>
       </div>
     </section>
 
-    <!-- FEEDBACK -->
-    <section class="es-card ds-section" id="feedback" aria-labelledby="feedback-title">
-      <div class="es-card__head"><div><h2 class="es-card__title" id="feedback-title">Feedback &amp; menus</h2><p class="es-card__sub">Callouts for tips, empty states for blank areas, floating menus for actions, toasts for confirmations.</p></div></div>
-      <div class="es-card__body ds-grid-2">
-        <div class="ds-stack">
-          <div class="es-callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><div><strong>Label speakers for better results</strong>Assign speakers in the transcript panel to help us generate better captions.</div></div>
-          <div class="es-empty"><p class="es-empty__title">No designs yet</p><p class="es-empty__copy">Pick a workspace to start your first design. Exports appear here.</p><button class="es-btn es-btn--sm" type="button">Create a design</button></div>
-          <div class="ds-row"><button class="es-btn" type="button" data-ds-toast>Show a toast</button></div>
+    <!-- ═══ 7 BRAND AND LOGOS ═══════════════════════════════════════════ -->
+    <section class="es-card ds-section" id="brand" aria-labelledby="brand-title">
+      <div class="es-card__head"><div><h2 class="es-type-section" id="brand-title">Brand and logos</h2><p class="es-card__sub">Use a logo instead of a text badge wherever one exists: leagues, teams and newsletters read faster as marks.</p></div></div>
+      <div class="es-card__body">
+        <div class="ds-sub">
+          <h3>League logo tiles</h3>
+          <p class="ds-rule">From <code>LeagueLogos.logoFor(sport)</code>. A flat light tile in both themes so the official colours hold; unknown sports get the neutral trophy tile and keep their own label.</p>
+          <div class="ds-logo-grid" data-ds-leagues></div>
+          <ul class="ds-tokens" aria-label="League logo API"><li><button class="ds-tok" type="button">LeagueLogos.logoFor('nfl')</button></li><li><button class="ds-tok" type="button">.va-league</button></li><li><button class="ds-tok" type="button">.is-league</button></li></ul>
         </div>
-        <div class="es-menu" role="menu" aria-label="Example menu">
-          <div class="es-menu__label">Actions</div>
-          <button class="es-menu__item" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Duplicate design<kbd class="es-kbd">⌘D</kbd></button>
-          <button class="es-menu__item" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Export all slides</button>
-          <div class="es-menu__sep"></div>
-          <div class="es-menu__label">Rewrite <span class="es-badge">AI</span></div>
-          <button class="es-menu__item" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Fix grammar</button>
-          <button class="es-menu__item" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/></svg>Make it punchier</button>
+        <div class="ds-sub">
+          <h3>Team logo chips</h3>
+          <p class="ds-rule">The team logo on a fixed white circle with a 1px line, so the box never shifts and dark logos read in dark mode. No logo, or one that fails to load: the team's two-colour dot in the same box.</p>
+          <div class="va-page ds-va">
+            <ul class="va-teams" aria-label="Team chips" data-ds-teams></ul>
+          </div>
+          <ul class="ds-tokens" aria-label="Team logo API"><li><button class="ds-tok" type="button">VideoAdsTeams.findTeam(name, sport)</button></li><li><button class="ds-tok" type="button">VideoAdsTeams.logoFor(team)</button></li><li><button class="ds-tok" type="button">.va-team</button></li><li><button class="ds-tok" type="button">.va-logo</button></li><li><button class="ds-tok" type="button">.va-logo--dot</button></li></ul>
         </div>
-        <p class="ds-code ds-span-2"><code>.es-callout</code> <code>.es-empty</code> <code>.es-menu</code> <code>.es-menu__item</code> <code>showToast()</code></p>
+        <div class="ds-sub">
+          <h3>Newsletter brand chips</h3>
+          <p class="ds-rule">A colour dot in the brand's wordmark colour plus its short name, inside a segmented control.</p>
+          <div class="va-page ds-va">
+            <div class="va-seg va-seg--brand" role="radiogroup" aria-label="Newsletter" data-ds-vaseg>
+              <button type="button" role="radio" aria-checked="true"><span class="va-dot" style="--c:#781A1D" aria-hidden="true"></span><span>CFB</span></button>
+              <button type="button" role="radio" aria-checked="false"><span class="va-dot" style="--c:#BF0D3E" aria-hidden="true"></span><span>Dugout</span></button>
+              <button type="button" role="radio" aria-checked="false"><span class="va-dot" style="--c:#252D47" aria-hidden="true"></span><span>Huddle</span></button>
+            </div>
+          </div>
+          <ul class="ds-tokens" aria-label="Brand chip classes"><li><button class="ds-tok" type="button">.va-seg--brand</button></li><li><button class="ds-tok" type="button">.va-dot</button></li><li><button class="ds-tok" type="button">VideoAdsBrands.AD_BRANDS</button></li></ul>
+        </div>
+        <div class="ds-sub">
+          <h3>ES marks</h3>
+          <p class="ds-rule">Blue wordmark on light; white wordmark on dark and on Blue 600. Marks are images, not icons: never recolour or stretch them.</p>
+          <div class="ds-marks">
+            <div class="ds-mark is-light"><img src="brand-logo-blue.svg" alt="EssentiallySports wordmark, blue" width="160" height="28"><span>brand-logo-blue.svg</span></div>
+            <div class="ds-mark is-dark"><img src="brand-logo-white.svg" alt="EssentiallySports wordmark, white" width="160" height="28"><span>brand-logo-white.svg</span></div>
+            <div class="ds-mark is-blue"><img src="brand-logo-white.svg" alt="EssentiallySports wordmark on blue" width="160" height="28"><span>On Blue 600</span></div>
+            <div class="ds-mark is-light"><img src="assets/brand-logos/essentiallysports-mark.svg" alt="EssentiallySports mark" width="28" height="28"><span>essentiallysports-mark.svg</span></div>
+            <div class="ds-mark is-light"><img src="assets/brand-logos/essentially-golf-wordmark.svg" alt="Essentially Golf wordmark" width="160" height="28"><span>essentially-golf-wordmark.svg</span></div>
+            <div class="ds-mark is-light"><img src="assets/brand-logos/essentially-w-wordmark.svg" alt="Essentially W wordmark" width="160" height="28"><span>essentially-w-wordmark.svg</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 8 AI PATTERNS ═══════════════════════════════════════════════ -->
+    <section class="es-card ds-section ais-page" id="ai" aria-labelledby="ai-title">
+      <div class="es-card__head"><div><h2 class="es-type-section" id="ai-title">AI patterns</h2><p class="es-card__sub">The AI features (Generate, Trends, Video Ads) share one family: ES blues and cyan, gradient rings that move only where they show, and no purple.</p></div></div>
+      <div class="es-card__body">
+        <div class="ds-sub">
+          <h3>Ask AI panel</h3>
+          <p class="ds-rule">One inline card under the thing it edits: quick actions first, optional context folded away, progress, results as option cards, then a compose box for anything else.</p>
+          <div class="va-page ds-va">
+            <div class="va-ai">
+              <div class="va-ai__inner">
+                <div class="va-ai__head"><p class="va-ai__title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>Ask AI</p><button class="es-icon-btn es-icon-btn--plain va-ai__close" type="button" aria-label="Close Ask AI"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+                <div class="va-ai__actions">
+                  <button class="va-ai__act" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg><span>Write 3 options</span></button>
+                  <button class="va-ai__act" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg><span>Make it punchier</span></button>
+                  <button class="va-ai__act is-busy" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 16 6-12 6 12"/><path d="M8 12h8"/><path d="m16 20 2 2 4-4"/></svg><span>Check grammar</span></button>
+                  <button class="va-ai__act" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg><span>Shorter</span></button>
+                </div>
+                <details class="va-ai__context"><summary><span>Context: Chiefs · Red · Huddle</span><span class="va-ai__optional">Optional</span></summary><div class="va-ai__context-body"><div class="va-field"><label class="va-label" for="ds-ai-notes">Notes</label><input class="va-input" id="ds-ai-notes" type="text" placeholder="Anything the AI should know"></div></div></details>
+                <div class="va-ai__progress" aria-live="polite"><span>Checking grammar…</span><span class="va-ai__bar"></span></div>
+                <div class="va-ai__out">
+                  <p class="va-ai__label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>2 options · pick one to use it</p>
+                  <div class="va-variants">
+                    <article class="va-variant is-applied" tabindex="0"><span class="va-variant__state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>In your ad</span><p class="va-variant__headline">KANSAS CITY ISN'T <mark>SLOWING DOWN</mark></p><p class="va-variant__body">Get the one newsletter that explains every Chiefs win before Monday talk starts.</p></article>
+                    <article class="va-variant" tabindex="0"><p class="va-variant__headline va-variant__headline--simple">Chiefs fans already know. Now get the why, every morning.</p><p class="va-variant__body">Free, five minutes, written by people who watch every snap.</p></article>
+                  </div>
+                </div>
+                <div class="va-compose"><textarea class="va-input" rows="1" aria-label="Ask for something else" placeholder="Ask for something else…"></textarea><button class="va-send" type="button" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button></div>
+              </div>
+            </div>
+          </div>
+          <ul class="ds-tokens" aria-label="Ask AI panel classes"><li><button class="ds-tok" type="button">.va-ai</button></li><li><button class="ds-tok" type="button">.va-ai__actions</button></li><li><button class="ds-tok" type="button">.va-ai__context</button></li><li><button class="ds-tok" type="button">.va-ai__progress</button></li><li><button class="ds-tok" type="button">.va-variant</button></li><li><button class="ds-tok" type="button">.va-variant.is-applied</button></li><li><button class="ds-tok" type="button">.va-compose</button></li></ul>
+        </div>
+
+        <div class="ds-sub">
+          <h3>Grammar suggestions</h3>
+          <p class="ds-rule">One row per fix: which field, the change as strike-through and insert, a one-line reason, and a small Fix button. Fixed rows fade; a clean result says so in green.</p>
+          <div class="va-page ds-va">
+            <div class="va-gram">
+              <ul class="va-gram__list">
+                <li class="va-gram__item"><div class="va-gram__main"><span class="va-gram__field">Headline</span><span class="va-gram__diff"><del>it's</del><ins>its</ins></span><span class="va-gram__why">Possessive, not "it is".</span></div><button class="es-btn es-btn--sm" type="button">Fix</button></li>
+                <li class="va-gram__item is-fixed"><div class="va-gram__main"><span class="va-gram__field">Body</span><span class="va-gram__diff"><del>every morning ,</del><ins>every morning,</ins></span><span class="va-gram__why">No space before a comma.</span></div><span class="va-gram__done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Fixed</span></li>
+              </ul>
+              <p class="va-gram__clean"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>No grammar issues found.</p>
+            </div>
+          </div>
+          <ul class="ds-tokens" aria-label="Grammar classes"><li><button class="ds-tok" type="button">.va-gram__item</button></li><li><button class="ds-tok" type="button">.va-gram__diff</button></li><li><button class="ds-tok" type="button">.va-gram__done</button></li><li><button class="ds-tok" type="button">.va-gram__clean</button></li></ul>
+        </div>
+
+        <div class="ds-sub">
+          <h3>Option cards and detection pills</h3>
+          <p class="ds-rule">Format cards are a radio group (arrow keys move and select) with the real template art; a blue dot marks the ones that fit the brief. Pills show what the AI found in the brief, with a logo where it can.</p>
+          <div class="ds-ai-fcards" role="radiogroup" aria-label="Format" data-ds-fcards>
+            <button class="ds-fcard" type="button" role="radio" aria-checked="true"><span class="ds-fcard__art is-auto" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg></span><span>Auto</span></button>
+            <button class="ds-fcard is-fit" type="button" role="radio" aria-checked="false"><span class="ds-fcard__art" aria-hidden="true"><img src="assets/template-thumbs/instagram-quote.webp" width="360" height="450" alt="" loading="lazy" decoding="async"></span><span>Quote</span></button>
+            <button class="ds-fcard is-fit" type="button" role="radio" aria-checked="false"><span class="ds-fcard__art" aria-hidden="true"><img src="assets/template-thumbs/instagram-stats-single-ent.webp" width="360" height="450" alt="" loading="lazy" decoding="async"></span><span>Stats</span></button>
+            <button class="ds-fcard" type="button" role="radio" aria-checked="false"><span class="ds-fcard__art" aria-hidden="true"><img src="assets/template-thumbs/instagram-cover.webp" width="360" height="450" alt="" loading="lazy" decoding="async"></span><span>Cover</span></button>
+          </div>
+          <ul class="ds-found ds-mt" aria-label="Found in your brief">
+            <li class="is-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><b>Patrick Mahomes</b></span></li>
+            <li class="is-on" data-ds-found-team><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><b>Chiefs</b></span></li>
+            <li class="is-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><b>2 stats</b></span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 3" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg><span>Quote</span></li>
+          </ul>
+          <p class="ds-cap ds-mt">Live on generate.html as <code>.gen-fcard</code> and <code>.gen-found</code> (page-scoped); shown here with page-scoped copies.</p>
+        </div>
+
+        <div class="ds-sub">
+          <h3>Colour swatches and the Meta preview</h3>
+          <p class="ds-rule">Swatches are 32px circles with the label under; the selected one gets a 2px ring. The Meta preview frames the ad as a feed post or a reel for a placement check only; it is never drawn into the export.</p>
+          <div class="va-page ds-va">
+            <div class="ds-grid-2">
+              <div class="va-swatches" role="radiogroup" aria-label="Team colour" data-ds-swatches>
+                <button class="va-swatch va-swatch--any" type="button" role="radio" aria-checked="false"><span class="va-swatch__dot" aria-hidden="true"></span><span class="va-swatch__label">Any</span></button>
+                <button class="va-swatch" type="button" role="radio" aria-checked="true" style="--sw:#C8102E"><span class="va-swatch__dot" aria-hidden="true"></span><span class="va-swatch__label">Red</span></button>
+                <button class="va-swatch" type="button" role="radio" aria-checked="false" style="--sw:#0057B8"><span class="va-swatch__dot" aria-hidden="true"></span><span class="va-swatch__label">Blue</span></button>
+                <button class="va-swatch" type="button" role="radio" aria-checked="false" style="--sw:#1E6B3A"><span class="va-swatch__dot" aria-hidden="true"></span><span class="va-swatch__label">Green</span></button>
+                <button class="va-swatch" type="button" role="radio" aria-checked="false" style="--sw:#FFB81C"><span class="va-swatch__dot" aria-hidden="true"></span><span class="va-swatch__label">Gold</span></button>
+                <button class="va-swatch" type="button" role="radio" aria-checked="false" style="--sw:#0C2340"><span class="va-swatch__dot" aria-hidden="true"></span><span class="va-swatch__label">Navy</span></button>
+              </div>
+              <div class="va-device" data-meta="feed" style="max-width:260px" role="img" aria-label="Meta feed preview example">
+                <div class="va-meta-head"><div class="va-meta-row"><span class="va-meta-avatar"><img src="assets/brand-logos/essentiallysports-mark.svg" alt=""></span><span class="va-meta-who"><b>EssentiallySports</b><small>Sponsored</small></span></div></div>
+                <div class="va-device__media"><img src="assets/template-thumbs/instagram-cover.webp" alt="" width="360" height="450" style="display:block;width:100%;height:auto"></div>
+                <div class="va-meta-foot"><span class="va-meta-cta"><span>Sign up</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span><p class="va-meta-caption"><b>EssentiallySports</b> Chiefs fans already know. Now get the why.</p></div>
+              </div>
+            </div>
+          </div>
+          <ul class="ds-tokens" aria-label="Swatch and preview classes"><li><button class="ds-tok" type="button">.va-swatches</button></li><li><button class="ds-tok" type="button">.va-swatch[aria-checked="true"]</button></li><li><button class="ds-tok" type="button">.va-device[data-meta="feed"]</button></li><li><button class="ds-tok" type="button">.va-meta-over</button></li></ul>
+        </div>
+
+        <div class="ds-sub">
+          <h3>Gradient tokens</h3>
+          <p class="ds-rule">For AI marks, bars, rings and fills only. White text sits only on the fill gradient; gradient text only on dark (use the on-light version on white).</p>
+          <div class="ds-tiles">
+            <div class="ds-grad"><span style="background:var(--ais-gradient)"></span><b>Sweep</b>--ais-gradient</div>
+            <div class="ds-grad"><span style="background:var(--ais-gradient-fill)"></span><b>Fill (white text)</b>--ais-gradient-fill</div>
+            <div class="ds-grad"><span style="background:var(--ais-gradient-stroke)"></span><b>Stroke and ring</b>--ais-gradient-stroke</div>
+            <div class="ds-grad"><span style="background:var(--ais-gradient-soft)"></span><b>Soft tint</b>--ais-gradient-soft</div>
+            <div class="ds-grad"><span style="background:#101114;display:grid;align-items:center;padding:0 12px"><strong class="ais-gradient-text" style="font-size:15px">Gradient text</strong></span><b>Text on dark</b>--ais-gradient-text</div>
+            <div class="ds-grad"><span style="background:var(--es-bg);box-shadow:var(--ais-glow)"></span><b>Glow</b>--ais-glow</div>
+          </div>
+          <div class="ds-row ds-row--lg ds-mt"><div class="ais-card es-card" style="padding:var(--es-space-4);min-width:200px" tabindex="0"><p class="es-type-card-title">Hover me</p><p class="ds-cap">.ais-card: ring and glow on hover or focus</p></div><span class="ais-gradient-text ais-gradient-text--on-light es-type-section" style="font-size:var(--es-type-section-size-sm)">On-light gradient text</span></div>
+          <div class="ds-dd">
+            <div class="ds-do"><strong>Do</strong>Keep the ring moving only on the card that is hovered, focused or selected.</div>
+            <div class="ds-dont"><strong>Don't</strong>Add purple or pink stops, or put white text on the light sweep.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 9 LAYOUT ════════════════════════════════════════════════════ -->
+    <section class="es-card ds-section" id="layout" aria-labelledby="layout-title">
+      <div class="es-card__head"><div><h2 class="es-type-section" id="layout-title">Layout</h2><p class="es-card__sub">One shell, one content column, three breakpoints.</p></div></div>
+      <div class="es-card__body">
+        <div class="ds-sub">
+          <h3>Shell and content width</h3>
+          <p class="ds-rule">The 224px sidebar on the left; content in one column of up to 1120px with a 32px gutter (16px on phones). The page title sits 32px from the top.</p>
+          <div class="ds-layout" aria-hidden="true"><div class="ds-layout__side"></div><div class="ds-layout__main"><i></i><i style="width:70%"></i><i style="width:85%"></i><i style="width:60%"></i></div></div>
+          <ul class="ds-tokens" aria-label="Layout tokens"><li><button class="ds-tok" type="button">--es-sidebar-w</button></li><li><button class="ds-tok" type="button">--es-page-gutter</button></li><li><button class="ds-tok" type="button">--es-page-gutter-phone</button></li><li><button class="ds-tok" type="button">--es-shell-offset</button></li><li><button class="ds-tok" type="button">.es-page-head</button></li></ul>
+        </div>
+        <div class="ds-sub">
+          <h3>Breakpoints</h3>
+          <p class="ds-rule">Design at these three widths and check there is never sideways page scroll; wide rows scroll inside themselves.</p>
+          <div class="ds-bp">
+            <div><b>375</b>Phone. The sidebar becomes a menu under the top bar; 16px gutter; one column; 44px touch targets; 16px field text.</div>
+            <div><b>900</b>The shell switch. Above it, the fixed sidebar and the 32px gutter; at or below it, the phone layout.</div>
+            <div><b>1280</b>Laptop. Content column up to 1120px; 3–4 column grids; the Stars ticker tightens its label below it.</div>
+          </div>
+        </div>
+        <div class="ds-sub">
+          <h3>Light and dark</h3>
+          <p class="ds-rule">Every page supports both. The switch sets <code>html[data-theme]</code> and remembers it; components change colour only, never size or spacing.</p>
+          <div class="es-segmented" role="radiogroup" aria-label="Theme" data-ds-theme><button class="es-segmented__item" role="radio" type="button" data-theme-choice="light">Light</button><button class="es-segmented__item" role="radio" type="button" data-theme-choice="dark">Dark</button></div>
+          <ul class="ds-tokens" aria-label="Theme API"><li><button class="ds-tok" type="button">FrameUpTheme.apply('dark')</button></li><li><button class="ds-tok" type="button">html[data-theme="dark"]</button></li><li><button class="ds-tok" type="button">frameup-theme-change</button></li></ul>
+        </div>
       </div>
     </section>
   </main>
 
   <script>
-    // Demo behaviour for the library page only.
-    document.querySelectorAll('[data-ds-tabs]').forEach(list => list.addEventListener('click', event => {
-      const tab = event.target.closest('[role="tab"]');
-      if (!tab) return;
-      list.querySelectorAll('[role="tab"]').forEach(item => item.setAttribute('aria-selected', String(item === tab)));
-    }));
-    document.querySelector('[data-ds-palette]')?.addEventListener('click', () => window.FrameUpShell?.openPalette());
-    document.querySelector('[data-ds-toast]')?.addEventListener('click', () => {
-      let region = document.getElementById('es-toast-region');
-      if (!region) {
-        region = document.createElement('div');
-        region.id = 'es-toast-region';
-        region.className = 'es-toast-region';
-        region.setAttribute('role', 'status');
-        region.setAttribute('aria-live', 'polite');
-        document.body.appendChild(region);
+    // Demo behaviour for the UI Library page only.
+    (function () {
+      'use strict';
+      const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+      // Toasts (same markup as the app's).
+      function toast(message, isError) {
+        let region = document.getElementById('es-toast-region');
+        if (!region) {
+          region = document.createElement('div');
+          region.id = 'es-toast-region';
+          region.className = 'es-toast-region';
+          region.setAttribute('role', 'status');
+          region.setAttribute('aria-live', 'polite');
+          document.body.appendChild(region);
+        }
+        const item = document.createElement('div');
+        item.className = 'es-toast' + (isError ? ' is-error' : '');
+        const text = document.createElement('span');
+        text.textContent = message;
+        item.appendChild(text);
+        region.appendChild(item);
+        setTimeout(() => item.classList.add('is-leaving'), 2600);
+        setTimeout(() => item.remove(), 3000);
       }
-      const toast = document.createElement('div');
-      toast.className = 'es-toast is-success';
-      const text = document.createElement('span');
-      text.textContent = 'Downloaded es-ig-warriors-win.jpeg';
-      toast.appendChild(text);
-      region.appendChild(toast);
-      setTimeout(() => toast.classList.add('is-leaving'), 2600);
-      setTimeout(() => toast.remove(), 3000);
-    });
-    const tocLinks = [...document.querySelectorAll('.ds-toc a')];
-    const sections = tocLinks.map(link => document.querySelector(link.getAttribute('href')));
-    const syncToc = () => {
-      let current = sections[0];
-      sections.forEach(section => { if (section.getBoundingClientRect().top < 160) current = section; });
-      tocLinks.forEach((link, index) => link.classList.toggle('is-active', sections[index] === current));
-    };
-    window.addEventListener('scroll', syncToc, { passive: true });
-    syncToc();
+      $$('[data-ds-toast]').forEach(btn => btn.addEventListener('click', () => toast('Downloaded es-ig-warriors-win.jpeg')));
+
+      // Copy a token or class name.
+      document.addEventListener('click', event => {
+        const tok = event.target.closest('.ds-tok');
+        if (!tok) return;
+        const value = tok.textContent.trim();
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(value).then(() => toast('Copied ' + value), () => toast('Couldn’t copy. Select the text instead.', true));
+        else toast('Couldn’t copy. Select the text instead.', true);
+      });
+
+      // Tabs, segments, chips, radios.
+      $$('[data-ds-tabs]').forEach(list => list.addEventListener('click', event => {
+        const tab = event.target.closest('[role="tab"]');
+        if (!tab) return;
+        list.querySelectorAll('[role="tab"]').forEach(item => item.setAttribute('aria-selected', String(item === tab)));
+      }));
+      $$('[data-ds-seg], [data-ds-vaseg], [data-ds-swatches], [data-ds-fcards]').forEach(group => group.addEventListener('click', event => {
+        const item = event.target.closest('[role="radio"]');
+        if (!item || !group.contains(item)) return;
+        group.querySelectorAll('[role="radio"]').forEach(other => {
+          other.setAttribute('aria-checked', String(other === item));
+          if (other.classList.contains('es-segmented__item')) other.setAttribute('aria-selected', String(other === item));
+        });
+      }));
+      $$('[data-ds-chips]').forEach(group => group.addEventListener('click', event => {
+        const chip = event.target.closest('.es-chip');
+        if (chip) chip.setAttribute('aria-pressed', String(chip.getAttribute('aria-pressed') !== 'true'));
+      }));
+      $$('[data-ds-ask]').forEach(btn => btn.addEventListener('click', () => btn.setAttribute('aria-expanded', String(btn.getAttribute('aria-expanded') !== 'true'))));
+      $$('[data-ds-palette]').forEach(btn => btn.addEventListener('click', () => window.FrameUpShell?.openPalette?.()));
+
+      // Motion replays.
+      const replayNode = el => { if (!el) return null; const copy = el.cloneNode(true); el.replaceWith(copy); return copy; };
+      document.addEventListener('click', event => {
+        const btn = event.target.closest('[data-ds-replay]');
+        if (!btn) return;
+        const kind = btn.dataset.dsReplay;
+        if (kind === 'glyph') replayNode(document.querySelector('[data-ds-glyph] .es-pulse-glyph'));
+        if (kind === 'check') replayNode(document.querySelector('[data-ds-check] .es-check'));
+        if (kind === 'stagger') replayNode(document.querySelector('[data-ds-stagger]'));
+        if (kind === 'new') {
+          const tag = document.querySelector('[data-ds-new]');
+          if (tag) { tag.classList.remove('is-shining'); void tag.offsetWidth; tag.classList.add('is-shining'); }
+        }
+      });
+      const refresh = document.querySelector('[data-ds-refresh]');
+      refresh?.addEventListener('click', () => {
+        const on = refresh.getAttribute('aria-busy') !== 'true';
+        if (window.FrameUpMotion) window.FrameUpMotion.busy(refresh, on);
+        else if (on) refresh.setAttribute('aria-busy', 'true');
+        else refresh.removeAttribute('aria-busy');
+        refresh.querySelector('span').textContent = on ? 'Refreshing' : 'Refresh';
+      });
+      const count = document.querySelector('[data-ds-count]');
+      document.querySelector('[data-ds-tick]')?.addEventListener('click', () => {
+        const next = (Number(count.textContent) || 0) + 1;
+        if (window.FrameUpMotion) window.FrameUpMotion.setCount(count, next);
+        else count.textContent = String(next);
+      });
+      document.querySelector('[data-ds-step]')?.addEventListener('click', () => {
+        const steps = $$('[data-ds-steps] .es-step');
+        const index = steps.findIndex(step => step.getAttribute('aria-current') === 'step');
+        const next = (index + 1) % steps.length;
+        steps.forEach((step, i) => {
+          step.classList.toggle('is-done', i < next);
+          if (i === next) step.setAttribute('aria-current', 'step');
+          else step.removeAttribute('aria-current');
+        });
+      });
+      const rm = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const rmState = document.querySelector('[data-ds-rm-state]');
+      const syncRm = () => { if (rmState) rmState.textContent = rm.matches ? 'on, so effects are static' : 'off, so effects play'; };
+      syncRm();
+      rm.addEventListener?.('change', syncRm);
+
+      // Theme switch.
+      const themeGroup = document.querySelector('[data-ds-theme]');
+      const syncTheme = () => {
+        const current = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+        themeGroup?.querySelectorAll('[data-theme-choice]').forEach(btn => {
+          const on = btn.dataset.themeChoice === current;
+          btn.setAttribute('aria-checked', String(on));
+          btn.classList.toggle('is-active', on);
+        });
+      };
+      themeGroup?.addEventListener('click', event => {
+        const btn = event.target.closest('[data-theme-choice]');
+        if (btn && window.FrameUpTheme) window.FrameUpTheme.apply(btn.dataset.themeChoice);
+        syncTheme();
+      });
+      window.addEventListener('frameup-theme-change', syncTheme);
+      syncTheme();
+
+      // Sticky in-page nav: highlight the section in view.
+      const toc = document.querySelector('.ds-toc');
+      const tocLinks = $$('.ds-toc a');
+      const sections = tocLinks.map(link => document.querySelector(link.getAttribute('href')));
+      let lastActive = null;
+      const syncToc = () => {
+        let current = sections[0];
+        sections.forEach(section => { if (section && section.getBoundingClientRect().top < 200) current = section; });
+        tocLinks.forEach((link, index) => {
+          const on = sections[index] === current;
+          link.classList.toggle('is-active', on);
+          if (on) link.setAttribute('aria-current', 'true');
+          else link.removeAttribute('aria-current');
+          if (on && link !== lastActive) {
+            lastActive = link;
+            if (toc && toc.scrollWidth > toc.clientWidth) toc.scrollLeft = link.offsetLeft - (toc.clientWidth - link.offsetWidth) / 2;
+          }
+        });
+      };
+      let tocFrame = 0;
+      window.addEventListener('scroll', () => { cancelAnimationFrame(tocFrame); tocFrame = requestAnimationFrame(syncToc); }, { passive: true });
+      syncToc();
+
+      // Logos: league tiles and team chips from the real data files (guarded).
+      const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+      function leagueTile(id, large) {
+        const L = window.LeagueLogos;
+        if (!L || typeof L.logoFor !== 'function') return '';
+        const logo = L.logoFor(id);
+        return `<span class="${large ? 'is-league' : 'va-league'}" style="--league-bg:${esc(logo.bg)}" aria-hidden="true"><img src="${esc(logo.src)}" alt="" decoding="async"></span>`;
+      }
+      function teamMark(team, size) {
+        const colors = (team && Array.isArray(team.colors) ? team.colors : []).filter(c => /^#[0-9a-f]{3,8}$/i.test(String(c)));
+        const a = colors[0] || '#8490A6';
+        const b = colors[1] || a;
+        const T = window.VideoAdsTeams;
+        const src = team && T && typeof T.logoFor === 'function' ? T.logoFor(team) : '';
+        const img = /^https:\/\//.test(src) ? `<img src="${esc(src)}" alt="" width="${size}" height="${size}" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-team-logo>` : '';
+        return `<span class="va-logo${img ? '' : ' va-logo--dot'}" style="--a:${esc(a)};--b:${esc(b)};--logo:${size}px" aria-hidden="true">${img}</span>`;
+      }
+      // A logo that fails to load turns back into the dot: never a broken image.
+      document.addEventListener('error', event => {
+        const img = event.target;
+        if (!(img instanceof HTMLImageElement) || !img.hasAttribute('data-team-logo')) return;
+        img.parentElement?.classList.add('va-logo--dot');
+        img.remove();
+      }, true);
+      function renderLogos() {
+        const L = window.LeagueLogos;
+        const leagues = document.querySelector('[data-ds-leagues]');
+        if (leagues) {
+          if (L && typeof L.ids === 'function') {
+            const entries = [...L.ids().filter(id => id !== 'sports'), 'Curling'];
+            leagues.innerHTML = entries.map(id => `<div class="ds-logo-item">${leagueTile(id, true)}<span>${esc(L.logoFor(id).label)}</span></div>`).join('');
+          } else {
+            leagues.innerHTML = '<p class="ds-cap">League logos are unavailable (league-logos.js did not load).</p>';
+          }
+        }
+        $$('[data-ds-league]').forEach(cell => {
+          const tile = leagueTile(cell.dataset.dsLeague, false);
+          if (tile && !cell.querySelector('.va-league')) cell.insertAdjacentHTML('afterbegin', tile);
+        });
+        const T = window.VideoAdsTeams;
+        const teamsList = document.querySelector('[data-ds-teams]');
+        if (teamsList) {
+          const pick = [['Kansas City Chiefs', 'nfl'], ['Buffalo Bills', 'nfl'], ['Green Bay Packers', 'nfl'], ['New York Yankees', 'mlb'], ['Alabama Crimson Tide', 'cfb']];
+          const found = T && typeof T.findTeam === 'function' ? pick.map(([name, sport]) => { try { return T.findTeam(name, sport); } catch (error) { return null; } }).filter(Boolean) : [];
+          const items = found.map(team => `<li class="va-team" aria-label="${esc(team.name)}">${teamMark(team, 20)}<span>${esc(team.short || team.name)}</span></li>`);
+          items.push(`<li class="va-team" aria-label="Team without a logo">${teamMark({ colors: ['#781A1D', '#CDB286'] }, 20)}<span>No logo</span></li>`);
+          items.push('<li class="va-team va-team--more">+3 more</li>');
+          teamsList.innerHTML = items.join('');
+          const chiefs = found.find(team => /Chiefs/.test(team.name));
+          const pill = document.querySelector('[data-ds-found-team]');
+          if (chiefs && pill && !pill.querySelector('.va-logo')) pill.querySelector('svg')?.insertAdjacentHTML('afterend', teamMark(chiefs, 20));
+        }
+      }
+
+      // Added after the shell boots, so site-chrome.js and app-shell.js (which
+      // look for .profile-menu and .es-ticker on load) leave these copies alone.
+      function addLateDemos() {
+        const account = document.querySelector('[data-ds-account]');
+        if (account && !account.firstChild) {
+          account.innerHTML = '<div class="profile-menu" data-profile-popover-version="2" aria-hidden="true"><span class="profile-trigger"><span class="profile-avatar" data-initial="A" style="--profile-avatar-bg:#0A6FDE"></span><span class="profile-copy"><span class="profile-name">Alex Morgan</span><span class="profile-sub">alex@essentiallysports.com</span></span><svg class="profile-chevron" viewBox="4 7 16 10" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>';
+        }
+        const slot = document.querySelector('[data-ds-ticker-slot]');
+        if (slot && !slot.firstChild) {
+          const stars = [['Priya Shah', 42, '#0A6FDE'], ['Marcus Lee', 37, '#0B8043'], ['Dana Ortiz', 31, '#B06000']];
+          const item = ([name, n, bg], i) => `<span class="es-ticker__item is-rank-${i + 1}"><span class="es-ticker__rank">${i + 1}</span><span class="es-ticker__avatar" style="background-color:${bg}">${name.charAt(0)}</span><span class="es-ticker__name">${name}</span><span class="es-ticker__stat"><b>${n}</b> designs</span></span>`;
+          const group = `<div class="es-ticker__group">${stars.map(item).join('')}${stars.map(item).join('')}</div>`;
+          slot.innerHTML = `<div class="es-ticker ds-ticker" role="img" aria-label="Stars of the week example: 1. Priya Shah, 42 designs; 2. Marcus Lee, 37; 3. Dana Ortiz, 31"><span class="es-ticker__label" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2"/><path d="M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2"/><path d="M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3"/><path d="M4 22h16"/><path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"/><path d="M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3"/></svg><span>Stars <span class="es-ticker__label-long">of the week</span></span></span><div class="es-ticker__viewport" aria-hidden="true"><div class="es-ticker__track">${group}${group}</div></div></div>`;
+        }
+        // The demo sidebar's scroll fade hides at the end, like the real one.
+        const demo = document.querySelector('[data-ds-sidebar]');
+        const scroller = demo?.querySelector('.es-sidebar__scroll');
+        if (scroller && !scroller.dataset.dsBound) {
+          scroller.dataset.dsBound = '1';
+          const sync = () => demo.classList.toggle('es-sidebar--at-end', scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2);
+          scroller.addEventListener('scroll', sync, { passive: true });
+          sync();
+        }
+      }
+
+      function onReady() {
+        renderLogos();
+        setTimeout(addLateDemos, 50);
+      }
+      if (document.readyState === 'complete') onReady();
+      else window.addEventListener('load', onReady, { once: true });
+    })();
   </script>
 </body>
 </html>
