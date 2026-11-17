@@ -41,10 +41,7 @@ create table if not exists public.frameup_generate_direction_events (
   )),
   run_id text check (run_id is null or char_length(run_id) <= 64),
   direction_id text check (direction_id is null or char_length(direction_id) <= 24),
-  post_type text check (post_type is null or post_type in (
-    'cover', 'quote', 'long-quote', 'double-entity-quote',
-    'stats-single-ent', 'stats-double-ent', 'listicle-type-1', 'listicle-type-2'
-  )),
+  post_type text check (post_type is null or char_length(post_type) <= 40),
   hook text check (hook is null or hook in ('question', 'claim', 'reaction', 'quote', 'numbers', 'ranking')),
   sport text check (sport is null or char_length(sport) <= 20),
   angle text check (angle is null or char_length(angle) <= 160),

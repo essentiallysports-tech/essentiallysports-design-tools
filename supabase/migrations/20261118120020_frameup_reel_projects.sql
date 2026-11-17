@@ -23,8 +23,8 @@ create table if not exists public.frameup_reel_projects (
   user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
   user_email text not null,
   title text not null default 'Untitled reel' check (char_length(title) <= 140),
-  format text not null default 'explainer' check (format in ('explainer', 'stat', 'top5', 'quote')),
-  sport text check (sport is null or sport in ('nfl', 'cfb', 'mlb', 'golf')),
+  format text not null default 'explainer' check (char_length(format) <= 40),
+  sport text check (sport is null or char_length(sport) <= 20),
   status text not null default 'draft' check (status in ('draft', 'rendered', 'exported')),
   timeline jsonb not null default '{}'::jsonb check (octet_length(timeline::text) <= 204800),
   cost_usd numeric(10, 6) not null default 0 check (cost_usd >= 0),
@@ -81,8 +81,8 @@ create table if not exists public.frameup_reel_events (
   user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
   user_email text not null,
   project_id uuid,
-  type text not null check (type in ('plan', 'revise', 'voice', 'edit', 'export', 'lint_blocked')),
-  format text check (format is null or format in ('explainer', 'stat', 'top5', 'quote')),
+  type text not null check (char_length(type) <= 40),
+  format text check (format is null or char_length(format) <= 40),
   payload jsonb not null default '{}'::jsonb check (octet_length(payload::text) <= 20000)
 );
 
