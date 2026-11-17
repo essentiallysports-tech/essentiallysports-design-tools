@@ -56,6 +56,38 @@ and what's still uncommitted.
   - **AI cost**: no AI on load (unchanged) and **no AI on hover/focus any more**; only an opened kit (1 story), a card's AI angles, or the toolbar (≤6 stories, picks first). Browser cache sessionStorage → localStorage 6 h.
 - Tours: Trends tour steps updated (Post now, Post kit); `tours/tours.js` key bumped to `20261118-hero-trends` on 11 pages (not `reel-maker.html`, owned by the Reels branch). Release note `2026-11-19-hero-trends`.
 - Tests: `scripts/test-trends-hero.mjs` (18 checks, chained into `npm run test:trend-design`). No migration, no new env vars.
+### 2026-11-19 — Editor UI: Layers panel rebuilt, canvas bar, safe zones, slide tools (branch `feature/editor-ui`)
+- Status: `[committed on feature/editor-ui, not pushed]` (built on `feature/hero-editor`)
+- Audit: `project-docs/hero-audit-editor-ui.md`.
+- **New** `frameup-editor-ui.js` + `.css` (loaded last in index.html; the CSS sits at the end of the body so it never
+  blocks first paint; the script waits for `load` and runs its first pass in idle steps).
+- **Layers panel** (Cover and now standard YouTube thumbnails): type icon / photo thumbnail / "Aa" in the pill colours,
+  a content line, double-click / Enter / F2 rename (stored in the existing `label`), click / Shift / ⌘ selection with a
+  DOM outline on the canvas and canvas-click selects the layer, drag with a drop line, ⌘[ ⌘] and ⌘⇧[ ⌘⇧], Alt+↑/↓,
+  H / L, filter from 7 rows, background row expands (team fade, YouTube player cut-outs), resizable 200–360 px
+  (`frameup.layers.width`), collapsed per workspace (`frameup.layers.collapsed.<ws>`; rail by default below 1280 px,
+  and on YouTube below 1440 px). Phones: layers in the More sheet. Reorders go through `applyOrder` on the same
+  `state.coverLayers` array, so undo, autosave and saved drafts are unchanged.
+- **index.html (surgical):** `isCoverLayersPanelActive` includes YouTube (not Quote Mode); `renderLayersPanelRows`
+  delegates once `FrameUpEditorUI.ready`; inline list handlers yield to it; `_render` fires `frameup:rendered`;
+  `getExportIssues` appends `FrameUpEditorUI.exportIssues()` (headline under the YouTube timestamp);
+  `moveInstagramSlide` / `duplicateInstagramSlide` / `clearInstagramSlide` (swap / clone with `cloneDesignValue` /
+  reset keeping the template); `window.FrameUpEditorBridge` (read-only getters for let/const state).
+- **Canvas bar** next to Undo / save chip on all three workspaces: template · size chip (opens the picker; YouTube
+  jumps to Layout), Safe zones (YouTube timestamp corner, Instagram 3:4 grid crop, ES 50 px margin; red dot when the
+  headline hits the timestamp), Small size on YouTube (246 / 168 px previews). Phone header kicker says the template
+  and size; the phone Export says Copy HTML on widgets.
+- **Newsletter:** "Copy image link", a hint under the buttons (what you get, where to paste), labels on widget fields.
+- **Carousel:** ⋯ menu next to the slide numbers: Duplicate to next empty slide, Move left / right, Clear (undoable).
+- Shortcuts sheet (`frameup-extras.js`): Shift+1 fit, layer keys, rename. Editor tour: Layers text, new Format and
+  safe zones step. Release note `2026-11-19-editor-ui`. `tours/tours.js` cache key bumped on every page that loads
+  it (not reel-maker.html: Reels Studio belongs to another branch).
+- **Exports byte-identical:** 15 cases across the three workspaces (incl. a reordered / hidden-layer Cover and two
+  widget HTMLs), seeded `Math.random`, hashes equal before and after.
+- **Speed** (4× CPU, warm, 7-run median, both sides served the same way): FCP 432 → 432 ms (Instagram, YouTube),
+  DCL and longest task unchanged, TBT +8 ms. Newsletter FCP 396 → 400 ms.
+- No Listicle Type 2 / infographic code touched. No AI, no migration, no env vars.
+- Tests: `scripts/test-editor-ui.mjs`.
 ### 2026-11-18 — Editor hero: save chip, Best for this story, Brand check, pills stay on canvas (branch `feature/hero-editor`)
 - Status: `[committed on feature/hero-editor, not pushed]`
 - Audit: `project-docs/hero-audit-editor.md`.
