@@ -2610,6 +2610,17 @@
     const top = layer.valign === 'top' ? layer.y : layer.valign === 'bottom' ? layer.y + layer.h - block : layer.y + (layer.h - block) / 2;
     const x0 = layer.align === 'center' ? layer.x + (layer.w - m.total) / 2 : layer.align === 'right' ? layer.x + layer.w - m.total : layer.x;
     const base = top + capH;
+    // Contrast guard for numbers (same rule as text): on a flat field where the
+    // figure reads under 3:1 (e.g. after a palette flip), swap to the closest
+    // palette ink that reads. Busy photos and decorative numbers are left alone.
+    const decorative = (layer.fx?.opacity ?? 1) < 0.6 || layer.guard === false;
+    const nStats = decorative ? null : sampleStats(g, x0, top, m.total, capH, s);
+    if (nStats && nStats.busy <= 0.05 && Math.min(...nStats.cols.map(c => contrast(layer.color, c))) < 3) {
+      const pal = report.palette || {};
+      const pool = [pal.bg, pal.ink, pal.paperInk, pal.accent, ES.ink, '#FFFFFF', '#000000'].filter(Boolean).map(normHex);
+      const numColor = pool.find(c => contrast(c, nStats.mean) >= 3) || pool.sort((a, b) => contrast(b, nStats.mean) - contrast(a, nStats.mean))[0];
+      layer = { ...layer, color: numColor, unitColor: layer.unitColor && contrast(layer.unitColor, nStats.mean) >= 3 ? layer.unitColor : numColor };
+    }
     g.save();
     applyFx(g, layer.fx, s);
     g.textBaseline = 'alphabetic';
