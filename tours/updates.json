@@ -3,6 +3,36 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-19-hero-video-ads",
+      "date": "2026-11-19",
+      "title": "Video Ads: today's ad set in one go",
+      "commit": "29fd694",
+      "items": [
+        {
+          "title": "Make my daily set",
+          "text": "Pick a newsletter and press Make my daily set: one Ask AI call writes 3 angles, each in the style that fits, shown in 9:16, 4:5 and 1:1. Edit any angle, then export all of them in one pass.",
+          "page": "video-ads.html",
+          "target": "#va-set-make"
+        },
+        {
+          "title": "Check before you export",
+          "text": "A free, instant check for a clear free offer, 55+ readability, trust, fit and safe zones, each with a one-click fix. An AI score is there when you want one.",
+          "page": "video-ads.html",
+          "target": "#va-check"
+        },
+        {
+          "title": "Feed, Story and Reels",
+          "text": "Meta preview now shows all three placements, including how the feed crops a 9:16 and how Stories show a 4:5.",
+          "page": "video-ads.html",
+          "target": "#va-meta-toggle"
+        },
+        {
+          "title": "Remembers your newsletter",
+          "text": "Video Ads opens on the newsletter you used last, with its style, sizes, tint and button. Stat Card and Quote Card are gone; the empty preview is plain black until you pick a background."
+        }
+      ]
+    },
+    {
       "id": "2026-11-18-director",
       "date": "2026-11-18",
       "title": "The creative director, ES guidelines and Bring it on-brand",

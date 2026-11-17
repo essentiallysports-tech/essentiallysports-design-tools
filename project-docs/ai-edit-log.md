@@ -17,6 +17,37 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-18 — Video Ads hero pass: today's ad set, check before export, Meta placements (branch `feature/hero-video-ads`)
+- Status: `[committed on feature/hero-video-ads — not pushed; migration NOT applied]`
+- Audit: `project-docs/hero-audit-video-ads.md`.
+- **Owner decisions (Suhail, 2026-11-18):** Stat Card and Quote Card removed everywhere (picker, suggestion, Ask AI
+  fields, renderer, server checks, rating prompt v1.2.0, learning ranking skips their old exports, tests, CSS);
+  unknown/removed styles fall back to Highlight (`VideoAdsBrands.styleOr`). Copyrighted clips may run in Meta paid
+  ads: the rights tick is now an optional reminder ("I have the rights to use this footage") and never blocks;
+  the source URL and the tick are logged with each export. The empty preview is plain #000 until a clip, photo
+  or the animated background is chosen.
+- **Make my daily set** (Copy step): one Haiku call (`mode:'copy', set:true`) writes 3 angles in mixed styles;
+  `planDailySet` keeps each in a style it can fill. Review grid: live 9:16 / 4:5 / 1:1 thumbnails per angle, the
+  free rubric checks, a style picker, Include, Edit (edits save back into the angle). No brief yet: uses today's top
+  trend for the brand's sport. AI down: "Use my copy in 3 styles instead". Export: "Today's set / This ad only";
+  every angle × size records in **one** real-time pass, named `{brand}_{style}_a{n}_{WxH}_{date}`.
+- **Check before you export** (on demand): `preflight()` — background, readiness, fit, small text (55+), safe zone,
+  unsubscribe, plus `copyChecks()` (clear free offer, readability, trust, sign-up button) — each with a one-click fix
+  (or "Shorten / Calm it with AI"). Optional "Get an AI score" uses the existing `/api/ad-rating` (Haiku vision,
+  cached system prompt) with 3 frames; same ad again in the session is free. Fixes go to Ask AI.
+- **Meta preview**: Feed / Story / Reels for any size; 9:16 in the feed shows the 4:5 crop, 4:5 / 1:1 in Stories or
+  Reels sit on a blurred fill; a note says what to export instead.
+- **Per-brand defaults** (localStorage `frameup.videoAds.brandDefaults.v1`): last newsletter, style, sizes, safe zone,
+  tint, button, unsubscribe, placement; "Reset" in the toast.
+- **AI quality/cost**: `COPY_SYSTEM` rewritten around the rating rubric and marked cacheable (≥1,024 chars); chat uses
+  the same static cached system prompt with the ad's context in the first turn; copy responses cached 10 min (skips
+  gates); variants ranked by `copyChecks`; grammar moved from gpt-oss (light) to Haiku (main) — "Haiku only".
+  Unapproved Us vs Them claims are never suggested first.
+- **Claims admin**: `claims` / `save-claims` modes + "Edit claims (admin)" under Us vs Them. Migration (owner runs):
+  `supabase/migrations/20261118124800_frameup_video_ad_claims.sql` (read: signed in; write: `is_es_designer_admin()`).
+  Before it runs, the file's placeholder claims and the warning stay.
+- Tests: new `scripts/test-video-ads-hero.mjs`; updated `test-video-ads.mjs`, `test-video-ads-styles.mjs`,
+  `test-ad-learning.mjs`, `test-ad-rating.mjs`. No new env vars. Clip search code untouched (owned by the clips branches).
 ### 2026-11-18 — Generate: the creative director first, ES guidelines, Bring it on-brand (branch feature/generate-director)
 - Status: `[committed on feature/generate-director - not pushed]`
 - **Director first.** Generate now asks the director for 2-4 named directions (`POST /api/es-generate {mode:'direct'}`):

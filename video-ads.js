@@ -44,7 +44,10 @@
     bodies: [$('va-body-1'), $('va-body-2'), $('va-body-3')], addPara: $('va-add-para'), cta: $('va-cta'), unsub: $('va-unsub'),
     styleFields: $('va-style-fields'), classicFields: $('va-classic-fields'), suggest: $('va-suggest'), styleCount: $('va-style-count'), zone: $('va-zone'), zoneRow: $('va-zone-row'),
     safeToggle: $('va-safe-toggle'), safe: $('va-safe'), grid: $('va-grid'), gridStyles: $('va-grid-styles'), gridNames: $('va-grid-names'), rightsRow: $('va-rights-row'),
-    exsizes: $('va-exsizes'), metaToggle: $('va-meta-toggle'), ready: $('va-ready'), rights: $('va-rights'), exportBtn: $('va-export'), exportProgress: $('va-export-progress'), exportStatus: $('va-export-status'), files: $('va-files'), again: $('va-again'),
+    exsizes: $('va-exsizes'), exmode: $('va-exmode'), exmodeRow: $('va-exmode-row'), gridRow: $('va-grid-row'),
+    set: $('va-set'), setBody: $('va-set-body'), setMake: $('va-set-make'), setMakeText: $('va-set-make-text'), setBrand: $('va-set-brand'), setEditing: $('va-set-editing'),
+    placement: $('va-placement'), metaFill: $('va-meta-fill'), metaNote: $('va-meta-note'),
+    check: $('va-check'), preflightOut: $('va-preflight-out'), metaToggle: $('va-meta-toggle'), ready: $('va-ready'), rights: $('va-rights'), exportBtn: $('va-export'), exportProgress: $('va-export-progress'), exportStatus: $('va-export-status'), files: $('va-files'), again: $('va-again'),
     toasts: $('va-toasts'),
   };
   // The ad's media: the clip <video>, or a still source with no footage
@@ -118,6 +121,10 @@
     aiView: 'options', // which Ask AI result shows: options | grammar | chat
     // Export step
     exportIds: ['9x16'], exported: false,
+    // Today's ad set (see "Today's ad set" below) and the Meta preview placement
+    // (null = by size: 9:16 Reels, 4:5 / 1:1 Feed).
+    set: { status: 'idle', error: '', angles: [], editing: -1, mode: 'set' },
+    placement: null,
     version: 0,
   };
   let railReady = false; // the Frame + Tint rail is wired up (near the end)
@@ -358,9 +365,28 @@
     more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
     chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
   };
+  // Placement: Feed, Story or Reels (state.placement; null = by size).
+  // A 9:16 in the feed is cropped to 4:5 (Meta's feed maximum); a 4:5 or 1:1
+  // in Stories or Reels sits small on a blurred fill. Both say so.
+  const placementNow = () => state.placement || (state.size === '9x16' ? 'reel' : 'feed');
+  const metaFit = mode => (mode === 'feed' && state.size === '9x16' ? 'crop' : (mode === 'story' || mode === 'reel') && state.size !== '9x16' ? 'letterbox' : '');
+  function setPlacement(place) {
+    state.placement = ['feed', 'story', 'reel'].includes(place) ? place : null;
+    renderMeta();
+    fitCanvasDisplay();
+    draw();
+    saveDefaults();
+  }
   function renderMeta() {
-    const mode = !metaPreview ? 'off' : state.size === '9x16' ? 'reel' : 'feed';
+    const mode = !metaPreview ? 'off' : placementNow();
+    const fit = mode === 'off' ? '' : metaFit(mode);
     els.device.dataset.meta = mode;
+    els.device.dataset.fit = fit;
+    els.placement.hidden = mode === 'off';
+    if (mode !== 'off') markRadios(els.placement, 'place', mode);
+    els.metaNote.hidden = !fit;
+    els.metaNote.textContent = fit === 'crop' ? 'The feed crops 9:16 to 4:5: the top and bottom are cut. Export a 4:5 for the feed.'
+      : fit === 'letterbox' ? `${state.size.replace('x', ':')} shows small in ${mode === 'story' ? 'Stories' : 'Reels'}, on a blurred fill. Export a 9:16 for it.` : '';
     if (mode === 'off') { els.metaHead.innerHTML = ''; els.metaOver.innerHTML = ''; els.metaFoot.innerHTML = ''; return; }
     // Ads run from the EssentiallySports page, whichever newsletter they promote.
     const name = 'EssentiallySports';
@@ -378,6 +404,16 @@
           <p class="va-meta-caption">${caption}</p>
           ${cta}
         </div>`;
+      return;
+    }
+    if (mode === 'story') {
+      // Stories: progress bars and the profile row on top, a "Sign up" link
+      // at the bottom; no action rail and no caption.
+      els.metaHead.innerHTML = '';
+      els.metaFoot.innerHTML = '';
+      els.metaOver.innerHTML = `
+        <div class="va-meta-story-top"><div class="va-meta-bars"><i class="is-on"></i><i></i><i></i></div><div class="va-meta-row">${who}<span class="va-meta-more">${META_ICON.more}</span></div></div>
+        <div class="va-meta-story-cta"><span class="va-meta-up">${META_ICON.chevron}</span><span class="va-meta-link">Sign up</span></div>`;
       return;
     }
     els.metaOver.innerHTML = '';
@@ -417,20 +453,28 @@
     const cs = getComputedStyle(els.drop);
     const room = { width: els.drop.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), height: els.drop.clientHeight };
     const pad = room.width < 500 ? 24 : 48;
+    // The media box: the canvas, or (Meta preview) the placement's frame:
+    // 4:5 for a cropped 9:16 in the feed, 9:16 for a letterboxed 4:5 / 1:1.
+    const fit = els.device.dataset.fit || '';
+    const box = fit === 'crop' ? { width: 1080, height: 1350 } : fit === 'letterbox' ? { width: 1080, height: 1920 } : s;
     // A feed post adds the profile row above and the CTA bar, actions and
     // caption below the media; leave room for them.
     const feed = els.device.dataset.meta === 'feed';
-    const fitScale = chrome => Math.min((room.width - pad) / s.width, (room.height - pad - chrome) / s.height);
+    const fitScale = chrome => Math.min((room.width - pad) / box.width, (room.height - pad - chrome) / box.height);
     let scale = fitScale(0);
     if (feed) {
       // Measure the post chrome at the media width, then fit once more.
-      els.device.style.width = `${Math.floor(s.width * scale)}px`;
+      els.device.style.width = `${Math.floor(box.width * scale)}px`;
       scale = fitScale(els.metaHead.offsetHeight + els.metaFoot.offsetHeight);
     }
     if (!(scale > 0)) return;
-    els.canvas.style.width = `${Math.floor(s.width * scale)}px`;
-    els.canvas.style.height = `${Math.floor(s.height * scale)}px`;
-    els.device.style.width = feed ? `${Math.floor(s.width * scale)}px` : '';
+    const mediaW = Math.floor(box.width * scale);
+    const media = els.canvas.parentElement;
+    els.canvas.style.width = `${mediaW}px`;
+    els.canvas.style.height = `${Math.floor(mediaW * (s.height / s.width))}px`;
+    media.style.width = fit ? `${mediaW}px` : '';
+    media.style.height = fit ? `${Math.floor(box.height * scale)}px` : '';
+    els.device.style.width = feed ? `${mediaW}px` : '';
   }
   if (window.ResizeObserver) new ResizeObserver(fitCanvasDisplay).observe(els.drop);
   else window.addEventListener('resize', fitCanvasDisplay);
@@ -458,6 +502,7 @@
     els.highlight.setAttribute('aria-invalid', String(!els.highlightWarn.hidden));
     renderCounts();
     draw();
+    drawSetThumbs();
   }
 
   let glowAt = 0;
@@ -480,6 +525,8 @@
     const s = size();
     R.drawFrame(ctx, { width: s.width, height: s.height, video: hasClip() ? els.video : placeholder, bg: bg(), ops: current.ops, logoImage: logo.img, blurCanvas, source: still ? still.source() : undefined, ...previewClock() });
     sampleGlow();
+    // Letterboxed placement: Meta's blurred fill, from a tiny copy of the ad (CSS blurs it).
+    if (els.device.dataset.fit === 'letterbox') { try { els.metaFill.getContext('2d').drawImage(els.canvas, 0, 0, els.metaFill.width, els.metaFill.height); } catch (error) { /* keep the last fill */ } }
   }
 
   // ─── Playback + timeline ─────────────────────────────────────────────────
@@ -1008,7 +1055,7 @@
   const stepButtons = [...els.steps.querySelectorAll('.va-step')];
   function stepDone(id) {
     if (id === 'clip') return hasClip();
-    if (id === 'copy') return state.appliedVariant >= 0 || state.copyEdited;
+    if (id === 'copy') return state.appliedVariant >= 0 || state.copyEdited || setReady();
     if (id === 'export') return state.exported;
     return false;
   }
@@ -1019,13 +1066,14 @@
       return f?.status === 'loading' ? 'Searching…' : 'Find a video';
     }
     if (id === 'copy') {
-      if (state.draftsStatus === 'loading') return 'Writing…';
+      if (state.draftsStatus === 'loading' || state.set.status === 'loading') return 'Writing…';
+      if (setReady()) return `Set of ${state.set.angles.filter(a => a.include).length}`;
       const need = S.isNew(state.style) ? S.styleReady(state.style, resolvedCopy()) : { ok: true };
       if (!need.ok) return `Needs ${need.missing}`;
       if (current && !current.fits) return 'Too long';
       return stepDone('copy') ? (B.STYLES[state.style]?.label || 'Done') : 'Write the words';
     }
-    if (id === 'export') return state.exported ? 'Exported' : `${state.exportIds.length} size${state.exportIds.length === 1 ? '' : 's'} · MP4`;
+    if (id === 'export') return state.exported ? 'Exported' : setExporting() ? `${setItems().length * state.exportIds.length} MP4s · set` : `${state.exportIds.length} size${state.exportIds.length === 1 ? '' : 's'} · MP4`;
     return '';
   }
   function renderSteps() {
@@ -1101,6 +1149,8 @@
   function changed() {
     state.version += 1;
     state.exported = false;
+    syncSetAngle();
+    saveDefaults();
     renderSteps();
     if (state.step === 'export') renderExport();
   }
@@ -1666,7 +1716,8 @@
       parts.push(`<div class="va-field va-field--tight"><div class="va-field__top"><span class="va-label" id="va-them-label">Your feed (crossed out)</span><span class="va-count">${L.themWords} words max, no names</span></div><div class="va-them" role="group" aria-labelledby="va-them-label">${them}</div></div>`);
       parts.push(`<div class="va-field va-field--tight"><div class="va-field__top"><span class="va-label" id="va-us-label">${esc(b.label)} (ticked)</span><span class="va-count">Pick 2–3</span></div>
         <div class="va-claims" role="group" aria-labelledby="va-us-label">${claims}</div>
-        ${b.claimsApproved ? '<p class="va-hint">Only approved claims can appear here.</p>' : `<p class="va-warn va-claims__todo">${ICON.alert}<span>Placeholder claims: the owner still has to approve this list before paid use.</span></p>`}</div>`);
+        ${b.claimsApproved ? '<p class="va-hint">Only approved claims can appear here.</p>' : `<p class="va-warn va-claims__todo">${ICON.alert}<span>Placeholder claims: the owner still has to approve this list before paid use.</span></p>`}
+        ${claimsInfo.canEdit ? `<button class="va-link" type="button" data-act="edit-claims" aria-expanded="false" aria-controls="va-claims-editor">Edit claims (admin)</button><div class="va-claims-editor" id="va-claims-editor" hidden></div>` : ''}</div>`);
     }
     parts.push(fieldHtml({ key: 'offer', label: 'Offer', value: state.offer, placeholder: d.offer, max: L.offerWords, hint: 'Say it’s free.' }));
     parts.push('<p class="va-warn va-style-ready" id="va-style-ready" role="status" hidden></p>');
@@ -1724,6 +1775,8 @@
       return;
     }
     if (event.target.closest('[data-act="fill-items"]')) fillItems();
+    if (event.target.closest('[data-act="edit-claims"]')) toggleClaimsEditor();
+    if (event.target.closest('[data-act="save-claims"]')) saveClaimsEdit();
   });
   // Today's 3 from Trends: the moment's related stories, then other trending titles.
   async function fillItems() {
@@ -1944,6 +1997,8 @@
     return '';
   }
   function renderCopy() {
+    renderSet();
+    renderSetEditing();
     syncFields();
     suggestSoon();
     markRadios(els.brands, 'brand', state.brandId);
@@ -2528,25 +2583,33 @@
   }
   function renderExport() {
     [...els.exsizes.querySelectorAll('[data-ex]')].forEach(b => b.setAttribute('aria-pressed', String(state.exportIds.includes(b.dataset.ex))));
+    const setMode = setExporting();
+    els.exmodeRow.hidden = !setReady();
+    markRadios(els.exmode, 'exmode', setMode ? 'set' : 'single');
+    els.gridRow.hidden = setMode;
     renderGrid();
-    const styles = gridStyles();
-    const n = state.exportIds.length * styles.length;
+    const items = setMode ? setItems() : null;
+    const styles = setMode ? [...new Set(items.map(x => x.style))] : gridStyles();
+    const n = state.exportIds.length * (setMode ? items.length : styles.length);
     // A style missing its facts says so below; "too long" is only for styles that are ready.
-    const tooLong = styles.filter(st => gridReady(st).ok).flatMap(st => state.exportIds.filter(id => !layoutFor(id, { ...state, style: st }).fits).map(id => `${B.STYLES[st].label} ${id.replace('x', ':')}`));
-    const notReady = styles.map(st => ({ st, r: gridReady(st) })).filter(x => !x.r.ok);
+    const tooLong = setMode
+      ? items.flatMap(x => state.exportIds.filter(id => !layoutFor(id, { ...state, ...x.copy, style: x.style }).fits).map(id => `angle ${x.angle} ${id.replace('x', ':')}`))
+      : styles.filter(st => gridReady(st).ok).flatMap(st => state.exportIds.filter(id => !layoutFor(id, { ...state, style: st }).fits).map(id => `${B.STYLES[st].label} ${id.replace('x', ':')}`));
+    const notReady = setMode ? [] : styles.map(st => ({ st, r: gridReady(st) })).filter(x => !x.r.ok);
     const notes = [];
     if (!hasClip()) notes.push(`<div class="va-notice">${ICON.film}<span><b>No clip yet.</b> Add one, or use an animated background: ${S.isNew(state.style) ? 'this style needs no footage.' : 'no footage needed.'}</span><span class="va-notice__acts"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="make-animated">Animated background</button><button class="es-btn es-btn--sm" type="button" data-act="to-clip">Find a clip</button></span></div>`);
     if (notReady.length) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>${esc(B.STYLES[notReady[0].st].label)} needs ${esc(notReady[0].r.missing)}.</b></span><button class="es-btn es-btn--sm" type="button" data-act="to-copy">Add it</button></div>`);
     if (tooLong.length) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>Copy is too long</b> for ${esc(tooLong.slice(0, 3).join(', '))}.</span><button class="es-btn es-btn--sm" type="button" data-act="to-copy">Shorten</button></div>`);
-    if (n > 6) notes.push(`<div class="va-notice">${ICON.alert}<span>${n} files record at once. Keep this tab visible; a slower computer may drop frames, so export fewer sizes if it stutters.</span></div>`);
+    if (n > 6) notes.push(`<div class="va-notice">${ICON.alert}<span>${n} files record at once, in one ${adDuration().toFixed(0)}-second pass. Keep this tab visible; a slower computer may drop frames, so export fewer sizes if it stutters.</span></div>`);
     els.ready.innerHTML = notes.join('');
     els.ready.hidden = !notes.length;
-    // No footage, nothing to license: the rights box only shows for a clip or photo.
-    els.rightsRow.hidden = state.clip?.source === 'animated';
+    // No footage, nothing to license: the optional rights reminder only shows for a clip or photo.
+    els.rightsRow.hidden = !hasClip() || state.clip?.source === 'animated';
     els.metaToggle.setAttribute('aria-pressed', String(metaPreview));
     if (!exporting) {
-      els.exportBtn.disabled = !hasClip() || notReady.length > 0;
+      els.exportBtn.disabled = !hasClip() || notReady.length > 0 || n === 0;
       els.exportBtn.innerHTML = `${ICON.download}<span>Export ${n === 1 ? 'MP4' : `${n} MP4s`}</span>`;
+      els.exportBtn.title = !hasClip() ? 'Add a clip, a photo or the animated background first' : '';
     }
   }
   els.grid.addEventListener('change', () => {
@@ -2581,6 +2644,7 @@
     } else state.exportIds = ['9x16', '4x5', '1x1'].filter(x => x === id || state.exportIds.includes(x));
     renderExport();
     renderSteps();
+    saveDefaults();
   });
   els.ready.addEventListener('click', event => {
     const act = event.target.closest('[data-act]')?.dataset.act;
@@ -2604,6 +2668,26 @@
     if (!hasClip()) { els.exportStatus.textContent = 'Add a clip first.'; return; }
     // The rights tick is a reminder only (owner, 2026-11-18: licensed and
     // copyrighted clips may run in Meta paid ads); it never blocks an export.
+    // Today's set: every included angle × the sizes, in one recording pass.
+    const items = setExporting() ? setItems() : null;
+    if (items) {
+      const files = await exportSizes(state.exportIds, { items });
+      if (state.exported) {
+        const gridId = `set${Math.random().toString(36).slice(2, 5)}`;
+        items.forEach(item => {
+          const src = { ...state, ...item.copy, style: item.style };
+          logEvent('export', {
+            copy: copyForLog(src), style: item.style, sizes: [...state.exportIds], angle: item.angle, gridId, gridKind: 'daily-set',
+            files: (files || []).filter(f => f.angle === item.angle).map(f => f.fileName),
+            clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), safeZone: S.isNew(item.style) ? 'meta' : state.safeZone,
+            context: { kind: state.context.kind, color: state.context.color, trend: state.context.trend?.title || '' },
+          });
+        });
+        els.again.hidden = false;
+        reveal(els.exportStatus);
+      }
+      return;
+    }
     const styles = gridStyles();
     const gridId = styles.length > 1 ? Math.random().toString(36).slice(2, 6) : '';
     const files = await exportSizes(state.exportIds, { styles });
@@ -2655,7 +2739,9 @@
 
   // Records every (style × size) target in one real-time pass over the clip.
   // Resolves to the files written: [{ style, sizeId, fileName, href, mb }].
-  async function exportSizes(sizeIds, { styles = [state.style] } = {}) {
+  // items (optional): [{ style, copy, angle }] for a daily set: each angle's
+  // own copy, all recorded in the same single pass as the sizes.
+  async function exportSizes(sizeIds, { styles = [state.style], items = null } = {}) {
     if (exporting) { exporting.cancel(); return null; }
     if (!hasClip()) { els.exportStatus.textContent = 'Add a clip first.'; return null; }
     const mimeType = pickFormat();
@@ -2667,7 +2753,8 @@
     const audioDest = ac.createMediaStreamDestination();
     audioSource.connect(audioDest);
     const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
-    const targets = styles.flatMap(style => sizeIds.map(id => ({ id, style }))).map(({ id, style }) => {
+    const list = items && items.length ? items : styles.map(style => ({ style, copy: null, angle: angle() }));
+    const targets = list.flatMap(item => sizeIds.map(id => ({ id, ...item }))).map(({ id, style, copy, angle: ang }) => {
       const s = B.SIZES[id];
       const canvas = document.createElement('canvas');
       canvas.width = s.width;
@@ -2677,7 +2764,7 @@
       const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: id === '9x16' ? 12e6 : 10e6, audioBitsPerSecond: 128000 });
       const chunks = [];
       recorder.ondataavailable = e => { if (e.data?.size) chunks.push(e.data); };
-      return { id, style, s, canvas, ctx: canvas.getContext('2d'), blur: document.createElement('canvas'), layout: layoutFor(id, { ...state, style }), recorder, chunks, stream };
+      return { id, style, angle: ang, s, canvas, ctx: canvas.getContext('2d'), blur: document.createElement('canvas'), layout: layoutFor(id, { ...state, ...(copy || {}), style }), recorder, chunks, stream };
     });
     const span = Math.max(0.5, state.trimOut - state.trimIn);
     const bar = els.exportProgress.querySelector('span');
@@ -2756,14 +2843,14 @@
       const blob = new Blob(t.chunks, { type: mimeType.split(';')[0] });
       const href = URL.createObjectURL(blob);
       fileUrls.push(href);
-      const fileName = S.fileName({ brand: brand(), style: t.style, angle: angle(), size: t.s, date: when, ext });
+      const fileName = S.fileName({ brand: brand(), style: t.style, angle: t.angle, size: t.s, date: when, ext });
       const a = document.createElement('a');
       a.href = href;
       a.download = fileName;
       document.body.append(a);
       a.click();
       setTimeout(() => a.remove(), 1000);
-      return { style: t.style, sizeId: t.id, fileName, href, mb: blob.size / 1048576 };
+      return { style: t.style, angle: t.angle, sizeId: t.id, fileName, href, mb: blob.size / 1048576 };
     });
     els.files.hidden = false;
     els.files.innerHTML = rows.map(r => `<li><span class="va-files__icon" aria-hidden="true">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="va-files__name">${esc(r.fileName)}</span><span class="va-meta">${r.mb.toFixed(1)} MB</span><a class="va-link" href="${r.href}" download="${esc(r.fileName)}">Download again</a></li>`).join('');
@@ -2779,7 +2866,7 @@
       const sizes = targets.map(t => `${t.s.width}x${t.s.height}`);
       const adNames = rows.map(r => r.fileName.replace(/\.[a-z0-9]+$/i, ''));
       const styles = [...new Set(rows.map(r => r.style))];
-      window.FrameUpPosted?.exported?.({ source: 'video-ads', title: plain(state.headline).slice(0, 120), template: styles.join(','), style: styles.join(','), angle: angle(), brand: brand().id, sizes, adNames, aiMade: state.aiCopy ? 'video-ads' : '', count: rows.length });
+      window.FrameUpPosted?.exported?.({ source: 'video-ads', title: plain(state.headline).slice(0, 120), template: styles.join(','), style: styles.join(','), angle: items && items.length ? items.map(x => x.angle).join(',') : angle(), brand: brand().id, sizes, adNames, aiMade: state.aiCopy ? 'video-ads' : '', count: rows.length });
     } catch (error) { /* never block an export */ }
     return rows;
   }
@@ -2788,7 +2875,10 @@
   els.brands.innerHTML = B.AD_BRANDS.map(b => `<button type="button" role="radio" data-brand="${esc(b.id)}" aria-checked="false" title="${esc(b.label)} (${esc(SPORT_LABEL[b.sport] || '')})" aria-label="${esc(b.label)}, ${esc(SPORT_LABEL[b.sport] || '')}"><span class="va-dot" style="--c:${esc(b.wordmark?.bg || b.accent)}" aria-hidden="true"></span><span>${esc(b.short || b.label)}</span></button>`).join('');
   const markRadios = (group, attr, value) => [...group.querySelectorAll('[role="radio"]')].forEach(b => { const on = b.dataset[attr] === value; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; });
   function setBrand(id) {
-    state.brandId = B.byId(id).id;
+    const next = B.byId(id).id;
+    // A set is written for one newsletter: a new newsletter starts a new set.
+    if (next !== state.brandId && state.set.status !== 'idle') { state.set = { status: 'idle', error: '', angles: [], editing: -1, mode: 'set' }; renderSetEditing(); }
+    state.brandId = next;
     markRadios(els.brands, 'brand', state.brandId);
     els.cta.placeholder = brand().cta;
     els.stage.style.setProperty('--va-brand', brand().wordmark?.bg || brand().accent);
@@ -2800,6 +2890,7 @@
     if (els.styles.childElementCount) { renderStyleFields({ force: true }); suggestSoon(); }
     changed();
     if (railReady) syncRail();
+    renderSet();
   }
   // Radiogroups share one pattern (click + arrow keys).
   function radioGroup(group, attr, onPick) {
@@ -2820,7 +2911,7 @@
       (group.querySelector(`[data-${attr}="${CSS.escape(next.dataset[attr])}"]`) || next).focus();
     });
   }
-  radioGroup(els.brands, 'brand', id => { state.brandChosen = true; setBrand(id); if (state.step === 'copy') { renderCopySwatches(); renderMoments(); } });
+  radioGroup(els.brands, 'brand', id => { state.brandChosen = true; const changedBrand = id !== state.brandId; setBrand(id); if (changedBrand) applyDefaults(id); defaultsReady = true; if (state.step === 'copy') { renderCopySwatches(); renderMoments(); } });
   if (els.copySwatches) radioGroup(els.copySwatches, 'copycolor', color => { state.copyColor = color; renderCopySwatches(); });
   radioGroup(els.sizes, 'size', id => {
     state.size = id;
@@ -2862,7 +2953,9 @@
     els.metaToggle.setAttribute('aria-pressed', String(metaPreview));
     renderMeta();
     fitCanvasDisplay();
+    draw();
   });
+  radioGroup(els.placement, 'place', place => setPlacement(place));
 
   // Transport
   els.play.addEventListener('click', () => setPlaying(!playing));
@@ -3102,10 +3195,479 @@
   onMedia('loadedmetadata', () => syncRail());
   syncRail();
 
+  // ─── Us vs Them claims: admin edits, owner approval ─────────────────────
+  // The claims in video-ads-brands.js are placeholders. An admin can edit a
+  // newsletter's list and tick "Owner approved"; the server keeps it in
+  // frameup_video_ad_claims (admins write, everyone reads). Until that
+  // migration runs, the file's list stays and the warning stays on.
+  const claimsInfo = { canEdit: false, loaded: false };
+  async function loadClaims() {
+    try {
+      const data = await callApi({ mode: 'claims' });
+      claimsInfo.canEdit = data.canEdit === true;
+      Object.entries(data.claims || {}).forEach(([id, c]) => {
+        const b = B.AD_BRANDS.find(x => x.id === id);
+        if (!b || !c || c.source !== 'saved' || !Array.isArray(c.claims) || c.claims.length < 2) return;
+        b.verifiedClaims = c.claims.map(String);
+        b.claimsApproved = c.approved === true;
+      });
+      claimsInfo.loaded = true;
+      if (state.style === 'versus') { state.us = null; renderStyleFields({ force: true }); relayout(); }
+    } catch (error) { /* the file's claims stay */ }
+  }
+  function toggleClaimsEditor() {
+    const box = document.getElementById('va-claims-editor');
+    const btn = els.styleFields.querySelector('[data-act="edit-claims"]');
+    if (!box) return;
+    const open = box.hidden;
+    box.hidden = !open;
+    btn?.setAttribute('aria-expanded', String(open));
+    if (!open) return;
+    const b = brand();
+    const list = [...(b.verifiedClaims || []), '', ''].slice(0, Math.max(4, (b.verifiedClaims || []).length + 1)).slice(0, 6);
+    box.innerHTML = `<p class="va-hint">2–6 short claims about ${esc(b.label)}, each true of every issue. No numbers unless they are verified.</p>
+      ${list.map((c, i) => `<input type="text" class="va-input" data-claim-edit="${i}" value="${esc(c)}" maxlength="60" aria-label="Claim ${i + 1}" spellcheck="true" lang="en-US">`).join('')}
+      <label class="va-check"><input type="checkbox" id="va-claims-approved"${b.claimsApproved ? ' checked' : ''}><span>The owner approved these for paid ads</span></label>
+      <div class="va-claims-editor__acts"><button class="es-btn es-btn--sm" type="button" data-act="save-claims">Save claims</button><span class="va-hint" id="va-claims-status" role="status"></span></div>`;
+    box.querySelector('input')?.focus();
+  }
+  async function saveClaimsEdit() {
+    const box = document.getElementById('va-claims-editor');
+    const status = document.getElementById('va-claims-status');
+    if (!box) return;
+    const claims = [...box.querySelectorAll('[data-claim-edit]')].map(x => x.value.trim()).filter(Boolean);
+    const approved = Boolean(document.getElementById('va-claims-approved')?.checked);
+    status.textContent = 'Saving…';
+    try {
+      const data = await callApi({ mode: 'save-claims', brandId: state.brandId, claims, approved });
+      const b = brand();
+      b.verifiedClaims = data.claims;
+      b.claimsApproved = data.approved === true;
+      state.us = null;
+      renderStyleFields({ force: true });
+      relayout();
+      changed();
+      toast(`Claims saved for ${b.label}${b.claimsApproved ? ', approved' : ' (still placeholders)'}.`, { tone: 'good' });
+    } catch (error) {
+      status.textContent = error.message;
+    }
+  }
+
+  // ─── Today's ad set: 3 angles × 3 sizes ──────────────────────────────────
+  // One Ask AI call (mode 'copy', set: true) writes 3 angles; planDailySet
+  // (video-ads-styles.js) gives each a style it can fill. The editor reviews
+  // them here (live thumbnails per size, the free rubric checks), edits any
+  // angle in the normal editor, and exports every angle × size in one pass.
+  const ALL_SIZES = ['9x16', '4x5', '1x1'];
+  function setReady() { return state.set.status === 'done' && state.set.angles.some(a => a.include); }
+  function setExporting() { return setReady() && state.set.mode === 'set'; }
+  function setItems() {
+    return state.set.angles.map((a, i) => ({ ...a, angle: i + 1 })).filter(a => a.include).map(a => ({ style: a.style, copy: { ...a.copy, style: a.style }, angle: a.angle }));
+  }
+  // The request body shared by "Write 3 options" and the daily set.
+  function copyBody() {
+    const c = copyContext();
+    const notes = els.notes.value.trim();
+    return {
+      mode: 'copy',
+      brandId: state.brandId,
+      sport: c.sport || brand().sport || '',
+      color: c.color || undefined,
+      colorLabel: c.colorLabel || undefined,
+      teams: c.teams.length ? c.teams.slice(0, 12) : undefined,
+      team: c.teams[0] || undefined,
+      trend: c.trend ? { id: c.trend.id, title: c.trend.title, sport: c.trend.sport, url: c.trend.url || '', related: (c.trend.related || []).slice(0, 4).map(r => ({ title: typeof r === 'string' ? r : r?.title })) } : undefined,
+      title: c.trend?.title || undefined,
+      clip: clipText() ? { text: clipText() } : undefined,
+      notes: notes || undefined,
+      headlines: relatedTitles().slice(0, 8),
+      items: state.items.filter(x => String(x || '').trim()),
+      hasClip: Boolean(realVideo.videoWidth) && !still,
+    };
+  }
+  const hasBrief = () => { const c = copyContext(); return Boolean(c.trend || c.teams.length || c.color || els.notes.value.trim()); };
+  // Nothing to write about yet: use today's top moment for the brand's sport.
+  async function ensureBrief() {
+    if (hasBrief()) return true;
+    if (state.trendsStatus !== 'done') await loadTrends().catch(() => {});
+    const top = trendItems.find(t => t.sport === brand().sport);
+    if (!top) return false;
+    state.copyTrend = { id: top.id, sport: top.sport, title: String(top.title || '').slice(0, 200), url: top.url || '', image: top.image || '', related: Array.isArray(top.related) ? top.related : [] };
+    renderMoments();
+    toast(`Writing about today’s top ${SPORT_LABEL[top.sport] || ''} moment: ${top.title}`, { timeout: 4200 });
+    return true;
+  }
+  async function makeSet() {
+    if (state.set.status === 'loading') return;
+    state.set = { ...state.set, status: 'loading', error: '', angles: [], editing: -1 };
+    renderSet();
+    renderSteps();
+    const started = performance.now();
+    if (!(await ensureBrief())) {
+      state.set = { ...state.set, status: 'error', error: 'No trending moment for this sport right now. Add a note about the ad (Ask AI → Add context), or pick a clip first.' };
+      renderSet();
+      renderSteps();
+      return;
+    }
+    try {
+      const data = await callApi({ ...copyBody(), set: true });
+      const angles = S.planDailySet(data.variants || []).map(a => ({ style: a.style, copy: variantFields(a.copy), why: a.why, include: true }));
+      if (!angles.length) throw new Error('The AI came back empty. Try again, or add a note.');
+      state.set = { status: 'done', error: '', angles, editing: -1, mode: 'set', ms: Math.round(performance.now() - started), cached: Boolean(data.cached) };
+      if (!brandDefaults().setSizes) state.exportIds = [...ALL_SIZES];
+      else state.exportIds = brandDefaults().setSizes;
+      logEvent('copy_generated', { style: '', set: true, context: { kind: copyContext().kind, trend: copyContext().trend?.title || '' }, variants: angles.map(a => copyForLog({ ...a.copy, style: a.style })) });
+    } catch (error) {
+      state.set = { ...state.set, status: 'error', error: error.message };
+    }
+    renderSet();
+    renderSteps();
+    // The first angle goes straight into the preview and the editor.
+    if (state.set.status === 'done') { editAngle(0); reveal(els.set); }
+  }
+  // AI unavailable: the current copy in up to 3 styles it can fill (a style test).
+  function setFromCurrentCopy() {
+    const order = [state.style, 'highlight', 'condensed', 'simple', ...STYLE_IDS];
+    const styles = [...new Set(order)].filter(id => B.STYLES[id] && S.styleReady(id, resolvedCopy({ ...state, style: id })).ok).slice(0, 3);
+    state.set = { status: 'done', error: '', angles: styles.map(st => ({ style: st, copy: { ...copyOf(), style: st }, why: `${B.STYLES[st].label} (your copy)`, include: true })), editing: -1, mode: 'set' };
+    state.exportIds = brandDefaults().setSizes || [...ALL_SIZES];
+    renderSet();
+    renderSteps();
+  }
+  const readyStylesFor = a => STYLE_IDS.filter(id => S.styleReady(id, resolvedCopy({ ...state, ...a.copy, style: id })).ok);
+  const checkIcon = ok => (ok ? ICON.check : ICON.alert);
+  function angleRow(a, i) {
+    const copy = { ...state, ...a.copy, style: a.style, cta: a.copy.cta || state.cta };
+    const checks = S.copyChecks(copy, brand());
+    const title = S.isNew(a.style) ? (a.copy.listTitle || (a.copy.them || []).join(' · ')) : plain(a.copy.headline);
+    const options = readyStylesFor(a).map(id => `<option value="${esc(id)}"${id === a.style ? ' selected' : ''}>${esc(B.STYLES[id].label)}</option>`).join('');
+    const thumbs = ALL_SIZES.map(id => `<button class="va-angle__thumb" type="button" data-thumb="${i}" data-size="${id}" aria-label="Preview angle ${i + 1} at ${id.replace('x', ':')}"><canvas data-angle="${i}" data-size="${id}" width="${id === '9x16' ? 72 : 90}" height="${id === '9x16' ? 128 : id === '4x5' ? 112 : 90}" aria-hidden="true"></canvas><span>${id.replace('x', ':')}</span></button>`).join('');
+    return `<article class="va-angle${a.include ? '' : ' is-off'}${state.set.editing === i ? ' is-editing' : ''}" data-angle="${i}" aria-labelledby="va-angle-${i}">
+      <header class="va-angle__head">
+        <span class="va-angle__n" aria-hidden="true">${i + 1}</span>
+        <div class="va-angle__what"><b id="va-angle-${i}">${esc(a.why || `Angle ${i + 1}`)}</b><span>${esc(title)}</span></div>
+        <label class="va-angle__inc"><input type="checkbox" data-include="${i}"${a.include ? ' checked' : ''}><span>Include</span></label>
+      </header>
+      <div class="va-angle__thumbs">${thumbs}</div>
+      <ul class="va-angle__checks" aria-label="Copy checks">${checks.checks.map(c => `<li class="${c.ok ? 'is-ok' : 'is-warn'}" title="${esc(c.tip)}">${checkIcon(c.ok)}<span>${esc(c.label)}</span><span class="va-sr">: ${c.ok ? 'passes' : esc(c.tip)}</span></li>`).join('')}</ul>
+      <div class="va-angle__acts">
+        <label class="va-sr" for="va-angle-style-${i}">Style for angle ${i + 1}</label>
+        <select class="es-select va-angle__style" id="va-angle-style-${i}" data-style-of="${i}">${options}</select>
+        <button class="es-btn es-btn--sm" type="button" data-edit="${i}">${state.set.editing === i ? 'Editing' : 'Edit'}</button>
+      </div>
+    </article>`;
+  }
+  function renderSet() {
+    if (!els.set) return;
+    els.setBrand.textContent = brand().label;
+    const st = state.set;
+    els.setMake.disabled = st.status === 'loading';
+    els.setMake.setAttribute('aria-busy', String(st.status === 'loading'));
+    els.setMake.classList.toggle('es-btn--primary', st.status !== 'done');
+    els.setMakeText.textContent = st.status === 'loading' ? 'Writing 3 angles…' : st.status === 'done' ? 'Make a new set' : 'Make my daily set';
+    if (st.status === 'idle') { els.setBody.innerHTML = ''; return; }
+    if (st.status === 'loading') {
+      els.setBody.innerHTML = `<div class="va-set__rows" aria-hidden="true">${[0, 1, 2].map(i => `<div class="va-angle va-angle--skeleton" style="--i:${i}"><span class="va-line va-line--lg va-shimmer"></span><span class="va-line va-shimmer" style="width:60%"></span></div>`).join('')}</div><p class="va-hint">${dots}One Ask AI call writes 3 angles. About 5 seconds.</p>`;
+      return;
+    }
+    if (st.status === 'error') {
+      els.setBody.innerHTML = `<div class="va-ai-error" role="alert">${ICON.alert}<span>${esc(st.error)}</span><button class="va-link" type="button" data-set-act="retry">${ICON.retry}Try again</button></div>
+        <button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-set-act="fallback">Use my copy in 3 styles instead</button>`;
+      return;
+    }
+    const n = st.angles.filter(a => a.include).length;
+    const files = n * state.exportIds.length;
+    els.setBody.innerHTML = `<div class="va-set__rows">${st.angles.map(angleRow).join('')}</div>
+      <div class="va-set__foot">
+        <p class="va-hint">${n} angle${n === 1 ? '' : 's'} × ${state.exportIds.length} size${state.exportIds.length === 1 ? '' : 's'} = <b>${files} MP4s</b>${hasClip() ? '' : '. Pick a background first: a clip, a photo or the animated background.'}</p>
+        <button class="es-btn es-btn--primary" type="button" data-set-act="export"${n ? '' : ' disabled'}>${ICON.download}<span>Review and export ${files}</span></button>
+      </div>`;
+    drawSetThumbs();
+  }
+  var setThumbTimer = 0; // eslint-disable-line no-var
+  function drawSetThumbs() {
+    if (state.set.status !== 'done') return;
+    clearTimeout(setThumbTimer);
+    setThumbTimer = setTimeout(() => {
+      els.setBody.querySelectorAll('canvas[data-angle]').forEach(canvas => {
+        const a = state.set.angles[Number(canvas.dataset.angle)];
+        if (!a) return;
+        const sz = B.SIZES[canvas.dataset.size];
+        const layout = layoutFor(sz.id, { ...state, ...a.copy, style: a.style });
+        canvas.closest('.va-angle__thumb')?.classList.toggle('is-bad', !layout.fits);
+        if (!layout.fits) canvas.closest('.va-angle__thumb')?.setAttribute('title', 'Too much copy for this size');
+        const c = canvas.getContext('2d');
+        c.setTransform(canvas.width / sz.width, 0, 0, canvas.height / sz.height, 0, 0);
+        try {
+          R.drawFrame(c, { width: sz.width, height: sz.height, video: hasClip() ? els.video : placeholder, bg: bg(), ops: layout.ops, logoImage: logo.img, blurCanvas, source: still ? still.source() : undefined });
+        } catch (error) { /* a thumbnail never breaks the page */ }
+        c.setTransform(1, 0, 0, 1, 0, 0);
+      });
+    }, 160);
+  }
+  function editAngle(i, { size: sizeId = '' } = {}) {
+    const a = state.set.angles[i];
+    if (!a) return;
+    state.set.editing = -1; // don't write the old ad into this angle
+    applyCopy({ ...a.copy, style: a.style }, { silent: true });
+    state.set.editing = i;
+    if (sizeId && sizeId !== state.size) { state.size = sizeId; markRadios(els.sizes, 'size', sizeId); relayout(); }
+    renderSetEditing();
+    renderSet();
+  }
+  function renderSetEditing() {
+    const i = state.set.editing;
+    els.setEditing.hidden = i < 0;
+    els.setEditing.innerHTML = i < 0 ? '' : `${ICON.check}<span>Editing angle ${i + 1} of today’s set. Changes save to the set.</span><button class="va-link" type="button" data-set-act="done">Back to the set</button>`;
+  }
+  els.setMake?.addEventListener('click', makeSet);
+  els.set?.addEventListener('click', event => {
+    const act = event.target.closest('[data-set-act]')?.dataset.setAct;
+    const edit = event.target.closest('[data-edit]');
+    const thumb = event.target.closest('[data-thumb]');
+    if (act === 'retry') makeSet();
+    if (act === 'fallback') setFromCurrentCopy();
+    if (act === 'export') {
+      state.set.mode = 'set';
+      state.set.editing = -1;
+      renderSetEditing();
+      goStep('export');
+    }
+    if (edit) { editAngle(Number(edit.dataset.edit)); reveal(els.editor); }
+    if (thumb) editAngle(Number(thumb.dataset.thumb), { size: thumb.dataset.size });
+  });
+  els.set?.addEventListener('change', event => {
+    const inc = event.target.closest('[data-include]');
+    const pick = event.target.closest('[data-style-of]');
+    if (inc) { state.set.angles[Number(inc.dataset.include)].include = inc.checked; renderSet(); renderSteps(); }
+    if (pick) {
+      const i = Number(pick.dataset.styleOf);
+      const a = state.set.angles[i];
+      a.style = B.styleOr(pick.value);
+      a.copy = { ...a.copy, style: a.style };
+      if (state.set.editing === i) pickStyle(a.style);
+      renderSet();
+    }
+  });
+  els.setEditing?.addEventListener('click', event => {
+    if (!event.target.closest('[data-set-act="done"]')) return;
+    state.set.editing = -1;
+    renderSetEditing();
+    renderSet();
+    reveal(els.set);
+    els.set.querySelector('.va-angle')?.focus?.();
+  });
+  els.exmode?.addEventListener('click', event => {
+    const b = event.target.closest('[data-exmode]');
+    if (!b) return;
+    state.set.mode = b.dataset.exmode === 'single' ? 'single' : 'set';
+    renderExport();
+  });
+  // Edits to the ad while an angle is open save back into that angle.
+  function syncSetAngle() {
+    const i = state.set.editing;
+    if (i < 0 || !state.set.angles[i]) return;
+    state.set.angles[i] = { ...state.set.angles[i], style: state.style, copy: copyOf() };
+    drawSetThumbs();
+  }
+
+  // ─── Per-brand defaults (this browser) ───────────────────────────────────
+  // Style, sizes, safe zone, tint, button text, "Unsubscribe anytime" and the
+  // Meta placement are remembered per newsletter; the last newsletter opens
+  // next time. Saved after the editor changes something, never before.
+  const DEFAULTS_KEY = 'frameup.videoAds.brandDefaults.v1';
+  const readDefaults = () => { try { const v = JSON.parse(localStorage.getItem(DEFAULTS_KEY) || '{}'); return v && typeof v === 'object' ? { last: v.last || '', brands: v.brands && typeof v.brands === 'object' ? v.brands : {} } : { last: '', brands: {} }; } catch (error) { return { last: '', brands: {} }; } };
+  const writeDefaults = v => { try { localStorage.setItem(DEFAULTS_KEY, JSON.stringify(v)); } catch (error) { /* storage blocked: this session only */ } };
+  function brandDefaults(id = state.brandId) { return readDefaults().brands[id] || {}; }
+  // var, not let: changed() can call saveDefaults() before this line runs.
+  var defaultsReady = false; // eslint-disable-line no-var
+  var defaultsTimer = 0; // eslint-disable-line no-var
+  function saveDefaults() {
+    if (!defaultsReady) return;
+    clearTimeout(defaultsTimer);
+    defaultsTimer = setTimeout(() => {
+      const all = readDefaults();
+      all.last = state.brandId;
+      all.brands[state.brandId] = {
+        style: state.style, exportIds: [...state.exportIds], ...(setReady() ? { setSizes: [...state.exportIds] } : { setSizes: all.brands[state.brandId]?.setSizes }),
+        safeZone: state.safeZone, tintId: state.tintId, tintAmount: state.tintAmount, tintCustom: state.tintCustom,
+        unsubscribe: state.unsubscribe, cta: state.cta, placement: state.placement || '', at: Date.now(),
+      };
+      writeDefaults(all);
+    }, 500);
+  }
+  // Applies a newsletter's remembered settings; a removed or unready style falls back to Highlight.
+  function applyDefaults(id) {
+    const d = brandDefaults(id);
+    if (!d || !d.at) return false;
+    const style = B.styleOr(d.style);
+    state.style = B.STYLES[style].classic || S.styleReady(style, resolvedCopy({ ...state, style })).ok ? style : B.DEFAULT_STYLE;
+    const ids = (Array.isArray(d.exportIds) ? d.exportIds : []).filter(x => B.SIZES[x]);
+    if (ids.length) state.exportIds = ALL_SIZES.filter(x => ids.includes(x));
+    if (B.SAFE_ZONES.includes(d.safeZone)) state.safeZone = d.safeZone;
+    if (typeof d.tintId === 'string') state.tintId = d.tintId;
+    if (Number.isFinite(d.tintAmount)) state.tintAmount = Math.max(0, Math.min(1, d.tintAmount));
+    if (/^#[0-9a-f]{6}$/i.test(d.tintCustom || '')) state.tintCustom = d.tintCustom;
+    if (typeof d.unsubscribe === 'boolean') state.unsubscribe = d.unsubscribe;
+    if (typeof d.cta === 'string') state.cta = d.cta.slice(0, 40);
+    state.placement = ['feed', 'story', 'reel'].includes(d.placement) ? d.placement : null;
+    syncFields();
+    if (railReady) syncRail();
+    relayout();
+    return true;
+  }
+  function resetDefaults() {
+    const all = readDefaults();
+    delete all.brands[state.brandId];
+    writeDefaults(all);
+    Object.assign(state, { style: B.DEFAULT_STYLE, exportIds: ['9x16'], safeZone: 'meta', unsubscribe: true, cta: '', placement: null, tintId: FRAME_DEFAULTS.tintId, tintAmount: FRAME_DEFAULTS.tintAmount });
+    syncFields();
+    if (railReady) syncRail();
+    relayout();
+    changed();
+    toast(`Back to the standard settings for ${brand().label}.`, { timeout: 2600 });
+  }
+
+  // ─── Check before export: free checks, an optional AI score ─────────────
+  const ratingCache = new Map(); // signature -> rating (this session; a repeat check is free)
+  const clipKind = () => (!hasClip() ? '' : state.clip?.source === 'animated' ? 'animated' : state.clip?.source === 'photo' ? 'photo' : 'clip');
+  const sizesFor = src => state.exportIds.map(id => { const l = layoutFor(id, src); return { id, fits: l.fits, scale: l.scale }; });
+  var preflightView = null; // eslint-disable-line no-var -- { issues, rating, ratingStatus, error }
+  function preflightIssues() {
+    const base = { brand: brand(), hasMedia: hasClip(), safeZone: state.safeZone, unsubscribe: state.unsubscribe };
+    if (setExporting()) {
+      const out = [];
+      setItems().forEach(item => {
+        const src = { ...state, ...item.copy, style: item.style };
+        S.preflight({ ...base, copy: { ...resolvedCopy(src), cta: src.cta || brand().cta }, sizes: sizesFor(src) }).forEach(x => {
+          if (x.id === 'media' || x.id === 'zone' || x.id === 'unsub') { if (!out.some(o => o.id === x.id)) out.push(x); return; }
+          out.push({ ...x, text: `Angle ${item.angle}: ${x.text}`, angle: item.angle - 1 });
+        });
+      });
+      return out;
+    }
+    return S.preflight({ ...base, copy: { ...resolvedCopy(), cta: state.cta || brand().cta }, sizes: sizesFor(state) });
+  }
+  function ratingSignature() {
+    return JSON.stringify([state.brandId, state.size, clipKind(), copyForLog(), state.safeZone, state.unsubscribe]);
+  }
+  function renderPreflight() {
+    const v = preflightView;
+    if (!v) { els.preflightOut.innerHTML = ''; return; }
+    const issues = v.issues;
+    const list = issues.length
+      ? `<ul class="va-preflight__list">${issues.map((x, i) => `<li class="is-${x.level}">${x.level === 'bad' ? ICON.alert : ICON.alert}<span>${esc(x.text)}</span>${x.fix ? `<button class="es-btn es-btn--sm" type="button" data-fix="${i}">${esc(FIX_LABEL[x.fix] || 'Fix')}</button>` : ''}</li>`).join('')}</ul>`
+      : `<p class="va-preflight__clear">${ICON.check}<span>All clear: a clear free offer, easy to read, calm, and it fits every size.</span></p>`;
+    let ai = '';
+    if (v.ratingStatus === 'loading') ai = `<p class="va-hint">${dots}Scoring 3 frames with the ES rubric…</p>`;
+    else if (v.ratingStatus === 'error') ai = `<div class="va-ai-error" role="alert">${ICON.alert}<span>${esc(v.error)}</span><button class="va-link" type="button" data-pf="score">${ICON.retry}Try again</button></div>`;
+    else if (v.rating) {
+      const fixes = (v.rating.fixes || []).slice(0, 3);
+      ai = `<div class="va-preflight__score" id="va-rating"></div>${fixes.length ? `<h4 class="va-rate-heading">Top fixes</h4><ul class="va-preflight__aifix">${fixes.map((f, i) => `<li><span>${esc(f.change)}</span><button class="es-btn es-btn--sm" type="button" data-aifix="${i}">Ask AI to fix</button></li>`).join('')}</ul>` : ''}${v.rating.cachedHere ? '<p class="va-hint">Same ad as before: shown from this session, no new AI call.</p>' : ''}`;
+    } else if (!setExporting()) ai = `<button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-pf="score">${ICON.sparkle}Get an AI score <span class="va-hint">about $0.001</span></button>`;
+    els.preflightOut.innerHTML = list + ai;
+    // The fixes show once, below, each with "Ask AI to fix".
+    if (v.rating && window.VideoAdsRating) window.VideoAdsRating.renderRatingPanel(document.getElementById('va-rating'), { ...v.rating, fixes: [] });
+  }
+  const FIX_LABEL = { 'make-animated': 'Animated background', 'to-copy': 'Add it', shorten: 'Shorten with AI', 'meta-zone': 'Use Meta zone', 'unsub-on': 'Turn on', 'add-free': 'Add “free”', 'cta-default': 'Use sign-up button', calm: 'Calm it with AI' };
+  function runPreflight() {
+    preflightView = { ...(preflightView || {}), issues: preflightIssues() };
+    if (preflightView.rating && preflightView.ratingSig !== ratingSignature()) preflightView = { issues: preflightView.issues };
+    renderPreflight();
+  }
+  async function applyFix(fix, angleIndex) {
+    if (Number.isInteger(angleIndex) && angleIndex >= 0 && state.set.editing !== angleIndex) editAngle(angleIndex);
+    if (fix === 'make-animated') { useStill('animated'); runPreflight(); return; }
+    if (fix === 'to-copy') { goStep('copy'); return; }
+    if (fix === 'meta-zone') { state.safeZone = 'meta'; markRadios(els.zone, 'zone', 'meta'); }
+    if (fix === 'unsub-on') { state.unsubscribe = true; els.unsub.checked = true; }
+    if (fix === 'cta-default') { snapshot(); state.cta = ''; syncFields(); }
+    if (fix === 'add-free') {
+      snapshot();
+      const line = `Get ${brand().label} free, in your inbox.`;
+      if (S.isNew(state.style)) state.offer = S.defaultsFor(brand(), state.style).offer;
+      else {
+        const last = Math.max(0, state.body.map(x => String(x || '').trim()).reduce((at, x, i) => (x ? i : at), 0));
+        state.body = state.body.map((x, i) => (i === last ? `${String(x || '').trim()} ${line}`.trim() : x));
+      }
+      syncFields();
+    }
+    if (fix === 'shorten' || fix === 'calm') {
+      goStep('copy');
+      openAi({ focus: false });
+      sendChat(fix === 'shorten' ? 'Shorten the copy so it sets larger and reads easily for viewers aged 55+. Keep the hook and that it’s free.' : 'Remove hype words, extra exclamation marks and all-caps words. Keep it calm and specific.');
+      return;
+    }
+    relayout();
+    changed();
+    runPreflight();
+    toast('Fixed.', { action: { label: 'Undo', fn: () => { undo(); runPreflight(); } }, timeout: 3000 });
+  }
+  async function scoreAd() {
+    if (!window.VideoAdsRating) { preflightView = { ...preflightView, ratingStatus: 'error', error: 'The AI score didn’t load. Refresh the page.' }; renderPreflight(); return; }
+    if (!hasClip()) { preflightView = { ...preflightView, ratingStatus: 'error', error: 'Add a background first so there are frames to score.' }; renderPreflight(); return; }
+    const sig = ratingSignature();
+    if (ratingCache.has(sig)) { preflightView = { ...preflightView, rating: { ...ratingCache.get(sig), cachedHere: true }, ratingSig: sig, ratingStatus: 'done' }; renderPreflight(); return; }
+    preflightView = { ...preflightView, ratingStatus: 'loading', rating: null };
+    renderPreflight();
+    try {
+      const sz = size();
+      const off = Object.assign(document.createElement('canvas'), { width: sz.width, height: sz.height });
+      const octx = off.getContext('2d');
+      const offBlur = document.createElement('canvas');
+      const duration = adDuration();
+      const times = window.VideoAdsRating.pickFrameTimes(duration, 3);
+      const layout = layoutFor(state.size);
+      const frames = await window.VideoAdsRating.captureFrames(async t => {
+        R.drawFrame(octx, { width: sz.width, height: sz.height, video: els.video, bg: bg(), ops: layout.ops, logoImage: logo.img, blurCanvas: offBlur, source: still ? still.source() : undefined, t, duration });
+        return off;
+      }, times);
+      const c = resolvedCopy();
+      const result = await window.VideoAdsRating.requestRating({
+        frames,
+        context: {
+          brandId: state.brandId, placement: state.size, objective: 'newsletter_signup', style: state.style, background: clipKind() || 'clip',
+          headline: plain(state.headline), body: state.body.map(plain).filter(x => x.trim()), cta: state.cta || brand().cta,
+          styleCopy: S.isNew(state.style) ? { offer: c.offer, listTitle: c.listTitle, items: c.items, them: c.them, us: c.us } : {},
+          verifiedClaims: state.style === 'versus' ? c.us : [], frameTimes: times,
+        },
+      });
+      ratingCache.set(sig, result);
+      preflightView = { ...preflightView, rating: result, ratingSig: sig, ratingStatus: 'done' };
+      logEvent('rated', { style: state.style, size: state.size, score: result.score, verdict: result.verdict });
+    } catch (error) {
+      preflightView = { ...preflightView, ratingStatus: 'error', error: friendlyError(error.status || 0, { error: error.message, reason: error.reason }) };
+    }
+    renderPreflight();
+  }
+  els.check?.addEventListener('click', () => { runPreflight(); els.check.textContent = 'Check again'; });
+  els.preflightOut?.addEventListener('click', event => {
+    const fixBtn = event.target.closest('[data-fix]');
+    if (fixBtn) { const x = preflightView?.issues?.[Number(fixBtn.dataset.fix)]; if (x) applyFix(x.fix, x.angle); return; }
+    if (event.target.closest('[data-pf="score"]')) { scoreAd(); return; }
+    const ai = event.target.closest('[data-aifix]');
+    if (ai) {
+      const f = preflightView?.rating?.fixes?.[Number(ai.dataset.aifix)];
+      if (!f) return;
+      goStep('copy');
+      openAi({ focus: false });
+      sendChat(`Fix this in the ad: ${f.change}`);
+    }
+  });
+
   // ─── Start ───────────────────────────────────────────────────────────────
   renderNoClip();
   $('va-empty-animated')?.addEventListener('click', () => useStill('animated'));
   setBrand(state.brandId);
+  // The newsletter used last time, with its remembered settings.
+  let fromHandoff = false;
+  try { fromHandoff = Boolean(sessionStorage.getItem('frameup.videoAdMoment.v1') || new URLSearchParams(location.search).get('moment')); } catch (error) { /* storage blocked */ }
+  const remembered = readDefaults();
+  if (!fromHandoff && remembered.last && B.AD_BRANDS.some(b => b.id === remembered.last)) {
+    setBrand(remembered.last);
+    state.brandChosen = true;
+    if (applyDefaults(remembered.last)) toast(`Using your ${brand().label} settings.`, { action: { label: 'Reset', fn: resetDefaults }, timeout: 4200 });
+  }
   syncFields();
   renderSwatches();
   goStep('copy', { focus: false });
@@ -3132,5 +3694,7 @@
     document.fonts.load('700 40px Roboto'),
   ]).catch(() => {}).finally(() => refreshLogo());
   relayout();
-  window.VideoAdsPage = { state, syncRail, bg, finds, relayout, layoutFor, exportSizes, startExport, useClip, goStep, findClips, findByColor, selectMoment, sendChat, generateDrafts, checkGrammar, lintText, openAi, closeAi, applyCopy, undo, setTrim, logEvent, pickStyle, useStill, renderSafe, localSuggestion, resolvedCopy, renderExport };
+  defaultsReady = true;
+  loadClaims();
+  window.VideoAdsPage = { state, syncRail, bg, finds, relayout, layoutFor, exportSizes, startExport, useClip, goStep, findClips, findByColor, selectMoment, sendChat, generateDrafts, checkGrammar, lintText, openAi, closeAi, applyCopy, undo, setTrim, logEvent, pickStyle, useStill, renderSafe, localSuggestion, resolvedCopy, renderExport, makeSet, setFromCurrentCopy, editAngle, runPreflight, scoreAd, applyDefaults, resetDefaults, readDefaults, setPlacement, loadClaims };
 })();
