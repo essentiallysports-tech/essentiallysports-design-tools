@@ -1160,12 +1160,19 @@
 
   // ─── 1 Clip ──────────────────────────────────────────────────────────────
   // Tabs: By colour / By moment / Link or upload.
-  const clipTabs = [...els.clipTabs.querySelectorAll('[role="tab"]')];
+  // The Library is an icon button at the right of the pane header (not a tab),
+  // but it switches panels the same way.
+  const tabStrip = [...els.clipTabs.querySelectorAll('[role="tab"]')];
+  const libraryBtn = document.getElementById('va-tab-library');
+  const clipTabs = libraryBtn ? [...tabStrip, libraryBtn] : tabStrip;
   function selectClipTab(tab, focus) {
     clipTabs.forEach(t => {
       const on = t === tab;
-      t.setAttribute('aria-selected', String(on));
-      t.tabIndex = on ? 0 : -1;
+      if (t === libraryBtn) t.setAttribute('aria-pressed', String(on));
+      else {
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on || (tab === libraryBtn && t === tabStrip[0]) ? 0 : -1;
+      }
       $(t.getAttribute('aria-controls')).hidden = !on;
     });
     state.clipTab = tab.dataset.tab;
@@ -1179,10 +1186,15 @@
   const clipTab = name => clipTabs.find(t => t.dataset.tab === name);
   els.clipTabs.addEventListener('click', event => { const tab = event.target.closest('[role="tab"]'); if (tab) { state.clipTabPicked = true; selectClipTab(tab); } });
   els.clipTabs.addEventListener('keydown', event => {
-    const i = clipTabs.indexOf(document.activeElement);
+    const i = tabStrip.indexOf(document.activeElement);
     if (i < 0) return;
-    if (event.key === 'ArrowRight') { event.preventDefault(); selectClipTab(clipTabs[(i + 1) % clipTabs.length], true); }
-    if (event.key === 'ArrowLeft') { event.preventDefault(); selectClipTab(clipTabs[(i - 1 + clipTabs.length) % clipTabs.length], true); }
+    if (event.key === 'ArrowRight') { event.preventDefault(); selectClipTab(tabStrip[(i + 1) % tabStrip.length], true); }
+    if (event.key === 'ArrowLeft') { event.preventDefault(); selectClipTab(tabStrip[(i - 1 + tabStrip.length) % tabStrip.length], true); }
+  });
+  libraryBtn?.addEventListener('click', () => {
+    state.clipTabPicked = true;
+    // A second click goes back to By team.
+    selectClipTab(state.clipTab === 'library' ? tabStrip[0] : libraryBtn);
   });
 
   // Colour picker: sport above, swatches below, then Find clips.
