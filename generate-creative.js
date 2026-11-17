@@ -58,6 +58,14 @@
   const cleanStory = text => (U()?.cleanStory ? U().cleanStory(text) : String(text || '').replace(/^Story:\s*/i, ''));
   // How many designs this run makes: templates stop at 4 (the server cap there).
   const wanted = () => (look === 'templates' ? Math.min(count, 4) : count);
+  // The cost per choice: Creative uses the assistant engine's costEstimate (the
+  // same budget the server applies), shown as a range; templates one figure.
+  const estLabel = n => {
+    const range = U()?.estimateRange?.(n, look);
+    if (range) return `${money(range.low)}–${money(range.high)}`;
+    const est = U()?.estimateCost?.(n, look);
+    return est != null ? money(est) : '';
+  };
 
   // ── Look switch and the number of designs (in the composer) ───────────────
   function mountSwitch() {
@@ -135,9 +143,9 @@
     });
     // Hover / focus previews that choice's cost.
     const preview = n => {
-      const est = U()?.estimateCost?.(n, look);
+      const est = estLabel(n);
       const cost = document.getElementById('gen-count-cost');
-      if (cost && est != null) cost.innerHTML = `<span class="gen-sr">Estimated AI cost for ${n} design${n === 1 ? '' : 's'}: </span>est. ${money(est)}<span class="gen-count__per" aria-hidden="true"> · ${look === 'creative' ? 'art-directed' : 'templates'}</span>`;
+      if (cost && est) cost.innerHTML = `<span class="gen-sr">Estimated AI cost for ${n} design${n === 1 ? '' : 's'}: </span>est. ${est}<span class="gen-count__per" aria-hidden="true"> · ${look === 'creative' ? 'art-directed' : 'templates'}</span>`;
     };
     expect.addEventListener('pointerover', event => { const b = event.target.closest('[data-count]'); if (b && !b.disabled) preview(Number(b.dataset.count)); });
     expect.addEventListener('pointerleave', () => preview(wanted()));
@@ -153,7 +161,7 @@
       const value = Number(b.dataset.count);
       const off = look === 'templates' && value > 4;
       b.disabled = off;
-      b.title = off ? 'ES templates make up to 4 designs' : `${value} design${value === 1 ? '' : 's'} · est. ${money(U()?.estimateCost?.(value, look) || 0)}`;
+      b.title = off ? 'ES templates make up to 4 designs' : `${value} design${value === 1 ? '' : 's'} · est. ${estLabel(value)}`;
       b.setAttribute('aria-checked', String(value === n));
       b.tabIndex = value === n ? 0 : -1;
     });
@@ -316,7 +324,12 @@
     const note = card._verdict.note || card._dir.note || '';
     return `${note}${scene.fixApplied ? `${note ? ' ' : ''}Fix applied: ${scene.fixApplied.replace(/-/g, ' ')}.` : ''}`.trim();
   };
-  const critiqueOf = card => (U()?.critiqueFor ? U().critiqueFor({ verdict: card._verdict, dir: card._dir, scene: card._scene, report: card._report }) : { source: 'quick', strengths: [], improvements: [], nextTime: '' });
+  // card._critique is gen-brain's merged critique (director + judge, ids i1..),
+  // the same object the assistant holds, so Apply ids match on both sides.
+  const critiqueOf = card => (U()?.critiqueFor ? U().critiqueFor({ verdict: { ...card._verdict, critique: card._critique || card._verdict.critique }, dir: card._dir, scene: card._scene, report: card._report }) : { source: 'quick', strengths: [], improvements: [], nextTime: '' });
+  // A fix the composer can apply here, free: { op:'fix', name } (gen-brain) or
+  // a bare { op:'<fix>' } (the quick check).
+  const localFix = fix => { const name = fix?.op === 'fix' ? fix.name : fix?.op; return name && C()?.FIXES?.includes(name) ? name : ''; };
 
   // The director's note, collapsed to one line; open: what works, what could
   // be better (each with Apply), and the lesson for next time.
@@ -337,7 +350,7 @@
     better.querySelector('.gen-cc__eyebrow').textContent = crit.source === 'quick' ? 'What could be better · quick check' : 'What could be better';
     const viaAssistant = typeof window.FrameUpAssistant?.applyImprovement === 'function';
     better.querySelector('ul').innerHTML = crit.improvements.map(i => {
-      const local = i.fix?.op && C().FIXES?.includes(i.fix.op);
+      const local = localFix(i.fix);
       const button = viaAssistant || local
         ? `<button class="gen-cc__apply" type="button" data-cc="apply" data-id="${G().esc(i.id)}" title="${viaAssistant ? 'The AI assistant makes this change' : 'Apply the fix'}">${ICON.wand}Apply</button>`
         : `<button class="gen-cc__apply" type="button" data-cc="ask" data-id="${G().esc(i.id)}" title="Open the design and ask the AI assistant">${ICON.sparkles}Ask AI</button>`;
@@ -379,20 +392,50 @@
     if (!item) return false;
     if (typeof window.FrameUpAssistant?.applyImprovement === 'function') {
       try {
-        await window.FrameUpAssistant.applyImprovement(card._designId, id);
-        G().track('fix_applied', { runId: state.run?.plan?.runId, directionId: card._dir.id, payload: { id, text: item.text, via: 'assistant' } });
-        return true;
+        // The assistant changes the design through design(id).setScene, so the
+        // version lands in this card's History once.
+        const res = await window.FrameUpAssistant.applyImprovement(card._designId, id);
+        if (res?.ok !== false) {
+          G().track('fix_applied', { runId: state.run?.plan?.runId, directionId: card._dir.id, payload: { id, text: item.text, via: 'assistant', cost: res?.cost || 0 } });
+          return true;
+        }
+        if (!localFix(item.fix)) { G().setNotice('Could not apply that', ` ${res?.reply || 'The assistant could not make that change.'}`); return false; }
       } catch (error) {
-        G().setNotice('Could not apply that', ` ${error?.message || 'The assistant did not answer.'}`);
-        return false;
+        if (!localFix(item.fix)) { G().setNotice('Could not apply that', ` ${error?.message || 'The assistant did not answer.'}`); return false; }
       }
     }
-    if (item.fix?.op && C().FIXES?.includes(item.fix.op)) {
-      await commit(card, C().applyFix(card._scene, item.fix.op), { label: `Fix: ${item.text}`, source: 'fix' });
-      G().track('fix_applied', { runId: state.run?.plan?.runId, directionId: card._dir.id, payload: { id, text: item.text, fix: item.fix.op, via: 'local' } });
+    const name = localFix(item.fix);
+    if (name) {
+      await commit(card, C().applyFix(card._scene, name), { label: `Fix: ${item.text}`, source: 'fix' });
+      G().track('fix_applied', { runId: state.run?.plan?.runId, directionId: card._dir.id, payload: { id, text: item.text, fix: name, via: 'local' } });
       return true;
     }
     return false;
+  }
+
+  // The facts a version may show: the scene's, the direction's input, and every
+  // digit already on the original (so a checked edit is never refused for them).
+  function factsFor(card) {
+    const first = card._history?.entries?.[0]?.scene || card._scene;
+    const onDesign = first.layers.map(l => `${l.prefix || ''}${l.value || ''}${l.suffix || ''} ${l.label || ''} ${l.text || ''}`).join(' ');
+    return [...(card._scene.facts || []), ...(card._dir.input?.facts || []), { id: 'on-design', text: onDesign }];
+  }
+  // Composer input for a rebuild: the server's input for this direction, with
+  // the current version's copy, photo and palette when they were edited.
+  function inputFor(card) {
+    const base = card._scene.input || card._dir.input || null;
+    if (!base) return null;
+    const A = window.FrameUpAssistant;
+    const first = card._history?.entries?.[0]?.scene;
+    if (!A?.inputsFromScene || !first || JSON.stringify(first) === JSON.stringify(card._scene)) return base;
+    const was = A.inputsFromScene(first);
+    const now = A.inputsFromScene(card._scene);
+    const out = { ...base };
+    ['kicker', 'headline', 'body', 'name'].forEach(k => { if (now[k] !== was[k]) { out[k] = now[k]; if (k === 'headline') out.highlight = []; } });
+    if (now.photo?.src && now.photo.src !== was.photo?.src) out.photo = now.photo;
+    if (now.cutout?.src !== was.cutout?.src) out.cutout = now.cutout;
+    if (JSON.stringify(now.palette) !== JSON.stringify(was.palette)) out.palette = now.palette;
+    return out;
   }
 
   // The design as the focus view and the assistant see it.
@@ -413,7 +456,7 @@
       // The assistant (and anything else) sets a new scene here; it is checked
       // against the ES gate first, so a patch can never break the guidelines.
       setScene: (scene, meta = {}) => {
-        const checked = C().checkScene?.(scene, { facts: card._scene.facts });
+        const checked = C().checkScene?.(scene, { facts: factsFor(card) });
         if (checked && !checked.ok) throw new Error(checked.errors?.[0]?.msg || 'That change breaks the ES guidelines.');
         return commit(card, checked?.scene || scene, { label: meta.label || 'AI assistant', source: meta.source || 'assistant' });
       },
@@ -428,13 +471,17 @@
         return commit(card, C().swapPhoto(card._scene, { from: C().mainPhoto(card._scene), to: photo.src, cutout: photo.cutout || '' }), { label: 'Swapped photo', source: 'photo' });
       },
       resize: key => {
-        // Built from its inputs when the server sends them; otherwise reframed.
-        const input = card._scene.input || card._dir.input;
+        // Built from its inputs when the server sends them (plan.directions[].input),
+        // with this version's edits on top (text, photo, palette: the assistant
+        // engine reads them off the scene); otherwise reframed.
+        const input = inputFor(card);
         let next = null;
-        try { next = input && C().build ? C().build(card._scene.archetype, { ...input, size: key }, card._scene.variant || 0) : U().reframe(card._scene, key); } catch (error) { next = null; }
+        try { next = input && C().build && C().fits?.(card._scene.archetype, { ...input, size: key }) !== false ? C().build(card._scene.archetype, { ...input, size: key }, card._scene.variant || 0) : U().reframe(card._scene, key); } catch (error) { next = null; }
+        if (!next) { try { next = U().reframe(card._scene, key); } catch (error) { next = null; } }
         if (!next) return false;
         next.id = card._scene.id;
-        const checked = C().checkScene?.(next, { facts: card._scene.facts });
+        if (!next.facts?.length) next.facts = card._scene.facts;
+        const checked = C().checkScene?.(next, { facts: factsFor(card) });
         if (checked && !checked.ok) return false;
         const names = { portrait: '4:5 · 1080 × 1350', story: '9:16 · 1080 × 1920', square: '1:1 · 1080 × 1080' };
         commit(card, checked?.scene || next, { label: `Size ${names[key] || key}`, source: 'size' });

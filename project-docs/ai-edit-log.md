@@ -17,6 +17,15 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-19 — Generate v2 integrated: brain + styles + UI on one branch (branch feature/gen-v2)
+- Status: `[committed on feature/gen-v2 — not pushed]`. Merges `feature/gen-brain` (a74b96e), `feature/gen-styles` (5968e26), `feature/gen-ui` (3e226e8) with `--no-ff`, then integration fixes.
+- **One history**: gen-ui's `History` (`FrameUpCreative.design(id).history`) owns versions. `generate-assistant.js` keeps no private stack when the page hosts the design: every assistant change and `applyImprovement` goes through the host's `setScene(scene, { label })` (one version per change), its undo / redo call the host, its `commit()` is a no-op there, `history(id)` reads the host's. The chat's own Undo / Redo buttons and Cmd-Z handler hide/skip when hosted (the focus view's are the controls). New `FrameUpAssistant.unmount(slot)`; the chat repaints on `frameup:design-changed`.
+- **Apply ids**: cards, focus view and assistant read one critique (`card._critique` = `FrameUpAssistant.designCritique(dir.critique, verdict.critique, scene)`, ids `i1..`); quick-check items (`{op:'<fix>'}`) also apply through the assistant (normalised to `{op:'fix',name}`); a failed assistant apply falls back to the free local fix.
+- **Server**: `_composer.js` gets gen-styles' integration (Needs from `COMPOSE.NEEDS`, photos for film-strip / photo-mosaic, cut-out guard for trading-card / sticker-collage / stat-tower, PRIORITY derived from archetype `kinds`, `defaultNote` falls back to the archetype's `about`); brief labels ("Story: Story: Bryson…", "Summary:") are stripped before stories are split, so headlines no longer read "STORY: BRYSON…"; `plan.directions[].input` (composer input) so the size switch rebuilds instead of reframing (edits to copy / photo / palette are carried over).
+- **Count / cost**: server caps 1-8 (`budgetFor`); the count control shows the assistant engine's `costEstimate(n)` range, and `FrameUpFocus.util.estimateCost` returns its `high` (one source of truth).
+- Cache keys `20261119-gen-v2` on generate.html (compose, focus, assistant, creative, creative.css), the focus view's lazy loader, and `es-guidelines.js` in index.html. `package.json`: one `test:generate` key running every generate test.
+- Tests: new `scripts/test-gen-v2-integration.mjs`. Full suite: baseline 7 failures only.
+
 ### 2026-11-19 — Generate v2 brain: director critique, learning model, AI design assistant (branch feature/gen-brain)
 - Status: `[UNCOMMITTED in ds-branches/gen-brain: the commit was blocked by the permission classifier; browser QA not run]`. Contract: scratchpad `gen-v2-contract.md` (agent B).
 - **Critique** (`_composer.js`): director JSON and vision judge return `strengths`, `improvements` (each with `fix`: `{op:'fix',name}` free in code, or `{op:'assist',instruction}`) and `nextTime`; free code checks (number without a unit, long headline, missing team logo, photo layouts with no photo). `publicDirection.critique`, judge `verdict.critique`; page merges with `FrameUpAssistant.designCritique(dir.critique, verdict.critique, scene)`.

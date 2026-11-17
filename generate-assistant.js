@@ -511,7 +511,7 @@
   function directionFor(designId) {
     const plan = Creative()?.state?.run?.plan;
     const id = String(designId || '');
-    return (plan?.directions || []).find(d => id === d.id || id.endsWith(`:${d.id}`) || id.startsWith(`${d.id}c`)) || null;
+    return (plan?.directions || []).find(d => id === d.id || id.endsWith(`:${d.id}`) || id.endsWith(`-${d.id}`) || id.startsWith(`${d.id}c`)) || null;
   }
   function contextFor(entry) {
     const plan = Creative()?.state?.run?.plan;
@@ -537,11 +537,59 @@
       designs.set(id, entry);
     }
     ['getScene', 'setScene', 'runId', 'critique', 'context'].forEach(k => { if (opts[k] !== undefined) entry[k] = opts[k]; });
-    if (!entry.history && typeof entry.getScene === 'function') {
+    if (!entry.history && !hostOf(entry) && typeof entry.getScene === 'function') {
       const scene = entry.getScene();
       if (scene) entry.history = createHistory(scene);
     }
     return entry;
+  }
+
+  // ONE history. On the Generate page the design's versions live in
+  // generate-creative.js (FrameUpCreative.design(id).history, gen-ui's History):
+  // every assistant change goes through the host's setScene(scene, { label })
+  // (one version per change, the host fires 'frameup:design-changed'), and
+  // undo / redo call the host. The private stack below is only for pages that
+  // mount the assistant without such a host.
+  function hostOf(entry) {
+    try { return Creative()?.design?.(entry?.designId) || null; } catch (error) { return null; }
+  }
+  const hostHistory = entry => hostOf(entry)?.history || null;
+  function currentScene(entry) {
+    const host = hostOf(entry);
+    if (host) return clone(host.getScene());
+    if (entry?.history) return entry.history.current;
+    const scene = typeof entry?.getScene === 'function' ? entry.getScene() : null;
+    return scene ? clone(scene) : null;
+  }
+  // The design's critique: the one registered for it (B's merged critique, the
+  // same object the cards render) or, failing that, the host's.
+  function critiqueOf(entry) {
+    const own = entry?.critique;
+    if (own?.improvements?.length) return own;
+    try { return hostOf(entry)?.critique?.() || own || null; } catch (error) { return own || null; }
+  }
+  // A quick-check item carries a bare fix name ({ op: 'more-contrast' }).
+  const fixOp = fix => (fix && fix.op && !OPS.includes(fix.op) && fix.op !== 'assist' ? { op: 'fix', name: fix.op } : fix);
+  function improvementOf(entry, id) {
+    const pick = list => (list?.improvements || []).find(i => i.id === id);
+    let item = pick(entry?.critique);
+    if (!item) { try { item = pick(hostOf(entry)?.critique?.()); } catch (error) { item = null; } }
+    return item ? { ...item, fix: fixOp(item.fix) } : null;
+  }
+  const canUndo = entry => { const h = hostHistory(entry); return h ? Boolean(h.canUndo) : Boolean(entry?.history?.canUndo()); };
+  const canRedo = entry => { const h = hostHistory(entry); return h ? Boolean(h.canRedo) : Boolean(entry?.history?.canRedo()); };
+  // A new version: through the host when there is one, else the private stack.
+  async function pushScene(entry, scene, label, source) {
+    const host = hostOf(entry);
+    if (host) {
+      await (entry.setScene || host.setScene)(scene, { label, source: 'assistant', via: source });
+      entry.ui?.paint();
+      return true;
+    }
+    if (!entry.history) entry.history = createHistory(scene);
+    else entry.history.push(scene, label);
+    emit(entry, label, source);
+    return true;
   }
 
   // source 'host': the host already shows this scene (its own edit), so only
@@ -549,7 +597,7 @@
   function emit(entry, label, source) {
     const scene = entry.history.current;
     if (source !== 'host') {
-      try { entry.setScene?.(scene); } catch (error) { /* the host re-renders on the event */ }
+      try { entry.setScene?.(scene, { label, source: 'assistant', via: source }); } catch (error) { /* the host re-renders on the event */ }
     }
     document.dispatchEvent(new CustomEvent('frameup:design-changed', { detail: { designId: entry.designId, scene, label, source, canUndo: entry.history.canUndo(), canRedo: entry.history.canRedo(), history: entry.history.entries() } }));
     entry.ui?.paint();
@@ -558,6 +606,7 @@
   function commit(designId, scene, label = 'Edit', source = 'host') {
     const entry = entryFor(designId);
     if (!entry || !scene) return false;
+    if (hostOf(entry)) { entry.ui?.paint(); return true; } // the host's history already has it
     if (!entry.history) entry.history = createHistory(scene);
     else entry.history.push(scene, label);
     emit(entry, label, source);
@@ -565,6 +614,8 @@
   }
   function undo(designId) {
     const entry = entryFor(designId);
+    const host = hostOf(entry);
+    if (host) return host.history?.canUndo ? (host.undo(), true) : false;
     if (!entry?.history?.canUndo()) return false;
     entry.history.undo();
     emit(entry, 'Undo', 'history');
@@ -572,18 +623,25 @@
   }
   function redo(designId) {
     const entry = entryFor(designId);
+    const host = hostOf(entry);
+    if (host) return host.history?.canRedo ? (host.redo(), true) : false;
     if (!entry?.history?.canRedo()) return false;
     entry.history.redo();
     emit(entry, 'Redo', 'history');
     return true;
   }
-  const history = designId => entryFor(designId)?.history?.entries() || [];
+  const history = designId => {
+    const entry = entryFor(designId);
+    const h = hostHistory(entry);
+    if (h) return h.entries.map((e, i) => ({ label: e.label, at: i, current: i === h.index }));
+    return entry?.history?.entries() || [];
+  };
 
   // Learning signals (fire-and-forget; the server learns lessons from them).
   function signal(type, designId, extra = {}) {
     try {
       const entry = designId ? entryFor(designId) : null;
-      const scene = entry?.history?.current || null;
+      const scene = entry ? currentScene(entry) : null;
       const ctx = entry ? contextFor(entry) : {};
       const body = { mode: 'creative-signal', signal: { type, designId, runId: entry?.runId || Creative()?.state?.run?.plan?.runId || '', archetype: scene?.archetype || extra.archetype || '', archetypeName: scene?.archetypeName || ctx.archetypeName || '', sport: ctx.sport || '', ...extra } };
       window.ESAuth?.fetchWithAuth?.('/api/es-generate', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })?.catch?.(() => {});
@@ -603,17 +661,16 @@
   // Sonnet for layout changes). Returns { ok, reply, cost, skipped }.
   async function ask(designId, instruction, { source = 'chat' } = {}) {
     const entry = entryFor(designId);
-    if (!entry?.history) return { ok: false, reply: 'This design is not ready yet.' };
+    const scene = entry ? currentScene(entry) : null;
+    if (!scene) return { ok: false, reply: 'This design is not ready yet.' };
     const text = clean(instruction, 300);
     if (!text) return { ok: false, reply: 'Type what to change.' };
-    const scene = entry.history.current;
     const ctx = contextFor(entry);
     const local = localIntent(text, scene, ctx);
     if (local) {
       const res = applyPatch(scene, local.ops, ctx);
       if (res.ok) {
-        entry.history.push(res.scene, local.reply);
-        emit(entry, local.reply, source);
+        await pushScene(entry, res.scene, local.reply, source);
         signal('assistant', designId, { text });
         return { ok: true, reply: local.reply, cost: 0, model: 'rules', skipped: res.skipped };
       }
@@ -621,7 +678,7 @@
       // A local intent that could not apply: let the AI try.
     }
     const turns = entry.chat.slice(-6).map(m => ({ role: m.role, text: clean(m.text, 200) }));
-    const data = await callServer({ mode: 'creative-assist', instruction: text, scene, history: turns, runId: entry.runId || '', context: { sport: ctx.sport, photos: ctx.photos.slice(0, 8), logos: ctx.logos.slice(0, 4), facts: ctx.facts.slice(0, 20), critique: entry.critique ? { improvements: (entry.critique.improvements || []).map(i => i.text).slice(0, 4) } : undefined } });
+    const data = await callServer({ mode: 'creative-assist', instruction: text, scene, history: turns, runId: entry.runId || '', context: { sport: ctx.sport, photos: ctx.photos.slice(0, 8), logos: ctx.logos.slice(0, 4), facts: ctx.facts.slice(0, 20), critique: critiqueOf(entry) ? { improvements: (critiqueOf(entry).improvements || []).map(i => i.text).slice(0, 4) } : undefined } });
     const cost = Number(data?.costUsd) || 0;
     entry.cost += cost;
     let applied = null;
@@ -632,8 +689,7 @@
     }
     if (applied?.ok) {
       const label = clean(data.reply, 80) || text;
-      entry.history.push(applied.scene, label);
-      emit(entry, label, source);
+      await pushScene(entry, applied.scene, label, source);
     }
     return { ok: Boolean(applied?.ok), reply: clean(data?.reply, 400) || (applied?.ok ? 'Done.' : 'I could not make that change.'), cost, model: data?.model || '', tier: data?.tier || '', skipped: [...(data?.skipped || []), ...(applied && !applied.ok ? applied.skipped : [])], suggestions: data?.suggestions || [] };
   }
@@ -641,15 +697,15 @@
   // The director's "what could be better", one click.
   async function applyImprovement(designId, improvementId) {
     const entry = entryFor(designId);
-    const item = (entry?.critique?.improvements || []).find(i => i.id === improvementId);
-    if (!entry?.history || !item) return { ok: false, reply: 'That suggestion is not available.' };
+    const item = improvementOf(entry, improvementId);
+    const scene = entry ? currentScene(entry) : null;
+    if (!scene || !item) return { ok: false, reply: 'That suggestion is not available.' };
     let result;
     if (item.fix && item.fix.op && item.fix.op !== 'assist') {
-      const res = applyPatch(entry.history.current, [item.fix], contextFor(entry));
+      const res = applyPatch(scene, [item.fix], contextFor(entry));
       if (res.ok) {
         const label = chipLabel(item).replace(/^Apply: /, 'Applied: ');
-        entry.history.push(res.scene, label);
-        emit(entry, label, 'improvement');
+        await pushScene(entry, res.scene, label, 'improvement');
         result = { ok: true, reply: `${label}.`, cost: 0 };
       }
     }
@@ -671,11 +727,13 @@
 
   function resize(designId, size) {
     const entry = entryFor(designId);
-    if (!entry?.history) return false;
-    const res = applyPatch(entry.history.current, [{ op: 'size', size }], contextFor(entry));
+    const host = hostOf(entry);
+    if (host?.resize) return host.resize(size);
+    const scene = entry ? currentScene(entry) : null;
+    if (!scene) return false;
+    const res = applyPatch(scene, [{ op: 'size', size }], contextFor(entry));
     if (!res.ok) return false;
-    entry.history.push(res.scene, `Size: ${size}`);
-    emit(entry, `Size: ${size}`, 'resize');
+    pushScene(entry, res.scene, `Size: ${size}`, 'resize');
     return true;
   }
 
@@ -766,10 +824,15 @@
       return li;
     };
     const paint = () => {
-      $('[data-fa="undo"]').disabled = !entry.history?.canUndo();
-      $('[data-fa="redo"]').disabled = !entry.history?.canRedo();
+      // Hosted: the focus view's own Undo / Redo (top bar, History) are the
+      // controls; the chat does not show a second pair.
+      const hosted = Boolean(hostOf(entry));
+      $('[data-fa="undo"]').hidden = hosted;
+      $('[data-fa="redo"]').hidden = hosted;
+      $('[data-fa="undo"]').disabled = !canUndo(entry);
+      $('[data-fa="redo"]').disabled = !canRedo(entry);
       $('[data-fa="cost"]').textContent = money(entry.cost);
-      const items = (entry.critique?.improvements || []).filter(i => !entry.applied.has(i.id));
+      const items = (critiqueOf(entry)?.improvements || []).filter(i => !entry.applied.has(i.id));
       const list = items.length ? items.map(i => ({ id: i.id, label: chipLabel(i) })) : STARTERS.filter(s => !/logo/i.test(s) || contextFor(entry).logos.length).slice(0, 4).map(s => ({ text: s, label: s }));
       chips.innerHTML = list.map(c => `<button class="es-chip" type="button" ${c.id ? `data-fa-improve="${esc(c.id)}"` : `data-fa-say="${esc(c.text)}"`}>${esc(c.label)}</button>`).join('');
       send.disabled = busy;
@@ -811,7 +874,7 @@
       if (btn.dataset.fa === 'undo') undo(designId);
       else if (btn.dataset.fa === 'redo') redo(designId);
       else if (btn.dataset.faImprove) {
-        const item = (entry.critique?.improvements || []).find(i => i.id === btn.dataset.faImprove);
+        const item = improvementOf(entry, btn.dataset.faImprove);
         if (!item) return;
         log('user', chipLabel(item));
         busy = true;
@@ -821,21 +884,26 @@
     };
     const onKey = event => {
       if (event.key === 'Enter' && !event.shiftKey && event.target === input) { event.preventDefault(); form.requestSubmit(); return; }
+      if (hostOf(entry)) return; // the host's keyboard shortcuts undo / redo (once)
       const mod = event.metaKey || event.ctrlKey;
       if (!mod || event.key.toLowerCase() !== 'z' || event.target === input) return;
       event.preventDefault();
       if (event.shiftKey) redo(designId); else undo(designId);
     };
+    const onChanged = event => { if (event.detail?.designId === designId) paint(); };
     form.addEventListener('submit', onSubmit);
     slotEl.addEventListener('click', onClick);
     slotEl.addEventListener('keydown', onKey);
+    document.addEventListener('frameup:design-changed', onChanged);
     entry.ui = {
+      slot: slotEl,
       paint,
       log,
       destroy() {
         form.removeEventListener('submit', onSubmit);
         slotEl.removeEventListener('click', onClick);
         slotEl.removeEventListener('keydown', onKey);
+        document.removeEventListener('frameup:design-changed', onChanged);
         entry.ui = null;
       },
     };
@@ -849,5 +917,10 @@
     return { designId, ask: text => run(() => ask(designId, text), text), destroy: () => entry.ui?.destroy() };
   }
 
-  return Object.freeze({ ...engine, engine, mount, register, applyImprovement, ask, undo, redo, commit, history, resize, signal, _designs: designs });
+  // The focus view calls this before it re-mounts the slot for another design.
+  function unmount(slotEl) {
+    designs.forEach(entry => { if (entry.ui && (!slotEl || entry.ui.slot === slotEl)) entry.ui.destroy(); });
+  }
+
+  return Object.freeze({ ...engine, engine, mount, unmount, register, applyImprovement, ask, undo, redo, commit, history, resize, signal, _designs: designs });
 }));

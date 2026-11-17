@@ -134,12 +134,24 @@ function properNames(text) {
   }
   return out;
 }
-const SENTENCE_START = new Set(['The', 'A', 'An', 'He', 'She', 'They', 'It', 'His', 'Her', 'Their', 'After', 'Before', 'Next', 'Sport', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'ESPN']);
+const SENTENCE_START = new Set(['The', 'A', 'An', 'He', 'She', 'They', 'It', 'His', 'Her', 'Their', 'After', 'Before', 'Next', 'Sport', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'ESPN', 'Story', 'Summary', 'Angle', 'Context', 'Trend']);
 
 // The stories in a brief: sentences, and "X ... and Y ..." halves when each
 // half has its own subject and its own fact. Sentences about the same subject merge.
+// Labels a trend brief carries in front of its text ("Story: Story: Bryson…",
+// "Summary: …"): never part of the story, never a subject.
+const BRIEF_LABEL = /(^|[.;|]\s*)(?:story|summary|angle|context|trend)\s*:\s*/gi;
+const stripLabels = text => {
+  let out = String(text || '');
+  for (let i = 0; i < 3; i += 1) {
+    const next = out.replace(BRIEF_LABEL, '$1');
+    if (next === out) break;
+    out = next;
+  }
+  return out;
+};
 function splitStories(brief) {
-  const body = String(brief || '').split('\n').filter(line => !/^\s*(?:sport|headline|team)\s*:/i.test(line)).join(' ');
+  const body = String(brief || '').split('\n').filter(line => !/^\s*(?:sport|headline|team)\s*:/i.test(line)).map(stripLabels).join(' ');
   const sentences = clean(body).split(/(?<=[.!?]["”]?)\s+(?=[A-Z“"])/).map(s => s.trim()).filter(Boolean);
   const parts = [];
   sentences.forEach(sentence => {
@@ -435,6 +447,11 @@ const PRIORITY = {
   person: ['hero-number', 'magazine-cover', 'collage-strip', 'duotone-hero', 'by-the-numbers'],
   none: ['typographic', 'magazine-cover', 'duotone-hero'],
 };
+// gen-styles: every archetype lists the story kinds it serves; append the new
+// ones so code plans vary too (the hand-picked order above stays first).
+Object.keys(PRIORITY).forEach(kind => (COMPOSE.ARCHETYPES || []).forEach(a => {
+  if ((a.kinds || []).includes(kind) && !PRIORITY[kind].includes(a.id)) PRIORITY[kind].push(a.id);
+}));
 
 function directionSkeleton(read, story, archetype, assets, used) {
   const facts = read.facts.filter(f => f.story === story.id);
@@ -595,7 +612,7 @@ function budgetFor(count) {
 
 // ─── 5. The art director (one AI call) ────────────────────────────────────
 function DIRECTOR_SYSTEM() {
-  const catalog = COMPOSE.ARCHETYPES.map(a => `- ${a.id} (${a.name}, focal: ${a.focal}): ${a.about} Needs: ${NEEDS[a.id]}.`).join('\n');
+  const catalog = COMPOSE.ARCHETYPES.map(a => `- ${a.id} (${a.name}, focal: ${a.focal}): ${a.about} Needs: ${a.needs || COMPOSE.NEEDS?.[a.id] || NEEDS[a.id]}.`).join('\n');
   return [
     'You are the senior art director of EssentiallySports (ES), a US sports media brand with a bold, editorial Instagram look.',
     'You plan COMPOSED designs (not template fills): each design is a composition archetype the ES composer draws, filled with your copy and the brief\'s real numbers.',
@@ -705,7 +722,7 @@ function validateDirections(parsed, read, assets = {}, { want = 4 } = {}) {
     if (photo && used.photos.has(photoKey(photo.src))) { why('same photo as another design'); continue; }
     if (photo && !story.people?.includes(photo.person) && !read.people.includes(photo.person) && !read.teams.some(t => t.name === photo.person)) { why('photo of someone the brief does not name'); continue; }
     // Team / league photos are event imagery: never cut out as a person.
-    if (photo?.team && ['hero-number', 'collage-strip', 'quote-portrait'].includes(archetype)) { why('a team photo cannot be a player cut-out'); continue; }
+    if (photo?.team && ['hero-number', 'collage-strip', 'quote-portrait', 'trading-card', 'sticker-collage', 'stat-tower'].includes(archetype)) { why('a team photo cannot be a player cut-out'); continue; }
     const conceptArt = cut(raw.art, 120);
     const dir = {
       id: `d${kept.length + 1}`,
@@ -739,11 +756,11 @@ function validateDirections(parsed, read, assets = {}, { want = 4 } = {}) {
       dir.sides = others.map(s => sideFor(read, s, assets, used.photos));
       dir.factIds = [...new Set([...dir.factIds, ...dir.sides.map(s => s.number.factId)])];
     }
-    if (archetype === 'collage-strip' && photo) {
+    if (['collage-strip', 'film-strip', 'photo-mosaic'].includes(archetype) && photo) {
       dir.photos = (assets.photos?.[photo.person] || []).filter(p => photoKey(p.src) !== photoKey(photo.src) && !used.photos.has(photoKey(p.src))).slice(0, 3);
     }
     const input = inputsFor(dir, read, assets);
-    if (!COMPOSE.fits(archetype, input)) { why(`${archetype} does not fit (needs ${NEEDS[archetype]})`); continue; }
+    if (!COMPOSE.fits(archetype, input)) { why(`${archetype} does not fit (needs ${COMPOSE.NEEDS?.[archetype] || NEEDS[archetype]})`); continue; }
     used.archetypes.add(archetype);
     if (photo) used.photos.add(photoKey(photo.src));
     dir.photos.forEach(p => used.photos.add(photoKey(p.src)));
@@ -891,6 +908,8 @@ async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = 
     d.archetypeName = COMPOSE.BY_ID[d.archetype]?.name || d.archetype;
     d.storyText = read.stories.find(s => s.id === d.story)?.text || '';
     d.candidates = scenesFor(d, read, assets, perDesign);
+    // The composer input, so the page can rebuild this design at another size.
+    d.input = inputsFor(d, read, assets);
     d.critique = mergeCritiques(d.critique, d.candidates[0] ? codeCritique(d.candidates[0], d, read) : null);
     // Swap photo: every ES photo of this design's person (or team), with its cut-out when one was made.
     const owner = d.photo?.person || d.person || read.teams.find(t => read.stories.find(s => s.id === d.story)?.teams?.includes(t.id))?.name || '';
@@ -926,6 +945,7 @@ function publicDirection(d) {
     cutout: d.cutout || null,
     art: d.art ? { src: d.art.src, ai: Boolean(d.art.ai) } : null,
     candidates: d.candidates,
+    input: d.input || null,
     critique: d.critique || { strengths: [], improvements: [], nextTime: '' },
   };
 }
@@ -949,7 +969,7 @@ function defaultNote(d, read) {
     case 'duotone-hero': return `${who || 'The photo'} in two team colours, with the headline knocked out low.`;
     case 'collage-strip': return `${who}'s name huge behind the cut-out, a strip of moments, the headline in a colour band.`;
     case 'typographic': return 'No photo needed: the headline is the image, one word in the accent colour.';
-    default: return 'Composed from the brief\'s facts.';
+    default: return COMPOSE.BY_ID?.[d.archetype]?.about || 'Composed from the brief\'s facts.';
   }
 }
 

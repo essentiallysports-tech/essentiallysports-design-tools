@@ -56,8 +56,22 @@
       const t = COST.templates;
       return Number((t.base + Math.min(n, 4) * t.perDesign).toFixed(3));
     }
+    const range = estimateRange(n, look);
+    if (range) return range.high;
     const c = COST.creative;
     return Number((c.base + n * (c.director + c.judge + c.assets)).toFixed(3));
+  }
+  // One source of truth for Creative: the assistant engine's costEstimate(n)
+  // (generate-assistant.js mirrors the server's budgetFor: 3 candidates up to 4
+  // designs, 2 above). { low, high, label } or null when it is not loaded.
+  function assistantEngine() {
+    if (root && root.FrameUpAssistant?.costEstimate) return root.FrameUpAssistant;
+    try { return typeof require === 'function' ? require('./generate-assistant.js') : null; } catch (error) { return null; }
+  }
+  function estimateRange(count, look = 'creative') {
+    if (look === 'templates') return null;
+    const engine = assistantEngine();
+    return engine?.costEstimate ? engine.costEstimate(Math.max(1, Math.min(8, Number(count) || 4))) : null;
   }
 
   // "now", "12m", "3h", "2d" (a trend's freshness, a recent brief's age).
@@ -181,7 +195,7 @@
 
   const designIdFor = (runId, dirId) => `${String(runId || 'run').replace(/[^\w-]/g, '').slice(0, 40) || 'run'}-${dirId}`;
 
-  const util = Object.freeze({ cleanStory, estimateCost, relTime, History, reframe, sizeKeyOf, critiqueFor, designIdFor, SIZE_KEYS, COST });
+  const util = Object.freeze({ cleanStory, estimateCost, estimateRange, relTime, History, reframe, sizeKeyOf, critiqueFor, designIdFor, SIZE_KEYS, COST });
   if (!root || typeof root.document === 'undefined') return { util };
 
   // ─── Browser: the focus view ────────────────────────────────────────────
@@ -233,7 +247,7 @@
     view.assistantTried = true;
     return new Promise(resolve => {
       const s = doc.createElement('script');
-      s.src = 'generate-assistant.js?v=20261118-gen-ui';
+      s.src = 'generate-assistant.js?v=20261119-gen-v2';
       s.async = true;
       s.onload = () => resolve(Boolean(root.FrameUpAssistant));
       s.onerror = () => { s.remove(); resolve(false); };
@@ -517,7 +531,8 @@
   // when it names one of the composer's built-in fixes.
   function applyButton(d, i) {
     const viaAssistant = typeof root.FrameUpAssistant?.applyImprovement === 'function';
-    const local = i.fix?.op && C()?.FIXES?.includes(i.fix.op);
+    const name = i.fix?.op === 'fix' ? i.fix.name : i.fix?.op;
+    const local = Boolean(name) && C()?.FIXES?.includes(name);
     if (!viaAssistant && !local) return `<button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-fx="ask" data-id="${esc(i.id)}" data-tip="Send this to the AI assistant">${ICON.sparkles}Ask AI</button>`;
     return `<button class="es-btn es-btn--sm" type="button" data-fx="apply" data-id="${esc(i.id)}" data-tip="${viaAssistant ? 'The AI assistant makes this change' : 'Apply the fix'}">${ICON.wand}Apply</button>`;
   }
