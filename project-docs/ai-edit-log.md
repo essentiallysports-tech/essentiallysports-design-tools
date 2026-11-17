@@ -17,6 +17,25 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-18 — Clips: free public clip sources, Reddit and Bluesky (branch feature/clips-public)
+- Status: `[committed on feature/clips-public - not pushed]`
+- New `netlify/functions/_clip-source-public.js`, which follows the shared clip-source contract. It exports a combined `public`
+  source, `sources: [reddit, bluesky]` and `MEDIA_HOSTS`. Its results:
+  - X links found in posts come back as `platform: 'x'` candidates for `clipFromPost`.
+  - Timestamps are verified, then the throwback, quality and sport-relevance filters run.
+  - Duplicates are removed, results are cached for 12 minutes, and requests to each host are spaced out.
+  - After a 403 or 429 the host is skipped for a while. Each call costs $0.
+- **Measured over 48 h:**
+  - Bluesky: NFL 67 MP4s plus 42 X links (20 from @NFL, 4 from team accounts), CFB 8, MLB 2, golf 0.
+  - Reddit: unauthenticated `.json` returns 403, so its yield could not be measured.
+  - All media hosts send CORS `*`, so clips-library does not need a server stream.
+  - Details: `project-docs/clips-public.md`.
+- Env vars (all optional):
+  - Turn sources off: `CLIPS_PUBLIC`, `CLIPS_REDDIT`, `CLIPS_BLUESKY` and `CLIPS_BLUESKY_SEARCH` (`=off`).
+  - Credentials: `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET`; `BLUESKY_HANDLE` and `BLUESKY_APP_PASSWORD`.
+- Tests: `scripts/test-clip-source-public.mjs`. All network calls are mocked.
+- Not wired into `video-ads.js`; clips-library owns that integration.
+
 ### 2026-11-18 — Generate: the creative director first, ES guidelines, Bring it on-brand (branch feature/generate-director)
 - Status: `[committed on feature/generate-director - not pushed]`
 - **Director first.** Generate now asks the director for 2-4 named directions (`POST /api/es-generate {mode:'direct'}`):
