@@ -204,6 +204,16 @@ Every inspector follows this order:
 
 Adjacent levels must differ in at least two of size, weight and colour.
 
+### Editor inspector (right panel, 2026-11-20)
+
+Rules in the "Inspector redesign" section of `studio-inspector.css`; behaviour in `frameup-inspector.js`. Research: `inspector-research.md`.
+
+- Order: pinned Export bar → selection strip ("Whole design · template" or the selected layer) → Template → Content → Text placement → Brand & colours → Photo → ES Image Pool.
+- Block titles: Lucide icon at `--es-icon-sm` + 11px/700 caps eyebrow (0.08em), 44px tall when they fold. The section holding the selected layer gets a blue title and a "Selected" chip.
+- Fields: 12px/500 label 6px above, 36px control (`--es-radius-chip`), 14px value, 12px help; 12px between stacked fields, 16px panel gutter, 20px under an open section. Phones: 44px and 16px text.
+- Toggles: label left, switch right, no box. 2–7 choices: one segmented control (grey track, white pill). Swatches 40px with a 2px blue ring when chosen.
+- Width 370px (1280+) / 320px (below); the left edge resizes 300–440px and is remembered.
+
 ## Usage Rules
 
 - One page title or workspace title per screen; page titles in sentence case.

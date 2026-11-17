@@ -503,32 +503,34 @@ html[data-theme="dark"][data-studio-shell="on"] body .panel .widget-pick-label {
   --fi-w: 370px;              /* inspector column; 320 on narrow laptops */
   --fi-gutter: var(--es-space-4, 16px);
   --fi-ctl-h: 36px;
-  --fi-ctl-radius: 10px;
+  --fi-ctl-radius: var(--es-radius-chip, 10px);
   --fi-ctl-font: 14px;
   --fi-label: 12px;
   --fi-help: 12px;
   --fi-stack: var(--es-space-3, 12px);
   --fi-head-h: 44px;
-  --fi-icon: 16px;
-  --fi-ink: var(--es-ink, #0e1014);
-  --fi-ink-3: var(--es-ink-3, #565c67);
+  --fi-icon: var(--es-icon-sm, 16px);
+  --fi-ink: var(--es-text-strong, #0e1014);
+  --fi-ink-3: var(--es-text-muted, #565c67);
   --fi-bg: var(--es-bg, #ffffff);
   --fi-line: var(--es-line, #dfe2e7);
-  --fi-ink-label: var(--es-ink-2, #3a3f48);
+  --fi-ink-label: var(--es-text-secondary, #3a3f48);
+  --fi-accent-text: var(--es-brand-text, #0a62c7);
+  --fi-accent-line: var(--es-brand-fill, #0a6fde);
   --fi-field-line: var(--es-line-2, #8a919e);
   --fi-well: var(--es-sunk, #f0f2f5);
-  --fi-track: #eceef2;
+  --fi-track: var(--fi-well);
 }
 @media (max-width: 1279px) { :root { --fi-w: 320px; } }
 html[data-theme="dark"] {
-  --fi-ink: #FFFFFF;
-  --fi-ink-3: #A3AEC2;
+  /* Text roles remap themselves (--es-text-*); only the surfaces and the
+     Blue 300 / 400 accents for dark are set here. */
+  --fi-accent-text: var(--es-blue-300, #9DCBFD);
+  --fi-accent-line: var(--es-blue-400, #54A4FB);
   --fi-bg: var(--theme-dark-surface, #1F2126);
   --fi-line: var(--theme-dark-border, #2A2D34);
-  --fi-ink-label: #BFC8D9;
-  --fi-field-line: #4A505C;
-  --fi-well: #2A2D34;
-  --fi-track: #2A2D34;
+  --fi-field-line: var(--es-btn-line-hover, #5C6373);
+  --fi-well: var(--theme-dark-surface-raised, #2A2D34);
 }
 
 /* Icons used by the section titles (Lucide, 24px grid, drawn with currentColor
@@ -659,9 +661,8 @@ html.fi-is-resizing, html.fi-is-resizing * { cursor: col-resize !important; user
 .fi-context[data-kind="button"] .fi-context__icon::before { -webkit-mask-image: var(--fi-i-layout); mask-image: var(--fi-i-layout); }
 .fi-context.is-selection .fi-context__icon {
   background: var(--es-brand-soft);
-  color: var(--es-brand-text, #0a62c7);
+  color: var(--fi-accent-text);
 }
-html[data-theme="dark"] .fi-context.is-selection .fi-context__icon { color: #8FC2FF; }
 .fi-context__copy { display: grid; flex: 1 1 auto; gap: 2px; min-width: 0; }
 .fi-context__title {
   overflow: hidden;
@@ -696,7 +697,7 @@ html[data-theme="dark"] .fi-context.is-selection .fi-context__icon { color: #8FC
 }
 .fi-icon-btn:hover { background: var(--fi-well); color: var(--fi-ink); }
 .fi-icon-btn:focus-visible { outline: var(--es-focus-outline); outline-offset: 1px; }
-.fi-icon-btn svg { width: 16px; height: 16px; }
+.fi-icon-btn svg { width: var(--fi-icon); height: var(--fi-icon); }
 .fi-icon-btn[hidden] { display: none; }
 
 /* ─── Section titles: icon + 11px caps label + chevron ──────────────────── */
@@ -775,9 +776,8 @@ html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-acc
    tint on its body (no tint with reduced motion: the title alone shows it). */
 html[data-studio-shell="on"]:root body .app[data-workspace] > .panel [data-fi-active] > .studio-accordion-trigger,
 html[data-studio-shell="on"]:root body .app[data-workspace] > .panel [data-fi-active] > .fi-section-title {
-  color: var(--es-brand-text, #0a62c7) !important;
+  color: var(--fi-accent-text) !important;
 }
-html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel [data-fi-active] > :is(.studio-accordion-trigger, .fi-section-title) { color: #8FC2FF !important; }
 html[data-studio-shell="on"]:root body .app[data-workspace] > .panel [data-fi-active] > .studio-accordion-trigger::after {
   content: "Selected";
   flex: none;
@@ -996,7 +996,7 @@ html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(#youtub
   flex-wrap: nowrap !important;
   gap: 2px !important;
   padding: 3px !important;
-  border-radius: 12px !important;
+  border-radius: var(--es-radius-control, 12px) !important;
   background: var(--fi-track) !important;
 }
 html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(#youtube-variation-card .select-chip, .stat-template-count .post-type-option) {
@@ -1005,7 +1005,7 @@ html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(#youtub
   min-height: 32px !important;
   padding: 6px 8px !important;
   border: 0 !important;
-  border-radius: 9px !important;
+  border-radius: calc(var(--es-radius-control, 12px) - 3px) !important; /* nested in the 12px track with 3px inset */
   background: transparent !important;
   box-shadow: none !important;
   color: var(--fi-ink-3) !important;
@@ -1020,8 +1020,8 @@ html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(#youtub
   font-weight: 600 !important;
 }
 html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(#youtube-variation-card .select-chip:is([aria-checked="true"], [aria-pressed="true"], .is-selected), .stat-template-count .post-type-option:is([aria-pressed="true"], .is-active)) {
-  background: #3B4049 !important;
-  color: #FFFFFF !important;
+  background: var(--es-btn-line, #3B4049) !important;
+  color: var(--fi-ink) !important;
 }
 html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(#youtube-variation-card .select-chip, .stat-template-count .post-type-option):focus-visible {
   outline: var(--es-focus-outline) !important;
@@ -1053,7 +1053,7 @@ html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .logo-slot 
   border-radius: var(--es-radius-control, 12px) !important;
   background: var(--fi-bg) !important;
 }
-html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel .logo-slot { border-color: #3B4049 !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel .logo-slot { border-color: var(--fi-field-line) !important; }
 
 /* ─── Swatches and logo choices: quiet ring for the chosen one ──────────── */
 html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .palette-row {
@@ -1064,10 +1064,10 @@ html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .palette-ro
   height: 40px !important;
   border-radius: var(--fi-ctl-radius) !important;
 }
-html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .palette-row .swatch .swatch-inner { border-radius: 8px !important; font-size: 12px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .palette-row .swatch .swatch-inner { border-radius: calc(var(--fi-ctl-radius) - 2px) !important; font-size: 12px !important; }
 html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .palette-row .swatch:hover { transform: none !important; box-shadow: 0 0 0 1px var(--fi-ink-3) !important; }
 html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .palette-row .swatch:is(.active, [aria-pressed="true"]) {
-  outline: 2px solid var(--es-brand-fill, #0a6fde) !important;
+  outline: 2px solid var(--fi-accent-line) !important;
   outline-offset: 2px !important;
 }
 html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .palette-row .swatch:focus-visible {
@@ -1083,9 +1083,9 @@ html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .brand-logo
 }
 html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .brand-logo-option img { max-height: 24px !important; }
 html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .brand-logo-option:is([aria-checked="true"], [aria-pressed="true"], .is-active) {
-  border-color: var(--es-brand-fill, #0a6fde) !important;
+  border-color: var(--fi-accent-line) !important;
   background: var(--es-brand-soft) !important;
-  box-shadow: inset 0 0 0 1px var(--es-brand-fill, #0a6fde) !important;
+  box-shadow: inset 0 0 0 1px var(--fi-accent-line) !important;
 }
 
 /* ─── Photo block: title, empty drop area, precise X / Y / Zoom ─────────── */
@@ -1126,7 +1126,7 @@ html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .image-cont
 html.fi-is-scrubbing, html.fi-is-scrubbing * { cursor: ew-resize !important; user-select: none !important; }
 html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .image-asset-tabs {
   padding: 3px !important;
-  border-radius: 12px !important;
+  border-radius: var(--es-radius-control, 12px) !important;
   background: var(--fi-track) !important;
 }
 
@@ -1150,15 +1150,13 @@ html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] >
 html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.widget-text-input:not(.widget-paste-link-input), .stat-template-fields .pill-entry) {
   border-color: var(--fi-field-line) !important;
   background: var(--theme-dark-surface, #1F2126) !important;
-  color: #FFFFFF !important;
+  color: var(--fi-ink) !important;
 }
 html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-accordion-section:not([hidden]) ~ .studio-accordion-section:not([hidden]) {
   border-top-color: var(--theme-dark-border, #2A2D34) !important;
 }
 html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel .image-context-empty { background: rgb(255 255 255 / .03) !important; }
-html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel .brand-logo-option { border-color: #3B4049 !important; }
-html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel .brand-logo-option:is([aria-checked="true"], [aria-pressed="true"], .is-active) { border-color: #54A4FB !important; box-shadow: inset 0 0 0 1px #54A4FB !important; background: rgb(10 125 250 / .17) !important; }
-html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel .palette-row .swatch:is(.active, [aria-pressed="true"]) { outline-color: #54A4FB !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel .brand-logo-option { border-color: var(--fi-field-line) !important; }
 
 /* ─── Phone: the panel is a bottom sheet (index.html keeps its grip, detents
    and tabs). Fields grow to 44px touch targets with 16px text (no iOS zoom). */
