@@ -3,6 +3,44 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-18-director",
+      "date": "2026-11-18",
+      "title": "The creative director, ES guidelines and Bring it on-brand",
+      "commit": "abe1c50",
+      "items": [
+        {
+          "title": "Directions first",
+          "text": "Generate now shows the director's 2–4 named directions: angle, hook, template, why it works, past ES posts behind it and a confidence score.",
+          "page": "generate.html",
+          "target": "#gen-submit"
+        },
+        {
+          "title": "Pick, edit and steer",
+          "text": "Pick one or several, edit an angle or hook, More or Less like this, or Skip · Auto. Set the tone and audience once.",
+          "page": "generate.html",
+          "target": "#gen-steer"
+        },
+        {
+          "title": "The director's note",
+          "text": "Every design says what works and one fix you can apply in a click. Results are grouped by direction.",
+          "page": "generate.html",
+          "target": "#gen-grid"
+        },
+        {
+          "title": "Bring it on-brand",
+          "text": "Drop or paste any design, even a carousel from another AI tool. The director lists what breaks the ES guidelines and remakes it with ES templates.",
+          "page": "generate.html",
+          "target": "#gen-onbrand-open"
+        },
+        {
+          "title": "On-brand, checked",
+          "text": "Every generated design passes an ES guideline check (fonts, palette, logo, safe area, copy) and shows On-brand or the fixes it made.",
+          "page": "generate.html",
+          "target": "#gen-grid"
+        }
+      ]
+    },
+    {
       "id": "2026-11-17-video-ads-v2",
       "date": "2026-11-17",
       "title": "Video Ads v2, Trends hub, Ask AI and tours",
