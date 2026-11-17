@@ -40,6 +40,7 @@ let teamSpend = { status: 200, body: [{ total_usd: 0 }] };
 let usageInsert = { status: 201, body: {} };
 let gatewayReply = null; // function(body) -> { status, body }
 let summary = { total_usd: 0, users: [] };
+let adminFlag = false;
 const claimed = new Set();
 const reply = (status, body) => ({ ok: status < 400, status, json: async () => body, text: async () => JSON.stringify(body) });
 globalThis.fetch = async (url, options = {}) => {
@@ -56,6 +57,7 @@ globalThis.fetch = async (url, options = {}) => {
   }
   if (href.endsWith('/rpc/frameup_my_ai_calls_last_hour')) return reply(200, 0);
   if (href.endsWith('/rpc/frameup_ai_budget_summary')) return reply(200, summary);
+  if (href.endsWith('/rpc/is_es_designer_admin')) return reply(200, adminFlag);
   if (href.endsWith('/rpc/frameup_ai_alert_claim')) {
     const fresh = !claimed.has(body.p_key);
     claimed.add(body.p_key);
@@ -489,6 +491,7 @@ for (const [name, handler, body, feature] of cases) {
 
 // ── 11. Reels transcription logs its OpenAI usage ──────────────────────────
 {
+  process.env.REELS_TRANSCRIBE = 'openai';
   reset();
   const res = await call(handlers.reels, { action: 'transcribe', fileName: 'a.wav', mimeType: 'audio/wav', data: Buffer.from('fake-audio').toString('base64') });
   assert.equal(res.status, 200, 'transcribed');
@@ -506,6 +509,7 @@ for (const [name, handler, body, feature] of cases) {
   assert.equal(capped.body.reason, 'weekly-limit');
   assert.equal(fetched(h => h.includes('openai.com')).length, 0);
   mySpend = { status: 200, body: [{ total_usd: 0 }] };
+  delete process.env.REELS_TRANSCRIBE;
 }
 
 // ── 12. /api/ai-status, dashboard summary, migration ───────────────────────
@@ -570,6 +574,150 @@ for (const [name, handler, body, feature] of cases) {
   assert.match(sql, /alter table public\.frameup_ai_alerts enable row level security;/);
   assert.match(sql, /Undo:/);
   assert.match(sql, /create table if not exists/);
+}
+
+// ── 13. Everything on the Gateway key: transcription, backups, diagnostics ──
+{
+  // The order: Groq (free) -> Gateway -> direct OpenAI; REELS_TRANSCRIBE moves one first.
+  const names = env => gw.transcriptionPlan(env).map(step => step.provider);
+  assert.deepEqual(names({}), ['groq', 'gateway', 'openai'], 'default order');
+  assert.deepEqual(names({ REELS_TRANSCRIBE: 'gateway' }), ['gateway', 'groq', 'openai']);
+  assert.deepEqual(names({ REELS_TRANSCRIBE: 'OpenAI' }), ['openai', 'groq', 'gateway']);
+  assert.deepEqual(names({ REELS_TRANSCRIBE: 'nonsense' }), ['groq', 'gateway', 'openai'], 'an unknown value keeps the default');
+  const plan = gw.transcriptionPlan({ GROQ_API_KEY: 'g', AI_GATEWAY_API_KEY: 'k' });
+  assert.deepEqual(plan.map(step => step.keyPresent), [true, true, false]);
+  assert.equal(plan[1].model, 'elevenlabs/scribe-v2', 'Gateway default model');
+  assert.equal(plan[0].perMinuteUsd, 0, 'Groq is free');
+  assert.ok(Math.abs(plan[1].perMinuteUsd - 0.0036667) < 1e-9, 'Scribe v2: $0.0000611/s');
+  assert.equal(gw.transcriptionPlan({ AI_GATEWAY_API_KEY: 'k', GENERATE_AI: 'rules' })[1].keyPresent, false, 'GENERATE_AI=rules keeps the Gateway off');
+  assert.ok(gw.AUDIO_PRICES_PER_MIN[gw.TRANSCRIPTION_MODEL] > 0, 'the default transcription model is priced');
+
+  // aiTranscribe: the documented REST shape, word timings, cost.
+  const WORDS = [
+    { text: 'Big', type: 'word', start: 0.0, end: 0.3, speaker_id: 's0' }, { text: ' ', type: 'spacing', start: 0.3, end: 0.35 },
+    { text: 'shot', type: 'word', start: 0.35, end: 0.7 }, { text: '[cheering]', type: 'audio_event', start: 0.7, end: 1.5 },
+    { text: 'from', type: 'word', start: 2.6, end: 2.8 }, { text: 'deep.', type: 'word', start: 2.8, end: 3.2 },
+    { text: 'Again', type: 'word', start: 3.4, end: 3.8 },
+  ];
+  gatewayReply = (body, href) => (href.endsWith('/v4/ai/transcription-model')
+    ? { body: { text: 'Big shot from deep. Again', segments: [], language: 'en', durationInSeconds: 60, warnings: [], providerMetadata: { elevenlabs: { words: WORDS } } } }
+    : { status: 500, body: { error: { message: 'down' } } });
+  reset();
+  const audio = Buffer.from('fake-wav').toString('base64');
+  const out = await gw.aiTranscribe({ audio, mediaType: 'audio/wav', track: { ...track, feature: 'reels-transcription' } });
+  const [request] = fetched(h => h.endsWith('/v4/ai/transcription-model'));
+  assert.equal(request.href, 'https://ai-gateway.vercel.sh/v4/ai/transcription-model');
+  assert.equal(request.headers.Authorization, 'Bearer gw-test');
+  assert.equal(request.headers['ai-model-id'], 'elevenlabs/scribe-v2');
+  assert.equal(request.headers['ai-transcription-model-specification-version'], '4');
+  assert.equal(request.headers['ai-gateway-protocol-version'], '0.0.1');
+  assert.deepEqual(request.body, { audio, mediaType: 'audio/wav' }, 'base64 audio in JSON, no provider options for Scribe');
+  assert.deepEqual(out.words.map(w => w.word), ['Big', 'shot', 'from', 'deep.', 'Again'], 'words only (no spacing or audio events)');
+  assert.equal(out.durationInSeconds, 60);
+  const [row] = fetched(h => h.includes('/frameup_ai_usage')).map(c => c.body);
+  assert.equal(row.model, 'elevenlabs/scribe-v2');
+  assert.equal(row.feature, 'reels-transcription');
+  assert.ok(Math.abs(row.cost_usd - 0.003667) < 1e-6, 'a minute of Scribe v2 costs about $0.0037');
+  reset();
+  gatewayReply = () => ({ body: { text: 'Big shot', segments: [{ text: 'Big', startSecond: 0, endSecond: 0.3 }, { text: 'shot', startSecond: 0.35, endSecond: 0.7 }] } });
+  const whisper = await gw.aiTranscribe({ audio, model: 'openai/whisper-1', track });
+  assert.deepEqual(fetched(h => h.endsWith('/transcription-model'))[0].body.providerOptions, { openai: { timestampGranularities: ['word', 'segment'] } }, 'whisper-1 asks for word timestamps');
+  assert.deepEqual(whisper.words.map(w => w.word), ['Big', 'shot'], 'one-word segments become words');
+  assert.ok(Math.abs(fetched(h => h.includes('/frameup_ai_usage'))[0].body.cost_usd - 0.7 / 60 * 0.006) < 1e-6, 'no duration: cost from the last word');
+  process.env.AI_DISABLE = 'reels-transcription';
+  reset();
+  await assert.rejects(gw.aiTranscribe({ audio, track: { ...track, feature: 'reels-transcription' } }), error => error.code === 'feature-off');
+  assert.equal(calls.length, 0, 'switched off: no fetch');
+  delete process.env.AI_DISABLE;
+
+  // Reels handler without Groq: Gateway first, captions from word timings, gate + log.
+  gatewayReply = (body, href) => ({ body: { text: 'Big shot from deep. Again', language: 'en', durationInSeconds: 30, providerMetadata: { elevenlabs: { words: WORDS } } } });
+  reset();
+  const reel = await call(handlers.reels, { action: 'transcribe', fileName: 'a.wav', mimeType: 'audio/wav', data: audio });
+  assert.equal(reel.status, 200);
+  assert.equal(reel.body.provider, 'AI Gateway elevenlabs/scribe-v2');
+  assert.deepEqual(reel.body.segments.map(seg => seg.text), ['Big shot', 'from deep.', 'Again'], 'a new caption after a pause or a sentence end');
+  assert.deepEqual(reel.body.segments[0].words.map(w => [w.word, w.start, w.end]), [['Big', 0, 0.3], ['shot', 0.35, 0.7]], 'word timings kept');
+  assert.equal(reel.body.segments[1].start, 2.6);
+  assert.equal(fetched(h => h.includes('/rpc/frameup_my_ai_spend')).length, 1, 'the billed path passes the weekly caps once');
+  assert.equal(fetched(h => h.includes('openai.com')).length, 0, 'direct OpenAI not called');
+  assert.equal(fetched(h => h.includes('/frameup_ai_usage')).length, 1, 'one usage row');
+  // Gateway down: falls back to direct OpenAI.
+  gatewayReply = () => ({ status: 500, body: { error: { message: 'down' } } });
+  reset();
+  const fell = await call(handlers.reels, { action: 'transcribe', fileName: 'a.wav', mimeType: 'audio/wav', data: audio });
+  assert.equal(fell.status, 200);
+  assert.equal(fell.body.provider, 'OpenAI gpt-4o-transcribe', 'direct OpenAI is the last resort');
+  assert.deepEqual(fetched(h => h.includes('/frameup_ai_usage')).map(c => [c.body.model, c.body.ok]), [['elevenlabs/scribe-v2', false], ['openai/gpt-4o-transcribe', true]]);
+
+  // Backup text AI on the Gateway key when Groq isn't configured.
+  const gen = require(path.join(fnDir, 'es-generate.js'))._test;
+  const provider = gen.pickProvider();
+  assert.equal(provider.name, 'gateway');
+  assert.deepEqual(provider.backup, { name: 'gateway-backup', model: 'openai/gpt-oss-120b' }, 'no GROQ_API_KEY: a Gateway backup');
+  provider.track = { feature: 'generate', email: 'designer@essentiallysports.com', token: 'tok' };
+  provider.backup.track = provider.track;
+  gatewayReply = (body, href) => (href.endsWith('/messages')
+    ? { status: 500, body: { error: { message: 'overloaded' } } }
+    : { body: { choices: [{ message: { content: '{"designs": []}' }, finish_reason: 'stop' }], usage: { prompt_tokens: 1000, completion_tokens: 200 } } });
+  reset();
+  const written = await gen.chat(provider, [{ role: 'user', content: 'rules\n<<<REQUEST>>>\nBrief: x' }]);
+  assert.equal(written, '{"designs": []}', 'the backup wrote the reply');
+  const backupCall = fetched(h => h.endsWith('/chat/completions'))[0];
+  assert.equal(backupCall.body.model, 'openai/gpt-oss-120b');
+  assert.ok(!JSON.stringify(backupCall.body.messages).includes('<<<REQUEST>>>'), 'the cache marker is stripped');
+  const backupRow = fetched(h => h.includes('/frameup_ai_usage')).map(c => c.body).find(r => r.feature === 'generate-backup');
+  assert.ok(backupRow && backupRow.cost_usd > 0, 'logged as generate-backup with its real cost');
+  // Budget gone: no pointless second Gateway call.
+  const broke = gen.pickProvider();
+  broke.track = provider.track;
+  gatewayReply = () => ({ status: 402, body: { error: { message: 'Spending limit reached' } } });
+  reset();
+  await assert.rejects(gen.chat(broke, [{ role: 'user', content: 'x' }]));
+  assert.equal(aiCalls(), 1, 'budget error: the Gateway backup is skipped');
+
+  const trend = require(path.join(fnDir, 'trend-design.js'))._test;
+  trend.reset();
+  gatewayReply = body => (body.model === 'openai/gpt-oss-20b'
+    ? { status: 500, body: { error: { message: 'busy' } } }
+    : { body: { choices: [{ message: { content: '{"titles": ["Clark Breaks The Record", "Caitlin Clark Does It Again"]}' }, finish_reason: 'stop' }], usage: { prompt_tokens: 300, completion_tokens: 60 } } });
+  reset();
+  const titles = await trend.aiTitles({ title: 'Caitlin Clark breaks the record', related: [] }, { feature: 'trend-headlines', email: 'designer@essentiallysports.com', token: 'tok' });
+  assert.deepEqual(titles, ['Clark Breaks The Record', 'Caitlin Clark Does It Again'], 'Trends falls back to the Gateway backup model');
+  assert.deepEqual(fetched(h => h.endsWith('/chat/completions')).map(c => c.body.model), ['openai/gpt-oss-20b', 'openai/gpt-oss-120b']);
+  assert.ok(fetched(h => h.includes('/frameup_ai_usage')).some(c => c.body.feature === 'trend-headlines-backup' && c.body.ok));
+  trend.reset();
+  gatewayReply = () => ({ status: 402, body: { error: { message: 'budget exhausted' } } });
+  reset();
+  await assert.rejects(trend.aiTitles({ title: 'Another story here', related: [] }, { feature: 'trend-headlines', email: 'designer@essentiallysports.com', token: 'tok' }));
+  assert.equal(aiCalls(), 1, 'Trends: no backup try when the budget is gone');
+
+  // Admin diagnostics: admins only, booleans only.
+  const status = require(path.join(fnDir, 'ai-status.js'));
+  const diag = () => status.handler({ httpMethod: 'GET', headers: { authorization: 'Bearer tok' }, queryStringParameters: { diag: '1' } });
+  adminFlag = false;
+  assert.equal((await diag()).statusCode, 403, 'not an admin');
+  assert.equal((await status.handler({ httpMethod: 'GET', headers: {}, queryStringParameters: { diag: '1' } })).statusCode, 401, 'signed out');
+  adminFlag = true;
+  process.env.GROQ_API_KEY = 'gsk-secret-groq';
+  process.env.X_BEARER_TOKEN = 'x-secret-token';
+  const res = await diag();
+  assert.equal(res.statusCode, 200);
+  const raw = res.body;
+  for (const secret of ['gw-test', 'gsk-secret-groq', 'sk-test-openai', 'x-secret-token']) assert.ok(!raw.includes(secret), `never leaks ${secret}`);
+  const jobs = JSON.parse(raw).diagnostics.jobs;
+  for (const job of ['text', 'director', 'search', 'transcription', 'tts', 'image']) assert.ok(jobs[job], `diagnostics cover ${job}`);
+  assert.deepEqual([jobs.text.provider, jobs.text.model, jobs.text.keyPresent], ['gateway', 'anthropic/claude-haiku-5.5', true]);
+  assert.deepEqual(jobs.text.backup, { provider: 'groq', model: 'openai/gpt-oss-120b', keyPresent: true });
+  assert.equal(jobs.director.model, 'anthropic/claude-sonnet-5.5');
+  assert.equal(jobs.search.xApiKeyPresent, true);
+  assert.deepEqual(jobs.transcription.willUse, { provider: 'groq', model: 'whisper-large-v3-turbo' });
+  assert.deepEqual(jobs.transcription.order.map(s => [s.provider, s.keyPresent]), [['groq', true], ['gateway', true], ['openai', true]]);
+  assert.equal(jobs.image.model, 'bfl/flux-3-image-klein');
+  assert.equal(typeof jobs.tts.keyPresent, 'boolean');
+  delete process.env.GROQ_API_KEY;
+  delete process.env.X_BEARER_TOKEN;
+  adminFlag = false;
 }
 
 console.warn = realWarn;

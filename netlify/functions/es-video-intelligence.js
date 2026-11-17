@@ -1,5 +1,5 @@
 const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
-const { aiSpendGate, audioCostUsd, featureDisabled, featureOffMessage, logUsage } = require('./_ai-gateway.js');
+const { aiSpendGate, aiTranscribe, audioCostUsd, featureDisabled, featureOffMessage, isBudgetError, logUsage, transcriptionPlan } = require('./_ai-gateway.js');
 const TRANSCRIPTION_FEATURE = 'reels-transcription';
 
 const ES_MCP_ENDPOINT = process.env.ES_MCP_ENDPOINT || 'https://mcp.essentiallysports.com/mcp';
@@ -46,6 +46,8 @@ function getMcpConfigState() {
     groqFallbackConfigured: Boolean(GROQ_API_KEY),
     groqTranscriptionModel: GROQ_TRANSCRIPTION_MODEL,
     openAiFallbackConfigured: Boolean(OPENAI_API_KEY),
+    // Speech-to-text order (REELS_TRANSCRIBE): provider, model, key present (boolean).
+    transcriptionOrder: transcriptionPlan().map(({ provider, model, keyPresent }) => ({ provider, model, keyPresent })),
   };
 }
 
@@ -542,6 +544,47 @@ async function transcribeWithGroq(payload) {
   });
 }
 
+// Word timings -> caption segments: a new caption after 8 words, a pause over
+// 0.8 s, or a sentence end.
+function captionsFromWords(words) {
+  const segments = [];
+  let current = [];
+  const flush = () => {
+    if (!current.length) return;
+    segments.push({ start: current[0].start, end: current[current.length - 1].end, text: current.map(word => word.word).join(' '), confidence: null, words: current });
+    current = [];
+  };
+  words.forEach(word => {
+    const previous = current[current.length - 1];
+    if (previous && (current.length >= 8 || word.start - previous.end > 0.8 || /[.!?]$/.test(previous.word))) flush();
+    current.push({ word: word.word, start: word.start, end: word.end, confidence: null });
+  });
+  flush();
+  return segments;
+}
+
+// Vercel AI Gateway speech to text (default elevenlabs/scribe-v2, word timings).
+async function transcribeWithGateway(payload, track, model) {
+  try {
+    const result = await aiTranscribe({ audio: payload.data, mediaType: payload.mimeType || 'application/octet-stream', model, track });
+    const segments = result.words.length
+      ? captionsFromWords(result.words)
+      : (result.segments.length
+        ? normalizeSegmentsFromProvider(result.segments.map(seg => ({ start: seg.startSecond, end: seg.endSecond, text: seg.text })))
+        : chunkPlainTranscript(result.text));
+    return json(200, {
+      provider: `AI Gateway ${result.model}`,
+      language: result.language || '',
+      text: result.text || segments.map(segment => segment.text).join(' '),
+      segments,
+    });
+  } catch (error) {
+    if (error.code === 'feature-off') return json(503, { error: error.message, reason: 'feature-off', provider: 'gateway' });
+    if (isBudgetError(error)) return json(503, { error: "This week's AI budget is used up, so cloud captions are paused.", reason: 'budget', provider: 'gateway' });
+    return json(error.status === 413 ? 413 : 502, { error: 'Cloud speech recognition failed. Try again in a moment.', provider: 'gateway' });
+  }
+}
+
 function chunkPlainTranscript(text) {
   const words = String(text || '').trim().split(/\s+/).filter(Boolean);
   if (!words.length) return [];
@@ -634,13 +677,26 @@ async function transcribeVideo(payload, { email = '', token = '' } = {}) {
     });
   }
 
-  if (GROQ_API_KEY) return transcribeWithGroq(payload);
-  if (OPENAI_API_KEY) {
-    // OpenAI is billed, so it goes through the same weekly caps as every AI feature.
-    const gate = await aiSpendGate(token, { feature: TRANSCRIPTION_FEATURE });
-    if (gate) return json(gate.status, { error: gate.error, reason: gate.reason, provider: 'limit' });
-    return transcribeWithOpenAI(payload, { feature: TRANSCRIPTION_FEATURE, email, token });
+  // Groq (free) -> AI Gateway -> direct OpenAI, or REELS_TRANSCRIBE first.
+  // A failed provider falls through to the next; billed ones pass the weekly
+  // caps once (aiSpendGate) and log their usage.
+  const track = { feature: TRANSCRIPTION_FEATURE, email, token };
+  let gated = false;
+  let last = null;
+  for (const step of transcriptionPlan().filter(item => item.keyPresent)) {
+    if (step.billed && !gated) {
+      const gate = await aiSpendGate(token, { feature: TRANSCRIPTION_FEATURE });
+      if (gate) return json(gate.status, { error: gate.error, reason: gate.reason, provider: 'limit' });
+      gated = true;
+    }
+    const result = step.provider === 'groq' ? await transcribeWithGroq(payload)
+      : step.provider === 'gateway' ? await transcribeWithGateway(payload, track, step.model)
+        : await transcribeWithOpenAI(payload, track);
+    if (result && result.statusCode < 300) return result;
+    if (result) last = result;
+    if (result?.statusCode === 413) return result;
   }
+  if (last) return last;
 
   return json(501, {
     error: mcpResult?.error || 'Speech recognition is not configured. Add an ES MCP transcription tool, GROQ_API_KEY, or OPENAI_API_KEY.',

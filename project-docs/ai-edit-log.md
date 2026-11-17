@@ -52,6 +52,14 @@ and what's still uncommitted.
   It ends with an "Undo:" block.
 - **New env vars:** `AI_TEAM_WEEKLY_LIMIT_USD`, `AI_FAIL_CLOSED`, `AI_DISABLE`, `AI_ECONOMY`, `SLACK_AI_ALERTS_WEBHOOK_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET`. Set them in the Enterprise Vercel project.
 - **Tests:** new `scripts/test-ai-guardrails.mjs` (all network mocked; no Slack message sent). The full suite shows only the 7 known baseline failures.
+- **Follow-up (same branch): every AI call on the Gateway key.**
+  - **Reels captions:** they can transcribe through the Gateway: `POST /v4/ai/transcription-model`, default `elevenlabs/scribe-v2` at $0.0037/min, with word timings.
+    - The order is Groq → Gateway → OpenAI, and `REELS_TRANSCRIBE` moves one provider first.
+    - The billed steps are gated and logged.
+  - **Backup without Groq:** the Generate writer and Trends fall back to `AI_BACKUP_MODEL` (`openai/gpt-oss-120b`) on the Gateway.
+  - **Admin diagnostics:** `GET /api/ai-status?diag=1` lists each job's provider, model and whether its key is present (booleans only).
+  - **New env vars:** `AI_BACKUP_MODEL`, `AI_TRANSCRIPTION_MODEL`, `REELS_TRANSCRIBE`.
+  - **Docs:** `.env.example` and the strategy doc are updated.
 - **Browser:** the Dashboard AI panel was checked through a temporary local harness (stubbed `ESAuth` / `ESDashboardData`, since deleted) at 1280 and 375, light and dark. It covered no-cap, economy, empty and no-settings states, with no horizontal scroll and no console errors.
 
 

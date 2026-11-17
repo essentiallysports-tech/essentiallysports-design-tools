@@ -37,7 +37,13 @@ const MODELS = {
   best: process.env.AI_BEST_MODEL || 'anthropic/claude-sonnet-5.5',
   // Scene/background images, only on an explicit click. Cheapest good model.
   image: process.env.AI_IMAGE_MODEL || 'bfl/flux-3-image-klein',
+  // Backup text model on the Gateway, used when Groq isn't configured (Generate
+  // writer, Trends): an open-weights model from a different family than Claude.
+  backup: process.env.AI_BACKUP_MODEL || 'openai/gpt-oss-120b',
 };
+// Speech to text on the Gateway (Reels captions). ElevenLabs Scribe v2 returns
+// word-level timestamps by default, which the caption editor needs.
+const TRANSCRIPTION_MODEL = process.env.AI_TRANSCRIPTION_MODEL || 'elevenlabs/scribe-v2';
 // USD per generated image (Gateway list prices, 2026-11, ~1MP). Unknown models count at 0.07.
 const IMAGE_PRICES = {
   'bfl/flux-3-image-klein': 0.011,
@@ -57,15 +63,28 @@ const IMAGE_PRICES = {
 // Cache writes are priced at the 5-minute TTL (the only TTL FrameUp sends).
 const PRICES = {
   'openai/gpt-oss-20b': { input: 0.03, output: 0.14 },
+  'openai/gpt-oss-120b': { input: 0.10, output: 0.50 },
   'openai/gpt-6-luna': { input: 0.10, output: 0.50 },
   'anthropic/claude-haiku-5.5': { input: 0.10, output: 0.50, cacheRead: 0.01, cacheWrite: 0.125, longContext: { above: 100000, input: 0.50, output: 2.50, cacheRead: 0.05, cacheWrite: 0.625 } },
   'anthropic/claude-sonnet-5.5': { input: 2, output: 10, cacheRead: 0.10, cacheWrite: 2.5 },
   'anthropic/claude-opus-5.5': { input: 4, output: 20, cacheRead: 0.20, cacheWrite: 5 },
 };
-// USD per audio minute for speech-to-text billed outside the Gateway (Reels
-// transcription through OPENAI_API_KEY; OpenAI list prices, 2026-11). Groq
-// Whisper is on its free tier and is not logged.
+// USD per audio minute for speech to text. Gateway ids are from the live model
+// list (ai-gateway.vercel.sh/v1/models, 2026-11-18: transcription_duration_cost_per_second
+// x 60). Token-billed models (gpt-4o-*, gemini) are estimates from typical audio
+// token rates. Bare ids are direct OpenAI (OPENAI_API_KEY). Groq Whisper is free.
 const AUDIO_PRICES_PER_MIN = {
+  'elevenlabs/scribe-v2': 0.0036667,
+  'openai/whisper-1': 0.006,
+  'openai/gpt-transcribe': 0.0045,
+  'openai/gpt-4o-transcribe': 0.006,
+  'openai/gpt-4o-mini-transcribe': 0.003,
+  'google/gemini-3.5-transcribe': 0.004,
+  'mistral/voxtral-mini-transcribe-3': 0.0035,
+  'mistral/voxtral-small-transcribe-3': 0.004,
+  'microsoft/mai-transcribe-2': 0.0016668,
+  'spacexai/grok-stt': 0.00168,
+  'fish-audio/transcribe-1': 0.006,
   'gpt-4o-transcribe': 0.006,
   'gpt-4o-mini-transcribe': 0.003,
   'whisper-1': 0.006,
@@ -437,7 +456,7 @@ async function aiText({ tier = 'light', system, messages, json = false, effort =
   if (!process.env.AI_GATEWAY_API_KEY) throw new Error('AI_GATEWAY_API_KEY is not set.');
   if (trackDisabled(track)) throw featureOffError(track.feature || track.task);
   const model = modelFor(tier, 'light');
-  if (model === MODELS.image) throw new Error('Use aiImage for image models.');
+  if (tier === 'image' || model === MODELS.image) throw new Error('Use aiImage for image models.');
   const started = Date.now();
   try {
     const call = model.startsWith('anthropic/') ? anthropicCall : openaiCall;
@@ -531,6 +550,84 @@ async function aiWebResearch({ tier = 'main', system, prompt, maxUses = 4, maxTo
   }
 }
 
+// Speech to text through the Gateway's transcription endpoint
+// (vercel.com/docs/ai-gateway/modalities/speech-to-text, REST):
+//   POST https://ai-gateway.vercel.sh/v4/ai/transcription-model
+//   headers: Authorization: Bearer <key>, ai-gateway-protocol-version: 0.0.1,
+//            ai-transcription-model-specification-version: 4, ai-model-id: <model>
+//   body:    { audio: <base64>, mediaType, providerOptions? }
+//   reply:   { text, segments: [{ text, startSecond, endSecond }], language,
+//              durationInSeconds, warnings, providerMetadata }
+// Word timing: ElevenLabs puts it in providerMetadata.elevenlabs.words
+// ({ text, type, start, end }); whisper-1 gives it with
+// providerOptions.openai.timestampGranularities ['word'].
+// Returns { text, segments, words: [{ word, start, end }], language,
+// durationInSeconds, model, cost }. Logged with the audio cost. Throws on failure.
+const GATEWAY_TRANSCRIBE_URL = 'https://ai-gateway.vercel.sh/v4/ai/transcription-model';
+function transcriptionWords(data) {
+  const meta = data?.providerMetadata || {};
+  const listed = [meta.elevenlabs?.words, meta.openai?.words, meta.azure?.words].find(list => Array.isArray(list) && list.length) || [];
+  const words = listed
+    .filter(item => !item.type || item.type === 'word')
+    .map(item => ({ word: String(item.text ?? item.word ?? '').trim(), start: Number(item.start ?? item.startSecond) || 0, end: Number(item.end ?? item.endSecond) || 0 }))
+    .filter(item => item.word);
+  if (words.length) return words;
+  // whisper-1 with word granularity comes back as one segment per word.
+  const segments = Array.isArray(data?.segments) ? data.segments : [];
+  if (segments.length && segments.every(seg => String(seg.text || '').trim().split(/\s+/).length <= 1)) {
+    return segments.map(seg => ({ word: String(seg.text || '').trim(), start: Number(seg.startSecond) || 0, end: Number(seg.endSecond) || 0 })).filter(item => item.word);
+  }
+  return [];
+}
+async function aiTranscribe({ audio, mediaType = 'audio/wav', model = TRANSCRIPTION_MODEL, timeoutMs = 60000, track } = {}) {
+  if (!process.env.AI_GATEWAY_API_KEY) throw new Error('AI_GATEWAY_API_KEY is not set.');
+  if (trackDisabled(track)) throw featureOffError(track.feature || track.task);
+  const started = Date.now();
+  const providerOptions = /^openai\/whisper/.test(model) ? { openai: { timestampGranularities: ['word', 'segment'] } } : undefined;
+  try {
+    const response = await fetch(GATEWAY_TRANSCRIBE_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.AI_GATEWAY_API_KEY}`,
+        'ai-gateway-protocol-version': '0.0.1',
+        'ai-transcription-model-specification-version': '4',
+        'ai-model-id': model,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ audio, mediaType, ...(providerOptions ? { providerOptions } : {}) }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) throw Object.assign(new Error(data?.error?.message || data?.message || `Transcription failed: ${response.status}`), { status: response.status });
+    const words = transcriptionWords(data);
+    const segments = Array.isArray(data?.segments) ? data.segments : [];
+    const lastEnd = Math.max(0, ...words.map(word => word.end), ...segments.map(seg => Number(seg.endSecond) || 0));
+    const seconds = Number(data?.durationInSeconds) > 0 ? Number(data.durationInSeconds) : lastEnd;
+    const cost = audioCostUsd(model, seconds);
+    await logUsage(track, { model, ok: true, input_tokens: 0, output_tokens: 0, cost_usd: Number(cost.toFixed(6)), duration_ms: Date.now() - started });
+    return { text: String(data?.text || ''), segments, words, language: data?.language || '', durationInSeconds: seconds, model, cost };
+  } catch (error) {
+    await logUsage(track, { model, ok: false, input_tokens: 0, output_tokens: 0, cost_usd: 0, duration_ms: Date.now() - started, error: String(error.message || error).slice(0, 200) });
+    throw error;
+  }
+}
+
+// Which speech-to-text providers Reels captions try, in order. Groq first
+// (free), then the Gateway, then direct OpenAI. REELS_TRANSCRIBE=gateway|groq|openai
+// moves one provider to the front; the others stay as fallbacks. Each step says
+// whether its key is present (booleans only) and whether it is billed.
+const TRANSCRIBE_PROVIDERS = ['groq', 'gateway', 'openai'];
+function transcriptionPlan(env = process.env) {
+  const steps = {
+    groq: { provider: 'groq', model: env.GROQ_TRANSCRIPTION_MODEL || 'whisper-large-v3-turbo', keyPresent: Boolean(env.GROQ_API_KEY), billed: false },
+    gateway: { provider: 'gateway', model: env.AI_TRANSCRIPTION_MODEL || TRANSCRIPTION_MODEL, keyPresent: Boolean(env.AI_GATEWAY_API_KEY) && String(env.GENERATE_AI || '').toLowerCase() !== 'rules', billed: true },
+    openai: { provider: 'openai', model: env.OPENAI_TRANSCRIPTION_MODEL || 'gpt-4o-transcribe', keyPresent: Boolean(env.OPENAI_API_KEY), billed: true },
+  };
+  const prefer = String(env.REELS_TRANSCRIBE || '').trim().toLowerCase();
+  const order = TRANSCRIBE_PROVIDERS.includes(prefer) ? [prefer, ...TRANSCRIBE_PROVIDERS.filter(name => name !== prefer)] : TRANSCRIBE_PROVIDERS;
+  return order.map(name => ({ ...steps[name], perMinuteUsd: steps[name].billed ? (AUDIO_PRICES_PER_MIN[steps[name].model] ?? 0.006) : 0 }));
+}
+
 // One generated image (scenes and backgrounds only; callers write the prompt).
 // Image-only models use /images/generations; Gemini image models answer
 // through /chat/completions with modalities. Returns { dataUrl, model, cost }.
@@ -576,5 +673,6 @@ module.exports = {
   gatewayConfigured, aiText, aiImage, aiWebResearch, costUsd, audioCostUsd, isBudgetError, logBackupCall, logUsage,
   userOverHourlyLimit, userOverWeeklyLimit, teamOverWeeklyLimit, weeklyLimitMessage, teamLimitMessage, weekStartUtc,
   aiSpendGate, aiGuardConfig, featureDisabled, trackDisabled, featureOffMessage, featureOffError, modelFor, economyMode, failClosed, teamWeeklyLimitUsd, warnEvent,
+  aiTranscribe, transcriptionPlan, transcriptionWords, TRANSCRIPTION_MODEL,
   MODELS, PRICES, IMAGE_PRICES, AUDIO_PRICES_PER_MIN, ECONOMY_ROUTES, CACHE_MIN_CHARS, USER_WEEKLY_LIMIT_USD,
 };

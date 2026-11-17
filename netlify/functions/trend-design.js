@@ -29,7 +29,7 @@
 // every user of the instance; hourly and weekly limits apply.
 
 const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
-const { gatewayConfigured, aiText, logBackupCall, userOverHourlyLimit, aiSpendGate, featureDisabled } = require('./_ai-gateway.js');
+const { gatewayConfigured, aiText, isBudgetError, logBackupCall, userOverHourlyLimit, aiSpendGate, featureDisabled } = require('./_ai-gateway.js');
 let TEAMS = null;
 try { TEAMS = require('../../video-ads-teams.js'); } catch (error) { /* team logos are optional */ }
 
@@ -326,7 +326,15 @@ async function lightJson({ system, user, maxTokens }, track) {
       lastError = error;
     }
   }
-  if (!provider) throw lastError || new Error('AI unavailable.');
+  if (!provider) {
+    // No Groq / OpenAI key: one try on the Gateway backup model (a different
+    // model from the light tier), unless the budget is gone or AI is switched off.
+    if (gatewayConfigured() && lastError && !isBudgetError(lastError) && lastError.code !== 'feature-off') {
+      const { text, cost } = await aiText({ tier: 'backup', system, messages: [{ role: 'user', content: user }], json: true, maxTokens, timeoutMs: 15000, track: track ? { ...track, feature: `${track.feature || 'trend'}-backup` } : track });
+      return { text, cost };
+    }
+    throw lastError || new Error('AI unavailable.');
+  }
   const messages = [{ role: 'system', content: system }, { role: 'user', content: user }];
   for (const model of provider.models) {
     const started = Date.now();
