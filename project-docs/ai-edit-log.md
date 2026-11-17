@@ -17,6 +17,16 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-19 — Home "Today" becomes mission control (branch feature/home-today)
+- Status: `[committed on feature/home-today — not pushed]`. Audit: `project-docs/hero-audit-home-today.md`.
+- `frameup-home-today.js` rewritten (same UMD shape, same sessionStorage caching, cache prefix now `frameup.home.v2.`): **Start here** (top story by `TrendsLogic.topPicks`, why-now line, suggested template, Make a post / Make a reel / Video ad using Trends' own hand-offs `briefFor` / `reelHandoff` / `videoHandoff`, Generate always `autorun=0`); **Create** launchers (Generate, Reels Studio, Video Ads, Editor) with continue hints read from this browser (`frameup.generate.recent.v1`, `frameup.reels.projects.v1`, `frameup.videoAds.brandDefaults.v1`, latest editor draft); **Trending now** (sport chips, sport label, Hot/Rising, age, outlets, 2-line titles linking to the story, Post / Reel / Ad per row); **Continue where you left off** (designs exported on this browser with thumbnails via `FrameUpDesigns.listLocal` + open in place via `openDesign`, `frameup_drafts` rows, Reels Studio projects; replaces the separate "Jump back in" section, removed from index.html); **Team exports** (10 Gallery posts with title / who / when, variant on hover); **Team this week** (posts per day for 7 days, top formats, most active, your count + streak; counted from the same single Gallery read, now `limit: 48`, shown as "48+" when the page is cut inside the week).
+- Requests: card kept but `hidden`, only shown when `FrameUpFeatures.requests === true`; no Request-a-design launcher.
+- No new endpoints, no AI calls, no new paid services, no migrations, no env vars. Requests on Home: trend-design (cached), one Gallery RPC + signed thumbs (as before, larger page), frameup_drafts (as before).
+- `frameup-home-today.css` rewritten: local `--ht-*` tokens with dark overrides, container queries (`today` and `card`), skeleton / empty / error per card, reduced-motion.
+- index.html: home section markup only; loads `trends-logic.js` (unchanged file) before the home script; cache keys `frameup-home-today.{js,css}?v=20261119-home`, `tours/tours.js?v=20261119-home` (index.html only).
+- Server: `netlify/functions/trend-design.js` `classify()` — a college name with another sport word (basketball, hockey, …) and no football word goes to Others with score ≥ 6 ("Notre Dame Basketball" was College Football). Cases added to `scripts/test-trend-design.mjs`.
+- Tests: new `scripts/test-home-today.mjs`; `scripts/test-hero-workflow.mjs` card ids updated. Release note `2026-11-19-home-today`; tour "Today" step text updated.
+
 ### 2026-11-19 — Generate asset service: AI backgrounds and concept art, cut-outs, varied ES photos (branch feature/gen-assets)
 - Status: `[committed on feature/gen-assets — not pushed]`. Spec: `scratchpad/gen-creative-contract.md` (agent gen-assets). Docs: `project-docs/gen-assets.md`.
 - New `netlify/functions/_asset-service.js` (`generateBackground`, `generateConceptArt`, `cutout`, `findPhotos`, `status`), `netlify/functions/gen-assets.js` + `api/gen-assets.js` (`GET/POST /api/gen-assets`, vercel.json maxDuration 60), browser client `frameup-assets.js` (`window.FrameUpAssets`, not loaded by any page yet: the gen-creative composer loads it).

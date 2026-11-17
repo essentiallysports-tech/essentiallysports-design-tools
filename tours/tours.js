@@ -66,7 +66,7 @@
       { target: '[data-shell-palette]', media: DESKTOP, placement: 'right', icon: I.search, title: 'Search', text: 'Jump to any page, template or action. Press ⌘K or /.' },
       { target: '.es-sidebar [data-shell-usage]', media: DESKTOP, placement: 'right', icon: I.gauge, title: 'AI usage', text: 'Your AI spend this week, out of $20. It resets every Monday.' },
       { target: ['.es-sidebar__account', '.navbar .profile-trigger'], placement: 'right', icon: I.user, title: 'Your profile', text: 'Profile, light or dark, the UI Library, and these tours.' },
-      { page: 'index.html', pageLabel: 'Home', route: '#frames', navTarget: '.es-sidebar [data-shell-id="frames"]', target: ['#home-today', '#frame-instagram'], icon: I.home, title: 'Today', text: 'Your requests, drafts, team exports and live trends, one glance each morning.' },
+      { page: 'index.html', pageLabel: 'Home', route: '#frames', navTarget: '.es-sidebar [data-shell-id="frames"]', target: ['#home-today', '#frame-instagram'], icon: I.home, title: 'Today', text: 'The top story, live trends, your drafts and what the team shipped, at a glance.' },
       { page: 'index.html', route: '#frames', target: '#frame-instagram', icon: I.grid, title: 'Pick a workspace', text: 'Each card opens an editor with the approved sizes and layouts.' },
       { page: 'index.html', route: '#instagram', target: ['.canvas-wrap', '.canvas-stage'], icon: I.image, title: 'Canvas', text: 'Your design, live. Click any text or photo to edit it.' },
       { page: 'index.html', target: ['.app > .panel', '.studio-control-dock'], media: DESKTOP, placement: 'left', icon: I.sliders, title: 'Inspector', text: 'Post type, text, photos and colours. Changes show instantly.' },

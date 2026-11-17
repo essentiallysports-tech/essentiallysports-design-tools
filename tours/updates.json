@@ -3,6 +3,42 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-19-home-today",
+      "date": "2026-11-19",
+      "title": "Home is now mission control",
+      "commit": "1503d36",
+      "items": [
+        {
+          "title": "Start here",
+          "text": "Home opens on the top story right now with one click to a post, a reel or a video ad. The brief carries only the story, and nothing runs until you press Generate.",
+          "page": "index.html",
+          "route": "#frames",
+          "target": "#home-today"
+        },
+        {
+          "title": "Trending, with full titles",
+          "text": "Every trend shows its sport, heat and age, two full lines of headline and Post, Reel and Ad buttons. College basketball no longer shows up as College Football.",
+          "page": "index.html",
+          "route": "#frames",
+          "target": "[data-today=\"trends\"]"
+        },
+        {
+          "title": "Continue where you left off",
+          "text": "Your exported designs, account drafts and Reels Studio projects in one list, newest first. Each tool tile also shows what you were last doing in it.",
+          "page": "index.html",
+          "route": "#frames",
+          "target": "[data-today=\"continue\"]"
+        },
+        {
+          "title": "Team this week",
+          "text": "Team exports with who and when, posts per day, top formats, the most active people and your own count and streak, all from the Gallery.",
+          "page": "index.html",
+          "route": "#frames",
+          "target": "[data-today=\"pulse\"]"
+        }
+      ]
+    },
+    {
       "id": "2026-11-19-hero-generate",
       "date": "2026-11-19",
       "title": "Generate: stat lines, records, carousels and no blank photos",

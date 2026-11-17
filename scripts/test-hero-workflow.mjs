@@ -201,7 +201,7 @@ test('index.html loads Today inside Home only', () => {
   const html = read('index.html');
   const home = html.slice(html.indexOf('<main class="frame-home"'), html.indexOf('</main>', html.indexOf('<main class="frame-home"')));
   assert.ok(home.includes('id="home-today"'));
-  ['trends', 'requests', 'exports', 'drafts'].forEach(id => assert.ok(home.includes(`data-today="${id}"`), id));
+  ['spotlight', 'trends', 'continue', 'exports', 'pulse', 'requests'].forEach(id => assert.ok(home.includes(`data-today="${id}"`), id));
   assert.match(html, /frameup-home-today\.js\?v=[\w-]+" defer/);
 });
 
