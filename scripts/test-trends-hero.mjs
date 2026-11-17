@@ -49,6 +49,9 @@ ok('whyNow: searches, storyline size, outlets, brand; no repeated signal word', 
   const text = L.whyNow(story('a', 'nfl', 1, { signal: 'hot', coverage: 3, storyline: { id: 'x', size: 5 }, fit: { brand: 'the-huddle' } }));
   assert.equal(text, '5 stories on this · 3 outlets · fits The Huddle');
   assert.equal(L.whyNow(story('b', 'golf', 1, { type: 'search', traffic: '50K+' })), '50K+ searches');
+  // The Trends board's meta line already shows searches and outlets.
+  assert.equal(L.whyNow(story('a', 'nfl', 1, { coverage: 3, storyline: { id: 'x', size: 5 }, fit: { brand: 'the-huddle' } }), { reach: false }), '5 stories on this · fits The Huddle');
+  assert.equal(L.whyNow(story('b', 'golf', 1, { type: 'search', traffic: '50K+' }), { reach: false }), '');
 });
 
 ok('hand-offs: Generate brief, Video Ads, Reels Studio contract', () => {

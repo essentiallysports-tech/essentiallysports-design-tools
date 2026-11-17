@@ -31,13 +31,13 @@ html[data-theme="dark"] .home-today {
   --ht-surface: var(--es-slate-800, #1F2126);
   --ht-sunk: var(--es-slate-700, #2A2D34);
   --ht-line: var(--es-slate-700, #2A2D34);
-  --ht-ink: #FFFFFF;
-  --ht-ink-2: #BFC8D9;
-  --ht-ink-3: #98A6BF;
-  --ht-link: #9DCBFD;
+  --ht-ink: var(--es-white);
+  --ht-ink-2: var(--es-slate-100);
+  --ht-ink-3: var(--es-slate-200);
+  --ht-link: var(--es-blue-300);
   --ht-link-soft: rgb(10 125 250 / .2);
   --ht-bar: rgb(84 164 251 / .45);
-  --ht-bar-strong: #54A4FB;
+  --ht-bar-strong: var(--es-blue-400);
   --ht-hot: var(--es-bad-on-dark, #FF8A8A);
   --ht-hot-soft: var(--es-bad-soft-on-dark, rgb(255 138 138 / .14));
   --ht-rise: var(--es-good-on-dark, #4CC985);
@@ -45,6 +45,8 @@ html[data-theme="dark"] .home-today {
   --ht-spot: linear-gradient(135deg, rgb(10 125 250 / .16) 0%, rgb(10 125 250 / 0) 60%), var(--ht-surface);
   --ht-shadow-hover: 0 8px 24px rgb(0 0 0 / .4);
 }
+/* theme.css mutes every dark-mode <p> (!important); the spotlight headline is a <p> and must stay full ink. */
+html[data-theme="dark"] .home-today .home-today__spot-title { color: var(--ht-ink) !important; }
 
 /* Header: greeting + one line of real counts */
 .home-today__head { display: grid; gap: var(--es-space-1); margin: 0 0 var(--es-space-5); }
@@ -270,7 +272,7 @@ a.home-today__trend-title:focus-visible,
   padding: 2px 6px;
   border-radius: 6px;
   background: rgb(14 16 20 / .72);
-  color: #FFFFFF;
+  color: var(--es-white);
   font-size: 11px;
   font-weight: 600;
   line-height: 16px;

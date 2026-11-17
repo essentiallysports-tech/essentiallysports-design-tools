@@ -248,9 +248,9 @@
     const related = isSearch && item.related?.length
       ? `<ul class="trend-related">${item.related.slice(0, 1).map(r => `<li><a href="${esc(safeUrl(r.url))}" target="_blank" rel="noopener noreferrer">${iconImg(r.domain, 14)}<span>${esc(r.title)}</span><span class="es-sr-only"> (opens in a new tab)</span></a></li>`).join('')}</ul>`
       : '';
-    const outlets = item.coverage > 1 ? `<span class="td-m td-sources"><span class="trend-meta__sep" aria-hidden="true">·</span><span title="Covered by ${item.coverage} publications">${item.coverage} sources</span></span>` : '';
+    const outlets = item.coverage > 1 ? `<span class="td-m td-sources"><span class="trend-meta__sep" aria-hidden="true">·</span><span title="Covered by ${item.coverage} publications">${item.coverage} outlets</span></span>` : '';
     const age = L.freshness(item.publishedAt);
-    const why = pick ? L.whyNow(item, { brands: brands() }) : '';
+    const why = pick ? L.whyNow(item, { brands: brands(), reach: false }) : '';
     const kitOpen = openKits.has(item.id);
     return `<article class="trend-row${isSearch ? ' is-search' : ''}${pick ? ' is-pick' : ''}${kitOpen ? ' has-kit' : ''}" style="--i:${index}" tabindex="-1" data-id="${esc(item.id)}" data-sport="${esc(item.category)}" aria-labelledby="tt-${esc(item.id)}">
       ${visualHtml(item)}

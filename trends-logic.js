@@ -117,13 +117,15 @@
     return out;
   }
   // "Why now" for a pick: the signal, outlets, searches, the brand it fits.
-  function whyNow(item, { brands = BRANDS } = {}) {
+  function whyNow(item, { brands = BRANDS, reach = true } = {}) {
     // The signal itself is the badge next to it, so it is not repeated here.
+    // reach:false leaves out searches and outlets (a row whose meta line
+    // already shows them, like the Trends board).
     const parts = [];
     const size = item.storyline ? item.storyline.size : 1;
-    if (item.type === 'search' && item.traffic) parts.push(`${item.traffic} searches`);
+    if (reach && item.type === 'search' && item.traffic) parts.push(`${item.traffic} searches`);
     if (size > 1) parts.push(`${size} stories on this`);
-    if ((item.coverage || 1) > 1) parts.push(`${item.coverage} outlets`);
+    if (reach && (item.coverage || 1) > 1) parts.push(`${item.coverage} outlets`);
     const brand = brandOf(item, brands);
     if (brand) parts.push(`fits ${brand.label}`);
     return parts.join(' · ');

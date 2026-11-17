@@ -507,8 +507,9 @@
     const crit = d.critique();
     const score = d.score();
     const count = $('gfx-better-count');
-    count.hidden = !crit.improvements.length;
-    count.textContent = crit.improvements.length;
+    const toImprove = crit.improvements.filter(i => !d.isApplied?.(i.id)).length;
+    count.hidden = !toImprove;
+    count.textContent = toImprove;
     const rubric = score?.parts ? RUBRIC.filter(([k]) => Number.isFinite(score.parts[k])) : [];
     pane.innerHTML = `
       <section class="gfx-sec">
@@ -522,7 +523,7 @@
       ${crit.strengths.length ? `<section class="gfx-sec"><h3 class="gfx-eyebrow">What works</h3><ul class="gfx-list gfx-list--good">${crit.strengths.map(s => `<li>${ICON.check}<span>${esc(s)}</span></li>`).join('')}</ul></section>` : ''}
       <section class="gfx-sec">
         <h3 class="gfx-eyebrow">What could be better${crit.source === 'quick' ? ' <span class="gfx-src">quick check</span>' : ''}</h3>
-        ${crit.improvements.length ? `<ul class="gfx-better">${crit.improvements.map(i => `<li class="gfx-better__item" data-id="${esc(i.id)}"><span class="gfx-better__text">${esc(i.text)}</span>${applyButton(d, i)}</li>`).join('')}</ul>` : '<p class="gfx-muted">Nothing flagged on this version. Ask the assistant for a variation if you want one.</p>'}
+        ${crit.improvements.length ? `<ul class="gfx-better">${crit.improvements.map(i => `<li class="gfx-better__item${d.isApplied?.(i.id) ? ' is-applied' : ''}" data-id="${esc(i.id)}"><span class="gfx-better__text">${esc(i.text)}</span>${applyButton(d, i)}</li>`).join('')}</ul>` : '<p class="gfx-muted">Nothing flagged on this version. Ask the assistant for a variation if you want one.</p>'}
       </section>
       ${crit.nextTime ? `<section class="gfx-sec gfx-lesson">${ICON.bulb}<div><h3 class="gfx-eyebrow">Next time</h3><p>${esc(crit.nextTime)}</p></div></section>` : ''}
       ${d.source ? `<p class="gfx-muted gfx-source">Source: <a href="${esc(d.source.url)}" target="_blank" rel="noopener">${esc(d.source.title || d.source.url)}</a></p>` : ''}`;
@@ -530,6 +531,7 @@
   // An improvement is applied by the assistant (any instruction), or here
   // when it names one of the composer's built-in fixes.
   function applyButton(d, i) {
+    if (d.isApplied?.(i.id)) return `<span class="gfx-applied">${ICON.check}Applied</span>`;
     const viaAssistant = typeof root.FrameUpAssistant?.applyImprovement === 'function';
     const name = i.fix?.op === 'fix' ? i.fix.name : i.fix?.op;
     const local = Boolean(name) && C()?.FIXES?.includes(name);
@@ -679,6 +681,8 @@
       b.disabled = true;
       b.classList.add('is-busy');
       try { await d.applyImprovement(b.dataset.id); } finally { if (b.isConnected) { b.disabled = false; b.classList.remove('is-busy'); } }
+      // The button became "Applied": keep keyboard focus in the list.
+      if (!b.isConnected) (view.el.querySelector('.gfx-better :is([data-fx="apply"], [data-fx="ask"])') || view.el.querySelector('.gfx-tab[aria-selected="true"]'))?.focus({ preventScroll: true });
       return;
     }
     if (fx === 'ask') {

@@ -171,11 +171,11 @@ html[data-theme="dark"] .rm-page .es-segmented__item[aria-checked="true"] { back
   transition: box-shadow var(--es-dur, 160ms) var(--es-ease, ease);
 }
 .rm-trendbox.is-scrolled .rm-trendbox__head { box-shadow: inset 1px 1px 0 var(--rm-line), inset -1px 0 0 var(--rm-line), 0 1px 0 var(--rm-line), 0 8px 16px -12px rgb(14 16 20 / .28); }
-html[data-theme="dark"] .rm-trendbox.is-scrolled .rm-trendbox__head { box-shadow: inset 1px 1px 0 var(--rm-line), inset -1px 0 0 var(--rm-line), 0 1px 0 #3B4049, 0 8px 16px -12px rgb(0 0 0 / .6); }
+html[data-theme="dark"] .rm-trendbox.is-scrolled .rm-trendbox__head { box-shadow: inset 1px 1px 0 var(--rm-line), inset -1px 0 0 var(--rm-line), 0 1px 0 var(--es-slate-600), 0 8px 16px -12px rgb(0 0 0 / .6); }
 .rm-filter { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); }
 .rm-filter .es-chip { gap: 6px; }
 .rm-filter .es-chip[aria-checked="true"] { background: var(--rm-brand-soft); box-shadow: inset 0 0 0 1px var(--es-brand-tint, #b5d8fd); color: var(--rm-brand-text); }
-html[data-theme="dark"] .rm-filter .es-chip[aria-checked="true"] { background: rgb(10 125 250 / .2); box-shadow: inset 0 0 0 1px rgb(84 164 251 / .55); color: #9DCBFD; }
+html[data-theme="dark"] .rm-filter .es-chip[aria-checked="true"] { background: rgb(10 125 250 / .2); box-shadow: inset 0 0 0 1px rgb(84 164 251 / .55); color: var(--es-blue-300); }
 .rm-league { display: inline-grid; place-items: center; flex: none; width: var(--size, 20px); height: var(--size, 20px); border-radius: calc(var(--size, 20px) / 4); background: var(--tile, #fff); box-shadow: inset 0 0 0 1px rgb(14 16 20 / .08); overflow: hidden; }
 .rm-league img { width: 72%; height: 72%; object-fit: contain; }
 .rm-league--none { background: var(--rm-sunk); color: var(--rm-ink-2); font-size: 11px; font-weight: 700; letter-spacing: .02em; }
@@ -196,7 +196,7 @@ html[data-theme="dark"] .rm-trend[aria-checked="true"] { box-shadow: inset 0 0 0
 .rm-trend__title { font-size: 14px; font-weight: 500; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .rm-trend__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); color: var(--rm-ink-3); font-size: 12px; line-height: 1.3; }
 .rm-trend__fmt.es-badge { min-height: 20px; padding: 0 var(--es-space-2, 8px); font-size: 11px; }
-html[data-theme="dark"] .rm-trend__fmt.es-badge { background: rgb(10 125 250 / .2); color: #9DCBFD; }
+html[data-theme="dark"] .rm-trend__fmt.es-badge { background: rgb(10 125 250 / .2); color: var(--es-blue-300); }
 .rm-trend.is-skeleton { display: flex; flex-direction: column; gap: var(--es-space-2, 8px); cursor: default; }
 .rm-trends > .rm-trend.is-skeleton { padding: var(--es-space-3, 12px) var(--es-space-2, 8px); }
 .rm-sk-a { height: 14px; width: 85%; border-radius: 6px; }
@@ -405,7 +405,7 @@ html[data-theme="dark"] .rm-photos { background: #1F2126; color: #fff; }
   color: var(--rm-ink); text-align: left; cursor: pointer; font-family: var(--es-font-ui);
   transition: background-color var(--es-dur, 160ms) var(--es-ease, ease), box-shadow var(--es-dur, 160ms) var(--es-ease, ease);
 }
-html[data-theme="dark"] .rm-setsum__item { box-shadow: inset 0 0 0 1px #3B4049; }
+html[data-theme="dark"] .rm-setsum__item { box-shadow: inset 0 0 0 1px var(--es-slate-600); }
 .rm-setsum__label { grid-column: 1; color: var(--rm-ink-3); font-size: 12px; font-weight: 500; line-height: 1.3; }
 .rm-setsum__value { grid-column: 1; color: var(--rm-ink); font-size: 14px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rm-setsum__item svg { grid-column: 2; grid-row: 1 / 3; width: 16px; height: 16px; color: var(--rm-ink-3); transition: transform var(--es-dur, 160ms) var(--es-ease, ease), color var(--es-dur, 160ms) var(--es-ease, ease); }
@@ -446,7 +446,7 @@ html[data-theme="dark"] .rm-making__step.is-done .rm-making__mark { color: #1618
 .rm-making__step.is-skipped .rm-making__label { color: var(--rm-ink-2); }
 .rm-spin { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--rm-line-2); border-top-color: var(--es-brand-fill, #0a6fde); box-sizing: border-box; }
 .rm-making .rm-spin { border-color: var(--es-brand-tint, #b5d8fd); border-top-color: var(--es-brand-fill, #0a6fde); }
-html[data-theme="dark"] .rm-making .rm-spin { border-color: rgb(84 164 251 / .35); border-top-color: #9DCBFD; }
+html[data-theme="dark"] .rm-making .rm-spin { border-color: rgb(84 164 251 / .35); border-top-color: var(--es-blue-300); }
 @media (prefers-reduced-motion: no-preference) { .rm-spin { animation: rmSpin .8s linear infinite; } }
 @keyframes rmSpin { to { transform: rotate(360deg); } }
 .rm-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--rm-line-2); }
@@ -457,7 +457,7 @@ html[data-theme="dark"] .rm-making .rm-spin { border-color: rgb(84 164 251 / .35
    accordion. The header is a rounded row inset 4px from the card edge, so the
    hover tint never runs edge to edge; the chevron turns when open. */
 .rm-fold { border-radius: var(--es-radius-control, 12px); background: var(--rm-surface); box-shadow: inset 0 0 0 1px var(--rm-line); }
-html[data-theme="dark"] .rm-fold { box-shadow: inset 0 0 0 1px #3B4049; }
+html[data-theme="dark"] .rm-fold { box-shadow: inset 0 0 0 1px var(--es-slate-600); }
 .rm-fold > summary {
   display: flex; align-items: center; justify-content: space-between; gap: var(--es-space-3, 12px);
   min-height: 40px; margin: var(--es-space-1, 4px); padding: 0 var(--es-space-3, 12px);
@@ -572,7 +572,9 @@ html[data-theme="dark"] .rm-fold { box-shadow: inset 0 0 0 1px #3B4049; }
 @media (max-width: 900px) {
   .rm-page { padding: var(--es-space-5, 20px) var(--es-page-gutter-phone, 16px) var(--es-space-10, 40px); gap: var(--es-space-4, 16px); --rm-stage-h: min(56dvh, 520px); }
   .rm-steps ol { gap: 4px; }
-  .rm-steps li + li::before { width: 12px; }
+  .rm-steps li + li::before { width: 8px; }
+  /* Keep the help button on the steps row at 375 (it wrapped onto a row of its own). */
+  .rm-head { gap: var(--es-space-2, 8px); }
   .rm-work { grid-template-columns: minmax(0, 1fr); }
   .rm-stage { position: relative; top: auto; padding: var(--es-space-4, 16px); }
   .rm-pane { padding: var(--es-space-4, 16px); }

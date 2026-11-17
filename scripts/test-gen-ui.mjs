@@ -162,6 +162,12 @@ assert.equal(U.relTime('', now), '');
   assert.match(js, /cleanStory\(dir\.storyText\)/, 'the story label is stripped');
   assert.ok(!/textEl\('strong', '', 'Story: '\)/.test(js), 'no "Story:" prefix on the card');
   assert.match(js, /checkScene\?\.\(scene/, 'setScene goes through the ES gate');
+  // An applied director fix shows "Applied" (card + focus view) until undone.
+  assert.match(js, /isApplied: id => isApplied\(card, id\)/, 'the design API says which fixes are applied');
+  assert.match(js, /markApplied\(card, id\)/);
+  assert.match(js, /gen-cc__applied/);
+  assert.match(focus, /d\.isApplied\?\.\(i\.id\)\) return `<span class="gfx-applied"/, 'focus view: Applied in place of Apply');
+  assert.match(focus, /filter\(i => !d\.isApplied\?\.\(i\.id\)\)\.length/, 'the Director count leaves out applied fixes');
   const css = fs.readFileSync('generate-creative.css', 'utf8');
   assert.ok(!/#(?:7B2CBF|8B5CF6|A855F7|9333EA|6D28D9|800080)/i.test(css + html), 'no purple');
   assert.match(css, /html\[data-theme="dark"\] \.gfx \{/, 'focus view has a dark theme');

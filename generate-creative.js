@@ -340,8 +340,9 @@
     card.querySelector('.gen-cc__note-text').textContent = note;
     card.querySelector('.gen-cc__note-text').hidden = !note;
     const more = card.querySelector('.gen-cc__more');
-    more.hidden = !crit.improvements.length;
-    more.textContent = crit.improvements.length ? `${crit.improvements.length} to improve` : '';
+    const toImprove = crit.improvements.filter(i => !isApplied(card, i.id)).length;
+    more.hidden = !toImprove;
+    more.textContent = toImprove ? `${toImprove} to improve` : '';
     const good = card.querySelector('.gen-cc__good');
     good.hidden = !crit.strengths.length;
     good.innerHTML = crit.strengths.map(s => `<li>${ICON.check}<span>${G().esc(s)}</span></li>`).join('');
@@ -354,7 +355,8 @@
       const button = viaAssistant || local
         ? `<button class="gen-cc__apply" type="button" data-cc="apply" data-id="${G().esc(i.id)}" title="${viaAssistant ? 'The AI assistant makes this change' : 'Apply the fix'}">${ICON.wand}Apply</button>`
         : `<button class="gen-cc__apply" type="button" data-cc="ask" data-id="${G().esc(i.id)}" title="Open the design and ask the AI assistant">${ICON.sparkles}Ask AI</button>`;
-      return `<li><span>${G().esc(i.text)}</span>${button}</li>`;
+      const done = isApplied(card, i.id) ? `<span class="gen-cc__applied">${ICON.check}Applied</span>` : '';
+      return `<li${done ? ' class="is-applied"' : ''}><span>${G().esc(i.text)}</span>${done || button}</li>`;
     }).join('');
     const next = card.querySelector('.gen-cc__next');
     next.hidden = !crit.nextTime;
@@ -386,6 +388,23 @@
     return stray.length ? `Numbers must come from the brief (${stray.join(', ')} is not).` : '';
   }
 
+  // An applied improvement shows "Applied" (not a second Apply) while the
+  // version it made is current or behind the current one; undo brings Apply back.
+  function isApplied(card, id) {
+    const h = card._history;
+    const entry = card._applied?.get(id);
+    if (!h || !entry) return false;
+    const at = h.entries.indexOf(entry);
+    return at > 0 && at <= h.index;
+  }
+  function markApplied(card, id) {
+    const h = card._history;
+    if (!h) return;
+    (card._applied ||= new Map()).set(id, h.entries[h.index]);
+    paintCritique(card);
+    F()?.refresh?.(card._designId, { parts: 'all' });
+  }
+
   async function applyImprovement(card, id) {
     const crit = critiqueOf(card);
     const item = crit.improvements.find(i => i.id === id);
@@ -397,6 +416,7 @@
         const res = await window.FrameUpAssistant.applyImprovement(card._designId, id);
         if (res?.ok !== false) {
           G().track('fix_applied', { runId: state.run?.plan?.runId, directionId: card._dir.id, payload: { id, text: item.text, via: 'assistant', cost: res?.cost || 0 } });
+          markApplied(card, id);
           return true;
         }
         if (!localFix(item.fix)) { G().setNotice('Could not apply that', ` ${res?.reply || 'The assistant could not make that change.'}`); return false; }
@@ -408,6 +428,7 @@
     if (name) {
       await commit(card, C().applyFix(card._scene, name), { label: `Fix: ${item.text}`, source: 'fix' });
       G().track('fix_applied', { runId: state.run?.plan?.runId, directionId: card._dir.id, payload: { id, text: item.text, fix: name, via: 'local' } });
+      markApplied(card, id);
       return true;
     }
     return false;
@@ -491,6 +512,7 @@
       redo: () => (card._history?.canRedo ? commit(card, card._history.redo(), { record: false, source: 'redo' }) : false),
       restore: i => (card._history ? commit(card, card._history.restore(i), { record: false, source: 'restore' }) : false),
       applyImprovement: id => applyImprovement(card, id),
+      isApplied: id => isApplied(card, id),
       export: type => exportCard(card, type),
       openInEditor: typeof window.FrameUpCompose?.openInEditor === 'function' ? () => window.FrameUpCompose.openInEditor(card._scene) : undefined,
     };
@@ -724,6 +746,7 @@
       button.classList.add('is-busy');
       await applyImprovement(card, button.dataset.id);
       if (button.isConnected) { button.disabled = false; button.classList.remove('is-busy'); }
+      else (card.querySelector('.gen-cc__better :is([data-cc="apply"], [data-cc="ask"])') || card.querySelector('.gen-cc__director > summary'))?.focus({ preventScroll: true });
     } else if (act === 'ask') {
       openFocus(card, 'assistant');
     }

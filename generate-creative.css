@@ -80,6 +80,11 @@
 .gen-cc__apply:hover { background: color-mix(in srgb, var(--es-brand-soft) 70%, var(--es-brand, #0A7DFA)); }
 .gen-cc__apply:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
 .gen-cc__apply.is-busy { opacity: .6; cursor: progress; }
+/* Applied improvement: a quiet green confirmation in place of the button. */
+:is(.gen-cc__applied, .gfx-applied) { display: inline-flex; flex: none; align-items: center; gap: var(--es-space-1, 4px); height: 28px; padding: 0 var(--es-space-2, 8px); border-radius: 8px; background: var(--es-good-soft); color: var(--es-good); font: 600 12px/1 var(--es-font-ui); white-space: nowrap; }
+:is(.gen-cc__applied, .gfx-applied) svg { width: 14px; height: 14px; }
+:is(.gen-cc__better li, .gfx-better__item).is-applied > span:first-child { color: var(--es-ink-3); }
+html[data-theme="dark"] :is(.gen-cc__applied, .gfx-applied) { background: var(--es-good-soft-on-dark); color: var(--es-good-on-dark); }
 .gen-cc__next { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: var(--es-space-2, 8px); margin: 0; color: var(--es-ink-2); font-size: 13px; line-height: 1.45; }
 .gen-cc__next svg { width: 16px; height: 16px; color: #B45309; }
 .gen-cc__next b { color: var(--es-ink); font-weight: 600; }
@@ -131,21 +136,21 @@
 .gen-summary__hint { margin-left: auto; color: var(--es-ink-3); font-size: 12px; }
 .gen-summary__muted { color: var(--es-ink-3); font-weight: 400; }
 
-html[data-theme="dark"] .gen-cc__score { background: #2A2D34; color: #FFFFFF; }
-html[data-theme="dark"] .gen-cc__field input { background: #1F2126; border-color: #3B4049; color: #FFFFFF; }
+html[data-theme="dark"] .gen-cc__score { background: var(--es-slate-700); color: var(--es-white); }
+html[data-theme="dark"] .gen-cc__field input { background: var(--es-slate-800); border-color: var(--es-slate-600); color: var(--es-white); }
 html[data-theme="dark"] .gen-cc__director { background: #24272D; }
-html[data-theme="dark"] .gen-cc__director > summary:hover { background: #2A2D34; }
-html[data-theme="dark"] .gen-cc__better li { background: #1F2126; box-shadow: inset 0 0 0 1px #3B4049; }
-html[data-theme="dark"] .gen-cc__apply { background: rgb(84 164 251 / .16); color: #9DCBFD; }
+html[data-theme="dark"] .gen-cc__director > summary:hover { background: var(--es-slate-700); }
+html[data-theme="dark"] .gen-cc__better li { background: var(--es-slate-800); box-shadow: inset 0 0 0 1px var(--es-slate-600); }
+html[data-theme="dark"] .gen-cc__apply { background: rgb(84 164 251 / .16); color: var(--es-blue-300); }
 html[data-theme="dark"] .gen-cc__apply:hover { background: rgb(84 164 251 / .28); }
 html[data-theme="dark"] .gen-cc__more { background: rgb(251 191 36 / .16); color: #FCD34D; }
 html[data-theme="dark"] .gen-cc__good svg { color: var(--es-good-on-dark); }
 html[data-theme="dark"] .gen-cc__next svg { color: #FBBF24; }
-html[data-theme="dark"] .gen-tool:hover:not(:disabled) { background: #2A2D34; }
-html[data-theme="dark"] .gen-tool[aria-expanded="true"] { background: rgb(84 164 251 / .16); color: #9DCBFD; }
-html[data-theme="dark"] .gen-count { background: #2A2D34; }
-html[data-theme="dark"] .gen-count__item[aria-checked="true"] { background: #3B4049; box-shadow: none; color: #FFFFFF; }
-@media (hover: hover) { html[data-theme="dark"] .gen-cc:not(.is-skeleton):hover { box-shadow: inset 0 0 0 1px #3B4049, 0 12px 32px -12px rgb(0 0 0 / .6); } }
+html[data-theme="dark"] .gen-tool:hover:not(:disabled) { background: var(--es-slate-700); }
+html[data-theme="dark"] .gen-tool[aria-expanded="true"] { background: rgb(84 164 251 / .16); color: var(--es-blue-300); }
+html[data-theme="dark"] .gen-count { background: var(--es-slate-700); }
+html[data-theme="dark"] .gen-count__item[aria-checked="true"] { background: var(--es-slate-600); box-shadow: none; color: var(--es-white); }
+@media (hover: hover) { html[data-theme="dark"] .gen-cc:not(.is-skeleton):hover { box-shadow: inset 0 0 0 1px var(--es-slate-600), 0 12px 32px -12px rgb(0 0 0 / .6); } }
 @media (max-width: 600px) {
   .gen-grid:has(.gen-cc) { grid-template-columns: minmax(0, 1fr); }
   .gen-look { width: 100%; }
@@ -160,7 +165,7 @@ html[data-theme="dark"] .gen-count__item[aria-checked="true"] { background: #3B4
 
 /* ═════════ Focus view: the design big, Figma-style ═════════════════════ */
 html.gfx-open { overflow: hidden; }
-.gfx { --gfx-bar: 56px; --gfx-panel: 368px; --gfx-rail: 88px; --gfx-canvas-bg: #E9EBEF; --gfx-surface: #FFFFFF; --gfx-ink: #0E1014; --gfx-ink-2: #3F4450; --gfx-ink-3: #565C67; --gfx-line: #E3E6EB; --gfx-sunk: #F2F4F7;
+.gfx { --gfx-bar: 56px; --gfx-panel: 368px; --gfx-rail: 88px; --gfx-canvas-bg: #E9EBEF; --gfx-surface: var(--es-white); --gfx-ink: #0E1014; --gfx-ink-2: #3F4450; --gfx-ink-3: #565C67; --gfx-line: #E3E6EB; --gfx-sunk: #F2F4F7;
   position: fixed; inset: 0; width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; background: var(--gfx-surface); color: var(--gfx-ink); font-family: var(--es-font-ui); }
 .gfx[open] { display: grid; grid-template-rows: var(--gfx-bar) minmax(0, 1fr); }
 .gfx::backdrop { background: rgb(14 16 20 / .5); }
@@ -320,17 +325,17 @@ html.gfx-open { overflow: hidden; }
 .gfx-version__meta { color: var(--gfx-ink-3); font-size: 11px; }
 
 /* Dark: the editor-style dark surfaces. */
-html[data-theme="dark"] .gfx { --es-sunk: #2A2D34; --gfx-canvas-bg: #121316; --gfx-surface: #1A1C20; --gfx-ink: #FFFFFF; --gfx-ink-2: #BFC8D9; --gfx-ink-3: #98A6BF; --gfx-line: #2A2D34; --gfx-sunk: #2A2D34; --es-brand-soft: rgb(84 164 251 / .16); --es-brand-text: #9DCBFD; }
+html[data-theme="dark"] .gfx { --es-sunk: var(--es-slate-700); --gfx-canvas-bg: #121316; --gfx-surface: #1A1C20; --gfx-ink: var(--es-white); --gfx-ink-2: var(--es-slate-100); --gfx-ink-3: var(--es-slate-200); --gfx-line: var(--es-slate-700); --gfx-sunk: var(--es-slate-700); --es-brand-soft: rgb(84 164 251 / .16); --es-brand-text: var(--es-blue-300); }
 html[data-theme="dark"] .gfx-stage { background-image: radial-gradient(circle, rgb(255 255 255 / .06) 1px, transparent 1.2px); }
-html[data-theme="dark"] .gfx-canvas { box-shadow: 0 0 0 1px #2A2D34, 0 24px 64px -24px rgb(0 0 0 / .8); }
-html[data-theme="dark"] .gfx-seg__item[aria-checked="true"] { background: #3B4049; box-shadow: none; }
+html[data-theme="dark"] .gfx-canvas { box-shadow: 0 0 0 1px var(--es-slate-700), 0 24px 64px -24px rgb(0 0 0 / .8); }
+html[data-theme="dark"] .gfx-seg__item[aria-checked="true"] { background: var(--es-slate-600); box-shadow: none; }
 html[data-theme="dark"] :is(.gfx-score__guide, .gfx-list--good svg) { color: var(--es-good-on-dark); }
 html[data-theme="dark"] .gfx-tab__count { background: rgb(251 191 36 / .16); color: #FCD34D; }
 html[data-theme="dark"] .gfx-stage__note { background: #2a2414; color: #FCD34D; }
-html[data-theme="dark"] .gfx-busy { background: #2A2D34; }
-html[data-theme="dark"] .gfx-layer__field input { border-color: #3B4049; background: #121316; }
+html[data-theme="dark"] .gfx-busy { background: var(--es-slate-700); }
+html[data-theme="dark"] .gfx-layer__field input { border-color: var(--es-slate-600); background: #121316; }
 html[data-theme="dark"] .gfx-lesson > svg { color: #FBBF24; }
-html[data-theme="dark"] .gfx-zoom { box-shadow: inset 0 0 0 1px #3B4049, 0 4px 16px -6px rgb(0 0 0 / .6); }
+html[data-theme="dark"] .gfx-zoom { box-shadow: inset 0 0 0 1px var(--es-slate-600), 0 4px 16px -6px rgb(0 0 0 / .6); }
 
 @media (max-width: 1279px) { .gfx { --gfx-panel: 336px; --gfx-rail: 76px; } .gfx-tab > svg { display: none; } }
 @media (max-width: 1180px) { .gfx-top__meta { display: none; } .gfx-jpg, .gfx-keys-btn { display: none; } }
@@ -356,7 +361,9 @@ html[data-theme="dark"] .gfx-zoom { box-shadow: inset 0 0 0 1px #3B4049, 0 4px 1
   .gfx-seg__item .gfx-ratio { display: none; }
   .gfx-top__right { gap: var(--es-space-1, 4px); }
   .gfx-top__right .es-btn { padding-inline: var(--es-space-3, 12px); }
-  .gfx-tab { flex-direction: column; gap: 2px; height: 48px; font-size: 11px; }
+  .gfx-tab { position: relative; flex-direction: column; gap: 2px; height: 48px; font-size: 11px; }
+  /* The count sits on the icon's corner so every tab label lines up. */
+  .gfx-tab__count { position: absolute; top: 4px; left: calc(50% + 6px); }
   .gfx-rubric li { grid-template-columns: 104px minmax(0, 1fr) 16px; }
   .gfx-icon { width: 40px; height: 40px; }
   .gfx-layer__field input { font-size: 16px; } /* no iOS zoom on focus */

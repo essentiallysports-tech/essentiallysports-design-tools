@@ -17,6 +17,17 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-19 — Release QA pass: spacing, UI Library, rules (branch release/2026-11-19)
+- Status: `[committed on release/2026-11-19 — not pushed]`. Static audit of `origin/main..HEAD` + headless sweep (index home + Social/YouTube/Newsletter, generate + focus + Trends, video-ads, reel-maker; 1440/1280/1024/375, light + dark; computed fonts, purple, `[hidden]`, overflow, clipped text, labels, primaries). Screenshots + reports: scratchpad `hero/qa-1119/`.
+- **Generate focus view + cards**: a Director fix that was applied now shows a green "Applied" (not a second Apply) while its version is current or behind it; Undo brings Apply back. The Director tab count and the card's "N to improve" leave out applied fixes. Focus stays in the list after Apply. API: `FrameUpCreative.design(id).isApplied(improvementId)`.
+- **Generate 375**: the brief card no longer scrolls sideways (help + Bring it on-brand on one row, Generate full width; `.gen-brief` column `minmax(0,1fr)`). Focus view phone tabs: the Director count sits on the icon so labels line up.
+- **Generate Trending now chips**: picked with `TrendsLogic.topPicks` (one per storyline, max 2 per sport) instead of the next 6 in feed order (was 5 near-identical golf stories).
+- **Trends**: Post-now rows no longer repeat "2000+ searches · 2 outlets" under a meta line that already says it (`whyNow(item, { reach: false })`); the meta says "outlets" (was "sources"), the same word as Home.
+- **Home Today dark**: the spotlight headline was muted to Slate 100 by theme.css's dark `<p>` rule; now full white.
+- **Reels 375**: help button back on the steps row.
+- **Tokens**: 60 hard-coded dark-mode hexes on lines this release added (generate-creative.css, trends.css, reel-maker.css, frameup-home-today.css) now use the palette tokens (`--es-slate-*`, `--es-blue-300/400`, `--es-white`); same values, no visual change.
+- Cache key `20261119-rel2` for the changed files. Tests: `test-gen-ui`, `test-trends-hero` extended.
+
 ### 2026-11-18 — Video Ads: clip sound muted by default, Sound control, shared audio library; toolbar back to one row (branch feature/va-audio)
 - Status: `[committed on feature/va-audio — not pushed]`. Based on feature/va-library-icon.
 - **Muted by default**: the clip's own audio is off in the preview and in every export (single, Export 3 styles, Today's set). A muted export has NO audio track. New `video-ads-audio.js` (UMD, `window.VideoAdsAudio`): library parsing, upload validation (mp3/m4a/wav, 15 MB), levels (music -6 dB, clip ducked to -12 dB under music), fade / loop / trim-start maths, rights record, and `createMixer(ac)` (one Web Audio bus feeds the preview speaker and the recorder, so the preview hears the export mix).

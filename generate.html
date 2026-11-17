@@ -26,7 +26,7 @@
 <link rel="stylesheet" href="es-ui.css?v=20261119-rel3">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="trends.css?v=20261119-rel">
+  <link rel="stylesheet" href="trends.css?v=20261119-rel2">
   <script src="ai-studio.js?v=20261115-ds2" defer></script>
   <script src="es-motion.js?v=20261115-ds1" defer></script>
   <script>
@@ -58,11 +58,11 @@
 <link rel="stylesheet" href="frameup-posted.css?v=20261118-rel1">
 <script src="frameup-impact.js?v=20261118-rel1"></script>
 <script src="frameup-posted.js?v=20261118-rel1"></script>
-<link rel="stylesheet" href="generate-creative.css?v=20261119-rel">
+<link rel="stylesheet" href="generate-creative.css?v=20261119-rel2">
 <script src="frameup-compose.js?v=20261119-rel" defer></script>
-<script src="generate-focus.js?v=20261119-rel" defer></script>
+<script src="generate-focus.js?v=20261119-rel2" defer></script>
 <script src="generate-assistant.js?v=20261119-rel" defer></script>
-<script src="generate-creative.js?v=20261119-rel" defer></script>
+<script src="generate-creative.js?v=20261119-rel2" defer></script>
   <style>
     html:not([data-theme="dark"]) body.gen-body { background: #fff; }
     .gen-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 32px 0 72px; font-family: var(--es-font-ui); color: var(--es-ink); }
@@ -613,6 +613,10 @@
       .gen-actions__buttons { width: 100%; margin-left: 0; }
       .gen-actions__buttons .es-btn { flex: 1 1 auto; min-width: 0; }
       .gen-actions__buttons #gen-submit { min-width: 0; }
+      /* Help + Bring it on-brand on one row, Generate full width under them (no sideways scroll at 375). */
+      .gen-brief { grid-template-columns: minmax(0, 1fr); }
+      .gen-actions__buttons { flex-wrap: wrap; min-width: 0; }
+      .gen-actions__buttons #gen-submit { flex-basis: 100%; }
       .gen-steer__group .gen-chips { flex: 1 1 auto; }
     }
     @media (max-width: 640px) { .gen-onbrand, .gen-critique { padding: var(--es-space-4, 16px); } }
@@ -822,8 +826,8 @@
   </main>
 
   <!-- Trends view: pure logic + the board (the Generate view is the next script). -->
-  <script src="trends-logic.js?v=20261119-rel"></script>
-  <script src="trends-view.js?v=20261119-rel"></script>
+  <script src="trends-logic.js?v=20261119-rel2"></script>
+  <script src="trends-view.js?v=20261119-rel2"></script>
   <script>
     // FrameUp Generate: brief → /api/es-generate (ES research + AI copy +
     // template checks + ES photo) → each design rendered by the real editor in
@@ -2852,7 +2856,9 @@
           // Smart starters: the next live trends join the quick chips (when
           // ES MCP has no trending tool of its own).
           if (!topics) {
-            const more = items.filter(item => !picks.includes(item)).slice(0, 6);
+            // Varied like the Trends board: one story per storyline, at most two per sport.
+            const rest = items.filter(item => !picks.includes(item));
+            const more = window.TrendsLogic?.topPicks ? window.TrendsLogic.topPicks(rest, { n: 6, maxPerSport: 2 }) : rest.slice(0, 6);
             if (more.length) {
               topics = more.map(item => ({
                 title: item.title, brief: trendBrief(item, labelOf(item.category)), label: labelOf(item.category) || 'Trend', category: item.category,
