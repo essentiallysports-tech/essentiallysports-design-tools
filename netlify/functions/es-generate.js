@@ -13,10 +13,13 @@ const { verifyEsUser } = require('./_supabase-auth.js');
 const { selectExamples, formatExamples, loadCorpus, normalizeCorpus, pickPastPosts, formatPastPosts, houseStyle, LABELS: POST_LABELS } = require('./_generate-examples.js');
 const director = require('./_creative-director.js');
 const directionMemory = require('./_direction-memory.js');
+const onBrandKit = require('./_onbrand.js');
+const GUIDE = require('../../es-guidelines.js');
+const BRAND_KIT = require('../../brand-kit.js');
 const { isMcpConfigured, createSession } = require('./_es-mcp.js');
 const { gatewayConfigured, aiText, isBudgetError, logBackupCall, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage, MODELS: AI_MODELS } = require('./_ai-gateway.js');
 const RULES = require('../../frameup-rules.js');
-const { lintSpec, applyPatch } = require('./_lint-spec.js');
+const { lintSpec, applyPatch, findTeam } = require('./_lint-spec.js');
 
 // Marks where buildPrompt's unchanging part (rules, templates, model answers) ends and the
 // per-request part begins. The Gateway call caches everything before it; Groq just drops it.
@@ -787,6 +790,7 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid
     '- photoQuery is 2-5 words: the person plus their current team, e.g. "Patrick Mahomes Chiefs".',
     '- scene (photo templates only) is 5-14 lowercase words for an optional AI background image: a place or objects that fit the story, with NO people, faces, names, teams, logos, jerseys or text, e.g. "empty football stadium at night under bright floodlights".',
     '- A brief from Trend Design has labelled lines. "Headline:" is the headline the editor picked: put it word for word on a Cover (split into pills of max 20 chars; fix capitalisation only). "Story:" and "Context:" are the news to work from. "Sport:" is the league.',
+    ...GUIDE.directorLines(),
     '',
     `Templates:\n${catalog}`,
     '',
@@ -1432,6 +1436,41 @@ async function directions({ brief, formats, count, token, email, steer }) {
   };
 }
 
+// "Bring it on-brand": read a design made elsewhere (one image or a carousel),
+// critique it against the ES guidelines, then remake the same story as ES
+// designs: one direction per slide that maps to an ES template, facts only
+// from the image and the editor's note. Never throws past the handler.
+async function onBrand({ images, note = '', token, email, steer }) {
+  const started = clock.now();
+  const read = onBrandKit.readImages(images);
+  if (read.error) return { status: 400, body: { error: read.error } };
+  if (!gatewayConfigured()) return { status: 503, body: { error: 'Bring it on-brand needs the AI, which is off right now.', reason: 'off' } };
+  const result = await onBrandKit.critique({ images: read.images, note, track: { email, token } });
+  if (result.error === 'budget') return { status: 503, body: { error: "This week's AI budget is used up, so on-brand checks are paused until it resets.", reason: 'budget' } };
+  const critique = result.critique;
+  if (!critique) return { status: 422, body: { error: 'The director could not read that design. Try a sharper screenshot, or add the story in the note.' } };
+  const mapping = GUIDE.mapSlides(critique.slides);
+  const directions = onBrandKit.conceptsFrom(critique, mapping);
+  const brief = onBrandKit.briefFrom(critique, note);
+  const visionMs = clock.now() - started;
+  const made = await generate({
+    brief, formats: [], count: Math.min(MAX_DESIGNS, Math.max(2, directions.length)), token, email, steer,
+    directions: directions.length ? directions : true, offsetMs: visionMs, quietRefit: true,
+  });
+  return {
+    status: 200,
+    body: {
+      ...made,
+      mode: 'onbrand',
+      brief,
+      critique,
+      carousel: mapping,
+      meta: { ...made.meta, ms: { ...made.meta.ms, vision: visionMs }, costUsd: Number(((made.meta.costUsd || 0) + result.cost).toFixed(5)) },
+      vision: { model: result.model, cost: Number(result.cost.toFixed(5)) },
+    },
+  };
+}
+
 // How many designs each chosen direction gets: one direction makes 2 takes,
 // two make 2 each, three or four make one each (never more than 4 in all).
 function designsPerDirection(n, want) {
@@ -1441,8 +1480,10 @@ function designsPerDirection(n, want) {
   return 1;
 }
 
-async function generate({ brief, formats, count, avoid, token, email, steer = '', directions: chosenDirections = true }) {
-  const started = clock.now();
+// offsetMs: time already spent before this call (the on-brand vision read),
+// so the late-run guards still keep the whole request inside the limit.
+async function generate({ brief, formats, count, avoid, token, email, steer = '', directions: chosenDirections = true, offsetMs = 0, quietRefit = false }) {
+  const started = clock.now() - Math.max(0, Number(offsetMs) || 0);
   const elapsed = () => clock.now() - started;
   const runId = newRunId();
   let want = Math.min(Math.max(parseInt(count, 10) || MAX_DESIGNS, 1), MAX_DESIGNS);
@@ -1489,7 +1530,7 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
       direction.perConcept = designsPerDirection(chosen.length, want);
       want = Math.min(MAX_DESIGNS, chosen.length * direction.perConcept);
       Object.assign(direction, { source: 'chosen', concepts: chosen });
-    } else {
+    } else if (!quietRefit) {
       notes.push('Those directions no longer fit this brief, so the director chose again.');
     }
   }
@@ -1583,9 +1624,23 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
           lint: lint.errors,
         });
       }
+      const teamBefore = spec.team;
+      applyPatch(spec, lint.patch);
+      // Guideline check (es-guidelines.js): the hard gate on top of the brand
+      // checker. Off-template designs never pass; style overrides are
+      // stripped; off-kit teams/palettes fall back to the ES look (listed).
+      const guide = GUIDE.checkDesign(spec, { lint: { ...lint, patch: null }, brandKit: BRAND_KIT, templates: TEMPLATES, resolveTeam: findTeam });
+      // The templates never read style keys, but say so when the AI tried one.
+      let styled = [];
+      try { styled = GUIDE.stripStyleKeys(JSON.parse(JSON.stringify(raw?.fields || {}))); } catch (error) { styled = []; }
+      if (styled.length) guide.fixes.unshift({ rule: 'font-family', what: `ignored off-guide style (${styled.slice(0, 3).join(', ')}); the ES template sets type and colour` });
+      if (lint.patch && 'team' in lint.patch && !lint.patch.team && teamBefore) guide.fixes.push({ rule: 'team-palette', what: `"${teamBefore}" is not in the ES brand kit; the neutral ES look is used` });
+      if (!guide.ok) {
+        return problems.push({ error: `design ${index + offset + 1} (${spec.postType}): ${guide.errors.map(issue => issue.msg).join(' | ')}`, raw, lint: [] });
+      }
+      spec.guideline = { ok: true, fixes: guide.fixes.map(({ rule, what }) => ({ rule, what })), checks: guide.passed.length, version: GUIDE.VERSION };
       if (repairRound) lintStats.repaired += 1;
       else if (!lint.warnings.some(w => w.code === 'auto-split')) lintStats.passedFirst += 1;
-      applyPatch(spec, lint.patch);
       spec.lint = { warnings: lint.warnings.map(({ field, code, msg }) => ({ field, code, msg })), rules: RULES.VERSION };
       const key = `${spec.postType}|${spec.lines.join('|')}`;
       if (!seen.has(key) && designs.length < want) {
@@ -1856,6 +1911,16 @@ exports.handler = async function handler(event) {
       const result = await rewriteDesign({ brief: rewriteBrief, spec: body.spec, instruction: String(body.instruction || ''), fix: body.fix, token, email: auth.user.email });
       return json(result.status, result.body);
     }
+    // Bring it on-brand: images (data URLs) of a design made elsewhere. Same
+    // weekly and hourly caps as Generate.
+    if (body.mode === 'onbrand') {
+      const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
+      const [overWeek, overHour] = await Promise.all([userOverWeeklyLimit(token), userOverHourlyLimit(token)]);
+      if (overWeek) return json(429, { error: weeklyLimitMessage(), reason: 'weekly-limit' });
+      if (overHour) return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
+      const result = await onBrand({ images: body.images, note: String(body.note || '').slice(0, 600), token, email: auth.user.email, steer: director.normalizeSteer(body.steer) });
+      return json(result.status, result.body);
+    }
     // Keep line breaks: a pasted table is only readable row by row.
     const brief = String(body.brief || '').replace(/<[^>]*>/g, ' ').replace(/[^\S\n\t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1500);
     if (brief.length < 3) return json(400, { error: 'Write a brief of at least a few words.' });
@@ -1887,4 +1952,4 @@ exports.handler = async function handler(event) {
 };
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
-exports._test = { readBrief: readBriefFor, directorAllowed, directorNote, designsPerDirection, pastPostCard, REWRITES, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE };
+exports._test = { onBrand, readBrief: readBriefFor, directorAllowed, directorNote, designsPerDirection, pastPostCard, REWRITES, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE };

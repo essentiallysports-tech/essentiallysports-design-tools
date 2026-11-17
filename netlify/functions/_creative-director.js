@@ -18,6 +18,7 @@
 const RULES = require('../../frameup-rules.js');
 const BRAND_KIT = require('../../brand-kit.js');
 const { findTeam, findSport } = require('./_lint-spec.js');
+const GUIDE = require('../../es-guidelines.js');
 // Required when called (not at load), so tests that swap the Gateway module see the new one.
 const gateway = () => require('./_ai-gateway.js');
 
@@ -303,6 +304,8 @@ function DIRECTOR_SYSTEM(templates = {}) {
     '',
     'Templates:',
     catalog,
+    '',
+    ...GUIDE.directorLines(),
     '',
     'Rules:',
     '- Every concept is about the brief\'s own story. Use only facts that appear in the brief or the ES research, and copy them into factsUsed exactly as written there.',
