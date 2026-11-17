@@ -168,6 +168,8 @@
   }
 
   function friendlyError(status, data) {
+    // Weekly caps, the team cap, a switched-off feature: the server's own calm sentence.
+    if (['feature-off', 'weekly-limit', 'team-limit', 'limit-unknown'].includes(data?.reason) && data?.error) return data.error;
     if (status === 429 || data?.reason === 'limit') return 'You’ve hit this hour’s AI limit. Try again in a little while.';
     if (data?.reason === 'budget') return 'The team’s AI budget is used up for now. Try again later.';
     if (data?.reason === 'off') return 'The AI tools are switched off right now.';
@@ -1114,7 +1116,7 @@
       if (state.context.kind === kind) state.context.teams = teams.map(t => t.name).filter(Boolean);
     } catch (error) {
       if (token !== findTokens[kind]) return;
-      finds[kind] = { ...finds[kind], status: 'error', error: error.message };
+      finds[kind] = { ...finds[kind], status: 'error', error: error.message, off: error.reason === 'feature-off' };
     }
     renderFound();
     renderSteps();
@@ -1204,7 +1206,10 @@
     }
     els.found.removeAttribute('aria-busy');
     if (f.status === 'error') {
-      els.found.innerHTML = `${teamsHtml}<div class="va-empty-state va-empty-state--bad" role="alert">${ICON.alert}<strong>The search didn’t finish</strong><span>${esc(f.error)}</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="retry-find">${ICON.retry}Try again</button></div>${noClipBlock()}</div>`;
+      // Switched off (AI_DISABLE): a calm note and the no-clip options, no retry.
+      els.found.innerHTML = f.off
+        ? `${teamsHtml}<div class="va-empty-state" role="status">${ICON.alert}<strong>Clip search is switched off</strong><span>${esc(f.error)} Paste an X link or upload a clip instead.</span>${noClipBlock()}</div>`
+        : `${teamsHtml}<div class="va-empty-state va-empty-state--bad" role="alert">${ICON.alert}<strong>The search didn’t finish</strong><span>${esc(f.error)}</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="retry-find">${ICON.retry}Try again</button></div>${noClipBlock()}</div>`;
       return;
     }
     if (f.status === 'empty') {
