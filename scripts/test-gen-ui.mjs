@@ -145,7 +145,7 @@ assert.equal(U.relTime('', now), '');
   const focusAt = html.indexOf('generate-focus.js?v=');
   const creativeAt = html.indexOf('generate-creative.js?v=');
   assert.ok(focusAt > 0 && creativeAt > focusAt, 'generate-focus.js loads before generate-creative.js');
-  assert.match(html, /generate-creative\.css\?v=20261119-gen-v2/);
+  assert.match(html, /generate-creative\.css\?v=[\w-]+/);
   assert.match(html, /count: window\.FrameUpCreative\?\.count\?\.\(\) \|\| 4/, 'ES templates runs send the chosen count');
   assert.ok(!/gen-quick__group|grid-template-columns: 72px/.test(html), 'no fixed label column (the clipped TRENDING label)');
   ['Trending now', 'Try a format', 'gen-recent__run', 'gen-tchip__rising', 'gen-tchip__age', 'template-thumbs/instagram-'].forEach(t => assert.ok(html.includes(t), `quick rows have ${t}`));

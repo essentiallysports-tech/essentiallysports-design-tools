@@ -247,7 +247,7 @@
     view.assistantTried = true;
     return new Promise(resolve => {
       const s = doc.createElement('script');
-      s.src = 'generate-assistant.js?v=20261119-gen-v2';
+      s.src = 'generate-assistant.js?v=20261119-rel';
       s.async = true;
       s.onload = () => resolve(Boolean(root.FrameUpAssistant));
       s.onerror = () => { s.remove(); resolve(false); };

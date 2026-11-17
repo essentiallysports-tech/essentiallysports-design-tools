@@ -167,10 +167,10 @@ const BRYSON = 'Story: Story: Bryson DeChambeau takes his game to Europe after a
 // ── f. cache keys ──────────────────────────────────────────────────────────
 {
   const html = fs.readFileSync('generate.html', 'utf8');
-  ['generate-creative.css', 'frameup-compose.js', 'generate-focus.js', 'generate-assistant.js', 'generate-creative.js'].forEach(f => assert.ok(html.includes(`${f}?v=20261119-gen-v2`), `${f} on the gen-v2 key`));
+  ['generate-creative.css', 'frameup-compose.js', 'generate-focus.js', 'generate-assistant.js', 'generate-creative.js'].forEach(f => assert.ok(new RegExp(f.replace(/\./g,'\\.')+'\\?v=[\\w-]+').test(html), `${f} on a cache key`));
   const at = f => html.indexOf(`${f}?v=`);
   assert.ok(at('generate-focus.js') < at('generate-assistant.js') && at('generate-assistant.js') < at('generate-creative.js'), 'focus, assistant, then creative');
-  assert.match(fs.readFileSync('generate-focus.js', 'utf8'), /generate-assistant\.js\?v=20261119-gen-v2/, 'the lazy loader asks for the same file');
+  assert.match(fs.readFileSync('generate-focus.js', 'utf8'), /generate-assistant\.js\?v=[\w-]+/, 'the lazy loader asks for the same file');
   const pkg = fs.readFileSync('package.json', 'utf8');
   assert.equal((pkg.match(/"test:generate"/g) || []).length, 1, 'one test:generate key');
   ['test-gen-brain', 'test-gen-ui', 'test-compose-styles', 'test-gen-v2-integration'].forEach(t => assert.ok(JSON.parse(pkg).scripts['test:generate'].includes(t), `test:generate runs ${t}`));

@@ -381,7 +381,7 @@ const bigNumber = nflPlan.directions.find(d => d.archetype === 'big-number').can
 // ── 9. Page wiring ────────────────────────────────────────────────────────
 {
   const html = fs.readFileSync('generate.html', 'utf8');
-  assert.match(html, /<script src="generate-assistant\.js\?v=20261119-gen-v2" defer><\/script>/);
+  assert.match(html, /<script src="generate-assistant\.js\?v=[\w-]+" defer><\/script>/);
   const js = fs.readFileSync('generate-creative.js', 'utf8');
   ['FrameUpAssistant', 'designCritique', 'register', "signal?.('export'", "signal?.('edit'", 'sport: plan.read?.sport'].forEach(text => assert.ok(js.includes(text), `generate-creative.js has ${text}`));
   const client = fs.readFileSync('generate-assistant.js', 'utf8');

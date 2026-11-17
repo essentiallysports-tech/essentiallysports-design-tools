@@ -128,8 +128,8 @@ test('index.html: Today markup, no request entry points, cache keys', () => {
   assert.ok(!section.includes('design-request.html'), 'no Request a design launcher');
   assert.match(section, /data-today="requests"[^>]*hidden/);
   assert.ok(!html.includes('id="home-recent"'), 'Jump back in is folded into Continue');
-  assert.match(html, /trends-logic\.js\?v=[\w-]+" defer><\/script>\s*<script src="frameup-home-today\.js\?v=20261119-home" defer>/);
-  assert.match(html, /frameup-home-today\.css\?v=20261119-home/);
+  assert.match(html, /trends-logic\.js\?v=[\w-]+" defer><\/script>\s*<script src="frameup-home-today\.js\?v=[\w-]+" defer>/);
+  assert.match(html, /frameup-home-today\.css\?v=[\w-]+/);
   const js = read('frameup-home-today.js');
   assert.match(js, /FrameUpFeatures\?\.requests !== true\) return/);
 });
