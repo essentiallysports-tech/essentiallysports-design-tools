@@ -17,6 +17,16 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-19 — Generate asset service: AI backgrounds and concept art, cut-outs, varied ES photos (branch feature/gen-assets)
+- Status: `[committed on feature/gen-assets — not pushed]`. Spec: `scratchpad/gen-creative-contract.md` (agent gen-assets). Docs: `project-docs/gen-assets.md`.
+- New `netlify/functions/_asset-service.js` (`generateBackground`, `generateConceptArt`, `cutout`, `findPhotos`, `status`), `netlify/functions/gen-assets.js` + `api/gen-assets.js` (`GET/POST /api/gen-assets`, vercel.json maxDuration 60), browser client `frameup-assets.js` (`window.FrameUpAssets`, not loaded by any page yet: the gen-creative composer loads it).
+- Models from the live Gateway list: photo `bfl/flux-3-image` ($0.048), illustration `recraft/recraft-v4.1` ($0.035), texture `bfl/flux-3-image-klein` ($0.009), abstract `recraft/recraft-v4.1-flash` ($0.007), concept `google/gemini-nano-banana-2.1` ($0.0336); economy/fallback klein.
+- Never people: prompt sanitiser (names, brands, numbers, person words, action verbs) + no-people/no-marks clauses + a Haiku vision check on every image (one retry, then refused). Image-to-image only from our own backgrounds.
+- Cut-outs keep the original pixels (mask alpha only, frameup-cutout.js checks); masks never stored. Small export added to `remove-bg.js` (`removeBackgroundMask`) and `es-image-search.js` (`_internals`).
+- findPhotos: ES agency + article + media, de-duplicated (sizes, crops, bursts, already used), vision-ranked, varied by kind.
+- Storage: existing public bucket `frameup-links`, prefix `gen-assets/<input hash>`, immutable cache; HEAD before generating. No migration.
+- Tests: `scripts/test-gen-assets.mjs` (added to `test:generate`).
+
 ### 2026-11-19 — Generate hero round: stat lines, records, carousels, no blank photos (branch feature/hero-generate)
 - Status: `[committed on feature/hero-generate — not pushed; browser QA NOT run (preview server limit)]`
 - Audit: `project-docs/hero-audit-hero-generate.md`.

@@ -170,6 +170,9 @@
     "api/remove-bg.js": {
       "maxDuration": 60
     },
+    "api/gen-assets.js": {
+      "maxDuration": 60
+    },
     "api/reel-maker.js": {
       "maxDuration": 60
     }
