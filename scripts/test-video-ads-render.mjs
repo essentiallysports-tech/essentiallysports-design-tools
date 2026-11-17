@@ -247,4 +247,73 @@ assert.equal(R.tintLayers({ color: 'red', amount: 0.3 })[0].color, '#000000');
   assert.ok(log.some(e => e.fn === 'fillRect' && e.fill === 'rgba(0,0,0,0.45)'), 'scrim fallback');
 }
 
+// ─── Background sources: video | image (Ken Burns) | generated ────────────
+{
+  const log = [];
+  const makeCtx = () => new Proxy({}, {
+    get: (o, k) => (k in o ? o[k] : (typeof k === 'string' && /^(save|restore|fillRect|drawImage|fillText|strokeText|beginPath|moveTo|arcTo|closePath|fill|stroke|lineTo|translate|scale|createLinearGradient|createRadialGradient|createPattern)$/.test(k)
+      ? (...a) => { log.push({ fn: k, args: a, op: o.globalCompositeOperation || 'source-over', alpha: o.globalAlpha ?? 1, fill: o.fillStyle }); return { addColorStop() {} }; }
+      : undefined)),
+    set: (o, k, v) => { o[k] = v; return true; },
+  });
+  let ctx3 = makeCtx();
+  const ops = [{ type: 'text', text: 'Hi', x: 10, y: 900, font: '500 40px Roboto', fill: '#FFFFFF' }];
+  const clip = { videoWidth: 1920, videoHeight: 1080 };
+  const frame = { width: 1080, height: 1920, bg: { tint: { color: '#0A6FDE', amount: 0.5 }, zoom: 1.2, vignette: 0.4, fade: { color: '#000000' } }, ops };
+  // The video path is unchanged: no source and { kind: 'video' } draw the same calls.
+  R.drawFrame(ctx3, { ...frame, video: clip });
+  assert.ok(log.length > 10);
+  const plainLog = JSON.stringify(log);
+  log.length = 0;
+  ctx3 = makeCtx();
+  R.drawFrame(ctx3, { ...frame, video: clip, source: { kind: 'video' } });
+  assert.equal(JSON.stringify(log), plainLog, 'a video source draws exactly as before');
+
+  // Ken Burns: eases from the editor's framing to a slow push-in, clamped.
+  assert.deepEqual(R.kenBurnsFrame({ zoom: 1 }, 0, 8), { zoom: 1, panX: -0.35, panY: 0.15 });
+  const mid = R.kenBurnsFrame({ zoom: 1 }, 4, 8);
+  assert.ok(Math.abs(mid.zoom - 1.07) < 1e-9 && Math.abs(mid.panX) < 1e-9, 'halfway at the midpoint');
+  const end = R.kenBurnsFrame({ zoom: 1.5, panX: 0.9, tint: { color: '#000000', amount: 0.4 } }, 8, 8);
+  assert.ok(Math.abs(end.zoom - 1.5 * 1.14) < 1e-9, 'the editor zoom is kept and multiplied');
+  assert.equal(end.panX, 1, 'pan stays within -1..1');
+  assert.deepEqual(end.tint, { color: '#000000', amount: 0.4 }, 'tint passes through');
+  assert.ok(R.kenBurnsFrame({ zoom: 2.5 }, 8, 8).zoom <= R.ZOOM_MAX);
+  assert.deepEqual(R.kenBurnsFrame({}, 20, 8), R.kenBurnsFrame({}, 8, 8), 'past the end it holds');
+  // A photo draws through the clip path, bigger at the end than the start.
+  const photo = { width: 1600, height: 1200 };
+  const imageWidth = t => {
+    log.length = 0;
+    R.drawFrame(ctx3, { ...frame, video: null, source: { kind: 'image', image: photo, t, duration: 8 } });
+    const call = log.find(e => e.fn === 'drawImage');
+    assert.equal(call.args[0], photo, 'the photo is the drawn image');
+    return call.args[3];
+  };
+  assert.ok(imageWidth(8) > imageWidth(0) * 1.1, 'slow push-in');
+  // Draw order for a photo: photo, tint, vignette, fade, copy.
+  const order = () => ['drawImage', 'multiply', 'createRadialGradient', 'createLinearGradient', 'fillText'].map(k => log.findIndex(e => e.fn === k || e.op === k));
+  const o1 = order();
+  assert.ok(o1.every(i => i >= 0) && o1.every((v, i) => i === 0 || v > o1[i - 1]), `photo draw order ${o1}`);
+
+  // Generated: loops cleanly, falls back to safe colours, draws under tint and copy.
+  const a = R.generatedState(0, 8);
+  const b = R.generatedState(8, 8);
+  ['blobA', 'blobB'].forEach(k => { assert.ok(Math.abs(a[k].x - b[k].x) < 1e-9 && Math.abs(a[k].y - b[k].y) < 1e-9, `${k} returns to its start`); });
+  assert.ok(a.sweep < -0.4 && b.sweep > 1.4, 'the light sweep is off-screen at both ends');
+  assert.notDeepEqual(R.generatedState(4, 8).blobA, a.blobA, 'it moves in between');
+  assert.deepEqual(R.generatedColors(['#E31837', '#FFB81C']), ['#E31837', '#FFB81C']);
+  assert.deepEqual(R.generatedColors(['nope']), ['#0A2342', '#0A6FDE'], 'bad colours fall back');
+  assert.deepEqual(R.generatedColors(['#0B162A', '#C83803']), ['#C83803', '#0B162A'], 'a near-black primary lets the brighter colour lead');
+  assert.deepEqual(R.generatedColors(['#E31837', '#e31837']), ['#E31837', '#0A6FDE'], 'two of the same: a second colour is added');
+  log.length = 0;
+  R.drawFrame(ctx3, { ...frame, video: null, source: { kind: 'generated', colors: ['#E31837', '#FFB81C'], t: 2, duration: 8, grain: { width: 128, height: 128 } } });
+  assert.ok(!log.some(e => e.fn === 'drawImage'), 'no footage drawn');
+  const firstGrad = log.findIndex(e => e.fn === 'createLinearGradient');
+  const pattern = log.findIndex(e => e.fn === 'createPattern');
+  const tintAt = log.findIndex(e => e.op === 'multiply');
+  const textAt = log.findIndex(e => e.fn === 'fillText');
+  assert.ok(log[0].fn === 'save' && firstGrad > 0 && firstGrad < pattern && pattern < tintAt && tintAt < textAt, 'gradient, grain, then tint, then copy');
+  assert.ok(log.filter(e => e.fn === 'createRadialGradient').length >= 3, 'two lights and a vignette (plus the frame vignette)');
+  assert.deepEqual(R.STILL, { minSeconds: 5, maxSeconds: 15, defaultSeconds: 8 });
+}
+
 console.log('Video Ads renderer tests passed.');

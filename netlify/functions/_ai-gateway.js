@@ -260,8 +260,10 @@ async function aiText({ tier = 'light', system, messages, json = false, effort =
 // never runs past maxUses searches; the result carries capped: true when it
 // stopped early. With the cap set, a reply with cited links but no text is
 // returned (text '') instead of throwing.
+// allowedDomains (optional): limits the search tool to those sites (Anthropic
+// web_search `allowed_domains`), e.g. ['x.com', 'twitter.com'] for clip search.
 const WEB_SEARCH_USD = 0.01;
-async function aiWebResearch({ tier = 'main', system, prompt, maxUses = 4, maxTokens = 3000, timeoutMs = 45000, track, maxCostUsd } = {}) {
+async function aiWebResearch({ tier = 'main', system, prompt, maxUses = 4, maxTokens = 3000, timeoutMs = 45000, track, maxCostUsd, allowedDomains } = {}) {
   if (!process.env.AI_GATEWAY_API_KEY) throw new Error('AI_GATEWAY_API_KEY is not set.');
   const model = MODELS[tier] || MODELS.main;
   if (!model.startsWith('anthropic/')) throw new Error('Web research needs a Claude model.');
@@ -284,7 +286,7 @@ async function aiWebResearch({ tier = 'main', system, prompt, maxUses = 4, maxTo
           max_tokens: maxTokens,
           ...(system ? { system } : {}),
           messages,
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: maxUses }],
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: maxUses, ...(Array.isArray(allowedDomains) && allowedDomains.length ? { allowed_domains: allowedDomains } : {}) }],
         }),
         signal: AbortSignal.timeout(timeoutMs),
       });

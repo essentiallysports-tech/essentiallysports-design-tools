@@ -3,8 +3,10 @@
 // measure(text, font) function, so the layout is testable in Node.
 //
 //   fitLayout(measure, layout, brand, size, logo) -> { ops, scale, fits, box }
-//   drawFrame(ctx, { width, height, video, bg, ops, logoImage, blurCanvas })
+//   drawFrame(ctx, { width, height, video, bg, ops, logoImage, blurCanvas, source })
 //     bg: { zoom, panX, panY, fit: 'fill'|'fit', tint: { color, amount }, fade, … }
+//     source: the background when there is no clip (a photo with a slow
+//     zoom, or an animated gradient); see Background sources below
 //   videoRect(...) / tintLayers(...): the framing and tint maths, for tests
 //
 // Sizes and spacing are taken from the live ES video ads in the ES Design Team
@@ -474,11 +476,126 @@
     return best;
   }
 
-  // One full frame: video (optionally blurred), scrim, vignette, bottom fade, overlay.
-  function drawFrame(ctx, { width, height, video, bg = {}, ops = [], logoImage = null, blurCanvas = null }) {
+  // ─── Background sources (no footage) ────────────────────────────────────
+  // drawFrame's `source` picks what sits under the tint and the copy:
+  //   undefined or { kind: 'video' }  the clip in `video` (the original path)
+  //   { kind: 'image', image, t, duration, motion? }
+  //        a still photo with a slow push-in / pan (Ken Burns). It goes
+  //        through the clip path, so Fill / Fit, zoom and pan still apply.
+  //   { kind: 'generated', colors: [a, b], t, duration, grain? }
+  //        an animated gradient in two colours: drifting light, a slow light
+  //        sweep, vignette and grain. Every motion repeats once per
+  //        `duration`, so it loops without a jump.
+  const STILL = { minSeconds: 5, maxSeconds: 15, defaultSeconds: 8 };
+  const KEN_BURNS = { from: 1, to: 1.14, panX: [-0.35, 0.35], panY: [0.15, -0.15] };
+  const clamp01 = v => Math.max(0, Math.min(1, Number(v) || 0));
+  const stillProgress = (t, duration) => clamp01((Number(t) || 0) / Math.max(0.1, Number(duration) || STILL.defaultSeconds));
+  // The framing for a photo at time t: the editor's Frame settings times the slow move.
+  function kenBurnsFrame(bg = {}, t = 0, duration = STILL.defaultSeconds, motion = KEN_BURNS) {
+    const m = { ...KEN_BURNS, ...(motion || {}) };
+    const e = 0.5 - 0.5 * Math.cos(Math.PI * stillProgress(t, duration)); // ease in-out
+    const lerp = ([a, b]) => a + (b - a) * e;
+    const clamp = v => Math.max(-1, Math.min(1, v));
+    return {
+      ...bg,
+      zoom: Math.min(ZOOM_MAX, Math.max(1, Number(bg.zoom) || 1) * (m.from + (m.to - m.from) * e)),
+      panX: clamp((Number(bg.panX) || 0) + lerp(m.panX)),
+      panY: clamp((Number(bg.panY) || 0) + lerp(m.panY)),
+    };
+  }
+  const HEX6 = /^#[0-9a-f]{6}$/i;
+  // A hex colour mixed towards black (k 0..1), as rgba().
+  const shade = (hex, k, alpha = 1) => {
+    const [r, g, b] = hexRgb(hex).split(',').map(Number);
+    const f = 1 - Math.max(0, Math.min(1, k));
+    return `rgba(${Math.round(r * f)},${Math.round(g * f)},${Math.round(b * f)},${alpha})`;
+  };
+  function generatedColors(colors) {
+    const list = (Array.isArray(colors) ? colors : []).filter(c => HEX6.test(String(c)));
+    const a = list[0] || '#0A2342';
+    const b = list[1] && list[1].toLowerCase() !== a.toLowerCase() ? list[1] : '#0A6FDE';
+    // A near-black primary (Bears navy, Raiders black) would leave the frame
+    // dark: let the brighter colour lead the light.
+    return luminance(a) < 0.015 && luminance(b) > luminance(a) ? [b, a] : [a, b];
+  }
+  // Where the animated pieces are at time t (pure, so the loop is testable).
+  function generatedState(t, duration) {
+    const p = stillProgress(t, duration);
+    const ph = 2 * Math.PI * p;
+    return {
+      blobA: { x: 0.3 + 0.14 * Math.sin(ph), y: 0.3 + 0.07 * Math.cos(ph), r: 0.78 },
+      blobB: { x: 0.72 + 0.12 * Math.cos(ph), y: 0.72 + 0.08 * Math.sin(ph), r: 0.85 },
+      sweep: -0.9 + 2.8 * p, // band centre across the width: off-screen at both ends
+      grain: Math.floor((Number(t) || 0) * 24),
+    };
+  }
+  function drawGenerated(ctx, width, height, source = {}) {
+    const [a, b] = generatedColors(source.colors);
+    const st = generatedState(source.t, source.duration);
+    // Deep base in the team's colours.
+    const base = ctx.createLinearGradient(0, 0, width * 0.35, height);
+    base.addColorStop(0, shade(a, 0.35));
+    base.addColorStop(0.55, shade(a, 0.62));
+    base.addColorStop(1, shade(b, 0.7));
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, width, height);
+    // Two soft lights that drift on a loop.
+    [[st.blobA, a, 0.85], [st.blobB, b, 0.6]].forEach(([blob, hex, alpha]) => {
+      const x = blob.x * width;
+      const y = blob.y * height;
+      const r = blob.r * Math.max(width, height) * 0.6;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, shade(hex, 0, alpha));
+      g.addColorStop(1, shade(hex, 0, 0));
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, height);
+    });
+    // A slow diagonal light sweep.
+    const cx = st.sweep * width;
+    const band = width * 0.45;
+    const sweep = ctx.createLinearGradient(cx - band, -height * 0.15, cx + band, height * 0.15);
+    sweep.addColorStop(0, 'rgba(255,255,255,0)');
+    sweep.addColorStop(0.5, 'rgba(255,255,255,0.12)');
+    sweep.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sweep;
+    ctx.fillRect(0, 0, width, height);
+    // Vignette.
+    const v = ctx.createRadialGradient(width / 2, height * 0.45, Math.min(width, height) * 0.25, width / 2, height * 0.45, Math.max(width, height) * 0.75);
+    v.addColorStop(0, 'rgba(0,0,0,0)');
+    v.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, width, height);
+    // Film grain from a small noise tile, shifted every frame (24 a second).
+    if (source.grain && typeof ctx.createPattern === 'function') {
+      const pattern = ctx.createPattern(source.grain, 'repeat');
+      if (pattern) {
+        ctx.save();
+        ctx.globalAlpha = 0.07;
+        ctx.translate((st.grain * 37) % 128, (st.grain * 61) % 128);
+        ctx.fillStyle = pattern;
+        ctx.fillRect(-128, -128, width + 256, height + 256);
+        ctx.restore();
+      }
+    }
+  }
+
+  // One full frame. `source` (above) picks the background; without it, or
+  // with a video source, this is exactly the original clip path.
+  function drawFrame(ctx, options) {
+    const source = options && options.source;
+    if (source && source.kind === 'image') {
+      return drawClipFrame(ctx, { ...options, video: source.image || null, bg: kenBurnsFrame(options.bg, source.t, source.duration, source.motion) });
+    }
+    if (source && source.kind === 'generated') return drawClipFrame(ctx, { ...options, video: null, generated: source });
+    return drawClipFrame(ctx, options);
+  }
+
+  // Video (optionally blurred), scrim, vignette, bottom fade, overlay.
+  function drawClipFrame(ctx, { width, height, video, bg = {}, ops = [], logoImage = null, blurCanvas = null, generated = null }) {
     ctx.save();
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, width, height);
+    if (generated) drawGenerated(ctx, width, height, generated);
     if (video && bg.fit === 'fit') {
       // Fit: the whole clip over a soft, dark copy of itself (no black bars).
       if (blurCanvas) {
@@ -555,5 +672,5 @@
     ctx.restore();
   }
 
-  return { BASE, MIN_SCALE, MAX_SCALE, CAP, CONDENSED, BODY, ZOOM_MAX, TINT_MAX, TINT_MAX_FADE, parseRuns, tokensFor, wrapTokens, fitLayout, drawFrame, drawOps, drawVideo, videoRect, tintLayers, luminance, roundRect };
+  return { BASE, MIN_SCALE, MAX_SCALE, CAP, CONDENSED, BODY, ZOOM_MAX, TINT_MAX, TINT_MAX_FADE, STILL, KEN_BURNS, parseRuns, tokensFor, wrapTokens, fitLayout, drawFrame, drawOps, drawVideo, videoRect, tintLayers, luminance, roundRect, kenBurnsFrame, generatedState, generatedColors, drawGenerated };
 }));

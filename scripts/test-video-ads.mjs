@@ -76,6 +76,8 @@ assert.equal(res.body.items[0].sport, 'nfl');
 
 // 2. Clip from fxtwitter: MP4s on video.twimg.com only, largest first.
 const VIDEO = (w, h) => `https://video.twimg.com/amplify_video/1/vid/avc1/${w}x${h}/clip.mp4`;
+// A video with its own X media id (the same id = the same video re-posted).
+const VIDEOM = (id, w, h) => `https://video.twimg.com/amplify_video/${id}/vid/avc1/${w}x${h}/clip.mp4`;
 fxReply = { code: 200, tweet: { text: 'What a catch', author: { name: 'MLB', screen_name: 'MLB' }, media: { videos: [{
   url: VIDEO(1080, 1920), thumbnail_url: 'https://pbs.twimg.com/thumb.jpg', duration: 21.5, width: 1080, height: 1920,
   formats: [
@@ -161,8 +163,9 @@ assert.ok(TEAMS.teamsFor({ sport: 'mlb', color: 'red' }).length <= 12);
 assert.deepEqual(TEAMS.teamsFor({ sport: 'nfl', color: 'pink' }), []);
 assert.equal(TEAMS.findTeam('chiefs', 'nfl').name, 'Kansas City Chiefs');
 
-// 7. Find clips by colour: one cheap web search (Haiku, 2 searches max),
-//    candidates verified like `clip`, old posts and posts without video dropped.
+// 7. Find clips by colour: one x.com-only web search (Haiku, 4 searches max,
+//    aimed at verified handles), candidates verified like `clip`, old posts
+//    and posts without video dropped, ranked best first, diag counts.
 const { _test } = require(adsPath);
 let searchCalls = 0;
 let searchPrompt = '';
@@ -173,8 +176,9 @@ messagesHandler = body => {
   searchPrompt = body.messages[0].content;
   assert.equal(body.model, 'anthropic/claude-haiku-5.5', 'cheapest Claude model for search');
   assert.equal(body.tools?.[0]?.type, 'web_search_20250305');
-  assert.equal(body.tools[0].max_uses, 2, 'at most 2 searches');
-  assert.ok(body.max_tokens <= 1200, 'short reply');
+  assert.equal(body.tools[0].max_uses, 4, 'at most 4 searches');
+  assert.deepEqual(body.tools[0].allowed_domains, ['x.com', 'twitter.com'], 'search limited to X');
+  assert.ok(body.max_tokens <= 1700, 'short reply');
   return reply(200, { stop_reason: 'end_turn', usage: clipUsage, content: [
     { type: 'web_search_tool_result', content: [{ url: 'https://twitter.com/Chiefs/status/301', title: 'Chiefs' }, { url: 'https://www.espn.com/nfl/story', title: 'ESPN' }] },
     { type: 'text', text: JSON.stringify({ posts: [tid(101), { url: tid(102), date: 'today' }, tid(103), tid(104), { url: tid(105), date: '2026-11-17' }, tid(106), 'https://example.com/not-x', tid(101)] }) },
@@ -188,8 +192,8 @@ fxReply = href => {
   const created = { 103: nowSec - 20 * 86400, 104: nowSec - 121 * 3600, 105: undefined, 301: nowSec - 5 * 3600 }[id];
   const text = id === '106' ? '#TBT to the 2019 AFC title game' : `Clip ${id}`;
   return { code: 200, tweet: { text, created_timestamp: id in { 103: 1, 104: 1, 105: 1, 301: 1 } ? created : nowSec - 3600, author: { name: 'NFL', screen_name: id === '301' ? 'Chiefs' : 'NFL' }, media: { videos: [{
-    url: VIDEO(720, 1280), thumbnail_url: `https://pbs.twimg.com/${id}.jpg`, duration: 12.3, width: 720, height: 1280,
-    formats: [{ url: VIDEO(720, 1280), container: 'mp4', bitrate: 2176000 }, { url: VIDEO(320, 568), container: 'mp4', bitrate: 632000 }, { url: 'https://evil.example/x.mp4', container: 'mp4' }],
+    url: VIDEOM(id, 720, 1280), thumbnail_url: `https://pbs.twimg.com/${id}.jpg`, duration: 12.3, width: 720, height: 1280,
+    formats: [{ url: VIDEOM(id, 720, 1280), container: 'mp4', bitrate: 2176000 }, { url: VIDEOM(id, 320, 568), container: 'mp4', bitrate: 632000 }, { url: 'https://evil.example/x.mp4', container: 'mp4' }],
   }] } } };
 };
 synReply = null;
@@ -200,11 +204,23 @@ assert.ok(res.body.teams.length > 3 && res.body.teams[0].name && res.body.teams[
 assert.equal(res.body.teams[0].families, undefined, 'teams carry name, short, colors');
 assert.match(searchPrompt, /Kansas City Chiefs/, 'the colour teams are in the prompt');
 assert.match(searchPrompt, /last 5 days/);
-assert.deepEqual(res.body.clips.map(c => c.url), [tid(101), 'https://x.com/Chiefs/status/301'], 'no-video, 20-day-old, 121h-old, untimestamped and throwback posts dropped; duplicates merged; cited posts kept; newest first');
-assert.deepEqual(res.body.clips.map(c => c.ageHours), [1, 5], 'verified age in hours');
+assert.match(searchPrompt, /@Chiefs/, 'the colour teams\' official handles are targeted');
+assert.match(searchPrompt, /@NFL\b/, 'league accounts are targeted');
+assert.match(searchPrompt, /x\.com\/AZCardinals OR x\.com\/AtlantaFalcons OR x\.com\/Chiefs status video/, 'focused per-handle queries');
+assert.match(searchPrompt, /up to 25/, 'asks for 25 candidates');
+assert.deepEqual(res.body.clips.map(c => c.url), ['https://x.com/Chiefs/status/301', tid(101)], 'no-video, 20-day-old, 121h-old, untimestamped and throwback posts dropped; duplicates merged; cited posts kept; the official team account ranks first');
+assert.deepEqual(res.body.clips.map(c => c.ageHours), [5, 1], 'verified age in hours');
+assert.deepEqual(res.body.clips.map(c => c.source), ['official', 'league']);
+assert.deepEqual(res.body.clips.map(c => c.quality), ['720p', '720p']);
+assert.ok(res.body.clips[0].score > res.body.clips[1].score, 'sorted by score');
+assert.equal(res.body.strategy, 'web');
+assert.deepEqual(
+  (({ searched, listed, nonPost, candidates, noVideo, tooOld, noDate, throwback, kept }) => ({ searched, listed, nonPost, candidates, noVideo, tooOld, noDate, throwback, kept }))(res.body.diag),
+  { searched: 2, listed: 9, nonPost: 2, candidates: 7, noVideo: 1, tooOld: 2, noDate: 1, throwback: 1, kept: 2 },
+  'diag says where every candidate went');
 assert.ok(res.body.clips.every(c => c.postedAt && !Number.isNaN(Date.parse(c.postedAt))));
 assert.equal(res.body.note, 'Only 2 clips from the last 5 days.', 'fewer than 3 fresh clips: a note, no padding');
-const clip0 = res.body.clips[0];
+const clip0 = res.body.clips[1];
 assert.equal(clip0.handle, 'NFL');
 assert.equal(clip0.thumb, 'https://pbs.twimg.com/101.jpg');
 assert.equal(clip0.duration, 12.3);
@@ -213,7 +229,7 @@ assert.ok(clip0.variants.every(v => v.url.startsWith('https://video.twimg.com/')
 assert.equal(res.body.cached, false);
 assert.ok(res.body.cost > 0.02 && res.body.cost <= _test.FIND_CLIPS.maxCostUsd, `cost within the cap (${res.body.cost})`);
 
-// 8. Cache: the same (sport, colour, query) for 30 minutes, free, and served even
+// 8. Cache: the same (strategy, sport, colour, query) for 30 minutes, free, and served even
 //    over the hourly limit; a different colour searches again.
 callsThisHour = 500;
 res = await post({ mode: 'find-clips', sport: 'nfl', color: 'red' });
@@ -228,18 +244,21 @@ assert.equal(res.status, 429);
 assert.equal(searchCalls, 1);
 callsThisHour = 0;
 // Expired cache entries search again.
-for (const entry of _test.CLIP_CACHE.values()) entry.at -= 16 * 60 * 1000; // 15-minute TTL
+for (const entry of _test.CLIP_CACHE.values()) entry.at -= 29 * 60 * 1000;
+res = await post({ mode: 'find-clips', sport: 'nfl', color: 'red' });
+assert.equal(res.body.cached, true, 'still cached at 29 minutes');
+for (const entry of _test.CLIP_CACHE.values()) entry.at -= 2 * 60 * 1000; // 30-minute TTL
 res = await post({ mode: 'find-clips', sport: 'nfl', color: 'red' });
 assert.equal(res.body.cached, false);
 assert.equal(searchCalls, 2);
 
 // 9. Find clips by moment (query), the hard cost cap (a paused search is not
-//    continued once the cap or the 2 searches are used), 401, bad input, AI off.
+//    continued once the cap or the 4 searches are used), 401, bad input, AI off.
 let pauseCalls = 0;
 messagesHandler = body => {
   pauseCalls += 1;
   searchPrompt = body.messages[0].content;
-  return reply(200, { stop_reason: 'pause_turn', usage: { input_tokens: 9000, output_tokens: 200, server_tool_use: { web_search_requests: 2 } }, content: [
+  return reply(200, { stop_reason: 'pause_turn', usage: { input_tokens: 9000, output_tokens: 200, server_tool_use: { web_search_requests: 4 } }, content: [
     { type: 'web_search_tool_result', content: [{ url: tid(101), title: 'NFL' }] },
   ] });
 };
@@ -292,12 +311,16 @@ assert.deepEqual(res.body.teams, [{ name: 'Kansas City Chiefs', short: 'Chiefs',
 assert.match(teamPrompt, /Kansas City Chiefs \(only this team\)/);
 assert.doesNotMatch(teamPrompt, /Green Bay|something else/, 'team takes precedence over colour and query');
 assert.equal(res.body.clips.length, 3);
-assert.equal(res.body.note, undefined, '3 fresh clips: no note');
+assert.deepEqual(res.body.widened, { to: ['league'] }, 'no Chiefs-account clips: the NFL-account clips are labelled as widened');
+assert.equal(res.body.note, 'Fewer Chiefs clips this week — showing NFL accounts too.');
+assert.ok(res.body.clips.every(c => c.via === 'league'));
+assert.match(teamPrompt, /@Chiefs/, 'the team\'s official handle is targeted');
 assert.ok(res.body.clips.every(c => typeof c.ageHours === 'number'));
 res = await post({ mode: 'find-clips', sport: 'nfl', team: { name: 'Kansas City Chiefs' } });
 assert.equal(res.body.cached, true, 'cached per (sport, team), by short or full name');
 assert.equal(teamCalls, 1);
-assert.ok([..._test.CLIP_CACHE.keys()].includes('nfl|team:kansas city chiefs'), 'the cache key includes the team');
+assert.ok([..._test.CLIP_CACHE.keys()].includes('web|nfl|team:kansas city chiefs'), 'the cache key includes the strategy and the team');
+assert.equal(res.body.note, 'Fewer Chiefs clips this week — showing NFL accounts too.', 'the widened note survives the cache');
 res = await post({ mode: 'find-clips', sport: 'nfl', color: 'red' });
 assert.notDeepEqual(res.body.teams.length, 1, 'a colour search is cached separately from the team');
 res = await post({ mode: 'find-clips', sport: 'nfl', team: 'Toronto Argonauts' });
@@ -545,13 +568,16 @@ fxReply = href => {
   const id = href.match(/status\/(\d+)/)[1];
   const created = { 901: nowSec - 2 * 3600, 902: nowSec - 121 * 3600, 903: nowSec - 3600, 904: undefined, 905: nowSec - 30 * 3600, 906: nowSec - 3600 }[id];
   const text = id === '903' ? 'On this day in 2019: what a throw' : `Clip ${id}`;
-  return { code: 200, tweet: { text, created_timestamp: created, author: { screen_name: 'NFL' }, media: { videos: [{ url: VIDEO(720, 1280), formats: [{ url: VIDEO(720, 1280), container: 'mp4', bitrate: 2000000 }] }] } } };
+  return { code: 200, tweet: { text, created_timestamp: created, author: { screen_name: 'NFL' }, media: { videos: [{ url: VIDEOM(id, 720, 1280), formats: [{ url: VIDEOM(id, 720, 1280), container: 'mp4', bitrate: 2000000 }] }] } } };
 };
 res = await post({ mode: 'moments-with-clips', sport: 'all' });
 assert.equal(res.status, 200, JSON.stringify(res.body));
 assert.equal(momentCalls, 1, 'one search for all moments');
 assert.equal(momentBody.model, 'anthropic/claude-haiku-5.5');
 assert.equal(momentBody.tools[0].max_uses, 3);
+assert.deepEqual(momentBody.tools[0].allowed_domains, ['x.com', 'twitter.com']);
+assert.match(momentPrompt, /team account @Chiefs/, 'the team named in a title is targeted by its handle');
+assert.match(momentPrompt, /@NFL\b/, 'league accounts are targeted');
 assert.match(momentPrompt, /1\. \[NFL\] Mahomes rallies the Chiefs past the Bills/);
 assert.match(momentPrompt, /last 5 days/);
 assert.doesNotMatch(momentPrompt, /golf/i, 'ad sports only');
@@ -561,6 +587,11 @@ assert.deepEqual(res.body.moments.map(m => m.id), ['m1', 'm3'], 'only moments wi
 assert.deepEqual(res.body.moments[0].clips.map(c => c.url), [mid(901)], '121h-old and throwback posts dropped');
 assert.deepEqual(res.body.moments[1].clips.map(c => c.url), [mid(905)], 'a post counts for its first moment only');
 assert.equal(res.body.moments[0].clips[0].ageHours, 2);
+assert.equal(res.body.moments[0].clips[0].source, 'league');
+assert.equal(res.body.moments[0].clips[0].quality, '720p');
+assert.equal(res.body.diag.tooOld, 1);
+assert.equal(res.body.diag.noDate, 1);
+assert.equal(res.body.diag.throwback, 1);
 assert.ok(res.body.moments[0].clips[0].postedAt && res.body.moments[0].clips[0].variants.length);
 assert.equal(res.body.moments[0].team.name, 'Kansas City Chiefs', 'the team named in the title');
 assert.equal(res.body.moments[1].team, undefined);
@@ -586,13 +617,13 @@ res = await post({ mode: 'moments-with-clips' });
 assert.equal(res.body.cached, true, 'no sport = all');
 assert.deepEqual(res.body.moments.map(m => m.id), ['m1']);
 // A new set of trending moments is a new key; an expired entry searches again.
-momentEntry.at -= 16 * 60 * 1000;
+momentEntry.at -= 31 * 60 * 1000;
 res = await post({ mode: 'moments-with-clips', sport: 'all' });
 assert.equal(res.body.cached, false);
 assert.equal(momentCalls, 2);
 
 // Gates and failures: 401, weekly 429, AI off 503, search down 502, budget 503.
-for (const entry of _test.MOMENT_CACHE.values()) entry.at -= 16 * 60 * 1000;
+for (const entry of _test.MOMENT_CACHE.values()) entry.at -= 31 * 60 * 1000;
 signedIn = false;
 assert.equal((await post({ mode: 'moments-with-clips' })).status, 401);
 signedIn = true;

@@ -1657,3 +1657,40 @@ html:not([data-theme="dark"]) .va-rail__sw[aria-checked="true"] { box-shadow: 0 
   .va-rail__swatches { grid-template-columns: repeat(6, 32px); }
   .va-rail__reset { margin-left: 0; }
 }
+
+/* ── Clip cards: verified source + quality (20261117-clips2) ───────────── */
+/* On the thumbnail: source tag top-left, quality bottom-left, length bottom-right. */
+.va-clip__tag { position: absolute; left: 6px; top: 6px; display: inline-flex; align-items: center; gap: 3px; padding: 4px 7px 4px 5px; border-radius: 6px; background: rgb(0 0 0 / .72); color: #fff; font: 600 11px/1 var(--es-font-ui); --es-icon: 11px; }
+.va-clip__tag svg { width: 11px; height: 11px; stroke-width: 3; }
+.va-clip__tag--official svg { color: #6fd49a; }
+.va-clip__tag--verified svg { color: #7cb9ff; }
+.va-clip__q { position: absolute; left: 6px; bottom: 6px; padding: var(--es-space-1, 4px) 6px; border-radius: 6px; background: rgb(0 0 0 / .72); color: #fff; font: 700 11px/1 var(--es-font-ui); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+
+/* ── Make it without a clip: first-class choices in empty states ───────── */
+.va-make { display: grid; gap: var(--es-space-2, 8px); width: 100%; margin-top: var(--es-space-4, 16px); padding-top: var(--es-space-4, 16px); border-top: 1px solid var(--va-line); text-align: left; }
+.va-make--compact { margin-top: var(--es-space-3, 12px); padding-top: 0; border-top: 0; }
+.va-make__title { margin: 0; color: var(--va-ink); font: 600 13.5px/1.3 var(--es-font-ui); }
+.va-make__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-2, 8px); }
+.va-make__card { display: grid; grid-template-columns: 36px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: var(--es-space-3, 12px); align-items: center; min-height: 64px; padding: var(--es-space-2, 8px) var(--es-space-3, 12px) var(--es-space-2, 8px) var(--es-space-2, 8px); border: 0; border-radius: 12px; background: var(--va-card); box-shadow: inset 0 0 0 1px var(--va-line); color: var(--va-ink); text-align: left; cursor: pointer; font: inherit; transition: box-shadow var(--es-dur-fill, 200ms) var(--va-ease, ease), background var(--es-dur-fill, 200ms) var(--va-ease, ease); }
+.va-make__card:hover { background: var(--va-hover); box-shadow: inset 0 0 0 1px var(--va-line-2); }
+.va-make__card:active { transform: scale(.99); }
+.va-make__card:focus-visible { outline: 2px solid var(--va-accent); outline-offset: 2px; }
+.va-make__card[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--va-accent); }
+.va-make__art { grid-row: 1 / span 2; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--va-sunk); color: var(--va-ink-2); --es-icon: 18px; }
+.va-make__art svg { width: 18px; height: 18px; }
+.va-make__art--anim { background: radial-gradient(circle at 30% 28%, var(--a) 0, transparent 62%), radial-gradient(circle at 75% 78%, var(--b) 0, transparent 66%), linear-gradient(160deg, color-mix(in srgb, var(--a) 55%, #000), color-mix(in srgb, var(--b) 30%, #000)); background-size: 160% 160%, 160% 160%, 100% 100%; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12); }
+.va-make__name { align-self: end; min-width: 0; color: var(--va-ink); font: 600 13.5px/1.25 var(--es-font-ui); }
+.va-make__desc { align-self: start; min-width: 0; color: var(--va-ink-3); font-size: 12px; line-height: 1.35; }
+.va-make__len { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-1, 4px); }
+.va-make__len .va-hint { margin-right: var(--es-space-1, 4px); }
+.va-make__len .va-chip { min-height: 28px; padding-inline: 10px; }
+.va-make__len .va-chip[aria-pressed="true"] { background: var(--va-accent-soft); color: var(--va-accent-text); box-shadow: inset 0 0 0 1px var(--va-accent); }
+@media (prefers-reduced-motion: no-preference) {
+  .va-make__art--anim { animation: vaMakeDrift 8s ease-in-out infinite alternate; }
+}
+@keyframes vaMakeDrift { from { background-position: 0% 0%, 100% 100%, 0 0; } to { background-position: 60% 40%, 40% 60%, 0 0; } }
+@media (max-width: 600px) {
+  .va-make__grid { grid-template-columns: minmax(0, 1fr); }
+}
+/* The preview's "No clip?" pill has room for the extra action only on wide screens. */
+@media (max-width: 900px) { #va-empty-animated { display: none; } }

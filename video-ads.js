@@ -43,6 +43,15 @@
     exsizes: $('va-exsizes'), metaToggle: $('va-meta-toggle'), ready: $('va-ready'), rights: $('va-rights'), exportBtn: $('va-export'), exportProgress: $('va-export-progress'), exportStatus: $('va-export-status'), files: $('va-files'), again: $('va-again'),
     toasts: $('va-toasts'),
   };
+  // The ad's media: the clip <video>, or a still source with no footage
+  // (StillClip: an animated background or a photo with a slow zoom). Code that
+  // plays, seeks or trims uses els.video either way; listeners that must hear
+  // both are added with onMedia().
+  const realVideo = els.video;
+  let still = null;
+  Object.defineProperty(els, 'video', { get: () => still || realVideo, configurable: true });
+  const mediaHandlers = [];
+  const onMedia = (type, fn) => { mediaHandlers.push([type, fn]); realVideo.addEventListener(type, fn); };
   const ctx = els.canvas.getContext('2d');
   const measureCtx = document.createElement('canvas').getContext('2d');
   const measure = (text, font) => { measureCtx.font = font; return measureCtx.measureText(text).width; };
@@ -393,7 +402,7 @@
   function draw() {
     if (!current) return;
     const s = size();
-    R.drawFrame(ctx, { width: s.width, height: s.height, video: hasClip() ? els.video : placeholder, bg: bg(), ops: current.ops, logoImage: logo.img, blurCanvas });
+    R.drawFrame(ctx, { width: s.width, height: s.height, video: hasClip() ? els.video : placeholder, bg: bg(), ops: current.ops, logoImage: logo.img, blurCanvas, source: still ? still.source() : undefined });
     sampleGlow();
   }
 
@@ -553,6 +562,7 @@
   let clipUrl = '';
   function useClip(blob, meta) {
     setPlaying(false);
+    dropStill();
     if (clipUrl) URL.revokeObjectURL(clipUrl);
     clipUrl = URL.createObjectURL(blob);
     state.clip = meta;
@@ -560,6 +570,218 @@
     els.video.src = clipUrl;
     els.video.load();
   }
+  // ─── No clip: animated background or photo (StillClip) ───────────────────
+  // A media clock with the parts of the <video> API the editor uses (play,
+  // pause, currentTime, duration, seeked / timeupdate / ended), so preview,
+  // trim and export work unchanged. Frames come from the renderer's
+  // background sources (video-ads-render.js): 'animated' = generated
+  // gradient, 'photo' = Ken Burns over the still.
+  let stillSeconds = R.STILL.defaultSeconds;
+  let grain = null;
+  function grainTile() {
+    if (grain) return grain;
+    grain = document.createElement('canvas');
+    grain.width = 128;
+    grain.height = 128;
+    const g = grain.getContext('2d');
+    const img = g.createImageData(128, 128);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = Math.random() * 255;
+      img.data[i] = v; img.data[i + 1] = v; img.data[i + 2] = v; img.data[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    return grain;
+  }
+  class StillClip extends EventTarget {
+    constructor(kind, { image = null, colors = [], duration = R.STILL.defaultSeconds } = {}) {
+      super();
+      this.kind = kind;
+      this.image = image;
+      this.colors = colors;
+      this.duration = duration;
+      this.paused = true;
+      this.ended = false;
+      this.muted = true;
+      this.t0 = 0;
+      this.at = 0;
+      this.timer = 0;
+    }
+    get videoWidth() { return this.kind === 'photo' ? (this.image?.naturalWidth || this.image?.width || 0) : 1080; }
+    get videoHeight() { return this.kind === 'photo' ? (this.image?.naturalHeight || this.image?.height || 0) : 1920; }
+    get currentTime() { return this.paused ? this.t0 : Math.min(this.duration, this.t0 + (performance.now() - this.at) / 1000); }
+    set currentTime(value) {
+      this.t0 = Math.max(0, Math.min(this.duration, Number(value) || 0));
+      this.at = performance.now();
+      this.ended = false;
+      setTimeout(() => { this.dispatchEvent(new Event('seeked')); this.dispatchEvent(new Event('timeupdate')); }, 0);
+    }
+    play() {
+      if (this.t0 >= this.duration) this.t0 = 0;
+      this.at = performance.now();
+      this.paused = false;
+      this.ended = false;
+      clearInterval(this.timer);
+      this.timer = setInterval(() => this.tick(), 100);
+      return Promise.resolve();
+    }
+    tick() {
+      this.dispatchEvent(new Event('timeupdate'));
+      if (this.paused || this.currentTime < this.duration) return;
+      this.t0 = this.duration;
+      this.paused = true;
+      this.ended = true;
+      clearInterval(this.timer);
+      this.dispatchEvent(new Event('ended'));
+    }
+    pause() {
+      if (!this.paused) this.t0 = this.currentTime;
+      this.paused = true;
+      clearInterval(this.timer);
+    }
+    load() { setTimeout(() => this.dispatchEvent(new Event('loadedmetadata')), 0); }
+    getAttribute() { return null; }
+    source() {
+      const t = this.currentTime;
+      return this.kind === 'photo'
+        ? { kind: 'image', image: this.image, t, duration: this.duration }
+        : { kind: 'generated', colors: this.colors, t, duration: this.duration, grain: grainTile() };
+    }
+  }
+  function dropStill() {
+    if (!still) return;
+    still.pause();
+    still = null;
+    renderNoClip();
+  }
+  // The team's two colours, else the colour searched, else the newsletter's.
+  function stillColors() {
+    const sport = state.context?.sport || brand().sport;
+    const name = state.context?.teams?.[0];
+    const team = name && typeof T.findTeam === 'function' ? (T.findTeam(name, sport) || T.findTeam(name)) : null;
+    if (team?.colors?.length) return team.colors.slice(0, 2);
+    const color = state.context?.color ? colorById(state.context.color) : null;
+    if (color?.hex) return [color.hex, brand().accent];
+    return [brand().wordmark?.bg || brand().accent, brand().highlight?.bg || brand().accent];
+  }
+  function stillWhat() {
+    const name = state.context?.teams?.[0];
+    if (name) return `${(T.findTeam?.(name) || {}).short || name} colours`;
+    if (state.context?.color) return `${String(state.context.colorLabel || '').toLowerCase()} tones`;
+    return `${brand().label} colours`;
+  }
+  function useStill(kind, { image = null, name = '' } = {}) {
+    setPlaying(false);
+    realVideo.pause();
+    if (still) still.pause();
+    still = new StillClip(kind, { image, colors: stillColors(), duration: stillSeconds });
+    mediaHandlers.forEach(([type, fn]) => still.addEventListener(type, fn));
+    state.clip = { name: name || (kind === 'animated' ? 'Animated background' : 'Photo'), source: kind === 'animated' ? 'animated' : 'photo' };
+    els.strip.classList.remove('is-ready');
+    setClipStatus(kind === 'animated'
+      ? `Animated background in ${stillWhat()}, ${stillSeconds} s. It loops cleanly.`
+      : `Photo with a slow zoom, ${stillSeconds} s. Check you may use it before publishing.`);
+    still.load();
+    renderNoClip();
+  }
+  // Photo: any still the browser can read; it stays on this device.
+  const photoInput = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', hidden: true });
+  photoInput.id = 'va-photo-file';
+  document.body.append(photoInput);
+  let photoUrl = '';
+  photoInput.addEventListener('change', () => {
+    const file = photoInput.files?.[0];
+    photoInput.value = '';
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { toast('Choose an image (JPG, PNG or WebP).', { tone: 'bad' }); return; }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+      photoUrl = url;
+      useStill('photo', { image: img, name: file.name });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); toast('That image could not be read. Try a JPG or PNG.', { tone: 'bad' }); };
+    img.src = url;
+  });
+  // Filmstrip for a still source: frames drawn by the renderer.
+  function buildStillStrip(dur) {
+    const token = ++stripToken;
+    const rect = els.track.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = Math.max(120, Math.round(rect.width * dpr));
+    const H = Math.max(24, Math.round(rect.height * dpr));
+    els.strip.width = W;
+    els.strip.height = H;
+    const c = els.strip.getContext('2d');
+    c.clearRect(0, 0, W, H);
+    if (!still) return;
+    const ratio = still.kind === 'photo' && still.videoHeight ? Math.min(1.8, still.videoWidth / still.videoHeight) : 0.5625;
+    const tileW = Math.max(16, Math.round(H * ratio));
+    const n = Math.ceil(W / tileW);
+    const base = still.source();
+    for (let i = 0; i < n; i += 1) {
+      if (token !== stripToken) return;
+      c.save();
+      c.beginPath();
+      c.rect(i * tileW, 0, tileW, H);
+      c.clip();
+      c.translate(i * tileW, 0);
+      R.drawFrame(c, { width: tileW, height: H, video: null, bg: { scrim: 0 }, ops: [], source: { ...base, t: ((i + 0.5) / n) * dur, grain: null } });
+      c.restore();
+    }
+    els.strip.classList.add('is-ready');
+  }
+
+  // "Make it without a clip": first-class choices in every empty clip state,
+  // and on the Link tab (compact: only the two no-footage options).
+  const NOCLIP_ICON = {
+    photo: svg('<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>'),
+    upload: svg('<path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'),
+  };
+  function noClipBlock({ compact = false } = {}) {
+    const [a, b] = stillColors().map(c => (/^#[0-9a-f]{6}$/i.test(String(c)) ? c : '#0A2342'));
+    const on = kind => (still && still.kind === kind ? ' aria-pressed="true"' : ' aria-pressed="false"');
+    const card = (act, art, name, desc, extra = '') => `<button class="va-make__card" type="button" data-act="${act}"${extra}>${art}<span class="va-make__name">${name}</span><span class="va-make__desc">${desc}</span></button>`;
+    const cards = [
+      card('make-animated', `<span class="va-make__art va-make__art--anim" style="--a:${esc(a)};--b:${esc(b)}" aria-hidden="true"></span>`, 'Animated background', `${esc(stillWhat())}, slow light. Loops.`, on('animated')),
+      card('make-photo', `<span class="va-make__art" aria-hidden="true">${NOCLIP_ICON.photo}</span>`, 'Photo, slow zoom', 'Upload a still; it pushes in.', on('photo')),
+      ...(compact ? [] : [
+        card('make-upload', `<span class="va-make__art" aria-hidden="true">${NOCLIP_ICON.upload}</span>`, 'Upload a video', 'MP4 works best.'),
+        card('to-link', `<span class="va-make__art" aria-hidden="true">${ICON.link}</span>`, 'Paste an X link', 'Any public post.'),
+      ]),
+    ].join('');
+    const lens = [5, 8, 10, 15].map(n => `<button class="va-chip" type="button" data-act="still-len" data-len="${n}" aria-pressed="${n === stillSeconds}">${n} s</button>`).join('');
+    return `<div class="va-make${compact ? ' va-make--compact' : ''}" role="group" aria-label="Make it without a clip">
+      <p class="va-make__title">${compact ? 'No video? Make it without a clip' : 'Make it without a clip'}</p>
+      <div class="va-make__grid">${cards}</div>
+      <div class="va-make__len" role="group" aria-label="Length without a clip"><span class="va-hint">Length</span>${lens}</div>
+    </div>`;
+  }
+  // Handles a no-clip action from any empty state. True when handled.
+  function noClipAct(event) {
+    const el = event.target.closest('[data-act]');
+    const act = el?.dataset.act;
+    if (act === 'make-animated') { useStill('animated'); return true; }
+    if (act === 'make-photo') { photoInput.click(); return true; }
+    if (act === 'make-upload') { els.file.click(); return true; }
+    if (act === 'still-len') {
+      stillSeconds = Math.max(R.STILL.minSeconds, Math.min(R.STILL.maxSeconds, Number(el.dataset.len) || R.STILL.defaultSeconds));
+      if (still) useStill(still.kind, { image: still.image, name: still.kind === 'photo' ? state.clip?.name : '' });
+      else renderNoClip();
+      return true;
+    }
+    return false;
+  }
+  // Keeps every visible no-clip block in step (selected card, length).
+  function renderNoClip() {
+    const box = document.getElementById('va-noclip-link');
+    if (box) box.innerHTML = noClipBlock({ compact: true });
+    document.querySelectorAll('.va-make:not(.va-make--compact)').forEach(block => {
+      block.querySelectorAll('[data-act="still-len"]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.len) === stillSeconds)));
+      ['animated', 'photo'].forEach(kind => block.querySelector(`[data-act="make-${kind}"]`)?.setAttribute('aria-pressed', String(Boolean(still && still.kind === kind))));
+    });
+  }
+
   // Recorded WebM files often report an Infinity duration until the end is
   // seeked once; resolve the real length before setting up the trim.
   function finiteDuration(video) {
@@ -572,7 +794,7 @@
       video.currentTime = 1e7;
     });
   }
-  els.video.addEventListener('loadedmetadata', async () => {
+  onMedia('loadedmetadata', async () => {
     const d = await finiteDuration(els.video);
     if (!d) { setClipStatus('That video has no readable length. Try an MP4 (H.264).'); return; }
     state.trimIn = 0;
@@ -584,13 +806,15 @@
     syncTime();
     // Seeking to exactly 0 can skip the first-frame event in some browsers.
     els.video.currentTime = Math.min(0.03, d);
-    buildFilmstrip(clipUrl, d);
+    if (still) buildStillStrip(d);
+    else buildFilmstrip(clipUrl, d);
     changed();
     renderFound();
-    if (state.clip) toast('Clip ready', state.step === 'clip' ? { tone: 'good', action: { label: 'Next: Copy', fn: () => goStep('copy') } } : { tone: 'good' });
+    renderNoClip();
+    if (state.clip) toast(still ? (still.kind === 'animated' ? 'Animated background ready' : 'Photo ready') : 'Clip ready', state.step === 'clip' ? { tone: 'good', action: { label: 'Next: Copy', fn: () => goStep('copy') } } : { tone: 'good' });
   });
-  els.video.addEventListener('seeked', () => { draw(); syncTime(); });
-  els.video.addEventListener('error', () => { if (els.video.getAttribute('src')) setClipStatus('That video could not be played. Try an MP4 (H.264).'); });
+  onMedia('seeked', () => { draw(); syncTime(); });
+  realVideo.addEventListener('error', () => { if (!still && realVideo.getAttribute('src')) setClipStatus('That video could not be played. Try an MP4 (H.264).'); });
   const setClipStatus = text => { els.clipStatus.textContent = text; };
 
   function takeFile(file) {
@@ -651,7 +875,7 @@
         setBusy(true, 'Downloading the clip…', total ? got / total : null);
       }
       const who = meta.handle ? `@${String(meta.handle).replace(/^@/, '')}` : 'X';
-      useClip(new Blob(parts, { type: 'video/mp4' }), { name: `X post by ${who}`, source: 'x', url: meta.url || '' });
+      useClip(new Blob(parts, { type: 'video/mp4' }), { name: `X post by ${who}`, source: meta.from === 'search' ? 'search' : 'x', url: meta.url || '' });
       setClipStatus(`Clip from ${who}. Check you may use it before publishing.`);
     } catch (error) {
       logEvent('clip_failed', { height: Number(variant.height) || 0, status, post: safeUrl(meta.url) });
@@ -712,7 +936,7 @@
   }
   function stepSub(id) {
     if (id === 'clip') {
-      if (hasClip()) return state.clip?.source === 'upload' ? 'Your upload' : 'Clip in';
+      if (hasClip()) return { upload: 'Your upload', animated: 'Animated background', photo: 'Photo, slow zoom' }[state.clip?.source] || 'Clip in';
       const f = finds[state.clipTab];
       return f?.status === 'loading' ? 'Searching…' : 'Find a video';
     }
@@ -943,8 +1167,12 @@
     const hours = Number.isFinite(Number(c.ageHours)) && c.ageHours !== null && c.ageHours !== '' ? Number(c.ageHours) : (c.postedAt ? (Date.now() - new Date(c.postedAt).getTime()) / 3600e3 : NaN);
     const age = Number.isFinite(hours) ? (hours < 1 ? 'Just now' : hours < 24 ? `${Math.round(hours)}h ago` : `${Math.round(hours / 24)} day${Math.round(hours / 24) === 1 ? '' : 's'} ago`) : '';
     const secs = Number(c.duration) > 600 ? Number(c.duration) / 1000 : Number(c.duration || (c.durationMs ? c.durationMs / 1000 : 0));
+    // Verified sources (video-ads-sources.js on the server): the team's own
+    // account is "Official"; league, conference and network accounts "Verified".
+    const tag = c.source === 'official' ? 'Official' : (c.source === 'league' || c.source === 'media') ? 'Verified' : '';
+    const quality = /^\d{3,4}p$/.test(String(c.quality || '')) ? c.quality : '';
     return `<article class="va-clip${inAd ? ' is-in' : ''}${busy ? ' is-busy' : ''}" style="--i:${i}">
-      <span class="va-clip__thumb"${thumb ? ` style="background-image:url('${esc(thumb)}')"` : ''}>${secs ? `<span class="va-clip__dur">${esc(fmt(secs))}</span>` : ''}${inAd ? `<span class="va-clip__in">${ICON.check}In the ad</span>` : ''}</span>
+      <span class="va-clip__thumb"${thumb ? ` style="background-image:url('${esc(thumb)}')"` : ''}>${tag && !inAd ? `<span class="va-clip__tag va-clip__tag--${c.source === 'official' ? 'official' : 'verified'}" title="${tag === 'Official' ? 'Posted by the team’s own account' : 'Posted by a league, conference or network account'}">${ICON.check}${tag}</span>` : ''}${quality ? `<span class="va-clip__q" title="Best version on X">${esc(quality)}</span>` : ''}${secs ? `<span class="va-clip__dur">${esc(fmt(secs))}</span>` : ''}${inAd ? `<span class="va-clip__in">${ICON.check}In the ad</span>` : ''}</span>
       <span class="va-clip__who"><span>${handle ? `@${esc(handle)}` : 'X post'}</span>${age ? `<span class="va-clip__age">${esc(age)}</span>` : ''}</span>
       ${c.text ? `<span class="va-clip__text">${esc(c.text)}</span>` : ''}
       <span class="va-clip__actions">
@@ -955,6 +1183,7 @@
   }
   function renderFound() {
     const kind = state.clipTab;
+    if (kind !== 'link') renderNoClip(); // its colours follow the current team / colour
     // By moment with the list open: no moment chosen, so no clips under it.
     if (kind === 'link' || (kind === 'moment' && state.momentOpen)) { els.found.hidden = true; return; }
     els.found.hidden = false;
@@ -967,7 +1196,6 @@
     const teams = allTeams.slice(0, 6);
     const more = allTeams.length - teams.length;
     const teamsHtml = teams.length ? `<ul class="va-teams" aria-label="Matched teams">${teams.map(t => `<li class="va-team" aria-label="${esc(t.name || t.short)}">${teamMark(t, 20)}<span>${esc(t.short || t.name)}</span></li>`).join('')}${more > 0 ? `<li class="va-team va-team--more" title="${esc(allTeams.slice(6).map(t => t.short || t.name).join(', '))}">+${more} more</li>` : ''}</ul>` : '';
-    const linkBtn = '<button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-link">Paste a link</button>';
     if (f.status === 'loading') {
       els.found.innerHTML = `${teamsHtml}<p class="va-working">${dots}Looking for clips from the last 5 days…</p>
         <div class="va-clipgrid" aria-hidden="true">${Array.from({ length: 4 }, (_, i) => `<div class="va-clip va-clip--skeleton" style="--i:${i}"><span class="va-clip__thumb va-shimmer"></span><span class="va-line va-shimmer" style="width:46%"></span><span class="va-line va-shimmer"></span></div>`).join('')}</div>`;
@@ -976,13 +1204,15 @@
     }
     els.found.removeAttribute('aria-busy');
     if (f.status === 'error') {
-      els.found.innerHTML = `${teamsHtml}<div class="va-empty-state va-empty-state--bad" role="alert">${ICON.alert}<strong>The search didn’t finish</strong><span>${esc(f.error)}</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="retry-find">${ICON.retry}Try again</button>${linkBtn}</div></div>`;
+      els.found.innerHTML = `${teamsHtml}<div class="va-empty-state va-empty-state--bad" role="alert">${ICON.alert}<strong>The search didn’t finish</strong><span>${esc(f.error)}</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="retry-find">${ICON.retry}Try again</button></div>${noClipBlock()}</div>`;
       return;
     }
     if (f.status === 'empty') {
       const another = { team: 'Try another team', color: 'Try another colour', moment: 'Try another moment' }[kind];
       const pick = { team: ['other-team', 'Pick a team'], color: ['other-color', 'Pick a colour'], moment: ['other-moment', 'Pick a moment'] }[kind];
-      els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}<div class="va-empty-state">${ICON.film}<strong>No recent clips</strong><span>No clips from the last 5 days for ${esc(what)}. ${another} or paste an X link.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="${pick[0]}">${pick[1]}</button>${linkBtn}</div></div>`;
+      const title = { team: `No fresh ${esc(f.label || 'team')} clips yet`, color: `No fresh clips for ${esc(what)} yet`, moment: 'No fresh clips for this moment yet' }[kind];
+      const where = kind === 'moment' ? 'We checked X for a video of it from the last 5 days.' : 'We checked the official team, league and network accounts on X, and everyone else, for the last 5 days.';
+      els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}<div class="va-empty-state">${ICON.film}<strong>${title}</strong><span>${where} ${another}, or make the ad without a clip.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="${pick[0]}">${pick[1]}</button></div>${noClipBlock()}</div>`;
       return;
     }
     els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}
@@ -994,10 +1224,11 @@
     const use = event.target.closest('[data-clip]');
     if (use) {
       const c = finds[state.clipTab]?.clips?.[Number(use.dataset.clip)];
-      if (c) downloadClip(bestVariant(c.variants), { handle: c.handle, url: c.url });
+      if (c) downloadClip(bestVariant(c.variants), { handle: c.handle, url: c.url, from: 'search' });
       return;
     }
     const act = event.target.closest('[data-act]')?.dataset.act;
+    if (noClipAct(event)) return;
     if (act === 'retry-find') {
       const f = finds[state.clipTab];
       if (state.clipTab === 'color') findByColor();
@@ -1142,7 +1373,14 @@
       els.trends.removeAttribute('aria-busy');
       if (f.status === 'empty' || !f.items.length) {
         els.trendsStatus.textContent = '';
-        els.trends.innerHTML = `<li class="va-empty-state">${ICON.film}<strong>No fresh clips</strong><span>No trending moments have fresh clips right now. Try By team or paste an X link.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="to-team">By team</button><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-link">Paste an X link</button></div></li>`;
+        const all = state.sport === 'all' || !SPORT_LABEL[state.sport];
+        const tries = all
+          ? `${['nfl', 'cfb', 'mlb'].map(id => `<button class="es-btn es-btn--sm" type="button" data-act="sport-${id}">${SPORT_LABEL[id]}</button>`).join('')}<button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-team">By team</button>`
+          : `<button class="es-btn es-btn--sm" type="button" data-act="sport-all">All sports</button><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-team">By team</button>`;
+        const why = all
+          ? 'None of today’s top moments has a video from the last 5 days yet. Try one sport at a time, or search by team.'
+          : `None of the top ${esc(SPORT_LABEL[state.sport])} moments has a video from the last 5 days yet. Try all sports, or search by team.`;
+        els.trends.innerHTML = `<li class="va-empty-state">${ICON.film}<strong>No fresh clips for these moments yet</strong><span>${why}</span><div class="va-empty-state__actions">${tries}</div>${noClipBlock()}</li>`;
         return;
       }
       els.trends.innerHTML = f.items.map((item, i) => trendRow(item, i, item.clips.length)).join('');
@@ -1200,6 +1438,8 @@
   });
   els.trends.addEventListener('click', event => {
     const act = event.target.closest('[data-act]')?.dataset.act;
+    if (noClipAct(event)) return;
+    if (act && act.startsWith('sport-')) { els.sports.querySelector(`[data-sport="${act.slice(6)}"]`)?.click(); return; }
     if (act === 'retry-trends') { loadTrends(); return; }
     if (act === 'to-color') { selectClipTab(clipTab('color')); return; }
     if (act === 'to-team') { selectClipTab(clipTab('team')); return; }
@@ -1962,13 +2202,13 @@
   function audioGraph() {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      audioSource = audioCtx.createMediaElementSource(els.video);
+      audioSource = audioCtx.createMediaElementSource(realVideo);
       monitor = audioCtx.createGain();
       monitor.gain.value = previewMuted ? 0 : 1;
       audioSource.connect(monitor).connect(audioCtx.destination);
       // A muted element sends silence into Web Audio too: unmute it and let the
       // monitor gain decide what the speaker hears.
-      els.video.muted = false;
+      realVideo.muted = false;
     }
     return audioCtx;
   }
@@ -2035,7 +2275,7 @@
     els.video.addEventListener('timeupdate', guard);
     els.video.addEventListener('ended', guard);
 
-    const drawAll = () => targets.forEach(t => R.drawFrame(t.ctx, { width: t.s.width, height: t.s.height, video: els.video, bg: bg(), ops: t.layout.ops, logoImage: logo.img, blurCanvas: t.blur }));
+    const drawAll = () => targets.forEach(t => R.drawFrame(t.ctx, { width: t.s.width, height: t.s.height, video: els.video, bg: bg(), ops: t.layout.ops, logoImage: logo.img, blurCanvas: t.blur, source: still ? still.source() : undefined }));
     const onVisibility = () => {
       if (document.hidden && !finished) { els.video.pause(); targets.forEach(t => t.recorder.state === 'recording' && t.recorder.pause()); els.exportStatus.textContent = 'Paused: come back to this tab to keep recording.'; }
       else if (!finished) { targets.forEach(t => t.recorder.state === 'paused' && t.recorder.resume()); els.video.play(); els.exportStatus.textContent = 'Recording in real time. Keep this tab open and visible.'; }
@@ -2272,7 +2512,9 @@
   // Pan room on the 1080-wide canvas for the current framing (0 = nothing to move).
   function panRoom() {
     const s = size();
-    const src = hasClip() ? els.video : placeholder;
+    // An animated background fills the frame: nothing to move.
+    if (still && still.kind === 'animated') return { roomX: 0, roomY: 0 };
+    const src = still ? still.image : hasClip() ? els.video : placeholder;
     return R.videoRect(src.videoWidth || src.width, src.videoHeight || src.height, s.width, s.height, { zoom: state.zoom, fit: state.fit }) || { roomX: 0, roomY: 0 };
   }
   let lookTimer = 0;
@@ -2302,7 +2544,8 @@
     const movable = room.roomX > 0.5 || room.roomY > 0.5;
     els.canvas.classList.toggle('is-pannable', movable);
     rail.center.disabled = !state.panX && !state.panY;
-    rail.hint.textContent = movable ? 'Drag the ad or use arrow keys to move the clip' : 'Zoom in to move the clip';
+    rail.hint.textContent = still && still.kind === 'animated' ? 'Framing moves clips and photos; tint works here too'
+      : movable ? `Drag the ad or use arrow keys to move the ${still ? 'photo' : 'clip'}` : `Zoom in to move the ${still ? 'photo' : 'clip'}`;
     els.canvas.setAttribute('aria-label', `Ad preview. Clip ${state.fit === 'fit' ? 'fitted' : 'fills the frame'}, zoom ${z}%, tint ${t}% ${name}.`);
     renderTint();
   }
@@ -2403,10 +2646,12 @@
     panBy(dir[0] * step, dir[1] * step);
     lookChanged();
   });
-  els.video.addEventListener('loadedmetadata', () => syncRail());
+  onMedia('loadedmetadata', () => syncRail());
   syncRail();
 
   // ─── Start ───────────────────────────────────────────────────────────────
+  renderNoClip();
+  $('va-empty-animated')?.addEventListener('click', () => useStill('animated'));
   setBrand(state.brandId);
   syncFields();
   renderSwatches();
