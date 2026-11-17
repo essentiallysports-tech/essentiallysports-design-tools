@@ -146,8 +146,17 @@
     return '';
   }
 
-  // Rankings Table / Ranked List: fill the template's own data model. Row
-  // images stay empty (no placeholder logos); unused rows are hidden.
+  // A row's team logo from the logo library (logo-library.js), or ''.
+  function teamLogo(teamName, sportHint) {
+    const library = window.FrameUpLogos;
+    if (!teamName || !library) return null;
+    const entry = library.findTeam(teamName, sportHint) || library.findTeam(teamName);
+    return entry ? { src: library.srcFor(entry), name: entry.name } : null;
+  }
+
+  // Rankings Table / Ranked List: fill the template's own data model. A row
+  // that names a team gets that team's library logo; other row images stay
+  // empty (no placeholder logos); unused rows are hidden.
   function applyListicle(spec) {
     const data = spec.listicle || {};
     const table = spec.postType === 'listicle-type-1';
@@ -161,8 +170,8 @@
         entity: row.entity,
         ...(table ? { metric1: row.metric1, metric2: row.metric2 } : { subtitle: row.subtitle || '' }),
         accent: teamAccent(row.team, spec.sport) || api.DEFAULT_ACCENTS[index],
-        logoSrc: '',
-        logoName: '',
+        logoSrc: teamLogo(row.team, spec.sport)?.src || '',
+        logoName: teamLogo(row.team, spec.sport)?.name || '',
         ...(table ? {} : { playerSrc: '', playerName: '' }),
         hidden: false,
       };

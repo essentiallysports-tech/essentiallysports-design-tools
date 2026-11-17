@@ -75,6 +75,7 @@
     const source = value.trim();
     if (/^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(source)) return source;
     if (/^assets\/listicle-placeholders\/[a-z0-9-]+\.png$/i.test(source)) return source;
+    if (/^(?:assets\/logos\/[a-z0-9-]+\/[a-z0-9-]+\.webp|assets\/league-logos\/[a-z0-9-]+\.svg|assets\/infographics\/logo-[a-z0-9-]+\.webp|https:\/\/a\.espncdn\.com\/i\/teamlogos\/[a-z0-9/-]+\.png)$/i.test(source)) return source; // logo library (logo-library.js)
     return '';
   }
 

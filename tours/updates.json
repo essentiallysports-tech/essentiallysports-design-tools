@@ -79,6 +79,39 @@
       ]
     },
     {
+      "id": "2026-11-18-stat-templates-logos",
+      "date": "2026-11-18",
+      "title": "Two stat templates and a logo library",
+      "items": [
+        {
+          "title": "Player Stat Line",
+          "text": "A player photo with the team logo, name, opponent and up to 7 stats. Labels take the team's colours.",
+          "page": "index.html",
+          "route": "instagram"
+        },
+        {
+          "title": "Team Record / Score",
+          "text": "A big record or score under a round team badge, with the ESSENTIALLYSPORTS wordmark.",
+          "page": "index.html",
+          "route": "instagram"
+        },
+        {
+          "title": "Logo library",
+          "text": "800 team, club and league logos (NFL, NBA, MLB, NHL, WNBA, college, soccer, F1, tours) with search, favourites and your own uploads, wherever a design takes a logo."
+        }
+      ],
+      "templates": [
+        [
+          "instagram",
+          "player-stat-line"
+        ],
+        [
+          "instagram",
+          "team-record"
+        ]
+      ]
+    },
+    {
       "id": "2026-11-17-video-ads-v2",
       "date": "2026-11-17",
       "title": "Video Ads v2, Trends hub, Ask AI and tours",
