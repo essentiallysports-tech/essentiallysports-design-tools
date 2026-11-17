@@ -956,7 +956,9 @@
     const aiLeft = state.aiClips && state.config.aiClips?.ready ? Math.max(0, state.config.aiClips.max - state.aiClipsUsed) : 0;
     const durs = plan.beats.map(b => { const t = state.timeline.beats.find(x => x.id === b.id); return { id: b.id, kind: b.kind, visual: b.visual, durMs: t ? t.outMs - t.inMs : 2000 }; });
     const mix = F.planVisualMix(durs, { target: 0.8, clipsAvailable: state.useClips ? pool.length + aiLeft : 0 });
-    const usedClips = new Set(Object.values(state.assets).filter(a => a.kind === 'clip' && a.post).map(a => a.post));
+    // Clips already on a beat of THIS reel (not every clip this tab has seen).
+    const inUse = () => new Set(plan.beats.flatMap(b => state.photos[b.id] || []).map(id => state.assets[id]?.post).filter(Boolean));
+    const usedClips = inUse();
     const usedPhotos = new Set(Object.values(state.photos).flat());
     let n = 0;
     for (const beat of beats) {
@@ -1035,7 +1037,7 @@
       if (action === 'swap-clip') {
         const pool = await clipPool(state.plan);
         const current = (state.photos[beatId] || []).map(id => state.assets[id]?.post).filter(Boolean);
-        const used = new Set([...current, ...Object.values(state.assets).filter(a => a.post).map(a => a.post)]);
+        const used = new Set([...current, ...state.plan.beats.flatMap(b => state.photos[b.id] || []).map(id => state.assets[id]?.post).filter(Boolean)]);
         const clip = nextClip(pool, beat, used) || pool.find(c => !current.includes(c.url));
         if (!clip || !await useXClip(beatId, clip)) toast(pool.length ? 'No other clip loaded. Try a photo or upload one.' : 'No official clips found for this story. Try a photo, a team graphic or an upload.', { tone: 'error' });
       } else if (action === 'ai-clip') {
@@ -1181,7 +1183,7 @@
     const order = { critical: 0, warning: 1, info: 2 };
     const list = [...lint.issues].sort((a, b) => order[a.severity] - order[b.severity]);
     const tl = state.timeline;
-    els.statuslineText.textContent = FLOW.statusLine({ critical: lint.critical, warnings: lint.warnings, seconds: tl ? tl.durationMs / 1000 : 0, usd: totalSpent(), money: F.money });
+    els.statuslineText.textContent = FLOW.statusLine({ critical: lint.critical, warnings: lint.warnings, seconds: tl ? tl.durationMs / 1000 : 0, usd: totalSpent(), money: F.money }) + (state.voiceError && state.voiceOn ? ' · voice failed, captions only' : '');
     els.statusline.dataset.tone = lint.critical ? 'bad' : (lint.warnings ? 'warn' : 'good');
     els.lintBadge.className = `es-badge ${lint.critical ? 'es-badge--bad' : (lint.warnings ? 'es-badge--warn' : 'es-badge--good')}`;
     els.lintBadge.textContent = lint.critical ? `${lint.critical} to fix` : (lint.warnings ? `${lint.warnings} to review` : 'All clear');
@@ -1480,7 +1482,7 @@
     els.voiceBadge.className = `es-badge ${on ? (all ? 'es-badge--good' : (state.voiceError ? 'es-badge--bad' : 'es-badge--brand')) : ''}`;
     els.voiceBadge.textContent = !on ? 'Captions only' : (state.voiceMaking ? 'Recording…' : (all ? 'Voice ready' : (state.voiceError ? 'Voice failed' : `${voiced} of ${withVo} voiced`)));
     els.voiceNote.textContent = on
-      ? `${v.label}. Edited lines are re-voiced automatically; unchanged ones are reused for free.`
+      ? ((v.voices || []).length ? '' : `${v.label}. Edited lines are re-voiced automatically; unchanged ones are reused for free.`)
       : (v.ready ? 'Voice is off: the reel exports with captions only.' : (v.reason || `No voice is set up. The reel exports with captions${state.music ? ' and music' : ''}.`));
     // Failure: clear, non-blocking, with Retry. Captions-only export still works.
     els.voiceState.innerHTML = on && state.voiceError && !state.voiceMaking
@@ -1841,16 +1843,18 @@
   function renderExport() {
     if (!state.timeline) return;
     // One row per kind of asset with the same rights (6 voiceover clips = 1 row).
-    const KIND_PLURAL = { photo: 'ES photos', vo: 'Voiceover clips', logo: 'Logos', graphic: 'Graphics' };
+    const KIND_PLURAL = { photo: 'ES photos', vo: 'Voiceover clips', logo: 'Logos', graphic: 'Graphics', clip: 'Official X clips', scene: 'AI scenes', tile: 'Team graphics' };
     const groups = new Map();
     L.rightsSummary(state.timeline, state.target).forEach(row => {
-      const key = [row.kind, row.source, row.licence, row.covered, row.paid].join('|');
+      // X clips group into one row; each keeps its source link.
+      const x = row.kind === 'clip' && /^Official X post/.test(row.source);
+      const key = x ? `clip|x|${row.covered}` : [row.kind, row.source, row.licence, row.covered, row.paid].join('|');
       const g = groups.get(key);
-      if (g) { g.n += 1; g.credits.add(row.credit); } else groups.set(key, { ...row, n: 1, credits: new Set([row.credit]) });
+      if (g) { g.n += 1; g.credits.add(row.credit); g.links.add(state.timeline.assets[row.id]?.post || ''); } else groups.set(key, { ...row, source: x ? 'Official X posts' : row.source, n: 1, credits: new Set([row.credit]), links: new Set([x ? state.timeline.assets[row.id]?.post || '' : '']) });
     });
-    const rows = [...groups.values()].map(g => ({ ...g, label: g.n > 1 ? `${KIND_PLURAL[g.kind] || g.label} (${g.n})` : g.label, credit: [...g.credits].filter(Boolean).join(', ') }));
-    els.rights.innerHTML = `<ul class="rm-rights__list">${rows.map(r => `<li class="${r.covered ? 'is-ok' : 'is-bad'}"><span class="rm-rights__mark">${r.covered ? ICON.check : ICON.x}<span class="es-sr-only">${r.covered ? 'Cleared' : 'Not cleared'}</span></span><div><p>${esc(r.label)}</p><span>${esc(r.source)} · ${esc(r.licence)}${r.credit ? ` · Credit: ${esc(r.credit)}` : ''}</span></div><span class="rm-rights__use">${r.paid ? 'Organic + paid' : (r.organic ? 'Organic only' : 'Not cleared')}</span></li>`).join('')}</ul>
-      <p class="rm-hint">No league or broadcast footage is used. Photos and team marks are editorial: they are not cleared for paid ads until ES confirms the licence.</p>`;
+    const rows = [...groups.values()].map(g => ({ ...g, label: g.n > 1 ? `${KIND_PLURAL[g.kind] || g.label} (${g.n})` : g.label, credit: [...g.credits].filter(Boolean).join(', '), links: [...g.links].filter(Boolean) }));
+    els.rights.innerHTML = `<ul class="rm-rights__list">${rows.map(r => `<li class="${r.covered ? 'is-ok' : 'is-bad'}"><span class="rm-rights__mark">${r.covered ? ICON.check : ICON.x}<span class="es-sr-only">${r.covered ? 'Cleared' : 'Not cleared'}</span></span><div><p>${esc(r.label)}</p><span>${esc(r.source)} · ${esc(r.licence)}${r.credit ? ` · Credit: ${esc(r.credit)}` : ''}</span>${r.links.length ? `<span class="rm-rights__links">${r.links.map((u, k) => `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">Source ${k + 1}</a>`).join(' · ')}</span>` : ''}</div><span class="rm-rights__use">${r.paid ? 'Organic + paid' : (r.organic ? 'Organic only' : 'Not cleared')}</span></li>`).join('')}</ul>
+      <p class="rm-hint">Clips come only from official team, league and network posts on X, or your uploads; ES clears X clips for organic posts and Meta paid ads (keep the source links). ES photos are editorial: confirm before paid use.</p>`;
     const lint = state.lint;
     const critical = lint.issues.filter(i => i.severity === 'critical');
     els.gate.innerHTML = critical.length
@@ -2130,7 +2134,7 @@
     }
     els.aiclipsRow.hidden = !state.config.aiClips?.ready;
     if (state.config.aiClips?.ready) els.aiclipsNote.textContent = `Stadium, crowd or field shots, never people or logos. Up to ${state.config.aiClips.max} a reel, about ${F.money(state.config.aiClips.perClip)} each.`;
-    if (!state.config.ai) els.writeText.textContent = 'Make a draft reel';
+    els.writeText.textContent = state.config.ai ? 'Make my reel' : 'Make a draft reel';
     renderCost();
     renderVoicePickers();
     if (state.plan) { renderVoice(); renderEdit(); }
@@ -2177,5 +2181,5 @@
   });
   window.addEventListener('beforeunload', () => { if (state.plan) store.set(LOCAL_KEY, [snapshot(), ...store.get(LOCAL_KEY, []).filter(p => p.id !== state.projectId)].slice(0, 12)); });
 
-  window.ReelMakerPage = { state, rebuild, applyPlan, draw, seek, play, stop, goStep, renderMix, exportReel, makeVoice, restore, loadConfig, makeReel, fillVisuals, selectBeat, renderEdit, renderStyles, visualAction, addClipAsset, setVisual, clipShare };
+  window.ReelMakerPage = { state, rebuild, applyPlan, draw, seek, play, stop, goStep, renderMix, exportReel, makeVoice, restore, loadConfig, loadTrends, makeReel, fillVisuals, selectBeat, renderEdit, renderStyles, visualAction, addClipAsset, setVisual, clipShare };
 })();

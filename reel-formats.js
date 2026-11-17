@@ -258,7 +258,7 @@
       eligible.push(b);
     });
     // Order: beats that want motion first; beats where a face matters last.
-    const wantsStill = b => (STILL_FIRST[b.kind] || 0) + (b.visual === 'headshot' || b.visual === 'logo-tile' ? 2 : 0) + (b.visual === 'photo' ? 1 : 0);
+    const wantsStill = b => (b.kind === 'hook' ? -2 : 0) + (STILL_FIRST[b.kind] || 0) + (b.visual === 'headshot' || b.visual === 'logo-tile' ? 2 : 0) + (b.visual === 'photo' ? 1 : 0);
     const order = [...eligible].sort((a, b) => wantsStill(a) - wantsStill(b) || b.durMs - a.durMs);
     let clipMs = 0;
     let used = 0;

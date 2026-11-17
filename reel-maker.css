@@ -492,3 +492,5 @@ html[data-theme="dark"] .rm-photos { background: #1F2126; color: #fff; }
   .rm-pane:not([hidden]) { animation: rmRise var(--es-dur-step, 300ms) var(--es-ease-entrance, ease) backwards; }
 }
 @keyframes rmRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.rm-rights__links { display: block; margin-top: 2px; font-size: 12px; }
+.rm-rights__links a { color: var(--rm-brand-text); }

@@ -916,10 +916,13 @@
     let n = 0;
     const colon = style.emphasis === 'color' ? String(d.text || '').indexOf(':') : -1;
     let seenChars = 0;
+    let litOnce = false;
     fit.lines.forEach(line => {
       const x0 = align === 'center' ? G.left + (width - line.width) / 2 : G.left;
       line.words.forEach(word => {
-        const lit = isEmph(word.text, d.emphasis);
+        // One highlighted word: the first match only.
+        const lit = !litOnce && isEmph(word.text, d.emphasis);
+        if (lit) litOnce = true;
         const afterColon = colon >= 0 && seenChars > colon;
         seenChars += word.text.length + 1;
         const red = style.emphasis === 'color' && (lit || afterColon);
@@ -946,7 +949,8 @@
     const bottom = style.engine === 'classic' ? ZONE.graphicBottom : (timeline.strip ? 1168 : 1280);
     return { x: G.left, y: snap(top), w: CW, h: Math.max(160, bottom - snap(top)), bottom };
   }
-  const num = v => { const p = parseStatValue(v); return p ? p.num : NaN; };
+  // The number in a value like "-$12.3M", "2×", "+50%", "#31" (NaN if none).
+  const num = v => { const m = String(v == null ? '' : v).replace(/[$,]/g, '').replace('−', '-').match(/-?\d+(?:\.\d+)?/); return m ? Number(m[0]) : NaN; };
 
   function layoutStyled(measure, graphic, timeline) {
     const style = S.get(timeline.style);
@@ -973,7 +977,7 @@
       }
       const h = Math.min(box.bottom - y - (d.detail ? 96 : 24), 680);
       const label = d.label && style.engine !== 'classic' ? d.label : '';
-      ops.push(...visualOps(style, { x: G.left, y, w: CW, h }, { cutout: style.cutout && graphic.index === 0, cutoutAsset: d.cutout || '', label, delay: delay0 }, measure));
+      ops.push(...visualOps(style, { x: G.left, y, w: CW, h }, { cutout: style.cutout && graphic.index === 0, cutoutAsset: d.cutout || '', label, delay: graphic.index === 0 ? 0 : delay0 }, measure));
       if (d.detail) {
         const fit = fitText(measure, d.detail, { family: style.type.body, weight: 500, max: style.type.bodySize, min: style.type.bodySize - 6, maxLines: 2, width: CW });
         ops.push(...linesOps(fit, y + h + 40, { lineHeight: 1.2, upper: false, role: 'detail', color: 'muted', baseDelay: delay0 + 200, delayStep: 0 }).ops);
@@ -1286,7 +1290,7 @@
       const w = op.anim === 'grow' ? op.w * ease.outQuint(st.p) : op.w;
       fillRound(ctx, op.x, op.y, w, op.h, op.r || 0);
       if (op.stroke) { ctx.strokeStyle = tone(pal, op.stroke); ctx.lineWidth = op.lw || 2; roundRect(ctx, op.x, op.y, op.w, op.h, op.r || 0); ctx.stroke(); }
-    } else if (op.type === 'text') {
+    } else if (op.type === 'text' || op.type === 'word') {
       ctx.font = op.font;
       if (op.bg) {
         const padX = op.size * 0.1;

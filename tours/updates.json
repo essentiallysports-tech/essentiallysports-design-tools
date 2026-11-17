@@ -3,6 +3,43 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-18-reels-styles",
+      "date": "2026-11-18",
+      "title": "Reels Studio: Make my reel, four ES styles, human voices and clips",
+      "items": [
+        {
+          "title": "Make my reel",
+          "text": "Pick a story and press one button: script, voiceover, clips, captions and the build happen for you. Then tap any beat to change just that beat.",
+          "page": "reel-maker.html",
+          "target": "#rm-write"
+        },
+        {
+          "title": "Four ES styles",
+          "text": "ES Classic, the light ES Data Explainer, the ES Analytics Series dashboard and ES Countdown, with live thumbnails and a suggested style for your story.",
+          "page": "reel-maker.html",
+          "target": "#rm-settings"
+        },
+        {
+          "title": "The voiceover is on by default",
+          "text": "A more human voice (ElevenLabs v4) and four voices to choose from, with samples. Edited lines are re-voiced automatically, and the MP4 always carries the voice.",
+          "page": "reel-maker.html",
+          "target": "#rm-settings"
+        },
+        {
+          "title": "Mostly clips, never an empty frame",
+          "text": "About 80% of a reel is video: official team and league clips from X. The rest are ES photos, team graphics or AI scenes with no people in them.",
+          "page": "reel-maker.html",
+          "target": "#rm-stage"
+        },
+        {
+          "title": "Data beats",
+          "text": "Stat heroes, comparison bars, versus cards, dot rankings, 1-in-5 squares, step trackers, team tiles and position cards. Every number must come from a source.",
+          "page": "reel-maker.html",
+          "target": "#rm-stage"
+        }
+      ]
+    },
+    {
       "id": "2026-11-18-director",
       "date": "2026-11-18",
       "title": "The creative director, ES guidelines and Bring it on-brand",

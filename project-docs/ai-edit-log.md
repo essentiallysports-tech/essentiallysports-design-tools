@@ -17,6 +17,38 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-18 — Reels Studio: voice bug fix, four ES styles, human voices, clips first, one-click flow (branch feature/reels-styles)
+- Status: `[committed on feature/reels-styles, not pushed]`
+- **Voice bug ("no voiceover audio")**: `frameup_ai_usage` had `reels-director` rows and no `reels-voice` rows: the
+  voice was only made when someone found "Make the voiceover" in Edit. Now it is made automatically after every
+  script (Make my reel, revise, reopen), per-line cached, re-made for edited lines (1.8 s after typing, and always
+  before Preview and Export). Failure shows "The voiceover didn't record" + Retry; captions-only export still works.
+  The same Web Audio mix feeds preview, WebCodecs/Mediabunny (now `reel-export.js`) and the MediaRecorder fallback.
+- **Speech hardening** (`_reel-voice.js`): audio read from `audio` / `audio.base64` / `audio.data` / `data`; mp3 or wav
+  sniffed; reply keys logged on failure (never audio or keys). `GET /api/reel-maker?diag=voice` (admins via
+  `is_es_designer_admin()`, fails closed) runs one "Test." synthesis and returns ok/model/format/bytes or the error.
+- **Voice (Suhail: "much more human, 4 options")**: default model `elevenlabs/eleven-v4` (falls back to Multilingual
+  v2, then Flash v2.5, unless `REELS_TTS_MODEL` pins one). Four premade library voices, ids checked on
+  api.elevenlabs.io/v1/voices: Brian `nPczCjzI2devNBz1zQrb`, Liam `TX3LPaxmHKxFdv7VOQHJ`, Sarah
+  `EXAVITQu4vr4xnSDxMaL`, Bella `hpp4J3VqNfWAUOO0d1Us`. Samples (`mode: voice-sample`, cached both sides). Money and
+  multipliers are read naturally ("$32 million", "2 times"); `[excited]` only on Liam's hook line on v4/v3.
+- **Styles** (`reel-styles.js`, data): ES Classic, ES Data Explainer, ES Analytics Series, ES Countdown; picker with
+  live renderer thumbnails and a code suggestion. The renderer's styled engine draws every beat kind in every style:
+  stat hero, bars, versus cards (incl. "?"), dot rank, chips, step tracker, team tiles, role cards, mystery, plus
+  eyebrow, ES badge, series tag, a persistent data strip, block captions, cut-out player over the frame. Director
+  writes the components (fields validated, numbers sourced); explainer/series run 90–120 s (24 beats).
+- **Visuals**: clip-first (planner targets 80% of the time: `F.planVisualMix`), official X clips via Video Ads
+  `find-clips`, downloaded by the browser (`no-referrer`); then ES photos (query → team → league), team graphic,
+  AI scene still (`mode: scene`, name-free prompts), AI b-roll (`_reel-media.js`, Veo 3.1 Lite async job, off unless
+  `REELS_AI_CLIPS=gateway`, max 2), then the designed background. Empty = plain black (owner call). X clips are
+  cleared for Meta paid ads (owner call): no paid block, source links kept in the rights table.
+- **Flow**: Story → Review → Export, "Make my reel" (script → voice → clips → build, with progress), beat strip under the
+  preview, one beat at a time with Swap clip / Use photo / Team graphic / AI / Upload, settings in folds, status line.
+- New files: `reel-styles.js`, `reel-export.js`, `reel-flow.js`, `netlify/functions/_reel-media.js`; tests
+  `test-reel-styles`, `test-reel-media`, `test-reel-export-flow` (+ updates to the five existing reel tests).
+- Env (optional): `REELS_AI_CLIPS`, `REELS_AI_CLIPS_MAX`, `REELS_AI_CLIP_MODEL`. No migration.
+- Owner to do after deploy: open `/api/reel-maker?diag=voice` signed in as an admin.
+
 ### 2026-11-18 — Generate: the creative director first, ES guidelines, Bring it on-brand (branch feature/generate-director)
 - Status: `[committed on feature/generate-director - not pushed]`
 - **Director first.** Generate now asks the director for 2-4 named directions (`POST /api/es-generate {mode:'direct'}`):
