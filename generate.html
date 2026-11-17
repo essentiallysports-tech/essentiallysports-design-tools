@@ -641,6 +641,63 @@
     html[data-theme="dark"] .gen-switch[aria-checked="true"] .gen-switch__track { background: #54A4FB; }
     html[data-theme="dark"] .gen-group { border-bottom-color: #2A2D34; }
     html[data-theme="dark"] .gen-note__done { color: var(--es-good-on-dark); }
+
+    /* Bring it on-brand + the director's guideline check + the card chip. */
+    .gen-onbrand, .gen-critique { display: grid; gap: var(--es-space-4, 16px); margin: var(--es-space-4, 16px) 0 0; padding: var(--es-space-5, 20px); border-radius: var(--es-radius-container, 16px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
+    .gen-critique { margin: var(--es-space-6, 24px) 0 0; }
+    .gen-onbrand[hidden], .gen-critique[hidden] { display: none; }
+    .gen-onbrand__note { box-sizing: border-box; width: 100%; min-height: 56px; resize: vertical; padding: var(--es-space-3, 12px) var(--es-space-4, 16px); border: 0; border-radius: 12px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line-2, #c8cdd5); color: var(--es-ink); font: 500 14px/1.45 var(--es-font-ui); }
+    .gen-onbrand__note:focus { outline: none; box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo); }
+    .gen-drop { display: grid; justify-items: center; gap: var(--es-space-1, 4px); padding: var(--es-space-6, 24px) var(--es-space-4, 16px); border-radius: 14px; background: var(--es-sunk); box-shadow: inset 0 0 0 1.5px var(--es-line-2, #c8cdd5); color: var(--es-ink-2); cursor: pointer; text-align: center; transition: background-color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease); }
+    .gen-drop svg { width: 22px; height: 22px; color: var(--es-brand-text); }
+    .gen-drop:hover, .gen-drop.is-over { background: color-mix(in srgb, var(--es-brand-soft) 60%, var(--es-sunk)); box-shadow: inset 0 0 0 1.5px var(--es-brand, #0A7DFA); }
+    .gen-drop:focus-within { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .gen-drop__main { font-size: 14px; font-weight: 600; color: var(--es-ink); }
+    .gen-drop__main u { color: var(--es-brand-text); text-underline-offset: 3px; }
+    .gen-drop__sub { font-size: 12px; color: var(--es-ink-3); }
+    .gen-slides { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); margin: 0; padding: 0; list-style: none; }
+    .gen-slides:empty { display: none; }
+    .gen-slides li { position: relative; width: 72px; }
+    .gen-slides img { display: block; width: 72px; height: 90px; border-radius: 8px; background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); object-fit: cover; }
+    .gen-slides span { position: absolute; left: 4px; top: 4px; min-width: 18px; padding: 0 4px; border-radius: 999px; background: rgb(14 16 20 / .72); color: #fff; font: 700 11px/18px var(--es-font-ui); text-align: center; }
+    .gen-slides button { position: absolute; right: -6px; top: -6px; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: var(--es-bg); box-shadow: 0 1px 2px rgb(14 16 20 / .2), inset 0 0 0 1px var(--es-line); color: var(--es-ink-2); cursor: pointer; }
+    .gen-slides button svg { width: 14px; height: 14px; }
+    .gen-slides button:focus-visible { outline: var(--es-focus-outline); outline-offset: 2px; }
+    .gen-critique__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px) var(--es-space-3, 12px); }
+    .gen-critique__verdict { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: 999px; background: var(--es-warn-soft, #fff4d6); color: var(--es-warn, #b45309); font-size: 12px; font-weight: 700; }
+    .gen-critique__verdict.is-good { background: var(--es-good-soft, #e9f6ee); color: var(--es-good, #0e7a3d); }
+    .gen-critique__cols { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--es-space-6, 24px); }
+    .gen-critique__cols > div { display: grid; align-content: start; gap: var(--es-space-2, 8px); min-width: 0; }
+    .gen-critique__issues, .gen-critique__keep, .gen-critique__map { display: grid; gap: var(--es-space-2, 8px); margin: 0 0 var(--es-space-2, 8px); padding: 0; list-style: none; }
+    .gen-critique__issues li { display: grid; gap: 2px; padding: var(--es-space-3, 12px); border-radius: 12px; background: var(--es-sunk); color: var(--es-ink-2); font-size: 13px; line-height: 1.45; }
+    .gen-critique__issues b { color: var(--es-ink); font-weight: 700; }
+    .gen-critique__issues cite { color: var(--es-ink-3); font-size: 11.5px; font-style: normal; }
+    .gen-critique__issues .is-must { color: var(--es-bad, #b42318); font-weight: 700; }
+    .gen-critique__keep li, .gen-critique__map li { color: var(--es-ink-2); font-size: 13px; line-height: 1.45; }
+    .gen-critique__map b { color: var(--es-ink); }
+    .gen-critique__empty { color: var(--es-ink-3); font-size: 13px; }
+    .gen-card__guide { display: inline-flex; align-items: center; gap: 4px; min-height: 22px; padding: 0 8px; border-radius: 999px; background: var(--es-good-soft, #e9f6ee); color: var(--es-good, #0e7a3d); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .gen-card__guide svg { width: 12px; height: 12px; }
+    .gen-card__guide[hidden], .gen-card__fixes[hidden] { display: none; }
+    .gen-card__fixes { margin: 0; color: var(--es-ink-3); font-size: 12px; line-height: 1.4; }
+    .gen-steer, .gen-steer__group, .gen-chips { min-width: 0; }
+    .gen-onbrand .gen-director__titles { flex: 1 1 0; }
+    @media (max-width: 760px) { .gen-critique__cols { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) {
+      .gen-actions__buttons { width: 100%; margin-left: 0; }
+      .gen-actions__buttons .es-btn { flex: 1 1 auto; min-width: 0; }
+      .gen-actions__buttons #gen-submit { min-width: 0; }
+      .gen-steer__group .gen-chips { flex: 1 1 auto; }
+    }
+    @media (max-width: 640px) { .gen-onbrand, .gen-critique { padding: var(--es-space-4, 16px); } }
+    html[data-theme="dark"] :is(.gen-onbrand, .gen-critique) { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
+    html[data-theme="dark"] .gen-drop, html[data-theme="dark"] .gen-critique__issues li { background: #2A2D34; box-shadow: inset 0 0 0 1.5px #3B4049; }
+    html[data-theme="dark"] .gen-critique__issues li { box-shadow: none; }
+    html[data-theme="dark"] .gen-onbrand__note { background: #1F2126; box-shadow: inset 0 0 0 1px #3B4049; color: #FFFFFF; }
+    html[data-theme="dark"] .gen-slides button { background: #2A2D34; color: #FFFFFF; }
+    html[data-theme="dark"] :is(.gen-card__guide, .gen-critique__verdict.is-good) { background: var(--es-good-soft-on-dark); color: var(--es-good-on-dark); }
+    html[data-theme="dark"] .gen-critique__verdict { background: rgb(245 158 11 / .16); color: #FBBF24; }
+    html[data-theme="dark"] .gen-critique__issues .is-must { color: #FF8A80; }
   </style>
 </head>
 <body class="gen-body">
@@ -720,14 +777,59 @@
           <span class="gen-actions__hint" id="gen-expect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg><span><strong>Up to 4 designs</strong> · edit any in the editor</span></span>
           <div class="gen-actions__buttons">
             <button class="es-btn" type="button" id="gen-trending" hidden>Suggest topics</button>
+            <button class="es-btn" type="button" id="gen-onbrand-open" aria-expanded="false" aria-controls="gen-onbrand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>Bring it on-brand</button>
             <button class="es-btn es-btn--primary es-btn--lg ais-btn" type="submit" id="gen-submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg><span id="gen-submit-label">Generate</span><kbd class="gen-kbd" id="gen-kbd" aria-hidden="true">Ctrl ↵</kbd></button>
           </div>
         </div>
       </form>
+      <!-- Bring it on-brand: a design made elsewhere (one image or carousel
+           slides) is checked against the ES guidelines and remade as ES posts. -->
+      <section class="gen-onbrand" id="gen-onbrand" aria-labelledby="gen-onbrand-title" hidden>
+        <div class="gen-director__head">
+          <div class="gen-director__titles">
+            <h2 class="gen-director__title" id="gen-onbrand-title"><span class="gen-director__mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>Bring it on-brand</h2>
+            <p class="gen-director__read">The director checks any design against the ES guidelines, then remakes it with ES templates.</p>
+          </div>
+          <button class="es-icon-btn" type="button" id="gen-onbrand-close" aria-label="Close Bring it on-brand" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
+        <label class="gen-drop" id="gen-drop" for="gen-onbrand-file">
+          <input class="gen-sr" type="file" id="gen-onbrand-file" accept="image/png,image/jpeg,image/webp" multiple>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+          <span class="gen-drop__main">Drop a design or carousel slides, paste with <kbd class="es-kbd">⌘V</kbd>, or <u>choose files</u></span>
+          <span class="gen-drop__sub">PNG, JPG or WebP · up to 6 slides, in order</span>
+        </label>
+        <ol class="gen-slides" id="gen-onbrand-slides" aria-label="Slides to check"></ol>
+        <label class="gen-sr" for="gen-onbrand-note">Story note</label>
+        <textarea class="gen-onbrand__note" id="gen-onbrand-note" maxlength="400" rows="2" placeholder="Optional: the story, or numbers the image doesn't show"></textarea>
+        <div class="gen-director__foot">
+          <p class="gen-director__count" id="gen-onbrand-count" aria-live="polite"></p>
+          <div class="gen-director__buttons">
+            <button class="es-btn" type="button" id="gen-onbrand-run" disabled>Check and remake</button>
+          </div>
+        </div>
+      </section>
       <div class="gen-quick" id="gen-quick"></div>
     <ol class="gen-progress es-steps" id="gen-progress" aria-label="Progress" aria-live="polite" hidden></ol>
     <p class="gen-summary" id="gen-summary" role="status" aria-live="polite" hidden></p>
     <div class="es-callout gen-notice" id="gen-notice" role="alert" hidden></div>
+    <section class="gen-critique" id="gen-critique" aria-labelledby="gen-critique-title" hidden>
+      <div class="gen-critique__head">
+        <h2 class="gen-director__title" id="gen-critique-title">Director's guideline check</h2>
+        <span class="gen-critique__verdict" id="gen-critique-verdict"></span>
+      </div>
+      <div class="gen-critique__cols">
+        <div>
+          <span class="gen-dir__label">Off-guide</span>
+          <ul class="gen-critique__issues" id="gen-critique-issues"></ul>
+        </div>
+        <div>
+          <span class="gen-dir__label">Worth keeping</span>
+          <ul class="gen-critique__keep" id="gen-critique-keep"></ul>
+          <span class="gen-dir__label">Remade as</span>
+          <ol class="gen-critique__map" id="gen-critique-map"></ol>
+        </div>
+      </div>
+    </section>
     <section class="gen-director" id="gen-director" aria-labelledby="gen-director-title" hidden>
       <div class="gen-director__head">
         <div class="gen-director__titles">
@@ -1586,6 +1688,8 @@
         els.submit.classList.toggle('is-busy', value);
         els.trending.disabled = value;
         [els.directorAuto, els.directorMake, els.directorToggle].forEach(button => { button.disabled = value; });
+        const run = document.getElementById('gen-onbrand-run');
+        if (run) run.disabled = value || !run.closest('.gen-onbrand')?.querySelector('.gen-slides li');
         if (!value) updateDirectorCount();
         els.submitLabel.textContent = value ? 'Generating…' : 'Generate';
         els.kbd.hidden = value;
@@ -1606,8 +1710,9 @@
         card.innerHTML = `
           <div class="gen-card__media"><img alt=""></div>
           <div class="gen-card__body">
-            <div class="gen-card__tags"><span class="gen-card__type"></span><span class="gen-card__dir"></span></div>
+            <div class="gen-card__tags"><span class="gen-card__type"></span><span class="gen-card__guide" hidden></span><span class="gen-card__dir"></span></div>
             <p class="gen-card__why"></p>
+            <p class="gen-card__fixes" hidden></p>
             <p class="gen-card__source" hidden>Source: <a target="_blank" rel="noopener"></a></p>
             <p class="gen-card__hint" hidden></p>
             <div class="gen-card__actions">
@@ -1631,6 +1736,16 @@
         card.removeAttribute('aria-hidden');
         card.querySelector('.gen-card__type').textContent = spec.label;
         card.querySelector('.gen-card__dir').textContent = spec.direction?.name ? String(spec.direction.name) : '';
+        // Guideline check (es-guidelines.js): "On-brand" and any fixes it made.
+        const guide = card.querySelector('.gen-card__guide');
+        const fixesRow = card.querySelector('.gen-card__fixes');
+        const fixes = Array.isArray(spec.guideline?.fixes) ? spec.guideline.fixes.map(fix => String(fix?.what || '')).filter(Boolean) : [];
+        guide.hidden = !spec.guideline?.ok;
+        guide.innerHTML = `${ICON.check}<span></span>`;
+        guide.querySelector('span').textContent = fixes.length ? `On-brand · ${fixes.length} fix${fixes.length === 1 ? '' : 'es'}` : 'On-brand';
+        guide.title = fixes.length ? `Passed the ES guideline check after: ${fixes.join('; ')}` : 'Passed every ES guideline check';
+        fixesRow.hidden = !fixes.length || !spec.guideline?.ok;
+        fixesRow.textContent = fixes.length ? `Guideline fixes: ${fixes.join('; ')}` : '';
         renderNote(card);
         // The creative director's angle when there is one ("Angle: …"), else the
         // writer's note. Built from text nodes, never HTML.
@@ -2249,6 +2364,191 @@
         return cards;
       }
 
+      // ── Bring it on-brand ─────────────────────────────────────────────────
+      // A design made elsewhere (one image, or up to 6 carousel slides) goes
+      // to the director (mode 'onbrand'): a vision read against the ES rules,
+      // then the same story remade with ES templates. Images are downscaled
+      // here (max 1080px, JPEG) so a carousel stays well under the API limit.
+      const onbrand = {
+        open: $('gen-onbrand-open'), panel: $('gen-onbrand'), close: $('gen-onbrand-close'), drop: $('gen-drop'), file: $('gen-onbrand-file'),
+        slides: $('gen-onbrand-slides'), note: $('gen-onbrand-note'), run: $('gen-onbrand-run'), count: $('gen-onbrand-count'),
+        critique: $('gen-critique'), verdict: $('gen-critique-verdict'), issues: $('gen-critique-issues'), keep: $('gen-critique-keep'), map: $('gen-critique-map'),
+        list: [],
+      };
+      const MAX_SLIDES = 6;
+      const TEMPLATE_NAMES = Object.fromEntries(FORMATS.map(([id, label]) => [id, label]));
+      function paintSlides() {
+        onbrand.slides.replaceChildren(...onbrand.list.map((slide, index) => {
+          const li = document.createElement('li');
+          const img = document.createElement('img');
+          img.src = slide.dataUrl;
+          img.alt = `Slide ${index + 1}${slide.name ? `: ${slide.name}` : ''}`;
+          const n = textEl('span', '', String(index + 1));
+          n.setAttribute('aria-hidden', 'true');
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.dataset.index = String(index);
+          remove.setAttribute('aria-label', `Remove slide ${index + 1}`);
+          remove.innerHTML = svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
+          li.append(img, n, remove);
+          return li;
+        }));
+        const n = onbrand.list.length;
+        onbrand.run.disabled = busy || !n;
+        onbrand.run.textContent = n > 1 ? `Check and remake ${n} slides` : 'Check and remake';
+        onbrand.count.textContent = n ? `${n} of ${MAX_SLIDES} slide${n === 1 ? '' : 's'}` : '';
+      }
+      // A File (or Blob) -> a JPEG data URL, longest side at most 1080px.
+      async function shrink(file) {
+        const url = URL.createObjectURL(file);
+        try {
+          const img = await new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error('That file is not an image we can read.'));
+            image.src = url;
+          });
+          const scale = Math.min(1, 1080 / Math.max(img.naturalWidth, img.naturalHeight));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          let quality = 0.85;
+          let data = canvas.toDataURL('image/jpeg', quality);
+          while (data.length > 600000 && quality > 0.45) {
+            quality -= 0.1;
+            data = canvas.toDataURL('image/jpeg', quality);
+          }
+          return data;
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      }
+      async function addImages(files) {
+        const images = [...files].filter(file => /^image\/(png|jpe?g|webp|gif)$/i.test(file.type));
+        if (!images.length) {
+          setNotice('Not an image', ' Use a PNG, JPG or WebP of the design.');
+          return;
+        }
+        const room = MAX_SLIDES - onbrand.list.length;
+        if (images.length > room) setNotice('Up to 6 slides', ` Only the first ${Math.max(0, room)} were added.`);
+        for (const file of images.slice(0, Math.max(0, room))) {
+          try {
+            onbrand.list.push({ dataUrl: await shrink(file), name: file.name || '' });
+          } catch (error) {
+            setNotice('Could not read that image', ` ${error.message || ''}`);
+          }
+        }
+        paintSlides();
+      }
+      function showOnbrand(open, { focus = true } = {}) {
+        onbrand.panel.hidden = !open;
+        onbrand.open.setAttribute('aria-expanded', String(open));
+        if (open && focus) onbrand.drop.querySelector('input').focus({ preventScroll: true });
+        if (open && onbrand.panel.getBoundingClientRect().top > window.innerHeight * 0.75) onbrand.panel.scrollIntoView({ block: 'nearest', behavior: reducedMotion.matches ? 'auto' : 'smooth' });
+        if (!open) onbrand.open.focus({ preventScroll: true });
+      }
+      onbrand.open.addEventListener('click', () => showOnbrand(onbrand.panel.hidden));
+      onbrand.close.addEventListener('click', () => showOnbrand(false));
+      onbrand.file.addEventListener('change', async () => {
+        await addImages(onbrand.file.files || []);
+        onbrand.file.value = '';
+      });
+      onbrand.slides.addEventListener('click', event => {
+        const button = event.target.closest('button[data-index]');
+        if (!button || busy) return;
+        onbrand.list.splice(Number(button.dataset.index), 1);
+        paintSlides();
+        (onbrand.slides.querySelector('button') || onbrand.drop.querySelector('input')).focus({ preventScroll: true });
+      });
+      ['dragenter', 'dragover'].forEach(type => onbrand.drop.addEventListener(type, event => {
+        event.preventDefault();
+        onbrand.drop.classList.add('is-over');
+      }));
+      ['dragleave', 'drop'].forEach(type => onbrand.drop.addEventListener(type, () => onbrand.drop.classList.remove('is-over')));
+      onbrand.drop.addEventListener('drop', event => {
+        event.preventDefault();
+        addImages(event.dataTransfer?.files || []);
+      });
+      // Pasting an image anywhere on Generate (the brief, or the panel) opens
+      // Bring it on-brand with it.
+      document.addEventListener('paste', event => {
+        if (root.dataset.aisView === 'trends') return;
+        const files = [...(event.clipboardData?.items || [])].filter(item => item.kind === 'file' && item.type.startsWith('image/')).map(item => item.getAsFile()).filter(Boolean);
+        if (!files.length) return;
+        event.preventDefault();
+        showOnbrand(true, { focus: false });
+        addImages(files);
+      });
+
+      function renderCritique(critique, mapping = []) {
+        if (!critique) { onbrand.critique.hidden = true; return; }
+        const must = critique.issues.filter(issue => issue.level === 'must').length;
+        onbrand.verdict.className = `gen-critique__verdict${critique.issues.length ? '' : ' is-good'}`;
+        onbrand.verdict.textContent = critique.issues.length ? `${critique.issues.length} off-guide${must ? ` · ${must} must-fix` : ''}` : 'On-guide';
+        onbrand.issues.replaceChildren(...(critique.issues.length ? critique.issues.map(issue => {
+          const li = document.createElement('li');
+          const head = document.createElement('span');
+          head.append(textEl('b', '', `${issue.slide ? `Slide ${issue.slide} · ` : ''}${issue.what}`));
+          if (issue.level === 'must') head.append(document.createTextNode(' '), textEl('span', 'is-must', 'Must fix'));
+          li.append(head, textEl('span', '', issue.why), textEl('cite', '', `ES rule: ${issue.title} (${issue.source})`));
+          return li;
+        }) : [textEl('li', 'gen-critique__empty', 'Nothing off-guide found.')]));
+        onbrand.keep.replaceChildren(...(critique.keep.length ? critique.keep : ['The story']).map(item => textEl('li', '', item)));
+        onbrand.map.replaceChildren(...mapping.map(item => {
+          const li = document.createElement('li');
+          li.append(textEl('b', '', `Slide ${item.slide} → ${TEMPLATE_NAMES[item.template] || item.template}`), document.createTextNode(`: ${item.why}`));
+          return li;
+        }));
+        onbrand.critique.hidden = false;
+      }
+
+      onbrand.run.addEventListener('click', async () => {
+        if (busy || !onbrand.list.length) return;
+        setBusy(true);
+        onbrand.run.disabled = true;
+        setNotice('');
+        els.empty.hidden = true;
+        els.research.hidden = true;
+        els.director.hidden = true;
+        onbrand.critique.hidden = true;
+        els.grid.replaceChildren(...Array.from({ length: Math.min(4, Math.max(2, onbrand.list.length)) }, skeletonCard));
+        els.grid.setAttribute('aria-busy', 'true');
+        const progress = startProgress(['Reading the design', 'Checking ES guidelines', 'Remaking it the ES way', 'Designing your posts'], [3500, 9000]);
+        renderer().catch(() => {});
+        try {
+          const data = await callApi('/api/es-generate', { mode: 'onbrand', images: onbrand.list.map(slide => slide.dataUrl), note: onbrand.note.value.trim(), steer: steerBody() });
+          renderCritique(data.critique, data.carousel || []);
+          lastBrief = data.brief || lastBrief;
+          Object.assign(session, { brief: lastBrief, runId: data.runId || '', directions: [], selected: new Set(), less: [], more: [] });
+          if (!data.designs?.length) {
+            progress.stop();
+            els.grid.replaceChildren();
+            setNotice('No ES version this time', ' The director read the design but found nothing true to remake. Add the story or numbers in the note and try again.');
+            return;
+          }
+          progress.designing();
+          const cards = renderResults(data);
+          for (const card of cards) await paint(card);
+          const seconds = progress.stop();
+          setSummary(`${modeBadges(data)}<span class="gen-mode is-ai">On-brand remake</span><span><strong data-es-tick="gen-count">${cards.length} design${cards.length === 1 ? '' : 's'}</strong> · ${Math.max(1, Math.round(seconds))}s</span>`);
+          onbrand.critique.scrollIntoView({ block: 'start', behavior: reducedMotion.matches ? 'auto' : 'smooth' });
+        } catch (error) {
+          progress.stop();
+          els.grid.replaceChildren();
+          setNotice(error.reason === 'budget' || error.reason === 'weekly-limit' ? 'On-brand checks are paused' : 'Could not check that design', ` ${error.message || 'Something went wrong.'}`, error.reason ? 'warn' : '', error.reason ? null : { label: 'Try again', run: () => onbrand.run.click() });
+        } finally {
+          els.grid.removeAttribute('aria-busy');
+          setBusy(false);
+          paintSlides();
+          restoreFocus(els.grid.querySelector('[data-act="edit"]') || onbrand.run);
+        }
+      });
+      paintSlides();
+
       // ── Generate ──────────────────────────────────────────────────────────
       async function generate(event) {
         event?.preventDefault();
@@ -2262,6 +2562,7 @@
         if (brief !== session.brief) Object.assign(session, { brief, runId: '', directions: [], selected: new Set(), less: [], more: [] });
         session.formats = chosen === 'auto' ? [] : [chosen];
         lastBrief = brief;
+        document.getElementById('gen-critique').hidden = true;
         els.research.hidden = true;
         if (plan) {
           els.grid.replaceChildren();
