@@ -61,6 +61,8 @@ try { learning = { ...learning, ...require('./_ad-learning.js') }; } catch { /* 
 
 // The shared clip library (works in memory before its migration is applied).
 const CLIP_LIBRARY = require('./_clip-library.js');
+// Is it great game action? (AI verdict stored per clip, else free rules.)
+const CLASSIFY = require('./_clip-classify.js');
 
 // Extra clip sources (shared interface, scratchpad clips-contract.md), loaded
 // defensively: each lives on its own branch until merged. CLIPS_EXTRA_SOURCES=off
@@ -270,8 +272,8 @@ const FIND_CLIPS = {
   searchMs: 28000,
   // Widening into the colour group: a smaller search, only while there is time.
   widenUses: 2, widenCostUsd: 0.03, widenBeforeMs: 30000, widenSearchMs: 20000,
-  // Quality floor.
-  minShortSide: 480, minSeconds: 4, maxSeconds: 120,
+  // Quality floor: 720p, one shared constant (CLIP_MIN_SHORT_SIDE, _clip-library.js).
+  minShortSide: CLIP_LIBRARY.CLIP_MIN_SHORT_SIDE, minSeconds: 4, maxSeconds: 120,
 };
 const X_DOMAINS = ['x.com', 'twitter.com'];
 const X_API = 'https://api.x.com/2';
@@ -324,6 +326,15 @@ function searchPlan({ sport, team = null, teams = [], query = '' }) {
       `@${league[0]} highlights ${teams.slice(0, 3).map(t => t.short).join(' OR ')}`,
     ];
     return { kind: 'color', subject: `${sportName} teams: ${teams.map(t => t.name).join(', ')}`, official, league, media, queries, terms: teams.map(t => t.short) };
+  }
+  // No team, colour or query: the sport's most-watched highlights (By moment).
+  if (!query) {
+    const outlets = [...league.slice(0, 2), ...media.slice(0, 2)];
+    return {
+      kind: 'sport', subject: `${sportName}: the most-watched game highlights of the last 5 days`, official: [], league, media,
+      queries: [`${outlets.map(h => `@${h}`).join(' OR ')} highlight video`, `${sportName} viral highlight this week`, `@${league[0]} top plays`, `${sportName} best plays video`],
+      terms: [],
+    };
   }
   const named = teamInTitle(query, sport);
   const own = named ? SOURCES.handleFor(named) : '';
@@ -450,6 +461,8 @@ function scoreClip(c) {
   const side = c.shortSide || 0;
   score += side >= 1080 ? 20 : side >= 720 ? 15 : side >= 480 ? 6 : 3;
   score += 20 * Math.max(0, 1 - (Number(c.ageHours) || 0) / FIND_CLIPS.maxAgeHours);
+  // The AI quality score (1-5), when the daily job has judged the clip.
+  if (c.ai && c.ai.by === 'ai' && Number(c.ai.quality) >= 1) score += 3 * (Number(c.ai.quality) - 3);
   if (c.views > 0) score += Math.min(15, 2.5 * Math.log10(1 + c.views));
   else if (c.likes > 0) score += Math.min(15, 3 * Math.log10(1 + c.likes));
   const secs = (c.durationMs || 0) / 1000;
@@ -467,7 +480,8 @@ function assessClip(c, { sport = '', now = Date.now() } = {}) {
   if (looksOld(c.text, new Date(now))) return { reason: 'throwback' };
   const best = c.variants[0];
   const side = shortSide(best);
-  if (side && side < FIND_CLIPS.minShortSide) return { reason: 'lowQuality' };
+  // 720p floor; a file of unknown size can't prove it, so it is dropped too.
+  if (!side || side < FIND_CLIPS.minShortSide) return { reason: 'lowQuality' };
   const secs = (c.durationMs || 0) / 1000;
   if (secs && (secs < FIND_CLIPS.minSeconds || secs > FIND_CLIPS.maxSeconds)) return { reason: 'badLength' };
   const clip = {
@@ -493,6 +507,9 @@ function assessClip(c, { sport = '', now = Date.now() } = {}) {
   if (c.foundBy) clip.foundBy = c.foundBy;
   if (Array.isArray(c.teams) && c.teams.length) clip.teams = c.teams.slice(0, 8);
   if (Array.isArray(c.players) && c.players.length) clip.players = c.players.slice(0, 8);
+  if (c.ai && typeof c.ai.isGameAction === 'boolean') clip.ai = c.ai;
+  // Game action only (podcasts, pressers, promos and memes are dropped).
+  if (!CLASSIFY.isGreat(clip)) return { reason: 'notGame' };
   clip.score = scoreClip(clip);
   return { clip };
 }
@@ -530,7 +547,7 @@ function rankClips(clips, diag = null) {
   return kept.sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || a.ageHours - b.ageHours);
 }
 
-const newDiag = strategy => ({ strategy, searched: 0, listed: 0, nonPost: 0, candidates: 0, noVideo: 0, failed: 0, noDate: 0, tooOld: 0, throwback: 0, lowQuality: 0, badLength: 0, dupes: 0, kept: 0 });
+const newDiag = strategy => ({ strategy, searched: 0, listed: 0, nonPost: 0, candidates: 0, noVideo: 0, failed: 0, noDate: 0, tooOld: 0, throwback: 0, lowQuality: 0, badLength: 0, notGame: 0, dupes: 0, kept: 0 });
 
 // Verifies candidate posts in parallel and buckets the failures into diag.
 async function verifyAll(urls, { sport, diag }) {
@@ -794,7 +811,7 @@ async function libraryClips({ sport, teams = [], terms = [], token = '' } = {}) 
   const now = Date.now();
   const clips = (rows || [])
     .map(c => ({ ...c, ageHours: Math.round(ageHoursOf(c.postedAt, now) ?? Infinity) }))
-    .filter(c => Number.isFinite(c.ageHours) && !looksOld(c.text, new Date(now)))
+    .filter(c => Number.isFinite(c.ageHours) && !looksOld(c.text, new Date(now)) && CLASSIFY.isGreat(c))
     .filter(c => !terms.length || termHit(c, terms))
     .map(c => ({ ...c, score: scoreClip(c) }));
   return {
@@ -970,17 +987,40 @@ async function findClips(body, track) {
   return { ...value, ...(widened || fallback ? {} : noteFor(clips.filter(c => c.via !== 'older').length)), cached: false, cost: money(cost), ...(freeOnly ? { freeOnly: true } : {}) };
 }
 
-// ─── Moments with clips (By moment: only moments that have fresh clips) ────
-// The library first (each moment's team, or its key words); one AI search for
-// the top ~10 trending moments only when the library has fewer than 9 clips
-// for them, grouped by moment, aimed at x.com and the sport's verified
-// accounts (and the team's own account when the title names one), plus the
-// free extra sources for the first few moments without clips; every post
-// verified, filtered and ranked like find-clips. Shared across users for 30
-// minutes. Nothing for any moment: `fallback` carries the sport's freshest
-// library clips, so the page is never empty while the library has some.
+// ─── By moment: the most popular clips of the last 5 days ─────────────────
+// Owner's definition (2026-11-18): "Moments are the recent 5 days' trending
+// clips, and clips can be distributed according to teams and colours." So a
+// moment is a PLAY, not a news headline:
+//   1. Pool: the shared clip library for the sport(s) (last 5 days, >= 720p,
+//      game action only), instant and free.
+//   2. Thin pool (fewer than MOMENTS.enough moments): top up with the free
+//      sources (X API when configured, public sources), then, only if still
+//      thin and AI is allowed, one capped paid round for the thinnest sport
+//      (Haiku x.com search $0.03 cap + Grok via its own cap). New finds go
+//      into the library.
+//   3. Cluster near-duplicates of the same play into one moment (media key,
+//      soft key, caption words + same teams + posted within 6 h); the best
+//      version first, the others as "+N angles" (video-ads-moments.js).
+//   4. Rank by trending: engagement per hour, engagement, recency, source,
+//      quality, the AI quality score, and the number of angles. Too few view
+//      counts to rank by: newest first, labelled (ranking: 'newest').
+//   5. Titles: the post text, cleaned. Long or messy ones may get one light-
+//      tier AI call per refresh for the whole batch (<= $0.005, cached 6 h,
+//      kept only when every name and number is in the post text).
+//   6. Never empty: too few fresh moments -> the library's older clips (5-7
+//      days), labelled; the page keeps its "Make it without a clip" options.
+// Reply: { ok, moments:[{id, title, titleBy, sport, teams[], score, velocity,
+//   views, likes, postedAt, latestAt, ageHours, angles, clips:[best, ...alts]}],
+//   ranking, note, facets:{teams, colors}, diag, cost }. Shared 30-min cache per sport.
+const MOMENTS_LIB = require('../../video-ads-moments.js');
 const MOMENT_CACHE = new Map();
-const MOMENTS = { top: 10, maxUses: 3, maxTokens: 1700, maxCostUsd: 0.045, perMoment: 5, maxCandidates: 36 };
+const MOMENT_TITLE_CACHE = new Map(); // clip url -> { title, at }
+const MOMENTS = {
+  enough: 12, max: 60, minFresh: 3,
+  paidUses: 2, paidCostUsd: 0.03,
+  titleBatch: 12, titleMaxTokens: 420, titleTtlMs: 6 * 3600e3, titleMaxUsd: 0.005,
+  titleFeature: 'video-ads-moments-with-clips-titles',
+};
 
 // The team a moment's title names first (full or short name), if any.
 function teamInTitle(title, sport) {
@@ -994,191 +1034,162 @@ function teamInTitle(title, sport) {
   return best ? best.team : null;
 }
 
-async function momentList(sportIn) {
-  const sports = AD_SPORTS.includes(sportIn) ? [sportIn] : AD_SPORTS;
-  const data = await trends();
-  return (data.items || []).filter(item => sports.includes(item.sport)).slice(0, MOMENTS.top);
+// Clip -> the shape the moments module clusters (sport + teams always set).
+const poolClip = (c, sport) => ({ ...c, sport: c.sport || sport, teams: clipTeams(c, { sport }) });
+
+// Moments for the page: teams as objects (logo lookups on the page), titles,
+// facets for the Team / Colour filters.
+function momentsOut(moments) {
+  return moments.slice(0, MOMENTS.max).map(m => {
+    const cached = m.clips.map(c => MOMENT_TITLE_CACHE.get(c.url)).find(x => x && x.title && Date.now() - x.at < MOMENTS.titleTtlMs);
+    const { sourceText, ...rest } = m;
+    return {
+      ...rest,
+      ...(cached ? { title: cached.title, titleBy: 'ai' } : {}),
+      teams: m.teams.map(name => TEAMS.findTeam(name, m.sport)).filter(Boolean).map(t => ({ ...teamOut(t), families: t.families.slice(0, 3) })),
+    };
+  });
+}
+
+// One light-tier call titles the moments whose cleaned post text is long or
+// had to fall back. Kept only when grounded in the post text. -> cost
+async function titleMoments(moments, track) {
+  const need = moments
+    .filter(m => (m.titleCut || m.titleBy === 'fallback') && m.sourceText)
+    .filter(m => !m.clips.some(c => { const x = MOMENT_TITLE_CACHE.get(c.url); return x && Date.now() - x.at < MOMENTS.titleTtlMs; }))
+    .slice(0, MOMENTS.titleBatch);
+  if (!need.length || isOffValue(process.env.VIDEO_ADS_MOMENT_TITLES)) return 0;
+  if (typeof track.titleGate !== 'function' || !(await track.titleGate().catch(() => false))) return 0;
+  const prompt = [
+    'Write a short title (4-9 words) for each sports video post below.',
+    'Summarise ONLY what the post text says: use only names, teams and numbers that appear in it. No hype words, no emoji, no hashtags.',
+    'Reply with JSON only: {"titles":[{"i":1,"title":"..."}]}',
+    '',
+    ...need.map((m, i) => `${i + 1}. ${clean(m.sourceText, 280)}`),
+  ].join('\n');
+  try {
+    const result = await aiText({ tier: 'light', system: 'You write short, factual titles for sports clips. JSON only.', messages: [{ role: 'user', content: prompt }], json: true, maxTokens: MOMENTS.titleMaxTokens, timeoutMs: 12000, track: { ...track, feature: MOMENTS.titleFeature } });
+    if (result.cost > MOMENTS.titleMaxUsd) console.warn(`video-ads moment titles cost ${result.cost.toFixed(4)} over ${MOMENTS.titleMaxUsd}`);
+    const parsed = extractJson(result.text) || {};
+    const got = new Map();
+    (Array.isArray(parsed.titles) ? parsed.titles : []).forEach(item => {
+      const m = need[Number(item?.i) - 1];
+      const title = m ? MOMENTS_LIB.groundedTitle(item.title, m.sourceText) : '';
+      if (title) got.set(m, title);
+    });
+    // Rejected or missing titles are remembered too (title: ''), so a refresh
+    // never pays twice for the same moment within 6 hours.
+    need.forEach(m => {
+      while (MOMENT_TITLE_CACHE.size > 2000) MOMENT_TITLE_CACHE.delete(MOMENT_TITLE_CACHE.keys().next().value);
+      m.clips.forEach(c => MOMENT_TITLE_CACHE.set(c.url, { title: got.get(m) || '', at: Date.now() }));
+    });
+    return Number(result.cost) || 0;
+  } catch (error) {
+    console.warn('video-ads moment titles failed:', error.message);
+    return 0;
+  }
 }
 
 function momentsCached(key) {
   const hit = MOMENT_CACHE.get(key);
   if (!hit || Date.now() - hit.at >= CLIP_TTL_MS) return null;
-  const moments = hit.value.moments.map(m => ({ ...m, clips: reAge(m.clips) })).filter(m => m.clips.length);
-  return { ...hit.value, moments, cached: true, cost: 0 };
+  return hit.value;
 }
 
-// Library clips per moment: the named team's clips (those naming another key
-// word first), else clips whose text has the moment's key words.
-async function libraryMoments(list, token) {
-  const out = new Map();
-  if (!CLIP_LIBRARY.enabled() || !list.length) return out;
-  const bySport = new Map();
-  for (const sport of [...new Set(list.map(m => m.sport))]) bySport.set(sport, (await libraryClips({ sport, token })).fresh);
-  const used = new Set();
-  list.forEach((m, index) => {
-    const team = teamInTitle(m.title, m.sport);
-    const terms = keyTerms(m.title, team).filter(t => !team || t !== team.short);
-    const pool = (bySport.get(m.sport) || []).filter(c => !used.has(c.url));
-    const picks = team
-      ? pool.filter(c => (c.teams || []).includes(team.name)).sort((a, b) => Number(termHit(b, terms)) - Number(termHit(a, terms)))
-      : (terms.length ? pool.filter(c => termHit(c, terms)) : []);
-    const mine = picks.slice(0, MOMENTS.perMoment);
-    mine.forEach(c => used.add(c.url));
-    if (mine.length) out.set(index, mine);
-  });
-  return out;
+// Pool -> the reply (clusters, ranking, never-empty fill, facets).
+async function assembleMoments(pool, { sports, track, diag, older = [] }) {
+  const built = MOMENTS_LIB.buildMoments(pool);
+  let moments = built.moments;
+  let note = '';
+  let ranking = built.thin ? 'newest' : 'trending';
+  if (moments.length < MOMENTS.minFresh && older.length) {
+    const have = new Set(pool.map(c => c.url));
+    const fill = MOMENTS_LIB.buildMoments(older.filter(c => !have.has(c.url)).map(c => ({ ...c, via: 'older' })), { windowHours: CLIP_LIBRARY.KEEP_DAYS * 24 }).moments;
+    if (fill.length) {
+      moments = [...moments, ...fill.map(m => ({ ...m, via: 'older' }))];
+      note = 'Few fresh clips this week — older clips (5-7 days) from the clip library are added at the end.';
+    }
+  }
+  if (!note && ranking === 'newest' && moments.length) note = 'Not enough view counts yet to rank by trending — showing the newest verified clips.';
+  const cost = await titleMoments(moments.slice(0, 24), track);
+  const out = momentsOut(moments);
+  diag.kept = out.length;
+  diag.clips = out.reduce((n, m) => n + m.clips.length, 0);
+  diag.clustered = pool.length - built.moments.length;
+  return { moments: out, ranking, note, facets: MOMENTS_LIB.momentFacets(out.map(m => ({ ...m, teams: m.teams.map(t => t.name) }))), cost };
 }
 
 async function momentsWithClips(body, track) {
   const started = Date.now();
   const sport = AD_SPORTS.includes(body.sport) ? body.sport : 'all';
+  const sports = sport === 'all' ? AD_SPORTS : [sport];
   const freeOnly = Boolean(track.freeOnly);
-  const list = await momentList(sport);
-  const key = `web|${sport}|${list.map(m => m.id).join(',')}`;
+  const key = `trending|${sport}`;
   const cached = freeOnly ? null : momentsCached(key);
-  if (cached) return cached;
-
-  const libByMoment = await libraryMoments(list, track.token);
-  const libTotal = [...libByMoment.values()].reduce((n, l) => n + l.length, 0);
-  const assemble = (byMoment, diag) => list.map((m, index) => {
-    const clips = rankClips(byMoment.get(index) || []);
-    if (!clips.length) return null;
-    const team = teamInTitle(m.title, m.sport);
-    return { id: m.id, title: m.title, sport: m.sport, ...(team ? { team: teamOut(team) } : {}), publishedAt: m.publishedAt, clips };
-  }).filter(Boolean);
-  // Nothing for any moment: the sport's freshest library clips, labelled.
-  const fallbackFor = async moments => {
-    if (moments.length || !CLIP_LIBRARY.enabled()) return {};
-    const sports = AD_SPORTS.includes(sport) ? [sport] : AD_SPORTS;
-    const pools = await Promise.all(sports.map(s => libraryClips({ sport: s, token: track.token }).then(r => r.fresh)));
-    const clips = rankClips(pools.flat()).slice(0, LIBRARY.maxOut).map(c => ({ ...c, via: 'sport' }));
-    return clips.length ? { fallback: { clips, note: `No clips for today’s top moments yet — here are the newest ${sports.length === 1 ? SPORT_NAMES[sport] : ''} clips from the clip library.`.replace('  ', ' ') } } : {};
-  };
-
-  if (libTotal >= LIBRARY.enough) {
-    const diag = { ...newDiag('library'), kept: libTotal, sources: { library: libTotal }, ms: Date.now() - started };
-    return { ok: true, moments: assemble(libByMoment, diag), checked: list.length, strategy: 'library', diag, fromLibrary: true, cached: false, cost: 0 };
+  if (cached) {
+    // Re-age and re-rank from the cached pool (cheap, no network).
+    const diag = { ...cached.diag, strategy: 'cache' };
+    const value = await assembleMoments(cached.pool, { sports, track, diag, older: cached.older });
+    return { ok: true, ...value, strategy: cached.strategy, diag, cached: true, cost: money(value.cost) };
   }
-  if (track.skipAi) return null; // not enough in the library: the caller gates and comes back
-  if (!list.length) return { ok: true, moments: [], checked: 0, cached: false, cost: 0, ...(await fallbackFor([])) };
 
-  const diag = newDiag(freeOnly ? 'none' : 'web');
+  // 1. The library (free): fresh pool + older clips for the never-empty fill.
+  const libs = await Promise.all(sports.map(s => libraryClips({ sport: s, token: track.token }).then(r => ({ s, ...r }))));
+  let pool = libs.flatMap(r => r.fresh.map(c => poolClip(c, r.s)));
+  const older = libs.flatMap(r => r.older.map(c => poolClip(c, r.s)));
+  const diag = { ...newDiag('library'), sources: { library: pool.length } };
   let cost = 0;
-  // Moment index -> candidate post URLs; a post counts for its first moment only.
-  const seen = new Set();
-  const byMoment = new Map();
-  if (!freeOnly) {
-    const since = new Date(Date.now() - FIND_CLIPS.maxAgeHours * 3600e3).toISOString().slice(0, 16).replace('T', ' ');
-    const sports = [...new Set(list.map(m => m.sport))];
-    const outlets = sports.map(s => {
-      const src = SOURCES.sourcesFor(s);
-      return `- ${SPORT_NAMES[s]}: ${[...src.league.slice(0, 3), ...src.media.slice(0, 3)].map(h => `@${h}`).join(', ')}`;
-    });
-    const prompt = [
-      'Trending moments:',
-      ...list.map((m, i) => {
-        const team = teamInTitle(m.title, m.sport);
-        const own = team ? SOURCES.handleFor(team) : '';
-        return `${i + 1}. [${SPORT_NAMES[m.sport]}] ${m.title}${own ? ` (team account @${own})` : ''}`;
-      }),
-      '',
-      'Verified accounts to search first (league, networks):',
-      ...outlets,
-      '',
-      `For each moment, find X posts made in the last 5 days (120 hours) (after ${since} UTC) that carry native video OF THAT MOMENT: highlights, the play itself, celebrations, reactions. Prefer the team account and the verified accounts above. Status links only (https://x.com/<handle>/status/<id>), not profile pages or articles.`,
-      `Reply with JSON only: {"moments": [{"i": <moment number>, "posts": ["https://x.com/<handle>/status/<id>"]}]} (up to ${MOMENTS.perMoment} posts per moment, verified accounts first; leave out moments with none).`,
-    ].join('\n');
-    const result = await aiWebResearch({
-      tier: 'search', system: SEARCH_SYSTEM, prompt,
-      maxUses: MOMENTS.maxUses, maxTokens: MOMENTS.maxTokens, maxCostUsd: MOMENTS.maxCostUsd, timeoutMs: 40000, allowedDomains: X_DOMAINS,
-      track: { ...track, feature: 'video-ads-moments-with-clips' },
-    });
-    if (result.cost > MOMENTS.maxCostUsd + 0.01) console.warn(`video-ads moments-with-clips cost ${result.cost.toFixed(4)}`);
-    cost += result.cost;
-    const parsed = extractJson(result.text) || {};
-    const groups = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.moments) ? parsed.moments : []);
-    diag.searched = result.searches || 0;
-    let total = 0;
-    groups.forEach(group => {
-      const index = Number(group?.i ?? group?.index ?? group?.moment) - 1;
-      if (!Number.isInteger(index) || index < 0 || index >= list.length) return;
-      const raw = (Array.isArray(group.posts) ? group.posts : []).map(p => clean(typeof p === 'string' ? p : p?.url, 300)).filter(Boolean);
-      diag.listed += raw.length;
-      const posts = raw.filter(isXPost).map(u => tweet.normalizeTweetUrl(u));
-      diag.nonPost += raw.length - posts.length;
-      const mine = byMoment.get(index) || [];
-      posts.forEach(url => {
-        if (seen.has(url) || mine.length >= MOMENTS.perMoment || total >= MOMENTS.maxCandidates) return;
-        seen.add(url);
-        mine.push(url);
-        total += 1;
-      });
-      if (mine.length) byMoment.set(index, mine);
-    });
+  const enough = list => MOMENTS_LIB.buildMoments(list).moments.length >= MOMENTS.enough;
+  if (!enough(pool)) {
+    if (track.skipAi) return null; // thin: the caller gates and comes back
+    // 2a. Free top-up: X API (when configured) + the free public sources, per sport.
+    const known = new Set(pool.map(c => c.url));
+    const free = await Promise.all(sports.map(async s => {
+      const [xr, extra] = await Promise.all([
+        xApiOn() ? searchRound(searchPlan({ sport: s }), { sport: s, track, feature: 'video-ads-moments-with-clips', freeOnly: true, maxUses: 0, maxCostUsd: 0, timeoutMs: 12000 }).catch(() => null) : null,
+        runSources({ sport: s }, { track, freeOnly: true, known, timeoutMs: 15000 }),
+      ]);
+      return { s, clips: [...(xr?.clips || []), ...extra.clips], diag: { ...(xr ? { xapi: xr.clips.length } : {}), ...extra.diag } };
+    }));
+    const found = [];
+    free.forEach(r => { r.clips.forEach(c => found.push(poolClip(c, r.s))); Object.assign(diag.sources, Object.fromEntries(Object.entries(r.diag).map(([id, d]) => [`${r.s}:${id}`, typeof d === 'object' ? d.kept || 0 : d]))); });
+    pool = [...pool, ...found.filter(c => !known.has(c.url))];
+    // 2b. Paid, only when still thin and AI is allowed: the thinnest sport.
+    if (!freeOnly && !enough(pool)) {
+      const counts = sports.map(s => ({ s, n: pool.filter(c => c.sport === s).length })).sort((a, b) => a.n - b.n);
+      const s = counts[0].s;
+      const [web, paid] = await Promise.all([
+        xApiOn() ? null : searchRound(searchPlan({ sport: s }), { sport: s, track, feature: 'video-ads-moments-with-clips', maxUses: MOMENTS.paidUses, maxCostUsd: MOMENTS.paidCostUsd, timeoutMs: 25000 }).catch(() => null),
+        runSources({ sport: s }, { track, only: 'paid', known: new Set(pool.map(c => c.url)), timeoutMs: 25000 }),
+      ]);
+      cost += (web?.cost || 0) + paid.cost;
+      diag.strategy = 'web';
+      diag.paidSport = s;
+      if (web) { diag.sources[`${s}:web`] = web.clips.length; ['searched', 'listed', 'candidates', 'noVideo', 'tooOld', 'throwback', 'lowQuality', 'notGame', 'badLength'].forEach(k => { diag[k] = (diag[k] || 0) + (web.diag[k] || 0); }); }
+      Object.entries(paid.diag).forEach(([id, d]) => { diag.sources[`${s}:${id}`] = d.kept || 0; });
+      const paidClips = [...(web?.clips || []), ...paid.clips].map(c => poolClip(c, s));
+      const have = new Set(pool.map(c => c.url));
+      found.push(...paidClips);
+      pool = [...pool, ...paidClips.filter(c => !have.has(c.url))];
+    }
+    // New finds go into the library for everyone.
+    let saved = 0;
+    for (const s of sports) {
+      const mine = found.filter(c => c.sport === s);
+      if (mine.length) saved += await saveToLibrary(mine, { sport: s });
+    }
+    if (saved) diag.librarySaved = saved;
   }
-
-  const urls = [...byMoment.values()].flat();
-  diag.candidates = urls.length;
-  // The extra sources for the first few moments the library has nothing for
-  // (free ones for up to 3, paid ones for the first 2), in parallel with the checks.
-  const thin = list.map((m, index) => index).filter(i => !libByMoment.has(i)).slice(0, LIBRARY.momentSources);
-  const known = new Set([...urls, ...[...libByMoment.values()].flat().map(c => c.url)]);
-  const [checks, extraRuns] = await Promise.all([
-    Promise.all(urls.map(url => withTimeout(clipFromPost(url), FIND_CLIPS.verifyMs, { ok: false, reason: 'timeout' }))),
-    Promise.all(thin.map((index, n) => {
-      const m = list[index];
-      const team = teamInTitle(m.title, m.sport);
-      return runSources({ sport: m.sport, query: m.title, team: team ? teamOut(team) : null, teams: team ? [teamOut(team)] : [] }, {
-        track, freeOnly, paid: n < LIBRARY.momentPaid, known,
-      }).then(r => ({ index, ...r }));
-    })),
-  ]);
-  const now = Date.now();
-  const verified = new Map(urls.map((url, k) => {
-    const sportOf = list[[...byMoment.entries()].find(([, v]) => v.includes(url))[0]].sport;
-    const { clip, reason } = assessClip(checks[k], { sport: sportOf, now });
-    if (!clip) diag[reason] = (diag[reason] || 0) + 1;
-    return [url, clip || null];
-  }));
-  const merged = new Map();
-  const newFinds = [];
-  list.forEach((m, index) => {
-    const live = (byMoment.get(index) || []).map(url => verified.get(url)).filter(Boolean);
-    const extra = extraRuns.find(r => r.index === index)?.clips || [];
-    newFinds.push(...[...live, ...extra].map(c => ({ c, m })));
-    const all = [...live, ...extra, ...(libByMoment.get(index) || [])];
-    if (all.length) merged.set(index, all);
-  });
-  const sourceDiag = { library: libTotal, ...(freeOnly ? {} : { web: [...verified.values()].filter(Boolean).length }) };
-  extraRuns.forEach(r => {
-    cost += r.cost;
-    Object.entries(r.diag).forEach(([id, d]) => {
-      const had = sourceDiag[id] || { found: 0, verified: 0, kept: 0, cost: 0 };
-      sourceDiag[id] = { found: had.found + (d.found || 0), verified: had.verified + (d.verified || 0), kept: had.kept + (d.kept || 0), cost: money(had.cost + (d.cost || 0)) };
-    });
-  });
-  diag.sources = sourceDiag;
-  const moments = assemble(merged, diag);
-  diag.kept = moments.reduce((n, m) => n + m.clips.length, 0);
-  // Duplicates removed inside each moment's ranking.
-  diag.dupes = [...merged.values()].reduce((n, l) => n + l.length, 0) - diag.kept;
-
-  // New finds go into the library, tagged with the moment's team when the
-  // clip is that team's own post or names it.
-  let saved = 0;
-  for (const m of list) {
-    const clips = newFinds.filter(x => x.m === m).map(x => x.c);
-    if (clips.length) saved += await saveToLibrary(clips, { sport: m.sport, team: teamInTitle(m.title, m.sport) });
-  }
-  if (saved) diag.librarySaved = saved;
+  pool = rankClips(pool); // one copy per url / media id; clustering keeps the angles
+  const value = await assembleMoments(pool, { sports, track, diag, older });
+  cost += value.cost;
   diag.ms = Date.now() - started;
-
-  const value = { ok: true, moments, checked: list.length, strategy: diag.strategy, diag };
+  const strategy = diag.strategy;
   if (!freeOnly) {
-    if (MOMENT_CACHE.size > 20) MOMENT_CACHE.delete(MOMENT_CACHE.keys().next().value);
-    MOMENT_CACHE.set(key, { at: Date.now(), value });
+    if (MOMENT_CACHE.size > 12) MOMENT_CACHE.delete(MOMENT_CACHE.keys().next().value);
+    MOMENT_CACHE.set(key, { at: Date.now(), value: { pool, older, strategy, diag } });
   }
-  return { ...value, ...(await fallbackFor(moments)), cached: false, cost: money(cost), ...(freeOnly ? { freeOnly: true } : {}) };
+  return { ok: true, ...value, strategy, diag, ...(strategy === 'library' ? { fromLibrary: true } : {}), cached: false, cost: money(cost), ...(freeOnly ? { freeOnly: true } : {}) };
 }
 
 // ─── Clip library browsing (no AI, no cost) ────────────────────────────────
@@ -1188,14 +1199,18 @@ async function libraryMode(body, { token = '' } = {}) {
   if (!sport) return { ok: false, status: 400, error: 'Pick NFL, CFB or MLB first.' };
   const teamName = clean(typeof body.team === 'string' ? body.team : body.team?.name, 80);
   const team = teamName ? TEAMS.findTeam(teamName, sport) : null;
-  const sort = body.sort === 'popular' ? 'popular' : 'newest';
+  const sort = ['popular', 'newest'].includes(body.sort) ? body.sort : 'trending';
   const offset = Math.max(0, Math.min(500, Math.floor(Number(body.offset) || 0)));
   const limit = Math.max(1, Math.min(LIBRARY.maxOut, Math.floor(Number(body.limit) || 18)));
   const { fresh } = await libraryClips({ sport, teams: team ? [team] : [], token });
   const popularity = c => (c.views > 0 ? Math.log10(1 + c.views) : 0) + (c.likes > 0 ? 1.2 * Math.log10(1 + c.likes) : 0);
+  // Trending (default): views or likes per hour, recency, source, quality, AI score.
+  const now = Date.now();
+  const trend = c => MOMENTS_LIB.trendScore({ velocity: MOMENTS_LIB.velocityOf(c, now), engagement: MOMENTS_LIB.engagementOf(c), ageHours: c.ageHours, best: c }) + (c.ai?.by === 'ai' ? 3 * (Number(c.ai.quality) - 3) : 0);
   const sorted = [...fresh].sort(sort === 'popular'
     ? (a, b) => popularity(b) - popularity(a) || b.score - a.score
-    : (a, b) => new Date(b.postedAt) - new Date(a.postedAt));
+    : sort === 'trending' ? (a, b) => trend(b) - trend(a) || new Date(b.postedAt) - new Date(a.postedAt)
+      : (a, b) => new Date(b.postedAt) - new Date(a.postedAt));
   // Team filter chips: the teams with fresh clips in this sport (all of them, not just this page).
   const all = team ? (await libraryClips({ sport, token })).fresh : fresh;
   const counts = new Map();
@@ -1990,6 +2005,13 @@ exports.handler = async function handler(event) {
       const token = bearerToken(event.headers);
       // One run id per request: a copy run's retry shares it with the first try.
       const track = { email: auth.user.email, token, runId: `va-${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 6)}` };
+      // By moment's optional AI titles: one light call per refresh, only when
+      // AI is on and this person is inside every limit (checked once, lazily).
+      if (body.mode === 'moments-with-clips') {
+        let gate = null;
+        track.titleGate = () => (gate = gate || (async () => gatewayConfigured() && !featureDisabled(MOMENTS.titleFeature)
+          && !(await userOverHourlyLimit(token)) && !(await aiSpendGate(token, { feature: MOMENTS.titleFeature })))());
+      }
       // Switched off (AI_DISABLE): a calm reply before anything else, cached results included.
       const feature = MODE_FEATURES[body.mode];
       // AI blocked (switched off, not configured, over a limit) for a clip
@@ -2056,7 +2078,7 @@ exports.handler = async function handler(event) {
 exports._test = {
   variantsFrom, isVideoUrl, sizeFromUrl, clipFromPost, trends, checkVariant, autoFix, trimToWords, swapBanned, closestPhrase, copyContext, suggestStyle, skipReason, styleFieldsOf,
   MODE_FEATURES, COPY_SYSTEM, COPY_CACHE, copyKey, rankVariants, claimsFor, checkClaims, saveClaims, claimsMode, resetClaims() { claimsCache = { at: 0, rows: null }; }, findClips, momentsWithClips, teamInTitle, MOMENT_CACHE, MOMENTS, looksOld, ageHoursOf, copy, chat, CLIP_CACHE, FIND_CLIPS, grammar, checkGrammarIssues, GRAMMAR_CACHE,
-  searchPlan, webPrompt, xQueryFor, xApiSearch, assessClip, freshClip, scoreClip, rankClips, mediaKey, qualityLabel, CLIP_TTL_MS, SOURCES,
+  MOMENT_TITLE_CACHE, MOMENTS_LIB, CLASSIFY, assembleMoments, searchPlan, webPrompt, xQueryFor, xApiSearch, assessClip, freshClip, scoreClip, rankClips, mediaKey, qualityLabel, CLIP_TTL_MS, SOURCES,
   LIBRARY, CLIP_LIBRARY, libraryMode, libraryClips, nearestFallback, runSources, verifyCandidate, checkMedia, mediaHostAllowed, teamsInText, clipTeams, softKey,
   useSources(list) { EXTRA_SOURCES = Array.isArray(list) ? list : []; },
   useLearning(mod) { learning = { lessonsFor: async () => ({ examples: [], rules: [] }), styleRankingFor: async () => [], recordEvent: async () => false, ...mod }; },
@@ -2065,5 +2087,5 @@ exports._test = {
 // The clip pipeline, for the prefetch cron (clips-prefetch.js).
 exports.clipPipeline = {
   AD_SPORTS, FIND_CLIPS, LIBRARY, CLIP_LIBRARY, searchPlan, searchRound, runSources, rankClips, saveToLibrary, clipFromPost, checkMedia,
-  assessClip, teamInTitle, teamOut, isXPost, xApiOn, clipSources, isPaidSource, trends, mediaKey,
+  assessClip, teamInTitle, teamOut, isXPost, xApiOn, clipSources, isPaidSource, trends, mediaKey, CLASSIFY, libraryClips,
 };

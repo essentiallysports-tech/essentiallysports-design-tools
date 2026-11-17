@@ -27,7 +27,8 @@ const USER_AGENT = 'FrameUp/1.0 (+https://frameup.essentiallysports.com)';
 const CACHE_MS = 12 * 60e3; // listings: 10–15 min
 const LONG_CACHE_MS = 24 * 3600e3; // DID -> PDS
 const TIMEOUT_MS = 8000;
-const QUALITY = { minShortSide: 480, minSeconds: 4, maxSeconds: 120 };
+// 720p floor: the shared Video Ads constant (CLIP_MIN_SHORT_SIDE in _clip-library.js).
+const QUALITY = { minShortSide: 720, minSeconds: 4, maxSeconds: 120 };
 const MAX_BYTES_SERVER_STREAM = 4 * 1024 * 1024;
 
 let SOURCES = null;

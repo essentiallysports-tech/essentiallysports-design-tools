@@ -114,7 +114,7 @@ globalThis.fetch = async (url, options = {}) => {
     const p = posts[id];
     if (!p) return reply(404, {});
     return reply(200, { code: 200, tweet: {
-      text: p.text ?? `Clip ${id}`, created_timestamp: nowSec - Math.round((p.ageH ?? 2) * 3600), likes: p.likes ?? 0, views: p.views ?? 0,
+      text: p.text ?? `Clip ${id} highlight`, created_timestamp: nowSec - Math.round((p.ageH ?? 2) * 3600), likes: p.likes ?? 0, views: p.views ?? 0,
       author: { name: p.handle, screen_name: p.handle },
       media: p.video === false ? {} : { videos: [{ url: VIDEOM(p.media ?? id), thumbnail_url: `https://pbs.twimg.com/${id}.jpg`, duration: p.secs ?? 15, width: 1280, height: 720 }] },
     } });
@@ -280,7 +280,7 @@ freeCandidates = () => [
   // A Bluesky re-upload of the NFL post: same length, same caption -> duplicate.
   { url: 'https://bsky.app/profile/nflmirror/post/1', platform: 'bluesky', handle: 'nflmirror', postedAt: hAgo(2), text: 'Packers walk-off field goal wins it at Lambeau tonight', mediaUrl: BSKY(1), durationMs: 15000, width: 1280, height: 720, sourceKind: 'fan' },
   // A different Bluesky clip.
-  { url: 'https://bsky.app/profile/fan/post/2', platform: 'bluesky', handle: 'gbfan', postedAt: hAgo(4), text: 'Packers sideline reaction', mediaUrl: BSKY(2), durationMs: 20000, width: 1080, height: 1920, sourceKind: 'fan', hasAudio: true },
+  { url: 'https://bsky.app/profile/fan/post/2', platform: 'bluesky', handle: 'gbfan', postedAt: hAgo(4), text: 'Packers sideline celebration after the touchdown', mediaUrl: BSKY(2), durationMs: 20000, width: 1080, height: 1920, sourceKind: 'fan', hasAudio: true },
   // No verified time: dropped.
   { url: 'https://bsky.app/profile/fan/post/3', platform: 'bluesky', handle: 'gbfan', postedAt: null, text: 'Packers', mediaUrl: BSKY(3), durationMs: 20000, width: 1280, height: 720, sourceKind: 'fan' },
   // A host that is not allowed: never fetched.
@@ -360,34 +360,38 @@ res = await post({ mode: 'find-clips', sport: 'nfl', team: 'Chiefs' }); // red
 assert.deepEqual(res.body.clips.map(c => c.via), ['colorx']);
 assert.match(res.body.note, /other red teams/);
 
-// ═══ 5. moments-with-clips ═════════════════════════════════════════════════
+// ═══ 5. moments-with-clips (By moment = the last 5 days' trending clips) ═══
 resetAll();
-trendItems = [
-  { id: 't1', category: 'nfl', title: 'Chiefs stun Bills in overtime thriller', publishedAt: hAgo(3) },
-  { id: 't2', category: 'nfl', title: 'Cowboys coach under fire after loss', publishedAt: hAgo(5) },
-];
-trendItems.push({ id: 't3', category: 'nfl', title: 'Lions clinch the division', publishedAt: hAgo(6) });
+const nflTeams = TEAMS.TEAMS.filter(t => t.sport === 'nfl');
 await LIB.write([
-  ...Array.from({ length: 6 }, (_, i) => libClip(400 + i, { ageH: 2 + i })),
-  ...Array.from({ length: 4 }, (_, i) => libClip(420 + i, { ageH: 2 + i, teams: ['Detroit Lions'], handle: 'Lions' })),
+  ...Array.from({ length: 13 }, (_, i) => libClip(400 + i, { ageH: 2 + i, teams: [nflTeams[i].name], handle: 'NFL', views: 1000 * (i + 1) })),
+  // The same touchdown from the league and the team: one moment, two angles.
+  { ...libClip(430, { ageH: 3, handle: 'NFL', views: 500000 }), clip: { ...libClip(430, { ageH: 3, handle: 'NFL', views: 500000 }).clip, text: 'Patrick Mahomes finds Travis Kelce for the go-ahead touchdown!' } },
+  { ...libClip(431, { ageH: 3.5, handle: 'Chiefs', views: 200000 }), clip: { ...libClip(431, { ageH: 3.5, handle: 'Chiefs', views: 200000 }).clip, text: 'MAHOMES TO KELCE. GO-AHEAD TOUCHDOWN. #ChiefsKingdom' } },
 ]);
 res = await post({ mode: 'moments-with-clips', sport: 'nfl' });
 assert.equal(res.status, 200, JSON.stringify(res.body));
 assert.equal(res.body.strategy, 'library');
-assert.equal(aiCalls.length, 0, 'moments from the library: no AI');
-assert.deepEqual(res.body.moments.map(m => m.id), ['t1', 't3'], 'moments without library clips are left out');
-assert.equal(res.body.moments[0].clips.length, 5, 'up to 5 per moment');
-// No clip for any moment: the sport's newest library clips come back as a fallback.
+assert.equal(aiCalls.length, 0, 'a full library: no AI search');
+assert.equal(res.body.moments.length, 14, '15 clips, one play posted twice -> 14 moments');
+const td = res.body.moments.find(m => m.angles === 1);
+assert.ok(td, 'the duplicate play is one moment with +1 angle');
+assert.equal(res.body.moments[0].id, td.id, 'the most viewed, fastest moment ranks first');
+assert.equal(res.body.ranking, 'trending');
+assert.match(td.title, /Mahomes/);
+assert.equal(td.teams[0].name, 'Kansas City Chiefs');
+assert.ok(res.body.facets.teams.length >= 13 && res.body.facets.colors.length >= 1, 'team and colour filters come with the reply');
+// Thin: the free sources, then one paid round; older library clips fill in, labelled.
 resetAll();
-trendItems = trendItems.slice(0, 2);
-await LIB.write([libClip(450, { teams: ['Detroit Lions'], handle: 'Lions', ageH: 2 })]);
-messagesHandler = () => reply(200, { stop_reason: 'end_turn', usage: { input_tokens: 9000, output_tokens: 300, server_tool_use: { web_search_requests: 1 } }, content: [{ type: 'text', text: '{"moments": []}' }] });
+await LIB.write([libClip(450, { teams: ['Detroit Lions'], handle: 'Lions', ageH: 2 }), libClip(451, { teams: ['Chicago Bears'], handle: 'ChicagoBears', ageH: 140 })]);
+sourceCalls.length = 0;
+messagesHandler = () => searchReply([]);
 res = await post({ mode: 'moments-with-clips', sport: 'nfl' });
 assert.equal(res.status, 200);
-assert.equal(res.body.moments.length, 0);
-assert.equal(res.body.fallback.clips.length, 1);
-assert.equal(res.body.fallback.clips[0].via, 'sport');
-assert.match(res.body.fallback.note, /clip library/);
+assert.deepEqual([...new Set(sourceCalls.map(c => c.id))].sort(), ['grok', 'public'], 'free sources, then the paid ones when still thin');
+assert.equal(res.body.moments.length, 2);
+assert.equal(res.body.moments[1].via, 'older', 'an older clip fills in at the end, labelled');
+assert.match(res.body.note, /older clips/);
 
 // ═══ 6. library mode ═══════════════════════════════════════════════════════
 resetAll();
@@ -400,6 +404,9 @@ await LIB.write([
 res = await post({ mode: 'library', sport: 'nfl' });
 assert.equal(res.status, 200);
 assert.equal(res.body.total, 3);
+assert.equal(res.body.sort, 'trending', 'trending is the default');
+assert.equal(res.body.clips[0].url.split('/').pop(), '9502', 'trending: 900k views in 5 h beats a fresher clip with 10 views');
+res = await post({ mode: 'library', sport: 'nfl', sort: 'newest' });
 assert.deepEqual(res.body.clips.map(c => c.url.split('/').pop()), ['9501', '9503', '9502'], 'newest first');
 res = await post({ mode: 'library', sport: 'nfl', sort: 'popular', limit: 1, offset: 0 });
 assert.equal(res.body.clips[0].url.endsWith('9502'), true, 'most popular first');
@@ -493,13 +500,15 @@ assert.ok(db.frameup_ai_usage.length >= 1);
 const libRows = db.frameup_clip_library.length;
 assert.ok(libRows >= run1.done);
 // The next batch sees what batch 1 spent: nothing left, so no AI at all.
-const aiBeforeB2 = aiCalls.length;
+// Classification (clips-classify) has its own daily budget; count search calls only.
+const searchCalls = () => aiCalls.filter(b => !JSON.stringify(b.system || '').includes('game footage')).length;
+const aiBeforeB2 = searchCalls();
 res = await call({ batch: '2' }, { authorization: 'Bearer cron-secret-123' });
 assert.equal(res.status, 200);
 assert.ok(res.body.budget.availableThisBatch <= 0.1 - run1.cost + 1e-9);
-const spentAll = db.frameup_clip_prefetch_runs.reduce((n, r) => n + Number(r.cost_usd), 0);
+const spentAll = db.frameup_clip_prefetch_runs.reduce((n, r) => n + Number(r.summary?.searchCost ?? r.cost_usd), 0);
 assert.ok(spentAll <= 0.1 + 1e-9, `all batches together stay within the daily cap (${spentAll})`);
-if (res.body.budget.availableThisBatch < C.CONFIG.aiEstimateUsd) assert.equal(aiCalls.length, aiBeforeB2, 'budget gone: no AI in later batches');
+if (res.body.budget.availableThisBatch < C.CONFIG.aiEstimateUsd) assert.equal(searchCalls(), aiBeforeB2, 'budget gone: no AI search in later batches');
 assert.ok(res.body.done > 0);
 delete process.env.CLIPS_PREFETCH_MAX_USD;
 

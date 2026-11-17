@@ -26,7 +26,8 @@
   <link rel="stylesheet" href="es-ui.css?v=20261119-rel3">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="video-ads.css?v=20261118-va-audio">
+  <link rel="stylesheet" href="video-ads.css?v=20261119-va-combined">
+  <link rel="stylesheet" href="video-ads-moments.css?v=20261119-va-combined">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
@@ -337,7 +338,7 @@
           <header class="va-pane__head va-pane__head--action">
             <div class="va-pane__titles">
               <h2 id="va-h-clip" tabindex="-1">Find a clip</h2>
-              <p>Team videos posted on X in the last 5 days.</p>
+              <p>Game clips from the last 5 days, 720p and up, most popular first.</p>
             </div>
             <button class="va-icon-btn va-lib-btn" type="button" id="va-tab-library" data-tab="library" aria-controls="va-by-library" aria-pressed="false" aria-label="Clip library: every fresh clip we've found" title="Clip library">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></svg>
@@ -389,12 +390,12 @@
                 <button class="va-chip" type="button" data-sport="cfb" aria-pressed="false">CFB</button>
                 <button class="va-chip" type="button" data-sport="mlb" aria-pressed="false">MLB</button>
               </div>
-              <button class="va-icon-btn es-refresh" type="button" id="va-refresh" aria-label="Refresh trends" title="Refresh trends">
+              <button class="va-icon-btn es-refresh" type="button" id="va-refresh" aria-label="Refresh trending clips" title="Refresh trending clips">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
               </button>
             </div>
-            <p class="va-hint" id="va-trends-status" role="status">Loading the last 48 hours…</p>
-            <ul class="va-trends" id="va-trends" aria-label="Trending moments"></ul>
+            <p class="va-hint" id="va-trends-status" role="status">Finding the most popular clips of the last 5 days…</p>
+            <ul class="va-trends" id="va-trends" aria-label="Trending clips, one card per play"></ul>
           </div>
 
           <div class="va-tabpanel" id="va-by-library" role="tabpanel" aria-labelledby="va-tab-library" hidden>
@@ -518,11 +519,12 @@
   <script src="video-ads-brands.js?v=20261119-rel3"></script>
   <script src="video-ads-styles.js?v=20261119-rel3"></script>
   <script src="video-ads-teams.js?v=20261117-tlogo1"></script>
+  <script src="video-ads-moments.js?v=20261119-va-combined"></script>
   <script src="video-ads-render.js?v=20261119-rel3"></script>
   <script src="video-ads-rating.js?v=20261118-hero-video-ads"></script>
   <script src="video-ads-audio.js?v=20261118-va-audio"></script>
   <script src="es-motion.js?v=20261115-ds1"></script>
   <script src="league-logos.js?v=20261117-logo1"></script>
-  <script src="video-ads.js?v=20261118-va-audio"></script>
+  <script src="video-ads.js?v=20261119-va-combined"></script>
 </body>
 </html>
