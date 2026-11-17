@@ -68,6 +68,7 @@
     "api/trend-design.js": { "maxDuration": 30 },
     "api/video-ads.js": { "maxDuration": 60 },
     "api/ad-rating.js": { "maxDuration": 60 },
-    "api/ad-learning.js": { "maxDuration": 15 }
+    "api/ad-learning.js": { "maxDuration": 15 },
+    "api/reel-maker.js": { "maxDuration": 60 }
   }
 }

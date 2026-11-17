@@ -131,6 +131,24 @@
     ],
   });
 
+  // ─── Reels Studio (Topic → Edit → Export) ───────────────────────────
+  Tour.register({
+    id: 'reels-studio',
+    label: 'Reels Studio',
+    description: 'Trend to a voiced 9:16 reel, checked and exported.',
+    kicker: 'Reels Studio',
+    icon: I.film,
+    steps: [
+      { page: 'reel-maker.html', pageLabel: 'Reels Studio', navTarget: '.es-sidebar [data-shell-id="reel-maker"]', target: '#rm-steps', icon: I.steps, title: 'Three steps', text: 'Topic, Edit, Export. A reel in a few minutes.' },
+      { page: 'reel-maker.html', target: '#rm-topic', placement: 'left', icon: I.trending, title: 'Start from a trend', text: 'Pick a story from the last 48 hours, or write a brief.' },
+      { page: 'reel-maker.html', target: '#rm-formats', placement: 'left', icon: I.grid, title: 'Format', text: 'Explainer, Stat alert, Top 5 or Quote. Auto picks for you.' },
+      { page: 'reel-maker.html', target: '#rm-write', placement: 'left', icon: I.sparkles, title: 'Write the reel', text: 'AI writes the beats. Every number must come from a source.' },
+      { page: 'reel-maker.html', target: '#rm-stage', placement: 'right', icon: I.phone, title: 'Live preview', text: 'The reel as it will post, 1080×1920. Space plays.' },
+      { page: 'reel-maker.html', target: '.rm-step[data-step="edit"]', icon: I.pen, title: 'Edit the beats', text: 'Change words, photos and order. The preview follows.' },
+      { page: 'reel-maker.html', target: '.rm-step[data-step="export"]', icon: I.download, title: 'Check and export', text: 'Rights, quality checks and cost, then MP4.' },
+    ],
+  });
+
   // ─── Editor (Social Media, YouTube, Newsletter on index.html) ────────
   Tour.register({
     id: 'editor',

@@ -107,6 +107,7 @@
       return trends ? 'trends' : 'generate';
     }
     if (page === 'video-ads.html') return 'video-ads';
+    if (page === 'reel-maker.html') return 'reels-studio';
     if (page === 'index.html' && ['#instagram', '#youtube', '#newsletter'].includes(window.location.hash)) return 'editor';
     return null;
   }
@@ -218,7 +219,7 @@
 
   function pickerItems() {
     const here = pageTourId();
-    const order = ['welcome', 'generate', 'trends', 'video-ads', 'editor'];
+    const order = ['welcome', 'generate', 'trends', 'video-ads', 'reels-studio', 'editor'];
     const tours = order.map(id => Tour.get(id)).filter(Boolean);
     if (here) tours.sort((a, b) => (b.id === here) - (a.id === here));
     return { tours, here };
@@ -300,6 +301,7 @@
     generate: () => document.querySelector('#gen-form .gen-actions__buttons'),
     trends: () => document.querySelector('#ais-view-trends .td-status')?.parentElement,
     'video-ads': () => document.querySelector('#va-panel .va-pane-nav'),
+    'reels-studio': () => document.querySelector('.rm-head'),
     editor: () => document.querySelector('.studio-history-group'),
   };
 

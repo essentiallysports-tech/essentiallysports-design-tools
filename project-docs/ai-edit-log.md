@@ -17,6 +17,25 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-18 — Reels Studio MVP (reel-maker.html), branch feature/reels-studio
+- Status: `[on branch feature/reels-studio, NOT committed (git commit blocked by the permission system twice); not pushed]`
+- Built from `project-docs/ai-reels-research.md` (MVP, §1.3 craft norms, §3 legal path, §5 lint, §6 architecture).
+- New page `reel-maker.html` / `reel-maker.js` / `reel-maker.css`: Topic (trend from the last 48 h or a brief; format cards with a router "fits" dot; sport; Standard/Economy script tier; capped fact check; cost estimate) → Edit (beats: on-screen text, voiceover, stat / rank / quote fields, highlight word, ES-pool photo per beat, reorder/delete/add; Revise chips; voice and caption style; music upload or library + licence; sources; quality checks) → Export (organic/paid target, rights table, lint gate, real cost, MP4). Live 9:16 preview with transport, mute, safe-zone overlay, Space to play.
+- Shared pure modules (UMD, Node-tested): `reel-formats.js` (formats, router, number provenance, pacing, cost estimate, grounded no-AI draft), `reel-render.js` (timeline/EDL builder, frame timing, layout, drawing; reuses `video-ads-render.js` videoRect / tintLayers / drawGenerated), `reel-lint.js` (rules; `netlify/functions/_reel-lint.js` wraps it for the server).
+- Server: `netlify/functions/reel-maker.js` + `api/reel-maker.js` (modes config, trends, plan, revise, voice, projects, project-save, project-load, event), `_reel-director.js` (Haiku, Sonnet only when weak; validates every beat; drafts when AI is off or over a cap), `_reel-voice.js` (ElevenLabs or Gateway TTS, env-gated, never-clone check, one beat per response). `vercel.json`: `api/reel-maker.js` at 60 s.
+- Export: WebCodecs + Mediabunny 1.62.1 (jsDelivr; frame-exact, about 5 s for a 28 s reel in Chrome), else the Video Ads MediaRecorder path in real time.
+- Migration (owner runs it): `supabase/migrations/20261118120000_frameup_reel_projects.sql` (projects + events, RLS own rows, admins read all). Until then projects autosave in the browser only.
+- Voice (follow-up, same day): ALL voice goes through the Vercel AI Gateway by default, so no ElevenLabs account is needed.
+  - Speech: `POST https://ai-gateway.vercel.sh/v4/ai/speech-model` (headers `ai-gateway-protocol-version: 0.0.1`, `ai-speech-model-specification-version: 4`, `ai-model-id`; body `{ text, voice, outputFormat, providerOptions }` → `{ audio: base64 }`), docs https://vercel.com/docs/ai-gateway/modalities/text-to-speech. Default model `elevenlabs/eleven-flash-v2.5`, default voice ElevenLabs "Roger" (`CwhRBWXzGAHq8TQ4Fs17`, public library voice).
+  - Caption timing: the speech reply has no word timings, so each clip is transcribed once with `elevenlabs/scribe-v2` via `POST /v4/ai/transcription-model` (body `{ audio, mediaType }`, words in `providerMetadata.elevenlabs.words`), docs https://vercel.com/docs/ai-gateway/modalities/speech-to-text. The script's words keep their spelling and take Scribe's times. Cached by text hash.
+  - Cost for a 30 s reel (about 450 characters): voice $0.018 + alignment $0.0018 ≈ $0.02 (Gateway list prices from /v1/models, 2026-11-17). Logged as `reels-voice` and `reels-voice-align`.
+  - Music bed (optional, `REELS_MUSIC=gateway`): `elevenlabs/music-v2.5`, $0.0025/s, logged as `reels-music`. ElevenLabs Music Terms (updated 2026-10-09) allow online commercial use on paid plans (not film/TV/radio) but don't name paid ads, and the plan behind Vercel's keys is unconfirmed → recorded as organic only, so paid exports with it are blocked by the lint.
+  - Direct ElevenLabs only behind `REELS_TTS=elevenlabs`.
+- Env (all optional): `REELS_TTS` (unset = Gateway | off | elevenlabs), `REELS_TTS_MODEL`, `REELS_TTS_VOICE`, `REELS_ALIGN_MODEL`, `REELS_MUSIC`, and for the fallback `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL_ID`. All listed in `.env.example`.
+- `reels-music.json` is empty on purpose (TODO for the owner: licensed tracks only).
+- Shared files touched: `app-shell.js` (NAV item + usage label), `tours/tours.js`, `tours/tour-launcher.js`, `tours/updates.json`, `vercel.json`, and the `?v=` keys of app-shell / tours on every app-shell page (13 pages incl. `index.html`, a three-line change each).
+- Tests: `scripts/test-reel-render.mjs`, `test-reel-lint.mjs`, `test-reel-director.mjs`, `test-reel-voice.mjs`, `test-reel-maker-api.mjs`; the full suite shows only the 7 baseline failures.
+
 ### 2026-09-10 — Fix a regression from this same day's earlier fixes: concurrent profile upsert race
 - Status: `[pushed - see rollback point below]`
 - Files touched: `dashboard-data.js`. No database changes this time.
