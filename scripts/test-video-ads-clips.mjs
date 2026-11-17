@@ -48,7 +48,7 @@ globalThis.fetch = async (url, options = {}) => {
     const h = p.h ?? 720;
     const media = p.media ?? id;
     return reply(200, { code: 200, tweet: {
-      text: p.text ?? `Clip ${id}`, created_timestamp: nowSec - Math.round((p.ageH ?? 2) * 3600),
+      text: p.text ?? `Clip ${id} highlight`, created_timestamp: nowSec - Math.round((p.ageH ?? 2) * 3600),
       likes: p.likes ?? 0, views: p.views ?? 0,
       author: { name: p.handle, screen_name: p.handle, verification: { type: p.vtype ?? '' } },
       media: p.video === false ? {} : { videos: [{ url: VIDEOM(media, w, h), thumbnail_url: `https://pbs.twimg.com/${id}.jpg`, duration: p.secs ?? 15, width: w, height: h,
@@ -134,8 +134,10 @@ const good = _test.assessClip({ ...base, variants: v(1080, 1920) }, { sport: 'nf
 assert.equal(good.quality, '1080p', 'quality is the short side');
 assert.equal(good.source, 'official');
 assert.equal(_test.assessClip({ ...base, variants: v(1280, 720) }).clip.quality, '720p');
-assert.equal(_test.assessClip({ ...base, variants: v(854, 480) }).clip.quality, '480p', '480p kept');
-assert.equal(_test.assessClip({ ...base, variants: [{ url: 'https://video.twimg.com/x/clip.mp4', width: 0, height: 0, bitrate: 0 }] }).clip.quality, '', 'unknown size kept, unlabelled');
+assert.equal(_test.assessClip({ ...base, variants: v(854, 480) }).reason, 'lowQuality', '480p dropped (720p floor)');
+assert.equal(_test.FIND_CLIPS.minShortSide, 720, 'one shared 720p floor');
+assert.equal(_test.assessClip({ ...base, variants: [{ url: 'https://video.twimg.com/x/clip.mp4', width: 0, height: 0, bitrate: 0 }] }).reason, 'lowQuality', 'unknown size dropped: it cannot prove 720p');
+assert.equal(_test.assessClip({ ...base, text: 'Full press conference with the head coach', variants: v(1280, 720) }, { sport: 'nfl' }).reason, 'notGame', 'a presser is not game action');
 const fan = _test.assessClip({ ...base, url: url('fan', 2), handle: 'fan', views: 5e6, variants: v(1080, 1920, 2) }, { sport: 'nfl' }).clip;
 const net = _test.assessClip({ ...base, url: url('NFLonCBS', 3), handle: 'NFLonCBS', variants: v(1280, 720, 3) }, { sport: 'nfl' }).clip;
 assert.deepEqual(_test.rankClips([fan, net, good]).map(c => c.handle), ['Chiefs', 'NFLonCBS', 'fan'], 'official, then media, then a viral fan post');
