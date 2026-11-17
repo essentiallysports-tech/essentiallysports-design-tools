@@ -7,9 +7,10 @@
   <title>Dashboard | FrameUp</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
+  <script src="frameup-errors.js?v=20261118-reliability-drafts"></script>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261115-auth2"></script>
-  <script src="dashboard-data.js?v=20261117-ready1"></script>
+  <script src="dashboard-data.js?v=20261118-reliability-drafts"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -368,6 +369,21 @@
     .ai-spend-groups h3 { margin: 0 0 10px; font: 700 14px/1.4 var(--es-font-ui, inherit); color: var(--es-text-secondary, #464c57); }
     body.dashboard-page .ai-spend-groups .workspace-bar-chart { padding: 0; }
     .ai-spend-note { margin: 16px 0 0; font-size: 14px; color: var(--es-text-muted, #646a76); }
+    /* Errors panel (frameup_client_errors, grouped by fingerprint) */
+    #dov-errors:not(:has(> .dov-skel)) { padding: var(--es-space-6, 24px); }
+    .dov-errors { list-style: none; margin: var(--es-space-6, 24px) 0 0; padding: 0; display: grid; border-top: 1px solid var(--dov-line); }
+    .dov-errors > li { border-bottom: 1px solid var(--dov-line); }
+    .dov-errors summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--es-space-1, 4px) var(--es-space-4, 16px); align-items: center; padding: var(--es-space-3, 12px) 0; cursor: pointer; list-style: none; border-radius: var(--es-radius-control, 10px); }
+    .dov-errors summary::-webkit-details-marker { display: none; }
+    .dov-errors summary:focus-visible { outline: 2px solid var(--es-focus, #0a6bd8); outline-offset: 2px; }
+    .dov-error-msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dov-ink); font: 600 15px/1.4 var(--es-font-ui); }
+    .dov-error-count { grid-row: span 2; color: var(--dov-ink); font: 700 18px/1 var(--es-font-ui); font-variant-numeric: tabular-nums; text-align: right; }
+    .dov-error-count small { display: block; margin-top: 2px; color: var(--dov-muted); font: 400 12px/1.3 var(--es-font-ui); }
+    .dov-error-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); min-width: 0; color: var(--dov-muted); font: 400 13px/1.4 var(--es-font-ui); }
+    .dov-error-detail { margin: 0 0 var(--es-space-4, 16px); display: grid; gap: var(--es-space-2, 8px); color: var(--dov-ink-2); font: 400 13px/1.5 var(--es-font-ui); }
+    .dov-error-detail .dov-cell-meta { white-space: normal; }
+    .dov-error-detail pre { margin: 0; max-height: 220px; overflow: auto; padding: var(--es-space-3, 12px); border-radius: var(--es-radius-control, 10px); background: var(--dov-soft); color: var(--dov-ink-2); font: 400 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+    @media (max-width: 720px) { .dov-errors summary { grid-template-columns: minmax(0, 1fr); } .dov-error-count { grid-row: auto; text-align: left; } .dov-error-count small { display: inline; margin-left: 4px; } }
     .empty {
       padding: 28px 22px;
       color: var(--es-muted);
@@ -650,6 +666,16 @@
                   <div><h3 class="dov-card-title es-type-card-title">AI spend · last 7 days</h3><p class="dov-card-meta">Headline ideas, Generate and image calls against the $20 weekly key limit</p></div>
                 </header>
                 <div class="dov-card-body" id="ai-spend"></div>
+              </article>
+            </section>
+
+            <section class="dov-section" aria-labelledby="dov-errors-title" data-dashboard-panel="errors">
+              <h2 class="dov-section-title es-type-section" id="dov-errors-title">Errors</h2>
+              <article class="dov-card">
+                <header class="dov-card-head">
+                  <div><h3 class="dov-card-title es-type-card-title">Errors in people’s browsers · last 7 days</h3><p class="dov-card-meta">Crashes, failed promises and failed /api calls, grouped. Scrubbed of emails, tokens and query strings</p></div>
+                </header>
+                <div class="dov-card-body" id="dov-errors"></div>
               </article>
             </section>
           </div>
@@ -2162,6 +2188,85 @@
       setHtml(target, aiSpendMarkup(aiSpendCache));
     }
 
+    // Errors: browser error reports from the last 7 days, grouped by
+    // fingerprint (frameup-errors.js → /api/client-errors → frameup_client_errors).
+    const ERROR_KIND_LABELS = { error: 'Crash', rejection: 'Failed promise', api: 'API call', resource: 'File failed to load' };
+    let clientErrorsLoading = false;
+    let clientErrorsCache = null; // { at, ready, rows } | { at, error: true }
+
+    function groupClientErrors(rows) {
+      const groups = new Map();
+      rows.forEach(row => {
+        const key = row.fingerprint || `${row.kind}|${row.message}`;
+        const group = groups.get(key) || { key, kind: row.kind, message: row.message, count: 0, people: new Set(), pages: new Set(), last: '', first: '', sample: row };
+        group.count += Math.max(1, Number(row.occurrences) || 1);
+        if (row.user_email) group.people.add(String(row.user_email).toLowerCase());
+        if (row.page) group.pages.add(row.page);
+        if (!group.last || row.created_at > group.last) { group.last = row.created_at; group.sample = row; }
+        if (!group.first || row.created_at < group.first) group.first = row.created_at;
+        groups.set(key, group);
+      });
+      return Array.from(groups.values()).sort((a, b) => b.count - a.count || String(b.last).localeCompare(String(a.last)));
+    }
+
+    function clientErrorsMarkup(cache) {
+      if (!cache) return skeletonRows(3);
+      if (cache.error) return errorState('Error reports couldn’t load right now.');
+      if (!cache.ready) return emptyState('Error reporting isn’t switched on yet', 'The error table hasn’t been created in Supabase. Reports are collected once it is.');
+      const rows = cache.rows;
+      if (!rows.length) return emptyState('No errors in the last 7 days', 'Crashes and failed API calls in anyone’s browser show up here.');
+      const groups = groupClientErrors(rows);
+      const total = groups.reduce((sum, group) => sum + group.count, 0);
+      const people = new Set(rows.map(row => String(row.user_email || '').toLowerCase()).filter(Boolean));
+      const apiFailures = groups.filter(group => group.kind === 'api').reduce((sum, group) => sum + group.count, 0);
+      const list = groups.slice(0, 12).map(group => {
+        const sample = group.sample || {};
+        const pages = Array.from(group.pages).slice(0, 3).join(', ');
+        const where = [sample.source && sample.source !== sample.page ? sample.source : '', sample.line ? `line ${sample.line}${sample.col ? `:${sample.col}` : ''}` : ''].filter(Boolean).join(' · ');
+        return `<li><details>
+          <summary>
+            <span class="dov-error-msg" title="${attr(group.message)}">${escapeHtml(group.message)}</span>
+            <span class="dov-error-count">${fmt(group.count)}<small>${group.count === 1 ? 'time' : 'times'}</small></span>
+            <span class="dov-error-meta">${pill(ERROR_KIND_LABELS[group.kind] || group.kind, group.kind === 'api' ? 'warn' : 'bad')}<span>${fmt(group.people.size)} ${group.people.size === 1 ? 'person' : 'people'}</span><span>${escapeHtml(pages || '—')}</span><span>Last ${timeTag(group.last)}</span></span>
+          </summary>
+          <div class="dov-error-detail">
+            <p class="dov-cell-meta">First seen ${timeTag(group.first)}${sample.release ? ` · release ${escapeHtml(sample.release)}` : ''}${where ? ` · ${escapeHtml(where)}` : ''}</p>
+            ${sample.stack ? `<pre>${escapeHtml(sample.stack)}</pre>` : '<p class="dov-cell-meta">No stack trace for this one.</p>'}
+          </div>
+        </details></li>`;
+      }).join('');
+      return `
+        <ul class="dov-ai-stats">
+          <li><span class="dov-eyebrow">Errors</span><span class="dov-stat-big">${fmt(total)}</span><span class="dov-cell-meta">${fmt(groups.length)} different ${groups.length === 1 ? 'problem' : 'problems'}</span></li>
+          <li><span class="dov-eyebrow">People affected</span><span class="dov-stat-big">${fmt(people.size)}</span><span class="dov-cell-meta">Signed-in people who hit one</span></li>
+          <li><span class="dov-eyebrow">Failed API calls</span><span class="dov-stat-big">${fmt(apiFailures)}</span><span class="dov-cell-meta">5xx, 404 or no response</span></li>
+        </ul>
+        <ul class="dov-errors">${list}</ul>
+        ${groups.length > 12 ? `<p class="dov-note">Showing the 12 most frequent of ${fmt(groups.length)}.</p>` : ''}`;
+    }
+
+    async function renderClientErrors({ force = false } = {}) {
+      const target = document.getElementById('dov-errors');
+      if (!target || !window.ESDashboardData.fetchClientErrors) return;
+      // Keep any open stack trace open across the 30 s live refresh.
+      if (target.querySelector('details[open]') && !force) return;
+      setHtml(target, clientErrorsMarkup(clientErrorsCache));
+      const fresh = clientErrorsCache && Date.now() - clientErrorsCache.at < AI_REFRESH_MS;
+      if (clientErrorsLoading || (fresh && !force)) return;
+      clientErrorsLoading = true;
+      try {
+        const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { rows, ready } = await window.ESDashboardData.fetchClientErrors({ sinceIso: since });
+        clientErrorsCache = { at: Date.now(), ready, rows: rows || [] };
+      } catch (error) {
+        console.warn('[client errors]', error);
+        clientErrorsCache = { at: Date.now(), error: true };
+      } finally {
+        clientErrorsLoading = false;
+      }
+      setHtml(target, clientErrorsMarkup(clientErrorsCache));
+    }
+
     function renderOverview(state) {
       const phase = overviewPhase(state);
       if (phase === 'loading' || phase === 'error') {
@@ -2180,6 +2285,7 @@
       renderExportsByWorkspaceChart(state);
       renderTemplates(state);
       renderAiSpend();
+      renderClientErrors();
     }
 
     function renderDesigns(state) {
@@ -2852,6 +2958,7 @@
             window.ESDashboardData.refreshCloudDashboardData?.(),
             refreshAccessRequests(),
             renderAiSpend({ force: true }),
+            renderClientErrors({ force: true }),
           ]).finally(renderDashboard);
           return;
         }
@@ -3061,8 +3168,20 @@
       console.error('Dashboard boot failed:', error);
     }
 
+    // Paint loading placeholders at once (no data: nothing private is shown
+    // before the sign-in and admin checks below finish). Before this, the
+    // KPI cards read "0" and the cards sat empty for the 1–4 s those take.
+    function renderBootSkeleton() {
+      document.querySelectorAll('.dov-kpi').forEach(card => card.classList.add('is-loading'));
+      document.querySelectorAll('.dov-kpi [data-metric]').forEach(el => { el.textContent = '—'; });
+      document.querySelectorAll('.dov .dov-card-body').forEach(body => {
+        if (!body.children.length && !body.textContent.trim()) body.innerHTML = skeletonRows(3);
+      });
+    }
+
     async function boot() {
       setupPageTransitions();
+      try { renderBootSkeleton(); } catch (error) { /* placeholders only */ }
       try {
         // These four checks each make their own independent Supabase/auth
         // round trip and none needs a previous one's resolved value to
