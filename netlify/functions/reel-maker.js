@@ -14,6 +14,10 @@
 //   music     optional generated instrumental bed (REELS_MUSIC=gateway), organic-only rights
 //   voice-sample  a ~2 s preview of one of the four voices (cached)
 //   scene     one AI scene still for the fill chain (no people, names or logos)
+//   clip-judge  a vision model rates up to 3 candidate clips from frames the
+//             browser sampled (_reel-clip-judge.js, Gemini 3.8 Flash, Haiku
+//             fallback); capped at $0.10 per reel, cached per clip URL,
+//             logged as reels-clip-judge; respects aiSpendGate
 //   ai-clip-start / ai-clip-status
 //             one AI b-roll clip as an async Gateway job (REELS_AI_CLIPS=gateway,
 //             capped by REELS_AI_CLIPS_MAX, default 2 per reel); the page polls
@@ -38,7 +42,9 @@ const { verifyEsUser, bearerToken, authConfig } = require('./_supabase-auth.js')
 const media = require('./_reel-media.js');
 const STYLES = require('../../reel-styles.js');
 const { getTrends } = require('./trend-design.js');
-const { gatewayConfigured, isBudgetError, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage } = require('./_ai-gateway.js');
+const { gatewayConfigured, isBudgetError, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage, aiSpendGate } = require('./_ai-gateway.js');
+const clipJudge = require('./_reel-clip-judge.js');
+const CLIPS = require('../../reel-clips.js');
 const director = require('./_reel-director.js');
 const voice = require('./_reel-voice.js');
 const { lintPlan } = require('./_reel-lint.js');
@@ -48,7 +54,7 @@ const REEL_SPORTS = ['nfl', 'cfb', 'mlb', 'golf'];
 const TREND_HOURS = 48;
 const PLAN_TTL_MS = 45 * 60 * 1000;
 const PLAN_CACHE = new Map();
-const MAX_BODY = 220 * 1024; // a project's timeline is capped at 200 KB
+const MAX_BODY = 220 * 1024; // a project's timeline is capped at 200 KB; a clip-judge batch (3 clips x 3 small JPEGs) is ~120 KB
 const PROJECTS = 'frameup_reel_projects';
 const EVENTS = 'frameup_reel_events';
 const EVENT_TYPES = ['plan', 'revise', 'voice', 'edit', 'export', 'lint_blocked', 'make', 'visuals'];
@@ -312,9 +318,17 @@ exports.handler = async function handler(event) {
         formats: F.FORMAT_IDS, prices: F.PRICES, styles: STYLES.STYLE_IDS,
         aiClips: (({ ready, model, max, seconds, perClip, reason }) => ({ ready, model, max, seconds, perClip, reason }))(media.clipsStatus()),
         scenes: { ready: gatewayConfigured(), perImage: F.PRICES.sceneImage },
+        clipJudge: { ready: gatewayConfigured(), model: process.env.REELS_CLIP_JUDGE_MODEL || CLIPS.JUDGE.model, maxUsdPerReel: CLIPS.JUDGE.maxUsdPerReel },
       });
     }
     if (body.mode === 'trends') return json(200, await trends());
+    if (body.mode === 'clip-judge') {
+      const gate = await aiSpendGate(token, { feature: clipJudge.FEATURE });
+      if (gate) return json(gate.status, { ok: false, reason: gate.reason, error: gate.error });
+      if (await userOverHourlyLimit(token)) return json(429, { ok: false, reason: 'limit', error: 'Clips are ranked without the AI check this hour.' });
+      const result = await clipJudge.judgeClips({ clips: body.clips, subjects: body.subjects, budgetUsd: Number(body.budgetUsd ?? CLIPS.JUDGE.maxUsdPerReel), track });
+      return json(result.ok ? 200 : (result.status || (result.reason === 'off' || result.reason === 'feature-off' ? 503 : 502)), result);
+    }
     if (DATA_MODES[body.mode]) {
       const result = await DATA_MODES[body.mode](body, auth, token);
       return json(result.ok ? 200 : (result.status || 400), result);

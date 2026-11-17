@@ -56,7 +56,7 @@
     return [...ids];
   }
 
-  function lintTimeline(timeline, { boxes = null, target = 'organic', extraSources = '' } = {}) {
+  function lintTimeline(timeline, { boxes = null, target = 'organic', extraSources = '', marks = null } = {}) {
     const issues = [];
     if (!timeline || !Array.isArray(timeline.beats) || !timeline.beats.length) {
       return { issues: [issue('empty', 'critical', 'The reel has no beats yet.', 'Write the reel first.')], critical: 1, warnings: 0, ok: false };
@@ -119,6 +119,36 @@
         if (seen.has(key)) return;
         seen.add(key);
         issues.push(issue('safe-zone', 'critical', `“${String(b.text).slice(0, 24)}” runs outside the safe zone, under the app's buttons.`, 'Shorten the line.', b.beat));
+      });
+    }
+
+    // Brand (VB-02, SM-02, BL-05/06): the official ES mark on every beat,
+    // 122 x 104, top-right inside the safe zone, nothing in its 50 px clear
+    // space. A missing or misplaced mark blocks export.
+    const OFFICIAL_MARK = /(^|\/)assets\/brand-logos\/essentiallysports-mark\.svg$/;
+    const placed = Array.isArray(marks) ? marks : (R.logoPlacements ? R.logoPlacements(timeline) : []);
+    const esAsset = timeline.assets && timeline.assets['logo:es'];
+    if (!esAsset || !OFFICIAL_MARK.test(String(esAsset.src || ''))) issues.push(issue('logo', 'critical', 'The ES logo is not the official mark.', 'Use the ES mark from assets/brand-logos (the renderer draws it for you).'));
+    const spec = R.ES_MARK || { w: 122, h: 104, clear: 50 };
+    timeline.beats.forEach((beat, index) => {
+      const m = placed.find(x => x.beat === beat.id);
+      if (!m) { issues.push(issue('logo', 'critical', `Beat ${index + 1} has no ES logo.`, 'The ES mark must be on every frame.', beat.id)); return; }
+      if (Math.abs(m.w - spec.w) > 0.5 || Math.abs(m.h - spec.h) > 0.5) issues.push(issue('logo', 'critical', `Beat ${index + 1}: the ES logo is ${Math.round(m.w)}x${Math.round(m.h)}, not ${spec.w}x${spec.h}.`, 'Never scale the logo.', beat.id));
+      const S0 = R.SAFE;
+      const inSafe = m.x >= S0.left - 0.5 && m.x + m.w <= S0.right + 0.5 && m.y >= S0.top - 0.5 && m.y + m.h <= S0.bottom + 0.5;
+      const topRight = m.x + m.w >= S0.right - 60 && m.y <= S0.top + 60;
+      if (!inSafe || !topRight) issues.push(issue('logo', 'critical', `Beat ${index + 1}: the ES logo is not top-right inside the safe zone.`, 'The mark sits top-right on every frame; never move it.', beat.id));
+    });
+    if (Array.isArray(boxes) && placed.length) {
+      const m = placed[0];
+      const c = m.clear != null ? m.clear : spec.clear;
+      const zone = { x: m.x - c, y: m.y - c, w: m.w + 2 * c, h: m.h + 2 * c };
+      const seen = new Set();
+      boxes.filter(b => b.role !== 'es-mark' && b.x < zone.x + zone.w - 0.5 && b.x + b.w > zone.x + 0.5 && b.y < zone.y + zone.h - 0.5 && b.y + b.h > zone.y + 0.5).forEach(b => {
+        const key = `${b.beat}:${b.role}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        issues.push(issue('logo', 'critical', `“${String(b.text || b.role).slice(0, 24)}” sits in the ES logo's clear space.`, 'Keep 50 px clear round the logo: shorten the line.', b.beat));
       });
     }
 

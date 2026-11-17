@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261119-rel3">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="reel-maker.css?v=20261119-rel3">
+  <link rel="stylesheet" href="reel-maker.css?v=20261118-reels-ui">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
@@ -63,10 +63,7 @@
 
   <main class="rm-page ais-page" id="main">
     <header class="rm-head">
-      <div class="rm-head__title">
-        <p class="rm-kicker">AI Studio</p>
-        <h1 class="rm-title" id="rm-title">Reels Studio</h1>
-      </div>
+      <h1 class="es-sr-only" id="rm-title">Reels Studio</h1>
       <!-- Three steps: Topic, Edit, Export. -->
       <nav class="rm-steps" id="rm-steps" aria-label="Reel steps">
         <ol>
@@ -124,8 +121,12 @@
               </div>
             </div>
             <div class="rm-source" id="rm-source-trend">
-              <div class="rm-filter" role="radiogroup" aria-label="League" id="rm-leagues"></div>
-              <ul class="rm-trends" id="rm-trends" aria-label="Trending stories" aria-busy="true"></ul>
+              <div class="rm-trendbox" id="rm-trendbox">
+                <div class="rm-trendbox__head">
+                  <div class="rm-filter" role="radiogroup" aria-label="League" id="rm-leagues"></div>
+                </div>
+                <ul class="rm-trends" id="rm-trends" aria-label="Trending stories" aria-busy="true"></ul>
+              </div>
               <p class="rm-hint" id="rm-trends-note">News from the last 48 hours. Check facts before you post.</p>
             </div>
             <div class="rm-source" id="rm-source-brief" hidden>
@@ -138,27 +139,35 @@
             <div class="rm-picked" id="rm-picked" hidden></div>
           </div>
 
-          <p class="rm-autoline" id="rm-autoline"></p>
-          <button class="es-btn es-btn--primary es-btn--lg rm-block" type="button" id="rm-write">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>
+          <section class="rm-setsum" aria-labelledby="rm-setsum-title">
+            <div class="rm-setsum__head">
+              <h3 class="rm-setsum__title" id="rm-setsum-title">Settings</h3>
+              <span class="rm-setsum__hint">Tap one to change it</span>
+            </div>
+            <div class="rm-setsum__grid" id="rm-autoline"></div>
+          </section>
+          <button class="es-btn es-btn--primary es-btn--lg rm-block rm-write" type="button" id="rm-write" aria-describedby="rm-write-status">
+            <span class="rm-spin rm-write__spin" aria-hidden="true"></span>
+            <svg class="rm-write__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>
             <span id="rm-write-text">Make my reel</span>
           </button>
-          <ol class="rm-making" id="rm-making" aria-label="Progress" hidden></ol>
+          <ol class="rm-making" id="rm-making" aria-label="Making your reel" hidden></ol>
+          <span class="es-sr-only" id="rm-making-live" aria-live="polite"></span>
           <p class="rm-status" id="rm-write-status" role="status" aria-live="polite"></p>
 
           <details class="rm-fold" id="rm-settings">
-            <summary><span class="rm-fold__title">Settings</span><span class="rm-fold__meta" id="rm-settings-meta">Auto</span></summary>
+            <summary><span class="rm-fold__title">All settings</span><span class="rm-fold__meta" id="rm-settings-meta">Auto</span></summary>
             <div class="rm-fold__body">
-              <div class="rm-sec">
+              <div class="rm-sec" id="rm-set-style">
                 <div class="rm-sec__head"><h3 class="rm-sec__title" id="rm-styles-label">Style</h3><span class="rm-meta" id="rm-style-why"></span></div>
                 <div class="rm-styles" role="radiogroup" aria-labelledby="rm-styles-label" id="rm-styles"></div>
               </div>
-              <div class="rm-sec">
+              <div class="rm-sec" id="rm-set-format">
                 <h3 class="rm-sec__title" id="rm-formats-label">Format</h3>
                 <div class="rm-formats" role="radiogroup" aria-labelledby="rm-formats-label" id="rm-formats"></div>
               </div>
               <div class="rm-sec" id="rm-voice-topic"></div>
-              <div class="rm-sec">
+              <div class="rm-sec" id="rm-set-clips">
                 <h3 class="rm-sec__title">Clips</h3>
                 <label class="rm-check"><input type="checkbox" id="rm-clips-on" checked><span><b>Use video clips</b><small>About 80% of the reel moves: official team and league clips from X, found for you. Stills fill the rest.</small></span></label>
                 <label class="rm-check" id="rm-aiclips-row" hidden><input type="checkbox" id="rm-aiclips-on"><span><b>AI b-roll when no clip fits</b><small id="rm-aiclips-note">Stadium, crowd or field shots, never people or logos.</small></span></label>
@@ -293,6 +302,7 @@
               </div>
               <label class="rm-check rm-check--sm"><input type="checkbox" id="rm-licence-paid"><span>Cleared for paid ads too</span></label>
             </div>
+            <label class="rm-check rm-check--sm"><input type="checkbox" id="rm-clip-audio"><span><b>Original clip audio</b><small>Off by default: clips play muted under the voice and music. On, their sound sits low and ducks under the voice.</small></span></label>
             </div>
           </details>
 
@@ -382,13 +392,14 @@
   <script src="logo-library-data.js?v=20261118-rel2"></script>
   <script src="logo-library.js?v=20261118-rel2"></script>
   <script src="frameup-cutout.js?v=20261118-rel1"></script>
-  <script src="reel-formats.js?v=20261119-rel3"></script>
-  <script src="reel-styles.js?v=20261119-rel3"></script>
-  <script src="reel-render.js?v=20261119-rel3"></script>
-  <script src="reel-lint.js?v=20261119-rel3"></script>
+  <script src="reel-formats.js?v=20261118-reels-quality"></script>
+  <script src="reel-styles.js?v=20261118-reels-quality"></script>
+  <script src="reel-render.js?v=20261118-reels-quality"></script>
+  <script src="reel-lint.js?v=20261118-reels-quality"></script>
+  <script src="reel-clips.js?v=20261118-reels-quality"></script>
   <script src="reel-export.js?v=20261119-rel3"></script>
   <script src="reel-flow.js?v=20261119-rel3"></script>
   <script src="es-motion.js?v=20261115-ds1"></script>
-  <script src="reel-maker.js?v=20261119-rel3"></script>
+  <script src="reel-maker.js?v=20261119-reels-base"></script>
 </body>
 </html>

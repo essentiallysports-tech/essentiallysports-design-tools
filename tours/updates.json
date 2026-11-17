@@ -251,6 +251,61 @@
       ]
     },
     {
+      "id": "2026-11-19-reels-ui",
+      "date": "2026-11-19",
+      "title": "Reels Studio: a cleaner Story step",
+      "commit": "1503d36",
+      "items": [
+        {
+          "title": "Trends that scroll cleanly",
+          "text": "The league filter stays pinned while compact story rows scroll beneath it. Arrow keys move through the stories.",
+          "page": "reel-maker.html",
+          "target": "#rm-topic"
+        },
+        {
+          "title": "Settings at a glance",
+          "text": "Style, Voice, Clips and Format sit in one summary. Tap one to jump straight to it.",
+          "page": "reel-maker.html",
+          "target": "#rm-write"
+        },
+        {
+          "title": "Clear progress",
+          "text": "Make my reel shows each step as done, in progress or to do, in place of the trend list.",
+          "page": "reel-maker.html",
+          "target": "#rm-write"
+        }
+      ]
+    },
+    {
+      "id": "2026-11-19-reels-quality",
+      "date": "2026-11-19",
+      "title": "Reels Studio: the real ES logo, the best clips, sharper styles",
+      "commit": "1503d36",
+      "items": [
+        {
+          "title": "The real ES logo",
+          "text": "Every reel carries the official ES mark top-right at its guideline size and clear space, and end cards use the official wordmark. A check stops export if the logo is missing or moved.",
+          "page": "reel-maker.html"
+        },
+        {
+          "title": "Best clip for each beat",
+          "text": "Clips are ranked for each beat: who is on screen, how fresh, how sharp, official first. With AI on, a vision check looks at a few frames (about a cent a reel) and the best part of the clip is used.",
+          "page": "reel-maker.html"
+        },
+        {
+          "title": "Pro motion",
+          "text": "Headlines rise in word by word, beats push, wipe or flip into each other, numbers count up, and a light grain and vignette finish every frame.",
+          "page": "reel-maker.html"
+        },
+        {
+          "title": "Clip sound is muted",
+          "text": "Clips play muted under the voice and music. Turn on Original clip audio under Music to keep their sound, low and ducked under the voice.",
+          "page": "reel-maker.html",
+          "target": "#rm-clip-audio"
+        }
+      ]
+    },
+    {
       "id": "2026-11-18-director",
       "date": "2026-11-18",
       "title": "The creative director, ES guidelines and Bring it on-brand",
