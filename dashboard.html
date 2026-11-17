@@ -443,6 +443,11 @@
 <script src="tours/tours.js?v=20261117-tour1"></script>
 <script src="tours/tour-launcher.js?v=20261117-tour1"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
+<link rel="stylesheet" href="frameup-posted.css?v=20261118-impact-posted-links">
+<link rel="stylesheet" href="frameup-impact.css?v=20261118-impact-posted-links">
+<script src="frameup-impact.js?v=20261118-impact-posted-links"></script>
+<script src="frameup-posted.js?v=20261118-impact-posted-links"></script>
+<script src="frameup-impact-view.js?v=20261118-impact-posted-links"></script>
 </head>
 <body class="dashboard-page" data-dashboard-view="overview">
   <nav class="navbar" aria-label="Global navigation">
@@ -489,6 +494,7 @@
     <aside class="dashboard-sidebar" aria-label="Dashboard navigation">
       <nav class="sidebar-nav">
         <button class="is-active" type="button" data-dashboard-view="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Overview</span></button>
+        <button type="button" data-dashboard-view="impact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg><span>Impact</span></button>
         <button type="button" data-dashboard-view="board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v14"/><path d="M12 3v8"/><path d="M19 3v18"/></svg><span>Request Board</span><span class="nav-count" data-request-count>0</span></button>
         <button type="button" data-dashboard-view="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg><span>Request List</span><span class="nav-count" data-open-request-count>0</span></button>
         <button type="button" data-dashboard-view="designs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg><span>Review Exports</span><span class="nav-count" data-design-count>0</span></button>
@@ -714,6 +720,8 @@
             <div id="feedback-table"></div>
           </section>
 
+          <section class="impact-view" id="impact-view" data-view-section="impact" aria-label="Impact" hidden></section>
+
           <section class="panel" data-view-section="activity" data-dashboard-panel="activity">
             <div class="panel-head">
               <div><h2 class="panel-title">Activity</h2><p class="panel-subtitle">Submissions, exports, assignment changes, and status moves.</p></div>
@@ -776,7 +784,7 @@
       'manish.kalsi@essentiallysports.com',
     ]);
     const DASHBOARD_SEEN_KEY = 'es.dashboard.seenBadges.v1';
-    const DASHBOARD_VIEWS = new Set(['overview', 'board', 'list', 'designs', 'feedback', 'people', 'access', 'activity']);
+    const DASHBOARD_VIEWS = new Set(['overview', 'impact', 'board', 'list', 'designs', 'feedback', 'people', 'access', 'activity']);
     let dashboardUser = { name: 'ES Admin', email: '', role: 'Admin', accessRole: 'Admin', designation: 'Design Operations' };
     let canAssignDashboardRoles = false;
     let selectedTaskId = '';
@@ -2556,6 +2564,9 @@
       if (exportSection && exportDetails) {
         exportSection.hidden = !exportDetailsHtml;
         exportDetails.innerHTML = exportDetailsHtml;
+        // "Posted it?" links for this export (frameup-posted.js).
+        exportSection.querySelectorAll('.fp-inline').forEach(node => node.remove());
+        if (exportDetailsHtml) window.FrameUpPosted?.mount?.(exportSection, { taskId: task.id, title: task.title, template: task.workspaceVariant, source: 'dashboard' });
       }
       // Only http(s) links: a "javascript:" reference would run when clicked.
       const links = (task.referenceLinks || []).filter(link => /^https?:\/\//i.test(String(link || '').trim()));
