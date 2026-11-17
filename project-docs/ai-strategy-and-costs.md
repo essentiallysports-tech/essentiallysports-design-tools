@@ -132,6 +132,36 @@ This section is the current state. Where sections A–F below disagree with it, 
   - the migration.
 - Every network call is mocked, so no real Slack message, AI call or Supabase write is ever made.
 
+### 8. Every AI call on the Gateway key (follow-up, 2026-11-18)
+- **Reels captions can run on the Gateway.** `aiTranscribe()` in `_ai-gateway.js` calls the Gateway's speech-to-text REST endpoint. Docs: [Speech to Text](https://vercel.com/docs/ai-gateway/modalities/speech-to-text).
+  - **Request:** `POST https://ai-gateway.vercel.sh/v4/ai/transcription-model` with headers `Authorization: Bearer $AI_GATEWAY_API_KEY`, `ai-gateway-protocol-version: 0.0.1`, `ai-transcription-model-specification-version: 4` and `ai-model-id: <model>`. The JSON body is `{ audio: <base64>, mediaType, providerOptions? }`; multipart uploads are not supported.
+  - **Reply:** `{ text, segments: [{ text, startSecond, endSecond }], language, durationInSeconds, warnings, providerMetadata }`. The same shape the AI SDK's `@ai-sdk/gateway` 4.0.23 parses.
+  - **Default model `elevenlabs/scribe-v2`.** It timestamps every word by default, in `providerMetadata.elevenlabs.words` (`{ text, type: word | spacing | audio_event, start, end, speaker_id }`). FrameUp keeps the `word` entries and groups them into captions: a new caption after 8 words, a pause over 0.8 s, or a sentence end.
+  - **`openai/whisper-1`** also works: it is sent `providerOptions.openai.timestampGranularities: ['word', 'segment']` and returns one segment per word.
+  - **Overrides:** `AI_TRANSCRIPTION_MODEL` changes the model.
+- **Order.** With no env set, captions try **Groq (free) → Gateway → direct OpenAI**, and a failed provider falls through to the next. `REELS_TRANSCRIBE=gateway|groq|openai` moves one provider to the front, with the others kept as fallbacks. `GENERATE_AI=rules` keeps the Gateway out. The billed steps (Gateway, OpenAI) pass `aiSpendGate` once and each logs a usage row with the audio cost.
+- **Transcription cost per audio minute.** From the live Gateway model list (`ai-gateway.vercel.sh/v1/models`, 2026-11-18). Per-second prices are × 60; token-billed models are estimates.
+
+  | Option | $ / minute | Word timestamps |
+  |---|---|---|
+  | Groq `whisper-large-v3-turbo` (direct, free tier) | **$0** | yes |
+  | Gateway `elevenlabs/scribe-v2` (**default**) | **$0.0037** | yes, by default |
+  | Gateway `openai/whisper-1` | $0.0060 | yes, with `timestampGranularities` |
+  | Gateway `openai/gpt-4o-mini-transcribe` | about $0.003 (token-billed: $1.25/M audio in, $5/M out) | no |
+  | Gateway `openai/gpt-4o-transcribe` | about $0.006 (token-billed: $2.50/M in, $10/M out) | no |
+  | Gateway `openai/gpt-transcribe` | $0.0045 | not documented |
+  | Gateway `google/gemini-3.5-transcribe` | about $0.004 (token-billed: $2/M audio in, $12/M out) | not documented |
+  | Gateway `mistral/voxtral-mini-transcribe-3` | $0.0035 | not documented |
+  | Gateway `microsoft/mai-transcribe-2` | $0.0017 (the cheapest with word timing, via `providerOptions.azure.timestamps: 'word'`; WAV/MP3/FLAC/Ogg only. Not wired) | yes, with option |
+  | Direct OpenAI `gpt-4o-transcribe` (`OPENAI_API_KEY`) | $0.0060 | segments only |
+
+- **Backup text AI without Groq.** When `GROQ_API_KEY` is not set, the Generate writer and Trends (titles and AI angles) fall back to **`AI_BACKUP_MODEL` on the same Gateway key**: `openai/gpt-oss-120b`, $0.10 / $0.50 per 1M tokens. It is the same model Groq ran for Generate. For Trends it is a different model from the light tier (`gpt-oss-20b`), so a model-specific failure has somewhere to go.
+  - **When it is skipped:** if the Gateway budget is used up (a budget error) or the feature is switched off.
+  - **Logging:** usage rows say `<feature>-backup` with the real cost.
+  - Removing `GROQ_API_KEY` no longer leaves Generate without a backup.
+- **Admin diagnostics.** `GET /api/ai-status?diag=1` is for dashboard admins only, checked with `is_es_designer_admin()` in the database; any failure gives 403. For each AI job (text, trends, director, review, escalation, search, transcription, TTS, image, direct OpenAI) it lists the provider and model that would run, `keyPresent` and `switchedOff`. It also gives the transcription order with per-minute prices. It returns booleans only and never a key (a test checks the response contains no key values). FrameUp has no text-to-speech feature yet; the entry says so.
+- `.env.example` lists every AI variable.
+
 ### What the owner must do
 1. **Run** `supabase/migrations/20261118120000_ai_guardrails.sql`. Everything works before it, with the team cap failing open, no cache columns and no alerts.
 2. **In the Vercel Enterprise project** (the one that serves frameup.essentiallysports.com), set:
@@ -154,6 +184,9 @@ This section is the current state. Where sections A–F below disagree with it, 
 | `AI_REVIEW_MODEL` | `openai/gpt-6-luna` | Generate's review model |
 | `AI_BEST_MODEL` | `anthropic/claude-sonnet-5.5` | `best` tier (director, escalation, "Best version") |
 | `AI_IMAGE_MODEL` | `bfl/flux-3-image-klein` | Scene images |
+| **`AI_BACKUP_MODEL`** | `openai/gpt-oss-120b` | **New.** Gateway backup for the Generate writer and Trends when `GROQ_API_KEY` is not set |
+| **`AI_TRANSCRIPTION_MODEL`** | `elevenlabs/scribe-v2` | **New.** Gateway speech-to-text model for Reels captions |
+| **`REELS_TRANSCRIBE`** | unset (Groq → Gateway → OpenAI) | **New.** `gateway`, `groq` or `openai` moves that provider to the front |
 | `GENERATE_DIRECTOR_MODEL` / `GENERATE_DIRECTOR_TIER` | `best` | Director tier (`main`/`haiku` for Haiku) |
 | `GENERATE_IMAGES` | on | `off` turns scene images off |
 | `GENERATE_IMAGE_HOURLY_LIMIT` | 12 | Scene images per person per hour, per server |
@@ -166,7 +199,7 @@ This section is the current state. Where sections A–F below disagree with it, 
 | **`SLACK_AI_ALERTS_WEBHOOK_URL`** | none | **New.** Slack incoming webhook for spend alerts |
 | **`SUPABASE_SERVICE_ROLE_KEY`** | none | **New.** Server only. Alerts read totals and claim alerts with it |
 | **`CRON_SECRET`** | none | **New.** Protects `/api/ai-budget-watch`; Vercel cron sends it |
-| `GROQ_API_KEY` | none | Free backup for Generate and Trends, and Reels Whisper |
+| `GROQ_API_KEY` | none | Free backup for Generate and Trends, and Reels Whisper (first in the caption order). Optional now: without it the Gateway covers both |
 | `GROQ_GENERATE_MODEL` / `GROQ_FALLBACK_MODELS` / `GROQ_TITLES_MODEL` / `GROQ_TRANSCRIPTION_MODEL` | gpt-oss-120b / gpt-oss-20b,qwen / gpt-oss-20b / whisper-large-v3-turbo | Groq models |
 | `OPENAI_API_KEY` | none | Opt-in OpenAI (Reels transcription when no Groq; Generate with `GENERATE_USE_OPENAI=true`) |
 | `OPENAI_GENERATE_MODEL` / `OPENAI_TRANSCRIPTION_MODEL` | gpt-4.1-mini / gpt-4o-transcribe | OpenAI models |

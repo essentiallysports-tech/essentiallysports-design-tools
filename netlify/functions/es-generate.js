@@ -51,8 +51,10 @@ function pickProvider() {
   if (GENERATE_AI === 'rules') return null;
   if (GENERATE_AI === 'openai' && USE_OPENAI) return { name: 'openai', ...AI_PROVIDERS.openai };
   // Vercel AI Gateway (main tier: Claude Haiku) is preferred when its key is set; Groq stays as the backup.
+  // The backup is Groq (free) when GROQ_API_KEY is set, else a different model
+  // on the same Gateway key (AI_BACKUP_MODEL, gpt-oss-120b by default).
   if (GENERATE_AI !== 'groq' && gatewayConfigured()) {
-    return { name: 'gateway', model: AI_MODELS.main, backup: GROQ_API_KEY ? { name: 'groq', ...AI_PROVIDERS.groq } : null };
+    return { name: 'gateway', model: AI_MODELS.main, backup: GROQ_API_KEY ? { name: 'groq', ...AI_PROVIDERS.groq } : { name: 'gateway-backup', model: AI_MODELS.backup } };
   }
   if (GROQ_API_KEY) return { name: 'groq', ...AI_PROVIDERS.groq };
   if (USE_OPENAI) return { name: 'openai', ...AI_PROVIDERS.openai };
@@ -848,8 +850,10 @@ async function thinkWithMcp(prompt, mcp, tool) {
 // (each Groq model has its own free allowance); provider.used records which ran.
 async function chat(provider, messages) {
   const plain = list => list.map(m => ({ ...m, content: String(m.content).split(PROMPT_CACHE_BREAK).join('\n') }));
+  // A Gateway backup can't help when the Gateway budget itself is used up.
+  const noBackup = () => !provider.backup || (provider.backup.name === 'gateway-backup' && provider.fallback === 'budget');
   if (provider.name === 'gateway' && provider.fallback) {
-    if (!provider.backup) throw new Error('The AI is unavailable.');
+    if (noBackup()) throw new Error('The AI is unavailable.');
     const text = await chat(provider.backup, messages);
     provider.usedProvider = provider.backup.name;
     provider.used = provider.backup.used;
@@ -866,12 +870,19 @@ async function chat(provider, messages) {
       // Claude failed (e.g. the weekly AI budget ran out): this and any later
       // call in the request run on Groq, reported as the brain.
       provider.fallback = isBudgetError(error) ? 'budget' : 'error';
-      if (!provider.backup) throw error;
+      if (noBackup()) throw error;
       const text = await chat(provider.backup, messages);
       provider.usedProvider = provider.backup.name;
       provider.used = provider.backup.used;
       return text;
     }
+  }
+  // Backup on the Gateway key (no Groq): one call to the backup tier, logged
+  // with its real cost as "<feature>-backup".
+  if (provider.name === 'gateway-backup') {
+    const { text, model } = await aiText({ tier: 'backup', messages: plain(messages), json: true, effort: 'low', maxTokens: 6000, timeoutMs: 25000, track: { ...provider.track, feature: `${provider.track?.feature || 'generate'}-backup` } });
+    provider.used = model;
+    return text;
   }
   // Each model is tried in strict JSON mode, then (if the provider rejects its
   // JSON) in plain mode, which extractJson can still read.
@@ -1958,4 +1969,4 @@ exports.handler = async function handler(event) {
 };
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
-exports._test = { onBrand, readBrief: readBriefFor, directorAllowed, directorNote, designsPerDirection, pastPostCard, REWRITES, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE };
+exports._test = { onBrand, readBrief: readBriefFor, directorAllowed, directorNote, designsPerDirection, pastPostCard, REWRITES, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE, pickProvider, chat };
