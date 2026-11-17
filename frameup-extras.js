@@ -23,6 +23,10 @@
     ['Move a selected photo', ['Arrow keys']],
     ['Move it faster', ['Shift', 'Arrow keys']],
     ['Zoom a selected photo', ['+', '−']],
+    ['Fit the canvas to the screen', ['Shift', '1']],
+    ['Layer forward / backward', [MOD, ']  [']],
+    ['Layer to front / back', [MOD, 'Shift', ']  [']],
+    ['Rename a layer', ['Double-click']],
     ['Finish editing a photo', ['Esc']],
     ['This list', ['?']],
   ];

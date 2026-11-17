@@ -7910,7 +7910,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 <link rel="stylesheet" href="frameup-tour.css?v=20261117-tour1">
 <script src="frameup-tour.js?v=20261117-tour1"></script>
 <script src="tours/updates.js?v=20261117-tour1"></script>
-<script src="tours/tours.js?v=20261118-rel1"></script>
+<script src="tours/tours.js?v=20261118-editor-ui"></script>
 <script src="tours/tour-launcher.js?v=20261118-rel1"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
 </head>
@@ -14744,6 +14744,8 @@ function reorderCoverLayer(id, targetIndex) {
 }
 
 function isCoverLayersPanelActive() {
+  // Cover Image and the standard YouTube thumbnails draw the same cover layers.
+  if (activeWorkspace === 'youtube') return !state.youtubeQuote;
   return activeWorkspace === 'instagram' && (state.postType || 'cover') === 'cover';
 }
 
@@ -18216,6 +18218,7 @@ function _render() {
   syncCanvasImageEditMode();
   updateLayersPanel();
   syncCanvasEmptyHint();
+  window.dispatchEvent(new Event('frameup:rendered'));
 }
 
 // Purely a DOM overlay on the canvas; never touches the canvas bitmap, so it
@@ -18297,6 +18300,11 @@ function layerLockIconSvg(locked) {
 }
 
 function renderLayersPanelRows() {
+  // frameup-editor-ui.js draws the full panel (icons, selection, rename, filter).
+  if (window.FrameUpEditorUI?.ready) {
+    window.FrameUpEditorUI.renderLayers();
+    return;
+  }
   const list = document.getElementById('layers-panel-list');
   if (!list) return;
   const layers = getCoverLayers();
@@ -18356,6 +18364,7 @@ function setupLayersPanel() {
   let draggedId = null;
 
   list.addEventListener('click', evt => {
+    if (window.FrameUpEditorUI?.ready) return;
     const row = evt.target.closest('.layers-panel-row');
     if (!row) return;
     const layerId = row.dataset.layerId;
@@ -18370,6 +18379,7 @@ function setupLayersPanel() {
   });
 
   list.addEventListener('dragstart', evt => {
+    if (window.FrameUpEditorUI?.ready) return;
     const row = evt.target.closest('.layers-panel-row');
     if (!row) return;
     draggedId = row.dataset.layerId;
@@ -18379,6 +18389,7 @@ function setupLayersPanel() {
   });
 
   list.addEventListener('dragend', evt => {
+    if (window.FrameUpEditorUI?.ready) return;
     const row = evt.target.closest('.layers-panel-row');
     if (row) row.classList.remove('is-dragging');
     list.querySelectorAll('.layers-panel-row.is-drop-target').forEach(el => el.classList.remove('is-drop-target'));
@@ -18386,6 +18397,7 @@ function setupLayersPanel() {
   });
 
   list.addEventListener('dragover', evt => {
+    if (window.FrameUpEditorUI?.ready) return;
     if (!draggedId) return;
     const row = evt.target.closest('.layers-panel-row');
     if (!row) return;
@@ -18395,6 +18407,7 @@ function setupLayersPanel() {
   });
 
   list.addEventListener('drop', evt => {
+    if (window.FrameUpEditorUI?.ready) return;
     const row = evt.target.closest('.layers-panel-row');
     if (!row || !draggedId) return;
     evt.preventDefault();
@@ -20748,6 +20761,8 @@ function getExportIssues() {
   }
   // ES guideline nudges (font, copy, text size): frameup-editor-assist.js.
   issues.push(...(window.FrameUpEditorAssist?.exportIssues?.({ workspace: activeWorkspace, state }) || []));
+  // Safe-zone nudges (YouTube timestamp corner): frameup-editor-ui.js.
+  issues.push(...(window.FrameUpEditorUI?.exportIssues?.() || []));
   return issues;
 }
 
@@ -21931,6 +21946,89 @@ function switchInstagramSlide(slideIndex) {
   syncCanvasNameField();
   renderRestoredContextNow();
 }
+
+// Carousel slide actions (frameup-editor-ui.js slide menu). The five slide
+// states stay the same objects, so each keeps its own undo history; moving
+// swaps them, duplicating copies into an empty one, clearing resets one.
+function prepareInstagramSlideChange() {
+  if (activeWorkspace !== 'instagram') return false;
+  flushPendingTextChange();
+  cancelPendingRender();
+  saveTextContext();
+  saveMediaContext();
+  state.isDraggingText = false;
+  return true;
+}
+
+function moveInstagramSlide(delta) {
+  const to = activeInstagramSlide + delta;
+  if (!Number.isInteger(to) || to < 0 || to >= instagramSlideStates.length) return null;
+  if (!prepareInstagramSlideChange()) return null;
+  const from = activeInstagramSlide;
+  [instagramSlideStates[from], instagramSlideStates[to]] = [instagramSlideStates[to], instagramSlideStates[from]];
+  activeInstagramSlide = to;
+  workspaceStates.instagram = instagramSlideStates[to];
+  state = workspaceStates.instagram;
+  updateInstagramSlideNavigation();
+  syncCanvasNameField();
+  render();
+  return to;
+}
+
+function duplicateInstagramSlide() {
+  if (!prepareInstagramSlideChange() || !slideHasContent(state)) return null;
+  const total = instagramSlideStates.length;
+  let to = -1;
+  for (let step = 1; step < total && to < 0; step += 1) {
+    const index = (activeInstagramSlide + step) % total;
+    if (!slideHasContent(instagramSlideStates[index])) to = index;
+  }
+  if (to < 0) return null;
+  const target = instagramSlideStates[to];
+  const copy = cloneDesignValue(state);
+  Object.keys(target).forEach(key => { delete target[key]; });
+  Object.assign(target, copy, { isDraggingText: false });
+  switchInstagramSlide(to);
+  render();
+  return to;
+}
+
+function clearInstagramSlide() {
+  if (!prepareInstagramSlideChange() || !slideHasContent(state)) return false;
+  const fresh = createDesignerState(WORKSPACES.instagram.defaultBottomAnchor);
+  fresh.postType = state.postType || 'cover'; // keep the template, empty the content
+  Object.keys(state).forEach(key => { delete state[key]; });
+  Object.assign(state, fresh);
+  restoreTextContext();
+  restoreMediaContext();
+  const textarea = document.getElementById('pill-text');
+  if (textarea) textarea.value = (state.lines || []).join('\n');
+  syncWorkspaceControls();
+  updateInstagramSlideNavigation();
+  renderRestoredContextNow();
+  updatePillTextHint();
+  autoGrowTextarea(textarea);
+  return true;
+}
+
+// Read-only view of editor state for frameup-editor-ui.js (let/const bindings
+// are not on window).
+window.FrameUpEditorBridge = {
+  get state() { return state; },
+  get activeWorkspace() { return activeWorkspace; },
+  get activeYoutubeVariation() { return activeYoutubeVariation; },
+  get activeNewsletterAsset() { return activeNewsletterAsset; },
+  get activeInstagramSlide() { return activeInstagramSlide; },
+  get instagramSlideStates() { return instagramSlideStates; },
+  get INSTAGRAM_POST_TYPES() { return INSTAGRAM_POST_TYPES; },
+  get COVER_LAYER_LABELS() { return COVER_LAYER_LABELS; },
+  get LOGO_FINAL_W() { return LOGO_FINAL_W; },
+  get LOGO_FINAL_H() { return LOGO_FINAL_H; },
+  get LOGO_SAFE_MARGIN() { return LOGO_SAFE_MARGIN; },
+  get SWIPE_BUTTON_W() { return SWIPE_BUTTON_W; },
+  get SWIPE_BUTTON_H() { return SWIPE_BUTTON_H; },
+  get SWIPE_BUTTON_SAFE_MARGIN() { return SWIPE_BUTTON_SAFE_MARGIN; },
+};
 
 function activateWorkspace(workspaceName) {
   if (!WORKSPACES[workspaceName]) return;
@@ -24493,9 +24591,12 @@ loadFont().then(() => render());
 <script src="frameup-zip.js?v=20261118-rel1"></script>
 <script src="frameup-size-pack.js?v=20261118-rel1"></script>
 <script src="frameup-cutout.js?v=20261118-rel1"></script>
-<script src="frameup-extras.js?v=20261118-hero-editor"></script>
+<script src="frameup-extras.js?v=20261118-editor-ui"></script>
 <script src="frameup-rules.js?v=20261118-hero-editor"></script>
 <script src="es-guidelines.js?v=20261118-hero-editor"></script>
 <script src="frameup-editor-assist.js?v=20261118-hero-editor"></script>
+<!-- Editor UI styles load here, after first paint: they only style what frameup-editor-ui.js adds. -->
+<link rel="stylesheet" href="frameup-editor-ui.css?v=20261118-editor-ui">
+<script src="frameup-editor-ui.js?v=20261118-editor-ui"></script>
 </body>
 </html>
