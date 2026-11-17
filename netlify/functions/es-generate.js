@@ -14,6 +14,8 @@ const { selectExamples, formatExamples, loadCorpus, normalizeCorpus, pickPastPos
 const director = require('./_creative-director.js');
 const composer = require('./_composer.js');
 const directionMemory = require('./_direction-memory.js');
+const creativeMemory = require('./_creative-memory.js');
+const designAssistant = require('./_design-assistant.js');
 const onBrandKit = require('./_onbrand.js');
 const GUIDE = require('../../es-guidelines.js');
 const BRAND_KIT = require('../../brand-kit.js');
@@ -1925,8 +1927,11 @@ async function creative({ brief, steer = {}, token, email, count = 4 }) {
     const articles = (found.articles || []).filter(a => squash(a.title).includes(surname));
     return (await photoCandidates(person, mcp, tools, articles)).map(c => ({ url: c.url, title: c.title }));
   };
-  const want = Math.min(Math.max(parseInt(count, 10) || 4, 1), 4);
-  const result = await composer.plan({ brief, found, steer, want, track: { email, token, runId }, localFind, nameCandidates });
+  // 1-8 designs (default 4); the composer scales candidates and caps the judge.
+  const want = Math.min(Math.max(parseInt(count, 10) || 4, 1), 8);
+  // The learning model: the team's lessons for this sport go into the director's prompt.
+  const lessons = ({ sport }) => creativeMemory.lessonsFor({ token, sport });
+  const result = await composer.plan({ brief, found, steer, want, track: { email, token, runId }, localFind, nameCandidates, lessons });
   return {
     ...result,
     runId,
@@ -2064,12 +2069,54 @@ exports.handler = async function handler(event) {
       const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
       const gate = await aiSpendGate(token, { feature: 'generate-creative' });
       if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
+      const sets = Array.isArray(body.sets) ? body.sets : [];
+      const sport = String(body.sport || '').slice(0, 20);
+      const lessons = await creativeMemory.lessonsFor({ token, sport, archetypes: sets.map(set => String(set?.archetype || '')) });
       const result = await composer.judge({
-        brief: String(body.brief || '').slice(0, 1500), sets: Array.isArray(body.sets) ? body.sets : [],
+        brief: String(body.brief || '').slice(0, 1500), sets,
         heuristics: body.heuristics && typeof body.heuristics === 'object' ? body.heuristics : {},
+        lessons,
         track: { email: auth.user.email, token, runId: String(body.runId || '').slice(0, 40) },
       });
-      return json(200, result);
+      // Learn: the judge's improvements become (or reinforce) lessons, and the
+      // lessons that were in the prompt score a hit or a recurrence.
+      if (result.source === 'vision') {
+        const archetypeOf = Object.fromEntries(sets.map(set => [String(set?.direction || ''), String(set?.archetype || '')]));
+        await creativeMemory.learn({ token, signals: creativeMemory.judgeSignals(result.directions, { sport, archetypeOf }), injected: lessons.map(l => l.key) });
+      }
+      return json(200, { ...result, lessons: lessons.map(({ id, text, kind }) => ({ id, text, kind })) });
+    }
+    // Creative: the design assistant (one instruction on one design -> a scene patch).
+    if (body.mode === 'creative-assist') {
+      const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
+      const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: 'generate-assistant' }), userOverHourlyLimit(token)]);
+      if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
+      if (overHour) return json(429, { error: "You've made a lot of changes this hour. Take a short break and try again soon.", reason: 'limit' });
+      const result = await designAssistant.assist({
+        instruction: body.instruction, scene: body.scene, history: body.history, context: body.context && typeof body.context === 'object' ? body.context : {},
+        track: { email: auth.user.email, token, runId: String(body.runId || '').slice(0, 40) },
+      });
+      if (result.status === 200 && result.body.ok) {
+        await creativeMemory.learn({ token, signals: [{ type: 'assistant', text: String(body.instruction || ''), archetype: String(body.scene?.archetype || ''), sport: String(body.context?.sport || '') }] });
+      }
+      return json(result.status, result.body);
+    }
+    // Creative: learning signals from the page (picks, exports, thumbs, edits, ...). No AI.
+    if (body.mode === 'creative-signal') {
+      const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
+      const checked = creativeMemory.normalizeSignal(body.signal);
+      if (checked.error) return json(400, { ok: false, error: checked.error });
+      const logged = creativeMemory.eventFor(checked.signal);
+      const [learned] = await Promise.all([
+        creativeMemory.learn({ token, signals: [checked.signal] }),
+        logged ? directionMemory.recordEvent({ token, email: auth.user.email, event: logged }) : Promise.resolve(false),
+      ]);
+      return json(200, { ok: true, observed: learned.observed });
+    }
+    // Creative: what the learning model knows (admin view data).
+    if (body.mode === 'creative-lessons') {
+      const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
+      return json(200, creativeMemory.adminView(await creativeMemory.loadLessons({ token })));
     }
     if (body.mode === 'onbrand') {
       const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
