@@ -198,7 +198,8 @@ $$;
 drop trigger if exists frameup_request_status_stamp on public.es_designer_tasks;
 create trigger frameup_request_status_stamp
   before update on public.es_designer_tasks
-  for each row execute function public.frameup_request_status_stamp();
+  for each row when (new.task_type = 'design_request')
+  execute function public.frameup_request_status_stamp();
 
 create or replace function public.frameup_request_log_changes()
 returns trigger
@@ -248,7 +249,8 @@ $$;
 drop trigger if exists frameup_request_log_changes on public.es_designer_tasks;
 create trigger frameup_request_log_changes
   after insert or update on public.es_designer_tasks
-  for each row execute function public.frameup_request_log_changes();
+  for each row when (new.task_type = 'design_request')
+  execute function public.frameup_request_log_changes();
 
 -- 7) RPCs ---------------------------------------------------------------------
 -- Status / assignee / due / priority in one call. Rules match

@@ -6,7 +6,7 @@ Three reliability pieces shipped on `feature/reliability-drafts`. Everything wor
 
 | File | Creates | Until it's applied |
 | --- | --- | --- |
-| `supabase/migrations/20261118120000_frameup_drafts.sql` | `frameup_drafts` (own rows only; admins can read), a trigger that stamps `updated_at` with the server clock, `frameup_purge_old_drafts()` | Drafts stay in each browser, as before. "Your drafts" says cloud drafts aren't switched on yet. |
+| `supabase/migrations/20261118120010_frameup_drafts.sql` | `frameup_drafts` (own rows only; admins can read), a trigger that stamps `updated_at` with the server clock, `frameup_purge_old_drafts()` | Drafts stay in each browser, as before. "Your drafts" says cloud drafts aren't switched on yet. |
 | `supabase/migrations/20261118120100_frameup_client_errors.sql` | `frameup_client_errors` (insert own; admins read), `frameup_purge_old_client_errors()` | Error reports are accepted and dropped. Dashboard → Errors says reporting isn't switched on yet. |
 
 Both are idempotent and end with an `Undo:` note.

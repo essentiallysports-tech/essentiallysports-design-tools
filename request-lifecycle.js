@@ -1,7 +1,7 @@
 // Design Request lifecycle: statuses, allowed moves and who may do what.
 // One file for the browser (window.FrameUpRequestLifecycle), the serverless
 // functions (require) and the tests. The database enforces the same rules in
-// frameup_request_update() (supabase/migrations/20261118120000_request_workflow.sql);
+// frameup_request_update() (supabase/migrations/20261118120030_request_workflow.sql);
 // keep the two in step.
 (function (root, factory) {
   const api = factory();

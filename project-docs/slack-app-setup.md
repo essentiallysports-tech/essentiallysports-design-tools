@@ -17,7 +17,7 @@ Optional: `SLACK_THREAD_COMMENTS=0` stops comments going to the thread. `FRAMEUP
 
 ## 1. Apply the database update first
 
-Run `supabase/migrations/20261118120000_request_workflow.sql` in the Supabase SQL editor (project xtdusejokbhtjlmijdca). It is idempotent; its header has the Undo steps. Then add designers on **My requests → Designers** (admins are designers already).
+Run `supabase/migrations/20261118120030_request_workflow.sql` in the Supabase SQL editor (project xtdusejokbhtjlmijdca). It is idempotent; its header has the Undo steps. Then add designers on **My requests → Designers** (admins are designers already).
 
 ## 2. Create the Slack app (a Slack workspace admin may need to approve)
 

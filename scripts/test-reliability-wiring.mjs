@@ -121,7 +121,7 @@ const shellFirst = read('frameup-shell-first.js');
     assert.match(read(`api/${name}.js`), /toNetlifyEvent/, `api/${name}.js uses the adapter pattern`);
   }
 }
-for (const [file, table] of [['supabase/migrations/20261118120000_frameup_drafts.sql', 'frameup_drafts'], ['supabase/migrations/20261118120100_frameup_client_errors.sql', 'frameup_client_errors']]) {
+for (const [file, table] of [['supabase/migrations/20261118120010_frameup_drafts.sql', 'frameup_drafts'], ['supabase/migrations/20261118120100_frameup_client_errors.sql', 'frameup_client_errors']]) {
   const sql = read(file);
   assert.match(sql, /-- Undo:/, `${file}: Undo note`);
   assert.match(sql, new RegExp(`create table if not exists public\\.${table}`), `${file}: idempotent table`);
@@ -133,7 +133,7 @@ for (const [file, table] of [['supabase/migrations/20261118120000_frameup_drafts
   assert.ok(!/default[^,\n]*\(select /i.test(sql), `${file}: no subqueries in DEFAULT`);
 }
 {
-  const sql = read('supabase/migrations/20261118120000_frameup_drafts.sql');
+  const sql = read('supabase/migrations/20261118120010_frameup_drafts.sql');
   assert.match(sql, /owner_id = \(select auth\.uid\(\)\)/, 'drafts: own rows only');
   assert.match(sql, /octet_length\(design::text\) <= 524288/, 'drafts: size cap in the database');
   assert.match(sql, /interval '30 days'/, 'drafts: 30-day retention');

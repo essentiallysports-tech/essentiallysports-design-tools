@@ -456,7 +456,7 @@ await test('design-request-submit returns channel + ts in bot mode', async () =>
 
 // ── Static checks: migration, page shell, nav ──────────────────────────────
 await test('migration: RLS on every new table, undo notes, role helpers', () => {
-  const sql = fs.readFileSync(path.join(ROOT, 'supabase/migrations/20261118120000_request_workflow.sql'), 'utf8');
+  const sql = fs.readFileSync(path.join(ROOT, 'supabase/migrations/20261118120030_request_workflow.sql'), 'utf8');
   ['frameup_request_designers', 'frameup_request_events', 'frameup_request_deliveries'].forEach(table => {
     assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`));
     assert.match(sql, new RegExp(`drop table if exists public\\.${table}`), `${table} in Undo`);
