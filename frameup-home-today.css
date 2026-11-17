@@ -1,0 +1,100 @@
+/* Home → Today (frameup-home-today.js): quick actions + four small cards.
+   Same width as "Jump back in" and the workspace grid below it. */
+.home-today { width: min(1280px, calc(100% - 80px)); margin: 0 auto; padding: var(--es-space-12) 0 0; font-family: var(--es-font-ui); color: var(--es-ink); }
+.home-today .frame-section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--es-space-2) var(--es-space-5); margin: 0 0 var(--es-space-5); }
+.home-today .frame-section-count { color: var(--es-ink-3); font-size: var(--es-type-meta-size); }
+
+/* Quick actions */
+.home-today__actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--es-space-4); margin-bottom: var(--es-space-4); }
+.home-today__action {
+  display: flex;
+  align-items: center;
+  gap: var(--es-space-3);
+  min-width: 0;
+  min-height: 64px;
+  padding: var(--es-space-3) var(--es-space-4);
+  border-radius: var(--es-radius-container);
+  background: var(--es-surface, #fff);
+  box-shadow: inset 0 0 0 1px var(--es-line);
+  color: var(--es-ink);
+  text-decoration: none;
+}
+.home-today__action > span:last-child { display: grid; gap: 2px; min-width: 0; }
+.home-today__action strong { font-size: var(--es-type-body-size); font-weight: 600; }
+.home-today__action small { overflow: hidden; color: var(--es-ink-3); font-size: var(--es-type-meta-size); text-overflow: ellipsis; white-space: nowrap; }
+.home-today__action .es-tile svg, .home-today__card-head .es-tile svg { width: var(--es-icon-sm, 16px); height: var(--es-icon-sm, 16px); }
+.home-today__action:focus-visible { outline: var(--es-focus-outline, 2px solid #0A6FDE); outline-offset: var(--es-focus-offset, 2px); }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .home-today__action { transition: box-shadow var(--es-dur, 160ms) var(--es-ease), transform var(--es-dur, 160ms) var(--es-ease); }
+  .home-today__action:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgb(14 16 20 / .1), inset 0 0 0 1px var(--es-line); }
+}
+
+/* Cards */
+.home-today__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-4); }
+.home-today__card { display: grid; grid-template-rows: auto 1fr; gap: var(--es-space-3); min-width: 0; padding: var(--es-card-pad-md, 20px); border-radius: var(--es-radius-container); background: var(--es-surface, #fff); box-shadow: inset 0 0 0 1px var(--es-line); }
+.home-today__card-head { display: flex; align-items: center; gap: var(--es-space-3); min-width: 0; }
+.home-today__card-head h3 { flex: 1 1 auto; margin: 0; color: var(--es-ink); font-size: var(--es-type-card-title-size); font-weight: var(--es-type-card-title-weight); line-height: var(--es-type-card-title-line); }
+.home-today__more { flex: none; padding: 4px 8px; border-radius: var(--es-radius-chip); color: var(--es-brand-text); font-size: var(--es-type-meta-size); font-weight: 500; text-decoration: none; }
+.home-today__more:hover { background: var(--es-brand-soft); }
+.home-today__body { display: grid; align-content: start; gap: var(--es-space-3); min-width: 0; }
+
+.home-today__chips { display: flex; gap: var(--es-space-2); overflow-x: auto; scrollbar-width: none; }
+.home-today__chips::-webkit-scrollbar { display: none; }
+.home-today__chips .es-chip { flex: none; min-height: 28px; padding: 0 10px; }
+
+.home-today__rows { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.home-today__row { display: flex; align-items: center; justify-content: space-between; gap: var(--es-space-3); min-width: 0; min-height: 48px; }
+.home-today__row + .home-today__row { box-shadow: inset 0 1px 0 var(--es-line); }
+.home-today__row-link { display: flex; flex: 1 1 auto; align-items: center; justify-content: space-between; gap: var(--es-space-3); min-width: 0; min-height: 48px; margin: 0 calc(-1 * var(--es-space-2)); padding: 0 var(--es-space-2); border-radius: var(--es-radius-chip); color: inherit; text-decoration: none; }
+.home-today__row-link:hover { background: var(--es-sunk); }
+.home-today__row-text { display: grid; gap: 1px; min-width: 0; }
+.home-today__row-text > span { overflow: hidden; color: var(--es-ink); font-size: var(--es-type-body-size); line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.home-today__row-text small { color: var(--es-ink-3); font-size: var(--es-type-meta-size); }
+.home-today__row-text .is-overdue { color: var(--es-warn); font-weight: 600; }
+.home-today__row .es-badge, .home-today__row .es-btn { flex: none; }
+.home-today__row.is-skeleton { display: grid; align-content: center; gap: 6px; }
+.home-today__row.is-skeleton .es-skeleton { display: block; width: 40%; height: 10px; border-radius: 6px; }
+.home-today__row.is-skeleton .es-skeleton + .es-skeleton { width: 75%; height: 14px; }
+
+.home-today__shots { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--es-space-2); margin: 0; padding: 0; list-style: none; }
+.home-today__shot { position: relative; display: grid; place-items: center; aspect-ratio: 4 / 5; overflow: hidden; border-radius: var(--es-radius-chip); background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); color: var(--es-ink-3); text-decoration: none; }
+.home-today__shot img { width: 100%; height: 100%; object-fit: cover; }
+.home-today__shot-name { padding: var(--es-space-1); font-size: var(--es-type-meta-size); line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
+.home-today__shot:focus-visible { outline: var(--es-focus-outline, 2px solid #0A6FDE); outline-offset: var(--es-focus-offset, 2px); }
+
+.home-today__empty { display: grid; justify-items: start; gap: var(--es-space-3); padding: var(--es-space-3) 0; }
+.home-today__empty p { display: grid; gap: 2px; margin: 0; color: var(--es-ink-3); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); }
+.home-today__empty strong { color: var(--es-ink); font-size: var(--es-type-body-size); font-weight: 600; }
+.home-today__drafts-open { justify-self: start; }
+
+/* Inside the shell the Today block sits right under the hero. */
+html.es-shell .home-today { padding-top: var(--es-space-12) !important; }
+html.es-shell .home-today + .home-recent { padding-top: var(--es-space-8) !important; }
+
+@media (max-width: 1100px) {
+  .home-today__actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-today__shots { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .home-today, html.es-shell .home-today { width: calc(100% - 2 * var(--es-page-gutter-phone, 16px)) !important; padding-top: var(--es-space-6) !important; }
+  .home-today__grid { grid-template-columns: minmax(0, 1fr); gap: var(--es-space-3); }
+  .home-today__actions { gap: var(--es-space-3); }
+  .home-today__card { padding: var(--es-card-pad-sm, 16px); }
+}
+@media (max-width: 480px) {
+  .home-today__actions { gap: var(--es-space-2); }
+  .home-today__action { min-height: 56px; padding: var(--es-space-3); }
+  .home-today__action small { display: none; }
+  .home-today__action strong { font-size: var(--es-type-meta-size); }
+}
+
+html[data-theme="dark"] .home-today__action,
+html[data-theme="dark"] .home-today__card { background: var(--es-slate-800, #1F2126); box-shadow: inset 0 0 0 1px var(--es-slate-700, #2A2D34); }
+html[data-theme="dark"] .home-today__row + .home-today__row { box-shadow: inset 0 1px 0 var(--es-slate-700, #2A2D34); }
+html[data-theme="dark"] .home-today__row-link:hover { background: var(--es-slate-700, #2A2D34); }
+html[data-theme="dark"] .home-today__shot { background: var(--es-slate-700, #2A2D34); box-shadow: none; }
+html[data-theme="dark"] .home-today__more { color: #9DCBFD; }
+html[data-theme="dark"] :is(.home-today__action strong, .home-today__card-head h3, .home-today__row-text > span, .home-today__empty strong) { color: #FFFFFF; }
+html[data-theme="dark"] :is(.home-today__action small, .home-today__row-text small, .home-today__empty p, .home-today .frame-section-count) { color: #98A6BF; }
+html[data-theme="dark"] .home-today__row-text .is-overdue { color: var(--es-warn-on-dark, #FCD34D); }
+html[data-theme="dark"] .home-today__more:hover { background: rgb(10 125 250 / .2); }
