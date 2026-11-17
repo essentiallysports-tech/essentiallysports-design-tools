@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "about": "Shared FrameUp audio library, used by Video Ads (video-ads.html) and, later, Reels Studio. EMPTY ON PURPOSE until the owner adds licensed tracks. To add a track: (1) put the file in assets/audio/ named after its id, e.g. assets/audio/fourth-quarter-drive.mp3 (mp3, m4a or wav; same origin, so the browser can mix it into the export); (2) add an entry to \"tracks\" below with the fields listed in \"fields\"; (3) set licence.paid to true ONLY if the licence covers paid ads on every platform (Meta, TikTok, YouTube), and licence.organic to true if it covers organic posts; (4) commit both files. Never add trending commercial songs. Entries with a bad id, path or licence are skipped and the rest still load.",
+  "fields": {
+    "id": "lowercase slug, unique, same as the file name (a-z, 0-9, -)",
+    "title": "track title shown in the picker",
+    "mood": "hype | tension | calm | celebration | analysis",
+    "bpm": "number (optional)",
+    "durationSec": "track length in seconds",
+    "file": "assets/audio/<id>.mp3 (or .m4a / .wav)",
+    "licence": "{ \"organic\": true|false, \"paid\": true|false, \"note\": \"licence name and number, e.g. Epidemic Sound Enterprise #1234\" }",
+    "addedBy": "who added it",
+    "addedAt": "YYYY-MM-DD"
+  },
+  "example": {
+    "id": "fourth-quarter-drive",
+    "title": "Fourth Quarter Drive",
+    "mood": "hype",
+    "bpm": 128,
+    "durationSec": 62,
+    "file": "assets/audio/fourth-quarter-drive.mp3",
+    "licence": { "organic": true, "paid": true, "note": "Epidemic Sound Enterprise #0000" },
+    "addedBy": "Suhail",
+    "addedAt": "2026-11-18"
+  },
+  "tracks": []
+}

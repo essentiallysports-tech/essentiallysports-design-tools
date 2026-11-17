@@ -29,6 +29,7 @@
     "test:trend-design": "node scripts/test-trend-design.mjs && node scripts/test-trends-hero.mjs",
     "test:impact": "node scripts/test-impact.mjs",
     "test:ai-guardrails": "node scripts/test-ai-guardrails.mjs && node scripts/test-ai-weekly-limit.mjs",
-    "test:clips": "node scripts/test-clip-library.mjs && node scripts/test-video-ads-clips.mjs"
+    "test:clips": "node scripts/test-clip-library.mjs && node scripts/test-video-ads-clips.mjs",
+    "test:video-ads-audio": "node scripts/test-video-ads-audio.mjs"
   }
 }
