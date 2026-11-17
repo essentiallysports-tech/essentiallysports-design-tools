@@ -174,7 +174,7 @@ messagesHandler = body => {
   assert.equal(body.model, 'anthropic/claude-haiku-5.5', 'cheapest Claude model for search');
   assert.equal(body.tools?.[0]?.type, 'web_search_20250305');
   assert.equal(body.tools[0].max_uses, 2, 'at most 2 searches');
-  assert.ok(body.max_tokens <= 1000, 'short reply');
+  assert.ok(body.max_tokens <= 1200, 'short reply');
   return reply(200, { stop_reason: 'end_turn', usage: clipUsage, content: [
     { type: 'web_search_tool_result', content: [{ url: 'https://twitter.com/Chiefs/status/301', title: 'Chiefs' }, { url: 'https://www.espn.com/nfl/story', title: 'ESPN' }] },
     { type: 'text', text: JSON.stringify({ posts: [tid(101), { url: tid(102), date: 'today' }, tid(103), tid(104), { url: tid(105), date: '2026-11-17' }, tid(106), 'https://example.com/not-x', tid(101)] }) },
@@ -184,8 +184,8 @@ const nowSec = Math.floor(Date.now() / 1000);
 fxReply = href => {
   const id = href.match(/status\/(\d+)/)[1];
   if (id === '102') return { code: 200, tweet: { text: 'No video here', author: { screen_name: 'NFL' }, media: {} } };
-  // 103: 20 days old; 104: 73h old; 105: no timestamp (the model's date is not trusted); 106: throwback; 301: 5h old.
-  const created = { 103: nowSec - 20 * 86400, 104: nowSec - 73 * 3600, 105: undefined, 301: nowSec - 5 * 3600 }[id];
+  // 103: 20 days old; 104: 121h old; 105: no timestamp (the model's date is not trusted); 106: throwback; 301: 5h old.
+  const created = { 103: nowSec - 20 * 86400, 104: nowSec - 121 * 3600, 105: undefined, 301: nowSec - 5 * 3600 }[id];
   const text = id === '106' ? '#TBT to the 2019 AFC title game' : `Clip ${id}`;
   return { code: 200, tweet: { text, created_timestamp: id in { 103: 1, 104: 1, 105: 1, 301: 1 } ? created : nowSec - 3600, author: { name: 'NFL', screen_name: id === '301' ? 'Chiefs' : 'NFL' }, media: { videos: [{
     url: VIDEO(720, 1280), thumbnail_url: `https://pbs.twimg.com/${id}.jpg`, duration: 12.3, width: 720, height: 1280,
@@ -199,11 +199,11 @@ assert.equal(searchCalls, 1);
 assert.ok(res.body.teams.length > 3 && res.body.teams[0].name && res.body.teams[0].short && res.body.teams[0].colors.length === 2);
 assert.equal(res.body.teams[0].families, undefined, 'teams carry name, short, colors');
 assert.match(searchPrompt, /Kansas City Chiefs/, 'the colour teams are in the prompt');
-assert.match(searchPrompt, /last 72 hours/);
-assert.deepEqual(res.body.clips.map(c => c.url), [tid(101), 'https://x.com/Chiefs/status/301'], 'no-video, 20-day-old, 73h-old, untimestamped and throwback posts dropped; duplicates merged; cited posts kept; newest first');
+assert.match(searchPrompt, /last 5 days/);
+assert.deepEqual(res.body.clips.map(c => c.url), [tid(101), 'https://x.com/Chiefs/status/301'], 'no-video, 20-day-old, 121h-old, untimestamped and throwback posts dropped; duplicates merged; cited posts kept; newest first');
 assert.deepEqual(res.body.clips.map(c => c.ageHours), [1, 5], 'verified age in hours');
 assert.ok(res.body.clips.every(c => c.postedAt && !Number.isNaN(Date.parse(c.postedAt))));
-assert.equal(res.body.note, 'Only 2 clips from the last 3 days.', 'fewer than 3 fresh clips: a note, no padding');
+assert.equal(res.body.note, 'Only 2 clips from the last 5 days.', 'fewer than 3 fresh clips: a note, no padding');
 const clip0 = res.body.clips[0];
 assert.equal(clip0.handle, 'NFL');
 assert.equal(clip0.thumb, 'https://pbs.twimg.com/101.jpg');
@@ -534,7 +534,7 @@ messagesHandler = body => {
   momentBody = body;
   momentPrompt = body.messages[0].content;
   return reply(200, { stop_reason: 'end_turn', usage: { input_tokens: 15000, output_tokens: 600, server_tool_use: { web_search_requests: 3 } }, content: [{ type: 'text', text: JSON.stringify({ moments: [
-    { i: 1, posts: [mid(901), mid(902), 'https://example.com/x', mid(903)] }, // fresh, 73h old, not X, throwback
+    { i: 1, posts: [mid(901), mid(902), 'https://example.com/x', mid(903)] }, // fresh, 121h old, not X, throwback
     { i: 2, posts: [mid(904)] }, // no timestamp: dropped, so moment 2 is dropped
     { i: 3, posts: [mid(905), mid(901)] }, // fresh; 901 already counted for moment 1
     { i: 4, posts: [] },
@@ -543,7 +543,7 @@ messagesHandler = body => {
 };
 fxReply = href => {
   const id = href.match(/status\/(\d+)/)[1];
-  const created = { 901: nowSec - 2 * 3600, 902: nowSec - 73 * 3600, 903: nowSec - 3600, 904: undefined, 905: nowSec - 30 * 3600, 906: nowSec - 3600 }[id];
+  const created = { 901: nowSec - 2 * 3600, 902: nowSec - 121 * 3600, 903: nowSec - 3600, 904: undefined, 905: nowSec - 30 * 3600, 906: nowSec - 3600 }[id];
   const text = id === '903' ? 'On this day in 2019: what a throw' : `Clip ${id}`;
   return { code: 200, tweet: { text, created_timestamp: created, author: { screen_name: 'NFL' }, media: { videos: [{ url: VIDEO(720, 1280), formats: [{ url: VIDEO(720, 1280), container: 'mp4', bitrate: 2000000 }] }] } } };
 };
@@ -553,12 +553,12 @@ assert.equal(momentCalls, 1, 'one search for all moments');
 assert.equal(momentBody.model, 'anthropic/claude-haiku-5.5');
 assert.equal(momentBody.tools[0].max_uses, 3);
 assert.match(momentPrompt, /1\. \[NFL\] Mahomes rallies the Chiefs past the Bills/);
-assert.match(momentPrompt, /last 72 hours/);
+assert.match(momentPrompt, /last 5 days/);
 assert.doesNotMatch(momentPrompt, /golf/i, 'ad sports only');
 assert.doesNotMatch(momentPrompt, /Filler NFL story 9/, 'top 10 moments only');
 assert.equal(res.body.checked, 10);
 assert.deepEqual(res.body.moments.map(m => m.id), ['m1', 'm3'], 'only moments with a fresh, verified clip');
-assert.deepEqual(res.body.moments[0].clips.map(c => c.url), [mid(901)], '73h-old and throwback posts dropped');
+assert.deepEqual(res.body.moments[0].clips.map(c => c.url), [mid(901)], '121h-old and throwback posts dropped');
 assert.deepEqual(res.body.moments[1].clips.map(c => c.url), [mid(905)], 'a post counts for its first moment only');
 assert.equal(res.body.moments[0].clips[0].ageHours, 2);
 assert.ok(res.body.moments[0].clips[0].postedAt && res.body.moments[0].clips[0].variants.length);
@@ -579,9 +579,9 @@ assert.equal(momentCalls, 1);
 res = await post({ mode: 'moments-with-clips', sport: 'mlb' });
 assert.equal(res.status, 429, 'a cache miss is gated');
 callsThisHour = 0;
-// While cached, clips that cross 72h are dropped, and so is a moment left empty.
+// While cached, clips that cross 120h are dropped, and so is a moment left empty.
 const momentEntry = [..._test.MOMENT_CACHE.values()][0];
-momentEntry.value.moments[1].clips[0].postedAt = new Date(Date.now() - 80 * 3600e3).toISOString();
+momentEntry.value.moments[1].clips[0].postedAt = new Date(Date.now() - 125 * 3600e3).toISOString();
 res = await post({ mode: 'moments-with-clips' });
 assert.equal(res.body.cached, true, 'no sport = all');
 assert.deepEqual(res.body.moments.map(m => m.id), ['m1']);

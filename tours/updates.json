@@ -22,7 +22,7 @@
         },
         {
           "title": "Clips by team, colour, moment or link",
-          "text": "With team logos, and only fresh clips from the last 72 hours. Trends shows league logos too.",
+          "text": "With team logos, and only fresh clips from the last 5 days. Trends shows league logos too.",
           "page": "video-ads.html",
           "target": ".va-step[data-step=\"clip\"]"
         },

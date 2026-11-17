@@ -969,7 +969,7 @@
     const teamsHtml = teams.length ? `<ul class="va-teams" aria-label="Matched teams">${teams.map(t => `<li class="va-team" aria-label="${esc(t.name || t.short)}">${teamMark(t, 20)}<span>${esc(t.short || t.name)}</span></li>`).join('')}${more > 0 ? `<li class="va-team va-team--more" title="${esc(allTeams.slice(6).map(t => t.short || t.name).join(', '))}">+${more} more</li>` : ''}</ul>` : '';
     const linkBtn = '<button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-link">Paste a link</button>';
     if (f.status === 'loading') {
-      els.found.innerHTML = `${teamsHtml}<p class="va-working">${dots}Looking for clips from the last 3 days…</p>
+      els.found.innerHTML = `${teamsHtml}<p class="va-working">${dots}Looking for clips from the last 5 days…</p>
         <div class="va-clipgrid" aria-hidden="true">${Array.from({ length: 4 }, (_, i) => `<div class="va-clip va-clip--skeleton" style="--i:${i}"><span class="va-clip__thumb va-shimmer"></span><span class="va-line va-shimmer" style="width:46%"></span><span class="va-line va-shimmer"></span></div>`).join('')}</div>`;
       els.found.setAttribute('aria-busy', 'true');
       return;
@@ -982,11 +982,11 @@
     if (f.status === 'empty') {
       const another = { team: 'Try another team', color: 'Try another colour', moment: 'Try another moment' }[kind];
       const pick = { team: ['other-team', 'Pick a team'], color: ['other-color', 'Pick a colour'], moment: ['other-moment', 'Pick a moment'] }[kind];
-      els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}<div class="va-empty-state">${ICON.film}<strong>No recent clips</strong><span>No clips from the last 3 days for ${esc(what)}. ${another} or paste an X link.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="${pick[0]}">${pick[1]}</button>${linkBtn}</div></div>`;
+      els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}<div class="va-empty-state">${ICON.film}<strong>No recent clips</strong><span>No clips from the last 5 days for ${esc(what)}. ${another} or paste an X link.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="${pick[0]}">${pick[1]}</button>${linkBtn}</div></div>`;
       return;
     }
     els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}
-      <div class="va-found__head"><h3>${f.clips.length} clip${f.clips.length === 1 ? '' : 's'}</h3><span class="va-hint">Last 3 days</span></div>
+      <div class="va-found__head"><h3>${f.clips.length} clip${f.clips.length === 1 ? '' : 's'}</h3><span class="va-hint">Last 5 days</span></div>
       ${f.note ? `<p class="va-found__note">${esc(f.note)}</p>` : ''}
       <div class="va-clipgrid">${f.clips.map(clipCard).join('')}</div>`;
   }
@@ -1146,7 +1146,7 @@
         return;
       }
       els.trends.innerHTML = f.items.map((item, i) => trendRow(item, i, item.clips.length)).join('');
-      els.trendsStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b data-es-tick="va-moments">${f.items.length}</b> moment${f.items.length === 1 ? '' : 's'} with clips from the last 72 hours</span>`;
+      els.trendsStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b data-es-tick="va-moments">${f.items.length}</b> moment${f.items.length === 1 ? '' : 's'} with clips from the last 5 days</span>`;
       return;
     }
     // The old board: every trend (Copy step, or the clip check failed).

@@ -6,11 +6,11 @@
 //   clip        an X post link -> its MP4 versions on video.twimg.com, so the
 //               browser downloads the clip itself. Video bytes never pass
 //               through this function (serverless responses are capped at ~4.5 MB).
-//   find-clips  X posts with video from the last 72 hours of one team, the
+//   find-clips  X posts with video from the last 5 days of one team, the
 //               teams in a colour, or a moment: one cheap web search (Haiku,
 //               2 searches, hard cost cap, 15-minute cache); every post
 //               verified like `clip`, and kept only if its verified timestamp
-//               is under 72h old and it isn't a throwback
+//               is under 120h (5 days) old and it isn't a throwback
 //   copy        3 ad-copy variants in the ES styles, grounded in the brand, sport,
 //               team or moment and colour theme, plus lessons from past ads;
 //               common problems are repaired in code before the model retries
@@ -190,11 +190,11 @@ function trendInput(trend = {}) {
 // Cheap on purpose: the search tier (Haiku), at most 2 searches, a short reply,
 // a hard per-call cap, and a 15-minute cache per (sport, team | colour | query).
 // Fresh on purpose: only posts whose VERIFIED timestamp (fxtwitter / X
-// syndication, never the model's claim) is under 72 hours old; no timestamp =
+// syndication, never the model's claim) is under 120 hours (5 days) old; no timestamp =
 // dropped (fail closed); obvious re-uploads of old footage are dropped too.
 const CLIP_CACHE = new Map();
 const CLIP_TTL_MS = 15 * 60 * 1000;
-const FIND_CLIPS = { maxUses: 2, maxTokens: 900, maxCostUsd: 0.03, candidates: 12, maxClips: 9, maxAgeHours: 72, minClips: 3, verifyMs: 6000 };
+const FIND_CLIPS = { maxUses: 2, maxTokens: 1100, maxCostUsd: 0.03, candidates: 16, maxClips: 12, maxAgeHours: 120, minClips: 3, verifyMs: 6000 };
 
 function teamOut(team) {
   return { name: team.name, short: team.short, colors: team.colors.slice(0, 2) };
@@ -237,7 +237,7 @@ async function findClips(body, track) {
   const key = team ? `${sport}|team:${team.name.toLowerCase()}` : color ? `${sport}|color:${color}` : `${sport}|query:${query.toLowerCase()}`;
   const hit = CLIP_CACHE.get(key);
   if (hit && Date.now() - hit.at < CLIP_TTL_MS) {
-    // Ages move on while cached; anything that crossed 72h meanwhile goes.
+    // Ages move on while cached; anything that crossed 120h meanwhile goes.
     const clips = reAge(hit.value.clips);
     return { ...hit.value, clips, ...noteFor(clips.length), cached: true, cost: 0 };
   }
@@ -251,11 +251,11 @@ async function findClips(body, track) {
   const system = [
     'You find the newest sports video posts on X (Twitter) for EssentiallySports newsletter ads.',
     'Search, then reply with JSON only. List only X post URLs you actually saw in search results; never make one up.',
-    'Freshness matters most: only posts made in the last 72 hours. No throwbacks, anniversaries or re-uploads of old games.',
+    'Freshness matters most: only posts made in the last 5 days (120 hours). No throwbacks, anniversaries or re-uploads of old games.',
   ].join('\n');
   const prompt = [
     subject,
-    `Find X posts made in the last 72 hours (after ${since} UTC) that carry native video from this week's games: highlights, big plays, celebrations, fan moments.`,
+    `Find X posts made in the last 5 days (120 hours) (after ${since} UTC) that carry native video from this week's games: highlights, big plays, celebrations, fan moments.`,
     'Prefer official team, league, network and reporter accounts. Skip posts that only link to an article, and skip anything older.',
     `Reply with JSON only: {"posts": [{"url": "https://x.com/<handle>/status/<id>", "date": "YYYY-MM-DD the post was made"}]} (up to ${FIND_CLIPS.candidates}, newest first).`,
   ].join('\n');
@@ -282,10 +282,10 @@ async function findClips(body, track) {
   return { ...value, ...noteFor(clips.length), cached: false, cost: money(result.cost) };
 }
 
-const noteFor = n => (n < FIND_CLIPS.minClips ? { note: `Only ${n} clip${n === 1 ? '' : 's'} from the last 3 days.` } : {});
+const noteFor = n => (n < FIND_CLIPS.minClips ? { note: `Only ${n} clip${n === 1 ? '' : 's'} from the last 5 days.` } : {});
 
 // Shapes a verified clipFromPost result for the client, or null when it fails
-// the freshness rules (verified timestamp under 72h, not a throwback).
+// the freshness rules (verified timestamp under 120h, not a throwback).
 function freshClip(c) {
   if (!c?.ok || !c.variants?.length) return null;
   const age = ageHoursOf(c.postedAt);
@@ -303,7 +303,7 @@ function freshClip(c) {
   };
 }
 
-// Re-ages cached clips and drops the ones that crossed 72h since caching.
+// Re-ages cached clips and drops the ones that crossed 120h since caching.
 const reAge = clips => clips
   .map(c => ({ ...c, ageHours: Math.round(ageHoursOf(c.postedAt) ?? Infinity) }))
   .filter(c => c.ageHours <= FIND_CLIPS.maxAgeHours);
@@ -353,13 +353,13 @@ async function momentsWithClips(body, track) {
   const system = [
     'You find the newest sports video posts on X (Twitter) for EssentiallySports newsletter ads.',
     'Search, then reply with JSON only. List only X post URLs you actually saw in search results; never make one up.',
-    'Freshness matters most: only posts made in the last 72 hours. No throwbacks, anniversaries or re-uploads of old games.',
+    'Freshness matters most: only posts made in the last 5 days (120 hours). No throwbacks, anniversaries or re-uploads of old games.',
   ].join('\n');
   const prompt = [
     'Trending moments:',
     ...list.map((m, i) => `${i + 1}. [${SPORT_NAMES[m.sport]}] ${m.title}`),
     '',
-    `For each moment, find X posts made in the last 72 hours (after ${since} UTC) that carry native video OF THAT MOMENT: highlights, the play itself, celebrations, reactions. Prefer official team, league, network and reporter accounts. Skip posts that only link to an article.`,
+    `For each moment, find X posts made in the last 5 days (120 hours) (after ${since} UTC) that carry native video OF THAT MOMENT: highlights, the play itself, celebrations, reactions. Prefer official team, league, network and reporter accounts. Skip posts that only link to an article.`,
     `Reply with JSON only: {"moments": [{"i": <moment number>, "posts": ["https://x.com/<handle>/status/<id>"]}]} (up to ${MOMENTS.perMoment} posts per moment; leave out moments with none).`,
   ].join('\n');
   const result = await aiWebResearch({
