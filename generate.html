@@ -1069,12 +1069,13 @@
         const ai = aiFor(item);
         const state = aiState.get(item.id);
         const titles = (ai?.titles?.length ? ai.titles : item.titles || []).slice(0, 3);
-        const canAsk = data?.aiEnrich && !ai && state !== 'loading' && state !== 'limited';
+        const canAsk = data?.aiEnrich && !ai && state !== 'loading' && state !== 'limited' && state !== 'off';
         const side = ai ? '<span class="ais-badge" title="Written by AI from the story">AI</span>'
           : canAsk ? `<button class="td-icon-btn trend-ideas__ai" type="button" data-ai aria-label="AI angles for this trend">${ICON.sparkles}<span>${state === 'error' ? 'Try AI again' : 'AI angles'}</span></button>` : '';
         const head = `<div class="trend-ideas__head"><span class="trend-ideas__label">${ICON.sparkles}<span>Headline ideas</span></span>${side}</div>`;
         if (state === 'loading') return `${head}<div class="trend-ideas__list" aria-busy="true">${'<span class="trend-idea is-skeleton es-skeleton"></span>'.repeat(3)}</div>`;
-        const note = state === 'limited' ? '<p class="trend-ideas__note">AI limit reached for now, so these are quick ideas.</p>' : '';
+        const note = state === 'limited' ? '<p class="trend-ideas__note">AI limit reached for now, so these are quick ideas.</p>'
+          : (state === 'off' || (data?.aiOff && !ai)) ? '<p class="trend-ideas__note">AI angles are switched off for now, so these are quick ideas.</p>' : '';
         if (!titles.length) return `${head}<span class="trend-ideas__empty">No headline ideas for this story yet.</span>${note}`;
         return `${head}<div class="trend-ideas__list${isNew ? ' is-new' : ''}">${titles.map(t => `<div class="trend-idea"><a class="trend-idea__go" href="${esc(designUrl(item, t))}" data-design title="Design a post with this headline">${esc(t)}</a><button class="trend-idea__copy" type="button" data-copy="${esc(t)}" aria-label="Copy headline: ${esc(t)}" title="Copy">${ICON.copy}</button></div>`).join('')}</div>${note}`;
       }
@@ -1222,12 +1223,13 @@
           const response = await authFetch('/api/trend-design', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'enrich', items }) });
           const json = await response.json().catch(() => null);
           limited = response.status === 429 || Boolean(json?.limited);
+          const off = json?.limited === 'off';
           message = json?.error || '';
           const got = json?.items || {};
           ids.forEach(id => {
             const value = got[id];
             if (value?.ai) { aiCache.set(id, { why: value.why || '', titles: value.titles || [], ai: true }); aiState.delete(id); }
-            else aiState.set(id, limited ? 'limited' : 'error');
+            else aiState.set(id, off ? 'off' : limited ? 'limited' : 'error');
           });
         } catch (error) {
           ids.forEach(id => aiState.set(id, 'error'));
@@ -1605,6 +1607,10 @@
 
       // ── Status, progress and notices ──────────────────────────────────────
       // action: { label, run } adds the one-click next step (Try again, Use Auto).
+      // A switched-off feature or a reached weekly cap gets a calm title, never "failed".
+      const PAUSED_TITLES = { 'feature-off': 'Switched off for now', 'weekly-limit': 'Weekly AI limit reached', 'team-limit': 'Team AI budget used up', 'limit-unknown': 'AI is paused for a moment' };
+      const pausedTitle = error => PAUSED_TITLES[error?.reason] || '';
+
       function setNotice(title, body = '', tone = '', action = null) {
         els.notice.hidden = !title;
         els.notice.className = `es-callout gen-notice${tone ? ` is-${tone}` : ''}`;
@@ -2637,7 +2643,8 @@
           els.grid.replaceChildren();
           els.empty.hidden = !els.director.hidden;
           if (picked) els.director.classList.remove('is-collapsed');
-          setNotice('Could not generate', ` ${error.message || 'Something went wrong.'} Your brief is still here.`, '', { label: 'Try again', run: () => (picked ? makeDesigns(picked) : generate()) });
+          if (pausedTitle(error)) setNotice(pausedTitle(error), ` ${error.message || ''} Your brief is still here.`, 'warn');
+          else setNotice('Could not generate', ` ${error.message || 'Something went wrong.'} Your brief is still here.`, '', { label: 'Try again', run: () => (picked ? makeDesigns(picked) : generate()) });
         } finally {
           els.grid.removeAttribute('aria-busy');
           setBusy(false);
@@ -2728,7 +2735,7 @@
             Object.assign(spec, { fields: data.design.fields, lines: data.design.lines, listicle: data.design.listicle });
             await paint(card);
           } catch (error) {
-            setNotice(error.reason === 'budget' ? 'Rewrites are paused' : 'No rewrite', ` ${error.message || ''}`, error.reason === 'budget' ? 'warn' : '');
+            setNotice(pausedTitle(error) || (error.reason === 'budget' ? 'Rewrites are paused' : 'No rewrite'), ` ${error.message || ''}`, error.reason === 'budget' || pausedTitle(error) ? 'warn' : '');
           } finally {
             card.querySelector('.gen-card__media').classList.remove('is-busy');
             await renderRefine(card);
@@ -2827,7 +2834,7 @@
             spec.photo = { ...scene };
             await paint(card);
           } catch (error) {
-            setNotice(error.reason === 'budget' ? 'Scene images are paused' : 'No scene image', ` ${error.message || ''}`, error.reason === 'budget' ? 'warn' : '');
+            setNotice(pausedTitle(error) || (error.reason === 'budget' ? 'Scene images are paused' : 'No scene image'), ` ${error.message || ''}`, error.reason === 'budget' || pausedTitle(error) ? 'warn' : '');
           } finally {
             card.querySelector('.gen-card__media').classList.remove('is-busy');
             renderPhotos(card);
@@ -2859,7 +2866,7 @@
             }
           } catch (error) {
             media.classList.add('is-ready');
-            setNotice('Retry failed', ` ${error.message || ''}`);
+            setNotice(pausedTitle(error) || 'Retry failed', ` ${error.message || ''}`, pausedTitle(error) ? 'warn' : '');
           } finally {
             button.disabled = false;
             locked.forEach(other => { other.disabled = false; });

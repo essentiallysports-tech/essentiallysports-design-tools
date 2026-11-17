@@ -660,7 +660,12 @@
       if (serverResult.segments.length) return serverResult;
       setStatus(els.transcribeStatus, 'Cloud speech returned no captions. Loading on-device Whisper...');
     } catch (error) {
-      setStatus(els.transcribeStatus, 'Cloud speech failed. Loading on-device Whisper captions...');
+      // Switched off or over the weekly AI limit: say so, then caption on this device.
+      setStatus(els.transcribeStatus, error.reason === 'feature-off'
+        ? 'Cloud captions are switched off for now, so captions run on this device. Loading Whisper...'
+        : /limit/.test(error.reason || '')
+          ? 'The AI limit is reached for now, so captions run on this device. Loading Whisper...'
+          : 'Cloud speech failed. Loading on-device Whisper captions...');
     }
 
     try {
@@ -2272,7 +2277,7 @@
       body: JSON.stringify(payload),
     }).then(function (response) {
       return response.json().catch(function () { return {}; }).then(function (data) {
-        if (!response.ok) throw new Error(data.error || data.detail || ('Request failed: ' + response.status));
+        if (!response.ok) throw Object.assign(new Error(data.error || data.detail || ('Request failed: ' + response.status)), { reason: data.reason || '' });
         return data;
       });
     });

@@ -29,7 +29,7 @@
 // every user of the instance; hourly and weekly limits apply.
 
 const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
-const { gatewayConfigured, aiText, logBackupCall, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage } = require('./_ai-gateway.js');
+const { gatewayConfigured, aiText, logBackupCall, userOverHourlyLimit, aiSpendGate, featureDisabled } = require('./_ai-gateway.js');
 let TEAMS = null;
 try { TEAMS = require('../../video-ads-teams.js'); } catch (error) { /* team logos are optional */ }
 
@@ -652,8 +652,10 @@ async function buildTrends(sources = SOURCES, { window = '1d', now = Date.now() 
     refreshSeconds: FRESH_MS / 1000,
     freshness: { newsMaxHours: maxAge.news, searchMaxHours: maxAge.search, freshMinutes: FRESH_MS / 60000, dropped },
     region: 'US',
-    aiTitles: aiAvailable(),
-    aiEnrich: aiAvailable(),
+    aiTitles: aiAvailable() && !featureDisabled('trend-headlines'),
+    aiEnrich: aiAvailable() && !featureDisabled('trend-enrich'),
+    // Switched off with AI_DISABLE: the page says so and keeps its free ideas.
+    aiOff: featureDisabled('trend-enrich'),
     categories: CATEGORIES.map(c => ({ ...c, count: categories[c.id].length })),
     items: CATEGORIES.flatMap(c => categories[c.id]),
     sourcesFailed: errors,
@@ -753,9 +755,10 @@ async function handleEnrich(event, body) {
   if (!misses.length) return json(200, { ok: true, ai: true, items, calls: 0 }, 'no-store');
   const withRules = () => { misses.forEach(story => { if (!items[story.id]) items[story.id] = rulesFor(story); }); return items; };
   if (!aiAvailable()) return json(200, { ok: true, ai: false, items: withRules(), calls: 0 }, 'no-store');
+  if (featureDisabled('trend-enrich')) return json(200, { ok: true, ai: false, limited: 'off', items: withRules(), calls: 0 }, 'no-store');
   const token = bearerToken(event.headers);
-  const [overWeek, overHour] = await Promise.all([userOverWeeklyLimit(token), userOverHourlyLimit(token)]);
-  if (overWeek) return json(429, { ok: false, error: weeklyLimitMessage(), reason: 'weekly-limit', items: withRules() }, 'no-store');
+  const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: 'trend-enrich' }), userOverHourlyLimit(token)]);
+  if (gate) return json(gate.status, { ok: false, error: gate.error, reason: gate.reason, items: withRules() }, 'no-store');
   if (overHour) return json(200, { ok: true, ai: false, limited: 'hourly', items: withRules(), calls: 0 }, 'no-store');
   try {
     const result = await enrich(misses, { feature: 'trend-enrich', email: auth.user.email, token }, { now });
@@ -780,8 +783,10 @@ exports.handler = async event => {
     const related = (Array.isArray(body.related) ? body.related : []).map(r => String(r || '').slice(0, 300)).slice(0, 3);
     // Over the weekly $ limit: 429 like the other AI modes (the page keeps its
     // free rule-based ideas).
-    const [overWeek, overHour] = await Promise.all([userOverWeeklyLimit(bearerToken(event.headers)), userOverHourlyLimit(bearerToken(event.headers))]);
-    if (overWeek) return json(429, { ok: false, error: weeklyLimitMessage(), reason: 'weekly-limit' }, 'no-store');
+    // Switched off (AI_DISABLE=trend-headlines): the free rule-based ideas.
+    if (featureDisabled('trend-headlines')) return json(200, { ok: true, ai: false, off: true, titles: suggestTitles({ title, related: related.map(t => ({ title: t })) }) }, 'no-store');
+    const [gate, overHour] = await Promise.all([aiSpendGate(bearerToken(event.headers), { feature: 'trend-headlines' }), userOverHourlyLimit(bearerToken(event.headers))]);
+    if (gate) return json(gate.status, { ok: false, error: gate.error, reason: gate.reason }, 'no-store');
     // Over the hourly AI limit: fall back to the free rule-based headlines.
     if (overHour) {
       return json(200, { ok: true, ai: false, titles: suggestTitles({ title, related: related.map(t => ({ title: t })) }) }, 'no-store');

@@ -1,4 +1,6 @@
-const { verifyEsUser } = require('./_supabase-auth.js');
+const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
+const { aiSpendGate, audioCostUsd, featureDisabled, featureOffMessage, logUsage } = require('./_ai-gateway.js');
+const TRANSCRIPTION_FEATURE = 'reels-transcription';
 
 const ES_MCP_ENDPOINT = process.env.ES_MCP_ENDPOINT || 'https://mcp.essentiallysports.com/mcp';
 const ES_MCP_ISSUER = process.env.ES_MCP_ISSUER || 'https://mcp.essentiallysports.com';
@@ -430,7 +432,16 @@ async function transcribeWithMcp(payload) {
   return normalizeMcpTranscription(called.data?.result);
 }
 
-async function transcribeWithOpenAI(payload) {
+// Seconds of audio OpenAI billed: verbose_json carries duration; the newer
+// models report usage.seconds; else the last segment's end.
+function billedSeconds(data, segments) {
+  const direct = Number(data?.duration ?? (data?.usage?.type === 'duration' ? data.usage.seconds : NaN));
+  if (Number.isFinite(direct) && direct > 0) return direct;
+  const last = Array.isArray(segments) && segments.length ? Number(segments[segments.length - 1].end) : 0;
+  return Number.isFinite(last) && last > 0 ? last : 0;
+}
+
+async function transcribeWithOpenAI(payload, track = null) {
   if (!OPENAI_API_KEY) {
     return json(501, {
       error: 'Speech recognition is wired, but OPENAI_API_KEY is not configured for this environment.',
@@ -447,6 +458,8 @@ async function transcribeWithOpenAI(payload) {
   form.append('timestamp_granularities[]', 'segment');
   form.append('timestamp_granularities[]', 'word');
 
+  const started = Date.now();
+  const model = `openai/${TRANSCRIPTION_MODEL}`;
   const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
     method: 'POST',
     headers: {
@@ -456,6 +469,7 @@ async function transcribeWithOpenAI(payload) {
   });
   const data = await response.json().catch(() => null);
   if (!response.ok) {
+    await logUsage(track, { model, ok: false, input_tokens: 0, output_tokens: 0, cost_usd: 0, duration_ms: Date.now() - started, error: String(data?.error?.message || `HTTP ${response.status}`).slice(0, 200) });
     return json(response.status, {
       error: data?.error?.message || `Speech recognition failed: ${response.status}`,
       provider: 'openai',
@@ -468,6 +482,15 @@ async function transcribeWithOpenAI(payload) {
       confidence: segment.avg_logprob == null ? null : Math.max(0, Math.min(1, 1 + Number(segment.avg_logprob))),
     })), data.words)
     : chunkPlainTranscript(data?.text || '');
+  // OpenAI bills transcription by the audio minute; one usage row per call.
+  await logUsage(track, {
+    model,
+    ok: true,
+    input_tokens: Number(data?.usage?.input_tokens) || 0,
+    output_tokens: Number(data?.usage?.output_tokens) || 0,
+    cost_usd: Number(audioCostUsd(TRANSCRIPTION_MODEL, billedSeconds(data, segments)).toFixed(6)),
+    duration_ms: Date.now() - started,
+  });
 
   return json(200, {
     provider: `OpenAI ${TRANSCRIPTION_MODEL}`,
@@ -583,7 +606,10 @@ async function styleWithIntelligence(payload) {
   return json(200, localStyleFallback(payload));
 }
 
-async function transcribeVideo(payload) {
+async function transcribeVideo(payload, { email = '', token = '' } = {}) {
+  if (featureDisabled(TRANSCRIPTION_FEATURE)) {
+    return json(503, { error: featureOffMessage(TRANSCRIPTION_FEATURE), reason: 'feature-off', provider: 'switched-off' });
+  }
   if (!payload.data) return json(400, { error: 'Missing video/audio data.' });
   if (getBase64DecodedSize(payload.data) > MAX_TRANSCRIPTION_UPLOAD_BYTES) {
     return json(413, {
@@ -609,7 +635,12 @@ async function transcribeVideo(payload) {
   }
 
   if (GROQ_API_KEY) return transcribeWithGroq(payload);
-  if (OPENAI_API_KEY) return transcribeWithOpenAI(payload);
+  if (OPENAI_API_KEY) {
+    // OpenAI is billed, so it goes through the same weekly caps as every AI feature.
+    const gate = await aiSpendGate(token, { feature: TRANSCRIPTION_FEATURE });
+    if (gate) return json(gate.status, { error: gate.error, reason: gate.reason, provider: 'limit' });
+    return transcribeWithOpenAI(payload, { feature: TRANSCRIPTION_FEATURE, email, token });
+  }
 
   return json(501, {
     error: mcpResult?.error || 'Speech recognition is not configured. Add an ES MCP transcription tool, GROQ_API_KEY, or OPENAI_API_KEY.',
@@ -641,7 +672,7 @@ exports.handler = async function handler(event) {
     if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed.' });
 
     const payload = parseJsonBody(event);
-    if (payload.action === 'transcribe') return transcribeVideo(payload);
+    if (payload.action === 'transcribe') return transcribeVideo(payload, { email: auth.user.email, token: bearerToken(event.headers) });
     if (payload.action === 'style') return styleWithIntelligence(payload);
     return json(400, { error: 'Unknown video intelligence action.' });
   } catch (error) {

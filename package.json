@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "npm run check:design-tokens && npm run check:site-chrome && npm run check:profile-layout && npm run check:dashboard-ui && npm run test:workspace-ui && npm run test:listicle && npm run test:listicle-pill && npm run test:listicle-accordion && npm run test:listicle-type2 && npm run test:auth && npm run test:ai-image-query && npm run test:es-images && npm run test:video-intelligence && npm run test:vercel-api && npm run test:trend-design && npm run test:generate",
+    "test": "npm run check:design-tokens && npm run check:site-chrome && npm run check:profile-layout && npm run check:dashboard-ui && npm run test:workspace-ui && npm run test:listicle && npm run test:listicle-pill && npm run test:listicle-accordion && npm run test:listicle-type2 && npm run test:auth && npm run test:ai-image-query && npm run test:es-images && npm run test:video-intelligence && npm run test:vercel-api && npm run test:trend-design && npm run test:generate && npm run test:ai-guardrails",
     "check:design-tokens": "node scripts/test-design-tokens.mjs",
     "check:site-chrome": "node scripts/check-site-chrome.mjs",
     "check:profile-layout": "node scripts/test-profile-layout.mjs",
@@ -26,6 +26,7 @@
     "es:mcp:register": "node scripts/es-mcp-register-client.mjs",
     "es:mcp:token": "node scripts/es-mcp-exchange-token.mjs",
     "test:trend-design": "node scripts/test-trend-design.mjs",
-    "test:impact": "node scripts/test-impact.mjs"
+    "test:impact": "node scripts/test-impact.mjs",
+    "test:ai-guardrails": "node scripts/test-ai-guardrails.mjs && node scripts/test-ai-weekly-limit.mjs"
   }
 }

@@ -1763,21 +1763,33 @@
   // AI spend (admins only): one row per AI call, written by the server.
   // Returns { rows, ready }; ready is false until the frameup_ai_usage
   // migration has been applied.
+  // measured is true once the 20261118120000_ai_guardrails migration added the
+  // cache-token, task and run-id columns; before that the basic columns load.
+  const AI_USAGE_BASIC = 'created_at,user_email,feature,model,ok,input_tokens,output_tokens,images,cost_usd';
+  const AI_USAGE_MEASURED = `${AI_USAGE_BASIC},cache_read_tokens,cache_write_tokens,task,run_id`;
+  let aiUsageMeasured = true;
   async function fetchAiUsage({ sinceIso } = {}) {
     const client = getSupabaseClient();
     const session = await getAuthenticatedSession();
     if (!client || !session?.user?.email) return { rows: [], ready: false };
-    let query = client.from('frameup_ai_usage')
-      .select('created_at,user_email,feature,model,ok,input_tokens,output_tokens,images,cost_usd')
-      .order('created_at', { ascending: false })
-      .limit(5000);
-    if (sinceIso) query = query.gte('created_at', sinceIso);
-    const { data, error } = await query;
+    const read = columns => {
+      let query = client.from('frameup_ai_usage')
+        .select(columns)
+        .order('created_at', { ascending: false })
+        .limit(5000);
+      if (sinceIso) query = query.gte('created_at', sinceIso);
+      return query;
+    };
+    let { data, error } = await read(aiUsageMeasured ? AI_USAGE_MEASURED : AI_USAGE_BASIC);
+    if (error && aiUsageMeasured && /column|42703|PGRST/i.test(`${error.code || ''} ${error.message || ''}`)) {
+      aiUsageMeasured = false;
+      ({ data, error } = await read(AI_USAGE_BASIC));
+    }
     if (error) {
       console.warn('[ai spend] frameup_ai_usage read failed:', error.message || error);
       return { rows: [], ready: false };
     }
-    return { rows: data || [], ready: true };
+    return { rows: data || [], ready: true, measured: aiUsageMeasured };
   }
 
   // Browser error reports (admins only), written by /api/client-errors.

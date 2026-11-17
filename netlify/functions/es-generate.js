@@ -17,7 +17,7 @@ const onBrandKit = require('./_onbrand.js');
 const GUIDE = require('../../es-guidelines.js');
 const BRAND_KIT = require('../../brand-kit.js');
 const { isMcpConfigured, createSession } = require('./_es-mcp.js');
-const { gatewayConfigured, aiText, isBudgetError, logBackupCall, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage, MODELS: AI_MODELS } = require('./_ai-gateway.js');
+const { gatewayConfigured, aiText, isBudgetError, logBackupCall, userOverHourlyLimit, aiSpendGate, MODELS: AI_MODELS } = require('./_ai-gateway.js');
 const RULES = require('../../frameup-rules.js');
 const { lintSpec, applyPatch, findTeam } = require('./_lint-spec.js');
 
@@ -760,10 +760,14 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid
   const block = direction?.concepts?.length
     ? director.conceptsBlock(direction.concepts, count, direction.houseStyle || [], { perConcept: direction.perConcept || 1, steer: direction.steer || null })
     : director.steerLines(director.normalizeSteer(direction?.steer || {})).join('\n');
+  // The catalog lists every template, whatever the editor picked, so the
+  // cached prefix is the same for every format choice (one cache entry, not
+  // one per choice). The picked formats go after the break; checkSpec still
+  // rejects any other template.
   const catalog = Object.entries(TEMPLATES)
-    .filter(([type]) => !allowedTypes.length || allowedTypes.includes(type))
     .map(([type, t]) => `- ${type} (${t.label}): ${t.use}\n  fields: ${t.shape}`)
     .join('\n');
+  const picked = allowedTypes.filter(type => TEMPLATES[type]);
   return [
     'You are the senior social designer at EssentiallySports (ES), a US sports media brand.',
     'Plan distinct Instagram post designs for the brief below, each using one of our templates.',
@@ -799,6 +803,7 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid
     PROMPT_CACHE_BREAK,
     ...(pastExamples ? [`Real ES posts on similar topics (style and template choice only; never reuse their facts, names or numbers):\n${pastExamples}`, ''] : []),
     ...(block ? [block, ''] : []),
+    ...(picked.length ? [`The editor picked these formats. Use ONLY these templates (any other template is rejected): ${picked.map(type => `${type} (${TEMPLATES[type].label})`).join(', ')}.`, ''] : []),
     `Brief: ${brief}`,
     `Return up to ${count} designs.`,
     ...(avoid.length ? ['', `The editor asked for a fresh take: do not reuse these lines: ${avoid.map(line => JSON.stringify(line)).join(', ')}`] : []),
@@ -1501,7 +1506,7 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
   const person = found.tags?.[0]?.name || nameCandidates(brief)[0] || '';
   const wantsPhoto = !allowedTypes.length || allowedTypes.some(type => TEMPLATES[type].photo);
   // Photo candidates and Claude's pick run while the designs are written.
-  const photoTrack = { email, token };
+  const photoTrack = { email, token, runId };
   const photoWork = wantsPhoto
     ? photoCandidates(person, mcp, tools, found.articles)
       .then(async candidates => ({ candidates, pick: await pickPhoto(person, candidates, photoTrack) }))
@@ -1511,7 +1516,7 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
   let brain = brainName(tools);
   const provider = tools.think ? null : pickProvider();
   if (provider) {
-    provider.track = { feature: 'generate', email, token };
+    provider.track = { feature: 'generate', task: 'generate-writer', runId, email, token };
     if (provider.backup) provider.backup.track = provider.track;
   }
   let aiFailed = false;
@@ -1548,7 +1553,7 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
       corpus: found.corpus || found.digest,
       want,
       templates: TEMPLATES,
-      track: { email, token },
+      track: { email, token, runId },
       timeoutMs: DIRECTOR_TIMEOUT_MS,
       startedAt: started,
       retryByMs: DIRECTOR_RETRY_BY_MS,
@@ -1730,7 +1735,7 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
   // draft mode, and when the weekly budget has run out.
   const quality = { reviewed: false, improved: 0, cost: 0 };
   if (provider?.name === 'gateway' && !provider.fallback && brain !== 'draft' && designs.length && elapsed() < REVIEW_START_BY_MS) {
-    const track = { email, token };
+    const track = { email, token, runId };
     const review = await reviewDesigns(brief, designs, track);
     quality.reviewed = review.reviewed;
     quality.cost += review.cost;
@@ -1904,19 +1909,20 @@ exports.handler = async function handler(event) {
     if (body.mode === 'trending') return json(200, await trending());
     if (body.mode === 'rewrite') {
       const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
-      const [overWeek, overHour] = await Promise.all([userOverWeeklyLimit(token), userOverHourlyLimit(token)]);
-      if (overWeek) return json(429, { error: weeklyLimitMessage(), reason: 'weekly-limit' });
+      const instruction = String(body.instruction || '');
+      const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: `generate-rewrite-${REWRITES[instruction] ? instruction : 'other'}` }), userOverHourlyLimit(token)]);
+      if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
       if (overHour) return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
       const rewriteBrief = String(body.brief || '').replace(/<[^>]*>/g, ' ').trim().slice(0, 1500);
-      const result = await rewriteDesign({ brief: rewriteBrief, spec: body.spec, instruction: String(body.instruction || ''), fix: body.fix, token, email: auth.user.email });
+      const result = await rewriteDesign({ brief: rewriteBrief, spec: body.spec, instruction, fix: body.fix, token, email: auth.user.email });
       return json(result.status, result.body);
     }
     // Bring it on-brand: images (data URLs) of a design made elsewhere. Same
-    // weekly and hourly caps as Generate.
+    // spend gate (weekly, team, switches) and hourly cap as Generate.
     if (body.mode === 'onbrand') {
       const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
-      const [overWeek, overHour] = await Promise.all([userOverWeeklyLimit(token), userOverHourlyLimit(token)]);
-      if (overWeek) return json(429, { error: weeklyLimitMessage(), reason: 'weekly-limit' });
+      const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: 'generate-onbrand' }), userOverHourlyLimit(token)]);
+      if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
       if (overHour) return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
       const result = await onBrand({ images: body.images, note: String(body.note || '').slice(0, 600), token, email: auth.user.email, steer: director.normalizeSteer(body.steer) });
       return json(result.status, result.body);
@@ -1925,8 +1931,8 @@ exports.handler = async function handler(event) {
     const brief = String(body.brief || '').replace(/<[^>]*>/g, ' ').replace(/[^\S\n\t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1500);
     if (brief.length < 3) return json(400, { error: 'Write a brief of at least a few words.' });
     const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
-    const [overWeek, overHour] = await Promise.all([userOverWeeklyLimit(token), userOverHourlyLimit(token)]);
-    if (overWeek) return json(429, { error: weeklyLimitMessage(), reason: 'weekly-limit' });
+    const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: 'generate' }), userOverHourlyLimit(token)]);
+    if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
     if (overHour) {
       return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
     }

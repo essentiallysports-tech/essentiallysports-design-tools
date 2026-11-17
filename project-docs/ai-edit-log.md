@@ -149,6 +149,41 @@ and what's still uncommitted.
   `test-ad-learning.mjs`, `test-ad-rating.mjs`. No migration, no new env vars.
 - Not done: `style_selected` / `grid_created` events (the events table's type check would reject them; needs a
   migration), What's new / tour copy (shared files across pages).
+### 2026-11-18 — AI guardrails: team cap, alerts, kill switches, measurable usage (branch `feature/ai-guardrails`)
+- Status: `[committed on feature/ai-guardrails, not pushed; the coordinator merges]`
+- **Full write-up:** `project-docs/ai-strategy-and-costs.md` → "What shipped", including a table of every AI env var.
+- **Limits:** none lowered. The per-person cap stays $20/week (a testing value; `AI_USER_WEEKLY_LIMIT_USD` raises it).
+- **Server:**
+  - `_ai-gateway.js`:
+    - `aiSpendGate()` checks the kill switch, then the person's weekly cap, then the team cap (`AI_TEAM_WEEKLY_LIMIT_USD`, off when unset).
+    - It fails open with a JSON warning event, or fails closed with `AI_FAIL_CLOSED=1`.
+    - `AI_DISABLE` kill switches and `AI_ECONOMY=1` (Sonnet tier → Haiku).
+    - `logUsage` now writes cache tokens, task and run id (and retries without them before the migration).
+    - `PRICES` fixed: Sonnet 5.5 cache read $0.10; Haiku's long-context rate is now priced.
+    - The cache hint is skipped for tiny prompts, and a rejected hint logs a warning.
+  - **Handlers:** `es-generate.js`, `es-generate-image.js`, `trend-design.js`, `video-ads.js`, `ad-rating.js` and `es-video-intelligence.js` all use the gate.
+  - **Generate writer:** one cached prefix for every format choice, with the picked formats after the break. Run `npm run eval:generate` with picked formats before relying on it.
+  - **Video Ads copy:** no longer marked cacheable (under 512 tokens).
+  - **Reels:** OpenAI transcription logs usage.
+  - **New files:**
+    - `_ai-alerts.js`: Slack alerts at 50/80/100% of the team cap and 80% of a person's cap, once per week each;
+    - `ai-budget-watch.js`: the daily cron, protected by `CRON_SECRET`;
+    - `ai-status.js`: caps and switches for the UI;
+    - `api/` adapters for both functions;
+    - `vercel.json`: two `functions` entries and one daily `crons` entry, `0 13 * * *`.
+- **UI:**
+  - **Dashboard:** the AI panel is now "AI spend · this week": team vs cap, cost per export, cache hit rate, Sonnet share, top features and top people (`ai-usage-summary.js`, `dashboard-data.js`, `dashboard-ui-system.css`).
+  - **Polite "switched off" and limit states** in Generate, Trends, Video Ads and Reels.
+  - **Cache keys** bumped to `20261118-ai-guardrails`.
+- **Migration (owner runs it):** `supabase/migrations/20261118120000_ai_guardrails.sql` adds:
+  - the nullable usage columns;
+  - `frameup_team_ai_spend` (aggregate only);
+  - `frameup_ai_budget_summary` and `frameup_ai_alert_claim` (service_role only);
+  - the `frameup_ai_alerts` table.
+  It ends with an "Undo:" block.
+- **New env vars:** `AI_TEAM_WEEKLY_LIMIT_USD`, `AI_FAIL_CLOSED`, `AI_DISABLE`, `AI_ECONOMY`, `SLACK_AI_ALERTS_WEBHOOK_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET`. Set them in the Enterprise Vercel project.
+- **Tests:** new `scripts/test-ai-guardrails.mjs` (all network mocked; no Slack message sent). The full suite shows only the 7 known baseline failures.
+- **Browser:** the Dashboard AI panel was checked through a temporary local harness (stubbed `ESAuth` / `ESDashboardData`, since deleted) at 1280 and 375, light and dark. It covered no-cap, economy, empty and no-settings states, with no horizontal scroll and no console errors.
 
 ### 2026-09-10 — Fix a regression from this same day's earlier fixes: concurrent profile upsert race
 - Status: `[pushed - see rollback point below]`

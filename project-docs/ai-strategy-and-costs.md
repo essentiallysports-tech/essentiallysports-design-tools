@@ -1,6 +1,6 @@
 # FrameUp AI: strategy, costs and the creative powerhouse plan
 
-Written 2026-11-17 from the code on local `main` (plus the uncommitted Generate/Video Ads work). Read-only research: no code was changed.
+Written 2026-11-17 from the code on local `main` (plus the uncommitted Generate/Video Ads work) as read-only research. **Updated 2026-11-18:** the guardrails (B2, B4, B6, D4, D5) shipped on `feature/ai-guardrails`; see "What shipped" below.
 
 **Sources:**
 - `netlify/functions/_ai-gateway.js`, `es-generate.js`, `_creative-director.js`, `es-generate-image.js`, `trend-design.js`, `video-ads.js`, `_ad-rating.js`, `ad-rating.js` and `es-video-intelligence.js`;
@@ -37,6 +37,144 @@ Written 2026-11-17 from the code on local `main` (plus the uncommitted Generate/
 
 ---
 
+## What shipped (2026-11-18, branch `feature/ai-guardrails`)
+
+This section is the current state. Where sections A–F below disagree with it, this section wins; they stay as the original research.
+
+**Limits were not lowered.** The per-person cap stays **$20 a week** (a testing value; raise it with `AI_USER_WEEKLY_LIMIT_USD`). The hourly cap stays 120 calls. B2's "$5 per person" is **not** applied. The team cap is new and **off until you set it**.
+
+### 1. Team cap and fail open / fail closed (B2)
+- `aiSpendGate(token, { feature })` in `_ai-gateway.js` is the single check every AI handler runs before any AI call: Generate, rewrites, scene images, Trends titles and AI angles, every Video Ads mode, ad rating, and Reels transcription when it would use the paid OpenAI path. It checks, in order:
+  1. the feature's kill switch → `503`, `reason: 'feature-off'`;
+  2. the person's weekly $ cap → `429`, `reason: 'weekly-limit'` (same message as before);
+  3. the team's weekly $ cap (`AI_TEAM_WEEKLY_LIMIT_USD`) → `429`, `reason: 'team-limit'`, "The team has used this week's $X AI budget, so AI features are paused until Monday. Everything else still works."
+- The team total comes from a new RPC, `frameup_team_ai_spend(p_since)`: `security definer`, signed-in ES users only, and it returns **only the aggregate**.
+- **Fails open, observably.** If spend can't be read (RPC missing, timeout, bad reply), calls go ahead and the server logs one JSON line `{"event":"ai-guard-warning","kind":"user-spend-unreadable" | "team-spend-unreadable" | "hourly-count-unreadable", ...}`, at most once a minute per kind. Every miss is counted in `/api/ai-status` → `warnings`.
+- **`AI_FAIL_CLOSED=1`** switches to failing closed: an unreadable spend gives `503`, `reason: 'limit-unknown'`, with a calm "try again shortly" message. The hourly call count always fails open.
+
+### 2. Alerts (B2.4, D5)
+- `netlify/functions/_ai-alerts.js` posts to **`SLACK_AI_ALERTS_WEBHOOK_URL`**, its own channel and never the design-request webhook. An alert fires once per week per threshold:
+  - the team crosses **50%, 80% or 100%** of the team cap (one message for the highest threshold crossed at once);
+  - one person crosses **80%** of their own cap.
+- **Two paths send alerts:**
+  - a **daily cron** at 13:00 UTC, `GET /api/ai-budget-watch` (`vercel.json` `crons`);
+  - **in real time** from `aiSpendGate` the moment a request sees the team total cross a threshold. This is checked once per threshold per server instance, and never blocks for more than 3s.
+- **`CRON_SECRET` protects the cron.** Vercel sends `Authorization: Bearer <CRON_SECRET>`. Without `CRON_SECRET` the endpoint refuses every call (`503`); with a wrong or missing header it returns `401`.
+- **Alerts need `SUPABASE_SERVICE_ROLE_KEY`** (server env only). It reads the week's totals with `frameup_ai_budget_summary()` and claims each alert once with `frameup_ai_alert_claim()`. That claim is what stops several servers posting the same alert. Both functions are `service_role` only. Without the webhook or the key, nothing is sent and nothing breaks.
+- This answers open question 2 (below): the service key, used only by these two RPCs.
+
+### 3. Measurability (B4)
+- **New columns on `frameup_ai_usage`**, all nullable: `cache_read_tokens`, `cache_write_tokens`, `task` and `run_id`.
+- **What gets logged:**
+  - `logUsage` writes them for every Gateway text and web-research call.
+  - Generate passes one `run_id` through the writer (`task: 'generate-writer'`), director, photo pick and review.
+  - Video Ads gives every request its own run id, so a copy retry shares the first try's id.
+- **Works before the migration.** When PostgREST answers `PGRST204` (unknown column), the row is re-sent without the new columns, and later rows skip them until a cold start.
+- **`PRICES` fixed and cited** (Anthropic list prices, platform.claude.com/docs/en/about-claude/pricing, checked 2026-11-17):
+
+  | Model | In / Out per 1M | Cache read | Cache write (5 min) |
+  |---|---|---|---|
+  | `anthropic/claude-haiku-5.5` | $0.10 / $0.50 (prompts up to 100K tokens; **$0.50 / $2.50 above**, now priced) | $0.01 (0.1×) | $0.125 (1.25×) |
+  | `anthropic/claude-sonnet-5.5` | $2 / $10 | **$0.10** (was $0.20) | $2.50 |
+  | `anthropic/claude-opus-5.5` | $4 / $20 | $0.20 | $5 |
+  | `openai/gpt-oss-20b`, `openai/gpt-6-luna` | unchanged (Gateway list prices; not re-verified here) | none | none |
+
+  A test fails if any default model in `MODELS` has no `PRICES` entry.
+- **Prompt caching:**
+  - **Video Ads `COPY_SYSTEM`** (about 400 tokens, under the 512-token minimum on Haiku, Sonnet and Opus 5.5) is no longer marked cacheable. `anthropicCall` also skips the hint for any system prompt under 1,024 characters, which can never reach 512 tokens.
+  - **The Gateway rejecting `cache_control`** now logs a `cache-hint-rejected` warning event instead of retrying silently.
+- **Generate writer prefix: 9 variants become 1.** The template catalog before `PROMPT_CACHE_BREAK` now always lists every template. The editor's picked formats go after the break ("Use ONLY these templates (any other template is rejected): …"), and `checkSpec` still rejects any other template.
+  - **Quality note:** this changes what the writer sees when a format is picked. Run `npm run eval:generate` with picked formats before relying on it (F1). It is one function to revert.
+
+### 4. Kill switches and economy mode (B6)
+- **`AI_DISABLE=video-ads-find-clips,trend-enrich`** switches features off. Names are case-insensitive and cover their sub-features: `generate` covers `generate-director`, `generate-rewrite-best`, and so on. `all` switches everything off, and `AI_DISABLE_FEATURES` is an alias. Task names work too, for example `generate-writer`.
+- **Handlers.** A switched-off top-level feature gets `503`, `reason: 'feature-off'`: "<Feature> is switched off for now. Everything else in FrameUp still works." No AI call is made and no spend is read.
+- **Sub-steps** (director, review, escalation, photo pick) throw `feature-off` inside `aiText`, `aiWebResearch` and `aiImage` before any fetch, so Generate carries on without them.
+- **Polite "switched off" states in the UI:**
+  - **Generate:** the notice is titled "Switched off for now" (warning tone, no retry). The same calm titles cover "Weekly AI limit reached", "Team AI budget used up" and "AI is paused for a moment".
+  - **Trends:** the free rule-based ideas are kept, with the note "AI angles are switched off for now, so these are quick ideas." The AI button is hidden, because `aiEnrich` and `aiTitles` in the trend payload honour the switch.
+  - **Video Ads:** a calm "Clip search is switched off" panel with the no-clip options. The server's sentence is shown for every limit; before this change, a weekly-limit `429` showed the hourly message.
+  - **Reels:** "Cloud captions are switched off for now, so captions run on this device", then on-device Whisper.
+- **`AI_ECONOMY=1`** routes the `best` tier (Sonnet) to `main` (Haiku), covering the director, escalation and "Best version". Usage rows record the model that really ran. This is a quality trade-off, for emergencies only (F2).
+
+### 5. Dashboard (D4, admins only)
+- The Dashboard's AI panel is now **"AI spend · this week"**, counted from Monday 00:00 UTC, the same week the caps count. It shows:
+  - **Team spend** against the team cap: a meter, plus a pill when the team or anyone is at 80% or more of their cap;
+  - **Cost per export**: this week's AI $ ÷ this week's exports, plus cost per Generate run;
+  - **Cache hit rate**: cached share of Claude prompt tokens, once the migration runs;
+  - **Sonnet share** of spend;
+  - **Top features**, **Top people** (each with their share of their own cap) and spend **By model**;
+  - pills for **switched-off features**, **economy mode** and **fail-closed**.
+- **Where the numbers come from:** the caps and switches come from the new `GET /api/ai-status` (signed-in users; no secrets, no spend). The maths lives in `ai-usage-summary.js` (pure, tested).
+
+### 6. Reels transcription
+- The paid OpenAI path (`OPENAI_API_KEY`, used only when Groq is not set) now logs one `frameup_ai_usage` row per call:
+  - `feature: 'reels-transcription'`, `model: 'openai/gpt-4o-transcribe'`;
+  - cost = billed audio seconds × $0.006 a minute (gpt-4o-mini-transcribe: $0.003).
+- That path also goes through `aiSpendGate`. The free Groq Whisper path is unchanged and not logged, so it never counts against the hourly call cap.
+
+### 7. Tests
+- `scripts/test-ai-guardrails.mjs` (`npm run test:ai-guardrails`, now part of `npm test`) covers:
+  - prices;
+  - kill switches;
+  - economy mode;
+  - team cap;
+  - fail open with a warning, and fail closed;
+  - every handler's team-limit and feature-off replies;
+  - the `logUsage` columns before and after the migration;
+  - cache hints;
+  - the Generate prefix;
+  - alerts with a mocked webhook (thresholds, once per week, deduped across servers, real time);
+  - the cron secret, including the Vercel adapter;
+  - Reels usage logging;
+  - `/api/ai-status`;
+  - the dashboard summary;
+  - the migration.
+- Every network call is mocked, so no real Slack message, AI call or Supabase write is ever made.
+
+### What the owner must do
+1. **Run** `supabase/migrations/20261118120000_ai_guardrails.sql`. Everything works before it, with the team cap failing open, no cache columns and no alerts.
+2. **In the Vercel Enterprise project** (the one that serves frameup.essentiallysports.com), set:
+   - `AI_TEAM_WEEKLY_LIMIT_USD` (suggested **$60**; off until set);
+   - `SLACK_AI_ALERTS_WEBHOOK_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET` (any long random string);
+   - optionally `AI_FAIL_CLOSED`, `AI_DISABLE` and `AI_ECONOMY`.
+
+   Then redeploy.
+3. **The new cron runs once a day** (allowed on every Vercel plan, the Hobby copy included). Real-time alerts cover the time between runs.
+
+### Every AI environment variable
+
+| Variable | Default | What it does |
+|---|---|---|
+| `AI_GATEWAY_API_KEY` | none (AI off) | Vercel AI Gateway key for every AI feature |
+| `GENERATE_AI` | auto | `rules` turns the Gateway off everywhere; `groq` / `openai` pick Generate's provider |
+| `AI_LIGHT_MODEL` | `openai/gpt-oss-20b` | `light` tier (Trends headlines, grammar) |
+| `AI_MAIN_MODEL` | `anthropic/claude-haiku-5.5` | `main` tier (Generate writer, Video Ads, photo pick) |
+| `AI_SEARCH_MODEL` | `anthropic/claude-haiku-5.5` | Web-search tier (Video Ads clip search) |
+| `AI_REVIEW_MODEL` | `openai/gpt-6-luna` | Generate's review model |
+| `AI_BEST_MODEL` | `anthropic/claude-sonnet-5.5` | `best` tier (director, escalation, "Best version") |
+| `AI_IMAGE_MODEL` | `bfl/flux-3-image-klein` | Scene images |
+| `GENERATE_DIRECTOR_MODEL` / `GENERATE_DIRECTOR_TIER` | `best` | Director tier (`main`/`haiku` for Haiku) |
+| `GENERATE_IMAGES` | on | `off` turns scene images off |
+| `GENERATE_IMAGE_HOURLY_LIMIT` | 12 | Scene images per person per hour, per server |
+| `AI_USER_HOURLY_LIMIT` | 120 | AI calls per person per hour (database-counted) |
+| `AI_USER_WEEKLY_LIMIT_USD` | **20** | Per-person weekly $ cap. A testing value: raise freely. `0` turns it off; an unreadable value keeps $20 |
+| **`AI_TEAM_WEEKLY_LIMIT_USD`** | off | **New.** Team weekly $ cap (Monday 00:00 UTC) |
+| **`AI_FAIL_CLOSED`** | off | **New.** `1` blocks AI when spend can't be read; otherwise it fails open with a warning event |
+| **`AI_DISABLE`** (alias `AI_DISABLE_FEATURES`) | none | **New.** Comma list of features or tasks to switch off; `all` for everything |
+| **`AI_ECONOMY`** | off | **New.** `1` routes `best` (Sonnet) to `main` (Haiku) |
+| **`SLACK_AI_ALERTS_WEBHOOK_URL`** | none | **New.** Slack incoming webhook for spend alerts |
+| **`SUPABASE_SERVICE_ROLE_KEY`** | none | **New.** Server only. Alerts read totals and claim alerts with it |
+| **`CRON_SECRET`** | none | **New.** Protects `/api/ai-budget-watch`; Vercel cron sends it |
+| `GROQ_API_KEY` | none | Free backup for Generate and Trends, and Reels Whisper |
+| `GROQ_GENERATE_MODEL` / `GROQ_FALLBACK_MODELS` / `GROQ_TITLES_MODEL` / `GROQ_TRANSCRIPTION_MODEL` | gpt-oss-120b / gpt-oss-20b,qwen / gpt-oss-20b / whisper-large-v3-turbo | Groq models |
+| `OPENAI_API_KEY` | none | Opt-in OpenAI (Reels transcription when no Groq; Generate with `GENERATE_USE_OPENAI=true`) |
+| `OPENAI_GENERATE_MODEL` / `OPENAI_TRANSCRIPTION_MODEL` | gpt-4.1-mini / gpt-4o-transcribe | OpenAI models |
+| `X_BEARER_TOKEN` | none | X API for Video Ads clip search (instead of web search) |
+| `ES_MCP_*` | none | ES MCP research, intelligence and transcription tools (not billed per call) |
+
+---
+
 ## A. Current AI inventory
 
 ### A1. Prices used (USD per 1M tokens, from `_ai-gateway.js` `PRICES` / `IMAGE_PRICES`)
@@ -47,10 +185,10 @@ Written 2026-11-17 from the code on local `main` (plus the uncommitted Generate/
 | `main` | `anthropic/claude-haiku-5.5` | 0.10 / 0.50 | 0.01 / 0.125 | Thinking is adaptive by default; calls send `effort: 'low'` |
 | `search` | `anthropic/claude-haiku-5.5` + `web_search_20250305` | as main, plus **$0.01 per search** | | Search results come back as input tokens (about 5–10k per search) |
 | `review` | `openai/gpt-6-luna` | 0.10 / 0.50 | none | Different model family on purpose |
-| `best` | `anthropic/claude-sonnet-5.5` | 2 / 10 | 0.20 / 2.5 | Anthropic's list price for Sonnet 5.5 cache reads is $0.10. Check the Gateway's price and fix `PRICES` if it is lower |
+| `best` | `anthropic/claude-sonnet-5.5` | 2 / 10 | 0.10 / 2.5 | Fixed 2026-11-18: `PRICES` had cache reads at $0.20; Anthropic's list price is $0.10 |
 | `image` | `bfl/flux-3-image-klein` | $0.011 per image | | |
 | backup | Groq gpt-oss-120b / 20b / qwen, Whisper | $0 (free tier) | | Logged as `<feature>-backup` with cost 0 |
-| outside Gateway | OpenAI `gpt-4o-transcribe` (Reels) | about $0.006 per audio minute | | Only if `OPENAI_API_KEY` is set. **Not logged** to `frameup_ai_usage` |
+| outside Gateway | OpenAI `gpt-4o-transcribe` (Reels) | about $0.006 per audio minute | | Only if `OPENAI_API_KEY` is set. Logged to `frameup_ai_usage` since 2026-11-18 (`reels-transcription`) |
 
 ### A2. Every AI call in the product
 

@@ -2274,6 +2274,9 @@ body.dashboard-page .dov-chart .chart-x-label:last-child { transform: translateX
 /* ---- AI usage ---- */
 body.dashboard-page .dov-ai-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--es-space-6); }
 body.dashboard-page .dov-ai-stats li { display: grid; gap: var(--es-space-1); min-width: 0; }
+body.dashboard-page .dov-ai-stats.is-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+body.dashboard-page :is(.dov-ai-stats, .dov-budget-head) .dov-cell-meta { white-space: normal; overflow: visible; text-overflow: clip; min-width: 0; }
+body.dashboard-page .dov-budget-head .dov-pill { max-width: 100%; white-space: normal; text-align: left; }
 body.dashboard-page .dov-stat-big { color: var(--dov-ink); font: 700 28px/1.15 var(--es-font-ui); font-variant-numeric: tabular-nums; }
 body.dashboard-page .dov-budget { display: grid; gap: var(--es-space-2); margin-top: var(--es-space-5); }
 body.dashboard-page .dov-budget-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2) var(--es-space-3); }
@@ -2325,6 +2328,7 @@ body.dashboard-page .dov-skel.is-chart .dov-skel-row { background: var(--dov-sof
 }
 @media (max-width: 1179px) {
   body.dashboard-page .dov-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.dashboard-page .dov-ai-stats.is-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 899px) {
   body.dashboard-page .dov-grid.is-1-1 { grid-template-columns: minmax(0, 1fr); }
@@ -2391,7 +2395,8 @@ body.dashboard-page .dov-skel.is-chart .dov-skel-row { background: var(--dov-sof
   body.dashboard-page :is(.dov-list-item, .dov-feed-item) { padding-inline: var(--es-space-4); }
   body.dashboard-page .dov-stats { padding-inline: var(--es-space-4); }
   body.dashboard-page .dov-strip-cells { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  body.dashboard-page .dov-ai-stats { grid-template-columns: minmax(0, 1fr); gap: var(--es-space-4); }
+  body.dashboard-page .dov-ai-stats,
+  body.dashboard-page .dov-ai-stats.is-4 { grid-template-columns: minmax(0, 1fr); gap: var(--es-space-4); }
   body.dashboard-page .dov-list-item:has(.dov-actions) { flex-wrap: wrap; }
   body.dashboard-page .dov-list-item .dov-actions { margin-left: 44px; }
 }

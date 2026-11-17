@@ -11,6 +11,7 @@
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261115-auth2"></script>
   <script src="dashboard-data.js?v=20261118-requests-slack"></script>
+  <script src="ai-usage-summary.js?v=20261118-ai-guardrails"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -442,7 +443,7 @@
   </style>
   <link rel="stylesheet" href="dashboard-v2.css?v=20261117-focus1">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
-  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261117-ready1">
+  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261118-ai-guardrails">
 <link rel="stylesheet" href="theme.css?v=20261117-ready1">
   <link rel="stylesheet" href="site-chrome.css?v=20261117-ready1">
 <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
@@ -669,7 +670,7 @@
               <h2 class="dov-section-title es-type-section" id="dov-ai-title">AI usage</h2>
               <article class="dov-card">
                 <header class="dov-card-head">
-                  <div><h3 class="dov-card-title es-type-card-title">AI spend · last 7 days</h3><p class="dov-card-meta">Headline ideas, Generate and image calls against the $20 weekly key limit</p></div>
+                  <div><h3 class="dov-card-title es-type-card-title">AI spend · this week</h3><p class="dov-card-meta">Since Monday 00:00 UTC: team total against the team cap, top people and features, cost per export, cache hits and Sonnet share</p></div>
                 </header>
                 <div class="dov-card-body" id="ai-spend"></div>
               </article>
@@ -2137,67 +2138,87 @@
       </table>`);
     }
 
-    // AI spend: rolling 7 days vs the key's $20 weekly limit (set by the dev team in Vercel).
-    const AI_WEEKLY_BUDGET = 20;
-    const AI_FEATURE_LABELS = { 'trend-headlines': 'Trend Design headlines', generate: 'Generate', 'generate-backup': 'Generate (backup AI)', 'trend-headlines-backup': 'Trend Design headlines (backup AI)', 'generate-photo-pick': 'Photo picking', 'generate-director': 'Generate creative director', 'trend-enrich': 'Trends AI angles', 'trend-enrich-backup': 'Trends AI angles (backup AI)', 'video-ads-find-clips': 'Video Ads clip search', 'photo-pick': 'Photo picking', 'generate-scene-image': 'Image generation', 'image-gen': 'Image generation' };
+    // AI spend this week (Monday 00:00 UTC, the week the caps count) against the
+    // team cap from /api/ai-status (AI_TEAM_WEEKLY_LIMIT_USD). Totals come from
+    // ai-usage-summary.js; caps and switches from the server.
+    const AI_FEATURE_LABELS = { 'trend-headlines': 'Trend Design headlines', generate: 'Generate', 'generate-photo-pick': 'Photo picking', 'generate-director': 'Generate creative director', 'generate-review': 'Generate review', 'generate-escalate': 'Generate escalation', 'trend-enrich': 'Trends AI angles', 'video-ads-find-clips': 'Video Ads clip search', 'video-ads-moments-with-clips': 'Video Ads moments', 'video-ads-copy': 'Video Ads copy', 'video-ads-chat': 'Video Ads assistant', 'video-ads-grammar': 'Video Ads grammar', 'video-ads-rating': 'Ad rating', 'reels-transcription': 'Reels captions', 'photo-pick': 'Photo picking', 'generate-scene-image': 'Image generation', 'image-gen': 'Image generation' };
+    const aiFeatureLabel = key => AI_FEATURE_LABELS[key] || (/^generate-rewrite-/.test(key) ? 'Generate rewrites' : key);
     const money = value => '$' + (value >= 1 ? value.toFixed(2) : value.toFixed(value >= 0.01 ? 3 : value > 0 ? 4 : 2));
+    const pctText = value => (value == null ? '—' : `${value < 0.1 && value > 0 ? (value * 100).toFixed(1) : Math.round(value * 100)}%`);
     const AI_REFRESH_MS = 60000;
     let aiSpendLoading = false;
-    let aiSpendCache = null; // { at, ready, rows } | { at, error: true }
+    let aiSpendCache = null; // { at, ready, rows, measured, guard } | { at, error: true }
+    let aiOverviewState = null; // the latest overview state, for exports this week
+
+    // Guardrail settings (caps, switched-off features). null when unavailable.
+    async function fetchAiGuard() {
+      const fetcher = window.ESAuth?.fetchWithAuth;
+      if (!fetcher) return null;
+      try {
+        const response = await fetcher('/api/ai-status');
+        const data = await response.json().catch(() => null);
+        return response.ok && data?.ok ? data : null;
+      } catch (error) {
+        return null;
+      }
+    }
 
     function aiSpendMarkup(cache) {
       if (!cache) return skeletonRows(3);
       if (cache.error) return errorState('AI spend couldn’t load right now.');
       if (!cache.ready) return emptyState('AI usage tracking isn’t switched on yet', 'The usage table hasn’t been created in Supabase.');
-      const rows = cache.rows;
-      const total = rows.reduce((sum, row) => sum + Number(row.cost_usd || 0), 0);
-      const calls = rows.length;
-      const failed = rows.filter(row => row.ok === false).length;
-      const pct = Math.min(100, (total / AI_WEEKLY_BUDGET) * 100);
-      const level = pct >= 100 ? ['bad', 'Limit reached'] : pct >= 80 ? ['warn', 'Near the limit'] : ['good', 'Within the limit'];
+      const guard = cache.guard;
+      const weekStart = window.ESAIUsageSummary.weekStartUtc().getTime();
+      const exportsThisWeek = aiOverviewState ? exportsBetween(allExports(aiOverviewState), weekStart, Date.now() + 60000).length : 0;
+      const s = window.ESAIUsageSummary.summarize(cache.rows, {
+        exports: exportsThisWeek,
+        teamLimit: Number(guard?.teamWeeklyLimitUsd) || 0,
+        userLimit: Number(guard?.userWeeklyLimitUsd) || 0,
+      });
+      const teamPct = s.teamShare == null ? null : Math.min(100, s.teamShare * 100);
+      const level = teamPct == null ? null : teamPct >= 100 ? ['bad', 'Team cap reached'] : teamPct >= 80 ? ['warn', 'Near the team cap'] : ['good', 'Within the team cap'];
+      const switches = [
+        ...(guard?.disabled || []).map(name => pill(`Off: ${aiFeatureLabel(name)}`, 'warn')),
+        guard?.economy ? pill('Economy mode on', 'info') : '',
+        guard?.failClosed ? pill('Fails closed', 'info') : '',
+      ].filter(Boolean).join('');
       const summary = `
-        <ul class="dov-ai-stats">
-          <li><span class="dov-eyebrow">Spent</span><span class="dov-stat-big">${money(total)}</span><span class="dov-cell-meta">of ${money(AI_WEEKLY_BUDGET)} weekly limit</span></li>
-          <li><span class="dov-eyebrow">AI calls</span><span class="dov-stat-big">${fmt(calls)}</span><span class="dov-cell-meta">${failed ? `${fmt(failed)} failed` : 'None failed'}</span></li>
-          <li><span class="dov-eyebrow">Average per call</span><span class="dov-stat-big">${calls ? money(total / calls) : '—'}</span><span class="dov-cell-meta">List-price estimate</span></li>
+        <ul class="dov-ai-stats is-4">
+          <li><span class="dov-eyebrow">Team spend</span><span class="dov-stat-big">${money(s.total)}</span><span class="dov-cell-meta">${s.teamLimit ? `of ${money(s.teamLimit)} team cap` : 'No team cap set'} · ${fmt(s.calls)} call${s.calls === 1 ? '' : 's'}${s.failed ? `, ${fmt(s.failed)} failed` : ''}</span></li>
+          <li><span class="dov-eyebrow">Cost per export</span><span class="dov-stat-big">${s.costPerExport == null ? '—' : money(s.costPerExport)}</span><span class="dov-cell-meta">${fmt(s.exports)} export${s.exports === 1 ? '' : 's'} this week${s.costPerRun == null ? '' : ` · ${money(s.costPerRun)} per Generate run`}</span></li>
+          <li><span class="dov-eyebrow">Cache hit rate</span><span class="dov-stat-big">${pctText(s.cacheHitRate)}</span><span class="dov-cell-meta">${s.cacheMeasured ? 'Cached share of Claude prompt tokens' : s.calls ? 'Measured once the guardrails migration runs' : 'No Claude calls yet'}</span></li>
+          <li><span class="dov-eyebrow">Sonnet share</span><span class="dov-stat-big">${pctText(s.sonnetShare)}</span><span class="dov-cell-meta">Of this week’s AI spend</span></li>
         </ul>
         <div class="dov-budget">
-          <p class="dov-budget-head">${pill(level[1], level[0])}<span class="dov-cell-meta">${Math.round(pct)}% of the weekly limit used</span></p>
-          <span class="dov-meter is-${level[0]}" role="meter" aria-label="Share of the weekly AI limit used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><span style="width:${pct.toFixed(1)}%"></span></span>
+          <p class="dov-budget-head">${level ? `${pill(level[1], level[0])}<span class="dov-cell-meta">${Math.round(s.teamShare * 100)}% of the ${money(s.teamLimit)} team cap used · resets Monday</span>` : `${pill('No team cap', 'neutral')}<span class="dov-cell-meta">${guard ? 'Set AI_TEAM_WEEKLY_LIMIT_USD in Vercel to cap the team’s weekly AI spend.' : 'Cap settings couldn’t load.'}</span>`}${s.usersNearCap ? pill(`${s.usersNearCap} ${s.usersNearCap === 1 ? 'person' : 'people'} at 80%+ of their cap`, 'warn') : ''}${switches}</p>
+          ${level ? `<span class="dov-meter is-${level[0]}" role="meter" aria-label="Share of the team's weekly AI cap used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(teamPct)}"><span style="width:${teamPct.toFixed(1)}%"></span></span>` : ''}
         </div>`;
-      if (!calls) return summary + emptyState('No AI calls in the last 7 days', 'Generate, Trends headlines and image calls appear here once someone uses them.');
-      const group = key => {
-        const map = new Map();
-        rows.forEach(row => {
-          const label = key(row) || 'Unknown';
-          const entry = map.get(label) || { label, cost: 0, count: 0 };
-          entry.cost += Number(row.cost_usd || 0);
-          entry.count += 1;
-          map.set(label, entry);
-        });
-        return Array.from(map.values()).sort((a, b) => b.cost - a.cost || b.count - a.count).slice(0, 5)
-          .map(entry => ({ ...entry, meta: `${fmt(entry.count)} call${entry.count === 1 ? '' : 's'}`, count: entry.cost }));
-      };
+      if (!s.calls) return summary + emptyState('No AI calls this week yet', 'Generate, Video Ads, Trends and image calls appear here once someone uses them.');
+      const bars = (list, label, meta) => list.map(entry => ({ label: label(entry), meta: meta(entry), count: entry.cost }));
+      const callsMeta = entry => `${fmt(entry.calls)} call${entry.calls === 1 ? '' : 's'}`;
       const block = (title, list) => `<div class="dov-ai-group"><h4 class="dov-eyebrow es-type-eyebrow">${escapeHtml(title)}</h4>${barList(list, { valueText: row => money(row.count) })}</div>`;
       return summary + `<div class="dov-ai-groups">
-          ${block('By feature', group(row => AI_FEATURE_LABELS[row.feature] || row.feature))}
-          ${block('By model', group(row => String(row.model || '').replace(/^[a-z-]+\//, '')))}
-          ${block('By person', group(row => personDisplayName('', row.user_email)))}
+          ${block('Top features', bars(s.features, entry => aiFeatureLabel(entry.key), callsMeta))}
+          ${block('Top people', bars(s.users, entry => personDisplayName('', entry.key), entry => (entry.shareOfCap == null ? callsMeta(entry) : `${callsMeta(entry)} · ${pctText(entry.shareOfCap)} of their cap`)))}
+          ${block('By model', bars(s.models, entry => entry.key, callsMeta))}
         </div>
-        <p class="dov-note">Costs are worked out from token counts at list prices, so they can differ slightly from the Vercel bill. When the weekly limit is used up, FrameUp falls back to its free drafts until it resets.</p>`;
+        <p class="dov-note">Costs are worked out from token counts at list prices, so they can differ slightly from the Vercel bill. Each person’s cap is ${guard?.userWeeklyLimitUsd ? money(Number(guard.userWeeklyLimitUsd)) : 'set in Vercel'} a week; when a cap is reached FrameUp says so calmly and the free drafts keep working.</p>`;
     }
 
     async function renderAiSpend({ force = false } = {}) {
       const target = document.getElementById('ai-spend');
-      if (!target || !window.ESDashboardData.fetchAiUsage) return;
+      if (!target || !window.ESDashboardData.fetchAiUsage || !window.ESAIUsageSummary) return;
       setHtml(target, aiSpendMarkup(aiSpendCache));
       const fresh = aiSpendCache && Date.now() - aiSpendCache.at < AI_REFRESH_MS;
       if (aiSpendLoading || (fresh && !force)) return;
       aiSpendLoading = true;
       try {
-        const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-        const { rows, ready } = await window.ESDashboardData.fetchAiUsage({ sinceIso: since });
-        aiSpendCache = { at: Date.now(), ready, rows: rows || [] };
+        const since = window.ESAIUsageSummary.weekStartUtc().toISOString();
+        const [usage, guard] = await Promise.all([
+          window.ESDashboardData.fetchAiUsage({ sinceIso: since }),
+          fetchAiGuard(),
+        ]);
+        aiSpendCache = { at: Date.now(), ready: usage.ready, rows: usage.rows || [], measured: Boolean(usage.measured), guard };
       } catch (error) {
         console.warn('[ai spend]', error);
         aiSpendCache = { at: Date.now(), error: true };
@@ -2287,6 +2308,7 @@
     }
 
     function renderOverview(state) {
+      aiOverviewState = state;
       const phase = overviewPhase(state);
       if (phase === 'loading' || phase === 'error') {
         ['#dov-trend-meta', '#dov-exports-meta', '#dov-queue-meta', '#dov-feedback-meta', '#live-summary', '#dov-workspace-meta', '#dov-templates-meta']
