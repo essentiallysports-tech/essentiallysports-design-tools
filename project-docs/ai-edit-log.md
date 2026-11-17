@@ -96,6 +96,31 @@ and what's still uncommitted.
 - **Dashboard**: status filter (incl. Open/Declined), Declined column only when needed, "History and comments" link in the task drawer, Declined no longer counted as open, edits ask the server to post to the Slack thread.
 - Tests: `scripts/test-request-workflow.mjs` (33 checks, fetch mocked; no real Slack).
 
+### 2026-11-18 — Reliability: cloud drafts, error reports, /api/health, shell-first loading (branch `feature/reliability-drafts`)
+- Status: `[committed on feature/reliability-drafts — not pushed, not merged]`
+- Brief: research "Trust and truth" item 1 (§4.1) + launch-readiness P1 #1 (blank main area for 1–4 s).
+- **Cloud drafts** (`frameup-cloud-drafts.js`, new; hooks in `frameup-autosave.js` / `frameup-designs.js`; one script line in `index.html`):
+  - each confirmed local autosave fires `frameup:autosaved`;
+  - the web-photo-only snapshot is upserted to `frameup_drafts` (key `editor`) about 20 s later, and on tab hide, close or reconnect;
+  - exports sync too (`design:<id>`);
+  - **conflicts:** last write wins, but a newer save from another device asks first ("A newer version is on another device": Keep this one / Open the newer one); an empty editor just opens the newer draft;
+  - **safety:** local stays the source of truth; offline and signed-out saves wait; >400 KB is skipped; a missing table switches the feature off for the page load;
+  - "Your drafts" section added to the Recent designs dialog.
+- **Error reports** (`frameup-errors.js`, new, first script on every signed-in page):
+  - catches `window.onerror`, `unhandledrejection`, script/CSS load failures, and `/api/*` fetches that return 5xx/404 or get no response;
+  - scrubbed (emails, tokens, keys, passwords, query strings), deduped, max 5/min and 20/page, batched;
+  - goes to `POST /api/client-errors` (new; auth required, 401/413, per-user backstop, writes `frameup_client_errors` with the user's token, optional Sentry forward when `SENTRY_DSN` is set, hashed user id);
+  - Dashboard → Overview → **Errors** panel: last 7 days, grouped, stack on click.
+- **Uptime:** `GET /api/health` (new; no auth, no secrets) checks Supabase `/auth/v1/health` plus the AI gateway configured flag. Optional Slack alert on state change, only for callers with `CRON_SECRET`, when `SLACK_OPS_WEBHOOK_URL` is set. Setup steps are in `project-docs/uptime-and-errors.md`.
+- **Blank-page delay:**
+  - **Cause:** `ESAuth.requireAuth` hides the whole `<html>` until the Supabase SDK downloads and the session check finishes.
+  - **Fix on Generate, Video Ads and Gallery:** new `frameup-shell-first.js` shows the shell and a skeleton at once and keeps `#main`, the account name and AI usage hidden (and unclickable) until `es:auth-ready`. Auth itself is unchanged; the auth script isn't edited.
+  - **Fix on Dashboard:** skeletons and "—" KPIs paint before the auth/admin checks; it used to show "0"s and empty cards.
+  - **Measured** (local, SDK held back 1.5 s): shell visible at 1.5–3.0 s before, 26–46 ms after; content appears at auth-ready (~1.5 s), as before.
+- Also: P1 #3, the Reels phone Export now mirrors the desktop button's disabled state.
+- Migrations (owner runs): `20261118120000_frameup_drafts.sql`, `20261118120100_frameup_client_errors.sql`.
+- New env vars (all optional): `SENTRY_DSN`, `CRON_SECRET`, `SLACK_OPS_WEBHOOK_URL`.
+- Tests: `scripts/test-cloud-drafts.mjs`, `test-client-errors.mjs`, `test-health.mjs`, `test-reliability-wiring.mjs`.
 
 ### 2026-09-10 — Fix a regression from this same day's earlier fixes: concurrent profile upsert race
 - Status: `[pushed - see rollback point below]`

@@ -72,6 +72,8 @@
     "api/generate-direction-events.js": { "maxDuration": 15 },
     "api/impact-stats.js": { "maxDuration": 15 },
     "api/design-request-update.js": { "maxDuration": 15 },
-    "api/slack-command.js": { "maxDuration": 10 }
+    "api/slack-command.js": { "maxDuration": 10 },
+    "api/client-errors.js": { "maxDuration": 10 },
+    "api/health.js": { "maxDuration": 10 }
   }
 }

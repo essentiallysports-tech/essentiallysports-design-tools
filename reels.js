@@ -221,7 +221,18 @@
       button.addEventListener('click', toggleReelsMobileDetent);
     });
     document.querySelectorAll('[data-reels-mobile-export]').forEach(function (button) {
+      // The phone Export mirrors the desktop one: disabled until a clip is
+      // uploaded (it used to look ready and do nothing when tapped).
+      var syncDisabled = function () {
+        button.disabled = !!els.exportBtn.disabled;
+        button.title = els.exportBtn.disabled ? 'Upload a clip first' : '';
+      };
+      syncDisabled();
+      if (typeof MutationObserver === 'function') {
+        new MutationObserver(syncDisabled).observe(els.exportBtn, { attributes: true, attributeFilter: ['disabled'] });
+      }
       button.addEventListener('click', function () {
+        if (els.exportBtn.disabled) return;
         els.exportBtn.click();
       });
     });

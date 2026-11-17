@@ -1780,6 +1780,26 @@
     return { rows: data || [], ready: true };
   }
 
+  // Browser error reports (admins only), written by /api/client-errors.
+  // Returns { rows, ready }; ready is false until the frameup_client_errors
+  // migration has been applied.
+  async function fetchClientErrors({ sinceIso } = {}) {
+    const client = getSupabaseClient();
+    const session = await getAuthenticatedSession();
+    if (!client || !session?.user?.email) return { rows: [], ready: false };
+    let query = client.from('frameup_client_errors')
+      .select('created_at,user_email,kind,message,stack,page,source,line,col,status,fingerprint,occurrences,release')
+      .order('created_at', { ascending: false })
+      .limit(2000);
+    if (sinceIso) query = query.gte('created_at', sinceIso);
+    const { data, error } = await query;
+    if (error) {
+      console.warn('[client errors] frameup_client_errors read failed:', error.message || error);
+      return { rows: [], ready: false };
+    }
+    return { rows: data || [], ready: true };
+  }
+
   // The shareable copy of an exported design (text, settings, web photo
   // links), used by "Open in editor" in the Gallery.
   async function fetchGalleryDesign(id) {
@@ -1840,6 +1860,7 @@
     fetchGalleryPreview,
     fetchGalleryDesign,
     fetchAiUsage,
+    fetchClientErrors,
     fetchGalleryThumbs,
     emitDashboardChange,
   });
