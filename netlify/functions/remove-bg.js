@@ -292,6 +292,18 @@ function diagnostics(env = process.env) {
   };
 }
 
+// For the asset service (_asset-service.js, Generate's composer): one cut-out
+// MASK call with the same provider, model, quality and cost rules as the
+// editor's button. The caller must use only the alpha of the result, on the
+// original photo (frameup-assets.js does this in the browser).
+async function removeBackgroundMask(dataUrl, size, env = process.env) {
+  const image = parseImage(dataUrl);
+  if (image.error) throw Object.assign(new Error(image.error), { status: image.tooLarge ? 413 : 400 });
+  const chosen = SIZES.has(size) ? size : '1024x1024';
+  return provider(env) === 'bria' ? callBria(image, env) : callOpenAi(image, chosen, env);
+}
+exports.removeBackgroundMask = removeBackgroundMask;
+
 exports.handler = async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' }, body: '' };
   if (event.httpMethod !== 'GET' && event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed.' });

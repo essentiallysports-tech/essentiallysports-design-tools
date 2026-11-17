@@ -621,3 +621,7 @@ exports.handler = async function handler(event) {
     });
   }
 };
+
+// For the asset service (_asset-service.js findPhotos): the same searches and
+// host check, without the HTTP handler.
+exports._internals = { callMcpSearchImages, searchWordPressMedia, isAllowedImageUrl, getMcpConfigState };
