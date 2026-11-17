@@ -7,6 +7,9 @@
 //                                     mixed audio interleaved one second at a
 //                                     time; clips are seeked before each frame
 //   attachAudio(stream, ac, mix)      the MediaRecorder fallback's audio track
+//   renderStills(slides, opts)        carousel slides (1080x1350) -> PNG files
+//   exportStills(slides, opts)        the same, zipped (frameup-zip.js, no
+//                                     deflate: PNGs are already compressed)
 //
 // The audio mix (voice at 0 dB, music ducked 14 dB under it) is rendered once
 // by the page with an OfflineAudioContext and is the SAME buffer for preview,
@@ -72,5 +75,47 @@
     return src;
   }
 
-  return { mixPlan, sliceSecond, encodeMediabunny, attachAudio };
+  // ─── Carousel stills (data formats) ────────────────────────────────────
+  // slides: ReelRender.buildSlides(timeline) (one 1080x1350 timeline each).
+  // Each slide is drawn once its motion has landed (t = the slide's end),
+  // so the PNG is the settled design. opts (all optional in the browser):
+  //   R        ReelRender            env    the renderer env (images, measure)
+  //   canvas   a 1080x1350 canvas to reuse, or makeCanvas() -> canvas
+  //   names    file names (default 01-cover.png, 02-panel.png...)
+  //   onProgress(done, total)
+  const pad2 = n => String(n).padStart(2, '0');
+  const stillName = (s, i) => `${pad2(i + 1)}-${(s && s.slide && s.slide.kind) || 'slide'}.png`;
+  async function canvasBytes(canvas, type) {
+    if (typeof canvas.convertToBlob === 'function') return new Uint8Array(await (await canvas.convertToBlob({ type })).arrayBuffer());
+    const blob = await new Promise((resolve, reject) => canvas.toBlob(b => (b ? resolve(b) : reject(new Error('The slide could not be encoded.'))), type));
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+  async function renderStills(slides, opts = {}) {
+    const R = opts.R || (typeof self !== 'undefined' ? self.ReelRender : null);
+    const list = Array.isArray(slides) ? slides.slice(0, 20) : [];
+    if (!R || !list.length) throw new Error('No slides to export.');
+    const make = opts.makeCanvas || (() => { const c = document.createElement('canvas'); c.width = 1080; c.height = 1350; return c; });
+    const canvas = opts.canvas || make();
+    const ctx = canvas.getContext('2d');
+    const files = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const s = list[i];
+      ctx.clearRect(0, 0, 1080, 1350);
+      R.drawFrame(ctx, s, Math.max(0, (s.durationMs || 2400) - 1), opts.env || {});
+      const name = (opts.names && opts.names[i]) || stillName(s, i);
+      files.push({ name, data: await canvasBytes(canvas, opts.type || 'image/png'), date: opts.date || new Date() });
+      if (opts.onProgress) opts.onProgress(i + 1, list.length);
+    }
+    return files;
+  }
+  // -> a zip Blob (Uint8Array in Node, where Blob is optional).
+  async function exportStills(slides, opts = {}) {
+    const Zip = opts.Zip || (typeof self !== 'undefined' ? self.FrameUpZip : null);
+    const files = await renderStills(slides, opts);
+    if (!Zip) throw new Error('The zip writer is not loaded.');
+    const bytes = Zip.zip(files);
+    return typeof Blob !== 'undefined' ? new Blob([bytes], { type: 'application/zip' }) : bytes;
+  }
+
+  return { mixPlan, sliceSecond, encodeMediabunny, attachAudio, renderStills, exportStills, stillName };
 }));

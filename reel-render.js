@@ -28,16 +28,32 @@
 // cards, a "?" card, the end card) and block captions. Every layout is ops
 // with boxes, so the safe-zone test covers every style x every kind.
 //
+// Data formats (Phase 1, project-docs/reels-formats-contract.md §4): Game
+// Swing, Moment Replay and Archive build a v2 timeline (canvas, data block,
+// beat refs) and draw the play / wpline / moment / panel3 beats: scorebug,
+// game-clock tab, WP band or chart with the swing marker and the attribution
+// line, play card, year rail with stat rows and source chip, the 3-frame
+// strip. Every number they draw comes from timeline.data through a ref
+// (provenanceNumbers / unbackedNumbers back the lint). A 1080x1350 canvas
+// (ReelReplay.buildSlides) draws as a carousel slide. News formats keep the
+// v1 path byte-identical.
+//
 // Visuals: a shot's asset is a photo, an AI scene still, an uploaded image, a
 // video clip (env.videos[assetId], the page keeps it at clipTimes()), or a
 // team graphic tile. A shot with no asset draws the style's designed motion
 // background, so no slot is ever empty.
 (function (root, factory) {
   const node = typeof module === 'object' && module.exports;
-  const api = factory(node ? require('./video-ads-render.js') : root.VideoAdsRender, node ? require('./reel-formats.js') : root.ReelFormats, node ? require('./reel-styles.js') : root.ReelStyles);
+  const api = factory(
+    node ? require('./video-ads-render.js') : root.VideoAdsRender, node ? require('./reel-formats.js') : root.ReelFormats, node ? require('./reel-styles.js') : root.ReelStyles,
+    // Data formats (Phase 1): the v2 schema and the replay helpers. Optional
+    // in the browser (looked up again at call time), so a page that has not
+    // loaded them still renders every news reel as before.
+    node ? require('./reel-timeline.js') : root.ReelTimeline, node ? require('./reel-replay.js') : root.ReelReplay,
+  );
   if (node) module.exports = api;
   else root.ReelRender = api;
-}(typeof self !== 'undefined' ? self : this, (VA, F, S) => {
+}(typeof self !== 'undefined' ? self : this, (VA, F, S, T0, RP0) => {
   'use strict';
 
   const W = 1080;
@@ -248,9 +264,80 @@
     if (Array.isArray(raw.roles)) d.roles = cleanList(raw.roles, 4).map(r => ({ role: clean(r && r.role, 8), value: clean(r && r.value, 10), note: clean(r && r.note, 40), tone: r && r.tone === 'good' ? 'good' : 'bad' })).filter(r => r.role && r.value);
     return d;
   }
+  // ─── Data formats: build (Phase 1, contract §4) ─────────────────────────
+  // Lazy lookups so the page's script order does not matter.
+  const getT = () => T0 || (typeof self !== 'undefined' && self.ReelTimeline) || null;
+  const getRP = () => RP0 || (typeof self !== 'undefined' && self.ReelReplay) || null;
+  const DATA_TEMPLATES = new Set(['play', 'wpline', 'moment', 'panel3']);
+  const DATA_OPS = new Set(['score', 'circle', 'wpchart', 'panel', 'backdrop', 'shade', 'placeholder']);
+  // A data beat holds long enough for its own motion: the score count-up, the
+  // line drawing in, three panels arriving one by one.
+  const DATA_MIN_MS = { play: 3200, wpline: 3400, moment: 2800, panel3: 5600 };
+  const REF_OK = /^(play|wp|src|stat|photo|frame):[A-Za-z0-9_.-]{1,40}$/;
+  // Data mode: a data format, or a caller that passes a canvas or data.
+  function dataMode(fmt, plan, opts) {
+    const isData = (F.isDataFormat && F.isDataFormat(fmt)) || Boolean(opts.canvas || opts.data);
+    if (!isData) return null;
+    const p = plan || {};
+    const src = opts.data || p.data || {};
+    const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : null);
+    const data = { game: obj(src.game), athlete: obj(src.athlete), archive: obj(src.archive) };
+    const replay = obj(opts.replay) || obj(p.replay);
+    const c = opts.canvas || p.canvas || null;
+    const canvas = c && Number(c.w) === 1080 && Number(c.h) === 1350 ? { w: 1080, h: 1350 } : { w: W, h: H };
+    const fmtOutputs = (F.FORMATS[fmt] && F.FORMATS[fmt].outputs) || ['reel'];
+    const want = Array.isArray(opts.outputs) ? opts.outputs : (Array.isArray(p.outputs) ? p.outputs : fmtOutputs);
+    let outputs = want.filter(o => o === 'reel' || o === 'carousel');
+    if (canvas.h !== H) outputs = outputs.filter(o => o !== 'reel');
+    if (!outputs.length) outputs = canvas.h === H ? ['reel'] : ['carousel'];
+    const slides = Array.isArray(opts.slides) ? opts.slides : (Array.isArray(p.slides) ? p.slides : []);
+    return { data, replay, canvas, outputs, slides, ctx: { data, replay } };
+  }
+  function beatRefs(raw) {
+    const list = Array.isArray(raw && raw.refs) ? raw.refs : [];
+    return [...new Set(list.map(String).filter(r => REF_OK.test(r)))].slice(0, 8);
+  }
+  // A data kind stays only when its data resolves (the validator's rules);
+  // otherwise it degrades to a story point, never to an empty box.
+  function dataKind(raw, dm) {
+    const kind = raw && raw.kind;
+    if (F.KINDS.includes(kind)) return kind;
+    if (!F.DATA_KINDS || !F.DATA_KINDS.includes(kind)) return 'point';
+    const T = getT();
+    if (!T) return 'point';
+    const refs = beatRefs(raw);
+    const ok = type => refs.some(r => r.startsWith(`${type}:`) && T.resolveRef(dm.ctx, r));
+    const game = dm.data.game;
+    const hasWp = Boolean(game && game.wp && Array.isArray(game.wp.points) && game.wp.points.length && String(game.attribution || '').trim());
+    if (kind === 'play' && ok('play')) return 'play';
+    if (kind === 'wpline' && hasWp) return 'wpline';
+    if (kind === 'moment' && (ok('src') || ok('stat'))) return 'moment';
+    if (kind === 'panel3' && ok('frame')) return 'panel3';
+    return 'point';
+  }
+  // Panel captions a replay plan carries on its panel3 beat (frames[].caption, <= 6 words).
+  function frameCaptions(raw) {
+    const list = Array.isArray(raw && raw.frames) ? raw.frames : [];
+    const caps = {};
+    list.forEach(f => { if (f && ['setup', 'play', 'reaction'].includes(f.role) && f.caption) caps[f.role] = String(f.caption).replace(/\s+/g, ' ').trim().split(' ').slice(0, 6).join(' '); });
+    return Object.keys(caps).length ? { captions: caps } : {};
+  }
+  function toV2(tl, dm, plan) {
+    const clip = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+    const slides = dm.slides.slice(0, 20).map((sl, i) => ({ id: /^s\d{1,2}$/.test(String(sl && sl.id)) ? sl.id : `s${i + 1}`, kind: ['cover', 'panel', 'moment', 'data', 'cta'].includes(sl && sl.kind) ? sl.kind : 'panel', text: clip(sl && sl.text).slice(0, 140), ...(sl && sl.caption ? { caption: clip(sl.caption).slice(0, 80) } : {}), ...(sl && sl.asset ? { asset: clip(sl.asset).slice(0, 80) } : {}), ...(sl && sl.beat ? { beat: String(sl.beat) } : {}), refs: beatRefs(sl) }));
+    const v2 = { ...tl, v: 2, canvas: { ...dm.canvas }, size: [dm.canvas.w, dm.canvas.h], outputs: dm.outputs, data: dm.data, replay: dm.replay, slides };
+    void plan;
+    const T = getT();
+    return T ? T.normalizeTimeline(v2) : v2;
+  }
+
   function buildTimeline(plan, opts = {}) {
     const fmt = F.FORMATS[plan && plan.format] ? plan.format : 'explainer';
     const style = S.get(opts.style || (plan && plan.style));
+    // Data formats (Game Swing, Moment Replay, Archive) build a v2 timeline:
+    // the data block, beat refs and the data beat kinds. News formats take
+    // the v1 path below unchanged (byte-identical output, contract §8).
+    const dm = dataMode(fmt, plan, opts);
     const voice = opts.voice || {};
     const photos = opts.photos || {};
     const team = opts.team && opts.team.name ? { name: clean(opts.team.name, 80), colors: (opts.team.colors || []).filter(c => HEX6.test(String(c))).slice(0, 2), logo: opts.team.logo || '' } : null;
@@ -266,13 +353,15 @@
     const list = (plan && Array.isArray(plan.beats) ? plan.beats : []).slice(0, style.beats.max);
     list.forEach((raw, index) => {
       const id = clean(raw.id, 24) || `b${index + 1}`;
-      const kind = F.KINDS.includes(raw.kind) ? raw.kind : 'point';
+      const kind = dm ? dataKind(raw, dm) : (F.KINDS.includes(raw.kind) ? raw.kind : 'point');
       const vo = clean(raw.vo, 320);
       const v = voice[id] || null;
       const voMs = v && v.durationMs > 0 ? Math.round(v.durationMs) : F.estimateVoMs(vo);
       const lead = index === 0 ? F.PACE.voLeadMs : 120;
       const last = index === list.length - 1;
-      const min = F.PACE.beatMinMs[kind] || F.PACE.beatMinMs.default;
+      // Data plans (reel-data.js) carry holdMs: the beat's designed hold.
+      const hold = dm && Number(raw.holdMs) > 0 ? Math.max(1200, Math.min(7000, Math.round(Number(raw.holdMs)))) : 0;
+      const min = Math.max(hold, (dm && DATA_MIN_MS[kind]) || 0) || F.PACE.beatMinMs[kind] || F.PACE.beatMinMs.default;
       const dur = Math.max(min, voMs ? lead + voMs + (last ? F.PACE.endTailMs : F.PACE.tailMs) : min);
       const beat = {
         id, kind, inMs: t, outMs: t + dur,
@@ -285,6 +374,7 @@
         photo: clean(raw.photo, 80), visual: F.VISUALS.includes(raw.visual) ? raw.visual : '',
         ...componentData(raw, id, photos, assets),
       };
+      if (dm) beat.refs = beatRefs(raw);
       beats.push(beat);
 
       // Shots: a beat longer than shotMaxMs gets a second (or third) shot, so
@@ -317,10 +407,10 @@
         });
       }
 
-      const layout = style.layouts[kind] || 'headline-visual';
+      const layout = (dm && DATA_TEMPLATES.has(kind) ? kind : style.layouts[kind]) || 'headline-visual';
       graphics.push({
         id: `${id}g`, beat: id, template: layout === 'legacy' ? (TEMPLATE_FOR[kind] || 'text') : layout, kind, inMs: t, outMs: t + dur, index,
-        data: { text: beat.text, emphasis: beat.emphasis, label: beat.label, stat: beat.stat, rank: beat.rank, name: beat.name, detail: beat.detail, quote: beat.quote, visual: beat.visual, ...componentData(raw, id, photos, assets) },
+        data: { text: beat.text, emphasis: beat.emphasis, label: beat.label, stat: beat.stat, rank: beat.rank, name: beat.name, detail: beat.detail, quote: beat.quote, visual: beat.visual, ...componentData(raw, id, photos, assets), ...(dm ? { refs: beat.refs, ...frameCaptions(raw) } : {}) },
       });
 
       if (vo) {
@@ -371,7 +461,7 @@
     const highlight = accessibleHighlight(team ? team.colors : []);
     const cards = captionCards(words, { style: captionStyle === 'box' ? 'box' : 'highlight' });
     const sx = plan && plan.strip && plan.strip.value ? { label: clean(plan.strip.label, 32), value: clean(plan.strip.value, 14), of: clean(plan.strip.of, 14), note: clean(plan.strip.note, 48), tone: plan.strip.tone === 'good' ? 'good' : 'bad' } : null;
-    return {
+    const out = {
       v: 1, fps: FPS, size: [W, H], durationMs,
       format: fmt, tag: F.FORMATS[fmt].tag, sport: clean(plan && plan.sport, 12), title: clean(plan && plan.title, 140),
       style: style.id, limits: { maxSeconds: style.seconds.max, targetSeconds: style.seconds.target },
@@ -384,6 +474,7 @@
       sources: (opts.sources || []).slice(0, 20),
       corpus: String(opts.corpus || '').slice(0, 12000),
     };
+    return dm ? toV2(out, dm, plan) : out;
   }
 
   // ─── What is on screen at t (pure; the timing tests read this) ─────────
@@ -496,6 +587,7 @@
   // Ops for one graphic. Boxes: every op has x, y (baseline), w, size, so a
   // box is [x, y - size*CAP, w, size*CAP] (what the lint checks against SAFE).
   function layoutGraphic(measure, graphic, timeline = {}) {
+    if (SLIDE_TEMPLATES.has(graphic.template)) return layoutSlide(measure, graphic, { style: 'classic', tracks: { video: [] }, beats: [], ...timeline });
     if (S.LAYOUTS.includes(graphic.template) && graphic.template !== 'legacy') return layoutStyled(measure, graphic, { style: 'classic', tracks: { video: [] }, beats: [], ...timeline });
     const d = graphic.data || {};
     const m = upperMeasure(measure);
@@ -626,6 +718,7 @@
   function allBoxes(measure, timeline) {
     const out = [];
     const add = (beat, op) => {
+      if (op.noBox) return;
       if (op.type === 'word' || op.type === 'count' || op.type === 'text') out.push({ beat, role: op.role, text: op.text, x: op.x, y: op.y - op.size * CAP, w: op.w, h: op.size * CAP });
       else if (op.type === 'dotring') out.push({ beat, role: op.role, x: op.cx - op.r1 - 3, y: op.cy - op.r1 - 3, w: op.r1 * 2 + 6, h: op.r1 * 2 + 6 });
       else if (op.w != null && op.h != null && op.type !== 'mark') out.push({ beat, role: op.role, x: op.x, y: op.y, w: op.w, h: op.h });
@@ -1017,6 +1110,9 @@
   }
   // Where the brand sits on each beat (the lint and the tests read this).
   function logoPlacements(timeline) {
+    if (timeline && timeline.canvas && Number(timeline.canvas.h) === 1350) {
+      return (timeline.tracks.graphics || []).map(g => ({ beat: g.beat, kind: 'mark', x: SLIDE_MARK.x, y: SLIDE_MARK.y, w: SLIDE_MARK.w, h: SLIDE_MARK.h, clear: SLIDE_MARK.clear, endcard: g.template === 'slide-cta', slide: true }));
+    }
     return (timeline.tracks.graphics || []).map(g => ({
       beat: g.beat, kind: 'mark', x: ES_MARK.x, y: ES_MARK.y, w: ES_MARK.w, h: ES_MARK.h, clear: ES_MARK.clear,
       endcard: g.template === 'cta' || g.template === 'endcard',
@@ -1036,12 +1132,14 @@
   // track: letter spacing in px (labels and chips read better a little open);
   // widths include it, so boxes stay honest.
   const tracked = (measure, t, f, track) => measure(t, f) + (track ? track * Math.max(0, t.length - 1) : 0);
-  function textOp(measure, text, family, weight, size, x, y, { color = 'ink', role = 'text', upper = true, delay = 0, anim, bg, align = 'left', width, track = 0 } = {}) {
+  function textOp(measure, text, family, weight, size, x, y, { color = 'ink', role = 'text', upper = true, delay = 0, anim, bg, align = 'left', width, track = 0, refs = null } = {}) {
     const t = upper ? String(text).toUpperCase() : String(text);
     const f = font(weight, size, family);
     const w = tracked(measure, t, f, track);
     const x0 = align === 'center' ? (width != null ? x + (width - w) / 2 : x - w / 2) : (align === 'right' ? x - w : x);
-    return { type: 'text', role, text: t, font: f, size, x: x0, y, w, color, delay, anim, bg, track };
+    const op = { type: 'text', role, text: t, font: f, size, x: x0, y, w, color, delay, anim, bg, track };
+    if (refs) op.refs = refs; // data formats: the refs a number on screen comes from
+    return op;
   }
   function chipOp(measure, text, x, y, { fill = 'chip', ink = 'chipInk', size = 24, h = 44, role = 'chip', delay = 0, anim } = {}) {
     const t = String(text).toUpperCase();
@@ -1149,6 +1247,7 @@
   }
 
   function layoutStyled(measure, graphic, timeline) {
+    if (DATA_TEMPLATES.has(graphic.template)) return layoutData(measure, graphic, timeline);
     const style = S.get(timeline.style);
     const d = graphic.data || {};
     const ops = [];
@@ -1389,6 +1488,8 @@
     // The ES mark (drawn last by drawEsMark; listed here for the boxes).
     const ops = [{ type: 'esmark', role: 'es-mark', x: ES_MARK.x, y: ES_MARK.y, w: ES_MARK.w, h: ES_MARK.h }];
     if (style.engine === 'classic') return ops;
+    // Data beats own the top of the frame (scorebug, panel header, year rail).
+    if (frame && frame.graphic && DATA_TEMPLATES.has(frame.graphic.template)) return ops;
     const c = style.chrome;
     const beside = LOGO_CLEAR.left - G.left; // the width left of the logo's clear space
     if (c.seriesTag && timeline.series) ops.push(...chipOp(measure, timeline.series.tag, G.left, G.top + 10, { fill: 'chip', ink: 'chipInk', size: 24, h: 44, role: 'series-tag' }));
@@ -1465,6 +1566,997 @@
       y += boxH + gap;
     });
     return { style: 'block', ops, box: null };
+  }
+
+  // ─── Data formats: layout (Game Swing, Moment Replay, Archive) ──────────
+  // Every element is ops with boxes, like the styled layouts, so the safe-zone
+  // and logo tests cover them. Every number an op shows comes from the
+  // timeline's data through a ref (op.refs); the lint re-derives the allowed
+  // numbers from those refs (provenanceNumbers) and blocks anything else.
+  // Nothing here reads the model's text for a number: score, clock, down and
+  // distance, WP percentages, years and stat values are the digest's or
+  // ESPN's own strings.
+  const canvasOf = tl => (tl && tl.canvas && Number(tl.canvas.h) === 1350 ? { w: 1080, h: 1350 } : { w: W, h: H });
+  // The ES mark on a 4:5 slide: top-right inside the 60 px margin, the same
+  // size and clear space as on the reel.
+  const SLIDE_MARK = { w: ES_MARK.w, h: ES_MARK.h, x: 1080 - 60 - ES_MARK.w, y: 60, clear: ES_MARK.clear };
+  const SLIDE_SAFE = { left: 60, right: 1020, top: 60, bottom: 1290 };
+  const SLIDE_TEMPLATES = new Set(['slide-cover', 'slide-panel', 'slide-moment', 'slide-data', 'slide-cta']);
+  const pct = v => Math.round(Number(v) * 100);
+  const NEUTRAL_TEAM = '#4A5260';
+  const rgbOf = hex => { const m = String(hex).match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i); return m ? m.slice(1).map(x => parseInt(x, 16)) : [0, 0, 0]; };
+  const rgbDistance = (a, b) => { const x = rgbOf(a); const y = rgbOf(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]); };
+  const INK_DARK = '#111214';
+  function resolvedRefs(tl, refs) {
+    const T = getT();
+    const out = { play: [], wp: [], src: [], stat: [], photo: [], frame: [] };
+    if (!T) return out;
+    (refs || []).forEach(ref => {
+      const r = T.parseRef(ref);
+      const v = r ? T.resolveRef(tl, ref) : null;
+      if (r && v) out[r.type].push({ ref, id: r.id, v });
+    });
+    return out;
+  }
+  const gameOf = tl => (tl && tl.data && tl.data.game && tl.data.game.teams ? tl.data.game : null);
+  const wpPoints = game => (game && game.wp && Array.isArray(game.wp.points) ? game.wp.points.filter(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])) : []);
+  const hasWp = tl => { const g = gameOf(tl); return Boolean(g && wpPoints(g).length && String(g.attribution || '').trim()); };
+  // Q1-Q4, OT, 2OT (football); TOP 9 / BOT 9 (baseball).
+  function periodLabel(game, play) {
+    if (!play || !Number.isInteger(play.period)) return '';
+    if ((game && game.sport === 'mlb') || play.half) return `${play.half === 'bottom' ? 'BOT' : 'TOP'} ${play.period}`;
+    if (play.period <= 4) return `Q${play.period}`;
+    return play.period === 5 ? 'OT' : `${play.period - 4}OT`;
+  }
+  // White or near-black, whichever reads better on a colour.
+  const bestInk = c => (!HEX6.test(String(c)) ? WHITE : (contrast(WHITE, c) >= contrast(INK_DARK, c) ? WHITE : INK_DARK));
+  const normName = v => String(v || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+  // A team's colours: the digest's, else the reel's team when the names match.
+  function teamColours(tl, side) {
+    const game = gameOf(tl);
+    const t = game && game.teams[side];
+    const list = (t && Array.isArray(t.colors) ? t.colors : []).filter(c => HEX6.test(String(c)));
+    if (!list.length && t && tl.team && tl.team.name && Array.isArray(tl.team.colors)) {
+      const a = normName(t.name);
+      if (normName(tl.team.name).some(w => a.includes(w))) list.push(...tl.team.colors.filter(c => HEX6.test(String(c))));
+    }
+    return list;
+  }
+  // A team colour as a block on `against` (it must stand off it, 1.6:1), and
+  // never purple; else the fallback.
+  const blockColour = (list, against, fallback) => list.find(c => !S.isPurple(c) && (!HEX6.test(String(against)) || contrast(c, against) >= 1.6)) || fallback;
+  // A team colour as text on `against` (3:1, large type), else the ink.
+  const textColour = (list, against, ink) => list.find(c => !S.isPurple(c) && HEX6.test(String(against)) && contrast(c, against) >= 3) || ink;
+  function sideColours(tl, style, against) {
+    const pal = style.palette;
+    const home = blockColour(teamColours(tl, 'home'), against, pal.accent);
+    // The away block must read as a different team: far enough from home in RGB.
+    let away = blockColour(teamColours(tl, 'away').filter(c => !HEX6.test(home) || rgbDistance(c, home) >= 120), against, NEUTRAL_TEAM);
+    if (away === home) away = NEUTRAL_TEAM;
+    return { home, away };
+  }
+
+  // Score state on a beat: the last play the beat refs (score after it; a
+  // scoring play counts up from the score before it), else the final.
+  function scoreState(tl, refs) {
+    const game = gameOf(tl);
+    if (!game) return null;
+    const plays = Array.isArray(game.plays) ? game.plays : [];
+    const r = resolvedRefs(tl, refs);
+    const play = r.play.length ? r.play.reduce((m, p) => (p.v.seq > m.v.seq ? p : m)).v : null;
+    if (play) {
+      const prev = plays.filter(p => p.seq < play.seq).pop() || null;
+      const before = play.scoring ? (prev ? prev.score : { home: 0, away: 0 }) : play.score;
+      return { mode: 'play', play, score: play.score, before, poss: play.team || null, down: play.down || '', period: periodLabel(game, play), clock: play.clock || '', refs: [`play:${play.id}`, ...(play.scoring && prev ? [`play:${prev.id}`] : [])] };
+    }
+    if (game.status && game.status.final) {
+      const score = { home: game.teams.home.score, away: game.teams.away.score };
+      return { mode: 'final', play: null, score, before: score, poss: null, down: '', period: '', clock: '', status: String(game.status.detail || 'Final').toUpperCase(), refs: ['game:final'] };
+    }
+    const last = plays[plays.length - 1];
+    return last ? { mode: 'play', play: last, score: last.score, before: last.score, poss: last.team || null, down: last.down || '', period: periodLabel(game, last), clock: last.clock || '', refs: [`play:${last.id}`] } : null;
+  }
+
+  // Scorebug: [AWAY | score][HOME | score][down & distance or FINAL].
+  function scorebugOps(measure, tl, style, cv, state, delay = 0) {
+    const game = gameOf(tl);
+    if (!game || !state) return [];
+    const tk = S.elementTokens(style.id, 'scorebug');
+    const b = S.elementBox('scorebug', cv);
+    const slide = cv.h !== H;
+    const chipW = slide ? 128 : 136;
+    const scoreW = slide ? 100 : 104;
+    const cols = sideColours(tl, style, tk.fill);
+    const ops = [{ type: 'rect', role: 'scorebug', x: b.x, y: b.y, w: b.w, h: b.h, fill: tk.fill, stroke: style.id === 'explainer' ? style.palette.line : '', lw: 2, r: 4, delay, anim: 'wipe' }];
+    ['away', 'home'].forEach((side, i) => {
+      const t = game.teams[side];
+      const x = b.x + i * (chipW + scoreW + 2);
+      ops.push({ type: 'rect', role: 'team-chip', x, y: b.y, w: chipW, h: b.h, fill: cols[side], r: 0, delay: delay + 60 + i * 60, anim: 'wipe' });
+      const abbr = String(t.abbr || '').toUpperCase();
+      const af = fitText(measure, abbr, { family: style.type.display, weight: 700, max: slide ? 50 : 56, min: 30, maxLines: 1, width: chipW - 20 });
+      const aw = af.lines[0] ? af.lines[0].width : 0;
+      ops.push({ type: 'text', role: 'team-abbr', text: abbr, font: af.font, size: af.size, x: x + (chipW - aw) / 2, y: b.y + b.h / 2 + af.size * 0.36, w: aw, color: bestInk(cols[side]), delay: delay + 140 + i * 60, anim: 'rise' });
+      const size = slide ? 68 : 76;
+      const sf = font(700, size, style.type.display);
+      const to = state.score[side];
+      // Count up only across one score (a jump of more than 8 means plays
+      // in between were not kept: show the score as it is).
+      const from = state.before && Math.abs(to - state.before[side]) <= 8 ? state.before[side] : to;
+      const sw = measure(String(to), sf);
+      ops.push({ type: 'score', role: 'score', text: String(to), from, to, font: sf, size, x: x + chipW + (scoreW - sw) / 2, y: b.y + b.h / 2 + size * 0.36, w: sw, cellX: x + chipW, cellW: scoreW, color: tk.ink, countDelay: 380, countMs: 640, delay: delay + 200, anim: 'fade', refs: state.refs });
+      // Possession: a short bar under the score.
+      if (state.poss === side) ops.push({ type: 'rect', role: 'possession', x: x + chipW + scoreW / 2 - 22, y: b.y + b.h - 14, w: 44, h: 6, fill: style.palette.hi, r: 3, delay: delay + 320, anim: 'grow' });
+    });
+    const sx = b.x + 2 * (chipW + scoreW + 2) + 8;
+    const sw = b.x + b.w - sx - 12;
+    const status = state.mode === 'final' ? state.status : String(state.down || state.period || '').toUpperCase();
+    if (status) {
+      const stf = fitText(upperMeasure(measure), status, { family: style.type.display, weight: 700, max: slide ? 40 : 46, min: 24, maxLines: 1, width: sw });
+      const w = stf.lines[0] ? stf.lines[0].width : 0;
+      ops.push({ type: 'text', role: state.mode === 'final' ? 'status' : 'down', text: status, font: stf.font, size: stf.size, x: sx + (sw - w) / 2, y: b.y + b.h / 2 + stf.size * 0.36, w, color: tk.ink, delay: delay + 300, anim: 'rise', refs: state.refs });
+    }
+    return ops;
+  }
+  // The game clock: a tab under the bug's right end ("Q1  6:56").
+  function clockOps(measure, tl, style, cv, state, delay = 0) {
+    if (!state || state.mode === 'final') return [];
+    const text = [state.period, state.clock].filter(Boolean).join('  ');
+    if (!text) return [];
+    const tk = S.elementTokens(style.id, 'clock');
+    const b = S.elementBox('clock', cv);
+    const f = fitText(upperMeasure(measure), text, { family: style.type.display, weight: 700, max: b.h * 0.7, min: 22, maxLines: 1, width: b.w - 56 });
+    const w = f.lines[0] ? f.lines[0].width : 0;
+    return [
+      { type: 'rect', role: 'clock', x: b.x, y: b.y, w: b.w, h: b.h, fill: tk.fill, r: 4, delay, anim: 'wipe' },
+      { type: 'circle', role: 'clock-dot', cx: b.x + 24, cy: b.y + b.h / 2, r: 6, fill: tk.ink, x: b.x + 18, y: b.y + b.h / 2 - 6, w: 12, h: 12, delay: delay + 80, anim: 'pop', pulse: true },
+      { type: 'text', role: 'clock-text', text, font: f.font, size: f.size, x: b.x + 40 + (b.w - 56 - w) / 2, y: b.y + b.h / 2 + f.size * 0.36, w, color: tk.ink, delay: delay + 80, anim: 'rise', refs: state.refs },
+    ];
+  }
+
+  // Win probability: geometry shared by the layout (labels) and the draw.
+  function wpGeom(box, mode, pts, game) {
+    const full = mode === 'full';
+    const px = box.x + (full ? 96 : 84);
+    const pw = box.w - (full ? 96 + 40 : 84 + 24);
+    const py = box.y + (full ? 88 : 40);
+    const ph = box.h - (full ? 88 + 64 : 40 + 16);
+    const plays = game && Array.isArray(game.plays) ? game.plays : [];
+    const s0 = Math.min(...pts.map(p => p[0]));
+    const s1 = Math.max(...pts.map(p => p[0]), ...plays.map(p => p.seq), s0 + 1);
+    const X = seq => px + ((seq - s0) / (s1 - s0)) * pw;
+    const Y = wp => py + (1 - Math.max(0, Math.min(1, wp))) * ph;
+    return { px, py, pw, ph, s0, s1, X, Y };
+  }
+  // The WP point at or before a seq (a play's own value when it has one).
+  function wpAt(game, seq) {
+    const pts = wpPoints(game);
+    let hit = null;
+    pts.forEach(p => { if (p[0] <= seq) hit = p; });
+    return hit || pts[0] || null;
+  }
+  // The leader at a WP value and its whole-number chance ("SF 63%").
+  function leaderLabel(game, wpHome) {
+    const home = wpHome >= 0.5;
+    const t = game.teams[home ? 'home' : 'away'];
+    return { side: home ? 'home' : 'away', text: `${String(t.abbr || '').toUpperCase()} ${pct(home ? wpHome : 1 - wpHome)}%` };
+  }
+  // The chart (band under the bug on a play, full on a wpline beat) and its
+  // labels as text ops (so the lint and the boxes see every number).
+  function wpOps(measure, tl, style, box, { mode = 'full', upto = null, from = null, to = null, marker = null, delay = 0 } = {}) {
+    const game = gameOf(tl);
+    const pts = wpPoints(game);
+    // Never a WP line without its attribution line.
+    if (!game || !pts.length || !hasWp(tl)) return [];
+    const tk = S.elementTokens(style.id, 'wpline');
+    const pal = style.palette;
+    const panel = HEX6.test(String(pal.panel)) ? pal.panel : pal.paper;
+    const cols = sideColours(tl, style, panel);
+    const geo = wpGeom(box, mode, pts, game);
+    const drawMs = mode === 'full' ? 1600 : 900;
+    const ops = [];
+    const r = style.visual === 'card' ? 20 : 4;
+    ops.push({ type: 'wpchart', role: mode === 'full' ? 'wp-chart' : 'wp-band', mode, x: box.x, y: box.y, w: box.w, h: box.h, r, points: pts.map(p => [p[0], p[1]]), geo: { px: geo.px, py: geo.py, pw: geo.pw, ph: geo.ph, s0: geo.s0, s1: geo.s1 }, upto, from, to, panel, stroke: style.id === 'series' ? pal.ink : '', colors: cols, line: tk.line, guide: tk.guide, hi: pal.hi, ink: pal.ink, drawMs, delay, anim: 'fade' });
+    const L = S.LABEL;
+    const labelSize = mode === 'full' ? 24 : 18;
+    // Axis: the home team at the top, the away team at the bottom.
+    [['home', geo.py + labelSize * 0.72], ['away', geo.py + geo.ph]].forEach(([side, y]) => {
+      const t = game.teams[side];
+      const text = String(t.abbr || '').toUpperCase();
+      ops.push(textOp(measure, text, style.type.display, 700, mode === 'full' ? 34 : 24, geo.px - 16, y, { role: 'wp-axis', color: textColour([cols[side]], panel, pal.ink), align: 'right', upper: false, delay: delay + 120, anim: 'fade' }));
+    });
+    if (mode === 'full') {
+      ops.push(textOp(measure, 'WIN PROBABILITY', L, 700, labelSize, box.x + 32, box.y + 48, { role: 'wp-title', color: 'muted', track: 1.5, delay, anim: 'fade' }));
+      // Legend: a swatch and the abbreviation per team, right-aligned.
+      let lx = box.x + box.w - 32;
+      ['away', 'home'].forEach(side => {
+        const text = String(game.teams[side].abbr || '').toUpperCase();
+        const t = textOp(measure, text, L, 700, labelSize, lx, box.y + 48, { role: 'wp-legend', color: 'ink', align: 'right', upper: false, delay, anim: 'fade' });
+        ops.push(t);
+        ops.push({ type: 'rect', role: 'wp-swatch', x: t.x - 28, y: box.y + 48 - 16, w: 18, h: 18, fill: cols[side], r: 3, delay, anim: 'fade' });
+        lx = t.x - 52;
+      });
+      ops.push(textOp(measure, 'KICKOFF', L, 700, 18, geo.px, geo.py + geo.ph + 36, { role: 'wp-axis-x', color: 'muted', track: 1.2, delay: delay + 120, anim: 'fade' }));
+      if (game.sport === 'mlb') ops[ops.length - 1].text = 'FIRST PITCH';
+      ops.push(textOp(measure, game.status && game.status.final ? 'FINAL' : 'NOW', L, 700, 18, geo.px + geo.pw, geo.py + geo.ph + 36, { role: 'wp-axis-x', color: 'muted', align: 'right', track: 1.2, delay: delay + 120, anim: 'fade' }));
+    } else {
+      ops.push(textOp(measure, 'WIN PROBABILITY', L, 700, 18, box.x + 20, box.y + 26, { role: 'wp-title', color: 'muted', track: 1.2, delay, anim: 'fade' }));
+    }
+    // The swing marker and its callout ("SF 63%").
+    if (marker) {
+      const mx = geo.X(marker.seq);
+      const my = geo.Y(marker.wp);
+      const lab = leaderLabel(game, marker.wp);
+      const size = mode === 'full' ? 30 : 22;
+      const h = mode === 'full' ? 52 : 38;
+      const f = font(700, size, style.type.display);
+      const tw = measure(lab.text, f);
+      const w = tw + 28;
+      const x = Math.max(box.x + 12, Math.min(box.x + box.w - 12 - w, mx - w / 2));
+      const above = my - 22 - h > box.y + (mode === 'full' ? 64 : 4);
+      const y = above ? my - 22 - h : my + 22;
+      const at = delay + drawMs + 60;
+      ops.push({ type: 'rect', role: 'wp-callout-bg', x, y, w, h, fill: pal.hi, r: 4, delay: at, anim: 'pop' });
+      ops.push({ type: 'text', role: 'wp-callout', text: lab.text, font: f, size, x: x + 14, y: y + h / 2 + size * 0.36, w: tw, color: pal.hiInk, delay: at, anim: 'pop', refs: marker.refs });
+      if (mode === 'full' && marker.fromWp != null && marker.fromSeq != null && marker.fromSeq !== marker.seq) {
+        const fl = leaderLabel(game, marker.fromWp);
+        const fx = geo.X(marker.fromSeq);
+        const fy = geo.Y(marker.fromWp);
+        const ff = font(700, 24, L);
+        const fw = measure(fl.text, ff);
+        const fbx = Math.max(box.x + 12, Math.min(box.x + box.w - 12 - fw - 24, fx - (fw + 24) / 2));
+        const fby = fy - 18 - 40 > box.y + 64 ? fy - 18 - 40 : fy + 18;
+        ops.push({ type: 'rect', role: 'wp-from-bg', x: fbx, y: fby, w: fw + 24, h: 40, fill: panel, stroke: pal.line && HEX6.test(pal.line) ? pal.line : pal.ink, lw: 2, r: 4, delay: delay + 200, anim: 'fade' });
+        ops.push({ type: 'text', role: 'wp-from', text: fl.text, font: ff, size: 24, x: fbx + 12, y: fby + 20 + 24 * 0.36, w: fw, color: 'muted', delay: delay + 200, anim: 'fade', refs: marker.fromRefs });
+      }
+    }
+    return ops;
+  }
+  // "Win probability: ESPN Analytics", exactly the digest's line.
+  function attributionOps(measure, tl, style, x, y, delay = 0) {
+    const game = gameOf(tl);
+    if (!game || !String(game.attribution || '').trim()) return [];
+    const text = String(game.attribution).trim();
+    return [textOp(measure, text, S.LABEL, 700, 22, x, y, { role: 'attribution', color: 'muted', upper: false, track: 0.5, delay, anim: 'fade' })];
+  }
+  // The swing a beat points at: its wp refs (first -> last), or its play's
+  // move from the WP point before it.
+  function swingFor(tl, refs) {
+    const game = gameOf(tl);
+    const pts = wpPoints(game);
+    if (!pts.length) return null;
+    const r = resolvedRefs(tl, refs);
+    const biggest = (lo, hi) => {
+      let best = null;
+      pts.forEach((p, i) => { if (i && p[0] > lo && p[0] <= hi && (!best || Math.abs(p[1] - pts[i - 1][1]) > Math.abs(best[1][1] - best[0][1]))) best = [pts[i - 1], p]; });
+      return best;
+    };
+    if (r.wp.length) {
+      const list = r.wp.map(x => x.v).sort((a, b) => a.seq - b.seq);
+      const a = list[0];
+      const b = list[list.length - 1];
+      // Two refs spanning the whole game (reel-data.js: first and last point):
+      // highlight the biggest single move inside the span, not the whole line.
+      if (list.length >= 2 && a.seq === pts[0][0] && b.seq === pts[pts.length - 1][0] && pts.length > 3) {
+        const m = biggest(a.seq, b.seq);
+        if (m) return { fromSeq: m[0][0], fromWp: m[0][1], fromRefs: [`wp:${m[0][0]}`], seq: m[1][0], wp: m[1][1], refs: [`wp:${m[1][0]}`] };
+      }
+      return { fromSeq: a.seq, fromWp: a.wpHome, fromRefs: [`wp:${a.seq}`], seq: b.seq, wp: b.wpHome, refs: [`wp:${b.seq}`] };
+    }
+    const play = r.play.length ? r.play[r.play.length - 1].v : null;
+    if (play) {
+      const at = play.wpHome != null ? [play.seq, play.wpHome] : wpAt(game, play.seq);
+      const before = pts.filter(p => p[0] < (at ? at[0] : play.seq)).pop() || null;
+      const refsAt = play.wpHome != null ? [`play:${play.id}`] : [`wp:${at[0]}`];
+      return { fromSeq: before ? before[0] : null, fromWp: before ? before[1] : null, fromRefs: before ? [`wp:${before[0]}`] : [], seq: at[0], wp: at[1], refs: refsAt, upto: Math.max(at[0], play.seq) };
+    }
+    // The biggest move in the game.
+    let best = null;
+    pts.forEach((p, i) => { if (i && (!best || Math.abs(p[1] - pts[i - 1][1]) > Math.abs(best[1][1] - best[0][1]))) best = [pts[i - 1], p]; });
+    if (!best) best = [pts[0], pts[0]];
+    return { fromSeq: best[0][0], fromWp: best[0][1], fromRefs: [`wp:${best[0][0]}`], seq: best[1][0], wp: best[1][1], refs: [`wp:${best[1][0]}`] };
+  }
+
+  // The play card: play type and yards chips, the beat's line, the play.
+  function playcardOps(measure, tl, style, box, g, play, delay = 0, onImage = false) {
+    const tk = S.elementTokens(style.id, 'playcard');
+    const pal = style.palette;
+    const ops = [];
+    const pad = 28;
+    const innerW = box.w - pad * 2;
+    let y = box.y + pad;
+    const chips = [];
+    if (play.type) chips.push({ text: play.type, fill: play.scoring ? tk.hi : tk.ink, ink: play.scoring ? tk.hiInk : (HEX6.test(String(tk.fill)) ? tk.fill : pal.paper) });
+    if (play.yards != null && Number.isFinite(Number(play.yards)) && Number(play.yards) !== 0) chips.push({ text: `${play.yards} YDS`, fill: tk.accent, ink: WHITE });
+    let cx = box.x + pad;
+    const chipOpsList = [];
+    chips.forEach((c, i) => {
+      const cs = chipOp(measure, c.text, cx, y, { fill: c.fill, ink: c.ink, size: 22, h: 40, role: 'play-chip', delay: delay + 100 + i * 60 });
+      cs[1].refs = [`play:${play.id}`];
+      chipOpsList.push(...cs);
+      cx += cs[0].w + 12;
+    });
+    if (chipOpsList.length) y += 40 + 20;
+    const head = String((g.data && g.data.text) || '').trim();
+    let headOps = [];
+    if (head) {
+      const hf = fitText(upperMeasure(measure), head, { family: style.type.display, weight: 700, max: 68, min: 48, maxLines: 2, width: innerW });
+      const blk = linesOps(hf, y, { lineHeight: 0.96, role: 'headline', color: tk.ink, emphasis: g.data.emphasis, baseDelay: delay + 160, delayStep: style.motion.stagger });
+      headOps = blk.ops.map(o => ({ ...o, type: 'text', anim: 'mask', x: o.x - MARGIN + box.x + pad }));
+      y = blk.bottom + 18;
+    }
+    const tf = fitText(measure, play.text || '', { family: style.type.body, weight: 500, max: 30, min: 24, maxLines: 2, width: innerW });
+    const textBlk = linesOps(tf, y, { lineHeight: 1.22, upper: false, role: 'play-text', color: tk.muted, baseDelay: delay + 320, delayStep: 0 });
+    const playText = textBlk.ops.map(o => ({ ...o, type: 'text', anim: 'fade', x: o.x - MARGIN + box.x + pad, refs: [`play:${play.id}`] }));
+    const h = Math.round(textBlk.bottom - box.y + pad);
+    ops.push({ type: 'rect', role: 'playcard', x: box.x, y: box.y, w: box.w, h, fill: onImage ? 'rgba(11,13,18,0.82)' : tk.fill, stroke: style.id === 'series' ? pal.ink : '', lw: 3, r: style.visual === 'card' ? 20 : 4, delay, anim: 'wipe' });
+    ops.push({ type: 'rect', role: 'playcard-rule', x: box.x, y: box.y, w: 8, h, fill: play.scoring ? pal.hi : tk.accent, r: 0, delay: delay + 60, anim: 'fade' });
+    ops.push(...chipOpsList, ...headOps, ...playText);
+    return { ops, bottom: box.y + h };
+  }
+
+  function layoutPlay(measure, g, tl, style, cv) {
+    const refs = (g.data && g.data.refs) || [];
+    const state = scoreState(tl, refs);
+    const ops = [];
+    if (!state || !state.play) return ops;
+    const classic = style.engine === 'classic';
+    ops.push(...scorebugOps(measure, tl, style, cv, state, 0));
+    ops.push(...clockOps(measure, tl, style, cv, state, 160));
+    let y = S.elementBox('clock', cv).y + S.elementBox('clock', cv).h + 24;
+    const showWp = hasWp(tl);
+    if (showWp) {
+      const band = S.elementBox('wpline', cv);
+      const sw = swingFor(tl, refs);
+      ops.push(...wpOps(measure, tl, style, band, { mode: 'band', upto: sw ? sw.upto : null, from: sw ? sw.fromSeq : null, to: sw ? sw.seq : null, marker: sw, delay: 260 }));
+      y = band.y + band.h + 24;
+    }
+    const card = S.elementBox('playcard', cv);
+    // The card sits on the lower third, its bottom on a fixed line (room for
+    // the attribution under it); the clip fills the space above it.
+    const dry = playcardOps(measure, tl, style, { x: card.x, y: 0, w: card.w, h: card.h }, g, state.play, 200, classic);
+    const bottomLine = showWp ? 1452 : 1500;
+    const cardY = snap(Math.max(card.y, bottomLine - dry.bottom));
+    if (!classic) {
+      const vh = cardY - 24 - y;
+      if (vh > 160) ops.push(...visualOps(style, { x: G.left, y, w: CW, h: vh }, { delay: 120 }, measure));
+    }
+    const pc = playcardOps(measure, tl, style, { x: card.x, y: cardY, w: card.w, h: card.h }, g, state.play, 200, classic);
+    ops.push(...pc.ops);
+    if (showWp) ops.push(...attributionOps(measure, tl, style, G.left, pc.bottom + 44, 400));
+    return ops;
+  }
+  function layoutWpline(measure, g, tl, style, cv) {
+    const refs = (g.data && g.data.refs) || [];
+    const ops = [];
+    // A wpline beat's play refs are marks on the line; the bug shows the final (or the latest play).
+    const state = scoreState(tl, []);
+    ops.push(...scorebugOps(measure, tl, style, cv, state, 0));
+    ops.push(...clockOps(measure, tl, style, cv, state, 120));
+    const head = headlineOps(measure, g.data || {}, 472, style, { maxLines: 2 });
+    ops.push(...head.ops);
+    const full = { ...S.ELEMENTS.wpline.full };
+    full.y = Math.max(full.y, snap(head.bottom + 48));
+    full.h = Math.min(720, 1420 - full.y);
+    const sw = swingFor(tl, refs);
+    ops.push(...wpOps(measure, tl, style, full, { mode: 'full', from: sw ? sw.fromSeq : null, to: sw ? sw.seq : null, marker: sw, delay: 220 }));
+    ops.push(...attributionOps(measure, tl, style, G.left, full.y + full.h + 44, 300));
+    return ops;
+  }
+
+  // Archive: what one moment beat shows (year, title, line, stat row, source).
+  const STAT_PICKS = { passing: ['YDS', 'TD', 'INT'], rushing: ['YDS', 'TD', 'AVG'], receiving: ['REC', 'YDS', 'TD'], batting: ['AVG', 'HR', 'RBI'], hitting: ['AVG', 'HR', 'RBI'], pitching: ['ERA', 'W', 'K'], scoring: ['EVENTS', 'WINS', 'TOP10'] };
+  function momentInfo(tl, refs) {
+    const r = resolvedRefs(tl, refs);
+    const arch = tl && tl.data && tl.data.archive;
+    const moments = arch && Array.isArray(arch.moments) ? arch.moments : [];
+    const m = moments.find(mm => Array.isArray(mm.cite) && mm.cite.some(c => refs.includes(c))) || null;
+    const statRow = r.stat[0] || null;
+    const src = r.src[0] || null;
+    let year = null;
+    let yearRefs = [];
+    if (m && Number.isInteger(m.year)) { year = m.year; yearRefs = m.cite.filter(c => refs.includes(c)); }
+    else if (statRow && Number.isInteger(statRow.v.year)) { year = statRow.v.year; yearRefs = [statRow.ref]; }
+    else if (src && /^\d{4}/.test(String(src.v.date || ''))) { year = Number(String(src.v.date).slice(0, 4)); yearRefs = [src.ref]; }
+    const athlete = tl && tl.data && tl.data.athlete;
+    const stats = athlete && athlete.stats;
+    let tiles = [];
+    if (statRow && stats && Array.isArray(stats.labels)) {
+      const values = statRow.v.stats || [];
+      const want = STAT_PICKS[String(stats.category || '').toLowerCase()] || [];
+      let idx = want.map(l => stats.labels.indexOf(l)).filter(i => i >= 0);
+      if (idx.length < 3) idx = [...new Set([...idx, ...stats.labels.map((l, i) => i).filter(i => !/^GP$/i.test(stats.labels[i]))])];
+      const human = i => String((Array.isArray(stats.names) && stats.names[i]) || stats.labels[i]).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^QB/, 'QB ').replace(/\s+/g, ' ').trim().toUpperCase();
+      tiles = idx.filter(i => values[i] != null && String(values[i]).trim() && String(values[i]).trim() !== '-').slice(0, 3).map(i => ({ label: stats.labels[i], name: human(i), value: String(values[i]).trim(), refs: [statRow.ref] }));
+    }
+    return { year, yearRefs, title: m ? String(m.title || '') : '', line: m ? String(m.line || '') : '', lineRefs: m ? m.cite : [], statRow, src, photo: r.photo[0] || null, tiles, athlete, stats };
+  }
+  const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  // The source line: "ES · FEB 2017 · <headline>" or "ESPN · 2001 SEASON STATS".
+  function sourceLine(info) {
+    if (info.src) {
+      const d = String(info.src.v.date || '');
+      const m = /^(\d{4})-(\d{2})/.exec(d);
+      const when = m ? `${MONTHS[Number(m[2]) - 1] || ''} ${m[1]}`.trim() : '';
+      return { text: ['ES', when, String(info.src.v.title || '').slice(0, 48)].filter(Boolean).join(' · '), refs: [info.src.ref] };
+    }
+    if (info.statRow) {
+      const name = (info.athlete && info.athlete.source && info.athlete.source.name) || 'ESPN';
+      const label = info.statRow.v.id === 'totals' ? 'CAREER STATS' : `${info.statRow.v.year} SEASON STATS`;
+      return { text: `${name} · ${label}`, refs: [info.statRow.ref] };
+    }
+    return null;
+  }
+  function statTilesOps(measure, style, tiles, rect, delay) {
+    const ops = [];
+    if (!tiles.length) return ops;
+    const gap = 16;
+    const n = tiles.length;
+    const tw = Math.floor((rect.w - gap * (n - 1)) / n);
+    tiles.forEach((t, i) => {
+      const x = rect.x + i * (tw + gap);
+      const dl = delay + i * 120;
+      ops.push({ type: 'rect', role: 'stat-tile', x, y: rect.y, w: tw, h: rect.h, fill: 'panel', stroke: style.id === 'series' ? 'ink' : '', lw: 3, r: style.visual === 'card' ? 20 : 4, delay: dl, anim: style.motion.enter === 'flip' ? 'flip' : 'rise' });
+      const vf = fitText(measure, t.value, { family: style.type.display, weight: 700, max: Math.min(104, rect.h * 0.56), min: 44, maxLines: 1, width: tw - 40 });
+      ops.push({ type: 'count', role: 'stat-value', text: t.value, spec: parseStatValue(t.value), font: vf.font, size: vf.size, x: x + 20, y: rect.y + 24 + vf.size * CAP, w: vf.lines[0] ? vf.lines[0].width : 0, color: i === 0 ? (style.theme === 'dark' ? 'hi' : 'accent') : 'ink', delay: dl + 80, anim: 'rise', countMs: 800, refs: t.refs });
+      ops.push(textOp(measure, t.label, S.LABEL, 700, 24, x + 20, rect.y + rect.h - 26, { role: 'stat-label', color: 'muted', track: 1.4, delay: dl + 160, anim: 'fade', refs: t.refs }));
+    });
+    return ops;
+  }
+  // Stat rows (no photo on the moment): one big value per row, its full name beside it.
+  function statRowsOps(measure, style, tiles, rect, delay) {
+    const ops = [];
+    const gap = 16;
+    const n = tiles.length;
+    const rh = Math.min(184, Math.floor((rect.h - gap * (n - 1)) / Math.max(1, n)));
+    tiles.forEach((t, i) => {
+      const y = rect.y + i * (rh + gap);
+      const dl = delay + i * 140;
+      ops.push({ type: 'rect', role: 'stat-row', x: rect.x, y, w: rect.w, h: rh, fill: 'panel', stroke: style.id === 'series' ? 'ink' : '', lw: 3, r: style.visual === 'card' ? 20 : 4, delay: dl, anim: style.motion.enter === 'flip' ? 'flip' : 'rise' });
+      ops.push({ type: 'rect', role: 'stat-row-rule', x: rect.x, y, w: 8, h: rh, fill: i === 0 ? 'hi' : 'accent', r: 0, delay: dl + 60, anim: 'fade' });
+      const vf = fitText(measure, t.value, { family: style.type.display, weight: 700, max: Math.min(132, rh * 0.72), min: 56, maxLines: 1, width: rect.w * 0.48 });
+      ops.push({ type: 'count', role: 'stat-value', text: t.value, spec: parseStatValue(t.value), font: vf.font, size: vf.size, x: rect.x + 40, y: y + rh / 2 + vf.size * CAP / 2, w: vf.lines[0] ? vf.lines[0].width : 0, color: i === 0 ? (style.theme === 'dark' ? 'hi' : 'accent') : 'ink', delay: dl + 80, anim: 'rise', countMs: 900, refs: t.refs });
+      const lf = fitText(upperMeasure(measure), t.name || t.label, { family: S.LABEL, weight: 700, max: 34, min: 22, maxLines: 2, width: rect.w * 0.44 });
+      const lx = rect.x + rect.w * 0.52;
+      const blk = linesOps(lf, y + rh / 2 - (lf.size * CAP + (lf.lines.length - 1) * lf.size * 1.1) / 2, { lineHeight: 1.1, role: 'stat-label', color: 'muted', baseDelay: dl + 160, delayStep: 0 });
+      ops.push(...blk.ops.map(o => ({ ...o, type: 'text', anim: 'fade', x: o.x - MARGIN + lx, refs: t.refs })));
+    });
+    return ops;
+  }
+  // The year rail: one node per moment beat; the current one lit.
+  function railOps(measure, tl, style, g, rail) {
+    const tk = S.elementTokens(style.id, 'timeline-node');
+    const ops = [];
+    const nodes = (tl.beats || []).filter(b => b.kind === 'moment').map(b => ({ id: b.id, info: momentInfo(tl, b.refs || []) })).filter(n => n.info.year != null);
+    if (!nodes.length) return ops;
+    const n = nodes.length;
+    const spacing = n > 1 ? Math.min(360, (rail.h - 120) / (n - 1)) : 0;
+    const top = rail.y + rail.h / 2 - (spacing * (n - 1)) / 2;
+    const lx = rail.x + 24;
+    const cur = nodes.findIndex(x => x.id === g.beat);
+    ops.push({ type: 'rect', role: 'rail-line', x: lx - 2, y: top - 40, w: 4, h: spacing * (n - 1) + 80, fill: tk.line, r: 2, delay: 0, anim: 'fade' });
+    if (cur > 0) ops.push({ type: 'rect', role: 'rail-progress', x: lx - 3, y: top, w: 6, h: spacing * cur, fill: tk.hi, r: 3, delay: 80, anim: 'fade' });
+    nodes.forEach((node, i) => {
+      const cy = top + i * spacing;
+      const on = i === cur;
+      const done = i < cur;
+      ops.push({ type: 'circle', role: on ? 'rail-node-on' : 'rail-node', cx: lx, cy, r: on ? 16 : 9, fill: on || done ? (on ? tk.hi : tk.node) : style.palette.paper, stroke: on ? tk.ink : tk.node, lw: on ? 4 : 3, x: lx - 18, y: cy - 18, w: 36, h: 36, delay: on ? 200 : 60, anim: on ? 'pop' : 'fade' });
+      const size = on ? 40 : 28;
+      const f = on ? style.type.display : S.LABEL;
+      ops.push(textOp(measure, String(node.info.year), f, 700, size, lx + 30, cy + size * 0.36, { role: 'rail-year', color: on ? 'ink' : 'muted', upper: false, delay: on ? 240 : 60, anim: 'fade', refs: node.info.yearRefs }));
+    });
+    return ops;
+  }
+  function layoutMoment(measure, g, tl, style, cv) {
+    const refs = (g.data && g.data.refs) || [];
+    const info = momentInfo(tl, refs);
+    const ops = [];
+    const slide = cv.h !== H;
+    const rail = slide ? null : S.elementBox('timeline-node', cv);
+    if (rail) ops.push(...railOps(measure, tl, style, g, rail));
+    const x0 = slide ? 60 : rail.x + rail.w + 32;
+    const w0 = (slide ? 960 : G.right - x0);
+    let y = slide ? 60 : G.top;
+    if (info.year != null) {
+      // As big as it goes left of the ES mark's clear space.
+      const text = String(info.year);
+      const room = (slide ? SLIDE_MARK.x - SLIDE_MARK.clear : LOGO_CLEAR.left) - x0 - 8;
+      const yfit = fitText(measure, text, { family: style.type.display, weight: 700, max: slide ? 220 : 280, min: 120, maxLines: 1, width: room });
+      const ys = yfit.size;
+      ops.push({ type: 'text', role: 'year', text, font: yfit.font, size: ys, x: x0, y: y + ys * CAP, w: yfit.lines[0] ? yfit.lines[0].width : 0, color: style.theme === 'dark' ? 'hi' : 'accent', delay: 80, anim: 'mask', refs: info.yearRefs });
+      y += ys * CAP + 40;
+    }
+    const titleText = String((g.data && g.data.text) || info.title || '').trim();
+    if (titleText) {
+      const tf = fitText(upperMeasure(measure), titleText, { family: style.type.display, weight: 700, max: slide ? 80 : 84, min: 52, maxLines: 2, width: w0 });
+      const blk = linesOps(tf, y, { lineHeight: 0.96, role: 'headline', color: 'ink', emphasis: g.data && g.data.emphasis, baseDelay: 200, delayStep: style.motion.stagger });
+      ops.push(...blk.ops.map(o => ({ ...o, type: 'text', anim: 'mask', x: o.x - MARGIN + x0 })));
+      y = blk.bottom + 36;
+    }
+    const photoKey = info.photo ? `photo:${info.photo.id}` : '';
+    if (photoKey && tl.assets && tl.assets[photoKey]) {
+      const ph = slide ? 400 : 440;
+      ops.push(...visualOps(style, { x: x0, y, w: w0, h: ph }, { slot: photoKey, role: 'archive-photo', delay: 260 }, measure).map(o => (o.type === 'visual' ? { ...o, slot: photoKey } : o)));
+      const credit = String(info.photo.v.credit || '').trim();
+      if (credit) ops.push(textOp(measure, `PHOTO: ${credit}`.slice(0, 60), S.LABEL, 700, 18, x0 + w0 - 16, y + ph - 16, { role: 'photo-credit', color: '#FFFFFF', align: 'right', track: 1, delay: 400, anim: 'fade', refs: [info.photo.ref] }));
+      y += ph + 32;
+    }
+    const srcTop = slide ? SLIDE_SAFE.bottom - 52 : S.elementBox('source-chip', cv).y;
+    if (info.tiles.length && !(photoKey && tl.assets && tl.assets[photoKey])) {
+      // No photo: the stat rows carry the moment and fill the column.
+      const h = Math.min(info.tiles.length * 200, srcTop - 40 - y);
+      ops.push(...statRowsOps(measure, style, info.tiles, { x: x0, y, w: w0, h }, 320));
+      y += h + 32;
+    } else if (info.tiles.length) {
+      const th = slide ? 180 : 200;
+      ops.push(...statTilesOps(measure, style, info.tiles, { x: x0, y, w: w0, h: th }, 320));
+      y += th + 32;
+    }
+    if (info.line && info.line !== titleText && !info.tiles.length) {
+      const lf = fitText(measure, info.line, { family: style.type.body, weight: 500, max: style.type.bodySize, min: style.type.bodySize - 8, maxLines: 2, width: w0 });
+      const blk = linesOps(lf, y, { lineHeight: 1.2, upper: false, role: 'moment-line', color: 'muted', baseDelay: 460, delayStep: 0 });
+      ops.push(...blk.ops.map(o => ({ ...o, type: 'text', anim: 'fade', x: o.x - MARGIN + x0, refs: info.lineRefs })));
+    }
+    const src = sourceLine(info);
+    if (src) {
+      const sb = S.elementBox('source-chip', cv);
+      const sy = slide ? SLIDE_SAFE.bottom - 52 : sb.y;
+      const cf = font(700, 24, S.LABEL);
+      const text = src.text.toUpperCase();
+      const tw = Math.min(w0 - 40, measure(text, cf) + 1.2 * Math.max(0, text.length - 1));
+      ops.push({ type: 'rect', role: 'source-chip', x: x0, y: sy, w: tw + 40, h: 48, fill: 'panel', stroke: 'line', lw: 2, r: 4, delay: 520, anim: 'fade' });
+      ops.push({ type: 'text', role: 'source', text, font: cf, size: 24, x: x0 + 20, y: sy + 24 + 24 * 0.36, w: tw, color: 'muted', track: 1.2, delay: 520, anim: 'fade', refs: src.refs });
+    }
+    return ops;
+  }
+
+  // Moment Replay: the 3-panel strip (setup / the play / reaction).
+  function layoutPanel3(measure, g, tl, style, cv) {
+    const RP = getRP();
+    const refs = (g.data && g.data.refs) || [];
+    const ops = [];
+    if (!RP) return ops;
+    const L = RP.panelLayout(style, cv);
+    const tk = S.elementTokens(style.id, 'panel3');
+    const r = resolvedRefs(tl, refs);
+    const frames = {};
+    r.frame.forEach(f => { frames[f.v.role] = f.v; });
+    const clip = tl.replay ? (tl.replay.clipAsset || '') : '';
+    const dur = Math.max(1, g.outMs - g.inMs);
+    const step = Math.max(500, Math.min(1500, (dur - 1600) / 3));
+    if (style.engine === 'classic') ops.push({ type: 'backdrop', role: 'backdrop', key: 'frame:play', clip, dim: 0.8, delay: 0, anim: 'fade' });
+    // Header (left of the ES mark's clear space): the format tag and the line.
+    const slide = cv.h !== H;
+    const hx = L.box.x;
+    const hy = slide ? 72 : 300;
+    const tag = String(tl.tag || '').trim();
+    let ty = hy;
+    if (tag) { ops.push(...chipOp(measure, tag, hx, hy, { fill: tk.chip, ink: tk.chipInk, size: 22, h: 40, role: 'panel-tag', delay: 0 })); ty += 56; }
+    const head = String((g.data && g.data.text) || tl.title || '').trim();
+    if (head) {
+      const hf = fitText(upperMeasure(measure), head, { family: style.type.display, weight: 700, max: 64, min: 40, maxLines: 1, width: (slide ? SLIDE_MARK.x - SLIDE_MARK.clear : LOGO_CLEAR.left) - hx - 12 });
+      ops.push(...linesOps(hf, ty, { role: 'headline', color: 'ink', baseDelay: 80, delayStep: style.motion.stagger }).ops.map(o => ({ ...o, type: 'text', anim: 'mask', x: o.x - MARGIN + hx })));
+    }
+    L.panels.forEach((p, i) => {
+      const f = frames[p.role];
+      const delay = 160 + i * step;
+      ops.push({ type: 'panel', role: 'panel', frame: p.role, key: f ? `frame:${p.role}` : '', clip: f ? clip : '', x: p.x, y: p.y, w: p.w, h: p.h, tilt: p.tilt, border: L.border, borderColor: tk.gutter, r: L.radius, empty: tk.fill, delay, anim: 'rise', kb: [1, 1.07], kbMs: Math.max(1800, dur - delay), refs: f ? [`frame:${p.role}`] : [] });
+      ops.push(...chipOp(measure, p.label, p.chip.x, p.chip.y, { fill: tk.chip, ink: tk.chipInk, size: 28, h: 48, role: 'panel-chip', delay: delay + 140 }));
+      const own = g.data && g.data.captions ? g.data.captions[p.role] : '';
+      const cap = f ? String(own || f.caption || '').split(/\s+/).filter(Boolean).slice(0, 6).join(' ') : '';
+      if (cap) {
+        const cf = fitText(upperMeasure(measure), cap, { family: style.type.display, weight: 700, max: 56, min: 36, maxLines: 1, width: p.w - 80 });
+        const cw = cf.lines[0] ? cf.lines[0].width : 0;
+        const bh = cf.size * CAP + 28;
+        ops.push({ type: 'rect', role: 'panel-caption-bg', x: p.caption.x, y: p.caption.y - bh, w: cw + 32, h: bh, fill: style.caption.box || INK_DARK, r: 2, delay: delay + 260, anim: 'wipe' });
+        ops.push({ type: 'text', role: 'panel-caption', text: cap.toUpperCase(), font: cf.font, size: cf.size, x: p.caption.x + 16, y: p.caption.y - 14, w: cw, color: WHITE, delay: delay + 300, anim: 'fade', refs: [`frame:${p.role}`] });
+      }
+    });
+    return ops;
+  }
+  function layoutData(measure, g, tl) {
+    const style = S.get(tl.style);
+    const cv = canvasOf(tl);
+    let ops = [];
+    if (g.template === 'play') ops = layoutPlay(measure, g, tl, style, cv);
+    else if (g.template === 'wpline') ops = layoutWpline(measure, g, tl, style, cv);
+    else if (g.template === 'moment') ops = layoutMoment(measure, g, tl, style, cv);
+    else if (g.template === 'panel3') ops = layoutPanel3(measure, g, tl, style, cv);
+    // Data missing at draw time (a project saved before its data loaded):
+    // the Phase 0 placeholder, never an empty frame.
+    if (!ops.length) ops.push({ type: 'placeholder', role: 'placeholder', element: { play: 'scorebug', wpline: 'wpline', moment: 'timeline-node', panel3: 'panel3' }[g.template], x: G.left, y: 472, w: CW, h: 160, delay: 0, anim: 'fade' });
+    ops.forEach(op => { if (!op.anim) op.anim = 'fade'; });
+    return ops;
+  }
+
+  // ─── Carousel slides (1080x1350) ───────────────────────────────────────
+  // One slide per timeline (ReelReplay.buildSlides). The slide's own text is
+  // the headline; every number on it comes through its refs, like the reel.
+  function slideKey(tl, refs, sl) {
+    const r = resolvedRefs(tl, refs);
+    if (r.frame.length) return { key: `frame:${r.frame[0].v.role}`, clip: tl.replay ? tl.replay.clipAsset || '' : '' };
+    if (r.photo.length && tl.assets && tl.assets[`photo:${r.photo[0].id}`]) return { key: `photo:${r.photo[0].id}`, clip: '' };
+    if (sl && sl.asset && tl.assets && tl.assets[sl.asset]) return { key: sl.asset, clip: '' };
+    return null;
+  }
+  function slideHeadline(measure, text, style, x, y, width, { color = 'ink', max = 104, min = 64, maxLines = 3, align = 'left', anchorBottom = null } = {}) {
+    const fit = fitText(upperMeasure(measure), text, { family: style.type.display, weight: 700, max, min, maxLines, width });
+    const lh = fit.size * 0.96;
+    const height = fit.size * CAP + (fit.lines.length - 1) * lh;
+    const top = anchorBottom != null ? anchorBottom - height : y;
+    const ops = [];
+    let n = 0;
+    fit.lines.forEach((line, li) => {
+      const x0 = align === 'center' ? x + (width - line.width) / 2 : x;
+      line.words.forEach(word => {
+        ops.push({ type: 'text', role: 'headline', text: word.text.toUpperCase(), font: fit.font, size: fit.size, x: x0 + word.x, y: top + fit.size * CAP + li * lh, w: word.w, color, delay: n * style.motion.stagger, anim: 'mask' });
+        n += 1;
+      });
+    });
+    return { ops, bottom: top + height, top };
+  }
+  function layoutSlide(measure, g, tl) {
+    const style = S.get(tl.style);
+    const pal = style.palette;
+    const kind = g.template.slice(6);
+    const sl = tl.slide || {};
+    const refs = (g.data && g.data.refs) || [];
+    const cv = { w: 1080, h: 1350 };
+    const M = 60;
+    const CWS = 960;
+    const ops = [];
+    const text = String((g.data && g.data.text) || '').trim();
+    const beside = SLIDE_MARK.x - SLIDE_MARK.clear - M; // header width left of the mark
+    const tagOps = () => (tl.tag ? chipOp(measure, tl.tag, M, 72, { fill: 'chip', ink: 'chipInk', size: 22, h: 40, role: 'slide-tag', delay: 0 }) : []);
+    if (kind === 'cover') {
+      const key = slideKey(tl, refs, sl);
+      if (key) {
+        ops.push({ type: 'panel', role: 'bg', frame: '', key: key.key, clip: key.clip, x: 0, y: 0, w: 1080, h: 1350, tilt: 0, border: 0, r: 0, empty: pal.bg, delay: 0, anim: 'fade', kb: [1.04, 1.08], kbMs: 2400, noBox: true });
+        ops.push({ type: 'shade', role: 'bg', y0: 520, y1: 1350, a1: 0.86, noBox: true, delay: 0, anim: 'fade' });
+      }
+      ops.push(...tagOps());
+      const col = key ? WHITE : 'ink';
+      if (text) ops.push(...slideHeadline(measure, text, style, M, 0, CWS, { color: col, max: 120, min: 72, maxLines: 3, anchorBottom: 1170 }).ops);
+      const swipe = chipOp(measure, 'SWIPE  →', 0, 1212, { fill: 'hi', ink: 'hiInk', size: 26, h: 52, role: 'swipe', delay: 300 });
+      const dx = SLIDE_SAFE.right - swipe[0].w;
+      swipe.forEach(o => { o.x += dx; });
+      ops.push(...swipe);
+    } else if (kind === 'panel') {
+      const r = resolvedRefs(tl, refs);
+      const RP = getRP();
+      if (r.frame.length >= 2 && RP) {
+        const sub = layoutPanel3(measure, { ...g, data: { ...(g.data || {}), text } }, { ...tl, title: '' }, style, cv);
+        ops.push(...sub.filter(o => o.type !== 'backdrop'));
+      } else {
+        const f = r.frame[0] ? r.frame[0].v : null;
+        const key = slideKey(tl, refs, sl);
+        const role = f ? f.role : '';
+        const label = RP && role ? RP.ROLE_LABELS[role] : (text || '').toUpperCase();
+        ops.push(...tagOps());
+        const ih = 820;
+        ops.push({ type: 'panel', role: 'panel', frame: role, key: key ? key.key : '', clip: key ? key.clip : '', x: M, y: 214, w: CWS, h: ih, tilt: style.id === 'classic' ? (sl.index % 2 ? 0.5 : -0.5) : 0, border: style.id === 'classic' ? 6 : (style.id === 'series' ? 4 : 0), borderColor: S.elementTokens(style.id, 'panel3').gutter, r: style.id === 'countdown' ? 20 : 0, empty: pal.panel, delay: 0, anim: 'rise', kb: [1.0, 1.04], kbMs: 2400, refs: f ? [`frame:${role}`] : [] });
+        if (label) ops.push(...chipOp(measure, label, M + 24, 214 + 24, { fill: 'chip', ink: 'chipInk', size: 30, h: 52, role: 'panel-chip', delay: 120 }));
+        const cap = String(sl.caption || (f && f.caption) || (text && text.toUpperCase() !== label ? text : '') || '').trim();
+        if (cap) ops.push(...slideHeadline(measure, cap, style, M, 214 + ih + 40, CWS, { max: 76, min: 52, maxLines: 2 }).ops);
+      }
+    } else if (kind === 'moment') {
+      ops.push(...layoutMoment(measure, { ...g, beat: '' }, tl, style, cv).map(o => ({ ...o })));
+      // The year sits top-left: keep the slide tag off it.
+    } else if (kind === 'data') {
+      const game = gameOf(tl);
+      if (game) {
+        const state = scoreState(tl, refs);
+        ops.push(...scorebugOps(measure, tl, style, cv, state, 0));
+        ops.push(...clockOps(measure, tl, style, cv, state, 100));
+        let y = 236;
+        if (text) { const h2 = slideHeadline(measure, text, style, M, y, CWS, { max: 80, min: 56, maxLines: 2 }); ops.push(...h2.ops); y = h2.bottom + 40; }
+        if (hasWp(tl)) {
+          const full = { x: M, y: Math.max(380, snap(y)), w: CWS, h: 0 };
+          full.h = Math.min(660, 1200 - full.y);
+          const sw = swingFor(tl, refs);
+          ops.push(...wpOps(measure, tl, style, full, { mode: 'full', from: sw ? sw.fromSeq : null, to: sw ? sw.seq : null, marker: sw, delay: 120 }));
+          ops.push(...attributionOps(measure, tl, style, M, full.y + full.h + 40, 200));
+        } else if (state && state.play) {
+          ops.push(...playcardOps(measure, tl, style, { x: M, y: Math.max(400, y), w: CWS, h: 200 }, { data: { text: '' } }, state.play, 120).ops);
+        }
+      } else {
+        const athlete = tl.data && tl.data.athlete;
+        ops.push(...tagOps());
+        let y = 236;
+        if (text) { const h2 = slideHeadline(measure, text, style, M, y, CWS, { max: 88, min: 56, maxLines: 2 }); ops.push(...h2.ops); y = h2.bottom + 48; }
+        if (athlete && athlete.stats && Array.isArray(athlete.stats.totals)) {
+          const info = momentInfo(tl, ['stat:totals']);
+          ops.push(...statTilesOps(measure, style, info.tiles, { x: M, y, w: CWS, h: 220 }, 120));
+          const src = sourceLine(info);
+          if (src) ops.push(textOp(measure, src.text, S.LABEL, 700, 22, M, y + 220 + 56, { role: 'source', color: 'muted', track: 1.2, delay: 300, anim: 'fade', refs: src.refs }));
+        }
+      }
+    } else if (kind === 'cta') {
+      ops.push({ type: 'rect', role: 'rule', x: (1080 - 120) / 2, y: 470, w: 120, h: 10, fill: 'accent', r: 2, delay: 0, anim: 'grow' });
+      const h2 = slideHeadline(measure, text || 'What do you think?', style, M, 540, CWS, { max: 104, min: 64, maxLines: 3, align: 'center' });
+      ops.push(...h2.ops);
+      const wm = wordmarkFor(tl);
+      ops.push({ type: 'wordmark', role: 'wordmark', brand: wm.id, x: (1080 - wm.w) / 2, y: snap(h2.bottom + 88), w: wm.w, h: wm.h, delay: 240, anim: 'rise' });
+      ops.push(textOp(measure, 'TELL US IN THE COMMENTS', S.LABEL, 700, 26, 0, snap(h2.bottom + 88) + wm.h + 72, { role: 'cta-note', color: 'muted', align: 'center', width: 1080, track: 2, delay: 360, anim: 'fade' }));
+    }
+    ops.forEach(op => { if (!op.anim) op.anim = 'fade'; });
+    void cv;
+    return ops;
+  }
+
+  // ─── Data formats: drawing ──────────────────────────────────────────────
+  // The new op types (score, circle, wpchart, panel, backdrop, shade,
+  // placeholder). drawStyledOp hands them here, so no existing op changes.
+  function frameImage(env, key, clip) {
+    const img = key && env.images ? env.images[key] : null;
+    if (mediaSize(img)) return img;
+    const vid = clip && env.videos ? env.videos[clip] : null;
+    if (vid && (vid.readyState || 0) >= 2 && mediaSize(vid)) return vid;
+    const poster = clip && env.images ? env.images[clip] : null;
+    return mediaSize(poster) ? poster : null;
+  }
+  function drawDataOp(ctx, op, st, timeline, env, frame, pal, style) {
+    if (op.type === 'score') {
+      // Counts from the score before a scoring play to the score after it,
+      // then pulses once (120 ms up, 120 ms back: 1.0 -> 1.12 -> 1.0).
+      const local = st.local == null ? 99999 : st.local;
+      const c = ease.outCubic(progress(local, op.countDelay || 0, op.countMs || 600));
+      const value = op.from === op.to ? op.to : Math.round(op.from + (op.to - op.from) * c);
+      const text = String(value);
+      ctx.font = op.font;
+      const w = env.measure ? env.measure(text, op.font) : op.w;
+      const x = op.cellX != null ? op.cellX + (op.cellW - w) / 2 : op.x;
+      const landed = local - (op.countDelay || 0) - (op.countMs || 600);
+      const k = op.from !== op.to && landed >= 0 && landed < 240 ? 1 + 0.12 * Math.sin(Math.PI * (landed / 240)) : 1;
+      ctx.save();
+      if (k !== 1) { const cx = x + w / 2; const cy = op.y - op.size * CAP / 2; ctx.translate(cx, cy); ctx.scale(k, k); ctx.translate(-cx, -cy); }
+      ctx.fillStyle = tone(pal, op.color);
+      ctx.fillText(text, x, op.y);
+      ctx.restore();
+    } else if (op.type === 'circle') {
+      const k = op.pulse ? 0.75 + 0.25 * (0.5 + 0.5 * Math.sin(((frame.t || 0) / 1000) * Math.PI * 2)) : 1;
+      ctx.beginPath();
+      ctx.arc(op.cx, op.cy, op.r * k, 0, Math.PI * 2);
+      if (op.fill) { ctx.fillStyle = tone(pal, op.fill); ctx.fill(); }
+      if (op.stroke) { ctx.strokeStyle = tone(pal, op.stroke); ctx.lineWidth = op.lw || 3; ctx.stroke(); }
+    } else if (op.type === 'wpchart') {
+      drawWpChart(ctx, op, st, pal);
+    } else if (op.type === 'panel') {
+      drawPanel(ctx, op, st, timeline, env, frame, pal);
+    } else if (op.type === 'backdrop') {
+      const img = frameImage(env, op.key, op.clip);
+      if (img) {
+        ctx.save();
+        drawCover(ctx, img, 0, 0, W, H, { zoom: 1.12, fx: 0.5, fy: 0.45 });
+        ctx.fillStyle = `rgba(11,13,18,${op.dim || 0.8})`;
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
+    } else if (op.type === 'shade') {
+      if (typeof ctx.createLinearGradient === 'function') {
+        const g = ctx.createLinearGradient(0, op.y0, 0, op.y1);
+        g.addColorStop(0, 'rgba(8,10,14,0)');
+        g.addColorStop(1, `rgba(8,10,14,${op.a1 || 0.85})`);
+        ctx.fillStyle = g;
+        ctx.fillRect(0, op.y0, W, op.y1 - op.y0);
+      }
+    } else if (op.type === 'placeholder') {
+      S.drawPlaceholder(ctx, op.element, { x: op.x, y: op.y, w: op.w, h: op.h }, style.id);
+    }
+  }
+  // A frame panel: the still, a slow Ken Burns push, the border, a tilt
+  // (Classic), or the empty state when no frame is picked yet.
+  function drawPanel(ctx, op, st, timeline, env, frame, pal) {
+    const img = frameImage(env, op.key, op.clip);
+    ctx.save();
+    if (op.tilt) { const cx = op.x + op.w / 2; const cy = op.y + op.h / 2; ctx.translate(cx, cy); ctx.rotate((op.tilt * Math.PI) / 180); ctx.translate(-cx, -cy); }
+    ctx.beginPath();
+    if (op.r) roundRect(ctx, op.x, op.y, op.w, op.h, op.r); else ctx.rect(op.x, op.y, op.w, op.h);
+    ctx.save();
+    ctx.clip();
+    if (img) {
+      const [z0, z1] = op.kb || [1, 1];
+      const p = ease.inOutSine(progress(st.local == null ? 0 : st.local, 0, op.kbMs || 2400));
+      drawCover(ctx, img, op.x, op.y, op.w, op.h, { zoom: z0 + (z1 - z0) * p, fx: 0.5, fy: 0.42 });
+      if (op.h > 200 && typeof ctx.createLinearGradient === 'function' && op.role !== 'bg') {
+        const g = ctx.createLinearGradient(0, op.y + op.h * 0.55, 0, op.y + op.h);
+        g.addColorStop(0, 'rgba(0,0,0,0)');
+        g.addColorStop(1, 'rgba(0,0,0,0.42)');
+        ctx.fillStyle = g;
+        ctx.fillRect(op.x, op.y + op.h * 0.55, op.w, op.h * 0.45);
+      }
+    } else {
+      ctx.fillStyle = tone(pal, op.empty || 'mystery');
+      ctx.fillRect(op.x, op.y, op.w, op.h);
+      if (op.role !== 'bg') {
+        ctx.globalAlpha *= 0.7;
+        ctx.fillStyle = tone(pal, 'muted');
+        ctx.font = font(700, 26, S.LABEL);
+        const msg = 'PICK A FRAME';
+        const w = ctx.measureText ? (ctx.measureText(msg).width || 0) : 0;
+        ctx.fillText(msg, op.x + (op.w - w) / 2, op.y + op.h / 2 + 9);
+      }
+    }
+    ctx.restore();
+    if (op.border) { ctx.strokeStyle = tone(pal, op.borderColor || 'ink'); ctx.lineWidth = op.border; ctx.stroke(); }
+    ctx.restore();
+  }
+  // The WP chart: guides (0 / 50 / 100), team-coloured areas either side of
+  // 50%, the line drawing on, the swing highlighted and its marker landing.
+  function drawWpChart(ctx, op, st, pal) {
+    const { px, py, pw, ph, s0, s1 } = op.geo;
+    const X = seq => px + ((seq - s0) / (s1 - s0)) * pw;
+    const Y = wp => py + (1 - Math.max(0, Math.min(1, wp))) * ph;
+    const pts = (op.upto != null ? op.points.filter(p => p[0] <= op.upto) : op.points);
+    if (!pts.length) return;
+    const e = ease.inOutCubic(progress(st.local == null ? 99999 : st.local, 0, op.drawMs || 1200));
+    const lastX = X(pts[pts.length - 1][0]);
+    const revealX = px + (Math.max(px, lastX) - px) * e;
+    // Panel.
+    ctx.fillStyle = op.panel;
+    fillRound(ctx, op.x, op.y, op.w, op.h, op.r || 0);
+    if (op.stroke) { ctx.strokeStyle = op.stroke; ctx.lineWidth = 3; roundRect(ctx, op.x, op.y, op.w, op.h, op.r || 0); ctx.stroke(); }
+    // Guides.
+    ctx.save();
+    ctx.strokeStyle = tone(pal, op.guide);
+    ctx.globalAlpha *= 0.9;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + pw, py); ctx.moveTo(px, py + ph); ctx.lineTo(px + pw, py + ph); ctx.stroke();
+    if (ctx.setLineDash) ctx.setLineDash([10, 10]);
+    ctx.beginPath(); ctx.moveTo(px, Y(0.5)); ctx.lineTo(px + pw, Y(0.5)); ctx.stroke();
+    if (ctx.setLineDash) ctx.setLineDash([]);
+    ctx.restore();
+    // The series as a path (steps between points read as a broadcast WP chart).
+    const path = () => { ctx.beginPath(); pts.forEach((p, i) => { if (i) ctx.lineTo(X(p[0]), Y(p[1])); else ctx.moveTo(X(p[0]), Y(p[1])); }); };
+    ctx.save();
+    ctx.beginPath(); ctx.rect(px - 8, op.y, revealX - px + 16, op.h); ctx.clip();
+    // Areas: home colour above 50%, away colour below.
+    [['home', py, Y(0.5) - py], ['away', Y(0.5), py + ph - Y(0.5)]].forEach(([side, y, h]) => {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(px, y, pw, h); ctx.clip();
+      path();
+      ctx.lineTo(X(pts[pts.length - 1][0]), Y(0.5));
+      ctx.lineTo(X(pts[0][0]), Y(0.5));
+      ctx.closePath();
+      ctx.globalAlpha *= 0.26;
+      ctx.fillStyle = op.colors[side];
+      ctx.fill();
+      ctx.restore();
+    });
+    // The swing: a highlighter stroke under the line.
+    if (op.from != null && op.to != null && op.to !== op.from) {
+      const seg = pts.filter(p => p[0] >= op.from && p[0] <= op.to);
+      if (seg.length >= 2) {
+        ctx.save();
+        ctx.strokeStyle = op.hi;
+        ctx.globalAlpha *= 0.9;
+        ctx.lineWidth = op.mode === 'full' ? 18 : 12;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); seg.forEach((p, i) => { if (i) ctx.lineTo(X(p[0]), Y(p[1])); else ctx.moveTo(X(p[0]), Y(p[1])); }); ctx.stroke();
+        ctx.restore();
+      }
+    }
+    ctx.strokeStyle = tone(pal, op.line);
+    ctx.lineWidth = op.mode === 'full' ? 6 : 4;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    path();
+    ctx.stroke();
+    ctx.restore();
+    // The head of the line while it draws.
+    if (e < 1) {
+      let hy = Y(pts[0][1]);
+      for (let i = 1; i < pts.length; i += 1) {
+        const a = pts[i - 1]; const b = pts[i];
+        if (X(b[0]) >= revealX) { const k = (revealX - X(a[0])) / Math.max(1e-6, X(b[0]) - X(a[0])); hy = Y(a[1] + (b[1] - a[1]) * k); break; }
+        hy = Y(b[1]);
+      }
+      ctx.fillStyle = tone(pal, op.line);
+      ctx.beginPath(); ctx.arc(revealX, hy, op.mode === 'full' ? 9 : 7, 0, Math.PI * 2); ctx.fill();
+    }
+    // The marker lands once the line reaches it.
+    const mk = op.to != null ? (op.points.find(p => p[0] === op.to) || null) : null;
+    if (mk && revealX >= X(mk[0]) - 0.5) {
+      const land = progress(st.local == null ? 99999 : st.local, op.drawMs || 1200, 300);
+      const r = (op.mode === 'full' ? 14 : 10) * (0.6 + 0.4 * ease.outBack(land));
+      ctx.fillStyle = op.hi;
+      ctx.strokeStyle = op.ink;
+      ctx.lineWidth = op.mode === 'full' ? 5 : 4;
+      ctx.beginPath(); ctx.arc(X(mk[0]), Y(mk[1]), r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+  }
+
+  // A 1080x1350 carousel slide (ReelReplay.buildSlides): the style's ground,
+  // the slide's ops, the ES mark top-right.
+  function drawSlideFrame(ctx, timeline, tMs, env) {
+    const style = S.get(timeline.style);
+    const pal = style.palette;
+    const g = timeline.tracks && timeline.tracks.graphics ? timeline.tracks.graphics[0] : null;
+    const t = Math.max(0, Math.min((timeline.durationMs || 2400) - 1, tMs));
+    const frame = { t, shot: null, prev: null, mix: 1, graphic: g ? { ...g, local: t - g.inMs, exit: 0 } : null, transition: null, beatIndex: 0, caption: null };
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, 1080, 1350); ctx.clip();
+    if (style.engine === 'classic') {
+      ctx.fillStyle = pal.bg;
+      ctx.fillRect(0, 0, 1080, 1350);
+      if (typeof ctx.createRadialGradient === 'function') {
+        const glow = ctx.createRadialGradient(1080 * 0.25, 1350 * 0.1, 0, 1080 * 0.25, 1350 * 0.1, 1350);
+        glow.addColorStop(0, 'rgba(10,111,222,0.18)');
+        glow.addColorStop(1, 'rgba(10,111,222,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, 1080, 1350);
+      }
+    } else drawBackground(ctx, timeline, frame, env, style, pal);
+    drawStyledGraphic(ctx, frame, timeline, env, style, pal);
+    if (typeof ctx.createRadialGradient === 'function') {
+      const v = ctx.createRadialGradient(540, 640, 420, 540, 675, 1000);
+      v.addColorStop(0, 'rgba(0,0,0,0)');
+      v.addColorStop(1, style.theme === 'dark' ? 'rgba(0,0,0,0.32)' : 'rgba(40,34,24,0.08)');
+      ctx.fillStyle = v;
+      ctx.fillRect(0, 0, 1080, 1350);
+    }
+    // The mark's colourway: what is under it (a full-bleed cover frame is probed).
+    let bg = style.engine === 'classic' ? pal.bg : pal.paper;
+    if (g && g.template === 'slide-cover' && typeof ctx.getImageData === 'function' && env.probeMark !== false) {
+      try {
+        const data = ctx.getImageData(SLIDE_MARK.x, SLIDE_MARK.y, SLIDE_MARK.w, SLIDE_MARK.h).data;
+        let r = 0; let gg = 0; let b = 0; let n = 0;
+        for (let i = 0; i < data.length; i += 64) { r += data[i]; gg += data[i + 1]; b += data[i + 2]; n += 1; }
+        if (n) bg = `#${hex2(r / n)}${hex2(gg / n)}${hex2(b / n)}`;
+      } catch { /* tainted: keep the paper */ }
+    }
+    drawBrand(ctx, 'mark', SLIDE_MARK.x, SLIDE_MARK.y, SLIDE_MARK.w, SLIDE_MARK.h, markVariant(bg), env);
+    ctx.restore();
+    return frame;
+  }
+
+  // ─── Data formats: provenance (the lint's "every number has a ref") ────
+  // The numbers a set of refs may put on screen: every number in the
+  // resolved data, a WP value as whole percentages for both teams, and the
+  // overtime count ("2OT"). 'game:final' is the digest's final score.
+  function provenanceNumbers(timeline, refs) {
+    const T = getT();
+    const set = new Set(['0']);
+    const add = v => F.numbersIn(String(v == null ? '' : v)).forEach(n => set.add(n));
+    const game = gameOf(timeline);
+    (refs || []).forEach(ref => {
+      if (ref === 'game:final') { if (game) { add(JSON.stringify(game.teams)); add(game.status && game.status.detail); } return; }
+      const r = T && T.parseRef(ref);
+      const v = r ? T.resolveRef(timeline, ref) : null;
+      if (!v) return;
+      add(JSON.stringify(v));
+      const wp = r.type === 'wp' ? v.wpHome : (r.type === 'play' ? v.wpHome : null);
+      if (wp != null && Number.isFinite(Number(wp))) { add(pct(wp)); add(pct(1 - wp)); }
+      if (r.type === 'play' && Number.isInteger(v.period) && v.period > 4) add(v.period - 4);
+    });
+    return set;
+  }
+  // Every drawn op of a data beat or slide that shows a digit, with the
+  // numbers its refs do not back. Headlines are the beat's own text (the
+  // numbers rule checks those against the sources and the beat's refs).
+  const DIGIT = /\d/;
+  function unbackedNumbers(measure, timeline) {
+    const out = [];
+    const m = measure || ((text, f) => String(text).length * Number((String(f).match(/([\d.]+)px/) || [0, 40])[1]) * 0.55);
+    (timeline.tracks.graphics || []).forEach(g => {
+      if (!DATA_TEMPLATES.has(g.template) && !SLIDE_TEMPLATES.has(g.template)) return;
+      layoutGraphic(m, g, timeline).forEach(op => {
+        if (!(op.type === 'text' || op.type === 'count' || op.type === 'score' || op.type === 'word') || !DIGIT.test(String(op.text || ''))) return;
+        if (op.role === 'headline') return;
+        const allowed = provenanceNumbers(timeline, op.refs || []);
+        const bad = F.numbersIn(op.text).filter(n => !allowed.has(n));
+        if (!op.refs || !op.refs.length || bad.length) out.push({ beat: g.beat, role: op.role, text: op.text, numbers: bad.length ? bad : F.numbersIn(op.text), refs: op.refs || [] });
+      });
+    });
+    return out;
+  }
+  // Is the WP line or a WP number on a beat, and is the attribution drawn?
+  function wpOnScreen(measure, timeline) {
+    const m = measure || ((text, f) => String(text).length * Number((String(f).match(/([\d.]+)px/) || [0, 40])[1]) * 0.55);
+    return (timeline.tracks.graphics || []).filter(g => DATA_TEMPLATES.has(g.template) || SLIDE_TEMPLATES.has(g.template)).map(g => {
+      const ops = layoutGraphic(m, g, timeline);
+      const wp = ops.some(op => op.type === 'wpchart' || (op.refs || []).some(r => String(r).startsWith('wp:')) || op.role === 'wp-callout');
+      const attribution = ops.filter(op => op.role === 'attribution').map(op => op.text);
+      return { beat: g.beat, wp, attribution };
+    });
   }
 
   // ─── Styled drawing ─────────────────────────────────────────────────────
@@ -1610,6 +2702,8 @@
         ctx.fillStyle = tone(pal, 'bad');
         ctx.beginPath(); ctx.arc(op.cx, op.cy - rr, 11 * pop, 0, Math.PI * 2); ctx.fill();
       }
+    } else if (DATA_OPS.has(op.type)) {
+      drawDataOp(ctx, op, st, timeline, env, frame, pal, style);
     }
   }
   function drawBackground(ctx, timeline, frame, env, style, pal) {
@@ -1791,6 +2885,8 @@
 
   // env: { measure(text, font), images: { assetId: Image }, grain }
   function drawFrame(ctx, timeline, tMs, env = {}) {
+    // A 4:5 carousel slide (canvas 1080x1350) draws as a slide.
+    if (timeline && timeline.canvas && Number(timeline.canvas.h) === 1350) return drawSlideFrame(ctx, timeline, tMs, env);
     const frame = frameAt(timeline, tMs);
     ctx.save();
     if (S.get(timeline.style).engine !== 'classic') {
@@ -1817,5 +2913,9 @@
     buildTimeline, frameAt, wrap, fitText, layoutGraphic, layoutCaption, layoutChrome, textBoxes, drawFrame,
     clipTimes, clipTime, drawVisual, allBoxes, CHART_LAYOUTS,
     BRAND, ES_MARK, WORDMARK, CAPTION_W, LOGO_CLEAR, markVariant, drawBrand, logoPlacements, wordmarkFor, drawFinish,
+    // Data formats (Phase 1)
+    DATA_TEMPLATES, SLIDE_TEMPLATES, SLIDE_MARK, SLIDE_SAFE, DATA_MIN_MS, canvasOf, scoreState, swingFor, momentInfo, periodLabel, teamColours, bestInk,
+    provenanceNumbers, unbackedNumbers, wpOnScreen, drawSlideFrame,
+    buildSlides: (timeline, opts) => { const RP = getRP(); return RP ? RP.buildSlides(timeline, opts) : []; },
   };
 }));
