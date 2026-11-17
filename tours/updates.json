@@ -219,6 +219,38 @@
       ]
     },
     {
+      "id": "2026-11-19-gen-creative",
+      "date": "2026-11-19",
+      "title": "Generate: a Creative look that composes new designs",
+      "commit": "f8a9be3",
+      "items": [
+        {
+          "title": "Creative look",
+          "text": "Generate can now compose designs instead of filling a template: cut-out players over giant numbers, prize art, split screens, scoreboards, unit charts and more, in ES fonts and team colours.",
+          "page": "generate.html",
+          "target": "#gen-steer"
+        },
+        {
+          "title": "An art director picks",
+          "text": "Each idea is drawn 2–3 ways; the art director keeps the strongest, applies one fix and tells you why in a specific note.",
+          "page": "generate.html",
+          "target": "#gen-grid"
+        },
+        {
+          "title": "One story per design",
+          "text": "A brief with two stories gets designs for both, each with a different composition and photo. Numbers come only from your brief.",
+          "page": "generate.html",
+          "target": "#gen-grid"
+        },
+        {
+          "title": "Tweak and download",
+          "text": "Try another composition, swap the photo or edit the words on the card, then download PNG or JPEG at 1080 wide.",
+          "page": "generate.html",
+          "target": "#gen-grid"
+        }
+      ]
+    },
+    {
       "id": "2026-11-18-director",
       "date": "2026-11-18",
       "title": "The creative director, ES guidelines and Bring it on-brand",

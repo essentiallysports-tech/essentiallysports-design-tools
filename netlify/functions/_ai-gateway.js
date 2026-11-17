@@ -127,6 +127,7 @@ function featureDisabled(feature) {
 }
 const FEATURE_NAMES = [
   ['generate-rewrite', 'AI rewrites'],
+  ['generate-creative', 'Creative designs'],
   ['generate-scene-image', 'AI scene images'],
   ['generate', 'AI design writing'],
   ['trend', 'AI headline ideas'],
