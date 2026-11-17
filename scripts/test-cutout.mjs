@@ -61,4 +61,78 @@ assert.deepEqual(Cutout.scaledSize(800, 600, 2048), { width: 800, height: 600 },
 assert.equal(Cutout.base64Bytes('data:image/png;base64,AAAA'), 3);
 assert.ok(Cutout.MAX_SEND_BASE64 < 4.5 * 1024 * 1024, 'stays under the Vercel body limit');
 
+// ─── Model mask on the original photo ───────────────────────────────────
+// Pad plan: fitted, never cropped, centred, one of the model's sizes.
+assert.deepEqual(Cutout.padPlan(1000, 1500), { size: '1024x1536', width: 1024, height: 1536, region: { x: 0, y: 0, w: 1024, h: 1536 } });
+const tall = Cutout.padPlan(900, 1600); // 9:16 into 2:3: grey bars left and right
+assert.equal(tall.size, '1024x1536');
+assert.equal(tall.region.h, 1536);
+assert.equal(tall.region.w, 864);
+assert.equal(tall.region.x, 80);
+assert.equal(Cutout.padPlan(1600, 900).size, '1536x1024');
+assert.equal(Cutout.padPlan(1000, 1000).size, '1024x1024');
+
+// A synthetic photo: green-ish backdrop, a red-ish "player" rectangle.
+const PW = 80;
+const PH = 100;
+const subject = (x, y) => x >= 20 && x < 60 && y >= 15 && y < 95;
+const photo = image(PW, PH, (x, y) => (subject(x, y) ? [200, 40 + (x % 7), 50] : [30, 140 + (y % 5), 60]));
+// What a faithful model returns: roughly the same pixels (slightly redrawn),
+// alpha 255 on the subject and 0 elsewhere.
+function modelOutput({ shift = 0, alphaFn = (x, y) => (subject(x - shift, y) ? 255 : 0) } = {}) {
+  const out = new Uint8ClampedArray(PW * PH * 4);
+  for (let y = 0; y < PH; y++) {
+    for (let x = 0; x < PW; x++) {
+      const i = (y * PW + x) * 4;
+      const sx = Math.min(PW - 1, Math.max(0, x - shift));
+      const j = (y * PW + sx) * 4;
+      out[i] = photo[j] + 6; out[i + 1] = photo[j + 1] - 4; out[i + 2] = photo[j + 2] + 3;
+      out[i + 3] = alphaFn(x, y);
+    }
+  }
+  return out;
+}
+
+const good = modelOutput();
+const alpha = Cutout.maskFromModel(good, PW, PH);
+assert.equal(alpha[50 * PW + 40], 255, 'inside the subject stays opaque');
+assert.equal(alpha[5 * PW + 5], 0, 'backdrop stays clear');
+const edge = alpha[50 * PW + 20];
+assert.ok(edge > 0 && edge < 255, `edge is softened (${edge})`);
+const verdict = Cutout.checkMask({ alpha, modelRgba: good, originalRgba: photo, width: PW, height: PH, spill: 0 });
+assert.equal(verdict.ok, true, JSON.stringify(verdict));
+assert.ok(verdict.colorDiff < 10);
+assert.ok(Math.abs(verdict.coverage - 0.4) < 0.03);
+
+// Compositing keeps the ORIGINAL pixels: only alpha comes from the model.
+const cut = Cutout.applyMask(photo, alpha);
+const centre = (50 * PW + 40) * 4;
+assert.deepEqual([cut[centre], cut[centre + 1], cut[centre + 2], cut[centre + 3]], [photo[centre], photo[centre + 1], photo[centre + 2], 255]);
+assert.notEqual(cut[centre], good[centre], 'the model’s redrawn colour is not used');
+assert.equal(cut[(5 * PW + 5) * 4 + 3], 0);
+assert.equal(photo[(5 * PW + 5) * 4 + 3], 255, 'the original array is not modified');
+
+// Rejections.
+const empty = Cutout.maskFromModel(modelOutput({ alphaFn: () => 0 }), PW, PH);
+assert.equal(Cutout.checkMask({ alpha: empty, modelRgba: good, originalRgba: photo, width: PW, height: PH }).reason, 'empty');
+const full = Cutout.maskFromModel(modelOutput({ alphaFn: () => 255 }), PW, PH);
+assert.equal(Cutout.checkMask({ alpha: full, modelRgba: good, originalRgba: photo, width: PW, height: PH }).reason, 'full');
+assert.equal(Cutout.checkMask({ alpha, modelRgba: good, originalRgba: photo, width: PW, height: PH, spill: 0.2 }).reason, 'misaligned');
+// The model moved the subject 15 px: its mask and pixels no longer match the photo.
+const moved = modelOutput({ shift: 15 });
+const movedVerdict = Cutout.checkMask({ alpha: Cutout.maskFromModel(moved, PW, PH), modelRgba: moved, originalRgba: photo, width: PW, height: PH });
+assert.equal(movedVerdict.ok, false, 'a shifted subject is rejected');
+assert.equal(movedVerdict.reason, 'redrawn');
+// The model repainted the subject (here: a different shirt colour).
+const repainted = modelOutput();
+for (let p = 0; p < PW * PH; p++) { repainted[p * 4] = 40; repainted[p * 4 + 1] = 60; repainted[p * 4 + 2] = 210; }
+assert.equal(Cutout.checkMask({ alpha, modelRgba: repainted, originalRgba: photo, width: PW, height: PH }).reason, 'redrawn');
+
+// Spill: opaque pixels in the grey padding around the photo.
+const plan = { x: 10, y: 0, w: 60, h: 100 };
+const spillImg = new Uint8ClampedArray(PW * PH * 4);
+for (let y = 0; y < PH; y++) for (let x = 0; x < PW; x++) spillImg[(y * PW + x) * 4 + 3] = x < 10 ? 255 : 0;
+assert.ok(Math.abs(Cutout.paddingSpill(spillImg, PW, PH, plan) - 0.5) < 0.05, 'left bar painted = half the padding');
+assert.deepEqual(Cutout.maskBox(alpha, PW, PH), { x: 20, y: 15, w: 40, h: 80 });
+
 console.log('cutout tests passed.');

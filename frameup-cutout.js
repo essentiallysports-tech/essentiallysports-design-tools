@@ -1,14 +1,19 @@
 // FrameUp editor: "Remove background" on each photo in the Photos panel.
 //
-//   - With BRIA_API_KEY set on the server, /api/remove-bg cuts the subject
-//     out with Bria RMBG 2.0 (about $0.018 per image, logged and capped like
-//     every AI call). Results are kept for this session, so the same photo is
-//     never sent twice.
-//   - Without it, the button says it isn't set up, and offers the free
-//     "plain backdrop" tool instead when the photo suits it: a flood fill
-//     from the edges that runs fully in the browser (no model download). It
-//     only works on studio-style photos with a plain, even backdrop, and
-//     says so rather than guessing on busy photos.
+//   - /api/remove-bg asks a cut-out model (default: OpenAI gpt-image-1-mini
+//     with a transparent background, using the server's OPENAI_API_KEY; Bria
+//     and the Vercel AI Gateway are optional providers). Logged and capped
+//     like every AI call; results are kept for this session per photo.
+//   - LIKENESS: a generative model redraws pixels, so its version of a real
+//     athlete's face, jersey or logos may differ. The editor never shows it.
+//     It uses ONLY the returned image's alpha as a mask, scaled back onto the
+//     ORIGINAL photo's own pixels, and first checks that the mask lines up
+//     (coverage, spill into the padding, colour agreement under the mask).
+//     A mask that fails falls back to the free tool below, or says it
+//     couldn't cut this one out cleanly.
+//   - Without a key, the button says it isn't set up (naming the env var) and
+//     offers the free "plain backdrop" tool when the photo suits it: a flood
+//     fill from the edges that runs fully in the browser (no model download).
 // The pixel maths is pure and exported for tests (scripts/test-cutout.mjs).
 (function (root, factory) {
   const api = factory();
@@ -22,6 +27,8 @@
   const MAX_SEND_BASE64 = 4 * 1024 * 1024;
   const MAX_SEND_SIDE = 2048;
   const PLAIN_MAX_SIDE = 1600;
+  // Neutral grey for the padding around the photo sent to the model.
+  const PAD_GREY = 128;
 
   function colorDistance(data, i, color) {
     const dr = data[i] - color[0];
@@ -105,7 +112,141 @@
     return Math.floor(length * 3 / 4);
   }
 
-  const api = { MAX_UPLOAD_BYTES, MAX_SEND_BASE64, MAX_SEND_SIDE, edgeStats, plainBackdropMask, scaledSize, base64Bytes };
+  // ─── Model mask on the original photo ────────────────────────────────
+  // The model only takes 1024x1024, 1024x1536 or 1536x1024. The photo is
+  // fitted (never cropped) into the closest one, centred on grey padding, so
+  // the returned mask maps back to the photo with a plain rectangle.
+  function padPlan(width, height) {
+    const ratio = width / height;
+    const [cw, ch] = ratio < 0.83 ? [1024, 1536] : ratio > 1.2 ? [1536, 1024] : [1024, 1024];
+    const scale = Math.min(cw / width, ch / height);
+    const w = Math.max(1, Math.round(width * scale));
+    const h = Math.max(1, Math.round(height * scale));
+    return { size: `${cw}x${ch}`, width: cw, height: ch, region: { x: Math.round((cw - w) / 2), y: Math.round((ch - h) / 2), w, h } };
+  }
+
+  // Alpha from the model's RGBA (already scaled to the photo's size), with
+  // near-0/near-255 snapped clean and a 3x3 soften on the edge only.
+  function maskFromModel(rgba, width, height) {
+    const total = width * height;
+    const raw = new Uint8ClampedArray(total);
+    for (let p = 0; p < total; p++) {
+      const a = rgba[p * 4 + 3];
+      raw[p] = a < 10 ? 0 : a > 245 ? 255 : a;
+    }
+    const alpha = new Uint8ClampedArray(total);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const p = y * width + x;
+        const v = raw[p];
+        let edge = false;
+        if (x > 0 && raw[p - 1] !== v) edge = true;
+        else if (x < width - 1 && raw[p + 1] !== v) edge = true;
+        else if (y > 0 && raw[p - width] !== v) edge = true;
+        else if (y < height - 1 && raw[p + width] !== v) edge = true;
+        if (!edge) { alpha[p] = v; continue; }
+        let sum = 0;
+        let count = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          const yy = y + dy;
+          if (yy < 0 || yy >= height) continue;
+          for (let dx = -1; dx <= 1; dx++) {
+            const xx = x + dx;
+            if (xx < 0 || xx >= width) continue;
+            sum += raw[yy * width + xx];
+            count++;
+          }
+        }
+        alpha[p] = Math.round(sum / count);
+      }
+    }
+    return alpha;
+  }
+
+  // Share of the grey padding (outside the photo) the model made opaque. A
+  // model that moved or rescaled the subject paints into the padding.
+  function paddingSpill(rgba, width, height, region) {
+    let padding = 0;
+    let opaque = 0;
+    for (let y = 0; y < height; y += 2) {
+      for (let x = 0; x < width; x += 2) {
+        if (x >= region.x && x < region.x + region.w && y >= region.y && y < region.y + region.h) continue;
+        padding++;
+        if (rgba[(y * width + x) * 4 + 3] > 128) opaque++;
+      }
+    }
+    return padding ? opaque / padding : 0;
+  }
+
+  function maskBox(alpha, width, height) {
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (alpha[y * width + x] <= 128) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    return maxX < 0 ? null : { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+  }
+
+  // Is this mask safe to put on the original? Checks:
+  //   coverage: not (nearly) empty or (nearly) everything;
+  //   spill:    the model didn't paint into the padding (moved/rescaled);
+  //   colour:   under the mask, the model's pixels still look like the
+  //             original's (same subject in the same place): low mean
+  //             difference AND few clearly different pixels. A model that
+  //             redrew or shifted the person disagrees here.
+  //   box:      the kept area isn't a sliver.
+  function checkMask({ alpha, modelRgba, originalRgba, width, height, spill = 0 }, limits = {}) {
+    const { minCoverage = 0.03, maxCoverage = 0.97, maxSpill = 0.04, maxColorDiff = 48, maxMismatch = 0.2, minBoxShare = 0.02 } = limits;
+    const total = width * height;
+    let sum = 0;
+    for (let p = 0; p < total; p++) sum += alpha[p];
+    const coverage = sum / (255 * total);
+    const box = maskBox(alpha, width, height);
+    const step = Math.max(1, Math.floor(Math.sqrt(total / 40000)));
+    let diff = 0;
+    let samples = 0;
+    let mismatched = 0;
+    for (let y = 0; y < height; y += step) {
+      for (let x = 0; x < width; x += step) {
+        const p = y * width + x;
+        if (alpha[p] < 220) continue;
+        const i = p * 4;
+        const d = (Math.abs(modelRgba[i] - originalRgba[i]) + Math.abs(modelRgba[i + 1] - originalRgba[i + 1]) + Math.abs(modelRgba[i + 2] - originalRgba[i + 2])) / 3;
+        diff += d;
+        if (d > 40) mismatched++;
+        samples++;
+      }
+    }
+    const colorDiff = samples ? diff / samples : 255;
+    // Share of kept pixels that clearly disagree with the photo (a moved or
+    // redrawn subject), so a partly shifted mask isn't averaged away.
+    const mismatch = samples ? mismatched / samples : 1;
+    const boxShare = box ? (box.w * box.h) / total : 0;
+    const stats = { coverage, spill, colorDiff, mismatch, box, boxShare };
+    if (coverage < minCoverage || !box) return { ok: false, reason: 'empty', ...stats };
+    if (coverage > maxCoverage) return { ok: false, reason: 'full', ...stats };
+    if (spill > maxSpill) return { ok: false, reason: 'misaligned', ...stats };
+    if (boxShare < minBoxShare) return { ok: false, reason: 'empty', ...stats };
+    if (colorDiff > maxColorDiff || mismatch > maxMismatch) return { ok: false, reason: 'redrawn', ...stats };
+    return { ok: true, reason: '', ...stats };
+  }
+
+  // The original's own pixels, with the mask as alpha. Never the model's RGB.
+  function applyMask(originalRgba, alpha) {
+    const out = new Uint8ClampedArray(originalRgba);
+    for (let p = 0; p < alpha.length; p++) out[p * 4 + 3] = Math.min(out[p * 4 + 3], alpha[p]);
+    return out;
+  }
+
+  const api = { MAX_UPLOAD_BYTES, MAX_SEND_BASE64, MAX_SEND_SIDE, PAD_GREY, edgeStats, plainBackdropMask, scaledSize, base64Bytes, padPlan, maskFromModel, paddingSpill, maskBox, checkMask, applyMask };
 
   // ─── Browser ────────────────────────────────────────────────────────────
   if (typeof window === 'undefined' || typeof document === 'undefined') return Object.freeze(api);
@@ -175,48 +316,83 @@
     }
   }
 
-  // { configured: bool } from the server, asked once per page load.
+  // { configured, envVar } from the server, asked once per page load.
   function serviceStatus(token) {
     if (!statusPromise) {
       statusPromise = fetch('/api/remove-bg', { headers: { Authorization: `Bearer ${token}` } })
         .then(response => (response.ok ? response.json() : { configured: false }))
-        .then(body => ({ configured: body?.configured === true }))
-        .catch(() => ({ configured: false }));
+        .then(body => ({ configured: body?.configured === true, envVar: String(body?.envVar || 'OPENAI_API_KEY') }))
+        .catch(() => ({ configured: false, envVar: 'OPENAI_API_KEY' }));
       // A failed check is asked again next time (the network may be back).
       statusPromise.then(result => { if (!result.configured) setTimeout(() => { statusPromise = null; }, 30000); });
     }
     return statusPromise;
   }
 
-  function encodeForUpload(image) {
-    for (const side of [MAX_SEND_SIDE, 1600, 1200]) {
-      const { canvas } = drawToCanvas(image, side);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-      if (dataUrl.length <= MAX_SEND_BASE64 && base64Bytes(dataUrl) <= MAX_UPLOAD_BYTES) return dataUrl;
-    }
-    throw new Error('That photo is too large to send. Try a smaller one.');
-  }
+  const CROSS_SITE = 'This photo comes from another site, so it can’t be processed. Download it and upload it instead.';
 
-  async function removeWithBria(image, token) {
-    let dataUrl;
+  // Sends the photo, padded to the model's size, and turns the answer into a
+  // cut-out of the ORIGINAL photo (mask only). Returns { ok, image } or
+  // { ok: false, reason, stats }.
+  async function removeWithModel(image, token) {
+    const original = drawToCanvas(image, MAX_SEND_SIDE);
+    const width = original.canvas.width;
+    const height = original.canvas.height;
+    let originalPixels;
     try {
-      dataUrl = encodeForUpload(image);
+      originalPixels = original.ctx.getImageData(0, 0, width, height);
     } catch (error) {
-      if (error?.name === 'SecurityError') throw new Error('This photo comes from another site, so it can’t be processed. Download it and upload it instead.');
-      throw error;
+      throw new Error(CROSS_SITE);
     }
+    const plan = padPlan(width, height);
+    const padded = document.createElement('canvas');
+    padded.width = plan.width;
+    padded.height = plan.height;
+    const pctx = padded.getContext('2d');
+    pctx.fillStyle = `rgb(${PAD_GREY}, ${PAD_GREY}, ${PAD_GREY})`;
+    pctx.fillRect(0, 0, plan.width, plan.height);
+    pctx.imageSmoothingQuality = 'high';
+    pctx.drawImage(original.canvas, plan.region.x, plan.region.y, plan.region.w, plan.region.h);
+    const dataUrl = padded.toDataURL('image/jpeg', 0.9);
+    if (dataUrl.length > MAX_SEND_BASE64) throw new Error('That photo is too large to send. Try a smaller one.');
+
     const response = await fetch('/api/remove-bg', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ image: dataUrl }),
+      body: JSON.stringify({ image: dataUrl, size: plan.size }),
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok || !body.ok) {
+    if (!response.ok || !body.ok || !body.dataUrl) {
       const error = new Error(body.error || 'The background could not be removed. Try again in a moment.');
       error.reason = body.reason || '';
+      error.envVar = body.envVar || '';
       throw error;
     }
-    return body.dataUrl ? loadImage(body.dataUrl) : loadImage(body.url, true);
+    const modelImage = await loadImage(body.dataUrl);
+    // The model may answer at another resolution: map the plan onto it.
+    const sx = (modelImage.naturalWidth || plan.width) / plan.width;
+    const sy = (modelImage.naturalHeight || plan.height) / plan.height;
+
+    const full = document.createElement('canvas');
+    full.width = plan.width;
+    full.height = plan.height;
+    const fctx = full.getContext('2d', { willReadFrequently: true });
+    fctx.drawImage(modelImage, 0, 0, plan.width, plan.height);
+    const spill = paddingSpill(fctx.getImageData(0, 0, plan.width, plan.height).data, plan.width, plan.height, plan.region);
+
+    const fitted = document.createElement('canvas');
+    fitted.width = width;
+    fitted.height = height;
+    const mctx = fitted.getContext('2d', { willReadFrequently: true });
+    mctx.imageSmoothingQuality = 'high';
+    mctx.drawImage(modelImage, plan.region.x * sx, plan.region.y * sy, plan.region.w * sx, plan.region.h * sy, 0, 0, width, height);
+    const modelRgba = mctx.getImageData(0, 0, width, height).data;
+    const alpha = maskFromModel(modelRgba, width, height);
+    const check = checkMask({ alpha, modelRgba, originalRgba: originalPixels.data, width, height, spill });
+    if (!check.ok) return { ok: false, reason: check.reason, stats: check };
+    originalPixels.data.set(applyMask(originalPixels.data, alpha));
+    original.ctx.putImageData(originalPixels, 0, 0);
+    return { ok: true, image: await loadImage(original.canvas.toDataURL('image/png')), stats: check };
   }
 
   async function removePlainBackdrop(image) {
@@ -225,7 +401,7 @@
     try {
       pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
     } catch (error) {
-      throw new Error('This photo comes from another site, so it can’t be processed. Download it and upload it instead.');
+      throw new Error(CROSS_SITE);
     }
     const mask = plainBackdropMask(pixels.data, canvas.width, canvas.height);
     if (!mask.ok) return { ok: false, reason: mask.reason };
@@ -256,13 +432,14 @@
     toast('Plain backdrop removed. Undo brings it back.', 'success');
   }
 
-  function explainNotSetUp(tool, image, name) {
+  function explainNotSetUp(tool, image, name, envVar = 'OPENAI_API_KEY') {
     const plain = plainCheck(image);
+    const need = `The AI cut-out needs a key on the server (an admin adds ${envVar}).`;
     showEsDialog({
       title: 'Remove background isn’t set up yet',
       body: plain
-        ? 'The AI cut-out needs a Bria key on the server (an admin adds BRIA_API_KEY). This photo has a plain backdrop, so the free in-browser tool can remove it now.'
-        : 'The AI cut-out needs a Bria key on the server (an admin adds BRIA_API_KEY). The free in-browser tool only handles plain studio backdrops, and this photo’s backdrop is too busy for it.',
+        ? `${need} This photo has a plain backdrop, so the free in-browser tool can remove it now.`
+        : `${need} The free in-browser tool only handles plain studio backdrops, and this photo’s backdrop is too busy for it.`,
       actions: plain
         ? [
           { label: 'Not now', variant: 'quiet' },
@@ -305,21 +482,31 @@
       }
       const status = await serviceStatus(token);
       if (!status.configured) {
-        explainNotSetUp(tool, image, descriptor.name);
+        explainNotSetUp(tool, image, descriptor.name, status.envVar);
         return;
       }
-      const result = await removeWithBria(image, token);
-      cutouts.set(image, result);
-      isCutout.add(result);
+      const result = await removeWithModel(image, token);
+      if (!result.ok) {
+        // The model's mask didn't line up with this photo: never guess.
+        console.info('Remove background: mask rejected', result.reason, result.stats);
+        if (plainCheck(image)) {
+          await runPlain(tool, image, descriptor.name);
+        } else {
+          toast('Couldn’t cut this one out cleanly. Try another photo.', 'error');
+        }
+        return;
+      }
+      cutouts.set(image, result.image);
+      isCutout.add(result.image);
       // Only apply if the slot still shows the photo we sent.
       if (getImageToolDescriptor(tool).image === image) {
-        applyToSlot(tool, result, descriptor.name);
+        applyToSlot(tool, result.image, descriptor.name);
         toast('Background removed. Undo brings it back.', 'success');
       }
     } catch (error) {
       if (error.reason === 'off') {
-        statusPromise = Promise.resolve({ configured: false });
-        explainNotSetUp(tool, image, descriptor.name);
+        statusPromise = Promise.resolve({ configured: false, envVar: error.envVar || 'OPENAI_API_KEY' });
+        explainNotSetUp(tool, image, descriptor.name, error.envVar || 'OPENAI_API_KEY');
       } else {
         toast(error.message || 'The background could not be removed.', 'error');
       }
@@ -353,5 +540,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();
 
-  return Object.freeze({ ...api, removeBackground, _cutouts: cutouts });
+  return Object.freeze({ ...api, removeBackground, removeWithModel, _cutouts: cutouts });
 });

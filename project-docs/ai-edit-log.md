@@ -26,13 +26,24 @@ and what's still uncommitted.
   146→98 KB (−33%), Video FI 111→73 KB (−35%), Tag FI 106→68 KB (−36%). Side-by-side checks showed no
   visible difference at 100%. Helpers: `linkImagePlan()`, `resizeCanvasForLink()` (index.html).
 - **Remove background** (`frameup-cutout.js`, `netlify/functions/remove-bg.js`, `api/remove-bg.js`): a
-  "Remove background" action on each photo in the Photos panel. Server: signed-in ES only, 6 MB cap
-  (bytes checked to be PNG/JPEG/WebP), per-person hourly cap (`REMOVE_BG_HOURLY_LIMIT`, default 30) plus
-  the shared hourly/weekly AI caps, logged via `logUsage` as `remove-bg` at $0.018. **Off unless
-  `BRIA_API_KEY` is set**; then the button explains it isn't set up. Free fallback with no downloads: a
-  "plain backdrop" flood fill in the browser, offered only when the photo's edges are a plain studio
-  backdrop (refuses busy photos instead of guessing). Results cached per photo for the session; Undo works.
-  Bria endpoint/response shape is from Bria's docs and **unverified live** (no key here).
+  "Remove background" action on each photo in the Photos panel. **Changed per Suhail ("use a chatgpt cheap
+  model"):** default provider is OpenAI `gpt-image-1-mini` (cheapest GPT Image model; `REMOVE_BG_MODEL`
+  overrides) via `/v1/images/edits` with `background: transparent`, `quality: low`, WebP output (keeps
+  alpha, stays under Vercel's 4.5 MB response cap), called **directly with the existing `OPENAI_API_KEY`**
+  (same key as Reels transcription), so no new key. `REMOVE_BG_PROVIDER=gateway` (opt-in: the Gateway's
+  OpenAI image-edit route isn't documented for transparency) and `=bria` (`BRIA_API_KEY`) remain options.
+  **Likeness rule:** the model's picture is never shown. The editor pads the photo to the model's size
+  (1024², 1024×1536 or 1536×1024), takes only the returned alpha, maps it back to the photo, softens the
+  edge and applies it to the ORIGINAL pixels at up to 2048 px. A mask is rejected (falls back to the free
+  plain-backdrop tool, or "Couldn't cut this one out cleanly") when it is near-empty/near-full, spills into
+  the padding (moved/rescaled), or the model's pixels under it disagree with the photo (mean diff > 48 or
+  > 20% of pixels clearly different = redrawn/shifted). Cost is computed from the response's token usage
+  ($2 text / $2.5 image in / $8 out per 1M for gpt-image-1-mini; about $0.005 per image at low) and logged
+  via `logUsage` as `remove-bg` with model `openai/gpt-image-1-mini`. Signed-in only, 6 MB cap, per-person
+  hourly cap + shared hourly/weekly AI caps. Not set up → dialog naming the env var. Free in-browser
+  plain-backdrop flood fill kept. Per-photo session cache and Undo kept. **Not tried against the real
+  OpenAI API** (no real calls from this session); the mask pipeline was checked in the browser with a
+  stand-in model response.
 - **Size packs** (`frameup-size-pack.js`, `frameup-zip.js`, `frameup-quick-wins.css`): Export settings →
   "Size pack" (and ⌘K "Export size pack") in the Social Media workspace: feed 1080×1350, square 1080×1080,
   story 1080×1920, X 1600×900, YouTube 1280×720, preview grid, tick sizes, one ZIP (tiny stored-ZIP writer,
@@ -51,8 +62,8 @@ and what's still uncommitted.
   noise before and after (~60–80 ms).
 - Tests: `scripts/test-remove-bg.mjs`, `test-size-pack.mjs` (ZIP bytes + `unzip -t`), `test-cutout.mjs`,
   `test-editor-quick-wins.mjs`. Full suite: only the 7 known baseline failures.
-- New env vars (all optional, feature is off without the key): `BRIA_API_KEY`, `BRIA_REMOVE_BG_URL`,
-  `REMOVE_BG_HOURLY_LIMIT`, `REMOVE_BG_COST_USD`. No migrations.
+- Env: reuses `OPENAI_API_KEY`. New optional: `REMOVE_BG_PROVIDER`, `REMOVE_BG_MODEL`, `REMOVE_BG_QUALITY`,
+  `REMOVE_BG_HOURLY_LIMIT`, and for Bria only `BRIA_API_KEY`, `BRIA_REMOVE_BG_URL`, `REMOVE_BG_COST_USD`. No migrations.
 
 ### 2026-09-10 — Fix a regression from this same day's earlier fixes: concurrent profile upsert race
 - Status: `[pushed - see rollback point below]`
