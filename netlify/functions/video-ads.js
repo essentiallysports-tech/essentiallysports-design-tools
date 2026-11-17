@@ -29,7 +29,7 @@
 const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
 const { getTrends } = require('./trend-design.js');
 const { _helpers: tweet } = require('./tweet-oembed.js');
-const { aiText, aiWebResearch, gatewayConfigured, isBudgetError, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage } = require('./_ai-gateway.js');
+const { aiText, aiWebResearch, gatewayConfigured, isBudgetError, userOverHourlyLimit, aiSpendGate, featureDisabled, featureOffMessage } = require('./_ai-gateway.js');
 const RULES = require('../../frameup-rules.js');
 const BRANDS = require('../../video-ads-brands.js');
 const TEAMS = require('../../video-ads-teams.js');
@@ -1013,7 +1013,9 @@ async function copy(body, track) {
   let lastErrors = [];
   let allErrors = [];
   for (let attempt = 0; attempt < 2 && good.length < 2; attempt += 1) {
-    const result = await aiText({ tier: 'main', system: COPY_SYSTEM, cacheSystem: true, messages, json: true, maxTokens: 2000, timeoutMs: 25000, track: { ...track, feature: 'video-ads-copy' } });
+    // COPY_SYSTEM is about 400 tokens, under the 512-token cache minimum, so it is
+    // not marked cacheable (the hint would only add a cache-write attempt).
+    const result = await aiText({ tier: 'main', system: COPY_SYSTEM, messages, json: true, maxTokens: 2000, timeoutMs: 25000, track: { ...track, feature: 'video-ads-copy' } });
     cost += result.cost;
     const parsed = extractJson(result.text);
     const variants = Array.isArray(parsed?.variants) ? parsed.variants : [];
@@ -1192,6 +1194,8 @@ async function grammar(body, track) {
 }
 
 const AI_MODES = { 'find-clips': findClips, 'moments-with-clips': momentsWithClips, copy, chat, grammar };
+// The usage feature (and AI_DISABLE name) of each mode.
+const MODE_FEATURES = { 'find-clips': 'video-ads-find-clips', 'moments-with-clips': 'video-ads-moments-with-clips', copy: 'video-ads-copy', chat: 'video-ads-chat', grammar: 'video-ads-grammar' };
 
 exports.handler = async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'POST, OPTIONS' }, body: '' };
@@ -1209,7 +1213,11 @@ exports.handler = async function handler(event) {
     if (body.mode === 'research') return json(410, { ok: false, error: 'Research was removed.' });
     if (AI_MODES[body.mode]) {
       const token = bearerToken(event.headers);
-      const track = { email: auth.user.email, token };
+      // One run id per request: a copy run's retry shares it with the first try.
+      const track = { email: auth.user.email, token, runId: `va-${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 6)}` };
+      // Switched off (AI_DISABLE): a calm reply before anything else, cached results included.
+      const feature = MODE_FEATURES[body.mode];
+      if (featureDisabled(feature)) return json(503, { ok: false, reason: 'feature-off', error: featureOffMessage(feature) });
       // A cached clip search costs nothing, so it skips the AI gates.
       if (body.mode === 'find-clips') {
         const cached = await findClips(body, { ...track, skipAi: true });
@@ -1227,7 +1235,8 @@ exports.handler = async function handler(event) {
       }
       if (!gatewayConfigured()) return json(503, { ok: false, reason: 'off', error: 'AI is not available right now.' });
       if (await userOverHourlyLimit(token)) return json(429, { ok: false, reason: 'limit', error: "You've used a lot of AI this hour. Take a short break and try again soon." });
-      if (await userOverWeeklyLimit(token)) return json(429, { ok: false, reason: 'weekly-limit', error: weeklyLimitMessage() });
+      const gate = await aiSpendGate(token, { feature });
+      if (gate) return json(gate.status, { ok: false, reason: gate.reason, error: gate.error });
       if (String(event.body || '').length > 60000) return json(413, { ok: false, error: 'That request is too large.' });
       try {
         const result = await AI_MODES[body.mode](body, track);
@@ -1254,7 +1263,7 @@ exports.handler = async function handler(event) {
 
 exports._test = {
   variantsFrom, isVideoUrl, sizeFromUrl, clipFromPost, trends, checkVariant, autoFix, trimToWords, swapBanned, closestPhrase,
-  findClips, momentsWithClips, teamInTitle, MOMENT_CACHE, MOMENTS, looksOld, ageHoursOf, copy, chat, CLIP_CACHE, FIND_CLIPS, grammar, checkGrammarIssues, GRAMMAR_CACHE,
+  MODE_FEATURES, COPY_SYSTEM, findClips, momentsWithClips, teamInTitle, MOMENT_CACHE, MOMENTS, looksOld, ageHoursOf, copy, chat, CLIP_CACHE, FIND_CLIPS, grammar, checkGrammarIssues, GRAMMAR_CACHE,
   searchPlan, webPrompt, xQueryFor, xApiSearch, assessClip, freshClip, scoreClip, rankClips, mediaKey, qualityLabel, CLIP_TTL_MS, SOURCES,
   useLearning(mod) { learning = { lessonsFor: async () => ({ examples: [], rules: [] }), recordEvent: async () => false, ...mod }; },
 };
