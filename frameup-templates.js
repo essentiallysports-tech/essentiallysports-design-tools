@@ -21,7 +21,7 @@
       title: 'Choose a post type',
       groups: [
         ['Covers and quotes', ['cover', 'quote', 'long-quote', 'double-entity-quote']],
-        ['Stats', ['stats-single-ent', 'stats-double-ent']],
+        ['Stats', ['stats-single-ent', 'stats-double-ent', 'player-stat-line', 'team-record']],
         ['Lists and timelines', ['listicle-type-1', 'listicle-type-2', 'asap-template-1']],
         ['Tweets', ['twitter-quote', 'twitter-multi']],
       ],
