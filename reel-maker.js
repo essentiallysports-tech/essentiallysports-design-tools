@@ -52,6 +52,7 @@
     info: svg('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>'),
     check: svg('<path d="M20 6 9 17l-5-5"/>'),
     x: svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'),
+    chevronRight: svg('<path d="m9 18 6-6-6-6"/>'),
     link: svg('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'),
     refresh: svg('<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'),
     play: svg('<path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>'),
@@ -73,7 +74,7 @@
     steps: $('rm-steps'), canvas: $('rm-canvas'), emptyStage: $('rm-empty-stage'), safe: $('rm-safe'),
     play: $('rm-play'), scrub: $('rm-scrub'), time: $('rm-time'), mute: $('rm-mute'), safeToggle: $('rm-safe-toggle'), stageMeta: $('rm-stage-meta'),
     panes: { topic: $('rm-pane-topic'), edit: $('rm-pane-edit'), export: $('rm-pane-export') },
-    source: $('rm-source'), sourceTrend: $('rm-source-trend'), sourceBrief: $('rm-source-brief'), leagues: $('rm-leagues'), trends: $('rm-trends'), trendsNote: $('rm-trends-note'), picked: $('rm-picked'),
+    source: $('rm-source'), sourceTrend: $('rm-source-trend'), sourceBrief: $('rm-source-brief'), leagues: $('rm-leagues'), trendbox: $('rm-trendbox'), trends: $('rm-trends'), trendsNote: $('rm-trends-note'), picked: $('rm-picked'),
     brief: $('rm-brief'), formats: $('rm-formats'), sport: $('rm-sport'), tier: $('rm-tier'), factcheck: $('rm-factcheck'), factcheckRow: $('rm-factcheck-row'),
     cost: $('rm-cost'), write: $('rm-write'), writeText: $('rm-write-text'), writeStatus: $('rm-write-status'), recent: $('rm-recent'), recentList: $('rm-recent-list'),
     notice: $('rm-notice'), summary: $('rm-summary'), askForm: $('rm-ask'), askInput: $('rm-ask-input'), beats: $('rm-beats'), beatsMeta: $('rm-beats-meta'),
@@ -84,7 +85,7 @@
     back: $('rm-back'), next: $('rm-next'), nextText: $('rm-next-text'),
     photos: $('rm-photos'), photosForm: $('rm-photos-search'), photosQ: $('rm-photos-q'), photosGrid: $('rm-photos-grid'), photosNone: $('rm-photos-none'),
     toasts: $('rm-toasts'),
-    strip: $('rm-strip'), stripwrap: $('rm-stripwrap'), making: $('rm-making'), autoline: $('rm-autoline'), settings: $('rm-settings'), settingsMeta: $('rm-settings-meta'),
+    strip: $('rm-strip'), stripwrap: $('rm-stripwrap'), making: $('rm-making'), makingLive: $('rm-making-live'), autoline: $('rm-autoline'), settings: $('rm-settings'), settingsMeta: $('rm-settings-meta'),
     styles: $('rm-styles'), stylesEdit: $('rm-styles-edit'), styleWhy: $('rm-style-why'), styleMeta: $('rm-style-meta'),
     voiceTopic: $('rm-voice-topic'), voiceEdit: $('rm-voice-edit'), voiceState: $('rm-voice-state'),
     clipsOn: $('rm-clips-on'), aiclipsOn: $('rm-aiclips-on'), aiclipsRow: $('rm-aiclips-row'), aiclipsNote: $('rm-aiclips-note'),
@@ -281,13 +282,14 @@
     radios(els.source, 'source', state.source);
     els.sourceTrend.hidden = state.source !== 'trend';
     els.sourceBrief.hidden = state.source !== 'brief';
+    renderPicked();
     renderFormats();
     renderCost();
   });
 
   function leagueTile(sport, size = 20) {
     const logo = LOGOS ? LOGOS.logoFor(sport) : null;
-    if (!logo) return '';
+    if (!logo) return size >= 32 ? `<span class="rm-league rm-league--none" style="--size:${size}px" aria-hidden="true">${esc((SPORT_LABEL[sport] || '?').slice(0, 3))}</span>` : '';
     return `<span class="rm-league" style="--tile:${esc(logo.bg)};--size:${size}px" title="${esc(logo.label)}"><img src="${esc(logo.src)}" alt="" loading="lazy"></span>`;
   }
   function renderLeagues() {
@@ -297,9 +299,12 @@
   els.leagues.addEventListener('click', event => {
     const btn = event.target.closest('[data-league]');
     if (!btn) return;
+    const refocus = els.leagues.contains(document.activeElement);
     state.league = btn.dataset.league;
     renderLeagues();
     renderTrends();
+    if (refocus) els.leagues.querySelector(`[data-league="${state.league}"]`)?.focus();
+    els.trendbox.scrollTop = 0;
   });
   const ago = iso => {
     const t = new Date(iso).getTime();
@@ -323,15 +328,21 @@
       els.trends.innerHTML = '<li class="es-empty rm-trends-state"><p class="es-empty__title">No fresh stories here</p><p class="es-empty__copy">Try another league, or write a brief.</p></li>';
       return;
     }
+    // Roving tabindex: one Tab stop (the picked row, else the first); arrows move.
+    const tabId = items.some(item => item.id === state.trend?.id) ? state.trend.id : items[0].id;
     els.trends.innerHTML = items.map(item => {
       const on = state.trend?.id === item.id;
-      const fmt = F.FORMATS[item.format];
-      return `<li><button class="rm-trend" type="button" role="radio" aria-checked="${on}" data-trend="${esc(item.id)}">
-        ${leagueTile(item.sport, 28)}
-        <span class="rm-trend__body"><span class="rm-trend__title">${esc(item.title)}</span>
-        <span class="rm-trend__meta">${esc(SPORT_LABEL[item.sport] || '')}${item.publishedAt ? ` · ${esc(ago(item.publishedAt))}` : ''}${fmt ? ` · <span class="rm-trend__fmt">${esc(fmt.short)}</span>` : ''}</span></span>
+      return `<li role="none"><button class="rm-trend" type="button" role="radio" aria-checked="${on}" tabindex="${item.id === tabId ? 0 : -1}" data-trend="${esc(item.id)}">
+        ${leagueTile(item.sport, 40)}
+        <span class="rm-trend__body"><span class="rm-trend__title">${esc(item.title)}</span>${trendMeta(item)}</span>
       </button></li>`;
     }).join('');
+  }
+  // "NFL · 2h ago" plus the format tag (Explainer, Top 5…).
+  function trendMeta(item) {
+    const fmt = F.FORMATS[item.format];
+    const bits = [SPORT_LABEL[item.sport] || '', item.publishedAt ? ago(item.publishedAt) : ''].filter(Boolean).join(' · ');
+    return `<span class="rm-trend__meta"><span>${esc(bits)}</span>${fmt ? `<span class="es-badge es-badge--brand rm-trend__fmt">${esc(fmt.short)}</span>` : ''}</span>`;
   }
   els.trends.setAttribute('role', 'radiogroup');
   els.trends.addEventListener('click', event => {
@@ -339,18 +350,43 @@
     if (!btn) return;
     const item = state.trends.find(t => t.id === btn.dataset.trend);
     if (!item) return;
+    const refocus = els.trends.contains(document.activeElement);
     state.trend = state.trend?.id === item.id ? null : item;
     if (state.trend && !state.sport) els.sport.value = '';
     renderTrends();
     renderPicked();
     renderFormats();
+    if (refocus) els.trends.querySelector(`[data-trend="${CSS.escape(item.id)}"]`)?.focus({ preventScroll: false });
   });
+  // Home / End jump to the first / last story (arrows are handled for every radiogroup).
+  els.trends.addEventListener('keydown', event => {
+    if (!['Home', 'End'].includes(event.key) || !event.target.closest('[data-trend]')) return;
+    const list = [...els.trends.querySelectorAll('[data-trend]')];
+    event.preventDefault();
+    (event.key === 'Home' ? list[0] : list[list.length - 1])?.focus();
+  });
+  // A hairline + soft shadow under the sticky league filter once the list scrolls.
+  els.trendbox.addEventListener('scroll', () => els.trendbox.classList.toggle('is-scrolled', els.trendbox.scrollTop > 0), { passive: true });
   function renderPicked() {
     const t = state.trend;
     els.picked.hidden = !t || state.source !== 'trend';
     if (!t) { els.picked.innerHTML = ''; return; }
-    els.picked.innerHTML = `${leagueTile(t.sport, 20)}<span><b>Reel about:</b> ${esc(t.title)}</span><button class="rm-icon-btn rm-icon-btn--sm" type="button" id="rm-unpick" aria-label="Clear the trend">${ICON.x}</button>`;
-    $('rm-unpick').addEventListener('click', () => { state.trend = null; renderTrends(); renderPicked(); renderFormats(); });
+    els.picked.innerHTML = `${leagueTile(t.sport, 40)}
+      <div class="rm-picked__body"><p class="rm-picked__eyebrow">Reel about</p><p class="rm-picked__title">${esc(t.title)}</p>${trendMeta(t)}</div>
+      <div class="rm-picked__actions">
+        <button class="es-btn es-btn--tertiary es-btn--sm" type="button" id="rm-repick">Change</button>
+        <button class="es-btn es-btn--tertiary es-btn--sm" type="button" id="rm-unpick" aria-label="Clear the story">Clear</button>
+      </div>`;
+    $('rm-unpick').addEventListener('click', () => {
+      state.trend = null; renderTrends(); renderPicked(); renderFormats();
+      els.trends.querySelector('[tabindex="0"]')?.focus();
+    });
+    $('rm-repick').addEventListener('click', () => {
+      if (state.league !== 'all' && state.league !== t.sport) { state.league = 'all'; renderLeagues(); renderTrends(); }
+      const row = els.trends.querySelector(`[data-trend="${CSS.escape(t.id)}"]`) || els.trends.querySelector('[data-trend]');
+      row?.scrollIntoView({ block: 'nearest' });
+      row?.focus({ preventScroll: true });
+    });
   }
   async function loadTrends() {
     state.trendsState = 'loading';
@@ -456,15 +492,27 @@
   els.styles.addEventListener('click', onStylePick);
   els.stylesEdit.addEventListener('click', onStylePick);
 
-  // "Auto picks: Data Explainer · Brian · clips on" above Make my reel.
+  // The Settings summary above Make my reel: Style · Voice · Clips · Format.
+  // Each tile opens All settings at that section.
   function renderAutoline() {
     const v = state.config.voice;
     const voice = v.ready && state.voiceOn ? ((v.voices || []).find(x => x.id === state.voiceId) || {}).name || 'House voice' : 'Captions only';
-    const st = state.style === 'auto' ? `${S.get(state.styleSuggested.id).label} (auto)` : S.get(state.style).label;
-    const fmt = state.format === 'auto' ? 'format auto' : F.FORMATS[state.format].short;
-    els.autoline.innerHTML = `<span>${esc(st)}</span><span>${esc(voice)}</span><span>${state.useClips ? 'Clips on' : 'Stills only'}</span><span>${esc(fmt)}</span>`;
-    els.settingsMeta.textContent = `${st} · ${voice}`;
+    const st = state.style === 'auto' ? `Auto · ${S.get(state.styleSuggested.id).label}` : S.get(state.style).label;
+    const fmt = state.format === 'auto' ? 'Auto' : F.FORMATS[state.format].short;
+    const rows = [['style', 'Style', st], ['voice', 'Voice', voice], ['clips', 'Clips', state.useClips ? 'On' : 'Stills only'], ['format', 'Format', fmt]];
+    els.autoline.innerHTML = rows.map(([id, label, value]) => `<button class="rm-setsum__item" type="button" data-open="${id}" aria-label="${esc(label)}: ${esc(value)}. Change ${esc(label.toLowerCase())}"><span class="rm-setsum__label">${esc(label)}</span><span class="rm-setsum__value">${esc(value)}</span>${ICON.chevronRight}</button>`).join('');
+    els.settingsMeta.textContent = `${state.tier === 'economy' ? 'Economy' : 'Standard'} script · fact check ${state.factCheck ? 'on' : 'off'}`;
   }
+  const SETTING_SEC = { style: 'rm-set-style', voice: 'rm-voice-topic', clips: 'rm-set-clips', format: 'rm-set-format' };
+  els.autoline.addEventListener('click', event => {
+    const btn = event.target.closest('[data-open]');
+    const sec = btn && $(SETTING_SEC[btn.dataset.open]);
+    if (!sec) return;
+    els.settings.open = true;
+    const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    sec.scrollIntoView({ block: 'start', behavior: calm ? 'auto' : 'smooth' });
+    sec.querySelector('[role="radio"][aria-checked="true"]:not(:disabled), input:not(:disabled), button:not(:disabled)')?.focus({ preventScroll: true });
+  });
 
   // ─── Voice picker (Story settings and Review fold share it) ─────────────
   let sampleSource = null;
@@ -538,8 +586,9 @@
     state.tier = btn.dataset.tier;
     radios(els.tier, 'tier', state.tier);
     renderCost();
+    renderAutoline();
   });
-  els.factcheck.addEventListener('change', () => { state.factCheck = els.factcheck.checked; renderCost(); });
+  els.factcheck.addEventListener('change', () => { state.factCheck = els.factcheck.checked; renderCost(); renderAutoline(); });
 
   function voChars() {
     if (state.plan) return state.plan.beats.reduce((n, b) => n + (b.vo || '').length, 0);
@@ -576,11 +625,29 @@
     if (label) textEl.textContent = label;
   }
   // ─── Make my reel: script -> voice -> visuals -> build ───────────────────
+  // The primary button stays a filled primary while busy (aria-disabled, not
+  // disabled, so it never falls back to the outline look) and counts the steps.
+  const writeLabel = () => (state.config.ai ? 'Make my reel' : 'Make a draft reel');
+  function setWriteBusy(busy) {
+    els.write.classList.toggle('is-busy', busy);
+    els.write.setAttribute('aria-busy', String(busy));
+    if (busy) els.write.setAttribute('aria-disabled', 'true'); else els.write.removeAttribute('aria-disabled');
+    if (!busy) els.writeText.textContent = writeLabel();
+  }
+  const STATE_WORD = { done: 'done', active: 'in progress', todo: 'to do', failed: 'needs a look', skipped: 'skipped' };
   function renderMaking() {
     const f = state.flow;
     els.making.hidden = !f.making && !f.stages.some(x => x.state !== 'todo');
-    const mark = { done: ICON.check, failed: ICON.warn, skipped: '<span aria-hidden="true">–</span>', active: '<span class="rm-spin" aria-hidden="true"></span>', todo: '<span class="rm-dot" aria-hidden="true"></span>' };
-    els.making.innerHTML = f.stages.map(x => `<li class="rm-making__step is-${x.state}"><span class="rm-making__mark">${mark[x.state]}</span><span>${esc(x.label)}${x.note ? `<small>${esc(x.note)}</small>` : ''}</span><span class="es-sr-only">${x.state}</span></li>`).join('');
+    // While it runs, the stepper takes the trend list's place so nothing clips.
+    els.panes.topic.classList.toggle('is-making', f.making);
+    els.brief.readOnly = f.making;
+    const mark = { done: ICON.check, failed: ICON.warn, skipped: '<span class="rm-making__dash"></span>', active: '<span class="rm-spin"></span>', todo: '' };
+    els.making.innerHTML = f.stages.map(x => `<li class="rm-making__step is-${x.state}"${x.state === 'active' ? ' aria-current="step"' : ''}><span class="rm-making__mark" aria-hidden="true">${mark[x.state]}</span><span class="rm-making__text"><span class="rm-making__label">${esc(x.label)}</span>${x.note ? `<small>${esc(x.note)}</small>` : ''}</span><span class="es-sr-only">, ${STATE_WORD[x.state] || x.state}</span></li>`).join('');
+    const i = f.stages.findIndex(x => x.state === 'active');
+    if (f.making && i >= 0) {
+      els.writeText.textContent = `Making your reel · ${i + 1} of ${f.stages.length}`;
+      if (els.makingLive) els.makingLive.textContent = `Step ${i + 1} of ${f.stages.length}: ${f.stages[i].label}`;
+    }
   }
   const flowEvent = event => { state.flow = FLOW.reduce(state.flow, event); renderMaking(); };
   async function makeReel() {
@@ -593,9 +660,11 @@
       return;
     }
     if (state.source === 'brief' && brief.length < 20) { els.writeStatus.textContent = 'Add a little more: who, what happened, and the numbers.'; els.brief.focus(); return; }
+    setWriteBusy(true);
     flowEvent({ type: 'make' });
-    setBusy(els.write, els.writeText, true, 'Making your reel…');
     els.writeStatus.textContent = '';
+    const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    els.making.scrollIntoView?.({ block: 'nearest', behavior: calm ? 'auto' : 'smooth' });
     const started = Date.now();
     // 1. Script.
     const body = { mode: 'plan', brief, trend, format: state.format, sport: state.sport, tier: state.tier, factCheck: state.factCheck, style: state.style };
@@ -619,7 +688,7 @@
         flowEvent({ type: 'stage-done', stage: 'script', failed: true, note: error.message });
         els.writeStatus.textContent = error.message;
         toast(error.message, { tone: 'error' });
-        setBusy(els.write, els.writeText, false, 'Make my reel');
+        setWriteBusy(false);
         return;
       }
     }
@@ -639,7 +708,8 @@
     rebuild();
     if (S.get(styleId()).cutout) autoCutout();
     flowEvent({ type: 'stage-done', stage: 'build', note: `${(state.timeline.durationMs / 1000).toFixed(0)} s` });
-    setBusy(els.write, els.writeText, false, 'Make my reel');
+    setWriteBusy(false);
+    if (els.makingLive) els.makingLive.textContent = 'Your reel is ready.';
     renderEdit();
     goStep('edit', { focus: false });
     toast('Your reel is ready. Tap a beat under the preview to change it.');
@@ -2134,7 +2204,7 @@
     }
     els.aiclipsRow.hidden = !state.config.aiClips?.ready;
     if (state.config.aiClips?.ready) els.aiclipsNote.textContent = `Stadium, crowd or field shots, never people or logos. Up to ${state.config.aiClips.max} a reel, about ${F.money(state.config.aiClips.perClip)} each.`;
-    els.writeText.textContent = state.config.ai ? 'Make my reel' : 'Make a draft reel';
+    if (!state.flow.making) els.writeText.textContent = writeLabel();
     renderCost();
     renderVoicePickers();
     if (state.plan) { renderVoice(); renderEdit(); }
