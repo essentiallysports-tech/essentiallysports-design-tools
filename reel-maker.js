@@ -30,6 +30,11 @@
   const LOGOS = window.LeagueLogos;
   const LOGOLIB = window.FrameUpLogos;
   const CUT = window.FrameUpCutout;
+  // Data formats (2026-11-18, reels-fmt-ui): the gallery and source pickers
+  // (reel-gallery.js) and timeline v2 (reel-timeline.js). Without them the
+  // page is exactly the news flow.
+  const G = window.ReelGallery || null;
+  const TL = window.ReelTimeline || null;
   if (!F || !R || !L || !S || !X || !FLOW) return;
 
   const $ = id => document.getElementById(id);
@@ -62,7 +67,7 @@
     shield: svg('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>'),
     scissors: svg('<circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/>'),
   };
-  const KIND_NAME = { hook: 'Hook', context: 'Context', point: 'Point', stat: 'Stat', rank: 'Rank', quote: 'Quote', payoff: 'Why it matters', cta: 'End card', bars: 'Bars', versus: 'Versus', dotrank: 'Dot ranking', chips: 'Squares', steps: 'Steps', tiles: 'Team tiles', roles: 'Position cards', mystery: 'Mystery card' };
+  const KIND_NAME = { hook: 'Hook', context: 'Context', point: 'Point', stat: 'Stat', rank: 'Rank', quote: 'Quote', payoff: 'Why it matters', cta: 'End card', bars: 'Bars', versus: 'Versus', dotrank: 'Dot ranking', chips: 'Squares', steps: 'Steps', tiles: 'Team tiles', roles: 'Position cards', mystery: 'Mystery card', play: 'Play', wpline: 'Win probability', moment: 'Moment', panel3: '3 frames' };
   // Where a beat's picture came from (the fill chain), in plain words.
   const SOURCE_NAME = { 'x-clip': 'Official X clip', upload: 'Your upload', 'upload-clip': 'Your clip', photo: 'ES photo', headshot: 'ES photo', tile: 'Team graphic', scene: 'AI scene', 'ai-clip': 'AI b-roll clip', design: 'Designed background', none: 'Nothing yet (plain black)' };
   const SPORT_LABEL = { nfl: 'NFL', cfb: 'College FB', mlb: 'MLB', golf: 'Golf' };
@@ -73,7 +78,11 @@
   const els = {
     steps: $('rm-steps'), canvas: $('rm-canvas'), emptyStage: $('rm-empty-stage'), safe: $('rm-safe'),
     play: $('rm-play'), scrub: $('rm-scrub'), time: $('rm-time'), mute: $('rm-mute'), safeToggle: $('rm-safe-toggle'), stageMeta: $('rm-stage-meta'),
-    panes: { topic: $('rm-pane-topic'), edit: $('rm-pane-edit'), export: $('rm-pane-export') },
+    panes: { format: $('rm-pane-format'), source: $('rm-pane-source'), topic: $('rm-pane-topic'), edit: $('rm-pane-edit'), export: $('rm-pane-export') },
+    work: document.querySelector('.rm-work'), topic: $('rm-topic'), fmtEntry: $('rm-fmt-entry'), gallery: $('rm-gallery'), galleryClose: $('rm-gallery-close'), sourceStep: $('rm-source-step'),
+    dataStory: $('rm-data-story'), dataReview: $('rm-data-review'), view: $('rm-view'), device: $('rm-device'), transport: $('rm-transport'),
+    slidenav: $('rm-slidenav'), slidePos: $('rm-slide-pos'), slideDots: $('rm-slide-dots'), slidePrev: $('rm-slide-prev'), slideNext: $('rm-slide-next'),
+    carouselOut: $('rm-carousel-out'), carouselBtn: $('rm-export-carousel'), carouselNote: $('rm-carousel-note'), carouselStatus: $('rm-carousel-status'),
     source: $('rm-source'), sourceTrend: $('rm-source-trend'), sourceBrief: $('rm-source-brief'), leagues: $('rm-leagues'), trendbox: $('rm-trendbox'), trends: $('rm-trends'), trendsNote: $('rm-trends-note'), picked: $('rm-picked'),
     brief: $('rm-brief'), formats: $('rm-formats'), sport: $('rm-sport'), tier: $('rm-tier'), factcheck: $('rm-factcheck'), factcheckRow: $('rm-factcheck-row'),
     cost: $('rm-cost'), write: $('rm-write'), writeText: $('rm-write-text'), writeStatus: $('rm-write-status'), recent: $('rm-recent'), recentList: $('rm-recent-list'),
@@ -229,29 +238,40 @@
   })();
 
   // ─── Steps ───────────────────────────────────────────────────────────────
+  // Page steps: format and source show for the data formats only.
+  const PAGE_STEPS = ['format', 'source', 'topic', 'edit', 'export'];
+  const FLOW_STEP = { format: 'format', source: 'source', topic: 'story', edit: 'review', export: 'export' };
   function goStep(step, { focus = true } = {}) {
-    if (step !== 'topic' && !state.plan) return;
+    if (step !== 'topic' && step !== 'format' && step !== 'source' && !state.plan) return;
+    const fmt = G && TL ? dataFmt() : '';
+    if (step === 'source' && !fmt) return;
+    if (step === 'topic' && fmt && !FLOW.sourceReady(fmt, state.flow.source)) step = 'source';
     state.step = step;
+    if (fmt && !state.flow.making) state.flow = { ...state.flow, step: FLOW_STEP[step] };
     Object.entries(els.panes).forEach(([id, pane]) => { pane.hidden = id !== step; });
+    els.work.classList.toggle('is-gallery', step === 'format');
+    els.work.classList.toggle('is-picking', step === 'source');
+    if (G && TL) renderStepsNav();
     els.steps.querySelectorAll('.rm-step').forEach(btn => {
       const id = btn.dataset.step;
-      const order = ['topic', 'edit', 'export'];
+      const order = PAGE_STEPS;
       btn.toggleAttribute('aria-current', id === step);
       if (id === step) btn.setAttribute('aria-current', 'step');
-      btn.disabled = id !== 'topic' && !state.plan;
-      btn.classList.toggle('is-done', order.indexOf(id) < order.indexOf(step) && Boolean(state.plan));
+      btn.disabled = id === 'format' ? false : (id === 'source' ? !fmt : (id === 'topic' ? Boolean(fmt) && !FLOW.sourceReady(fmt, state.flow.source) : !state.plan));
+      btn.classList.toggle('is-done', order.indexOf(id) < order.indexOf(step) && (Boolean(state.plan) || ['format', 'source'].includes(id)));
     });
-    els.back.hidden = step === 'topic';
-    els.next.hidden = step !== 'edit' && !(step === 'topic' && state.plan);
+    els.back.hidden = step === 'format' || (step === 'topic' && !fmt);
+    els.next.hidden = (step !== 'edit' && !(step === 'topic' && state.plan)) || ['format', 'source'].includes(step);
     els.nextText.textContent = step === 'topic' ? 'Back to your reel' : 'Next: Export';
-    els.stripwrap.hidden = step === 'topic' || !state.plan;
+    els.stripwrap.hidden = ['format', 'source', 'topic'].includes(step) || !state.plan;
     els.next.classList.toggle('es-btn--primary', step === 'edit');
     if (step === 'export') renderExport();
+    if (G && TL) { if (step === 'source') syncLive(); else stopLive(); }
     if (focus) els.panes[step].querySelector('h3, button, input, textarea')?.focus({ preventScroll: true });
     document.querySelector('.rm-panel')?.scrollTo?.({ top: 0 });
   }
-  els.steps.addEventListener('click', event => { const btn = event.target.closest('.rm-step'); if (btn && !btn.disabled) goStep(btn.dataset.step); });
-  els.back.addEventListener('click', () => goStep(state.step === 'export' ? 'edit' : 'topic'));
+  els.steps.addEventListener('click', event => { const btn = event.target.closest('.rm-step'); if (!btn || btn.disabled) return; if (btn.dataset.step === 'format') openGallery(); else goStep(btn.dataset.step); });
+  els.back.addEventListener('click', () => goStep({ export: 'edit', edit: 'topic', topic: 'source', source: 'format' }[state.step] || 'topic'));
   els.next.addEventListener('click', () => goStep(state.step === 'topic' ? 'edit' : 'export'));
 
   function radios(group, attr, value) {
@@ -452,7 +472,7 @@
     c.restore();
   }
   function renderStyles() {
-    const suggestion = S.suggestStyle({ format: state.format, text: topicText() });
+    const suggestion = S.suggestStyle({ format: (G && TL && dataFmt()) || state.format, text: topicText() });
     state.styleSuggested = suggestion;
     const current = state.plan ? state.plan.style || 'classic' : state.style;
     const items = [{ id: 'auto', label: 'Auto', blurb: `Suggested: ${S.get(suggestion.id).label}` }, ...S.STYLE_IDS.map(id => S.STYLES[id])];
@@ -498,14 +518,17 @@
     const v = state.config.voice;
     const voice = v.ready && state.voiceOn ? ((v.voices || []).find(x => x.id === state.voiceId) || {}).name || 'House voice' : 'Captions only';
     const st = state.style === 'auto' ? `Auto · ${S.get(state.styleSuggested.id).label}` : S.get(state.style).label;
-    const fmt = state.format === 'auto' ? 'Auto' : F.FORMATS[state.format].short;
-    const rows = [['style', 'Style', st], ['voice', 'Voice', voice], ['clips', 'Clips', state.useClips ? 'On' : 'Stills only'], ['format', 'Format', fmt]];
+    const data = G && TL ? dataFmt() : '';
+    const fmt = data ? F.FORMATS[data].short : (state.format === 'auto' ? 'Auto' : F.FORMATS[state.format].short);
+    const rows = [['style', 'Style', st], ['voice', 'Voice', voice], ['clips', 'Clips', state.useClips ? 'On' : 'Stills only'], ['format', 'Format', fmt]]
+      .filter(([id]) => !data || id !== 'clips' || data === 'gameswing');
     els.autoline.innerHTML = rows.map(([id, label, value]) => `<button class="rm-setsum__item" type="button" data-open="${id}" aria-label="${esc(label)}: ${esc(value)}. Change ${esc(label.toLowerCase())}"><span class="rm-setsum__label">${esc(label)}</span><span class="rm-setsum__value">${esc(value)}</span>${ICON.chevronRight}</button>`).join('');
     els.settingsMeta.textContent = `${state.tier === 'economy' ? 'Economy' : 'Standard'} script · fact check ${state.factCheck ? 'on' : 'off'}`;
   }
   const SETTING_SEC = { style: 'rm-set-style', voice: 'rm-voice-topic', clips: 'rm-set-clips', format: 'rm-set-format' };
   els.autoline.addEventListener('click', event => {
     const btn = event.target.closest('[data-open]');
+    if (btn && btn.dataset.open === 'format' && G && TL && dataFmt()) { openGallery(); return; }
     const sec = btn && $(SETTING_SEC[btn.dataset.open]);
     if (!sec) return;
     els.settings.open = true;
@@ -617,7 +640,16 @@
       clipSearches: state.useClips && ai ? 1 : 0, aiClips: state.useClips && state.aiClips && state.config.aiClips?.ready ? Math.min(state.config.aiClips.max, Math.max(1, sceneBeats)) : 0,
       scenes: ai ? Math.min(2, sceneBeats) : 0, longForm: long,
       clipJudge: state.useClips && ai && CLIPS && state.config.clipJudge?.ready !== false ? CLIPS.reelJudgeEstimate(CLIPS.JUDGE.maxClips) : 0,
+      ...dataCostOptions(),
     });
+  }
+  // A data format adds its own lines: game data and ES research (free), the
+  // AI frame pick (capped). Empty for the news formats.
+  function dataCostOptions() {
+    const fmt = G && TL ? (dataFmt() || (state.plan && F.isDataFormat(state.plan.format) ? state.plan.format : '')) : '';
+    if (!fmt) return {};
+    const o = F.formatCostOptions(fmt, { aiFramePick: G.modeOn(state.config.formatModes, 'frame-pick') && state.config.ai && !state.config.offline });
+    return { data: o.data, framePick: o.framePick, archiveResearch: o.archiveResearch };
   }
   function costHtml(title = 'Estimated cost for this reel') {
     const est = costEstimate();
@@ -666,6 +698,7 @@
   const flowEvent = event => { state.flow = FLOW.reduce(state.flow, event); renderMaking(); };
   async function makeReel() {
     if (state.flow.making) return;
+    if (G && TL && dataFmt()) { await makeDataReel(); return; }
     const brief = state.source === 'brief' ? els.brief.value.trim() : '';
     const trend = state.source === 'trend' ? state.trend : null;
     if (!brief && !trend) {
@@ -1307,10 +1340,15 @@
       voiceMode, music: state.music ? { asset: 'music' } : null, sources: state.sources, corpus: state.corpus,
       // Clip sound is muted unless "Original clip audio" is on (then only clips that have a sound track).
       clipAudio: state.clipAudio ? Object.keys(state.buffers).filter(k => k.startsWith('clipaudio:') && state.buffers[k]).map(k => k.slice(10)) : false,
+      ...dataBuildOptions(),
     });
+    // Data formats: timeline v2 fields (data, replay, outputs); the lint reads
+    // the data's facts as a source. News reels are built exactly as before.
+    const facts = G && TL ? dataFacts() : '';
+    if (G && TL) dataTimeline(state.timeline);
     layoutCache = new Map();
     captionCache = new Map();
-    state.lint = L.lintTimeline(state.timeline, { boxes: R.textBoxes(measure, state.timeline), target: state.target, extraSources: els.extraSource.value });
+    state.lint = L.lintTimeline(state.timeline, { boxes: R.textBoxes(measure, state.timeline), target: state.target, extraSources: facts ? [els.extraSource.value, facts].filter(Boolean).join('\n') : els.extraSource.value });
     state.mix = null;
     // A clip added while "Original clip audio" is on gets its sound decoded, then the mix is rebuilt.
     if (state.clipAudio && Object.entries(state.assets).some(([id, a]) => a.kind === 'clip' && a.src && !(`clipaudio:${id}` in state.buffers))) clipSounds().then(n => { if (n) rebuild(); });
@@ -1327,6 +1365,13 @@
     autosave();
   }
   const rebuildSoon = debounce(rebuild, 220);
+  // Extra buildTimeline options for a data format (the v2 canvas and data
+  // for the renderer; ignored by a renderer that does not read them yet).
+  function dataBuildOptions() {
+    const fmt = G && TL && state.plan && F.isDataFormat(state.plan.format) ? state.plan.format : '';
+    if (!fmt) return {};
+    return { canvas: { w: 1080, h: 1920 }, outputs: F.FORMATS[fmt].outputs.slice(), data: { game: fmt === 'gameswing' ? state.data.game : null, athlete: fmt === 'archive' ? state.data.athlete : null, archive: fmt === 'archive' ? state.data.archive : null }, replay: fmt === 'replay' ? state.replay : null, ...(Array.isArray(state.plan.slides) ? { slides: state.plan.slides } : {}) };
+  }
 
   function renderMeta() {
     const tl = state.timeline;
@@ -1399,6 +1444,7 @@
     renderStyles();
     els.capstyleField.hidden = S.get(styleId()).caption.mode !== 'user';
     $('rm-revise').hidden = !state.config.ai || state.config.offline;
+    if (G && TL) renderDataReview();
   }
   els.summary.addEventListener('click', event => {
     const btn = event.target.closest('[data-hook]');
@@ -1915,6 +1961,7 @@
     }));
   }
   function draw() {
+    if (state.view === 'carousel' && state.timeline) { drawSlide(); return; }
     if (!state.timeline) {
       ctx.fillStyle = '#101114';
       ctx.fillRect(0, 0, 1080, 1920);
@@ -2042,9 +2089,20 @@
       ${state.spent.revise ? `<li><span>Revisions</span><span>${F.money(state.spent.revise)}</span></li>` : ''}
       ${state.spent.music ? `<li><span>Generated music</span><span>${F.money(state.spent.music)}</span></li>` : ''}
       <li><span>Voiceover</span><span>${state.spent.voice ? F.money(state.spent.voice) : (voiceLeft ? `≈ ${F.money(voiceLeft)} if you add it` : '$0')}</span></li>
+      ${G && TL ? dataSpendRows() : ''}
       <li><span>Render and export</span><span>$0 (in your browser)</span></li>
       <li class="rm-spend__total"><span>Spent on this reel</span><span>${F.money(totalSpent())}</span></li></ul>`;
     els.exportBtn.disabled = Boolean(critical.length) || Boolean(state.exporting && !state.exporting.cancel);
+    if (G && TL) renderDataExport();
+  }
+  function dataSpendRows() {
+    const fmt = state.plan && F.isDataFormat(state.plan.format) ? state.plan.format : '';
+    if (!fmt) return '';
+    const rows = [];
+    if (fmt === 'gameswing') rows.push(['Game data', 'Free']);
+    if (fmt === 'archive') rows.push(['ES articles, photos and stats', state.spent.archive ? F.money(state.spent.archive) : 'Free']);
+    if (fmt === 'replay') rows.push(['Frame pick', state.spent.framePick ? F.money(state.spent.framePick) : 'Free (code pick)']);
+    return rows.map(([a, b]) => `<li><span>${esc(a)}</span><span>${esc(b)}</span></li>`).join('');
   }
 
   function pickRecorderFormat() {
@@ -2199,6 +2257,7 @@
         trend: state.trendRef || null, brief: state.brief || '', planSource: state.planSource,
         music: state.music ? { title: state.music.title, source: state.music.source } : null,
         durationMs: state.timeline?.durationMs || 0,
+        ...(G && TL ? dataSnapshot() || {} : {}),
       },
     };
   }
@@ -2226,9 +2285,11 @@
     if (p) restore(p);
   });
   async function restore(p) {
-    const t = p.timeline || {};
+    // v1 and v2 projects both load: normalizeTimeline adds the v2 fields.
+    const t = (TL ? TL.normalizeTimeline(p.timeline || {}) : p.timeline) || {};
     if (!t.plan) return;
     stop();
+    if (G && TL) { restoreData(t, p.format || t.plan.format); if (state.view !== 'reel') setView('reel'); }
     state.projectId = p.id;
     state.status = p.status || 'draft';
     state.plan = t.plan;
@@ -2290,15 +2351,1373 @@
     voiceSoon(0);
   }
 
+  // ─── Data formats: gallery, source, story, make, review, export ─────────
+  // Game Swing, Moment Replay and Hall-of-Fame Archive (reel-formats.js
+  // DATA_FORMATS) run the unified flow from reel-flow.js:
+  //   format (gallery) -> source -> story -> make -> review -> export.
+  // The news flow above is untouched: state.flow.format is empty for it, and
+  // every branch below checks dataFmt() first. Server modes come from the
+  // contract (project-docs/reels-formats-contract.md §2.1); a mode that is not
+  // built yet answers 501 coming-soon, and its tile says "Coming soon".
+  const dataFmt = () => (G && TL && state.flow.format && F.isDataFormat(state.flow.format) ? state.flow.format : '');
+  const srcKind = () => FLOW.sourceKindFor(dataFmt());
+  const modes = () => state.config.formatModes || {};
+  const modeOn = mode => G.modeOn(modes(), mode);
+  const isSoon = error => error && (error.status === 501 || error.reason === 'coming-soon');
+  const calmMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  // The editor's news-flow choices, put back when they leave a data format.
+  let newsPrefs = null;
+  Object.assign(state, {
+    data: { game: null, athlete: null, archive: null }, research: null, replay: null, angle: '',
+    gp: { sport: 'nfl', tab: 'recent', query: '', date: '', status: 'idle', list: [], error: '', selected: '', updatedAt: '', seq: 0 },
+    pp: { sport: 'nfl', query: '', status: 'idle', list: [], error: '', selected: '', candidate: null, angle: '5 best moments', custom: '', seq: 0 },
+    cp: { origin: 'x', link: '', status: 'idle', error: '', clip: null, list: [], libSport: 'nfl', libStatus: 'idle', libError: '', asset: '', duration: 0, segment: null, rightsOk: false, file: null },
+    keyPlays: [], digestState: 'idle', digestError: '', researchState: 'idle', view: 'reel', slide: 0, slides: null,
+  });
+
+  // ── Gallery ──
+  function galleryModel() { return G.galleryModel(F, modes(), { aiFramePick: true }); }
+  function renderGallery() {
+    if (!G || !TL) { els.fmtEntry.hidden = true; return; }
+    const model = galleryModel();
+    const selected = dataFmt() || (state.format !== 'auto' ? state.format : '');
+    els.gallery.innerHTML = G.galleryHtml(model, { selected });
+    els.fmtEntry.innerHTML = G.entryHtml(model);
+    els.fmtEntry.hidden = Boolean(dataFmt());
+  }
+  function openGallery() {
+    if (state.flow.making) return;
+    renderGallery();
+    goStep('format');
+  }
+  function onGalleryClick(event) {
+    if (event.target.closest('[data-gall]')) { openGallery(); return; }
+    const btn = event.target.closest('[data-gformat]');
+    if (!btn) return;
+    const id = btn.dataset.gformat;
+    if (btn.getAttribute('aria-disabled') === 'true') {
+      toast(`${F.FORMATS[id].label} is coming soon. Its data server lands next; the news formats work today.`);
+      return;
+    }
+    pickFormat(id);
+  }
+  // A new reel when the editor switches format family or data format while a
+  // reel is open (the old one is kept under "Continue a reel").
+  function startFresh() {
+    if (!state.plan) return;
+    autosave();
+    stop();
+    const title = state.plan.title;
+    state.plan = null; state.timeline = null; state.lint = null; state.photos = {}; state.visualSrc = {}; state.voice = {};
+    state.projectId = uuid(); state.status = 'draft'; state.t = 0; state.slides = null;
+    setView('reel');
+    els.emptyStage.hidden = false; els.play.disabled = true; els.scrub.disabled = true;
+    els.stageMeta.textContent = '';
+    els.stripwrap.hidden = true;
+    draw();
+    renderRecent();
+    toast(`“${title}” is saved under Continue a reel.`);
+  }
+  function pickFormat(id) {
+    if (state.flow.making || !F.FORMATS[id]) return;
+    const was = dataFmt();
+    const planFmt = state.plan?.format || '';
+    if (F.isDataFormat(id)) {
+      if (planFmt && planFmt !== id) startFresh();
+      if (!was) newsPrefs = { voiceOn: state.voiceOn, useClips: state.useClips, style: state.style };
+      if (was !== id) {
+        state.flow = FLOW.reduce(state.flow, { type: 'pick-format', format: id });
+        resetSources();
+      }
+      // Format defaults (owner): ES style per format, music only, clip audio muted.
+      state.style = 'auto';
+      state.voiceOn = F.FORMATS[id].voice !== 'off' ? state.voiceOn : false;
+      state.useClips = id === 'gameswing';
+      renderStepsNav();
+      renderSourceStep();
+      renderDataStory();
+      renderStyles();
+      renderVoicePickers();
+      renderCost();
+      renderGallery();
+      goStep(FLOW.sourceReady(id, state.flow.source) && was === id ? 'topic' : 'source');
+      logEvent('edit', { what: 'format', format: id });
+      return;
+    }
+    // A news format: back to the Story step as today, with that format set.
+    if (was) {
+      if (planFmt && F.isDataFormat(planFmt)) startFresh();
+      state.flow = FLOW.reduce(state.flow, { type: 'pick-format', format: id });
+      leaveDataPrefs();
+    }
+    state.format = id;
+    renderStepsNav();
+    renderDataStory();
+    renderFormats();
+    renderStyles();
+    renderCost();
+    renderGallery();
+    goStep('topic');
+  }
+  function leaveDataPrefs() {
+    stopLive();
+    if (newsPrefs) { state.voiceOn = newsPrefs.voiceOn; state.useClips = newsPrefs.useClips; state.style = newsPrefs.style; newsPrefs = null; }
+    els.clipsOn.checked = state.useClips;
+    renderVoicePickers();
+  }
+  function resetSources() {
+    state.data = { game: null, athlete: null, archive: null };
+    state.research = null; state.replay = null; state.keyPlays = []; state.digestState = 'idle'; state.researchState = 'idle';
+    state.gp.selected = ''; state.pp.selected = ''; state.pp.candidate = null; state.cp.clip = null; state.cp.asset = ''; state.cp.segment = null;
+  }
+  els.gallery.addEventListener('click', onGalleryClick);
+  els.fmtEntry.addEventListener('click', onGalleryClick);
+  els.galleryClose.addEventListener('click', () => goStep(dataFmt() ? (FLOW.sourceReady(dataFmt(), state.flow.source) ? 'topic' : 'source') : 'topic'));
+
+  // Steps: Format and Source appear for data formats (and while the gallery
+  // is open); numbers follow what is visible.
+  function renderStepsNav() {
+    const data = Boolean(dataFmt()) || state.step === 'format';
+    els.steps.querySelectorAll('[data-dataflow]').forEach(li => { li.hidden = !data; });
+    els.steps.querySelector('ol').classList.toggle('is-data', data);
+    const order = data ? ['format', 'source', 'topic', 'edit', 'export'] : ['topic', 'edit', 'export'];
+    order.forEach((id, i) => { const num = els.steps.querySelector(`[data-step="${id}"] .rm-step__num`); if (num) num.textContent = String(i + 1); });
+    const label = $('rm-step-source-label');
+    if (label) label.textContent = dataFmt() ? (G.SOURCE_LABEL[srcKind()] || 'Source') : 'Source';
+  }
+
+  // ── Source step ──
+  const seg = (id, label, items, value, attr) => `<div class="es-segmented rm-seg" role="radiogroup" aria-label="${esc(label)}" id="${id}">${items.map(([v, l]) => `<button class="es-segmented__item" type="button" role="radio" aria-checked="${v === value}" tabindex="${v === value ? 0 : -1}" data-${attr}="${esc(v)}">${esc(l)}</button>`).join('')}</div>`;
+  const SPORTS_FOR = { game: [['nfl', 'NFL'], ['cfb', 'CFB'], ['mlb', 'MLB']], player: [['nfl', 'NFL'], ['cfb', 'CFB'], ['mlb', 'MLB'], ['golf', 'Golf']] };
+  function soonHtml(what) {
+    return `<div class="es-empty rm-src-state"><p class="es-empty__title">${esc(what)} is coming soon</p><p class="es-empty__copy">The data server for this format lands next. Until then, start from a trend or a brief.</p><button class="es-btn es-btn--sm" type="button" data-news>Use a trend or a brief</button></div>`;
+  }
+  function errorHtml(title, copy, retry = 'retry') {
+    return `<div class="es-error-state rm-src-state" role="alert"><span class="es-error-state__icon">${ICON.alert}</span><p class="es-error-state__title">${esc(title)}</p><p class="es-error-state__copy">${esc(copy)}</p><button class="es-btn es-btn--sm" type="button" data-${retry}>Try again</button></div>`;
+  }
+  const skeletonRows = (n, cls) => Array.from({ length: n }, () => `<li class="${cls} is-skeleton" aria-hidden="true"><span class="es-skeleton rm-sk-a"></span><span class="es-skeleton rm-sk-b"></span></li>`).join('');
+  function renderSourceStep() {
+    const fmt = dataFmt();
+    if (!fmt) { els.sourceStep.innerHTML = ''; return; }
+    const kind = srcKind();
+    const f = F.FORMATS[fmt];
+    const head = (title, meta) => `<div class="rm-sec__head"><h3 class="rm-sec__title" id="rm-src-title">${esc(title)}</h3><span class="rm-meta">${esc(meta)}</span></div>`;
+    if (kind === 'game') {
+      const g = state.gp;
+      els.sourceStep.innerHTML = `${head('Pick a game', `${f.label} · game data is free`)}
+        <div class="rm-src-controls">${seg('rm-g-sport', 'Sport', SPORTS_FOR.game, g.sport, 'gsport')}
+        ${seg('rm-g-tab', 'Games', [['live', 'Live now'], ['recent', 'Last 48 h'], ['search', 'Search']], g.tab, 'gtab')}</div>
+        <form class="rm-g-search" id="rm-g-search" ${g.tab === 'search' ? '' : 'hidden'}>
+          <div class="es-field"><label class="es-field__label" for="rm-g-q">Team</label><input class="es-input" id="rm-g-q" type="search" maxlength="60" placeholder="Cowboys or DAL" value="${esc(g.query)}" autocomplete="off"></div>
+          <div class="es-field"><label class="es-field__label" for="rm-g-date">Date</label><input class="es-input" id="rm-g-date" type="date" value="${esc(g.date ? `${g.date.slice(0, 4)}-${g.date.slice(4, 6)}-${g.date.slice(6, 8)}` : '')}"></div>
+        </form>
+        <p class="rm-hint" id="rm-g-note"></p>
+        <ul class="rm-games" id="rm-games" role="radiogroup" aria-labelledby="rm-src-title"></ul>`;
+      renderGameList();
+      if (g.status === 'idle') loadGames();
+      syncLive();
+      return;
+    }
+    if (kind === 'player') {
+      const p = state.pp;
+      const angles = FLOW.SOURCE_KINDS.player.angles;
+      els.sourceStep.innerHTML = `${head('Pick a player', `${f.label} · ES coverage and career stats, free`)}
+        ${seg('rm-p-sport', 'League', SPORTS_FOR.player, p.sport, 'psport')}
+        <div class="es-field"><label class="es-field__label" for="rm-p-q">Player</label><input class="es-input" id="rm-p-q" type="search" maxlength="60" placeholder="Tom Brady" value="${esc(p.query)}" autocomplete="off" aria-describedby="rm-p-hint"><p class="es-field__hint" id="rm-p-hint">Type two letters or more. Position and years tell players with the same name apart.</p></div>
+        <ul class="rm-players" id="rm-players" role="radiogroup" aria-label="Players"></ul>
+        <details class="rm-fold rm-p-byid"${p.byId ? ' open' : ''}><summary><span class="rm-fold__title">Not found? Use the ESPN player link</span></summary><div class="rm-fold__body">
+          <form class="rm-c-xform" id="rm-p-idform" novalidate><div class="es-field"><label class="es-field__label" for="rm-p-id">ESPN player link or id</label>
+          <div class="rm-c-xrow"><input class="es-input" id="rm-p-id" type="text" inputmode="url" maxlength="300" placeholder="espn.com/nfl/player/_/id/2330/tom-brady" value="${esc(p.byId || '')}" aria-describedby="rm-p-idhint"><button class="es-btn" type="submit">Look up</button></div>
+          <p class="es-field__hint" id="rm-p-idhint">ESPN’s search misses many retired players. Their ESPN page link always works.</p></div></form></div></details>
+        <div class="es-field"><span class="es-field__label" id="rm-angle-label">Angle</span>
+          <div class="rm-chips rm-angles" role="radiogroup" aria-labelledby="rm-angle-label" id="rm-angles">${[...angles, 'Your own'].map(a => { const on = (p.angle === a) || (a === 'Your own' && !angles.includes(p.angle)); return `<button class="es-chip" type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-angle="${esc(a)}">${esc(a)}</button>`; }).join('')}</div>
+          <input class="es-input" id="rm-angle-own" type="text" maxlength="80" placeholder="His playoff comebacks" value="${esc(angles.includes(p.angle) ? '' : p.angle)}" ${angles.includes(p.angle) ? 'hidden' : ''} aria-label="Your own angle"></div>`;
+      renderPlayerList();
+      return;
+    }
+    // clip
+    const c = state.cp;
+    els.sourceStep.innerHTML = `${head('Pick a clip', `${f.label} · one clip, three frames`)}
+      ${seg('rm-c-origin', 'Clip from', [['x', 'X link'], ['library', 'Clip library'], ['upload', 'Upload']], c.origin, 'corigin')}
+      <div class="rm-c-panel" id="rm-c-panel"></div>
+      <div class="rm-c-pick" id="rm-c-pick"></div>`;
+    renderClipPanel();
+    renderClipPick();
+  }
+  function onSourceClick(event) {
+    const t = event.target;
+    if (t.closest('[data-news]')) { pickFormat('explainer'); return; }
+    const gs = t.closest('[data-gsport]');
+    if (gs) { state.gp.sport = gs.dataset.gsport; radios($('rm-g-sport'), 'gsport', state.gp.sport); loadGames(); return; }
+    const gt = t.closest('[data-gtab]');
+    if (gt) { state.gp.tab = gt.dataset.gtab; radios($('rm-g-tab'), 'gtab', state.gp.tab); $('rm-g-search').hidden = state.gp.tab !== 'search'; if (state.gp.tab === 'search') $('rm-g-q')?.focus(); loadGames(); syncLive(); return; }
+    if (t.closest('[data-retry]')) { loadGames({ force: true }); return; }
+    const game = t.closest('[data-game]');
+    if (game) { pickGame(game.dataset.game); return; }
+    const ps = t.closest('[data-psport]');
+    if (ps) { state.pp.sport = ps.dataset.psport; radios($('rm-p-sport'), 'psport', state.pp.sport); state.pp.list = []; searchPlayers(); return; }
+    if (t.closest('[data-pretry]')) { searchPlayers({ now: true }); return; }
+    const pl = t.closest('[data-athlete]');
+    if (pl) { pickPlayer(pl.dataset.athlete); return; }
+    const ang = t.closest('[data-angle]');
+    if (ang) {
+      const own = ang.dataset.angle === 'Your own';
+      radios($('rm-angles'), 'angle', ang.dataset.angle);
+      $('rm-angle-own').hidden = !own;
+      state.pp.angle = own ? ($('rm-angle-own').value.trim() || '') : ang.dataset.angle;
+      if (own) $('rm-angle-own').focus();
+      updatePlayerSource();
+      return;
+    }
+    const co = t.closest('[data-corigin]');
+    if (co) { state.cp.origin = co.dataset.corigin; radios($('rm-c-origin'), 'corigin', state.cp.origin); renderClipPanel(); return; }
+    const cs = t.closest('[data-csport]');
+    if (cs) { state.cp.libSport = cs.dataset.csport; radios($('rm-c-sport'), 'csport', state.cp.libSport); loadLibrary(); return; }
+    if (t.closest('[data-cretry]')) { loadLibrary(); return; }
+    const lc = t.closest('[data-clip]');
+    if (lc) { useLibraryClip(Number(lc.dataset.clip)); return; }
+    if (t.closest('[data-cuse]')) { confirmClip(); return; }
+    if (t.closest('[data-cclear]')) { state.cp.clip = null; state.cp.asset = ''; state.cp.segment = null; renderClipPick(); renderClipPanel(); }
+  }
+  els.sourceStep.addEventListener('click', onSourceClick);
+  els.sourceStep.addEventListener('input', event => {
+    if (event.target.id === 'rm-g-q') { state.gp.query = event.target.value; renderGameList(); }
+    if (event.target.id === 'rm-p-q') { state.pp.query = event.target.value; searchPlayers(); }
+    if (event.target.id === 'rm-angle-own') { state.pp.angle = event.target.value.trim(); updatePlayerSourceSoon(); }
+    if (event.target.dataset.seg) onSegmentInput(event.target);
+  });
+  els.sourceStep.addEventListener('change', event => {
+    if (event.target.id === 'rm-g-date') { state.gp.date = String(event.target.value || '').replace(/-/g, ''); loadGames(); }
+    if (event.target.id === 'rm-c-file') onClipFile(event.target);
+    if (event.target.id === 'rm-c-rights') { state.cp.rightsOk = event.target.checked; renderClipPick(); }
+  });
+  els.sourceStep.addEventListener('submit', event => {
+    event.preventDefault();
+    if (event.target.id === 'rm-c-xform') resolveXLink();
+    if (event.target.id === 'rm-g-search') loadGames();
+    if (event.target.id === 'rm-p-idform') lookupAthlete();
+  });
+  // Home / End on the long lists (arrows are handled for every radiogroup).
+  els.sourceStep.addEventListener('keydown', event => {
+    const row = event.target.closest?.('[data-game], [data-athlete], [data-clip]');
+    if (!row || !['Home', 'End'].includes(event.key)) return;
+    const list = [...row.closest('[role="radiogroup"]').querySelectorAll('[role="radio"]')];
+    event.preventDefault();
+    (event.key === 'Home' ? list[0] : list[list.length - 1])?.focus();
+  });
+
+  // Games: one request per sport + list, cached for the response's TTL.
+  const gameCache = new Map();
+  function logoFor(team, sport) {
+    const entry = LOGOLIB?.findTeam ? LOGOLIB.findTeam(team.name || team.abbr || '', sport) : null;
+    const dark = document.documentElement.dataset.theme === 'dark';
+    const colors = entry?.colors || team.colors || [];
+    return { src: entry ? LOGOLIB.srcFor(entry, { dark }) : '', a: colors[0] || '', b: colors[1] || '' };
+  }
+  async function loadGames({ force = false } = {}) {
+    const g = state.gp;
+    const when = g.tab === 'live' ? 'live' : (g.tab === 'search' && g.date ? 'date' : 'recent');
+    const key = `${g.sport}|${when}|${when === 'date' ? g.date : ''}`;
+    const hit = gameCache.get(key);
+    if (hit && !force && Date.now() - hit.at < hit.ttl * 1000) { g.list = hit.games; g.updatedAt = hit.updatedAt; g.status = 'ready'; renderGameList(); return; }
+    const seq = ++g.seq;
+    if (!force || g.status !== 'ready') { g.status = 'loading'; renderGameList(); }
+    try {
+      const data = await api({ mode: 'games', sport: g.sport, when, ...(when === 'date' ? { date: g.date } : {}) });
+      if (seq !== g.seq) return;
+      g.list = Array.isArray(data.games) ? data.games : [];
+      g.updatedAt = data.updatedAt || '';
+      g.status = 'ready';
+      gameCache.set(key, { at: Date.now(), ttl: Number(data.ttlSec) || (when === 'live' ? 15 : 60), games: g.list, updatedAt: g.updatedAt });
+    } catch (error) {
+      if (seq !== g.seq) return;
+      g.status = isSoon(error) ? 'soon' : (error.offline ? 'offline' : 'error');
+      g.error = error.message;
+      if (isSoon(error)) markSoon('games');
+    }
+    renderGameList();
+  }
+  function markSoon(mode) {
+    state.config.formatModes = { ...modes(), [mode]: false };
+    renderGallery();
+  }
+  function renderGameList() {
+    const list = $('rm-games');
+    if (!list) return;
+    const g = state.gp;
+    const note = $('rm-g-note');
+    list.setAttribute('aria-busy', String(g.status === 'loading'));
+    if (note) note.textContent = g.tab === 'live' ? 'Live games refresh every 30 seconds.' : (g.tab === 'recent' ? 'Finals from the last 48 hours, biggest win-probability swing first.' : 'Filter by team, or pick a date.');
+    if (g.status === 'loading' || g.status === 'idle') { list.innerHTML = skeletonRows(4, 'rm-game'); return; }
+    if (g.status === 'soon') { list.innerHTML = `<li role="none">${soonHtml('Game Swing')}</li>`; return; }
+    if (g.status === 'error' || g.status === 'offline') { list.innerHTML = `<li role="none">${errorHtml(g.status === 'offline' ? 'The game list is not reachable' : 'Games did not load', g.status === 'offline' ? 'Reels Studio’s server is not reachable from here.' : (g.error || 'Try again in a moment.'))}</li>`; return; }
+    const games = G.sortGames(G.filterGames(g.list, g.tab === 'search' ? g.query : ''));
+    if (!games.length) {
+      const empty = g.tab === 'live' ? ['No live games right now', 'See the finals from the last 48 hours.', '<button class="es-btn es-btn--sm" type="button" data-gtab="recent">Last 48 h</button>'] : (g.tab === 'search' ? ['No games match', 'Try a team name or abbreviation, or another date.', ''] : ['No finals in the last 48 hours', 'Try another league, or pick a date in Search.', '']);
+      list.innerHTML = `<li role="none" class="es-empty rm-src-state"><p class="es-empty__title">${empty[0]}</p><p class="es-empty__copy">${empty[1]}</p>${empty[2]}</li>`;
+      return;
+    }
+    const tabId = games.some(x => x.id === g.selected) ? g.selected : games[0].id;
+    list.innerHTML = games.map(x => G.gameRowHtml(x, { selected: g.selected, tab: x.id === tabId, logo: logoFor })).join('');
+  }
+  let liveTimer = 0;
+  function syncLive() {
+    clearInterval(liveTimer);
+    if (dataFmt() === 'gameswing' && state.gp.tab === 'live' && state.step === 'source') liveTimer = setInterval(() => { if (!document.hidden) loadGames({ force: true }); }, 30000);
+  }
+  function stopLive() { clearInterval(liveTimer); }
+  function pickGame(id) {
+    const g = state.gp;
+    const game = g.list.find(x => x.id === id);
+    if (!game) return;
+    g.selected = id;
+    renderGameList();
+    $('rm-games')?.querySelector(`[data-game="${CSS.escape(id)}"]`)?.focus();
+    if (state.data.game?.eventId !== id) { state.data.game = null; state.keyPlays = []; state.digestState = 'idle'; }
+    state.gameSummary = game;
+    setSource({ kind: 'game', sport: game.sport || g.sport, eventId: id, label: G.gameLabel(game) });
+    loadDigest().catch(() => {}).then(() => renderDataStory());
+  }
+  // The digest of the picked game (free, cached on the server; here per tab).
+  const digestCache = new Map();
+  async function loadDigest() {
+    const src = state.flow.source;
+    if (!src || src.kind !== 'game') return null;
+    const key = `${src.sport}|${src.eventId}`;
+    const hit = digestCache.get(key);
+    if (hit && (hit.final || Date.now() - hit.at < 20000)) { state.data.game = hit.digest; state.digestState = 'ready'; if (!state.keyPlays.length) state.keyPlays = keyPlaysOf(hit.digest); return hit.digest; }
+    state.digestState = 'loading';
+    renderDataStory();
+    try {
+      const data = await api({ mode: 'game-data', sport: src.sport, eventId: src.eventId });
+      const check = TL.validateDigest(data.digest);
+      if (!check.ok) throw Object.assign(new Error('The game data came back incomplete. Try another game, or use a brief.'), { reason: 'bad-digest' });
+      digestCache.set(key, { at: Date.now(), digest: data.digest, final: Boolean(data.digest.status?.final) });
+      if (state.flow.source?.eventId !== src.eventId) return null;
+      state.data.game = data.digest;
+      state.digestState = 'ready';
+      state.keyPlays = keyPlaysOf(data.digest);
+      return data.digest;
+    } catch (error) {
+      state.digestState = isSoon(error) ? 'soon' : 'error';
+      state.digestError = error.reason === 'data-unavailable' ? 'Game data is unavailable for this game. Use a brief instead.' : error.message;
+      if (isSoon(error)) markSoon('game-data');
+      throw error;
+    }
+  }
+  const keyPlaysOf = digest => (window.ReelData?.keyPlays ? window.ReelData.keyPlays(digest).map(p => (typeof p === 'string' ? p : p.id)) : G.keyPlays(digest, 5));
+
+  // Players: search (debounced), then stats and ES coverage for the pick.
+  let playerTimer = 0;
+  function searchPlayers({ now = false } = {}) {
+    clearTimeout(playerTimer);
+    const q = state.pp.query.trim();
+    if (q.length < 2) { state.pp.status = 'idle'; state.pp.list = []; renderPlayerList(); return; }
+    playerTimer = setTimeout(async () => {
+      const p = state.pp;
+      const seq = ++p.seq;
+      p.status = 'loading';
+      renderPlayerList();
+      try {
+        const data = await api({ mode: 'athlete', sport: p.sport, query: q });
+        if (seq !== p.seq) return;
+        p.list = (data.candidates || []).slice(0, 8);
+        p.status = 'ready';
+      } catch (error) {
+        if (seq !== p.seq) return;
+        p.status = isSoon(error) ? 'soon' : (error.offline ? 'offline' : 'error');
+        p.error = error.message;
+        if (isSoon(error)) markSoon('athlete');
+      }
+      renderPlayerList();
+    }, now ? 0 : 350);
+  }
+  function renderPlayerList() {
+    const list = $('rm-players');
+    if (!list) return;
+    const p = state.pp;
+    list.setAttribute('aria-busy', String(p.status === 'loading'));
+    if (p.status === 'idle') { list.innerHTML = p.candidate ? G.playerRowHtml(p.candidate, { selected: p.selected, tab: true }) : ''; return; }
+    if (p.status === 'loading') { list.innerHTML = skeletonRows(3, 'rm-player'); return; }
+    if (p.status === 'soon') { list.innerHTML = `<li role="none">${soonHtml('Hall-of-Fame Archive')}</li>`; return; }
+    if (p.status === 'error' || p.status === 'offline') { list.innerHTML = `<li role="none">${errorHtml('Player search did not work', p.status === 'offline' ? 'Reels Studio’s server is not reachable from here.' : p.error, 'pretry')}</li>`; return; }
+    if (!p.list.length) { list.innerHTML = `<li role="none" class="es-empty rm-src-state"><p class="es-empty__title">No players found</p><p class="es-empty__copy">Check the spelling, or try another league.</p></li>`; return; }
+    const tabId = p.list.some(c => c.athleteId === p.selected) ? p.selected : p.list[0].athleteId;
+    list.innerHTML = p.list.map(c => G.playerRowHtml(c, { selected: p.selected, tab: c.athleteId === tabId })).join('');
+  }
+  // A player by ESPN id (typed, or pulled from a pasted ESPN player link).
+  async function lookupAthlete() {
+    const p = state.pp;
+    const raw = $('rm-p-id')?.value || '';
+    p.byId = raw;
+    const id = G.parseAthleteId(raw);
+    const hint = $('rm-p-idhint');
+    const fail = msg => { if (hint) { hint.textContent = msg; hint.classList.add('rm-err'); hint.setAttribute('role', 'alert'); } $('rm-p-id')?.focus(); };
+    if (!id) { fail('Paste an ESPN player link, or type the number after /id/.'); return; }
+    p.status = 'loading';
+    renderPlayerList();
+    try {
+      const data = await api({ mode: 'athlete', sport: p.sport, athleteId: id });
+      const a = data.athlete;
+      athleteCache.set(`${a.sport || p.sport}|${a.athleteId}`, a);
+      const seasons = a.stats?.seasons || [];
+      const c = { athleteId: a.athleteId, name: a.name, sport: a.sport || p.sport, position: a.position || '', years: seasons.length ? `${seasons[0].year}-${seasons[seasons.length - 1].year}` : '' };
+      p.list = [c];
+      p.status = 'ready';
+      renderPlayerList();
+      pickPlayer(c.athleteId);
+    } catch (error) {
+      p.status = 'idle';
+      renderPlayerList();
+      fail(isSoon(error) ? 'Player lookup is coming soon.' : (error.message || 'That player was not found.'));
+    }
+  }
+  function pickPlayer(id) {
+    const p = state.pp;
+    const c = p.list.find(x => x.athleteId === id) || (p.candidate?.athleteId === id ? p.candidate : null);
+    if (!c) return;
+    if (p.selected !== id) { state.data.athlete = null; state.research = null; state.researchState = 'idle'; }
+    p.selected = id;
+    p.candidate = c;
+    renderPlayerList();
+    $('rm-players')?.querySelector(`[data-athlete="${CSS.escape(id)}"]`)?.focus();
+    updatePlayerSource({ advance: true });
+  }
+  function updatePlayerSource({ advance = false } = {}) {
+    const c = state.pp.candidate;
+    if (!c) return;
+    const angle = state.pp.angle || '5 best moments';
+    if (state.research && state.research.angle !== angle) { state.research = null; state.researchState = 'idle'; }
+    setSource({ kind: 'player', sport: c.sport || state.pp.sport, athleteId: c.athleteId, name: c.name, angle }, { advance });
+    if (advance) loadArchive().catch(() => {}).then(() => renderDataStory());
+  }
+  const updatePlayerSourceSoon = debounce(() => updatePlayerSource(), 400);
+  const athleteCache = new Map();
+  const researchCache = new Map();
+  async function loadArchive() {
+    const src = state.flow.source;
+    if (!src || src.kind !== 'player') return null;
+    state.researchState = 'loading';
+    renderDataStory();
+    try {
+      const aKey = `${src.sport}|${src.athleteId}`;
+      const rKey = `${aKey}|${src.angle}`;
+      const [athlete, research] = await Promise.all([
+        athleteCache.get(aKey) || api({ mode: 'athlete', sport: src.sport, athleteId: src.athleteId }).then(d => { athleteCache.set(aKey, d.athlete); return d.athlete; }).catch(() => null),
+        researchCache.get(rKey) || api({ mode: 'archive-research', sport: src.sport, athleteId: src.athleteId, name: src.name, angle: src.angle }).then(d => { researchCache.set(rKey, d); state.spent.archive = (state.spent.archive || 0) + (Number(d.cost) || 0); return d; }),
+      ]);
+      if (state.flow.source?.athleteId !== src.athleteId) return null;
+      state.data.athlete = research.athlete || athlete;
+      if (!state.data.athlete) throw new Error('The player’s career stats did not load. Try again.');
+      state.research = research;
+      state.researchState = 'ready';
+      const moments = G.pickMoments(research.candidates, src.angle, /best/i.test(src.angle) ? 5 : F.FORMATS.archive.beats.max - 2);
+      state.data.archive = {
+        athleteId: src.athleteId, angle: src.angle,
+        sources: (research.articles || []).slice(0, TL.LIMITS.sources),
+        photos: (research.photos || []).slice(0, TL.LIMITS.photos),
+        moments: moments.map(({ id, year, title, line, cite }) => ({ id, year, title, line, cite })),
+        thin: Boolean(research.coverage?.thin),
+      };
+      return state.data.archive;
+    } catch (error) {
+      state.researchState = isSoon(error) ? 'soon' : 'error';
+      state.digestError = error.message;
+      if (isSoon(error)) markSoon(error.data?.mode || 'archive-research');
+      throw error;
+    }
+  }
+
+  // Clips: an X link (resolved by Video Ads' free 'clip' mode), the clip
+  // library (Video Ads' free 'library' mode) or an ES upload.
+  async function videoAds(body) {
+    if (!window.ESAuth?.fetchWithAuth) throw Object.assign(new Error('Sign-in is still loading. Try again in a moment.'), { offline: true });
+    let response;
+    try { response = await window.ESAuth.fetchWithAuth('/api/video-ads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); } catch { throw Object.assign(new Error('The clip server is not reachable.'), { offline: true }); }
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data || data.ok === false) throw Object.assign(new Error(data?.error || `That did not work (${response.status}).`), { status: response.status, reason: data?.reason, offline: response.status === 404 && !data });
+    return data;
+  }
+  function renderClipPanel() {
+    const panel = $('rm-c-panel');
+    if (!panel) return;
+    const c = state.cp;
+    if (c.origin === 'x') {
+      panel.innerHTML = `<form class="rm-c-xform" id="rm-c-xform" novalidate>
+        <div class="es-field"><label class="es-field__label" for="rm-c-link">X post link</label>
+        <div class="rm-c-xrow"><input class="es-input" id="rm-c-link" type="url" inputmode="url" maxlength="400" placeholder="https://x.com/NFL/status/1855…" value="${esc(c.link)}" aria-describedby="rm-c-xhint" ${c.status === 'error' ? 'aria-invalid="true"' : ''}><button class="es-btn" type="submit" ${c.status === 'loading' ? 'aria-busy="true"' : ''}>${c.status === 'loading' ? '<span class="rm-spin" aria-hidden="true"></span>Finding' : 'Find the clip'}</button></div>
+        <p class="es-field__hint${c.status === 'error' ? ' rm-err' : ''}" id="rm-c-xhint" ${c.status === 'error' ? 'role="alert"' : ''}>${esc(c.status === 'error' ? c.error : 'A team, league or network post with a video. Allowed for organic posts.')}</p></div></form>`;
+      return;
+    }
+    if (c.origin === 'library') {
+      panel.innerHTML = `${seg('rm-c-sport', 'League', [['nfl', 'NFL'], ['cfb', 'CFB'], ['mlb', 'MLB']], c.libSport, 'csport')}<p class="rm-hint">Official clips from the last few days. Free.</p><ul class="rm-clips" id="rm-clips" role="radiogroup" aria-label="Clips in the library"></ul>`;
+      renderLibrary();
+      if (c.libStatus === 'idle') loadLibrary();
+      return;
+    }
+    panel.innerHTML = `<div class="rm-upload rm-c-upload"><input type="file" id="rm-c-file" accept="video/mp4,video/quicktime,video/webm" class="es-sr-only"><label class="es-btn" for="rm-c-file">${ICON.upload}<span>Choose a video</span></label><span class="rm-meta">${c.file ? esc(c.file.name) : 'MP4, MOV or WebM, up to 120 MB'}</span></div>
+      <label class="rm-check rm-check--sm"><input type="checkbox" id="rm-c-rights" ${c.rightsOk ? 'checked' : ''}><span><b>ES owns this clip or has the rights to it</b><small>Required for uploads.</small></span></label>`;
+  }
+  async function loadLibrary() {
+    const c = state.cp;
+    c.libStatus = 'loading';
+    renderLibrary();
+    try {
+      const data = await videoAds({ mode: 'library', sport: c.libSport, sort: 'newest', limit: 18 });
+      c.list = (data.clips || []).filter(x => x.variants?.length);
+      c.libStatus = 'ready';
+    } catch (error) {
+      c.libStatus = error.offline ? 'offline' : 'error';
+      c.libError = error.message;
+    }
+    renderLibrary();
+  }
+  function renderLibrary() {
+    const list = $('rm-clips');
+    if (!list) return;
+    const c = state.cp;
+    list.setAttribute('aria-busy', String(c.libStatus === 'loading'));
+    if (c.libStatus === 'loading' || c.libStatus === 'idle') { list.innerHTML = skeletonRows(3, 'rm-clip'); return; }
+    if (c.libStatus !== 'ready') { list.innerHTML = `<li role="none">${errorHtml('The clip library did not load', c.libStatus === 'offline' ? 'The clip server is not reachable from here. Paste an X link or upload instead.' : c.libError, 'cretry')}</li>`; return; }
+    if (!c.list.length) { list.innerHTML = '<li role="none" class="es-empty rm-src-state"><p class="es-empty__title">No fresh clips in this league</p><p class="es-empty__copy">Paste an X link or upload a clip instead.</p></li>'; return; }
+    const sel = c.clip?.url || '';
+    const tabI = Math.max(0, c.list.findIndex(x => x.url === sel));
+    list.innerHTML = c.list.map((x, i) => G.clipRowHtml(x, i, { selected: sel, tab: i === tabI })).join('');
+  }
+  async function resolveXLink() {
+    const c = state.cp;
+    c.link = $('rm-c-link')?.value || '';
+    const parsed = G.parseClipLink(c.link);
+    if (!parsed.ok) { c.status = 'error'; c.error = parsed.error; renderClipPanel(); $('rm-c-link')?.focus(); return; }
+    c.status = 'loading';
+    renderClipPanel();
+    try {
+      const data = await videoAds({ mode: 'clip', url: parsed.url });
+      c.status = 'ready';
+      await loadReplayClip({ origin: 'x', url: data.url || parsed.url, variants: data.variants, handle: data.handle || parsed.handle, text: data.text || '', thumb: data.thumbnail || '', postedAt: data.postedAt || '', durationMs: data.durationMs || 0 });
+    } catch (error) {
+      c.status = 'error';
+      c.error = error.offline ? 'The clip server is not reachable from here. Upload the clip instead.' : error.message;
+    }
+    renderClipPanel();
+  }
+  function useLibraryClip(i) {
+    const clip = state.cp.list[i];
+    if (!clip) return;
+    loadReplayClip({ origin: 'library', url: clip.url, variants: clip.variants, handle: clip.handle, text: clip.text, thumb: clip.thumb, postedAt: clip.postedAt, durationMs: clip.durationMs });
+  }
+  function onClipFile(input) {
+    const file = input.files[0];
+    input.value = '';
+    if (!file) return;
+    if (file.size > 120 * 1024 * 1024) { toast('That file is too large (120 MB at most).', { tone: 'error' }); return; }
+    state.cp.file = file;
+    renderClipPanel();
+    loadReplayClip({ origin: 'upload', file, text: file.name.replace(/\.[^.]+$/, '').slice(0, 80) });
+  }
+  // Downloads (or reads) the clip once into a clip: asset; the preview video
+  // and the segment trimmer use it.
+  async function loadReplayClip(clip) {
+    const c = state.cp;
+    c.clip = { ...clip, loading: true };
+    c.asset = '';
+    renderClipPick();
+    let id = '';
+    if (clip.origin === 'upload') {
+      id = `clip:replay-up-${Date.now().toString(36)}`;
+      const ok = await addClipAsset(id, { blob: clip.file, label: `Your clip: ${clip.file.name.slice(0, 40)}`, rights: { source: 'Uploaded by you', licence: 'You confirmed ES owns it or has the rights', organic: true, paid: true, credit: '' } });
+      if (!ok) id = '';
+    } else {
+      const variant = pickVariant(clip.variants || []);
+      if (variant) {
+        id = `clip:replay-${slugOf(clip.url).slice(-24)}`;
+        if (!state.assets[id]) {
+          try {
+            const response = await fetch(variant.url, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
+            const blob = response.ok ? await response.blob() : null;
+            const ok = blob && await addClipAsset(id, { blob, remote: variant.url, post: clip.url, label: `Clip from @${clip.handle || 'x'}`, rights: { source: `X post (${clip.url})`, licence: 'Clip from an X post. Allowed for organic posts; a paid ad with league footage needs a rights check. Keep the source link.', organic: true, paid: true, x: true, credit: clip.handle ? `@${clip.handle}` : '' } });
+            if (!ok) id = '';
+          } catch { id = ''; }
+        }
+      }
+    }
+    if (c.clip?.url !== clip.url || c.clip?.file !== clip.file) return;
+    if (!id) {
+      c.clip = { ...clip, loading: false, failed: true };
+      renderClipPick();
+      return;
+    }
+    const dur = (state.assets[id].durationMs || 6000) / 1000;
+    c.asset = id;
+    c.duration = dur;
+    c.segment = { in: Math.round(Math.min(0.4, dur / 10) * 10) / 10, out: Math.round(Math.min(dur, 12) * 10) / 10 };
+    c.clip = { ...clip, loading: false };
+    renderClipPick();
+    renderLibrary();
+  }
+  function renderClipPick() {
+    const box = $('rm-c-pick');
+    if (!box) return;
+    const c = state.cp;
+    if (!c.clip) { box.innerHTML = ''; return; }
+    if (c.clip.loading) { box.innerHTML = `<div class="rm-c-card is-loading" role="status"><span class="rm-spin" aria-hidden="true"></span><span>Loading the clip…</span></div>`; return; }
+    if (c.clip.failed) { box.innerHTML = errorHtml('That clip could not be loaded', c.clip.origin === 'upload' ? 'Try an MP4 file.' : 'Its video did not download. Try another post, or upload the clip.', 'cclear'); return; }
+    const a = state.assets[c.asset];
+    const s = c.segment;
+    const needRights = c.clip.origin === 'upload' && !c.rightsOk;
+    box.innerHTML = `<div class="rm-c-card">
+      <div class="rm-c-video"><video id="rm-c-video" src="${esc(a?.src || '')}" muted playsinline controls preload="metadata" aria-label="Clip preview"></video></div>
+      <div class="rm-c-meta"><p class="rm-c-title">${esc(c.clip.text || a?.label || 'Clip')}</p><p class="rm-meta">${esc([c.clip.handle ? `@${c.clip.handle}` : (c.clip.origin === 'upload' ? 'Your upload' : ''), `${c.duration.toFixed(1)} s`].filter(Boolean).join(' · '))}</p></div>
+      <fieldset class="rm-trim"><legend class="es-field__label">The moment</legend>
+        <label class="rm-trim__row"><span>Starts</span><input type="range" data-seg="in" min="0" max="${c.duration.toFixed(1)}" step="0.1" value="${s.in}" aria-valuetext="${G.fmtSec(s.in)}"><output id="rm-seg-in">${G.fmtSec(s.in)}</output></label>
+        <label class="rm-trim__row"><span>Ends</span><input type="range" data-seg="out" min="0" max="${c.duration.toFixed(1)}" step="0.1" value="${s.out}" aria-valuetext="${G.fmtSec(s.out)}"><output id="rm-seg-out">${G.fmtSec(s.out)}</output></label>
+        <p class="rm-hint">Three frames come from this stretch: the setup, the play and the reaction.</p></fieldset>
+      <div class="rm-c-actions"><button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-cclear>Pick another</button><button class="es-btn es-btn--primary" type="button" data-cuse ${needRights ? 'aria-disabled="true"' : ''}>Use this clip</button></div>
+      ${needRights ? '<p class="rm-hint rm-err">Tick the rights box above to use an upload.</p>' : ''}
+    </div>`;
+  }
+  function onSegmentInput(input) {
+    const c = state.cp;
+    if (!c.segment) return;
+    const v = Number(input.value);
+    if (input.dataset.seg === 'in') c.segment.in = Math.min(v, c.segment.out - 1);
+    else c.segment.out = Math.max(v, c.segment.in + 1);
+    input.value = String(c.segment[input.dataset.seg]);
+    input.setAttribute('aria-valuetext', G.fmtSec(c.segment[input.dataset.seg]));
+    const out = $(`rm-seg-${input.dataset.seg}`);
+    if (out) out.textContent = G.fmtSec(c.segment[input.dataset.seg]);
+    const video = $('rm-c-video');
+    if (video) { try { video.currentTime = c.segment[input.dataset.seg]; } catch { /* not ready */ } }
+  }
+  function confirmClip() {
+    const c = state.cp;
+    if (!c.clip || !c.asset) return;
+    if (c.clip.origin === 'upload' && !c.rightsOk) { $('rm-c-rights')?.focus(); return; }
+    const src = { kind: 'clip', origin: c.clip.origin, segment: { ...c.segment } };
+    if (c.clip.origin === 'upload') src.assetId = c.asset; else { src.url = c.clip.url; src.assetId = c.asset; }
+    state.replay = null;
+    setSource(src);
+  }
+
+  // The flow's source; a complete source moves the editor to the Story step.
+  function setSource(source, { advance = true } = {}) {
+    state.flow = FLOW.reduce(state.flow, { type: 'set-source', source });
+    renderStepsNav();
+    renderDataStory();
+    if (advance && state.flow.step === 'story' && state.step === 'source') goStep('topic');
+  }
+
+  // ── Story step for a data format ──
+  const EMPTY_HINT = { game: 'Pick a game, then Make my reel.', clip: 'Pick a clip, then Make my reel.', player: 'Pick a player, then Make my reel.' };
+  function renderDataStory() {
+    const fmt = dataFmt();
+    const box = els.dataStory;
+    const hint = els.emptyStage.querySelector('span');
+    if (hint) hint.textContent = fmt ? EMPTY_HINT[srcKind()] : 'Pick a trend or write a brief, then Make my reel.';
+    els.topic.hidden = Boolean(fmt);
+    $('rm-set-format').hidden = Boolean(fmt);
+    els.factcheckRow.hidden = Boolean(fmt) || !state.config.ai;
+    $('rm-set-clips').hidden = Boolean(fmt) && fmt !== 'gameswing';
+    els.recent.hidden = Boolean(fmt) || !store.get(LOCAL_KEY, []).length;
+    box.hidden = !fmt;
+    if (!fmt) { box.innerHTML = ''; return; }
+    const f = F.FORMATS[fmt];
+    const src = state.flow.source;
+    const change = `<button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-dsrc>Change</button>`;
+    let body = '';
+    if (!src) body = `<p class="rm-hint">Pick a ${esc(G.SOURCE_LABEL[srcKind()].toLowerCase())} first.</p><button class="es-btn es-btn--sm" type="button" data-dsrc>Pick one</button>`;
+    else if (src.kind === 'game') {
+      const g = state.gameSummary;
+      const d = state.data.game;
+      const teams = d ? d.teams : g?.teams;
+      const head = teams ? `<div class="rm-ds-game">${G.gameRowHtml({ id: src.eventId, sport: src.sport, teams, status: (d || g).status, startsAt: (d || g).startsAt, drama: g?.drama ?? null, wpSpark: g?.wpSpark || null }, { logo: logoFor, still: true })}</div>` : `<p class="rm-ds-label">${esc(src.label)}</p>`;
+      let plays = '';
+      if (state.digestState === 'loading') plays = `<p class="rm-hint" role="status"><span class="rm-spin" aria-hidden="true"></span> Reading the play-by-play…</p>`;
+      else if (state.digestState === 'error' || state.digestState === 'soon') plays = `<p class="rm-hint rm-err" role="alert">${esc(state.digestState === 'soon' ? 'Game data is coming soon.' : state.digestError)}</p>`;
+      else if (d) {
+        plays = `<fieldset class="rm-keyplays"><legend class="es-field__label">Key plays <span class="rm-meta">${state.keyPlays.length} of ${d.plays.length} picked</span></legend>${d.plays.length ? d.plays.map(p => `<label class="rm-keyplay"><input type="checkbox" data-keyplay="${esc(p.id)}" ${state.keyPlays.includes(p.id) ? 'checked' : ''}><span class="rm-keyplay__when">${esc(G.playWhen(p, d.sport))}</span><span class="rm-keyplay__text">${esc(p.text)}</span><span class="rm-keyplay__tags">${(p.tags || []).filter(t => G.TAG_LABEL[t]).slice(0, 2).map(t => `<span class="es-badge${t === 'swing' || t === 'lead-change' ? ' es-badge--warn' : ''}">${esc(G.TAG_LABEL[t])}</span>`).join('')}${typeof p.swing === 'number' ? `<span class="rm-keyplay__swing">${p.swing > 0 ? '+' : ''}${Math.round(p.swing * 100)}%</span>` : ''}</span></label>`).join('') : '<p class="rm-hint">No key plays in this game’s data yet.</p>'}</fieldset>
+          ${d.wp?.points?.length ? `<p class="rm-attrib">${esc(d.attribution || TL.ATTRIBUTION.espn)}</p>` : '<p class="rm-hint">No win probability for this game, so the reel leaves the line out.</p>'}`;
+      }
+      body = `${head}${plays}`;
+    } else if (src.kind === 'player') {
+      const c = state.pp.candidate;
+      const r = state.research;
+      let cov = '';
+      if (state.researchState === 'loading') cov = `<p class="rm-hint" role="status"><span class="rm-spin" aria-hidden="true"></span> Searching ES coverage and career stats…</p>`;
+      else if (state.researchState === 'error' || state.researchState === 'soon') cov = `<p class="rm-hint rm-err" role="alert">${esc(state.researchState === 'soon' ? 'Archive research is coming soon.' : state.digestError)}</p>`;
+      else if (r) {
+        const a = Number(r.coverage?.articles) || 0;
+        const level = Math.min(1, a / 12);
+        cov = `<div class="rm-coverage${r.coverage?.thin ? ' is-thin' : ''}"><span class="rm-coverage__bar" aria-hidden="true"><span style="width:${Math.round(level * 100)}%"></span></span><span>${esc(G.coverageText(r.coverage, r.dropped))} · ${(r.candidates || []).length} moments with a source</span></div>${r.coverage?.thin ? `<p class="rm-callout-warn">${ICON.warn}<span>Thin ES coverage: the moments lean on career stat rows. Check every year before you post.</span></p>` : ''}`;
+      }
+      body = `<div class="rm-ds-player">${G.playerRowHtml(c || { athleteId: src.athleteId, name: src.name, sport: src.sport }, { still: true })}</div><p class="rm-ds-angle"><span class="rm-meta">Angle</span> ${esc(src.angle)}</p>${cov}`;
+    } else if (src.kind === 'clip') {
+      const a = state.assets[src.assetId];
+      const img = state.images[src.assetId];
+      body = `<div class="rm-ds-clip"><span class="rm-clip__thumb" data-ds-poster>${img && img.src ? `<img src="${esc(img.src)}" alt="">` : ''}</span><span class="rm-clip__body"><span class="rm-clip__text">${esc(state.cp.clip?.text || a?.label || 'Clip')}</span><span class="rm-clip__meta">${esc({ x: 'X link', library: 'Clip library', upload: 'Your upload' }[src.origin])} · ${esc(G.fmtSec(src.segment?.in))}–${esc(G.fmtSec(src.segment?.out))}</span></span></div>`;
+    }
+    box.innerHTML = `<div class="rm-sec__head"><h3 class="rm-sec__title">${esc(f.label)}</h3>${src ? change : ''}</div>
+      <p class="rm-hint">${esc(f.blurb)}</p>
+      <div class="rm-ds-card">${body}</div>
+      ${src ? `<div class="es-field"><label class="es-field__label" for="rm-angle">Angle <span class="rm-meta">optional</span></label><input class="es-input" id="rm-angle" type="text" maxlength="200" value="${esc(state.angle)}" placeholder="${esc({ gameswing: 'Lead with the fourth-quarter comeback', replay: 'The catch that sealed it', archive: 'Why he is the greatest' }[fmt])}"></div>` : ''}
+      <p class="rm-ds-outputs">${f.outputs.map(o => `<span class="rm-gchip">${o === 'carousel' ? 'Carousel 1080×1350' : 'Reel 1080×1920'}</span>`).join('')}<span class="rm-gchip">${esc(S.get(S.suggestStyle({ format: fmt }).id).label)} style</span>${f.voice === 'off' ? '<span class="rm-gchip">Music only</span>' : ''}</p>`;
+    const poster = box.querySelector('[data-ds-poster]');
+    const pimg = src?.assetId && state.images[src.assetId];
+    if (poster && pimg && pimg.tagName === 'CANVAS') { const cv = document.createElement('canvas'); cv.width = pimg.width; cv.height = pimg.height; cv.getContext('2d').drawImage(pimg, 0, 0); poster.append(cv); }
+  }
+  els.dataStory.addEventListener('click', event => {
+    if (event.target.closest('[data-dsrc]')) goStep('source');
+  });
+  els.dataStory.addEventListener('change', event => {
+    const box = event.target.closest('[data-keyplay]');
+    if (!box) return;
+    const id = box.dataset.keyplay;
+    state.keyPlays = box.checked ? [...new Set([...state.keyPlays, id])] : state.keyPlays.filter(x => x !== id);
+    const order = (state.data.game?.plays || []).map(p => p.id);
+    state.keyPlays.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    const legend = els.dataStory.querySelector('.rm-keyplays .rm-meta');
+    if (legend) legend.textContent = `${state.keyPlays.length} of ${order.length} picked`;
+  });
+  els.dataStory.addEventListener('input', event => { if (event.target.id === 'rm-angle') state.angle = event.target.value; });
+
+  // ── Make (data formats): data / frames -> script -> voice -> visuals -> build ─
+  async function makeDataReel() {
+    const fmt = dataFmt();
+    if (!FLOW.sourceReady(fmt, state.flow.source)) { els.writeStatus.textContent = `Pick a ${G.SOURCE_LABEL[srcKind()].toLowerCase()} first.`; goStep('source'); return; }
+    if (fmt === 'gameswing' && state.data.game && !state.keyPlays.length) { els.writeStatus.textContent = 'Tick at least one key play.'; els.dataStory.querySelector('[data-keyplay]')?.focus(); return; }
+    setWriteBusy(true);
+    flowEvent({ type: 'make' });
+    els.writeStatus.textContent = '';
+    els.making.scrollIntoView?.({ block: 'nearest', behavior: calmMotion() ? 'auto' : 'smooth' });
+    const started = Date.now();
+    const ctxRun = { brief: '', title: '' };
+    for (const stage of state.flow.stages.map(s => s.id)) {
+      if (!state.flow.making) break;
+      // eslint-disable-next-line no-await-in-loop
+      await runStage(stage, fmt, ctxRun);
+    }
+    setWriteBusy(false);
+    if (!state.flow.hasReel || state.flow.making || !state.timeline) {
+      if (state.flow.error) { els.writeStatus.innerHTML = `${esc(state.flow.error)} <button class="rm-link" type="button" data-news>Use a brief instead</button>`; toast(state.flow.error, { tone: 'error' }); }
+      return;
+    }
+    if (els.makingLive) els.makingLive.textContent = 'Your reel is ready.';
+    renderEdit();
+    goStep('edit', { focus: false });
+    toast(F.FORMATS[fmt].outputs.includes('carousel') ? 'Your reel and carousel are ready.' : 'Your reel is ready. Tap a beat under the preview to change it.');
+    logEvent('make', { ms: Date.now() - started, style: styleId(), seconds: Math.round(state.timeline.durationMs / 1000), format: fmt, clipShare: clipShare().share });
+  }
+  // "Use a brief instead": the news flow with a brief seeded from what the
+  // data step did get (the game line, the player), never invented.
+  els.writeStatus.addEventListener('click', event => {
+    if (!event.target.closest('[data-news]')) return;
+    const seed = (dataBrief() || state.flow.source?.label || state.flow.source?.name || '').slice(0, 2400);
+    pickFormat('explainer');
+    state.source = 'brief';
+    radios(els.source, 'source', 'brief');
+    els.sourceTrend.hidden = true;
+    els.sourceBrief.hidden = false;
+    if (!els.brief.value.trim()) els.brief.value = seed;
+    renderPicked();
+    els.writeStatus.textContent = '';
+    els.brief.focus();
+  });
+  const done = (stage, note, extra = {}) => flowEvent({ type: 'stage-done', stage, note, ...extra });
+  function dataBrief() {
+    const fmt = dataFmt();
+    const src = state.flow.source || {};
+    if (fmt === 'gameswing') return G.briefFromGame(state.data.game, state.keyPlays, TL);
+    if (fmt === 'archive') return G.briefFromArchive(state.data.athlete || { name: src.name }, state.data.archive, state.data.archive?.moments, src.angle);
+    if (fmt === 'replay') return G.briefFromReplay(state.cp.clip, state.replay?.captions, state.angle);
+    return '';
+  }
+  function dataTitle() {
+    const src = state.flow.source || {};
+    const d = state.data.game;
+    if (src.kind === 'game' && d) return `${d.teams.away.name} at ${d.teams.home.name}`;
+    if (src.kind === 'player') return `${src.name}: ${src.angle}`;
+    return state.cp.clip?.text ? F.trimWords(state.cp.clip.text, 10) : 'The moment';
+  }
+  async function runStage(stage, fmt, run) {
+    const src = state.flow.source;
+    if (stage === 'data') {
+      try {
+        if (fmt === 'gameswing') {
+          const d = state.data.game || await loadDigest();
+          if (!d) throw new Error('Game data is unavailable; use the brief.');
+          logEvent('data', { kind: 'game', sport: d.sport, eventId: d.eventId, plays: d.plays.length, wp: Boolean(d.wp?.points?.length) });
+          done('data', `Free · ${d.plays.length} plays${d.wp?.points?.length ? ' · win probability' : ''}`);
+        } else {
+          const a = (state.researchState === 'ready' && state.data.archive) ? state.data.archive : await loadArchive();
+          if (!a) throw new Error('The career data did not load.');
+          if (!a.moments.length) throw new Error('No sourced moments were found for this player. Try another angle.');
+          logEvent('data', { kind: 'archive', sport: src.sport, athleteId: src.athleteId, articles: a.sources.length, photos: a.photos.length, moments: a.moments.length, thin: a.thin });
+          done('data', `Free · ${G.coverageText(state.research?.coverage)} · ${a.moments.length} moments`);
+        }
+      } catch (error) {
+        const note = isSoon(error) ? `${F.FORMATS[fmt].label} data is coming soon.` : (error.reason === 'data-unavailable' ? 'Game data is unavailable; use the brief.' : error.message);
+        done('data', note, { failed: true });
+      }
+      renderDataStory();
+      return;
+    }
+    if (stage === 'frames') {
+      const out = await pickFrames({ ai: true });
+      done('frames', out.note, out.failed ? { failed: true } : {});
+      return;
+    }
+    if (stage === 'script') {
+      run.brief = dataBrief();
+      run.title = dataTitle();
+      const body = { mode: 'plan', brief: run.brief, format: fmt, sport: src.sport || '', tier: state.tier, style: state.style, steer: state.angle.slice(0, 300), source: src, title: run.title.slice(0, 90), ...planData(fmt) };
+      try {
+        const data = await api(body);
+        state.spent.director += Number(data.costs?.director) || 0;
+        if (data.suggestedStyle) state.styleSuggested = data.suggestedStyle;
+        data.plan.format = fmt;
+        keepPickedPlays(data.plan);
+        applyPlan(data, { brief: run.brief, go: false });
+        done('script', `${data.plan.beats.length} beats · ${S.get(data.plan.style).label} · ${F.money(Number(data.costs?.director) || 0)}`);
+      } catch (error) {
+        if (!error.offline) { done('script', error.message, { failed: true }); return; }
+        const plan = localPlan(fmt, run);
+        applyPlan({ plan, source: 'draft', notice: 'The AI server is not reachable here, so the script is a draft built from the data.', corpus: run.brief, sources: [] }, { brief: run.brief, go: false });
+        done('script', 'Draft from the data · free');
+      }
+      state.sources = [...dataSources(), ...state.sources];
+      return;
+    }
+    if (stage === 'voice') {
+      if (state.config.voice.ready && state.voiceOn) {
+        const out = await makeVoice({ auto: true });
+        done('voice', out.failed ? 'Captions only for now. Retry in Review.' : `${out.made + out.reused} lines`, out.failed ? { failed: true } : {});
+      } else done('voice', state.config.voice.ready ? 'Music only (voice off)' : 'Captions only', { skipped: true });
+      return;
+    }
+    if (stage === 'visuals') {
+      try {
+        if (fmt === 'archive') await archivePhotos();
+        const v = await fillVisuals();
+        done('visuals', v.note);
+      } catch { done('visuals', 'Some beats still need a picture', { failed: true }); }
+      return;
+    }
+    if (stage === 'build') {
+      if (fmt === 'replay') replayVisuals();
+      rebuild();
+      if (S.get(styleId()).cutout && fmt !== 'replay') autoCutout();
+      done('build', `${(state.timeline.durationMs / 1000).toFixed(0)} s${F.FORMATS[fmt].outputs.includes('carousel') ? ' · reel + carousel' : ''}`);
+    }
+  }
+  // Offline or before the director knows the data formats: a free plan from
+  // the data (reel-data.js when Agent A's module is here, else the draft).
+  // What the data director plans from (contract §2.1 + A's plan hand-off):
+  // the digest, the archive and athlete, or the replay frames and captions.
+  function planData(fmt) {
+    const src = state.flow.source || {};
+    if (fmt === 'gameswing') return { digest: state.data.game, playIds: state.keyPlays.slice() };
+    if (fmt === 'archive') {
+      const a = state.data.archive || {};
+      return { angle: src.angle, name: src.name, athlete: state.data.athlete, archive: { athleteId: a.athleteId, angle: a.angle, articles: a.sources || [], photos: a.photos || [], candidates: a.moments || [], coverage: state.research?.coverage || null, thin: Boolean(a.thin) } };
+    }
+    if (fmt === 'replay' && state.replay) return { replay: { origin: state.replay.origin, clipAsset: state.replay.clipAsset, clipUrl: state.replay.clipUrl, segment: state.replay.segment, picker: state.replay.picker, frames: state.replay.frames }, captions: state.replay.captions || undefined };
+    return {};
+  }
+  // The data director picks its own key plays: the ones the editor unticked
+  // are dropped from the plan (as long as one play stays).
+  function keepPickedPlays(plan) {
+    if (dataFmt() !== 'gameswing' || !state.keyPlays.length || !Array.isArray(plan?.beats)) return;
+    const playOf = b => (b.refs || []).find(r => r.startsWith('play:'));
+    const isPlay = b => b.kind === 'play' && playOf(b);
+    const kept = plan.beats.filter(b => !isPlay(b) || state.keyPlays.includes(playOf(b).slice(5)));
+    if (kept.some(isPlay)) plan.beats = kept;
+  }
+  function localPlan(fmt, run) {
+    const RD = window.ReelData;
+    let plan = null;
+    try {
+      if (fmt === 'gameswing' && RD?.planFromGame && state.data.game) { plan = RD.planFromGame(state.data.game, { title: run.title }); keepPickedPlays(plan); }
+      if (fmt === 'archive' && RD?.planFromArchive && state.data.archive) plan = RD.planFromArchive(state.data.archive, state.data.athlete, { angle: state.flow.source?.angle, name: state.flow.source?.name, momentIds: state.data.archive.moments.map(m => m.id) });
+      if (fmt === 'replay' && RD?.planFromReplay && state.replay) plan = RD.planFromReplay(state.replay, { captions: state.replay.captions || undefined, title: run.title });
+    } catch { plan = null; }
+    if (!plan || !Array.isArray(plan.beats) || !plan.beats.length) plan = F.fallbackPlan({ brief: run.brief, title: run.title, format: fmt, sport: state.flow.source?.sport || '' });
+    plan.format = fmt;
+    plan.style = state.style === 'auto' ? S.suggestStyle({ format: fmt }).id : state.style;
+    if (fmt === 'gameswing' && state.data.game && !plan.team) {
+      const d = state.data.game;
+      const winner = d.teams.home.score >= d.teams.away.score ? d.teams.home : d.teams.away;
+      const entry = LOGOLIB?.findTeam?.(winner.name, d.sport);
+      plan.team = { name: winner.name, colors: entry?.colors || winner.colors || [], logo: '' };
+    }
+    return plan;
+  }
+  function dataSources() {
+    const out = [];
+    const d = state.data.game;
+    if (dataFmt() === 'gameswing' && d) out.push({ type: 'data', title: `${d.source?.name || 'ESPN'} play-by-play and win probability`, url: d.source?.url || '' });
+    if (dataFmt() === 'archive') {
+      if (state.data.athlete?.source) out.push({ type: 'data', title: `${state.data.athlete.source.name} career stats`, url: state.data.athlete.source.url });
+      (state.data.archive?.sources || []).forEach(a => out.push({ type: 'es-article', title: a.title, url: a.url }));
+    }
+    return out;
+  }
+  // Archive: ES photos from the research go on the beats first (moment
+  // photo, then the rest in order); the fill chain covers what is left.
+  async function archivePhotos() {
+    const photos = state.data.archive?.photos || [];
+    if (!photos.length || !state.plan) return;
+    // Every ES photo is an asset photo:<id> (with its rights), so refs and
+    // carousel slides draw it and the rights check covers it.
+    photos.forEach(p => {
+      const id = `photo:${p.id}`;
+      if (!state.assets[id]) state.assets[id] = photoAsset({ src: p.url, title: p.caption || 'ES photo', credit: p.credit || '', source: 'es-archive' });
+      if (!state.images[id]) loadImage(p.url, true).then(img => { if (img) { state.images[id] = img; draw(); } });
+    });
+    const queue = [...(state.research?.candidates || []).filter(c => c.photoId).map(c => photos.find(p => p.id === c.photoId)).filter(Boolean), ...photos];
+    const used = new Set();
+    for (const beat of state.plan.beats) {
+      if (beat.kind === 'cta' || state.photos[beat.id]?.length) continue;
+      const photo = queue.find(p => !used.has(p.id));
+      if (!photo) break;
+      used.add(photo.id);
+      // eslint-disable-next-line no-await-in-loop
+      await usePhoto(beat.id, { id: `photo:${photo.id}`, src: photo.url, title: photo.caption || 'ES photo', credit: photo.credit || '', source: 'es-archive' }, { quiet: true });
+    }
+  }
+
+  // ── Replay frames: code pick (free), AI pick when it is on (capped) ──
+  let frameVideo = null;
+  async function replayVideo() {
+    const id = state.flow.source?.assetId;
+    const a = id && state.assets[id];
+    if (!a?.src) return null;
+    if (frameVideo && frameVideo.dataset.src === a.src) return frameVideo;
+    frameVideo = await videoFrom(a.src);
+    if (frameVideo) frameVideo.dataset.src = a.src;
+    return frameVideo;
+  }
+  const seekTo = (v, t) => new Promise(resolve => {
+    if (Math.abs(v.currentTime - t) < 0.02) { resolve(); return; }
+    const timer = setTimeout(resolve, 1500);
+    v.addEventListener('seeked', () => { clearTimeout(timer); resolve(); }, { once: true });
+    try { v.currentTime = t; } catch { clearTimeout(timer); resolve(); }
+  });
+  async function grabFrame(t, width = 320) {
+    const v = await replayVideo();
+    if (!v) return null;
+    await seekTo(v, t);
+    const c = document.createElement('canvas');
+    c.width = width;
+    c.height = Math.round(width * (v.videoHeight || 9) / (v.videoWidth || 16));
+    try { c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); } catch { return null; }
+    return c;
+  }
+  // Each sampled frame stays under ~23K base64 characters so nine fit the
+  // server's 220 KB body cap (it rejects anything over 60K per frame).
+  const FRAME_B64_MAX = 23000;
+  function smallJpeg(canvas) {
+    let c = canvas;
+    for (let q = 0.72; q >= 0.3; q -= 0.14) {
+      const url = c.toDataURL('image/jpeg', q);
+      if (url.length - 23 <= FRAME_B64_MAX) return url;
+    }
+    const s = document.createElement('canvas');
+    s.width = 240; s.height = Math.round(240 * c.height / c.width);
+    s.getContext('2d').drawImage(c, 0, 0, s.width, s.height);
+    c = s;
+    return c.toDataURL('image/jpeg', 0.4);
+  }
+  const RP = window.ReelReplay || null;
+  // Full-size frames for the renderer (env.images['frame:<role>']).
+  async function grabReplayFrames() {
+    if (!RP?.grabFrames || !state.replay) return;
+    const v = await replayVideo();
+    if (!v) return;
+    Object.assign(state.images, await RP.grabFrames(v, state.replay.frames));
+    draw();
+  }
+  const grabReplaySoon = debounce(() => grabReplayFrames(), 300);
+  // ReelReplay (Agent B): sample the segment, code pick, AI pick request
+  // under the body cap, apply the answer (bad indices fall back to code).
+  async function pickFramesRP(ai) {
+    const src = state.flow.source;
+    const v = await replayVideo();
+    const segment = state.replay.segment;
+    const samples = v ? await RP.sampleSegment(v, segment) : [];
+    const cands = RP.candidateFrames(samples, { segment });
+    const code = RP.codePick(cands);
+    if (code.length === 3) state.replay.frames = code;
+    const canAi = ai && modeOn('frame-pick') && state.config.ai && !state.config.offline && cands.candidates.length;
+    let note = `Code pick · free${modeOn('frame-pick') ? '' : ' (AI pick coming soon)'}`;
+    let failed = false;
+    if (canAi) {
+      let response = null;
+      try { response = await api(RP.pickRequest(cands, { clipUrl: src.url || '', segment, budgetUsd: F.PRICES.framePickCap })); } catch (error) { if (isSoon(error)) markSoon('frame-pick'); failed = true; note = `Code pick used: ${isSoon(error) ? 'the AI pick is coming soon' : (error.message || 'the AI pick failed')}`; }
+      if (response) {
+        const out = RP.applyPick(cands, response.picker === 'code' ? null : response);
+        state.replay.frames = out.frames;
+        state.replay.picker = out.picker;
+        state.replay.captions = Object.keys(out.captions || {}).length ? out.captions : null;
+        state.spent.framePick = (state.spent.framePick || 0) + (Number(response.cost) || 0);
+        note = out.picker === 'ai' ? `AI pick · ${F.money(Number(response.cost) || 0)}${response.cached ? ' (cached)' : ''}` : `Code pick · free${response.capped ? ' (AI cap reached)' : ''}`;
+      }
+    }
+    logEvent('frames', { picker: state.replay.picker, cost: state.spent.framePick || 0 });
+    await grabReplayFrames();
+    return { note, failed };
+  }
+  async function pickFrames({ ai = true } = {}) {
+    const src = state.flow.source;
+    const segment = src.segment || { in: 0, out: (state.assets[src.assetId]?.durationMs || 6000) / 1000 };
+    state.replay = { origin: src.origin, clipAsset: src.assetId, clipUrl: src.url || '', segment: { ...segment }, picker: 'code', frames: G.codeFrames(segment), captions: state.replay?.captions || null };
+    if (RP?.candidateFrames && RP.sampleSegment && RP.applyPick) return pickFramesRP(ai);
+    const canAi = ai && modeOn('frame-pick') && state.config.ai && !state.config.offline;
+    if (!canAi) { logEvent('frames', { picker: 'code' }); return { note: `Code pick · free${modeOn('frame-pick') ? '' : ' (AI pick coming soon)'}` }; }
+    try {
+      const times = G.sampleTimes(segment, 9);
+      const frames = [];
+      for (const t of times) {
+        // eslint-disable-next-line no-await-in-loop
+        const c = await grabFrame(t, 320);
+        if (!c) throw new Error('The clip frames could not be read.');
+        frames.push(smallJpeg(c));
+      }
+      const data = await api({ mode: 'frame-pick', clipUrl: src.url || '', segment, frames, times, budgetUsd: F.PRICES.framePickCap });
+      // Over the cap (or AI off on the server) the server answers with its own code pick.
+      if (data.picker === 'code') { logEvent('frames', { picker: 'code', capped: Boolean(data.capped) }); return { note: `Code pick · free${data.capped ? ' (AI cap reached)' : ''}` }; }
+      const picked = G.framesFromPick(data, times);
+      if (!picked) throw new Error('The AI pick came back incomplete.');
+      state.replay.frames = picked;
+      state.replay.picker = 'ai';
+      state.replay.captions = data.captions || null;
+      state.spent.framePick = (state.spent.framePick || 0) + (Number(data.cost) || 0);
+      logEvent('frames', { picker: 'ai', cost: Number(data.cost) || 0, cached: Boolean(data.cached) });
+      return { note: `AI pick · ${F.money(Number(data.cost) || 0)}${data.cached ? ' (cached)' : ''}` };
+    } catch (error) {
+      if (isSoon(error)) markSoon('frame-pick');
+      logEvent('frames', { picker: 'code', aiFailed: true });
+      return { failed: true, note: `Code pick used: ${isSoon(error) ? 'the AI pick is coming soon' : (error.message || 'the AI pick failed')}` };
+    }
+  }
+  // Every beat plays its stretch of the replay clip (the strip and slides
+  // are drawn from timeline.replay by the renderer).
+  function replayVisuals() {
+    const r = state.replay;
+    const base = r && state.assets[r.clipAsset];
+    if (!base || !state.plan) return;
+    const use = `${r.clipAsset}@seg`;
+    state.assets[use] = { ...base, clipIn: r.segment.in, clipOut: r.segment.out };
+    state.videos[use] = state.videos[r.clipAsset];
+    if (state.images[r.clipAsset]) state.images[use] = state.images[r.clipAsset];
+    state.plan.beats.forEach(b => { if (b.kind !== 'cta') setVisual(b.id, [use], r.origin === 'upload' ? 'upload-clip' : 'x-clip'); else setVisual(b.id, [designAsset()], 'design'); });
+  }
+
+  // ── What the timeline carries for a data format (contract §3) ──
+  function dataTimeline(tl) {
+    const fmt = dataFmt() || (state.plan && F.isDataFormat(state.plan.format) ? state.plan.format : '');
+    if (!fmt || !TL || !tl) return tl;
+    tl.v = 2;
+    tl.canvas = tl.canvas || { w: 1080, h: 1920 };
+    tl.outputs = F.FORMATS[fmt].outputs.slice();
+    tl.data = { game: fmt === 'gameswing' ? state.data.game : null, athlete: fmt === 'archive' ? state.data.athlete : null, archive: fmt === 'archive' ? state.data.archive : null };
+    tl.replay = fmt === 'replay' && state.replay ? { origin: state.replay.origin, clipAsset: state.replay.clipAsset, clipUrl: state.replay.clipUrl, segment: state.replay.segment, picker: state.replay.picker, frames: state.replay.frames } : null;
+    if (!Array.isArray(tl.slides)) tl.slides = [];
+    if (Array.isArray(tl.beats)) tl.beats.forEach(b => { if (!Array.isArray(b.refs)) b.refs = (state.plan.beats.find(x => x.id === b.id)?.refs || []).slice(); });
+    return tl;
+  }
+  // Facts the lint reads for a data format: the digest's facts text, the
+  // archive's cited lines and stat rows, the frame-pick captions.
+  function dataFacts() {
+    const fmt = dataFmt() || (state.plan && F.isDataFormat(state.plan.format) ? state.plan.format : '');
+    if (!fmt || !TL) return '';
+    if (fmt === 'gameswing') return TL.digestFacts(state.data.game);
+    if (fmt === 'archive') {
+      const a = state.data.athlete;
+      const rows = (a?.stats?.seasons || []).map(s => `${s.year}: ${a.stats.labels.map((l, i) => `${s.stats[i]} ${l}`).join(', ')}.`);
+      return [dataBrief(), ...rows, a?.stats?.totals ? `Career: ${a.stats.labels.map((l, i) => `${a.stats.totals[i]} ${l}`).join(', ')}.` : ''].join('\n');
+    }
+    return dataBrief();
+  }
+
+  // ── Review: the data panel per format ──
+  function renderDataReview() {
+    const fmt = state.plan && F.isDataFormat(state.plan.format) ? state.plan.format : '';
+    const box = els.dataReview;
+    box.hidden = !fmt || !G;
+    els.view.hidden = !fmt || !F.FORMATS[fmt].outputs.includes('carousel');
+    if (!fmt || !G) { box.innerHTML = ''; return; }
+    if (fmt === 'gameswing') box.innerHTML = gameReviewHtml();
+    if (fmt === 'replay') { box.innerHTML = replayReviewHtml(); drawFrameThumbs(); }
+    if (fmt === 'archive') box.innerHTML = archiveReviewHtml();
+  }
+  function gameReviewHtml() {
+    const d = state.data.game;
+    if (!d) return `<div class="rm-sec__head"><h3 class="rm-sec__title">The game</h3></div><p class="rm-hint">The game data is not loaded. Make the reel again to fetch it.</p>`;
+    const beats = state.plan.beats.map((b, i) => ({ b, i, ref: (b.refs || []).find(r => r.startsWith('play:')) })).filter(x => x.ref);
+    const opts = sel => d.plays.map(p => `<option value="${esc(p.id)}" ${`play:${p.id}` === sel ? 'selected' : ''}>${esc(`${G.playWhen(p, d.sport)} · ${p.text}`.slice(0, 80))}</option>`).join('');
+    const line = ['away', 'home'].map(s => `<tr><th scope="row">${esc(d.teams[s].abbr)}</th>${d.teams[s].linescore.map(n => `<td>${esc(n)}</td>`).join('')}<td class="rm-ls__t">${esc(d.teams[s].score)}</td></tr>`).join('');
+    return `<div class="rm-sec__head"><h3 class="rm-sec__title">The game</h3><span class="rm-meta">${esc(d.source?.name || 'ESPN')} data · free</span></div>
+      <div class="rm-ls-wrap"><table class="rm-ls"><caption class="es-sr-only">Score by period</caption><thead><tr><th scope="col"><span class="es-sr-only">Team</span></th>${d.teams.home.linescore.map((_, i) => `<th scope="col">${d.sport === 'mlb' ? i + 1 : `Q${i + 1}`}</th>`).join('')}<th scope="col">T</th></tr></thead><tbody>${line}</tbody></table></div>
+      ${d.wp?.points?.length ? `<p class="rm-attrib">${esc(d.attribution)}</p>` : ''}
+      ${beats.length ? `<div class="rm-swaps"><p class="es-field__label">Swap a play</p>${beats.map(x => `<div class="rm-swap"><label class="rm-swap__label" for="rm-swap-${esc(x.b.id)}">Beat ${x.i + 1}</label><select class="es-select es-select--sm" id="rm-swap-${esc(x.b.id)}" data-swapplay="${esc(x.b.id)}">${opts(x.ref)}</select></div>`).join('')}<p class="rm-hint">The score, clock and win probability on screen come from the play you pick, never typed.</p></div>`
+        : `<div class="rm-swaps"><p class="es-field__label">Key plays in this reel</p><ul class="rm-playlist">${d.plays.filter(p => state.keyPlays.includes(p.id)).map(p => `<li><span class="rm-keyplay__when">${esc(G.playWhen(p, d.sport))}</span><span>${esc(p.text)}</span></li>`).join('')}</ul><button class="es-btn es-btn--sm" type="button" data-remake>Change the plays</button></div>`}`;
+  }
+  function replayReviewHtml() {
+    const r = state.replay;
+    if (!r) return `<div class="rm-sec__head"><h3 class="rm-sec__title">The three frames</h3></div><p class="rm-hint">Make the reel to pick the frames.</p>`;
+    const canAi = modeOn('frame-pick') && state.config.ai && !state.config.offline;
+    const picker = { ai: 'AI pick', code: 'Code pick · free', manual: 'Adjusted by you' }[r.picker] || '';
+    return `<div class="rm-sec__head"><h3 class="rm-sec__title">The three frames</h3><span class="rm-meta">${esc(picker)}</span></div>
+      <div class="rm-frames">${r.frames.map(fr => `<div class="rm-frame" data-role="${esc(fr.role)}"><div class="rm-frame__img"><canvas width="320" height="180" data-framethumb="${esc(fr.role)}" aria-hidden="true"></canvas><span class="rm-frame__chip">${esc(G.ROLE_LABEL[fr.role])}</span></div>
+        <label class="rm-frame__row"><span class="es-sr-only">${esc(G.ROLE_LABEL[fr.role])} frame time</span><input type="range" data-frame="${esc(fr.role)}" min="${r.segment.in}" max="${r.segment.out}" step="0.1" value="${fr.t}" aria-valuetext="${G.fmtSec(fr.t)}"><output>${G.fmtSec(fr.t)}</output></label>
+        ${r.captions?.[fr.role] ? `<p class="rm-frame__cap">${esc(r.captions[fr.role])}</p>` : ''}</div>`).join('')}</div>
+      <p class="rm-hint">Drag a slider to move that panel’s frame inside the moment.</p>
+      ${canAi ? `<button class="es-btn es-btn--sm" type="button" data-repick>${ICON.sparkles}<span>Re-pick with AI · about ${F.money(F.PRICES.framePick)}</span></button>` : ''}`;
+  }
+  let thumbJob = 0;
+  async function drawFrameThumbs(only = '') {
+    const job = ++thumbJob;
+    for (const fr of state.replay?.frames || []) {
+      if (only && fr.role !== only) continue;
+      // eslint-disable-next-line no-await-in-loop
+      const c = await grabFrame(fr.t, 320);
+      if (job !== thumbJob && !only) return;
+      const cv = els.dataReview.querySelector(`[data-framethumb="${fr.role}"]`);
+      if (!cv || !c) continue;
+      const g = cv.getContext('2d');
+      g.fillStyle = '#101114'; g.fillRect(0, 0, cv.width, cv.height);
+      const k = Math.min(cv.width / c.width, cv.height / c.height);
+      g.drawImage(c, (cv.width - c.width * k) / 2, (cv.height - c.height * k) / 2, c.width * k, c.height * k);
+    }
+  }
+  const frameThumbSoon = debounce(role => drawFrameThumbs(role), 120);
+  function archiveReviewHtml() {
+    const a = state.data.archive;
+    if (!a) return `<div class="rm-sec__head"><h3 class="rm-sec__title">Moments</h3></div><p class="rm-hint">The archive data is not loaded. Make the reel again to fetch it.</p>`;
+    const cands = state.research?.candidates || [];
+    const srcRows = G.archiveSources(a, state.data.athlete, a.moments);
+    const citeHtml = m => (m.cite || []).map(ref => {
+      const row = srcRows.find(r => r.ref === ref);
+      return row ? (row.url ? `<a class="rm-cite" href="${esc(row.url)}" target="_blank" rel="noopener noreferrer">${esc(row.kind === 'article' ? `ES ${row.year || ''}` : row.label)}</a>` : `<span class="rm-cite">${esc(row.label)}</span>`) : `<span class="rm-cite is-bad">${esc(ref)}</span>`;
+    }).join('');
+    return `<div class="rm-sec__head"><h3 class="rm-sec__title">Moments</h3><span class="rm-meta">${esc(G.coverageText(state.research?.coverage))}</span></div>
+      ${a.thin ? `<p class="rm-callout-warn">${ICON.warn}<span>Thin ES coverage. Every moment still cites a source; check the years before you post.</span></p>` : ''}
+      <ol class="rm-moments">${a.moments.map((m, i) => `<li class="rm-moment"><span class="rm-moment__year">${esc(m.year)}</span><div class="rm-moment__body"><p class="rm-moment__title">${esc(m.title)}</p>${m.line ? `<p class="rm-hint">${esc(m.line)}</p>` : ''}<p class="rm-moment__cites">${citeHtml(m)}</p></div>
+        ${cands.length > a.moments.length ? `<label class="es-sr-only" for="rm-mswap-${i}">Swap moment ${i + 1}</label><select class="es-select es-select--sm rm-moment__swap" id="rm-mswap-${i}" data-swapmoment="${i}"><option value="">Swap…</option>${cands.filter(c => !a.moments.some(x => x.id === c.id)).map(c => `<option value="${esc(c.id)}">${esc(`${c.year} · ${c.title}`.slice(0, 60))}</option>`).join('')}</select>` : ''}</li>`).join('')}</ol>
+      <details class="rm-fold rm-arch-sources" id="rm-arch-sources" open><summary><span class="rm-fold__title">Sources</span><span class="rm-fold__meta">${srcRows.length} · every year and number links here</span></summary>
+        <div class="rm-fold__body">${srcRows.length ? `<ul class="rm-srclist">${srcRows.map(r => `<li class="${r.cited ? 'is-cited' : ''}"><span class="rm-srclist__year">${esc(r.year || '—')}</span><span class="rm-srclist__body"><span class="rm-srclist__kind">${esc(r.label)}${r.cited ? ' · <b>cited</b>' : ''}</span>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">${esc(r.title)}</a>` : `<span>${esc(r.title)}</span>`}</span></li>`).join('')}</ul>` : '<p class="rm-hint">No sources yet.</p>'}</div></details>`;
+  }
+  els.dataReview.addEventListener('input', event => {
+    const input = event.target.closest('[data-frame]');
+    if (!input || !state.replay) return;
+    if (RP?.scrubberModel && RP.scrub) {
+      // Each panel keeps the three frames in order (setup, play, reaction).
+      const model = RP.scrub(RP.scrubberModel(state.replay), input.dataset.frame, Number(input.value));
+      const caps = Object.fromEntries(state.replay.frames.map(f => [f.role, f.caption]));
+      state.replay.frames = RP.framesOf(model).map(f => (caps[f.role] ? { ...f, caption: caps[f.role] } : f));
+      input.value = String(state.replay.frames.find(f => f.role === input.dataset.frame).t);
+    } else state.replay.frames.find(f => f.role === input.dataset.frame).t = Number(input.value);
+    const fr = state.replay.frames.find(f => f.role === input.dataset.frame);
+    state.replay.picker = 'manual';
+    grabReplaySoon();
+    input.setAttribute('aria-valuetext', G.fmtSec(fr.t));
+    const out = input.parentNode.querySelector('output');
+    if (out) out.textContent = G.fmtSec(fr.t);
+    const meta = els.dataReview.querySelector('.rm-sec__head .rm-meta');
+    if (meta) meta.textContent = 'Adjusted by you';
+    frameThumbSoon(fr.role);
+    rebuildSoon();
+  });
+  els.dataReview.addEventListener('change', event => {
+    const sp = event.target.closest('[data-swapplay]');
+    if (sp) {
+      const beat = state.plan.beats.find(b => b.id === sp.dataset.swapplay);
+      const play = state.data.game.plays.find(p => p.id === sp.value);
+      if (!beat || !play) return;
+      beat.refs = [...(beat.refs || []).filter(r => !r.startsWith('play:') && !r.startsWith('wp:')), `play:${play.id}`];
+      if (play.wpHome != null && state.data.game.wp?.points?.some(p => p[0] === play.seq)) beat.refs.push(`wp:${play.seq}`);
+      beat.text = F.trimWords(play.text, F.PACE.textMaxWords);
+      rebuild(); renderBeats();
+      logEvent('edit', { what: 'swap-play' });
+      return;
+    }
+    const sm = event.target.closest('[data-swapmoment]');
+    if (sm && sm.value) swapMoment(Number(sm.dataset.swapmoment), sm.value);
+  });
+  els.dataReview.addEventListener('click', event => {
+    if (event.target.closest('[data-remake]')) { goStep('topic'); return; }
+    const re = event.target.closest('[data-repick]');
+    if (re) {
+      re.disabled = true;
+      pickFrames({ ai: true }).then(out => { toast(out.note, out.failed ? { tone: 'error' } : {}); rebuild(); renderDataReview(); });
+    }
+  });
+  function swapMoment(i, candId) {
+    const a = state.data.archive;
+    const cand = (state.research?.candidates || []).find(c => c.id === candId);
+    if (!a || !cand) return;
+    const old = a.moments[i];
+    a.moments[i] = { id: cand.id, year: cand.year, title: cand.title, line: cand.line, cite: cand.cite.slice() };
+    // The beat that told the old moment now tells the new one (its refs and words come from the candidate).
+    const beat = state.plan.beats.find(b => (b.refs || []).some(r => (old.cite || []).includes(r))) || state.plan.beats.find(b => b.text && old.title && b.text.includes(String(old.year)));
+    if (beat) {
+      beat.refs = [...(beat.refs || []).filter(r => !(old.cite || []).includes(r)), ...cand.cite];
+      beat.text = F.trimWords(`${cand.year}: ${cand.title}`, F.PACE.textMaxWords);
+      if (cand.line) beat.vo = F.trimWords(`${cand.year}. ${cand.line}.`, F.PACE.voMaxWords);
+      voiceSoon();
+    }
+    rebuild(); renderEdit();
+    logEvent('edit', { what: 'swap-moment' });
+  }
+
+  // ── Carousel preview (Replay and Archive) ──
+  // Slides come from the renderer's buildSlides (Agent B); until it lands the
+  // Carousel view explains that and the reel still exports.
+  const hasSlides = () => typeof R.buildSlides === 'function';
+  function buildSlidesNow() {
+    if (!hasSlides() || !state.plan) return null;
+    try {
+      const out = R.buildSlides(state.timeline, { style: styleId() });
+      return Array.isArray(out) ? out : (out?.slides || null);
+    } catch (error) { console.warn('buildSlides failed', error); return null; }
+  }
+  function setView(view) {
+    state.view = view;
+    radios(els.view, 'view', view);
+    const slide = view === 'carousel';
+    els.device.classList.toggle('is-slide', slide);
+    els.canvas.height = slide ? 1350 : 1920;
+    els.transport.hidden = slide;
+    els.slidenav.hidden = !slide;
+    els.canvas.setAttribute('aria-label', slide ? 'Carousel slide preview' : 'Reel preview');
+    if (slide) { stop(); state.slides = buildSlidesNow(); state.slide = Math.min(state.slide, Math.max(0, (state.slides?.length || 1) - 1)); }
+    renderSlideNav();
+    if (slide) els.stageMeta.textContent = `Carousel · ${state.slides?.length || 0} slides · 1080×1350`; else renderMeta();
+    draw();
+  }
+  function renderSlideNav() {
+    const n = state.slides?.length || 0;
+    els.slidePos.textContent = n ? `Slide ${state.slide + 1} of ${n}` : 'Slides coming soon';
+    els.slideDots.innerHTML = Array.from({ length: n }, (_, i) => `<span class="${i === state.slide ? 'is-on' : ''}"></span>`).join('');
+    els.slidePrev.disabled = !n || state.slide === 0;
+    els.slideNext.disabled = !n || state.slide >= n - 1;
+  }
+  function drawSlide() {
+    ctx.fillStyle = '#101114';
+    ctx.fillRect(0, 0, 1080, 1350);
+    const slide = state.slides?.[state.slide];
+    if (!slide) {
+      ctx.fillStyle = '#BFC8D9';
+      ctx.font = '500 40px Roboto, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('The carousel preview arrives', 540, 640);
+      ctx.fillText('with the slide renderer.', 540, 696);
+      ctx.textAlign = 'start';
+      return;
+    }
+    const slideEnv = { ...env, layoutCache: g => R.layoutGraphic(measure, g, slide), captionCache: card => R.layoutCaption(measure, card, slide) };
+    try { R.drawFrame(ctx, slide, Math.max(0, (slide.durationMs || 1) - 1), slideEnv); } catch (error) { console.warn('slide draw failed', error); }
+  }
+  els.view.addEventListener('click', event => { const b = event.target.closest('[data-view]'); if (b && b.dataset.view !== state.view) setView(b.dataset.view); });
+  els.slidePrev.addEventListener('click', () => { state.slide = Math.max(0, state.slide - 1); renderSlideNav(); draw(); });
+  els.slideNext.addEventListener('click', () => { state.slide = Math.min((state.slides?.length || 1) - 1, state.slide + 1); renderSlideNav(); draw(); });
+  els.device.addEventListener('keydown', event => {
+    if (state.view !== 'carousel' || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    (event.key === 'ArrowLeft' ? els.slidePrev : els.slideNext).click();
+  });
+  // Swipe between slides on touch screens.
+  let swipeX = null;
+  els.device.addEventListener('pointerdown', event => { if (state.view === 'carousel') swipeX = event.clientX; });
+  els.device.addEventListener('pointerup', event => {
+    if (swipeX == null) return;
+    const dx = event.clientX - swipeX;
+    swipeX = null;
+    if (Math.abs(dx) > 40) (dx > 0 ? els.slidePrev : els.slideNext).click();
+  });
+
+  // ── Export: carousel PNG zip, paid-ad warning for league footage ──
+  function renderDataExport() {
+    const fmt = state.plan && F.isDataFormat(state.plan.format) ? state.plan.format : '';
+    const carousel = Boolean(fmt) && F.FORMATS[fmt].outputs.includes('carousel');
+    els.carouselOut.hidden = !carousel;
+    if (carousel) {
+      const ready = hasSlides() && typeof X.exportStills === 'function';
+      els.carouselBtn.disabled = !ready || Boolean(state.lint && !state.lint.ok) || Boolean(state.exportingStills);
+      const n = ready ? (buildSlidesNow()?.length || 0) : 0;
+      els.carouselNote.textContent = ready ? `${n} slides, 1080×1350, as a PNG zip with a cover JPEG. Every slide keeps the ES mark and the sources.` : 'The carousel export arrives with the slide renderer. The reel exports today.';
+    }
+    const warn = $('rm-paid-warn');
+    const league = fmt === 'replay' && state.target === 'paid' && F.FORMATS.replay.rights.paidWithLeagueFootage === 'warn' && state.replay?.origin !== 'upload';
+    if (warn) warn.remove();
+    if (league) els.rights.insertAdjacentHTML('afterbegin', `<p class="rm-callout-warn" id="rm-paid-warn">${ICON.warn}<span>This paid ad uses league footage from X. Check the footage rights before it runs.</span></p>`);
+    const attrib = fmt === 'gameswing' && state.data.game?.wp?.points?.length;
+    if (attrib && !$('rm-attrib-export')) els.rights.insertAdjacentHTML('beforeend', `<p class="rm-attrib" id="rm-attrib-export">On screen: ${esc(state.data.game.attribution)}</p>`);
+  }
+  async function exportCarousel() {
+    if (state.exportingStills) return;
+    const slides = buildSlidesNow();
+    if (!slides?.length || typeof X.exportStills !== 'function') return;
+    state.exportingStills = true;
+    els.carouselBtn.setAttribute('aria-busy', 'true');
+    els.carouselStatus.textContent = `Drawing ${slides.length} slides…`;
+    try {
+      await ensureImages();
+      const blob = await X.exportStills(slides, { env, R, onProgress: (i, total) => { els.carouselStatus.textContent = `Drawing slide ${i} of ${total}…`; } });
+      const url = URL.createObjectURL(blob);
+      const name = `es-carousel-${slug(state.plan.title)}-1080x1350.zip`;
+      const a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.append(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 4000);
+      els.carouselStatus.textContent = `Exported ${slides.length} slides (${(blob.size / 1048576).toFixed(1)} MB).`;
+      logEvent('carousel_export', { slides: slides.length, format: state.plan.format, target: state.target });
+      toast('Carousel exported', { tone: 'good' });
+    } catch (error) {
+      els.carouselStatus.textContent = error.message || 'The carousel export failed. Try again.';
+    } finally {
+      state.exportingStills = false;
+      els.carouselBtn.removeAttribute('aria-busy');
+    }
+  }
+  els.carouselBtn.addEventListener('click', exportCarousel);
+
+  // ── Projects: what a data reel keeps (timeline v2 fields) ──
+  function dataSnapshot() {
+    const fmt = state.plan && F.isDataFormat(state.plan.format) ? state.plan.format : '';
+    if (!fmt) return null;
+    return { v: 2, outputs: F.FORMATS[fmt].outputs.slice(), data: { ...state.data }, replay: state.replay, source: state.flow.source, angle: state.angle, keyPlays: state.keyPlays, research: state.research ? { candidates: state.research.candidates, coverage: state.research.coverage, angle: state.research.angle } : null, game: state.gameSummary || null };
+  }
+  function restoreData(t, format) {
+    if (!G || !TL || !F.isDataFormat(format)) {
+      if (dataFmt()) { state.flow = FLOW.initial(); leaveDataPrefs(); }
+      renderStepsNav(); renderDataStory(); renderGallery();
+      return;
+    }
+    if (!dataFmt()) newsPrefs = { voiceOn: state.voiceOn, useClips: state.useClips, style: state.style };
+    state.flow = { ...FLOW.initial(format), source: t.source || null, step: 'review', hasReel: true };
+    state.flow.stages = state.flow.stages.map(s => ({ ...s, state: 'done' }));
+    state.data = { game: t.data?.game || null, athlete: t.data?.athlete || null, archive: t.data?.archive || null };
+    state.replay = t.replay || null;
+    state.angle = t.angle || '';
+    state.keyPlays = Array.isArray(t.keyPlays) ? t.keyPlays : [];
+    state.research = t.research || null;
+    state.gameSummary = t.game || null;
+    state.digestState = state.data.game ? 'ready' : 'idle';
+    state.researchState = state.research ? 'ready' : 'idle';
+    if (t.source?.kind === 'player') { state.pp.selected = t.source.athleteId; state.pp.candidate = { athleteId: t.source.athleteId, name: t.source.name, sport: t.source.sport }; state.pp.angle = t.source.angle; }
+    if (t.source?.kind === 'game') state.gp.selected = t.source.eventId;
+    renderStepsNav(); renderSourceStep(); renderDataStory(); renderGallery();
+  }
+
   // ─── Boot ────────────────────────────────────────────────────────────────
   async function loadConfig() {
     try {
       const data = await api({ mode: 'config' });
-      state.config = { ai: data.ai, voice: data.voice, music: data.music || null, aiClips: data.aiClips || null, offline: false };
+      state.config = { ai: data.ai, voice: data.voice, music: data.music || null, aiClips: data.aiClips || null, offline: false, formatModes: data.formatModes || {}, dataFormats: data.dataFormats || [] };
       if (data.voice?.defaultVoice && !(data.voice.voices || []).some(v => v.id === state.voiceId)) state.voiceId = data.voice.defaultVoice;
     } catch (error) {
-      state.config = { ai: false, voice: { mode: 'off', ready: false, label: 'Captions only', reason: 'The voice server is not reachable from here.' }, offline: Boolean(error.offline) };
+      state.config = { ai: false, voice: { mode: 'off', ready: false, label: 'Captions only', reason: 'The voice server is not reachable from here.' }, offline: Boolean(error.offline), formatModes: {} };
     }
+    if (G && TL) { renderGallery(); renderDataStory(); }
     els.factcheckRow.hidden = !state.config.ai;
     const gen = $('rm-music-gen-row');
     if (gen) {
@@ -2335,6 +3754,7 @@
   }
 
   renderLeagues();
+  if (G && TL) { renderGallery(); renderStepsNav(); }
   readHandoff();
   renderTrends();
   renderPicked();
@@ -2354,5 +3774,5 @@
   });
   window.addEventListener('beforeunload', () => { if (state.plan) store.set(LOCAL_KEY, [snapshot(), ...store.get(LOCAL_KEY, []).filter(p => p.id !== state.projectId)].slice(0, 12)); });
 
-  window.ReelMakerPage = { state, rebuild, applyPlan, draw, seek, play, stop, goStep, renderMix, exportReel, makeVoice, restore, loadConfig, loadTrends, makeReel, fillVisuals, selectBeat, renderEdit, renderStyles, visualAction, addClipAsset, setVisual, clipShare };
+  window.ReelMakerPage = { pickFormat: G && TL ? pickFormat : null, openGallery: G && TL ? openGallery : null, setSource: G && TL ? setSource : null, setView: G && TL ? setView : null, state, rebuild, applyPlan, draw, seek, play, stop, goStep, renderMix, exportReel, makeVoice, restore, loadConfig, loadTrends, makeReel, fillVisuals, selectBeat, renderEdit, renderStyles, visualAction, addClipAsset, setVisual, clipShare };
 })();
