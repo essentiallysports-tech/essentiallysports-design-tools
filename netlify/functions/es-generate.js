@@ -10,8 +10,9 @@
 // The AI never draws: it only fills fields our templates already understand.
 // The browser renders each spec with the real editor (frameup-spec.js).
 const { verifyEsUser } = require('./_supabase-auth.js');
-const { selectExamples, formatExamples, loadCorpus, normalizeCorpus, pickPastPosts, formatPastPosts, houseStyle } = require('./_generate-examples.js');
+const { selectExamples, formatExamples, loadCorpus, normalizeCorpus, pickPastPosts, formatPastPosts, houseStyle, LABELS: POST_LABELS } = require('./_generate-examples.js');
 const director = require('./_creative-director.js');
+const directionMemory = require('./_direction-memory.js');
 const { isMcpConfigured, createSession } = require('./_es-mcp.js');
 const { gatewayConfigured, aiText, isBudgetError, logBackupCall, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage, MODELS: AI_MODELS } = require('./_ai-gateway.js');
 const RULES = require('../../frameup-rules.js');
@@ -69,6 +70,9 @@ const MAX_DESIGNS = 4;
 const DIRECTOR_START_BY_MS = 9000;
 const DIRECTOR_RETRY_BY_MS = 12000;
 const DIRECTOR_TIMEOUT_MS = 12000;
+// The directions step (mode 'direct') writes no designs, so an auto-mode
+// Sonnet escalation may still start up to 30s in.
+const DIRECT_RETRY_BY_MS = 30000;
 const REPAIR_START_BY_MS = 25000;
 const REVIEW_START_BY_MS = 38000;
 const ESCALATE_START_BY_MS = 20000;
@@ -745,10 +749,14 @@ function goldExamplesText() {
   return GOLD_EXAMPLES.map(example => `Brief: ${example.brief.replace(/\n/g, ' / ')}\nAnswer: ${JSON.stringify({ designs: example.designs })}`).join('\n\n');
 }
 
-// direction (optional): { concepts, houseStyle } from the creative director.
+// direction (optional): { concepts, houseStyle, perConcept, steer } from the
+// creative director (or the directions the editor picked). With no concepts,
+// an editor steer (tone, audience) still reaches the writer.
 // The part before PROMPT_CACHE_BREAK never changes with it (the cache holds).
 function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid = [], direction = null) {
-  const block = direction?.concepts?.length ? director.conceptsBlock(direction.concepts, count, direction.houseStyle || []) : '';
+  const block = direction?.concepts?.length
+    ? director.conceptsBlock(direction.concepts, count, direction.houseStyle || [], { perConcept: direction.perConcept || 1, steer: direction.steer || null })
+    : director.steerLines(director.normalizeSteer(direction?.steer || {})).join('\n');
   const catalog = Object.entries(TEMPLATES)
     .filter(([type]) => !allowedTypes.length || allowedTypes.includes(type))
     .map(([type, t]) => `- ${type} (${t.label}): ${t.use}\n  fields: ${t.shape}`)
@@ -796,7 +804,7 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid
     'For every design except listicles, add "alts": up to 2 alternative versions of the same template built on the same facts, each a clearly different hook or wording (fields objects only). The editor can switch between them with one click.',
     '',
     'Reply with JSON only, no prose:',
-    block
+    direction?.concepts?.length
       ? '{"designs": [{"conceptId": "c1", "postType": "...", "title": "short name", "sport": "...", "team": "...", "fields": {...}, "alts": [{...fields}, {...fields}], "photoQuery": "...", "scene": "...", "why": "the concept\'s angle", "sources": ["ES article URLs you used"]}]}'
       : '{"designs": [{"postType": "...", "title": "short name", "sport": "...", "team": "...", "fields": {...}, "alts": [{...fields}, {...fields}], "photoQuery": "...", "scene": "...", "why": "one short sentence on why this template fits", "sources": ["ES article URLs you used"]}]}',
   ].join('\n');
@@ -1182,10 +1190,10 @@ async function reviewDesigns(brief, designs, track) {
     directed
       ? 'For each card, pick the best option and score it 1-5 on: hook (a bold claim or a curious question, not a summary), specific (concrete to this story), voice (punchy, confident, plain American sports English), glance (understood in one second on a phone), angle (does it land the intended angle, distinct from the other cards).'
       : 'For each card, pick the best option and score it 1-5 on: hook (a bold claim or a curious question, not a summary), specific (concrete to this story), voice (punchy, confident, plain American sports English), glance (understood in one second on a phone).',
-    `score is the average of the ${directed ? 'five' : 'four'}. note is one short sentence on what would make the chosen option stronger (empty if it is already great).`,
+    `score is the average of the ${directed ? 'five' : 'four'}. strong is what works best in the chosen option, in at most 10 words. note is ONE concrete fix that would make it stronger, in at most 16 words (empty if it is already great).`,
     `Brief: ${brief.slice(0, 600)}`,
     cards,
-    'Reply with JSON only: {"cards": [{"card": 1, "best": 0, "score": 4.2, "note": "..."}]}',
+    'Reply with JSON only: {"cards": [{"card": 1, "best": 0, "score": 4.2, "strong": "...", "note": "..."}]}',
   ].join('\n');
   try {
     const { text, cost, model } = await aiText({ tier: 'review', messages: [{ role: 'user', content: prompt }], json: true, maxTokens: 1200, timeoutMs: 12000, track: { ...track, feature: 'generate-review' } });
@@ -1202,7 +1210,7 @@ async function reviewDesigns(brief, designs, track) {
         Object.assign(spec, chosen);
       }
       const score = Math.max(1, Math.min(5, Number(verdict.score) || 0));
-      spec.review = { score: Number(score.toFixed(1)), note: clean(verdict.note).slice(0, 200), model };
+      spec.review = { score: Number(score.toFixed(1)), note: clean(verdict.note).slice(0, 200), strong: clean(verdict.strong).slice(0, 100), model };
     });
     return { cost, reviewed: true };
   } catch (error) {
@@ -1248,6 +1256,51 @@ async function escalateDesigns({ brief, designs, found, check, track }) {
   }
 }
 
+// ─── The director's note on each design (critique + one-click fix) ─────────
+// Built from signals Generate already has: the art director's review (strong /
+// note / score), the brand checks' warnings and the diversity guard. No extra
+// AI call. fix.how is what "Apply fix" runs: a rewrite instruction (fix,
+// shorter, punchier, angle) or 'photo' (open the photo picker).
+const STRONG_BY_TYPE = {
+  'stats-single-ent': 'Three real numbers carry it.',
+  'stats-double-ent': 'A clean head-to-head on real numbers.',
+  quote: 'Their own words carry it.',
+  'long-quote': 'Their own words, in full.',
+  'double-entity-quote': 'Two voices, one debate.',
+  'listicle-type-1': 'Every row in order, in team colours.',
+  'listicle-type-2': 'Every row in order, in team colours.',
+};
+const STRONG_BY_HOOK = {
+  question: 'A question fans will want to answer.',
+  claim: 'A bold claim that stops the scroll.',
+  reaction: 'A reaction that matches the moment.',
+  numbers: 'Numbers first, no fluff.',
+  quote: 'Their own words carry it.',
+  ranking: 'A ranking fans will argue about.',
+};
+function directorNote(spec) {
+  const warnings = spec.lint?.warnings || [];
+  const has = code => warnings.some(warning => warning.code === code);
+  const review = spec.review || null;
+  const strong = review?.strong
+    || (review?.escalated ? 'Rewritten by the director to land harder.' : '')
+    || STRONG_BY_TYPE[spec.postType]
+    || STRONG_BY_HOOK[spec.direction?.hook]
+    || 'A clear hook on a real story.';
+  let fix = null;
+  if (has('same-angle')) fix = { text: 'Too close to another card: take a different angle.', how: 'angle' };
+  else if (review?.note && review.score < 4.6) fix = { text: review.note, how: 'fix' };
+  else if (has('pick-photo')) fix = { text: 'No ES photo clearly shows them: pick one.', how: 'photo' };
+  else if (has('auto-split') || has('too-long')) fix = { text: 'Shorter lines will sit bigger on the design.', how: 'shorter' };
+  else if (review && review.score < REVIEW_PASS) fix = { text: 'Sharpen the hook: fewer words, a stronger verb.', how: 'punchier' };
+  return {
+    strong: strong.slice(0, 100),
+    fix,
+    ...(review ? { score: review.score } : {}),
+    source: review ? 'review' : 'checks',
+  };
+}
+
 const brainName = tools => {
   if (tools.think) return `es-mcp:${tools.think.name}`;
   const provider = pickProvider();
@@ -1266,23 +1319,137 @@ function directorAllowed({ provider, want, directions, pinned, researchMs, think
 
 const newRunId = () => `run-${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 6)}`;
 
-async function generate({ brief, formats, count, avoid, token, email, steer = '', directions = true }) {
+// A past ES post as the page shows it under "Inspired by" (no facts reused,
+// no ids beyond the export's own; the photo only through the ES image proxy).
+function pastPostCard(post) {
+  if (!post) return null;
+  return {
+    postType: post.postType,
+    label: POST_LABELS[post.postType] || TEMPLATES[post.postType]?.label || '',
+    text: String(post.topicOnly ? post.text : post.text).slice(0, 110),
+    sport: post.sport || '',
+    stars: post.stars || null,
+    at: String(post.at || '').slice(0, 10),
+    photo: post.photoUrl && canProxy(post.photoUrl) ? proxied(post.photoUrl) : '',
+  };
+}
+
+// The direction as the page gets it (a concept plus its label and cards).
+const directionOut = (concept, picked = []) => ({
+  id: concept.id,
+  ...(concept.ref ? { ref: concept.ref } : {}),
+  name: concept.name,
+  postType: concept.postType,
+  label: TEMPLATES[concept.postType]?.label || '',
+  angle: concept.angle,
+  hook: concept.hook,
+  emotion: concept.emotion,
+  headlineIdea: concept.headlineIdea,
+  why: concept.rationale,
+  confidence: concept.confidence,
+  factsUsed: concept.factsUsed,
+  photo: concept.photo,
+  team: concept.team,
+  palette: concept.palette,
+  inspiredBy: (concept.inspiredBy || []).map(ref => (typeof ref === 'string' ? pastPostCard(picked[Number(ref.slice(1)) - 1]) : ref)).filter(Boolean),
+  ...(concept.edited ? { edited: true } : {}),
+});
+
+// Research, the team's past posts and the director's memory, in parallel.
+// Shared by the directions step (mode 'direct') and the designs step.
+async function prepare({ brief, formats, token }) {
+  const notes = [];
+  const allowedTypes = (Array.isArray(formats) ? formats : []).filter(type => TEMPLATES[type]);
+  const discovered = await discover(notes);
+  const { mcp, tools } = discovered;
+  const [found, corpus, signals] = await Promise.all([
+    research(brief, mcp, tools, notes),
+    loadCorpus(token).catch(() => ({ rows: [], source: 'none', designs: [] })),
+    directionMemory.signalsFor({ token }).catch(() => directionMemory.EMPTY),
+  ]);
+  const read = readBriefFor(brief, found, allowedTypes);
+  const pastPosts = normalizeCorpus(corpus.rows);
+  const picked = pickPastPosts(pastPosts, { ...read, brief }, { allowedTypes, signals });
+  return { ...discovered, notes, allowedTypes, found, corpus, signals, read, pastPosts, picked };
+}
+
+// Step 1 of the director-first flow: the director's 2-4 named directions for
+// the page to show, pick, edit and steer. No designs are written here.
+// Falls back (directions: []) when the director cannot run; the page then
+// generates the old way.
+async function directions({ brief, formats, count, token, email, steer }) {
   const started = clock.now();
   const elapsed = () => clock.now() - started;
   const runId = newRunId();
-  const notes = [];
-  const allowedTypes = (Array.isArray(formats) ? formats : []).filter(type => TEMPLATES[type]);
-  const want = Math.min(Math.max(parseInt(count, 10) || MAX_DESIGNS, 1), MAX_DESIGNS);
-  const { mcp, tools, toolNames, error: mcpError } = await discover(notes);
-  // Past team posts (the brain's memory) load alongside the research.
-  const [found, corpus] = await Promise.all([
-    research(brief, mcp, tools, notes),
-    loadCorpus(token).catch(() => ({ rows: [], source: 'none', designs: [] })),
-  ]);
+  const want = Math.min(Math.max(parseInt(count, 10) || MAX_DESIGNS, 2), MAX_DESIGNS);
+  const prep = await prepare({ brief, formats, token });
+  const { tools, notes, allowedTypes, found, corpus, signals, read, pastPosts, picked } = prep;
   const researchMs = elapsed();
-  const read = readBriefFor(brief, found, allowedTypes);
-  const pastPosts = normalizeCorpus(corpus.rows);
-  const picked = pickPastPosts(pastPosts, { ...read, brief }, { allowedTypes });
+  const provider = tools.think ? null : pickProvider();
+  const base = {
+    runId,
+    mode: 'direct',
+    steer,
+    research: { articles: found.articles.map(({ title, url, date }) => ({ title, url, date })) },
+    learning: { corpus: corpus.source, pastPosts: picked.length, memory: signals.rows || 0 },
+    notes,
+  };
+  if (provider?.name !== 'gateway' || provider.fallback) {
+    return { ...base, source: 'off', model: '', directions: [], meta: { ms: { research: researchMs, direction: 0, total: elapsed() }, costUsd: 0 } };
+  }
+  const styleLines = corpus.source === 'rich' ? houseStyle(pastPosts, read) : [];
+  const directionStarted = clock.now();
+  const result = await director.runDirector({
+    brief,
+    read,
+    allowedTypes,
+    steer,
+    pastPosts: formatPastPosts(picked, { ids: true }),
+    pastIds: picked.map((_, index) => `P${index + 1}`),
+    houseStyle: styleLines,
+    memory: signals.lines || [],
+    digest: found.digest,
+    corpus: found.corpus || found.digest,
+    want,
+    templates: TEMPLATES,
+    track: { email, token },
+    // Nothing else waits on this step, so the director gets a little longer
+    // and an auto-mode Sonnet escalation still fits in the function's limit.
+    timeoutMs: DIRECTOR_TIMEOUT_MS + 3000,
+    startedAt: started,
+    retryByMs: DIRECT_RETRY_BY_MS,
+    now: clock.now,
+  });
+  const out = result.concepts.map(concept => directionOut(concept, picked));
+  return {
+    ...base,
+    source: result.source,
+    model: result.model || '',
+    escalated: Boolean(result.escalated),
+    ...(result.read ? { read: result.read } : {}),
+    directions: out,
+    meta: { ms: { research: researchMs, direction: clock.now() - directionStarted, total: elapsed() }, costUsd: Number((result.cost || 0).toFixed(5)) },
+  };
+}
+
+// How many designs each chosen direction gets: one direction makes 2 takes,
+// two make 2 each, three or four make one each (never more than 4 in all).
+function designsPerDirection(n, want) {
+  if (n <= 0) return 1;
+  if (n === 1) return Math.max(1, Math.min(want, 2));
+  if (n === 2 && want >= 4) return 2;
+  return 1;
+}
+
+async function generate({ brief, formats, count, avoid, token, email, steer = '', directions: chosenDirections = true }) {
+  const started = clock.now();
+  const elapsed = () => clock.now() - started;
+  const runId = newRunId();
+  let want = Math.min(Math.max(parseInt(count, 10) || MAX_DESIGNS, 1), MAX_DESIGNS);
+  // Past team posts (the brain's memory) and the director's memory load alongside the research.
+  const { mcp, tools, toolNames, error: mcpError, notes, allowedTypes, found, corpus, signals, read, pastPosts, picked } = await prepare({ brief, formats, token });
+  const researchMs = elapsed();
+  const steerIn = director.normalizeSteer(steer);
   // Before the corpus migration is applied (legacy source) the writer sees the
   // same examples as before; with it, the scored, digit-masked past posts.
   const pastDesigns = corpus.source === 'legacy' ? corpus.designs : pastPosts;
@@ -1309,17 +1476,33 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
   let aiFailed = false;
   const avoidLines = (Array.isArray(avoid) ? avoid : []).map(line => clean(line).slice(0, 120)).filter(Boolean).slice(0, 12);
   // ─── Creative direction (one Sonnet call; any failure = the old path) ───
-  const direction = { source: 'none', model: '', read: null, concepts: [], cost: 0, ms: 0 };
+  // The editor's picked (maybe edited) directions skip the director call: they
+  // are re-checked in code (template fit, real facts) and written as given.
+  const direction = { source: 'none', model: '', read: null, concepts: [], cost: 0, ms: 0, perConcept: 1, escalated: false };
   const styleLines = corpus.source === 'rich' ? houseStyle(pastPosts, read) : [];
-  if (directorAllowed({ provider, want, directions, pinned: false, researchMs, think: Boolean(tools.think) })) {
+  const chosenList = Array.isArray(chosenDirections) ? chosenDirections.slice(0, MAX_DESIGNS) : null;
+  if (chosenList?.length) {
+    const chosen = director.validateConcepts({ concepts: chosenList }, {
+      read, allowedTypes, want: MAX_DESIGNS, brief, corpus: found.corpus || found.digest, templates: TEMPLATES, chosen: true,
+    });
+    if (chosen.length) {
+      direction.perConcept = designsPerDirection(chosen.length, want);
+      want = Math.min(MAX_DESIGNS, chosen.length * direction.perConcept);
+      Object.assign(direction, { source: 'chosen', concepts: chosen });
+    } else {
+      notes.push('Those directions no longer fit this brief, so the director chose again.');
+    }
+  }
+  if (!direction.concepts.length && directorAllowed({ provider, want, directions: chosenDirections, pinned: false, researchMs, think: Boolean(tools.think) })) {
     const directionStarted = clock.now();
     const result = await director.runDirector({
       brief,
       read,
       allowedTypes,
-      steer: director.STEERS.includes(steer) ? steer : '',
+      steer: steerIn,
       pastPosts: formatPastPosts(picked),
       houseStyle: styleLines,
+      memory: signals.lines || [],
       digest: found.digest,
       corpus: found.corpus || found.digest,
       want,
@@ -1333,12 +1516,15 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
     direction.ms = clock.now() - directionStarted;
     direction.cost = result.cost || 0;
     direction.model = result.model || '';
+    direction.escalated = Boolean(result.escalated);
     // Budget gone: the writer goes straight to the backup (no second Gateway try).
     if (result.source === 'budget') provider.fallback = 'budget';
     if (result.concepts.length) Object.assign(direction, { source: result.source, read: result.read, concepts: result.concepts });
   }
   const concepts = direction.concepts;
-  const prompt = buildPrompt(brief, found, allowedTypes, want, pastExamples, avoidLines, concepts.length ? { concepts, houseStyle: styleLines } : null);
+  const prompt = buildPrompt(brief, found, allowedTypes, want, pastExamples, avoidLines,
+    concepts.length ? { concepts, houseStyle: styleLines, perConcept: direction.perConcept, steer: steerIn }
+      : (director.steerIsEmpty(steerIn) ? null : { concepts: [], steer: steerIn }));
   const designs = [];
   const seen = new Set();
   const leads = new Set();
@@ -1437,14 +1623,20 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
   // Each design carries its concept's direction (matched by conceptId, else by
   // position when the template matches), in the director's order.
   if (concepts.length) {
-    const used = new Set();
+    // Each concept answers up to perConcept designs (2 when the editor picked one or two).
+    const used = new Map();
+    const free = concept => concept && (used.get(concept.id) || 0) < direction.perConcept;
     designs.forEach((spec, index) => {
-      let concept = concepts.find(c => c.id === spec.conceptId && !used.has(c.id));
-      if (!concept && !spec.conceptId && concepts[index]?.postType === spec.postType && !used.has(concepts[index].id)) concept = concepts[index];
+      let concept = concepts.find(c => c.id === spec.conceptId && free(c));
+      const byPosition = concepts[Math.floor(index / direction.perConcept)];
+      if (!concept && !spec.conceptId && byPosition?.postType === spec.postType && free(byPosition)) concept = byPosition;
       delete spec.conceptId;
       if (!concept) return;
-      used.add(concept.id);
-      spec.direction = { conceptId: concept.id, angle: concept.angle, hook: concept.hook, emotion: concept.emotion, shot: concept.photo?.shot || 'any', palette: concept.palette };
+      used.set(concept.id, (used.get(concept.id) || 0) + 1);
+      spec.direction = {
+        conceptId: concept.id, ...(concept.ref ? { ref: concept.ref } : {}), name: concept.name, angle: concept.angle, hook: concept.hook,
+        emotion: concept.emotion, shot: concept.photo?.shot || 'any', palette: concept.palette, confidence: concept.confidence,
+      };
       if (!spec.team && concept.team) spec.team = concept.team;
     });
     const rank = spec => (spec.direction ? concepts.findIndex(c => c.id === spec.direction.conceptId) : concepts.length);
@@ -1490,7 +1682,9 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
     // Diversity guard: two cards with the same template and the same hook type
     // are flagged; a low-scoring one is told to take a different angle.
     designs.forEach((spec, index) => {
-      const twin = designs.findIndex((other, j) => j !== index && other.postType === spec.postType && spec.direction?.hook && other.direction?.hook === spec.direction.hook);
+      // Two takes on the same chosen direction are meant to share it.
+      const twin = designs.findIndex((other, j) => j !== index && other.postType === spec.postType && spec.direction?.hook && other.direction?.hook === spec.direction.hook
+        && other.direction?.conceptId !== spec.direction.conceptId);
       if (twin < 0) return;
       spec.lint = spec.lint || { warnings: [] };
       spec.lint.warnings.push({ field: 'angle', code: 'same-angle', msg: `same template and hook as card ${twin + 1}` });
@@ -1529,6 +1723,8 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
     spec.photos = TEMPLATES[spec.postType].photo ? (aboutPerson ? ordered : [spec.photo, ...ordered].filter(Boolean)).slice(0, 6) : [];
     spec.hints = brandHints(spec, brief, found.articles);
     spec.brief = brief.slice(0, 600);
+    spec.runId = runId;
+    spec.critique = directorNote(spec);
     if (!spec.sport) spec.sport = spec.hints.sport;
     if (!spec.sources.length && found.sources[0]) spec.sources = [{ url: found.sources[0], title: found.articles.find(a => a.url === found.sources[0])?.title || '' }];
   }));
@@ -1539,9 +1735,12 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
     direction: {
       source: direction.source,
       model: direction.model,
+      ...(direction.escalated ? { escalated: true } : {}),
       ...(direction.read ? { read: direction.read } : {}),
-      concepts: concepts.map(({ id, postType, angle, hook, emotion }) => ({ id, postType, angle, hook, emotion })),
+      perConcept: direction.perConcept,
+      concepts: concepts.map(concept => directionOut(concept, picked)),
     },
+    ...(director.steerIsEmpty(steerIn) ? {} : { steer: steerIn }),
     designs,
     research: { articles: found.articles.map(({ title, url, date }) => ({ title, url, date })) },
     connection: connectionInfo(tools, toolNames, mcpError),
@@ -1571,11 +1770,18 @@ const REWRITES = {
   shorter: { tier: 'main', ask: 'Make every line shorter so the text sits bigger on the design; keep the meaning.' },
   angle: { tier: 'main', ask: 'Take a clearly different angle on the same story: a new hook or question, same facts.' },
   best: { tier: 'best', ask: 'Write the strongest version an expert ES social editor would post.' },
+  // The creative director's one-click fix (the note on each design card).
+  fix: { tier: 'main', ask: 'Apply the ES creative director\'s fix below, and change nothing else.' },
 };
 
-async function rewriteDesign({ brief, spec, instruction, token, email }) {
+// The director's fix as one plain sentence (no prompt games: 6-180 chars, one line).
+const fixText = value => clean(value).replace(/[{}<>`]/g, '').slice(0, 180);
+
+async function rewriteDesign({ brief, spec, instruction, fix = '', token, email }) {
   const how = REWRITES[instruction];
   if (!how) return { status: 400, body: { error: 'Unknown rewrite.' } };
+  const fixLine = instruction === 'fix' ? fixText(fix) : '';
+  if (instruction === 'fix' && fixLine.length < 6) return { status: 400, body: { error: 'Missing fix.' } };
   if (!spec || !TEMPLATES[spec.postType] || typeof spec.fields !== 'object') return { status: 400, body: { error: 'Missing design.' } };
   if (!gatewayConfigured()) return { status: 503, body: { error: 'AI rewrites are not available right now.', reason: 'off' } };
   // Facts for the checker: ES coverage of the brief (cached for 10 minutes).
@@ -1583,6 +1789,9 @@ async function rewriteDesign({ brief, spec, instruction, token, email }) {
   const prompt = [
     'You are the senior social editor at EssentiallySports (ES). Rewrite this Instagram design.',
     how.ask,
+    ...(fixLine ? [`Director's fix: ${JSON.stringify(fixLine)}`] : []),
+    ...(typeof spec.direction?.angle === 'string' && spec.direction.angle.trim() && instruction !== 'angle'
+      ? [`Keep the creative direction's angle: ${JSON.stringify(clean(spec.direction.angle).slice(0, 140))}`] : []),
     ...RULES.VOICE.map(line => `- ${line}`),
     '- Keep the same template. Never invent numbers, quotes or results; quotes must stay the person\'s exact words.',
     `Brief: ${brief.slice(0, 600)}`,
@@ -1644,7 +1853,7 @@ exports.handler = async function handler(event) {
       if (overWeek) return json(429, { error: weeklyLimitMessage(), reason: 'weekly-limit' });
       if (overHour) return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
       const rewriteBrief = String(body.brief || '').replace(/<[^>]*>/g, ' ').trim().slice(0, 1500);
-      const result = await rewriteDesign({ brief: rewriteBrief, spec: body.spec, instruction: String(body.instruction || ''), token, email: auth.user.email });
+      const result = await rewriteDesign({ brief: rewriteBrief, spec: body.spec, instruction: String(body.instruction || ''), fix: body.fix, token, email: auth.user.email });
       return json(result.status, result.body);
     }
     // Keep line breaks: a pasted table is only readable row by row.
@@ -1656,11 +1865,19 @@ exports.handler = async function handler(event) {
     if (overHour) {
       return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
     }
+    // Optional (all backward compatible): an editor steer (the old hook string,
+    // or { hook, tone, audience, more, less }).
+    const steer = director.normalizeSteer(body.steer);
+    // Director-first step 1: the named directions only (no designs yet).
+    if (body.mode === 'direct') {
+      return json(200, await directions({ brief, formats: body.formats, count: body.count, token, email: auth.user.email, steer }));
+    }
     return json(200, await generate({
       brief, formats: body.formats, count: body.count, avoid: body.avoid, token, email: auth.user.email,
-      // Optional (all backward compatible): an editor steer, and directions:false for the old single-call path.
-      steer: director.STEERS.includes(body.steer) ? body.steer : '',
-      directions: body.directions !== false,
+      steer,
+      // directions: false = the old single-call path; an array = the editor's
+      // picked (maybe edited) directions; anything else = the director decides.
+      directions: Array.isArray(body.directions) ? body.directions : body.directions !== false,
     }));
   } catch (error) {
     // Details stay in the server log; the browser gets a plain message.
@@ -1670,4 +1887,4 @@ exports.handler = async function handler(event) {
 };
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
-exports._test = { readBrief: readBriefFor, directorAllowed, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE };
+exports._test = { readBrief: readBriefFor, directorAllowed, directorNote, designsPerDirection, pastPostCard, REWRITES, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE };

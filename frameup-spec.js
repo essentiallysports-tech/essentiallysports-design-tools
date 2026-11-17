@@ -255,14 +255,34 @@
   function generatedFor() {
     if (!lastApplied?.brief || state.postType !== lastApplied.postType) return null;
     if (Date.now() - lastApplied.at > GENERATED_WINDOW_MS) return null;
-    return { brief: lastApplied.brief, postType: lastApplied.postType };
+    // The director's direction travels with the export, so Generate's corpus
+    // (list_frameup_generate_corpus reads these keys) learns which angles ship.
+    const { brief, postType, runId, specId, angle, hook, aiText, score } = lastApplied;
+    return {
+      brief, postType,
+      ...(runId ? { runId } : {}), ...(specId ? { specId } : {}), ...(angle ? { angle } : {}), ...(hook ? { hook } : {}),
+      ...(aiText?.length ? { aiText } : {}), ...(Number.isFinite(score) ? { score } : {}),
+    };
   }
 
   async function applySpec(spec) {
     if (!spec || !SUPPORTED.includes(spec.postType) || !Array.isArray(spec.lines)) {
       throw new Error('This design type cannot be opened in the editor yet.');
     }
-    lastApplied = { brief: String(spec.brief || '').slice(0, 600), postType: spec.postType, at: Date.now() };
+    const short = (value, max) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
+    lastApplied = {
+      brief: String(spec.brief || '').slice(0, 600),
+      postType: spec.postType,
+      at: Date.now(),
+      runId: short(spec.runId, 64),
+      specId: short(spec.id, 64),
+      angle: short(spec.direction?.angle, 120),
+      hook: short(spec.direction?.hook, 20),
+      // What the AI wrote, so an unedited export can be told apart from an edited one.
+      // (Listicles keep their copy in rows, which the corpus compares differently: none.)
+      aiText: spec.listicle ? [] : spec.lines.slice(0, 6).map(line => short(line, 120)),
+      score: Number(spec.review?.score),
+    };
     await whenReady();
     const select = document.getElementById('instagram-post-type-select');
     if (select) select.value = spec.postType;

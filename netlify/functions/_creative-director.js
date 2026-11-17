@@ -29,12 +29,59 @@ const STEERS = ['claim', 'question', 'stats', 'emotion', 'debate'];
 const POST_TYPES = ['cover', 'quote', 'long-quote', 'double-entity-quote', 'stats-single-ent', 'stats-double-ent', 'listicle-type-1', 'listicle-type-2'];
 const STATS_TYPES = new Set(['stats-single-ent', 'stats-double-ent']);
 
-// Which model directs. GENERATE_DIRECTOR_MODEL: unset/best/sonnet = Sonnet
-// (the Gateway "best" tier); main/haiku = Haiku (economy). GENERATE_DIRECTOR_TIER
-// is read too (the name used in the research doc).
+// Which model directs. GENERATE_DIRECTOR_MODEL (GENERATE_DIRECTOR_TIER is read
+// too, the name used in the research doc):
+//   unset / best / sonnet  Sonnet (the Gateway "best" tier). The default:
+//                          quality first; only the owner changes it.
+//   main / haiku           Haiku only (economy).
+//   auto                   Haiku first; Sonnet once when Haiku fails or its
+//                          concepts fail validation (fewer than 2 survive).
+//                          project-docs/ai-strategy-and-costs.md, B1.
 function directorTier(value = process.env.GENERATE_DIRECTOR_MODEL || process.env.GENERATE_DIRECTOR_TIER || '') {
   const wanted = String(value).trim().toLowerCase();
+  if (wanted === 'auto') return 'auto';
   return /^(?:main|haiku)$|haiku/.test(wanted) ? 'main' : 'best';
+}
+
+// ─── Editor steering (tone, audience, more / less like this) ───────────────
+const TONES = ['hype', 'analytical', 'emotional', 'witty'];
+const AUDIENCES = ['casual', 'diehard'];
+const TONE_TEXT = {
+  hype: 'hype: big energy, bold verbs, celebration',
+  analytical: 'analytical: lead with what the numbers or the matchup say',
+  emotional: 'emotional: the human story, what it means to the player and fans',
+  witty: 'witty: a clever, playful line fans will share (never mocking injuries or personal lives)',
+};
+const AUDIENCE_TEXT = {
+  casual: 'casual fans: plain words, the big picture, no jargon or deep stats',
+  diehard: 'die-hard fans: insider detail, real stat labels, rivalries and history',
+};
+const steerList = value => (Array.isArray(value) ? value : [])
+  .map(item => cut(typeof item === 'string' ? item : item?.angle, 120))
+  .filter(item => item.length >= 4)
+  .slice(0, 3);
+
+// Accepts the old string steer ('question') or an object
+// { hook, tone, audience, more: [angle], less: [angle] }. Unknown values drop.
+function normalizeSteer(input) {
+  const raw = typeof input === 'string' ? { hook: input } : (input && typeof input === 'object' && !Array.isArray(input) ? input : {});
+  const pick = (value, list) => (list.includes(String(value || '').trim().toLowerCase()) ? String(value).trim().toLowerCase() : '');
+  return {
+    hook: pick(raw.hook, STEERS),
+    tone: pick(raw.tone, TONES),
+    audience: pick(String(raw.audience || '').replace(/[^a-z]/gi, ''), AUDIENCES),
+    more: steerList(raw.more),
+    less: steerList(raw.less),
+  };
+}
+const steerIsEmpty = steer => !steer || (!steer.hook && !steer.tone && !steer.audience && !steer.more?.length && !steer.less?.length);
+
+// Lines for the writer (tone and audience only; hooks are the director's job).
+function steerLines(steer = {}) {
+  const lines = [];
+  if (steer.tone) lines.push(`Tone from the editor: ${TONE_TEXT[steer.tone]}.`);
+  if (steer.audience) lines.push(`Audience: ${AUDIENCE_TEXT[steer.audience]}.`);
+  return lines;
 }
 
 // ─── Small text helpers (same behaviour as es-generate.js) ─────────────────
@@ -268,14 +315,18 @@ function DIRECTOR_SYSTEM(templates = {}) {
     '- team is the person\'s CURRENT team (newest coverage wins; a team named in the brief wins), full brand name. Empty if unsure. It sets the brand colours.',
     ...RULES.VOICE.map(line => `- ${line}`),
     '- Match the ES house style and the editors\' lessons when given.',
+    '- name: a 2-4 word name for the direction an editor can say out loud (e.g. "The Unguardable Case", "Her Own Words"). rationale: one line on why it works for ES\'s Instagram audience.',
+    '- inspiredBy: the ids (P1, P2...) of the past ES posts that shaped this concept\'s template or hook; empty if none did. Never invent ids.',
+    '- confidence: 0-100, how sure you are this concept performs for ES (real facts, a strong hook, a template that fits).',
+    '- Follow the editor\'s tone, audience and "more like / less like" steers when given.',
     '',
     `Enums: hook = ${HOOKS.join(' | ')}. emotion = ${EMOTIONS.join(' | ')}.`,
     `photo.shot = ${SHOTS.join(' | ')}. palette = ${PALETTES.join(' | ')}.`,
     '',
     'Reply with JSON only:',
     '{"read":{"subject":"","team":"","sport":"","moment":"one line: what happened"},',
-    ' "concepts":[{"postType":"","angle":"","hook":"","emotion":"","headlineIdea":"","layout":"","factsUsed":[""],',
-    '   "photo":{"query":"2-5 words: person + current team","shot":""},"team":"","palette":"auto","rationale":""}]}',
+    ' "concepts":[{"name":"","postType":"","angle":"","hook":"","emotion":"","headlineIdea":"","layout":"","factsUsed":[""],',
+    '   "photo":{"query":"2-5 words: person + current team","shot":""},"team":"","palette":"auto","rationale":"","inspiredBy":["P1"],"confidence":80}]}',
   ].join('\n');
 }
 
@@ -294,14 +345,20 @@ function compactRead(read = {}) {
   });
 }
 
-function directorRequest({ brief, read = {}, allowedTypes = [], steer = '', pastPosts = '', houseStyle = [], lessons = [], teamHints = [], digest = '', want = 4 } = {}) {
+function directorRequest({ brief, read = {}, allowedTypes = [], steer = '', pastPosts = '', houseStyle = [], lessons = [], teamHints = [], memory = [], digest = '', want = 4 } = {}) {
   const parts = [
     `Brief: ${String(brief || '').slice(0, 1500)}`,
     `What the brief gives you (code-checked): ${compactRead(read)}`,
     `Allowed: ${JSON.stringify(allowedTypes.length ? allowedTypes : POST_TYPES)} Fits: ${JSON.stringify(read.fits || {})}`,
   ];
-  if (STEERS.includes(steer)) parts.push(`Steer from the editor: ${steer}. At least 2 concepts use ${STEER_TEXT[steer]} when it fits.`);
+  const s = normalizeSteer(steer);
+  if (s.hook) parts.push(`Steer from the editor: ${s.hook}. At least 2 concepts use ${STEER_TEXT[s.hook]} when it fits.`);
+  if (s.tone) parts.push(`Tone from the editor: ${TONE_TEXT[s.tone]}. Every concept follows it.`);
+  if (s.audience) parts.push(`Audience from the editor: ${AUDIENCE_TEXT[s.audience]}.`);
+  if (s.more.length) parts.push(`The editor wants more like: ${s.more.map(a => JSON.stringify(a)).join('; ')}. Keep that direction's spirit, with fresh angles.`);
+  if (s.less.length) parts.push(`The editor wants less like (avoid these angles and their hooks): ${s.less.map(a => JSON.stringify(a)).join('; ')}.`);
   if (pastPosts) parts.push(`Past ES posts the team shipped (style and template choice only, never their facts):\n${pastPosts}`);
+  if (memory.length) parts.push(`What ES editors picked and exported lately:\n${memory.slice(0, 5).map(line => `- ${line}`).join('\n')}`);
   if (houseStyle.length) parts.push(`ES house style:\n${houseStyle.map(line => `- ${line}`).join('\n')}`);
   if (lessons.length) parts.push(`Editors' lessons:\n${lessons.slice(0, 6).map(line => `- ${line}`).join('\n')}`);
   if (teamHints.length) parts.push(`Team hints: ${teamHints.slice(0, 8).map(hint => `editors set ${hint.person} -> ${hint.team}`).join('; ')}`);
@@ -310,9 +367,32 @@ function directorRequest({ brief, read = {}, allowedTypes = [], steer = '', past
   return parts.join('\n\n');
 }
 
+const HOOK_NAMES = { question: 'The Question', claim: 'The Bold Claim', reaction: 'The Reaction', quote: 'In Their Words', numbers: 'By The Numbers', ranking: 'The Ranking' };
+
+// A direction's name: the model's (2-40 chars, no quotes), else one from its hook.
+function directionName(raw, hook) {
+  const name = cut(String(raw ?? '').replace(/["“”]/g, ''), 40);
+  return name.length >= 2 && name.split(' ').length <= 6 ? name : HOOK_NAMES[hook] || 'Direction';
+}
+
+// Confidence 0-100: the model's own number, tempered by what code can check
+// (verified facts, a past ES post behind it). Never above 98 or below 15.
+function confidenceFor(raw, { factsUsed = [], inspiredBy = [], postType = '' } = {}) {
+  let model = Number(raw);
+  if (!Number.isFinite(model)) model = 70;
+  if (model > 0 && model <= 1) model *= 100;
+  model = Math.max(0, Math.min(100, model));
+  const code = 50 + 10 * Math.min(factsUsed.length, 3) + (inspiredBy.length ? 10 : 0) - (postType === 'cover' && !factsUsed.length ? 10 : 0);
+  return Math.max(15, Math.min(98, Math.round(0.6 * model + 0.4 * code)));
+}
+
 // Never trusts the model: returns only concepts the code can stand behind.
 // [] means the writer runs as before (no direction).
-function validateConcepts(parsed, { read = {}, allowedTypes = [], want = 4, brief = '', corpus = '', templates = {} } = {}) {
+// pastIds: the P1..Pn ids the director saw (inspiredBy must name one of them).
+// chosen: directions an editor picked (and maybe edited) on the page. Their
+// angle may be a little longer, their ids (ref) are kept for the page, and the
+// look-alike checks are skipped (the editor chose them on purpose).
+function validateConcepts(parsed, { read = {}, allowedTypes = [], want = 4, brief = '', corpus = '', templates = {}, pastIds = [], chosen = false } = {}) {
   const list = Array.isArray(parsed?.concepts) ? parsed.concepts.slice(0, 12) : [];
   const source = squash(`${brief} ${corpus}`);
   const fits = read.fits || {};
@@ -323,7 +403,7 @@ function validateConcepts(parsed, { read = {}, allowedTypes = [], want = 4, brie
     const postType = String(raw?.postType || '').trim();
     if (!templates[postType] || (allowedTypes.length && !allowedTypes.includes(postType)) || fits[postType] !== true) continue;
     const angle = clean(raw.angle);
-    if (angle.length < 6 || angle.length > 90) continue;
+    if (angle.length < 6 || angle.length > (chosen ? 120 : 90)) continue;
     const hook = HOOKS.includes(raw.hook) ? raw.hook : 'claim';
     const emotion = EMOTIONS.includes(raw.emotion) ? raw.emotion : '';
     const shot = SHOTS.includes(raw.photo?.shot) ? raw.photo.shot : 'any';
@@ -337,12 +417,20 @@ function validateConcepts(parsed, { read = {}, allowedTypes = [], want = 4, brie
       .filter(fact => squash(fact).trim().length >= 2 && source.includes(squash(fact)))
       .slice(0, 6);
     if (STATS_TYPES.has(postType) && factsUsed.filter(fact => /\d/.test(fact)).length < 3) continue;
-    // Distinct: never the same template + hook twice, never a look-alike angle.
-    if (kept.some(other => other.postType === postType && other.hook === hook)) continue;
-    if (kept.some(other => jaccard(other.angle, angle) >= 0.6)) continue;
-    if (postType === 'cover' && onlyCover && kept.filter(other => other.postType === 'cover').length >= 3) continue;
+    if (!chosen) {
+      // Distinct: never the same template + hook twice, never a look-alike angle.
+      if (kept.some(other => other.postType === postType && other.hook === hook)) continue;
+      if (kept.some(other => jaccard(other.angle, angle) >= 0.6)) continue;
+      if (postType === 'cover' && onlyCover && kept.filter(other => other.postType === 'cover').length >= 3) continue;
+    }
+    const inspiredBy = [...new Set((Array.isArray(raw.inspiredBy) ? raw.inspiredBy : [])
+      .map(ref => String(ref || '').trim().toUpperCase())
+      .filter(ref => pastIds.includes(ref)))].slice(0, 3);
+    const ref = chosen ? cut(raw.ref || raw.id, 24).replace(/[^\w-]/g, '') : '';
     kept.push({
       id: '',
+      ...(ref ? { ref } : {}),
+      name: directionName(raw.name, hook),
       postType,
       angle,
       hook,
@@ -353,60 +441,95 @@ function validateConcepts(parsed, { read = {}, allowedTypes = [], want = 4, brie
       photo: { query: templates[postType].photo && query.length >= 2 && query.length <= 80 ? query : '', shot },
       team,
       palette,
-      rationale: cut(raw.rationale, 160),
+      rationale: cut(raw.rationale || raw.why, 160),
+      inspiredBy,
+      confidence: chosen && Number.isFinite(Number(raw.confidence)) ? Math.max(0, Math.min(100, Math.round(Number(raw.confidence)))) : confidenceFor(raw.confidence, { factsUsed, inspiredBy, postType }),
+      ...(chosen && raw.edited ? { edited: true } : {}),
     });
   }
   kept.forEach((concept, index) => { concept.id = `c${index + 1}`; });
   return kept;
 }
 
-// One AI call. Never throws. source: 'director' | 'haiku-fallback' | 'budget' | 'none'.
-// startedAt: when the Generate run began; the Haiku retry only runs while
-// the run is young (retryByMs), so a slow Sonnet failure never stacks a second wait.
+// One AI call (two in auto mode when Haiku falls short). Never throws.
+// source: 'director' | 'haiku-fallback' | 'sonnet-escalated' | 'budget' | 'none'.
+// startedAt: when the Generate run began; a second call only runs while the
+// run is young (retryByMs), so a slow failure never stacks a second wait.
+// tier: 'best' (Sonnet, default), 'main' (Haiku) or 'auto' (Haiku, then Sonnet
+// once when Haiku fails or fewer than min(want, 2) concepts pass validation).
 async function runDirector({
-  brief, read, allowedTypes = [], steer = '', pastPosts = '', houseStyle = [], lessons = [], teamHints = [],
+  brief, read, allowedTypes = [], steer = '', pastPosts = '', pastIds = [], houseStyle = [], lessons = [], teamHints = [], memory = [],
   digest = '', corpus = '', want = 4, templates = {}, tier = directorTier(), track = null,
   timeoutMs = 12000, startedAt = Date.now(), retryByMs = 12000, now = () => Date.now(),
 } = {}) {
-  const result = { concepts: [], read: null, model: '', cost: 0, source: 'none' };
+  const result = { concepts: [], read: null, model: '', cost: 0, source: 'none', calls: 0, escalated: false };
   try {
     const system = DIRECTOR_SYSTEM(templates);
-    const request = directorRequest({ brief, read, allowedTypes, steer, pastPosts, houseStyle, lessons, teamHints, digest, want });
+    const request = directorRequest({ brief, read, allowedTypes, steer, pastPosts, houseStyle, lessons, teamHints, memory, digest, want });
     const { aiText, isBudgetError } = gateway();
-    const ask = askTier => aiText({
-      tier: askTier,
-      system,
-      cacheSystem: true,
-      messages: [{ role: 'user', content: request }],
-      effort: 'low',
-      maxTokens: 1400,
-      timeoutMs,
-      track: track ? { ...track, feature: 'generate-director' } : undefined,
-    });
-    let reply;
+    const ask = async askTier => {
+      result.calls += 1;
+      const reply = await aiText({
+        tier: askTier,
+        system,
+        cacheSystem: true,
+        messages: [{ role: 'user', content: request }],
+        effort: 'low',
+        maxTokens: 1400,
+        timeoutMs,
+        track: track ? { ...track, feature: 'generate-director' } : undefined,
+      });
+      result.cost += Number(reply.cost) || 0;
+      result.model = reply.model || '';
+      return reply;
+    };
+    const judge = reply => {
+      const parsed = extractJson(reply?.text);
+      return { parsed, concepts: validateConcepts(parsed, { read, allowedTypes, want, brief, corpus, templates, pastIds }) };
+    };
+    const young = () => now() - startedAt < retryByMs;
+    const first = tier === 'auto' ? 'main' : tier;
+    let reply = null;
+    let judged = { parsed: null, concepts: [] };
     try {
-      reply = await ask(tier);
+      reply = await ask(first);
+      judged = judge(reply);
       result.source = 'director';
     } catch (error) {
       if (isBudgetError(error)) return { ...result, source: 'budget' };
-      if (tier !== 'best' || now() - startedAt >= retryByMs) return result;
-      try {
-        reply = await ask('main');
-        result.source = 'haiku-fallback';
-      } catch (retryError) {
-        return isBudgetError(retryError) ? { ...result, source: 'budget' } : result;
+      if (tier === 'best') {
+        // Sonnet failed fast: one Haiku try (today's behaviour).
+        if (!young()) return { ...result, source: 'none' };
+        try {
+          reply = await ask('main');
+          judged = judge(reply);
+          result.source = 'haiku-fallback';
+        } catch (retryError) {
+          return isBudgetError(retryError) ? { ...result, source: 'budget' } : { ...result, source: 'none' };
+        }
+      } else if (tier !== 'auto') {
+        return { ...result, source: 'none' };
       }
     }
-    result.model = reply.model || '';
-    result.cost = Number(reply.cost) || 0;
-    const parsed = extractJson(reply.text);
-    const concepts = validateConcepts(parsed, { read, allowedTypes, want, brief, corpus, templates });
-    if (!concepts.length) return { ...result, source: 'none' };
-    const said = parsed?.read || {};
+    // Auto: Haiku failed, or too few of its concepts survived validation.
+    if (tier === 'auto' && judged.concepts.length < Math.min(want, 2) && young()) {
+      try {
+        const better = judge(await ask('best'));
+        if (better.concepts.length >= judged.concepts.length) {
+          judged = better;
+          result.source = 'sonnet-escalated';
+          result.escalated = true;
+        }
+      } catch (error) {
+        if (isBudgetError(error) && !judged.concepts.length) return { ...result, source: 'budget' };
+      }
+    }
+    if (!judged.concepts.length) return { ...result, source: 'none' };
+    const said = judged.parsed?.read || {};
     result.read = {
       subject: cut(said.subject, 60), team: cut(said.team, 40), sport: cut(said.sport, 20), moment: cut(said.moment, 160),
     };
-    result.concepts = concepts;
+    result.concepts = judged.concepts;
     return result;
   } catch (error) {
     return { ...result, concepts: [], source: 'none' };
@@ -414,10 +537,14 @@ async function runDirector({
 }
 
 // ─── D4. The concepts as a block for the writer ────────────────────────────
-function conceptsBlock(concepts = [], count = 4, houseStyleLines = []) {
+// options.perConcept: designs per concept (2 when the editor picked one or two
+// directions). options.steer: the editor's tone and audience for the copy.
+function conceptsBlock(concepts = [], count = 4, houseStyleLines = [], { perConcept = 1, steer = null } = {}) {
   if (!concepts.length) return '';
   const lines = [
-    'Creative direction from the ES creative director. Write exactly one design per concept, in this order, using its postType.',
+    perConcept > 1
+      ? `Creative direction from the ES creative director. Write exactly ${perConcept} designs per concept, in this order, using its postType: same angle, clearly different wording.`
+      : 'Creative direction from the ES creative director. Write exactly one design per concept, in this order, using its postType.',
     'Keep its angle and hook type; sharpen the headline idea if you can, within the limits. Use its team and photo query.',
     'Put the concept id in "conceptId". Put the angle in "why".',
     ...concepts.map(c => {
@@ -428,8 +555,9 @@ function conceptsBlock(concepts = [], count = 4, houseStyleLines = []) {
       return `${bits.join(' ')}${extra ? ` | ${extra}` : ''}`;
     }),
   ];
-  if (concepts.length < count) lines.push(`Then add up to ${count - concepts.length} more designs with clearly different angles.`);
+  if (concepts.length * perConcept < count) lines.push(`Then add up to ${count - concepts.length * perConcept} more designs with clearly different angles.`);
   if (houseStyleLines.length) lines.push(`ES house style: ${houseStyleLines.join(' ')}`);
+  lines.push(...steerLines(normalizeSteer(steer || {})));
   return lines.join('\n');
 }
 
@@ -441,7 +569,13 @@ module.exports = {
   validateConcepts,
   conceptsBlock,
   directorTier,
+  normalizeSteer,
+  steerIsEmpty,
+  steerLines,
+  confidenceFor,
   teamInText,
+  TONES,
+  AUDIENCES,
   HOOKS,
   EMOTIONS,
   SHOTS,

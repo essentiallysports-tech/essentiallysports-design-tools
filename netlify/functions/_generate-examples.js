@@ -262,7 +262,7 @@ function normalizeCorpus(rows = []) {
       paletteIdx: Number.isInteger(row.palette_idx) ? row.palette_idx : null,
       photoUrl: String(row.photo_url || ''),
       brief: cleanText(row.brief).slice(0, 300),
-      generated: { angle: cleanText(generated.angle), hook: cleanText(generated.hook), aiText, score: Number.isFinite(Number(generated.score)) && generated.score != null ? Number(generated.score) : null },
+      generated: { runId: cleanText(generated.runId).slice(0, 64), angle: cleanText(generated.angle), hook: cleanText(generated.hook), aiText, score: Number.isFinite(Number(generated.score)) && generated.score != null ? Number(generated.score) : null },
       edited: aiText ? !sameLines(aiText, lines) : null,
       stars: stars >= 1 && stars <= 5 ? stars : null,
       status: cleanText(row.status),
@@ -302,22 +302,43 @@ function scorePastPost(post, read = {}, ctx = {}) {
   const format = wanted.includes(post.postType) ? 1.5 : wanted.some(type => FAMILY[type] === FAMILY[post.postType]) ? 0.5 : 0;
   const briefSim = Math.min(3, 10 * wordJaccard(read.brief || '', post.brief || post.text));
   const quality = (post.stars ? (post.stars - 3) * 1.5 : 0)
+    + (post.stars >= 4 ? 1 : 0)
     + (post.generated?.aiText && post.edited === false ? 1.5 : 0)
     + (post.brief ? 0.8 : 0)
     + (post.status === 'Done' ? 0.5 : 0);
+  const memory = memoryScore(post, ctx.signals);
   const at = Date.parse(post.at);
   const ageDays = Number.isFinite(at) ? Math.max(0, (now - at) / 864e5) : 365;
   const recency = 1.5 * Math.exp(-ageDays / 45);
-  return entity + team + sport + format + briefSim + quality + recency;
+  return entity + team + sport + format + briefSim + quality + recency + memory;
+}
+
+// The director's memory (_direction-memory.js signalsFor): an export from a
+// Generate run the team opened or exported, or whose angle editors chose,
+// counts more; an angle editors asked for less of counts less.
+const sameAngle = (a, b) => {
+  const x = cleanText(a).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  return x.length >= 6 && x === cleanText(b).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+};
+function memoryScore(post, signals) {
+  if (!signals) return 0;
+  const runId = post.generated?.runId || '';
+  const angle = post.generated?.angle || '';
+  let score = 0;
+  if (runId && signals.exportedRuns?.has?.(runId)) score += 2;
+  if (angle && (signals.exportedAngles || []).some(item => sameAngle(item.angle, angle))) score += 1.5;
+  else if (angle && (signals.chosenAngles || []).some(item => sameAngle(item.angle, angle))) score += 1;
+  if (angle && (signals.lessAngles || []).some(item => sameAngle(item.angle, angle))) score -= 2;
+  return score;
 }
 
 // The best past posts for a brief: top scores, at most 2 per template, no
 // near-duplicates, and one well-starred post for the sport when there is one.
-function pickPastPosts(posts = [], read = {}, { allowedTypes = [], conceptTypes = [], max = 6, now } = {}) {
+function pickPastPosts(posts = [], read = {}, { allowedTypes = [], conceptTypes = [], max = 6, now, signals = null } = {}) {
   const { findSport } = lintHelpers();
   const usable = posts.filter(post => !(post.stars != null && post.stars <= 2))
     .filter(post => !allowedTypes.length || allowedTypes.includes(post.postType));
-  const scored = usable.map(post => ({ ...post, score: scorePastPost(post, read, { allowedTypes, conceptTypes, now }) }))
+  const scored = usable.map(post => ({ ...post, score: scorePastPost(post, read, { allowedTypes, conceptTypes, now, signals }) }))
     .sort((a, b) => b.score - a.score);
   const picked = [];
   const perType = {};
@@ -343,12 +364,14 @@ const maskDigits = text => String(text || '').replace(/\d[\d,.]*/g, '#');
 
 // One line per post, digits masked so their facts are never copied:
 // - [Cover · NFL · Kansas City Chiefs · ★5] "Can Anyone | Stop Mahomes?" (brief: "mahomes after chiefs win")
-function formatPastPosts(posts = []) {
-  return posts.map(post => {
+// ids: true prefixes each line with P1, P2... so the director can say which
+// posts inspired a concept (validateConcepts checks the ids).
+function formatPastPosts(posts = [], { ids = false } = {}) {
+  return posts.map((post, index) => {
     const tags = [LABELS[post.postType], post.sport, post.team, post.stars ? `★${post.stars}` : ''].filter(Boolean).join(' · ');
     const text = maskDigits(post.topicOnly ? `(topic) ${post.text}` : post.text).slice(0, 140);
     const brief = post.brief ? ` (brief: ${JSON.stringify(maskDigits(post.brief).slice(0, 100))})` : '';
-    return `- [${tags}] ${JSON.stringify(text)}${brief}`;
+    return `- ${ids ? `P${index + 1} ` : ''}[${tags}] ${JSON.stringify(text)}${brief}`;
   }).join('\n');
 }
 
@@ -397,9 +420,9 @@ function houseStyle(posts = [], read = {}) {
 
 module.exports = {
   loadPastDesigns, selectExamples, formatExamples,
-  loadCorpus, normalizeCorpus, scorePastPost, pickPastPosts, formatPastPosts, houseStyle,
+  loadCorpus, normalizeCorpus, scorePastPost, pickPastPosts, formatPastPosts, houseStyle, LABELS,
   _test: {
-    normalize, words, VARIANT_TYPES,
+    normalize, words, VARIANT_TYPES, memoryScore, LABELS,
     loadCorpus, normalizeCorpus, scorePastPost, pickPastPosts, formatPastPosts, houseStyle, maskDigits,
     reset: () => { cache = { at: 0, designs: [] }; corpusCache = { at: 0, value: null }; },
   },
