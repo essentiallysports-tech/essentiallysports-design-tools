@@ -31,14 +31,16 @@ One brand colour (ES Blue), a black and slate scale for dark mode, light neutral
 | Sunk: tracks, hover | `--es-sunk` | `#F0F2F5` | `#2A2D34` (raised fields) |
 | Sidebar | `--es-sidebar-bg` | `#F2F3F5` | `#101114` |
 | Line | `--es-line` | `#DFE2E7` | `#2A2D34` |
-| Line 2: field outlines | `--es-line-2` | `#C8CDD5` | `#3B4049` |
+| Line 2: field and chip outlines (3:1) | `--es-line-2` | `#8A919E` (3.2:1 on white) | `#707A8C` (3.2:1 on Slate 700) |
 | Ink | `--es-ink` | `#0E1014` | `#FFFFFF` |
 | Ink 2 | `--es-ink-2` | `#3A3F48` | `#BFC8D9` |
 | Ink 3: meta, helper | `--es-ink-3` | `#565C67` | `#98A6BF` |
 
-**Brand roles**: `--es-brand` (Blue 500), `--es-brand-fill` (filled buttons), `--es-brand-text` (`#0A62C7` on light, `#9DCBFD` on dark), `--es-brand-soft`, `--es-brand-tint`.
+**Brand roles**: `--es-brand` (Blue 500), `--es-brand-fill` (= Blue 600, filled buttons; press = Blue 700), `--es-brand-text` (`#0A62C7` on light, `#9DCBFD` on dark), `--es-brand-soft` (= Blue 100), `--es-brand-tint`.
 
-**Status**: `--es-good` `#0E7A3D` / `--es-good-soft`, `--es-warn` `#B45309` / `--es-warn-soft`, `--es-bad` `#C42323` / `--es-bad-soft`. Always colour plus a word or icon. The yellow NEW tag (`.es-badge--new`, `#FDF3C8` / `#8A6100`) is for the sidebar only.
+**Surface**: `--es-surface` (`#FFFFFF`, Slate 800 in dark) for cards, toasts and the ring around status dots. **Placeholder**: `--es-placeholder` `#6E7581` (4.6:1 on white; `#98A6BF` in dark).
+
+**Status**: `--es-good` `#0E7A3D` / `--es-good-soft`, `--es-warn` `#B45309` / `--es-warn-soft`, `--es-bad` `#C42323` / `--es-bad-soft`. On dark surfaces: `--es-good-on-dark` `#4CC985`, `--es-warn-on-dark` `#FCD34D`, `--es-bad-on-dark` `#FF8A8A` (+ `-soft-on-dark` fills); badges and dashboard pills switch to these. Always colour plus a word or icon. The yellow NEW tag (`.es-badge--new`, `#FDF3C8` / `#8A6100`) is for the sidebar only.
 
 **Contrast**: body text 4.5:1, large text and non-text 3:1, in both themes.
 - White on Blue 600 is 4.8:1: the blue that takes a white label. White on Blue 500 is 3.9:1 (large text only).
@@ -72,7 +74,7 @@ FrameUp UI uses two families (15px base). Acumin is only for artwork (posts, ads
 | Buttons | `.es-btn` | 14 (13 sm, 15 lg) | 500 | Roboto | See Buttons |
 | Sidebar nav / group | `--es-type-nav-*` / `--es-type-nav-group-*` | 14 / 11 | 400 / 600 | Roboto | Compact sidebar sizes |
 | Steps | `--es-type-step-*`, `--es-step-circle` / `.es-steps` | 13 | 500 | Roboto | 22px circles; the Video Ads rail uses 24px + 14px labels |
-| Big number | `.es-stat__value` | 36 | 800 | Condensed | Tabular numerals |
+| Big number | `--es-type-number-*` / `.es-stat__value`, dashboard KPI | 36 (32 phone) | 800 | Condensed | Tabular numerals; one style for stats and KPIs |
 | Prompt input | `--es-type-prompt-*` | 18 | 400 | Roboto | Big brief box |
 | Workspace / panel title (editor) | `--es-type-workspace-title-*`, `--es-type-panel-title-*` | 22 / 18 | 800 | Condensed | Editor and dashboard panels |
 | Control value (editor) | `--es-type-control-*` | 15 | 500 | Roboto | Dense editor forms |
@@ -90,8 +92,8 @@ Rhythm rules:
 
 ## Radius and elevation
 
-- Radius: 10 chips, buttons, nav items (`--es-radius-chip`) · 12 fields and toasts (`--es-radius-control`) · 16 panels, menus, tables (`--es-radius-container`) · 20 `.es-card` (`--es-radius-card`) · 999 badges and team chips (`--es-radius-pill`).
-- Elevation: hairlines everywhere (`--es-hairline`); `--es-shadow-pill` for the selected segment and current nav item; `--es-shadow-soft` on `.es-card`; `--es-shadow-float` only for things that float (menus, toasts, popovers); `--ais-glow` for primary hover and AI surfaces. Dark mode swaps shadows for 1px Slate lines.
+- Radius: 10 chips, buttons, nav items (`--es-radius-chip`) · 12 fields and toasts (`--es-radius-control`) · 16 panels, cards, menus, tables, callouts, empty states (`--es-radius-container`; `--es-radius-card` is an alias) · 999 badges and team chips (`--es-radius-pill`).
+- Elevation: hairlines everywhere (`--es-hairline`, restated in dark and in every scope that changes `--es-line`); `--es-shadow-pill` for the selected segment and current nav item; `--es-shadow-soft` on `.es-card`; `--es-shadow-float` only for things that float (menus, toasts, popovers); `--ais-glow` for primary hover and AI surfaces. Dark mode swaps shadows for 1px Slate lines.
 
 ## Motion
 
@@ -122,21 +124,22 @@ Defined once in `design-tokens.css`:
 - **Fields**: the outline turns ES blue at the same width, plus one halo. No outline ring.
 - **Buttons, links, chips, tabs, radios**: keyboard only (`:focus-visible`), one 2px outline with a 2px offset. A mouse click shows nothing.
 - Dropdown triggers styled as fields take the field focus, never both.
-- **Selected**: segment = white pill on a grey track (Slate 600 in dark); chip = 1.5px ink ring in light (soft blue tint on AI pages, `.ais-page`); current nav item = white pill with the pill shadow and a blue icon; format cards and swatches = soft blue fill or a 2px ring.
+- **Selected**: segment = white pill on a grey track (Slate 600 in dark); chip = soft blue tint (Blue 100 fill, 1px tint ring, brand text; a gradient tint on AI pages, `.ais-page`); current nav item = white pill with the pill shadow and a blue icon; format cards and swatches = soft blue fill or a 2px ring.
 
 ## Forms
 
 - `.es-field` (grid, 8px gap) → `.es-field__label` → `.es-input` / `.es-search` → `.es-field__hint`.
 - `.es-input`: white, 1px Line 2 outline, Ink 3 on hover, focus as above, radius 12, 44px tall, 15px text (16px on phones so iOS never zooms). `textarea.es-input` 96px minimum. A native `select.es-input` is fine.
 - Placeholders show an example, never the instruction.
-- Errors: a red outline (`aria-invalid="true"`) plus one sentence that says how to fix it, linked with `aria-describedby`. The shared library has no error class yet.
+- Errors: a red outline (`aria-invalid="true"` on `.es-input` / `.es-select`) plus one sentence (`.es-field__error`) that says how to fix it, linked with `aria-describedby`.
+- `.es-select`: a native select with the field outline, radius, focus and a Lucide chevron (`.es-select--sm` 32px).
 - Word / character counts (`.va-count`, `.is-over` = warn) sit right of the label. Writing checks (`.va-lint__item`) sit under the field with one fix link; AI auto-fixes (`.va-autofixed`) say what changed.
 
 ## Navigation
 
 - **Sidebar** (`.es-sidebar`, built by `app-shell.js` from one nav list): 224px (`--es-sidebar-w`), always open on desktop, a menu on phones. Brand → search launcher (⌘K palette) → categories (`.es-sidebar__section`, 11px `.es-sidebar__label`, a very light 1px line with 12px above and below between categories) → footer.
 - AI Studio category: blue → cyan mark, blue icons, a gradient bar on the active item.
-- NEW tag: yellow `.es-badge--new` with a one-time shine, **sidebar only**.
+- NEW tag: yellow `.es-badge--new` with a one-time shine, **sidebar only** (the phone menu is the sidebar on phones and uses the same markup). The What's new dialog's "New" marks unread changelog entries and stays.
 - Current page: `aria-current="page"`, white pill with `--es-shadow-pill` and a blue icon.
 - Scroll fade: 24px above the footer, hidden at the end of the list (`.es-sidebar--at-end`).
 - AI usage card (`.es-usage[data-state]`): this week's spend against the $20 cap; `ok` blue, `warn` amber from 80%, `over` red at 100%; click for the per-feature breakdown.
@@ -148,11 +151,13 @@ Defined once in `design-tokens.css`:
 ## Data display
 
 - `.es-card` (head / title / sub / body), `.es-stat` (tile + Condensed number + trend).
+- Icon tiles `.es-tile` + `--blue`, `--cyan` (`--purple` is a legacy alias of `--cyan`), `--green`, `--pink`, `--amber`.
+- Light islands in dark mode: give a surface that stays light `data-surface="light"` so theme.css does not mute its text.
 - KPI cards (dashboard `.dov-kpi`, scoped to the dashboard): eyebrow label, 36px number, delta against the same-length period, sparkline, one meta line; 4 → 2 → 1 columns.
 - `.es-table` in `.es-table-wrap`: tabular numbers, row hover, small tertiary actions.
-- Badges: `.es-badge` (+ `--brand`, `--good`, `--bad`, `--ink`, `--new`), `.ais-badge`, `.ais-tag`. Status = colour + word.
+- Badges: `.es-badge` (+ `--brand`, `--good`, `--warn`, `--bad`, `--ink`, `--new`; each has a dark variant), `.ais-badge`, `.ais-tag`. Status = colour + word.
 - Meta lines: `.es-meta-list` joins items with " · ".
-- Every list has empty (`.es-empty`, says what will appear + first step), loading (`.es-skeleton`) and error (what failed + Try again) states.
+- Every list has empty (`.es-empty`, says what will appear + first step), loading (`.es-skeleton`, a translucent ink fill so it shows on white and on `.es-empty`) and error (`.es-error-state`: `__icon`, `__title`, `__copy`, one Try again button) states.
 - Toasts (`.es-toast`, `.is-error`, `.es-toast-action`): bottom right, about 3s, one optional action.
 - `.es-callout` for tips; `.es-menu` floats with `--es-shadow-float`.
 - Stars of the week (`.es-ticker`): Home only, medal-ranked, slow scroll, pauses on hover.
@@ -161,7 +166,7 @@ Defined once in `design-tokens.css`:
 
 **Use logos instead of text badges wherever one exists.**
 - League tiles: `LeagueLogos.logoFor(sport)` → `{ src, bg, label }`; `.va-league` (20px) or `.is-league` tiles; a flat light tile in both themes; unknown sports get the neutral tile with their own label.
-- Team logo chips: `VideoAdsTeams.findTeam()` + `logoFor()` → `.va-team` with `.va-logo` (logo on a fixed white circle, 1px line); no logo or a failed load falls back to `.va-logo--dot` (the team's two colours). Never show a broken image.
+- Team logo chips: `VideoAdsTeams.findTeam()` + `logoFor()` → `.va-team` with `.va-logo` (shared class: `.es-team-logo` / `.es-team-logo--dot` in es-ui.css) (logo on a fixed white circle, 1px line); no logo or a failed load falls back to `.va-logo--dot` (the team's two colours). Never show a broken image.
 - Newsletter brand chips: `.va-seg--brand` buttons with a `.va-dot` in the wordmark colour plus the short name.
 - ES marks: `brand-logo-blue.svg` on light, `brand-logo-white.svg` on dark and on Blue 600, `assets/brand-logos/*`. Never recolour or stretch.
 

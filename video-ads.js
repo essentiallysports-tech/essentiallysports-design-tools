@@ -63,6 +63,8 @@
     align: 'auto', // 'auto' follows the style (see layoutFor); 'left' / 'center' force it
     anchor: 'center',
     scrim: 0.45, blur: 0, zoom: 1, panX: 0, panY: 0, fade: null, vignette: 0,
+    // Frame + Tint rail: how the clip sits in the ad (FRAME_DEFAULTS below).
+    fit: 'fill', tintId: 'black', tintAmount: 0.45, tintCustom: '#0B2265',
     trimIn: 0, trimOut: 0,
     clip: null, // { name, source: 'upload'|'x', url }
     // Clip step
@@ -92,6 +94,7 @@
     exportIds: ['9x16'], exported: false,
     version: 0,
   };
+  let railReady = false; // the Frame + Tint rail is wired up (near the end)
   let previewCopy = null; // a draft shown on hover / focus; never exported
 
   // ─── Small helpers ───────────────────────────────────────────────────────
@@ -281,7 +284,8 @@
     anchor: state.anchor,
   }, brand(), B.SIZES[sizeId], logo.img ? logo : null);
   let current = null;
-  const bg = () => ({ scrim: state.scrim, blur: state.blur, zoom: state.zoom, panX: state.panX, panY: state.panY, fade: state.fade, vignette: state.vignette });
+  // Everything the renderer needs to draw the clip; the preview and the MP4 export both use it.
+  const bg = () => ({ scrim: state.scrim, blur: state.blur, zoom: state.zoom, panX: state.panX, panY: state.panY, fit: state.fit, tint: { color: tintColor(), amount: state.tintAmount }, fade: state.fade, vignette: state.vignette });
 
   // Shows the canvas as large as the stage allows, keeping its shape.
   let metaPreview = false;
@@ -467,7 +471,7 @@
     handle.addEventListener('pointerdown', event => {
       if (handle.disabled) return;
       event.preventDefault();
-      handle.setPointerCapture(event.pointerId);
+      try { handle.setPointerCapture(event.pointerId); } catch {}
       handle.classList.add('is-drag');
       setPlaying(false);
       const move = e => {
@@ -721,6 +725,7 @@
     return '';
   }
   function renderSteps() {
+    renderTint();
     stepButtons.forEach(button => {
       const id = button.dataset.step;
       if (id === state.step) button.setAttribute('aria-current', 'step'); else button.removeAttribute('aria-current');
@@ -809,7 +814,7 @@
     state.clipTab = tab.dataset.tab;
     if (focus) tab.focus();
     if (state.clipTab === 'team') renderTeamPicker();
-    if (state.clipTab === 'moment' && state.trendsStatus === 'idle') loadTrends();
+    if (state.clipTab === 'moment') loadFreshMoments();
     renderFound();
     renderSteps();
   }
@@ -950,7 +955,8 @@
   }
   function renderFound() {
     const kind = state.clipTab;
-    if (kind === 'link') { els.found.hidden = true; return; }
+    // By moment with the list open: no moment chosen, so no clips under it.
+    if (kind === 'link' || (kind === 'moment' && state.momentOpen)) { els.found.hidden = true; return; }
     els.found.hidden = false;
     const f = finds[kind];
     if (!f) { els.found.innerHTML = ''; return; }
@@ -1001,7 +1007,7 @@
     if (act === 'to-link') { selectClipTab(clipTab('link')); els.xurl.focus(); }
     if (act === 'other-team') { els.teamQ.focus(); }
     if (act === 'other-color') els.swatches.querySelector('[aria-checked="true"]')?.focus();
-    if (act === 'other-moment') { state.momentOpen = true; renderTrends(); els.trends.querySelector('.va-trend')?.focus(); }
+    if (act === 'other-moment') { state.momentOpen = true; renderTrends(); renderFound(); els.trends.querySelector('.va-trend')?.focus(); }
   });
 
   // By team: every team for the sport, type to filter, then Find clips.
@@ -1059,27 +1065,101 @@
     if (event.key === 'ArrowDown') { event.preventDefault(); els.teamList.querySelector('[tabindex="0"]')?.focus(); }
   });
 
-  // By moment: the free trends board. Picking one searches X for it.
+  // By moment: trending moments that already have fresh clips
+  // (POST { mode: 'moments-with-clips', sport }). Picking one shows its clips
+  // straight from that response. If the check fails (AI off, server error),
+  // the full trends board comes back with a note, and picking a moment
+  // searches X for it as before.
   let trendItems = [];
   let trendsError = '';
   state.trendsStatus = 'idle';
+  // moments-with-clips, one entry per sport filter: { status, items, error }
+  const fresh = {};
+  let freshToken = 0;
+  let freshFallback = false; // the check failed: show the old board
+  const usableClips = list => (Array.isArray(list) ? list : []).filter(c => c && Array.isArray(c.variants) && c.variants.some(v => v && v.url));
+  async function loadFreshMoments({ force = false } = {}) {
+    const sport = state.sport;
+    if (!force && fresh[sport] && fresh[sport].status !== 'error') { renderTrends(); return; }
+    const token = ++freshToken;
+    fresh[sport] = { status: 'loading', items: [] };
+    freshFallback = false;
+    els.refresh.classList.add('is-spinning');
+    renderTrends();
+    try {
+      const data = await callApi({ mode: 'moments-with-clips', sport });
+      if (token !== freshToken) return;
+      const items = (Array.isArray(data.moments) ? data.moments : [])
+        .map(m => ({ ...m, id: String(m.id || m.title || ''), clips: usableClips(m.clips) }))
+        .filter(m => m.id && m.title && m.clips.length && (sport === 'all' || !m.sport || m.sport === sport));
+      fresh[sport] = { status: items.length ? 'done' : 'empty', items };
+    } catch (error) {
+      if (token !== freshToken) return;
+      fresh[sport] = { status: 'error', items: [], error: error.message || '' };
+      freshFallback = true;
+      if (state.trendsStatus !== 'done') { els.refresh.classList.remove('is-spinning'); loadTrends(); return; }
+    }
+    els.refresh.classList.remove('is-spinning');
+    renderTrends();
+  }
+  const skeletonRows = () => Array.from({ length: 5 }, (_, i) => `<li class="va-trend-item" aria-hidden="true" style="--i:${i}"><div class="va-trend va-trend--skeleton"><span class="va-trend__img va-shimmer"></span><span class="va-trend__body"><span class="va-line va-shimmer" style="width:42%"></span><span class="va-line va-shimmer"></span><span class="va-line va-shimmer" style="width:72%"></span></span></div></li>`).join('');
+  function trendRow(item, index, count = 0) {
+    const firstThumb = count ? safeUrl(item.clips[0]?.thumb || item.clips[0]?.thumbnail) : '';
+    const img = safeUrl(item.image) || firstThumb;
+    const on = state.trend?.id === item.id;
+    const meta = [ago(item.publishedAt), item.source].filter(Boolean).map(esc).join('<i aria-hidden="true">·</i>');
+    const countHtml = count ? `<span class="va-trend__count">${count} clip${count === 1 ? '' : 's'}</span>` : '';
+    return `<li class="va-trend-item" style="--i:${index}">
+        <button class="va-trend${on ? ' is-on' : ''}" type="button" data-id="${esc(item.id)}" aria-pressed="${on}">
+          ${img ? `<span class="va-trend__img" style="background-image:url('${esc(img)}')"></span>` : leagueTile(item.sport, 'va-trend__img is-league')}
+          <span class="va-trend__body">
+            <span class="va-trend__meta">${leagueTile(item.sport)}<span>${esc(SPORT_LABEL[item.sport] || '')}</span>${meta ? `<i aria-hidden="true">·</i>${meta}` : ''}${countHtml}</span>
+            <span class="va-trend__title">${esc(item.title)}</span>
+          </span>
+          <span class="va-trend__go" aria-hidden="true">${on ? ICON.check : ICON.chevron}</span>
+        </button>
+      </li>`;
+  }
   function renderTrends() {
     els.boardBar.hidden = !state.momentOpen;
-    if (state.trendsStatus === 'loading') {
-      els.trends.innerHTML = Array.from({ length: 5 }, (_, i) => `<li class="va-trend-item" aria-hidden="true" style="--i:${i}"><div class="va-trend va-trend--skeleton"><span class="va-trend__img va-shimmer"></span><span class="va-trend__body"><span class="va-line va-shimmer" style="width:42%"></span><span class="va-line va-shimmer"></span><span class="va-line va-shimmer" style="width:72%"></span></span></div></li>`).join('');
+    els.trendsStatus.classList.remove('is-error');
+    // A picked moment: just that one, with Change.
+    if (!state.momentOpen && state.trend) {
+      const t = state.trend;
+      els.trends.removeAttribute('aria-busy');
+      els.trendsStatus.textContent = '';
+      els.trends.innerHTML = `<li class="va-picked">${leagueTile(t.sport)}<p>${esc(t.title)}</p><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="change-moment">Change</button></li>`;
+      return;
+    }
+    const f = fresh[state.sport];
+    if (f && !freshFallback) {
+      if (f.status === 'loading') {
+        els.trendsStatus.textContent = 'Finding moments with fresh clips…';
+        els.trends.innerHTML = skeletonRows();
+        els.trends.setAttribute('aria-busy', 'true');
+        return;
+      }
+      els.trends.removeAttribute('aria-busy');
+      if (f.status === 'empty' || !f.items.length) {
+        els.trendsStatus.textContent = '';
+        els.trends.innerHTML = `<li class="va-empty-state">${ICON.film}<strong>No fresh clips</strong><span>No trending moments have fresh clips right now. Try By team or paste an X link.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="to-team">By team</button><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-link">Paste an X link</button></div></li>`;
+        return;
+      }
+      els.trends.innerHTML = f.items.map((item, i) => trendRow(item, i, item.clips.length)).join('');
+      els.trendsStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b data-es-tick="va-moments">${f.items.length}</b> moment${f.items.length === 1 ? '' : 's'} with clips from the last 72 hours</span>`;
+      return;
+    }
+    // The old board: every trend (Copy step, or the clip check failed).
+    if (state.trendsStatus === 'loading' || state.trendsStatus === 'idle') {
+      els.trendsStatus.textContent = 'Loading the last 48 hours…';
+      els.trends.innerHTML = skeletonRows();
       els.trends.setAttribute('aria-busy', 'true');
       return;
     }
     els.trends.removeAttribute('aria-busy');
     if (state.trendsStatus === 'error') {
-      els.trends.innerHTML = `<li class="va-empty-state va-empty-state--bad">${ICON.alert}<strong>Trends didn’t load</strong><span>${esc(trendsError)}</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="retry-trends">${ICON.retry}Try again</button><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-color">Search by colour</button></div></li>`;
-      return;
-    }
-    // A picked moment: just that one, with Change.
-    if (!state.momentOpen && state.trend) {
-      const t = state.trend;
       els.trendsStatus.textContent = '';
-      els.trends.innerHTML = `<li class="va-picked">${leagueTile(t.sport)}<p>${esc(t.title)}</p><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="change-moment">Change</button></li>`;
+      els.trends.innerHTML = `<li class="va-empty-state va-empty-state--bad">${ICON.alert}<strong>Trends didn’t load</strong><span>${esc(trendsError)}</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="retry-trends">${ICON.retry}Try again</button><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-color">Search by colour</button></div></li>`;
       return;
     }
     const list = trendItems.filter(item => state.sport === 'all' || item.sport === state.sport);
@@ -1088,27 +1168,13 @@
       els.trendsStatus.textContent = '';
       return;
     }
-    els.trends.innerHTML = list.map((item, index) => {
-      const img = safeUrl(item.image);
-      const on = state.trend?.id === item.id;
-      const meta = [ago(item.publishedAt), item.source].filter(Boolean).map(esc).join('<i aria-hidden="true">·</i>');
-      return `<li class="va-trend-item" style="--i:${index}">
-        <button class="va-trend${on ? ' is-on' : ''}" type="button" data-id="${esc(item.id)}" aria-pressed="${on}">
-          ${img ? `<span class="va-trend__img" style="background-image:url('${esc(img)}')"></span>` : leagueTile(item.sport, 'va-trend__img is-league')}
-          <span class="va-trend__body">
-            <span class="va-trend__meta">${leagueTile(item.sport)}<span>${esc(SPORT_LABEL[item.sport] || '')}</span><i aria-hidden="true">·</i>${meta}</span>
-            <span class="va-trend__title">${esc(item.title)}</span>
-          </span>
-          <span class="va-trend__go" aria-hidden="true">${on ? ICON.check : ICON.chevron}</span>
-        </button>
-      </li>`;
-    }).join('');
-    els.trendsStatus.classList.remove('is-error');
-    els.trendsStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b data-es-tick="va-moments">${list.length}</b> trending in the last 48 hours</span>`;
+    els.trends.innerHTML = list.map((item, i) => trendRow(item, i)).join('');
+    els.trendsStatus.innerHTML = freshFallback
+      ? `<span>Clips not checked; some moments may have no video</span>`
+      : `<span class="es-live-dot" aria-hidden="true"></span><span><b data-es-tick="va-moments">${list.length}</b> trending in the last 48 hours</span>`;
   }
   async function loadTrends() {
     state.trendsStatus = 'loading';
-    els.trendsStatus.textContent = 'Loading the last 48 hours…';
     els.refresh.classList.add('is-spinning');
     renderTrends();
     try {
@@ -1129,24 +1195,39 @@
     if (!chip) return;
     state.sport = chip.dataset.sport;
     [...els.sports.children].forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
-    renderTrends();
+    if (freshFallback) renderTrends();
+    else loadFreshMoments();
   });
   els.trends.addEventListener('click', event => {
     const act = event.target.closest('[data-act]')?.dataset.act;
     if (act === 'retry-trends') { loadTrends(); return; }
     if (act === 'to-color') { selectClipTab(clipTab('color')); return; }
-    if (act === 'change-moment') { state.momentOpen = true; renderTrends(); els.trends.querySelector('.va-trend.is-on, .va-trend')?.focus(); return; }
+    if (act === 'to-team') { selectClipTab(clipTab('team')); return; }
+    if (act === 'to-link') { selectClipTab(clipTab('link')); els.xurl.focus(); return; }
+    if (act === 'change-moment') { state.momentOpen = true; renderTrends(); renderFound(); els.trends.querySelector('.va-trend.is-on, .va-trend')?.focus(); return; }
     const button = event.target.closest('.va-trend[data-id]');
     if (!button) return;
+    const f = fresh[state.sport];
+    const withClips = !freshFallback && f?.items?.find(t => t.id === button.dataset.id);
+    if (withClips) { selectMoment(withClips, { clips: withClips.clips }); return; }
     const item = trendItems.find(t => t.id === button.dataset.id);
     if (item) selectMoment(item);
   });
-  els.refresh.addEventListener('click', loadTrends);
-  function selectMoment(item) {
+  els.refresh.addEventListener('click', () => loadFreshMoments({ force: true }));
+  // clips: the moment's clips from moments-with-clips (no extra search).
+  function selectMoment(item, { clips = null } = {}) {
     state.trend = item;
     state.momentOpen = false;
     renderTrends();
-    findClips('moment', { sport: item.sport, query: item.title }, { label: item.title });
+    if (!clips) { findClips('moment', { sport: item.sport, query: item.title }, { label: item.title }); return; }
+    const params = { sport: item.sport, query: item.title };
+    ++findTokens.moment;
+    const teams = item.team ? [typeof item.team === 'string' ? { name: item.team, short: item.team } : item.team] : [];
+    finds.moment = { key: JSON.stringify(params), status: 'done', teams, clips, error: '', label: item.title, params, cached: true, note: '' };
+    state.context = { kind: 'moment', sport: item.sport || '', color: '', colorLabel: '', teams: teams.map(t => t.name).filter(Boolean), trend: item };
+    renderFound();
+    renderSteps();
+    if (state.clipTab === 'moment') reveal(els.found);
   }
 
   // ─── 2 Copy ──────────────────────────────────────────────────────────────
@@ -2028,6 +2109,7 @@
     paintPlaceholder();
     refreshLogo();
     changed();
+    if (railReady) syncRail();
   }
   // Radiogroups share one pattern (click + arrow keys).
   function radioGroup(group, attr, onPick) {
@@ -2126,11 +2208,222 @@
     if (key === 'o') { event.preventDefault(); setTrim(state.trimIn, els.video.currentTime); toast(`Trim ends at ${fmtFine(state.trimOut)}`, { timeout: 1600 }); }
   });
 
+
+  // ─── Frame + Tint rail ───────────────────────────────────────────────────
+  // Zoom / pan / Fill-Fit move the clip only; the copy and logo keep their
+  // safe-zone layout. Tint washes the clip under the copy (see tintLayers in
+  // video-ads-render.js). The export reads the same bg(), so it matches.
+  railReady = true;
+  const FRAME_DEFAULTS = { fit: 'fill', zoom: 1, panX: 0, panY: 0, tintId: 'black', tintAmount: 0.45 };
+  const rail = {
+    root: $('va-rail'), fit: $('va-fitmode'), zoom: $('va-zoom'), zoomVal: $('va-zoom-val'), zoomIn: $('va-zoom-in'), zoomOut: $('va-zoom-out'), center: $('va-center'),
+    hint: $('va-pan-hint'), tint: $('va-tint'), tintVal: $('va-tint-val'), colors: $('va-tint-colors'), custom: $('va-tint-custom'), chip: $('va-tint-chip'), reset: $('va-look-reset'),
+  };
+  const hex6 = c => {
+    const m = String(c || '').trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (!m) return '';
+    const h = m[1].length === 3 ? m[1].split('').map(x => x + x).join('') : m[1];
+    return `#${h.toUpperCase()}`;
+  };
+  // The team behind the ad: the team picked in By team, else the first team of the last search.
+  function tintTeam() {
+    let t = state.team ? (Array.isArray(T.TEAMS) ? T.TEAMS : []).find(x => x.name === state.team && x.sport === state.teamSport) : null;
+    if (!t && state.context?.teams?.length) {
+      const name = state.context.teams[0];
+      t = finds[state.context.kind]?.teams?.find(x => x.name === name) || (Array.isArray(T.TEAMS) ? T.TEAMS : []).find(x => x.name === name) || null;
+    }
+    if (!t) return null;
+    const c = (Array.isArray(t.colors) ? t.colors : []).map(hex6).find(Boolean);
+    return c ? { hex: c, label: t.short || t.name } : null;
+  }
+  function tintOptions() {
+    const b = brand();
+    const team = tintTeam();
+    return [
+      { id: 'black', label: 'Black', hex: '#000000' },
+      { id: 'navy', label: 'Navy', hex: '#0B2265' },
+      { id: 'brand', label: `${b.short || b.label} brand colour`, hex: hex6(b.wordmark?.bg || b.accent) || '#000000' },
+      team ? { id: 'team', label: `${team.label} team colour`, hex: team.hex } : null,
+      { id: 'es', label: 'ES Blue', hex: '#0A6FDE' },
+      { id: 'custom', label: 'Custom colour', hex: hex6(state.tintCustom) || '#0B2265' },
+    ].filter(Boolean);
+  }
+  function tintColor() {
+    const o = tintOptions().find(x => x.id === state.tintId);
+    return o ? o.hex : '#000000';
+  }
+  let tintSig = '';
+  function renderTint() {
+    if (!railReady) return;
+    const options = tintOptions();
+    if (!options.some(o => o.id === state.tintId)) state.tintId = 'black';
+    const sig = JSON.stringify([options, state.tintId]);
+    rail.chip.style.setProperty('--sw', tintColor());
+    if (sig === tintSig) return;
+    tintSig = sig;
+    const hadFocus = rail.colors.contains(document.activeElement);
+    rail.colors.innerHTML = options.map(o => {
+      const on = o.id === state.tintId;
+      const custom = o.id === 'custom';
+      return `<button class="va-rail__sw${custom ? ' va-rail__sw--custom' : ''}" type="button" role="radio" data-tint="${o.id}" aria-checked="${on}" tabindex="${on ? 0 : -1}" aria-label="${esc(o.label)}${custom ? `, ${o.hex}` : ''}" title="${esc(o.label)}" style="--sw:${esc(o.hex)}">${custom ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>' : ''}</button>`;
+    }).join('');
+    if (hadFocus) rail.colors.querySelector('[aria-checked="true"]')?.focus();
+  }
+  // Pan room on the 1080-wide canvas for the current framing (0 = nothing to move).
+  function panRoom() {
+    const s = size();
+    const src = hasClip() ? els.video : placeholder;
+    return R.videoRect(src.videoWidth || src.width, src.videoHeight || src.height, s.width, s.height, { zoom: state.zoom, fit: state.fit }) || { roomX: 0, roomY: 0 };
+  }
+  let lookTimer = 0;
+  function lookChanged({ commit = true } = {}) {
+    syncRail();
+    draw();
+    clearTimeout(lookTimer);
+    if (commit) lookTimer = setTimeout(changed, 250);
+  }
+  function syncRail() {
+    const z = Math.round(state.zoom * 100);
+    rail.zoom.value = String(z);
+    rail.zoom.setAttribute('aria-valuetext', `${z}%`);
+    rail.zoomVal.textContent = `${z}%`;
+    rail.zoomOut.disabled = z <= 100;
+    rail.zoomIn.disabled = z >= R.ZOOM_MAX * 100;
+    const t = Math.round(state.tintAmount * 100);
+    rail.tint.value = String(t);
+    const name = tintOptions().find(o => o.id === state.tintId)?.label || 'Black';
+    rail.tint.setAttribute('aria-valuetext', `${t}%, ${name}`);
+    rail.tintVal.textContent = `${t}%`;
+    markRadios(rail.fit, 'fit', state.fit);
+    const room = panRoom();
+    const movable = room.roomX > 0.5 || room.roomY > 0.5;
+    els.canvas.classList.toggle('is-pannable', movable);
+    rail.center.disabled = !state.panX && !state.panY;
+    rail.hint.textContent = movable ? 'Drag the ad or use arrow keys to move the clip' : 'Zoom in to move the clip';
+    els.canvas.setAttribute('aria-label', `Ad preview. Clip ${state.fit === 'fit' ? 'fitted' : 'fills the frame'}, zoom ${z}%, tint ${t}% ${name}.`);
+    renderTint();
+  }
+  const setZoom = z => {
+    state.zoom = Math.max(1, Math.min(R.ZOOM_MAX, Math.round(z * 100) / 100));
+    // Keep pan inside the new room.
+    const room = panRoom();
+    if (room.roomX < 0.5) state.panX = 0;
+    if (room.roomY < 0.5) state.panY = 0;
+  };
+  rail.zoom.addEventListener('input', () => { setZoom(Number(rail.zoom.value) / 100); lookChanged(); });
+  rail.zoomIn.addEventListener('click', () => { setZoom(state.zoom + 0.1); lookChanged(); });
+  rail.zoomOut.addEventListener('click', () => { setZoom(state.zoom - 0.1); lookChanged(); });
+  rail.center.addEventListener('click', () => { state.panX = 0; state.panY = 0; lookChanged(); });
+  rail.tint.addEventListener('input', () => { state.tintAmount = Number(rail.tint.value) / 100; lookChanged(); });
+  radioGroup(rail.fit, 'fit', fit => { state.fit = fit === 'fit' ? 'fit' : 'fill'; setZoom(state.zoom); lookChanged(); });
+  rail.colors.addEventListener('click', event => {
+    const b = event.target.closest('[data-tint]');
+    if (!b) return;
+    if (b.dataset.tint === 'custom') {
+      // Opens the picker; the swatch is selected once a colour is chosen.
+      if (state.tintId === 'custom' || !hex6(state.tintCustom)) rail.custom.click();
+      else { state.tintId = 'custom'; lookChanged(); rail.custom.click(); }
+      return;
+    }
+    state.tintId = b.dataset.tint;
+    lookChanged();
+  });
+  rail.colors.addEventListener('keydown', event => {
+    const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+    const list = [...rail.colors.querySelectorAll('[role="radio"]')];
+    const i = list.indexOf(document.activeElement);
+    if (i < 0) return;
+    if (event.key === 'Enter' && list[i].dataset.tint === 'custom') { event.preventDefault(); rail.custom.click(); return; }
+    if (!(event.key in keys)) return;
+    event.preventDefault();
+    const next = list[(i + keys[event.key] + list.length) % list.length];
+    if (next.dataset.tint !== 'custom') { state.tintId = next.dataset.tint; lookChanged(); }
+    else { state.tintId = 'custom'; lookChanged(); }
+    rail.colors.querySelector(`[data-tint="${next.dataset.tint}"]`)?.focus();
+  });
+  rail.custom.addEventListener('input', () => { state.tintCustom = hex6(rail.custom.value) || state.tintCustom; state.tintId = 'custom'; lookChanged(); });
+  rail.reset.addEventListener('click', () => { Object.assign(state, FRAME_DEFAULTS); lookChanged(); toast('Frame and tint reset', { timeout: 1600 }); });
+
+  // Phones: Frame / Tint open as a sheet over the bottom of the preview.
+  rail.root.querySelector('.va-rail__tabs').addEventListener('click', event => {
+    const tab = event.target.closest('[data-rail]');
+    if (!tab) return;
+    const open = rail.root.dataset.open === tab.dataset.rail ? '' : tab.dataset.rail;
+    rail.root.dataset.open = open;
+    rail.root.querySelectorAll('[data-rail]').forEach(b => b.setAttribute('aria-expanded', String(b.dataset.rail === open)));
+    // The sticky preview grows by the sheet's height, so the ad keeps its size.
+    const body = rail.root.querySelector('.va-rail__body');
+    els.stage.classList.toggle('has-sheet', Boolean(open));
+    if (open) els.stage.style.setProperty('--va-sheet', `${body.offsetHeight + 8}px`);
+  });
+  rail.root.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !rail.root.dataset.open) return;
+    const tab = rail.root.querySelector(`[data-rail="${rail.root.dataset.open}"]`);
+    tab?.click();
+    tab?.focus();
+  });
+
+  // Pan: drag the preview, or arrow keys while it has focus.
+  const panBy = (dx, dy) => {
+    const room = panRoom();
+    if (room.roomX > 0.5) state.panX = Math.max(-1, Math.min(1, state.panX + dx / room.roomX));
+    if (room.roomY > 0.5) state.panY = Math.max(-1, Math.min(1, state.panY + dy / room.roomY));
+  };
+  let drag = null;
+  els.canvas.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || !els.canvas.classList.contains('is-pannable')) return;
+    drag = { id: event.pointerId, x: event.clientX, y: event.clientY, k: els.canvas.width / Math.max(1, els.canvas.clientWidth) };
+    try { els.canvas.setPointerCapture(event.pointerId); } catch {}
+    els.canvas.classList.add('is-panning');
+    event.preventDefault();
+  });
+  els.canvas.addEventListener('pointermove', event => {
+    if (!drag || event.pointerId !== drag.id) return;
+    panBy((event.clientX - drag.x) * drag.k, (event.clientY - drag.y) * drag.k);
+    drag.x = event.clientX;
+    drag.y = event.clientY;
+    lookChanged({ commit: false });
+  });
+  const endDrag = event => {
+    if (!drag || event.pointerId !== drag.id) return;
+    drag = null;
+    els.canvas.classList.remove('is-panning');
+    lookChanged();
+  };
+  els.canvas.addEventListener('pointerup', endDrag);
+  els.canvas.addEventListener('pointercancel', endDrag);
+  els.canvas.addEventListener('keydown', event => {
+    const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
+    if (!dir || event.metaKey || event.ctrlKey || event.altKey) return;
+    event.preventDefault();
+    const step = event.shiftKey ? 120 : 30; // canvas px
+    panBy(dir[0] * step, dir[1] * step);
+    lookChanged();
+  });
+  els.video.addEventListener('loadedmetadata', () => syncRail());
+  syncRail();
+
   // ─── Start ───────────────────────────────────────────────────────────────
   setBrand(state.brandId);
   syncFields();
   renderSwatches();
   goStep('copy', { focus: false });
+  // Hand-off from Trends ("Video ad" on a trend card): preselect the moment.
+  try {
+    const q = new URLSearchParams(location.search);
+    const h = JSON.parse(sessionStorage.getItem('frameup.videoAdMoment.v1') || 'null');
+    const m = h && (!q.get('trend') || h.id === q.get('trend')) ? h
+      : q.get('moment') ? { id: q.get('trend') || 'trend-link', title: q.get('moment'), sport: q.get('sport'), team: q.get('team') || '', related: [] } : null;
+    if (m && ['nfl', 'cfb', 'mlb'].includes(m.sport)) {
+      setBrand(B.forSport(m.sport).id);
+      state.copyTrend = { id: m.id, sport: m.sport, title: String(m.title || '').slice(0, 200), url: m.url || '', image: m.image || '', related: Array.isArray(m.related) ? m.related : [] };
+      if (m.team) { state.team = String(m.team).slice(0, 80); state.teamSport = m.sport; }
+      els.momentFold.open = true;
+      renderMoments();
+      sessionStorage.removeItem('frameup.videoAdMoment.v1');
+      history.replaceState(null, '', location.pathname);
+    }
+  } catch {}
   Promise.all([
     document.fonts.load(`700 80px ${R.CONDENSED}`),
     document.fonts.load('400 40px Roboto'),
@@ -2138,5 +2431,5 @@
     document.fonts.load('700 40px Roboto'),
   ]).catch(() => {}).finally(() => refreshLogo());
   relayout();
-  window.VideoAdsPage = { state, finds, relayout, layoutFor, exportSizes, startExport, useClip, goStep, findClips, findByColor, selectMoment, sendChat, generateDrafts, checkGrammar, lintText, openAi, closeAi, applyCopy, undo, setTrim, logEvent };
+  window.VideoAdsPage = { state, syncRail, bg, finds, relayout, layoutFor, exportSizes, startExport, useClip, goStep, findClips, findByColor, selectMoment, sendChat, generateDrafts, checkGrammar, lintText, openAi, closeAi, applyCopy, undo, setTrim, logEvent };
 })();

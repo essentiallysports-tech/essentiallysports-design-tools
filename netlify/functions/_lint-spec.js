@@ -192,6 +192,20 @@ function lintSpec(spec, ctx = {}) {
     if (words > 10) warnings.push({ field: 'pills', code: 'long-hook', msg: `the Cover runs ${words} words; ES hooks are 2-8`, fix: 'tighten to one punchy claim or question' });
   }
 
+  // 6b. Stats templates show only real game or season stat labels (PTS, YDS,
+  //     HR...), never ages, money or years. A plural form ("BLKS") counts.
+  if (spec.postType === 'stats-single-ent' || spec.postType === 'stats-double-ent') {
+    const f = spec.fields || {};
+    const stats = spec.postType === 'stats-single-ent'
+      ? (f.stats || []).map((stat, i) => ({ field: `stat ${i + 1} label`, label: stat?.label }))
+      : ['a', 'b'].flatMap(side => (f[side]?.stats || []).map((stat, i) => ({ field: `${side} stat ${i + 1} label`, label: stat?.label })));
+    stats.forEach(({ field, label }) => {
+      const text = String(label || '').trim();
+      if (RULES.STAT_LABELS.test(text) || RULES.STAT_LABELS.test(text.replace(/s$/i, ''))) return;
+      errors.push({ field, code: 'bad-stat-label', msg: `"${text}" is not a game or season stat label`, fix: 'use real stat labels (PTS, YDS, HR…) or another template' });
+    });
+  }
+
   // 7. Team and sport are real brand-kit entries (they set the colours).
   const sport = findSport(spec.sport);
   if (spec.sport && !sport) {

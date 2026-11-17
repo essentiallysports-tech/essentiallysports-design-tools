@@ -501,7 +501,7 @@ html::-webkit-scrollbar {
   box-sizing: border-box !important;
   border: 0 !important;
   border-radius: 999px !important;
-  background-color: var(--profile-avatar-bg, #0A6BD8) !important;
+  background-color: var(--profile-avatar-bg, #0A6FDE) !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
   color: #ffffff !important;
@@ -514,7 +514,7 @@ html::-webkit-scrollbar {
 .profile-menu[data-profile-popover-version="2"] .profile-avatar:not(.has-image),
 .profile-menu[data-profile-popover-version="2"] .profile-identity-avatar:not(.has-image) {
   border: 0 !important;
-  background-color: var(--profile-avatar-bg, #0A6BD8) !important;
+  background-color: var(--profile-avatar-bg, #0A6FDE) !important;
   background-image: none !important;
   font-size: 0 !important; /* hides any stray text; the letter is ::before */
 }

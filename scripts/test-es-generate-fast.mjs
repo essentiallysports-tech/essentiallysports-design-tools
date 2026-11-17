@@ -121,11 +121,15 @@ assert.equal(stats.photos.length, 3);
 assert.equal(stats.scene, 'empty basketball arena under bright lights, logo at center court');
 assert.equal(res.body.photo.picked, true);
 assert.equal(res.body.ai.fallback, '');
-assert.ok(res.body.meta.costUsd > 0 && res.body.meta.costUsd < 0.01, 'a run costs well under a cent');
+// The creative director (Sonnet) runs first on a 4-design run; here its reply
+// has no concepts, so the writer runs as before. Still a few cents at most.
+assert.ok(res.body.meta.costUsd > 0 && res.body.meta.costUsd < 0.03, 'a run with the director stays under 3 cents');
+assert.equal(res.body.direction.source, 'none', 'no usable concepts: the old single-call path');
 assert.ok(res.body.meta.ms.total >= 0);
 // Writer, photo pick and the art-director review are each tracked (the review
 // is a separate, cheaper model from a different family).
-assert.deepEqual(usageRows.map(row => row.feature).filter(f => f !== 'generate-escalate').sort(), ['generate', 'generate-photo-pick', 'generate-review'], 'every AI call is tracked');
+assert.deepEqual(usageRows.map(row => row.feature).filter(f => f !== 'generate-escalate' && f !== 'generate-director').sort(), ['generate', 'generate-photo-pick', 'generate-review'], 'every AI call is tracked');
+assert.ok(usageRows.some(row => row.feature === 'generate-director'), 'the director call is tracked under its own feature');
 
 // 5. Retry asks for a fresh take.
 let prompt = '';
@@ -147,7 +151,7 @@ assert.match(res.body.brain, /^groq:/);
 assert.equal(res.body.ai.fallback, 'budget');
 assert.equal(res.body.designs.length, 2);
 assert.equal(res.body.designs[0].photo.sourceUrl, IMG(1), 'without the pick, the newest ES photo is used');
-assert.equal(calls.filter(url => url.endsWith('/v1/messages')).length, 2, 'one design call + one photo pick, no retries');
+assert.equal(calls.filter(url => url.endsWith('/v1/messages')).length, 2, 'the director (402, hands the writer to Groq) + one photo pick, no retries');
 
 // 7. Scene image: one click, one image, tracked with images: 1.
 gatewayMode = 'ok';

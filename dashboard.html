@@ -9,7 +9,7 @@
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261115-auth2"></script>
-  <script src="dashboard-data.js?v=20261112-aispend1"></script>
+  <script src="dashboard-data.js?v=20261117-ready1"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -425,18 +425,18 @@
     }
   </style>
   <link rel="stylesheet" href="dashboard-v2.css?v=20261117-focus1">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-focus1">
-  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261117-focus1">
-<link rel="stylesheet" href="theme.css?v=20261116-sp1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261117-usage1">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
+  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261117-ready1">
+<link rel="stylesheet" href="theme.css?v=20261117-ready1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261117-ready1">
 <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261117-focus1">
-<link rel="stylesheet" href="es-ui.css?v=20261117-adm1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261117-ready1">
+<link rel="stylesheet" href="es-ui.css?v=20261117-ready1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
-<script src="app-shell.js?v=20261117-usage1"></script>
+<script src="app-shell.js?v=20261117-ready1"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
 </head>
 <body class="dashboard-page" data-dashboard-view="overview">
@@ -2089,7 +2089,7 @@
 
     // AI spend: rolling 7 days vs the key's $20 weekly limit (set by the dev team in Vercel).
     const AI_WEEKLY_BUDGET = 20;
-    const AI_FEATURE_LABELS = { 'trend-headlines': 'Trend Design headlines', generate: 'Generate', 'generate-backup': 'Generate (backup AI)', 'trend-headlines-backup': 'Trend Design headlines (backup AI)', 'generate-photo-pick': 'Photo picking', 'photo-pick': 'Photo picking', 'generate-scene-image': 'Image generation', 'image-gen': 'Image generation' };
+    const AI_FEATURE_LABELS = { 'trend-headlines': 'Trend Design headlines', generate: 'Generate', 'generate-backup': 'Generate (backup AI)', 'trend-headlines-backup': 'Trend Design headlines (backup AI)', 'generate-photo-pick': 'Photo picking', 'generate-director': 'Generate creative director', 'trend-enrich': 'Trends AI angles', 'trend-enrich-backup': 'Trends AI angles (backup AI)', 'video-ads-find-clips': 'Video Ads clip search', 'photo-pick': 'Photo picking', 'generate-scene-image': 'Image generation', 'image-gen': 'Image generation' };
     const money = value => '$' + (value >= 1 ? value.toFixed(2) : value.toFixed(value >= 0.01 ? 3 : value > 0 ? 4 : 2));
     const AI_REFRESH_MS = 60000;
     let aiSpendLoading = false;

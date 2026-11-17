@@ -160,8 +160,13 @@ function inferVisitorProfile() {
   const metadata = identityUser?.user_metadata || identityUser?.app_metadata || {};
   const identityName = cleanVisitorName(metadata.full_name || metadata.fullName || metadata.name || identityUser?.user_metadata?.name);
   const identityEmail = cleanVisitorName(identityUser?.email);
-  const storedName = cleanVisitorName(stored.name);
   const storedEmail = cleanVisitorName(stored.email);
+  let storedName = cleanVisitorName(stored.name);
+  // A name that is just the email handle ("first.last") reads as "First Last",
+  // matching the sidebar. Only that exact case: a typed name is left alone.
+  if (storedName && storedEmail && storedName.toLowerCase() === storedEmail.split('@')[0].toLowerCase()) {
+    storedName = nameFromEmail(storedEmail);
+  }
   const name = queryName ||
     identityName ||
     (storedName && !isDemoProfileName(storedName) ? storedName : '') ||

@@ -164,4 +164,87 @@ const longSize = sizeOf(longOps[0].font);
 assert.ok(lineCount <= 3 || longSize <= 97.04 * R.BASE.headlineMin + 0.1, `long headline stays within 3 lines (${lineCount} at ${longSize}px)`);
 assert.ok(longSize < 97 && longSize >= 97.04 * R.BASE.headlineMin - 0.1);
 
+// ─── Framing: cover / fit, zoom and pan (videoRect) ─────────────────────────
+const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 0.01, `${msg} (${a} vs ${b})`);
+// A 16:9 clip on the 9:16 canvas: Fill covers the height, the spare is sideways.
+let r = R.videoRect(1920, 1080, 1080, 1920);
+near(r.h, 1920, 'fill covers the height');
+near(r.w, 1920 * 1920 / 1080, 'fill keeps the aspect');
+near(r.x, (1080 - r.w) / 2, 'centred by default');
+near(r.y, 0, 'no vertical room');
+near(r.roomY, 0, 'roomY 0');
+// Pan +1 slides the clip fully right (its left edge at 0), −1 fully left.
+near(R.videoRect(1920, 1080, 1080, 1920, { panX: 1 }).x, 0, 'pan +1 = left edge on the frame edge');
+near(R.videoRect(1920, 1080, 1080, 1920, { panX: -1 }).x, 1080 - r.w, 'pan −1 = right edge on the frame edge');
+near(R.videoRect(1920, 1080, 1080, 1920, { panX: 5 }).x, 0, 'pan is clamped');
+// Zoom grows both sides around the centre; never below 1 or above ZOOM_MAX.
+r = R.videoRect(1080, 1920, 1080, 1920, { zoom: 2 });
+near(r.w, 2160, 'zoom 2 doubles');
+near(r.x, -540, 'zoom stays centred');
+near(r.roomX, 540, 'zoom opens pan room');
+near(R.videoRect(1080, 1920, 1080, 1920, { zoom: 0.4 }).w, 1080, 'zoom floor 1');
+near(R.videoRect(1080, 1920, 1080, 1920, { zoom: 9 }).w, 1080 * R.ZOOM_MAX, 'zoom cap');
+assert.equal(R.ZOOM_MAX, 2.5);
+// Fit shows the whole clip (letterboxed), centred; pan still moves it inside the frame.
+r = R.videoRect(1920, 1080, 1080, 1920, { fit: 'fit' });
+near(r.w, 1080, 'fit matches the width');
+near(r.h, 1080 * 1080 / 1920, 'fit keeps the aspect');
+near(r.y, (1920 - r.h) / 2, 'fit centred');
+near(R.videoRect(1920, 1080, 1080, 1920, { fit: 'fit', panY: 1 }).y + r.h, 1920, 'fit pan +1 = at the bottom');
+assert.equal(R.videoRect(0, 0, 1080, 1920), null, 'no size, no rect');
+// drawVideo draws exactly that rect.
+{
+  const calls = [];
+  const fake = { drawImage: (...a) => calls.push(a) };
+  R.drawVideo(fake, { videoWidth: 1920, videoHeight: 1080 }, 1080, 1920, { zoom: 1.5, panX: 0.5 });
+  const want = R.videoRect(1920, 1080, 1080, 1920, { zoom: 1.5, panX: 0.5 });
+  assert.deepEqual(calls[0].slice(1), [want.x, want.y, want.w, want.h]);
+}
+
+// ─── Tint (tintLayers + drawFrame) ──────────────────────────────────────────
+// Black is a plain overlay, identical to the old 45% scrim.
+assert.deepEqual(R.tintLayers({ color: '#000000', amount: 0.45 }), [{ color: '#000000', alpha: 0.45, mode: 'source-over' }]);
+assert.deepEqual(R.tintLayers({ color: '#000000', amount: 0 }), []);
+assert.deepEqual(R.tintLayers(null), []);
+// Strength is capped so the clip always shows, lower under a bottom fade.
+assert.equal(R.tintLayers({ color: '#000000', amount: 1 })[0].alpha, R.TINT_MAX);
+assert.equal(R.tintLayers({ color: '#000000', amount: 1 }, { fade: true })[0].alpha, R.TINT_MAX_FADE);
+assert.ok(R.TINT_MAX <= 0.85 && R.TINT_MAX_FADE < R.TINT_MAX);
+// A colour recolours the clip ('color' blend: its hue, the clip's light/dark),
+// then multiplies at 60% so it also darkens under the white copy.
+let layers = R.tintLayers({ color: '#0A6FDE', amount: 0.6 });
+assert.equal(layers[0].mode, 'color');
+assert.equal(layers[0].color, '#0A6FDE');
+near(layers[0].alpha, 0.6, 'hue at the strength');
+assert.equal(layers[1].mode, 'multiply');
+near(layers[1].alpha, 0.36, 'multiply at 60% of the strength');
+// Bright tints add black so the white copy keeps contrast; darker ones add less.
+const gold = R.tintLayers({ color: '#D7A343', amount: 0.6 });
+const navy = R.tintLayers({ color: '#0B2265', amount: 0.6 });
+const blackOf = list => list.filter(l => l.color === '#000000').reduce((n, l) => n + l.alpha, 0);
+assert.ok(blackOf(gold) > blackOf(navy), 'gold darkens more than navy');
+// Bad colours fall back to black.
+assert.equal(R.tintLayers({ color: 'red', amount: 0.3 })[0].color, '#000000');
+// drawFrame: the tint replaces the scrim and sits under the copy.
+{
+  const log = [];
+  const ctx2 = new Proxy({}, {
+    get: (o, k) => (k in o ? o[k] : (typeof k === 'string' && /^(save|restore|fillRect|drawImage|fillText|strokeText|beginPath|moveTo|arcTo|closePath|fill|stroke|lineTo|translate|scale|createLinearGradient|createRadialGradient)$/.test(k)
+      ? (...a) => { log.push({ fn: k, op: o.globalCompositeOperation || 'source-over', alpha: o.globalAlpha ?? 1, fill: o.fillStyle }); return { addColorStop() {} }; }
+      : undefined)),
+    set: (o, k, v) => { o[k] = v; return true; },
+  });
+  const ops = [{ type: 'text', text: 'Hi', x: 10, y: 900, font: '500 40px Roboto', fill: '#FFFFFF' }];
+  R.drawFrame(ctx2, { width: 1080, height: 1920, video: { videoWidth: 1920, videoHeight: 1080 }, bg: { tint: { color: '#0A6FDE', amount: 0.5 }, zoom: 1.2 }, ops });
+  const mult = log.findIndex(e => e.fn === 'fillRect' && e.op === 'multiply');
+  const text = log.findIndex(e => e.fn === 'fillText');
+  assert.ok(mult > 0, 'tint drawn with multiply');
+  assert.ok(log.findIndex(e => e.fn === 'drawImage') < mult && mult < text, 'video, then tint, then copy');
+  assert.ok(!log.some(e => e.fn === 'fillRect' && e.fill === 'rgba(0,0,0,0.45)'), 'no extra scrim under a tint');
+  // Without a tint the old scrim still draws (older callers).
+  log.length = 0;
+  R.drawFrame(ctx2, { width: 1080, height: 1920, video: null, bg: {}, ops: [] });
+  assert.ok(log.some(e => e.fn === 'fillRect' && e.fill === 'rgba(0,0,0,0.45)'), 'scrim fallback');
+}
+
 console.log('Video Ads renderer tests passed.');

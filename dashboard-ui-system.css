@@ -1785,9 +1785,10 @@ body.dashboard-page {
   --dov-brand: #0A6FDE;
   --dov-brand-text: #085EBC;
   --dov-brand-soft: #E8F2FF;
-  --dov-good: #166534;  --dov-good-bg: #E7F6EC;
-  --dov-warn: #92400E;  --dov-warn-bg: #FDF3E1;
-  --dov-bad: #B91C1C;   --dov-bad-bg: #FDECEC;
+  /* Status = the shared tokens (one green, one amber, one red site-wide). */
+  --dov-good: var(--es-good);  --dov-good-bg: var(--es-good-soft);
+  --dov-warn: var(--es-warn);  --dov-warn-bg: var(--es-warn-soft);
+  --dov-bad: var(--es-bad);    --dov-bad-bg: var(--es-bad-soft);
   --dov-info: #085EBC;  --dov-info-bg: #E8F2FF;
   --dov-neutral: #3A3F48; --dov-neutral-bg: #EEF0F3;
   --dov-shadow: 0 1px 2px rgb(14 16 20 / .04), 0 8px 24px -16px rgb(14 16 20 / .12);
@@ -1803,9 +1804,9 @@ html[data-theme="dark"] body.dashboard-page {
   --dov-brand: #54A4FB;
   --dov-brand-text: #9DCBFD;
   --dov-brand-soft: rgb(10 125 250 / .2);
-  --dov-good: #86EFAC;  --dov-good-bg: rgb(34 197 94 / .14);
-  --dov-warn: #FCD34D;  --dov-warn-bg: rgb(245 158 11 / .16);
-  --dov-bad: #FCA5A5;   --dov-bad-bg: rgb(239 68 68 / .16);
+  --dov-good: var(--es-good-on-dark);  --dov-good-bg: var(--es-good-soft-on-dark);
+  --dov-warn: var(--es-warn-on-dark);  --dov-warn-bg: var(--es-warn-soft-on-dark);
+  --dov-bad: var(--es-bad-on-dark);    --dov-bad-bg: var(--es-bad-soft-on-dark);
   --dov-info: #9DCBFD;  --dov-info-bg: rgb(10 125 250 / .2);
   --dov-neutral: #BFC8D9; --dov-neutral-bg: #2A2D34;
   --dov-shadow: none;
@@ -1930,8 +1931,9 @@ body.dashboard-page .dov-eyebrow {
 body.dashboard-page .dov-kpi-value {
   margin-top: var(--es-space-2) !important;
   color: var(--dov-ink) !important;
-  font: 700 36px/1.1 var(--es-font-ui);
-  letter-spacing: -.02em;
+  /* The shared big-number role (same as .es-stat__value). */
+  font: var(--es-type-number-weight) var(--es-type-number-size)/var(--es-type-number-line) var(--es-type-number-family);
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
 body.dashboard-page .dov-kpi-delta {
@@ -2396,7 +2398,7 @@ body.dashboard-page .dov-skel.is-chart .dov-skel-row { background: var(--dov-sof
 @media (max-width: 599px) {
   body.dashboard-page .dov-kpis { grid-template-columns: minmax(0, 1fr); }
   body.dashboard-page .dov-kpi { padding: var(--es-space-4) var(--es-space-5); }
-  body.dashboard-page .dov-kpi-value { font-size: 32px; }
+  body.dashboard-page .dov-kpi-value { font-size: var(--es-type-number-size-sm); }
   body.dashboard-page .dov-rangebar { align-items: stretch; }
   body.dashboard-page .dov-segment { width: 100%; }
   body.dashboard-page .dov-segment button { flex: 1; }

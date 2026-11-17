@@ -9,7 +9,7 @@
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
 <script src="es-auth-config.js?v=20260707-auth4"></script>
 <script src="es-auth.js?v=20261115-auth2"></script>
-  <script src="dashboard-data.js?v=20261111-basics2"></script>
+  <script src="dashboard-data.js?v=20261117-ready1"></script>
 <script>
   (() => {
     window.ESAuth?.requireAuth(`index.html${window.location.search}${window.location.hash}`);
@@ -7797,20 +7797,20 @@ body[data-current-page="faq"] .faq-cta-art img {
     pointer-events: none;
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-focus1">
-<link rel="stylesheet" href="studio-inspector.css?v=20261117-focus1">
-<link rel="stylesheet" href="theme.css?v=20261116-sp1">
-<link rel="stylesheet" href="site-chrome.css?v=20261117-usage1">
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
+<link rel="stylesheet" href="studio-inspector.css?v=20261117-ready1">
+<link rel="stylesheet" href="theme.css?v=20261117-ready1">
+<link rel="stylesheet" href="site-chrome.css?v=20261117-ready1">
 <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
 <link rel="stylesheet" href="how-it-works.css?v=20261115-btn1">
-<link rel="stylesheet" href="design-tokens.css?v=20261117-focus1">
-<link rel="stylesheet" href="es-ui.css?v=20261117-adm1">
+<link rel="stylesheet" href="design-tokens.css?v=20261117-ready1">
+<link rel="stylesheet" href="es-ui.css?v=20261117-ready1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
 <link rel="stylesheet" href="editor-polish.css?v=20261117-focus1">
 <script src="theme.js?v=20261115-pol2"></script>
 <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
 <script src="site-chrome.js?v=20261117-usage1"></script>
-<script src="app-shell.js?v=20261117-usage1"></script>
+<script src="app-shell.js?v=20261117-ready1"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
 </head>
 <body>
@@ -7985,7 +7985,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           <p>Social, YouTube, Newsletter or Reels, each with approved sizes and layouts ready.</p>
         </li>
         <li class="home-start__step">
-          <span class="home-start__icon es-tile es-tile--purple" aria-hidden="true">
+          <span class="home-start__icon es-tile es-tile--cyan" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
           </span>
           <span class="home-start__num">02</span>
@@ -8010,7 +8010,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         <nav class="home-start__links" aria-label="Help and resources">
           <a class="home-start__link" href="#logo-guidelines" data-route="logo-guidelines"><span class="es-tile es-tile--amber" aria-hidden="true">G</span><span><strong>Brand guidelines</strong><small>Approved logo, social and video rules</small></span></a>
           <a class="home-start__link" href="#faq" data-route="faq"><span class="es-tile es-tile--pink" aria-hidden="true">?</span><span><strong>FAQ</strong><small>Answers to common questions</small></span></a>
-          <a class="home-start__link" href="tool-feedback.html"><span class="es-tile es-tile--purple" aria-hidden="true">F</span><span><strong>Tool feedback</strong><small>Report a bug or share an idea</small></span></a>
+          <a class="home-start__link" href="tool-feedback.html"><span class="es-tile es-tile--cyan" aria-hidden="true">F</span><span><strong>Tool feedback</strong><small>Report a bug or share an idea</small></span></a>
         </nav>
       </div>
     </div>
@@ -23244,7 +23244,7 @@ loadFont().then(() => render());
           <div class="studio-dock-title">ES Image Pool <span class="studio-dock-kicker">ES Storage</span></div>
           <form class="studio-ai-search" data-ai-image-search-form role="search" aria-label="Search ES images">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
-            <input type="search" data-ai-image-query-input placeholder="Search entity, team, topic..." autocomplete="off" spellcheck="false">
+            <input type="search" data-ai-image-query-input placeholder="Search entity, team, topic..." autocomplete="off" spellcheck="false" aria-label="Search ES images">
             <button type="submit" data-ai-image-search-submit>Search</button>
           </form>
           <div class="studio-ai-helper">Search shows the latest ES images for the exact entity, team, topic, or keyword you type.</div>

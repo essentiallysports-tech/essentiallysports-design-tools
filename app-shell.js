@@ -139,9 +139,23 @@
   }
 
   // ─── Sidebar ───────────────────────────────────────────────────────────
+  // The yellow NEW tag: one markup for the sidebar and the phone menu (the
+  // phone menu is the sidebar on small screens). It shimmers once, the first
+  // time it is seen (es-motion.js), keyed per item so it never repeats.
+  function newBadgeMarkup(item) {
+    return item.badge ? `<span class="es-badge es-badge--new es-new-shine" data-es-new-key="nav-${item.id}">${item.badge}</span>` : '';
+  }
+
+  // Only real nav links (built from NAV, so they carry data-shell-id) can be the
+  // current page. Demo links without an id (the UI Library) are never marked:
+  // undefined === undefined must not count as a match.
+  function isCurrentLink(link, id, owner) {
+    const shellId = link.dataset.shellId;
+    return Boolean(shellId) && (shellId === id || shellId === owner?.id);
+  }
+
   function navItemMarkup(item) {
-    // "New" badges shimmer once, the first time they are seen (es-motion.js).
-    const badge = item.badge ? `<span class="es-badge es-badge--new es-new-shine" data-es-new-key="nav-${item.id}">${item.badge}</span>` : '';
+    const badge = newBadgeMarkup(item);
     return `<a class="es-nav-item" href="${base}${item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''} data-tip="${item.label}">${ICONS[item.icon]}<span class="es-nav-item__text">${item.label}</span><span class="es-nav-item__short" aria-hidden="true">${item.short || item.label}</span>${badge}</a>`;
   }
 
@@ -523,7 +537,7 @@
       list.innerHTML = NAV.map(group => {
         const items = group.items.filter(item => item.sidebar !== false);
         if (!items.length) return '';
-        return `<div class="es-mobile-nav__group${group.id ? ` es-mobile-nav__group--${group.id}` : ''}">${group.label ? `<span class="es-mobile-nav__label">${group.label}</span>` : ''}${items.map(item => `<a class="es-mobile-nav__item" href="${item.action ? '#' : base + item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''}>${ICONS[item.icon]}<span>${item.label}</span>${item.badge ? `<span class="es-badge es-badge--new">${item.badge}</span>` : ''}</a>`).join('')}</div>`;
+        return `<div class="es-mobile-nav__group${group.id ? ` es-mobile-nav__group--${group.id}` : ''}">${group.label ? `<span class="es-mobile-nav__label">${group.label}</span>` : ''}${items.map(item => `<a class="es-mobile-nav__item" href="${item.action ? '#' : base + item.href}" data-shell-id="${item.id}"${item.adminOnly ? ' data-shell-admin hidden' : ''}>${ICONS[item.icon]}<span>${item.label}</span>${newBadgeMarkup(item)}</a>`).join('')}</div>`;
       }).join('');
       menu.prepend(list);
       menu.classList.add('has-es-mobile-nav');
@@ -541,7 +555,7 @@
     const id = currentId();
     const owner = NAV.flatMap(group => group.items).find(item => item.covers?.includes(id));
     document.querySelectorAll('.es-mobile-nav__item').forEach(link => {
-      if (link.dataset.shellId === id || link.dataset.shellId === owner?.id) link.setAttribute('aria-current', 'page');
+      if (isCurrentLink(link, id, owner)) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
   }
@@ -567,7 +581,7 @@
     document.documentElement.classList.toggle('es-editor', Boolean(findItem(id)?.item.editor));
     const owner = NAV.flatMap(group => group.items).find(item => item.covers?.includes(id));
     document.querySelectorAll('.es-nav-item').forEach(link => {
-      if (link.dataset.shellId === id || link.dataset.shellId === owner?.id) link.setAttribute('aria-current', 'page');
+      if (isCurrentLink(link, id, owner)) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
     const crumbs = document.querySelector('.es-breadcrumbs');

@@ -16,12 +16,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-focus1">
-  <link rel="stylesheet" href="theme.css?v=20261116-sp1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261117-usage1">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
+  <link rel="stylesheet" href="theme.css?v=20261117-ready1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261117-ready1">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261117-focus1">
-<link rel="stylesheet" href="es-ui.css?v=20261117-adm1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261117-ready1">
+<link rel="stylesheet" href="es-ui.css?v=20261117-ready1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
   <script src="ai-studio.js?v=20261115-ds2" defer></script>
@@ -45,7 +45,7 @@
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
-<script src="app-shell.js?v=20261117-usage1"></script>
+<script src="app-shell.js?v=20261117-ready1"></script>
 <script src="league-logos.js?v=20261117-logo1"></script>
   <style>
     html:not([data-theme="dark"]) body.gen-body { background: #fff; }
@@ -132,11 +132,6 @@
     .gen-found li.is-on { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .3); color: var(--es-brand-text); }
     .gen-found li b { color: inherit; font-weight: 700; }
     .gen-found__logo { flex: none; width: 16px; height: 16px; padding: 1px; border-radius: 4px; background: #fff; object-fit: contain; }
-    /* Team pill: the team logo (video-ads-teams.js) on a fixed white circle; a logo that fails to load turns into the team's two-colour dot. */
-    .gen-found__team { display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px var(--es-line, #dfe2e7); overflow: hidden; }
-    .gen-found__team img { display: block; width: 100%; height: 100%; padding: 2px; box-sizing: border-box; object-fit: contain; }
-    .gen-found__team.is-dot { background: transparent; box-shadow: none; }
-    .gen-found__team.is-dot::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%); box-shadow: inset 0 0 0 1px rgb(127 127 127 / .35); }
 
     /* Format: Auto + the real ES template art as a radiogroup. */
     .gen-format { display: grid; gap: var(--es-space-2, 8px); min-width: 0; padding-top: var(--es-space-2, 8px); border-top: 1px solid var(--es-line); }
@@ -173,7 +168,8 @@
     @keyframes genShimmer { to { transform: translateX(100%); } }
     .gen-card__body { display: flex; flex-direction: column; gap: var(--es-space-2, 8px); min-width: 0; padding: var(--es-space-4, 16px); }
     .gen-card__type { align-self: flex-start; display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: 999px; background: var(--es-brand-soft); color: var(--es-brand-text); font-size: 12px; font-weight: 700; }
-    .gen-card__why { margin: 0; color: var(--es-ink-2, #3f4450); font-size: 13px; line-height: 1.45; }
+    .gen-card__why { display: -webkit-box; margin: 0; overflow: hidden; color: var(--es-ink-2, #3f4450); font-size: 13px; line-height: 1.45; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .gen-card__why strong { color: var(--es-ink); font-weight: 600; }
     .gen-card__source { margin: 0; overflow: hidden; color: var(--es-ink-3); font-size: var(--es-type-meta-size); text-overflow: ellipsis; white-space: nowrap; }
     .gen-card__source a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
     .gen-card__actions { display: flex; align-items: center; gap: var(--es-space-2, 8px); margin-top: auto; padding-top: var(--es-space-1, 4px); }
@@ -251,6 +247,7 @@
     html[data-theme="dark"] .gen-mode.is-ai { background: var(--ais-grad-soft); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .35); color: var(--ais-soft-text); }
     html[data-theme="dark"] .gen-card__media:not(.is-ready)::before { background: var(--ais-sheen); }
     html[data-theme="dark"] :is(.gen-card__why, .gen-summary, .gen-research a, .gen-progress li.is-done) { color: #BFC8D9; }
+    html[data-theme="dark"] .gen-card__why strong { color: #F1F4F9; }
     html[data-theme="dark"] :is(.gen-summary strong, .gen-progress li.is-active, .gen-empty__title, .gen-format__note strong, .gen-actions__hint strong) { color: #FFFFFF; }
     html[data-theme="dark"] .gen-thumb[aria-pressed="true"] { box-shadow: 0 0 0 2px #1F2126, 0 0 0 4px #FFFFFF; }
     html[data-theme="dark"] .gen-card__actions .es-icon-btn[aria-expanded="true"] { color: #FFFFFF; box-shadow: inset 0 0 0 1.5px #FFFFFF; }
@@ -302,24 +299,27 @@
     .gen-brief.ais-surface::before { background: rgb(132 144 166 / .35); }
     .gen-brief.ais-surface:focus-within::before { background: var(--es-rim-conic, var(--ais-gradient-stroke)); }
 
-    /* Trends toolbar: live status, counts, Refresh. */
+    /* Trends toolbar: honest "Updated X min ago", counts, AI angles, Refresh. */
     .td-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-3, 12px) var(--es-space-5, 20px); margin: 0 0 var(--es-space-4, 16px); }
-    .td-status { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); min-height: 32px; padding: 0 var(--es-space-3, 12px); border-radius: 999px; background: var(--es-sunk); color: var(--es-ink-2); font-size: var(--es-type-meta-size); font-weight: 500; }
+    .td-status { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); min-height: 32px; padding: 0 var(--es-space-3, 12px); border-radius: 999px; background: var(--es-sunk); color: var(--es-ink-2); font-size: var(--es-type-meta-size); font-weight: 500; font-variant-numeric: tabular-nums; }
     .td-stats { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--es-ink-3); font-size: var(--es-type-meta-size); }
     .td-stats b { color: var(--es-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
     .td-stats:empty { display: none; }
-    .td-toolbar .td-refresh { margin-left: auto; }
+    .td-toolbar__actions { display: flex; gap: var(--es-space-2, 8px); margin-left: auto; }
+    .td-toolbar__actions .es-btn[hidden] { display: none; }
+    .td-toolbar__actions .es-btn svg[viewBox] { width: var(--es-icon-sm); height: var(--es-icon-sm); }
     html[data-theme="dark"] .td-status { background: #2A2D34; color: #BFC8D9; }
     html[data-theme="dark"] .td-stats { color: #98A6BF; }
     html[data-theme="dark"] .td-stats b { color: #FFFFFF; }
 
-    /* ── Trends board (was trend-design.html) ──────────────────────────── */
-    /* Live dot, refresh spin, skeleton shimmer, pulse glyph: es-motion.css. */
-
+    /* ── Trends board ──────────────────────────────────────────────────── */
+    /* Live dot, refresh spin, skeleton shimmer: es-motion.css. */
     .trends-filters { display: flex; gap: var(--es-space-2, 8px); margin: 0 calc(-1 * var(--es-space-1, 4px)) var(--es-space-5, 20px); padding: var(--es-space-1, 4px); overflow-x: auto; scrollbar-width: none; }
     .trends-filters::-webkit-scrollbar { display: none; }
     .trends-filters:empty { display: none; }
     .trends-filters .es-chip { flex: none; }
+    .trends-filters .td-chip-sep { flex: none; width: 1px; margin: 4px 4px; background: var(--es-line); }
+    .trends-filters .es-chip svg[viewBox] { width: var(--es-icon-sm); height: var(--es-icon-sm); }
 
     .trends-group + .trends-group { margin-top: var(--es-space-8, 32px); }
     .trends-group__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
@@ -337,28 +337,33 @@
     .trends-group__more:focus-visible { border-radius: 6px; }
     .trends-list { display: grid; gap: 12px; }
 
-    .trend-row { display: grid; grid-template-columns: 128px minmax(0, 1fr) auto; gap: 20px; align-items: start; padding: 16px; border-radius: 18px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line), 0 1px 2px rgb(14 16 20 / .04); }
+    .trend-row { display: grid; grid-template-columns: 112px minmax(0, 1fr) 168px; gap: 20px; align-items: start; padding: 16px; border-radius: 18px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line), 0 1px 2px rgb(14 16 20 / .04); }
     @media (hover: hover) { .trend-row.ais-card:hover { transform: translateY(-2px); } }
     /* Search trends: a quiet blue → cyan ring that is always on. */
     .trend-row.is-search::before { opacity: .7; }
     .trend-row.is-search { box-shadow: 0 10px 30px -22px rgb(10 125 250 / .6); }
 
-    .trend-visual { position: relative; width: 128px; height: 128px; border-radius: 14px; overflow: hidden; background: var(--es-sunk); isolation: isolate; }
+    .trend-visual { position: relative; width: 112px; height: 112px; border-radius: 14px; overflow: hidden; background: var(--es-sunk); isolation: isolate; }
     .trend-visual::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12); pointer-events: none; }
     .trend-visual img.td-photo { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; transition: transform 400ms var(--td-ease); }
     @media (hover: hover) { .trend-row:hover .trend-visual img.td-photo { transform: scale(1.04); } }
     .trend-visual.is-logo { background: #fff; box-shadow: inset 0 0 0 1px var(--es-line); }
     .trend-visual.is-logo img.td-photo { object-fit: contain; padding: 16px; }
-    /* No photo: the league logo, centred at 60% on its flat tile colour. */
+    /* No photo: the team logo, else the league logo, on a flat light tile. */
     .trend-visual.is-league { background: var(--league-bg, #fff); }
     .trend-visual.is-league::after { box-shadow: inset 0 0 0 1px var(--es-line); }
     .td-fallback { position: absolute; inset: 0; display: grid; place-items: center; }
     .td-fallback img { display: block; width: 60%; height: 60%; object-fit: contain; }
-    .td-src-badge { position: absolute; right: 6px; bottom: 6px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: #fff; box-shadow: 0 2px 8px rgb(0 0 0 / .25); }
+    .td-src-badge, .td-team-badge { position: absolute; bottom: 6px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: #fff; box-shadow: 0 2px 8px rgb(0 0 0 / .25); }
+    .td-src-badge { right: 6px; }
+    .td-team-badge { left: 6px; border-radius: 50%; }
     .td-src-badge img { width: 16px; height: 16px; border-radius: 4px; }
+    .td-team-badge img { width: 20px; height: 20px; object-fit: contain; }
 
-    .trend-body { display: grid; gap: 8px; min-width: 0; }
+    .trend-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; min-width: 0; }
     .trend-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--es-ink-3); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); }
+    .trend-meta time { font-variant-numeric: tabular-nums; }
+    .trend-meta time.is-new { color: var(--es-good); font-weight: 600; }
     .td-source { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); color: var(--es-ink-2); font-weight: 600; }
     .td-source img { width: 16px; height: 16px; border-radius: 4px; background: #fff; box-shadow: 0 0 0 1px var(--es-line); }
     .trend-tag { display: inline-flex; align-items: center; gap: var(--es-space-1, 4px); height: 22px; padding: 0 8px; border-radius: 999px; background: var(--es-sunk); color: var(--es-ink-2); font-size: 12px; font-weight: 600; white-space: nowrap; }
@@ -368,39 +373,53 @@
     .trend-tag.is-search .es-live-dot::after { inset: -3px; border-color: rgb(10 125 250 / .45); }
     .trend-meta__sep { color: var(--es-line-2); }
     .trend-title { display: -webkit-box; margin: 0; overflow: hidden; color: var(--es-ink); font-size: var(--es-type-card-title-size); font-weight: var(--es-type-card-title-weight); line-height: var(--es-type-card-title-line); -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .trend-related { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+    .trend-why { display: flex; gap: var(--es-space-2, 8px); margin: 0; color: var(--es-ink-2); font-size: 14px; line-height: 1.45; }
+    .trend-why svg[viewBox] { flex: none; width: var(--es-icon-sm); height: var(--es-icon-sm); margin-top: 2px; color: var(--ais-blue); }
+    .trend-related { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; margin: 0; padding: 0; list-style: none; }
     .trend-related a { display: flex; align-items: center; gap: var(--es-space-2, 8px); min-width: 0; color: var(--es-ink-2); font-size: 13px; line-height: 1.45; text-decoration: none; }
     .trend-related a img { flex: none; width: 14px; height: 14px; border-radius: 3px; }
     .trend-related a span:first-of-type { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .trend-related a:hover span:first-of-type { color: var(--es-ink); text-decoration: underline; }
 
     .trend-ideas { display: grid; gap: var(--es-space-2, 8px); margin-top: var(--es-space-1, 4px); padding-top: var(--es-space-3, 12px); border-top: 1px dashed var(--es-line-2); }
+    .trend-ideas__head { display: flex; align-items: center; justify-content: space-between; gap: var(--es-space-2, 8px); min-height: 32px; }
     .trend-ideas__label { display: flex; align-items: center; gap: var(--es-space-2, 8px); color: var(--es-text-secondary, var(--es-ink-2)); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); text-transform: uppercase; }
-    .trend-ideas__label small { letter-spacing: 0; text-transform: none; }
     .trend-ideas__label svg[viewBox] { width: var(--es-icon-sm) !important; height: var(--es-icon-sm) !important; min-width: var(--es-icon-sm); color: var(--ais-blue); }
-    .trend-ideas__label small { color: var(--es-ink-3); font-weight: 500; }
-    .trend-ideas__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-2, 8px); }
-    .trend-idea { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 36px; padding: var(--es-space-2, 8px) var(--es-space-3, 12px); border: 0; border-radius: 10px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line-2); color: var(--es-ink); font: inherit; font-size: 13px; font-weight: 500; line-height: 1.35; text-align: left; text-decoration: none; cursor: pointer; transition: box-shadow 180ms var(--td-ease), background 180ms var(--td-ease), transform 140ms var(--td-ease); }
-    .trend-idea svg[viewBox] { width: var(--es-icon-sm) !important; height: var(--es-icon-sm) !important; min-width: var(--es-icon-sm); color: var(--ais-blue); opacity: 0; transform: translateX(-4px); transition: opacity 180ms var(--td-ease), transform 180ms var(--td-ease); }
+    .trend-ideas__ai svg[viewBox] { width: var(--es-icon-sm); height: var(--es-icon-sm); color: var(--ais-blue); }
+    .trend-ideas__list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--es-space-2, 8px); }
+    .trend-idea { position: relative; display: flex; align-items: stretch; min-width: 0; border-radius: 10px; background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line-2); transition: box-shadow 180ms var(--td-ease), background 180ms var(--td-ease); }
+    .trend-idea__go { display: flex; flex: 1; align-items: center; min-width: 0; min-height: 36px; padding: var(--es-space-2, 8px) 0 var(--es-space-2, 8px) var(--es-space-3, 12px); border-radius: 10px 0 0 10px; color: var(--es-ink); font-size: 13px; font-weight: 500; line-height: 1.35; text-decoration: none; }
+    .trend-idea__copy { display: grid; flex: none; place-items: center; width: 36px; border: 0; border-radius: 0 10px 10px 0; background: none; color: var(--es-ink-3); cursor: pointer; }
+    .trend-idea__copy svg[viewBox] { width: var(--es-icon-sm); height: var(--es-icon-sm); }
+    .trend-idea__copy.is-done { color: var(--es-good); }
     @media (hover: hover) {
       .trend-idea:hover { background: var(--ais-grad-soft), var(--es-bg); box-shadow: inset 0 0 0 1px rgb(10 125 250 / .45); }
-      .trend-idea:hover svg[viewBox] { opacity: 1; transform: none; }
+      .trend-idea__copy:hover { color: var(--es-ink); }
     }
-    .trend-idea:active { transform: scale(.98); }
-    .trend-idea:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
-    .trend-idea:focus-visible svg[viewBox] { opacity: 1; transform: none; }
-    .trend-idea.is-skeleton, .td-sk { color: transparent; box-shadow: none; pointer-events: none; }
+    .trend-idea__go:active { transform: scale(.98); }
+    .trend-idea__go:focus-visible, .trend-idea__copy:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .trend-idea.is-skeleton, .td-sk { min-height: 36px; color: transparent; box-shadow: none; pointer-events: none; }
     .trend-ideas__empty { color: var(--es-ink-3); font-size: 13px; }
+    .trend-ideas__note { margin: 0; color: var(--es-ink-3); font-size: 12px; }
 
-    .trend-actions { display: grid; gap: 8px; justify-items: stretch; width: 152px; }
-    .trend-actions .trend-read { display: inline-flex; align-items: center; justify-content: center; gap: var(--es-space-2, 8px); min-height: 40px; border-radius: 10px; color: var(--es-ink-2); font-size: 13px; font-weight: 600; text-decoration: none; }
-    .trend-actions .trend-read svg { width: var(--es-icon-sm); height: var(--es-icon-sm); }
-    .trend-actions .trend-read:hover { background: var(--es-sunk); color: var(--es-ink); }
+    .trend-actions { display: grid; gap: 8px; justify-items: stretch; }
+    .trend-actions .es-btn { width: 100%; }
+    .trend-actions .es-btn svg[viewBox] { width: var(--es-icon-sm); height: var(--es-icon-sm); }
+    .trend-actions__row { display: flex; gap: 8px; }
+    .trend-actions__row > * { flex: 1; }
+    .td-icon-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 0 var(--es-space-2, 8px); border: 0; border-radius: 10px; background: none; color: var(--es-ink-2); font: inherit; font-size: 13px; font-weight: 500; text-decoration: none; cursor: pointer; }
+    .td-icon-btn svg[viewBox] { width: var(--es-icon-sm); height: var(--es-icon-sm); }
+    .td-icon-btn:hover { background: var(--es-sunk); color: var(--es-ink); }
+    .td-icon-btn:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .td-save[aria-pressed="true"] { color: var(--es-brand-text); }
+    .td-save[aria-pressed="true"] svg[viewBox] { fill: currentColor; }
 
     @media (prefers-reduced-motion: no-preference) {
       .trends-list.is-entering .trend-row { animation: tdIn var(--es-dur-step, 300ms) var(--td-ease) both; animation-delay: calc(min(var(--i, 0), 7) * 40ms); }
+      .trend-why.is-new, .trend-ideas__list.is-new { animation: tdFade var(--es-dur-step, 300ms) var(--td-ease) both; }
     }
     @keyframes tdIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes tdFade { from { opacity: 0; } to { opacity: 1; } }
     @media (prefers-reduced-motion: reduce) {
       .trend-row, .trend-visual img.td-photo, .trend-idea, .td-design { transition: none; }
     }
@@ -408,39 +427,48 @@
     .td-sk { display: block; border-radius: 8px; }
     .trends-note { margin-top: var(--es-space-8, 32px); color: var(--es-ink-3); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); }
     .trends-notice[hidden], .trends-empty[hidden] { display: none; }
-    .trends-notice { margin-bottom: 16px; }
+    .trends-notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--es-space-3, 12px); margin-bottom: 16px; }
+    .trends-empty .es-btn, .trends-notice .es-btn { flex: none; }
+    .trends-empty__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--es-space-2, 8px); margin-top: var(--es-space-2, 8px); }
 
     @media (max-width: 1100px) {
-      .trend-row { grid-template-columns: 104px minmax(0, 1fr); }
-      .trend-visual { width: 104px; height: 104px; }
-      .trend-actions { grid-column: 2; display: flex; align-items: center; width: auto; }
-      .trend-actions .trend-read { padding: 0 var(--es-space-3, 12px); }
+      .trend-row { grid-template-columns: 96px minmax(0, 1fr); }
+      .trend-visual { width: 96px; height: 96px; }
+      .trend-actions { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; }
+      .trend-actions .es-btn { width: auto; }
+      .trend-actions__row { flex: none; }
+      .trend-ideas__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 640px) {
-      .td-refresh span { display: none; }
-      .td-refresh { width: var(--es-tap); padding: 0; }
+      .td-refresh span, .td-ai-all span { display: none; }
+      .td-toolbar__actions .es-btn { width: var(--es-tap); min-height: var(--es-tap); padding: 0; }
       .trends-filters .es-chip { min-height: var(--es-tap); }
       .trend-row { grid-template-columns: 64px minmax(0, 1fr); gap: var(--es-space-3, 12px); padding: var(--es-space-4, 16px); }
       .trend-visual { width: 64px; height: 64px; border-radius: 12px; }
       .td-src-badge { display: none; }
+      .td-team-badge { left: 2px; bottom: 2px; width: 22px; height: 22px; }
+      .td-team-badge img { width: 16px; height: 16px; }
       .trend-visual.is-logo img.td-photo { padding: 8px; }
       .trend-title { font-size: 16px; -webkit-line-clamp: 3; }
-      .trend-ideas, .trend-actions { grid-column: 1 / -1; }
+      .trend-why, .trend-ideas, .trend-actions { grid-column: 1 / -1; }
       .trend-ideas__list { grid-template-columns: 1fr; }
-      .td-design { flex: 1; }
-      .trend-actions .trend-read { min-height: 44px; }
-      .trend-idea { min-height: var(--es-tap); }
+      .trend-actions { display: grid; grid-template-columns: 1fr 1fr; }
+      .trend-actions .es-btn { width: 100%; min-height: var(--es-tap); }
+      .trend-actions .td-design:only-child, .trend-actions .td-design:nth-last-child(2):first-child { grid-column: 1 / -1; }
+      .trend-actions__row { grid-column: 1 / -1; }
+      .td-icon-btn { min-height: var(--es-tap); }
+      .trend-idea__go { min-height: var(--es-tap); }
+      .trend-idea__copy { width: var(--es-tap); }
       .trends-group__more { min-height: var(--es-tap); }
       .trend-tag { height: auto; min-height: 22px; padding-top: 2px; padding-bottom: 2px; white-space: normal; }
-      .td-toolbar .td-refresh { width: var(--es-tap); min-height: var(--es-tap); }
       .gen-empty__link { min-height: var(--es-tap); }
       .td-toolbar .td-stats { order: 3; flex-basis: 100%; }
     }
 
-    html[data-theme="dark"] .td-view { --es-ink: #FFFFFF; --es-ink-2: #BFC8D9; --es-ink-3: #98A6BF; --es-bg: #1F2126; --es-line: #2A2D34; --es-line-2: #3B4049; --es-sunk: #2A2D34; --es-text-secondary: #BFC8D9; }
-    html[data-theme="dark"] .trend-idea svg[viewBox], html[data-theme="dark"] .trend-ideas__label svg[viewBox] { color: #9DCBFD; }
+    html[data-theme="dark"] .td-view { --es-ink: #FFFFFF; --es-ink-2: #BFC8D9; --es-ink-3: #98A6BF; --es-bg: #1F2126; --es-line: #2A2D34; --es-line-2: #3B4049; --es-sunk: #2A2D34; --es-text-secondary: #BFC8D9; --es-brand-text: #9DCBFD; --es-good: #6EE7A0; }
+    html[data-theme="dark"] :is(.trend-ideas__label, .trend-ideas__ai, .trend-why) svg[viewBox] { color: #9DCBFD; }
     html[data-theme="dark"] .trend-tag.is-search .es-live-dot { background: #54A4FB; }
-    html[data-theme="dark"] .trend-actions .trend-read:hover { background: #2A2D34; }
+    html[data-theme="dark"] .td-icon-btn:hover { background: #2A2D34; }
   </style>
 </head>
 <body class="gen-body">
@@ -531,38 +559,59 @@
       <div class="td-toolbar">
         <span class="td-status" id="trends-live"><span class="es-live-dot" aria-hidden="true"></span><span id="trends-updated">Loading live trends…</span></span>
         <div class="td-stats" id="td-stats" aria-live="polite"></div>
-        <button class="es-btn es-btn--sm td-refresh es-refresh" type="button" id="trends-refresh" aria-label="Refresh trends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg><span>Refresh</span></button>
+        <div class="td-toolbar__actions">
+          <button class="es-btn es-btn--sm es-btn--tertiary td-ai-all" type="button" id="trends-ai" aria-label="AI angles for the trends on screen" title="Why fans care + 3 headlines for the trends on screen" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg><span>AI angles</span></button>
+          <button class="es-btn es-btn--sm td-refresh es-refresh" type="button" id="trends-refresh" aria-label="Refresh trends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg><span>Refresh</span></button>
+        </div>
       </div>
-      <div class="trends-filters" id="trends-filters" role="group" aria-label="Filter by sport"></div>
+      <div class="trends-filters" id="trends-filters" role="group" aria-label="Filter trends"></div>
       <div class="es-callout trends-notice" id="trends-notice" role="status" hidden></div>
       <div id="trends-body"></div>
-      <div class="es-empty trends-empty" id="trends-empty" hidden>
-        <p class="es-empty__title">No trends in this sport right now</p>
-        <p class="es-empty__copy">Trends refresh every 5 minutes. Try All or another sport.</p>
-      </div>
-      <p class="trends-note" data-ais-reveal>Google Trends and Google News (US), every 5 minutes. Images: Wikipedia. Check facts before you publish.</p>
+      <div class="es-empty trends-empty" id="trends-empty" hidden></div>
+      <p class="trends-note" data-ais-reveal>Google Trends and Google News (US): news from the last 48 hours, searches from the last 24. Images: Wikipedia. Check facts before you publish.</p>
+      <p class="es-sr-only" id="trends-announce" aria-live="polite"></p>
     </section>
   </main>
 
   <script>
-    // AI Studio · Trends view (was trend-design.html): /api/trend-design
-    // (Google Trends + Google News, US), grouped by sport. Cards with a photo /
-    // logo, source icons and headline ideas. Refreshes every 5 minutes while the
-    // view is open; AI ideas load per card when it scrolls into view (cached for
-    // the session). "Design this" and the ideas hand a brief to the Generate
-    // view on this page (event 'ais:design'); their links still work in a new tab.
+    // AI Studio · Trends view: /api/trend-design (Google Trends + Google News,
+    // US), grouped by sport and ranked by the server (recency × momentum × ES
+    // relevance). A hub: every card can become a post (Generate, this page), a
+    // video ad (video-ads.html) or a saved trend, and its headline ideas copy
+    // in one click.
+    //   - Instant first paint: the last feed (localStorage) shows at once with
+    //     its real age, then a fresh copy loads in the background.
+    //   - Freshness: news older than 48 h and searches older than 24 h are
+    //     hidden here too, so an old cached feed never shows expired stories.
+    //   - AI angles ("why fans care" + 3 headlines) load only for a card that
+    //     is hovered or focused for a moment, its AI button, or the toolbar's
+    //     "AI angles" (cards on screen, 6 per call). Never on load. The server
+    //     caches them per trend for everyone.
     (() => {
-      const REFRESH_MS = 5 * 60 * 1000;
+      const REFRESH_MS = 5 * 60 * 1000; // poll while the view is open (the CDN answers most)
+      const STALE_AFTER_MS = 20 * 60 * 1000; // amber dot past this
+      const FEED_MAX_AGE_MS = 6 * 60 * 60 * 1000; // a stored feed older than this is not shown
+      const DWELL_MS = 600; // hover / focus this long = "opened"
+      const AI_BATCH = 6;
       const PER_GROUP = 4;
+      const MAX_SAVED = 50;
+      const AD_SPORTS = ['nfl', 'cfb', 'mlb'];
       const SHORT = { golf: 'Golf', tennis: 'Tennis', nfl: 'NFL', cfb: 'College FB', mlb: 'MLB', others: 'Sports' };
+      const KEY = { feed: 'frameup.trends.v2', saved: 'frameup.savedTrends.v1', ai: 'frameup.trendAi.v1', handoff: 'frameup.videoAdMoment.v1' };
       // Lucide icons (ISC licence).
+      const svg = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
       const ICON = {
-        news: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="10" y="6" rx="1"/></svg>',
-        external: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
-        wand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>',
-        sparkles: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></svg>',
-        arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
-        chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>',
+        news: svg('<path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="10" y="6" rx="1"/>'),
+        external: svg('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'),
+        wand: svg('<path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/>'),
+        sparkles: svg('<path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/>'),
+        chevron: svg('<path d="m9 18 6-6-6-6"/>'),
+        video: svg('<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>'),
+        bookmark: svg('<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>'),
+        copy: svg('<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>'),
+        check: svg('<path d="M20 6 9 17l-5-5"/>'),
+        refresh: svg('<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'),
+        alert: svg('<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>'),
       };
       const els = {
         filters: document.getElementById('trends-filters'),
@@ -572,30 +621,53 @@
         updated: document.getElementById('trends-updated'),
         live: document.getElementById('trends-live'),
         refresh: document.getElementById('trends-refresh'),
+        aiAll: document.getElementById('trends-ai'),
         stats: document.getElementById('td-stats'),
+        announce: document.getElementById('trends-announce'),
       };
       const isOpen = () => document.documentElement.dataset.aisView === 'trends';
+      const store = {
+        get(key, fallback, area = 'localStorage') { try { const raw = window[area].getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (error) { return fallback; } },
+        set(key, value, area = 'localStorage') { try { window[area].setItem(key, JSON.stringify(value)); } catch (error) { /* private mode or full */ } },
+      };
+
       let data = null;
       let active = new URLSearchParams(location.search).get('sport') || 'all';
       let loadedAt = 0;
       let loading = false;
+      let failed = false;
       let entered = false;
-      const ideasCache = new Map();
-      try { Object.entries(JSON.parse(sessionStorage.getItem('frameup.trendIdeas') || '{}')).forEach(([k, v]) => ideasCache.set(k, v)); } catch (error) { /* private mode */ }
-      const saveIdeas = () => { try { sessionStorage.setItem('frameup.trendIdeas', JSON.stringify(Object.fromEntries([...ideasCache].slice(-200)))); } catch (error) { /* full */ } };
+      let shownCount = -1;
+      // AI angles for this browser session (the server shares them across users).
+      const aiCache = new Map(Object.entries(store.get(KEY.ai, {}, 'sessionStorage')));
+      const saveAi = () => store.set(KEY.ai, Object.fromEntries([...aiCache].slice(-200)), 'sessionStorage');
+      const aiState = new Map(); // id -> 'loading' | 'limited' | 'error'
+      let saved = store.get(KEY.saved, []);
+      if (!Array.isArray(saved)) saved = [];
 
-      const ago = iso => {
-        const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-        if (s < 60) return 'just now';
-        if (s < 3600) return `${Math.round(s / 60)} min ago`;
-        if (s < 86400) return `${Math.round(s / 3600)} h ago`;
-        return `${Math.round(s / 86400)} d ago`;
-      };
+      // ── Small helpers ──────────────────────────────────────────────────
       const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
       const safeUrl = u => /^https?:\/\//i.test(String(u || '')) ? String(u) : '#';
-      const labelOf = id => data?.categories.find(c => c.id === id)?.label || id;
-      const byId = id => data?.items.find(item => item.id === id);
+      const ms = iso => Date.parse(iso || '');
+      // Card age: "12m ago", "2h ago", "1d ago". Status: "4 min ago".
+      const ago = iso => {
+        const s = Math.max(0, (Date.now() - ms(iso)) / 1000);
+        if (!Number.isFinite(s)) return '';
+        if (s < 60) return 'just now';
+        if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+        if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+        return `${Math.floor(s / 86400)}d ago`;
+      };
+      const agoLong = iso => {
+        const s = Math.max(0, (Date.now() - ms(iso)) / 1000);
+        if (s < 60) return 'just now';
+        if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+        const h = Math.floor(s / 3600);
+        return `${h} h ago`;
+      };
+      const labelOf = id => data?.categories?.find(c => c.id === id)?.label || SHORT[id] || id;
       const favicon = domain => domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64` : '';
+      const iconImg = (domain, size) => domain ? `<img src="${esc(favicon(domain))}" alt="" width="${size}" height="${size}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
       // League marks (league-logos.js): a flat tile with the logo, never the
       // league name as text. The name is the tile's aria-label.
       const league = id => window.LeagueLogos?.logoFor(id) || { id: 'sports', label: SHORT[id] || 'Sports', src: 'assets/league-logos/sports.svg', bg: '#F2F4F7' };
@@ -603,36 +675,101 @@
       const leagueImg = id => `<img src="${esc(league(id).src)}" alt="" decoding="async">`;
       const leagueTile = (id, cls) => `<span class="td-league ${cls}" style="--league-bg:${esc(league(id).bg)}" aria-hidden="true">${leagueImg(id)}</span>`;
       const leagueVisual = id => `<div class="trend-visual is-league" data-sport="${esc(id)}" role="img" aria-label="${esc(leagueName(id))}" style="--league-bg:${esc(league(id).bg)}"><span class="td-fallback">${leagueImg(id)}</span></div>`;
-      // A story photo that fails to load falls back to the league tile.
+      // A photo or team logo that fails to load falls back to the league tile.
       window.AIStudioTrendPhotoError = img => { const visual = img.closest('.trend-visual'); if (visual) visual.outerHTML = leagueVisual(visual.dataset.sport); };
-      const iconImg = (domain, size) => domain ? `<img src="${esc(favicon(domain))}" alt="" width="${size}" height="${size}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
 
+      // Freshness, as on the server: real dates only, 48 h news, 24 h search.
+      function fresh(item) {
+        const limits = { news: data?.freshness?.newsMaxHours || 48, search: data?.freshness?.searchMaxHours || 24 };
+        const age = (Date.now() - ms(item.publishedAt)) / 3600e3;
+        return Number.isFinite(age) && age <= (limits[item.type] || limits.news);
+      }
+      const liveItems = () => (data?.items || []).filter(fresh);
+      const isSaved = id => saved.some(s => s.id === id);
+      const findItem = id => data?.items?.find(item => item.id === id) || saved.find(item => item.id === id);
+      const aiFor = item => aiCache.get(item.id) || (item.ai?.titles?.length || item.ai?.why ? { ...item.ai, ai: true } : null);
+      const announce = text => { els.announce.textContent = ''; setTimeout(() => { els.announce.textContent = text; }, 30); };
+
+      let toastRegion = null;
+      function toast(text, action) {
+        if (!toastRegion) {
+          toastRegion = document.querySelector('.es-toast-region') || Object.assign(document.createElement('div'), { className: 'es-toast-region' });
+          if (!toastRegion.isConnected) { toastRegion.setAttribute('aria-live', 'polite'); document.body.append(toastRegion); }
+        }
+        const el = document.createElement('div');
+        el.className = `es-toast${action ? ' es-toast--action' : ''}`;
+        el.innerHTML = `<span>${esc(text)}</span>${action ? `<button class="es-toast-action" type="button">${esc(action.label)}</button>` : ''}`;
+        if (action) el.querySelector('button').addEventListener('click', () => { action.run(); el.remove(); });
+        toastRegion.append(el);
+        setTimeout(() => { el.classList.add('is-leaving'); setTimeout(() => el.remove(), 260); }, action ? 5000 : 3000);
+      }
+
+      // ── Hand-offs ──────────────────────────────────────────────────────
       function briefFor(item, headline) {
         const lines = [];
         if (headline) lines.push(`Headline: ${headline}`);
         lines.push(headline ? `Story: ${item.title}` : item.title);
         const context = item.related?.[0]?.title;
         if (context && context.toLowerCase() !== item.title.toLowerCase()) lines.push(`Context: ${context}`);
+        const why = aiFor(item)?.why;
+        if (why) lines.push(`Why fans care: ${why}`);
+        if (item.team?.name) lines.push(`Team: ${item.team.name}`);
         lines.push(`Sport: ${labelOf(item.category)}`);
         return lines.join('\n').slice(0, 1400);
       }
       const designUrl = (item, headline) => `generate.html?brief=${encodeURIComponent(briefFor(item, headline))}`;
-
-      function ideasHtml(item) {
-        const cached = ideasCache.get(item.id);
-        const titles = cached?.titles?.length ? cached.titles : (data?.aiTitles ? null : item.titles);
-        const label = `<span class="trend-ideas__label">${ICON.sparkles}<span>Headline ideas</span>${cached?.ai ? ' <span class="ais-badge" title="Written by AI from the story">AI</span>' : ''}</span>`;
-        if (!titles) return `${label}<div class="trend-ideas__list" aria-busy="true">${'<span class="trend-idea is-skeleton es-skeleton">.</span>'.repeat(4)}</div>`;
-        if (!titles.length) return `${label}<span class="trend-ideas__empty">No ideas for this story.</span>`;
-        return `${label}<div class="trend-ideas__list">${titles.map(t => `<a class="trend-idea" href="${esc(designUrl(item, t))}" data-design title="Design with this headline"><span>${esc(t)}</span>${ICON.arrow}</a>`).join('')}</div>`;
+      // Video Ads: the trend becomes the moment, with its sport and team. URL
+      // params work in a new tab; sessionStorage carries the full story.
+      function videoUrl(item) {
+        const params = new URLSearchParams({ from: 'trends', sport: item.category, moment: item.title.slice(0, 200) });
+        if (item.team?.name) params.set('team', item.team.name);
+        if (item.id) params.set('trend', item.id);
+        return `video-ads.html?${params}`;
+      }
+      function handOffVideo(item) {
+        store.set(KEY.handoff, {
+          id: item.id, title: item.title, sport: item.category, url: item.url, image: item.image || '',
+          team: item.team?.name || '', teamShort: item.team?.short || '', publishedAt: item.publishedAt,
+          related: (item.related || []).slice(0, 3).map(r => ({ title: r.title, url: r.url, source: r.source })),
+          why: aiFor(item)?.why || '', from: 'trends', at: Date.now(),
+        }, 'sessionStorage');
       }
 
+      // ── Cards ──────────────────────────────────────────────────────────
       function visualHtml(item) {
+        const team = item.team?.logo ? `<span class="td-team-badge" title="${esc(item.team.name)}"><img src="${esc(item.team.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></span>` : '';
         if (item.image) {
           const badge = item.sourceDomain ? `<span class="td-src-badge" title="${esc(item.source)}">${iconImg(item.sourceDomain, 16)}</span>` : '';
-          return `<div class="trend-visual${item.imageKind === 'logo' ? ' is-logo' : ''}" data-sport="${esc(item.category)}"><img class="td-photo" src="${esc(item.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" ${item.imageCredit ? `title="${esc(item.imageCredit)}"` : ''} onerror="window.AIStudioTrendPhotoError?.(this)">${badge}</div>`;
+          return `<div class="trend-visual${item.imageKind === 'logo' ? ' is-logo' : ''}" data-sport="${esc(item.category)}"><img class="td-photo" src="${esc(item.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" ${item.imageCredit ? `title="${esc(item.imageCredit)}"` : ''} onerror="window.AIStudioTrendPhotoError?.(this)">${badge}${team}</div>`;
+        }
+        if (item.team?.logo) {
+          return `<div class="trend-visual is-logo" data-sport="${esc(item.category)}" role="img" aria-label="${esc(item.team.name)}"><img class="td-photo" src="${esc(item.team.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="window.AIStudioTrendPhotoError?.(this)"></div>`;
         }
         return leagueVisual(item.category);
+      }
+
+      function whyHtml(item, isNew) {
+        const why = aiFor(item)?.why;
+        return why ? `<p class="trend-why${isNew ? ' is-new' : ''}">${ICON.sparkles}<span><span class="es-sr-only">Why fans care: </span>${esc(why)}</span></p>` : '';
+      }
+
+      function ideasHtml(item, isNew) {
+        const ai = aiFor(item);
+        const state = aiState.get(item.id);
+        const titles = (ai?.titles?.length ? ai.titles : item.titles || []).slice(0, 3);
+        const canAsk = data?.aiEnrich && !ai && state !== 'loading' && state !== 'limited';
+        const side = ai ? '<span class="ais-badge" title="Written by AI from the story">AI</span>'
+          : canAsk ? `<button class="td-icon-btn trend-ideas__ai" type="button" data-ai aria-label="AI angles for this trend">${ICON.sparkles}<span>${state === 'error' ? 'Try AI again' : 'AI angles'}</span></button>` : '';
+        const head = `<div class="trend-ideas__head"><span class="trend-ideas__label">${ICON.sparkles}<span>Headline ideas</span></span>${side}</div>`;
+        if (state === 'loading') return `${head}<div class="trend-ideas__list" aria-busy="true">${'<span class="trend-idea is-skeleton es-skeleton"></span>'.repeat(3)}</div>`;
+        const note = state === 'limited' ? '<p class="trend-ideas__note">AI limit reached for now, so these are quick ideas.</p>' : '';
+        if (!titles.length) return `${head}<span class="trend-ideas__empty">No headline ideas for this story yet.</span>${note}`;
+        return `${head}<div class="trend-ideas__list${isNew ? ' is-new' : ''}">${titles.map(t => `<div class="trend-idea"><a class="trend-idea__go" href="${esc(designUrl(item, t))}" data-design title="Design a post with this headline">${esc(t)}</a><button class="trend-idea__copy" type="button" data-copy="${esc(t)}" aria-label="Copy headline: ${esc(t)}" title="Copy">${ICON.copy}</button></div>`).join('')}</div>${note}`;
+      }
+
+      function saveBtn(item) {
+        const on = isSaved(item.id);
+        return `<button class="td-icon-btn td-save" type="button" data-save aria-pressed="${on}" title="${on ? 'Remove from saved' : 'Save for later'}">${ICON.bookmark}<span>${on ? 'Saved' : 'Save'}</span></button>`;
       }
 
       function row(item, index) {
@@ -643,17 +780,24 @@
         const related = isSearch && item.related?.length
           ? `<ul class="trend-related">${item.related.slice(0, 2).map(r => `<li><a href="${esc(safeUrl(r.url))}" target="_blank" rel="noopener noreferrer">${iconImg(r.domain, 14)}<span>${esc(r.title)}</span><span class="es-sr-only"> (opens in a new tab)</span></a></li>`).join('')}</ul>`
           : '';
+        const more = item.coverage > 1 ? `<span class="trend-meta__sep" aria-hidden="true">·</span><span title="Covered by ${item.coverage} publications">${item.coverage} sources</span>` : '';
+        const minutes = (Date.now() - ms(item.publishedAt)) / 60000;
         return `<article class="trend-row ais-card${isSearch ? ' is-search' : ''}" style="--i:${index}" data-id="${esc(item.id)}" data-sport="${esc(item.category)}" aria-labelledby="tt-${esc(item.id)}">
           ${visualHtml(item)}
           <div class="trend-body">
-            <div class="trend-meta">${tag}<span class="td-source">${iconImg(item.sourceDomain, 16)}${esc(item.source || 'Google')}</span><span class="trend-meta__sep" aria-hidden="true">·</span><time datetime="${esc(item.publishedAt)}">${ago(item.publishedAt)}</time></div>
+            <div class="trend-meta">${tag}<span class="td-source">${iconImg(item.sourceDomain, 16)}${esc(item.source || 'Google')}</span><span class="trend-meta__sep" aria-hidden="true">·</span><time datetime="${esc(item.publishedAt)}"${minutes < 60 ? ' class="is-new"' : ''}>${ago(item.publishedAt)}</time>${more}</div>
             <h3 class="trend-title es-type-card-title" id="tt-${esc(item.id)}">${esc(item.title)}</h3>
+            <div data-why="${esc(item.id)}">${whyHtml(item)}</div>
             ${related}
             <div class="trend-ideas" data-ideas="${esc(item.id)}">${ideasHtml(item)}</div>
           </div>
           <div class="trend-actions">
-            <a class="es-btn td-design" href="${esc(designUrl(item))}" data-design>${ICON.wand}Design this</a>
-            <a class="trend-read" href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer">Read story ${ICON.external}<span class="es-sr-only"> (opens in a new tab)</span></a>
+            <a class="es-btn es-btn--sm td-design" href="${esc(designUrl(item))}" data-design>${ICON.wand}Design post</a>
+            ${AD_SPORTS.includes(item.category) ? `<a class="es-btn es-btn--sm es-btn--tertiary td-video" href="${esc(videoUrl(item))}" data-video>${ICON.video}Video ad</a>` : ''}
+            <div class="trend-actions__row">
+              ${saveBtn(item)}
+              <a class="td-icon-btn" href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer" title="Read the story">${ICON.external}<span>Read</span><span class="es-sr-only"> the story (opens in a new tab)</span></a>
+            </div>
           </div>
         </article>`;
       }
@@ -662,149 +806,247 @@
         return `<div class="trends-list" aria-hidden="true">${Array.from({ length: n }, () => `<div class="trend-row is-skeleton"><span class="td-sk es-skeleton" style="width:100%;aspect-ratio:1;border-radius:14px"></span><div class="trend-body"><span class="td-sk es-skeleton" style="width:min(220px,100%);height:22px"></span><span class="td-sk es-skeleton" style="height:18px"></span><span class="td-sk es-skeleton" style="width:60%;height:18px"></span><span class="td-sk es-skeleton" style="width:80%;height:34px;margin-top:8px"></span></div><span class="td-sk trend-actions" style="height:40px"></span></div>`).join('')}</div>`;
       }
 
+      // ── Filters, stats, board ──────────────────────────────────────────
+      function categoriesNow() {
+        const live = liveItems();
+        return (data?.categories || []).map(c => ({ ...c, count: live.filter(i => i.category === c.id).length }));
+      }
       const focusActiveChip = () => els.filters.querySelector(`[data-sport="${CSS.escape(active)}"]`)?.focus();
       function renderFilters() {
-        const total = data ? data.items.length : 0;
-        const chips = [{ id: 'all', label: 'All', count: total }, ...(data?.categories || [])];
-        // The chips are rebuilt (counts change on refresh): keep keyboard focus.
+        const cats = categoriesNow();
+        const chips = [{ id: 'all', label: 'All', count: liveItems().length }, ...cats];
         const hadFocus = els.filters.contains(document.activeElement);
-        els.filters.innerHTML = chips.map(c => `<button type="button" class="es-chip" data-sport="${esc(c.id)}" aria-pressed="${c.id === active}">${c.id === 'all' ? '' : leagueTile(c.id, 'td-league--chip')}<span>${esc(c.label)}</span><span class="template-filter__count">${c.count}</span></button>`).join('');
+        els.filters.innerHTML = chips.map(c => `<button type="button" class="es-chip" data-sport="${esc(c.id)}" aria-pressed="${c.id === active}">${c.id === 'all' ? '' : leagueTile(c.id, 'td-league--chip')}<span>${esc(c.label)}</span><span class="template-filter__count">${c.count}</span></button>`).join('')
+          + `<span class="td-chip-sep" aria-hidden="true"></span><button type="button" class="es-chip" data-sport="saved" aria-pressed="${active === 'saved'}">${ICON.bookmark}<span>Saved</span><span class="template-filter__count">${saved.length}</span></button>`;
         if (hadFocus) focusActiveChip();
       }
 
       function renderStats() {
-        if (!data) return;
-        const searches = data.items.filter(i => i.type === 'search').length;
-        const sources = new Set(data.items.map(i => i.sourceDomain).filter(Boolean)).size;
-        els.stats.innerHTML = `<span><b data-es-tick="td-stories">${data.items.length}</b> stories</span>${searches ? `<span><b data-es-tick="td-searches">${searches}</b> trending on Google</span>` : ''}<span><b data-es-tick="td-sources">${sources}</b> publications</span><span><b data-es-tick="td-sports">${data.categories.filter(c => c.count).length}</b> sports</span>`;
+        if (!data) { els.stats.innerHTML = ''; return; }
+        const live = liveItems();
+        const searches = live.filter(i => i.type === 'search').length;
+        els.stats.innerHTML = `<span><b data-es-tick="td-stories">${live.length}</b> stories</span>${searches ? `<span><b data-es-tick="td-searches">${searches}</b> trending on Google</span>` : ''}<span><b data-es-tick="td-sports">${categoriesNow().filter(c => c.count).length}</b> sports</span>`;
+      }
+
+      function setEmpty(kind) {
+        if (!kind) { els.empty.hidden = true; els.empty.innerHTML = ''; return; }
+        const copy = {
+          saved: ['Nothing saved yet', 'Tap Save on any trend to keep it here, even after it drops off the board.', '<button class="es-btn es-btn--sm" type="button" data-filter="all">Browse trends</button>'],
+          sport: [`No ${esc(leagueName(active))} trends in the last 48 hours`, 'New stories land every few minutes.', '<button class="es-btn es-btn--sm" type="button" data-filter="all">See all sports</button><button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-refresh>Refresh</button>'],
+          all: ['No sports trends right now', 'Google had nothing new for US sports fans. Refresh in a few minutes, or start from your own brief.', '<button class="es-btn es-btn--sm" type="button" data-refresh>Refresh</button><a class="es-btn es-btn--sm es-btn--tertiary" href="generate.html">Write a brief</a>'],
+        }[kind];
+        els.empty.innerHTML = `<p class="es-empty__title">${copy[0]}</p><p class="es-empty__copy">${copy[1]}</p><div class="trends-empty__actions">${copy[2]}</div>`;
+        els.empty.hidden = false;
+      }
+
+      function renderError() {
+        els.filters.innerHTML = '';
+        els.stats.innerHTML = '';
+        setEmpty(null);
+        els.body.innerHTML = `<div class="es-error-state" role="alert"><span class="es-error-state__icon">${ICON.alert}</span><p class="es-empty__title">Trends couldn’t load</p><p class="es-empty__copy">Google didn’t answer in time. Try again, or start from your own brief.</p><div class="trends-empty__actions"><button class="es-btn es-btn--sm" type="button" data-refresh>${ICON.refresh}Try again</button><a class="es-btn es-btn--sm es-btn--tertiary" href="generate.html">Write a brief</a></div></div>`;
       }
 
       function render() {
-        if (!data) { els.body.innerHTML = skeleton(4); return; }
+        if (!data) { if (failed) renderError(); else { els.body.innerHTML = skeleton(4); setEmpty(null); } return; }
         renderFilters();
         renderStats();
-        const byCat = id => data.items.filter(item => item.category === id);
+        const live = liveItems();
+        shownCount = live.length;
         const listClass = `trends-list${entered ? '' : ' is-entering'}`;
-        if (active === 'all') {
-          els.body.innerHTML = data.categories.filter(c => c.count).map(c => `<section class="trends-group" data-sport="${esc(c.id)}"${entered ? '' : ' data-ais-reveal'} aria-labelledby="tg-${esc(c.id)}">
-            <div class="trends-group__head"><h2 id="tg-${esc(c.id)}">${leagueTile(c.id, 'td-league--head')}${esc(c.label)} <span class="template-picker__count">${c.count}</span></h2>${c.count > PER_GROUP ? `<button class="trends-group__more" type="button" data-sport="${esc(c.id)}">See all ${c.count}${ICON.chevron}</button>` : ''}</div>
-            <div class="${listClass}">${byCat(c.id).slice(0, PER_GROUP).map((item, i) => row(item, i)).join('')}</div>
-          </section>`).join('');
-          els.empty.hidden = data.items.length > 0;
-        } else {
-          const list = byCat(active);
+        if (active === 'saved') {
+          const list = saved.map(s => data.items.find(i => i.id === s.id) || s);
           els.body.innerHTML = list.length ? `<div class="${listClass}">${list.map((item, i) => row(item, i)).join('')}</div>` : '';
-          els.empty.hidden = list.length > 0;
+          setEmpty(list.length ? null : 'saved');
+        } else if (active === 'all') {
+          const cats = categoriesNow().filter(c => c.count);
+          els.body.innerHTML = cats.map(c => `<section class="trends-group" data-sport="${esc(c.id)}"${entered ? '' : ' data-ais-reveal'} aria-labelledby="tg-${esc(c.id)}">
+            <div class="trends-group__head"><h2 id="tg-${esc(c.id)}">${leagueTile(c.id, 'td-league--head')}${esc(c.label)} <span class="template-picker__count">${c.count}</span></h2>${c.count > PER_GROUP ? `<button class="trends-group__more" type="button" data-sport="${esc(c.id)}">See all ${c.count}${ICON.chevron}</button>` : ''}</div>
+            <div class="${listClass}">${live.filter(i => i.category === c.id).slice(0, PER_GROUP).map((item, i) => row(item, i)).join('')}</div>
+          </section>`).join('');
+          setEmpty(live.length ? null : 'all');
+        } else {
+          const list = live.filter(i => i.category === active);
+          els.body.innerHTML = list.length ? `<div class="${listClass}">${list.map((item, i) => row(item, i)).join('')}</div>` : '';
+          setEmpty(list.length ? null : 'sport');
         }
         entered = true;
+        els.aiAll.hidden = !data.aiEnrich;
         window.AIStudio?.reveal(els.body);
-        observeIdeas();
       }
 
-      // ── AI headline ideas, loaded as cards come into view ─────────────────
-      const queue = [];
-      let running = 0;
-      const pending = new Set();
-      async function fetchIdeas(id) {
-        const item = byId(id);
-        if (!item || ideasCache.has(id) || pending.has(id)) return;
-        pending.add(id);
-        running += 1;
+      // Repaint one card's AI parts (why line + ideas) in place.
+      function paintAi(id, isNew) {
+        const item = findItem(id);
+        if (!item) return;
+        document.querySelectorAll(`[data-why="${CSS.escape(id)}"]`).forEach(box => { box.innerHTML = whyHtml(item, isNew); });
+        document.querySelectorAll(`[data-ideas="${CSS.escape(id)}"]`).forEach(box => {
+          const hadFocus = box.contains(document.activeElement);
+          box.innerHTML = ideasHtml(item, isNew);
+          if (hadFocus) box.querySelector('a, button')?.focus();
+        });
+      }
+
+      // ── AI angles: lazy, batched, cached ───────────────────────────────
+      const aiQueue = new Set();
+      let aiTimer = 0;
+      let aiRunning = false;
+      const needsAi = id => data?.aiEnrich && !aiCache.has(id) && !findItem(id)?.ai && !aiState.has(id);
+      function wantAi(ids, delay = 200) {
+        ids.filter(needsAi).forEach(id => aiQueue.add(id));
+        if (!aiQueue.size) return;
+        clearTimeout(aiTimer);
+        aiTimer = setTimeout(flushAi, delay);
+      }
+      const authFetch = (url, init) => (window.ESAuth?.fetchWithAuth ? window.ESAuth.fetchWithAuth(url, init) : fetch(url, init));
+      async function flushAi() {
+        if (aiRunning || !aiQueue.size) return;
+        aiRunning = true;
+        const ids = [...aiQueue].slice(0, AI_BATCH);
+        ids.forEach(id => { aiQueue.delete(id); aiState.set(id, 'loading'); paintAi(id); });
+        let limited = false;
+        let message = '';
         try {
-          const request = {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mode: 'titles', title: item.title, related: (item.related || []).map(r => r.title), sport: labelOf(item.category) }),
-          };
-          let response;
-          try {
-            response = window.ESAuth?.fetchWithAuth ? await window.ESAuth.fetchWithAuth('/api/trend-design', request) : await fetch('/api/trend-design', request);
-          } catch (error) {
-            response = await fetch('/api/trend-design', request);
-          }
+          const items = ids.map(id => { const item = findItem(id); return { id, title: item.title, related: (item.related || []).slice(0, 2).map(r => r.title), sport: labelOf(item.category) }; });
+          const response = await authFetch('/api/trend-design', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'enrich', items }) });
           const json = await response.json().catch(() => null);
-          if (!response.ok || !json?.ok) throw new Error(json?.error || `HTTP ${response.status}`);
-          ideasCache.set(id, { ai: !!json.ai, titles: json.titles?.length ? json.titles : item.titles });
-        } catch (error) {
-          ideasCache.set(id, { ai: false, titles: item.titles });
-        } finally {
-          pending.delete(id);
-          running -= 1;
-          saveIdeas();
-          document.querySelectorAll(`[data-ideas="${CSS.escape(id)}"]`).forEach(box => { box.innerHTML = ideasHtml(item); });
-          pump();
-        }
-      }
-      function pump() { while (running < 3 && queue.length) fetchIdeas(queue.shift()); }
-      const observer = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-          if (!entry.isIntersecting) return;
-          observer.unobserve(entry.target);
-          const id = entry.target.dataset.id;
-          if (!ideasCache.has(id) && !queue.includes(id)) queue.push(id);
-        });
-        pump();
-      }, { rootMargin: '200px 0px' }) : null;
-      function observeIdeas() {
-        if (!data?.aiTitles) return;
-        document.querySelectorAll('.trend-row[data-id]').forEach(rowEl => {
-          if (ideasCache.has(rowEl.dataset.id)) return;
-          if (observer) observer.observe(rowEl); else queue.push(rowEl.dataset.id);
-        });
-        if (!observer) pump();
-        clearTimeout(observeIdeas.timer);
-        observeIdeas.timer = setTimeout(() => {
-          // Only cards on screen: a hidden view has no layout (every card would
-          // look "on screen" and ask the AI for ideas nobody sees).
-          if (!isOpen()) return;
-          document.querySelectorAll('.trend-row[data-id]').forEach(rowEl => {
-            const id = rowEl.dataset.id;
-            const box = rowEl.getBoundingClientRect();
-            if (box.height && box.top < window.innerHeight + 200 && !ideasCache.has(id) && !pending.has(id) && !queue.includes(id)) queue.push(id);
+          limited = response.status === 429 || Boolean(json?.limited);
+          message = json?.error || '';
+          const got = json?.items || {};
+          ids.forEach(id => {
+            const value = got[id];
+            if (value?.ai) { aiCache.set(id, { why: value.why || '', titles: value.titles || [], ai: true }); aiState.delete(id); }
+            else aiState.set(id, limited ? 'limited' : 'error');
           });
-          pump();
-        }, 800);
+        } catch (error) {
+          ids.forEach(id => aiState.set(id, 'error'));
+        }
+        aiRunning = false;
+        saveAi();
+        ids.forEach(id => paintAi(id, true));
+        const done = ids.filter(id => aiCache.has(id)).length;
+        if (done) announce(`AI angles ready for ${done} trend${done === 1 ? '' : 's'}.`);
+        if (limited) toast(message || 'AI limit reached for now. Quick headline ideas still work.');
+        else if (!done) toast('AI angles didn’t load. Quick headline ideas still work.');
+        if (aiQueue.size) flushAi();
       }
 
+      // A card is "opened" when the pointer or keyboard focus rests on it.
+      let dwellRow = null;
+      let dwellTimer = 0;
+      const canHover = window.matchMedia('(hover: hover)');
+      function dwellOn(rowEl) {
+        if (rowEl === dwellRow) return;
+        clearTimeout(dwellTimer);
+        dwellRow = rowEl;
+        if (!rowEl || !needsAi(rowEl.dataset.id)) return;
+        dwellTimer = setTimeout(() => { if (dwellRow === rowEl) wantAi([rowEl.dataset.id]); }, DWELL_MS);
+      }
+      els.body.addEventListener('pointerover', event => { if (canHover.matches && event.pointerType === 'mouse') dwellOn(event.target.closest('.trend-row[data-id]')); });
+      els.body.addEventListener('pointerleave', () => dwellOn(null));
+      els.body.addEventListener('focusin', event => dwellOn(event.target.closest('.trend-row[data-id]')));
+
+      function visibleIds() {
+        return [...els.body.querySelectorAll('.trend-row[data-id]')].filter(rowEl => {
+          const box = rowEl.getBoundingClientRect();
+          return box.height && box.bottom > 0 && box.top < window.innerHeight;
+        }).map(rowEl => rowEl.dataset.id);
+      }
+      els.aiAll.addEventListener('click', () => {
+        const ids = visibleIds().filter(needsAi).slice(0, AI_BATCH);
+        if (!ids.length) { toast('AI angles are already showing for the trends on screen.'); return; }
+        wantAi(ids, 0);
+      });
+
+      // ── Saved ──────────────────────────────────────────────────────────
+      function toggleSave(id, button) {
+        const item = findItem(id);
+        if (!item) return;
+        if (isSaved(id)) {
+          saved = saved.filter(s => s.id !== id);
+          announce('Removed from saved.');
+        } else {
+          const { ai, rank, ...snapshot } = item;
+          saved = [{ ...snapshot, savedAt: Date.now() }, ...saved].slice(0, MAX_SAVED);
+          toast('Saved for later', active === 'saved' ? null : { label: 'View saved', run: () => setActive('saved', true) });
+        }
+        store.set(KEY.saved, saved);
+        if (active === 'saved') { render(); return; }
+        document.querySelectorAll(`.trend-row[data-id="${CSS.escape(id)}"] [data-save]`).forEach(b => { b.outerHTML = saveBtn(item); });
+        renderFilters();
+        if (button) document.querySelector(`.trend-row[data-id="${CSS.escape(id)}"] [data-save]`)?.focus();
+      }
+
+      async function copyText(text, button) {
+        let ok = false;
+        try { await navigator.clipboard.writeText(text); ok = true; } catch (error) {
+          const area = Object.assign(document.createElement('textarea'), { value: text });
+          area.setAttribute('readonly', '');
+          area.style.cssText = 'position:fixed;opacity:0';
+          document.body.append(area);
+          area.select();
+          try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+          area.remove();
+        }
+        if (!ok) { toast('Couldn’t copy. Select the headline and copy it by hand.'); return; }
+        button.classList.add('is-done');
+        button.innerHTML = ICON.check;
+        announce('Headline copied.');
+        setTimeout(() => { button.classList.remove('is-done'); button.innerHTML = ICON.copy; }, 1500);
+      }
+
+      // ── Status + loading (instant from the last feed, then fresh) ──────
       function setLive() {
-        if (!data) return;
-        const age = Date.now() - new Date(data.updatedAt).getTime();
-        els.updated.textContent = `Live · ${ago(data.updatedAt)}`;
-        els.live.title = 'Refreshes every 5 minutes';
-        els.live.classList.toggle('is-stale', age > REFRESH_MS * 2 || !!data.stale);
-        document.querySelectorAll('.trend-meta time').forEach(t => { t.textContent = ago(t.getAttribute('datetime')); });
+        if (!data) {
+          els.updated.textContent = loading ? 'Loading live trends…' : failed ? 'Not loaded' : 'Loading live trends…';
+          els.live.classList.toggle('is-error', failed && !loading);
+          return;
+        }
+        const age = Date.now() - ms(data.updatedAt);
+        let text = `Updated ${agoLong(data.updatedAt)}`;
+        if (loading) text += ' · updating…';
+        else if (failed) text = `Couldn’t refresh · updated ${agoLong(data.updatedAt)}`;
+        els.updated.textContent = text;
+        els.live.title = `Rebuilt every ${Math.round((data.refreshSeconds || 600) / 60)} minutes. News older than ${data.freshness?.newsMaxHours || 48} h and searches older than ${data.freshness?.searchMaxHours || 24} h are hidden.`;
+        els.live.classList.toggle('is-stale', !failed && (age > STALE_AFTER_MS || Boolean(data.stale)));
+        els.live.classList.toggle('is-error', failed);
+        document.querySelectorAll('.trend-meta time').forEach(t => { t.textContent = ago(t.getAttribute('datetime')); t.classList.toggle('is-new', Date.now() - ms(t.getAttribute('datetime')) < 3600e3); });
+        // A story that just passed its cutoff leaves the board (unless
+        // someone is working in it).
+        if (active !== 'saved' && liveItems().length !== shownCount && !els.body.contains(document.activeElement)) render();
+      }
+
+      function adopt(json) {
+        data = json;
+        (json.items || []).forEach(item => { if (item.ai && !aiCache.has(item.id)) aiCache.set(item.id, { ...item.ai, ai: true }); });
       }
 
       async function load(force) {
         if (loading) return;
         loading = true;
+        setLive();
         els.refresh.setAttribute('aria-busy', 'true');
         try {
-          const response = await fetch(`/api/trend-design${force ? `?t=${Date.now()}` : ''}`, { headers: { Accept: 'application/json' } });
+          const response = await fetch(`/api/trend-design${force ? `?fresh=1&t=${Date.now()}` : ''}`, { headers: { Accept: 'application/json' } });
           const json = await response.json();
           if (!response.ok || !json.ok) throw new Error(json.error || `HTTP ${response.status}`);
-          data = json;
+          const first = !data;
+          adopt(json);
           loadedAt = Date.now();
-          els.live.classList.remove('is-error');
+          failed = false;
+          store.set(KEY.feed, json);
           els.notice.hidden = !(json.sourcesFailed?.length);
           if (json.sourcesFailed?.length) els.notice.textContent = 'Some sources didn’t respond this time, so a few trends may be missing. They’ll be back on the next refresh.';
           // A background refresh must not wipe the cards while someone is
-          // tabbing through them: keep the list, update stats and status.
-          if (!force && els.body.contains(document.activeElement)) { renderFilters(); renderStats(); } else render();
-          setLive();
+          // working in them: keep the list, update counts and status.
+          if (!first && !force && els.body.contains(document.activeElement)) { renderFilters(); renderStats(); } else render();
+          if (force) announce(`Trends updated: ${liveItems().length} stories.`);
         } catch (error) {
-          els.live.classList.add('is-error');
-          if (!data) {
-            els.body.innerHTML = '';
-            els.notice.hidden = false;
-            els.notice.textContent = 'Trends couldn’t load right now. Try Refresh in a moment.';
-            els.updated.textContent = 'Not loaded';
-          } else {
-            els.updated.textContent = `Couldn’t refresh · showing trends from ${ago(data.updatedAt)}`;
-          }
+          failed = true;
+          if (!data) render();
         } finally {
           loading = false;
           els.refresh.removeAttribute('aria-busy');
+          setLive();
         }
       }
 
@@ -814,34 +1056,53 @@
         if (active === 'all') url.searchParams.delete('sport'); else url.searchParams.set('sport', active);
         return url;
       }
-      els.filters.addEventListener('click', event => {
-        const chip = event.target.closest('[data-sport]');
-        if (!chip) return;
-        active = chip.dataset.sport;
+      function setActive(next, focusChip) {
+        active = next;
         history.replaceState(history.state, '', sportUrl());
         entered = false;
         render();
+        if (focusChip) focusActiveChip();
+      }
+
+      els.filters.addEventListener('click', event => {
+        const chip = event.target.closest('[data-sport]');
+        if (chip) setActive(chip.dataset.sport);
+      });
+      els.empty.addEventListener('click', event => {
+        if (event.target.closest('[data-refresh]')) { load(true); return; }
+        const to = event.target.closest('[data-filter]');
+        if (to) setActive(to.dataset.filter, true);
       });
       els.body.addEventListener('click', event => {
-        // "Design this" / a headline idea: design it here, in the Generate view.
+        if (event.target.closest('[data-refresh]')) { failed = false; render(); load(true); return; }
+        const rowEl = event.target.closest('.trend-row[data-id]');
+        const id = rowEl?.dataset.id;
+        const plainClick = event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+        // Design post / a headline idea: design it here, in the Generate view.
         // Ctrl/⌘/Shift/middle clicks keep the link (Generate in a new tab).
         const design = event.target.closest('a[data-design]');
         if (design) {
-          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          if (!plainClick) return;
           const brief = new URL(design.href, location.href).searchParams.get('brief');
           if (!brief) return;
           event.preventDefault();
-          document.dispatchEvent(new CustomEvent('ais:design', { detail: { brief } }));
+          document.dispatchEvent(new CustomEvent('ais:design', { detail: { brief, source: 'trends', trendId: id } }));
           return;
         }
+        if (event.target.closest('a[data-video]')) { const item = findItem(id); if (item) handOffVideo(item); return; }
+        const copy = event.target.closest('[data-copy]');
+        if (copy) { copyText(copy.dataset.copy, copy); return; }
+        const save = event.target.closest('[data-save]');
+        if (save) { toggleSave(id, save); return; }
+        if (event.target.closest('[data-ai]')) { aiState.delete(id); wantAi([id], 0); return; }
         const more = event.target.closest('.trends-group__more');
-        if (!more) return;
-        active = more.dataset.sport;
-        history.replaceState(history.state, '', sportUrl());
-        entered = false;
-        render();
-        // Move focus to the now-active sport chip (focusing scrolls it into view).
-        focusActiveChip();
+        if (more) setActive(more.dataset.sport, true);
+      });
+      // Middle-click / new-tab on "Video ad" still hands the moment over.
+      els.body.addEventListener('auxclick', event => {
+        const link = event.target.closest('a[data-video]');
+        const item = link && findItem(link.closest('.trend-row')?.dataset.id);
+        if (item) handOffVideo(item);
       });
       els.refresh.addEventListener('click', () => load(true));
 
@@ -850,14 +1111,17 @@
       document.addEventListener('visibilitychange', () => { if (!document.hidden && isOpen() && Date.now() - loadedAt > REFRESH_MS) load(false); });
       setInterval(() => { if (isOpen()) setLive(); }, 30000);
 
+      // First paint: the last feed this browser saw, with its real age.
+      const last = store.get(KEY.feed, null);
+      if (last?.ok && Array.isArray(last.items) && Date.now() - ms(last.updatedAt) < FEED_MAX_AGE_MS) { adopt(last); setLive(); }
       render();
       window.AIStudioTrends = Object.freeze({
         // Called by the page when the Trends view opens.
         activate() {
-          if (!data || Date.now() - loadedAt > REFRESH_MS) load(false);
-          else { setLive(); observeIdeas(); }
+          if (!loadedAt || Date.now() - loadedAt > REFRESH_MS) load(false);
+          else setLive();
         },
-        sport: () => active,
+        sport: () => (active === 'saved' ? 'all' : active),
         // Back/forward between sports.
         setSport(sport) {
           const next = sport || 'all';
@@ -1145,7 +1409,19 @@
         card.classList.remove('is-skeleton', 'is-failed');
         card.removeAttribute('aria-hidden');
         card.querySelector('.gen-card__type').textContent = spec.label;
-        card.querySelector('.gen-card__why').textContent = spec.why || spec.title;
+        // The creative director's angle when there is one ("Angle: …"), else the
+        // writer's note. Built from text nodes, never HTML.
+        const why = card.querySelector('.gen-card__why');
+        const angle = typeof spec.direction?.angle === 'string' ? spec.direction.angle.trim() : '';
+        if (angle) {
+          const label = document.createElement('strong');
+          label.textContent = 'Angle:';
+          why.replaceChildren(label, document.createTextNode(` ${angle}`));
+          why.title = `Angle: ${angle}`;
+        } else {
+          why.textContent = spec.why || spec.title;
+          why.removeAttribute('title');
+        }
         card.querySelector('img').alt = `${spec.label}: ${(spec.lines || []).join(' ') || spec.title}`;
         // Only http(s) sources: a "javascript:" link would run when clicked.
         const source = (spec.sources || []).find(item => /^https?:\/\//i.test(String(item?.url || '')));
@@ -1663,13 +1939,13 @@
         const src = typeof data.logoFor === 'function' ? data.logoFor(match) : '';
         if (!/^https:\/\//.test(src)) return '';
         const [a, b] = Array.isArray(match.colors) ? match.colors : [];
-        return `<span class="gen-found__team" style="--a:${esc(a || '#8490A6')};--b:${esc(b || a || '#8490A6')}" aria-hidden="true"><img src="${esc(src)}" alt="" width="20" height="20" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-team-logo></span>`;
+        return `<span class="es-team-logo" style="--a:${esc(a || '#8490A6')};--b:${esc(b || a || '#8490A6')}" aria-hidden="true"><img src="${esc(src)}" alt="" width="20" height="20" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-team-logo></span>`;
       }
       // error doesn't bubble: catch it in the capture phase, show the dot instead.
       els.found.addEventListener('error', event => {
         const img = event.target;
         if (!(img instanceof HTMLImageElement) || !img.hasAttribute('data-team-logo')) return;
-        img.parentElement?.classList.add('is-dot');
+        img.parentElement?.classList.add('es-team-logo--dot');
         img.remove();
       }, true);
       function analyzeBrief() {

@@ -18,6 +18,8 @@
 //   grammar     grammar / spelling / punctuation fixes from the cheapest model;
 //               each must quote its field exactly and keep numbers and brand
 //               words; 10-minute cache
+//   moments-with-clips  the top ~10 trending moments that have fresh, verified
+//               clips (one capped search for all of them, shared 15-min cache)
 //   research    removed (410)
 //
 // Every request needs a signed-in ES user; AI modes count toward the hourly limit.
@@ -236,9 +238,7 @@ async function findClips(body, track) {
   const hit = CLIP_CACHE.get(key);
   if (hit && Date.now() - hit.at < CLIP_TTL_MS) {
     // Ages move on while cached; anything that crossed 72h meanwhile goes.
-    const clips = hit.value.clips
-      .map(c => ({ ...c, ageHours: Math.round(ageHoursOf(c.postedAt) ?? Infinity) }))
-      .filter(c => c.ageHours <= FIND_CLIPS.maxAgeHours);
+    const clips = reAge(hit.value.clips);
     return { ...hit.value, clips, ...noteFor(clips.length), cached: true, cost: 0 };
   }
   if (track.skipAi) return null; // cache miss: the caller gates and comes back
@@ -275,23 +275,7 @@ async function findClips(body, track) {
 
   // Verify each post like `clip` does: video.twimg.com MP4s only, never the bytes.
   const checks = await Promise.all(candidates.map(url => withTimeout(clipFromPost(url), FIND_CLIPS.verifyMs, { ok: false })));
-  const clips = checks
-    .filter(c => c?.ok && c.variants?.length)
-    .map(c => ({ c, age: ageHoursOf(c.postedAt) }))
-    .filter(({ c, age }) => age !== null && age <= FIND_CLIPS.maxAgeHours && !looksOld(c.text))
-    .sort((x, y) => x.age - y.age)
-    .slice(0, FIND_CLIPS.maxClips)
-    .map(({ c, age }) => ({
-      url: c.url,
-      handle: c.handle || '',
-      text: c.text || '',
-      thumb: c.thumbnail || '',
-      duration: Math.round((c.durationMs || 0) / 100) / 10,
-      durationMs: c.durationMs || 0,
-      postedAt: c.postedAt,
-      ageHours: Math.round(age),
-      variants: c.variants.map(v => ({ url: v.url, width: v.width, height: v.height, bitrate: v.bitrate })),
-    }));
+  const clips = checks.map(freshClip).filter(Boolean).sort((a, b) => a.ageHours - b.ageHours).slice(0, FIND_CLIPS.maxClips);
   const value = { ok: true, teams: teamsOut, clips };
   if (CLIP_CACHE.size > 120) CLIP_CACHE.delete(CLIP_CACHE.keys().next().value);
   CLIP_CACHE.set(key, { at: Date.now(), value });
@@ -299,6 +283,125 @@ async function findClips(body, track) {
 }
 
 const noteFor = n => (n < FIND_CLIPS.minClips ? { note: `Only ${n} clip${n === 1 ? '' : 's'} from the last 3 days.` } : {});
+
+// Shapes a verified clipFromPost result for the client, or null when it fails
+// the freshness rules (verified timestamp under 72h, not a throwback).
+function freshClip(c) {
+  if (!c?.ok || !c.variants?.length) return null;
+  const age = ageHoursOf(c.postedAt);
+  if (age === null || age > FIND_CLIPS.maxAgeHours || looksOld(c.text)) return null;
+  return {
+    url: c.url,
+    handle: c.handle || '',
+    text: c.text || '',
+    thumb: c.thumbnail || '',
+    duration: Math.round((c.durationMs || 0) / 100) / 10,
+    durationMs: c.durationMs || 0,
+    postedAt: c.postedAt,
+    ageHours: Math.round(age),
+    variants: c.variants.map(v => ({ url: v.url, width: v.width, height: v.height, bitrate: v.bitrate })),
+  };
+}
+
+// Re-ages cached clips and drops the ones that crossed 72h since caching.
+const reAge = clips => clips
+  .map(c => ({ ...c, ageHours: Math.round(ageHoursOf(c.postedAt) ?? Infinity) }))
+  .filter(c => c.ageHours <= FIND_CLIPS.maxAgeHours);
+
+// ─── Moments with clips (By moment: only moments that have fresh clips) ────
+// One search for the top ~10 trending moments, grouped by moment, every post
+// verified like find-clips. Shared across users for 15 minutes, so a refresh
+// costs at most one capped search per sport choice per quarter hour.
+const MOMENT_CACHE = new Map();
+const MOMENTS = { top: 10, maxUses: 3, maxTokens: 1500, maxCostUsd: 0.03, perMoment: 4, maxCandidates: 30 };
+
+// The team a moment's title names first (full or short name), if any.
+function teamInTitle(title, sport) {
+  const text = String(title || '').toLowerCase();
+  const at = name => text.search(new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(name.toLowerCase())}(?![\\p{L}\\p{N}])`, 'u'));
+  let best = null;
+  TEAMS.TEAMS.filter(t => t.sport === sport).forEach(team => {
+    const found = [at(team.name), at(team.short)].filter(i => i >= 0);
+    if (found.length && (!best || Math.min(...found) < best.index)) best = { team, index: Math.min(...found) };
+  });
+  return best ? best.team : null;
+}
+
+async function momentList(sportIn) {
+  const sports = AD_SPORTS.includes(sportIn) ? [sportIn] : AD_SPORTS;
+  const data = await trends();
+  return (data.items || []).filter(item => sports.includes(item.sport)).slice(0, MOMENTS.top);
+}
+
+function momentsCached(key) {
+  const hit = MOMENT_CACHE.get(key);
+  if (!hit || Date.now() - hit.at >= CLIP_TTL_MS) return null;
+  const moments = hit.value.moments.map(m => ({ ...m, clips: reAge(m.clips) })).filter(m => m.clips.length);
+  return { ...hit.value, moments, cached: true, cost: 0 };
+}
+
+async function momentsWithClips(body, track) {
+  const sport = AD_SPORTS.includes(body.sport) ? body.sport : 'all';
+  const list = await momentList(sport);
+  const key = `${sport}|${list.map(m => m.id).join(',')}`;
+  const cached = momentsCached(key);
+  if (cached) return cached;
+  if (track.skipAi) return null; // cache miss: the caller gates and comes back
+  if (!list.length) return { ok: true, moments: [], checked: 0, cached: false, cost: 0 };
+
+  const since = new Date(Date.now() - FIND_CLIPS.maxAgeHours * 3600e3).toISOString().slice(0, 16).replace('T', ' ');
+  const system = [
+    'You find the newest sports video posts on X (Twitter) for EssentiallySports newsletter ads.',
+    'Search, then reply with JSON only. List only X post URLs you actually saw in search results; never make one up.',
+    'Freshness matters most: only posts made in the last 72 hours. No throwbacks, anniversaries or re-uploads of old games.',
+  ].join('\n');
+  const prompt = [
+    'Trending moments:',
+    ...list.map((m, i) => `${i + 1}. [${SPORT_NAMES[m.sport]}] ${m.title}`),
+    '',
+    `For each moment, find X posts made in the last 72 hours (after ${since} UTC) that carry native video OF THAT MOMENT: highlights, the play itself, celebrations, reactions. Prefer official team, league, network and reporter accounts. Skip posts that only link to an article.`,
+    `Reply with JSON only: {"moments": [{"i": <moment number>, "posts": ["https://x.com/<handle>/status/<id>"]}]} (up to ${MOMENTS.perMoment} posts per moment; leave out moments with none).`,
+  ].join('\n');
+  const result = await aiWebResearch({
+    tier: 'search', system, prompt,
+    maxUses: MOMENTS.maxUses, maxTokens: MOMENTS.maxTokens, maxCostUsd: MOMENTS.maxCostUsd, timeoutMs: 40000,
+    track: { ...track, feature: 'video-ads-moments-with-clips' },
+  });
+  if (result.cost > MOMENTS.maxCostUsd + 0.01) console.warn(`video-ads moments-with-clips cost ${result.cost.toFixed(4)}`);
+  const parsed = extractJson(result.text) || {};
+  const groups = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.moments) ? parsed.moments : []);
+  // Moment index -> candidate post URLs; a post counts for its first moment only.
+  const seen = new Set();
+  const byMoment = new Map();
+  let total = 0;
+  groups.forEach(group => {
+    const index = Number(group?.i ?? group?.index ?? group?.moment) - 1;
+    if (!Number.isInteger(index) || index < 0 || index >= list.length) return;
+    const posts = (Array.isArray(group.posts) ? group.posts : []).map(p => clean(typeof p === 'string' ? p : p?.url, 300)).filter(isXPost).map(u => tweet.normalizeTweetUrl(u));
+    const mine = byMoment.get(index) || [];
+    posts.forEach(url => {
+      if (seen.has(url) || mine.length >= MOMENTS.perMoment || total >= MOMENTS.maxCandidates) return;
+      seen.add(url);
+      mine.push(url);
+      total += 1;
+    });
+    if (mine.length) byMoment.set(index, mine);
+  });
+
+  const urls = [...byMoment.values()].flat();
+  const checks = await Promise.all(urls.map(url => withTimeout(clipFromPost(url), FIND_CLIPS.verifyMs, { ok: false })));
+  const verified = new Map(urls.map((url, k) => [url, freshClip(checks[k])]));
+  const moments = list.map((m, index) => {
+    const clips = (byMoment.get(index) || []).map(url => verified.get(url)).filter(Boolean).sort((a, b) => a.ageHours - b.ageHours);
+    if (!clips.length) return null;
+    const team = teamInTitle(m.title, m.sport);
+    return { id: m.id, title: m.title, sport: m.sport, ...(team ? { team: teamOut(team) } : {}), publishedAt: m.publishedAt, clips };
+  }).filter(Boolean);
+  const value = { ok: true, moments, checked: list.length };
+  if (MOMENT_CACHE.size > 20) MOMENT_CACHE.delete(MOMENT_CACHE.keys().next().value);
+  MOMENT_CACHE.set(key, { at: Date.now(), value });
+  return { ...value, cached: false, cost: money(result.cost) };
+}
 
 // ─── Copy (3 variants in the ES styles) ────────────────────────────────────
 const LIMITS = { headlineWords: 22, paragraphWords: 45, totalWords: 95, ctaChars: 32 };
@@ -742,7 +845,7 @@ async function grammar(body, track) {
   return { ...value, dropped, cached: false, cost: money(result.cost) };
 }
 
-const AI_MODES = { 'find-clips': findClips, copy, chat, grammar };
+const AI_MODES = { 'find-clips': findClips, 'moments-with-clips': momentsWithClips, copy, chat, grammar };
 
 exports.handler = async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'POST, OPTIONS' }, body: '' };
@@ -766,6 +869,11 @@ exports.handler = async function handler(event) {
         const cached = await findClips(body, { ...track, skipAi: true });
         if (cached) return json(cached.ok ? 200 : (cached.status || 502), cached);
       }
+      // Same for moments-with-clips (shared 15-minute cache).
+      if (body.mode === 'moments-with-clips') {
+        const cached = await momentsWithClips(body, { ...track, skipAi: true }).catch(() => null);
+        if (cached) return json(200, cached);
+      }
       // Same for a repeated grammar check (10-minute cache).
       if (body.mode === 'grammar') {
         const cached = grammarCached(body);
@@ -784,6 +892,10 @@ exports.handler = async function handler(event) {
           console.error('video-ads find-clips failed:', error);
           return json(502, { ok: false, error: 'Clip search is unavailable right now. Paste an X link or upload a clip instead.' });
         }
+        if (body.mode === 'moments-with-clips') {
+          console.error('video-ads moments-with-clips failed:', error);
+          return json(502, { ok: false, error: "Couldn't check which moments have clips right now." });
+        }
         throw error;
       }
     }
@@ -796,6 +908,6 @@ exports.handler = async function handler(event) {
 
 exports._test = {
   variantsFrom, isVideoUrl, sizeFromUrl, clipFromPost, trends, checkVariant, autoFix, trimToWords, swapBanned, closestPhrase,
-  findClips, looksOld, ageHoursOf, copy, chat, CLIP_CACHE, FIND_CLIPS, grammar, checkGrammarIssues, GRAMMAR_CACHE,
+  findClips, momentsWithClips, teamInTitle, MOMENT_CACHE, MOMENTS, looksOld, ageHoursOf, copy, chat, CLIP_CACHE, FIND_CLIPS, grammar, checkGrammarIssues, GRAMMAR_CACHE,
   useLearning(mod) { learning = { lessonsFor: async () => ({ examples: [], rules: [] }), recordEvent: async () => false, ...mod }; },
 };

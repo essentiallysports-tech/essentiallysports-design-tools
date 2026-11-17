@@ -15,6 +15,7 @@
   /* #1A73E0: white labels on it pass 4.5:1 (was #2586F7, 3.6:1). */
   --theme-dark-accent: #1A73E0;
   --theme-dark-accent-soft: rgba(26, 115, 224, .22);
+  --theme-dark-field-line: #707A8C; /* Slate 400: field outlines, 3.2:1 on Slate 700 */
 }
 
 .theme-switcher {
@@ -293,8 +294,14 @@ html[data-theme="dark"] :is(
   color: var(--theme-dark-text) !important;
 }
 
+/* Bare p / label / li / small are muted, but not when they carry a design-system
+   role class (es-type-*, es-*, ais-*, va-*, gen-*, dov-*: those set their own
+   dark colour from tokens), and not inside a surface that stays light in dark
+   mode (mark it data-surface="light"; the Video Ads Meta preview is one).
+   :where() keeps this rule's specificity what it was before the exclusions. */
 html[data-theme="dark"] :is(
-  p, label, li, small, .request-card-copy, .request-help,
+  :where(:is(p, label, li, small):not([class*="es-"], [class*="ais-"], [class*="va-"], [class*="gen-"], [class*="dov-"]):not(:is([data-surface="light"], .va-device[data-meta="feed"], .va-meta-over, .canvas-wrap, .canvas-stack) *)),
+  .request-card-copy, .request-help,
   .account-subtitle, .panel-subtitle, .item-meta, .task-card-meta,
   .export-list-title small, .export-list-row, .drawer-meta,
   .drawer-section p, .drawer-links, .metric-label, .login-note,
@@ -308,7 +315,8 @@ html[data-theme="dark"] :is(
 html[data-theme="dark"] :is(input, textarea, select, .select-dropdown-trigger, .studio-name-field, .studio-ai-search, .command-search, .dashboard-choice-trigger, .filter, .table-control, .login-mode-tab) {
   background: var(--theme-dark-surface-raised) !important;
   color: var(--theme-dark-text) !important;
-  border-color: var(--theme-dark-border-strong) !important;
+  /* Field outlines need 3:1 against the raised fill: Slate 400 is 3.2:1 on #2A2D34. */
+  border-color: var(--theme-dark-field-line, #707A8C) !important;
 }
 
 html[data-theme="dark"] :is(.request-dropdown-trigger, .request-dropdown-menu, .request-type-guide) {

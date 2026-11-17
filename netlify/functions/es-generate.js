@@ -10,7 +10,8 @@
 // The AI never draws: it only fills fields our templates already understand.
 // The browser renders each spec with the real editor (frameup-spec.js).
 const { verifyEsUser } = require('./_supabase-auth.js');
-const { loadPastDesigns, selectExamples, formatExamples } = require('./_generate-examples.js');
+const { selectExamples, formatExamples, loadCorpus, normalizeCorpus, pickPastPosts, formatPastPosts, houseStyle } = require('./_generate-examples.js');
+const director = require('./_creative-director.js');
 const { isMcpConfigured, createSession } = require('./_es-mcp.js');
 const { gatewayConfigured, aiText, isBudgetError, logBackupCall, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage, MODELS: AI_MODELS } = require('./_ai-gateway.js');
 const RULES = require('../../frameup-rules.js');
@@ -62,6 +63,16 @@ const TOOL_OVERRIDES = {
   images: process.env.ES_MCP_SEARCH_TOOL || '',
 };
 const MAX_DESIGNS = 4;
+// Time guards (ms since the run started). Vercel gives this function 60s; these
+// keep a run under ~50s: the director only starts while research was quick,
+// and the slow optional steps are skipped late in a run.
+const DIRECTOR_START_BY_MS = 9000;
+const DIRECTOR_RETRY_BY_MS = 12000;
+const DIRECTOR_TIMEOUT_MS = 12000;
+const REPAIR_START_BY_MS = 25000;
+const REVIEW_START_BY_MS = 38000;
+const ESCALATE_START_BY_MS = 20000;
+const clock = { now: () => Date.now() };
 // Hosts the /api/es-image-search proxy will fetch (same list as es-image-search.js);
 // a photo on any other host would fail to load in the editor.
 const PROXY_IMAGE_HOSTS = new Set(['image-cdn.essentiallysports.com', 'www.essentiallysports.com', 'www.staging.essentiallysports.com']);
@@ -272,9 +283,12 @@ function checkSpec(raw, index, allowedTypes, researchUrls = null) {
     if (!alts.length) return { error: `design ${index + 1}: ${checked.error}` };
     Object.assign(checked, alts.shift());
   }
+  // Which creative-director concept this design answers (c1-c4), if any.
+  const conceptId = /^c[1-4]$/.test(String(raw.conceptId || '')) ? String(raw.conceptId) : '';
   return {
     spec: {
       id: `gen-${Date.now().toString(36)}-${index}`,
+      ...(conceptId ? { conceptId } : {}),
       postType,
       label: TEMPLATES[postType].label,
       title: within(raw.title, 1, 80) || (checked.lines[0] || checked.listicle?.title.replace(/\n/g, ' ') || '').slice(0, 80),
@@ -704,7 +718,8 @@ function fakeQuote(spec, source) {
 }
 
 // The short follow-up for rejected designs: errors, the designs, the shapes.
-function repairPrompt(brief, broken, found = null) {
+// concepts (optional): the director's concepts, so a fix keeps each design's angle.
+function repairPrompt(brief, broken, found = null, concepts = []) {
   const shapes = [...new Set(broken.map(p => p.raw?.postType).filter(type => TEMPLATES[type]))]
     .map(type => `- ${type}: ${TEMPLATES[type].shape}`).join('\n');
   // Number or quote problems need the facts to fix them with.
@@ -716,6 +731,10 @@ function repairPrompt(brief, broken, found = null) {
     `Brief: ${brief.slice(0, 600)}`,
     `Errors (each says how to fix it):\n- ${broken.map(p => p.error).join('\n- ')}`,
     `Rejected designs:\n${JSON.stringify(broken.map(p => p.raw)).slice(0, 2500)}`,
+    ...broken.map((p, i) => {
+      const concept = concepts.find(c => c.id === p.raw?.conceptId);
+      return concept ? `Angle to keep for rejected design ${i + 1}: ${JSON.stringify(concept.angle)} (keep "conceptId": "${concept.id}")` : '';
+    }),
     shapes ? `Template fields:\n${shapes}` : '',
     needsFacts && found?.digest ? `Facts you may use (ES research):\n${found.digest.slice(0, 2500)}` : '',
     'Reply with JSON only: {"designs": [...]}',
@@ -726,7 +745,10 @@ function goldExamplesText() {
   return GOLD_EXAMPLES.map(example => `Brief: ${example.brief.replace(/\n/g, ' / ')}\nAnswer: ${JSON.stringify({ designs: example.designs })}`).join('\n\n');
 }
 
-function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid = []) {
+// direction (optional): { concepts, houseStyle } from the creative director.
+// The part before PROMPT_CACHE_BREAK never changes with it (the cache holds).
+function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid = [], direction = null) {
+  const block = direction?.concepts?.length ? director.conceptsBlock(direction.concepts, count, direction.houseStyle || []) : '';
   const catalog = Object.entries(TEMPLATES)
     .filter(([type]) => !allowedTypes.length || allowedTypes.includes(type))
     .map(([type, t]) => `- ${type} (${t.label}): ${t.use}\n  fields: ${t.shape}`)
@@ -764,6 +786,7 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid
     '',
     PROMPT_CACHE_BREAK,
     ...(pastExamples ? [`Real ES posts on similar topics (style and template choice only; never reuse their facts, names or numbers):\n${pastExamples}`, ''] : []),
+    ...(block ? [block, ''] : []),
     `Brief: ${brief}`,
     `Return up to ${count} designs.`,
     ...(avoid.length ? ['', `The editor asked for a fresh take: do not reuse these lines: ${avoid.map(line => JSON.stringify(line)).join(', ')}`] : []),
@@ -773,7 +796,9 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid
     'For every design except listicles, add "alts": up to 2 alternative versions of the same template built on the same facts, each a clearly different hook or wording (fields objects only). The editor can switch between them with one click.',
     '',
     'Reply with JSON only, no prose:',
-    '{"designs": [{"postType": "...", "title": "short name", "sport": "...", "team": "...", "fields": {...}, "alts": [{...fields}, {...fields}], "photoQuery": "...", "scene": "...", "why": "one short sentence on why this template fits", "sources": ["ES article URLs you used"]}]}',
+    block
+      ? '{"designs": [{"conceptId": "c1", "postType": "...", "title": "short name", "sport": "...", "team": "...", "fields": {...}, "alts": [{...fields}, {...fields}], "photoQuery": "...", "scene": "...", "why": "the concept\'s angle", "sources": ["ES article URLs you used"]}]}'
+      : '{"designs": [{"postType": "...", "title": "short name", "sport": "...", "team": "...", "fields": {...}, "alts": [{...fields}, {...fields}], "photoQuery": "...", "scene": "...", "why": "one short sentence on why this template fits", "sources": ["ES article URLs you used"]}]}',
   ].join('\n');
 }
 
@@ -809,6 +834,7 @@ async function chat(provider, messages) {
   if (provider.name === 'gateway' && provider.fallback) {
     if (!provider.backup) throw new Error('The AI is unavailable.');
     const text = await chat(provider.backup, messages);
+    provider.usedProvider = provider.backup.name;
     provider.used = provider.backup.used;
     return text;
   }
@@ -1143,14 +1169,20 @@ const ESCALATE_MAX = 2;
 // the copy rather than recognising its own style.
 async function reviewDesigns(brief, designs, track) {
   if (!designs.length || !gatewayConfigured()) return { cost: 0, reviewed: false };
+  // Cards from the creative director carry their intended angle, and the
+  // review then also scores whether each card lands it (5 criteria, not 4).
+  const directed = designs.some(spec => spec.direction?.angle);
   const cards = designs.map((spec, index) => {
     const options = [spec, ...(spec.alts || [])].map((option, n) => `  option ${n}: ${designText(spec.postType, option)}`).join('\n');
-    return `card ${index + 1} (${spec.label}):\n${options}`;
+    const angle = spec.direction?.angle ? `\n  intended angle: ${JSON.stringify(spec.direction.angle)} (${spec.direction.hook})` : '';
+    return `card ${index + 1} (${spec.label}):\n${options}${angle}`;
   }).join('\n');
   const prompt = [
     'You are the art director of EssentiallySports (ES), a US sports media brand, reviewing Instagram designs before they are posted.',
-    'For each card, pick the best option and score it 1-5 on: hook (a bold claim or a curious question, not a summary), specific (concrete to this story), voice (punchy, confident, plain American sports English), glance (understood in one second on a phone).',
-    'score is the average of the four. note is one short sentence on what would make the chosen option stronger (empty if it is already great).',
+    directed
+      ? 'For each card, pick the best option and score it 1-5 on: hook (a bold claim or a curious question, not a summary), specific (concrete to this story), voice (punchy, confident, plain American sports English), glance (understood in one second on a phone), angle (does it land the intended angle, distinct from the other cards).'
+      : 'For each card, pick the best option and score it 1-5 on: hook (a bold claim or a curious question, not a summary), specific (concrete to this story), voice (punchy, confident, plain American sports English), glance (understood in one second on a phone).',
+    `score is the average of the ${directed ? 'five' : 'four'}. note is one short sentence on what would make the chosen option stronger (empty if it is already great).`,
     `Brief: ${brief.slice(0, 600)}`,
     cards,
     'Reply with JSON only: {"cards": [{"card": 1, "best": 0, "score": 4.2, "note": "..."}]}',
@@ -1189,7 +1221,11 @@ async function escalateDesigns({ brief, designs, found, check, track }) {
     ...RULES.VOICE.map(line => `- ${line}`),
     '- Covers are hooks: a bold claim or a curious question in 2-8 words. Never invent numbers, quotes or results.',
     `Brief: ${brief.slice(0, 600)}`,
-    ...low.map((spec, i) => `Design ${i + 1} (${spec.postType}): ${JSON.stringify(spec.fields)}\n  Art director: ${spec.review.note || 'not strong enough'}\n  Fields: ${TEMPLATES[spec.postType].shape}`),
+    ...low.map((spec, i) => {
+      const angle = spec.direction?.angle ? `\n  Intended angle: ${JSON.stringify(spec.direction.angle)}` : '';
+      const close = spec.tooCloseTo ? `\n  Too close to card ${spec.tooCloseTo}; take a different angle.` : '';
+      return `Design ${i + 1} (${spec.postType}): ${JSON.stringify(spec.fields)}\n  Art director: ${spec.review.note || 'not strong enough'}${angle}${close}\n  Fields: ${TEMPLATES[spec.postType].shape}`;
+    }),
     `Facts you may use (ES research):\n${String(found.digest || '').slice(0, 3000)}`,
     'Reply with JSON only: {"designs": [{"postType": "...", "fields": {...}}]} in the same order.',
   ].join('\n');
@@ -1218,16 +1254,41 @@ const brainName = tools => {
   return provider ? `${provider.name}:${provider.model}` : 'draft';
 };
 
-async function generate({ brief, formats, count, avoid, token, email }) {
-  const started = Date.now();
+// The brief read with es-generate's own helpers (names, tables, ES URLs).
+const readBriefFor = (brief, found, allowedTypes) => director.readBrief(brief, found, allowedTypes, { nameCandidates, parseTableBrief, sportFromUrl });
+
+// D3 "when it runs": Claude on the Gateway (not a backup), more than one
+// design, not turned off, and research was quick enough to leave time.
+function directorAllowed({ provider, want, directions, pinned, researchMs, think }) {
+  return Boolean(provider?.name === 'gateway' && !provider.fallback && !think && want >= 2
+    && directions !== false && !pinned && researchMs < DIRECTOR_START_BY_MS);
+}
+
+const newRunId = () => `run-${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 6)}`;
+
+async function generate({ brief, formats, count, avoid, token, email, steer = '', directions = true }) {
+  const started = clock.now();
+  const elapsed = () => clock.now() - started;
+  const runId = newRunId();
   const notes = [];
   const allowedTypes = (Array.isArray(formats) ? formats : []).filter(type => TEMPLATES[type]);
   const want = Math.min(Math.max(parseInt(count, 10) || MAX_DESIGNS, 1), MAX_DESIGNS);
   const { mcp, tools, toolNames, error: mcpError } = await discover(notes);
-  // Past team designs (background learning) load alongside the research.
-  const [found, pastDesigns] = await Promise.all([research(brief, mcp, tools, notes), loadPastDesigns(token).catch(() => [])]);
-  const pastExamples = formatExamples(selectExamples(brief, pastDesigns, allowedTypes));
-  const researchMs = Date.now() - started;
+  // Past team posts (the brain's memory) load alongside the research.
+  const [found, corpus] = await Promise.all([
+    research(brief, mcp, tools, notes),
+    loadCorpus(token).catch(() => ({ rows: [], source: 'none', designs: [] })),
+  ]);
+  const researchMs = elapsed();
+  const read = readBriefFor(brief, found, allowedTypes);
+  const pastPosts = normalizeCorpus(corpus.rows);
+  const picked = pickPastPosts(pastPosts, { ...read, brief }, { allowedTypes });
+  // Before the corpus migration is applied (legacy source) the writer sees the
+  // same examples as before; with it, the scored, digit-masked past posts.
+  const pastDesigns = corpus.source === 'legacy' ? corpus.designs : pastPosts;
+  const pastExamples = corpus.source === 'legacy'
+    ? formatExamples(selectExamples(brief, corpus.designs, allowedTypes))
+    : formatPastPosts(picked);
   // The main person (or team): the top ES tag, else the names in the brief.
   const person = found.tags?.[0]?.name || nameCandidates(brief)[0] || '';
   const wantsPhoto = !allowedTypes.length || allowedTypes.some(type => TEMPLATES[type].photo);
@@ -1247,7 +1308,37 @@ async function generate({ brief, formats, count, avoid, token, email }) {
   }
   let aiFailed = false;
   const avoidLines = (Array.isArray(avoid) ? avoid : []).map(line => clean(line).slice(0, 120)).filter(Boolean).slice(0, 12);
-  const prompt = buildPrompt(brief, found, allowedTypes, want, pastExamples, avoidLines);
+  // ─── Creative direction (one Sonnet call; any failure = the old path) ───
+  const direction = { source: 'none', model: '', read: null, concepts: [], cost: 0, ms: 0 };
+  const styleLines = corpus.source === 'rich' ? houseStyle(pastPosts, read) : [];
+  if (directorAllowed({ provider, want, directions, pinned: false, researchMs, think: Boolean(tools.think) })) {
+    const directionStarted = clock.now();
+    const result = await director.runDirector({
+      brief,
+      read,
+      allowedTypes,
+      steer: director.STEERS.includes(steer) ? steer : '',
+      pastPosts: formatPastPosts(picked),
+      houseStyle: styleLines,
+      digest: found.digest,
+      corpus: found.corpus || found.digest,
+      want,
+      templates: TEMPLATES,
+      track: { email, token },
+      timeoutMs: DIRECTOR_TIMEOUT_MS,
+      startedAt: started,
+      retryByMs: DIRECTOR_RETRY_BY_MS,
+      now: clock.now,
+    });
+    direction.ms = clock.now() - directionStarted;
+    direction.cost = result.cost || 0;
+    direction.model = result.model || '';
+    // Budget gone: the writer goes straight to the backup (no second Gateway try).
+    if (result.source === 'budget') provider.fallback = 'budget';
+    if (result.concepts.length) Object.assign(direction, { source: result.source, read: result.read, concepts: result.concepts });
+  }
+  const concepts = direction.concepts;
+  const prompt = buildPrompt(brief, found, allowedTypes, want, pastExamples, avoidLines, concepts.length ? { concepts, houseStyle: styleLines } : null);
   const designs = [];
   const seen = new Set();
   const leads = new Set();
@@ -1332,8 +1423,9 @@ async function generate({ brief, formats, count, avoid, token, email }) {
       // One targeted repair round: only the designs that failed the template or
       // brand checks, with each problem and how to fix it (not the whole
       // research again). Whatever still fails is dropped, never shown.
-      if (broken.length && designs.length < want) {
-        const fixed = keepValid(designsFrom(extractJson(await chat(provider, [{ role: 'user', content: repairPrompt(brief, broken, found) }]))), 10, { repairRound: true });
+      // Skipped late in a run so the whole request stays inside the time limit.
+      if (broken.length && designs.length < want && elapsed() < REPAIR_START_BY_MS) {
+        const fixed = keepValid(designsFrom(extractJson(await chat(provider, [{ role: 'user', content: repairPrompt(brief, broken, found, concepts) }]))), 10, { repairRound: true });
         lintStats.dropped += fixed.length;
         notes.push(...skipped(fixed));
       }
@@ -1341,6 +1433,24 @@ async function generate({ brief, formats, count, avoid, token, email }) {
   } catch (error) {
     aiFailed = true;
     notes.push(`AI step failed, using your text with simple rules: ${String(error.message || error).slice(0, 160)}`);
+  }
+  // Each design carries its concept's direction (matched by conceptId, else by
+  // position when the template matches), in the director's order.
+  if (concepts.length) {
+    const used = new Set();
+    designs.forEach((spec, index) => {
+      let concept = concepts.find(c => c.id === spec.conceptId && !used.has(c.id));
+      if (!concept && !spec.conceptId && concepts[index]?.postType === spec.postType && !used.has(concepts[index].id)) concept = concepts[index];
+      delete spec.conceptId;
+      if (!concept) return;
+      used.add(concept.id);
+      spec.direction = { conceptId: concept.id, angle: concept.angle, hook: concept.hook, emotion: concept.emotion, shot: concept.photo?.shot || 'any', palette: concept.palette };
+      if (!spec.team && concept.team) spec.team = concept.team;
+    });
+    const rank = spec => (spec.direction ? concepts.findIndex(c => c.id === spec.direction.conceptId) : concepts.length);
+    designs.sort((a, b) => rank(a) - rank(b));
+  } else {
+    designs.forEach(spec => { delete spec.conceptId; });
   }
   // A table in the brief always becomes a ranking design, first, even if the
   // AI missed it (free models are not consistent about this).
@@ -1372,12 +1482,21 @@ async function generate({ brief, formats, count, avoid, token, email }) {
   // score low, one rewrite from the best model. Skipped on backup models, in
   // draft mode, and when the weekly budget has run out.
   const quality = { reviewed: false, improved: 0, cost: 0 };
-  if (provider?.name === 'gateway' && !provider.fallback && brain !== 'draft' && designs.length) {
+  if (provider?.name === 'gateway' && !provider.fallback && brain !== 'draft' && designs.length && elapsed() < REVIEW_START_BY_MS) {
     const track = { email, token };
     const review = await reviewDesigns(brief, designs, track);
     quality.reviewed = review.reviewed;
     quality.cost += review.cost;
-    if (review.reviewed) {
+    // Diversity guard: two cards with the same template and the same hook type
+    // are flagged; a low-scoring one is told to take a different angle.
+    designs.forEach((spec, index) => {
+      const twin = designs.findIndex((other, j) => j !== index && other.postType === spec.postType && spec.direction?.hook && other.direction?.hook === spec.direction.hook);
+      if (twin < 0) return;
+      spec.lint = spec.lint || { warnings: [] };
+      spec.lint.warnings.push({ field: 'angle', code: 'same-angle', msg: `same template and hook as card ${twin + 1}` });
+      if (spec.review && spec.review.score < REVIEW_PASS) spec.tooCloseTo = twin + 1;
+    });
+    if (review.reviewed && elapsed() < ESCALATE_START_BY_MS) {
       const check = (raw, current) => {
         const checked = checkSpec(raw, 0, [], researchUrls);
         if (checked.error) return null;
@@ -1388,6 +1507,7 @@ async function generate({ brief, formats, count, avoid, token, email }) {
       quality.improved = escalation.improved;
       quality.cost += escalation.cost;
     }
+    designs.forEach(spec => { delete spec.tooCloseTo; });
   }
   const aiMs = Date.now() - started - researchMs;
   const { candidates, pick } = await photoWork;
@@ -1415,6 +1535,13 @@ async function generate({ brief, formats, count, avoid, token, email }) {
 
   return {
     brain: brain !== 'draft' && provider?.used ? `${provider.usedProvider || provider.name}:${provider.used}` : brain,
+    runId,
+    direction: {
+      source: direction.source,
+      model: direction.model,
+      ...(direction.read ? { read: direction.read } : {}),
+      concepts: concepts.map(({ id, postType, angle, hook, emotion }) => ({ id, postType, angle, hook, emotion })),
+    },
     designs,
     research: { articles: found.articles.map(({ title, url, date }) => ({ title, url, date })) },
     connection: connectionInfo(tools, toolNames, mcpError),
@@ -1422,8 +1549,8 @@ async function generate({ brief, formats, count, avoid, token, email }) {
     photo: { person, candidates: candidates.length, picked: pick.picked, rejected: pick.rejected },
     checks: { ...lintStats, rules: RULES.VERSION },
     quality: { reviewed: quality.reviewed, improved: quality.improved },
-    meta: { ms: { research: researchMs, ai: aiMs, total: Date.now() - started }, costUsd: Number(((provider?.cost || 0) + (pick.cost || 0) + quality.cost).toFixed(5)) },
-    learning: { pastDesigns: pastDesigns.length, examplesUsed: pastExamples ? pastExamples.split('\n').length : 0 },
+    meta: { ms: { research: researchMs, direction: direction.ms, ai: aiMs, total: Date.now() - started }, costUsd: Number(((provider?.cost || 0) + (pick.cost || 0) + quality.cost + direction.cost).toFixed(5)) },
+    learning: { pastDesigns: pastDesigns.length, examplesUsed: pastExamples ? pastExamples.split('\n').length : 0, corpus: corpus.source },
     notes,
   };
 }
@@ -1529,7 +1656,12 @@ exports.handler = async function handler(event) {
     if (overHour) {
       return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
     }
-    return json(200, await generate({ brief, formats: body.formats, count: body.count, avoid: body.avoid, token, email: auth.user.email }));
+    return json(200, await generate({
+      brief, formats: body.formats, count: body.count, avoid: body.avoid, token, email: auth.user.email,
+      // Optional (all backward compatible): an editor steer, and directions:false for the old single-call path.
+      steer: director.STEERS.includes(body.steer) ? body.steer : '',
+      directions: body.directions !== false,
+    }));
   } catch (error) {
     // Details stay in the server log; the browser gets a plain message.
     console.error('es-generate failed:', error);
@@ -1538,4 +1670,4 @@ exports.handler = async function handler(event) {
 };
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
-exports._test = { TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE };
+exports._test = { readBrief: readBriefFor, directorAllowed, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE };

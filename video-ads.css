@@ -409,7 +409,6 @@ html body .va-stage :is(button, a, input, [role="slider"], [role="radio"]):focus
 }
 .va-input::placeholder { color: var(--va-placeholder); opacity: 1; } /* 4.5:1+ in both themes */
 .va-input:hover { box-shadow: inset 0 0 0 1px var(--va-ink-3); }
-.va-input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--va-accent), 0 0 0 4px var(--va-accent-soft); }
 textarea.va-input { min-height: 64px; }
 .va-row { display: flex; gap: var(--es-space-2, 8px); min-width: 0; }
 .va-row .va-input { flex: 1 1 auto; min-width: 0; }
@@ -660,7 +659,6 @@ html[data-theme="dark"] .va-tab[aria-selected="true"] { background: #2a2a2a; }
 .va-msg__applied span { color: var(--va-ink-2); }
 .va-msg--cards { display: grid; gap: 8px; padding-left: 36px; }
 .va-compose { display: flex; align-items: flex-end; gap: var(--es-space-2, 8px); min-width: 0; padding: var(--es-space-2, 8px); border-radius: 16px; background: var(--va-surface); box-shadow: inset 0 0 0 1px var(--va-line-2), 0 -12px 24px -18px rgb(14 16 20 / .3); }
-.va-compose:focus-within { box-shadow: inset 0 0 0 2px var(--va-accent), 0 0 0 4px var(--va-accent-soft); }
 .va-compose .va-input { min-height: 40px; padding: var(--es-space-2, 8px); box-shadow: none; background: transparent; resize: none; }
 .va-compose .va-input:focus { box-shadow: none; }
 .va-send { display: grid; flex: none; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 12px; background: var(--va-grad); color: #fff; cursor: pointer; transition: transform var(--es-dur-press, 140ms) var(--va-ease), opacity var(--es-dur, 160ms); }
@@ -674,7 +672,6 @@ html[data-theme="dark"] .va-tab[aria-selected="true"] { background: #2a2a2a; }
 .va-switch__track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .3); transition: transform var(--es-dur-fill, 200ms) var(--va-ease); }
 .va-switch input:checked + .va-switch__track { background: var(--va-accent); }
 .va-switch input:checked + .va-switch__track::after { transform: translateX(16px); }
-.va-switch input:focus-visible + .va-switch__track { outline: 2px solid var(--va-accent-text); outline-offset: 2px; }
 
 
 /* ── 5 Export ──────────────────────────────────────────────────────── */
@@ -795,8 +792,6 @@ html body .va-toast button:focus-visible { outline: 2px solid #fff !important; }
 }
 
 /* Focus on the dark studio surfaces. */
-html body .va-page .va-panel :is(a, button, input, textarea, summary, [role="tab"], [role="radio"], [tabindex]):focus-visible { outline: 2px solid var(--va-accent-text) !important; outline-offset: 2px !important; }
-.va-input:focus { box-shadow: inset 0 0 0 1.5px var(--va-accent-text), 0 0 0 4px rgb(10 125 250 / .2); }
 .va-variant, .va-clip, .va-trend, .va-styles button, .va-exsizes button { background: var(--va-card); }
 .va-seg button[aria-checked="true"], .va-tab[aria-selected="true"] { background: var(--va-sel) !important; box-shadow: var(--va-sel-shadow); color: var(--va-sel-ink); }
 .va-stage .va-seg button[aria-checked="true"] { background: #FFFFFF !important; color: #101114; }
@@ -1196,7 +1191,6 @@ html:not([data-theme="dark"]) .va-swatch[aria-checked="true"] .va-swatch__dot { 
 .va-ai .va-variants { gap: var(--es-space-2); }
 .va-ai .va-thread { max-height: 320px; }
 .va-ai .va-compose { box-shadow: inset 0 0 0 1px var(--va-line-2); background: var(--va-field); }
-.va-ai .va-compose:focus-within { box-shadow: inset 0 0 0 2px var(--va-accent), 0 0 0 4px var(--va-accent-soft); }
 .va-ai-error { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-1) var(--es-space-2); padding: var(--es-space-2) var(--es-space-3); border-radius: 10px; background: var(--va-bad-soft); color: var(--va-ink); font-size: 13px; line-height: 1.4; --es-icon: 16px; }
 .va-ai-error > svg { flex: none; width: 16px; height: 16px; color: var(--va-bad); }
 .va-ai-error > span { flex: 1 1 12ch; min-width: 0; overflow-wrap: anywhere; }
@@ -1316,7 +1310,6 @@ html:not([data-theme="dark"]) .va-swatch[aria-checked="true"] .va-swatch__dot { 
 .va-step[data-state="done"] .va-step__num::after { content: ""; position: absolute; width: 9px; height: 5px; margin-top: -2px; border: solid currentColor; border-width: 0 0 2px 2px; transform: rotate(-45deg); }
 .va-step[data-state="done"][aria-current="step"] .va-step__num { background: var(--va-white); box-shadow: none; color: var(--va-page); }
 .va-step.is-busy .va-step__num::before { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--es-blue-600, #0A6FDE); animation: vaSpin .9s linear infinite; }
-html body .va-steps .va-step:focus-visible { outline: 2px solid var(--va-accent-text) !important; outline-offset: 2px !important; }
 .va-steps__compact { display: none; width: 100%; }
 .va-steps__now { margin: 0 0 var(--es-space-2); color: var(--va-ink-2); font: 500 14px/1.2 var(--es-font-ui); }
 .va-steps__now b, .va-steps__now span { color: var(--va-white); font-weight: 600; }
@@ -1436,11 +1429,9 @@ html[data-theme="dark"] #va-meta-toggle[aria-pressed="true"] { outline-color: va
 .va-ask-ai svg { width: 16px; height: 16px; color: var(--es-blue-600, #0A6FDE); }
 .va-ask-ai:hover { box-shadow: 0 6px 18px -8px rgb(10 125 250 / .55); }
 .va-ask-ai[aria-expanded="true"] { --ask-fill: #EAF3FF; color: var(--es-brand-text, #0a62c7); }
-.va-ask-ai:focus-visible { outline: 2px solid var(--es-blue-600, #0A6FDE); outline-offset: 2px; }
 html[data-theme="dark"] .va-ask-ai { --ask-fill: #1F2126; --ask-ink: #FFFFFF; --ask-base: rgb(84 164 251 / .35); }
 html[data-theme="dark"] .va-ask-ai svg { color: #54A4FB; }
 html[data-theme="dark"] .va-ask-ai[aria-expanded="true"] { --ask-fill: #23324a; color: #9DCBFD; }
-html[data-theme="dark"] .va-ask-ai:focus-visible { outline-color: #54A4FB; }
 @media (prefers-reduced-motion: no-preference) {
   .va-ask-ai { animation: esRimSpin 2.8s linear infinite; }
   .va-ask-ai:active { transform: scale(.96); }
@@ -1458,3 +1449,163 @@ html body .va-page .va-panel :is(input:not([type="checkbox"], [type="radio"], [t
 html body .va-steps .va-step:focus-visible,
 .va-ask-ai:focus-visible, html[data-theme="dark"] .va-ask-ai:focus-visible { outline: var(--es-focus-outline) !important; outline-offset: var(--es-focus-offset) !important; }
 .va-chip[aria-pressed="true"] { box-shadow: inset 0 0 0 1px rgb(10 125 250 / .4); }
+
+/* ── Frame + Tint rail (2026-11-17, frame1) ─────────────────────────────
+   A slim column on the left of the stage: Frame (Fill/Fit, zoom, centre)
+   and Tint (strength, colour). Phones: two buttons under the preview that
+   open one section as a sheet over the bottom of the ad. */
+.va-view { position: relative; display: flex; flex: 1 1 auto; min-height: 0; }
+.va-view .va-canvas-wrap { flex: 1 1 auto; min-width: 0; }
+.va-rail {
+  --rail-ink: rgb(255 255 255 / .74);
+  --rail-ink-strong: #FFFFFF;
+  --rail-line: rgb(255 255 255 / .1);
+  --rail-fill: rgb(255 255 255 / .06);
+  --rail-hover: rgb(255 255 255 / .1);
+  --rail-on: #FFFFFF;
+  --rail-on-ink: #101114;
+  --rail-accent: var(--es-blue-400, #54A4FB);
+  position: relative;
+  z-index: 3;
+  flex: none;
+  width: 120px;
+  margin: 0 0 0 var(--es-space-4, 16px);
+  color: var(--rail-ink);
+  font-family: var(--es-font-ui, Roboto, sans-serif);
+}
+html:not([data-theme="dark"]) .va-rail {
+  --rail-ink: var(--va-ink-2);
+  --rail-ink-strong: var(--va-ink);
+  --rail-line: var(--es-line, #dfe2e7);
+  --rail-fill: #FFFFFF;
+  --rail-hover: rgb(14 16 20 / .05);
+  --rail-on: var(--va-ink, #0e1014);
+  --rail-on-ink: #FFFFFF;
+  --rail-accent: var(--es-blue-600, #0A6FDE);
+}
+.va-rail__tabs { display: none; }
+.va-rail__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--es-space-4, 16px);
+  max-height: 100%;
+  padding: var(--es-space-3, 12px) 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.va-view > .va-rail { align-self: center; max-height: 100%; display: flex; }
+.va-rail__sec { display: grid; gap: var(--es-space-2, 8px); min-width: 0; }
+.va-rail__h { margin: 0 0 var(--es-space-1, 4px); color: var(--rail-ink); font: var(--es-type-eyebrow-weight, 600) var(--es-type-eyebrow-size, 11px)/var(--es-type-eyebrow-line, 1.3) var(--es-font-ui); letter-spacing: var(--es-type-eyebrow-tracking, .06em); text-transform: uppercase; }
+.va-rail__row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--es-space-1, 4px); margin-top: var(--es-space-1, 4px); }
+.va-rail__label { color: var(--rail-ink-strong); font: 500 var(--es-type-meta-size, 13px)/1.2 var(--es-font-ui); }
+.va-rail__val { color: var(--rail-ink); font: 500 var(--es-type-meta-size, 13px)/1.2 var(--es-font-ui); font-variant-numeric: tabular-nums; }
+.va-rail__fit { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; border-radius: 10px; background: var(--rail-fill); box-shadow: inset 0 0 0 1px var(--rail-line); }
+.va-rail__fit button { min-height: 28px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--rail-ink); font: 500 var(--es-type-meta-size, 13px)/1 var(--es-font-ui); cursor: pointer; }
+.va-rail__fit button:hover { background: var(--rail-hover); color: var(--rail-ink-strong); }
+.va-rail__fit button[aria-checked="true"] { background: var(--rail-on); color: var(--rail-on-ink); }
+.va-rail__range { width: 100%; height: 24px; margin: 0; accent-color: var(--rail-accent); cursor: pointer; }
+.va-rail__steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--es-space-1, 4px); }
+.va-rail__btn { display: grid; place-items: center; height: 32px; padding: 0; border: 0; border-radius: 8px; background: var(--rail-fill); box-shadow: inset 0 0 0 1px var(--rail-line); color: var(--rail-ink-strong); cursor: pointer; }
+.va-rail__btn svg { width: 16px; height: 16px; }
+.va-rail__btn:hover:not(:disabled) { background: var(--rail-hover); }
+.va-rail__btn:disabled { opacity: .4; cursor: not-allowed; }
+.va-rail__hint { margin: 0; color: var(--rail-ink); font: 400 12px/1.35 var(--es-font-ui); }
+.va-rail__swatches { display: grid; grid-template-columns: repeat(3, 28px); justify-content: space-between; gap: var(--es-space-2, 8px); margin-top: var(--es-space-1, 4px); }
+.va-rail__sw {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--sw);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .28), 0 0 0 0 transparent;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: box-shadow var(--es-dur, 160ms) var(--va-ease);
+}
+html:not([data-theme="dark"]) .va-rail__sw { box-shadow: inset 0 0 0 1px rgb(14 16 20 / .18); }
+.va-rail__sw[aria-checked="true"] { box-shadow: 0 0 0 2px var(--va-stage-bg, #1F2126), 0 0 0 4px var(--rail-ink-strong); }
+html:not([data-theme="dark"]) .va-rail__sw[aria-checked="true"] { box-shadow: 0 0 0 2px var(--es-stage, #eef0f3), 0 0 0 4px var(--rail-ink-strong); }
+.va-rail__sw--custom:not([aria-checked="true"]) { background: transparent; box-shadow: inset 0 0 0 1.5px var(--rail-ink); color: var(--rail-ink-strong); border: 0; }
+.va-rail__sw--custom[aria-checked="true"] svg { filter: drop-shadow(0 1px 1px rgb(0 0 0 / .5)); }
+.va-rail__sw svg { width: 14px; height: 14px; }
+.va-rail__reset { align-self: stretch; }
+.va-rail__chip { width: 16px; height: 16px; border-radius: 50%; background: var(--sw, #000); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .35); }
+html:not([data-theme="dark"]) .va-rail__chip { box-shadow: inset 0 0 0 1px rgb(14 16 20 / .2); }
+#va-canvas.is-pannable { cursor: grab; touch-action: none; }
+#va-canvas.is-panning { cursor: grabbing; }
+html body .va-stage .va-rail :is(button, input):focus-visible { outline: 2px solid var(--rail-ink-strong) !important; outline-offset: 2px !important; }
+html:not([data-theme="dark"]) body .va-stage .va-rail :is(button, input):focus-visible { outline-color: var(--es-brand-text, #0a62c7) !important; }
+#va-canvas:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 3px; }
+html:not([data-theme="dark"]) #va-canvas:focus-visible { outline-color: var(--es-brand-text, #0a62c7); }
+/* Short laptop screens: the grab cursor and the canvas description carry the drag hint. */
+@media (min-width: 901px) and (max-height: 820px) { .va-rail__hint { display: none; } }
+@media (pointer: coarse) {
+  .va-rail__btn, .va-rail__fit button { min-height: 44px; height: 44px; }
+  .va-rail__sw { width: 36px; height: 36px; }
+  .va-rail__swatches { grid-template-columns: repeat(3, 36px); }
+}
+
+/* Phones and tablets: a row under the preview; one section opens as a sheet. */
+@media (max-width: 900px) {
+  .va-view { flex-direction: column; }
+  /* Two small buttons float top-left of the preview (no height taken from the
+     ad); the open section sits under the ad and the sticky preview grows by
+     its height (--va-sheet, set in video-ads.js) so the ad stays in view. */
+  .va-view > .va-rail { order: 2; position: static; display: block; flex: none; align-self: stretch; width: auto; max-height: none; margin: 0 var(--es-space-2, 8px); }
+  .va-view .va-canvas-wrap { padding: 0 108px; } /* clear of the two buttons, still centred */
+  .va-rail__tabs { position: absolute; top: var(--es-space-2, 8px); left: var(--es-space-2, 8px); z-index: 5; display: flex; gap: var(--es-space-2, 8px); }
+  .va-rail__tab {
+    display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px;
+    background: var(--rail-fill); box-shadow: inset 0 0 0 1px var(--rail-line); color: var(--rail-ink-strong); cursor: pointer;
+  }
+  html:not([data-theme="dark"]) .va-rail__tab { box-shadow: inset 0 0 0 1px var(--es-line, #dfe2e7), 0 1px 3px rgb(14 16 20 / .08); }
+  .va-rail__tab[aria-expanded="true"] { background: var(--rail-on); color: var(--rail-on-ink); }
+  .va-stage.has-sheet { height: calc(min(42vh, 380px) + var(--va-sheet, 180px)); }
+  .va-rail__tab svg { width: 18px; height: 18px; }
+  .va-rail__tab[aria-expanded="true"] { background: var(--rail-on); color: var(--rail-on-ink); }
+  .va-rail__body {
+    position: static; display: none; flex-direction: column; gap: var(--es-space-3, 12px);
+    max-height: none; margin: var(--es-space-2, 8px) 0 0; padding: var(--es-space-3, 12px); overflow: visible;
+    border-radius: 14px; background: rgb(255 255 255 / .05); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1);
+  }
+  html:not([data-theme="dark"]) .va-rail__body { background: #FFFFFF; box-shadow: inset 0 0 0 1px var(--es-line, #dfe2e7); }
+  .va-rail[data-open="frame"] .va-rail__body, .va-rail[data-open="tint"] .va-rail__body { display: flex; }
+  .va-rail[data-open="frame"] #va-rail-tint, .va-rail[data-open="tint"] #va-rail-frame { display: none; }
+  .va-rail__h, .va-rail__hint { display: none; }
+  /* Frame: Fill/Fit + − + centre on one row, then the zoom slider. */
+  #va-rail-frame { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "fit steps" "row row" "range range"; gap: var(--es-space-2, 8px); }
+  #va-rail-frame > .va-rail__fit { grid-area: fit; }
+  #va-rail-frame > .va-rail__steps { grid-area: steps; grid-template-columns: repeat(3, 44px); }
+  #va-rail-frame > .va-rail__row { grid-area: row; margin: 0; }
+  #va-rail-frame > .va-rail__range { grid-area: range; }
+  .va-rail__fit button { min-height: 40px; }
+  .va-rail__row { margin: 0; }
+  .va-rail__swatches { grid-template-columns: repeat(6, 36px); justify-content: space-between; margin: 0; }
+  .va-rail__sw { width: 36px; height: 36px; }
+  .va-rail__reset { align-self: flex-end; }
+  .va-stage.is-mini .va-view > .va-rail { display: none; }
+  .va-stage.is-mini.has-sheet { height: 210px; }
+}
+
+/* By moment: "N clips" on moments that have fresh clips. */
+.va-trend__count { display: inline-flex; align-items: center; min-height: 20px; margin-left: auto; padding: 0 var(--es-space-2, 8px); border-radius: 999px; background: var(--va-accent-soft); color: var(--va-accent-text); font: 500 12px/1 var(--es-font-ui); white-space: nowrap; }
+
+/* ── Phones: a usable ad preview (2026-11-17, ready1) ──────────────────
+   Toolbar in two rows (newsletter + Meta/shrink icons, then sizes), the
+   Frame/Tint buttons stacked on the left, and a taller sticky stage so a
+   9:16 ad previews at ~130×230 instead of ~40×70. */
+@media (max-width: 600px) {
+  .va-stage { height: min(54svh, 460px); min-height: 380px; }
+  .va-stage.has-sheet { height: calc(min(54svh, 460px) + var(--va-sheet, 180px)); }
+  .va-stage .va-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--es-space-2, 8px); align-items: center; }
+  .va-stage .va-toolbar > #va-sizes { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+  .va-stage .va-toolbar__end { flex-wrap: nowrap; gap: var(--es-space-1, 4px); }
+  #va-meta-toggle { min-width: 44px; padding-inline: var(--es-space-2, 8px); }
+  #va-meta-toggle > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .va-rail__tabs { flex-direction: column; }
+  .va-view .va-canvas-wrap { padding: 0 56px; }
+}

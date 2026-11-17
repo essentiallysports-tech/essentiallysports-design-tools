@@ -4,6 +4,8 @@
 //
 //   fitLayout(measure, layout, brand, size, logo) -> { ops, scale, fits, box }
 //   drawFrame(ctx, { width, height, video, bg, ops, logoImage, blurCanvas })
+//     bg: { zoom, panX, panY, fit: 'fill'|'fit', tint: { color, amount }, fade, … }
+//   videoRect(...) / tintLayers(...): the framing and tint maths, for tests
 //
 // Sizes and spacing are taken from the live ES video ads in the ES Design Team
 // Figma file (ADS page: the three 9:16 "NFL-ad-with-logo" frames and the three
@@ -332,17 +334,62 @@
     ctx.closePath();
   }
 
-  // Cover-fit the video, then zoom (≥1) and pan (−1..1 of the spare room).
-  function drawVideo(ctx, source, width, height, { zoom = 1, panX = 0, panY = 0 } = {}) {
-    const sw = source.videoWidth || source.width;
-    const sh = source.videoHeight || source.height;
-    if (!sw || !sh) return;
-    const scale = Math.max(width / sw, height / sh) * Math.max(1, zoom);
-    const dw = sw * scale;
-    const dh = sh * scale;
-    const x = (width - dw) / 2 + ((dw - width) / 2) * Math.max(-1, Math.min(1, panX));
-    const y = (height - dh) / 2 + ((dh - height) / 2) * Math.max(-1, Math.min(1, panY));
-    ctx.drawImage(source, x, y, dw, dh);
+  // Framing: where the clip lands on the frame.
+  //   fit 'fill' (default) covers the frame; 'fit' shows the whole clip.
+  //   zoom 1..ZOOM_MAX on top of that; pan −1..1 slides the clip across its
+  //   spare room (+1 = clip moved fully right / down). Pure, so it is tested.
+  const ZOOM_MAX = 2.5;
+  function videoRect(sw, sh, width, height, { zoom = 1, panX = 0, panY = 0, fit = 'fill' } = {}) {
+    if (!sw || !sh) return null;
+    const z = Math.max(1, Math.min(ZOOM_MAX, Number(zoom) || 1));
+    const base = fit === 'fit' ? Math.min(width / sw, height / sh) : Math.max(width / sw, height / sh);
+    const w = sw * base * z;
+    const h = sh * base * z;
+    const clamp = v => Math.max(-1, Math.min(1, Number(v) || 0));
+    const x = (width - w) / 2 + (Math.abs(w - width) / 2) * clamp(panX);
+    const y = (height - h) / 2 + (Math.abs(h - height) / 2) * clamp(panY);
+    return { x, y, w, h, roomX: Math.abs(w - width) / 2, roomY: Math.abs(h - height) / 2 };
+  }
+  function drawVideo(ctx, source, width, height, frame = {}) {
+    const r = videoRect(source.videoWidth || source.width, source.videoHeight || source.height, width, height, frame);
+    if (r) ctx.drawImage(source, r.x, r.y, r.w, r.h);
+  }
+
+  // Tint: a colour wash over the clip, under the copy. amount 0..1.
+  //   'color' blend: the clip takes the tint's hue, keeping its own light/dark;
+  //   multiply (at 60%): darkens it towards the colour, so white copy reads;
+  //   then a little black (more for bright tints) so the copy keeps its contrast.
+  // Black is a plain alpha overlay (= the old scrim). The strength is capped
+  // so the clip always shows (TINT_MAX), lower again under a bottom fade.
+  const TINT_MAX = 0.85;
+  const TINT_MAX_FADE = 0.7;
+  const luminance = hex => {
+    const m = String(hex || '').replace('#', '').match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    if (!m) return 0;
+    const lin = c => { const v = parseInt(c, 16) / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+    return 0.2126 * lin(m[1]) + 0.7152 * lin(m[2]) + 0.0722 * lin(m[3]);
+  };
+  function tintLayers(tint, { fade = false } = {}) {
+    if (!tint) return [];
+    const color = /^#[0-9a-f]{6}$/i.test(String(tint.color || '')) ? String(tint.color) : '#000000';
+    const a = Math.max(0, Math.min(fade ? TINT_MAX_FADE : TINT_MAX, Number(tint.amount) || 0));
+    if (a <= 0) return [];
+    const L = luminance(color);
+    if (L < 0.005) return [{ color, alpha: a, mode: 'source-over' }];
+    const layers = [{ color, alpha: a, mode: 'color' }, { color, alpha: a * 0.6, mode: 'multiply' }];
+    const dark = a * (0.3 + 0.5 * L);
+    if (dark > 0.01) layers.push({ color: '#000000', alpha: dark, mode: 'source-over' });
+    return layers;
+  }
+  function drawTint(ctx, width, height, layers) {
+    layers.forEach(layer => {
+      ctx.save();
+      ctx.globalCompositeOperation = layer.mode;
+      ctx.globalAlpha = layer.alpha;
+      ctx.fillStyle = layer.color;
+      ctx.fillRect(0, 0, width, height);
+      ctx.restore();
+    });
   }
 
   const MAIL_D = [
@@ -432,7 +479,20 @@
     ctx.save();
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, width, height);
-    if (video) {
+    if (video && bg.fit === 'fit') {
+      // Fit: the whole clip over a soft, dark copy of itself (no black bars).
+      if (blurCanvas) {
+        blurCanvas.width = Math.max(8, Math.round(width / 40));
+        blurCanvas.height = Math.max(8, Math.round(height / 40));
+        drawVideo(blurCanvas.getContext('2d'), video, blurCanvas.width, blurCanvas.height, { fit: 'fill' });
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(blurCanvas, 0, 0, width, height);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, width, height);
+      }
+      drawVideo(ctx, video, width, height, bg);
+    } else if (video) {
       const blur = Math.max(0, Math.min(1, bg.blur || 0));
       if (blur > 0 && blurCanvas) {
         // Cheap, Safari-safe blur: draw small, scale back up smoothly.
@@ -448,10 +508,15 @@
         drawVideo(ctx, video, width, height, bg);
       }
     }
-    const scrim = Math.max(0, Math.min(0.9, bg.scrim ?? 0.45));
-    if (scrim > 0) {
-      ctx.fillStyle = `rgba(0,0,0,${scrim})`;
-      ctx.fillRect(0, 0, width, height);
+    if (bg.tint) {
+      // The tint replaces the old black scrim (black at 45% looks the same).
+      drawTint(ctx, width, height, tintLayers(bg.tint, { fade: Boolean(bg.fade && bg.fade.color) }));
+    } else {
+      const scrim = Math.max(0, Math.min(0.9, bg.scrim ?? 0.45));
+      if (scrim > 0) {
+        ctx.fillStyle = `rgba(0,0,0,${scrim})`;
+        ctx.fillRect(0, 0, width, height);
+      }
     }
     // Vignette from the rated ads (AD1 Brick Black Bottom): an ellipse centred
     // high on the frame, clear to 52% of its radius, then darkening to the edges.
@@ -490,5 +555,5 @@
     ctx.restore();
   }
 
-  return { BASE, MIN_SCALE, MAX_SCALE, CAP, CONDENSED, BODY, parseRuns, tokensFor, wrapTokens, fitLayout, drawFrame, drawOps, drawVideo, roundRect };
+  return { BASE, MIN_SCALE, MAX_SCALE, CAP, CONDENSED, BODY, ZOOM_MAX, TINT_MAX, TINT_MAX_FADE, parseRuns, tokensFor, wrapTokens, fitLayout, drawFrame, drawOps, drawVideo, videoRect, tintLayers, luminance, roundRect };
 }));

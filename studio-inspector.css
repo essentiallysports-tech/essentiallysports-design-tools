@@ -143,7 +143,7 @@ textarea.ig-input { padding: 10px 12px; resize: vertical; }
 .ig-chip svg { width: var(--es-icon-sm); height: var(--es-icon-sm); }
 .ig-icon-btn { width: 34px; padding: 0; }
 .ig-chip:hover, .ig-icon-btn:hover, .ig-reset:hover { background: var(--es-sunk); color: var(--es-ink); }
-.ig-icon-btn.is-active { border-color: var(--es-brand); background: var(--es-brand-soft, #eaf3ff); color: var(--es-brand-text, #0a62c7); }
+.ig-icon-btn.is-active { border-color: var(--es-brand); background: var(--es-brand-soft, #e8f2ff); color: var(--es-brand-text, #0a62c7); }
 .ig-adjust {
   display: grid;
   gap: 8px;

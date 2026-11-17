@@ -79,4 +79,15 @@ assert.equal(patched.sport, 'CFB');
 // 10. A real team stays exactly as written.
 assert.equal(lintSpec(cover(['Can Anyone', 'Stop Mahomes?']), ctx()).patch.team, undefined);
 
+// 11. Stats show only real stat labels: ages, money and years are rejected.
+assert.deepEqual(codes(lintSpec(stats([['320', 'YDS'], ['3', 'TD'], ['1', 'AGE']]), ctx())), ['bad-stat-label']);
+assert.match(lintSpec(stats([['320', 'YDS'], ['3', 'TD'], ['1', 'AGE']]), ctx()).errors[0].msg, /"AGE" is not a game or season stat label/);
+assert.equal(lintSpec(stats([['320', 'yds'], ['3', 'TDs'], ['1', 'INT']]), ctx()).ok, true, 'case and plural forms of real labels pass');
+const h2h = {
+  postType: 'stats-double-ent', sport: 'NFL', team: '', lines: ['Who Wins?'],
+  fields: { headline: 'Who Wins?', a: { name: 'Patrick Mahomes', stats: [['320', 'YDS'], ['3', 'TD'], ['1', 'INT'], ['3', 'TD']].map(([value, label]) => ({ value, label })) },
+    b: { name: 'Josh Allen', stats: [['320', 'YDS'], ['3', 'TD'], ['1', 'INT'], ['27', 'SALARY']].map(([value, label]) => ({ value, label })) } },
+};
+assert.ok(lintSpec(h2h, { ...ctx(), corpus: `${corpus} 27` }).errors.some(issue => issue.code === 'bad-stat-label' && issue.field === 'b stat 4 label'));
+
 console.log('Brand checker tests passed.');

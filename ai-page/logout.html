@@ -3,28 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Logout | FrameUp</title>
+  <title>Log out | FrameUp</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="../es-auth-config.js?v=20260707-auth4"></script>
   <script src="../es-auth.js?v=20261115-auth2"></script>
-  <script src="../dashboard-data.js?v=20261030-previews2"></script>
+  <script src="../dashboard-data.js?v=20261117-ready1"></script>
   <link rel="icon" href="../favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="account.css?v=20261117-focus1">
-  <link rel="stylesheet" href="../site-mobile-chrome.css?v=20261117-focus1">
-<link rel="stylesheet" href="../theme.css?v=20261116-sp1">
-  <link rel="stylesheet" href="../site-chrome.css?v=20261117-usage1">
+  <link rel="stylesheet" href="../site-mobile-chrome.css?v=20261117-ready1">
+<link rel="stylesheet" href="../theme.css?v=20261117-ready1">
+  <link rel="stylesheet" href="../site-chrome.css?v=20261117-ready1">
   <link rel="stylesheet" href="../cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="../design-tokens.css?v=20261117-focus1">
-<link rel="stylesheet" href="../es-ui.css?v=20261117-adm1">
+  <link rel="stylesheet" href="../design-tokens.css?v=20261117-ready1">
+<link rel="stylesheet" href="../es-ui.css?v=20261117-ready1">
   <link rel="stylesheet" href="../es-motion.css?v=20261115-btn1">
   <script src="../theme.js?v=20261115-pol2"></script>
   <script src="../site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="../site-chrome.js?v=20261117-usage1"></script>
-<script src="../app-shell.js?v=20261117-usage1"></script>
+<script src="../app-shell.js?v=20261117-ready1"></script>
 </head>
 <body class="logout-page">
   <div class="page">
@@ -88,7 +88,7 @@
 
   <footer class="site-footer" aria-label="Site footer"></footer>
 
-  <script src="account.js"></script>
+  <script src="account.js?v=20261117-ready1"></script>
   <script>
     document.getElementById('confirm-logout').addEventListener('click', async event => {
       const button = event.currentTarget;
@@ -101,7 +101,7 @@
         sessionStorage.setItem('es.ai.loggedOut', 'true');
         document.getElementById('logout-copy').textContent = 'You have been logged out of FrameUp on this device.';
         status.textContent = 'Session ended.';
-        document.getElementById('logout-actions').innerHTML = '<a class="primary-btn" href="../login.html">Return to login</a><a class="secondary-btn" href="../index.html">FrameUp home</a>';
+        document.getElementById('logout-actions').innerHTML = '<a class="primary-btn" href="../login.html">Sign in again</a>';
       } catch (error) {
         button.disabled = false;
         button.textContent = 'Log out';

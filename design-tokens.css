@@ -18,29 +18,40 @@
 
   /* Neutrals (shared) */
   --es-bg: #ffffff;
+  --es-surface: #ffffff; /* cards, toasts, rings around dots; Slate 800 in dark */
   --es-stage: #eef0f3;
   --es-sunk: #f0f2f5;
   --es-line: #dfe2e7;
-  --es-line-2: #c8cdd5;
+  /* Line 2 is the field / chip outline: 3.2:1 on white (WCAG 1.4.11 asks 3:1
+     for the boundary of a control). Plain dividers keep the lighter --es-line. */
+  --es-line-2: #8a919e;
   --es-ink: #0e1014;
   --es-ink-2: #3a3f48;
   --es-ink-3: #565c67; /* 4.5:1+ on white and on the sunk greys */
-  --es-placeholder: #9aa0aa;
+  --es-placeholder: #6e7581; /* 4.6:1 on white: example text in fields */
   --es-good: #0e7a3d;
   --es-good-soft: #e9f6ee;
   --es-bad: #c42323;
   --es-bad-soft: #fdeeee;
   --es-warn: #b45309;
   --es-warn-soft: #fff8ed;
+  /* Status colours for dark surfaces (badges, pills, trends on Slate 800):
+     good 7.7:1, bad 7.1:1, warn 11:1 on #1F2126. */
+  --es-good-on-dark: #4cc985;
+  --es-good-soft-on-dark: rgb(76 201 133 / .16);
+  --es-bad-on-dark: #ff8a8a;
+  --es-bad-soft-on-dark: rgb(255 138 138 / .14);
+  --es-warn-on-dark: #fcd34d;
+  --es-warn-soft-on-dark: rgb(245 158 11 / .16);
 
   /* Brand slots. ES blue #0A7DFA is 3.9:1 on white, so it stays the wordmark
      colour (dots, rules, progress) and a deeper fill/text carries AA contrast. */
   --es-brand: #0a7dfa;
   --es-brand-rgb: 10 125 250;
-  --es-brand-fill: #0a6bd8;
-  --es-brand-fill-press: #0859b5;
+  --es-brand-fill: #0a6fde;       /* = Blue 600 (white label 4.8:1) */
+  --es-brand-fill-press: #085ebc; /* = Blue 700 */
   --es-brand-text: #0a62c7;
-  --es-brand-soft: #eaf3ff;
+  --es-brand-soft: #e8f2ff;       /* = Blue 100 */
   --es-brand-soft-hover: #dcebff;
   --es-brand-tint: #b5d8fd;
   --es-band-tint: #f5f9ff;
@@ -92,6 +103,7 @@
   --es-radius-chip: 10px;
   --es-radius-control: 12px;
   --es-radius-container: 16px;
+  --es-radius-card: var(--es-radius-container); /* one card radius: 16 (was 20 in es-ui.css) */
   --es-radius-pill: 999px;
 
   /* Sizing */
@@ -130,6 +142,14 @@
   --es-type-display-size: 48px;
   --es-type-display-line: .98;
   --es-type-display-weight: 800;
+
+  /* Big number (stats, KPIs): Roboto Condensed 800, tabular. One style for
+     .es-stat__value and the dashboard KPI value. */
+  --es-type-number-family: var(--es-font-display);
+  --es-type-number-size: 36px;
+  --es-type-number-size-sm: 32px;
+  --es-type-number-weight: 800;
+  --es-type-number-line: 1;
 
   /* Page title (h1): Roboto 700, sentence case, tight tracking. */
   --es-type-page-title-family: var(--es-font-ui);
@@ -786,7 +806,7 @@ html:not([data-theme="dark"])[data-studio-shell="on"] .studio-inspector-tab.is-a
   box-shadow: inset 0 0 0 1px var(--es-line), 0 1px 2px rgb(14 16 20 / .06) !important;
 }
 
-/* Fields: 14px radius, 1.5px line-2 outline, ink-3 on hover, brand outline on focus / open */
+/* Fields: 12px radius (--es-radius-control), 1px line-2 outline, ink-3 on hover, blue border + halo on focus / open */
 html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input){
   border: 1px solid var(--es-line-2) !important;
   border-radius: var(--es-radius-control) !important;
@@ -875,7 +895,7 @@ html:not([data-theme="dark"]) .select-dropdown-option.is-selected{
   font-weight: 700 !important;
 }
 
-/* Fields: white (sunk means disabled), 14px radius, line-2 outline, ink focus. */
+/* Fields: white (sunk means disabled), 12px radius (--es-radius-control), line-2 outline, blue focus. */
 html:not([data-theme="dark"]) :is(.request-input, .request-select, .request-textarea, .request-dropdown-trigger:not([class*="priority-"]), .feedback-textarea, .feedback-dropdown-trigger, .reels-native-select, .reels-choice-trigger, .account-main input:not([type="checkbox"]):not([type="radio"]), .account-main select, .account-main textarea){
   border: 1px solid var(--es-line-2) !important;
   border-radius: var(--es-radius-control) !important;
@@ -1990,9 +2010,15 @@ html[data-theme="dark"] :is(.template-picker, .recent-designs-dialog, .whats-new
   --es-ink: #FFFFFF;
   --es-ink-2: #BFC8D9;
   --es-bg: #2A2D34;
+  --es-surface: #2A2D34;
   --es-sunk: #3B4049;
   --es-line: #2A2D34;
-  --es-line-2: #3B4049;
+  --es-line-2: #707A8C;
+  --es-placeholder: #98A6BF;
+  /* Shadow tokens bake in their colour where they are declared, so they are
+     restated wherever --es-line / --es-line-2 change. */
+  --es-hairline: inset 0 0 0 1px var(--es-line);
+  --es-outline: inset 0 0 0 1.5px var(--es-line-2);
   --es-brand-soft: rgb(10 125 250 / .2);
   --es-brand-text: #9DCBFD;
 }
@@ -2458,12 +2484,9 @@ html[data-theme="dark"] .feedback-type-option input:checked + .feedback-type-car
   box-shadow: inset 0 0 0 .5px #FFFFFF !important;
 }
 
-/* Selected chips (es-chip): ink ring, not a blue fill. */
-html:not([data-theme="dark"]) .es-chip[aria-pressed="true"]{
-  background: var(--es-bg);
-  box-shadow: inset 0 0 0 1.5px var(--es-ink);
-  color: var(--es-ink);
-}
+/* Selected chips (es-chip): the calm blue tint everywhere (es-ui.css sets it:
+   Blue 100 fill, Blue tint ring, brand text 5.2:1). AI pages add their gradient
+   tint in ai-studio.css. No ink ring. */
 
 /* Search fields on pages: white and outlined, brand ring on focus. The
    sidebar's search launcher stays a grey button. */
@@ -2694,6 +2717,7 @@ html[data-theme="dark"] {
   --dk-hover: var(--es-slate-600);
   --dk-line: var(--es-slate-700);
   --dk-line-2: var(--es-slate-600);
+  --dk-line-field: var(--es-slate-400); /* field outlines: 3.7:1 on Slate 800, 3.2:1 on Slate 700 */
   --dk-ink: var(--es-white);
   --dk-ink-2: var(--es-slate-100);
   --dk-ink-3: var(--es-slate-200);
@@ -2717,6 +2741,11 @@ html[data-theme="dark"] {
   --es-focus-halo: 0 0 0 3px rgb(84 164 251 / .22);
   --es-focus-outline: 2px solid var(--es-focus-color);
   --es-focus-ring: rgb(84 164 251 / .22);
+  /* Elevation and surface in dark: the shadow tokens resolve their colour where
+     they are declared, so they are restated here (they stayed light before). */
+  --es-hairline: inset 0 0 0 1px var(--dk-line);
+  --es-outline: inset 0 0 0 1.5px var(--dk-line-field);
+  --es-surface: var(--dk-surface);
 }
 
 /* Sidebar section dividers */
@@ -2753,13 +2782,14 @@ html[data-theme="dark"] :is(.feedback-type-card, .feedback-dropdown-trigger) { b
 /* ── Icon tiles (How it works, Home, UI Library): dark tints, bright marks ── */
 html[data-theme="dark"] .es-tile { background: rgb(255 255 255 / .06) !important; color: #BFC8D9 !important; }
 html[data-theme="dark"] .es-tile--blue { background: rgb(10 125 250 / .18) !important; color: #9DCBFD !important; }
-html[data-theme="dark"] .es-tile--purple { background: rgb(0 179 230 / .16) !important; color: #7fdbf5 !important; }
+html[data-theme="dark"] :is(.es-tile--cyan, .es-tile--purple) { background: rgb(0 179 230 / .16) !important; color: #7fdbf5 !important; }
 html[data-theme="dark"] .es-tile--green { background: rgb(22 163 74 / .18) !important; color: #6fd39a !important; }
 html[data-theme="dark"] .es-tile--pink { background: rgb(219 39 119 / .18) !important; color: #f9a8d4 !important; }
 html[data-theme="dark"] .es-tile--amber { background: rgb(217 119 6 / .2) !important; color: #fcd34d !important; }
 html[data-theme="dark"] .es-chip { background: var(--dk-raised); box-shadow: inset 0 0 0 1px var(--dk-line-2); color: var(--dk-ink); }
-html[data-theme="dark"] .es-chip[aria-pressed="true"] { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dk-ink); color: var(--dk-ink); }
-html[data-theme="dark"] .es-input { background: var(--dk-surface); box-shadow: inset 0 0 0 1px var(--dk-line-2); color: var(--dk-ink); }
+html[data-theme="dark"] .es-chip[aria-pressed="true"] { background: rgb(10 125 250 / .2); box-shadow: inset 0 0 0 1px rgb(84 164 251 / .55); color: var(--es-blue-300); }
+html[data-theme="dark"] .es-input { background: var(--dk-surface); box-shadow: inset 0 0 0 1px var(--dk-line-field); color: var(--dk-ink); }
+html[data-theme="dark"] .es-input::placeholder { color: var(--dk-ink-3); }
 html[data-theme="dark"] .es-card { background: var(--dk-surface) !important; box-shadow: inset 0 0 0 1px var(--dk-line) !important; }
 html[data-theme="dark"] .es-empty { background: var(--dk-surface); }
 
@@ -2917,7 +2947,9 @@ html[data-theme="dark"] :is(body.reels-page, body:has(#ai-sidebar)) {
   --es-sunk: #101114;
   --es-stage: #101114;
   --es-line: #2A2D34;
-  --es-line-2: #3B4049;
+  --es-line-2: #707A8C; /* Slate 400: field outlines 3.7:1 on Slate 800 */
+  --es-hairline: inset 0 0 0 1px var(--es-line);
+  --es-outline: inset 0 0 0 1.5px var(--es-line-2);
   --es-ink: #FFFFFF;
   --es-ink-2: #BFC8D9;
   --es-ink-3: #98A6BF;
@@ -3063,7 +3095,6 @@ html[data-theme="dark"] :is(.mobile-menu-account, .profile-menu) .profile-name {
     white-space: nowrap !important;
     opacity: 1 !important;
     filter: none !important;
-    outline: none !important;
     animation: none !important;
     cursor: pointer !important;
     transform: none !important;
@@ -3202,6 +3233,12 @@ html[data-theme="dark"] :is(.mobile-menu-account, .profile-menu) .profile-name {
   }
   @media (prefers-reduced-motion: no-preference) {
     html :where(.es-btn--primary, .va-btn--primary):is(.is-busy, [aria-busy="true"])::after { animation: esSheen 1.6s linear infinite !important; }
+  }
+
+  /* No outline unless keyboard-focused. Kept out of the base rule so that rule
+     never cancels a focus outline: keyboard focus always gets the one below. */
+  html :where(.es-btn, .workspace-cta, .frame-cta, .frame-hero-cta, .faq-cta-action, .how-button, .btn, .secondary-btn, .danger-btn, .primary-btn, .request-submit, .feedback-submit, .feedback-reset, .feedback-back-link, .reels-btn, .topbar-button, .login-button, .login-secondary-button, .auth-state-button, .studio-export-btn, .studio-export-options-btn, .studio-link-btn, .va-btn, .ais-btn, .export-review-cta, .canvas-upload-button, .image-context-upload, .image-context-ai, .quick-action, .avatar-upload-label, .profile-back-link, .td-design, .tweet-fetch-button, .listicle-add-row-button, .widget-image-action-btn, .studio-ai-search button, .export-row-view, .export-row-details, .mobile-editor-export, .es-toast-action):not(:focus-visible):not(:has(:focus-visible)) {
+    outline: none !important;
   }
 
   /* ── Focus-visible: 2px outline, 2px offset ── */

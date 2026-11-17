@@ -16,19 +16,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-focus1">
-  <link rel="stylesheet" href="theme.css?v=20261116-sp1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261117-usage1">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
+  <link rel="stylesheet" href="theme.css?v=20261117-ready1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261117-ready1">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261117-focus1">
-  <link rel="stylesheet" href="es-ui.css?v=20261117-adm1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261117-ready1">
+  <link rel="stylesheet" href="es-ui.css?v=20261117-ready1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="video-ads.css?v=20261117-focus1">
+  <link rel="stylesheet" href="video-ads.css?v=20261117-ready1">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
-  <script src="app-shell.js?v=20261117-usage1"></script>
+  <script src="app-shell.js?v=20261117-ready1"></script>
 </head>
 <body class="va-body">
   <nav class="navbar">
@@ -93,6 +93,51 @@
           </div>
         </div>
 
+        <div class="va-view">
+        <!-- Frame + Tint: how the clip sits in the ad (the copy never moves). -->
+        <aside class="va-rail" id="va-rail" aria-label="Clip framing and tint" data-open="">
+          <div class="va-rail__tabs" role="group" aria-label="Clip controls">
+            <button class="va-rail__tab" type="button" data-rail="frame" aria-expanded="false" aria-controls="va-rail-frame" title="Frame: zoom and position">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+              <span class="va-sr">Frame</span>
+            </button>
+            <button class="va-rail__tab" type="button" data-rail="tint" aria-expanded="false" aria-controls="va-rail-tint" title="Tint: colour and strength">
+              <span class="va-rail__chip" id="va-tint-chip" aria-hidden="true"></span>
+              <span class="va-sr">Tint</span>
+            </button>
+          </div>
+          <div class="va-rail__body">
+            <section class="va-rail__sec" id="va-rail-frame" aria-labelledby="va-rail-frame-h">
+              <h3 class="va-rail__h" id="va-rail-frame-h">Frame</h3>
+              <div class="va-rail__fit" role="radiogroup" aria-label="Clip fit" id="va-fitmode">
+                <button type="button" role="radio" data-fit="fill" aria-checked="true" title="Fill the frame (crops the edges)">Fill</button>
+                <button type="button" role="radio" data-fit="fit" aria-checked="false" title="Show the whole clip">Fit</button>
+              </div>
+              <div class="va-rail__row">
+                <label class="va-rail__label" for="va-zoom">Zoom</label>
+                <output class="va-rail__val" id="va-zoom-val" for="va-zoom">100%</output>
+              </div>
+              <input class="va-rail__range" type="range" id="va-zoom" min="100" max="250" step="5" value="100" aria-valuetext="100%">
+              <div class="va-rail__steps">
+                <button class="va-rail__btn" type="button" id="va-zoom-out" aria-label="Zoom out" title="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+                <button class="va-rail__btn" type="button" id="va-zoom-in" aria-label="Zoom in" title="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+                <button class="va-rail__btn" type="button" id="va-center" aria-label="Centre the clip" title="Centre the clip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="M2 12h4"/><path d="M18 12h4"/></svg></button>
+              </div>
+              <p class="va-rail__hint" id="va-pan-hint">Drag the ad or use arrow keys to move the clip</p>
+            </section>
+            <section class="va-rail__sec" id="va-rail-tint" aria-labelledby="va-rail-tint-h">
+              <h3 class="va-rail__h" id="va-rail-tint-h">Tint</h3>
+              <div class="va-rail__row">
+                <label class="va-rail__label" for="va-tint">Strength</label>
+                <output class="va-rail__val" id="va-tint-val" for="va-tint">45%</output>
+              </div>
+              <input class="va-rail__range" type="range" id="va-tint" min="0" max="100" step="1" value="45" aria-valuetext="45%">
+              <div class="va-rail__swatches" role="radiogroup" aria-label="Tint colour" id="va-tint-colors"></div>
+              <input class="va-sr" type="color" id="va-tint-custom" value="#0B2265" tabindex="-1" aria-label="Custom tint colour">
+            </section>
+            <button class="es-btn es-btn--sm es-btn--tertiary va-rail__reset" type="button" id="va-look-reset">Reset</button>
+          </div>
+        </aside>
         <div class="va-canvas-wrap" id="va-drop">
           <!-- Meta preview: the ad framed as an Instagram/Facebook placement
                (Reels/Stories for 9:16, feed post for 4:5 and 1:1). Display only;
@@ -100,7 +145,7 @@
           <div class="va-device" id="va-device" data-meta="off">
             <div class="va-meta-head" id="va-meta-head" aria-hidden="true"></div>
             <div class="va-device__media">
-              <canvas id="va-canvas" width="1080" height="1920" role="img" aria-label="Ad preview"></canvas>
+              <canvas id="va-canvas" width="1080" height="1920" role="img" aria-label="Ad preview" tabindex="0" aria-describedby="va-pan-hint" aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown"></canvas>
               <div class="va-meta-over" id="va-meta-over" aria-hidden="true"></div>
             </div>
             <div class="va-meta-foot" id="va-meta-foot" aria-hidden="true"></div>
@@ -111,6 +156,7 @@
             <p id="va-busy-text">Downloading the clip…</p>
           </div>
           <div class="va-dropcue" aria-hidden="true"><span>Drop to use this clip</span></div>
+        </div>
         </div>
 
         <div class="va-transport" id="va-transport">
@@ -378,9 +424,9 @@
   <video id="va-video" playsinline muted preload="auto" hidden></video>
   <script src="video-ads-brands.js?v=20261115-fig1"></script>
   <script src="video-ads-teams.js?v=20261117-tlogo1"></script>
-  <script src="video-ads-render.js?v=20261115-fig1"></script>
+  <script src="video-ads-render.js?v=20261117-ready1"></script>
   <script src="es-motion.js?v=20261115-ds1"></script>
   <script src="league-logos.js?v=20261117-logo1"></script>
-  <script src="video-ads.js?v=20261117-gram1"></script>
+  <script src="video-ads.js?v=20261117-ready1"></script>
 </body>
 </html>

@@ -9,7 +9,7 @@
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261115-auth2"></script>
-  <script src="dashboard-data.js?v=20261111-basics2"></script>
+  <script src="dashboard-data.js?v=20261117-ready1"></script>
   <script>
     window.ESAuth?.requireAuth(`gallery.html${window.location.search}${window.location.hash}`);
   </script>
@@ -17,17 +17,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-focus1">
-  <link rel="stylesheet" href="theme.css?v=20261116-sp1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261117-usage1">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
+  <link rel="stylesheet" href="theme.css?v=20261117-ready1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261117-ready1">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261117-focus1">
-<link rel="stylesheet" href="es-ui.css?v=20261117-adm1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261117-ready1">
+<link rel="stylesheet" href="es-ui.css?v=20261117-ready1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
-<script src="app-shell.js?v=20261117-usage1"></script>
+<script src="app-shell.js?v=20261117-ready1"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
   <style>
     .gallery-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: var(--es-space-8, 32px) 0 var(--es-space-12, 48px); font-family: var(--es-font-ui); color: var(--es-ink); }
@@ -183,7 +183,13 @@
 
     <div class="es-callout gallery-notice" id="gallery-notice" hidden></div>
 
-    <div class="gallery-grid" id="gallery-grid"></div>
+    <div class="es-error-state gallery-error" id="gallery-error" role="alert" hidden>
+      <span class="es-error-state__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
+      <p class="es-error-state__title">Couldn’t load the gallery</p>
+      <p class="es-error-state__copy" id="gallery-error-copy">Check your connection and try again.</p>
+      <button class="es-btn es-btn--sm" type="button" id="gallery-retry">Try again</button>
+    </div>
+    <div class="gallery-grid" id="gallery-grid" aria-busy="false"></div>
 
     <div class="es-empty gallery-empty" id="gallery-empty" hidden>
       <p class="es-empty__title" id="gallery-empty-title">No posts yet</p>
@@ -249,6 +255,9 @@
         viewerOpenNote: document.getElementById('gallery-viewer-open-note'),
         workspaces: document.getElementById('gallery-workspaces'),
         intro: document.getElementById('gallery-intro'),
+        error: document.getElementById('gallery-error'),
+        errorCopy: document.getElementById('gallery-error-copy'),
+        retry: document.getElementById('gallery-retry'),
       };
       const state = { items: [], filter: 'All', workspace: 'All', query: '', exhausted: false, loading: false, visible: [], viewerIndex: -1 };
       const WORKSPACE_ROUTES = { 'Social Media': 'instagram', YouTube: 'youtube', Newsletter: 'newsletter' };
@@ -444,6 +453,8 @@
       async function loadPage() {
         if (state.loading || state.exhausted) return;
         state.loading = true;
+        els.grid.setAttribute('aria-busy', 'true');
+        els.notice.hidden = true;
         els.more.disabled = true;
         els.more.textContent = 'Loading…';
         if (!state.items.length) els.grid.innerHTML = Array.from({ length: 8 }, () => '<span class="gallery-card is-skeleton"><span class="gallery-card__thumb"></span><span class="gallery-card__body"><strong class="es-skeleton"></strong><small class="es-skeleton"></small></span></span>').join('');
@@ -462,14 +473,23 @@
           state.items.push(...fresh);
           state.exhausted = items.length < PAGE_SIZE || source === 'admin' || source === 'local';
         } catch (error) {
-          state.failed = true;
           console.error('[gallery]', error);
-          els.notice.hidden = false;
-          els.notice.innerHTML = '<div><strong>Could not load the gallery</strong><span>Refresh the page. If it keeps happening, share this message: </span><code></code></div>';
-          els.notice.querySelector('code').textContent = String(error?.message || error || 'Unknown error');
-          state.exhausted = true;
+          const detail = String(error?.message || error || '').slice(0, 160);
+          if (state.items.length) {
+            // A later page failed: keep what is shown, let Load more retry.
+            els.notice.hidden = false;
+            els.notice.innerHTML = '<div><strong>Couldn’t load more posts</strong><span>Press Load more to try again.</span></div>';
+          } else {
+            state.failed = true;
+            state.exhausted = true;
+            els.errorCopy.textContent = detail
+              ? `Check your connection and try again. If it keeps happening, share this with the design team: ${detail}`
+              : 'Check your connection and try again.';
+            els.error.hidden = false;
+          }
         } finally {
           state.loading = false;
+          els.grid.setAttribute('aria-busy', 'false');
           els.more.disabled = false;
           els.more.textContent = 'Load more';
           renderWorkspaces();
@@ -549,6 +569,12 @@
         await loadPage();
         const next = els.grid.children[oldLen];
         if (next && (hadFocus || els.more.hidden)) next.focus();
+      });
+      els.retry.addEventListener('click', () => {
+        state.failed = false;
+        state.exhausted = false;
+        els.error.hidden = true;
+        loadPage();
       });
       els.viewerOpen.addEventListener('click', event => {
         if (els.viewerOpen.getAttribute('aria-disabled') === 'true') event.preventDefault();

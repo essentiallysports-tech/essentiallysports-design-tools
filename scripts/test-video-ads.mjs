@@ -20,6 +20,8 @@ let signedIn = true;
 let fxReply = null;
 let synReply = null;
 let callsThisHour = 0;
+let weeklySpend = 0;
+let trendItems = null;
 let messagesHandler = null;
 let chatHandler = () => { throw new Error('unexpected light-model call'); };
 const reply = (status, body) => ({ ok: status < 400, status, json: async () => body });
@@ -27,6 +29,7 @@ globalThis.fetch = async (url, options = {}) => {
   const href = String(url);
   if (href.includes('/rest/v1/rpc/frameup_my_ai_calls_last_hour')) return reply(200, callsThisHour);
   if (href.includes('/rest/v1/frameup_ai_usage')) return reply(201, {});
+  if (href.includes('/rest/v1/rpc/frameup_my_ai_spend')) return reply(200, [{ total_usd: weeklySpend }]);
   if (href.startsWith('https://ai-gateway.vercel.sh/v1/messages')) return messagesHandler(JSON.parse(options.body));
   if (href.startsWith('https://ai-gateway.vercel.sh/v1/chat/completions')) return chatHandler(JSON.parse(options.body));
   if (href.startsWith('https://api.fxtwitter.com/')) {
@@ -48,6 +51,7 @@ let trendWindow = '';
 require.cache[trendsPath] = { id: trendsPath, filename: trendsPath, loaded: true, exports: {
   getTrends: async (force, options) => {
     trendWindow = options?.window;
+    if (trendItems) return { updatedAt: hoursAgo(0), items: trendItems };
     return { updatedAt: hoursAgo(0), items: [
       { id: 'a', category: 'nfl', title: 'Mahomes rallies the Chiefs', publishedAt: hoursAgo(5), related: [] },
       { id: 'b', category: 'mlb', title: 'Skubal hits free agency', publishedAt: hoursAgo(30), related: [] },
@@ -509,5 +513,116 @@ callsThisHour = 0;
 delete process.env.AI_GATEWAY_API_KEY;
 assert.equal((await post({ mode: 'grammar', brandId: 'es-dugout', copy: { headline: 'Yet another headline' } })).status, 503);
 process.env.AI_GATEWAY_API_KEY = 'gw-test';
+
+// 17. Moments with clips: one capped search for the top trending moments,
+//     posts grouped by moment, verified with the 72h + throwback rules, only
+//     moments with a clip returned, shared 15-minute cache, 401/429/503.
+trendItems = [
+  { id: 'm1', category: 'nfl', title: 'Mahomes rallies the Chiefs past the Bills', publishedAt: hoursAgo(3), related: [] },
+  { id: 'm2', category: 'nfl', title: 'Old news nobody filmed', publishedAt: hoursAgo(4), related: [] },
+  { id: 'm3', category: 'mlb', title: 'Skubal hits free agency', publishedAt: hoursAgo(6), related: [] },
+  { id: 'm4', category: 'cfb', title: 'Ohio State routs Michigan', publishedAt: hoursAgo(7), related: [] },
+  { id: 'm5', category: 'golf', title: 'A golf story', publishedAt: hoursAgo(2), related: [] },
+  ...Array.from({ length: 12 }, (_, k) => ({ id: `x${k}`, category: 'nfl', title: `Filler NFL story ${k}`, publishedAt: hoursAgo(10), related: [] })),
+];
+const mid = id => `https://x.com/NFL/status/${id}`;
+let momentCalls = 0;
+let momentPrompt = '';
+let momentBody = null;
+messagesHandler = body => {
+  momentCalls += 1;
+  momentBody = body;
+  momentPrompt = body.messages[0].content;
+  return reply(200, { stop_reason: 'end_turn', usage: { input_tokens: 15000, output_tokens: 600, server_tool_use: { web_search_requests: 3 } }, content: [{ type: 'text', text: JSON.stringify({ moments: [
+    { i: 1, posts: [mid(901), mid(902), 'https://example.com/x', mid(903)] }, // fresh, 73h old, not X, throwback
+    { i: 2, posts: [mid(904)] }, // no timestamp: dropped, so moment 2 is dropped
+    { i: 3, posts: [mid(905), mid(901)] }, // fresh; 901 already counted for moment 1
+    { i: 4, posts: [] },
+    { i: 99, posts: [mid(906)] }, // no such moment
+  ] }) }] });
+};
+fxReply = href => {
+  const id = href.match(/status\/(\d+)/)[1];
+  const created = { 901: nowSec - 2 * 3600, 902: nowSec - 73 * 3600, 903: nowSec - 3600, 904: undefined, 905: nowSec - 30 * 3600, 906: nowSec - 3600 }[id];
+  const text = id === '903' ? 'On this day in 2019: what a throw' : `Clip ${id}`;
+  return { code: 200, tweet: { text, created_timestamp: created, author: { screen_name: 'NFL' }, media: { videos: [{ url: VIDEO(720, 1280), formats: [{ url: VIDEO(720, 1280), container: 'mp4', bitrate: 2000000 }] }] } } };
+};
+res = await post({ mode: 'moments-with-clips', sport: 'all' });
+assert.equal(res.status, 200, JSON.stringify(res.body));
+assert.equal(momentCalls, 1, 'one search for all moments');
+assert.equal(momentBody.model, 'anthropic/claude-haiku-5.5');
+assert.equal(momentBody.tools[0].max_uses, 3);
+assert.match(momentPrompt, /1\. \[NFL\] Mahomes rallies the Chiefs past the Bills/);
+assert.match(momentPrompt, /last 72 hours/);
+assert.doesNotMatch(momentPrompt, /golf/i, 'ad sports only');
+assert.doesNotMatch(momentPrompt, /Filler NFL story 9/, 'top 10 moments only');
+assert.equal(res.body.checked, 10);
+assert.deepEqual(res.body.moments.map(m => m.id), ['m1', 'm3'], 'only moments with a fresh, verified clip');
+assert.deepEqual(res.body.moments[0].clips.map(c => c.url), [mid(901)], '73h-old and throwback posts dropped');
+assert.deepEqual(res.body.moments[1].clips.map(c => c.url), [mid(905)], 'a post counts for its first moment only');
+assert.equal(res.body.moments[0].clips[0].ageHours, 2);
+assert.ok(res.body.moments[0].clips[0].postedAt && res.body.moments[0].clips[0].variants.length);
+assert.equal(res.body.moments[0].team.name, 'Kansas City Chiefs', 'the team named in the title');
+assert.equal(res.body.moments[1].team, undefined);
+assert.equal(res.body.moments[0].sport, 'nfl');
+assert.equal(res.body.moments[0].publishedAt, trendItems[0].publishedAt);
+assert.equal(res.body.cached, false);
+assert.ok(res.body.cost > 0.03 && res.body.cost < 0.04, `cost per refresh ${res.body.cost}`);
+
+// Shared cache: another user, over the hourly limit, gets it free; a sport filter is its own entry.
+callsThisHour = 500;
+res = await post({ mode: 'moments-with-clips', sport: 'all' });
+assert.equal(res.status, 200);
+assert.equal(res.body.cached, true);
+assert.equal(res.body.cost, 0);
+assert.equal(momentCalls, 1);
+res = await post({ mode: 'moments-with-clips', sport: 'mlb' });
+assert.equal(res.status, 429, 'a cache miss is gated');
+callsThisHour = 0;
+// While cached, clips that cross 72h are dropped, and so is a moment left empty.
+const momentEntry = [..._test.MOMENT_CACHE.values()][0];
+momentEntry.value.moments[1].clips[0].postedAt = new Date(Date.now() - 80 * 3600e3).toISOString();
+res = await post({ mode: 'moments-with-clips' });
+assert.equal(res.body.cached, true, 'no sport = all');
+assert.deepEqual(res.body.moments.map(m => m.id), ['m1']);
+// A new set of trending moments is a new key; an expired entry searches again.
+momentEntry.at -= 16 * 60 * 1000;
+res = await post({ mode: 'moments-with-clips', sport: 'all' });
+assert.equal(res.body.cached, false);
+assert.equal(momentCalls, 2);
+
+// Gates and failures: 401, weekly 429, AI off 503, search down 502, budget 503.
+for (const entry of _test.MOMENT_CACHE.values()) entry.at -= 16 * 60 * 1000;
+signedIn = false;
+assert.equal((await post({ mode: 'moments-with-clips' })).status, 401);
+signedIn = true;
+weeklySpend = 999;
+res = await post({ mode: 'moments-with-clips' });
+assert.equal(res.status, 429);
+assert.equal(res.body.reason, 'weekly-limit');
+weeklySpend = 0;
+delete process.env.AI_GATEWAY_API_KEY;
+res = await post({ mode: 'moments-with-clips' });
+assert.equal(res.status, 503);
+assert.equal(res.body.ok, false);
+process.env.AI_GATEWAY_API_KEY = 'gw-test';
+messagesHandler = () => reply(500, { error: { message: 'search down' } });
+res = await post({ mode: 'moments-with-clips' });
+assert.equal(res.status, 502);
+assert.equal(res.body.ok, false);
+assert.match(res.body.error, /Couldn't check which moments have clips/);
+messagesHandler = () => reply(402, { error: { message: 'spend limit reached' } });
+res = await post({ mode: 'moments-with-clips' });
+assert.equal(res.status, 503);
+assert.equal(res.body.reason, 'budget');
+// No trending moments: nothing searched.
+trendItems = [];
+momentCalls = 0;
+messagesHandler = () => { momentCalls += 1; throw new Error('no search without moments'); };
+res = await post({ mode: 'moments-with-clips' });
+assert.equal(res.status, 200);
+assert.deepEqual(res.body.moments, []);
+assert.equal(momentCalls, 0);
+trendItems = null;
 
 console.log('Video Ads server tests passed.');

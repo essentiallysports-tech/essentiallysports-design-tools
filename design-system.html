@@ -16,20 +16,20 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-focus1">
-  <link rel="stylesheet" href="theme.css?v=20261116-sp1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261117-usage1">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
+  <link rel="stylesheet" href="theme.css?v=20261117-ready1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261117-ready1">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261117-focus1">
-<link rel="stylesheet" href="es-ui.css?v=20261117-adm1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261117-ready1">
+<link rel="stylesheet" href="es-ui.css?v=20261117-ready1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <!-- Component sources for the AI, Video Ads and logo specimens below. -->
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="video-ads.css?v=20261117-ask1">
+  <link rel="stylesheet" href="video-ads.css?v=20261117-ready1">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
-<script src="app-shell.js?v=20261117-usage1"></script>
+<script src="app-shell.js?v=20261117-ready1"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
   <script src="league-logos.js?v=20261117-logo1" defer></script>
   <script src="video-ads-teams.js?v=20261117-tlogo1" defer></script>
@@ -50,12 +50,13 @@
        every token-based specimen shows its dark value. */
     html[data-theme="dark"] .ds-page {
       --es-bg: #1F2126; --es-sunk: #101114; --es-stage: #101114;
-      --es-line: #2A2D34; --es-line-2: #3B4049;
+      --es-line: #2A2D34; --es-line-2: #707A8C;
       --es-ink: #FFFFFF; --es-ink-2: #BFC8D9; --es-ink-3: #98A6BF; --es-placeholder: #98A6BF;
       --es-brand-text: #9DCBFD; --es-brand-soft: rgb(10 125 250 / .2); --es-brand-tint: rgb(84 164 251 / .45);
       --es-canvas: #101114;
       /* --es-hairline / --es-outline resolve their colour on :root, so they are restated here. */
-      --es-hairline: inset 0 0 0 1px #2A2D34; --es-outline: inset 0 0 0 1.5px #3B4049;
+      --es-hairline: inset 0 0 0 1px #2A2D34; --es-outline: inset 0 0 0 1.5px #707A8C;
+      --es-surface: #1F2126;
     }
     /* theme.css mutes every p / small / li in dark with !important; specimens on fixed light surfaces keep their own ink. */
     html[data-theme="dark"] .ds-page .ds-on-light > p { color: #565C67 !important; }
@@ -216,7 +217,7 @@
     html .ds-on-dark .va-ask-ai svg { color: #54A4FB; }
     html .ds-on-light .va-ask-ai { --ask-fill: #FFFFFF; --ask-ink: #0E1014; --ask-base: rgb(10 111 222 / .35); }
     html .ds-on-light .va-ask-ai svg { color: #0A6FDE; }
-    html .ds-on-light .va-ask-ai[aria-expanded="true"] { --ask-fill: #EAF3FF; color: #0A62C7; }
+    html .ds-on-light .va-ask-ai[aria-expanded="true"] { --ask-fill: #E8F2FF; color: #0A62C7; }
     html .ds-on-dark .va-ask-ai[aria-expanded="true"] { --ask-fill: #23324a; color: #9DCBFD; }
 
     /* The library remaps --es-ink to white in dark; keep the pressed tool readable. */
@@ -250,7 +251,7 @@
     /* Data display */
     .ds-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--es-space-4); }
     .ds-kpi { display: flex; flex-direction: column; min-width: 0; padding: var(--es-space-5) var(--es-space-6); border-radius: var(--es-radius-container); background: var(--es-bg); box-shadow: var(--es-hairline), 0 1px 2px rgb(14 16 20 / .04), 0 8px 24px -16px rgb(14 16 20 / .12); }
-    .ds-kpi__value { margin: var(--es-space-2) 0 0; color: var(--es-ink); font: 700 36px/1.1 var(--es-font-ui); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+    .ds-kpi__value { margin: var(--es-space-2) 0 0; color: var(--es-ink); font: var(--es-type-number-weight) var(--es-type-number-size)/var(--es-type-number-line) var(--es-type-number-family); font-variant-numeric: tabular-nums; }
     .ds-kpi__delta { display: flex; flex-wrap: wrap; gap: 0 var(--es-space-2); min-height: 20px; margin: var(--es-space-1) 0 0; font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); color: var(--es-ink-3); }
     .ds-kpi__delta b { font-weight: 600; color: var(--es-good); }
     .ds-kpi__delta b.is-down { color: var(--es-bad); }
@@ -459,7 +460,7 @@
             <div class="ds-modes__role"><b>Line (dividers)</b><small>--es-line</small></div>
             <span class="ds-chipswatch"><i style="background:#DFE2E7"></i>#DFE2E7</span><span class="ds-chipswatch"><i style="background:#2A2D34"></i>#2A2D34</span>
             <div class="ds-modes__role"><b>Line 2 (field outlines)</b><small>--es-line-2</small></div>
-            <span class="ds-chipswatch"><i style="background:#C8CDD5"></i>#C8CDD5</span><span class="ds-chipswatch"><i style="background:#3B4049"></i>#3B4049</span>
+            <span class="ds-chipswatch"><i style="background:#8A919E"></i>#8A919E</span><span class="ds-chipswatch"><i style="background:#707A8C"></i>#707A8C</span>
             <div class="ds-modes__role"><b>Ink (titles, values)</b><small>--es-ink</small></div>
             <span class="ds-chipswatch"><i style="background:#0E1014"></i>#0E1014</span><span class="ds-chipswatch"><i style="background:#FFFFFF"></i>#FFFFFF</span>
             <div class="ds-modes__role"><b>Ink 2 (body, labels)</b><small>--es-ink-2</small></div>
@@ -572,7 +573,7 @@
             <div class="ds-tile ds-radius"><span style="border-radius:var(--es-radius-chip)"></span><b>10</b>--es-radius-chip · buttons, chips, nav items</div>
             <div class="ds-tile ds-radius"><span style="border-radius:var(--es-radius-control)"></span><b>12</b>--es-radius-control · fields, toasts</div>
             <div class="ds-tile ds-radius"><span style="border-radius:var(--es-radius-container)"></span><b>16</b>--es-radius-container · panels, menus, tables</div>
-            <div class="ds-tile ds-radius"><span style="border-radius:var(--es-radius-card)"></span><b>20</b>--es-radius-card · .es-card</div>
+            <div class="ds-tile ds-radius"><span style="border-radius:var(--es-radius-card)"></span><b>16</b>--es-radius-card · .es-card (= container)</div>
             <div class="ds-tile ds-radius"><span style="border-radius:var(--es-radius-pill)"></span><b>999</b>--es-radius-pill · badges, team chips</div>
           </div>
         </div>
@@ -758,7 +759,7 @@
         </div>
         <div class="ds-sub">
           <h3>Selected</h3>
-          <p class="ds-rule">Selection is calm: a white pill on a grey track for segments, an ink ring for chips (a soft blue tint on AI pages), a white pill with a blue icon for the current nav item.</p>
+          <p class="ds-rule">Selection is calm: a white pill on a grey track for segments, a soft blue tint for chips (a gradient tint on AI pages), a white pill with a blue icon for the current nav item.</p>
           <div class="ds-row ds-row--lg">
             <div class="es-segmented" role="radiogroup" aria-label="Selected segment example" data-ds-seg><button class="es-segmented__item" role="radio" aria-checked="true" aria-selected="true" type="button">Feed</button><button class="es-segmented__item" role="radio" aria-checked="false" aria-selected="false" type="button">Reel</button><button class="es-segmented__item" role="radio" aria-checked="false" aria-selected="false" type="button">Square</button></div>
             <div class="ds-row" data-ds-chips><button class="es-chip" type="button" aria-pressed="true">Captions</button><button class="es-chip" type="button" aria-pressed="false">Newsletter</button><button class="es-chip" type="button" aria-pressed="false">Quotes</button></div>
@@ -784,7 +785,7 @@
             <label class="es-field ds-span-2"><span class="es-field__label">Notes for the designer</span><textarea class="es-input" placeholder="Keep the headline bold and mobile-safe."></textarea></label>
           </div>
           <ul class="ds-tokens" aria-label="Field classes"><li><button class="ds-tok" type="button">.es-field</button></li><li><button class="ds-tok" type="button">.es-field__label</button></li><li><button class="ds-tok" type="button">.es-field__hint</button></li><li><button class="ds-tok" type="button">.es-input</button></li><li><button class="ds-tok" type="button">.es-search</button></li><li><button class="ds-tok" type="button">.es-kbd</button></li><li><button class="ds-tok" type="button">aria-invalid="true"</button></li></ul>
-          <p class="ds-cap ds-mt"><b>Error:</b> a red outline plus one sentence that says how to fix it, linked with <code>aria-describedby</code>. The shared library has no error class yet, so this specimen uses page-scoped styles.</p>
+          <p class="ds-cap ds-mt"><b>Error:</b> a red outline plus one sentence that says how to fix it, linked with <code>aria-describedby</code>. Shared classes: <code>.es-input[aria-invalid="true"]</code> + <code>.es-field__error</code>; a native <code>select.es-select</code> takes the same outline and focus.</p>
         </div>
         <div class="ds-sub">
           <h3>Counts and inline fixes</h3>

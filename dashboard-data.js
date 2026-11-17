@@ -807,9 +807,12 @@
     const session = await getAuthenticatedSession();
     if (!client || !session?.user?.email) return null;
     const row = activityToSupabaseRow(record);
+    // Activity is append-only for non-admins (update is admin-only under RLS),
+    // so a retried write must not take the ON CONFLICT DO UPDATE path:
+    // DO NOTHING keeps retries idempotent instead of failing under RLS.
     const { error } = await client
       .from(SUPABASE_ACTIVITY_TABLE)
-      .upsert(row, { onConflict: 'id' });
+      .upsert(row, { onConflict: 'id', ignoreDuplicates: true });
     if (error) throw error;
     return normalizeActivityRecord({ ...row, source: 'supabase' });
   }

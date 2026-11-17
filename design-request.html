@@ -9,7 +9,7 @@
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
 <script src="es-auth-config.js?v=20260707-auth4"></script>
 <script src="es-auth.js?v=20261115-auth2"></script>
-  <script src="dashboard-data.js?v=20261111-basics2"></script>
+  <script src="dashboard-data.js?v=20261117-ready1"></script>
 <script>
   (() => {
     window.ESAuth?.requireAuth(`design-request.html${window.location.search}${window.location.hash}`);
@@ -2421,17 +2421,17 @@
     }
   }
 </style>
-<link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-focus1">
-<link rel="stylesheet" href="theme.css?v=20261116-sp1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261117-usage1">
+<link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
+<link rel="stylesheet" href="theme.css?v=20261117-ready1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261117-ready1">
 <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
-<link rel="stylesheet" href="design-tokens.css?v=20261117-focus1">
-<link rel="stylesheet" href="es-ui.css?v=20261117-adm1">
+<link rel="stylesheet" href="design-tokens.css?v=20261117-ready1">
+<link rel="stylesheet" href="es-ui.css?v=20261117-ready1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
 <script src="theme.js?v=20261115-pol2"></script>
 <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
 <script src="site-chrome.js?v=20261117-usage1"></script>
-<script src="app-shell.js?v=20261117-usage1"></script>
+<script src="app-shell.js?v=20261117-ready1"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
 </head>
 <body>
@@ -2479,8 +2479,8 @@
 </nav>
 
 <!-- FRAME HOME -->
-<main class="frame-home" data-page="frames">
-  <img class="frame-banner" src="request-design-hero-banner.webp" alt="Create designs in seconds">
+<main class="frame-home view-hidden" data-page="frames" hidden>
+  <img class="frame-banner" src="request-design-hero-banner.webp" alt="Create designs in seconds" loading="lazy" decoding="async">
 
   <div class="frame-section-head">
     <h1 class="frame-section-title">Choose a workspace</h1>
@@ -2491,7 +2491,7 @@
     <article class="frame-card" id="frame-instagram">
       <div class="frame-thumbnail">
         <span class="frame-status tag-beta">BETA</span>
-        <img src="workspace-card-social-media.webp" alt="Social Media">
+        <img src="workspace-card-social-media.webp" alt="Social Media" loading="lazy" decoding="async">
       </div>
       <div class="frame-card-body">
         <h2 class="frame-card-title">Social Media</h2>
@@ -2508,7 +2508,7 @@
     <article class="frame-card" id="frame-youtube">
       <div class="frame-thumbnail">
         <span class="frame-status tag-beta">BETA</span>
-        <img src="workspace-card-youtube-thumbnail.webp" alt="YouTube Thumbnails">
+        <img src="workspace-card-youtube-thumbnail.webp" alt="YouTube Thumbnails" loading="lazy" decoding="async">
       </div>
       <div class="frame-card-body">
         <h2 class="frame-card-title">YouTube Thumbnails</h2>
@@ -2525,7 +2525,7 @@
     <article class="frame-card" id="frame-newsletters">
       <div class="frame-thumbnail">
         <span class="frame-status tag-beta">BETA</span>
-        <img src="workspace-card-newsletter-assets.webp" alt="Newsletter">
+        <img src="workspace-card-newsletter-assets.webp" alt="Newsletter" loading="lazy" decoding="async">
       </div>
       <div class="frame-card-body">
         <h2 class="frame-card-title">Newsletter</h2>
@@ -4286,9 +4286,11 @@ function designRequestIntegrationMessage(sync) {
   if (sync.integrations?.email?.ok) {
     messages.push('sent by email');
   }
-  if (messages.length) return ` and ${messages.join(' and ')}.`;
-  if (sync.skipped) return '. External integrations are ready once Netlify environment variables are added.';
-  return '. External sync needs attention.';
+  if (messages.length) return ` (${messages.join(', ')}). You can follow it on the dashboard.`;
+  // The request still reaches the dashboard (ESDashboardData.recordDesignRequest);
+  // only the Sheets/Slack/email alerts are missing. No setup jargon for users.
+  if (sync.skipped) return '. The design team will see it on the dashboard.';
+  return '. The design team will see it on the dashboard, but the Slack and email alert didn’t go out, so ping them if it’s urgent.';
 }
 
 function setupDesignRequests() {
@@ -4338,13 +4340,33 @@ function setupDesignRequests() {
     clearStatusAfterReset = false;
     form.reset();
     clearStatusAfterReset = true;
+    void persisted;
     setRequestFormStatus(
-      `${record.id} submitted${persisted ? ' and saved in this browser' : ' for this session'}${designRequestIntegrationMessage(sheetSync)}`,
+      `Request ${record.id} sent${designRequestIntegrationMessage(sheetSync)}`,
       'success'
     );
+    prefillRequester();
   });
 
+  prefillRequester();
   updateRequestTypeFields();
+  updateRequestStages();
+}
+
+// Signed-in people shouldn't retype their own name and email: fill them from
+// the profile this browser already knows (es.ai.profile), only when empty.
+function prefillRequester() {
+  const profile = readStoredProfile();
+  const name = document.getElementById('requester-name');
+  const email = document.getElementById('requester-email');
+  let profileName = cleanVisitorName(profile.name);
+  // A handle like "first.last" reads better as "First Last".
+  if (/^[a-z0-9]+([._-][a-z0-9]+)+$/i.test(profileName || '')) {
+    profileName = profileName.replace(/[._-]+/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+  }
+  // The demo check runs on the stored value (old builds seeded a demo name).
+  if (name && !name.value && profileName && !isDemoProfileName(profile.name) && profileName !== 'Guest User') name.value = profileName;
+  if (email && !email.value && typeof profile.email === 'string' && /@/.test(profile.email)) email.value = profile.email.trim();
   updateRequestStages();
 }
 
