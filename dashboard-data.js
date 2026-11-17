@@ -16,6 +16,7 @@
   const PENDING_ACTIVITY_KEY = 'es.dashboard.pendingActivity.v1';
   const PRESENCE_ONLINE_WINDOW_MS = 2 * 60 * 1000;
   const PRESENCE_HEARTBEAT_MS = 20 * 1000;
+  const PRESENCE_MIN_GAP_MS = 10 * 1000;
   const TASK_STATUS_COLUMNS = Object.freeze(['Backlog', 'Assigned', 'Doing', 'Review', 'Done']);
   const ACCESS_ROLES = Object.freeze(['Associate', 'Admin', 'Super Admin', 'Server Owner']);
   const DASHBOARD_ACCESS_ROLES = Object.freeze(['Admin', 'Super Admin', 'Server Owner']);
@@ -900,7 +901,9 @@
     return normalizeSupabaseTask(data);
   }
 
-  async function refreshCloudDashboardData({ silent = true, fetchPeople = /dashboard\.html$/i.test(window.location.pathname) } = {}) {
+  // presence: false skips the profile upsert and pending flush (the presence
+  // heartbeat already does both every 20 s); the dashboard's live sync uses it.
+  async function refreshCloudDashboardData({ silent = true, fetchPeople = /dashboard\.html$/i.test(window.location.pathname), presence = true } = {}) {
     if (cloudRefreshInFlight) return cloudRefreshInFlight;
     cloudRefreshInFlight = (async () => {
       try {
@@ -909,10 +912,10 @@
         // though none of them depend on another's result. At ~0.4-1.6s per
         // Supabase round trip, that serial chain was the main contributor to
         // slow dashboard load times. Run everything concurrently instead.
-        const tasks = [
+        const tasks = presence ? [
           withRejectingTimeout(upsertSupabaseProfileAndPresence(), 5000, 'Profile sync'),
           withRejectingTimeout(flushPendingCloudWrites(), 8000, 'Pending dashboard sync'),
-        ];
+        ] : [Promise.resolve(null), Promise.resolve(null)];
         if (fetchPeople) {
           tasks.push(
             withRejectingTimeout(fetchSupabasePeople(), 7000, 'People sync'),
@@ -963,7 +966,8 @@
 
   async function recordPresenceHeartbeat() {
     try {
-      await upsertSupabaseProfileAndPresence();
+      const wrote = await upsertSupabaseProfileAndPresence();
+      if (!wrote) return false; // signed out or auth not ready yet
       await flushPendingCloudWrites();
       return true;
     } catch (error) {
@@ -977,21 +981,31 @@
 
   function scheduleSupabasePresence() {
     if (!shouldRunSupabasePresence()) return;
-    const beat = () => {
-      if (document.visibilityState === 'hidden') return;
-      recordPresenceHeartbeat();
+    // At boot pageshow, focus, es:auth-ready and the first timer all fired a
+    // beat within ~2 s (three profile upserts and three pending flushes per
+    // page view). Now one beat runs at a time, and a beat within
+    // PRESENCE_MIN_GAP_MS of the last successful one is skipped unless it
+    // carries news (sign-in change, a new route).
+    let lastBeatAt = 0;
+    let beatInFlight = null;
+    const beat = ({ force = false } = {}) => {
+      if (document.visibilityState === 'hidden' || beatInFlight) return;
+      if (!force && Date.now() - lastBeatAt < PRESENCE_MIN_GAP_MS) return;
+      beatInFlight = recordPresenceHeartbeat()
+        .then(ok => { if (ok) lastBeatAt = Date.now(); })
+        .finally(() => { beatInFlight = null; });
     };
     const start = () => {
       if (presenceTimer) return;
-      window.setTimeout(beat, 1800);
-      presenceTimer = window.setInterval(beat, PRESENCE_HEARTBEAT_MS);
+      window.setTimeout(() => beat(), 1800);
+      presenceTimer = window.setInterval(() => beat(), PRESENCE_HEARTBEAT_MS);
     };
     window.addEventListener('es:auth-ready', start);
-    window.addEventListener('focus', beat);
-    window.addEventListener('pageshow', beat);
-    window.addEventListener('hashchange', () => window.setTimeout(beat, 0));
-    window.addEventListener('es:auth-ready', beat);
-    window.addEventListener('es:auth-updated', beat);
+    window.addEventListener('focus', () => beat());
+    window.addEventListener('pageshow', () => beat());
+    window.addEventListener('hashchange', () => window.setTimeout(() => beat({ force: true }), 0));
+    window.addEventListener('es:auth-ready', () => beat());
+    window.addEventListener('es:auth-updated', () => beat({ force: true }));
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => window.setTimeout(start, 0), { once: true });
     } else {
