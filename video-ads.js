@@ -3,6 +3,7 @@
 //   Brands, sizes, styles: video-ads-brands.js (window.VideoAdsBrands)
 //   Style rules (fields, suggestion, grid names, safe zones): video-ads-styles.js (window.VideoAdsStyles)
 //   Team colours: video-ads-teams.js (window.VideoAdsTeams)
+//   Sound (muted by default, library music, uploads, mix): video-ads-audio.js (window.VideoAdsAudio)
 //   AI + trends + X clips: POST /api/video-ads { mode: trends | find-clips | clip | copy | chat }
 //   Learning events: POST /api/ad-learning { event } (fire-and-forget)
 (() => {
@@ -10,6 +11,7 @@
   const R = window.VideoAdsRender;
   const B = window.VideoAdsBrands;
   const S = window.VideoAdsStyles;
+  const A = window.VideoAdsAudio; // sound: muted by default (video-ads-audio.js)
   // The colour data ships in video-ads-teams.js; without it the picker still
   // shows the colours (no team preview) and the server matches the teams.
   const T = window.VideoAdsTeams || {
@@ -47,7 +49,7 @@
     safeToggle: $('va-safe-toggle'), safe: $('va-safe'), grid: $('va-grid'), gridStyles: $('va-grid-styles'), gridNames: $('va-grid-names'), rightsRow: $('va-rights-row'),
     exsizes: $('va-exsizes'), exmode: $('va-exmode'), exmodeRow: $('va-exmode-row'), gridRow: $('va-grid-row'),
     set: $('va-set'), setBody: $('va-set-body'), setMake: $('va-set-make'), setMakeText: $('va-set-make-text'), setBrand: $('va-set-brand'), setEditing: $('va-set-editing'),
-    placement: $('va-placement'), metaFill: $('va-meta-fill'), metaNote: $('va-meta-note'),
+    metaFill: $('va-meta-fill'), metaNote: $('va-meta-note'),
     check: $('va-check'), preflightOut: $('va-preflight-out'), metaToggle: $('va-meta-toggle'), ready: $('va-ready'), rights: $('va-rights'), exportBtn: $('va-export'), exportProgress: $('va-export-progress'), exportStatus: $('va-export-status'), files: $('va-files'), again: $('va-again'),
     toasts: $('va-toasts'),
   };
@@ -125,7 +127,8 @@
     // Today's ad set (see "Today's ad set" below) and the Meta preview placement
     // (null = by size: 9:16 Reels, 4:5 / 1:1 Feed).
     set: { status: 'idle', error: '', angles: [], editing: -1, mode: 'set' },
-    placement: null,
+    // Sound in the MP4 and the preview (video-ads-audio.js): muted unless chosen.
+    sound: { ...A.DEFAULTS },
     version: 0,
   };
   let railReady = false; // the Frame + Tint rail is wired up (near the end)
@@ -366,28 +369,21 @@
     more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
     chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
   };
-  // Placement: Feed, Story or Reels (state.placement; null = by size).
-  // A 9:16 in the feed is cropped to 4:5 (Meta's feed maximum); a 4:5 or 1:1
-  // in Stories or Reels sits small on a blurred fill. Both say so.
-  const placementNow = () => state.placement || (state.size === '9x16' ? 'reel' : 'feed');
-  const metaFit = mode => (mode === 'feed' && state.size === '9x16' ? 'crop' : (mode === 'story' || mode === 'reel') && state.size !== '9x16' ? 'letterbox' : '');
-  function setPlacement(place) {
-    state.placement = ['feed', 'story', 'reel'].includes(place) ? place : null;
-    renderMeta();
-    fitCanvasDisplay();
-    draw();
-    saveDefaults();
-  }
+  // Placement follows the size (owner, 2026-11-18: no Feed / Story / Reels
+  // switch): 9:16 shows in Reels, 4:5 and 1:1 in the feed. metaFit stays as
+  // the guard: a 9:16 in the feed would be cropped to 4:5 (Meta's feed
+  // maximum) and a 4:5 or 1:1 in Reels would sit small on a blurred fill; the
+  // note then says which size to export.
+  const placementNow = () => (state.size === '9x16' ? 'reel' : 'feed');
+  const metaFit = mode => (mode === 'feed' && state.size === '9x16' ? 'crop' : mode === 'reel' && state.size !== '9x16' ? 'letterbox' : '');
   function renderMeta() {
     const mode = !metaPreview ? 'off' : placementNow();
     const fit = mode === 'off' ? '' : metaFit(mode);
     els.device.dataset.meta = mode;
     els.device.dataset.fit = fit;
-    els.placement.hidden = mode === 'off';
-    if (mode !== 'off') markRadios(els.placement, 'place', mode);
     els.metaNote.hidden = !fit;
     els.metaNote.textContent = fit === 'crop' ? 'The feed crops 9:16 to 4:5: the top and bottom are cut. Export a 4:5 for the feed.'
-      : fit === 'letterbox' ? `${state.size.replace('x', ':')} shows small in ${mode === 'story' ? 'Stories' : 'Reels'}, on a blurred fill. Export a 9:16 for it.` : '';
+      : fit === 'letterbox' ? `${state.size.replace('x', ':')} shows small in Reels, on a blurred fill. Export a 9:16 for it.` : '';
     if (mode === 'off') { els.metaHead.innerHTML = ''; els.metaOver.innerHTML = ''; els.metaFoot.innerHTML = ''; return; }
     // Ads run from the EssentiallySports page, whichever newsletter they promote.
     const name = 'EssentiallySports';
@@ -405,16 +401,6 @@
           <p class="va-meta-caption">${caption}</p>
           ${cta}
         </div>`;
-      return;
-    }
-    if (mode === 'story') {
-      // Stories: progress bars and the profile row on top, a "Sign up" link
-      // at the bottom; no action rail and no caption.
-      els.metaHead.innerHTML = '';
-      els.metaFoot.innerHTML = '';
-      els.metaOver.innerHTML = `
-        <div class="va-meta-story-top"><div class="va-meta-bars"><i class="is-on"></i><i></i><i></i></div><div class="va-meta-row">${who}<span class="va-meta-more">${META_ICON.more}</span></div></div>
-        <div class="va-meta-story-cta"><span class="va-meta-up">${META_ICON.chevron}</span><span class="va-meta-link">Sign up</span></div>`;
       return;
     }
     els.metaOver.innerHTML = '';
@@ -537,6 +523,7 @@
     if (els.video.currentTime >= state.trimOut - 0.03) els.video.currentTime = state.trimIn;
     draw();
     syncTime();
+    soundSync();
     if (els.video.requestVideoFrameCallback) els.video.requestVideoFrameCallback(frameLoop);
     else requestAnimationFrame(frameLoop);
   }
@@ -545,12 +532,15 @@
     if (playing) state.previewAt = 'playhead';
     if (playing) {
       if (els.video.currentTime < state.trimIn || els.video.currentTime >= state.trimOut) els.video.currentTime = state.trimIn;
-      els.video.play().catch(() => { playing = false; renderPlay(); });
+      // Play is a click: the moment the browser lets a chosen sound start.
+      if (soundOn()) { audioGraph(); audioCtx.resume().catch(() => {}); }
+      els.video.play().catch(() => { playing = false; renderPlay(); soundSync(); });
       frameLoop();
     } else {
       els.video.pause();
       draw();
     }
+    soundSync();
     renderPlay();
   }
   function renderPlay() {
@@ -695,6 +685,7 @@
     els.strip.classList.remove('is-ready');
     els.video.src = clipUrl;
     els.video.load();
+    soundClipChanged();
   }
   // ─── No clip: animated background or photo (StillClip) ───────────────────
   // A media clock with the parts of the <video> API the editor uses (play,
@@ -808,6 +799,7 @@
       : `Photo with a slow zoom, ${stillSeconds} s. Check you may use it before publishing.`);
     still.load();
     renderNoClip();
+    soundClipChanged();
   }
   // Photo: any still the browser can read; it stays on this device.
   const photoInput = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', hidden: true });
@@ -2853,14 +2845,17 @@
     if (!hasClip()) notes.push(`<div class="va-notice">${ICON.film}<span><b>No clip yet.</b> Add one, or use an animated background: ${S.isNew(state.style) ? 'this style needs no footage.' : 'no footage needed.'}</span><span class="va-notice__acts"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="make-animated">Animated background</button><button class="es-btn es-btn--sm" type="button" data-act="to-clip">Find a clip</button></span></div>`);
     if (notReady.length) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>${esc(B.STYLES[notReady[0].st].label)} needs ${esc(notReady[0].r.missing)}.</b></span><button class="es-btn es-btn--sm" type="button" data-act="to-copy">Add it</button></div>`);
     if (tooLong.length) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>Copy is too long</b> for ${esc(tooLong.slice(0, 3).join(', '))}.</span><button class="es-btn es-btn--sm" type="button" data-act="to-copy">Shorten</button></div>`);
+    const soundWait = A.usesMusic(state.sound) && !soundBuffer();
+    if (soundWait) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>Sound:</b> ${state.sound.mode === 'library' ? 'pick a track' : 'upload an audio file'}, or choose Muted.</span></div>`);
     if (n > 6) notes.push(`<div class="va-notice">${ICON.alert}<span>${n} files record at once, in one ${adDuration().toFixed(0)}-second pass. Keep this tab visible; a slower computer may drop frames, so export fewer sizes if it stutters.</span></div>`);
     els.ready.innerHTML = notes.join('');
     els.ready.hidden = !notes.length;
     // No footage, nothing to license: the optional rights reminder only shows for a clip or photo.
     els.rightsRow.hidden = !hasClip() || state.clip?.source === 'animated';
     els.metaToggle.setAttribute('aria-pressed', String(metaPreview));
+    if (soundReady) renderSound();
     if (!exporting) {
-      els.exportBtn.disabled = !hasClip() || notReady.length > 0 || n === 0;
+      els.exportBtn.disabled = !hasClip() || notReady.length > 0 || n === 0 || soundWait;
       els.exportBtn.innerHTML = `${ICON.download}<span>Export ${n === 1 ? 'MP4' : `${n} MP4s`}</span>`;
       els.exportBtn.title = !hasClip() ? 'Add a clip, a photo or the animated background first' : '';
     }
@@ -2932,7 +2927,7 @@
           logEvent('export', {
             copy: copyForLog(src), style: item.style, sizes: [...state.exportIds], angle: item.angle, gridId, gridKind: 'daily-set',
             files: (files || []).filter(f => f.angle === item.angle).map(f => f.fileName),
-            clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), safeZone: S.isNew(item.style) ? 'meta' : state.safeZone,
+            clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), sound: soundRecord(), safeZone: S.isNew(item.style) ? 'meta' : state.safeZone,
             context: { kind: state.context.kind, color: state.context.color, trend: state.context.trend?.title || '' },
           });
         });
@@ -2955,7 +2950,7 @@
         logEvent('export', {
           copy, style: st, sizes: [...state.exportIds], angle: angle(), ...(gridId ? { gridId, gridStyles: styles } : {}),
           files: (files || []).filter(f => f.style === st).map(f => f.fileName),
-          clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), safeZone: S.isNew(st) ? 'meta' : state.safeZone,
+          clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), sound: soundRecord(), safeZone: S.isNew(st) ? 'meta' : state.safeZone,
           context: { kind: state.context.kind, color: state.context.color, trend: state.context.trend?.title || '' },
         });
       });
@@ -2965,21 +2960,26 @@
   }
   els.exportBtn.addEventListener('click', startExport);
 
-  // MediaRecorder; the clip's audio goes through Web Audio.
-  let audioCtx = null;
-  let audioSource = null;
-  let monitor = null;
-  let previewMuted = true;
+  // MediaRecorder; sound goes through one Web Audio graph (video-ads-audio.js
+  // createMixer) that feeds the preview speaker and the recorder alike, so the
+  // preview plays the same mix as the export. var: setPlaying() can run first.
+  var audioCtx = null; // eslint-disable-line no-var
+  var audioSource = null; // eslint-disable-line no-var
+  var mixer = null; // eslint-disable-line no-var
+  var monitor = null; // eslint-disable-line no-var
+  var previewMuted = true; // eslint-disable-line no-var
   function audioGraph() {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       audioSource = audioCtx.createMediaElementSource(realVideo);
+      mixer = A.createMixer(audioCtx, { mediaSource: audioSource });
       monitor = audioCtx.createGain();
       monitor.gain.value = previewMuted ? 0 : 1;
-      audioSource.connect(monitor).connect(audioCtx.destination);
-      // A muted element sends silence into Web Audio too: unmute it and let the
-      // monitor gain decide what the speaker hears.
+      mixer.bus.connect(monitor).connect(audioCtx.destination);
+      // A muted element sends silence into Web Audio too: unmute it. The
+      // mixer's clip gain (0 unless the sound choice uses the clip) decides.
       realVideo.muted = false;
+      applySound();
     }
     return audioCtx;
   }
@@ -3001,10 +3001,17 @@
     if (!mimeType) { els.exportStatus.textContent = 'This browser cannot record video. Use Chrome or Edge.'; return null; }
     await document.fonts.ready;
     setPlaying(false);
-    const ac = audioGraph();
-    await ac.resume();
-    const audioDest = ac.createMediaStreamDestination();
-    audioSource.connect(audioDest);
+    // Muted (the default): no audio track at all. Otherwise the mixer's bus,
+    // the same mix the preview plays.
+    const withSound = soundAudible();
+    let audioDest = null;
+    if (withSound) {
+      const ac = audioGraph();
+      await ac.resume();
+      applySound();
+      audioDest = ac.createMediaStreamDestination();
+      mixer.bus.connect(audioDest);
+    }
     const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
     const list = items && items.length ? items : styles.map(style => ({ style, copy: null, angle: angle() }));
     const targets = list.flatMap(item => sizeIds.map(id => ({ id, ...item }))).map(({ id, style, copy, angle: ang }) => {
@@ -3013,8 +3020,8 @@
       canvas.width = s.width;
       canvas.height = s.height;
       const stream = canvas.captureStream(30);
-      audioDest.stream.getAudioTracks().forEach(track => stream.addTrack(track.clone()));
-      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: id === '9x16' ? 12e6 : 10e6, audioBitsPerSecond: 128000 });
+      if (audioDest) audioDest.stream.getAudioTracks().forEach(track => stream.addTrack(track.clone()));
+      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: id === '9x16' ? 12e6 : 10e6, ...(audioDest ? { audioBitsPerSecond: 128000 } : {}) });
       const chunks = [];
       recorder.ondataavailable = e => { if (e.data?.size) chunks.push(e.data); };
       return { id, style, angle: ang, s, canvas, ctx: canvas.getContext('2d'), blur: document.createElement('canvas'), layout: layoutFor(id, { ...state, ...(copy || {}), style }), recorder, chunks, stream };
@@ -3040,6 +3047,7 @@
       if (finished) return;
       finished = true;
       els.video.pause();
+      soundSync();
       targets.forEach(t => { if (t.recorder.state !== 'inactive') t.recorder.stop(); });
     };
     exporting = { cancel: () => { cancelled = true; stopAll(); } };
@@ -3055,8 +3063,8 @@
       targets.forEach(x => R.drawFrame(x.ctx, { width: x.s.width, height: x.s.height, video: els.video, bg: bg(), ops: x.layout.ops, logoImage: logo.img, blurCanvas: x.blur, source: still ? still.source() : undefined, t, duration: span }));
     };
     const onVisibility = () => {
-      if (document.hidden && !finished) { els.video.pause(); targets.forEach(t => t.recorder.state === 'recording' && t.recorder.pause()); els.exportStatus.textContent = 'Paused: come back to this tab to keep recording.'; }
-      else if (!finished) { targets.forEach(t => t.recorder.state === 'paused' && t.recorder.resume()); els.video.play(); els.exportStatus.textContent = 'Recording in real time. Keep this tab open and visible.'; }
+      if (document.hidden && !finished) { els.video.pause(); soundSync(); targets.forEach(t => t.recorder.state === 'recording' && t.recorder.pause()); els.exportStatus.textContent = 'Paused: come back to this tab to keep recording.'; }
+      else if (!finished) { targets.forEach(t => t.recorder.state === 'paused' && t.recorder.resume()); els.video.play(); soundSync(); els.exportStatus.textContent = 'Recording in real time. Keep this tab open and visible.'; }
     };
     document.addEventListener('visibilitychange', onVisibility);
 
@@ -3068,6 +3076,7 @@
       drawAll();
       draw();
       syncTime();
+      soundSync();
       const progress = (els.video.currentTime - state.trimIn) / span;
       bar.style.width = `${Math.min(100, Math.round(progress * 100))}%`;
       if (els.video.currentTime >= state.trimOut - 0.04 || els.video.ended) { stopAll(); return; }
@@ -3075,12 +3084,13 @@
       else requestAnimationFrame(tick);
     };
     await els.video.play();
+    soundSync();
     tick();
     await done;
     document.removeEventListener('visibilitychange', onVisibility);
     els.video.removeEventListener('timeupdate', guard);
     els.video.removeEventListener('ended', guard);
-    audioSource.disconnect(audioDest);
+    if (audioDest) { try { mixer.bus.disconnect(audioDest); } catch (error) { /* already gone */ } }
     targets.forEach(t => t.stream.getTracks().forEach(track => track.stop()));
     exporting = null;
     els.exportBtn.classList.remove('es-btn--danger');
@@ -3107,9 +3117,9 @@
     });
     els.files.hidden = false;
     els.files.innerHTML = rows.map(r => `<li><span class="va-files__icon" aria-hidden="true">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="va-files__name">${esc(r.fileName)}</span><span class="va-meta">${r.mb.toFixed(1)} MB</span><a class="va-link" href="${r.href}" download="${esc(r.fileName)}">Download again</a></li>`).join('');
-    els.exportStatus.textContent = ext === 'mp4'
+    els.exportStatus.textContent = (ext === 'mp4'
       ? `Downloaded ${targets.length} MP4${targets.length > 1 ? 's' : ''} (${span.toFixed(1)}s).`
-      : 'Downloaded as WebM: this browser can’t record MP4. Use Chrome or Edge for MP4.';
+      : 'Downloaded as WebM: this browser can’t record MP4. Use Chrome or Edge for MP4.') + (withSound ? '' : ' No sound (Muted).');
     state.exported = true;
     renderSteps();
     toast(`Exported ${targets.length} ${ext.toUpperCase()}${targets.length > 1 ? 's' : ''}`, { tone: 'good' });
@@ -3208,19 +3218,15 @@
     fitCanvasDisplay();
     draw();
   });
-  radioGroup(els.placement, 'place', place => setPlacement(place));
 
   // Transport
   els.play.addEventListener('click', () => setPlaying(!playing));
   // Preview sound only: once Web Audio owns the clip (after the first export),
   // muting turns the speaker down but the recording keeps the clip's audio.
+  // The speaker only: what the MP4 carries is the Sound choice in Export.
   els.mute.addEventListener('click', () => {
-    previewMuted = !previewMuted;
-    if (monitor) monitor.gain.value = previewMuted ? 0 : 1;
-    else els.video.muted = previewMuted;
-    els.mute.setAttribute('aria-pressed', String(previewMuted));
-    els.mute.setAttribute('aria-label', previewMuted ? 'Unmute preview' : 'Mute preview');
-    els.mute.innerHTML = previewMuted ? ICON.soundOff : ICON.soundOn;
+    setPreviewMuted(!previewMuted);
+    if (!previewMuted && state.sound.mode === 'muted') toast('This ad is Muted. Pick a sound in Export to hear one.', { action: { label: 'Sound', fn: () => { goStep('export'); $('va-sound')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }, timeout: 4200 });
   });
   els.mini.addEventListener('click', () => {
     const on = !els.stage.classList.contains('is-mini');
@@ -3744,7 +3750,7 @@
       all.brands[state.brandId] = {
         style: state.style, exportIds: [...state.exportIds], ...(setReady() ? { setSizes: [...state.exportIds] } : { setSizes: all.brands[state.brandId]?.setSizes }),
         safeZone: state.safeZone, tintId: state.tintId, tintAmount: state.tintAmount, tintCustom: state.tintCustom,
-        unsubscribe: state.unsubscribe, cta: state.cta, placement: state.placement || '', at: Date.now(),
+        unsubscribe: state.unsubscribe, cta: state.cta, sound: A.persistable(state.sound), at: Date.now(),
       };
       writeDefaults(all);
     }, 500);
@@ -3763,7 +3769,7 @@
     if (/^#[0-9a-f]{6}$/i.test(d.tintCustom || '')) state.tintCustom = d.tintCustom;
     if (typeof d.unsubscribe === 'boolean') state.unsubscribe = d.unsubscribe;
     if (typeof d.cta === 'string') state.cta = d.cta.slice(0, 40);
-    state.placement = ['feed', 'story', 'reel'].includes(d.placement) ? d.placement : null;
+    restoreSound(d.sound);
     syncFields();
     if (railReady) syncRail();
     relayout();
@@ -3773,7 +3779,8 @@
     const all = readDefaults();
     delete all.brands[state.brandId];
     writeDefaults(all);
-    Object.assign(state, { style: B.DEFAULT_STYLE, exportIds: ['9x16'], safeZone: 'meta', unsubscribe: true, cta: '', placement: null, tintId: FRAME_DEFAULTS.tintId, tintAmount: FRAME_DEFAULTS.tintAmount });
+    Object.assign(state, { style: B.DEFAULT_STYLE, exportIds: ['9x16'], safeZone: 'meta', unsubscribe: true, cta: '', tintId: FRAME_DEFAULTS.tintId, tintAmount: FRAME_DEFAULTS.tintAmount });
+    restoreSound(null);
     syncFields();
     if (railReady) syncRail();
     relayout();
@@ -3908,6 +3915,284 @@
     }
   });
 
+  // ─── Sound: Muted (default) / Original / Music / Upload ──────────────────
+  // The choice lives in state.sound (remembered per newsletter, never the
+  // file). Library tracks come from audio-library.json (same origin, shared
+  // with Reels Studio); an upload stays in this tab only, like an uploaded clip.
+  var soundReady = false; // eslint-disable-line no-var
+  var soundLibrary = null; // eslint-disable-line no-var -- parsed audio-library.json, once loaded
+  var soundLibraryLoading = null; // eslint-disable-line no-var
+  var soundUpload = null; // eslint-disable-line no-var -- { name, size, buffer, loading, error }
+  var soundRights = false; // eslint-disable-line no-var -- "I have the rights to this audio" (upload)
+  var soundError = ''; // eslint-disable-line no-var
+  var trackBuffers = new Map(); // eslint-disable-line no-var -- track id -> { buffer, loading, error }
+  const snd = {
+    root: $('va-sound'), sum: $('va-sound-sum'), modes: $('va-sound-mode'), body: $('va-sound-body'), mix: $('va-sound-mix'), file: $('va-sound-file'),
+    keepRow: $('va-sound-keep-row'), keep: $('va-sound-keep'), loopRow: $('va-sound-loop-row'), loop: $('va-sound-loop'),
+    music: $('va-sound-music'), musicVal: $('va-sound-music-val'), musicRow: $('va-sound-music-row'),
+    orig: $('va-sound-orig'), origVal: $('va-sound-orig-val'), origRow: $('va-sound-orig-row'),
+    fade: $('va-sound-fade'), fadeVal: $('va-sound-fade-val'), fadeRow: $('va-sound-fade-row'),
+    offset: $('va-sound-offset'), offsetVal: $('va-sound-offset-val'), offsetRow: $('va-sound-offset-row'),
+  };
+  const soundOn = () => state.sound.mode !== 'muted';
+  const clipHasAudio = () => !still && Boolean(realVideo.getAttribute('src')) && state.clip?.hasAudio !== false;
+  const soundTrack = () => soundLibrary?.tracks.find(t => t.id === state.sound.trackId) || null;
+  function soundBuffer() {
+    if (state.sound.mode === 'library') return trackBuffers?.get(state.sound.trackId)?.buffer || null;
+    if (state.sound.mode === 'upload') return soundUpload?.buffer || null;
+    return null;
+  }
+  const soundAudible = () => A.audible(state.sound, { clipHasAudio: clipHasAudio(), hasMusic: Boolean(soundBuffer()) });
+  function soundRecord() {
+    return A.record(state.sound, { track: soundTrack(), upload: soundUpload?.buffer ? soundUpload : null, clip: { source: state.clip?.source || '', url: safeUrl(state.clip?.url) }, rightsTicked: soundRights, clipHasAudio: clipHasAudio() });
+  }
+  function applySound() {
+    if (mixer) mixer.apply(state.sound, { buffer: soundBuffer(), clipHasAudio: clipHasAudio() });
+  }
+  // Follows the video: starts, restarts after a seek or loop, stops on pause.
+  function soundSync() {
+    if (!mixer) return;
+    mixer.sync(els.video.currentTime - state.trimIn, !els.video.paused && !els.video.ended, adDuration());
+  }
+  function setPreviewMuted(on) {
+    previewMuted = on;
+    if (!on && soundOn()) { audioGraph(); audioCtx.resume().catch(() => {}); }
+    if (monitor) monitor.gain.value = previewMuted ? 0 : 1;
+    els.mute.setAttribute('aria-pressed', String(previewMuted));
+    els.mute.setAttribute('aria-label', previewMuted ? 'Unmute preview' : 'Mute preview');
+    els.mute.title = previewMuted ? 'Preview sound: off' : 'Preview sound: on';
+    els.mute.innerHTML = previewMuted ? ICON.soundOff : ICON.soundOn;
+  }
+  function soundClipChanged() {
+    applySound();
+    if (soundReady) renderSound();
+  }
+  function ensureLibrary() {
+    if (soundLibrary) return Promise.resolve(soundLibrary);
+    if (!soundLibraryLoading) {
+      soundLibraryLoading = A.loadLibrary((url, opts) => fetch(url, opts)).then(lib => {
+        soundLibrary = lib;
+        // A remembered track that left the library: back to Muted.
+        if (state.sound.mode === 'library' && state.sound.trackId && !soundTrack()) { state.sound.mode = 'muted'; applySound(); }
+        if (state.sound.mode === 'library' && soundTrack()) loadTrack(soundTrack());
+        renderSound();
+        return lib;
+      });
+    }
+    return soundLibraryLoading;
+  }
+  async function decode(arrayBuffer) {
+    const ac = audioGraph();
+    // Safari's decodeAudioData is callback-only.
+    return new Promise((resolve, reject) => { const p = ac.decodeAudioData(arrayBuffer, resolve, reject); if (p && p.then) p.then(resolve, reject); });
+  }
+  async function loadTrack(track) {
+    if (!track || trackBuffers.get(track.id)?.buffer || trackBuffers.get(track.id)?.loading) return;
+    trackBuffers.set(track.id, { loading: true });
+    renderSound();
+    try {
+      const res = await fetch(track.file, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(String(res.status));
+      const buffer = await decode(await res.arrayBuffer());
+      trackBuffers.set(track.id, { buffer });
+    } catch (error) {
+      trackBuffers.set(track.id, { error: `“${track.title}” could not be loaded.` });
+    }
+    if (state.sound.trackId === track.id) { applySound(); soundSync(); }
+    renderSound();
+    if (state.step === 'export') renderExport();
+  }
+  async function takeAudio(file) {
+    if (!file) return;
+    const check = A.validateUpload(file);
+    if (!check.ok) { soundError = check.error; toast(check.error, { tone: 'bad' }); renderSound(); return; }
+    soundError = '';
+    soundUpload = { name: file.name, size: file.size, buffer: null, loading: true };
+    soundRights = false;
+    state.sound.mode = 'upload';
+    state.sound.offset = 0;
+    renderSound();
+    try {
+      const buffer = await decode(await file.arrayBuffer());
+      if (!buffer || !(buffer.duration > 0)) throw new Error('empty');
+      soundUpload = { name: file.name, size: file.size, buffer };
+    } catch (error) {
+      soundUpload = null;
+      soundError = 'That audio file could not be read. Try an MP3 or WAV.';
+      toast(soundError, { tone: 'bad' });
+    }
+    applySound();
+    soundSync();
+    renderSound();
+    if (state.step === 'export') renderExport();
+  }
+  function setSoundMode(mode) {
+    if (!A.MODES.includes(mode)) return;
+    state.sound.mode = mode;
+    soundError = '';
+    if (mode !== 'muted') {
+      // A click: the browser lets audio start now. Turn the preview speaker on
+      // so the choice is heard straight away.
+      audioGraph();
+      audioCtx.resume().catch(() => {});
+      if (previewMuted) setPreviewMuted(false);
+    }
+    if (mode === 'library') ensureLibrary();
+    if (mode === 'library' && soundTrack()) loadTrack(soundTrack());
+    if (mode === 'upload' && !soundUpload) snd.file.click();
+    applySound();
+    soundSync();
+    renderSound();
+    renderExport();
+    renderSteps();
+    saveDefaults();
+  }
+  // Restores a newsletter's remembered sound (null = the default, Muted).
+  function restoreSound(saved) {
+    state.sound = A.normalize(saved, { library: soundLibrary, hasUpload: false });
+    if (state.sound.mode === 'library') ensureLibrary().then(() => { if (soundTrack()) loadTrack(soundTrack()); });
+    applySound();
+    if (soundReady) renderSound();
+  }
+
+  const fmtDb = db => (db <= A.DB_MIN ? 'Off' : `${db > 0 ? '+' : db < 0 ? '−' : ''}${Math.abs(db)} dB`);
+  const fmtMb = bytes => `${(bytes / 1048576).toFixed(1)} MB`;
+  function paintRange(input) {
+    const min = Number(input.min);
+    const max = Number(input.max);
+    input.style.setProperty('--p', `${max > min ? ((Number(input.value) - min) / (max - min)) * 100 : 0}%`);
+  }
+  function renderSoundValues() {
+    const s = state.sound;
+    const ducked = A.usesMusic(s) && s.keepOriginal;
+    snd.music.value = String(s.musicDb);
+    snd.musicVal.textContent = fmtDb(s.musicDb);
+    snd.orig.value = String(ducked ? s.duckDb : s.originalDb);
+    snd.origVal.textContent = fmtDb(ducked ? s.duckDb : s.originalDb);
+    snd.fade.value = String(s.fade);
+    snd.fadeVal.textContent = `${s.fade.toFixed(1)} s`;
+    const buf = soundBuffer();
+    const maxOffset = buf ? Math.max(0, Math.floor((buf.duration - 0.5) * 10) / 10) : 0;
+    snd.offset.max = String(maxOffset);
+    snd.offset.disabled = !maxOffset;
+    snd.offset.value = String(Math.min(s.offset, maxOffset));
+    snd.offsetVal.textContent = fmtFine(Math.min(s.offset, maxOffset));
+    snd.keep.checked = s.keepOriginal;
+    snd.loop.checked = s.loop;
+    [snd.music, snd.orig, snd.fade, snd.offset].forEach(paintRange);
+  }
+  function trackMeta(t) {
+    return [t.mood && t.mood[0].toUpperCase() + t.mood.slice(1), t.bpm ? `${t.bpm} BPM` : '', t.durationSec ? fmt(t.durationSec) : ''].filter(Boolean).join(' · ');
+  }
+  function renderSound() {
+    if (!snd.root) return;
+    const s = state.sound;
+    markRadios(snd.modes, 'sound', s.mode);
+    const realClip = clipHasAudio();
+    const music = A.usesMusic(s);
+    let html = '';
+    if (s.mode === 'muted') {
+      html = '<p class="va-hint">No audio track in the MP4. Most people scroll feeds with the sound off; the copy carries the ad.</p>';
+    } else if (s.mode === 'original') {
+      html = still
+        ? `<p class="va-notice">${ICON.alert}<span>An ${state.clip?.source === 'photo' ? 'photo' : 'animated background'} has no sound of its own. Pick music or upload a track.</span></p>`
+        : !realVideo.getAttribute('src') ? '<p class="va-hint">The clip’s own sound, once you add a clip.</p>'
+          : state.clip?.hasAudio === false ? `<p class="va-notice">${ICON.alert}<span>This clip has no sound. Pick music or upload a track.</span></p>`
+            : '<p class="va-hint">The clip’s own sound. Make sure you have the rights to it.</p>';
+    } else if (s.mode === 'library') {
+      if (!soundLibrary) html = '<p class="va-hint">Loading the FrameUp audio library…</p>';
+      else if (soundLibrary.empty) {
+        html = `<div class="es-empty va-sound__empty"><p class="es-empty__copy">${esc(A.EMPTY_LIBRARY)}</p><button class="es-btn es-btn--sm es-btn--secondary" type="button" data-sound-act="pick">Upload audio</button></div>`;
+      } else {
+        const t = soundTrack();
+        const st = t ? trackBuffers.get(t.id) : null;
+        html = `<div class="va-sound__tracks" role="radiogroup" aria-label="Library tracks">${soundLibrary.tracks.map(x => `<button type="button" role="radio" data-track="${esc(x.id)}" aria-checked="${x.id === s.trackId}" tabindex="${x.id === s.trackId || (!t && x === soundLibrary.tracks[0]) ? 0 : -1}"><span class="va-sound__tname">${esc(x.title)}</span><span class="va-sound__tmeta">${esc(trackMeta(x))}</span><span class="es-badge ${x.licence.paid ? 'es-badge--good' : ''}" title="${esc(x.licence.note)}">${esc(A.licenceLabel(x.licence))}</span></button>`).join('')}</div>`
+          + (st?.loading ? `<p class="va-hint">Loading “${esc(t.title)}”…</p>` : '')
+          + (st?.error ? `<p class="va-warn" role="alert">${esc(st.error)}</p>` : '')
+          + (t && !t.licence.paid ? `<p class="va-notice va-notice--warn">${ICON.alert}<span><b>Organic posts only.</b> This track isn’t cleared for paid ads. Use it for an organic post, or pick a track cleared for paid.</span></p>` : '');
+      }
+    } else if (s.mode === 'upload') {
+      if (soundUpload?.loading) html = `<p class="va-hint">Reading ${esc(soundUpload.name)}…</p>`;
+      else if (soundUpload?.buffer) {
+        html = `<div class="va-sound__file">${ICON.soundOn}<span class="va-sound__fname">${esc(soundUpload.name)}</span><span class="va-meta">${fmt(soundUpload.buffer.duration)} · ${fmtMb(soundUpload.size)}</span><span class="va-sound__facts"><button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-sound-act="pick">Replace</button><button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-sound-act="remove">Remove</button></span></div>`
+          + `<label class="va-check va-sound__rights"><input type="checkbox" data-sound-rights${soundRights ? ' checked' : ''}><span>I have the rights to use this audio <span class="va-hint">Optional; saved with the export</span></span></label>`;
+      } else {
+        html = '<div class="va-sound__pick"><button class="es-btn es-btn--sm es-btn--secondary" type="button" data-sound-act="pick">Choose an audio file</button><span class="va-hint">MP3, M4A or WAV, up to 15 MB. Kept in this tab only.</span></div>';
+      }
+    }
+    if (soundError) html += `<p class="va-warn" role="alert">${esc(soundError)}</p>`;
+    // Keep focus on a track button across the re-render.
+    const focusTrack = document.activeElement?.dataset?.track;
+    snd.body.innerHTML = html;
+    if (focusTrack) snd.body.querySelector(`[data-track="${CSS.escape(focusTrack)}"]`)?.focus();
+    const hasMusic = music && Boolean(soundBuffer());
+    snd.mix.hidden = !(hasMusic || (s.mode === 'original' && realClip));
+    snd.keepRow.hidden = !hasMusic || !realClip;
+    snd.musicRow.hidden = !hasMusic;
+    snd.origRow.hidden = !(s.mode === 'original' || (hasMusic && s.keepOriginal && realClip));
+    snd.origRow.querySelector('.va-sound__row > span').textContent = hasMusic ? 'Clip under music' : 'Clip volume';
+    snd.fadeRow.hidden = !hasMusic;
+    snd.offsetRow.hidden = !hasMusic;
+    snd.loopRow.hidden = !hasMusic;
+    renderSoundValues();
+    snd.sum.textContent = A.describe(s, { track: soundTrack(), upload: soundUpload?.buffer ? soundUpload : null, clipHasAudio: realClip });
+  }
+
+  radioGroup(snd.modes, 'sound', mode => { if (!exporting) setSoundMode(mode); });
+  snd.body.addEventListener('click', event => {
+    if (exporting) return;
+    const track = event.target.closest('[data-track]');
+    if (track) {
+      state.sound.trackId = track.dataset.track;
+      state.sound.offset = 0;
+      loadTrack(soundTrack());
+      applySound();
+      renderSound();
+      renderExport();
+      saveDefaults();
+      return;
+    }
+    const act = event.target.closest('[data-sound-act]')?.dataset.soundAct;
+    if (act === 'pick') snd.file.click();
+    if (act === 'remove') {
+      soundUpload = null;
+      soundRights = false;
+      state.sound.mode = 'muted';
+      applySound();
+      soundSync();
+      renderSound();
+      renderExport();
+      saveDefaults();
+    }
+  });
+  snd.body.addEventListener('keydown', event => {
+    const list = [...snd.body.querySelectorAll('[data-track]')];
+    const i = list.indexOf(document.activeElement);
+    const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
+    if (i < 0 || !step) return;
+    event.preventDefault();
+    const next = list[(i + step + list.length) % list.length];
+    next.focus();
+    next.click();
+  });
+  snd.body.addEventListener('change', event => { if (event.target.matches('[data-sound-rights]')) soundRights = event.target.checked; });
+  snd.file.addEventListener('change', () => { takeAudio(snd.file.files?.[0]); snd.file.value = ''; });
+  const soundInput = (input, fn) => {
+    input.addEventListener('input', () => { fn(Number(input.value)); applySound(); renderSoundValues(); });
+    input.addEventListener('change', () => { soundSync(); renderSound(); saveDefaults(); });
+  };
+  soundInput(snd.music, v => { state.sound.musicDb = v; });
+  soundInput(snd.orig, v => { if (A.usesMusic(state.sound) && state.sound.keepOriginal) state.sound.duckDb = v; else state.sound.originalDb = v; });
+  soundInput(snd.fade, v => { state.sound.fade = v; });
+  soundInput(snd.offset, v => { state.sound.offset = v; });
+  snd.keep.addEventListener('change', () => { state.sound.keepOriginal = snd.keep.checked; applySound(); renderSound(); saveDefaults(); });
+  snd.loop.addEventListener('change', () => { state.sound.loop = snd.loop.checked; applySound(); soundSync(); saveDefaults(); });
+  // The clip's own sound can start or stop with the element (seek, load, end).
+  ['play', 'pause', 'seeked', 'ended'].forEach(type => realVideo.addEventListener(type, () => soundSync()));
+  realVideo.addEventListener('loadedmetadata', () => soundClipChanged());
+  soundReady = true;
+  renderSound();
+
   // ─── Start ───────────────────────────────────────────────────────────────
   renderNoClip();
   $('va-empty-animated')?.addEventListener('click', () => useStill('animated'));
@@ -3949,5 +4234,5 @@
   relayout();
   defaultsReady = true;
   loadClaims();
-  window.VideoAdsPage = { state, syncRail, bg, finds, relayout, layoutFor, exportSizes, startExport, useClip, goStep, findClips, findByColor, selectMoment, sendChat, generateDrafts, checkGrammar, lintText, openAi, closeAi, applyCopy, undo, setTrim, logEvent, pickStyle, useStill, renderSafe, localSuggestion, resolvedCopy, renderExport, makeSet, setFromCurrentCopy, editAngle, runPreflight, scoreAd, applyDefaults, resetDefaults, readDefaults, setPlacement, loadClaims };
+  window.VideoAdsPage = { state, syncRail, bg, finds, relayout, layoutFor, exportSizes, startExport, useClip, goStep, findClips, findByColor, selectMoment, sendChat, generateDrafts, checkGrammar, lintText, openAi, closeAi, applyCopy, undo, setTrim, logEvent, pickStyle, useStill, renderSafe, localSuggestion, resolvedCopy, renderExport, makeSet, setFromCurrentCopy, editAngle, runPreflight, scoreAd, applyDefaults, resetDefaults, readDefaults, loadClaims };
 })();

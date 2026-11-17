@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261119-rel3">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="video-ads.css?v=20261120-libicon">
+  <link rel="stylesheet" href="video-ads.css?v=20261118-va-audio">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
@@ -93,16 +93,11 @@
             <button type="button" role="radio" data-size="1x1" aria-checked="false"><span class="va-ratio va-ratio--1x1" aria-hidden="true"></span>1:1</button>
           </div>
           <div class="va-toolbar__end">
-            <button class="es-btn es-btn--sm" type="button" id="va-meta-toggle" aria-pressed="false" title="See the ad as it shows on Instagram and Facebook">
+            <button class="es-btn es-btn--sm" type="button" id="va-meta-toggle" aria-pressed="false" aria-label="Meta preview" title="Meta preview: the ad as it shows on Instagram and Facebook (9:16 in Reels, 4:5 and 1:1 in the feed)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
               <span>Meta preview</span>
             </button>
-            <div class="va-seg va-seg--sm" role="radiogroup" aria-label="Meta placement" id="va-placement" hidden>
-              <button type="button" role="radio" data-place="feed" aria-checked="false" title="Instagram / Facebook feed">Feed</button>
-              <button type="button" role="radio" data-place="story" aria-checked="false" title="Stories">Story</button>
-              <button type="button" role="radio" data-place="reel" aria-checked="true" title="Reels">Reels</button>
-            </div>
-            <button class="es-btn es-btn--sm" type="button" id="va-safe-toggle" aria-pressed="false" title="Show the areas Meta's Reels buttons, profile row and caption cover">
+            <button class="es-btn es-btn--sm" type="button" id="va-safe-toggle" aria-pressed="false" aria-label="Safe zone" title="Safe zone: the areas Meta's Reels buttons, profile row and caption cover">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" stroke-dasharray="3 2.4"/><path d="M5 15h14"/><path d="M5 6h14"/></svg>
               <span>Safe zone</span>
             </button>
@@ -439,7 +434,7 @@
         <section class="va-pane" data-pane="export" aria-labelledby="va-h-export" hidden>
           <header class="va-pane__head">
             <h2 id="va-h-export" tabindex="-1">Export</h2>
-            <p>MP4 with sound. Records in real time.</p>
+            <p>MP4, recorded in real time. Sound is off unless you add it.</p>
           </header>
           <div class="va-field" id="va-exmode-row" hidden>
             <span class="va-label" id="va-exmode-label">What to export</span>
@@ -461,6 +456,30 @@
             <div class="va-grid-styles" id="va-grid-styles" role="group" aria-label="Styles in the test set" hidden></div>
             <p class="va-hint va-grid-names" id="va-grid-names"></p>
           </div>
+          <section class="va-field va-sound" id="va-sound" aria-labelledby="va-sound-label">
+            <div class="va-field__top">
+              <span class="va-label" id="va-sound-label">Sound</span>
+              <span class="va-hint va-sound__sum" id="va-sound-sum" aria-live="polite">Muted</span>
+            </div>
+            <div class="va-seg va-seg--full va-sound__modes" role="radiogroup" aria-labelledby="va-sound-label" id="va-sound-mode">
+              <button type="button" role="radio" data-sound="muted" aria-checked="true">Muted</button>
+              <button type="button" role="radio" data-sound="original" aria-checked="false">Original</button>
+              <button type="button" role="radio" data-sound="library" aria-checked="false">Music</button>
+              <button type="button" role="radio" data-sound="upload" aria-checked="false">Upload</button>
+            </div>
+            <div class="va-sound__body" id="va-sound-body"></div>
+            <div class="va-sound__mix" id="va-sound-mix" hidden>
+              <label class="va-switch va-sound__keep" id="va-sound-keep-row"><input type="checkbox" id="va-sound-keep"><span class="va-switch__track" aria-hidden="true"></span><span>Keep the clip’s sound underneath <span class="va-hint">Ducked to −12 dB under the music</span></span></label>
+              <div class="va-sound__sliders">
+                <label class="va-sound__slider" id="va-sound-music-row"><span class="va-sound__row"><span>Music volume</span><output id="va-sound-music-val">−6 dB</output></span><input class="va-rail__range" type="range" id="va-sound-music" min="-40" max="6" step="1" value="-6"></label>
+                <label class="va-sound__slider" id="va-sound-orig-row"><span class="va-sound__row"><span>Clip volume</span><output id="va-sound-orig-val">0 dB</output></span><input class="va-rail__range" type="range" id="va-sound-orig" min="-40" max="6" step="1" value="0"></label>
+                <label class="va-sound__slider" id="va-sound-fade-row"><span class="va-sound__row"><span>Fade in and out</span><output id="va-sound-fade-val">0.5 s</output></span><input class="va-rail__range" type="range" id="va-sound-fade" min="0" max="3" step="0.1" value="0.5"></label>
+                <label class="va-sound__slider" id="va-sound-offset-row"><span class="va-sound__row"><span>Start the track at</span><output id="va-sound-offset-val">0:00.0</output></span><input class="va-rail__range" type="range" id="va-sound-offset" min="0" max="0" step="0.1" value="0"></label>
+              </div>
+              <label class="va-switch" id="va-sound-loop-row"><input type="checkbox" id="va-sound-loop" checked><span class="va-switch__track" aria-hidden="true"></span><span>Loop to the ad’s length <span class="va-hint">Off: silence after the track ends</span></span></label>
+            </div>
+            <input type="file" id="va-sound-file" accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/x-wav" hidden>
+          </section>
           <div class="va-ready" id="va-ready"></div>
           <section class="va-preflight" id="va-preflight" aria-labelledby="va-preflight-title">
             <div class="va-field__top">
@@ -501,8 +520,9 @@
   <script src="video-ads-teams.js?v=20261117-tlogo1"></script>
   <script src="video-ads-render.js?v=20261119-rel3"></script>
   <script src="video-ads-rating.js?v=20261118-hero-video-ads"></script>
+  <script src="video-ads-audio.js?v=20261118-va-audio"></script>
   <script src="es-motion.js?v=20261115-ds1"></script>
   <script src="league-logos.js?v=20261117-logo1"></script>
-  <script src="video-ads.js?v=20261120-libicon"></script>
+  <script src="video-ads.js?v=20261118-va-audio"></script>
 </body>
 </html>

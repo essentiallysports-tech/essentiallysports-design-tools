@@ -4,7 +4,7 @@
 //     validation, "migration not run" (claims / save-claims modes)
 //   - copy: the static system prompt is cached, the rubric is in it
 //   - chat: static (cached) system prompt, the ad's context in the first turn
-//   - the page markup: the daily set, the placement picker, the pre-export
+//   - the page markup: the daily set, Meta preview by size (no placement picker), the pre-export
 //     check, the rating helper loaded, no removed styles, cache keys
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -140,12 +140,15 @@ assert.equal(lastMessages.messages[0].role, 'user', 'a thread that starts with t
 
 // 5. The page.
 const html = fs.readFileSync('video-ads.html', 'utf8');
-['va-set-make', 'va-set-body', 'va-placement', 'va-meta-note', 'va-exmode', 'va-check', 'va-preflight-out'].forEach(id => assert.ok(html.includes(`id="${id}"`), `#${id} is on the page`));
+['va-set-make', 'va-set-body', 'va-meta-toggle', 'va-safe-toggle', 'va-meta-note', 'va-exmode', 'va-check', 'va-preflight-out'].forEach(id => assert.ok(html.includes(`id="${id}"`), `#${id} is on the page`));
+assert.ok(!html.includes('id="va-placement"'), 'no Feed / Story / Reels switch: the placement follows the size');
 assert.match(html, /video-ads-rating\.js\?v=[\w-]+/);
 assert.match(html, /video-ads\.js\?v=[\w-]+/);
 assert.match(html, /I have the rights to use this footage/);
 assert.doesNotMatch(html, /We can use this footage in a paid ad/);
 const js = fs.readFileSync('video-ads.js', 'utf8');
+assert.match(js, /const placementNow = \(\) => \(state\.size === '9x16' \? 'reel' : 'feed'\);/, 'Meta preview: 9:16 in Reels, 4:5 and 1:1 in the feed');
+assert.doesNotMatch(js, /setPlacement|state\.placement/, 'the placement switch code is gone');
 assert.doesNotMatch(js, /if \(!els\.rights\.checked/, 'the rights tick never blocks an export');
 assert.doesNotMatch(js, /statLabel|quoteContext|'Stat Card'/, 'no removed-style fields in the page');
 assert.match(js, /c\.fillStyle = '#000000'/, 'the empty preview is plain black');
