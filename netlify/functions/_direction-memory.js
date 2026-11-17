@@ -28,7 +28,7 @@ const EVENT_TYPES = [
   'design_opened', // opened in the editor
   'design_exported', // downloaded (PNG) from Generate
 ];
-const POST_TYPES = ['cover', 'quote', 'long-quote', 'double-entity-quote', 'stats-single-ent', 'stats-double-ent', 'listicle-type-1', 'listicle-type-2'];
+const POST_TYPES = ['cover', 'quote', 'long-quote', 'double-entity-quote', 'stats-single-ent', 'stats-double-ent', 'listicle-type-1', 'listicle-type-2', 'player-stat-line', 'team-record'];
 const HOOKS = ['question', 'claim', 'reaction', 'quote', 'numbers', 'ranking'];
 const MAX_PAYLOAD_CHARS = 16 * 1024;
 const WINDOW = 400;

@@ -69,7 +69,7 @@
   const MIST = { opacity: 0.9, rule: 'Stats posts use mist in the team\'s official colour at 90% opacity; never black mist on stats', source: 'SM-04, SM-05' };
 
   // The ES templates Generate may use (the director picks only from these).
-  const TEMPLATES = ['cover', 'quote', 'long-quote', 'double-entity-quote', 'stats-single-ent', 'stats-double-ent', 'listicle-type-1', 'listicle-type-2'];
+  const TEMPLATES = ['cover', 'quote', 'long-quote', 'double-entity-quote', 'stats-single-ent', 'stats-double-ent', 'listicle-type-1', 'listicle-type-2', 'player-stat-line', 'team-record'];
 
   // ─── Rules (id, level, what, source, how it is enforced) ────────────────
   // level: must (hard gate / never produced) | should (critique, warning)
@@ -86,7 +86,7 @@
     // Layout
     { id: 'canvas-size', level: 'must', area: 'layout', rule: 'Instagram creative is 1080×1350px.', source: 'SM-03', enforced: 'template' },
     { id: 'safe-area', level: 'must', area: 'layout', rule: 'All text and key visuals stay inside the 50px safe area.', source: 'SM-03, SM-05, SM-08', enforced: 'template' },
-    { id: 'es-template', level: 'must', area: 'layout', rule: 'Use an ES template (Cover, Quote, Long Quote, Two-Person Quote, Player Stats, Head-to-Head, Rankings Table, Ranked List). No free-form layouts.', source: 'CODE (es-generate.js TEMPLATES); SM-08, SM-10 examples', enforced: 'check' },
+    { id: 'es-template', level: 'must', area: 'layout', rule: 'Use an ES template (Cover, Quote, Long Quote, Two-Person Quote, Player Stats, Head-to-Head, Rankings Table, Ranked List, Player Stat Line, Team Record / Score). No free-form layouts.', source: 'CODE (es-generate.js TEMPLATES); SM-08, SM-10 examples', enforced: 'check' },
     { id: 'headline-bottom', level: 'should', area: 'layout', rule: 'Headline pills sit low on the canvas over the mist, inside the safe area.', source: 'SM-08, SM-10', enforced: 'template' },
     // Type
     { id: 'font-family', level: 'must', area: 'type', rule: 'Headlines in Acumin Pro Condensed Black; only Acumin VF and Roboto Condensed inside pills. No other fonts (no wide or rounded grotesques, no scripts).', source: 'SM-07', enforced: 'template' },
@@ -133,7 +133,7 @@
   function directorLines() {
     return [
       'ES design rules (fixed by the templates; plan only inside them):',
-      '- Only ES templates (Cover, Quote, Long Quote, Two-Person Quote, Player Stats, Head-to-Head, Rankings Table, Ranked List); no free-form layouts, carousel art or custom slides.',
+      '- Only ES templates (Cover, Quote, Long Quote, Two-Person Quote, Player Stats, Head-to-Head, Rankings Table, Ranked List, Player Stat Line, Team Record / Score); no free-form layouts, carousel art or custom slides.',
       '- Type is Acumin Pro Condensed Black, uppercase, in solid pills: no other fonts, no outlined or stroked type.',
       '- Colours are the team\'s official brand-kit palette (pills, highlight text, 90% mist); no off-palette accent words or colours.',
       '- ES logo top-right (top-left with a swipe button), 50px clear space and safe area; never moved or restyled.',
@@ -202,7 +202,7 @@
     passed.push('team-palette');
 
     // mist-team-colour: stats posts want a team (its mist); warn-only fix note.
-    if ((spec.postType === 'stats-single-ent' || spec.postType === 'stats-double-ent') && !spec.team) {
+    if (['stats-single-ent', 'stats-double-ent', 'player-stat-line', 'team-record'].includes(spec.postType) && !spec.team) {
       fixes.push({ rule: 'mist-team-colour', what: 'no team found: pick the team so the mist uses its official colour' });
     }
 
@@ -210,7 +210,7 @@
     // guideline errors too; its automatic fixes are listed.
     const lint = ctx.lint;
     if (lint) {
-      const map = { banned: 'banned-words', 'unsourced-number': 'real-facts', 'unsourced-quote': 'real-facts', 'bad-stat-label': 'real-facts', 'too-long': 'text-fit', duplicate: 'voice' };
+      const map = { banned: 'banned-words', 'unsourced-number': 'real-facts', 'unsourced-quote': 'real-facts', 'bad-stat-label': 'real-facts', 'stat-mismatch': 'real-facts', 'too-long': 'text-fit', duplicate: 'voice' };
       (lint.errors || []).forEach(issue => fail(map[issue.code] || 'voice', issue.msg));
       (lint.warnings || []).forEach(warning => {
         if (warning.code === 'auto-split') fixes.push({ rule: 'text-fit', what: 'split long lines so the text stays big' });
@@ -238,7 +238,10 @@
       else if (role === 'list' || entities.length >= 3) {
         template = numbers.length >= entities.length && entities.length >= 3 ? 'listicle-type-1' : 'listicle-type-2';
         why = 'a ranked list becomes an ES Rankings Table / Ranked List';
-      } else if (statNumbers.length >= 3) { template = 'stats-single-ent'; why = 'three real stat numbers become ES Player Stats'; }
+      } else if (numbers.some(n => /^\d{1,3}\s?[-–]\s?\d{1,3}$/.test(String(n?.value || '').trim())) && entities.length <= 2) {
+        template = 'team-record'; why = 'a record or final score becomes an ES Team Record / Score';
+      } else if (statNumbers.length >= 4) { template = 'player-stat-line'; why = 'a full stat line becomes an ES Player Stat Line'; }
+      else if (statNumbers.length >= 3) { template = 'stats-single-ent'; why = 'three real stat numbers become ES Player Stats'; }
       else if (numbers.length) { template = 'cover'; why = 'numbers without game-stat labels (views, money, records) become a Cover hook, never a stats card'; }
       return { slide: index + 1, role: role || 'other', template, why };
     });

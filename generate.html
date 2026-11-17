@@ -245,6 +245,30 @@
     .gen-refine__team select { min-height: 40px; padding: 0 var(--es-space-3, 12px); border: 0; border-radius: var(--es-radius-control, 12px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line-2, #d8dce3); color: var(--es-ink); font: 500 13px var(--es-font-ui); }
     .gen-card__hint { margin: 0; color: var(--es-ink-3); font-size: 12px; line-height: 1.4; }
     .gen-card__hint[hidden] { display: none; }
+    /* Photo search (the photo panel) and "same idea, new template". */
+    .gen-photos__search { display: flex; gap: var(--es-space-2, 8px); min-width: 0; }
+    .gen-photos__search input { flex: 1 1 auto; min-width: 0; min-height: 32px; padding: 0 var(--es-space-3, 12px); border: 0; border-radius: var(--es-radius-chip, 10px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line-2); color: var(--es-ink); font: 400 13px var(--es-font-ui); }
+    .gen-photos__search input::placeholder { color: var(--es-placeholder); }
+    .gen-photos__search input:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .gen-photos__status { margin: 0; color: var(--es-ink-3); font-size: 12px; }
+    .gen-photos__status:empty { display: none; }
+    .gen-refine__swap { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); }
+    .gen-swap { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); min-height: 32px; padding: 0 var(--es-space-3, 12px) 0 4px; border: 0; border-radius: var(--es-radius-chip, 10px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line-2); color: var(--es-ink); font: 500 13px var(--es-font-ui); cursor: pointer; }
+    .gen-swap img { width: 20px; height: 25px; border-radius: 4px; object-fit: cover; }
+    .gen-swap:hover { background: var(--es-sunk); }
+    .gen-swap:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .gen-swap:disabled { opacity: .55; cursor: default; }
+    @media (pointer: coarse) { .gen-swap, .gen-photos__search input { min-height: 44px; } }
+    html[data-theme="dark"] :is(.gen-swap, .gen-photos__search input) { background: #2A2D34; box-shadow: inset 0 0 0 1px #3B4049; color: #FFFFFF; }
+    /* The set bar: every design on screen as one carousel. */
+    .gen-setbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); margin: 0 0 var(--es-space-4, 16px); padding: var(--es-space-3, 12px) var(--es-space-4, 16px); border-radius: var(--es-radius-container, 16px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); }
+    .gen-setbar[hidden] { display: none; }
+    .gen-setbar__text { flex: 1 1 220px; min-width: 0; margin: 0; color: var(--es-ink-2); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); }
+    .gen-setbar__text strong { color: var(--es-ink); font-weight: 600; }
+    .gen-setbar .es-btn svg { width: 16px; height: 16px; }
+    .gen-keys { color: var(--es-ink-3); font-size: 12px; }
+    .gen-keys kbd { padding: 0 4px; border-radius: 4px; background: var(--es-sunk); color: var(--es-ink-2); font: 500 11px/18px var(--es-font-ui); }
+    @media (max-width: 640px) { .gen-keys { display: none; } .gen-setbar .es-btn { flex: 1 1 auto; } }
     @media (pointer: coarse) { .gen-version, .gen-refine__team select { min-height: 44px; } }
     html[data-theme="dark"] :is(.gen-version, .gen-refine__team select) { background: #2A2D34; box-shadow: inset 0 0 0 1px #3B4049; color: #FFFFFF; }
     html[data-theme="dark"] .gen-version[aria-pressed="true"] { box-shadow: inset 0 0 0 2px #FFFFFF; }
@@ -847,9 +871,10 @@
       <div class="gen-directions" id="gen-directions" role="list" aria-label="Creative directions"></div>
       <div class="gen-director__foot">
         <p class="gen-director__count" id="gen-director-count" aria-live="polite"></p>
+        <span class="gen-keys" id="gen-director-keys" aria-hidden="true"><kbd>1</kbd>–<kbd>4</kbd> pick · <kbd class="gen-keys__make">Ctrl ↵</kbd> make</span>
         <div class="gen-director__buttons">
           <button class="es-btn es-btn--tertiary" type="button" id="gen-director-auto">Skip · Auto</button>
-          <button class="es-btn" type="button" id="gen-director-make">Make all</button>
+          <button class="es-btn" type="button" id="gen-director-make" aria-keyshortcuts="Control+Enter Meta+Enter">Make all</button>
         </div>
       </div>
     </section>
@@ -860,6 +885,11 @@
       </div>
       <div class="gen-live" id="gen-live" aria-busy="true"></div>
     </section>
+    <div class="gen-setbar" id="gen-setbar" role="group" aria-label="This set" hidden>
+      <p class="gen-setbar__text" id="gen-setbar-text"></p>
+      <button class="es-btn es-btn--sm" type="button" id="gen-set-carousel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="12" height="16" x="6" y="4" rx="2"/><path d="M2 7v10"/><path d="M22 7v10"/></svg>Open as carousel</button>
+      <button class="es-btn es-btn--sm" type="button" id="gen-set-zip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download all (.zip)</button>
+    </div>
     <div class="gen-grid" id="gen-grid"></div>
     <details class="gen-research" id="gen-research" data-ais-reveal hidden>
       <summary>Based on these ES stories</summary>
@@ -1463,14 +1493,17 @@
         ['double-entity-quote', 'Two-Person Quote', 'Two people quoted side by side', 'Needs quotes from two people'],
         ['stats-single-ent', 'Player Stats', 'One player, three big numbers', 'Needs game numbers (PTS, YDS, HR…)'],
         ['stats-double-ent', 'Head-to-Head', 'Two players, four stats each', 'Needs numbers for two players'],
+        ['player-stat-line', 'Player Stat Line', 'One player\u2019s full game line, 3\u20137 numbers', 'Needs 3+ game numbers for one player'],
+        ['team-record', 'Team Record', 'A record or final score under the team badge', 'Needs a record or score (10-0, 31-28) and the team'],
         ['listicle-type-1', 'Rankings Table', 'A top-N table with two number columns', 'Paste a ranked list, one row per line'],
         ['listicle-type-2', 'Ranked List', 'A top-N list of names', 'Paste a ranked list, one row per line'],
       ];
-      const PHOTO_TYPES = new Set(['cover', 'quote', 'long-quote', 'stats-single-ent']);
+      const PHOTO_TYPES = new Set(['cover', 'quote', 'long-quote', 'stats-single-ent', 'player-stat-line', 'team-record']);
       // Starter prompts, each tagged with what it makes.
       const EXAMPLES = [
         ['Quote + stats', 'Patrick Mahomes after the Chiefs win: "We are not done yet." 320 YDS, 3 TD, 1 INT'],
         ['Player stats', 'Caitlin Clark scores 30 PTS 9 AST 6 REB against the Sky'],
+        ['Stat line', 'Luka Doncic drops 43 PTS 11 REB 9 AST 4 STL in 36 MIN against the Suns'],
         ['Ranked list', 'Top 5 QBs right now\n1. Patrick Mahomes\n2. Josh Allen\n3. Lamar Jackson\n4. Joe Burrow\n5. Jalen Hurts'],
         ['Cover hooks', 'Make a post about the Lakers losing streak'],
       ];
@@ -1503,7 +1536,10 @@
         director: $('gen-director'), directions: $('gen-directions'), directorRead: $('gen-director-read'), directorChosen: $('gen-director-chosen'),
         directorToggle: $('gen-director-toggle'), directorCount: $('gen-director-count'), directorAuto: $('gen-director-auto'), directorMake: $('gen-director-make'),
       };
-      if (/Mac|iPhone|iPad/.test(navigator.platform || '')) els.kbd.textContent = '⌘ ↵';
+      if (/Mac|iPhone|iPad/.test(navigator.platform || '')) {
+        els.kbd.textContent = '⌘ ↵';
+        document.querySelectorAll('.gen-keys__make').forEach(kbd => { kbd.textContent = '⌘ ↵'; });
+      }
       let chosen = 'auto'; // the selected format card ('auto' = the AI picks)
       let busy = false;
       let lastBrief = '';
@@ -1576,7 +1612,9 @@
           }
           const textEl = document.createElement('span');
           textEl.className = 'gen-quick__text';
-          textEl.textContent = text.replace(/\s*\n\s*/g, ' · ');
+          // Labelled trend briefs show their story only ("Story: …" lines).
+          const shown = /^Story: /.test(text) ? text.split('\n')[0].replace(/^Story: /, '') : text;
+          textEl.textContent = shown.replace(/\s*\n\s*/g, ' · ');
           button.append(textEl);
           button.title = text;
           button.addEventListener('click', () => setBrief(text));
@@ -1799,6 +1837,8 @@
         const f = option.fields || {};
         if (postType === 'stats-single-ent' || postType === 'stats-double-ent') return f.headline || '';
         if (postType === 'double-entity-quote') return `${f.a?.quote || ''} / ${f.b?.quote || ''}`;
+        if (postType === 'player-stat-line') return `${f.firstName || ''} ${f.lastName || ''} · ${(f.stats || []).map(stat => `${stat.value} ${stat.label}`).join(' ')}`.trim();
+        if (postType === 'team-record') return [f.record, f.subline].filter(Boolean).join(' · ');
         if (option.listicle?.title) return option.listicle.title.replace(/\n/g, ' ');
         return (option.lines || []).join(' ');
       }
@@ -1826,7 +1866,22 @@
             <button class="es-btn es-btn--sm" type="button" data-act="rewrite" data-how="angle">New angle</button>
             <button class="es-btn es-btn--sm" type="button" data-act="rewrite" data-how="best" title="Uses the strongest AI model">${ICON.sparkles}Best version</button>
           </div>
+          ${swapField(spec)}
           ${teamField}`;
+      }
+
+      // "Same idea, new template": the formats this brief can fill, other
+      // than the card's own (the server re-checks the fit).
+      function swapTypes(spec) {
+        const fits = fitsFor(readBrief(lastBrief || briefFound.text || ''));
+        return FORMATS.map(([type]) => type).filter(type => type !== 'auto' && type !== spec.postType && fits.has(type));
+      }
+      function swapField(spec) {
+        const types = swapTypes(spec);
+        if (!types.length) return '';
+        const label = type => FORMATS.find(([id]) => id === type)?.[1] || type;
+        return `<span class="gen-refine__label" id="gen-swap-${esc(spec.id)}">Same idea, new template</span>
+          <div class="gen-refine__swap" role="group" aria-labelledby="gen-swap-${esc(spec.id)}">${types.map(type => `<button class="gen-swap" type="button" data-act="swap" data-type="${esc(type)}"><img src="assets/template-thumbs/instagram-${esc(type)}.webp" alt="" width="20" height="25" loading="lazy">${esc(label(type))}</button>`).join('')}</div>`;
       }
 
       async function paint(card) {
@@ -1835,12 +1890,77 @@
         media.classList.remove('is-ready');
         try {
           const api = await renderer();
-          img.src = await api.renderToDataUrl(card._spec);
+          // renderWithInfo also says what filled the photo slot (an ES photo,
+          // the team graphic, or nothing); older renderers only give the image.
+          if (api.renderWithInfo) {
+            const info = await api.renderWithInfo(card._spec);
+            img.src = info.dataUrl;
+            card._photoKind = info.photo || '';
+          } else {
+            img.src = await api.renderToDataUrl(card._spec);
+          }
           card.classList.remove('is-failed');
         } catch (error) {
           card.classList.add('is-failed');
         } finally {
           media.classList.add('is-ready');
+        }
+        photoHint(card);
+      }
+
+      // The photo slot is never left blank: no ES photo means the team graphic
+      // (made by the renderer), and with no team either, the photo panel opens
+      // with an ES photo search already run for the card's subject.
+      const photoQueryFor = spec => String(spec.photoQuery || briefFound.name || spec.team || '').trim().slice(0, 80);
+      function photoHint(card) {
+        const spec = card._spec;
+        if (!spec || !PHOTO_TYPES.has(spec.postType)) return;
+        const hint = card.querySelector('.gen-card__hint');
+        const kind = card._photoKind;
+        if (kind === 'team-graphic') {
+          hint.hidden = false;
+          hint.textContent = `No ES photo ${spec.photos?.length ? 'clearly shows them' : 'found'}, so this uses the ${spec.team || 'team'} graphic. Search ES photos with the photo button.`;
+        } else if (kind === 'none') {
+          hint.hidden = false;
+          hint.textContent = 'No ES photo yet: pick or search one below.';
+          const button = card.querySelector('[data-act="photos"]');
+          if (button && button.getAttribute('aria-expanded') !== 'true') {
+            renderPhotos(card);
+            card.querySelector('.gen-photos').hidden = false;
+            button.setAttribute('aria-expanded', 'true');
+          }
+          if (!card._autoSearched && !(spec.photos || []).some(photo => !photo.ai) && photoQueryFor(spec)) {
+            card._autoSearched = true;
+            searchPhotos(card, photoQueryFor(spec));
+          }
+        } else if (kind === 'photo' && spec.photo?.url) {
+          hint.hidden = true;
+        }
+      }
+
+      // ES photo search for one card (mode 'photos': no AI, no spend).
+      async function searchPhotos(card, query) {
+        const spec = card._spec;
+        const status = card.querySelector('.gen-photos__status');
+        const q = String(query || '').trim();
+        if (q.length < 2) {
+          if (status) status.textContent = 'Type a name to search ES photos.';
+          return;
+        }
+        card._photoQuery = q;
+        if (status) status.textContent = `Searching ES photos for ${q}…`;
+        try {
+          const data = await callApi('/api/es-generate', { mode: 'photos', query: q });
+          const seen = new Set((spec.photos || []).map(photo => photo.url));
+          const fresh = (data.photos || []).filter(photo => /^\/api\/es-image-search\?/.test(String(photo.url || '')) && !seen.has(photo.url));
+          spec.photos = [...(spec.photos || []), ...fresh].slice(0, 12);
+          if (!card.isConnected) return;
+          renderPhotos(card);
+          const next = card.querySelector('.gen-photos__status');
+          if (next) next.textContent = fresh.length ? `${fresh.length} ES photo${fresh.length === 1 ? '' : 's'} for ${q}. Pick one.` : `No ES photos for ${q}. Try a full name or the team.`;
+        } catch (error) {
+          const next = card.querySelector('.gen-photos__status');
+          if (next) next.textContent = `Photo search failed: ${error.message || 'try again.'}`;
         }
       }
 
@@ -1854,9 +1974,15 @@
           const active = spec.photo?.url === photo.url;
           return `<button class="gen-thumb${photo.ai ? ' is-ai' : ''}" type="button" data-act="pick" data-index="${index}" aria-pressed="${active}" aria-label="${esc(photo.ai ? 'AI scene image' : `ES photo: ${photo.title || index + 1}`)}" title="${esc(photo.ai ? 'AI scene image' : photo.title || '')}"><img src="${esc(photo.url)}" alt="" loading="lazy"></button>`;
         }).join('');
+        const query = card._photoQuery || photoQueryFor(spec);
         panel.innerHTML = `
           <span class="gen-photos__label">${photos.some(p => !p.ai) ? 'ES photos' : 'Photo'}</span>
-          ${strip ? `<div class="gen-photos__strip">${strip}</div>` : '<p class="gen-photos__none">No ES photo found for this design.</p>'}
+          ${strip ? `<div class="gen-photos__strip">${strip}</div>` : '<p class="gen-photos__none">No ES photo found for this design yet.</p>'}
+          <form class="gen-photos__search" role="search" data-photo-search>
+            <input type="search" name="q" maxlength="80" value="${esc(query)}" placeholder="Search ES photos (name, team)" aria-label="Search ES photos">
+            <button class="es-btn es-btn--sm" type="submit">Search</button>
+          </form>
+          <p class="gen-photos__status" aria-live="polite"></p>
           <button class="es-btn es-btn--sm" type="button" data-act="scene" title="AI background: a place, no people or logos. Made only when you click.">${ICON.sparkles}Scene image</button>`;
       }
 
@@ -2801,6 +2927,38 @@
           } finally {
             button.disabled = false;
           }
+        } else if (act === 'swap') {
+          // Same idea, new template: one design in the picked format, on the
+          // card's direction (its angle and facts), placed right after it.
+          if (busy) return;
+          const type = button.dataset.type;
+          const name = FORMATS.find(([id]) => id === type)?.[1] || type;
+          const swaps = [...card.querySelectorAll('[data-act="swap"]')];
+          swaps.forEach(other => { other.disabled = true; });
+          const placeholder = skeletonCard();
+          card.after(placeholder);
+          track('more_like_this', designEvent(spec, { on: 'template', to: type }));
+          try {
+            const dir = card._dir ? [{ ...dirPayload(card._dir), postType: type }] : undefined;
+            const data = await callApi('/api/es-generate', { brief: lastBrief, formats: [type], count: 1, steer: steerBody(), ...(dir ? { directions: dir } : {}) });
+            const next = data.designs?.[0];
+            placeholder.remove();
+            if (!next) {
+              setNotice(`No ${name} this time`, ' The brief does not have what that template needs. Add the facts, or try another template.');
+              return;
+            }
+            const nextCard = buildCard(next);
+            if (card._dir) nextCard._dir = { ...card._dir, postType: type };
+            card.after(nextCard);
+            updateSetBar();
+            await paint(nextCard);
+            nextCard.querySelector('[data-act="edit"]')?.focus({ preventScroll: true });
+          } catch (error) {
+            placeholder.remove();
+            setNotice(pausedTitle(error) || `${name} failed`, ` ${error.message || ''}`, pausedTitle(error) ? 'warn' : '');
+          } finally {
+            swaps.forEach(other => { if (other.isConnected) other.disabled = false; });
+          }
         } else if (act === 'less') {
           // Less like this: remembered for this brief's next directions, and the card goes.
           track('less_like_this', designEvent(spec, { on: 'design' }));
@@ -2872,6 +3030,68 @@
             locked.forEach(other => { other.disabled = false; });
             restoreFocus(button.isConnected ? button : card.querySelector('[data-act="again"]'));
           }
+        }
+      });
+
+      els.grid.addEventListener('submit', event => {
+        const form = event.target.closest('[data-photo-search]');
+        const card = form?.closest('.gen-card');
+        if (!card?._spec) return;
+        event.preventDefault();
+        searchPhotos(card, form.elements.q.value);
+      });
+
+      // ── The set: every design on screen as one carousel ──────────────────
+      // Open as carousel: the designs fill the editor's empty carousel slides
+      // (up to 5). Download all: one ZIP, files numbered in order, each made
+      // by the editor's own export (same size and quality as a single download).
+      const CAROUSEL_SLIDES = 5;
+      const setBar = { bar: $('gen-setbar'), text: $('gen-setbar-text'), carousel: $('gen-set-carousel'), zip: $('gen-set-zip') };
+      const setCards = () => [...els.grid.querySelectorAll('.gen-card:not(.is-skeleton)')].filter(card => card._spec);
+      function updateSetBar() {
+        const n = setCards().length;
+        setBar.bar.hidden = n < 2;
+        if (n < 2) return;
+        setBar.text.innerHTML = `<strong>${n} designs</strong> · post them as one carousel, in this order${n > CAROUSEL_SLIDES ? ` (the editor holds the first ${CAROUSEL_SLIDES})` : ''}.`;
+      }
+      new MutationObserver(updateSetBar).observe(els.grid, { childList: true });
+      const setSpecs = () => setCards().map(card => {
+        const { photos, ...spec } = card._spec;
+        return spec;
+      });
+      setBar.carousel.addEventListener('click', () => {
+        const specs = setSpecs().slice(0, CAROUSEL_SLIDES);
+        if (specs.length < 2) return;
+        try {
+          sessionStorage.setItem('frameup.openSpecSet.v1', JSON.stringify(specs));
+        } catch (error) {
+          setNotice('Could not open the editor', ' Your browser blocked session storage, or the photos are too large. Open the designs one at a time.');
+          return;
+        }
+        specs.forEach(spec => track('design_opened', designEvent(spec, { set: specs.length })));
+        window.location.href = 'index.html#instagram';
+      });
+      setBar.zip.addEventListener('click', async () => {
+        const specs = setSpecs().slice(0, 10);
+        if (specs.length < 2 || setBar.zip.disabled) return;
+        setBar.zip.disabled = true;
+        setBar.zip.setAttribute('aria-busy', 'true');
+        const label = setBar.zip.lastChild.textContent;
+        setBar.zip.lastChild.textContent = `Exporting ${specs.length}…`;
+        try {
+          const api = await renderer();
+          if (!api.exportSet) throw new Error('Reload the page to download sets.');
+          const name = `frameup-${(lastBrief || 'set').split(/\s+/).slice(0, 5).join(' ')}`;
+          const result = await api.exportSet(specs, name);
+          specs.forEach(spec => track('design_exported', designEvent(spec, { set: specs.length, score: spec.review?.score ?? null })));
+          window.FrameUpPosted?.exported?.({ source: 'generate', title: `${result.count}-design set: ${versionText(specs[0].postType, specs[0]).slice(0, 80)}`, template: 'Carousel set', style: specs.map(spec => spec.postType).join(','), brand: 'essentiallysports', aiMade: 'generate' });
+          setSummary(`<span>${window.FrameUpMotion ? window.FrameUpMotion.check() : ''}<strong>${result.count} designs downloaded</strong> as ${esc(result.filename)}.</span>`);
+        } catch (error) {
+          setNotice('Set download failed', ` ${error.message || 'Try again.'}`, '', { label: 'Try again', run: () => setBar.zip.click() });
+        } finally {
+          setBar.zip.lastChild.textContent = label;
+          setBar.zip.disabled = false;
+          setBar.zip.removeAttribute('aria-busy');
         }
       });
 
@@ -3031,7 +3251,9 @@
         const team = findTeam(text);
         const name = findName(text, team);
         const versus = /\b(?:vs\.?|versus|head[- ]to[- ]head|compared?)\b/i.test(text);
-        return { text, quotes, stats, list, table, team, name, versus };
+        // A record or final score (10-0, 31-28), as the director reads it.
+        const record = (text.replace(/[\u2013\u2014]/g, '-').match(/(?:^|[^\d/.-])(\d{1,3}-\d{1,3})(?![\d/.-])/) || [])[1] || '';
+        return { text, quotes, stats, list, table, team, name, versus, record };
       }
       function fitsFor(found) {
         const fits = new Set();
@@ -3044,6 +3266,8 @@
         if (found.quotes.length >= 2) fits.add('double-entity-quote');
         if (found.quotes.length) fits.add(found.quotes[0].length <= 48 ? 'quote' : 'long-quote');
         if (found.stats) fits.add(found.versus ? 'stats-double-ent' : 'stats-single-ent');
+        if (found.stats >= 3 && !found.versus) fits.add('player-stat-line');
+        if (found.record && (found.team || found.name)) fits.add('team-record');
         return fits;
       }
       let briefFound = readBrief('');
@@ -3105,6 +3329,7 @@
           if (team && name) items.push(pill(true, 'Team', team.team, teamLogoMark(team) || logo));
           items.push(pill(quotes.length > 0, 'Quote', quotes.length > 1 ? `${quotes.length} quotes` : 'Quote'));
           items.push(pill(stats > 0, 'Stats', `${stats} stat${stats === 1 ? '' : 's'}`));
+          if (briefFound.record) items.push(pill(true, 'Record', briefFound.record));
         }
         els.found.innerHTML = items.join('');
         const fits = fitsFor(briefFound);
@@ -3141,6 +3366,13 @@
         const photo = item.image && /^https?:\/\//i.test(item.image) ? `<img src="${esc(item.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : '';
         return `<span class="gen-trend__art" style="--league-bg:${esc(league?.bg || '#F2F4F7')}" aria-hidden="true">${photo || logo}</span>`;
       }
+      function trendBrief(item, sport) {
+        return [
+          `Story: ${item.title}`,
+          item.team?.name ? `Team: ${item.team.name}` : '',
+          sport ? `Sport: ${sport}` : '',
+        ].filter(Boolean).join('\n');
+      }
       async function loadLiveTrends() {
         els.live.innerHTML = '<span class="gen-trend is-skeleton es-skeleton" aria-hidden="true"><span class="gen-trend__art"></span><span class="gen-trend__text"></span></span>'.repeat(3);
         try {
@@ -3160,7 +3392,7 @@
             const sport = labelOf(item.category);
             button.innerHTML = `${trendArt(item)}<span class="gen-trend__body">${sport ? `<span class="gen-trend__meta">${esc(sport)}</span>` : ''}<span class="gen-trend__text">${esc(item.title)}</span></span>`;
             button.title = item.title;
-            button.setAttribute('aria-label', `Use trend: ${item.title}${sport ? ` (${sport})` : ''}`);
+            button.setAttribute('aria-label', `Make posts from this trend: ${item.title}${sport ? ` (${sport})` : ''}`);
             const photo = button.querySelector('.gen-trend__art img:not(.is-logo)');
             // A broken story photo falls back to the league logo.
             photo?.addEventListener('error', () => {
@@ -3168,9 +3400,24 @@
               tile.innerHTML = trendArt({ ...item, image: '' });
               photo.replaceWith(tile.querySelector('img') || document.createTextNode(''));
             }, { once: true });
-            button.addEventListener('click', () => setBrief([item.title, sport ? `Sport: ${sport}` : ''].filter(Boolean).join('\n')));
+            // One click makes the posts: the trend becomes a labelled brief
+            // (the writer reads Story / Team / Sport), shown in the brief box.
+            button.addEventListener('click', () => {
+              if (busy) { setBrief(trendBrief(item, sport)); return; }
+              setBrief(trendBrief(item, sport));
+              generate();
+            });
             return button;
           }));
+          // Smart starters: the next live trends join the quick chips (when
+          // ES MCP has no trending tool of its own).
+          if (!topics) {
+            const more = items.filter(item => !picks.includes(item)).slice(0, 3);
+            if (more.length) {
+              topics = more.map(item => [labelOf(item.category) || 'Trend', trendBrief(item, labelOf(item.category))]);
+              renderQuick();
+            }
+          }
         } catch (error) {
           els.live.replaceChildren();
         } finally {
@@ -3179,6 +3426,35 @@
           els.empty.classList.toggle('is-offline', !els.live.children.length);
         }
       }
+
+      // ── Keyboard flow ─────────────────────────────────────────────────────
+      // "/" jumps to the brief. With directions on screen: 1-4 pick or unpick
+      // a direction, Ctrl/⌘ + Enter makes the picked ones (outside the brief,
+      // where it means Generate).
+      const typing = target => target instanceof HTMLElement && (target.isContentEditable || /^(?:INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+      document.addEventListener('keydown', event => {
+        if (root.dataset.aisView === 'trends' || event.defaultPrevented || event.altKey) return;
+        const directorOpen = !els.director.hidden && !els.director.classList.contains('is-collapsed');
+        if (event.key === '/' && !event.metaKey && !event.ctrlKey && !typing(event.target)) {
+          event.preventDefault();
+          els.brief.focus();
+          return;
+        }
+        if (!directorOpen || busy) return;
+        if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && event.target !== els.brief && !event.target.closest?.('.gen-dir__form')) {
+          event.preventDefault();
+          els.directorMake.click();
+          return;
+        }
+        if (/^[1-4]$/.test(event.key) && !event.metaKey && !event.ctrlKey && !typing(event.target)) {
+          const card = els.directions.querySelectorAll('.gen-dir:not(.is-skeleton)')[Number(event.key) - 1];
+          if (!card) return;
+          event.preventDefault();
+          const pick = card.querySelector('.gen-dir__pick');
+          pick.click();
+          pick.focus({ preventScroll: true });
+        }
+      });
 
       selectFormat('auto');
       analyzeBrief();

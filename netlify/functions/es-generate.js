@@ -144,6 +144,20 @@ const TEMPLATES = {
     photo: false,
     shape: '{"headline": "2-30 chars", "a": {"name": "2-24 chars", "stats": [4 x {"value","label"}]}, "b": {same as a}}',
   },
+  // Added 2026-11-19 (project-docs/templates-player-stat-line.md): one
+  // player's full game line, and a team's record or final score.
+  'player-stat-line': {
+    label: 'Player Stat Line',
+    use: 'One player\'s full game line: first and last name, the opponent, and 3-7 real numbers with labels (the box score). Best when the brief gives 4 or more stats from one game.',
+    photo: true,
+    shape: '{"firstName": "1-18 chars", "lastName": "1-24 chars", "opponent": "0-32 chars, e.g. V/S THE SUNS (empty if unknown)", "stats": [{"value": "1-7 chars", "label": "1-18 chars, a stat label (PTS, REB) or its full word (POINTS, REBOUNDS)"}, 3 to 7]}',
+  },
+  'team-record': {
+    label: 'Team Record / Score',
+    use: 'A team\'s record (10-0) or a final score (31-28) as one huge number under the team badge, with an optional short subline. Only when the brief states that record or score.',
+    photo: true,
+    shape: '{"record": "3-12 chars, e.g. 10-0 or 31-28, exactly as in the brief", "subline": "0-40 chars, e.g. UNDEFEATED SEASON (no new numbers)"}',
+  },
 };
 
 const clean = value => String(value ?? '')
@@ -221,6 +235,31 @@ function checkFields(postType, fields = {}) {
         lines: [headline, a.name, ...a.stats.map(statLine), b.name, ...b.stats.map(statLine)],
         fields: { headline, a, b },
       };
+    }
+    case 'player-stat-line': {
+      const firstName = within(fields.firstName, 1, 18);
+      const lastName = within(fields.lastName, 1, 24);
+      const opponent = within(fields.opponent ?? '', 0, 32);
+      const list = Array.isArray(fields.stats) ? fields.stats : [];
+      if (list.length < 3 || list.length > 7) return { error: 'player stat line needs 3-7 stats' };
+      const stats = list.map(stat => ({ value: within(stat?.value, 1, 7), label: within(stat?.label, 1, 18) }));
+      if (!firstName || !lastName || opponent === null || stats.some(stat => !stat.value || !stat.label)) {
+        return { error: 'player stat line needs a first name (max 18), last name (max 24), and stats with a value (max 7) and label (max 18)' };
+      }
+      const upper = stats.map(stat => ({ value: stat.value, label: stat.label.toUpperCase() }));
+      return {
+        lines: [`${firstName} ${lastName}`, ...(opponent ? [opponent] : []), ...upper.map(statLine)],
+        fields: { firstName, lastName, opponent, stats: upper },
+      };
+    }
+    case 'team-record': {
+      const record = within(fields.record, 3, 12);
+      const subline = within(fields.subline ?? '', 0, 40);
+      if (!record || !/^\d{1,3}\s?[-–]\s?\d{1,3}(?:\s?[-–]\s?\d{1,2})?$/.test(record) || subline === null) {
+        return { error: 'team record needs a record or score like 10-0 or 31-28 (max 12 chars) and an optional subline (max 40)' };
+      }
+      const tidy = record.replace(/\s+/g, '').replace(/–/g, '-');
+      return { lines: [tidy, ...(subline ? [subline] : [])], fields: { record: tidy, subline } };
     }
     case 'listicle-type-1':
     case 'listicle-type-2': {
@@ -570,11 +609,8 @@ async function findPhoto(query, mcp, tools, articles = []) {
   if (!query) return null;
   try {
     if (mcp && tools.images) {
-      const args = buildArgs(tools.images, query, { type: 'agency' }) || buildArgs(tools.images, query);
-      if (args) {
-        const url = imageUrlsFromMcp(resultText(await mcp.callTool(tools.images.name, args, { timeoutMs: 8000 })))[0];
-        if (url) return { title: query, sourceUrl: url, url: proxied(url) };
-      }
+      const url = (await mcpImages(query, mcp, tools))[0];
+      if (url) return { title: query, sourceUrl: url, url: proxied(url) };
     }
     const terms = keyTerms(query) || query;
     const surname = mainWord(terms);
@@ -705,6 +741,13 @@ const GOLD_EXAMPLES = [
     ],
   },
   {
+    brief: 'Luka Doncic drops 43 PTS 11 REB 9 AST 4 STL in 36 MIN against the Suns',
+    designs: [
+      { postType: 'player-stat-line', sport: 'NBA', team: 'Los Angeles Lakers', fields: { firstName: 'Luka', lastName: 'Doncic', opponent: 'V/S The Suns', stats: [{ value: '36', label: 'MIN' }, { value: '43', label: 'PTS' }, { value: '11', label: 'REB' }, { value: '9', label: 'AST' }, { value: '4', label: 'STL' }] }, photoQuery: 'Luka Doncic Lakers' },
+      { postType: 'cover', sport: 'NBA', team: 'Los Angeles Lakers', fields: { pills: ['Luka Was', 'Everywhere'] }, photoQuery: 'Luka Doncic Lakers' },
+    ],
+  },
+  {
     brief: 'make a post about the Warriors trade rumours',
     designs: [
       { postType: 'cover', sport: 'NBA', team: 'Golden State Warriors', fields: { pills: ['Are The Warriors', 'About To Blink?'] }, photoQuery: 'Stephen Curry Warriors' },
@@ -780,6 +823,8 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid
     '- Never invent numbers, quotes or results. If a fact is missing, choose a template that does not need it, or return fewer designs.',
     '- Quotes must be real (from the brief or the research). Quote and Long Quote show no name, so use them ONLY for words said BY the post\'s main person. Words said about them by someone else need the Two-Person Quote (which names both speakers) or no quote at all.',
     '- Player Stats and Head-to-Head are ONLY for real game or season performance numbers with standard labels (PTS, REB, AST, YDS, TD, INT, HR, RBI, AVG, G, GOALS...). Never use ages, years, dates, contract money, deficits or rankings as stats. No such numbers: skip the stats templates.',
+    '- Player Stat Line is ONE player\'s line from ONE game: 3-7 stats from the brief or research, each value kept with its own label exactly as written there (never move a number to another label; 30 PTS stays 30 | PTS). opponent is "V/S THE <TEAM NICKNAME>" only when the opponent is stated, else empty. Prefer it over Player Stats when there are 4 or more stats.',
+    '- Team Record / Score only when the brief or research states the record or final score (10-0, 31-28): copy it exactly, set team to that team. The subline is a short label (UNDEFEATED SEASON, FINAL), never a new number.',
     ...RULES.VOICE.map(line => `- ${line}`),
     '- Title Case for pills and headlines.',
     '- ES Covers are HOOKS, not summaries: a bold claim or a curious question in 2-8 words, e.g. "Does Patrick Mahomes Really Deserve This?", "Warriors\' $40M Gamble Just Got Worse", "Are Steelers Doomed at QB?". Never just list the facts on a Cover.',
@@ -1138,6 +1183,24 @@ function brandHints(spec, brief, articles) {
 // ─── Photos of real people ─────────────────────────────────────────────────
 // Candidates come only from ES (agency images via ES MCP, and the lead images
 // of ES stories tagged with the person). AI never draws a real person.
+// ES agency images for a query (ES MCP), cached for 15 minutes per warm
+// instance: "Try again", "More like this" and a new template on the same
+// story ask for the same person again within seconds.
+const IMAGE_SEARCH_CACHE = new Map();
+const IMAGE_SEARCH_TTL_MS = 15 * 60 * 1000;
+async function mcpImages(query, mcp, tools) {
+  if (!query || !mcp || !tools?.images) return [];
+  const key = squash(query).trim();
+  const hit = IMAGE_SEARCH_CACHE.get(key);
+  if (hit && clock.now() - hit.at < IMAGE_SEARCH_TTL_MS) return hit.urls;
+  const args = buildArgs(tools.images, query, { type: 'agency' }) || buildArgs(tools.images, query);
+  if (!args) return [];
+  const urls = imageUrlsFromMcp(resultText(await mcp.callTool(tools.images.name, args, { timeoutMs: 8000 })));
+  if (IMAGE_SEARCH_CACHE.size > 200) IMAGE_SEARCH_CACHE.clear();
+  IMAGE_SEARCH_CACHE.set(key, { at: clock.now(), urls });
+  return urls;
+}
+
 async function photoCandidates(person, mcp, tools, articles) {
   const out = [];
   const add = (sourceUrl, title) => {
@@ -1145,8 +1208,7 @@ async function photoCandidates(person, mcp, tools, articles) {
   };
   if (person && mcp && tools.images) {
     try {
-      const args = buildArgs(tools.images, person, { type: 'agency' }) || buildArgs(tools.images, person);
-      if (args) imageUrlsFromMcp(resultText(await mcp.callTool(tools.images.name, args, { timeoutMs: 8000 }))).slice(0, 3).forEach(url => add(url, person));
+      (await mcpImages(person, mcp, tools)).slice(0, 3).forEach(url => add(url, person));
     } catch (error) { /* ES story images below */ }
   }
   articles.filter(a => canProxy(a.image)).forEach(a => add(a.image, a.title));
@@ -1159,9 +1221,25 @@ async function photoCandidates(person, mcp, tools, articles) {
 // model looked and none shows the person, so no photo is used (the card offers
 // the photo picker instead of putting someone else on the post).
 const PHOTO_PICK_MAX = 5;
+// The same person and the same photos get the same answer: a pick is reused
+// for 30 minutes (one vision call per story, not one per "Try again").
+const PHOTO_PICK_CACHE = new Map();
+const PHOTO_PICK_TTL_MS = 30 * 60 * 1000;
 async function pickPhoto(person, candidates, track) {
   if (!person || candidates.length < 2 || !gatewayConfigured()) return { index: 0, cost: 0, picked: false, rejected: false };
   const shown = candidates.slice(0, PHOTO_PICK_MAX);
+  const key = `${squash(person).trim()}|${shown.map(candidate => candidate.sourceUrl).join('|')}`;
+  const hit = PHOTO_PICK_CACHE.get(key);
+  if (hit && clock.now() - hit.at < PHOTO_PICK_TTL_MS) return { ...hit.result, cost: 0, cached: true };
+  const result = await pickPhotoNow(person, shown, track);
+  // Only real answers are kept (a timeout or a failed call is tried again next time).
+  if (result.picked || result.rejected) {
+    if (PHOTO_PICK_CACHE.size > 200) PHOTO_PICK_CACHE.clear();
+    PHOTO_PICK_CACHE.set(key, { at: clock.now(), result });
+  }
+  return result;
+}
+async function pickPhotoNow(person, shown, track) {
   const content = [{ type: 'text', text: `Which photo best shows ${person} for a sports Instagram post? Prefer ${person} clearly visible and recognisable (ideally alone, face visible, sharp). Avoid graphics, collages, text-heavy images and photos of other people. Reply with JSON only: {"best": <photo number, or 0 if none shows ${person}>}` }];
   shown.forEach((candidate, index) => content.push({ type: 'text', text: `Photo ${index + 1}:` }, { type: 'image', source: { type: 'url', url: candidate.sourceUrl } }));
   try {
@@ -1183,6 +1261,8 @@ function designText(postType, option) {
     case 'double-entity-quote': return `${f.a?.name}: "${f.a?.quote}" vs ${f.b?.name}: "${f.b?.quote}"`;
     case 'stats-single-ent': return `${f.headline} — ${(f.stats || []).map(s => `${s.value} ${s.label}`).join(', ')}`;
     case 'stats-double-ent': return `${f.headline} — ${f.a?.name} vs ${f.b?.name}`;
+    case 'player-stat-line': return `${f.firstName} ${f.lastName}${f.opponent ? ` ${f.opponent}` : ''} — ${(f.stats || []).map(s => `${s.value} ${s.label}`).join(', ')}`;
+    case 'team-record': return `${f.record}${f.subline ? ` — ${f.subline}` : ''}`;
     case 'listicle-type-1':
     case 'listicle-type-2': return `${String(f.title || '').replace(/\n/g, ' ')} — ${(f.rows || []).slice(0, 3).map(r => r.entity).join(', ')}…`;
     default: return (option.lines || []).join(' / ');
@@ -1284,6 +1364,8 @@ async function escalateDesigns({ brief, designs, found, check, track }) {
 const STRONG_BY_TYPE = {
   'stats-single-ent': 'Three real numbers carry it.',
   'stats-double-ent': 'A clean head-to-head on real numbers.',
+  'player-stat-line': 'The full box-score line, straight from the game.',
+  'team-record': 'One huge number under the team badge.',
   quote: 'Their own words carry it.',
   'long-quote': 'Their own words, in full.',
   'double-entity-quote': 'Two voices, one debate.',
@@ -1835,6 +1917,20 @@ async function trending() {
   return { topics, notes };
 }
 
+// ─── Photo search (the card's photo panel) ─────────────────────────────────
+// ES photos for a query the editor typed (or the card's own photo query): ES
+// agency images and the lead images of ES stories, through the ES image proxy.
+// No AI call, so no spend gate.
+async function searchPhotos(query) {
+  const q = clean(query).replace(/[^\w\s.'’&-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+  if (q.length < 2) return { status: 400, body: { error: 'Type a name to search ES photos.' } };
+  const notes = [];
+  const { mcp, tools } = await discover(notes);
+  const coverage = await esCoverage(q).catch(() => ({ articles: [] }));
+  const found = await photoCandidates(q, mcp, tools, coverage.articles || []);
+  return { status: 200, body: { query: q, photos: found.map(({ title, url }) => ({ title, url })) } };
+}
+
 // ─── One-card rewrite (Generate's quick fixes) ─────────────────────────────
 const REWRITES = {
   punchier: { tier: 'main', ask: 'Make it punchier and bolder: a stronger hook in fewer words.' },
@@ -1918,6 +2014,10 @@ exports.handler = async function handler(event) {
 
     const body = JSON.parse(event.body || '{}');
     if (body.mode === 'trending') return json(200, await trending());
+    if (body.mode === 'photos') {
+      const result = await searchPhotos(String(body.query || ''));
+      return json(result.status, result.body);
+    }
     if (body.mode === 'rewrite') {
       const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
       const instruction = String(body.instruction || '');
@@ -1969,4 +2069,4 @@ exports.handler = async function handler(event) {
 };
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
-exports._test = { onBrand, readBrief: readBriefFor, directorAllowed, directorNote, designsPerDirection, pastPostCard, REWRITES, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE, pickProvider, chat };
+exports._test = { onBrand, searchPhotos, IMAGE_SEARCH_CACHE, PHOTO_PICK_CACHE, readBrief: readBriefFor, directorAllowed, directorNote, designsPerDirection, pastPostCard, REWRITES, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE, pickProvider, chat };

@@ -141,8 +141,8 @@ function briefFrom(critique, note = '') {
   return lines.join('\n').slice(0, 1500);
 }
 
-const HOOK_FOR = { cover: 'claim', quote: 'quote', 'long-quote': 'quote', 'stats-single-ent': 'numbers', 'stats-double-ent': 'numbers', 'listicle-type-1': 'ranking', 'listicle-type-2': 'ranking', 'double-entity-quote': 'quote' };
-const NAME_FOR = { cover: 'Cover', quote: 'Quote', 'long-quote': 'Long Quote', 'stats-single-ent': 'Player Stats', 'stats-double-ent': 'Head-to-Head', 'listicle-type-1': 'Rankings Table', 'listicle-type-2': 'Ranked List', 'double-entity-quote': 'Two-Person Quote' };
+const HOOK_FOR = { cover: 'claim', quote: 'quote', 'long-quote': 'quote', 'stats-single-ent': 'numbers', 'stats-double-ent': 'numbers', 'listicle-type-1': 'ranking', 'listicle-type-2': 'ranking', 'double-entity-quote': 'quote', 'player-stat-line': 'numbers', 'team-record': 'numbers' };
+const NAME_FOR = { cover: 'Cover', quote: 'Quote', 'long-quote': 'Long Quote', 'stats-single-ent': 'Player Stats', 'stats-double-ent': 'Head-to-Head', 'listicle-type-1': 'Rankings Table', 'listicle-type-2': 'Ranked List', 'double-entity-quote': 'Two-Person Quote', 'player-stat-line': 'Player Stat Line', 'team-record': 'Team Record' };
 
 // One ES direction per mapped slide (cover first, then the other templates),
 // at most 4 and never the same template twice for covers beyond 2.

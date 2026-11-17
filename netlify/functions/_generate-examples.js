@@ -30,6 +30,9 @@ const VARIANT_TYPES = {
   'rankings table': 'listicle-type-1',
   'listicle type 2': 'listicle-type-2',
   'ranked list': 'listicle-type-2',
+  'player stat line': 'player-stat-line',
+  'team record / score': 'team-record',
+  'team record': 'team-record',
 };
 
 const STOP = new Set('the and for with this that from have has was were are his her their they about after before into over just what when who will your you our not but out all can its it\'s been more most than then them did does how why'.split(' '));
@@ -123,7 +126,7 @@ function selectExamples(brief, designs, allowedTypes = [], max = 10) {
   };
   scored.filter(item => item.score > 5).sort((a, b) => b.score - a.score).slice(0, 8).forEach(take);
   // Style anchors: the newest examples of each template.
-  for (const type of ['cover', 'stats-single-ent', 'long-quote', 'quote', 'listicle-type-1', 'listicle-type-2', 'stats-double-ent', 'double-entity-quote']) {
+  for (const type of ['cover', 'stats-single-ent', 'long-quote', 'quote', 'listicle-type-1', 'listicle-type-2', 'stats-double-ent', 'double-entity-quote', 'player-stat-line', 'team-record']) {
     scored.filter(item => item.design.postType === type).slice(0, type === 'cover' ? 3 : 1).forEach(take);
     if (picked.length >= max) break;
   }
@@ -133,6 +136,7 @@ function selectExamples(brief, designs, allowedTypes = [], max = 10) {
 const LABELS = {
   cover: 'Cover', quote: 'Quote', 'long-quote': 'Long Quote', 'double-entity-quote': 'Two-Person Quote',
   'stats-single-ent': 'Player Stats', 'stats-double-ent': 'Head-to-Head', 'listicle-type-1': 'Rankings Table', 'listicle-type-2': 'Ranked List',
+  'player-stat-line': 'Player Stat Line', 'team-record': 'Team Record',
 };
 
 function formatExamples(examples) {
@@ -151,10 +155,11 @@ const CORPUS_PAGES = 2;
 const CORPUS_PAGE_SIZE = 150;
 let corpusCache = { at: 0, value: null };
 
-const POST_TYPES = ['cover', 'quote', 'long-quote', 'double-entity-quote', 'stats-single-ent', 'stats-double-ent', 'listicle-type-1', 'listicle-type-2'];
+const POST_TYPES = ['cover', 'quote', 'long-quote', 'double-entity-quote', 'stats-single-ent', 'stats-double-ent', 'listicle-type-1', 'listicle-type-2', 'player-stat-line', 'team-record'];
 const FAMILY = {
   cover: 'words', quote: 'words', 'long-quote': 'words', 'double-entity-quote': 'words',
   'stats-single-ent': 'stats', 'stats-double-ent': 'stats', 'listicle-type-1': 'list', 'listicle-type-2': 'list',
+  'player-stat-line': 'stats', 'team-record': 'stats',
 };
 
 async function fetchCorpusPages(token) {

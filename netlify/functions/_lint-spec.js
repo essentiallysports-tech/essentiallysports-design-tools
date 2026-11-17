@@ -55,6 +55,49 @@ function findTeam(sport, value) {
     || '';
 }
 
+// ─── Stat labels and the brief's own stat line ─────────────────────────────
+// Player Stat Line labels may be spelled out (POINTS, MINUTES PLAYED); each
+// maps to the short code the other stats templates use.
+const LONG_LABELS = {
+  POINTS: 'PTS', POINT: 'PTS', REBOUNDS: 'REB', REBOUND: 'REB', ASSISTS: 'AST', ASSIST: 'AST', STEALS: 'STL', STEAL: 'STL',
+  BLOCKS: 'BLK', BLOCK: 'BLK', TURNOVERS: 'TOV', MINUTES: 'MIN', 'MINUTES PLAYED': 'MIN', 'THREE POINTERS': '3PM', THREES: '3PM', '3-POINTERS': '3PM',
+  'FIELD GOALS': 'FG', 'FREE THROWS': 'FT', YARDS: 'YDS', 'PASSING YARDS': 'YDS', 'PASS YDS': 'YDS', 'RUSHING YARDS': 'YDS', 'RUSH YDS': 'YDS',
+  'RECEIVING YARDS': 'YDS', 'REC YDS': 'YDS', TOUCHDOWNS: 'TD', TOUCHDOWN: 'TD', 'PASSING TDS': 'TD', 'PASS TD': 'TD', 'RUSHING TDS': 'TD',
+  INTERCEPTIONS: 'INT', INTERCEPTION: 'INT', RECEPTIONS: 'REC', CATCHES: 'REC', CARRIES: 'CAR', TACKLES: 'TKL', SACKS: 'SACK',
+  'HOME RUNS': 'HR', 'HOME RUN': 'HR', RBIS: 'RBI', STRIKEOUTS: 'SO', HITS: 'HITS', 'STOLEN BASES': 'SB', GOALS: 'G', GOAL: 'G',
+  SAVES: 'SV', SHOTS: 'SOG', 'SHOTS ON GOAL': 'SOG', ACES: 'ACES', BIRDIES: 'BIRDIES', COMPLETIONS: 'CMP', ATTEMPTS: 'ATT', RATING: 'RTG',
+};
+// The short code for a stat label ('' when it is not a stat label).
+function statCode(label) {
+  const text = String(label || '').trim().toUpperCase().replace(/\s+/g, ' ');
+  if (!text) return '';
+  if (LONG_LABELS[text]) return LONG_LABELS[text];
+  if (RULES.STAT_LABELS.test(text)) return text.replace(/S$/, '') === 'YARD' ? 'YDS' : text;
+  if (RULES.STAT_LABELS.test(text.replace(/S$/, ''))) return text.replace(/S$/, '');
+  return '';
+}
+// Short codes that mean the same stat ("TDS" = "TD", "REBS" = "REB").
+const sameCode = code => ({ TDS: 'TD', INTS: 'INT', REBS: 'REB', ASTS: 'AST', SACKS: 'SACK', TKLS: 'TKL', YARDS: 'YDS', MINS: 'MIN', GOALS: 'G', SAVES: 'SV', RBIS: 'RBI', HRS: 'HR' }[code] || code);
+const LABEL_WORDS = [...Object.keys(LONG_LABELS), ...String(RULES.STAT_LABELS.source).replace(/^\^\(|\)\$$/g, '').split('|')]
+  .map(word => word.replace(/\\/g, ''))
+  // One-letter labels (A, G, K, W, L) read as words ("30 a game"): skipped here.
+  .filter(word => word.length > 1)
+  .sort((a, b) => b.length - a.length);
+const LABEL_RE = new RegExp(`(\\d[\\d,]*(?:\\.\\d+)?%?)\\s*(${LABEL_WORDS.map(escapeRe).join('|')})(?![A-Za-z])`, 'gi');
+// The brief's own value/label pairs: { PTS: Set('30'), ... }. Only labels the
+// brief pairs with a number count, so season numbers in research never clash.
+function briefStatPairs(brief) {
+  const pairs = {};
+  for (const match of String(brief || '').matchAll(LABEL_RE)) {
+    const code = sameCode(statCode(match[2]));
+    if (!code) continue;
+    const value = numberTokens(match[1])[0];
+    if (value == null) continue;
+    (pairs[code] = pairs[code] || new Set()).add(value);
+  }
+  return pairs;
+}
+
 // ─── The text on a design ──────────────────────────────────────────────────
 function textFields(spec) {
   const f = spec.fields || {};
@@ -74,6 +117,11 @@ function textFields(spec) {
       { field: `${side}.name`, text: f[side]?.name },
       ...(f[side]?.stats || []).flatMap((s, i) => [{ field: `${side} stat ${i + 1} value`, text: s.value }, { field: `${side} stat ${i + 1} label`, text: s.label }]),
     ])];
+    case 'player-stat-line': return [
+      { field: 'first name', text: f.firstName }, { field: 'last name', text: f.lastName }, { field: 'opponent', text: f.opponent },
+      ...(f.stats || []).flatMap((s, i) => [{ field: `stat ${i + 1} value`, text: s.value }, { field: `stat ${i + 1} label`, text: s.label }]),
+    ];
+    case 'team-record': return [{ field: 'record', text: f.record }, { field: 'subline', text: f.subline }];
     case 'listicle-type-1':
     case 'listicle-type-2': return [
       { field: 'title', text: f.title },
@@ -88,6 +136,8 @@ function textFields(spec) {
     default: return (spec.lines || []).map((text, i) => ({ field: `line ${i + 1}`, text }));
   }
 }
+
+const STAT_TYPES = new Set(['stats-single-ent', 'stats-double-ent', 'player-stat-line']);
 
 const leadLine = spec => squash(spec.lines?.[0] || spec.listicle?.title || '').trim();
 
@@ -194,16 +244,38 @@ function lintSpec(spec, ctx = {}) {
 
   // 6b. Stats templates show only real game or season stat labels (PTS, YDS,
   //     HR...), never ages, money or years. A plural form ("BLKS") counts.
-  if (spec.postType === 'stats-single-ent' || spec.postType === 'stats-double-ent') {
+  //     Player Stat Line may spell labels out (POINTS, MINUTES PLAYED).
+  if (STAT_TYPES.has(spec.postType)) {
     const f = spec.fields || {};
-    const stats = spec.postType === 'stats-single-ent'
-      ? (f.stats || []).map((stat, i) => ({ field: `stat ${i + 1} label`, label: stat?.label }))
-      : ['a', 'b'].flatMap(side => (f[side]?.stats || []).map((stat, i) => ({ field: `${side} stat ${i + 1} label`, label: stat?.label })));
-    stats.forEach(({ field, label }) => {
+    const stats = spec.postType === 'stats-double-ent'
+      ? ['a', 'b'].flatMap(side => (f[side]?.stats || []).map((stat, i) => ({ field: `${side} stat ${i + 1}`, label: stat?.label, value: stat?.value })))
+      : (f.stats || []).map((stat, i) => ({ field: `stat ${i + 1}`, label: stat?.label, value: stat?.value }));
+    const long = spec.postType === 'player-stat-line';
+    // 6c. A number keeps its own label: "30 PTS 9 AST" never becomes 9 | PTS.
+    const pairs = briefStatPairs(ctx.brief);
+    stats.forEach(({ field, label, value }) => {
       const text = String(label || '').trim();
-      if (RULES.STAT_LABELS.test(text) || RULES.STAT_LABELS.test(text.replace(/s$/i, ''))) return;
-      errors.push({ field, code: 'bad-stat-label', msg: `"${text}" is not a game or season stat label`, fix: 'use real stat labels (PTS, YDS, HR…) or another template' });
+      const code = long ? statCode(text) : (RULES.STAT_LABELS.test(text) || RULES.STAT_LABELS.test(text.replace(/s$/i, '')) ? statCode(text) || text.toUpperCase() : '');
+      if (!code) {
+        errors.push({ field: `${field} label`, code: 'bad-stat-label', msg: `"${text}" is not a game or season stat label`, fix: 'use real stat labels (PTS, YDS, HR…) or another template' });
+        return;
+      }
+      const given = pairs[sameCode(code)];
+      const number = numberTokens(value)[0];
+      // (an invented number is already an unsourced-number error)
+      if (given && number != null && known.has(number) && !given.has(number)) {
+        errors.push({ field: `${field} value`, code: 'stat-mismatch', msg: `${value} ${text} does not match the brief (it says ${[...given].join(' or ')} ${text})`, fix: 'keep each number with its own label exactly as the brief pairs them' });
+      }
     });
+  }
+
+  // 6d. Team Record / Score: the record or score itself must be in the brief or research.
+  if (spec.postType === 'team-record') {
+    const record = String(spec.fields?.record || '').replace(/\s+/g, '');
+    const said = `${ctx.brief || ''} ${ctx.corpus || ''}`.replace(/[–—]/g, '-').replace(/(\d)\s*-\s*(\d)/g, '$1-$2');
+    if (record && !new RegExp(`(^|[^\\d])${escapeRe(record)}(?![\\d])`).test(said)) {
+      errors.push({ field: 'record', code: 'unsourced-number', msg: `the record "${record}" is not in the brief or the ES research`, fix: 'copy the record or score exactly as the brief states it, or choose another template' });
+    }
   }
 
   // 7. Team and sport are real brand-kit entries (they set the colours).
@@ -250,4 +322,4 @@ function applyPatch(spec, patch = {}) {
   return spec;
 }
 
-module.exports = { lintSpec, applyPatch, numberTokens, findTeam, findSport, textFields, fitIssues };
+module.exports = { lintSpec, applyPatch, numberTokens, findTeam, findSport, textFields, fitIssues, statCode, briefStatPairs };

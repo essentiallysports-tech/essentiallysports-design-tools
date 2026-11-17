@@ -99,7 +99,8 @@ function load() {
   return require(genPath);
 }
 let gen = load();
-const post = body => gen.handler({ httpMethod: 'POST', headers: { authorization: 'Bearer tok' }, body: JSON.stringify(body) }).then(r => ({ status: r.statusCode, body: JSON.parse(r.body) }));
+// Each request starts cold (no photo pick reused from an earlier scenario).
+const post = body => (gen._test.PHOTO_PICK_CACHE.clear(), gen._test.IMAGE_SEARCH_CACHE.clear(), gen).handler({ httpMethod: 'POST', headers: { authorization: 'Bearer tok' }, body: JSON.stringify(body) }).then(r => ({ status: r.statusCode, body: JSON.parse(r.body) }));
 const brief = 'Caitlin Clark after the Fever beat the Sky: "We are building something special." 30 PTS 9 AST 6 REB';
 
 // 1. The director directs, the writer follows, the reviewer checks the angle.

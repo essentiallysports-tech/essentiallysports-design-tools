@@ -17,6 +17,28 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-19 — Generate hero round: stat lines, records, carousels, no blank photos (branch feature/hero-generate)
+- Status: `[committed on feature/hero-generate — not pushed; browser QA NOT run (preview server limit)]`
+- Audit: `project-docs/hero-audit-hero-generate.md`.
+- **New formats:** Player Stat Line and Team Record / Score in Generate (steps in `templates-player-stat-line.md`):
+  `es-generate.js` TEMPLATES/checkFields/prompt rules/gold example, `_creative-director.js` POST_TYPES, STATS_TYPES,
+  fits (3+ stats; a stated record + team), `_lint-spec.js` fields, `_generate-examples.js`, `_onbrand.js`,
+  `_direction-memory.js`, `es-guidelines.js` (TEMPLATES, mapSlides: score → Team Record, 4+ stats → Player Stat Line),
+  `frameup-spec.js` (SUPPORTED, applyStatTemplate, waits for the team logo), two format cards on `generate.html`.
+- **Number accuracy:** `_lint-spec.js` stat-pair check (`stat-mismatch`): a value must keep the label the brief gives it;
+  spelled-out labels accepted for Player Stat Line; a Team Record must be stated in the brief/research.
+- **Never a blank photo:** `frameup-spec.js` draws a team graphic (team colour + library logo) when there is no ES photo;
+  `renderWithInfo` tells the page; with no team, the photo panel opens and runs an ES photo search.
+  New `mode: 'photos'` on `/api/es-generate` (no AI, no spend gate).
+- **Same idea, new template:** Refine lists the other formats the brief fits; one click makes that design on the card's direction.
+- **Carousel set bar:** Open as carousel (fills empty editor carousel slides, never overwrites) and Download all (.zip,
+  numbered, same export path and quality as single downloads) via `FrameUpSpec.exportSet` + `frameup-zip.js`.
+- **Keyboard:** `/` brief, `1`–`4` pick directions, Ctrl/⌘ + Enter make. Live trends make posts in one click; more trends become quick chips.
+- **Cost:** photo-pick vision result cached 30 min, ES MCP image search 15 min (per warm instance).
+- Intentional export change: a design with no ES photo now exports with the team graphic instead of the empty dark background.
+- Cache key: `frameup-spec.js?v=20261118-hero-generate` (index.html). Release note `2026-11-19-hero-generate`.
+- Tests: new `scripts/test-generate-hero.mjs` (in `test:generate`); photo caches are cleared per request in two existing tests.
+
 ### 2026-11-18 — Generate: the creative director first, ES guidelines, Bring it on-brand (branch feature/generate-director)
 - Status: `[committed on feature/generate-director - not pushed]`
 - **Director first.** Generate now asks the director for 2-4 named directions (`POST /api/es-generate {mode:'direct'}`):
