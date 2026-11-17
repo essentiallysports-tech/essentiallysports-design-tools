@@ -167,12 +167,18 @@
     // Facts: every number must come from the sources (blocking). The walk
     // covers every component field (bars, versus, dot rank, chips, tiles,
     // roles…) and the plan-level eyebrow, series tag and data strip.
+    const v2 = timeline.v === 2 && R.provenanceNumbers;
     const sourceSet = F.numberSet(`${timeline.corpus || ''} ${extraSources || ''}`);
+    // v2: a beat with no refs (hook, payoff) may use any fact of the data block;
+    // a beat with refs only its own refs (so 2001 cannot borrow 2022's yards).
+    const wholeData = v2 ? new Set([...sourceSet, ...F.numberSet(dataFacts(timeline))]) : sourceSet;
     timeline.beats.forEach((beat, index) => {
-      const bad = F.unsourcedNumbers(beat, sourceSet, timeline.format);
+      // v2 (data formats): a beat's own refs back the numbers it shows.
+      const set = v2 && Array.isArray(beat.refs) && beat.refs.length ? new Set([...sourceSet, ...R.provenanceNumbers(timeline, beat.refs)]) : wholeData;
+      const bad = F.unsourcedNumbers(beat, set, timeline.format);
       if (bad.length) issues.push(issue('numbers', 'critical', `Beat ${index + 1}: ${bad.join(', ')} ${bad.length > 1 ? 'are' : 'is'} not in the sources.`, 'Fix the number, or add where it comes from under Sources.', beat.id));
     });
-    const planBad = F.unsourcedPlanNumbers({ eyebrow: timeline.eyebrow, series: timeline.series, strip: timeline.strip }, sourceSet);
+    const planBad = F.unsourcedPlanNumbers({ eyebrow: timeline.eyebrow, series: timeline.series, strip: timeline.strip }, wholeData);
     if (planBad.length) issues.push(issue('numbers', 'critical', `The eyebrow, series tag or data strip shows ${planBad.join(', ')}, not in the sources.`, 'Fix the number in Settings, or add its source.'));
 
     // Visuals: every beat should show a clip or a picture (an empty slot is
@@ -181,7 +187,7 @@
       if (shot.asset && !timeline.assets[shot.asset]) issues.push(issue('visual', 'critical', 'A beat points at a clip or picture that is gone.', 'Pick another visual for it.', shot.beat));
     });
     timeline.beats.forEach((beat, index) => {
-      if (beat.kind === 'cta') return;
+      if (beat.kind === 'cta' || SELF_VISUAL.has(beat.kind)) return;
       const shots = timeline.tracks.video.filter(s => s.beat === beat.id);
       if (shots.length && shots.every(s => !s.asset)) issues.push(issue('visual', 'warning', `Beat ${index + 1} has no clip or picture yet (it shows plain black).`, 'Use "Fill visuals", or pick a clip, photo or team graphic.', beat.id));
     });
@@ -204,6 +210,157 @@
       }
     });
 
+    if (timeline.v === 2) issues.push(...dataIssues(timeline, { target, boxes }));
+
+    const critical = issues.filter(i => i.severity === 'critical').length;
+    const warnings = issues.filter(i => i.severity === 'warning').length;
+    return { issues, critical, warnings, ok: critical === 0 };
+  }
+
+  // ─── Data formats (v2 timelines and carousel slides) ────────────────────
+  // The data block as facts, so a v2 reel lints on its own: the digest's
+  // facts (ReelTimeline.digestFacts), the athlete's season years and career
+  // totals, and the cited archive moments (the server drops uncited ones).
+  function dataFacts(timeline) {
+    const T = typeof self !== 'undefined' && self.ReelTimeline ? self.ReelTimeline : (typeof require === 'function' ? require('./reel-timeline.js') : null);
+    const d = timeline.data || {};
+    const out = [];
+    if (T && d.game) out.push(T.digestFacts(d.game));
+    const st = d.athlete && d.athlete.stats;
+    if (st && Array.isArray(st.seasons)) out.push(st.seasons.map(r => r.year).join(' '));
+    if (st && Array.isArray(st.totals)) out.push(st.totals.join(' '));
+    const arch = d.archive;
+    if (arch && Array.isArray(arch.moments)) arch.moments.filter(m => Array.isArray(m.cite) && m.cite.length).forEach(m => out.push(`${m.year} ${m.title || ''} ${m.line || ''}`));
+    return out.join('\n');
+  }
+  // Data beats that draw their own pictures (chart, year rail, frame strip).
+  const SELF_VISUAL = new Set(['wpline', 'moment', 'panel3']);
+  const BAD_HOST = /(?:^|\/\/|\.)(?:[a-z0-9-]+\.)*(?:espncdn\.com|mlb\.com|mlbstatic\.com)(?:[/:?#]|$)/i;
+  const YEAR_RE = /\b(18[5-9]\d|19\d\d|20\d\d)\b/g;
+  // Rules (contract §4):
+  //   data-numbers       every number a data element draws resolves to a data ref (critical)
+  //   data-attribution   WP on screen carries "Win probability: ESPN Analytics" (critical)
+  //   archive-cite       a moment cites a src: or stat: ref that resolves (critical)
+  //   archive-date       a year on a moment is a year of its cited source (critical)
+  //   asset-host         no espncdn / mlb.com images (critical)
+  //   replay-real-frames the strip's frames are times inside the project's own clip (critical)
+  //   scorebug-clear     the scorebug keeps out of the ES mark's clear space (critical)
+  //   paid-league-footage a paid export of a clip from X or the library warns
+  function dataIssues(timeline, { target = 'organic', boxes = null } = {}) {
+    const out = [];
+    const T = typeof self !== 'undefined' && self.ReelTimeline ? self.ReelTimeline : (typeof require === 'function' ? require('./reel-timeline.js') : null);
+    const beatsById = new Map((timeline.beats || []).map((b, i) => [b.id, { b, i }]));
+    const label = id => { const x = beatsById.get(id); return x ? `Beat ${x.i + 1}` : (timeline.slide ? `Slide ${(timeline.slide.index || 0) + 1}` : 'A beat'); };
+    // Numbers drawn by data elements.
+    if (R.unbackedNumbers) {
+      const seen = new Set();
+      R.unbackedNumbers(null, timeline).forEach(u => {
+        const key = `${u.beat}:${u.role}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push(issue('data-numbers', 'critical', `${label(u.beat)}: “${String(u.text).slice(0, 32)}” shows ${u.numbers.join(', ')} with no data behind it.`, 'Numbers on data elements come from the game, the stats or the sources; re-link the beat to its data.', u.beat));
+      });
+    }
+    // WP attribution.
+    const game = timeline.data && timeline.data.game;
+    const want = String((game && game.attribution) || (F.FORMATS.gameswing && F.FORMATS.gameswing.attribution) || '').trim();
+    const official = T && game && T.ATTRIBUTION ? T.ATTRIBUTION[game.provider] : '';
+    if (R.wpOnScreen) {
+      R.wpOnScreen(null, timeline).forEach(w => {
+        const kind = (beatsById.get(w.beat) || {}).b;
+        if (!w.wp && kind && kind.kind === 'wpline') { out.push(issue('data-attribution', 'critical', `${label(w.beat)}: the win-probability chart is hidden because the game has no attribution line.`, 'Reload the game data: win probability always carries its credit.', w.beat)); return; }
+        if (!w.wp) return;
+        if (!want || !w.attribution.includes(want)) out.push(issue('data-attribution', 'critical', `${label(w.beat)} shows win probability without “${want || 'its attribution'}”.`, 'Win probability is always credited on screen.', w.beat));
+        else if (official && want !== official) out.push(issue('data-attribution', 'critical', `${label(w.beat)}: the attribution reads “${want}”, not “${official}”.`, 'Use the provider\'s attribution line exactly.', w.beat));
+      });
+    }
+    // Archive: cites and dates.
+    const archiveBeats = (timeline.beats || []).filter(b => b.kind === 'moment' || b.kind === 'slide-moment');
+    archiveBeats.forEach(b => {
+      const refs = Array.isArray(b.refs) ? b.refs : [];
+      const cites = refs.filter(r => /^(src|stat):/.test(r));
+      const ok = T ? cites.filter(r => T.resolveRef(timeline, r)) : [];
+      if (!ok.length) { out.push(issue('archive-cite', 'critical', `${label(b.id)}: this moment cites no ES article or stat row.`, 'Every archive moment needs a source: pick one in Sources.', b.id)); return; }
+      const years = new Set();
+      ok.forEach(r => {
+        const v = T.resolveRef(timeline, r);
+        if (r.startsWith('stat:') && Number.isInteger(v.year)) years.add(String(v.year));
+        if (r.startsWith('src:') && /^\d{4}/.test(String(v.date || ''))) years.add(String(v.date).slice(0, 4));
+        if (r.startsWith('src:')) (String(v.title || '').match(YEAR_RE) || []).forEach(y => years.add(y));
+      });
+      const arch = timeline.data && timeline.data.archive;
+      (arch && Array.isArray(arch.moments) ? arch.moments : []).filter(m => Array.isArray(m.cite) && m.cite.some(c => ok.includes(c))).forEach(m => {
+        if (Number.isInteger(m.year) && !years.has(String(m.year))) out.push(issue('archive-date', 'critical', `${label(b.id)}: the moment says ${m.year}, but its source is from ${[...years].join(', ') || 'another year'}.`, 'Use the year of the cited source, or cite the right one.', b.id));
+      });
+      const shown = String(b.text || '').match(YEAR_RE) || [];
+      const bad = shown.filter(y => !years.has(y));
+      if (bad.length) out.push(issue('archive-date', 'critical', `${label(b.id)}: ${bad.join(', ')} is not a year of the cited source.`, 'Use the year of the cited source, or cite the right one.', b.id));
+    });
+    // Image hosts: ESPN and MLB images are never drawn (logos come from FrameUp's library).
+    const urls = [];
+    Object.entries(timeline.assets || {}).forEach(([id, a]) => { if (a && a.src) urls.push([id, a.src]); if (a && a.url) urls.push([id, a.url]); });
+    const arch = timeline.data && timeline.data.archive;
+    (arch && Array.isArray(arch.photos) ? arch.photos : []).forEach(p => urls.push([`photo:${p.id}`, p.url]));
+    urls.filter(([, u]) => BAD_HOST.test(String(u || ''))).forEach(([id]) => out.push(issue('asset-host', 'critical', `${id} is an ESPN or MLB image. FrameUp never draws those.`, 'Use an ES photo, or a logo from FrameUp\'s library.')));
+    // Replay: real frames of the project's own clip.
+    const rp = timeline.replay;
+    const strips = (timeline.beats || []).filter(b => b.kind === 'panel3' || ((b.refs || []).some(r => r.startsWith('frame:'))));
+    if (strips.length) {
+      const clipId = rp && rp.clipAsset;
+      const clip = clipId && timeline.assets ? timeline.assets[clipId] : null;
+      if (!rp || (!clip && !rp.clipUrl)) out.push(issue('replay-real-frames', 'critical', 'The frame strip has no clip behind it.', 'Pick the clip again: the three frames are taken from it.', strips[0].id));
+      else {
+        const seg = rp.segment || null;
+        const dur = clip && Number(clip.durationMs) > 0 ? clip.durationMs / 1000 : null;
+        (rp.frames || []).forEach(f => {
+          const outside = (seg && (f.t < seg.in - 0.05 || f.t > seg.out + 0.05)) || (dur != null && f.t > dur + 0.05);
+          if (outside) out.push(issue('replay-real-frames', 'critical', `The ${f.role} frame (${f.t} s) is outside the clip's chosen moment.`, 'Scrub the panel back inside the segment.', strips[0].id));
+        });
+        const frames = rp.frames || [];
+        if (frames.length === 3 && !(frames[0].t <= frames[1].t && frames[1].t <= frames[2].t)) out.push(issue('replay-real-frames', 'warning', 'The setup, play and reaction frames are out of order.', 'Scrub the panels so they run in time order.', strips[0].id));
+      }
+    }
+    // Paid export with league footage (owner, 2026-11-18: warn, do not block).
+    const fmt = F.FORMATS[timeline.format] || {};
+    if (target === 'paid' && fmt.rights && fmt.rights.paidWithLeagueFootage === 'warn') {
+      const league = (rp && ['x', 'library'].includes(rp.origin)) || Object.values(timeline.assets || {}).some(a => a && a.kind === 'clip' && a.rights && (a.rights.x || a.rights.league));
+      if (league) out.push(issue('paid-league-footage', 'warning', 'This paid export uses league footage (an X post or a library clip).', 'Check the clip is cleared for paid use, or export it as an organic post.'));
+    }
+    // The scorebug keeps out of the ES mark and its clear space.
+    const marks = R.logoPlacements ? R.logoPlacements(timeline) : [];
+    const m = marks[0];
+    if (m) {
+      const zone = { x: m.x - m.clear, y: m.y - m.clear, w: m.w + 2 * m.clear, h: m.h + 2 * m.clear };
+      const list = Array.isArray(boxes) ? boxes : (R.allBoxes ? R.allBoxes((t, f) => String(t).length * Number((String(f).match(/([\d.]+)px/) || [0, 40])[1]) * 0.55, timeline) : []);
+      const seen = new Set();
+      list.filter(b => ['scorebug', 'team-chip', 'clock', 'score', 'down', 'status'].includes(b.role) && b.x < zone.x + zone.w - 0.5 && b.x + b.w > zone.x + 0.5 && b.y < zone.y + zone.h - 0.5 && b.y + b.h > zone.y + 0.5).forEach(b => {
+        if (seen.has(b.beat)) return;
+        seen.add(b.beat);
+        out.push(issue('scorebug-clear', 'critical', `${label(b.beat)}: the scorebug runs into the ES logo's clear space.`, 'The scorebug ends 50 px left of the logo.', b.beat));
+      });
+    }
+    return out;
+  }
+  // A carousel (ReelReplay.buildSlides output): the data rules per slide,
+  // text inside the 4:5 safe area, and the ES mark on every slide.
+  function lintSlides(slides, { target = 'organic', measure = null } = {}) {
+    const issues = [];
+    const list = Array.isArray(slides) ? slides : [];
+    if (!list.length) issues.push(issue('slides', 'critical', 'The carousel has no slides yet.', 'Build the carousel first.'));
+    if (list.length > 20) issues.push(issue('slides', 'critical', `${list.length} slides: Instagram allows 20.`, 'Remove a slide.'));
+    const m = measure || ((t, f) => String(t).length * Number((String(f).match(/([\d.]+)px/) || [0, 40])[1]) * 0.55);
+    list.forEach((s, i) => {
+      dataIssues(s, { target }).forEach(x => issues.push({ ...x, beat: s.slide ? s.slide.id : x.beat, message: x.message.replace(/^(Beat|A beat) ?\d*/, `Slide ${i + 1}`) }));
+      const safe = R.SLIDE_SAFE || { left: 60, right: 1020, top: 60, bottom: 1290 };
+      const seen = new Set();
+      R.allBoxes(m, s).filter(b => b.role !== 'es-mark' && b.role !== 'bg' && b.text != null && (b.x < safe.left - 0.5 || b.x + b.w > safe.right + 0.5 || b.y < safe.top - 0.5 || b.y + b.h > safe.bottom + 0.5)).forEach(b => {
+        if (seen.has(b.role)) return;
+        seen.add(b.role);
+        issues.push(issue('safe-zone', 'critical', `Slide ${i + 1}: “${String(b.text).slice(0, 24)}” runs outside the 4:5 safe area.`, 'Shorten the line.', s.slide ? s.slide.id : ''));
+      });
+      const marks = R.logoPlacements(s);
+      if (!marks.length || marks.some(k => !k.slide)) issues.push(issue('logo', 'critical', `Slide ${i + 1} has no ES logo.`, 'The ES mark must be on every slide.', s.slide ? s.slide.id : ''));
+    });
     const critical = issues.filter(i => i.severity === 'critical').length;
     const warnings = issues.filter(i => i.severity === 'warning').length;
     return { issues, critical, warnings, ok: critical === 0 };
@@ -222,5 +379,5 @@
     });
   }
 
-  return { LIMITS, lintTimeline, rightsSummary, usedAssets };
+  return { LIMITS, lintTimeline, lintSlides, dataIssues, rightsSummary, usedAssets };
 }));

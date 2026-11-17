@@ -47,7 +47,10 @@
   const ALL_KINDS = [...STORY_KINDS, ...COMPONENT_KINDS];
 
   // Layout names the renderer knows. Every style maps every kind to one.
-  const LAYOUTS = ['legacy', 'headline-visual', 'stat-hero', 'rank-card', 'quote', 'bars', 'versus', 'dotrank', 'chips', 'steps', 'tiles', 'roles', 'mystery', 'endcard'];
+  // Data-format layouts (Phase 1): one per data beat kind, the same name in
+  // every style (reel-render.js draws them with each style's element tokens).
+  const DATA_LAYOUTS = ['play', 'wpline', 'moment', 'panel3'];
+  const LAYOUTS = ['legacy', 'headline-visual', 'stat-hero', 'rank-card', 'quote', 'bars', 'versus', 'dotrank', 'chips', 'steps', 'tiles', 'roles', 'mystery', 'endcard', ...DATA_LAYOUTS];
   const STANDARD_LAYOUTS = {
     hook: 'headline-visual', context: 'headline-visual', point: 'headline-visual', payoff: 'headline-visual',
     stat: 'stat-hero', rank: 'rank-card', quote: 'quote', cta: 'endcard',
@@ -149,12 +152,12 @@
   //   kinds  the beat kinds (reel-formats.js DATA_KINDS) that use it
   const ELEMENTS = {
     scorebug: { id: 'scorebug', label: 'Scorebug', kinds: ['play', 'wpline'], zone: 'top', box: { x: 88, y: 288, w: 720, h: 104 }, box45: { x: 60, y: 60, w: 700, h: 96 }, tokens: { fill: 'panel', ink: 'ink', muted: 'muted', line: 'line', accent: 'accent', font: 'display', labelFont: 'label' }, notes: 'Team abbreviations (team colours are content), scores, period, clock, possession dot, down and distance. Stays clear of the ES mark and its 50 px clear space (the mark is x 870-992, y 288-392).' },
-    wpline: { id: 'wpline', label: 'Win-probability line', kinds: ['wpline', 'play'], zone: 'band', box: { x: 88, y: 408, w: 904, h: 160 }, box45: { x: 60, y: 172, w: 960, h: 140 }, full: { x: 88, y: 520, w: 904, h: 720 }, tokens: { line: 'accent', guide: 'line', ink: 'ink', muted: 'muted', fill: 'paper', good: 'good', bad: 'bad', labelFont: 'label' }, notes: 'Draws on with beat progress; 0/50/100% guides; the attribution element is required next to it.' },
-    clock: { id: 'clock', label: 'Game clock', kinds: ['play'], zone: 'top', box: { x: 88, y: 400, w: 220, h: 56 }, box45: { x: 60, y: 164, w: 200, h: 52 }, tokens: { fill: 'chip', ink: 'chipInk', font: 'display' }, notes: 'Period + clock ("Q4 0:23", "BOT 9"); ticks only within the beat when the play clock is known.' },
-    playcard: { id: 'playcard', label: 'Play caption card', kinds: ['play'], zone: 'lower', box: { x: 88, y: 1088, w: 904, h: 200 }, box45: { x: 60, y: 1040, w: 960, h: 190 }, tokens: { fill: 'panel', ink: 'ink', muted: 'muted', accent: 'accent', hi: 'hi', hiInk: 'hiInk', font: 'display', bodyFont: 'body' }, notes: 'Down and distance chip + the play line (<= 9 words), score change pulses.' },
-    panel3: { id: 'panel3', label: '3-frame strip', kinds: ['panel3'], zone: 'full', box: { x: 88, y: 288, w: 904, h: 1272 }, box45: { x: 60, y: 60, w: 960, h: 1230 }, tokens: { gutter: 'line', ink: 'ink', chip: 'chip', chipInk: 'chipInk', fill: 'paper', font: 'display', labelFont: 'label' }, notes: 'Setup / The play / Reaction panels, 8 px gutters, label chip top-left, caption bottom-left (<= 6 words).' },
+    wpline: { id: 'wpline', label: 'Win-probability line', kinds: ['wpline', 'play'], zone: 'band', box: { x: 88, y: 472, w: 904, h: 144 }, box45: { x: 60, y: 228, w: 960, h: 140 }, full: { x: 88, y: 640, w: 904, h: 600 }, full45: { x: 60, y: 420, w: 960, h: 640 }, tokens: { line: 'ink', guide: 'line', ink: 'ink', muted: 'muted', fill: 'paper', good: 'good', bad: 'bad', labelFont: 'label' }, notes: 'Draws on with beat progress; 0/50/100% guides; the line in ink, team colours either side of 50%; the swing in a highlighter stroke with a marker and its callout ("SF 63%"); the attribution element is required next to it.' },
+    clock: { id: 'clock', label: 'Game clock', kinds: ['play', 'wpline'], zone: 'top', box: { x: 588, y: 400, w: 220, h: 48 }, box45: { x: 560, y: 164, w: 200, h: 44 }, tokens: { fill: 'chip', ink: 'chipInk', font: 'display' }, notes: 'Period + clock ("Q4  0:23", "BOT 9") as the digest has them, in a tab under the bug with a live dot. The clock never ticks: a ticking clock would show times that are not in the data.' },
+    playcard: { id: 'playcard', label: 'Play caption card', kinds: ['play'], zone: 'lower', box: { x: 88, y: 1172, w: 904, h: 200 }, box45: { x: 60, y: 1080, w: 960, h: 190 }, tokens: { fill: 'panel', ink: 'ink', muted: 'muted', accent: 'accent', hi: 'hi', hiInk: 'hiInk', font: 'display', bodyFont: 'body' }, notes: 'Down and distance chip + the play line (<= 9 words), score change pulses.' },
+    panel3: { id: 'panel3', label: '3-frame strip', kinds: ['panel3'], zone: 'full', box: { x: 88, y: 456, w: 904, h: 1104 }, box45: { x: 60, y: 214, w: 960, h: 1076 }, tokens: { gutter: 'line', ink: 'ink', chip: 'chip', chipInk: 'chipInk', fill: 'paper', font: 'display', labelFont: 'label' }, notes: 'Setup / The play / Reaction panels, 8 px gutters, label chip top-left, caption bottom-left (<= 6 words).' },
     'timeline-node': { id: 'timeline-node', label: 'Year rail node', kinds: ['moment'], zone: 'rail', box: { x: 88, y: 288, w: 160, h: 1272 }, box45: { x: 60, y: 60, w: 140, h: 1230 }, tokens: { line: 'rule', node: 'accent', ink: 'ink', muted: 'muted', hi: 'hi', font: 'display', labelFont: 'label' }, notes: 'The year rail of an archive reel; the current moment is the lit node.' },
-    'source-chip': { id: 'source-chip', label: 'Source chip', kinds: ['moment', 'play', 'wpline', 'panel3'], zone: 'chip', box: { x: 88, y: 1456, w: 600, h: 48 }, box45: { x: 60, y: 1194, w: 600, h: 44 }, tokens: { fill: 'panel', ink: 'muted', line: 'line', labelFont: 'label' }, notes: 'Short source line ("ES · Feb 2017", photo credit). Text only, no links drawn.' },
+    'source-chip': { id: 'source-chip', label: 'Source chip', kinds: ['moment', 'play', 'wpline', 'panel3'], zone: 'chip', box: { x: 88, y: 1448, w: 600, h: 48 }, box45: { x: 60, y: 1194, w: 600, h: 44 }, tokens: { fill: 'panel', ink: 'muted', line: 'line', labelFont: 'label' }, notes: 'Short source line ("ES · Feb 2017", photo credit). Text only, no links drawn.' },
     attribution: { id: 'attribution', label: 'Data attribution', kinds: ['wpline', 'play'], zone: 'chip', box: { x: 88, y: 1512, w: 760, h: 40 }, box45: { x: 60, y: 1246, w: 760, h: 36 }, tokens: { ink: 'muted', labelFont: 'label' }, notes: 'Exactly the format attribution ("Win probability: ESPN Analytics"). Required whenever a WP line or WP number is on screen.' },
   };
   const ELEMENT_IDS = Object.keys(ELEMENTS);
@@ -162,7 +165,7 @@
   // Absent = the element's default token map above.
   const ELEMENT_TOKENS = {
     classic: { scorebug: { fill: 'bg' }, panel3: { gutter: 'ink' }, 'timeline-node': { line: 'line' } },
-    explainer: { wpline: { line: 'rule' } },
+    explainer: {},
     series: { scorebug: { fill: 'ink', ink: 'paper', muted: 'hi' }, clock: { fill: 'hi', ink: 'hiInk' } },
     countdown: { 'timeline-node': { node: 'hi' }, clock: { fill: 'hi', ink: 'hiInk' } },
   };
@@ -282,7 +285,7 @@
   }
 
   return {
-    STYLES, STYLE_IDS, STORY_KINDS, COMPONENT_KINDS, ALL_KINDS, LAYOUTS, GRID, FONTS, CONDENSED, LABEL, BODY, get, kindsFor, suggestStyle, validateStyle, isPurple,
+    STYLES, STYLE_IDS, STORY_KINDS, COMPONENT_KINDS, ALL_KINDS, LAYOUTS, DATA_LAYOUTS, GRID, FONTS, CONDENSED, LABEL, BODY, get, kindsFor, suggestStyle, validateStyle, isPurple,
     ELEMENTS, ELEMENT_IDS, ELEMENT_TOKENS, FORMAT_STYLES, elementTokens, elementBox, drawPlaceholder,
   };
 }));

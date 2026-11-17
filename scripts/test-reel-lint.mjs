@@ -186,4 +186,102 @@ test('visuals: an empty slot warns (plain black); X clips are fine for paid (own
   assert.ok(!gone.issues.some(i => i.id === 'visual' && i.severity === 'critical'), 'unknown assets are filtered out before the timeline');
 });
 
+// ─── Data formats (Phase 1) ──────────────────────────────────────────────
+const T = require('../reel-timeline.js');
+const fx = name => JSON.parse(JSON.stringify(require(`./fixtures/reels/${name}`)));
+const planOf = tl => ({ format: tl.format, title: tl.title, sport: tl.sport, beats: tl.beats.map(b => ({ id: b.id, kind: b.kind, text: b.text, vo: b.vo, refs: b.refs })), data: tl.data, replay: tl.replay, slides: tl.slides, outputs: tl.outputs });
+const dataLint = (name, { style, mutate, opts = {}, build = {} } = {}) => {
+  const f = fx(name);
+  if (mutate && mutate.before) mutate.before(f);
+  const tl = R.buildTimeline(planOf(f), { style: style || f.style, assets: f.assets, ...build });
+  if (mutate && mutate.after) mutate.after(tl);
+  return { tl, res: L.lintTimeline(tl, { boxes: R.allBoxes(measure, tl), extraSources: T.digestFacts(tl.data.game), ...opts }) };
+};
+const has = (res, id, sev = 'critical') => res.issues.some(i => i.id === id && i.severity === sev);
+
+test('data formats: the three fixture reels and their carousels lint clean (no critical)', () => {
+  for (const name of ['timeline-v2-gameswing.json', 'timeline-v2-replay.json', 'timeline-v2-archive.json']) {
+    for (const style of ['classic', 'explainer', 'series', 'countdown']) {
+      const { tl, res } = dataLint(name, { style });
+      assert.equal(res.critical, 0, `${name}/${style}: ${JSON.stringify(res.issues.filter(i => i.severity === 'critical'))}`);
+      const sl = L.lintSlides(R.buildSlides(tl), { measure });
+      assert.equal(sl.critical, 0, `${name}/${style} slides: ${JSON.stringify(sl.issues)}`);
+    }
+  }
+});
+
+test('data-attribution: WP on screen with the wrong credit blocks export', () => {
+  const { res } = dataLint('timeline-v2-gameswing.json', { mutate: { before: f => { f.data.game.attribution = 'Win probability: Somebody'; } } });
+  assert.ok(has(res, 'data-attribution'), JSON.stringify(res.issues));
+  // The renderer never draws WP without its line: no attribution, no chart.
+  const none = dataLint('timeline-v2-gameswing.json', { mutate: { after: tl => { tl.data.game.attribution = ''; } } });
+  assert.ok(!R.wpOnScreen(measure, none.tl).some(w => w.wp), 'no chart without the attribution');
+  assert.ok(has(none.res, 'data-attribution'), 'and the hidden chart is reported');
+});
+
+test('data-numbers: a number a data element draws without a ref behind it is critical', () => {
+  const { res } = dataLint('timeline-v2-archive.json', { mutate: { after: tl => { tl.data.archive.moments[0].line = '9,999 yards'; tl.data.athlete.stats.seasons[1].stats = tl.data.athlete.stats.seasons[1].stats.map(() => '-'); } } });
+  assert.ok(has(res, 'data-numbers'), JSON.stringify(res.issues));
+  // Beat text: its own refs back it (no corpus needed for 2,843 on the 2001 beat)...
+  const ok = dataLint('timeline-v2-archive.json', { opts: { extraSources: '' } });
+  assert.ok(!has(ok.res, 'numbers'), JSON.stringify(ok.res.issues));
+  // ...but not a number from another season.
+  const bad = dataLint('timeline-v2-archive.json', { mutate: { before: f => { f.beats[1].text = '2001: 4,694 yards'; } }, opts: { extraSources: '' } });
+  assert.ok(has(bad.res, 'numbers'));
+});
+
+test('archive-cite and archive-date: every moment cites a source from its own year', () => {
+  const cite = dataLint('timeline-v2-archive.json', { mutate: { after: tl => { tl.beats[1].refs = ['src:a9']; } } });
+  assert.ok(has(cite.res, 'archive-cite'));
+  const year = dataLint('timeline-v2-archive.json', { mutate: { before: f => { f.data.archive.moments[0].year = 2003; } } });
+  assert.ok(has(year.res, 'archive-date'), JSON.stringify(year.res.issues));
+  const text = dataLint('timeline-v2-archive.json', { mutate: { before: f => { f.beats[1].text = '2005 was the year'; } } });
+  assert.ok(has(text.res, 'archive-date'));
+});
+
+test('asset-host: an ESPN or MLB image never ships', () => {
+  const { res } = dataLint('timeline-v2-archive.json', { build: { assets: { 'img:x': { kind: 'photo', src: 'https://a.espncdn.com/i/headshots/nfl/players/full/2330.png', rights: { source: 'x', licence: 'y', organic: true } } } } });
+  assert.ok(has(res, 'asset-host'));
+  const mlb = dataLint('timeline-v2-archive.json', { mutate: { after: tl => { tl.data.archive.photos = [{ id: 'p1', url: 'https://img.mlbstatic.com/a.jpg' }]; } } });
+  assert.ok(has(mlb.res, 'asset-host'));
+  assert.ok(!has(dataLint('timeline-v2-archive.json').res, 'asset-host'));
+});
+
+test('replay-real-frames: frames come from the project\'s clip, inside its moment', () => {
+  const out = dataLint('timeline-v2-replay.json', { mutate: { after: tl => { tl.replay.frames[2].t = 12.4; } } });
+  assert.ok(has(out.res, 'replay-real-frames'));
+  const noClip = dataLint('timeline-v2-replay.json', { mutate: { after: tl => { tl.replay.clipAsset = ''; tl.replay.clipUrl = ''; } } });
+  assert.ok(has(noClip.res, 'replay-real-frames'));
+  const order = dataLint('timeline-v2-replay.json', { mutate: { after: tl => { tl.replay.frames[0].t = 9.5; } } });
+  assert.ok(has(order.res, 'replay-real-frames', 'warning'));
+});
+
+test('paid-league-footage: a paid export of an X or library clip warns; an ES upload does not', () => {
+  const x = dataLint('timeline-v2-replay.json', { mutate: { after: tl => { tl.replay.origin = 'x'; } }, opts: { target: 'paid' } });
+  assert.ok(has(x.res, 'paid-league-footage', 'warning'));
+  assert.ok(!has(dataLint('timeline-v2-replay.json', { opts: { target: 'paid' } }).res, 'paid-league-footage', 'warning'));
+  assert.ok(!has(dataLint('timeline-v2-replay.json', { mutate: { after: tl => { tl.replay.origin = 'x'; } } }).res, 'paid-league-footage', 'warning'), 'organic is fine');
+});
+
+test('scorebug-clear: a scorebug in the ES mark\'s clear space blocks export', () => {
+  const { tl } = dataLint('timeline-v2-gameswing.json');
+  const boxes = R.allBoxes(measure, tl).map(b => (b.role === 'scorebug' ? { ...b, w: 800 } : b));
+  const res = L.lintTimeline(tl, { boxes, extraSources: T.digestFacts(tl.data.game) });
+  assert.ok(has(res, 'scorebug-clear'));
+});
+
+test('lintSlides: the carousel limit and the ES mark on every slide', () => {
+  const { tl } = dataLint('timeline-v2-replay.json');
+  const slides = R.buildSlides(tl);
+  assert.equal(L.lintSlides(slides).critical, 0);
+  assert.ok(L.lintSlides([]).issues.some(i => i.id === 'slides'));
+  const many = Array.from({ length: 21 }, () => slides[0]);
+  assert.ok(L.lintSlides(many).issues.some(i => i.id === 'slides' && /20/.test(i.message)));
+});
+
+test('news reels: no data rules run on a v1 timeline', () => {
+  const { res } = lintOf(GOOD);
+  assert.ok(!res.issues.some(i => /^(data-|archive-|asset-host|replay-|scorebug|paid-league)/.test(i.id)));
+});
+
 console.log(process.exitCode ? '\nReel lint tests failed.' : `\nAll ${passed} reel lint tests passed.`);
