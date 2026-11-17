@@ -131,6 +131,7 @@
     const state_ = L.dueState(request);
     const when = formatDate(request.designDueAt);
     if (state_ === 'overdue') return `<span class="is-overdue">Overdue · ${esc(when)}</span>`;
+    if (state_ === 'soon') return `<span class="is-soon">Due soon · ${esc(when)}</span>`;
     return `Due ${esc(when)}`;
   }
 
@@ -177,8 +178,10 @@
         ? (request.assignedTo ? `With ${esc(personName(request.assignedTo))}` : 'Not assigned yet')
         : esc(personName(request.requesterEmail, request.requesterName) || 'Unknown requester');
       const due = dueText(request);
+      const step = state.ctx?.ready ? L.nextStep(request, user()) : null;
+      const yourMove = Boolean(step?.action) && step.tone !== 'wait';
       return `<li><button class="rq-item" type="button" data-id="${esc(request.id)}" aria-current="${request.id === state.selectedId}">
-        <span class="rq-item__top"><span class="rq-item__title">${esc(request.title)}</span>${statusBadge(request.status)}</span>
+        <span class="rq-item__top"><span class="rq-item__title">${esc(request.title)}</span><span class="rq-item__badges">${yourMove ? '<span class="es-badge es-badge--brand rq-move">Your move</span>' : ''}${statusBadge(request.status)}</span></span>
         <span class="rq-item__meta">${esc(request.requestId)} · ${who}${due ? ` · ${due}` : ''}</span>
       </button></li>`;
     }).join('');
@@ -223,6 +226,43 @@
       const cls = index < current ? 'is-done' : (index === current ? 'is-current' : '');
       return `<li class="rq-step ${cls}"${index === current ? ' aria-current="step"' : ''}>${esc(step.label)}</li>`;
     }).join('')}</ol>`;
+  }
+
+  // ── Next step: the one action that moves the request forward ─────────────
+  const NEXT_LABELS = {
+    claim: 'Assign to me', assign: 'Choose a designer', start: 'Start work', attach: 'Attach the design',
+    review: 'Send for review', done: 'Mark done', comment: 'Ask for a change',
+  };
+  function nextCopy(step, request, deliveries) {
+    const who = personName(step.assignee) || 'The designer';
+    const due = formatDate(request.designDueAt);
+    const copy = {
+      done: ['Delivered', deliveries ? 'The finished designs are below.' : 'This request is done.'],
+      'requester-new': ['Waiting for a designer', 'The design team has it in their queue. You can withdraw it until work starts.'],
+      'requester-assigned': [`${who} has it`, 'Work starts soon. Each step shows here as it happens.'],
+      'requester-doing': [`${who} is designing it`, due ? `Due ${due}. Comment below if anything changes.` : 'Comment below if anything changes.'],
+      'requester-review': ['Your designs are ready to check', 'Look at the delivered designs below. Happy? There is nothing to do. Need a change? Ask in a comment.'],
+      'unassigned-admin': ['Nobody has this yet', 'Pick a designer so it starts moving.'],
+      unassigned: ['Nobody has this yet', 'Take it and it moves to your queue.'],
+      'with-someone': [`With ${who}`, step.overdue ? 'It is past its due date. A comment is the quickest nudge.' : 'Nothing for you to do right now.'],
+      'mine-start': ['Ready when you are', 'Starting it tells the requester that work has begun.'],
+      'mine-attach': ['Attach the design', 'Pick your FrameUp export or paste a link. Attaching sends it for review.'],
+      'mine-send': ['Send it for review', 'The requester is told to check the delivered designs.'],
+      'mine-review': ['Waiting on the requester', 'When they are happy, close it out.'],
+    }[step.key];
+    if (!copy) return null;
+    return [step.overdue ? `Overdue · ${copy[0]}` : copy[0], copy[1]];
+  }
+  function nextStepMarkup(request, deliveries) {
+    if (!state.ctx?.ready) return '';
+    const step = L.nextStep(request, user(), { deliveries });
+    const copy = nextCopy(step, request, deliveries);
+    if (!copy) return '';
+    const label = NEXT_LABELS[step.action];
+    return `<div class="rq-detail__section"><div class="rq-next" data-tone="${esc(step.tone)}" role="status">
+      <div class="rq-next__copy"><span class="es-type-eyebrow">Next step</span><strong>${esc(copy[0])}</strong><span>${esc(copy[1])}</span></div>
+      ${label ? `<button class="es-btn es-btn--primary es-btn--sm" type="button" data-action="next-${esc(step.action)}"${step.status ? ` data-status="${esc(step.status)}"` : ''}>${esc(label)}</button>` : ''}
+    </div></div>`;
   }
 
   function factsMarkup(request) {
@@ -298,7 +338,7 @@
       <div class="rq-controls">${statusField}${assigneeControl(request)}${dueField}${priorityField}
         ${canSave ? `<label class="es-field is-wide"><span class="es-field__label">Note for the requester (optional)</span><textarea class="es-input rq-textarea" id="rq-reason" maxlength="4000" placeholder="Shown in the history and the Slack thread. Required when declining."></textarea></label>` : ''}
       </div>
-      ${canSave ? '<div class="rq-actions"><button class="es-btn es-btn--primary" type="button" data-action="save">Save changes</button></div>' : ''}
+      ${canSave ? '<div class="rq-actions"><button class="es-btn es-btn--secondary" type="button" data-action="save">Save changes</button></div>' : ''}
       <p class="rq-form-status" id="rq-manage-status" role="status" aria-live="polite"></p></div>`;
   }
 
@@ -368,7 +408,7 @@
         <div id="rq-declined">${declinedNote}</div>
       </div>
       <div class="rq-detail__section">${factsMarkup(request)}</div>`;
-    body.innerHTML = `${head}${manageMarkup(request)}<div class="rq-detail__section"><h3 class="rq-h3">Brief</h3>${briefMarkup(request)}</div><div id="rq-deliveries-slot"></div><div id="rq-activity-slot"><div class="rq-detail__section"><h3 class="rq-h3">Activity</h3><p class="rq-form-status">Loading history…</p></div></div>`;
+    body.innerHTML = `${head}<div id="rq-next-slot"></div>${manageMarkup(request)}<div class="rq-detail__section"><h3 class="rq-h3">Brief</h3>${briefMarkup(request)}</div><div id="rq-deliveries-slot"></div><div id="rq-activity-slot"><div class="rq-detail__section"><h3 class="rq-h3">Activity</h3><p class="rq-form-status">Loading history…</p></div></div>`;
 
     const u = user();
     const [eventsResult, deliveries, exportsList] = await Promise.all([
@@ -377,6 +417,7 @@
       state.ctx.ready && L.canEditPlan(request, u) ? API.recentExports() : Promise.resolve([]),
     ]);
     if (token !== state.detailToken) return;
+    $('rq-next-slot').innerHTML = nextStepMarkup(request, deliveries.length);
     $('rq-deliveries-slot').innerHTML = deliveriesMarkup(request, deliveries, exportsList);
     $('rq-activity-slot').innerHTML = activityMarkup(request, eventsResult);
     if (request.status === 'Declined') {
@@ -450,7 +491,16 @@
     const me = state.ctx.email;
     if (action === 'back') { select(''); $('rq-list').querySelector('.rq-item')?.focus(); return; }
     if (action === 'save') saveChanges();
-    if (action === 'claim') run('rq-manage-status', 'update', { assignedTo: me }, 'It’s yours.');
+    if (action === 'claim' || action === 'next-claim') run('rq-manage-status', 'update', { assignedTo: me }, 'It’s yours.');
+    if (['next-start', 'next-review', 'next-done'].includes(action) && button.dataset.status) {
+      const done = { Doing: 'Started. The requester can see it.', Review: 'Sent for review.', Done: 'Marked done.' }[button.dataset.status] || 'Saved.';
+      run('rq-manage-status', 'update', { status: button.dataset.status }, done);
+    }
+    const focusTarget = { 'next-assign': 'rq-assignee', 'next-attach': 'rq-attach-export', 'next-comment': 'rq-comment' }[action];
+    if (focusTarget && $(focusTarget)) {
+      $(focusTarget).scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      $(focusTarget).focus({ preventScroll: true });
+    }
     if (action === 'handback') run('rq-manage-status', 'update', { assignedTo: '' }, 'Handed back.');
     if (action === 'withdraw') {
       if (!window.confirm('Withdraw this request? The design team will see that you cancelled it.')) return;
@@ -532,6 +582,7 @@
 
   async function reload({ keepSelection = false } = {}) {
     $('rq-error').hidden = true;
+    state.loadedAt = Date.now();
     try {
       state.requests = await API.listRequests();
     } catch (error) {
@@ -616,6 +667,22 @@
   $('rq-list').addEventListener('click', event => {
     const item = event.target.closest('.rq-item[data-id]');
     if (item) select(item.dataset.id, { focus: !window.matchMedia('(min-width: 1024px)').matches });
+  });
+  // Up / Down move between requests in the list.
+  $('rq-list').addEventListener('keydown', event => {
+    if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+    const items = [...$('rq-list').querySelectorAll('.rq-item[data-id]')];
+    const index = items.indexOf(document.activeElement);
+    if (index < 0) return;
+    event.preventDefault();
+    items[Math.max(0, Math.min(items.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)))].focus();
+  });
+  // Coming back to the tab after a while: refresh, unless something is being typed.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !state.ctx?.signedIn || Date.now() - (state.loadedAt || 0) < 60000) return;
+    const typing = [...document.querySelectorAll('#rq-detail-body textarea, #rq-detail-body input')].some(field => field.value && field.type !== 'datetime-local');
+    if (typing || $('rq-detail').contains(document.activeElement) && document.activeElement.matches('textarea, input, select')) return;
+    reload({ keepSelection: true });
   });
   $('rq-detail').addEventListener('click', onDetailClick);
   $('rq-detail').addEventListener('submit', onDetailSubmit);

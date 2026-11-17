@@ -61,6 +61,20 @@
 .rq-item__title { overflow: hidden; color: var(--es-ink); font-size: var(--es-type-body-size); font-weight: 500; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .rq-item__meta { overflow: hidden; color: var(--es-ink-3); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); text-overflow: ellipsis; white-space: nowrap; }
 .rq-item__meta .is-overdue { color: var(--es-warn); font-weight: 500; }
+.rq-item__meta .is-soon { color: var(--es-ink-2); font-weight: 500; }
+.rq-item__badges { display: inline-flex; flex: none; align-items: center; gap: var(--es-space-1); }
+
+/* Next step: the one action that moves a request forward. */
+.rq-next { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--es-space-3) var(--es-space-4); padding: var(--es-space-4); border-radius: var(--es-radius-control); background: var(--es-sunk); box-shadow: inset 3px 0 0 var(--es-line-2); }
+.rq-next[data-tone="act"] { background: var(--es-brand-soft); box-shadow: inset 3px 0 0 var(--es-brand); }
+.rq-next[data-tone="warn"] { background: var(--es-warn-soft); box-shadow: inset 3px 0 0 var(--es-warn); }
+.rq-next[data-tone="good"] { background: var(--es-good-soft); box-shadow: inset 3px 0 0 var(--es-good); }
+.rq-next__copy { display: grid; flex: 1 1 240px; gap: 2px; min-width: 0; }
+.rq-next__copy strong { color: var(--es-ink); font-size: var(--es-type-body-size); font-weight: 600; }
+.rq-next__copy > span:last-child { color: var(--es-ink-2); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); }
+html[data-theme="dark"] .rq-next[data-tone="act"] { background: color-mix(in srgb, var(--es-brand) 16%, transparent); }
+html[data-theme="dark"] .rq-next[data-tone="warn"] { background: var(--es-warn-soft-on-dark, rgba(252, 211, 77, .12)); box-shadow: inset 3px 0 0 var(--es-warn-on-dark, #FCD34D); }
+html[data-theme="dark"] .rq-next[data-tone="good"] { background: var(--es-good-soft-on-dark, rgba(76, 201, 133, .12)); box-shadow: inset 3px 0 0 var(--es-good-on-dark, #4CC985); }
 .rq-item.is-skeleton { height: 64px; cursor: default; }
 .rq-empty[hidden] { display: none; }
 

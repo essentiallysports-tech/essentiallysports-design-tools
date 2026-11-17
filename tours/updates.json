@@ -108,6 +108,44 @@
       ]
     },
     {
+      "id": "2026-11-19-hero-workflow",
+      "date": "2026-11-19",
+      "title": "Today on Home, Gallery filters, request next steps",
+      "commit": "6cde4b7",
+      "items": [
+        {
+          "title": "Today on Home",
+          "text": "Your open requests, drafts on your account, the newest team exports and live trends, plus one-click Generate, Video Ads and Reels Studio.",
+          "page": "index.html",
+          "route": "#frames",
+          "target": "#home-today"
+        },
+        {
+          "title": "Find any post",
+          "text": "Gallery search matches every word, filters by person and posted or not, and the link keeps your filters. Press / to search.",
+          "page": "gallery.html",
+          "target": "#gallery-search"
+        },
+        {
+          "title": "Make another like this",
+          "text": "Open a Gallery post and start a new one in Generate with its template and team filled in. Nothing runs until you press Generate.",
+          "page": "gallery.html"
+        },
+        {
+          "title": "Next step on every request",
+          "text": "My requests shows the one thing that moves each request forward: assign, start, attach, send for review or mark done. Your move is flagged in the list.",
+          "page": "requests.html",
+          "target": "#rq-detail"
+        },
+        {
+          "title": "Needs attention (admins)",
+          "text": "The Dashboard opens with what to act on: overdue or unassigned requests, people waiting for access, bug reports and error spikes.",
+          "page": "dashboard.html",
+          "target": "#dov-insights"
+        }
+      ]
+    },
+    {
       "id": "2026-11-18-director",
       "date": "2026-11-18",
       "title": "The creative director, ES guidelines and Bring it on-brand",

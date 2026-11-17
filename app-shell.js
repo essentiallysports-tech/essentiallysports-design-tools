@@ -7,6 +7,21 @@
   const base = window.location.pathname.includes('/ai-page/') ? '../' : '';
   const desktop = window.matchMedia('(min-width: 901px)');
 
+  // Feature switches. Design requests are paused for now (owner, 2026-11-19):
+  // every entry point is hidden and the request pages send people Home. The
+  // code, data and Slack routes stay in place; set requests: true to bring
+  // them back.
+  const FEATURES = Object.freeze({ requests: false });
+  window.FrameUpFeatures = FEATURES;
+  const PAUSED_NAV_IDS = FEATURES.requests ? [] : ['request', 'my-requests'];
+  if (!FEATURES.requests) {
+    document.documentElement.classList.add('fu-requests-off');
+    const page = window.location.pathname.split('/').pop();
+    if (page === 'design-request.html' || page === 'requests.html') {
+      window.location.replace(`${base}index.html?paused=requests`);
+    }
+  }
+
   const icon = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
   const ICONS = {
     guideMap: icon('<circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/>'),
@@ -44,7 +59,10 @@
   // One source of truth for navigation, breadcrumbs and the command palette.
   // `short` is the label under the icon in the collapsed rail. `sidebar: false`
   // keeps a page out of the sidebar (still in breadcrumbs and search); `covers`
-  // lets one sidebar item stay highlighted for several pages.
+  // lets one sidebar item stay highlighted for several pages. `added` (the
+  // day the page shipped) drives the NEW tag: shown for NAV_NEW_DAYS, then it
+  // drops off by itself, so no badge is ever left on an old feature.
+  const NAV_NEW_DAYS = 14;
   const GUIDE_IDS = ['logo-guidelines', 'social-guidelines', 'video-guidelines', 'faq'];
   const NAV = [
     {
@@ -60,10 +78,10 @@
       id: 'ai',
       label: 'AI Studio',
       items: [
-        { id: 'generate', label: 'Generate', href: 'generate.html', icon: 'sparkle', badge: 'New', desc: 'Turn a brief into on-brand, editable Social Media posts.' },
-        { id: 'trends', label: 'Trends', href: 'generate.html?view=trends', icon: 'trending', badge: 'New', desc: 'What US sports fans are searching and reading now, by sport. Turn any trend into a design.' },
-        { id: 'video-ads', label: 'Video Ads', short: 'Ads', href: 'video-ads.html', icon: 'video', badge: 'New', desc: 'Newsletter sign-up video ads: a trending clip, ES copy styles and a CTA, exported as MP4.' },
-        { id: 'reel-maker', label: 'Reels Studio', short: 'Studio', href: 'reel-maker.html', icon: 'film', badge: 'New', desc: 'Turn a trend or a brief into a 20–45 s 9:16 reel: script, ES photos, stat cards, voiceover and captions. No game footage.' },
+        { id: 'generate', label: 'Generate', href: 'generate.html', icon: 'sparkle', added: '2026-10-22', desc: 'Turn a brief into on-brand, editable Social Media posts.' },
+        { id: 'trends', label: 'Trends', href: 'generate.html?view=trends', icon: 'trending', added: '2026-11-12', desc: 'What US sports fans are searching and reading now, by sport. Turn any trend into a design.' },
+        { id: 'video-ads', label: 'Video Ads', short: 'Ads', href: 'video-ads.html', icon: 'video', added: '2026-11-16', desc: 'Newsletter sign-up video ads: a trending clip, ES copy styles and a CTA, exported as MP4.' },
+        { id: 'reel-maker', label: 'Reels Studio', short: 'Studio', href: 'reel-maker.html', icon: 'film', added: '2026-11-17', desc: 'Turn a trend or a brief into a 20–45 s 9:16 reel: script, ES photos, stat cards, voiceover and captions. No game footage.' },
       ],
     },
     {
@@ -81,8 +99,8 @@
       label: 'Work',
       items: [
         { id: 'request', label: 'Design Request', short: 'Request', href: 'design-request.html', icon: 'request', desc: 'Send the design team one clear brief with context, copy, deadline and references.' },
-        { id: 'my-requests', label: 'My requests', short: 'Mine', href: 'requests.html', icon: 'inbox', count: true, desc: 'Track your design requests; designers work their queue and admins assign.' },
-        { id: 'gallery', label: 'Gallery', href: 'gallery.html', icon: 'gallery', badge: 'New', desc: 'Browse every Social Media post the team has exported.' },
+        { id: 'my-requests', label: 'My requests', short: 'Mine', href: 'requests.html', icon: 'inbox', count: true, added: '2026-11-17', desc: 'Track your design requests; designers work their queue and admins assign.' },
+        { id: 'gallery', label: 'Gallery', href: 'gallery.html', icon: 'gallery', added: '2026-10-22', desc: 'Browse every Social Media post the team has exported.' },
         { id: 'dashboard', label: 'Dashboard', href: 'dashboard.html', icon: 'dashboard', adminOnly: true },
       ],
     },
@@ -101,6 +119,7 @@
       ],
     },
   ];
+  NAV.forEach(group => { group.items = group.items.filter(item => !PAUSED_NAV_IDS.includes(item.id)); });
 
   const PAGE_IDS = {
     'reels.html': 'reels',
@@ -151,8 +170,15 @@
   // The yellow NEW tag: one markup for the sidebar and the phone menu (the
   // phone menu is the sidebar on small screens). It shimmers once, the first
   // time it is seen (es-motion.js), keyed per item so it never repeats.
+  function isNavItemNew(item, now = Date.now()) {
+    const added = Date.parse(`${item?.added || ''}T00:00:00Z`);
+    if (!Number.isFinite(added)) return false;
+    const age = now - added;
+    return age >= 0 && age < NAV_NEW_DAYS * 24 * 60 * 60 * 1000;
+  }
+
   function newBadgeMarkup(item) {
-    return item.badge ? `<span class="es-badge es-badge--new es-new-shine" data-es-new-key="nav-${item.id}">${item.badge}</span>` : '';
+    return isNavItemNew(item) ? `<span class="es-badge es-badge--new es-new-shine" data-es-new-key="nav-${item.id}">New</span>` : '';
   }
 
   // Only real nav links (built from NAV, so they carry data-shell-id) can be the
@@ -401,6 +427,7 @@
   }
 
   async function loadRequestCount({ force = false } = {}) {
+    if (!FEATURES.requests) return;
     if (!force) {
       try {
         const cached = JSON.parse(window.sessionStorage.getItem(REQUEST_COUNT_KEY) || 'null');
@@ -1023,5 +1050,5 @@
     if (slot && profile && profile.parentElement !== slot) slot.appendChild(profile);
   });
 
-  window.FrameUpShell = { openPalette, setCollapsed, nav: NAV, addPaletteSource };
+  window.FrameUpShell = { openPalette, setCollapsed, nav: NAV, addPaletteSource, isNavItemNew };
 })();
