@@ -6,10 +6,15 @@
 //           called directly with the OPENAI_API_KEY the repo already uses for
 //           Reels transcription. Model REMOVE_BG_MODEL, default
 //           gpt-image-1-mini (OpenAI's cheapest image model).
-//   gateway the same request through the Vercel AI Gateway
-//           (AI_GATEWAY_API_KEY, model "openai/<model>"). Opt-in only: the
-//           Gateway's OpenAI image-edit route isn't documented for
-//           transparent output, so it is never picked automatically.
+//   gateway the same edit through the Vercel AI Gateway's OpenAI-compatible
+//           /v1/images/edits (AI_GATEWAY_API_KEY, model "openai/<model>",
+//           JSON body with the photo as a data URL). Opt-in for now: the
+//           Gateway docs show edits (with gpt-image-2) but don't say that a
+//           transparent background is passed through, so it needs one real
+//           call on a preview before it becomes the default.
+//
+// Admins can check a deployment with GET /api/remove-bg?diag=1 (provider,
+// model, which keys are present as booleans; never the keys).
 //   bria    Bria RMBG 2.0 (BRIA_API_KEY), kept as an option.
 //
 // IMPORTANT: a generative model redraws pixels, so its picture of a real
@@ -30,7 +35,7 @@
 // Every call is logged to frameup_ai_usage (feature "remove-bg", real model,
 // cost from the response's token usage) and counts toward the shared
 // per-person hourly and weekly AI caps.
-const { verifyEsUser } = require('./_supabase-auth.js');
+const { verifyEsUser, authConfig } = require('./_supabase-auth.js');
 const { logUsage, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage } = require('./_ai-gateway.js');
 
 const OPENAI_EDITS = 'https://api.openai.com/v1/images/edits';
@@ -146,40 +151,76 @@ function parseImage(dataUrl) {
 }
 
 // ─── OpenAI (direct or through the Gateway) ─────────────────────────────
-async function callOpenAi(image, size, env = process.env) {
-  const via = provider(env);
-  const name = model(env);
+// The OpenAI image-edit options, shared by both routes.
+function editOptions(size, env = process.env) {
+  return {
+    background: 'transparent',
+    // WebP keeps the alpha channel and is far smaller than PNG, so the answer
+    // stays under Vercel's response limit. Only the alpha is used anyway.
+    output_format: 'webp',
+    output_compression: 90,
+    quality: quality(env),
+    size,
+    n: 1,
+  };
+}
+
+// Direct: multipart, as in OpenAI's API reference.
+function openAiRequest(image, size, env = process.env) {
   const form = new FormData();
-  form.append('model', via === 'gateway' ? `openai/${name}` : name);
+  form.append('model', model(env));
   form.append('prompt', PROMPT);
   form.append('image', new Blob([image.bytes], { type: image.mime }), `photo.${image.mime.split('/')[1]}`);
-  form.append('background', 'transparent');
-  // WebP keeps the alpha channel and is far smaller than PNG, so the answer
-  // stays under Vercel's response limit. Only the alpha is used anyway.
-  form.append('output_format', 'webp');
-  form.append('output_compression', '90');
-  form.append('quality', quality(env));
-  form.append('size', size);
-  form.append('n', '1');
-  const response = await fetch(via === 'gateway' ? GATEWAY_EDITS : OPENAI_EDITS, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${String(env[envVar(env)]).trim()}` },
-    body: form,
-    signal: AbortSignal.timeout(55000),
-  });
+  Object.entries(editOptions(size, env)).forEach(([key, value]) => form.append(key, String(value)));
+  return { url: OPENAI_EDITS, init: { method: 'POST', headers: { Authorization: `Bearer ${String(env.OPENAI_API_KEY).trim()}` }, body: form } };
+}
+
+// Gateway: the documented JSON form of /v1/images/edits, with the photo as a
+// base64 data URL in images[].image_url
+// (https://vercel.com/docs/ai-gateway/modalities/image-generation/openai#reference-images-by-url).
+// The OpenAI options go both as OpenAI-compatible top-level fields and in
+// providerOptions.openai (the Gateway's passthrough), since the docs don't
+// say which one the Gateway forwards for edits.
+function gatewayRequest(image, size, env = process.env) {
+  const options = editOptions(size, env);
+  const body = {
+    model: `openai/${model(env)}`,
+    prompt: PROMPT,
+    images: [{ image_url: `data:${image.mime};base64,${image.base64}` }],
+    ...options,
+    providerOptions: { openai: { background: options.background, output_format: options.output_format, output_compression: options.output_compression, quality: options.quality } },
+  };
+  return {
+    url: GATEWAY_EDITS,
+    init: { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${String(env.AI_GATEWAY_API_KEY).trim()}` }, body: JSON.stringify(body) },
+  };
+}
+
+// Image type from the returned bytes (base64 signature), not the label.
+function base64ImageType(b64) {
+  if (b64.startsWith('iVBOR')) return 'image/png';
+  if (b64.startsWith('UklGR')) return 'image/webp';
+  if (b64.startsWith('/9j/')) return 'image/jpeg';
+  return 'image/webp';
+}
+
+async function callOpenAi(image, size, env = process.env) {
+  const name = model(env);
+  const request = provider(env) === 'gateway' ? gatewayRequest(image, size, env) : openAiRequest(image, size, env);
+  const response = await fetch(request.url, { ...request.init, signal: AbortSignal.timeout(55000) });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = new Error(payload?.error?.message || `Image edit ${response.status}`);
+    const message = payload?.error?.message || payload?.message || `Image edit ${response.status}`;
+    const error = new Error(message);
     error.status = response.status;
-    error.moderation = /safety|moderation|content policy/i.test(String(payload?.error?.message || payload?.error?.code || ''));
+    error.moderation = /safety|moderation|content policy/i.test(String(message || payload?.error?.code || ''));
     throw error;
   }
   const b64 = payload?.data?.[0]?.b64_json;
   if (!b64) throw new Error('The image model returned no image.');
   if (b64.length > MAX_RESULT_BASE64) throw new Error('The cut-out came back too large.');
-  const format = String(payload?.output_format || 'webp').toLowerCase();
   return {
-    dataUrl: `data:image/${['png', 'webp'].includes(format) ? format : 'webp'};base64,${b64}`,
+    dataUrl: `data:${base64ImageType(b64)};base64,${b64}`,
     cost: openAiCost(name, payload?.usage, quality(env)),
     model: `openai/${name}`,
     usage: payload?.usage || null,
@@ -212,11 +253,55 @@ async function callBria(image, env = process.env) {
   return { dataUrl: `data:${type};base64,${base64}`, cost: briaCost(env), model: 'bria/rmbg-2.0', usage: null };
 }
 
+// Dashboard admin? Asks the database (is_es_designer_admin(), the same check
+// RLS uses) with the caller's own session; REMOVE_BG_DIAG_EMAILS can add
+// people. Fails closed.
+async function isAdmin(token, email, env = process.env) {
+  const extra = String(env.REMOVE_BG_DIAG_EMAILS || '').split(',').map(item => item.trim().toLowerCase()).filter(Boolean);
+  if (email && extra.includes(String(email).toLowerCase())) return true;
+  if (!token) return false;
+  try {
+    const config = authConfig();
+    const response = await fetch(`${config.url}/rest/v1/rpc/is_es_designer_admin`, {
+      method: 'POST',
+      headers: { apikey: config.publishableKey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: '{}',
+      signal: AbortSignal.timeout(2500),
+    });
+    if (!response.ok) return false;
+    return (await response.json()) === true;
+  } catch {
+    return false;
+  }
+}
+
+// What this deployment would do. Booleans only: never a key or part of one.
+function diagnostics(env = process.env) {
+  const via = provider(env);
+  const present = name => Boolean(String(env[name] || '').trim());
+  return {
+    provider: via,
+    providerSetExplicitly: Boolean(String(env.REMOVE_BG_PROVIDER || '').trim()),
+    model: via === 'bria' ? 'bria/rmbg-2.0' : `openai/${model(env)}`,
+    quality: via === 'bria' ? null : quality(env),
+    endpoint: via === 'bria' ? 'bria' : via === 'gateway' ? GATEWAY_EDITS : OPENAI_EDITS,
+    envVar: envVar(env),
+    configured: configured(env),
+    keys: { OPENAI_API_KEY: present('OPENAI_API_KEY'), AI_GATEWAY_API_KEY: present('AI_GATEWAY_API_KEY'), BRIA_API_KEY: present('BRIA_API_KEY') },
+    hourlyLimit: hourlyLimit(env),
+  };
+}
+
 exports.handler = async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' }, body: '' };
   if (event.httpMethod !== 'GET' && event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed.' });
   const auth = await verifyEsUser(event);
   if (!auth.ok) return json(auth.statusCode, { error: auth.error });
+  if (event.httpMethod === 'GET' && String(event.queryStringParameters?.diag || '') === '1') {
+    const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
+    if (!await isAdmin(token, auth.user?.email)) return json(403, { error: 'Admins only.' });
+    return json(200, { diag: diagnostics() });
+  }
   if (event.httpMethod === 'GET') {
     return json(200, { configured: configured(), provider: provider(), envVar: envVar(), model: model(), maxBytes: MAX_BYTES, sizes: [...SIZES] });
   }
@@ -266,4 +351,4 @@ exports.handler = async function handler(event) {
   }
 };
 
-exports._test = { provider, envVar, configured, model, quality, hourlyLimit, briaCost, openAiCost, underLimit, parseImage, resultUrl, recent, MAX_BYTES, OPENAI_EDITS, GATEWAY_EDITS, BRIA_ENDPOINT, DEFAULT_MODEL, PROMPT };
+exports._test = { diagnostics, isAdmin, gatewayRequest, openAiRequest, base64ImageType, provider, envVar, configured, model, quality, hourlyLimit, briaCost, openAiCost, underLimit, parseImage, resultUrl, recent, MAX_BYTES, OPENAI_EDITS, GATEWAY_EDITS, BRIA_ENDPOINT, DEFAULT_MODEL, PROMPT };

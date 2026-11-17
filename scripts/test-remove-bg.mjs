@@ -17,6 +17,7 @@ let briaStatus = 200;
 let user = { id: 'u1', email: 'designer@essentiallysports.com' };
 let weeklySpend = 0;
 let hourlyCalls = 0;
+let isAdmin = false;
 const USAGE = { input_tokens: 400, input_tokens_details: { text_tokens: 60, image_tokens: 340 }, output_tokens: 272, total_tokens: 672 };
 const okEdit = () => ({ created: 1, background: 'transparent', output_format: 'webp', data: [{ b64_json: WEBP_B64 }], usage: USAGE });
 
@@ -30,6 +31,7 @@ globalThis.fetch = async (url, options = {}) => {
   if (target.includes('/rpc/frameup_my_ai_spend')) return new Response(JSON.stringify([{ total_usd: weeklySpend }]), { status: 200 });
   if (target.includes('/rpc/frameup_my_ai_calls_last_hour')) return new Response(JSON.stringify(hourlyCalls), { status: 200 });
   if (target.includes('/rest/v1/frameup_ai_usage')) return new Response('', { status: 201 });
+  if (target.includes('/rpc/is_es_designer_admin')) return new Response(JSON.stringify(isAdmin), { status: 200 });
   if (target.endsWith('/v1/images/edits')) {
     return new Response(JSON.stringify(editPayload || (editStatus === 200 ? okEdit() : { error: { message: 'Server error' } })), { status: editStatus });
   }
@@ -161,7 +163,29 @@ assert.equal(parse(await post({ image: jpegData })).status, 200);
 const gw = calls.find(call => call.url === _test.GATEWAY_EDITS);
 assert.ok(gw, 'calls the Gateway');
 assert.equal(gw.options.headers.Authorization, 'Bearer gw-key');
-assert.equal(gw.options.body.get('model'), 'openai/gpt-image-1-mini');
+assert.equal(gw.options.headers['Content-Type'], 'application/json', 'documented JSON form of /v1/images/edits');
+const gwBody = JSON.parse(gw.options.body);
+assert.equal(gwBody.model, 'openai/gpt-image-1-mini');
+assert.equal(gwBody.images.length, 1);
+assert.equal(gwBody.images[0].image_url, jpegData, 'photo sent as a data URL');
+assert.equal(gwBody.background, 'transparent');
+assert.equal(gwBody.output_format, 'webp');
+assert.equal(gwBody.quality, 'low');
+assert.equal(gwBody.size, '1024x1024');
+assert.deepEqual(gwBody.providerOptions.openai, { background: 'transparent', output_format: 'webp', output_compression: 90, quality: 'low' }, 'also passed through providerOptions.openai');
+assert.ok(!calls.some(call => call.url === _test.OPENAI_EDITS), 'no direct OpenAI call on the gateway route');
+assert.equal(usageRows()[0].model, 'openai/gpt-image-1-mini');
+// The Gateway may answer PNG even when asked for WebP: the type comes from the bytes.
+editPayload = { data: [{ b64_json: PNG_1PX }] };
+assert.match(parse(await post({ image: jpegData })).body.dataUrl, /^data:image\/png;base64,/);
+editPayload = null;
+assert.equal(_test.base64ImageType('/9j/abc'), 'image/jpeg');
+// Gateway error messages come back in the documented { error: { message } } shape.
+editStatus = 400;
+editPayload = { error: { message: 'Request blocked by content moderation' } };
+assert.equal(parse(await post({ image: jpegData })).body.reason, 'moderation');
+editStatus = 200;
+editPayload = null;
 
 // 7. Bria provider (optional, no longer default).
 reset();
@@ -201,7 +225,36 @@ assert.equal(capped.body.reason, 'limit');
 assert.equal(_test.underLimit('other@essentiallysports.com', 2), true, 'limits are per person');
 assert.equal(_test.hourlyLimit({}), 30);
 
-// 9. The Vercel adapter forwards to the same handler.
+// 9. Admin diagnostics: booleans only, admins only.
+reset();
+process.env.OPENAI_API_KEY = 'sk-very-secret';
+process.env.AI_GATEWAY_API_KEY = 'gw-very-secret';
+const diagGet = (query = { diag: '1' }) => handler({ httpMethod: 'GET', headers: { authorization: 'Bearer good-token' }, queryStringParameters: query });
+isAdmin = false;
+assert.equal(parse(await diagGet()).status, 403, 'not an admin');
+assert.equal(parse(await handler({ httpMethod: 'GET', headers: {}, queryStringParameters: { diag: '1' } })).status, 401, 'signed out');
+isAdmin = true;
+const diag = parse(await diagGet());
+assert.equal(diag.status, 200);
+assert.deepEqual(diag.body.diag, {
+  provider: 'openai', providerSetExplicitly: false, model: 'openai/gpt-image-1-mini', quality: 'low',
+  endpoint: _test.OPENAI_EDITS, envVar: 'OPENAI_API_KEY', configured: true,
+  keys: { OPENAI_API_KEY: true, AI_GATEWAY_API_KEY: true, BRIA_API_KEY: false }, hourlyLimit: 30,
+});
+const diagText = JSON.stringify(diag.body);
+assert.ok(!diagText.includes('very-secret') && !diagText.includes('sk-'), 'never leaks a key');
+process.env.REMOVE_BG_PROVIDER = 'gateway';
+assert.equal(parse(await diagGet()).body.diag.endpoint, _test.GATEWAY_EDITS);
+assert.equal(parse(await diagGet()).body.diag.providerSetExplicitly, true);
+isAdmin = false;
+process.env.REMOVE_BG_DIAG_EMAILS = 'someone@essentiallysports.com, designer@essentiallysports.com';
+assert.equal(parse(await diagGet()).status, 200, 'extra diag emails allowed');
+delete process.env.REMOVE_BG_DIAG_EMAILS;
+assert.equal(parse(await diagGet({})).body.diag, undefined, 'plain GET is the normal status');
+reset();
+process.env.OPENAI_API_KEY = 'sk-test';
+
+// 10. The Vercel adapter forwards to the same handler.
 const adapter = require('../api/remove-bg.js');
 const response = { headers: {}, statusCode: 0, payload: null, setHeader(name, value) { this.headers[name.toLowerCase()] = value; }, status(code) { this.statusCode = code; return this; }, send(payload) { this.payload = payload; return this; }, json(payload) { this.payload = payload; return this; } };
 await adapter({ method: 'GET', headers: { authorization: 'Bearer good-token' }, query: {} }, response);

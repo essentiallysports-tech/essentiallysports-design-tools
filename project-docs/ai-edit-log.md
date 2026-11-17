@@ -44,6 +44,14 @@ and what's still uncommitted.
   plain-backdrop flood fill kept. Per-photo session cache and Undo kept. **Not tried against the real
   OpenAI API** (no real calls from this session); the mask pipeline was checked in the browser with a
   stand-in model response.
+  **Gateway follow-up:** `REMOVE_BG_PROVIDER=gateway` now uses the Gateway's documented JSON form of
+  `POST https://ai-gateway.vercel.sh/v1/images/edits` (`model: openai/gpt-image-1-mini`, `images:
+  [{ image_url: <data URL> }]`, plus `background/output_format/quality/size` top-level and in
+  `providerOptions.openai`). Default stays `openai` (direct) because the Gateway docs show edits only with
+  `openai/gpt-image-2` and never mention transparent output passthrough; switch with one env var after a
+  real call on a preview. New admin check: `GET /api/remove-bg?diag=1` (dashboard admins via
+  `is_es_designer_admin()`, or `REMOVE_BG_DIAG_EMAILS`) returns provider, model, endpoint and key presence
+  as booleans.
 - **Size packs** (`frameup-size-pack.js`, `frameup-zip.js`, `frameup-quick-wins.css`): Export settings →
   "Size pack" (and ⌘K "Export size pack") in the Social Media workspace: feed 1080×1350, square 1080×1080,
   story 1080×1920, X 1600×900, YouTube 1280×720, preview grid, tick sizes, one ZIP (tiny stored-ZIP writer,
