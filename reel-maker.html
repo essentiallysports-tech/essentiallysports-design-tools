@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261119-rel3">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="reel-maker.css?v=20261118-reels-ui">
+  <link rel="stylesheet" href="reel-maker.css?v=20261118-reels-fmt-ui">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
@@ -67,7 +67,9 @@
       <!-- Three steps: Topic, Edit, Export. -->
       <nav class="rm-steps" id="rm-steps" aria-label="Reel steps">
         <ol>
-          <li><button class="rm-step" type="button" data-step="topic" aria-current="step"><span class="rm-step__num" aria-hidden="true">1</span><span>Story</span></button></li>
+          <li data-dataflow hidden><button class="rm-step" type="button" data-step="format"><span class="rm-step__num" aria-hidden="true">1</span><span>Format</span></button></li>
+          <li data-dataflow hidden><button class="rm-step" type="button" data-step="source" disabled><span class="rm-step__num" aria-hidden="true">2</span><span id="rm-step-source-label">Source</span></button></li>
+          <li class="rm-steps__story"><button class="rm-step" type="button" data-step="topic" aria-current="step"><span class="rm-step__num" aria-hidden="true">1</span><span>Story</span></button></li>
           <li><button class="rm-step" type="button" data-step="edit" disabled><span class="rm-step__num" aria-hidden="true">2</span><span>Review</span></button></li>
           <li><button class="rm-step" type="button" data-step="export" disabled><span class="rm-step__num" aria-hidden="true">3</span><span>Export</span></button></li>
         </ol>
@@ -77,6 +79,10 @@
     <div class="rm-work">
       <!-- ── Stage: the live 9:16 preview ───────────────────────────────── -->
       <section class="rm-stage" id="rm-stage" aria-label="Reel preview">
+        <div class="es-segmented rm-seg rm-view" role="radiogroup" aria-label="Preview" id="rm-view" hidden>
+          <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-view="reel">Reel</button>
+          <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-view="carousel">Carousel</button>
+        </div>
         <div class="rm-device" id="rm-device">
           <canvas class="rm-canvas" id="rm-canvas" width="1080" height="1920" role="img" aria-label="Reel preview"></canvas>
           <div class="rm-safe" id="rm-safe" hidden aria-hidden="true"><span>Safe zone</span></div>
@@ -85,6 +91,12 @@
             <p>Your reel plays here.</p>
             <span>Pick a trend or write a brief, then Make my reel.</span>
           </div>
+        </div>
+        <div class="rm-slidenav" id="rm-slidenav" hidden>
+          <button class="rm-icon-btn" type="button" id="rm-slide-prev" aria-label="Previous slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+          <span class="rm-slidenav__dots" id="rm-slide-dots" aria-hidden="true"></span>
+          <span class="rm-time" id="rm-slide-pos" aria-live="polite">Slide 1 of 1</span>
+          <button class="rm-icon-btn" type="button" id="rm-slide-next" aria-label="Next slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
         </div>
         <div class="rm-transport" id="rm-transport">
           <button class="rm-icon-btn rm-play" type="button" id="rm-play" aria-label="Play" disabled>
@@ -110,8 +122,24 @@
       <section class="rm-panel" id="rm-panel" aria-labelledby="rm-panel-title">
         <h2 class="es-sr-only" id="rm-panel-title">Reel settings</h2>
 
+        <!-- Data formats, step 1: the format gallery (beside the trend-first path) -->
+        <div class="rm-pane rm-pane--gallery" id="rm-pane-format" data-pane="format" hidden>
+          <div class="rm-sec__head">
+            <h3 class="rm-sec__title" id="rm-gallery-title">Pick a format</h3>
+            <button class="es-btn es-btn--tertiary es-btn--sm" type="button" id="rm-gallery-close">Back to the story</button>
+          </div>
+          <div class="rm-gallery" id="rm-gallery" aria-labelledby="rm-gallery-title"></div>
+        </div>
+
+        <!-- Data formats, step 2: the source (a game, a clip or a player) -->
+        <div class="rm-pane" id="rm-pane-source" data-pane="source" hidden>
+          <div class="rm-srcstep" id="rm-source-step"></div>
+        </div>
+
         <!-- Step 1: Story -->
         <div class="rm-pane" id="rm-pane-topic" data-pane="topic">
+          <div class="rm-fmt-entry" id="rm-fmt-entry" role="group" aria-label="Start from data"></div>
+          <div class="rm-sec rm-datastory" id="rm-data-story" hidden></div>
           <div class="rm-sec" id="rm-topic">
             <div class="rm-sec__head">
               <h3 class="rm-sec__title">What's the story?</h3>
@@ -218,6 +246,7 @@
           </div>
           <div class="rm-notice" id="rm-notice" hidden></div>
           <div class="rm-summary" id="rm-summary"></div>
+          <div class="rm-sec rm-datarev" id="rm-data-review" hidden></div>
 
           <div class="rm-sec">
             <div class="rm-sec__head">
@@ -348,6 +377,15 @@
           <div class="rm-progress" id="rm-export-progress" hidden><span></span></div>
           <p class="rm-status" id="rm-export-status" role="status" aria-live="polite"></p>
           <ul class="rm-files" id="rm-files" aria-label="Exported files" hidden></ul>
+          <div class="rm-sec rm-carousel-out" id="rm-carousel-out" hidden>
+            <h3 class="rm-sec__title">Carousel</h3>
+            <p class="rm-hint" id="rm-carousel-note">1080×1350 slides for an Instagram carousel, as a PNG zip.</p>
+            <button class="es-btn es-btn--lg rm-block" type="button" id="rm-export-carousel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="18" x="5" y="3" rx="2"/><path d="M2 7v10"/><path d="M22 7v10"/></svg>
+              <span id="rm-export-carousel-text">Export carousel</span>
+            </button>
+            <p class="rm-status" id="rm-carousel-status" role="status" aria-live="polite"></p>
+          </div>
         </div>
 
         <footer class="rm-pane-nav" id="rm-pane-nav">
@@ -394,12 +432,17 @@
   <script src="frameup-cutout.js?v=20261118-rel1"></script>
   <script src="reel-formats.js?v=20261118-reels-formats"></script>
   <script src="reel-styles.js?v=20261118-reels-formats"></script>
+  <script src="reel-timeline.js?v=20261118-reels-fmt-ui"></script>
+  <script src="reel-replay.js?v=20261118-reels-fmt-ui"></script>
+  <script src="reel-data.js?v=20261118-reels-fmt-ui"></script>
   <script src="reel-render.js?v=20261118-reels-quality"></script>
   <script src="reel-lint.js?v=20261118-reels-quality"></script>
   <script src="reel-clips.js?v=20261118-reels-quality"></script>
+  <script src="frameup-zip.js?v=20261118-rel1"></script>
   <script src="reel-export.js?v=20261119-rel3"></script>
   <script src="reel-flow.js?v=20261118-reels-formats"></script>
+  <script src="reel-gallery.js?v=20261118-reels-fmt-ui"></script>
   <script src="es-motion.js?v=20261115-ds1"></script>
-  <script src="reel-maker.js?v=20261119-reels-base"></script>
+  <script src="reel-maker.js?v=20261118-reels-fmt-ui"></script>
 </body>
 </html>
