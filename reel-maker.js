@@ -8,15 +8,29 @@
 // Server: /api/reel-maker (netlify/functions/reel-maker.js).
 // Export: WebCodecs + Mediabunny (frame-exact, faster than real time), else
 // the Video Ads path (canvas.captureStream + MediaRecorder, real time).
+//
+// 2026-11-18 (reels-styles): one guided flow (Story -> Review -> Export) with
+// a single "Make my reel" that writes the script, records the voice, finds
+// clips and builds the reel; four styles (reel-styles.js) with live
+// thumbnails; four voices with previews; the voiceover is made automatically
+// and re-made for edited lines only; every beat gets a visual through the
+// fill chain (official X clips about 80% of the time, then ES photos,
+// headshots, team graphics, AI scenes or AI b-roll, then the style's designed
+// background; nothing chosen yet shows plain black).
 (() => {
   'use strict';
 
   const F = window.ReelFormats;
   const R = window.ReelRender;
   const L = window.ReelLint;
+  const S = window.ReelStyles;
+  const X = window.ReelExport;
+  const FLOW = window.ReelFlow;
   const TEAMS = window.VideoAdsTeams;
   const LOGOS = window.LeagueLogos;
-  if (!F || !R || !L) return;
+  const LOGOLIB = window.FrameUpLogos;
+  const CUT = window.FrameUpCutout;
+  if (!F || !R || !L || !S || !X || !FLOW) return;
 
   const $ = id => document.getElementById(id);
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -40,8 +54,16 @@
     x: svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'),
     link: svg('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'),
     refresh: svg('<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'),
+    play: svg('<path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>'),
+    stop: svg('<rect x="5" y="5" width="14" height="14" rx="2"/>'),
+    film: svg('<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/>'),
+    upload: svg('<path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'),
+    shield: svg('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>'),
+    scissors: svg('<circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/>'),
   };
-  const KIND_NAME = { hook: 'Hook', context: 'Context', point: 'Point', stat: 'Stat', rank: 'Rank', quote: 'Quote', payoff: 'Why it matters', cta: 'End card' };
+  const KIND_NAME = { hook: 'Hook', context: 'Context', point: 'Point', stat: 'Stat', rank: 'Rank', quote: 'Quote', payoff: 'Why it matters', cta: 'End card', bars: 'Bars', versus: 'Versus', dotrank: 'Dot ranking', chips: 'Squares', steps: 'Steps', tiles: 'Team tiles', roles: 'Position cards', mystery: 'Mystery card' };
+  // Where a beat's picture came from (the fill chain), in plain words.
+  const SOURCE_NAME = { 'x-clip': 'Official X clip', upload: 'Your upload', 'upload-clip': 'Your clip', photo: 'ES photo', headshot: 'ES photo', tile: 'Team graphic', scene: 'AI scene', 'ai-clip': 'AI b-roll clip', design: 'Designed background', none: 'Nothing yet (plain black)' };
   const SPORT_LABEL = { nfl: 'NFL', cfb: 'College FB', mlb: 'MLB', golf: 'Golf' };
   const LOCAL_KEY = 'frameup.reels.projects.v1';
   const HANDOFF_KEY = 'frameup.reelMoment.v1';
@@ -62,6 +84,12 @@
     back: $('rm-back'), next: $('rm-next'), nextText: $('rm-next-text'),
     photos: $('rm-photos'), photosForm: $('rm-photos-search'), photosQ: $('rm-photos-q'), photosGrid: $('rm-photos-grid'), photosNone: $('rm-photos-none'),
     toasts: $('rm-toasts'),
+    strip: $('rm-strip'), stripwrap: $('rm-stripwrap'), making: $('rm-making'), autoline: $('rm-autoline'), settings: $('rm-settings'), settingsMeta: $('rm-settings-meta'),
+    styles: $('rm-styles'), stylesEdit: $('rm-styles-edit'), styleWhy: $('rm-style-why'), styleMeta: $('rm-style-meta'),
+    voiceTopic: $('rm-voice-topic'), voiceEdit: $('rm-voice-edit'), voiceState: $('rm-voice-state'),
+    clipsOn: $('rm-clips-on'), aiclipsOn: $('rm-aiclips-on'), aiclipsRow: $('rm-aiclips-row'), aiclipsNote: $('rm-aiclips-note'),
+    statusline: $('rm-statusline'), statuslineText: $('rm-statusline-text'), lint: $('rm-lint'), costEdit: $('rm-cost-edit'),
+    musicMeta: $('rm-music-meta'), sourcesMeta: $('rm-sources-meta'), visualFile: $('rm-visual-file'), capstyleField: $('rm-capstyle-field'),
   };
   const ctx = els.canvas.getContext('2d');
 
@@ -77,7 +105,16 @@
     spent: { director: 0, factCheck: 0, revise: 0, voice: 0 },
     timeline: null, lint: null, t: 0, playing: false, busy: '',
     cloud: true,
+    // reels-styles
+    style: 'auto', styleSuggested: { id: 'classic', why: '' },
+    voiceOn: true, voiceId: 'brian', voiceError: '', voiceMaking: false,
+    useClips: true, aiClips: false, aiClipsUsed: 0,
+    videos: {}, cutouts: {}, visualSrc: {}, clipPool: [], clipPoolKey: '', selected: '',
+    flow: FLOW.initial(),
   };
+  state.spent.clips = 0;
+  state.spent.scenes = 0;
+  const styleId = () => (state.plan && state.plan.style) || (state.style === 'auto' ? state.styleSuggested.id : state.style);
 
   // ─── Small helpers ───────────────────────────────────────────────────────
   function toast(text, { tone = '', action = null } = {}) {
@@ -151,6 +188,8 @@
   const env = {
     measure,
     images: state.images,
+    videos: state.videos,
+    cutouts: state.cutouts,
     grain,
     layoutCache: g => { const key = `${g.id}|${g.inMs}`; let v = layoutCache.get(key); if (!v) { v = R.layoutGraphic(measure, g, state.timeline); layoutCache.set(key, v); } return v; },
     captionCache: card => { const key = `${card.s}`; let v = captionCache.get(key); if (!v) { v = R.layoutCaption(measure, card, state.timeline); captionCache.set(key, v); } return v; },
@@ -203,7 +242,8 @@
     });
     els.back.hidden = step === 'topic';
     els.next.hidden = step !== 'edit' && !(step === 'topic' && state.plan);
-    els.nextText.textContent = step === 'topic' ? 'Back to editing' : 'Next: Export';
+    els.nextText.textContent = step === 'topic' ? 'Back to your reel' : 'Next: Export';
+    els.stripwrap.hidden = step === 'topic' || !state.plan;
     els.next.classList.toggle('es-btn--primary', step === 'edit');
     if (step === 'export') renderExport();
     if (focus) els.panes[step].querySelector('h3, button, input, textarea')?.focus({ preventScroll: true });
@@ -352,8 +392,145 @@
     if (!btn) return;
     state.format = btn.dataset.format;
     renderFormats();
+    renderStyles();
   });
-  els.brief.addEventListener('input', debounce(() => { renderFormats(); renderCost(); }, 250));
+
+  // ─── Styles: picker with live thumbnails drawn by the renderer ──────────
+  const SAMPLE = {
+    classic: { beats: [{ id: 's1', kind: 'hook', text: 'Allen breaks the Bills record', vo: 'Josh Allen just broke the Bills record.', emphasis: 'record' }] },
+    explainer: { eyebrow: 'Josh Allen · Every season', beats: [{ id: 's1', kind: 'stat', text: 'Average throw depth', vo: 'His average throw travels 8.4 yards.', stat: { value: '8.4', label: 'Yards per throw' }, visual: 'chart', chips: { filled: '1', total: '5', label: 'Deep shots' } }] },
+    series: { series: { tag: 'ES Moneyball' }, strip: { label: 'Cap space', value: '-$12.3M', of: '$40M', tone: 'bad' }, beats: [{ id: 's1', kind: 'roles', text: 'Where the holes are', vo: 'Here is where the holes are.', roles: [{ role: 'WR', value: '#31', tone: 'bad' }, { role: 'LB', value: 'FA', tone: 'bad' }, { role: 'DB', value: '3 FAs', tone: 'bad' }, { role: 'DL', value: '#2', tone: 'good' }] }] },
+    countdown: { beats: [{ id: 's1', kind: 'rank', rank: 1, name: 'Josh Allen', text: 'Josh Allen', vo: 'Number one is Josh Allen.', detail: 'MVP favourite' }, { id: 's0', kind: 'rank', rank: 2, name: 'Lamar', text: 'Lamar', vo: 'Two.' }] },
+  };
+  const thumbCache = new Map();
+  function drawThumb(canvas, id) {
+    const c = canvas.getContext('2d');
+    const plan = { format: id === 'countdown' ? 'top5' : 'explainer', title: 'Sample', ...SAMPLE[id] };
+    const team = state.plan?.team || { name: 'Sample', colors: ['#0A2342', '#0A6FDE'] };
+    const assets = { 'design:bg': { kind: 'design', label: 'Designed background', rights: {} } };
+    const photos = Object.fromEntries(plan.beats.map(b => [b.id, ['design:bg']]));
+    const tl = R.buildTimeline(plan, { style: id, team, photos, assets });
+    c.save();
+    c.scale(canvas.width / 1080, canvas.height / 1920);
+    R.drawFrame(c, tl, 1600, { measure, images: state.images, videos: {}, cutouts: {}, grain });
+    c.restore();
+  }
+  function renderStyles() {
+    const suggestion = S.suggestStyle({ format: state.format, text: topicText() });
+    state.styleSuggested = suggestion;
+    const current = state.plan ? state.plan.style || 'classic' : state.style;
+    const items = [{ id: 'auto', label: 'Auto', blurb: `Suggested: ${S.get(suggestion.id).label}` }, ...S.STYLE_IDS.map(id => S.STYLES[id])];
+    const html = (prefix, withAuto) => (withAuto ? items : items.slice(1)).map(st => {
+      const on = current === st.id;
+      const sug = st.id === suggestion.id && topicText().trim().length > 8;
+      return `<button class="rm-style" type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-style="${st.id}">
+        ${st.id === 'auto' ? `<span class="rm-style__auto" aria-hidden="true">${ICON.sparkles}</span>` : `<canvas class="rm-style__thumb" width="108" height="192" data-thumb="${st.id}" aria-hidden="true"></canvas>`}
+        <span class="rm-style__name">${esc(st.label)}${sug ? '<span class="rm-format__dot" title="Suggested for this story"><span class="es-sr-only">, suggested</span></span>' : ''}</span>
+        <span class="rm-style__blurb">${esc(st.blurb)}</span></button>`;
+    }).join('');
+    els.styles.innerHTML = html('t', true);
+    els.stylesEdit.innerHTML = html('e', false);
+    [els.styles, els.stylesEdit].forEach(root => root.querySelectorAll('[data-thumb]').forEach(cv => drawThumb(cv, cv.dataset.thumb)));
+    els.styleWhy.textContent = topicText().trim().length > 8 ? `Suggested: ${S.get(suggestion.id).label}` : '';
+    if (els.styleMeta) els.styleMeta.textContent = state.plan ? S.get(styleId()).label : '';
+    renderAutoline();
+  }
+  function onStylePick(event) {
+    const btn = event.target.closest('[data-style]');
+    if (!btn) return;
+    const id = btn.dataset.style;
+    if (state.plan) {
+      if (id === 'auto' || id === state.plan.style) return;
+      state.plan.style = id;
+      state.style = id;
+      // A style that lacks a component shows it with its own layout; the
+      // director is asked again only if the editor wants (Revise).
+      if (S.get(id).caption.mode !== 'user') els.capstyleField.hidden = true; else els.capstyleField.hidden = false;
+      rebuild();
+      renderEdit();
+      if (S.get(id).cutout) autoCutout();
+      logEvent('edit', { what: 'style', style: id });
+    } else state.style = id;
+    renderStyles();
+  }
+  els.styles.addEventListener('click', onStylePick);
+  els.stylesEdit.addEventListener('click', onStylePick);
+
+  // "Auto picks: Data Explainer · Brian · clips on" above Make my reel.
+  function renderAutoline() {
+    const v = state.config.voice;
+    const voice = v.ready && state.voiceOn ? ((v.voices || []).find(x => x.id === state.voiceId) || {}).name || 'House voice' : 'Captions only';
+    const st = state.style === 'auto' ? `${S.get(state.styleSuggested.id).label} (auto)` : S.get(state.style).label;
+    const fmt = state.format === 'auto' ? 'format auto' : F.FORMATS[state.format].short;
+    els.autoline.innerHTML = `<span>${esc(st)}</span><span>${esc(voice)}</span><span>${state.useClips ? 'Clips on' : 'Stills only'}</span><span>${esc(fmt)}</span>`;
+    els.settingsMeta.textContent = `${st} · ${voice}`;
+  }
+
+  // ─── Voice picker (Story settings and Review fold share it) ─────────────
+  let sampleSource = null;
+  function voicePickerHtml(where) {
+    const v = state.config.voice;
+    if (!v.ready) return `<h3 class="rm-sec__title">Voice</h3><p class="rm-hint">${esc(v.reason || 'No voice is set up. Reels export with captions.')}</p>`;
+    const list = v.voices || [];
+    const est = F.estimateCost({ voiceMode: v.mode, voiceModel: v.model, voChars: voChars(), tier: 'economy' }).lines.find(l => l.id === 'voice').usd;
+    return `<div class="rm-sec__head"><h3 class="rm-sec__title">Voice</h3>
+      <label class="rm-switch"><input type="checkbox" role="switch" data-voice-on ${state.voiceOn ? 'checked' : ''}><span>${state.voiceOn ? 'On' : 'Off'}</span></label></div>
+      ${list.length ? `<div class="rm-voices" role="radiogroup" aria-label="Voice" ${state.voiceOn ? '' : 'aria-disabled="true"'}>${list.map(x => {
+        const on = state.voiceId === x.id;
+        return `<div class="rm-voice${on ? ' is-on' : ''}"><button class="rm-voice__pick" type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-voice="${x.id}" ${state.voiceOn ? '' : 'disabled'}><span class="rm-voice__name">${esc(x.name)}</span><span class="rm-voice__line">${esc(x.line)}</span></button><button class="rm-icon-btn rm-icon-btn--sm rm-voice__play" type="button" data-sample="${x.id}" aria-label="Hear ${esc(x.name)}" title="Hear a short sample">${ICON.play}</button></div>`;
+      }).join('')}</div>` : ''}
+      <p class="rm-hint">${state.voiceOn ? `Human-sounding AI voices (${esc(v.model.replace('elevenlabs/', 'ElevenLabs '))}), never a clone. About ${F.money(est)} for this reel; unchanged lines are reused for free.` : 'Off: the reel exports with captions only.'}</p>`;
+  }
+  function renderVoicePickers() {
+    els.voiceTopic.innerHTML = voicePickerHtml('topic');
+    els.voiceEdit.innerHTML = voicePickerHtml('edit');
+    renderAutoline();
+  }
+  async function playSample(id, btn) {
+    try { sampleSource?.stop(); } catch { /* ended */ }
+    btn.disabled = true;
+    try {
+      const key = `sample|${state.config.voice.model}|${id}`;
+      let rec = await VoiceCache.get(key);
+      if (!rec) {
+        const data = await api({ mode: 'voice-sample', voice: id });
+        state.spent.voice += Number(data.cost) || 0;
+        rec = { bytes: b64ToBytes(data.audio).buffer, mime: data.mime, words: [] };
+        VoiceCache.set(key, rec);
+      }
+      const ac = audioContext();
+      await ac.resume().catch(() => {});
+      const buffer = await ac.decodeAudioData(rec.bytes.slice(0));
+      sampleSource = ac.createBufferSource();
+      sampleSource.buffer = buffer;
+      sampleSource.connect(ac.destination);
+      sampleSource.start();
+    } catch (error) {
+      toast(error.message || 'The sample could not play.', { tone: 'error' });
+    } finally { btn.disabled = false; }
+  }
+  function onVoiceUi(event) {
+    const sample = event.target.closest('[data-sample]');
+    if (sample) { playSample(sample.dataset.sample, sample); return; }
+    const pick = event.target.closest('[data-voice]');
+    if (pick && pick.dataset.voice !== state.voiceId) {
+      state.voiceId = pick.dataset.voice;
+      renderVoicePickers();
+      if (state.plan && state.voiceOn) { state.voice = {}; rebuild(); renderVoice(); voiceSoon(0); }
+      logEvent('edit', { what: 'voice', voice: state.voiceId });
+    }
+  }
+  function onVoiceToggle(event) {
+    const box = event.target.closest('[data-voice-on]');
+    if (!box) return;
+    state.voiceOn = box.checked;
+    renderVoicePickers();
+    if (state.plan) { rebuild(); renderVoice(); if (state.voiceOn) voiceSoon(0); }
+  }
+  [els.voiceTopic, els.voiceEdit].forEach(root => { root.addEventListener('click', onVoiceUi); root.addEventListener('change', onVoiceToggle); });
+  els.clipsOn.addEventListener('change', () => { state.useClips = els.clipsOn.checked; renderAutoline(); renderCost(); });
+  els.aiclipsOn.addEventListener('change', () => { state.aiClips = els.aiclipsOn.checked; renderCost(); });
+  els.brief.addEventListener('input', debounce(() => { renderFormats(); renderStyles(); renderCost(); }, 250));
   els.sport.addEventListener('change', () => { state.sport = els.sport.value; });
   els.tier.addEventListener('click', event => {
     const btn = event.target.closest('[data-tier]');
@@ -368,12 +545,27 @@
     if (state.plan) return state.plan.beats.reduce((n, b) => n + (b.vo || '').length, 0);
     return 450;
   }
-  function renderCost() {
-    const est = F.estimateCost({ tier: state.tier, factCheck: state.factCheck, voiceMode: state.config.voice.ready ? state.config.voice.mode : 'off', voChars: voChars() });
+  function costEstimate() {
+    const v = state.config.voice;
+    const long = S.get(styleId()).seconds.max > 90;
     const ai = state.config.ai && !state.config.offline;
-    els.cost.innerHTML = `<details class="rm-cost__fold"><summary><span>Estimated cost for this reel</span><b>${ai ? `≈ ${F.money(est.total)}` : 'Free draft'}</b></summary>
+    const sceneBeats = state.plan ? state.plan.beats.filter(b => b.visual === 'scene').length : 1;
+    return F.estimateCost({
+      tier: state.tier, factCheck: state.factCheck, voiceMode: v.ready && state.voiceOn ? v.mode : 'off', voiceModel: v.model, voChars: voChars() || (long ? 1100 : 450),
+      clipSearches: state.useClips && ai ? 1 : 0, aiClips: state.useClips && state.aiClips && state.config.aiClips?.ready ? Math.min(state.config.aiClips.max, Math.max(1, sceneBeats)) : 0,
+      scenes: ai ? Math.min(2, sceneBeats) : 0, longForm: long,
+    });
+  }
+  function costHtml(title = 'Estimated cost for this reel') {
+    const est = costEstimate();
+    const ai = state.config.ai && !state.config.offline;
+    return `<details class="rm-cost__fold"><summary><span>${esc(title)}</span><b>${ai ? `≈ ${F.money(est.total)}` : 'Free draft'}</b></summary>
       <ul>${est.lines.map(line => `<li><span>${esc(line.label)}</span><span>${F.money(line.usd)}</span></li>`).join('')}</ul>
-      <p>Counts toward your weekly AI limit. ${ai ? '' : 'AI is off here, so you get a draft built from your words.'}</p></details>`;
+      <p>Counts toward your weekly AI limit. Official X clips are free once found. ${ai ? '' : 'AI is off here, so you get a draft built from your words.'}</p></details>`;
+  }
+  function renderCost() {
+    els.cost.innerHTML = costHtml();
+    if (els.costEdit) els.costEdit.innerHTML = costHtml(`Spent ${F.money(totalSpent())} so far · estimate`);
   }
 
   // ─── Write the reel ──────────────────────────────────────────────────────
@@ -383,7 +575,16 @@
     button.setAttribute('aria-busy', String(busy));
     if (label) textEl.textContent = label;
   }
-  async function writeReel() {
+  // ─── Make my reel: script -> voice -> visuals -> build ───────────────────
+  function renderMaking() {
+    const f = state.flow;
+    els.making.hidden = !f.making && !f.stages.some(x => x.state !== 'todo');
+    const mark = { done: ICON.check, failed: ICON.warn, skipped: '<span aria-hidden="true">–</span>', active: '<span class="rm-spin" aria-hidden="true"></span>', todo: '<span class="rm-dot" aria-hidden="true"></span>' };
+    els.making.innerHTML = f.stages.map(x => `<li class="rm-making__step is-${x.state}"><span class="rm-making__mark">${mark[x.state]}</span><span>${esc(x.label)}${x.note ? `<small>${esc(x.note)}</small>` : ''}</span><span class="es-sr-only">${x.state}</span></li>`).join('');
+  }
+  const flowEvent = event => { state.flow = FLOW.reduce(state.flow, event); renderMaking(); };
+  async function makeReel() {
+    if (state.flow.making) return;
     const brief = state.source === 'brief' ? els.brief.value.trim() : '';
     const trend = state.source === 'trend' ? state.trend : null;
     if (!brief && !trend) {
@@ -392,41 +593,74 @@
       return;
     }
     if (state.source === 'brief' && brief.length < 20) { els.writeStatus.textContent = 'Add a little more: who, what happened, and the numbers.'; els.brief.focus(); return; }
-    setBusy(els.write, els.writeText, true, state.factCheck ? 'Checking facts and writing…' : 'Writing the reel…');
+    flowEvent({ type: 'make' });
+    setBusy(els.write, els.writeText, true, 'Making your reel…');
     els.writeStatus.textContent = '';
-    const body = { mode: 'plan', brief, trend, format: state.format, sport: state.sport, tier: state.tier, factCheck: state.factCheck };
+    const started = Date.now();
+    // 1. Script.
+    const body = { mode: 'plan', brief, trend, format: state.format, sport: state.sport, tier: state.tier, factCheck: state.factCheck, style: state.style };
     try {
       const data = await api(body);
       state.spent.director += Number(data.costs?.director) || 0;
       state.spent.factCheck += Number(data.costs?.factCheck) || 0;
-      applyPlan(data, { brief, trend });
-      logEvent('plan', { source: data.source, format: data.plan.format, escalated: data.escalated, cost: data.cost, issues: (data.issues || []).length, beats: data.plan.beats.length });
+      if (data.suggestedStyle) state.styleSuggested = data.suggestedStyle;
+      applyPlan(data, { brief, trend, go: false });
+      logEvent('plan', { source: data.source, format: data.plan.format, style: data.plan.style, escalated: data.escalated, cost: data.cost, issues: (data.issues || []).length, beats: data.plan.beats.length });
+      flowEvent({ type: 'stage-done', stage: 'script', note: `${data.plan.beats.length} beats · ${S.get(data.plan.style).label}` });
     } catch (error) {
       if (error.offline) {
         // No server (static preview): a draft from the words on the page.
         const corpus = [brief, trend?.title, ...(trend?.related || []).map(r => r.title)].filter(Boolean).join('\n');
         const plan = F.fallbackPlan({ brief: corpus, title: trend?.title || '', format: state.format, sport: state.sport || trend?.sport || '' });
-        applyPlan({ plan, source: 'draft', notice: 'The AI server is not reachable here, so this is a draft built from your words.', corpus, sources: trend ? [{ type: 'trend', title: trend.title, url: trend.url }] : [{ type: 'brief', title: 'Your brief' }] }, { brief, trend });
+        plan.style = state.style === 'auto' ? state.styleSuggested.id : state.style;
+        applyPlan({ plan, source: 'draft', notice: 'The AI server is not reachable here, so this is a draft built from your words.', corpus, sources: trend ? [{ type: 'trend', title: trend.title, url: trend.url }] : [{ type: 'brief', title: 'Your brief' }] }, { brief, trend, go: false });
+        flowEvent({ type: 'stage-done', stage: 'script', note: 'Draft from your words' });
       } else {
+        flowEvent({ type: 'stage-done', stage: 'script', failed: true, note: error.message });
         els.writeStatus.textContent = error.message;
         toast(error.message, { tone: 'error' });
+        setBusy(els.write, els.writeText, false, 'Make my reel');
+        return;
       }
-    } finally {
-      setBusy(els.write, els.writeText, false, 'Write the reel');
     }
+    // 2. Voice (automatic when it is set up and on).
+    if (state.config.voice.ready && state.voiceOn) {
+      const out = await makeVoice({ auto: true });
+      flowEvent({ type: 'stage-done', stage: 'voice', failed: Boolean(out.failed), note: out.failed ? 'Captions only for now. Retry in Review.' : `${out.made + out.reused} lines` });
+    } else flowEvent({ type: 'stage-done', stage: 'voice', skipped: true, note: state.config.voice.ready ? 'Voice is off' : 'Captions only' });
+    // 3. Visuals: clips first, then the fill chain.
+    try {
+      const v = await fillVisuals();
+      flowEvent({ type: 'stage-done', stage: 'visuals', note: v.note });
+    } catch (error) {
+      flowEvent({ type: 'stage-done', stage: 'visuals', failed: true, note: 'Some beats still need a picture' });
+    }
+    // 4. Build.
+    rebuild();
+    if (S.get(styleId()).cutout) autoCutout();
+    flowEvent({ type: 'stage-done', stage: 'build', note: `${(state.timeline.durationMs / 1000).toFixed(0)} s` });
+    setBusy(els.write, els.writeText, false, 'Make my reel');
+    renderEdit();
+    goStep('edit', { focus: false });
+    toast('Your reel is ready. Tap a beat under the preview to change it.');
+    logEvent('make', { ms: Date.now() - started, style: styleId(), seconds: Math.round(state.timeline.durationMs / 1000), clipShare: clipShare().share });
   }
-  els.write.addEventListener('click', writeReel);
+  els.write.addEventListener('click', makeReel);
 
   function teamFor(plan) {
     const t = plan.team;
     if (t && t.name) return { name: t.name, colors: t.colors || [], logo: t.logo || '' };
     return null;
   }
-  function applyPlan(data, { brief = '', trend = null } = {}) {
+  function applyPlan(data, { brief = '', trend = null, go = true } = {}) {
     stop();
     const plan = data.plan;
     plan.beats.forEach((beat, i) => { beat.id = beat.id || `b${i + 1}-${Math.random().toString(36).slice(2, 6)}`; });
     plan.team = teamFor(plan);
+    plan.style = S.STYLES[plan.style] ? plan.style : (state.style === 'auto' ? state.styleSuggested.id : state.style);
+    state.selected = plan.beats[0]?.id || '';
+    state.visualSrc = {};
+    state.aiClipsUsed = 0;
     state.plan = plan;
     state.planSource = data.source || '';
     state.notice = data.notice || (data.source === 'draft' ? 'This is a draft built from your words. Edit the beats, or write again when AI is available.' : '');
@@ -441,8 +675,7 @@
     loadTeamLogo();
     rebuild();
     renderEdit();
-    goStep('edit', { focus: false });
-    pickPhotos();
+    if (go) { goStep('edit', { focus: false }); fillVisuals().then(() => rebuild()); }
     if (data.issues?.length) els.writeStatus.textContent = '';
   }
   async function loadTeamLogo() {
@@ -487,46 +720,373 @@
       },
     };
   }
-  async function usePhoto(beatId, photo) {
-    if (!photo) { delete state.photos[beatId]; rebuild(); renderBeats(); return; }
+  async function usePhoto(beatId, photo, { quiet = false } = {}) {
+    if (!photo) { setVisual(beatId, [designAsset()], 'design'); rebuild(); renderBeats(); return; }
     state.assets[photo.id] = photoAsset(photo);
-    state.photos[beatId] = [photo.id];
-    rebuild();
-    renderBeats();
+    setVisual(beatId, [photo.id], 'photo');
+    if (!quiet) { rebuild(); renderBeats(); }
     if (!state.images[photo.id]) {
       const img = await loadImage(photo.src, !photo.src.startsWith('/'));
-      if (img) { state.images[photo.id] = img; layoutCache = new Map(); draw(); renderBeats(); } else {
+      if (img) { state.images[photo.id] = img; layoutCache = new Map(); draw(); if (!quiet) renderBeats(); } else {
         delete state.photos[beatId];
+        delete state.visualSrc[beatId];
+        if (!quiet) { rebuild(); renderBeats(); }
+      }
+    }
+  }
+  // ─── Visuals: the fill chain (no beat is left empty) ─────────────────────
+  //   clip beats (about 80% of the time): an official X clip (Video Ads'
+  //   verified search, cached 30 min) -> an AI b-roll clip for scene beats
+  //   (when on, capped) -> the still chain below
+  //   still beats: ES image pool (the director's query, then the team, then
+  //   the league) -> the team graphic (logo on team colours) -> an AI scene
+  //   (scene beats only, never people) -> the style's designed background.
+  const slugOf = text => String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+  function setVisual(beatId, assetIds, source) {
+    state.photos[beatId] = assetIds;
+    state.visualSrc[beatId] = source;
+  }
+  function designAsset() {
+    state.assets['design:bg'] = { kind: 'design', label: `${S.get(styleId()).label} designed background`, rights: { source: 'FrameUp renderer', licence: 'ES-owned graphic', organic: true, paid: true } };
+    return 'design:bg';
+  }
+  function clipShare() {
+    const tl = state.timeline;
+    if (!tl) return { share: 0, clipMs: 0, totalMs: 0 };
+    let clipMs = 0;
+    tl.tracks.video.forEach(shot => { if (shot.clip) clipMs += shot.outMs - shot.inMs; });
+    return { share: tl.durationMs ? clipMs / tl.durationMs : 0, clipMs, totalMs: tl.durationMs };
+  }
+
+  // Clips: one verified search per reel (team, else the story), via Video Ads.
+  const CLIP_SPORTS = ['nfl', 'cfb', 'mlb'];
+  async function clipPool(plan) {
+    const sport = CLIP_SPORTS.includes(plan.sport) ? plan.sport : '';
+    if (!sport || !state.useClips || state.config.offline || !window.ESAuth?.fetchWithAuth) return [];
+    const team = plan.team?.name || '';
+    const key = `${sport}|${team || plan.title}`;
+    if (state.clipPoolKey === key) return state.clipPool;
+    try {
+      const response = await window.ESAuth.fetchWithAuth('/api/video-ads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(team ? { mode: 'find-clips', sport, team } : { mode: 'find-clips', sport, query: F.trimWords(plan.title, 8) }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.ok) return [];
+      state.spent.clips += Number(data.cost) || 0;
+      state.clipPool = (data.clips || []).filter(c => c.variants?.length);
+      state.clipPoolKey = key;
+      return state.clipPool;
+    } catch { return []; }
+  }
+  // The variant to download: up to 720p on the short side, else the smallest.
+  const pickVariant = variants => {
+    const ok = variants.filter(v => v.url && /\.mp4(\?|$)/.test(v.url));
+    const list = ok.length ? ok : variants;
+    const side = v => Math.min(v.width || 0, v.height || 0) || 0;
+    return [...list].sort((a, b) => (side(a) <= 720 ? 0 : 1) - (side(b) <= 720 ? 0 : 1) || side(b) - side(a))[0];
+  };
+  function videoFrom(src) {
+    return new Promise(resolve => {
+      const v = document.createElement('video');
+      v.muted = true; v.playsInline = true; v.preload = 'auto'; v.loop = false;
+      const done = ok => { clearTimeout(timer); resolve(ok ? v : null); };
+      const timer = setTimeout(() => done(v.readyState >= 2), 15000);
+      v.addEventListener('loadeddata', () => done(true), { once: true });
+      v.addEventListener('error', () => done(false), { once: true });
+      v.src = src;
+    });
+  }
+  const clipBlobs = new Map();
+  async function addClipAsset(id, { blob, url = '', label, rights, remote = '', post = '' }) {
+    let src = url;
+    if (blob) src = URL.createObjectURL(blob);
+    const video = await videoFrom(src);
+    if (!video) return false;
+    const durationMs = Math.round((video.duration || 6) * 1000);
+    state.videos[id] = video;
+    // A poster for the strip and thumbnails.
+    try { video.currentTime = Math.min(0.5, (video.duration || 1) / 3); await new Promise(r => video.addEventListener('seeked', r, { once: true })); } catch { /* keep going */ }
+    const poster = document.createElement('canvas');
+    poster.width = 160; poster.height = Math.round(160 * (video.videoHeight || 9) / (video.videoWidth || 16));
+    try { poster.getContext('2d').drawImage(video, 0, 0, poster.width, poster.height); state.images[id] = poster; } catch { /* no poster */ }
+    // Trim: skip the first moment (team intros, black frames); the beat plays from there.
+    const clipIn = durationMs > 4000 ? 0.4 : 0;
+    state.assets[id] = { kind: 'clip', label, src, remote, post, durationMs, clipIn, rights };
+    return true;
+  }
+  async function useXClip(beatId, clip) {
+    const variant = pickVariant(clip.variants || []);
+    if (!variant) return false;
+    const id = `clip:${slugOf(clip.url || variant.url).slice(-24)}`;
+    if (!state.assets[id]) {
+      let blob = clipBlobs.get(variant.url);
+      if (!blob) {
+        try {
+          const response = await fetch(variant.url, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
+          if (!response.ok) return false;
+          blob = await response.blob();
+          clipBlobs.set(variant.url, blob);
+        } catch { return false; }
+      }
+      const ok = await addClipAsset(id, {
+        blob, remote: variant.url, post: clip.url, label: `Clip from @${clip.handle || 'x'}`,
+        rights: { source: `Official X post (${clip.url})`, licence: 'Official team, league or network post on X. ES clears these for organic posts and Meta paid ads; keep the source link.', organic: true, paid: true, x: true, credit: clip.handle ? `@${clip.handle}` : '' },
+      });
+      if (!ok) return false;
+    }
+    setVisual(beatId, [id], 'x-clip');
+    return true;
+  }
+  function nextClip(pool, beat, used) {
+    const words = String(`${beat.photo} ${beat.text}`).toLowerCase().split(/\W+/).filter(w => w.length > 3);
+    const free = pool.filter(c => !used.has(c.url));
+    return free.find(c => words.some(w => String(c.text || '').toLowerCase().includes(w))) || free[0] || null;
+  }
+
+  // Stills.
+  async function teamTile(beatId, team, { key = '' } = {}) {
+    if (!team || !team.name) return '';
+    const entry = LOGOLIB ? LOGOLIB.findTeam(team.name, state.plan?.sport || '') : null;
+    const logoSrc = entry ? LOGOLIB.srcFor(entry) : (team.logo || '');
+    const slug = slugOf(team.name);
+    const logoId = `logo:lib:${slug}`;
+    if (logoSrc && !state.images[logoId]) {
+      const img = await loadImage(logoSrc, /^https?:/.test(logoSrc));
+      if (img) state.images[logoId] = img;
+    }
+    if (logoSrc) state.assets[logoId] = { kind: 'logo', label: `${team.name} logo`, src: logoSrc, rights: { source: entry ? 'FrameUp logo library' : 'Team mark (ESPN logo CDN)', licence: 'Editorial use of a team mark', organic: true, paid: true } };
+    const id = `tile:${slug}`;
+    state.assets[id] = { kind: 'tile', label: `${team.name} team graphic`, colors: (team.colors && team.colors.length ? team.colors : (entry?.colors || [])).slice(0, 2), logo: state.images[logoId] ? logoId : '', rights: { source: 'FrameUp renderer + team mark', licence: 'ES-owned graphic with an editorial team mark', organic: true, paid: true } };
+    if (key) state.photos[key] = [id]; else setVisual(beatId, [id], 'tile');
+    return id;
+  }
+  async function aiScene(beat) {
+    if (!state.config.ai || state.config.offline) return '';
+    try {
+      const data = await api({ mode: 'scene', scene: beat.scene || 'stadium', sport: state.plan.sport, colors: state.plan.team?.colors || [] });
+      state.spent.scenes += Number(data.cost) || 0;
+      const img = await loadImage(data.dataUrl);
+      if (!img) return '';
+      const id = `scene:${data.scene}:${slugOf((state.plan.team?.colors || []).join(''))}`;
+      state.images[id] = img;
+      state.assets[id] = { kind: 'scene', label: `AI scene (${data.scene})`, src: '', rights: { ...data.rights, credit: 'AI-generated' } };
+      setVisual(beat.id, [id], 'scene');
+      return id;
+    } catch { return ''; }
+  }
+  async function stillChain(beat, used) {
+    const plan = state.plan;
+    const team = plan.team;
+    if (beat.visual === 'logo-tile' && team && await teamTile(beat.id, team)) return 'tile';
+    if (beat.visual === 'scene' && await aiScene(beat)) return 'scene';
+    const queries = [beat.photo, team?.name, [F.SPORTS.find(x => x.id === plan.sport)?.label, team?.short || ''].join(' ').trim()].filter(Boolean);
+    for (const q of [...new Set(queries)]) {
+      const list = await searchPhotos(q);
+      const pick = list.find(p => !used.has(p.id) && (!p.width || p.width >= 600)) || list.find(p => !used.has(p.id));
+      if (pick) { used.add(pick.id); await usePhoto(beat.id, pick, { quiet: true }); state.visualSrc[beat.id] = beat.visual === 'headshot' ? 'headshot' : 'photo'; return 'photo'; }
+    }
+    if (team && await teamTile(beat.id, team)) return 'tile';
+    if (beat.visual === 'scene' && await aiScene(beat)) return 'scene';
+    setVisual(beat.id, [designAsset()], 'design');
+    return 'design';
+  }
+  // Component pictures: versus headshots and tile logos.
+  async function componentVisuals(beat) {
+    for (const [i, v] of (beat.versus || []).entries()) {
+      if (v.name === '?' || state.photos[`${beat.id}#v${i}`]) continue;
+      const list = await searchPhotos(v.photo || v.name);
+      const pick = list[0];
+      if (pick) { state.assets[pick.id] = photoAsset(pick); const img = await loadImage(pick.src, !pick.src.startsWith('/')); if (img) { state.images[pick.id] = img; state.photos[`${beat.id}#v${i}`] = [pick.id]; } }
+    }
+    for (const [i, t] of (beat.tiles || []).entries()) {
+      if (state.photos[`${beat.id}#t${i}`]) continue;
+      const entry = LOGOLIB ? LOGOLIB.findTeam(t.name || t.team, state.plan.sport || '') : null;
+      const src = entry ? LOGOLIB.srcFor(entry) : t.logo;
+      if (!src) continue;
+      const id = `logo:lib:${slugOf(t.name || t.team)}`;
+      const img = state.images[id] || await loadImage(src, /^https?:/.test(src));
+      if (!img) continue;
+      state.images[id] = img;
+      state.assets[id] = { kind: 'logo', label: `${t.team} logo`, src, rights: { source: entry ? 'FrameUp logo library' : 'Team mark', licence: 'Editorial use of a team mark', organic: true, paid: true } };
+      state.photos[`${beat.id}#t${i}`] = [id];
+      if (!t.colors?.length && entry?.colors) t.colors = entry.colors.slice(0, 2);
+    }
+  }
+  // An AI b-roll clip (async job, polled). Shows the AI scene still while it renders.
+  async function aiClip(beat, { wait = false } = {}) {
+    const cfg = state.config.aiClips;
+    if (!cfg?.ready || state.aiClipsUsed >= cfg.max) return false;
+    if (!state.photos[beat.id]?.length) await aiScene(beat);
+    let start;
+    try {
+      start = await api({ mode: 'ai-clip-start', scene: beat.scene || 'stadium', sport: state.plan.sport, colors: state.plan.team?.colors || [], used: state.aiClipsUsed });
+    } catch (error) { toast(error.message, { tone: 'error' }); return false; }
+    state.aiClipsUsed += 1;
+    state.spent.clips += Number(start.cost) || 0;
+    state.visualNote = { ...(state.visualNote || {}), [beat.id]: 'AI clip rendering…' };
+    renderBeats();
+    const poll = async () => {
+      let st = start.status === 'completed' ? start : null;
+      for (let i = 0; !st && i < 40; i += 1) {
+        await new Promise(r => setTimeout(r, 5000));
+        try { const s2 = await api({ mode: 'ai-clip-status', job: start.job, operation: start.operation }); if (s2.status !== 'pending') st = s2; } catch (error) { st = { ok: false, error: error.message }; }
+      }
+      delete state.visualNote[beat.id];
+      if (!st || !st.ok) { toast(st?.error || 'The AI clip took too long. The scene still stays.', { tone: 'error' }); renderBeats(); return false; }
+      let blob = null;
+      try {
+        if (st.data) blob = new Blob([b64ToBytes(st.data)], { type: st.mediaType || 'video/mp4' });
+        else blob = await (await fetch(st.url, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' })).blob();
+      } catch { blob = null; }
+      const id = `aiclip:${beat.id}`;
+      if (!blob || !await addClipAsset(id, { blob, label: `AI b-roll (${st.scene || beat.scene || 'scene'})`, rights: { ...st.rights, credit: 'AI-generated' } })) { toast('The AI clip could not be loaded. The scene still stays.', { tone: 'error' }); renderBeats(); return false; }
+      setVisual(beat.id, [id], 'ai-clip');
+      rebuild(); renderBeats();
+      return true;
+    };
+    if (wait) return poll();
+    poll();
+    return true;
+  }
+
+  async function fillVisuals({ only = null, force = false } = {}) {
+    const plan = state.plan;
+    if (!plan) return { note: '' };
+    if (!state.timeline) rebuild();
+    const beats = plan.beats.filter(b => !only || only.includes(b.id));
+    const pool = await clipPool(plan);
+    const aiLeft = state.aiClips && state.config.aiClips?.ready ? Math.max(0, state.config.aiClips.max - state.aiClipsUsed) : 0;
+    const durs = plan.beats.map(b => { const t = state.timeline.beats.find(x => x.id === b.id); return { id: b.id, kind: b.kind, visual: b.visual, durMs: t ? t.outMs - t.inMs : 2000 }; });
+    const mix = F.planVisualMix(durs, { target: 0.8, clipsAvailable: state.useClips ? pool.length + aiLeft : 0 });
+    const usedClips = new Set(Object.values(state.assets).filter(a => a.kind === 'clip' && a.post).map(a => a.post));
+    const usedPhotos = new Set(Object.values(state.photos).flat());
+    let n = 0;
+    for (const beat of beats) {
+      if (state.plan !== plan) return { note: '' };
+      await componentVisuals(beat).catch(() => {});
+      if (!force && state.photos[beat.id]?.length) continue;
+      if (beat.kind === 'cta') { setVisual(beat.id, [designAsset()], 'design'); continue; }
+      let done = false;
+      if (mix.mode[beat.id] === 'clip') {
+        const clip = nextClip(pool, beat, usedClips);
+        if (clip) { usedClips.add(clip.url); done = await useXClip(beat.id, clip); }
+        if (!done && beat.visual === 'scene' && state.aiClips && state.config.aiClips?.ready && state.aiClipsUsed < state.config.aiClips.max) done = await aiClip(beat);
+      }
+      if (!done) await stillChain(beat, usedPhotos);
+      n += 1;
+      if (n % 2 === 0) { rebuild(); renderBeats(); }
+    }
+    rebuild();
+    renderBeats();
+    const share = clipShare();
+    const empty = plan.beats.filter(b => b.kind !== 'cta' && !(state.photos[b.id] || []).length).length;
+    return { note: `${Math.round(share.share * 100)}% clips${empty ? ` · ${empty} still need a picture` : ''}`, share: share.share };
+  }
+
+  // Cut-out player for styles that stand one over the frame (hook beat):
+  // a free plain-backdrop cut first; the AI "Remove background" on request.
+  async function autoCutout({ ai = false } = {}) {
+    const plan = state.plan;
+    const beat = plan?.beats[0];
+    if (!beat || !CUT || !S.get(styleId()).cutout) return false;
+    const key = `${beat.id}#cut`;
+    if (state.photos[key] && state.cutouts[state.photos[key][0]] && !ai) return true;
+    const list = await searchPhotos(beat.photo || plan.team?.name || '');
+    for (const photo of list.slice(0, ai ? 1 : 4)) {
+      const img = state.images[photo.id] || await loadImage(photo.src, !photo.src.startsWith('/'));
+      if (!img) continue;
+      try {
+        let cut = null;
+        if (ai) {
+          const session = await window.ESAuth?.getSession?.();
+          const out = await CUT.removeWithModel(img, session?.token);
+          if (out.ok) cut = out.image;
+          else { toast('That photo could not be cut out cleanly. The framed photo stays.', { tone: 'error' }); return false; }
+        } else {
+          const c = document.createElement('canvas');
+          const k = Math.min(1, 1200 / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+          c.width = Math.round((img.naturalWidth || img.width) * k); c.height = Math.round((img.naturalHeight || img.height) * k);
+          const g = c.getContext('2d', { willReadFrequently: true });
+          g.drawImage(img, 0, 0, c.width, c.height);
+          const px = g.getImageData(0, 0, c.width, c.height);
+          const mask = CUT.plainBackdropMask(px.data, c.width, c.height);
+          if (!mask.ok) continue;
+          for (let i = 0; i < mask.alpha.length; i += 1) px.data[i * 4 + 3] = Math.min(px.data[i * 4 + 3], mask.alpha[i]);
+          g.putImageData(px, 0, 0);
+          cut = c;
+        }
+        state.images[photo.id] = img;
+        state.assets[photo.id] = photoAsset(photo);
+        state.cutouts[photo.id] = cut;
+        state.photos[key] = [photo.id];
         rebuild();
         renderBeats();
-      }
+        return true;
+      } catch { /* cross-site photo or no mask: keep the framed photo */ }
     }
+    return false;
   }
-  async function pickPhotos() {
-    const plan = state.plan;
-    if (!plan) return;
-    const used = new Set();
-    const fallbackQuery = plan.team?.name || F.trimWords(plan.title, 4);
-    for (const beat of plan.beats) {
-      if (state.plan !== plan) return;
-      if (beat.kind === 'cta') continue;
-      const list = await searchPhotos(beat.photo || fallbackQuery);
-      const pick = list.find(p => !used.has(p.id) && (!p.width || p.width >= 600)) || list.find(p => !used.has(p.id));
-      if (!pick) continue;
-      used.add(pick.id);
-      // A long beat gets a second photo for the second shot.
-      const second = list.find(p => !used.has(p.id) && p.id !== pick.id);
-      await usePhoto(beat.id, pick);
-      const beatTl = state.timeline?.beats.find(b => b.id === beat.id);
-      if (second && beatTl && beatTl.outMs - beatTl.inMs > F.PACE.shotMaxMs) {
-        used.add(second.id);
-        state.assets[second.id] = photoAsset(second);
-        const img = await loadImage(second.src, !second.src.startsWith('/'));
-        if (img) { state.images[second.id] = img; state.photos[beat.id] = [pick.id, second.id]; rebuild(); }
-      }
-    }
+
+  // Per-beat visual actions (Review).
+  async function visualAction(beatId, action) {
+    const beat = state.plan.beats.find(b => b.id === beatId);
+    if (!beat) return;
+    state.visualNote = { ...(state.visualNote || {}), [beatId]: 'Working…' };
     renderBeats();
+    try {
+      if (action === 'swap-clip') {
+        const pool = await clipPool(state.plan);
+        const current = (state.photos[beatId] || []).map(id => state.assets[id]?.post).filter(Boolean);
+        const used = new Set([...current, ...Object.values(state.assets).filter(a => a.post).map(a => a.post)]);
+        const clip = nextClip(pool, beat, used) || pool.find(c => !current.includes(c.url));
+        if (!clip || !await useXClip(beatId, clip)) toast(pool.length ? 'No other clip loaded. Try a photo or upload one.' : 'No official clips found for this story. Try a photo, a team graphic or an upload.', { tone: 'error' });
+      } else if (action === 'ai-clip') {
+        if (!await aiClip({ ...beat, scene: beat.scene || 'stadium' })) toast(state.config.aiClips?.ready ? `This reel already has ${state.config.aiClips.max} AI clips.` : 'AI b-roll is off for now.', { tone: 'error' });
+      } else if (action === 'photo') {
+        delete state.visualNote[beatId];
+        openPhotos(beatId);
+        return;
+      } else if (action === 'tile') {
+        if (!await teamTile(beatId, state.plan.team)) toast('This reel has no team for a team graphic.', { tone: 'error' });
+      } else if (action === 'scene') {
+        if (!await aiScene({ ...beat, scene: beat.scene || 'stadium' })) toast('The AI scene could not be made right now.', { tone: 'error' });
+      } else if (action === 'upload') {
+        uploadTarget = beatId;
+        delete state.visualNote[beatId];
+        els.visualFile.click();
+        return;
+      } else if (action === 'cutout') {
+        await autoCutout({ ai: true });
+      } else if (action === 'design') {
+        setVisual(beatId, [designAsset()], 'design');
+      }
+    } finally {
+      delete state.visualNote[beatId];
+      rebuild();
+      renderBeats();
+      logEvent('visuals', { action, source: state.visualSrc[beatId] || '' });
+    }
   }
+  let uploadTarget = '';
+  els.visualFile.addEventListener('change', async () => {
+    const file = els.visualFile.files[0];
+    els.visualFile.value = '';
+    if (!file || !uploadTarget) return;
+    if (file.size > 120 * 1024 * 1024) { toast('That file is too large (120 MB at most).', { tone: 'error' }); return; }
+    const rights = { source: 'Uploaded by you', licence: 'You confirmed ES may use it', organic: true, paid: true, credit: '' };
+    const id = `up:${Date.now().toString(36)}`;
+    if (file.type.startsWith('video/')) {
+      if (await addClipAsset(id, { blob: file, label: `Your clip: ${file.name.slice(0, 40)}`, rights })) setVisual(uploadTarget, [id], 'upload-clip');
+      else toast('That clip could not be read. Try an MP4.', { tone: 'error' });
+    } else {
+      const url = URL.createObjectURL(file);
+      const img = await loadImage(url);
+      if (!img) { toast('That image could not be read.', { tone: 'error' }); return; }
+      state.images[id] = img;
+      state.assets[id] = { kind: 'upload', label: `Your image: ${file.name.slice(0, 40)}`, src: url, rights };
+      setVisual(uploadTarget, [id], 'upload');
+    }
+    rebuild();
+    renderBeats();
+  });
 
   let photoTarget = null;
   async function openPhotos(beatId) {
@@ -560,14 +1120,16 @@
     logEvent('edit', { what: 'photo' });
   });
   els.photosNone.addEventListener('click', () => { els.photos.close(); usePhoto(photoTarget, null); });
+  els.photos.addEventListener('close', () => { if (state.plan) { renderBeats(); } });
 
   // ─── Timeline + lint ─────────────────────────────────────────────────────
   function voiceFor() {
-    // Only clips whose text still matches the beat's VO line are used.
+    // Only clips whose text (and voice) still match the beat's VO line are used.
     const out = {};
+    if (!state.voiceOn) return out;
     (state.plan?.beats || []).forEach(beat => {
       const v = state.voice[beat.id];
-      if (v && v.text === beat.vo) out[beat.id] = v;
+      if (v && v.text === beat.vo && v.voiceId === state.voiceId) out[beat.id] = v;
     });
     return out;
   }
@@ -576,7 +1138,7 @@
     const voice = voiceFor();
     const voiceMode = Object.keys(voice).length ? state.config.voice.mode : 'off';
     state.timeline = R.buildTimeline(state.plan, {
-      voice, photos: state.photos, assets: { ...state.assets }, team: state.plan.team, captionStyle: state.captionStyle,
+      style: styleId(), voice, photos: state.photos, assets: { ...state.assets }, team: state.plan.team, captionStyle: state.captionStyle,
       voiceMode, music: state.music ? { asset: 'music' } : null, sources: state.sources, corpus: state.corpus,
     });
     layoutCache = new Map();
@@ -590,6 +1152,7 @@
     renderLint();
     renderMeta();
     renderCost();
+    renderStrip();
     if (state.step === 'export') renderExport();
     draw();
     autosave();
@@ -617,10 +1180,13 @@
     const sevIcon = { critical: ICON.alert, warning: ICON.warn, info: ICON.info };
     const order = { critical: 0, warning: 1, info: 2 };
     const list = [...lint.issues].sort((a, b) => order[a.severity] - order[b.severity]);
+    const tl = state.timeline;
+    els.statuslineText.textContent = FLOW.statusLine({ critical: lint.critical, warnings: lint.warnings, seconds: tl ? tl.durationMs / 1000 : 0, usd: totalSpent(), money: F.money });
+    els.statusline.dataset.tone = lint.critical ? 'bad' : (lint.warnings ? 'warn' : 'good');
     els.lintBadge.className = `es-badge ${lint.critical ? 'es-badge--bad' : (lint.warnings ? 'es-badge--warn' : 'es-badge--good')}`;
     els.lintBadge.textContent = lint.critical ? `${lint.critical} to fix` : (lint.warnings ? `${lint.warnings} to review` : 'All clear');
     els.issues.innerHTML = list.length ? list.map(issue => {
-      const n = state.plan.beats.findIndex(b => b.id === issue.beat);
+      const n = state.plan ? state.plan.beats.findIndex(b => b.id === issue.beat) : -1;
       return `<li class="rm-issue is-${issue.severity}">${sevIcon[issue.severity]}<div><p>${esc(issue.message)}</p>${issue.fix ? `<span>${esc(issue.fix)}</span>` : ''}</div>${n >= 0 ? `<button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-goto="${esc(issue.beat)}">Beat ${n + 1}</button>` : ''}</li>`;
     }).join('') : `<li class="rm-issue is-good">${ICON.check}<div><p>Hook, safe zones, captions, sources and rights all check out.</p></div></li>`;
     // Flags on beat cards.
@@ -634,10 +1200,14 @@
   els.issues.addEventListener('click', event => {
     const btn = event.target.closest('[data-goto]');
     if (!btn) return;
-    const li = els.beats.querySelector(`[data-beat="${CSS.escape(btn.dataset.goto)}"]`);
-    seekBeat(btn.dataset.goto);
-    li?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    li?.querySelector('input, textarea')?.focus({ preventScroll: true });
+    selectBeat(btn.dataset.goto, { seek: true });
+    els.beats.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    els.beats.querySelector('input, textarea')?.focus({ preventScroll: true });
+  });
+  els.statusline.addEventListener('click', () => {
+    const open = els.lint.hidden;
+    els.lint.hidden = !open;
+    els.statusline.setAttribute('aria-expanded', String(open));
   });
 
   // ─── Step 2: Edit ────────────────────────────────────────────────────────
@@ -647,13 +1217,18 @@
     els.notice.hidden = !state.notice;
     els.notice.innerHTML = state.notice ? `${ICON.info}<p>${esc(state.notice)}</p>` : '';
     const teamChip = plan.team ? `<span class="rm-teamchip">${plan.team.logo ? `<span class="es-team-logo" style="--logo:20px"><img src="${esc(plan.team.logo)}" alt="" onerror="this.parentNode.classList.add('es-team-logo--dot')"></span>` : ''}${esc(plan.team.name)}</span>` : '';
-    els.summary.innerHTML = `<p class="rm-summary__eyebrow">${esc(fmt.label)}${plan.sport ? ` · ${esc(SPORT_LABEL[plan.sport] || plan.sport)}` : ''}${state.planSource === 'director-sonnet' ? ' · <span class="ais-badge" title="Sonnet improved a weak first draft">Sonnet</span>' : ''}</p>
+    const share = clipShare();
+    els.summary.innerHTML = `<p class="rm-summary__eyebrow">${esc(S.get(styleId()).label)} · ${esc(fmt.label)}${plan.sport ? ` · ${esc(SPORT_LABEL[plan.sport] || plan.sport)}` : ''}${state.planSource === 'director-sonnet' ? ' · <span class="ais-badge" title="Sonnet improved a weak first draft">Sonnet</span>' : ''}</p>
       <p class="rm-summary__title">${esc(plan.title || 'Untitled reel')}</p>
       ${plan.angle ? `<p class="rm-summary__angle">${esc(plan.angle)}</p>` : ''}${teamChip}
+      <div class="rm-ratio" title="Share of the reel's time"><span class="rm-ratio__bar"><span style="width:${Math.round(share.share * 100)}%"></span></span><span>Clips ${Math.round(share.share * 100)}% · Stills ${100 - Math.round(share.share * 100)}%</span></div>
       ${plan.hooks?.length ? `<div class="rm-hooks"><span>Other hooks</span>${plan.hooks.map((h, i) => `<button class="es-chip" type="button" data-hook="${i}">${esc(h)}</button>`).join('')}</div>` : ''}`;
     renderBeats();
     renderVoice();
+    renderVoicePickers();
     renderSources();
+    renderStyles();
+    els.capstyleField.hidden = S.get(styleId()).caption.mode !== 'user';
     $('rm-revise').hidden = !state.config.ai || state.config.offline;
   }
   els.summary.addEventListener('click', event => {
@@ -679,38 +1254,124 @@
     if (beat.kind === 'rank') parts.push(`<div class="rm-bf-pair">${f('name', `#${beat.rank} name`, beat.name || '', { maxlength: 60 })}${f('detail', 'Detail', beat.detail || '', { maxlength: 110 })}</div>`);
     if (beat.kind === 'quote') parts.push(f('quote.text', 'Quote (exact words)', beat.quote?.text || '', { area: true, maxlength: 220 }), f('quote.by', 'Said by', beat.quote?.by || '', { maxlength: 60 }));
     if (beat.kind !== 'cta') parts.push(f('emphasis', 'Highlight word', beat.emphasis || '', { maxlength: 30, placeholder: 'One word from the line' }));
+    // Data components: each row edits as "label = value" (numbers must be in a source).
+    const rows = (list, a, b2) => (list || []).map(x => `${x[a] || ''} = ${x[b2] || ''}`).join('\n');
+    if (beat.kind === 'bars') parts.push(f('rows.bars', 'Bars (label = value, one per line)', rows(beat.bars, 'label', 'value'), { area: true, maxlength: 200 }));
+    if (beat.kind === 'versus') parts.push(f('rows.versus', 'Cards (name = value, "?" for a mystery card)', rows(beat.versus, 'name', 'value'), { area: true, maxlength: 200 }));
+    if (beat.kind === 'roles') parts.push(f('rows.roles', 'Positions (role = value)', rows(beat.roles, 'role', 'value'), { area: true, maxlength: 200 }));
+    if (beat.kind === 'tiles') parts.push(f('rows.tiles', 'Teams (team = line)', rows(beat.tiles, 'team', 'label'), { area: true, maxlength: 200 }));
+    if (beat.kind === 'dotrank') parts.push(`<div class="rm-bf-pair">${f('dotrank.rank', 'Rank', beat.dotrank?.rank || '', { maxlength: 8 })}${f('dotrank.total', 'Out of', beat.dotrank?.total || '', { maxlength: 8 })}</div>`, f('dotrank.label', 'Callout', beat.dotrank?.label || '', { maxlength: 32 }));
+    if (beat.kind === 'chips' || (beat.kind === 'stat' && beat.chips)) parts.push(`<div class="rm-bf-pair">${f('chips.filled', 'Filled', beat.chips?.filled || '', { maxlength: 6 })}${f('chips.total', 'Out of', beat.chips?.total || '', { maxlength: 6 })}</div>`, f('chips.label', 'Label', beat.chips?.label || '', { maxlength: 40 }));
+    if (beat.kind === 'steps') parts.push(`<div class="rm-bf-pair">${f('steps.current', 'Step', beat.steps?.current || '', { maxlength: 2 })}${f('steps.total', 'Of', beat.steps?.total || '', { maxlength: 2 })}</div>`);
+    if (['bars', 'stat', 'mystery', 'context', 'point', 'payoff', 'hook'].includes(beat.kind) && S.get(styleId()).engine !== 'classic') parts.push(f('detail', 'Small line', beat.detail || '', { maxlength: 110 }));
     return parts.join('');
+  }
+  function visualCard(beat) {
+    const ids = state.photos[beat.id] || [];
+    const asset = ids[0] ? state.assets[ids[0]] : null;
+    const img = ids[0] && state.images[ids[0]];
+    const src = state.visualSrc[beat.id] || (asset ? (asset.kind === 'clip' ? 'x-clip' : 'photo') : 'none');
+    const note = state.visualNote?.[beat.id];
+    const clip = asset && asset.kind === 'clip';
+    const canAi = state.config.aiClips?.ready && state.aiClipsUsed < state.config.aiClips.max;
+    const cutable = beat === state.plan.beats[0] && S.get(styleId()).cutout && CUT && state.config.ai;
+    const btn = (action, label, icon, extra = '') => `<button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-visual="${action}" ${extra}>${icon}<span>${label}</span></button>`;
+    return `<div class="rm-visual">
+      <button class="rm-thumb${img ? '' : ' is-empty'}" type="button" data-photo aria-label="Choose a photo for this beat">${img ? (img.tagName === 'CANVAS' ? '<span class="rm-thumb__canvas" data-thumb-canvas></span>' : `<img src="${esc(img.src)}" alt="">`) : ICON.image}${clip ? `<span class="rm-thumb__badge">${ICON.film}</span>` : ''}</button>
+      <div class="rm-visual__meta"><p class="rm-visual__src">${esc(SOURCE_NAME[src] || src)}${asset?.rights?.credit ? ` · ${esc(asset.rights.credit)}` : ''}</p>
+        <p class="rm-hint">${note ? esc(note) : (src === 'none' ? 'Plain black until you pick something.' : esc(asset?.label || ''))}</p>
+        <div class="rm-visual__actions">
+          ${btn('swap-clip', clip ? 'Swap clip' : 'Use a clip', ICON.film)}
+          ${btn('photo', 'Use photo', ICON.image)}
+          ${state.plan.team ? btn('tile', 'Team graphic', ICON.shield) : ''}
+          ${canAi ? btn('ai-clip', 'Use AI clip', ICON.sparkles) : (state.config.ai ? btn('scene', 'AI scene', ICON.sparkles) : '')}
+          ${btn('upload', 'Upload', ICON.upload)}
+          ${cutable ? btn('cutout', 'Cut out the player', ICON.scissors) : ''}
+        </div></div></div>`;
+  }
+  function renderStrip() {
+    const tl = state.timeline;
+    if (!state.plan || !tl) { els.stripwrap.hidden = true; return; }
+    els.stripwrap.hidden = state.step === 'topic';
+    els.strip.innerHTML = state.plan.beats.map((beat, i) => {
+      const b = tl.beats.find(x => x.id === beat.id);
+      const id = (state.photos[beat.id] || [])[0];
+      const img = id && state.images[id];
+      const on = beat.id === state.selected;
+      const issue = state.lint?.issues.find(x => x.beat === beat.id && x.severity !== 'info');
+      const w = b ? Math.max(56, Math.min(140, (b.outMs - b.inMs) / 40)) : 64;
+      return `<li><button class="rm-chipbeat${on ? ' is-on' : ''}${issue ? ` has-${issue.severity}` : ''}" type="button" data-pick="${esc(beat.id)}" aria-pressed="${on}" style="--w:${w}px" aria-label="Beat ${i + 1}, ${esc(KIND_NAME[beat.kind] || beat.kind)}${b ? `, ${fmtTime(b.inMs)}` : ''}">
+        <span class="rm-chipbeat__img">${img && img.src ? `<img src="${esc(img.src)}" alt="">` : ''}${state.assets[id]?.kind === 'clip' ? `<span class="rm-chipbeat__clip">${ICON.film}</span>` : ''}</span>
+        <span class="rm-chipbeat__n">${i + 1}</span><span class="rm-chipbeat__kind">${esc(KIND_NAME[beat.kind] || beat.kind)}</span></button></li>`;
+    }).join('') + `<li><button class="rm-chipbeat rm-chipbeat--add" type="button" id="rm-add-beat" aria-label="Add a beat" ${state.plan.beats.length >= S.get(styleId()).beats.max ? 'disabled' : ''}>${ICON.plus}</button></li>`;
+    // Canvas posters (clips) are drawn into the chips.
+    els.strip.querySelectorAll('[data-pick]').forEach(btn => {
+      const id = (state.photos[btn.dataset.pick] || [])[0];
+      const img = id && state.images[id];
+      if (img && img.tagName === 'CANVAS') { const c = document.createElement('canvas'); c.width = 80; c.height = 80; const g = c.getContext('2d'); const k = Math.max(80 / img.width, 80 / img.height); g.drawImage(img, (80 - img.width * k) / 2, (80 - img.height * k) / 2, img.width * k, img.height * k); btn.querySelector('.rm-chipbeat__img').prepend(c); }
+    });
+  }
+  els.strip.addEventListener('click', event => {
+    if (event.target.closest('#rm-add-beat')) { addBeat(); return; }
+    const btn = event.target.closest('[data-pick]');
+    if (!btn) return;
+    selectBeat(btn.dataset.pick, { seek: true });
+  });
+  function selectBeat(id, { seek: doSeek = false, focus = false } = {}) {
+    state.selected = id;
+    renderBeats();
+    if (doSeek) seekBeat(id);
+    if (focus) els.beats.querySelector('input, textarea')?.focus();
+  }
+  function addBeat() {
+    const at = Math.max(1, state.plan.beats.findIndex(b => b.id === state.selected) + 1 || state.plan.beats.length - 1);
+    const beat = { id: `b${Date.now().toString(36)}`, kind: 'point', text: 'New point', vo: 'Say what this beat adds.', emphasis: '', photo: state.plan.team?.name || '' };
+    state.plan.beats.splice(Math.min(at, state.plan.beats.length - 1), 0, beat);
+    state.selected = beat.id;
+    rebuild();
+    renderBeats();
+    fillVisuals({ only: [beat.id] }).then(() => { rebuild(); renderBeats(); });
+    els.beats.querySelector('input')?.select();
   }
   function renderBeats() {
     if (!state.plan) return;
     const tl = state.timeline;
     const active = document.activeElement;
     const keepId = active && els.beats.contains(active) ? active.id : '';
-    els.beats.innerHTML = state.plan.beats.map((beat, i) => {
-      const b = tl?.beats.find(x => x.id === beat.id);
-      const photoId = (state.photos[beat.id] || [])[0];
-      const img = photoId && state.images[photoId];
-      const voiced = state.voice[beat.id] && state.voice[beat.id].text === beat.vo;
-      return `<li class="rm-beat" data-beat="${esc(beat.id)}" data-kind="${esc(beat.kind)}">
+    if (!state.plan.beats.some(b => b.id === state.selected)) state.selected = state.plan.beats[0]?.id || '';
+    const i = state.plan.beats.findIndex(b => b.id === state.selected);
+    const beat = state.plan.beats[i];
+    const b = tl?.beats.find(x => x.id === beat.id);
+    const voiced = state.voice[beat.id] && state.voice[beat.id].text === beat.vo;
+    els.beats.innerHTML = `<li class="rm-beat" data-beat="${esc(beat.id)}" data-kind="${esc(beat.kind)}">
         <div class="rm-beat__head">
           <button class="rm-beat__seek" type="button" data-seek="${esc(beat.id)}" aria-label="Play from beat ${i + 1}"><span class="rm-beat__n">${i + 1}</span><span class="rm-beat__kind">${esc(KIND_NAME[beat.kind] || beat.kind)}${beat.kind === 'rank' ? ` #${beat.rank}` : ''}</span><span class="rm-beat__time">${b ? `${fmtTime(b.inMs)}–${fmtTime(b.outMs)}` : ''}</span>${voiced ? '<span class="rm-beat__vo" title="Voiceover ready">VO</span>' : ''}</button>
           <span class="rm-beat__tools">
-            <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-move="-1" aria-label="Move beat ${i + 1} up" ${i === 0 ? 'disabled' : ''}>${ICON.up}</button>
-            <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-move="1" aria-label="Move beat ${i + 1} down" ${i === state.plan.beats.length - 1 ? 'disabled' : ''}>${ICON.down}</button>
+            <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-move="-1" aria-label="Move beat ${i + 1} earlier" ${i === 0 ? 'disabled' : ''}>${ICON.up}</button>
+            <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-move="1" aria-label="Move beat ${i + 1} later" ${i === state.plan.beats.length - 1 ? 'disabled' : ''}>${ICON.down}</button>
             <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-remove aria-label="Delete beat ${i + 1}" ${state.plan.beats.length <= 2 ? 'disabled' : ''}>${ICON.trash}</button>
           </span>
         </div>
-        <div class="rm-beat__body">
-          <button class="rm-thumb${img ? '' : ' is-empty'}" type="button" data-photo aria-label="${img ? 'Change' : 'Add'} the photo for beat ${i + 1}" ${beat.kind === 'cta' ? 'hidden' : ''}>${img ? `<img src="${esc(img.src)}" alt="">` : ICON.image}<span>${img ? 'Change' : 'Photo'}</span></button>
-          <div class="rm-beat__fields">${beatFields(beat, i)}</div>
-        </div>
+        ${beat.kind === 'cta' ? '' : visualCard(beat)}
+        <div class="rm-beat__fields">${beatFields(beat, i)}</div>
         <p class="rm-beat__flag" aria-live="polite"></p>
       </li>`;
-    }).join('') + `<li class="rm-beats__add"><button class="es-btn es-btn--sm es-btn--tertiary" type="button" id="rm-add-beat" ${state.plan.beats.length >= 12 ? 'disabled' : ''}>${ICON.plus}<span>Add a beat</span></button></li>`;
+    const holder = els.beats.querySelector('[data-thumb-canvas]');
+    const img = state.images[(state.photos[beat.id] || [])[0]];
+    if (holder && img) { const c = document.createElement('canvas'); c.width = 128; c.height = 128; const g = c.getContext('2d'); const k = Math.max(128 / img.width, 128 / img.height); g.drawImage(img, (128 - img.width * k) / 2, (128 - img.height * k) / 2, img.width * k, img.height * k); holder.replaceWith(c); }
+    els.beatsMeta.textContent = `Beat ${i + 1} of ${state.plan.beats.length}`;
+    renderStrip();
     renderLint();
     if (keepId) { const el = $(keepId); if (el) { el.focus(); const len = el.value.length; try { el.setSelectionRange(len, len); } catch { /* not a text field */ } } }
   }
   function setField(beat, field, value) {
+    if (field.startsWith('rows.')) {
+      const kind = field.slice(5);
+      const keys = { bars: ['label', 'value'], versus: ['name', 'value'], roles: ['role', 'value'], tiles: ['team', 'label'] }[kind];
+      const old = beat[kind] || [];
+      beat[kind] = String(value).split('\n').map((line, i) => { const [a, ...rest] = line.split('='); return { ...(old[i] || {}), [keys[0]]: a.trim(), [keys[1]]: rest.join('=').trim() }; }).filter(x => x[keys[0]]).slice(0, 4);
+      return;
+    }
     if (field.includes('.')) {
       const [a, b] = field.split('.');
       beat[a] = { ...(beat[a] || {}), [b]: value };
@@ -724,6 +1385,7 @@
     if (!beat) return;
     setField(beat, input.dataset.field, input.value);
     if (beat.kind === 'rank' && input.dataset.field === 'name') beat.text = input.value;
+    if (input.dataset.field === 'vo') voiceSoon();
     const counter = input.closest('.rm-bf')?.querySelector('.rm-count');
     if (counter) { const max = input.dataset.field === 'vo' ? F.PACE.voMaxWords : F.PACE.textMaxWords; const n = F.wordCount(input.value); counter.textContent = `${n}/${max}`; counter.classList.toggle('is-over', n > max); }
     rebuildSoon();
@@ -732,15 +1394,9 @@
   const editedSoon = debounce(() => logEvent('edit', { what: 'text' }), 4000);
   els.beats.addEventListener('click', event => {
     const li = event.target.closest('[data-beat]');
-    if (event.target.closest('#rm-add-beat')) {
-      const at = Math.max(1, state.plan.beats.length - 1);
-      state.plan.beats.splice(at, 0, { id: `b${Date.now().toString(36)}`, kind: 'point', text: 'New point', vo: 'Say what this beat adds.', emphasis: '', photo: state.plan.team?.name || '' });
-      rebuild();
-      renderBeats();
-      els.beats.querySelectorAll('[data-beat]')[at]?.querySelector('input')?.select();
-      return;
-    }
     if (!li) return;
+    const vis = event.target.closest('[data-visual]');
+    if (vis) { visualAction(li.dataset.beat, vis.dataset.visual); return; }
     const i = state.plan.beats.findIndex(b => b.id === li.dataset.beat);
     if (event.target.closest('[data-seek]')) { seekBeat(li.dataset.beat); return; }
     if (event.target.closest('[data-photo]')) { openPhotos(li.dataset.beat); return; }
@@ -752,11 +1408,12 @@
       state.plan.beats.splice(j, 0, beat);
       rebuild();
       renderBeats();
-      els.beats.querySelectorAll('[data-beat]')[j]?.querySelector(`[data-move="${move.dataset.move}"]`)?.focus();
+      els.beats.querySelector(`[data-move="${move.dataset.move}"]`)?.focus();
       return;
     }
     if (event.target.closest('[data-remove]')) {
       const [removed] = state.plan.beats.splice(i, 1);
+      state.selected = (state.plan.beats[i] || state.plan.beats[i - 1]).id;
       rebuild();
       renderBeats();
       toast(`Beat ${i + 1} deleted`, { action: { label: 'Undo', run: () => { state.plan.beats.splice(i, 0, removed); rebuild(); renderBeats(); } } });
@@ -777,14 +1434,23 @@
     els.askForm.setAttribute('aria-busy', 'true');
     try {
       const data = await api({ mode: 'revise', plan: state.plan, instruction, corpus: `${state.corpus}\n${els.extraSource.value}` });
+      data.plan.beats.forEach(beat => { const o = state.plan.beats.find(x => x.photo && x.photo === beat.photo && state.visualSrc[x.id]); if (o) beat._from = o.id; });
       state.spent.revise += Number(data.cost) || 0;
       const old = state.plan;
-      data.plan.beats.forEach((beat, i) => { beat.id = `b${i + 1}-${Math.random().toString(36).slice(2, 6)}`; const same = old.beats.find(o => o.photo && o.photo === beat.photo); if (same && state.photos[same.id]) state.photos[beat.id] = state.photos[same.id]; });
+      data.plan.beats.forEach((beat, i) => {
+        beat.id = `b${i + 1}-${Math.random().toString(36).slice(2, 6)}`;
+        const same = beat._from ? old.beats.find(o => o.id === beat._from) : old.beats.find(o => o.photo && o.photo === beat.photo);
+        delete beat._from;
+        if (same && state.photos[same.id]) { state.photos[beat.id] = state.photos[same.id]; state.visualSrc[beat.id] = state.visualSrc[same.id]; }
+      });
       data.plan.team = old.team;
+      data.plan.style = old.style;
       state.plan = data.plan;
+      state.selected = data.plan.beats[0]?.id || '';
       rebuild();
       renderEdit();
       pickPhotosMissing();
+      voiceSoon(0);
       toast('Revised. Your photos were kept where the beat still matches.');
       logEvent('revise', { instruction: String(instruction).slice(0, 80), cost: data.cost });
     } catch (error) {
@@ -795,87 +1461,119 @@
       els.askForm.removeAttribute('aria-busy');
     }
   }
-  async function pickPhotosMissing() {
-    const plan = state.plan;
-    for (const beat of plan.beats) {
-      if (state.plan !== plan || beat.kind === 'cta' || state.photos[beat.id]) continue;
-      const list = await searchPhotos(beat.photo || plan.team?.name || '');
-      const taken = new Set(Object.values(state.photos).flat());
-      const pick = list.find(p => !taken.has(p.id)) || list[0];
-      if (pick) await usePhoto(beat.id, pick);
-    }
-  }
+  const pickPhotosMissing = () => fillVisuals();
   document.querySelectorAll('[data-revise]').forEach(btn => btn.addEventListener('click', () => revise(btn.dataset.revise)));
   els.askForm.addEventListener('submit', event => { event.preventDefault(); const v = els.askInput.value.trim(); if (v.length >= 3) { revise(v); els.askInput.value = ''; } });
 
   // ─── Voice ───────────────────────────────────────────────────────────────
+  function voiceCounts() {
+    const beats = state.plan?.beats || [];
+    const withVo = beats.filter(b => (b.vo || '').trim()).length;
+    const voiced = beats.filter(b => state.voice[b.id] && state.voice[b.id].text === b.vo && state.voice[b.id].voiceId === state.voiceId).length;
+    return { withVo, voiced };
+  }
   function renderVoice() {
     const v = state.config.voice;
-    const beats = state.plan?.beats || [];
-    const voiced = beats.filter(b => state.voice[b.id] && state.voice[b.id].text === b.vo).length;
-    const withVo = beats.filter(b => (b.vo || '').trim()).length;
-    els.voiceBadge.className = `es-badge ${v.ready ? (voiced && voiced === withVo ? 'es-badge--good' : 'es-badge--brand') : ''}`;
-    els.voiceBadge.textContent = v.ready ? (voiced && voiced === withVo ? 'Voice ready' : (voiced ? `${voiced} of ${withVo} voiced` : 'House voice')) : 'Captions only';
-    els.voiceNote.textContent = v.ready
-      ? `${v.label}. One AI voice for every reel, never a cloned voice. Edited lines are re-voiced; unchanged ones are reused for free.`
-      : (v.reason || `No voice is set up. The reel exports with captions${state.music ? ' and music' : ''}.`);
-    els.voiceBtn.hidden = !v.ready;
-    els.voiceBtn.disabled = Boolean(state.busy) || !withVo || voiced === withVo;
-    els.voiceBtn.textContent = voiced && voiced < withVo ? 'Voice the edited lines' : (voiced === withVo && withVo ? 'Voiceover is up to date' : 'Make the voiceover');
+    const { withVo, voiced } = voiceCounts();
+    const on = v.ready && state.voiceOn;
+    const all = voiced && voiced === withVo;
+    els.voiceBadge.className = `es-badge ${on ? (all ? 'es-badge--good' : (state.voiceError ? 'es-badge--bad' : 'es-badge--brand')) : ''}`;
+    els.voiceBadge.textContent = !on ? 'Captions only' : (state.voiceMaking ? 'Recording…' : (all ? 'Voice ready' : (state.voiceError ? 'Voice failed' : `${voiced} of ${withVo} voiced`)));
+    els.voiceNote.textContent = on
+      ? `${v.label}. Edited lines are re-voiced automatically; unchanged ones are reused for free.`
+      : (v.ready ? 'Voice is off: the reel exports with captions only.' : (v.reason || `No voice is set up. The reel exports with captions${state.music ? ' and music' : ''}.`));
+    // Failure: clear, non-blocking, with Retry. Captions-only export still works.
+    els.voiceState.innerHTML = on && state.voiceError && !state.voiceMaking
+      ? `<div class="rm-voicefail">${ICON.warn}<div><p><b>The voiceover didn't record.</b> ${esc(state.voiceError)}</p><span>You can still export with captions only.</span></div><button class="es-btn es-btn--sm" type="button" data-voice-retry>Retry</button></div>`
+      : '';
+    els.voiceBtn.hidden = !on || all || state.voiceMaking || Boolean(state.voiceError);
+    els.voiceBtn.disabled = Boolean(state.busy) || !withVo || all;
+    els.voiceBtn.textContent = voiced ? 'Voice the edited lines' : 'Make the voiceover';
   }
+  els.voiceState.addEventListener('click', event => { if (event.target.closest('[data-voice-retry]')) { state.voiceError = ''; makeVoice({ auto: false }); } });
   function audioContext() {
     if (!state.ac) state.ac = new (window.AudioContext || window.webkitAudioContext)();
     return state.ac;
   }
   const b64ToBytes = b64 => { const bin = atob(b64); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i); return out; };
-  async function makeVoice() {
-    if (!state.plan || state.busy) return;
-    state.busy = 'voice';
-    const beats = state.plan.beats.filter(b => (b.vo || '').trim() && !(state.voice[b.id] && state.voice[b.id].text === b.vo));
-    const bar = els.voiceProgress.querySelector('span');
-    els.voiceProgress.hidden = false;
-    bar.style.width = '4%';
-    setBusy(els.voiceBtn, els.voiceBtn, true);
-    let done = 0;
-    let failed = '';
-    const ac = audioContext();
-    for (const beat of beats) {
-      const key = `${state.config.voice.mode}|${state.config.voice.model}|${beat.vo}`;
-      try {
-        let rec = await VoiceCache.get(key);
-        if (!rec) {
-          const data = await api({ mode: 'voice', text: beat.vo, beat: beat.id });
-          state.spent.voice += Number(data.cost) || 0;
-          if (data.alignedBy) state.alignedBy = data.alignedBy;
-          rec = { bytes: b64ToBytes(data.audio).buffer, mime: data.mime, words: data.words || [] };
-          VoiceCache.set(key, rec);
+  // Voices every line that has no matching clip yet (the per-line cache makes
+  // unchanged lines free). Returns { made, reused, failed }.
+  let voiceRun = null;
+  async function makeVoice({ auto = false } = {}) {
+    if (!state.plan || !state.config.voice.ready || !state.voiceOn) return { made: 0, reused: 0, failed: '' };
+    if (voiceRun) return voiceRun;
+    voiceRun = (async () => {
+      state.voiceMaking = true;
+      state.voiceError = '';
+      const voiceId = state.voiceId;
+      const beats = state.plan.beats.filter(b => (b.vo || '').trim() && !(state.voice[b.id] && state.voice[b.id].text === b.vo && state.voice[b.id].voiceId === voiceId));
+      const bar = els.voiceProgress.querySelector('span');
+      els.voiceProgress.hidden = false;
+      bar.style.width = '4%';
+      renderVoice();
+      let done = 0;
+      let made = 0;
+      let reused = 0;
+      let failed = '';
+      const ac = audioContext();
+      for (const beat of beats) {
+        const hook = state.plan.beats.indexOf(beat) === 0;
+        const key = `${state.config.voice.mode}|${state.config.voice.model}|${voiceId}|${hook ? 'h' : ''}|${beat.vo}`;
+        els.writeStatus.textContent = auto ? `Recording the voiceover… ${done + 1} of ${beats.length}` : '';
+        try {
+          let rec = await VoiceCache.get(key);
+          if (!rec) {
+            const data = await api({ mode: 'voice', text: beat.vo, beat: beat.id, voice: voiceId, hook });
+            state.spent.voice += Number(data.cost) || 0;
+            if (data.alignedBy) state.alignedBy = data.alignedBy;
+            rec = { bytes: b64ToBytes(data.audio).buffer, mime: data.mime, words: data.words || [], model: data.model };
+            VoiceCache.set(key, rec);
+            made += 1;
+          } else reused += 1;
+          const buffer = await ac.decodeAudioData(rec.bytes.slice(0));
+          const asset = `vo:${beat.id}`;
+          state.buffers[asset] = buffer;
+          const name = (state.config.voice.voices || []).find(x => x.id === voiceId)?.name || 'ES house voice';
+          state.assets[asset] = {
+            kind: 'vo', label: `Voiceover, beat ${state.plan.beats.indexOf(beat) + 1}`,
+            rights: { source: state.config.voice.mode === 'elevenlabs' ? 'ElevenLabs direct (ES house voice)' : `Vercel AI Gateway, ${rec.model || state.config.voice.model} (${name}, an ElevenLabs library voice)`, licence: 'AI voice, not a clone of any person; commercial use under the provider terms', organic: true, paid: true },
+          };
+          state.voice[beat.id] = { text: beat.vo, voiceId, durationMs: Math.round(buffer.duration * 1000), words: rec.words, asset };
+        } catch (error) {
+          failed = error.message || 'The voiceover could not be made.';
+          if (error.status === 429 || error.reason === 'budget' || error.status === 503 || error.offline) break;
         }
-        const buffer = await ac.decodeAudioData(rec.bytes.slice(0));
-        const asset = `vo:${beat.id}`;
-        state.buffers[asset] = buffer;
-        state.assets[asset] = {
-          kind: 'vo', label: `Voiceover, beat ${state.plan.beats.indexOf(beat) + 1}`,
-          rights: { source: state.config.voice.mode === 'elevenlabs' ? 'ElevenLabs direct (ES house voice)' : `Vercel AI Gateway, ${state.config.voice.model || 'TTS'} (ES house voice, a public library voice)`, licence: 'AI voice, not a clone of any person; commercial use under the provider terms', organic: true, paid: true },
-        };
-        state.voice[beat.id] = { text: beat.vo, durationMs: Math.round(buffer.duration * 1000), words: rec.words, asset };
-      } catch (error) {
-        failed = error.message || 'The voiceover could not be made.';
-        if (error.status === 429 || error.reason === 'budget' || error.status === 503) break;
+        done += 1;
+        bar.style.width = `${Math.round((done / Math.max(1, beats.length)) * 100)}%`;
       }
-      done += 1;
-      bar.style.width = `${Math.round((done / beats.length) * 100)}%`;
-    }
-    state.busy = '';
-    setBusy(els.voiceBtn, els.voiceBtn, false);
-    setTimeout(() => { els.voiceProgress.hidden = true; }, 600);
-    rebuild();
-    renderBeats();
-    renderVoice();
-    if (failed) toast(failed, { tone: 'error' });
-    else toast('Voiceover ready. Captions now follow the voice word by word.');
-    logEvent('voice', { beats: beats.length, failed: Boolean(failed), mode: state.config.voice.mode });
+      state.voiceMaking = false;
+      state.voiceError = failed;
+      setTimeout(() => { els.voiceProgress.hidden = true; }, 600);
+      if (auto) els.writeStatus.textContent = '';
+      rebuild();
+      renderBeats();
+      renderVoice();
+      if (failed && !auto) toast(failed, { tone: 'error', action: { label: 'Retry', run: () => { state.voiceError = ''; makeVoice(); } } });
+      else if (!failed && made && !auto) toast('Voiceover updated. Captions follow the voice word by word.');
+      if (beats.length) logEvent('voice', { beats: beats.length, made, reused, failed: Boolean(failed), mode: state.config.voice.mode, voice: voiceId, model: state.config.voice.model });
+      return { made, reused, failed };
+    })();
+    try { return await voiceRun; } finally { voiceRun = null; }
   }
-  els.voiceBtn.addEventListener('click', makeVoice);
+  // Edited lines are re-voiced after a pause in typing; always before play and export.
+  let voiceTimer = 0;
+  function voiceSoon(ms = 1800) {
+    clearTimeout(voiceTimer);
+    if (!state.config.voice.ready || !state.voiceOn) return;
+    voiceTimer = setTimeout(() => { makeVoice(); }, ms);
+  }
+  async function ensureVoice() {
+    clearTimeout(voiceTimer);
+    if (!state.config.voice.ready || !state.voiceOn || state.voiceError) return;
+    const { withVo, voiced } = voiceCounts();
+    if (voiced < withVo) await makeVoice();
+  }
+  els.voiceBtn.addEventListener('click', () => makeVoice());
   els.capstyle.addEventListener('click', event => {
     const btn = event.target.closest('[data-cap]');
     if (!btn) return;
@@ -925,6 +1623,7 @@
     state.music = { title, source };
     state.assets.music = { kind: 'music', label: `Music: ${title}`, rights: { source: source === 'library' ? 'ES music library' : 'Uploaded by you', licence, organic: Boolean(licence), paid: Boolean(licence) && paid } };
     els.musicName.textContent = title;
+    els.musicMeta.textContent = title;
     els.licence.hidden = source !== 'upload';
     if (source === 'upload') { els.licenceNote.value = licence; els.licencePaid.checked = paid; }
     rebuild();
@@ -932,7 +1631,7 @@
   }
   els.musicPick.addEventListener('change', async () => {
     const id = els.musicPick.value;
-    if (!id) { state.music = null; delete state.assets.music; delete state.buffers.music; els.musicName.textContent = ''; els.licence.hidden = true; rebuild(); return; }
+    if (!id) { state.music = null; delete state.assets.music; delete state.buffers.music; els.musicName.textContent = ''; els.musicMeta.textContent = 'None'; els.licence.hidden = true; rebuild(); return; }
     if (id === '__upload') return;
     const track = state.musicLibrary.find(t => t.id === id);
     try {
@@ -967,6 +1666,7 @@
 
   // ─── Sources ─────────────────────────────────────────────────────────────
   function renderSources() {
+    els.sourcesMeta.textContent = state.sources.length ? `${state.sources.length}` : '';
     els.sourcesList.innerHTML = state.sources.length ? state.sources.map(s => `<li><span class="rm-src__type">${esc({ brief: 'Brief', trend: 'Trend', news: 'News', 'fact-check': 'Fact check' }[s.type] || 'Source')}</span>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}${ICON.link}</a>` : `<span>${esc(s.title)}</span>`}</li>`).join('') : '<li class="rm-hint">No sources yet.</li>';
   }
   els.extraSource.addEventListener('input', debounce(() => { state.extraSource = els.extraSource.value; rebuild(); }, 300));
@@ -1006,12 +1706,46 @@
   }
 
   // ─── Preview ─────────────────────────────────────────────────────────────
+  // Clips follow the preview clock: playing, they run and are nudged back when
+  // they drift; paused or scrubbing, they seek and the frame redraws.
+  let redrawQueued = false;
+  const redrawSoon = () => { if (redrawQueued) return; redrawQueued = true; requestAnimationFrame(() => { redrawQueued = false; draw(); }); };
+  function syncClips(t, playing) {
+    const want = state.timeline ? R.clipTimes(state.timeline, t) : [];
+    const active = new Set(want.map(w => w.asset));
+    Object.entries(state.videos).forEach(([id, v]) => { if (!active.has(id) && !v.paused) v.pause(); });
+    want.forEach(({ asset, time }) => {
+      const v = state.videos[asset];
+      if (!v) return;
+      if (playing) {
+        if (v.paused) { try { v.currentTime = time; } catch { /* not ready */ } v.play().catch(() => {}); } else if (Math.abs(v.currentTime - time) > 0.35) v.currentTime = time;
+      } else if (Math.abs(v.currentTime - time) > 0.04) {
+        if (!v.paused) v.pause();
+        v.currentTime = time;
+        v.addEventListener('seeked', redrawSoon, { once: true });
+      }
+    });
+  }
+  // Export: every clip on screen shows exactly its frame before drawing.
+  async function seekClipsExact(t) {
+    const want = state.timeline ? R.clipTimes(state.timeline, t) : [];
+    await Promise.all(want.map(({ asset, time }) => {
+      const v = state.videos[asset];
+      if (!v || Math.abs(v.currentTime - time) < 0.5 / 30) return null;
+      return new Promise(resolve => {
+        const timer = setTimeout(resolve, 1000);
+        v.addEventListener('seeked', () => { clearTimeout(timer); resolve(); }, { once: true });
+        v.currentTime = time;
+      });
+    }));
+  }
   function draw() {
     if (!state.timeline) {
       ctx.fillStyle = '#101114';
       ctx.fillRect(0, 0, 1080, 1920);
       return;
     }
+    if (!state.exporting) syncClips(state.t, state.playing);
     R.drawFrame(ctx, state.timeline, state.t, env);
     const d = state.timeline.durationMs;
     els.scrub.value = String(Math.round((state.t / d) * 1000));
@@ -1028,6 +1762,13 @@
     state.playing = true;
     els.play.classList.add('is-playing');
     els.play.setAttribute('aria-label', 'Pause');
+    // The preview speaks: edited lines are voiced first.
+    if (voiceCounts().voiced < voiceCounts().withVo && state.voiceOn && state.config.voice.ready && !state.voiceError) {
+      els.stageMeta.textContent = 'Recording the voiceover for the edited lines…';
+      await ensureVoice();
+      renderMeta();
+      if (!state.playing) return;
+    }
     const mix = await renderMix().catch(() => null);
     if (!state.playing) return;
     const ac = audioContext();
@@ -1058,6 +1799,7 @@
     cancelAnimationFrame(raf);
     try { playSource?.stop(); } catch { /* already stopped */ }
     playSource = null;
+    Object.values(state.videos).forEach(v => { try { v.pause(); } catch { /* fine */ } });
     els.play.classList.remove('is-playing');
     els.play.setAttribute('aria-label', 'Play');
   }
@@ -1153,33 +1895,10 @@
     const canvas = document.createElement('canvas');
     canvas.width = 1080; canvas.height = 1920;
     const c = canvas.getContext('2d');
-    const output = new MB.Output({ format: new MB.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new MB.BufferTarget() });
-    const video = new MB.CanvasSource(canvas, { codec: 'avc', bitrate: 8e6, keyFrameInterval: 2 });
-    output.addVideoTrack(video, { frameRate: 30 });
-    let audio = null;
-    if (mix) { audio = new MB.AudioBufferSource({ codec: 'aac', bitrate: 192e3 }); output.addAudioTrack(audio); }
     job.cancel = async () => { job.cancelled = true; };
-    await output.start();
-    const fps = 30;
-    const frames = Math.ceil((tl.durationMs / 1000) * fps);
-    const slice = sec => {
-      // One second of the mix at a time, interleaved with the video.
-      const start = Math.floor(sec * mix.sampleRate);
-      const end = Math.min(mix.length, Math.floor((sec + 1) * mix.sampleRate));
-      if (end <= start) return null;
-      const buf = new AudioBuffer({ length: end - start, numberOfChannels: mix.numberOfChannels, sampleRate: mix.sampleRate });
-      for (let ch = 0; ch < mix.numberOfChannels; ch += 1) buf.copyToChannel(mix.getChannelData(ch).subarray(start, end), ch);
-      return buf;
-    };
-    for (let i = 0; i < frames; i += 1) {
-      if (job.cancelled) { await output.cancel(); throw new Error('cancelled'); }
-      if (audio && i % fps === 0) { const s = slice(i / fps); if (s) await audio.add(s); }
-      R.drawFrame(c, tl, (i * 1000) / fps, env);
-      await video.add(i / fps, 1 / fps);
-      if (i % 6 === 0) { onProgress(i / frames); await new Promise(r => setTimeout(r, 0)); }
-    }
-    await output.finalize();
-    return { blob: new Blob([output.target.buffer], { type: 'video/mp4' }), ext: 'mp4', how: 'webcodecs' };
+    Object.values(state.videos).forEach(v => { try { v.pause(); } catch { /* fine */ } });
+    const out = await X.encodeMediabunny({ MB, canvas, durationMs: tl.durationMs, mix, fps: 30, onProgress, job, prepare: seekClipsExact, draw: t => R.drawFrame(c, tl, t, env) });
+    return { blob: new Blob([out.buffer], { type: 'video/mp4' }), ext: 'mp4', how: 'webcodecs', hasAudio: out.hasAudio };
   }
   // Fallback: the Video Ads path, real time (MediaRecorder).
   async function recordRealtime(tl, mix, onProgress, job) {
@@ -1191,9 +1910,7 @@
     const stream = canvas.captureStream(30);
     const ac = audioContext();
     await ac.resume();
-    const dest = ac.createMediaStreamDestination();
-    let src = null;
-    if (mix) { src = ac.createBufferSource(); src.buffer = mix; src.connect(dest); dest.stream.getAudioTracks().forEach(t => stream.addTrack(t)); }
+    const src = X.attachAudio(stream, ac, mix);
     const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 12e6, audioBitsPerSecond: 192000 });
     const chunks = [];
     recorder.ondataavailable = e => { if (e.data?.size) chunks.push(e.data); };
@@ -1207,6 +1924,7 @@
       const tick = () => {
         const t = (ac.currentTime - t0) * 1000;
         if (job.cancelled || t >= tl.durationMs) { resolve(); return; }
+        syncClips(Math.max(0, t), true);
         R.drawFrame(c, tl, Math.max(0, t), env);
         onProgress(t / tl.durationMs);
         requestAnimationFrame(tick);
@@ -1214,17 +1932,24 @@
       tick();
     });
     try { src?.stop(); } catch { /* ended */ }
+    Object.values(state.videos).forEach(v => { try { v.pause(); } catch { /* fine */ } });
     recorder.stop();
     await stopped;
+    const hasAudio = stream.getAudioTracks().length > 0;
     stream.getTracks().forEach(t => t.stop());
     if (job.cancelled) throw new Error('cancelled');
     const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
-    return { blob: new Blob(chunks, { type: mimeType.split(';')[0] }), ext, how: 'realtime' };
+    return { blob: new Blob(chunks, { type: mimeType.split(';')[0] }), ext, how: 'realtime', hasAudio };
   }
   const slug = text => String(text || 'reel').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'reel';
   let fileUrl = '';
   async function exportReel() {
     if (state.exporting) { state.exporting.cancel?.(); return; }
+    // The voice is always brought up to date before export.
+    if (state.voiceOn && state.config.voice.ready && !state.voiceError) {
+      els.exportStatus.textContent = 'Recording the voiceover for the edited lines…';
+      await ensureVoice();
+    }
     rebuild();
     if (!state.lint.ok) { renderExport(); logEvent('lint_blocked', { issues: state.lint.issues.filter(i => i.severity === 'critical').map(i => i.id) }); return; }
     stop();
@@ -1243,6 +1968,8 @@
     try {
       await ensureImages();
       const mix = await renderMix();
+      const plan = X.mixPlan(tl, state.buffers);
+      if (plan.missingVo && state.voiceOn && state.config.voice.ready) els.exportStatus.textContent = `${plan.missingVo} line${plan.missingVo > 1 ? 's have' : ' has'} no voice yet; exporting with captions for ${plan.missingVo > 1 ? 'them' : 'it'}.`;
       try {
         els.exportStatus.textContent = 'Encoding MP4 (frame by frame)…';
         result = await encodeWebCodecs(tl, mix, progress, job);
@@ -1260,11 +1987,13 @@
       document.body.append(a); a.click(); setTimeout(() => a.remove(), 1000);
       els.files.hidden = false;
       els.files.innerHTML = `<li><span class="rm-files__icon">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="rm-files__name">${esc(name)}</span><span class="rm-meta">${(result.blob.size / 1048576).toFixed(1)} MB · ${(tl.durationMs / 1000).toFixed(1)} s</span><a class="rm-link" href="${fileUrl}" download="${esc(name)}">Download again</a></li>`;
-      els.exportStatus.textContent = result.ext === 'mp4' ? 'Exported. Post it with a disclosure only if you added AI-generated video (this reel has none).' : 'Exported as WebM: this browser can’t make MP4. Use Chrome or Edge for MP4.';
+      const hasAi = L.usedAssets(tl).some(id => tl.assets[id]?.rights?.ai);
+      const voiced = X.mixPlan(tl, state.buffers).vo;
+      els.exportStatus.textContent = `${result.ext === 'mp4' ? 'Exported' : 'Exported as WebM (this browser can’t make MP4; use Chrome or Edge)'}${result.hasAudio ? (voiced ? ' with the voiceover' : ' with music') : ' with captions only (no audio)'}. ${hasAi ? 'It has AI-generated scenes: turn on the platform’s AI label when you post.' : 'No AI-generated video in it.'}`;
       state.status = 'exported';
       autosave(true);
       toast('Reel exported', { tone: 'good' });
-      logEvent('export', { how: result.how, ext: result.ext, seconds: Math.round(tl.durationMs / 1000), format: tl.format, beats: tl.beats.length, voice: tl.voice.mode, music: Boolean(state.music), target: state.target, warnings: state.lint.warnings, cost: totalSpent() });
+      logEvent('export', { audio: Boolean(result.hasAudio), clipShare: clipShare().share, style: tl.style, how: result.how, ext: result.ext, seconds: Math.round(tl.durationMs / 1000), format: tl.format, beats: tl.beats.length, voice: tl.voice.mode, music: Boolean(state.music), target: state.target, warnings: state.lint.warnings, cost: totalSpent() });
     } catch (error) {
       els.exportStatus.textContent = error.message === 'cancelled' ? 'Export cancelled.' : (error.message || 'The export failed. Try again.');
     } finally {
@@ -1280,13 +2009,16 @@
   // ─── Projects: local first, cloud when the table exists ─────────────────
   function snapshot() {
     const assets = {};
-    Object.entries(state.assets).forEach(([id, a]) => { if (a.kind === 'photo') assets[id] = a; });
+    // Photos, team tiles and clips with a remote source come back on reopen
+    // (uploads and AI media live in this tab only).
+    Object.entries(state.assets).forEach(([id, a]) => { if (a.kind === 'photo' || a.kind === 'tile' || a.kind === 'design' || (a.kind === 'logo' && id.startsWith('logo:lib:')) || (a.kind === 'clip' && a.remote)) assets[id] = { ...a, src: a.kind === 'clip' ? '' : a.src }; });
     return {
       id: state.projectId, title: state.plan?.title || 'Untitled reel', format: state.plan?.format || 'explainer', sport: state.plan?.sport || null,
       status: state.status, cost_usd: totalSpent(), updatedAt: Date.now(),
       timeline: {
         v: 1, plan: state.plan, corpus: state.corpus.slice(0, 12000), sources: state.sources, extraSource: els.extraSource.value,
         photos: state.photos, assets, captionStyle: state.captionStyle, target: state.target, spent: state.spent,
+        style: state.plan?.style || '', voiceId: state.voiceId, voiceOn: state.voiceOn, visualSrc: state.visualSrc, useClips: state.useClips,
         trend: state.trendRef || null, brief: state.brief || '', planSource: state.planSource,
         music: state.music ? { title: state.music.title, source: state.music.source } : null,
         durationMs: state.timeline?.durationMs || 0,
@@ -1328,6 +2060,13 @@
     els.extraSource.value = t.extraSource || '';
     state.photos = t.photos || {};
     Object.assign(state.assets, t.assets || {});
+    state.visualSrc = t.visualSrc || {};
+    if (t.voiceId) state.voiceId = t.voiceId;
+    if (typeof t.voiceOn === 'boolean') state.voiceOn = t.voiceOn;
+    if (t.style && S.STYLES[t.style]) state.plan.style = t.style;
+    state.selected = state.plan.beats[0]?.id || '';
+    // Drop picks whose media is gone (uploads, AI media): those beats refill.
+    Object.keys(state.photos).forEach(k => { state.photos[k] = (state.photos[k] || []).filter(id => state.assets[id]); if (!state.photos[k].length) { delete state.photos[k]; delete state.visualSrc[k]; } });
     state.captionStyle = t.captionStyle === 'box' ? 'box' : 'highlight';
     radios(els.capstyle, 'cap', state.captionStyle);
     state.target = t.target === 'paid' ? 'paid' : 'organic';
@@ -1345,33 +2084,41 @@
     // Photos load again; the voiceover comes back from this browser's cache for free.
     Object.values(state.photos).flat().forEach(id => {
       const a = state.assets[id];
-      if (a && !state.images[id]) loadImage(a.src, !a.src.startsWith('/')).then(img => { if (img) { state.images[id] = img; draw(); renderBeats(); } });
+      if (!a || state.images[id] || state.videos[id]) return;
+      if (a.kind === 'clip' && a.remote) {
+        fetch(a.remote, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' }).then(r => (r.ok ? r.blob() : null)).then(blob => blob && addClipAsset(id, { blob, label: a.label, rights: a.rights, remote: a.remote, post: a.post })).then(() => { rebuild(); renderBeats(); }).catch(() => {});
+      } else if (a.src) loadImage(a.src, !a.src.startsWith('/')).then(img => { if (img) { state.images[id] = img; draw(); renderBeats(); } });
     });
+    Object.values(state.assets).filter(a => a.kind === 'logo' && a.src).forEach(a => { const id = Object.keys(state.assets).find(k => state.assets[k] === a); if (!state.images[id]) loadImage(a.src, /^https?:/.test(a.src)).then(img => { if (img) { state.images[id] = img; draw(); } }); });
+    fillVisuals();
     if (state.config.voice.ready) restoreVoiceFromCache();
   }
   async function restoreVoiceFromCache() {
     let found = 0;
     const ac = audioContext();
     for (const beat of state.plan.beats) {
-      const rec = await VoiceCache.get(`${state.config.voice.mode}|${state.config.voice.model}|${beat.vo}`);
+      const hook = state.plan.beats.indexOf(beat) === 0;
+      const rec = await VoiceCache.get(`${state.config.voice.mode}|${state.config.voice.model}|${state.voiceId}|${hook ? 'h' : ''}|${beat.vo}`);
       if (!rec) continue;
       try {
         const buffer = await ac.decodeAudioData(rec.bytes.slice(0));
         const asset = `vo:${beat.id}`;
         state.buffers[asset] = buffer;
         state.assets[asset] = { kind: 'vo', label: `Voiceover, beat ${state.plan.beats.indexOf(beat) + 1}`, rights: { source: 'ES house voice (AI)', licence: 'AI voice, not a clone of any person; commercial use under the provider terms', organic: true, paid: true } };
-        state.voice[beat.id] = { text: beat.vo, durationMs: Math.round(buffer.duration * 1000), words: rec.words, asset };
+        state.voice[beat.id] = { text: beat.vo, voiceId: state.voiceId, durationMs: Math.round(buffer.duration * 1000), words: rec.words, asset };
         found += 1;
       } catch { /* skip */ }
     }
     if (found) { rebuild(); renderBeats(); renderVoice(); }
+    voiceSoon(0);
   }
 
   // ─── Boot ────────────────────────────────────────────────────────────────
   async function loadConfig() {
     try {
       const data = await api({ mode: 'config' });
-      state.config = { ai: data.ai, voice: data.voice, music: data.music || null, offline: false };
+      state.config = { ai: data.ai, voice: data.voice, music: data.music || null, aiClips: data.aiClips || null, offline: false };
+      if (data.voice?.defaultVoice && !(data.voice.voices || []).some(v => v.id === state.voiceId)) state.voiceId = data.voice.defaultVoice;
     } catch (error) {
       state.config = { ai: false, voice: { mode: 'off', ready: false, label: 'Captions only', reason: 'The voice server is not reachable from here.' }, offline: Boolean(error.offline) };
     }
@@ -1381,8 +2128,11 @@
       gen.hidden = !data_music(state.config);
       $('rm-music-gen').onclick = generateMusic;
     }
-    if (!state.config.ai) els.writeText.textContent = 'Write a draft';
+    els.aiclipsRow.hidden = !state.config.aiClips?.ready;
+    if (state.config.aiClips?.ready) els.aiclipsNote.textContent = `Stadium, crowd or field shots, never people or logos. Up to ${state.config.aiClips.max} a reel, about ${F.money(state.config.aiClips.perClip)} each.`;
+    if (!state.config.ai) els.writeText.textContent = 'Make a draft reel';
     renderCost();
+    renderVoicePickers();
     if (state.plan) { renderVoice(); renderEdit(); }
   }
   const data_music = config => Boolean(config.music && config.music.ready);
@@ -1412,6 +2162,8 @@
   renderTrends();
   renderPicked();
   renderFormats();
+  renderStyles();
+  renderVoicePickers();
   renderCost();
   renderRecent();
   draw();
@@ -1425,5 +2177,5 @@
   });
   window.addEventListener('beforeunload', () => { if (state.plan) store.set(LOCAL_KEY, [snapshot(), ...store.get(LOCAL_KEY, []).filter(p => p.id !== state.projectId)].slice(0, 12)); });
 
-  window.ReelMakerPage = { state, rebuild, applyPlan, draw, seek, play, stop, goStep, renderMix, exportReel, makeVoice, restore };
+  window.ReelMakerPage = { state, rebuild, applyPlan, draw, seek, play, stop, goStep, renderMix, exportReel, makeVoice, restore, loadConfig, makeReel, fillVisuals, selectBeat, renderEdit, renderStyles, visualAction, addClipAsset, setVisual, clipShare };
 })();

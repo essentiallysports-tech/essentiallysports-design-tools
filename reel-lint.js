@@ -50,6 +50,7 @@
     timeline.tracks.graphics.forEach(g => {
       (g.data.versus || []).forEach(v => { if (v.asset) ids.add(v.asset); });
       (g.data.tiles || []).forEach(t => { if (t.asset) ids.add(t.asset); });
+      if (g.data.cutout) ids.add(g.data.cutout);
     });
     if (timeline.team && timeline.team.logo && timeline.tracks.graphics.some(g => g.template === 'stat')) ids.add('logo:team');
     return [...ids];

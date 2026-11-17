@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Reels Studio | FrameUp</title>
-  <meta name="description" content="Turn a trend or a brief into a 20–45 second 9:16 reel: script, ES photos, stat cards, voiceover and captions. No game footage. Exports MP4 in the browser.">
+  <meta name="description" content="Turn a trend or a brief into a 9:16 reel: script, voiceover, official clips, ES photos, data cards and captions in four ES styles. Exports MP4 in the browser.">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261117-ready1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="reel-maker.css?v=20261118-rel1">
+  <link rel="stylesheet" href="reel-maker.css?v=20261118-reels-styles">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
@@ -70,8 +70,8 @@
       <!-- Three steps: Topic, Edit, Export. -->
       <nav class="rm-steps" id="rm-steps" aria-label="Reel steps">
         <ol>
-          <li><button class="rm-step" type="button" data-step="topic" aria-current="step"><span class="rm-step__num" aria-hidden="true">1</span><span>Topic</span></button></li>
-          <li><button class="rm-step" type="button" data-step="edit" disabled><span class="rm-step__num" aria-hidden="true">2</span><span>Edit</span></button></li>
+          <li><button class="rm-step" type="button" data-step="topic" aria-current="step"><span class="rm-step__num" aria-hidden="true">1</span><span>Story</span></button></li>
+          <li><button class="rm-step" type="button" data-step="edit" disabled><span class="rm-step__num" aria-hidden="true">2</span><span>Review</span></button></li>
           <li><button class="rm-step" type="button" data-step="export" disabled><span class="rm-step__num" aria-hidden="true">3</span><span>Export</span></button></li>
         </ol>
       </nav>
@@ -104,17 +104,20 @@
           </button>
         </div>
         <p class="rm-meta" id="rm-stage-meta" aria-live="polite"></p>
+        <div class="rm-stripwrap" id="rm-stripwrap" hidden>
+          <ol class="rm-strip" id="rm-strip" aria-label="Beats: pick one to edit it"></ol>
+        </div>
       </section>
 
       <!-- ── Panel: one step at a time ──────────────────────────────────── -->
       <section class="rm-panel" id="rm-panel" aria-labelledby="rm-panel-title">
         <h2 class="es-sr-only" id="rm-panel-title">Reel settings</h2>
 
-        <!-- Step 1: Topic -->
+        <!-- Step 1: Story -->
         <div class="rm-pane" id="rm-pane-topic" data-pane="topic">
           <div class="rm-sec" id="rm-topic">
             <div class="rm-sec__head">
-              <h3 class="rm-sec__title">Start from</h3>
+              <h3 class="rm-sec__title">What's the story?</h3>
               <div class="es-segmented rm-seg" role="radiogroup" aria-label="Start from" id="rm-source">
                 <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-source="trend">Trend</button>
                 <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-source="brief">Brief</button>
@@ -135,42 +138,57 @@
             <div class="rm-picked" id="rm-picked" hidden></div>
           </div>
 
-          <div class="rm-sec">
-            <h3 class="rm-sec__title" id="rm-formats-label">Format</h3>
-            <div class="rm-formats" role="radiogroup" aria-labelledby="rm-formats-label" id="rm-formats"></div>
-          </div>
-
-          <div class="rm-sec rm-sec--row">
-            <div class="es-field rm-field-sport">
-              <label class="es-field__label" for="rm-sport">Sport</label>
-              <select class="es-select" id="rm-sport">
-                <option value="">Auto</option>
-                <option value="nfl">NFL</option>
-                <option value="cfb">College Football</option>
-                <option value="mlb">MLB</option>
-                <option value="golf">Golf</option>
-              </select>
-            </div>
-            <div class="es-field">
-              <span class="es-field__label" id="rm-tier-label">Script quality</span>
-              <div class="es-segmented rm-seg" role="radiogroup" aria-labelledby="rm-tier-label" id="rm-tier">
-                <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-tier="standard" title="Haiku writes; Sonnet steps in only if the script comes back weak">Standard</button>
-                <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-tier="economy" title="Haiku only">Economy</button>
-              </div>
-            </div>
-          </div>
-
-          <label class="rm-check" id="rm-factcheck-row">
-            <input type="checkbox" id="rm-factcheck">
-            <span><b>Fact check with web search</b><small id="rm-factcheck-note">Two searches, capped at $0.03. Found numbers can be used in the reel.</small></span>
-          </label>
-
-          <div class="rm-cost" id="rm-cost" aria-live="polite"></div>
+          <p class="rm-autoline" id="rm-autoline"></p>
           <button class="es-btn es-btn--primary es-btn--lg rm-block" type="button" id="rm-write">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>
-            <span id="rm-write-text">Write the reel</span>
+            <span id="rm-write-text">Make my reel</span>
           </button>
+          <ol class="rm-making" id="rm-making" aria-label="Progress" hidden></ol>
           <p class="rm-status" id="rm-write-status" role="status" aria-live="polite"></p>
+
+          <details class="rm-fold" id="rm-settings">
+            <summary><span class="rm-fold__title">Settings</span><span class="rm-fold__meta" id="rm-settings-meta">Auto</span></summary>
+            <div class="rm-fold__body">
+              <div class="rm-sec">
+                <div class="rm-sec__head"><h3 class="rm-sec__title" id="rm-styles-label">Style</h3><span class="rm-meta" id="rm-style-why"></span></div>
+                <div class="rm-styles" role="radiogroup" aria-labelledby="rm-styles-label" id="rm-styles"></div>
+              </div>
+              <div class="rm-sec">
+                <h3 class="rm-sec__title" id="rm-formats-label">Format</h3>
+                <div class="rm-formats" role="radiogroup" aria-labelledby="rm-formats-label" id="rm-formats"></div>
+              </div>
+              <div class="rm-sec" id="rm-voice-topic"></div>
+              <div class="rm-sec">
+                <h3 class="rm-sec__title">Clips</h3>
+                <label class="rm-check"><input type="checkbox" id="rm-clips-on" checked><span><b>Use video clips</b><small>About 80% of the reel moves: official team and league clips from X, found for you. Stills fill the rest.</small></span></label>
+                <label class="rm-check" id="rm-aiclips-row" hidden><input type="checkbox" id="rm-aiclips-on"><span><b>AI b-roll when no clip fits</b><small id="rm-aiclips-note">Stadium, crowd or field shots, never people or logos.</small></span></label>
+              </div>
+              <div class="rm-sec rm-sec--row">
+                <div class="es-field rm-field-sport">
+                  <label class="es-field__label" for="rm-sport">Sport</label>
+                  <select class="es-select" id="rm-sport">
+                    <option value="">Auto</option>
+                    <option value="nfl">NFL</option>
+                    <option value="cfb">College Football</option>
+                    <option value="mlb">MLB</option>
+                    <option value="golf">Golf</option>
+                  </select>
+                </div>
+                <div class="es-field">
+                  <span class="es-field__label" id="rm-tier-label">Script quality</span>
+                  <div class="es-segmented rm-seg" role="radiogroup" aria-labelledby="rm-tier-label" id="rm-tier">
+                    <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-tier="standard" title="Haiku writes; Sonnet steps in only if the script comes back weak">Standard</button>
+                    <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-tier="economy" title="Haiku only">Economy</button>
+                  </div>
+                </div>
+              </div>
+              <label class="rm-check" id="rm-factcheck-row">
+                <input type="checkbox" id="rm-factcheck">
+                <span><b>Fact check with web search</b><small id="rm-factcheck-note">Two searches, capped at $0.03. Found numbers can be used in the reel.</small></span>
+              </label>
+              <div class="rm-cost" id="rm-cost" aria-live="polite"></div>
+            </div>
+          </details>
 
           <div class="rm-sec rm-recent" id="rm-recent" hidden>
             <h3 class="rm-sec__title">Continue a reel</h3>
@@ -178,53 +196,71 @@
           </div>
         </div>
 
-        <!-- Step 2: Edit -->
+        <!-- Step 2: Review -->
         <div class="rm-pane" id="rm-pane-edit" data-pane="edit" hidden>
+          <button class="rm-statusline" type="button" id="rm-statusline" aria-expanded="false" aria-controls="rm-lint"><span class="rm-statusline__dot" aria-hidden="true"></span><span id="rm-statusline-text">Checking…</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div class="rm-sec rm-lintbox" id="rm-lint" hidden>
+            <div class="rm-sec__head">
+              <h3 class="rm-sec__title">Quality checks</h3>
+              <span class="es-badge" id="rm-lint-badge"></span>
+            </div>
+            <ul class="rm-issues" id="rm-issues"></ul>
+            <div class="rm-cost" id="rm-cost-edit"></div>
+          </div>
           <div class="rm-notice" id="rm-notice" hidden></div>
           <div class="rm-summary" id="rm-summary"></div>
 
-          <div class="rm-sec" id="rm-revise">
-            <h3 class="rm-sec__title">Revise with AI</h3>
-            <div class="rm-chips" role="group" aria-label="Quick changes">
-              <button class="es-chip" type="button" data-revise="shorter">Shorter</button>
-              <button class="es-chip" type="button" data-revise="punchier">Punchier</button>
-              <button class="es-chip" type="button" data-revise="hook">Stronger hook</button>
-              <button class="es-chip" type="button" data-revise="calmer">Calmer</button>
-            </div>
-            <form class="rm-ask" id="rm-ask">
-              <label class="es-sr-only" for="rm-ask-input">Ask for a change</label>
-              <input class="es-input" id="rm-ask-input" type="text" maxlength="300" placeholder="Lead with the 31-28 score">
-              <button class="es-btn" type="submit">Revise</button>
-            </form>
-          </div>
-
           <div class="rm-sec">
             <div class="rm-sec__head">
-              <h3 class="rm-sec__title">Beats</h3>
+              <h3 class="rm-sec__title">This beat</h3>
               <span class="rm-meta" id="rm-beats-meta"></span>
             </div>
-            <ol class="rm-beats" id="rm-beats" aria-label="Beats"></ol>
+            <ol class="rm-beats" id="rm-beats" aria-label="Selected beat"></ol>
           </div>
 
-          <div class="rm-sec" id="rm-voice">
-            <div class="rm-sec__head">
-              <h3 class="rm-sec__title">Voice and captions</h3>
-              <span class="es-badge" id="rm-voice-badge">Captions only</span>
+          <details class="rm-fold" id="rm-revise">
+            <summary><span class="rm-fold__title">Revise with AI</span><span class="rm-fold__meta">Shorter, punchier, your words</span></summary>
+            <div class="rm-fold__body">
+              <div class="rm-chips" role="group" aria-label="Quick changes">
+                <button class="es-chip" type="button" data-revise="shorter">Shorter</button>
+                <button class="es-chip" type="button" data-revise="punchier">Punchier</button>
+                <button class="es-chip" type="button" data-revise="hook">Stronger hook</button>
+                <button class="es-chip" type="button" data-revise="calmer">Calmer</button>
+              </div>
+              <form class="rm-ask" id="rm-ask">
+                <label class="es-sr-only" for="rm-ask-input">Ask for a change</label>
+                <input class="es-input" id="rm-ask-input" type="text" maxlength="300" placeholder="Lead with the 31-28 score">
+                <button class="es-btn" type="submit">Revise</button>
+              </form>
             </div>
-            <p class="rm-hint" id="rm-voice-note"></p>
-            <button class="es-btn rm-block" type="button" id="rm-voice-btn" hidden>Make the voiceover</button>
-            <div class="rm-progress" id="rm-voice-progress" hidden><span></span></div>
-            <div class="es-field">
-              <span class="es-field__label" id="rm-capstyle-label">Caption style</span>
-              <div class="es-segmented rm-seg" role="radiogroup" aria-labelledby="rm-capstyle-label" id="rm-capstyle">
-                <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-cap="highlight">Highlight</button>
-                <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-cap="box">Box</button>
+          </details>
+
+          <details class="rm-fold" id="rm-voice">
+            <summary><span class="rm-fold__title">Voice and captions</span><span class="es-badge" id="rm-voice-badge">Captions only</span></summary>
+            <div class="rm-fold__body">
+              <div id="rm-voice-edit"></div>
+              <p class="rm-hint" id="rm-voice-note"></p>
+              <div class="rm-voicestate" id="rm-voice-state" role="status" aria-live="polite"></div>
+              <button class="es-btn rm-block" type="button" id="rm-voice-btn" hidden>Make the voiceover</button>
+              <div class="rm-progress" id="rm-voice-progress" hidden><span></span></div>
+              <div class="es-field" id="rm-capstyle-field">
+                <span class="es-field__label" id="rm-capstyle-label">Caption style</span>
+                <div class="es-segmented rm-seg" role="radiogroup" aria-labelledby="rm-capstyle-label" id="rm-capstyle">
+                  <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-cap="highlight">Highlight</button>
+                  <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-cap="box">Box</button>
+                </div>
               </div>
             </div>
-          </div>
+          </details>
 
-          <div class="rm-sec" id="rm-music">
-            <h3 class="rm-sec__title">Music</h3>
+          <details class="rm-fold" id="rm-style-fold">
+            <summary><span class="rm-fold__title">Style</span><span class="rm-fold__meta" id="rm-style-meta"></span></summary>
+            <div class="rm-fold__body"><div class="rm-styles" role="radiogroup" aria-label="Style" id="rm-styles-edit"></div></div>
+          </details>
+
+          <details class="rm-fold" id="rm-music">
+            <summary><span class="rm-fold__title">Music</span><span class="rm-fold__meta" id="rm-music-meta">None</span></summary>
+            <div class="rm-fold__body">
             <div class="es-field">
               <label class="es-field__label" for="rm-music-pick">Track</label>
               <select class="es-select" id="rm-music-pick"><option value="">No music</option></select>
@@ -257,25 +293,21 @@
               </div>
               <label class="rm-check rm-check--sm"><input type="checkbox" id="rm-licence-paid"><span>Cleared for paid ads too</span></label>
             </div>
-          </div>
+            </div>
+          </details>
 
-          <div class="rm-sec" id="rm-sources">
-            <h3 class="rm-sec__title">Sources</h3>
+          <details class="rm-fold" id="rm-sources">
+            <summary><span class="rm-fold__title">Sources</span><span class="rm-fold__meta" id="rm-sources-meta"></span></summary>
+            <div class="rm-fold__body">
             <ul class="rm-sources" id="rm-sources-list"></ul>
             <div class="es-field">
               <label class="es-field__label" for="rm-extra-source">Add a source</label>
               <textarea class="es-input rm-extra" id="rm-extra-source" rows="2" maxlength="1200" placeholder="ESPN box score: Allen 28/37, 412 yds, 4 TD" aria-describedby="rm-extra-hint"></textarea>
               <p class="es-field__hint" id="rm-extra-hint">Numbers you add to a beat must appear in a source.</p>
             </div>
-          </div>
-
-          <div class="rm-sec" id="rm-lint">
-            <div class="rm-sec__head">
-              <h3 class="rm-sec__title">Quality checks</h3>
-              <span class="es-badge" id="rm-lint-badge"></span>
             </div>
-            <ul class="rm-issues" id="rm-issues"></ul>
-          </div>
+          </details>
+          <input type="file" id="rm-visual-file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" class="es-sr-only" tabindex="-1" aria-hidden="true">
         </div>
 
         <!-- Step 3: Export -->
@@ -336,7 +368,7 @@
       <p class="rm-hint">From the ES image pool. Editorial licence: fine for organic posts; check before paid use.</p>
       <ul class="rm-photos__grid" id="rm-photos-grid" aria-label="Photos"></ul>
       <div class="rm-photos__foot">
-        <button class="es-btn es-btn--tertiary" type="button" id="rm-photos-none">Use the animated background</button>
+        <button class="es-btn es-btn--tertiary" type="button" id="rm-photos-none">Use the designed background</button>
       </div>
     </dialog>
   </main>
@@ -347,10 +379,16 @@
   <script src="video-ads-teams.js?v=20261117-tlogo1"></script>
   <script src="league-logos.js?v=20261117-logo1"></script>
   <script src="video-ads-render.js?v=20261118-rel1"></script>
-  <script src="reel-formats.js?v=20261118-rel1"></script>
-  <script src="reel-render.js?v=20261118-rel1"></script>
-  <script src="reel-lint.js?v=20261118-rel1"></script>
+  <script src="logo-library-data.js?v=20261118-rel2"></script>
+  <script src="logo-library.js?v=20261118-rel2"></script>
+  <script src="frameup-cutout.js?v=20261118-rel1"></script>
+  <script src="reel-formats.js?v=20261118-reels-styles"></script>
+  <script src="reel-styles.js?v=20261118-reels-styles"></script>
+  <script src="reel-render.js?v=20261118-reels-styles"></script>
+  <script src="reel-lint.js?v=20261118-reels-styles"></script>
+  <script src="reel-export.js?v=20261118-reels-styles"></script>
+  <script src="reel-flow.js?v=20261118-reels-styles"></script>
   <script src="es-motion.js?v=20261115-ds1"></script>
-  <script src="reel-maker.js?v=20261118-rel1"></script>
+  <script src="reel-maker.js?v=20261118-reels-styles"></script>
 </body>
 </html>

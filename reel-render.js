@@ -215,6 +215,9 @@
     if (raw.chips && raw.chips.total) d.chips = { filled: clean(raw.chips.filled, 6), total: clean(raw.chips.total, 6), label: clean(raw.chips.label, 40) };
     if (raw.steps && raw.steps.total) d.steps = { current: clean(raw.steps.current, 2), total: clean(raw.steps.total, 2), label: clean(raw.steps.label, 32) };
     if (Array.isArray(raw.tiles)) d.tiles = cleanList(raw.tiles, 4).map((t, i) => ({ team: clean(t && (t.team || t.name), 32), label: clean(t && t.label, 36), chip: clean(t && t.chip, 18), colors: cleanList(t && t.colors, 2).filter(c => HEX6.test(String(c))), asset: first(`${id}#t${i}`) })).filter(t => t.team);
+    // A cut-out player (from a photo) that stands over the beat's clip or photo.
+    const cut = first(`${id}#cut`);
+    if (cut) d.cutout = cut;
     if (Array.isArray(raw.roles)) d.roles = cleanList(raw.roles, 4).map(r => ({ role: clean(r && r.role, 8), value: clean(r && r.value, 10), note: clean(r && r.note, 40), tone: r && r.tone === 'good' ? 'good' : 'bad' })).filter(r => r.role && r.value);
     return d;
   }
@@ -929,10 +932,10 @@
     return { ops, bottom };
   }
   // A framed visual (photo, clip, tile…) in the style's frame.
-  function visualOps(style, rect, { slot = 'shot', role = 'visual', cutout = false, delay = 80, round = false, label = '' } = {}, measure) {
+  function visualOps(style, rect, { slot = 'shot', role = 'visual', cutout = false, cutoutAsset = '', delay = 80, round = false, label = '' } = {}, measure) {
     const ops = [];
     const frame = style.visual === 'card' ? 24 : 0;
-    ops.push({ type: 'visual', role, slot, x: rect.x, y: rect.y, w: rect.w, h: rect.h, r: round ? Math.min(rect.w, rect.h) / 2 : frame, cutout, delay, anim: style.motion.enter === 'flip' ? 'flip' : (style.motion.enter === 'wipe' ? 'wipe' : 'rise'), stroke: style.id === 'series' ? 'ink' : (round ? 'accent' : ''), lw: round ? 6 : 4 });
+    ops.push({ type: 'visual', role, slot, x: rect.x, y: rect.y, w: rect.w, h: rect.h, r: round ? Math.min(rect.w, rect.h) / 2 : frame, cutout, cutoutAsset, delay, anim: style.motion.enter === 'flip' ? 'flip' : (style.motion.enter === 'wipe' ? 'wipe' : 'rise'), stroke: style.id === 'series' ? 'ink' : (round ? 'accent' : ''), lw: round ? 6 : 4 });
     if (style.id === 'explainer' && !round) ops.push({ type: 'rect', role: 'rule', x: rect.x, y: rect.y + rect.h + 8, w: rect.w, h: 8, fill: 'rule', delay: delay + 120, anim: 'grow' });
     if (label && measure) ops.push(...chipOp(measure, label, rect.x + 16, rect.y + 16, { fill: 'chip', ink: 'chipInk', size: 22, h: 40, role: 'visual-label', delay: delay + 160 }));
     return ops;
@@ -970,7 +973,7 @@
       }
       const h = Math.min(box.bottom - y - (d.detail ? 96 : 24), 680);
       const label = d.label && style.engine !== 'classic' ? d.label : '';
-      ops.push(...visualOps(style, { x: G.left, y, w: CW, h }, { cutout: style.cutout && graphic.index === 0, label, delay: delay0 }, measure));
+      ops.push(...visualOps(style, { x: G.left, y, w: CW, h }, { cutout: style.cutout && graphic.index === 0, cutoutAsset: d.cutout || '', label, delay: delay0 }, measure));
       if (d.detail) {
         const fit = fitText(measure, d.detail, { family: style.type.body, weight: 500, max: style.type.bodySize, min: style.type.bodySize - 6, maxLines: 2, width: CW });
         ops.push(...linesOps(fit, y + h + 40, { lineHeight: 1.2, upper: false, role: 'detail', color: 'muted', baseDelay: delay0 + 200, delayStep: 0 }).ops);
@@ -1313,10 +1316,11 @@
         return;
       }
       ctx.clip();
-      const cut = op.cutout && slot && env.cutouts ? env.cutouts[slot] : null;
-      // With a cut-out: the frame shows the beat's second picture (or the
-      // same one, darker) and the player stands over it, above the frame.
-      const inset = cut ? ((frame.shot && timeline.tracks.video.find(s => s.beat === frame.shot.beat && s.asset && s.asset !== slot)) || {}).asset || slot : slot;
+      // With a cut-out: the frame shows the beat's clip (or its second
+      // picture, or the same one darker) and the player stands over it.
+      const cutId = op.cutout && env.cutouts ? (op.cutoutAsset && env.cutouts[op.cutoutAsset] ? op.cutoutAsset : (slot && env.cutouts[slot] ? slot : '')) : '';
+      const cut = cutId ? env.cutouts[cutId] : null;
+      const inset = cut && cutId === slot ? ((frame.shot && timeline.tracks.video.find(s => s.beat === frame.shot.beat && s.asset && s.asset !== slot)) || {}).asset || slot : slot;
       const kind = drawVisual(ctx, inset, op, timeline, env, { p: frame.shot ? frame.shot.p : 0, motion: frame.shot ? frame.shot.motion : null, tMs: frame.t });
       if (cut && inset === slot) { ctx.fillStyle = 'rgba(10,12,16,0.45)'; ctx.fillRect(op.x, op.y, op.w, op.h); }
       if (kind === 'empty' && style.theme === 'light') { /* plain black until a visual is picked */ }
