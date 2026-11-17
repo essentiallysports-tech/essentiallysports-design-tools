@@ -18123,6 +18123,45 @@ function renderExportImage() {
 }
 
 const FRAMEUP_LINKS_BUCKET = 'frameup-links';
+// Link images are fetched by every newsletter reader (25–30k per issue), so
+// they're encoded smaller than downloads: JPEG at 0.85 instead of 0.94
+// (about 40% fewer bytes, no visible change at email size), and newsletter
+// images are never wider than 1200 px (2x a 600 px email column).
+// Downloads keep 0.94 and full size. PNGs are untouched.
+const LINK_JPEG_QUALITY = 0.85;
+const LINK_MAX_WIDTH = 1200;
+
+function linkImagePlan({ width, height, type, workspace, quality }) {
+  const isJpeg = type === 'image/jpeg';
+  const cap = workspace === 'newsletter' && width > LINK_MAX_WIDTH ? LINK_MAX_WIDTH / width : 1;
+  return {
+    quality: isJpeg ? LINK_JPEG_QUALITY : quality,
+    width: Math.round(width * cap),
+    height: Math.round(height * cap),
+  };
+}
+
+// Downscale in halving steps so text edges stay crisp.
+function resizeCanvasForLink(source, width, height) {
+  if (source.width === width && source.height === height) return source;
+  let current = source;
+  while (current.width / 2 >= width) {
+    const step = document.createElement('canvas');
+    step.width = Math.round(current.width / 2);
+    step.height = Math.round(current.height / 2);
+    const stepCtx = step.getContext('2d');
+    stepCtx.imageSmoothingQuality = 'high';
+    stepCtx.drawImage(current, 0, 0, step.width, step.height);
+    current = step;
+  }
+  const out = document.createElement('canvas');
+  out.width = width;
+  out.height = height;
+  const outCtx = out.getContext('2d');
+  outCtx.imageSmoothingQuality = 'high';
+  outCtx.drawImage(current, 0, 0, width, height);
+  return out;
+}
 
 function canvasToBlob(canvas, type, quality) {
   return new Promise((resolve, reject) => {
@@ -18233,7 +18272,9 @@ async function copyImageLink() {
   if (button) button.disabled = true;
   try {
     const { offscreen, filename, workspace, exportQuality } = renderExportImage();
-    const blob = await canvasToBlob(offscreen, workspace.exportType, exportQuality);
+    const plan = linkImagePlan({ width: offscreen.width, height: offscreen.height, type: workspace.exportType, workspace: activeWorkspace, quality: exportQuality });
+    const linkCanvas = resizeCanvasForLink(offscreen, plan.width, plan.height);
+    const blob = await canvasToBlob(linkCanvas, workspace.exportType, plan.quality);
     const now = new Date();
     const folder = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
     const extension = (filename.match(/\.[a-z0-9]+$/i)?.[0] || '.jpeg').toLowerCase();
