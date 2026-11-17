@@ -68,6 +68,10 @@ require.cache[authPath] = { id: authPath, filename: authPath, loaded: true, expo
 } };
 require.cache[trendsPath] = { id: trendsPath, filename: trendsPath, loaded: true, exports: { getTrends: async () => ({ updatedAt: new Date().toISOString(), items: [] }) } };
 process.env.AI_GATEWAY_API_KEY = 'gw-test';
+// The shared clip library and the extra sources have their own tests
+// (test-clip-library.mjs); off here so these keep testing the live search alone.
+process.env.CLIPS_LIBRARY = 'off';
+process.env.CLIPS_EXTRA_SOURCES = 'off';
 delete process.env.X_BEARER_TOKEN;
 delete require.cache[path.join(fnDir, '_ai-gateway.js')];
 const { handler, _test } = require(adsPath);

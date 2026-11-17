@@ -485,7 +485,9 @@ for (const [name, handler, body, feature] of cases) {
   assert.equal(res.statusCode, 200, 'adapter: right secret');
   delete process.env.CRON_SECRET;
   const vercel = JSON.parse(readFileSync('vercel.json', 'utf8'));
-  assert.deepEqual(vercel.crons, [{ path: '/api/ai-budget-watch', schedule: '0 13 * * *' }], 'one daily cron');
+  // The budget watch's daily cron (other features add their own; every cron stays daily).
+  assert.deepEqual(vercel.crons.filter(c => c.path === '/api/ai-budget-watch'), [{ path: '/api/ai-budget-watch', schedule: '0 13 * * *' }], 'one daily cron');
+  vercel.crons.forEach(c => assert.match(c.schedule, /^\d+ \d+ \* \* \*$/, `${c.path} runs once a day`));
   assert.ok(vercel.functions['api/ai-budget-watch.js'] && vercel.functions['api/ai-status.js'], 'function entries');
 }
 
