@@ -220,22 +220,24 @@
     document.querySelectorAll('[data-reels-mobile-detent]').forEach(function (button) {
       button.addEventListener('click', toggleReelsMobileDetent);
     });
-    document.querySelectorAll('[data-reels-mobile-export]').forEach(function (button) {
-      // The phone Export mirrors the desktop one: disabled until a clip is
-      // uploaded (it used to look ready and do nothing when tapped).
-      var syncDisabled = function () {
-        button.disabled = !!els.exportBtn.disabled;
-        button.title = els.exportBtn.disabled ? 'Upload a clip first' : '';
-      };
-      syncDisabled();
-      if (typeof MutationObserver === 'function') {
-        new MutationObserver(syncDisabled).observe(els.exportBtn, { attributes: true, attributeFilter: ['disabled'] });
-      }
+    var mobileExportButtons = document.querySelectorAll('[data-reels-mobile-export]');
+    mobileExportButtons.forEach(function (button) {
       button.addEventListener('click', function () {
         if (els.exportBtn.disabled) return;
         els.exportBtn.click();
       });
     });
+    // The phone Export mirrors the desktop one: disabled until a clip loads.
+    function syncMobileExport() {
+      mobileExportButtons.forEach(function (button) {
+        button.disabled = els.exportBtn.disabled;
+        button.title = els.exportBtn.disabled ? 'Upload a clip first' : '';
+      });
+    }
+    syncMobileExport();
+    if (window.MutationObserver) {
+      new MutationObserver(syncMobileExport).observe(els.exportBtn, { attributes: true, attributeFilter: ['disabled'] });
+    }
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape') closeReelsMobileSheet();
     });

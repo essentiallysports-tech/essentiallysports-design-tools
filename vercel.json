@@ -76,7 +76,8 @@
     "api/client-errors.js": { "maxDuration": 10 },
     "api/health.js": { "maxDuration": 10 },
     "api/ai-budget-watch.js": { "maxDuration": 30 },
-    "api/ai-status.js": { "maxDuration": 10 }
+    "api/ai-status.js": { "maxDuration": 10 },
+    "api/remove-bg.js": { "maxDuration": 60 }
   },
   "crons": [
     { "path": "/api/ai-budget-watch", "schedule": "0 13 * * *" }

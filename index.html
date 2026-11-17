@@ -14,6 +14,10 @@
 <script>
   (() => {
     window.ESAuth?.requireAuth(`index.html${window.location.search}${window.location.hash}`);
+    // Opening an editor link: keep Home out of the first layout so its
+    // banner and card images (about 0.5 MB) aren't fetched for nothing.
+    // Ends as soon as the router sets body[data-current-page].
+    if (/^#(instagram|youtube|newsletter)$/.test(window.location.hash)) document.documentElement.classList.add('boot-editor-route');
   })();
 </script>
 <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -7809,6 +7813,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
 <link rel="stylesheet" href="frameup-posted.css?v=20261118-impact-posted-links">
 <link rel="stylesheet" href="editor-polish.css?v=20261117-focus1">
+<link rel="stylesheet" href="frameup-quick-wins.css?v=20261118-editor-quick-wins">
 <script src="theme.js?v=20261115-pol2"></script>
 <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
 <script src="site-chrome.js?v=20261117-usage1"></script>
@@ -7882,7 +7887,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           </div>
           <div class="frame-hero-slide" data-hero-slide="1">
             <picture class="frame-hero-picture">
-              <img class="frame-banner" src="home-hero-banner-reels.webp?v=20260815-heroart4" alt="Try In-house Reel Captions Creator">
+              <img class="frame-banner" loading="lazy" decoding="async" src="home-hero-banner-reels.webp?v=20260815-heroart4" alt="Try In-house Reel Captions Creator">
             </picture>
             <div class="frame-hero-actions frame-hero-actions--single">
               <a class="frame-hero-cta is-primary" href="reels.html">Create Now</a>
@@ -7922,7 +7927,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     <div class="frame-grid">
     <article class="frame-card" id="frame-instagram">
       <div class="frame-thumbnail">
-        <img decoding="async" src="workspace-card-social-media.webp" alt="Social Media">
+        <img loading="lazy" decoding="async" src="workspace-card-social-media.webp" alt="Social Media">
       </div>
       <div class="frame-card-body">
         <h2 class="frame-card-title">Social Media</h2>
@@ -7935,7 +7940,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     <article class="frame-card" id="frame-youtube">
       <div class="frame-thumbnail">
-        <img decoding="async" src="workspace-card-youtube-thumbnail.webp" alt="YouTube">
+        <img loading="lazy" decoding="async" src="workspace-card-youtube-thumbnail.webp" alt="YouTube">
       </div>
       <div class="frame-card-body">
         <h2 class="frame-card-title">YouTube</h2>
@@ -7948,7 +7953,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     <article class="frame-card" id="frame-newsletters">
       <div class="frame-thumbnail">
-        <img decoding="async" src="workspace-card-newsletter-assets.webp" alt="Newsletter">
+        <img loading="lazy" decoding="async" src="workspace-card-newsletter-assets.webp" alt="Newsletter">
       </div>
       <div class="frame-card-body">
         <h2 class="frame-card-title">Newsletter</h2>
@@ -7961,7 +7966,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     <article class="frame-card" id="frame-reels">
       <div class="frame-thumbnail">
-        <img decoding="async" src="workspace-card-reel-captions.webp" alt="Reel Captions">
+        <img loading="lazy" decoding="async" src="workspace-card-reel-captions.webp" alt="Reel Captions">
       </div>
       <div class="frame-card-body">
         <h2 class="frame-card-title">Reel Captions</h2>
@@ -8059,6 +8064,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
 <div class="studio-topbar view-hidden" data-workspace aria-label="Studio workspace toolbar">
   <div class="studio-topbar-left">
+    <h1 class="es-sr-only" id="studio-route-heading">Social Media editor</h1>
     <span class="studio-title" id="studio-workspace-title">Social Media</span>
     <input class="studio-name-field" id="studio-canvas-name" type="text" autocomplete="off" spellcheck="false" aria-label="Canvas export name" placeholder="Untitled canvas">
   </div>
@@ -18125,6 +18131,45 @@ function renderExportImage() {
 }
 
 const FRAMEUP_LINKS_BUCKET = 'frameup-links';
+// Link images are fetched by every newsletter reader (25–30k per issue), so
+// they're encoded smaller than downloads: JPEG at 0.85 instead of 0.94
+// (about 40% fewer bytes, no visible change at email size), and newsletter
+// images are never wider than 1200 px (2x a 600 px email column).
+// Downloads keep 0.94 and full size. PNGs are untouched.
+const LINK_JPEG_QUALITY = 0.85;
+const LINK_MAX_WIDTH = 1200;
+
+function linkImagePlan({ width, height, type, workspace, quality }) {
+  const isJpeg = type === 'image/jpeg';
+  const cap = workspace === 'newsletter' && width > LINK_MAX_WIDTH ? LINK_MAX_WIDTH / width : 1;
+  return {
+    quality: isJpeg ? LINK_JPEG_QUALITY : quality,
+    width: Math.round(width * cap),
+    height: Math.round(height * cap),
+  };
+}
+
+// Downscale in halving steps so text edges stay crisp.
+function resizeCanvasForLink(source, width, height) {
+  if (source.width === width && source.height === height) return source;
+  let current = source;
+  while (current.width / 2 >= width) {
+    const step = document.createElement('canvas');
+    step.width = Math.round(current.width / 2);
+    step.height = Math.round(current.height / 2);
+    const stepCtx = step.getContext('2d');
+    stepCtx.imageSmoothingQuality = 'high';
+    stepCtx.drawImage(current, 0, 0, step.width, step.height);
+    current = step;
+  }
+  const out = document.createElement('canvas');
+  out.width = width;
+  out.height = height;
+  const outCtx = out.getContext('2d');
+  outCtx.imageSmoothingQuality = 'high';
+  outCtx.drawImage(current, 0, 0, width, height);
+  return out;
+}
 
 function canvasToBlob(canvas, type, quality) {
   return new Promise((resolve, reject) => {
@@ -18235,7 +18280,9 @@ async function copyImageLink() {
   if (button) button.disabled = true;
   try {
     const { offscreen, filename, workspace, exportQuality } = renderExportImage();
-    const blob = await canvasToBlob(offscreen, workspace.exportType, exportQuality);
+    const plan = linkImagePlan({ width: offscreen.width, height: offscreen.height, type: workspace.exportType, workspace: activeWorkspace, quality: exportQuality });
+    const linkCanvas = resizeCanvasForLink(offscreen, plan.width, plan.height);
+    const blob = await canvasToBlob(linkCanvas, workspace.exportType, plan.quality);
     const now = new Date();
     const folder = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
     const extension = (filename.match(/\.[a-z0-9]+$/i)?.[0] || '.jpeg').toLowerCase();
@@ -22595,6 +22642,8 @@ loadFont().then(() => render());
     const modeNode = document.getElementById('studio-mode-badge');
     const safeNode = document.getElementById('studio-safe-badge');
     if (titleNode) titleNode.textContent = title;
+    const routeHeading = document.getElementById('studio-route-heading');
+    if (routeHeading) routeHeading.textContent = `${title} editor`;
     if (sizeNode && workspace) sizeNode.textContent = `${workspace.width} × ${workspace.height} px`;
     if (modeNode) modeNode.textContent = workspaceName === 'instagram' ? 'Carousel Studio' : 'Canvas Studio';
     if (safeNode) {
@@ -23630,5 +23679,8 @@ loadFont().then(() => render());
 <script src="frameup-spec.js?v=20261118-generate-director"></script>
 <script src="frameup-impact.js?v=20261118-impact-posted-links"></script>
 <script src="frameup-posted.js?v=20261118-impact-posted-links"></script>
+<script src="frameup-zip.js?v=20261118-editor-quick-wins"></script>
+<script src="frameup-size-pack.js?v=20261118-editor-quick-wins"></script>
+<script src="frameup-cutout.js?v=20261118-editor-quick-wins"></script>
 </body>
 </html>

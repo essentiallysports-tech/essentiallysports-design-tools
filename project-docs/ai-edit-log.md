@@ -184,6 +184,61 @@ and what's still uncommitted.
 - **New env vars:** `AI_TEAM_WEEKLY_LIMIT_USD`, `AI_FAIL_CLOSED`, `AI_DISABLE`, `AI_ECONOMY`, `SLACK_AI_ALERTS_WEBHOOK_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET`. Set them in the Enterprise Vercel project.
 - **Tests:** new `scripts/test-ai-guardrails.mjs` (all network mocked; no Slack message sent). The full suite shows only the 7 known baseline failures.
 - **Browser:** the Dashboard AI panel was checked through a temporary local harness (stubbed `ESAuth` / `ESDashboardData`, since deleted) at 1280 and 375, light and dark. It covered no-cap, economy, empty and no-settings states, with no horizontal scroll and no console errors.
+### 2026-11-18 — Editor quick wins: smaller link images, Remove background, size packs, P1 fixes, faster editor links
+- Status: `[committed on feature/editor-quick-wins - not pushed, not merged]`
+- Branch/worktree: `feature/editor-quick-wins` in `ds-branches/editor-quick-wins` (from origin/main 150ab31).
+- **Smaller newsletter link images (egress).** `copyImageLink()` now encodes JPEG link uploads at 0.85
+  (downloads stay 0.94) and caps newsletter link images at 1200 px wide (2x a 600 px email column; only
+  the 2x export option is affected). Measured on the newsletter templates in the browser: Feature Image
+  146→98 KB (−33%), Video FI 111→73 KB (−35%), Tag FI 106→68 KB (−36%). Side-by-side checks showed no
+  visible difference at 100%. Helpers: `linkImagePlan()`, `resizeCanvasForLink()` (index.html).
+- **Remove background** (`frameup-cutout.js`, `netlify/functions/remove-bg.js`, `api/remove-bg.js`): a
+  "Remove background" action on each photo in the Photos panel. **Changed per Suhail ("use a chatgpt cheap
+  model"):** default provider is OpenAI `gpt-image-1-mini` (cheapest GPT Image model; `REMOVE_BG_MODEL`
+  overrides) via `/v1/images/edits` with `background: transparent`, `quality: low`, WebP output (keeps
+  alpha, stays under Vercel's 4.5 MB response cap), called **directly with the existing `OPENAI_API_KEY`**
+  (same key as Reels transcription), so no new key. `REMOVE_BG_PROVIDER=gateway` (opt-in: the Gateway's
+  OpenAI image-edit route isn't documented for transparency) and `=bria` (`BRIA_API_KEY`) remain options.
+  **Likeness rule:** the model's picture is never shown. The editor pads the photo to the model's size
+  (1024², 1024×1536 or 1536×1024), takes only the returned alpha, maps it back to the photo, softens the
+  edge and applies it to the ORIGINAL pixels at up to 2048 px. A mask is rejected (falls back to the free
+  plain-backdrop tool, or "Couldn't cut this one out cleanly") when it is near-empty/near-full, spills into
+  the padding (moved/rescaled), or the model's pixels under it disagree with the photo (mean diff > 48 or
+  > 20% of pixels clearly different = redrawn/shifted). Cost is computed from the response's token usage
+  ($2 text / $2.5 image in / $8 out per 1M for gpt-image-1-mini; about $0.005 per image at low) and logged
+  via `logUsage` as `remove-bg` with model `openai/gpt-image-1-mini`. Signed-in only, 6 MB cap, per-person
+  hourly cap + shared hourly/weekly AI caps. Not set up → dialog naming the env var. Free in-browser
+  plain-backdrop flood fill kept. Per-photo session cache and Undo kept. **Not tried against the real
+  OpenAI API** (no real calls from this session); the mask pipeline was checked in the browser with a
+  stand-in model response.
+  **Gateway follow-up:** `REMOVE_BG_PROVIDER=gateway` now uses the Gateway's documented JSON form of
+  `POST https://ai-gateway.vercel.sh/v1/images/edits` (`model: openai/gpt-image-1-mini`, `images:
+  [{ image_url: <data URL> }]`, plus `background/output_format/quality/size` top-level and in
+  `providerOptions.openai`). Default stays `openai` (direct) because the Gateway docs show edits only with
+  `openai/gpt-image-2` and never mention transparent output passthrough; switch with one env var after a
+  real call on a preview. New admin check: `GET /api/remove-bg?diag=1` (dashboard admins via
+  `is_es_designer_admin()`, or `REMOVE_BG_DIAG_EMAILS`) returns provider, model, endpoint and key presence
+  as booleans.
+- **Size packs** (`frameup-size-pack.js`, `frameup-zip.js`, `frameup-quick-wins.css`): Export settings →
+  "Size pack" (and ⌘K "Export size pack") in the Social Media workspace: feed 1080×1350, square 1080×1080,
+  story 1080×1920, X 1600×900, YouTube 1280×720, preview grid, tick sizes, one ZIP (tiny stored-ZIP writer,
+  no CDN). Cover Image is re-laid out at every size (story/YouTube use the Reels/YouTube workspaces' own
+  fade and text anchor). Every other template was checked at each size and does NOT re-lay out cleanly
+  (fixed-coordinate cards overlap the wordmark), so they are shown whole on a blurred backdrop ("Fitted"),
+  with a centred crop only when ≤6% would be lost. Each preview is labelled Original / Re-laid out /
+  Cropped / Fitted.
+- **Launch-readiness P1s:** the ES Image Pool inputs already had `aria-label` (no change); added a visually
+  hidden `h1#studio-route-heading` kept in sync with the workspace name; Reels phone Export now mirrors the
+  desktop button's `disabled` (MutationObserver) and starts disabled.
+- **Performance:** tour scripts (4 files, ~78 KB) are `defer`; Home's second banner and four workspace
+  cards are `loading="lazy"`, and opening an editor link (`#instagram|#youtube|#newsletter`) keeps Home out
+  of the first layout until the router runs, so those images are never fetched there: same-origin images
+  on an editor deep link went 588 KB → 106 KB. Local (cached, localhost) parse/DCL timings were within
+  noise before and after (~60–80 ms).
+- Tests: `scripts/test-remove-bg.mjs`, `test-size-pack.mjs` (ZIP bytes + `unzip -t`), `test-cutout.mjs`,
+  `test-editor-quick-wins.mjs`. Full suite: only the 7 known baseline failures.
+- Env: reuses `OPENAI_API_KEY`. New optional: `REMOVE_BG_PROVIDER`, `REMOVE_BG_MODEL`, `REMOVE_BG_QUALITY`,
+  `REMOVE_BG_HOURLY_LIMIT`, and for Bria only `BRIA_API_KEY`, `BRIA_REMOVE_BG_URL`, `REMOVE_BG_COST_USD`. No migrations.
 
 ### 2026-09-10 — Fix a regression from this same day's earlier fixes: concurrent profile upsert race
 - Status: `[pushed - see rollback point below]`
