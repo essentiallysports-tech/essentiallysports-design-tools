@@ -184,7 +184,7 @@
     label: 'Editor tour',
     kicker: 'Editor',
     steps: [
-      { page: 'index.html', route: editorRoute, target: ['.studio-primary-controls', '#post-type-control'], placement: 'left', title: 'Post type', text: 'Choose the template. Browse shows every one as a picture.' },
+      { page: 'index.html', route: editorRoute, target: ['.studio-primary-controls', '#post-type-control'], placement: 'left', title: 'Format', text: 'Pick the template or layout for this design.' },
       { page: 'index.html', target: '#layers-panel', media: DESKTOP, placement: 'right', title: 'Layers', text: 'Show, hide or lock parts of the design.' },
       { page: 'index.html', target: ['.canvas-wrap', '.canvas-stage'], title: 'Canvas', text: 'Click any text or photo to edit it.' },
       { page: 'index.html', target: '.canvas-bottom-actions', placement: 'top', title: 'Zoom, slides and photos', text: 'Upload a photo or pull one from the ES Image Pool.' },

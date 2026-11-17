@@ -172,8 +172,16 @@
     toast.addEventListener('keydown', event => {
       if (event.key === 'Escape') { event.stopPropagation(); close(options.onSecondary); }
     });
-    // On <html>, not <body>: a transform left on <body> would break position: fixed.
-    doc.documentElement.appendChild(toast);
+    // Top layer when supported (a transform on <body> would break
+    // position: fixed); otherwise on <html>, outside the transformed <body>.
+    const popover = typeof toast.showPopover === 'function';
+    if (popover) {
+      toast.setAttribute('popover', 'manual');
+      doc.body.appendChild(toast);
+      try { toast.showPopover(); } catch (error) { /* shown as a normal box */ }
+    } else {
+      doc.documentElement.appendChild(toast);
+    }
     return toast;
   }
 

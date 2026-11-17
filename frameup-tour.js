@@ -32,7 +32,7 @@
   const doc = win.document;
   const RESUME_KEY = 'frameup.tour.resume';
   const RESUME_MAX_AGE = 2 * 60 * 1000;
-  const WAIT_SHORT = 1200;
+  const WAIT_SHORT = 600;
   const WAIT_LONG = 6000;
   const GAP = 14;
   const MARGIN = 16;
@@ -193,11 +193,16 @@
         </div>
         <p class="fu-tour__live" aria-live="polite" aria-atomic="true" data-tour-live></p>
       </section>`;
-    // The top layer (popover) sits above open dialogs and ignores ancestors
-    // with a transform (some pages leave one on <body>, which would turn
-    // position: fixed into "scrolls with the page"). Older browsers: <html>.
-    if (supportsPopover()) layer.setAttribute('popover', 'manual');
-    doc.documentElement.appendChild(layer);
+    // The top layer (popover) sits above everything and ignores ancestors
+    // with a transform (phones have one on <body>, which would turn
+    // position: fixed into "scrolls with the page"). Older browsers: mount on
+    // <html> instead, outside the transformed <body>.
+    if (supportsPopover()) {
+      layer.setAttribute('popover', 'manual');
+      doc.body.appendChild(layer);
+    } else {
+      doc.documentElement.appendChild(layer);
+    }
     ui = {
       layer,
       spot: layer.querySelector('.fu-tour__spot'),

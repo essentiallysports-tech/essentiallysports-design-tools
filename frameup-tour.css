@@ -258,8 +258,6 @@ html[data-theme="dark"] .fu-tour :is(.fu-tour__close, .es-btn):focus-visible {
     transition: top 300ms var(--fu-ease), left 300ms var(--fu-ease), opacity 160ms var(--fu-ease);
     animation: fuTourIn 240ms var(--fu-ease) both;
   }
-
-  .fu-tour.is-moving .fu-tour__card { opacity: .6; }
 }
 
 @keyframes fuTourIn {
@@ -288,6 +286,18 @@ html[data-theme="dark"] .fu-tour :is(.fu-tour__close, .es-btn):focus-visible {
 }
 
 .fu-tour-toast[hidden] { display: none; }
+
+/* Undo the browser's popover box (the toast uses the top layer). */
+.fu-tour-toast[popover] {
+  inset: auto 24px calc(24px + env(safe-area-inset-bottom, 0px)) auto;
+  margin: 0;
+  overflow: visible;
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .fu-tour-toast[popover] { inset: auto 16px calc(16px + env(safe-area-inset-bottom, 0px)) 16px; }
+}
 
 .fu-tour-toast__icon {
   display: grid;
