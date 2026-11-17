@@ -3,6 +3,49 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-19-editor-ui",
+      "date": "2026-11-19",
+      "title": "Editor: a better Layers panel, safe zones, slide tools",
+      "commit": "986f022",
+      "items": [
+        {
+          "title": "Layers you can work with",
+          "text": "Each layer shows what it is and what's in it. Click to select it on the canvas (Shift or ⌘ for more), double-click to rename, drag to reorder, or press ⌘[ / ⌘]. Hide and lock sit on every row. Drag the edge to resize. YouTube thumbnails have layers now too.",
+          "page": "index.html",
+          "route": "#instagram",
+          "target": "#layers-panel"
+        },
+        {
+          "title": "Format and safe zones",
+          "text": "The bar above the canvas shows the template and size you're on; click it to switch. Safe zones mark YouTube's timestamp corner, the Instagram grid crop and the ES margin. Export warns if your headline sits under the timestamp.",
+          "page": "index.html",
+          "route": "#youtube",
+          "target": ".studio-history-group"
+        },
+        {
+          "title": "See it small",
+          "text": "On YouTube, Small size shows your thumbnail at search and Up next sizes, so you can check it still reads.",
+          "page": "index.html",
+          "route": "#youtube",
+          "target": ".studio-history-group"
+        },
+        {
+          "title": "Carousel slide tools",
+          "text": "The ⋯ next to the slide numbers duplicates a slide into the next empty one, moves it left or right, or clears it.",
+          "page": "index.html",
+          "route": "#instagram",
+          "target": ".carousel-workspace-nav"
+        },
+        {
+          "title": "Newsletter: copy the right thing",
+          "text": "Image assets say Copy image link (the URL for the newsletter's image block); widgets say Copy HTML. A line under the buttons says where to paste it.",
+          "page": "index.html",
+          "route": "#newsletter",
+          "target": "#studio-link-btn"
+        }
+      ]
+    },
+    {
       "id": "2026-11-19-hero-editor",
       "date": "2026-11-19",
       "title": "Editor: save status, smarter templates, brand check",

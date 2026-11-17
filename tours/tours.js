@@ -162,9 +162,10 @@
     icon: I.image,
     steps: [
       { page: 'index.html', route: editorRoute, target: ['.studio-primary-controls', '#post-type-control'], placement: 'left', icon: I.grid, title: 'Format', text: 'Pick the template or layout for this design.' },
-      { page: 'index.html', target: '#layers-panel', media: DESKTOP, placement: 'right', icon: I.layers, title: 'Layers', text: 'Show, hide or lock parts of the design.' },
+      { page: 'index.html', target: '#layers-panel', media: DESKTOP, placement: 'right', icon: I.layers, title: 'Layers', text: 'Select, rename, hide, lock and drag to reorder. ⌘[ and ⌘] move a layer.' },
       { page: 'index.html', target: ['.canvas-wrap', '.canvas-stage'], icon: I.image, title: 'Canvas', text: 'Click any text or photo to edit it.' },
-      { page: 'index.html', target: '.canvas-bottom-actions', placement: 'top', icon: I.zoom, title: 'Zoom, slides and photos', text: 'Upload a photo or pull one from the ES Image Pool.' },
+      { page: 'index.html', target: '.canvas-bottom-actions', placement: 'top', icon: I.zoom, title: 'Zoom, slides and photos', text: 'Zoom, switch slides (⋯ duplicates or moves one), or add a photo.' },
+      { page: 'index.html', target: ['.fu-canvas-bar', '.studio-history-group'], media: DESKTOP, icon: I.grid, title: 'Format and safe zones', text: 'The template and size you are on. Click to switch. Safe zones show what gets covered.' },
       { page: 'index.html', target: '.studio-history-group', media: DESKTOP, icon: I.history, title: 'Undo and recent', text: 'Undo, redo, and reopen anything you exported.' },
       { page: 'index.html', target: ['.app > .panel', '.studio-control-dock'], media: DESKTOP, placement: 'left', icon: I.sliders, title: 'Inspector', text: 'Text, photos, brand and colours, top to bottom.' },
       { page: 'index.html', target: '.mobile-editor-nav', media: PHONE, icon: I.sliders, title: 'Edit', text: 'Content, photos, format and brand. Tap a tab to open it.' },
