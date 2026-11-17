@@ -9,7 +9,7 @@
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261115-auth2"></script>
-  <script src="dashboard-data.js?v=20261117-ready1"></script>
+  <script src="dashboard-data.js?v=20261118-requests-slack"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -436,7 +436,7 @@
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
-<script src="app-shell.js?v=20261117-tour2"></script>
+<script src="app-shell.js?v=20261118-requests-slack"></script>
 <link rel="stylesheet" href="frameup-tour.css?v=20261117-tour1">
 <script src="frameup-tour.js?v=20261117-tour1"></script>
 <script src="tours/updates.js?v=20261117-tour1"></script>
@@ -664,6 +664,7 @@
             </div>
             <div class="task-filter-controls">
               <label><span class="sr-only">Assignee</span><select class="filter" id="task-owner-filter"><option value="">All assignees</option></select></label>
+              <label><span class="sr-only">Status</span><select class="filter" id="task-status-filter"><option value="">Any status</option><option value="open">Open</option><option value="Backlog">New</option><option value="Assigned">Assigned</option><option value="Doing">In progress</option><option value="Review">In review</option><option value="Done">Done</option><option value="Declined">Declined</option></select></label>
               <label><span class="sr-only">Priority</span><select class="filter" id="task-priority-filter"><option value="">All priorities</option><option value="Urgent">Urgent</option><option value="High">High</option><option value="Normal">Normal</option></select></label>
               <label><span class="sr-only">Due date</span><select class="filter" id="task-due-filter"><option value="">Any due date</option><option value="overdue">Overdue</option><option value="today">Due today</option><option value="week">Due this week</option><option value="none">No due date</option></select></label>
               <label><span class="sr-only">Sort requests</span><select class="filter" id="task-sort-filter"><option value="updated">Recently updated</option><option value="due">Due date</option><option value="priority">Priority</option><option value="created">Newest created</option></select></label>
@@ -766,6 +767,10 @@
   </div>
   <script>
     const STATUS_OPTIONS = ['Backlog', 'Assigned', 'Doing', 'Review', 'Done'];
+    // Declined (request workflow) closes a request without a kanban column of
+    // its own; it shows on the board only when declined requests exist.
+    const CLOSED_STATUSES = ['Done', 'Declined'];
+    const statusOptionsFor = task => (task?.status === 'Declined' ? [...STATUS_OPTIONS, 'Declined'] : STATUS_OPTIONS);
     const PRIORITY_OPTIONS = ['Normal', 'High', 'Urgent'];
     // Keep the database values and the visible role vocabulary identical. A
     // role badge must never show a designation such as Founder or Design
@@ -883,7 +888,7 @@
       const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const startTomorrow = new Date(startToday.getTime() + 86400000);
       const endWeek = new Date(startToday.getTime() + (7 * 86400000));
-      if (due < now && task.status !== 'Done') return 'overdue';
+      if (due < now && !CLOSED_STATUSES.includes(task.status)) return 'overdue';
       if (due >= startToday && due < startTomorrow) return 'today';
       if (due >= startTomorrow && due < endWeek) return 'week';
       return 'future';
@@ -1092,7 +1097,7 @@
     }
 
     function taskStatusChoice(task) {
-      return dashboardChoice(STATUS_OPTIONS.map(status => ({ value: status, label: status })), task.status || 'Backlog', 'status');
+      return dashboardChoice(statusOptionsFor(task).map(status => ({ value: status, label: status })), task.status || 'Backlog', 'status');
     }
 
     function taskOwnerChoice(people, selected = '') {
@@ -1164,6 +1169,7 @@
       const owner = document.getElementById('task-owner-filter')?.value || '';
       const priority = document.getElementById('task-priority-filter')?.value || '';
       const due = document.getElementById('task-due-filter')?.value || '';
+      const statusFilter = document.getElementById('task-status-filter')?.value || '';
       const sort = document.getElementById('task-sort-filter')?.value || 'updated';
       const signedInEmail = String(dashboardUser.email || '').trim().toLowerCase();
       const recentCutoff = Date.now() - (7 * 86400000);
@@ -1182,6 +1188,7 @@
         return (!query || haystack.includes(query))
           && (!owner || task.assignedTo === owner)
           && (!priority || task.priority === priority)
+          && (!statusFilter || (statusFilter === 'open' ? !CLOSED_STATUSES.includes(task.status) : task.status === statusFilter))
           && (!due || taskDueState(task) === due)
           && quickFilterMatches;
       });
@@ -1204,8 +1211,8 @@
       return {
         tasks: tasks.length,
         requests: requests.length,
-        open: requests.filter(task => task.status !== 'Done').length,
-        openRequests: requests.filter(task => task.status !== 'Done').length,
+        open: requests.filter(task => !CLOSED_STATUSES.includes(task.status)).length,
+        openRequests: requests.filter(task => !CLOSED_STATUSES.includes(task.status)).length,
         urgent: requests.filter(task => String(task.priority || '').toLowerCase() === 'urgent').length,
         designs: designs.length,
         exportsRange: exportsBetween(designs, rangeWindow().start, Infinity).length,
@@ -1278,6 +1285,7 @@
         || Boolean(document.getElementById('dashboard-search')?.value)
         || Boolean(ownerFilter.value)
         || Boolean(document.getElementById('task-priority-filter')?.value)
+        || Boolean(document.getElementById('task-status-filter')?.value)
         || Boolean(document.getElementById('task-due-filter')?.value)
         || (document.getElementById('task-sort-filter')?.value || 'updated') !== 'updated';
       const reset = document.getElementById('task-filter-reset');
@@ -1316,7 +1324,10 @@
       const board = document.getElementById('kanban-board');
       if (!board) return;
       const tasks = filteredTasks(state).filter(task => task.type === 'design_request');
-      board.innerHTML = STATUS_OPTIONS.map(status => {
+      const columns = tasks.some(task => task.status === 'Declined') ? [...STATUS_OPTIONS, 'Declined'] : STATUS_OPTIONS;
+      // The stylesheet lays out five columns; a sixth (Declined) widens the grid.
+      board.style.gridTemplateColumns = columns.length > STATUS_OPTIONS.length ? `repeat(${columns.length}, minmax(230px, 1fr))` : '';
+      board.innerHTML = columns.map(status => {
         const columnTasks = tasks.filter(task => task.status === status);
         return `
           <section class="kanban-column" data-kanban-status="${attr(status)}">
@@ -1678,7 +1689,7 @@
       setHtml('[data-kpi-meta="visitors"]', `${fmt(online)} online now · by last seen`);
 
       const requests = (state.tasks || []).filter(task => task.type === 'design_request');
-      const open = requests.filter(task => task.status !== 'Done');
+      const open = requests.filter(task => !CLOSED_STATUSES.includes(task.status));
       const urgent = open.filter(task => String(task.priority || '').toLowerCase() === 'urgent').length;
       const overdue = open.filter(task => taskDueState(task) === 'overdue').length;
       setHtml('[data-kpi-delta="requests"]', overdue
@@ -1958,7 +1969,7 @@
       if (gate) { setHtml(target, gate); return; }
       const requests = (state.tasks || []).filter(task => task.type === 'design_request');
       const designs = allExports(state);
-      const open = requests.filter(task => task.status !== 'Done').sort((a, b) =>
+      const open = requests.filter(task => !CLOSED_STATUSES.includes(task.status)).sort((a, b) =>
         priorityWeight(b.priority) - priorityWeight(a.priority)
         || (Date.parse(a.designDueAt || '') || Infinity) - (Date.parse(b.designDueAt || '') || Infinity));
       setHtml('#dov-queue-meta', `${fmt(open.length)} open request${open.length === 1 ? '' : 's'} · ${fmt(designs.filter(task => task.status !== 'Done').length)} exports not marked done`);
@@ -2543,8 +2554,8 @@
       const drawerSource = (drawerPersonName || drawerPersonEmail)
         ? personDisplayName(drawerPersonName, drawerPersonEmail)
         : task.workspace;
-      document.getElementById('task-drawer-meta').innerHTML = `${text(task.sourceId)} · ${text(drawerSource)} · Created ${dateText(task.createdAt)}`;
-      document.getElementById('drawer-status').innerHTML = optionList(STATUS_OPTIONS, task.status);
+      document.getElementById('task-drawer-meta').innerHTML = `${text(task.sourceId)} · ${text(drawerSource)} · Created ${dateText(task.createdAt)}${task.type === 'design_request' ? ` · <a href="requests.html?id=${attr(encodeURIComponent(task.sourceId || ''))}">History and comments</a>` : ''}`;
+      document.getElementById('drawer-status').innerHTML = optionList(statusOptionsFor(task), task.status);
       document.getElementById('drawer-assignee').innerHTML = peopleOptions(window.ESDashboardData.getDashboardState().people, task.assignedTo);
       document.getElementById('drawer-priority').value = PRIORITY_OPTIONS.includes(task.priority) ? task.priority : 'Normal';
       document.getElementById('drawer-due').value = datetimeLocalValue(task.designDueAt);
@@ -2767,7 +2778,7 @@
     }
 
     function setupDashboardEvents() {
-      ['task-owner-filter', 'task-priority-filter', 'task-due-filter', 'task-sort-filter'].forEach(id => {
+      ['task-owner-filter', 'task-status-filter', 'task-priority-filter', 'task-due-filter', 'task-sort-filter'].forEach(id => {
         document.getElementById(id)?.addEventListener('change', renderDashboard);
       });
       document.getElementById('dashboard-search')?.addEventListener('input', renderDashboard);
@@ -2775,7 +2786,7 @@
         activeTaskQuickFilter = 'all';
         const search = document.getElementById('dashboard-search');
         if (search) search.value = '';
-        ['task-owner-filter', 'task-priority-filter', 'task-due-filter'].forEach(id => {
+        ['task-owner-filter', 'task-status-filter', 'task-priority-filter', 'task-due-filter'].forEach(id => {
           const control = document.getElementById(id);
           if (control) control.value = '';
         });

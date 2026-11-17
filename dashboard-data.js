@@ -217,6 +217,9 @@
     if (normalized === 'in progress' || normalized === 'doing') return 'Doing';
     if (normalized === 'needs review' || normalized === 'review') return 'Review';
     if (normalized === 'done' || normalized === 'complete' || normalized === 'completed') return 'Done';
+    // Declined arrives with the request workflow (20261118120000); it is not a
+    // kanban column, the board shows it only when such requests exist.
+    if (normalized === 'declined' || normalized === 'withdrawn') return 'Declined';
     return TASK_STATUS_COLUMNS.includes(cleaned) ? cleaned : fallback;
   }
 
@@ -311,6 +314,8 @@
       referenceLinks: request.referenceLinks || [],
       metadata: {
         source: request.source || 'Web Portal',
+        // Bot-mode Slack thread: status updates reply here (design-request-update.js).
+        ...(request.slack?.ts ? { slackChannel: String(request.slack.channel || ''), slackThreadTs: String(request.slack.ts) } : {}),
         publication: request.publication || '',
         socialChannel: request.socialChannel || '',
         entities: request.entities || '',
@@ -1377,6 +1382,9 @@
       removePendingTask(updated.id);
       cloudTasksCache = mergeTasks([saved], cloudTasksCache);
       emitDashboardChange('task', { record: saved });
+      // The database logged the change (request workflow trigger); ask the
+      // server to post it to the request's Slack thread. Best effort.
+      if (saved.type === 'design_request') notifyRequestChange(saved.id);
     }
     await recordActivity({
       type: 'task_updated',
@@ -1386,6 +1394,16 @@
       meta: { status: updated.status, assignedTo: updated.assignedTo },
     });
     return saved || updated;
+  }
+
+  function notifyRequestChange(taskId) {
+    if (!window.ESAuth?.fetchWithAuth || !taskId) return;
+    window.ESAuth.fetchWithAuth('/api/design-request-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'notify', requestId: taskId }),
+    }).catch(() => null);
+    try { window.sessionStorage.removeItem('frameup.requestCount.v1'); } catch (error) { /* ignore */ }
   }
 
   async function updatePersonAccessRole(email, role) {

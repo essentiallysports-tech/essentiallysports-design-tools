@@ -9,7 +9,8 @@
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
 <script src="es-auth-config.js?v=20260707-auth4"></script>
 <script src="es-auth.js?v=20261115-auth2"></script>
-  <script src="dashboard-data.js?v=20261117-ready1"></script>
+  <script src="dashboard-data.js?v=20261118-requests-slack"></script>
+  <script src="request-lifecycle.js?v=20261118-requests-slack"></script>
 <script>
   (() => {
     window.ESAuth?.requireAuth(`design-request.html${window.location.search}${window.location.hash}`);
@@ -1588,6 +1589,22 @@
     color: var(--success);
     font-weight: 700;
   }
+  .request-success[hidden], .request-form[hidden] { display: none !important; }
+  .request-note a { color: var(--es-brand-text); font-weight: 500; }
+  html[data-theme="dark"] .request-note a { color: #9DCBFD; }
+  .request-success { outline: none; }
+  .request-success-kicker { display: flex; align-items: center; gap: var(--es-space-2); margin: 0 0 var(--es-space-2); color: var(--es-good); font-family: var(--es-font-ui); font-size: var(--es-type-meta-size); font-weight: 700; }
+  .request-success-check { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--es-good-soft); }
+  .request-success-check::after { content: ''; width: 8px; height: 4px; margin-top: -2px; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); }
+  .request-success-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--es-space-4); margin: var(--es-space-5) 0; }
+  .request-success-facts dt { color: var(--text-secondary); font-family: var(--es-font-ui); font-size: var(--es-type-meta-size); }
+  .request-success-facts dd { margin: 2px 0 0; color: var(--text-primary); font-family: var(--es-font-ui); font-size: var(--es-type-body-size); overflow-wrap: anywhere; }
+  .request-input[readonly] { background: var(--es-sunk); color: var(--text-secondary); cursor: default; }
+  html[data-theme="dark"] .request-success-kicker { color: var(--es-good-on-dark); }
+  html[data-theme="dark"] .request-success-check { background: var(--es-good-soft-on-dark); }
+  html[data-theme="dark"] .request-success-facts dd { color: #FFFFFF; }
+  html[data-theme="dark"] .request-success-facts dt { color: #BFC8D9; }
+  html[data-theme="dark"] .request-input[readonly] { background: #2A2D34; color: #BFC8D9; }
   .request-note {
     padding: 18px;
     border: 1.5px solid var(--border);
@@ -2431,7 +2448,7 @@
 <script src="theme.js?v=20261115-pol2"></script>
 <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
 <script src="site-chrome.js?v=20261117-usage1"></script>
-<script src="app-shell.js?v=20261117-tour2"></script>
+<script src="app-shell.js?v=20261118-requests-slack"></script>
 <link rel="stylesheet" href="frameup-tour.css?v=20261117-tour1">
 <script src="frameup-tour.js?v=20261117-tour1"></script>
 <script src="tours/updates.js?v=20261117-tour1"></script>
@@ -2710,7 +2727,8 @@
         </div>
         <div class="request-field is-wide">
           <label class="request-label" for="requester-email">Work Email <span class="request-required">*</span></label>
-          <input class="request-input" id="requester-email" name="requesterEmail" type="email" autocomplete="email" required>
+          <input class="request-input" id="requester-email" name="requesterEmail" type="email" autocomplete="email" required aria-describedby="requester-email-help">
+          <p class="request-help" id="requester-email-help">From your sign-in. Status updates and comments are tied to it.</p>
         </div>
         <div class="request-field is-wide" id="request-publication-field">
           <label class="request-label" for="request-publication">Newsletter Name / Brand <span class="request-required">*</span></label>
@@ -2757,21 +2775,22 @@
       </div>
       <div class="request-grid">
         <div class="request-field is-wide">
-          <label class="request-label" for="request-entities">Entity Names <span class="request-required">*</span></label>
+          <label class="request-label" for="request-entities">Who or What It’s About <span class="request-required">*</span></label>
           <textarea class="request-textarea" id="request-entities" name="entities" placeholder="List every athlete, team, coach, league, or person involved." required></textarea>
         </div>
         <div class="request-field is-wide">
-          <label class="request-label" for="request-brief">Task-Specific Requirement <span class="request-required">*</span></label>
-          <textarea class="request-textarea" id="request-brief" name="brief" placeholder="Describe the story, visual direction, hierarchy, and must-have details." required></textarea>
+          <label class="request-label" for="request-brief">What You Need <span class="request-required">*</span></label>
+          <textarea class="request-textarea" id="request-brief" name="brief" placeholder="Describe the story, visual direction, hierarchy, and must-have details." required aria-describedby="request-brief-help"></textarea>
+          <p class="request-help" id="request-brief-help">One or two sentences on the story, then the must-haves: sizes, logos, stats, tone.</p>
         </div>
         <div class="request-field is-wide">
-          <label class="request-label" for="request-copy">Text or Copy on Design</label>
+          <label class="request-label" for="request-copy">Exact Text on the Design</label>
           <textarea class="request-textarea" id="request-copy" name="designCopy" placeholder="Add exact copy if the design needs text."></textarea>
         </div>
         <div class="request-field is-wide">
-          <label class="request-label" for="request-links">Reference Files or Image Links</label>
+          <label class="request-label" for="request-links">Reference Links</label>
           <textarea class="request-textarea" id="request-links" name="referenceLinks" placeholder="Paste one public file, image, or folder link per line."></textarea>
-          <p class="request-help">Use accessible Google Drive, Dropbox, image, or webpage links.</p>
+          <p class="request-help">One link per line. Share files from Google Drive or Dropbox with “anyone at EssentiallySports can view”.</p>
         </div>
         <div class="request-field is-wide">
           <label class="request-label" for="request-notes">Additional Notes</label>
@@ -2812,13 +2831,26 @@
     <div class="request-status" id="request-form-status" role="status" aria-live="polite"></div>
   </form>
 
+  <section class="request-card request-success" id="request-success" tabindex="-1" aria-labelledby="request-success-title" hidden>
+    <div class="request-card-head">
+      <p class="request-success-kicker"><span class="request-success-check" aria-hidden="true"></span>Request sent</p>
+      <h2 class="request-card-title" id="request-success-title">The design team has it</h2>
+      <p class="request-card-copy" id="request-success-copy"></p>
+    </div>
+    <dl class="request-success-facts" id="request-success-facts"></dl>
+    <div class="request-actions">
+      <a class="es-btn es-btn--primary" id="request-success-track" href="requests.html">Track this request</a>
+      <button class="es-btn es-btn--secondary" type="button" id="request-success-another">Send another request</button>
+    </div>
+  </section>
+
   <aside class="request-sidebar">
     <section class="request-note">
       <h2 class="request-note-title">What happens next</h2>
       <ol>
-        <li>The request receives a tracking ID.</li>
-        <li>Its starting status is New.</li>
-        <li>Assignment stays with design operations.</li>
+        <li>You get a tracking ID and a link to follow it.</li>
+        <li>A designer picks it up: New, In progress, In review, Done.</li>
+        <li>Follow every change and comment in <a href="requests.html">My requests</a> (and the Slack thread).</li>
       </ol>
     </section>
   </aside>
@@ -4197,7 +4229,8 @@ function createDesignRequestRecord() {
 
   return {
     schemaVersion: 1,
-    id: generateDesignRequestId(records, createdAt),
+    // DR-YYYYMMDD-XXXX: unique across browsers (request-lifecycle.js).
+    id: window.FrameUpRequestLifecycle?.makeRequestId?.(new Date(createdAt)) || generateDesignRequestId(records, createdAt),
     createdAt,
     source: 'Web Portal',
     status: 'New',
@@ -4313,6 +4346,7 @@ function setupDesignRequests() {
       updateRequestTypeFields();
       document.querySelectorAll('#design-request-form .request-select').forEach(syncRequestDropdown);
       updateRequestStages();
+      fillSessionEmail();
       if (shouldClearStatus) setRequestFormStatus('');
     }, 0);
   });
@@ -4327,6 +4361,11 @@ function setupDesignRequests() {
       ok: false,
       reason: error.message || 'sheet_sync_failed',
     }));
+
+    // Bot-mode Slack returns the message ts: keep it so every status change
+    // replies in the same thread (stored in the task metadata).
+    const slackPost = sheetSync.integrations?.slack;
+    if (slackPost?.ok && slackPost.ts) record.slack = { channel: slackPost.channel || '', ts: slackPost.ts };
 
     const records = readDesignRequests();
     const persisted = writeDesignRequests([...records, record]);
@@ -4346,16 +4385,99 @@ function setupDesignRequests() {
     form.reset();
     clearStatusAfterReset = true;
     void persisted;
-    setRequestFormStatus(
-      `Request ${record.id} sent${designRequestIntegrationMessage(sheetSync)}`,
-      'success'
-    );
+    setRequestFormStatus('');
+    showRequestSuccess(record, sheetSync);
     prefillRequester();
   });
+
+  document.getElementById('request-success-another')?.addEventListener('click', () => {
+    document.getElementById('request-success').hidden = true;
+    form.hidden = false;
+    document.getElementById('request-type')?.focus();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  prefillFromQuery();
 
   prefillRequester();
   updateRequestTypeFields();
   updateRequestStages();
+}
+
+// After sending: swap the form for a confirmation with the tracking link.
+function showRequestSuccess(record, sync) {
+  const form = document.getElementById('design-request-form');
+  const panel = document.getElementById('request-success');
+  if (!form || !panel) {
+    setRequestFormStatus(`Request ${record.id} sent${designRequestIntegrationMessage(sync)}`, 'success');
+    return;
+  }
+  const slack = sync?.integrations?.slack;
+  const due = record.designDueAt ? new Date(record.designDueAt) : null;
+  const facts = [
+    ['Tracking ID', record.id],
+    ['Type', requestTypeLabel(record.requestType)],
+    ['Priority', record.priority || 'Normal'],
+    ['Needed by', due && !Number.isNaN(due.getTime()) ? due.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Not set'],
+  ];
+  const factsNode = document.getElementById('request-success-facts');
+  factsNode.replaceChildren(...facts.map(([label, value]) => {
+    const wrap = document.createElement('div');
+    const dt = document.createElement('dt');
+    const dd = document.createElement('dd');
+    dt.textContent = label;
+    dd.textContent = value;
+    wrap.append(dt, dd);
+    return wrap;
+  }));
+  let copy = 'You’ll see every status change, comment and the finished design in My requests.';
+  if (slack?.ok && slack.ts) copy = 'It’s in the design channel on Slack. Status changes reply in that thread, and everything shows in My requests.';
+  else if (slack?.ok) copy = 'It’s in the design channel on Slack. Follow status changes, comments and the finished design in My requests.';
+  else if (!sync?.skipped && !sync?.ok) copy = 'The design team will see it in FrameUp, but the Slack alert didn’t go out, so ping them if it’s urgent. Follow it in My requests.';
+  document.getElementById('request-success-copy').textContent = copy;
+  document.getElementById('request-success-track').href = `requests.html?id=${encodeURIComponent(record.id)}`;
+  form.hidden = true;
+  panel.hidden = false;
+  panel.focus({ preventScroll: true });
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Slack's /frameup falls back to a pre-filled form link:
+// design-request.html?brief=…&priority=High&due=ISO
+function prefillFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const brief = (params.get('brief') || '').slice(0, 1500);
+  const priority = params.get('priority') || '';
+  const due = params.get('due') || '';
+  const briefInput = document.getElementById('request-brief');
+  if (brief && briefInput && !briefInput.value) briefInput.value = brief;
+  const prioritySelect = document.getElementById('request-priority');
+  if (prioritySelect && ['Normal', 'High', 'Urgent'].includes(priority)) {
+    prioritySelect.value = priority;
+    syncRequestDropdown(prioritySelect);
+  }
+  const dueInput = document.getElementById('request-design-due');
+  const dueDate = due ? new Date(due) : null;
+  if (dueInput && dueDate && !Number.isNaN(dueDate.getTime()) && !dueInput.value) {
+    dueInput.value = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  }
+  if (brief) setRequestFormStatus('Your brief from Slack is filled in. Pick the type and brand, then submit.');
+}
+
+// The signed-in account is the requester (the server enforces it too), so the
+// email is filled from the session and can't be edited.
+async function fillSessionEmail() {
+  const email = document.getElementById('requester-email');
+  if (!email) return;
+  try {
+    const session = await window.ESAuth?.getSession?.();
+    const value = String(session?.user?.email || '').trim();
+    if (value) {
+      email.value = value;
+      email.readOnly = true;
+      updateRequestStages();
+    }
+  } catch (error) { /* keep the field editable */ }
 }
 
 // Signed-in people shouldn't retype their own name and email: fill them from
@@ -4373,6 +4495,7 @@ function prefillRequester() {
   if (name && !name.value && profileName && !isDemoProfileName(profile.name) && profileName !== 'Guest User') name.value = profileName;
   if (email && !email.value && typeof profile.email === 'string' && /@/.test(profile.email)) email.value = profile.email.trim();
   updateRequestStages();
+  fillSessionEmail();
 }
 
 // ─── DEBOUNCE ─────────────────────────────────────────────────────────────────
