@@ -14,6 +14,11 @@
 //
 // Also used by "Recent designs" / Gallery reopen (see frameup-designs.js):
 // encodeValue / decodeValue turn a design (with images) into storable data.
+//
+// Cloud drafts (frameup-cloud-drafts.js): every confirmed local save fires
+// `frameup:autosaved`; that file then copies cloudSnapshot() (web photo links
+// only) to the person's account, and applyCloudPayload() opens a draft saved
+// on another device. This browser's copy is always written first.
 (() => {
   'use strict';
 
@@ -301,6 +306,7 @@
   let defaultSignature = '';
   let lastSaveFailed = false;
   let dirty = false;
+  let defaultContentSignature = '';
 
   async function saveNow() {
     clearTimeout(saveTimer);
@@ -331,6 +337,8 @@
       lastSaveFailed = false;
       dirty = false;
       pruneImages().catch(() => {});
+      // Cloud drafts (frameup-cloud-drafts.js) copy each confirmed local save.
+      try { window.dispatchEvent(new CustomEvent('frameup:autosaved', { detail: { savedAt: Date.now() } })); } catch (error) { /* optional */ }
     })();
     try {
       await saving;
@@ -584,6 +592,52 @@
     return record;
   }
 
+  // ─── Cloud drafts (frameup-cloud-drafts.js) ───────────────────────────────
+  // The copy that goes to the account: same data as the local save, but
+  // uploaded files are left out (web photo links travel; files don't).
+  function countLocalImages(value, seen = new Set(), depth = 0) {
+    if (!value || typeof value !== 'object' || depth > 40) return seen.size;
+    if (typeof HTMLImageElement !== 'undefined' && value instanceof HTMLImageElement) {
+      const src = value.currentSrc || value.src || '';
+      if (isLocalUrl(src)) seen.add(src);
+      return seen.size;
+    }
+    if (typeof HTMLCanvasElement !== 'undefined' && value instanceof HTMLCanvasElement) { seen.add(value); return seen.size; }
+    if (Array.isArray(value)) value.forEach(item => countLocalImages(item, seen, depth + 1));
+    else if (Object.getPrototypeOf(value) === Object.prototype) Object.keys(value).forEach(key => { if (!TRANSIENT_KEYS.has(key)) countLocalImages(value[key], seen, depth + 1); });
+    return seen.size;
+  }
+
+  function cloudSnapshot() {
+    try { flushPendingTextChange?.(); } catch (error) { /* keep going */ }
+    const editor = collectEditor();
+    return {
+      format: FORMAT,
+      payload: { format: FORMAT, cloud: true, editor: encodeValue(editor, new Map(), { webOnly: true }) },
+      workspace: typeof activeWorkspace === 'string' ? activeWorkspace : '',
+      localPhotos: countLocalImages(editor.states) + countLocalImages(editor.builders),
+    };
+  }
+
+  // Something worth keeping is in the editor (not just the blank templates).
+  function hasLocalWork() {
+    try {
+      const current = encodeValue(collectEditor(), new Map());
+      return Boolean(defaultContentSignature) && contentSignatureOf(current) !== defaultContentSignature;
+    } catch (error) {
+      return true;
+    }
+  }
+
+  // Puts a draft from the account into the editor, then saves it locally.
+  async function applyCloudPayload(payload) {
+    if (!payload || payload.format !== FORMAT || !payload.editor) throw new Error('This draft can no longer be opened.');
+    const lookup = await loadImagesFor(payload.editor, () => Promise.resolve(null));
+    const saved = decodeValue(payload.editor, lookup);
+    applyEditor(saved);
+    schedule();
+  }
+
   function onBeforeUnload(event) {
     if (!enabled) return undefined;
     if (dirty || saveTimer) saveNow();
@@ -613,6 +667,7 @@
     try {
       const defaultPayload = encodeValue(collectEditor(), new Map());
       defaultSignature = signatureOf(defaultPayload);
+      defaultContentSignature = contentSignatureOf(defaultPayload);
       restoredRecord = await restore();
       if (restoredRecord) {
         lastSavedSignature = signatureOf(restoredRecord.payload);
@@ -665,6 +720,9 @@
     builderState: name => (BUILDERS.find(([key]) => key === name) || [null, () => null])[1](),
     assignState,
     markImagesStored: ids => ids.forEach(id => storedImageIds.add(id)),
+    cloudSnapshot,
+    applyCloudPayload,
+    hasLocalWork,
     isImageStored: id => storedImageIds.has(id),
   });
 

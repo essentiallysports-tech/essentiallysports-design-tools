@@ -3,6 +3,8 @@
 // Every export keeps a copy of the design that was on screen:
 //   * on this device (browser database, with photos), listed under
 //     "Recent designs" (clock button next to Undo / Redo), last 30 kept;
+//   * in the person's account (frameup-cloud-drafts.js, web photo links
+//     only), listed under "Your drafts" in the same dialog on other devices;
 //   * with the export record (text, settings and web photo links only, no
 //     uploaded files), so anyone can reopen it from the Gallery.
 //
@@ -107,6 +109,8 @@
       }, LOCAL_PREFIX + id);
       await A.txDone(tx);
       A.markImagesStored(blobs.map(([imageId]) => imageId));
+      // Cloud drafts: the shareable copy follows the person to other devices.
+      try { window.FrameUpCloudDrafts?.queueDesign(id, captured.cloud, meta); } catch (error) { /* optional */ }
       await trimLocal();
       refreshRecentCache();
     } catch (error) {
@@ -289,6 +293,9 @@
     dialog.showModal();
 
     const records = await listLocal();
+    // "Your drafts": work and exports saved to the account from other devices.
+    window.FrameUpCloudDrafts?.renderInto(dialog, { localIds: new Set(records.map(record => record.id)), close: () => dialog.close() })
+      .catch(error => console.warn('[designs] cloud drafts unavailable:', error));
     if (!records.length) {
       list.innerHTML = '<div class="recent-designs-empty"><strong>Nothing here yet</strong><span>Designs you export appear here, so you can reopen and change them later.</span></div>';
       return;
@@ -334,6 +341,7 @@
       remove.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
       remove.addEventListener('click', async () => {
         await removeLocal([record.id]).catch(() => {});
+        window.FrameUpCloudDrafts?.removeDesign(record.id).catch(() => {});
         row.remove();
         if (!list.querySelector('.recent-design')) list.innerHTML = '<div class="recent-designs-empty"><strong>Nothing here yet</strong><span>Designs you export appear here, so you can reopen and change them later.</span></div>';
       });
