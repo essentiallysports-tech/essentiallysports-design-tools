@@ -1,0 +1,41 @@
+{
+ "_note": "Trimmed ESPN CFB summary",
+ "keys": [
+  "boxscore",
+  "format",
+  "gameInfo",
+  "drives",
+  "leaders",
+  "broadcasts",
+  "pickcenter",
+  "odds",
+  "againstTheSpread",
+  "scoringPlays",
+  "news",
+  "winprobability",
+  "header",
+  "article",
+  "videos",
+  "wallclockAvailable",
+  "meta",
+  "standings"
+ ],
+ "winprobability.count": 159,
+ "winprobability.sample": [
+  {
+   "homeWinPercentage": 0.8882,
+   "tiePercentage": 0.0,
+   "playId": "4018568832"
+  },
+  {
+   "homeWinPercentage": 0.8867,
+   "tiePercentage": 0.0,
+   "playId": "4018568833"
+  },
+  {
+   "homeWinPercentage": 0.9118,
+   "tiePercentage": 0.0,
+   "playId": "40185688314"
+  }
+ ]
+}

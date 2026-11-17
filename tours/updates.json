@@ -435,6 +435,32 @@
       ]
     },
     {
+      "id": "2026-11-19-reels-fmt-ui",
+      "date": "2026-11-19",
+      "title": "Reels Studio: start from a game, a clip or a career",
+      "commit": "5e3dad5",
+      "items": [
+        {
+          "title": "Format gallery",
+          "text": "All formats in one place: the four news formats, plus Game Swing, Moment Replay and Hall-of-Fame Archive. Formats whose data server is not live yet say Coming soon.",
+          "page": "reel-maker.html",
+          "target": "#rm-fmt-entry"
+        },
+        {
+          "title": "Game Swing",
+          "text": "Pick a live or finished NFL, CFB or MLB game, sorted by the biggest win-probability swing. Tick the key plays; the score, clock and win probability come from the game data.",
+          "page": "reel-maker.html",
+          "target": "#rm-fmt-entry"
+        },
+        {
+          "title": "Moment Replay and Archive",
+          "text": "Turn one clip into setup, play and reaction frames you can nudge, or a player's career into cited moments with every source listed. Both export a reel and a 1080×1350 carousel.",
+          "page": "reel-maker.html",
+          "target": "#rm-fmt-entry"
+        }
+      ]
+    },
+    {
       "id": "2026-11-18-director",
       "date": "2026-11-18",
       "title": "The creative director, ES guidelines and Bring it on-brand",

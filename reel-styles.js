@@ -11,6 +11,10 @@
 //                       tiles, roles, mystery) on top of the story beats
 //   suggestStyle({ format, text })  -> { id, why }   (code only, free)
 //   validateStyle(style) -> [] of problems (tests keep the data honest)
+//   ELEMENTS / elementTokens / elementBox / drawPlaceholder
+//                       the data-format overlay pieces (scorebug, wpline,
+//                       clock, playcard, panel3, timeline-node, source-chip,
+//                       attribution) and their per-style tokens
 //
 // Studied from two published ES reels (a light "data explainer" and the
 // "ES Moneyball" analytics series) and rebuilt on one 8-pt grid inside the
@@ -43,7 +47,10 @@
   const ALL_KINDS = [...STORY_KINDS, ...COMPONENT_KINDS];
 
   // Layout names the renderer knows. Every style maps every kind to one.
-  const LAYOUTS = ['legacy', 'headline-visual', 'stat-hero', 'rank-card', 'quote', 'bars', 'versus', 'dotrank', 'chips', 'steps', 'tiles', 'roles', 'mystery', 'endcard'];
+  // Data-format layouts (Phase 1): one per data beat kind, the same name in
+  // every style (reel-render.js draws them with each style's element tokens).
+  const DATA_LAYOUTS = ['play', 'wpline', 'moment', 'panel3'];
+  const LAYOUTS = ['legacy', 'headline-visual', 'stat-hero', 'rank-card', 'quote', 'bars', 'versus', 'dotrank', 'chips', 'steps', 'tiles', 'roles', 'mystery', 'endcard', ...DATA_LAYOUTS];
   const STANDARD_LAYOUTS = {
     hook: 'headline-visual', context: 'headline-visual', point: 'headline-visual', payoff: 'headline-visual',
     stat: 'stat-hero', rank: 'rank-card', quote: 'quote', cta: 'endcard',
@@ -133,6 +140,86 @@
   const STYLE_IDS = ['classic', 'explainer', 'series', 'countdown'];
   const get = id => STYLES[id] || STYLES.classic;
 
+  // ─── Elements for the data formats (Phase 0 contract) ─────────────────────
+  // project-docs/reels-formats-contract.md §4. The overlay and card pieces the
+  // Game Swing, Moment Replay and Archive formats draw. Each element names the
+  // style tokens it reads (palette keys and type roles), so every style can
+  // draw it without new colours; a style may override a token per element in
+  // ELEMENT_TOKENS below. Real drawing is Agent B's (reel-render.js); until
+  // then drawPlaceholder() draws a clear labelled box so nothing crashes.
+  //   box    default box on the 1080x1920 reel canvas (inside the safe zone)
+  //   box45  default box on the 1080x1350 slide canvas (60 px margins)
+  //   kinds  the beat kinds (reel-formats.js DATA_KINDS) that use it
+  const ELEMENTS = {
+    scorebug: { id: 'scorebug', label: 'Scorebug', kinds: ['play', 'wpline'], zone: 'top', box: { x: 88, y: 288, w: 720, h: 104 }, box45: { x: 60, y: 60, w: 700, h: 96 }, tokens: { fill: 'panel', ink: 'ink', muted: 'muted', line: 'line', accent: 'accent', font: 'display', labelFont: 'label' }, notes: 'Team abbreviations (team colours are content), scores, period, clock, possession dot, down and distance. Stays clear of the ES mark and its 50 px clear space (the mark is x 870-992, y 288-392).' },
+    wpline: { id: 'wpline', label: 'Win-probability line', kinds: ['wpline', 'play'], zone: 'band', box: { x: 88, y: 472, w: 904, h: 144 }, box45: { x: 60, y: 228, w: 960, h: 140 }, full: { x: 88, y: 640, w: 904, h: 600 }, full45: { x: 60, y: 420, w: 960, h: 640 }, tokens: { line: 'ink', guide: 'line', ink: 'ink', muted: 'muted', fill: 'paper', good: 'good', bad: 'bad', labelFont: 'label' }, notes: 'Draws on with beat progress; 0/50/100% guides; the line in ink, team colours either side of 50%; the swing in a highlighter stroke with a marker and its callout ("SF 63%"); the attribution element is required next to it.' },
+    clock: { id: 'clock', label: 'Game clock', kinds: ['play', 'wpline'], zone: 'top', box: { x: 588, y: 400, w: 220, h: 48 }, box45: { x: 560, y: 164, w: 200, h: 44 }, tokens: { fill: 'chip', ink: 'chipInk', font: 'display' }, notes: 'Period + clock ("Q4  0:23", "BOT 9") as the digest has them, in a tab under the bug with a live dot. The clock never ticks: a ticking clock would show times that are not in the data.' },
+    playcard: { id: 'playcard', label: 'Play caption card', kinds: ['play'], zone: 'lower', box: { x: 88, y: 1172, w: 904, h: 200 }, box45: { x: 60, y: 1080, w: 960, h: 190 }, tokens: { fill: 'panel', ink: 'ink', muted: 'muted', accent: 'accent', hi: 'hi', hiInk: 'hiInk', font: 'display', bodyFont: 'body' }, notes: 'Down and distance chip + the play line (<= 9 words), score change pulses.' },
+    panel3: { id: 'panel3', label: '3-frame strip', kinds: ['panel3'], zone: 'full', box: { x: 88, y: 456, w: 904, h: 1104 }, box45: { x: 60, y: 214, w: 960, h: 1076 }, tokens: { gutter: 'line', ink: 'ink', chip: 'chip', chipInk: 'chipInk', fill: 'paper', font: 'display', labelFont: 'label' }, notes: 'Setup / The play / Reaction panels, 8 px gutters, label chip top-left, caption bottom-left (<= 6 words).' },
+    'timeline-node': { id: 'timeline-node', label: 'Year rail node', kinds: ['moment'], zone: 'rail', box: { x: 88, y: 288, w: 160, h: 1272 }, box45: { x: 60, y: 60, w: 140, h: 1230 }, tokens: { line: 'rule', node: 'accent', ink: 'ink', muted: 'muted', hi: 'hi', font: 'display', labelFont: 'label' }, notes: 'The year rail of an archive reel; the current moment is the lit node.' },
+    'source-chip': { id: 'source-chip', label: 'Source chip', kinds: ['moment', 'play', 'wpline', 'panel3'], zone: 'chip', box: { x: 88, y: 1448, w: 600, h: 48 }, box45: { x: 60, y: 1194, w: 600, h: 44 }, tokens: { fill: 'panel', ink: 'muted', line: 'line', labelFont: 'label' }, notes: 'Short source line ("ES · Feb 2017", photo credit). Text only, no links drawn.' },
+    attribution: { id: 'attribution', label: 'Data attribution', kinds: ['wpline', 'play'], zone: 'chip', box: { x: 88, y: 1512, w: 760, h: 40 }, box45: { x: 60, y: 1246, w: 760, h: 36 }, tokens: { ink: 'muted', labelFont: 'label' }, notes: 'Exactly the format attribution ("Win probability: ESPN Analytics"). Required whenever a WP line or WP number is on screen.' },
+  };
+  const ELEMENT_IDS = Object.keys(ELEMENTS);
+  // Per-style token overrides (palette key or literal colour), per element.
+  // Absent = the element's default token map above.
+  const ELEMENT_TOKENS = {
+    classic: { scorebug: { fill: 'bg' }, panel3: { gutter: 'ink' }, 'timeline-node': { line: 'line' } },
+    explainer: {},
+    series: { scorebug: { fill: 'ink', ink: 'paper', muted: 'hi' }, clock: { fill: 'hi', ink: 'hiInk' } },
+    countdown: { 'timeline-node': { node: 'hi' }, clock: { fill: 'hi', ink: 'hiInk' } },
+  };
+  // Resolve an element's tokens for a style: palette keys become colours,
+  // type roles ('display', 'label', 'body') become ES font stacks.
+  function elementTokens(styleId, elementId) {
+    const style = get(styleId);
+    const el = ELEMENTS[elementId];
+    if (!el) return null;
+    const over = (ELEMENT_TOKENS[style.id] || {})[elementId] || {};
+    const out = {};
+    Object.entries({ ...el.tokens, ...over }).forEach(([key, ref]) => {
+      if (['display', 'label', 'body'].includes(ref)) out[key] = style.type[ref];
+      else if (style.palette[ref] != null) out[key] = style.palette[ref];
+      else out[key] = ref; // a literal colour override
+    });
+    return out;
+  }
+  // The default box for an element on a canvas (1080x1920 reel or 1080x1350 slide).
+  function elementBox(elementId, canvas) {
+    const el = ELEMENTS[elementId];
+    if (!el) return null;
+    return { ...(canvas && Number(canvas.h) === 1350 ? el.box45 : el.box) };
+  }
+  // Stub draw (Phase 0): a dashed, labelled box in the style's tokens, so a
+  // data beat never crashes or draws nothing. Agent B replaces the call sites
+  // with real drawing; this function stays as the fallback for unknown data.
+  // ctx is a CanvasRenderingContext2D (or the tests' stub). Returns the op it drew.
+  function drawPlaceholder(ctx, elementId, box, styleId) {
+    const el = ELEMENTS[elementId] || { id: String(elementId || 'element'), label: String(elementId || 'Element') };
+    const t = elementTokens(styleId, el.id) || {};
+    const style = get(styleId);
+    const b = box || elementBox(el.id) || { x: 88, y: 288, w: 904, h: 120 };
+    const text = `${String(el.label).toUpperCase()} · COMING SOON`;
+    const size = Math.max(18, Math.min(32, Math.round(b.h * 0.3)));
+    if (ctx) {
+      ctx.save();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = style.palette.panel;
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      if (ctx.setLineDash) ctx.setLineDash([12, 8]);
+      ctx.strokeStyle = style.palette.accent;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(b.x + 1.5, b.y + 1.5, b.w - 3, b.h - 3);
+      if (ctx.setLineDash) ctx.setLineDash([]);
+      ctx.fillStyle = style.palette.ink;
+      ctx.font = `700 ${size}px ${t.labelFont || t.font || LABEL}`;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, b.x + 20, b.y + b.h / 2, Math.max(10, b.w - 40));
+      ctx.restore();
+    }
+    return { type: 'placeholder', element: el.id, text, x: b.x, y: b.y, w: b.w, h: b.h, size };
+  }
+
   // Which beat kinds a style lets the director write (story kinds of the
   // format plus the style's components).
   const kindsFor = (styleId, formatKinds = STORY_KINDS) => [...new Set([...formatKinds, ...get(styleId).components])];
@@ -140,7 +227,11 @@
   // ─── Suggestion (code first, free) ───────────────────────────────────────
   const SERIES_RE = /\b(?:moneyball|rebuild|rebuilding|cap space|salary cap|free agen(?:cy|ts?)|draft (?:pick|capital)|front office|roster|blueprint|series|part \d|step \d|dead money|contract year|trade (?:up|down))\b/i;
   const DATA_RE = /\b(?:per (?:game|throw|attempt|carry)|average|rate|percent|percentile|rank(?:ed|s)?|since \d{4}|seasons?|out of|compared|vs\.?|versus|efficiency|epa|yards per|completion|analytics|data|chart)\b|\d+(?:\.\d+)?%|\b1 in \d+\b/i;
+  // Default style per data format (owner, 2026-11-18); reel-formats.js
+  // DATA_FORMATS[id].defaultStyle says the same (a test keeps them equal).
+  const FORMAT_STYLES = { gameswing: 'series', replay: 'classic', archive: 'countdown' };
   function suggestStyle({ format = '', text = '' } = {}) {
+    if (FORMAT_STYLES[format]) return { id: FORMAT_STYLES[format], why: `The ${get(FORMAT_STYLES[format]).label} look is the house style for this format.` };
     const t = String(text || '');
     const numbers = (t.match(/\d[\d,.]*/g) || []).length;
     if (format === 'top5' || /\btop[\s-]?(?:5|five|10|ten)\b|\bcountdown\b|\branked\b/i.test(t)) return { id: 'countdown', why: 'A ranked list: cards flip in from 5 to 1.' };
@@ -180,8 +271,21 @@
     if (!(style.seconds && style.seconds.max >= style.seconds.target[1])) problems.push(`${style.id}: seconds`);
     if (!['crossfade', 'slide', 'wipe', 'flip'].includes(style.motion && style.motion.transition)) problems.push(`${style.id}: transition`);
     if (!['user', 'block', 'highlight', 'box'].includes(style.caption && style.caption.mode)) problems.push(`${style.id}: caption mode`);
+    // Data-format elements: every token resolves to an ES font or a non-purple colour.
+    ELEMENT_IDS.forEach(id => {
+      const over = (ELEMENT_TOKENS[style.id] || {})[id] || {};
+      Object.entries({ ...ELEMENTS[id].tokens, ...over }).forEach(([key, ref]) => {
+        if (['display', 'label', 'body'].includes(ref)) { if (!FONTS.includes(style.type && style.type[ref])) problems.push(`${style.id}: ${id}.${key} not an ES font`); return; }
+        const value = style.palette && style.palette[ref] != null ? style.palette[ref] : ref;
+        if (!COLOR.test(String(value))) problems.push(`${style.id}: ${id}.${key} is not a colour`);
+        else if (HEX.test(value) && isPurple(value)) problems.push(`${style.id}: ${id}.${key} is purple`);
+      });
+    });
     return problems;
   }
 
-  return { STYLES, STYLE_IDS, STORY_KINDS, COMPONENT_KINDS, ALL_KINDS, LAYOUTS, GRID, FONTS, CONDENSED, LABEL, BODY, get, kindsFor, suggestStyle, validateStyle, isPurple };
+  return {
+    STYLES, STYLE_IDS, STORY_KINDS, COMPONENT_KINDS, ALL_KINDS, LAYOUTS, DATA_LAYOUTS, GRID, FONTS, CONDENSED, LABEL, BODY, get, kindsFor, suggestStyle, validateStyle, isPurple,
+    ELEMENTS, ELEMENT_IDS, ELEMENT_TOKENS, FORMAT_STYLES, elementTokens, elementBox, drawPlaceholder,
+  };
 }));

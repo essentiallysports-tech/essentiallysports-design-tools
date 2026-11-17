@@ -35,6 +35,20 @@
 //             own session (RLS). Before the migration runs they answer
 //             { cloud: false } and the page keeps its local autosave.
 //
+// Data formats (Game Swing, Moment Replay, Archive; Phase 0 contract in
+// project-docs/reels-formats-contract.md §2). One dispatch table,
+// FORMAT_MODES, registers:
+//   games             { sport, when, date? }          -> { games: [GameSummary] }      data (free)
+//   game-data         { sport, eventId }              -> { digest: GameDigest }        data (free)
+//   athlete           { sport, query } | { sport, athleteId } -> { candidates } | { athlete }  data (free)
+//   archive-research  { sport, athleteId, angle }     -> { articles, photos, candidates, coverage }  mcp
+//   frame-pick        { clipUrl, segment, frames, times } -> { setup, play, reaction, captions }  ai
+// Handlers: _reel-games.js (ESPN, no AI; soft-fails with reason
+// 'data-unavailable'), _reel-archive.js (ES MCP, $0 AI), _reel-frame-pick.js
+// (one capped vision call, code fallback). A mode whose run is null answers
+// 501 { reason: 'coming-soon' } before any gate or network call.
+// plan with a data format + its digest / archive / replay: see dataPlan.
+//
 // Every request needs a signed-in ES user. AI modes count toward the hourly
 // and weekly caps and are logged in frameup_ai_usage (features reels-*).
 const crypto = require('node:crypto');
@@ -49,6 +63,9 @@ const director = require('./_reel-director.js');
 const voice = require('./_reel-voice.js');
 const { lintPlan } = require('./_reel-lint.js');
 const F = require('../../reel-formats.js');
+const games = require('./_reel-games.js');
+const archive = require('./_reel-archive.js');
+const framePick = require('./_reel-frame-pick.js');
 
 const REEL_SPORTS = ['nfl', 'cfb', 'mlb', 'golf'];
 const TREND_HOURS = 48;
@@ -57,7 +74,7 @@ const PLAN_CACHE = new Map();
 const MAX_BODY = 220 * 1024; // a project's timeline is capped at 200 KB; a clip-judge batch (3 clips x 3 small JPEGs) is ~120 KB
 const PROJECTS = 'frameup_reel_projects';
 const EVENTS = 'frameup_reel_events';
-const EVENT_TYPES = ['plan', 'revise', 'voice', 'edit', 'export', 'lint_blocked', 'make', 'visuals'];
+const EVENT_TYPES = ['plan', 'revise', 'voice', 'edit', 'export', 'lint_blocked', 'make', 'visuals', 'data', 'frames', 'carousel_export'];
 
 function json(statusCode, body) {
   return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) };
@@ -104,7 +121,38 @@ function sourcesOf(trend, brief, facts) {
   return list.slice(0, 16);
 }
 
+// Data formats (Game Swing, Moment Replay, Archive): the plan comes from the
+// digest / archive / replay the page sends (re-validated on the server), so
+// every beat carries refs into timeline.data. Code plans it; one optional
+// Haiku pass rewrites the words (numbers only from the facts). Over a cap or
+// with AI off, the code plan ships as it is (free).
+async function dataPlan(input, body, track, gates) {
+  const style = STYLES.STYLES[body.style] ? body.style : F.FORMATS[input.format].defaultStyle;
+  const blocked = gates.off ? 'off' : (gates.weekly ? 'weekly-limit' : (gates.hourly ? 'limit' : ''));
+  const tier = body.tier === 'economy' ? 'economy' : 'standard';
+  const out = await director.runDataDirector(input, { style, tier: body.aiCopy === false ? 'off' : tier, steer: clean(body.steer, 300), voice: body.voice === true, blocked, track });
+  if (!out.plan) return { ok: false, status: 422, reason: 'no-data', error: 'There is not enough data for this reel; use the brief.' };
+  const MAXP = require('../../reel-data.js').MAX_KEY_PLAYS;
+  const dropped = input.playIds && input.playIds.length > MAXP ? [`Kept the ${MAXP} strongest of your ${input.playIds.length} ticked plays.`] : [];
+  return {
+    ok: true, plan: out.plan, source: out.source, reason: out.reason || '',
+    notice: blocked === 'weekly-limit' ? `${weeklyLimitMessage()} Here is the reel built from the data.` : blocked === 'limit' ? "You've used a lot of AI this hour. Here is the reel built from the data." : '',
+    escalated: false, model: out.model || '', issues: [...dropped, ...(out.issues || [])].slice(0, 8), corpus: out.corpus.slice(0, 12000),
+    sources: [], route: null, style, suggestedStyle: STYLES.suggestStyle({ format: input.format }),
+    lint: lintPlan(out.plan, { corpus: out.corpus }),
+    costs: { director: money(out.cost), factCheck: 0 }, cost: money(out.cost), factCheck: null, cached: Boolean(out.cached),
+  };
+}
+
 async function plan(body, track, gates) {
+  if (F.isDataFormat(body.format)) {
+    const input = director.readDataInput(body, { cachedDigest: games.cachedDigest });
+    // Game Swing honours the editor's ticked key plays: at least one must be a play of this game.
+    if (input.format === 'gameswing' && input.digest && input.playIdsSent && !input.playIds.length) {
+      return { ok: false, status: 422, reason: 'no-plays', error: 'Tick at least one key play from this game.' };
+    }
+    if (director.hasDataInput(input)) return dataPlan(input, body, track, gates);
+  }
   const brief = clean(body.brief, 2400);
   const trend = readTrend(body.trend);
   if (!brief && !trend) return { ok: false, status: 400, error: 'Pick a trend or write a brief.' };
@@ -287,6 +335,44 @@ async function recordEvent(body, auth, token) {
   } catch { return { ok: true, cloud: false }; }
 }
 
+// ─── Data-format modes (one dispatch table; contract §2) ────────────────
+// gate:  'data' free, signed-in, rate-limited per user (Agent A adds the
+//               30/min limiter in _reel-games.js);
+//        'mcp'  ES MCP calls, no Gateway spend: counts toward the hourly limit;
+//        'ai'   a Gateway call: aiSpendGate(feature) + hourly + weekly caps.
+// run:   async (body, ctx) -> { ok, ...result } | { ok:false, status, reason, error }
+//        ctx = { auth, token, track }. null = not built yet (501).
+const FORMAT_MODES = {
+  games: { gate: 'data', label: 'Game list', run: games.listGames },
+  'game-data': { gate: 'data', label: 'Game data', run: games.gameData },
+  athlete: { gate: 'data', label: 'Player search', run: games.athlete },
+  'archive-research': { gate: 'mcp', label: 'Archive research', run: archive.archiveResearch },
+  'frame-pick': { gate: 'ai', feature: 'reels-frame-pick', label: 'AI frame pick', run: framePick.framePick },
+};
+const comingSoon = (mode, entry) => ({ ok: false, status: 501, reason: 'coming-soon', mode, error: `${entry.label} is coming soon to Reels Studio.` });
+async function formatMode(mode, body, ctx, gates = {}) {
+  const entry = FORMAT_MODES[mode];
+  if (!entry) return { ok: false, status: 400, error: 'Unknown request.' };
+  if (typeof entry.run !== 'function') return comingSoon(mode, entry);
+  const { token } = ctx;
+  if (entry.gate === 'ai') {
+    const gate = await (gates.aiSpendGate || aiSpendGate)(token, { feature: entry.feature });
+    if (gate) return { ok: false, status: gate.status, reason: gate.reason, error: gate.error };
+  }
+  if (entry.gate === 'ai' || entry.gate === 'mcp') {
+    const [weekly, hourly] = await Promise.all([(gates.weekly || userOverWeeklyLimit)(token), (gates.hourly || userOverHourlyLimit)(token)]);
+    if (entry.gate === 'ai' && weekly) return { ok: false, status: 429, reason: 'weekly-limit', error: weeklyLimitMessage() };
+    if (hourly) return { ok: false, status: 429, reason: 'limit', error: "You've used a lot of AI this hour. Take a short break and try again soon." };
+  }
+  try {
+    return await entry.run(body, ctx);
+  } catch (error) {
+    if (isBudgetError(error)) return { ok: false, status: 503, reason: 'budget', error: "This week's AI budget is used up, so AI features are paused until it resets." };
+    console.error(`reel-maker ${mode} failed:`, error);
+    return { ok: false, status: 502, error: `${entry.label} is unavailable right now. Try again in a moment.` };
+  }
+}
+
 const AI_MODES = { plan, revise, voice: speak, music, 'voice-sample': voiceSample, scene: sceneImage, 'ai-clip-start': aiClipStart };
 // ai-clip-status only reads a job that was already billed and capped.
 const DATA_MODES = { 'ai-clip-status': aiClipStatus, projects, 'project-save': projectSave, 'project-load': projectLoad, event: recordEvent };
@@ -316,6 +402,8 @@ exports.handler = async function handler(event) {
         music: (({ ready, perSecond, rights, reason }) => ({ ready, perSecond, rights, reason }))(voice.musicStatus()),
         factCheck: { maxSearches: director.FACT_CHECK.maxUses, maxCostUsd: director.FACT_CHECK.maxCostUsd },
         formats: F.FORMAT_IDS, prices: F.PRICES, styles: STYLES.STYLE_IDS,
+        dataFormats: F.DATA_FORMAT_IDS,
+        formatModes: Object.fromEntries(Object.entries(FORMAT_MODES).map(([id, m]) => [id, typeof m.run === 'function'])),
         aiClips: (({ ready, model, max, seconds, perClip, reason }) => ({ ready, model, max, seconds, perClip, reason }))(media.clipsStatus()),
         scenes: { ready: gatewayConfigured(), perImage: F.PRICES.sceneImage },
         clipJudge: { ready: gatewayConfigured(), model: process.env.REELS_CLIP_JUDGE_MODEL || CLIPS.JUDGE.model, maxUsdPerReel: CLIPS.JUDGE.maxUsdPerReel },
@@ -328,6 +416,10 @@ exports.handler = async function handler(event) {
       if (await userOverHourlyLimit(token)) return json(429, { ok: false, reason: 'limit', error: 'Clips are ranked without the AI check this hour.' });
       const result = await clipJudge.judgeClips({ clips: body.clips, subjects: body.subjects, budgetUsd: Number(body.budgetUsd ?? CLIPS.JUDGE.maxUsdPerReel), track });
       return json(result.ok ? 200 : (result.status || (result.reason === 'off' || result.reason === 'feature-off' ? 503 : 502)), result);
+    }
+    if (FORMAT_MODES[body.mode]) {
+      const result = await formatMode(body.mode, body, { auth, token, track });
+      return json(result.ok ? 200 : (result.status || 400), result);
     }
     if (DATA_MODES[body.mode]) {
       const result = await DATA_MODES[body.mode](body, auth, token);
@@ -358,4 +450,4 @@ exports.handler = async function handler(event) {
   }
 };
 
-exports._test = { isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf };
+exports._test = { FORMAT_MODES, formatMode, dataPlan, EVENT_TYPES, isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf };

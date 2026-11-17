@@ -172,4 +172,22 @@ test('scenePrompt: closed scene list, no names, no people, no logos or text', ()
   assert.doesNotMatch(evil.prompt, /Mahomes|Chiefs/);
 });
 
+test('data-format elements: layouts registered, boxes stacked without overlap, tokens ES-only and never purple', () => {
+  assert.deepEqual(S.DATA_LAYOUTS, ['play', 'wpline', 'moment', 'panel3']);
+  S.DATA_LAYOUTS.forEach(l => assert.ok(S.LAYOUTS.includes(l)));
+  S.STYLE_IDS.forEach(id => assert.deepEqual(S.validateStyle(S.STYLES[id]), [], id));
+  for (const cv of [{ w: 1080, h: 1920 }, { w: 1080, h: 1350 }]) {
+    const bug = S.elementBox('scorebug', cv);
+    const clock = S.elementBox('clock', cv);
+    const band = S.elementBox('wpline', cv);
+    assert.ok(clock.y >= bug.y + bug.h, 'the clock tab hangs under the bug');
+    assert.ok(clock.x + clock.w <= bug.x + bug.w, 'under its right end');
+    assert.ok(band.y >= clock.y + clock.h, 'the WP band below the clock');
+    const mark = cv.h === 1350 ? R.SLIDE_MARK : R.ES_MARK;
+    assert.ok(bug.x + bug.w <= mark.x - mark.clear, 'clear of the ES mark');
+    assert.ok(S.elementBox('panel3', cv).y >= mark.y + mark.h + mark.clear, 'the strip starts under the mark');
+  }
+  for (const id of S.STYLE_IDS) for (const el of S.ELEMENT_IDS) Object.entries(S.elementTokens(id, el)).forEach(([k, v]) => { if (!/font/i.test(k)) assert.ok(!S.isPurple(v), `${id}/${el}.${k}`); });
+});
+
 console.log(process.exitCode ? '\nReel styles tests failed.' : `\nAll ${passed} reel styles tests passed.`);

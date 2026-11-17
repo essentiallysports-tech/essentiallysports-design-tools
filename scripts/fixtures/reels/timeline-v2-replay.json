@@ -1,0 +1,148 @@
+{
+ "v": 2,
+ "canvas": {
+  "w": 1080,
+  "h": 1920
+ },
+ "size": [
+  1080,
+  1920
+ ],
+ "outputs": [
+  "reel",
+  "carousel"
+ ],
+ "format": "replay",
+ "tag": "MOMENT REPLAY",
+ "style": "classic",
+ "sport": "nfl",
+ "title": "The catch, in three frames",
+ "durationMs": 9600,
+ "data": {
+  "game": null,
+  "athlete": null,
+  "archive": null
+ },
+ "replay": {
+  "origin": "upload",
+  "clipAsset": "clip:upload1",
+  "clipUrl": "",
+  "segment": {
+   "in": 3.2,
+   "out": 9.8
+  },
+  "picker": "code",
+  "frames": [
+   {
+    "role": "setup",
+    "t": 3.6
+   },
+   {
+    "role": "play",
+    "t": 6.1
+   },
+   {
+    "role": "reaction",
+    "t": 9.0
+   }
+  ]
+ },
+ "beats": [
+  {
+   "id": "b1",
+   "kind": "hook",
+   "inMs": 0,
+   "outMs": 2400,
+   "text": "Watch the whole play",
+   "vo": "",
+   "refs": []
+  },
+  {
+   "id": "b2",
+   "kind": "panel3",
+   "inMs": 2400,
+   "outMs": 8100,
+   "text": "",
+   "vo": "",
+   "refs": [
+    "frame:setup",
+    "frame:play",
+    "frame:reaction"
+   ]
+  },
+  {
+   "id": "b3",
+   "kind": "cta",
+   "inMs": 8100,
+   "outMs": 9600,
+   "text": "Best catch this year?",
+   "vo": "",
+   "refs": []
+  }
+ ],
+ "slides": [
+  {
+   "id": "s1",
+   "kind": "cover",
+   "text": "The catch, in three frames",
+   "refs": [
+    "frame:play"
+   ]
+  },
+  {
+   "id": "s2",
+   "kind": "panel",
+   "text": "The setup",
+   "refs": [
+    "frame:setup"
+   ],
+   "beat": "b2"
+  },
+  {
+   "id": "s3",
+   "kind": "panel",
+   "text": "The play",
+   "refs": [
+    "frame:play"
+   ],
+   "beat": "b2"
+  },
+  {
+   "id": "s4",
+   "kind": "panel",
+   "text": "The reaction",
+   "refs": [
+    "frame:reaction"
+   ],
+   "beat": "b2"
+  },
+  {
+   "id": "s5",
+   "kind": "cta",
+   "text": "Best catch this year?",
+   "refs": []
+  }
+ ],
+ "tracks": {
+  "video": [],
+  "graphics": [],
+  "captions": {
+   "style": "highlight",
+   "words": [],
+   "cards": []
+  },
+  "audio": []
+ },
+ "assets": {
+  "clip:upload1": {
+   "kind": "clip",
+   "label": "ES upload",
+   "rights": {
+    "source": "ES upload",
+    "licence": "ES-owned",
+    "organic": true,
+    "paid": true
+   }
+  }
+ }
+}

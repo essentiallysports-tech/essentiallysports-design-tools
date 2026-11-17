@@ -1,0 +1,12 @@
+{
+ "ok": true,
+ "candidates": [
+  {
+   "athleteId": "2330",
+   "name": "Tom Brady",
+   "sport": "nfl",
+   "position": "QB",
+   "years": "2000-2022"
+  }
+ ]
+}

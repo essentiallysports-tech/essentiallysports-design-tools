@@ -218,4 +218,189 @@ test('drawFrame: draws every frame of the reel without throwing (stub canvas)', 
   assert.ok(calls.fillText > before, 'text on the very first frame');
 });
 
+// ─── Data formats (Phase 1): Game Swing, Moment Replay, Archive ─────────
+const T = require('../reel-timeline.js');
+const S = require('../reel-styles.js');
+const fx = name => JSON.parse(JSON.stringify(require(`./fixtures/reels/${name}`)));
+const planOf = tl => ({ format: tl.format, title: tl.title, sport: tl.sport, beats: tl.beats.map(b => ({ id: b.id, kind: b.kind, text: b.text, vo: b.vo, refs: b.refs })), data: tl.data, replay: tl.replay, slides: tl.slides, outputs: tl.outputs });
+const recCtx = () => {
+  const calls = [];
+  const ctx = new Proxy({}, { get: (t, k) => (k in t ? t[k] : (k === 'measureText' ? s => ({ width: String(s).length * 20 }) : (k === 'getImageData' ? undefined : (...a) => { calls.push([k, ...a]); return { addColorStop() {} }; }))), set: (t, k, v) => { t[k] = v; return true; } });
+  return { ctx, calls };
+};
+const FIX = { gameswing: 'timeline-v2-gameswing.json', replay: 'timeline-v2-replay.json', archive: 'timeline-v2-archive.json' };
+const build = (id, style, extra = {}) => { const f = fx(FIX[id]); return R.buildTimeline({ ...planOf(f), ...(extra.plan || {}) }, { style, assets: f.assets, ...extra.opts }); };
+const textsOf = (tl, beat) => R.layoutGraphic(measure, tl.tracks.graphics.find(g => g.beat === beat), tl).filter(o => o.text != null).map(o => o.text);
+
+test('data formats: buildTimeline emits v2 with the canvas, data, refs and the data kinds', () => {
+  const tl = build('gameswing', 'series');
+  assert.equal(tl.v, 2);
+  assert.deepEqual(tl.canvas, { w: 1080, h: 1920 });
+  assert.deepEqual(tl.outputs, ['reel']);
+  assert.deepEqual(tl.beats.map(b => b.kind), ['hook', 'play', 'wpline', 'cta']);
+  assert.deepEqual(tl.beats[1].refs, ['play:401873063558']);
+  assert.deepEqual(tl.tracks.graphics.map(g => g.template), ['headline-visual', 'play', 'wpline', 'endcard']);
+  assert.equal(tl.data.game.eventId, '401873063');
+  assert.ok(T.validateTimeline(tl).ok, JSON.stringify(T.validateTimeline(tl).errors));
+  assert.ok(tl.beats[1].outMs - tl.beats[1].inMs >= R.DATA_MIN_MS.play, 'a play holds for its count-up');
+  const rp = build('replay', 'classic');
+  assert.deepEqual(rp.outputs, ['reel', 'carousel']);
+  assert.equal(rp.slides.length, 5);
+  assert.equal(rp.beats[1].kind, 'panel3');
+  // No data behind a data kind: it degrades to a story point, never an empty box.
+  const bare = R.buildTimeline({ format: 'gameswing', beats: [{ id: 'b1', kind: 'hook', text: 'Hi' }, { id: 'b2', kind: 'play', text: 'x', refs: ['play:nope'] }, { id: 'b3', kind: 'wpline', text: 'y' }] }, { style: 'series' });
+  assert.deepEqual(bare.beats.map(b => b.kind), ['hook', 'point', 'point']);
+  // A carousel-only project on the 4:5 canvas.
+  const four = R.buildTimeline(planOf(fx(FIX.archive)), { style: 'countdown', canvas: { w: 1080, h: 1350 } });
+  assert.deepEqual(four.canvas, { w: 1080, h: 1350 });
+  assert.deepEqual(four.outputs, ['carousel']);
+  // News formats keep v1 exactly.
+  assert.equal(R.buildTimeline(STAT_PLAN, {}).v, 1);
+});
+
+test('data formats: every style x every data kind stays inside the safe zone and clear of the ES mark', () => {
+  const zone = { x: R.ES_MARK.x - R.ES_MARK.clear, y: R.ES_MARK.y - R.ES_MARK.clear, w: R.ES_MARK.w + 2 * R.ES_MARK.clear, h: R.ES_MARK.h + 2 * R.ES_MARK.clear };
+  for (const id of Object.keys(FIX)) {
+    for (const style of S.STYLE_IDS) {
+      const tl = build(id, style);
+      const data = new Set(tl.beats.filter(b => R.DATA_TEMPLATES.has(b.kind)).map(b => b.id));
+      assert.ok(data.size, `${id} has data beats`);
+      R.allBoxes(measure, tl).filter(b => data.has(b.beat)).forEach(b => {
+        assert.ok(b.x >= R.SAFE.left - 0.5 && b.x + b.w <= R.SAFE.right + 0.5 && b.y >= R.SAFE.top - 0.5 && b.y + b.h <= R.SAFE.bottom + 0.5, `${id}/${style} ${b.role} ${JSON.stringify(b)}`);
+        if (b.role !== 'es-mark') assert.ok(!(b.x < zone.x + zone.w && b.x + b.w > zone.x && b.y < zone.y + zone.h && b.y + b.h > zone.y), `${id}/${style} ${b.role} in the logo clear space`);
+      });
+      const { ctx, calls } = recCtx();
+      for (let t = 0; t < tl.durationMs; t += 300) R.drawFrame(ctx, tl, t, { measure, images: {}, videos: {} });
+      assert.ok(calls.some(c => c[0] === 'fillText'));
+    }
+  }
+});
+
+test('scorebug: digest scores (a scoring play counts up from the score before), down, clock tab, possession', () => {
+  const tl = build('gameswing', 'series');
+  const ops = R.layoutGraphic(measure, tl.tracks.graphics[1], tl);
+  const scores = ops.filter(o => o.type === 'score');
+  assert.deepEqual(scores.map(o => [o.from, o.to]), [[0, 7], [3, 3]], 'SF 0 -> 7 on the touchdown, DAL stays 3');
+  assert.deepEqual(scores[0].refs, ['play:401873063558', 'play:401873063302']);
+  assert.ok(ops.some(o => o.role === 'down' && o.text === '1ST & 10'));
+  assert.ok(ops.some(o => o.role === 'clock-text' && o.text === 'Q1  6:56'));
+  const poss = ops.find(o => o.role === 'possession');
+  assert.ok(poss && poss.x < scores[1].cellX, 'possession under the away (SF) score');
+  const bug = ops.find(o => o.role === 'scorebug');
+  assert.ok(bug.x + bug.w <= R.ES_MARK.x - R.ES_MARK.clear);
+  // The wpline beat shows the final.
+  const fin = R.layoutGraphic(measure, tl.tracks.graphics[2], tl);
+  assert.deepEqual(fin.filter(o => o.type === 'score').map(o => o.to), [46, 40]);
+  assert.ok(fin.some(o => o.role === 'status' && o.text === 'FINAL'));
+  assert.equal(R.periodLabel({ sport: 'nfl' }, { period: 6 }), '2OT');
+  assert.equal(R.periodLabel({ sport: 'mlb' }, { period: 9, half: 'bottom' }), 'BOT 9');
+});
+
+test('win probability: the chart, the swing marker from the refs, and the attribution every time', () => {
+  const tl = build('gameswing', 'series');
+  const wp = R.layoutGraphic(measure, tl.tracks.graphics[2], tl);
+  const chart = wp.find(o => o.type === 'wpchart');
+  assert.equal(chart.mode, 'full');
+  assert.deepEqual([chart.from, chart.to], [-1, 1]);
+  assert.ok(wp.some(o => o.role === 'wp-callout' && o.text === 'SF 63%'), 'SF 63% at wp:1 (DAL 0.3663)');
+  assert.ok(wp.some(o => o.role === 'wp-from' && o.text === 'SF 64%'));
+  assert.deepEqual(wp.filter(o => o.role === 'attribution').map(o => o.text), ['Win probability: ESPN Analytics']);
+  const band = R.layoutGraphic(measure, tl.tracks.graphics[1], tl);
+  assert.equal(band.find(o => o.type === 'wpchart').mode, 'band');
+  assert.ok(band.some(o => o.role === 'attribution'));
+  // No WP in the digest: no chart and no attribution line.
+  const f = fx(FIX.gameswing);
+  f.data.game.wp = null;
+  const noWp = R.buildTimeline(planOf(f), { style: 'series' });
+  assert.equal(noWp.beats[2].kind, 'point', 'a wpline beat needs WP');
+  assert.ok(!R.layoutGraphic(measure, noWp.tracks.graphics[1], noWp).some(o => o.type === 'wpchart' || o.role === 'attribution'));
+  // The chart draws on: early frames reveal less of the line than late ones.
+  const st = (local) => { const { ctx, calls } = recCtx(); R.drawFrame(ctx, tl, tl.beats[2].inMs + local, { measure, images: {}, videos: {} }); return calls.filter(c => c[0] === 'lineTo').length; };
+  assert.ok(st(3000) >= st(400));
+});
+
+test('team colours: from the digest, contrast-checked against the bug, never purple, distinct teams', () => {
+  const f = fx(FIX.gameswing);
+  f.data.game.teams.home.colors = ['#003594', '#869397'];
+  f.data.game.teams.away.colors = ['#5B2C83', '#AA0000'];
+  const tl = R.buildTimeline(planOf(f), { style: 'series' });
+  const chips = R.layoutGraphic(measure, tl.tracks.graphics[1], tl).filter(o => o.role === 'team-chip').map(o => o.fill);
+  assert.deepEqual(chips, ['#AA0000', '#003594'], 'away purple skipped, home navy');
+  assert.equal(R.bestInk('#FFB612'), '#111214', 'dark ink on gold');
+  assert.equal(R.bestInk('#003594'), '#FFFFFF');
+  f.data.game.teams.away.colors = ['#003594'];
+  const same = R.buildTimeline(planOf(f), { style: 'series' });
+  const c2 = R.layoutGraphic(measure, same.tracks.graphics[1], same).filter(o => o.role === 'team-chip').map(o => o.fill);
+  assert.notEqual(c2[0], c2[1], 'two teams never share a colour');
+});
+
+test('provenance: every number a data element draws comes from a ref', () => {
+  for (const id of Object.keys(FIX)) {
+    for (const style of S.STYLE_IDS) {
+      const tl = build(id, style);
+      assert.deepEqual(R.unbackedNumbers(measure, tl), [], `${id}/${style}`);
+      R.buildSlides(tl).forEach(s => assert.deepEqual(R.unbackedNumbers(measure, s), [], `${id}/${style} ${s.slide.id}`));
+    }
+  }
+  const tl = build('archive', 'countdown');
+  const nums = R.provenanceNumbers(tl, ['stat:s2001']);
+  ['2001', '2843', '18', '12'].forEach(n => assert.ok(nums.has(n), n));
+  assert.ok(!nums.has('4694'));
+  const wp = R.provenanceNumbers(build('gameswing', 'series'), ['wp:1']);
+  assert.ok(wp.has('37') && wp.has('63'));
+  // A moment line that says something its stat row does not.
+  tl.data.archive.moments[0].line = '9,999 yards in one year';
+  tl.data.athlete.stats.seasons[1].stats = tl.data.athlete.stats.seasons[1].stats.map(() => '-'); // no stat rows: the line shows
+  const bad = R.unbackedNumbers(measure, tl);
+  assert.ok(bad.some(u => u.numbers.includes('9999')), JSON.stringify(bad));
+});
+
+test('archive: year from the cited source, stat rows from ESPN strings, source chip, the year rail', () => {
+  const tl = build('archive', 'countdown');
+  const t = textsOf(tl, 'b2');
+  assert.ok(t.includes('2001'));
+  assert.ok(t.includes('2,843') && t.includes('18') && t.includes('12'), 'ESPN display strings, never recomputed');
+  assert.ok(t.includes('PASSING') && t.includes('YARDS'), 'the stat\'s full name');
+  assert.ok(t.includes('ESPN · 2001 SEASON STATS'));
+  const ops = R.layoutGraphic(measure, tl.tracks.graphics[1], tl);
+  assert.equal(ops.filter(o => o.role === 'rail-node-on').length, 1);
+  assert.equal(ops.filter(o => o.role === 'rail-node' || o.role === 'rail-node-on').length, 2);
+  const info = R.momentInfo(tl, ['stat:s2022']);
+  assert.equal(info.year, 2022);
+  assert.deepEqual(info.tiles.map(x => x.label), ['YDS', 'TD', 'INT']);
+});
+
+test('replay: three panels from the frames, chips and captions, staggered in; images from env', () => {
+  const f = fx(FIX.replay);
+  f.replay.frames = f.replay.frames.map(x => ({ ...x, caption: `The ${x.role} moment here today now` }));
+  const tl = R.buildTimeline(planOf(f), { style: 'classic', assets: f.assets });
+  const ops = R.layoutGraphic(measure, tl.tracks.graphics[1], tl);
+  const panels = ops.filter(o => o.type === 'panel');
+  assert.deepEqual(panels.map(p => p.key), ['frame:setup', 'frame:play', 'frame:reaction']);
+  assert.ok(panels[0].delay < panels[1].delay && panels[1].delay < panels[2].delay);
+  assert.deepEqual(ops.filter(o => o.role === 'panel-chip').map(o => o.text), ['SETUP', 'THE PLAY', 'REACTION']);
+  ops.filter(o => o.role === 'panel-caption').forEach(o => assert.ok(o.text.split(' ').length <= 6, 'captions <= 6 words'));
+  const img = { width: 1280, height: 720 };
+  const { ctx, calls } = recCtx();
+  R.drawFrame(ctx, tl, tl.beats[1].outMs - 400, { measure, images: { 'frame:setup': img, 'frame:play': img, 'frame:reaction': img }, videos: {} });
+  assert.ok(calls.filter(c => c[0] === 'drawImage').length >= 3, 'all three frames drawn');
+  const empty = recCtx();
+  R.drawFrame(empty.ctx, tl, tl.beats[1].outMs - 400, { measure, images: {}, videos: {} });
+  assert.ok(empty.calls.some(c => c[0] === 'fillText' && c[1] === 'PICK A FRAME'), 'the empty state, never a blank panel');
+});
+
+test('slides: drawn on a 1080x1350 canvas with the ES mark top-right; logo placements follow the canvas', () => {
+  const tl = build('replay', 'classic');
+  const slides = R.buildSlides(tl);
+  slides.forEach(s => {
+    const { ctx, calls } = recCtx();
+    R.drawFrame(ctx, s, 2399, { measure, images: {}, videos: {} });
+    const clip = calls.find(c => c[0] === 'rect');
+    assert.deepEqual(clip.slice(1), [0, 0, 1080, 1350]);
+    const [m] = R.logoPlacements(s);
+    assert.deepEqual([m.x, m.y, m.w, m.h], [R.SLIDE_MARK.x, 60, 122, 104]);
+    R.allBoxes(measure, s).filter(b => b.text != null).forEach(b => assert.ok(b.x >= 59.5 && b.x + b.w <= 1020.5 && b.y >= 59.5 && b.y + b.h <= 1290.5, `${s.slide.id} ${b.role} ${JSON.stringify(b)}`));
+  });
+});
+
 console.log(process.exitCode ? '\nReel render tests failed.' : `\nAll ${passed} reel render tests passed.`);

@@ -1,0 +1,392 @@
+{
+ "_note": "Trimmed from GET https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401873063 (SF 46 at DAL 40, 2026-11-15). Full response 677 KB, cache-control max-age=5.",
+ "topLevelKeys": [
+  "boxscore",
+  "format",
+  "gameInfo",
+  "drives",
+  "leaders",
+  "injuries",
+  "broadcasts",
+  "pickcenter",
+  "odds",
+  "againstTheSpread",
+  "scoringPlays",
+  "news",
+  "winprobability",
+  "header",
+  "article",
+  "videos",
+  "wallclockAvailable",
+  "meta",
+  "standings"
+ ],
+ "header.competitions[0]": {
+  "status": {
+   "type": {
+    "id": "3",
+    "name": "STATUS_FINAL",
+    "state": "post",
+    "completed": true,
+    "description": "Final",
+    "detail": "Final",
+    "shortDetail": "Final"
+   },
+   "isTBDFlex": false
+  },
+  "competitors": [
+   {
+    "abbr": "DAL",
+    "homeAway": "home",
+    "score": "40",
+    "linescores": [
+     {
+      "displayValue": "10"
+     },
+     {
+      "displayValue": "6"
+     },
+     {
+      "displayValue": "3"
+     },
+     {
+      "displayValue": "21"
+     }
+    ],
+    "possession": false,
+    "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png"
+   },
+   {
+    "abbr": "SF",
+    "homeAway": "away",
+    "score": "46",
+    "linescores": [
+     {
+      "displayValue": "7"
+     },
+     {
+      "displayValue": "10"
+     },
+     {
+      "displayValue": "14"
+     },
+     {
+      "displayValue": "15"
+     }
+    ],
+    "possession": false,
+    "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png"
+   }
+  ]
+ },
+ "drives.previous[].count": 23,
+ "plays.count": 203,
+ "plays.sample": [
+  {
+   "id": "40187306340",
+   "type": {
+    "id": "53",
+    "text": "Kickoff",
+    "abbreviation": "K"
+   },
+   "text": "C.Waitman kicks 59 yards from SF 35 to DAL 6. C.Brown to DAL 31 for 25 yards (L.Gifford).",
+   "awayScore": 0,
+   "homeScore": 0,
+   "period": {
+    "number": 1
+   },
+   "clock": {
+    "displayValue": "15:00"
+   },
+   "wallclock": "2026-11-15T21:25:50Z",
+   "scoringPlay": false,
+   "statYardage": 25,
+   "start": {
+    "down": 0,
+    "distance": 0,
+    "yardLine": 65,
+    "yardsToEndzone": 65,
+    "team": {
+     "id": "25"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 31,
+    "yardsToEndzone": 69,
+    "downDistanceText": "1st & 10 at DAL 31",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "DAL 31",
+    "team": {
+     "id": "6"
+    }
+   }
+  },
+  {
+   "id": "40187306363",
+   "type": {
+    "id": "3",
+    "text": "Pass Incompletion"
+   },
+   "text": "(Shotgun) D.Prescott pass incomplete short middle to G.Pickens [O.Odighizuwa].",
+   "awayScore": 0,
+   "homeScore": 0,
+   "period": {
+    "number": 1
+   },
+   "clock": {
+    "displayValue": "14:54"
+   },
+   "wallclock": "2026-11-15T21:26:28Z",
+   "scoringPlay": false,
+   "statYardage": 0,
+   "start": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 31,
+    "yardsToEndzone": 69,
+    "downDistanceText": "1st & 10 at DAL 31",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "DAL 31",
+    "team": {
+     "id": "6"
+    }
+   },
+   "end": {
+    "down": 2,
+    "distance": 10,
+    "yardLine": 31,
+    "yardsToEndzone": 69,
+    "downDistanceText": "2nd & 10 at DAL 31",
+    "shortDownDistanceText": "2nd & 10",
+    "possessionText": "DAL 31",
+    "team": {
+     "id": "6"
+    }
+   }
+  },
+  {
+   "id": "40187306386",
+   "type": {
+    "id": "8",
+    "text": "Penalty",
+    "abbreviation": "PEN"
+   },
+   "text": "(Shotgun) D.Prescott pass incomplete short middle to C.Lamb.PENALTY on SF-O.Odighizuwa, Roughing the Passer, 15 yards, enforced at DAL 31 - No Play.",
+   "awayScore": 0,
+   "homeScore": 0,
+   "period": {
+    "number": 1
+   },
+   "clock": {
+    "displayValue": "14:50"
+   },
+   "wallclock": "2026-11-15T21:27:02Z",
+   "scoringPlay": false,
+   "statYardage": 15,
+   "start": {
+    "down": 2,
+    "distance": 10,
+    "yardLine": 31,
+    "yardsToEndzone": 69,
+    "downDistanceText": "2nd & 10 at DAL 31",
+    "shortDownDistanceText": "2nd & 10",
+    "possessionText": "DAL 31",
+    "team": {
+     "id": "6"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 46,
+    "yardsToEndzone": 54,
+    "downDistanceText": "1st & 10 at DAL 46",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "DAL 46",
+    "team": {
+     "id": "6"
+    }
+   }
+  },
+  {
+   "id": "401873063302",
+   "type": {
+    "id": "59",
+    "text": "Field Goal Good",
+    "abbreviation": "FG"
+   },
+   "text": " B.Aubrey 52 yard field goal is GOOD, Center-T.Sieg, Holder-B.Anger.",
+   "awayScore": 0,
+   "homeScore": 3,
+   "period": {
+    "number": 1
+   },
+   "clock": {
+    "displayValue": "12:11"
+   },
+   "wallclock": "2026-11-15T21:32:55Z",
+   "scoringPlay": true,
+   "statYardage": 52,
+   "start": {
+    "down": 4,
+    "distance": 7,
+    "yardLine": 66,
+    "yardsToEndzone": 34,
+    "downDistanceText": "4th & 7 at SF 34",
+    "shortDownDistanceText": "4th & 7",
+    "possessionText": "SF 34",
+    "team": {
+     "id": "6"
+    }
+   },
+   "end": {
+    "down": -1,
+    "distance": 10,
+    "yardLine": 100,
+    "yardsToEndzone": 0,
+    "team": {
+     "id": "6"
+    }
+   }
+  },
+  {
+   "id": "401873063558",
+   "type": {
+    "id": "67",
+    "text": "Passing Touchdown",
+    "abbreviation": "TD"
+   },
+   "text": "(Shotgun) B.Purdy pass short right to D.Samuel for 11 yards, TOUCHDOWN. E.Pineiro extra point is GOOD, Center-J.Weeks, Holder-C.Waitman.",
+   "awayScore": 7,
+   "homeScore": 3,
+   "period": {
+    "number": 1
+   },
+   "clock": {
+    "displayValue": "6:56"
+   },
+   "wallclock": "2026-11-15T21:43:21Z",
+   "scoringPlay": true,
+   "statYardage": 11,
+   "start": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 11,
+    "yardsToEndzone": 11,
+    "downDistanceText": "1st & 10 at DAL 11",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "DAL 11",
+    "team": {
+     "id": "25"
+    }
+   },
+   "end": {
+    "down": -1,
+    "distance": 10,
+    "yardLine": 0,
+    "yardsToEndzone": 0,
+    "team": {
+     "id": "25"
+    }
+   }
+  }
+ ],
+ "winprobability.count": 203,
+ "winprobability.sample": [
+  {
+   "homeWinPercentage": 0.3606,
+   "tiePercentage": 0.0,
+   "playId": "4018730631"
+  },
+  {
+   "homeWinPercentage": 0.3846,
+   "tiePercentage": 0.0,
+   "playId": "40187306340"
+  },
+  {
+   "homeWinPercentage": 0.3663,
+   "tiePercentage": 0.0,
+   "playId": "40187306363"
+  },
+  {
+   "homeWinPercentage": 0.001,
+   "tiePercentage": 0.0,
+   "playId": "4018730634808"
+  },
+  {
+   "homeWinPercentage": 0.0,
+   "tiePercentage": 0.0,
+   "playId": "4018730634958"
+  }
+ ],
+ "scoringPlays.sample": [
+  {
+   "id": "401873063302",
+   "type": {
+    "id": "59",
+    "text": "Field Goal Good",
+    "abbreviation": "FG"
+   },
+   "text": "Brandon Aubrey 52 Yd Field Goal ",
+   "awayScore": 0,
+   "homeScore": 3,
+   "period": {
+    "number": 1
+   },
+   "clock": {
+    "value": 731.0,
+    "displayValue": "12:11"
+   }
+  },
+  {
+   "id": "401873063558",
+   "type": {
+    "id": "67",
+    "text": "Passing Touchdown",
+    "abbreviation": "TD"
+   },
+   "text": "Deebo Samuel Sr. 11 Yd pass from Brock Purdy (Eddy Pineiro Kick)",
+   "awayScore": 7,
+   "homeScore": 3,
+   "period": {
+    "number": 1
+   },
+   "clock": {
+    "value": 416.0,
+    "displayValue": "6:56"
+   }
+  },
+  {
+   "id": "401873063878",
+   "type": {
+    "id": "67",
+    "text": "Passing Touchdown",
+    "abbreviation": "TD"
+   },
+   "text": "George Pickens 35 Yd pass from Dak Prescott (Brandon Aubrey Kick)",
+   "awayScore": 7,
+   "homeScore": 10,
+   "period": {
+    "number": 1
+   },
+   "clock": {
+    "value": 68.0,
+    "displayValue": "1:08"
+   }
+  }
+ ],
+ "videos.sample": [
+  {
+   "headline": "49ers outlast Cowboys in back-and-forth thriller",
+   "duration": 106,
+   "thumbnail": "https://espnmedia-cdn.akamaized.net/espn/media/common/2026/1115/c9b222bfcf7142e4b9e7e37d8771eff31222/c9b222bfcf7142e4b9e7e37d8771eff31222.jpg"
+  },
+  {
+   "headline": "Dak Prescott lets it fly to George Pickens for a Cowboys TD",
+   "duration": 24,
+   "thumbnail": "https://espnmedia-cdn.akamaized.net/espn/media/common/2026/1115/8cd68053e28f48b5a2f18bb200305f271041/8cd68053e28f48b5a2f18bb200305f271041.jpg"
+  }
+ ]
+}

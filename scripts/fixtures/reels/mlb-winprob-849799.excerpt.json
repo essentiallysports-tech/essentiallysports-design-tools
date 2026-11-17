@@ -1,0 +1,41 @@
+{
+ "_note": "GET https://statsapi.mlb.com/api/v1/game/849799/winProbability : one entry per plate appearance (full play object + WP fields). Showing WP fields only.",
+ "count": 70,
+ "sample": [
+  {
+   "atBatIndex": 0,
+   "homeTeamWinProbability": 52.2,
+   "awayTeamWinProbability": 47.8,
+   "homeTeamWinProbabilityAdded": 2.200000000000003,
+   "leverageIndex": null
+  },
+  {
+   "atBatIndex": 1,
+   "homeTeamWinProbability": 53.800000000000004,
+   "awayTeamWinProbability": 46.199999999999996,
+   "homeTeamWinProbabilityAdded": 1.6000000000000014,
+   "leverageIndex": 0.63
+  },
+  {
+   "atBatIndex": 2,
+   "homeTeamWinProbability": 54.800000000000004,
+   "awayTeamWinProbability": 45.199999999999996,
+   "homeTeamWinProbabilityAdded": 1.0,
+   "leverageIndex": 0.4
+  },
+  {
+   "atBatIndex": 68,
+   "homeTeamWinProbability": 1.6,
+   "awayTeamWinProbability": 98.4,
+   "homeTeamWinProbabilityAdded": 1.1,
+   "leverageIndex": 0.2
+  },
+  {
+   "atBatIndex": 69,
+   "homeTeamWinProbability": 0.0,
+   "awayTeamWinProbability": 100.0,
+   "homeTeamWinProbabilityAdded": -1.6,
+   "leverageIndex": 0.62
+  }
+ ]
+}
