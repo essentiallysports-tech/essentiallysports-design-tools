@@ -1,6 +1,6 @@
 # Reels Studio data formats: Phase 0 contract
 
-Status: Phase 0 landed on `feature/reels-formats` (2026-11-18). This is the agreement that agents A (data and server), B (render, styles, export, lint) and C (UI, flow, gallery) build against in parallel. Product spec: the research doc `reels-formats-research.md` (coordinator scratchpad), §G.
+Status: Phase 0 landed on `feature/reels-formats` (2026-11-18). Phase 1 (A, B, C) merged and integrated on the same branch (2026-11-19); the agreed deviations from this Phase 0 text are listed in **§9** and win over the earlier sections. This is the agreement that agents A (data and server), B (render, styles, export, lint) and C (UI, flow, gallery) build against in parallel. Product spec: the research doc `reels-formats-research.md` (coordinator scratchpad), §G.
 
 **Owner decisions.** These are the defaults; apply them.
 - **Formats, in build order:**
@@ -383,3 +383,33 @@ for f in scripts/test-*.mjs scripts/check-*.mjs; do node $f >/dev/null 2>&1 || e
 The Phase 0 numbers: hash `90a7617f…aa17d0`, 96,145 calls on both.
 
 **Every test mocks `fetch`.** No network.
+
+## 9. Agreed deviations after Phase 1 (integrator, 2026-11-19)
+
+These came out of the Phase 1 builds and a live-data check (real ESPN GETs, 2026-11-18). Where they differ from §1–§8, this section wins.
+
+**Data and server (A)**
+1. **Digest rule 6 (fitting).** A full NFL or CFB game does not fit 30 plays plus 120 WP points in 8 KB. `fitDigest` goes in this order, stopping as soon as the digest fits:
+   1. shorten play text to 80, then 60 characters (rule 3 cut; abbreviations such as `Sr.`, `Jr.` and initials are not sentence ends);
+   2. halve the WP points, never below **60** (`WP_FLOOR`);
+   3. drop `period-end`-only plays (oldest first), then `swing`-only plays (smallest `|swing|` first);
+   4. halve the WP points again, down to 4;
+   5. drop plays that are neither `final` nor `lead-change` (smallest `|swing|` first), then any play (oldest first).
+   Live check: SF–DAL 7,994 B (20 plays, 60 WP points of 203), LAC–BAL 8,073 B, TEX–LSU (CFB) 8,076 B, MIL–TB (MLB) 6,339 B (70 of 70).
+2. **Live football: `drives.current`.** Rule 1's flattened play list also takes `drives.current.plays[]` (when that drive is not already in `drives.previous`), so a live game's latest plays are in the digest.
+3. **Drama is a composite**, not the max `|swing|` of §2.1: `dramaScore = 0.45·swing + 0.2·leads + 0.15·late + 0.2·comeback`, each 0..1 (`reel-data.js` `dramaParts`: swing = the biggest `|swing|` / 0.5; leads = lead changes / 4; late = a score in the last period within one score; comeback = how far below 50% the winner fell). Null without plays or WP.
+4. **Archive `datePrecision`.** An archive article carries `datePrecision: 'day' | 'year'`. An article found for a career year but published in a different year gets `date: '<year>-01-01'` and `'year'`; only `'day'` dates are copied onto a moment's `date`. The `archive-date` lint reads it.
+5. **Frame-pick frame size.** Each frame data URL is at most **60,000 characters** (~44 KB JPEG; the page sends ~20 KB at 320 px), at most 9 frames, inside the 220 KB request cap.
+6. **`plan` with `playIds` (Game Swing).** The page sends `playIds` (the editor's ticked key plays). The server keeps only ids that are plays of the (re-validated or cached) digest, plans exactly those (the strongest **5** by `playWeight` when more are ticked, in game order, with an issue line "Kept the 5 strongest…"), and answers **422 `no-plays`** when `playIds` is sent but none is valid (an empty array included). Without `playIds` the code picks 4 key plays.
+   ```jsonc
+   → { "mode":"plan", "format":"gameswing", "digest": GameDigest, "playIds":["401873063558", ...], "clips":[{ "url","handle","text","postedAt" }] }
+   ```
+7. **`game-data` with `clips:true`.** Additive `clipMatches: [{ playId, url, handle, text, postedAt, lagSec, confidence, reasons, variants, thumb, durationMs, sourceKind }]` (≤ 30, sure matches only, from the clip library). The page sends them back as `plan.clips`; `planFromGame` re-matches each clip against **every** play (a clip goes to the play it shows) and puts only sure matches on a play beat (`visual:'clip'`, `beat.clip`). Game Swing play beats show only their matched clip, else a photo; they never take an unmatched clip from the general clip pool.
+
+**Timeline, render and lint (B)**
+8. **v2 only for data formats.** `buildTimeline` emits `v: 2` (canvas, outputs, data, replay, slides, refs) only for `gameswing`, `replay` and `archive`. News reels keep building today's v1 timeline byte for byte (the §8 hash gate).
+9. **Captions on replay frames.** `replay.frames[]` may carry `caption` (≤ 6 words, number-free, from frame-pick or the editor); the panels and slides draw it.
+10. **Element boxes (reel, 1080×1920)** were re-stacked so nothing overlaps the ES mark or each other: scorebug x 88 y 288 720×104 (ends at x 808); clock tab x 588 y 400 220×48 (under the bug's right end); WP band x 88 y 472 904×144 (full chart y 640, 904×600); play card y 1172; panel3 strip x 88 y 456 904×1104; source chip y 1448; attribution y 1512. The 4:5 boxes moved to match (see `S.ELEMENTS`).
+11. **The clock never ticks.** The clock tab shows the period and clock exactly as the digest has them; it is static for the whole beat (a ticking clock would show times that are not in the data).
+12. **Extra lint rule ids** beyond §4: `data-numbers` (every number on a v2 beat must be in its refs or the facts), `scorebug-clear` (scorebug/clock clear of the ES mark), `paid-league-footage` (the paid-ad warning), `slides` (carousel checks via `lintSlides`).
+13. **Extra beat fields** in data plans (all optional, ignored by news reels): `holdMs` (the beat's designed hold, clamped 1.2–7 s), `playRef`, `clip { url, handle, lagSec, confidence, matchedBy }` on a play beat, and on a `wpline` beat `from`, `to`, `marks`, `team`, `attribution`; archive `moment` beats carry `year`, `title`, `line` and `cite`.

@@ -333,4 +333,17 @@ await test('playHeadline: no formation / jersey noise, no cut at "Sr.", no dangl
   assert.equal(D.playHeadline({ text: 'Pratt singled to center, Turang scored, Pratt thrown out' }), 'Pratt singled to center, Turang scored, Pratt thrown out');
 });
 
+await test('reel-maker plan: sure clips sent with the plan land on their play beat (URL kept intact)', async () => {
+  delete process.env.AI_GATEWAY_API_KEY;
+  const { _test } = require('../netlify/functions/reel-maker.js');
+  const td = FULL.plays.find(p => p.scoring && p.team === 'away' && /McCaffrey 66/.test(p.text));
+  const clip = { url: 'https://x.com/49ers/status/1990000000000000001', handle: '49ers', text: 'Christian McCaffrey to the house', postedAt: new Date(Date.parse(td.wallclock) + 150e3).toISOString() };
+  const bad = { url: 'javascript:alert(1)', handle: '49ers', text: 'McCaffrey', postedAt: clip.postedAt };
+  const out = await _test.plan({ format: 'gameswing', digest: FULL, playIds: [td.id], clips: [bad, clip] }, { email: 'e' }, { off: true });
+  const beat = out.plan.beats.find(b => b.kind === 'play');
+  assert.equal(beat.visual, 'clip');
+  assert.equal(beat.clip.url, clip.url);
+  assert.equal(DIR.readDataInput({ format: 'gameswing', clips: [bad] }).clips.length, 0);
+});
+
 console.log(`\n${passed} passed`);

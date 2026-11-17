@@ -516,7 +516,9 @@ function readDataInput(body, { cachedDigest = null } = {}) {
   let replay = null;
   if (format === 'replay' && b.replay && typeof b.replay === 'object' && T.validateTimeline({ v: 2, beats: [], replay: b.replay }).ok) replay = b.replay;
   const captions = b.captions && typeof b.captions === 'object' ? Object.fromEntries(['setup', 'play', 'reaction'].map(r => [r, clean(b.captions[r], 60)])) : null;
-  const clips = (Array.isArray(b.clips) ? b.clips : []).slice(0, 40).filter(c => c && /^https:\/\//.test(String(c.url || ''))).map(c => ({ url: clean(c.url, 400), handle: clean(c.handle, 40), text: clean(c.text, 280), postedAt: clean(c.postedAt, 40) }));
+  // Clip post URLs are kept as they are (clean() strips URLs): https, no spaces or quotes.
+  const clipUrl = u => (/^https:\/\/[^\s"'<>]{1,400}$/.test(String(u || '')) ? String(u) : '');
+  const clips = (Array.isArray(b.clips) ? b.clips : []).slice(0, 40).filter(c => c && clipUrl(c.url)).map(c => ({ url: clipUrl(c.url), handle: clean(c.handle, 40), text: clean(c.text, 280), postedAt: clean(c.postedAt, 40) }));
   // Game Swing: the editor's ticked key plays, kept only when the digest has them.
   const playIdsSent = Array.isArray(b.playIds);
   const known = new Set(digest ? digest.plays.map(p => String(p.id)) : []);
