@@ -344,6 +344,32 @@
       ]
     },
     {
+      "id": "2026-11-19-trends-ui",
+      "date": "2026-11-19",
+      "title": "Trends: a cleaner, faster board",
+      "commit": "1503d36",
+      "items": [
+        {
+          "title": "Compact stories",
+          "text": "Each story is now one tidy card or row: the title (two lines at most), one line with Hot, source, age and sources, and the rest of the storyline behind a small \"more\" toggle.",
+          "page": "generate.html",
+          "target": "#trends-body"
+        },
+        {
+          "title": "The same actions, in the same place",
+          "text": "Design post, then Post kit, Reel, Video ad, Shortlist and Read in fixed slots on every story, in cards and list. Hover for a tip; on smaller screens the rest sit under ⋯.",
+          "page": "generate.html",
+          "target": "#trends-body"
+        },
+        {
+          "title": "Headline ideas on request",
+          "text": "No more empty idea boxes: press Headline ideas on a card and three AI headlines appear, ready to copy or design.",
+          "page": "generate.html",
+          "target": "#trends-body"
+        }
+      ]
+    },
+    {
       "id": "2026-11-18-director",
       "date": "2026-11-18",
       "title": "The creative director, ES guidelines and Bring it on-brand",

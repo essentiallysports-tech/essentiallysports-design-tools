@@ -35,6 +35,9 @@
     wand: svg('<path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/>'),
     sparkles: svg('<path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/>'),
     chevron: svg('<path d="m9 18 6-6-6-6"/>'),
+    chevronDown: svg('<path d="m6 9 6 6 6-6"/>'),
+    more: svg('<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>'),
+    keyboard: svg('<path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/>'),
     video: svg('<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>'),
     film: svg('<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/>'),
     bookmark: svg('<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>'),
@@ -59,6 +62,16 @@
     keysBtn: $('trends-keys'), keys: $('trends-keys-panel'),
   };
   const isOpen = () => document.documentElement.dataset.aisView === 'trends';
+  // Toolbar: AI angles and Refresh are both secondary buttons; the shortcuts
+  // button reads as one with the layout toggle. Done here so generate.html
+  // (shared with the Generate view) keeps its markup.
+  els.aiAll.classList.remove('es-btn--tertiary');
+  els.aiAll.removeAttribute('title');
+  els.aiAll.dataset.tip = 'Why fans care, 3 headlines and a reel hook for the top stories on screen';
+  els.refresh.dataset.tip = 'Refresh trends';
+  els.keysBtn.removeAttribute('title');
+  els.keysBtn.dataset.tip = 'Keyboard shortcuts (?)';
+  els.density.querySelectorAll('[data-density]').forEach(b => { b.dataset.tip = b.title; b.removeAttribute('title'); });
   const store = {
     get(key, fallback, area = 'localStorage') { try { const raw = window[area].getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (error) { return fallback; } },
     set(key, value, area = 'localStorage') { try { window[area].setItem(key, JSON.stringify(value)); } catch (error) { /* private mode or full */ } },
@@ -137,8 +150,9 @@
   function visualHtml(item) {
     const team = item.team?.logo ? `<span class="td-team-badge" title="${esc(item.team.name)}"><img src="${esc(item.team.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></span>` : '';
     if (item.image) {
-      const badge = item.sourceDomain ? `<span class="td-src-badge" title="${esc(item.source)}">${iconImg(item.sourceDomain, 16)}</span>` : '';
-      return `<div class="trend-visual${item.imageKind === 'logo' ? ' is-logo' : ''}" data-sport="${esc(item.category)}"><img class="td-photo" src="${esc(item.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" ${item.imageCredit ? `title="${esc(item.imageCredit)}"` : ''} onerror="window.AIStudioTrendPhotoError?.(this)">${badge}${team}</div>`;
+      const logo = L.isLogoImage(item);
+      const badge = item.sourceDomain && !logo ? `<span class="td-src-badge" title="${esc(item.source)}">${iconImg(item.sourceDomain, 16)}</span>` : '';
+      return `<div class="trend-visual${logo ? ' is-logo' : ''}" data-sport="${esc(item.category)}"><img class="td-photo" src="${esc(item.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" ${item.imageCredit ? `title="${esc(item.imageCredit)}"` : ''} onerror="window.AIStudioTrendPhotoError?.(this)">${badge}${logo ? '' : team}</div>`;
     }
     if (item.team?.logo) {
       return `<div class="trend-visual is-logo" data-sport="${esc(item.category)}" role="img" aria-label="${esc(item.team.name)}"><img class="td-photo" src="${esc(item.team.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="window.AIStudioTrendPhotoError?.(this)"></div>`;
@@ -151,26 +165,60 @@
     return why ? `<p class="trend-why${isNew ? ' is-new' : ''}">${ICON.sparkles}<span><span class="es-sr-only">Why fans care: </span>${esc(why)}</span></p>` : '';
   }
 
+  // Headline ideas on the card: nothing until they exist. "Headline ideas"
+  // (a ghost button in the action row) asks for them; then 3 compact
+  // headlines with copy buttons. Quick (rule) ideas show only when AI can't
+  // answer, with the reason. The post kit always has them.
   function ideasHtml(item, isNew) {
     const ai = aiFor(item);
     const state = aiState.get(item.id);
-    const titles = (ai?.titles?.length ? ai.titles : item.titles || []).slice(0, 3);
-    const canAsk = data?.aiEnrich && !ai && state !== 'loading' && state !== 'limited' && state !== 'off';
-    const side = ai ? '<span class="ais-badge" title="Written by AI from the story">AI</span>'
-      : canAsk ? `<button class="td-icon-btn trend-ideas__ai" type="button" data-ai aria-label="AI angles for this trend">${ICON.sparkles}<span>${state === 'error' ? 'Try AI again' : 'AI angles'}</span></button>` : '';
-    const head = `<div class="trend-ideas__head"><span class="trend-ideas__label">${ICON.sparkles}<span>Headline ideas</span></span>${side}</div>`;
-    if (state === 'loading') return `${head}<div class="trend-ideas__list" aria-busy="true">${'<span class="trend-idea is-skeleton es-skeleton"></span>'.repeat(3)}</div>`;
-    const note = state === 'limited' ? '<p class="trend-ideas__note">AI limit reached for now, so these are quick ideas.</p>'
-      : (state === 'off' || (data?.aiOff && !ai)) ? '<p class="trend-ideas__note">AI angles are switched off for now, so these are quick ideas.</p>' : '';
-    // No quick idea (a long headline with no clean clause): just the AI
-    // button, or nothing at all, never an empty box.
-    if (!titles.length) return canAsk || note ? `${head}${note}` : '';
-    return `${head}<div class="trend-ideas__list${isNew ? ' is-new' : ''}">${titles.map(t => `<div class="trend-idea"><a class="trend-idea__go" href="${esc(designUrl(item, t))}" data-design title="Design a post with this headline">${esc(t)}</a><button class="trend-idea__copy" type="button" data-copy="${esc(t)}" aria-label="Copy headline: ${esc(t)}" title="Copy">${ICON.copy}</button></div>`).join('')}</div>${note}`;
+    if (state === 'loading') return `<div class="trend-ideas__list" aria-busy="true" aria-label="Writing headline ideas">${'<span class="trend-idea is-skeleton es-skeleton"></span>'.repeat(3)}</div>`;
+    const fallback = !ai && (state === 'limited' || state === 'off' || state === 'error');
+    const titles = (ai?.titles?.length ? ai.titles : fallback ? item.titles || [] : []).slice(0, 3);
+    const note = !fallback ? '' : state === 'limited' ? 'AI limit reached for now, so these are quick ideas.'
+      : state === 'off' ? 'AI angles are switched off for now, so these are quick ideas.' : 'AI angles didn’t load, so these are quick ideas.';
+    if (!titles.length) return note ? `<p class="trend-ideas__note">${esc(note.replace(/, so these are quick ideas\./, '.'))}</p>` : '';
+    return `<p class="es-sr-only">${ai ? 'Headline ideas, written by AI from the story' : 'Quick headline ideas'}</p><ul class="trend-ideas__list${isNew ? ' is-new' : ''}">${titles.map(t => `<li class="trend-idea"><a class="trend-idea__go" href="${esc(designUrl(item, t))}" data-design title="Design a post with this headline"><span>${esc(t)}</span></a><button class="trend-idea__copy" type="button" data-copy="${esc(t)}" aria-label="Copy headline: ${esc(t)}" title="Copy">${ICON.copy}</button></li>`).join('')}</ul>${note ? `<p class="trend-ideas__note">${esc(note)}</p>` : ''}`;
+  }
+  // The ghost "Headline ideas" button: only while there is something to ask.
+  function ideasBtnHtml(item) {
+    const state = aiState.get(item.id);
+    if (!data?.aiEnrich || aiFor(item) || state === 'loading' || state === 'limited' || state === 'off') return '';
+    return `<button class="es-btn es-btn--sm es-btn--tertiary td-ideas-btn" type="button" data-ai>${ICON.sparkles}<span>${state === 'error' ? 'Try ideas again' : 'Headline ideas'}</span></button>`;
   }
 
-  function saveBtn(item) {
-    const on = isSaved(item.id);
-    return `<button class="td-icon-btn td-save" type="button" data-save aria-pressed="${on}" title="${on ? 'Remove from the shortlist (S)' : 'Add to the shortlist (S)'}">${ICON.bookmark}<span>${on ? 'Shortlisted' : 'Shortlist'}</span></button>`;
+  // ── Row actions: the same five, in the same slots, everywhere ─────────
+  // Post kit · Reel · Video ad · Shortlist · Read (trends-logic.js
+  // ROW_ACTIONS). Icon buttons with a label that collapses to a tooltip when
+  // space is short; "⋯" holds the rest on narrow widths.
+  const ACT_ICON = { kit: ICON.kit, reel: ICON.film, video: ICON.video, shortlist: ICON.bookmark, open: ICON.external };
+  function actHtml(item, a) {
+    const tip = `${a.available ? a.tip : a.reason} (${a.key.toUpperCase()})`;
+    const cls = `td-act td-act--${a.id}${a.id === 'kit' ? ' td-kit-btn' : ' td-act--more'}`;
+    const inner = `${ACT_ICON[a.id]}<span class="td-act__label">${esc(a.label)}</span>`;
+    if (!a.available) return `<button class="${cls}" type="button" aria-disabled="true" data-na="${esc(a.reason)}" data-tip="${esc(a.reason)}">${inner}<span class="es-sr-only">: ${esc(a.reason)}</span></button>`;
+    if (a.id === 'kit') { const open = openKits.has(item.id); return `<button class="${cls}" type="button" data-kit aria-expanded="${open}" aria-controls="kit-${esc(item.id)}" data-tip="${esc(tip)}">${inner}</button>`; }
+    if (a.id === 'reel') return `<a class="${cls}" href="${esc(reelOf(item).url)}" data-reel data-tip="${esc(tip)}">${inner}</a>`;
+    if (a.id === 'video') return `<a class="${cls}" href="${esc(videoOf(item).url)}" data-video data-tip="${esc(tip)}">${inner}</a>`;
+    if (a.id === 'shortlist') { const on = isSaved(item.id); return `<button class="${cls} td-save" type="button" data-save aria-pressed="${on}" data-tip="${esc(tip)}">${inner}</button>`; }
+    return `<a class="${cls}" href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer" data-open data-tip="${esc(tip)}">${inner}<span class="es-sr-only"> the story (opens in a new tab)</span></a>`;
+  }
+  const actsFor = item => L.rowActions(item, { saved: isSaved(item.id) });
+  function saveBtn(item) { return actHtml(item, actsFor(item).find(a => a.id === 'shortlist')); }
+  function actionsHtml(item) {
+    return `<div class="trend-actions">
+        <a class="es-btn es-btn--sm td-design" href="${esc(designUrl(item))}" data-design data-tip="Design a post (D)">${ICON.wand}<span>Design post</span></a>
+        <div class="td-acts" role="group" aria-label="More for this story">${actsFor(item).map(a => actHtml(item, a)).join('')}<button class="td-act td-more-btn" type="button" aria-haspopup="menu" aria-expanded="false" data-more data-tip="More">${ICON.more}<span class="td-act__label">More</span></button></div>
+        <span class="td-ideas-slot" data-ideas-btn="${esc(item.id)}">${ideasBtnHtml(item)}</span>
+      </div>`;
+  }
+  // "⋯": the actions that don't fit, as a menu (built when it opens).
+  function moreMenuHtml(item) {
+    return actsFor(item).filter(a => a.id !== 'kit').map(a => {
+      const label = a.id === 'shortlist' && isSaved(item.id) ? 'Remove from shortlist' : a.id === 'open' ? 'Read the story' : a.id === 'reel' ? 'Make a reel' : a.id === 'video' ? 'Make a video ad' : a.label;
+      const kbd = `<kbd class="es-kbd" aria-hidden="true">${a.key.toUpperCase()}</kbd>`;
+      return `<button class="es-menu__item" type="button" role="menuitem" data-more-act="${a.id}"${a.available ? '' : ` aria-disabled="true" title="${esc(a.reason)}"`}>${ACT_ICON[a.id]}<span>${esc(label)}</span>${kbd}</button>`;
+    }).join('');
   }
 
   const SIGNAL = { hot: ['Hot', ICON.flame, 'Big search volume or many outlets on this story right now'], rising: ['Rising', ICON.trending, 'More outlets or searches than an hour ago'] };
@@ -179,46 +227,43 @@
     return s ? `<span class="td-signal is-${esc(item.signal)}" title="${esc(s[2])}">${s[1]}${s[0]}</span>` : '';
   }
 
-  function storyHtml(item, more) {
+  // Storyline: a quiet inline toggle on the meta line; the stories open below.
+  const openStories = new Set();
+  function storyToggleHtml(item, more) {
     if (!more?.length) return '';
+    const open = openStories.has(item.id);
     const label = item.storyline?.label || 'this story';
-    return `<details class="td-story" data-story="${esc(item.storyline?.id || '')}"><summary>${ICON.layers}<span>${esc(label)}: ${more.length} more ${more.length === 1 ? 'story' : 'stories'}</span>${ICON.chevron}</summary><ul class="td-story__list">${more.map(m => `<li><a href="${esc(safeUrl(m.url))}" target="_blank" rel="noopener noreferrer">${iconImg(m.sourceDomain, 14)}<span class="td-story__title">${esc(m.title)}</span><span class="es-sr-only"> (opens in a new tab)</span></a><span class="td-story__meta">${esc(m.source || '')} · ${esc(L.ago(m.publishedAt))}</span><a class="td-story__use" href="${esc(designUrl(m))}" data-design data-for="${esc(m.id)}">Design this one</a></li>`).join('')}</ul></details>`;
+    return `<span class="td-m td-m--story"><span class="trend-meta__sep" aria-hidden="true">·</span><button class="td-story-btn" type="button" data-story-toggle aria-expanded="${open}" aria-controls="st-${esc(item.id)}" title="${esc(label)}: ${more.length} more ${more.length === 1 ? 'story' : 'stories'}">${ICON.layers}<span>${more.length} more</span><span class="es-sr-only"> ${more.length === 1 ? 'story' : 'stories'} on ${esc(label)}</span>${ICON.chevronDown}</button></span>`;
+  }
+  function storyListHtml(item, more) {
+    if (!more?.length) return '';
+    return `<ul class="td-story__list" id="st-${esc(item.id)}"${openStories.has(item.id) ? '' : ' hidden'}>${more.map(m => `<li><a href="${esc(safeUrl(m.url))}" target="_blank" rel="noopener noreferrer">${iconImg(m.sourceDomain, 14)}<span class="td-story__title">${esc(m.title)}</span><span class="es-sr-only"> (opens in a new tab)</span></a><span class="td-story__meta">${esc(m.source || '')} · ${esc(L.ago(m.publishedAt))}</span><a class="td-story__use" href="${esc(designUrl(m))}" data-design data-for="${esc(m.id)}">Design this one</a></li>`).join('')}</ul>`;
   }
 
   function row(item, index, { more = [], pick = false } = {}) {
     const isSearch = item.type === 'search';
     const tag = isSearch
-      ? `<span class="trend-tag is-search"><span class="es-live-dot" aria-hidden="true"></span>Trending on Google${item.traffic ? ` · ${esc(item.traffic)} searches` : ''}</span>`
-      : `<span class="trend-tag">${ICON.news}News</span>`;
-    const related = isSearch && item.related?.length
-      ? `<ul class="trend-related">${item.related.slice(0, 2).map(r => `<li><a href="${esc(safeUrl(r.url))}" target="_blank" rel="noopener noreferrer">${iconImg(r.domain, 14)}<span>${esc(r.title)}</span><span class="es-sr-only"> (opens in a new tab)</span></a></li>`).join('')}</ul>`
+      ? `<span class="trend-tag is-search" title="Trending on Google"><span class="es-live-dot" aria-hidden="true"></span><span class="es-sr-only">Trending on Google: </span>${item.traffic ? `${esc(item.traffic)} searches` : 'Google'}</span>`
       : '';
-    const outlets = item.coverage > 1 ? `<span class="trend-meta__sep" aria-hidden="true">·</span><span title="Covered by ${item.coverage} publications">${item.coverage} sources</span>` : '';
+    const related = isSearch && item.related?.length
+      ? `<ul class="trend-related">${item.related.slice(0, 1).map(r => `<li><a href="${esc(safeUrl(r.url))}" target="_blank" rel="noopener noreferrer">${iconImg(r.domain, 14)}<span>${esc(r.title)}</span><span class="es-sr-only"> (opens in a new tab)</span></a></li>`).join('')}</ul>`
+      : '';
+    const outlets = item.coverage > 1 ? `<span class="td-m td-sources"><span class="trend-meta__sep" aria-hidden="true">·</span><span title="Covered by ${item.coverage} publications">${item.coverage} sources</span></span>` : '';
     const age = L.freshness(item.publishedAt);
     const why = pick ? L.whyNow(item, { brands: brands() }) : '';
     const kitOpen = openKits.has(item.id);
-    const canVideo = L.AD_SPORTS.includes(item.category);
-    return `<article class="trend-row ais-card${isSearch ? ' is-search' : ''}${pick ? ' is-pick' : ''}${kitOpen ? ' has-kit' : ''}" style="--i:${index}" tabindex="-1" data-id="${esc(item.id)}" data-sport="${esc(item.category)}" aria-labelledby="tt-${esc(item.id)}">
+    return `<article class="trend-row${isSearch ? ' is-search' : ''}${pick ? ' is-pick' : ''}${kitOpen ? ' has-kit' : ''}" style="--i:${index}" tabindex="-1" data-id="${esc(item.id)}" data-sport="${esc(item.category)}" aria-labelledby="tt-${esc(item.id)}">
       ${visualHtml(item)}
       <div class="trend-body">
-        <div class="trend-meta">${signalHtml(item)}${tag}<span class="td-source">${iconImg(item.sourceDomain, 16)}${esc(item.source || 'Google')}</span><span class="trend-meta__sep" aria-hidden="true">·</span><time datetime="${esc(item.publishedAt)}" class="td-age is-${age}">${L.ago(item.publishedAt)}</time>${outlets}</div>
         <h3 class="trend-title es-type-card-title" id="tt-${esc(item.id)}">${esc(item.title)}</h3>
+        <div class="trend-meta">${signalHtml(item)}${tag}<span class="td-source">${iconImg(item.sourceDomain, 16)}<span class="td-source__name">${esc(item.source || 'Google')}</span></span><span class="td-m"><span class="trend-meta__sep" aria-hidden="true">·</span><time datetime="${esc(item.publishedAt)}" class="td-age is-${age}">${L.ago(item.publishedAt)}</time></span>${outlets}${storyToggleHtml(item, more)}</div>
         ${why ? `<p class="td-why-now"><span class="es-sr-only">Why now: </span>${esc(why)}</p>` : ''}
-        <div data-why="${esc(item.id)}">${whyHtml(item)}</div>
+        <div class="td-why-slot" data-why="${esc(item.id)}">${whyHtml(item)}</div>
         ${related}
-        ${storyHtml(item, more)}
+        ${storyListHtml(item, more)}
         <div class="trend-ideas" data-ideas="${esc(item.id)}">${ideasHtml(item)}</div>
       </div>
-      <div class="trend-actions">
-        <a class="es-btn es-btn--sm td-design" href="${esc(designUrl(item))}" data-design title="Design a post (D)">${ICON.wand}Design post</a>
-        <button class="es-btn es-btn--sm es-btn--tertiary td-kit-btn" type="button" data-kit aria-expanded="${kitOpen}" aria-controls="kit-${esc(item.id)}" title="Headlines, template, photo, reel hook and video ad (P)">${ICON.kit}<span>Post kit</span></button>
-        <div class="trend-actions__row">
-          <a class="td-icon-btn" href="${esc(reelOf(item).url)}" data-reel title="Make a reel (R)">${ICON.film}<span>Reel</span></a>
-          ${canVideo ? `<a class="td-icon-btn" href="${esc(videoOf(item).url)}" data-video title="Make a video ad (V)">${ICON.video}<span>Video ad</span></a>` : ''}
-          ${saveBtn(item)}
-          <a class="td-icon-btn" href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer" data-open title="Read the story (O)">${ICON.external}<span>Read</span><span class="es-sr-only"> the story (opens in a new tab)</span></a>
-        </div>
-      </div>
+      ${actionsHtml(item)}
       <div class="td-kit" id="kit-${esc(item.id)}" data-kit-for="${esc(item.id)}" role="region" aria-label="Post kit: ${esc(item.title)}"${kitOpen ? '' : ' hidden'}>${kitOpen ? kitHtml(item) : ''}</div>
     </article>`;
   }
@@ -292,7 +337,8 @@
   }
 
   function skeleton(n) {
-    return `<div class="trends-list" aria-hidden="true">${Array.from({ length: n }, () => `<div class="trend-row is-skeleton"><span class="td-sk es-skeleton" style="width:100%;aspect-ratio:1;border-radius:14px"></span><div class="trend-body"><span class="td-sk es-skeleton" style="width:min(220px,100%);height:22px"></span><span class="td-sk es-skeleton" style="height:18px"></span><span class="td-sk es-skeleton" style="width:60%;height:18px"></span><span class="td-sk es-skeleton" style="width:80%;height:34px;margin-top:8px"></span></div><span class="td-sk trend-actions" style="height:40px"></span></div>`).join('')}</div>`;
+    const sk = (style, cls = '') => `<span class="td-sk es-skeleton${cls}" style="${style}"></span>`;
+    return `<div class="trends-list" aria-hidden="true">${Array.from({ length: n }, () => `<div class="trend-row is-skeleton">${sk('', ' trend-visual')}<div class="trend-body">${sk('width:min(520px,100%);height:20px')}${sk('width:min(280px,70%);height:16px')}</div><div class="trend-actions">${sk('width:120px;height:32px')}</div></div>`).join('')}</div>`;
   }
 
   // ── Toolbar: brand, density, filters, stats ────────────────────────────
@@ -315,8 +361,9 @@
     const cats = categoriesNow().filter(c => c.count || c.id === active);
     const chips = [{ id: 'all', label: 'All', count: boardItems().length }, ...cats];
     const hadFocus = els.filters.contains(document.activeElement);
-    els.filters.innerHTML = chips.map(c => `<button type="button" class="es-chip" data-sport="${esc(c.id)}" aria-pressed="${c.id === active}">${c.id === 'all' ? '' : leagueTile(c.id, 'td-league--chip')}<span>${esc(c.label)}</span><span class="template-filter__count">${c.count}</span></button>`).join('')
-      + `<span class="td-chip-sep" aria-hidden="true"></span><button type="button" class="es-chip" data-sport="saved" aria-pressed="${active === 'saved'}">${ICON.bookmark}<span>Shortlist</span><span class="template-filter__count">${saved.length}</span></button>`;
+    const count = n => `<span class="td-count"><span class="es-sr-only">, </span>${n}</span>`;
+    els.filters.innerHTML = chips.map(c => `<button type="button" class="es-chip td-chip" data-sport="${esc(c.id)}" aria-pressed="${c.id === active}">${c.id === 'all' ? '' : leagueTile(c.id, 'td-league--chip')}<span>${esc(c.label)}</span>${count(c.count)}</button>`).join('')
+      + `<button type="button" class="es-chip td-chip td-chip--shortlist" data-sport="saved" aria-pressed="${active === 'saved'}">${ICON.bookmark}<span>Shortlist</span>${saved.length ? count(saved.length) : ''}</button>`;
     if (hadFocus) focusActiveChip();
   }
 
@@ -368,14 +415,14 @@
       const pickEntries = picks.map(p => ({ item: p, more: live.filter(i => i !== p && p.storyline && i.storyline?.id === p.storyline.id) }));
       const cats = categoriesNow().filter(c => c.count);
       const picksHtml = picks.length ? `<section class="trends-group trends-picks"${entered ? '' : ' data-ais-reveal'} aria-labelledby="tg-picks">
-        <div class="trends-group__head"><h2 id="tg-picks">${ICON.flame}Post now <span class="template-picker__count">${picks.length}</span></h2><p class="trends-group__sub">Ranked by freshness, momentum and ES fit${prefs.brand ? ` for ${esc(brands().find(b => b.id === prefs.brand)?.label || '')}` : ''}.</p></div>
+        <div class="trends-group__head"><h2 id="tg-picks">${ICON.flame}<span>Post now</span> <span class="td-count">${picks.length}</span></h2><p class="trends-group__sub">Ranked by freshness, momentum and ES fit${prefs.brand ? ` for ${esc(brands().find(b => b.id === prefs.brand)?.label || '')}` : ''}.</p></div>
         ${listHtml(pickEntries, listClass, { pick: true })}
       </section>` : '';
       const groups = cats.map(c => {
         const entries = L.foldStorylines(live.filter(i => i.category === c.id && !inPick(i)));
         if (!entries.length) return '';
         return `<section class="trends-group" data-sport="${esc(c.id)}"${entered ? '' : ' data-ais-reveal'} aria-labelledby="tg-${esc(c.id)}">
-          <div class="trends-group__head"><h2 id="tg-${esc(c.id)}">${leagueTile(c.id, 'td-league--head')}${esc(c.label)} <span class="template-picker__count">${c.count}</span></h2>${entries.length > PER_GROUP ? `<button class="trends-group__more" type="button" data-sport="${esc(c.id)}">See all ${c.count}${ICON.chevron}</button>` : ''}</div>
+          <div class="trends-group__head"><h2 id="tg-${esc(c.id)}">${leagueTile(c.id, 'td-league--head')}<span>${esc(c.label)}</span> <span class="td-count">${c.count}</span></h2>${entries.length > PER_GROUP ? `<button class="trends-group__more" type="button" data-sport="${esc(c.id)}">See all<span class="es-sr-only"> ${c.count} ${esc(c.label)} stories</span>${ICON.chevron}</button>` : ''}</div>
           ${listHtml(entries.slice(0, PER_GROUP), listClass)}
         </section>`;
       }).join('');
@@ -397,6 +444,12 @@
     const item = findItem(id);
     if (!item) return;
     document.querySelectorAll(`[data-why="${CSS.escape(id)}"]`).forEach(box => { box.innerHTML = whyHtml(item, isNew); });
+    document.querySelectorAll(`[data-ideas-btn="${CSS.escape(id)}"]`).forEach(box => {
+      const hadFocus = box.contains(document.activeElement);
+      box.innerHTML = ideasBtnHtml(item);
+      // The button goes once ideas exist: keep focus on the card.
+      if (hadFocus) (box.querySelector('button') || box.closest('.trend-row')?.querySelector('.trend-idea__go') || box.closest('.trend-row'))?.focus();
+    });
     document.querySelectorAll(`[data-ideas="${CSS.escape(id)}"], [data-kit-for="${CSS.escape(id)}"]:not([hidden])`).forEach(box => {
       const hadFocus = box.contains(document.activeElement);
       box.innerHTML = box.matches('.td-kit') ? kitHtml(item, isNew) : ideasHtml(item, isNew);
@@ -628,14 +681,59 @@
     const item = findItem(id);
     if (!item) return;
     event.preventDefault();
+    runAction(action, id, { keyboard: true });
+  });
+  // One place for what a row action does (shortcuts, the "⋯" menu).
+  function runAction(action, id, { keyboard = false } = {}) {
+    const item = findItem(id);
+    if (!item) return;
+    const na = L.rowActions(item).find(a => a.id === action && !a.available);
+    if (na) { toast(na.reason); return; }
     if (action === 'kit') { toggleKit(id); return; }
     if (action === 'design') { designHere(briefFor(item), id); return; }
     if (action === 'reel') { const h = reelOf(item); handOff(h); location.href = h.url; return; }
-    if (action === 'video') { if (!L.AD_SPORTS.includes(item.category)) { toast('Video ads are made for NFL, College Football and MLB.'); return; } const h = videoOf(item); handOff(h); location.href = h.url; return; }
-    if (action === 'shortlist') { toggleSave(id); rove(id)?.focus(); return; }
+    if (action === 'video') { const h = videoOf(item); handOff(h); location.href = h.url; return; }
+    if (action === 'shortlist') { toggleSave(id); if (keyboard) rove(id)?.focus(); return; }
     if (action === 'copy') { const t = L.kitFor(item, aiFor(item)).headlines[0]; if (t) copyText(t, null); else toast('No headline idea for this one yet. Open the post kit for AI angles.'); return; }
     if (action === 'open') window.open(safeUrl(item.url), '_blank', 'noopener');
-  });
+  }
+
+  // ── "⋯" menu (narrow widths): the row actions that don't fit ──────────
+  let menu = null;
+  function closeMenu(focusBtn = false) {
+    if (!menu) return;
+    const { el, btn } = menu;
+    menu = null;
+    el.remove();
+    btn.setAttribute('aria-expanded', 'false');
+    if (focusBtn && btn.isConnected) btn.focus();
+  }
+  function openMenu(btn) {
+    const rowEl = btn.closest('.trend-row[data-id]');
+    const item = rowEl && findItem(rowEl.dataset.id);
+    if (!item) return;
+    closeMenu();
+    const el = Object.assign(document.createElement('div'), { className: 'es-menu td-more-menu', innerHTML: moreMenuHtml(item) });
+    el.setAttribute('role', 'menu');
+    el.setAttribute('aria-label', `More for: ${item.title}`);
+    btn.after(el);
+    btn.setAttribute('aria-expanded', 'true');
+    menu = { el, btn, id: item.id };
+    el.querySelector('[role="menuitem"]')?.focus();
+  }
+  document.addEventListener('pointerdown', event => { if (menu && !menu.el.contains(event.target) && !menu.btn.contains(event.target)) closeMenu(); });
+  els.body.addEventListener('keydown', event => {
+    if (!menu || !menu.el.contains(event.target)) return;
+    const items = [...menu.el.querySelectorAll('[role="menuitem"]')];
+    const at = items.indexOf(document.activeElement);
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeMenu(true); return; }
+    if (event.key === 'Tab') { closeMenu(); return; }
+    const step = { ArrowDown: 1, ArrowUp: -1 }[event.key];
+    if (step) { event.preventDefault(); event.stopPropagation(); items[(at + step + items.length) % items.length]?.focus(); return; }
+    if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); items[event.key === 'Home' ? 0 : items.length - 1]?.focus(); }
+    // Single-key shortcuts don't fire from inside the menu.
+    if (event.key.length === 1) event.stopPropagation();
+  }, true);
   els.body.addEventListener('focusin', event => { const rowEl = event.target.closest('.trend-row[data-id]'); if (rowEl && rowEl.dataset.id !== current) rove(rowEl.dataset.id); });
 
   // ── Events ─────────────────────────────────────────────────────────────
@@ -678,6 +776,21 @@
     }
     const rowEl = event.target.closest('.trend-row[data-id]');
     const id = rowEl?.dataset.id;
+    const moreBtn = event.target.closest('[data-more]');
+    if (moreBtn) { if (menu?.btn === moreBtn) closeMenu(); else openMenu(moreBtn); return; }
+    const moreAct = event.target.closest('[data-more-act]');
+    if (moreAct) { const act = moreAct.dataset.moreAct; const btn = menu?.btn; closeMenu(); runAction(act, id); if (act === 'shortlist') rowEl?.querySelector('[data-more]')?.focus(); else if (btn?.isConnected && act !== 'open') btn.focus(); return; }
+    const na = event.target.closest('[data-na]');
+    if (na) { event.preventDefault(); toast(na.dataset.na); return; }
+    const storyBtn = event.target.closest('[data-story-toggle]');
+    if (storyBtn) {
+      const open = storyBtn.getAttribute('aria-expanded') !== 'true';
+      if (open) openStories.add(id); else openStories.delete(id);
+      storyBtn.setAttribute('aria-expanded', String(open));
+      const list = document.getElementById(storyBtn.getAttribute('aria-controls'));
+      if (list) list.hidden = !open;
+      return;
+    }
     const plainClick = event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
     // Design post / a headline idea: design it here, in the Generate view.
     // Ctrl/⌘/Shift/middle clicks keep the link (Generate in a new tab).
