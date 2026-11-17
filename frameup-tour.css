@@ -42,8 +42,21 @@ html[data-theme="dark"] :is(.fu-tour, .fu-tour-toast, .fu-tour-help) {
   position: fixed;
   inset: 0;
   z-index: 5000;
+  /* Undo the browser's popover box so the layer covers the viewport. */
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  color: var(--fu-ink);
   font-family: var(--es-font-ui, "Roboto", sans-serif);
 }
+
+.fu-tour::backdrop { background: transparent; }
 
 .fu-tour[hidden] { display: none; }
 

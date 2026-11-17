@@ -372,7 +372,7 @@
   function normalizeWhatsNew(data) {
     const entries = Array.isArray(data) ? data : (data && Array.isArray(data.entries) ? data.entries : []);
     return entries
-      .filter(entry => entry && entry.id && entry.date)
+      .filter(entry => entry && entry.id && entry.date && !entry.draft)
       .map(entry => ({
         ...entry,
         items: (entry.items || []).map(item => (Array.isArray(item) ? { title: item[0], text: item[1] } : item)).filter(item => item && (item.title || item.text)),

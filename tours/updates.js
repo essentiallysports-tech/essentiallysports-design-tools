@@ -29,7 +29,7 @@
 
   function entriesOf(data) {
     const list = Array.isArray(data) ? data : (data && Array.isArray(data.entries) ? data.entries : []);
-    return list.filter(entry => entry && entry.id && entry.date);
+    return list.filter(entry => entry && entry.id && entry.date && !entry.draft);
   }
 
   /** Newest first, by date then by position in the file. */
@@ -99,6 +99,8 @@
         if (item.page) {
           step.page = item.page;
           step.pageLabel = pageLabel(item.page);
+          // The "Continue on <page>" card points at that page's sidebar link.
+          step.navTarget = `.es-sidebar .es-nav-item[href$="${String(item.page).split(/[?#]/)[0]}"]`;
         }
         if (item.route) step.route = item.route;
       }
@@ -170,7 +172,8 @@
     toast.addEventListener('keydown', event => {
       if (event.key === 'Escape') { event.stopPropagation(); close(options.onSecondary); }
     });
-    doc.body.appendChild(toast);
+    // On <html>, not <body>: a transform left on <body> would break position: fixed.
+    doc.documentElement.appendChild(toast);
     return toast;
   }
 

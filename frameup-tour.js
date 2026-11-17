@@ -164,6 +164,10 @@
 
   const ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
 
+  function supportsPopover() {
+    return Boolean(doc && doc.documentElement && typeof doc.documentElement.showPopover === 'function');
+  }
+
   function buildUi() {
     if (ui) return ui;
     const layer = doc.createElement('div');
@@ -189,7 +193,11 @@
         </div>
         <p class="fu-tour__live" aria-live="polite" aria-atomic="true" data-tour-live></p>
       </section>`;
-    doc.body.appendChild(layer);
+    // The top layer (popover) sits above open dialogs and ignores ancestors
+    // with a transform (some pages leave one on <body>, which would turn
+    // position: fixed into "scrolls with the page"). Older browsers: <html>.
+    if (supportsPopover()) layer.setAttribute('popover', 'manual');
+    doc.documentElement.appendChild(layer);
     ui = {
       layer,
       spot: layer.querySelector('.fu-tour__spot'),
@@ -421,6 +429,7 @@
       waitBoost: resumed,
     };
     ui.layer.hidden = false;
+    if (supportsPopover()) { try { ui.layer.showPopover(); } catch (error) { /* already open */ } }
     ui.layer.classList.toggle('is-reduced', prefersReducedMotion());
     doc.documentElement.classList.add('fu-tour-open');
     win.addEventListener('keydown', onKeydown, true);
@@ -604,6 +613,7 @@
     win.removeEventListener('scroll', schedule, true);
     doc.documentElement.classList.remove('fu-tour-open');
     if (ui) {
+      if (supportsPopover()) { try { ui.layer.hidePopover(); } catch (error) { /* already closed */ } }
       ui.layer.hidden = true;
       ui.live.textContent = '';
     }

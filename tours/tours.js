@@ -78,15 +78,23 @@
       {
         page: 'index.html',
         target: ['.app > .panel', '.studio-control-dock'],
+        media: DESKTOP,
         placement: 'left',
         title: 'Inspector',
         text: 'Post type, text, photos and colours. Changes show instantly.',
       },
       {
         page: 'index.html',
+        target: '.mobile-editor-nav',
+        media: PHONE,
+        title: 'Edit',
+        text: 'Content, photos, format and brand. Tap a tab to open it.',
+      },
+      {
+        page: 'index.html',
         target: ['[data-studio-export-section]', '#studio-export-btn', '.mobile-editor-export'],
         title: 'Export',
-        text: 'Download, set the format, or copy a share link. ⌘E works too.',
+        text: 'Download, set the format, or copy a share link.',
       },
       {
         page: 'generate.html',
@@ -181,8 +189,9 @@
       { page: 'index.html', target: ['.canvas-wrap', '.canvas-stage'], title: 'Canvas', text: 'Click any text or photo to edit it.' },
       { page: 'index.html', target: '.canvas-bottom-actions', placement: 'top', title: 'Zoom, slides and photos', text: 'Upload a photo or pull one from the ES Image Pool.' },
       { page: 'index.html', target: '.studio-history-group', media: DESKTOP, title: 'Undo and recent', text: 'Undo, redo, and reopen anything you exported.' },
-      { page: 'index.html', target: ['.app > .panel', '.studio-control-dock'], placement: 'left', title: 'Inspector', text: 'Text, photos, brand and colours, top to bottom.' },
-      { page: 'index.html', target: ['[data-studio-export-section]', '#studio-export-btn', '.mobile-editor-export'], title: 'Export', text: 'Download, export options, or copy a share link. Your work autosaves.' },
+      { page: 'index.html', target: ['.app > .panel', '.studio-control-dock'], media: DESKTOP, placement: 'left', title: 'Inspector', text: 'Text, photos, brand and colours, top to bottom.' },
+      { page: 'index.html', target: '.mobile-editor-nav', media: PHONE, title: 'Edit', text: 'Content, photos, format and brand. Tap a tab to open it.' },
+      { page: 'index.html', target: ['[data-studio-export-section]', '#studio-export-btn', '.mobile-editor-export'], title: 'Export', text: 'Download or copy a share link. ⌘E exports. Your work autosaves.' },
     ],
   });
 })();
