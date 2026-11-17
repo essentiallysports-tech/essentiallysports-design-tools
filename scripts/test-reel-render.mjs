@@ -89,7 +89,9 @@ test('buildTimeline: long beats get a second shot; pushes stay under 10%; rights
   const shots = tl.tracks.video;
   shots.forEach(s => assert.ok(s.outMs - s.inMs <= F.PACE.shotMaxMs + 1, `shot ${s.id} ${s.outMs - s.inMs}ms`));
   shots.filter(s => !s.asset).forEach(s => assert.ok(s.motion.to / s.motion.from <= 1.1));
-  assert.ok(tl.assets['bg:generated'].rights.paid, 'the generated background is ES-owned');
+  assert.equal(tl.assets['bg:generated'], undefined, 'an empty slot is plain black, not a generated background');
+  const designed = R.buildTimeline(STAT_PLAN, { photos: { b1: ['design:bg'] }, assets: { 'design:bg': { kind: 'design', rights: {} } } });
+  assert.ok(designed.assets['bg:generated'].rights.paid, 'the designed background (fill-chain step 4) is ES-owned');
   assert.ok(tl.assets['graphics:es'].rights.organic);
 });
 

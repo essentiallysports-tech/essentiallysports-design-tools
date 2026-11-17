@@ -39,8 +39,19 @@
   // Every asset the reel actually uses (shots, audio, logos the renderer draws).
   function usedAssets(timeline) {
     const ids = new Set(['graphics:es', 'logo:es']);
-    timeline.tracks.video.forEach(shot => ids.add(shot.asset || 'bg:generated'));
+    timeline.tracks.video.forEach(shot => {
+      if (!shot.asset) return; // plain black: nothing to clear
+      const a = timeline.assets[shot.asset];
+      ids.add(a && a.kind === 'design' ? 'bg:generated' : shot.asset);
+      if (a && a.kind === 'tile' && a.logo) ids.add(a.logo);
+    });
     timeline.tracks.audio.forEach(clip => ids.add(clip.asset));
+    // Pictures inside the data components (versus headshots, tile logos).
+    timeline.tracks.graphics.forEach(g => {
+      (g.data.versus || []).forEach(v => { if (v.asset) ids.add(v.asset); });
+      (g.data.tiles || []).forEach(t => { if (t.asset) ids.add(t.asset); });
+      if (g.data.cutout) ids.add(g.data.cutout);
+    });
     if (timeline.team && timeline.team.logo && timeline.tracks.graphics.some(g => g.template === 'stat')) ids.add('logo:team');
     return [...ids];
   }
@@ -52,13 +63,17 @@
     }
     const fmt = F.FORMATS[timeline.format] || F.FORMATS.explainer;
     const seconds = timeline.durationMs / 1000;
+    // Long-form styles (Data Explainer, Analytics Series) run to 120 s.
+    const maxSeconds = Math.max(LIMITS.maxSeconds, (timeline.limits && timeline.limits.maxSeconds) || 0);
+    const span = timeline.limits && timeline.limits.targetSeconds && timeline.limits.targetSeconds[1] > fmt.targetSeconds[1] ? timeline.limits.targetSeconds : fmt.targetSeconds;
+    const longForm = span !== fmt.targetSeconds;
 
     // Length.
-    if (seconds < LIMITS.minSeconds || seconds > LIMITS.maxSeconds) {
-      issues.push(issue('length', 'critical', `The reel runs ${seconds.toFixed(1)} s. Keep it between ${LIMITS.minSeconds} and ${LIMITS.maxSeconds} s.`, seconds > LIMITS.maxSeconds ? 'Cut a beat or shorten the voiceover.' : 'Add a beat.'));
-    } else if (seconds > fmt.maxSeconds) {
-      issues.push(issue('length', 'warning', `${seconds.toFixed(0)} s is long for a ${fmt.short}. Aim for ${fmt.targetSeconds[0]}–${fmt.targetSeconds[1]} s.`, 'Try "Shorter" in Revise.'));
-    } else if (seconds < F.PACE.reelMinSeconds || seconds > F.PACE.reelMaxSeconds) {
+    if (seconds < LIMITS.minSeconds || seconds > maxSeconds) {
+      issues.push(issue('length', 'critical', `The reel runs ${seconds.toFixed(1)} s. Keep it between ${LIMITS.minSeconds} and ${maxSeconds} s.`, seconds > maxSeconds ? 'Cut a beat or shorten the voiceover.' : 'Add a beat.'));
+    } else if (seconds > Math.max(fmt.maxSeconds, longForm ? span[1] : 0)) {
+      issues.push(issue('length', 'warning', `${seconds.toFixed(0)} s is long for a ${fmt.short}. Aim for ${span[0]}–${span[1]} s.`, 'Try "Shorter" in Revise.'));
+    } else if (!longForm && (seconds < F.PACE.reelMinSeconds || seconds > F.PACE.reelMaxSeconds)) {
       issues.push(issue('length', 'info', `${seconds.toFixed(0)} s. Most reels that travel are ${F.PACE.reelMinSeconds}–${F.PACE.reelMaxSeconds} s.`));
     }
 
@@ -91,7 +106,7 @@
 
     // Pacing: a visual change every few seconds.
     timeline.tracks.video.forEach(shot => {
-      if (shot.outMs - shot.inMs > LIMITS.shotMaxMs) issues.push(issue('pacing', 'warning', `A shot holds ${((shot.outMs - shot.inMs) / 1000).toFixed(1)} s with one move.`, 'Add a second photo to this beat.', shot.beat));
+      if (!shot.clip && shot.outMs - shot.inMs > LIMITS.shotMaxMs) issues.push(issue('pacing', 'warning', `A shot holds ${((shot.outMs - shot.inMs) / 1000).toFixed(1)} s with one move.`, 'Add a second photo to this beat.', shot.beat));
     });
 
     // Safe zones (boxes from ReelRender.textBoxes with the real font metrics).
@@ -119,12 +134,32 @@
     if (!words.length) issues.push(issue('captions', 'warning', 'No captions: most people watch with the sound off.', 'Add voiceover lines to the beats.'));
     if (timeline.voice.mode === 'off') issues.push(issue('voice', 'info', 'Captions only, no voiceover. Voiceover is what makes a reel count as original on Instagram and Facebook.'));
 
-    // Facts: every number must come from the sources (blocking).
+    // Facts: every number must come from the sources (blocking). The walk
+    // covers every component field (bars, versus, dot rank, chips, tiles,
+    // roles…) and the plan-level eyebrow, series tag and data strip.
     const sourceSet = F.numberSet(`${timeline.corpus || ''} ${extraSources || ''}`);
     timeline.beats.forEach((beat, index) => {
       const bad = F.unsourcedNumbers(beat, sourceSet, timeline.format);
       if (bad.length) issues.push(issue('numbers', 'critical', `Beat ${index + 1}: ${bad.join(', ')} ${bad.length > 1 ? 'are' : 'is'} not in the sources.`, 'Fix the number, or add where it comes from under Sources.', beat.id));
     });
+    const planBad = F.unsourcedPlanNumbers({ eyebrow: timeline.eyebrow, series: timeline.series, strip: timeline.strip }, sourceSet);
+    if (planBad.length) issues.push(issue('numbers', 'critical', `The eyebrow, series tag or data strip shows ${planBad.join(', ')}, not in the sources.`, 'Fix the number in Settings, or add its source.'));
+
+    // Visuals: every beat should show a clip or a picture (an empty slot is
+    // plain black). A shot pointing at a missing asset would draw nothing.
+    timeline.tracks.video.forEach(shot => {
+      if (shot.asset && !timeline.assets[shot.asset]) issues.push(issue('visual', 'critical', 'A beat points at a clip or picture that is gone.', 'Pick another visual for it.', shot.beat));
+    });
+    timeline.beats.forEach((beat, index) => {
+      if (beat.kind === 'cta') return;
+      const shots = timeline.tracks.video.filter(s => s.beat === beat.id);
+      if (shots.length && shots.every(s => !s.asset)) issues.push(issue('visual', 'warning', `Beat ${index + 1} has no clip or picture yet (it shows plain black).`, 'Use "Fill visuals", or pick a clip, photo or team graphic.', beat.id));
+    });
+    const used = usedAssets(timeline).map(id => timeline.assets[id]).filter(Boolean);
+    if (used.some(a => a.kind === 'clip' && a.rights && a.rights.x)) {
+      issues.push(issue('rights', 'info', target === 'paid' ? 'This ad uses clips from official X posts. Cleared by ES for Meta paid ads; the source links are kept in the rights table.' : 'Clips come from official X posts; their source links are kept in the rights table.'));
+    }
+    if (used.some(a => a.rights && a.rights.ai)) issues.push(issue('ai-label', 'info', 'This reel has AI-generated scenes (no real people). Turn on the platform\'s AI label when you post it.'));
 
     // Rights: every asset in use needs a record that covers the target.
     usedAssets(timeline).forEach(id => {

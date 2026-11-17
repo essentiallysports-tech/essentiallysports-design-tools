@@ -73,8 +73,12 @@ await test('config: the Gateway key alone turns the house voice on; music bed of
   assert.equal(status, 200);
   assert.equal(body.ai, true);
   assert.equal(body.voice.mode, 'gateway');
-  assert.equal(body.voice.model, 'elevenlabs/eleven-flash-v2.5');
-  assert.equal(JSON.stringify(body).includes('CwhRBWXzGAHq8TQ4Fs17'), false);
+  assert.equal(body.voice.model, 'elevenlabs/eleven-v4');
+  assert.deepEqual(body.voice.voices.map(v => v.name), ['Brian', 'Liam', 'Sarah', 'Bella']);
+  ['nPczCjzI2devNBz1zQrb', 'TX3LPaxmHKxFdv7VOQHJ', 'EXAVITQu4vr4xnSDxMaL', 'hpp4J3VqNfWAUOO0d1Us'].forEach(id => assert.equal(JSON.stringify(body).includes(id), false));
+  assert.deepEqual(body.styles, ['classic', 'explainer', 'series', 'countdown']);
+  assert.equal(body.aiClips.ready, false, 'AI clips are off by default');
+  assert.equal(body.aiClips.max, 2);
   assert.equal(body.music.ready, false);
   assert.equal(body.music.rights.paid, false);
   assert.equal(body.factCheck.maxCostUsd, 0.03);
@@ -171,6 +175,64 @@ await test('projects: before the migration -> cloud false (no error); after -> s
 await test('unknown mode is 400; revise with no reel is 400', async () => {
   assert.equal((await call({ mode: 'nope' })).status, 400);
   assert.equal((await call({ mode: 'revise', plan: { beats: [] } })).status, 400);
+});
+
+await test('plan: style picked or suggested (code, free); returned with the plan', async () => {
+  gateway.aiText = async () => ({ text: JSON.stringify({ format: 'stat', beats: [] }), model: 'anthropic/claude-haiku-5.5', cost: 0.001 });
+  const auto = await call({ mode: 'plan', brief: 'Moneyball for the Steelers: cap space is the problem and the draft is the fix.' });
+  assert.equal(auto.body.style, 'series');
+  assert.equal(auto.body.suggestedStyle.id, 'series');
+  assert.equal(auto.body.plan.style, 'series');
+  const picked = await call({ mode: 'plan', brief: 'Moneyball for the Steelers: cap space is the problem and the draft is the fix.', style: 'explainer' });
+  assert.equal(picked.body.style, 'explainer');
+});
+
+await test('diag=voice: admins only (fails closed), one tiny synthesis, no audio or key in the answer', async () => {
+  let admin = false;
+  let rpcFails = false;
+  let speechCalls = 0;
+  const base = globalThis.fetch;
+  globalThis.fetch = async (url, opts = {}) => {
+    const u = String(url);
+    if (u.includes('/rpc/is_es_designer_admin')) { if (rpcFails) throw new Error('down'); return jsonResponse(200, admin); }
+    if (u.includes('/v4/ai/speech-model')) { speechCalls += 1; assert.equal(JSON.parse(opts.body).text, 'Test.'); return jsonResponse(200, { audio: Buffer.from('ID3diag-bytes').toString('base64') }); }
+    return base(url, opts);
+  };
+  const get = (token = 'good') => handler({ httpMethod: 'GET', headers: { authorization: `Bearer ${token}` }, queryStringParameters: { diag: 'voice' } });
+  assert.equal((await get('bad')).statusCode, 401);
+  assert.equal((await get()).statusCode, 403, 'not an admin');
+  rpcFails = true;
+  assert.equal((await get()).statusCode, 403, 'admin check down: closed');
+  rpcFails = false;
+  admin = true;
+  const res = await get();
+  const body = JSON.parse(res.body);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual([body.ok, body.model, body.format, body.bytes], [true, 'elevenlabs/eleven-v4', 'audio/mpeg', 13]);
+  assert.equal(speechCalls, 1);
+  assert.equal(res.body.includes('gw-test'), false, 'no key');
+  assert.equal(res.body.includes(Buffer.from('ID3diag-bytes').toString('base64')), false, 'no audio');
+  globalThis.fetch = base;
+});
+
+await test('voice-sample, scene and AI clip modes: gated, capped, sanitised', async () => {
+  const base = globalThis.fetch;
+  const prompts = [];
+  globalThis.fetch = async (url, opts = {}) => {
+    const u = String(url);
+    if (u.includes('/v4/ai/speech-model')) return jsonResponse(200, { audio: Buffer.from('ID3sample-voice-bytes').toString('base64') });
+    if (u.includes('/images/generations')) { prompts.push(JSON.parse(opts.body).prompt); return jsonResponse(200, { data: [{ b64_json: '/9j/fakejpeg' }] }); }
+    return base(url, opts);
+  };
+  const sample = await call({ mode: 'voice-sample', voice: 'sarah' });
+  assert.equal(sample.status, 200);
+  assert.equal((await call({ mode: 'voice-sample', voice: 'cloned-celebrity' })).status, 400);
+  const scene = await call({ mode: 'scene', scene: 'Patrick Mahomes in a Chiefs jersey', sport: 'nfl', colors: ['#E31837'] });
+  assert.equal(scene.status, 200);
+  assert.equal(scene.body.rights.ai, true);
+  assert.doesNotMatch(prompts[0], /Mahomes|Chiefs/);
+  assert.equal((await call({ mode: 'ai-clip-start', scene: 'stadium', sport: 'nfl' })).body.reason, 'off', 'off unless REELS_AI_CLIPS=gateway');
+  globalThis.fetch = base;
 });
 
 globalThis.fetch = realFetch;

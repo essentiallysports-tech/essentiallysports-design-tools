@@ -16,6 +16,7 @@
 //   factCheck       capped web research (2 searches, $0.03 cap) whose text
 //                   joins the sources, so its numbers can be used.
 const F = require('../../reel-formats.js');
+const STYLES = require('../../reel-styles.js');
 const RULES = require('../../frameup-rules.js');
 const TEAMS = require('../../video-ads-teams.js');
 const BRAND_KIT = require('../../brand-kit.js');
@@ -99,7 +100,9 @@ const DIRECTOR_SYSTEM = [
   '- text: the on-screen line, 2-9 words, punchy, no full stop',
   '- vo: what the voice says, 6-26 words, a natural spoken sentence; numbers as digits',
   '- emphasis: one word from text to highlight',
-  '- photo: an ES photo search for this beat, a person\'s full name or a team name; "" for none',
+  '- visual: what the beat shows: clip (game or team video), photo, headshot (one person), logo-tile (a team), scene (a place or object, no people), chart (the data itself)',
+  '- photo: a specific ES photo/clip search for this beat: a person\'s full name, a team name, or "Team Name scene words"; "" for none',
+  '- scene: for visual "scene" only, one of stadium, crowd, field, ball, trophy, skyline, locker, scoreboard',
   '- stat: {"value":"5,477","label":"pass yds"} (stat beats only)',
   '- rank: 1-5, name: the entry, detail: one short line (rank beats only)',
   '- quote: {"text":"exact words","by":"Full Name"} (quote beats only)',
@@ -120,10 +123,36 @@ const DIRECTOR_SYSTEM = [
   '7. Vary the opening: a number, a claim or a question, whichever is strongest for this story.',
 ].join('\n');
 
-function directorRequest({ read, format, steer = '', today = new Date() }) {
+// The style's extra beat kinds, with their exact fields (only the ones the
+// chosen style supports are offered to the model).
+const COMPONENT_SPEC = {
+  bars: 'bars: comparison bars. "bars":[{"label":"Mahomes","value":"1×","note":""}] 2-4 rows, the subject first; values from SOURCES. "detail": what is measured.',
+  versus: 'versus: 2-3 cards. "versus":[{"name":"Burrow","value":"+50%","note":"short line","photo":"Joe Burrow"}]; name "?" makes a mystery card.',
+  dotrank: 'dotrank: a dot ranking of a whole field. "dotrank":{"total":"714","rank":"234","label":"2018 Mahomes","note":"what closer to the centre means"}. Both numbers from SOURCES.',
+  chips: 'chips: "1 in 5" squares. "chips":{"filled":"1","total":"5","label":"pre-designed throws"} (total up to 12). Numbers from SOURCES.',
+  steps: 'steps: a step tracker for a multi-part story. "steps":{"current":"2","total":"3","label":"Moneyball rebuild"}.',
+  tiles: 'tiles: 2-4 team tiles. "tiles":[{"team":"Baltimore Ravens","label":"short line","chip":"REBUILT"}].',
+  roles: 'roles: 2-4 position cards. "roles":[{"role":"WR","value":"#31","note":"short","tone":"bad|good"}]. Values from SOURCES.',
+  mystery: 'mystery: a "?" card for the open question. text + "detail".',
+};
+function styleRequest(style) {
+  if (!style || !style.components.length) return '';
+  const long = style.seconds.max > 90;
+  return [
+    `STYLE: ${style.label}. ${style.blurb}`,
+    long ? `LENGTH: this style runs long-form: ${style.seconds.target[0]}-${style.seconds.target[1]} seconds, ${Math.round(style.beats.max * 0.5)}-${style.beats.max} beats, ${style.voWords[0]}-${style.voWords[1]} voiceover words in total. Build an argument: setup, evidence beats, the turn, the payoff.` : '',
+    'Extra beat kinds this style draws (use them where SOURCES have the numbers; never invent one):',
+    ...style.components.map(k => `- ${COMPONENT_SPEC[k]}`),
+    style.chrome.eyebrow ? 'Also return "eyebrow": a short grey label over every scene, e.g. "PATRICK MAHOMES · 714 QB SEASONS" (numbers from SOURCES only).' : '',
+    style.chrome.seriesTag ? 'Also return "series":{"tag":"ES MONEYBALL"} (a short series name) and "strip":{"label":"2027 cap space","value":"-$12.3M","of":"","note":"","tone":"bad|good"} - one number from SOURCES that stays on screen the whole reel; omit "strip" if SOURCES have none.' : '',
+  ].filter(Boolean).join('\n');
+}
+
+function directorRequest({ read, format, steer = '', style = null, today = new Date() }) {
   const fmt = F.FORMATS[format];
   return [
     `FORMAT: ${read.auto ? `auto (the router suggests ${fmt.id}; candidates: ${read.route.candidates.join(', ')})` : fmt.id}`,
+    styleRequest(style),
     `SPORT: ${(F.SPORTS.find(s => s.id === read.sport) || {}).label || 'unknown'}`,
     read.team ? `TEAM: ${read.team.name}` : '',
     steer ? `EDITOR NOTE: ${clean(steer, 300)}` : '',
@@ -136,14 +165,51 @@ function directorRequest({ read, format, steer = '', today = new Date() }) {
 }
 
 // ─── Validation ──────────────────────────────────────────────────────────
-function validatePlan(parsed, { read, format, steer = '' } = {}) {
+// Component values keep a leading # (a pick or a rank, "#31"), unlike clean().
+const str = (v, n) => String(v == null ? '' : v).replace(/<[^>]*>/g, ' ').replace(/https?:\/\/\S+/gi, '').replace(/\p{Extended_Pictographic}/gu, '').replace(/[‐-―−]/g, '-').replace(/\s+/g, ' ').trim().slice(0, n);
+// The data fields of a component beat, shaped and capped (numbers are then
+// checked by F.unsourcedNumbers, which walks every one of these fields).
+function componentFields(kind, b, read) {
+  const out = {};
+  const list = (v, n) => (Array.isArray(v) ? v.slice(0, n) : []);
+  if (kind === 'bars') out.bars = list(b.bars, 4).map(x => ({ label: str(x && x.label, 24), value: str(x && x.value, 16), note: str(x && x.note, 60) })).filter(x => x.label && /\d/.test(x.value));
+  if (kind === 'versus') out.versus = list(b.versus, 3).map(x => ({ name: str(x && x.name, 28), value: str(x && x.value, 14), note: str(x && x.note, 60), photo: str(x && x.photo, 60).replace(/[^\p{L}\p{N} .'-]/gu, '') })).filter(x => x.name);
+  if (kind === 'dotrank' && b.dotrank) out.dotrank = { total: str(b.dotrank.total, 8), rank: str(b.dotrank.rank, 8), label: str(b.dotrank.label, 32), note: str(b.dotrank.note, 60) };
+  if ((kind === 'chips' || kind === 'stat') && b.chips) out.chips = { filled: str(b.chips.filled, 6), total: str(b.chips.total, 6), label: str(b.chips.label, 40) };
+  if (kind === 'steps' && b.steps) out.steps = { current: str(b.steps.current, 2), total: str(b.steps.total, 2), label: str(b.steps.label, 32) };
+  if (kind === 'tiles') {
+    out.tiles = list(b.tiles, 4).map(x => {
+      const name = str(x && (x.team || x.name), 60);
+      const info = name ? teamInfo(name, read.sport) : null;
+      return { team: info ? info.short || info.name : name.split(' ').pop(), name: info ? info.name : name, label: str(x && x.label, 36), chip: str(x && x.chip, 18), colors: info ? info.colors : [], logo: info ? info.logo : '' };
+    }).filter(x => x.team);
+  }
+  if (kind === 'roles') out.roles = list(b.roles, 4).map(x => ({ role: str(x && x.role, 8), value: str(x && x.value, 10), note: str(x && x.note, 40), tone: x && x.tone === 'good' ? 'good' : 'bad' })).filter(x => x.role && x.value);
+  return out;
+}
+const COMPONENT_OK = {
+  bars: b => b.bars && b.bars.length >= 2,
+  versus: b => b.versus && b.versus.length >= 2,
+  dotrank: b => b.dotrank && /\d/.test(b.dotrank.total) && /\d/.test(b.dotrank.rank) && Number(String(b.dotrank.rank).replace(/,/g, '')) <= Number(String(b.dotrank.total).replace(/,/g, '')),
+  chips: b => b.chips && /^\d+$/.test(b.chips.filled) && /^\d+$/.test(b.chips.total) && Number(b.chips.filled) <= Number(b.chips.total),
+  steps: b => b.steps && /^\d$/.test(b.steps.current) && /^\d$/.test(b.steps.total) && Number(b.steps.current) <= Number(b.steps.total),
+  tiles: b => b.tiles && b.tiles.length >= 2,
+  roles: b => b.roles && b.roles.length >= 2,
+  mystery: () => true,
+};
+
+function validatePlan(parsed, { read, format, steer = '', style: styleId = '' } = {}) {
   const issues = [];
+  const style = STYLES.get(styleId);
   let fmt = F.FORMATS[format] ? format : 'explainer';
   // The model may only move to an explainer (Top-5 without five entries) or,
   // on Auto, to any format.
   const said = String(parsed && parsed.format || '');
   if (F.FORMATS[said] && said !== fmt && (read.auto || said === 'explainer')) fmt = said;
   const spec = F.FORMATS[fmt];
+  const allowed = fmt === 'top5' ? spec.kinds : STYLES.kindsFor(style.id, spec.kinds);
+  const longForm = style.seconds.max > 90;
+  const maxBeats = longForm ? style.beats.max : spec.beats.max;
   const sourceSet = F.numberSet(read.corpus);
   const corpusSquash = squash(read.corpus);
   const raw = Array.isArray(parsed && parsed.beats) ? parsed.beats.slice(0, 14) : [];
@@ -152,15 +218,23 @@ function validatePlan(parsed, { read, format, steer = '' } = {}) {
   raw.forEach((b, index) => {
     if (!b || typeof b !== 'object') { dropped += 1; return; }
     let kind = F.KINDS.includes(b.kind) ? b.kind : 'point';
-    if (!spec.kinds.includes(kind)) kind = index === 0 ? 'hook' : (spec.kinds.includes('point') ? 'point' : 'context');
+    if (!allowed.includes(kind)) kind = index === 0 ? 'hook' : (spec.kinds.includes('point') ? 'point' : 'context');
     if (fmt === 'top5' && !['hook', 'rank', 'cta'].includes(kind)) { dropped += 1; issues.push('A non-ranked beat was dropped from the Top 5.'); return; }
     const beat = {
       kind,
       text: F.trimWords(clean(b.text, 90), 12),
       vo: F.trimWords(clean(b.vo, 260), 40),
       emphasis: clean(b.emphasis, 30).split(' ')[0] || '',
-      photo: clean(b.photo, 60).replace(/[^\p{L}\p{N} .'-]/gu, ''),
+      photo: clean(b.photo || b.photoQuery, 60).replace(/[^\p{L}\p{N} .'-]/gu, ''),
+      visual: F.VISUALS.includes(b.visual) ? b.visual : '',
     };
+    if (beat.visual === 'scene') beat.scene = F.SCENES.includes(b.scene) ? b.scene : 'stadium';
+    if (F.COMPONENT_KINDS.includes(kind) || (kind === 'stat' && b.chips)) {
+      Object.assign(beat, componentFields(kind, b, read));
+      if (b.detail) beat.detail = clean(b.detail, 110);
+      if (F.COMPONENT_KINDS.includes(kind) && !COMPONENT_OK[kind](beat)) { dropped += 1; issues.push(`A ${kind} beat without its data was dropped.`); return; }
+      if (['bars', 'dotrank', 'chips', 'roles'].includes(kind)) beat.visual = beat.visual || 'chart';
+    }
     if (kind === 'stat') {
       const value = clean(b.stat && b.stat.value, 16);
       if (!value || !/\d/.test(value)) { dropped += 1; issues.push('A stat card without a number was dropped.'); return; }
@@ -215,11 +289,11 @@ function validatePlan(parsed, { read, format, steer = '' } = {}) {
     if (F.numbersIn(`${cta.text} ${cta.vo}`).length) { cta.text = 'What do you make of it?'; cta.vo = 'What do you make of it? Tell us in the comments.'; }
   }
   // Too many beats: keep the first ones and the end card.
-  const final = beats.length > spec.beats.max ? [...beats.slice(0, spec.beats.max - 1), beats[beats.length - 1]] : beats;
+  const final = beats.length > maxBeats ? [...beats.slice(0, maxBeats - 1), beats[beats.length - 1]] : beats;
   if (final.length < spec.beats.min) weak = true;
-  if (dropped >= 2) weak = true;
+  if (dropped >= (longForm ? 3 : 2)) weak = true;
   const voWords = final.reduce((n, b) => n + F.wordCount(b.vo), 0);
-  if (voWords < 35) weak = true;
+  if (voWords < (longForm ? 70 : 35)) weak = true;
 
   // Banned style (frameup-rules): kept as issues so the UI can show them.
   final.forEach((b, i) => RULES.BANNED.forEach(rule => { if (rule.re.test(`${b.text} ${b.vo}`)) issues.push(`Beat ${i + 1}: ${rule.why}.`); }));
@@ -235,18 +309,37 @@ function validatePlan(parsed, { read, format, steer = '' } = {}) {
     hooks: (Array.isArray(parsed && parsed.hooks) ? parsed.hooks : []).map(h => clean(h, 60)).filter(h => h && !F.unsourcedNumbers({ text: h }, sourceSet, fmt).length).slice(0, 3),
     beats: final,
     steer: clean(steer, 200),
+    style: style.id,
   };
+  // Plan-level chrome: eyebrow, series tag, the data strip (numbers sourced).
+  const eyebrow = clean(parsed && parsed.eyebrow, 48);
+  if (eyebrow && style.chrome.eyebrow) {
+    if (F.unsourcedPlanNumbers({ eyebrow }, sourceSet).length) issues.push('The eyebrow had a number not in the sources, so it was left out.'); else plan.eyebrow = eyebrow;
+  }
+  if (style.chrome.seriesTag) {
+    const tag = clean(parsed && parsed.series && parsed.series.tag, 28);
+    if (tag && !F.unsourcedPlanNumbers({ series: { tag } }, sourceSet).length) plan.series = { tag };
+    const st = parsed && parsed.strip;
+    if (st && st.value) {
+      const strip = { label: clean(st.label, 32), value: clean(st.value, 14), of: clean(st.of, 14), note: clean(st.note, 48), tone: st.tone === 'good' ? 'good' : 'bad' };
+      if (!/\d/.test(strip.value) || F.unsourcedPlanNumbers({ strip }, sourceSet).length) issues.push('The data strip had a number not in the sources, so it was left out.');
+      else plan.strip = strip;
+    }
+  }
   return { plan, issues, dropped, weak, voWords };
 }
 
 // ─── Director ────────────────────────────────────────────────────────────
 // tier: 'economy' = Haiku only; 'standard' = Haiku, then Sonnet when weak.
-async function runReelDirector({ brief = '', trend = null, facts = '', format = 'auto', sport = '', tier = 'standard', steer = '', track = null, timeoutMs = 22000, startedAt = Date.now(), budgetMs = 45000, now = () => Date.now() } = {}) {
+async function runReelDirector({ brief = '', trend = null, facts = '', format = 'auto', sport = '', tier = 'standard', steer = '', style: styleId = 'classic', track = null, timeoutMs = 22000, startedAt = Date.now(), budgetMs = 45000, now = () => Date.now() } = {}) {
   const read = readReelBrief({ brief, trend, facts, sport, format });
+  const style = STYLES.get(styleId);
+  const longForm = style.seconds.max > 90;
   const result = { plan: null, read, model: '', cost: 0, source: 'draft', issues: [], escalated: false };
   const draft = () => {
     const plan = F.fallbackPlan({ brief: read.text, title: trend ? trend.title : '', format: read.format, sport: read.sport });
     plan.team = read.team;
+    plan.style = style.id;
     return plan;
   };
   let api;
@@ -257,9 +350,9 @@ async function runReelDirector({ brief = '', trend = null, facts = '', format = 
     system: DIRECTOR_SYSTEM,
     cacheSystem: true,
     json: true,
-    messages: [{ role: 'user', content: directorRequest({ read, format: read.format, steer }) }],
+    messages: [{ role: 'user', content: directorRequest({ read, format: read.format, steer, style }) }],
     effort: 'low',
-    maxTokens: 2200,
+    maxTokens: longForm ? 5200 : 2600,
     timeoutMs,
     track: track ? { ...track, feature: askTier === 'best' ? 'reels-director-sonnet' : 'reels-director' } : undefined,
   });
@@ -267,7 +360,7 @@ async function runReelDirector({ brief = '', trend = null, facts = '', format = 
   const attempt = async askTier => {
     const reply = await ask(askTier);
     result.cost += Number(reply.cost) || 0;
-    const checked = validatePlan(extractJson(reply.text), { read, format: read.format, steer });
+    const checked = validatePlan(extractJson(reply.text), { read, format: read.format, steer, style: style.id });
     checked.model = reply.model;
     if (!best || (best.weak && !checked.weak) || (best.weak === checked.weak && checked.plan.beats.length > best.plan.beats.length)) best = checked;
     return checked;
@@ -305,19 +398,20 @@ async function revisePlan({ plan, instruction = '', corpus = '', track = null, t
   const read = { corpus: clean(corpus, 8000), auto: false, route: F.routeFormat(''), sport: plan && plan.sport || '', team: plan && plan.team || null };
   const ask = REVISE_PRESETS[instruction] || clean(instruction, 300);
   if (!ask) throw new Error('Say what to change.');
-  const current = { format: plan.format, title: plan.title, team: plan.team ? plan.team.name : '', beats: (plan.beats || []).slice(0, 12) };
+  const style = STYLES.get(plan && plan.style);
+  const current = { format: plan.format, title: plan.title, team: plan.team ? plan.team.name : '', eyebrow: plan.eyebrow, series: plan.series, strip: plan.strip, beats: (plan.beats || []).slice(0, style.beats.max) };
   const reply = await api.aiText({
     tier: 'main',
     system: DIRECTOR_SYSTEM,
     cacheSystem: true,
     json: true,
-    messages: [{ role: 'user', content: `${directorRequest({ read, format: F.FORMATS[plan.format] ? plan.format : 'explainer' })}\n\nCURRENT REEL:\n${JSON.stringify(current)}\n\nCHANGE: ${ask}\nReturn the whole revised reel as JSON in the same shape. Keep the format.` }],
+    messages: [{ role: 'user', content: `${directorRequest({ read, format: F.FORMATS[plan.format] ? plan.format : 'explainer', style })}\n\nCURRENT REEL:\n${JSON.stringify(current)}\n\nCHANGE: ${ask}\nReturn the whole revised reel as JSON in the same shape. Keep the format.` }],
     effort: 'low',
-    maxTokens: 2200,
+    maxTokens: style.seconds.max > 90 ? 5200 : 2600,
     timeoutMs,
     track: track ? { ...track, feature: 'reels-revise' } : undefined,
   });
-  const checked = validatePlan(extractJson(reply.text), { read, format: F.FORMATS[plan.format] ? plan.format : 'explainer' });
+  const checked = validatePlan(extractJson(reply.text), { read, format: F.FORMATS[plan.format] ? plan.format : 'explainer', style: style.id });
   return { ...checked, model: reply.model, cost: Number(reply.cost) || 0 };
 }
 
@@ -341,7 +435,7 @@ async function factCheck({ topic = '', sport = '', track = null } = {}) {
 }
 
 module.exports = {
-  readReelBrief, directorRequest, validatePlan, runReelDirector, revisePlan, factCheck, teamInfo,
+  readReelBrief, directorRequest, styleRequest, validatePlan, runReelDirector, COMPONENT_SPEC, revisePlan, factCheck, teamInfo,
   DIRECTOR_SYSTEM, REVISE_PRESETS, FACT_CHECK, KIT_SPORT,
   _test: { extractJson, clean, squash },
 };
