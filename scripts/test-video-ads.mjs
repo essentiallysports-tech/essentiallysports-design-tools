@@ -125,6 +125,8 @@ assert.equal((await post({ mode: 'publish-everything' })).status, 400);
 // 6. Team colours: every NFL and MLB team, ~40+ CFB programs, valid data,
 //    primary-family teams first, max 12.
 const TEAMS = require(path.resolve('video-ads-teams.js'));
+const BRANDS_FOR_TEST = require(path.resolve('video-ads-brands.js'));
+const STYLES_FOR_TEST = require(path.resolve('video-ads-styles.js'));
 const count = sport => TEAMS.TEAMS.filter(t => t.sport === sport).length;
 assert.equal(count('nfl'), 32);
 assert.equal(count('mlb'), 30);
@@ -436,6 +438,97 @@ copyVariants = [{ style: 'simple', headline: 'Red teams, big moments.', body: ['
 res = await post({ mode: 'copy', brandId: 'the-huddle', sport: 'nfl', color: 'red' });
 assert.equal(res.status, 200);
 _test.useLearning({});
+
+// 12b. Copy for the no-footage styles: each style's fields, checked and
+//      repaired in code; facts only from the brief; the style suggestion.
+{
+  const huddle = BRANDS_FOR_TEST.byId('the-huddle');
+  const notes = 'Mahomes threw for 412 yards. Reid said “we never stopped believing in this group” after the game.';
+  const ctx = _test.copyContext({ brandId: 'the-huddle', sport: 'nfl', notes, trend: { title: 'Mahomes rallies the Chiefs', related: [{ title: 'Chiefs beat the Broncos in overtime' }, { title: 'Bears fire their offensive coordinator' }, { title: 'Lions clinch the NFC North' }] } });
+  const facts = ctx.facts;
+  assert.ok(facts.claims.length >= 2 && facts.headlines.length === 4 && facts.sources.includes(notes));
+  // Stat Card: the number must be in the facts.
+  let c = _test.checkVariant({ style: 'stat', stat: '412', statLabel: 'passing yards for Mahomes on Sunday', offer: 'Get numbers like this in The Huddle. Free.' }, huddle, facts, 'stat');
+  assert.deepEqual(c.errors, []);
+  assert.equal(c.variant.stat, '412');
+  c = _test.checkVariant({ style: 'stat', stat: '450', statLabel: 'passing yards', offer: 'Free.' }, huddle, facts, 'stat');
+  assert.match(c.errors.join(' '), /stat 450 is not in/);
+  let fixed = _test.autoFix({ style: 'stat', stat: '450', statLabel: 'passing yards', offer: 'Numbers like this, every day' }, huddle, facts, 'stat');
+  assert.equal(fixed.raw.stat, '', 'an invented stat is dropped, never kept');
+  assert.match(fixed.raw.offer, /Free\.$/, 'the offer always says free');
+  assert.ok(fixed.fixes.some(f => f.kind === 'invented_number'));
+  // Today's 3: real stories only, 9 words max.
+  c = _test.checkVariant({ style: 'today3', listTitle: '3 things NFL fans need to know', items: ['Chiefs beat the Broncos in overtime', 'Bears fire their offensive coordinator', 'Lions clinch the NFC North'], offer: 'The stories that matter, in The Huddle. Free.' }, huddle, facts, 'today3');
+  assert.deepEqual(c.errors, [], 'the title may say 3');
+  c = _test.checkVariant({ style: 'today3', items: ['Chiefs beat the Broncos in overtime', 'Aliens land at Arrowhead stadium tonight', 'Lions clinch the NFC North'], offer: 'Free.' }, huddle, facts, 'today3');
+  assert.match(c.errors.join(' '), /headline 2 is not one of the stories/);
+  fixed = _test.autoFix({ style: 'today3', items: ['Chiefs beat the Broncos in overtime in a game nobody will forget for years', 'Aliens land at Arrowhead stadium tonight'], offer: 'Free.' }, huddle, facts, 'today3');
+  assert.deepEqual(fixed.raw.items, ['Chiefs beat the Broncos in overtime in a game'], 'cut to 9 words, the made-up story dropped');
+  // Us vs Them: generic "them", approved claims only.
+  c = _test.checkVariant({ style: 'versus', them: ['Endless hot takes', 'Rumours from ESPN'], us: ['Free to sign up', 'Read by 2 million fans'], offer: 'Switch to The Huddle. It’s free.' }, huddle, facts, 'versus');
+  assert.match(c.errors.join(' '), /names someone/);
+  assert.match(c.errors.join(' '), /not an approved claim/);
+  fixed = _test.autoFix({ style: 'versus', them: ['Endless hot takes', 'Rumours from ESPN', 'Too many apps'], us: ['free to sign up', 'Read by 2 million fans'], offer: 'Switch to The Huddle. It’s free.' }, huddle, facts, 'versus');
+  assert.deepEqual(fixed.raw.them, ['Endless hot takes', 'Too many apps']);
+  assert.ok(fixed.raw.us.every(u => huddle.verifiedClaims.includes(u)) && fixed.raw.us.length >= 2, 'only approved claims, word for word');
+  assert.deepEqual(_test.checkVariant(fixed.raw, huddle, facts, 'versus').errors, []);
+  // Quote Card: word for word from the notes, by someone the notes name.
+  c = _test.checkVariant({ style: 'quote', quote: 'We never stopped believing in this group', speaker: 'Andy Reid', quoteContext: 'after the win', offer: 'Every word that matters, in The Huddle. Free.' }, huddle, facts, 'quote');
+  assert.match(c.errors.join(' '), /speaker "Andy Reid" is not named/, 'Andy is not in the notes');
+  c = _test.checkVariant({ style: 'quote', quote: 'We never stopped believing in this group', speaker: 'Reid', quoteContext: 'after the win', offer: 'Every word that matters, in The Huddle. Free.' }, huddle, facts, 'quote');
+  assert.deepEqual(c.errors, []);
+  fixed = _test.autoFix({ style: 'quote', quote: 'We always believed in this team', speaker: 'Reid', offer: 'Free.' }, huddle, facts, 'quote');
+  assert.equal(fixed.raw.quote, '', 'a reworded quote is dropped');
+  assert.match(_test.checkVariant(fixed.raw, huddle, facts, 'quote').errors.join(' '), /quote is missing/);
+  // Extras on a classic variant ride along only when they pass.
+  c = _test.checkVariant({ style: 'condensed', headline: 'Mahomes threw for 412 yards.', body: ['The Huddle, free.'], stat: '999', statLabel: 'made up', quote: 'We never stopped believing in this group', speaker: 'Reid' }, huddle, facts, 'condensed');
+  assert.deepEqual(c.errors, []);
+  assert.equal(c.variant.stat, '', 'a bad extra is emptied, not an error');
+  assert.equal(c.variant.quote, 'We never stopped believing in this group', 'a good extra rides along');
+  // Skip: asked for a style without its facts.
+  const bare = _test.copyContext({ brandId: 'the-huddle', notes: 'The Chiefs keep winning.' });
+  const brief = STYLES_FOR_TEST.briefFacts({ notes: bare.notes, brand: bare.brand });
+  assert.equal(_test.skipReason('stat', brief).skip, 'no number');
+  assert.equal(_test.skipReason('quote', brief).skip, 'no quote');
+  assert.equal(_test.skipReason('today3', brief).skip, 'no headlines');
+  assert.equal(_test.skipReason('versus', brief), null);
+
+  // Through the endpoint: Stat Card with no number skips before any AI call.
+  _test.useLearning({ styleRankingFor: async () => [{ style: 'versus', score: 1, exports: 4 }] });
+  copyCalls = 0;
+  res = await post({ mode: 'copy', brandId: 'the-huddle', sport: 'nfl', style: 'stat', notes: 'The Chiefs keep winning.' });
+  assert.equal(res.status, 422);
+  assert.equal(res.body.reason, 'skip');
+  assert.match(res.body.error, /Stat Card needs a number/);
+  assert.equal(copyCalls, 0);
+  assert.equal(res.body.suggestion.style, 'versus');
+  // Stat Card with a number: the ask carries the claims and the shape; the
+  // invented stat is dropped and only the grounded variants come back.
+  copyVariants = [
+    { style: 'stat', stat: '412', statLabel: 'passing yards for Mahomes on Sunday', offer: 'Get numbers like this in The Huddle', headline: 'Mahomes threw for 412.', body: ['The Huddle, free.'] },
+    { style: 'stat', stat: '412', statLabel: 'yards through the air for Kansas City', offer: 'One free email. Every number that matters.' },
+    { style: 'stat', stat: '35', statLabel: 'points', offer: 'Free.' },
+  ];
+  res = await post({ mode: 'copy', brandId: 'the-huddle', sport: 'nfl', style: 'stat', notes, hasClip: false, trend: { title: 'Mahomes rallies the Chiefs', related: [{ title: 'Chiefs beat the Broncos in overtime' }] } });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.match(copyAsk, /all in the "stat" style/);
+  assert.match(copyAsk, /Approved claims about The Huddle/);
+  assert.match(copyAsk, /"bestStyle"/);
+  assert.equal(res.body.variants.length, 2, 'the made-up 35 never comes back');
+  assert.ok(res.body.variants.every(v => v.stat === '412' && /free/i.test(v.offer)));
+  assert.equal(res.body.suggestion.style, 'stat');
+  assert.equal(res.body.suggestion.text, 'Suggested: Stat Card — your brief has a number (412)');
+  // suggest-style: no model call, no AI gate.
+  copyCalls = 0;
+  delete process.env.AI_GATEWAY_API_KEY;
+  res = await post({ mode: 'suggest-style', brandId: 'the-huddle', notes: 'Reid said “we never stopped believing in this group” after the game.' });
+  process.env.AI_GATEWAY_API_KEY = 'gw-test';
+  assert.equal(res.status, 200);
+  assert.equal(copyCalls, 0);
+  assert.ok(res.body.suggestion.scores.some(x => x.style === 'quote'));
+  assert.ok(!res.body.suggestion.scores.some(x => x.style === 'stat'), 'no number, no Stat Card');
+  _test.useLearning({});
+}
 
 // 13. Auto-fix helpers directly.
 const huddle = require(path.resolve('video-ads-brands.js')).byId('the-huddle');

@@ -14,10 +14,15 @@
 // 540px wide is roughly $0.001 per rating (about $0.002 if the one retry runs).
 
 const { aiText } = require('./_ai-gateway.js');
-const { AD_BRANDS, SIZES } = require('../../video-ads-brands.js');
+const { AD_BRANDS, SIZES, STYLES } = require('../../video-ads-brands.js');
 
 const RUBRIC_VERSION = 'frameup-newsletter-v1.0.0';
-const PROMPT_VERSION = 'frameup-video-ads-review-v1.0.0';
+// v1.1.0: the reviewer knows the no-footage styles (Stat Card, Today's 3, Us vs
+// Them, Quote Card), the animated / photo backgrounds and the timed reveals,
+// so an ad without a clip is not marked down for "missing footage". The
+// rubric (factors, weights, caps, verdicts) is unchanged, so RUBRIC_VERSION
+// stays and scores remain comparable with v1.0.0 ratings.
+const PROMPT_VERSION = 'frameup-video-ads-review-v1.1.0';
 const PERFORMANCE_CLAIM = 'Hypothesis only; no CTR, conversion rate, or CAC is predicted.';
 
 const FACTORS = Object.freeze([
@@ -319,9 +324,17 @@ function validateReview(input) {
 const SYSTEM_PROMPT = `You are a senior Meta performance creative reviewer for free US sports newsletter acquisition, especially audiences aged 55+. The goal is qualified newsletter subscriptions at efficient CAC, not vanity CTR, aesthetic prestige or curiosity clicks. Apply this rubric to the ad's actual visible content. Treat previously observed audience preferences as hypotheses, not rules.
 
 ## What you are reviewing
-EssentiallySports newsletter-signup VIDEO ads made in FrameUp: a trending sports clip (NFL, college football or MLB) under a dark scrim, the newsletter's logo, copy (a headline plus short body paragraphs; styles: simple, condensed headline, or condensed headline with one highlighted phrase), a white CTA button such as "SIGN UP ES CFB" and the line "Unsubscribe anytime". The objective is direct newsletter subscription.
-You receive a few still frames sampled from the exported video (in time order, labeled with their time), downscaled to about 540px wide. A phone shows the full-width ad at roughly 390pt wide, so these frames are close to real phone size: judge legibility as you see it. You also receive the campaign context as JSON: brand, sport, audience, placement with its safe zones, the copy the designer typed, and any verified claims.
-Do NOT claim to have seen anything not supplied: no audio, no landing page, no metrics. Rate only what is visible in the frames. If the typed copy is not visible in the frames, say so as evidence. For video, judge the first-frame hook, sound-off comprehension (the copy must work with no audio), whether the clip reads at a glance, and whether the copy stays readable over the moving footage.
+EssentiallySports newsletter-signup VIDEO ads made in FrameUp for NFL, college football or MLB newsletters. Every ad has the newsletter's logo, copy, a white CTA button such as "SIGN UP ES CFB" and the line "Unsubscribe anytime". The objective is direct newsletter subscription.
+The background is one of: a sports clip, an animated gradient in team or brand colours, or a still photo with a slow zoom. The context's "background" says which. An animated or photo background is a deliberate choice (paid ads avoid league footage): never penalise an ad, or list a weakness or fix, for having no clip, no game footage or no action shot; judge whether the copy and the layout carry the message on their own.
+The context's "style" says which layout it is:
+- simple / condensed / highlight: a centred block of copy (a headline plus short body paragraphs; condensed = bold condensed headline; highlight = one phrase on a coloured box).
+- stat (Stat Card): one big number with a line saying what it counts and an offer line. The number comes from the editor's brief.
+- today3 (Today's 3): a title and three real headlines that appear one after another, then the offer.
+- versus (Us vs Them): a "Your feed" card with struck-through lines vs a card in the newsletter's colour with ticked claims (claims come from an approved list).
+- quote (Quote Card): a verbatim, attributed quote, then the offer.
+These styles reveal their parts over time: early frames may show only the hook (the number, the title, the quote, the two cards) while later frames add the rows, ticks, offer and CTA; the CTA is up by 40% of the duration and holds to the end. Judge the hook on the first frame and the full message on the last frame; do not mark the CTA as missing because an early frame does not show it yet.
+You receive a few still frames sampled from the exported video (in time order, labeled with their time), downscaled to about 540px wide. A phone shows the full-width ad at roughly 390pt wide, so these frames are close to real phone size: judge legibility as you see it. You also receive the campaign context as JSON: brand, sport, audience, placement with its safe zones, the style and background, the copy the designer typed (styleCopy for the no-footage styles), and any verified claims.
+Do NOT claim to have seen anything not supplied: no audio, no landing page, no metrics. Rate only what is visible in the frames. If the typed copy is not visible in the frames, say so as evidence. For video, judge the first-frame hook, sound-off comprehension (the copy must work with no audio), whether the background reads at a glance, and whether the copy stays readable over it.
 
 ## Output contract: JSON only, no Markdown, no code fences
 Return exactly this shape:
@@ -331,7 +344,7 @@ NEVER output an overall score, weighted sums, a verdict, or CTR/CPC/CAC numbers:
 "factors" must contain all eight keys:
 - headlineOffer (20%): Is the newsletter and its specific benefit apparent within a quick glance? Does the hook match what the newsletter delivers?
 - cta (20%): Is the requested action prominent, clear, newsletter-aligned, ideally explicit that signup is free? "Subscribe for Free" is useful but not mandatory verbatim; "SIGN UP <NEWSLETTER>" is a clear signup action.
-- readability55Plus (15%): Real mobile-size visibility, type weight, contrast against the footage and scrim, hierarchy and legibility for 55+ readers. Do not require all caps.
+- readability55Plus (15%): Real mobile-size visibility, type weight, contrast against the background (footage, gradient or photo) and its tint, hierarchy and legibility for 55+ readers. Do not require all caps.
 - trust (15%): Is the brand identifiable (logo, name)? Is the offer credible? "Unsubscribe anytime" lowers risk. Only reward social proof, free-forever claims or reading-time promises if they appear in verifiedClaims.
 - stopScroll (10%): Does the first frame give an immediate, relevant visual or copy hook without clickbait? Never fabricate color-based performance gains.
 - audienceFit (10%): Is the creative right for this specific sport and audience? For an MLB newsletter do not penalize the absence of NFL.
@@ -361,10 +374,21 @@ Give 2-3 strengths, 2-3 weaknesses and 3-5 topFixes, each with the exact change,
 
 ## Constraints
 - Never assume subscriber counts, a "5-minute read" or "free forever"; use only claims visible on the creative or in verifiedClaims, and flag unsupported claims.
-- Do not automatically prefer red over blue, faces over no faces, a set number of headline blocks, icon pills, phone mockups, black buttons or all caps.
+- Do not automatically prefer red over blue, faces over no faces, footage over no footage, a set number of headline blocks, icon pills, phone mockups, black buttons or all caps.
 - No blind color rules.
 - This is not Meta's Quality, Engagement or Conversion Ranking.
 - Every negative observation must reference a specific element (e.g. "Body paragraph 2 sits on the bright crowd and loses contrast").`;
+
+const STYLE_IDS = Object.keys(STYLES);
+const BACKGROUNDS = ['clip', 'animated', 'photo'];
+// The no-footage styles' typed copy, sanitised; only fields that are set.
+function styleCopyOf(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  const out = {};
+  ['offer', 'stat', 'statLabel', 'statSource', 'listTitle', 'quote', 'speaker', 'quoteContext'].forEach(k => { const v = sanitizeText(input[k], 300); if (v) out[k] = v; });
+  ['items', 'them', 'us'].forEach(k => { const v = (Array.isArray(input[k]) ? input[k] : []).map(x => sanitizeText(x, 200)).filter(Boolean).slice(0, 3); if (v.length) out[k] = v; });
+  return out;
+}
 
 function sanitizeText(value, max) {
   return String(value ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -391,6 +415,10 @@ function buildContext(context = {}, frameCount = 0) {
     headline: sanitizeText(context.headline, 300),
     body: (Array.isArray(context.body) ? context.body : []).map(p => sanitizeText(p, 600)).filter(Boolean).slice(0, 6),
     cta: sanitizeText(context.cta, 60),
+    style: STYLE_IDS.includes(context.style) ? context.style : '',
+    styleLabel: STYLE_IDS.includes(context.style) ? STYLES[context.style].label : '',
+    background: BACKGROUNDS.includes(context.background) ? context.background : 'clip',
+    styleCopy: styleCopyOf(context.styleCopy),
     verifiedClaims: (Array.isArray(context.verifiedClaims) ? context.verifiedClaims : []).map(c => sanitizeText(c, 200)).filter(Boolean).slice(0, 5),
     frameTimes,
     landingPageInspected: false,

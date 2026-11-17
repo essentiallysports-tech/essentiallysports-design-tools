@@ -16,7 +16,12 @@
 //               30-minute cache; `diag` says where candidates went
 //   copy        3 ad-copy variants in the ES styles, grounded in the brand, sport,
 //               team or moment and colour theme, plus lessons from past ads;
-//               common problems are repaired in code before the model retries
+//               common problems are repaired in code before the model retries.
+//               Each variant also carries the fields of the no-footage styles
+//               (stat, headlines, claims, quote…) when the brief supports them,
+//               and the reply has a style `suggestion`
+//   suggest-style  the style suggestion alone, no model call (rules + what
+//               this brand's exports favour)
 //   chat        the Video Ads assistant: a reply, plus an optional change to the ad
 //   grammar     grammar / spelling / punctuation fixes from the cheapest model;
 //               each must quote its field exactly and keep numbers and brand
@@ -33,9 +38,10 @@ const { aiText, aiWebResearch, gatewayConfigured, isBudgetError, userOverHourlyL
 const RULES = require('../../frameup-rules.js');
 const BRANDS = require('../../video-ads-brands.js');
 const TEAMS = require('../../video-ads-teams.js');
+const STYLE_RULES = require('../../video-ads-styles.js');
 
 // The learning loop (_ad-learning.js) is optional: without it, copy works as before.
-let learning = { lessonsFor: async () => ({ examples: [], rules: [] }), recordEvent: async () => false };
+let learning = { lessonsFor: async () => ({ examples: [], rules: [] }), styleRankingFor: async () => [], recordEvent: async () => false };
 try { learning = { ...learning, ...require('./_ad-learning.js') }; } catch { /* not deployed yet */ }
 
 const AD_SPORTS = ['nfl', 'cfb', 'mlb'];
@@ -751,11 +757,15 @@ async function momentsWithClips(body, track) {
 
 // ─── Copy (3 variants in the ES styles) ────────────────────────────────────
 const LIMITS = { headlineWords: 22, paragraphWords: 45, totalWords: 95, ctaChars: 32 };
-const STYLES = ['simple', 'condensed', 'highlight'];
+const STYLES = Object.keys(BRANDS.STYLES);
+const CLASSIC = BRANDS.CLASSIC_STYLES;
+const NEW_STYLES = BRANDS.NEW_STYLES;
+const SL = STYLE_RULES.LIMITS;
 const words = text => String(text || '').split(/\s+/).filter(Boolean).length;
 
 // What the ad is about: brand, sport, team(s) or moment, colour theme, notes.
-// Only this text may supply numbers.
+// Only this text may supply numbers, quotes and headlines; claims about the
+// newsletter come only from the brand's approved list.
 function copyContext(body) {
   const brand = BRANDS.byId(body.brandId);
   const sport = AD_SPORTS.includes(body.sport) ? body.sport : brand.sport;
@@ -768,49 +778,172 @@ function copyContext(body) {
   const color = TEAMS.colorById(body.color);
   const notes = clean(body.notes, 600);
   const clipText = clean(body.clip?.text, 280);
-  const factsText = [trend.title, ...trend.related.map(r => r.title), ...teams, notes, clipText].filter(Boolean).join(' ');
-  return { brand, sport, trend, teams, color, notes, clipText, factsText };
+  // Headlines the editor already has (Today's 3), and other trending titles the page sent.
+  const typedItems = strings(body.items, 3, 200);
+  const headlines = [...new Set([...trend.related.map(r => r.title), ...strings(body.headlines, 8, 200), ...typedItems].filter(Boolean))].slice(0, 10);
+  const factsText = [trend.title, ...headlines, ...teams, notes, clipText].filter(Boolean).join(' ');
+  const quotes = STYLE_RULES.extractQuotes([notes, clipText].join(' ')).slice(0, 3);
+  const facts = {
+    text: factsText,
+    // Verbatim sources for quotes and grounding for headlines.
+    sources: [notes, clipText, trend.title, ...headlines].filter(Boolean),
+    headlines: [trend.title, ...headlines].filter(Boolean),
+    claims: (brand.verifiedClaims || []).slice(0, 12),
+    teams,
+  };
+  return { brand, sport, trend, teams, color, notes, clipText, factsText, facts, headlines, quotes, typedItems };
 }
 
 function contextLines(ctx) {
   return [
     `Newsletter: ${ctx.brand.label} (${ctx.brand.league}) for ${ctx.brand.audience}. Default button: "${ctx.brand.cta}". Sport: ${SPORT_NAMES[ctx.sport]}.`,
     ctx.trend.title ? `Moment: ${ctx.trend.title}` : '',
-    ...ctx.trend.related.map(r => (r.title ? `Related: ${r.title}` : '')),
+    ...ctx.headlines.map(title => `Related: ${title}`),
     ctx.teams.length ? `Team${ctx.teams.length > 1 ? 's' : ''} in the clip: ${ctx.teams.join(', ')}` : '',
     ctx.color ? `Colour theme of this ad set: ${ctx.color.label.toLowerCase()} teams` : '',
     ctx.clipText ? `The clip's post says: ${ctx.clipText}` : '',
     ctx.notes ? `Editor's notes: ${ctx.notes}` : '',
+    ctx.facts.claims.length ? `Approved claims about ${ctx.brand.label} (the only claims allowed, copy them exactly): ${ctx.facts.claims.map(c => `"${c}"`).join(', ')}` : '',
   ].filter(Boolean);
 }
 
-// Checks one variant; returns { variant, errors }.
-function checkVariant(raw, brand, factsText, wantStyle) {
+// Facts for the checks: the context's facts object, or (older callers) a plain string.
+const factsOf = (facts, brand) => (facts && typeof facts === 'object'
+  ? { text: '', sources: [], headlines: [], claims: [], teams: [], ...facts }
+  : { text: String(facts || ''), sources: [String(facts || '')], headlines: [String(facts || '')], claims: (brand?.verifiedClaims || []), teams: [] });
+
+// Cuts to `max` words without adding punctuation (labels, list items).
+const cutWords = (text, max) => {
+  const list = String(text || '').split(/\s+/).filter(Boolean);
+  if (list.length <= max) return list.join(' ');
+  let cut = list.slice(0, max).join(' ');
+  for (let i = 0; i < 3 && TRAILING_FILLER.test(cut); i += 1) cut = cut.replace(TRAILING_FILLER, '');
+  return cut.replace(/[,;:]$/, '');
+};
+
+// The no-footage styles' fields, cleaned (no checks yet).
+function styleFieldsOf(raw) {
+  return {
+    offer: clean(raw?.offer, 200),
+    stat: clean(raw?.stat, 24),
+    statLabel: clean(raw?.statLabel, 160),
+    statSource: clean(raw?.statSource, 80),
+    listTitle: clean(raw?.listTitle, 120),
+    items: strings(raw?.items, 3, 200),
+    them: strings(raw?.them, 3, 80),
+    us: strings(raw?.us, 3, 80),
+    quote: clean(raw?.quote, 400),
+    speaker: clean(raw?.speaker, 80),
+    quoteContext: clean(raw?.quoteContext, 80),
+  };
+}
+const GROUP_FIELDS = {
+  stat: ['stat', 'statLabel', 'statSource'],
+  today3: ['listTitle', 'items'],
+  versus: ['them', 'us'],
+  quote: ['quote', 'speaker', 'quoteContext'],
+};
+const emptyOf = field => (['items', 'them', 'us'].includes(field) ? [] : '');
+// The speaker must be named in the brief (never attribute words to someone new).
+const speakerKnown = (speaker, facts) => {
+  const names = String(speaker || '').split(/\s+/).filter(w => /^\p{Lu}/u.test(w));
+  const hay = facts.sources.join(' ').toLowerCase();
+  return names.length > 0 && names.every(n => hay.includes(n.toLowerCase().replace(/[^\p{L}'’-]/gu, '')));
+};
+
+// Problems with one style's fields ([] = fine). `known` = numbers in the facts.
+function groupErrors(group, f, facts, known) {
+  const errors = [];
+  const numbersOk = text => STYLE_RULES.numberTokens(text).every(n => known.has(n));
+  if (group === 'stat') {
+    if (!f.stat || !STYLE_RULES.numberTokens(f.stat).length) errors.push('stat must be a number from the moment or your notes');
+    else if (f.stat.length > SL.statChars) errors.push(`stat "${f.stat}" is over ${SL.statChars} characters`);
+    else if (!numbersOk(f.stat)) errors.push(`the stat ${f.stat} is not in the moment or your notes`);
+    if (!f.statLabel) errors.push('statLabel must say what the number counts');
+    else if (words(f.statLabel) > SL.statLabelWords) errors.push(`statLabel has ${words(f.statLabel)} words (max ${SL.statLabelWords})`);
+    if (!numbersOk(f.statLabel)) errors.push('statLabel has a number that is not in the facts');
+  }
+  if (group === 'today3') {
+    if (f.items.length < 3) errors.push(`today3 needs 3 headlines (got ${f.items.length})`);
+    if (words(f.listTitle) > SL.listTitleWords) errors.push(`listTitle has ${words(f.listTitle)} words (max ${SL.listTitleWords})`);
+    f.items.forEach((item, i) => {
+      if (words(item) > SL.itemWords) errors.push(`headline ${i + 1} has ${words(item)} words (max ${SL.itemWords})`);
+      if (!STYLE_RULES.groundedIn(item, facts.headlines.concat(facts.sources))) errors.push(`headline ${i + 1} is not one of the stories given`);
+      if (!numbersOk(item)) errors.push(`headline ${i + 1} has a number that is not in the stories`);
+    });
+  }
+  if (group === 'versus') {
+    if (f.them.length < 2) errors.push('versus needs 2-3 "them" lines');
+    if (f.us.length < 2) errors.push('versus needs 2-3 approved claims');
+    f.them.forEach(t => {
+      if (words(t) > SL.themWords) errors.push(`"${t}" is over ${SL.themWords} words`);
+      if (STYLE_RULES.namesSomeone(t)) errors.push(`"${t}" names someone; keep "them" generic`);
+      if (STYLE_RULES.numberTokens(t).length) errors.push(`"${t}" has a number`);
+    });
+    f.us.forEach(u => { if (!STYLE_RULES.approvedClaim(u, facts.claims)) errors.push(`"${u}" is not an approved claim`); });
+  }
+  if (group === 'quote') {
+    if (!f.quote) errors.push('quote is missing');
+    else if (words(f.quote) > SL.quoteWords) errors.push(`quote has ${words(f.quote)} words (max ${SL.quoteWords})`);
+    else if (!STYLE_RULES.isVerbatim(f.quote, facts.sources)) errors.push('quote must be copied word for word from the notes or the clip');
+    if (!f.speaker) errors.push('speaker is missing');
+    else if (!speakerKnown(f.speaker, facts)) errors.push(`speaker "${f.speaker}" is not named in the brief`);
+    if (words(f.quoteContext) > SL.quoteContextWords) errors.push(`quoteContext has ${words(f.quoteContext)} words (max ${SL.quoteContextWords})`);
+  }
+  return errors;
+}
+
+// Checks one variant; returns { variant, errors }. The classic styles check
+// the headline / body; a no-footage style checks its own fields (errors),
+// and the other styles' fields ride along only when they pass (else they
+// are emptied: the variant grid can't use them, nothing else breaks).
+function checkVariant(raw, brand, factsIn, wantStyle) {
+  const facts = factsOf(factsIn, brand);
+  const factsText = facts.text;
   const errors = [];
   const style = STYLES.includes(raw?.style) ? raw.style : (wantStyle || 'condensed');
+  const classic = CLASSIC.includes(style);
   const headline = clean(raw?.headline, 220);
   const body = strings(raw?.body, 3, 400);
   let highlight = clean(raw?.highlight, 120);
   const cta = clean(raw?.cta, LIMITS.ctaChars).toUpperCase() || brand.cta;
-  if (!headline) errors.push('headline is missing');
-  if (words(headline) > LIMITS.headlineWords) errors.push(`headline has ${words(headline)} words (max ${LIMITS.headlineWords})`);
-  body.forEach((p, i) => { if (words(p) > LIMITS.paragraphWords) errors.push(`paragraph ${i + 1} has ${words(p)} words (max ${LIMITS.paragraphWords})`); });
-  const total = words(headline) + body.reduce((n, p) => n + words(p), 0);
-  if (total > LIMITS.totalWords) errors.push(`${total} words in all (max ${LIMITS.totalWords})`);
+  if (classic) {
+    if (!headline) errors.push('headline is missing');
+    if (words(headline) > LIMITS.headlineWords) errors.push(`headline has ${words(headline)} words (max ${LIMITS.headlineWords})`);
+    body.forEach((p, i) => { if (words(p) > LIMITS.paragraphWords) errors.push(`paragraph ${i + 1} has ${words(p)} words (max ${LIMITS.paragraphWords})`); });
+    const total = words(headline) + body.reduce((n, p) => n + words(p), 0);
+    if (total > LIMITS.totalWords) errors.push(`${total} words in all (max ${LIMITS.totalWords})`);
+  }
   if (style === 'highlight') {
     if (!highlight || !headline.toLowerCase().includes(highlight.toLowerCase())) errors.push('highlight must be words copied exactly from the headline');
   } else {
     highlight = '';
   }
-  [headline, ...body].forEach(text => {
+  const known = new Set(numberTokens(factsText));
+  const f = styleFieldsOf(raw);
+  const own = GROUP_FIELDS[style] ? style : '';
+  Object.keys(GROUP_FIELDS).forEach(group => {
+    const touched = GROUP_FIELDS[group].some(k => (Array.isArray(f[k]) ? f[k].length : f[k]));
+    if (group !== own && !touched) return;
+    const problems = groupErrors(group, f, facts, known);
+    if (group === own) errors.push(...problems);
+    else if (problems.length) GROUP_FIELDS[group].forEach(k => { f[k] = emptyOf(k); });
+  });
+  if (!classic) {
+    if (!f.offer) errors.push('offer is missing');
+    else if (words(f.offer) > SL.offerWords) errors.push(`offer has ${words(f.offer)} words (max ${SL.offerWords})`);
+    else if (!/\bfree\b/i.test(f.offer)) errors.push('offer must say it is free');
+  }
+  const texts = [headline, ...body, f.offer, f.statLabel, f.listTitle, ...f.items, ...f.them, f.quoteContext];
+  texts.filter(Boolean).forEach(text => {
     const hit = RULES.BANNED.find(rule => rule.re.test(text));
     if (hit) errors.push(`"${text.slice(0, 60)}" breaks the ES style (${hit.why})`);
   });
-  const known = new Set(numberTokens(factsText));
-  [headline, ...body].forEach(text => numberTokens(text).forEach(n => {
-    if (!known.has(n)) errors.push(`the number ${n} is not in the moment or your notes`);
+  // Today's 3 titles may say "3" ("3 things NFL fans need to know").
+  [headline, ...body, f.offer, f.listTitle, f.quoteContext].forEach(text => numberTokens(text).forEach(n => {
+    if (!known.has(n) && !(text === f.listTitle && n === '3')) errors.push(`the number ${n} is not in the moment or your notes`);
   }));
-  return { variant: { style, headline, highlight, body, cta, why: clean(raw?.why, 200) }, errors };
+  return { variant: { style, headline, highlight, body, cta, ...f, why: clean(raw?.why, 200) }, errors: [...new Set(errors)] };
 }
 
 // ─── Auto-fix: deterministic repairs before any retry ──────────────────────
@@ -876,7 +1009,9 @@ function closestPhrase(headline, highlight) {
 }
 
 // Repairs a raw variant in code. Returns { raw, fixes:[{ kind, word?, note }] }.
-function autoFix(input, brand, factsText, wantStyle) {
+function autoFix(input, brand, factsIn, wantStyle) {
+  const facts = factsOf(factsIn, brand);
+  const factsText = facts.text;
   const fixes = [];
   const fix = (kind, note, extra = {}) => fixes.push({ kind, ...extra, note });
   const style = STYLES.includes(input?.style) ? input.style : (wantStyle || 'condensed');
@@ -960,29 +1095,93 @@ function autoFix(input, brand, factsText, wantStyle) {
     fix('cta', 'Uppercased the button text');
     cta = cta.toUpperCase();
   }
-  return { raw: { ...input, style, headline, body, highlight, cta }, fixes };
+  // The no-footage styles' fields.
+  const f = styleFieldsOf(input);
+  // (known: the numbers in the facts, from above.)
+  const own = GROUP_FIELDS[style] ? style : '';
+  const ownOr = (group, note) => (group === own ? note : '');
+  const scrubField = (text, field) => (text ? scrub(text, field, true) : text);
+  ['offer', 'statLabel', 'listTitle', 'quoteContext'].forEach(k => { f[k] = scrubField(f[k], k); });
+  ['items', 'them'].forEach(k => { f[k] = f[k].map(t => scrubField(t, k)).filter(Boolean); });
+  // Offer: short, and it says free (the default offer when there is none).
+  if (!CLASSIC.includes(style)) {
+    if (!f.offer) { f.offer = STYLE_RULES.defaultsFor(brand, style).offer; fix('offer', 'Added the offer line'); }
+    if (words(f.offer) > SL.offerWords) { f.offer = trimToWords(f.offer, SL.offerWords); fix('offer', `Trimmed the offer to ${words(f.offer)} words`); }
+    if (!/\bfree\b/i.test(f.offer)) { f.offer = `${f.offer.replace(/[.!\s]*$/, '')}. Free.`; fix('offer', 'Added “Free.” to the offer'); }
+  }
+  // Stat: an exact number from the facts, or nothing.
+  if (f.stat) {
+    const tokens = STYLE_RULES.numberTokens(f.stat);
+    if (!tokens.length || tokens.some(n => !known.has(n))) {
+      f.stat = '';
+      const note = ownOr('stat', 'Dropped a stat that is not in the input');
+      if (note) fix('invented_number', note);
+    } else if (f.stat.length > SL.statChars) {
+      const m = f.stat.match(/[.\d][\d,]*(?:\.\d+)?%?/);
+      if (m && m[0].length <= SL.statChars) { f.statLabel = f.statLabel || f.stat.replace(m[0], '').trim(); f.stat = m[0]; fix('stat', `Kept just the number: ${m[0]}`); }
+    }
+  }
+  if (words(f.statLabel) > SL.statLabelWords) { f.statLabel = cutWords(f.statLabel, SL.statLabelWords); if (own === 'stat') fix('stat', 'Shortened what the number counts'); }
+  if (f.statSource && (words(f.statSource) > SL.statSourceWords || !STYLE_RULES.groundedIn(f.statSource, facts.sources))) f.statSource = '';
+  // Today's 3: short, real stories only.
+  if (words(f.listTitle) > SL.listTitleWords) f.listTitle = cutWords(f.listTitle, SL.listTitleWords);
+  const items = f.items.map(t => cutWords(t, SL.itemWords));
+  f.items = items.filter(t => STYLE_RULES.groundedIn(t, facts.headlines.concat(facts.sources)) && STYLE_RULES.numberTokens(t).every(n => known.has(n)));
+  if (f.items.length < items.length && own === 'today3') fix('today3', 'Dropped a headline that is not one of the stories given');
+  // Us vs Them: generic "them", approved claims only.
+  const them = f.them.map(t => cutWords(t, SL.themWords));
+  f.them = them.filter(t => !STYLE_RULES.namesSomeone(t) && !STYLE_RULES.numberTokens(t).length);
+  if (f.them.length < them.length && own === 'versus') fix('versus', 'Dropped a "your feed" line that named someone');
+  const us = f.us.map(u => STYLE_RULES.approvedClaim(u, facts.claims)).filter(Boolean);
+  if (us.length < f.us.length && own === 'versus') fix('claims', 'Dropped a claim that is not on the approved list');
+  f.us = [...new Set(us)];
+  if (own === 'versus' && f.us.length < 2 && facts.claims.length >= 2) {
+    f.us = [...new Set([...f.us, ...facts.claims])].slice(0, SL.sideItems);
+    fix('claims', 'Used the approved claims');
+  }
+  // Quote: word for word from the brief, said by someone it names; else nothing.
+  if (f.quote && !STYLE_RULES.isVerbatim(f.quote, facts.sources)) {
+    f.quote = '';
+    if (own === 'quote') fix('quote', 'Dropped a quote that is not in the notes or the clip');
+  }
+  if (f.speaker && !speakerKnown(f.speaker, facts)) { f.speaker = ''; if (own === 'quote') fix('quote', 'Dropped a speaker the brief does not name'); }
+  if (words(f.quoteContext) > SL.quoteContextWords) f.quoteContext = cutWords(f.quoteContext, SL.quoteContextWords);
+  return { raw: { ...input, style, headline, body, highlight, cta, ...f }, fixes };
 }
 
 const COPY_SYSTEM = [
-  'You write newsletter sign-up video ads for EssentiallySports (ES) newsletters. The ad plays over a trending sports clip.',
+  'You write newsletter sign-up video ads for EssentiallySports (ES) newsletters. The ad plays over a sports clip, an animated background in team colours or a photo.',
   'Formula: hook on the moment or team fans are talking about -> what the newsletter gives them -> it is free. Warm, punchy, plain American English. Second person ("you") or a fan\'s first person ("That\'s why I read ES Dugout").',
   'Styles: "simple" = all plain paragraphs; "condensed" = a bold condensed headline then plain paragraphs; "highlight" = an uppercase condensed headline where one phrase (copied exactly from the headline) sits on a coloured box, then plain paragraphs.',
-  'Headline up to 22 words, 1-3 short paragraphs, under 95 words in all. Never invent stats, scores, quotes or subscriber counts: use numbers only if they appear in the moment, the clip or the editor\'s notes. No emojis, hashtags, links, "Breaking" or hype words.',
+  'Styles that need no footage: "stat" (Stat Card) = one number copied exactly from the facts (stat, max 10 characters), what it counts (statLabel, max 10 words), an optional source named in the notes (statSource); "today3" (Today\'s 3) = a short title (listTitle, max 9 words) and three real stories from the related headlines or notes, each rewritten plainly and calmly in max 9 words (items), no rumours as facts, no "Breaking"; "versus" (Us vs Them) = 2-3 generic things fans put up with (them, max 5 words each, never a named outlet, person or brand) and 2-3 claims about the newsletter copied exactly from the approved claims (us); "quote" (Quote Card) = a quote copied word for word from the notes or the clip text (max 22 words), the speaker named there, and a short context (quoteContext, max 8 words, e.g. "after Sunday\'s win"). Every no-footage style also has an offer line (offer, max 16 words) that says it is free.',
+  'Headline up to 22 words, 1-3 short paragraphs, under 95 words in all. Never invent stats, scores, quotes, headlines or subscriber counts: use numbers and quotes only if they appear in the moment, the clip or the editor\'s notes, and leave a style\'s fields empty when its facts are missing. Never imply a player or coach endorses the newsletter. No emojis, hashtags, links, "Breaking" or hype words.',
   'The button text is a short call to sign up (e.g. "SIGN UP ES CFB"); it is separate from the copy.',
 ].join('\n');
 
 // Lessons from past ads (never blocks: empties on any problem or after 3s).
-async function lessons(brand, sport, token) {
+// Examples in the requested style come first.
+async function lessons(brand, sport, token, style = '') {
   const got = await withTimeout(learning.lessonsFor({ brandId: brand.id, sport, token }), 3000, null);
-  const examples = (Array.isArray(got?.examples) ? got.examples : []).slice(0, 5).map(ex => ({
-    style: STYLES.includes(ex?.style) ? ex.style : 'condensed',
-    headline: clean(ex?.headline, 220),
-    highlight: clean(ex?.highlight, 120),
-    body: strings(Array.isArray(ex?.body) ? ex.body : [ex?.body], 3, 400),
-    cta: clean(ex?.cta, 40),
-  })).filter(ex => ex.headline || ex.body.length);
+  const examples = (Array.isArray(got?.examples) ? got.examples : []).slice(0, 5).map(ex => {
+    const out = {
+      style: STYLES.includes(ex?.style) ? ex.style : 'condensed',
+      headline: clean(ex?.headline, 220),
+      highlight: clean(ex?.highlight, 120),
+      body: strings(Array.isArray(ex?.body) ? ex.body : [ex?.body], 3, 400),
+      cta: clean(ex?.cta, 40),
+    };
+    const extra = styleFieldsOf(ex);
+    Object.keys(extra).forEach(k => { if (Array.isArray(extra[k]) ? extra[k].length : extra[k]) out[k] = extra[k]; });
+    return out;
+  }).filter(ex => ex.headline || ex.body.length || ex.offer)
+    .sort((a, b) => (b.style === style) - (a.style === style));
   const rules = strings(got?.rules, 6, 120);
   return { examples, rules };
+}
+// This brand's styles ranked by exports and light editing (_ad-learning.js); [] on any problem.
+async function styleRanking(brand, sport, token) {
+  const got = await withTimeout(Promise.resolve().then(() => learning.styleRankingFor({ brandId: brand.id, sport, token })), 2500, []);
+  return (Array.isArray(got) ? got : []).filter(r => r && STYLES.includes(r.style)).map(r => ({ style: r.style, score: Math.max(0, Math.min(1, Number(r.score) || 0)), exports: Number(r.exports) || 0 }));
 }
 
 function lessonLines({ examples, rules }) {
@@ -992,19 +1191,54 @@ function lessonLines({ examples, rules }) {
   ].filter(Boolean);
 }
 
+// What the brief supports, for the suggestion and the "skip" rules.
+function factsForSuggestion(ctx, body = {}) {
+  return STYLE_RULES.briefFacts({
+    notes: ctx.notes,
+    clipText: ctx.clipText,
+    trendTitle: ctx.trend.title,
+    related: ctx.headlines,
+    copy: { stat: clean(body.stat, 24), quote: clean(body.quote, 400), items: ctx.typedItems },
+    brand: ctx.brand,
+    hasClip: body.hasClip === true,
+  });
+}
+// The style suggestion: rules first, then this brand's ranking, then the AI's pick (near-ties only).
+function suggestionFor(ctx, body, ranking, aiPick = '') {
+  return STYLE_RULES.suggestStyles(factsForSuggestion(ctx, body), { ranking, aiPick: STYLES.includes(aiPick) ? aiPick : '', brand: ctx.brand });
+}
+// A no-footage style asked for without its facts: say so before any AI call.
+function skipReason(style, facts) {
+  if (style === 'stat' && !facts.numbers.length) return { skip: 'no number', error: 'Stat Card needs a number from your notes, the moment or the clip. Add one to the note, or pick another style.' };
+  if (style === 'quote' && !facts.quotes.length) return { skip: 'no quote', error: 'Quote Card needs a quote in your note (in quotation marks) or the clip text. The AI never writes quotes.' };
+  if (style === 'today3' && facts.relatedCount < 3) return { skip: 'no headlines', error: 'Today’s 3 needs 3 real headlines: pick a trending moment, or type them into the style’s fields.' };
+  if (style === 'versus' && facts.claims < 2) return { skip: 'no claims', error: 'Us vs Them needs at least 2 approved claims for this newsletter.' };
+  return null;
+}
+
+const VARIANT_SHAPE = '{"style": "...", "headline": "...", "highlight": "exact words from the headline (highlight style only)", "body": ["...", "..."], "cta": "...", "offer": "...", "stat": "", "statLabel": "", "statSource": "", "listTitle": "", "items": [], "them": [], "us": [], "quote": "", "speaker": "", "quoteContext": "", "why": "one short line on the angle"}';
+
 async function copy(body, track) {
   const ctx = copyContext(body);
-  const { brand, factsText } = ctx;
+  const { brand, facts } = ctx;
   const wantStyle = STYLES.includes(body.style) ? body.style : '';
-  if (!ctx.trend.title && !ctx.teams.length && !ctx.notes && !ctx.color) {
+  if (!ctx.trend.title && !ctx.teams.length && !ctx.notes && !ctx.color && !ctx.typedItems.length) {
     return { ok: false, status: 400, error: 'Pick a clip, a moment or a colour first, or write a note about the ad.' };
   }
-  const learned = await lessons(brand, ctx.sport, track.token);
+  const [learned, ranking] = await Promise.all([lessons(brand, ctx.sport, track.token, wantStyle), styleRanking(brand, ctx.sport, track.token)]);
+  const brief = factsForSuggestion(ctx, body);
+  const skip = wantStyle ? skipReason(wantStyle, brief) : null;
+  if (skip) return { ok: false, status: 422, reason: 'skip', ...skip, suggestion: suggestionFor(ctx, body, ranking) };
+  const isNew = NEW_STYLES.includes(wantStyle);
   const ask = [
     ...contextLines(ctx),
     ...lessonLines(learned),
     wantStyle ? `Write 3 variants, all in the "${wantStyle}" style, each a clearly different angle.` : 'Write 3 variants: one "simple", one "condensed", one "highlight", each a clearly different angle.',
-    'Reply with JSON only: {"variants": [{"style": "...", "headline": "...", "highlight": "exact words from the headline (highlight style only)", "body": ["...", "..."], "cta": "...", "why": "one short line on the angle"}]}',
+    isNew
+      ? 'Also give each variant a headline and 1-2 short body paragraphs on the same angle, so it can run in a classic style too.'
+      : 'Also fill the no-footage fields (stat, statLabel, listTitle, items, them, us, quote, speaker, offer) on the same angle wherever the facts support them, so the same copy can run as a Stat Card, Today\'s 3, Us vs Them or Quote Card. Leave a field empty when its facts are missing.',
+    `Then name the one style that fits this brief best as "bestStyle" (one of: ${STYLES.join(', ')}), with "bestWhy" in under 10 words.`,
+    `Reply with JSON only: {"variants": [${VARIANT_SHAPE}], "bestStyle": "...", "bestWhy": "..."}`,
   ].join('\n');
   let cost = 0;
   let messages = [{ role: 'user', content: ask }];
@@ -1012,15 +1246,18 @@ async function copy(body, track) {
   let autoFixed = [];
   let lastErrors = [];
   let allErrors = [];
+  let aiPick = '';
   for (let attempt = 0; attempt < 2 && good.length < 2; attempt += 1) {
-    const result = await aiText({ tier: 'main', system: COPY_SYSTEM, cacheSystem: true, messages, json: true, maxTokens: 2000, timeoutMs: 25000, track: { ...track, feature: 'video-ads-copy' } });
+    const result = await aiText({ tier: 'main', system: COPY_SYSTEM, cacheSystem: true, messages, json: true, maxTokens: 3200, timeoutMs: 30000, track: { ...track, feature: 'video-ads-copy' } });
     cost += result.cost;
     const parsed = extractJson(result.text);
+    if (parsed?.skip && !Array.isArray(parsed?.variants)) { lastErrors = [`the AI skipped: ${clean(parsed.skip, 80)}`]; allErrors = [...allErrors, ...lastErrors]; break; }
+    if (!aiPick && STYLES.includes(parsed?.bestStyle)) aiPick = parsed.bestStyle;
     const variants = Array.isArray(parsed?.variants) ? parsed.variants : [];
     // Repair in code first; only what can't be repaired goes back to the model.
     const checked = variants.slice(0, 4).map(raw => {
-      const repaired = autoFix(raw, brand, factsText, wantStyle);
-      return { ...checkVariant(repaired.raw, brand, factsText, wantStyle), fixes: repaired.fixes };
+      const repaired = autoFix(raw, brand, facts, wantStyle);
+      return { ...checkVariant(repaired.raw, brand, facts, wantStyle), fixes: repaired.fixes };
     });
     const passed = checked.filter(c => !c.errors.length);
     good = [...good, ...passed.map(c => c.variant)].slice(0, 3);
@@ -1037,12 +1274,26 @@ async function copy(body, track) {
     await withTimeout(learning.recordEvent({
       token: track.token,
       email: track.email,
-      event: { type: 'check_failed', brandId: brand.id, sport: ctx.sport, payload: { issues: allErrors.slice(0, 12), autoFixed: autoFixed.map(({ kind, word }) => (word ? { kind, word } : { kind })) } },
+      event: { type: 'check_failed', brandId: brand.id, sport: ctx.sport, payload: { style: wantStyle || '', issues: allErrors.slice(0, 12), autoFixed: autoFixed.map(({ kind, word }) => (word ? { kind, word } : { kind })) } },
     }), 1500, false);
   }
   const lessonsUsed = { examples: learned.examples.length, rules: learned.rules.length };
-  if (!good.length) return { ok: false, status: 422, error: 'The AI copy did not pass the ES checks. Try again or add a note.', issues: lastErrors.slice(0, 5), autoFixed, lessons: lessonsUsed, cost: money(cost) };
-  return { ok: true, variants: good, autoFixed, lessons: lessonsUsed, cost: money(cost) };
+  const suggestion = suggestionFor(ctx, body, ranking, aiPick);
+  if (!good.length) return { ok: false, status: 422, error: 'The AI copy did not pass the ES checks. Try again or add a note.', issues: lastErrors.slice(0, 5), autoFixed, lessons: lessonsUsed, suggestion, cost: money(cost) };
+  return { ok: true, variants: good, autoFixed, lessons: lessonsUsed, suggestion, cost: money(cost) };
+}
+
+// The style suggestion on its own: no model call, so no AI gate.
+async function suggestStyle(body, track) {
+  const ctx = copyContext(body);
+  const ranking = await styleRanking(ctx.brand, ctx.sport, track.token);
+  return { ok: true, suggestion: suggestionFor(ctx, body, ranking), ranking };
+}
+
+// The current ad's no-footage fields, only those that are set (keeps the chat prompt short).
+function currentStyleFields(layout) {
+  const f = styleFieldsOf(layout);
+  return Object.fromEntries(Object.entries(f).filter(([, v]) => (Array.isArray(v) ? v.length : v)));
 }
 
 // ─── Assistant chat ────────────────────────────────────────────────────────
@@ -1058,25 +1309,25 @@ async function chat(body, track) {
   const system = [
     COPY_SYSTEM,
     'You are the Video Ads assistant inside FrameUp: help the editor shape this ad. Be brief and practical.',
-    'When the editor asks for a change to the ad, include "patch" with only the fields to change (style, headline, highlight, body, cta). For several options, include "variants" (same shape as the copy variants). Otherwise only reply.',
+    'When the editor asks for a change to the ad, include "patch" with only the fields to change (style, headline, highlight, body, cta, offer, stat, statLabel, statSource, listTitle, items, them, us, quote, speaker, quoteContext). For several options, include "variants" (same shape as the copy variants). Otherwise only reply.',
     'Reply with JSON only: {"reply": "...", "patch": {...} or null, "variants": [...] or null}',
     '',
     ...contextLines(ctx),
     ctx.trend.title || ctx.teams.length ? '' : 'No clip or moment picked yet.',
-    `Current ad: ${JSON.stringify({ style: layout.style, headline: clean(layout.headline, 300), highlight: clean(layout.highlight, 120), body: strings(layout.body, 3, 500), cta: clean(layout.cta, 40) })}`,
+    `Current ad: ${JSON.stringify({ style: layout.style, headline: clean(layout.headline, 300), highlight: clean(layout.highlight, 120), body: strings(layout.body, 3, 500), cta: clean(layout.cta, 40), ...currentStyleFields(layout) })}`,
   ].filter(Boolean).join('\n');
   const result = await aiText({ tier: 'main', system, messages: history, json: true, maxTokens: 1800, timeoutMs: 25000, track: { ...track, feature: 'video-ads-chat' } });
   const parsed = extractJson(result.text) || { reply: clean(result.text, 1500) };
   const out = { ok: true, reply: clean(parsed.reply, 1500) || 'Done.', cost: money(result.cost) };
   // A change to the ad passes the same checks as AI copy; fields that fail are dropped and said so.
   if (parsed.patch && typeof parsed.patch === 'object') {
-    const merged = { style: layout.style, headline: layout.headline, highlight: layout.highlight, body: layout.body, cta: layout.cta, ...parsed.patch };
-    const { variant, errors } = checkVariant(merged, brand, factsText, layout.style);
+    const merged = { ...styleFieldsOf(layout), style: layout.style, headline: layout.headline, highlight: layout.highlight, body: layout.body, cta: layout.cta, ...parsed.patch };
+    const { variant, errors } = checkVariant(merged, brand, { ...ctx.facts, text: factsText, sources: [...ctx.facts.sources, ...history.filter(m => m.role === 'user').map(m => m.content)] }, merged.style);
     if (errors.length) out.reply += ` (I couldn't apply that change: ${errors.slice(0, 2).join('; ')}.)`;
     else out.patch = Object.fromEntries(Object.keys(parsed.patch).filter(k => k in variant).map(k => [k, variant[k]]));
   }
   if (Array.isArray(parsed.variants)) {
-    const good = parsed.variants.slice(0, 3).map(v => checkVariant(v, brand, factsText, '')).filter(c => !c.errors.length).map(c => c.variant);
+    const good = parsed.variants.slice(0, 3).map(v => checkVariant(v, brand, { ...ctx.facts, text: factsText }, '')).filter(c => !c.errors.length).map(c => c.variant);
     if (good.length) out.variants = good;
   }
   return out;
@@ -1207,6 +1458,7 @@ exports.handler = async function handler(event) {
       return json(result.ok ? 200 : result.status, result);
     }
     if (body.mode === 'research') return json(410, { ok: false, error: 'Research was removed.' });
+    if (body.mode === 'suggest-style') return json(200, await suggestStyle(body, { email: auth.user.email, token: bearerToken(event.headers) }));
     if (AI_MODES[body.mode]) {
       const token = bearerToken(event.headers);
       const track = { email: auth.user.email, token };
@@ -1253,8 +1505,8 @@ exports.handler = async function handler(event) {
 };
 
 exports._test = {
-  variantsFrom, isVideoUrl, sizeFromUrl, clipFromPost, trends, checkVariant, autoFix, trimToWords, swapBanned, closestPhrase,
+  variantsFrom, isVideoUrl, sizeFromUrl, clipFromPost, trends, checkVariant, autoFix, trimToWords, swapBanned, closestPhrase, copyContext, suggestStyle, skipReason, styleFieldsOf,
   findClips, momentsWithClips, teamInTitle, MOMENT_CACHE, MOMENTS, looksOld, ageHoursOf, copy, chat, CLIP_CACHE, FIND_CLIPS, grammar, checkGrammarIssues, GRAMMAR_CACHE,
   searchPlan, webPrompt, xQueryFor, xApiSearch, assessClip, freshClip, scoreClip, rankClips, mediaKey, qualityLabel, CLIP_TTL_MS, SOURCES,
-  useLearning(mod) { learning = { lessonsFor: async () => ({ examples: [], rules: [] }), recordEvent: async () => false, ...mod }; },
+  useLearning(mod) { learning = { lessonsFor: async () => ({ examples: [], rules: [] }), styleRankingFor: async () => [], recordEvent: async () => false, ...mod }; },
 };

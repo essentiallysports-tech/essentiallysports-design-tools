@@ -45,6 +45,9 @@ function checkContext(context) {
   if (context.objective != null && context.objective !== 'newsletter_signup') return 'Only newsletter signup ads can be rated.';
   if (context.body != null && !Array.isArray(context.body)) return 'The body copy must be a list of paragraphs.';
   if (context.verifiedClaims != null && !Array.isArray(context.verifiedClaims)) return 'Verified claims must be a list.';
+  if (context.style != null && typeof context.style !== 'string') return 'The style must be a style id.';
+  if (context.background != null && !['clip', 'animated', 'photo'].includes(context.background)) return 'Background must be clip, animated or photo.';
+  if (context.styleCopy != null && (typeof context.styleCopy !== 'object' || Array.isArray(context.styleCopy))) return 'The style copy is not in the right format.';
   return '';
 }
 

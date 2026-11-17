@@ -247,6 +247,49 @@ await test('empties on 500, network errors, bad input', async () => {
   assert.deepEqual(await learning.lessonsFor(), { examples: [], rules: [] });
 });
 
+// ── 2b. style ranking ──────────────────────────────────────────────────────
+console.log('styleRankingFor');
+await test('style ranking: export share, discounted by how much people rewrite the AI copy', async () => {
+  reset();
+  rpcStatus = 200;
+  const exp = style => ({ type: 'export', payload: { style, copy: { style, headline: `${style} ad ${Math.random()}`, body: ['Free.'] } } });
+  const edited = (style, before, after) => ({ type: 'copy_edited', payload: { style, before: { headline: before }, after: { headline: after } } });
+  rpcRows = [
+    exp('stat'), exp('stat'), exp('stat'), exp('versus'), exp('versus'), exp('versus'), exp('condensed'),
+    edited('stat', 'One number that tells the story', 'One number that tells the story'),
+    edited('versus', 'Your feed is noise and nothing else', 'Get the news without the noise today'),
+  ];
+  const ranking = await learning.styleRankingFor({ brandId: 'the-huddle', sport: 'nfl', token: jwt('u1') });
+  assert.deepEqual(ranking.map(r => r.style), ['stat', 'versus', 'condensed'], 'equal exports: the lightly edited style wins');
+  assert.equal(ranking[0].score, 1);
+  assert.equal(ranking[0].exports, 3);
+  assert.equal(ranking[0].share, 0.429);
+  assert.equal(ranking[0].editDistance, 0);
+  assert.ok(ranking[1].editDistance > 0.5 && ranking[1].score < 1);
+  assert.ok(ranking.every(r => r.score >= 0 && r.score <= 1));
+  // lessonsFor keeps its shape.
+  assert.deepEqual(Object.keys(await learning.lessonsFor({ brandId: 'the-huddle', sport: 'nfl', token: jwt('u1') })), ['examples', 'rules']);
+});
+await test('style ranking: empty until there are enough exports, and on any failure', async () => {
+  reset();
+  rpcStatus = 200;
+  rpcRows = [{ type: 'export', payload: { style: 'stat', copy: { style: 'stat', stat: '412', statLabel: 'yards' } } }];
+  assert.deepEqual(await learning.styleRankingFor({ brandId: 'the-huddle', token: jwt('u1') }), [], `under ${learning.MIN_STYLE_EXPORTS} exports`);
+  reset();
+  readThrows = true;
+  assert.deepEqual(await learning.styleRankingFor({ brandId: 'the-huddle', token: jwt('u1') }), []);
+  assert.deepEqual(await learning.styleRankingFor({}), []);
+});
+await test('new-style exports become examples with their own fields', async () => {
+  reset();
+  rowsExports = [{ type: 'export', payload: { style: 'stat', copy: { style: 'stat', headline: '', body: [], stat: '.412', statLabel: 'on-base this month', offer: 'Free.', cta: 'SIGN UP', items: [] } } }];
+  const { examples } = await learning.lessonsFor({ brandId: 'es-dugout', token: jwt('u1') });
+  assert.deepEqual(examples[0], { style: 'stat', headline: '', highlight: '', body: [], cta: 'SIGN UP', offer: 'Free.', stat: '.412', statLabel: 'on-base this month' });
+  assert.equal(learning.editDistance('a b c d', 'a b c d'), 0);
+  assert.equal(learning.editDistance('a b c d', 'a x c d'), 0.25);
+  assert.equal(learning.editDistance('', 'new words'), 1);
+});
+
 // ── 3. endpoint ────────────────────────────────────────────────────────────
 console.log('endpoint');
 const post = (body, extra = {}) => handler({ httpMethod: 'POST', headers: { authorization: 'Bearer tok' }, body: typeof body === 'string' ? body : JSON.stringify(body), ...extra });
