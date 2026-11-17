@@ -50,7 +50,13 @@ function diagnostics(env = process.env) {
     jobs: {
       text: { ...viaGateway('main', 'generate'), backup: groq ? { provider: 'groq', model: env.GROQ_GENERATE_MODEL || 'openai/gpt-oss-120b', keyPresent: true } : gatewayBackup },
       trends: { ...viaGateway('light', 'trend'), backup: groq ? { provider: 'groq', model: env.GROQ_TITLES_MODEL || 'openai/gpt-oss-20b', keyPresent: true } : gatewayBackup },
-      director: viaGateway(directorTier(env.GENERATE_DIRECTOR_MODEL || env.GENERATE_DIRECTOR_TIER || ''), 'generate-director'),
+      // 'auto' = Haiku first, Sonnet once on escalation.
+      director: (() => {
+        const tier = directorTier(env.GENERATE_DIRECTOR_MODEL || env.GENERATE_DIRECTOR_TIER || '');
+        return tier === 'auto'
+          ? { ...viaGateway('main', 'generate-director'), mode: 'auto', escalation: modelFor('best') }
+          : viaGateway(tier, 'generate-director');
+      })(),
       review: viaGateway('review', 'generate-review'),
       escalation: viaGateway('best', 'generate-escalate'),
       search: { ...viaGateway('search', 'video-ads-find-clips'), xApiKeyPresent: Boolean(env.X_BEARER_TOKEN) },

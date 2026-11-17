@@ -709,7 +709,7 @@ for (const [name, handler, body, feature] of cases) {
   for (const job of ['text', 'director', 'search', 'transcription', 'tts', 'image']) assert.ok(jobs[job], `diagnostics cover ${job}`);
   assert.deepEqual([jobs.text.provider, jobs.text.model, jobs.text.keyPresent], ['gateway', 'anthropic/claude-haiku-5.5', true]);
   assert.deepEqual(jobs.text.backup, { provider: 'groq', model: 'openai/gpt-oss-120b', keyPresent: true });
-  assert.equal(jobs.director.model, 'anthropic/claude-sonnet-5.5');
+  assert.deepEqual([jobs.director.mode, jobs.director.model, jobs.director.escalation], ['auto', 'anthropic/claude-haiku-5.5', 'anthropic/claude-sonnet-5.5'], 'director: Haiku first, Sonnet on escalation');
   assert.equal(jobs.search.xApiKeyPresent, true);
   assert.deepEqual(jobs.transcription.willUse, { provider: 'groq', model: 'whisper-large-v3-turbo' });
   assert.deepEqual(jobs.transcription.order.map(s => [s.provider, s.keyPresent]), [['groq', true], ['gateway', true], ['openai', true]]);
