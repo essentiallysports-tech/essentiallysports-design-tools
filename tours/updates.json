@@ -73,6 +73,41 @@
       ]
     },
     {
+      "id": "2026-11-19-hero-editor",
+      "date": "2026-11-19",
+      "title": "Editor: save status, smarter templates, brand check",
+      "commit": "6cde4b7",
+      "items": [
+        {
+          "title": "Always know it's saved",
+          "text": "A small status next to Undo shows Saved, Saving…, Synced or Offline. Click it for your drafts. Ctrl/⌘+S saves now.",
+          "page": "index.html",
+          "route": "#instagram",
+          "target": ".studio-history-group"
+        },
+        {
+          "title": "Best for this story",
+          "text": "Press T (or Browse) for templates. FrameUp reads your headline, or a story pasted into search, and suggests the templates that fit. Recent templates sit on top.",
+          "page": "index.html",
+          "route": "#instagram",
+          "target": "#instagram-post-type-select"
+        },
+        {
+          "title": "Brand check before export",
+          "text": "Export now flags hashtags, links, emojis, hype words, Cover lines too long to read, or a missing ES font. Export anyway stays one click.",
+          "page": "index.html",
+          "route": "#instagram",
+          "target": "#studio-export-btn"
+        },
+        {
+          "title": "Pills stay on the canvas",
+          "text": "Long staggered Cover lines no longer run off the right edge; each pill now stays inside the 50px safe area.",
+          "page": "index.html",
+          "route": "#instagram"
+        }
+      ]
+    },
+    {
       "id": "2026-11-18-director",
       "date": "2026-11-18",
       "title": "The creative director, ES guidelines and Bring it on-brand",

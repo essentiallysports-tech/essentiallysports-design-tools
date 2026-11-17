@@ -118,6 +118,15 @@
     });
   }
 
+  // Every typed word starts a word of the card ("stat" finds "stats", "to"
+  // doesn't match inside "photo"). A single word may also sit inside a name.
+  function matchesQuery(haystack, query) {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length === 1 && haystack.includes(words[0])) return true;
+    const tokens = haystack.split(/[^a-z0-9%]+/).filter(Boolean);
+    return words.every(word => tokens.some(token => token.startsWith(word.replace(/[^a-z0-9%]/g, ''))));
+  }
+
   function openPicker(picker) {
     const select = document.getElementById(picker.selectId);
     if (!select) return;
@@ -183,82 +192,193 @@
       filters.remove();
     }
 
-    groups.forEach(group => {
+    const assist = window.FrameUpEditorAssist;
+    function buildCard(option, groupLabel, { why = '', assistRow = false } = {}) {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'template-card';
+      card.dataset.value = option.value;
+      const info = assist?.templateInfo?.(picker.workspace, option.value);
+      card.dataset.search = `${option.textContent} ${groupLabel} ${info?.best || ''} ${info?.keywords || ''}`.toLowerCase();
+      const current = option.value === select.value;
+      if (current) {
+        card.classList.add('is-current');
+        if (!assistRow) card.setAttribute('aria-current', 'true');
+      }
+      const name = document.createElement('span');
+      name.className = 'template-card__name';
+      name.textContent = option.textContent.replace(/\s*\(draft\)$/, '');
+      // Status sits on the preview: Locked / New top-left, a check when in use.
+      const thumb = buildThumb(picker, option);
+      const flags = document.createElement('span');
+      flags.className = 'template-card__flags';
+      if (option.dataset.tag === 'locked') {
+        flags.insertAdjacentHTML('beforeend', `<span class="template-tag is-locked">${ICON_LOCK}View only</span>`);
+      }
+      if (window.FrameUpWhatsNew?.isNewTemplate?.(picker.workspace, option.value)) {
+        flags.insertAdjacentHTML('beforeend', '<span class="es-badge es-badge--new">New</span>');
+      }
+      if (flags.childElementCount) thumb.appendChild(flags);
+      if (current) thumb.insertAdjacentHTML('beforeend', `<span class="template-card__check">${ICON_CHECK}</span>`);
+      const label = document.createElement('span');
+      label.className = 'template-card__label';
+      label.appendChild(name);
+      const note = document.createElement('span');
+      if (why) {
+        note.className = 'template-card__why';
+        note.textContent = why;
+      } else if (info?.best) {
+        note.className = 'template-card__best';
+        note.textContent = info.best;
+      }
+      if (note.textContent) label.appendChild(note);
+      if (current) label.insertAdjacentHTML('beforeend', '<span class="template-card__status">Current template</span>');
+      card.append(thumb, label);
+      card.setAttribute('aria-label', `${name.textContent}${note.textContent ? `: ${note.textContent}` : ''}${option.dataset.tag === 'locked' ? ', locked: view only' : ''}${current ? ', current' : ''}`);
+      card.addEventListener('click', () => {
+        dialog.close();
+        if (select.value !== option.value) {
+          select.value = option.value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          try { syncAllCustomSelects(); } catch (error) { /* custom dropdown only */ }
+        }
+      });
+      return card;
+    }
+
+    function buildSection(label, cards, { assistRow = false, hint = '', key = label } = {}) {
       const section = document.createElement('section');
-      section.className = 'template-picker__group';
-      section.dataset.group = group.label;
+      section.className = `template-picker__group${assistRow ? ' is-assist' : ''}`;
+      section.dataset.group = key;
       const heading = document.createElement('h3');
       heading.innerHTML = '<span></span><span class="template-picker__count"></span>';
-      heading.firstChild.textContent = group.label;
-      heading.lastChild.textContent = group.options.length;
+      heading.firstChild.textContent = label;
+      if (hint) {
+        heading.lastChild.className = 'template-picker__hint';
+        heading.lastChild.textContent = hint;
+      } else {
+        heading.lastChild.textContent = cards.length;
+      }
       const grid = document.createElement('div');
       grid.className = 'template-picker__grid';
-      group.options.forEach(option => {
-        const card = document.createElement('button');
-        card.type = 'button';
-        card.className = 'template-card';
-        card.dataset.search = `${option.textContent} ${group.label}`.toLowerCase();
-        const current = option.value === select.value;
-        if (current) {
-          card.classList.add('is-current');
-          card.setAttribute('aria-current', 'true');
-        }
-        const name = document.createElement('span');
-        name.className = 'template-card__name';
-        name.textContent = option.textContent.replace(/\s*\(draft\)$/, '');
-        // Status sits on the preview: Locked / New top-left, a check when in use.
-        const thumb = buildThumb(picker, option);
-        const flags = document.createElement('span');
-        flags.className = 'template-card__flags';
-        if (option.dataset.tag === 'locked') {
-          flags.insertAdjacentHTML('beforeend', `<span class="template-tag is-locked">${ICON_LOCK}View only</span>`);
-        }
-        if (window.FrameUpWhatsNew?.isNewTemplate?.(picker.workspace, option.value)) {
-          flags.insertAdjacentHTML('beforeend', '<span class="es-badge es-badge--new">New</span>');
-        }
-        if (flags.childElementCount) thumb.appendChild(flags);
-        if (current) thumb.insertAdjacentHTML('beforeend', `<span class="template-card__check">${ICON_CHECK}</span>`);
-        const label = document.createElement('span');
-        label.className = 'template-card__label';
-        label.appendChild(name);
-        if (current) label.insertAdjacentHTML('beforeend', '<span class="template-card__status">Current template</span>');
-        card.append(thumb, label);
-        card.setAttribute('aria-label', `${name.textContent}${option.dataset.tag === 'locked' ? ', locked: view only' : ''}${current ? ', current' : ''}`);
-        card.addEventListener('click', () => {
-          dialog.close();
-          if (select.value !== option.value) {
-            select.value = option.value;
-            select.dispatchEvent(new Event('change', { bubbles: true }));
-            try { syncAllCustomSelects(); } catch (error) { /* custom dropdown only */ }
-          }
-        });
-        grid.appendChild(card);
-      });
+      cards.forEach(card => grid.appendChild(card));
       section.append(heading, grid);
+      return section;
+    }
+
+    const optionByValue = value => [...select.options].find(option => option.value === value && !option.disabled);
+
+    // Suggested: "best for this story", from the headline on the design or
+    // from what's typed in search (a few words or a pasted story).
+    const suggestedSlot = document.createElement('div');
+    suggestedSlot.className = 'template-picker__assist';
+    function storyText() {
+      const typed = search.value.trim();
+      if (typed.split(/\s+/).length >= 3) return { text: typed, typed: true };
+      if (typed) return { text: '', typed: true }; // a short search is a name search
+      const headline = picker.workspace === 'instagram' ? (document.getElementById('pill-text')?.value || '').replace(/\s+/g, ' ').trim() : '';
+      return { text: headline, typed: false };
+    }
+    function renderSuggested() {
+      suggestedSlot.textContent = '';
+      if (picker.workspace !== 'instagram' || !assist?.suggestTemplates) return;
+      const { text, typed } = storyText();
+      const picks = assist.suggestTemplates(text, { available: [...select.options].filter(option => !option.disabled).map(option => option.value) });
+      if (!picks.length) return;
+      const preview = text.length > 48 ? `${text.slice(0, 46)}…` : text;
+      const cards = picks.map(pick => buildCard(optionByValue(pick.value), 'Suggested', { why: pick.why, assistRow: true }));
+      const section = buildSection('Best for this story', cards, { assistRow: true, hint: `${typed ? 'From your search' : 'From your headline'}: “${preview}”`, key: '__suggested' });
+      section.dataset.assist = 'suggested';
+      suggestedSlot.appendChild(section);
+    }
+
+    // Recent: the last templates used on this workspace (this browser).
+    const recent = readRecent(picker.workspace).filter(value => value !== select.value && optionByValue(value)).slice(0, 4);
+    if (recent.length) {
+      const section = buildSection('Recent', recent.map(value => buildCard(optionByValue(value), 'Recent', { assistRow: true })), { assistRow: true, key: '__recent' });
+      section.dataset.assist = 'recent';
       body.appendChild(section);
+    }
+    body.prepend(suggestedSlot);
+
+    groups.forEach(group => {
+      body.appendChild(buildSection(group.label, group.options.map(option => buildCard(option, group.label))));
     });
 
     function applyFilter() {
       const query = search.value.trim().toLowerCase();
       let shown = 0;
+      renderSuggested();
       body.querySelectorAll('.template-picker__group').forEach(section => {
+        if (section.dataset.assist) {
+          // Recent shows only on the full list; Suggested always shows its picks.
+          const show = section.dataset.assist === 'suggested' ? !activeGroup : !activeGroup && !query;
+          section.hidden = !show;
+          section.querySelectorAll('.template-card').forEach(card => { card.hidden = !show; });
+          return;
+        }
         const inScope = !activeGroup || section.dataset.group === activeGroup;
         let inGroup = 0;
         section.querySelectorAll('.template-card').forEach(card => {
-          const match = inScope && (!query || card.dataset.search.includes(query));
+          const match = inScope && (!query || matchesQuery(card.dataset.search, query));
           card.hidden = !match;
           if (match) inGroup += 1;
         });
         section.hidden = inGroup === 0;
         shown += inGroup;
       });
-      empty.hidden = shown > 0;
+      // A pasted story matches no names, but its suggestions still show.
+      const suggested = activeGroup ? 0 : suggestedSlot.querySelectorAll('.template-card').length;
+      empty.hidden = shown > 0 || suggested > 0;
     }
+    applyFilter();
     search.addEventListener('input', applyFilter);
     search.addEventListener('keydown', event => {
       if (event.key !== 'Enter') return;
       event.preventDefault();
       body.querySelector('.template-card:not([hidden])')?.click();
+    });
+
+    // Arrow keys move between cards like a grid; Down from search enters it.
+    function visibleCards() {
+      return [...body.querySelectorAll('.template-card')].filter(card => !card.hidden && card.offsetParent !== null);
+    }
+    search.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowDown') return;
+      const first = visibleCards()[0];
+      if (!first) return;
+      event.preventDefault();
+      first.focus();
+    });
+    body.addEventListener('keydown', event => {
+      const card = event.target.closest?.('.template-card');
+      if (!card || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+      const cards = visibleCards();
+      const index = cards.indexOf(card);
+      if (index < 0) return;
+      let next = null;
+      if (event.key === 'ArrowRight') next = cards[index + 1];
+      else if (event.key === 'ArrowLeft') next = cards[index - 1];
+      else if (event.key === 'Home') next = cards[0];
+      else if (event.key === 'End') next = cards[cards.length - 1];
+      else {
+        const from = card.getBoundingClientRect();
+        const down = event.key === 'ArrowDown';
+        const centre = from.left + from.width / 2;
+        let best = Infinity;
+        cards.forEach(other => {
+          const rect = other.getBoundingClientRect();
+          const rowGap = down ? rect.top - from.bottom : from.top - rect.bottom;
+          if (rowGap < -2) return;
+          const score = rowGap * 4 + Math.abs(rect.left + rect.width / 2 - centre);
+          if (score < best) { best = score; next = other; }
+        });
+        if (!next && !down) { search.focus(); event.preventDefault(); return; }
+      }
+      if (!next) return;
+      event.preventDefault();
+      next.focus();
+      next.scrollIntoView({ block: 'nearest' });
     });
 
     dialog.querySelector('.template-picker__close').addEventListener('click', () => dialog.close());
@@ -268,13 +388,45 @@
     dialog.showModal();
     requestAnimationFrame(() => {
       fitHtmlThumbs(dialog);
-      (body.querySelector('.template-card.is-current') || search).focus();
-      body.querySelector('.template-card.is-current')?.scrollIntoView({ block: 'nearest' });
+      // With suggestions, start at the top on the best one; else on the current template.
+      const start = suggestedSlot.querySelector('.template-card') || body.querySelector('.template-card[aria-current="true"]');
+      (start || search).focus({ preventScroll: true });
+      if (start && !suggestedSlot.contains(start)) start.scrollIntoView({ block: 'nearest' });
     });
     if ('ResizeObserver' in window) new ResizeObserver(() => fitHtmlThumbs(dialog)).observe(body);
   }
 
+  // Recent templates per workspace, in this browser only.
+  const RECENT_KEY = 'frameup.templates.recent.';
+  function readRecent(workspace) {
+    try {
+      const list = JSON.parse(localStorage.getItem(RECENT_KEY + workspace) || '[]');
+      return Array.isArray(list) ? list.filter(item => typeof item === 'string') : [];
+    } catch (error) {
+      return [];
+    }
+  }
+  function rememberTemplate(workspace, value) {
+    const push = window.FrameUpEditorAssist?.pushRecent;
+    const next = push ? push(readRecent(workspace), value) : [value, ...readRecent(workspace).filter(item => item !== value)].slice(0, 4);
+    try { localStorage.setItem(RECENT_KEY + workspace, JSON.stringify(next)); } catch (error) { /* storage is optional */ }
+  }
+  function trackRecent() {
+    PICKERS.forEach(picker => {
+      const select = document.getElementById(picker.selectId);
+      if (!select || select.dataset.recentTracked) return;
+      select.dataset.recentTracked = '1';
+      let previous = select.value;
+      select.addEventListener('change', () => {
+        // The template you leave is the one you'll want back.
+        if (previous && previous !== select.value) rememberTemplate(picker.workspace, previous);
+        previous = select.value;
+      });
+    });
+  }
+
   function addBrowseButtons() {
+    trackRecent();
     PICKERS.forEach(picker => {
       const select = document.getElementById(picker.selectId);
       const title = select?.closest('.card')?.querySelector('.card-title');
@@ -284,7 +436,7 @@
       button.className = 'template-browse-btn';
       button.innerHTML = `${ICON_GRID}<span>Browse</span>`;
       button.setAttribute('aria-label', `Browse ${picker.workspace === 'newsletter' ? 'newsletter assets' : 'post types'} with previews`);
-      button.title = 'See every template with a preview';
+      button.title = 'See every template with a preview (T)';
       button.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();

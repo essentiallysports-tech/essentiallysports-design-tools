@@ -1,0 +1,98 @@
+/* FrameUp editor assist (frameup-editor-assist.js, frameup-templates.js):
+   the save chip, and the template picker's Suggested / Recent rows. */
+
+/* ── Save chip, next to Undo / Redo ─────────────────────────────────────── */
+.editor-save-chip {
+  --chip-dot: var(--es-good, #1F9D55);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--es-space-2, 8px);
+  flex: 0 0 auto;
+  height: 36px;
+  margin-left: var(--es-space-2, 8px);
+  padding: 0 var(--es-space-3, 12px);
+  border: 0;
+  border-radius: var(--es-radius-pill, 999px);
+  background: transparent;
+  color: var(--es-ink-2, #4B5260);
+  font-family: var(--es-font-ui, 'Roboto', sans-serif);
+  font-size: var(--es-type-meta-size, 13px);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--es-dur, 160ms) var(--es-ease, ease), color var(--es-dur, 160ms) var(--es-ease, ease);
+}
+.editor-save-chip[hidden] { display: none; }
+.editor-save-chip:hover { background: var(--es-sunk, #EEEFF1); color: var(--es-ink, #0E1014); }
+.editor-save-chip:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+.editor-save-chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chip-dot);
+}
+.editor-save-chip[data-tone="busy"] { --chip-dot: var(--es-brand, #0A7DFA); }
+.editor-save-chip[data-tone="warn"] { --chip-dot: var(--es-warn, #B25E09); color: var(--es-warn, #B25E09); }
+.editor-save-chip[data-tone="error"] {
+  --chip-dot: var(--es-bad, #D14343);
+  background: var(--es-bad-soft, #FDECEC);
+  color: var(--es-bad, #B42318);
+  font-weight: 700;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .editor-save-chip[data-tone="busy"] .editor-save-chip__dot { animation: editor-save-pulse 1s ease-in-out infinite; }
+  @keyframes editor-save-pulse { 50% { opacity: .35; } }
+}
+html[data-theme="dark"] .editor-save-chip { color: #BFC8D9; }
+html[data-theme="dark"] .editor-save-chip:hover { background: #2A2D34; color: #FFFFFF; }
+html[data-theme="dark"] .editor-save-chip[data-tone="warn"] { --chip-dot: #F5B861; color: #F5B861; }
+html[data-theme="dark"] .editor-save-chip[data-tone="error"] { --chip-dot: var(--es-bad-on-dark, #FF8A80); background: var(--es-bad-soft-on-dark, rgb(255 138 128 / .14)); color: var(--es-bad-on-dark, #FF8A80); }
+html[data-theme="dark"] .editor-save-chip[data-tone="ok"] { --chip-dot: var(--es-good-on-dark, #5BD08D); }
+
+/* Phones: the dot alone, unless something needs attention. */
+@media (max-width: 640px) {
+  .editor-save-chip { margin-left: var(--es-space-1, 4px); padding: 0 var(--es-space-2, 8px); }
+  .editor-save-chip:is([data-tone="ok"], [data-tone="busy"]) .editor-save-chip__label {
+    position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+}
+
+.editor-assist-sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ── Template picker: "best for" line, Suggested and Recent rows ───────── */
+.template-card__best {
+  color: var(--es-ink-2, #4B5260);
+  font-size: var(--es-type-meta-size, 12px);
+  font-weight: 400;
+  line-height: 1.35;
+}
+.template-card__why {
+  color: var(--es-brand-text, #0A63C8);
+  font-size: var(--es-type-meta-size, 12px);
+  font-weight: 600;
+  line-height: 1.35;
+}
+.template-picker__group.is-assist .template-picker__grid {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.template-picker__group.is-assist h3 .template-picker__hint {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--es-ink-3, #8a9099);
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.template-picker__group.is-assist + .template-picker__group:not(.is-assist) {
+  padding-top: 22px;
+  border-top: 1px solid var(--es-line, #E3E5E8);
+}
+html[data-theme="dark"] .template-picker__group.is-assist + .template-picker__group:not(.is-assist) { border-top-color: #3B4049; }
+.template-picker__group.is-assist h3 { flex-wrap: wrap; row-gap: 2px; }
+@media (max-width: 640px) {
+  .template-picker__group.is-assist h3 .template-picker__hint { flex-basis: 100%; }
+}
