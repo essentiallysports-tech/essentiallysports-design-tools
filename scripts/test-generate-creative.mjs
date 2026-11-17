@@ -75,7 +75,7 @@ const post = body => gen.handler({ httpMethod: 'POST', headers: { authorization:
 
 // ── 2. The composition library and the ES gate ───────────────────────────
 {
-  assert.ok(COMPOSE.ARCHETYPES.length >= 12 && COMPOSE.ARCHETYPES.length <= 20, '12-20 archetypes');
+  assert.ok(COMPOSE.ARCHETYPES.length >= 24 && COMPOSE.ARCHETYPES.length <= 40, '24-40 archetypes (v2 styles)');
   const pal = COMPOSE.makePalette(['#FB4F14', '#000000']);
   assert.equal(pal.bg, '#000000');
   assert.equal(pal.accent, '#FB4F14');
