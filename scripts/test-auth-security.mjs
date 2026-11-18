@@ -91,6 +91,8 @@ function createEnvironment({
   const client = {
     async rpc(name, payload) {
       authCalls.rpc = { name, payload: payload || null };
+      // The role checks answer from the (empty) profiles table: not an admin.
+      if (name === 'is_es_designer_admin' || name === 'can_manage_es_designer_roles') return { data: false, error: null };
       return { data: true, error: null };
     },
     auth: {

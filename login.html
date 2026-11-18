@@ -12,7 +12,8 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260714-authcallback1"></script>
-  <script src="es-auth.js?v=20261115-auth2"></script>
+  <script src="es-auth.js?v=20261120-auth"></script>
+  <script src="auth-flow.js?v=20261120-auth"></script>
 <style>
   @font-face {
     font-family: 'Acumin Pro Condensed Local';
@@ -865,6 +866,56 @@
       padding: 16px;
     }
   }
+
+  /* --- Auth flow polish (feature/auth-roles) --- */
+  .login-field-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--es-space-3, 12px); }
+  .login-password-wrap { position: relative; }
+  .login-field .login-password-wrap input { padding-right: 48px; }
+  .login-password-toggle {
+    position: absolute; top: 50%; right: var(--es-field-inset, 4px); transform: translateY(-50%);
+    width: 32px; height: 32px; display: grid; place-items: center; padding: 0;
+    border: 0; border-radius: var(--es-radius-control); background: transparent; color: var(--es-ink-3); cursor: pointer;
+  }
+  .login-password-toggle svg { width: 18px; height: 18px; }
+  .login-password-toggle:hover, .login-password-toggle:focus-visible { background: var(--es-sunk); color: var(--es-ink); }
+  .login-password-toggle:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+  html[data-theme="dark"] .login-password-toggle { color: var(--es-slate-200, #98A6BF); }
+  html[data-theme="dark"] .login-password-toggle:hover, html[data-theme="dark"] .login-password-toggle:focus-visible { background: var(--es-slate-700, #2A2D34); color: #FFFFFF; }
+  @media (pointer: coarse) { .login-password-toggle { width: 40px; height: 40px; } }
+  .login-hint { margin: 0; color: var(--es-ink-3); font-size: var(--es-type-helper-size, 13px); line-height: 1.4; }
+  .login-hint.is-warn { color: var(--es-warn); }
+  html[data-theme="dark"] .login-hint { color: var(--es-slate-200, #98A6BF); }
+  html[data-theme="dark"] .login-hint.is-warn { color: var(--es-warn-on-dark, #FCD34D); }
+  .login-rules { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .login-rules li { display: flex; align-items: center; gap: var(--es-space-2, 8px); color: var(--es-ink-3); font-size: var(--es-type-helper-size, 13px); line-height: 1.35; }
+  .login-rules li::before { content: ""; width: 14px; height: 14px; flex: 0 0 auto; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--es-line-2); }
+  .login-rules li.is-met { color: var(--es-good); }
+  .login-rules li.is-met::before { background: var(--es-good) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 10px no-repeat; box-shadow: none; }
+  html[data-theme="dark"] .login-rules li { color: var(--es-slate-200, #98A6BF); }
+  html[data-theme="dark"] .login-rules li.is-met { color: var(--es-good-on-dark, #4CC985); }
+  html[data-theme="dark"] .login-rules li.is-met::before { background-color: var(--es-good-on-dark, #4CC985); }
+  .login-error-actions { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); margin-top: calc(var(--es-space-3, 12px) - var(--es-space-5, 20px)); }
+  .login-error-actions:empty { display: none; }
+  html[data-theme="dark"] .login-error { color: var(--es-bad-on-dark, #FF8A8A); }
+  html[data-theme="dark"] .login-error.is-success { color: var(--es-good-on-dark, #4CC985); }
+  .login-alt { justify-self: center; padding: 0; border: 0; background: transparent; color: var(--es-brand-text, #0A62C7); font: 500 14px/1.3 var(--font-ui); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .login-alt:hover { color: var(--accent-hover); }
+  .login-alt:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); border-radius: 4px; }
+  html[data-theme="dark"] .login-alt { color: #9DCBFD; }
+  @media (pointer: coarse) { .login-alt { min-height: var(--es-tap, 44px); } }
+  .login-help { max-width: 480px; margin: var(--es-space-4, 16px) 0 0; padding: var(--es-space-3, 12px) var(--es-space-4, 16px); border-radius: var(--es-radius-control); background: var(--es-sunk); color: var(--es-ink-2); font-size: 14px; line-height: 1.5; }
+  .login-help + .login-help { margin-top: var(--es-space-2, 8px); }
+  html[data-theme="dark"] .login-help { background: var(--es-slate-700, #2A2D34); color: var(--es-slate-100, #BFC8D9); }
+  .login-confirmation h2, .login-confirmation strong { color: var(--es-ink); }
+  html[data-theme="dark"] .login-confirmation h2 { color: #FFFFFF; }
+  html[data-theme="dark"] .login-confirmation p { color: var(--es-slate-200, #98A6BF); }
+  .login-confirmation-status.is-error { color: var(--es-bad); }
+  html[data-theme="dark"] .login-confirmation-status { color: var(--es-good-on-dark, #4CC985); }
+  html[data-theme="dark"] .login-confirmation-status.is-error { color: var(--es-bad-on-dark, #FF8A8A); }
+  .login-confirmation-icon.is-warn { background: var(--es-warn-soft); color: var(--es-warn); }
+  .login-button[aria-busy="true"], .login-secondary-button[aria-busy="true"] { cursor: progress; }
+  .login-secondary-button .login-timer { font-variant-numeric: tabular-nums; }
+  @media (max-width: 420px) { .login-confirmation-actions { grid-template-columns: 1fr; } }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
 <link rel="stylesheet" href="theme.css?v=20261117-ready1">
@@ -882,60 +933,87 @@
       <img class="login-brand" src="brand-logo-blue.svg" alt="EssentiallySports">
       <h1 class="login-title" id="login-title">Log in to FrameUp</h1>
     </div>
-    <form class="login-form" id="login-form" novalidate>
-      <div class="login-mode-tabs" role="tablist" aria-label="Authentication mode">
-        <button class="login-mode-tab is-active" id="login-account-tab" type="button" data-auth-mode="login" role="tab" aria-selected="true">Login</button>
-        <button class="login-mode-tab" id="create-account-tab" type="button" data-auth-mode="create" role="tab" aria-selected="false">Create account</button>
+    <form class="login-form" id="login-form" novalidate aria-labelledby="login-title">
+      <div class="login-mode-tabs" role="tablist" aria-label="Log in or create an account">
+        <button class="login-mode-tab is-active" id="login-account-tab" type="button" data-auth-mode="login" role="tab" aria-selected="true" aria-controls="login-form">Login</button>
+        <button class="login-mode-tab" id="create-account-tab" type="button" data-auth-mode="create" role="tab" aria-selected="false" aria-controls="login-form" tabindex="-1">Create account</button>
       </div>
       <div class="login-field">
         <label for="login-email">Email</label>
-        <input id="login-email" name="email" type="email" autocomplete="email" placeholder="xyz@email.com" required>
+        <input id="login-email" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="you@essentiallysports.com" required aria-describedby="email-hint">
+        <p class="login-hint" id="email-hint" hidden></p>
       </div>
       <div class="login-field">
         <label for="login-password">Password</label>
-        <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Password" required>
+        <span class="login-password-wrap">
+          <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Password" required aria-describedby="password-rules">
+          <button class="login-password-toggle" id="password-toggle" type="button" aria-label="Show password" aria-pressed="false" aria-controls="login-password"></button>
+        </span>
+        <ul class="login-rules" id="password-rules" aria-live="polite" hidden></ul>
       </div>
       <button class="login-forgot" id="forgot-password" type="button" data-login-only>Forgot password?</button>
       <button class="login-button" type="submit">Login</button>
       <p class="login-error" id="login-error" role="alert"></p>
+      <div class="login-error-actions" id="login-error-actions"></div>
       <p class="login-note" id="login-note">Login with the email and password you created for FrameUp.</p>
+      <button class="login-alt" id="magic-link" type="button" data-login-only>Email me a sign-in link instead</button>
     </form>
-    <section class="login-confirmation" id="login-confirmation" tabindex="-1" aria-live="polite" hidden>
-      <div class="login-confirmation-icon" aria-hidden="true">
+    <section class="login-confirmation" id="login-confirmation" tabindex="-1" aria-labelledby="inbox-title" hidden>
+      <div class="login-confirmation-icon" id="inbox-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
       </div>
-      <h2>Check your inbox</h2>
-      <p>We sent a secure confirmation link to <strong id="confirmation-email"></strong>. Click it once to activate your account—there is no code to enter.</p>
-      <div class="login-confirmation-actions">
+      <h2 id="inbox-title">Check your inbox</h2>
+      <p id="inbox-body">We sent a secure confirmation link to <strong id="confirmation-email"></strong>. Click it once to activate your account—there is no code to enter.</p>
+      <p class="login-help" id="inbox-spam"></p>
+      <div class="login-confirmation-actions" id="inbox-actions">
         <button class="login-secondary-button" id="back-to-login" type="button">Back to login</button>
         <button class="login-secondary-button" id="resend-confirmation" type="button">Resend link</button>
       </div>
-      <p class="login-confirmation-status" id="confirmation-status" role="status"></p>
+      <p class="login-confirmation-status" id="confirmation-status" role="status" aria-live="polite"></p>
+      <p class="login-help" id="inbox-limit"></p>
     </section>
   </section>
 </main>
 
 <script>
 (() => {
+  const Flow = window.FrameUpAuthFlow;
   const form = document.getElementById('login-form');
   const title = document.getElementById('login-title');
   const modeTabs = Array.from(document.querySelectorAll('[data-auth-mode]'));
   const loginOnlyFields = Array.from(document.querySelectorAll('[data-login-only]'));
   const emailInput = document.getElementById('login-email');
+  const emailHint = document.getElementById('email-hint');
   const passwordInput = document.getElementById('login-password');
+  const passwordToggle = document.getElementById('password-toggle');
+  const passwordRules = document.getElementById('password-rules');
   const forgotPasswordButton = document.getElementById('forgot-password');
+  const magicLinkButton = document.getElementById('magic-link');
   const errorEl = document.getElementById('login-error');
+  const errorActions = document.getElementById('login-error-actions');
   const noteEl = document.getElementById('login-note');
   const button = form.querySelector('.login-button');
   const confirmationPanel = document.getElementById('login-confirmation');
-  const confirmationEmail = document.getElementById('confirmation-email');
+  const inboxIcon = document.getElementById('inbox-icon');
+  const inboxTitle = document.getElementById('inbox-title');
+  const inboxBody = document.getElementById('inbox-body');
+  const inboxSpam = document.getElementById('inbox-spam');
+  const inboxLimit = document.getElementById('inbox-limit');
+  const inboxActions = document.getElementById('inbox-actions');
   const confirmationStatus = document.getElementById('confirmation-status');
   const backToLoginButton = document.getElementById('back-to-login');
   const resendConfirmationButton = document.getElementById('resend-confirmation');
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const defaultRedirectTarget = 'index.html';
+  const mailIcon = inboxIcon.innerHTML;
+  const userIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
+  const eyeIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>';
+  const eyeOffIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>';
   let authMode = 'login';
   let pendingConfirmationEmail = '';
+  let inboxKind = 'confirm';
+  let cooldownTimer = null;
+  let busy = false;
 
   function showPage() {
     document.body.classList.remove('is-page-leaving');
@@ -945,15 +1023,84 @@
   window.requestAnimationFrame(showPage);
   window.addEventListener('pageshow', showPage);
 
-  function setError(message, type = 'error') {
+  const ACTION_LABELS = {
+    resend: 'Resend confirmation email',
+    reset: 'Reset password',
+    login: 'Log in instead',
+    create: 'Create an account',
+    magic: 'Email me a sign-in link',
+  };
+
+  function setError(message, type = 'error', actions = []) {
     errorEl.textContent = message || '';
     errorEl.classList.toggle('is-visible', Boolean(message));
     errorEl.classList.toggle('is-success', type === 'success' && Boolean(message));
+    errorEl.setAttribute('role', type === 'success' ? 'status' : 'alert');
+    errorActions.replaceChildren(...actions.map(action => {
+      const actionButton = document.createElement('button');
+      actionButton.type = 'button';
+      actionButton.className = 'es-btn es-btn--secondary es-btn--sm login-secondary-button';
+      actionButton.dataset.errorAction = action;
+      actionButton.textContent = ACTION_LABELS[action] || action;
+      return actionButton;
+    }));
   }
 
-  function setMode(mode) {
+  function setBusy(control, isBusy, label) {
+    busy = isBusy;
+    if (control) {
+      control.disabled = isBusy;
+      control.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+      if (label) control.textContent = label;
+    }
+    emailInput.readOnly = isBusy;
+    passwordInput.readOnly = isBusy;
+    form.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+  }
+
+  function directory() {
+    return {
+      domains: window.ESAuth?.approvedDomains?.() || ['essentiallysports.com'],
+      emails: window.ESAuth?.approvedEmails?.() || [],
+    };
+  }
+
+  function updateEmailHint() {
+    const value = emailInput.value.trim();
+    const kind = value.includes('@') ? Flow?.classifyEmail(value, directory()) : '';
+    const showOutside = authMode === 'create' && kind === 'other';
+    emailHint.hidden = !showOutside && authMode !== 'create';
+    emailHint.classList.toggle('is-warn', Boolean(showOutside));
+    emailHint.textContent = showOutside
+      ? 'This isn’t an @essentiallysports.com address, so we’ll send an access request to a FrameUp admin instead of creating the account straight away.'
+      : 'Use your @essentiallysports.com email.';
+    if (authMode !== 'create') emailHint.hidden = true;
+  }
+
+  function renderPasswordRules() {
+    const isCreate = authMode === 'create';
+    passwordRules.hidden = !isCreate;
+    if (!isCreate || !Flow) return;
+    const checks = window.ESAuth?.passwordChecks?.(passwordInput.value) || { minLength: passwordInput.value.length >= 8 };
+    passwordRules.replaceChildren(...Flow.passwordRules(checks).map(rule => {
+      const item = document.createElement('li');
+      item.className = rule.met ? 'is-met' : '';
+      item.textContent = `${rule.label}${rule.met ? ' (done)' : ''}`;
+      return item;
+    }));
+  }
+
+  function setPasswordVisible(visible) {
+    passwordInput.type = visible ? 'text' : 'password';
+    passwordToggle.innerHTML = visible ? eyeOffIcon : eyeIcon;
+    passwordToggle.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+    passwordToggle.setAttribute('aria-pressed', visible ? 'true' : 'false');
+  }
+
+  function setMode(mode, { focus = false } = {}) {
     authMode = mode === 'login' ? 'login' : 'create';
     const isCreate = authMode === 'create';
+    stopCooldown();
     form.hidden = false;
     confirmationPanel.hidden = true;
     form.classList.add('is-switching');
@@ -962,9 +1109,12 @@
     button.textContent = isCreate ? 'Create Account' : 'Login';
     passwordInput.autocomplete = isCreate ? 'new-password' : 'current-password';
     passwordInput.placeholder = isCreate ? 'Minimum 8 characters' : 'Password';
-    noteEl.innerHTML = isCreate
-      ? '<strong>Create your account.</strong> We will email a secure confirmation link. No OTP or code is required.'
-      : '<strong>Already signed up?</strong> Log in with your approved email and password.';
+    noteEl.textContent = '';
+    const lead = document.createElement('strong');
+    lead.textContent = isCreate ? 'Create your account.' : 'Already signed up?';
+    noteEl.append(lead, isCreate
+      ? ' We’ll email you a secure confirmation link. No code to type.'
+      : ' Log in with your approved email and password.');
     loginOnlyFields.forEach(field => {
       field.hidden = isCreate;
     });
@@ -972,18 +1122,108 @@
       const active = tab.dataset.authMode === authMode;
       tab.classList.toggle('is-active', active);
       tab.setAttribute('aria-selected', String(active));
+      tab.tabIndex = active ? 0 : -1;
     });
+    setPasswordVisible(false);
+    renderPasswordRules();
+    updateEmailHint();
     setError('');
+    if (focus) (emailInput.value ? passwordInput : emailInput).focus();
   }
 
-  function showConfirmation(email) {
+  function stopCooldown() {
+    if (cooldownTimer) window.clearInterval(cooldownTimer);
+    cooldownTimer = null;
+  }
+
+  function resendLabel() {
+    return Flow?.inboxCopy(inboxKind, pendingConfirmationEmail).resend || 'Resend link';
+  }
+
+  // Keeps the resend button disabled with a visible countdown while
+  // Supabase wouldn't accept another email for this address anyway.
+  function startCooldown(seconds) {
+    stopCooldown();
+    let remaining = Math.max(0, Math.ceil(seconds || window.ESAuth?.emailCooldownRemaining?.(pendingConfirmationEmail) || 0));
+    const tick = () => {
+      if (remaining <= 0) {
+        stopCooldown();
+        resendConfirmationButton.disabled = false;
+        resendConfirmationButton.textContent = resendLabel();
+        return;
+      }
+      resendConfirmationButton.disabled = true;
+      resendConfirmationButton.innerHTML = '';
+      const timer = document.createElement('span');
+      timer.className = 'login-timer';
+      timer.textContent = Flow ? Flow.formatCountdown(remaining) : `${remaining}s`;
+      resendConfirmationButton.append('Resend in ', timer);
+      remaining -= 1;
+    };
+    tick();
+    if (resendConfirmationButton.disabled) cooldownTimer = window.setInterval(tick, 1000);
+  }
+
+  // kind: 'confirm' | 'reset' | 'magic' | 'exists' | 'requested'
+  function showInbox(kind, email, { cooldown = 0, message = '' } = {}) {
+    inboxKind = kind;
     pendingConfirmationEmail = email;
-    confirmationEmail.textContent = email;
     confirmationStatus.textContent = '';
+    confirmationStatus.classList.remove('is-error');
     form.hidden = true;
     confirmationPanel.hidden = false;
-    title.textContent = 'Confirm your email';
+    inboxIcon.classList.toggle('is-warn', kind === 'exists' || kind === 'requested');
+    if (kind === 'exists') {
+      title.textContent = 'You already have an account';
+      inboxIcon.innerHTML = userIcon;
+      inboxTitle.textContent = 'Welcome back';
+      inboxBody.textContent = '';
+      const strong = document.createElement('strong');
+      strong.id = 'confirmation-email';
+      strong.textContent = email;
+      inboxBody.append('There’s already a FrameUp account for ', strong, '. No new email was sent. Log in with your password, or reset it if you’ve forgotten it.');
+      inboxSpam.hidden = true;
+      inboxLimit.hidden = true;
+      backToLoginButton.textContent = 'Log in';
+      resendConfirmationButton.textContent = 'Reset password';
+      resendConfirmationButton.disabled = false;
+      inboxActions.hidden = false;
+    } else if (kind === 'requested') {
+      title.textContent = 'Access requested';
+      inboxIcon.innerHTML = userIcon;
+      inboxTitle.textContent = 'Request sent';
+      inboxBody.textContent = message;
+      inboxSpam.hidden = true;
+      inboxLimit.hidden = true;
+      backToLoginButton.textContent = 'Back to login';
+      resendConfirmationButton.hidden = true;
+    } else {
+      const copy = Flow.inboxCopy(kind, email);
+      title.textContent = kind === 'confirm' ? 'Confirm your email' : kind === 'reset' ? 'Reset your password' : 'Sign in by email';
+      inboxIcon.innerHTML = mailIcon;
+      inboxTitle.textContent = copy.title;
+      inboxBody.textContent = '';
+      const strong = document.createElement('strong');
+      strong.id = 'confirmation-email';
+      strong.textContent = email;
+      const [before, after] = copy.body.split(email);
+      inboxBody.append(before || '', strong, after || '');
+      inboxSpam.hidden = false;
+      inboxSpam.textContent = copy.spamHelp;
+      inboxLimit.hidden = false;
+      inboxLimit.textContent = copy.limitHelp;
+      backToLoginButton.textContent = 'Back to login';
+      resendConfirmationButton.hidden = false;
+      resendConfirmationButton.textContent = copy.resend;
+      startCooldown(cooldown);
+    }
+    if (kind !== 'requested') resendConfirmationButton.hidden = false;
     confirmationPanel.focus?.();
+  }
+
+  // Kept for older links/tests: the "check your inbox" state after sign-up.
+  function showConfirmation(email, cooldown) {
+    showInbox('confirm', email, { cooldown });
   }
 
   function getRedirectTarget() {
@@ -992,7 +1232,7 @@
     try {
       const url = new URL(rawTarget, window.location.href);
       if (url.origin !== window.location.origin) return defaultRedirectTarget;
-      if (/\/login\.html$/i.test(url.pathname)) return defaultRedirectTarget;
+      if (/\/(?:login|auth-callback)\.html$/i.test(url.pathname)) return defaultRedirectTarget;
       // Strip every leading slash: "//evil.example" would leave the site.
       const path = url.pathname.replace(/^[/\\]+/, '') || defaultRedirectTarget;
       return `${path}${url.search}${url.hash}`;
@@ -1002,11 +1242,13 @@
   }
 
   function validateEmail(email) {
-    if (!emailInput.validity.valid || !email) {
+    if (!emailInput.validity.valid || !email || (Flow && Flow.classifyEmail(email) === 'invalid')) {
       setError('Enter a valid email address.');
+      emailInput.setAttribute('aria-invalid', 'true');
       emailInput.focus();
       return false;
     }
+    emailInput.removeAttribute('aria-invalid');
     return true;
   }
 
@@ -1014,6 +1256,12 @@
     if (!validateEmail(email)) return false;
     if (!password) {
       setError('Enter your password.');
+      passwordInput.focus();
+      return false;
+    }
+    if (authMode === 'create' && Flow && window.ESAuth?.passwordChecks && !Flow.passwordOk(window.ESAuth.passwordChecks(password))) {
+      const unmet = Flow.passwordRules(window.ESAuth.passwordChecks(password)).find(rule => !rule.met);
+      setError(`Password: ${unmet ? unmet.label.toLowerCase() : 'check the rules below'}.`);
       passwordInput.focus();
       return false;
     }
@@ -1033,82 +1281,167 @@
     }, 220);
   }
 
-  modeTabs.forEach(tab => {
-    tab.addEventListener('click', () => setMode(tab.dataset.authMode));
+  function showFailure(error) {
+    const outcome = Flow ? Flow.outcomeForError(error, { mode: authMode }) : { message: error?.message, actions: [] };
+    const email = emailInput.value.trim().toLowerCase();
+    if (outcome.panel === 'exists') {
+      showInbox('exists', email);
+      return;
+    }
+    if (outcome.panel === 'requested') {
+      showInbox('requested', email, { message: outcome.message });
+      return;
+    }
+    setError(outcome.message || 'Something went wrong. Please try again.', 'error', outcome.actions || []);
+  }
+
+  async function sendResetLink(email) {
+    const redirectTo = new URL('reset-password.html', window.location.href).href;
+    await window.ESAuth.requestPasswordReset({ email, redirectTo });
+  }
+
+  async function sendMagicLink(email) {
+    await window.ESAuth.requestMagicLink({ email, redirectTo: getRedirectTarget() });
+  }
+
+  async function runEmailAction(kind, control) {
+    setError('');
+    const email = emailInput.value.trim();
+    if (!validateEmail(email)) return;
+    const original = control.textContent;
+    setBusy(control, true, 'Sending…');
+    try {
+      if (kind === 'reset') await sendResetLink(email);
+      else if (kind === 'magic') await sendMagicLink(email);
+      else await window.ESAuth.resendConfirmation({ email, redirectTo: getRedirectTarget() });
+      setBusy(control, false, original);
+      showInbox(kind === 'resend' ? 'confirm' : kind, email.toLowerCase());
+    } catch (error) {
+      setBusy(control, false, original);
+      showFailure(error);
+    }
+  }
+
+  modeTabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => setMode(tab.dataset.authMode, { focus: true }));
+    tab.addEventListener('keydown', event => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const nextIndex = event.key === 'Home' ? 0
+        : event.key === 'End' ? modeTabs.length - 1
+          : (index + (event.key === 'ArrowRight' ? 1 : -1) + modeTabs.length) % modeTabs.length;
+      setMode(modeTabs[nextIndex].dataset.authMode);
+      modeTabs[nextIndex].focus();
+    });
+  });
+
+  passwordToggle.addEventListener('click', () => {
+    setPasswordVisible(passwordInput.type === 'password');
+    passwordInput.focus();
+  });
+  passwordInput.addEventListener('input', renderPasswordRules);
+  emailInput.addEventListener('input', () => {
+    emailInput.removeAttribute('aria-invalid');
+    updateEmailHint();
+  });
+
+  errorActions.addEventListener('click', event => {
+    const actionButton = event.target.closest('[data-error-action]');
+    if (!actionButton || busy) return;
+    const action = actionButton.dataset.errorAction;
+    if (action === 'login') { setMode('login', { focus: true }); return; }
+    if (action === 'create') { setMode('create', { focus: true }); return; }
+    runEmailAction(action, actionButton);
   });
 
   backToLoginButton.addEventListener('click', () => {
     setMode('login');
     emailInput.value = pendingConfirmationEmail;
     passwordInput.value = '';
-    emailInput.focus();
+    (pendingConfirmationEmail ? passwordInput : emailInput).focus();
   });
 
   resendConfirmationButton.addEventListener('click', async () => {
-    if (!pendingConfirmationEmail) return;
+    if (!pendingConfirmationEmail || resendConfirmationButton.disabled) return;
     confirmationStatus.textContent = '';
-    resendConfirmationButton.disabled = true;
-    resendConfirmationButton.textContent = 'Sending…';
+    confirmationStatus.classList.remove('is-error');
+    if (inboxKind === 'exists') {
+      emailInput.value = pendingConfirmationEmail;
+      setBusy(resendConfirmationButton, true, 'Sending…');
+      try {
+        await sendResetLink(pendingConfirmationEmail);
+        setBusy(resendConfirmationButton, false);
+        showInbox('reset', pendingConfirmationEmail);
+      } catch (error) {
+        setBusy(resendConfirmationButton, false, 'Reset password');
+        confirmationStatus.textContent = error.message || 'Unable to send the password reset email.';
+        confirmationStatus.classList.add('is-error');
+      }
+      return;
+    }
+    setBusy(resendConfirmationButton, true, 'Sending…');
     try {
-      await window.ESAuth.resendConfirmation({
-        email: pendingConfirmationEmail,
-        redirectTo: getRedirectTarget(),
-      });
-      confirmationStatus.textContent = 'A fresh confirmation link has been sent.';
+      if (inboxKind === 'reset') await sendResetLink(pendingConfirmationEmail);
+      else if (inboxKind === 'magic') await sendMagicLink(pendingConfirmationEmail);
+      else {
+        await window.ESAuth.resendConfirmation({
+          email: pendingConfirmationEmail,
+          redirectTo: getRedirectTarget(),
+        });
+      }
+      setBusy(resendConfirmationButton, false);
+      confirmationStatus.textContent = inboxKind === 'confirm'
+        ? 'A fresh confirmation link has been sent.'
+        : 'Sent again. Only the newest link works.';
+      startCooldown();
     } catch (error) {
-      confirmationStatus.textContent = error.message || 'Unable to resend the confirmation link.';
-    } finally {
-      resendConfirmationButton.disabled = false;
-      resendConfirmationButton.textContent = 'Resend link';
+      setBusy(resendConfirmationButton, false, resendLabel());
+      const outcome = Flow ? Flow.outcomeForError(error) : { message: error.message, cooldown: 0 };
+      confirmationStatus.textContent = outcome.message || 'Unable to resend the link.';
+      confirmationStatus.classList.add('is-error');
+      if (outcome.cooldown) startCooldown(outcome.cooldown);
     }
   });
 
-  forgotPasswordButton.addEventListener('click', async () => {
-    setError('');
-    const email = emailInput.value.trim();
-    if (!validateEmail(email)) return;
+  forgotPasswordButton.addEventListener('click', () => {
+    if (!busy) runEmailAction('reset', forgotPasswordButton);
+  });
 
-    forgotPasswordButton.disabled = true;
-    forgotPasswordButton.textContent = 'Sending reset link...';
-    try {
-      const redirectTo = new URL('reset-password.html', window.location.href).href;
-      await window.ESAuth.requestPasswordReset({ email, redirectTo });
-      setError('If an account exists for this email, a password reset link has been sent.', 'success');
-    } catch (error) {
-      setError(error.message || 'Unable to send the password reset email.');
-    } finally {
-      forgotPasswordButton.disabled = false;
-      forgotPasswordButton.textContent = 'Forgot password?';
-    }
+  magicLinkButton.addEventListener('click', () => {
+    if (!busy) runEmailAction('magic', magicLinkButton);
   });
 
   form.addEventListener('submit', async event => {
     event.preventDefault();
+    if (busy) return;
     setError('');
 
     const email = emailInput.value.trim();
     const password = passwordInput.value;
     if (!validateBaseFields(email, password)) return;
-    button.disabled = true;
-    button.textContent = authMode === 'create' ? 'Creating...' : 'Logging in...';
+    setBusy(button, true, authMode === 'create' ? 'Creating account…' : 'Logging in…');
 
     try {
       if (authMode === 'create') {
-        await window.ESAuth.createAccount({
+        const redirect = new URLSearchParams(window.location.search).get('redirect');
+        const account = await window.ESAuth.createAccount({
           name: '',
           email,
           password,
           // New accounts land on the How It Works walkthrough the first time
-          // they confirm their email, not the homepage; every login after
-          // that first landing goes through the normal getRedirectTarget()
-          // path (index.html by default). The walkthrough now lives on the
-          // homepage itself, so this just scrolls straight to it.
-          redirectTo: 'index.html#intro',
+          // they confirm their email, unless they came from a specific page.
+          redirectTo: redirect ? getRedirectTarget() : 'index.html#intro',
         });
         passwordInput.value = '';
-        button.disabled = false;
-        button.textContent = 'Create Account';
-        showConfirmation(email);
+        setBusy(button, false, 'Create Account');
+        if (account && account.requiresEmailConfirmation === false) {
+          setMode('login');
+          emailInput.value = email;
+          setError('Account created. Log in with your new password.', 'success');
+          passwordInput.focus();
+          return;
+        }
+        showConfirmation(email.toLowerCase(), account?.cooldownSeconds);
         return;
       }
 
@@ -1127,11 +1460,11 @@
       if (status === 'not-approved') {
         throw new Error('This account is not approved for FrameUp yet. Ask the design team to approve your email.');
       }
+      button.textContent = 'Opening FrameUp…';
       goToApp();
     } catch (error) {
-      setError(error.message || 'Unable to log in right now.');
-      button.disabled = false;
-      button.textContent = authMode === 'create' ? 'Create Account' : 'Login';
+      setBusy(button, false, authMode === 'create' ? 'Create Account' : 'Login');
+      showFailure(error);
     }
   });
 
@@ -1141,11 +1474,6 @@
     // the login service did not answer): explain it rather than bouncing.
     const reason = params.get('reason') || '';
     const checkFailed = reason === 'check-failed';
-    // Any reason means a page just sent the person here: explain, never bounce.
-    if (!reason && await window.ESAuth?.isValidSession?.()) {
-      window.location.replace(getRedirectTarget());
-      return;
-    }
     const requestedMode = params.get('mode');
     const accountDeleted = params.get('account') === 'deleted';
     setMode(
@@ -1153,17 +1481,28 @@
         ? requestedMode
         : accountDeleted ? 'create' : 'login'
     );
+    const prefill = String(params.get('email') || '').trim();
+    if (prefill && Flow?.classifyEmail(prefill) !== 'invalid') emailInput.value = prefill;
+    // Any reason means a page just sent the person here: explain, never bounce.
+    if (!reason && await window.ESAuth?.isValidSession?.()) {
+      window.location.replace(getRedirectTarget());
+      return;
+    }
 
     if (params.get('confirmation') === 'failed') {
-      setError('That link has already been used or has expired. Try logging in first—your account may already be confirmed.');
+      setError('That link has already been used or has expired. Try logging in first—your account may already be confirmed.', 'error', ['resend']);
     } else if (params.get('confirmation') === 'success') {
       setError('Email confirmed. Log in with your password to continue.', 'success');
+    } else if (params.get('password') === 'updated') {
+      setError('Password updated. Log in with your new password.', 'success');
     } else if (accountDeleted) {
       setError('Your account was deleted. You can create a new account anytime with an approved ES email.', 'success');
     } else if (checkFailed) {
       setError('We couldn\'t confirm your login: the connection was slow or the login service didn\'t answer. Check your connection and log in again.');
     } else if (reason === 'not-approved') {
       setError('This account is not approved for FrameUp yet. Ask the design team to approve your email.');
+    } else if (reason === 'session-expired') {
+      setError('Your session expired. Log in again and we’ll take you back where you were.', 'success');
     } else if (reason === 'no-session') {
       setError('Please log in to continue.', 'success');
     }

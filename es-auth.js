@@ -13,6 +13,11 @@
   // Subresource integrity for exactly that file (update both together).
   const SUPABASE_SDK_INTEGRITY = 'sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp';
   const config = window.ES_AUTH_CONFIG || {};
+  // The SDK clears auth tokens from the address bar as soon as it starts, so
+  // the callback reads the link type (signup / magiclink / invite / recovery)
+  // from the URL as it was when this file loaded.
+  let initialHref = '';
+  try { initialHref = String(window.location.href || ''); } catch (error) { initialHref = ''; }
   const supabaseConfig = config.supabase || {};
 
   function normalizeEmail(email) {
@@ -239,7 +244,11 @@
 
   function accessPendingError(email) {
     const normalizedEmail = normalizeEmail(email);
-    return new Error(`Access request sent for ${normalizedEmail}. A FrameUp admin can approve or reject it from the dashboard.`);
+    return authError(
+      'access_requested',
+      `Access request sent for ${normalizedEmail}. A FrameUp admin can approve or reject it from the dashboard.`,
+      { friendly: true },
+    );
   }
 
   function hasSupabaseSdk() {
@@ -261,41 +270,104 @@
     return new Error('FrameUp login is temporarily unavailable. Please try again shortly.');
   }
 
+  // Supabase's per-address email limit says "you can only request this after
+  // 37 seconds". Returns that number, or 0.
+  function retryAfterSeconds(message) {
+    const match = /after\s+(\d+)\s+second/i.exec(String(message || ''));
+    return match ? Math.max(1, Number(match[1]) || 0) : 0;
+  }
+
+  // An Error with a stable `code` the pages switch on (offer Resend, start a
+  // cooldown, switch to Log in). Messages never echo passwords or tokens.
+  function authError(code, message, extra = {}) {
+    const error = new Error(message);
+    error.code = code;
+    Object.assign(error, extra);
+    return error;
+  }
+
+  const EMAIL_LIMIT_HELP = 'FrameUp\'s email sender only allows a few emails per hour for the whole team.';
+
   function friendlyAuthError(error, fallback = 'Unable to complete authentication right now.') {
+    if (error && typeof error === 'object' && error.code && error.friendly === true) return error;
     const message = String(error?.message || error || '').trim();
     const normalized = message.toLowerCase();
-    if (normalized.includes('email not confirmed') || normalized.includes('not confirmed')) {
-      return new Error('Please verify your ES email before logging in.');
+    const code = String(error?.code || error?.error_code || '').toLowerCase();
+    const status = Number(error?.status || 0);
+    const make = (friendlyCode, friendlyMessage, extra = {}) => authError(friendlyCode, friendlyMessage, { friendly: true, ...extra });
+
+    if (code === 'email_not_confirmed' || normalized.includes('email not confirmed') || normalized.includes('not confirmed')) {
+      return make('email_not_confirmed', 'Please verify your ES email before logging in. Use the link we emailed you, or send a new one.');
     }
-    if (normalized.includes('invalid login credentials')) {
-      return new Error('Invalid email or password. If this is your first time, create an account first.');
+    if (code === 'invalid_credentials' || normalized.includes('invalid login credentials')) {
+      return make('invalid_credentials', 'Invalid email or password. If this is your first time, create an account first.');
     }
-    if (normalized.includes('user already registered') || normalized.includes('already registered')) {
-      return new Error('An account already exists for this email. Please log in or use Forgot password.');
+    if (code === 'user_already_exists' || code === 'email_exists' || normalized.includes('user already registered') || normalized.includes('already registered')) {
+      return make('account_exists', 'An account already exists for this email. Please log in or use Forgot password.');
     }
-    if (normalized.includes('password should be at least') || normalized.includes('weak password')) {
-      return new Error('Password must be at least 8 characters.');
+    if (code === 'same_password' || normalized.includes('should be different from the old password')) {
+      return make('same_password', 'Choose a password you haven\'t used for FrameUp before.');
     }
-    if (normalized.includes('rate limit') || normalized.includes('too many')) {
-      return new Error('Too many attempts. Please wait a moment and try again.');
+    if (code === 'weak_password' || normalized.includes('password should be at least') || normalized.includes('weak password')) {
+      return make('weak_password', 'Password must be at least 8 characters.');
+    }
+    const waitSeconds = retryAfterSeconds(message);
+    if (code === 'over_email_send_rate_limit' || normalized.includes('email rate limit') || waitSeconds) {
+      return make(
+        'email_rate_limited',
+        waitSeconds
+          ? `An email was sent to this address moments ago. You can ask for another in ${waitSeconds} seconds.`
+          : `We couldn't send that email right now: ${EMAIL_LIMIT_HELP} Wait a few minutes and try again, or ask a FrameUp admin to confirm your account from the Dashboard.`,
+        { retryAfterSeconds: waitSeconds || 60 },
+      );
+    }
+    if (code === 'over_request_rate_limit' || status === 429 || normalized.includes('rate limit') || normalized.includes('too many')) {
+      return make('rate_limited', 'Too many attempts. Please wait a moment and try again.', { retryAfterSeconds: 60 });
     }
     if (
-      normalized.includes('email address not authorized')
+      code === 'email_address_not_authorized'
+      || normalized.includes('email address not authorized')
       || normalized.includes('email_address_not_authorized')
     ) {
-      return new Error('FrameUp cannot send confirmation emails to this address yet. Please contact suhail.quraishi@essentiallysports.com.');
+      return make('email_not_authorized', 'FrameUp cannot send confirmation emails to this address yet. Please contact suhail.quraishi@essentiallysports.com.');
+    }
+    if (normalized.includes('needs es designer admin approval') || normalized.includes('only @essentiallysports.com')) {
+      return make('signup_blocked', 'This email needs approval from a FrameUp admin before it can create an account.');
+    }
+    if (code === 'signup_disabled' || normalized.includes('signups not allowed')) {
+      return make('signup_disabled', 'New accounts are switched off right now. Ask a FrameUp admin for help.');
+    }
+    if (code === 'user_banned' || normalized.includes('banned')) {
+      return make('user_banned', 'This account is paused. Ask a FrameUp admin for help.');
+    }
+    if (code === 'email_address_invalid' || /email address .* is invalid/.test(normalized)) {
+      return make('email_invalid', 'Enter a valid email address.');
+    }
+    if (code === 'flow_state_expired' || code === 'flow_state_not_found' || code === 'bad_code_verifier' || normalized.includes('code verifier')) {
+      return make('link_other_browser', 'Open the link in the same browser you used to ask for it, or ask for a new link here.');
     }
     if (
-      normalized.includes('otp expired')
+      code === 'otp_expired'
+      || normalized.includes('otp expired')
       || normalized.includes('token has expired')
       || normalized.includes('invalid token')
       || normalized.includes('invalid claim')
       || normalized.includes('invalid or expired')
+      || normalized.includes('is invalid or has expired')
       || normalized.includes('already been used')
     ) {
-      return new Error('This confirmation link has already been used or has expired. Your account may already be confirmed—return to login and try signing in.');
+      return make('link_expired', 'This confirmation link has already been used or has expired. Your account may already be confirmed—return to login and try signing in.');
     }
-    return new Error(message || fallback);
+    if (code === 'session_expired' || code === 'session_not_found' || code === 'refresh_token_not_found' || normalized.includes('refresh token')) {
+      return make('session_expired', 'Your session has ended. Log in again to continue.');
+    }
+    if (normalized.includes('failed to fetch') || normalized.includes('networkerror') || normalized.includes('network request failed') || normalized.includes('load failed')) {
+      return make('network', 'FrameUp couldn\'t reach the login service. Check your connection and try again.');
+    }
+    if (code === 'hook_timeout' || code === 'request_timeout' || code === 'unexpected_failure' || status >= 500) {
+      return make('service_unavailable', 'The login service had a hiccup. Please try again in a moment.');
+    }
+    return make(code || 'unknown', message || fallback);
   }
 
   function safeLocalReturnTo(returnTo) {
@@ -402,18 +474,116 @@
     return supabaseClient;
   }
 
-  function validatePassword(password) {
-    if (String(password || '').length < 8) {
-      throw new Error('Password must be at least 8 characters.');
+  const PASSWORD_MIN = 8;
+  // bcrypt (Supabase's hash) only reads the first 72 bytes.
+  const PASSWORD_MAX_BYTES = 72;
+
+  function passwordByteLength(password) {
+    try {
+      return new TextEncoder().encode(String(password || '')).length;
+    } catch (error) {
+      return String(password || '').length;
     }
   }
 
-  function syncProfile({ name, email }) {
+  // Rules shown live under the password field. Never logs the password.
+  function passwordChecks(password) {
+    const value = String(password || '');
+    return {
+      minLength: value.length >= PASSWORD_MIN,
+      maxLength: passwordByteLength(value) <= PASSWORD_MAX_BYTES,
+      noEdgeSpaces: value === value.trim(),
+    };
+  }
+
+  function validatePassword(password) {
+    const checks = passwordChecks(password);
+    if (!checks.minLength) {
+      throw authError('weak_password', 'Password must be at least 8 characters.', { friendly: true });
+    }
+    if (!checks.maxLength) {
+      throw authError('weak_password', 'Password must be 72 characters or fewer.', { friendly: true });
+    }
+    if (!checks.noEdgeSpaces) {
+      throw authError('weak_password', 'Password can\'t start or end with a space.', { friendly: true });
+    }
+  }
+
+  // Per-address cooldown for auth emails, so a reload doesn't reset the timer
+  // and the button can't fire into Supabase's per-address limit (60 s).
+  const EMAIL_COOLDOWN_KEY = 'es.authEmailCooldown.v1';
+  const EMAIL_COOLDOWN_SECONDS = 60;
+
+  function readCooldowns() {
     try {
-      window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({
-        name: String(name || '').trim() || normalizeEmail(email).split('@')[0] || 'Frameup User',
-        email: normalizeEmail(email),
-      }));
+      const parsed = JSON.parse(window.sessionStorage.getItem(EMAIL_COOLDOWN_KEY) || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function startEmailCooldown(email, seconds = EMAIL_COOLDOWN_SECONDS) {
+    const normalized = normalizeEmail(email);
+    if (!normalized) return 0;
+    const until = Date.now() + Math.max(1, seconds) * 1000;
+    try {
+      const all = readCooldowns();
+      Object.keys(all).forEach(key => { if (Number(all[key]) < Date.now()) delete all[key]; });
+      all[normalized] = until;
+      window.sessionStorage.setItem(EMAIL_COOLDOWN_KEY, JSON.stringify(all));
+    } catch (error) {
+      // Cooldown display is a nicety; Supabase still enforces its own limit.
+    }
+    return seconds;
+  }
+
+  function emailCooldownRemaining(email) {
+    const until = Number(readCooldowns()[normalizeEmail(email)] || 0);
+    return Math.max(0, Math.ceil((until - Date.now()) / 1000));
+  }
+
+  function guardEmailCooldown(email) {
+    const remaining = emailCooldownRemaining(email);
+    if (remaining > 0) {
+      throw authError(
+        'email_rate_limited',
+        `An email was sent to this address moments ago. You can ask for another in ${remaining} seconds.`,
+        { friendly: true, retryAfterSeconds: remaining },
+      );
+    }
+  }
+
+  function rememberRateLimit(email, error) {
+    if (error?.code === 'email_rate_limited' && error.retryAfterSeconds) {
+      startEmailCooldown(email, error.retryAfterSeconds);
+    }
+    return error;
+  }
+
+  // Keeps es.ai.profile in step with the signed-in account WITHOUT dropping
+  // what the person saved in Edit profile (role, team, note, photo, avatar…).
+  // Same email: merge, and a name they typed wins over the account metadata.
+  // Different email (another person on this browser): start fresh.
+  function syncProfile({ name, email }) {
+    const normalizedEmail = normalizeEmail(email);
+    const accountName = String(name || '').trim();
+    const fallbackName = normalizedEmail.split('@')[0] || 'Frameup User';
+    try {
+      const existing = readJson(PROFILE_STORAGE_KEY, null);
+      const sameAccount = existing && typeof existing === 'object' && !Array.isArray(existing)
+        && normalizeEmail(existing.email) === normalizedEmail;
+      const base = sameAccount ? existing : {};
+      const keptName = sameAccount ? String(existing.name || '').trim() : '';
+      const next = {
+        ...base,
+        name: keptName || accountName || fallbackName,
+        email: normalizedEmail,
+      };
+      const serialized = JSON.stringify(next);
+      if (window.localStorage.getItem(PROFILE_STORAGE_KEY) !== serialized) {
+        window.localStorage.setItem(PROFILE_STORAGE_KEY, serialized);
+      }
     } catch (error) {
       // Profile sync is helpful but not required for auth.
     }
@@ -452,13 +622,26 @@
       },
     });
 
-    if (error) throw friendlyAuthError(error, 'Unable to create account.');
+    if (error) throw rememberRateLimit(normalizedEmail, friendlyAuthError(error, 'Unable to create account.'));
+    // With email confirmation on, Supabase answers a sign-up for an address
+    // that already has a confirmed account with a stand-in user that has no
+    // identities, and sends NO email. Say so instead of leaving the person
+    // waiting for a confirmation that never comes.
+    if (data?.user && !data?.session && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      throw authError(
+        'account_exists',
+        'You already have a FrameUp account for this email. Log in, or reset your password if you’ve forgotten it.',
+        { friendly: true },
+      );
+    }
     if (data?.session) await client.auth.signOut();
+    if (!data?.session) startEmailCooldown(normalizedEmail);
     return {
       email: normalizedEmail,
       name: data?.user?.user_metadata?.name || String(name || '').trim() || normalizedEmail.split('@')[0] || 'Frameup User',
       role: 'Designer',
       requiresEmailConfirmation: !data?.session,
+      cooldownSeconds: data?.session ? 0 : emailCooldownRemaining(normalizedEmail),
     };
   }
 
@@ -543,6 +726,7 @@
     if (!await isAllowedEmailAsync(normalizedEmail)) {
       throw new Error('Confirmation links are available only for approved FrameUp accounts.');
     }
+    guardEmailCooldown(normalizedEmail);
     if (!await ensureSupabaseReady()) throw authUnavailableError();
     const client = getSupabaseClient();
     if (!client) throw authUnavailableError();
@@ -554,8 +738,42 @@
         emailRedirectTo: authCallbackUrl(redirectTo),
       },
     });
-    if (error) throw friendlyAuthError(error, 'Unable to resend the confirmation email.');
+    if (error) throw rememberRateLimit(normalizedEmail, friendlyAuthError(error, 'Unable to resend the confirmation email.'));
     rememberKnownEmail(normalizedEmail);
+    startEmailCooldown(normalizedEmail);
+    return true;
+  }
+
+  // Passwordless sign-in for EXISTING accounts (shouldCreateUser: false, so it
+  // never creates one). Uses the same email sender and limits as confirmation.
+  // Supabase answers "Signups not allowed for otp" when there's no account;
+  // that is reported the same way as a sent link so this can't be used to
+  // test which addresses have accounts.
+  async function requestMagicLink({ email, redirectTo } = {}) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail || !normalizedEmail.includes('@')) {
+      throw authError('email_invalid', 'Enter a valid email address.', { friendly: true });
+    }
+    if (!await isAllowedEmailAsync(normalizedEmail)) {
+      throw authError('not_approved', 'Sign-in links are available only for approved FrameUp accounts.', { friendly: true });
+    }
+    guardEmailCooldown(normalizedEmail);
+    if (!await ensureSupabaseReady()) throw authUnavailableError();
+    const client = getSupabaseClient();
+    if (!client) throw authUnavailableError();
+    const { error } = await client.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: authCallbackUrl(redirectTo),
+      },
+    });
+    if (error) {
+      const message = String(error.message || '').toLowerCase();
+      const noAccount = String(error.code || '') === 'otp_disabled' || message.includes('signups not allowed');
+      if (!noAccount) throw rememberRateLimit(normalizedEmail, friendlyAuthError(error, 'Unable to send a sign-in link.'));
+    }
+    startEmailCooldown(normalizedEmail);
     return true;
   }
 
@@ -564,13 +782,20 @@
     const client = getSupabaseClient();
     if (!client) throw authUnavailableError();
 
-    const currentUrl = new URL(window.location.href);
+    const liveUrl = new URL(window.location.href);
+    const loadedUrl = initialHref ? new URL(initialHref) : liveUrl;
+    // Same page, so prefer what was in the address bar when the page loaded.
+    const currentUrl = loadedUrl.pathname === liveUrl.pathname ? loadedUrl : liveUrl;
     const hashParams = new URLSearchParams(currentUrl.hash.replace(/^#/, ''));
     const callbackError = currentUrl.searchParams.get('error_description')
       || currentUrl.searchParams.get('error')
       || hashParams.get('error_description')
       || hashParams.get('error');
-    if (callbackError) throw friendlyAuthError(new Error(callbackError), 'Unable to confirm this email.');
+    if (callbackError) {
+      // Supabase sends e.g. #error=access_denied&error_code=otp_expired.
+      const callbackErrorCode = currentUrl.searchParams.get('error_code') || hashParams.get('error_code') || '';
+      throw friendlyAuthError({ message: callbackError, code: callbackErrorCode }, 'Unable to confirm this email.');
+    }
 
     const code = currentUrl.searchParams.get('code');
     const tokenHash = currentUrl.searchParams.get('token_hash');
@@ -610,10 +835,10 @@
           requiresLogin: true,
         };
       }
-      throw new Error('This confirmation link has already been used or has expired. Your account may already be confirmed—return to login and try signing in.');
+      throw authError('link_expired', 'This confirmation link has already been used or has expired. Your account may already be confirmed—return to login and try signing in.', { friendly: true });
     }
     rememberKnownEmail(session.user.email);
-    return session;
+    return { ...session, callbackType, processedCredential: didProcessCredential };
   }
 
   async function requestPasswordReset({ email, redirectTo }) {
@@ -637,10 +862,12 @@
       safeRedirectTo = new URL('reset-password.html', window.location.href).href;
     }
 
+    guardEmailCooldown(normalizedEmail);
     const { error } = await getSupabaseClient().auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: safeRedirectTo,
     });
-    if (error) throw friendlyAuthError(error, 'Unable to send the password reset email.');
+    if (error) throw rememberRateLimit(normalizedEmail, friendlyAuthError(error, 'Unable to send the password reset email.'));
+    startEmailCooldown(normalizedEmail);
     return true;
   }
 
@@ -762,9 +989,31 @@
     return true;
   }
 
+  // The page to come back to after logging in: the caller's choice, else the
+  // page the person is on now (path + query + hash), never login itself.
+  function currentReturnTo() {
+    try {
+      const path = String(window.location.pathname || '').replace(/^[/\\]+/, '');
+      if (!path || /(?:^|\/)(?:login|auth-callback|reset-password)\.html$/i.test(path)) return 'index.html';
+      return `${path}${window.location.search || ''}${window.location.hash || ''}`;
+    } catch (error) {
+      return 'index.html';
+    }
+  }
+
   function loginUrl(returnTo) {
     const loginPath = window.location.pathname.includes('/ai-page/') ? '../login.html' : 'login.html';
-    return `${loginPath}?redirect=${encodeURIComponent(returnTo || 'index.html')}`;
+    return `${loginPath}?redirect=${encodeURIComponent(returnTo || currentReturnTo())}`;
+  }
+
+  // True when this tab had a signed-in session earlier (mirrored copy in
+  // sessionStorage) — so "no session" now means it expired or was ended.
+  function hadSessionInThisTab() {
+    try {
+      return Boolean(window.sessionStorage.getItem(AUTH_STORAGE_KEY));
+    } catch (error) {
+      return false;
+    }
   }
 
   // What the page guard knows about the current visitor:
@@ -811,6 +1060,10 @@
         }
       }
       if (reason === 'not-approved') await logout();
+      if (reason === 'no-session' && hadSessionInThisTab()) {
+        reason = 'session-expired';
+        try { window.sessionStorage.removeItem(AUTH_STORAGE_KEY); } catch (error) { /* ignore */ }
+      }
       window.location.replace(`${loginUrl(returnTo)}&reason=${reason}`);
       return false;
     })();
@@ -838,6 +1091,11 @@
     completeAuthCallback,
     createAccount,
     deleteAccount,
+    emailCooldownRemaining,
+    friendlyAuthError,
+    passwordChecks,
+    requestMagicLink,
+    PASSWORD_MIN,
     fetchWithAuth,
     getAccessRequests,
     getKnownEmails,
