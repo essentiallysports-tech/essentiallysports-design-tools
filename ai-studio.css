@@ -140,14 +140,14 @@ html[data-theme="dark"] .ais-page .es-chip[aria-pressed="true"] { background: va
   .gen-empty svg, .gen-empty img, .va-empty svg { animation: aisFloat 4s ease-in-out infinite; }
 
   /* 3. Response: cards and chips lift toward the pointer. */
-  .gen-card, .trend-idea, .va-trend, .va-variant, .va-card, .va-chip, .es-chip {
+  .gen-card, .trend-idea, .va-trend, .va-variant, .va-card, .es-chip {
     transition: transform 220ms var(--es-ease, ease), box-shadow 220ms var(--es-ease, ease), background-color 160ms, border-color 160ms;
   }
   @media (hover: hover) {
     .gen-card:hover, .va-trend:hover, .va-variant:not(.va-variant--skeleton):hover { transform: translateY(-3px); }
-    .trend-idea:hover, .va-chip:hover, .ais-page .es-chip:hover { transform: translateY(-1px); }
+    .trend-idea:hover, .ais-page .es-chip:hover { transform: translateY(-1px); }
   }
-  :is(.va-chip, .es-chip):active { transform: scale(.97); }
+  .es-chip:active { transform: scale(.97); }
 
   /* 4. Progress: the current step breathes; working states sweep. */
   .va-step[aria-current="step"] .va-step__num, .va-step.is-current .va-step__num { animation: aisBreath 2.4s ease-in-out infinite; }

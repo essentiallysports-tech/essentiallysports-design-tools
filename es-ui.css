@@ -127,13 +127,26 @@
   transition: background-color var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease);
 }
 .es-segmented__item:hover { color: var(--es-ink); }
+/* Selected: whichever ARIA the control already uses (tabs: aria-selected,
+   radios: aria-checked, toggles: aria-pressed) or .is-active for links. */
 .es-segmented__item[aria-selected="true"],
+.es-segmented__item[aria-checked="true"],
+.es-segmented__item[aria-pressed="true"],
 .es-segmented__item.is-active {
   background: var(--es-bg);
   box-shadow: var(--es-shadow-pill);
   color: var(--es-ink);
 }
-.es-segmented__item svg { width: 16px; height: 16px; }
+.es-segmented__item:is(:disabled, [aria-disabled="true"]) { opacity: .4; cursor: not-allowed; }
+.es-segmented__item:is(:disabled, [aria-disabled="true"]):hover { color: var(--es-ink-3); }
+.es-segmented__item svg { width: 16px; height: 16px; flex: none; }
+/* Icon-only segment (title + aria-label carry the name): square. */
+.es-segmented__item--icon { flex: 0 0 auto; min-width: 36px; padding: 0 10px; }
+/* Compact: dense editor panels only (the editor inspector). 32px segments in
+   a 3px track = 38px. Every feature page uses the standard 44px control. */
+.es-segmented--sm { padding: 3px; gap: 2px; border-radius: 12px; }
+.es-segmented--sm .es-segmented__item { min-height: 32px; padding: 0 10px; border-radius: 9px; font-size: 13px; }
+.es-segmented--sm .es-segmented__item--icon { min-width: 32px; padding: 0 8px; }
 
 /* ─── Underline tabs ─────────────────────────────────────────────────────
    Roboto 500 15px. Active: primary text + 2px ES-blue underline; inactive
@@ -243,7 +256,18 @@ html[data-theme="dark"] .es-tabs__ink { background: #54A4FB; }
 }
 .es-chip:hover { background: var(--es-sunk); }
 .es-chip svg { color: var(--es-ink-3); }
-.es-chip[aria-pressed="true"] { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px var(--es-brand-tint); color: var(--es-brand-text); }
+/* Selected: aria-pressed (filter toggles) or aria-checked (one-of radios). */
+.es-chip:is([aria-pressed="true"], [aria-checked="true"]) { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px var(--es-brand-tint); color: var(--es-brand-text); }
+.es-chip:is([aria-pressed="true"], [aria-checked="true"]) svg { color: currentColor; }
+.es-chip:is(:disabled, [aria-disabled="true"]) { opacity: .5; cursor: not-allowed; }
+.es-chip:is(:disabled, [aria-disabled="true"]):hover { background: var(--es-bg); }
+/* Count inside a chip ("NFL 12"): quiet, tabular; inherits on a selected chip. */
+.es-chip__count { color: var(--es-ink-3); font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.es-chip:is([aria-pressed="true"], [aria-checked="true"]) .es-chip__count { color: inherit; opacity: .72; }
+/* A league logo, team logo or colour dot leads the label at 18px. */
+.es-chip > :is(img, .es-team-logo, .es-chip__dot):first-child { flex: none; }
+.es-chip__dot { width: 12px; height: 12px; border-radius: 50%; background: var(--dot, currentColor); box-shadow: inset 0 0 0 1px rgb(127 127 127 / .4); }
+@media (pointer: coarse) { .es-chip { min-height: var(--es-tap, 44px); } } /* touch: 44px, everywhere */
 
 .es-badge {
   display: inline-flex;
@@ -979,7 +1003,9 @@ html[data-theme="dark"] .es-chip { background: #2A2D34; box-shadow: inset 0 0 0 
 html[data-theme="dark"] .es-input { background: #2A2D34; box-shadow: inset 0 0 0 1px #707A8C; color: #FFFFFF; }
 html[data-theme="dark"] .es-segmented { background: #2A2D34; }
 html[data-theme="dark"] .es-segmented__item { color: #98A6BF; }
-html[data-theme="dark"] :is(.es-segmented__item[aria-selected="true"], .es-segmented__item.is-active) { background: #3B4049; box-shadow: none; color: #FFFFFF; }
+html[data-theme="dark"] :is(.es-segmented__item[aria-selected="true"], .es-segmented__item[aria-checked="true"], .es-segmented__item[aria-pressed="true"], .es-segmented__item.is-active) { background: #3B4049; box-shadow: none; color: #FFFFFF; }
+html[data-theme="dark"] .es-chip__count { color: #98A6BF; }
+html[data-theme="dark"] .es-chip:is(:disabled, [aria-disabled="true"]):hover { background: #2A2D34; }
 html[data-theme="dark"] .es-badge:not([class*="es-badge--"]) { background: #3B4049; color: #BFC8D9; }
 html[data-theme="dark"] .es-badge--good { background: var(--es-good-soft-on-dark); color: var(--es-good-on-dark); }
 html[data-theme="dark"] .es-badge--bad { background: var(--es-bad-soft-on-dark); color: var(--es-bad-on-dark); }

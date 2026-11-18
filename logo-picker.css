@@ -74,8 +74,6 @@ html.flp-open { overflow: hidden; }
 .flp__input::placeholder { color: var(--es-placeholder); }
 .flp__input:focus { box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo); }
 .flp__bg { flex: none; }
-.flp__bg .es-segmented__item { min-height: 32px; }
-.flp__bg .es-segmented__item[aria-pressed="true"] { background: var(--es-bg); box-shadow: var(--es-shadow-pill); color: var(--es-ink); }
 .flp__chips {
   display: flex;
   gap: var(--es-space-2, 8px);
@@ -186,7 +184,6 @@ html[data-theme="dark"] .flp__pick:hover { background: #3B4049; }
 html[data-theme="dark"] .flp__tile.is-selected .flp__pick { box-shadow: inset 0 0 0 2px var(--es-blue-400, #54A4FB); background: rgb(10 125 250 / .14); }
 html[data-theme="dark"] .flp__input { background: #2A2D34; box-shadow: inset 0 0 0 1px #707A8C; }
 html[data-theme="dark"] .flp__bg { background: #2A2D34; }
-html[data-theme="dark"] .flp__bg .es-segmented__item[aria-pressed="true"] { background: #3B4049; color: #FFFFFF; }
 html[data-theme="dark"] .flp__fav[aria-pressed="true"] { color: var(--es-warn-on-dark, #FCD34D); }
 html[data-theme="dark"] .flp__foot { border-top-color: #2A2D34; }
 

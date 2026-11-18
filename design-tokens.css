@@ -2787,7 +2787,7 @@ html[data-theme="dark"] .es-tile--green { background: rgb(22 163 74 / .18) !impo
 html[data-theme="dark"] .es-tile--pink { background: rgb(219 39 119 / .18) !important; color: #f9a8d4 !important; }
 html[data-theme="dark"] .es-tile--amber { background: rgb(217 119 6 / .2) !important; color: #fcd34d !important; }
 html[data-theme="dark"] .es-chip { background: var(--dk-raised); box-shadow: inset 0 0 0 1px var(--dk-line-2); color: var(--dk-ink); }
-html[data-theme="dark"] .es-chip[aria-pressed="true"] { background: rgb(10 125 250 / .2); box-shadow: inset 0 0 0 1px rgb(84 164 251 / .55); color: var(--es-blue-300); }
+html[data-theme="dark"] .es-chip:is([aria-pressed="true"], [aria-checked="true"]) { background: rgb(10 125 250 / .2); box-shadow: inset 0 0 0 1px rgb(84 164 251 / .55); color: var(--es-blue-300); }
 html[data-theme="dark"] .es-input { background: var(--dk-surface); box-shadow: inset 0 0 0 1px var(--dk-line-field); color: var(--dk-ink); }
 html[data-theme="dark"] .es-input::placeholder { color: var(--dk-ink-3); }
 html[data-theme="dark"] .es-card { background: var(--dk-surface) !important; box-shadow: inset 0 0 0 1px var(--dk-line) !important; }

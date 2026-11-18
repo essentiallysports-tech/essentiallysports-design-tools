@@ -361,7 +361,7 @@
     const cats = categoriesNow().filter(c => c.count || c.id === active);
     const chips = [{ id: 'all', label: 'All', count: boardItems().length }, ...cats];
     const hadFocus = els.filters.contains(document.activeElement);
-    const count = n => `<span class="td-count"><span class="es-sr-only">, </span>${n}</span>`;
+    const count = n => `<span class="es-chip__count"><span class="es-sr-only">, </span>${n}</span>`;
     els.filters.innerHTML = chips.map(c => `<button type="button" class="es-chip td-chip" data-sport="${esc(c.id)}" aria-pressed="${c.id === active}">${c.id === 'all' ? '' : leagueTile(c.id, 'td-league--chip')}<span>${esc(c.label)}</span>${count(c.count)}</button>`).join('')
       + `<button type="button" class="es-chip td-chip td-chip--shortlist" data-sport="saved" aria-pressed="${active === 'saved'}">${ICON.bookmark}<span>Shortlist</span>${saved.length ? count(saved.length) : ''}</button>`;
     if (hadFocus) focusActiveChip();

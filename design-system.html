@@ -21,12 +21,12 @@
   <link rel="stylesheet" href="theme.css?v=20261117-ready1">
   <link rel="stylesheet" href="site-chrome.css?v=20261117-ready1">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261117-ready1">
-<link rel="stylesheet" href="es-ui.css?v=20261119-rel3">
+  <link rel="stylesheet" href="design-tokens.css?v=20261120-unify">
+<link rel="stylesheet" href="es-ui.css?v=20261120-unify">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <!-- Component sources for the AI, Video Ads and logo specimens below. -->
-  <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="video-ads.css?v=20261119-rel">
+  <link rel="stylesheet" href="ai-studio.css?v=20261120-unify">
+  <link rel="stylesheet" href="video-ads.css?v=20261120-unify">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
@@ -241,7 +241,7 @@
     .ds-va.va-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--es-space-3); height: auto; min-height: 0; padding: 0; background: transparent; isolation: auto; }
     .ds-va-card { display: grid; gap: var(--es-space-5); min-width: 0; padding: var(--es-space-4); border-radius: var(--es-radius-container); background: var(--va-solid); box-shadow: inset 0 0 0 1px var(--va-line); }
     .ds-va .va-steps { height: auto; min-height: 48px; }
-    .ds-va > .va-seg { justify-self: start; max-width: 100%; }
+    .ds-va > .es-segmented { justify-self: start; max-width: 100%; }
 
     /* Navigation: a static copy of the app sidebar (the live one is on the left). */
     html body .ds-sidebar.es-sidebar { position: relative !important; inset: auto !important; top: auto !important; bottom: auto !important; z-index: auto; display: flex !important; flex: none; width: var(--es-sidebar-w); height: auto !important; max-height: none; border-radius: var(--es-radius-container); border: 1px solid var(--es-line); }
@@ -896,12 +896,24 @@
 
         <div class="ds-sub">
           <h3>Segmented control</h3>
-          <p class="ds-rule">For 2–4 mutually exclusive options that change the same view (size, mode). More than four, or different views, use tabs.</p>
+          <p class="ds-rule">For 2–4 mutually exclusive options that change the same view (size, mode, tone, count). More than four, or different views, use tabs. <strong>One height everywhere:</strong> 36px segments in a 4px grey track (44px), 10px segment radius, 14px track radius, on every page (Generate, Trends, Video Ads, Reels Studio, Home). Selected follows the ARIA the control already uses: <code>aria-checked</code> (role=radio, arrow keys move), <code>aria-selected</code> (tabs), <code>aria-pressed</code> or <code>.is-active</code>. Icon-only segments add <code>--icon</code> and a <code>title</code>. <code>--sm</code> (32px segments in a 3px track, 38px) is for the dense editor inspector only.</p>
           <div class="ds-row ds-row--lg">
             <div class="es-segmented" role="radiogroup" aria-label="Size" data-ds-seg><button class="es-segmented__item" role="radio" aria-checked="true" aria-selected="true" type="button">9:16</button><button class="es-segmented__item" role="radio" aria-checked="false" aria-selected="false" type="button">4:5</button><button class="es-segmented__item" role="radio" aria-checked="false" aria-selected="false" type="button">1:1</button></div>
             <div class="es-segmented" role="radiogroup" aria-label="Panel" data-ds-seg><button class="es-segmented__item" role="radio" aria-checked="true" aria-selected="true" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></svg>Content</button><button class="es-segmented__item" role="radio" aria-checked="false" aria-selected="false" type="button">Templates <span class="es-badge">4</span></button></div>
           </div>
-          <ul class="ds-tokens" aria-label="Segmented classes"><li><button class="ds-tok" type="button">.es-segmented</button></li><li><button class="ds-tok" type="button">.es-segmented--full</button></li><li><button class="ds-tok" type="button">.es-segmented__item</button></li></ul>
+          <div class="ds-row ds-row--lg ds-mt">
+            <div class="es-segmented" role="radiogroup" aria-label="Layout" data-ds-seg><button class="es-segmented__item es-segmented__item--icon" role="radio" aria-checked="true" type="button" title="Cards" aria-label="Cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="7" x="3" y="3" rx="1"/><rect width="18" height="7" x="3" y="14" rx="1"/></svg></button><button class="es-segmented__item es-segmented__item--icon" role="radio" aria-checked="false" type="button" title="Compact list" aria-label="Compact list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/></svg></button></div>
+            <div class="es-segmented" role="radiogroup" aria-label="Designs" data-ds-seg><button class="es-segmented__item" role="radio" aria-checked="false" type="button">1</button><button class="es-segmented__item" role="radio" aria-checked="true" type="button">4</button><button class="es-segmented__item" role="radio" aria-checked="false" type="button" disabled>8</button></div>
+            <div class="es-segmented es-segmented--sm" role="radiogroup" aria-label="Compact example (editor inspector only)" data-ds-seg><button class="es-segmented__item" role="radio" aria-checked="true" type="button">Up</button><button class="es-segmented__item" role="radio" aria-checked="false" type="button">Down</button></div>
+          </div>
+          <ul class="ds-tokens" aria-label="Segmented classes"><li><button class="ds-tok" type="button">.es-segmented</button></li><li><button class="ds-tok" type="button">.es-segmented--full</button></li><li><button class="ds-tok" type="button">.es-segmented__item</button></li><li><button class="ds-tok" type="button">.es-segmented__item--icon</button></li><li><button class="ds-tok" type="button">.es-segmented--sm (editor inspector)</button></li><li><button class="ds-tok" type="button">[aria-checked|aria-selected|aria-pressed="true"]</button></li></ul>
+        </div>
+
+        <div class="ds-sub">
+          <h3>Chips</h3>
+          <p class="ds-rule">Filters and quick choices: <code>.es-chip</code> everywhere (Home, Generate, Trends, Video Ads, Reels Studio). 32px tall (44px on touch screens), 10px radius, 1px outline, Roboto 500 13. Pressed or checked: the calm blue tint (a gradient tint on AI pages). A league logo, team logo or colour dot leads the label; a count sits after it in <code>.es-chip__count</code>. Toggle filters use <code>aria-pressed</code>; one-of choices use <code>role=radio</code> + <code>aria-checked</code>. Don't make pill-shaped (999px) chips; pills are for badges.</p>
+          <div class="ds-row" data-ds-chips><button class="es-chip" type="button" aria-pressed="true">All <span class="es-chip__count">84</span></button><button class="es-chip" type="button" aria-pressed="false"><span class="es-chip__dot" style="--dot:#0A7DFA" aria-hidden="true"></span>Blue <span class="es-chip__count">12</span></button><button class="es-chip" type="button" aria-pressed="false">Most viewed</button><button class="es-chip" type="button" aria-pressed="false" aria-disabled="true">Needs a clip</button></div>
+          <ul class="ds-tokens" aria-label="Chip classes"><li><button class="ds-tok" type="button">.es-chip</button></li><li><button class="ds-tok" type="button">.es-chip__count</button></li><li><button class="ds-tok" type="button">.es-chip__dot</button></li><li><button class="ds-tok" type="button">.es-chip[aria-pressed="true"]</button></li><li><button class="ds-tok" type="button">.es-chip[aria-checked="true"]</button></li><li><button class="ds-tok" type="button">.es-chip[aria-disabled="true"]</button></li></ul>
         </div>
       </div>
     </section>
@@ -1015,13 +1027,13 @@
           <h3>Newsletter brand chips</h3>
           <p class="ds-rule">A colour dot in the brand's wordmark colour plus its short name, inside a segmented control.</p>
           <div class="va-page ds-va">
-            <div class="va-seg va-seg--brand" role="radiogroup" aria-label="Newsletter" data-ds-vaseg>
-              <button type="button" role="radio" aria-checked="true"><span class="va-dot" style="--c:#781A1D" aria-hidden="true"></span><span>CFB</span></button>
-              <button type="button" role="radio" aria-checked="false"><span class="va-dot" style="--c:#BF0D3E" aria-hidden="true"></span><span>Dugout</span></button>
-              <button type="button" role="radio" aria-checked="false"><span class="va-dot" style="--c:#252D47" aria-hidden="true"></span><span>Huddle</span></button>
+            <div class="es-segmented va-brands-seg" role="radiogroup" aria-label="Newsletter" data-ds-vaseg>
+              <button class="es-segmented__item" type="button" role="radio" aria-checked="true"><span class="va-dot" style="--c:#781A1D" aria-hidden="true"></span><span>CFB</span></button>
+              <button class="es-segmented__item" type="button" role="radio" aria-checked="false"><span class="va-dot" style="--c:#BF0D3E" aria-hidden="true"></span><span>Dugout</span></button>
+              <button class="es-segmented__item" type="button" role="radio" aria-checked="false"><span class="va-dot" style="--c:#252D47" aria-hidden="true"></span><span>Huddle</span></button>
             </div>
           </div>
-          <ul class="ds-tokens" aria-label="Brand chip classes"><li><button class="ds-tok" type="button">.va-seg--brand</button></li><li><button class="ds-tok" type="button">.va-dot</button></li><li><button class="ds-tok" type="button">VideoAdsBrands.AD_BRANDS</button></li></ul>
+          <ul class="ds-tokens" aria-label="Brand chip classes"><li><button class="ds-tok" type="button">.es-segmented.va-brands-seg</button></li><li><button class="ds-tok" type="button">.va-dot</button></li><li><button class="ds-tok" type="button">VideoAdsBrands.AD_BRANDS</button></li></ul>
         </div>
         <div class="ds-sub">
           <h3>ES marks</h3>
@@ -1229,7 +1241,7 @@
       }));
       $$('[data-ds-chips]').forEach(group => group.addEventListener('click', event => {
         const chip = event.target.closest('.es-chip');
-        if (chip) chip.setAttribute('aria-pressed', String(chip.getAttribute('aria-pressed') !== 'true'));
+        if (chip && chip.getAttribute('aria-disabled') !== 'true') chip.setAttribute('aria-pressed', String(chip.getAttribute('aria-pressed') !== 'true'));
       }));
       $$('[data-ds-ask]').forEach(btn => btn.addEventListener('click', () => btn.setAttribute('aria-expanded', String(btn.getAttribute('aria-expanded') !== 'true'))));
       $$('[data-ds-palette]').forEach(btn => btn.addEventListener('click', () => window.FrameUpShell?.openPalette?.()));

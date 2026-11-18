@@ -70,7 +70,7 @@ FrameUp UI uses two families (15px base). Acumin is only for artwork (posts, ads
 | Meta | `--es-type-meta-*` / `.es-meta-list` | 13 | 400 | Roboto | Muted, items joined with " · " |
 | Field label / helper | `--es-type-field-label-*`, `--es-type-helper-*` / `.es-field__label`, `.es-field__hint` | 13 / 13 | 600 / 400 | Roboto | Label above the control |
 | Tabs | `--es-type-tab-*` / `.es-tabs` `.es-tab` | 15 | 500 | Roboto | Active: primary text + 2px blue underline; count 13 |
-| Chips | `--es-type-chip-*` / `.es-chip` | 13 | 500 | Roboto | 10px radius, 1px outline |
+| Chips | `--es-type-chip-*` / `.es-chip` | 13 | 500 | Roboto | 10px radius, 1px outline, 32px (44 touch) |
 | Buttons | `.es-btn` | 14 (13 sm, 15 lg) | 500 | Roboto | See Buttons |
 | Sidebar nav / group | `--es-type-nav-*` / `--es-type-nav-group-*` | 14 / 11 | 400 / 600 | Roboto | Compact sidebar sizes |
 | Steps | `--es-type-step-*`, `--es-step-circle` / `.es-steps` | 13 | 500 | Roboto | 22px circles; the Video Ads rail uses 24px + 14px labels |
@@ -92,7 +92,7 @@ Rhythm rules:
 
 ## Radius and elevation
 
-- Radius: 10 chips, buttons, nav items (`--es-radius-chip`) · 12 fields and toasts (`--es-radius-control`) · 16 panels, cards, menus, tables, callouts, empty states (`--es-radius-container`; `--es-radius-card` is an alias) · 999 badges and team chips (`--es-radius-pill`).
+- Radius: 10 chips, buttons, nav items (`--es-radius-chip`) · 12 fields and toasts (`--es-radius-control`) · 16 panels, cards, menus, tables, callouts, empty states (`--es-radius-container`; `--es-radius-card` is an alias) · 999 badges and display-only team tags `.va-team` (`--es-radius-pill`; interactive chips are `.es-chip`, 10).
 - Elevation: hairlines everywhere (`--es-hairline`, restated in dark and in every scope that changes `--es-line`); `--es-shadow-pill` for the selected segment and current nav item; `--es-shadow-soft` on `.es-card`; `--es-shadow-float` only for things that float (menus, toasts, popovers); `--ais-glow` for primary hover and AI surfaces. Dark mode swaps shadows for 1px Slate lines.
 
 ## Motion
@@ -146,7 +146,9 @@ Defined once in `design-tokens.css`:
 - Profile row: initials avatar on a colour picked from the name, name over email, a quiet chevron; the account menu opens upward.
 - **Tabs** (`.es-tabs` / `.es-tab`): switch views within a page; counts `.es-tab__count` (`.is-hot` blue); the ink slides.
 - **Step rail** (`.va-steps`): 3–5 steps; current filled ink (white in dark), done = blue check and clickable, upcoming outline; phones show "Step N of M" and a bar. `.es-steps` is the compact shared version.
-- **Segmented** (`.es-segmented`): 2–4 options that change the same view. More, or different views: tabs.
+- **Segmented** (`.es-segmented`): 2–4 options that change the same view. More, or different views: tabs. **One control, one height (2026-11-20):** every segmented control on Generate (Look, Tone, Audience, Designs, focus-view canvas size), Trends (layout), Video Ads (newsletter, size, safe zone, clip fit, sport, export, sound), Reels Studio and Home is `.es-segmented` + `.es-segmented__item`: 36px segments in a 4px grey track = **44px**, segment radius 10, track 14, Roboto 500 15. Keep the ARIA the control already has; the library styles `aria-checked` (role=radio + roving tabindex + arrows), `aria-selected` (tabs), `aria-pressed` and `.is-active`; disabled segments fade to 40%. `.es-segmented--full` stretches; `.es-segmented__item--icon` is a square icon segment (give it a `title`). `.es-segmented--sm` (32px segments in a 3px track = 38px, 13px) is for the dense **editor inspector only** (Layout, stat count, ticker direction already use that spec). No page-local segmented CSS: only layout may be tuned locally (gap, segment padding, 13px labels in a crowded toolbar such as the Video Ads stage at about 1024); never height, radius or selected colours. On a grey surface (the Video Ads stage) the track gets a 1px `--es-line` ring.
+- **Feature section headings** (Generate: Trending now, Recent, Try a format, Start from a live trend): one style, the panel-title role, 18 / 800 Roboto Condensed UPPERCASE in ink, optional 16–18px icon, as Reels Studio's and Video Ads' panel headings. No 11px eyebrow headings for sections.
+- **Chips** (`.es-chip`): filters and quick choices everywhere (Home sport filter, Generate Trending now, Trends sports, Video Ads By moment sports / sort / quality / claims / style set, Reels leagues and angles). 32px (44px on touch), 10px radius, 1px outline, 13/500. Pressed (`aria-pressed`) or checked (`role=radio` + `aria-checked`) = the calm blue tint (gradient tint on `.ais-page`). Leading league/team logo or `.es-chip__dot` colour dot; trailing count `.es-chip__count`; `aria-disabled` fades to 50%. No 999px pill chips (pills are badges); no page-local chip heights or radii.
 
 ## Data display
 
