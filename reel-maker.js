@@ -2386,13 +2386,33 @@
 
   // ── Gallery ──
   function galleryModel() { return G.galleryModel(F, modes(), { aiFramePick: true }); }
+  // The "Start from data" panel expands in place ("All formats"); the choice
+  // is remembered per browser (try/catch: private windows can throw).
+  const ENTRY_KEY = 'frameup.reels.allFormats.v1';
+  let entryOpen = (() => { try { return localStorage.getItem(ENTRY_KEY) === '1'; } catch { return false; } })();
   function renderGallery() {
     if (!G || !TL) { els.fmtEntry.hidden = true; return; }
     const model = galleryModel();
     const selected = dataFmt() || (state.format !== 'auto' ? state.format : '');
     els.gallery.innerHTML = G.galleryHtml(model, { selected });
-    els.fmtEntry.innerHTML = G.entryHtml(model);
+    els.fmtEntry.innerHTML = G.entryHtml(model, { expanded: entryOpen, selected });
+    els.fmtEntry.classList.toggle('is-open', entryOpen);
     els.fmtEntry.hidden = Boolean(dataFmt());
+  }
+  function setEntryOpen(open, { focus = false } = {}) {
+    entryOpen = Boolean(open);
+    try { localStorage.setItem(ENTRY_KEY, entryOpen ? '1' : '0'); } catch { /* per-browser convenience only */ }
+    const k = entryOpen ? 'open' : 'closed';
+    const toggle = els.fmtEntry.querySelector('[data-gall]');
+    const more = els.fmtEntry.querySelector(`#${G.ENTRY_MORE_ID}`);
+    const title = els.fmtEntry.querySelector('[data-gtitle]');
+    els.fmtEntry.classList.toggle('is-open', entryOpen);
+    if (toggle) { toggle.setAttribute('aria-expanded', String(entryOpen)); toggle.textContent = G.ENTRY_TOGGLE[k]; }
+    if (title) title.textContent = G.ENTRY_TITLE[k];
+    if (more) more.toggleAttribute('inert', !entryOpen);
+    if (focus && toggle) toggle.focus({ preventScroll: true });
+    // Bring the newly shown formats into view without jumping the page.
+    if (entryOpen && more) requestAnimationFrame(() => more.scrollIntoView?.({ block: 'nearest', behavior: calmMotion() ? 'auto' : 'smooth' }));
   }
   function openGallery() {
     if (state.flow.making) return;
@@ -2400,7 +2420,6 @@
     goStep('format');
   }
   function onGalleryClick(event) {
-    if (event.target.closest('[data-gall]')) { openGallery(); return; }
     const btn = event.target.closest('[data-gformat]');
     if (!btn) return;
     const id = btn.dataset.gformat;
@@ -2408,7 +2427,19 @@
       toast(`${F.FORMATS[id].label} is coming soon. Its data server lands next; the news formats work today.`);
       return;
     }
+    const fromEntry = els.fmtEntry.contains(btn);
     pickFormat(id);
+    // A news tile keeps the editor on the Story step: put focus back on it.
+    if (fromEntry && !F.isDataFormat(id)) els.fmtEntry.querySelector(`[data-gformat="${id}"]`)?.focus({ preventScroll: true });
+  }
+  function onEntryClick(event) {
+    if (event.target.closest('[data-gall]')) { setEntryOpen(!entryOpen); return; }
+    onGalleryClick(event);
+  }
+  function onEntryKey(event) {
+    if (event.key !== 'Escape' || !entryOpen) return;
+    event.preventDefault();
+    setEntryOpen(false, { focus: true });
   }
   // A new reel when the editor switches format family or data format while a
   // reel is open (the old one is kept under "Continue a reel").
@@ -2480,7 +2511,8 @@
     state.gp.selected = ''; state.pp.selected = ''; state.pp.candidate = null; state.cp.clip = null; state.cp.asset = ''; state.cp.segment = null;
   }
   els.gallery.addEventListener('click', onGalleryClick);
-  els.fmtEntry.addEventListener('click', onGalleryClick);
+  els.fmtEntry.addEventListener('click', onEntryClick);
+  els.fmtEntry.addEventListener('keydown', onEntryKey);
   els.galleryClose.addEventListener('click', () => goStep(dataFmt() ? (FLOW.sourceReady(dataFmt(), state.flow.source) ? 'topic' : 'source') : 'topic'));
 
   // Steps: Format and Source appear for data formats (and while the gallery

@@ -4,7 +4,8 @@
 //
 //   Format gallery   two rows of tiles: the four news formats (the trend-first
 //                    path, unchanged) and the data formats (Game Swing, Moment
-//                    Replay, Archive). A data tile is "coming soon" until the
+//                    Replay, Archive). The Story step's "Start from data" panel
+//                    renders the same tiles and expands in place to show all. A data tile is "coming soon" until the
 //                    server modes it needs are live (config.formatModes).
 //   Source pickers   game list (Live now / Last 48 h sorted by drama / Search),
 //                    player search with an angle, clip link / library / upload.
@@ -61,29 +62,57 @@
     return { news: F.FORMAT_IDS.map(tile), data: (F.DATA_FORMAT_IDS || []).map(tile) };
   }
 
-  // One gallery tile. Coming-soon tiles stay focusable (aria-disabled) so
-  // keyboard and screen-reader users hear why they cannot be picked.
-  function tileHtml(t, { selected = '' } = {}) {
+  // One line under each tile title (shortened from reel-formats.js blurbs; the
+  // registry is frozen, so the short copy lives here).
+  const SUMMARY = {
+    explainer: 'What happened and why it matters.',
+    stat: 'One big number, then the context.',
+    top5: 'Five ranked entries, #5 to #1.',
+    quote: 'A real quote as kinetic type.',
+    gameswing: 'The plays that swung a game.',
+    replay: 'Setup, play, reaction from one clip.',
+    archive: 'A career year by year, all cited.',
+  };
+  const summaryOf = t => SUMMARY[t.id] || t.blurb || '';
+
+  // One format tile: the one renderer for the Format step gallery and the
+  // "Start from data" panel on the Story step. Coming-soon tiles stay
+  // focusable (aria-disabled) so keyboard and screen-reader users hear why
+  // they cannot be picked. prefix keeps ids unique when both are in the DOM;
+  // compact drops the cost chip and uses the short name (narrow panel).
+  function tileHtml(t, { selected = '', prefix = 'rm-gt', compact = false } = {}) {
     const soon = t.status === 'soon';
     const on = selected === t.id;
-    const sports = t.sports.map(s => SPORT_LABEL[s] || s).join(' · ');
-    return `<li class="rm-gtile${soon ? ' is-soon' : ''}${on ? ' is-on' : ''}">
-      <button class="rm-gtile__btn" type="button" data-gformat="${esc(t.id)}" aria-describedby="rm-gt-${esc(t.id)}-d"${soon ? ' aria-disabled="true"' : ''}${on ? ' aria-current="true"' : ''}>
-        <span class="rm-gtile__art"><img src="${esc(t.art)}" alt="" width="320" height="200" loading="lazy" decoding="async">${soon ? '<span class="es-badge rm-gtile__soon">Coming soon</span>' : ''}${on ? '<span class="es-badge es-badge--brand rm-gtile__on">Selected</span>' : ''}</span>
-        <span class="rm-gtile__name">${esc(t.label)}</span>
+    const sports = (t.sports || []).map(s => SPORT_LABEL[s] || s).join(compact ? '\u200a·\u200a' : ' · ');
+    const did = `${prefix}-${esc(t.id)}-d`;
+    const name = compact ? (t.short || t.label) : t.label;
+    return `<li class="rm-gtile${compact ? ' rm-gtile--compact' : ''}${soon ? ' is-soon' : ''}${on ? ' is-on' : ''}">
+      <button class="rm-gtile__btn" type="button" data-gformat="${esc(t.id)}" aria-describedby="${did}"${soon ? ' aria-disabled="true"' : ''}${on ? ' aria-current="true"' : ''}>
+        <span class="rm-gtile__art"><img src="${esc(t.art)}" alt="" width="200" height="250" loading="lazy" decoding="async">${soon ? '<span class="es-badge rm-gtile__soon">Coming soon</span>' : ''}${on ? '<span class="es-badge es-badge--brand rm-gtile__on">Selected</span>' : ''}</span>
+        <span class="rm-gtile__name">${esc(name)}</span>
       </button>
-      <p class="rm-gtile__blurb" id="rm-gt-${esc(t.id)}-d">${esc(t.blurb)}${soon ? ' Coming soon: the data server for it lands next.' : ''}</p>
-      <p class="rm-gtile__chips"><span class="rm-gchip">${esc(t.outputsLabel)}</span><span class="rm-gchip">${esc(t.cost)} a reel</span>${t.family === 'data' ? `<span class="rm-gchip rm-gchip--quiet">${esc(sports)}</span>` : ''}</p>
+      <p class="rm-gtile__blurb" id="${did}">${esc(summaryOf(t))}${soon ? ' Coming soon: its data server lands next.' : ''}</p>
+      <p class="rm-gtile__chips"><span class="rm-gchip">${esc(t.outputsLabel)}</span>${compact ? '' : `<span class="rm-gchip">${esc(t.cost)} a reel</span>`}<span class="rm-gchip rm-gchip--quiet rm-gtile__sports" title="${t.family === 'data' ? esc(sports) : 'From a trend or a brief'}">${t.family === 'data' ? esc(sports) : 'Trend or brief'}</span></p>
     </li>`;
   }
   function galleryHtml(model, opts = {}) {
     return `<section class="rm-ggroup" aria-labelledby="rm-gg-news"><h4 class="rm-ggroup__title" id="rm-gg-news">From the news</h4><p class="rm-ggroup__hint">Start from a trend or your brief.</p><ul class="rm-gtiles">${model.news.map(t => tileHtml(t, opts)).join('')}</ul></section>
       <section class="rm-ggroup" aria-labelledby="rm-gg-data"><h4 class="rm-ggroup__title" id="rm-gg-data">From live data and the archive <span class="es-badge es-badge--new">New</span></h4><p class="rm-ggroup__hint">Start from a game, a clip or a career. Every number comes from the data.</p><ul class="rm-gtiles">${model.data.map(t => tileHtml(t, opts)).join('')}</ul></section>`;
   }
-  // The slim entry on the Story step (beside the trend-first path).
-  function entryHtml(model) {
-    return `<div class="rm-fmt-entry__head"><span class="rm-fmt-entry__title">Start from data <span class="es-badge es-badge--new">New</span></span><button class="rm-link" type="button" data-gall>All formats</button></div>
-      <div class="rm-fmt-entry__row">${model.data.map(t => `<button class="rm-fmt-mini${t.status === 'soon' ? ' is-soon' : ''}" type="button" data-gformat="${esc(t.id)}"${t.status === 'soon' ? ' aria-disabled="true"' : ''}><img src="${esc(t.art)}" alt="" width="64" height="40" loading="lazy"><span class="rm-fmt-mini__text"><span class="rm-fmt-mini__name">${esc(t.short)}</span><span class="rm-fmt-mini__meta">${t.status === 'soon' ? 'Coming soon' : esc(t.outputsLabel)}</span></span></button>`).join('')}</div>`;
+  // The "Start from data" panel on the Story step (beside the trend-first
+  // path). Collapsed: the data formats in one row. "All formats" expands the
+  // same panel downward (no step change) to add the news formats below.
+  const ENTRY_TITLE = { closed: 'Start from data', open: 'From live data and the archive' };
+  const ENTRY_TOGGLE = { closed: 'All formats', open: 'Show less' };
+  const ENTRY_MORE_ID = 'rm-fe-more';
+  function entryHtml(model, { expanded = false, selected = '' } = {}) {
+    const k = expanded ? 'open' : 'closed';
+    const opts = { selected, prefix: 'rm-fe', compact: true };
+    return `<div class="rm-fmt-entry__head"><span class="rm-fmt-entry__title"><span class="rm-fmt-entry__label" id="rm-fe-title" data-gtitle>${ENTRY_TITLE[k]}</span> <span class="es-badge es-badge--new">New</span></span><button class="rm-link rm-fmt-entry__toggle" type="button" data-gall aria-expanded="${expanded}" aria-controls="${ENTRY_MORE_ID}">${ENTRY_TOGGLE[k]}</button></div>
+      <ul class="rm-gtiles rm-gtiles--row" aria-labelledby="rm-fe-title">${model.data.map(t => tileHtml(t, opts)).join('')}</ul>
+      <div class="rm-fmt-entry__more" id="${ENTRY_MORE_ID}" role="region" aria-labelledby="rm-fe-news"${expanded ? '' : ' inert'}><div class="rm-fmt-entry__inner">
+        <section class="rm-ggroup"><h4 class="rm-ggroup__title" id="rm-fe-news">From the news</h4><p class="rm-ggroup__hint">Start from a trend or your brief.</p><ul class="rm-gtiles rm-gtiles--grid">${model.news.map(t => tileHtml(t, opts)).join('')}</ul></section>
+      </div></div>`;
   }
 
   // ─── Games ───────────────────────────────────────────────────────────────
@@ -292,9 +321,54 @@
     return (lines.join('\n') || 'One moment as three frames: the setup, the play and the reaction.').slice(0, 2400);
   }
 
+  // Format thumbnails are drawn as <img> first (fast, cacheable), then swapped
+  // for the same SVG inline so its text uses the page's web fonts (Roboto
+  // Condensed): an <img> SVG cannot load web fonts and would fall back to Arial.
+  // Each copy gets its own id prefix, and its <style> is scoped to that copy,
+  // so nothing leaks into the page or clashes when a tile appears twice.
+  const artCache = new Map();
+  let artSeq = 0;
+  function scopeSvg(text, uid) {
+    return text
+      .replace(/<style>([^<]*)<\/style>/, (m, css) => `<style>${css.split('}').filter(r => r.trim()).map(r => {
+        const [sel, decl] = r.split('{');
+        return `${sel.split(',').map(s => `#${uid} ${s.trim()}`).join(',')}{${decl}`;
+      }).join('}')}}</style>`)
+      .replace(/\bid="([\w-]+)"/g, (m, id) => `id="${uid}-${id}"`)
+      .replace(/url\(#([\w-]+)\)/g, (m, id) => `url(#${uid}-${id})`)
+      .replace(/href="#([\w-]+)"/g, (m, id) => `href="#${uid}-${id}"`)
+      .replace(/^<svg\b/, `<svg id="${uid}" aria-hidden="true" focusable="false"`);
+  }
+  function inlineArt(root) {
+    if (typeof document === 'undefined' || typeof fetch !== 'function') return;
+    (root || document).querySelectorAll('.rm-gtile__art img[src$=".svg"], .rm-gtile__art img[src*=".svg?"]').forEach(img => {
+      const src = img.getAttribute('src');
+      if (!artCache.has(src)) artCache.set(src, fetch(src).then(r => (r.ok ? r.text() : '')).catch(() => ''));
+      artCache.get(src).then(text => {
+        if (!text || !text.trim().startsWith('<svg') || !img.isConnected) return;
+        const box = document.createElement('span');
+        box.innerHTML = scopeSvg(text.trim(), `rm-art-${++artSeq}`);
+        const svg = box.firstElementChild;
+        if (!svg) return;
+        svg.setAttribute('class', 'rm-gtile__svg');
+        img.replaceWith(svg);
+      });
+    });
+  }
+  if (typeof document !== 'undefined' && typeof MutationObserver === 'function') {
+    const watch = () => {
+      inlineArt(document);
+      new MutationObserver(list => { if (list.some(m => m.addedNodes.length)) inlineArt(document); })
+        .observe(document.body, { childList: true, subtree: true });
+    };
+    if (document.body) watch(); else document.addEventListener('DOMContentLoaded', watch);
+  }
+
   return {
+    inlineArt, scopeSvg,
     ART, SPORT_LABEL, SOURCE_LABEL, REQUIRED_MODES, OPTIONAL_MODES, ROLE_LABEL, TAG_LABEL,
     formatStatus, modeOn, costHint, outputsLabel, galleryModel, tileHtml, galleryHtml, entryHtml,
+    SUMMARY, ENTRY_TITLE, ENTRY_TOGGLE, ENTRY_MORE_ID,
     swingPct, dramaBadge, sortGames, filterGames, gameLabel, statusText, sparkPath, gameRowHtml, keyPlays, playWhen,
     playerRowHtml, archiveSources, pickMoments, coverageText, yearOf,
     parseAthleteId, parseClipLink, fmtSec, codeFrames, framesFromPick, sampleTimes, clipRowHtml,

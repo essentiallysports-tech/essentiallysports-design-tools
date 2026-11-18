@@ -58,10 +58,17 @@ t('galleryModel: two rows, every format once, outputs and a cost chip per tile',
   assert.notEqual(off, on);
 });
 
-t('preview art: ES palette only (no purple), no external references, no text to mis-render', () => {
+t('preview art: 4:5 mini reels, ES palette (no purple), ES fonts with fallbacks, ES mark top-right, small', () => {
   F.ALL_FORMAT_IDS.forEach(id => {
     const svg = readFileSync(path.join(root, `assets/reels/formats/${id}.svg`), 'utf8');
-    assert.doesNotMatch(svg, /<text|href=|xlink|<script/i, id);
+    assert.ok(Buffer.byteLength(svg) < 8192, `${id} is under 8 KB`);
+    assert.match(svg, /viewBox="0 0 200 250"/, `${id} is 4:5`);
+    assert.doesNotMatch(svg, /href=|xlink|<script|<image|@import|url\((?!#)/i, `${id} has no external references`);
+    // Text uses the ES families first, then a condensed fallback stack.
+    assert.match(svg, /font-family:'Roboto Condensed','Acumin Pro Condensed',[^;]*sans-serif/, `${id} font stack`);
+    assert.match(svg, /<path d="M0 0h122\.3v104\.1H0z" fill="#0A7DFA"\/>/, `${id} carries the ES mark`);
+    const mark = svg.match(/<g transform="translate\((\d+) (\d+)\) scale/);
+    assert.ok(mark && Number(mark[1]) >= 150 && Number(mark[2]) <= 30, `${id}: ES mark top-right`);
     const hexes = svg.match(/#[0-9a-f]{6}\b/gi) || [];
     hexes.forEach(hex => {
       const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
@@ -70,22 +77,94 @@ t('preview art: ES palette only (no purple), no external references, no text to 
     });
     assert.match(svg, /<title>[^<]+<\/title>/, `${id} has a title`);
   });
+  // What each thumbnail explains, at a glance.
+  const art = id => readFileSync(path.join(root, `assets/reels/formats/${id}.svg`), 'utf8');
+  assert.match(art('gameswing'), /WIN PROBABILITY/); assert.match(art('gameswing'), /FINAL/); assert.match(art('gameswing'), /SWING/);
+  ['SETUP', 'PLAY', 'REACTION'].forEach(w => assert.match(art('replay'), new RegExp(w)));
+  ['2017', '2023', 'SOURCE'].forEach(w => assert.match(art('archive'), new RegExp(w)));
+  ['#5', '#1'].forEach(w => assert.match(art('top5'), new RegExp(w)));
+  assert.match(art('quote'), /“/); assert.match(art('stat'), /STAT ALERT/); assert.match(art('explainer'), /EXPLAINED/);
 });
 
-t('tiles: coming-soon is aria-disabled with the reason; values are escaped', () => {
+t('tiles: coming-soon is aria-disabled with the reason; values are escaped; one-line summary + chips', () => {
   const m = G.galleryModel(F, ALL_OFF);
   const tile = G.tileHtml(m.data[0]);
   assert.match(tile, /data-gformat="gameswing"[^>]*aria-disabled="true"/);
   assert.match(tile, /Coming soon/);
   assert.match(tile, /aria-describedby="rm-gt-gameswing-d"/);
+  assert.match(tile, /width="200" height="250"/, 'the 4:5 thumbnail');
+  assert.match(tile, /NFL · CFB · MLB/, 'data tiles list their sports');
   const ready = G.tileHtml(m.data[1], { selected: 'replay' });
   assert.doesNotMatch(ready, /aria-disabled/);
   assert.match(ready, /aria-current="true"/);
+  assert.match(ready, />Reel \+ carousel</);
   const evil = G.tileHtml({ ...m.news[0], label: '<img src=x onerror=1>' });
   assert.doesNotMatch(evil, /<img src=x/);
   const all = G.galleryHtml(m);
   assert.equal((all.match(/data-gformat=/g) || []).length, F.ALL_FORMAT_IDS.length);
-  assert.match(G.entryHtml(m), /data-gall/);
+  F.ALL_FORMAT_IDS.forEach(id => {
+    assert.ok(G.SUMMARY[id] && G.SUMMARY[id].length <= 60, `${id}: a one-line summary`);
+    assert.ok(all.includes(G.esc(G.SUMMARY[id])), `${id} summary rendered`);
+  });
+  // Compact (panel) tiles: short name, no cost chip, own id prefix.
+  const compact = G.tileHtml(m.data[2], { compact: true, prefix: 'rm-fe' });
+  assert.match(compact, /rm-gtile--compact/);
+  assert.match(compact, /aria-describedby="rm-fe-archive-d"/);
+  assert.match(compact, /rm-gtile__name">Archive</);
+  assert.doesNotMatch(compact, /a reel</);
+});
+
+t('entry panel: the data row plus every format in place, wired for expand/collapse', () => {
+  const m = G.galleryModel(F, ALL_ON);
+  const closed = G.entryHtml(m);
+  assert.match(closed, /data-gall aria-expanded="false" aria-controls="rm-fe-more">All formats</);
+  assert.match(closed, /id="rm-fe-more" role="region" aria-labelledby="rm-fe-news" inert>/, 'collapsed region is inert');
+  assert.match(closed, />Start from data</);
+  // All seven formats, grouped: data row first, news below (expands downward).
+  const ids = [...closed.matchAll(/data-gformat="([a-z0-9]+)"/g)].map(x => x[1]);
+  assert.deepEqual(ids, [...F.DATA_FORMAT_IDS, ...F.FORMAT_IDS]);
+  assert.ok(closed.indexOf('rm-gtiles--row') < closed.indexOf('From the news'));
+  // One renderer: the panel's tiles are tileHtml's (compact), ids unique vs the gallery.
+  const gallery = G.galleryHtml(m);
+  const idsIn = h => [...h.matchAll(/ id="([^"]+)"/g)].map(x => x[1]);
+  const both = [...idsIn(closed), ...idsIn(gallery)];
+  assert.equal(new Set(both).size, both.length, 'no duplicate ids when both are in the DOM');
+  m.news.forEach(t => assert.ok(closed.includes(G.tileHtml(t, { prefix: 'rm-fe', compact: true }))));
+  const open = G.entryHtml(m, { expanded: true, selected: 'top5' });
+  assert.match(open, /aria-expanded="true" aria-controls="rm-fe-more">Show less</);
+  assert.doesNotMatch(open, / inert/);
+  assert.match(open, />From live data and the archive</);
+  assert.match(open, /data-gformat="top5"[^>]*aria-current="true"/);
+});
+
+t('page: "All formats" expands the panel in place (no step change), remembered, Esc collapses', () => {
+  assert.match(js, /const ENTRY_KEY = 'frameup\.reels\.allFormats\.v1';/);
+  assert.match(js, /try \{ return localStorage\.getItem\(ENTRY_KEY\) === '1'; \} catch \{ return false; \}/);
+  assert.match(js, /try \{ localStorage\.setItem\(ENTRY_KEY, entryOpen \? '1' : '0'\); \} catch/);
+  const entryClick = js.slice(js.indexOf('function onEntryClick'), js.indexOf('function onEntryKey'));
+  assert.match(entryClick, /\[data-gall\]'\)\) \{ setEntryOpen\(!entryOpen\); return; \}/);
+  assert.doesNotMatch(entryClick, /openGallery|goStep/, 'the toggle never changes the step');
+  const setOpen = js.slice(js.indexOf('function setEntryOpen'), js.indexOf('function openGallery'));
+  assert.match(setOpen, /setAttribute\('aria-expanded', String\(entryOpen\)\)/);
+  assert.match(setOpen, /toggleAttribute\('inert', !entryOpen\)/);
+  assert.match(setOpen, /classList\.toggle\('is-open', entryOpen\)/);
+  assert.match(js, /if \(event\.key !== 'Escape' \|\| !entryOpen\) return;[\s\S]{0,80}setEntryOpen\(false, \{ focus: true \}\)/);
+  assert.match(js, /els\.fmtEntry\.addEventListener\('click', onEntryClick\);/);
+  assert.match(js, /els\.fmtEntry\.addEventListener\('keydown', onEntryKey\);/);
+  assert.match(js, /G\.entryHtml\(model, \{ expanded: entryOpen, selected \}\)/);
+  // Tiles in the panel pick exactly as the gallery tiles do.
+  assert.match(js, /function onEntryClick[\s\S]{0,160}onGalleryClick\(event\);/);
+  // The Format step (steps nav) still opens the full gallery.
+  assert.match(js, /if \(btn\.dataset\.step === 'format'\) openGallery\(\)/);
+  // CSS: height animation via grid rows, reduced motion, phone scroll-snap + 2 columns.
+  const block = css.slice(css.indexOf('feature/reels-gallery-expand'));
+  assert.match(block, /\.rm-fmt-entry__more \{ display: grid; grid-template-rows: 0fr;/);
+  assert.match(block, /\.rm-fmt-entry\.is-open \.rm-fmt-entry__more \{ grid-template-rows: 1fr;/);
+  assert.match(block, /prefers-reduced-motion: reduce\)[\s\S]{0,120}transition: none/);
+  assert.match(block, /scroll-snap-type: x mandatory/);
+  assert.match(block, /repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(block, /\.rm-gtile__art \{ aspect-ratio: 4 \/ 5; \}/);
+  ['reel-gallery.js', 'reel-maker.js', 'reel-maker.css'].forEach(f => assert.ok(html.includes(`${f}?v=20261120-gallery`), `${f} cache key`));
 });
 
 // ─── Games (fixture-backed) ────────────────────────────────────────────────

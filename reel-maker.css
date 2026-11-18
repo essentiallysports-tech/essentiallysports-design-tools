@@ -828,3 +828,75 @@ a.rm-cite:hover { text-decoration: underline; }
   .rm-steps ol.is-data .rm-step:not([aria-current]) > span:not(.rm-step__num) { display: none; }
   .rm-steps ol.is-data .rm-step { padding: 0 6px; }
 }
+
+/* ═══ Format tiles + "Start from data" expand in place (feature/reels-gallery-expand, 2026-11-20) ═══
+   One tile renderer (reel-gallery.js tileHtml) for the Format step and the
+   Story step panel. Thumbnails are 4:5 mini reels (assets/reels/formats).
+   "All formats" grows the same panel downward; no step change. */
+.rm-gtile__art { aspect-ratio: 4 / 5; }
+.rm-gallery .rm-gtiles { grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); }
+.rm-gtile__blurb { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.rm-gtile__btn:focus-visible { outline: none; }
+.rm-gtile.is-soon .rm-gtile__art img { filter: saturate(.25) brightness(.8); }
+
+/* Compact tiles in the narrow panel. */
+.rm-gtile--compact { gap: var(--es-space-1, 4px); padding: var(--es-space-1, 4px) var(--es-space-1, 4px) var(--es-space-2, 8px); border-radius: var(--es-radius-control, 12px); }
+.rm-gtile--compact .rm-gtile__art { border-radius: 8px; }
+.rm-gtile--compact .rm-gtile__btn { gap: var(--es-space-1, 4px); border-radius: 8px; }
+.rm-gtile--compact .rm-gtile__name { overflow: hidden; font-size: 13px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.rm-gtile--compact .rm-gtile__blurb { font-size: 12px; line-height: 1.35; }
+.rm-gtile--compact .rm-gtile__chips { gap: 4px; }
+.rm-gtile--compact .rm-gchip { min-height: 20px; padding: 0 6px; font-size: 11px; }
+.rm-gtile__sports { display: block; max-width: 100%; overflow: hidden; line-height: 20px; text-overflow: ellipsis; }
+.rm-gtile--compact .rm-gtile__sports { flex-basis: 100%; padding: 0; box-shadow: none; }
+.rm-gtile--compact .rm-gtile__soon, .rm-gtile--compact .rm-gtile__on { top: var(--es-space-1, 4px); left: var(--es-space-1, 4px); }
+
+/* The panel. */
+.rm-fmt-entry { gap: var(--es-space-3, 12px); }
+.rm-fmt-entry__title { flex-wrap: wrap; }
+.rm-fmt-entry__toggle { flex: none; min-height: 32px; padding: 0 var(--es-space-1, 4px); border-radius: 6px; color: var(--rm-brand-text, var(--es-brand-text, #0a5fbf)); }
+.rm-fmt-entry__toggle:focus-visible { outline: var(--es-focus-outline, 2px solid #0a6fde); outline-offset: var(--es-focus-offset, 2px); }
+.rm-fmt-entry .rm-gtiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--es-space-2, 8px); }
+.rm-fmt-entry .rm-ggroup { gap: var(--es-space-1, 4px); }
+.rm-fmt-entry .rm-ggroup__title { font-size: 13px; }
+.rm-fmt-entry .rm-ggroup__hint { margin: 0 0 var(--es-space-1, 4px); font-size: 12px; }
+/* Height animation: a 0fr -> 1fr grid row, so no measuring in JS. */
+.rm-fmt-entry__more { display: grid; grid-template-rows: 0fr; margin-top: calc(-1 * var(--es-space-3, 12px)); visibility: hidden; transition: grid-template-rows var(--es-dur-step, 300ms) var(--es-ease-entrance, ease), margin-top var(--es-dur-step, 300ms) var(--es-ease-entrance, ease), visibility 0s linear var(--es-dur-step, 300ms); }
+.rm-fmt-entry__inner { min-height: 0; overflow: hidden; }
+.rm-fmt-entry__inner > .rm-ggroup { padding-top: var(--es-space-3, 12px); border-top: 1px solid var(--rm-line); }
+.rm-fmt-entry.is-open .rm-fmt-entry__more { grid-template-rows: 1fr; margin-top: 0; visibility: visible; transition-delay: 0s; }
+.rm-fmt-entry__inner > .rm-ggroup { opacity: 0; transform: translateY(-8px); transition: opacity var(--es-dur-step, 300ms) ease, transform var(--es-dur-step, 300ms) var(--es-ease-entrance, ease); }
+.rm-fmt-entry.is-open .rm-fmt-entry__inner > .rm-ggroup { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .rm-fmt-entry__more, .rm-fmt-entry__inner > .rm-ggroup { transition: none; }
+}
+/* Thumb hover: a small lift (the scale already lives above). */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .rm-gtile:not(.is-soon) .rm-gtile__art { transition: box-shadow var(--es-dur-step, 300ms) ease; }
+  .rm-gtile:not(.is-soon):hover .rm-gtile__art { box-shadow: 0 8px 24px rgb(10 111 222 / .18); }
+}
+/* One focus ring, on the whole card (the button's own ring would double it).
+   Inset in the panel, where the scroller and the expand clip would cut it. */
+.rm-page .rm-gtile__btn:focus-visible { outline: none !important; }
+.rm-page .rm-gtile:has(.rm-gtile__btn:focus-visible) { outline: var(--es-focus-outline, 2px solid #0a6fde); outline-offset: var(--es-focus-offset, 2px); }
+.rm-page .rm-gtile--compact:has(.rm-gtile__btn:focus-visible) { outline-offset: -2px; }
+@media (hover: hover) { .rm-gtile:not(.is-soon):not(.is-on):hover .rm-gchip:not(.rm-gchip--quiet) { background: var(--rm-surface); } }
+@media (max-width: 480px) {
+  /* Collapsed on a phone: the row scrolls sideways with snap. Expanded: 2 columns. */
+  .rm-fmt-entry:not(.is-open) .rm-gtiles--row { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 44%; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding: 0 var(--es-space-1, 4px); padding: 2px 2px var(--es-space-1, 4px); scrollbar-width: none; }
+  .rm-fmt-entry:not(.is-open) .rm-gtiles--row::-webkit-scrollbar { display: none; }
+  .rm-fmt-entry:not(.is-open) .rm-gtiles--row > .rm-gtile { scroll-snap-align: start; }
+  .rm-fmt-entry.is-open .rm-gtiles, .rm-fmt-entry .rm-gtiles--grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rm-gallery .rm-gtiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* ═══ end reels-gallery-expand ═══ */
+
+/* Inline format thumbnails (reel-gallery.js inlineArt): same box as the <img>,
+   so the swap is invisible except that the text now uses the ES web fonts. */
+.rm-gtile__art svg.rm-gtile__svg { display: block; width: 100%; height: 100%; }
+.rm-gtile.is-soon .rm-gtile__art svg.rm-gtile__svg { filter: saturate(.25) brightness(.8); }
+/* The 4 news formats: 2 x 2 in the side panel (no lone tile on its own row),
+   4 across when the panel is wide enough. */
+.rm-fmt-entry { container-type: inline-size; }
+.rm-fmt-entry .rm-gtiles--grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container (min-width: 640px) { .rm-fmt-entry .rm-gtiles--grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
