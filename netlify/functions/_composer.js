@@ -292,6 +292,21 @@ function dedupePhotos(list = []) {
 async function resolvePhotos(read, { localFind = null, track = null } = {}) {
   const out = {};
   const service = assetService();
+  // Imagery v3 (_imagery.js via the asset service): cleaned subjects, ranked,
+  // de-duplicated photos per subject, cut-outs, headshots and logos.
+  if (service?.prepareImagery) {
+    try {
+      const imagery = await service.prepareImagery(read, { ...(track || {}) });
+      if (imagery?.ok) {
+        Object.entries(imagery.bySubject || {}).forEach(([name, list]) => {
+          const isTeam = !list[0]?.person && imagery.subjects?.find(x => x.name === name)?.kind !== 'person';
+          out[name] = list.map(p => ({ ...p, src: p.url, title: p.title || '', person: name, source: 'es', team: isTeam }));
+        });
+        Object.defineProperty(out, 'imagery', { value: imagery, enumerable: false });
+        return out;
+      }
+    } catch (error) { /* fall back to the per-person search below */ }
+  }
   const subjects = [...read.people.slice(0, 4)];
   read.stories.forEach(story => {
     if (story.people?.length) return;
@@ -431,6 +446,16 @@ function inputsFor(direction, read, assets = {}) {
     input.compare = { title: direction.compareTitle || direction.headline, a: { label: `${left || 'A'} ${unit}`.trim(), value: compareFact.a, display: compareFact.a, factId: compareFact.id }, b: { label: `${right || 'B'} ${unit}`.trim(), value: compareFact.b, display: compareFact.b, factId: compareFact.id }, factId: compareFact.id };
   }
   if (direction.sides) input.sides = direction.sides;
+  // Imagery v3 contract fields (input.photos / cutouts / headshots / logos).
+  // A collage's own secondary photos (direction.photos) keep their meaning.
+  if (assets.imagery && ASSETS?.inputImagery) {
+    const extra = ASSETS.inputImagery(assets.imagery, { person, team: storyTeams[0]?.name || '', main: photo?.src || '' });
+    // input.photo leads; input.photos are the other ranked candidates ([photo, ...photos] = the full list).
+    if (!(direction.photos || []).length && extra.photos?.length) input.photos = extra.photos.filter(p => !photo || p.url !== photo.src);
+    if (extra.cutouts?.length) { input.cutouts = extra.cutouts; if (!input.cutout && person) input.cutout = { src: extra.cutouts[0].url }; }
+    input.headshots = extra.headshots || [];
+    if (!input.logos.length && extra.logos?.length) input.logos = extra.logos;
+  }
   return input;
 }
 
@@ -831,6 +856,11 @@ async function resolveCutouts(photos, { track = null, limit = 4 } = {}) {
   const service = assetService();
   const out = {};
   let cost = 0;
+  // Imagery v3: cut-outs already in the shared store (made by an earlier run's browser).
+  if (photos.imagery) {
+    (photos.imagery.cutouts || []).forEach(c => { out[c.fromPhoto] = c.url; });
+    return { cutouts: out, cost };
+  }
   if (!service?.cutout) return { cutouts: out, cost };
   const firsts = Object.values(photos).flatMap(list => list.filter(p => !p.team).slice(0, 2)).slice(0, limit);
   await Promise.all(firsts.map(async photo => {
@@ -877,7 +907,7 @@ async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = 
   const photos = await resolvePhotos(read, { localFind, track });
   Object.entries(photos).forEach(([person, list]) => list.forEach((p, i) => { p.id = `p${Object.keys(photos).indexOf(person) + 1}${String.fromCharCode(97 + i)}`; }));
   const { cutouts, cost: cutCost } = await resolveCutouts(photos, { track });
-  const assets = { photos, cutouts, art: {} };
+  const assets = { photos, cutouts, art: {}, imagery: photos.imagery || null };
   // Vector art first so the director sees what fits; AI art only for the chosen directions.
   read.stories.forEach(story => { assets.art[story.id] = { src: `proc:${procArtFor(story.text, read.sport)}`, ai: false }; });
   // Team lessons for this sport (never blocks the run).
@@ -916,7 +946,7 @@ async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = 
     d.swaps = dedupePhotos([d.photo, ...(d.photos || []), ...(photos[owner] || [])].filter(Boolean)).map(p => ({ src: p.src, person: p.person || owner, cutout: cutouts[p.src] || '' }));
   });
   directions = directions.filter(d => d.candidates.length);
-  const cost = { director: ai.cost, assets: cutCost + artRes.cost, judge: 0 };
+  const cost = { director: ai.cost, assets: cutCost + artRes.cost + (Number(assets.imagery?.cost) || 0), judge: 0 };
   cost.total = Number((cost.director + cost.assets).toFixed(5));
   const value = {
     kind: 'creative',
@@ -927,6 +957,8 @@ async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = 
     lessons: lessons.map(({ id, key: lessonKey, text, kind, scope, scopeValue }) => ({ id, key: lessonKey, text, kind, scope, scopeValue })),
     budget: { count: want, candidatesPerDesign: perDesign },
     assets: { service: Boolean(assetService()), cutouts: Object.keys(cutouts).length, photos: Object.values(photos).reduce((n, l) => n + l.length, 0) },
+    // Imagery v3: what the browser still makes (cut-outs) and what it found.
+    imagery: assets.imagery ? { cutoutPlan: assets.imagery.cutoutPlan || [], headshots: assets.imagery.headshots || [], logos: assets.imagery.logos || [], stats: assets.imagery.stats || {}, cost: Number(assets.imagery.cost) || 0 } : null,
     cost,
     ms: now() - started,
   };

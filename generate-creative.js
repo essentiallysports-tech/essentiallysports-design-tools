@@ -559,6 +559,8 @@
         // Never leave someone empty-handed: Generate falls back to ES templates.
         return 'fallback';
       }
+      // Imagery v3: cut out the hero subject(s) in the browser before composing.
+      await addCutouts(plan);
       progress.designing?.();
       // Every candidate small, with the free check.
       const sets = [];
@@ -615,6 +617,45 @@
       g.setBusy(false);
       g.restoreFocus(els.grid.querySelector('.gen-cc .gen-cc__media') || els.submit);
     }
+  }
+
+  // ── Imagery v3: cut-outs the plan asked for (plan.imagery.cutoutPlan) ──────
+  // Made here because only the browser can keep the photo's original pixels
+  // (FrameUpAssets: AI mask, alignment checks, shared store so the next run gets
+  // them at $0). Each direction of that person without a cut-out is rebuilt from
+  // its input with the cut-out, through the same ES gate as the server. Photo /
+  // cut-out preparation only: archetypes and layout are the composer's.
+  async function addCutouts(plan) {
+    const items = plan?.imagery?.cutoutPlan || [];
+    const A = window.FrameUpAssets;
+    if (!items.length || !A?.prepareCutouts || !C()?.candidates) return;
+    let made;
+    try { made = await A.prepareCutouts(items, { max: 3 }); } catch (error) { return; }
+    plan.imagery.cutoutCost = made.cost || 0;
+    if (plan.cost) plan.cost.total = Number(((plan.cost.total || 0) + (made.cost || 0)).toFixed(5));
+    if (!made.cutouts?.length) return;
+    const contract = made.cutouts.map(({ url, width, height, person, fromPhoto }) => ({ url, src: url, width, height, person, fromPhoto }));
+    plan.directions.forEach(dir => {
+      const person = dir.photo?.person || dir.input?.name || '';
+      const mine = contract.filter(c => c.person && c.person === person);
+      (dir.photos || []).forEach(p => { const hit = contract.find(c => c.fromPhoto === p.src); if (hit && !p.cutout) p.cutout = hit.url; });
+      if (!mine.length || !dir.input || dir.input.cutout) return;
+      const cut = mine.find(c => c.fromPhoto === dir.photo?.src) || mine[0];
+      const input = { ...dir.input, cutout: { src: cut.url }, cutouts: mine };
+      let rebuilt = [];
+      try {
+        rebuilt = C().candidates(dir.archetype, input, Math.max(2, dir.candidates.length))
+          .filter(scene => C().checkScene(scene, { facts: input.facts }).ok);
+      } catch (error) { rebuilt = []; }
+      dir.input = input;
+      if (!rebuilt.some(scene => scene.layers?.some(l => l.type === 'cutout'))) return;
+      const was = dir.candidates[0] || {};
+      dir.candidates = rebuilt.map((scene, i) => {
+        const checked = C().checkScene(scene, { facts: input.facts });
+        return Object.assign(scene, { id: `${dir.id}c${i + 1}`, ...(was.extra ? { extra: was.extra } : {}), guideline: { ok: true, fixes: (checked.fixes || []).map(({ rule, what }) => ({ rule, what })), version: was.guideline?.version } });
+      });
+      dir.cutout = { src: cut.url };
+    });
   }
 
   // Ideas the director had that code dropped (off-brief, invented numbers...).

@@ -4,6 +4,8 @@
 //   FrameUpAssets.generateConceptArt({ concept, sport, palette, avoid, size, seed, quality, space })
 //   FrameUpAssets.findPhotos({ person, team, sport, query, count, exclude })
 //   FrameUpAssets.cutout({ imageUrl, source })  -> transparent PNG of the ORIGINAL photo
+//   FrameUpAssets.prepareCutouts(plan.imagery.cutoutPlan, { max, timeoutMs, maxUsd }) -> { cutouts, cost }
+//   FrameUpAssets.storeCutout({ sourceUrl, image })  -> shared store URL (reused by later runs at $0)
 //   FrameUpAssets.status()
 // All resolve to { ok, url | dataUrl, width, height, cost, cached, rights: { source, licence, aiGenerated } }
 // (failures: { ok: false, reason, error }). They never throw.
@@ -191,5 +193,44 @@
 
   const cutout = (args = {}) => cached('cutout', { imageUrl: String(args.imageUrl || ''), source: args.source || '' }, () => runCutout(args));
 
-  return Object.freeze({ generateBackground, generateConceptArt, findPhotos, cutout, status, _test: { toProxied, stableKey, session } });
+  // Keep a finished cut-out (a PNG of the ORIGINAL pixels) in the shared store,
+  // named after its ES photo, so the next run on any server gets it at $0.
+  const storeCutout = ({ sourceUrl, image } = {}) => post({ op: 'cutout-store', sourceUrl, image });
+
+  // Generate imagery v3: make the cut-outs a Creative plan asks for
+  // (plan.imagery.cutoutPlan: [{ fromPhoto, sourceUrl, person, path }]).
+  // At most `max` (default 3) per run, in parallel, within `timeoutMs`
+  // (default 25 s) and `maxUsd` (default $0.05: about 3-5 low-quality masks).
+  // Resolves to { cutouts: [{ url, width, height, person, fromPhoto }], cost, made, failed }.
+  // Never throws; whatever is not done in time is skipped (the design keeps its photo).
+  async function prepareCutouts(items = [], { max = 3, timeoutMs = 25000, maxUsd = 0.05, store = true } = {}) {
+    const list = (Array.isArray(items) ? items : []).filter(item => item && item.sourceUrl).slice(0, Math.max(0, max));
+    const out = { cutouts: [], cost: 0, made: 0, failed: 0 };
+    if (!list.length || typeof document === 'undefined') return out;
+    let spent = 0;
+    const one = async item => {
+      if (spent >= maxUsd) { out.failed += 1; return; }
+      const result = await cutout({ imageUrl: item.sourceUrl, source: 'ES photo (original pixels; AI used only for the mask)' });
+      spent += Number(result.cost) || 0;
+      out.cost += Number(result.cost) || 0;
+      if (!result.ok || !result.dataUrl) { out.failed += 1; return; }
+      out.made += 1;
+      let url = result.dataUrl;
+      if (store) {
+        const kept = await storeCutout({ sourceUrl: item.sourceUrl, image: result.dataUrl });
+        if (kept.ok && kept.url) url = kept.url;
+      }
+      out.cutouts.push({ url, width: result.width, height: result.height, person: item.person || '', fromPhoto: item.fromPhoto || toProxied(item.sourceUrl), dataUrl: result.dataUrl });
+    };
+    let timer;
+    await Promise.race([
+      Promise.all(list.map(item => one(item).catch(() => { out.failed += 1; }))),
+      new Promise(resolve => { timer = setTimeout(resolve, timeoutMs); }),
+    ]);
+    clearTimeout(timer);
+    out.cost = Number(out.cost.toFixed(5));
+    return out;
+  }
+
+  return Object.freeze({ generateBackground, generateConceptArt, findPhotos, cutout, storeCutout, prepareCutouts, status, _test: { toProxied, stableKey, session } });
 });
