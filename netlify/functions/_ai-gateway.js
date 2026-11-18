@@ -261,7 +261,8 @@ async function userOverHourlyLimit(token, limit = USER_HOURLY_CALL_LIMIT) {
 // a warning event is logged ("fails open", right while testing).
 // AI_FAIL_CLOSED=1 blocks instead (aiSpendGate, reason "limit-unknown").
 const USER_WEEKLY_LIMIT_USD = (() => {
-  const raw = String(process.env.AI_USER_WEEKLY_LIMIT_USD ?? '').trim();
+  // Accept "50", "$50", "50 USD", "50.00" (people type the dollar sign in Vercel).
+  const raw = String(process.env.AI_USER_WEEKLY_LIMIT_USD ?? '').trim().replace(/^\$\s*/, '').replace(/\s*(usd|dollars?)$/i, '').replace(/,/g, '');
   const value = Number(raw || 20);
   return Number.isFinite(value) && value >= 0 ? value : 20;
 })();
