@@ -113,6 +113,32 @@
       ]
     },
     {
+      "id": "2026-11-20-va-multiselect",
+      "date": "2026-11-20",
+      "title": "Video Ads: pick several teams or colours at once",
+      "commit": "ac32470",
+      "items": [
+        {
+          "title": "Several teams in one search",
+          "text": "In Find a clip, By team now lets you pick up to 6 teams. You get clips of any of them in one list, one card per play, and each card marks the team it matched. Your picks are remembered for each sport.",
+          "page": "video-ads.html",
+          "target": "#va-team-list"
+        },
+        {
+          "title": "Several colours too",
+          "text": "By colour works the same way: pick up to 6 team colours and see clips of every team that wears any of them.",
+          "page": "video-ads.html",
+          "target": "#va-swatches"
+        },
+        {
+          "title": "Multi-select filters",
+          "text": "The Team and Colour filters in By moment and the clip library are now menus with checkboxes, so you can show two or three teams side by side.",
+          "page": "video-ads.html",
+          "target": "#va-clip-tabs"
+        }
+      ]
+    },
+    {
       "id": "2026-11-19-hero-generate",
       "date": "2026-11-19",
       "title": "Generate: stat lines, records, carousels and no blank photos",

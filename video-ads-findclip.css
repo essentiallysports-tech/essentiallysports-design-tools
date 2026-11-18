@@ -131,3 +131,68 @@
   .va-linkres__text, .va-linkres__acts { padding-left: 0; }
   .va-linkres__acts .es-btn { flex: 1 1 auto; }
 }
+
+/* ── Multi-select (feature/va-multiselect, 2026-11-20) ──────────────────────
+   By team / By colour: up to 6 picks, a compact summary row (count, removable
+   chips, Clear). Library / By moment / result filters: a chip menu with a
+   checkbox popover. ES chip tokens; 8px rhythm. */
+.va-picksum { display: grid; gap: var(--es-space-2, 8px); min-width: 0; }
+.va-picksum:empty { display: none; }
+.va-picksum__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); min-width: 0; min-height: 32px; }
+.va-picksum__label, .va-picksum__all { color: var(--va-ink); font: 600 13px/1.3 var(--es-font-ui); white-space: nowrap; }
+.va-picksum__label .es-chip__count { margin-left: 2px; }
+.va-picksum__row .va-hint { margin: 0; }
+.va-picksum__chip { min-height: 28px; max-width: 100%; padding: 0 6px 0 4px; gap: 6px; background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px var(--es-brand-tint); color: var(--es-brand-text); }
+.va-picksum__chip:hover { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px var(--es-brand-text); }
+.va-picksum__chip > span:not(.va-logo):not(.es-chip__dot) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.va-picksum__chip > svg { flex: none; width: 14px; height: 14px; color: currentColor; opacity: .72; }
+.va-picksum__chip .es-chip__dot { margin-left: 4px; }
+.va-picksum__clear { margin-left: var(--es-space-1, 4px); }
+.va-picksum__note { display: flex; align-items: center; gap: var(--es-space-2, 8px); margin: 0; padding: var(--es-space-2, 8px) var(--es-space-3, 12px); border-radius: var(--es-radius-chip, 10px); background: var(--va-warn-soft); color: var(--va-ink); font: 500 13px/1.4 var(--es-font-ui); }
+.va-picksum__note svg { flex: none; width: 16px; height: 16px; color: var(--va-warn, #b26a00); }
+.va-pane[data-pane="clip"] .va-swatches + .va-swatch-teams { margin-top: 0; }
+.va-teamchip.is-full:not([aria-pressed="true"]) { opacity: .55; }
+.va-swatch:focus-visible { outline: 2px solid var(--es-brand, #0a7dfa); outline-offset: 2px; border-radius: var(--es-radius-chip, 10px); }
+
+/* Chip menu */
+.va-pick { position: relative; display: inline-flex; min-width: 0; max-width: 100%; }
+.va-pick__btn { min-width: 0; max-width: 100%; padding: 0 10px 0 8px; }
+.va-pick__btn .va-pick__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.va-pick__btn > svg:last-child { flex: none; width: 14px; height: 14px; transform: rotate(90deg); transition: transform .15s ease; }
+.va-pick.is-open .va-pick__btn > svg:last-child { transform: rotate(-90deg); }
+.va-pick__btn.is-on { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px var(--es-brand-tint); color: var(--es-brand-text); }
+.va-pick__btn.is-on svg, .va-pick__btn.is-on .es-chip__count { color: inherit; }
+.va-pick__pop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; display: grid; gap: var(--es-space-1, 4px); width: 272px; min-width: 0; max-width: calc(100vw - 32px); }
+.va-pick__pop[hidden] { display: none; }
+.va-pick.is-right .va-pick__pop { left: auto; right: 0; }
+.va-pick__list { display: grid; gap: 2px; max-height: 264px; overflow-y: auto; overscroll-behavior: contain; }
+.va-pick__opt { gap: var(--es-space-2, 8px); min-height: 36px; font-size: 14px; }
+.va-pick__opt input { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--es-brand, #0a7dfa); }
+.va-pick__opt .es-chip__count { margin-left: auto; }
+.va-pick__opt.is-on { background: var(--es-brand-soft); color: var(--es-brand-text); }
+.va-pick__opt.is-full { opacity: .5; cursor: not-allowed; }
+.va-pick__opt:focus-within { outline: 2px solid var(--es-brand, #0a7dfa); outline-offset: -2px; }
+.va-pick__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.va-pick__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--es-space-2, 8px); padding: var(--es-space-2, 8px) 10px var(--es-space-1, 4px); border-top: 1px solid var(--es-line, rgb(127 127 127 / .2)); }
+.va-pick__acts { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); }
+.va-pick__foot .va-link:disabled { opacity: .45; cursor: default; }
+.va-pane[data-pane="clip"] .va-cliptools__team { display: flex; }
+.va-mo-filter:has(.va-pick) { flex: 0 1 auto; max-width: 100%; }
+.va-pane[data-pane="clip"] .va-mo-tools:has(.va-pick) { justify-content: flex-start; }
+
+/* A card's teams: the picked ones it matched lead, marked. */
+.va-mo__team.is-match { background: var(--es-brand-soft); box-shadow: inset 0 0 0 1px var(--es-brand-tint); color: var(--es-brand-text); }
+
+html[data-theme="dark"] :is(.va-picksum__chip, .va-pick__btn.is-on) { background: rgb(10 125 250 / .2); box-shadow: inset 0 0 0 1px rgb(84 164 251 / .55); color: var(--es-blue-300, #9DCBFD); }
+html[data-theme="dark"] .va-picksum__chip:hover { box-shadow: inset 0 0 0 1px var(--es-blue-300, #9DCBFD); }
+html[data-theme="dark"] .va-pick__opt.is-on,
+html[data-theme="dark"] .va-mo__team.is-match { background: rgb(10 125 250 / .2); color: var(--es-blue-300, #9DCBFD); }
+html[data-theme="dark"] .va-mo__team.is-match { box-shadow: inset 0 0 0 1px rgb(84 164 251 / .45); }
+html[data-theme="dark"] .va-pick__foot { border-top-color: #3B4049; }
+
+@media (max-width: 600px) {
+
+  .va-mo-filter:has(.va-pick) { flex: 1 1 calc(50% - 4px); }
+  .va-mo-filter .va-pick, .va-mo-filter .va-pick__btn { width: 100%; }
+  .va-mo-filter .va-pick__btn .va-pick__text { flex: 1 1 auto; text-align: left; }
+}
