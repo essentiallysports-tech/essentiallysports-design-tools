@@ -2092,7 +2092,8 @@
     clearTimeout(thumbTimer);
     thumbTimer = setTimeout(() => {
       const size4x5 = B.SIZES['4x5'];
-      const colors = stillColors();
+      // Thumbnails sit on plain black (owner's call): no generated team-colour
+      // background, so the styles read as type and layout only.
       els.styles.querySelectorAll('[data-style]').forEach(b => {
         const id = b.dataset.style;
         const canvas = b.querySelector('canvas');
@@ -2104,7 +2105,7 @@
         const c = canvas.getContext('2d');
         c.setTransform(canvas.width / size4x5.width, 0, 0, canvas.height / size4x5.height, 0, 0);
         try {
-          R.drawFrame(c, { width: size4x5.width, height: size4x5.height, video: null, bg: { tint: { color: '#000000', amount: 0.25 } }, ops: layout.ops, logoImage: logo.img, source: { kind: 'generated', colors, t: 2, duration: 8 } });
+          R.drawFrame(c, { width: size4x5.width, height: size4x5.height, video: null, bg: { tint: { color: '#000000', amount: 0 } }, ops: layout.ops, logoImage: logo.img });
         } catch (error) { /* a thumbnail never breaks the page */ }
         c.setTransform(1, 0, 0, 1, 0, 0);
       });
