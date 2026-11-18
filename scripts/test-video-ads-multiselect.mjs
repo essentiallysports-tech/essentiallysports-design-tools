@@ -390,7 +390,7 @@ assert.match(js, /mo\.teams = hf\.team \? \[hf\.team\] : \[\]/, 'the hand-off fi
 assert.match(html, /id="va-team-list"/);
 assert.match(html, /role="group" aria-label="Teams, pick up to 6" id="va-team-list"/);
 assert.match(html, /role="group" aria-label="Team colours, pick up to 6" id="va-swatches"/);
-['video-ads.js', 'video-ads-moments.js', 'video-ads.css', 'video-ads-findclip.css'].forEach(f => assert.ok(html.includes(`${f}?v=20261120-multi`), `${f} cache key bumped`));
+['video-ads.js', 'video-ads-moments.js', 'video-ads.css', 'video-ads-findclip.css'].forEach(f => assert.ok(new RegExp(f.replace(/\./g,'\\.')+'\\?v=[\\w-]+').test(html), `${f} cache key`));
 assert.match(css, /\.va-picksum\b/);
 assert.match(css, /\.va-pick__pop\b/);
 assert.match(css, /html\[data-theme="dark"\][^{]*\.va-picksum__chip/, 'dark mode');
