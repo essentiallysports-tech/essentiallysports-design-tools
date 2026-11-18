@@ -406,6 +406,20 @@ function parseRedditPost(post, { sport } = {}) {
   return null;
 }
 
+// One post by id (for a pasted link) -> the post `data`, or null.
+// -> { post, status }
+async function redditPost(id, env, diag = {}) {
+  if (!/^[a-z0-9]{4,10}$/i.test(String(id || ''))) return { post: null, status: 400 };
+  env = envOf(env);
+  const token = await redditToken(env, diag);
+  const url = token
+    ? `https://oauth.reddit.com/comments/${id}?raw_json=1&limit=1`
+    : `https://www.reddit.com/comments/${id}.json?raw_json=1&limit=1`;
+  const res = await request(url, { headers: token ? { Authorization: `bearer ${token}` } : {}, diag, cooldownOn403: !token, cooldownMs: 10 * 60e3 });
+  const post = res.ok ? (res.json?.[0]?.data?.children || []).find(ch => ch?.kind === 't3')?.data || null : null;
+  return { post, status: res.status || 0 };
+}
+
 async function redditSearch({ sport = '', team = null, teams = [], query = '', sinceHours = 120, limit = 25, env } = {}) {
   env = envOf(env);
   const diag = { source: 'reddit', searched: 0, found: 0, noVideo: 0, failed: 0 };
@@ -748,6 +762,8 @@ module.exports = {
   bluesky,
   MEDIA_HOSTS,
   USER_AGENT,
+  // For a pasted link (_clip-link.js): one post / file, not a search.
+  links: { parseRedditPost, redditPost, parseBlueskyPost, pdsFor, PDS_ALLOWED, resolveStreamable, streamableId, request },
   _test: {
     looksOld, isoOf, ageHours, xLink, streamableId, redditVideo, parseRedditPost, parseBlueskyPost,
     blueskyPostedAt, resolveStreamable, aboutSport, finalize, retryAfterMs, teamTerms, mentionsAny, pdsFor,

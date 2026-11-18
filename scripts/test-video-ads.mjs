@@ -116,7 +116,8 @@ res = await post({ mode: 'clip', url: 'https://x.com/MLB/status/555' });
 assert.equal(res.status, 404);
 assert.match(res.body.error, /no downloadable video/);
 res = await post({ mode: 'clip', url: 'https://www.youtube.com/watch?v=abc' });
-assert.equal(res.status, 400);
+assert.equal(res.status, 422, 'YouTube: never downloaded (its terms), a clear message instead');
+assert.equal(res.body.reason, 'youtube');
 res = await post({ mode: 'clip', url: 'https://x.com/MLB' });
 assert.equal(res.status, 400);
 

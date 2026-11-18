@@ -28,6 +28,7 @@
   <link rel="stylesheet" href="ai-studio.css?v=20261120-unify">
   <link rel="stylesheet" href="video-ads.css?v=20261120-unify">
   <link rel="stylesheet" href="video-ads-moments.css?v=20261119-rel">
+  <link rel="stylesheet" href="video-ads-findclip.css?v=20261120-findclip">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261117-usage1"></script>
@@ -409,13 +410,15 @@
           </div>
 
           <div class="va-tabpanel" id="va-by-link" role="tabpanel" aria-labelledby="va-tab-link" hidden>
-            <form class="va-xform" id="va-xform">
-              <label class="va-label" for="va-xurl">X post with a video</label>
+            <form class="va-xform" id="va-xform" novalidate>
+              <label class="va-label" for="va-xurl">Video link</label>
               <div class="va-row">
-                <input class="va-input" id="va-xurl" type="url" placeholder="https://x.com/…/status/…" autocomplete="off">
+                <input class="va-input" id="va-xurl" type="url" inputmode="url" placeholder="Paste a link to a post or video" autocomplete="off" spellcheck="false" aria-describedby="va-xurl-help">
                 <button class="es-btn es-btn--primary" type="submit" id="va-xget">Get video</button>
               </div>
+              <p class="va-hint va-xform__help" id="va-xurl-help">Works with X, Bluesky, Reddit, Streamable, Vimeo, Google Drive and Dropbox links, and direct .mp4, .mov or .webm files. YouTube, Instagram and TikTok can’t be downloaded.</p>
             </form>
+            <div class="va-linkres" id="va-linkres" aria-live="polite" hidden></div>
             <div class="va-or" aria-hidden="true"><span>or</span></div>
             <div class="va-dropbox" id="va-dropbox">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
@@ -423,7 +426,6 @@
               <button class="es-btn es-btn--sm" type="button" id="va-upload">Choose file</button>
               <input type="file" id="va-file" accept="video/*" hidden>
             </div>
-            <div class="va-qualities" id="va-qualities" role="group" aria-label="Clip quality" hidden></div>
             <div id="va-noclip-link"></div>
           </div>
 
@@ -520,6 +522,7 @@
   <script src="video-ads-styles.js?v=20261119-rel3"></script>
   <script src="video-ads-teams.js?v=20261117-tlogo1"></script>
   <script src="video-ads-moments.js?v=20261119-rel"></script>
+  <script src="video-ads-links.js?v=20261120-findclip"></script>
   <script src="video-ads-render.js?v=20261119-rel3"></script>
   <script src="video-ads-rating.js?v=20261118-hero-video-ads"></script>
   <script src="video-ads-audio.js?v=20261119-rel"></script>

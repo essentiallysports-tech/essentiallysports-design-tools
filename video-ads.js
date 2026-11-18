@@ -36,7 +36,7 @@
     clipTabs: $('va-clip-tabs'), teamSport: $('va-team-sport'), teamQ: $('va-team-q'), teamHint: $('va-team-hint'), teamList: $('va-team-list'), teamFind: $('va-team-find'), teamFindText: $('va-team-find-text'), colorSport: $('va-color-sport'), swatches: $('va-swatches'), find: $('va-find'), findText: $('va-find-text'), found: $('va-found'),
     libSport: $('va-lib-sport'), libStatus: $('va-lib-status'), libFound: $('va-lib-found'),
     trends: $('va-trends'), trendsStatus: $('va-trends-status'), refresh: $('va-refresh'), sports: $('va-sports'), boardBar: document.querySelector('.va-board-bar'),
-    upload: $('va-upload'), file: $('va-file'), xform: $('va-xform'), xurl: $('va-xurl'), xget: $('va-xget'), qualities: $('va-qualities'), clipStatus: $('va-clip-status'),
+    upload: $('va-upload'), file: $('va-file'), xform: $('va-xform'), xurl: $('va-xurl'), xget: $('va-xget'), linkres: $('va-linkres'), clipStatus: $('va-clip-status'),
     brands: $('va-brands'), styles: $('va-styles'), copySwatches: $('va-copy-swatches'), momentFold: $('va-moment-fold'), momentSum: $('va-moment-sum'), copyMoments: $('va-copy-moments'), notes: $('va-notes'),
     variants: $('va-variants'), editor: $('va-editor'), headlineCount: $('va-headline-count'), bodyCount: $('va-body-count'), ctaCount: $('va-cta-count'), stepsN: $('va-steps-n'), stepsName: $('va-steps-name'), stepsBar: $('va-steps-bar'),
     thread: $('va-thread'), compose: $('va-compose'), ask: $('va-ask'), send: $('va-send'),
@@ -98,7 +98,7 @@
     // Frame + Tint rail: how the clip sits in the ad (FRAME_DEFAULTS below).
     fit: 'fill', tintId: 'black', tintAmount: 0.45, tintCustom: '#0B2265',
     trimIn: 0, trimOut: 0,
-    clip: null, // { name, source: 'upload'|'x', url }
+    clip: null, // { name, source: 'upload'|'x'|'link'|'search'|'animated'|'photo', platform, url }
     // Clip step
     clipTab: 'team',
     clipTabPicked: false,
@@ -939,6 +939,7 @@
     if (!file) return;
     if (!/^video\//.test(file.type)) { setClipStatus('Choose a video file (MP4 works best).'); toast('That isn’t a video file.', { tone: 'bad' }); return; }
     useClip(file, { name: file.name, source: 'upload' });
+    renderLink(null);
     setClipStatus(`Using ${file.name}`);
   }
   els.upload.addEventListener('click', () => els.file.click());
@@ -966,11 +967,17 @@
   }
 
   // Downloads a clip straight from its video host (X, Reddit, Bluesky,
-  // Streamable: all CORS-open) into the browser (no server in between), with
-  // progress on the preview.
+  // Streamable, Vimeo, Drive, Dropbox, any CORS-open file) into the browser (no
+  // server in between), with progress on the preview. A pasted link that the
+  // host won't let the browser read (CORS) gets the "download it, then drop it
+  // here" card instead of a dead end. -> true when the clip is in the ad.
   let loadingClip = '';
+  const LK = window.VideoAdsLinks || null;
+  const PLATFORM_NAME = { x: 'X', reddit: 'Reddit', bluesky: 'Bluesky', streamable: 'Streamable', vimeo: 'Vimeo', drive: 'Google Drive', dropbox: 'Dropbox', direct: 'Web', web: 'Web' };
+  // "@NFL", but "r/nfl" for a subreddit.
+  const atHandle = h => { const v = String(h || '').replace(/^@/, ''); return /^r\//.test(v) ? v : `@${v}`; };
   async function downloadClip(variant, meta) {
-    if (!variant?.url) { toast('That clip has no video file. Try another one.', { tone: 'bad' }); return; }
+    if (!variant?.url) { toast('That clip has no video file. Try another one.', { tone: 'bad' }); return false; }
     loadingClip = meta.url || variant.url;
     renderFound();
     setBusy(true, 'Downloading the clip…', 0);
@@ -993,14 +1000,24 @@
         got += value.length;
         setBusy(true, 'Downloading the clip…', total ? got / total : null);
       }
-      const platform = { x: 'X', reddit: 'Reddit', bluesky: 'Bluesky', streamable: 'Streamable' }[meta.platform || 'x'] || 'Web';
-      const who = meta.handle ? `@${String(meta.handle).replace(/^@/, '')}` : platform;
-      useClip(new Blob(parts, { type: 'video/mp4' }), { name: `${platform} post by ${who}`, source: meta.from === 'search' ? 'search' : 'x', url: meta.url || '' });
+      const platform = meta.platformLabel || PLATFORM_NAME[meta.platform || 'x'] || 'Web';
+      const who = meta.handle ? atHandle(meta.handle) : platform;
+      const type = /webm/i.test(variant.url) ? 'video/webm' : /\.mov(\?|$)/i.test(variant.url) ? 'video/quicktime' : 'video/mp4';
+      const source = meta.from === 'search' ? 'search' : (meta.platform || 'x') === 'x' ? 'x' : 'link';
+      useClip(new Blob(parts, { type }), { name: meta.handle ? `${platform} post by ${who}` : `${platform} video`, source, platform: meta.platform || 'x', url: meta.url || '' });
       setClipStatus(`Clip from ${who}. Check you may use it before publishing.`);
+      return true;
     } catch (error) {
-      logEvent('clip_failed', { height: Number(variant.height) || 0, status, post: safeUrl(meta.url) });
-      setClipStatus('Couldn’t download that clip. Try another one, or save it from the post and upload it.');
-      toast('Couldn’t download that clip. Try another one.', { tone: 'bad' });
+      logEvent('clip_failed', { height: Number(variant.height) || 0, status, post: safeUrl(meta.url), platform: meta.platform || 'x', cors: !status });
+      if (meta.from === 'link') {
+        // status 0: the browser was not allowed to read the file (CORS) or the
+        // host dropped the connection; either way the user can save it.
+        renderLink({ state: 'cors', data: meta, variant, status });
+      } else {
+        setClipStatus('Couldn’t download that clip. Try another one, or save it from the post and upload it.');
+        toast('Couldn’t download that clip. Try another one.', { tone: 'bad' });
+      }
+      return false;
     } finally {
       loadingClip = '';
       setBusy(false);
@@ -1019,35 +1036,139 @@
     return sized.find(ok) || sized[sized.length - 1] || list[0];
   }
 
-  async function loadXPost(url, button) {
+  // ─── Video link: any link -> its file(s) (server: mode 'clip', _clip-link.js)
+  let linkView = null;
+  const LINK_FAIL = {
+    cors: ['This site blocks direct downloads', 'Its server doesn’t let other sites read the file, so FrameUp can’t fetch it. Open the video, save it, then drop it here.'],
+    'private-file': ['That file isn’t public', ''],
+    'not-video': ['No video found', ''],
+    'no-video': ['No video in that post', ''],
+    unreachable: ['Couldn’t reach that link', ''],
+    'too-large': ['That file is too big', ''],
+    stream: ['That’s a stream, not a file', ''],
+    private: ['That link can’t be used', ''],
+    'bad-url': ['That link can’t be used', ''],
+    'not-https': ['That link can’t be used', ''],
+  };
+  const platPill = (platform, label) => `<span class="va-clip__plat va-clip__plat--${esc(String(platform || 'web').replace(/[^a-z]/g, ''))}">${esc(label || PLATFORM_NAME[platform] || 'Web')}</span>`;
+  function renderLink(view = linkView) {
+    linkView = view;
+    const box = els.linkres;
+    if (!box) return;
+    if (!view) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    const d = view.data || {};
+    if (view.state === 'busy') {
+      box.innerHTML = `<div class="va-linkres__card is-busy" role="status"><div class="va-linkres__top">${platPill(view.platform, view.label)}<span class="va-working">${dots}${view.label && view.platform !== 'web' ? `Finding the video on ${esc(view.label)}…` : 'Finding the video…'}</span></div></div>`;
+      return;
+    }
+    if (view.state === 'ready') {
+      const variants = d.variants || [];
+      const chosen = variants[view.chosen] || variants[0] || {};
+      const q = chosen.quality || view.measured || '';
+      const side = chosen.width && chosen.height ? Math.min(chosen.width, chosen.height) : 0;
+      const low = (side && side < 720) || (!side && /^\d+p$/.test(q) && parseInt(q, 10) < 720);
+      const handle = String(d.handle || '').replace(/^@/, '');
+      const meta = [d.durationMs ? fmt(d.durationMs / 1000) : '', LK ? LK.fmtBytes(chosen.bytes || d.bytes) : '', d.hasAudio === false ? 'No sound' : ''].filter(Boolean);
+      const chips = variants.length > 1
+        ? `<div class="va-qualities" role="group" aria-label="Clip quality"><span class="va-hint">Quality</span>${variants.slice(0, 4).map((v, i) => `<button class="es-chip" type="button" data-q="${i}" aria-pressed="${i === view.chosen}">${esc(v.quality || `Version ${i + 1}`)}</button>`).join('')}</div>`
+        : '';
+      const notes = [d.audioNote, low ? 'Below 720p: it may look soft in a 1080-wide ad. Pick a higher quality if there is one.' : ''].filter(Boolean);
+      box.innerHTML = `<div class="va-linkres__card${view.loading ? ' is-busy' : ''}">
+        <div class="va-linkres__top">${platPill(d.platform, d.platformLabel)}<span class="va-linkres__who">${handle ? esc(atHandle(handle)) : esc(d.author || (d.text ? String(d.text).slice(0, 60) : (PLATFORM_NAME[d.platform] === 'Web' ? 'Video file' : 'Video')))}</span>${q ? `<span class="va-linkres__q${low ? ' is-low' : ''}" title="${low ? 'Below 720p' : 'Quality of the version in the ad'}">${esc(q)}</span>` : ''}</div>
+        ${meta.length ? `<p class="va-linkres__meta">${meta.map(esc).join('<span aria-hidden="true"> · </span>')}</p>` : ''}
+        ${chips}
+        ${notes.map(n => `<p class="va-linkres__note">${ICON.alert}<span>${esc(n)}</span></p>`).join('')}
+      </div>`;
+      return;
+    }
+    // fail / cors: what happened, and the way through (open it, save it, drop it here).
+    const reason = view.state === 'cors' ? 'cors' : (d.reason || 'unreachable');
+    const [title, fallbackText] = LINK_FAIL[reason] || LINK_FAIL.unreachable;
+    const text = view.state === 'cors'
+      ? (view.status ? `The site refused the download (error ${Number(view.status)}). Open the video, save it, then drop it here.` : fallbackText)
+      : (d.error || fallbackText || 'Something went wrong. Try again, or save the video and drop it here.');
+    const open = safeUrl(view.state === 'cors' ? (view.variant?.url || d.openUrl) : (d.directUrl || d.openUrl));
+    const canRetry = reason === 'unreachable' && view.state !== 'cors';
+    box.innerHTML = `<div class="va-linkres__card va-linkres__card--fallback" role="alert">
+      <div class="va-linkres__top">${ICON.alert}<strong>${esc(d.title || title)}</strong></div>
+      <p class="va-linkres__text">${esc(text)}</p>
+      <div class="va-linkres__acts">
+        ${open ? `<a class="es-btn es-btn--sm es-btn--secondary" href="${esc(open)}" target="_blank" rel="noopener noreferrer">${ICON.external}<span>${view.state === 'cors' || d.directUrl ? 'Open the file' : `Open on ${esc(d.platformLabel || 'the site')}`}</span></a>` : ''}
+        <button class="es-btn es-btn--sm" type="button" data-link-act="upload">Choose file</button>
+        ${canRetry ? '<button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-link-act="retry">Try again</button>' : ''}
+        ${view.state === 'cors' && view.skipped ? '<button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-link-act="try">Try anyway</button>' : ''}
+      </div>
+    </div>`;
+  }
+  els.linkres?.addEventListener('click', event => {
+    const chip = event.target.closest('[data-q]');
+    if (chip && linkView?.state === 'ready') {
+      const v = linkView.data.variants[Number(chip.dataset.q)];
+      if (v) startLinkDownload(linkView.data, v, { force: true });
+      return;
+    }
+    const act = event.target.closest('[data-link-act]')?.dataset.linkAct;
+    if (act === 'upload') els.file.click();
+    if (act === 'retry') loadLink(els.xurl.value.trim(), els.xget);
+    if (act === 'try' && linkView?.variant) startLinkDownload(linkView.data, linkView.variant, { force: true });
+  });
+  // After the clip loads, a file with no size info gets its real quality badge.
+  function measureLinkClip() {
+    realVideo.addEventListener('loadedmetadata', () => {
+      if (linkView?.state !== 'ready' || !LK) return;
+      const q = LK.qualityLabel(realVideo.videoWidth, realVideo.videoHeight);
+      const v = linkView.data.variants[linkView.chosen];
+      if (v && !v.quality && q) { v.quality = q; v.width = realVideo.videoWidth; v.height = realVideo.videoHeight; renderLink(); }
+    }, { once: true });
+  }
+  async function startLinkDownload(data, variant, { force = false } = {}) {
+    const chosen = Math.max(0, data.variants.indexOf(variant));
+    // The server saw the host refuse other sites: say so up front (one click to try anyway).
+    if (data.cors === 'blocked' && !force) { renderLink({ state: 'cors', data, variant, skipped: true }); return; }
+    renderLink({ state: 'ready', data, chosen, loading: true });
+    const ok = await downloadClip(variant, { ...data, from: 'link' });
+    if (ok) { renderLink({ state: 'ready', data, chosen, loading: false }); measureLinkClip(); }
+  }
+  async function loadLink(url, button) {
+    const found = LK ? LK.detect(url) : null;
+    if (LK && !found) {
+      renderLink({ state: 'fail', data: { reason: 'bad-url', error: 'That doesn’t look like a link. Paste the full address, starting with https://' } });
+      els.xurl.focus();
+      return;
+    }
+    // YouTube, Instagram, Threads, Facebook, TikTok: no request needed to say no.
+    if (found?.kind === 'blocked' && LK.BLOCKED[found.platform]) {
+      const msg = LK.BLOCKED[found.platform];
+      renderLink({ state: 'fail', data: { reason: found.platform === 'youtube' ? 'youtube' : 'blocked', platform: found.platform, platformLabel: found.label, title: msg.title, error: msg.text, openUrl: found.url } });
+      logEvent('clip_link', { platform: found.platform, ok: false, reason: 'blocked' });
+      return;
+    }
     if (button) button.disabled = true;
-    setClipStatus('Finding the video in that post…');
-    els.qualities.hidden = true;
+    els.xurl.setAttribute('aria-busy', 'true');
+    setClipStatus('');
+    renderLink({ state: 'busy', platform: found?.platform || 'web', label: found?.label || '' });
     try {
-      const data = await callApi({ mode: 'clip', url });
+      const data = await callApi({ mode: 'clip', url: found?.url || url });
+      logEvent('clip_link', { platform: data.platform, ok: true, quality: data.quality || '', cors: data.cors || '' });
       const best = bestVariant(data.variants);
-      els.qualities.innerHTML = `<span class="va-hint">Quality</span>${data.variants.slice(0, 4).map((v, i) => `<button class="es-chip" type="button" data-q="${i}" aria-pressed="${v === best}">${v.height ? `${v.height}p` : `Version ${i + 1}`}</button>`).join('')}`;
-      els.qualities.hidden = data.variants.length < 2;
-      els.qualities.onclick = e => {
-        const chip = e.target.closest('[data-q]');
-        if (!chip) return;
-        [...els.qualities.querySelectorAll('[data-q]')].forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
-        downloadClip(data.variants[Number(chip.dataset.q)], data);
-      };
-      await downloadClip(best, data);
+      await startLinkDownload(data, best || data.variants[0]);
     } catch (error) {
-      setClipStatus(error.message);
-      toast(error.message, { tone: 'bad' });
+      const data = error.data && typeof error.data === 'object' ? error.data : { reason: 'unreachable', error: error.message };
+      logEvent('clip_link', { platform: data.platform || found?.platform || '', ok: false, reason: data.reason || '' });
+      renderLink({ state: 'fail', data: { platform: found?.platform, platformLabel: found?.label, openUrl: found?.url, ...data } });
     } finally {
       if (button) button.disabled = false;
+      els.xurl.removeAttribute('aria-busy');
     }
   }
   els.xform.addEventListener('submit', event => {
     event.preventDefault();
     const url = els.xurl.value.trim();
-    if (!url) { els.xurl.focus(); setClipStatus('Paste a link to an X post first.'); return; }
-    loadXPost(url, els.xget);
+    if (!url) { els.xurl.focus(); renderLink({ state: 'fail', data: { reason: 'bad-url', error: 'Paste a link to a video first.' } }); return; }
+    loadLink(url, els.xget);
   });
+  els.xurl.addEventListener('input', () => { if (linkView && linkView.state !== 'ready' && !els.xurl.value.trim()) renderLink(null); });
 
   // ─── Steps ───────────────────────────────────────────────────────────────
   const stepButtons = [...els.steps.querySelectorAll('.va-step')];
@@ -1412,11 +1533,11 @@
       <span class="va-mo__title"${m.titleBy === 'ai' ? ' title="Short title written from the post text"' : ''}>${esc(title)}</span>
       ${teams.length ? `<span class="va-mo__teams">${teams.map(t => `<span class="va-mo__team" title="${esc(t.name)}">${teamMark(t, 18)}<span>${esc(t.short || t.name)}</span></span>`).join('')}</span>` : ''}
       <span class="va-mo__meta"><span class="va-clip__plat va-clip__plat--${esc(platform.replace(/[^a-z]/g, ''))}" title="From ${esc(platformLabel)}${handle ? ` · @${esc(handle)}` : ''}">${esc(platformLabel)}</span>${age ? `<span>${esc(age)}</span>` : ''}${eng ? `<span class="va-mo__eng">${esc(eng)}</span>` : ''}</span>
+      ${m.angles > 0 ? `<button class="va-mo__angles" type="button" data-mo-angles="${i}" aria-expanded="${open}">${open ? 'Hide angles' : `+${m.angles} angle${m.angles === 1 ? '' : 's'}`}</button>` : ''}
       <span class="va-clip__actions">
         <button class="es-btn es-btn--sm es-btn--still${inAd || busy ? '' : ' es-btn--primary'}" type="button" data-mo-use="${i}"${busy || inAd ? ' disabled' : ''}>${busy ? 'Loading…' : inAd ? 'Using it' : 'Use clip'}</button>
         ${safeUrl(c.url) ? `<a class="va-icon-btn va-icon-btn--sm" href="${esc(c.url)}" target="_blank" rel="noopener" aria-label="Open the post${handle ? ` by @${esc(handle)}` : ''}" title="Open the post">${ICON.external}</a>` : ''}
       </span>
-      ${m.angles > 0 ? `<button class="va-mo__angles" type="button" data-mo-angles="${i}" aria-expanded="${open}">${open ? 'Hide angles' : `+${m.angles} more angle${m.angles === 1 ? '' : 's'}`}</button>` : ''}
     </article>`;
   }
   // The other versions of an open moment: a full-width row under its card.
@@ -3002,7 +3123,7 @@
           logEvent('export', {
             copy: copyForLog(src), style: item.style, sizes: [...state.exportIds], angle: item.angle, gridId, gridKind: 'daily-set',
             files: (files || []).filter(f => f.angle === item.angle).map(f => f.fileName),
-            clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), sound: soundRecord(), safeZone: S.isNew(item.style) ? 'meta' : state.safeZone,
+            clipSource: state.clip?.source || '', clipPlatform: state.clip?.platform || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), sound: soundRecord(), safeZone: S.isNew(item.style) ? 'meta' : state.safeZone,
             context: { kind: state.context.kind, color: state.context.color, trend: state.context.trend?.title || '' },
           });
         });
@@ -3025,7 +3146,7 @@
         logEvent('export', {
           copy, style: st, sizes: [...state.exportIds], angle: angle(), ...(gridId ? { gridId, gridStyles: styles } : {}),
           files: (files || []).filter(f => f.style === st).map(f => f.fileName),
-          clipSource: state.clip?.source || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), sound: soundRecord(), safeZone: S.isNew(st) ? 'meta' : state.safeZone,
+          clipSource: state.clip?.source || '', clipPlatform: state.clip?.platform || '', clipUrl: safeUrl(state.clip?.url), rightsTicked: Boolean(els.rights.checked), sound: soundRecord(), safeZone: S.isNew(st) ? 'meta' : state.safeZone,
           context: { kind: state.context.kind, color: state.context.color, trend: state.context.trend?.title || '' },
         });
       });

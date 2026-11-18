@@ -32,6 +32,32 @@
       ]
     },
     {
+      "id": "2026-11-20-findclip",
+      "date": "2026-11-20",
+      "title": "Video Ads: paste any video link, and a tidier Find a clip",
+      "commit": "852a1d6",
+      "items": [
+        {
+          "title": "Paste any video link",
+          "text": "Video link now takes X, Bluesky, Reddit, Streamable, Vimeo, Google Drive and Dropbox links, and direct .mp4, .mov or .webm files. You see the source, the quality (1080p, 720p…) and the size before it loads.",
+          "page": "video-ads.html",
+          "target": "#va-xform"
+        },
+        {
+          "title": "Clear answers when a site says no",
+          "text": "YouTube, Instagram and TikTok don’t allow downloads, and some sites block them. FrameUp now says so and gives you the file to open and save, then drop it here.",
+          "page": "video-ads.html",
+          "target": "#va-dropbox"
+        },
+        {
+          "title": "Clip cards line up",
+          "text": "Even spacing across Find a clip, and Use clip sits at the bottom of every card, so the buttons in a row line up.",
+          "page": "video-ads.html",
+          "target": "[data-pane=\"clip\"]"
+        }
+      ]
+    },
+    {
       "id": "2026-11-19-hero-generate",
       "date": "2026-11-19",
       "title": "Generate: stat lines, records, carousels and no blank photos",

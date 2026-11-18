@@ -3,9 +3,12 @@
 // CTA). One endpoint, POST { mode, ... }:
 //
 //   trends      last-48h NFL / CFB / MLB moments (shared with Trend Design)
-//   clip        an X post link -> its MP4 versions on video.twimg.com, so the
-//               browser downloads the clip itself. Video bytes never pass
-//               through this function (serverless responses are capped at ~4.5 MB).
+//   clip        any video link -> its direct file versions (X via video.twimg.com,
+//               Bluesky, Reddit, Streamable, Vimeo, Drive, Dropbox, direct files,
+//               og:video pages; YouTube / Instagram / TikTok refused with a
+//               message), see _clip-link.js, so the browser downloads the clip
+//               itself. Video bytes never pass through this function
+//               (serverless responses are capped at ~4.5 MB).
 //   find-clips  X posts with video from the last 5 days of one team, the
 //               teams in a colour, or a moment, aimed at verified sources
 //               (video-ads-sources.js): one x.com-only web search (Haiku, up
@@ -61,6 +64,7 @@ try { learning = { ...learning, ...require('./_ad-learning.js') }; } catch { /* 
 
 // The shared clip library (works in memory before its migration is applied).
 const CLIP_LIBRARY = require('./_clip-library.js');
+const CLIP_LINK = require('./_clip-link.js');
 // Is it great game action? (AI verdict stored per clip, else free rules.)
 const CLASSIFY = require('./_clip-classify.js');
 
@@ -1986,7 +1990,9 @@ exports.handler = async function handler(event) {
   try {
     if (body.mode === 'trends') return json(200, await trends());
     if (body.mode === 'clip') {
-      const result = await clipFromPost(String(body.url || '').slice(0, 400));
+      // Any video link (X, Bluesky, Reddit, Streamable, Vimeo, Drive, Dropbox,
+      // direct files, pages with og:video) -> direct file URLs (_clip-link.js).
+      const result = await CLIP_LINK.resolveLink(String(body.url || '').slice(0, 2000), { clipFromPost });
       return json(result.ok ? 200 : result.status, result);
     }
     if (body.mode === 'research') return json(410, { ok: false, error: 'Research was removed.' });
