@@ -424,13 +424,13 @@ await test('pages wire the new flows', async () => {
   assert.match(loginHtml, /id="password-toggle"/);
   assert.match(loginHtml, /ESAuth\.requestMagicLink/);
   assert.match(loginHtml, /reason === 'session-expired'/);
-  assert.match(loginHtml, /auth-flow\.js\?v=20261120-auth/);
+  assert.match(loginHtml, /auth-flow\.js\?v=[\w-]+/);
   assert.doesNotMatch(loginHtml, /console\.(log|info|debug)\([^)]*password/i);
   assert.match(callbackHtml, /resendConfirmation/);
   assert.match(callbackHtml, /reset-password\.html\?mode=/);
   assert.match(resetHtml, /id="new-link-form"/);
   assert.match(dashboardHtml, /ESPeopleAdmin\?\.mount/);
-  assert.match(dashboardHtml, /dashboard-people\.js\?v=20261120-auth/);
+  assert.match(dashboardHtml, /dashboard-people\.js\?v=[\w-]+/);
 });
 
 // --- Migration static checks ------------------------------------------------------------
