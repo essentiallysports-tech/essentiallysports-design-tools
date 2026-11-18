@@ -325,4 +325,57 @@ await test('shortenText: abbreviations ("Sr.", initials) are not sentence ends (
   assert.equal(G.shortenText('Pass to J. Smith for 5 yards. Tackled by K. Jones at the 20 and more words here.', 60), 'Pass to J. Smith for 5 yards.');
 });
 
+await test('play text: the card line drops ESPN noise from real CFB and NFL strings, never adds a number', () => {
+  const CASES = [
+    // CFB digest strings (TEX at LSU, 2026-11-14), already cut by the digest.
+    ['Shotgun #16 A.Manning pass incomplete deep left to #3…', 'A. Manning pass incomplete deep left'],
+    ['No Huddle-Shotgun #10 S.Leavitt pass intercepted by #4…', 'S. Leavitt pass intercepted'],
+    ['Shotgun #13 D.Jones rush middle for 4 yards gain to the…', 'D. Jones rush middle for 4 yds gain'],
+    ['Shotgun #16 A.Manning sacked for loss of 8 yards to the…', 'A. Manning sacked for loss of 8 yds'],
+    ['Raleek Brown 4 Yd pass from Arch Manning (Two-Point Run…', 'Raleek Brown 4 Yd pass from Arch Manning'],
+    ['Arch Manning 1 Yd Run (Gianni Spetic Kick)', 'Arch Manning 1 Yd Run'],
+    ['End of 1st quarter.', 'End of 1st quarter'],
+    // NFL raw ESPN text (SF at DAL, espn-nfl-summary-401873063.full.min.json).
+    ['(Shotgun) B.Purdy pass short right to C.McCaffrey for 74 yards, TOUCHDOWN. E.Pineiro extra point is GOOD, Center-J.Weeks, Holder-C.Waitman.', 'B. Purdy pass short right to C. McCaffrey for 74 yds, TD'],
+    ['(Shotgun) B.Purdy pass deep middle to J.Watkins to SF 48 for 22 yards (D.Bland).', 'B. Purdy pass deep middle to J. Watkins for 22 yds'],
+    ['(Shotgun) B.Purdy sacked at SF 42 for -6 yards (K.Clark).PENALTY on DAL-C.Downs, Defensive Holding, 5 yards, enforced at SF 48 - No Play.', 'B. Purdy sacked for -6 yds'],
+    ['B.Jones reported in as eligible.  D.Prescott pass incomplete deep right [M.Williams].', 'D. Prescott pass incomplete deep right'],
+    ['B.Purdy pass deep left to K.Allen ran ob at DAL 38 for 23…', 'B. Purdy pass deep left to K. Allen for 23'],
+    ['D.Prescott pass incomplete deep middle to C.Lamb.Penalty…', 'D. Prescott pass incomplete deep middle to C. Lamb'],
+    [' B.Aubrey 52 yard field goal is GOOD, Center-T.Sieg, Holder-B.Anger.', 'B. Aubrey 52 yd field goal is GOOD'],
+    ['Deebo Samuel Sr. 11 Yd pass from Brock Purdy (Eddy Pineiro…', 'Deebo Samuel Sr. 11 Yd pass from Brock Purdy'],
+    ['Timeout #2 by DAL at 00:29.', 'Timeout #2 by DAL at 00:29'],
+    // MLB: already clean.
+    ['Pratt singled to center, Turang scored, Pratt thrown out at second, Frelick to third.', 'Pratt singled to center, Turang scored, Pratt thrown out at second, Frelick to third'],
+  ];
+  const nums = t => t.match(/-?\d+/g) || [];
+  CASES.forEach(([raw, want]) => {
+    const got = T.cleanPlayText(raw);
+    assert.equal(got, want, raw);
+    nums(got).forEach(n => assert.ok(nums(raw).includes(n), `${n} is in the source: ${raw}`));
+    got.split(/\s+/).forEach(w => {
+      const bare = w.replace(/[.,]/g, '');
+      assert.ok(['yds', 'yd', 'TD'].includes(bare) || raw.includes(bare), `"${bare}" is from the source: ${raw}`);
+    });
+  });
+  assert.equal(T.cleanPlayText(''), '');
+  assert.equal(T.cleanPlayText(null), '');
+});
+
+await test('play text: the digest drops the formation and jersey numbers before its length cut (NFL golden unchanged)', () => {
+  assert.equal(T.stripPlayNoise('Shotgun #16 A.Manning pass complete short right to #1 R.Brown'), 'A.Manning pass complete short right to R.Brown');
+  assert.equal(T.stripPlayNoise('No Huddle-Shotgun #10 S.Leavitt pass intercepted by #4 X.Smith'), 'S.Leavitt pass intercepted by X.Smith');
+  assert.equal(T.stripPlayNoise('Timeout #2 by DAL at 00:29.'), 'Timeout #2 by DAL at 00:29.');
+  assert.equal(T.stripPlayNoise('B.Purdy pass short left to G.Kittle to DAL 11 for 20 yards (E.Garcia).'), 'B.Purdy pass short left to G.Kittle to DAL 11 for 20 yards (E.Garcia).');
+  // A kept non-scoring play given a college-style lead-in: the digest text loses it.
+  const raw = fx('espn-nfl-summary-401873063.full.min.json');
+  const kept = new Set(G.digestGame(fx('espn-nfl-summary-401873063.full.min.json'), { sport: 'nfl', eventId: '401873063' }).plays.filter(p => !p.scoring).map(p => p.id));
+  const play = raw.drives.previous.flatMap(d => d.plays).find(p => kept.has(String(p.id)) && /^[A-Z]\.[A-Z]/.test(p.text));
+  assert.ok(play, 'a kept play to dress up');
+  const plain = G.digestGame(fx('espn-nfl-summary-401873063.full.min.json'), { sport: 'nfl', eventId: '401873063' }).plays.find(p => p.id === String(play.id)).text;
+  play.text = `No Huddle-Shotgun #16 ${play.text}`;
+  const got = G.digestGame(raw, { sport: 'nfl', eventId: '401873063' }).plays.find(p => p.id === String(play.id));
+  assert.equal(got.text, plain);
+});
+
 console.log(`\n${passed} passed`);

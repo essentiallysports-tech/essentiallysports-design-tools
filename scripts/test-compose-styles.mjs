@@ -166,4 +166,33 @@ const depth = C.applyFix(C.build('trading-card', rich, 0), 'more-depth');
 assert.ok(depth.layers.find(l => l.type === 'cutout').rim, 'more-depth rim-lights the cut-out');
 assert.ok(depth.layers.some(l => l.shape === 'vignette'));
 
+// ── Big-number poster at 9:16 and 1:1 (polish 2026-11-20) ────────────────
+// 4:5 is the original layout, value for value; 9:16 fills the lower third
+// instead of leaving it empty; 1:1 keeps headline and body apart. Each size
+// passes the ES gate with no fixes, every text box inside the canvas.
+{
+  const boxOf = (s, role) => s.layers.find(l => l.role === role);
+  const portrait = C.build('big-number', rich, 0);
+  assert.deepEqual([boxOf(portrait, 'number').y, boxOf(portrait, 'number').h, boxOf(portrait, 'headline').y, boxOf(portrait, 'headline').h, boxOf(portrait, 'headline').size, boxOf(portrait, 'body').y], [200, 600, 910, 330, 130, 1240], '4:5 unchanged');
+  for (const size of ['story', 'square']) {
+    for (const v of [0, 1, 2]) {
+      const s = C.build('big-number', { ...rich, size }, v);
+      const H = s.size.h;
+      const gate = C.checkScene(JSON.parse(JSON.stringify(s)));
+      assert.ok(gate.ok, `big-number ${size} v${v}: ${JSON.stringify(gate.errors)}`);
+      assert.deepEqual(gate.fixes.filter(f => /safe|logo/i.test(f.rule)), [], `big-number ${size} v${v}: no safe-area or logo fixes`);
+      const num = boxOf(s, 'number');
+      const head = boxOf(s, 'headline');
+      const body = boxOf(s, 'body');
+      assert.ok(num.y + num.h <= head.y && head.y + head.h <= body.y, `${size}: number, headline, body stack without overlap`);
+      assert.ok(body.y + body.h <= H - 50, `${size}: body inside the safe area`);
+      if (size === 'story') {
+        assert.ok(head.y >= H * 0.6, '9:16: the headline sits in the lower part, not at the 4:5 position');
+        assert.ok(body.y - (head.y + head.h) <= 80, '9:16: no empty band between headline and body');
+        assert.ok(num.h > 600 && head.size > 130, '9:16: number and headline grow');
+      }
+    }
+  }
+}
+
 console.log('compose styles checks passed');
