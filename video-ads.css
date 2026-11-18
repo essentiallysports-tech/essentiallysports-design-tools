@@ -1364,7 +1364,7 @@ html[data-theme="dark"] .va-steps__item.is-done:not(:last-child)::after { backgr
 /* Team choices are .es-chip (UI Library) with the team logo leading; a team in
    the chosen colour gets a stronger outline. */
 .va-teamchip { padding-left: 6px; }
-.va-teamchip.is-suggested:not([aria-checked="true"]) { box-shadow: inset 0 0 0 1px var(--va-ink-3); }
+.va-teamchip.is-suggested:not([aria-checked="true"], [aria-pressed="true"]) { box-shadow: inset 0 0 0 1px var(--va-ink-3); }
 #va-team-hint:empty { display: none; }
 
 /* Clip freshness */

@@ -9,8 +9,9 @@
 //               message), see _clip-link.js, so the browser downloads the clip
 //               itself. Video bytes never pass through this function
 //               (serverless responses are capped at ~4.5 MB).
-//   find-clips  X posts with video from the last 5 days of one team, the
-//               teams in a colour, or a moment, aimed at verified sources
+//   find-clips  X posts with video from the last 5 days of one team (or up
+//               to 6: `teams: []`, any of them), the teams in a colour (or up
+//               to 6: `colors: []`), or a moment, aimed at verified sources
 //               (video-ads-sources.js): one x.com-only web search (Haiku, up
 //               to 4 searches, $0.06 cap) or, with X_BEARER_TOKEN, the X API;
 //               every post verified like `clip` (timestamp under 120h, no
@@ -618,7 +619,55 @@ async function searchRound(plan, { sport, track, feature, maxUses, maxCostUsd, t
 }
 
 const noteFor = n => (n < FIND_CLIPS.minClips ? { note: `Only ${n} clip${n === 1 ? '' : 's'} from the last 5 days.` } : {});
-const clipKey = (strategy, sport, { team, color, query }) => `${strategy}|${sport}|${team ? `team:${team.name.toLowerCase()}` : color ? `color:${color}` : `query:${query.toLowerCase()}`}`;
+// One key per selection: a single team / colour keeps its old key; several are
+// keyed by the sorted selection, so Alabama+Auburn and Auburn+Alabama share one.
+const clipKey = (strategy, sport, { team, teams = [], color, colors = [], query }) => `${strategy}|${sport}|${team ? `team:${team.name.toLowerCase()}`
+  : teams.length > 1 ? `teams:${teams.map(t => t.name.toLowerCase()).sort().join(',')}`
+    : colors.length > 1 ? `colors:${[...colors].sort().join(',')}`
+      : color ? `color:${color}` : `query:${query.toLowerCase()}`}`;
+
+// ── Multi-select (By team / By colour / Library) ──────────────────────────
+// `teams: []` / `colors: []` arrays, with the single `team` / `color` fields
+// still accepted (merged in). Known teams / colour ids only, at most PICK_MAX.
+const PICK_MAX = 6;
+const COLOR_TEAMS_MAX = 24;
+function pickedTeams(body, sport, { strict = true } = {}) {
+  const raw = [...(Array.isArray(body.teams) ? body.teams : []), ...(body.team ? [body.team] : [])];
+  const names = [...new Set(raw.map(x => clean(typeof x === 'string' ? x : x?.name, 80)).filter(Boolean))];
+  if (names.length > PICK_MAX) return strict ? { error: `Pick up to ${PICK_MAX} teams at a time.` } : { teams: [] };
+  const out = [];
+  for (const name of names) {
+    const team = TEAMS.findTeam(name, sport);
+    if (!team) {
+      if (strict) return { error: `We don't have "${name}" in ${SPORT_NAMES[sport]}. Pick a team from the list.` };
+      continue;
+    }
+    if (!out.includes(team)) out.push(team);
+  }
+  return { teams: out };
+}
+function pickedColors(body) {
+  const list = Array.isArray(body.colors) ? body.colors.map(c => clean(c, 24).toLowerCase()).filter(Boolean) : [];
+  // Back compat: a lone unknown `color` was ignored before; an unknown id in `colors` is an error.
+  const unknown = list.find(id => !TEAMS.colorById(id));
+  if (unknown) return { error: `"${unknown}" is not one of the team colours.` };
+  const single = TEAMS.colorById(body.color) ? [body.color] : [];
+  const ids = [...new Set([...list, ...single])];
+  if (ids.length > PICK_MAX) return { error: `Pick up to ${PICK_MAX} colours at a time.` };
+  return { colors: ids };
+}
+// The teams of several colours (union, each colour's primary teams first).
+function teamsForColors(sport, colors) {
+  const out = [];
+  colors.forEach(color => TEAMS.teamsFor({ sport, color }).forEach(t => { if (!out.includes(t)) out.push(t); }));
+  return out.slice(0, COLOR_TEAMS_MAX);
+}
+// Which selected teams a clip is about (its tags, handle and text).
+function matchedTeams(clip, selection, sport) {
+  if (!selection.length) return [];
+  const about = new Set([...(clip.teams || []), ...clipTeams(clip, { sport })].map(n => String(n).toLowerCase()));
+  return selection.filter(t => about.has(t.name.toLowerCase())).map(t => t.name);
+}
 
 // Re-ages cached clips, drops the ones that crossed 120h, and re-ranks.
 // Fallback clips labelled 'older' may be up to the library's 7 days.
@@ -867,32 +916,40 @@ async function findClips(body, track) {
   const started = Date.now();
   const sport = AD_SPORTS.includes(body.sport) ? body.sport : '';
   if (!sport) return { ok: false, status: 400, error: 'Pick NFL, CFB or MLB first.' };
-  // Precedence: team > colour > query.
-  const teamName = clean(typeof body.team === 'string' ? body.team : body.team?.name, 80);
-  const team = teamName ? TEAMS.findTeam(teamName, sport) : null;
-  if (teamName && !team) return { ok: false, status: 400, error: `We don't have "${teamName}" in ${SPORT_NAMES[sport]}. Pick a team from the list.` };
-  const color = !team && TEAMS.colorById(body.color) ? body.color : '';
-  const query = !team && !color ? clean(body.query, 160) : '';
-  if (!team && !color && query.length < 3) return { ok: false, status: 400, error: 'Pick a team, a colour or a moment first.' };
-  const teams = team ? [team] : (color ? TEAMS.teamsFor({ sport, color }) : []);
+  // Precedence: team(s) > colour(s) > query. One team / one colour behaves
+  // exactly as before; several are one union search (see PICK_MAX).
+  const picked = pickedTeams(body, sport);
+  if (picked.error) return { ok: false, status: 400, error: picked.error };
+  const pickedC = picked.teams.length ? { colors: [] } : pickedColors(body);
+  if (pickedC.error) return { ok: false, status: 400, error: pickedC.error };
+  const team = picked.teams.length === 1 ? picked.teams[0] : null;
+  const multi = picked.teams.length > 1 ? picked.teams : [];
+  const colors = pickedC.colors;
+  const color = colors.length === 1 ? colors[0] : '';
+  const query = !picked.teams.length && !colors.length ? clean(body.query, 160) : '';
+  if (!picked.teams.length && !colors.length && query.length < 3) return { ok: false, status: 400, error: 'Pick a team, a colour or a moment first.' };
+  const teams = team ? [team] : multi.length ? multi : (colors.length ? teamsForColors(sport, colors) : []);
   const teamsOut = teams.map(teamOut);
   // A colour with no teams in this sport: nothing to search, nothing spent.
-  if (color && !teams.length) return { ok: true, teams: [], clips: [], cached: false, cost: 0, note: `No ${SPORT_NAMES[sport]} teams wear that colour.` };
+  if (colors.length && !teams.length) return { ok: true, teams: [], clips: [], cached: false, cost: 0, note: `No ${SPORT_NAMES[sport]} teams wear ${colors.length > 1 ? 'those colours' : 'that colour'}.` };
+  // Several teams (picked, or a colour's): each clip says which of them it is about.
+  const tagMatched = list => (teams.length > 1 ? list.map(c => ({ ...c, matched: matchedTeams(c, teams, sport) })) : list);
 
   const freeOnly = Boolean(track.freeOnly);
   const strategy = strategyNow();
-  const key = clipKey(strategy, sport, { team, color, query });
+  const key = clipKey(strategy, sport, { team, teams: multi, color, colors, query });
   const hit = freeOnly ? null : fromCache(key);
   if (hit) return hit;
 
-  // 1. The shared library: instant and free. Enough good clips: done.
+  // 1. The shared library: instant and free, ONE query (an overlap filter on
+  //    the teams array) however many teams are picked. Enough good clips: done.
   const named = query ? teamInTitle(query, sport) : null;
-  const libTeams = team ? [team] : color ? teams : (named ? [named] : []);
+  const libTeams = team ? [team] : teams.length ? teams : (named ? [named] : []);
   const terms = query ? keyTerms(query, named) : [];
   const lib = await libraryClips({ sport, teams: libTeams, terms: named ? [] : terms, token: track.token });
   const viaOf = c => (team && (c.source === 'league' || c.source === 'media') ? 'league' : 'search');
   if (lib.fresh.length >= LIBRARY.enough) {
-    const clips = lib.fresh.slice(0, LIBRARY.maxOut).map(c => ({ ...c, via: viaOf(c) }));
+    const clips = tagMatched(lib.fresh.slice(0, LIBRARY.maxOut).map(c => ({ ...c, via: viaOf(c) })));
     clips.sort((a, b) => viaRank(a) - viaRank(b) || b.score - a.score);
     const diag = { ...newDiag('library'), kept: clips.length, sources: { library: lib.fresh.length }, ms: Date.now() - started };
     return { ok: true, teams: teamsOut, clips, strategy: 'library', diag, fromLibrary: true, cached: false, cost: 0 };
@@ -900,13 +957,17 @@ async function findClips(body, track) {
   if (track.skipAi) return null; // not enough in the library: the caller gates and comes back
 
   // 2. Live top-up: web search or X API, plus the extra sources, in parallel.
-  const plan = searchPlan({ sport, team, teams: color ? teams : [], query });
+  //    Several teams: still ONE capped search (the same caps as one team),
+  //    aimed at the thinnest of the selection first (fewest library clips).
+  const libCount = t => lib.fresh.filter(c => (c.teams || []).includes(t.name)).length;
+  const searchTeams = multi.length ? [...multi].sort((a, b) => libCount(a) - libCount(b)) : colors.length ? teams : [];
+  const plan = searchPlan({ sport, team, teams: searchTeams, query });
   const [first, extra] = await Promise.all([
     searchRound(plan, {
       sport, track, feature: 'video-ads-find-clips', freeOnly,
       maxUses: FIND_CLIPS.maxUses, maxCostUsd: FIND_CLIPS.maxCostUsd, timeoutMs: FIND_CLIPS.searchMs,
     }),
-    runSources({ sport, team: team ? teamOut(team) : null, teams: teams.map(teamOut), color, query }, {
+    runSources({ sport, team: team ? teamOut(team) : null, teams: (multi.length ? searchTeams : teams).map(teamOut), color, ...(colors.length > 1 ? { colors } : {}), query }, {
       track, freeOnly, known: new Set(lib.fresh.map(c => c.url)),
     }),
   ]);
@@ -982,7 +1043,7 @@ async function findClips(body, track) {
       note = note ? `${note} ${fbNote}` : fbNote;
     }
   }
-  clips = clips.slice(0, FIND_CLIPS.maxClips);
+  clips = tagMatched(clips.slice(0, FIND_CLIPS.maxClips));
   diag.kept = clips.length;
   diag.fromLibrary = clips.filter(c => fromLib.has(c.url) || c.fromLibrary).length;
   diag.ms = Date.now() - started;
@@ -1197,16 +1258,18 @@ async function momentsWithClips(body, track) {
 }
 
 // ─── Clip library browsing (no AI, no cost) ────────────────────────────────
-// POST { mode: 'library', sport, team?, sort: 'newest' | 'popular', offset, limit }
+// POST { mode: 'library', sport, teams?: [] (or team?), sort: 'newest' | 'popular', offset, limit }
 async function libraryMode(body, { token = '' } = {}) {
   const sport = AD_SPORTS.includes(body.sport) ? body.sport : '';
   if (!sport) return { ok: false, status: 400, error: 'Pick NFL, CFB or MLB first.' };
-  const teamName = clean(typeof body.team === 'string' ? body.team : body.team?.name, 80);
-  const team = teamName ? TEAMS.findTeam(teamName, sport) : null;
+  // Team filter: `teams: []` (any of them, one overlap query) or the old single
+  // `team`. Unknown names are dropped (a filter, not a search); at most PICK_MAX.
+  const picked = pickedTeams(body, sport, { strict: false }).teams;
+  const team = picked[0] || null;
   const sort = ['popular', 'newest'].includes(body.sort) ? body.sort : 'trending';
   const offset = Math.max(0, Math.min(500, Math.floor(Number(body.offset) || 0)));
   const limit = Math.max(1, Math.min(LIBRARY.maxOut, Math.floor(Number(body.limit) || 18)));
-  const { fresh } = await libraryClips({ sport, teams: team ? [team] : [], token });
+  const { fresh } = await libraryClips({ sport, teams: picked, token });
   const popularity = c => (c.views > 0 ? Math.log10(1 + c.views) : 0) + (c.likes > 0 ? 1.2 * Math.log10(1 + c.likes) : 0);
   // Trending (default): views or likes per hour, recency, source, quality, AI score.
   const now = Date.now();
@@ -1228,8 +1291,9 @@ async function libraryMode(body, { token = '' } = {}) {
   return {
     ok: true, sport, sort, offset, limit,
     team: team ? teamOut(team) : null,
+    selected: picked.map(teamOut),
     total: sorted.length,
-    clips: sorted.slice(offset, offset + limit),
+    clips: picked.length > 1 ? sorted.slice(offset, offset + limit).map(c => ({ ...c, matched: matchedTeams(c, picked, sport) })) : sorted.slice(offset, offset + limit),
     teams: teamsOut,
     newestAt: fresh.reduce((max, c) => (!max || c.postedAt > max ? c.postedAt : max), ''),
     store: CLIP_LIBRARY.status().store,
@@ -2085,7 +2149,7 @@ exports._test = {
   variantsFrom, isVideoUrl, sizeFromUrl, clipFromPost, trends, checkVariant, autoFix, trimToWords, swapBanned, closestPhrase, copyContext, suggestStyle, skipReason, styleFieldsOf,
   MODE_FEATURES, COPY_SYSTEM, COPY_CACHE, copyKey, rankVariants, claimsFor, checkClaims, saveClaims, claimsMode, resetClaims() { claimsCache = { at: 0, rows: null }; }, findClips, momentsWithClips, teamInTitle, MOMENT_CACHE, MOMENTS, looksOld, ageHoursOf, copy, chat, CLIP_CACHE, FIND_CLIPS, grammar, checkGrammarIssues, GRAMMAR_CACHE,
   MOMENT_TITLE_CACHE, MOMENTS_LIB, CLASSIFY, assembleMoments, searchPlan, webPrompt, xQueryFor, xApiSearch, assessClip, freshClip, scoreClip, rankClips, mediaKey, qualityLabel, CLIP_TTL_MS, SOURCES,
-  LIBRARY, CLIP_LIBRARY, libraryMode, libraryClips, nearestFallback, runSources, verifyCandidate, checkMedia, mediaHostAllowed, teamsInText, clipTeams, softKey,
+  LIBRARY, CLIP_LIBRARY, libraryMode, PICK_MAX, pickedTeams, pickedColors, teamsForColors, matchedTeams, clipKey, libraryClips, nearestFallback, runSources, verifyCandidate, checkMedia, mediaHostAllowed, teamsInText, clipTeams, softKey,
   useSources(list) { EXTRA_SOURCES = Array.isArray(list) ? list : []; },
   useLearning(mod) { learning = { lessonsFor: async () => ({ examples: [], rules: [] }), styleRankingFor: async () => [], recordEvent: async () => false, ...mod }; },
 };

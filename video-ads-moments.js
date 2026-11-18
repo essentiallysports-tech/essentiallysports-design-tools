@@ -17,6 +17,9 @@
 //   filterMoments / sortMoments / momentFacets   the page's sport, team,
 //                  colour filters and Trending / Newest / Most viewed sort
 //   handoffFilter  the Trends page hand-off (frameup.videoAdMoment.v1) -> filters
+//   togglePick / matchedOf / readPicks / writePicks   multi-select (up to 6
+//                  teams or colours), which picked teams a card matched, and
+//                  the last picks per sport (localStorage)
 (function (root, factory) {
   let teams = null;
   if (typeof module === 'object' && module.exports) {
@@ -391,11 +394,64 @@
   }
   const teamNames = m => (m.teams || []).map(t => (typeof t === 'string' ? t : t && t.name)).filter(Boolean);
 
-  // filters: { sport: 'all' | id, team: name, color: family id }
-  function filterMoments(list, { sport = 'all', team = '', color = '' } = {}) {
+  // filters: { sport: 'all' | id, teams: [names], colors: [family ids] } (the
+  // single team / color are still accepted). ANY of the teams, ANY of the
+  // colours; teams AND colours when both are set.
+  const asList = (many, one) => [...(Array.isArray(many) ? many : []), ...(one ? [one] : [])].map(String).filter(Boolean);
+  function filterMoments(list, { sport = 'all', team = '', color = '', teams = [], colors = [] } = {}) {
+    const wantTeams = asList(teams, team).map(n => n.toLowerCase());
+    const wantColors = asList(colors, color);
     return (list || []).filter(m => (!sport || sport === 'all' || m.sport === sport)
-      && (!team || teamNames(m).some(n => n.toLowerCase() === String(team).toLowerCase()))
-      && (!color || familiesOf(m).includes(color)));
+      && (!wantTeams.length || teamNames(m).some(n => wantTeams.includes(n.toLowerCase())))
+      && (!wantColors.length || familiesOf(m).some(f => wantColors.includes(f))));
+  }
+
+  // ── Multi-select helpers (By team, By colour, the Library and By moment) ──
+  const PICK_MAX = 6;
+  // Toggle one value in a selection, at most max. -> { list, capped }
+  function togglePick(list, value, max = PICK_MAX) {
+    const have = Array.isArray(list) ? list.filter(Boolean) : [];
+    if (!value) return { list: have, capped: false };
+    if (have.includes(value)) return { list: have.filter(v => v !== value), capped: false };
+    if (have.length >= max) return { list: have, capped: true };
+    return { list: [...have, value], capped: false };
+  }
+  // The selected teams a moment (or clip) is about: its server `matched` tags,
+  // else its own teams that are in the selection. Selection order kept.
+  function matchedOf(item, selected) {
+    const sel = (Array.isArray(selected) ? selected : []).filter(Boolean);
+    if (!sel.length || !item) return [];
+    const own = new Set([
+      ...teamNames(item),
+      ...(Array.isArray(item.matched) ? item.matched : []),
+      ...(Array.isArray(item.clips) ? item.clips.flatMap(c => [...(Array.isArray(c.matched) ? c.matched : []), ...teamNames(c)]) : []),
+    ].map(n => String(n).toLowerCase()));
+    return sel.filter(n => own.has(String(n).toLowerCase()));
+  }
+  // Remembered picks, per sport: { [sport]: { teams: [], colors: [] } } in
+  // localStorage (any storage-like object; never throws).
+  const PICKS_KEY = 'frameup.videoAdPicks.v1';
+  function readPicks(storage, sport) {
+    try {
+      const all = JSON.parse((storage && storage.getItem(PICKS_KEY)) || '{}');
+      const v = all && typeof all === 'object' ? all[sport] : null;
+      const clip = x => (Array.isArray(x) ? x.filter(s => typeof s === 'string' && s && s.length <= 80).slice(0, PICK_MAX) : []);
+      return { teams: clip(v && v.teams), colors: clip(v && v.colors) };
+    } catch (error) { return { teams: [], colors: [] }; }
+  }
+  function writePicks(storage, sport, picks) {
+    try {
+      if (!storage || !sport) return false;
+      let all = {};
+      try { all = JSON.parse(storage.getItem(PICKS_KEY) || '{}') || {}; } catch (error) { all = {}; }
+      const had = all[sport] && typeof all[sport] === 'object' ? all[sport] : {};
+      const next = { ...had };
+      if (picks && Array.isArray(picks.teams)) next.teams = picks.teams.slice(0, PICK_MAX);
+      if (picks && Array.isArray(picks.colors)) next.colors = picks.colors.slice(0, PICK_MAX);
+      all[sport] = next;
+      storage.setItem(PICKS_KEY, JSON.stringify(all));
+      return true;
+    } catch (error) { return false; }
   }
 
   // Team and colour options over a list (after the sport filter), with counts.
@@ -449,5 +505,6 @@
     engagementOf, velocityOf, versionScore, trendScore, clusterClips,
     cleanTitle, fallbackTitle, groundedTitle,
     buildMoments, sortMoments, familiesOf, filterMoments, momentFacets, teamInTitle, handoffFilter,
+    PICK_MAX, PICKS_KEY, togglePick, matchedOf, readPicks, writePicks,
   };
 }));

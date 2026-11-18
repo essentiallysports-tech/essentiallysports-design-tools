@@ -103,10 +103,10 @@
     clipTab: 'team',
     clipTabPicked: false,
     teamSport: 'cfb',
-    team: '', // full team name picked in By team
+    teams: [], // full team names picked in By team (up to 6; any of them)
     teamQuery: '',
     colorSport: 'cfb',
-    color: 'red',
+    colors: ['red'], // colour ids picked in By colour (up to 6; any of them)
     sport: 'all', // trend board filter
     trend: null,
     momentOpen: true, // the trend list (false once a moment is picked: just that one shows)
@@ -1231,7 +1231,9 @@
       if (!state.clipPicked) {
         state.colorSport = brand().sport || state.colorSport;
         state.teamSport = state.colorSport;
-        if (state.copyColor) state.color = state.copyColor;
+        loadPicks('team');
+        loadPicks('color');
+        if (state.copyColor) state.colors = [state.copyColor];
         markRadios(els.colorSport, 'sport', state.colorSport);
         markRadios(els.teamSport, 'sport', state.teamSport);
       }
@@ -1275,6 +1277,132 @@
   }
 
   // ─── 1 Clip ──────────────────────────────────────────────────────────────
+  // ─── Multi-select (By team, By colour, Library, By moment) ───────────────
+  // Up to PICK_MAX teams or colours; results are clips of ANY of them. Each
+  // pick list has a compact summary row (count, removable chips, Clear) or a
+  // chip menu (a checkbox popover) in the result filters. The last picks are
+  // remembered per sport (video-ads-moments.js readPicks / writePicks).
+  const MOX = window.VideoAdsMoments || {};
+  const PICK_MAX = MOX.PICK_MAX || 6;
+  const togglePick = MOX.togglePick || ((list, v, max = PICK_MAX) => (list.includes(v) ? { list: list.filter(x => x !== v), capped: false } : list.length >= max ? { list, capped: true } : { list: [...list, v], capped: false }));
+  const pickStore = () => { try { return window.localStorage; } catch (error) { return null; } };
+  const picksLoaded = { team: '', color: '' };
+  // Remembered picks for the current sport (once per sport switch).
+  function loadPicks(kind) {
+    const sport = kind === 'team' ? state.teamSport : state.colorSport;
+    if (picksLoaded[kind] === sport || typeof MOX.readPicks !== 'function') return;
+    picksLoaded[kind] = sport;
+    const saved = MOX.readPicks(pickStore(), sport);
+    if (kind === 'team') state.teams = saved.teams.filter(name => (Array.isArray(T.TEAMS) ? T.TEAMS : []).some(t => t.name === name && t.sport === sport));
+    else if (saved.colors.length) state.colors = saved.colors.filter(id => T.COLORS.some(c => c.id === id));
+  }
+  function savePicks(kind) {
+    if (typeof MOX.writePicks !== 'function') return;
+    const sport = kind === 'team' ? state.teamSport : state.colorSport;
+    picksLoaded[kind] = sport;
+    MOX.writePicks(pickStore(), sport, kind === 'team' ? { teams: state.teams } : { colors: state.colors });
+  }
+  // A polite announcement for screen readers ("Auburn added. 2 of 6 teams.").
+  const pickLive = document.createElement('span');
+  pickLive.className = 'va-sr';
+  pickLive.setAttribute('role', 'status');
+  document.body.append(pickLive);
+  const announce = text => { pickLive.textContent = ''; requestAnimationFrame(() => { pickLive.textContent = text; }); };
+  const pickNotes = { team: '', color: '' };
+  // The summary row above a pick list. items: [{ value, label, title, mark?, dot? }]
+  function pickSummary(kind, items, { noun, all, hint }) {
+    const note = pickNotes[kind] ? `<p class="va-picksum__note" role="status">${ICON.alert}<span>${esc(pickNotes[kind])}</span></p>` : '';
+    if (!items.length) return `<div class="va-picksum__row"><span class="va-picksum__all">${esc(all)}</span><span class="va-hint">${esc(hint)}</span></div>${note}`;
+    const chips = items.map(it => `<button class="es-chip va-picksum__chip" type="button" data-unpick="${esc(it.value)}" aria-label="Remove ${esc(it.title || it.label)}" title="Remove ${esc(it.title || it.label)}">${it.mark || (it.dot ? `<span class="es-chip__dot" style="--dot:${esc(it.dot)}" aria-hidden="true"></span>` : '')}<span>${esc(it.label)}</span>${ICON.x}</button>`).join('');
+    return `<div class="va-picksum__row"><span class="va-picksum__label">${items.length} ${noun}${items.length === 1 ? '' : 's'} <span class="es-chip__count">of ${PICK_MAX}</span></span>${chips}<button class="va-link va-picksum__clear" type="button" data-unpick-all>Clear</button></div>${note}`;
+  }
+  // Chip menu: an es-chip that opens a checkbox popover (Library / By moment /
+  // result filters). options: [{ value, label, count, mark?, dot? }]
+  const pickers = {}; // id -> { get(), set(list), render() }
+  let openPick = '';
+  // apply: the list reloads from the server when the menu closes ("Done").
+  function pickMenu(id, { label, all, options, selected, noun, apply = false }) {
+    const sel = selected.filter(Boolean);
+    const open = openPick === id;
+    const first = options.find(o => o.value === sel[0]);
+    const text = !sel.length ? all : sel.length === 1 ? (first?.label || sel[0]) : `${sel.length} ${noun}s`;
+    const lead = sel.length === 1 && first ? (first.mark || (first.dot ? `<span class="es-chip__dot" style="--dot:${esc(first.dot)}" aria-hidden="true"></span>` : '')) : '';
+    const full = sel.length >= PICK_MAX;
+    return `<div class="va-pick${open ? ' is-open' : ''}" data-pick="${esc(id)}">
+      <button class="es-chip va-pick__btn${sel.length ? ' is-on' : ''}" type="button" data-pick-toggle="${esc(id)}" aria-haspopup="true" aria-expanded="${open}" aria-controls="va-pick-${esc(id)}" aria-label="${esc(label)}: ${esc(sel.length ? sel.map(v => options.find(o => o.value === v)?.label || v).join(', ') : all)}">${lead}<span class="va-pick__text">${esc(text)}</span>${sel.length > 1 ? `<span class="es-chip__count">${sel.length}</span>` : ''}${ICON.chevron}</button>
+      <div class="va-pick__pop es-menu" id="va-pick-${esc(id)}" role="group" aria-label="${esc(label)}, up to ${PICK_MAX}"${open ? '' : ' hidden'}>
+        <div class="va-pick__list">${options.map(o => {
+          const on = sel.includes(o.value);
+          return `<label class="es-menu__item va-pick__opt${on ? ' is-on' : ''}${!on && full ? ' is-full' : ''}"><input type="checkbox" data-pick-opt="${esc(id)}" value="${esc(o.value)}"${on ? ' checked' : ''}${!on && full ? ' disabled' : ''}>${o.mark || (o.dot ? `<span class="es-chip__dot" style="--dot:${esc(o.dot)}" aria-hidden="true"></span>` : '')}<span class="va-pick__name">${esc(o.label)}</span>${Number.isFinite(o.count) ? `<span class="es-chip__count">${o.count}</span>` : ''}</label>`;
+        }).join('')}</div>
+        <div class="va-pick__foot"><span class="va-hint">${full ? `Up to ${PICK_MAX} at a time` : `Any of up to ${PICK_MAX}`}</span><span class="va-pick__acts"><button class="va-link" type="button" data-pick-clear="${esc(id)}"${sel.length ? '' : ' disabled'}>Clear</button>${apply ? `<button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-pick-toggle="${esc(id)}">Done</button>` : ''}</span></div>
+      </div>
+    </div>`;
+  }
+  function placePick(id) {
+    const root = document.querySelector(`[data-pick="${CSS.escape(id)}"]`);
+    const pop = root?.querySelector('.va-pick__pop');
+    if (!pop || pop.hidden) return;
+    root.classList.remove('is-right');
+    if (pop.getBoundingClientRect().right > document.documentElement.clientWidth - 8) root.classList.add('is-right');
+  }
+  function rerenderPick(id, focus) {
+    pickers[id]?.render();
+    placePick(id);
+    const root = document.querySelector(`[data-pick="${CSS.escape(id)}"]`);
+    if (!root || !focus) return;
+    const target = focus === 'button' ? root.querySelector('[data-pick-toggle]') : root.querySelector(`[data-pick-opt][value="${CSS.escape(focus)}"]`) || root.querySelector('[data-pick-opt]');
+    target?.focus({ preventScroll: true });
+  }
+  document.addEventListener('click', event => {
+    const toggle = event.target.closest('[data-pick-toggle]');
+    if (toggle) {
+      const id = toggle.dataset.pickToggle;
+      const was = openPick;
+      openPick = openPick === id ? '' : id;
+      if (was && was !== id) pickers[was]?.render();
+      rerenderPick(id, openPick ? (pickers[id]?.get()[0] || true) : 'button');
+      return;
+    }
+    const clear = event.target.closest('[data-pick-clear]');
+    if (clear) {
+      const id = clear.dataset.pickClear;
+      pickers[id]?.set([]);
+      announce('Filter cleared.');
+      rerenderPick(id, 'button');
+      return;
+    }
+    if (openPick && !event.target.closest(`[data-pick="${CSS.escape(openPick)}"]`)) {
+      const id = openPick;
+      openPick = '';
+      pickers[id]?.render();
+    }
+  });
+  document.addEventListener('change', event => {
+    const box = event.target.closest('[data-pick-opt]');
+    if (!box) return;
+    const id = box.dataset.pickOpt;
+    const p = pickers[id];
+    if (!p) return;
+    const { list, capped } = togglePick(p.get(), box.value, PICK_MAX);
+    if (capped) { box.checked = false; announce(`Up to ${PICK_MAX} at a time.`); return; }
+    p.set(list);
+    announce(`${list.length ? `${list.length} selected` : 'All'}.`);
+    rerenderPick(id, box.value);
+  });
+  document.addEventListener('keydown', event => {
+    if (!openPick) return;
+    const root = event.target.closest?.(`[data-pick="${CSS.escape(openPick)}"]`);
+    if (!root) return;
+    if (event.key === 'Escape') { event.preventDefault(); const id = openPick; openPick = ''; rerenderPick(id, 'button'); return; }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      const boxes = [...root.querySelectorAll('[data-pick-opt]:not(:disabled), [data-pick-clear]:not(:disabled)')];
+      const i = boxes.indexOf(document.activeElement);
+      event.preventDefault();
+      boxes[(i + (event.key === 'ArrowDown' ? 1 : -1) + boxes.length) % boxes.length]?.focus();
+    }
+  });
+
   // Tabs: By colour / By moment / Link or upload.
   // The Library is an icon button at the right of the pane header (not a tab),
   // but it switches panels the same way.
@@ -1313,26 +1441,42 @@
     selectClipTab(state.clipTab === 'library' ? tabStrip[0] : libraryBtn);
   });
 
-  // Colour picker: sport above, swatches below, then Find clips.
+  // Colour picker: sport above, swatches below (several may be picked: clips
+  // of any team in any of them), then Find clips.
   const colorById = id => T.COLORS.find(c => c.id === id) || T.COLORS[0];
   const teamsFor = (sport, color) => { try { return T.teamsFor({ sport, color }) || []; } catch (error) { return []; } };
+  // The teams of several colours: the union, each colour's primary teams first.
+  const teamsForColors = (sport, ids) => {
+    const out = [];
+    (ids || []).forEach(id => teamsFor(sport, id).forEach(t => { if (!out.some(x => x.name === t.name)) out.push(t); }));
+    return out;
+  };
   const availableColors = sport => (hasTeamData ? T.COLORS.filter(c => teamsFor(sport, c.id).length) : T.COLORS);
+  const colorSum = document.createElement('div');
+  colorSum.className = 'va-picksum';
+  colorSum.id = 'va-color-sum';
+  els.swatches.before(colorSum);
   const swatchTeams = document.createElement('p');
   swatchTeams.className = 'va-hint va-swatch-teams';
   els.swatches.after(swatchTeams);
+  const colorLabelOf = ids => (ids.length === 1 ? colorById(ids[0]).label : ids.length === 2 ? `${colorById(ids[0]).label.split(' ')[0]} + ${colorById(ids[1]).label.split(' ')[0]}` : `${ids.length} colours`);
   function renderSwatches() {
     const colors = availableColors(state.colorSport);
-    if (!colors.some(c => c.id === state.color)) state.color = colors[0]?.id || '';
+    const had = state.colors.length;
+    state.colors = state.colors.filter(id => colors.some(c => c.id === id));
+    if (had && !state.colors.length && colors[0]) state.colors = [colors[0].id];
+    const focusId = state.colors.find(id => colors.some(c => c.id === id)) || colors[0]?.id;
     els.swatches.innerHTML = colors.map(c => {
-      const on = c.id === state.color;
-      return `<button class="va-swatch" type="button" role="radio" data-color="${esc(c.id)}" aria-checked="${on}" tabindex="${on ? 0 : -1}" style="--sw:${esc(c.hex)}"><span class="va-swatch__dot" aria-hidden="true"></span><span class="va-swatch__label">${esc(c.label)}</span></button>`;
+      const on = state.colors.includes(c.id);
+      return `<button class="va-swatch" type="button" role="checkbox" data-color="${esc(c.id)}" aria-checked="${on}" tabindex="${c.id === focusId ? 0 : -1}" style="--sw:${esc(c.hex)}"><span class="va-swatch__dot" aria-hidden="true"></span><span class="va-swatch__label">${esc(c.label)}</span></button>`;
     }).join('');
-    const teams = teamsFor(state.colorSport, state.color);
+    const teams = teamsForColors(state.colorSport, state.colors);
     swatchTeams.innerHTML = teams.length ? `${teams.slice(0, 3).map(t => `<span class="va-swatch-team" title="${esc(t.name)}">${teamMark(t, 20)}<span>${esc(t.short || t.name)}</span></span>`).join('')}${teams.length > 3 ? `<span class="va-swatch-team va-swatch-team--more">+${teams.length - 3} more</span>` : ''}` : '';
     swatchTeams.hidden = !teams.length;
+    colorSum.innerHTML = pickSummary('color', state.colors.map(id => colorById(id)).map(c => ({ value: c.id, label: c.label.split(' ')[0], dot: c.hex, title: c.label })), { noun: 'colour', all: 'No colour picked', hint: `Pick up to ${PICK_MAX} — clips of any of them` });
     renderFindButton();
   }
-  const colorKey = () => JSON.stringify({ sport: state.colorSport, color: state.color });
+  const colorKey = () => JSON.stringify({ sport: state.colorSport, colors: [...state.colors].sort() });
   function renderFindButton() {
     const f = finds.color;
     // Once this exact search has results, the clips are the next action.
@@ -1341,8 +1485,8 @@
     els.find.classList.toggle('es-btn--primary', !same);
     // The result chips already name the teams.
     swatchTeams.hidden = Boolean(same) || !swatchTeams.textContent;
-    els.find.disabled = f?.status === 'loading' || !state.color;
-    els.findText.textContent = f?.status === 'loading' ? 'Finding clips…' : fresh ? 'Search again' : 'Find clips';
+    els.find.disabled = f?.status === 'loading' || !state.colors.length;
+    els.findText.textContent = f?.status === 'loading' ? 'Finding clips…' : !state.colors.length ? 'Pick a colour' : fresh ? 'Search again' : state.colors.length > 1 ? `Find clips for ${state.colors.length} colours` : 'Find clips';
     els.find.toggleAttribute('aria-busy', f?.status === 'loading');
   }
 
@@ -1355,12 +1499,12 @@
     finds[kind] = { key, status: 'loading', teams: previewTeams, clips: [], error: '', label, params };
     views[kind] = newView();
     // The search is what the ad is about: it grounds the copy.
-    const color = kind === 'color' ? colorById(params.color) : null;
+    const color = kind === 'color' ? colorById(params.color || params.colors?.[0]) : null;
     state.context = {
       kind,
       sport: params.sport || '',
       color: color?.id || '',
-      colorLabel: color?.label || '',
+      colorLabel: (params.colors?.length > 1 ? colorLabelOf(params.colors) : color?.label) || '',
       teams: previewTeams.map(t => t.name).filter(Boolean),
       trend: kind === 'moment' ? state.trend : null,
     };
@@ -1389,8 +1533,11 @@
     if (state.clipTab === kind && finds[kind]?.status !== 'loading') reveal(els.found);
   }
   function findByColor() {
-    if (!state.color) return;
-    findClips('color', { sport: state.colorSport, color: state.color }, { label: colorById(state.color).label, teams: teamsFor(state.colorSport, state.color) });
+    if (!state.colors.length) return;
+    const colors = [...state.colors];
+    // One colour: the single `color` field (its cache is shared with older pages).
+    const params = colors.length === 1 ? { sport: state.colorSport, color: colors[0] } : { sport: state.colorSport, colors };
+    findClips('color', params, { label: colorLabelOf(colors), teams: teamsForColors(state.colorSport, colors) });
   }
   els.find.addEventListener('click', findByColor);
 
@@ -1429,7 +1576,7 @@
   // Every card says where the clip is from (platform + Official / League /
   // Network), how fresh it is, and when it is a labelled fallback.
   const PAGE = 9;
-  const newView = () => ({ shown: PAGE, sort: 'trending', team: '' });
+  const newView = () => ({ shown: PAGE, sort: 'trending', teams: [] });
   const views = { team: newView(), color: newView(), moment: newView() };
   const PLATFORM = { x: 'X', reddit: 'Reddit', bluesky: 'Bluesky', streamable: 'Streamable' };
   const VIA_LABEL = { older: ['Older', 'Older than 5 days, from the clip library'], sport: ['Same league', 'Another team in this league, from the clip library'], colorx: ['Same colour', 'A team of the same colour in another sport, from the clip library'], color: ['Same colour', 'A team of the same colour'] };
@@ -1479,8 +1626,14 @@
     const counts = new Map();
     f.clips.forEach(c => clipTeamNames(c, f.teams).forEach(name => counts.set(name, (counts.get(name) || 0) + 1)));
     const teamOpts = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    const id = `found-${kind}`;
+    pickers[id] = {
+      get: () => views[kind].teams,
+      set: list => { views[kind] = { ...views[kind], teams: list, shown: PAGE }; },
+      render: () => { if (state.clipTab === kind) renderFound(); },
+    };
     const teamSelect = teamOpts.length > 1
-      ? `<label class="va-cliptools__team"><span class="va-sr">Team</span><select class="es-select va-select-sm" data-filter="team" aria-label="Filter clips by team"><option value="">All teams</option>${teamOpts.map(([name, n]) => `<option value="${esc(name)}"${v.team === name ? ' selected' : ''}>${esc(name)} (${n})</option>`).join('')}</select></label>`
+      ? `<div class="va-cliptools__team">${pickMenu(id, { label: 'Filter clips by team', all: 'All teams', noun: 'team', selected: v.teams, options: teamOpts.map(([name, n]) => { const t = teamObj(name, f.params.sport); return { value: name, label: t.short || name, count: n, mark: teamMark(t, 18) }; }) })}</div>`
       : '';
     return f.clips.length > 3 || teamSelect ? `<div class="va-cliptools">${teamSelect}${sortChips(v.sort, 'data-sort', MO_SORTS)}</div>` : '';
   }
@@ -1523,7 +1676,11 @@
     const handle = String(c.handle || '').replace(/^@/, '');
     const age = clipAge({ postedAt: m.latestAt || c.postedAt });
     const eng = MO ? MO.engagementLabel({ views: m.views, likes: m.likes }) : '';
-    const teams = (m.teams || []).slice(0, 3).map(t => teamObj(t, m.sport)).filter(t => t.name);
+    // Several teams picked: the ones this play matched lead, marked.
+    const sel = matchFor[scope] || [];
+    const matched = sel.length ? (MOX.matchedOf ? MOX.matchedOf(m, sel) : sel.filter(n => (m.teams || []).some(t => (typeof t === 'string' ? t : t?.name) === n))) : [];
+    const own = (m.teams || []).map(t => teamObj(t, m.sport)).filter(t => t.name);
+    const teams = [...matched.map(n => own.find(t => t.name === n) || teamObj(n, m.sport)), ...own.filter(t => !matched.includes(t.name))].slice(0, 3);
     const via = VIA_LABEL[m.via];
     const title = m.title || (c.text ? String(c.text).slice(0, 90) : `${SPORT_LABEL[m.sport] || ''} highlight`.trim());
     const open = openAngles[scope] === m.id;
@@ -1531,7 +1688,7 @@
       <span class="va-clip__thumb"${thumb ? ` style="background-image:url('${esc(thumb)}')"` : ''}>${tag && !inAd ? `<span class="va-clip__tag va-clip__tag--${kind === 'official' ? 'official' : 'verified'}">${ICON.check}${tag}</span>` : ''}${quality ? `<span class="va-clip__q" title="Best version">${esc(quality)}</span>` : ''}${secs ? `<span class="va-clip__dur">${esc(fmt(secs))}</span>` : ''}${c.hasAudio === false && !inAd ? '<span class="va-clip__mute" title="This file has no sound">No sound</span>' : ''}${inAd ? `<span class="va-clip__in">${ICON.check}In the ad</span>` : ''}</span>
       ${via ? `<span class="va-clip__via" title="${esc(via[1])}">${esc(via[0])}</span>` : ''}
       <span class="va-mo__title"${m.titleBy === 'ai' ? ' title="Short title written from the post text"' : ''}>${esc(title)}</span>
-      ${teams.length ? `<span class="va-mo__teams">${teams.map(t => `<span class="va-mo__team" title="${esc(t.name)}">${teamMark(t, 18)}<span>${esc(t.short || t.name)}</span></span>`).join('')}</span>` : ''}
+      ${teams.length ? `<span class="va-mo__teams"${matched.length ? ` aria-label="Matched ${esc(matched.map(n => teamObj(n, m.sport).short || n).join(', '))}"` : ''}>${teams.map(t => { const hit = matched.includes(t.name); return `<span class="va-mo__team${hit ? ' is-match' : ''}" title="${esc(t.name)}${hit ? ' (matched)' : ''}">${teamMark(t, 18)}<span>${esc(t.short || t.name)}</span></span>`; }).join('')}</span>` : ''}
       <span class="va-mo__meta"><span class="va-clip__plat va-clip__plat--${esc(platform.replace(/[^a-z]/g, ''))}" title="From ${esc(platformLabel)}${handle ? ` · @${esc(handle)}` : ''}">${esc(platformLabel)}</span>${age ? `<span>${esc(age)}</span>` : ''}${eng ? `<span class="va-mo__eng">${esc(eng)}</span>` : ''}</span>
       ${m.angles > 0 ? `<button class="va-mo__angles" type="button" data-mo-angles="${i}" aria-expanded="${open}">${open ? 'Hide angles' : `+${m.angles} angle${m.angles === 1 ? '' : 's'}`}</button>` : ''}
       <span class="va-clip__actions">
@@ -1547,8 +1704,10 @@
       <div class="va-clipgrid va-clipgrid--3">${m.clips.slice(1).map((c, k) => clipCard(c, `${i}:${k}`, 'data-mo-alt')).join('')}</div>
     </div>`;
   }
-  function momentGrid(list, scope) {
+  const matchFor = {}; // scope -> the picked team names (several), to mark matches
+  function momentGrid(list, scope, match = []) {
     shownMoments[scope] = list;
+    matchFor[scope] = match;
     return `<div class="va-clipgrid va-clipgrid--3 va-mogrid">${list.map((m, i) => momentCard(m, i, scope) + (openAngles[scope] === m.id ? anglesRow(m, i, scope) : '')).join('')}</div>`;
   }
   const momentSkeleton = (n = 6) => `<div class="va-clipgrid va-clipgrid--3" aria-hidden="true">${Array.from({ length: n }, (_, i) => `<div class="va-clip va-clip--skeleton" style="--i:${i}"><span class="va-clip__thumb va-shimmer"></span><span class="va-line va-shimmer"></span><span class="va-line va-shimmer" style="width:60%"></span><span class="va-line va-shimmer" style="width:40%"></span></div>`).join('')}</div>`;
@@ -1652,7 +1811,7 @@
     const v = views[kind];
     let moments = momentsOf(f.clips, f.params.sport);
     const total = moments.length;
-    if (v.team) moments = moments.filter(m => m.clips.some(c => clipTeamNames(c, f.teams).includes(v.team)));
+    if (v.teams.length) moments = moments.filter(m => m.clips.some(c => clipTeamNames(c, f.teams).some(n => v.teams.includes(n))));
     moments = sortMoments(moments, v.sort);
     const shown = moments.slice(0, v.shown);
     const fresh = f.clips.filter(c => !VIA_LABEL[c.via] || c.via === 'color').length;
@@ -1661,7 +1820,7 @@
       <div class="va-found__head"><h3>${total} play${total === 1 ? '' : 's'}</h3><span class="va-hint">${fresh === f.clips.length ? 'Last 5 days' : `${fresh} from the last 5 days`}${angles > 0 ? ` · ${angles} more angle${angles === 1 ? '' : 's'}` : ''}</span></div>
       ${f.note ? `<p class="va-found__note">${esc(f.note)}</p>` : ''}
       ${clipTools(kind)}
-      ${shown.length ? momentGrid(shown, `found-${kind}`) : '<p class="va-hint">No clips for that team in these results. Pick “All teams”.</p>'}
+      ${shown.length ? momentGrid(shown, `found-${kind}`, kind === 'team' && f.teams.length > 1 ? f.teams.map(t => t.name) : []) : '<p class="va-hint">No clips for those teams in these results. Pick “All teams”.</p>'}
       ${moreButton(moments.length - shown.length, 'more-clips')}`;
   }
   // Pick a clip (any list) -> download it into the ad.
@@ -1699,17 +1858,17 @@
     if (act === 'other-color') els.swatches.querySelector('[aria-checked="true"]')?.focus();
     if (act === 'other-moment') { state.momentOpen = true; renderTrends(); renderFound(); els.trends.querySelector('.va-trend')?.focus(); }
   });
-  els.found.addEventListener('change', event => {
-    const select = event.target.closest('[data-filter="team"]');
-    if (!select || !views[state.clipTab]) return;
-    views[state.clipTab] = { ...views[state.clipTab], team: select.value, shown: PAGE };
-    renderFound();
-    els.found.querySelector('[data-filter="team"]')?.focus();
-  });
 
   // ─── Clip library tab: everything fresh for a sport, no search needed ────
-  // POST { mode: 'library', sport, team, sort, offset, limit } (free, no AI).
-  const lib = { sport: '', team: '', sort: 'trending', clips: [], total: 0, teams: [], status: 'idle', error: '', token: 0 };
+  // POST { mode: 'library', sport, teams: [], sort, offset, limit } (free, no AI).
+  // teams: the Team filter (any of up to 6); facets: the teams with fresh clips.
+  const lib = { sport: '', teams: [], sort: 'trending', clips: [], total: 0, facets: [], status: 'idle', error: '', token: 0 };
+  pickers.library = {
+    get: () => lib.teams,
+    set: list => { lib.teams = list; lib.dirty = true; },
+    // The popover stays open while picking; the library reloads when it closes.
+    render: () => { if (lib.dirty && openPick !== 'library') { lib.dirty = false; lib.refocus = true; loadLibrary({ force: true }); } else renderLibrary(); },
+  };
   async function loadLibrary({ more = false, force = false } = {}) {
     const sport = lib.sport || state.teamSport || 'nfl';
     if (!more && !force && lib.sport === sport && lib.status === 'done') { renderLibrary(); return; }
@@ -1720,12 +1879,12 @@
     if (!more) { lib.clips = []; lib.total = 0; }
     renderLibrary();
     try {
-      const data = await callApi({ mode: 'library', sport, team: lib.team, sort: lib.sort === 'views' ? 'popular' : lib.sort, offset: more ? lib.clips.length : 0, limit: 36 });
+      const data = await callApi({ mode: 'library', sport, ...(lib.teams.length ? { teams: lib.teams } : {}), sort: lib.sort === 'views' ? 'popular' : lib.sort, offset: more ? lib.clips.length : 0, limit: 36 });
       if (token !== lib.token) return;
       const clips = (Array.isArray(data.clips) ? data.clips : []).filter(c => c && Array.isArray(c.variants) && c.variants.some(v => v && v.url));
       lib.clips = more ? [...lib.clips, ...clips] : clips;
       lib.total = Number(data.total) || lib.clips.length;
-      lib.teams = Array.isArray(data.teams) ? data.teams : [];
+      lib.facets = Array.isArray(data.teams) ? data.teams : [];
       lib.status = 'done';
     } catch (error) {
       if (token !== lib.token) return;
@@ -1749,24 +1908,27 @@
       els.libFound.innerHTML = `<div class="va-empty-state va-empty-state--bad" role="alert">${ICON.alert}<strong>The clip library didn’t load</strong><span>${esc(lib.error)}</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="lib-retry">${ICON.retry}Try again</button></div>${noClipBlock()}</div>`;
       return;
     }
-    const teamSelect = lib.teams.length
-      ? `<label class="va-cliptools__team"><span class="va-sr">Team</span><select class="es-select va-select-sm" data-lib-filter="team" aria-label="Filter the library by team"><option value="">All teams</option>${lib.teams.map(t => `<option value="${esc(t.name)}"${lib.team === t.name ? ' selected' : ''}>${esc(t.short || t.name)} (${Number(t.count) || 0})</option>`).join('')}</select></label>`
+    // Picked teams with no fresh clips still show (count 0), so they can be unticked.
+    const facets = [...lib.facets, ...lib.teams.filter(n => !lib.facets.some(t => t.name === n)).map(n => ({ ...teamObj(n, lib.sport), count: 0 }))];
+    const teamSelect = facets.length
+      ? `<div class="va-cliptools__team">${pickMenu('library', { label: 'Filter the library by team', all: 'All teams', noun: 'team', apply: true, selected: lib.teams, options: facets.map(t => ({ value: t.name, label: t.short || t.name, count: Number(t.count) || 0, mark: teamMark(t, 18) })) })}</div>`
       : '';
     const tools = `<div class="va-cliptools">${teamSelect}${sortChips(lib.sort, 'data-lib-sort', MO_SORTS)}</div>`;
     if (!lib.clips.length) {
       els.libStatus.textContent = '';
-      els.libFound.innerHTML = `${lib.team ? tools : ''}<div class="va-empty-state">${ICON.film}<strong>The ${esc(sportName)} library is empty right now</strong><span>It fills every morning and with every search. Find clips by team, or make the ad without a clip.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="lib-to-team">By team</button></div>${noClipBlock()}</div>`;
+      els.libFound.innerHTML = `${lib.teams.length ? tools : ''}<div class="va-empty-state">${ICON.film}<strong>${lib.teams.length ? `No fresh ${esc(sportName)} clips for those teams yet` : `The ${esc(sportName)} library is empty right now`}</strong><span>It fills every morning and with every search. Find clips by team, or make the ad without a clip.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="lib-to-team">By team</button></div>${noClipBlock()}</div>`;
       return;
     }
-    els.libStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b>${lib.total}</b> fresh ${esc(sportName)} clip${lib.total === 1 ? '' : 's'}${lib.team ? ` for ${esc(lib.team)}` : ''}, last 5 days</span>`;
-    els.libFound.innerHTML = `${tools}${momentGrid(sortMoments(momentsOf(lib.clips, lib.sport), lib.sort), 'library')}
+    els.libStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b>${lib.total}</b> fresh ${esc(sportName)} clip${lib.total === 1 ? '' : 's'}${lib.teams.length ? ` for ${esc(lib.teams.map(n => teamObj(n, lib.sport).short || n).join(', '))}` : ''}, last 5 days</span>`;
+    els.libFound.innerHTML = `${tools}${momentGrid(sortMoments(momentsOf(lib.clips, lib.sport), lib.sort), 'library', lib.teams.length > 1 ? lib.teams : [])}
       ${lib.status === 'more' ? `<p class="va-working">${dots}Loading more…</p>` : moreButton(lib.total - lib.clips.length, 'lib-more')}`;
+    if (lib.refocus) { lib.refocus = false; els.libFound.querySelector('[data-pick-toggle="library"]')?.focus({ preventScroll: true }); }
   }
   if (els.libSport) {
     radioGroup(els.libSport, 'sport', sport => {
       if (sport === lib.sport) return;
       lib.sport = sport;
-      lib.team = '';
+      lib.teams = [];
       markRadios(els.libSport, 'sport', sport);
       loadLibrary({ force: true });
     });
@@ -1793,17 +1955,17 @@
       if (act === 'lib-to-team') { selectClipTab(clipTab('team')); return; }
       noClipAct(event);
     });
-    els.libFound.addEventListener('change', event => {
-      const select = event.target.closest('[data-lib-filter="team"]');
-      if (!select) return;
-      lib.team = select.value;
-      loadLibrary({ force: true });
-    });
   }
 
-  // By team: every team for the sport, type to filter, then Find clips.
+  // By team: every team for the sport, type to filter, toggle up to 6 teams
+  // (clips of ANY of them), then Find clips.
   const allTeams = sport => (Array.isArray(T.TEAMS) ? T.TEAMS : []).filter(t => t.sport === sport);
-  const teamKey = () => JSON.stringify({ sport: state.teamSport, team: state.team });
+  const teamKey = () => JSON.stringify({ sport: state.teamSport, teams: [...state.teams].sort() });
+  const teamSum = document.createElement('div');
+  teamSum.className = 'va-picksum';
+  teamSum.id = 'va-team-sum';
+  els.teamList.before(teamSum);
+  let teamFocus = ''; // the chip that holds the roving tab stop
   function renderTeamPicker() {
     const sport = state.teamSport;
     const q = state.teamQuery.trim().toLowerCase();
@@ -1813,48 +1975,116 @@
     const inColor = t => fam && Array.isArray(t.families) && t.families.includes(fam);
     teams = [...teams].sort((a, b) => (inColor(b) - inColor(a)) || a.name.localeCompare(b.name));
     const shown = q ? teams.filter(t => `${t.name} ${t.short || ''}`.toLowerCase().includes(q)) : teams;
-    if (state.team && !teams.some(t => t.name === state.team)) state.team = '';
+    if (teams.length) state.teams = state.teams.filter(name => teams.some(t => t.name === name));
     const nColor = fam ? teams.filter(inColor).length : 0;
     els.teamHint.textContent = !teams.length ? '' : nColor && !q ? `${colorById(fam).label} teams first` : '';
     els.teamHint.hidden = !els.teamHint.textContent;
+    const picked = state.teams.map(name => teams.find(t => t.name === name)).filter(Boolean);
+    teamSum.innerHTML = pickSummary('team', picked.map(t => ({ value: t.name, label: t.short || t.name, title: t.name, mark: teamMark(t, 18) })), { noun: 'team', all: 'All teams', hint: `Pick up to ${PICK_MAX} — clips of any of them` });
     if (!teams.length) {
       els.teamList.innerHTML = '<p class="va-hint">Team list is still loading. Try By colour, or paste a link.</p>';
     } else if (!shown.length) {
       els.teamList.innerHTML = `<p class="va-hint">No team matches “${esc(state.teamQuery)}”.</p>`;
     } else {
-      const focusable = shown.some(t => t.name === state.team) ? state.team : shown[0].name;
+      const focusable = shown.some(t => t.name === teamFocus) ? teamFocus : (shown.find(t => state.teams.includes(t.name)) || shown[0]).name;
+      const full = state.teams.length >= PICK_MAX;
       els.teamList.innerHTML = shown.map(t => {
-        const on = t.name === state.team;
-        return `<button class="es-chip va-teamchip${inColor(t) ? ' is-suggested' : ''}" type="button" role="radio" data-team="${esc(t.name)}" aria-checked="${on}" tabindex="${t.name === focusable ? 0 : -1}" title="${esc(t.name)}" aria-label="${esc(t.name)}">${teamMark(t, 20)}<span>${esc(t.short || t.name)}</span></button>`;
+        const on = state.teams.includes(t.name);
+        return `<button class="es-chip va-teamchip${inColor(t) ? ' is-suggested' : ''}${!on && full ? ' is-full' : ''}" type="button" data-team="${esc(t.name)}" aria-pressed="${on}" tabindex="${t.name === focusable ? 0 : -1}" title="${esc(t.name)}" aria-label="${esc(t.name)}">${teamMark(t, 20)}<span>${esc(t.short || t.name)}</span></button>`;
       }).join('');
     }
     renderTeamFind();
+  }
+  // Toggle one team; a 7th is refused with a note (nothing else changes).
+  function toggleTeam(name, { focus = true } = {}) {
+    const t = allTeams(state.teamSport).find(x => x.name === name);
+    const { list, capped } = togglePick(state.teams, name, PICK_MAX);
+    pickNotes.team = capped ? `Up to ${PICK_MAX} teams at a time. Remove one to add ${t?.short || 'another'}.` : '';
+    state.teams = list;
+    state.clipPicked = true;
+    teamFocus = name;
+    if (!capped) savePicks('team');
+    announce(capped ? pickNotes.team : `${t?.short || name} ${list.includes(name) ? 'added' : 'removed'}. ${list.length} of ${PICK_MAX} teams.`);
+    renderTeamPicker();
+    if (focus) els.teamList.querySelector(`[data-team="${CSS.escape(name)}"]`)?.focus();
   }
   function renderTeamFind() {
     const f = finds.team;
     const loading = f?.status === 'loading';
     const same = f && f.key === teamKey();
-    els.teamFind.disabled = loading || !state.team;
+    const n = state.teams.length;
+    els.teamFind.disabled = loading || !n;
     els.teamFind.classList.toggle('es-btn--primary', !same);
     els.teamFind.toggleAttribute('aria-busy', loading);
-    const t = allTeams(state.teamSport).find(x => x.name === state.team);
-    els.teamFindText.textContent = loading ? 'Finding clips…' : !state.team ? 'Pick a team' : same && f.status !== 'error' ? 'Search again' : `Find ${t?.short || 'team'} clips`;
+    const t = n === 1 ? allTeams(state.teamSport).find(x => x.name === state.teams[0]) : null;
+    els.teamFindText.textContent = loading ? 'Finding clips…' : !n ? 'Pick a team' : same && f.status !== 'error' ? 'Search again' : n === 1 ? `Find ${t?.short || 'team'} clips` : `Find clips for ${n} teams`;
   }
+  const teamLabelOf = teams => (teams.length === 1 ? teams[0].short || teams[0].name : teams.length === 2 ? `${teams[0].short} + ${teams[1].short}` : `${teams[0].short} + ${teams.length - 1} more`);
   function findByTeam() {
-    if (!state.team) { els.teamQ.focus(); return; }
-    const t = allTeams(state.teamSport).find(x => x.name === state.team);
-    findClips('team', { sport: state.teamSport, team: state.team }, { label: t?.short || state.team, teams: t ? [t] : [] });
+    if (!state.teams.length) { els.teamQ.focus(); return; }
+    const picked = state.teams.map(name => allTeams(state.teamSport).find(x => x.name === name)).filter(Boolean);
+    const names = picked.length ? picked.map(t => t.name) : [...state.teams];
+    // One team: the single `team` field (same request and cache as before).
+    const params = names.length === 1 ? { sport: state.teamSport, team: names[0] } : { sport: state.teamSport, teams: names };
+    findClips('team', params, { label: picked.length ? teamLabelOf(picked) : names[0], teams: picked });
   }
   els.teamFind.addEventListener('click', findByTeam);
   els.teamQ.addEventListener('input', () => { state.teamQuery = els.teamQ.value; renderTeamPicker(); });
   els.teamQ.addEventListener('keydown', event => {
     if (event.key === 'Enter') {
       event.preventDefault();
+      // Enter adds the first match (never removes one).
       const first = els.teamList.querySelector('[data-team]');
-      if (first) { state.team = first.dataset.team; state.clipPicked = true; renderTeamPicker(); els.teamList.querySelector(`[data-team="${CSS.escape(state.team)}"]`)?.focus(); }
+      if (first && !state.teams.includes(first.dataset.team)) toggleTeam(first.dataset.team);
+      else first?.focus();
     }
     if (event.key === 'ArrowDown') { event.preventDefault(); els.teamList.querySelector('[tabindex="0"]')?.focus(); }
   });
+  // Team chips: toggle buttons (aria-pressed). Arrow keys move between them
+  // (one tab stop), Space / Enter toggle.
+  els.teamList.addEventListener('click', event => {
+    const chip = event.target.closest('[data-team]');
+    if (chip) toggleTeam(chip.dataset.team);
+  });
+  els.teamList.addEventListener('keydown', event => {
+    const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1, Home: -Infinity, End: Infinity };
+    if (!(event.key in keys)) return;
+    const list = [...els.teamList.querySelectorAll('[data-team]')];
+    const i = list.indexOf(document.activeElement);
+    if (i < 0) return;
+    event.preventDefault();
+    const step = keys[event.key];
+    const next = step === -Infinity ? list[0] : step === Infinity ? list[list.length - 1] : list[(i + step + list.length) % list.length];
+    list.forEach(b => { b.tabIndex = b === next ? 0 : -1; });
+    teamFocus = next.dataset.team;
+    next.focus();
+  });
+  // Summary rows: remove one, or Clear.
+  function sumClick(kind) {
+    return event => {
+      const one = event.target.closest('[data-unpick]');
+      const all = event.target.closest('[data-unpick-all]');
+      if (!one && !all) return;
+      pickNotes[kind] = '';
+      if (kind === 'team') {
+        state.teams = all ? [] : state.teams.filter(n => n !== one.dataset.unpick);
+        state.clipPicked = true;
+        savePicks('team');
+        announce(all ? 'All teams cleared.' : `${one.dataset.unpick} removed. ${state.teams.length} of ${PICK_MAX} teams.`);
+        renderTeamPicker();
+        (teamSum.querySelector('[data-unpick]') || els.teamQ).focus();
+      } else {
+        state.colors = all ? [] : state.colors.filter(id => id !== one.dataset.unpick);
+        state.clipPicked = true;
+        savePicks('color');
+        announce(all ? 'Colours cleared.' : `${colorById(one.dataset.unpick).label} removed.`);
+        renderSwatches();
+        (colorSum.querySelector('[data-unpick]') || els.swatches.querySelector('[tabindex="0"]'))?.focus();
+      }
+    };
+  }
+  teamSum.addEventListener('click', sumClick('team'));
+  colorSum.addEventListener('click', sumClick('color'));
 
   // By moment: the most popular clips of the last 5 days (owner, 2026-11-18:
   // "Moments are the recent 5 days' trending clips, and clips can be
@@ -1867,7 +2097,10 @@
   // One entry per sport chip: { status, items, ranking, note, error, fallback }
   const fresh = {};
   let freshToken = 0;
-  const mo = { team: '', color: '', sort: 'trending', shown: PAGE, handoff: null };
+  // teams / colors: the Team and Colour filters (any of up to 6 each).
+  const mo = { teams: [], colors: [], sort: 'trending', shown: PAGE, handoff: null };
+  pickers['mo-team'] = { get: () => mo.teams, set: list => { mo.teams = list; mo.shown = PAGE; if (!list.length) mo.handoff = null; }, render: () => renderTrends() };
+  pickers['mo-color'] = { get: () => mo.colors, set: list => { mo.colors = list; mo.shown = PAGE; }, render: () => renderTrends() };
   const usableClips = list => (Array.isArray(list) ? list : []).filter(c => c && Array.isArray(c.variants) && c.variants.some(v => v && v.url));
   async function loadFreshMoments({ force = false } = {}) {
     const sport = state.sport;
@@ -1907,17 +2140,16 @@
   const teamNamesOf = m => (m.teams || []).map(t => (typeof t === 'string' ? t : t?.name)).filter(Boolean);
   // The pool after the sport chip, then the Team / Colour filters, sorted.
   function momentView(items) {
-    const filtered = MO ? MO.filterMoments(items, { team: mo.team, color: mo.color }) : items.filter(m => !mo.team || teamNamesOf(m).includes(mo.team));
+    const filtered = MO ? MO.filterMoments(items, { teams: mo.teams, colors: mo.colors }) : items.filter(m => !mo.teams.length || teamNamesOf(m).some(n => mo.teams.includes(n)));
     return sortMoments(filtered, mo.sort);
   }
   function momentTools(items) {
     const facets = MO ? MO.momentFacets(items.map(m => ({ ...m, teams: teamNamesOf(m) }))) : { teams: [], colors: [] };
-    // A hand-off team with no clips yet still shows in the list (with 0).
-    if (mo.team && !facets.teams.some(t => t.name === mo.team)) facets.teams.unshift({ name: mo.team, short: teamObj(mo.team).short || mo.team, count: 0 });
-    if (mo.color && !facets.colors.some(c => c.id === mo.color)) { const c = colorById(mo.color); facets.colors.unshift({ id: c.id, label: c.label, hex: c.hex, count: 0 }); }
-    const teamSel = facets.teams.length ? `<label class="va-mo-filter"><span class="va-sr">Team</span><select class="es-select va-select-sm" data-mo-filter="team" aria-label="Filter moments by team"><option value="">All teams</option>${facets.teams.map(t => `<option value="${esc(t.name)}"${mo.team === t.name ? ' selected' : ''}>${esc(t.short || t.name)} (${Number(t.count) || 0})</option>`).join('')}</select></label>` : '';
-    const swatch = mo.color ? colorById(mo.color).hex : '';
-    const colorSel = facets.colors.length ? `<label class="va-mo-filter va-mo-filter--color"${swatch ? ` style="--sw:${esc(swatch)}"` : ''}><span class="va-sr">Colour</span><select class="es-select va-select-sm" data-mo-filter="color" aria-label="Filter moments by team colour"><option value="">All colours</option>${facets.colors.map(c => `<option value="${esc(c.id)}"${mo.color === c.id ? ' selected' : ''}>${esc(c.label)} (${Number(c.count) || 0})</option>`).join('')}</select></label>` : '';
+    // A picked team / colour with no clips yet (a hand-off team) still shows (with 0).
+    mo.teams.filter(n => !facets.teams.some(t => t.name === n)).reverse().forEach(n => { const t = teamObj(n); facets.teams.unshift({ ...t, name: n, short: t.short || n, count: 0 }); });
+    mo.colors.filter(id => !facets.colors.some(c => c.id === id)).reverse().forEach(id => { const c = colorById(id); facets.colors.unshift({ id: c.id, label: c.label, hex: c.hex, count: 0 }); });
+    const teamSel = facets.teams.length ? `<div class="va-mo-filter">${pickMenu('mo-team', { label: 'Filter moments by team', all: 'All teams', noun: 'team', selected: mo.teams, options: facets.teams.map(t => ({ value: t.name, label: t.short || t.name, count: Number(t.count) || 0, mark: teamMark(t, 18) })) })}</div>` : '';
+    const colorSel = facets.colors.length ? `<div class="va-mo-filter">${pickMenu('mo-color', { label: 'Filter moments by team colour', all: 'All colours', noun: 'colour', selected: mo.colors, options: facets.colors.map(c => ({ value: c.id, label: c.label, count: Number(c.count) || 0, dot: c.hex })) })}</div>` : '';
     return `<div class="va-cliptools va-mo-tools">${teamSel}${colorSel}${sortChips(mo.sort, 'data-mo-sort', MO_SORTS)}</div>`;
   }
   const skeletonRows = () => `<li class="va-mo-wrap" aria-hidden="true">${momentSkeleton(6)}</li>`;
@@ -1958,16 +2190,16 @@
     const view = momentView(items);
     const shown = view.slice(0, mo.shown);
     const ranking = fromLibrary ? 'newest' : f.ranking;
-    const filterLabel = [mo.team ? (teamObj(mo.team).short || mo.team) : '', mo.color ? colorById(mo.color).label.toLowerCase() + ' teams' : ''].filter(Boolean).join(' · ');
+    const filterLabel = [mo.teams.map(n => teamObj(n).short || n).join(', '), mo.colors.length ? `${mo.colors.map(id => colorById(id).label.split(' ')[0].toLowerCase()).join(' / ')} teams` : ''].filter(Boolean).join(' · ');
     els.trendsStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b data-es-tick="va-moments">${view.length}</b> ${view.length === 1 ? 'play' : 'plays'}${filterLabel ? ` for ${esc(filterLabel)}` : ''}, last 5 days · ${ranking === 'newest' ? 'newest first' : 'ranked by views per hour'}</span>`;
     const note = fromLibrary
       ? `<p class="va-found__note">${f.status === 'error' ? 'The trending check didn’t finish' : 'No trending clips yet'} — here are the newest ${esc(sportName)} clips from the clip library.</p>`
       : f.note ? `<p class="va-found__note">${esc(f.note)}</p>` : '';
     const handoff = mo.handoff ? `<p class="va-mo-handoff">From Trends: <b>${esc(mo.handoff.title)}</b> <button class="va-link" type="button" data-act="mo-clear">Show all teams</button></p>` : '';
     const empty = !view.length
-      ? `<div class="va-empty-state">${ICON.film}<strong>No ${esc(filterLabel || 'matching')} plays in the last 5 days yet</strong><span>Clear the filter, or search that team directly.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="mo-clear">Show all</button>${mo.team ? `<button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="mo-find-team">Find ${esc(teamObj(mo.team).short || mo.team)} clips</button>` : ''}</div>${noClipBlock({ compact: true })}</div>`
+      ? `<div class="va-empty-state">${ICON.film}<strong>No ${esc(filterLabel || 'matching')} plays in the last 5 days yet</strong><span>Clear the filter, or search that team directly.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="mo-clear">Show all</button>${mo.teams.length ? `<button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="mo-find-team">${mo.teams.length === 1 ? `Find ${esc(teamObj(mo.teams[0]).short || mo.teams[0])} clips` : `Find clips for ${mo.teams.length} teams`}</button>` : ''}</div>${noClipBlock({ compact: true })}</div>`
       : '';
-    els.trends.innerHTML = `<li class="va-mo-wrap">${handoff}${momentTools(items)}${note}${empty || momentGrid(shown, 'moment')}${moreButton(view.length - shown.length, 'mo-more')}${view.length ? noClipBlock({ compact: true }) : ''}</li>`;
+    els.trends.innerHTML = `<li class="va-mo-wrap">${handoff}${momentTools(items)}${note}${empty || momentGrid(shown, 'moment', mo.teams.length > 1 ? mo.teams : [])}${moreButton(view.length - shown.length, 'mo-more')}${view.length ? noClipBlock({ compact: true }) : ''}</li>`;
   }
   async function loadTrends() {
     state.trendsStatus = 'loading';
@@ -2004,11 +2236,13 @@
     if (act && act.startsWith('sport-')) { els.sports.querySelector(`[data-sport="${act.slice(6)}"]`)?.click(); return; }
     if (act === 'retry-moments') { loadFreshMoments({ force: true }); return; }
     if (act === 'mo-more') { const at = mo.shown; mo.shown += PAGE; renderTrends(); els.trends.querySelectorAll('[data-mo-use]')[at]?.focus(); return; }
-    if (act === 'mo-clear') { mo.team = ''; mo.color = ''; mo.handoff = null; mo.shown = PAGE; renderTrends(); return; }
+    if (act === 'mo-clear') { mo.teams = []; mo.colors = []; mo.handoff = null; mo.shown = PAGE; renderTrends(); return; }
     if (act === 'mo-find-team') {
-      const t = teamObj(mo.team, state.sport);
-      if (t?.sport) { state.teamSport = t.sport; markRadios(els.teamSport, 'sport', t.sport); }
-      state.team = t?.name || mo.team;
+      const picked = mo.teams.map(n => teamObj(n, state.sport));
+      const sport = picked.find(t => t?.sport)?.sport;
+      if (sport) { state.teamSport = sport; picksLoaded.team = sport; markRadios(els.teamSport, 'sport', sport); }
+      state.teams = picked.filter(t => !sport || !t.sport || t.sport === sport).map(t => t.name).slice(0, PICK_MAX);
+      state.clipPicked = true;
       selectClipTab(clipTab('team'));
       findByTeam();
       return;
@@ -2017,15 +2251,6 @@
     if (act === 'to-team') { selectClipTab(clipTab('team')); return; }
     if (act === 'to-link') { selectClipTab(clipTab('link')); els.xurl.focus(); return; }
     if (act === 'change-moment') { state.momentOpen = true; renderTrends(); renderFound(); return; }
-  });
-  els.trends.addEventListener('change', event => {
-    const sel = event.target.closest('[data-mo-filter]');
-    if (!sel) return;
-    mo[sel.dataset.moFilter] = sel.value;
-    if (sel.dataset.moFilter === 'team' && !sel.value) mo.handoff = null;
-    mo.shown = PAGE;
-    renderTrends();
-    els.trends.querySelector(`[data-mo-filter="${sel.dataset.moFilter}"]`)?.focus();
   });
   els.refresh.addEventListener('click', () => loadFreshMoments({ force: true }));
   // clips: the moment's clips from moments-with-clips (no extra search).
@@ -3385,20 +3610,44 @@
     state.colorSport = sport;
     state.clipPicked = true;
     markRadios(els.colorSport, 'sport', sport);
+    pickNotes.color = '';
+    loadPicks('color');
     renderSwatches();
   });
-  radioGroup(els.swatches, 'color', color => {
-    state.color = color;
+  // Colour swatches: checkboxes (several may be on). Arrows move, Space toggles.
+  els.swatches.addEventListener('click', event => {
+    const sw = event.target.closest('[data-color]');
+    if (!sw) return;
+    const id = sw.dataset.color;
+    const { list, capped } = togglePick(state.colors, id, PICK_MAX);
+    pickNotes.color = capped ? `Up to ${PICK_MAX} colours at a time.` : '';
+    state.colors = list;
     state.clipPicked = true;
+    if (!capped) savePicks('color');
+    announce(capped ? pickNotes.color : `${colorById(id).label} ${list.includes(id) ? 'added' : 'removed'}.`);
     renderSwatches();
+    els.swatches.querySelectorAll('[data-color]').forEach(b => { b.tabIndex = b.dataset.color === id ? 0 : -1; });
+    els.swatches.querySelector(`[data-color="${CSS.escape(id)}"]`)?.focus();
+  });
+  els.swatches.addEventListener('keydown', event => {
+    const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+    if (!(event.key in keys)) return;
+    const list = [...els.swatches.querySelectorAll('[data-color]')];
+    const i = list.indexOf(document.activeElement);
+    if (i < 0) return;
+    event.preventDefault();
+    const next = list[(i + keys[event.key] + list.length) % list.length];
+    list.forEach(b => { b.tabIndex = b === next ? 0 : -1; });
+    next.focus();
   });
   radioGroup(els.teamSport, 'sport', sport => {
     state.teamSport = sport;
     state.clipPicked = true;
     markRadios(els.teamSport, 'sport', sport);
+    pickNotes.team = '';
+    loadPicks('team');
     renderTeamPicker();
   });
-  radioGroup(els.teamList, 'team', name => { state.team = name; state.clipPicked = true; renderTeamPicker(); });
   // Sport radios and chips: league logo before the text (not on "All").
   document.querySelectorAll('#va-team-sport [data-sport], #va-color-sport [data-sport], #va-sports [data-sport]').forEach(b => { if (b.dataset.sport !== 'all') b.insertAdjacentHTML('afterbegin', leagueTile(b.dataset.sport)); });
   markRadios(els.sizes, 'size', state.size);
@@ -3469,7 +3718,7 @@
   };
   // The team behind the ad: the team picked in By team, else the first team of the last search.
   function tintTeam() {
-    let t = state.team ? (Array.isArray(T.TEAMS) ? T.TEAMS : []).find(x => x.name === state.team && x.sport === state.teamSport) : null;
+    let t = state.teams.length ? (Array.isArray(T.TEAMS) ? T.TEAMS : []).find(x => x.name === state.teams[0] && x.sport === state.teamSport) : null;
     if (!t && state.context?.teams?.length) {
       const name = state.context.teams[0];
       t = finds[state.context.kind]?.teams?.find(x => x.name === name) || (Array.isArray(T.TEAMS) ? T.TEAMS : []).find(x => x.name === name) || null;
@@ -4415,13 +4664,20 @@
     if (m && ['nfl', 'cfb', 'mlb'].includes(m.sport)) {
       setBrand(B.forSport(m.sport).id);
       state.copyTrend = { id: m.id, sport: m.sport, title: String(m.title || '').slice(0, 200), url: m.url || '', image: m.image || '', related: Array.isArray(m.related) ? m.related : [] };
-      if (m.team) { state.team = String(m.team).slice(0, 80); state.teamSport = m.sport; }
+      // The hand-off names one team: By team opens with just that one picked
+      // (it does not overwrite the remembered picks until changed by hand).
+      if (m.team) {
+        const named = T.findTeam?.(String(m.team).slice(0, 80), m.sport);
+        state.teams = [named?.name || String(m.team).slice(0, 80)];
+        state.teamSport = m.sport;
+        picksLoaded.team = m.sport;
+      }
       // By moment opens on that story's sport and team (named, or the team its title names first).
       const hf = window.VideoAdsMoments?.handoffFilter?.(m);
       if (hf) {
         state.sport = hf.sport;
         [...els.sports.children].forEach(c => c.setAttribute('aria-pressed', String(c.dataset.sport === hf.sport)));
-        mo.team = hf.team;
+        mo.teams = hf.team ? [hf.team] : [];
         mo.handoff = hf.team ? { title: hf.title } : null;
       }
       els.momentFold.open = true;
