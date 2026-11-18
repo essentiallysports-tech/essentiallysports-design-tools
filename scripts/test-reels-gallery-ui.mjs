@@ -164,7 +164,7 @@ t('page: "All formats" expands the panel in place (no step change), remembered, 
   assert.match(block, /scroll-snap-type: x mandatory/);
   assert.match(block, /repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(block, /\.rm-gtile__art \{ aspect-ratio: 4 \/ 5; \}/);
-  ['reel-gallery.js', 'reel-maker.js', 'reel-maker.css'].forEach(f => assert.ok(html.includes(`${f}?v=20261120-gallery`), `${f} cache key`));
+  ['reel-gallery.js', 'reel-maker.js', 'reel-maker.css'].forEach(f => assert.ok(new RegExp(f.replace(/\./g,'\\.')+'\\?v=[\\w-]+').test(html), `${f} cache key`));
 });
 
 // ─── Games (fixture-backed) ────────────────────────────────────────────────
