@@ -3,6 +3,30 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-20-auth-roles",
+      "date": "2026-11-20",
+      "title": "Sign-in that doesn't loop, clearer emails, and a People view for admins",
+      "commit": "e3ba8cc",
+      "items": [
+        {
+          "title": "No more bouncing back to login",
+          "text": "If this browser can't keep your login, FrameUp now says why and how to fix it instead of sending you back to the login page again. Fix sign-in clears only FrameUp's sign-in data; your designs and drafts stay.",
+          "page": "login.html"
+        },
+        {
+          "title": "Emails you can count on",
+          "text": "Already have an account? We tell you straight away. Resend buttons show a countdown, expired links let you ask for a new one on the spot, and you can sign in with an emailed link instead of a password.",
+          "page": "login.html"
+        },
+        {
+          "title": "People and roles (admins)",
+          "text": "Dashboard → People: search everyone, filter by status, approve access requests, change roles with a confirm step, and confirm a stuck account's email.",
+          "page": "dashboard.html",
+          "route": "#people"
+        }
+      ]
+    },
+    {
       "id": "2026-11-20-inspector",
       "date": "2026-11-20",
       "title": "Editor: a cleaner settings panel that follows your selection",

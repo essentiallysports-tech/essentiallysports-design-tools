@@ -353,3 +353,12 @@ html[data-theme="dark"] .auth-state-icon.is-error {
 html[data-theme="dark"] .auth-state-icon.is-success {
   background: var(--es-good-soft-on-dark, rgba(76, 201, 133, .16));
 }
+
+.auth-state-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

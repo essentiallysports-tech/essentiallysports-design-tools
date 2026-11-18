@@ -916,6 +916,7 @@
   .login-button[aria-busy="true"], .login-secondary-button[aria-busy="true"] { cursor: progress; }
   .login-secondary-button .login-timer { font-variant-numeric: tabular-nums; }
   @media (max-width: 420px) { .login-confirmation-actions { grid-template-columns: 1fr; } }
+  .login-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .login-checks { list-style: none; margin: var(--es-space-4, 16px) 0 0; padding: 0; width: 100%; display: grid; gap: 6px; }
   .login-checks li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: var(--es-space-2, 8px); align-items: start; color: var(--es-ink-2); font-size: 14px; line-height: 1.4; }
   .login-checks li::before { content: ""; width: 10px; height: 10px; margin: 5px 4px 0; border-radius: 50%; background: var(--es-good); }
@@ -1118,7 +1119,13 @@
     passwordRules.replaceChildren(...Flow.passwordRules(checks).map(rule => {
       const item = document.createElement('li');
       item.className = rule.met ? 'is-met' : '';
-      item.textContent = `${rule.label}${rule.met ? ' (done)' : ''}`;
+      item.textContent = rule.label;
+      if (rule.met) {
+        const done = document.createElement('span');
+        done.className = 'login-sr';
+        done.textContent = ', done';
+        item.append(done);
+      }
       return item;
     }));
   }
@@ -1559,6 +1566,7 @@
     const bounces = window.ESAuth?.recentAuthBounces?.(10 * 60 * 1000) || [];
     let diag = window.ESAuth?.quickDiagnostics?.() || {};
     renderChecks({ ...diag, supabaseReachable: null });
+    try { await window.ESAuth?.ensureSupabaseReady?.(); } catch (error) { /* reported below */ }
     try { diag = await window.ESAuth.authDiagnostics(); } catch (error) { /* keep quick ones */ }
     renderChecks(diag);
     diagnoseSummary.textContent = diagnosisSummary(diag);
