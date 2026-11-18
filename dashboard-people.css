@@ -397,3 +397,5 @@ html[data-theme="dark"] .pv-line { background: var(--es-slate-700, #2a2d34); }
 html[data-theme="dark"] .pv .es-badge--good { background: var(--es-good-soft-on-dark, rgba(76, 201, 133, .16)); color: var(--es-good-on-dark, #4cc985); }
 html[data-theme="dark"] .pv .es-badge--warn { background: var(--es-warn-soft-on-dark, rgba(252, 211, 77, .14)); color: var(--es-warn-on-dark, #fcd34d); }
 html[data-theme="dark"] .pv .es-badge--brand { background: rgba(84, 164, 251, .16); color: #9dcbfd; }
+
+html[data-theme="dark"] .pv .pv-search-input { background: transparent !important; border: 0 !important; box-shadow: none !important; }
