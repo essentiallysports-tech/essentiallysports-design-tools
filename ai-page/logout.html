@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Log out | FrameUp</title>
+  <title>Signing out | FrameUp</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="../es-auth-config.js?v=20260707-auth4"></script>
@@ -16,22 +16,23 @@
   <link rel="stylesheet" href="account.css?v=20261117-focus1">
   <link rel="stylesheet" href="../site-mobile-chrome.css?v=20261117-ready1">
 <link rel="stylesheet" href="../theme.css?v=20261117-ready1">
-  <link rel="stylesheet" href="../site-chrome.css?v=20261117-ready1">
+  <link rel="stylesheet" href="../site-chrome.css?v=20261120-account">
   <link rel="stylesheet" href="../cta-hover.css?v=20261115-btn1">
   <link rel="stylesheet" href="../design-tokens.css?v=20261117-ready1">
 <link rel="stylesheet" href="../es-ui.css?v=20261119-rel3">
   <link rel="stylesheet" href="../es-motion.css?v=20261115-btn1">
-  <script src="../theme.js?v=20261115-pol2"></script>
+  <link rel="stylesheet" href="account-pages.css?v=20261120-account">
+  <script src="../theme.js?v=20261120-account"></script>
   <script src="../site-mobile-chrome.js?v=20261113-uipass1"></script>
-  <script src="../site-chrome.js?v=20261117-usage1"></script>
+  <script src="../site-chrome.js?v=20261120-account"></script>
 <script src="../app-shell.js?v=20261119-rel3"></script>
-<link rel="stylesheet" href="../frameup-tour.css?v=20261117-tour1">
+<link rel="stylesheet" href="../frameup-tour.css?v=20261120-account">
 <script src="../frameup-tour.js?v=20261117-tour1"></script>
 <script src="../tours/updates.js?v=20261117-tour1"></script>
 <script src="../tours/tours.js?v=20261119-rel"></script>
-<script src="../tours/tour-launcher.js?v=20261118-rel1"></script>
+<script src="../tours/tour-launcher.js?v=20261120-account"></script>
 </head>
-<body class="logout-page">
+<body class="logout-page account-v2 signed-out-page" data-tours="off">
   <div class="page">
     <nav class="navbar">
       <a class="navbar-logo" href="../index.html" aria-label="EssentiallySports home"><img src="assets/brand-logo-blue.svg" alt="EssentiallySports"></a>
@@ -72,48 +73,132 @@
       </div>
     </nav>
 
-    <main class="account-main">
+    <main class="account-main" id="main">
       <div class="account-shell">
-        <section class="account-card logout-card">
-          <div class="logout-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg>
+        <section class="es-card acc-card acc-out logout-card" id="logout-card" data-state="checking" aria-labelledby="logout-title" aria-describedby="logout-copy">
+          <div class="acc-out__brand">
+            <img class="acc-out__logo-light" src="assets/brand-logo-blue.svg" alt="EssentiallySports" width="176" height="20">
+            <img class="acc-out__logo-dark" src="assets/brand-logo-white.svg" alt="" width="176" height="20">
+            <span class="acc-out__product">FrameUp</span>
           </div>
-          <div class="account-kicker">FrameUp Account</div>
-          <h1 class="account-title">Log out of FrameUp?</h1>
-          <p class="account-subtitle" id="logout-copy">This ends only your current session. Your local profile and workspace preferences stay on this browser.</p>
-          <div class="actions" id="logout-actions">
-            <button class="primary-btn" id="confirm-logout" type="button">Log out</button>
-            <a class="secondary-btn" href="../index.html#frames">Stay signed in</a>
-          </div>
-          <div class="status-note" id="logout-status" aria-live="polite"></div>
+          <div class="acc-out__icon" id="logout-icon" aria-hidden="true"><span class="acc-out__spinner"></span></div>
+          <h1 id="logout-title" tabindex="-1">Checking your session…</h1>
+          <p id="logout-copy">One moment.</p>
+          <div class="acc-out__actions" id="logout-actions"></div>
+          <p class="acc-out__note" id="logout-note" hidden></p>
+          <p class="status-note" id="logout-status" role="status" aria-live="polite"></p>
         </section>
+        <p class="acc-out-foot">EssentiallySports Media, Inc. · FrameUp design tools</p>
       </div>
     </main>
   </div>
 
   <footer class="site-footer" aria-label="Site footer"></footer>
 
-  <script src="account.js?v=20261117-ready1"></script>
+  <script src="account.js?v=20261120-account"></script>
   <script>
-    document.getElementById('confirm-logout').addEventListener('click', async event => {
-      const button = event.currentTarget;
+    (() => {
+      'use strict';
+      // Signed-out screen. From the account menu (?from=menu) it signs out
+      // straight away (the menu already asked if work was unsaved); opened
+      // any other way it asks first. ESAuth.logout() is the same call as
+      // before; nothing else about signing out changed.
+      const card = document.getElementById('logout-card');
+      const title = document.getElementById('logout-title');
+      const copy = document.getElementById('logout-copy');
+      const actions = document.getElementById('logout-actions');
+      const note = document.getElementById('logout-note');
+      const icon = document.getElementById('logout-icon');
       const status = document.getElementById('logout-status');
-      button.disabled = true;
-      button.textContent = 'Logging out…';
-      status.textContent = 'Ending your session…';
-      try {
-        await window.ESAuth?.logout?.();
-        sessionStorage.setItem('es.ai.loggedOut', 'true');
-        document.getElementById('logout-copy').textContent = 'You have been logged out of FrameUp on this device.';
-        status.textContent = 'Session ended.';
-        document.getElementById('logout-actions').innerHTML = '<a class="primary-btn" href="../login.html">Sign in again</a>';
-      } catch (error) {
-        button.disabled = false;
-        button.textContent = 'Log out';
-        status.textContent = 'Could not end the session. Please try again.';
-        status.classList.add('is-error');
+      const fromMenu = new URLSearchParams(window.location.search).get('from') === 'menu';
+      const svg = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+      const ICONS = {
+        out: svg('<path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>'),
+        done: svg('<path d="M20 6 9 17l-5-5"/>'),
+        error: svg('<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>'),
+        spin: '<span class="acc-out__spinner"></span>',
+      };
+      const SIGN_IN = '<a class="es-btn es-btn--primary es-btn--lg" href="../login.html" id="sign-back-in">Sign back in</a>';
+
+      function show(state, { heading, text, buttons = '', footnote = '', glyph, focus = true }) {
+        card.dataset.state = state;
+        icon.innerHTML = glyph;
+        title.textContent = heading;
+        copy.textContent = text;
+        actions.innerHTML = buttons;
+        note.textContent = footnote;
+        note.hidden = !footnote;
+        document.title = `${heading.replace(/…$/, '')} | FrameUp`;
+        if (focus) (actions.querySelector('a, button') || title).focus({ preventScroll: true });
       }
-    });
+
+      async function signOut() {
+        show('working', { heading: 'Signing you out…', text: 'Ending your session on this device.', glyph: ICONS.spin, focus: false });
+        status.textContent = 'Signing you out…';
+        try {
+          await window.ESAuth?.logout?.();
+          try {
+            sessionStorage.setItem('es.ai.loggedOut', 'true');
+            // Edit profile's own copy goes with the rest of the personal details.
+            localStorage.removeItem('es.ai.profile.edits.v1');
+          } catch (error) { /* ignore */ }
+          window.FrameUpProfileMenu?.refresh?.({});
+          show('signed-out', {
+            heading: 'You’re signed out',
+            text: 'Your FrameUp session on this device has ended.',
+            buttons: SIGN_IN,
+            footnote: 'Your name and email were cleared from this browser. Editor drafts and your theme stay on this device.',
+            glyph: ICONS.done,
+          });
+          status.textContent = 'You’re signed out.';
+        } catch (error) {
+          show('error', {
+            heading: 'Couldn’t finish signing out',
+            text: 'The sign-in service didn’t answer. Check your connection and try again.',
+            buttons: '<button class="es-btn es-btn--primary es-btn--lg" type="button" data-logout-retry>Try again</button><a class="es-btn es-btn--lg" href="../index.html#frames">Back to FrameUp</a>',
+            glyph: ICONS.error,
+          });
+          status.textContent = 'Signing out failed.';
+          actions.querySelector('[data-logout-retry]').addEventListener('click', signOut);
+        }
+      }
+
+      function askFirst() {
+        show('confirm', {
+          heading: 'Log out of FrameUp?',
+          text: 'This ends your session on this device. Editor drafts stay saved here.',
+          buttons: '<button class="es-btn es-btn--primary es-btn--lg" type="button" id="confirm-logout">Log out</button><a class="es-btn es-btn--lg" href="../index.html#frames">Stay signed in</a>',
+          glyph: ICONS.out,
+        });
+        document.getElementById('confirm-logout').addEventListener('click', signOut);
+      }
+
+      async function sessionState() {
+        try {
+          const check = window.ESAuth?.sessionStatus?.();
+          if (!check) return 'unknown';
+          const result = await Promise.race([check, new Promise(resolve => setTimeout(() => resolve('unknown'), 8000))]);
+          return result === 'valid' ? 'signed-in' : result === 'no-session' ? 'signed-out' : 'unknown';
+        } catch (error) {
+          return 'unknown';
+        }
+      }
+
+      (async () => {
+        const state = await sessionState();
+        if (state === 'signed-out') {
+          show('already', {
+            heading: 'You’re already signed out',
+            text: 'There’s no FrameUp session on this device.',
+            buttons: SIGN_IN,
+            glyph: ICONS.done,
+          });
+          return;
+        }
+        if (fromMenu) signOut();
+        else askFirst();
+      })();
+    })();
   </script>
 </body>
 </html>

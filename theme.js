@@ -6,16 +6,31 @@
   const DARK_THEME = 'dark';
   const LIGHT_THEME = 'light';
 
-  function readTheme() {
+  const SYSTEM_THEME = 'system';
+  const darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+  // What the person chose: 'light' (the default), 'dark' or 'system'
+  // (follow the device). Older pages only read 'dark' from storage, so a
+  // stored 'system' shows light there; every page with theme.js resolves it.
+  function readPreference() {
     try {
-      return localStorage.getItem(STORAGE_KEY) === DARK_THEME ? DARK_THEME : LIGHT_THEME;
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored === DARK_THEME || stored === SYSTEM_THEME ? stored : LIGHT_THEME;
     } catch {
       return LIGHT_THEME;
     }
   }
 
-  function applyTheme(theme) {
-    const normalizedTheme = theme === DARK_THEME ? DARK_THEME : LIGHT_THEME;
+  function resolve(preference) {
+    if (preference === SYSTEM_THEME) return darkQuery && darkQuery.matches ? DARK_THEME : LIGHT_THEME;
+    return preference === DARK_THEME ? DARK_THEME : LIGHT_THEME;
+  }
+
+  function readTheme() {
+    return resolve(readPreference());
+  }
+
+  function paint(normalizedTheme) {
     // Switch instantly: without this, every colour transition on the page
     // runs at once and the switch smears for a moment.
     const freeze = document.createElement('style');
@@ -25,12 +40,38 @@
     document.documentElement.style.colorScheme = normalizedTheme;
     void document.documentElement.offsetHeight; // apply the new colours now
     window.requestAnimationFrame(() => window.requestAnimationFrame(() => freeze.remove()));
+  }
+
+  // apply('light' | 'dark' | 'system'). Returns the theme now on screen.
+  function applyTheme(theme) {
+    const preference = theme === SYSTEM_THEME ? SYSTEM_THEME : (theme === DARK_THEME ? DARK_THEME : LIGHT_THEME);
+    const normalizedTheme = resolve(preference);
+    paint(normalizedTheme);
     try {
-      localStorage.setItem(STORAGE_KEY, normalizedTheme);
+      localStorage.setItem(STORAGE_KEY, preference);
     } catch {}
-    window.dispatchEvent(new CustomEvent('frameup-theme-change', { detail: { theme: normalizedTheme } }));
+    window.dispatchEvent(new CustomEvent('frameup-theme-change', { detail: { theme: normalizedTheme, preference } }));
     return normalizedTheme;
   }
+
+  // 'System' follows the device live, and other tabs follow a change here.
+  function followSystem() {
+    if (readPreference() !== SYSTEM_THEME) return;
+    const next = readTheme();
+    if (document.documentElement.dataset.theme === next) return;
+    paint(next);
+    window.dispatchEvent(new CustomEvent('frameup-theme-change', { detail: { theme: next, preference: SYSTEM_THEME } }));
+  }
+  if (darkQuery) {
+    if (darkQuery.addEventListener) darkQuery.addEventListener('change', followSystem);
+    else if (darkQuery.addListener) darkQuery.addListener(followSystem);
+  }
+  window.addEventListener('storage', event => {
+    if (event.key !== STORAGE_KEY) return;
+    const next = readTheme();
+    if (document.documentElement.dataset.theme !== next) paint(next);
+    window.dispatchEvent(new CustomEvent('frameup-theme-change', { detail: { theme: next, preference: readPreference() } }));
+  });
 
   // Apply as soon as the script is parsed to avoid a light-frame flash.
   document.documentElement.dataset.theme = readTheme();
@@ -84,7 +125,12 @@
     updateButton();
   }
 
-  window.FrameUpTheme = { apply: applyTheme, current: () => document.documentElement.dataset.theme || LIGHT_THEME };
+  window.FrameUpTheme = {
+    apply: applyTheme,
+    current: () => document.documentElement.dataset.theme || LIGHT_THEME,
+    preference: readPreference,
+    resolve,
+  };
   const scheduleSwitcher = () => requestAnimationFrame(renderSwitcher);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scheduleSwitcher, { once: true });
   else scheduleSwitcher();

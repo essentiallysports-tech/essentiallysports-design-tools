@@ -3,6 +3,37 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-20-account",
+      "date": "2026-11-20",
+      "title": "A cleaner account menu, Settings and Edit profile",
+      "commit": "852a1d6",
+      "items": [
+        {
+          "title": "New account menu",
+          "text": "Your name, email and role at the top; Edit profile, Settings, Tours (with how many you've done), What's new and UI Library; Light, Dark or System appearance; Log out last. Works with the arrow keys and Esc.",
+          "target": ".es-sidebar .profile-trigger"
+        },
+        {
+          "title": "System theme",
+          "text": "Appearance can now follow your device's light or dark setting, in the menu or on Settings."
+        },
+        {
+          "title": "Edit profile keeps your changes",
+          "text": "Role, team, note and photo now stay after you reload. Save shows what changed, checks the fields, and Ctrl/Cmd+S works.",
+          "page": "ai-page/profile.html"
+        },
+        {
+          "title": "Settings, regrouped",
+          "text": "Appearance, Start page and your AI usage this week, all saving as you change them.",
+          "page": "ai-page/settings.html"
+        },
+        {
+          "title": "Tours panel and sign-out",
+          "text": "Tours shows which ones you've finished. Logging out asks first only if editor work isn't saved, then shows a clear signed-out screen."
+        }
+      ]
+    },
+    {
       "id": "2026-11-20-inspector",
       "date": "2026-11-20",
       "title": "Editor: a cleaner settings panel that follows your selection",

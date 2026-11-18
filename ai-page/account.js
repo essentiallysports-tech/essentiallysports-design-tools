@@ -77,17 +77,42 @@ function setupPageTransitions() {
   });
 }
 
+// The sign-in check (es-auth.js syncProfile) rewrites es.ai.profile with only
+// { name, email } on every session read, which wiped role, team, note and
+// photo on the next page load. Edit profile also keeps its own copy, tied to
+// the signed-in address, and it is laid back over the synced profile.
+const PROFILE_EDITS_KEY = 'es.ai.profile.edits.v1';
+
+function readProfileEdits() {
+  try {
+    const edits = JSON.parse(localStorage.getItem(PROFILE_EDITS_KEY) || 'null');
+    return edits && typeof edits === 'object' ? edits : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function withProfileEdits(profile) {
+  const edits = readProfileEdits();
+  if (!edits) return profile;
+  const owner = String(profile.email || '').trim().toLowerCase();
+  const editsOwner = String(edits.email || '').trim().toLowerCase();
+  if (owner && editsOwner && owner !== editsOwner) return profile;
+  return { ...profile, ...edits, email: profile.email || edits.email };
+}
+
 function loadProfile() {
   try {
-    return JSON.parse(localStorage.getItem('es.ai.profile') || '{}');
+    return withProfileEdits(JSON.parse(localStorage.getItem('es.ai.profile') || '{}'));
   } catch (error) {
-    return {};
+    return withProfileEdits({});
   }
 }
 
 function saveProfile(profile) {
   const sanitizedProfile = sanitizeProfile(profile);
   localStorage.setItem('es.ai.profile', JSON.stringify(sanitizedProfile));
+  localStorage.setItem(PROFILE_EDITS_KEY, JSON.stringify(sanitizedProfile));
   window.FrameUpProfileMenu?.refresh(sanitizedProfile);
   window.dispatchEvent(new CustomEvent('frameup-profile-change', { detail: { profile: sanitizedProfile } }));
 }

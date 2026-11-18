@@ -20,23 +20,24 @@
   <link rel="stylesheet" href="account.css?v=20261117-focus1">
   <link rel="stylesheet" href="../site-mobile-chrome.css?v=20261117-ready1">
 <link rel="stylesheet" href="../theme.css?v=20261117-ready1">
-  <link rel="stylesheet" href="../site-chrome.css?v=20261117-ready1">
+  <link rel="stylesheet" href="../site-chrome.css?v=20261120-account">
   <link rel="stylesheet" href="profile-page.css?v=20261117-focus1">
   <link rel="stylesheet" href="../cta-hover.css?v=20261115-btn1">
   <link rel="stylesheet" href="../design-tokens.css?v=20261117-ready1">
 <link rel="stylesheet" href="../es-ui.css?v=20261119-rel3">
   <link rel="stylesheet" href="../es-motion.css?v=20261115-btn1">
-  <script src="../theme.js?v=20261115-pol2"></script>
+  <link rel="stylesheet" href="account-pages.css?v=20261120-account">
+  <script src="../theme.js?v=20261120-account"></script>
   <script src="../site-mobile-chrome.js?v=20261113-uipass1"></script>
-  <script src="../site-chrome.js?v=20261117-usage1"></script>
+  <script src="../site-chrome.js?v=20261120-account"></script>
 <script src="../app-shell.js?v=20261119-rel3"></script>
-<link rel="stylesheet" href="../frameup-tour.css?v=20261117-tour1">
+<link rel="stylesheet" href="../frameup-tour.css?v=20261120-account">
 <script src="../frameup-tour.js?v=20261117-tour1"></script>
 <script src="../tours/updates.js?v=20261117-tour1"></script>
 <script src="../tours/tours.js?v=20261119-rel"></script>
-<script src="../tours/tour-launcher.js?v=20261118-rel1"></script>
+<script src="../tours/tour-launcher.js?v=20261120-account"></script>
 </head>
-<body class="profile-page">
+<body class="profile-page account-v2">
   <div class="page">
     <nav class="navbar">
       <a class="navbar-logo" href="../index.html" aria-label="EssentiallySports home"><img src="assets/brand-logo-blue.svg" alt="EssentiallySports"></a>
@@ -77,51 +78,69 @@
       </div>
     </nav>
 
-    <main class="account-main">
+    <main class="account-main" id="main">
       <div class="account-shell">
-        <header class="profile-page-header">
-          <div class="profile-page-heading">
-            <div class="account-kicker">FrameUp Account</div>
-            <h1 class="account-title">Edit profile</h1>
-            <p class="account-subtitle">Manage the details used across FrameUp tools, requests, and internal workflows.</p>
+        <header class="acc-head">
+          <div class="es-page-head">
+            <p class="es-type-kicker">Account</p>
+            <h1>Edit profile</h1>
+            <p>How you appear across FrameUp: the account menu, the Gallery and the team dashboard.</p>
           </div>
-          <a class="profile-back-link" href="../index.html#frames">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-            Back to Home
-          </a>
         </header>
-        <section class="account-card profile-editor" aria-label="Profile details">
-          <aside class="profile-summary">
-            <div class="large-avatar" id="profile-avatar-large">ES</div>
+
+        <section class="es-card acc-card account-card profile-editor acc-profile" aria-labelledby="profile-card-title">
+          <aside class="profile-summary" aria-label="Photo">
+            <div class="large-avatar" id="profile-avatar-large" role="img" aria-label="Your avatar">ES</div>
             <div class="profile-summary-copy">
               <h2 class="summary-name" id="summary-name">Guest User</h2>
               <p class="summary-meta is-empty" id="summary-role"></p>
             </div>
-            <label class="avatar-upload">
-              <input id="avatar-upload" type="file" accept="image/png,image/jpeg,image/webp">
-              <span class="avatar-upload-label">Upload image</span>
-              <span class="avatar-help">PNG, JPG, or WebP. Saved in this browser.</span>
-            </label>
+            <div class="acc-avatar-actions">
+              <input class="acc-avatar-input" id="avatar-upload" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="avatar-help">
+              <button class="es-btn es-btn--sm" type="button" id="avatar-choose">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+                <span>Upload photo</span>
+              </button>
+              <button class="es-btn es-btn--tertiary es-btn--sm" type="button" id="avatar-remove" hidden>Remove</button>
+            </div>
+            <p class="acc-avatar-help" id="avatar-help">PNG, JPG or WebP. Cropped to a square and kept in this browser. Without a photo, your initials show.</p>
           </aside>
+
           <div class="profile-form-card">
-            <form id="profile-form">
+            <h2 class="acc-card__title" id="profile-card-title">Profile</h2>
+            <form id="profile-form" novalidate>
               <input id="avatar" name="avatar" type="hidden">
-              <div class="field-grid">
-                <div class="field">
-                  <label for="name">Display name</label>
-                  <input id="name" name="name" value="Guest User" autocomplete="name">
+              <div class="acc-fields">
+                <div class="es-field">
+                  <label class="es-field__label" for="name">Display name</label>
+                  <input id="name" name="name" autocomplete="name" maxlength="80" required aria-describedby="name-error">
+                  <p class="es-field__error" id="name-error" hidden></p>
                 </div>
-                <div class="field">
-                  <label for="role">Role</label>
-                  <input id="role" name="role" placeholder="Optional role">
+                <div class="es-field">
+                  <label class="es-field__label" for="email">Email</label>
+                  <div class="acc-readonly">
+                    <input id="email" name="email" type="email" readonly aria-describedby="email-hint">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  </div>
+                  <p class="es-field__hint" id="email-hint">Your ES sign-in. It can’t be changed here.</p>
                 </div>
-                <div class="field">
-                  <label for="email">Email</label>
-                  <input id="email" name="email" type="email" value="">
+                <div class="es-field">
+                  <label class="es-field__label" for="role">Role <span class="acc-optional">(optional)</span></label>
+                  <input id="role" name="role" maxlength="80" placeholder="e.g. Senior Designer" autocomplete="organization-title" list="role-suggestions" aria-describedby="role-error">
+                  <datalist id="role-suggestions">
+                    <option value="Designer"></option>
+                    <option value="Senior Designer"></option>
+                    <option value="Design Lead"></option>
+                    <option value="Editor"></option>
+                    <option value="Newsletter Editor"></option>
+                    <option value="Social Media Manager"></option>
+                    <option value="Video Producer"></option>
+                  </datalist>
+                  <p class="es-field__error" id="role-error" hidden></p>
                 </div>
-                <div class="field">
-                  <label for="team">Primary team</label>
-                  <select id="team" name="team">
+                <div class="es-field">
+                  <label class="es-field__label" for="team">Team</label>
+                  <select class="acc-select" id="team" name="team">
                     <option>Design</option>
                     <option>Newsletters</option>
                     <option>Editorial</option>
@@ -129,25 +148,52 @@
                     <option>Video</option>
                   </select>
                 </div>
-                <div class="field full">
-                  <label for="bio">Profile note</label>
-                  <textarea id="bio" name="bio"></textarea>
+                <div class="es-field is-full">
+                  <div class="es-field__label-row">
+                    <label class="es-field__label" for="bio">Profile note <span class="acc-optional">(optional)</span></label>
+                    <span class="acc-count" id="bio-count" aria-hidden="true">0 / 280</span>
+                  </div>
+                  <textarea id="bio" name="bio" placeholder="e.g. NFL and college football. Ask me about newsletter headers." aria-describedby="bio-error bio-hint"></textarea>
+                  <p class="es-field__hint" id="bio-hint">Up to 280 characters.</p>
+                  <p class="es-field__error" id="bio-error" hidden></p>
                 </div>
               </div>
-              <div class="actions">
-                <button class="primary-btn" type="submit">Save Profile</button>
-                <button class="secondary-btn" type="button" id="reset-profile">Reset</button>
+              <div class="acc-savebar">
+                <button class="es-btn es-btn--primary" type="submit" id="save-profile" disabled>Save changes</button>
+                <button class="es-btn es-btn--tertiary" type="button" id="reset-profile" hidden>Discard changes</button>
+                <p class="acc-status" id="profile-status" role="status" aria-live="polite"></p>
               </div>
-              <div class="status-note" id="profile-status" aria-live="polite"></div>
             </form>
           </div>
         </section>
-        <section class="account-card danger-zone" aria-labelledby="delete-account-title">
-          <div class="danger-zone-copy">
-            <h2 id="delete-account-title">Account controls</h2>
-            <p>Delete your FrameUp login and profile. Shared requests and export history remain available to the team.</p>
+
+        <section class="es-card acc-card" aria-labelledby="account-card-title">
+          <div class="es-card__head">
+            <div>
+              <h2 class="acc-card__title" id="account-card-title">Account</h2>
+              <p class="es-card__sub">Your FrameUp sign-in.</p>
+            </div>
           </div>
-          <button class="danger-btn" id="open-delete-account" type="button">Delete my account</button>
+          <div class="es-card__body">
+            <div class="acc-row">
+              <div>
+                <p class="acc-row__title">Signed in as</p>
+                <p class="acc-row__copy acc-signin"><strong id="signed-in-email">Checking…</strong></p>
+              </div>
+              <div class="acc-row__control">
+                <a class="es-btn" href="logout.html?from=menu" id="profile-logout">Log out</a>
+              </div>
+            </div>
+            <div class="acc-row danger-zone" aria-labelledby="delete-account-title">
+              <div>
+                <p class="acc-row__title" id="delete-account-title">Delete account</p>
+                <p class="acc-row__copy">Deletes your FrameUp login and profile for good. Requests and export history stay with the team.</p>
+              </div>
+              <div class="acc-row__control">
+                <button class="es-btn es-btn--danger" id="open-delete-account" type="button">Delete my account</button>
+              </div>
+            </div>
+          </div>
         </section>
       </div>
     </main>
@@ -168,158 +214,342 @@
       </label>
       <div class="account-dialog-status" id="delete-account-status" role="status" aria-live="polite"></div>
       <div class="account-dialog-actions">
-        <button class="secondary-btn" id="cancel-delete-account" type="button">Keep my account</button>
-        <button class="danger-btn" id="confirm-delete-account" type="submit" disabled>Delete permanently</button>
+        <button class="es-btn" id="cancel-delete-account" type="button">Keep my account</button>
+        <button class="es-btn es-btn--danger" id="confirm-delete-account" type="submit" disabled>Delete permanently</button>
       </div>
     </form>
   </dialog>
 
   <footer class="site-footer" aria-label="Site footer"></footer>
 
-  <script src="account.js?v=20261117-ready1"></script>
+  <script src="account.js?v=20261120-account"></script>
   <script>
-    const defaults = {
-      name: 'Guest User',
-      email: '',
-      team: 'Design',
-      bio: '',
-      avatar: ''
-    };
-    const form = document.getElementById('profile-form');
-    const status = document.getElementById('profile-status');
-    const avatarUpload = document.getElementById('avatar-upload');
-    const largeAvatar = document.getElementById('profile-avatar-large');
-    const deleteDialog = document.getElementById('delete-account-dialog');
-    const deleteForm = document.getElementById('delete-account-form');
-    const deleteConfirmation = document.getElementById('delete-account-confirmation');
-    const deleteButton = document.getElementById('confirm-delete-account');
-    const deleteStatus = document.getElementById('delete-account-status');
-    const deleteEmailLabel = document.getElementById('delete-account-email');
-    let signedInAccountEmail = '';
+    (() => {
+      'use strict';
+      const LIMITS = { name: 60, role: 60, bio: 280 };
+      const TEAMS = ['Design', 'Newsletters', 'Editorial', 'Social Media', 'Video'];
+      const AVATAR_PX = 256;
+      const form = document.getElementById('profile-form');
+      const fields = { name: form.elements.name, email: form.elements.email, role: form.elements.role, team: form.elements.team, bio: form.elements.bio, avatar: form.elements.avatar };
+      const status = document.getElementById('profile-status');
+      const saveButton = document.getElementById('save-profile');
+      const discardButton = document.getElementById('reset-profile');
+      const avatarUpload = document.getElementById('avatar-upload');
+      const avatarRemove = document.getElementById('avatar-remove');
+      const largeAvatar = document.getElementById('profile-avatar-large');
+      const bioCount = document.getElementById('bio-count');
+      const icons = {
+        check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
+        dot: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="5"/></svg>',
+        alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>',
+      };
+      let accountEmail = '';
+      let saved = {};
 
-    function applyProfile(profile) {
-      const data = typeof sanitizeProfile === 'function' ? { ...defaults, ...sanitizeProfile(profile) } : { ...defaults, ...profile };
-      Object.entries(defaults).forEach(([key, value]) => {
-        const field = form.elements[key];
-        if (field) field.value = data[key] || value;
+      const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+      const AVATAR_COLORS = ['#0A6BD8', '#00796B', '#2E7D32', '#C2410C', '#0E7490', '#475569', '#B91C1C'];
+      function avatarColor(name) {
+        const shared = window.FrameUpProfileMenu?.avatarColor;
+        if (typeof shared === 'function') return shared(name);
+        let hash = 0;
+        for (const ch of String(name || '')) hash = (hash * 31 + ch.codePointAt(0)) >>> 0;
+        return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+      }
+
+      function setStatus(state, text) {
+        status.dataset.state = state || '';
+        status.innerHTML = state ? (icons[{ saved: 'check', dirty: 'dot', error: 'alert' }[state]] || '') : '';
+        if (text) status.append(document.createTextNode(text));
+      }
+
+      function draft() {
+        return {
+          name: clean(fields.name.value),
+          role: clean(fields.role.value),
+          team: fields.team.value,
+          bio: String(fields.bio.value || '').trim(),
+          avatar: fields.avatar.value || '',
+        };
+      }
+
+      function normalized(profile) {
+        return {
+          name: clean(profile.name),
+          role: clean(profile.role),
+          team: profile.team || 'Design',
+          bio: String(profile.bio || '').trim(),
+          avatar: hasCustomProfileAvatar(profile.avatar) ? String(profile.avatar) : '',
+        };
+      }
+
+      function isDirty() {
+        const a = normalized(draft());
+        const b = normalized(saved);
+        return Object.keys(a).some(key => a[key] !== b[key]);
+      }
+
+      function validate() {
+        const values = draft();
+        const errors = {};
+        if (!values.name) errors.name = 'Add your name so the team knows who made what.';
+        else if (values.name.length > LIMITS.name) errors.name = `Keep your name under ${LIMITS.name} characters.`;
+        if (values.role.length > LIMITS.role) errors.role = `Keep your role under ${LIMITS.role} characters.`;
+        if (values.bio.length > LIMITS.bio) errors.bio = `Shorten your note by ${values.bio.length - LIMITS.bio} characters.`;
+        ['name', 'role', 'bio'].forEach(key => {
+          const error = document.getElementById(`${key}-error`);
+          fields[key].setAttribute('aria-invalid', String(Boolean(errors[key])));
+          error.textContent = errors[key] || '';
+          error.hidden = !errors[key];
+        });
+        return errors;
+      }
+
+      function paintAvatar(name, avatar) {
+        largeAvatar.style.setProperty('--acc-avatar-bg', avatarColor(name || 'Guest User'));
+        if (hasCustomProfileAvatar(avatar)) {
+          largeAvatar.textContent = '';
+          largeAvatar.classList.add('has-image');
+          largeAvatar.style.backgroundImage = `url("${String(avatar).replace(/"/g, '%22')}")`;
+        } else {
+          largeAvatar.classList.remove('has-image');
+          largeAvatar.style.removeProperty('background-image');
+          largeAvatar.textContent = initialsFromName(name);
+        }
+        largeAvatar.setAttribute('aria-label', hasCustomProfileAvatar(avatar) ? `Photo of ${name || 'you'}` : `Initials avatar for ${name || 'you'}`);
+        avatarRemove.hidden = !hasCustomProfileAvatar(avatar);
+      }
+
+      function paintSummary() {
+        const values = draft();
+        const name = values.name || 'Guest User';
+        document.getElementById('summary-name').textContent = name;
+        const meta = [values.role, values.team].filter(Boolean).join(' · ');
+        const summaryRole = document.getElementById('summary-role');
+        summaryRole.textContent = meta;
+        summaryRole.classList.toggle('is-empty', !meta);
+        paintAvatar(name, values.avatar);
+        const length = values.bio.length;
+        bioCount.textContent = `${length} / ${LIMITS.bio}`;
+        bioCount.classList.toggle('is-over', length > LIMITS.bio);
+      }
+
+      function syncDirty() {
+        const dirty = isDirty();
+        saveButton.disabled = !dirty;
+        discardButton.hidden = !dirty;
+        if (dirty) setStatus('dirty', 'Unsaved changes');
+        else if (status.dataset.state === 'dirty') setStatus('', '');
+      }
+
+      function fill(profile) {
+        const values = normalized(profile);
+        fields.name.value = values.name === 'Guest User' ? '' : values.name;
+        fields.role.value = values.role;
+        if (values.team && !TEAMS.includes(values.team)) {
+          const option = document.createElement('option');
+          option.textContent = values.team;
+          fields.team.appendChild(option);
+        }
+        fields.team.value = values.team || 'Design';
+        fields.bio.value = values.bio;
+        fields.avatar.value = values.avatar;
+        fields.email.value = accountEmail || clean(profile.email);
+        paintSummary();
+        syncDirty();
+      }
+
+      form.addEventListener('input', event => {
+        if (event.target.getAttribute('aria-invalid') === 'true') validate();
+        paintSummary();
+        syncDirty();
       });
-      if (form.elements.role) form.elements.role.value = data.role || '';
-      document.getElementById('summary-name').textContent = data.name;
-      const summaryRole = document.getElementById('summary-role');
-      summaryRole.textContent = data.role || '';
-      summaryRole.classList.toggle('is-empty', !data.role);
-      if (typeof hasCustomProfileAvatar === 'function' && hasCustomProfileAvatar(data.avatar)) {
-        largeAvatar.textContent = '';
-        largeAvatar.classList.add('has-image');
-        largeAvatar.style.backgroundImage = `url("${data.avatar}")`;
-      } else {
-        largeAvatar.classList.remove('has-image');
-        largeAvatar.style.removeProperty('background-image');
-        largeAvatar.textContent = typeof initialsFromName === 'function' ? initialsFromName(data.name) : 'ES';
-      }
-      syncProfileChrome();
-    }
+      form.addEventListener('change', () => { paintSummary(); syncDirty(); });
 
-    function pushProfileToCloud() {
-      // Saving only writes localStorage; without this, the change sits unsynced
-      // until this browser's next 60s presence heartbeat, so other views (the
-      // dashboard's People list, another device) see stale data for up to a
-      // minute. Push it immediately instead.
-      window.ESDashboardData?.recordPresenceHeartbeat?.()?.catch(() => {});
-    }
-
-    form.addEventListener('submit', event => {
-      event.preventDefault();
-      const profile = typeof sanitizeProfile === 'function'
-        ? sanitizeProfile(Object.fromEntries(new FormData(form).entries()))
-        : Object.fromEntries(new FormData(form).entries());
-      saveProfile(profile);
-      applyProfile(profile);
-      pushProfileToCloud();
-      status.textContent = 'Profile saved.';
-    });
-
-    avatarUpload.addEventListener('change', () => {
-      const file = avatarUpload.files && avatarUpload.files[0];
-      if (!file) return;
-      if (!file.type.startsWith('image/')) {
-        status.textContent = 'Please upload an image file.';
-        return;
-      }
-      const reader = new FileReader();
-      reader.addEventListener('load', () => {
-        form.elements.avatar.value = reader.result;
-        const profile = typeof sanitizeProfile === 'function'
-          ? sanitizeProfile(Object.fromEntries(new FormData(form).entries()))
-          : Object.fromEntries(new FormData(form).entries());
-        saveProfile(profile);
-        applyProfile(profile);
-        pushProfileToCloud();
-        status.textContent = 'Profile image saved.';
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        const errors = validate();
+        const first = ['name', 'role', 'bio'].find(key => errors[key]);
+        if (first) {
+          fields[first].focus();
+          setStatus('error', 'Fix the highlighted field to save.');
+          return;
+        }
+        const values = draft();
+        const next = { ...loadProfile(), ...values, email: accountEmail || clean(saved.email) };
+        if (!next.avatar) delete next.avatar;
+        try {
+          saveProfile(next);
+        } catch (error) {
+          setStatus('error', 'Couldn’t save in this browser (storage is full or blocked). Try a smaller photo.');
+          return;
+        }
+        saved = loadProfile();
+        // Push to the team list now rather than on the next presence heartbeat.
+        window.ESDashboardData?.recordPresenceHeartbeat?.()?.catch?.(() => {});
+        syncDirty();
+        setStatus('saved', 'Saved');
       });
-      reader.readAsDataURL(file);
-    });
 
-    document.getElementById('reset-profile').addEventListener('click', () => {
-      localStorage.removeItem('es.ai.profile');
-      avatarUpload.value = '';
-      applyProfile(defaults);
-      status.textContent = 'Profile reset.';
-    });
+      discardButton.addEventListener('click', () => {
+        avatarUpload.value = '';
+        fill(saved);
+        validate();
+        setStatus('', '');
+        fields.name.focus();
+      });
 
-    function closeDeleteDialog() {
-      deleteDialog.close();
-      deleteForm.reset();
-      deleteStatus.textContent = '';
-      deleteButton.disabled = true;
-      deleteButton.textContent = 'Delete permanently';
-    }
+      // Ctrl/Cmd+S saves.
+      document.addEventListener('keydown', event => {
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+          event.preventDefault();
+          if (isDirty()) form.requestSubmit();
+        }
+      });
 
-    document.getElementById('open-delete-account').addEventListener('click', async () => {
-      deleteStatus.textContent = '';
-      const session = await window.ESAuth?.getSession?.();
-      signedInAccountEmail = window.ESAuth?.normalizeEmail?.(session?.user?.email) || '';
-      if (!signedInAccountEmail) {
-        status.textContent = 'Please log in again before deleting your account.';
-        return;
+      // A photo is cropped to a centred square and scaled to 256px, so it
+      // stays small in this browser's storage.
+      function squareAvatar(file) {
+        return new Promise((resolve, reject) => {
+          const url = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const side = Math.min(img.naturalWidth, img.naturalHeight);
+              const size = Math.min(AVATAR_PX, side);
+              const canvas = document.createElement('canvas');
+              canvas.width = size;
+              canvas.height = size;
+              canvas.getContext('2d').drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
+              const webp = canvas.toDataURL('image/webp', 0.86);
+              resolve(webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.86));
+            } catch (error) {
+              reject(error);
+            } finally {
+              URL.revokeObjectURL(url);
+            }
+          };
+          img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('decode')); };
+          img.src = url;
+        });
       }
-      deleteEmailLabel.textContent = signedInAccountEmail;
-      deleteConfirmation.value = '';
-      deleteButton.disabled = true;
-      deleteDialog.showModal();
-      window.setTimeout(() => deleteConfirmation.focus(), 80);
-    });
 
-    deleteConfirmation.addEventListener('input', () => {
-      const enteredEmail = window.ESAuth?.normalizeEmail?.(deleteConfirmation.value) || '';
-      deleteButton.disabled = enteredEmail !== signedInAccountEmail;
-      deleteStatus.textContent = '';
-    });
+      document.getElementById('avatar-choose').addEventListener('click', () => avatarUpload.click());
+      avatarUpload.addEventListener('change', async () => {
+        const file = avatarUpload.files && avatarUpload.files[0];
+        if (!file) return;
+        if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+          setStatus('error', 'Choose a PNG, JPG or WebP image.');
+          avatarUpload.value = '';
+          return;
+        }
+        if (file.size > 15 * 1024 * 1024) {
+          setStatus('error', 'That image is over 15 MB. Choose a smaller one.');
+          avatarUpload.value = '';
+          return;
+        }
+        try {
+          fields.avatar.value = await squareAvatar(file);
+          paintSummary();
+          syncDirty();
+        } catch (error) {
+          setStatus('error', 'That image couldn’t be read. Try another file.');
+        }
+        avatarUpload.value = '';
+      });
+      avatarRemove.addEventListener('click', () => {
+        fields.avatar.value = '';
+        paintSummary();
+        syncDirty();
+        document.getElementById('avatar-choose').focus();
+      });
 
-    document.getElementById('close-delete-account').addEventListener('click', closeDeleteDialog);
-    document.getElementById('cancel-delete-account').addEventListener('click', closeDeleteDialog);
-    deleteDialog.addEventListener('cancel', event => {
-      event.preventDefault();
-      closeDeleteDialog();
-    });
+      window.addEventListener('beforeunload', event => {
+        if (!isDirty()) return;
+        event.preventDefault();
+        event.returnValue = '';
+      });
+      window.FrameUpProfileMenu?.registerUnsaved?.(() => (isDirty() ? 'Your profile changes aren’t saved yet.' : ''));
 
-    deleteForm.addEventListener('submit', async event => {
-      event.preventDefault();
-      if (deleteButton.disabled) return;
-      deleteButton.disabled = true;
-      deleteButton.textContent = 'Deleting account…';
-      deleteStatus.textContent = '';
-      try {
-        await window.ESAuth.deleteAccount({ confirmationEmail: deleteConfirmation.value });
-        window.location.replace('../login.html?mode=create&account=deleted');
-      } catch (error) {
-        deleteStatus.textContent = error?.message || 'Unable to delete your account right now.';
+      // The email comes from the sign-in, never from this form.
+      async function loadAccountEmail() {
+        let email = '';
+        try {
+          const session = await window.ESAuth?.getSession?.();
+          email = window.ESAuth?.normalizeEmail?.(session?.user?.email) || '';
+        } catch (error) { email = ''; }
+        accountEmail = email || clean(saved.email);
+        fields.email.value = accountEmail;
+        document.getElementById('signed-in-email').textContent = accountEmail || 'Not available';
+        // getSession() may have refreshed the stored profile.
+        if (!isDirty()) { saved = inferVisitorProfile(); fill(saved); }
+        window.FrameUpProfileMenu?.refresh?.(loadProfile());
+      }
+
+      saved = inferVisitorProfile();
+      fill(saved);
+      loadAccountEmail();
+
+      // ─── Delete account (unchanged flow) ───────────────────────────────
+      const deleteDialog = document.getElementById('delete-account-dialog');
+      const deleteForm = document.getElementById('delete-account-form');
+      const deleteConfirmation = document.getElementById('delete-account-confirmation');
+      const deleteButton = document.getElementById('confirm-delete-account');
+      const deleteStatus = document.getElementById('delete-account-status');
+      const deleteEmailLabel = document.getElementById('delete-account-email');
+      let signedInAccountEmail = '';
+
+      function closeDeleteDialog() {
+        deleteDialog.close();
+        deleteForm.reset();
+        deleteStatus.textContent = '';
+        deleteButton.disabled = true;
         deleteButton.textContent = 'Delete permanently';
-        deleteButton.disabled = false;
       }
-    });
 
-    applyProfile(typeof inferVisitorProfile === 'function' ? inferVisitorProfile() : loadProfile());
+      document.getElementById('open-delete-account').addEventListener('click', async () => {
+        deleteStatus.textContent = '';
+        const session = await window.ESAuth?.getSession?.();
+        signedInAccountEmail = window.ESAuth?.normalizeEmail?.(session?.user?.email) || '';
+        if (!signedInAccountEmail) {
+          setStatus('error', 'Please log in again before deleting your account.');
+          return;
+        }
+        deleteEmailLabel.textContent = signedInAccountEmail;
+        deleteConfirmation.value = '';
+        deleteButton.disabled = true;
+        deleteDialog.showModal();
+        window.setTimeout(() => deleteConfirmation.focus(), 80);
+      });
+
+      deleteConfirmation.addEventListener('input', () => {
+        const enteredEmail = window.ESAuth?.normalizeEmail?.(deleteConfirmation.value) || '';
+        deleteButton.disabled = enteredEmail !== signedInAccountEmail;
+        deleteStatus.textContent = '';
+      });
+
+      document.getElementById('close-delete-account').addEventListener('click', closeDeleteDialog);
+      document.getElementById('cancel-delete-account').addEventListener('click', closeDeleteDialog);
+      deleteDialog.addEventListener('cancel', event => {
+        event.preventDefault();
+        closeDeleteDialog();
+      });
+
+      deleteForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (deleteButton.disabled) return;
+        deleteButton.disabled = true;
+        deleteButton.textContent = 'Deleting account…';
+        deleteStatus.textContent = '';
+        try {
+          await window.ESAuth.deleteAccount({ confirmationEmail: deleteConfirmation.value });
+          window.location.replace('../login.html?mode=create&account=deleted');
+        } catch (error) {
+          deleteStatus.textContent = error?.message || 'Unable to delete your account right now.';
+          deleteButton.textContent = 'Delete permanently';
+          deleteButton.disabled = false;
+        }
+      });
+    })();
   </script>
 </body>
 </html>
