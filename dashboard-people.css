@@ -1,11 +1,17 @@
 /* Dashboard → People (dashboard-people.js). Tokens from design-tokens.css,
    components from es-ui.css. Light + dark. */
 
+#people-list:has(> .pv) { display: block; min-width: 0; }
+
 .pv {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--es-space-4, 16px);
   min-width: 0;
 }
+
+.pv-toolbar,
+.pv-filters { min-width: 0; }
 
 .pv-toolbar {
   display: flex;
