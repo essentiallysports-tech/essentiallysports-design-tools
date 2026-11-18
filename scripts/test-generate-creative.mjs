@@ -75,7 +75,7 @@ const post = body => gen.handler({ httpMethod: 'POST', headers: { authorization:
 
 // ── 2. The composition library and the ES gate ───────────────────────────
 {
-  assert.ok(COMPOSE.ARCHETYPES.length >= 24 && COMPOSE.ARCHETYPES.length <= 40, '24-40 archetypes (v2 styles)');
+  assert.ok(COMPOSE.ARCHETYPES.length >= 24 && COMPOSE.ARCHETYPES.length <= 60, '24-60 archetypes (v2 styles + v3 looks)');
   const pal = COMPOSE.makePalette(['#FB4F14', '#000000']);
   assert.equal(pal.bg, '#000000');
   assert.equal(pal.accent, '#FB4F14');
@@ -90,7 +90,8 @@ const post = body => gen.handler({ httpMethod: 'POST', headers: { authorization:
     facts: [{ id: 'f1', text: '409 yards' }, { id: 'f2', text: '4 touchdowns' }, { id: 'f3', text: '11 passes' }, { id: 'f4', text: '484-222' }, { id: 'f5', text: '38-18' }, { id: 'f6', text: '7-2' }, { id: 'f7', text: '$2 million' }, { id: 'f8', text: '100 players' }],
   };
   const unitsInput = { ...rich, number: { value: '100', label: 'players earning cards' } };
-  COMPOSE.ARCHETYPES.forEach(a => {
+  // v3 looks have their own fit rules and tests (scripts/test-compose-looks.mjs).
+  COMPOSE.ARCHETYPES.filter(a => !a.looks).forEach(a => {
     const input = a.id === 'unit-grid' ? unitsInput : rich;
     assert.ok(a.fits(input), `${a.id} fits a rich input`);
     const scenes = COMPOSE.candidates(a.id, input, 3);

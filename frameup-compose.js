@@ -4,7 +4,9 @@
  * composition archetype, checks against the ES guidelines, and draws on a
  * canvas (the Generate preview and the 1080+ export use the same code).
  *
- *   FrameUpCompose.ARCHETYPES            the composition library (29 recipes)
+ *   FrameUpCompose.ARCHETYPES            the composition library (29 recipes + 17 v3 looks)
+ *   FrameUpCompose.TONES / tonePalette   v3 tone families, contrast-checked
+ *   FrameUpCompose.normalizeInput(input) the shared input shape (photos / cutouts / headshots / logos with url)
  *   FrameUpCompose.fits(id, input)       can this archetype be made from it?
  *   FrameUpCompose.build(id, input, v)   -> scene (v = variant 0..2)
  *   FrameUpCompose.candidates(id, input) -> 2-3 scenes (variants)
@@ -36,7 +38,7 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const VERSION = '2026-11-19-v2';
+  const VERSION = '2026-11-20-v3';
   const SIZES = { portrait: { w: 1080, h: 1350 }, story: { w: 1080, h: 1920 }, square: { w: 1080, h: 1080 } };
   const SAFE = 50;
   const LOGO = { w: 122, h: 104 };
@@ -114,7 +116,7 @@
     const paper = lightPool[0] && sat(lightPool[0]) > 0.25 ? lightPool[0] : ES.paper;
     const paperInk = contrast(bg, paper) >= 4.5 ? bg : '#000000';
     const bg2 = mix(bg, accent, 0.18);
-    const palette = { name: name || 'ES', bg, bg2, ink, accent, accent2, paper, paperInk, mist: bg, mode };
+    const palette = { name: name || 'ES', bg, bg2, ink, accent, accent2, paper, paperInk, mist: bg, mode, base: base.slice(0, 4) };
     if (mode === 'light') Object.assign(palette, { bg: paper, ink: paperInk, paper: bg, paperInk: ink, bg2: mix(paper, accent, 0.12) });
     finishPalette(palette, base);
     // Variants and the swap-palette fix draw with the flipped palette: allow its roles too.
@@ -221,6 +223,179 @@
     align: opts.align || 'left', size: opts.size || 600, labelSize: opts.labelSize || 40, ...(opts.fx ? { fx: opts.fx } : {}),
   });
   const grain = (opacity = 0.08) => ({ type: 'shape', shape: 'grain', x: 0, y: 0, w: 0, h: 0, opacity });
+
+
+  // ─── Generate v3: shared input shape + tone families ───────────────────
+  // The shared input (agents B / C) carries photos / cut-outs / headshots /
+  // logos as { url, ... }; older callers use { src }. normalizeInput accepts
+  // both, fills input.photo / input.cutout from the ranked lists when they are
+  // missing, and never fails on absent fields (each branch works alone).
+  //   input.photos    = [{ url, width, height, person?, team?, kind, focal?, score, source, rights }]
+  //   input.cutouts   = [{ url, width, height, person?, fromPhoto, bbox? }]
+  //   input.headshots = [{ url, person, team? }]
+  //   input.logos     = [{ url, team, league }]
+  //   input.tone      = 'light'|'paper'|'vivid'|'dark'|'duotone'|'editorial'|'esblue'
+  const TONES = ['light', 'paper', 'vivid', 'dark', 'duotone', 'editorial', 'esblue'];
+  const LIGHT_TONES = new Set(['light', 'paper', 'editorial']);
+  const srcOf = x => (x && typeof x === 'object' ? String(x.src || x.url || '') : typeof x === 'string' ? x : '');
+  function normalizeInput(input = {}) {
+    if (!input || typeof input !== 'object') return {};
+    const out = { ...input };
+    const asImage = x => {
+      const src = srcOf(x);
+      if (!src) return null;
+      return x && typeof x === 'object' ? (x.src === src ? x : { ...x, src }) : { src };
+    };
+    const uniq = list => {
+      const seen = new Set();
+      return list.filter(x => x && !seen.has(x.src) && seen.add(x.src));
+    };
+    const extra = uniq((Array.isArray(input.photos) ? input.photos : []).map(asImage));
+    const hero = asImage(input.photo);
+    if (hero) {
+      out.photo = hero;
+      if (Array.isArray(input.photos)) out.photos = extra.filter(p => p.src !== hero.src);
+    } else if (extra.length) {
+      // Ranked list (shared shape): the best photo is the hero, the rest support it.
+      out.photo = extra[0];
+      out.photos = extra.slice(1);
+    }
+    const cuts = uniq([asImage(input.cutout), ...(Array.isArray(input.cutouts) ? input.cutouts : []).map(asImage)]);
+    if (cuts.length) {
+      // Prefer the cut-out made from the hero photo (same light, same moment).
+      const own = out.photo ? cuts.find(c => c.fromPhoto && c.fromPhoto === out.photo.src) : null;
+      out.cutout = asImage(input.cutout) || own || cuts[0];
+      out.cutouts = cuts;
+    }
+    if (Array.isArray(input.headshots)) out.headshots = uniq(input.headshots.map(asImage));
+    if (Array.isArray(input.logos)) out.logos = input.logos.map(l => { const im = asImage(l); return im ? { ...im, name: l.name || l.team || '' } : null; }).filter(Boolean);
+    if (input.tone != null && !TONES.includes(input.tone)) delete out.tone;
+    return out;
+  }
+  const allPhotos = i => [i.photo, ...(i.photos || [])].filter(x => x?.src);
+  const allCutouts = i => (i.cutouts?.length ? i.cutouts : i.cutout?.src ? [i.cutout] : []).filter(x => x?.src);
+  // The photo a cut-out came from (the blurred field behind it), else the hero photo.
+  const sourcePhoto = i => {
+    const from = i.cutout?.fromPhoto;
+    return (from && allPhotos(i).find(p => p.src === from)) || (from ? { src: from } : null) || i.photo || null;
+  };
+
+  // A colour pushed toward black or white until it reads on `on` at `need`:1.
+  function readable(color, on, need = 4.5) {
+    let c = normHex(color) || '#000000';
+    const toward = lum(on) > 0.35 ? '#000000' : '#FFFFFF';
+    for (let k = 0; k < 14 && contrast(c, on) < need; k += 1) c = mix(c, toward, 0.14);
+    return contrast(c, on) >= need ? c : toward;
+  }
+  const bestInk = (on, list = ['#FFFFFF', '#000000']) => list.map(normHex).filter(Boolean).sort((a, b) => contrast(b, on) - contrast(a, on))[0];
+  // The team's colours (primary first) behind a palette.
+  function teamColors(p = {}) {
+    const list = (p.base?.length ? p.base : [p.accent, p.bg, p.accent2]).map(normHex).filter(Boolean);
+    return list.length ? [...new Set(list)] : [ES.blue, ES.navy];
+  }
+  // The colour a team is known by: the first colour unless it is near black,
+  // near white or grey, then the most saturated.
+  function signature(cols) {
+    const first = cols[0];
+    if (first && sat(first) > 0.25 && lum(first) > 0.02 && lum(first) < 0.8) return first;
+    return cols.slice().sort((a, b) => sat(b) - sat(a))[0] || ES.blue;
+  }
+
+  // A palette for one tone family. Every role is contrast-checked:
+  //   ink on bg 4.5:1 (ES blue: 3:1, display sizes only; inkSmall is 4.5:1), accent on bg 3:1 (display sizes), boxInk on box 4.5:1,
+  //   boxHi on box 3:1, tagInk on tag 4.5:1.
+  // Extra roles: box / boxInk / boxHi (ES highlight boxes behind headline
+  // lines), tag / tagInk (small label tags under numbers), rule (hairlines),
+  // treat (photo treatment the tone asks for), tone (the family name).
+  function tonePalette(p, tone = 'dark') {
+    const cols = teamColors(p);
+    const sig = signature(cols);
+    const byDark = cols.slice().sort((a, b) => lum(a) - lum(b));
+    const darkest = byDark[0];
+    const other = cols.find(c => c !== sig && Math.sqrt(colorDist(c, sig)) > 90) || '';
+    let r;
+    switch (tone) {
+      case 'light':
+      case 'paper':
+      case 'editorial': {
+        const bg = tone === 'paper' ? '#EBEAE6' : '#FFFFFF';
+        const ink = tone === 'editorial' ? '#000000' : ES.ink;
+        const reads = cols.filter(c => contrast(c, bg) >= 3).sort((a, b) => sat(b) - sat(a));
+        const accent = contrast(sig, bg) >= 3 ? sig : reads.find(c => sat(c) > 0.25) || (reads[0] && sat(sig) < 0.5 ? reads[0] : readable(tone === 'editorial' && sat(sig) < 0.2 ? ES.blue : sig, bg, 3));
+        const box = tone === 'editorial' ? '#FFFFFF' : lum(darkest) < 0.06 ? darkest : readable(sig, '#FFFFFF', 4.5);
+        r = {
+          bg, bg2: mix(bg, '#000000', 0.06), ink, accent, accent2: other ? readable(other, bg, 3) : accent,
+          paper: '#FFFFFF', paperInk: ink, mist: bg, mode: 'light',
+          box, boxInk: tone === 'editorial' ? '#000000' : '#FFFFFF', boxHi: tone === 'editorial' ? accent : '', tag: ink, tagInk: bg, rule: mix(ink, bg, 0.2),
+          treat: tone === 'editorial' ? 'mono' : '',
+        };
+        break;
+      }
+      case 'vivid': {
+        // The team colour as the field (OKC orange, Lakers gold): never murky.
+        let bg = sig;
+        if (lum(bg) > 0.7) bg = mix(bg, '#000000', 0.25);
+        const ink = bestInk(bg, ['#FFFFFF', '#000000', ...cols.filter(c => c !== bg)]);
+        const accentPool = cols.filter(c => c !== sig && contrast(c, bg) >= 3);
+        const accent = accentPool[0] || ink;
+        r = {
+          bg, bg2: mix(bg, '#000000', 0.22), ink, accent, accent2: ink,
+          paper: '#FFFFFF', paperInk: readable(darkest, '#FFFFFF', 4.5), mist: bg, mode: 'dark',
+          box: '#FFFFFF', boxInk: readable(bg, '#FFFFFF', 4.5), boxHi: '', tag: '#FFFFFF', tagInk: readable(bg, '#FFFFFF', 4.5), rule: ink,
+          treat: '',
+        };
+        break;
+      }
+      case 'esblue': {
+        r = {
+          bg: ES.blue, bg2: mix(ES.blue, ES.navy, 0.45), ink: '#FFFFFF', accent: '#FFFFFF', accent2: ES.navy,
+          paper: '#FFFFFF', paperInk: ES.navy, mist: ES.navy, mode: 'dark',
+          box: '#FFFFFF', boxInk: ES.navy, boxHi: readable(sig, '#FFFFFF', 3), tag: ES.navy, tagInk: '#FFFFFF', rule: '#FFFFFF',
+          treat: '',
+        };
+        break;
+      }
+      case 'duotone':
+      case 'dark':
+      default: {
+        const bg = lum(darkest) < 0.012 ? darkest : mix(darkest, '#000000', lum(darkest) > 0.15 ? 0.78 : 0.55);
+        const accent = readable(sig, bg, 3);
+        const box = sig;
+        r = {
+          bg, bg2: mix(bg, sig, 0.18), ink: '#FFFFFF', accent, accent2: other ? readable(other, bg, 3) : mix(accent, '#FFFFFF', 0.35),
+          paper: ES.paper, paperInk: '#000000', mist: bg, mode: 'dark',
+          box, boxInk: bestInk(box), boxHi: '', tag: accent, tagInk: bestInk(accent), rule: mix('#FFFFFF', bg, 0.55),
+          treat: tone === 'duotone' ? 'duotone' : '',
+        };
+      }
+    }
+    // A second colour for highlighted words inside a box, only when it reads.
+    if (!r.boxHi) {
+      const hi = cols.concat([ES.blue]).filter(c => normHex(c) !== normHex(r.box) && contrast(c, r.box) >= 3).sort((a, b) => sat(b) - sat(a))[0];
+      r.boxHi = hi || r.boxInk;
+    }
+    if (contrast(r.boxHi, r.box) < 3) r.boxHi = r.boxInk;
+    // Small type (under 60px) straight on the field: ink when it reaches 4.5:1,
+    // else the better of black / white (white on ES blue is 3.9:1, display only).
+    r.inkSmall = contrast(r.ink, r.bg) >= 4.5 ? r.ink : bestInk(r.bg);
+    const pal = finishPalette({ name: p.name || 'ES', base: cols, ...r, toneName: tone }, cols);
+    // Duotone ramp (photo shadows in the field colour, highlights in the team colour).
+    pal.duo = [mix(pal.bg, '#000000', 0.4), readable(sig, '#000000', 3.2), mix(sig, '#FFFFFF', 0.86)];
+    pal.allowed = [...new Set([...pal.allowed, ...[r.box, r.boxInk, r.boxHi, r.tag, r.tagInk, r.rule, r.inkSmall, ...pal.duo, '#EBEAE6', mix('#EBEAE6', '#000000', 0.06), mix('#FFFFFF', '#000000', 0.06)].map(normHex).filter(Boolean)])];
+    return pal;
+  }
+  // Which tone an archetype draws: the director's input.tone when the archetype
+  // supports it, else its first tone. Variant 2 crosses light/dark so the three
+  // candidates never share one mood.
+  function toneFor(archetype, input = {}, variant = 0) {
+    const list = archetype.tones || ['dark'];
+    const want = input.tone && list.includes(input.tone) ? input.tone : list[0];
+    if (variant !== 2 || list.length < 2) return want;
+    const cross = list.find(t => LIGHT_TONES.has(t) !== LIGHT_TONES.has(want));
+    return cross || list[(list.indexOf(want) + 1) % list.length];
+  }
+  // Photo treatment props for a tone (mono = editorial B&W, duotone = team ramp).
+  const treatFor = (pal, extra = {}) => (pal.treat === 'mono' ? { grayscale: true, levels: true, ...extra } : pal.treat === 'duotone' ? { tritone: pal.duo, curve: 1.2, ...extra } : { ...extra });
 
   // ─── The composition library ────────────────────────────────────────────
   // Each archetype: id, name, what it is, focal element, needs (fits), and a
@@ -1122,27 +1297,784 @@
       },
     },
   ];
+
+  // ─── Generate v3 looks: ES Figma board categories ──────────────────────
+  // Modelled on the ES board (STATS POST, COVER IMAGE, QUOTES, GRID, LISTICLE,
+  // BAR GRAPH, EXTRA POSTS, LIFESTYLE) plus outside style research. Every look
+  // declares its tone families (input.tone picks one), its ES category
+  // (family) and works from real ES photos and cut-outs. Cut-out craft: the
+  // subject sharp over a blurred field made from its own photo, a rim light in
+  // the team colour, a ground shadow, and the figure overlapping the number
+  // or breaking its frame (depth); headlines sit in ES highlight boxes.
+  const heroStat = i => (i.record?.value ? { value: clean(i.record.value), label: i.record.label || '', factId: i.record.factId || '' } : i.number?.value ? i.number : null);
+  const statList = (i, n = 5) => (i.numbers || []).filter(x => x && (x.display || x.value)).slice(0, n);
+  const statText = s => clean(s.display || `${s.prefix || ''}${s.value}${s.suffix || ''}`);
+  const topX = i => (i.swipe ? SAFE + LOGO.w + SAFE : SAFE);
+  const topW = (i, W) => (i.swipe ? W - SAFE - topX(i) : W - SAFE * 2 - LOGO.w - SAFE);
+  const darkTone = pal => !LIGHT_TONES.has(pal.toneName);
+  // A cut-out with the ES finish: ground shadow, rim light on dark fields.
+  const cutLayer = (cut, box, pal, opts = {}) => ({
+    type: 'cutout', src: cut.src, ...box, anchor: opts.anchor || 'bottom', ...(opts.align ? { align: opts.align } : {}), ...(opts.flip ? { flip: true } : {}),
+    ...(opts.mono ? { duotone: ['#000000', '#FFFFFF'], curve: 1.1 } : {}),
+    ...(darkTone(pal) && opts.rim !== false ? { rim: { color: pal.toneName === 'esblue' ? '#FFFFFF' : pal.rim, width: 4, angle: opts.flip ? -125 : -55, alpha: 0.7 } } : {}),
+    fx: { shadow: { color: '#000000', blur: darkTone(pal) ? 48 : 34, x: 0, y: darkTone(pal) ? 22 : 16, alpha: darkTone(pal) ? 0.55 : 0.28 } },
+  });
+  // The subject's own photo, blurred and toned, as the field behind its cut-out.
+  const fieldPhoto = (i, pal, W, H, opts = {}) => {
+    const src = sourcePhoto(i);
+    if (!src?.src) return null;
+    return { type: 'photo', src: src.src, focus: src.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', zoom: opts.zoom || 1.12, blur: opts.blur ?? 16, vignette: 0.35, ...treatFor(pal), fx: { opacity: opts.opacity ?? 0.85 } };
+  };
+  // ES highlight-box headline: one solid box per line, lines staggered.
+  const esHead = (text, pal, box, opts = {}) => ({
+    type: 'text', role: opts.role || 'headline', text: upper(text), ...box,
+    font: 'display', size: opts.size || 120, minSize: opts.minSize || 52, maxLines: opts.maxLines || 3, lineHeight: 0.9,
+    color: opts.ink || pal.boxInk, align: opts.align || 'left', valign: opts.valign || 'bottom',
+    box: { color: opts.bg || pal.box, ...(opts.colors ? { colors: opts.colors } : {}), ...(opts.stagger ? { stagger: opts.stagger } : {}) },
+    highlight: { words: (opts.words || []).map(upper), color: opts.hi || pal.boxHi },
+    ...(opts.fx ? { fx: opts.fx } : {}),
+  });
+  const swipePill = (i, pal, W, H) => (i.swipe ? { type: 'pill', role: 'label', text: 'SWIPE >>', x: W - SAFE - 200, y: H - SAFE - 46, h: 46, maxW: 200, align: 'right', color: pal.boxInk, bg: pal.box } : null);
+  const tagPill = (text, x, y, pal, opts = {}) => (clean(text) ? { type: 'pill', role: 'label', text: upper(text), x, y, h: opts.h || 42, maxW: opts.maxW || 360, align: opts.align || 'left', color: opts.ink || pal.tagInk, bg: opts.bg || pal.tag } : null);
+  const paperBg = pal => ({ type: 'background', fill: { kind: 'solid', colors: [pal.bg] }, ...(pal.toneName === 'paper' ? { texture: 'grain', textureOpacity: 0.12 } : {}) });
+  // Ranks / positions are ordinals, not claims: the fact gate lets 1-30 through.
+  const rankSquare = (n, x, y, size, color, pal) => [
+    { type: 'shape', shape: 'rect', x, y, w: size, h: size, color },
+    { type: 'text', role: 'label', ordinal: true, text: String(n), x: x + 4, y: y + size * 0.16, w: size - 8, h: size * 0.68, font: 'display', size: size * 0.78, minSize: 24, maxLines: 1, color: bestInk(color, ['#FFFFFF', '#000000', pal.ink]), align: 'center', valign: 'middle', guard: false },
+  ];
+  const nameOf = h => clean(h?.person || h?.name || h?.label || '');
+
+  const LOOKS = [
+    {
+      id: 'stat-stack', name: 'Stat stack with cut-out', focal: 'athlete', family: 'stats', looks: true,
+      about: 'ES stats post: the record or stat set huge at the top, the player cut out over it (number behind the head), the headline in a highlight box.',
+      needs: 'a person with a cut-out + one real stat or record',
+      kinds: ['record', 'count', 'pct', 'person', 'money'],
+      tones: ['vivid', 'dark', 'esblue', 'duotone'],
+      fits: i => has.cutout(i) && Boolean(heroStat(i)) && has.headline(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const st = heroStat(input);
+        const short = `${clean(st.prefix)}${clean(st.value)}${clean(st.suffix)}`.length <= 3;
+        const left = short ? v !== 1 : v === 1;
+        const top = 214;
+        const numH = H >= 1900 ? 520 : H <= 1100 ? 280 : 360;
+        const labelText = st.label || input.label || '';
+        const headH = H <= 1100 ? 200 : 240;
+        const cutY = top + numH * 0.4;
+        return [
+          { type: 'background', fill: { kind: 'linear', colors: [pal.bg2, pal.bg], angle: 90 } },
+          fieldPhoto(input, pal, W, H, { opacity: 0.6 }),
+          { type: 'shape', shape: 'gradient', x: 0, y: 0, w: W, h: Math.round(H * 0.5), color: pal.deep, stops: [[0, 0.55], [1, 0]] },
+          numberLayer({ ...st, label: '' }, { x: SAFE, y: top, w: W - SAFE * 2, h: numH }, pal.ink, { align: left ? 'left' : short ? 'right' : 'center', size: numH * 1.35, noLabel: true }),
+          { ...cutLayer(input.cutout, short && !left ? { x: 20, y: cutY, w: 800, h: H - cutY } : { x: left ? 260 : 90, y: cutY, w: left ? 800 : 900, h: H - cutY }, pal, { align: left ? 'right' : short ? 'left' : 'center' }), maxW: short ? 900 : 1180 },
+          mist(W, H, pal, 0.7, 0.9),
+          // The label reads over the figure (ES "CURRENT RECORD" under the number).
+          ...(labelText ? [tagPill(labelText, left ? SAFE : W - SAFE - 420, top + numH + 18, pal, { h: 50, maxW: 420, align: left ? 'left' : 'right' })] : []),
+          esHead(input.headline, pal, { x: SAFE, y: H - SAFE - headH - (input.swipe ? 60 : 0), w: W - SAFE * 2, h: headH }, { size: 130, maxLines: 2, words: input.highlight, stagger: left ? null : [0, 60] }),
+          swipePill(input, pal, W, H),
+          grain(0.06),
+        ];
+      },
+    },
+    {
+      id: 'stat-column', name: 'Stat column', focal: 'data', family: 'stats', looks: true,
+      about: 'ES stats post: a framed column of 2-3 stats down one side (13 PTS / 9 AST / 4 MVP), the player large beside it, a highlight-box headline.',
+      needs: 'a person (cut-out or photo) + 2-3 real stats',
+      kinds: ['count', 'person', 'compare'],
+      tones: ['vivid', 'dark', 'esblue', 'duotone'],
+      fits: i => (has.cutout(i) || has.photo(i)) && statList(i).length >= 2 && has.headline(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const stats = statList(input, H <= 1100 ? 2 : 3);
+        const right = v === 1;
+        const colW = 250;
+        const colX = right ? W - SAFE - colW : SAFE;
+        const colY = input.swipe || right ? 230 : 180;
+        const headH = 240;
+        const colH = Math.min(stats.length * 230, H - colY - headH - SAFE - 70);
+        const cell = colH / stats.length;
+        const cut = has.cutout(input);
+        return [
+          { type: 'background', fill: { kind: 'linear', colors: [pal.bg2, pal.bg], angle: 90 } },
+          cut ? fieldPhoto(input, pal, W, H, { opacity: 0.55 })
+            : { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', ...treatFor(pal) },
+          ...(cut ? [cutLayer(input.cutout, { x: right ? 0 : 260, y: 170, w: 820, h: H - 170 }, pal, { align: right ? 'left' : 'right' })] : []),
+          { type: 'shape', shape: 'rect', x: colX, y: colY, w: colW, h: colH, color: pal.deep, opacity: 0.82 },
+          { type: 'shape', shape: 'frame', x: colX, y: colY, w: colW, h: colH, color: pal.accent, lineWidth: 4 },
+          ...stats.slice(1).map((s, k) => ({ type: 'shape', shape: 'rect', x: colX + 24, y: Math.round(colY + cell * (k + 1)), w: colW - 48, h: 3, color: pal.accent, opacity: 0.7 })),
+          ...stats.map((s, k) => numberLayer({ value: statText(s), label: s.label, factId: s.factId }, { x: colX + 14, y: Math.round(colY + cell * k + 22), w: colW - 28, h: cell - 44 }, '#FFFFFF', { align: 'center', size: 170, labelSize: 30, labelColor: pal.toneName === 'esblue' ? '#FFFFFF' : readable(pal.accent, pal.deep, 4.5) })),
+          mist(W, H, pal, 0.72, 0.9),
+          esHead(input.headline, pal, { x: SAFE, y: H - SAFE - headH - (input.swipe ? 56 : 0), w: W - SAFE * 2, h: headH }, { size: 124, maxLines: 2, words: input.highlight, align: right ? 'left' : 'center' }),
+          swipePill(input, pal, W, H),
+          grain(0.05),
+        ];
+      },
+    },
+    {
+      id: 'cover-boxes', name: 'Cover with highlight boxes', focal: 'athlete', family: 'cover', looks: true,
+      about: 'ES cover image: a full-bleed action photo, the team colour rising from the bottom, the headline stacked in staggered highlight boxes.',
+      needs: 'an ES photo + a headline',
+      kinds: ['person', 'score', 'none', 'record', 'quote', 'money', 'count'],
+      tones: ['vivid', 'dark', 'editorial', 'duotone', 'esblue'],
+      fits: i => has.photo(i) && has.headline(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        // Alternating box colours only when the second box reads: its text and its edge.
+        const two = v === 1 && pal.boxHi !== pal.boxInk && contrast(pal.boxInk, pal.boxHi) >= 4.5 && contrast(pal.boxHi, pal.toneName === 'editorial' ? '#000000' : pal.mist) >= 1.6;
+        const headH = H >= 1900 ? 560 : H <= 1100 ? 330 : 430;
+        const mistColor = pal.toneName === 'editorial' ? '#000000' : pal.mist;
+        return [
+          { type: 'background', fill: { kind: 'solid', colors: [pal.bg] } },
+          { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', levels: true, ...treatFor(pal) },
+          { type: 'shape', shape: 'gradient', x: 0, y: 0, w: W, h: 260, color: '#000000', stops: [[0, 0.45], [1, 0]] },
+          mist(W, H, pal, 0.5, 0.9, mistColor),
+          kickerPill(input, pal, topX(input), SAFE + 12, { bg: pal.box, color: pal.boxInk, maxW: topW(input, W) }),
+          esHead(input.headline, pal, { x: SAFE, y: H - SAFE - headH - (input.swipe ? 60 : 0), w: W - SAFE * 2 - 40, h: headH }, {
+            size: 140, maxLines: 4, words: input.highlight, stagger: v === 2 ? [0, 120, 60] : v === 1 && !two ? [40, 0] : [0, 48, 96, 30],
+            ...(two ? { colors: [pal.box, pal.boxHi], hi: pal.boxInk } : {}),
+          }),
+          swipePill(input, pal, W, H),
+          grain(0.05),
+        ];
+      },
+    },
+    {
+      id: 'frame-break', name: 'Cut-out breaks the frame', focal: 'athlete', family: 'cover', looks: true,
+      about: 'The photo in an inset frame with the player cut out of it in register, so the head and shoulders rise out of the frame; the headline boxed across the frame foot.',
+      needs: 'a person with an ES photo and its cut-out + a headline',
+      kinds: ['person', 'record', 'score', 'none', 'count'],
+      tones: ['dark', 'vivid', 'paper', 'esblue', 'duotone'],
+      fits: i => has.cutout(i) && Boolean(sourcePhoto(i)?.src) && has.headline(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const src = sourcePhoto(input);
+        const top = input.swipe ? 214 : 150;
+        const lift = H <= 1100 ? 0.16 : 0.2;
+        const headH = H >= 1900 ? 470 : H <= 1100 ? 250 : 330;
+        const fx = v === 1 ? 130 : 80;
+        const fw = W - fx * 2;
+        const fh = Math.round((H - SAFE - headH + 90 - top) / (1 + lift));
+        const fy = H - SAFE - headH + 90 - fh;
+        const t = treatFor(pal);
+        return [
+          { type: 'background', fill: { kind: 'radial', colors: [pal.bg2, pal.bg], at: { x: 0.5, y: 0.35 } }, texture: darkTone(pal) ? 'halftone' : 'grain', textureColor: pal.accent, textureOpacity: darkTone(pal) ? 0.14 : 0.12 },
+          kickerPill(input, pal, topX(input), SAFE + 12, { bg: pal.box, color: pal.boxInk, maxW: topW(input, W) }),
+          {
+            ...cutLayer(input.cutout, { x: fx, y: fy, w: fw, h: fh }, pal, { align: 'center' }),
+            breakout: { photo: src.src, focus: src.focus, frame: { x: fx, y: fy, w: fw, h: fh }, lift, shade: 0.45, border: { color: darkTone(pal) ? '#FFFFFF' : pal.ink, width: 10 }, ...(t.tritone ? { tritone: t.tritone } : t.grayscale ? { grayscale: true } : {}), levels: true },
+          },
+          esHead(input.headline, pal, { x: SAFE, y: fy + fh - 70, w: W - SAFE * 2, h: H - SAFE - (fy + fh - 70) - (input.swipe ? 56 : 0) }, { size: 124, maxLines: 3, words: input.highlight, align: 'center', valign: 'top', stagger: v === 2 ? [0, 50] : null }),
+          swipePill(input, pal, W, H),
+          grain(0.05),
+        ];
+      },
+    },
+    {
+      id: 'quote-boxes', name: 'Quote in boxes over portrait', focal: 'type', family: 'quote', looks: true,
+      about: 'ES quote post: the speaker full-bleed, the quote set in white highlight boxes with quote marks, the context line under it.',
+      needs: 'a quote + a photo of the speaker',
+      kinds: ['quote'],
+      tones: ['dark', 'vivid', 'editorial', 'esblue'],
+      fits: i => has.quote(i) && has.photo(i) && words(i.quote.text).length <= 18,
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const qH = H >= 1900 ? 620 : H <= 1100 ? 360 : 440;
+        const qY = H - SAFE - 90 - qH;
+        const ink = pal.toneName === 'esblue' ? ES.navy : '#111111';
+        return [
+          { type: 'background', fill: { kind: 'solid', colors: [pal.bg] } },
+          { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', vignette: 0.4, ...treatFor(pal) },
+          mist(W, H, pal, 0.48, 0.9, pal.toneName === 'vivid' ? pal.bg : pal.toneName === 'esblue' ? ES.navy : '#000000'),
+          { type: 'shape', shape: 'quote', x: SAFE + 30, y: qY - 120, w: 120, h: 90, color: '#FFFFFF' },
+          esHead(input.quote.text, pal, { x: SAFE + 30, y: qY, w: W - SAFE * 2 - 60, h: qH }, { role: 'quote', size: 110, minSize: 48, maxLines: 5, words: input.highlight, bg: '#FFFFFF', ink, hi: readable(signature(teamColors(pal)), '#FFFFFF', 3), align: v === 1 ? 'left' : 'center', valign: 'bottom', stagger: v === 2 ? [0, 40] : null }),
+          { type: 'text', role: 'name', text: upper(input.quote.by), x: SAFE, y: H - SAFE - 64, w: W - SAFE * 2 - (input.swipe ? 220 : 0), h: 50, font: 'condensed', size: 36, minSize: 24, maxLines: 1, color: '#FFFFFF', align: v === 1 ? 'left' : 'center', valign: 'bottom', tracking: 1 },
+          swipePill(input, pal, W, H),
+          grain(0.05),
+        ];
+      },
+    },
+    {
+      id: 'quote-card', name: 'Quote card on photo', focal: 'type', family: 'quote', looks: true,
+      about: 'ES quote card: the speaker on the top two-thirds, a light card across the foot with a quote tag, the quote and the speaker name tag.',
+      needs: 'a quote + a photo of the speaker',
+      kinds: ['quote'],
+      tones: ['dark', 'paper', 'vivid', 'esblue'],
+      fits: i => has.quote(i) && has.photo(i) && words(i.quote.text).length <= 34,
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const cardH = H >= 1900 ? 640 : H <= 1100 ? 400 : 470;
+        const cardY = H - SAFE - cardH - (input.swipe ? 60 : 0);
+        const card = pal.toneName === 'paper' ? '#FFFFFF' : '#EBEAE6';
+        const tagC = readable(signature(teamColors(pal)), card, 4.5);
+        return [
+          { type: 'background', fill: { kind: 'solid', colors: [pal.bg] }, ...(pal.toneName === 'paper' ? { texture: 'grain', textureOpacity: 0.12 } : {}) },
+          { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: pal.toneName === 'paper' ? SAFE : 0, y: pal.toneName === 'paper' ? (input.swipe ? 214 : 170) : 0, w: pal.toneName === 'paper' ? W - SAFE * 2 : W, h: pal.toneName === 'paper' ? cardY + 120 - (input.swipe ? 214 : 170) : H, mask: pal.toneName === 'paper' ? 'round' : 'rect', radius: 10, vignette: pal.toneName === 'paper' ? 0 : 0.35, ...treatFor(pal) },
+          ...(pal.toneName === 'paper' ? [{ type: 'text', role: 'kicker', text: upper(input.kicker || input.sport || ''), x: topX(input), y: SAFE + 14, w: topW(input, W), h: 70, font: 'display', size: 72, minSize: 40, maxLines: 1, color: pal.ink, align: 'left', valign: 'top' }] : [mist(W, H, pal, 0.45, 0.9, pal.toneName === 'vivid' ? pal.bg : pal.toneName === 'esblue' ? ES.navy : '#000000')]),
+          { type: 'shape', shape: 'rect', x: SAFE, y: cardY, w: W - SAFE * 2, h: cardH, color: card, radius: 14, fx: { shadow: { color: '#000000', blur: 40, x: 0, y: 16, alpha: 0.35 } } },
+          { type: 'shape', shape: 'rect', x: v === 1 ? W / 2 - 32 : SAFE + 40, y: cardY + 36, w: 64, h: 52, color: tagC },
+          { type: 'shape', shape: 'quote', x: v === 1 ? W / 2 - 22 : SAFE + 50, y: cardY + 46, w: 44, h: 32, color: bestInk(tagC) },
+          { type: 'text', role: 'quote', text: upper(input.quote.text), x: SAFE + 40, y: cardY + 116, w: W - SAFE * 2 - 80, h: cardH - 116 - 90, font: 'display', size: 84, minSize: 36, maxLines: 5, lineHeight: 0.95, color: '#111111', align: v === 1 ? 'center' : 'left', valign: 'top', highlight: { words: (input.highlight || []).map(upper), color: tagC } },
+          tagPill(input.quote.by, SAFE + 40, cardY + cardH - 74, pal, { bg: tagC, ink: bestInk(tagC), h: 40, maxW: W - SAFE * 2 - 80, align: v === 1 ? 'center' : 'left' }),
+          swipePill(input, pal, W, H),
+        ];
+      },
+    },
+    {
+      id: 'quote-duo', name: 'Two voices', focal: 'type', family: 'quote', looks: true,
+      about: 'ES dual-portrait quote: a checkerboard of two portraits and two light quote panels, each quote with its speaker tag.',
+      needs: 'two quotes from two people + a photo of each',
+      kinds: ['quote'],
+      tones: ['paper', 'light', 'dark'],
+      fits: i => duoVoices(i).length === 2,
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const [a, b] = duoVoices(input);
+        const half = W / 2;
+        const midY = Math.round(H / 2);
+        const panel = pal.bg;
+        const ink = pal.ink;
+        const tag = readable(signature(teamColors(pal)), panel, 4.5);
+        const quoteText = (q, x, y, h, flip) => [
+          { type: 'shape', shape: 'quote', x: x + SAFE, y: flip ? y + h - 130 : y + (x > 10 || input.swipe ? 120 : 60), w: 100, h: 74, color: ink, ...(flip ? { flip: true } : {}) },
+          { type: 'text', role: 'quote', text: upper(q.text), x: x + SAFE, y: y + (flip ? 50 : (x > 10 || input.swipe ? 220 : 170)), w: half - SAFE * 2, h: h - (flip ? 50 : (x > 10 || input.swipe ? 220 : 170)) - (flip ? 170 : 70), font: 'display', size: 80, minSize: 30, maxLines: 6, lineHeight: 0.92, color: ink, align: 'left', valign: 'top' },
+          tagPill(q.by, x + SAFE, flip ? y + h - 200 : y + h - 64, pal, { bg: tag, ink: bestInk(tag), h: 38, maxW: half - SAFE * 2 }),
+        ];
+        const photo = (p, x, y) => ({ type: 'photo', src: p.src, focus: p.focus || { x: 0.5, y: 0.3 }, x, y, w: half, h: H - midY, mask: 'rect', ...treatFor(pal) });
+        const yTop = 0;
+        return [
+          { type: 'background', fill: { kind: 'solid', colors: [panel] }, texture: 'grain', textureOpacity: 0.1 },
+          photo(a.photo, v === 1 ? 0 : half, yTop),
+          photo(b.photo, v === 1 ? half : 0, midY),
+          ...quoteText(a, v === 1 ? half : 0, yTop, midY, false),
+          ...quoteText(b, v === 1 ? 0 : half, midY, H - midY, true),
+        ];
+      },
+    },
+    {
+      id: 'headshot-grid', name: 'Headshot grid', focal: 'athlete', family: 'grid', looks: true,
+      about: 'ES grid: a title over a tight grid of player headshots (2x2 to 4x3), each tile in a team colour with a name tag.',
+      needs: '4+ headshots (or photos) of different people + a headline',
+      kinds: ['person', 'none', 'count'],
+      tones: ['paper', 'light', 'dark', 'esblue'],
+      fits: i => gridPeople(i).length >= 4 && has.headline(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const people = gridPeople(input);
+        const n = people.length >= 12 && H >= 1300 ? 12 : people.length >= 9 ? 9 : people.length >= 6 ? 6 : 4;
+        const cols = n === 4 ? 2 : n === 12 ? 4 : 3;
+        const rows = Math.ceil(n / cols);
+        const titleY = input.swipe ? 214 : SAFE;
+        const top = titleY + 210;
+        const gap = 16;
+        const gw = W - SAFE * 2;
+        const cw = (gw - gap * (cols - 1)) / cols;
+        const ch = Math.min(cw * 1.08, (H - SAFE - top - gap * (rows - 1)) / rows);
+        const gx = SAFE + (gw - (cw * cols + gap * (cols - 1))) / 2;
+        const tiles = teamColors(pal);
+        const tileColor = k => (v === 1 ? pal.box : mix(tiles[k % tiles.length], '#000000', lum(tiles[k % tiles.length]) > 0.5 ? 0.3 : 0.05));
+        return [
+          paperBg(pal),
+          { type: 'text', role: 'headline', text: upper(input.headline), x: topX(input), y: titleY, w: topW(input, W), h: 150, font: 'display', size: 84, minSize: 44, maxLines: 2, lineHeight: 0.92, color: pal.ink, align: 'left', valign: 'top', highlight: { words: (input.highlight || []).map(upper), color: pal.accent } },
+          { type: 'shape', shape: 'rect', x: SAFE, y: titleY + 166, w: W - SAFE * 2, h: 4, color: pal.ink },
+          ...people.slice(0, n).flatMap((p, k) => {
+            const x = Math.round(gx + (k % cols) * (cw + gap));
+            const y = Math.round(top + Math.floor(k / cols) * (ch + gap));
+            const name = nameOf(p);
+            return [
+              { type: 'shape', shape: 'rect', x, y, w: cw, h: ch, color: tileColor(k), radius: 8 },
+              p.cut ? { type: 'cutout', src: p.src, x: x + 6, y: y + 10, w: cw - 12, h: ch - 10, anchor: 'bottom', fx: { shadow: { color: '#000000', blur: 14, x: 0, y: 6, alpha: 0.35 } } }
+                : { type: 'photo', src: p.src, focus: p.focus || { x: 0.5, y: 0.25 }, x, y, w: cw, h: ch, mask: 'round', radius: 8, zoom: 1.15 },
+              ...(name && n <= 9 ? [tagPill(name, x + 10, y + ch - 46, pal, { h: 34, maxW: cw - 20, bg: '#FFFFFF', ink: '#111111' })] : []),
+            ];
+          }),
+        ];
+      },
+    },
+    {
+      id: 'ranked-table', name: 'Ranked table', focal: 'data', family: 'listicle', looks: true,
+      about: 'ES listicle: a light paper table, title over a rule, rows with a coloured rank square, logo, name, value and a headshot at the row end.',
+      needs: '3-8 ranked rows (input.rows: name, value, logo, headshot) or numbers for 3+ different people + a headline',
+      kinds: ['count', 'money', 'compare', 'none'],
+      tones: ['paper', 'light', 'dark'],
+      fits: i => tableRows(i).length >= 3 && has.headline(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const maxRows = H >= 1900 ? 8 : H <= 1100 ? 5 : 6;
+        const rows = tableRows(input).slice(0, maxRows);
+        const titleY = input.swipe ? 214 : SAFE;
+        const head = titleY + 196;
+        const avail = H - SAFE - head;
+        const rowH = Math.min(H >= 1900 ? 230 : 200, avail / rows.length);
+        const sq = Math.round(Math.min(96, rowH * 0.56));
+        const hasLogo = rows.some(r => r.logo);
+        const hasShot = rows.some(r => r.headshot);
+        const nameX = SAFE + sq + 24 + (hasLogo ? sq + 20 : 0);
+        const shotW = hasShot ? Math.round(rowH * 1.05) : 0;
+        const valueW = rows.some(r => r.value) ? 250 : 0;
+        const valueX = W - SAFE - valueW - (hasShot ? shotW + 10 : 0);
+        const rule = darkTone(pal) ? mix('#FFFFFF', pal.bg, 0.7) : mix(pal.ink, pal.bg, 0.78);
+        const cols = teamColors(pal);
+        // Rows fill the page; a short table sits under the title, the rest is air at the foot only when rows are few.
+        return [
+          paperBg(pal),
+          v === 1
+            ? esHead(input.headline, pal, { x: topX(input), y: titleY, w: topW(input, W), h: 170 }, { size: 84, minSize: 40, maxLines: 2, valign: 'top' })
+            : { type: 'text', role: 'headline', text: upper(input.headline), x: topX(input), y: titleY, w: topW(input, W), h: 160, font: 'display', size: 90, minSize: 44, maxLines: 2, lineHeight: 0.92, color: pal.ink, align: 'left', valign: 'top', highlight: { words: (input.highlight || []).map(upper), color: pal.accent } },
+          { type: 'shape', shape: 'rect', x: SAFE, y: head - 18, w: W - SAFE * 2, h: 5, color: pal.ink },
+          ...rows.flatMap((r, k) => {
+            const y = Math.round(head + k * rowH);
+            const sqColor = r.color && hexRe.test(r.color) ? normHex(r.color) : v === 2 ? pal.box : readable(cols[k % cols.length], pal.bg, 3);
+            return [
+              ...rankSquare(r.rank || k + 1, SAFE, y + (rowH - sq) / 2, sq, sqColor, pal),
+              ...(r.logo ? [{ type: 'logo', kind: 'team', src: r.logo, x: SAFE + sq + 20, y: y + (rowH - sq) / 2, w: sq, h: sq }] : []),
+              { type: 'text', role: 'label', text: upper(r.name), x: nameX, y: y + 14, w: valueX - nameX - 16, h: rowH - 28, font: 'display', size: Math.round(rowH * 0.34), minSize: 26, maxLines: 2, lineHeight: 0.92, color: pal.ink, align: 'left', valign: 'middle' },
+              ...(r.value ? [{ type: 'text', role: 'label', text: upper(r.value), x: valueX, y: y + 18, w: valueW, h: rowH - 36, font: 'display', size: Math.round(rowH * 0.4), minSize: 28, maxLines: 1, color: readable(pal.accent, pal.bg, 3), align: 'right', valign: 'middle' }] : []),
+              ...(r.headshot ? [r.headshotCut
+                ? { type: 'cutout', src: r.headshot, x: W - SAFE - shotW, y: y + 4, w: shotW, h: rowH - 6, anchor: 'bottom', fx: { shadow: { color: '#000000', blur: 12, x: 0, y: 4, alpha: 0.25 } } }
+                : { type: 'photo', src: r.headshot, focus: { x: 0.5, y: 0.22 }, x: W - SAFE - shotW, y: y + 10, w: shotW, h: rowH - 18, mask: 'round', radius: 6, zoom: 1.25 }] : []),
+              { type: 'shape', shape: 'rect', x: SAFE, y: y + rowH - 2, w: W - SAFE * 2, h: 2, color: rule },
+            ];
+          }),
+        ];
+      },
+    },
+    {
+      id: 'bar-race', name: 'Bar graph with cut-out', focal: 'data', family: 'bar-graph', looks: true,
+      about: 'ES bar graph: a boxed title, 2-4 bars of ONE measure (seasons, or different players) on a light page, values inside, label tags at the bar ends, the player cut out at the foot.',
+      needs: 'one measure across 2-4 seasons or players (input.bars, or numbers labelled by year / person) + a headline',
+      kinds: ['compare', 'pct', 'count', 'money'],
+      tones: ['paper', 'light', 'esblue', 'dark'],
+      fits: i => barStats(i).length >= 2 && has.headline(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const bars = barStats(input).slice(0, H <= 1100 ? 3 : 4);
+        const max = Math.max(...bars.map(b => b.n));
+        const titleY = input.swipe ? 214 : SAFE;
+        const top = titleY + (clean(input.kicker) ? 290 : 250);
+        const cutH = has.cutout(input) ? Math.round(H * 0.42) : 0;
+        const barH = Math.min(120, (H - top - SAFE - cutH * 0.5) / bars.length - 56);
+        const step = barH + 64;
+        const barW = W - SAFE * 2;
+        const fill = v === 2 ? pal.box : readable(signature(teamColors(pal)), pal.bg, 3);
+        const valueInk = bestInk(fill);
+        const track = darkTone(pal) ? mix(pal.bg, '#FFFFFF', 0.12) : mix(pal.bg, '#000000', 0.06);
+        const tagBg = darkTone(pal) ? '#FFFFFF' : '#111111';
+        return [
+          paperBg(pal),
+          esHead(input.headline, pal, { x: topX(input), y: titleY, w: topW(input, W), h: 180 }, { size: 86, minSize: 40, maxLines: 2, valign: 'top', bg: darkTone(pal) ? pal.box : '#111111', ink: darkTone(pal) ? pal.boxInk : '#FFFFFF', hi: darkTone(pal) ? pal.boxHi : readable(signature(teamColors(pal)), '#111111', 3) }),
+          ...(clean(input.kicker) ? [{ type: 'text', role: 'kicker', text: upper(input.kicker), x: topX(input), y: titleY + 196, w: topW(input, W), h: 40, font: 'condensed', size: 34, minSize: 24, maxLines: 1, color: pal.ink, align: 'left', valign: 'top' }] : []),
+          ...(has.cutout(input) ? [{ ...cutLayer(input.cutout, { x: v === 1 ? SAFE : W - SAFE - 640, y: H - cutH, w: 640, h: cutH }, pal, { align: v === 1 ? 'left' : 'right', mono: pal.toneName !== 'esblue', rim: false }), maxW: 760 }] : []),
+          ...bars.flatMap((b, k) => {
+            const y = Math.round(top + k * step);
+            const w = Math.max(240, Math.round((barW * b.n) / max));
+            return [
+              { type: 'shape', shape: 'rect', x: SAFE, y, w: barW, h: barH, color: track },
+              { type: 'shape', shape: 'frame', x: SAFE, y, w: barW, h: barH, color: darkTone(pal) ? '#FFFFFF' : '#111111', lineWidth: 2 },
+              { type: 'shape', shape: 'rect', x: SAFE, y, w, h: barH, color: fill },
+              { type: 'text', role: 'label', text: upper(b.text), x: SAFE + 22, y: y + barH * 0.16, w: Math.max(200, w - 44), h: barH * 0.68, font: 'display', size: 90, minSize: 30, maxLines: 1, color: valueInk, align: 'left', valign: 'middle', guard: false },
+              tagPill(b.label, SAFE + w - 380, y - 44, pal, { h: 40, maxW: 380, align: 'right', bg: tagBg, ink: bestInk(tagBg) }),
+            ];
+          }),
+        ];
+      },
+    },
+    {
+      id: 'post-card', name: 'Social post card', focal: 'type', family: 'extra', looks: true,
+      about: 'ES extra post: a real social post (account name + text) as a white card over the subject photo, blurred and dimmed, with the headline boxed above.',
+      needs: 'a real social post (input.post: name, text) + a photo',
+      kinds: ['quote', 'none'],
+      tones: ['dark', 'vivid', 'esblue'],
+      fits: i => Boolean(clean(i.post?.text) && clean(i.post?.name)) && has.photo(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const post = input.post;
+        const text = clean(post.text);
+        const cardW = W - SAFE * 2 - 40;
+        const size = text.length < 140 ? 52 : text.length < 260 ? 44 : 36;
+        const lines = Math.min(10, Math.ceil((text.length * size * 0.5) / (cardW - 80)) + 1);
+        const cardH = Math.min(H * 0.62, 190 + lines * size * 1.22 + 50);
+        const head = clean(input.headline) ? 1 : 0;
+        const top = 214;
+        const headH = H <= 1100 ? 190 : 240;
+        const cardY = v === 1 || !head ? Math.round(Math.max(top, (H - cardH) / 2 - (head ? 120 : 0))) : Math.round(top + headH + 40);
+        const cx = (W - cardW) / 2;
+        const logo = input.logos?.[0]?.src;
+        const avatar = post.avatar || '';
+        return [
+          { type: 'background', fill: { kind: 'solid', colors: [pal.bg] } },
+          { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', blur: v === 2 ? 0 : 22, zoom: 1.1, vignette: 0.5, ...treatFor(pal) },
+          { type: 'shape', shape: 'rect', x: 0, y: 0, w: W, h: H, color: pal.toneName === 'vivid' ? pal.bg : pal.deep, opacity: v === 2 ? 0.55 : 0.4 },
+          ...(head ? [esHead(input.headline, pal, v === 1 ? { x: SAFE, y: cardY + cardH + 50, w: W - SAFE * 2, h: H - SAFE - cardY - cardH - 50 - (input.swipe ? 56 : 0) } : { x: SAFE, y: top, w: W - SAFE * 2, h: headH }, { size: 110, minSize: 44, maxLines: 2, words: input.highlight, valign: v === 1 ? 'top' : 'bottom' })] : []),
+          { type: 'shape', shape: 'rect', x: cx, y: cardY, w: cardW, h: cardH, color: '#FFFFFF', radius: 22, fx: { shadow: { color: '#000000', blur: 50, x: 0, y: 20, alpha: 0.45 } } },
+          ...(avatar ? [{ type: 'photo', src: avatar, focus: { x: 0.5, y: 0.25 }, x: cx + 40, y: cardY + 40, w: 90, h: 90, mask: 'circle', zoom: 1.3 }]
+            : logo ? [{ type: 'shape', shape: 'circle', x: cx + 40, y: cardY + 40, w: 90, h: 90, color: '#F2F2F2' }, { type: 'logo', kind: 'team', src: logo, x: cx + 52, y: cardY + 52, w: 66, h: 66 }]
+              : [{ type: 'shape', shape: 'circle', x: cx + 40, y: cardY + 40, w: 90, h: 90, color: readable(signature(teamColors(pal)), '#FFFFFF', 3) }]),
+          { type: 'text', role: 'name', text: clean(post.name), x: cx + 150, y: cardY + 50, w: cardW - 190, h: 42, font: 'body', size: 36, minSize: 24, maxLines: 1, color: '#111111', align: 'left', valign: 'top', weight: 700 },
+          ...(clean(post.handle) ? [{ type: 'text', role: 'label', text: clean(post.handle), x: cx + 150, y: cardY + 96, w: cardW - 190, h: 34, font: 'body', size: 28, minSize: 22, maxLines: 1, color: '#536471', align: 'left', valign: 'top' }] : []),
+          { type: 'text', role: 'body', text, x: cx + 40, y: cardY + 160, w: cardW - 80, h: cardH - 200, font: 'body', size, minSize: 26, maxLines: 10, lineHeight: 1.22, color: '#111111', align: 'left', valign: 'top' },
+          swipePill(input, pal, W, H),
+        ];
+      },
+    },
+    {
+      id: 'stat-sheet', name: 'Stat sheet', focal: 'data', family: 'extra', looks: true,
+      about: 'ES stat composite: a logo tile and name block, a grid of 3-5 different stats with label tags, the subject large on the other side.',
+      needs: 'a person or team (cut-out or photo) + 3-5 different real stats',
+      kinds: ['count', 'record', 'person', 'compare'],
+      tones: ['dark', 'vivid', 'esblue', 'duotone'],
+      fits: i => (has.cutout(i) || has.photo(i)) && sheetStats(i).length >= 3,
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const stats = sheetStats(input).slice(0, H <= 1100 ? 4 : 5);
+        const logo = input.logos?.[0]?.src;
+        const name = clean(input.name || input.logos?.[0]?.name || '');
+        const top = input.swipe ? 214 : 150;
+        const gridY = top + 270;
+        const rowsN = Math.ceil(stats.length / 2);
+        const cellH = Math.min(250, (H - gridY - SAFE) / rowsN);
+        const colW = 300;
+        const cut = has.cutout(input);
+        const right = v !== 1;
+        const gx = right ? SAFE : W - SAFE - colW * 2;
+        const nameW = Math.min(right ? 640 : colW * 2, W - SAFE - LOGO.w - SAFE - gx);
+        return [
+          { type: 'background', fill: { kind: 'linear', colors: [pal.bg2, pal.bg], angle: 90 } },
+          cut ? fieldPhoto(input, pal, W, H, { opacity: 0.45, blur: 20 }) : { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', ...treatFor(pal), fx: { opacity: 0.9 } },
+          { type: 'shape', shape: 'gradient', x: 0, y: 0, w: W, h: H, color: pal.deep, dir: right ? 'left' : 'right', stops: [[0, 0], [0.45, 0.55], [1, 0.9]] },
+          ...(cut ? [{ ...cutLayer(input.cutout, { x: right ? W - 560 : 0, y: 230, w: 560, h: H - 230 }, pal, { align: right ? 'right' : 'left' }), maxW: 640 }] : []),
+          ...(logo ? [{ type: 'shape', shape: 'rect', x: gx, y: top, w: 130, h: 130, color: '#FFFFFF', radius: 10 }, { type: 'logo', kind: 'team', src: logo, x: gx + 14, y: top + 14, w: 102, h: 102 }] : []),
+          ...(name ? [{ type: 'text', role: 'name', text: upper(name), x: gx + (logo ? 150 : 0), y: top, w: nameW - (logo ? 150 : 0), h: 140, font: 'display', size: 76, minSize: 40, maxLines: 2, lineHeight: 0.9, color: '#FFFFFF', align: 'left', valign: 'middle' }] : []),
+          ...(clean(input.kicker) ? [{ type: 'text', role: 'kicker', text: upper(input.kicker), x: gx, y: top + 160, w: colW * 2, h: 40, font: 'condensed', size: 32, minSize: 22, maxLines: 1, color: '#FFFFFF', align: 'left', valign: 'top' }] : []),
+          ...stats.flatMap((s, k) => {
+            const x = gx + (k % 2) * colW;
+            const y = Math.round(gridY + Math.floor(k / 2) * cellH);
+            return [
+              numberLayer({ value: statText(s), label: '', factId: s.factId }, { x, y, w: colW - 50, h: cellH - 76 }, '#FFFFFF', { align: 'left', size: 160, noLabel: true, fx: { shadow: { color: '#000000', blur: 20, x: 0, y: 6, alpha: 0.4 } } }),
+              tagPill(s.label, x, y + cellH - 66, pal, { h: 40, maxW: colW - 50 }),
+            ];
+          }),
+          swipePill(input, pal, W, H),
+          grain(0.05),
+        ];
+      },
+    },
+    {
+      id: 'record-alert', name: 'Record alert', focal: 'number', family: 'stats', looks: true,
+      about: 'Loud and celebratory for a record or milestone: the number centred on rays in the team colour, its label tag, a tilted RECORD ALERT box, the player rising from the foot.',
+      needs: 'a record / milestone story (input.record, or record words in the brief) + a cut-out (or photo)',
+      kinds: ['record', 'count', 'money'],
+      tones: ['vivid', 'esblue', 'dark'],
+      fits: i => Boolean(heroStat(i)) && (has.cutout(i) || has.photo(i)) && has.headline(i) && isRecordStory(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const st = heroStat(input);
+        const top = 214;
+        const numH = H >= 1900 ? 560 : H <= 1100 ? 260 : 380;
+        const cut = has.cutout(input);
+        const alert = /record|history|milestone|all-time|first ever|alert/i.test(input.kicker || '') ? upper(input.kicker) : 'RECORD ALERT!';
+        const cutY = top + numH * 0.55;
+        // Never the same phrase twice: a headline that is the alert itself is not repeated.
+        const sameLine = squashed(input.headline).replace(/[^a-z ]/g, '').trim() === squashed(alert).replace(/[^a-z ]/g, '').trim();
+        return [
+          { type: 'background', fill: { kind: 'radial', colors: [mix(pal.bg, '#FFFFFF', 0.14), pal.bg], at: { x: 0.5, y: 0.32 } }, texture: 'rays', textureColor: pal.ink, textureOpacity: 0.08 },
+          ...(cut ? [] : [{ type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: Math.round(H * 0.42), w: W, h: H - Math.round(H * 0.42), mask: 'rect', fade: { to: 'top', from: 0.35 }, ...treatFor(pal) }]),
+          numberLayer({ ...st, label: '' }, { x: SAFE, y: top, w: W - SAFE * 2, h: numH }, pal.ink, { align: 'center', size: numH * 1.4, noLabel: true, fx: { shadow: { color: '#000000', blur: 30, x: 0, y: 10, alpha: 0.3 } } }),
+          ...(cut ? [{ ...cutLayer(input.cutout, { x: 90, y: cutY, w: W - 180, h: H - cutY }, pal, { align: v === 1 ? 'right' : 'center' }), maxW: 1100 }] : []),
+          mist(W, H, pal, 0.74, 0.9),
+          esHead(alert, pal, { x: SAFE, y: top + numH - 30, w: W - SAFE * 2, h: 120 }, { role: 'kicker', size: 104, minSize: 50, maxLines: 1, align: 'center', valign: 'top', fx: { rotate: v === 0 ? -4 : 3 }, ...(v === 1 ? { bg: pal.ink, ink: bestInk(pal.ink) } : {}) }),
+          ...(st.label ? [tagPill(st.label, (W - 520) / 2, top + numH + 100, pal, { h: 48, maxW: 520, align: 'center' })] : []),
+          sameLine ? null : { type: 'text', role: 'headline', text: upper(input.headline), x: SAFE, y: H - SAFE - 190 - (input.swipe ? 56 : 0), w: W - SAFE * 2, h: 190, font: 'display', size: 96, minSize: 44, maxLines: 2, lineHeight: 0.9, color: pal.ink, align: 'center', valign: 'bottom', highlight: { words: (input.highlight || []).map(upper), color: pal.accent }, fx: { shadow: { color: '#000000', blur: 24, x: 0, y: 6, alpha: 0.45 } } },
+          swipePill(input, pal, W, H),
+          grain(0.06),
+        ];
+      },
+    },
+    {
+      id: 'editorial-feature', name: 'Lifestyle editorial', focal: 'athlete', family: 'lifestyle', looks: true,
+      about: 'A clean magazine feature: the photo across the top, a white page below with a small kicker, a big black headline, one line of body and a second photo inset over the seam.',
+      needs: 'an ES photo + a headline (+ a second photo)',
+      kinds: ['person', 'none', 'quote', 'money'],
+      tones: ['editorial', 'light', 'paper'],
+      fits: i => has.photo(i) && has.headline(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const photoH = Math.round(H * (H <= 1100 ? 0.5 : clean(input.body) ? 0.56 : words(input.headline).length <= 4 ? 0.66 : 0.6));
+        const inset = (input.photos || [])[0];
+        const insetW = 300;
+        const insetH = 360;
+        const textY = photoH + 50;
+        const textW = inset && v !== 2 ? W - SAFE * 2 - insetW - 30 : W - SAFE * 2;
+        const insetX = v === 1 ? SAFE : W - SAFE - insetW;
+        return [
+          paperBg(pal),
+          { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: photoH, mask: 'rect', levels: true, ...(pal.toneName === 'editorial' && v === 2 ? { grayscale: true } : {}) },
+          { type: 'shape', shape: 'gradient', x: 0, y: 0, w: W, h: 230, color: '#000000', stops: [[0, 0.4], [1, 0]] },
+          ...(inset && v !== 2 ? [{ type: 'photo', src: inset.src, focus: inset.focus, x: insetX, y: photoH - 200, w: insetW, h: insetH, mask: 'rect', border: { color: pal.bg, width: 12 }, fx: { shadow: { color: '#000000', blur: 30, x: 0, y: 14, alpha: 0.3 } } }] : []),
+          { type: 'text', role: 'kicker', text: upper(input.kicker || input.sport || ''), x: v === 1 && inset ? SAFE + insetW + 30 : SAFE, y: textY, w: textW, h: 40, font: 'condensed', size: 32, minSize: 24, maxLines: 1, color: pal.accent, align: 'left', valign: 'top', tracking: 3 },
+          { type: 'text', role: 'headline', text: upper(input.headline), x: v === 1 && inset ? SAFE + insetW + 30 : SAFE, y: textY + 56, w: textW, h: H - SAFE - textY - 56 - (clean(input.body) ? 110 : 0), font: 'display', size: 150, minSize: 50, maxLines: 4, lineHeight: 0.9, color: pal.ink, align: 'left', valign: 'top', highlight: { words: (input.highlight || []).map(upper), color: pal.accent } },
+          ...(clean(input.body) ? [{ type: 'text', role: 'body', text: clean(input.body), x: SAFE, y: H - SAFE - 90, w: W - SAFE * 2, h: 90, font: 'body', size: 30, minSize: 24, maxLines: 2, color: mix(pal.ink, pal.bg, 0.2), align: 'left', valign: 'bottom' }] : []),
+        ];
+      },
+    },
+    {
+      id: 'split-panel', name: 'Magazine split', focal: 'athlete', family: 'cover', looks: true,
+      about: 'Half colour panel, half photo; the name stacked big in the panel, the player cut out in register so the figure steps over the seam into the panel.',
+      needs: 'a person with an ES photo (+ its cut-out) + a headline',
+      kinds: ['person', 'money', 'count', 'record', 'none'],
+      tones: ['vivid', 'light', 'esblue', 'dark', 'paper'],
+      fits: i => has.photo(i) && has.headline(i) && Boolean(clean(i.name)),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const right = v === 1;
+        const pw = Math.round(W * 0.47);
+        const px = right ? W - pw : 0;
+        const ox = right ? 0 : pw;
+        const st = heroStat(input);
+        const cut = has.cutout(input);
+        const src = cut ? sourcePhoto(input) : input.photo;
+        const tx = px + (right ? 34 : SAFE);
+        const tw = pw - SAFE - 34;
+        const nameY = input.swipe && !right ? 214 : SAFE + 10;
+        // Never the name twice: when the headline already says it, the panel leads with the kicker.
+        const surname = squashed(input.name).split(' ').pop();
+        const dup = surname && squashed(input.headline).split(/[^a-z'.-]+/).includes(surname);
+        const lead = dup ? clean(input.kicker) : clean(input.name);
+        const nameW = right ? Math.min(tw, W - SAFE - LOGO.w - SAFE - tx) : tw - (input.swipe ? topX(input) - SAFE : 0);
+        const t = treatFor(pal);
+        const photoBox = { x: ox, y: 0, w: W - pw, h: H };
+        return [
+          { type: 'background', fill: { kind: 'solid', colors: [pal.bg] }, ...(pal.toneName === 'paper' ? { texture: 'grain', textureOpacity: 0.12 } : {}) },
+          cut
+            ? { ...cutLayer(input.cutout, photoBox, pal, { rim: false }), fx: { shadow: { color: '#000000', blur: 30, x: right ? 12 : -12, y: 10, alpha: 0.4 } }, breakout: { photo: src.src, focus: src.focus, frame: photoBox, lift: -0.1, spill: 0.14, ...(t.tritone ? { tritone: t.tritone } : t.grayscale ? { grayscale: true } : {}) } }
+            : { type: 'photo', src: src.src, focus: src.focus, ...photoBox, mask: 'rect', ...t },
+          { type: 'shape', shape: 'rect', x: right ? W - pw : pw - 10, y: 0, w: 10, h: H, color: pal.accent },
+          !lead ? null : { type: 'text', role: dup ? 'kicker' : 'name', text: upper(lead), x: right ? tx : topX(input) === SAFE ? tx : topX(input), y: nameY, w: nameW, h: 380, font: 'display', size: 170, minSize: 40, maxLines: 3, lineHeight: 0.86, color: pal.accent, align: 'left', valign: 'top' },
+          ...(st ? [numberLayer({ ...st, label: st.label }, { x: tx, y: nameY + 420, w: tw, h: 300 }, pal.ink, { align: 'left', size: 260, labelSize: 34 })] : []),
+          { type: 'text', role: 'headline', text: upper(input.headline), x: tx, y: H - SAFE - 330 - (input.swipe ? 56 : 0), w: tw, h: 330, font: 'display', size: 96, minSize: 40, maxLines: 5, lineHeight: 0.9, color: pal.ink, align: 'left', valign: 'bottom', highlight: { words: (input.highlight || []).map(upper), color: pal.accent } },
+          swipePill(input, pal, W, H),
+        ];
+      },
+    },
+    {
+      id: 'print-collage', name: 'Photo collage', focal: 'athlete', family: 'extra', looks: true,
+      about: '3-5 ES photos as tilted prints with white borders and soft shadows, the subject cut out over the pile, the headline boxed below.',
+      needs: '3+ ES photos (+ a cut-out) + a headline',
+      kinds: ['person', 'none', 'score', 'record'],
+      tones: ['paper', 'dark', 'vivid', 'esblue'],
+      fits: i => allPhotos(i).length >= 3 && has.headline(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const shots = allPhotos(input).slice(0, H <= 1100 ? 3 : 4);
+        const top = input.swipe ? 214 : 150;
+        const areaH = H - top - (H <= 1100 ? 300 : 380);
+        const pw = 520;
+        const ph = Math.min(400, areaH * 0.62);
+        const spots = [
+          { x: SAFE + 10, y: top + 10, r: -6 }, { x: W - SAFE - pw - 10, y: top + 40, r: 5 },
+          { x: SAFE + 60, y: top + areaH - ph - 10, r: 4 }, { x: W - SAFE - pw - 40, y: top + areaH - ph + 20, r: -5 },
+        ];
+        const order = v === 1 ? [1, 0, 3, 2] : [0, 1, 2, 3];
+        const cut = has.cutout(input) && v !== 2;
+        return [
+          paperBg(pal),
+          ...(darkTone(pal) ? [{ type: 'background', fill: { kind: 'radial', colors: [pal.bg2, pal.bg], at: { x: 0.5, y: 0.4 } }, texture: 'grain', textureOpacity: 0.1 }] : []),
+          ...shots.map((p, k) => {
+            const s = spots[order[k]];
+            return { type: 'photo', src: p.src, focus: p.focus, x: s.x, y: s.y, w: pw, h: ph, mask: 'rect', border: { color: '#FFFFFF', width: 14 }, ...treatFor(pal), fx: { rotate: s.r, shadow: { color: '#000000', blur: 30, x: 0, y: 14, alpha: 0.35 } } };
+          }),
+          ...(cut ? [cutLayer(input.cutout, { x: 180, y: top + 120, w: W - 360, h: H - top - 120 - (H <= 1100 ? 160 : 210) }, pal, { align: 'center' })] : []),
+          kickerPill(input, pal, topX(input), SAFE + 12, { bg: pal.box, color: pal.boxInk, maxW: topW(input, W) }),
+          esHead(input.headline, pal, { x: SAFE, y: H - SAFE - (H <= 1100 ? 250 : 310) - (input.swipe ? 56 : 0), w: W - SAFE * 2, h: H <= 1100 ? 250 : 310 }, { size: 120, maxLines: 3, words: input.highlight, align: 'center', stagger: [0, 40] }),
+          swipePill(input, pal, W, H),
+        ];
+      },
+    },
+    {
+      id: 'light-stat', name: 'Light stat card', focal: 'number', family: 'stats', looks: true,
+      about: 'A light page with the stat huge in the team colour, its label in a tag, the player cut out of a team-colour panel so the head rises above the panel edge.',
+      needs: 'one real stat + a cut-out (or photo)',
+      kinds: ['count', 'money', 'pct', 'record'],
+      tones: ['light', 'paper', 'editorial'],
+      fits: i => Boolean(heroStat(i)) && (has.cutout(i) || has.photo(i)) && has.headline(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const st = heroStat(input);
+        const cut = has.cutout(input);
+        const right = v !== 1;
+        const split = Math.round(W * 0.46);
+        const panelX = right ? split : SAFE;
+        const panelW = W - SAFE - split;
+        const panelY = Math.round(H * 0.32);
+        const panelH = H - panelY - SAFE;
+        const tx = right ? SAFE : panelX + panelW + 34;
+        const tw = right ? panelX - SAFE - 34 : W - SAFE - tx;
+        const panel = signature(teamColors(pal));
+        const top = input.swipe ? 214 : 150;
+        const numH = H <= 1100 ? 250 : 330;
+        const headY = top + 60 + numH + 100;
+        return [
+          paperBg(pal),
+          { type: 'shape', shape: 'rect', x: panelX, y: panelY, w: panelW, h: panelH, color: panel, radius: 16 },
+          cut
+            ? { ...cutLayer(input.cutout, { x: panelX - 30, y: panelY - 240, w: panelW + 60, h: panelH + 240 }, pal, { align: 'center', mono: pal.toneName === 'editorial' }), maxW: panelW + 120 }
+            : { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: panelX, y: panelY, w: panelW, h: panelH, mask: 'round', radius: 16, ...treatFor(pal) },
+          { type: 'text', role: 'kicker', text: upper(input.kicker || input.sport || ''), x: right ? topX(input) : tx, y: top, w: right ? Math.min(tw, topW(input, W)) : Math.min(tw, W - SAFE - LOGO.w - SAFE - tx), h: 40, font: 'condensed', size: 32, minSize: 22, maxLines: 1, color: pal.accent, align: 'left', valign: 'top', tracking: 3 },
+          numberLayer({ ...st, label: '' }, { x: tx, y: top + 60, w: tw, h: numH }, pal.accent, { align: 'left', size: 460, noLabel: true }),
+          tagPill(st.label, tx, top + 60 + numH + 24, pal, { maxW: tw, h: 46 }),
+          { type: 'shape', shape: 'rect', x: tx, y: headY, w: 110, h: 10, color: pal.accent },
+          { type: 'text', role: 'headline', text: upper(input.headline), x: tx, y: headY + 34, w: tw, h: H - SAFE - headY - 34, font: 'display', size: 120, minSize: 44, maxLines: 6, lineHeight: 0.9, color: pal.ink, align: 'left', valign: 'top', highlight: { words: (input.highlight || []).map(upper), color: pal.accent } },
+        ];
+      },
+    },
+  ];
+  // Two voices for quote-duo: input.quotes [{ text, by, photo? }] or sides
+  // [{ quote: { text, by }, photo }], each with a photo of that speaker.
+  function duoVoices(i) {
+    const people = allPhotos(i).concat((i.headshots || []).map(h => ({ ...h })));
+    const photoFor = (q, k) => {
+      const own = q.photo?.src || q.photo?.url ? { src: q.photo.src || q.photo.url, focus: q.photo.focus } : null;
+      const byName = people.find(p => p.person && q.by && squashed(q.by).includes(squashed(p.person).split(' ').pop()));
+      return own || byName || null;
+    };
+    const list = (Array.isArray(i.quotes) ? i.quotes : Array.isArray(i.sides) ? i.sides.map(s => ({ ...(s.quote || {}), photo: s.photo })) : [])
+      .filter(q => clean(q?.text) && clean(q?.by) && words(q.text).length <= 22);
+    const out = list.slice(0, 2).map((q, k) => ({ text: clean(q.text), by: clean(q.by), photo: photoFor(q, k) }));
+    return out.length === 2 && out.every(q => q.photo?.src) && out[0].photo.src !== out[1].photo.src && squashed(out[0].by) !== squashed(out[1].by) ? out : [];
+  }
+  // People for a grid: headshots first (cut-outs welcome), else people photos.
+  function gridPeople(i) {
+    const shots = (i.headshots || []).filter(h => h?.src).map(h => ({ ...h, cut: /\.png(\?|$)/i.test(h.src) || h.cutout === true }));
+    if (shots.length >= 4) return shots;
+    const photos = allPhotos(i).filter(p => p.person);
+    const seen = new Set();
+    return shots.concat(photos.filter(p => !seen.has(p.person) && seen.add(p.person)));
+  }
+  // Ranked rows: input.rows, else the numbers list (label = name, display = value).
+  function tableRows(i) {
+    const people = statList(i, 8).filter(s => clean(s.who));
+    const rows = Array.isArray(i.rows) && i.rows.length ? i.rows
+      : new Set(people.map(s => squashed(s.who))).size >= 3 ? people.map(s => ({ name: s.who, value: statText(s), factId: s.factId })) : [];
+    const logoFor = r => srcOf(r.logo) || (i.logos || []).find(l => r.team && squashed(l.name) === squashed(r.team))?.src || '';
+    const shotFor = r => {
+      const own = srcOf(r.headshot);
+      if (own) return own;
+      const hit = (i.headshots || []).find(h => h.person && r.name && squashed(h.person) === squashed(r.name));
+      return hit?.src || '';
+    };
+    return rows.filter(r => clean(r?.name)).map(r => {
+      const headshot = shotFor(r);
+      return { rank: r.rank, name: clean(r.name), value: clean(r.value || ''), logo: logoFor(r), headshot, headshotCut: /\.png(\?|$)/i.test(headshot), color: r.color || '' };
+    });
+  }
+  // Bars: numbers that share a unit (all % / all $ / all plain), largest first kept in order.
+  function barStats(i) {
+    const explicit = Array.isArray(i.bars) && i.bars.length >= 2;
+    const season = /^(?:19|20)\d\d(?:\s*[-/–]\s*\d{2,4})?$/;
+    const pool = explicit ? i.bars : statList(i, 5);
+    // A bar chart compares ONE measure: seasons ("2022"), or different people.
+    const bySeason = pool.filter(s => season.test(clean(s.label)));
+    const byPerson = pool.filter(s => clean(s.who));
+    const chosen = explicit ? pool : bySeason.length >= 2 ? bySeason : new Set(byPerson.map(s => squashed(s.who))).size >= 2 ? byPerson.map(s => ({ ...s, label: s.who })) : [];
+    const list = chosen.map(s => {
+      const n = Number(String(s.value ?? s.display ?? '').replace(/[^0-9.]/g, ''));
+      const unit = `${clean(s.prefix)}|${clean(s.suffix)}|${/%/.test(s.display || '') ? '%' : ''}`;
+      return { n, unit, text: statText(s), label: s.label || s.who || '', factId: s.factId };
+    }).filter(s => Number.isFinite(s.n) && s.n > 0);
+    if (list.length < 2) return [];
+    const unit = list[0].unit;
+    const same = list.filter(s => s.unit === unit);
+    return same.length >= 2 ? same : [];
+  }
+  // Different stats for a sheet: the record first, no value shown twice.
+  function sheetStats(i) {
+    const out = [];
+    const seen = new Set();
+    [...(i.record?.value ? [{ value: i.record.value, label: i.record.label || 'record', factId: i.record.factId }] : []), ...statList(i, 6)].forEach(s => {
+      const key = statText(s).replace(/[^0-9.%$-]/g, '');
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      out.push(s);
+    });
+    return out;
+  }
+  // A record story: a record field, or record words in the copy.
+  const isRecordStory = i => /\b(?:record|records|milestone|all-time|history|historic|first ever|most ever|career-high)\b/i.test(`${i.kicker || ''} ${i.headline || ''}`) || /\b(?:all-time|career|most ever|record)\b/i.test(i.number?.label && !/^record$/i.test(clean(i.number.label)) ? i.number.label : '');
+
+  ARCHETYPES.push(...LOOKS);
+  // Every archetype names its ES board category and the tones it draws. The
+  // v1/v2 archetypes build their own team palette (dark field; variant 2 or the
+  // swap-palette fix flips it light) and do not read input.tone.
+  // v1/v2 archetypes: ES board category and the tones they can take (the same
+  // maps gen-director uses as its fallback). They read input.tone only when it
+  // is one of theirs; with no tone they build exactly as before.
+  const FAMILY_OF = {
+    'hero-number': 'stats', 'big-number': 'stats', 'prize-poster': 'stats', 'record-badge': 'stats', 'stat-tower': 'stats', 'trading-card': 'stats', 'sticker-collage': 'stats', 'swiss-grid': 'stats',
+    'magazine-cover': 'cover', 'duotone-hero': 'cover', 'pill-stack': 'cover', 'lower-third': 'cover', 'type-knockout': 'cover', 'neon-night': 'cover', typographic: 'cover', 'front-page': 'lifestyle',
+    'quote-portrait': 'quote', 'quote-marks': 'quote',
+    'collage-strip': 'grid', 'photo-mosaic': 'grid', 'film-strip': 'grid',
+    'by-the-numbers': 'listicle',
+    'stat-bars': 'bar-graph', 'record-gauge': 'bar-graph', 'unit-grid': 'bar-graph',
+    scoreboard: 'extra', 'versus-split': 'extra', 'split-versus': 'extra', 'ticket-stub': 'extra',
+  };
+  const LIGHT_OK = new Set(['by-the-numbers', 'typographic', 'big-number', 'swiss-grid', 'quote-marks', 'quote-portrait', 'stat-tower', 'stat-bars', 'unit-grid', 'record-gauge', 'scoreboard', 'record-badge', 'prize-poster']);
+  const PHOTO_FIELD = new Set(['magazine-cover', 'duotone-hero', 'lower-third', 'type-knockout', 'neon-night', 'film-strip', 'photo-mosaic', 'pill-stack']);
+  const oldTones = id => (id === 'front-page' ? ['paper', 'editorial', 'light'] : PHOTO_FIELD.has(id) ? ['dark', 'duotone', 'vivid'] : LIGHT_OK.has(id) ? ['light', 'paper', 'editorial', 'vivid', 'dark', 'esblue'] : ['dark', 'vivid', 'esblue', 'duotone']);
+  // Looks read the shared input shape: their fits normalise first, so a direct
+  // a.fits(input) call with { url } photos works the same as COMPOSE.fits().
+  LOOKS.forEach(a => { const raw = a.fits; a.fits = input => raw(normalizeInput(input)); });
+  ARCHETYPES.forEach(a => {
+    if (!a.family) a.family = FAMILY_OF[a.id] || 'extra';
+    if (!a.tones) a.tones = oldTones(a.id);
+  });
+  const FAMILIES = ['stats', 'cover', 'quote', 'grid', 'listicle', 'bar-graph', 'lifestyle', 'extra'];
   const BY_ID = Object.fromEntries(ARCHETYPES.map(a => [a.id, a]));
   // What each archetype needs from the brief (for the art director's catalogue)
   // and the story kinds it serves (for the no-AI plan's priority lists).
   const NEEDS = Object.fromEntries(ARCHETYPES.map(a => [a.id, a.needs]));
 
-  const fits = (id, input = {}) => Boolean(BY_ID[id] && BY_ID[id].fits(input));
-  const fitting = (input = {}) => ARCHETYPES.filter(a => a.fits(input)).map(a => a.id);
+  const fits = (id, input = {}) => Boolean(BY_ID[id] && BY_ID[id].fits(normalizeInput(input)));
+  const fitting = (input = {}) => { const i = normalizeInput(input); return ARCHETYPES.filter(a => a.fits(i)).map(a => a.id); };
 
   // A scene from an archetype and its inputs (variant 0-2).
   function build(id, input = {}, variant = 0) {
     const archetype = BY_ID[id];
     if (!archetype) throw new Error(`Unknown composition "${id}".`);
-    const { W, H, p } = frame(input);
-    const layers = archetype.build({ ...input, palette: p }, variant).filter(Boolean)
+    const norm = normalizeInput(input);
+    const { W, H, p: base } = frame(norm);
+    // Looks always draw in a tone; v1/v2 archetypes only when the director asks for one they support.
+    const tone = archetype.looks ? toneFor(archetype, norm, variant) : norm.tone && archetype.tones.includes(norm.tone) ? norm.tone : '';
+    const p = tone ? tonePalette(base, tone) : base;
+    const layers = archetype.build({ ...norm, palette: p }, variant).filter(Boolean)
       .filter(layer => !layer.hidden);
+    // Looks derive every colour in code from the tone palette (team colours,
+    // their readable shades, ES colours, neutrals): register them as allowed.
+    if (archetype.looks) p.allowed = [...new Set([...p.allowed, ...layers.flatMap(sceneColors)])];
     return {
       v: 1,
       kind: 'composed',
       archetype: id,
       archetypeName: archetype.name,
       focal: archetype.focal,
+      family: archetype.family,
+      tone: tone || (p.mode === 'light' ? 'light' : 'dark'),
       variant,
       size: { w: W, h: H },
       palette: p,
@@ -1167,6 +2099,10 @@
   //   numbers:   every digit on the design comes from a fact (brief / research)
   //   size:      known canvas sizes; at most 28 layers
   const COLOR_KEYS = ['color', 'bg', 'unitColor', 'labelColor', 'textureColor', 'track'];
+  function sceneColors(layer) {
+    return [...COLOR_KEYS.map(k => layer[k]), layer.border?.color, layer.box?.color, ...(layer.box?.colors || []), layer.highlight?.color, layer.rim?.color, layer.breakout?.border?.color]
+      .filter(c => typeof c === 'string').map(normHex).filter(Boolean);
+  }
   function logoZone(scene) {
     const W = scene.size?.w || 1080;
     return scene.swipe ? { x: 0, y: 0, w: SAFE + LOGO.w + SAFE, h: SAFE + LOGO.h + SAFE } : { x: W - SAFE - LOGO.w - SAFE, y: 0, w: SAFE + LOGO.w + SAFE, h: SAFE + LOGO.h + SAFE };
@@ -1258,7 +2194,8 @@
         }
         // Numbers come only from facts.
         if (known.length || facts) {
-          const digits = digitsIn(textOf(layer));
+          // A rank square's position (1-30) is an ordinal, not a claim.
+          const digits = layer.ordinal && /^\d{1,2}$/.test(clean(layer.text)) && Number(layer.text) >= 1 && Number(layer.text) <= 30 ? [] : digitsIn(textOf(layer));
           const stray = digits.filter(d => !factDigits.has(d));
           if (stray.length) errors.push({ rule: 'real-facts', msg: `${tag}: "${stray.join(', ')}" is not a number from the brief or ES research` });
         }
@@ -1900,6 +2837,9 @@
     const b = layer.box || {};
     return { padX: b.pad ?? Math.round(cap * 0.34), padY: b.padY ?? Math.round(cap * 0.2), gap: b.gap ?? Math.round(cap * 0.16) };
   }
+  // ES staggered boxes: each line steps in by box.stagger[i] px (cycled).
+  const staggerMax = layer => (Array.isArray(layer.box?.stagger) && layer.box.stagger.length ? Math.max(0, ...layer.box.stagger.map(n => Number(n) || 0)) : 0);
+  const staggerAt = (layer, i) => (Array.isArray(layer.box?.stagger) && layer.box.stagger.length ? Number(layer.box.stagger[i % layer.box.stagger.length]) || 0 : 0);
   // Vertical metrics for one size: where the first baseline sits from the box
   // top, the line step, and the block height for n lines.
   function vMetrics(g, layer, size) {
@@ -1924,7 +2864,7 @@
       const track = layer.tracking ?? autoTracking(font, sz);
       g.font = fontString(font, sz, layer.weight);
       setTracking(g, track);
-      const avail = layer.w - (vm.box ? vm.box.padX * 2 : 0);
+      const avail = layer.w - (vm.box ? vm.box.padX * 2 + staggerMax(layer) : 0);
       const lines = wrap(g, layer.text, avail, track);
       return { vm, track, avail, lines };
     };
@@ -2326,13 +3266,112 @@
     }
   }
 
+  // Frame break: the photo shown inside a frame, and its own cut-out drawn in
+  // register on top so the subject's head / shoulders rise out of the frame.
+  // The cut-out must be the photo's full-size mask (same aspect); otherwise the
+  // cut-out is fitted into the frame as usual (never mis-registered).
+  //   breakout: { photo, frame: {x,y,w,h}, lift (-0.3..0.4 of frame height above the top), spill (0..0.5 of frame width past the sides),
+  //               border: {color, width}, shade (0..1 bottom darkening), tone props (duotone / tritone / grayscale / levels) }
+  async function drawBreakout(g, layer, s, report) {
+    const b = layer.breakout;
+    const F = b.frame || { x: layer.x, y: layer.y, w: layer.w, h: layer.h };
+    const [cut, ph] = await Promise.all([loadImage(layer.src), loadImage(b.photo)]);
+    if (!ph) report.missing.push(b.photo);
+    if (!cut) report.missing.push(layer.src);
+    if (!cut || !ph) return;
+    const trimmed = trim(cut);
+    const box = trimmed.bounds;
+    const registered = box && Math.abs(cut.width / cut.height - ph.width / ph.height) < 0.012;
+    // The photo, cover-cropped (or registered to the subject), toned, in the frame.
+    let sc = 1; let offX = F.x; let offY = F.y;
+    if (registered) {
+      const lift = Math.max(-0.3, Math.min(0.4, b.lift ?? 0.2));
+      sc = (F.h * (1 + lift)) / box.h;
+      sc = Math.min(sc, (F.w * 1.45) / box.w);
+      sc = Math.max(sc, F.w / cut.width, F.h / cut.height);
+      offX = F.x + F.w / 2 - (box.x + box.w / 2) * sc;
+      offY = F.y - F.h * lift - box.y * sc;
+      offX = Math.min(F.x, Math.max(F.x + F.w - cut.width * sc, offX));
+      offY = Math.min(F.y, Math.max(F.y + F.h - cut.height * sc, offY));
+    }
+    const bw = Math.max(1, Math.round(F.w * s));
+    const bh = Math.max(1, Math.round(F.h * s));
+    let buf = makeCanvas(bw, bh);
+    const bg = buf.getContext('2d');
+    bg.imageSmoothingQuality = 'high';
+    if (registered) {
+      const k = ph.width / cut.width;
+      bg.drawImage(ph, ((F.x - offX) / sc) * k, ((F.y - offY) / sc) * k, (F.w / sc) * k, (F.h / sc) * k, 0, 0, bw, bh);
+    } else {
+      const { sx, sy, sw, sh } = coverRect(ph.width, ph.height, F.w, F.h, b.focus, b.zoom || 1);
+      bg.drawImage(ph, sx, sy, sw, sh, 0, 0, bw, bh);
+      // Not in register: the photo becomes a soft field, so the subject never doubles.
+      buf = blurCanvas(buf, 18 * s);
+    }
+    const bgx = buf.getContext('2d');
+    if (b.levels) autoLevels(buf);
+    const tone = b.tritone || b.duotone || (b.grayscale ? ['#000000', '#FFFFFF'] : null);
+    if (tone) toneMap(buf, tone, b.curve || 1.2);
+    if (b.shade) {
+      const grad = bgx.createLinearGradient(0, 0, 0, bh);
+      grad.addColorStop(0, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, `rgba(0,0,0,${Math.min(0.8, b.shade)})`);
+      bgx.fillStyle = grad;
+      bgx.fillRect(0, 0, bw, bh);
+    }
+    g.save();
+    g.shadowColor = 'rgba(0,0,0,0.4)';
+    g.shadowBlur = 40 * s;
+    g.shadowOffsetY = 16 * s;
+    g.drawImage(buf, F.x * s, F.y * s);
+    g.restore();
+    if (b.border?.width) {
+      g.save();
+      g.strokeStyle = b.border.color || '#FFFFFF';
+      g.lineWidth = b.border.width * s;
+      g.strokeRect((F.x + b.border.width / 2) * s, (F.y + b.border.width / 2) * s, (F.w - b.border.width) * s, (F.h - b.border.width) * s);
+      g.restore();
+    }
+    // The subject, in register: only what lies outside the frame is new.
+    let dx; let dy; let dw; let dh;
+    if (registered) {
+      dx = offX + box.x * sc; dy = offY + box.y * sc; dw = box.w * sc; dh = box.h * sc;
+    } else {
+      const fit = Math.min((F.h * 1.15) / trimmed.height, (F.w * 1.1) / trimmed.width);
+      dw = trimmed.width * fit; dh = trimmed.height * fit; dx = F.x + (F.w - dw) / 2; dy = F.y + F.h - dh;
+    }
+    const cw = Math.max(1, Math.round(dw * s));
+    const ch = Math.max(1, Math.round(dh * s));
+    const src = makeCanvas(cw, ch);
+    const sg = src.getContext('2d');
+    sg.imageSmoothingQuality = 'high';
+    sg.drawImage(trimmed, 0, 0, cw, ch);
+    g.save();
+    g.beginPath();
+    const spill = Math.max(0, Math.min(0.5, b.spill ?? 0.35));
+    g.rect((F.x - F.w * spill) * s, 0, F.w * (1 + spill * 2) * s, (F.y + F.h) * s);
+    g.clip();
+    g.save();
+    applyFx(g, layer.fx, s);
+    g.drawImage(src, dx * s, dy * s);
+    g.restore();
+    if (layer.rim) {
+      g.globalCompositeOperation = 'screen';
+      g.drawImage(rimLight(src, layer.rim.color || '#FFFFFF', Math.max(1.5, (layer.rim.width || 5) * s), layer.rim.angle, layer.rim.alpha ?? 0.85), dx * s, dy * s);
+    }
+    g.restore();
+    report.cutouts = (report.cutouts || []).concat([{ x: dx, y: dy, w: dw, h: dh, registered: Boolean(registered) }]);
+  }
+
   async function drawCutout(g, layer, s, report) {
+    if (layer.breakout?.photo) return drawBreakout(g, layer, s, report);
     const img = await loadImage(layer.src);
     if (!img) { report.missing.push(layer.src); return; }
     // Trim to the subject's own box, then fit the box (anchored bottom).
     const trimmed = trim(img);
     const { x, y, w, h } = layer;
-    const scale = Math.min(w / trimmed.width, h / trimmed.height);
+    // maxW lets a wide subject (a swing, a stretch) grow past its box width.
+    const scale = Math.min(h / trimmed.height, (layer.maxW || w) / trimmed.width);
     const dw = trimmed.width * scale;
     const dh = trimmed.height * scale;
     const dx = layer.align === 'left' ? x : layer.align === 'right' ? x + w - dw : x + (w - dw) / 2;
@@ -2396,6 +3435,7 @@
       if (maxX > minX && maxY > minY) {
         out = makeCanvas(maxX - minX + 2, maxY - minY + 2);
         out.getContext('2d').drawImage(c, minX, minY, out.width, out.height, 0, 0, out.width, out.height);
+        out.bounds = { x: minX, y: minY, w: out.width, h: out.height, iw: c.width, ih: c.height };
       }
     } catch (error) { /* cross-origin: draw as is */ }
     trimCache.set(img, out);
@@ -2444,7 +3484,8 @@
     const placed = fit.lines.map((line, i) => {
       const width = textW(g, line, fit.track);
       const padX = vm.box ? vm.box.padX : 0;
-      const lx = layer.align === 'center' ? layer.x + (layer.w - width) / 2 : layer.align === 'right' ? layer.x + layer.w - width - padX : layer.x + padX;
+      const shift = vm.box ? staggerAt(layer, i) * (layer.align === 'right' ? -1 : layer.align === 'center' ? 0.5 : 1) : 0;
+      const lx = (layer.align === 'center' ? layer.x + (layer.w - width) / 2 : layer.align === 'right' ? layer.x + layer.w - width - padX : layer.x + padX) + shift;
       return { line, width, lx, base: y0 + vm.first + i * vm.step };
     });
     const minX = Math.min(...placed.map(p => p.lx));
@@ -2756,7 +3797,7 @@
     const g = canvas.getContext('2d', { willReadFrequently: true });
     await ensureFonts();
     // Images load in parallel before drawing in order.
-    await Promise.all(scene.layers.flatMap(l => [l.src, l.image?.src, l.knockout?.src].filter(Boolean)).map(loadImage));
+    await Promise.all(scene.layers.flatMap(l => [l.src, l.image?.src, l.knockout?.src, l.breakout?.photo].filter(Boolean)).map(loadImage));
     const report = { items: [], missing: [], palette: scene.palette || null };
     g.clearRect(0, 0, canvas.width, canvas.height);
     g.imageSmoothingQuality = 'high';
@@ -2809,7 +3850,10 @@
     const next = JSON.parse(JSON.stringify(scene));
     next.layers.forEach(layer => {
       if (layer.type === 'photo' && layer.role !== 'art' && (!from || layer.src === from)) layer.src = to;
-      if (layer.type === 'cutout' && cutout) layer.src = cutout;
+      if (layer.type === 'cutout' && cutout) {
+        layer.src = cutout;
+        if (layer.breakout) layer.breakout.photo = to;
+      }
     });
     return next;
   }
@@ -2822,9 +3866,10 @@
 
   return {
     mainPhoto,
-    VERSION, SIZES, SAFE, LOGO, FONTS, LAYER_TYPES, ROLES, FIXES, FX_LIMITS, PROC_ART, ARCHETYPES, BY_ID, NEEDS,
+    VERSION, SIZES, SAFE, LOGO, FONTS, LAYER_TYPES, ROLES, FIXES, FX_LIMITS, PROC_ART, ARCHETYPES, BY_ID, NEEDS, TONES, FAMILIES,
+    normalizeInput, tonePalette, toneFor,
     fits, fitting, build, candidates, makePalette, flipPalette, checkScene, applyFix, scoreReport,
     render, toDataUrl, editableText, setText, swapPhoto,
-    _test: { contrast, mix, lum, normHex, digitsIn, logoZone, coverRect },
+    _test: { contrast, mix, lum, normHex, digitsIn, logoZone, coverRect, readable },
   };
 }));
