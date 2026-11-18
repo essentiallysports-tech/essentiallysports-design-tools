@@ -154,7 +154,9 @@ const post = body => gen.handler({ httpMethod: 'POST', headers: { authorization:
   const read = C.readCreative(GOLF, { articles: [{ title: 'Tour Pro Issues Plea for LIV Golfers\' PGA Return', url: 'https://www.essentiallysports.com/golf-news-liv/', excerpt: 'Following LIV Golf\'s collapse into Chapter 11 liquidation, a tour pro wants them back.' }] });
   const assets = { photos: { 'LPGA Tour': [{ src: '/lpga1.jpg', id: 'p1a', person: 'LPGA Tour', team: true }], 'PGA Tour': [{ src: '/pga.jpg', id: 'p2a', person: 'PGA Tour', team: true }, { src: '/pga-1200x768.jpg', id: 'p2b', person: 'PGA Tour', team: true }] }, cutouts: {}, art: { s1: { src: 'proc:trophy' }, s2: { src: 'proc:cards' } } };
   const raw = { directions: [
-    { story: 's1', archetype: 'prize-poster', headline: 'One last swing for $2 million', numberFact: 'f1', factIds: ['f1'], highlight: ['$2'], palette: 'golf:Green & Gold', note: 'Gold trophy, $2M over its base.' },
+    // gen-director: the headline never repeats the hero number ($2M is on the poster).
+    { story: 's1', archetype: 'prize-poster', headline: 'One last swing for $2 million', numberFact: 'f1', factIds: ['f1'] },
+    { story: 's1', archetype: 'prize-poster', headline: 'One last swing for the prize', numberFact: 'f1', factIds: ['f1'], highlight: ['swing'], palette: 'golf:Green & Gold', note: 'Gold trophy, $2M over its base.' },
     { story: 's1', archetype: 'big-number', headline: 'A $3 million finish', numberFact: 'f1', factIds: ['f1'] },
     { story: 's1', archetype: 'typographic', headline: 'LIV Golf is dead. Now what?', sources: [] },
     { story: 's2', archetype: 'prize-poster', headline: 'Cards earned', numberFact: 'f2' },
@@ -168,6 +170,7 @@ const post = body => gen.handler({ httpMethod: 'POST', headers: { authorization:
   const why = text => dropped.find(d => d.headline === text)?.why || '';
   assert.match(why('A $3 million finish'), /not a fact/, 'invented number dropped');
   assert.match(why('LIV Golf is dead. Now what?'), /not in the brief.*no ES story was cited/, 'off-brief LIV angle dropped without a citation');
+  assert.match(why('One last swing for $2 million'), /repeats \$2M/, 'number and headline say it once');
   assert.match(why('Cards earned'), /same archetype/);
   assert.match(why('Cards, earned again'), /same photo/, 'the same image under a resized URL is the same photo');
   assert.match(why('Nowhere'), /no story/);
@@ -203,7 +206,7 @@ const post = body => gen.handler({ httpMethod: 'POST', headers: { authorization:
 {
   C.setAssetService(null);
   gatewayReply = { directions: [
-    { story: 's1', archetype: 'prize-poster', name: 'The Last Check', headline: 'One last swing for $2 million', numberFact: 'f1', factIds: ['f1'], art: 'gold trophy', palette: 'golf:Green & Gold', note: 'Gold trophy lit from above; $2M over its base.' },
+    { story: 's1', archetype: 'prize-poster', name: 'The Last Check', headline: 'One last swing for the purse', numberFact: 'f1', factIds: ['f1'], art: 'gold trophy', palette: 'golf:Green & Gold', note: 'Gold trophy lit from above; $2M over its base.' },
     { story: 's2', archetype: 'unit-grid', headline: 'Season over. Cards earned.', numberFact: 'f2', factIds: ['f2'], palette: 'es', note: '100 cards in a grid.' },
   ] };
   const calls = gatewayCalls;

@@ -1839,3 +1839,21 @@ and what's still uncommitted.
   the tour's page), What's new toast → generated tour across pages, light/dark, 1280 and 375.
   Not verified: real login (ESAuth session key), the AI usage step with real data, `/api/version` on Vercel,
   Safari/Firefox, screen readers.
+
+### 2026-11-20 — Generate v3 (C, gen-director): a smarter art director for composed sets
+- Status: `[branch feature/gen-director, not pushed]`. Parallel with gen-looks (A) and gen-imagery (B).
+- Asked (Suhail): sets an ES senior designer would ship; fix the live golf set (coverage counts as stats, "2027" as the
+  hero number and repeated in the headline, "2027 SEASON WHY FANS", three dark designs, no cut-out of a named star),
+  and fix each failure CLASS for every brief and sport.
+- `_composer.js`: content sense (coverage counts and years/dates/identifiers are never stats; labels cut at the next
+  sentence; ratios "14 of 15", ordinals "4th MVP", ranks "No. 1" as facts; Trends coverage meta stripped), stat weights
+  pick the hero, code headlines never chopped before their number, scene-based "say it once" check, ES families
+  (stats / cover / quote / grid / listicle / bar-graph / lifestyle / extra, from the ES Figma board) with one per family,
+  tones (`input.tone`: light / paper / vivid / dark / duotone / editorial / esblue) mixed light and dark, a cut-out-led
+  design for a named star, image-led sets, empty-area check (3x3 cells) with a swap, set scorecard `plan.review`.
+  Art director: Haiku first, Sonnet once if the plan is thin (`GENERATE_ART_DIRECTOR_MODEL`). Judge: rubric adds
+  image / labels / stats and a set `toneVariety`; fixes map to assistant ops (palette flip, remove, text, assist).
+- `_creative-memory.js`: topics stat-meaning, label-sense, duplicate, tone-monotone, no-cutout, image-weak; 7 house
+  lessons (seeds) under their own heading in the director and judge prompts.
+- Tests: `scripts/test-gen-director.mjs` (23 briefs, 8 sports, every class asserted), `test-generate-creative.mjs`
+  updated for the say-it-once rule. Suite: only the 7 baseline failures.

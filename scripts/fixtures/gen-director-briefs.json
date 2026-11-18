@@ -1,0 +1,28 @@
+{
+  "_about": "gen-director replay set (2026-11-20): briefs across sports and story types, in the shapes Generate receives them (typed briefs, Trends / Home hand-offs with coverage meta, multi-story). Used by scripts/test-gen-director.mjs with mocked photos and cut-outs. Facts are illustrative fixtures, not reporting.",
+  "briefs": [
+    { "id": "golf-bryson-trend", "sport": "Golf", "type": "transfer", "brief": "Headline: Bryson Takes On Europe\nStory: Bryson DeChambeau commits to play DP World Tour events from the 2027 season\nWhy fans care: 4 stories on this · 6 outlets · fits Golf\nSport: Golf" },
+    { "id": "golf-bryson-coverage-inline", "sport": "Golf", "type": "transfer", "brief": "Everyone is covering Bryson DeChambeau's move: 4 stories across 6 outlets. Bryson DeChambeau will play the DP World Tour in the 2027 season\nSport: Golf" },
+    { "id": "golf-scheffler-major", "sport": "Golf", "type": "result", "brief": "Scottie Scheffler wins the Masters by 4 strokes for his 3rd major title, shooting 11 under par on Sunday.\nSport: Golf" },
+    { "id": "golf-money", "sport": "Golf", "type": "money", "brief": "LPGA Tour season ends with $2 million prize and PGA Tour season ends with 100 players earning cards\nSport: Golf" },
+    { "id": "nfl-burrow-stats", "sport": "NFL", "type": "stats", "brief": "Bengals rout Steelers 38-18 on Sunday Night Football and sit alone atop the AFC North at 7-2. Joe Burrow threw for 409 yards and 4 touchdowns. Ja'Marr Chase caught 11 passes for 231 yards. Cincinnati outgained Pittsburgh 484-222.\nSport: NFL" },
+    { "id": "nfl-mahomes-contract", "sport": "NFL", "type": "contract", "brief": "Patrick Mahomes signs a 10-year, $450 million extension with the Chiefs, the richest deal in NFL history, running through the 2031 season.\nSport: NFL" },
+    { "id": "nfl-injury", "sport": "NFL", "type": "injury", "brief": "Headline: Bad News In Baltimore\nStory: Lamar Jackson leaves Sunday's game with an ankle injury and will miss 2 weeks, the Ravens said on Nov 18.\nWhy fans care: 12 outlets · 50K+ searches\nSport: NFL" },
+    { "id": "nfl-preview", "sport": "NFL", "type": "preview", "brief": "Eagles host Cowboys on Thanksgiving in 2026 with the NFC East on the line. Jalen Hurts has 12 rushing touchdowns this season.\nSport: NFL" },
+    { "id": "cfb-ranking", "sport": "CFB", "type": "ranking", "brief": "Headline: The New Top 4\nStory: Ohio State stays No. 1 in the College Football Playoff rankings at 11-0, with Indiana, Texas and Oregon behind them\nWhy fans care: 9 stories on this · 15 outlets\nSport: CFB" },
+    { "id": "cfb-heisman", "sport": "CFB", "type": "stats", "brief": "Arch Manning threw for 3,450 yards and 31 touchdowns as Texas finished the regular season 11-1. Manning is the Heisman favorite.\nSport: CFB" },
+    { "id": "nba-lakers-quote", "sport": "NBA", "type": "quote", "brief": "Lakers start the season 12-2 behind Luka Doncic. ESPN's Ramona Shelburne: \"It's easy to find your way when you're playing one of the easiest schedules in the league.\" The Lakers visit Victor Wembanyama and the Spurs the day after Thanksgiving.\nSport: NBA" },
+    { "id": "nba-sga-record", "sport": "NBA", "type": "record", "brief": "Shai Gilgeous-Alexander scores 50 points with 9 rebounds and 6 assists as the Thunder improve to 25-2, the best start in franchise history.\nSport: NBA" },
+    { "id": "nba-trade", "sport": "NBA", "type": "trade", "brief": "Headline: Giannis Is Moving\nStory: The Bucks trade Giannis Antetokounmpo to the Knicks for 3 first-round picks\nWhy fans care: 22 stories on this · 31 outlets · fits The Spun\nSport: NBA" },
+    { "id": "nba-lifestyle", "sport": "NBA", "type": "lifestyle", "brief": "LeBron James opens a new school in Akron for 1,500 students, 8 years after his first I Promise School opened.\nSport: NBA" },
+    { "id": "mlb-ohtani", "sport": "MLB", "type": "stats", "brief": "Shohei Ohtani wins his 4th MVP after hitting 55 home runs with 130 RBIs for the Dodgers in the 2025 season.\nSport: MLB" },
+    { "id": "mlb-free-agent", "sport": "MLB", "type": "contract", "brief": "Juan Soto agrees to a 15-year, $765 million deal with the Mets, the biggest contract in baseball history.\nSport: MLB" },
+    { "id": "mlb-result", "sport": "MLB", "type": "result", "brief": "Dodgers beat Yankees 7-6 in Game 5 to win the World Series. Freddie Freeman drove in 4 runs.\nSport: MLB" },
+    { "id": "tennis-sinner", "sport": "Tennis", "type": "result", "brief": "Jannik Sinner beats Carlos Alcaraz 6-4 6-4 in Turin to win the ATP Finals, his 2nd straight title, without dropping a set all week.\nSport: Tennis" },
+    { "id": "tennis-quote", "sport": "Tennis", "type": "quote", "brief": "Coco Gauff after her Wuhan Open title: \"I am playing the best tennis of my life right now.\" Gauff has won 14 of her last 15 matches.\nSport: Tennis" },
+    { "id": "soccer-messi", "sport": "Soccer", "type": "record", "brief": "Lionel Messi scores 2 goals as Inter Miami win the MLS Cup 3-1, his 47th career trophy.\nSport: Soccer" },
+    { "id": "f1-verstappen", "sport": "F1", "type": "result", "brief": "Max Verstappen wins the Las Vegas Grand Prix from pole, his 70th career win, 12 seconds clear of Lando Norris.\nSport: F1" },
+    { "id": "multi-story-golf", "sport": "Golf", "type": "multi", "brief": "Rory McIlroy wins the DP World Tour title for a 7th time and Nelly Korda ends the LPGA season with $4 million in earnings.\nSport: Golf" },
+    { "id": "topic-only", "sport": "NFL", "type": "topic", "brief": "Aaron Rodgers says the 2026 season will be his last in the NFL.\nSport: NFL" }
+  ]
+}
