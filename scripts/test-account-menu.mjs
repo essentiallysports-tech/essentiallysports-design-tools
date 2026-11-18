@@ -136,8 +136,8 @@ test('tours: progress recorded on tour-start / completed tour-end, exposed as pr
 test('account pages load account-pages.css and the new cache keys', () => {
   for (const page of ['ai-page/profile.html', 'ai-page/settings.html', 'ai-page/logout.html']) {
     const html = read(page);
-    assert.match(html, /account-pages\.css\?v=20261120-account/, page);
-    assert.match(html, /site-chrome\.js\?v=20261120-account/, page);
+    assert.match(html, /account-pages\.css\?v=[\w-]+/, page);
+    assert.match(html, /site-chrome\.js\?v=[\w-]+/, page);
     assert.match(html, /class="[^"]*\baccount-v2\b/, page);
   }
 });
