@@ -287,15 +287,25 @@
         const { W, H, p } = frame(input);
         const pal = v === 1 ? flipPalette(p) : p;
         const photo = has.photo(input) && v !== 2;
+        // Vertical rhythm per canvas. 4:5 is the original poster, unchanged.
+        // 9:16 grows the number, the headline and the body into the extra
+        // height (the 4:5 positions left the lower third empty); 1:1 tightens
+        // the stack so the headline and the body no longer collide. Every box
+        // stays inside the 50px safe area and clear of the ES mark zone.
+        const L = H >= 1900
+          ? { bar: [320, 760], num: [290, 820], size: 760, labelSize: 56, rule: 1190, head: [1230, 500], headSize: 170, headLines: 4, body: [H - SAFE - 100, 100], bodySize: 40 }
+          : H <= 1100
+            ? { bar: [230, 400], num: [212, 440], size: 470, labelSize: 40, rule: 690, head: [714, 220], headSize: 104, headLines: 2, body: [H - SAFE - 56, 56], bodySize: 30 }
+            : { bar: [220, 520], num: [200, 600], size: 640, labelSize: 48, rule: 880, head: [910, 330], headSize: 130, headLines: 3, body: [H - SAFE - 60, 60], bodySize: 34 };
         return [
           { type: 'background', fill: { kind: 'solid', colors: [pal.bg] }, texture: 'grain', textureOpacity: 0.1 },
           ...(photo ? [{ type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', duotone: [pal.bg, mix(pal.bg, pal.ink, 0.55)], fx: { opacity: 0.38, blend: pal.mode === 'light' ? 'multiply' : 'screen' } }] : []),
-          { type: 'shape', shape: 'rect', x: SAFE, y: 220, w: 14, h: 520, color: pal.accent },
+          { type: 'shape', shape: 'rect', x: SAFE, y: L.bar[0], w: 14, h: L.bar[1], color: pal.accent },
           kickerPill(input, pal),
-          numberLayer(input.number, { x: SAFE + 40, y: 200, w: W - SAFE * 2 - 40, h: 600 }, pal.accent, { size: 640, labelColor: pal.ink, labelSize: 48 }),
-          { type: 'shape', shape: 'rect', x: SAFE, y: 880, w: W - SAFE * 2, h: 4, color: pal.ink, opacity: 0.5 },
-          headlineText(input, pal, { x: SAFE, y: 910, w: W - SAFE * 2, h: 330 }, { size: 130, maxLines: 3, valign: 'top' }),
-          ...(clean(input.body) ? [{ type: 'text', role: 'body', text: clean(input.body), x: SAFE, y: H - SAFE - 60, w: W - SAFE * 2, h: 60, font: 'body', size: 34, minSize: 24, maxLines: 2, color: pal.ink, align: 'left', valign: 'bottom', fx: { opacity: 0.85 } }] : []),
+          numberLayer(input.number, { x: SAFE + 40, y: L.num[0], w: W - SAFE * 2 - 40, h: L.num[1] }, pal.accent, { size: L.size, labelColor: pal.ink, labelSize: L.labelSize }),
+          { type: 'shape', shape: 'rect', x: SAFE, y: L.rule, w: W - SAFE * 2, h: 4, color: pal.ink, opacity: 0.5 },
+          headlineText(input, pal, { x: SAFE, y: L.head[0], w: W - SAFE * 2, h: L.head[1] }, { size: L.headSize, maxLines: L.headLines, valign: 'top' }),
+          ...(clean(input.body) ? [{ type: 'text', role: 'body', text: clean(input.body), x: SAFE, y: L.body[0], w: W - SAFE * 2, h: L.body[1], font: 'body', size: L.bodySize, minSize: 24, maxLines: 2, color: pal.ink, align: 'left', valign: 'bottom', fx: { opacity: 0.85 } }] : []),
         ];
       },
     },
