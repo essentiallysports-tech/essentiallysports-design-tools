@@ -22,11 +22,11 @@
   <link rel="stylesheet" href="theme.css?v=20261117-ready1">
   <link rel="stylesheet" href="site-chrome.css?v=20261117-ready1">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261117-ready1">
-<link rel="stylesheet" href="es-ui.css?v=20261119-rel3">
+  <link rel="stylesheet" href="design-tokens.css?v=20261120-unify">
+<link rel="stylesheet" href="es-ui.css?v=20261120-unify">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
-  <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="trends.css?v=20261119-rel2">
+  <link rel="stylesheet" href="ai-studio.css?v=20261120-unify">
+  <link rel="stylesheet" href="trends.css?v=20261120-unify">
   <script src="ai-studio.js?v=20261115-ds2" defer></script>
   <script src="es-motion.js?v=20261115-ds1" defer></script>
   <script>
@@ -62,7 +62,7 @@
 <script src="frameup-compose.js?v=20261120-polish" defer></script>
 <script src="generate-focus.js?v=20261119-rel2" defer></script>
 <script src="generate-assistant.js?v=20261119-rel" defer></script>
-<script src="generate-creative.js?v=20261119-rel2" defer></script>
+<script src="generate-creative.js?v=20261120-unify" defer></script>
   <style>
     html:not([data-theme="dark"]) body.gen-body { background: #fff; }
     .gen-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 32px 0 72px; font-family: var(--es-font-ui); color: var(--es-ink); }
@@ -101,11 +101,14 @@
     .gen-quick__split.is-single { grid-template-columns: minmax(0, 1fr); }
     .gen-quick__split:empty { display: none; }
     .gen-qs { min-width: 0; }
-    .gen-qs__head { display: flex; align-items: center; gap: var(--es-space-2, 8px); min-height: 28px; margin-bottom: var(--es-space-2, 8px); list-style: none; cursor: pointer; border-radius: 8px; }
+    .gen-qs__head { display: flex; align-items: center; gap: var(--es-space-2, 8px); min-height: 32px; margin-bottom: var(--es-space-3, 12px); list-style: none; cursor: pointer; border-radius: 8px; }
     .gen-qs__head::-webkit-details-marker { display: none; }
     .gen-qs__head:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
     .gen-qs:not([open]) > .gen-qs__head { margin-bottom: 0; }
-    .gen-qs__label { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); color: var(--es-ink-2, #3f4450); font-size: var(--es-type-eyebrow-size); font-weight: var(--es-type-eyebrow-weight); letter-spacing: var(--es-type-eyebrow-tracking); line-height: 16px; text-transform: uppercase; white-space: nowrap; }
+    /* Section headings (Trending now, Recent, Try a format, Start from a live trend):
+       one style, the panel-title role (18 / 800 Roboto Condensed, UPPERCASE), the same
+       as Home's and Reels Studio's section titles. */
+    .gen-qs__label { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); min-width: 0; margin: 0; color: var(--es-ink); font: var(--es-type-panel-title-weight, 800) var(--es-type-panel-title-size, 18px)/1.2 var(--es-font-display); letter-spacing: var(--es-type-section-tracking, .005em); text-transform: uppercase; white-space: nowrap; }
     .gen-qs__label svg { flex: none; width: 16px; height: 16px; color: var(--es-ink-3); }
     .gen-qs--trend .gen-qs__label svg { color: var(--es-brand-text, #0A62C7); }
     .gen-qs__hint { overflow: hidden; color: var(--es-ink-3); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
@@ -118,10 +121,9 @@
     .gen-qs[open] .gen-qs__chev { transform: rotate(180deg); }
     /* Trending: outlined pills; logo, rising dot, the story, its age. */
     .gen-tchips { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); min-width: 0; }
-    .gen-tchip { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); max-width: min(100%, 420px); min-width: 0; height: 36px; padding: 0 var(--es-space-3, 12px) 0 var(--es-space-2, 8px); border: 0; border-radius: var(--es-radius-pill, 999px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line-2, #c8cdd5); color: var(--es-ink); font: 500 13px/1 var(--es-font-ui); cursor: pointer; transition: box-shadow var(--es-dur) var(--es-ease), background-color var(--es-dur) var(--es-ease); }
-    .gen-tchip:hover { box-shadow: inset 0 0 0 1px var(--es-ink-3); }
-    .gen-tchip:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
-    .gen-tchip__logo { flex: none; width: 22px; height: 22px; box-sizing: border-box; padding: 3px; border-radius: 50%; background: var(--league-bg, #F2F4F7); object-fit: contain; }
+    /* Each trend is an .es-chip (UI Library: 32px, 10px radius, 1px outline); these only lay out its parts. */
+    .gen-tchip { max-width: min(100%, 420px); min-width: 0; padding-left: var(--es-space-2, 8px); gap: var(--es-space-2, 8px); }
+    .gen-tchip__logo { flex: none; width: 20px; height: 20px; box-sizing: border-box; padding: 3px; border-radius: 50%; background: var(--league-bg, #F2F4F7); object-fit: contain; }
     .gen-tchip__tag { flex: none; padding-left: 4px; color: var(--es-brand-text, #0A62C7); font-weight: 600; }
     .gen-tchip__rising { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #E5484D; box-shadow: 0 0 0 3px rgb(229 72 77 / .16); }
     .gen-tchip__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -338,15 +340,13 @@
     html[data-theme="dark"] #ais-view-generate { --es-ink: #FFFFFF; --es-ink-2: #BFC8D9; --es-ink-3: #98A6BF; --es-bg: #1F2126; --es-line: #2A2D34; --es-line-2: #707A8C; --es-sunk: #2A2D34; --es-brand: #54A4FB; --es-brand-text: #9DCBFD; }
     html[data-theme="dark"] .gen-brief { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
     html[data-theme="dark"] .gen-actions { background: #24272D; }
-    html[data-theme="dark"] .gen-tchip { background: #1F2126; box-shadow: inset 0 0 0 1px #3B4049; }
-    html[data-theme="dark"] .gen-tchip:hover { box-shadow: inset 0 0 0 1px #6B7488; }
     html[data-theme="dark"] .gen-tchip__rising { background: #FF6369; box-shadow: 0 0 0 3px rgb(255 99 105 / .2); }
     html[data-theme="dark"] .gen-recent { background: #24272D; }
     html[data-theme="dark"] :is(.gen-recent__fill, .gen-recent__run, .gen-qs__action):hover { background: #2A2D34; }
     html[data-theme="dark"] .gen-recent__row + .gen-recent__row { border-top-color: #2A2D34; }
     html[data-theme="dark"] .gen-try__card { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
     html[data-theme="dark"] .gen-try__card:hover { box-shadow: inset 0 0 0 1px #3B4049; }
-    html[data-theme="dark"] .gen-qs__label { color: #BFC8D9; }
+    html[data-theme="dark"] .gen-qs__label { color: #FFFFFF; }
     html[data-theme="dark"] .gen-fcard__mark { background: #1F2126; box-shadow: 0 1px 2px rgb(0 0 0 / .4), inset 0 0 0 1px #3B4049; }
     html[data-theme="dark"] .gen-card { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
     @media (hover: hover) { html[data-theme="dark"] .gen-card.ais-card:hover { box-shadow: inset 0 0 0 1px transparent, var(--ais-glow-strong); } }
@@ -406,7 +406,7 @@
       .gen-qs__hint { display: none; }
       .gen-tchips { flex-wrap: nowrap; margin: 0 calc(-1 * var(--es-space-4, 16px)); padding: 2px var(--es-space-4, 16px); overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; scroll-snap-type: x proximity; }
       .gen-tchips::-webkit-scrollbar { display: none; }
-      .gen-tchip { flex: none; max-width: 280px; height: var(--es-tap, 44px); scroll-snap-align: start; }
+      .gen-tchip { flex: none; max-width: 280px; scroll-snap-align: start; }
       .gen-recent__fill { min-height: var(--es-tap, 44px); }
       .gen-recent__run { height: var(--es-tap, 44px); }
       .gen-try { grid-template-columns: minmax(0, 1fr); }
@@ -440,11 +440,8 @@
        states (thin blue ring, soft tint); tokens only. */
     .gen-steer { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-3, 12px) var(--es-space-6, 24px); margin-top: var(--es-space-5, 20px); padding-top: var(--es-space-5, 20px); border-top: 1px solid var(--es-line); }
     .gen-steer__group { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px) var(--es-space-3, 12px); min-width: 0; }
-    .gen-chips { display: flex; flex-wrap: wrap; gap: 2px; padding: 2px; border-radius: 10px; background: var(--es-sunk); } /* 2 + 32 + 2 = 36, same as Designs */
-    .gen-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 var(--es-space-3, 12px); border: 0; border-radius: 8px; background: transparent; color: var(--es-ink-3); cursor: pointer; font: 500 var(--es-type-meta-size, 13px)/1 var(--es-font-ui); white-space: nowrap; transition: background-color var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease); }
-    .gen-chip:hover { color: var(--es-ink); }
-    .gen-chip[aria-checked="true"] { background: var(--es-bg); box-shadow: 0 1px 2px rgb(14 16 20 / .08), inset 0 0 0 1px var(--es-line); color: var(--es-ink); font-weight: 600; }
-    .gen-chip:focus-visible, .gen-switch:focus-visible, .gen-dir__pick:focus-visible, .gen-dir__edit-btn:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    /* Look, Tone, Audience and Designs are .es-segmented (UI Library, 44px). */
+    .gen-switch:focus-visible, .gen-dir__pick:focus-visible, .gen-dir__edit-btn:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
     .gen-switch { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); min-height: 32px; margin-left: auto; padding: 0 var(--es-space-1, 4px); border: 0; border-radius: 10px; background: transparent; color: var(--es-ink-2); cursor: pointer; font: 500 var(--es-type-meta-size, 13px)/1.2 var(--es-font-ui); }
     .gen-switch__track { position: relative; flex: none; width: 34px; height: 20px; border-radius: 999px; background: var(--es-line-2, #c8cdd5); transition: background-color var(--es-dur) var(--es-ease); }
     .gen-switch__track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(14 16 20 / .25); transition: transform var(--es-dur) var(--es-ease); }
@@ -538,19 +535,18 @@
     .gen-note__row .gen-note__steer { display: inline-flex; gap: var(--es-space-1, 4px); margin-left: auto; }
     .gen-note .es-icon-btn[aria-pressed="true"] { color: var(--es-brand-text); box-shadow: inset 0 0 0 1.5px var(--es-brand, #0A7DFA); }
 
-    @media (pointer: coarse) { .gen-chip, .gen-switch { min-height: 44px; } .gen-dir__pick { width: 44px; height: 44px; } }
+    @media (pointer: coarse) { .gen-switch { min-height: 44px; } .gen-dir__pick { width: 44px; height: 44px; } }
     @media (max-width: 640px) {
       .gen-director { padding: var(--es-space-4, 16px); }
       .gen-switch { margin-left: 0; }
       .gen-director__buttons { width: 100%; margin-left: 0; }
       .gen-director__buttons .es-btn { flex: 1 1 auto; }
       .gen-steer__group { width: 100%; }
-      .gen-chips { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+      .gen-steer__group .es-segmented { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
     }
-    @media (prefers-reduced-motion: reduce) { .gen-switch__track, .gen-switch__track::after, .gen-chip, .gen-dir { transition: none; } }
+    @media (prefers-reduced-motion: reduce) { .gen-switch__track, .gen-switch__track::after, .gen-dir { transition: none; } }
     html[data-theme="dark"] .gen-steer, html[data-theme="dark"] .gen-director__foot { border-top-color: #2A2D34; }
-    html[data-theme="dark"] .gen-chips, html[data-theme="dark"] .gen-note { background: #2A2D34; }
-    html[data-theme="dark"] .gen-chip[aria-checked="true"] { background: #3B4049; box-shadow: none; color: #FFFFFF; }
+    html[data-theme="dark"] .gen-note { background: #2A2D34; }
     html[data-theme="dark"] .gen-director { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
     html[data-theme="dark"] .gen-dir { background: #24272D; box-shadow: inset 0 0 0 1px #3B4049; }
     html[data-theme="dark"] .gen-dir:hover { box-shadow: inset 0 0 0 1px #707A8C; }
@@ -606,7 +602,7 @@
     .gen-card__guide svg { width: 12px; height: 12px; }
     .gen-card__guide[hidden], .gen-card__fixes[hidden] { display: none; }
     .gen-card__fixes { margin: 0; color: var(--es-ink-3); font-size: 12px; line-height: 1.4; }
-    .gen-steer, .gen-steer__group, .gen-chips { min-width: 0; }
+    .gen-steer, .gen-steer__group, .gen-steer .es-segmented { min-width: 0; }
     .gen-onbrand .gen-director__titles { flex: 1 1 0; }
     @media (max-width: 760px) { .gen-critique__cols { grid-template-columns: 1fr; } }
     @media (max-width: 640px) {
@@ -617,7 +613,7 @@
       .gen-brief { grid-template-columns: minmax(0, 1fr); }
       .gen-actions__buttons { flex-wrap: wrap; min-width: 0; }
       .gen-actions__buttons #gen-submit { flex-basis: 100%; }
-      .gen-steer__group .gen-chips { flex: 1 1 auto; }
+      .gen-steer__group .es-segmented { flex: 1 1 auto; }
     }
     @media (max-width: 640px) { .gen-onbrand, .gen-critique { padding: var(--es-space-4, 16px); } }
     html[data-theme="dark"] :is(.gen-onbrand, .gen-critique) { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
@@ -694,11 +690,11 @@
         <div class="gen-steer" id="gen-steer">
           <div class="gen-steer__group">
             <span class="gen-row__label" id="gen-tone-label">Tone</span>
-            <div class="gen-chips" id="gen-tone" role="radiogroup" aria-labelledby="gen-tone-label"></div>
+            <div class="es-segmented" id="gen-tone" role="radiogroup" aria-labelledby="gen-tone-label"></div>
           </div>
           <div class="gen-steer__group">
             <span class="gen-row__label" id="gen-audience-label">Audience</span>
-            <div class="gen-chips" id="gen-audience" role="radiogroup" aria-labelledby="gen-audience-label"></div>
+            <div class="es-segmented" id="gen-audience" role="radiogroup" aria-labelledby="gen-audience-label"></div>
           </div>
           <button class="gen-switch" type="button" id="gen-plan" role="switch" aria-checked="true"><span class="gen-switch__track" aria-hidden="true"></span>Directions first</button>
         </div>
@@ -805,8 +801,8 @@
         <div class="td-toolbar__actions">
           <label class="td-brand"><span class="es-sr-only">Newsletter</span><select class="es-select es-select--sm" id="trends-brand" title="Show the stories for one newsletter"><option value="">All of ES</option></select></label>
           <div class="es-segmented td-density" id="trends-density" role="radiogroup" aria-label="Layout">
-            <button class="es-segmented__item" type="button" role="radio" data-density="cards" aria-checked="true" title="Cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="7" x="3" y="3" rx="1"/><rect width="18" height="7" x="3" y="14" rx="1"/></svg><span class="es-sr-only">Cards</span></button>
-            <button class="es-segmented__item" type="button" role="radio" data-density="list" aria-checked="false" title="Compact list" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/></svg><span class="es-sr-only">Compact list</span></button>
+            <button class="es-segmented__item es-segmented__item--icon" type="button" role="radio" data-density="cards" aria-checked="true" title="Cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="7" x="3" y="3" rx="1"/><rect width="18" height="7" x="3" y="14" rx="1"/></svg><span class="es-sr-only">Cards</span></button>
+            <button class="es-segmented__item es-segmented__item--icon" type="button" role="radio" data-density="list" aria-checked="false" title="Compact list" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/></svg><span class="es-sr-only">Compact list</span></button>
           </div>
           <button class="es-btn es-btn--sm es-btn--tertiary td-ai-all" type="button" id="trends-ai" aria-label="AI angles for the top stories on screen" title="Why fans care, 3 headlines and a reel hook for the top stories on screen (one AI call)" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg><span>AI angles</span></button>
           <button class="es-btn es-btn--sm td-refresh es-refresh" type="button" id="trends-refresh" aria-label="Refresh trends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg><span>Refresh</span></button>
@@ -827,7 +823,7 @@
 
   <!-- Trends view: pure logic + the board (the Generate view is the next script). -->
   <script src="trends-logic.js?v=20261119-rel2"></script>
-  <script src="trends-view.js?v=20261119-rel2"></script>
+  <script src="trends-view.js?v=20261120-unify"></script>
   <script>
     // FrameUp Generate: brief → /api/es-generate (ES research + AI copy +
     // template checks + ES photo) → each design rendered by the real editor in
@@ -1001,7 +997,7 @@
         list.forEach(item => {
           const button = document.createElement('button');
           button.type = 'button';
-          button.className = 'gen-tchip';
+          button.className = 'es-chip gen-tchip';
           const league = window.LeagueLogos?.logoFor?.(window.LeagueLogos?.idFor?.(item.category) || item.category || item.label);
           const fresh = ago(item.at);
           button.innerHTML = `${league ? `<img class="gen-tchip__logo" src="${esc(league.src)}" alt="" width="16" height="16" style="--league-bg:${esc(league.bg || '#F2F4F7')}">` : `<span class="gen-tchip__tag">${esc(item.label || 'Trend')}</span>`}${item.rising ? '<span class="gen-tchip__rising" title="Rising in search"><span class="gen-sr">Rising: </span></span>' : ''}<span class="gen-tchip__text">${esc(item.title)}</span>${fresh ? `<span class="gen-tchip__age">${esc(fresh)}</span>` : ''}`;
@@ -1503,7 +1499,7 @@
         const chips = options.map(([id, label]) => {
           const chip = document.createElement('button');
           chip.type = 'button';
-          chip.className = 'gen-chip';
+          chip.className = 'es-segmented__item';
           chip.setAttribute('role', 'radio');
           chip.dataset.value = id;
           chip.textContent = label;

@@ -395,7 +395,7 @@
       renderSpotlight(plan.spotlight);
       counts.trends = trendData.items.length;
       paintSummary();
-      const chips = cats.length ? `<div class="home-today__chips" role="group" aria-label="Sport">${[{ id: 'all', label: 'All sports' }, ...cats].map(c => `<button type="button" class="es-chip es-chip--sm" data-today-sport="${esc(c.id)}" aria-pressed="${c.id === sport}">${esc(c.id === 'others' ? 'Other sports' : c.label)}</button>`).join('')}</div>` : '';
+      const chips = cats.length ? `<div class="home-today__chips" role="group" aria-label="Sport">${[{ id: 'all', label: 'All sports' }, ...cats].map(c => `<button type="button" class="es-chip" data-today-sport="${esc(c.id)}" aria-pressed="${c.id === sport}">${esc(c.id === 'others' ? 'Other sports' : c.label)}</button>`).join('')}</div>` : '';
       const rows = plan.rows.length
         ? `<ol class="home-today__trends">${plan.rows.map(item => {
           const reach = (item.coverage || 1) > 1 ? `<span>${item.coverage} outlets</span>` : (item.type === 'search' && item.traffic ? `<span>${esc(item.traffic)} searches</span>` : '');

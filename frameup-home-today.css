@@ -206,7 +206,7 @@ a.home-today__trend-title:focus-visible,
 /* Trending now */
 .home-today__chips { display: flex; gap: var(--es-space-2); overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--es-space-1)); padding: 2px var(--es-space-1); }
 .home-today__chips::-webkit-scrollbar { display: none; }
-.home-today__chips .es-chip { flex: none; min-height: 32px; padding: 0 12px; }
+.home-today__chips .es-chip { flex: none; }
 .home-today__trends { display: grid; grid-template-columns: minmax(0, 1fr) auto; margin: 0; padding: 0; list-style: none; }
 .home-today__trend { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; gap: var(--es-space-2) var(--es-space-4); min-width: 0; padding: var(--es-space-3) 0; }
 .home-today__trend + .home-today__trend { box-shadow: inset 0 1px 0 var(--ht-line); }

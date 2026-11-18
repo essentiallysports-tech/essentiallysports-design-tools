@@ -868,7 +868,7 @@
         card('to-link', `<span class="va-make__art" aria-hidden="true">${ICON.link}</span>`, 'Paste an X link', 'Any public post.'),
       ]),
     ].join('');
-    const lens = [5, 8, 10, 15].map(n => `<button class="va-chip" type="button" data-act="still-len" data-len="${n}" aria-pressed="${n === stillSeconds}">${n} s</button>`).join('');
+    const lens = [5, 8, 10, 15].map(n => `<button class="es-chip" type="button" data-act="still-len" data-len="${n}" aria-pressed="${n === stillSeconds}">${n} s</button>`).join('');
     return `<div class="va-make${compact ? ' va-make--compact' : ''}" role="group" aria-label="Make it without a clip">
       <p class="va-make__title">${compact ? 'No video? Make it without a clip' : 'Make it without a clip'}</p>
       <div class="va-make__grid">${cards}</div>
@@ -1026,7 +1026,7 @@
     try {
       const data = await callApi({ mode: 'clip', url });
       const best = bestVariant(data.variants);
-      els.qualities.innerHTML = `<span class="va-hint">Quality</span>${data.variants.slice(0, 4).map((v, i) => `<button class="va-chip" type="button" data-q="${i}" aria-pressed="${v === best}">${v.height ? `${v.height}p` : `Version ${i + 1}`}</button>`).join('')}`;
+      els.qualities.innerHTML = `<span class="va-hint">Quality</span>${data.variants.slice(0, 4).map((v, i) => `<button class="es-chip" type="button" data-q="${i}" aria-pressed="${v === best}">${v.height ? `${v.height}p` : `Version ${i + 1}`}</button>`).join('')}`;
       els.qualities.hidden = data.variants.length < 2;
       els.qualities.onclick = e => {
         const chip = e.target.closest('[data-q]');
@@ -1351,7 +1351,7 @@
     const text = `${c.text || ''} ${c.handle || ''}`.toLowerCase();
     return (teams || []).filter(t => [t.name, t.short].filter(Boolean).some(n => text.includes(String(n).toLowerCase()))).map(t => t.name);
   }
-  const sortChips = (current, attr = 'data-sort', options = [['best', 'Best'], ['newest', 'Newest'], ['popular', 'Most popular']]) => `<div class="va-chips va-cliptools__sort" role="group" aria-label="Sort clips">${options.map(([id, label]) => `<button class="va-chip" type="button" ${attr}="${id}" aria-pressed="${current === id}">${label}</button>`).join('')}</div>`;
+  const sortChips = (current, attr = 'data-sort', options = [['best', 'Best'], ['newest', 'Newest'], ['popular', 'Most popular']]) => `<div class="va-chips va-cliptools__sort" role="group" aria-label="Sort clips">${options.map(([id, label]) => `<button class="es-chip" type="button" ${attr}="${id}" aria-pressed="${current === id}">${label}</button>`).join('')}</div>`;
   function clipTools(kind) {
     const f = finds[kind];
     const v = views[kind];
@@ -1704,7 +1704,7 @@
       const focusable = shown.some(t => t.name === state.team) ? state.team : shown[0].name;
       els.teamList.innerHTML = shown.map(t => {
         const on = t.name === state.team;
-        return `<button class="va-teamchip${inColor(t) ? ' is-suggested' : ''}" type="button" role="radio" data-team="${esc(t.name)}" aria-checked="${on}" tabindex="${t.name === focusable ? 0 : -1}" title="${esc(t.name)}" aria-label="${esc(t.name)}">${teamMark(t, 24)}<span>${esc(t.short || t.name)}</span></button>`;
+        return `<button class="es-chip va-teamchip${inColor(t) ? ' is-suggested' : ''}" type="button" role="radio" data-team="${esc(t.name)}" aria-checked="${on}" tabindex="${t.name === focusable ? 0 : -1}" title="${esc(t.name)}" aria-label="${esc(t.name)}">${teamMark(t, 20)}<span>${esc(t.short || t.name)}</span></button>`;
       }).join('');
     }
     renderTeamFind();
@@ -2032,7 +2032,7 @@
     } else if (state.style === 'versus') {
       const them = [0, 1, 2].map(i => `<input type="text" class="va-input" id="va-f-them-${i}" data-f="them" data-i="${i}" value="${esc(state.them[i] || '')}" placeholder="${esc(d.them[i] || '')}" aria-label="Your feed, line ${i + 1}" spellcheck="true" lang="en-US">`).join('');
       const chosen = resolvedCopy().us;
-      const claims = (b.verifiedClaims || []).map(c => `<button class="va-chip" type="button" data-claim="${esc(c)}" aria-pressed="${chosen.includes(c)}">${esc(c)}</button>`).join('');
+      const claims = (b.verifiedClaims || []).map(c => `<button class="es-chip" type="button" data-claim="${esc(c)}" aria-pressed="${chosen.includes(c)}">${esc(c)}</button>`).join('');
       parts.push(`<div class="va-field va-field--tight"><div class="va-field__top"><span class="va-label" id="va-them-label">Your feed (crossed out)</span><span class="va-count">${L.themWords} words max, no names</span></div><div class="va-them" role="group" aria-labelledby="va-them-label">${them}</div></div>`);
       parts.push(`<div class="va-field va-field--tight"><div class="va-field__top"><span class="va-label" id="va-us-label">${esc(b.label)} (ticked)</span><span class="va-count">Pick 2–3</span></div>
         <div class="va-claims" role="group" aria-labelledby="va-us-label">${claims}</div>
@@ -2895,7 +2895,7 @@
     els.gridStyles.innerHTML = STYLE_IDS.map(id => {
       const r = gridReady(id);
       const on = state.grid.styles.includes(id) && r.ok;
-      return `<button class="va-chip" type="button" data-grid="${esc(id)}" aria-pressed="${on}"${r.ok ? '' : ` aria-disabled="true" title="Needs ${esc(r.missing)}"`}>${esc(B.STYLES[id].label)}${r.ok ? '' : `<span class="va-sr"> (needs ${esc(r.missing)})</span>`}</button>`;
+      return `<button class="es-chip" type="button" data-grid="${esc(id)}" aria-pressed="${on}"${r.ok ? '' : ` aria-disabled="true" title="Needs ${esc(r.missing)}"`}>${esc(B.STYLES[id].label)}${r.ok ? '' : `<span class="va-sr"> (needs ${esc(r.missing)})</span>`}</button>`;
     }).join('');
     const styles = gridStyles();
     const first = S.fileName({ brand: brand(), style: styles[0], angle: angle(), size: B.SIZES[state.exportIds[0]] });
@@ -3210,7 +3210,7 @@
   }
 
   // ─── Brand, sizes, Meta preview ──────────────────────────────────────────
-  els.brands.innerHTML = B.AD_BRANDS.map(b => `<button type="button" role="radio" data-brand="${esc(b.id)}" aria-checked="false" title="${esc(b.label)} (${esc(SPORT_LABEL[b.sport] || '')})" aria-label="${esc(b.label)}, ${esc(SPORT_LABEL[b.sport] || '')}"><span class="va-dot" style="--c:${esc(b.wordmark?.bg || b.accent)}" aria-hidden="true"></span><span>${esc(b.short || b.label)}</span></button>`).join('');
+  els.brands.innerHTML = B.AD_BRANDS.map(b => `<button class="es-segmented__item" type="button" role="radio" data-brand="${esc(b.id)}" aria-checked="false" title="${esc(b.label)} (${esc(SPORT_LABEL[b.sport] || '')})" aria-label="${esc(b.label)}, ${esc(SPORT_LABEL[b.sport] || '')}"><span class="va-dot" style="--c:${esc(b.wordmark?.bg || b.accent)}" aria-hidden="true"></span><span>${esc(b.short || b.label)}</span></button>`).join('');
   const markRadios = (group, attr, value) => [...group.querySelectorAll('[role="radio"]')].forEach(b => { const on = b.dataset[attr] === value; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; });
   function setBrand(id) {
     const next = B.byId(id).id;

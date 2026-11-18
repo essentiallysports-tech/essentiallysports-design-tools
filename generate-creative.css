@@ -8,12 +8,8 @@
 
 /* ── Number of designs (action bar) ─────────────────────────────────────── */
 .gen-count-wrap { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px) var(--es-space-3, 12px); }
-.gen-count { display: inline-flex; gap: 2px; padding: 2px; border-radius: 10px; background: var(--es-sunk); }
-.gen-count__item { min-width: 32px; height: 32px; padding: 0 var(--es-space-2, 8px); border: 0; border-radius: 8px; background: transparent; color: var(--es-ink-3); font: 600 13px/1 var(--es-font-ui); font-variant-numeric: tabular-nums; cursor: pointer; transition: background-color var(--es-dur) var(--es-ease), color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease); }
-.gen-count__item:hover:not(:disabled) { color: var(--es-ink); }
-.gen-count__item[aria-checked="true"] { background: var(--es-bg); box-shadow: 0 1px 2px rgb(14 16 20 / .08), inset 0 0 0 1px var(--es-line); color: var(--es-ink); }
-.gen-count__item:disabled { opacity: .4; cursor: not-allowed; }
-.gen-count__item:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+/* The control is .es-segmented (UI Library); numbers stay tabular and square. */
+.gen-count__item { min-width: 36px; padding: 0 var(--es-space-2, 8px); font-variant-numeric: tabular-nums; }
 .gen-count__cost { color: var(--es-ink-3); font-size: var(--es-type-meta-size, 13px); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .gen-count__per { color: var(--es-ink-3); }
 
@@ -148,8 +144,6 @@ html[data-theme="dark"] .gen-cc__good svg { color: var(--es-good-on-dark); }
 html[data-theme="dark"] .gen-cc__next svg { color: #FBBF24; }
 html[data-theme="dark"] .gen-tool:hover:not(:disabled) { background: var(--es-slate-700); }
 html[data-theme="dark"] .gen-tool[aria-expanded="true"] { background: rgb(84 164 251 / .16); color: var(--es-blue-300); }
-html[data-theme="dark"] .gen-count { background: var(--es-slate-700); }
-html[data-theme="dark"] .gen-count__item[aria-checked="true"] { background: var(--es-slate-600); box-shadow: none; color: var(--es-white); }
 @media (hover: hover) { html[data-theme="dark"] .gen-cc:not(.is-skeleton):hover { box-shadow: inset 0 0 0 1px var(--es-slate-600), 0 12px 32px -12px rgb(0 0 0 / .6); } }
 @media (max-width: 600px) {
   .gen-grid:has(.gen-cc) { grid-template-columns: minmax(0, 1fr); }
@@ -189,11 +183,9 @@ html.gfx-open { overflow: hidden; }
 .gfx-icon:hover:not(:disabled) { background: var(--gfx-sunk); color: var(--gfx-ink); }
 .gfx-icon:disabled { opacity: .35; cursor: not-allowed; }
 .gfx-icon[aria-expanded="true"] { background: var(--es-brand-soft); color: var(--es-brand-text); }
-.gfx :is(.gfx-btn, .gfx-icon, .gfx-seg__item, .gfx-tab, .gfx-zoom__item, .gfx-rail__item, .gfx-version):focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
-.gfx-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 10px; background: var(--gfx-sunk); }
-.gfx-seg__item { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 var(--es-space-3, 12px) 0 var(--es-space-2, 8px); border: 0; border-radius: 8px; background: transparent; color: var(--gfx-ink-3); font: 600 12px/1 var(--es-font-ui); font-variant-numeric: tabular-nums; cursor: pointer; }
-.gfx-seg__item:hover { color: var(--gfx-ink); }
-.gfx-seg__item[aria-checked="true"] { background: var(--gfx-surface); box-shadow: 0 1px 2px rgb(14 16 20 / .08), inset 0 0 0 1px var(--gfx-line); color: var(--gfx-ink); }
+.gfx :is(.gfx-btn, .gfx-icon, .gfx-tab, .gfx-zoom__item, .gfx-rail__item, .gfx-version):focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+/* Canvas size: .es-segmented (UI Library); the ratio glyph leads the label. */
+.gfx-seg__item { gap: 6px; font-variant-numeric: tabular-nums; }
 .gfx-ratio { display: inline-block; box-sizing: border-box; border: 1.5px solid currentColor; border-radius: 2px; }
 .gfx-ratio--portrait { width: 10px; height: 12px; }
 .gfx-ratio--story { width: 8px; height: 14px; }
@@ -328,7 +320,6 @@ html.gfx-open { overflow: hidden; }
 html[data-theme="dark"] .gfx { --es-sunk: var(--es-slate-700); --gfx-canvas-bg: #121316; --gfx-surface: #1A1C20; --gfx-ink: var(--es-white); --gfx-ink-2: var(--es-slate-100); --gfx-ink-3: var(--es-slate-200); --gfx-line: var(--es-slate-700); --gfx-sunk: var(--es-slate-700); --es-brand-soft: rgb(84 164 251 / .16); --es-brand-text: var(--es-blue-300); }
 html[data-theme="dark"] .gfx-stage { background-image: radial-gradient(circle, rgb(255 255 255 / .06) 1px, transparent 1.2px); }
 html[data-theme="dark"] .gfx-canvas { box-shadow: 0 0 0 1px var(--es-slate-700), 0 24px 64px -24px rgb(0 0 0 / .8); }
-html[data-theme="dark"] .gfx-seg__item[aria-checked="true"] { background: var(--es-slate-600); box-shadow: none; }
 html[data-theme="dark"] :is(.gfx-score__guide, .gfx-list--good svg) { color: var(--es-good-on-dark); }
 html[data-theme="dark"] .gfx-tab__count { background: rgb(251 191 36 / .16); color: #FCD34D; }
 html[data-theme="dark"] .gfx-stage__note { background: #2a2414; color: #FCD34D; }

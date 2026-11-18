@@ -22,11 +22,11 @@
   <link rel="stylesheet" href="theme.css?v=20261117-ready1">
   <link rel="stylesheet" href="site-chrome.css?v=20261117-ready1">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261117-ready1">
-  <link rel="stylesheet" href="es-ui.css?v=20261119-rel3">
+  <link rel="stylesheet" href="design-tokens.css?v=20261120-unify">
+  <link rel="stylesheet" href="es-ui.css?v=20261120-unify">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
-  <link rel="stylesheet" href="ai-studio.css?v=20261116-sp-ai">
-  <link rel="stylesheet" href="video-ads.css?v=20261119-rel">
+  <link rel="stylesheet" href="ai-studio.css?v=20261120-unify">
+  <link rel="stylesheet" href="video-ads.css?v=20261120-unify">
   <link rel="stylesheet" href="video-ads-moments.css?v=20261119-rel">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
@@ -87,11 +87,11 @@
       <!-- ── Stage: the live ad ───────────────────────────────────────── -->
       <section class="va-stage" id="va-stage" aria-label="Ad preview">
         <div class="va-toolbar">
-          <div class="va-seg va-seg--brand" role="radiogroup" aria-label="Newsletter" id="va-brands"></div>
-          <div class="va-seg" role="radiogroup" aria-label="Preview size" id="va-sizes">
-            <button type="button" role="radio" data-size="9x16" aria-checked="true"><span class="va-ratio va-ratio--9x16" aria-hidden="true"></span>9:16</button>
-            <button type="button" role="radio" data-size="4x5" aria-checked="false"><span class="va-ratio va-ratio--4x5" aria-hidden="true"></span>4:5</button>
-            <button type="button" role="radio" data-size="1x1" aria-checked="false"><span class="va-ratio va-ratio--1x1" aria-hidden="true"></span>1:1</button>
+          <div class="es-segmented va-brands-seg" role="radiogroup" aria-label="Newsletter" id="va-brands"></div>
+          <div class="es-segmented" role="radiogroup" aria-label="Preview size" id="va-sizes">
+            <button class="es-segmented__item" type="button" role="radio" data-size="9x16" aria-checked="true"><span class="va-ratio va-ratio--9x16" aria-hidden="true"></span>9:16</button>
+            <button class="es-segmented__item" type="button" role="radio" data-size="4x5" aria-checked="false"><span class="va-ratio va-ratio--4x5" aria-hidden="true"></span>4:5</button>
+            <button class="es-segmented__item" type="button" role="radio" data-size="1x1" aria-checked="false"><span class="va-ratio va-ratio--1x1" aria-hidden="true"></span>1:1</button>
           </div>
           <div class="va-toolbar__end">
             <button class="es-btn es-btn--sm" type="button" id="va-meta-toggle" aria-pressed="false" aria-label="Meta preview" title="Meta preview: the ad as it shows on Instagram and Facebook (9:16 in Reels, 4:5 and 1:1 in the feed)">
@@ -124,9 +124,9 @@
           <div class="va-rail__body">
             <section class="va-rail__sec" id="va-rail-frame" aria-labelledby="va-rail-frame-h">
               <h3 class="va-rail__h" id="va-rail-frame-h">Frame</h3>
-              <div class="va-rail__fit" role="radiogroup" aria-label="Clip fit" id="va-fitmode">
-                <button type="button" role="radio" data-fit="fill" aria-checked="true" title="Fill the frame (crops the edges)">Fill</button>
-                <button type="button" role="radio" data-fit="fit" aria-checked="false" title="Show the whole clip">Fit</button>
+              <div class="es-segmented es-segmented--full va-rail__fit" role="radiogroup" aria-label="Clip fit" id="va-fitmode">
+                <button class="es-segmented__item" type="button" role="radio" data-fit="fill" aria-checked="true" title="Fill the frame (crops the edges)">Fill</button>
+                <button class="es-segmented__item" type="button" role="radio" data-fit="fit" aria-checked="false" title="Show the whole clip">Fit</button>
               </div>
               <div class="va-rail__row">
                 <label class="va-rail__label" for="va-zoom">Zoom</label>
@@ -245,9 +245,9 @@
             <div class="va-styles" role="radiogroup" aria-labelledby="va-style-label" id="va-styles"></div>
             <div class="va-zone" id="va-zone-row">
               <span class="va-hint" id="va-zone-label">9:16 safe zone</span>
-              <div class="va-seg" role="radiogroup" aria-labelledby="va-zone-label" id="va-zone">
-                <button type="button" role="radio" data-zone="meta" aria-checked="true" title="Keep the copy in y 270–1250, clear of Meta's Reels UI">Meta Reels</button>
-                <button type="button" role="radio" data-zone="classic" aria-checked="false" title="The original Figma margins">Classic</button>
+              <div class="es-segmented" role="radiogroup" aria-labelledby="va-zone-label" id="va-zone">
+                <button class="es-segmented__item" type="button" role="radio" data-zone="meta" aria-checked="true" title="Keep the copy in y 270–1250, clear of Meta's Reels UI">Meta Reels</button>
+                <button class="es-segmented__item" type="button" role="radio" data-zone="classic" aria-checked="false" title="The original Figma margins">Classic</button>
               </div>
             </div>
           </div>
@@ -352,10 +352,10 @@
           </div>
 
           <div class="va-tabpanel" id="va-by-team" role="tabpanel" aria-labelledby="va-tab-team">
-            <div class="va-seg va-seg--full" role="radiogroup" aria-label="Sport" id="va-team-sport">
-              <button type="button" role="radio" data-sport="nfl" aria-checked="false">NFL</button>
-              <button type="button" role="radio" data-sport="cfb" aria-checked="true">CFB</button>
-              <button type="button" role="radio" data-sport="mlb" aria-checked="false">MLB</button>
+            <div class="es-segmented es-segmented--full" role="radiogroup" aria-label="Sport" id="va-team-sport">
+              <button class="es-segmented__item" type="button" role="radio" data-sport="nfl" aria-checked="false">NFL</button>
+              <button class="es-segmented__item" type="button" role="radio" data-sport="cfb" aria-checked="true">CFB</button>
+              <button class="es-segmented__item" type="button" role="radio" data-sport="mlb" aria-checked="false">MLB</button>
             </div>
             <div class="va-search">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
@@ -370,10 +370,10 @@
           </div>
 
           <div class="va-tabpanel" id="va-by-color" role="tabpanel" aria-labelledby="va-tab-color" hidden>
-            <div class="va-seg va-seg--full" role="radiogroup" aria-label="Sport" id="va-color-sport">
-              <button type="button" role="radio" data-sport="nfl" aria-checked="false">NFL</button>
-              <button type="button" role="radio" data-sport="cfb" aria-checked="true">CFB</button>
-              <button type="button" role="radio" data-sport="mlb" aria-checked="false">MLB</button>
+            <div class="es-segmented es-segmented--full" role="radiogroup" aria-label="Sport" id="va-color-sport">
+              <button class="es-segmented__item" type="button" role="radio" data-sport="nfl" aria-checked="false">NFL</button>
+              <button class="es-segmented__item" type="button" role="radio" data-sport="cfb" aria-checked="true">CFB</button>
+              <button class="es-segmented__item" type="button" role="radio" data-sport="mlb" aria-checked="false">MLB</button>
             </div>
             <div class="va-swatches" role="radiogroup" aria-label="Team colour" id="va-swatches"></div>
             <button class="es-btn es-btn--primary es-btn--lg va-block" type="button" id="va-find">
@@ -385,10 +385,10 @@
           <div class="va-tabpanel" id="va-by-moment" role="tabpanel" aria-labelledby="va-tab-moment" hidden>
             <div class="va-board-bar">
               <div class="va-chips" role="group" aria-label="Filter by sport" id="va-sports">
-                <button class="va-chip" type="button" data-sport="all" aria-pressed="true">All</button>
-                <button class="va-chip" type="button" data-sport="nfl" aria-pressed="false">NFL</button>
-                <button class="va-chip" type="button" data-sport="cfb" aria-pressed="false">CFB</button>
-                <button class="va-chip" type="button" data-sport="mlb" aria-pressed="false">MLB</button>
+                <button class="es-chip" type="button" data-sport="all" aria-pressed="true">All</button>
+                <button class="es-chip" type="button" data-sport="nfl" aria-pressed="false">NFL</button>
+                <button class="es-chip" type="button" data-sport="cfb" aria-pressed="false">CFB</button>
+                <button class="es-chip" type="button" data-sport="mlb" aria-pressed="false">MLB</button>
               </div>
               <button class="va-icon-btn es-refresh" type="button" id="va-refresh" aria-label="Refresh trending clips" title="Refresh trending clips">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
@@ -399,10 +399,10 @@
           </div>
 
           <div class="va-tabpanel" id="va-by-library" role="tabpanel" aria-labelledby="va-tab-library" hidden>
-            <div class="va-seg va-seg--full" role="radiogroup" aria-label="Sport" id="va-lib-sport">
-              <button type="button" role="radio" data-sport="nfl" aria-checked="false">NFL</button>
-              <button type="button" role="radio" data-sport="cfb" aria-checked="true">CFB</button>
-              <button type="button" role="radio" data-sport="mlb" aria-checked="false">MLB</button>
+            <div class="es-segmented es-segmented--full" role="radiogroup" aria-label="Sport" id="va-lib-sport">
+              <button class="es-segmented__item" type="button" role="radio" data-sport="nfl" aria-checked="false">NFL</button>
+              <button class="es-segmented__item" type="button" role="radio" data-sport="cfb" aria-checked="true">CFB</button>
+              <button class="es-segmented__item" type="button" role="radio" data-sport="mlb" aria-checked="false">MLB</button>
             </div>
             <p class="va-hint" id="va-lib-status" role="status">Every fresh clip we have found, for everyone. No search needed.</p>
             <div class="va-lib-found" id="va-lib-found" aria-live="polite"></div>
@@ -439,9 +439,9 @@
           </header>
           <div class="va-field" id="va-exmode-row" hidden>
             <span class="va-label" id="va-exmode-label">What to export</span>
-            <div class="va-seg va-seg--full" role="radiogroup" aria-labelledby="va-exmode-label" id="va-exmode">
-              <button type="button" role="radio" data-exmode="set" aria-checked="true">Today’s set</button>
-              <button type="button" role="radio" data-exmode="single" aria-checked="false">This ad only</button>
+            <div class="es-segmented es-segmented--full" role="radiogroup" aria-labelledby="va-exmode-label" id="va-exmode">
+              <button class="es-segmented__item" type="button" role="radio" data-exmode="set" aria-checked="true">Today’s set</button>
+              <button class="es-segmented__item" type="button" role="radio" data-exmode="single" aria-checked="false">This ad only</button>
             </div>
           </div>
           <div class="va-field">
@@ -462,11 +462,11 @@
               <span class="va-label" id="va-sound-label">Sound</span>
               <span class="va-hint va-sound__sum" id="va-sound-sum" aria-live="polite">Muted</span>
             </div>
-            <div class="va-seg va-seg--full va-sound__modes" role="radiogroup" aria-labelledby="va-sound-label" id="va-sound-mode">
-              <button type="button" role="radio" data-sound="muted" aria-checked="true">Muted</button>
-              <button type="button" role="radio" data-sound="original" aria-checked="false">Original</button>
-              <button type="button" role="radio" data-sound="library" aria-checked="false">Music</button>
-              <button type="button" role="radio" data-sound="upload" aria-checked="false">Upload</button>
+            <div class="es-segmented es-segmented--full va-sound__modes" role="radiogroup" aria-labelledby="va-sound-label" id="va-sound-mode">
+              <button class="es-segmented__item" type="button" role="radio" data-sound="muted" aria-checked="true">Muted</button>
+              <button class="es-segmented__item" type="button" role="radio" data-sound="original" aria-checked="false">Original</button>
+              <button class="es-segmented__item" type="button" role="radio" data-sound="library" aria-checked="false">Music</button>
+              <button class="es-segmented__item" type="button" role="radio" data-sound="upload" aria-checked="false">Upload</button>
             </div>
             <div class="va-sound__body" id="va-sound-body"></div>
             <div class="va-sound__mix" id="va-sound-mix" hidden>
@@ -525,6 +525,6 @@
   <script src="video-ads-audio.js?v=20261119-rel"></script>
   <script src="es-motion.js?v=20261115-ds1"></script>
   <script src="league-logos.js?v=20261117-logo1"></script>
-  <script src="video-ads.js?v=20261119-rel"></script>
+  <script src="video-ads.js?v=20261120-unify"></script>
 </body>
 </html>

@@ -75,9 +75,9 @@
     group.className = 'gen-steer__group gen-look';
     group.innerHTML = `
       <span class="gen-row__label" id="gen-look-label">Look</span>
-      <div class="gen-chips" id="gen-look" role="radiogroup" aria-labelledby="gen-look-label" aria-describedby="gen-look-hint">
-        <button class="gen-chip" type="button" role="radio" data-look="creative">Creative<span class="gen-look__new" aria-hidden="true">New</span></button>
-        <button class="gen-chip" type="button" role="radio" data-look="templates">ES templates</button>
+      <div class="es-segmented" id="gen-look" role="radiogroup" aria-labelledby="gen-look-label" aria-describedby="gen-look-hint">
+        <button class="es-segmented__item" type="button" role="radio" data-look="creative">Creative<span class="gen-look__new" aria-hidden="true">New</span></button>
+        <button class="es-segmented__item" type="button" role="radio" data-look="templates">ES templates</button>
       </div>
       <span class="gen-sr" id="gen-look-hint">Creative composes new designs (cut-outs, big numbers, layered type) and an art director picks the best of 2 to 3 compositions per idea. ES templates fills the standard templates.</span>`;
     steer.prepend(group);
@@ -119,8 +119,8 @@
     expect.classList.add('gen-count-wrap');
     expect.innerHTML = `
       <span class="gen-row__label" id="gen-count-label">Designs</span>
-      <div class="gen-count" id="gen-count" role="radiogroup" aria-labelledby="gen-count-label" aria-describedby="gen-count-cost">
-        ${COUNTS.map(n => `<button type="button" role="radio" class="gen-count__item" data-count="${n}" aria-checked="false">${n}</button>`).join('')}
+      <div class="es-segmented gen-count" id="gen-count" role="radiogroup" aria-labelledby="gen-count-label" aria-describedby="gen-count-cost">
+        ${COUNTS.map(n => `<button type="button" role="radio" class="es-segmented__item gen-count__item" data-count="${n}" aria-checked="false">${n}</button>`).join('')}
       </div>
       <span class="gen-count__cost" id="gen-count-cost" aria-live="polite"></span>`;
     const items = [...expect.querySelectorAll('[data-count]')];

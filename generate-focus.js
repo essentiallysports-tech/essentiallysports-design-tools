@@ -274,8 +274,8 @@
           </div>
         </div>
         <div class="gfx-top__right">
-          <div class="gfx-seg" role="radiogroup" aria-label="Canvas size" id="gfx-sizes">
-            ${SIZES.map(([key, ratio, dims, name], i) => `<button type="button" role="radio" class="gfx-seg__item" data-size="${key}" aria-checked="false" data-tip="${name} · ${dims} · ${i + 1}"><span class="gfx-ratio gfx-ratio--${key}" aria-hidden="true"></span>${ratio}</button>`).join('')}
+          <div class="es-segmented gfx-seg" role="radiogroup" aria-label="Canvas size" id="gfx-sizes">
+            ${SIZES.map(([key, ratio, dims, name], i) => `<button type="button" role="radio" class="es-segmented__item gfx-seg__item" data-size="${key}" aria-checked="false" data-tip="${name} · ${dims} · ${i + 1}"><span class="gfx-ratio gfx-ratio--${key}" aria-hidden="true"></span>${ratio}</button>`).join('')}
           </div>
           <div class="gfx-group">
             <button class="gfx-icon" type="button" data-fx="undo" aria-label="Undo" aria-keyshortcuts="${isMac ? 'Meta' : 'Control'}+Z" data-tip="Undo · ${mod} Z">${ICON.undo}</button>
