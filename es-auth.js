@@ -8,9 +8,13 @@
   const ACCESS_REQUESTS_TABLE = 'es_designer_access_requests';
   const AUTH_CALLBACK_PATH = '/auth-callback.html';
   const AUTH_CALLBACK_TYPES = new Set(['email', 'email_change', 'invite', 'magiclink', 'recovery', 'signup']);
-  // Pinned (same bytes the @2 alias served) so browsers can cache it for a year.
+  // supabase-js 2.118.0, served from FrameUp itself first (vendor/, same
+  // bytes as the CDN file: the SRI below matches both), with jsDelivr as the
+  // fallback. Some networks and extensions block or slow cdn.jsdelivr.net,
+  // which used to leave pages unable to check the login.
+  const SUPABASE_SDK_LOCAL_PATH = '/vendor/supabase-js-2.118.0.min.js';
   const SUPABASE_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js';
-  // Subresource integrity for exactly that file (update both together).
+  // Subresource integrity for exactly that file (update all three together).
   const SUPABASE_SDK_INTEGRITY = 'sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp';
   const config = window.ES_AUTH_CONFIG || {};
   // The SDK clears auth tokens from the address bar as soon as it starts, so
@@ -404,23 +408,24 @@
   let supabaseClient = null;
   let supabaseSdkPromise = null;
 
-  function loadSupabaseSdk(timeoutMs = 8000) {
-    if (hasSupabaseSdk()) return Promise.resolve(true);
-    if (!hasSupabaseCredentials()) return Promise.resolve(false);
-    if (supabaseSdkPromise) return supabaseSdkPromise;
+  let sdkSource = '';
 
-    supabaseSdkPromise = new Promise(resolve => {
-      if (
-        typeof document === 'undefined'
-        || typeof document.createElement !== 'function'
-        || !document.head
-        || typeof document.head.appendChild !== 'function'
-      ) {
-        resolve(false);
-        return;
-      }
+  function sdkSources() {
+    const sources = [];
+    try {
+      const origin = window.location.origin;
+      if (origin && /^https?:/i.test(origin)) sources.push(new URL(SUPABASE_SDK_LOCAL_PATH, origin).href);
+    } catch (error) {
+      // No usable origin (file://): CDN only.
+    }
+    sources.push(SUPABASE_SDK_URL);
+    return sources;
+  }
+
+  function loadSdkFrom(src, timeoutMs) {
+    return new Promise(resolve => {
       const existingScript = typeof document.querySelector === 'function'
-        ? document.querySelector(`script[src="${SUPABASE_SDK_URL}"]`)
+        ? document.querySelector(`script[src="${src}"]`)
         : null;
       let didFinish = false;
       const finish = value => {
@@ -433,21 +438,52 @@
         window.clearTimeout(timer);
         finish(value);
       };
-
       const script = existingScript || document.createElement('script');
       if (!existingScript) {
-        // The browser refuses the file if the CDN ever serves different bytes.
+        // The browser refuses the file if either copy ever has different bytes.
         script.integrity = SUPABASE_SDK_INTEGRITY;
         script.crossOrigin = 'anonymous';
+        script.src = src;
+        script.async = true;
       }
-      script.src = SUPABASE_SDK_URL;
-      script.async = true;
-      script.onload = () => complete(true);
-      script.onerror = () => complete(false);
-      if (!existingScript) {
-        document.head.appendChild(script);
+      if (typeof script.addEventListener === 'function') {
+        script.addEventListener('load', () => complete(true));
+        script.addEventListener('error', () => complete(false));
+      } else {
+        script.onload = () => complete(true);
+        script.onerror = () => complete(false);
       }
-    }).finally(() => {
+      if (!existingScript) document.head.appendChild(script);
+      else if (hasSupabaseSdk()) complete(true);
+    });
+  }
+
+  function loadSupabaseSdk(timeoutMs = 8000) {
+    if (hasSupabaseSdk()) return Promise.resolve(true);
+    if (!hasSupabaseCredentials()) return Promise.resolve(false);
+    if (supabaseSdkPromise) return supabaseSdkPromise;
+    if (
+      typeof document === 'undefined'
+      || typeof document.createElement !== 'function'
+      || !document.head
+      || typeof document.head.appendChild !== 'function'
+    ) {
+      return Promise.resolve(false);
+    }
+
+    supabaseSdkPromise = (async () => {
+      const sources = sdkSources();
+      for (let index = 0; index < sources.length; index += 1) {
+        const isLast = index === sources.length - 1;
+        // The same-origin copy gets a shorter wait so a broken deploy falls
+        // through to the CDN quickly.
+        if (await loadSdkFrom(sources[index], isLast ? timeoutMs : Math.min(timeoutMs, 5000))) {
+          sdkSource = sources[index] === SUPABASE_SDK_URL ? 'cdn' : 'local';
+          return true;
+        }
+      }
+      return hasSupabaseSdk();
+    })().finally(() => {
       if (!hasSupabaseSdk()) supabaseSdkPromise = null;
     });
 
@@ -460,11 +496,147 @@
     return loadSupabaseSdk(timeoutMs);
   }
 
+  // ---------------------------------------------------------------------
+  // Session storage that can't silently lose the login.
+  //
+  // supabase-js tests localStorage once with a tiny write; when this site's
+  // storage is FULL (FrameUp keeps drafts, previews and caches there) that
+  // write fails and the SDK quietly keeps the session in page memory only.
+  // Sign-in then "works", the next page finds no session and sends the person
+  // back to login, again and again. This adapter writes to localStorage and,
+  // when that fails, to sessionStorage (separate quota, survives navigation in
+  // the same tab), and remembers where the last write went.
+  // ---------------------------------------------------------------------
+  const SESSION_FALLBACK_FLAG = 'es.authStorageFallback.v1';
+  const storageState = { lastWrite: '', lastError: '' };
+
+  function projectRef() {
+    try {
+      return new URL(supabaseConfig.url).hostname.split('.')[0] || '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function supabaseStorageKey() {
+    return `sb-${projectRef()}-auth-token`;
+  }
+
+  function safeStore(kind) {
+    try {
+      return kind === 'session' ? window.sessionStorage : window.localStorage;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  const resilientStorage = {
+    getItem(key) {
+      const session = safeStore('session');
+      const local = safeStore('local');
+      try {
+        const fromSession = session ? session.getItem(key) : null;
+        if (fromSession !== null && fromSession !== undefined) return fromSession;
+      } catch (error) { /* fall through */ }
+      try {
+        return local ? local.getItem(key) : null;
+      } catch (error) {
+        return null;
+      }
+    },
+    setItem(key, value) {
+      const local = safeStore('local');
+      const session = safeStore('session');
+      try {
+        if (!local) throw new Error('localStorage unavailable');
+        local.setItem(key, value);
+        storageState.lastWrite = 'local';
+        storageState.lastError = '';
+        try { session?.removeItem(key); session?.removeItem(SESSION_FALLBACK_FLAG); } catch (error) { /* ignore */ }
+        return;
+      } catch (error) {
+        storageState.lastError = String(error?.name || error?.message || 'write failed').slice(0, 60);
+      }
+      // localStorage refused (full or blocked): keep the login for this tab.
+      try { local?.removeItem(key); } catch (error) { /* a stale copy must not win */ }
+      if (!session) throw new Error('This browser blocks storage for FrameUp.');
+      session.setItem(key, value);
+      storageState.lastWrite = 'session';
+      try { session.setItem(SESSION_FALLBACK_FLAG, String(Date.now())); } catch (error) { /* ignore */ }
+    },
+    removeItem(key) {
+      try { safeStore('local')?.removeItem(key); } catch (error) { /* ignore */ }
+      try { safeStore('session')?.removeItem(key); } catch (error) { /* ignore */ }
+    },
+  };
+
+  // Parsed copy of the session the SDK saved, or null.
+  function readStoredSupabaseSession() {
+    try {
+      const raw = resilientStorage.getItem(supabaseStorageKey());
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Can this site still write a session-sized value to localStorage?
+  function localStorageWritable(bytes = 4096) {
+    const probeKey = 'es.authStorageProbe';
+    try {
+      window.localStorage.setItem(probeKey, 'x'.repeat(bytes));
+      window.localStorage.removeItem(probeKey);
+      return true;
+    } catch (error) {
+      try { window.localStorage.removeItem(probeKey); } catch (cleanupError) { /* ignore */ }
+      return false;
+    }
+  }
+
+  // Before signing in: drop auth keys that can only confuse the check after
+  // it (other Supabase projects, the pre-v2 key, an unreadable copy).
+  function clearStaleAuthKeys() {
+    const current = supabaseStorageKey();
+    const removed = [];
+    try {
+      const keys = [];
+      for (let index = 0; index < window.localStorage.length; index += 1) keys.push(window.localStorage.key(index) || '');
+      keys.forEach(key => {
+        const isOtherProject = /^sb-.+-auth-token$/.test(key) && key !== current;
+        const isLegacy = key === 'supabase.auth.token';
+        let unreadable = false;
+        if (key === current) {
+          try { JSON.parse(window.localStorage.getItem(key) || 'null'); } catch (error) { unreadable = true; }
+        }
+        if (isOtherProject || isLegacy || unreadable) {
+          window.localStorage.removeItem(key);
+          removed.push(key);
+        }
+      });
+    } catch (error) {
+      // Storage blocked: nothing to clean.
+    }
+    return removed;
+  }
+
+  // Seconds this device's clock is ahead (+) or behind (-) Supabase's, from a
+  // session it just issued. 0 when it can't tell.
+  function clockSkewSeconds(session) {
+    const expiresAt = Number(session?.expires_at || 0);
+    const expiresIn = Number(session?.expires_in || 0);
+    if (!expiresAt || !expiresIn) return 0;
+    return Math.round(Date.now() / 1000 - (expiresAt - expiresIn));
+  }
+
   function getSupabaseClient() {
     if (!isSupabaseConfigured()) return null;
     if (!supabaseClient) {
       supabaseClient = window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey, {
         auth: {
+          storage: resilientStorage,
+          storageKey: supabaseStorageKey(),
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
@@ -673,16 +845,50 @@
     if (!client) throw new Error('Supabase is not configured yet.');
 
     const normalizedEmail = normalizeEmail(email);
-    const { data, error } = await client.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
+    clearStaleAuthKeys();
+    let result;
+    try {
+      result = await client.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
+    } catch (thrown) {
+      // The SDK throws (rather than returning an error) when saving the
+      // session fails, e.g. both storages full or blocked.
+      const text = `${thrown?.name || ''} ${thrown?.message || ''}`;
+      if (storageState.lastError || /quota|storage/i.test(text)) {
+        recordAuthEvent('login-not-saved', { stored: 'write-failed' });
+        throw authError(
+          'storage_failed',
+          'You were signed in, but this browser could not save the login (its storage for FrameUp is full or blocked). Use “Fix sign-in” below to clear FrameUp’s sign-in data, or allow site data for FrameUp, then log in again.',
+          { friendly: true, storage: 'write-failed' },
+        );
+      }
+      throw friendlyAuthError(thrown, 'Unable to log in.');
+    }
+    const { data, error } = result || {};
 
     if (error) throw friendlyAuthError(error, 'Unable to log in.');
-    // Signed in, but if the browser could not save the session every next page
-    // would bounce back here with no message. Say so instead.
-    if (data?.session && !hasStoredSupabaseSession()) {
-      throw new Error('You were signed in, but this browser could not save the login (its storage for FrameUp is full or blocked). Clear this site\'s data in your browser settings, or use a private window, then log in again.');
+    // Signed in: make sure THIS session is what the next page will read (not a
+    // stale copy, not page memory). Otherwise every next page would bounce
+    // back here with no explanation.
+    const verdict = verifyStoredSession(data?.session);
+    if (!verdict.ok) {
+      recordAuthEvent('login-not-saved', { stored: verdict.reason });
+      throw authError(
+        'storage_failed',
+        'You were signed in, but this browser could not save the login (its storage for FrameUp is full or blocked). Use “Fix sign-in” below to clear FrameUp’s sign-in data, or allow site data for FrameUp, then log in again.',
+        { friendly: true, storage: verdict.reason },
+      );
+    }
+    const skew = clockSkewSeconds(data?.session);
+    markLoginSucceeded({ skew, storage: storageState.lastWrite || 'local' });
+    if (Math.abs(skew) > 50 * 60) {
+      throw authError(
+        'clock_skew',
+        `This computer’s clock is about ${Math.round(Math.abs(skew) / 60)} minutes ${skew > 0 ? 'ahead' : 'behind'}, so every login looks expired straight away. Turn on “Set time automatically” in your system settings, then log in again.`,
+        { friendly: true, skewSeconds: skew },
+      );
     }
 
     const user = data?.user;
@@ -932,7 +1138,8 @@
     try {
       window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
       // Personal details shouldn't outlive the session on a shared machine.
-      [PROFILE_STORAGE_KEY, ACCESS_REQUESTS_KEY, KNOWN_EMAILS_KEY].forEach(key => window.localStorage.removeItem(key));
+      [PROFILE_STORAGE_KEY, ACCESS_REQUESTS_KEY, KNOWN_EMAILS_KEY, LOGIN_AT_KEY].forEach(key => window.localStorage.removeItem(key));
+      window.sessionStorage.removeItem(LOGIN_AT_KEY);
     } catch (error) {
       // Ignore storage failures.
     }
@@ -1037,50 +1244,370 @@
     return 'valid';
   }
 
+  function pause(ms) {
+    return new Promise(resolve => {
+      const id = window.setTimeout(resolve, ms);
+      // Test doubles without timers: don't hang.
+      if (id === undefined) resolve();
+    });
+  }
+
+  // The saved session, read straight from storage, when the SDK check hangs
+  // or errors. Only gates the page: every data call still needs a token the
+  // server accepts.
+  function storedSessionLooksValid() {
+    const stored = readStoredSupabaseSession();
+    const email = normalizeEmail(stored?.user?.email);
+    if (!stored?.access_token || !email) return false;
+    if (!(isAllowedEmail(email) || isLocallyApprovedEmail(email))) return false;
+    const expiresAt = Number(stored.expires_at || 0) * 1000;
+    // A refresh token outlives the access token: allow a stale access token
+    // for a while; the SDK refreshes it once it gets going.
+    return Boolean(stored.refresh_token) && (!expiresAt || expiresAt > Date.now() - 12 * 60 * 60 * 1000);
+  }
+
+  function authReady(detail = {}) {
+    document.documentElement.style.visibility = '';
+    window.dispatchEvent(new CustomEvent('es:auth-ready', { detail }));
+    // Send any earlier trips back to login (best-effort, after the page).
+    window.setTimeout(() => { flushAuthBounces().catch(() => {}); }, 4000);
+  }
+
+  // In-page "We couldn't confirm your login" panel, used instead of bouncing
+  // when the person logged in moments ago (bouncing again would loop).
+  function showAuthProblemPanel(reason, returnTo) {
+    const render = () => {
+      if (document.getElementById('es-auth-problem')) return;
+      document.documentElement.style.visibility = '';
+      const panel = document.createElement('div');
+      panel.id = 'es-auth-problem';
+      panel.setAttribute('role', 'alertdialog');
+      panel.setAttribute('aria-modal', 'true');
+      panel.setAttribute('aria-labelledby', 'es-auth-problem-title');
+      panel.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:16px;background:var(--es-canvas,#F7F7F8);font-family:var(--es-font-ui,Roboto,sans-serif);color:var(--es-ink,#0E1014)';
+      const dark = document.documentElement.dataset?.theme === 'dark';
+      if (dark) { panel.style.background = '#101114'; panel.style.color = '#FFFFFF'; }
+      const card = document.createElement('div');
+      card.style.cssText = `width:min(480px,100%);padding:32px;border-radius:16px;background:${dark ? '#1F2126' : '#FFFFFF'};box-shadow:inset 0 0 0 1px ${dark ? '#2A2D34' : '#DFE2E7'};display:grid;gap:12px`;
+      const title = document.createElement('h1');
+      title.id = 'es-auth-problem-title';
+      title.tabIndex = -1;
+      title.style.cssText = 'margin:0;font-size:28px;line-height:1.15;font-weight:700';
+      title.textContent = 'We couldn’t confirm your login';
+      const text = document.createElement('p');
+      text.style.cssText = `margin:0;font-size:15px;line-height:1.55;color:${dark ? '#BFC8D9' : '#3A3F48'}`;
+      const diag = quickDiagnostics();
+      text.textContent = !diag.storageWritable
+        ? 'You signed in, but this browser’s storage for FrameUp is full, so the login can’t be kept between pages. Retry usually works in this tab; “Fix sign-in” on the login page explains how to free space.'
+        : reason === 'check-failed'
+          ? 'You signed in a moment ago, but the login check didn’t finish (slow connection or the login service didn’t answer). Retry in a few seconds.'
+          : 'You signed in a moment ago, but this page couldn’t find the login. Retry, or go back to the login page for a fix.';
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:12px';
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'es-btn es-btn--primary es-btn--static';
+      retry.textContent = 'Retry';
+      retry.addEventListener('click', () => window.location.reload());
+      const back = document.createElement('a');
+      back.className = 'es-btn es-btn--secondary';
+      back.href = `${loginUrl(returnTo)}&reason=${encodeURIComponent(reason)}&diagnose=1`;
+      back.textContent = 'Back to login';
+      actions.append(retry, back);
+      card.append(title, text, actions);
+      panel.append(card);
+      document.body.append(panel);
+      title.focus();
+    };
+    if (document.body) render();
+    else document.addEventListener('DOMContentLoaded', render, { once: true });
+  }
+
   function requireAuth(returnTo) {
     document.documentElement.style.visibility = 'hidden';
     return (async () => {
       // A slow network, a slow CDN or a failed lookup must not sign people
-      // out. The check gets a second, longer try; the session is only cleared
-      // when the account is definitely not approved. Every trip back to the
-      // login page carries a reason so the page can explain what happened.
+      // out. The check gets a second, longer try after a short wait; when it
+      // still can't finish, the saved session is read directly. The session
+      // is only cleared when the account is definitely not approved. Every
+      // trip back to the login page carries a reason and is recorded.
       let reason = 'check-failed';
-      for (const timeoutMs of [10000, 20000]) {
+      const attempts = [9000, 15000];
+      for (let attempt = 0; attempt < attempts.length; attempt += 1) {
         try {
-          const status = await withTimeout(sessionStatus(), timeoutMs, 'Authentication check timed out.');
+          const status = await withTimeout(sessionStatus(), attempts[attempt], 'Authentication check timed out.');
           if (status === 'valid') {
-            document.documentElement.style.visibility = '';
-            window.dispatchEvent(new CustomEvent('es:auth-ready'));
+            authReady();
             return true;
           }
           reason = status;
-          break;
+          // Right after a login a missing session may be a slow write in
+          // another tab: look once more before giving up.
+          if (status !== 'no-session' || secondsSinceLogin() > 60) break;
         } catch (error) {
           reason = 'check-failed';
         }
+        if (attempt < attempts.length - 1) await pause(1500);
+      }
+      if (reason === 'check-failed' && storedSessionLooksValid()) {
+        recordAuthEvent('check-failed-used-stored');
+        authReady({ degraded: true });
+        return true;
       }
       if (reason === 'not-approved') await logout();
       if (reason === 'no-session' && hadSessionInThisTab()) {
         reason = 'session-expired';
         try { window.sessionStorage.removeItem(AUTH_STORAGE_KEY); } catch (error) { /* ignore */ }
       }
+      recordAuthEvent(reason);
+      if (reason !== 'not-approved' && secondsSinceLogin() <= 60) {
+        showAuthProblemPanel(reason, returnTo);
+        return false;
+      }
       window.location.replace(`${loginUrl(returnTo)}&reason=${reason}`);
       return false;
     })();
   }
 
-  // True when the browser actually stored the Supabase session (it can fail
-  // silently when this site's storage is full or blocked).
+  // Did the browser store THIS session (same access token and user), where
+  // the next page will find it? { ok, reason: 'local' | 'session' | why not }.
+  function verifyStoredSession(session) {
+    if (!session?.access_token) return { ok: true, reason: 'no-session-returned' };
+    const stored = readStoredSupabaseSession();
+    if (!stored) return { ok: false, reason: storageState.lastError ? `write-failed:${storageState.lastError}` : 'missing' };
+    const sameToken = stored.access_token === session.access_token;
+    const sameUser = !session.user?.id || stored.user?.id === session.user.id;
+    if (!sameToken || !sameUser) return { ok: false, reason: 'stale-copy' };
+    return { ok: true, reason: storageState.lastWrite || 'local' };
+  }
+
+  // Kept for callers of the old name: true when the current session is saved.
   function hasStoredSupabaseSession() {
+    const stored = readStoredSupabaseSession();
+    return Boolean(stored?.access_token);
+  }
+
+  // ---------------------------------------------------------------------
+  // Login-loop breaker and diagnostics.
+  // Every trip back to login is recorded (reason + a few facts, never tokens
+  // or full emails). login.html shows a diagnostic panel when it's reached
+  // more than twice in 2 minutes; the records are sent anonymously to
+  // /api/auth-bounce, and to /api/client-errors once the person gets in.
+  // ---------------------------------------------------------------------
+  const BOUNCES_KEY = 'es.authBounces.v1';
+  const LOGIN_AT_KEY = 'es.authLoginAt.v1';
+  const BOUNCE_ENDPOINT = '/api/auth-bounce';
+
+  function bounceStore() {
+    // Prefer localStorage; when it's full the record still fits in this tab.
+    return localStorageWritable(512) ? safeStore('local') : safeStore('session');
+  }
+
+  function readBounces() {
+    const lists = [];
+    ['local', 'session'].forEach(kind => {
+      try {
+        const parsed = JSON.parse(safeStore(kind)?.getItem(BOUNCES_KEY) || '[]');
+        if (Array.isArray(parsed)) lists.push(...parsed);
+      } catch (error) { /* ignore */ }
+    });
+    const seen = new Set();
+    return lists
+      .filter(item => {
+        const key = `${item?.id || ''}:${item?.at}:${item?.reason}`;
+        if (!item || !Number(item.at) || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => a.at - b.at)
+      .slice(-12);
+  }
+
+  function recentAuthBounces(windowMs = 2 * 60 * 1000) {
+    const since = Date.now() - windowMs;
+    return readBounces().filter(item => item.at >= since);
+  }
+
+  function emailDomain(email) {
+    const domain = normalizeEmail(email).split('@')[1] || '';
+    return domain === 'essentiallysports.com' ? domain : (domain ? 'other' : '');
+  }
+
+  // Facts that explain most login loops. Synchronous and cheap.
+  function quickDiagnostics() {
+    const stored = readStoredSupabaseSession();
+    let fallbackActive = false;
+    try { fallbackActive = Boolean(safeStore('session')?.getItem(SESSION_FALLBACK_FLAG)); } catch (error) { /* ignore */ }
+    let loginAt = 0;
+    let lastSkew = 0;
     try {
-      for (let index = 0; index < window.localStorage.length; index += 1) {
-        const key = window.localStorage.key(index) || '';
-        if (key.startsWith('sb-') && key.endsWith('-auth-token') && window.localStorage.getItem(key)) return true;
+      const marker = JSON.parse(safeStore('session')?.getItem(LOGIN_AT_KEY) || safeStore('local')?.getItem(LOGIN_AT_KEY) || 'null');
+      loginAt = Number(marker?.at || 0);
+      lastSkew = Number(marker?.skew || 0);
+    } catch (error) { /* ignore */ }
+    let usedKb = 0;
+    try {
+      const local = window.localStorage;
+      for (let index = 0; index < local.length; index += 1) {
+        const key = local.key(index) || '';
+        usedKb += ((key.length + String(local.getItem(key) || '').length) * 2) / 1024;
+      }
+    } catch (error) { usedKb = -1; }
+    const expiresAt = Number(stored?.expires_at || 0);
+    return {
+      storageWritable: localStorageWritable(4096),
+      storageUsedKb: Math.round(usedKb),
+      sessionFallback: fallbackActive,
+      storedSession: Boolean(stored?.access_token),
+      storedSessionExpired: expiresAt ? expiresAt * 1000 < Date.now() : null,
+      sdkLoaded: hasSupabaseSdk(),
+      sdkSource: sdkSource || (hasSupabaseSdk() ? 'page' : 'none'),
+      locks: Boolean(typeof navigator !== 'undefined' && navigator.locks?.request),
+      online: typeof navigator === 'undefined' ? null : navigator.onLine !== false,
+      secondsSinceLogin: loginAt ? Math.round((Date.now() - loginAt) / 1000) : null,
+      clockSkewMinutes: lastSkew ? Math.round(lastSkew / 60) : 0,
+      emailDomain: emailDomain(stored?.user?.email || getKnownEmails()[0] || ''),
+    };
+  }
+
+  // Slower checks for the diagnostic panel: can we reach Supabase, who holds
+  // the auth lock. Never sends tokens.
+  async function authDiagnostics() {
+    const quick = quickDiagnostics();
+    let reachable = null;
+    let reachMs = null;
+    try {
+      const started = Date.now();
+      const controller = typeof AbortController === 'function' ? new AbortController() : null;
+      const timer = controller ? window.setTimeout(() => controller.abort(), 6000) : null;
+      const response = await window.fetch(`${String(supabaseConfig.url || '').replace(/\/+$/, '')}/auth/v1/health`, {
+        headers: { apikey: supabaseConfig.anonKey || '' },
+        signal: controller?.signal,
+        cache: 'no-store',
+      });
+      if (timer) window.clearTimeout(timer);
+      reachMs = Date.now() - started;
+      reachable = response.ok || response.status === 401;
+    } catch (error) {
+      reachable = false;
+    }
+    let heldLocks = null;
+    try {
+      if (navigator.locks?.query) {
+        const state = await navigator.locks.query();
+        heldLocks = (state?.held || []).filter(lock => String(lock.name || '').includes('auth-token')).length;
+      }
+    } catch (error) { heldLocks = null; }
+    return {
+      ...quick,
+      supabaseReachable: reachable,
+      supabaseMs: reachMs,
+      heldAuthLocks: heldLocks,
+      userAgent: typeof navigator === 'undefined' ? '' : String(navigator.userAgent || '').slice(0, 160),
+      at: new Date().toISOString(),
+    };
+  }
+
+  function sendBounceReport(entry) {
+    try {
+      const body = JSON.stringify({ reason: entry.reason, page: entry.page, diag: entry.diag });
+      if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function' && typeof Blob === 'function') {
+        navigator.sendBeacon(BOUNCE_ENDPOINT, new Blob([body], { type: 'application/json' }));
+        return;
+      }
+      window.fetch?.(BOUNCE_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+    } catch (error) {
+      // Reporting is best-effort.
+    }
+  }
+
+  function recordAuthEvent(reason, extra = {}) {
+    let page = '';
+    try { page = String(window.location.pathname || '').slice(0, 80); } catch (error) { page = ''; }
+    const entry = { id: Math.random().toString(36).slice(2, 10), at: Date.now(), reason: String(reason || 'unknown').slice(0, 40), page, diag: { ...quickDiagnostics(), ...extra } };
+    try {
+      const store = bounceStore();
+      const list = readBounces();
+      list.push(entry);
+      store?.setItem(BOUNCES_KEY, JSON.stringify(list.slice(-12)));
+    } catch (error) { /* ignore */ }
+    // A plain "not logged in yet" visit isn't news; report the rest, and any
+    // trip back to login soon after a login or after an earlier bounce.
+    if (entry.reason !== 'no-session' || secondsSinceLogin() < 600 || readBounces().length > 1) sendBounceReport(entry);
+    return entry;
+  }
+
+  function markLoginSucceeded({ skew = 0, storage = 'local' } = {}) {
+    const value = JSON.stringify({ at: Date.now(), skew, storage });
+    try { safeStore('session')?.setItem(LOGIN_AT_KEY, value); } catch (error) { /* ignore */ }
+    try { safeStore('local')?.setItem(LOGIN_AT_KEY, value); } catch (error) { /* ignore */ }
+  }
+
+  function secondsSinceLogin() {
+    try {
+      const marker = JSON.parse(safeStore('session')?.getItem(LOGIN_AT_KEY) || safeStore('local')?.getItem(LOGIN_AT_KEY) || 'null');
+      return marker?.at ? (Date.now() - Number(marker.at)) / 1000 : Infinity;
+    } catch (error) {
+      return Infinity;
+    }
+  }
+
+  // Once someone is in, send the trips back to login they had on the way
+  // (signed-in path, stored in frameup_client_errors) and forget them.
+  async function flushAuthBounces() {
+    const bounces = readBounces();
+    if (!bounces.length) return 0;
+    const errors = bounces.slice(-5).map(item => ({
+      kind: 'error',
+      message: `auth-bounce: ${item.reason} on ${item.page || '/'} · ${Object.entries(item.diag || {}).map(([key, value]) => `${key}=${value}`).join(' ')}`.slice(0, 480),
+      page: item.page || '/',
+      fingerprint: '',
+      occurrences: 1,
+    }));
+    try {
+      const response = await fetchWithAuth('/api/client-errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ errors }),
+      });
+      if (response && (response.ok || response.status === 202)) {
+        ['local', 'session'].forEach(kind => { try { safeStore(kind)?.removeItem(BOUNCES_KEY); } catch (error) { /* ignore */ } });
+        return errors.length;
       }
     } catch (error) {
-      return false;
+      // Try again on the next page.
     }
-    return false;
+    return 0;
+  }
+
+  // "Clear FrameUp sign-in data": only the login keys, never drafts/designs.
+  function clearSignInData() {
+    const removed = [];
+    ['local', 'session'].forEach(kind => {
+      const store = safeStore(kind);
+      if (!store) return;
+      try {
+        const keys = [];
+        for (let index = 0; index < store.length; index += 1) keys.push(store.key(index) || '');
+        keys.forEach(key => {
+          const isAuthKey = /^sb-.+-auth-token(?:-code-verifier|-user)?$/.test(key)
+            || key === 'supabase.auth.token'
+            || key === AUTH_STORAGE_KEY
+            || key === KNOWN_EMAILS_KEY
+            || key === BOUNCES_KEY
+            || key === LOGIN_AT_KEY
+            || key === SESSION_FALLBACK_FLAG
+            || key === EMAIL_COOLDOWN_KEY
+            || key.startsWith('es.auth');
+          if (isAuthKey) {
+            store.removeItem(key);
+            removed.push(key);
+          }
+        });
+      } catch (error) { /* ignore */ }
+    });
+    supabaseClient = null;
+    return removed;
   }
 
   window.ESAuth = Object.freeze({
@@ -1091,6 +1618,12 @@
     completeAuthCallback,
     createAccount,
     deleteAccount,
+    authDiagnostics,
+    clearSignInData,
+    quickDiagnostics,
+    recentAuthBounces,
+    recordAuthEvent,
+    verifyStoredSession,
     emailCooldownRemaining,
     friendlyAuthError,
     passwordChecks,

@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
+  <link rel="preload" href="/vendor/supabase-js-2.118.0.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260714-authcallback1"></script>
   <script src="es-auth.js?v=20261120-auth"></script>
   <script src="auth-flow.js?v=20261120-auth"></script>
@@ -916,6 +916,22 @@
   .login-button[aria-busy="true"], .login-secondary-button[aria-busy="true"] { cursor: progress; }
   .login-secondary-button .login-timer { font-variant-numeric: tabular-nums; }
   @media (max-width: 420px) { .login-confirmation-actions { grid-template-columns: 1fr; } }
+  .login-checks { list-style: none; margin: var(--es-space-4, 16px) 0 0; padding: 0; width: 100%; display: grid; gap: 6px; }
+  .login-checks li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: var(--es-space-2, 8px); align-items: start; color: var(--es-ink-2); font-size: 14px; line-height: 1.4; }
+  .login-checks li::before { content: ""; width: 10px; height: 10px; margin: 5px 4px 0; border-radius: 50%; background: var(--es-good); }
+  .login-checks li.is-bad::before { background: var(--es-bad); }
+  .login-checks li.is-warn::before { background: var(--es-warn); }
+  .login-checks li.is-unknown::before { background: var(--es-line-2); }
+  .login-checks strong { color: var(--es-ink); font-weight: 600; }
+  html[data-theme="dark"] .login-checks li { color: var(--es-slate-100, #BFC8D9); }
+  html[data-theme="dark"] .login-checks strong { color: #FFFFFF; }
+  html[data-theme="dark"] .login-checks li::before { background: var(--es-good-on-dark, #4CC985); }
+  html[data-theme="dark"] .login-checks li.is-bad::before { background: var(--es-bad-on-dark, #FF8A8A); }
+  html[data-theme="dark"] .login-checks li.is-warn::before { background: var(--es-warn-on-dark, #FCD34D); }
+  .login-diagnose-details { width: 100%; min-height: 96px; margin-top: var(--es-space-3, 12px); padding: var(--es-space-2, 8px) var(--es-space-3, 12px); border: 0; border-radius: var(--es-radius-control); background: var(--es-sunk); color: var(--es-ink-2); font: 400 13px/1.45 var(--es-font-ui); resize: vertical; box-shadow: inset 0 0 0 1px var(--es-line); }
+  html[data-theme="dark"] .login-diagnose-details { background: var(--es-slate-700, #2A2D34) !important; color: var(--es-slate-100, #BFC8D9) !important; box-shadow: none !important; }
+  .login-diagnose .login-confirmation-actions { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+  .login-diagnose .login-alt { justify-self: start; margin-top: var(--es-space-3, 12px); }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
 <link rel="stylesheet" href="theme.css?v=20261117-ready1">
@@ -971,6 +987,22 @@
       </div>
       <p class="login-confirmation-status" id="confirmation-status" role="status" aria-live="polite"></p>
       <p class="login-help" id="inbox-limit"></p>
+    </section>
+    <section class="login-confirmation login-diagnose" id="login-diagnose" tabindex="-1" aria-labelledby="diagnose-title" hidden>
+      <div class="login-confirmation-icon is-warn" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      </div>
+      <h2 id="diagnose-title">Let’s fix your sign-in</h2>
+      <p id="diagnose-summary">Checking this browser…</p>
+      <ul class="login-checks" id="diagnose-checks" aria-live="polite"></ul>
+      <div class="login-confirmation-actions">
+        <button class="login-secondary-button" id="diagnose-clear" type="button">Clear sign-in data and try again</button>
+        <button class="login-secondary-button" id="diagnose-copy" type="button">Copy details</button>
+      </div>
+      <p class="login-confirmation-status" id="diagnose-status" role="status" aria-live="polite"></p>
+      <textarea class="login-diagnose-details" id="diagnose-details" rows="5" readonly aria-label="Details to share with the FrameUp team"></textarea>
+      <p class="login-help">Clearing only removes FrameUp’s sign-in data on this browser. Your designs, drafts and settings stay.</p>
+      <button class="login-alt" id="diagnose-back" type="button">Back to login</button>
     </section>
   </section>
 </main>
@@ -1029,6 +1061,7 @@
     login: 'Log in instead',
     create: 'Create an account',
     magic: 'Email me a sign-in link',
+    fix: 'Fix sign-in',
   };
 
   function setError(message, type = 'error', actions = []) {
@@ -1351,6 +1384,7 @@
     const action = actionButton.dataset.errorAction;
     if (action === 'login') { setMode('login', { focus: true }); return; }
     if (action === 'create') { setMode('create', { focus: true }); return; }
+    if (action === 'fix') { showDiagnose('login-error'); return; }
     runEmailAction(action, actionButton);
   });
 
@@ -1455,7 +1489,7 @@
         status = 'valid'; // could not double-check: let the next page retry
       }
       if (status === 'no-session') {
-        throw new Error('You were signed in, but this browser did not keep the login. Allow site data for FrameUp (or turn off strict tracking protection for this site), then log in again.');
+        throw Object.assign(new Error('You were signed in, but this browser did not keep the login. Allow site data for FrameUp (or turn off strict tracking protection for this site), then log in again.'), { code: 'storage_failed' });
       }
       if (status === 'not-approved') {
         throw new Error('This account is not approved for FrameUp yet. Ask the design team to approve your email.');
@@ -1466,6 +1500,99 @@
       setBusy(button, false, authMode === 'create' ? 'Create Account' : 'Login');
       showFailure(error);
     }
+  });
+
+  // ---- Login-loop breaker: what's wrong with sign-in on this browser ----
+  const diagnosePanel = document.getElementById('login-diagnose');
+  const diagnoseSummary = document.getElementById('diagnose-summary');
+  const diagnoseChecks = document.getElementById('diagnose-checks');
+  const diagnoseDetails = document.getElementById('diagnose-details');
+  const diagnoseStatus = document.getElementById('diagnose-status');
+
+  function diagnosisSummary(diag) {
+    if (!diag.storageWritable) {
+      return `This browser’s storage for FrameUp is full (about ${Math.max(0, diag.storageUsedKb)} KB used), so the login can’t be kept between pages. Clear sign-in data below. If it still fails, remove FrameUp’s site data in your browser settings (this also removes drafts kept only in this browser), or use another browser.`;
+    }
+    if (diag.supabaseReachable === false) {
+      return 'This network or an extension is blocking FrameUp’s login service (xtdusejokbhtjlmijdca.supabase.co). Try turning off VPN or ad-blockers for FrameUp, or another network.';
+    }
+    if (Math.abs(diag.clockSkewMinutes || 0) >= 5) {
+      return `This computer’s clock is about ${Math.abs(diag.clockSkewMinutes)} minutes ${diag.clockSkewMinutes > 0 ? 'ahead' : 'behind'}. Turn on “Set time automatically”, then log in again.`;
+    }
+    if (!diag.sdkLoaded) {
+      return 'The login library didn’t load on this page. Reload; if it keeps happening, an extension may be blocking it.';
+    }
+    return 'Nothing obviously wrong on this browser. Clear sign-in data and log in once more; if it still loops, copy the details below and send them to the design team.';
+  }
+
+  function renderChecks(diag) {
+    const items = [
+      [diag.storageWritable ? 'ok' : 'bad', 'Browser storage', diag.storageWritable ? `writable (${Math.max(0, diag.storageUsedKb)} KB used)` : `full or blocked (${Math.max(0, diag.storageUsedKb)} KB used)`],
+      [diag.storedSession ? 'ok' : 'warn', 'Saved login', diag.storedSession ? (diag.storedSessionExpired ? 'found, expired' : 'found') : 'none on this browser'],
+      [diag.supabaseReachable === null ? 'unknown' : diag.supabaseReachable ? 'ok' : 'bad', 'Login service', diag.supabaseReachable === null ? 'not checked' : diag.supabaseReachable ? `reachable (${diag.supabaseMs} ms)` : 'not reachable from here'],
+      [diag.sdkLoaded ? 'ok' : 'bad', 'Login library', diag.sdkLoaded ? `loaded (${diag.sdkSource})` : 'not loaded'],
+      [Math.abs(diag.clockSkewMinutes || 0) >= 5 ? 'bad' : 'ok', 'Clock', diag.clockSkewMinutes ? `${diag.clockSkewMinutes} min off` : 'in sync'],
+      [diag.heldAuthLocks ? 'warn' : 'ok', 'Other FrameUp tabs', diag.heldAuthLocks ? `${diag.heldAuthLocks} holding the login lock: close other FrameUp tabs` : 'not blocking'],
+      [diag.online === false ? 'bad' : 'ok', 'Connection', diag.online === false ? 'offline' : 'online'],
+    ];
+    diagnoseChecks.replaceChildren(...items.map(([tone, label, value]) => {
+      const item = document.createElement('li');
+      item.className = tone === 'ok' ? '' : `is-${tone}`;
+      const strong = document.createElement('strong');
+      strong.textContent = `${label}: `;
+      const wrap = document.createElement('span');
+      wrap.append(strong, value);
+      item.append(wrap);
+      return item;
+    }));
+  }
+
+  async function showDiagnose(trigger) {
+    stopCooldown();
+    form.hidden = true;
+    confirmationPanel.hidden = true;
+    diagnosePanel.hidden = false;
+    title.textContent = 'Sign-in keeps failing';
+    diagnoseSummary.textContent = 'Checking this browser…';
+    diagnoseStatus.textContent = '';
+    diagnosePanel.focus?.();
+    const bounces = window.ESAuth?.recentAuthBounces?.(10 * 60 * 1000) || [];
+    let diag = window.ESAuth?.quickDiagnostics?.() || {};
+    renderChecks({ ...diag, supabaseReachable: null });
+    try { diag = await window.ESAuth.authDiagnostics(); } catch (error) { /* keep quick ones */ }
+    renderChecks(diag);
+    diagnoseSummary.textContent = diagnosisSummary(diag);
+    diagnoseDetails.value = JSON.stringify({
+      trigger,
+      reasons: bounces.map(item => ({ reason: item.reason, page: item.page, at: new Date(item.at).toISOString() })),
+      diagnostics: diag,
+    }, null, 2);
+  }
+
+  document.getElementById('diagnose-copy').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(diagnoseDetails.value);
+      diagnoseStatus.textContent = 'Copied. Paste it to the design team on Slack.';
+    } catch (error) {
+      diagnoseDetails.focus();
+      diagnoseDetails.select();
+      diagnoseStatus.textContent = 'Select the details and copy them.';
+    }
+  });
+
+  document.getElementById('diagnose-clear').addEventListener('click', () => {
+    window.ESAuth?.clearSignInData?.();
+    const params = new URLSearchParams(window.location.search);
+    const next = new URL('login.html', window.location.href);
+    next.searchParams.set('mode', 'login');
+    next.searchParams.set('cleared', '1');
+    if (params.get('redirect')) next.searchParams.set('redirect', params.get('redirect'));
+    window.location.replace(`${next.pathname.split('/').pop()}${next.search}`);
+  });
+
+  document.getElementById('diagnose-back').addEventListener('click', () => {
+    diagnosePanel.hidden = true;
+    setMode('login', { focus: true });
   });
 
   async function bootLoginPage() {
@@ -1486,6 +1613,18 @@
     // Any reason means a page just sent the person here: explain, never bounce.
     if (!reason && await window.ESAuth?.isValidSession?.()) {
       window.location.replace(getRedirectTarget());
+      return;
+    }
+
+    // Loop breaker: sent back here more than twice in 2 minutes (or asked to
+    // diagnose): explain what's wrong instead of another identical login.
+    const bounces = window.ESAuth?.recentAuthBounces?.() || [];
+    if (params.get('diagnose') === '1' || (reason && bounces.length > 2)) {
+      showDiagnose(reason || 'manual');
+      return;
+    }
+    if (params.get('cleared') === '1') {
+      setError('FrameUp’s sign-in data on this browser was cleared. Log in again.', 'success');
       return;
     }
 

@@ -71,6 +71,9 @@
         return { message: `${message} ${cooldown ? '' : LIMIT_HELP}`.trim(), actions: [], cooldown: cooldown || 60 };
       case 'rate_limited':
         return { message, actions: [], cooldown: cooldown || 60 };
+      case 'storage_failed':
+      case 'clock_skew':
+        return { message, actions: ['fix'], cooldown: 0 };
       case 'access_requested':
         return { panel: 'requested', message, actions: [], cooldown: 0 };
       case 'link_expired':

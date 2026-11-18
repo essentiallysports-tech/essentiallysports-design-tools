@@ -158,6 +158,9 @@
     "api/client-errors.js": {
       "maxDuration": 10
     },
+    "api/auth-bounce.js": {
+      "maxDuration": 10
+    },
     "api/health.js": {
       "maxDuration": 10
     },
