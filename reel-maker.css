@@ -890,3 +890,13 @@ a.rm-cite:hover { text-decoration: underline; }
   .rm-gallery .rm-gtiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 /* ═══ end reels-gallery-expand ═══ */
+
+/* Inline format thumbnails (reel-gallery.js inlineArt): same box as the <img>,
+   so the swap is invisible except that the text now uses the ES web fonts. */
+.rm-gtile__art svg.rm-gtile__svg { display: block; width: 100%; height: 100%; }
+.rm-gtile.is-soon .rm-gtile__art svg.rm-gtile__svg { filter: saturate(.25) brightness(.8); }
+/* The 4 news formats: 2 x 2 in the side panel (no lone tile on its own row),
+   4 across when the panel is wide enough. */
+.rm-fmt-entry { container-type: inline-size; }
+.rm-fmt-entry .rm-gtiles--grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container (min-width: 640px) { .rm-fmt-entry .rm-gtiles--grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

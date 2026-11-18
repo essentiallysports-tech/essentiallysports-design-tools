@@ -321,7 +321,51 @@
     return (lines.join('\n') || 'One moment as three frames: the setup, the play and the reaction.').slice(0, 2400);
   }
 
+  // Format thumbnails are drawn as <img> first (fast, cacheable), then swapped
+  // for the same SVG inline so its text uses the page's web fonts (Roboto
+  // Condensed): an <img> SVG cannot load web fonts and would fall back to Arial.
+  // Each copy gets its own id prefix, and its <style> is scoped to that copy,
+  // so nothing leaks into the page or clashes when a tile appears twice.
+  const artCache = new Map();
+  let artSeq = 0;
+  function scopeSvg(text, uid) {
+    return text
+      .replace(/<style>([^<]*)<\/style>/, (m, css) => `<style>${css.split('}').filter(r => r.trim()).map(r => {
+        const [sel, decl] = r.split('{');
+        return `${sel.split(',').map(s => `#${uid} ${s.trim()}`).join(',')}{${decl}`;
+      }).join('}')}}</style>`)
+      .replace(/\bid="([\w-]+)"/g, (m, id) => `id="${uid}-${id}"`)
+      .replace(/url\(#([\w-]+)\)/g, (m, id) => `url(#${uid}-${id})`)
+      .replace(/href="#([\w-]+)"/g, (m, id) => `href="#${uid}-${id}"`)
+      .replace(/^<svg\b/, `<svg id="${uid}" aria-hidden="true" focusable="false"`);
+  }
+  function inlineArt(root) {
+    if (typeof document === 'undefined' || typeof fetch !== 'function') return;
+    (root || document).querySelectorAll('.rm-gtile__art img[src$=".svg"], .rm-gtile__art img[src*=".svg?"]').forEach(img => {
+      const src = img.getAttribute('src');
+      if (!artCache.has(src)) artCache.set(src, fetch(src).then(r => (r.ok ? r.text() : '')).catch(() => ''));
+      artCache.get(src).then(text => {
+        if (!text || !text.trim().startsWith('<svg') || !img.isConnected) return;
+        const box = document.createElement('span');
+        box.innerHTML = scopeSvg(text.trim(), `rm-art-${++artSeq}`);
+        const svg = box.firstElementChild;
+        if (!svg) return;
+        svg.setAttribute('class', 'rm-gtile__svg');
+        img.replaceWith(svg);
+      });
+    });
+  }
+  if (typeof document !== 'undefined' && typeof MutationObserver === 'function') {
+    const watch = () => {
+      inlineArt(document);
+      new MutationObserver(list => { if (list.some(m => m.addedNodes.length)) inlineArt(document); })
+        .observe(document.body, { childList: true, subtree: true });
+    };
+    if (document.body) watch(); else document.addEventListener('DOMContentLoaded', watch);
+  }
+
   return {
+    inlineArt, scopeSvg,
     ART, SPORT_LABEL, SOURCE_LABEL, REQUIRED_MODES, OPTIONAL_MODES, ROLE_LABEL, TAG_LABEL,
     formatStatus, modeOn, costHint, outputsLabel, galleryModel, tileHtml, galleryHtml, entryHtml,
     SUMMARY, ENTRY_TITLE, ENTRY_TOGGLE, ENTRY_MORE_ID,
