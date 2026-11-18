@@ -215,60 +215,154 @@
     return true;
   }
 
-  // ─── Tour picker (profile menu → Tours) ─────────────────────────────
+  // ─── Progress (per person, this browser) ────────────────────────────
+  // state.tours = { [id]: { startedAt, doneAt } }. A tour counts as done
+  // once it reached its last step; closing it early leaves it "started".
+
+  const PICKER_ORDER = ['welcome', 'generate', 'trends', 'video-ads', 'reels-studio', 'editor'];
+
+  function tourStatus(record) {
+    if (record?.doneAt) return 'done';
+    if (record?.startedAt) return 'started';
+    return 'new';
+  }
+
+  async function recordTour(id, patch) {
+    if (!id || !Tour.get(id)) return; // generated What's new tours are not tracked
+    const { data } = await readState();
+    const tours = { ...(data.tours || {}) };
+    tours[id] = { ...(tours[id] || {}), ...patch };
+    await writeState({ tours });
+  }
+
+  window.addEventListener('frameup:tour-start', event => {
+    const id = event.detail?.id;
+    recordTour(id, { startedAt: new Date().toISOString() });
+  });
+  window.addEventListener('frameup:tour-end', event => {
+    const { id, completed } = event.detail || {};
+    if (completed) recordTour(id, { doneAt: new Date().toISOString() });
+  });
+
+  async function progressSummary() {
+    const { data } = await readState();
+    const ids = PICKER_ORDER.filter(id => Tour.get(id));
+    const done = ids.filter(id => tourStatus(data.tours?.[id]) === 'done').length;
+    return { done, total: ids.length, tours: data.tours || {} };
+  }
+
+  // ─── Tours panel (account menu → Tours) ─────────────────────────────
 
   function pickerItems() {
     const here = pageTourId();
-    const order = ['welcome', 'generate', 'trends', 'video-ads', 'reels-studio', 'editor'];
-    const tours = order.map(id => Tour.get(id)).filter(Boolean);
+    const tours = PICKER_ORDER.map(id => Tour.get(id)).filter(Boolean);
     if (here) tours.sort((a, b) => (b.id === here) - (a.id === here));
     return { tours, here };
+  }
+
+  const ICON_CHECK = svg('<path d="M20 6 9 17l-5-5"/>');
+  const ICON_PLAY = svg('<path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>');
+  const ICON_REPLAY = svg('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>');
+
+  function shortDate(iso) {
+    const date = new Date(iso);
+    return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   }
 
   async function openPicker() {
     closeOverlays();
     await new Promise(resolve => setTimeout(resolve, 40));
+    document.querySelectorAll('.fu-picker').forEach(node => node.remove());
     const { tours, here } = pickerItems();
-    const entries = await Updates.loadManifest(MANIFEST_URL);
+    const [entries, summary] = await Promise.all([Updates.loadManifest(MANIFEST_URL), progressSummary()]);
     const latest = Updates.sortEntries(Updates.entriesOf(entries))[0];
     const dialog = document.createElement('dialog');
     dialog.className = 'es-dialog fu-picker';
     dialog.setAttribute('aria-labelledby', 'fu-picker-title');
+    dialog.setAttribute('aria-describedby', 'fu-picker-sub');
+    const percent = summary.total ? Math.round((summary.done / summary.total) * 100) : 0;
     dialog.innerHTML = `
       <div class="fu-picker__head">
-        <h2 class="es-type-card-title" id="fu-picker-title">Tours</h2>
+        <div class="fu-picker__heading">
+          <h2 class="es-type-card-title" id="fu-picker-title">Tours</h2>
+          <p class="fu-picker__sub" id="fu-picker-sub"></p>
+        </div>
         <button class="fu-tour__close" type="button" data-picker-close aria-label="Close (Esc)" title="Close (Esc)">${ICON_CLOSE}</button>
       </div>
-      <ul class="fu-picker__list"></ul>`;
+      <div class="fu-picker__progress" role="progressbar" aria-label="Tours done" aria-valuemin="0" aria-valuemax="${summary.total}" aria-valuenow="${summary.done}" aria-valuetext="${summary.done} of ${summary.total} done"><span style="width:${percent}%"></span></div>
+      <ul class="fu-picker__list" aria-label="Tours"></ul>
+      <div class="fu-picker__latest" hidden><p class="fu-picker__section">Latest update</p><ul class="fu-picker__list"></ul></div>
+      <div class="fu-picker__foot">
+        <span>Tours never start on their own. Replay one any time.</span>
+        <button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-picker-reset>Reset progress</button>
+      </div>`;
+    dialog.querySelector('#fu-picker-sub').textContent = summary.done === summary.total && summary.total
+      ? `All ${summary.total} done. Nice.`
+      : `${summary.done} of ${summary.total} done · about a minute each`;
     const list = dialog.querySelector('.fu-picker__list');
-    const add = ({ icon, name, desc, tag, run }) => {
+    const add = (target, { icon, name, desc, tag, status, statusText, run }) => {
       const li = document.createElement('li');
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'fu-picker__item';
-      button.innerHTML = `<span class="fu-tour__icon" aria-hidden="true">${icon || ICON_MAP}</span><span><span class="fu-picker__name"></span><span class="fu-picker__desc"></span></span>${tag ? '<span class="fu-picker__tag"></span>' : ''}`;
+      if (status) button.dataset.status = status;
+      button.innerHTML = `<span class="fu-tour__icon" aria-hidden="true">${icon || ICON_MAP}</span>
+        <span class="fu-picker__copy"><span class="fu-picker__name"></span><span class="fu-picker__desc"></span>${statusText ? '<span class="fu-picker__status"></span>' : ''}</span>
+        <span class="fu-picker__end">${tag ? '<span class="fu-picker__tag"></span>' : ''}<span class="fu-picker__go" aria-hidden="true">${status === 'done' ? ICON_REPLAY : ICON_PLAY}</span></span>`;
       button.querySelector('.fu-picker__name').textContent = name;
       button.querySelector('.fu-picker__desc').textContent = desc || '';
+      if (statusText) {
+        const node = button.querySelector('.fu-picker__status');
+        node.innerHTML = status === 'done' ? ICON_CHECK : '';
+        node.append(document.createTextNode(statusText));
+      }
       if (tag) button.querySelector('.fu-picker__tag').textContent = tag;
+      button.setAttribute('aria-label', [name, statusText, tag, desc].filter(Boolean).join('. '));
       button.addEventListener('click', () => { dialog.close(); run(); });
       li.appendChild(button);
-      list.appendChild(li);
+      target.appendChild(li);
     };
-    tours.forEach(tour => add({
-      icon: tour.icon,
-      name: tour.label,
-      desc: tour.description,
-      tag: tour.id === here ? 'This page' : '',
-      run: () => startTour(tour.id, { fromList: true }),
-    }));
+    tours.forEach(tour => {
+      const record = summary.tours?.[tour.id];
+      const status = tourStatus(record);
+      const steps = Array.isArray(tour.steps) ? tour.steps.length : 0;
+      const statusText = status === 'done'
+        ? `Done${shortDate(record.doneAt) ? ` ${shortDate(record.doneAt)}` : ''} · Replay`
+        : status === 'started' ? 'Started, not finished' : `${steps} ${steps === 1 ? 'step' : 'steps'}`;
+      add(list, {
+        icon: tour.icon,
+        name: tour.label,
+        desc: tour.description,
+        tag: tour.id === here ? 'This page' : '',
+        status,
+        statusText,
+        run: () => startTour(tour.id, { fromList: true }),
+      });
+    });
     if (latest) {
-      add({
+      const box = dialog.querySelector('.fu-picker__latest');
+      box.hidden = false;
+      add(box.querySelector('.fu-picker__list'), {
         icon: ICON_WAVE,
-        name: `What’s new: ${latest.title || 'latest update'}`,
+        name: latest.title || 'Latest update',
         desc: new Date(`${latest.date}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long' }),
         run: () => startUpdateTour(latest),
       });
     }
+    // ↑ / ↓ move between rows (Tab works too).
+    dialog.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      const rows = [...dialog.querySelectorAll('.fu-picker__item')];
+      const at = rows.indexOf(document.activeElement);
+      if (at < 0) return;
+      event.preventDefault();
+      rows[(at + (event.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length].focus();
+    });
+    dialog.querySelector('[data-picker-reset]').addEventListener('click', async () => {
+      await writeState({ tours: {} });
+      dialog.close();
+      openPicker();
+    });
     dialog.querySelector('[data-picker-close]').addEventListener('click', () => dialog.close());
     dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
     dialog.addEventListener('close', () => dialog.remove());
@@ -282,7 +376,9 @@
   // "Tours" in the account menu (built by site-chrome.js): replay any tour.
   function addProfileEntry() {
     document.querySelectorAll('.profile-menu .profile-actions').forEach(actions => {
-      if (actions.querySelector('[data-tour-launch]')) return;
+      // The account menu (site-chrome.js) has its own Tours item now; this
+      // only fills in older menus that don't.
+      if (actions.closest('.profile-menu')?.querySelector('[data-tour-launch]')) return;
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'profile-option fu-tour-menu-option';
@@ -434,6 +530,8 @@
   // ─── Boot ───────────────────────────────────────────────────────────
 
   function boot() {
+    // Pages that ask for no tours (the signed-out screen) keep the API only.
+    if (document.body?.dataset.tours === 'off') return;
     addProfileEntry();
     addHelpButton();
     addPaletteEntries();
@@ -456,6 +554,7 @@
     startPageTour,
     startUpdateTour,
     openPicker,
+    progressSummary,
     offerWelcome: async () => offerWelcome({ ...(await readState()).data, welcome: undefined }, ''),
     pageTourId,
     userKey,

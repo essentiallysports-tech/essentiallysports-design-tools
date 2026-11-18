@@ -20,22 +20,23 @@
   <link rel="stylesheet" href="account.css?v=20261117-focus1">
   <link rel="stylesheet" href="../site-mobile-chrome.css?v=20261117-ready1">
 <link rel="stylesheet" href="../theme.css?v=20261117-ready1">
-  <link rel="stylesheet" href="../site-chrome.css?v=20261117-ready1">
+  <link rel="stylesheet" href="../site-chrome.css?v=20261120-account">
   <link rel="stylesheet" href="../cta-hover.css?v=20261115-btn1">
   <link rel="stylesheet" href="../design-tokens.css?v=20261120-rel">
 <link rel="stylesheet" href="../es-ui.css?v=20261120-rel">
   <link rel="stylesheet" href="../es-motion.css?v=20261115-btn1">
-  <script src="../theme.js?v=20261115-pol2"></script>
+  <link rel="stylesheet" href="account-pages.css?v=20261120-account">
+  <script src="../theme.js?v=20261120-account"></script>
   <script src="../site-mobile-chrome.js?v=20261113-uipass1"></script>
-  <script src="../site-chrome.js?v=20261117-usage1"></script>
+  <script src="../site-chrome.js?v=20261120-account"></script>
 <script src="../app-shell.js?v=20261119-rel3"></script>
-<link rel="stylesheet" href="../frameup-tour.css?v=20261117-tour1">
+<link rel="stylesheet" href="../frameup-tour.css?v=20261120-account">
 <script src="../frameup-tour.js?v=20261117-tour1"></script>
 <script src="../tours/updates.js?v=20261117-tour1"></script>
 <script src="../tours/tours.js?v=20261119-rel"></script>
-<script src="../tours/tour-launcher.js?v=20261118-rel1"></script>
+<script src="../tours/tour-launcher.js?v=20261120-account"></script>
 </head>
-<body class="settings-page">
+<body class="settings-page account-v2">
   <div class="page">
     <nav class="navbar">
       <a class="navbar-logo" href="../index.html" aria-label="EssentiallySports home"><img src="assets/brand-logo-blue.svg" alt="EssentiallySports"></a>
@@ -76,123 +77,341 @@
       </div>
     </nav>
 
-    <main class="account-main">
-      <div class="account-shell account-shell--compact">
-        <header class="account-page-header">
-          <div>
-            <div class="account-kicker">FrameUp Account</div>
-            <h1 class="account-title">Settings</h1>
-            <p class="account-subtitle">Choose how FrameUp looks and where your design work starts.</p>
+    <main class="account-main" id="main">
+      <div class="account-shell">
+        <header class="acc-head">
+          <div class="es-page-head">
+            <p class="es-type-kicker">Account</p>
+            <h1>Settings</h1>
+            <p>How FrameUp looks, where it opens, and your AI usage this week. Changes save as you make them, in this browser.</p>
           </div>
-          <a class="secondary-btn account-header-action" href="../index.html#frames">Back to Home</a>
         </header>
 
-        <section class="account-card settings-editor" aria-labelledby="settings-heading">
-          <h2 id="settings-heading" class="sr-only">FrameUp settings</h2>
-          <div class="settings-section">
-            <div class="settings-section-copy">
-              <h3>Appearance</h3>
-              <p>Use the same theme across FrameUp pages and workspaces.</p>
+        <section class="es-card acc-card" aria-labelledby="appearance-title">
+          <div class="es-card__head">
+            <div>
+              <h2 class="acc-card__title" id="appearance-title">Appearance</h2>
+              <p class="es-card__sub">The same theme on every FrameUp page. Exported designs never change.</p>
             </div>
-            <div class="settings-choice" role="group" aria-label="Appearance">
-              <button type="button" data-theme-choice="light" aria-pressed="false">Light</button>
-              <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
-            </div>
+            <span class="acc-saved" data-saved-for="appearance" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Saved</span>
           </div>
+          <div class="es-card__body">
+            <fieldset class="acc-themes" aria-label="Theme">
+              <label class="acc-theme">
+                <input type="radio" name="theme" value="light" data-theme-choice="light">
+                <span class="acc-preview" aria-hidden="true"><i></i><b><i></i><i></i><i></i></b></span>
+                <span class="acc-theme__label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>Light<svg class="acc-theme__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
+              </label>
+              <label class="acc-theme">
+                <input type="radio" name="theme" value="dark" data-theme-choice="dark">
+                <span class="acc-preview acc-preview--dark" aria-hidden="true"><i></i><b><i></i><i></i><i></i></b></span>
+                <span class="acc-theme__label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>Dark<svg class="acc-theme__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
+              </label>
+              <label class="acc-theme">
+                <input type="radio" name="theme" value="system" data-theme-choice="system">
+                <span class="acc-preview acc-preview--system" aria-hidden="true"><i></i><b><i></i><i></i><i></i></b></span>
+                <span class="acc-theme__label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>System<svg class="acc-theme__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
+              </label>
+            </fieldset>
+            <p class="acc-theme-note" id="theme-note" aria-live="polite"></p>
+          </div>
+        </section>
 
-          <div class="settings-section">
-            <div class="settings-section-copy">
-              <h3>Startup</h3>
-              <p>Control which workspace opens when you enter FrameUp without a direct link.</p>
+        <section class="es-card acc-card" aria-labelledby="startup-title">
+          <div class="es-card__head">
+            <div>
+              <h2 class="acc-card__title" id="startup-title">Start page</h2>
+              <p class="es-card__sub">Where FrameUp opens when you go to it without a link.</p>
             </div>
-            <div class="settings-section-controls">
-              <div class="field">
-                <label for="start-page">Start page</label>
-                <select id="start-page">
+            <span class="acc-saved" data-saved-for="startup" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Saved</span>
+          </div>
+          <div class="es-card__body">
+            <div class="acc-row acc-row--switch">
+              <div>
+                <p class="acc-row__title" id="remember-label">Reopen my last workspace</p>
+                <p class="acc-row__copy" id="remember-copy">Social Media, YouTube or Newsletter: whichever you used last.</p>
+              </div>
+              <div class="acc-row__control">
+                <span class="acc-switch"><input id="remember-workspace" type="checkbox" role="switch" aria-labelledby="remember-label" aria-describedby="remember-copy"><span></span></span>
+              </div>
+            </div>
+            <div class="acc-row">
+              <div>
+                <label class="acc-row__title" for="start-page">Start page</label>
+                <p class="acc-row__copy" id="start-page-copy">Used when “Reopen my last workspace” is off.</p>
+              </div>
+              <div class="acc-row__control">
+                <select class="acc-select" id="start-page" aria-describedby="start-page-copy">
                   <option value="frames">Home</option>
                   <option value="instagram">Social Media</option>
                   <option value="youtube">YouTube</option>
                   <option value="newsletter">Newsletter</option>
                 </select>
               </div>
-              <label class="setting-row setting-row--compact" for="remember-workspace">
-                <span class="setting-copy">
-                  <span class="settings-label">Remember my last workspace</span>
-                  <span>Open the workspace you most recently used instead of the start page.</span>
-                </span>
-                <span class="toggle"><input id="remember-workspace" type="checkbox"><span></span></span>
-              </label>
             </div>
           </div>
-
-          <footer class="settings-actions">
-            <button class="primary-btn" id="save-settings" type="button">Save settings</button>
-            <button class="secondary-btn" id="reset-settings" type="button">Reset</button>
-            <div class="status-note" id="settings-status" aria-live="polite"></div>
-          </footer>
         </section>
+
+        <section class="es-card acc-card" aria-labelledby="usage-title">
+          <div class="es-card__head">
+            <div>
+              <h2 class="acc-card__title" id="usage-title">AI usage</h2>
+              <p class="es-card__sub">What your AI requests cost this week (Generate, Trends, Video Ads, Reels Studio).</p>
+            </div>
+            <button class="es-btn es-btn--tertiary es-btn--sm" type="button" id="usage-refresh" aria-label="Refresh AI usage">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              <span>Refresh</span>
+            </button>
+          </div>
+          <div class="es-card__body" id="usage-body" aria-live="polite" aria-busy="true">
+            <div class="acc-usage-skeleton" aria-hidden="true"><span class="es-skeleton"></span><span class="es-skeleton"></span><span class="es-skeleton"></span></div>
+          </div>
+        </section>
+
+        <section class="es-card acc-card" aria-labelledby="help-title" id="help-card" hidden>
+          <div class="es-card__head">
+            <div>
+              <h2 class="acc-card__title" id="help-title">Tours and updates</h2>
+              <p class="es-card__sub">One-minute walkthroughs and release notes.</p>
+            </div>
+          </div>
+          <div class="es-card__body">
+            <div class="acc-row" id="tours-row" hidden>
+              <div>
+                <p class="acc-row__title">Tours</p>
+                <div class="acc-progress"><span class="acc-row__copy" id="tours-progress-text">Loading…</span><span class="acc-progress__bar" aria-hidden="true"><span id="tours-progress-bar" style="width:0%"></span></span></div>
+              </div>
+              <div class="acc-row__control">
+                <button class="es-btn" type="button" id="open-tours">Open tours</button>
+              </div>
+            </div>
+            <div class="acc-row" id="news-row" hidden>
+              <div>
+                <p class="acc-row__title">What’s new</p>
+                <p class="acc-row__copy" id="news-copy">The latest changes to FrameUp.</p>
+              </div>
+              <div class="acc-row__control">
+                <button class="es-btn" type="button" id="open-news">See what’s new</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="acc-head__actions">
+          <button class="es-btn es-btn--tertiary es-btn--sm" type="button" id="reset-settings">Restore default settings</button>
+          <p class="acc-status" id="settings-status" role="status" aria-live="polite"></p>
+        </div>
       </div>
     </main>
   </div>
 
   <footer class="site-footer" aria-label="Site footer"></footer>
 
-  <script src="account.js?v=20261117-ready1"></script>
+  <script src="account.js?v=20261120-account"></script>
   <script>
-    const defaults = { theme: 'light', startPage: 'frames', rememberLastWorkspace: true };
-    const fields = {
-      startPage: document.getElementById('start-page'),
-      rememberLastWorkspace: document.getElementById('remember-workspace')
-    };
-    const status = document.getElementById('settings-status');
-    let selectedTheme = window.FrameUpTheme?.current?.() || 'light';
+    (() => {
+      'use strict';
+      // es.ai.settings is read by index.html (routeFromHash): startPage and
+      // rememberLastWorkspace. Off by default, which is what index.html does
+      // when nothing was saved.
+      const DEFAULTS = { startPage: 'frames', rememberLastWorkspace: false };
+      const startPage = document.getElementById('start-page');
+      const remember = document.getElementById('remember-workspace');
+      const themeNote = document.getElementById('theme-note');
+      const status = document.getElementById('settings-status');
+      const savedTimers = {};
 
-    function syncThemeButtons() {
-      document.querySelectorAll('[data-theme-choice]').forEach(button => {
-        button.setAttribute('aria-pressed', String(button.dataset.themeChoice === selectedTheme));
+      function flashSaved(key) {
+        const chip = document.querySelector(`[data-saved-for="${key}"]`);
+        if (!chip) return;
+        chip.classList.add('is-shown');
+        status.textContent = 'Saved';
+        clearTimeout(savedTimers[key]);
+        savedTimers[key] = setTimeout(() => { chip.classList.remove('is-shown'); status.textContent = ''; }, 1800);
+      }
+
+      function persist(patch, key) {
+        try {
+          saveSettings({ ...loadSettings(), ...patch });
+          flashSaved(key);
+        } catch (error) {
+          status.textContent = 'Couldn’t save in this browser: storage is blocked.';
+        }
+      }
+
+      // ─── Appearance ───────────────────────────────────────────────────
+      function preference() {
+        return window.FrameUpTheme?.preference?.() || window.FrameUpTheme?.current?.() || 'light';
+      }
+      function syncTheme() {
+        const choice = preference();
+        document.querySelectorAll('input[name="theme"]').forEach(input => { input.checked = input.value === choice; });
+        const dark = document.documentElement.dataset.theme === 'dark';
+        themeNote.textContent = choice === 'system'
+          ? `Following your device: ${dark ? 'dark' : 'light'} right now.`
+          : '';
+      }
+      document.querySelectorAll('input[name="theme"]').forEach(input => input.addEventListener('change', () => {
+        if (!input.checked) return;
+        window.FrameUpTheme?.apply?.(input.value);
+        syncTheme();
+        flashSaved('appearance');
+      }));
+      window.addEventListener('frameup-theme-change', syncTheme);
+
+      // ─── Start page ──────────────────────────────────────────────────
+      function syncStartup(settings = loadSettings()) {
+        const data = { ...DEFAULTS, ...settings };
+        startPage.value = ['frames', 'instagram', 'youtube', 'newsletter'].includes(data.startPage) ? data.startPage : 'frames';
+        remember.checked = Boolean(data.rememberLastWorkspace);
+        startPage.disabled = remember.checked;
+      }
+      startPage.addEventListener('change', () => persist({ startPage: startPage.value }, 'startup'));
+      remember.addEventListener('change', () => {
+        startPage.disabled = remember.checked;
+        persist({ rememberLastWorkspace: remember.checked }, 'startup');
       });
-    }
 
-    function applySettings(settings) {
-      const data = { ...defaults, ...settings };
-      selectedTheme = window.FrameUpTheme?.current?.() || data.theme;
-      fields.startPage.value = data.startPage;
-      fields.rememberLastWorkspace.checked = Boolean(data.rememberLastWorkspace);
-      syncThemeButtons();
-    }
-
-    function collectSettings() {
-      return {
-        ...loadSettings(),
-        theme: selectedTheme,
-        startPage: fields.startPage.value,
-        rememberLastWorkspace: fields.rememberLastWorkspace.checked
-      };
-    }
-
-    document.querySelectorAll('[data-theme-choice]').forEach(button => {
-      button.addEventListener('click', () => {
-        selectedTheme = button.dataset.themeChoice;
-        window.FrameUpTheme?.apply?.(selectedTheme);
-        syncThemeButtons();
+      document.getElementById('reset-settings').addEventListener('click', () => {
+        window.FrameUpTheme?.apply?.('light');
+        try {
+          saveSettings({ ...loadSettings(), ...DEFAULTS });
+          localStorage.removeItem('frameup.lastWorkspace.v1');
+        } catch (error) { /* storage blocked */ }
+        syncTheme();
+        syncStartup();
+        status.textContent = 'Default settings restored.';
       });
-    });
 
-    document.getElementById('save-settings').addEventListener('click', () => {
-      saveSettings(collectSettings());
-      status.textContent = 'Settings saved.';
-    });
+      // ─── AI usage (same read as the sidebar card: frameup_my_ai_spend) ──
+      const usageBody = document.getElementById('usage-body');
+      const usageRefresh = document.getElementById('usage-refresh');
+      const LIMIT = Number(window.FrameUpUsage?.limit) || 20;
+      const FEATURES = [[/^generate-scene-image/, 'Scene images'], [/^generate/, 'Generate'], [/^trend/, 'Trends'], [/^video-ads/, 'Video Ads'], [/^reels/, 'Reels Studio']];
+      const money = value => `$${(Math.round(value * 100) / 100).toFixed(2)}`;
+      const esc = value => String(value).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 
-    document.getElementById('reset-settings').addEventListener('click', () => {
-      selectedTheme = defaults.theme;
-      window.FrameUpTheme?.apply?.(selectedTheme);
-      applySettings(defaults);
-      saveSettings({ ...loadSettings(), ...defaults });
-      try { localStorage.removeItem('frameup.lastWorkspace.v1'); } catch (error) {}
-      status.textContent = 'Settings reset.';
-    });
+      function weekStartUtc(now = new Date()) {
+        const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7));
+        return start;
+      }
+      function featureLabel(key) {
+        const match = FEATURES.find(([pattern]) => pattern.test(key));
+        if (match) return match[1];
+        const words = String(key || 'Other').replace(/[-_]+/g, ' ').trim();
+        return words.charAt(0).toUpperCase() + words.slice(1);
+      }
+      function resetLabel() {
+        const next = weekStartUtc();
+        next.setUTCDate(next.getUTCDate() + 7);
+        return next.toLocaleString(undefined, { weekday: 'long', hour: 'numeric', minute: '2-digit' });
+      }
 
-    applySettings(loadSettings());
+      function renderUsage(data) {
+        const total = Math.max(0, Number(data?.total_usd) || 0);
+        const ratio = total / LIMIT;
+        const state = ratio >= 1 ? 'over' : ratio >= 0.8 ? 'warn' : 'ok';
+        const rows = Object.entries(Object.entries(data?.by_feature || {}).reduce((sum, [key, usd]) => {
+          const label = featureLabel(key);
+          sum[label] = (sum[label] || 0) + (Number(usd) || 0);
+          return sum;
+        }, {})).filter(([, usd]) => usd >= 0.005).sort((a, b) => b[1] - a[1]);
+        const calls = Number(data?.calls) || 0;
+        usageBody.innerHTML = `
+          <div class="acc-usage" data-state="${state}">
+            <div class="acc-usage__top">
+              <p class="acc-usage__amount">${money(total)}<small>of $${LIMIT} this week</small></p>
+              <span class="acc-usage__reset">Resets ${esc(resetLabel())}</span>
+            </div>
+            <div class="acc-usage__bar" role="progressbar" aria-label="AI usage this week" aria-valuemin="0" aria-valuemax="${LIMIT}" aria-valuenow="${Math.min(LIMIT, Math.round(total * 100) / 100)}" aria-valuetext="${money(total)} of $${LIMIT}"><span style="width:${Math.min(100, Math.round(ratio * 100))}%"></span></div>
+            ${rows.length
+              ? `<ul class="acc-usage__list" aria-label="By feature">${rows.map(([label, usd]) => `<li><span>${esc(label)}</span><span>${money(usd)}</span></li>`).join('')}</ul>`
+              : '<p class="acc-usage__note">No AI requests yet this week. Generate, Trends angles, Video Ads copy and Reels Studio scripts count here.</p>'}
+            <p class="acc-usage__note">${calls ? `${calls} AI ${calls === 1 ? 'request' : 'requests'} · ` : ''}${state === 'over' ? 'Weekly limit reached: AI features pause until the reset.' : `A $${LIMIT} weekly limit per person keeps costs in check.`}</p>
+          </div>`;
+      }
+
+      function renderUsageError(message) {
+        usageBody.innerHTML = `
+          <div class="es-error-state" role="alert">
+            <span class="es-error-state__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></span>
+            <p class="es-error-state__title">Usage isn’t available right now</p>
+            <p class="es-error-state__copy">${esc(message)}</p>
+            <button class="es-btn es-btn--sm" type="button" data-usage-retry>Try again</button>
+          </div>`;
+        usageBody.querySelector('[data-usage-retry]').addEventListener('click', () => loadUsage());
+      }
+
+      let usageLoading = false;
+      async function loadUsage() {
+        if (usageLoading) return;
+        usageLoading = true;
+        usageBody.setAttribute('aria-busy', 'true');
+        usageRefresh.setAttribute('aria-busy', 'true');
+        usageRefresh.disabled = true;
+        try {
+          let client = null;
+          for (let i = 0; i < 20 && !client; i += 1) {
+            try { client = window.ESAuth?.getSupabaseClient?.(); } catch (error) { client = null; }
+            if (!client) await new Promise(resolve => setTimeout(resolve, 250));
+          }
+          if (!client || typeof client.rpc !== 'function') throw new Error('The sign-in service didn’t load. Check your connection.');
+          const result = await client.rpc('frameup_my_ai_spend', { p_since: weekStartUtc().toISOString() });
+          if (result?.error) throw new Error('The usage report couldn’t be read. It may not be set up yet.');
+          const data = Array.isArray(result?.data) ? result.data[0] || null : result?.data || null;
+          renderUsage(data || { total_usd: 0, by_feature: {}, calls: 0 });
+          window.FrameUpUsage?.refresh?.();
+        } catch (error) {
+          renderUsageError(error?.message || 'Try again in a moment.');
+        } finally {
+          usageLoading = false;
+          usageBody.setAttribute('aria-busy', 'false');
+          usageRefresh.removeAttribute('aria-busy');
+          usageRefresh.disabled = false;
+        }
+      }
+      usageRefresh.addEventListener('click', () => loadUsage());
+
+      // ─── Tours and What's new (only when they loaded on this page) ─────
+      async function syncHelp() {
+        const tours = window.FrameUpTours;
+        const news = window.FrameUpWhatsNew;
+        document.getElementById('help-card').hidden = !(tours?.openPicker || news?.open);
+        const toursRow = document.getElementById('tours-row');
+        toursRow.hidden = !tours?.openPicker;
+        if (tours?.progressSummary) {
+          try {
+            const { done, total } = await tours.progressSummary();
+            document.getElementById('tours-progress-text').textContent = total ? `${done} of ${total} done` : 'No tours yet';
+            document.getElementById('tours-progress-bar').style.width = `${total ? Math.round((done / total) * 100) : 0}%`;
+          } catch (error) {
+            document.getElementById('tours-progress-text').textContent = 'Replay any tour.';
+          }
+        }
+        const newsRow = document.getElementById('news-row');
+        newsRow.hidden = !news?.open;
+        if (news?.ready) {
+          try {
+            const entries = await news.ready;
+            const latest = entries?.[0];
+            if (latest) {
+              const date = new Date(`${latest.date}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
+              document.getElementById('news-copy').textContent = `Latest: ${latest.title || 'FrameUp was updated'} (${date}).`;
+            }
+          } catch (error) { /* keep the default line */ }
+        }
+      }
+      document.getElementById('open-tours').addEventListener('click', () => window.FrameUpTours?.openPicker?.());
+      document.getElementById('open-news').addEventListener('click', () => window.FrameUpWhatsNew?.open?.());
+      window.addEventListener('frameup:tour-end', () => setTimeout(syncHelp, 100));
+
+      syncTheme();
+      syncStartup();
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', syncHelp, { once: true });
+      else setTimeout(syncHelp, 0);
+      loadUsage();
+    })();
   </script>
 </body>
 </html>

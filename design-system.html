@@ -19,7 +19,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
   <link rel="stylesheet" href="theme.css?v=20261117-ready1">
-  <link rel="stylesheet" href="site-chrome.css?v=20261117-ready1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261120-account">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
   <link rel="stylesheet" href="design-tokens.css?v=20261120-rel">
 <link rel="stylesheet" href="es-ui.css?v=20261120-rel">
@@ -29,13 +29,13 @@
   <link rel="stylesheet" href="video-ads.css?v=20261120-rel">
   <script src="theme.js?v=20261115-pol2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
-  <script src="site-chrome.js?v=20261117-usage1"></script>
+  <script src="site-chrome.js?v=20261120-account"></script>
 <script src="app-shell.js?v=20261119-rel3"></script>
-<link rel="stylesheet" href="frameup-tour.css?v=20261117-tour1">
+<link rel="stylesheet" href="frameup-tour.css?v=20261120-account">
 <script src="frameup-tour.js?v=20261117-tour1"></script>
 <script src="tours/updates.js?v=20261117-tour1"></script>
 <script src="tours/tours.js?v=20261119-rel"></script>
-<script src="tours/tour-launcher.js?v=20261118-rel1"></script>
+<script src="tours/tour-launcher.js?v=20261120-account"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
   <script src="league-logos.js?v=20261117-logo1" defer></script>
   <script src="video-ads-teams.js?v=20261117-tlogo1" defer></script>
@@ -343,6 +343,38 @@
       .ds-ai-fcards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
   </style>
+  <style>
+    /* ── Page chrome (feature/account-polish, 2026-11-20): sticky bar with
+       search + section nav, and the search's empty state. Layout only; the
+       component sections are untouched. ── */
+    .ds-toc-bar { flex-wrap: wrap; align-items: center; gap: var(--es-space-2) var(--es-space-3); border-bottom: 1px solid transparent; }
+    .ds-toc-bar.is-stuck { border-bottom-color: var(--es-line); }
+    .ds-find { display: flex; align-items: center; gap: var(--es-space-2); flex: 0 1 300px; min-width: 0; }
+    .ds-find__field { position: relative; display: flex; align-items: center; flex: 1 1 auto; min-width: 0; }
+    .ds-find__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .ds-find__field > svg { position: absolute; left: 12px; width: var(--es-icon-sm); height: var(--es-icon-sm); color: var(--es-ink-3); pointer-events: none; }
+    .ds-find__field .es-kbd { position: absolute; right: 8px; pointer-events: none; }
+    .ds-find input { box-sizing: border-box; width: 100%; height: 40px; padding: 0 36px 0 36px; border: 0; border-radius: var(--es-radius-control); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line-2); color: var(--es-ink); font: 400 14px/1 var(--es-font-ui); outline: none; -webkit-appearance: none; appearance: none; }
+    .ds-find input:hover { box-shadow: inset 0 0 0 1px var(--es-ink-3); }
+    .ds-find input:focus { box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo); }
+    .ds-find input::-webkit-search-cancel-button { display: none; }
+    .ds-find input:not(:placeholder-shown) ~ .es-kbd { display: none; }
+    .ds-find__count { color: var(--es-ink-3); font-size: var(--es-type-meta-size); white-space: nowrap; }
+    .ds-find__count:empty { display: none; }
+    .ds-toc { flex: 1 1 auto; }
+    .ds-toc a.is-filtered-out { opacity: .4; }
+    .ds-page [data-ds-hidden] { display: none !important; }
+    .ds-find-empty { padding: var(--es-space-10) var(--es-space-6); text-align: center; }
+    .ds-find-empty[hidden] { display: none; }
+    html[data-theme="dark"] .ds-find input { background: #2A2D34; box-shadow: inset 0 0 0 1px #707A8C; color: #FFFFFF; }
+    html[data-theme="dark"] .ds-find input:focus { box-shadow: inset 0 0 0 1px #54A4FB, var(--es-focus-halo); }
+    html[data-theme="dark"] .ds-toc-bar.is-stuck { border-bottom-color: #2A2D34; }
+    @media (max-width: 900px) {
+      .ds-find { flex: 1 1 100%; }
+      .ds-find__field .es-kbd { display: none; }
+      .ds-find input { height: 44px; font-size: 16px; }
+    }
+  </style>
 </head>
 <body class="ds-body">
   <nav class="navbar">
@@ -398,6 +430,16 @@
     </header>
 
     <div class="ds-toc-bar">
+      <!-- Page chrome (feature/account-polish): library search. Component sections below are unchanged. -->
+      <div class="ds-find" role="search">
+        <label class="ds-find__field">
+          <span class="ds-find__sr">Search the UI Library</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+          <input type="search" id="ds-find-input" placeholder="Search components, e.g. button" autocomplete="off" spellcheck="false" aria-describedby="ds-find-count" aria-keyshortcuts="/">
+          <kbd class="es-kbd" aria-hidden="true">/</kbd>
+        </label>
+        <span class="ds-find__count" id="ds-find-count" role="status" aria-live="polite"></span>
+      </div>
       <nav class="ds-toc es-segmented" aria-label="Library sections">
         <a class="es-segmented__item is-active" href="#foundations">Foundations</a>
         <a class="es-segmented__item" href="#buttons">Buttons</a>
@@ -1416,6 +1458,88 @@
       }
       if (document.readyState === 'complete') onReady();
       else window.addEventListener('load', onReady, { once: true });
+    })();
+  </script>
+  <script>
+    // Page chrome (feature/account-polish): search the library and keep the
+    // sticky bar honest. Filters whole subsections (.ds-sub) by their text and
+    // class names; component demos are not touched.
+    (function () {
+      'use strict';
+      const input = document.getElementById('ds-find-input');
+      const count = document.getElementById('ds-find-count');
+      const bar = document.querySelector('.ds-toc-bar');
+      const page = document.querySelector('.ds-page');
+      if (!input || !page) return;
+      const sections = [...page.querySelectorAll('section.ds-section')];
+      const empty = document.createElement('div');
+      empty.className = 'es-empty ds-find-empty';
+      empty.hidden = true;
+      empty.innerHTML = '<p class="es-empty__title">Nothing matches</p><p class="es-empty__copy">Try a component or class name, such as “chip”, “.es-btn” or “empty state”.</p><button class="es-btn es-btn--sm" type="button">Clear search</button>';
+      sections[sections.length - 1]?.after(empty);
+      empty.querySelector('button').addEventListener('click', () => { input.value = ''; apply(); input.focus(); });
+      const norm = value => String(value || '').toLowerCase().replace(/\s+/g, ' ');
+      const index = sections.map(section => {
+        const head = norm(section.querySelector('.es-card__head')?.textContent);
+        const subs = [...section.querySelectorAll('.ds-sub')].map(sub => ({ sub, text: norm(sub.textContent) }));
+        return { section, head, subs };
+      });
+      function apply() {
+        const terms = norm(input.value).trim().split(' ').filter(Boolean);
+        let hits = 0;
+        index.forEach(({ section, head, subs }) => {
+          if (!terms.length) {
+            section.removeAttribute('data-ds-hidden');
+            subs.forEach(({ sub }) => sub.removeAttribute('data-ds-hidden'));
+            return;
+          }
+          const headHit = terms.every(term => head.includes(term));
+          let visible = 0;
+          subs.forEach(({ sub, text }) => {
+            const on = headHit || terms.every(term => text.includes(term) || head.includes(term));
+            sub.toggleAttribute('data-ds-hidden', !on);
+            if (on) visible += 1;
+          });
+          const show = headHit || visible > 0;
+          section.toggleAttribute('data-ds-hidden', !show);
+          hits += show ? Math.max(visible, 1) : 0;
+        });
+        document.querySelectorAll('.ds-toc a').forEach(link => {
+          const target = document.querySelector(link.getAttribute('href'));
+          link.classList.toggle('is-filtered-out', Boolean(target && target.hasAttribute('data-ds-hidden')));
+        });
+        empty.hidden = !terms.length || hits > 0;
+        count.textContent = terms.length ? (hits ? `${hits} ${hits === 1 ? 'match' : 'matches'}` : 'No matches') : '';
+      }
+      let timer = 0;
+      input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(apply, 80); });
+      input.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && input.value) { event.preventDefault(); event.stopPropagation(); input.value = ''; apply(); }
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          const first = sections.find(section => !section.hasAttribute('data-ds-hidden'));
+          first?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+        }
+      });
+      // "/" jumps to search unless you're typing somewhere.
+      document.addEventListener('keydown', event => {
+        if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
+        const t = event.target;
+        if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+        event.preventDefault();
+        input.focus();
+        input.select();
+      });
+      // A hairline under the bar once it sticks.
+      if (bar) {
+        let frame = 0;
+        const sync = () => {
+          const top = parseFloat(getComputedStyle(bar).top) || 0;
+          bar.classList.toggle('is-stuck', window.scrollY > 0 && bar.getBoundingClientRect().top <= top + 0.5);
+        };
+        window.addEventListener('scroll', () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(sync); }, { passive: true });
+        sync();
+      }
     })();
   </script>
 </body>
