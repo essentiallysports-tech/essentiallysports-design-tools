@@ -1698,8 +1698,11 @@
     return ops;
   }
   // The game clock: a tab under the bug's right end ("Q1  6:56").
+  // No tab without a clock when the bug already shows the period: baseball
+  // has no clock, so the tab would only repeat the bug's "TOP 2".
+  const clockTab = state => Boolean(state && state.mode !== 'final' && (state.clock || (state.period && state.down)));
   function clockOps(measure, tl, style, cv, state, delay = 0) {
-    if (!state || state.mode === 'final') return [];
+    if (!clockTab(state)) return [];
     const text = [state.period, state.clock].filter(Boolean).join('  ');
     if (!text) return [];
     const tk = S.elementTokens(style.id, 'clock');
@@ -1884,7 +1887,12 @@
       headOps = blk.ops.map(o => ({ ...o, type: 'text', anim: 'mask', x: o.x - MARGIN + box.x + pad }));
       y = blk.bottom + 18;
     }
-    const tf = fitText(measure, play.text || '', { family: style.type.body, weight: 500, max: 30, min: 24, maxLines: 2, width: innerW });
+    // ESPN's play text without its scorer's noise (formation, jersey numbers,
+    // tacklers, a cut-off tail): only removes words, so every number left is
+    // the play's own.
+    const T = getT();
+    const line = (T && T.cleanPlayText ? T.cleanPlayText(play.text) : '') || play.text || '';
+    const tf = fitText(measure, line, { family: style.type.body, weight: 500, max: 30, min: 24, maxLines: 2, width: innerW });
     const textBlk = linesOps(tf, y, { lineHeight: 1.22, upper: false, role: 'play-text', color: tk.muted, baseDelay: delay + 320, delayStep: 0 });
     const playText = textBlk.ops.map(o => ({ ...o, type: 'text', anim: 'fade', x: o.x - MARGIN + box.x + pad, refs: [`play:${play.id}`] }));
     const h = Math.round(textBlk.bottom - box.y + pad);
@@ -1902,7 +1910,8 @@
     const classic = style.engine === 'classic';
     ops.push(...scorebugOps(measure, tl, style, cv, state, 0));
     ops.push(...clockOps(measure, tl, style, cv, state, 160));
-    let y = S.elementBox('clock', cv).y + S.elementBox('clock', cv).h + 24;
+    const top = clockTab(state) ? S.elementBox('clock', cv) : S.elementBox('scorebug', cv);
+    let y = top.y + top.h + 24;
     const showWp = hasWp(tl);
     if (showWp) {
       const band = S.elementBox('wpline', cv);

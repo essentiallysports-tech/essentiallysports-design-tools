@@ -296,6 +296,48 @@ test('scorebug: digest scores (a scoring play counts up from the score before), 
   assert.equal(R.periodLabel({ sport: 'mlb' }, { period: 9, half: 'bottom' }), 'BOT 9');
 });
 
+// Real digests (ESPN, 2026-10-28 MIL at TB and 2026-11-14 TEX at LSU) as the Game Swing editor gets them.
+const realSwing = (name, playIds, style = 'series') => {
+  const game = fx(name);
+  const beats = [{ id: 'b1', kind: 'hook', text: 'Hook' }, ...playIds.map((id, i) => ({ id: `b${i + 2}`, kind: 'play', text: 'A play', refs: [`play:${id}`] }))];
+  return R.buildTimeline({ format: 'gameswing', title: 'Swing', sport: game.sport, beats }, { style, canvas: { w: 1080, h: 1920 }, data: { game } });
+};
+
+test('scorebug, MLB: no clock tab repeating the inning; the bug shows it once; the clip moves up into the space', () => {
+  for (const style of S.STYLE_IDS) {
+    const tl = realSwing('mlb-401908046.digest.json', ['4019080460204990057', '4019080461002990057'], style);
+    tl.tracks.graphics.filter(g => g.template === 'play').forEach(g => {
+      const ops = R.layoutGraphic(measure, g, tl);
+      assert.ok(!ops.some(o => o.role === 'clock' || o.role === 'clock-text'), `${style}: no clock tab for baseball`);
+      const innings = ops.filter(o => o.text != null && /^(?:TOP|BOT) \d+$/.test(o.text));
+      assert.equal(innings.length, 1, `${style}: the inning once`);
+      assert.equal(innings[0].role, 'down');
+    });
+  }
+  const top = R.layoutGraphic(measure, realSwing('mlb-401908046.digest.json', ['4019080460204990057']).tracks.graphics[1], realSwing('mlb-401908046.digest.json', ['4019080460204990057']));
+  assert.ok(top.some(o => o.text === 'TOP 2'));
+  // Football keeps its clock tab (period + clock), CFB too.
+  const cfb = realSwing('cfb-401856885.digest.json', ['401856885813']);
+  const ops = R.layoutGraphic(measure, cfb.tracks.graphics[1], cfb);
+  assert.ok(ops.some(o => o.role === 'clock-text' && o.text === 'Q4  0:03'));
+  assert.ok(ops.some(o => o.role === 'down' && o.text === '2ND & GOAL'));
+});
+
+test('play card, CFB: the line under the headline is the play without ESPN noise, numbers only from the play', () => {
+  const tl = realSwing('cfb-401856885.digest.json', ['401856885794', '401856885813', '401856885508', '401856885250']);
+  const lines = tl.tracks.graphics.filter(g => g.template === 'play').map(g => R.layoutGraphic(measure, g, tl).filter(o => o.role === 'play-text').map(o => o.text).join(' '));
+  assert.deepEqual(lines, [
+    'A. Manning pass complete short right',
+    'Raleek Brown 4 Yd pass from Arch Manning',
+    'D. Jones rush middle for 4 yds gain',
+    'S. Leavitt pass intercepted',
+  ]);
+  lines.forEach(l => assert.ok(!/Shotgun|Huddle|#\d|…|\(/.test(l), l));
+  const lint = require('../reel-lint.js').lintTimeline(tl, { boxes: R.allBoxes(measure, tl), extraSources: T.digestFacts(tl.data.game) });
+  const numberIssues = lint.issues.filter(i => i.id === 'numbers' || i.id === 'data-numbers');
+  assert.deepEqual(numberIssues, [], 'every number on the card is the play\'s own');
+});
+
 test('win probability: the chart, the swing marker from the refs, and the attribution every time', () => {
   const tl = build('gameswing', 'series');
   const wp = R.layoutGraphic(measure, tl.tracks.graphics[2], tl);

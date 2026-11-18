@@ -217,7 +217,10 @@ function digestGame(summary, { sport, eventId, now = Date.now } = {}) {
     const swing = wpHome != null && prevWp != null ? r4(wpHome - prevWp) : null;
     if (wpHome != null) prevWp = wpHome;
     const scoring = Boolean(p.scoringPlay);
-    const text = scoring && scoringText.get(String(p.id)) ? shortenText(scoringText.get(String(p.id))) : shortenText(stripParens(p.text));
+    // College play text leads with the formation and jersey numbers ("No
+    // Huddle-Shotgun #16 A.Manning ..."): drop them before the length cut so
+    // the receiver and the gain fit (the play card cleans the rest).
+    const text = scoring && scoringText.get(String(p.id)) ? shortenText(scoringText.get(String(p.id))) : shortenText(T.stripPlayNoise(stripParens(p.text)));
     let team = null;
     if (sport === 'mlb') team = half === 'top' ? 'away' : (half === 'bottom' ? 'home' : null);
     else {

@@ -316,6 +316,49 @@
     return { ok: !c.errors.length, errors: c.errors, warnings: c.warnings, bytes: size };
   }
 
+  // ─── Play text (ESPN) ────────────────────────────────────────────────────
+  // ESPN's play-by-play carries scorer's noise: a formation lead-in ("No
+  // Huddle-Shotgun", "(Shotgun)"), jersey numbers ("#16 A.Manning"), tacklers
+  // and kickers in parentheses, the ball spot before the gain ("to SF 48 for
+  // 22 yards"). These helpers only REMOVE noise from the source text; they
+  // never add a word or a number (the two abbreviations below shorten words
+  // that are there: yards -> yds, TOUCHDOWN -> TD).
+  const FORMATION_WORD = '(?:No[-\\s]Huddle|Shotgun|Pistol|Under Center|Wildcat)';
+  const FORMATION = new RegExp(`^\\s*(?:\\(${FORMATION_WORD}(?:[,\\s-]+${FORMATION_WORD})*\\)\\s*|(?:${FORMATION_WORD}[-\\s]+)+)`, 'i');
+  // Light pass, for the digest (before the length cut, so more of the play
+  // fits): the formation lead-in and jersey numbers in front of a name.
+  function stripPlayNoise(raw) {
+    return String(raw == null ? '' : raw).replace(FORMATION, '').replace(/#\d{1,3}\s+(?=[A-Z][A-Za-z'-]*\.\s?[A-Z])/g, '');
+  }
+  const DANGLING = /^(?:to|by|for|at|the|of|and|from|on|in|a|with|after)$/i;
+  // Full pass, for the play card's line: the first sentence of the play,
+  // without the noise above, parentheticals (also one the length cut left
+  // open), bracketed notes, the ball spot before "for N yards", a cut-off
+  // tail ("... short right to #1…") and dangling words; initials spaced
+  // ("A.Manning" -> "A. Manning").
+  function cleanPlayText(raw) {
+    // "B.Jones reported in as eligible." is a roster note, not the play.
+    let s = String(raw == null ? '' : raw).replace(/\s+/g, ' ').trim().replace(/^(?:[A-Z]\.\s?[A-Za-z'-]+ reported in as eligible\.\s*)+/, '');
+    s = stripPlayNoise(s).replace(/\s*(?:…|\.\.\.)$/, '').replace(/\s*#\d{1,3}$/, '');
+    // First sentence: a full stop or semicolon before a space, a capitalised
+    // word or ESPN's run-on "Penalty", not after an initial ("A.") or
+    // Jr / Sr / St / vs.
+    const first = s.match(/^.*?(?<!\b[A-Z]|\b(?:Jr|Sr|St|vs))[.;](?=\s|[A-Z]{2}|Penalty\b)/);
+    if (first && first[0].length > 8) s = first[0];
+    const spot = '(?:the )?(?:[A-Z][A-Za-z&]{1,5} )?\\d{1,2}';
+    s = s.replace(/\s*\([^)]*\)/g, ' ').replace(/\s*\([^)]*$/, '').replace(/\s*\[[^\]]*\]/g, ' ')
+      .replace(/,\s*(?:Center|Holder)-[A-Z]\.\s?[A-Za-z'-]+/g, '')
+      .replace(new RegExp(`\\s+(?:ran|pushed|stepped|forced) ob at ${spot}`, 'g'), '')
+      .replace(new RegExp(`\\s+(?:to|at) ${spot}(?=\\s+for\\b)`, 'g'), '')
+      .replace(/\byards\b/gi, 'yds').replace(/\byard\b/gi, 'yd').replace(/\bTOUCHDOWN\b/g, 'TD')
+      .replace(/\b([A-Z])\.(?=[A-Z][a-z'])/g, '$1. ')
+      .replace(/\s+/g, ' ').replace(/\s+([,.;:])/g, '$1').trim()
+      .replace(/[\s,;:.-]+$/, '');
+    let words = s.split(' ');
+    while (words.length > 3 && DANGLING.test(words[words.length - 1])) words = words.slice(0, -1);
+    return words.join(' ').replace(/[\s,;:-]+$/, '');
+  }
+
   // ─── Facts (lint extraSources) ───────────────────────────────────────────
   // Deterministic text built only from the digest, so every number a Game
   // Swing beat shows (scores, periods, clock, down and distance, WP percent)
@@ -346,5 +389,6 @@
   return {
     VERSION, CANVASES, SPORTS, GAME_SPORTS, PROVIDERS, LIMITS, ATTRIBUTION, FRAME_ROLES, SLIDE_KINDS, REF_RE,
     normalizeTimeline, validateTimeline, validateDigest, digestFacts, resolveRef, parseRef, canvasFor, bytes,
+    stripPlayNoise, cleanPlayText,
   };
 }));
