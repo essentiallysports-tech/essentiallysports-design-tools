@@ -107,8 +107,23 @@
     };
   }
 
+  // es.ai.profile (synced from the account) with the person's own Edit
+  // profile changes (es.ai.profile.edits.v1, same email only) laid over it,
+  // so presence shows the name and photo they chose.
+  const PROFILE_EDITS_KEY = 'es.ai.profile.edits.v1';
   function getStoredProfile() {
-    return readJson(PROFILE_KEY, {}) || {};
+    const base = readJson(PROFILE_KEY, {}) || {};
+    const edits = readJson(PROFILE_EDITS_KEY, null);
+    if (!edits || typeof edits !== 'object' || Array.isArray(edits)) return base;
+    const editsEmail = normalizeEmail(edits.email);
+    if (editsEmail && editsEmail !== normalizeEmail(base.email)) return base;
+    const merged = { ...base };
+    Object.entries(edits).forEach(([key, value]) => {
+      if (key === 'email' || value === undefined || value === null || value === '') return;
+      merged[key] = value;
+    });
+    if (!merged.avatar && merged.photo) merged.avatar = merged.photo;
+    return merged;
   }
 
   function getProfileForSession(session) {
@@ -149,18 +164,47 @@
     return { email, name, role, accessRole: role, designation, avatar: cleanString(profile.avatar) };
   }
 
+  // Asks the database (the real gate) when the email isn't a fixed one.
+  // Before migration 20261120120000 the database only knows the fixed emails,
+  // so this answers exactly as before; afterwards an ES account given the
+  // Admin role on the People view is an admin too.
+  async function askServerBoolean(rpcName) {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      const result = await withTimeout(client.rpc(rpcName), 5000, { data: false, error: true });
+      return !result?.error && result?.data === true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  const serverRoleChecks = new Map();
+  function cachedServerCheck(rpcName, email) {
+    const key = `${rpcName}:${email}`;
+    const cached = serverRoleChecks.get(key);
+    if (cached && Date.now() - cached.at < 60000) return cached.promise;
+    const promise = askServerBoolean(rpcName);
+    serverRoleChecks.set(key, { at: Date.now(), promise });
+    return promise;
+  }
+
   async function isCurrentUserAdmin() {
     const session = await getAuthenticatedSession();
     const email = normalizeEmail(session?.user?.email);
-    return DASHBOARD_ADMIN_EMAILS.includes(email);
+    if (DASHBOARD_ADMIN_EMAILS.includes(email)) return true;
+    if (!email || !email.endsWith('@essentiallysports.com')) return false;
+    return cachedServerCheck('is_es_designer_admin', email);
   }
 
   async function canCurrentUserAssignRoles() {
     const session = await getAuthenticatedSession();
-    // Role assignment belongs to the owner identity/identities. Keep the email
-    // check explicit so a stale or misconfigured profile cannot expose role
-    // controls to another account; Supabase's RPC must allow the same emails.
-    return SERVER_OWNER_EMAILS.includes(normalizeEmail(session?.user?.email));
+    const email = normalizeEmail(session?.user?.email);
+    // The fixed owner identities, or (after the migration) an ES account the
+    // database says is a Server Owner. The RPCs enforce the same rule.
+    if (SERVER_OWNER_EMAILS.includes(email)) return true;
+    if (!email || !email.endsWith('@essentiallysports.com')) return false;
+    return cachedServerCheck('can_manage_es_designer_roles', email);
   }
 
   let cloudPeopleCache = [];
@@ -654,8 +698,10 @@
         ...person,
         name: person.name || existing.name,
         designation: person.designation || existing.designation,
-        role: person.role || existing.role,
-        accessRole: person.accessRole || existing.accessRole,
+        // The profile holds the role; presence rows only mirror it and can
+        // lag (or default to Associate), so they never override it.
+        role: existing.role || person.role,
+        accessRole: existing.accessRole || person.accessRole,
         avatar: person.avatar || existing.avatar,
       });
     });
@@ -1420,63 +1466,61 @@
     try { window.sessionStorage.removeItem('frameup.requestCount.v1'); } catch (error) { /* ignore */ }
   }
 
+  function isMissingRpc(error, name) {
+    const message = String(error?.message || '').toLowerCase();
+    const code = String(error?.code || '');
+    return code === 'PGRST202' || code === '42883'
+      || (message.includes(name) && (message.includes('could not find') || message.includes('does not exist') || message.includes('schema cache')));
+  }
+
+  // Server error → Error with a stable `code` from the RPC's HINT.
+  function roleRpcError(error, fallback) {
+    const next = new Error(String(error?.message || fallback || 'Something went wrong.'));
+    next.code = String(error?.hint || error?.code || 'unknown');
+    return next;
+  }
+
   async function updatePersonAccessRole(email, role) {
     const normalizedEmail = normalizeEmail(email);
-    const accessRole = normalizeAccessRole(role, normalizedEmail);
-    const actor = await getCurrentUser();
-    if (!SERVER_OWNER_EMAILS.includes(normalizeEmail(actor.email))) {
-      throw new Error('Only the Server Owner can change dashboard roles.');
-    }
+    const accessRole = cleanString(role);
     if (!normalizedEmail) throw new Error('Missing person email.');
+    if (!ACCESS_ROLES.includes(accessRole)) throw Object.assign(new Error('Choose Associate, Admin, Super Admin or Server Owner.'), { code: 'invalid_role' });
+    const actor = await getCurrentUser();
+    if (!await canCurrentUserAssignRoles()) {
+      throw Object.assign(new Error('Only a Server Owner can change roles.'), { code: 'not_allowed' });
+    }
+    if (normalizeEmail(actor.email) === normalizedEmail) {
+      throw Object.assign(new Error('You can’t change your own role. Ask another Server Owner.'), { code: 'self_change' });
+    }
     if (DEFAULT_ROLE_ASSIGNMENTS[normalizedEmail] && DEFAULT_ROLE_ASSIGNMENTS[normalizedEmail] !== accessRole) {
-      throw new Error('Protected system role cannot be changed here.');
+      throw Object.assign(new Error('Protected system role cannot be changed here.'), { code: 'protected' });
     }
 
     const client = getSupabaseClient();
     if (!client) throw new Error('Supabase is not connected.');
-    let profileResult = await client
-      .rpc('set_es_designer_access_role', {
+    // Preferred: the guarded, audited RPC (migration 20261120120000).
+    let result = await client.rpc('admin_set_es_designer_role', {
+      target_email: normalizedEmail,
+      target_role: accessRole,
+    });
+    if (result.error && isMissingRpc(result.error, 'admin_set_es_designer_role')) {
+      // Before that migration: the older owner-only RPC.
+      result = await client.rpc('set_es_designer_access_role', {
         target_email: normalizedEmail,
         target_role: accessRole,
       });
-
-    if (profileResult.error) {
-      const message = String(profileResult.error.message || '').toLowerCase();
-      const roleMigrationMissing = /set_es_designer_access_role|access_role|schema cache|does not exist|could not find the function/.test(message);
-      if (!roleMigrationMissing) throw profileResult.error;
-
-      // Older projects may have the original `role` column but not the later
-      // access-role migration. Keep role management usable during that
-      // transition; the secure RPC remains the preferred path once migrated.
-      let directResult = await client
-        .from(SUPABASE_PROFILES_TABLE)
-        .update({ access_role: accessRole, role: accessRole, updated_at: new Date().toISOString() })
-        .eq('email', normalizedEmail)
-        .select('*')
-        .single();
-      if (directResult.error && /access_role|schema cache|does not exist/.test(String(directResult.error.message || '').toLowerCase())) {
-        directResult = await client
-          .from(SUPABASE_PROFILES_TABLE)
-          .update({ role: accessRole, updated_at: new Date().toISOString() })
-          .eq('email', normalizedEmail)
-          .select('*')
-          .single();
-      }
-      if (directResult.error) throw directResult.error;
-      profileResult = directResult;
-
-      // Presence is supplementary; do not turn a successful profile role
-      // update into a failure if the older presence schema is incomplete.
-      await client
-        .from(SUPABASE_PRESENCE_TABLE)
-        .update({ access_role: accessRole, role: accessRole, updated_at: new Date().toISOString() })
-        .eq('email', normalizedEmail)
-        .then(result => {
-          if (result.error && !/access_role|schema cache|does not exist/.test(String(result.error.message || '').toLowerCase())) throw result.error;
-        });
     }
+    if (result.error) throw roleRpcError(result.error, 'Role could not be updated.');
 
-    const person = normalizeCloudPerson(profileResult.data || { email: normalizedEmail, role: accessRole, access_role: accessRole, updated_at: new Date().toISOString() });
+    const row = result.data && typeof result.data === 'object' ? result.data : {};
+    const person = normalizeCloudPerson({
+      ...(cloudPeopleCache.find(item => normalizeEmail(item.email) === normalizedEmail) || {}),
+      ...row,
+      email: normalizedEmail,
+      access_role: row.access_role || row.role || accessRole,
+      role: row.access_role || row.role || accessRole,
+      updated_at: new Date().toISOString(),
+    });
     if (person) {
       cloudPeopleCache = [
         person,
@@ -1492,6 +1536,72 @@
       meta: { role: accessRole },
     });
     return person;
+  }
+
+  // Everyone with an account or profile, with sign-up status, from the
+  // admin-only RPC. Returns { people, source: 'directory' } or, before the
+  // migration, { people: [], source: 'unavailable' } so the page falls back
+  // to profiles + presence.
+  async function fetchPeopleDirectory() {
+    const client = getSupabaseClient();
+    if (!client) return { people: [], source: 'unavailable' };
+    const result = await withRejectingTimeout(client.rpc('admin_list_es_designer_people'), 8000, 'People list');
+    if (result.error) {
+      if (isMissingRpc(result.error, 'admin_list_es_designer_people')) return { people: [], source: 'unavailable' };
+      throw roleRpcError(result.error, 'Couldn’t load people.');
+    }
+    const people = (Array.isArray(result.data) ? result.data : []).map(row => {
+      const email = normalizeEmail(row.email);
+      if (!email) return null;
+      const lastSeen = row.last_seen_at || '';
+      const lastSeenMs = Date.parse(lastSeen);
+      return {
+        email,
+        name: cleanString(row.name || email.split('@')[0]),
+        designation: cleanString(row.designation || ''),
+        accessRole: normalizeAccessRole(row.access_role, email),
+        avatar: cleanString(row.avatar_url || ''),
+        workspace: cleanString(row.workspace || ''),
+        lastSeenAt: lastSeen,
+        online: Number.isFinite(lastSeenMs) && Date.now() - lastSeenMs <= PRESENCE_ONLINE_WINDOW_MS,
+        accountCreatedAt: row.account_created_at || '',
+        emailConfirmedAt: row.email_confirmed_at || '',
+        invitedAt: row.invited_at || '',
+        lastSignInAt: row.last_sign_in_at || '',
+        hasAccount: row.has_account === true,
+        isFixedRole: row.is_fixed_role === true || Boolean(DEFAULT_ROLE_ASSIGNMENTS[email]),
+        source: 'directory',
+      };
+    }).filter(Boolean);
+    return { people, source: 'directory' };
+  }
+
+  async function confirmPersonEmail(email) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) throw new Error('Missing person email.');
+    const client = getSupabaseClient();
+    if (!client) throw new Error('Supabase is not connected.');
+    const result = await client.rpc('admin_confirm_es_designer_email', { target_email: normalizedEmail });
+    if (result.error) {
+      if (isMissingRpc(result.error, 'admin_confirm_es_designer_email')) {
+        throw Object.assign(new Error('Manual confirmation needs the People migration (20261120120000) to be run first.'), { code: 'unavailable' });
+      }
+      throw roleRpcError(result.error, 'Couldn’t confirm this account.');
+    }
+    emitDashboardChange('person-confirmed', { email: normalizedEmail });
+    return result.data || { email: normalizedEmail, confirmed: true };
+  }
+
+  async function fetchRoleAudit({ limit = 20 } = {}) {
+    const client = getSupabaseClient();
+    if (!client) return { entries: [], source: 'unavailable' };
+    const result = await client
+      .from('es_designer_role_audit')
+      .select('id,action,actor_email,target_email,from_value,to_value,created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (result.error) return { entries: [], source: 'unavailable' };
+    return { entries: Array.isArray(result.data) ? result.data : [], source: 'audit' };
   }
 
   function getPeople({ requests = readDesignRequests(), designs = readDesigns(), tasks = [] } = {}) {
@@ -1868,6 +1978,9 @@
     updateRequestAdminFields,
     updateDesignAdminFields,
     updatePersonAccessRole,
+    fetchPeopleDirectory,
+    confirmPersonEmail,
+    fetchRoleAudit,
     recordActivity,
     readDesignRequests,
     writeDesignRequests,

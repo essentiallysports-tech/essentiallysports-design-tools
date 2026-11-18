@@ -178,6 +178,9 @@
     },
     "api/clips-prefetch.js": {
       "maxDuration": 60
+    },
+    "api/auth-bounce.js": {
+      "maxDuration": 10
     }
   },
   "crons": [

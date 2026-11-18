@@ -6,11 +6,12 @@
   <meta name="description" content="FrameUp admin dashboard for requests, exports, owners, and activity.">
   <title>Dashboard | FrameUp</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
+  <link rel="preload" href="/vendor/supabase-js-2.118.0.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="frameup-errors.js?v=20261118-rel1"></script>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
-  <script src="es-auth.js?v=20261115-auth2"></script>
-  <script src="dashboard-data.js?v=20261119-rel3"></script>
+  <script src="es-auth.js?v=20261120-auth"></script>
+  <script src="dashboard-data.js?v=20261120-auth"></script>
+  <script src="dashboard-people.js?v=20261120-auth"></script>
   <script src="ai-usage-summary.js?v=20261118-rel1"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -451,6 +452,7 @@
 <link rel="stylesheet" href="es-ui.css?v=20261120-rel2">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <script src="theme.js?v=20261120-rel2"></script>
+  <link rel="stylesheet" href="dashboard-people.css?v=20261120-auth">
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
 <script src="app-shell.js?v=20261119-rel3"></script>
@@ -726,7 +728,7 @@
 
           <section class="panel" data-view-section="people" data-dashboard-panel="people">
             <div class="panel-head">
-              <div><h2 class="panel-title">People</h2><p class="panel-subtitle">Users seen from auth, requests, exports, and activity. Server Owner can assign roles; Associate removes elevated dashboard access.</p></div>
+              <div><h2 class="panel-title">People</h2><p class="panel-subtitle">Everyone with a FrameUp account or access request. Search, filter by status, change roles (Server Owners), approve requests and unstick confirmations.</p></div>
             </div>
             <div class="people-list" id="people-list"></div>
           </section>
@@ -823,8 +825,10 @@
     const ACCESS_ROLE_OPTIONS = ['Associate', 'Admin', 'Super Admin', 'Server Owner'];
     const PROTECTED_ROLE_EMAILS = new Set([
       'suhail.quraishi@essentiallysports.com',
+      'designteam@essentiallysports.com',
       'manish.kalsi@essentiallysports.com',
     ]);
+    let peopleAdmin = null;
     const DASHBOARD_SEEN_KEY = 'es.dashboard.seenBadges.v1';
     const DASHBOARD_VIEWS = new Set(['overview', 'impact', 'board', 'list', 'designs', 'feedback', 'people', 'access', 'activity']);
     let dashboardUser = { name: 'ES Admin', email: '', role: 'Admin', accessRole: 'Admin', designation: 'Design Operations' };
@@ -2461,6 +2465,27 @@
     function renderPeople(state) {
       const target = document.getElementById('people-list');
       if (!target) return;
+      // People & roles view (dashboard-people.js): search, status filters,
+      // role menu with guards, access requests, manual email confirmation.
+      if (window.ESPeopleAdmin?.mount) {
+        if (!peopleAdmin) {
+          peopleAdmin = window.ESPeopleAdmin.mount(target, {
+            data: window.ESDashboardData,
+            auth: window.ESAuth,
+            onAccessChange: () => { refreshAccessRequests(); },
+          });
+        }
+        if (peopleAdmin) {
+          const cloudPeople = state.people.filter(person => person.source === 'supabase');
+          peopleAdmin.update({
+            fallbackPeople: cloudPeople.length ? cloudPeople : state.people,
+            accessRequests: accessRequestsStatus === 'ready' ? accessRequests : [],
+            actorEmail: dashboardUser.email,
+            canManage: canAssignDashboardRoles,
+          });
+          return;
+        }
+      }
       const cloudNotice = state.cloudSyncStatus?.ok === false
         ? `<article class="person"><strong>Supabase dashboard data is not connected yet</strong><span>${text(state.cloudSyncStatus.message || 'Apply dashboard migrations to show shared users and tasks.')}</span></article>`
         : '';
@@ -3326,6 +3351,7 @@
 
         const sessionState = await sessionPromise;
         if (sessionState !== 'valid') {
+          window.ESAuth?.recordAuthEvent?.(sessionState || 'no-session');
           if (sessionState === 'not-approved') await window.ESAuth?.logout?.();
           const loginTarget = window.ESAuth?.loginUrl?.('dashboard.html') || 'login.html?redirect=dashboard.html';
           window.location.replace(`${loginTarget}&reason=${encodeURIComponent(sessionState || 'no-session')}`);

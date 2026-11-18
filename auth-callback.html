@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="auth-state.css?v=20261117-focus1">
+  <link rel="stylesheet" href="auth-state.css?v=20261120-auth">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
   <link rel="stylesheet" href="design-tokens.css?v=20261120-rel2">
   <style>
@@ -19,16 +19,28 @@
     html::-webkit-scrollbar { display: none; }
   </style>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
+  <link rel="preload" href="/vendor/supabase-js-2.118.0.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260714-authcallback1"></script>
-  <script src="es-auth.js?v=20261115-auth2"></script>
+  <script src="es-auth.js?v=20261120-auth"></script>
+  <script src="auth-flow.js?v=20261120-auth"></script>
 </head>
 <body class="auth-state-page">
-  <main class="auth-state-card" aria-live="polite">
+  <main class="auth-state-card" aria-live="polite" aria-busy="true" id="callback-card">
     <img class="auth-state-brand" src="brand-logo-blue.svg" alt="EssentiallySports">
     <div class="auth-state-icon" id="callback-icon" aria-hidden="true"><span class="auth-state-spinner"></span></div>
-    <h1 class="auth-state-title" id="callback-title">Confirming your account</h1>
+    <h1 class="auth-state-title" id="callback-title" tabindex="-1">Confirming your account</h1>
     <p class="auth-state-copy" id="callback-message">One moment while FrameUp verifies your secure link.</p>
+
+    <form class="auth-state-form" id="resend-form" hidden novalidate>
+      <label class="auth-state-field" for="resend-email">
+        Your email
+        <input class="auth-state-input" id="resend-email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="you@essentiallysports.com" required>
+      </label>
+      <button class="auth-state-button is-primary" id="resend-button" type="submit">Send a new link</button>
+      <p class="auth-state-help" id="resend-help"></p>
+    </form>
+    <p class="auth-state-status" id="callback-status" role="status" aria-live="polite"></p>
+
     <div class="auth-state-actions" id="callback-actions" hidden>
       <a class="auth-state-button is-primary" id="continue-link" href="index.html">Continue to FrameUp</a>
       <a class="auth-state-button" id="login-link" href="login.html">Return to login</a>
@@ -37,14 +49,25 @@
 
   <script>
     (() => {
+      const Flow = window.FrameUpAuthFlow;
+      const card = document.getElementById('callback-card');
       const icon = document.getElementById('callback-icon');
       const title = document.getElementById('callback-title');
       const message = document.getElementById('callback-message');
       const actions = document.getElementById('callback-actions');
       const continueLink = document.getElementById('continue-link');
       const loginLink = document.getElementById('login-link');
+      const resendForm = document.getElementById('resend-form');
+      const resendEmail = document.getElementById('resend-email');
+      const resendButton = document.getElementById('resend-button');
+      const resendHelp = document.getElementById('resend-help');
+      const status = document.getElementById('callback-status');
       const successIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
       const errorIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
+      // What kind of link this was, read before the SDK tidies the address bar.
+      const initialParams = new URLSearchParams(`${window.location.search.slice(1)}&${window.location.hash.replace(/^#/, '')}`);
+      const linkType = initialParams.get('type') || '';
+      let cooldownTimer = null;
 
       function getRedirectTarget() {
         const fallback = 'index.html';
@@ -64,50 +87,124 @@
       const redirectTarget = getRedirectTarget();
       continueLink.href = redirectTarget;
 
-      function successLoginUrl() {
+      function loginHref(params) {
         const loginUrl = new URL('login.html', window.location.origin);
         loginUrl.searchParams.set('mode', 'login');
-        loginUrl.searchParams.set('confirmation', 'success');
+        Object.entries(params || {}).forEach(([key, value]) => { if (value) loginUrl.searchParams.set(key, value); });
         if (redirectTarget !== 'index.html') loginUrl.searchParams.set('redirect', redirectTarget);
         return `${loginUrl.pathname.replace(/^\//, '')}${loginUrl.search}`;
       }
 
-      function showSuccess({ requiresLogin = false } = {}) {
+      function successLoginUrl() {
+        return loginHref({ confirmation: 'success' });
+      }
+
+      function finish() {
+        card.setAttribute('aria-busy', 'false');
+        title.focus({ preventScroll: true });
+      }
+
+      function showSuccess({ requiresLogin = false, type = 'signup' } = {}) {
+        const copy = Flow ? Flow.callbackSuccessCopy(type, { requiresLogin }) : null;
         document.title = 'Account confirmed | FrameUp';
         icon.innerHTML = successIcon;
         icon.classList.add('is-success');
-        title.textContent = 'Email confirmed';
-        message.textContent = requiresLogin
+        title.textContent = copy?.title || 'Email confirmed';
+        message.textContent = copy?.body || (requiresLogin
           ? 'Your FrameUp account is ready. Log in with your password to continue.'
-          : 'Your FrameUp account is ready. Taking you to the workspace now.';
+          : 'Your FrameUp account is ready. Taking you to the workspace now.');
         if (requiresLogin) {
           continueLink.textContent = 'Log in to FrameUp';
           continueLink.href = successLoginUrl();
         }
         loginLink.hidden = true;
         actions.hidden = false;
+        finish();
+      }
+
+      function stopCooldown() {
+        if (cooldownTimer) window.clearInterval(cooldownTimer);
+        cooldownTimer = null;
+      }
+
+      function startCooldown(seconds) {
+        stopCooldown();
+        let remaining = Math.max(0, Math.ceil(seconds || 0));
+        const tick = () => {
+          if (remaining <= 0) {
+            stopCooldown();
+            resendButton.disabled = false;
+            resendButton.textContent = 'Send a new link';
+            return;
+          }
+          resendButton.disabled = true;
+          resendButton.textContent = `Send again in ${Flow ? Flow.formatCountdown(remaining) : `${remaining}s`}`;
+          remaining -= 1;
+        };
+        tick();
+        if (resendButton.disabled) cooldownTimer = window.setInterval(tick, 1000);
       }
 
       function showError(error) {
+        const isRecovery = linkType === 'recovery';
         document.title = 'Confirmation link issue | FrameUp';
         icon.innerHTML = errorIcon;
         icon.classList.add('is-error');
-        title.textContent = 'We could not confirm that link';
+        title.textContent = error?.code === 'link_other_browser' ? 'Open this link in the same browser' : 'This link has expired';
         message.textContent = error?.message || 'This link has already been used or has expired. Your account may already be confirmed—return to login and try signing in.';
         continueLink.hidden = true;
-        const loginUrl = new URL('login.html', window.location.origin);
-        loginUrl.searchParams.set('mode', 'login');
-        loginUrl.searchParams.set('confirmation', 'failed');
-        if (redirectTarget !== 'index.html') loginUrl.searchParams.set('redirect', redirectTarget);
-        loginLink.href = `${loginUrl.pathname.replace(/^\//, '')}${loginUrl.search}`;
+        loginLink.textContent = isRecovery ? 'Back to login' : 'Try logging in';
+        loginLink.href = loginHref({ confirmation: 'failed' });
         actions.hidden = false;
+        // Offer a fresh link right here instead of a dead end.
+        if (!isRecovery && ['link_expired', 'link_other_browser'].includes(error?.code)) {
+          resendForm.hidden = false;
+          resendHelp.textContent = Flow ? `${Flow.SPAM_HELP} ${Flow.LIMIT_HELP}` : '';
+        }
+        finish();
       }
+
+      resendForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        status.textContent = '';
+        status.classList.remove('is-error', 'is-success');
+        const email = resendEmail.value.trim();
+        if (!resendEmail.validity.valid || !email) {
+          status.textContent = 'Enter the email you signed up with.';
+          status.classList.add('is-error');
+          resendEmail.focus();
+          return;
+        }
+        resendButton.disabled = true;
+        resendButton.setAttribute('aria-busy', 'true');
+        resendButton.textContent = 'Sending…';
+        try {
+          await window.ESAuth.resendConfirmation({ email, redirectTo: redirectTarget });
+          status.textContent = `If ${email.toLowerCase()} is waiting for confirmation, a new link is on its way. Only the newest link works.`;
+          status.classList.add('is-success');
+          startCooldown(window.ESAuth.emailCooldownRemaining?.(email) || 60);
+        } catch (error) {
+          const outcome = Flow ? Flow.outcomeForError(error) : { message: error?.message, cooldown: 0 };
+          status.textContent = outcome.message || 'Unable to send a new link.';
+          status.classList.add('is-error');
+          if (outcome.cooldown) startCooldown(outcome.cooldown);
+          else { resendButton.disabled = false; resendButton.textContent = 'Send a new link'; }
+        } finally {
+          resendButton.setAttribute('aria-busy', 'false');
+        }
+      });
 
       async function boot() {
         try {
           const result = await window.ESAuth.completeAuthCallback();
           window.history.replaceState({}, document.title, window.location.pathname);
-          showSuccess({ requiresLogin: Boolean(result?.requiresLogin) });
+          const type = result?.callbackType || linkType || 'signup';
+          // Invite and recovery links need a password next.
+          if (!result?.requiresLogin && (type === 'invite' || type === 'recovery')) {
+            window.location.replace(`reset-password.html?mode=${type === 'invite' ? 'invite' : 'reset'}`);
+            return;
+          }
+          showSuccess({ requiresLogin: Boolean(result?.requiresLogin), type });
           if (result?.requiresLogin) return;
           window.setTimeout(() => window.location.replace(redirectTarget), 1400);
         } catch (error) {

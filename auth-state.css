@@ -269,3 +269,96 @@ html[data-theme="dark"] .auth-state-password-toggle:focus-visible {
     transition: none;
   }
 }
+
+/* Help text under a resend form (spam / quarantine / sending limits). */
+.auth-state-help {
+  margin: 0;
+  color: var(--auth-muted);
+  font-size: var(--es-type-helper-size, 13px);
+  line-height: 1.5;
+}
+
+.auth-state-help:empty {
+  display: none;
+}
+
+.auth-state-rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.auth-state-rules li {
+  display: flex;
+  align-items: center;
+  gap: var(--es-space-2, 8px);
+  color: var(--auth-muted);
+  font-size: var(--es-type-helper-size, 13px);
+  font-weight: 400;
+}
+
+.auth-state-rules li::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--es-line-2);
+}
+
+.auth-state-rules li.is-met {
+  color: var(--auth-success);
+}
+
+.auth-state-rules li.is-met::before {
+  background: var(--auth-success);
+  box-shadow: none;
+}
+
+/* Dark mode: the card and page follow the saved FrameUp theme. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --auth-page: var(--es-black, #101114);
+  --auth-surface: var(--es-slate-800, #1F2126);
+  --auth-text: #FFFFFF;
+  --auth-muted: var(--es-slate-200, #98A6BF);
+  --auth-accent: #54A4FB;
+  --auth-border: var(--es-slate-700, #2A2D34);
+  --auth-danger: var(--es-bad-on-dark, #FF8A8A);
+  --auth-success: var(--es-good-on-dark, #4CC985);
+}
+
+html[data-theme="dark"] .auth-state-card {
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .auth-state-brand {
+  content: url("brand-logo-white.svg");
+}
+
+html[data-theme="dark"] .auth-state-field {
+  color: var(--es-slate-100, #BFC8D9);
+}
+
+html[data-theme="dark"] .auth-state-icon {
+  background: rgba(84, 164, 251, .16);
+}
+
+html[data-theme="dark"] .auth-state-icon.is-error {
+  background: var(--es-bad-soft-on-dark, rgba(255, 138, 138, .16));
+}
+
+html[data-theme="dark"] .auth-state-icon.is-success {
+  background: var(--es-good-soft-on-dark, rgba(76, 201, 133, .16));
+}
+
+.auth-state-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

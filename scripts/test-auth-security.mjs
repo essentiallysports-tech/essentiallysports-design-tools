@@ -91,6 +91,8 @@ function createEnvironment({
   const client = {
     async rpc(name, payload) {
       authCalls.rpc = { name, payload: payload || null };
+      // The role checks answer from the (empty) profiles table: not an admin.
+      if (name === 'is_es_designer_admin' || name === 'can_manage_es_designer_roles') return { data: false, error: null };
       return { data: true, error: null };
     },
     auth: {
@@ -264,8 +266,11 @@ assert.match(supabaseSignupHookMigration, /signup_domain\s+<>\s+'essentiallyspor
 assert.match(authConfigSource, /designteam@essentiallysports\.com/i);
 assert.match(supabaseSignupHookMigration, /return\s+event\s*;/i);
 assert.doesNotMatch(supabaseSignupHookMigration, /return\s+'\{\}'::jsonb\s*;/i);
-assert.match(dashboardHtmlSource, /const\s+hasValidSession\s*=\s*await\s+withBootTimeout\(\s*window\.ESAuth\?\.isValidSession\?\.\(\),/);
-assert.match(dashboardHtmlSource, /if\s*\(!hasValidSession\)\s*\{[\s\S]*?loginUrl\?\.\('dashboard\.html'\)/);
+// The dashboard guard reads a three-way status ('valid' | 'no-session' |
+// 'not-approved') under a boot timeout, and only bounces to login when the
+// check really finished; a failed check shows the boot error instead.
+assert.match(dashboardHtmlSource, /const\s+sessionPromise\s*=\s*withBootTimeout\(\s*window\.ESAuth\?\.sessionStatus/);
+assert.match(dashboardHtmlSource, /if\s*\(sessionState\s*!==\s*'valid'\)\s*\{[\s\S]*?loginUrl\?\.\('dashboard\.html'\)/);
 assert.match(dashboardHtmlSource, /showDashboardBootError\(error\);/);
 assert.doesNotMatch(loginHtmlSource, /id="login-name"|name="name"/);
 assert.doesNotMatch(loginHtmlSource, /login-confirm-password|confirmPassword/);
@@ -520,8 +525,11 @@ assert.match(netlifyConfigSource, /for\s*=\s*"\/\*\.woff2"[\s\S]*?Cache-Control\
     ownerEmails: ['designer@essentiallysports.com'],
   }));
   vm.runInContext(dashboardSource, context, { filename: 'dashboard-data.js' });
+  // Stored config can't add admins; only the built-in owners stay
+  // (designteam@ is Suhail's second account, granted in d7cb699).
   assert.deepEqual(Array.from(window.ESDashboardData.getAdminConfig().adminEmails), [
     'suhail.quraishi@essentiallysports.com',
+    'designteam@essentiallysports.com',
     'manish.kalsi@essentiallysports.com',
   ]);
   assert.equal(await window.ESDashboardData.isCurrentUserAdmin(), false);
