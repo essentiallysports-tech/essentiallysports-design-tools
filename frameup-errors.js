@@ -85,6 +85,19 @@
     return (hash >>> 0).toString(16).padStart(8, '0');
   }
 
+  const BENIGN_BROWSER_NOTICE = /^ResizeObserver loop (completed with undelivered notifications|limit exceeded)\.?$/i;
+
+  // A 404 or 5xx that is an endpoint's own, deliberate JSON answer: a 404
+  // in JSON ("that post has no video": a missing endpoint answers in HTML),
+  // or a "not set up" / "switched off" / "budget used up" reply.
+  const DELIBERATE_REASONS = new Set(['off', 'feature-off', 'switched-off', 'not-configured', 'budget', 'user-limit', 'team-limit', 'limit-unknown', 'no-video', 'private-file']);
+  function isDeliberateAnswer({ status, contentType = '', body = null } = {}) {
+    if (!/json/i.test(String(contentType))) return false;
+    if (status === 404) return true;
+    if (!body || typeof body !== 'object') return false;
+    return body.configured === false || DELIBERATE_REASONS.has(String(body.reason || ''));
+  }
+
   // ─── Reporter (no browser globals, so it can be tested in Node) ───────────
   function createReporter({
     send,
@@ -203,18 +216,26 @@
     }
 
     const reporter = createReporter({ send, origin, page: () => win.location.pathname });
+    let leaving = false;
+    const offline = () => win.navigator?.onLine === false;
 
     win.addEventListener('error', event => {
       const target = event.target;
       if (target && target !== win && target.tagName) {
-        // A page script or stylesheet failed to load (images are ignored).
+        // A page script or stylesheet failed to load (images are ignored;
+        // so is anything while offline or leaving the page).
         if (target.tagName !== 'SCRIPT' && !(target.tagName === 'LINK' && target.rel === 'stylesheet')) return;
+        if (leaving || offline()) return;
         reporter.capture({ kind: 'resource', message: `${target.tagName === 'SCRIPT' ? 'Script' : 'Stylesheet'} failed to load`, source: target.src || target.href || '' });
         return;
       }
       const error = event.error;
       // Cross-origin scripts only say "Script error." with nothing to act on.
       if (!error && /^Script error\.?$/i.test(String(event.message || ''))) return;
+      // The browser's own "ResizeObserver loop …" notice: layout settled a
+      // frame later, nothing broke (no error object, no stack). Chrome fires
+      // it on ordinary resizes of pages that watch their own size.
+      if (!error && BENIGN_BROWSER_NOTICE.test(String(event.message || ''))) return;
       reporter.capture({
         kind: 'error',
         message: error?.message ? `${error.name || 'Error'}: ${error.message}` : event.message,
@@ -247,6 +268,18 @@
         return '';
       }
     }
+    // An endpoint's own JSON answer ("that link has no video", "not set up
+    // yet", "this week's AI budget is used up") is a reply the page shows,
+    // not a failure. Read from a clone, so the caller's body is untouched.
+    async function deliberate(response) {
+      const contentType = String(response.headers?.get?.('content-type') || '');
+      if (!/json/i.test(contentType)) return false;
+      if (response.status === 404) return true;
+      let body = null;
+      try { body = await response.clone().json(); } catch (error) { body = null; }
+      return isDeliberateAnswer({ status: response.status, contentType, body });
+    }
+
     win.fetch = function frameupFetch(input, init) {
       const path = apiPath(input);
       const request = nativeFetch(input, init);
@@ -256,18 +289,23 @@
         // 404 means a missing endpoint (a bad deploy), except /api/version,
         // which answers 404 on hosts without deploy info.
         if (response && (response.status >= 500 || (response.status === 404 && path !== '/api/version'))) {
-          reporter.capture({ kind: 'api', message: `${method} ${path} returned ${response.status}`, source: path, status: response.status });
+          deliberate(response).then(isAnswer => {
+            if (!isAnswer) reporter.capture({ kind: 'api', message: `${method} ${path} returned ${response.status}`, source: path, status: response.status });
+          }, () => {});
         }
         return response;
       }, error => {
-        if (error?.name !== 'AbortError') {
+        // Leaving the page cancels its requests, and an offline browser
+        // reaches nothing: neither is a FrameUp bug.
+        if (error?.name !== 'AbortError' && !leaving && !offline()) {
           reporter.capture({ kind: 'api', message: `${method} ${path} failed: no response`, source: path, status: 0 });
         }
         throw error;
       });
     };
 
-    win.addEventListener('pagehide', () => { reporter.flush(); });
+    win.addEventListener('pagehide', () => { leaving = true; reporter.flush(); });
+    win.addEventListener('pageshow', () => { leaving = false; });
 
     win.FrameUpErrors = Object.freeze({
       // For code that catches an error but still wants it seen.
@@ -282,5 +320,5 @@
     });
   }
 
-  return { createReporter, scrub, scrubUrl, scrubStack, fingerprintOf, install, ENDPOINT, MAX_BODY, PER_MINUTE, PER_PAGE };
+  return { createReporter, scrub, scrubUrl, scrubStack, fingerprintOf, isDeliberateAnswer, install, ENDPOINT, MAX_BODY, PER_MINUTE, PER_PAGE };
 }));

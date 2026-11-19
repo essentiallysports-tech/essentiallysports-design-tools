@@ -3,6 +3,30 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-21-qa-auth-errors",
+      "date": "2026-11-21",
+      "title": "Sign-in and Dashboard: tidier screens, a cleaner error log",
+      "commit": "6769e54",
+      "items": [
+        {
+          "title": "Errors shows real problems",
+          "text": "Ordinary sign-outs, offline moments, \"not set up yet\" answers and the browser's resize notices no longer count as errors. Sign-in trouble is grouped and marked Sign-in.",
+          "page": "dashboard.html",
+          "route": "overview"
+        },
+        {
+          "title": "People lines up",
+          "text": "Role, last seen and status sit in the same columns on every row, and the list keeps the panel's margins.",
+          "page": "dashboard.html",
+          "route": "people"
+        },
+        {
+          "title": "Sign-in screens",
+          "text": "No doubled sign-in link after a wrong password, full email hints on phones, and no box drawn around the sign-in help panel."
+        }
+      ]
+    },
+    {
       "id": "2026-11-20-inspector",
       "date": "2026-11-20",
       "title": "Editor: a cleaner settings panel that follows your selection",

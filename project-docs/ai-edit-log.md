@@ -17,6 +17,78 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-21 — Final QA 6/6: auth + Dashboard + live error log (branch qa/final-auth-errors)
+- Status: `[committed on qa/final-auth-errors — not pushed]`. Base: live origin/main 6769e54.
+- **Live error log ("19 errors in 24 h, 3 people hit one"): root causes found from the code paths and reproduced locally.**
+  - `es-auth.js`: every trip back to login (even a plain signed-out visit, or a session that ran out) was kept and sent as an "error" after the next sign-in, one row per trip (empty fingerprint). Now only notable trips are sent: not routine, or within 10 min of a login, or a loop (another trip in 2 min). They carry a stable fingerprint per reason + page, with the diagnostics in `stack`. The login page's loop breaker still sees every trip. Dashboard → Errors labels them "Sign-in".
+  - `frameup-errors.js`: these no longer count as API failures:
+    - an endpoint's own JSON answer: a JSON 404 ("no video in that link"), or a 5xx with `configured:false` or reason off / feature-off / budget / not-configured / limits;
+    - requests cancelled by leaving the page;
+    - anything while offline;
+    - Chrome's "ResizeObserver loop …" notice.
+
+    New export: `isDeliberateAnswer`.
+  - `dashboard.html` boot: the admin, profile and role checks timed out at 5 s on slow first loads. Reproduced under load: "Dashboard admin check timed out" for an admin. The checks not yet awaited then became uncaught "role permission check timed out" rejections. Now they get 9 s, like the session check, and each is marked handled. The boot-error state hides the header primary.
+  - `app-shell.js` (minimal edit, marked `qa-auth-errors`; the pages agent's file): on design-request.html and requests.html (paused), the redirect stops the parser. DOMContentLoaded then fires with no `<body>`, and buildSidebar crashed ("reading 'prepend'"), reported from every old Design Request link. The shell no longer boots on a page being left.
+  - `frameup-impact-view.js`: an /api/impact-stats answer without `sources` no longer throws.
+- **UI fixes:**
+  - People:
+    - rows share column positions (a fixed actions column; at 1024–1279 the actions sit under status);
+    - the list sits on the panel's 24px inset.
+  - Dashboard search no longer cuts its placeholder at 1024.
+  - Impact KPI cards drop the empty delta line.
+  - Empty status lines collapse on auth-callback, reset-password and login.
+  - reset-password drops the line that contradicted its own new-link form.
+  - Email fields on auth pages no longer reserve room for the password toggle (the placeholder was cut on phones).
+  - No doubled "Email me a sign-in link" after a wrong password.
+  - Diagnose panel: the main action is the primary, and its note matches the width of the details box.
+  - The in-page "couldn't confirm your login" panel: Retry is the primary.
+  - `design-tokens.css` (minimal edit, marked): panels focused by script (`tabindex="-1"`) no longer get a focus ring around the whole panel.
+- **Stale guards, fixed honestly:**
+  - `check-dashboard-ui` checked one old cache key. Now it checks that every stylesheet has a key, and that the order is kept.
+  - `check-site-chrome` was written for things that no longer exist: the retired how-it-works.html (d01fc8e), a pinned old chrome key, and the old login footer (e7def29). It now checks:
+    - the same chrome key on every page;
+    - no links to the retired page;
+    - admin-only Dashboard links;
+    - the six-icon set, where present;
+    - the auth guard and profile mount on how-frameup-works.html.
+  - `test-auth-security`: the reset page's copy check now tests the in-page new-link form instead.
+- **New check:** `scripts/check-auth-errors-ui.mjs`, with the in-page checks shared in `scripts/lib/ui-sweep-checks.js`.
+  - Setup:
+    - headless Chrome over CDP, 4 parallel windows on *.localhost origins;
+    - Supabase stubbed inside Chrome (CDP Fetch);
+    - /api/* stubbed, and /api/client-errors recorded.
+  - Sweep: 35 states x 1440/1024/375 x light/dark, plus 15 main pages crawled for error reports = 225 runs, about 2.5–4 min.
+    - Login: default, create, 5 reasons, wrong password, magic link, forgot, diagnose, loop breaker.
+    - Reset, callback (x2), logout, and the auth-problem panel.
+    - Dashboard: 9 views, the Errors card, the People role menu, 5 empty views and 2 failed loads.
+  - Fails on:
+    - doubled borders;
+    - empty bands and empty message slots;
+    - clipped text, including cut placeholders;
+    - horizontal page scroll;
+    - misaligned cards, buttons and list columns;
+    - non-ES fonts and purple;
+    - unlabelled controls, and more than one primary per layer;
+    - a focus ring around a whole panel;
+    - console errors and broken images;
+    - contrast;
+    - would-be /api/client-errors reports;
+    - broken flows.
+
+    Off-grid spacing is reported only.
+  - Before (6769e54): 69 of 225 runs failing. After: 0.
+- Tests:
+  - `test-auth-login-loop`: a new notable-trips test.
+  - `test-client-errors`: deliberate answers, offline, pagehide and ResizeObserver cases.
+  - `test-auth-security`: the boot checks are handled and get 9 s.
+  - Full suite: only the 4 allowed failures (canvas-action-dock, color-swatch-states, newsletter-header-options, reels-transcription-framework). check-dashboard-ui and check-site-chrome now pass.
+- Cache key `20261121-qa-auth-errors`, on every page that loads one of: es-auth.js, frameup-errors.js, app-shell.js, design-tokens.css, auth-state.css, dashboard-people.css, dashboard-ui-system.css, frameup-impact-view.js.
+- Release note `2026-11-21-qa-auth-errors`. No editor render file touched, so exports are unchanged.
+- Left for others:
+  - ai-page/settings.html: `#settings-status` keeps an empty 24px line at 375 (pages).
+  - reel-maker.html doesn't load frameup-errors.js (reels).
+
 ### 2026-11-20 — Video Ads: multi-select teams and colours (branch feature/va-multiselect)
 - Status: `[committed on feature/va-multiselect — not pushed]`. Based on fix/ai-cap-parse (live main 0328b3b + 2). Owner: "we should also allow to select multiple teams or colors".
 - **By team**: the team chips are toggle buttons (`.es-chip` `aria-pressed`, one tab stop, arrows move, Space/Enter toggle, Enter in the search adds the first match). Up to 6 (`PICK_MAX`); a 7th is refused with a note. A compact summary row above the list: "N teams of 6", removable chips, Clear; "All teams — pick up to 6" when none. Button: "Find Alabama clips" / "Find clips for 3 teams". Results = clips of ANY picked team, one card per play (unchanged clustering), current sort; each card marks the picked team(s) it matched (`.va-mo__team.is-match`, from the server's `matched` tags).

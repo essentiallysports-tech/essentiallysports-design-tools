@@ -14,10 +14,16 @@
   const FEATURES = Object.freeze({ requests: false });
   window.FrameUpFeatures = FEATURES;
   const PAUSED_NAV_IDS = FEATURES.requests ? [] : ['request', 'my-requests'];
+  // [qa-auth-errors] Set while this page is being replaced: the redirect stops
+  // the parser, DOMContentLoaded fires on a document with no <body>, and the
+  // shell used to crash in buildSidebar (a "reading 'prepend'" report from
+  // every old Design Request link). Nothing is built on a page being left.
+  let leavingPage = false;
   if (!FEATURES.requests) {
     document.documentElement.classList.add('fu-requests-off');
     const page = window.location.pathname.split('/').pop();
     if (page === 'design-request.html' || page === 'requests.html') {
+      leavingPage = true;
       window.location.replace(`${base}index.html?paused=requests`);
     }
   }
@@ -1028,7 +1034,7 @@
   // ─── Boot ──────────────────────────────────────────────────────────────
   let built = false;
   function boot() {
-    if (built || !desktop.matches) return;
+    if (built || !desktop.matches || leavingPage || !document.body) return;
     built = true;
     document.documentElement.classList.add('es-shell');
     setCollapsed(readCollapsed(), false);
@@ -1054,6 +1060,7 @@
 
   // site-chrome.js builds the account menu first; wait for it.
   function start() {
+    if (leavingPage || !document.body) return; // [qa-auth-errors] see leavingPage
     setTimeout(boot, 0);
     setTimeout(startTickerIfAuthed, 0);
     setTimeout(tagNewTemplates, 0);

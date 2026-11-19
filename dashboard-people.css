@@ -1,7 +1,9 @@
 /* Dashboard → People (dashboard-people.js). Tokens from design-tokens.css,
    components from es-ui.css. Light + dark. */
 
-#people-list:has(> .pv) { display: block; min-width: 0; }
+/* The toolbar and list sit on the panel's own 24px inset (they were flush
+   with the panel edge, under a header inset by 24px). */
+#people-list:has(> .pv) { display: block; min-width: 0; padding: 0 var(--es-space-6, 24px) var(--es-space-6, 24px); }
 
 .pv {
   display: grid;
@@ -101,7 +103,10 @@
 .pv-row {
   position: relative;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1.6fr) minmax(150px, .8fr) minmax(130px, .8fr) minmax(150px, .8fr) minmax(0, auto);
+  /* Every row is its own grid, so the actions column has one fixed width
+     (Approve + Deny fit): with "auto" a row with buttons pushed its role,
+     seen and status columns left of every other row's. */
+  grid-template-columns: 40px minmax(0, 1.6fr) minmax(150px, .8fr) minmax(130px, .8fr) minmax(150px, .8fr) var(--pv-actions-w, 152px);
   align-items: center;
   gap: var(--es-space-4, 16px);
   min-height: 68px;
@@ -324,8 +329,10 @@
 /* 1024–1279: drop "last seen" into the name column. */
 @media (max-width: 1279px) {
   .pv-row {
-    grid-template-columns: 40px minmax(0, 1.5fr) minmax(140px, .8fr) minmax(140px, .8fr) minmax(0, auto);
-    grid-template-areas: "avatar who role status actions" "avatar seen seen seen seen";
+    /* Actions share the status column, on the second line, so names keep
+       their room (a fixed actions column cut emails to "new.writer@ess…"). */
+    grid-template-columns: 40px minmax(0, 1.5fr) minmax(140px, .8fr) minmax(var(--pv-actions-w, 152px), .8fr);
+    grid-template-areas: "avatar who role status" "avatar seen seen actions";
     row-gap: 4px;
   }
   .pv-avatar { grid-area: avatar; }

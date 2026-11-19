@@ -42,12 +42,18 @@ const html = read(files.html);
 const system = read(files.system);
 const theme = read(files.theme);
 
-const dashboardV2Index = html.indexOf('dashboard-v2.css');
-const dashboardSystemIndex = html.indexOf('dashboard-ui-system.css?v=20261022-es1');
-const themeIndex = html.indexOf('theme.css');
+// Each stylesheet must be linked with a cache key (?v=…). The key itself
+// changes with every release, so only its presence is checked.
+const linkIndex = name => {
+  const match = new RegExp(`<link[^>]+href="${name.replace('.', '\\.')}\\?v=[^"]+"`).exec(html);
+  return match ? match.index : -1;
+};
+const dashboardV2Index = linkIndex('dashboard-v2.css');
+const dashboardSystemIndex = linkIndex('dashboard-ui-system.css');
+const themeIndex = linkIndex('theme.css');
 
 if (dashboardV2Index === -1 || dashboardSystemIndex === -1 || themeIndex === -1) {
-  fail('dashboard stylesheet links are missing or dashboard-ui-system cache key is stale');
+  fail('dashboard stylesheet links are missing or have no ?v= cache key');
 } else if (!(dashboardV2Index < dashboardSystemIndex && dashboardSystemIndex < themeIndex)) {
   fail('dashboard stylesheet order is wrong; dashboard-ui-system must load after dashboard-v2 and before theme');
 } else {

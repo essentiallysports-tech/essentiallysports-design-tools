@@ -1306,7 +1306,8 @@
       actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:12px';
       const retry = document.createElement('button');
       retry.type = 'button';
-      retry.className = 'es-btn es-btn--primary es-btn--static';
+      // The panel covers the whole page: Retry is its one key action.
+      retry.className = 'es-btn es-btn--primary';
       retry.textContent = 'Retry';
       retry.addEventListener('click', () => window.location.reload());
       const back = document.createElement('a');
@@ -1521,19 +1522,38 @@
     }
   }
 
+  // Trips back to login that happen in normal use (never signed in on this
+  // browser, or the session ran out / was ended in another tab): not errors
+  // on their own. They are when they come soon after a login or in a loop.
+  const ROUTINE_BOUNCES = new Set(['no-session', 'session-expired']);
+
+  // One stable id per kind of trip (reason + page), so Dashboard → Errors
+  // groups them instead of listing every trip as a new problem.
+  function bounceFingerprint(item) {
+    const basis = `auth-bounce|${item.reason}|${item.page || '/'}`;
+    let hash = 2166136261;
+    for (let index = 0; index < basis.length; index += 1) {
+      hash ^= basis.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0');
+  }
+
   function recordAuthEvent(reason, extra = {}) {
     let page = '';
     try { page = String(window.location.pathname || '').slice(0, 80); } catch (error) { page = ''; }
     const entry = { id: Math.random().toString(36).slice(2, 10), at: Date.now(), reason: String(reason || 'unknown').slice(0, 40), page, diag: { ...quickDiagnostics(), ...extra } };
+    // Notable: not a routine reason, or soon after a login, or another trip
+    // in the last 2 minutes (a loop). Every trip is still kept locally for
+    // the login page's loop breaker; only notable ones are ever sent.
+    entry.notable = !ROUTINE_BOUNCES.has(entry.reason) || secondsSinceLogin() < 600 || recentAuthBounces().length > 0;
     try {
       const store = bounceStore();
       const list = readBounces();
       list.push(entry);
       store?.setItem(BOUNCES_KEY, JSON.stringify(list.slice(-12)));
     } catch (error) { /* ignore */ }
-    // A plain "not logged in yet" visit isn't news; report the rest, and any
-    // trip back to login soon after a login or after an earlier bounce.
-    if (entry.reason !== 'no-session' || secondsSinceLogin() < 600 || readBounces().length > 1) sendBounceReport(entry);
+    if (entry.notable) sendBounceReport(entry);
     return entry;
   }
 
@@ -1557,11 +1577,20 @@
   async function flushAuthBounces() {
     const bounces = readBounces();
     if (!bounces.length) return 0;
-    const errors = bounces.slice(-5).map(item => ({
+    const clear = () => ['local', 'session'].forEach(kind => { try { safeStore(kind)?.removeItem(BOUNCES_KEY); } catch (error) { /* ignore */ } });
+    // Only trips that point at a sign-in problem are sent (records saved
+    // before the flag existed: everything but the routine reasons). The
+    // rest are forgotten once the person is in.
+    const notable = bounces.filter(item => (item.notable === undefined ? !ROUTINE_BOUNCES.has(item.reason) : item.notable === true));
+    if (!notable.length) { clear(); return 0; }
+    const errors = notable.slice(-5).map(item => ({
       kind: 'error',
-      message: `auth-bounce: ${item.reason} on ${item.page || '/'} · ${Object.entries(item.diag || {}).map(([key, value]) => `${key}=${value}`).join(' ')}`.slice(0, 480),
+      message: `auth-bounce: ${item.reason} on ${item.page || '/'}`.slice(0, 200),
+      // The facts go where Dashboard → Errors shows details (never tokens
+      // or full emails: see quickDiagnostics).
+      stack: Object.entries(item.diag || {}).map(([key, value]) => `${key}=${value}`).join('\n').slice(0, 1500),
       page: item.page || '/',
-      fingerprint: '',
+      fingerprint: bounceFingerprint(item),
       occurrences: 1,
     }));
     try {
@@ -1571,7 +1600,7 @@
         body: JSON.stringify({ errors }),
       });
       if (response && (response.ok || response.status === 202)) {
-        ['local', 'session'].forEach(kind => { try { safeStore(kind)?.removeItem(BOUNCES_KEY); } catch (error) { /* ignore */ } });
+        clear();
         return errors.length;
       }
     } catch (error) {

@@ -921,8 +921,10 @@ body.dashboard-page button:disabled:not(.topbar-button, .es-btn) {
     width: min(100% - 36px, 1460px);
   }
 
+  /* 28vw was 286px at 1024 once the app sidebar took 224px: the
+     placeholder ("Search tasks, people, notes") was cut. */
   body.dashboard-page .command-search {
-    width: min(300px, 28vw);
+    width: min(340px, 100%);
   }
 
   body.dashboard-page .person-role-card {

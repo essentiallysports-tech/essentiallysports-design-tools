@@ -11,7 +11,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const reporterLib = require('../frameup-errors.js');
-const { createReporter, scrub, scrubUrl, fingerprintOf, install, MAX_BODY } = reporterLib;
+const { createReporter, scrub, scrubUrl, fingerprintOf, isDeliberateAnswer, install, MAX_BODY } = reporterLib;
 
 // ── 1. Scrubbing ────────────────────────────────────────────────────────────
 {
@@ -126,6 +126,8 @@ const flushTimers = () => new Promise(resolve => setTimeout(resolve, 2200));
   assert.ok(w.win.FrameUpErrors, 'installed');
   w.fire('error', { error: Object.assign(new TypeError('Cannot read properties of undefined (reading \'x\')'), { stack: 'TypeError: ...\n    at go (https://frameup.essentiallysports.com/generate.html?brief=private:10:2)' }), filename: 'https://frameup.essentiallysports.com/generate.html?brief=private', lineno: 10, colno: 2, target: w.win });
   w.fire('error', { message: 'Script error.', error: null, target: w.win });
+  w.fire('error', { message: 'ResizeObserver loop completed with undelivered notifications.', error: null, target: w.win });
+  w.fire('error', { message: 'ResizeObserver loop limit exceeded', error: null, target: w.win });
   w.fire('unhandledrejection', { reason: new Error('Supabase timed out') });
   w.fire('unhandledrejection', { reason: Object.assign(new Error('aborted'), { name: 'AbortError' }) });
   await w.win.fetch('/api/broken', { method: 'POST', body: JSON.stringify({ brief: 'secret brief' }) });
@@ -138,7 +140,7 @@ const flushTimers = () => new Promise(resolve => setTimeout(resolve, 2200));
   assert.equal(posts.length, 1, 'one batched report');
   assert.equal(posts[0].init.headers.Authorization, 'Bearer user-token', 'sent with the signed-in session');
   const errors = JSON.parse(posts[0].init.body).errors;
-  assert.deepEqual(errors.map(error => error.kind), ['error', 'rejection', 'api', 'api', 'api'], 'cross-origin "Script error." and AbortError are ignored');
+  assert.deepEqual(errors.map(error => error.kind), ['error', 'rejection', 'api', 'api', 'api'], 'cross-origin "Script error.", the ResizeObserver loop notice and AbortError are ignored');
   assert.equal(errors[0].source, '/generate.html', 'script URL scrubbed to its path');
   assert.ok(!JSON.stringify(errors).includes('brief'), 'no query strings or request bodies');
   assert.deepEqual(errors.slice(2).map(error => error.status), [500, 404, 0]);
@@ -160,6 +162,55 @@ const flushTimers = () => new Promise(resolve => setTimeout(resolve, 2200));
   await flushTimers();
   await flushTimers();
   assert.equal(w.requests.filter(request => request.url === '/api/client-errors').length, 1, 'no loop when /api/client-errors fails');
+}
+
+// ── 3b. Not every 404 / 5xx is a bug ────────────────────────────────────────
+// The live error log filled with an endpoint's own answers ("that link has
+// no video", "not set up yet", "budget used up"), requests cancelled by
+// leaving the page, and an offline browser. None of those are reported.
+{
+  assert.equal(isDeliberateAnswer({ status: 404, contentType: 'application/json', body: { reason: 'no-video' } }), true, 'JSON 404: the endpoint answered');
+  assert.equal(isDeliberateAnswer({ status: 404, contentType: 'text/html' }), false, 'HTML 404: the endpoint is missing (bad deploy)');
+  assert.equal(isDeliberateAnswer({ status: 503, contentType: 'application/json', body: { ok: false, configured: false } }), true, 'not connected yet');
+  assert.equal(isDeliberateAnswer({ status: 503, contentType: 'application/json; charset=utf-8', body: { reason: 'budget' } }), true, 'weekly budget used up');
+  assert.equal(isDeliberateAnswer({ status: 503, contentType: 'application/json', body: { reason: 'feature-off' } }), true, 'switched off');
+  assert.equal(isDeliberateAnswer({ status: 500, contentType: 'application/json', body: { ok: false, error: 'boom' } }), false, 'a real 500');
+  assert.equal(isDeliberateAnswer({ status: 502, contentType: 'text/html', body: null }), false, 'gateway HTML error page');
+
+  const json = (status, body) => ({ status, ok: false, headers: { get: name => (/content-type/i.test(name) ? 'application/json' : null) }, clone() { return { json: async () => body }; } });
+  const w = fakeWindow();
+  const base = w.win.fetch;
+  let online = true;
+  w.win.navigator = { get onLine() { return online; } };
+  w.win.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.includes('/api/no-video')) return json(404, { ok: false, reason: 'no-video' });
+    if (url.includes('/api/budget')) return json(503, { ok: false, reason: 'budget' });
+    if (url.includes('/api/not-set-up')) return json(503, { ok: false, configured: false });
+    if (url.includes('/api/real-500')) return json(500, { ok: false, error: 'boom' });
+    if (url.includes('/api/leave') || url.includes('/api/offline')) { w.requests.push({ url }); throw new TypeError('Failed to fetch'); }
+    return base(input, init);
+  };
+  install(w.win);
+  await w.win.fetch('/api/no-video');
+  await w.win.fetch('/api/budget');
+  await w.win.fetch('/api/not-set-up');
+  await w.win.fetch('/api/real-500');
+  online = false;
+  await assert.rejects(w.win.fetch('/api/offline'));
+  w.fire('error', { target: { tagName: 'SCRIPT', src: 'https://frameup.essentiallysports.com/app.js' } });
+  online = true;
+  await flushTimers();
+  let posts = w.requests.filter(request => request.url === '/api/client-errors');
+  assert.equal(posts.length, 1);
+  const errors = JSON.parse(posts[0].init.body).errors;
+  assert.deepEqual(errors.map(error => error.message), ['GET /api/real-500 returned 500'], 'only the real failure is reported');
+  // Leaving the page: its cancelled requests are not failures.
+  w.fire('pagehide', {});
+  await assert.rejects(w.win.fetch('/api/leave'));
+  await flushTimers();
+  posts = w.requests.filter(request => request.url === '/api/client-errors');
+  assert.equal(posts.length, 1, 'nothing new after pagehide');
 }
 
 // ── 4. /api/client-errors ───────────────────────────────────────────────────
