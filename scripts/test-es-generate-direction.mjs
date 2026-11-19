@@ -10,6 +10,9 @@ import path from 'node:path';
 // These cases pin the Sonnet-only director path (the default is now auto).
 process.env.GENERATE_DIRECTOR_MODEL = process.env.GENERATE_DIRECTOR_MODEL || 'best';
 const require = createRequire(import.meta.url);
+// These cover the template look's fallback photo pick (no asset service);
+// the verified path (classicPhotos + asset service) is in test-generate-classic-photos.mjs.
+require('../netlify/functions/_composer.js').setAssetService(null);
 const fnDir = path.resolve('netlify/functions');
 const genPath = path.join(fnDir, 'es-generate.js');
 const gwPath = path.join(fnDir, '_ai-gateway.js');
@@ -157,7 +160,9 @@ assert.equal(res.status, 200);
 assert.match(res.body.brain, /^groq:/);
 assert.equal(res.body.ai.fallback, 'budget');
 assert.equal(seen.groq, 1);
-assert.equal(seen.messages, 2, 'director + photo pick only');
+// The photo pick may start before or after the director's 402: either it is
+// sent once, or it sees the budget is out and never calls. Never a retry.
+assert.ok(seen.messages >= 1 && seen.messages <= 2, `director + at most one photo pick (got ${seen.messages})`);
 assert.equal(res.body.designs.length, 2);
 assert.equal(res.body.direction.source, 'none');
 

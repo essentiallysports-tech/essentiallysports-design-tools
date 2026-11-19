@@ -1255,6 +1255,53 @@ async function photoCandidates(person, mcp, tools, articles, { extra = [] } = {}
   return out;
 }
 
+// ─── The template look's photo: the same right-person check as Creative ───
+// The template look used to guess: with one candidate, or when the Haiku pick
+// failed, it used the first candidate unchecked (often an ES story's lead image
+// of someone else), and Haiku was asked to recognise a face. It now asks the
+// asset service (findPhotos: caption evidence, then one Sonnet vision check of
+// uniform, number, team and setting, never a face) and keeps only verified
+// photos. -> [{ title, sourceUrl, url }] (verified, best first), [] when the
+// service looked and nothing verified, or null when it is unavailable / over
+// budget (the caller falls back to the old candidates, without guessing).
+const CLASSIC_PHOTO_BUDGET_MS = Math.max(4000, Number(process.env.GENERATE_PHOTO_BUDGET_MS) || 25000);
+async function verifiedPhotosFor(subject, read = {}, track = null, budgetMs = CLASSIC_PHOTO_BUDGET_MS) {
+  const service = composer.assetService?.();
+  if (!subject || !service?.findPhotos) return null;
+  const isTeam = Boolean(read.team) && squash(subject) === squash(read.team);
+  const others = (read.subjects || []).filter(name => name && squash(name) !== squash(subject)).slice(0, 6);
+  const args = isTeam
+    ? { team: subject, query: subject, sport: read.sport || '', others, count: 6, track }
+    : { person: subject, sport: read.sport || '', teams: read.team ? [read.team] : [], others, count: 6, track };
+  let timer;
+  const res = await Promise.race([
+    Promise.resolve(service.findPhotos(args)).catch(() => null).finally(() => clearTimeout(timer)),
+    new Promise(resolve => { timer = setTimeout(() => resolve(null), budgetMs); }),
+  ]);
+  // subject null: the service could not tell who or what this is (not a known
+  // ES person or team), which is not a failed check: the caller falls back.
+  if (!res || res.ok === false || res.subject === null) return null;
+  const raw = (res.photos || []).filter(p => p && (p.url || p.src) && p.sourceUrl);
+  const checked = raw.some(p => p.verified != null);
+  return raw.filter(p => !checked || p.verified)
+    .map(p => ({ title: clean(p.title || subject).slice(0, 120), sourceUrl: p.sourceUrl, url: p.url || p.src, verified: true }));
+}
+
+// The main subject's photo for the template look. pick: { index, picked,
+// rejected, verified }; rejected = no photo goes on the card, the candidates
+// go to the photo picker instead (never someone else on the post).
+async function classicPhotos({ person, read, found, mcp, tools, track, extra = [] }) {
+  const subject = person || read?.team || '';
+  const verified = subject ? await verifiedPhotosFor(subject, read, track).catch(() => null) : null;
+  if (verified?.length) return { candidates: verified, pick: { index: 0, cost: 0, picked: true, rejected: false, verified: true } };
+  const candidates = await photoCandidates(person, mcp, tools, found.articles || [], { extra }).catch(() => []);
+  // The check ran and nothing showed them: offer what was found, use none.
+  if (verified) return { candidates, pick: { index: 0, cost: 0, picked: false, rejected: candidates.length > 0, verified: true } };
+  // No asset service (or over budget): the old pick, but no unchecked first photo.
+  const pick = await pickPhoto(person, candidates, track);
+  return { candidates, pick: pick.picked ? pick : { ...pick, rejected: candidates.length > 0 } };
+}
+
 // Claude (main tier, it can see images) picks the photo that shows the person
 // best. Runs alongside the design call, so it adds no waiting. Returns the
 // index of the best candidate (0 when the pick could not run). rejected: the
@@ -1651,11 +1698,10 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
   // The main person (or team): the top ES tag, else the names in the brief.
   const person = found.tags?.[0]?.name || nameCandidates(brief)[0] || '';
   const wantsPhoto = !allowedTypes.length || allowedTypes.some(type => TEMPLATES[type].photo);
-  // Photo candidates and Claude's pick run while the designs are written.
+  // The verified photo (classicPhotos) runs while the designs are written.
   const photoTrack = { email, token, runId };
   const photoWork = wantsPhoto
-    ? photoCandidates(person, mcp, tools, found.articles, { extra: trendPhotoFor(found, person) })
-      .then(async candidates => ({ candidates, pick: await pickPhoto(person, candidates, photoTrack) }))
+    ? classicPhotos({ person, read, found, mcp, tools, track: photoTrack, extra: trendPhotoFor(found, person) })
       .catch(() => ({ candidates: [], pick: { index: 0, cost: 0, picked: false } }))
     : Promise.resolve({ candidates: [], pick: { index: 0, cost: 0, picked: false } });
 
@@ -1912,6 +1958,34 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
   }
   const aiMs = Date.now() - started - researchMs;
   const { candidates, pick } = await photoWork;
+  // Someone else on a card (the other side of a rivalry): the same check, one
+  // lookup per name; the old first-result search only when the service cannot.
+  // This runs after the designs, so it gets 15s and is skipped late in a run
+  // (that card then offers the photo picker): the run must end by ~150s.
+  const OTHER_PHOTO_MS = 15000;
+  const OTHER_PHOTO_START_BY_MS = 130000;
+  // The query is the writer's free text ("Bills celebrate Chiefs win"): the
+  // subject is the person or team from the brief it names, never the whole
+  // phrase (sent as a "person", it once matched a Chiefs ticketing story on a
+  // Bills card). Names nobody from the brief: the main subject's checked photo.
+  const named = (q, name) => {
+    const word = mainWord(keyTerms(name) || name);
+    return Boolean(word) && squash(q).includes(` ${word} `);
+  };
+  const otherSubject = query => (read.subjects || []).find(name => named(query, name))
+    || (read.team && named(query, read.team) ? read.team : '');
+  const otherLookups = new Map();
+  const otherPhoto = query => {
+    const subject = otherSubject(query);
+    if (!subject) return Promise.resolve(pick.rejected || !ordered[0] ? null : { ...ordered[0] });
+    const key = squash(subject).trim();
+    if (!otherLookups.has(key)) {
+      otherLookups.set(key, elapsed() > OTHER_PHOTO_START_BY_MS ? Promise.resolve(null)
+        : verifiedPhotosFor(subject, read, photoTrack, OTHER_PHOTO_MS).catch(() => null)
+          .then(async list => (list === null ? findPhoto(subject, mcp, tools, found.articles) : (list[0] ? { ...list[0] } : null))));
+    }
+    return otherLookups.get(key);
+  };
   const ordered = candidates.length ? [candidates[pick.index], ...candidates.filter((_, i) => i !== pick.index)] : [];
   const personWord = mainWord(keyTerms(person) || person);
   await Promise.all(designs.map(async spec => {
@@ -1922,7 +1996,7 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
     const aboutPerson = !spec.photoQuery || (personWord && squash(spec.photoQuery).includes(` ${personWord} `));
     spec.photo = !TEMPLATES[spec.postType].photo ? null
       : aboutPerson ? (pick.rejected ? null : (ordered[0] ? { ...ordered[0] } : null))
-        : await findPhoto(spec.photoQuery, mcp, tools, found.articles);
+        : await otherPhoto(spec.photoQuery);
     if (TEMPLATES[spec.postType].photo && !spec.photo) {
       spec.lint = spec.lint || { warnings: [] };
       spec.lint.warnings.push({ field: 'photo', code: 'pick-photo', msg: pick.rejected ? `no ES photo clearly shows ${person}; pick one` : 'no ES photo found; pick one' });
@@ -2239,4 +2313,4 @@ exports.handler = withAiMode(async function handler(event) {
 });
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
-exports._test = { creative, onBrand, searchPhotos, IMAGE_SEARCH_CACHE, PHOTO_PICK_CACHE, readBrief: readBriefFor, directorAllowed, directorNote, designsPerDirection, pastPostCard, REWRITES, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE, pickProvider, chat };
+exports._test = { creative, onBrand, searchPhotos, classicPhotos, verifiedPhotosFor, IMAGE_SEARCH_CACHE, PHOTO_PICK_CACHE, readBrief: readBriefFor, directorAllowed, directorNote, designsPerDirection, pastPostCard, REWRITES, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE, pickProvider, chat };

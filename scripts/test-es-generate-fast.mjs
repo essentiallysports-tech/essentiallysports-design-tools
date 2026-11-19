@@ -8,6 +8,9 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
+// These cover the template look's fallback photo pick (no asset service);
+// the verified path (classicPhotos + asset service) is in test-generate-classic-photos.mjs.
+require('../netlify/functions/_composer.js').setAssetService(null);
 const fnDir = path.resolve('netlify/functions');
 const genPath = path.join(fnDir, 'es-generate.js');
 const imgPath = path.join(fnDir, 'es-generate-image.js');
@@ -153,8 +156,12 @@ assert.equal(res.status, 200);
 assert.match(res.body.brain, /^groq:/);
 assert.equal(res.body.ai.fallback, 'budget');
 assert.equal(res.body.designs.length, 2);
-assert.equal(res.body.designs[0].photo.sourceUrl, IMG(1), 'without the pick, the newest ES photo is used');
-assert.equal(calls.filter(url => url.endsWith('/v1/messages')).length, 2, 'the director (402, hands the writer to Groq) + one photo pick, no retries');
+assert.equal(res.body.designs[0].photo, null, 'without a pick, no unchecked photo is placed');
+assert.equal(res.body.designs[0].photos[0].sourceUrl, IMG(1), 'the newest ES photo is offered in the picker');
+// The photo pick may start before or after the director's 402 (then it sees
+// the budget is out and never calls): at most one, never a retry.
+const msgCalls = calls.filter(url => url.endsWith('/v1/messages')).length;
+assert.ok(msgCalls >= 1 && msgCalls <= 2, `the director (402, hands the writer to Groq) + at most one photo pick, no retries (got ${msgCalls})`);
 
 // 7. Scene image: one click, one image, tracked with images: 1.
 gatewayMode = 'ok';

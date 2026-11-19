@@ -2528,7 +2528,7 @@ module.exports = {
   editorialKicker,
   readCreative, addTrendTeam, splitStories, factsIn, properNames, planDeterministic, validateDirections, runArtDirector, DIRECTOR_SYSTEM, directorRequest,
   inputsFor, scenesFor, plan, judge, judgePrompt, dedupePhotos, photoKey, photoFactsFor, distinctPhotos, resolvePhotos, procArtFor, paletteFor, paletteByKey, defaultNote,
-  setAssetService, PLAN_CACHE, JUDGE_CACHE, NEEDS, RUBRIC,
+  assetService, setAssetService, PLAN_CACHE, JUDGE_CACHE, NEEDS, RUBRIC,
   critiqueFromModel, codeCritique, mergeCritiques, fixFor, budgetFor, FIX_TEXT,
   // gen-director: content sense and set design.
   TONES, LIGHT_TONES, FAMILIES, familyOf, tonesOf, assignTones, statWeight, labelReads, senseLabel, stripCoverage,

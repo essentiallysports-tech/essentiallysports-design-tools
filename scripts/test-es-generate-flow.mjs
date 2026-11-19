@@ -6,6 +6,9 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
+// These cover the template look's fallback photo pick (no asset service);
+// the verified path (classicPhotos + asset service) is in test-generate-classic-photos.mjs.
+require('../netlify/functions/_composer.js').setAssetService(null);
 const fnDir = path.resolve('netlify/functions');
 const fnPath = path.join(fnDir, 'es-generate.js');
 const mcpPath = path.join(fnDir, '_es-mcp.js');
@@ -89,7 +92,11 @@ const [cover, stats] = res.body.designs;
 assert.deepEqual(cover.lines, ['Patrick Mahomes', 'Not Done Yet']);
 assert.equal(cover.sport, 'NFL');
 assert.equal(cover.team, 'Kansas City Chiefs');
-assert.equal(cover.photo.url, `/api/es-image-search?image=${encodeURIComponent(IMAGE)}`);
+// One unchecked candidate (no asset service, no photo pick): it is offered in
+// the photo picker but never placed on the card as a guess.
+assert.equal(cover.photo, null, 'an unchecked photo is never used');
+assert.equal(cover.photos[0].url, `/api/es-image-search?image=${encodeURIComponent(IMAGE)}`, 'it is offered in the picker');
+assert.ok(cover.lint.warnings.some(w => w.code === 'pick-photo'));
 assert.deepEqual(stats.lines, ['Mahomes Masterclass', '320 | YDS', '3 | TD', '1 | INT']);
 assert.equal(stats.sources[0].url, ARTICLE.link, 'non-ES sources are replaced by real ES research');
 assert.ok(mcpCalls.includes('search_articles') && mcpCalls.includes('write_copy'));
@@ -99,7 +106,7 @@ assert.deepEqual(res.body.connection.roles, { think: 'write_copy', articles: 'se
 assert.equal(res.body.connection.mcpConfigured, true);
 assert.ok(!fetchCalls.some(url => url.includes('openai')), 'OpenAI is not used when ES MCP can think');
 
-// 2. No ES MCP, OpenAI key present: OpenAI thinks; photo from the ES story.
+// 2. No ES MCP, OpenAI key present: OpenAI thinks; the ES story photo is offered (unchecked: not placed).
 process.env.OPENAI_API_KEY = 'test-key';
 process.env.GENERATE_USE_OPENAI = 'true';
 fetchCalls = [];
@@ -107,7 +114,8 @@ handler = mockModules();
 res = await post(handler, { brief: 'Patrick Mahomes after the Chiefs win', formats: ['cover'] });
 assert.equal(res.body.brain, 'openai:gpt-4.1-mini');
 assert.deepEqual(res.body.designs.map(d => d.postType), ['cover'], 'only requested formats survive');
-assert.equal(res.body.designs[0].photo.sourceUrl, IMAGE);
+assert.equal(res.body.designs[0].photo, null);
+assert.equal(res.body.designs[0].photos[0].sourceUrl, IMAGE);
 
 // 3. The AI fails: draft mode takes over and says so.
 openAiReply = { ok: false, body: { error: { message: 'rate limited' } } };

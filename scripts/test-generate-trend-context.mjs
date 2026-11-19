@@ -219,7 +219,7 @@ aok('photo: the ES-hosted trend picture is a candidate; Wikipedia is not', async
   assert.equal(wiki.length, 0, 'not an ES photo host: never a candidate');
   assert.ok(found);
   const src = fs.readFileSync(fnPath, 'utf8');
-  assert.match(src, /photoCandidates\(person, mcp, tools, found\.articles, \{ extra: trendPhotoFor\(found, person\) \}\)/, 'templates path offers it to the photo pick');
+  assert.match(src, /classicPhotos\(\{ person, read, found, mcp, tools, track: photoTrack, extra: trendPhotoFor\(found, person\) \}\)/, 'templates path offers it (when the asset service cannot check)');
   assert.match(src, /photoCandidates\(person, mcp, tools, articles, \{ extra: trendPhotoFor\(found, person\) \}\)/, 'Creative local search offers it (verifiedLocal still checks)');
   assert.match(src, /if \(!photo \|\| !canProxy\(photo\.image\) \|\| !surname/);
 });
