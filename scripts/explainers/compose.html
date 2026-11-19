@@ -10,135 +10,200 @@
 <body>
 <canvas id="c" width="1920" height="1080"></canvas>
 <script>
-// The encoder: plays a recorded timeline (screencast frames, cursor track,
-// clicks, captions, voice lines) in real time onto a 1920x1080 canvas and
-// records it with MediaRecorder (H.264 + AAC in an MP4). Also draws the poster,
-// and makes contact sheets / stills from a finished MP4.
+// The encoder: plays an edited timeline (screencast frames, cursor track,
+// clicks, captions, voice lines; the edit from lib/edit.mjs) in real time onto
+// a 1920x1080 canvas and records it with MediaRecorder (H.264 + AAC in an MP4).
+//   - Camera: the planned path (zoom on what is clicked or typed into, ease
+//     back out between steps), applied to the app, the cursor and the ripples.
+//   - Title card, chapter breaks and end card are animated in ES style
+//     (Acumin Pro Condensed Bold, Roboto, ES blue, highlight boxes).
+//   - Captions: short lower-third chunks; at the top when the zoom is low.
+//   - Sound: the voice lines plus a quiet music bed, ducked under the voice,
+//     faded in and out.
+// Also draws the poster, measures frame changes for the edit (analyze), and
+// makes contact sheets / stills and loudness readings from a finished MP4.
 const W = 1920, H = 1080;
-const APP = { x: 240, y: 36, w: 1440, h: 900, r: 14 };
-const BLUE = '#0A7DFA', BLUE_FILL = '#0A6FDE', INK = '#0B1220';
+const APP = { w: 1440, h: 900, r: 14 };
+const ANCHOR = { x: 960, y: 486 };
+const WIDE = { s: 1, fx: 720, fy: 450 };
+const BLUE = '#0A7DFA', BLUE_FILL = '#0A6FDE', INK = '#0B1220', SKY = '#8CC2FF';
+const DISPLAY = '"Acumin Pro Condensed", "Roboto Condensed"';
 const cv = document.getElementById('c');
 const g = cv.getContext('2d');
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+g.imageSmoothingQuality = 'high';
 let LOGO = null;
 
 async function loadImage(src) { const i = new Image(); i.src = src; await i.decode(); return i; }
-async function ready() {
-  await Promise.all(['400 30px Roboto', '500 30px Roboto', '700 30px Roboto', '700 60px "Roboto Condensed"', '800 60px "Roboto Condensed"', '600 30px "Roboto Condensed"'].map(f => document.fonts.load(f)));
-  LOGO = await loadImage('/brand-logo-white.svg');
+let READY = null;
+function ready() {
+  READY ||= (async () => {
+    try { const f = new FontFace('Acumin Pro Condensed', 'url(/fonts/acumin-pro-condensed-bold.otf)', { weight: '700' }); await f.load(); document.fonts.add(f); } catch {}
+    await Promise.all(['400 30px Roboto', '500 30px Roboto', '700 30px Roboto', '700 60px "Roboto Condensed"', '800 60px "Roboto Condensed"', `700 60px ${DISPLAY}`].map(f => document.fonts.load(f)));
+    LOGO = await loadImage('/brand-logo-white.svg');
+  })();
+  return READY;
 }
 
-// ── Drawing helpers ─────────────────────────────────────────────────────────
+// ── Easing + helpers ────────────────────────────────────────────────────────
+const clamp01 = k => Math.max(0, Math.min(1, k));
+const ease = k => { k = clamp01(k); return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; };
+const out3 = k => 1 - Math.pow(1 - clamp01(k), 3);
+const span = (t, a, b) => clamp01((t - a) / (b - a));
 function rr(x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
-function background() {
+function background(t = 0) {
   const gr = g.createLinearGradient(0, 0, W, H);
-  gr.addColorStop(0, '#0A1A33'); gr.addColorStop(1, '#06101F');
+  gr.addColorStop(0, '#0A1A33'); gr.addColorStop(1, '#050D1A');
   g.fillStyle = gr; g.fillRect(0, 0, W, H);
-  const glow = g.createRadialGradient(360, 120, 0, 360, 120, 1100);
-  glow.addColorStop(0, 'rgba(10,125,250,0.22)'); glow.addColorStop(1, 'rgba(10,125,250,0)');
+  const x = 360 + Math.sin(t * 0.25) * 60, y = 120 + Math.cos(t * 0.2) * 40;
+  const glow = g.createRadialGradient(x, y, 0, x, y, 1150);
+  glow.addColorStop(0, 'rgba(10,125,250,0.24)'); glow.addColorStop(1, 'rgba(10,125,250,0)');
   g.fillStyle = glow; g.fillRect(0, 0, W, H);
 }
-function appFrame(img) {
-  g.save();
-  g.shadowColor = 'rgba(0,0,0,0.45)'; g.shadowBlur = 48; g.shadowOffsetY = 18;
-  rr(APP.x, APP.y, APP.w, APP.h, APP.r); g.fillStyle = '#fff'; g.fill();
-  g.restore();
-  if (img) { g.save(); rr(APP.x, APP.y, APP.w, APP.h, APP.r); g.clip(); g.drawImage(img, APP.x, APP.y, APP.w, APP.h); g.restore(); }
-  g.save(); rr(APP.x + 0.5, APP.y + 0.5, APP.w - 1, APP.h - 1, APP.r); g.strokeStyle = 'rgba(255,255,255,0.10)'; g.lineWidth = 1; g.stroke(); g.restore();
-}
-function logo(x, y, w, alpha = 1) { if (!LOGO) return; const h = w * LOGO.height / LOGO.width; g.save(); g.globalAlpha = alpha; g.drawImage(LOGO, x, y, w, h); g.restore(); return h; }
-function footer() {
-  logo(APP.x, 993, 168, 0.95);
-}
+function logo(x, y, w, alpha = 1) { if (!LOGO) return 0; const h = w * LOGO.height / LOGO.width; g.save(); g.globalAlpha *= alpha; g.drawImage(LOGO, x, y, w, h); g.restore(); return h; }
 function wrapLines(text, maxW) {
   const words = text.split(/\s+/); const lines = []; let cur = '';
   for (const w of words) { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; }
   if (cur) lines.push(cur);
+  // Balance two lines so the last line isn't a single word.
+  if (lines.length === 2) {
+    const all = text.split(/\s+/); let best = null;
+    for (let i = 1; i < all.length; i++) { const a = all.slice(0, i).join(' '), b = all.slice(i).join(' '); const wa = g.measureText(a).width, wb = g.measureText(b).width; if (wa <= maxW && wb <= maxW) { const d = Math.abs(wa - wb); if (!best || d < best.d) best = { d, l: [a, b] }; } }
+    if (best) return best.l;
+  }
   return lines;
 }
-function caption(text, n, age) {
-  if (!text) return;
-  const k = Math.min(1, age / 0.26); const e = 1 - Math.pow(1 - k, 3);
+
+// ── Camera ──────────────────────────────────────────────────────────────────
+function camAt(m, o) {
+  const p = m.cam; if (!p) return WIDE;
+  const i = Math.max(0, Math.min(p.samples.length - 1, Math.round(o / p.step)));
+  const [s, fx, fy] = p.samples[i]; return { s, fx, fy };
+}
+const toScreen = (c, x, y) => ({ x: (x - c.fx) * c.s + ANCHOR.x, y: (y - c.fy) * c.s + ANCHOR.y });
+function toSrc(m, o) {
+  for (const s of m.edit.segs) if (o <= s.o1) return s.o1 === s.o0 ? s.s0 : s.s0 + Math.max(0, o - s.o0) / (s.o1 - s.o0) * (s.s1 - s.s0);
+  return m.duration;
+}
+function holdAt(m, o) { return m.edit.segs.find(s => s.hold && o >= s.o0 - 450 && o <= s.o1 + 350) || null; }
+
+// The app under a camera: frame, shadow, screen, cursor, ripples.
+function drawApp(m, img, c, srcT, { cursorOn = true, alpha = 1, scale = 1, blur = 0 } = {}) {
   g.save();
-  g.globalAlpha = e;
-  g.font = '500 30px Roboto';
-  const maxText = 940;
-  let lines = wrapLines(text, maxText);
-  const textW = Math.max(...lines.map(l => g.measureText(l).width));
-  const padL = 84, padR = 34, lh = 40;
-  const bw = Math.ceil(textW + padL + padR), bh = 32 + lines.length * lh;
-  const cx = W / 2, by = 1008 - bh / 2 + (1 - e) * 10;
-  const bx = cx - bw / 2;
-  g.shadowColor = 'rgba(0,0,0,0.35)'; g.shadowBlur = 24; g.shadowOffsetY = 6;
-  rr(bx, by, bw, bh, 18); g.fillStyle = 'rgba(16,20,28,0.94)'; g.fill();
-  g.shadowColor = 'transparent';
-  g.strokeStyle = 'rgba(255,255,255,0.10)'; g.lineWidth = 1; rr(bx + 0.5, by + 0.5, bw - 1, bh - 1, 18); g.stroke();
-  // Step badge: ES blue square with the step number.
-  rr(bx + 18, by + bh / 2 - 22, 44, 44, 10); g.fillStyle = BLUE_FILL; g.fill();
-  g.fillStyle = '#fff'; g.font = '800 26px "Roboto Condensed"'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(String(n), bx + 40, by + bh / 2 + 1);
-  g.textAlign = 'left'; g.font = '500 30px Roboto'; g.fillStyle = '#fff';
-  lines.forEach((l, i) => g.fillText(l, bx + padL, by + 16 + lh / 2 + i * lh + 1));
+  g.globalAlpha = alpha;
+  if (scale !== 1) { g.translate(W / 2, H / 2); g.scale(scale, scale); g.translate(-W / 2, -H / 2); }
+  g.save();
+  g.translate(ANCHOR.x - c.fx * c.s, ANCHOR.y - c.fy * c.s); g.scale(c.s, c.s);
+  g.save(); g.shadowColor = 'rgba(0,0,0,0.5)'; g.shadowBlur = 60 / c.s; g.shadowOffsetY = 22 / c.s;
+  rr(0, 0, APP.w, APP.h, APP.r); g.fillStyle = '#fff'; g.fill(); g.restore();
+  if (img) { g.save(); rr(0, 0, APP.w, APP.h, APP.r); g.clip(); if (blur) g.filter = `blur(${blur}px)`; g.drawImage(img, 0, 0, APP.w, APP.h); g.restore(); }
+  g.restore();
+  if (cursorOn && m.track) {
+    const clicks = m.clicks.filter(k => srcT >= k.t && srcT - k.t < 550);
+    clicks.forEach(k => { const p = toScreen(c, k.x, k.y); ripple(p.x, p.y, (srcT - k.t) / 1000, c.s); });
+    const p = cursorAt(m.track, srcT);
+    if (p) { const q = toScreen(c, p.x, p.y); const press = m.clicks.some(k => Math.abs(srcT - k.t - 60) < 90) ? 1 : 0; cursor(q.x, q.y, press, 1.15 + (c.s - 1) * 0.35); }
+  }
   g.restore();
 }
-function cursor(x, y, press) {
-  const s = 1.18 * (1 - press * 0.12);
-  g.save();
-  g.translate(APP.x + x, APP.y + y); g.scale(s, s);
+function cursor(x, y, press, size) {
+  const s = size * (1 - press * 0.12);
+  g.save(); g.translate(x, y); g.scale(s, s);
   g.shadowColor = 'rgba(0,0,0,0.35)'; g.shadowBlur = 6; g.shadowOffsetY = 2;
-  g.beginPath();
-  g.moveTo(0, 0); g.lineTo(0, 21); g.lineTo(5.2, 16.2); g.lineTo(8.6, 24); g.lineTo(12, 22.6); g.lineTo(8.7, 15); g.lineTo(15.4, 15); g.closePath();
-  g.fillStyle = '#111'; g.fill();
-  g.shadowColor = 'transparent';
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 21); g.lineTo(5.2, 16.2); g.lineTo(8.6, 24); g.lineTo(12, 22.6); g.lineTo(8.7, 15); g.lineTo(15.4, 15); g.closePath();
+  g.fillStyle = '#111'; g.fill(); g.shadowColor = 'transparent';
   g.lineWidth = 1.6; g.strokeStyle = '#fff'; g.lineJoin = 'round'; g.stroke();
   g.restore();
 }
-function ripple(x, y, age) {
-  const k = age / 0.5; if (k < 0 || k > 1) return;
-  const e = 1 - Math.pow(1 - k, 2);
-  g.save();
-  g.beginPath(); g.arc(APP.x + x, APP.y + y, 8 + e * 30, 0, Math.PI * 2);
-  g.fillStyle = `rgba(10,125,250,${0.28 * (1 - k)})`; g.fill();
-  g.lineWidth = 2.5; g.strokeStyle = `rgba(10,125,250,${0.85 * (1 - k)})`; g.stroke();
+function ripple(x, y, age, s) {
+  const k = age / 0.55; if (k < 0 || k > 1) return;
+  const e = out3(k);
+  g.save(); g.beginPath(); g.arc(x, y, (8 + e * 30) * (0.8 + s * 0.2), 0, Math.PI * 2);
+  g.fillStyle = `rgba(10,125,250,${0.26 * (1 - k)})`; g.fill();
+  g.lineWidth = 3; g.strokeStyle = `rgba(10,125,250,${0.9 * (1 - k)})`; g.stroke(); g.restore();
+}
+function cursorAt(track, t) {
+  if (!track.length) return null;
+  let lo = 0, hi = track.length - 1;
+  if (t <= track[0].t) return track[0];
+  if (t >= track[hi].t) return track[hi];
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (track[mid].t <= t) lo = mid; else hi = mid; }
+  const a = track[lo], b = track[hi]; const k = (t - a.t) / Math.max(1, b.t - a.t);
+  return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+}
+
+// ── Captions ────────────────────────────────────────────────────────────────
+function caption(q, o) {
+  const inK = out3((o - q.from) / 220), outK = clamp01((q.to - o) / 160);
+  const a = Math.min(inK, outK); if (a <= 0) return;
+  g.save(); g.globalAlpha = a;
+  g.font = '500 38px Roboto';
+  const lines = wrapLines(q.text, 1040);
+  const lh = 50, padX = 40, padY = 24;
+  const tw = Math.max(...lines.map(l => g.measureText(l).width));
+  const bw = Math.ceil(tw + padX * 2 + 8), bh = padY * 2 + lines.length * lh - 6;
+  const bx = W / 2 - bw / 2;
+  const by = (q.pos === 'top' ? 44 : H - 44 - bh) + (1 - inK) * (q.pos === 'top' ? -10 : 10);
+  g.shadowColor = 'rgba(0,0,0,0.4)'; g.shadowBlur = 28; g.shadowOffsetY = 8;
+  rr(bx, by, bw, bh, 16); g.fillStyle = 'rgba(8,14,26,0.9)'; g.fill();
+  g.shadowColor = 'transparent';
+  rr(bx, by, 8, bh, [16, 0, 0, 16]); g.fillStyle = BLUE_FILL; g.fill();
+  g.fillStyle = '#fff'; g.textBaseline = 'middle'; g.textAlign = 'left';
+  lines.forEach((l, i) => g.fillText(l, bx + padX + 8, by + padY + lh / 2 - 3 + i * lh));
   g.restore();
 }
-function titleCard(m, img, alpha, kind) {
-  g.save();
-  g.globalAlpha = alpha;
-  background();
-  if (img) { g.save(); g.globalAlpha = alpha * 0.22; g.filter = 'blur(14px)'; g.drawImage(img, APP.x, APP.y, APP.w, APP.h); g.restore(); }
-  const shade = g.createLinearGradient(0, 0, 0, H); shade.addColorStop(0, 'rgba(6,16,31,0.55)'); shade.addColorStop(1, 'rgba(6,16,31,0.92)');
+
+// ── Cards ───────────────────────────────────────────────────────────────────
+// A highlight box that wipes in, then its words (ES style).
+function highlight(text, x, baseY, size, k, { fill = BLUE_FILL, color = '#fff', font = DISPLAY } = {}) {
+  g.save(); g.font = `700 ${size}px ${font}`; g.textBaseline = 'alphabetic';
+  const tw = g.measureText(text).width, padX = size * 0.16, top = baseY - size * 0.84, h = size * 1.06;
+  const w = (tw + padX * 2) * out3(k);
+  g.fillStyle = fill; g.fillRect(x - padX, top, w, h);
+  g.beginPath(); g.rect(x - padX, top, w, h); g.clip();
+  g.fillStyle = color; g.fillText(text, x, baseY);
+  g.restore();
+  return tw;
+}
+function fadeText(text, x, y, font, color, k, dy = 18) {
+  const e = out3(k); if (e <= 0) return;
+  g.save(); g.globalAlpha *= e; g.font = font; g.fillStyle = color; g.textBaseline = 'alphabetic'; g.fillText(text, x, y + (1 - e) * dy); g.restore();
+}
+function titleCard(m, t, bg) {
+  background(t);
+  if (bg) { g.save(); g.globalAlpha = 0.16; g.filter = 'blur(18px)'; const z = 1.06 - 0.04 * clamp01(t / 4); g.drawImage(bg, W / 2 - 720 * z, H / 2 - 450 * z, 1440 * z, 900 * z); g.restore(); }
+  const shade = g.createLinearGradient(0, 0, W, 0); shade.addColorStop(0, 'rgba(5,13,26,0.9)'); shade.addColorStop(1, 'rgba(5,13,26,0.45)');
   g.fillStyle = shade; g.fillRect(0, 0, W, H);
-  const left = 200;
-  logo(left, 150, 260);
-  g.textBaseline = 'alphabetic';
-  if (kind === 'title') {
-    g.font = '700 30px "Roboto Condensed"'; g.fillStyle = '#7CB8FF'; g.letterSpacing = '6px';
-    g.fillText('FRAMEUP  ·  HOW TO USE', left, 420);
-    g.letterSpacing = '0px';
-    g.font = '800 168px "Roboto Condensed"';
-    const name = m.title.toUpperCase();
-    const tw = g.measureText(name).width;
-    rr(left - 24, 452, tw + 48, 182, 6); g.fillStyle = BLUE_FILL; g.fill();
-    g.fillStyle = '#fff'; g.fillText(name, left, 604);
-    g.font = '400 44px Roboto'; g.fillStyle = '#E3ECF8';
-    wrapLines(m.tagline, 1300).forEach((l, i) => g.fillText(l, left, 726 + i * 58));
-    g.font = '500 26px Roboto'; g.fillStyle = 'rgba(227,236,248,0.6)';
-    g.fillText(`${Math.round(m.totalSec)} second walkthrough`, left, 920);
-  } else {
-    g.font = '700 30px "Roboto Condensed"'; g.fillStyle = '#7CB8FF'; g.letterSpacing = '6px';
-    g.fillText(`THAT'S ${m.title.toUpperCase()}`, left, 420);
-    g.letterSpacing = '0px';
-    g.font = '800 120px "Roboto Condensed"'; g.fillStyle = '#fff';
-    g.fillText('TRY IT NOW', left, 560);
-    g.font = '700 64px "Roboto Condensed"';
-    const url = 'frameup.essentiallysports.com';
-    const tw = g.measureText(url).width;
-    rr(left - 20, 610, tw + 40, 96, 6); g.fillStyle = BLUE_FILL; g.fill();
-    g.fillStyle = '#fff'; g.fillText(url, left, 680);
-    g.font = '400 36px Roboto'; g.fillStyle = '#E3ECF8';
-    g.fillText(m.endLine || `Open ${m.title} from the FrameUp sidebar.`, left, 800);
-  }
+  const L = 200;
+  g.save(); g.globalAlpha = out3(span(t, 0.05, 0.6)); logo(L, 150 + (1 - out3(span(t, 0.05, 0.6))) * -12, 250); g.restore();
+  g.save(); g.letterSpacing = '7px'; fadeText('FRAMEUP  ·  HOW TO USE', L, 418, `700 30px "Roboto Condensed"`, SKY, span(t, 0.25, 0.8)); g.restore();
+  highlight(m.title.toUpperCase(), L, 620, 210, span(t, 0.45, 1.05));
+  g.save(); g.font = '400 46px Roboto';
+  wrapLines(m.tagline, 1250).forEach((l, i) => fadeText(l, L, 740 + i * 60, '400 46px Roboto', '#E3ECF8', span(t, 0.95 + i * 0.12, 1.55 + i * 0.12)));
+  g.restore();
+  // An ES-blue rule that grows under the title block.
+  g.save(); g.fillStyle = BLUE; g.fillRect(L, 900, 220 * out3(span(t, 1.3, 2.1)), 6); g.restore();
+  fadeText(`${Math.round(m.totalSec)}-second walkthrough`, L + 248, 911, '500 26px Roboto', 'rgba(227,236,248,0.65)', span(t, 1.5, 2.1), 0);
+}
+function endCard(m, t) {
+  background(t);
+  const L = 200;
+  g.save(); g.globalAlpha = out3(span(t, 0.0, 0.5)); logo(L, 150, 250); g.restore();
+  g.save(); g.letterSpacing = '7px'; fadeText(`THAT'S ${m.title.toUpperCase()}`, L, 418, '700 30px "Roboto Condensed"', SKY, span(t, 0.1, 0.6)); g.restore();
+  fadeText('TRY IT NOW', L, 580, `700 168px ${DISPLAY}`, '#fff', span(t, 0.2, 0.75), 24);
+  highlight('frameup.essentiallysports.com', L, 700, 80, span(t, 0.55, 1.15));
+  fadeText(m.endLine || `Open ${m.title} from the FrameUp sidebar.`, L, 812, '400 40px Roboto', '#E3ECF8', span(t, 0.9, 1.4));
+}
+function chapterCard(label, k, kicker) {
+  // k: 0..1 across the hold (plus its in / out margins).
+  const a = Math.min(out3(k / 0.18), out3((1 - k) / 0.16));
+  if (a <= 0) return;
+  g.save(); g.globalAlpha = a;
+  g.fillStyle = 'rgba(5,13,26,0.62)'; g.fillRect(0, 0, W, H);
+  g.restore();
+  g.save(); g.globalAlpha = a;
+  const L = 200;
+  g.save(); g.letterSpacing = '7px'; fadeText(kicker, L, 470, '700 30px "Roboto Condensed"', SKY, k / 0.25); g.restore();
+  highlight(label.toUpperCase(), L, 620, 150, (k - 0.06) / 0.3);
   g.restore();
 }
 
@@ -152,103 +217,183 @@ function makeFrames(m) {
     try { const b = await (await fetch(m.frameBase + frames[i].f)).blob(); cache.set(i, await createImageBitmap(b)); } catch {}
     loading.delete(i);
   }
-  let last = null;
+  let last = null, lastI = -1;
   return {
-    async preload(tMs, aheadMs = 2500) { const a = at(tMs); const jobs = []; for (let i = a; i < frames.length && frames[i].t <= tMs + aheadMs; i++) jobs.push(load(i)); jobs.push(load(a)); await Promise.all(jobs); },
-    get(tMs) {
+    at,
+    async preload(tMs, aheadMs = 2500) { const a = at(tMs); const jobs = []; for (let i = a; i < frames.length && frames[i].t <= tMs + aheadMs && jobs.length < 60; i++) jobs.push(load(i)); jobs.push(load(a)); await Promise.all(jobs); },
+    // ahead(): frames the next `ms` of OUTPUT time will need (the edit may skip).
+    get(tMs, nextTimes = []) {
       const i = at(tMs);
-      for (let j = i; j < frames.length && frames[j].t <= tMs + 2500; j++) if (!cache.has(j)) load(j);
-      for (const k of cache.keys()) if (k < i - 2) { cache.get(k).close?.(); cache.delete(k); }
-      if (cache.has(i)) last = cache.get(i);
+      for (const nt of nextTimes) { const j = at(nt); for (let k = j; k < j + 3 && k < frames.length; k++) if (!cache.has(k)) load(k); }
+      for (let j = i; j < frames.length && j < i + 6; j++) if (!cache.has(j)) load(j);
+      for (const k of cache.keys()) if (k < i - 2 && !nextTimes.some(nt => Math.abs(at(nt) - k) < 3)) { cache.get(k).close?.(); cache.delete(k); }
+      if (cache.has(i)) { last = cache.get(i); lastI = i; }
+      else if (lastI >= 0 && !cache.has(lastI)) last = null;
       return last;
     },
   };
 }
-function cursorAt(track, t) {
-  if (!track.length) return null;
-  let lo = 0, hi = track.length - 1;
-  if (t <= track[0].t) return track[0];
-  if (t >= track[hi].t) return track[hi];
-  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (track[mid].t <= t) lo = mid; else hi = mid; }
-  const a = track[lo], b = track[hi]; const k = (t - a.t) / Math.max(1, b.t - a.t);
-  return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
-}
 
 // One frame of the explainer at time t (seconds).
-function drawAt(m, F, t) {
-  const T1 = m.titleSec, T2 = m.titleSec + m.duration / 1000, T3 = T2 + m.endSec;
-  const appT = Math.min(Math.max(0, (t - T1) * 1000), m.duration);
-  const img = F.get(appT);
-  background();
-  appFrame(img);
-  if (t >= T1 - 0.6 && t < T2 + 0.6) {
-    const p = cursorAt(m.track, appT);
-    if (p) {
-      const c = m.clicks.filter(c => appT >= c.t && appT - c.t < 500);
-      c.forEach(c => ripple(c.x, c.y, (appT - c.t) / 1000));
-      const press = m.clicks.some(c => Math.abs(appT - c.t - 60) < 90) ? 1 : 0;
-      cursor(p.x, p.y, press);
-    }
+function drawAt(m, F, t, firstImg) {
+  const T1 = m.titleSec, A = m.edit.duration / 1000, T2 = T1 + A, T3 = T2 + m.endSec;
+  const o = Math.min(Math.max(0, (t - T1) * 1000), m.edit.duration);
+  const srcT = toSrc(m, o);
+  const look = [0.25, 0.5, 0.8, 1.2, 1.8].map(d => toSrc(m, Math.min(m.edit.duration, o + d * 1000)));
+  const img = F.get(srcT, look) || firstImg;
+  if (t < T1 - 0.75) { titleCard(m, t, firstImg); return true; }
+  if (t < T1) {
+    // Title -> app: the card lifts away, the app rises into place.
+    const k = ease(span(t, T1 - 0.75, T1));
+    background(t);
+    drawApp(m, img, WIDE, srcT, { cursorOn: false, alpha: k, scale: 0.9 + 0.1 * k });
+    g.save(); g.globalAlpha = 1 - k; g.translate(0, -60 * k); titleCard(m, t, firstImg); g.restore();
+    return true;
   }
-  footer(m);
-  // Captions
-  let ci = -1; for (let i = 0; i < m.captions.length; i++) if (appT >= m.captions[i].t) ci = i;
-  if (ci >= 0 && t >= T1 && t < T2) {
-    const c = m.captions[ci];
-    const next = m.captions[ci + 1];
-    const end = next ? next.t : m.duration;
-    const age = (appT - c.t) / 1000;
-    const outK = Math.min(1, (end - appT) / 180);
-    g.save(); g.globalAlpha = Math.max(0, outK); caption(c.text, ci + 1, age); g.restore();
+  if (t < T2) {
+    background(t);
+    const c = camAt(m, o);
+    const hold = holdAt(m, o);
+    drawApp(m, img, c, srcT, { blur: hold ? 6 * Math.min(out3((o - hold.o0 + 450) / 400), out3((hold.o1 + 350 - o) / 350)) : 0 });
+    if (hold) chapterCard(hold.hold, (o - (hold.o0 - 450)) / (hold.o1 + 350 - (hold.o0 - 450)), m.title.toUpperCase());
+    if (c.s < 1.08) { g.save(); g.globalAlpha = clamp01((1.08 - c.s) / 0.08); logo(48, 1080 - 64, 150, 0.9); g.restore(); }
+    const q = m.cues.find(q => o >= q.from && o < q.to);
+    if (q) caption(q, o);
+    return true;
   }
-  if (t < T1) titleCard(m, img, t < T1 - 0.55 ? 1 : (T1 - t) / 0.55, 'title');
-  if (t >= T2) titleCard(m, img, Math.min(1, (t - T2) / 0.55), 'end');
+  // App -> end card: pull back, blur, cross to the card.
+  const e = t - T2;
+  const k = ease(span(e, 0, 0.8));
+  if (k < 1) {
+    background(t);
+    const c = camAt(m, m.edit.duration);
+    drawApp(m, img, c, m.duration, { cursorOn: false, alpha: 1 - k, scale: 1 - 0.08 * k, blur: 10 * k });
+  }
+  g.save(); g.globalAlpha = k; endCard(m, Math.max(0, e - 0.25)); g.restore();
   return t < T3;
 }
 
-// The voice track: every line placed at its time, rendered offline.
-async function voiceTrack(m) {
-  const total = m.titleSec + m.duration / 1000 + m.endSec;
-  const rate = 48000;
-  const off = new OfflineAudioContext(2, Math.ceil(total * rate), rate);
-  const lines = [...(m.extraVoice || []), ...m.captions.map(c => ({ voice: c.voice, at: m.titleSec + c.t / 1000 }))];
-  for (const l of lines) {
-    const buf = await off.decodeAudioData(await (await fetch(m.voiceBase + l.voice)).arrayBuffer());
-    const src = off.createBufferSource(); src.buffer = buf;
-    const gain = off.createGain(); gain.gain.value = 0.95;
-    src.connect(gain).connect(off.destination); src.start(l.at);
+// ── Sound ───────────────────────────────────────────────────────────────────
+const dB = x => 20 * Math.log10(Math.max(1e-9, x));
+function rms(buf, from = 0, to = buf.duration) {
+  const r = buf.sampleRate, a = Math.max(0, Math.floor(from * r)), b = Math.min(buf.length, Math.floor(to * r));
+  let sum = 0, n = 0;
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) { const d = buf.getChannelData(ch); for (let i = a; i < b; i += 2) { sum += d[i] * d[i]; n++; } }
+  return n ? Math.sqrt(sum / n) : 0;
+}
+// Speech level: RMS over the louder half-second windows (ignores pauses).
+function activeRms(buf) {
+  const r = buf.sampleRate, win = Math.floor(r * 0.05); const levels = [];
+  const d = buf.getChannelData(0);
+  for (let i = 0; i + win < d.length; i += win) { let s = 0; for (let j = i; j < i + win; j++) s += d[j] * d[j]; levels.push(Math.sqrt(s / win)); }
+  const loud = levels.filter(l => l > 0.003); if (!loud.length) return 0;
+  return Math.sqrt(loud.reduce((a, l) => a + l * l, 0) / loud.length);
+}
+async function fetchAudio(ctx, url) { return ctx.decodeAudioData(await (await fetch(url)).arrayBuffer()); }
+const VOICE_DB = -18, BED_DB = -26, DUCK_DB = 12;
+// Renders the soundtrack (and its stems for the loudness check).
+async function soundtrack(m) {
+  const total = m.totalSec, rate = 48000, len = Math.ceil(total * rate);
+  const lines = [...(m.extraVoice || []), ...m.voiceLines];
+  const decoder = new OfflineAudioContext(2, rate, rate);
+  const bufs = await Promise.all(lines.map(l => fetchAudio(decoder, m.voiceBase + l.voice)));
+  const speech = bufs.map(activeRms).filter(Boolean);
+  const level = speech.length ? Math.sqrt(speech.reduce((a, x) => a + x * x, 0) / speech.length) : 0.1;
+  const peak = Math.max(...bufs.map(b => { let p = 0; const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) p = Math.max(p, Math.abs(d[i])); return p; }));
+  const voiceGain = Math.min(Math.pow(10, (VOICE_DB - dB(level)) / 20), 0.9 / Math.max(0.01, peak));
+  let music = null, musicGain = 0;
+  if (m.musicUrl) {
+    try { music = await fetchAudio(decoder, m.musicUrl); musicGain = Math.pow(10, (BED_DB - dB(rms(music, 5, Math.min(music.duration, 65)))) / 20); }
+    catch (e) { console.warn('music failed', e); music = null; }
   }
-  return off.startRendering();
+  // Voice spans (seconds), merged across short gaps so the bed doesn't pump.
+  const spans = lines.map((l, i) => [l.at, l.at + bufs[i].duration]).sort((a, b) => a[0] - b[0]);
+  const duck = [];
+  for (const s of spans) { const last = duck[duck.length - 1]; if (last && s[0] - last[1] < 1.1) last[1] = Math.max(last[1], s[1]); else duck.push([...s]); }
+  const render = async (withVoice, withMusic) => {
+    const off = new OfflineAudioContext(2, len, rate);
+    if (withVoice) lines.forEach((l, i) => { const src = off.createBufferSource(); src.buffer = bufs[i]; const gn = off.createGain(); gn.gain.value = voiceGain; src.connect(gn).connect(off.destination); src.start(l.at); });
+    if (withMusic && music) {
+      // Two gains in series: the duck (under every voice line) and the fades.
+      const gn = off.createGain(); const G = gn.gain; const low = Math.pow(10, -DUCK_DB / 20);
+      G.setValueAtTime(1, 0);
+      for (const [a, b] of duck) {
+        G.setValueAtTime(1, Math.max(0, a - 0.3)); G.linearRampToValueAtTime(low, Math.max(0.01, a - 0.05));
+        G.setValueAtTime(low, b + 0.15); G.linearRampToValueAtTime(1, b + 0.75);
+      }
+      const fade = off.createGain(); const Fg = fade.gain;
+      Fg.setValueAtTime(0, 0); Fg.linearRampToValueAtTime(musicGain, 1.6);
+      Fg.setValueAtTime(musicGain, Math.max(1.7, total - 2.8)); Fg.linearRampToValueAtTime(0, total - 0.05);
+      // Loop the track if the video is longer than it.
+      for (let at = 0; at < total; at += music.duration) { const src = off.createBufferSource(); src.buffer = music; src.connect(gn); src.start(at); }
+      gn.connect(fade).connect(off.destination);
+    }
+    return off.startRendering();
+  };
+  const mix = await render(true, true);
+  let stats = null;
+  if (music) {
+    const [v, mu] = await Promise.all([render(true, false), render(false, true)]);
+    const inVoice = duck.filter(([a, b]) => b - a > 1.5);
+    const gaps = []; let at = 1.8;
+    for (const [a, b] of duck) { if (a - at > 0.9) gaps.push([at + 0.75, a - 0.3]); at = b + 0.75; }
+    const avg = (buf, list) => dB(Math.sqrt(list.reduce((s, [a, b]) => s + Math.pow(rms(buf, a, b), 2) * (b - a), 0) / Math.max(0.001, list.reduce((s, [a, b]) => s + (b - a), 0))));
+    stats = { voiceDb: +avg(v, inVoice).toFixed(1), musicUnderVoiceDb: +avg(mu, inVoice).toFixed(1), musicInGapsDb: +(gaps.length ? avg(mu, gaps) : NaN).toFixed(1), duckDb: DUCK_DB, gaps: gaps.length };
+    stats.voiceOverMusicDb = +(stats.voiceDb - stats.musicUnderVoiceDb).toFixed(1);
+  }
+  return { mix, stats };
 }
 
 async function upload(url, blob) { const r = await fetch(url, { method: 'POST', body: blob }); if (!r.ok) throw new Error('upload failed ' + r.status); }
+
+// Visible change per frame (for the edit): small greyscale diffs.
+window.analyze = async (m) => {
+  const w = 180, h = 112;
+  const c = new OffscreenCanvas(w, h); const x = c.getContext('2d', { willReadFrequently: true });
+  let prev = null; const changes = [];
+  const fetchOne = async f => createImageBitmap(await (await fetch(m.frameBase + f.f)).blob(), { resizeWidth: w, resizeHeight: h, resizeQuality: 'medium' });
+  const N = m.frames.length; let next = 0; const ahead = new Map();
+  const want = i => { if (i < N && !ahead.has(i)) ahead.set(i, fetchOne(m.frames[i]).catch(() => null)); };
+  for (let i = 0; i < N; i++) {
+    for (let k = i; k < i + 12; k++) want(k);
+    const bm = await ahead.get(i); ahead.delete(i);
+    if (!bm) continue;
+    x.drawImage(bm, 0, 0); bm.close();
+    const d = x.getImageData(0, 0, w, h).data;
+    const lum = new Uint8Array(w * h); for (let p = 0, q = 0; p < d.length; p += 4, q++) lum[q] = (d[p] * 3 + d[p + 1] * 6 + d[p + 2]) / 10;
+    if (prev) { let n = 0; for (let q = 0; q < lum.length; q++) if (Math.abs(lum[q] - prev[q]) > 18) n++; if (n >= 6) changes.push(m.frames[i].t); }
+    prev = lum;
+  }
+  return changes;
+};
 
 window.renderVideo = async (m) => {
   await ready();
   const F = makeFrames(m);
   await F.preload(0, 3000);
-  const total = m.titleSec + m.duration / 1000 + m.endSec;
+  const firstImg = F.get(0);
+  const total = m.totalSec;
   const stream = cv.captureStream(30);
-  let ac = null, src = null;
+  let ac = null, src = null, stats = null;
   if (m.audio) {
-    const buf = await voiceTrack(m);
+    const s = await soundtrack(m); stats = s.stats;
     ac = new AudioContext({ sampleRate: 48000 }); await ac.resume();
-    src = ac.createBufferSource(); src.buffer = buf;
+    src = ac.createBufferSource(); src.buffer = s.mix;
     const dest = ac.createMediaStreamDestination(); src.connect(dest);
     stream.addTrack(dest.stream.getAudioTracks()[0]);
   }
   const mime = m.audio ? 'video/mp4;codecs=avc1.640028,mp4a.40.2' : 'video/mp4;codecs=avc1.640028';
-  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 9_000_000, audioBitsPerSecond: 160_000 });
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12_000_000, audioBitsPerSecond: 192_000 });
   const chunks = []; rec.ondataavailable = e => e.data.size && chunks.push(e.data);
-  drawAt(m, F, 0);
+  drawAt(m, F, 0, firstImg);
   rec.start(1000);
   const t0 = performance.now() + 50;
   if (src) src.start(ac.currentTime + 0.05);
-  let late = 0, drawn = 0;
+  let drawn = 0;
   await new Promise(res => {
     const tick = () => {
       const t = (performance.now() - t0) / 1000;
-      if (t >= 0) { drawAt(m, F, t); drawn++; }
+      if (t >= 0) { drawAt(m, F, t, firstImg); drawn++; }
       if (t < total) requestAnimationFrame(tick); else res();
     };
     requestAnimationFrame(tick);
@@ -258,34 +403,43 @@ window.renderVideo = async (m) => {
   if (src) src.stop();
   const blob = new Blob(chunks, { type: 'video/mp4' });
   await upload(m.uploadUrl, blob);
-  return { bytes: blob.size, drawn, seconds: total, fps: drawn / total };
+  return { bytes: blob.size, drawn, seconds: total, fps: drawn / total, audio: stats };
 };
 
 window.renderPoster = async (m, atSec, url) => {
   await ready();
   const F = makeFrames(m);
-  const appT = Math.max(0, (atSec - m.titleSec) * 1000);
-  await F.preload(appT, 0); await F.preload(0, 0);
-  // Poster: the title card over a crisp frame from the walkthrough.
-  const img = F.get(appT);
-  background(); appFrame(img);
-  g.save(); g.globalAlpha = 1;
-  const shade = g.createLinearGradient(0, 0, W * 0.75, 0); shade.addColorStop(0, 'rgba(6,16,31,0.96)'); shade.addColorStop(0.55, 'rgba(6,16,31,0.82)'); shade.addColorStop(1, 'rgba(6,16,31,0.15)');
+  const o = Math.max(0, (atSec - m.titleSec) * 1000);
+  const srcT = toSrc(m, o);
+  await F.preload(srcT, 0);
+  const img = F.get(srcT);
+  background(0); drawApp(m, img, WIDE, srcT, { cursorOn: false });
+  const shade = g.createLinearGradient(0, 0, W * 0.75, 0); shade.addColorStop(0, 'rgba(5,13,26,0.96)'); shade.addColorStop(0.55, 'rgba(5,13,26,0.84)'); shade.addColorStop(1, 'rgba(5,13,26,0.15)');
   g.fillStyle = shade; g.fillRect(0, 0, W, H);
-  g.restore();
-  const left = 160;
-  logo(left, 150, 240);
-  g.font = '700 30px "Roboto Condensed"'; g.fillStyle = '#7CB8FF'; g.letterSpacing = '6px'; g.fillText('FRAMEUP  ·  HOW TO USE', left, 420); g.letterSpacing = '0px';
-  g.font = '800 160px "Roboto Condensed"'; const name = m.title.toUpperCase(); const tw = g.measureText(name).width;
-  rr(left - 24, 452, tw + 48, 176, 6); g.fillStyle = BLUE_FILL; g.fill(); g.fillStyle = '#fff'; g.fillText(name, left, 598);
-  g.font = '400 42px Roboto'; g.fillStyle = '#E3ECF8'; wrapLines(m.tagline, 900).forEach((l, i) => g.fillText(l, left, 716 + i * 56));
-  // Play button
-  g.beginPath(); g.arc(left + 44, 920, 44, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill();
-  g.beginPath(); g.moveTo(left + 32, 896); g.lineTo(left + 32, 944); g.lineTo(left + 70, 920); g.closePath(); g.fillStyle = BLUE_FILL; g.fill();
-  g.font = '500 30px Roboto'; g.fillStyle = '#fff'; g.fillText(`Watch the ${Math.round(m.totalSec)}-second walkthrough`, left + 112, 931);
+  const L = 160;
+  logo(L, 150, 240);
+  g.save(); g.letterSpacing = '7px'; fadeText('FRAMEUP  ·  HOW TO USE', L, 418, '700 30px "Roboto Condensed"', SKY, 1); g.restore();
+  highlight(m.title.toUpperCase(), L, 610, 190, 1);
+  g.font = '400 42px Roboto'; wrapLines(m.tagline, 900).forEach((l, i) => fadeText(l, L, 726 + i * 56, '400 42px Roboto', '#E3ECF8', 1));
+  g.beginPath(); g.arc(L + 44, 920, 44, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill();
+  g.beginPath(); g.moveTo(L + 32, 896); g.lineTo(L + 32, 944); g.lineTo(L + 70, 920); g.closePath(); g.fillStyle = BLUE_FILL; g.fill();
+  fadeText(`Watch the ${Math.round(m.totalSec)}-second walkthrough`, L + 112, 931, '500 30px Roboto', '#fff', 1);
   const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
   await upload(url, blob);
   return blob.size;
+};
+
+// Loudness of a finished MP4's soundtrack: RMS (dBFS) inside the given voice
+// spans and in the gaps between them.
+window.loudness = async ({ src, spans }) => {
+  const ctx = new OfflineAudioContext(2, 48000, 48000);
+  const buf = await ctx.decodeAudioData(await (await fetch(src)).arrayBuffer());
+  const total = (list) => list.reduce((s, [a, b]) => s + (b - a), 0);
+  const avg = list => dB(Math.sqrt(list.reduce((s, [a, b]) => s + Math.pow(rms(buf, a, b), 2) * (b - a), 0) / Math.max(0.001, total(list))));
+  const voice = spans.filter(([a, b]) => b - a > 1.5);
+  const gaps = []; let at = 2;
+  for (const [a, b] of spans) { if (a - at > 1.2) gaps.push([at + 0.8, a - 0.35]); at = b + 0.8; }
+  return { duration: buf.duration, voiceDb: +avg(voice).toFixed(1), gapsDb: gaps.length ? +avg(gaps).toFixed(1) : null, gapSeconds: +total(gaps).toFixed(1), overallDb: +dB(rms(buf)).toFixed(1) };
 };
 
 // Stills from a finished MP4: a contact sheet (cols x rows) and, optionally,

@@ -6,8 +6,8 @@ const READY = "Boolean(window.ReelMakerPage && document.querySelector('#rm-pane-
 export default {
   title: 'Reels Studio',
   tagline: 'Turn a trend, a game or one clip into an on-brand reel, ready to post.',
-  titleVoice: 'FrameUp Reels Studio. Turn a trend, a game, or one clip into an on-brand reel.',
-  endVoice: 'Try it at frameup.essentiallysports.com.',
+  titleVoice: "This is Reels Studio in FrameUp. It turns a trend, a game, or a single clip into an on-brand reel.",
+  endVoice: 'Give it a try at frameup.essentiallysports.com.',
   endLine: 'Open Reels Studio from the FrameUp sidebar, under AI Studio.',
   page: '/reel-maker.html',
   ready: READY,
@@ -30,7 +30,8 @@ export default {
       throw new Error('could not get back to the format tiles');
     };
     await rec.pause(600);
-    await rec.say('Start with the story. Pick one of today’s trending stories.');
+    await rec.chapter('Pick a story');
+    await rec.say("Start with a story. Pick one of today's trending ones.");
     await rec.click('#rm-trends [data-trend="t1"]', { after: 900 });
 
     await rec.say('Or start from data. All formats shows every kind of reel.');
@@ -41,12 +42,13 @@ export default {
     await rec.reveal('#rm-pane-topic [data-style="classic"]');
     await rec.click('#rm-pane-topic [data-style="classic"]', { after: 700 });
 
-    await rec.say('Then press Make my reel.');
+    await rec.say('Then hit Make my reel.');
     await rec.click('#rm-write');
     await rec.waitFor(`!document.querySelector('#rm-pane-edit').hidden`, 40000);
     await rec.pause(1200);
 
-    await rec.say('Review it beat by beat. Change any words, photo or clip.');
+    await rec.chapter('Review');
+    await rec.say('Now review it, beat by beat. Change any words, photo, or clip.');
     await rec.click('#rm-play', { after: 300 });
     await rec.hover('#rm-pane-edit input[data-field="text"]', { dx: 0.6 });
     await rec.pause(1500);
@@ -55,13 +57,14 @@ export default {
     await rec.click('#rm-statusline', { after: 1800 });
     await rec.click('#rm-statusline', { after: 400 });
 
-    await rec.say('Voice, captions and music are here too.');
+    await rec.say('Voice, captions and music live here too.');
     await rec.click('#rm-voice > summary', { after: 1500 });
     await rec.click('#rm-voice > summary', { after: 300 });
     await rec.click('#rm-music > summary', { after: 1300 });
     await rec.click('#rm-music > summary', { after: 300 });
 
-    await rec.say('Next, Export. Choose an organic post or a paid ad, then Export MP4.');
+    await rec.chapter('Export');
+    await rec.say("Next, Export. Choose an organic post or a paid ad, then hit Export MP4.");
     await rec.click('#rm-next', { after: 900 });
     await rec.hover('#rm-target [data-target="paid"]');
     await rec.pause(400);
@@ -72,6 +75,7 @@ export default {
     await rec.hover('#rm-files');
     await rec.pause(600);
 
+    await rec.chapter('Game Swing');
     await rec.say('Game Swing turns a finished game into a reel.');
     let root = await toStart();
     await rec.reveal(`${root} [data-gformat="gameswing"]`);
@@ -90,7 +94,8 @@ export default {
     await rec.pause(900);
     await rec.click('#rm-play', { after: 2600 });
 
-    await rec.say('Replay takes one clip and finds the setup, the play and the reaction.');
+    await rec.chapter('Replay');
+    await rec.say('Replay takes one clip and finds the setup, the play, and the reaction.');
     root = await toStart();
     await rec.reveal(`${root} [data-gformat="replay"]`);
     await rec.click(`${root} [data-gformat="replay"]`);
@@ -107,7 +112,7 @@ export default {
     await rec.waitFor(`!document.querySelector('#rm-pane-edit').hidden && document.querySelector('#rm-data-review [data-frame]')`, 60000);
     await rec.pause(800);
 
-    await rec.say('Three frames, and it makes a carousel too.');
+    await rec.say('You get three frames, and a carousel too.');
     await rec.hover('#rm-data-review [data-frame="play"]');
     await rec.pause(700);
     await rec.click('#rm-view [data-view="carousel"]', { after: 1100 });

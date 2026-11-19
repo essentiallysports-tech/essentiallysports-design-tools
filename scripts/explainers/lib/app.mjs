@@ -5,6 +5,8 @@ import path from 'node:path';
 import { sleep } from './chrome.mjs';
 import { FAKE_SESSION } from './server.mjs';
 
+// SCALE: device pixel ratio of the capture (1.5 keeps zoomed shots sharp).
+export const SCALE = Number(process.env.EXPLAINER_SCALE || 1.5);
 export async function setupPage(page, { base, mediaDir, width = 1440, height = 900 }) {
   const CLIP_BYTES = () => fs.readFileSync(path.join(mediaDir, 'broll.mp4'));
   const THUMBS = [0, 1, 2].map(i => fs.readFileSync(path.join(mediaDir, `broll-thumb-${i}.webp`)));
@@ -28,7 +30,7 @@ export async function setupPage(page, { base, mediaDir, width = 1440, height = 9
   await page.send('Page.enable');
   await page.send('Runtime.enable');
   await page.send('Log.enable');
-  await page.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
+  await page.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: SCALE, mobile: false });
   await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }, { name: 'prefers-reduced-motion', value: 'no-preference' }] });
   await page.send('Browser.setDownloadBehavior', { behavior: 'deny' }).catch(() => {});
   await page.send('Page.setDownloadBehavior', { behavior: 'deny' }).catch(() => {});

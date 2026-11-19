@@ -164,8 +164,67 @@ function reelVideoAdsApi(body) {
   return [200, { ok: true, clips: [] }];
 }
 
+// ── Trends ──────────────────────────────────────────────────────────────────
+// The feed is built by the real server code (trend-design.js buildTrends) from
+// synthetic RSS, the same way scripts/check-pages-ui.mjs does, so the page sees
+// exactly the shape production sends. AI angles ("why fans care", headlines,
+// a reel hook) are written here per story; nothing calls a model.
+let TRENDS_FEED = null;
+const TREND_ANGLES = [
+  [/Mahomes|Chiefs/i, { why: 'A rivalry game with a playoff feel, and fans are already arguing about what it means for January.', titles: ['Mahomes and the Chiefs win the AFC showdown', 'Four touchdowns, one statement: Chiefs top Bills', 'Arrowhead gets its answer'], hook: 'Four touchdowns. One message to the AFC.' }],
+  [/LeBron/i, { why: 'A 40-point night at his age keeps the "greatest ever" debate going.', titles: ['LeBron drops 40 as the Lakers top the Warriors', 'Forty at Crypto.com: LeBron is not slowing down', 'Lakers ride LeBron past Golden State'], hook: 'Forty points. Still doing this.' }],
+  [/Ohtani/i, { why: 'Another MVP puts him in rare company, and Dodgers fans want to celebrate it.', titles: ['Ohtani wins MVP again with the Dodgers', 'Shohei Ohtani, MVP. Again.', 'The Dodgers star adds another MVP'], hook: 'Another season, another MVP.' }],
+  [/Scheffler/i, { why: 'Golf fans follow the year-end awards closely, and he keeps adding to his record.', titles: ['Scottie Scheffler is Player of the Year again', 'Scheffler does it again', 'Another year at the top for Scheffler'], hook: 'The best in golf, again.' }],
+  [/Sinner|Alcaraz/i, { why: 'The two best young players met in a final, so both fan bases are watching.', titles: ['Sinner beats Alcaraz to win the ATP Finals', 'Sinner ends the season on top', 'Sinner vs Alcaraz: round to Sinner'], hook: 'The rivalry of the decade just got another chapter.' }],
+  [/Arch Manning/i, { why: 'A big passing day keeps the Heisman talk loud around Texas.', titles: ['Arch Manning throws for 412 in a Texas win', 'Arch Manning puts up 412 yards', 'Texas rides Arch Manning'], hook: 'Four hundred and twelve yards. Heisman talk is back.' }],
+];
+const angleFor = title => (TREND_ANGLES.find(([re]) => re.test(title)) || [null, { why: 'A fresh story with a big name, so fans are searching for it right now.', titles: [title.replace(/\s+-\s+[^-]+$/, '')], hook: '' }])[1];
+async function trendsFeed() {
+  if (TRENDS_FEED) return TRENDS_FEED;
+  const now = Date.now();
+  const at = h => new Date(now - h * 3600e3).toUTCString();
+  const news = list => `<rss><channel>${list.map(([title, source, h]) => `<item><title>${title} - ${source}</title><link>https://example.com/${encodeURIComponent(title.slice(0, 40))}</link><pubDate>${at(h)}</pubDate><source url="https://${source.toLowerCase().replace(/[^a-z]/g, '')}.com">${source}</source></item>`).join('')}</channel></rss>`;
+  const FEEDS = {
+    sports: news([['Patrick Mahomes throws 4 touchdowns as Chiefs beat Bills 31-17', 'ESPN', 2], ['LeBron James scores 40 in Lakers win over Warriors', 'ESPN', 3], ['Ohio State tops Michigan in College Football Playoff rankings update', 'CBS Sports', 4]]),
+    nfl: news([['Mahomes, Chiefs top Bills in AFC thriller at Arrowhead', 'Yahoo Sports', 1], ['Andy Reid says the Chiefs must clean up turnovers before the playoffs', 'NFL.com', 2], ['NFL power rankings Week 12: Lions climb back to No. 1', 'CBS Sports', 5], ['Chiefs beat Bills behind four Mahomes touchdowns', 'The Ringer', 3]]),
+    cfb: news([['Heisman watch: Arch Manning throws for 412 yards in Texas win', 'On3', 3], ['College Football Playoff rankings: Ohio State, Oregon stay on top', 'ESPN', 7], ['Deion Sanders says Colorado will be ready for bowl season', 'Sports Illustrated', 9]]),
+    mlb: news([['Shohei Ohtani wins MVP award with Dodgers', 'MLB.com', 2], ['Yankees and Juan Soto talks continue at the winter meetings', 'New York Post', 8], ['MLB free agency tracker: every signing so far', 'The Athletic', 10]]),
+    golf: news([['Scottie Scheffler wins PGA Tour Player of the Year again', 'Golf Channel', 4], ['LIV Golf announces its 2027 schedule', 'Golf Digest', 11], ['Nelly Korda closes LPGA season with a win in Naples', 'LPGA', 5]]),
+    tennis: news([['Jannik Sinner beats Carlos Alcaraz to win ATP Finals', 'Tennis.com', 3], ['Aryna Sabalenka clinches year-end No. 1', 'WTA', 6], ['Coco Gauff names new coach ahead of the Australian Open', 'ESPN', 12]]),
+    trends: `<rss><channel><item><title>chiefs vs bills</title><ht:approx_traffic>200K+</ht:approx_traffic><pubDate>${at(1)}</pubDate><ht:news_item><ht:news_item_title>Chiefs beat Bills in AFC showdown</ht:news_item_title><ht:news_item_url>https://example.com/chiefs-bills</ht:news_item_url><ht:news_item_source>ESPN</ht:news_item_source></ht:news_item></item><item><title>scottie scheffler</title><ht:approx_traffic>50K+</ht:approx_traffic><pubDate>${at(2)}</pubDate><ht:news_item><ht:news_item_title>Scheffler wins Player of the Year</ht:news_item_title><ht:news_item_url>https://example.com/scheffler</ht:news_item_url><ht:news_item_source>Golf Channel</ht:news_item_source></ht:news_item></item></channel></rss>`,
+  };
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async url => {
+    const u = decodeURIComponent(String(url));
+    const id = u.includes('trends.google') ? 'trends' : u.includes('/topic/SPORTS') ? 'sports' : /NFL/.test(u) ? 'nfl' : /college/.test(u) ? 'cfb' : /MLB/.test(u) ? 'mlb' : /PGA/.test(u) ? 'golf' : /ATP/.test(u) ? 'tennis' : '';
+    return id ? new Response(FEEDS[id], { status: 200 }) : new Response('{}', { status: 404 });
+  };
+  try {
+    const T = require(path.join(ROOT, 'netlify/functions/trend-design.js'))._test;
+    T.reset();
+    const data = await T.buildTrends(undefined, { window: '1d', now });
+    data.aiEnrich = true; data.aiTitles = true; data.aiOff = false; data.sourcesFailed = [];
+    data.items.forEach(item => { item.image = ''; });
+    TRENDS_FEED = data;
+    return data;
+  } finally { globalThis.fetch = realFetch; }
+}
+export { trendsFeed };
+async function trendsApi(req, url, body) {
+  if (url.pathname === '/api/trend-design' && body?.mode === 'enrich') {
+    const items = {};
+    for (const it of body.items || []) items[it.id] = { ai: true, ...angleFor(it.title || '') };
+    return { body: { ok: true, items }, delay: 1300 };
+  }
+  if (url.pathname === '/api/trend-design') return { body: await trendsFeed() };
+  // The hand-off opens Generate, which starts designing: it stays "working"
+  // for the rest of the walkthrough (Generate has its own explainer).
+  if (url.pathname === '/api/es-generate' && body?.mode === 'creative') return { body: { directions: [] }, delay: 120000 };
+  return generateApi(req, url, body, {});
+}
+
 // ── Server ──────────────────────────────────────────────────────────────────
-// tool: 'generate' | 'video-ads' | 'reels'. extra(url) -> { type, body } | null.
+// tool: 'generate' | 'trends' | 'video-ads' | 'reels'. extra(url) -> { type, body } | null.
 export async function startServer({ tool, extra = null, opts = {}, mounts = {}, uploadDir = '' }) {
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
@@ -198,6 +257,12 @@ export async function startServer({ tool, extra = null, opts = {}, mounts = {}, 
       try { body = raw ? JSON.parse(raw) : {}; } catch { body = {}; }
       if (tool === 'generate') {
         const out = (await generateApi(req, url, body, opts)) || { status: 200, body: { ok: true } };
+        if (out.delay) await sleep(out.delay);
+        json(out.status || 200, out.body, out.type);
+        return;
+      }
+      if (tool === 'trends') {
+        const out = (await trendsApi(req, url, body)) || { status: 200, body: { ok: true } };
         if (out.delay) await sleep(out.delay);
         json(out.status || 200, out.body, out.type);
         return;
