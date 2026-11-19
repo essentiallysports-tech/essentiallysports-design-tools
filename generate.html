@@ -881,8 +881,8 @@
   </main>
 
   <!-- Trends view: pure logic + the board (the Generate view is the next script). -->
-  <script src="trends-logic.js?v=20261122-rel"></script>
-  <script src="trends-view.js?v=20261121-rel"></script>
+  <script src="trends-logic.js?v=20261124-trendctx"></script>
+  <script src="trends-view.js?v=20261124-trendctx"></script>
   <script>
     // FrameUp Generate: brief → /api/es-generate (ES research + AI copy +
     // template checks + ES photo) → each design rendered by the real editor in
@@ -1518,12 +1518,22 @@
           <button class="es-btn es-btn--sm" type="button" data-act="scene" title="AI background: a place, no people or logos. Made only when you click.">${ICON.sparkles}Scene image</button>`;
       }
 
+      // The trend behind the brief (Trends / Home "Design post"): { brief, trend }.
+      // It rides with the brief to /api/es-generate while the brief still tells
+      // that story (TrendsLogic.trendStillFits); a rewritten brief drops it.
+      let trendRun = null;
+      const TREND_MODES = new Set([undefined, 'direct', 'creative']);
+      function withTrend(path, body) {
+        if (!trendRun || path !== '/api/es-generate' || !body?.brief || !TREND_MODES.has(body.mode)) return body;
+        if (!TL()?.trendStillFits?.(body.brief, trendRun.brief)) { trendRun = null; return body; }
+        return { ...body, trend: trendRun.trend };
+      }
       async function callApi(path, body) {
         if (!window.ESAuth?.fetchWithAuth) throw new Error('Sign-in is still loading. Try again in a moment.');
         const response = await window.ESAuth.fetchWithAuth(path, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          body: JSON.stringify(withTrend(path, body)),
         });
         const data = await response.json().catch(() => null);
         if (!response.ok) throw Object.assign(new Error(data?.error || data?.detail || `Request failed (${response.status}).`), { reason: data?.reason || '' });
@@ -3113,6 +3123,7 @@
         if (!brief) return;
         setView('generate');
         els.brief.value = brief;
+        trendRun = event.detail?.trend?.title ? { brief, trend: event.detail.trend } : null;
         analyzeBrief();
         window.scrollTo({ top: 0, behavior: reducedMotion.matches ? 'auto' : 'smooth' });
         if (busy) {
@@ -3132,8 +3143,18 @@
       const linkedBrief = params.get('brief');
       if (linkedBrief) {
         els.brief.value = tidyIncoming(linkedBrief, params.get('league') || '');
+        // Home's trend cards store the trend for ?trend=<id> (TrendsLogic.designHandoff).
+        const trendId = params.get('trend');
+        if (trendId) {
+          try {
+            const key = TL()?.KEYS?.design || 'frameup.generateTrend.v1';
+            const stored = JSON.parse(sessionStorage.getItem(key) || 'null');
+            sessionStorage.removeItem(key);
+            if (stored?.trend?.id === trendId && Date.now() - (Number(stored.at) || 0) < 30 * 60 * 1000) trendRun = { brief: els.brief.value, trend: stored.trend };
+          } catch (error) { /* storage blocked: the brief alone */ }
+        }
         analyzeBrief();
-        ['brief', 'view', 'sport', 'league'].forEach(key => params.delete(key));
+        ['brief', 'view', 'sport', 'league', 'trend'].forEach(key => params.delete(key));
         const rest = params.toString();
         history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
       }

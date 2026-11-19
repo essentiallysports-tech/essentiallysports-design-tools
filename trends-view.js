@@ -141,9 +141,20 @@
   const handOff = h => store.set(h.key, h.payload, 'sessionStorage');
   // Design in the Generate view (this page). A template from the kit selects
   // Generate's format card first (the format picker is Generate's own UI).
+  // The trend itself rides along (headlines, outlets, team, how big, AI angle
+  // ideas, its storyline's other stories) so Generate's server has the context.
+  function trendOf(id) {
+    const item = findItem(id);
+    if (!item || !L.trendContext) return null;
+    const more = item.storyline?.id ? (data?.items || []).filter(other => other !== item && other.storyline?.id === item.storyline.id) : [];
+    return L.trendContext(item, aiFor(item), { more });
+  }
   function designHere(brief, id, template) {
     if (template) document.querySelector(`#gen-formats [data-type="${CSS.escape(template)}"]`)?.click();
-    document.dispatchEvent(new CustomEvent('ais:design', { detail: { brief, source: 'trends', trendId: id, format: template || '' } }));
+    // The league rides along too (the page's brief -> league map keeps only the
+    // last 40 briefs, so a long board could lose it).
+    const category = findItem(id)?.category;
+    document.dispatchEvent(new CustomEvent('ais:design', { detail: { brief, source: 'trends', trendId: id, format: template || '', trend: trendOf(id), ...(category ? { sport: labelOf(category) } : {}) } }));
   }
 
   // ── Cards ──────────────────────────────────────────────────────────────

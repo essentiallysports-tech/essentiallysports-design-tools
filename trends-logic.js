@@ -20,6 +20,7 @@
     prefs: 'frameup.trends.prefs.v1',
     video: 'frameup.videoAdMoment.v1',
     reel: 'frameup.reelMoment.v1',
+    design: 'frameup.generateTrend.v1', // Generate: the trend behind a brief (Home -> generate.html?trend=)
   };
   // The newsletters (video-ads-brands.js); the feed sends the same list.
   const BRANDS = [
@@ -293,6 +294,52 @@
     };
   }
 
+  // Generate: the trend itself rides beside the brief, so the server can use
+  // its headlines, outlets, team and how big it is (es-generate.js; the server
+  // validates and caps it again). ai: { why, hook, titles } (AI angle ideas,
+  // sent as ideas, never facts). more: other stories in the same storyline.
+  function trendContext(item, ai = null, { more = [] } = {}) {
+    if (!item || !item.title) return null;
+    const own = (item.related || []).map(r => ({ title: clip(squash(r && r.title), 300), url: (r && r.url) || '', source: clip((r && r.source) || '', 80) }));
+    const siblings = (more || []).filter(m => m && m.title && m.id !== item.id).map(m => ({ title: clip(squash(m.title), 300), url: m.url || '', source: clip(m.source || '', 80) }));
+    const related = [];
+    [...own, ...siblings].forEach(r => { if (r.title && related.length < 6 && r.title.toLowerCase() !== String(item.title).toLowerCase() && !related.some(x => x.title.toLowerCase() === r.title.toLowerCase())) related.push(r); });
+    const out = {
+      id: item.id || '', title: clip(squash(item.title), 300), type: item.type === 'search' ? 'search' : 'news', category: item.category || '',
+      url: item.url || '', source: clip(item.source || '', 80), publishedAt: item.publishedAt || '',
+      traffic: clip(item.traffic || '', 20), coverage: Number(item.coverage) || 0, signal: item.signal || '',
+      related,
+    };
+    if (item.team && item.team.name) out.team = { name: clip(item.team.name, 60), short: clip(item.team.short || '', 20) };
+    if (item.image) Object.assign(out, { image: item.image, imageKind: item.imageKind || '', imageCredit: clip(item.imageCredit || '', 120) });
+    if (item.storyline && item.storyline.size > 1) out.storyline = { size: item.storyline.size, label: clip(item.storyline.label || '', 80) };
+    if (ai) {
+      if (ai.why) out.why = clip(squash(ai.why), 400);
+      if (ai.hook) out.hook = clip(squash(ai.hook), 200);
+      const titles = (ai.titles || []).map(t => clip(squash(t), 140)).filter(Boolean).slice(0, 5);
+      if (titles.length) out.titles = titles;
+    }
+    return out;
+  }
+  // Home -> Generate in the same tab: sessionStorage carries the trend, the
+  // URL carries the brief and ?trend=<id> (Generate only uses a stored trend
+  // whose id matches, and only while the brief still tells its story).
+  function designHandoff(item, { why = '', brief = '' } = {}) {
+    return { key: KEYS.design, payload: { trend: trendContext(item, why ? { why } : null), brief, from: 'trends', at: Date.now() } };
+  }
+  // Is the brief still the trend's brief? The person may tidy or add to it;
+  // a rewrite to another story drops the trend (no stale context). True when
+  // 60%+ of the original brief's story words are still there.
+  const storyWords = text => [...new Set(String(text || '').toLowerCase().split('\n').filter(line => !/^\s*sport\s*:/.test(line)).join(' ')
+    .replace(/['’]s\b/g, '')
+    .replace(/[^a-z0-9]+/g, ' ').split(' ').filter(w => w.length >= 3 && !/^(?:the|and|for|with|from|that|this|into|over|after|about|their|his|her|its|are|was|were|has|have|had|not|but|who|what|when|why|how|fans|care|headline|context)$/.test(w)))];
+  function trendStillFits(current, original) {
+    const want = storyWords(original);
+    if (!want.length) return false;
+    const have = new Set(storyWords(current));
+    return want.filter(w => have.has(w)).length / want.length >= 0.6;
+  }
+
   // ── Post kit ───────────────────────────────────────────────────────────
   function templateFor(item) {
     const id = item.template && TEMPLATES[item.template.id] ? item.template.id : 'cover';
@@ -410,6 +457,7 @@
     isFresh, ago, agoLong, freshness, brandList, brandOf, matchesBrand,
     pickScore, topPicks, foldStorylines, whyNow,
     briefFor, tidyBrief, rememberSport, sportForBrief, withSport, videoHandoff, reelHandoff,
+    trendContext, designHandoff, trendStillFits,
     templateFor, photoFor, kitFor, kitText, shortlistText,
     readAiCache, writeAiCache, shortcut,
     ROW_ACTIONS, VIDEO_NA, rowActions, isLogoImage,

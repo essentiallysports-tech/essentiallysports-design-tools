@@ -387,6 +387,25 @@ function readCreative(brief, found = {}, tools = {}) {
   return { brief: text, sport, headline: headline.split(' ').length <= 9 ? headline : '', stories, facts, quotes, teams, people, research: (found.articles || []).slice(0, 8).map((a, i) => ({ id: `A${i + 1}`, title: clean(a.title), url: a.url, excerpt: cut(a.excerpt, 260), image: a.image || '' })) };
 }
 
+// The Trends feed's team for the story ("Los Angeles Rams") when the brief
+// reading found no team: the logo library's entry (same shape as readCreative),
+// linked to the stories that name it. A "person" that is really the team plus
+// a word ("Rams All-Pro") is dropped. Never a team from another sport.
+function addTrendTeam(read, teamName) {
+  if (!teamName || read.teams.some(t => t.kind === 'team')) return;
+  const entry = LOGOS.findTeam(teamName, read.sport || undefined);
+  if (!entry || (read.sport && entry.league && findSport(entry.league) && findSport(entry.league) !== read.sport)) return;
+  const team = { name: entry.short || teamName, full: entry.name, kind: 'team', logo: entry.file || entry.url || '', colors: entry.colors || [], id: entry.id, kit: read.sport ? findTeam(read.sport, teamName) || '' : '', from: 'trend' };
+  if (!read.sport && entry.league) read.sport = findSport(entry.league) || read.sport;
+  read.teams.push(team);
+  const named = name => new RegExp(`(?:^|[^A-Za-z])${String(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z])`);
+  read.people = read.people.filter(p => !new RegExp(`^${team.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(p) && p !== team.full);
+  read.stories.forEach(story => {
+    story.people = (story.people || []).filter(p => read.people.includes(p));
+    if ((named(team.name).test(story.text) || named(team.full).test(story.text)) && !story.teams.includes(team.id)) story.teams.push(team.id);
+  });
+}
+
 // ─── 2. Palette ───────────────────────────────────────────────────────────
 const GOLF_KIT = BRAND_KIT.filter(e => e.sport === 'Golf');
 function paletteFor(read, story, { team = null } = {}) {
@@ -1383,6 +1402,10 @@ function directorRequest(read, assets, { steer = {}, want = 4, lessons = [] } = 
     steer.tone ? `Tone: ${steer.tone}.` : '',
     steer.audience ? `Audience: ${steer.audience === 'diehard' ? 'die-hard fans (insider detail)' : 'casual fans (big picture)'}.` : '',
     read.research.length ? `ES research (cite by id only if you use it):\n${read.research.map(a => `${a.id}: ${a.title} — ${a.excerpt}`).join('\n')}` : '',
+    // The Trends story behind the brief: real headlines (context for the
+    // angle, not new facts) and its AI angle ideas, labelled as ideas.
+    read.trend?.lines?.length ? `The trend this brief came from (headlines from ES and other outlets; context for the angle, not facts to add):\n${read.trend.lines.map(line => `- ${line}`).join('\n')}${read.trend.team ? `\nTeam the feed tied it to: ${read.trend.team}` : ''}${read.trend.whyNow ? `\n${read.trend.whyNow}` : ''}` : '',
+    read.trend?.ideas || '',
     MEMORY.promptLines(MEMORY.withSeeds ? MEMORY.withSeeds(lessons, { limit: 4 }) : lessons, { who: 'director' }).join('\n'),
     `Return ${want} directions.`,
   ].filter(Boolean).join('\n\n');
@@ -2076,6 +2099,11 @@ async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = 
   if (hit && now() - hit.at < PLAN_TTL_MS) return { ...hit.value, cached: true, cost: { ...hit.value.cost, total: 0, cachedFrom: hit.value.cost.total } };
   const started = now();
   const read = readCreative(brief, found, { nameCandidates });
+  // es-generate research: the Trends story the brief came from (optional).
+  if (found.trend) {
+    read.trend = { lines: (found.trendLines || []).slice(0, 7), ideas: found.trendIdeas || '', whyNow: found.trend.whyNow || '', team: found.trend.team || '' };
+    addTrendTeam(read, found.trend.team);
+  }
   const extras = { cutouts: {}, headshots: [], logos: [] };
   const photos = await resolvePhotos(read, { localFind, track, extras });
   Object.entries(photos).forEach(([person, list]) => list.forEach((p, i) => { p.id = `p${Object.keys(photos).indexOf(person) + 1}${String.fromCharCode(97 + i)}`; }));
@@ -2498,7 +2526,7 @@ module.exports = {
   TIER, tierOf, showsPerson, rankArchetypes, cardTitle, judgeTierFor, judgeEstimate, RUN_CAP_USD, artDirectorTier,
   unquote,
   editorialKicker,
-  readCreative, splitStories, factsIn, properNames, planDeterministic, validateDirections, runArtDirector, DIRECTOR_SYSTEM, directorRequest,
+  readCreative, addTrendTeam, splitStories, factsIn, properNames, planDeterministic, validateDirections, runArtDirector, DIRECTOR_SYSTEM, directorRequest,
   inputsFor, scenesFor, plan, judge, judgePrompt, dedupePhotos, photoKey, photoFactsFor, distinctPhotos, resolvePhotos, procArtFor, paletteFor, paletteByKey, defaultNote,
   setAssetService, PLAN_CACHE, JUDGE_CACHE, NEEDS, RUBRIC,
   critiqueFromModel, codeCritique, mergeCritiques, fixFor, budgetFor, FIX_TEXT,

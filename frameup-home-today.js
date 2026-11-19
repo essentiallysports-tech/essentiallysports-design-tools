@@ -98,7 +98,8 @@
     const brief = logic && logic.briefFor
       ? logic.briefFor(item, { sportLabel, why })
       : [/[.!?]$/.test(title) ? title : `${title}.`, why ? `Why fans care: ${why}` : ''].filter(Boolean).join('\n').slice(0, 600);
-    return `generate.html?brief=${encodeURIComponent(brief)}${sportLabel ? `&league=${encodeURIComponent(sportLabel)}` : ''}&autorun=0`;
+    // &trend=<id>: Generate picks up the full trend stored for that id (designHandoff).
+    return `generate.html?brief=${encodeURIComponent(brief)}${sportLabel ? `&league=${encodeURIComponent(sportLabel)}` : ''}${item.id ? `&trend=${encodeURIComponent(item.id)}` : ''}&autorun=0`;
   }
 
   function dueLabel(iso, now = Date.now()) {
@@ -353,7 +354,7 @@
       const video = AD_SPORTS.includes(item.category) ? logic?.videoHandoff?.(item, { why: reasons }) : null;
       const btn = (kind, href, icon, text, aria, extra = '') => `<a class="es-btn es-btn--${size} ${kind}" href="${esc(href)}" aria-label="${esc(aria)}"${extra}>${icon}<span>${esc(text)}</span></a>`;
       return [
-        btn(primary ? 'es-btn--primary' : 'es-btn--secondary', trendHref(item, label, { logic, why: storyWhy(item) }), ICON.post, words[0], `${labels === 'long' ? 'Make a post' : 'Post'} about: ${item.title}`),
+        btn(primary ? 'es-btn--primary' : 'es-btn--secondary', trendHref(item, label, { logic, why: storyWhy(item) }), ICON.post, words[0], `${labels === 'long' ? 'Make a post' : 'Post'} about: ${item.title}`, ` data-today-handoff="post" data-today-trend="${esc(item.id)}"`),
         reel ? btn(primary ? 'es-btn--secondary' : 'es-btn--tertiary', reel.url, ICON.reel, words[1], `Make a reel about: ${item.title}`, ` data-today-handoff="reel" data-today-trend="${esc(item.id)}"`) : '',
         video ? btn(primary ? 'es-btn--secondary' : 'es-btn--tertiary', video.url, ICON.video, words[2], `Make a video ad about: ${item.title}`, ` data-today-handoff="video" data-today-trend="${esc(item.id)}"`) : '',
       ].join('');
@@ -362,7 +363,12 @@
       const item = trendData?.items?.find(i => i.id === link.dataset.todayTrend);
       const logic = L();
       if (!item || !logic) return;
-      const handoff = link.dataset.todayHandoff === 'video' ? logic.videoHandoff(item, { why: storyWhy(item) }) : logic.reelHandoff(item, { why: storyWhy(item) });
+      const kind = link.dataset.todayHandoff;
+      // Post: the trend itself rides beside the brief link (Generate reads it for ?trend=<id>).
+      if (kind === 'post' && !logic.designHandoff) return;
+      const handoff = kind === 'post'
+        ? logic.designHandoff(item, { why: storyWhy(item), brief: new URL(link.href, win.location.href).searchParams.get('brief') || '' })
+        : kind === 'video' ? logic.videoHandoff(item, { why: storyWhy(item) }) : logic.reelHandoff(item, { why: storyWhy(item) });
       try { win.sessionStorage.setItem(handoff.key, JSON.stringify(handoff.payload)); } catch (error) { /* the URL carries the story too */ }
     }
     const storyLink = (item, cls = '') => (item.url

@@ -23,6 +23,7 @@ const { isMcpConfigured, createSession } = require('./_es-mcp.js');
 const { gatewayConfigured, aiText, isBudgetError, logBackupCall, userOverHourlyLimit, aiSpendGate, freeModeGate, inFreeMode, withAiMode, MODELS: AI_MODELS } = require('./_ai-gateway.js');
 const RULES = require('../../frameup-rules.js');
 const { lintSpec, applyPatch, findTeam } = require('./_lint-spec.js');
+const TREND = require('./_trend-context.js');
 
 // Marks where buildPrompt's unchanging part (rules, templates, model answers) ends and the
 // per-request part begins. The Gateway call caches everything before it; Groq just drops it.
@@ -666,8 +667,13 @@ async function queryEsArticles(mcp, tool, name) {
   return recent.length ? recent : ask({});
 }
 
-async function research(brief, mcp, tools, notes) {
+// trend (optional, _trend-context.js normalizeTrend): the Trends story this
+// brief came from. Its real headlines lead the digest and join the corpus and
+// sources; its AI angle ideas stay apart (out.trendIdeas, prompts only, never
+// the corpus). No extra network calls.
+async function research(brief, mcp, tools, notes, trend = null) {
   const out = { articles: [], tags: [], digest: '', corpus: '', sources: [] };
+  const fromTrend = trend ? TREND.trendResearch(trend) : null;
   const sections = [];
   const name = keyTerms(brief).split(' ').slice(0, 2).join(' ');
   const tryTool = async (role, label) => {
@@ -720,15 +726,22 @@ async function research(brief, mcp, tools, notes) {
     const seen = new Set(out.mcpArticles.map(a => a.url));
     out.articles = [...out.mcpArticles, ...out.articles.filter(a => !seen.has(a.url))];
   }
+  if (fromTrend) {
+    out.sources.push(...fromTrend.sources);
+    out.trend = { id: trend.id, title: trend.title, team: fromTrend.teamName, photo: fromTrend.photo, whyNow: fromTrend.whyNow, related: trend.related.length, ideas: Boolean(fromTrend.ideas) };
+    out.trendIdeas = fromTrend.ideas;
+    out.trendLines = [trend.title, ...trend.related.map(r => r.title)];
+  }
   out.sources = [...new Set(out.sources)];
   // The prompt gets a digest plus the opening of the top stories (facts the
   // model can use); kept to ~7k chars so the backup models' limits hold.
   const leads = out.articles.filter(a => a.body).slice(0, 3)
     .map(a => `## From "${a.title}" (${a.url})\n${a.body.slice(0, 900)}`);
-  out.digest = [sections.join('\n\n').slice(0, 5000), ...leads].join('\n\n').slice(0, 7500);
+  // A trend's own headlines go first: they are short, and they are the story.
+  out.digest = [fromTrend?.section || '', sections.join('\n\n').slice(0, 5000), ...leads].filter(Boolean).join('\n\n').slice(0, 7500);
   // The fact check uses everything research saw, not the shortened digest, so
   // a real quote or number deep in an article is not mistaken for invented.
-  out.corpus = [...sections, ...out.articles.map(a => `${a.title}. ${a.excerpt} ${a.body || ''}`)].join('\n').slice(0, 80000);
+  out.corpus = [fromTrend?.corpus || '', ...sections, ...out.articles.map(a => `${a.title}. ${a.excerpt} ${a.body || ''}`)].filter(Boolean).join('\n').slice(0, 80000);
   return out;
 }
 
@@ -867,6 +880,7 @@ function buildPrompt(brief, found, allowedTypes, count, pastExamples = '', avoid
     '',
     `ES research:\n${found.digest || '(no ES coverage found)'}`,
     '',
+    ...(found.trendIdeas ? [found.trendIdeas, ''] : []),
     'For every design except listicles, add "alts": up to 2 alternative versions of the same template built on the same facts, each a clearly different hook or wording (fields objects only). The editor can switch between them with one click.',
     '',
     'Reply with JSON only, no prose:',
@@ -1198,6 +1212,19 @@ function brandHints(spec, brief, articles) {
 // story ask for the same person again within seconds.
 const IMAGE_SEARCH_CACHE = new Map();
 const IMAGE_SEARCH_TTL_MS = 15 * 60 * 1000;
+// The trend's picture as a photo candidate: only on an ES photo host (rights),
+// never a logo, and only when its headline names the person (same rule as an
+// ES story image in findPhoto). A Wikipedia / outlet picture is a hint at most.
+function trendPhotoFor(found, person) {
+  const photo = found?.trend?.photo;
+  const surname = String(person || '').trim().split(/\s+/).pop()?.toLowerCase() || '';
+  if (!photo || !canProxy(photo.image) || !surname || surname.length < 3) return [];
+  return String(photo.title || '').toLowerCase().includes(surname) ? [{ image: photo.image, title: photo.title, url: photo.url }] : [];
+}
+
+// What the response says about the trend behind the run (for the page and logs).
+const trendOut = found => (found?.trend ? { trend: { id: found.trend.id, title: found.trend.title, team: found.trend.team || '', related: found.trend.related, ideas: found.trend.ideas, whyNow: found.trend.whyNow || '', photo: Boolean(found.trend.photo) } } : {});
+
 async function mcpImages(query, mcp, tools) {
   if (!query || !mcp || !tools?.images) return [];
   const key = squash(query).trim();
@@ -1211,7 +1238,9 @@ async function mcpImages(query, mcp, tools) {
   return urls;
 }
 
-async function photoCandidates(person, mcp, tools, articles) {
+// extra: more ES-hosted candidates (the trend's own picture), after the MCP
+// agency images and before the ES story images; the photo pick still decides.
+async function photoCandidates(person, mcp, tools, articles, { extra = [] } = {}) {
   const out = [];
   const add = (sourceUrl, title) => {
     if (sourceUrl && !out.some(c => c.sourceUrl === sourceUrl) && out.length < 6) out.push({ title: clean(title || person).slice(0, 120), sourceUrl, url: proxied(sourceUrl) });
@@ -1221,6 +1250,7 @@ async function photoCandidates(person, mcp, tools, articles) {
       (await mcpImages(person, mcp, tools)).slice(0, 3).forEach(url => add(url, person));
     } catch (error) { /* ES story images below */ }
   }
+  extra.filter(a => canProxy(a.image)).forEach(a => add(a.image, a.title));
   articles.filter(a => canProxy(a.image)).forEach(a => add(a.image, a.title));
   return out;
 }
@@ -1471,17 +1501,27 @@ const directionOut = (concept, picked = []) => ({
 
 // Research, the team's past posts and the director's memory, in parallel.
 // Shared by the directions step (mode 'direct') and the designs step.
-async function prepare({ brief, formats, token }) {
+async function prepare({ brief, formats, token, trend = null }) {
   const notes = [];
   const allowedTypes = (Array.isArray(formats) ? formats : []).filter(type => TEMPLATES[type]);
   const discovered = await discover(notes);
   const { mcp, tools } = discovered;
   const [found, corpus, signals] = await Promise.all([
-    research(brief, mcp, tools, notes),
+    research(brief, mcp, tools, notes, trend),
     loadCorpus(token).catch(() => ({ rows: [], source: 'none', designs: [] })),
     directionMemory.signalsFor({ token }).catch(() => directionMemory.EMPTY),
   ]);
   const read = readBriefFor(brief, found, allowedTypes);
+  // The trend's team (the feed matched it to the story) when the brief and the
+  // ES research name none: the brand-kit team only, never a guess.
+  if (!read.team && found.trend?.team) {
+    const hit = director.teamInText(found.trend.team, read.sport);
+    if (hit?.team) {
+      read.team = hit.team;
+      read.teamHint = { team: hit.team, from: 'trend' };
+      if (!read.sport && hit.sport) read.sport = hit.sport;
+    }
+  }
   const pastPosts = normalizeCorpus(corpus.rows);
   const picked = pickPastPosts(pastPosts, { ...read, brief }, { allowedTypes, signals });
   return { ...discovered, notes, allowedTypes, found, corpus, signals, read, pastPosts, picked };
@@ -1491,12 +1531,12 @@ async function prepare({ brief, formats, token }) {
 // the page to show, pick, edit and steer. No designs are written here.
 // Falls back (directions: []) when the director cannot run; the page then
 // generates the old way.
-async function directions({ brief, formats, count, token, email, steer }) {
+async function directions({ brief, formats, count, token, email, steer, trend = null }) {
   const started = clock.now();
   const elapsed = () => clock.now() - started;
   const runId = newRunId();
   const want = Math.min(Math.max(parseInt(count, 10) || MAX_DESIGNS, 2), MAX_DESIGNS);
-  const prep = await prepare({ brief, formats, token });
+  const prep = await prepare({ brief, formats, token, trend });
   const { tools, notes, allowedTypes, found, corpus, signals, read, pastPosts, picked } = prep;
   const researchMs = elapsed();
   const provider = tools.think ? null : pickProvider();
@@ -1504,7 +1544,7 @@ async function directions({ brief, formats, count, token, email, steer }) {
     runId,
     mode: 'direct',
     steer,
-    research: { articles: found.articles.map(({ title, url, date }) => ({ title, url, date })) },
+    research: { articles: found.articles.map(({ title, url, date }) => ({ title, url, date })), ...trendOut(found) },
     learning: { corpus: corpus.source, pastPosts: picked.length, memory: signals.rows || 0 },
     notes,
   };
@@ -1524,6 +1564,7 @@ async function directions({ brief, formats, count, token, email, steer }) {
     memory: signals.lines || [],
     digest: found.digest,
     corpus: found.corpus || found.digest,
+    ideas: found.trendIdeas || '',
     want,
     templates: TEMPLATES,
     track: { email, token },
@@ -1592,13 +1633,13 @@ function designsPerDirection(n, want) {
 
 // offsetMs: time already spent before this call (the on-brand vision read),
 // so the late-run guards still keep the whole request inside the limit.
-async function generate({ brief, formats, count, avoid, token, email, steer = '', directions: chosenDirections = true, offsetMs = 0, quietRefit = false }) {
+async function generate({ brief, formats, count, avoid, token, email, steer = '', directions: chosenDirections = true, offsetMs = 0, quietRefit = false, trend = null }) {
   const started = clock.now() - Math.max(0, Number(offsetMs) || 0);
   const elapsed = () => clock.now() - started;
   const runId = newRunId();
   let want = Math.min(Math.max(parseInt(count, 10) || MAX_DESIGNS, 1), MAX_DESIGNS);
   // Past team posts (the brain's memory) and the director's memory load alongside the research.
-  const { mcp, tools, toolNames, error: mcpError, notes, allowedTypes, found, corpus, signals, read, pastPosts, picked } = await prepare({ brief, formats, token });
+  const { mcp, tools, toolNames, error: mcpError, notes, allowedTypes, found, corpus, signals, read, pastPosts, picked } = await prepare({ brief, formats, token, trend });
   const researchMs = elapsed();
   const steerIn = director.normalizeSteer(steer);
   // Before the corpus migration is applied (legacy source) the writer sees the
@@ -1613,7 +1654,7 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
   // Photo candidates and Claude's pick run while the designs are written.
   const photoTrack = { email, token, runId };
   const photoWork = wantsPhoto
-    ? photoCandidates(person, mcp, tools, found.articles)
+    ? photoCandidates(person, mcp, tools, found.articles, { extra: trendPhotoFor(found, person) })
       .then(async candidates => ({ candidates, pick: await pickPhoto(person, candidates, photoTrack) }))
       .catch(() => ({ candidates: [], pick: { index: 0, cost: 0, picked: false } }))
     : Promise.resolve({ candidates: [], pick: { index: 0, cost: 0, picked: false } });
@@ -1656,6 +1697,7 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
       memory: signals.lines || [],
       digest: found.digest,
       corpus: found.corpus || found.digest,
+      ideas: found.trendIdeas || '',
       want,
       templates: TEMPLATES,
       track: { email, token, runId },
@@ -1907,7 +1949,7 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
     },
     ...(director.steerIsEmpty(steerIn) ? {} : { steer: steerIn }),
     designs,
-    research: { articles: found.articles.map(({ title, url, date }) => ({ title, url, date })) },
+    research: { articles: found.articles.map(({ title, url, date }) => ({ title, url, date })), ...trendOut(found) },
     connection: connectionInfo(tools, toolNames, mcpError),
     ai: { fallback: provider?.fallback || '', failed: aiFailed },
     photo: { person, candidates: candidates.length, picked: pick.picked, rejected: pick.rejected },
@@ -1924,17 +1966,17 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
 // facts, photos (a different one per design), cut-outs and concept art when the
 // asset service is there, the art director's directions and 2-3 candidate
 // scenes each. The page renders the candidates and calls mode 'creative-judge'.
-async function creative({ brief, steer = {}, token, email, count = 4 }) {
+async function creative({ brief, steer = {}, token, email, count = 4, trend = null }) {
   const started = clock.now();
   const runId = newRunId();
   const notes = [];
   const { mcp, tools } = await discover(notes);
-  const found = await research(brief, mcp, tools, notes);
+  const found = await research(brief, mcp, tools, notes, trend);
   // ES photos of one person: MCP image search, then ES story images that name them.
   const localFind = async person => {
     const surname = squash(String(person).split(' ').pop());
     const articles = (found.articles || []).filter(a => squash(a.title).includes(surname));
-    return (await photoCandidates(person, mcp, tools, articles)).map(c => ({ url: c.url, title: c.title }));
+    return (await photoCandidates(person, mcp, tools, articles, { extra: trendPhotoFor(found, person) })).map(c => ({ url: c.url, title: c.title }));
   };
   // 1-8 designs (default 4); the composer scales candidates and caps the judge.
   const want = Math.min(Math.max(parseInt(count, 10) || 4, 1), 8);
@@ -1942,11 +1984,13 @@ async function creative({ brief, steer = {}, token, email, count = 4 }) {
   // gen4-learning: every archetype's lessons (the director has not picked yet),
   // what people change before export, and the ranking line (7 + 1 <= the composer's 8).
   const lessons = ({ sport }) => creativeMemory.lessonsFor({ token, sport, archetypes: '*', limit: 7, rank: true });
-  const result = await composer.plan({ brief, found, steer, want, track: { email, token, runId }, localFind, nameCandidates, lessons });
+  // A trend run plans from more context than the same brief alone: its own cache entry.
+  const cacheKey = found.trend ? `${brief}|${JSON.stringify(steer)}|${want}|trend:${found.trend.id || found.trend.title}` : '';
+  const result = await composer.plan({ brief, found, steer, want, track: { email, token, runId }, localFind, nameCandidates, lessons, cacheKey });
   return {
     ...result,
     runId,
-    research: { articles: (found.articles || []).map(({ title, url, date }) => ({ title, url, date })) },
+    research: { articles: (found.articles || []).map(({ title, url, date }) => ({ title, url, date })), ...trendOut(found) },
     notes,
     meta: { ms: { total: clock.now() - started, plan: result.ms }, costUsd: result.cost.total },
   };
@@ -2167,17 +2211,22 @@ exports.handler = withAiMode(async function handler(event) {
     // Optional (all backward compatible): an editor steer (the old hook string,
     // or { hook, tone, audience, more, less }).
     const steer = director.normalizeSteer(body.steer);
+    // Optional: the Trends story the brief came from (validated and capped;
+    // dropped when the brief no longer tells that story).
+    const trend = TREND.normalizeTrend(body.trend, brief);
+    // A trend knows its league: a brief without a "Sport:" line gets one.
+    const runBrief = trend ? TREND.withTrendSport(brief, trend) : brief;
     // Creative: composed designs (the page renders and judges the candidates).
     if (body.mode === 'creative') {
-      return json(200, await creative({ brief, steer, token, email: auth.user.email, count: body.count }));
+      return json(200, await creative({ brief: runBrief, steer, token, email: auth.user.email, count: body.count, trend }));
     }
     // Director-first step 1: the named directions only (no designs yet).
     if (body.mode === 'direct') {
-      return json(200, await directions({ brief, formats: body.formats, count: body.count, token, email: auth.user.email, steer }));
+      return json(200, await directions({ brief: runBrief, formats: body.formats, count: body.count, token, email: auth.user.email, steer, trend }));
     }
     return json(200, await generate({
-      brief, formats: body.formats, count: body.count, avoid: body.avoid, token, email: auth.user.email,
-      steer,
+      brief: runBrief, formats: body.formats, count: body.count, avoid: body.avoid, token, email: auth.user.email,
+      steer, trend,
       // directions: false = the old single-call path; an array = the editor's
       // picked (maybe edited) directions; anything else = the director decides.
       directions: Array.isArray(body.directions) ? body.directions : body.directions !== false,

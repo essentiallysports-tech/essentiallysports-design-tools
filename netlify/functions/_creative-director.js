@@ -358,7 +358,7 @@ function compactRead(read = {}) {
   });
 }
 
-function directorRequest({ brief, read = {}, allowedTypes = [], steer = '', pastPosts = '', houseStyle = [], lessons = [], teamHints = [], memory = [], digest = '', want = 4 } = {}) {
+function directorRequest({ brief, read = {}, allowedTypes = [], steer = '', pastPosts = '', houseStyle = [], lessons = [], teamHints = [], memory = [], digest = '', want = 4, ideas = '' } = {}) {
   const parts = [
     `Brief: ${String(brief || '').slice(0, 1500)}`,
     `What the brief gives you (code-checked): ${compactRead(read)}`,
@@ -376,6 +376,9 @@ function directorRequest({ brief, read = {}, allowedTypes = [], steer = '', past
   if (lessons.length) parts.push(`Editors' lessons:\n${lessons.slice(0, 6).map(line => `- ${line}`).join('\n')}`);
   if (teamHints.length) parts.push(`Team hints: ${teamHints.slice(0, 8).map(hint => `editors set ${hint.person} -> ${hint.team}`).join('; ')}`);
   parts.push(`ES research:\n${String(digest || '').slice(0, 2500) || '(no ES coverage found)'}`);
+  // Trends' AI angle ideas (labelled as ideas, never facts; validateConcepts
+  // still checks every fact against the brief and the corpus).
+  if (ideas) parts.push(String(ideas).slice(0, 1200));
   parts.push(`Return ${want} concepts (fewer only if fewer genuinely fit).`);
   return parts.join('\n\n');
 }
@@ -475,12 +478,12 @@ function validateConcepts(parsed, { read = {}, allowedTypes = [], want = 4, brie
 async function runDirector({
   brief, read, allowedTypes = [], steer = '', pastPosts = '', pastIds = [], houseStyle = [], lessons = [], teamHints = [], memory = [],
   digest = '', corpus = '', want = 4, templates = {}, tier = directorTier(), track = null,
-  timeoutMs = 12000, startedAt = Date.now(), retryByMs = 12000, now = () => Date.now(),
+  timeoutMs = 12000, startedAt = Date.now(), retryByMs = 12000, now = () => Date.now(), ideas = '',
 } = {}) {
   const result = { concepts: [], read: null, model: '', cost: 0, source: 'none', calls: 0, escalated: false };
   try {
     const system = DIRECTOR_SYSTEM(templates);
-    const request = directorRequest({ brief, read, allowedTypes, steer, pastPosts, houseStyle, lessons, teamHints, memory, digest, want });
+    const request = directorRequest({ brief, read, allowedTypes, steer, pastPosts, houseStyle, lessons, teamHints, memory, digest, want, ideas });
     const { aiText, isBudgetError } = gateway();
     const ask = async askTier => {
       result.calls += 1;
