@@ -40,6 +40,9 @@ const MODELS = {
   review: process.env.AI_REVIEW_MODEL || 'openai/gpt-6-luna',
   // Only for designs that still score low, or when someone asks for the best version.
   best: process.env.AI_BEST_MODEL || 'anthropic/claude-sonnet-5.5',
+  // gen5: Generate's art director (owner: "use a good model if it's needed to
+  // create good designs"). One call a run, logged and capped per run.
+  top: process.env.AI_TOP_MODEL || 'anthropic/claude-opus-5.5',
   // Scene/background images, only on an explicit click. Cheapest good model.
   image: process.env.AI_IMAGE_MODEL || 'bfl/flux-3-image-klein',
   // Backup text model on the Gateway, used when Groq isn't configured (Generate
@@ -161,7 +164,7 @@ function featureOffError(feature) {
 }
 // AI_ECONOMY=1 routes the expensive tier to a cheaper one: best (Sonnet) runs on
 // main (Haiku). Logged rows carry the model that really ran.
-const ECONOMY_ROUTES = { best: 'main' };
+const ECONOMY_ROUTES = { best: 'main', top: 'main' };
 function economyMode() { return envFlag('AI_ECONOMY'); }
 function modelFor(tier, fallback = 'light') {
   const routed = economyMode() && ECONOMY_ROUTES[tier] ? ECONOMY_ROUTES[tier] : tier;

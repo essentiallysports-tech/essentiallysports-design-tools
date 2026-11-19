@@ -611,7 +611,7 @@
       }
       let judged = { directions: [], cost: 0, source: 'heuristic' };
       try {
-        judged = await g.callApi('/api/es-generate', { mode: 'creative-judge', brief, runId: plan.runId, sport: plan.read?.sport || '', sets, heuristics });
+        judged = await g.callApi('/api/es-generate', { mode: 'creative-judge', brief, runId: plan.runId, sport: plan.read?.sport || '', sets, heuristics, spent: plan.cost?.total || 0 });
       } catch (error) { /* the heuristic picks below */ }
       state.run = { brief, plan, judged };
       registry.clear();
@@ -775,7 +775,7 @@
         const { dataUrl } = await small(p.scene);
         sets.push({ direction: p.dir.id, archetype: p.scene.archetype, tone: p.scene.tone || '', items: [{ id: p.scene.id, image: dataUrl }] });
       }
-      const again = await G().callApi('/api/es-generate', { mode: 'creative-judge', recheck: true, brief, runId: plan.runId, sport: plan.read?.sport || '', sets, heuristics: {} });
+      const again = await G().callApi('/api/es-generate', { mode: 'creative-judge', recheck: true, brief, runId: plan.runId, sport: plan.read?.sport || '', sets, heuristics: {}, spent: (plan.cost?.total || 0) + (judged.cost || 0) });
       judged.cost = Number(((judged.cost || 0) + (Number(again?.cost) || 0)).toFixed(5));
       judged.recheck = { designs: sets.length, cost: Number(again?.cost) || 0 };
       (again?.directions || []).forEach(v => {

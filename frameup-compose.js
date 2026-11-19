@@ -38,7 +38,7 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const VERSION = '2026-11-20-v3';
+  const VERSION = '2026-11-23-gen5';
   const SIZES = { portrait: { w: 1080, h: 1350 }, story: { w: 1080, h: 1920 }, square: { w: 1080, h: 1080 } };
   const SAFE = 50;
   const LOGO = { w: 122, h: 104 };
@@ -54,7 +54,7 @@
   const MAX_LAYERS = 34;
   // Effect limits the gate enforces (pro finish, never at the cost of reading).
   const FX_LIMITS = {
-    textRotate: 8, imageRotate: 12, skew: 0.12, photoBlur: 28, grain: 0.14, texture: 0.26, leak: 0.6, glowAlpha: 0.85, glowBlur: 100,
+    textRotate: 8, imageRotate: 12, skew: 0.12, photoBlur: 28, grain: 0.14, grit: 0.22, texture: 0.26, leak: 0.6, glowAlpha: 0.85, glowBlur: 100,
     mist: 0.9, minType: 22,
   };
   // Fixes the art director may ask for (one round, applied in code).
@@ -223,6 +223,8 @@
     align: opts.align || 'left', size: opts.size || 600, labelSize: opts.labelSize || 40, ...(opts.fx ? { fx: opts.fx } : {}),
   });
   const grain = (opacity = 0.08) => ({ type: 'shape', shape: 'grain', x: 0, y: 0, w: 0, h: 0, opacity });
+  // gen5: the board's gritty print texture (overlay, under the type layers' reading).
+  const grit = (opacity = 0.12) => ({ type: 'shape', shape: 'grain', kind: 'grit', x: 0, y: 0, w: 0, h: 0, opacity });
 
 
   // ─── Generate v3: shared input shape + tone families ───────────────────
@@ -1380,7 +1382,11 @@
     type: 'text', role: opts.role || 'headline', text: upper(text), ...box,
     font: 'display', size: opts.size || 120, minSize: opts.minSize || 52, maxLines: opts.maxLines || 3, lineHeight: 0.9,
     color: opts.ink || pal.boxInk, align: opts.align || 'left', valign: opts.valign || 'bottom',
-    box: { color: opts.bg || pal.box, ...(opts.colors ? { colors: opts.colors } : {}), ...(opts.stagger ? { stagger: opts.stagger } : {}) },
+    // gen5: every boxed headline breaks at phrase boundaries (one idea a line).
+    phrase: true,
+    ...(opts.keep ? { keep: opts.keep } : {}),
+    ...(opts.quoteMarks ? { quoteMarks: true } : {}),
+    box: { color: opts.bg || pal.box, ...(opts.board ? { style: 'board' } : {}), ...(opts.colors ? { colors: opts.colors } : {}), ...(opts.cascade ? { cascade: opts.cascade } : opts.stagger ? { stagger: opts.stagger } : {}) },
     highlight: { words: (opts.words || []).map(upper), color: opts.hi || pal.boxHi },
     ...(opts.fx ? { fx: opts.fx } : {}),
   });
@@ -1394,7 +1400,120 @@
   ];
   const nameOf = h => clean(h?.person || h?.name || h?.label || '');
 
+
+  // ─── gen5: the ES board system ──────────────────────────────────────────
+  // Measured on the owner's Figma board (file ZtArAy8Oa52pOF92FPl7Zo, section
+  // 2335:229, 1080x1350 frames; scratchpad gen5-out/board/measurements.md):
+  //   cover 2335:1869  headline 140px Acumin Condensed Black in touching boxes
+  //                    (pad ~0.17 cap x, ~0.15 cap y), steps of ~1 cap, team
+  //                    colour box with the second team colour as type.
+  //   stats 2335:798   team-colour field + the photo blurred 12-17px, number
+  //                    431px (+ full size) under the ES mark, the cut-out
+  //                    1000-1550px tall from y~300 (head over the number's
+  //                    foot), caption 57px, white label box 108-164px in a
+  //                    team colour, a 404px team-colour fade at the foot.
+  //   quote 2335:1418  dark portrait, white boxes 131px #0A0807, 115px quote
+  //                    squares at 65% black, credit line 45px.
+  //   bar   2335:1297  #E8E8E8 + grit, title box 107px, subtitle 49px, bars
+  //                    106px with a 2px rule, values 90px, year tags 39px.
+  // gen5: the photo a look wants (agent A's photo.kind / verified when
+  // present): a quote wants the speaker's portrait, a cover the action. A photo
+  // marked verified: false is never picked over the hero; unknown is fine.
+  function pickPhoto(input, kinds = []) {
+    const list = [input.photo, ...(input.photos || [])].filter(p => p?.src && p.verified !== false);
+    if (!list.length) return input.photo;
+    for (const k of kinds) { const hit = list.find(p => p.kind === k); if (hit) return hit; }
+    return list[0];
+  }
+  const BOARD = { head: 140, quote: 131, label: 120, number: 431, caption: 57, credit: 45, overlay: 404, red: '#F83B0F', tag: '#CC2B31', paper: '#E8E8E8', ink: '#0A0807' };
+  // The board's colour roles from the team colours (ES blue stays the mark).
+  function boardColors(pal, input = {}) {
+    // The team's own colours (the composer passes them even when the tone is
+    // ES blue): the board's field is always the team, ES blue is the mark.
+    const raw = (Array.isArray(input.teamColors) && input.teamColors.length ? input.teamColors.map(normHex).filter(Boolean) : teamColors(pal)).filter(c => !(lum(c) > 0.8 && sat(c) < 0.15) && !(lum(c) < 0.004));
+    const pool = raw.length ? raw : [ES.navy, ES.blue];
+    const sig = signature(pool);
+    const carriesWhite = c => contrast('#FFFFFF', c) >= 3 && sat(c) > 0.18;
+    const field = carriesWhite(sig) ? sig : pool.filter(carriesWhite).sort((a, b) => sat(b) - sat(a))[0] || mix(sig, '#000000', 0.5);
+    const second = pool.filter(c => normHex(c) !== normHex(field) && Math.sqrt(colorDist(c, field)) > 80).sort((a, b) => contrast(b, field) - contrast(a, field))[0] || '';
+    // Cover boxes: the darker team colour as the box, the brighter as the type
+    // (Browns brown box / orange type, Lakers purple / gold); white type when
+    // the pair does not read at display size.
+    const pair = second && contrast(second, field) >= 3 ? (lum(field) <= lum(second) ? [field, second] : [second, field]) : [field, '#FFFFFF'];
+    const labelInk = [sig, field, second].filter(Boolean).find(c => contrast(c, '#FFFFFF') >= 3 && sat(c) > 0.3) || readable(field, '#FFFFFF', 4.5);
+    return { field, deep: mix(field, '#000000', 0.55), second, sig, box: pair[0], boxInk: pair[1], invBox: pair[1] === '#FFFFFF' ? '#FFFFFF' : pair[1], invInk: pair[0], labelInk };
+  }
+  // The board's foot: the team colour rising 404px (scaled) from the bottom.
+  const boardFade = (W, H, color, reach = 1) => {
+    const h = Math.round(BOARD.overlay * (H / 1350) * reach);
+    return { type: 'shape', shape: 'gradient', mist: true, x: 0, y: H - h, w: W, h, color, stops: [[0, 0], [0.3, 0.58], [0.62, 0.86], [1, 0.9]] };
+  };
+  // Box steps in cap heights: the board's descending cascade (2335:1869), a
+  // flush stack, or the LeBron zigzag (2335:1881). Never a few stray pixels.
+  const CASCADES = [[0, 0, 0.9, 1.25], null, [0, 0.55, 0.25, 0.5]];
+  // Names that stay on one line inside a boxed headline.
+  // An abbreviation stays with its noun ("UK SUPPLIERS", "NFL RECORD"), read
+  // from the copy before it is set in caps.
+  const abbrevPairs = text => [...String(text || '').matchAll(/\b([A-Z]{2,4})\s+([A-Za-z][\w'-]*)/g)].map(m => `${m[1]} ${m[2]}`);
+  const keepOf = i => [i.name, i.quote?.by, ...(i.logos || []).map(l => l.name), ...(i.keep || []), ...abbrevPairs(i.headline), ...abbrevPairs(i.quote?.text)].map(clean).filter(n => n && n.includes(' '));
+  // A stats post's label box: the director's hook ("MVP CALLING?") when it is
+  // one, else the headline (the story), never a sport tag.
+  const isHook = t => /[!?]$/.test(clean(t)) && words(t).length <= 5;
+
   const LOOKS = [
+    {
+      id: 'name-stack', name: 'Name behind the player', focal: 'athlete', family: 'extra', looks: true,
+      about: 'ES stats-post build without a number: the surname set huge under the ES mark, the player cut out over it, the headline in white label boxes at the foot.',
+      needs: 'a named person with a cut-out + a headline',
+      kinds: ['person', 'none', 'quote'],
+      tones: ['vivid', 'dark', 'duotone'],
+      fits: i => has.cutout(i) && words(i.name).length >= 2 && words(i.name).slice(-1)[0].length <= 9 && has.headline(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const bc = boardColors(pal, input);
+        const surname = upper(words(input.name).slice(-1)[0]);
+        const top = SAFE + LOGO.h + SAFE + 2;
+        const nameH = H >= 1900 ? 420 : H <= 1100 ? 250 : 300;
+        const lblH = H <= 1100 ? 210 : 250;
+        const cutTop = Math.round(top + nameH * 0.72);
+        const src = sourcePhoto(input);
+        return [
+          { type: 'background', fill: { kind: 'solid', colors: [bc.field] } },
+          ...(src?.src ? [{ type: 'photo', src: src.src, focus: src.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', zoom: 1.25, blur: 18, fx: { opacity: 0.5 } }] : []),
+          { type: 'shape', shape: 'gradient', x: 0, y: 0, w: W, h: Math.round(H * 0.5), color: bc.deep, stops: [[0, 0.55], [1, 0]] },
+          { type: 'text', role: 'name', text: surname, x: SAFE, y: top, w: W - SAFE * 2, h: nameH, font: 'display', size: 520, minSize: 120, maxLines: 1, lineHeight: 0.8, color: v === 1 ? bc.second && contrast(bc.second, bc.field) >= 3 ? bc.second : '#FFFFFF' : '#FFFFFF', align: v === 2 ? 'left' : v === 1 ? 'right' : 'center', valign: 'top', guard: false },
+          { ...cutLayer(input.cutout, { x: v === 2 ? 160 : 0, y: cutTop, w: v ? W - 160 : W, h: H - cutTop }, pal, { align: v === 2 ? 'right' : v === 1 ? 'left' : 'center', rim: false }), bleed: true, maxW: Math.round(W * 1.05) },
+          boardFade(W, H, bc.field, 1.2),
+          esHead(input.headline, pal, { x: SAFE, y: H - SAFE - 24 - lblH - (input.swipe ? 56 : 0), w: W - SAFE * 2, h: lblH }, { size: 110, minSize: 56, maxLines: 2, bg: '#FFFFFF', ink: bc.labelInk, hi: bc.labelInk, align: 'center', board: true, keep: keepOf(input) }),
+          swipePill(input, pal, W, H),
+          grit(0.13),
+        ];
+      },
+    },
+    {
+      id: 'team-post', name: 'Team-colour post', focal: 'type', family: 'extra', looks: true,
+      about: 'ES extra post: a gritty team-colour page, the headline stacked big in boxes at the top, the photo rising from the foot into the colour.',
+      needs: 'a headline (+ an ES photo)',
+      kinds: ['none', 'person', 'money', 'score', 'quote'],
+      tones: ['vivid', 'dark'],
+      fits: i => has.headline(i) && words(i.headline).length >= 3 && has.photo(i),
+      build(input, v) {
+        const { W, H } = frame(input);
+        const pal = input.palette;
+        const bc = boardColors(pal, input);
+        const photoY = Math.round(H * 0.34);
+        const inv = v === 1;
+        return [
+          { type: 'background', fill: { kind: 'linear', colors: [bc.field, bc.deep], angle: 90 } },
+          { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: photoY, w: W, h: H - photoY, mask: 'rect', levels: true, fade: { to: 'top', from: 0.42 } },
+          boardFade(W, H, bc.deep, 0.7),
+          esHead(input.headline, pal, { x: SAFE, y: SAFE + LOGO.h + SAFE + 2, w: W - SAFE * 2, h: Math.round(H * 0.44) }, { size: BOARD.head, minSize: 76, maxLines: 4, valign: 'top', bg: inv ? bc.box : '#FFFFFF', ink: inv ? bc.boxInk : bc.labelInk, hi: inv ? bc.boxInk : bc.labelInk, board: true, cascade: CASCADES[(v + 2) % 3], keep: keepOf(input) }),
+          swipePill(input, pal, W, H),
+          grit(0.16),
+        ];
+      },
+    },
     {
       id: 'stat-stack', name: 'Stat stack with cut-out', focal: 'athlete', family: 'stats', looks: true,
       about: 'ES stats post: the record or stat set huge at the top, the player cut out over it (number behind the head), the headline in a highlight box.',
@@ -1403,28 +1522,30 @@
       tones: ['vivid', 'dark', 'esblue', 'duotone'],
       fits: i => has.cutout(i) && Boolean(heroStat(i)) && has.headline(i),
       build(input, v) {
+        // gen5 board STATS POST (2335:230 "1000+", 2335:798 "25-2").
         const { W, H } = frame(input);
         const pal = input.palette;
+        const bc = boardColors(pal, input);
         const st = heroStat(input);
-        const short = `${clean(st.prefix)}${clean(st.value)}${clean(st.suffix)}`.length <= 3;
-        const left = short ? v !== 1 : v === 1;
-        const top = 214;
-        const numH = H >= 1900 ? 520 : H <= 1100 ? 280 : 360;
-        const labelText = st.label || input.label || '';
-        const headH = H <= 1100 ? 200 : 240;
-        const cutY = top + numH * 0.4;
+        const numTop = SAFE + LOGO.h + SAFE + 2;
+        const numH = H >= 1900 ? 420 : H <= 1100 ? 240 : 300;
+        const caption = st.label || input.label || '';
+        const hook = isHook(input.kicker) ? input.kicker : '';
+        const label = hook || input.headline;
+        const lblH = H <= 1100 ? 200 : 230;
+        const cutTop = Math.round(numTop + numH * 0.58);
+        const src = sourcePhoto(input);
         return [
-          { type: 'background', fill: { kind: 'linear', colors: [pal.bg2, pal.bg], angle: 90 } },
-          fieldPhoto(input, pal, W, H, { opacity: 0.6 }),
-          { type: 'shape', shape: 'gradient', x: 0, y: 0, w: W, h: Math.round(H * 0.5), color: pal.deep, stops: [[0, 0.55], [1, 0]] },
-          numberLayer({ ...st, label: '' }, { x: SAFE, y: top, w: W - SAFE * 2, h: numH }, pal.ink, { align: left ? 'left' : short ? 'right' : 'center', size: numH * 1.35, noLabel: true }),
-          { ...cutLayer(input.cutout, short && !left ? { x: 20, y: cutY, w: 800, h: H - cutY } : { x: left ? 260 : 90, y: cutY, w: left ? 800 : 900, h: H - cutY }, pal, { align: left ? 'right' : short ? 'left' : 'center' }), maxW: short ? 900 : 1180 },
-          mist(W, H, pal, 0.7, 0.9),
-          // The label reads over the figure (ES "CURRENT RECORD" under the number).
-          ...(labelText ? [tagPill(labelText, left ? SAFE : W - SAFE - 420, top + numH + 18, pal, { h: 50, maxW: 420, align: left ? 'left' : 'right' })] : []),
-          esHead(input.headline, pal, { x: SAFE, y: H - SAFE - headH - (input.swipe ? 60 : 0), w: W - SAFE * 2, h: headH }, { size: 130, maxLines: 2, words: input.highlight, stagger: left ? null : [0, 60] }),
+          { type: 'background', fill: { kind: 'solid', colors: [bc.field] } },
+          ...(src?.src ? [{ type: 'photo', src: src.src, focus: src.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', zoom: 1.25, blur: 16, fx: { opacity: 0.6 } }] : []),
+          { type: 'shape', shape: 'gradient', x: 0, y: 0, w: W, h: Math.round(H * 0.5), color: bc.deep, stops: [[0, 0.55], [1, 0]] },
+          { ...numberLayer({ ...st, label: '' }, { x: SAFE, y: numTop, w: W - SAFE * 2, h: numH }, '#FFFFFF', { align: v === 1 ? 'left' : v === 2 ? 'right' : 'center', size: 700, noLabel: true }), valign: 'top', board: true, overlap: 0.42 },
+          { ...cutLayer(input.cutout, { x: v === 1 ? 140 : 0, y: cutTop, w: v ? W - 140 : W, h: H - cutTop }, pal, { align: v === 1 ? 'right' : v === 2 ? 'left' : 'center', rim: false }), bleed: true, maxW: Math.round(W * 1.05) },
+          boardFade(W, H, bc.field, 1.15),
+          ...(caption ? [{ type: 'text', role: 'label', text: upper(caption), x: v === 1 || v === 2 ? SAFE : W - SAFE - 440, y: numTop + numH + 22, w: 440, h: 104, font: 'display', size: BOARD.caption, minSize: 34, maxLines: 2, lineHeight: 0.86, color: '#FFFFFF', align: v === 1 || v === 2 ? 'left' : 'right', valign: 'top', phrase: true, fx: { shadow: { color: '#000000', blur: 18, x: 0, y: 4, alpha: 0.45 } } }] : []),
+          esHead(label, pal, { x: SAFE, y: H - SAFE - 24 - lblH - (input.swipe ? 56 : 0), w: W - SAFE * 2, h: lblH }, { role: hook ? 'kicker' : 'headline', size: hook ? 150 : 112, minSize: 60, maxLines: hook ? 1 : 2, bg: '#FFFFFF', ink: bc.labelInk, hi: bc.labelInk, align: 'center', board: true, keep: keepOf(input) }),
           swipePill(input, pal, W, H),
-          grain(0.06),
+          grit(0.13),
         ];
       },
     },
@@ -1452,14 +1573,14 @@
           cut ? fieldPhoto(input, pal, W, H, { opacity: 0.55 })
             : { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', ...treatFor(pal) },
           ...(cut ? [cutLayer(input.cutout, { x: right ? 0 : 260, y: 170, w: 820, h: H - 170 }, pal, { align: right ? 'left' : 'right' })] : []),
-          { type: 'shape', shape: 'rect', x: colX, y: colY, w: colW, h: colH, color: pal.deep, opacity: 0.82 },
-          { type: 'shape', shape: 'frame', x: colX, y: colY, w: colW, h: colH, color: pal.accent, lineWidth: 4 },
+          { type: 'shape', shape: 'rect', x: colX, y: colY, w: colW, h: colH, color: '#000000', opacity: 0.7 },
+          { type: 'shape', shape: 'frame', x: colX, y: colY, w: colW, h: colH, color: boardColors(pal, input).labelInk, lineWidth: 4 },
           ...stats.slice(1).map((s, k) => ({ type: 'shape', shape: 'rect', x: colX + 24, y: Math.round(colY + cell * (k + 1)), w: colW - 48, h: 3, color: pal.accent, opacity: 0.7 })),
           ...stats.map((s, k) => numberLayer({ value: statText(s), label: s.label, factId: s.factId }, { x: colX + 14, y: Math.round(colY + cell * k + 22), w: colW - 28, h: cell - 44 }, '#FFFFFF', { align: 'center', size: 170, labelSize: 30, labelColor: pal.toneName === 'esblue' ? '#FFFFFF' : readable(pal.accent, pal.deep, 4.5) })),
           mist(W, H, pal, 0.72, 0.9),
-          esHead(input.headline, pal, { x: SAFE, y: H - SAFE - headH - (input.swipe ? 56 : 0), w: W - SAFE * 2, h: headH }, { size: 124, maxLines: 2, words: input.highlight, align: right ? 'left' : 'center' }),
+          esHead(input.headline, pal, { x: SAFE, y: H - SAFE - headH - (input.swipe ? 56 : 0), w: W - SAFE * 2, h: headH }, { size: 120, minSize: 60, maxLines: 2, words: input.highlight, align: 'center', bg: '#FFFFFF', ink: boardColors(pal, input).labelInk, hi: boardColors(pal, input).labelInk, board: true, keep: keepOf(input) }),
           swipePill(input, pal, W, H),
-          grain(0.05),
+          grit(0.12),
         ];
       },
     },
@@ -1468,27 +1589,29 @@
       about: 'ES cover image: a full-bleed action photo, the team colour rising from the bottom, the headline stacked in staggered highlight boxes.',
       needs: 'an ES photo + a headline',
       kinds: ['person', 'score', 'none', 'record', 'quote', 'money', 'count'],
-      tones: ['vivid', 'dark', 'editorial', 'duotone', 'esblue'],
+      tones: ['dark', 'vivid', 'duotone'],
       fits: i => has.photo(i) && has.headline(i),
       build(input, v) {
+        // gen5 board COVER IMAGE (2335:1869 Browns, 2335:1881 Lakers, 2335:740).
         const { W, H } = frame(input);
         const pal = input.palette;
-        // Alternating box colours only when the second box reads: its text and its edge.
-        const two = v === 1 && pal.boxHi !== pal.boxInk && contrast(pal.boxInk, pal.boxHi) >= 4.5 && contrast(pal.boxHi, pal.toneName === 'editorial' ? '#000000' : pal.mist) >= 1.6;
-        const headH = H >= 1900 ? 560 : H <= 1100 ? 330 : 430;
-        const mistColor = pal.toneName === 'editorial' ? '#000000' : pal.mist;
+        const bc = boardColors(pal, input);
+        const inv = v === 2 && bc.invBox !== '#FFFFFF';
+        const box = inv ? bc.invBox : bc.box;
+        const ink = inv ? bc.invInk : bc.boxInk;
+        const headH = H >= 1900 ? 720 : H <= 1100 ? 400 : 540;
+        const mono = pal.toneName === 'editorial';
+        const hero = pickPhoto(input, ['action', 'celebration', 'portrait']);
         return [
-          { type: 'background', fill: { kind: 'solid', colors: [pal.bg] } },
-          { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', levels: true, ...treatFor(pal) },
-          { type: 'shape', shape: 'gradient', x: 0, y: 0, w: W, h: 260, color: '#000000', stops: [[0, 0.45], [1, 0]] },
-          mist(W, H, pal, 0.5, 0.9, mistColor),
-          kickerPill(input, pal, topX(input), SAFE + 12, { bg: pal.box, color: pal.boxInk, maxW: topW(input, W) }),
-          esHead(input.headline, pal, { x: SAFE, y: H - SAFE - headH - (input.swipe ? 60 : 0), w: W - SAFE * 2 - 40, h: headH }, {
-            size: 140, maxLines: 4, words: input.highlight, stagger: v === 2 ? [0, 120, 60] : v === 1 && !two ? [40, 0] : [0, 48, 96, 30],
-            ...(two ? { colors: [pal.box, pal.boxHi], hi: pal.boxInk } : {}),
+          { type: 'background', fill: { kind: 'solid', colors: [bc.deep] } },
+          { type: 'photo', src: hero.src, focus: hero.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', levels: true, vignette: 0.25, ...(mono ? { grayscale: true } : {}) },
+          { type: 'shape', shape: 'gradient', x: 0, y: 0, w: W, h: 300, color: '#000000', stops: [[0, 0.42], [1, 0]] },
+          boardFade(W, H, mono ? '#000000' : bc.field, 1.35),
+          esHead(input.headline, pal, { x: SAFE, y: H - SAFE - 64 - headH - (input.swipe ? 40 : 0), w: W - SAFE * 2, h: headH }, {
+            size: BOARD.head, minSize: 78, maxLines: 4, words: input.highlight, bg: box, ink, hi: ink, board: true, cascade: CASCADES[v % 3], keep: keepOf(input),
           }),
           swipePill(input, pal, W, H),
-          grain(0.05),
+          grit(0.12),
         ];
       },
     },
@@ -1532,20 +1655,21 @@
       tones: ['dark', 'vivid', 'editorial', 'esblue'],
       fits: i => has.quote(i) && has.photo(i) && words(i.quote.text).length <= 18,
       build(input, v) {
+        // gen5 board QUOTE (2335:1395 / 2335:1418): dark portrait, the quote in
+        // white boxes with quote squares, the credit line under it.
         const { W, H } = frame(input);
         const pal = input.palette;
-        const qH = H >= 1900 ? 620 : H <= 1100 ? 360 : 440;
-        const qY = H - SAFE - 90 - qH;
-        const ink = pal.toneName === 'esblue' ? ES.navy : '#111111';
+        const qH = H >= 1900 ? 700 : H <= 1100 ? 400 : 520;
+        const qY = H - SAFE - 110 - qH;
+        const speaker = pickPhoto(input, ['portrait', 'action', 'celebration']);
         return [
-          { type: 'background', fill: { kind: 'solid', colors: [pal.bg] } },
-          { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', vignette: 0.4, ...treatFor(pal) },
-          mist(W, H, pal, 0.48, 0.9, pal.toneName === 'vivid' ? pal.bg : pal.toneName === 'esblue' ? ES.navy : '#000000'),
-          { type: 'shape', shape: 'quote', x: SAFE + 30, y: qY - 120, w: 120, h: 90, color: '#FFFFFF' },
-          esHead(input.quote.text, pal, { x: SAFE + 30, y: qY, w: W - SAFE * 2 - 60, h: qH }, { role: 'quote', size: 110, minSize: 48, maxLines: 5, words: input.highlight, bg: '#FFFFFF', ink, hi: readable(signature(teamColors(pal)), '#FFFFFF', 3), align: v === 1 ? 'left' : 'center', valign: 'bottom', stagger: v === 2 ? [0, 40] : null }),
-          { type: 'text', role: 'name', text: upper(input.quote.by), x: SAFE, y: H - SAFE - 64, w: W - SAFE * 2 - (input.swipe ? 220 : 0), h: 50, font: 'condensed', size: 36, minSize: 24, maxLines: 1, color: '#FFFFFF', align: v === 1 ? 'left' : 'center', valign: 'bottom', tracking: 1 },
+          { type: 'background', fill: { kind: 'solid', colors: ['#0A0A0A'] } },
+          { type: 'photo', src: speaker.src, focus: speaker.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', levels: true, vignette: 0.5 },
+          { type: 'shape', shape: 'gradient', x: 0, y: Math.round(H * 0.3), w: W, h: H - Math.round(H * 0.3), color: '#000000', stops: [[0, 0], [0.45, 0.55], [1, 0.9]] },
+          esHead(input.quote.text, pal, { x: SAFE, y: qY, w: W - SAFE * 2, h: qH }, { role: 'quote', size: BOARD.quote, minSize: 60, maxLines: 4, words: input.highlight, bg: '#FFFFFF', ink: BOARD.ink, hi: readable(boardColors(pal, input).labelInk, '#FFFFFF', 3), align: v === 1 ? 'left' : 'center', valign: 'bottom', board: true, quoteMarks: true, cascade: v === 2 ? [0, 0.35, 0.15] : null, keep: keepOf(input) }),
+          { type: 'text', role: 'name', text: upper(input.quote.by), x: SAFE, y: H - SAFE - 74, w: W - SAFE * 2 - (input.swipe ? 220 : 0), h: 50, font: 'display', size: BOARD.credit, minSize: 28, maxLines: 1, color: '#FFFFFF', align: v === 1 ? 'left' : 'center', valign: 'bottom' },
           swipePill(input, pal, W, H),
-          grain(0.05),
+          grit(0.12),
         ];
       },
     },
@@ -1706,34 +1830,44 @@
       tones: ['paper', 'light', 'esblue', 'dark'],
       fits: i => barStats(i).length >= 2 && has.headline(i),
       build(input, v) {
+        // gen5 board BAR GRAPH (2335:1297 / 2335:1324): light grey grit page,
+        // a black title box and a white subtitle box, framed 106px bars in the
+        // team colour with the value inside, a tag box over each bar's end, the
+        // player cut out at the foot.
         const { W, H } = frame(input);
         const pal = input.palette;
+        const bc = boardColors(pal, input);
+        const dark = darkTone(pal);
         const bars = barStats(input).slice(0, H <= 1100 ? 3 : 4);
         const max = Math.max(...bars.map(b => b.n));
         const titleY = input.swipe ? 214 : SAFE;
-        const top = titleY + (clean(input.kicker) ? 290 : 250);
-        const cutH = has.cutout(input) ? Math.round(H * 0.42) : 0;
-        const barH = Math.min(120, (H - top - SAFE - cutH * 0.5) / bars.length - 56);
-        const step = barH + 64;
+        const sub = clean(input.kicker) || clean(input.label);
+        const top = titleY + (sub ? 250 : 200);
+        const cutH = has.cutout(input) ? Math.round(H * 0.48) : 0;
+        // No image at the foot: the bars take the page (bigger, more air).
+        const bare = !has.cutout(input) && !has.photo(input);
+        const barH = bare ? Math.min(150, (H - top - SAFE) / bars.length - 70) : Math.max(70, Math.min(106, (H - top - SAFE - cutH * 0.45) / bars.length - 58));
+        const step = barH + (bare ? 70 : 58);
         const barW = W - SAFE * 2;
-        const fill = v === 2 ? pal.box : readable(signature(teamColors(pal)), pal.bg, 3);
-        const valueInk = bestInk(fill);
-        const track = darkTone(pal) ? mix(pal.bg, '#FFFFFF', 0.12) : mix(pal.bg, '#000000', 0.06);
-        const tagBg = darkTone(pal) ? '#FFFFFF' : '#111111';
+        const fill = v === 2 ? BOARD.tag : dark ? bc.labelInk : readable(bc.field, BOARD.paper, 3);
+        const tagBg = v === 2 ? bc.field : fill === BOARD.tag ? '#111111' : BOARD.tag;
+        const page = dark ? bc.deep : BOARD.paper;
         return [
-          paperBg(pal),
-          esHead(input.headline, pal, { x: topX(input), y: titleY, w: topW(input, W), h: 180 }, { size: 86, minSize: 40, maxLines: 2, valign: 'top', bg: darkTone(pal) ? pal.box : '#111111', ink: darkTone(pal) ? pal.boxInk : '#FFFFFF', hi: darkTone(pal) ? pal.boxHi : readable(signature(teamColors(pal)), '#111111', 3) }),
-          ...(clean(input.kicker) ? [{ type: 'text', role: 'kicker', text: upper(input.kicker), x: topX(input), y: titleY + 196, w: topW(input, W), h: 40, font: 'condensed', size: 34, minSize: 24, maxLines: 1, color: pal.ink, align: 'left', valign: 'top' }] : []),
-          ...(has.cutout(input) ? [{ ...cutLayer(input.cutout, { x: v === 1 ? SAFE : W - SAFE - 640, y: H - cutH, w: 640, h: cutH }, pal, { align: v === 1 ? 'left' : 'right', mono: pal.toneName !== 'esblue', rim: false }), maxW: 760 }] : []),
+          { type: 'background', fill: { kind: 'solid', colors: [page] } },
+          grit(dark ? 0.12 : 0.2),
+          esHead(input.headline, pal, { x: topX(input), y: titleY, w: topW(input, W), h: 190 }, { size: 107, minSize: 52, maxLines: 2, valign: 'top', bg: dark ? '#FFFFFF' : '#000000', ink: dark ? '#000000' : '#FFFFFF', hi: dark ? '#000000' : '#FFFFFF', board: true, keep: keepOf(input) }),
+          ...(sub ? [esHead(sub, pal, { x: topX(input), y: titleY + 196, w: topW(input, W), h: 52 }, { role: 'kicker', size: 49, minSize: 30, maxLines: 1, valign: 'top', bg: dark ? bc.field : '#FFFFFF', ink: dark ? '#FFFFFF' : '#000000', board: true })] : []),
+          ...(has.cutout(input) ? [{ ...cutLayer(input.cutout, { x: v === 1 ? 0 : W - 620, y: H - cutH, w: 620, h: cutH }, pal, { align: v === 1 ? 'left' : 'right', mono: v !== 2, rim: false }), maxW: 760 }]
+            : has.photo(input) ? [{ type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: Math.round(top + bars.length * step + 10), w: W, h: H - Math.round(top + bars.length * step + 10), mask: 'rect', grayscale: v !== 2, levels: true, fade: { to: 'top', from: 0.3 } }] : []),
           ...bars.flatMap((b, k) => {
             const y = Math.round(top + k * step);
-            const w = Math.max(240, Math.round((barW * b.n) / max));
+            const w = Math.max(220, Math.round((barW * b.n) / max));
             return [
-              { type: 'shape', shape: 'rect', x: SAFE, y, w: barW, h: barH, color: track },
-              { type: 'shape', shape: 'frame', x: SAFE, y, w: barW, h: barH, color: darkTone(pal) ? '#FFFFFF' : '#111111', lineWidth: 2 },
+              { type: 'shape', shape: 'rect', x: SAFE, y, w: barW, h: barH, color: dark ? mix(page, '#FFFFFF', 0.1) : '#FFFFFF', opacity: dark ? 1 : 0.35 },
               { type: 'shape', shape: 'rect', x: SAFE, y, w, h: barH, color: fill },
-              { type: 'text', role: 'label', text: upper(b.text), x: SAFE + 22, y: y + barH * 0.16, w: Math.max(200, w - 44), h: barH * 0.68, font: 'display', size: 90, minSize: 30, maxLines: 1, color: valueInk, align: 'left', valign: 'middle', guard: false },
-              tagPill(b.label, SAFE + w - 380, y - 44, pal, { h: 40, maxW: 380, align: 'right', bg: tagBg, ink: bestInk(tagBg) }),
+              { type: 'shape', shape: 'frame', x: SAFE, y, w: barW, h: barH, color: dark ? '#FFFFFF' : '#000000', lineWidth: 2 },
+              { type: 'text', role: 'label', text: upper(b.text), x: SAFE + 40, y: y + barH * 0.14, w: Math.max(180, w - 60), h: barH * 0.72, font: 'display', size: 90, minSize: 30, maxLines: 1, color: bestInk(fill), align: 'left', valign: 'middle', guard: false },
+              tagPill(b.label, SAFE + w - 380, y - 40, pal, { h: 36, maxW: 380, align: 'right', bg: tagBg, ink: bestInk(tagBg) }),
             ];
           }),
         ];
@@ -1827,29 +1961,35 @@
       needs: 'a record / milestone story (input.record, or record words in the brief) + a cut-out (or photo)',
       kinds: ['record', 'count', 'money'],
       tones: ['vivid', 'esblue', 'dark'],
-      fits: i => Boolean(heroStat(i)) && (has.cutout(i) || has.photo(i)) && has.headline(i) && isRecordStory(i),
+      fits: i => Boolean(heroStat(i)) && has.cutout(i) && has.headline(i) && isRecordStory(i),
       build(input, v) {
+        // gen5 board stats post with a label box ("HISTORY" 2335:779,
+        // "RECORD ALERT!" 2335:1725): the number huge, the player bleeding off
+        // the foot, a white box with the alert in the team colour.
         const { W, H } = frame(input);
         const pal = input.palette;
+        const bc = boardColors(pal, input);
         const st = heroStat(input);
-        const top = 214;
-        const numH = H >= 1900 ? 560 : H <= 1100 ? 260 : 380;
+        const numTop = SAFE + LOGO.h + SAFE + 2;
+        const numH = H >= 1900 ? 420 : H <= 1100 ? 240 : 300;
         const cut = has.cutout(input);
-        const alert = /record|history|milestone|all-time|first ever|alert/i.test(input.kicker || '') ? upper(input.kicker) : 'RECORD ALERT!';
-        const cutY = top + numH * 0.55;
-        // Never the same phrase twice: a headline that is the alert itself is not repeated.
-        const sameLine = squashed(input.headline).replace(/[^a-z ]/g, '').trim() === squashed(alert).replace(/[^a-z ]/g, '').trim();
+        const alert = isHook(input.kicker) ? upper(input.kicker) : /\bhistory|historic|first\b/i.test(input.headline || '') ? 'HISTORY' : 'RECORD ALERT!';
+        const cutTop = Math.round(numTop + numH * 0.58);
+        const src = sourcePhoto(input);
+        const caption = st.label || input.label || '';
         return [
-          { type: 'background', fill: { kind: 'radial', colors: [mix(pal.bg, '#FFFFFF', 0.14), pal.bg], at: { x: 0.5, y: 0.32 } }, texture: 'rays', textureColor: pal.ink, textureOpacity: 0.08 },
-          ...(cut ? [] : [{ type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: Math.round(H * 0.42), w: W, h: H - Math.round(H * 0.42), mask: 'rect', fade: { to: 'top', from: 0.35 }, ...treatFor(pal) }]),
-          numberLayer({ ...st, label: '' }, { x: SAFE, y: top, w: W - SAFE * 2, h: numH }, pal.ink, { align: 'center', size: numH * 1.4, noLabel: true, fx: { shadow: { color: '#000000', blur: 30, x: 0, y: 10, alpha: 0.3 } } }),
-          ...(cut ? [{ ...cutLayer(input.cutout, { x: 90, y: cutY, w: W - 180, h: H - cutY }, pal, { align: v === 1 ? 'right' : 'center' }), maxW: 1100 }] : []),
-          mist(W, H, pal, 0.74, 0.9),
-          esHead(alert, pal, { x: SAFE, y: top + numH - 30, w: W - SAFE * 2, h: 120 }, { role: 'kicker', size: 104, minSize: 50, maxLines: 1, align: 'center', valign: 'top', fx: { rotate: v === 0 ? -4 : 3 }, ...(v === 1 ? { bg: pal.ink, ink: bestInk(pal.ink) } : {}) }),
-          ...(st.label ? [tagPill(st.label, (W - 520) / 2, top + numH + 100, pal, { h: 48, maxW: 520, align: 'center' })] : []),
-          sameLine ? null : { type: 'text', role: 'headline', text: upper(input.headline), x: SAFE, y: H - SAFE - 190 - (input.swipe ? 56 : 0), w: W - SAFE * 2, h: 190, font: 'display', size: 96, minSize: 44, maxLines: 2, lineHeight: 0.9, color: pal.ink, align: 'center', valign: 'bottom', highlight: { words: (input.highlight || []).map(upper), color: pal.accent }, fx: { shadow: { color: '#000000', blur: 24, x: 0, y: 6, alpha: 0.45 } } },
+          { type: 'background', fill: { kind: 'solid', colors: [bc.field] } },
+          ...(src?.src ? [{ type: 'photo', src: src.src, focus: src.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', zoom: 1.25, blur: cut ? 16 : 0, levels: !cut, fx: { opacity: cut ? 0.6 : 0.9 } }] : []),
+          { type: 'shape', shape: 'gradient', x: 0, y: 0, w: W, h: Math.round(H * 0.5), color: bc.deep, stops: [[0, 0.6], [1, 0]] },
+          { ...numberLayer({ ...st, label: '' }, { x: SAFE, y: numTop, w: W - SAFE * 2, h: numH }, '#FFFFFF', { align: 'center', size: 700, noLabel: true }), valign: 'top', board: true, overlap: 0.42 },
+          ...(cut ? [{ ...cutLayer(input.cutout, { x: 0, y: cutTop, w: W, h: H - cutTop }, pal, { align: v === 1 ? 'right' : 'center', rim: false }), bleed: true, maxW: Math.round(W * 1.05) }] : []),
+          boardFade(W, H, bc.field, 1.2),
+          ...(caption ? [{ type: 'text', role: 'label', text: upper(caption), x: W - SAFE - 440, y: numTop + numH + 22, w: 440, h: 104, font: 'display', size: BOARD.caption, minSize: 34, maxLines: 2, lineHeight: 0.86, color: '#FFFFFF', align: 'right', valign: 'top', phrase: true, fx: { shadow: { color: '#000000', blur: 18, x: 0, y: 4, alpha: 0.45 } } }] : []),
+          esHead(alert, pal, { x: SAFE, y: H - SAFE - 250 - (input.swipe ? 56 : 0), w: W - SAFE * 2, h: 170 }, { role: 'kicker', size: 164, minSize: 70, maxLines: 1, bg: v === 2 ? bc.labelInk : '#FFFFFF', ink: v === 2 ? '#FFFFFF' : bc.labelInk, hi: v === 2 ? '#FFFFFF' : bc.labelInk, align: 'center', board: true }),
+          // Never the same phrase twice: a headline that is the alert itself is not repeated.
+          squashed(input.headline).replace(/[^a-z ]/g, '').trim() === squashed(alert).replace(/[^a-z ]/g, '').trim() ? null : { type: 'text', role: 'headline', text: upper(input.headline), x: SAFE, y: H - SAFE - 64 - (input.swipe ? 56 : 0), w: W - SAFE * 2, h: 64, font: 'display', size: 50, minSize: 30, maxLines: 1, color: '#FFFFFF', align: 'center', valign: 'bottom', phrase: true },
           swipePill(input, pal, W, H),
-          grain(0.06),
+          grit(0.13),
         ];
       },
     },
@@ -1968,35 +2108,30 @@
       tones: ['light', 'paper', 'editorial'],
       fits: i => Boolean(heroStat(i)) && (has.cutout(i) || has.photo(i)) && has.headline(i),
       build(input, v) {
+        // gen5: the board's light page (bar graph 2335:1297 / listicle 2335:2341):
+        // #E8E8E8 with grit, a black title box under the top edge, the number
+        // huge in the team colour, its label in a white box, the player cut out
+        // in black and white rising from the foot.
         const { W, H } = frame(input);
         const pal = input.palette;
+        const bc = boardColors(pal, input);
         const st = heroStat(input);
         const cut = has.cutout(input);
         const right = v !== 1;
-        const split = Math.round(W * 0.46);
-        const panelX = right ? split : SAFE;
-        const panelW = W - SAFE - split;
-        const panelY = Math.round(H * 0.32);
-        const panelH = H - panelY - SAFE;
-        const tx = right ? SAFE : panelX + panelW + 34;
-        const tw = right ? panelX - SAFE - 34 : W - SAFE - tx;
-        const panel = signature(teamColors(pal));
-        const top = input.swipe ? 214 : 150;
-        const numH = H <= 1100 ? 250 : 330;
-        const headY = top + 60 + numH + 100;
+        const top = input.swipe ? 214 : SAFE;
+        const numColor = readable(bc.field, BOARD.paper, 3);
+        const numH = H <= 1100 ? 230 : H >= 1900 ? 380 : 300;
+        const numY = Math.max(top + 230, Math.round(H * 0.56 - numH / 2));
+        const cutTop = Math.round(H * 0.3);
         return [
-          paperBg(pal),
-          { type: 'shape', shape: 'rect', x: panelX, y: panelY, w: panelW, h: panelH, color: panel, radius: 16 },
+          { type: 'background', fill: { kind: 'solid', colors: [BOARD.paper] } },
+          grit(0.2),
+          esHead(input.headline, pal, { x: topX(input), y: top, w: topW(input, W), h: 200 }, { size: 107, minSize: 54, maxLines: 2, valign: 'top', bg: v === 2 ? numColor : '#000000', ink: '#FFFFFF', hi: '#FFFFFF', board: true, keep: keepOf(input) }),
+          { ...numberLayer({ ...st, label: '' }, { x: SAFE, y: numY, w: W - SAFE * 2, h: numH }, numColor, { align: right ? 'left' : 'right', size: 520, noLabel: true }), valign: 'top', board: true, overlap: 0.3 },
+          ...(st.label ? [esHead(st.label, pal, { x: right ? SAFE : W - SAFE - 520, y: numY + numH + 18, w: 520, h: 64 }, { role: 'label', size: 52, minSize: 30, maxLines: 1, valign: 'top', align: right ? 'left' : 'right', bg: '#FFFFFF', ink: '#000000', hi: '#000000', board: true })] : []),
           cut
-            ? { ...cutLayer(input.cutout, { x: panelX - 30, y: panelY - 240, w: panelW + 60, h: panelH + 240 }, pal, { align: 'center', mono: pal.toneName === 'editorial' }), maxW: panelW + 120 }
-            : { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: panelX, y: panelY, w: panelW, h: panelH, mask: 'round', radius: 16, ...treatFor(pal) },
-          { type: 'text', role: 'kicker', text: upper(input.kicker || ''), x: right ? topX(input) : tx, y: top, w: right ? Math.min(tw, topW(input, W)) : Math.min(tw, W - SAFE - LOGO.w - SAFE - tx), h: 40, font: 'condensed', size: 32, minSize: 22, maxLines: 1, color: pal.accent, align: 'left', valign: 'top', tracking: 3 },
-          numberLayer({ ...st, label: '' }, { x: tx, y: top + 60, w: tw, h: numH }, pal.accent, { align: 'left', size: 460, noLabel: true }),
-          tagPill(st.label, tx, top + 60 + numH + 24, pal, { maxW: tw, h: 46 }),
-          { type: 'shape', shape: 'rect', x: tx, y: headY, w: 110, h: 10, color: pal.accent },
-          // gen4: the headline sits on the foot line, level with the panel (a short
-          // headline no longer leaves the lower corner empty), set as big as it fits.
-          { type: 'text', role: 'headline', text: upper(input.headline), x: tx, y: headY + 34, w: tw, h: H - SAFE - headY - 34, font: 'display', size: 170, minSize: 44, maxLines: 6, lineHeight: 0.9, color: pal.ink, align: 'left', valign: 'bottom', highlight: { words: (input.highlight || []).map(upper), color: pal.accent } },
+            ? { ...cutLayer(input.cutout, { x: right ? Math.round(W * 0.22) : 0, y: cutTop, w: Math.round(W * 0.78), h: H - cutTop }, pal, { align: right ? 'right' : 'left', mono: true, rim: false }), bleed: true, maxW: Math.round(W * 0.85) }
+            : { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: right ? Math.round(W * 0.42) : 0, y: cutTop, w: Math.round(W * 0.58), h: H - cutTop, mask: 'rect', grayscale: true, levels: true, fade: { to: 'top', from: 0.25 } },
         ];
       },
     },
@@ -2054,6 +2189,13 @@
       const unit = `${clean(s.prefix)}|${clean(s.suffix)}|${/%/.test(s.display || '') ? '%' : ''}`;
       return { n, unit, text: statText(s), label: s.label || s.who || '', factId: s.factId };
     }).filter(s => Number.isFinite(s.n) && s.n > 0);
+    // gen5: a two-sided comparison (a final score, yards gained) is the
+    // board's bar graph too: one bar a side, the side as its tag.
+    if (list.length < 2 && i.compare?.a?.value && i.compare?.b?.value) {
+      const side = x => ({ n: Number(String(x.value).replace(/[^0-9.]/g, '')), unit: '', text: clean(x.display || x.value), label: clean(x.label), factId: x.factId || i.compare.factId || '' });
+      const pair = [side(i.compare.a), side(i.compare.b)].filter(x => Number.isFinite(x.n) && x.n > 0);
+      return pair.length === 2 ? pair : [];
+    }
     if (list.length < 2) return [];
     const unit = list[0].unit;
     const same = list.filter(s => s.unit === unit);
@@ -2120,6 +2262,20 @@
   const fitting = (input = {}) => { const i = normalizeInput(input); return ARCHETYPES.filter(a => a.fits(i)).map(a => a.id); };
 
   // A scene from an archetype and its inputs (variant 0-2).
+  // gen5 (owner: "a stray short ES-blue rule sits top-left with nothing
+  // attached"): a short accent rule stays only next to words it underlines.
+  function dropOrphanRules(layers) {
+    const words = layers.filter(l => (l.type === 'text' || l.type === 'pill' || l.type === 'number') && clean(l.text || l.value || ''));
+    return layers.filter(l => {
+      if (!(l.type === 'shape' && l.shape === 'rect' && (l.h || 0) <= 14 && (l.w || 0) <= 300 && (l.w || 0) > (l.h || 0))) return true;
+      return words.some(t => {
+        const tx = t.x || 0; const ty = t.y || 0; const tw = t.w || t.maxW || 0; const th = t.h || 0;
+        const near = l.y >= ty - 60 && l.y <= ty + th + 60;
+        const across = l.x < tx + tw + 20 && l.x + l.w > tx - 20;
+        return near && across;
+      });
+    });
+  }
   function build(id, input = {}, variant = 0) {
     const archetype = BY_ID[id];
     if (!archetype) throw new Error(`Unknown composition "${id}".`);
@@ -2128,7 +2284,7 @@
     // Looks always draw in a tone; v1/v2 archetypes only when the director asks for one they support.
     const tone = archetype.looks ? toneFor(archetype, norm, variant) : norm.tone && archetype.tones.includes(norm.tone) ? norm.tone : '';
     const p = tone ? tonePalette(base, tone) : base;
-    const layers = archetype.build({ ...norm, palette: p }, variant).filter(Boolean)
+    const layers = dropOrphanRules(archetype.build({ ...norm, palette: p }, variant).filter(Boolean))
       .filter(layer => !layer.hidden)
       // gen4: no empty tag boxes, and no washed-out picture boxes (an image
       // that is not a full-bleed field is either shown properly or not at all).
@@ -2294,7 +2450,9 @@
       if ((fx.glow.alpha ?? 0.5) > L.glowAlpha) { fx.glow.alpha = L.glowAlpha; note('glow strength limited'); }
       if ((fx.glow.blur || 0) > L.glowBlur) { fx.glow.blur = L.glowBlur; note('glow size limited'); }
     }
-    if (layer.type === 'shape' && layer.shape === 'grain' && (layer.opacity ?? 0) > L.grain) { layer.opacity = L.grain; note('grain limited'); }
+    // gen5: the board's print grit (a texture, not noise) may run a little heavier.
+    const grainCap = layer.kind === 'grit' ? L.grit : L.grain;
+    if (layer.type === 'shape' && layer.shape === 'grain' && (layer.opacity ?? 0) > grainCap) { layer.opacity = grainCap; note('grain limited'); }
     if (layer.type === 'shape' && layer.shape === 'leak' && (layer.opacity ?? 1) > L.leak) { layer.opacity = L.leak; note('light leak limited'); }
     if (layer.type === 'background' && layer.texture) {
       const cap = layer.texture === 'grain' ? L.grain : L.texture;
@@ -2652,6 +2810,38 @@
         img.data[i] = v; img.data[i + 1] = v; img.data[i + 2] = v; img.data[i + 3] = 255;
       }
       g.putImageData(img, 0, 0);
+    } else if (kind === 'grit') {
+      // gen5 board grit: print-worn blotches (value noise, 3 octaves) plus a
+      // hard speckle, mid-grey centred so it reads in overlay on any colour.
+      const N = 384;
+      c = makeCanvas(N, N);
+      const g = c.getContext('2d');
+      const img = g.createImageData(N, N);
+      const rnd = prng(29);
+      const octave = cells => {
+        const grid = Array.from({ length: (cells + 1) * (cells + 1) }, () => rnd());
+        const at = (i, j) => grid[(j % cells) * (cells + 1) + (i % cells)];
+        return (x, y) => {
+          const fx = (x / N) * cells; const fy = (y / N) * cells;
+          const i = Math.floor(fx); const j = Math.floor(fy);
+          const u = fx - i; const v = fy - j;
+          const sm = t => t * t * (3 - 2 * t);
+          const a = at(i, j) + (at(i + 1, j) - at(i, j)) * sm(u);
+          const b = at(i, j + 1) + (at(i + 1, j + 1) - at(i, j + 1)) * sm(u);
+          return a + (b - a) * sm(v);
+        };
+      };
+      const o1 = octave(6); const o2 = octave(16); const o3 = octave(48);
+      for (let y = 0; y < N; y += 1) {
+        for (let x = 0; x < N; x += 1) {
+          const blot = o1(x, y) * 0.5 + o2(x, y) * 0.3 + o3(x, y) * 0.2;
+          let v = 128 + (blot - 0.5) * 150 + (rnd() - 0.5) * 70;
+          if (rnd() < 0.012) v = rnd() < 0.5 ? 20 : 235;
+          const i = (y * N + x) * 4;
+          img.data[i] = v; img.data[i + 1] = v; img.data[i + 2] = v; img.data[i + 3] = 255;
+        }
+      }
+      g.putImageData(img, 0, 0);
     } else if (kind === 'grid') {
       c = makeCanvas(60, 60);
       const g = c.getContext('2d');
@@ -2930,11 +3120,93 @@
 
   function boxMetrics(layer, cap) {
     const b = layer.box || {};
+    // gen5 board boxes (Figma 2335:1869 / 2335:1418): tight pads, touching lines.
+    if (b.style === 'board') return { padX: b.pad ?? Math.round(cap * 0.17), padY: b.padY ?? Math.round(cap * 0.15), gap: b.gap ?? 0 };
     return { padX: b.pad ?? Math.round(cap * 0.34), padY: b.padY ?? Math.round(cap * 0.2), gap: b.gap ?? Math.round(cap * 0.16) };
   }
-  // ES staggered boxes: each line steps in by box.stagger[i] px (cycled).
-  const staggerMax = layer => (Array.isArray(layer.box?.stagger) && layer.box.stagger.length ? Math.max(0, ...layer.box.stagger.map(n => Number(n) || 0)) : 0);
-  const staggerAt = (layer, i) => (Array.isArray(layer.box?.stagger) && layer.box.stagger.length ? Number(layer.box.stagger[i % layer.box.stagger.length]) || 0 : 0);
+  // ES staggered boxes: each line steps in by box.stagger[i] px (cycled), or
+  // by box.cascade[i] cap heights (gen5: the board's deliberate steps, 0.4-1.4
+  // caps, never a few accidental pixels).
+  const staggerList = (layer, cap = 0) => (Array.isArray(layer.box?.cascade) && layer.box.cascade.length && cap
+    ? layer.box.cascade.map(n => Math.round((Number(n) || 0) * cap))
+    : Array.isArray(layer.box?.stagger) ? layer.box.stagger.map(n => Number(n) || 0) : []);
+  const staggerMax = (layer, cap = 0) => { const list = staggerList(layer, cap); return list.length ? Math.max(0, ...list) : 0; };
+  const staggerAt = (layer, i, cap = 0) => { const list = staggerList(layer, cap); return list.length ? list[i % list.length] : 0; };
+
+  // gen5 phrase breaks (the board stacks one idea per line: "PERFECT / TIMING /
+  // TO SACK / SANDERS!", "LEBRON / TO BREAK / ANOTHER / NBA RECORD"). Lines
+  // break after punctuation or before a joining word, never after one ("TO",
+  // "THE") and never inside a name (layer.keep).
+  const JOIN_AFTER = new Set(['A', 'AN', 'THE', 'TO', 'OF', 'IN', 'ON', 'AT', 'BY', 'FOR', 'WITH', 'FROM', 'HIS', 'HER', 'THEIR', 'ITS', 'OUR', 'MY', 'YOUR', 'AND', 'OR', 'BUT', 'AS', 'VS', 'VS.', 'THAN', 'INTO', 'NO.', 'MR.', 'DR.', 'ST.', 'NOT', 'WILL', 'CAN', 'IS', 'ARE', 'WAS', 'WERE', 'BE', 'HAS', 'HAVE', 'HAD', 'BEFORE', 'AFTER', 'OVER', 'AGAINST', 'WHILE', 'DESPITE', 'DURING', 'UNTIL', 'SINCE', 'BEHIND', 'WHEN', 'IF', 'ABOUT', 'WITHOUT', 'UNDER', 'PAST', 'WHO', 'WHICH', 'THAT', 'THIS', 'THESE']);
+  const BREAK_BEFORE = new Set(['AS', 'AFTER', 'BEFORE', 'WITH', 'WHILE', 'BUT', 'AND', 'FOR', 'TO', 'IN', 'ON', 'AT', 'BY', 'FROM', 'OVER', 'VS', 'VS.', 'AGAINST', 'THAN', 'WHO', 'WHICH', 'DESPITE', 'SINCE', 'DURING', 'INTO', 'BEHIND', 'UNTIL', 'WHEN', 'IF', 'OR', 'THEN', 'YET', 'SO']);
+  function breakCost(tokens, i, keepPairs) {
+    const a = tokens[i];
+    const b = tokens[i + 1] || '';
+    if (keepPairs.has(i)) return 12;
+    if (/[.,:;!?]["”']?$/.test(a) || /^["“]/.test(b) || b === '-' || a === '-') return 0;
+    const A = a.toUpperCase().replace(/[^\w.']/g, '');
+    const B = b.toUpperCase().replace(/[^\w.']/g, '');
+    if (JOIN_AFTER.has(A)) return 9;
+    if (/^[$#]?\d[\d,.]*[+%]?$/.test(a) && /^[A-Z]/i.test(b)) return 6;
+    if (BREAK_BEFORE.has(B)) return 1;
+    return 3;
+  }
+  // Pairs of token indexes that must stay on one line (names in layer.keep).
+  function keepPairsOf(tokens, keep = []) {
+    const out = new Set();
+    const norm = t => t.toUpperCase().replace(/[^\w']/g, '');
+    const toks = tokens.map(norm);
+    (keep || []).map(k => words(k).map(norm)).filter(k => k.length > 1).forEach(k => {
+      for (let i = 0; i + k.length <= toks.length; i += 1) {
+        if (k.every((w, j) => toks[i + j] === w || toks[i + j] === `${w}S` || toks[i + j] === `${w}'S`)) for (let j = 0; j < k.length - 1; j += 1) out.add(i + j);
+      }
+    });
+    return out;
+  }
+  // Best line breaks at one size: every line fits, at most maxLines lines,
+  // the least total break cost (plus a little rag). null when nothing fits.
+  function phraseWrap(g, text, width, track, maxLines, keep) {
+    const tokens = words(text);
+    const n = tokens.length;
+    if (!n) return null;
+    const keepPairs = keepPairsOf(tokens, keep);
+    const widthOf = (i, j) => textW(g, tokens.slice(i, j).join(' '), track);
+    // best[j][k] = min cost to set tokens[0..j) in k lines.
+    const best = Array.from({ length: n + 1 }, () => Array(maxLines + 1).fill(null));
+    best[0][0] = { cost: 0, worst: 0, prev: -1 };
+    for (let j = 1; j <= n; j += 1) {
+      for (let i = j - 1; i >= 0; i -= 1) {
+        const w = widthOf(i, j);
+        if (w > width) break;
+        const brk = j < n ? breakCost(tokens, j - 1, keepPairs) : 0;
+        const rag = (j < n ? 1.2 * (1 - w / width) ** 2 : 0) + (j - i === 1 && tokens[i].replace(/[^\w]/g, '').length <= 4 && n > 2 ? 4 : 0);
+        for (let k = 1; k <= maxLines; k += 1) {
+          const from = best[i][k - 1];
+          if (!from) continue;
+          const cost = from.cost + brk + rag;
+          const cur = best[j][k];
+          const orphan = j - i === 1 && j < n && n > 2 && tokens[i].replace(/[^\w]/g, '').length <= 4 ? 9 : 0;
+          if (!cur || cost < cur.cost - 1e-9) best[j][k] = { cost, worst: Math.max(from.worst, brk, orphan), prev: i };
+        }
+      }
+    }
+    let pick = null;
+    let lines = 0;
+    for (let k = 1; k <= maxLines; k += 1) {
+      const c = best[n][k];
+      // One more line costs a little: fewer, fuller lines win ties.
+      if (c && (!pick || c.cost + k * 0.4 < pick.cost + lines * 0.4)) { pick = c; lines = k; }
+    }
+    if (!pick) return null;
+    const out = [];
+    let j = n;
+    for (let k = lines; k >= 1; k -= 1) {
+      const c = best[j][k];
+      out.unshift(tokens.slice(c.prev, j).join(' '));
+      j = c.prev;
+    }
+    return { lines: out, cost: pick.cost, worst: pick.worst };
+  }
   // Vertical metrics for one size: where the first baseline sits from the box
   // top, the line step, and the block height for n lines.
   function vMetrics(g, layer, size) {
@@ -2951,6 +3223,7 @@
 
   function fitText(g, layer) {
     const font = layer.font || 'display';
+    const phrased = Boolean(layer.phrase) && font === 'display';
     const maxLines = layer.maxLines || 3;
     let size = layer.size || 100;
     const min = layer.minSize || Math.min(size, 24);
@@ -2959,20 +3232,35 @@
       const track = layer.tracking ?? autoTracking(font, sz);
       g.font = fontString(font, sz, layer.weight);
       setTracking(g, track);
-      const avail = layer.w - (vm.box ? vm.box.padX * 2 + staggerMax(layer) : 0);
+      const markW = layer.quoteMarks && vm.box ? vm.cap + vm.box.padY * 2 : 0;
+      const avail = layer.w - (vm.box ? vm.box.padX * 2 + staggerMax(layer, vm.cap) : 0) - markW;
+      if (phrased) {
+        const pw = phraseWrap(g, layer.text, avail, track, maxLines, layer.keep);
+        return { vm, track, avail, lines: pw ? pw.lines : wrap(g, layer.text, avail, track), worst: pw ? pw.worst : 99, phrased: Boolean(pw) };
+      }
       const lines = wrap(g, layer.text, avail, track);
       return { vm, track, avail, lines };
     };
     const finish = (sz, a, overflow) => {
       let lines = a.lines || [layer.text];
+      if (!overflow && a.phrased) return { size: sz, lines, lh: a.vm.lh, vm: a.vm, track: a.track, overflow };
       if (!overflow) lines = layer.role === 'body' || font === 'body' ? unwidow(g, lines, a.avail, a.track) : (layer.balance === false ? lines : balance(g, lines, a.avail, a.track));
       return { size: sz, lines, lh: a.vm.lh, vm: a.vm, track: a.track, overflow };
     };
+    // gen5: phrase-set display lines (layer.phrase): the largest size that
+    // fits wins unless its breaks split a phrase; then up to 22% smaller for
+    // clean breaks, else the largest fit.
+    let first = null;
     while (size >= min) {
       const a = attempt(size);
-      if (a.lines && a.lines.length <= maxLines && a.vm.height(a.lines.length) <= layer.h + 1) return finish(size, a, false);
+      if (a.lines && a.lines.length <= maxLines && a.vm.height(a.lines.length) <= layer.h + 1) {
+        if (!phrased || a.worst < 9) return finish(size, a, false);
+        if (!first) first = { size, a };
+        if (size < first.size * 0.78) break;
+      }
       size -= Math.max(1, Math.round(size * 0.04));
     }
+    if (first) return finish(first.size, first.a, false);
     const a = attempt(min);
     const lines = a.lines || [layer.text];
     const overflow = !a.lines || lines.length > maxLines || a.vm.height(Math.min(lines.length, maxLines)) > layer.h + 1;
@@ -3076,9 +3364,11 @@
   function drawTexture(g, kind, color, opacity, W, H, s, at = { x: 0.5, y: 0.4 }) {
     g.save();
     g.globalAlpha = opacity;
-    if (kind === 'grain') {
+    if (kind === 'grain' || kind === 'grit') {
       g.globalCompositeOperation = 'overlay';
-      g.fillStyle = g.createPattern(texture('grain'), 'repeat');
+      const pat = g.createPattern(texture(kind), 'repeat');
+      if (kind === 'grit' && pat.setTransform && typeof DOMMatrix !== 'undefined') pat.setTransform(new DOMMatrix().scale(Math.max(1, s * 1.4), Math.max(1, s * 1.4)));
+      g.fillStyle = pat;
       g.fillRect(0, 0, W * s, H * s);
     } else if (kind === 'halftone') {
       g.fillStyle = color;
@@ -3144,7 +3434,7 @@
     const { x = 0, y = 0, w = 0, h = 0 } = layer;
     if (layer.shape === 'grain') {
       g.restore();
-      drawTexture(g, 'grain', '#FFFFFF', layer.opacity ?? 0.08, W, H, s);
+      drawTexture(g, layer.kind === 'grit' ? 'grit' : 'grain', '#FFFFFF', layer.opacity ?? 0.08, W, H, s);
       return;
     }
     if (layer.shape === 'texture') {
@@ -3466,11 +3756,19 @@
     const trimmed = trim(img);
     const { x, y, w, h } = layer;
     // maxW lets a wide subject (a swing, a stretch) grow past its box width.
-    const scale = Math.min(h / trimmed.height, (layer.maxW || w) / trimmed.width);
+    // gen5 bleed (the board's stats posts): a full-length figure is set larger
+    // than its box, head at the box top and legs past the canvas foot, so the
+    // head and torso fill the post. A tight (half-body) cut-out fits as before.
+    // A bust or half-body cut-out (cut by its photo's frame) sits on the canvas
+    // foot so its straight edge is the canvas edge, never a line mid-post.
+    const aspect = trimmed.height / Math.max(1, trimmed.width);
+    const full = aspect > 1.7;
+    const bleed = layer.bleed ? (full ? 1.5 : aspect > 1.25 ? 1.0 : 0.95) : 1;
+    const scale = Math.min((h * bleed) / trimmed.height, (layer.maxW || w) / trimmed.width);
     const dw = trimmed.width * scale;
     const dh = trimmed.height * scale;
     let dx = layer.align === 'left' ? x : layer.align === 'right' ? x + w - dw : x + (w - dw) / 2;
-    let dy = layer.anchor === 'center' ? y + (h - dh) / 2 : layer.anchor === 'top' ? y : y + h - dh;
+    let dy = layer.bleed ? (full ? y : y + h - dh) : layer.anchor === 'center' ? y + (h - dh) / 2 : layer.anchor === 'top' ? y : y + h - dh;
     // Work at the drawn size (sharp, and the rim width is in canvas px).
     const cw = Math.max(1, Math.round(dw * s));
     const ch = Math.max(1, Math.round(dh * s));
@@ -3575,7 +3873,8 @@
         const head = { ...cut.head, x: cut.head.x + mx, y: cut.head.y + my };
         if (head.x < 0 || head.x + head.w > W || head.y < 0 || head.y + head.h * 0.8 > H - SAFE * 0.5) return false;
         if (Math.min(W, cut.x + mx + cut.w) - Math.max(0, cut.x + mx) < cut.w * 0.7) return false;
-        if (withNums && nums.some(n => boxesMeet(head, n.box, GAP))) return false;
+        // gen5: a board number may sit behind the head (n.overlap of its foot).
+        if (withNums && nums.some(n => boxesMeet(head, n.overlap ? { ...n.box, h: n.box.h * (1 - n.overlap) } : n.box, n.overlap ? 0 : GAP))) return false;
         const face = faceOf(head);
         return !over.some(i => boxesMeet(face, i.box, 4));
       };
@@ -3677,8 +3976,8 @@
     setTracking(g, fit.track);
     const placed = fit.lines.map((line, i) => {
       const width = textW(g, line, fit.track);
-      const padX = vm.box ? vm.box.padX : 0;
-      const shift = vm.box ? staggerAt(layer, i) * (layer.align === 'right' ? -1 : layer.align === 'center' ? 0.5 : 1) : 0;
+      const padX = (vm.box ? vm.box.padX : 0) + (layer.quoteMarks && vm.box && layer.align !== 'center' ? (vm.cap + vm.box.padY * 2) * (layer.align === 'right' ? 1 : 1) : 0);
+      const shift = vm.box ? staggerAt(layer, i, vm.cap) * (layer.align === 'right' ? -1 : layer.align === 'center' ? 0.5 : 1) : 0;
       const lx = (layer.align === 'center' ? layer.x + (layer.w - width) / 2 : layer.align === 'right' ? layer.x + layer.w - width - padX : layer.x + padX) + shift;
       return { line, width, lx, base: y0 + vm.first + i * vm.step };
     });
@@ -3734,6 +4033,27 @@
         g.fillStyle = colors[i % colors.length];
         g.fillRect((p.lx - vm.box.padX) * s, (p.base - vm.cap - vm.box.padY) * s, (p.width + vm.box.padX * 2) * s, (vm.cap + vm.box.padY * 2) * s);
       });
+      // gen5 board quote squares (2335:1418): 65% black, the size of a box
+      // line, before the first line and after the last.
+      if (layer.quoteMarks && placed.length) {
+        const side = vm.cap + vm.box.padY * 2;
+        const mark = (x, y, glyph) => {
+          g.save();
+          g.fillStyle = 'rgba(0,0,0,0.65)';
+          g.fillRect(x * s, y * s, side * s, side * s);
+          g.fillStyle = '#FFFFFF';
+          g.font = fontString('display', side * 2.1 * s);
+          setTracking(g, 0);
+          g.textAlign = 'center';
+          g.textBaseline = 'alphabetic';
+          g.fillText(glyph, (x + side / 2) * s, (y + side * 1.38) * s);
+          g.restore();
+        };
+        const a = placed[0];
+        const z = placed[placed.length - 1];
+        mark(a.lx - vm.box.padX - side, a.base - vm.cap - vm.box.padY, '\u201C');
+        mark(z.lx + z.width + vm.box.padX, z.base - vm.cap - vm.box.padY, '\u201D');
+      }
     }
     const paint = (fillFor) => placed.forEach(p => {
       let cursor = p.lx;
@@ -3837,6 +4157,8 @@
     const avail = layer.h - labelCap - labelGap;
     const ratio = capRatio(g, 'display');
     let size = Math.min(layer.size || 400, avail / ratio);
+    // gen5: the board sets a "+" at full size ("1000+"); other units half size.
+    const us = layer.unitScale || (suffix === '+' && layer.board ? 1 : 0.5);
     const measure = sz => {
       g.font = fontString('display', sz);
       const tr = autoTracking('display', sz);
@@ -3845,7 +4167,8 @@
       g.font = fontString('display', sz * 0.5);
       setTracking(g, autoTracking('display', sz * 0.5));
       const pre = prefix ? textW(g, prefix, autoTracking('display', sz * 0.5)) + sz * 0.03 : 0;
-      const suf = suffix ? textW(g, suffix, autoTracking('display', sz * 0.5)) + sz * 0.035 : 0;
+      g.font = fontString('display', sz * us);
+      const suf = suffix ? textW(g, suffix, autoTracking('display', sz * us)) + sz * 0.035 : 0;
       return { main, pre, suf, total: main + pre + suf };
     };
     let m = measure(size);
@@ -3882,16 +4205,16 @@
     g.fillStyle = layer.color;
     g.fillText(value, (x0 + m.pre) * s, base * s);
     if (suffix) {
-      g.font = fontString('display', size * 0.5 * s);
-      setTracking(g, autoTracking('display', size * 0.5) * s);
+      g.font = fontString('display', size * us * s);
+      setTracking(g, autoTracking('display', size * us) * s);
       g.fillStyle = layer.unitColor || layer.color;
-      g.fillText(suffix, (x0 + m.pre + m.main + size * 0.035) * s, unitBase * s);
+      g.fillText(suffix, (x0 + m.pre + m.main + size * 0.035) * s, (us >= 1 ? base : top + size * us * ratio) * s);
     }
     g.restore();
     if (label) {
       drawText(g, { type: 'text', role: 'label', text: label, x: layer.x, y: base + labelGap, w: layer.w, h: labelCap * 2 + labelSize * 0.5, font: 'condensed', size: labelSize, minSize: Math.min(labelSize, 22), maxLines: 2, lineHeight: 1.05, color: layer.labelColor || layer.color, align: layer.align, valign: 'top', guard: layer.guard }, s, report);
     }
-    report.items.push({ type: 'number', role: 'number', size, overflow: m.total > layer.w + 1, contrast: 0, box: { x: x0, y: top, w: m.total, h: capH }, layer: report.layerIndex, top: layer.y });
+    report.items.push({ type: 'number', role: 'number', size, overflow: m.total > layer.w + 1, contrast: 0, box: { x: x0, y: top, w: m.total, h: capH }, layer: report.layerIndex, top: layer.y, overlap: Math.max(0, Math.min(0.45, Number(layer.overlap) || 0)) });
   }
 
   function drawChart(g, layer, s, report) {
@@ -4176,6 +4499,7 @@
     normalizeInput, tonePalette, toneFor,
     fits, fitting, build, candidates, makePalette, flipPalette, checkScene, applyFix, scoreReport,
     render, toDataUrl, editableText, setText, swapPhoto,
-    _test: { contrast, mix, lum, normHex, digitsIn, logoZone, coverRect, readable },
+    BOARD, CASCADES, boardColors, pickPhoto, dropOrphanRules,
+    _test: { contrast, mix, lum, normHex, digitsIn, logoZone, coverRect, readable, phraseWrap, keepPairsOf },
   };
 }));

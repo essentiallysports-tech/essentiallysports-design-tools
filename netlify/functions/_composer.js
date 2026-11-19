@@ -35,6 +35,7 @@ const MEMORY = require('./_creative-memory.js');
 let ASSETS = null;
 try { ASSETS = require('./_asset-service.js'); } catch (error) { ASSETS = null; }
 const gateway = () => require('./_ai-gateway.js');
+const BOARD_REFS = require('./_board-refs.js');
 const assetService = () => ASSETS;
 function setAssetService(service) { ASSETS = service; }
 
@@ -345,7 +346,10 @@ function readCreative(brief, found = {}, tools = {}) {
     }
     const kit = sport ? findTeam(sport, name) : '';
     const entry = LOGOS.findTeam(name, sport || undefined);
-    if (entry && (kit || name.split(' ').length <= 3)) {
+    // gen5: a team from another sport is not this story's team ("UK suppliers"
+    // in a golf story is not Kentucky); abbreviations need the sport's own match.
+    const otherSport = entry && sport && entry.league && findSport(entry.league) && findSport(entry.league) !== sport && !kit;
+    if (entry && !otherSport && (kit || (name.split(' ').length <= 3 && (!/^[A-Z]{2,4}$/.test(name) || (sport && findSport(entry.league) === sport))))) {
       if (!sport) sport = findSport(entry.league) || sport;
       if (!teams.some(t => t.id === entry.id)) teams.push({ name: entry.short || name, full: entry.name, kind: 'team', logo: entry.file || entry.url || '', colors: entry.colors || [], id: entry.id, kit: kit || '' });
       return;
@@ -354,6 +358,15 @@ function readCreative(brief, found = {}, tools = {}) {
   });
   (typeof tools.nameCandidates === 'function' ? tools.nameCandidates(text) : []).forEach(n => { if (!people.includes(n) && !teams.some(t => t.name === n || t.full === n)) people.push(n); });
   const mentions = (text, name) => Boolean(name) && new RegExp(`(?:^|[^A-Za-z])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z])`).test(text);
+  // gen5: the speaker is a person the brief names ("Steve Kerr on the
+  // Warriors' slow start: ..." is Kerr's quote, not the Warriors').
+  quotes.forEach(q => {
+    if (!q.by || people.includes(q.by)) return;
+    const story = stories.find(st => st.id === q.story);
+    const before = story ? story.text.slice(0, story.text.indexOf(q.text)) : '';
+    const person = people.filter(n => before.includes(n)).sort((a, b) => before.lastIndexOf(b) - before.lastIndexOf(a))[0];
+    if (person) q.by = person;
+  });
   stories.forEach(story => {
     story.people = people.filter(p => mentions(story.text, p) || mentions(story.text, p.split(' ').pop()));
     story.teams = teams.filter(t => mentions(story.text, t.name) || mentions(story.text, t.full)).map(t => t.id);
@@ -596,13 +609,17 @@ function inputsFor(direction, read, assets = {}) {
     headline: direction.headline,
     highlight: direction.highlight || [],
     body: direction.body || '',
-    name: direction.name || person,
+    // gen5: the name strip is a real person the brief names, never the card
+    // title or a sport ("GOLF" on a trading card).
+    name: person,
+    teamColors: pal.colors || [],
     number: num && num.kind !== 'score' && num.kind !== 'compare' && isStat(num, 3) ? { prefix: num.prefix, value: num.kind === 'record' ? num.value : num.value, suffix: num.suffix, label: direction.label || num.label, factId: num.id } : null,
     numbers,
-    photo: photo ? { src: photo.src, focus: photo.focus } : null,
+    // gen5: agent A's verdicts ride along (photo.verified / kind / focus) for the looks.
+    photo: photo ? { src: photo.src, focus: photo.focus, ...(photo.kind ? { kind: photo.kind } : {}), ...(photo.verified != null ? { verified: photo.verified } : {}) } : null,
     // Shared input shape (gen-v3 contract): every item carries src and url;
     // photos are the extra moments (the main photo is input.photo).
-    photos: (direction.photos || []).map(p => ({ src: p.src, url: p.src, label: p.label || '', ...photoMeta(p) })),
+    photos: (direction.photos || []).map(p => ({ src: p.src, url: p.src, label: p.label || '', ...photoMeta(p), ...(p.verified != null ? { verified: p.verified } : {}) })),
     cutout: cutout ? { src: cutout.src } : null,
     cutouts: cutoutsFor(direction, assets),
     headshots: (assets.headshots || []).filter(h => h?.url).slice(0, 9).map(h => ({ url: h.url, src: h.url, person: h.person || '', ...(h.team ? { team: h.team } : {}) })),
@@ -645,19 +662,21 @@ function inputsFor(direction, read, assets = {}) {
 
 // Deterministic plan (no AI): per story, the archetypes that fit, then a set
 // with different archetypes, focal elements and photos, covering every story.
+// gen5: the ES board's own sections lead (stats post, cover image, quote,
+// bar graph / listicle); older posters follow only when nothing better fits.
 const PRIORITY = {
-  money: ['prize-poster', 'big-number', 'typographic'],
-  count: ['unit-grid', 'big-number', 'hero-number', 'typographic'],
-  pct: ['big-number', 'typographic'],
-  score: ['scoreboard', 'duotone-hero', 'magazine-cover'],
-  record: ['record-badge', 'big-number'],
-  compare: ['stat-bars', 'by-the-numbers'],
-  quote: ['quote-boxes', 'quote-card', 'quote-portrait', 'typographic'],
-  person: ['hero-number', 'magazine-cover', 'collage-strip', 'duotone-hero', 'by-the-numbers'],
-  ratio: ['big-number', 'hero-number', 'typographic'],
-  ordinal: ['hero-number', 'big-number', 'typographic'],
-  rank: ['big-number', 'hero-number', 'typographic'],
-  none: ['typographic', 'magazine-cover', 'duotone-hero'],
+  money: ['stat-stack', 'record-alert', 'cover-boxes', 'prize-poster', 'big-number'],
+  count: ['stat-stack', 'stat-column', 'bar-race', 'cover-boxes', 'unit-grid', 'big-number'],
+  pct: ['stat-stack', 'bar-race', 'cover-boxes', 'big-number'],
+  score: ['cover-boxes', 'stat-stack', 'scoreboard', 'frame-break'],
+  record: ['record-alert', 'stat-stack', 'cover-boxes', 'record-badge'],
+  compare: ['bar-race', 'stat-column', 'stat-bars', 'by-the-numbers'],
+  quote: ['quote-boxes', 'quote-card', 'quote-duo', 'quote-portrait'],
+  person: ['cover-boxes', 'name-stack', 'frame-break', 'stat-stack', 'split-panel', 'editorial-feature'],
+  ratio: ['stat-stack', 'cover-boxes', 'big-number'],
+  ordinal: ['stat-stack', 'cover-boxes', 'big-number'],
+  rank: ['stat-stack', 'cover-boxes', 'big-number'],
+  none: ['cover-boxes', 'team-post', 'frame-break', 'split-panel', 'editorial-feature', 'typographic'],
 };
 // gen-styles: every archetype lists the story kinds it serves; append the new
 // ones so code plans vary too (the hand-picked order above stays first).
@@ -669,6 +688,11 @@ Object.keys(PRIORITY).forEach(kind => (COMPOSE.ARCHETYPES || []).forEach(a => {
 // words, cut at a clause break, every digit a fact, never chopped before its
 // object ("Joe Burrow threw" when "for 409 yards" was cut); else the subject.
 const NUM_VERBS = /^(?:stays|stay|remains|remain|becomes|become|holds|hold|climbs|rises|falls|drops|jumps|threw|throws|throw|scored|scores|score|had|has|have|caught|catches|drove|drives|hit|hits|ran|runs|rushed|rushes|posted|posts|recorded|records|signs|signed|sign|agrees|agreed|earned|earns|won|wins|made|makes|shot|shoots|averaged|averages|totaled|totals|added|adds|grabbed|grabs|dished|collected|finished|finishes|improve|improves|improved|sits|sit|stands|moves|move|is|are|was|were|leads|led|reach|reaches|reached|hits|tallied|logged|notched|racked)$/i;
+// Words that carry a story's turn: a headline cut never drops them.
+const TURN = /\b(?:unpaid|not|never|no|without|despite|but|yet|while|whereas|bankrupt\w*|fail\w*|loss|lost|loses|lose|fired|banned|suspended|fined|injur\w*|out for|denied|refused|rejected|cut|released|unsigned|snubbed|quit|retire\w*)\b/i;
+const turnWords = h => (String(h || '').match(new RegExp(TURN.source, 'gi')) || []).map(w => w.toLowerCase());
+// The story's last turn word (its point) survives in a replacement headline.
+const keepsTurnOf = (was, h) => { const t = turnWords(was); return !t.length || turnWords(h).includes(t[t.length - 1]); };
 const CLAUSE_BREAK = /\s*[,;:]\s+|\s+(?=(?:and|with|as|after|behind|from|by|for|while|who|which|following|despite|before|since|during|than|on|in|at)\s)/i;
 // Quoted speech is the quote's, never a headline fragment ("CLARK I JUST LOVE
 // PLAYING"): "Name: \"...\"" and "\"...\"" are cut from the text a headline is
@@ -680,7 +704,8 @@ function unquote(text) {
   // A story that is only a quote reads no headline from it (the name stands in).
   return out.split(' ').length >= 3 || /["“]/.test(String(text || '')) ? out : clean(text);
 }
-function codeHeadline(text, story, read, { fallback = '', all = false } = {}) {
+function codeHeadline(text, story, read, { fallback = '', all = false, long = false } = {}) {
+  const maxWords = long ? 14 : 10;
   text = unquote(text);
   if (!text) return all ? [...new Set([fallback, story?.people?.[0], story?.subject].filter(Boolean))] : (fallback || story?.people?.[0] || story?.subject || '');
   const source = clean(story?.text || read.brief);
@@ -697,34 +722,57 @@ function codeHeadline(text, story, read, { fallback = '', all = false } = {}) {
     return carriesOn || /^\d+-[a-z]+,?$/i.test(h.split(' ').pop() || '')
       || new RegExp(`^[,;]?\\s*(?:(?:for|of|to)\\s+(?:(?:a|an|the|his|her|their)\\s+)?|in\\s+)${num}`, 'i').test(after)
       || ((NUM_VERBS.test(last) || /^[a-z]+(?:ing|ed)$/.test(h.split(' ').pop() || '')) && new RegExp(`^\\s*(?:(?:a|an|the|his|her|their)\\s+)?${num}`, 'i').test(after))
-      || WEAK_TAIL.test(last)
+      || WEAK_TAIL.test(last) || /^(?:most|least|more|less|fewer|best|worst)$/.test(last)
       // "Josh Allen goes over | 1000+ yards": the number was what the last word pointed at.
       || (/^(?:over|past|beyond|under|nearly|almost|about|around|top|tops|hit|hits|reach|reaches|passes|surpasses|eclipses)$/.test(last) && new RegExp(`^\\s*${num}`, 'i').test(after));
   };
-  const tidy = h => {
+  const tidy = (h, cap = maxWords) => {
     let words = clean(h).replace(/[“”"]/g, '').replace(/[.;:,]+$/, '').split(' ').filter(Boolean);
     // Cut before a number that is not a fact (the ES gate would drop the design).
     const stray = words.findIndex(w => digitsIn(w).some(d => !grounded.has(d)));
     if (stray >= 0) words = words.slice(0, stray);
-    words = words.slice(0, 10);
+    words = words.slice(0, cap);
     while (words.length > 1 && WEAK_TAIL.test(words[words.length - 1].replace(/[.,;:]+$/, ''))) words.pop();
     return words.join(' ').replace(/[,;:]+$/, '');
   };
   const options = [];
   const whole = tidy(text);
-  if (clean(text).split(' ').length <= 10) options.push(whole);
+  const flat = clean(text);
+  if (flat.split(' ').length <= maxWords) options.push(whole);
   // Clauses accumulate with their own punctuation: "Rob Manfred: MLB owners
   // won't compromise" keeps its colon (gen4: it used to read as one run-on).
-  const flat = clean(text);
+  // gen5 (owner: "LIV GOLF PAID PLAYERS MILLIONS" dropped the suppliers): a
+  // cut never drops the point of the story; while the rest still carries a
+  // turn (unpaid, not, despite, bankrupt, fired...), the next clause stays.
+  const accs = [];
   const breaks = new RegExp(CLAUSE_BREAK.source, 'gi');
   let m;
   while ((m = breaks.exec(flat))) {
     if (!m[0].length) { breaks.lastIndex += 1; continue; }
     const acc = flat.slice(0, m.index);
-    if (acc.split(' ').length >= 3) { options.push(tidy(acc)); break; }
+    if (acc.split(' ').length >= 3) accs.push({ text: acc });
+  }
+  // The clause right after each cut (the next cut, or the end).
+  accs.forEach((a, i) => { a.next = (accs[i + 1] ? accs[i + 1].text : flat).slice(a.text.length); });
+  const fitsCut = a => a.text.split(' ').length <= maxWords;
+  const firstPoint = accs.find(a => fitsCut(a) && !TURN.test(a.next));
+  const turnLost = !firstPoint && accs.some(a => TURN.test(a.next));
+  const nWords = flat.split(' ').length;
+  // The whole story first when every cut would lose its turn (up to 14 words).
+  if (turnLost && nWords <= 14 && !options.includes(whole)) options.unshift(tidy(flat, 14));
+  const lead = firstPoint || (nWords <= maxWords ? null : accs.filter(fitsCut).pop());
+  if (lead) options.push(tidy(lead.text));
+  if (all) accs.filter(fitsCut).forEach(a => options.push(tidy(a.text)));
+  // gen5: "LIV Golf: UK suppliers went unpaid" (the subject + the turn clause),
+  // a second reading that keeps the point when the whole story is used once.
+  if (all && accs.length) {
+    const last = accs[accs.length - 1];
+    const tail = clean(flat.slice(last.text.length)).replace(/^[,;:]\s*/, '').replace(/^(?:as|while|but|yet|whereas|and|after|before)\s+/i, '');
+    const subject = (story?.people?.[0] || story?.subject || properNames(flat)[0] || '').trim();
+    if (subject && TURN.test(tail) && tail.split(' ').length >= 3 && !squash(tail).includes(squash(subject).trim())) options.push(tidy(`${subject}: ${tail}`, 12));
   }
   if (!options.length || options[options.length - 1] === whole) {
-    if (flat.split(' ').length >= 3) options.push(tidy(flat));
+    if (nWords >= 3) options.push(tidy(flat));
   }
   options.push(whole);
   const good = options.filter(h => h && h.split(' ').length >= 2 && !chopped(h));
@@ -769,7 +817,8 @@ function directionSkeleton(read, story, archetype, assets, used) {
   // The brief's own headline, once per set, on a cover-family design about its first story.
   const useHeadline = Boolean(read.headline && !used.headline && story.id === (read.stories[0]?.id || 's1') && ['cover', 'lifestyle'].includes(familyOf(archetype)));
   if (useHeadline) text = read.headline;
-  const headline = useHeadline ? text : codeHeadline(text, story, read, { fallback: story.people?.[0] || team?.name || '' });
+  const long = ['cover', 'extra', 'lifestyle'].includes(familyOf(archetype)) && !['stat-sheet', 'scoreboard', 'split-versus', 'versus-split'].includes(archetype);
+  const headline = useHeadline ? text : codeHeadline(text, story, read, { fallback: story.people?.[0] || team?.name || '', long });
   return {
     usedHeadline: useHeadline,
     story: story.id,
@@ -817,12 +866,16 @@ function storyKinds(read, story) {
 // light data cards); tier 3 are type-only or art-led posters that read as
 // templates next to the board. From the real-photo audit of every archetype
 // (scratchpad gen-v4-out/quality/catalog-*).
+// gen5 (owner: "if these designs are what we are making then I am unsure what
+// we are doing"): tier 1 are the looks rebuilt from the board's measurements
+// (stats post, cover image, quote, bar graph, listicle, team post); tier 2 are
+// older looks that hold up; everything else (trading card, collage strip,
+// film strip, posters) is tier 3 and only fills a set nothing else can.
 const TIER = {
-  'stat-stack': 1, 'hero-number': 1, 'cover-boxes': 1, 'frame-break': 1, 'record-alert': 1, 'editorial-feature': 1, 'magazine-cover': 1,
-  'light-stat': 1, 'stat-column': 1, 'quote-boxes': 1, 'quote-card': 1, 'quote-duo': 1, 'bar-race': 1, 'ranked-table': 1, scoreboard: 1,
-  'pill-stack': 1, 'lower-third': 1, 'split-panel': 2, 'duotone-hero': 2, 'sticker-collage': 2, 'quote-portrait': 2, 'collage-strip': 2,
-  'headshot-grid': 2, 'stat-sheet': 2, 'print-collage': 2, 'record-badge': 2, 'stat-bars': 2, 'versus-split': 2, 'split-versus': 2,
-  'trading-card': 2, 'post-card': 2,
+  'stat-stack': 1, 'record-alert': 1, 'stat-column': 1, 'cover-boxes': 1, 'frame-break': 1, 'name-stack': 1, 'team-post': 1,
+  'quote-boxes': 1, 'quote-card': 1, 'quote-duo': 1, 'bar-race': 1, 'ranked-table': 1, 'headshot-grid': 1,
+  scoreboard: 2, 'split-panel': 2, 'light-stat': 2, 'editorial-feature': 2, 'hero-number': 2, 'magazine-cover': 2, 'stat-sheet': 2,
+  'pill-stack': 2, 'lower-third': 2, 'duotone-hero': 2, 'versus-split': 2, 'split-versus': 2, 'stat-bars': 2, 'post-card': 2,
 };
 const tierOf = id => TIER[id] || 3;
 // Archetypes that show the person when the input has their photo / cut-out
@@ -1083,7 +1136,8 @@ function repeatsNumber(dir, read, input = null) {
     const digits = digitsIn(`${n.value}`);
     if (digits.some(d => (d.length >= 2 || shown.length === 1) && head.includes(` ${d} `))) return `the headline repeats ${n.text}`;
   }
-  const hero = shown.find(n => n.label) || (inp.number?.label ? { label: inp.number.label } : null);
+  // gen5: only a number the design shows can be repeated (a cover shows none).
+  const hero = shown.find(n => n.label) || (shown.length && inp.number?.label ? { label: inp.number.label } : null);
   if (hero?.label) {
     const words = keyTerms(hero.label).filter(w => w.length > 3);
     if (words.length && words.every(w => head.includes(` ${w} `)) && digitsIn(dir.headline).length) return 'the headline repeats the number\'s label';
@@ -1235,6 +1289,10 @@ function DIRECTOR_SYSTEM() {
     '- art: a short concept for an AI background or object (trophy, ball, stadium light, money, cards, weather, motion). Never people, faces, jerseys, logos or text.',
     '- note: the director\'s note, SPECIFIC to this design (what the eye sees first, what is cut out, what colour does what), max 22 words. No generic praise.',
     '- Plan designs that need no fixing. strengths (1-2, what works, max 12 words each); improvements: [] unless you have ONE genuinely different creative idea starting with "Try" ("Try a versus layout with both quarterbacks"); never list repairs. nextTime (one lesson for future designs, max 16 words).',
+    '- name: 2-4 plain words that describe the design ("Record night stat post", "Kerr quote"). Never a team nickname or a word that reads as one (Bills, Heat, Jets, Kings, Thunder, Giants), never a sport or league tag.',
+    '- The ES board (the bar): stats posts set ONE number huge under the ES mark with the player cut out over its foot, a white label box with a short hook ("RECORD ALERT!", "MVP CALLING?", "ON PACE FOR HISTORY") or the headline; covers stack the headline in team-colour boxes, one idea per box line ("PERFECT / TIMING / TO SACK / SANDERS!"); quotes set 3-8 words of the speaker in white boxes over a dark portrait. Pick stat-stack / record-alert / stat-column, cover-boxes / name-stack / team-post, quote-boxes, bar-race / ranked-table first; trading cards, collage strips and posters only when nothing else fits.',
+    '- A set of 4 uses at least 3 different ES families (stats, cover, quote, extra, bar-graph, listicle) when the brief allows; never three photo-top / headline-bottom covers.',
+    '- headline cuts keep the point of the story: "LIV GOLF PAID PLAYERS MILLIONS AS UK SUPPLIERS WENT UNPAID", never "LIV GOLF PAID PLAYERS MILLIONS".',
     '- If team lessons are listed, follow them: they are mistakes editors already fixed.',
     ...RULES.VOICE.map(line => `- ${line}`),
     '',
@@ -1288,6 +1346,22 @@ function offBriefNames(headline, read) {
 }
 
 // Never trusts the model. Returns { directions, dropped: [{ why }] }.
+// gen5 card titles (owner: "Unpaid Bills Cover" reads like the NFL Bills):
+// plain words only. A title holding a team nickname the brief does not name,
+// or a sport / league tag, falls back to the look's own name.
+let NICKNAMES = null;
+const nicknames = () => NICKNAMES || (NICKNAMES = new Set((LOGOS.all?.() || []).filter(e => e.kind === 'team').flatMap(e => [e.short, e.nickname]).filter(Boolean).map(n => n.toLowerCase())));
+function cardTitle(raw, read, archetype) {
+  const fallback = COMPOSE.BY_ID?.[archetype]?.name || '';
+  const title = cut(clean(raw), 40);
+  if (!title) return fallback;
+  const own = new Set(read.teams.flatMap(t => [t.name, t.full]).filter(Boolean).flatMap(n => [n.toLowerCase(), ...n.toLowerCase().split(' ')]));
+  const tokens = title.toLowerCase().replace(/[^a-z0-9' ]/g, ' ').split(/\s+/).filter(Boolean);
+  const clash = tokens.some((t, i) => !own.has(t) && (nicknames().has(t) || nicknames().has(`${t} ${tokens[i + 1] || ''}`.trim())));
+  const tag = tokens.some(t => /^(?:nfl|nba|mlb|nhl|wnba|mls|pga|lpga|liv|atp|wta|f1|ncaa|golf|tennis|soccer)$/.test(t));
+  return clash || tag ? fallback : title;
+}
+
 function validateDirections(parsed, read, assets = {}, { want = 4 } = {}) {
   const list = Array.isArray(parsed?.directions) ? parsed.directions.slice(0, 10) : [];
   const dropped = [];
@@ -1342,7 +1416,7 @@ function validateDirections(parsed, read, assets = {}, { want = 4 } = {}) {
       source: 'director',
       story: story.id,
       archetype,
-      name: cut(raw.name, 40),
+      name: cardTitle(raw.name, read, archetype),
       headline,
       kicker: editorialKicker(raw.kicker, read),
       highlight: (Array.isArray(raw.highlight) ? raw.highlight : []).map(w => cut(w, 24)).filter(w => w && squash(headline).includes(squash(w))).slice(0, 2),
@@ -1398,12 +1472,22 @@ function validateDirections(parsed, read, assets = {}, { want = 4 } = {}) {
 //   main / haiku   Haiku only (economy).
 // gen4 (owner: "if needed we can spend more in Generate"): Sonnet by default;
 // GENERATE_ART_DIRECTOR_MODEL=auto brings back Haiku-first.
+// gen5 (owner: "use a good model if it's needed to create good designs"):
+// Opus directs by default (it picks the look, the words in the boxes, the crop
+// and the palette); Sonnet, then Haiku, if it fails. ~$0.05-0.08 a run.
+//   unset / top / opus   Opus (quality-first)
+//   best / sonnet        Sonnet
+//   auto                 Haiku first, Sonnet once when the plan is thin
+//   main / haiku         Haiku only (economy)
 function artDirectorTier(value = process.env.GENERATE_ART_DIRECTOR_MODEL || '') {
   const wanted = String(value).trim().toLowerCase();
-  if (!wanted) return 'best';
+  if (!wanted || /^(?:top|opus)/.test(wanted)) return 'top';
   if (wanted === 'auto') return 'auto';
-  return /haiku|^main$/.test(wanted) ? 'main' : 'best';
+  if (/haiku|^main$/.test(wanted)) return 'main';
+  return 'best';
 }
+// The most a 4-design run may spend on AI (director + judge + second look).
+const RUN_CAP_USD = Number(process.env.GENERATE_RUN_CAP_USD) > 0 ? Math.min(0.5, Number(process.env.GENERATE_RUN_CAP_USD)) : 0.25;
 
 async function runArtDirector({ read, assets, steer = {}, want = 4, lessons = [], track = null, timeoutMs = 20000, tier = artDirectorTier() } = {}) {
   const result = { directions: [], dropped: [], cost: 0, model: '', source: 'none', calls: 0, escalated: false };
@@ -1427,13 +1511,14 @@ async function runArtDirector({ read, assets, steer = {}, want = 4, lessons = []
     };
     let judged = { directions: [], dropped: [] };
     try {
-      judged = await ask(tier === 'auto' ? 'main' : tier, tier === 'best' ? Math.max(timeoutMs, 40000) : timeoutMs);
+      judged = await ask(tier === 'auto' ? 'main' : tier, tier === 'best' || tier === 'top' ? Math.max(timeoutMs, 40000) : timeoutMs);
       result.source = 'director';
     } catch (error) {
       if (isBudgetError?.(error)) return { ...result, source: 'budget' };
       // gen4: Sonnet slow or down: Haiku once (inside the per-step budget).
-      if (tier === 'best') {
-        try { judged = await ask('main', timeoutMs); result.source = 'director'; result.fellBack = true; } catch (e) { if (isBudgetError?.(e)) return { ...result, source: 'budget' }; }
+      // gen5: Opus slow or down: Sonnet, then Haiku.
+      for (const next of tier === 'top' ? ['best', 'main'] : tier === 'best' ? ['main'] : []) {
+        try { judged = await ask(next, timeoutMs); result.source = 'director'; result.fellBack = next; break; } catch (e) { if (isBudgetError?.(e)) return { ...result, source: 'budget' }; }
       }
     }
     // Auto: escalate once when the cheap plan is thin after the code checks.
@@ -1589,13 +1674,15 @@ function dedupeHeadlines(directions, read, assets, review) {
     if (!story) return;
     // Story readings first, then the brief's own headline, then the name.
     const names = [story.people?.[0], story.subject].filter(Boolean);
+    const long = ['cover', 'extra', 'lifestyle'].includes(familyOf(d.archetype));
     const options = [
-      ...codeHeadline(story.text, story, read, { all: true }),
-      ...codeHeadline(beforeNumbers(story.text, read.facts.filter(f => f.story === story.id)), story, read, { all: true }),
-    ].filter(h => !names.includes(h)).concat(read.headline && story.id === read.stories[0]?.id ? [read.headline] : [], names)
+      ...codeHeadline(story.text, story, read, { all: true, long }),
+      ...codeHeadline(beforeNumbers(story.text, read.facts.filter(f => f.story === story.id)), story, read, { all: true, long }),
+    ].filter(h => !names.includes(h)).concat(read.headline && story.id === read.stories[0]?.id ? [read.headline] : [], long ? [] : names)
       // gen4: a league or sport alone ("MLB") is a tag, never a headline.
       .filter(h => !(read.teams.some(t => squash(t.name) === squash(h) || squash(t.full || '') === squash(h)) || squash(h) === squash(read.sport)));
-    const next = options.find(h => !seen.has(squash(h)) && !repeatsNumber({ ...d, headline: h }, read, inputsFor(d, read, assets)) && COMPOSE.fits(d.archetype, inputsFor({ ...d, headline: h }, read, assets)));
+    const keepsTurn = h => keepsTurnOf(d.headline, h);
+    const next = options.find(h => !seen.has(squash(h)) && keepsTurn(h) && !repeatsNumber({ ...d, headline: h }, read, inputsFor(d, read, assets)) && COMPOSE.fits(d.archetype, inputsFor({ ...d, headline: h }, read, assets)));
     if (next) {
       review.fixed.push({ check: 'headline-variety', what: `${d.id}: "${d.headline}" -> "${next}"` });
       d.headline = next;
@@ -1704,8 +1791,13 @@ function designTimeFixes(directions, read, assets, review) {
     const autoFixed = [];
     const story = read.stories.find(st => st.id === d.story) || read.stories[0];
     // A code headline over 7 words: the shorter reading of the same story.
-    if (d.source !== 'director' && story && clean(d.headline).split(' ').length > 7) {
-      const shorter = codeHeadline(story.text, story, read, { all: true }).find(h => h.split(' ').length >= 3 && h.split(' ').length <= 7 && !repeatsNumber({ ...d, headline: h }, read, inputsFor({ ...d, headline: h }, read, assets)));
+    // gen5: boxed cover headlines hold up to 12 words, and a shorter reading
+    // never drops the story's turn ("... AS UK SUPPLIERS WENT UNPAID").
+    const longFamily = ['cover', 'extra', 'lifestyle'].includes(familyOf(d.archetype));
+    const limit = longFamily ? 12 : 7;
+    if (d.source !== 'director' && story && clean(d.headline).split(' ').length > limit) {
+      const keepsTurn = h => keepsTurnOf(d.headline, h);
+      const shorter = codeHeadline(story.text, story, read, { all: true, long: longFamily }).find(h => h.split(' ').length >= 3 && h.split(' ').length <= limit && keepsTurn(h) && !repeatsNumber({ ...d, headline: h }, read, inputsFor({ ...d, headline: h }, read, assets)));
       if (shorter) {
         const was = d.headline;
         d.headline = shorter;
@@ -2101,8 +2193,9 @@ const JUDGE_TTL_MS = 30 * 60 * 1000;
 // gen-director adds: image (photo / cut-out quality and use), labels (every
 // stat label reads), stats (every number is a real stat about the story).
 // Set level: toneVariety (light and dark mixed, not one tone three times).
-const RUBRIC = ['hierarchy', 'focal', 'readability', 'brand', 'originality', 'image', 'labels', 'stats'];
-const WEIGHTS = { hierarchy: 1.2, focal: 1.1, readability: 1.3, brand: 1, originality: 1, image: 1.2, labels: 1.1, stats: 1.2 };
+const RUBRIC = ['hierarchy', 'focal', 'readability', 'brand', 'originality', 'image', 'labels', 'stats', 'board'];
+// gen5: "board" (next to the ES board references) weighs the most.
+const WEIGHTS = { hierarchy: 1.2, focal: 1.1, readability: 1.3, brand: 1, originality: 1, image: 1.2, labels: 1.1, stats: 1.2, board: 1.6 };
 // Director fixes the judge may name, as one-click ops the design assistant
 // (generate-assistant.js) already applies.
 const DIRECTOR_FIXES = {
@@ -2114,13 +2207,29 @@ const DIRECTOR_FIXES = {
 };
 // Judge model: Sonnet vision by default (it buys the most quality per cent);
 // GENERATE_JUDGE_MODEL=haiku for economy.
-const judgeTier = (value = process.env.GENERATE_JUDGE_MODEL || '') => (/haiku|^main$/i.test(String(value).trim()) ? 'main' : 'best');
+const judgeTier = (value = process.env.GENERATE_JUDGE_MODEL || '') => (/haiku|^main$/i.test(String(value).trim()) ? 'main' : /opus|^top$/i.test(String(value).trim()) ? 'top' : 'best');
+// gen5: the judge's estimated cost for a set (images ~450 tokens, board refs
+// ~200, prompt ~2.5k, reply ~350 a design), and the tier that keeps the whole
+// run under RUN_CAP_USD given what it already spent (the director).
+const TIER_PRICE = { top: { input: 4, output: 20 }, best: { input: 2, output: 10 }, main: { input: 0.1, output: 0.5 } };
+function judgeEstimate(tier, images = 12, refs = 3, designs = 4) {
+  const p = TIER_PRICE[tier] || TIER_PRICE.best;
+  return ((2500 + images * 450 + refs * 200) * p.input + (600 + designs * 350) * p.output) / 1e6;
+}
+function judgeTierFor(spent = 0, images = 12, refs = 3, designs = 4, wanted = judgeTier()) {
+  const order = wanted === 'top' ? ['top', 'best', 'main'] : wanted === 'best' ? ['best', 'main'] : ['main'];
+  // The second look (~40% of a judge call) is budgeted in.
+  return order.find(t => spent + judgeEstimate(t, images, refs, designs) * 1.4 <= RUN_CAP_USD) || 'main';
+}
+// The board's families as the judge's references group them.
+const REF_FAMILY = { stats: 'stats', cover: 'cover', lifestyle: 'cover', quote: 'quote', 'bar-graph': 'data', listicle: 'data', grid: 'data', extra: 'extra' };
 
 const REPAIR_OPS_TEXT = () => COMPOSE.REPAIR_OPS.join(', ');
 function judgePrompt(sets, brief, lessons = [], { recheck = false } = {}) {
   return [
     ...(recheck ? ['SECOND LOOK: these designs were already repaired once. Score each, and list only the repairs that are STILL needed (usually none).'] : []),
     'You are the senior art director at EssentiallySports (ES), judging Instagram designs before they post.',
+    'The first images (ref-...) are REAL ES posts from the team\'s Figma board: the bar. Do not score them. Judge every design against the references of its kind: big team-colour photos or cut-outs that overlap the type, condensed headlines in tight highlight boxes with one idea per box line, a huge number under the ES mark on stats posts, a label box ("RECORD ALERT!"), texture and depth. Turn every visible gap from the references into a repair.',
     'For each direction, score every candidate 1-5 on: hierarchy (one clear reading order), focal (one strong focal point), readability (every word readable on a phone, good contrast), brand (feels like ES: bold condensed type, team colours, clean, the ES logo top-right untouched), originality (looks new, not a template),',
     'image (photo and cut-out quality and use: a named star shown big and bright, a clean cut-out in front; a tiny, murky or irrelevant photo scores 1-2; no photo when a star is named scores 2), labels (every stat label is a short noun phrase that reads, e.g. PASSING YARDS; words cut from another sentence like "SEASON WHY FANS" score 1), stats (every number is a real stat about the story: score, record, money, ranking; our own coverage counts like "4 STORIES", or a year shown as a stat, score 1).',
     'Also score the SET once: toneVariety 1-5 (5 = light and dark designs mixed, each its own tone; 1 = every design the same dark tone), and name the design to change if it is under 4.',
@@ -2133,7 +2242,8 @@ function judgePrompt(sets, brief, lessons = [], { recheck = false } = {}) {
     '- nextTime: ONE lesson for future designs (max 16 words), e.g. "Pick photos with clear sky above the subject for top headlines."',
     ...MEMORY.promptLines(MEMORY.withSeeds ? MEMORY.withSeeds(lessons, { limit: 4 }) : lessons, { who: 'judge' }),
     `Brief: ${String(brief || '').slice(0, 500)}`,
-    'Reply with JSON only: {"set":{"toneVariety":4,"change":"","why":""},"directions":[{"id":"d1","best":"d1c2","scores":{"d1c1":{"hierarchy":4,"focal":4,"readability":5,"brand":4,"originality":3,"image":4,"labels":5,"stats":5}},"note":"","repairs":[{"issue":"","op":"","text":""}],"idea":"","strengths":[""],"nextTime":""}]}',
+    'Reply with JSON only: {"set":{"toneVariety":4,"change":"","why":""},"directions":[{"id":"d1","best":"d1c2","scores":{"d1c1":{"hierarchy":4,"focal":4,"readability":5,"brand":4,"originality":3,"image":4,"labels":5,"stats":5,"board":4}},"note":"","repairs":[{"issue":"","op":"","text":""}],"idea":"","strengths":[""],"nextTime":""}]}',
+    'Also give each candidate "board" 1-5: 5 = an ES designer would post it next to the references unchanged; 3 = needs a designer; 1 = a template, nothing like the board.',
     `Directions: ${sets.map(s => `${s.direction} (${s.archetype}${s.tone ? `, ${s.tone} tone` : ''}): ${s.items.map(i => i.id).join(', ')}`).join('; ')}`,
   ].join('\n');
 }
@@ -2206,7 +2316,7 @@ function repairsFrom(verdict = {}) {
   return out.slice(0, 5);
 }
 
-async function judge({ brief, sets = [], heuristics = {}, lessons = [], track = null, timeoutMs = 20000, recheck = false } = {}) {
+async function judge({ brief, sets = [], heuristics = {}, lessons = [], track = null, timeoutMs = 20000, recheck = false, spent = 0 } = {}) {
   // Up to 8 designs; the image budget stays at 16 (3 candidates up to 4 designs, then 2).
   const perSet = sets.length > 4 ? 2 : 3;
   const clean = sets.slice(0, 8).map(s => ({
@@ -2230,12 +2340,19 @@ async function judge({ brief, sets = [], heuristics = {}, lessons = [], track = 
   const { aiText, gatewayConfigured } = gateway();
   if (gatewayConfigured && !gatewayConfigured()) return { ...out, directions: addSetFix(fallback(), out.set) };
   const content = [{ type: 'text', text: judgePrompt(clean, brief, lessons, { recheck }) }];
+  // gen5: 1-3 real ES posts of the set's kinds (the second look needs fewer).
+  const refs = BOARD_REFS.refsFor(clean.map(s => REF_FAMILY[familyOf(s.archetype)] || 'extra'), recheck ? 2 : 3);
+  refs.forEach(r => content.push({ type: 'text', text: `ref-${r.family} (ES board ${r.node}, not scored):` }, { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: r.data } }));
+  const images = clean.reduce((n, s) => n + s.items.length, 0);
+  const tier = judgeTierFor(Math.max(0, Number(spent) || 0), images, refs.length, clean.length);
+  out.refs = refs.map(r => r.id);
+  out.tier = tier;
   clean.forEach(s => s.items.forEach(item => {
     const [, mediaType, data] = item.image.match(/^data:(image\/[a-z]+);base64,(.*)$/) || [];
     content.push({ type: 'text', text: `${item.id}:` }, { type: 'image', source: { type: 'base64', media_type: mediaType, data } });
   }));
   try {
-    const reply = await aiText({ tier: judgeTier(), messages: [{ role: 'user', content }], effort: 'low', maxTokens: 1500 + 300 * clean.length, timeoutMs, track: track ? { ...track, feature: recheck ? 'generate-creative-recheck' : 'generate-creative-judge' } : undefined });
+    const reply = await aiText({ tier, messages: [{ role: 'user', content }], effort: 'low', maxTokens: 1500 + 300 * clean.length, timeoutMs, track: track ? { ...track, feature: recheck ? 'generate-creative-recheck' : 'generate-creative-judge' } : undefined });
     out.cost = Number(reply.cost) || 0;
     out.model = reply.model || '';
     const parsed = extractJson(reply.text);
@@ -2273,7 +2390,7 @@ async function judge({ brief, sets = [], heuristics = {}, lessons = [], track = 
 module.exports = {
   repairsFrom,
   designTimeFixes, isCreativeIdea, repairFor, topUp,
-  TIER, tierOf, showsPerson, rankArchetypes,
+  TIER, tierOf, showsPerson, rankArchetypes, cardTitle, judgeTierFor, judgeEstimate, RUN_CAP_USD, artDirectorTier,
   unquote,
   editorialKicker,
   readCreative, splitStories, factsIn, properNames, planDeterministic, validateDirections, runArtDirector, DIRECTOR_SYSTEM, directorRequest,
