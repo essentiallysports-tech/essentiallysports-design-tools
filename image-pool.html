@@ -180,6 +180,18 @@
         return entityBox.value.trim();
       }
 
+      // The link people copy must work when pasted anywhere (Slack, a browser
+      // bar). proxyUrl is relative ("/api/..."), which a pasted link reads as a
+      // host called "api". Prefer the photo's own public https address; else
+      // the proxy, made absolute on this site.
+      function shareUrlFor(result) {
+        try {
+          const source = new URL(result.sourceUrl);
+          if (source.protocol === 'https:') return source.href;
+        } catch (error) { /* no usable source URL */ }
+        return new URL(result.proxyUrl || result.sourceUrl, window.location.href).href;
+      }
+
       function filenameFor(result, index) {
         const base = decodeEntities(result.title || result.caption || `es-image-${index + 1}`)
           .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `es-image-${index + 1}`;
@@ -231,7 +243,7 @@
           copyBtn.setAttribute('aria-label', `Copy link to ${alt}`);
           copyBtn.addEventListener('click', async () => {
             try {
-              await navigator.clipboard.writeText(imageUrl);
+              await navigator.clipboard.writeText(shareUrlFor(result));
               copyBtn.textContent = 'Copied!';
             } catch (error) {
               copyBtn.textContent = 'Couldn’t copy';
