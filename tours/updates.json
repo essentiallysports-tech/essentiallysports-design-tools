@@ -3,6 +3,19 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-19-music-for-video-ads",
+      "date": "2026-11-19",
+      "title": "Music for Video Ads",
+      "commit": "f634298",
+      "items": [
+        {
+          "title": "Video Ads",
+          "text": "Seven licensed music tracks in the Sound step (calm, lo-fi, chill and hip hop), cleared for organic posts and paid ads.",
+          "page": "video-ads.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-21-gen4-ui",
       "date": "2026-11-21",
       "title": "Generate: clearer ideas, a time estimate and better briefs",

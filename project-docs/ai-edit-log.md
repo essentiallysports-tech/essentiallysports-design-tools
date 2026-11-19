@@ -4,6 +4,12 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-19 — Suhail (Claude): Video Ads music library, 7 licensed tracks (branch feature/va-music)
+- Status: `[committed, not pushed]`. Needs the migration `supabase/migrations/20261119120000_frameup_audio_bucket.sql` run and the 7 files uploaded to bucket `frameup-audio` before the push.
+- Owner confirmed the tracks are licensed for organic + paid. The repo is public, so the audio lives in a PRIVATE bucket: `audio-library.json` entries use `file: storage:frameup-audio/<id>.m4a`; `video-ads-audio.js` parses them (`track.storage`), `video-ads.js` `fetchStoredTrack` gets a 10-minute signed URL for the signed-in user.
+- Files (AAC 192k m4a, 0.9-2.7 MB): calm-deeper, calm-lofi, calm-lofi-short, chill-beat, chill-beat-no-intro, chill-beat-short, summer-hip-hop. Local copies outside the repo: ~/Downloads/frameup-audio-upload/.
+- Tests: test-video-ads-audio (shipped library, storage path rules), all Video Ads tests. Cache key 20261119-music. Release note 2026-11-19-music-for-video-ads.
+
 ## 2026-11-19 — Suhail (Claude): team rule A, direct pushes to main, no PRs (branch chore/team-setup)
 - Status: `[pushed]`. Owner chose direct pushes over pull requests.
 - `CLAUDE.md` / `ONBOARDING.md`: everyone pushes to `main` after "push": fetch, rebase, keep both sides on conflicts, run checks, `git push origin HEAD:main`; never force-push. PR template removed. GitHub admin asked to block force pushes and deletion on `main` only.
