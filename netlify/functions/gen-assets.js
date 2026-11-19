@@ -1,6 +1,8 @@
 // FrameUp Generate (Creative mode): the asset service over HTTP.
 //   GET  /api/gen-assets            what is set up (models, prices, storage; no secrets)
-//   POST /api/gen-assets {op, ...}  op: background | concept | cutout | photos
+//   POST /api/gen-assets {op, ...}  op: background | concept | cutout | photos | cutout-store
+//   (cutout-store: the browser's finished cut-out PNG of an ES photo, kept once
+//   under a name derived from the photo so later runs reuse it at $0)
 // Signed-in ES staff only. AI ops pass aiSpendGate (inside _asset-service.js),
 // the per-person hourly cap, and a per-image cost cap; every model call is
 // logged to frameup_ai_usage. See project-docs/gen-assets.md.
@@ -62,7 +64,8 @@ exports.handler = async function handler(event) {
   };
   const op = String(body.op || '');
   const paid = ['background', 'concept', 'cutout'].includes(op);
-  if (!paid && op !== 'photos') return json(400, { error: 'Unknown op. Use background, concept, cutout or photos.' });
+  if (!paid && op !== 'photos' && op !== 'cutout-store') return json(400, { error: 'Unknown op. Use background, concept, cutout, photos or cutout-store.' });
+  if (op === 'cutout-store' && !underLimit(email)) return json(429, { error: 'That is a lot of cut-outs this hour. Try again later.', reason: 'limit' });
   if (paid && (!underLimit(email) || await userOverHourlyLimit(token))) {
     return json(429, { error: 'That is a lot of AI images this hour. Try again later.', reason: 'limit' });
   }
@@ -85,6 +88,8 @@ exports.handler = async function handler(event) {
       }, ctx);
     } else if (op === 'cutout') {
       result = await assets.cutout({ image: pickString(body.image, 6000000), size: pickString(body.size, 12), source: pickString(body.source, 120) || undefined }, ctx);
+    } else if (op === 'cutout-store') {
+      result = await assets.storeCutout({ sourceUrl: pickString(body.sourceUrl, 2000), image: pickString(body.image, 6000000) }, ctx);
     } else {
       result = await assets.findPhotos({
         person: body.person, team: body.team, sport: body.sport, query: body.query,

@@ -37,6 +37,30 @@ and what's still uncommitted.
 - Tests: new `scripts/test-compose-looks.mjs`; `test-generate-creative` / `test-gen-v2-integration` now scope their v1/v2 checks with `!a.looks`. Full suite = baseline failures only (+ check-dashboard-supabase: live network timeout). Editor exports cannot change (no editor file touched; export-hashes script not available).
 - Lab: scratchpad `gen-v3-lab/` (render.html, run.mjs = static server + headless Chrome over CDP, 24 briefs across golf / NFL / CFB / NBA / WNBA / MLB / tennis / soccer / F1 with real ES photos + macOS Vision cut-outs). Sheets: scratchpad `gen-v3-out/looks/final/`.
 - Cache key `20261120-looks` (frameup-compose.js in generate.html). Release note `2026-11-20-gen-looks`. Generate composed exports change on purpose.
+### 2026-11-20 — Generate imagery v3: ranked ES photos, cut-outs, headshots, logos (branch feature/gen-imagery)
+- Status: `[committed on feature/gen-imagery — not pushed]`. Agent B of Generate v3; contract in scratchpad `gen-v3-contract.md`.
+- **Root causes, every brief:**
+  - Cut-outs never ran in Generate. The server refuses them (no decoder), and `generate.html` didn't load `frameup-assets.js` / `frameup-cutout.js`.
+  - Places, tours, weekdays and ALL-CAPS fragments were searched as people, and first names searched badly.
+  - With no vision key, photos stayed in source order (logos, silhouettes and other people first).
+  - Real sizes were unknown.
+- **New:** `netlify/functions/_imagery.js`:
+  - subject cleaning, plus ES tag resolution;
+  - gather and de-duplication (agency ids across hosts);
+  - header size probe and larger WordPress originals;
+  - free signals, Haiku vision only for people (gated, cached 24 h);
+  - a 0–1 score and a variety pick;
+  - cut-out plan, headshots, logos.
+
+  `findPhotos` now goes through it, returning contract-shaped `photos` / `cutouts` / `headshots` / `logos`.
+  `prepareImagery` is the whole-brief variant.
+- **Cut-outs:** `generate-creative.js` makes up to 3 per run in the browser ($0.05 cap, 25 s), rebuilds that
+  person's designs through `checkScene`, and stores the PNG (`op: 'cutout-store'`, `gen-assets/cutouts/<sha>.png`,
+  first write wins). Later runs get it from `findPhotos` at $0.
+- `_composer.js` is not touched (gen-director owns it). Cache key `20261120-img1`: `generate-creative.js`, plus
+  the new `frameup-cutout.js` / `frameup-assets.js` tags in `generate.html`.
+- **Tests:** new `scripts/test-gen-imagery.mjs`; `test-gen-assets` updated (contract kinds, cache). Full suite = the 7 baseline failures only.
+
 ### 2026-11-20 — Polish: MLB clock tab, CFB play text, Big-number poster at 9:16 / 1:1 (branch feature/polish-1120)
 - Status: `[committed on feature/polish-1120 — not pushed]`. From origin/main 852a1d6. Before/after frames: scratchpad `hero/polish-1120/`.
 - **Reels Game Swing, MLB**: baseball has no game clock, so the clock tab under the scorebug only repeated the bug's inning ("TOP 2"). `reel-render.js` `clockTab(state)`: the tab shows only with a clock, or a period the bug is not already showing (football with down & distance keeps "Q4  0:03"). The digest has no outs / bases, so nothing replaces it; the clip moves up into the space. Football unchanged.

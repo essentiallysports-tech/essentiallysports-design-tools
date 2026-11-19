@@ -235,3 +235,134 @@ Default caps:
 Existing variables used: `AI_GATEWAY_API_KEY`, `GENERATE_IMAGES=off`, `AI_DISABLE` (`generate-asset`,
 `generate-asset-background` and so on), `AI_ECONOMY`, and the `REMOVE_BG_*` / `OPENAI_API_KEY` settings for
 cut-outs.
+
+## Imagery v3 (feature/gen-imagery, 2026-11-20)
+
+Every Creative design now gets several ranked ES photos of the people and teams in the brief, cut-outs of the
+hero subject, headshots for grids, and team and league logos. The code is in `netlify/functions/_imagery.js`.
+
+### How the composer gets it
+The composer calls **`findPhotos({ person | team, sport, count })`**, once per subject, as before. It is now the
+v3 path (`findSubjectPhotos`) and is cached 15 minutes. It returns:
+
+```js
+{ ok,
+  photos:    [{ url, src, sourceUrl, width, height, person? | team?, kind, detail, focal?, score, source, rights,
+                face, alone, cutoutOk, title, caption, credit, date }],
+  cutouts:   [{ url, fromPhoto, person, width, height }],
+  headshots: [{ url, person, team?, focal? }],
+  logos:     [{ url, team, league }],
+  cutoutPlan:[{ fromPhoto, sourceUrl, person, path }],
+  subject:   { name, kind },
+  ranked, cost, cached }
+```
+
+- `photos` are sorted by `score` (0–1).
+- `kind` uses the contract kinds (action, portrait, crowd, venue, object); `detail` is the finer one (celebration,
+  reaction...).
+- `cutouts` lists only cut-outs already in the shared store. `cutoutPlan` is what the browser still makes.
+- A junk subject ("Europe", "Sunday", "World Tour" passed as a person) returns no photos, and nothing is searched.
+
+`prepareImagery(read, ctx)` gives the same data for a whole brief at once (every subject, with cross-subject
+de-duplication and headshots for up to 9 extra people). It's there for callers that want one call; the composer
+on `feature/gen-director` uses `findPhotos`.
+
+### Why the Bryson brief had no player photo (and the class of failure behind it)
+1. **Cut-outs could never happen in Generate.**
+   - The composer asked the server for cut-outs, and the server always refused (`reason: 'client'`), because it
+     has no image decoder.
+   - `generate.html` never loaded `frameup-assets.js` or `frameup-cutout.js`, so the browser path never ran either.
+   - So every cut-out archetype (hero number, stat tower, trading card...) was unavailable on every brief.
+2. **Subjects were polluted.** The composer searched every capitalised run as a person:
+   - "World Tour", "Europe", "Sunday", "North." (from "AFC North."), "Las Vegas", "Players Championship";
+   - ALL-CAPS fragments ("BRYSON TAKES", "CAITLIN CLARK BREAKS");
+   - while a first name alone ("Bryson", "Ohtani", "LeBron") searched badly.
+
+   Junk subjects used up the four search slots, and their photos (a golf course, a city) were offered as the brief's
+   imagery. With no cut-out and no confident player photo, the director fell back to type-led archetypes plus the
+   sport's concept art (`golf-ball`). That is the likely source of the murky golf-ball image; it can't be confirmed
+   without the live run's plan.
+3. **Ranking only ran with a vision key.** Without it, order was simply source order: article lead images
+   (often logos, silhouettes, other people) came before the agency and media library.
+4. **Sizes were unknown.** Article images report no size, and media items report the original size even when a
+   1536 px version is used. So "sharp at 1080" could not be checked, and small crops won.
+
+### What runs now
+1. **Subjects** (`subjectsFor`):
+   - Names are cleaned: possessives, trailing punctuation and verbs are dropped.
+   - Each name is classified as person, team, league, event, venue or place. Places and events are never searched as people.
+   - Short and ALL-CAPS names are resolved through ES WordPress tags (`/wp/v2/tags`, public, cached 24 h).
+     "Bryson" becomes "Bryson DeChambeau"; "CAITLIN CLARK BREAKS" becomes "Caitlin Clark".
+   - Up to 4 heroes are searched in full. Up to 9 more people are searched lightly for headshot grids.
+   - Stories with no person use their team or league, and a named venue is its own subject.
+2. **Gathering:** the same three ES sources (agency pool, article leads, media library), ES hosts only.
+   - De-duplication now also matches agency frame ids across hosts (`USATSI_123` on S3 and on the CDN).
+   - Each photo belongs to the first subject that found it, so no photo repeats within a set.
+3. **Sizes:**
+   - The ES CDN (Bunny) serves every file at most 1280 px wide unless asked. Every ES CDN URL now carries
+     `?width=2048`; it never upscales past the file. Before this, a "1536" photo arrived as 1280 × 853 and was
+     soft on a 1080 × 1350 canvas.
+   - The first 64–256 KB of the 12 most promising files is read to get the JPEG, PNG or WebP header (no decoder).
+   - A WordPress size such as `-1079x720` is swapped for its larger original when one exists.
+   - All probes share a 5 s deadline, because the CDN is slow on cold files. Results are cached 24 h.
+4. **Free signals:**
+   - whether the subject is named (full name, or surname) in the title, caption or file name;
+   - graphics (logo, collage, silhouette, screenshot...);
+   - group shots ("X and Y", "-vs-", teammates);
+   - kind (action, celebration, portrait, reaction, crowd, venue, object) from caption verbs;
+   - recency (date, upload path or year).
+5. **Vision, only where it pays:**
+   - It runs behind `aiSpendGate`, at most 4 calls per run: people first (wrong-person risk), then teams and
+     venues (another team's helmet "at Arrowhead" is not a Chiefs photo).
+   - Each call scores up to 8 photos the cache has not seen, using Haiku.
+   - For each photo it returns: subject, alone, face visible, quality 1–5 (blurry or murky = 1), kind, graphic,
+     cut-out-able, and focal x/y.
+   - Verdicts are cached 24 h per person and photo, so a repeat brief, or the same player in a new brief, costs nothing.
+6. **Score (0–1):**
+
+   | Signal | Weight |
+   |---|---|
+   | Subject | 0.35 |
+   | Resolution (1080+ short side = 1) | 0.2 |
+   | Visibility (alone and face) | 0.15 |
+   | Quality | 0.1 |
+   | Kind | 0.1 |
+   | Recency | 0.1 |
+
+   - These are dropped: graphics, the wrong person, a short side under 400 px, and quality 1.
+   - Without vision, a photo that never names the person is dropped once 3 photos do.
+   - A greedy pick then varies kinds and articles.
+7. **Output** (the shared contract):
+   - `input.photos`: the other ranked candidates; `input.photo` leads.
+   - `input.cutouts`
+   - `input.headshots`: per person, the photo with the best visible face.
+   - `input.logos`: team marks from the brief plus the sport's league mark, from `logo-library.js`.
+
+### Cut-outs: made once, then free for everyone
+1. `generate-creative.js` decides which cut-outs to make:
+   - If the plan returns `imagery.cutoutPlan`, it uses that.
+   - Otherwise it takes each named person's lead photo from the plan's directions: at most 3, never a team,
+     crowd, venue or object photo, and never one already cut out.
+2. `generate-creative.js` calls `FrameUpAssets.prepareCutouts`. This is the existing path: an AI mask, applied to
+   the ORIGINAL pixels after the alignment checks. It runs in parallel, with a 25 s cap and a $0.05 cap per run.
+3. It then rebuilds that person's designs with `input.cutout` and `input.cutouts`, through the same ES gate
+   (`checkScene`).
+4. The PNG is stored with `op: 'cutout-store'`:
+   - It must be an ES photo, a PNG with an alpha channel, at most 4 MB and at most 4096 px.
+   - The path is `frameup-links/gen-assets/cutouts/<sha of the photo>.png`.
+   - It is uploaded with the person's own session, `x-upsert: false`, so the first write wins.
+5. On every later run, on any server, `findPhotos` finds it with a HEAD request and returns it in `res.cutouts`
+   (`{ url, fromPhoto }`). The composer gets it at $0, before the art director plans, so cut-out-led
+   archetypes are available from the server side.
+
+### Cost per run (Imagery v3)
+
+| Item | First run | Repeat or same player |
+|---|---|---|
+| Subject tag lookups, size probes, ES searches | $0 (public ES endpoints) | $0 |
+| Vision ranking (Haiku, ≤ 4 calls of ≤ 8 photos per run) | about $0.002–0.004 per subject, ≤ $0.016 | $0 (24 h cache) |
+| Cut-outs (gpt-image-1-mini low, ≤ 3) | about $0.005–0.011 each, ≤ $0.033 (cap $0.05) | $0 (shared store) |
+| **Total** | **about $0.01–0.05** | **$0** |
+
+The cost shows in `plan.cost.assets` (vision) and in `plan.imagery.cutoutCost`, which is added to the run total the
+card summary shows.
