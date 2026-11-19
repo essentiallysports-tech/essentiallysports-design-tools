@@ -82,7 +82,8 @@ const SWEEP = `(async (theme, ws) => {
   const options = pick ? [...pick.options].map(o => o.value) : [''];
   for (const v of options) {
     if (pick) { pick.value = v; pick.dispatchEvent(new Event('change', { bubbles: true })); await sleep(700); }
-    const is = scan();
+    let is = scan();
+    if (is.length) { await sleep(900); is = scan(); } // settle once: panels re-render on the next frame
     if (is.length) out[(v || ws)] = [...new Set(is)];
   }
   return { templates: options.length, problems: out };
