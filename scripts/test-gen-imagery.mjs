@@ -66,6 +66,8 @@ const allowed = url => String(url).startsWith('https://image-cdn.essentiallyspor
   assert.deepEqual(mlb.heroes.map(h => h.name), ['Shohei Ohtani']);
   const caps = await I.subjectsFor({ brief: 'CAITLIN CLARK BREAKS THE ROOKIE ASSISTS RECORD WITH 337', people: ['CAITLIN CLARK BREAKS', 'ROOKIE ASSISTS RECORD'], teams: [], stories: [] }, { tags });
   assert.deepEqual(caps.heroes.map(h => h.name), ['Caitlin Clark'], 'shouted words: the longest prefix that is a real ES name');
+  const takes = await I.subjectsFor({ brief: 'BRYSON TAKES ON EUROPE IN 2027', people: ['BRYSON TAKES', 'EUROPE'], teams: [], stories: [] }, { tags });
+  assert.deepEqual(takes.heroes.map(h => h.name), ['Bryson DeChambeau'], 'a shouted first name before a verb still resolves');
   const north = await I.subjectsFor({ brief: 'The Bengals took first place in the AFC North.', people: ['North.'], teams: [], stories: [] }, { tags });
   assert.deepEqual(north.heroes, [], 'a direction word never becomes a venue or person');
   const venue = await I.subjectsFor({ brief: 'The Chiefs plan to leave Arrowhead Stadium', people: ['Arrowhead Stadium', 'Kansas'], teams: [{ name: 'Chiefs', kind: 'team', id: 'c' }], stories: [{ text: 'The Chiefs plan to leave Arrowhead Stadium', teams: ['c'] }] }, { tags });
@@ -166,8 +168,8 @@ function sources() {
     },
     probe: async url => {
       calls.probe.push(url);
-      if (/drives-the-ball\.jpg$/.test(url)) return { width: 2560, height: 1707 }; // the original behind the 1536 size
-      if (/smiling\.jpg$/.test(url)) return null; // no bigger original
+      if (/drives-the-ball\.jpg(\?|$)/.test(url)) return { width: 2560, height: 1707 }; // the original behind the 1536 size
+      if (/smiling\.jpg(\?|$)/.test(url)) return null; // no bigger original
       return null;
     },
     probeDeadlineMs: 2000,
@@ -187,7 +189,8 @@ const GOLF_READ = { brief: 'Sport: Golf\nBryson DeChambeau is taking on Europe o
   assert.ok(urls.length >= 3, 'several photos of the named person');
   assert.ok(!urls.some(u => /logo|silhouette|Rolapp|tiny/.test(u)), `no graphics, other people or thumbnails: ${urls}`);
   assert.equal(urls.filter(u => /USATSI_100001/.test(u)).length, 1, 'the agency frame and its article copy count once');
-  assert.ok(urls.some(u => /drives-the-ball\.jpg$/.test(u)), 'the 1536 size is swapped for the larger original');
+  assert.ok(urls.some(u => /drives-the-ball\.jpg\?width=2048$/.test(u)), 'the 1536 size is swapped for the larger original');
+  assert.ok(urls.every(u => u.includes('width=2048')), 'the CDN is asked for full resolution (it caps at 1280 otherwise)');
   const top = im.bySubject['Bryson DeChambeau'][0];
   assert.ok(/USATSI_10000[12]/.test(top.sourceUrl), `a sharp, named, solo agency photo leads: ${top.sourceUrl}`);
   assert.notEqual(im.bySubject['Bryson DeChambeau'][0].kind, im.bySubject['Bryson DeChambeau'][1].kind, 'variety in the first two');
@@ -251,6 +254,15 @@ const GOLF_READ = { brief: 'Sport: Golf\nBryson DeChambeau is taking on Europe o
   assert.ok(refused.photos.length >= 3);
 }
 
+// Never a cut-out of a crowd, venue or object photo, even when vision says it could be.
+{
+  T.VISION_CACHE.clear();
+  const subject = { name: 'Bryson DeChambeau', kind: 'person' };
+  const pool = ['crowd', 'venue', 'object', 'action'].map((k, i) => ({ sourceUrl: `${BASE}/Bryson-DeChambeau-${k}.jpg`, url: `/p${i}`, title: 'Bryson DeChambeau', caption: '', width: 2000, height: 1400, matched: 'person' }));
+  const res = await I.rankFor(subject, pool, { allowed, probe: async () => null, vision: async ({ photos }) => ({ cost: 0, rows: photos.map((p, i) => ({ n: i + 1, subject: true, alone: true, face: true, quality: 4, kind: p.sourceUrl.match(/-(\w+)\.jpg$/)[1], cutout: true })) }) }, {}, { allowVision: true });
+  assert.deepEqual(res.ranked.filter(p => p.cutoutOk).map(p => p.kind), ['action']);
+}
+
 // Team-only and grid briefs.
 {
   const { deps } = sources();
@@ -310,39 +322,51 @@ const GOLF_READ = { brief: 'Sport: Golf\nBryson DeChambeau is taking on Europe o
   assert.deepEqual(broken.photos, []);
 }
 
-// ─── 5. Composer hook: contract fields reach the composer input ──────────
+// ─── 5. findPhotos v3: exactly what the composer (gen-director) reads ───
+// Per subject: res.photos sorted by score (url, src, width, height, kind,
+// focal, rights), res.cutouts [{ url, fromPhoto }], res.headshots, res.logos.
 {
-  const C = require('../netlify/functions/_composer.js');
   const A = require('../netlify/functions/_asset-service.js');
-  A._test.IMAGERY_CACHE.clear();
+  A._test.PHOTO_CACHE.clear();
+  T.TAG_CACHE.clear();
   const { deps } = sources();
+  deps.tags = async q => (/bryson/i.test(q) ? [{ name: 'Bryson DeChambeau', count: 900 }] : []);
   deps.storageHas = async path => `https://store.example/${path}`;
-  C.setAssetService({ ...A, prepareImagery: (read, ctx) => A.prepareImagery(read, { ...ctx, deps }) });
-  C.PLAN_CACHE?.clear?.();
-  const plan = await C.plan({ brief: 'Sport: Golf\nBryson DeChambeau won $4 million on the DP World Tour.', found: {}, want: 3, director: false });
-  assert.ok(plan.directions.length >= 1);
-  assert.ok(plan.imagery && Array.isArray(plan.imagery.cutoutPlan), 'the plan carries the imagery summary');
-  const withPhoto = plan.directions.find(d => d.input?.photo || d.input?.cutout);
-  assert.ok(withPhoto, 'a design uses the named player');
-  const input = withPhoto.input;
-  assert.ok(Array.isArray(input.headshots) && input.headshots[0].person === 'Bryson DeChambeau');
-  assert.ok(Array.isArray(input.cutouts) && input.cutouts.length >= 1, 'stored cut-outs reach input.cutouts');
-  assert.ok(input.cutout?.src, 'and the single cut-out the existing archetypes use');
-  if (input.photo) assert.ok(!input.photos.some(p => p.url === input.photo.src), 'input.photos are the other candidates');
-  // Which archetype leads is the director's call; the input must let a cut-out archetype build.
-  const COMPOSE = require('../frameup-compose.js');
-  const numbered = plan.directions.find(d => d.input?.number && d.input?.cutout);
-  assert.ok(numbered, 'a design with a number and a cut-out');
-  assert.ok(COMPOSE.fits('hero-number', numbered.input), 'hero-number fits with the stored cut-out');
-  assert.ok(COMPOSE.candidates('hero-number', numbered.input, 2).some(scene => scene.layers.some(l => l.type === 'cutout')), 'and builds with it');
-  C.setAssetService(null);
-  // Without prepareImagery the old path still works.
-  C.PLAN_CACHE?.clear?.();
-  C.setAssetService({ findPhotos: async () => ({ photos: [{ url: '/api/es-image-search?image=a.jpg' }] }) });
-  const old = await C.plan({ brief: 'Sport: Golf\nBryson DeChambeau won $4 million.', found: {}, want: 2, director: false });
-  assert.ok(old.directions.length >= 1);
-  assert.equal(old.imagery, null);
-  C.setAssetService(null);
+  const ctx = { gated: true, deps };
+  const res = await A.findPhotos({ person: 'Bryson DeChambeau', sport: 'Golf', count: 6 }, ctx);
+  assert.equal(res.ok, true);
+  assert.ok(res.photos.length >= 3);
+  const scores = res.photos.map(p => p.score);
+  assert.ok(res.photos.every(p => p.url && p.src === p.url && typeof p.score === 'number' && p.rights?.aiGenerated === false && ['action', 'portrait', 'crowd', 'venue', 'object'].includes(p.kind) && p.person === 'Bryson DeChambeau'));
+  assert.ok(scores.every(x => x >= 0 && x <= 1), 'scores are 0-1');
+  assert.ok(res.cutouts.length >= 1 && res.cutouts.every(c => c.url && res.photos.some(p => p.url === c.fromPhoto)), 'stored cut-outs keyed by fromPhoto');
+  assert.ok(res.cutouts.every(c => !['crowd', 'venue', 'object'].includes(res.photos.find(p => p.url === c.fromPhoto).kind)));
+  assert.equal(res.headshots[0].person, 'Bryson DeChambeau');
+  assert.ok(res.headshots[0].url);
+  assert.ok(res.logos.some(l => l.url && l.league === 'GOLF') || Array.isArray(res.logos));
+  // Junk subjects: no photos, and nothing searched.
+  const searched = [];
+  const spy = { ...deps, agency: async q => { searched.push(q); return []; }, media: async q => { searched.push(q); return []; } };
+  for (const junk of ['Europe', 'Sunday', 'North.', 'World Tour', 'Las Vegas']) {
+    const none = await A.findPhotos({ person: junk, sport: 'Golf' }, { gated: true, deps: spy });
+    assert.deepEqual(none.photos, [], `${junk} is not a person`);
+  }
+  assert.deepEqual(searched, [], 'junk subjects never reach the ES search');
+  // A first name resolves before searching.
+  A._test.PHOTO_CACHE.clear();
+  const short = await A.findPhotos({ person: 'Bryson', sport: 'Golf' }, ctx);
+  assert.equal(short.subject.name, 'Bryson DeChambeau');
+  assert.ok(short.photos.length >= 3);
+  // A team: logo from the library, photos tagged with the team, never cut-outs.
+  const team = await A.findPhotos({ team: 'Bengals', query: 'Bengals', sport: 'NFL' }, ctx);
+  assert.ok(team.photos.every(p => p.team === 'Bengals' && !p.person));
+  assert.deepEqual(team.cutouts, []);
+  assert.ok(team.logos.some(l => /nfl\/cin/.test(l.url)), 'team logo');
+  assert.ok(team.logos.some(l => /league-logos\/nfl/.test(l.url)), 'league mark');
+  // Cached: the second design of the set costs nothing.
+  const again = await A.findPhotos({ person: 'Bryson', sport: 'Golf' }, ctx);
+  assert.equal(again.cached, true);
+  assert.equal(again.cost, 0);
 }
 
 // ─── 6. Browser client: prepareCutouts caps, stores and never throws ─────

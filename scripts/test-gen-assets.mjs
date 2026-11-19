@@ -449,7 +449,8 @@ const resetAll = () => {
   assert.equal(found.ranked, true);
   assert.equal(found.cost, 0.0031);
   // Variety: the first two are different kinds of picture.
-  assert.notEqual(found.photos[0].kind, found.photos[1].kind);
+  assert.notEqual(found.photos[0].detail, found.photos[1].detail);
+  assert.ok(found.photos.every(p => ['action', 'portrait', 'crowd', 'venue', 'object'].includes(p.kind)), 'contract kinds');
   found.photos.forEach(photo => {
     assert.equal(photo.rights.aiGenerated, false);
     assert.ok(photo.url.startsWith('/api/es-image-search?image='));

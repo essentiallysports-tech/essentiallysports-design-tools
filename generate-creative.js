@@ -625,8 +625,26 @@
   // them at $0). Each direction of that person without a cut-out is rebuilt from
   // its input with the cut-out, through the same ES gate as the server. Photo /
   // cut-out preparation only: archetypes and layout are the composer's.
+  // Without a server plan: each named person's lead photo (one per person, 3 at
+  // most), never a team, crowd, venue or object photo, never one already cut out.
+  function cutoutPlanFrom(plan) {
+    const out = [];
+    (plan?.directions || []).forEach(dir => {
+      const photo = dir.photo;
+      const person = photo?.person || '';
+      const kind = String(dir.input?.photo?.kind || '');
+      if (!person || !photo?.src || dir.input?.cutout || ['crowd', 'venue', 'object'].includes(kind)) return;
+      if ((plan.read?.teams || []).some(t => t.name === person)) return;
+      if (out.some(item => item.person === person) || out.length >= 3) return;
+      const match = String(photo.src).match(/[?&]image=([^&]+)/);
+      const sourceUrl = match ? decodeURIComponent(match[1]) : (/^https:\/\//.test(photo.src) ? photo.src : '');
+      if (sourceUrl) out.push({ fromPhoto: photo.src, sourceUrl, person });
+    });
+    return out;
+  }
+
   async function addCutouts(plan) {
-    const items = plan?.imagery?.cutoutPlan || [];
+    const items = plan?.imagery?.cutoutPlan?.length ? plan.imagery.cutoutPlan : cutoutPlanFrom(plan);
     const A = window.FrameUpAssets;
     if (!items.length || !A?.prepareCutouts || !C()?.candidates) return;
     let made;

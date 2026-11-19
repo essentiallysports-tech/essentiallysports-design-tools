@@ -3,6 +3,29 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-20-gen-imagery",
+      "date": "2026-11-20",
+      "title": "Generate: real player photos and cut-outs in every design",
+      "commit": "ffbb7fc",
+      "items": [
+        {
+          "title": "The right player, sharp",
+          "text": "Creative designs now use several ES photos of the people and teams in your brief, ranked for the right person, sharpness and a visible face. Logos, collages and photos of other people are left out.",
+          "page": "generate.html"
+        },
+        {
+          "title": "Automatic cut-outs",
+          "text": "The star of the story is cut out automatically for stat and cover designs. A cut-out is made once and reused for free after that.",
+          "page": "generate.html"
+        },
+        {
+          "title": "Headshots and logos",
+          "text": "Grids get a headshot for each named player, and designs get the team and league logos from the logo library.",
+          "page": "generate.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-20-inspector",
       "date": "2026-11-20",
       "title": "Editor: a cleaner settings panel that follows your selection",

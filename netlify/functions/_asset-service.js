@@ -891,6 +891,10 @@ const PHOTO_CACHE = new Map();
 const PHOTO_TTL_MS = 15 * 60 * 1000;
 const cleanQuery = value => String(value || '').replace(/[^\w\s.'’&-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
 
+// findPhotos (v3): one subject's ranked ES photos plus its cut-outs (already
+// stored ones), headshot and logos, for the composer (see _imagery.js
+// findSubjectPhotos). The subject is cleaned first ("Europe" -> none,
+// "Bryson" -> "Bryson DeChambeau"). Cached 15 minutes per warm server.
 async function findPhotos(args = {}, ctx = {}) {
   const person = cleanQuery(args.person);
   const team = cleanQuery(args.team);
@@ -898,66 +902,41 @@ async function findPhotos(args = {}, ctx = {}) {
   const query = cleanQuery(args.query);
   const count = Math.max(1, Math.min(12, Number(args.count) || 6));
   const exclude = (Array.isArray(args.exclude) ? args.exclude : []).map(String).slice(0, 50);
-  const queries = [
-    person && ['person', person],
-    person && team && ['person', `${person} ${team}`],
-    team && ['team', team],
-    query && query !== person && ['query', query],
-    !person && !team && !query && sport && ['sport', sport],
-  ].filter(Boolean);
-  if (!queries.length) return fail('empty', 'Name a person, team or topic to find ES photos.');
-  const deps = { ...defaultPhotoDeps(), ...(ctx.deps || {}) };
-
-  const key = JSON.stringify({ queries, count, exclude });
-  const hit = PHOTO_CACHE.get(key);
-  if (hit && clock.now() - hit.at < PHOTO_TTL_MS) return { ...hit.value, cost: 0, cached: true };
-
-  const gathered = [];
-  await Promise.all(queries.map(async ([matched, q], order) => {
-    const [agency, articles, media] = await Promise.all([
-      deps.agency(q, 12).catch(() => []),
-      order === 0 || matched === 'query' ? deps.articles(q).catch(() => []) : Promise.resolve([]),
-      deps.media(q, 10).catch(() => []),
-    ]);
-    agency.forEach(item => gathered.push({ order, weight: 3, photo: photoRecord(item, 'es-agency', matched) }));
-    articles.filter(a => a.image).forEach(a => gathered.push({ order, weight: 2, photo: photoRecord({ id: a.url, sourceUrl: a.image, title: a.title, articleUrl: a.url, date: a.date }, 'es-article', matched) }));
-    media.forEach(item => gathered.push({ order, weight: 1, photo: photoRecord(item, 'es-media', matched) }));
-  }));
-  // Person matches first, agency before article before library, then dedupe.
-  gathered.sort((a, b) => a.order - b.order || b.weight - a.weight);
-  const unique = dedupePhotos(gathered.map(entry => entry.photo).filter(photo => deps.allowed(photo.sourceUrl)), exclude);
-  if (!unique.length) return { ok: true, photos: [], cost: 0, cached: false, ranked: false, rights: PHOTO_RIGHTS['es-media'] };
-
-  // Rank with vision when it can pay off (more photos than asked for, or a person to check).
-  let cost = 0;
-  let ranked = false;
-  const pool = unique.slice(0, Math.max(count + 2, RANK_MAX));
-  pool.forEach((photo, index) => { photo.rank = 3 - index * 0.05; });
-  if (pool.length >= 2 && (person || pool.length > count) && gateway.gatewayConfigured()) {
-    const blocked = await gate(ctx, 'generate-photo-pick');
-    if (!blocked) {
-      const result = await deps.rank({ person, photos: pool, track: { email: ctx.email, token: ctx.token, runId: ctx.runId } });
-      cost += result.cost || 0;
-      if (result.ranked) {
-        ranked = true;
-        result.scores.forEach(row => {
-          const photo = pool[row.n - 1];
-          if (!photo) return;
-          photo.kind = row.kind;
-          photo.subject = row.subject;
-          photo.graphic = row.graphic;
-          photo.rank = row.score + (row.subject ? 2 : -3) + (row.graphic ? -4 : 0) - (row.n - 1) * 0.02;
-        });
-      }
-    }
+  if (!person && !team && !query && !sport) return fail('empty', 'Name a person, team or topic to find ES photos.');
+  const deps = imageryDeps(ctx);
+  // Older callers inject rank({ person, photos }) -> { scores: [{ n, subject, score, kind, graphic }] }.
+  if (ctx.deps?.rank && !ctx.deps?.vision) {
+    deps.vision = async ({ subject, photos, track }) => {
+      const res = await ctx.deps.rank({ person: subject.name, photos, track });
+      return { cost: res.cost || 0, rows: (res.scores || []).map(r => ({ n: r.n, subject: r.subject, alone: true, face: r.kind === 'portrait', quality: r.score, kind: r.kind, graphic: r.graphic, cutout: !r.graphic && r.kind !== 'group' })) };
+    };
   }
-  const usable = ranked ? pool.filter(photo => photo.graphic !== true && (photo.subject !== false || !person)) : pool;
-  const photos = diversify(usable.length ? usable : pool, count).map(({ rank, ...photo }) => ({ ...photo, score: Number((rank ?? 0).toFixed(2)) }));
-  const first = photos[0];
-  const value = { ok: true, url: first?.url, width: first?.width, height: first?.height, rights: first?.rights, photos, ranked };
-  if (PHOTO_CACHE.size > 100) PHOTO_CACHE.delete(PHOTO_CACHE.keys().next().value);
-  PHOTO_CACHE.set(key, { at: clock.now(), value });
-  return { ...value, cost: Number(cost.toFixed(5)), cached: false };
+  const key = JSON.stringify({ person, team, sport, query, count, exclude, v: 3 });
+  const hit = PHOTO_CACHE.get(key);
+  if (hit && clock.now() - hit.at < PHOTO_TTL_MS) return { ...(await refreshCutouts(hit.value, deps)), cost: 0, cached: true };
+  let result;
+  try {
+    result = await IMAGERY.findSubjectPhotos({ person, team, sport, query: query || (!person && !team ? sport : ''), count, exclude }, ctx, deps);
+  } catch (error) {
+    return { ok: true, photos: [], cutouts: [], headshots: [], logos: [], cutoutPlan: [], cost: 0, cached: false, ranked: false, rights: PHOTO_RIGHTS['es-media'] };
+  }
+  const first = result.photos[0];
+  const value = { ...result, url: first?.url, width: first?.width, height: first?.height, rights: first?.rights || PHOTO_RIGHTS['es-media'] };
+  if (result.photos.length) {
+    if (PHOTO_CACHE.size > 100) PHOTO_CACHE.delete(PHOTO_CACHE.keys().next().value);
+    PHOTO_CACHE.set(key, { at: clock.now(), value });
+  }
+  return { ...value, cost: Number((result.cost || 0).toFixed(5)), cached: false };
+}
+
+// A cached answer: cut-outs the browser stored since are picked up with a HEAD each ($0).
+async function refreshCutouts(value, deps) {
+  if (!value.cutoutPlan?.length || !deps.storageHas) return value;
+  const found = await Promise.all(value.cutoutPlan.map(item => deps.storageHas(item.path).catch(() => null)));
+  if (!found.some(Boolean)) return value;
+  value.cutouts = [...value.cutouts, ...value.cutoutPlan.filter((c, i) => found[i]).map((c, i) => ({ url: found.filter(Boolean)[i], width: c.width || null, height: c.height || null, person: c.person, fromPhoto: c.fromPhoto }))];
+  value.cutoutPlan = value.cutoutPlan.filter((c, i) => !found[i]);
+  return value;
 }
 
 // ─── Imagery v3 (Generate): photos, cut-outs, headshots, logos per run ─────
@@ -990,7 +969,7 @@ async function prepareImagery(read = {}, ctx = {}) {
     const key = JSON.stringify({ people: read.people || [], teams: (read.teams || []).map(t => t.name), sport: read.sport || '', stories: (read.stories || []).map(s => s.text) });
     const hit = IMAGERY_CACHE.get(key);
     // A cached answer with cut-outs still to make is rebuilt (finding new ones costs $0).
-    if (hit && clock.now() - hit.at < IMAGERY_TTL_MS && !hit.value.cutoutPlan.length) return { ...hit.value, cost: 0, cached: true };
+    if (hit && clock.now() - hit.at < IMAGERY_TTL_MS) return { ...(await refreshCutouts(hit.value, imageryDeps(ctx))), cost: 0, cached: true };
     const value = await IMAGERY.prepareImagery(read, ctx, imageryDeps(ctx));
     // An empty answer (ES search down or slow) is never cached: the next run tries again.
     if (value.photos.length) {
