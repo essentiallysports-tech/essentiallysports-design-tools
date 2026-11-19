@@ -56,7 +56,7 @@ const { verifyEsUser, bearerToken, authConfig } = require('./_supabase-auth.js')
 const media = require('./_reel-media.js');
 const STYLES = require('../../reel-styles.js');
 const { getTrends } = require('./trend-design.js');
-const { gatewayConfigured, isBudgetError, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage, aiSpendGate } = require('./_ai-gateway.js');
+const { gatewayConfigured, isBudgetError, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage, aiSpendGate, freeModeGate, withAiMode } = require('./_ai-gateway.js');
 const clipJudge = require('./_reel-clip-judge.js');
 const CLIPS = require('../../reel-clips.js');
 const director = require('./_reel-director.js');
@@ -128,7 +128,7 @@ function sourcesOf(trend, brief, facts) {
 // with AI off, the code plan ships as it is (free).
 async function dataPlan(input, body, track, gates) {
   const style = STYLES.STYLES[body.style] ? body.style : F.FORMATS[input.format].defaultStyle;
-  const blocked = gates.off ? 'off' : (gates.weekly ? 'weekly-limit' : (gates.hourly ? 'limit' : ''));
+  const blocked = gates.free ? 'free' : gates.off ? 'off' : (gates.weekly ? 'weekly-limit' : (gates.hourly ? 'limit' : '')); // ai-free-mode: 'free' = code plan
   const tier = body.tier === 'economy' ? 'economy' : 'standard';
   const out = await director.runDataDirector(input, { style, tier: body.aiCopy === false ? 'off' : tier, steer: clean(body.steer, 300), voice: body.voice === true, blocked, track });
   if (!out.plan) return { ok: false, status: 422, reason: 'no-data', error: 'There is not enough data for this reel; use the brief.' };
@@ -168,7 +168,7 @@ async function plan(body, track, gates) {
   if (hit && Date.now() - hit.at < PLAN_TTL_MS) return { ...hit.value, cached: true, cost: 0, costs: { director: 0, factCheck: 0 } };
 
   // Over a cap or AI off: a free, grounded draft (the page says why).
-  const blocked = gates.off ? 'off' : (gates.weekly ? 'weekly-limit' : (gates.hourly ? 'limit' : ''));
+  const blocked = gates.free ? 'free' : gates.off ? 'off' : (gates.weekly ? 'weekly-limit' : (gates.hourly ? 'limit' : '')); // ai-free-mode: 'free' = code plan
   let facts = null;
   let factCost = 0;
   if (!blocked && body.factCheck) {
@@ -357,6 +357,7 @@ async function formatMode(mode, body, ctx, gates = {}) {
   const { token } = ctx;
   if (entry.gate === 'ai') {
     const gate = await (gates.aiSpendGate || aiSpendGate)(token, { feature: entry.feature });
+    freeModeGate(gate); // ai-free-mode: skipped; the page keeps its code pick
     if (gate) return { ok: false, status: gate.status, reason: gate.reason, error: gate.error };
   }
   if (entry.gate === 'ai' || entry.gate === 'mcp') {
@@ -377,7 +378,8 @@ const AI_MODES = { plan, revise, voice: speak, music, 'voice-sample': voiceSampl
 // ai-clip-status only reads a job that was already billed and capped.
 const DATA_MODES = { 'ai-clip-status': aiClipStatus, projects, 'project-save': projectSave, 'project-load': projectLoad, event: recordEvent };
 
-exports.handler = async function handler(event) {
+// withAiMode (ai-free-mode): one free-mode store per request; replies carry mode: 'free'.
+exports.handler = withAiMode(async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' }, body: '' };
   if (event.httpMethod === 'GET' && String(event.queryStringParameters?.diag || '') === 'voice') {
     const auth = await verifyEsUser(event);
@@ -412,6 +414,7 @@ exports.handler = async function handler(event) {
     if (body.mode === 'trends') return json(200, await trends());
     if (body.mode === 'clip-judge') {
       const gate = await aiSpendGate(token, { feature: clipJudge.FEATURE });
+      freeModeGate(gate); // ai-free-mode: skipped; the page keeps its code ranking
       if (gate) return json(gate.status, { ok: false, reason: gate.reason, error: gate.error });
       if (await userOverHourlyLimit(token)) return json(429, { ok: false, reason: 'limit', error: 'Clips are ranked without the AI check this hour.' });
       const result = await clipJudge.judgeClips({ clips: body.clips, subjects: body.subjects, budgetUsd: Number(body.budgetUsd ?? CLIPS.JUDGE.maxUsdPerReel), track });
@@ -426,13 +429,18 @@ exports.handler = async function handler(event) {
       return json(result.ok ? 200 : (result.status || 400), result);
     }
     if (AI_MODES[body.mode]) {
-      const [weekly, hourly] = await Promise.all([userOverWeeklyLimit(token), userOverHourlyLimit(token)]);
+      // ai-free-mode: person and team budgets (was the personal cap only). Over one,
+      // the plan is the code plan (no director); AI-only modes are skipped.
+      const [gate, hourly] = await Promise.all([aiSpendGate(token, {}), userOverHourlyLimit(token)]);
+      const free = freeModeGate(gate);
+      const weekly = Boolean(gate) && !free;
       if (body.mode === 'plan') {
-        const result = await plan(body, track, { off: !gatewayConfigured(), weekly, hourly });
+        const result = await plan(body, track, { off: !free && !gatewayConfigured(), free, weekly, hourly });
         return json(result.ok ? 200 : (result.status || 502), result);
       }
+      if (free) return json(200, { ok: true, skipped: true });
       if (body.mode === 'revise' && !gatewayConfigured()) return json(503, { ok: false, reason: 'off', error: 'AI is not available right now. Edit the beats by hand.' });
-      if (weekly) return json(429, { ok: false, reason: 'weekly-limit', error: weeklyLimitMessage() });
+      if (weekly) return json(gate.status, { ok: false, reason: gate.reason, error: gate.error });
       if (hourly) return json(429, { ok: false, reason: 'limit', error: "You've used a lot of AI this hour. Take a short break and try again soon." });
       try {
         const result = await AI_MODES[body.mode](body, track);
@@ -448,6 +456,6 @@ exports.handler = async function handler(event) {
     console.error('reel-maker failed:', error);
     return json(502, { ok: false, error: 'Reels Studio is unavailable right now. Try again in a moment.' });
   }
-};
+});
 
 exports._test = { FORMAT_MODES, formatMode, dataPlan, EVENT_TYPES, isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf };

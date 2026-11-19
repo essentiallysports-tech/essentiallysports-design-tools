@@ -48,7 +48,8 @@
   <script src="theme.js?v=20261120-rel2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
-<script src="app-shell.js?v=20261119-rel3"></script>
+<script src="frameup-ai-mode.js?v=20261120-free"></script>
+<script src="app-shell.js?v=20261120-free"></script>
 <link rel="stylesheet" href="frameup-tour.css?v=20261120-rel2">
 <script src="frameup-tour.js?v=20261117-tour1"></script>
 <script src="tours/updates.js?v=20261117-tour1"></script>
@@ -823,7 +824,7 @@
 
   <!-- Trends view: pure logic + the board (the Generate view is the next script). -->
   <script src="trends-logic.js?v=20261119-rel2"></script>
-  <script src="trends-view.js?v=20261120-rel2"></script>
+  <script src="trends-view.js?v=20261120-free"></script>
   <script>
     // FrameUp Generate: brief → /api/es-generate (ES research + AI copy +
     // template checks + ES photo) → each design rendered by the real editor in
@@ -1073,7 +1074,8 @@
       // ── Status, progress and notices ──────────────────────────────────────
       // action: { label, run } adds the one-click next step (Try again, Use Auto).
       // A switched-off feature or a reached weekly cap gets a calm title, never "failed".
-      const PAUSED_TITLES = { 'feature-off': 'Switched off for now', 'weekly-limit': 'Weekly AI limit reached', 'team-limit': 'Team AI budget used up', 'limit-unknown': 'AI is paused for a moment' };
+      // Free mode (frameup-ai-mode.js): over this week's AI budget the AI-only steps rest.
+      const PAUSED_TITLES = { 'feature-off': 'Switched off for now', 'weekly-limit': 'Weekly AI limit reached', 'team-limit': 'Free mode this week', 'user-limit': 'Free mode this week', 'gateway-budget': 'Free mode this week', 'limit-unknown': 'AI is paused for a moment' };
       const pausedTitle = error => PAUSED_TITLES[error?.reason] || '';
 
       function setNotice(title, body = '', tone = '', action = null) {
@@ -2106,7 +2108,7 @@
         } catch (error) {
           progress.stop();
           els.grid.replaceChildren();
-          setNotice(error.reason === 'budget' || error.reason === 'weekly-limit' ? 'On-brand checks are paused' : 'Could not check that design', ` ${error.message || 'Something went wrong.'}`, error.reason ? 'warn' : '', error.reason ? null : { label: 'Try again', run: () => onbrand.run.click() });
+          setNotice(pausedTitle(error) || (error.reason === 'budget' || error.reason === 'weekly-limit' ? 'On-brand checks are paused' : 'Could not check that design'), ` ${error.message || 'Something went wrong.'}`, error.reason ? 'warn' : '', error.reason ? null : { label: 'Try again', run: () => onbrand.run.click() });
         } finally {
           els.grid.removeAttribute('aria-busy');
           setBusy(false);
@@ -2335,7 +2337,7 @@
           } catch (error) {
             button.disabled = false;
             button.innerHTML = label;
-            setNotice(error.reason === 'budget' ? 'Fixes are paused' : 'Fix not applied', ` ${error.message || ''}`, error.reason === 'budget' ? 'warn' : '');
+            setNotice(pausedTitle(error) || (error.reason === 'budget' ? 'Fixes are paused' : 'Fix not applied'), ` ${error.message || ''}`, error.reason === 'budget' || pausedTitle(error) ? 'warn' : '');
           } finally {
             card.querySelector('.gen-card__media').classList.remove('is-busy');
           }

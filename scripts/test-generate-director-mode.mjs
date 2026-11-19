@@ -290,12 +290,15 @@ assert.equal(res.status, 200);
 assert.deepEqual(res.body.directions, []);
 assert.equal(res.body.source, 'none');
 
-// The weekly cap holds for the directions step too.
+// The weekly cap holds for the directions step too: free mode, no director
+// (the page then makes the designs the usual, rule-based way).
 overWeek = true;
 reset();
 res = await post({ mode: 'direct', brief });
-assert.equal(res.status, 429);
-assert.equal(res.body.reason, 'weekly-limit');
+assert.equal(res.status, 200);
+assert.equal(res.body.mode, 'free');
+assert.equal(res.body.reason, 'user-limit');
+assert.deepEqual(res.body.directions, []);
 assert.equal(seen.director.length, 0);
 overWeek = false;
 

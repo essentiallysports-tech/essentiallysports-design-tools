@@ -29,7 +29,7 @@
 // every user of the instance; hourly and weekly limits apply.
 
 const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
-const { gatewayConfigured, aiText, isBudgetError, logBackupCall, userOverHourlyLimit, aiSpendGate, featureDisabled } = require('./_ai-gateway.js');
+const { gatewayConfigured, aiText, isBudgetError, logBackupCall, userOverHourlyLimit, aiSpendGate, featureDisabled, freeModeGate, inFreeMode, withAiMode } = require('./_ai-gateway.js');
 let TEAMS = null;
 try { TEAMS = require('../../video-ads-teams.js'); } catch (error) { /* team logos are optional */ }
 
@@ -318,7 +318,7 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const USE_OPENAI = process.env.GENERATE_USE_OPENAI === 'true' && Boolean(OPENAI_API_KEY);
 function aiProvider() {
-  if (String(process.env.GENERATE_AI || '').toLowerCase() === 'rules') return null;
+  if (String(process.env.GENERATE_AI || '').toLowerCase() === 'rules' || inFreeMode()) return null; // ai-free-mode: no Groq either
   if (GROQ_API_KEY) return { url: 'https://api.groq.com/openai/v1/chat/completions', key: GROQ_API_KEY, models: [process.env.GROQ_TITLES_MODEL || 'openai/gpt-oss-20b', process.env.GROQ_GENERATE_MODEL || 'openai/gpt-oss-120b'] };
   if (USE_OPENAI) return { url: 'https://api.openai.com/v1/chat/completions', key: OPENAI_API_KEY, models: [process.env.OPENAI_GENERATE_MODEL || 'gpt-4.1-mini'] };
   return null;
@@ -989,6 +989,8 @@ async function handleEnrich(event, body) {
   if (featureDisabled('trend-enrich')) return json(200, { ok: true, ai: false, limited: 'off', items: withRules(), calls: 0 }, 'no-store');
   const token = bearerToken(event.headers);
   const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: 'trend-enrich' }), userOverHourlyLimit(token)]);
+  // ai-free-mode: over a weekly budget -> the free rule-based ideas (AI angles hidden on the page).
+  if (freeModeGate(gate)) return json(200, { ok: true, ai: false, items: withRules(), calls: 0 }, 'no-store');
   if (gate) return json(gate.status, { ok: false, error: gate.error, reason: gate.reason, items: withRules() }, 'no-store');
   if (overHour) return json(200, { ok: true, ai: false, limited: 'hourly', items: withRules(), calls: 0 }, 'no-store');
   try {
@@ -1000,7 +1002,8 @@ async function handleEnrich(event, body) {
   }
 }
 
-exports.handler = async event => {
+// withAiMode (ai-free-mode): one free-mode store per request; replies carry mode: 'free'.
+exports.handler = withAiMode(async event => {
   if (event.httpMethod === 'OPTIONS') return json(204, {}, 'no-store');
   if (event.httpMethod === 'POST') {
     let body = {};
@@ -1017,6 +1020,8 @@ exports.handler = async event => {
     // Switched off (AI_DISABLE=trend-headlines): the free rule-based ideas.
     if (featureDisabled('trend-headlines')) return json(200, { ok: true, ai: false, off: true, titles: suggestTitles({ title, related: related.map(t => ({ title: t })) }) }, 'no-store');
     const [gate, overHour] = await Promise.all([aiSpendGate(bearerToken(event.headers), { feature: 'trend-headlines' }), userOverHourlyLimit(bearerToken(event.headers))]);
+    // ai-free-mode: over a weekly budget -> the free rule-based headlines.
+    if (freeModeGate(gate)) return json(200, { ok: true, ai: false, titles: suggestTitles({ title, related: related.map(t => ({ title: t })) }) }, 'no-store');
     if (gate) return json(gate.status, { ok: false, error: gate.error, reason: gate.reason }, 'no-store');
     // Over the hourly AI limit: fall back to the free rule-based headlines.
     if (overHour) {
@@ -1040,7 +1045,7 @@ exports.handler = async event => {
     console.error('trend-design failed:', error);
     return json(502, { ok: false, error: 'Trends are unavailable right now.' }, 'no-store');
   }
-};
+});
 
 exports.getTrends = getTrends;
 exports._test = {

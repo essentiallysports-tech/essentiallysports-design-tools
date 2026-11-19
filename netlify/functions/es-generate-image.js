@@ -4,7 +4,7 @@
 // those come from the ES Image Pool. Every image is logged to
 // frameup_ai_usage (images: 1, cost) through _ai-gateway.js.
 const { verifyEsUser } = require('./_supabase-auth.js');
-const { gatewayConfigured, aiImage, isBudgetError, userOverHourlyLimit, aiSpendGate } = require('./_ai-gateway.js');
+const { gatewayConfigured, aiImage, isBudgetError, userOverHourlyLimit, aiSpendGate, freeModeGate, withAiMode } = require('./_ai-gateway.js');
 const { _test: { sceneText } } = require('./es-generate.js');
 
 // A soft per-user cap on each warm server (the weekly Gateway cap is the hard one).
@@ -34,7 +34,8 @@ function underLimit(email) {
   return true;
 }
 
-exports.handler = async function handler(event) {
+// withAiMode (ai-free-mode): over a weekly budget the reply is { ok: true, mode: 'free', skipped: true }.
+exports.handler = withAiMode(async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'POST, OPTIONS' }, body: '' };
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed.' });
   const auth = await verifyEsUser(event);
@@ -55,6 +56,7 @@ exports.handler = async function handler(event) {
   // The per-server counter is a quick first check; the database-backed
   // per-person limit holds across servers and restarts.
   const gate = await aiSpendGate(token, { feature: 'generate-scene-image' });
+  freeModeGate(gate);
   if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
   if (!underLimit(email) || await userOverHourlyLimit(token)) {
     return json(429, { error: 'That is a lot of scene images this hour. Try again later.', reason: 'limit' });
@@ -67,6 +69,6 @@ exports.handler = async function handler(event) {
     console.error('es-generate-image failed:', error);
     return json(502, { error: 'The scene image could not be made. Try again in a moment.' });
   }
-};
+});
 
 exports._test = { scenePrompt, underLimit };

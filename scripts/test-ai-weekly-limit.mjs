@@ -4,10 +4,11 @@
 //   1. week start is Monday 00:00 UTC
 //   2. userOverWeeklyLimit: under / at / over the cap, the RPC body and headers,
 //      fails open (404, 500, bad JSON, network error), no token, cap turned off
-//   3. AI_USER_WEEKLY_LIMIT_USD changes the cap and the message
-//   4. every AI caller returns 429 with the weekly message before any AI call
-//      (es-generate generate + rewrite, es-generate-image, trend-design titles,
-//      ad-rating), and goes ahead when the RPC is missing
+//   3. AI_USER_WEEKLY_LIMIT_USD can lower the cap (never raise it past the $20 policy)
+//   4. every AI caller switches to free mode (200, mode 'free', reason
+//      'user-limit') before any AI call (es-generate generate + rewrite,
+//      es-generate-image, trend-design titles, ad-rating), and goes ahead when
+//      the RPC is missing
 //   5. the migration and the sidebar card use the same function
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -105,14 +106,22 @@ assert.equal(spendRequests.length, 0, 'no RPC without a token or with the cap of
   const probe = `
     const p = require('path'); const auth = p.resolve('netlify/functions/_supabase-auth.js');
     require.cache[auth] = { id: auth, filename: auth, loaded: true, exports: { authConfig: () => ({ url: 'https://db', publishableKey: 'pk' }) } };
-    globalThis.fetch = async () => ({ ok: true, json: async () => [{ total_usd: 12 }] });
+    const spent = Number(process.env.PROBE_SPEND || 12);
+    globalThis.fetch = async () => ({ ok: true, json: async () => [{ total_usd: spent }] });
+    console.warn = () => {};
     const g = require(p.resolve('netlify/functions/_ai-gateway.js'));
     g.userOverWeeklyLimit('tok').then(over => console.log(JSON.stringify({ over, message: g.weeklyLimitMessage() })));`;
-  const run = value => JSON.parse(execFileSync(process.execPath, ['-e', probe], { env: { ...process.env, AI_USER_WEEKLY_LIMIT_USD: value }, encoding: 'utf8' }).trim());
+  const run = (value, spent = 12) => JSON.parse(execFileSync(process.execPath, ['-e', probe], { env: { ...process.env, AI_USER_WEEKLY_LIMIT_USD: value, PROBE_SPEND: String(spent) }, encoding: 'utf8' }).trim());
   assert.deepEqual(run('10'), { over: true, message: "You've reached this week's $10 AI limit. It resets Monday." }, 'env lowers the cap');
+  assert.deepEqual(run('$10'), { over: true, message: "You've reached this week's $10 AI limit. It resets Monday." }, '"$10" parses');
   assert.deepEqual(run('15.5'), { over: false, message: "You've reached this week's $15.50 AI limit. It resets Monday." }, 'cents are shown');
   assert.equal(run('').over, false, 'empty env keeps the $20 default');
-  assert.equal(run('0').over, false, '0 turns the cap off');
+  assert.deepEqual(run('', 20), { over: true, message: MESSAGE }, '$20 by default');
+  // Policy (owner 2026-11-20): an env value can't raise the person cap past $20.
+  assert.deepEqual(run('50', 22), { over: true, message: MESSAGE }, '"50" is above the policy: the cap stays $20');
+  assert.deepEqual(run('$50 USD', 22), { over: true, message: MESSAGE }, '"$50 USD" is above the policy too');
+  assert.deepEqual(run('0', 22), { over: true, message: MESSAGE }, '0 no longer turns the cap off');
+  assert.deepEqual(run('abc', 22), { over: true, message: MESSAGE }, 'garbage keeps $20');
 }
 
 // ── 4. Callers ─────────────────────────────────────────────────────────────
@@ -140,9 +149,12 @@ for (const [name, handler, body] of cases) {
   setSpend(20.01);
   aiRequests = 0;
   const res = await call(handler, body);
-  assert.equal(res.status, 429, `${name}: over the weekly cap → 429`);
-  assert.equal(res.body.error, MESSAGE, `${name}: weekly message`);
-  assert.equal(res.body.reason, 'weekly-limit', `${name}: reason`);
+  assert.equal(res.status, 200, `${name}: over the weekly cap → free mode, not an error`);
+  assert.equal(res.body.ok, true, `${name}: ok`);
+  assert.equal(res.body.mode, 'free', `${name}: mode free`);
+  assert.equal(res.body.reason, 'user-limit', `${name}: reason`);
+  assert.match(res.body.notice, /You've used this week's AI budget, so FrameUp is in free mode/, `${name}: the one friendly note`);
+  assert.equal(res.body.error, undefined, `${name}: no raw error`);
   assert.equal(aiRequests, 0, `${name}: no AI call over the cap`);
 
   // RPC missing (migration not run): the request goes ahead (not a 429).
@@ -154,6 +166,7 @@ for (const [name, handler, body] of cases) {
   setSpend(3.2);
   const under = await call(handler, body);
   assert.notEqual(under.status, 429, `${name}: under the cap is allowed`);
+  assert.notEqual(under.body.mode, 'free', `${name}: under the cap is not free mode`);
 }
 
 console.error = quietError;

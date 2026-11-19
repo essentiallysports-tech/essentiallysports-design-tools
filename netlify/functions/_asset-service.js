@@ -604,8 +604,12 @@ function fail(reason, error, extra = {}) {
 const AI_RIGHTS = model => ({ source: `AI generated (${model}) via Vercel AI Gateway`, licence: 'FrameUp-generated art, no real people or marks; free to use in ES designs', aiGenerated: true });
 
 async function gate(ctx, feature) {
+  // ai-free-mode: over this week's AI budget, no new AI asset (cached ones still serve).
+  if (gateway.inFreeMode?.()) return { status: 503, reason: 'budget', free: gateway.freeModeReason(), error: gateway.freeModeNotice(gateway.freeModeReason()) };
   if (ctx.gated) return null;
-  return gateway.aiSpendGate(ctx.token, { feature });
+  const blocked = await gateway.aiSpendGate(ctx.token, { feature });
+  gateway.freeModeGate?.(blocked); // ai-free-mode
+  return blocked;
 }
 
 // Picks the model within ctx.maxCostUsd (steps down to economy, else refuses).
@@ -629,7 +633,8 @@ async function generate(kind, built, args, ctx) {
   const picked = chooseModel(style, size, quality, ctx);
   if (!picked) return fail('budget', 'This image would cost more than the run allows.');
   if (!subjectIsClean(built.subject)) return fail('unsafe', 'That prompt could not be made safe (no people, names or marks).');
-  if (!gateway.gatewayConfigured() || String(process.env.GENERATE_IMAGES || '').toLowerCase() === 'off') {
+  // ai-free-mode: in free mode the cache / storage lookup below still runs; gate() stops new images.
+  if ((!gateway.gatewayConfigured() && !gateway.inFreeMode?.()) || String(process.env.GENERATE_IMAGES || '').toLowerCase() === 'off') {
     return fail('off', 'AI images are not available right now. ES photos still work.');
   }
   if (gateway.featureDisabled(feature)) return fail('feature-off', gateway.featureOffMessage(feature));

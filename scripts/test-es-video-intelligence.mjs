@@ -299,6 +299,8 @@ const { handler: groqHandler } = require('../netlify/functions/es-video-intellig
 
 assert.ok(fetchCalls.every(call => (
   String(call.url).includes('/auth/v1/user')
+  // ai-free-mode: the weekly budgets are read once before cloud captions.
+  || /\/rest\/v1\/rpc\/frameup_(my|team)_ai_spend$/.test(String(call.url))
   || String(call.url) === 'https://mcp.essentiallysports.com/mcp'
   || String(call.url) === 'https://api.groq.com/openai/v1/audio/transcriptions'
 )));

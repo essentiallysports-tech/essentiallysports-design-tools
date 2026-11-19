@@ -9,7 +9,7 @@
 // refuses every call, so it can never be triggered from outside.
 const crypto = require('node:crypto');
 const { runBudgetWatch } = require('./_ai-alerts.js');
-const { teamWeeklyLimitUsd, weekStartUtc, USER_WEEKLY_LIMIT_USD } = require('./_ai-gateway.js');
+const { teamWeeklyLimitUsd, weekStartUtc, userWeeklyLimitUsd } = require('./_ai-gateway.js');
 
 function json(statusCode, body) {
   return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) };
@@ -39,7 +39,7 @@ exports.handler = async function handler(event) {
   if (!cronAuthorized(event.headers)) return json(401, { ok: false, error: 'Unauthorized.' });
   const result = await runBudgetWatch({
     teamLimit: teamWeeklyLimitUsd(),
-    userLimit: USER_WEEKLY_LIMIT_USD,
+    userLimit: userWeeklyLimitUsd(),
     weekStart: weekStartUtc().toISOString(),
   });
   if (result.error) console.warn(JSON.stringify({ event: 'ai-budget-watch', ...result }));

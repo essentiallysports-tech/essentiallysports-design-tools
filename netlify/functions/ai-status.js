@@ -1,15 +1,18 @@
 'use strict';
 // GET /api/ai-status: the AI guardrail settings for signed-in ES users: the
 // weekly caps, which features are switched off (AI_DISABLE), economy mode and
-// whether Slack alerts are set up. No secrets and no spend; the Dashboard's AI
-// panel reads it to show the team cap, and pages can use it to show a feature
-// as switched off before anyone clicks.
+// whether Slack alerts are set up, plus this week's budget state:
+//   mode 'ai' | 'free', reason 'user-limit' | 'team-limit' | 'gateway-budget' | null,
+//   userLimitUsd, userSpentUsd, teamLimitUsd, teamSpentUsd (aggregate only),
+//   resetsAt (next Monday 00:00 UTC), notice, admin.
+// No secrets. frameup-ai-mode.js reads it (cached ~60 s) so pages can show
+// free mode before anyone clicks; the sidebar "AI usage" card shows it.
 //
 // GET /api/ai-status?diag=1 (dashboard admins only, checked in the database
 // with is_es_designer_admin()): for every AI job, which provider and model
 // would run and whether its key is present. Booleans only, never a key.
 const { authConfig, bearerToken, verifyEsUser } = require('./_supabase-auth.js');
-const { aiGuardConfig, gatewayConfigured, featureDisabled, modelFor, transcriptionPlan, MODELS, TRANSCRIPTION_MODEL } = require('./_ai-gateway.js');
+const { aiGuardConfig, aiBudgetStatus, gatewayConfigured, featureDisabled, modelFor, transcriptionPlan, MODELS, TRANSCRIPTION_MODEL } = require('./_ai-gateway.js');
 const { directorTier } = require('./_creative-director.js');
 
 function json(statusCode, body, cache = 'private, max-age=60') {
@@ -74,7 +77,7 @@ function diagnostics(env = process.env) {
   };
 }
 
-exports.handler = async function handler(event) {
+async function handler(event) {
   if (event.httpMethod !== 'GET') return json(405, { ok: false, error: 'Method not allowed.' });
   const auth = await verifyEsUser(event);
   if (!auth.ok) return json(auth.statusCode, { ok: false, error: auth.error });
@@ -83,7 +86,12 @@ exports.handler = async function handler(event) {
     if (!(await isAdmin(bearerToken(event.headers)))) return json(403, { ok: false, error: 'Admins only.' }, 'no-store');
     return json(200, { ok: true, ...aiGuardConfig(), diagnostics: diagnostics() }, 'no-store');
   }
-  return json(200, { ok: true, gateway: gatewayConfigured(), ...aiGuardConfig() });
-};
+  const token = bearerToken(event.headers);
+  const [budget, admin] = await Promise.all([aiBudgetStatus(token), isAdmin(token)]);
+  return json(200, { ok: true, gateway: gatewayConfigured(), ...aiGuardConfig(), ...budget, admin }, 'private, max-age=30');
+}
+
+// Not wrapped in withAiMode: the status itself is not a free-mode reply.
+exports.handler = handler;
 
 exports._test = { diagnostics, isAdmin };

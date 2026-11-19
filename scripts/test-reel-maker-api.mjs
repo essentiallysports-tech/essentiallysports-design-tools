@@ -88,14 +88,15 @@ await test('config: the Gateway key alone turns the house voice on; music bed of
   delete process.env.REELS_TTS;
 });
 
-await test('plan: over the weekly cap -> free draft, no model call, reason weekly-limit', async () => {
+await test('plan: over the weekly cap -> free mode: code draft, no model call, reason user-limit', async () => {
   spend = 25;
   aiCalls = 0;
   const { status, body } = await call({ mode: 'plan', brief: BRIEF, format: 'stat' });
   assert.equal(status, 200);
   assert.equal(body.source, 'draft');
-  assert.equal(body.reason, 'weekly-limit');
-  assert.match(body.notice, /limit/);
+  assert.equal(body.mode, 'free');
+  assert.equal(body.reason, 'user-limit');
+  assert.match(body.notice, /free mode/);
   assert.equal(aiCalls, 0);
   assert.equal(body.cost, 0);
   assert.ok(body.lint && typeof body.lint.critical === 'number');
@@ -132,16 +133,18 @@ await test('plan: needs a trend or a brief; bodies over 220 KB are refused', asy
   assert.equal(big.statusCode, 413);
 });
 
-await test('voice: captions-only env -> 503 reason off; over the weekly cap -> 429; music off -> 503', async () => {
+await test('voice: captions-only env -> 503 reason off; over the weekly cap -> free mode (skipped); music off -> 503', async () => {
   process.env.REELS_TTS = 'off';
   let res = await call({ mode: 'voice', text: 'Josh Allen did it again.', beat: 'b1' });
   assert.equal(res.status, 503);
   assert.equal(res.body.reason, 'off');
   spend = 30;
   res = await call({ mode: 'voice', text: 'Josh Allen did it again.', beat: 'b1' });
-  assert.equal(res.status, 429);
-  assert.equal(res.body.reason, 'weekly-limit');
   spend = 0;
+  assert.equal(res.status, 200);
+  assert.equal(res.body.mode, 'free');
+  assert.equal(res.body.reason, 'user-limit');
+  assert.equal(res.body.skipped, true);
   delete process.env.REELS_TTS;
   res = await call({ mode: 'music', mood: 'hype', seconds: 30 });
   assert.equal(res.status, 503);

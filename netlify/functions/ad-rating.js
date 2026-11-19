@@ -6,7 +6,7 @@
 // are computed here (see _ad-rating.js), never taken from the model.
 // Needs a signed-in ES user; counts toward the per-person hourly AI limit.
 const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
-const { gatewayConfigured, isBudgetError, userOverHourlyLimit, aiSpendGate } = require('./_ai-gateway.js');
+const { gatewayConfigured, isBudgetError, userOverHourlyLimit, aiSpendGate, freeModeGate, withAiMode } = require('./_ai-gateway.js');
 const { rateCreative, parseDataUrl } = require('./_ad-rating.js');
 const { SIZES } = require('../../video-ads-brands.js');
 
@@ -51,7 +51,8 @@ function checkContext(context) {
   return '';
 }
 
-exports.handler = async function handler(event) {
+// withAiMode (ai-free-mode): over a weekly budget the reply is { ok: true, mode: 'free', skipped: true }.
+exports.handler = withAiMode(async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'POST, OPTIONS' }, body: '' };
   if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'Method not allowed.' });
 
@@ -73,6 +74,7 @@ exports.handler = async function handler(event) {
   if (!gatewayConfigured()) return json(503, { ok: false, error: 'Ad rating is not available right now.', reason: 'off' });
   const token = bearerToken(event.headers);
   const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: 'video-ads-rating' }), userOverHourlyLimit(token)]);
+  freeModeGate(gate);
   if (gate) return json(gate.status, { ok: false, error: gate.error, reason: gate.reason });
   if (overHour) {
     return json(429, { ok: false, error: "You've used a lot of AI this hour. Take a short break and rate again soon.", reason: 'limit' });
@@ -97,6 +99,6 @@ exports.handler = async function handler(event) {
     console.error('ad-rating failed:', error);
     return json(502, { ok: false, error: 'Ad rating is unavailable right now. Try again in a moment.' });
   }
-};
+});
 
 exports._test = { checkFrames, checkContext, MAX_FRAMES, MAX_FRAME_BYTES, MAX_BODY_CHARS };

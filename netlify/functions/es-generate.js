@@ -20,7 +20,7 @@ const onBrandKit = require('./_onbrand.js');
 const GUIDE = require('../../es-guidelines.js');
 const BRAND_KIT = require('../../brand-kit.js');
 const { isMcpConfigured, createSession } = require('./_es-mcp.js');
-const { gatewayConfigured, aiText, isBudgetError, logBackupCall, userOverHourlyLimit, aiSpendGate, MODELS: AI_MODELS } = require('./_ai-gateway.js');
+const { gatewayConfigured, aiText, isBudgetError, logBackupCall, userOverHourlyLimit, aiSpendGate, freeModeGate, inFreeMode, withAiMode, MODELS: AI_MODELS } = require('./_ai-gateway.js');
 const RULES = require('../../frameup-rules.js');
 const { lintSpec, applyPatch, findTeam } = require('./_lint-spec.js');
 
@@ -51,7 +51,8 @@ const AI_PROVIDERS = {
   openai: { url: 'https://api.openai.com/v1/chat/completions', key: OPENAI_API_KEY, model: OPENAI_GENERATE_MODEL },
 };
 function pickProvider() {
-  if (GENERATE_AI === 'rules') return null;
+  // ai-free-mode: over this week's AI budget -> the rules path (ES template designs), no Groq either.
+  if (GENERATE_AI === 'rules' || inFreeMode()) return null;
   if (GENERATE_AI === 'openai' && USE_OPENAI) return { name: 'openai', ...AI_PROVIDERS.openai };
   // Vercel AI Gateway (main tier: Claude Haiku) is preferred when its key is set; Groq stays as the backup.
   // The backup is Groq (free) when GROQ_API_KEY is set, else a different model
@@ -2026,7 +2027,8 @@ async function rewriteDesign({ brief, spec, instruction, fix = '', token, email 
   }
 }
 
-exports.handler = async function handler(event) {
+// withAiMode (ai-free-mode): one free-mode store per request; replies carry mode: 'free'.
+exports.handler = withAiMode(async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' }, body: '' };
 
   const auth = await verifyEsUser(event);
@@ -2056,6 +2058,7 @@ exports.handler = async function handler(event) {
       const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
       const instruction = String(body.instruction || '');
       const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: `generate-rewrite-${REWRITES[instruction] ? instruction : 'other'}` }), userOverHourlyLimit(token)]);
+      freeModeGate(gate); // ai-free-mode: AI-only, so the reply becomes { mode: 'free', skipped: true }
       if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
       if (overHour) return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
       const rewriteBrief = String(body.brief || '').replace(/<[^>]*>/g, ' ').trim().slice(0, 1500);
@@ -2068,7 +2071,8 @@ exports.handler = async function handler(event) {
     if (body.mode === 'creative-judge') {
       const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
       const gate = await aiSpendGate(token, { feature: 'generate-creative' });
-      if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
+      // ai-free-mode: the judge is skipped; picks and critique come from the page's rule checks.
+      if (gate && !freeModeGate(gate)) return json(gate.status, { error: gate.error, reason: gate.reason });
       const sets = Array.isArray(body.sets) ? body.sets : [];
       const sport = String(body.sport || '').slice(0, 20);
       const lessons = await creativeMemory.lessonsFor({ token, sport, archetypes: sets.map(set => String(set?.archetype || '')) });
@@ -2090,8 +2094,10 @@ exports.handler = async function handler(event) {
     if (body.mode === 'creative-assist') {
       const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
       const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: 'generate-assistant' }), userOverHourlyLimit(token)]);
-      if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
-      if (overHour) return json(429, { error: "You've made a lot of changes this hour. Take a short break and try again soon.", reason: 'limit' });
+      // ai-free-mode: only the free local edits run.
+      const free = freeModeGate(gate);
+      if (gate && !free) return json(gate.status, { error: gate.error, reason: gate.reason });
+      if (overHour && !free) return json(429, { error: "You've made a lot of changes this hour. Take a short break and try again soon.", reason: 'limit' });
       const result = await designAssistant.assist({
         instruction: body.instruction, scene: body.scene, history: body.history, context: body.context && typeof body.context === 'object' ? body.context : {},
         track: { email: auth.user.email, token, runId: String(body.runId || '').slice(0, 40) },
@@ -2121,6 +2127,7 @@ exports.handler = async function handler(event) {
     if (body.mode === 'onbrand') {
       const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
       const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: 'generate-onbrand' }), userOverHourlyLimit(token)]);
+      freeModeGate(gate); // ai-free-mode: AI-only (vision), so { mode: 'free', skipped: true }
       if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
       if (overHour) return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
       const result = await onBrand({ images: body.images, note: String(body.note || '').slice(0, 600), token, email: auth.user.email, steer: director.normalizeSteer(body.steer) });
@@ -2131,8 +2138,11 @@ exports.handler = async function handler(event) {
     if (brief.length < 3) return json(400, { error: 'Write a brief of at least a few words.' });
     const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
     const [gate, overHour] = await Promise.all([aiSpendGate(token, { feature: body.mode === 'creative' ? 'generate-creative' : 'generate' }), userOverHourlyLimit(token)]);
-    if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
-    if (overHour) {
+    // ai-free-mode: over a weekly budget the same request runs without AI
+    // (rules -> ES template designs; Creative -> the code plan, no director).
+    const free = freeModeGate(gate);
+    if (gate && !free) return json(gate.status, { error: gate.error, reason: gate.reason });
+    if (overHour && !free) {
       return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
     }
     // Optional (all backward compatible): an editor steer (the old hook string,
@@ -2158,7 +2168,7 @@ exports.handler = async function handler(event) {
     console.error('es-generate failed:', error);
     return json(500, { error: 'Generate failed. Try again in a moment.' });
   }
-};
+});
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
 exports._test = { creative, onBrand, searchPhotos, IMAGE_SEARCH_CACHE, PHOTO_PICK_CACHE, readBrief: readBriefFor, directorAllowed, directorNote, designsPerDirection, pastPostCard, REWRITES, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE, pickProvider, chat };

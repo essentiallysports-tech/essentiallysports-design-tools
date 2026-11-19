@@ -197,7 +197,8 @@
 
   function friendlyError(status, data) {
     // Weekly caps, the team cap, a switched-off feature: the server's own calm sentence.
-    if (['feature-off', 'weekly-limit', 'team-limit', 'limit-unknown'].includes(data?.reason) && data?.error) return data.error;
+    // Free mode (user-limit / team-limit / gateway-budget): the one friendly note.
+    if (['feature-off', 'weekly-limit', 'team-limit', 'user-limit', 'gateway-budget', 'limit-unknown'].includes(data?.reason) && data?.error) return data.error;
     if (status === 429 || data?.reason === 'limit') return 'You’ve hit this hour’s AI limit. Try again in a little while.';
     if (data?.reason === 'budget') return 'The team’s AI budget is used up for now. Try again later.';
     if (data?.reason === 'off') return 'The AI tools are switched off right now.';

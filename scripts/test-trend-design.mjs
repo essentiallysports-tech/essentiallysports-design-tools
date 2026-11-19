@@ -301,8 +301,9 @@ feeds = {
   hourlyCount = 0;
   weeklyUsd = 25;
   const weekly = await post({ mode: 'enrich', items: [{ id: nfl[0].id }] });
-  assert.equal(weekly.status, 429);
-  assert.equal(weekly.body.reason, 'weekly-limit');
+  assert.equal(weekly.status, 200, 'over the weekly cap: free mode (ai-free-mode)');
+  assert.equal(weekly.body.mode, 'free');
+  assert.equal(weekly.body.reason, 'user-limit');
   assert.ok(Array.isArray(weekly.body.items[nfl[0].id].titles), 'rule-based ideas still returned');
   assert.equal(aiCalls.length, 0, 'no AI over the weekly limit');
   weeklyUsd = 0;

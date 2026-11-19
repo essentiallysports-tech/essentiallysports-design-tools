@@ -193,14 +193,18 @@ assert.equal(seen.writer.length, 0, 'nothing is written from an unread design');
 
 visionMode = 'budget';
 res = await post({ mode: 'onbrand', images: [IMG] });
-assert.equal(res.status, 503);
-assert.equal(res.body.reason, 'budget');
+assert.equal(res.status, 200, 'Gateway budget used up: free mode (ai-free-mode)');
+assert.equal(res.body.mode, 'free');
+assert.equal(res.body.reason, 'gateway-budget');
+assert.equal(res.body.skipped, true);
 
 visionMode = 'ok';
 overWeek = true;
 reset();
 res = await post({ mode: 'onbrand', images: [IMG] });
-assert.equal(res.status, 429);
+assert.equal(res.status, 200, 'over the weekly cap: free mode (ai-free-mode)');
+assert.equal(res.body.mode, 'free');
+assert.equal(res.body.reason, 'user-limit');
 assert.equal(seen.vision.length, 0, 'the weekly cap holds');
 
 console.log('es guidelines checks passed');

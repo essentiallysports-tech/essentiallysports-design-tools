@@ -27,7 +27,7 @@
     "es:mcp:token": "node scripts/es-mcp-exchange-token.mjs",
     "test:trend-design": "node scripts/test-trend-design.mjs && node scripts/test-trends-hero.mjs",
     "test:impact": "node scripts/test-impact.mjs",
-    "test:ai-guardrails": "node scripts/test-ai-guardrails.mjs && node scripts/test-ai-weekly-limit.mjs",
+    "test:ai-guardrails": "node scripts/test-ai-guardrails.mjs && node scripts/test-ai-weekly-limit.mjs && node scripts/test-ai-free-mode.mjs",
     "test:clips": "node scripts/test-clip-library.mjs && node scripts/test-video-ads-clips.mjs && node scripts/test-video-ads-moments.mjs && node scripts/test-video-ads-links.mjs",
     "test:video-ads-audio": "node scripts/test-video-ads-audio.mjs"
   }

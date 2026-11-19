@@ -5,7 +5,7 @@
 // the per-person hourly cap, and a per-image cost cap; every model call is
 // logged to frameup_ai_usage. See project-docs/gen-assets.md.
 const { verifyEsUser } = require('./_supabase-auth.js');
-const { userOverHourlyLimit } = require('./_ai-gateway.js');
+const { userOverHourlyLimit, withAiMode } = require('./_ai-gateway.js');
 const assets = require('./_asset-service.js');
 
 const HOURLY_LIMIT = () => Math.max(1, Number(process.env.GEN_ASSETS_HOURLY_LIMIT) || 40);
@@ -39,7 +39,9 @@ const STATUS_BY_REASON = {
 const pickString = (value, max) => String(value ?? '').slice(0, max);
 const pickList = (value, max, each) => (Array.isArray(value) ? value.slice(0, max).map(item => pickString(item, each)) : []);
 
-exports.handler = async function handler(event) {
+// withAiMode (ai-free-mode): over a weekly budget AI ops reply { ok: true, mode: 'free', skipped: true };
+// photos (ES library) and cached assets keep working.
+exports.handler = withAiMode(async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' }, body: '' };
   if (event.httpMethod !== 'GET' && event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed.' });
   const auth = await verifyEsUser(event);
@@ -97,6 +99,6 @@ exports.handler = async function handler(event) {
   }
   if (!result?.ok) return json(result?.status || STATUS_BY_REASON[result?.reason] || 502, result || { ok: false, reason: 'error' });
   return json(200, result);
-};
+});
 
 exports._test = { underLimit, recent, STATUS_BY_REASON, MAX_USD_PER_IMAGE };

@@ -1,5 +1,5 @@
 const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
-const { aiSpendGate, aiTranscribe, audioCostUsd, featureDisabled, featureOffMessage, isBudgetError, logUsage, transcriptionPlan } = require('./_ai-gateway.js');
+const { aiSpendGate, aiTranscribe, audioCostUsd, featureDisabled, featureOffMessage, isBudgetError, logUsage, transcriptionPlan, freeModeGate, withAiMode } = require('./_ai-gateway.js');
 const TRANSCRIPTION_FEATURE = 'reels-transcription';
 
 const ES_MCP_ENDPOINT = process.env.ES_MCP_ENDPOINT || 'https://mcp.essentiallysports.com/mcp';
@@ -683,7 +683,16 @@ async function transcribeVideo(payload, { email = '', token = '' } = {}) {
   const track = { feature: TRANSCRIPTION_FEATURE, email, token };
   let gated = false;
   let last = null;
-  for (const step of transcriptionPlan().filter(item => item.keyPresent)) {
+  const steps = transcriptionPlan().filter(item => item.keyPresent);
+  // ai-free-mode: over this week's AI budget, automatic captions are off (the
+  // page says so and keeps hand-typed captions). One budget read covers the
+  // billed steps below too.
+  if (steps.length) {
+    const budget = await aiSpendGate(token, {});
+    if (freeModeGate(budget)) return json(200, { ok: true, skipped: true, provider: 'free-mode' });
+    gated = !budget && !featureDisabled(TRANSCRIPTION_FEATURE);
+  }
+  for (const step of steps) {
     if (step.billed && !gated) {
       const gate = await aiSpendGate(token, { feature: TRANSCRIPTION_FEATURE });
       if (gate) return json(gate.status, { error: gate.error, reason: gate.reason, provider: 'limit' });
@@ -704,7 +713,8 @@ async function transcribeVideo(payload, { email = '', token = '' } = {}) {
   });
 }
 
-exports.handler = async function handler(event) {
+// withAiMode (ai-free-mode): one free-mode store per request; replies carry mode: 'free'.
+exports.handler = withAiMode(async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return json(204, {});
   const params = event.queryStringParameters || {};
   if (!['GET', 'POST'].includes(event.httpMethod)) return json(405, { error: 'Method not allowed.' });
@@ -734,4 +744,4 @@ exports.handler = async function handler(event) {
   } catch (error) {
     return json(500, { error: safeError(error) });
   }
-};
+});

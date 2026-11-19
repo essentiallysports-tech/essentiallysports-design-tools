@@ -1,8 +1,10 @@
 'use strict';
 // FrameUp AI through the Vercel AI Gateway: one key (AI_GATEWAY_API_KEY, set in
-// Vercel / .env.local) for every AI feature. The key has a weekly spend cap
-// set by the dev team; when it runs out the Gateway errors and callers fall
-// back (Groq or rule-based drafts), so FrameUp keeps working.
+// Vercel / .env.local) for every AI feature. The account has a $50/week budget
+// on Vercel (a hard stop). FrameUp's own budgets sit under it (POLICY: $20 per
+// person, $45 team); over any of them, or when the Gateway reports its budget
+// used up, FrameUp runs in free mode: every tool uses its no-AI path (rules,
+// templates, ES photos, code ranking) and replies { ok: true, mode: 'free' }.
 //
 // Two tiers keep spend low:
 //   light: small, frequent jobs (Trend Design headline ideas). Cheapest model.
@@ -15,11 +17,14 @@
 //
 // Guardrails (project-docs/ai-strategy-and-costs.md, "What shipped"):
 //   aiSpendGate()  kill switch (AI_DISABLE) + per-person and team weekly $ caps
-//                  (AI_USER_WEEKLY_LIMIT_USD, AI_TEAM_WEEKLY_LIMIT_USD), fail open
-//                  with a warning event, or closed with AI_FAIL_CLOSED=1.
+//                  (POLICY; AI_USER_WEEKLY_LIMIT_USD / AI_TEAM_WEEKLY_LIMIT_USD can
+//                  only lower them), fail open with a warning event, or closed
+//                  with AI_FAIL_CLOSED=1. Over a cap: { free } -> freeModeGate().
+//   withAiMode()   wraps every AI handler: per-request free-mode store + reply shape.
 //   AI_ECONOMY=1   routes the best (Sonnet) tier to main (Haiku).
 //   aiText / aiWebResearch / aiImage refuse a switched-off feature before any fetch.
 
+const { AsyncLocalStorage } = require('node:async_hooks');
 const { authConfig } = require('./_supabase-auth.js');
 const { teamThresholdAlert } = require('./_ai-alerts.js');
 
@@ -95,8 +100,10 @@ function audioCostUsd(model, seconds) {
 }
 const USAGE_TABLE = 'frameup_ai_usage';
 
+// False in free mode too (over a weekly budget, see "Free mode" below), so every
+// caller's existing no-AI path (rules, templates, code ranking) runs instead.
 function gatewayConfigured() {
-  return Boolean(process.env.AI_GATEWAY_API_KEY) && String(process.env.GENERATE_AI || '').toLowerCase() !== 'rules';
+  return Boolean(process.env.AI_GATEWAY_API_KEY) && String(process.env.GENERATE_AI || '').toLowerCase() !== 'rules' && !freeModeReason();
 }
 
 function costUsd(model, usage = {}) {
@@ -161,9 +168,156 @@ function modelFor(tier, fallback = 'light') {
   return MODELS[routed] || MODELS[fallback];
 }
 function failClosed() { return envFlag('AI_FAIL_CLOSED'); }
-function teamWeeklyLimitUsd() {
-  const value = Number(String(process.env.AI_TEAM_WEEKLY_LIMIT_USD ?? '').trim());
-  return Number.isFinite(value) && value > 0 ? value : 0;
+
+// ─── Budget policy (testing phase, owner 2026-11-20). Set here, in code ─────
+// The Vercel AI Gateway account budget is $50/week, a hard stop on Vercel's
+// side. FrameUp stops at $45 for the team (so it degrades before that stop) and
+// $20 per person. Over any of them FrameUp runs in free mode (no AI) instead of
+// erroring. To raise a limit, change POLICY (and the Gateway budget on Vercel).
+// AI_USER_WEEKLY_LIMIT_USD / AI_TEAM_WEEKLY_LIMIT_USD are optional overrides
+// that can only LOWER a limit: a value above the policy (or 0, off, garbage)
+// is ignored with a logged 'limit-env-ignored' event and shows in
+// /api/ai-status as envIgnored, so an old env value never silently raises it.
+const POLICY = Object.freeze({ userWeeklyUsd: 20, teamWeeklyUsd: 45, gatewayWeeklyUsd: 50 });
+// Accepts "50", "$50", "50 USD", "50.00", "1,000". null when unset, NaN when unreadable.
+function parseUsd(raw) {
+  const text = String(raw ?? '').trim().replace(/^\$\s*/, '').replace(/\s*(usd|dollars?)$/i, '').replace(/,/g, '').trim();
+  if (!text) return null;
+  const value = Number(text);
+  return Number.isFinite(value) ? value : NaN;
+}
+function policyLimit(envName, ceiling, env = process.env) {
+  const value = parseUsd(env[envName]);
+  if (value === null) return { limit: ceiling, ignored: false };
+  if (value > 0 && value <= ceiling) return { limit: value, ignored: false };
+  return { limit: ceiling, ignored: true, why: value > ceiling ? 'above-policy' : 'not-a-positive-amount' };
+}
+function limitFor(envName, ceiling) {
+  const result = policyLimit(envName, ceiling);
+  if (result.ignored) warnEvent('limit-env-ignored', { env: envName, why: result.why, using: ceiling });
+  return result.limit;
+}
+function userWeeklyLimitUsd() { return limitFor('AI_USER_WEEKLY_LIMIT_USD', POLICY.userWeeklyUsd); }
+function teamWeeklyLimitUsd() { return limitFor('AI_TEAM_WEEKLY_LIMIT_USD', POLICY.teamWeeklyUsd); }
+function envIgnored() {
+  return ['AI_USER_WEEKLY_LIMIT_USD', 'AI_TEAM_WEEKLY_LIMIT_USD']
+    .filter(name => policyLimit(name, name.includes('TEAM') ? POLICY.teamWeeklyUsd : POLICY.userWeeklyUsd).ignored);
+}
+
+// ─── Free mode ─────────────────────────────────────────────────────────────
+// One request runs in free mode when the person or the team is over this
+// week's budget, or the Gateway itself said its budget is used up. Handlers
+// wrapped with withAiMode() get a per-request store; aiSpendGate() returns
+// { free: reason } and freeModeGate(gate) switches the request to free mode.
+// In free mode gatewayConfigured() is false and aiText / aiWebResearch /
+// aiImage / aiTranscribe throw a 'free-mode' error before any fetch, so the
+// callers' no-AI paths run. The handler's reply then carries
+// { ok: true, mode: 'free', reason, notice, resetsAt } (see annotateFree).
+const FREE_REASONS = ['user-limit', 'team-limit', 'gateway-budget'];
+const FREE_NOTES = {
+  user: "You've used this week's AI budget, so FrameUp is in free mode. AI features come back Monday.",
+  team: "The team's AI budget for this week is used up, so FrameUp is in free mode. AI features come back Monday.",
+};
+function freeModeNotice(reason) { return reason === 'user-limit' ? FREE_NOTES.user : FREE_NOTES.team; }
+const aiModeStore = new AsyncLocalStorage();
+// A Gateway budget reply switches the rest of that request to free mode. The
+// next request tries the Gateway again (a refused call costs nothing), so AI
+// comes back as soon as the budget does. The time of the last budget reply is
+// kept so /api/ai-status can say 'gateway-budget' for a while.
+const GATEWAY_BUDGET_RECENT_MS = 10 * 60 * 1000;
+let gatewayBudgetAt = 0;
+function gatewayBudgetRecent(now = Date.now()) { return gatewayBudgetAt > 0 && now - gatewayBudgetAt < GATEWAY_BUDGET_RECENT_MS; }
+function noteFree(reason) {
+  const store = aiModeStore.getStore();
+  if (store && !store.free) store.free = reason;
+}
+function markGatewayBudget() {
+  gatewayBudgetAt = Date.now();
+  warnEvent('gateway-budget', {});
+  noteFree('gateway-budget');
+}
+function freeModeReason() {
+  return aiModeStore.getStore()?.free || null;
+}
+function inFreeMode() { return Boolean(freeModeReason()); }
+function enterFreeMode(reason) { if (FREE_REASONS.includes(reason)) noteFree(reason); }
+function freeModeError(reason) {
+  return Object.assign(new Error(freeModeNotice(reason)), { status: 402, code: 'free-mode', reason, freeMode: true });
+}
+// A Gateway reply that means "the account's budget / credit is used up":
+// 402 always; 429 / 403 only with budget words (a plain rate limit is not it).
+function isGatewayBudgetReply(status, message = '') {
+  const code = Number(status || 0);
+  if (code === 402) return true;
+  return (code === 429 || code === 403) && /budget|quota|credit|spend|billing|insufficient|exceeded your|payment/i.test(String(message || ''));
+}
+// The error a failed Gateway reply throws. A budget reply switches the rest of
+// the request to free mode.
+function gatewayError(status, message, fallback) {
+  if (isGatewayBudgetReply(status, message)) {
+    markGatewayBudget();
+    return freeModeError('gateway-budget');
+  }
+  return Object.assign(new Error(message || fallback), { status });
+}
+// Throws before any fetch when the request is in free mode.
+function assertAiMode() {
+  const reason = freeModeReason();
+  if (reason) throw freeModeError(reason);
+}
+// For handlers: true (and the request is now in free mode) when the gate's
+// reason is a budget; false for anything else (switched off, unknown spend).
+function freeModeGate(gate) {
+  if (!gate?.free) return false;
+  enterFreeMode(gate.free);
+  return true;
+}
+function freeModeInfo(reason) {
+  return { mode: 'free', reason, notice: freeModeNotice(reason), resetsAt: nextWeekStartUtc().toISOString() };
+}
+// Turns a handler reply into the free-mode shape. A 2xx reply keeps its body
+// and gains { mode, reason, notice, resetsAt }. An AI-only reply that could not
+// run (429 / 500 / 502 / 503) becomes 200 { ok: true, mode: 'free', skipped: true }.
+// Old-style budget replies (reason weekly-limit / team-limit / budget) from
+// paths that did not enter free mode are converted too.
+const SKIPPABLE = new Set([429, 500, 502, 503]);
+function annotateFree(result, store = {}) {
+  if (!result || typeof result.body !== 'string' || !result.body) return result;
+  let body;
+  try { body = JSON.parse(result.body); } catch { return result; }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return result;
+  let reason = store.free || null;
+  if (!reason) {
+    if (body.reason === 'weekly-limit') reason = 'user-limit';
+    else if (body.reason === 'team-limit') reason = 'team-limit';
+    else if (body.reason === 'budget' && /week|budget is used up|AI budget/i.test(String(body.error || ''))) { reason = 'gateway-budget'; markGatewayBudget(); }
+  }
+  if (!reason) return result;
+  const status = Number(result.statusCode || 200);
+  let next;
+  let statusCode = status;
+  // A reply's own `mode` (e.g. es-generate 'direct') is kept as requestMode.
+  const own = body.mode && body.mode !== 'free' ? { requestMode: body.mode } : {};
+  if (status < 400) {
+    next = { ...body, ...own, ok: body.ok !== false, ...freeModeInfo(reason) };
+  } else if (SKIPPABLE.has(status)) {
+    const { error, detail, ...rest } = body;
+    next = { ...rest, ...own, ok: true, ...freeModeInfo(reason), skipped: true };
+    statusCode = 200;
+  } else {
+    return result;
+  }
+  return { ...result, statusCode, headers: { ...(result.headers || {}), 'Cache-Control': 'no-store' }, body: JSON.stringify(next) };
+}
+// Wraps a Netlify-style handler: one free-mode store per request, reply annotated.
+function withAiMode(handler) {
+  const wrapped = async function aiModeHandler(event, context) {
+    const store = { free: null };
+    const result = await aiModeStore.run(store, () => handler(event, context));
+    return annotateFree(result, store);
+  };
+  wrapped.inner = handler;
+  return wrapped;
 }
 
 // Guard warnings ("spend could not be read", "cache hint rejected") go to the
@@ -254,20 +408,14 @@ async function userOverHourlyLimit(token, limit = USER_HOURLY_CALL_LIMIT) {
 // Per-person weekly $ cap on AI spend (all features). The week starts Monday
 // 00:00 UTC, the same period the sidebar's "AI usage" card shows. Reads the
 // caller's own spend with frameup_my_ai_spend(p_since) and the caller's own
-// session. AI_USER_WEEKLY_LIMIT_USD changes the cap ($20 by default, a testing
-// value that may be raised; 0 turns it off; anything unreadable keeps $20).
+// session. The cap is POLICY.userWeeklyUsd ($20); AI_USER_WEEKLY_LIMIT_USD
+// can only lower it (see POLICY above).
 //
 // When spend can't be read (function missing, timeout) the call goes ahead and
 // a warning event is logged ("fails open", right while testing).
 // AI_FAIL_CLOSED=1 blocks instead (aiSpendGate, reason "limit-unknown").
-const USER_WEEKLY_LIMIT_USD = (() => {
-  // Accept "50", "$50", "50 USD", "50.00" (people type the dollar sign in Vercel).
-  const raw = String(process.env.AI_USER_WEEKLY_LIMIT_USD ?? '').trim().replace(/^\$\s*/, '').replace(/\s*(usd|dollars?)$/i, '').replace(/,/g, '');
-  const value = Number(raw || 20);
-  return Number.isFinite(value) && value >= 0 ? value : 20;
-})();
 const money = limit => (Number.isInteger(limit) ? String(limit) : Number(limit).toFixed(2));
-function weeklyLimitMessage(limit = USER_WEEKLY_LIMIT_USD) {
+function weeklyLimitMessage(limit = userWeeklyLimitUsd()) {
   return `You've reached this week's $${money(limit)} AI limit. It resets Monday.`;
 }
 function teamLimitMessage(limit = teamWeeklyLimitUsd()) {
@@ -279,6 +427,12 @@ function weekStartUtc(now = new Date()) {
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7));
   return start;
+}
+// Next Monday 00:00 UTC: when this week's budgets reset.
+function nextWeekStartUtc(now = new Date()) {
+  const next = weekStartUtc(now);
+  next.setUTCDate(next.getUTCDate() + 7);
+  return next;
 }
 // Reads one spend RPC with the caller's session. Returns { total } or { unknown: why }.
 async function readSpend(rpc, token) {
@@ -304,7 +458,7 @@ async function readSpend(rpc, token) {
     return { unknown: error?.name === 'TimeoutError' ? 'timeout' : 'network' };
   }
 }
-async function checkUserWeekly(token, limit = USER_WEEKLY_LIMIT_USD) {
+async function checkUserWeekly(token, limit = userWeeklyLimitUsd()) {
   if (!token || !(limit > 0)) return { over: false, unknown: false };
   const spend = await readSpend('frameup_my_ai_spend', token);
   if (spend.unknown) {
@@ -313,7 +467,7 @@ async function checkUserWeekly(token, limit = USER_WEEKLY_LIMIT_USD) {
   }
   return { over: spend.total >= limit, unknown: false, total: spend.total };
 }
-// Team weekly $ cap (AI_TEAM_WEEKLY_LIMIT_USD; off when unset). Reads
+// Team weekly $ cap (POLICY.teamWeeklyUsd, $45; AI_TEAM_WEEKLY_LIMIT_USD can lower it). Reads
 // frameup_team_ai_spend(p_since), which returns only the team's total.
 async function checkTeamWeekly(token, limit = teamWeeklyLimitUsd()) {
   if (!token || !(limit > 0)) return { over: false, unknown: false };
@@ -326,7 +480,7 @@ async function checkTeamWeekly(token, limit = teamWeeklyLimitUsd()) {
 }
 // Kept for callers and tests: true when the person is at or over their cap
 // (or, with AI_FAIL_CLOSED=1, when their spend can't be read).
-async function userOverWeeklyLimit(token, limit = USER_WEEKLY_LIMIT_USD) {
+async function userOverWeeklyLimit(token, limit = userWeeklyLimitUsd()) {
   const result = await checkUserWeekly(token, limit);
   return result.over || (result.unknown && failClosed());
 }
@@ -336,24 +490,84 @@ async function teamOverWeeklyLimit(token, limit = teamWeeklyLimitUsd()) {
 }
 // One check for every AI handler, before any AI call: the feature's kill
 // switch, the person's weekly cap and the team's weekly cap. Returns null when
-// the call may go ahead, else { status, reason, error } for a calm reply:
-//   feature-off (503), weekly-limit (429), team-limit (429), limit-unknown (503, AI_FAIL_CLOSED=1 only).
+// the call may go ahead, else { status, reason, error, free? } for a calm reply:
+//   feature-off (503), weekly-limit (429, free 'user-limit'), team-limit (429,
+//   free 'team-limit'), limit-unknown (503, AI_FAIL_CLOSED=1 only).
+// A gate with `free` means "run the no-AI path": pass it to freeModeGate().
 async function aiSpendGate(token, { feature } = {}) {
   if (feature && featureDisabled(feature)) return { status: 503, reason: 'feature-off', error: featureOffMessage(feature) };
   const [user, team] = await Promise.all([checkUserWeekly(token), checkTeamWeekly(token)]);
   // Crossing 50/80/100% of the team cap posts a Slack alert straight away
   // (once per threshold per week; needs SLACK_AI_ALERTS_WEBHOOK_URL).
   if (Number.isFinite(team.total)) await teamThresholdAlert({ total: team.total, limit: teamWeeklyLimitUsd(), weekStart: weekStartUtc().toISOString() });
-  if (user.over) return { status: 429, reason: 'weekly-limit', error: weeklyLimitMessage() };
-  if (team.over) return { status: 429, reason: 'team-limit', error: teamLimitMessage() };
+  if (user.over) return { status: 429, reason: 'weekly-limit', free: 'user-limit', error: weeklyLimitMessage() };
+  if (team.over) return { status: 429, reason: 'team-limit', free: 'team-limit', error: teamLimitMessage() };
   if ((user.unknown || team.unknown) && failClosed()) return { status: 503, reason: 'limit-unknown', error: LIMIT_UNKNOWN_MESSAGE };
   return null;
+}
+
+// Daily cron jobs have no user session. They read the team's week total with
+// the service role (frameup_ai_budget_summary) and skip AI work at or over the
+// team cap. Never throws; unreadable spend lets the job go ahead (its own
+// per-run $ cap still holds) unless AI_FAIL_CLOSED=1.
+async function cronSpendGate({ feature } = {}) {
+  if (feature && featureDisabled(feature)) return { status: 503, reason: 'feature-off', error: featureOffMessage(feature) };
+  const serviceKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const limit = teamWeeklyLimitUsd();
+  let total = NaN;
+  if (serviceKey) {
+    try {
+      const config = authConfig();
+      const response = await fetch(`${config.url}/rest/v1/rpc/frameup_ai_budget_summary`, {
+        method: 'POST',
+        headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_since: weekStartUtc().toISOString() }),
+        signal: AbortSignal.timeout(2500),
+      });
+      if (response.ok) total = Number((await response.json())?.total_usd);
+    } catch { /* unreadable */ }
+  }
+  if (!Number.isFinite(total)) {
+    warnEvent('team-spend-unreadable', { why: serviceKey ? 'cron-read-failed' : 'cron-no-service-key' });
+    return failClosed() ? { status: 503, reason: 'limit-unknown', error: LIMIT_UNKNOWN_MESSAGE } : null;
+  }
+  if (total >= limit) return { status: 429, reason: 'team-limit', free: 'team-limit', error: teamLimitMessage(limit), total };
+  return null;
+}
+
+// /api/ai-status: this person's and the team's week, and the mode the next AI
+// call would run in. Spend that can't be read is null (and does not switch to free).
+async function aiBudgetStatus(token) {
+  const userLimit = userWeeklyLimitUsd();
+  const teamLimit = teamWeeklyLimitUsd();
+  const [mine, team] = token
+    ? await Promise.all([readSpend('frameup_my_ai_spend', token), readSpend('frameup_team_ai_spend', token)])
+    : [{ unknown: 'no-session' }, { unknown: 'no-session' }];
+  const userSpent = Number.isFinite(mine.total) ? Number(mine.total.toFixed(4)) : null;
+  const teamSpent = Number.isFinite(team.total) ? Number(team.total.toFixed(4)) : null;
+  let reason = null;
+  if (userSpent != null && userSpent >= userLimit) reason = 'user-limit';
+  else if (teamSpent != null && teamSpent >= teamLimit) reason = 'team-limit';
+  else if (gatewayBudgetRecent()) reason = 'gateway-budget';
+  return {
+    mode: reason ? 'free' : 'ai',
+    reason,
+    notice: reason ? freeModeNotice(reason) : null,
+    userLimitUsd: userLimit,
+    userSpentUsd: userSpent,
+    teamLimitUsd: teamLimit,
+    teamSpentUsd: teamSpent,
+    gatewayBudgetUsd: POLICY.gatewayWeeklyUsd,
+    resetsAt: nextWeekStartUtc().toISOString(),
+  };
 }
 // What the Dashboard and pages may know about the guardrails (no secrets).
 function aiGuardConfig() {
   return {
-    userWeeklyLimitUsd: USER_WEEKLY_LIMIT_USD,
+    userWeeklyLimitUsd: userWeeklyLimitUsd(),
     teamWeeklyLimitUsd: teamWeeklyLimitUsd(),
+    policy: { ...POLICY },
+    envIgnored: envIgnored(),
     hourlyCallLimit: USER_HOURLY_CALL_LIMIT,
     disabled: disabledFeatures(),
     economy: economyMode(),
@@ -385,6 +599,7 @@ async function logBackupCall(track, { provider, model, ok, usage, started, error
 // True when the Gateway refused because the key's spend cap (or credit) ran
 // out, so callers can say so calmly instead of showing a raw error.
 function isBudgetError(error) {
+  if (error?.code === 'free-mode') return true;
   const status = Number(error?.status || 0);
   return status === 402 || /budget|spend|quota|credit|insufficient|spending limit|usage limit/i.test(String(error?.message || ''));
 }
@@ -419,7 +634,7 @@ async function anthropicCall({ model, system, messages, effort, maxTokens, timeo
     response = await send(false);
   }
   const data = await response.json().catch(() => null);
-  if (!response.ok) throw Object.assign(new Error(data?.error?.message || `AI request failed: ${response.status}`), { status: response.status });
+  if (!response.ok) throw gatewayError(response.status, data?.error?.message, `AI request failed: ${response.status}`);
   // A refusal or a cut-off reply counts as a failure so the caller falls back.
   if (data?.stop_reason === 'refusal') throw new Error('The AI declined this request.');
   if (data?.stop_reason === 'max_tokens') throw new Error('The AI reply was cut off.');
@@ -443,7 +658,7 @@ async function openaiCall({ model, system, messages, json, maxTokens, timeoutMs 
     signal: AbortSignal.timeout(timeoutMs),
   });
   const data = await response.json().catch(() => null);
-  if (!response.ok) throw Object.assign(new Error(data?.error?.message || `AI request failed: ${response.status}`), { status: response.status });
+  if (!response.ok) throw gatewayError(response.status, data?.error?.message, `AI request failed: ${response.status}`);
   if (data?.choices?.[0]?.finish_reason === 'length') throw new Error('The AI reply was cut off.');
   const u = data?.usage || {};
   return {
@@ -458,6 +673,7 @@ async function openaiCall({ model, system, messages, json, maxTokens, timeoutMs 
 async function aiText({ tier = 'light', system, messages, json = false, effort = 'low', maxTokens = 4000, timeoutMs = 25000, track, cacheSystem = false } = {}) {
   if (!process.env.AI_GATEWAY_API_KEY) throw new Error('AI_GATEWAY_API_KEY is not set.');
   if (trackDisabled(track)) throw featureOffError(track.feature || track.task);
+  assertAiMode();
   const model = modelFor(tier, 'light');
   if (tier === 'image' || model === MODELS.image) throw new Error('Use aiImage for image models.');
   const started = Date.now();
@@ -494,6 +710,7 @@ const WEB_SEARCH_USD = 0.01;
 async function aiWebResearch({ tier = 'main', system, prompt, maxUses = 4, maxTokens = 3000, timeoutMs = 45000, track, maxCostUsd, allowedDomains } = {}) {
   if (!process.env.AI_GATEWAY_API_KEY) throw new Error('AI_GATEWAY_API_KEY is not set.');
   if (trackDisabled(track)) throw featureOffError(track.feature || track.task);
+  assertAiMode();
   const model = modelFor(tier, 'main');
   if (!model.startsWith('anthropic/')) throw new Error('Web research needs a Claude model.');
   const started = Date.now();
@@ -520,7 +737,7 @@ async function aiWebResearch({ tier = 'main', system, prompt, maxUses = 4, maxTo
         signal: AbortSignal.timeout(timeoutMs),
       });
       const data = await response.json().catch(() => null);
-      if (!response.ok) throw Object.assign(new Error(data?.error?.message || `AI request failed: ${response.status}`), { status: response.status });
+      if (!response.ok) throw gatewayError(response.status, data?.error?.message, `AI request failed: ${response.status}`);
       const u = data?.usage || {};
       usage.input += u.input_tokens || 0;
       usage.output += u.output_tokens || 0;
@@ -585,6 +802,7 @@ function transcriptionWords(data) {
 async function aiTranscribe({ audio, mediaType = 'audio/wav', model = TRANSCRIPTION_MODEL, timeoutMs = 60000, track } = {}) {
   if (!process.env.AI_GATEWAY_API_KEY) throw new Error('AI_GATEWAY_API_KEY is not set.');
   if (trackDisabled(track)) throw featureOffError(track.feature || track.task);
+  assertAiMode();
   const started = Date.now();
   const providerOptions = /^openai\/whisper/.test(model) ? { openai: { timestampGranularities: ['word', 'segment'] } } : undefined;
   try {
@@ -601,7 +819,7 @@ async function aiTranscribe({ audio, mediaType = 'audio/wav', model = TRANSCRIPT
       signal: AbortSignal.timeout(timeoutMs),
     });
     const data = await response.json().catch(() => null);
-    if (!response.ok) throw Object.assign(new Error(data?.error?.message || data?.message || `Transcription failed: ${response.status}`), { status: response.status });
+    if (!response.ok) throw gatewayError(response.status, data?.error?.message || data?.message, `Transcription failed: ${response.status}`);
     const words = transcriptionWords(data);
     const segments = Array.isArray(data?.segments) ? data.segments : [];
     const lastEnd = Math.max(0, ...words.map(word => word.end), ...segments.map(seg => Number(seg.endSecond) || 0));
@@ -638,6 +856,7 @@ function transcriptionPlan(env = process.env) {
 async function aiImage({ prompt, model = MODELS.image, size = '1024x1280', timeoutMs = 45000, track } = {}) {
   if (!process.env.AI_GATEWAY_API_KEY) throw new Error('AI_GATEWAY_API_KEY is not set.');
   if (trackDisabled(track)) throw featureOffError(track.feature || track.task);
+  assertAiMode();
   const started = Date.now();
   const headers = { 'content-type': 'application/json', Authorization: `Bearer ${process.env.AI_GATEWAY_API_KEY}` };
   try {
@@ -649,7 +868,7 @@ async function aiImage({ prompt, model = MODELS.image, size = '1024x1280', timeo
         signal: AbortSignal.timeout(timeoutMs),
       });
       const data = await response.json().catch(() => null);
-      if (!response.ok) throw Object.assign(new Error(data?.error?.message || `Image request failed: ${response.status}`), { status: response.status });
+      if (!response.ok) throw gatewayError(response.status, data?.error?.message, `Image request failed: ${response.status}`);
       dataUrl = String(data?.choices?.[0]?.message?.images?.[0]?.image_url?.url || '');
     } else {
       const response = await fetch(`${GATEWAY}/images/generations`, {
@@ -658,7 +877,7 @@ async function aiImage({ prompt, model = MODELS.image, size = '1024x1280', timeo
         signal: AbortSignal.timeout(timeoutMs),
       });
       const data = await response.json().catch(() => null);
-      if (!response.ok) throw Object.assign(new Error(data?.error?.message || `Image request failed: ${response.status}`), { status: response.status });
+      if (!response.ok) throw gatewayError(response.status, data?.error?.message, `Image request failed: ${response.status}`);
       const b64 = data?.data?.[0]?.b64_json;
       if (b64) dataUrl = `data:image/${b64.startsWith('/9j/') ? 'jpeg' : 'png'};base64,${b64}`;
     }
@@ -673,9 +892,15 @@ async function aiImage({ prompt, model = MODELS.image, size = '1024x1280', timeo
 }
 
 module.exports = {
+  POLICY, parseUsd, policyLimit, userWeeklyLimitUsd, nextWeekStartUtc, cronSpendGate, aiBudgetStatus,
+  withAiMode, annotateFree, freeModeGate, enterFreeMode, inFreeMode, freeModeReason, freeModeError, freeModeNotice, freeModeInfo,
+  isGatewayBudgetReply, markGatewayBudget, gatewayBudgetRecent, FREE_REASONS, FREE_NOTES,
+  _resetFreeMode() { gatewayBudgetAt = 0; },
   gatewayConfigured, aiText, aiImage, aiWebResearch, costUsd, audioCostUsd, isBudgetError, logBackupCall, logUsage,
   userOverHourlyLimit, userOverWeeklyLimit, teamOverWeeklyLimit, weeklyLimitMessage, teamLimitMessage, weekStartUtc,
   aiSpendGate, aiGuardConfig, featureDisabled, trackDisabled, featureOffMessage, featureOffError, modelFor, economyMode, failClosed, teamWeeklyLimitUsd, warnEvent,
   aiTranscribe, transcriptionPlan, transcriptionWords, TRANSCRIPTION_MODEL,
-  MODELS, PRICES, IMAGE_PRICES, AUDIO_PRICES_PER_MIN, ECONOMY_ROUTES, CACHE_MIN_CHARS, USER_WEEKLY_LIMIT_USD,
+  MODELS, PRICES, IMAGE_PRICES, AUDIO_PRICES_PER_MIN, ECONOMY_ROUTES, CACHE_MIN_CHARS,
+  // Kept for old callers: the per-person limit right now (read on every access).
+  get USER_WEEKLY_LIMIT_USD() { return userWeeklyLimitUsd(); },
 };
