@@ -16,6 +16,7 @@
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://image-cdn.essentiallysports.com">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
   <link rel="stylesheet" href="theme.css?v=20261117-ready1">
@@ -37,31 +38,140 @@
   <script src="es-motion.js?v=20261115-ds1"></script>
   <style>
     .image-pool-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: var(--es-space-8, 32px) 0 var(--es-space-12, 48px); font-family: var(--es-font-ui); color: var(--es-ink); }
-    .es-image-pool__form { display: flex; align-items: center; gap: var(--es-space-3, 12px); margin: var(--es-space-6, 24px) 0 var(--es-space-3, 12px); }
-    .es-image-pool__chips { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); margin-bottom: var(--es-space-5, 20px); }
-    .es-image-pool__form .es-search { flex: 0 1 420px; }
-    .es-image-pool__status { margin: 0 0 var(--es-space-4, 16px); color: var(--es-ink-3); font-size: var(--es-type-meta-size); }
-    .es-image-pool__status:empty { display: none; }
-    .es-image-pool__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); gap: var(--es-space-5, 20px); }
-    .es-image-pool__card { display: grid; gap: var(--es-space-2, 8px); }
-    .es-image-pool__thumb { position: relative; display: block; aspect-ratio: 4 / 3; overflow: hidden; border-radius: var(--es-radius-md, 14px); background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); }
-    .es-image-pool__thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .25s var(--es-ease); }
-    .es-image-pool__thumb img.is-loaded { opacity: 1; }
-    .es-image-pool__card.is-skeleton .es-image-pool__thumb::before { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 15%, rgb(84 164 251 / .16) 45%, rgb(0 179 230 / .12) 60%, transparent 85%); transform: translateX(-100%); animation: esImagePoolShimmer 1.4s ease-in-out infinite; }
-    @keyframes esImagePoolShimmer { to { transform: translateX(100%); } }
-    .es-image-pool__actions { display: flex; gap: var(--es-space-2, 8px); }
-    .es-image-pool__actions .es-btn { flex: 1 1 0; justify-content: center; }
-    @media (prefers-reduced-motion: reduce) {
-      .es-image-pool__card.is-skeleton .es-image-pool__thumb::before { animation: none !important; }
+
+    /* Toolbar: one search control with the Search button inside it, then the
+       sport shortcuts, then a results line. */
+    .pool-toolbar { margin: var(--es-space-6, 24px) 0 var(--es-space-3, 12px); }
+    .pool-search { box-sizing: border-box; max-width: 640px; min-height: 44px; padding: 0 6px 0 14px; }
+    .pool-search input::-webkit-search-cancel-button { cursor: pointer; }
+    .pool-search .es-kbd { flex: none; }
+    .pool-search .es-btn { flex: none; }
+    .pool-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px); margin-bottom: var(--es-space-6, 24px); }
+    .pool-chips__label { margin-right: var(--es-space-1, 4px); color: var(--es-ink-3); font-size: var(--es-type-meta-size); }
+    .pool-bar { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--es-space-1, 4px) var(--es-space-4, 16px); min-height: 20px; margin-bottom: var(--es-space-3, 12px); }
+    .pool-count { margin: 0; color: var(--es-ink-2); font-size: var(--es-type-meta-size); font-variant-numeric: tabular-nums; }
+    .pool-count strong { color: var(--es-ink); font-weight: 700; }
+    .pool-hint { margin: 0; color: var(--es-ink-3); font-size: 12px; }
+    .pool-hint[hidden], .pool-count:empty { display: none; }
+
+    /* Justified rows: each photo keeps its own shape (no cropped heads or
+       feet). Width grows in proportion to the aspect ratio (--r), so every
+       photo in a row ends up the same height; the ::after spacer stops the
+       last row from stretching. */
+    .pool-grid { --row-h: 180px; display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); }
+    /* Row height follows the page's own width (the app sidebar takes a
+       varying share of the viewport): about 4 photos a row on desktop, 3 on
+       tablets, 2 on phones. */
+    .image-pool-page { container-type: inline-size; }
+    @container (max-width: 1000px) { .pool-grid { --row-h: 150px; } }
+    @container (max-width: 640px) { .pool-grid { --row-h: 128px; gap: 6px; } }
+    @container (max-width: 480px) { .pool-grid { --row-h: 96px; } }
+    .pool-grid::after { content: ''; flex: 999999 1 0; }
+    .pool-item { position: relative; flex: var(--r, 1.5) 1 calc(var(--r, 1.5) * var(--row-h)); min-width: 0; max-width: 100%; margin: 0; aspect-ratio: var(--r, 1.5); }
+    .pool-item__open { position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 0; border: 0; border-radius: var(--es-radius-sm, 10px); overflow: hidden; background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); cursor: zoom-in; }
+    .pool-item__open img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .25s var(--es-ease), transform .35s var(--es-ease); }
+    .pool-item__open img.is-loaded { opacity: 1; }
+    .pool-item:hover .pool-item__open img.is-loaded { transform: scale(1.02); }
+    .pool-item__open.is-missing::after { content: 'Preview unavailable'; position: absolute; inset: 0; display: grid; place-items: center; color: var(--es-ink-3); font-size: 13px; }
+    /* Soft blue shimmer until the photo arrives. */
+    .pool-item__open:not(.is-ready):not(.is-missing)::before { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 15%, rgb(84 164 251 / .16) 45%, rgb(0 179 230 / .12) 60%, transparent 85%); transform: translateX(-100%); animation: poolShimmer 1.4s ease-in-out infinite; }
+    @keyframes poolShimmer { to { transform: translateX(100%); } }
+    .pool-item.is-skeleton .pool-item__open { cursor: default; }
+
+    /* Hover / keyboard-focus overlay: shade, credit (bottom left), actions (top right). */
+    .pool-item__shade { position: absolute; inset: 0; border-radius: var(--es-radius-sm, 10px); background: linear-gradient(to bottom, rgb(14 16 20 / .38), transparent 34%, transparent 58%, rgb(14 16 20 / .62)); opacity: 0; pointer-events: none; transition: opacity .2s var(--es-ease); }
+    .pool-item__credit { position: absolute; right: 88px; bottom: 8px; left: 10px; overflow: hidden; color: #fff; font-size: 12px; font-weight: 500; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 2px rgb(0 0 0 / .5); opacity: 0; pointer-events: none; transition: opacity .2s var(--es-ease); }
+    .pool-item__actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; opacity: 0; transition: opacity .2s var(--es-ease); }
+    .pool-item:is(:hover, :focus-within) :is(.pool-item__shade, .pool-item__credit, .pool-item__actions) { opacity: 1; }
+    .pool-icon-btn { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 999px; background: rgb(255 255 255 / .94); color: var(--es-ink); box-shadow: 0 2px 8px rgb(14 16 20 / .2); cursor: pointer; text-decoration: none; transition: background-color var(--es-dur, .16s) var(--es-ease), transform var(--es-dur, .16s) var(--es-ease); }
+    .pool-icon-btn:hover { background: #fff; transform: translateY(-1px); }
+    .pool-icon-btn svg { width: 16px; height: 16px; }
+    .pool-icon-btn.is-done { color: var(--es-good, #0f7b3e); }
+    /* Touch: there is no hover, so the two actions always show. */
+    @media (hover: none) {
+      .pool-item__actions { opacity: 1; }
+      .pool-item__shade { opacity: 1; background: linear-gradient(to bottom, rgb(14 16 20 / .32), transparent 40%); }
+      .pool-item__credit { display: none; }
     }
+    /* Touch: small 32px discs so they don't crowd a phone-sized photo, each
+       with an invisible 44px tap area (12px apart, so the areas don't overlap). */
+    @media (pointer: coarse) {
+      .pool-item__actions { top: 6px; right: 6px; gap: 12px; }
+      .pool-icon-btn { position: relative; width: 32px; height: 32px; }
+      .pool-icon-btn::after { content: ''; position: absolute; inset: -6px; }
+      .pool-search { min-height: 52px; padding-right: 4px; }
+    }
+
+    .pool-more { display: grid; justify-items: center; gap: var(--es-space-2, 8px); margin-top: var(--es-space-8, 32px); }
+    .pool-more[hidden], .pool-more .es-btn[hidden], .pool-end[hidden] { display: none; }
+    .pool-end { margin: 0; color: var(--es-ink-3); font-size: var(--es-type-meta-size); }
+    .pool-empty[hidden], .pool-error[hidden] { display: none; }
+
+    /* Viewer */
+    .pool-viewer { width: min(1080px, calc(100vw - 48px)); max-height: calc(100vh - 48px); padding: 0; border: 0; border-radius: 20px; background: var(--es-surface, #fff); color: var(--es-ink); font-family: var(--es-font-ui); box-shadow: 0 24px 64px rgb(14 16 20 / .28); overflow: hidden; }
+    .pool-viewer[open] { display: grid; grid-template-columns: minmax(0, 1fr) 320px; }
+    .pool-viewer::backdrop { background: rgb(14 16 20 / .7); }
+    .pool-viewer__media { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 24px 68px; background: var(--es-stage, #eef0f3); }
+    .pool-viewer__media img { display: block; max-width: 100%; max-height: calc(100vh - 96px); width: auto; height: auto; border-radius: 8px; background: var(--es-sunk); }
+    .pool-viewer__nav, .pool-viewer__close { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 999px; background: #fff; color: var(--es-ink); box-shadow: 0 2px 8px rgb(14 16 20 / .14), inset 0 0 0 1px var(--es-line); cursor: pointer; }
+    .pool-viewer__nav svg, .pool-viewer__close svg { width: 18px; height: 18px; }
+    .pool-viewer__nav { position: absolute; top: 50%; transform: translateY(-50%); }
+    .pool-viewer__nav.is-prev { left: var(--es-space-3, 12px); }
+    .pool-viewer__nav.is-next { right: var(--es-space-3, 12px); }
+    .pool-viewer__nav:disabled { opacity: .35; cursor: default; }
+    .pool-viewer__close { position: absolute; top: var(--es-space-4, 16px); right: var(--es-space-4, 16px); z-index: 2; box-shadow: none; background: transparent; }
+    .pool-viewer__close:hover { background: var(--es-sunk); }
+    .pool-viewer__info { display: flex; flex-direction: column; gap: var(--es-space-2, 8px); min-width: 0; min-height: 0; padding: var(--es-space-6, 24px); overflow-y: auto; }
+    .pool-viewer__kicker { color: var(--es-brand-text); font-size: var(--es-type-eyebrow-size, 12px); font-weight: var(--es-type-eyebrow-weight, 700); letter-spacing: var(--es-type-eyebrow-tracking, .06em); text-transform: uppercase; }
+    .pool-viewer__info h2 { display: -webkit-box; margin: 0 36px 0 0; overflow: hidden; font-family: var(--es-font-ui); font-size: 17px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
+    .pool-viewer__details { display: grid; grid-template-columns: auto 1fr; gap: var(--es-space-3, 12px) var(--es-space-4, 16px); margin: var(--es-space-2, 8px) 0 0; padding-top: var(--es-space-4, 16px); border-top: 1px solid var(--es-line); font-size: 13px; line-height: 1.45; }
+    .pool-viewer__details dt { color: var(--es-ink-3); }
+    .pool-viewer__details dd { margin: 0; color: var(--es-ink); overflow-wrap: anywhere; }
+    .pool-viewer__details dd.is-credit { font-weight: 700; }
+    .pool-viewer__actions { display: grid; gap: var(--es-space-2, 8px); margin-top: var(--es-space-4, 16px); }
+    .pool-viewer__actions .es-btn { justify-content: center; gap: 8px; }
+    .pool-viewer__actions .es-btn svg { width: 16px; height: 16px; }
+    .pool-viewer__note { margin: 0; color: var(--es-ink-3); font-size: 12px; line-height: 1.45; }
+    .pool-viewer__position { margin: auto 0 0; padding-top: var(--es-space-4, 16px); color: var(--es-ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .pool-item__open::before { animation: none !important; }
+      .pool-item:hover .pool-item__open img.is-loaded { transform: none; }
+    }
+
     @media (max-width: 900px) {
       .image-pool-page { width: auto; padding: var(--es-space-6, 24px) var(--es-space-4, 16px) var(--es-space-12, 48px); }
-      .es-image-pool__form { flex-wrap: wrap; }
-      .es-image-pool__form .es-search { flex: 1 1 100%; }
-      .es-image-pool__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-3, 12px); }
+      .pool-toolbar { margin-top: var(--es-space-5, 20px); }
+      .pool-search { max-width: none; }
+      .pool-search .es-kbd, .pool-hint { display: none; }
+      .pool-chips { flex-wrap: nowrap; margin: 0 calc(-1 * var(--es-space-4, 16px)) var(--es-space-5, 20px); padding: 2px var(--es-space-4, 16px); overflow-x: auto; scrollbar-width: none; }
+      .pool-chips::-webkit-scrollbar { display: none; }
+      .pool-chips .es-chip { flex: none; }
+      .pool-viewer { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+      .pool-viewer[open] { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+      .pool-viewer__media { padding: calc(40px + 2 * var(--es-space-3, 12px)) var(--es-space-4, 16px) calc(40px + 2 * var(--es-space-3, 12px)); }
+      .pool-viewer__media img { max-height: calc(100dvh - 400px); min-height: 0; }
+      .pool-viewer__nav { top: auto; bottom: var(--es-space-3, 12px); transform: none; }
+      .pool-viewer__close { top: var(--es-space-3, 12px); right: var(--es-space-3, 12px); background: #fff; box-shadow: 0 2px 8px rgb(14 16 20 / .14), inset 0 0 0 1px var(--es-line); }
+      .pool-viewer__info { max-height: 52dvh; padding: var(--es-space-4, 16px); }
+      .pool-viewer__actions { grid-template-columns: 1fr 1fr; }
     }
-    html[data-theme="dark"] .es-image-pool__thumb { background: #1f1f1f; box-shadow: inset 0 0 0 1px #2e2e2e; }
-    html[data-theme="dark"] .es-image-pool__card.is-skeleton .es-image-pool__thumb::before { background: linear-gradient(100deg, transparent 15%, rgb(84 164 251 / .2) 45%, rgb(0 179 230 / .14) 60%, transparent 85%); }
+
+    html[data-theme="dark"] .pool-count { color: #c9d0dc; }
+    html[data-theme="dark"] .pool-count strong { color: #f3f5f7; }
+    html[data-theme="dark"] :is(.pool-chips__label, .pool-hint, .pool-end) { color: #98a6bf; }
+    html[data-theme="dark"] .pool-item__open { background: #1f1f1f; box-shadow: inset 0 0 0 1px #2e2e2e; }
+    html[data-theme="dark"] .pool-item__open::before { background: linear-gradient(100deg, transparent 15%, rgb(84 164 251 / .2) 45%, rgb(0 179 230 / .14) 60%, transparent 85%); }
+    html[data-theme="dark"] .pool-item__open.is-missing::after { color: #98a6bf; }
+    html[data-theme="dark"] .pool-viewer { background: #151515; color: #f3f5f7; }
+    html[data-theme="dark"] .pool-viewer__media { background: #0e0e0e; }
+    html[data-theme="dark"] .pool-viewer__media img { background: #1f1f1f; }
+    html[data-theme="dark"] .pool-viewer__kicker { color: #7cb8fc; }
+    html[data-theme="dark"] :is(.pool-viewer__info h2, .pool-viewer__details dd) { color: #f3f5f7; }
+    html[data-theme="dark"] :is(.pool-viewer__details dt, .pool-viewer__note, .pool-viewer__position) { color: #98a6bf; }
+    html[data-theme="dark"] .pool-viewer__details { border-color: #2e2e2e; }
+    html[data-theme="dark"] :is(.pool-viewer__nav, .pool-viewer__close) { background: #1f1f1f; color: #f3f5f7; box-shadow: inset 0 0 0 1px #3a3a3a; }
+    html[data-theme="dark"] .pool-viewer__close:hover { background: #262626; }
   </style>
 </head>
 <body class="image-pool-body">
@@ -110,17 +220,19 @@
   <main class="image-pool-page" id="main">
     <header class="es-page-head">
       <h1>ES Image Pool</h1>
-      <p>Search EssentiallySports&rsquo; licensed photo library. Copy a link or download any image.</p>
+      <p>Search EssentiallySports&rsquo; licensed photo library. Open a photo for its credit, or copy a link or download it.</p>
     </header>
 
-    <form class="es-image-pool__form" id="es-image-pool-form">
-      <label class="es-search" for="es-image-pool-search">
+    <form class="pool-toolbar" id="pool-form" role="search">
+      <div class="es-search pool-search" id="pool-search-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
-        <input type="search" id="es-image-pool-search" placeholder="Search for a player, team, or topic" aria-label="Search for a player, team, or topic" autocomplete="off">
-      </label>
-      <button type="submit" class="es-btn es-btn--primary es-btn--sm" id="es-image-pool-submit">Search</button>
+        <input type="search" id="pool-search" placeholder="Player, team, event or topic" aria-label="Search the image pool for a player, team, event or topic" autocomplete="off" enterkeyhint="search" aria-keyshortcuts="/">
+        <kbd class="es-kbd" aria-hidden="true">/</kbd>
+        <button type="submit" class="es-btn es-btn--primary es-btn--sm" id="pool-submit">Search</button>
+      </div>
     </form>
-    <div class="es-image-pool__chips" id="es-image-pool-chips" role="group" aria-label="Browse by sport">
+    <div class="pool-chips" id="pool-chips" role="group" aria-label="Browse by sport">
+      <span class="pool-chips__label" aria-hidden="true">Browse</span>
       <button type="button" class="es-chip" data-pool-query="NFL" aria-pressed="false">NFL</button>
       <button type="button" class="es-chip" data-pool-query="NBA" aria-pressed="false">NBA</button>
       <button type="button" class="es-chip" data-pool-query="MLB" aria-pressed="false">MLB</button>
@@ -129,49 +241,87 @@
       <button type="button" class="es-chip" data-pool-query="Tennis" aria-pressed="false">Tennis</button>
       <button type="button" class="es-chip" data-pool-query="WNBA" aria-pressed="false">WNBA</button>
     </div>
-    <p class="es-image-pool__status" id="es-image-pool-status" aria-live="polite"></p>
-    <div class="es-error-state" id="es-image-pool-error" role="alert" hidden>
+
+    <div class="pool-bar">
+      <p class="pool-count" id="pool-count" aria-live="polite"></p>
+      <p class="pool-hint" id="pool-hint" hidden>Click a photo for its credit and a larger view</p>
+    </div>
+
+    <div class="es-error-state pool-error" id="pool-error" role="alert" hidden>
       <span class="es-error-state__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
       <p class="es-error-state__title">Couldn&rsquo;t search the image pool</p>
-      <p class="es-error-state__copy" id="es-image-pool-error-copy">Check your connection and try again.</p>
-      <button class="es-btn es-btn--sm" type="button" id="es-image-pool-retry">Try again</button>
+      <p class="es-error-state__copy" id="pool-error-copy">Check your connection and try again.</p>
+      <button class="es-btn es-btn--sm" type="button" id="pool-retry">Try again</button>
     </div>
-    <div class="es-empty" id="es-image-pool-empty" hidden>
-      <p class="es-empty__title" id="es-image-pool-empty-title">No images found</p>
-      <p class="es-empty__copy" id="es-image-pool-empty-copy">Try another search.</p>
+    <div class="es-empty pool-empty" id="pool-empty" hidden>
+      <p class="es-empty__title" id="pool-empty-title">No images found</p>
+      <p class="es-empty__copy" id="pool-empty-copy">Try a player&rsquo;s full name, a team, or an event, like &ldquo;Patrick Mahomes&rdquo; or &ldquo;Masters&rdquo;.</p>
     </div>
-    <div class="es-image-pool__grid" id="es-image-pool-grid"></div>
+
+    <div class="pool-grid" id="pool-grid" aria-busy="false"></div>
+
+    <div class="pool-more" id="pool-more" hidden>
+      <button class="es-btn" type="button" id="pool-more-btn">Load more images</button>
+      <p class="pool-end" id="pool-end" tabindex="-1" hidden></p>
+    </div>
   </main>
+
+  <dialog class="pool-viewer" id="pool-viewer" aria-labelledby="pool-viewer-title">
+    <button class="pool-viewer__close" type="button" data-viewer-close aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+    <div class="pool-viewer__media">
+      <button class="pool-viewer__nav is-prev" type="button" data-viewer-step="-1" aria-label="Previous photo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <img id="pool-viewer-image" alt="">
+      <button class="pool-viewer__nav is-next" type="button" data-viewer-step="1" aria-label="Next photo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    </div>
+    <div class="pool-viewer__info">
+      <span class="pool-viewer__kicker" id="pool-viewer-kicker">ES Image Pool</span>
+      <h2 id="pool-viewer-title">Photo</h2>
+      <dl class="pool-viewer__details" id="pool-viewer-details"></dl>
+      <div class="pool-viewer__actions">
+        <button class="es-btn es-btn--primary es-btn--sm" type="button" id="pool-viewer-copy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <span>Copy link</span>
+        </button>
+        <a class="es-btn es-btn--sm" id="pool-viewer-download" href="#" download>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+          <span>Download</span>
+        </a>
+      </div>
+      <p class="pool-viewer__note">Credit the photographer and agency when you publish this photo.</p>
+      <p class="pool-viewer__position" id="pool-viewer-position"></p>
+    </div>
+  </dialog>
 
   <footer class="site-footer" aria-label="Site footer"></footer>
 
   <script>
     // ES Image Pool: a standalone search of ES Storage's licensed image
     // library. Reuses the /api/es-image-search proxy used by index.html's
-    // in-editor picker, but this page only copies links and downloads
-    // images (it never opens the editor).
+    // in-editor picker, but this page only views, copies links to and
+    // downloads images (it never opens the editor).
     (() => {
+      const PAGE_SIZE = 45;
+      const ICON_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+      const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+      const ICON_DOWNLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>';
+      const $ = id => document.getElementById(id);
       const els = {
-        form: document.getElementById('es-image-pool-form'),
-        input: document.getElementById('es-image-pool-search'),
-        submit: document.getElementById('es-image-pool-submit'),
-        status: document.getElementById('es-image-pool-status'),
-        grid: document.getElementById('es-image-pool-grid'),
-        error: document.getElementById('es-image-pool-error'),
-        errorCopy: document.getElementById('es-image-pool-error-copy'),
-        retry: document.getElementById('es-image-pool-retry'),
-        empty: document.getElementById('es-image-pool-empty'),
-        emptyTitle: document.getElementById('es-image-pool-empty-title'),
-        emptyCopy: document.getElementById('es-image-pool-empty-copy'),
-        chips: document.getElementById('es-image-pool-chips'),
+        form: $('pool-form'), input: $('pool-search'), submit: $('pool-submit'), chips: $('pool-chips'),
+        count: $('pool-count'), hint: $('pool-hint'), grid: $('pool-grid'),
+        error: $('pool-error'), errorCopy: $('pool-error-copy'), retry: $('pool-retry'),
+        empty: $('pool-empty'), emptyTitle: $('pool-empty-title'),
+        more: $('pool-more'), moreBtn: $('pool-more-btn'), end: $('pool-end'),
+        viewer: $('pool-viewer'), viewerImage: $('pool-viewer-image'), viewerKicker: $('pool-viewer-kicker'),
+        viewerTitle: $('pool-viewer-title'), viewerDetails: $('pool-viewer-details'), viewerPosition: $('pool-viewer-position'),
+        viewerCopy: $('pool-viewer-copy'), viewerDownload: $('pool-viewer-download'),
       };
-      let lastQuery = '';
-
-      function markChip(query) {
-        els.chips.querySelectorAll('[data-pool-query]').forEach(chip => {
-          chip.setAttribute('aria-pressed', String(chip.dataset.poolQuery.toLowerCase() === query.toLowerCase()));
-        });
-      }
+      const state = { query: '', items: [], seen: new Set(), next: null, loading: false, token: 0, viewerIndex: -1 };
 
       // WordPress titles arrive with HTML entities (&#8211;); decode as text only.
       const entityBox = document.createElement('textarea');
@@ -179,6 +329,8 @@
         entityBox.innerHTML = String(value || '');
         return entityBox.value.trim();
       }
+      const quote = text => `“${text}”`;
+      const plural = (n, word) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
 
       // The link people copy must work when pasted anywhere (Slack, a browser
       // bar). proxyUrl is relative ("/api/..."), which a pasted link reads as a
@@ -194,120 +346,398 @@
 
       function filenameFor(result, index) {
         const base = decodeEntities(result.title || result.caption || `es-image-${index + 1}`)
-          .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `es-image-${index + 1}`;
+          .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80).replace(/-+$/, '') || `es-image-${index + 1}`;
         return `${base}.jpg`;
       }
 
-      function setSkeleton(show) {
-        els.grid.innerHTML = show
-          ? Array.from({ length: 8 }, () => '<span class="es-image-pool__card is-skeleton"><span class="es-image-pool__thumb"></span></span>').join('')
-          : '';
+      // Aspect ratio for the justified grid, clamped so a panorama or a very
+      // tall crop can't swallow a whole row. Unknown sizes read as 3:2.
+      function ratioFor(result) {
+        const w = Number(result.width), h = Number(result.height);
+        const r = w > 0 && h > 0 ? w / h : 1.5;
+        return Math.min(Math.max(r, 0.56), 2.4);
       }
 
-      async function searchEsImagePool(query) {
-        const apiUrl = `/api/es-image-search?query=${encodeURIComponent(query)}&per_page=45`;
-        if (!window.ESAuth?.fetchWithAuth) throw new Error('Authenticated image search is unavailable.');
-        const response = await window.ESAuth.fetchWithAuth(apiUrl);
-        if (!response.ok) throw new Error(`Image search failed: ${response.status}`);
-        const data = await response.json();
-        return Array.isArray(data?.results) ? data.results : [];
+      // ── Toast ────────────────────────────────────────────────────────────
+      let toastRegion = null;
+      function toast(text, isError) {
+        if (!toastRegion) {
+          toastRegion = Object.assign(document.createElement('div'), { className: 'es-toast-region' });
+          toastRegion.setAttribute('aria-live', 'polite');
+        }
+        // A modal dialog sits in the top layer, above any z-index: while the
+        // viewer is open the toasts live inside it so they stay visible.
+        const host = els.viewer.open ? els.viewer : document.body;
+        if (toastRegion.parentNode !== host) host.append(toastRegion);
+        const el = document.createElement('div');
+        el.className = `es-toast${isError ? ' is-error' : ''}`;
+        el.textContent = text;
+        toastRegion.append(el);
+        setTimeout(() => { el.classList.add('is-leaving'); setTimeout(() => el.remove(), 260); }, 2600);
       }
 
-      function renderResults(results, query) {
-        els.grid.innerHTML = '';
-        results.forEach((result, index) => {
-          const imageUrl = result.proxyUrl || result.sourceUrl;
-          if (!imageUrl) return;
-          const alt = decodeEntities(result.title || result.caption) || `${query} image ${index + 1}`;
-
-          const card = document.createElement('div');
-          card.className = 'es-image-pool__card';
-
-          const thumb = document.createElement('span');
-          thumb.className = 'es-image-pool__thumb';
-          const img = document.createElement('img');
-          img.src = imageUrl;
-          img.alt = alt;
-          img.loading = 'lazy';
-          img.decoding = 'async';
-          img.addEventListener('load', () => img.classList.add('is-loaded'), { once: true });
-          thumb.appendChild(img);
-
-          const actions = document.createElement('div');
-          actions.className = 'es-image-pool__actions';
-
-          const copyBtn = document.createElement('button');
-          copyBtn.type = 'button';
-          copyBtn.className = 'es-btn es-btn--sm';
-          copyBtn.textContent = 'Copy link';
-          copyBtn.setAttribute('aria-label', `Copy link to ${alt}`);
-          copyBtn.addEventListener('click', async () => {
-            try {
-              await navigator.clipboard.writeText(shareUrlFor(result));
-              copyBtn.textContent = 'Copied!';
-            } catch (error) {
-              copyBtn.textContent = 'Couldn’t copy';
-            } finally {
-              setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 1500);
-            }
-          });
-
-          const downloadLink = document.createElement('a');
-          downloadLink.className = 'es-btn es-btn--sm';
-          downloadLink.href = result.proxyUrl || result.sourceUrl;
-          downloadLink.download = filenameFor(result, index);
-          downloadLink.textContent = 'Download';
-          downloadLink.setAttribute('aria-label', `Download ${alt}`);
-
-          actions.append(copyBtn, downloadLink);
-          card.append(thumb, actions);
-          els.grid.appendChild(card);
-        });
-      }
-
-      async function runSearch(query) {
-        const cleanQuery = String(query || '').trim();
-        if (!cleanQuery) return;
-        lastQuery = cleanQuery;
-        markChip(cleanQuery);
-        els.submit.disabled = true;
-        els.error.hidden = true;
-        els.empty.hidden = true;
-        els.status.textContent = `Searching for “${cleanQuery}”…`;
-        setSkeleton(true);
+      async function copyLink(result, button) {
         try {
-          const results = await searchEsImagePool(cleanQuery);
-          const usable = results.filter(item => item?.proxyUrl || item?.sourceUrl);
-          setSkeleton(false);
-          if (!usable.length) {
-            els.empty.hidden = false;
-            els.emptyTitle.textContent = 'No images found';
-            els.emptyCopy.textContent = `No images found for “${cleanQuery}”. Try another search.`;
-            els.status.textContent = `No images found for “${cleanQuery}”.`;
-            return;
+          await navigator.clipboard.writeText(shareUrlFor(result));
+          toast('Link copied');
+          if (button) {
+            button.classList.add('is-done');
+            button.innerHTML = ICON_CHECK;
+            setTimeout(() => { button.classList.remove('is-done'); button.innerHTML = ICON_LINK; }, 1400);
           }
-          renderResults(usable, cleanQuery);
-          els.status.textContent = `${usable.length} image${usable.length === 1 ? '' : 's'} found for “${cleanQuery}”.`;
         } catch (error) {
-          setSkeleton(false);
-          els.error.hidden = false;
-          els.errorCopy.textContent = error?.message || 'Check your connection and try again.';
-          els.status.textContent = 'Image search failed.';
-        } finally {
-          els.submit.disabled = false;
+          toast('Couldn’t copy the link. Open the photo and copy it from your browser.', true);
         }
       }
 
+      // ── Loading & state ──────────────────────────────────────────────────
+      function showSkeleton() {
+        const shapes = [1.5, 1.5, 0.67, 1.78, 1.33, 1.5, 0.8, 1.5, 1.78, 1.5, 0.67, 1.33];
+        els.grid.innerHTML = shapes.map(r => `<div class="pool-item is-skeleton" style="--r:${r}" aria-hidden="true"><span class="pool-item__open"></span></div>`).join('');
+        els.grid.setAttribute('aria-busy', 'true');
+      }
+
+      function updateCount() {
+        const n = state.items.length;
+        els.count.innerHTML = '';
+        if (!n) return;
+        const strong = document.createElement('strong');
+        strong.textContent = plural(n, 'image');
+        els.count.append(strong, ` for ${quote(state.query)}${state.next ? ' · more available' : ''}`);
+      }
+
+      function updateMore() {
+        const hasItems = state.items.length > 0;
+        els.more.hidden = !hasItems;
+        els.moreBtn.hidden = !state.next;
+        els.moreBtn.disabled = state.loading;
+        els.moreBtn.textContent = state.loading ? 'Loading more…' : 'Load more images';
+        els.end.hidden = Boolean(state.next) || !hasItems;
+        els.end.textContent = `That’s every image for ${quote(state.query)}.`;
+        els.hint.hidden = !hasItems;
+      }
+
+      function markChip(query) {
+        els.chips.querySelectorAll('[data-pool-query]').forEach(chip => {
+          chip.setAttribute('aria-pressed', String(chip.dataset.poolQuery.toLowerCase() === query.toLowerCase()));
+        });
+      }
+
+      async function fetchPage(query, next) {
+        const params = new URLSearchParams({ query, per_page: String(PAGE_SIZE) });
+        if (next?.page) params.set('page', String(next.page));
+        if (next?.source) params.set('source', next.source);
+        if (!window.ESAuth?.fetchWithAuth) throw new Error('Authenticated image search is unavailable.');
+        const response = await window.ESAuth.fetchWithAuth(`/api/es-image-search?${params}`);
+        if (response.status === 401) throw new Error('Your session has expired. Sign in again to search.');
+        if (!response.ok) throw new Error(`The photo library didn’t answer (error ${response.status}). Try again in a moment.`);
+        const data = await response.json();
+        return {
+          results: Array.isArray(data?.results) ? data.results : [],
+          // Older responses had no paging fields: treat them as "no more".
+          next: data?.next && (data.next.page || data.next.source) ? data.next : null,
+        };
+      }
+
+      // Keep only new, usable photos (pages can overlap; de-dupe by URL).
+      function addResults(results) {
+        const added = [];
+        results.forEach(result => {
+          const key = result?.sourceUrl || result?.proxyUrl;
+          if (!key || state.seen.has(key)) return;
+          state.seen.add(key);
+          state.items.push(result);
+          added.push(result);
+        });
+        return added;
+      }
+
+      // ── Grid ─────────────────────────────────────────────────────────────
+      function altFor(result, index) {
+        return decodeEntities(result.title || result.caption) || `${state.query} photo ${index + 1}`;
+      }
+      function shortLabel(text) {
+        return text.length > 70 ? `${text.slice(0, 67).trim()}…` : text;
+      }
+
+      function loadImage(img, open, urls) {
+        const queue = urls.filter((url, i) => url && urls.indexOf(url) === i);
+        const tryNext = () => {
+          const url = queue.shift();
+          if (!url) { open.classList.add('is-missing'); img.remove(); return; }
+          img.src = url;
+        };
+        img.addEventListener('load', () => { img.classList.add('is-loaded'); open.classList.add('is-ready'); });
+        img.addEventListener('error', tryNext);
+        tryNext();
+      }
+
+      function renderItems(results, startIndex) {
+        const frag = document.createDocumentFragment();
+        results.forEach((result, offset) => {
+          const index = startIndex + offset;
+          const alt = altFor(result, index);
+          const label = shortLabel(alt);
+          const credit = decodeEntities(result.credit);
+
+          const item = document.createElement('figure');
+          item.className = 'pool-item';
+          item.style.setProperty('--r', ratioFor(result).toFixed(3));
+          item.dataset.index = String(index);
+
+          const open = document.createElement('button');
+          open.type = 'button';
+          open.className = 'pool-item__open';
+          open.dataset.open = String(index);
+          open.setAttribute('aria-label', `View ${label}${credit ? `, credit ${credit}` : ''}`);
+          const img = document.createElement('img');
+          img.alt = alt;
+          img.loading = 'lazy';
+          img.decoding = 'async';
+          open.appendChild(img);
+          // Small CDN rendition first; the same-site proxy if the CDN fails.
+          loadImage(img, open, [result.thumbUrl, result.sourceUrl, result.proxyUrl]);
+
+          const shade = document.createElement('span');
+          shade.className = 'pool-item__shade';
+          const caption = document.createElement('span');
+          caption.className = 'pool-item__credit';
+          caption.textContent = credit ? `© ${credit}` : '';
+          caption.setAttribute('aria-hidden', 'true');
+
+          const actions = document.createElement('div');
+          actions.className = 'pool-item__actions';
+          const copyBtn = document.createElement('button');
+          copyBtn.type = 'button';
+          copyBtn.className = 'pool-icon-btn';
+          copyBtn.dataset.copy = String(index);
+          copyBtn.title = 'Copy link';
+          copyBtn.setAttribute('aria-label', `Copy link to ${label}`);
+          copyBtn.innerHTML = ICON_LINK;
+          const download = document.createElement('a');
+          download.className = 'pool-icon-btn';
+          download.href = result.proxyUrl || result.sourceUrl;
+          download.download = filenameFor(result, index);
+          download.title = 'Download';
+          download.setAttribute('aria-label', `Download ${label}`);
+          download.innerHTML = ICON_DOWNLOAD;
+          actions.append(copyBtn, download);
+
+          item.append(open, shade, caption, actions);
+          frag.appendChild(item);
+        });
+        els.grid.appendChild(frag);
+      }
+
+      // ── Search & paging ──────────────────────────────────────────────────
+      async function runSearch(query) {
+        const cleanQuery = String(query || '').trim();
+        if (!cleanQuery) { els.input.focus(); return; }
+        const token = ++state.token;
+        Object.assign(state, { query: cleanQuery, items: [], seen: new Set(), next: null, loading: true });
+        markChip(cleanQuery);
+        const url = new URL(window.location.href);
+        url.searchParams.set('q', cleanQuery);
+        history.replaceState(history.state, '', url);
+        els.submit.disabled = true;
+        els.error.hidden = true;
+        els.empty.hidden = true;
+        els.more.hidden = true;
+        els.hint.hidden = true;
+        els.count.textContent = `Searching for ${quote(cleanQuery)}…`;
+        showSkeleton();
+        try {
+          const page = await fetchPage(cleanQuery, null);
+          if (token !== state.token) return;
+          els.grid.innerHTML = '';
+          state.next = page.next;
+          const added = addResults(page.results);
+          if (!added.length) {
+            els.empty.hidden = false;
+            els.emptyTitle.textContent = `No images for ${quote(cleanQuery)}`;
+            els.count.textContent = '';
+            return;
+          }
+          renderItems(added, 0);
+          updateCount();
+        } catch (error) {
+          if (token !== state.token) return;
+          els.grid.innerHTML = '';
+          els.error.hidden = false;
+          els.errorCopy.textContent = error?.message || 'Check your connection and try again.';
+          els.count.textContent = '';
+        } finally {
+          if (token === state.token) {
+            state.loading = false;
+            els.submit.disabled = false;
+            els.grid.setAttribute('aria-busy', 'false');
+            updateMore();
+          }
+        }
+      }
+
+      // Appends the next page. A page that is all duplicates is skipped (up to
+      // three in a row) so "Load more" never appears to do nothing.
+      async function loadMore() {
+        if (state.loading || !state.next) return 0;
+        const token = state.token;
+        state.loading = true;
+        updateMore();
+        els.grid.setAttribute('aria-busy', 'true');
+        let added = [];
+        try {
+          for (let tries = 0; tries < 3 && state.next && !added.length; tries += 1) {
+            const page = await fetchPage(state.query, state.next);
+            if (token !== state.token) return 0;
+            state.next = page.next;
+            added = addResults(page.results);
+          }
+          if (added.length) renderItems(added, state.items.length - added.length);
+          updateCount();
+        } catch (error) {
+          if (token === state.token) toast('Couldn’t load more images. Try again.', true);
+        } finally {
+          if (token === state.token) {
+            state.loading = false;
+            els.grid.setAttribute('aria-busy', 'false');
+            updateMore();
+          }
+        }
+        return added.length;
+      }
+
+      // ── Viewer ───────────────────────────────────────────────────────────
+      let lastOpener = null;
+      function sourceLabel(result) {
+        return result.source === 'mcp-agency' ? 'Agency photo' : 'ES media library';
+      }
+
+      function openViewer(index) {
+        const result = state.items[index];
+        if (!result) return;
+        state.viewerIndex = index;
+        const alt = altFor(result, index);
+        const title = decodeEntities(result.title) || alt;
+        const caption = decodeEntities(result.caption);
+        const credit = decodeEntities(result.credit);
+        els.viewerKicker.textContent = sourceLabel(result);
+        els.viewerTitle.textContent = title;
+        els.viewerDetails.innerHTML = '';
+        const w = Number(result.width), h = Number(result.height);
+        [
+          ['Credit', credit || 'Not listed. Check before publishing.', 'is-credit'],
+          ['Caption', caption && caption !== title ? caption : ''],
+          ['Size', w > 0 && h > 0 ? `${w.toLocaleString()} × ${h.toLocaleString()} px` : ''],
+        ].filter(([, value]) => value).forEach(([label, value, cls]) => {
+          const dt = document.createElement('dt'); dt.textContent = label;
+          const dd = document.createElement('dd'); dd.textContent = value;
+          if (cls) dd.className = cls;
+          els.viewerDetails.append(dt, dd);
+        });
+        els.viewerDownload.href = result.proxyUrl || result.sourceUrl;
+        els.viewerDownload.download = filenameFor(result, index);
+        els.viewerPosition.textContent = `${index + 1} of ${state.items.length}${state.next ? '+' : ''}`;
+        els.viewer.querySelector('.is-prev').disabled = index === 0;
+        els.viewer.querySelector('.is-next').disabled = index === state.items.length - 1 && !state.next;
+
+        // Show the grid rendition at once, then swap in the full-size photo.
+        const img = els.viewerImage;
+        img.alt = alt;
+        img.style.aspectRatio = String(ratioFor(result));
+        img.src = result.thumbUrl || result.sourceUrl || result.proxyUrl;
+        const full = result.sourceUrl || result.proxyUrl;
+        if (full && full !== img.src) {
+          const pre = new Image();
+          pre.onload = () => { if (state.viewerIndex === index) img.src = full; };
+          pre.onerror = () => { if (state.viewerIndex === index && result.proxyUrl) img.src = result.proxyUrl; };
+          pre.src = full;
+        }
+        if (!els.viewer.open) els.viewer.showModal();
+      }
+
+      async function stepViewer(delta) {
+        const target = state.viewerIndex + delta;
+        if (target < 0) return;
+        if (target >= state.items.length) {
+          if (!state.next) return;
+          const added = await loadMore();
+          if (!added) return;
+        }
+        openViewer(target);
+      }
+
+      // Closes and returns focus to the photo you were looking at (it may differ
+      // from the one you opened). Done here, not in the dialog's close event,
+      // because the browser restores focus to the opener as it closes.
+      function closeViewer() {
+        if (!els.viewer.open) return;
+        const card = els.grid.querySelector(`[data-open="${state.viewerIndex}"]`) || lastOpener;
+        state.viewerIndex = -1;
+        els.viewer.close();
+        setTimeout(() => {
+          card?.focus({ preventScroll: true });
+          card?.scrollIntoView?.({ block: 'nearest' });
+        }, 0);
+      }
+
+      els.viewer.addEventListener('click', event => {
+        if (event.target === els.viewer || event.target.closest('[data-viewer-close]')) { closeViewer(); return; }
+        const step = event.target.closest('[data-viewer-step]');
+        if (step && !step.disabled) stepViewer(Number(step.dataset.viewerStep));
+      });
+      els.viewer.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { event.preventDefault(); closeViewer(); return; }
+        if (event.target.closest?.('input, textarea')) return;
+        if (event.key === 'ArrowLeft') { event.preventDefault(); stepViewer(-1); }
+        if (event.key === 'ArrowRight') { event.preventDefault(); stepViewer(1); }
+      });
+      els.viewerCopy.addEventListener('click', () => copyLink(state.items[state.viewerIndex]));
+
+      // ── Events ───────────────────────────────────────────────────────────
+      els.grid.addEventListener('click', event => {
+        const copy = event.target.closest('[data-copy]');
+        if (copy) { copyLink(state.items[Number(copy.dataset.copy)], copy); return; }
+        const open = event.target.closest('[data-open]');
+        if (open) { lastOpener = open; openViewer(Number(open.dataset.open)); }
+      });
       els.form.addEventListener('submit', event => {
         event.preventDefault();
         runSearch(els.input.value);
       });
-      els.retry.addEventListener('click', () => runSearch(lastQuery));
+      els.retry.addEventListener('click', () => runSearch(state.query || els.input.value));
       els.chips.addEventListener('click', event => {
         const chip = event.target.closest('[data-pool-query]');
         if (!chip) return;
         els.input.value = chip.dataset.poolQuery;
         runSearch(chip.dataset.poolQuery);
+      });
+      // Load more: focus moves to the first new photo so keyboard users carry on
+      // where the new page starts (and aren't stranded when the button hides).
+      els.moreBtn.addEventListener('click', async () => {
+        const before = state.items.length;
+        const added = await loadMore();
+        if (added) els.grid.querySelector(`[data-open="${before}"]`)?.focus();
+        else if (els.moreBtn.hidden) els.end.focus();
+      });
+      // "/" focuses this page's search. Captured on window so it runs before
+      // app-shell's document-level "/" (which opens the command palette; ⌘K
+      // still does that here).
+      window.addEventListener('keydown', event => {
+        if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey || els.viewer.open) return;
+        if (event.target.closest?.('input, textarea, select, [contenteditable="true"], dialog[open]')) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        els.input.focus();
+        els.input.select();
+      }, true);
+      // The whole search box focuses the field (it is a div, not a label, because it also holds the button).
+      $('pool-search-box').addEventListener('mousedown', event => {
+        if (event.target === els.input || event.target.closest('button')) return;
+        event.preventDefault();
+        els.input.focus();
+      });
+      els.input.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && els.input.value) { event.preventDefault(); els.input.value = ''; }
       });
 
       // Open as a gallery, not an empty box: a ?q= link searches that, else NFL.

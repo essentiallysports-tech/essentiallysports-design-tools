@@ -79,6 +79,10 @@ function mediaResult(media) {
     credit: cleanText(media?.media_details?.image_meta?.credit || media?.media_details?.image_meta?.copyright),
     sourceUrl,
     proxyUrl: sourceUrl ? `/api/es-image-search?image=${encodeURIComponent(sourceUrl)}` : '',
+    // Smaller rendition for grids (additive; callers that ignore it are unaffected).
+    thumbUrl: media?.media_details?.sizes?.medium_large?.source_url
+      || media?.media_details?.sizes?.large?.source_url
+      || sourceUrl,
     width: media?.media_details?.width || null,
     height: media?.media_details?.height || null,
   };
@@ -526,6 +530,45 @@ async function callMcpSearchImages(query, perPage) {
   }
 }
 
+// One page of WordPress media, plus whether a later page exists. WordPress
+// answers 400 (rest_post_invalid_page_number) past the last page: that is
+// "no more results", not an error.
+async function searchWordPressMediaPage(query, perPage, page = 1) {
+  const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
+  const url = new URL(ES_MEDIA_ENDPOINT);
+  url.searchParams.set('search', query);
+  url.searchParams.set('per_page', String(perPage));
+  if (pageNumber > 1) url.searchParams.set('page', String(pageNumber));
+  url.searchParams.set('media_type', 'image');
+  url.searchParams.set('orderby', 'date');
+  url.searchParams.set('order', 'desc');
+  url.searchParams.set('_fields', 'id,title,caption,source_url,guid,media_details');
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      'User-Agent': 'ES-Designer/1.0 (+https://www.essentiallysports.com/)',
+      Accept: 'application/json',
+    },
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    if (pageNumber > 1 && response.status === 400) return { results: [], hasMore: false };
+    throw new Error(data?.message || 'ES media search failed.');
+  }
+
+  const rows = Array.isArray(data) ? data : [];
+  // X-WP-TotalPages is unreliable here (the live site answers "0"), and
+  // mid-list pages can come back short (42 of 45), so any non-empty page
+  // counts as "maybe more"; an empty page or the 400 above ends it.
+  const totalPages = parseInt(response.headers?.get?.('x-wp-totalpages') || '', 10) || 0;
+  const hasMore = pageNumber < totalPages || rows.length > 0;
+  return {
+    results: rows.map(mediaResult).filter(result => result.sourceUrl),
+    hasMore,
+  };
+}
+
 async function searchWordPressMedia(query, perPage) {
   const url = new URL(ES_MEDIA_ENDPOINT);
   url.searchParams.set('search', query);
@@ -588,6 +631,26 @@ exports.handler = async function handler(event) {
     const query = cleanText(params.query).slice(0, 140);
     const perPage = Math.min(Math.max(parseInt(params.per_page || '45', 10) || 45, 1), 45);
     if (!query) return json(400, { error: 'Missing image search query.' });
+    // Optional paging (additive: no page / page=1 behaves exactly as before).
+    // The ES MCP search_images tool has no documented page/offset argument, so
+    // MCP only ever answers page 1; later pages come from the WordPress media
+    // library (source=wordpress-media&page=N). `next` tells the client what to
+    // ask for to get more, or is null when there is nothing more.
+    const page = Math.min(Math.max(parseInt(params.page || '1', 10) || 1, 1), 100);
+    const forceWordPress = params.source === 'wordpress-media';
+
+    if (page > 1 || forceWordPress) {
+      const wp = await searchWordPressMediaPage(query, perPage, page);
+      return json(200, {
+        query,
+        source: 'wordpress-media',
+        page,
+        results: wp.results,
+        hasMore: wp.hasMore,
+        next: wp.hasMore ? { source: 'wordpress-media', page: page + 1 } : null,
+        meta: { mcpConfigured: getMcpConfigState().mcpConfigured, mcpAttempted: false, mcpError: '', fallbackUsed: false },
+      });
+    }
 
     const configState = getMcpConfigState();
     const meta = {
@@ -609,12 +672,17 @@ exports.handler = async function handler(event) {
       meta.mcpError = safeDiagnosticError(error);
       results = [];
     }
+    // After the agency results, "more" continues into the WordPress media
+    // library from its first page (the client de-dupes by URL).
+    let next = results.length ? { source: 'wordpress-media', page: 1 } : null;
     if (!results.length) {
       meta.fallbackUsed = true;
-      results = await searchWordPressMedia(query, perPage);
+      const wp = await searchWordPressMediaPage(query, perPage, 1);
+      results = wp.results;
+      next = wp.hasMore ? { source: 'wordpress-media', page: 2 } : null;
     }
 
-    return json(200, { query, source, results, meta });
+    return json(200, { query, source, page, results, hasMore: Boolean(next), next, meta });
   } catch (error) {
     return json(500, {
       error: error.message || 'ES image search failed.',
@@ -624,4 +692,4 @@ exports.handler = async function handler(event) {
 
 // For the asset service (_asset-service.js findPhotos): the same searches and
 // host check, without the HTTP handler.
-exports._internals = { callMcpSearchImages, searchWordPressMedia, isAllowedImageUrl, getMcpConfigState };
+exports._internals = { callMcpSearchImages, searchWordPressMedia, searchWordPressMediaPage, isAllowedImageUrl, getMcpConfigState };
