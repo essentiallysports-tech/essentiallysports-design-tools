@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="site-chrome.css?v=20261120-rel2">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
   <link rel="stylesheet" href="design-tokens.css?v=20261121-rel2">
-<link rel="stylesheet" href="es-ui.css?v=20261121-rel2">
+<link rel="stylesheet" href="es-ui.css?v=20261121-gen4ui">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
   <link rel="stylesheet" href="trends.css?v=20261120-rel2">
@@ -49,7 +49,7 @@
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
 <script src="frameup-ai-mode.js?v=20261121-rel"></script>
-<script src="app-shell.js?v=20261121-rel2"></script>
+<script src="app-shell.js?v=20261121-gen4ui"></script>
 <link rel="stylesheet" href="frameup-tour.css?v=20261120-rel2">
 <script src="frameup-tour.js?v=20261117-tour1"></script>
 <script src="tours/updates.js?v=20261117-tour1"></script>
@@ -59,13 +59,13 @@
 <link rel="stylesheet" href="frameup-posted.css?v=20261118-rel1">
 <script src="frameup-impact.js?v=20261118-rel1"></script>
 <script src="frameup-posted.js?v=20261121-rel2"></script>
-<link rel="stylesheet" href="generate-creative.css?v=20261121-rel2">
+<link rel="stylesheet" href="generate-creative.css?v=20261121-gen4ui">
 <script src="frameup-compose.js?v=20261121-rel2" defer></script>
 <script src="frameup-cutout.js?v=20261120-img1" defer></script>
 <script src="frameup-assets.js?v=20261121-rel" defer></script>
-<script src="generate-focus.js?v=20261120-rel2" defer></script>
-<script src="generate-assistant.js?v=20261119-rel" defer></script>
-<script src="generate-creative.js?v=20261121-timeout" defer></script>
+<script src="generate-focus.js?v=20261121-gen4ui" defer></script>
+<script src="generate-assistant.js?v=20261121-gen4ui" defer></script>
+<script src="generate-creative.js?v=20261121-gen4ui" defer></script>
   <style>
     html:not([data-theme="dark"]) body.gen-body { background: #fff; }
     .gen-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 32px 0 72px; font-family: var(--es-font-ui); color: var(--es-ink); }
@@ -169,6 +169,20 @@
     .gen-progress li.is-done { color: var(--es-ink-2, #3f4450); }
     .gen-progress .gen-spinner { margin-left: 0; }
     .gen-progress__time { margin-left: auto; color: var(--es-ink-3); font-variant-numeric: tabular-nums; }
+    /* ETA (gen v4): a full-width row under the steps, bar · time left · clock. */
+    .gen-progress li.gen-progress__eta { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(0, auto) auto; align-items: center; gap: var(--es-space-3, 12px); flex: 1 1 100%; min-width: 0; color: var(--es-ink-3); font-size: var(--es-type-meta-size, 13px); }
+    .gen-progress__bar { display: block; height: 4px; overflow: hidden; border-radius: 999px; background: var(--es-line); }
+    .gen-progress__bar i { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--es-brand-fill, #0a6fde); transition: width .5s linear; }
+    .gen-progress__eta.is-over .gen-progress__bar i { background: #B45309; }
+    .gen-progress__eta.is-over .gen-progress__left { color: #92400E; }
+    .gen-progress__left { min-width: 0; text-align: right; }
+    .gen-progress__eta .gen-progress__time { margin-left: 0; min-width: 4ch; text-align: right; }
+    html[data-theme="dark"] .gen-progress__bar { background: #2A2D34; }
+    html[data-theme="dark"] .gen-progress__bar i { background: #54A4FB; }
+    html[data-theme="dark"] .gen-progress__eta.is-over .gen-progress__bar i { background: #F5A524; }
+    html[data-theme="dark"] .gen-progress__eta.is-over .gen-progress__left { color: #F5B547; }
+    @media (prefers-reduced-motion: reduce) { .gen-progress__bar i { transition: none; } }
+    @media (max-width: 600px) { .gen-progress li.gen-progress__eta { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--es-space-2, 8px); } .gen-progress__bar { grid-column: 1 / -1; } .gen-progress__left { text-align: left; } }
     /* Luminous ring spinner (ES Blue 400 → cyan). */
     .gen-spinner { flex: 0 0 auto; width: 16px; height: 16px; box-sizing: border-box; border-radius: 50%; background: conic-gradient(from 0deg, rgb(84 164 251 / 0) 0 15%, #54A4FB 60%, #00B3E6); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px)); mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px)); animation: genSpin .8s linear infinite; }
     @keyframes genSpin { to { transform: rotate(360deg); } }
@@ -335,11 +349,37 @@
     html[data-theme="dark"] :is(.gen-version, .gen-refine__team select) { background: #2A2D34; box-shadow: inset 0 0 0 1px #3B4049; color: #FFFFFF; }
     html[data-theme="dark"] .gen-version[aria-pressed="true"] { box-shadow: inset 0 0 0 2px #FFFFFF; }
 
-    .gen-research { margin-top: var(--es-space-8, 32px); color: var(--es-ink-3); font-size: 13px; }
+    /* Sources card (gen v4): ES card surface, one summary row, rows of links. */
+    .gen-research { margin-top: var(--es-space-8, 32px); border-radius: var(--es-radius-container, 16px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); color: var(--es-ink-3); font-size: var(--es-type-meta-size, 13px); }
     .gen-research[hidden] { display: none; }
-    .gen-research summary { cursor: pointer; font-weight: 700; }
-    .gen-research ul { margin: var(--es-space-3, 12px) 0 0; padding-left: var(--es-space-5, 20px); line-height: 1.7; }
-    .gen-research a { color: var(--es-ink-2, #3f4450); }
+    .gen-research__head { display: grid; grid-template-columns: 40px minmax(0, 1fr) 24px; align-items: center; gap: var(--es-space-3, 12px); padding: var(--es-space-4, 16px); border-radius: inherit; cursor: pointer; list-style: none; }
+    .gen-research__head::-webkit-details-marker { display: none; }
+    .gen-research__head:hover { background: color-mix(in srgb, var(--es-sunk) 60%, transparent); }
+    .gen-research__head:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+    .gen-research__icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--es-radius-control, 12px); background: var(--es-sunk); color: var(--es-ink-2, #3f4450); }
+    .gen-research__icon svg, .gen-research__chev svg { width: 20px; height: 20px; }
+    .gen-research__titles { display: grid; gap: 2px; min-width: 0; }
+    .gen-research__title { color: var(--es-ink); font-size: var(--es-type-card-title-size, 16px); font-weight: 700; line-height: 24px; }
+    .gen-research__count { color: var(--es-ink-3); font-weight: 400; }
+    .gen-research__sub { color: var(--es-ink-3); line-height: 20px; }
+    .gen-research__chev { display: grid; place-items: center; color: var(--es-ink-3); transition: transform var(--es-dur, 160ms) var(--es-ease, ease); }
+    .gen-research[open] .gen-research__chev { transform: rotate(180deg); }
+    .gen-research__list { display: grid; margin: 0; padding: 0 var(--es-space-2, 8px) var(--es-space-2, 8px); list-style: none; border-top: 1px solid var(--es-line); }
+    .gen-research__list li + li { border-top: 1px solid color-mix(in srgb, var(--es-line) 70%, transparent); }
+    .gen-research__link { display: grid; grid-template-columns: minmax(0, 1fr) 16px; align-items: center; gap: var(--es-space-1, 4px) var(--es-space-3, 12px); padding: var(--es-space-3, 12px) var(--es-space-2, 8px); border-radius: 8px; color: var(--es-ink); text-decoration: none; }
+    .gen-research__link:hover { background: var(--es-sunk); }
+    .gen-research__link:hover .gen-research__name { text-decoration: underline; }
+    .gen-research__link:focus-visible { outline: var(--es-focus-outline); outline-offset: -2px; }
+    .gen-research__name { min-width: 0; font-size: var(--es-type-body-size, 14px); font-weight: 500; line-height: 20px; overflow-wrap: anywhere; }
+    .gen-research__meta { grid-column: 1; color: var(--es-ink-3); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
+    .gen-research__link svg { grid-row: 1 / span 2; grid-column: 2; width: 16px; height: 16px; color: var(--es-ink-3); }
+    html[data-theme="dark"] .gen-research { background: #1F2126; box-shadow: inset 0 0 0 1px #2A2D34; }
+    html[data-theme="dark"] .gen-research__icon { background: #2A2D34; color: #DCE3EE; }
+    html[data-theme="dark"] :is(.gen-research__list, .gen-research__list li + li) { border-color: #2A2D34; }
+    html[data-theme="dark"] :is(.gen-research__link:hover, .gen-research__head:hover) { background: #24272D; }
+    html[data-theme="dark"] :is(.gen-research__title, .gen-research__name) { color: #FFFFFF; }
+    html[data-theme="dark"] :is(.gen-research__sub, .gen-research__count, .gen-research__meta, .gen-research__chev) { color: #BFC8D9; }
+    @media (max-width: 600px) { .gen-research__head { grid-template-columns: minmax(0, 1fr) 24px; } .gen-research__icon { display: none; } }
     .gen-renderer { position: fixed; left: -12000px; top: 0; width: 1280px; height: 900px; border: 0; visibility: hidden; pointer-events: none; }
     .gen-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -797,9 +837,18 @@
       <button class="es-btn es-btn--sm" type="button" id="gen-set-zip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download all (.zip)</button>
     </div>
     <div class="gen-grid" id="gen-grid"></div>
+    <!-- Sources (gen v4): the ES articles the facts and numbers came from, so
+         anyone can check a fact before publishing. Collapsed to one row. -->
     <details class="gen-research" id="gen-research" data-ais-reveal hidden>
-      <summary>Based on these ES stories</summary>
-      <ul id="gen-research-list"></ul>
+      <summary class="gen-research__head">
+        <span class="gen-research__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="10" y="6" rx="1"/></svg></span>
+        <span class="gen-research__titles">
+          <span class="gen-research__title">Sources <span class="gen-research__count" id="gen-research-count"></span></span>
+          <span class="gen-research__sub">The ES articles these facts and numbers came from. Open one to check a fact before you publish.</span>
+        </span>
+        <span class="gen-research__chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+      </summary>
+      <ol class="gen-research__list" id="gen-research-list"></ol>
     </details>
     </section>
 
@@ -831,7 +880,7 @@
   </main>
 
   <!-- Trends view: pure logic + the board (the Generate view is the next script). -->
-  <script src="trends-logic.js?v=20261119-rel2"></script>
+  <script src="trends-logic.js?v=20261121-gen4ui"></script>
   <script src="trends-view.js?v=20261121-rel"></script>
   <script>
     // FrameUp Generate: brief → /api/es-generate (ES research + AI copy +
@@ -857,11 +906,11 @@
       const PHOTO_TYPES = new Set(['cover', 'quote', 'long-quote', 'stats-single-ent', 'player-stat-line', 'team-record']);
       // Starter prompts: [what it makes, the brief, the format (its template art)].
       const EXAMPLES = [
-        ['Quote + stats', 'Patrick Mahomes after the Chiefs win: "We are not done yet." 320 YDS, 3 TD, 1 INT', 'quote'],
-        ['Player stats', 'Caitlin Clark scores 30 PTS 9 AST 6 REB against the Sky', 'stats-single-ent'],
-        ['Stat line', 'Luka Doncic drops 43 PTS 11 REB 9 AST 4 STL in 36 MIN against the Suns', 'player-stat-line'],
+        ['Quote + stats', 'Patrick Mahomes after the Chiefs win: "We are not done yet." He threw for 320 YDS, 3 TD and 1 INT.\nWhy fans care: the Chiefs are back on track.', 'quote'],
+        ['Player stats', 'Caitlin Clark scores 30 PTS, 9 AST and 6 REB as the Fever beat the Sky.\nWhy fans care: another big night in the Clark vs Sky rivalry.', 'stats-single-ent'],
+        ['Stat line', 'Luka Doncic drops 43 PTS, 11 REB, 9 AST and 4 STL in 36 MIN against the Suns.\nWhy fans care: a near triple-double in a rivalry game.', 'player-stat-line'],
         ['Ranked list', 'Top 5 QBs right now\n1. Patrick Mahomes\n2. Josh Allen\n3. Lamar Jackson\n4. Joe Burrow\n5. Jalen Hurts', 'listicle-type-2'],
-        ['Cover hooks', 'Make a post about the Lakers losing streak', 'cover'],
+        ['Cover hooks', 'The Lakers\u2019 losing streak: what is going wrong, and what fans want changed before the deadline.\nWhy fans care: the season is slipping away.', 'cover'],
       ];
       const RECENT_KEY = 'frameup.generate.recent.v2';
       const svg = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
@@ -951,7 +1000,8 @@
           return [];
         }
       }
-      function rememberBrief(brief) {
+      function rememberBrief(sent) {
+        const brief = shownBrief(sent);
         const list = [{ brief, at: Date.now() }, ...readRecent().filter(item => item.brief !== brief)].slice(0, 6);
         try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); } catch (error) { /* private mode */ }
         renderQuick();
@@ -972,7 +1022,30 @@
         return h < 48 ? `${h}h` : `${Math.round(h / 24)}d`;
       }
       // A labelled trend brief shows its story only ("Story: …" lines).
-      const briefTitle = text => (/^Story: /.test(text) ? text.split('\n')[0].replace(/^Story: /, '') : text).replace(/\s*\n\s*/g, ' · ');
+      const briefTitle = text => {
+        const lines = String(text || '').split('\n').map(line => line.trim()).filter(line => line && !/^(?:headline|sport|team)\s*:/i.test(line));
+        const lead = (lines[0] || String(text || '')).replace(/^(?:story|context)\s*:\s*/i, '');
+        return /^(?:story|context|why fans care)\s*:/im.test(text) || lines.length > 1 ? lead : String(text || '').replace(/\s*\n\s*/g, ' · ');
+      };
+      // Briefs that arrive from elsewhere (Trends, Home, Recent, an old link,
+      // ES MCP's trending tool): the old labelled shape becomes a real brief,
+      // and the league is kept beside it (TrendsLogic.withSport adds it when
+      // the brief is sent).
+      const TL = () => window.TrendsLogic;
+      function tidyIncoming(text, league = '') {
+        const raw = String(text || '').trim().slice(0, 1500);
+        const tidy = TL()?.tidyBrief ? TL().tidyBrief(raw) : { text: raw, sport: '' };
+        const sport = league || tidy.sport;
+        if (sport) TL()?.rememberSport?.(tidy.text, sport);
+        return tidy.text;
+      }
+      // What the server gets: the brief plus its league on a "Sport:" line
+      // when the person did not write one (the brief box shows it without).
+      const sentBrief = text => (TL()?.withSport ? TL().withSport(text) : text);
+      const shownBrief = text => {
+        const m = String(text || '').match(/\nSport: ([^\n]+)$/);
+        return m && TL()?.sportForBrief?.(text.slice(0, m.index)) === m[1] ? text.slice(0, m.index) : text;
+      };
 
       // Three rows, three jobs (2026-11-19):
       //   Trending  live chips: league logo, a "rising" dot, freshness;
@@ -1073,7 +1146,8 @@
 
       // Fill the brief (a starter, a trend), update the hints and place the
       // caret at the end so typing continues the brief.
-      function setBrief(text) {
+      function setBrief(raw) {
+        const text = tidyIncoming(raw);
         els.brief.value = text;
         analyzeBrief();
         els.brief.focus({ preventScroll: true });
@@ -1122,8 +1196,12 @@
       let progressTimer = null;
       // steps: the labels (the last starts with designing()). auto: when each
       // next step starts by itself (ms), e.g. research ~2.4s, the director ~8s.
-      function startProgress(steps = STEPS, auto = [2400]) {
+      // eta: the expected seconds (FrameUpFocus.util.etaEstimate); the clock
+      // then shows time left and a bar, and says so when a run goes long.
+      function startProgress(steps = STEPS, auto = [2400], { eta = 0 } = {}) {
         const started = performance.now();
+        const U = window.FrameUpFocus?.util;
+        let wasOver = false;
         let step = 0;
         let drawnStep = -1;
         const draw = () => {
@@ -1139,10 +1217,24 @@
             const num = index < step ? (window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check) : String(index + 1);
             const spinner = index === step ? '<span class="gen-spinner" aria-hidden="true"></span>' : '';
             return `<li class="es-step${state}"${index === step ? ' aria-current="step"' : ''}><span class="es-step__num" aria-hidden="true">${num}</span>${label}${spinner}</li>`;
-          }).join('') + '<li class="gen-progress__time" aria-hidden="true"></li>';
+          }).join('') + (eta && U?.etaProgress
+              ? '<li class="gen-progress__eta" aria-hidden="true"><span class="gen-progress__bar"><i></i></span><span class="gen-progress__left"></span><span class="gen-progress__time"></span></li><li class="gen-sr gen-progress__say"></li>'
+              : '<li class="gen-progress__time" aria-hidden="true"></li>');
           }
           const time = els.progress.querySelector('.gen-progress__time');
-          if (time) time.textContent = `${seconds}s`;
+          if (eta && U?.etaProgress) {
+            const ms = (performance.now() - started) / 1000;
+            const p = U.etaProgress(ms, eta);
+            const row = els.progress.querySelector('.gen-progress__eta');
+            row?.classList.toggle('is-over', p.over);
+            const bar = row?.querySelector('i');
+            if (bar) bar.style.width = `${p.pct}%`;
+            const left = row?.querySelector('.gen-progress__left');
+            if (left) left.textContent = p.text;
+            if (time) time.textContent = U.clock(ms);
+            // One announcement when it runs long (the clock itself is silent).
+            if (p.over && !wasOver) { wasOver = true; const say = els.progress.querySelector('.gen-progress__say'); if (say) say.textContent = p.text; }
+          } else if (time) time.textContent = `${seconds}s`;
         };
         els.progress.hidden = false;
         setSummary('');
@@ -2113,6 +2205,7 @@
           window.FrameUpPosted?.markGenerateRun?.({ count: cards.length, format: 'onbrand' });
           for (const card of cards) await paint(card);
           const seconds = progress.stop();
+          if (!data.cached) { try { U?.etaSave?.({ ...etaRun, s: seconds }); } catch (error) { /* optional */ } }
           setSummary(`${modeBadges(data)}<span class="gen-mode is-ai">On-brand remake</span><span><strong data-es-tick="gen-count">${cards.length} design${cards.length === 1 ? '' : 's'}</strong> · ${Math.max(1, Math.round(seconds))}s</span>`);
           onbrand.critique.scrollIntoView({ block: 'start', behavior: reducedMotion.matches ? 'auto' : 'smooth' });
         } catch (error) {
@@ -2131,7 +2224,7 @@
       // ── Generate ──────────────────────────────────────────────────────────
       async function generate(event) {
         event?.preventDefault();
-        const brief = els.brief.value.trim();
+        const brief = sentBrief(els.brief.value.trim());
         if (brief.length < 3) {
           els.brief.focus();
           setNotice('Write a brief first', ' Who it is about, what happened, and any numbers or quotes.');
@@ -2176,9 +2269,12 @@
         els.grid.replaceChildren(...Array.from({ length: count }, skeletonCard));
         els.grid.setAttribute('aria-busy', 'true');
         if (picked) collapseDirector(picked);
+        const U = window.FrameUpFocus?.util;
+        const etaRun = { look: 'templates', count, people: Boolean(briefFound.name) };
+        const eta = U?.etaEstimate ? U.etaEstimate(U.etaHistory(), etaRun).seconds : 0;
         const progress = picked
-          ? startProgress(['Writing your directions', 'Director’s notes', 'Designing your posts'], [7000])
-          : startProgress(['Reading ES coverage', 'Director choosing angles', 'Writing on-brand copy', 'Designing your posts'], [2400, 9000]);
+          ? startProgress(['Writing your directions', 'Director’s notes', 'Designing your posts'], [7000], { eta })
+          : startProgress(['Reading ES coverage', 'Director choosing angles', 'Writing on-brand copy', 'Designing your posts'], [2400, 9000], { eta });
         renderer().catch(() => {});
         if (picked) {
           picked.forEach(dir => track('direction_chosen', {
@@ -2230,18 +2326,46 @@
         }
       }
 
+      // Sources: the ES articles behind the facts, newest first, each with its
+      // date ("Nov 19 · 2d ago"). Only http(s) links; collapsed by default.
+      function sourceDate(value) {
+        const t = Date.parse(String(value || '').length === 10 ? `${value}T12:00:00Z` : value || '');
+        if (!Number.isFinite(t)) return '';
+        const d = new Date(t);
+        const day = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
+        // A date-only value has no time of day: say "today" / "2d ago", not "3h".
+        const now = new Date();
+        const days = Math.round((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())) / 864e5);
+        const age = String(value).length === 10 ? (days <= 0 ? 'today' : days === 1 ? 'yesterday' : days <= 14 ? `${days}d ago` : '') : (ago(t) === 'now' ? 'just now' : `${ago(t)} ago`);
+        return [day, age].filter(Boolean).join(' · ');
+      }
       function showResearch(articles) {
-        els.researchList.replaceChildren(...articles.map(article => {
+        const seen = new Set();
+        const list = (Array.isArray(articles) ? articles : [])
+          .filter(a => a && /^https?:\/\//i.test(String(a.url || '')) && String(a.title || '').trim() && !seen.has(a.url) && seen.add(a.url))
+          .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+        els.researchList.replaceChildren(...list.map(article => {
           const li = document.createElement('li');
           const link = document.createElement('a');
+          link.className = 'gen-research__link';
           link.href = article.url;
           link.target = '_blank';
           link.rel = 'noopener';
-          link.textContent = article.title;
-          li.append(link, document.createTextNode(article.date ? ` · ${article.date}` : ''));
+          const name = document.createElement('span');
+          name.className = 'gen-research__name';
+          name.textContent = String(article.title).trim();
+          const meta = document.createElement('span');
+          meta.className = 'gen-research__meta';
+          meta.textContent = ['EssentiallySports', sourceDate(article.date)].filter(Boolean).join(' · ');
+          link.append(name, meta);
+          link.insertAdjacentHTML('beforeend', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg><span class="gen-sr"> (opens in a new tab)</span>');
+          li.append(link);
           return li;
         }));
-        els.research.hidden = !articles.length;
+        const count = document.getElementById('gen-research-count');
+        if (count) count.textContent = list.length ? `· ${list.length} ES ${list.length === 1 ? 'story' : 'stories'}` : '';
+        els.research.open = false;
+        els.research.hidden = !list.length;
       }
 
       // ── Card actions ──────────────────────────────────────────────────────
@@ -2570,7 +2694,7 @@
         try {
           const data = await callApi('/api/es-generate', { mode: 'trending' });
           // [tag, brief] pairs from ES MCP's trending tool.
-          topics = data.topics?.length ? data.topics.map(t => (Array.isArray(t) ? { label: t[0], brief: t[1], title: briefTitle(t[1]) } : { label: t.label || 'Trend', brief: t.brief || t.title, title: briefTitle(t.title || t.brief || '') })).filter(t => t.brief) : null;
+          topics = data.topics?.length ? data.topics.map(t => (Array.isArray(t) ? { label: t[0], brief: tidyIncoming(t[1]), title: briefTitle(tidyIncoming(t[1])) } : { label: t.label || 'Trend', brief: tidyIncoming(t.brief || t.title), title: briefTitle(t.title || tidyIncoming(t.brief || '')) })).filter(t => t.brief) : null;
           renderQuick();
           if (!topics) setNotice('No trending topics right now', ' Open Trends (top of the page) for live US sports stories.');
         } catch (error) {
@@ -2791,6 +2915,7 @@
           card.setAttribute('aria-label', `${card.dataset.label || card.textContent.trim()}${fit ? ', fits your brief' : ''}`);
         });
         renderFormatNote();
+        window.FrameUpCreative?.paintEstimate?.();
       }
       let briefTimer = null;
       els.brief.addEventListener('input', () => {
@@ -2818,12 +2943,12 @@
         const photo = item.image && /^https?:\/\//i.test(item.image) ? `<img src="${esc(item.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : '';
         return `<span class="gen-trend__art" style="--league-bg:${esc(league?.bg || '#F2F4F7')}" aria-hidden="true">${photo || logo}</span>`;
       }
+      // A live trend as a real brief (TrendsLogic.briefFor: who, what happened,
+      // the related headlines, the angle; the league kept beside it).
       function trendBrief(item, sport) {
-        return [
-          `Story: ${item.title}`,
-          item.team?.name ? `Team: ${item.team.name}` : '',
-          sport ? `Sport: ${sport}` : '',
-        ].filter(Boolean).join('\n');
+        const why = String(item.ai?.why || item.why || '').trim();
+        if (TL()?.briefFor) return TL().briefFor(item, { why, sportLabel: sport });
+        return [item.team?.name && !item.title.includes(item.team.name.split(' ').pop()) ? `${item.team.name}: ${item.title}` : item.title, why ? `Why fans care: ${why}` : ''].filter(Boolean).join('\n');
       }
       async function loadLiveTrends() {
         els.live.innerHTML = '<span class="gen-trend is-skeleton es-skeleton" aria-hidden="true"><span class="gen-trend__art"></span><span class="gen-trend__text"></span></span>'.repeat(3);
@@ -2916,7 +3041,7 @@
       // The page's pieces the Creative look reuses (generate-creative.js).
       window.FrameUpGenerate = Object.freeze({
         els, ICON, esc, callApi, setBusy, setNotice, setSummary, startProgress, restoreFocus, showResearch, rememberBrief, track,
-        steer: () => steerBody(), isBusy: () => busy, rendererFrame: () => document.querySelector('iframe.gen-renderer'), renderer,
+        steer: () => steerBody(), isBusy: () => busy, found: () => briefFound, rendererFrame: () => document.querySelector('iframe.gen-renderer'), renderer,
       });
       selectFormat('auto');
       analyzeBrief();
@@ -2983,7 +3108,7 @@
       // Trends "Design this" / a headline idea: open Generate with that brief
       // and start right away (the click was the request).
       document.addEventListener('ais:design', event => {
-        const brief = String(event.detail?.brief || '').trim().slice(0, 1500);
+        const brief = tidyIncoming(event.detail?.brief || '', event.detail?.sport || '');
         if (!brief) return;
         setView('generate');
         els.brief.value = brief;
@@ -3005,9 +3130,9 @@
       const params = new URLSearchParams(window.location.search);
       const linkedBrief = params.get('brief');
       if (linkedBrief) {
-        els.brief.value = linkedBrief.slice(0, 1500);
+        els.brief.value = tidyIncoming(linkedBrief, params.get('league') || '');
         analyzeBrief();
-        ['brief', 'view', 'sport'].forEach(key => params.delete(key));
+        ['brief', 'view', 'sport', 'league'].forEach(key => params.delete(key));
         const rest = params.toString();
         history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
       }

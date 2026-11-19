@@ -57,7 +57,8 @@ ok('whyNow: searches, storyline size, outlets, brand; no repeated signal word', 
 ok('hand-offs: Generate brief, Video Ads, Reels Studio contract', () => {
   const item = story('t-1', 'nfl', 1, { title: 'Broncos drop 3 spots', team: { name: 'Denver Broncos', short: 'Broncos' }, related: [{ title: 'Power rankings week 11', url: 'https://x.com', source: 'X' }] });
   const brief = L.briefFor(item, { headline: 'Broncos slide', why: 'Bye week hurt', sportLabel: 'NFL' });
-  assert.match(brief, /^Headline: Broncos slide\nStory: Broncos drop 3 spots\nContext: Power rankings week 11\nWhy fans care: Bye week hurt\nTeam: Denver Broncos\nSport: NFL$/);
+  // gen v4: a real brief (no Team / Sport lines); the league rides beside it.
+  assert.equal(brief, 'Headline: Broncos slide\nBroncos drop 3 spots.\nContext: Power rankings week 11.\nWhy fans care: Bye week hurt.');
   const v = L.videoHandoff(item, { why: 'w' });
   assert.equal(v.key, 'frameup.videoAdMoment.v1');
   assert.match(v.url, /^video-ads\.html\?from=trends&sport=nfl&moment=Broncos\+drop\+3\+spots&team=Denver\+Broncos&trend=t-1$/);

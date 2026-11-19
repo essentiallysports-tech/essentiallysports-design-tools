@@ -3,6 +3,39 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-21-gen4-ui",
+      "date": "2026-11-21",
+      "title": "Generate: clearer ideas, a time estimate and better briefs",
+      "commit": "3d4d45a",
+      "items": [
+        {
+          "title": "Ideas you can read in full",
+          "text": "The assistant's ideas show their whole text, and small fixes the director made while designing are listed in one quiet line.",
+          "page": "generate.html"
+        },
+        {
+          "title": "How long it will take",
+          "text": "Generate shows a time estimate before you start and a countdown while it works. It learns from your own runs.",
+          "page": "generate.html",
+          "target": "#gen-expect"
+        },
+        {
+          "title": "Sources you can check",
+          "text": "The ES articles behind the facts sit in one tidy Sources card, with dates.",
+          "page": "generate.html"
+        },
+        {
+          "title": "Better briefs from trends",
+          "text": "Picking a trend, a Try card or a Recent brief fills a real brief: who, what happened, the related headlines and why fans care.",
+          "page": "generate.html"
+        },
+        {
+          "title": "AI usage explained",
+          "text": "Open the AI usage card for your spend by tool, the team's week, what counts, when it resets and what free mode means."
+        }
+      ]
+    },
+    {
       "id": "2026-11-21-qa-editor",
       "date": "2026-11-21",
       "title": "Editor: tidier toolbar and panels on laptops and phones",

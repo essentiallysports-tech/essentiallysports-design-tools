@@ -74,6 +74,67 @@
     return engine?.costEstimate ? engine.costEstimate(Math.max(1, Math.min(8, Number(count) || 4))) : null;
   }
 
+  // ─── ETA: how long a run takes (gen v4) ──────────────────────────────
+  // A model by look, number of designs and whether a named person means photo
+  // search + cut-outs, then corrected by this browser's own past runs (the
+  // median of actual / model over the last 12 runs of that look; the more runs,
+  // the more it trusts them). Shown before a run and live while it runs.
+  const ETA_KEY = 'frameup.generate.durations.v1';
+  function etaModel({ look = 'creative', count = 4, people = true } = {}) {
+    const n = Math.max(1, Math.min(8, Math.round(Number(count) || 4)));
+    if (look === 'templates') return 12 + 3 * Math.min(n, 4);
+    // Research + art director ~22 s, compose / judge ~5 s a design, photos and
+    // cut-outs for a named person ~14 s (concept art only: ~4 s).
+    return 22 + 5 * n + (people ? 14 : 4);
+  }
+  function etaEstimate(history = [], params = {}) {
+    const look = params.look === 'templates' ? 'templates' : 'creative';
+    const base = etaModel({ ...params, look });
+    const runs = (Array.isArray(history) ? history : []).filter(h => h && h.look === look && Number(h.s) > 3 && Number(h.s) < 400).slice(-12);
+    if (!runs.length) return { seconds: Math.round(base), base: Math.round(base), learned: 0 };
+    const ratios = runs.map(h => Number(h.s) / etaModel(h)).sort((a, b) => a - b);
+    const mid = ratios.length % 2 ? ratios[(ratios.length - 1) / 2] : (ratios[ratios.length / 2 - 1] + ratios[ratios.length / 2]) / 2;
+    const ratio = Math.max(0.4, Math.min(3, mid));
+    const trust = Math.min(1, runs.length / 4);
+    return { seconds: Math.round(base * (1 - trust + trust * ratio)), base: Math.round(base), learned: runs.length };
+  }
+  function etaRecord(history = [], run = {}) {
+    const s = Math.round(Number(run.s) || 0);
+    const list = Array.isArray(history) ? history.filter(Boolean) : [];
+    if (s < 3 || s > 400) return list.slice(-30);
+    return [...list, { look: run.look === 'templates' ? 'templates' : 'creative', count: Math.max(1, Math.min(8, Number(run.count) || 4)), people: Boolean(run.people), s, at: Number(run.at) || Date.now() }].slice(-30);
+  }
+  // "about 45 s", "about 1 min", "about 1 min 20 s" (to the nearest 5 s).
+  function etaLabel(seconds) {
+    const t = Math.max(5, Math.round((Number(seconds) || 0) / 5) * 5);
+    if (t < 60) return `about ${t} s`;
+    const m = Math.floor(t / 60);
+    const r = t - m * 60;
+    return `about ${m} min${r ? ` ${r} s` : ''}`;
+  }
+  // "0:42" for the running clock.
+  const clock = seconds => { const t = Math.max(0, Math.floor(Number(seconds) || 0)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+  // Live progress: { pct, over, text }. Honest when it runs long: the bar stops
+  // short of the end and the text says it is taking longer than usual.
+  function etaProgress(elapsed, estimate, { limit = 180 } = {}) {
+    const e = Math.max(0, Number(elapsed) || 0);
+    const est = Math.max(5, Number(estimate) || 60);
+    if (e <= est) {
+      const left = Math.max(5, Math.round((est - e) / 5) * 5);
+      return { pct: Math.round((e / est) * 90), over: false, text: e < 3 ? `Usually takes ${etaLabel(est)}` : `${etaLabel(left).replace(/^about /, 'About ')} left` };
+    }
+    const pct = Math.min(97, Math.round(90 + 7 * (1 - Math.exp(-(e - est) / est))));
+    if (e > limit - 30) return { pct, over: true, text: `Still working. A run stops at ${Math.round(limit / 60)} min; you'll see a notice if it does` };
+    if (e > est * 1.15) return { pct, over: true, text: `Taking longer than usual (usually ${etaLabel(est).replace(/^about /, '')})` };
+    return { pct, over: false, text: 'Almost there' };
+  }
+  function etaHistory() {
+    try { const list = JSON.parse(root.localStorage?.getItem(ETA_KEY) || '[]'); return Array.isArray(list) ? list : []; } catch (error) { return []; }
+  }
+  function etaSave(run) {
+    try { root.localStorage?.setItem(ETA_KEY, JSON.stringify(etaRecord(etaHistory(), run))); } catch (error) { /* private mode */ }
+  }
+
   // "now", "12m", "3h", "2d" (a trend's freshness, a recent brief's age).
   function relTime(then, now = Date.now()) {
     const t = typeof then === 'number' ? then : Date.parse(then || '');
@@ -177,7 +238,9 @@
   // or, until then, the free quick check's issues as improvements.
   function critiqueFor({ verdict = {}, dir = {}, scene = {}, report = null } = {}) {
     const given = verdict.critique || dir.critique || scene.critique || null;
-    if (given && (given.improvements?.length || given.strengths?.length || given.nextTime)) {
+    // A reviewed critique (gen v4: autoFixed + creative ideas) is final even
+    // when it has no ideas: the quick check's repairs never come back.
+    if (given && (given.improvements?.length || given.strengths?.length || given.nextTime || Array.isArray(given.autoFixed))) {
       return {
         source: 'director',
         strengths: (given.strengths || []).filter(Boolean).map(String).slice(0, 4),
@@ -195,7 +258,7 @@
 
   const designIdFor = (runId, dirId) => `${String(runId || 'run').replace(/[^\w-]/g, '').slice(0, 40) || 'run'}-${dirId}`;
 
-  const util = Object.freeze({ cleanStory, estimateCost, estimateRange, relTime, History, reframe, sizeKeyOf, critiqueFor, designIdFor, SIZE_KEYS, COST });
+  const util = Object.freeze({ cleanStory, estimateCost, estimateRange, relTime, History, reframe, sizeKeyOf, critiqueFor, designIdFor, SIZE_KEYS, COST, etaModel, etaEstimate, etaRecord, etaLabel, etaProgress, etaHistory, etaSave, clock, ETA_KEY });
   if (!root || typeof root.document === 'undefined') return { util };
 
   // ─── Browser: the focus view ────────────────────────────────────────────
@@ -247,7 +310,7 @@
     view.assistantTried = true;
     return new Promise(resolve => {
       const s = doc.createElement('script');
-      s.src = 'generate-assistant.js?v=20261119-rel';
+      s.src = 'generate-assistant.js?v=20261121-gen4ui';
       s.async = true;
       s.onload = () => resolve(Boolean(root.FrameUpAssistant));
       s.onerror = () => { s.remove(); resolve(false); };
@@ -520,13 +583,20 @@
         ${rubric.length ? `<ul class="gfx-rubric">${rubric.map(([k, label]) => `<li><span>${label}</span><span class="gfx-rubric__bar" aria-hidden="true"><i style="width:${(score.parts[k] / 5) * 100}%"></i></span><b>${score.parts[k]}</b></li>`).join('')}</ul>` : ''}
         ${d.note ? `<p class="gfx-note-text">${esc(d.note)}</p>` : ''}
       </section>
+      ${fixedHtml(crit)}
       ${crit.strengths.length ? `<section class="gfx-sec"><h3 class="gfx-eyebrow">What works</h3><ul class="gfx-list gfx-list--good">${crit.strengths.map(s => `<li>${ICON.check}<span>${esc(s)}</span></li>`).join('')}</ul></section>` : ''}
       <section class="gfx-sec">
-        <h3 class="gfx-eyebrow">What could be better${crit.source === 'quick' ? ' <span class="gfx-src">quick check</span>' : ''}</h3>
-        ${crit.improvements.length ? `<ul class="gfx-better">${crit.improvements.map(i => `<li class="gfx-better__item${d.isApplied?.(i.id) ? ' is-applied' : ''}" data-id="${esc(i.id)}"><span class="gfx-better__text">${esc(i.text)}</span>${applyButton(d, i)}</li>`).join('')}</ul>` : '<p class="gfx-muted">Nothing flagged on this version. Ask the assistant for a variation if you want one.</p>'}
+        <h3 class="gfx-eyebrow">Ideas to try</h3>
+        ${crit.improvements.length ? `<ul class="gfx-better">${crit.improvements.map(i => `<li class="gfx-better__item${d.isApplied?.(i.id) ? ' is-applied' : ''}" data-id="${esc(i.id)}"><span class="gfx-better__text">${esc(i.text)}</span>${applyButton(d, i)}</li>`).join('')}</ul>` : '<p class="gfx-muted">No new ideas for this version. Ask the assistant for a variation if you want one.</p>'}
       </section>
       ${crit.nextTime ? `<section class="gfx-sec gfx-lesson">${ICON.bulb}<div><h3 class="gfx-eyebrow">Next time</h3><p>${esc(crit.nextTime)}</p></div></section>` : ''}
       ${d.source ? `<p class="gfx-muted gfx-source">Source: <a href="${esc(d.source.url)}" target="_blank" rel="noopener">${esc(d.source.title || d.source.url)}</a></p>` : ''}`;
+  }
+  // "Fixed while designing": the small fixes the director made before this
+  // design was shown (design.review.autoFixed). Quiet, never a to-do.
+  function fixedHtml(crit) {
+    const line = root.FrameUpAssistant?.fixedLine ? root.FrameUpAssistant.fixedLine(crit.autoFixed || []) : (crit.autoFixed || []).join(', ');
+    return line ? `<section class="gfx-sec gfx-fixed">${ICON.check}<p><b>Fixed while designing:</b> ${esc(line)}</p></section>` : '';
   }
   // An improvement is applied by the assistant (any instruction), or here
   // when it names one of the composer's built-in fixes.

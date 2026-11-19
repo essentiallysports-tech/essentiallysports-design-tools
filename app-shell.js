@@ -263,7 +263,7 @@
   // The signed-in person's AI spend this week (Monday 00:00 UTC onward), read
   // with the frameup_my_ai_spend() database function. The server enforces the
   // same cap (netlify/functions/_ai-gateway.js POLICY: $20 a person, $45 the
-  // team). The limit, free mode and (for admins) the team's week come from
+  // team). The limit, free mode and the team's week (aggregate) come from
   // /api/ai-status through window.FrameUpAI (frameup-ai-mode.js) when the page
   // loads it; $20 is the fallback. Until the spend can be read the card stays hidden.
   const AI_WEEKLY_USER_LIMIT_USD = 20;
@@ -336,19 +336,24 @@
     usageLast = { data, ai };
     const limit = Number(ai?.userLimitUsd) > 0 ? Number(ai.userLimitUsd) : AI_WEEKLY_USER_LIMIT_USD;
     const free = ai?.mode === 'free';
+    const teamFree = free && (ai.reason === 'team-limit' || ai.reason === 'gateway-budget');
     const ratio = Math.max(0, total / limit);
     const state = free || ratio >= 1 ? 'over' : ratio >= 0.8 ? 'warn' : 'ok';
     const reset = resetText();
-    // Admins also see the team's week (aggregate only).
+    // The team's week (an aggregate /api/ai-status gives every signed-in
+    // person): when it reaches the team limit, everyone is in free mode.
     const teamSpent = Number(ai?.teamSpentUsd);
     const teamLimit = Number(ai?.teamLimitUsd);
-    const teamLine = ai?.admin && Number.isFinite(teamSpent) && teamLimit > 0
-      ? `<span class="es-usage__team">Team: ${money(teamSpent)} of $${teamLimit}${ai.reason === 'team-limit' || ai.reason === 'gateway-budget' ? ' · free mode' : ''}</span>`
+    const hasTeam = Number.isFinite(teamSpent) && teamLimit > 0;
+    const teamPct = hasTeam ? Math.min(100, Math.round((teamSpent / teamLimit) * 100)) : 0;
+    const teamLine = hasTeam
+      ? `<span class="es-usage__team"><span>Team</span><span><strong>${money(teamSpent)}</strong> of $${teamLimit}${teamFree ? ' · free mode' : ''}</span></span>`
       : '';
     const resetLine = free ? `Free mode · AI back ${reset}` : state === 'over' ? `Limit reached · resets ${reset}` : `Resets ${reset}`;
     const nextReset = weekStartUtc();
     nextReset.setUTCDate(nextReset.getUTCDate() + 7);
-    const resetTitle = `Resets ${nextReset.toLocaleString(undefined, { weekday: 'long', hour: 'numeric', minute: '2-digit' })} (Monday 00:00 UTC)`;
+    const localReset = nextReset.toLocaleString(undefined, { weekday: 'long', hour: 'numeric', minute: '2-digit' });
+    const resetTitle = `Resets ${localReset} your time (Monday 00:00 UTC)`;
     const features = Object.entries(data.by_feature || {})
       .reduce((sum, [key, usd]) => {
         const label = featureLabel(key);
@@ -356,14 +361,17 @@
         return sum;
       }, {});
     const rows = Object.entries(features).filter(([, usd]) => usd >= 0.005).sort((a, b) => b[1] - a[1]);
-    const clickable = rows.length > 0;
+    const top = rows[0]?.[1] || 0;
     const wasOpen = usageSlot.querySelector('.es-usage__card[aria-expanded="true"]');
-    const tag = clickable ? 'button' : 'div';
     const percent = Math.min(100, Math.round(ratio * 100));
+    const calls = Number(data.calls) || 0;
+    const left = Math.max(0, limit - total);
     usageSlot.dataset.state = state;
     usageSlot.dataset.free = String(free);
+    // The card always opens the details: what counts, per tool, the team,
+    // when it resets and what free mode means.
     usageSlot.innerHTML = `
-      <${tag} class="es-usage__card"${clickable ? ` type="button" aria-expanded="false" aria-controls="es-usage-pop" aria-label="AI usage: ${money(total)} of $${limit} this week. Show breakdown"` : ''} title="${escapeText(resetTitle)}">
+      <button class="es-usage__card" type="button" aria-expanded="false" aria-controls="es-usage-pop" aria-label="AI usage: ${money(total)} of $${limit} this week${free ? ', free mode' : ''}. Show details" title="${escapeText(resetTitle)}">
         <span class="es-usage__row">
           <span class="es-usage__label">AI usage</span>
           <span class="es-usage__amount"><strong>${money(total)}</strong> of $${limit}</span>
@@ -371,14 +379,35 @@
         <span class="es-usage__bar" role="progressbar" aria-label="AI usage this week" aria-valuemin="0" aria-valuemax="${limit}" aria-valuenow="${Math.min(limit, Math.round(total * 100) / 100)}" aria-valuetext="${money(total)} of $${limit}"><span class="es-usage__fill" style="width:${percent}%"></span></span>
         <span class="es-usage__reset">${resetLine}</span>
         ${teamLine}
-      </${tag}>
-      ${clickable ? `<div class="es-usage__pop" id="es-usage-pop" role="group" aria-label="AI usage by feature" hidden>
-        <p class="es-usage__pop-head"><span>This week</span><strong>${money(total)}</strong></p>
-        <ul class="es-usage__list">${rows.map(([label, usd]) => `<li><span>${escapeText(label)}</span><span>${money(usd)}</span></li>`).join('')}</ul>
-        <p class="es-usage__pop-note">${data.calls ? `${Number(data.calls)} AI ${Number(data.calls) === 1 ? 'call' : 'calls'} · ` : ''}$${limit} weekly limit</p>
-      </div>` : ''}`;
+      </button>
+      <div class="es-usage__pop" id="es-usage-pop" role="group" aria-labelledby="es-usage-pop-title" hidden>
+        <div class="es-usage__pop-head">
+          <p class="es-usage__pop-title" id="es-usage-pop-title">Your AI this week</p>
+          <p class="es-usage__pop-total"><strong>${money(total)}</strong> of $${limit}</p>
+        </div>
+        <p class="es-usage__pop-sub">${free ? (teamFree ? "The team's budget is used up, so everyone is in free mode." : "You've used your budget, so you're in free mode.") : `${money(left)} left · ${percent}% used`}${calls ? ` · ${calls} AI ${calls === 1 ? 'call' : 'calls'}` : ''}</p>
+        <section class="es-usage__sec" aria-label="By tool">
+          <p class="es-usage__eyebrow">By tool</p>
+          ${rows.length ? `<ul class="es-usage__list">${rows.map(([label, usd]) => `<li><span class="es-usage__tool">${escapeText(label)}</span><span class="es-usage__mini" aria-hidden="true"><i style="width:${Math.max(4, Math.round((usd / (top || 1)) * 100))}%"></i></span><span class="es-usage__usd">${money(usd)}</span></li>`).join('')}</ul>` : (total >= 0.005 ? '<p class="es-usage__muted">The per-tool split is not available right now.</p>' : '<p class="es-usage__muted">No AI used yet this week.</p>')}
+        </section>
+        ${hasTeam ? `<section class="es-usage__sec" aria-label="Team">
+          <p class="es-usage__eyebrow">Team</p>
+          <p class="es-usage__line"><span>Everyone at ES</span><span><strong>${money(teamSpent)}</strong> of $${teamLimit}</span></p>
+          <span class="es-usage__bar es-usage__bar--team" aria-hidden="true"><span class="es-usage__fill" style="width:${teamPct}%"></span></span>
+          <p class="es-usage__muted">If the team reaches $${teamLimit}, everyone switches to free mode until the reset.</p>
+        </section>` : ''}
+        <section class="es-usage__sec" aria-label="What counts">
+          <p class="es-usage__eyebrow">What counts</p>
+          <p class="es-usage__muted">Every AI step FrameUp runs for you: writing and rewrites, the art director, images and cut-outs, AI angles. Templates, editing, exports and downloads are free.</p>
+        </section>
+        <section class="es-usage__sec" aria-label="Resets and free mode">
+          <p class="es-usage__eyebrow">Resets</p>
+          <p class="es-usage__muted">${escapeText(localReset)} your time (Monday 00:00 UTC), ${escapeText(reset)}.</p>
+          <p class="es-usage__muted"><b>Free mode:</b> past the limit, FrameUp keeps working without AI. Templates, editing and exports still work; AI steps rest until the reset.</p>
+        </section>
+      </div>`;
     usageSlot.hidden = false;
-    if (clickable && wasOpen) setUsageOpen(true);
+    if (wasOpen) setUsageOpen(true);
   }
 
   function setUsageOpen(open) {

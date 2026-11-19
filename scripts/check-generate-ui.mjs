@@ -25,6 +25,24 @@ if (typeof WebSocket !== 'function') { console.log('generate ui: skipped (needs 
 
 const BRIEF = 'Josh Allen goes over 1000+ rushing yards as the Bills beat the Chiefs 30-21.\nSport: NFL';
 const PLAN = await buildPlan(BRIEF, { want: 4 });
+// gen v4: the server's design review (fixed while designing + creative ideas),
+// with one repair the page must never offer, and several dated ES sources.
+const REVIEW_FIRST = 'Try a versus layout: the Bills and the Chiefs side by side, with the 30-21 score between them as the one big number';
+const REVIEW = {
+  autoFixed: ['Brighter photo behind the headline', "Added Josh Allen's photo (he is named in the brief)", 'Restored the colon after ALLEN'],
+  suggestions: [
+    { text: 'Try a versus layout: the Bills and the Chiefs side by side, with the 30-21 score between them as the one big number' },
+    { text: 'Lead with the 1000+ rushing yards as one giant number and let the cut-out break the frame' },
+    { text: 'The NFL tag is tiny and the photo is murky' },
+  ],
+};
+PLAN.directions.forEach(d => { d.review = JSON.parse(JSON.stringify(REVIEW)); });
+PLAN.research = { articles: [
+  { title: 'Josh Allen goes over 1,000 rushing yards as the Bills beat the Chiefs 30-21', url: 'https://www.essentiallysports.com/nfl-news-josh-allen-1000/', date: '2026-11-19' },
+  { title: '"He is the MVP": Bills teammates react to a record night in Kansas City', url: 'https://www.essentiallysports.com/nfl-news-bills-react/', date: '2026-11-18' },
+  { title: 'Chiefs fall to 7-4 after a second loss in three weeks at Arrowhead', url: 'https://www.essentiallysports.com/nfl-news-chiefs-7-4/', date: '2026-11-17' },
+  { title: 'Josh Allen and the Bills: the numbers behind their best start since 1991', url: 'https://www.essentiallysports.com/nfl-news-bills-start/', date: '2026-11-04' },
+] };
 const PLAN_ONE = await buildPlan(BRIEF, { want: 1 });
 // As production sends it: ES CDN photos through the proxy, no cut-out yet, no
 // plan.imagery (the server never sends it), so the page makes the cut-outs.
@@ -41,7 +59,7 @@ const TRENDS = {
 };
 
 // What the stubs answer (changed per state).
-const stub = { trends: 'ok', creative: 'ok', delay: 0, free: false, one: false, live: false };
+const stub = { trends: 'ok', creative: 'ok', delay: 0, free: false, one: false, live: false, briefs: [] };
 const api = (req, url, body) => {
   const p = url.pathname;
   if (p === '/api/es-image-search' && url.searchParams.get('image')) { const f = qaProxyFile(url); return f ? { type: f.type, body: f.body } : { status: 404, body: {} }; }
@@ -52,12 +70,13 @@ const api = (req, url, body) => {
   if (p === '/api/ai-status') {
     return { body: stub.free
       ? { ok: true, mode: 'free', reason: 'user-limit', notice: 'You have used this week\'s AI budget. FrameUp works without AI until Monday.', userLimitUsd: 20, userSpentUsd: 20, resetsAt: '2026-11-23T00:00:00Z', admin: false }
-      : { ok: true, mode: 'ai', userLimitUsd: 20, userSpentUsd: 3.2, admin: false } };
+      : { ok: true, mode: 'ai', userLimitUsd: 20, userSpentUsd: 3.2, teamLimitUsd: 45, teamSpentUsd: 11.4, admin: false } };
   }
   if (p === '/api/es-generate' && req.method === 'GET') return { body: { roles: { trending: true } } };
   if (p === '/api/es-generate') {
     const mode = body?.mode || '';
     if (mode === 'creative') {
+      stub.briefs.push(String(body?.brief || ''));
       if (stub.creative === 'limit') return { status: 429, body: { error: 'You have reached the hourly limit for Generate.', reason: 'hourly' } };
       return { body: JSON.parse(JSON.stringify(stub.live ? PLAN_LIVE : stub.one ? PLAN_ONE : PLAN)), delay: stub.delay };
     }
@@ -88,7 +107,7 @@ const stop = () => { chrome.close(); server.close(); };
 const SCAN = `(() => {
   const issues = []; const grid = [];
   const dialog = [...document.querySelectorAll('.gfx')].find(e => e.offsetParent || getComputedStyle(e).position === 'fixed');
-  const scope = dialog && dialog.getBoundingClientRect().width > 0 ? dialog : document.querySelector('main#main');
+  const scope = (window.__qaScope && document.querySelector(window.__qaScope)) || (dialog && dialog.getBoundingClientRect().width > 0 ? dialog : document.querySelector('main#main'));
   const faded = e => { let op = 1; for (let a = e; a; a = a.parentElement) op *= Number(getComputedStyle(a).opacity); return op < 0.1; };
   // Visually hidden (screen-reader only) text: clipped to nothing on purpose.
   const srOnly = e => { for (let a = e; a && a !== document.body; a = a.parentElement) { const s = getComputedStyle(a); const r = a.getBoundingClientRect(); if ((s.position === 'absolute' || s.position === 'fixed') && r.width <= 2 && r.height <= 2) return true; if (/rect\\(0/.test(s.clip) || /inset\\(50%/.test(s.clipPath)) return true; } return false; };
@@ -247,6 +266,9 @@ async function open({ look = 'creative' } = {}) {
   await waitFor(`location.pathname === '/__blank'`);
   await evaluate(FAKE_SESSION);
   await evaluate('sessionStorage.clear(), true'); // the AI status is cached per tab
+  // The sidebar's AI usage card reads this week's spend (Supabase is blocked
+  // here), so seed its per-tab cache: per-tool rows for the details popover.
+  await evaluate(`(() => { const now = new Date(); const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())); start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7)); sessionStorage.setItem('frameup.aiUsage.v1', JSON.stringify({ at: Date.now(), since: start.toISOString(), data: { total_usd: 1.73, calls: 206, by_feature: { 'video-ads-copy': 1.06, 'generate-creative': 0.46, 'reels-plan': 0.21 } } })); return true; })()`);
   // The "New: tours" corner card belongs to the tours (another sweep); keep it off this page's states.
   await evaluate(`(() => { let h = 0x811c9dc5; for (const ch of 'qa@essentiallysports.com') { h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; } for (const k of ['frameup.tours.v1:u' + h.toString(36), 'frameup.tours.v1:device']) localStorage.setItem(k, JSON.stringify({ welcome: 'never' })); return true; })()`);
   await evaluate(`localStorage.setItem('frameup.generate.look.v1', ${JSON.stringify(look)}); localStorage.removeItem('frameup.generate.count.v1'); true`);
@@ -273,6 +295,16 @@ try {
   expect(await evaluate(`document.querySelectorAll('#gen-live .gen-trend:not(.is-skeleton)').length === 3`), 'idle: three live trends');
   expect(await evaluate(`!document.getElementById('gen-trending').hidden`), 'idle: Suggest topics shows when ES MCP has a trending tool');
   await sweep('idle');
+
+  // gen v4 #10: a live trend fills a real brief (no "Story:" / "Sport:" lines)
+  // and Generate still sends the league to the server.
+  stub.briefs = [];
+  await evaluate(`document.querySelector('#gen-live .gen-trend:not(.is-skeleton)')?.click()`);
+  await waitFor(`!window.FrameUpGenerate.isBusy() && document.querySelectorAll('#gen-grid .gen-cc:not(.is-skeleton)').length > 0`, 60000);
+  const shown = await evaluate(`document.getElementById('gen-brief').value`);
+  expect(!/^\s*(?:story|sport|team)\s*:/im.test(shown) && /Josh Allen/.test(shown), `hand-off: the brief box shows a real brief (got "${shown.slice(0, 80)}")`);
+  expect(/\nSport: NFL$/.test(stub.briefs.at(-1) || ''), `hand-off: the league still reaches the server (sent "${(stub.briefs.at(-1) || '').slice(-40)}")`);
+  expect(await evaluate(`!/Sport:/.test(JSON.parse(localStorage.getItem('frameup.generate.recent.v2') || '[]')[0]?.brief || '')`), 'hand-off: Recent keeps the brief as shown');
 
   // Trends offline.
   stub.trends = 'fail';
@@ -302,10 +334,13 @@ try {
   // Creative: loading, then results.
   await open({ look: 'creative' });
   await typeBrief(BRIEF);
+  await sleep(300);
+  expect(await evaluate(`/~\\d+ s|~\\d+ min/.test(document.getElementById('gen-count-cost')?.textContent || '')`), 'eta: the time estimate shows before generating');
   stub.delay = 4000;
   await evaluate(`document.getElementById('gen-submit').click()`);
   await sleep(1200);
   expect(await evaluate(`document.querySelectorAll('#gen-grid .is-skeleton, #gen-grid [class*=skeleton]').length > 0 && !document.getElementById('gen-progress').hidden`), 'loading: skeletons and progress');
+  expect(await evaluate(`/left|takes/i.test(document.querySelector('#gen-progress .gen-progress__left')?.textContent || '')`), 'eta: the live countdown shows while generating');
   await sweep('loading');
   stub.delay = 0;
   const made = await waitFor(`document.querySelectorAll('#gen-grid .gen-cc:not(.is-skeleton)').length >= 2 && !window.FrameUpGenerate.isBusy()`, 60000);
@@ -313,6 +348,14 @@ try {
   expect(await evaluate(`!document.getElementById('gen-summary').hidden && /design/.test(document.getElementById('gen-summary').textContent)`), 'creative: summary line');
   await sleep(600);
   await sweep('results');
+  // gen v4 #7: the sources card (the ES articles the facts came from).
+  expect(await evaluate(`!document.getElementById('gen-research').hidden && !document.getElementById('gen-research').open && /4 ES stories/.test(document.getElementById('gen-research').textContent)`), 'sources: a collapsed card says how many ES stories');
+  await evaluate(`document.querySelector('#gen-research summary').click()`);
+  await sleep(300);
+  expect(await evaluate(`document.getElementById('gen-research').open && document.querySelectorAll('#gen-research-list a[target=_blank]').length === 4 && /Nov 19/.test(document.querySelector('#gen-research-list li').textContent)`), 'sources: opens to dated links, newest first');
+  await evaluate(`document.getElementById('gen-research').scrollIntoView({ block: 'center' }), true`);
+  await sweep('sources-open');
+  await evaluate(`document.getElementById('gen-research').open = false, true`);
 
   // Card panels: photos and text.
   await evaluate(`(() => { const c = document.querySelector('#gen-grid .gen-cc'); c.querySelector('[data-cc="photos"]')?.click(); c.querySelector('[data-cc="text"]')?.click(); return true; })()`);
@@ -323,6 +366,9 @@ try {
   await evaluate(`(() => { document.querySelectorAll('#gen-grid .gen-cc').forEach(c => { c.querySelector('[data-cc="photos"][aria-expanded="true"]')?.click(); c.querySelector('[data-cc="text"][aria-expanded="true"]')?.click(); const d = c.querySelector('.gen-cc__director'); if (d) d.open = true; }); return true; })()`);
   await sleep(500);
   expect(await evaluate(`[...document.querySelectorAll('#gen-grid .gen-cc__director')].every(d => d.open)`), 'card: the director note opens');
+  expect(await evaluate(`/Fixed while designing/.test(document.querySelector('#gen-grid .gen-cc__fixed:not([hidden])')?.textContent || '')`), 'review: cards say what was fixed while designing');
+  expect(await evaluate(`![...document.querySelectorAll('#gen-grid .gen-cc__better li')].some(li => /murky|tag/i.test(li.textContent))`), 'review: a repair is never offered as an idea');
+  await evaluate(`document.querySelector('#gen-grid .gen-cc__director')?.scrollIntoView({ block: 'center' }), true`);
   await sweep('director-open');
   await evaluate(`document.querySelectorAll('#gen-grid .gen-cc__director').forEach(d => { d.open = false; }), true`);
   // Try another composition changes the design.
@@ -339,6 +385,12 @@ try {
     await evaluate(`document.querySelector('.gfx [data-tab="${tab}"].gfx-tab')?.click()`);
     await sleep(500);
     expect(await evaluate(`document.querySelector('.gfx [data-tab="${tab}"].gfx-tab')?.getAttribute('aria-selected') === 'true'`), `focus: ${tab} tab selects`);
+    if (tab === 'assistant') {
+      await waitFor(`document.querySelectorAll('.gfx .fa-chat__chips .es-chip').length > 0`, 5000);
+      const chips = await evaluate(`[...document.querySelectorAll('.gfx .fa-chat__chips .es-chip')].map(c => c.textContent.trim())`);
+      expect(chips.length === 2 && chips[0] === REVIEW_FIRST, `focus: idea chips show the full text, creative only (got ${JSON.stringify(chips)})`);
+      expect(await evaluate(`/Fixed while designing: Brighter photo/.test(document.querySelector('.gfx .fa-fixed:not([hidden])')?.textContent || '')`), 'focus: the quiet "Fixed while designing" line');
+    }
     await sweep(`focus-${tab}`);
   }
   await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
@@ -378,6 +430,24 @@ try {
   await evaluate(`document.getElementById('gen-submit').click()`);
   expect(await waitFor(`!document.getElementById('gen-notice').hidden && !window.FrameUpGenerate.isBusy()`, 20000), 'templates: an empty reply says why');
   await sweep('templates-empty');
+
+  // gen v4 #6: a run that goes past its estimate says so (bar stops short).
+  await open({ look: 'creative' });
+  await evaluate(`window.__qaProgress = window.FrameUpGenerate.startProgress(['Reading ES coverage', 'Art director planning', 'Composing candidates', 'Art director judging'], [1000, 2000], { eta: 5 }), true`);
+  await sleep(7000);
+  expect(await evaluate(`document.querySelector('#gen-progress .gen-progress__eta')?.classList.contains('is-over') && /longer than usual/i.test(document.getElementById('gen-progress').textContent)`), 'eta: a long run says it is taking longer than usual');
+  await sweep('progress-long');
+  await evaluate(`window.__qaProgress.stop(), true`);
+
+  // gen v4 #8: the AI usage card opens its details (per tool, team, resets, free mode).
+  await open();
+  await waitFor(`Boolean(document.querySelector('button.es-usage__card'))`, 8000);
+  await evaluate(`document.querySelector('button.es-usage__card')?.click(), true`);
+  await sleep(300);
+  expect(await evaluate(`(() => { const p = document.querySelector('.es-usage__pop:not([hidden])'); return Boolean(p) && p.querySelectorAll('.es-usage__list li').length === 3 && /Team/.test(p.textContent) && /What counts/.test(p.textContent) && /Free mode/.test(p.textContent) && /Resets/.test(p.textContent); })()`), 'usage: the details show per tool, team, what counts, resets and free mode');
+  await evaluate(`window.__qaScope = '.es-sidebar', true`);
+  await sweep('usage-open');
+  await evaluate(`window.__qaScope = '', true`);
 
   // Free mode.
   stub.free = true;

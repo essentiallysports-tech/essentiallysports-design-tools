@@ -90,12 +90,15 @@
     return { spotlight, rows: rank(pool, n, filtered ? n : 2) };
   }
 
-  // The brief carries only the trend's own words (no invented facts).
+  // The brief carries only the trend's own words (no invented facts): a real
+  // brief from TrendsLogic.briefFor (who, what happened, the related headlines,
+  // why fans care). The league rides beside it (&league=), not as a line.
   function trendHref(item = {}, sportLabel = '', { logic = BundledLogic, why = '' } = {}) {
+    const title = String(item.title || '').trim();
     const brief = logic && logic.briefFor
       ? logic.briefFor(item, { sportLabel, why })
-      : [String(item.title || '').trim(), sportLabel ? `Sport: ${sportLabel}` : ''].filter(Boolean).join('\n').slice(0, 600);
-    return `generate.html?brief=${encodeURIComponent(brief)}&autorun=0`;
+      : [/[.!?]$/.test(title) ? title : `${title}.`, why ? `Why fans care: ${why}` : ''].filter(Boolean).join('\n').slice(0, 600);
+    return `generate.html?brief=${encodeURIComponent(brief)}${sportLabel ? `&league=${encodeURIComponent(sportLabel)}` : ''}&autorun=0`;
   }
 
   function dueLabel(iso, now = Date.now()) {
