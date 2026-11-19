@@ -204,7 +204,7 @@
       if (!rights || !rights.source || !rights.licence) {
         issues.push(issue('rights', 'critical', `${asset?.label || id} has no ${rights && rights.source ? 'licence recorded' : 'rights record'}.`, 'Add where it comes from and its licence, or swap it.'));
       } else if (target === 'paid' && rights.paid !== true) {
-        issues.push(issue('rights', 'critical', `${asset.label || id} is not cleared for paid ads (${rights.licence}).`, 'Export as organic, or swap it for an asset cleared for paid use.'));
+        issues.push(issue('rights', 'critical', `${asset.label || id} is not cleared for paid ads (${String(rights.licence).replace(/\.\s*$/, '')}).`, 'Export as organic, or swap it for an asset cleared for paid use.'));
       } else if (rights.organic !== true) {
         issues.push(issue('rights', 'critical', `${asset.label || id} is not cleared for social posts.`, 'Swap it.'));
       }
