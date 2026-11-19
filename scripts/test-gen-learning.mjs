@@ -252,8 +252,11 @@ const norm = raw => M.normalizeSignal(raw).signal;
   M._test.reset();
   P.PLAN_CACHE.clear();
   const before = await P.plan({ brief: NFL, found: {}, want: 2, director: false, cacheKey: 'rank-before' });
-  const base = P.planDeterministic(P.readCreative(NFL, {}), { photos: {}, cutouts: {}, art: {}, headshots: [], logos: [] }, { want: 6 }).map(d => d.archetype);
-  const target = base.find(a => !before.directions.slice(0, 1).some(d => d.archetype === a) && a !== base[0]);
+  // A lower-ranked archetype that survives the plan's own checks (gen4 swaps
+  // designs with empty areas, so pick from what a wider plan actually keeps).
+  const wide = await P.plan({ brief: NFL, found: {}, want: 6, director: false, cacheKey: 'rank-wide' });
+  const base = wide.directions.map(d => d.archetype);
+  const target = base.find(a => a !== before.directions[0].archetype && a !== base[0]);
   assert.ok(target, 'a lower-ranked archetype to promote');
   for (let i = 0; i < 2; i += 1) await M.learn({ token: 'tok', signals: [norm({ event: 'export', archetype: target, sport: 'NFL', diff: { steps: 0 } })] });
   const after = await P.plan({ brief: NFL, found: {}, want: 2, director: false, cacheKey: 'rank-after' });

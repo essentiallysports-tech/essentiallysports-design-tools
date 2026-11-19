@@ -864,6 +864,9 @@ function planDeterministic(read, assets = {}, { want = 4 } = {}) {
   const withNumbers = stories.filter(s => read.facts.some(f => f.story === s.id && ['money', 'count', 'pct'].includes(f.kind) && isStat(f, 3)));
   let used;
   let out;
+  // gen4-learning: looks the team keeps shipping for this sport pass the tier filter.
+  let liked = new Set();
+  try { liked = MEMORY.preferredArchetypes?.(read.sport) || liked; } catch (error) { liked = new Set(); }
   // Pass 1: one design per ES family (stats, cover, quote, grid...); pass 2
   // allows a second of a family only when the brief cannot fill the set otherwise.
   const run = (cap, keep = [], relax = false, anyLook = false) => {
@@ -880,7 +883,7 @@ function planDeterministic(read, assets = {}, { want = 4 } = {}) {
       if ((used.families.get(family) || 0) >= cap) return false;
       // gen4: the strict passes use the board-grade looks only (tier 1-2);
       // template-like posters (tier 3) only fill a set that cannot be filled.
-      if (!relax && tierOf(archetype) > 2) return false;
+      if (!relax && tierOf(archetype) > 2 && !liked.has(archetype)) return false;
       // gen4: a named person with ES photos is shown on every design the strict
       // passes make (the board: a photo on almost every post); type-only and
       // art-led posters wait for the relaxed pass.

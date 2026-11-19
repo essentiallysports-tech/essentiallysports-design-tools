@@ -476,6 +476,12 @@ function rankBias(lessons = [], { sport = '', now = Date.now(), anySport = false
   const keep = map => Object.fromEntries(Object.entries(map).filter(([, v]) => Math.abs(v) >= ACTIVE_WEIGHT).sort((a, b) => b[1] - a[1]));
   return { archetypes: keep(archetypes), tones: keep(tones) };
 }
+// Archetypes the team keeps shipping for this sport (positive learned bias).
+// The composer lets these past its board-grade (tier) filter.
+function preferredArchetypes(sport = '', { now = Date.now() } = {}) {
+  const b = rankBias(mergeLists(cache.rows || [], [...memory.values()]), { sport, now });
+  return new Set(Object.entries(b.archetypes).filter(([, v]) => v > 0).map(([id]) => id));
+}
 function rankLine(bias) {
   const up = Object.entries(bias.archetypes).filter(([, v]) => v > 0).slice(0, 3).map(([id]) => id);
   const down = Object.entries(bias.archetypes).filter(([, v]) => v < 0).sort((a, b) => a[1] - b[1]).slice(0, 2).map(([id]) => id);
@@ -792,7 +798,7 @@ module.exports = {
   loadLessons, lessonsFor, learn, judgeSignals, normalizeSignal, eventFor,
   // gen4-learning
   cleanDiff, changesOf, changeText, exportObservations, exportSummary, scopedInjected, isChangeTopic,
-  rankBias, rankLine, rankDirections, trendFrom, loadTrend, isAdmin,
+  rankBias, rankLine, rankDirections, preferredArchetypes, trendFrom, loadTrend, isAdmin,
   _test: {
     reset: () => { memory = new Map(); cache = { at: 0, rows: null }; tableMissingUntil = 0; exportLog = []; },
     setFetch: fn => { fetchImpl = fn; },
