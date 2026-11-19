@@ -696,7 +696,7 @@ Object.keys(PRIORITY).forEach(kind => (COMPOSE.ARCHETYPES || []).forEach(a => {
 // object ("Joe Burrow threw" when "for 409 yards" was cut); else the subject.
 const NUM_VERBS = /^(?:stays|stay|remains|remain|becomes|become|holds|hold|climbs|rises|falls|drops|jumps|threw|throws|throw|scored|scores|score|had|has|have|caught|catches|drove|drives|hit|hits|ran|runs|rushed|rushes|posted|posts|recorded|records|signs|signed|sign|agrees|agreed|earned|earns|won|wins|made|makes|shot|shoots|averaged|averages|totaled|totals|added|adds|grabbed|grabs|dished|collected|finished|finishes|improve|improves|improved|sits|sit|stands|moves|move|is|are|was|were|leads|led|reach|reaches|reached|hits|tallied|logged|notched|racked)$/i;
 // Words that carry a story's turn: a headline cut never drops them.
-const TURN = /\b(?:best|record|history|historic|first|ever|unpaid|not|never|no|without|despite|but|while|whereas|bankrupt\w*|fail\w*|loss|lost|loses|lose|fired|banned|suspended|fined|injur\w*|out for|denied|refused|rejected|cut|released|unsigned|snubbed|quit|retire\w*)\b/i;
+const TURN = /\b(?:best|record|history|historic|first|unpaid|not|never|no|without|despite|but|while|whereas|bankrupt\w*|fail\w*|loss|lost|loses|lose|fired|banned|suspended|fined|injur\w*|out for|denied|refused|rejected|cut|released|unsigned|snubbed|quit|retire\w*)\b/i;
 const turnWords = h => (String(h || '').match(new RegExp(TURN.source, 'gi')) || []).map(w => w.toLowerCase());
 // The story's last turn word (its point) survives in a replacement headline.
 const keepsTurnOf = (was, h) => { const t = turnWords(was); return !t.length || turnWords(h).includes(t[t.length - 1]); };
@@ -711,9 +711,13 @@ function unquote(text) {
   // A story that is only a quote reads no headline from it (the name stands in).
   return out.split(' ').length >= 3 || /["“]/.test(String(text || '')) ? out : clean(text);
 }
-function codeHeadline(text, story, read, { fallback = '', all = false, long = false } = {}) {
+function codeHeadline(text, story, read, { fallback = '', all = false, long = false, turnMax = 0 } = {}) {
   const maxWords = long ? 14 : 10;
   text = unquote(text);
+  // gen5: an introductory phrase is not the headline ("In a wild double-overtime thriller that
+  // nobody ... will forget, the Indiana Fever edge the Sun" -> "The Indiana Fever edge the Sun").
+  const intro = String(text || '').match(/^(?:In|After|With|Despite|Behind|On|At|During|Following|Before|Amid|For)\b[^,]{5,110},\s+(.+)$/);
+  if (intro && intro[1].split(' ').length >= 4) text = intro[1].charAt(0).toUpperCase() + intro[1].slice(1);
   if (!text) return all ? [...new Set([fallback, story?.people?.[0], story?.subject].filter(Boolean))] : (fallback || story?.people?.[0] || story?.subject || '');
   const source = clean(story?.text || read.brief);
   const grounded = new Set(read.facts.flatMap(f => digitsIn(f.text)).concat(digitsIn(read.headline)));
@@ -770,7 +774,8 @@ function codeHeadline(text, story, read, { fallback = '', all = false, long = fa
   const turnLost = !firstPoint && accs.some(a => TURN.test(a.next));
   const nWords = flat.split(' ').length;
   // The whole story first when every cut would lose its turn (up to 14 words).
-  const turnCap = long ? 16 : 14;
+  // Older looks set 1-3 short lines: they keep their 10-word limit (turnMax).
+  const turnCap = turnMax || (long ? 16 : 14);
   if (turnLost && nWords <= turnCap && !options.includes(whole)) options.unshift(tidy(flat, turnCap));
   const lead = firstPoint || (nWords <= maxWords ? null : accs.filter(fitsCut).pop());
   // A long story reads better cut at its first complete point (board covers run 4-9 words).
@@ -841,7 +846,7 @@ function directionSkeleton(read, story, archetype, assets, used) {
   const useHeadline = Boolean(read.headline && !used.headline && story.id === (read.stories[0]?.id || 's1') && ['cover', 'lifestyle'].includes(familyOf(archetype)));
   if (useHeadline) text = read.headline;
   const long = ['cover', 'extra', 'lifestyle'].includes(familyOf(archetype)) && !['stat-sheet', 'scoreboard', 'split-versus', 'versus-split'].includes(archetype);
-  const headline = useHeadline ? text : codeHeadline(text, story, read, { fallback: story.people?.[0] || team?.name || '', long });
+  const headline = useHeadline ? text : codeHeadline(text, story, read, { fallback: story.people?.[0] || team?.name || '', long, turnMax: tierOf(archetype) === 1 ? 0 : 10 });
   return {
     usedHeadline: useHeadline,
     story: story.id,
@@ -1701,13 +1706,14 @@ function dedupeHeadlines(directions, read, assets, review) {
     const names = [story.people?.[0], story.subject].filter(Boolean);
     const long = ['cover', 'extra', 'lifestyle'].includes(familyOf(d.archetype));
     const options = [
-      ...codeHeadline(story.text, story, read, { all: true, long }),
-      ...codeHeadline(beforeNumbers(story.text, read.facts.filter(f => f.story === story.id)), story, read, { all: true, long }),
+      ...codeHeadline(story.text, story, read, { all: true, long, turnMax: tierOf(d.archetype) === 1 ? 0 : 10 }),
+      ...codeHeadline(beforeNumbers(story.text, read.facts.filter(f => f.story === story.id)), story, read, { all: true, long, turnMax: tierOf(d.archetype) === 1 ? 0 : 10 }),
     ].filter(h => !names.includes(h)).concat(read.headline && story.id === read.stories[0]?.id ? [read.headline] : [], long ? [] : names)
       // gen4: a league or sport alone ("MLB") is a tag, never a headline.
       .filter(h => !(read.teams.some(t => squash(t.name) === squash(h) || squash(t.full || '') === squash(h)) || squash(h) === squash(read.sport)));
     const keepsTurn = h => keepsTurnOf(d.headline, h);
-    const next = options.find(h => !seen.has(squash(h)) && keepsTurn(h) && !repeatsNumber({ ...d, headline: h }, read, inputsFor(d, read, assets)) && COMPOSE.fits(d.archetype, inputsFor({ ...d, headline: h }, read, assets)));
+    const fitsLook = h => tierOf(d.archetype) === 1 || h.split(' ').length <= 10;
+    const next = options.find(h => !seen.has(squash(h)) && keepsTurn(h) && fitsLook(h) && !repeatsNumber({ ...d, headline: h }, read, inputsFor(d, read, assets)) && COMPOSE.fits(d.archetype, inputsFor({ ...d, headline: h }, read, assets)));
     if (next) {
       review.fixed.push({ check: 'headline-variety', what: `${d.id}: "${d.headline}" -> "${next}"` });
       d.headline = next;
@@ -1821,7 +1827,8 @@ function designTimeFixes(directions, read, assets, review) {
     const longFamily = ['cover', 'extra', 'lifestyle'].includes(familyOf(d.archetype));
     const limit = longFamily ? 12 : 7;
     if (d.source !== 'director' && story && clean(d.headline).split(' ').length > limit) {
-      const keepsTurn = h => keepsTurnOf(d.headline, h);
+      // Board looks keep the turn; older looks keep their short lines (they cannot hold more).
+      const keepsTurn = h => tierOf(d.archetype) > 1 || keepsTurnOf(d.headline, h);
       const shorter = codeHeadline(story.text, story, read, { all: true, long: longFamily }).find(h => h.split(' ').length >= 3 && h.split(' ').length <= limit && keepsTurn(h) && !repeatsNumber({ ...d, headline: h }, read, inputsFor({ ...d, headline: h }, read, assets)));
       if (shorter) {
         const was = d.headline;

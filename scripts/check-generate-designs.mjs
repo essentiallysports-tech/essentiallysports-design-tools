@@ -193,7 +193,7 @@ try {
   // you fix some; QA_DESIGNS_VERBOSE=1 lists every one.
   // gen4-quality (2026-11-21): 86 / 59 / 490 -> 75 / 55 / 452 (typographic poster, light stat card,
   // big-number with cut-out, split panel without a tag).
-  const CEILING = { 'text collision': 69, 'cut off': 55, 'empty area': 430 };
+  const CEILING = { 'text collision': 68, 'cut off': 55, 'empty area': 422 };
   const over = Object.entries(CEILING).filter(([k, max]) => (byKind[k] || 0) > max);
   over.forEach(([k, max]) => console.log(`FAIL ${k}: ${byKind[k]} designs, more than the known ${max} (run with QA_DESIGNS_VERBOSE=1)`));
   if (fatal.length || over.length) exitCode = 1;
