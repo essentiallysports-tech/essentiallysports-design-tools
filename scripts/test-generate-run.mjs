@@ -45,7 +45,7 @@ const PAGE = `<!doctype html><meta charset="utf-8"><title>run</title>
     ICON: {}, esc: s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
     callApi: async (path, body) => {
       if (body.mode === 'creative') { if (window.__fail.plan) throw new Error(window.__fail.plan); return JSON.parse(JSON.stringify(window.__plan)); }
-      if (body.mode === 'creative-judge') { if (window.__fail.preview) window.__breakPreview = true; return { directions: [], cost: 0, source: 'heuristic' }; }
+      if (body.mode === 'creative-judge') { (window.__judgeBodies = window.__judgeBodies || []).push(body); if (window.__judge) return window.__judge(body); if (window.__fail.preview) window.__breakPreview = true; return { directions: [], cost: 0, source: 'heuristic' }; }
       return {};
     },
     setBusy: v => { window.__busy = v; }, isBusy: () => Boolean(window.__busy),
@@ -125,6 +125,28 @@ try {
   assert.equal(r.result, 'stop');
   assert.ok(r.notices.some(n => /Could not compose/.test(n)));
   assert.equal(r.reports.length, 0, `a limit is not an error: ${r.reports.join(' | ')}`);
+  // 6. gen4: the judge's repairs are applied while designing, then ONE second look;
+  //    design.review = { autoFixed, suggestions }, and no repair is ever a chip.
+  await send('Page.navigate', { url: `${origin}/__qa-run.html` });
+  for (let i = 0; i < 100 && !(await evaluate('window.__ready === true && Boolean(window.FrameUpCreative)').catch(() => false)); i++) await sleep(100);
+  r = await evaluate(`(async () => {
+    window.__plan = ${JSON.stringify(LIVE)};
+    window.__fail = {};
+    window.__judge = body => body.recheck
+      ? { source: 'vision', cost: 0.001, directions: body.sets.map(s => ({ id: s.direction, best: s.items[0].id, scores: {}, repairs: [], critique: { strengths: [], improvements: [], nextTime: '' } })) }
+      : { source: 'vision', cost: 0.01, directions: window.__plan.directions.map((d, i) => ({ id: d.id, best: d.candidates[0].id, scores: {}, note: '',
+          repairs: i === 0 ? [{ op: 'more-contrast', issue: 'Low contrast on the headline' }, { op: 'paint-it-red', issue: 'nonsense' }] : [],
+          critique: { strengths: ['Big number reads first'], improvements: i === 1 ? [{ id: 'j1', text: 'Try a versus layout with both teams', fix: { op: 'assist', instruction: 'Try a versus layout with both teams' } }] : [], nextTime: '' },
+          review: { autoFixed: [], suggestions: i === 1 ? ['Try a versus layout with both teams'] : [] } })) };
+    await window.FrameUpCreative.run(${JSON.stringify(BRIEF)});
+    const cards = [...document.querySelectorAll('#gen-grid .gen-cc:not(.is-skeleton)')];
+    return { bodies: window.__judgeBodies.map(b => ({ recheck: Boolean(b.recheck), sets: b.sets.length })), reviews: cards.map(c => c._review), ids: cards.map(c => c._designId), api: window.FrameUpCreative.review(cards[0]._designId), chips: cards.map(c => (c._critique?.improvements || []).map(i => i.text)), summary: window.__log.summary };
+  })()`);
+  assert.deepEqual(r.bodies, [{ recheck: false, sets: LIVE.directions.length }, { recheck: true, sets: 1 }], 'one judge pass, then one second look at the repaired design only');
+  assert.ok(r.reviews[0].autoFixed.includes('raised the contrast'), `design 1 says what was fixed: ${JSON.stringify(r.reviews[0])}`);
+  assert.deepEqual(r.api, r.reviews[0], 'FrameUpCreative.review(id) returns design.review');
+  assert.deepEqual(r.reviews[1].suggestions, ['Try a versus layout with both teams']);
+  assert.ok(r.chips.every(list => list.every(t => /^Try /.test(t))), `chips are creative only: ${JSON.stringify(r.chips)}`);
   console.log('generate run: designs stay after render (live plan shape, imagery, failing preview / summary / research / tracking); fallback only before render; limits not logged');
 } catch (error) {
   failed = true;

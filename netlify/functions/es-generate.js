@@ -2080,13 +2080,18 @@ exports.handler = withAiMode(async function handler(event) {
         brief: String(body.brief || '').slice(0, 1500), sets,
         heuristics: body.heuristics && typeof body.heuristics === 'object' ? body.heuristics : {},
         lessons,
+        // gen4: the page's second look after it applied the repairs (once per run).
+        recheck: body.recheck === true,
+        timeoutMs: body.recheck === true ? 15000 : 20000,
         track: { email: auth.user.email, token, runId: String(body.runId || '').slice(0, 40) },
       });
       // Learn: the judge's improvements become (or reinforce) lessons, and the
       // lessons that were in the prompt score a hit or a recurrence.
       if (result.source === 'vision') {
         const archetypeOf = Object.fromEntries(sets.map(set => [String(set?.direction || ''), String(set?.archetype || '')]));
-        await creativeMemory.learn({ token, signals: creativeMemory.judgeSignals(result.directions, { sport, archetypeOf }), injected: lessons.map(l => l.key) });
+        // The judge's repairs are what it would have improved: the learning model reads them as before.
+        const forMemory = result.directions.map(d => ({ ...d, critique: { ...d.critique, improvements: [...(d.issues || (d.repairs || []).map(r => r.issue)).map(text => ({ text })), ...(d.critique?.improvements || [])] } }));
+        await creativeMemory.learn({ token, signals: creativeMemory.judgeSignals(forMemory, { sport, archetypeOf }), injected: lessons.map(l => l.key) });
       }
       return json(200, { ...result, lessons: lessons.map(({ id, text, kind }) => ({ id, text, kind })) });
     }

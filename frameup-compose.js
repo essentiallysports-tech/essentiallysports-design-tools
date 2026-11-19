@@ -237,6 +237,16 @@
   //   input.tone      = 'light'|'paper'|'vivid'|'dark'|'duotone'|'editorial'|'esblue'
   const TONES = ['light', 'paper', 'vivid', 'dark', 'duotone', 'editorial', 'esblue'];
   const LIGHT_TONES = new Set(['light', 'paper', 'editorial']);
+  // gen4 (owner: "no sport tag on designs"): a kicker that is only a sport,
+  // league or tour name is dropped; "CHIEFS · NFL" keeps "CHIEFS" only when
+  // it is more than a tag (the composer drops team-only kickers itself).
+  const SPORT_TAG = /^(?:nfl|nba|mlb|nhl|wnba|mls|nwsl|pga|pga tour|lpga|lpga tour|liv|liv golf|atp|wta|f1|formula 1|formula one|nascar|indycar|ufc|wwe|boxing|mma|ncaa|ncaaf|ncaab|cfb|cbb|cbb men|cbb women|college football|college basketball|golf|tennis|soccer|football|basketball|baseball|hockey|racing|motorsport|epl|premier league|la liga|serie a|bundesliga|ligue 1|uefa|fifa|olympics|xfl|ufl|big 12|big ten|sec|acc|pac-12)$/i;
+  function cleanKicker(kicker, sport = '') {
+    const parts = clean(kicker).split(/\s*[·|•\/]\s*/).map(clean).filter(Boolean);
+    const sportName = clean(sport).toLowerCase();
+    const kept = parts.filter(part => !SPORT_TAG.test(part) && part.toLowerCase() !== sportName);
+    return kept.length === parts.length ? clean(kicker) : kept.join(' · ');
+  }
   const srcOf = x => (x && typeof x === 'object' ? String(x.src || x.url || '') : typeof x === 'string' ? x : '');
   function normalizeInput(input = {}) {
     if (!input || typeof input !== 'object') return {};
@@ -270,6 +280,8 @@
     if (Array.isArray(input.headshots)) out.headshots = uniq(input.headshots.map(asImage));
     if (Array.isArray(input.logos)) out.logos = input.logos.map(l => { const im = asImage(l); return im ? { ...im, name: l.name || l.team || '' } : null; }).filter(Boolean);
     if (input.tone != null && !TONES.includes(input.tone)) delete out.tone;
+    // gen4: never a sport / league tag ("MLB", "CHIEFS · NFL") as a kicker.
+    if ('kicker' in input) out.kicker = cleanKicker(input.kicker, input.sport);
     return out;
   }
   const allPhotos = i => [i.photo, ...(i.photos || [])].filter(x => x?.src);
@@ -461,7 +473,13 @@
       build(input, v) {
         const { W, H, p } = frame(input);
         const pal = v === 1 ? flipPalette(p) : p;
-        const photo = has.photo(input) && v !== 2;
+        // gen4: the photo used to sit behind the number at 38% (washed out,
+        // "murky"); the big-number poster is now the clean type-and-data
+        // option and the planner gives photos to the photo-led looks.
+        const photo = false;
+        // gen4: with the player's cut-out, the board's "1000+" stats post: the
+        // number on the left, the player standing on the right (never washed out).
+        const cutOn = has.cutout(input) && H >= 1300 && H < 1900;
         // Vertical rhythm per canvas. 4:5 is the original poster, unchanged.
         // 9:16 grows the number, the headline and the body into the extra
         // height (the 4:5 positions left the lower third empty); 1:1 tightens
@@ -475,9 +493,10 @@
         return [
           { type: 'background', fill: { kind: 'solid', colors: [pal.bg] }, texture: 'grain', textureOpacity: 0.1 },
           ...(photo ? [{ type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', duotone: [pal.bg, mix(pal.bg, pal.ink, 0.55)], fx: { opacity: 0.38, blend: pal.mode === 'light' ? 'multiply' : 'screen' } }] : []),
+          ...(cutOn ? [{ type: 'cutout', src: input.cutout.src, x: Math.round(W * 0.44), y: Math.round(H * 0.24), w: Math.round(W * 0.56), h: H - Math.round(H * 0.24), anchor: 'bottom', fx: { shadow: { color: '#000000', blur: 34, x: 0, y: 14, alpha: 0.45 } } }, mist(W, H, pal, 0.62, 0.9)] : []),
           { type: 'shape', shape: 'rect', x: SAFE, y: L.bar[0], w: 14, h: L.bar[1], color: pal.accent },
           kickerPill(input, pal),
-          numberLayer(input.number, { x: SAFE + 40, y: L.num[0], w: W - SAFE * 2 - 40, h: L.num[1] }, pal.accent, { size: L.size, labelColor: pal.ink, labelSize: L.labelSize }),
+          numberLayer(input.number, { x: SAFE + 40, y: L.num[0], w: cutOn ? Math.round(W * 0.44) - SAFE - 40 : W - SAFE * 2 - 40, h: L.num[1] }, pal.accent, { size: L.size, labelColor: pal.ink, labelSize: L.labelSize }),
           { type: 'shape', shape: 'rect', x: SAFE, y: L.rule, w: W - SAFE * 2, h: 4, color: pal.ink, opacity: 0.5 },
           headlineText(input, pal, { x: SAFE, y: L.head[0], w: W - SAFE * 2, h: L.head[1] }, { size: L.headSize, maxLines: L.headLines, valign: 'top' }),
           ...(clean(input.body) ? [{ type: 'text', role: 'body', text: clean(input.body), x: SAFE, y: L.body[0], w: W - SAFE * 2, h: L.body[1], font: 'body', size: L.bodySize, minSize: 24, maxLines: 2, color: pal.ink, align: 'left', valign: 'bottom', fx: { opacity: 0.85 } }] : []),
@@ -537,7 +556,7 @@
           { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', ...(v === 2 ? { duotone: [p.bg, mix(p.accent, '#FFFFFF', 0.35)] } : {}) },
           { type: 'shape', shape: 'gradient', x: 0, y: 0, w: W, h: 330, color: p.bg, stops: [[0, 0.75], [1, 0]] },
           mist(W, H, p, 0.48, 0.94),
-          { type: 'text', role: 'kicker', text: upper(input.kicker || input.sport), x: SAFE, y: SAFE + 4, w: 760, h: 120, font: 'display', size: 120, minSize: 60, maxLines: 1, color: p.ink, align: 'left', tracking: 1, fx: { shadow: { color: '#000000', blur: 18, x: 0, y: 4, alpha: 0.35 } } },
+          { type: 'text', role: 'kicker', text: upper(input.kicker), x: SAFE, y: SAFE + 4, w: 760, h: 120, font: 'display', size: 120, minSize: 60, maxLines: 1, color: p.ink, align: 'left', tracking: 1, fx: { shadow: { color: '#000000', blur: 18, x: 0, y: 4, alpha: 0.35 } } },
           { type: 'shape', shape: 'rect', x: SAFE, y: SAFE + 136, w: 220, h: 12, color: p.accent },
           ...lines.map((n, k) => ({ type: 'text', role: 'label', text: upper(`${n.display} ${n.label || ''}`), x: right ? SAFE : W - SAFE - 330, y: 660 + k * 110, w: 330, h: 96, font: 'condensed', size: 40, minSize: 26, maxLines: 2, color: p.ink, align: right ? 'left' : 'right', highlight: { words: [upper(n.display)], color: p.accent } })),
           headlineText(input, p, { x: SAFE, y: H - SAFE - 400, w: W - SAFE * 2, h: 400 }, { size: 170, maxLines: 3 }),
@@ -670,23 +689,53 @@
     },
     {
       id: 'typographic', name: 'Typographic poster', focal: 'type',
-      about: 'The headline is the image: giant stacked words, one in the accent colour.',
-      needs: 'a strong headline',
+      about: 'The headline is the image: giant stacked words filling the poster, one in the accent colour; with a named person, their cut-out (or photo) anchors the foot.',
+      needs: 'a strong headline (3+ words)',
       kinds: ["quote", "none", "money", "count", "pct"],
-      fits: i => has.headline(i),
+      // gen4: never a poster of just a name ("JOSH ALLEN"): 3+ words.
+      fits: i => has.headline(i) && words(i.headline).length >= 3,
       build(input, v) {
         const { W, H, p } = frame(input);
         const pal = v === 1 ? flipPalette(p) : p;
-        const art = input.art?.src || '';
+        // gen4 (owner: the Manfred poster): no faded art box, no empty lower
+        // half. The person anchors the foot when ES has them; otherwise the
+        // words fill the whole poster and a deck line closes it.
+        const cut = has.cutout(input);
+        const photo = !cut && has.photo(input);
+        const stat = input.number?.value ? upper(`${input.number.prefix || ''}${input.number.value}${input.number.suffix || ''} ${input.number.label || ''}`) : '';
+        const statLayer = (y, color) => (stat ? { type: 'text', role: 'label', text: stat, x: SAFE, y, w: W - SAFE * 2, h: 66, font: 'condensed', size: 46, minSize: 26, maxLines: 1, color, align: 'left', valign: 'bottom', tracking: 2, factId: input.number.factId || '' } : null);
+        // Below the ES mark zone (50 + 104 + 50): the top rule never runs under the logo.
+        const top = 230;
+        if (cut || photo) {
+          const imgY = Math.round(H * (H >= 1900 ? 0.5 : 0.47));
+          const headH = imgY - top + 40;
+          const left = v !== 1;
+          return [
+            { type: 'background', fill: { kind: 'solid', colors: [pal.bg] }, texture: v === 2 ? 'halftone' : 'grain', textureColor: pal.accent, textureOpacity: v === 2 ? 0.14 : 0.1 },
+            kickerPill(input, pal),
+            { type: 'shape', shape: 'rect', x: SAFE, y: top - 26, w: W - SAFE * 2, h: 6, color: pal.ink },
+            headlineText(input, pal, { x: SAFE, y: top, w: W - SAFE * 2, h: headH }, { size: 250, minSize: 90, maxLines: 4, valign: 'top', lineHeight: 0.86 }),
+            ...(cut
+              ? [
+                { type: 'shape', shape: 'rect', x: 0, y: imgY + 120, w: W, h: H - imgY - 120, color: pal.accent },
+                { type: 'cutout', src: input.cutout.src, x: left ? W - 860 : -40, y: imgY - 10, w: 900, h: H - imgY + 10, anchor: 'bottom', fx: { shadow: { color: '#000000', blur: 36, x: 0, y: 14, alpha: 0.45 } } },
+              ]
+              : [{ type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: imgY + 40, w: W, h: H - imgY - 40, mask: 'rect', fx: { opacity: 1 } }]),
+            mist(W, H, pal, 0.8, 0.9),
+            statLayer(H - SAFE - 70, '#FFFFFF'),
+          ];
+        }
+        const deck = clean(input.body);
+        const foot = (stat ? 90 : 0) + (deck ? 130 : 0) + 40;
         return [
           { type: 'background', fill: { kind: 'solid', colors: [pal.bg] }, texture: v === 2 ? 'halftone' : 'grain', textureColor: pal.accent, textureOpacity: v === 2 ? 0.14 : 0.1 },
-          ...(art ? [{ type: 'photo', role: 'art', src: art, x: W - 520, y: H - 620, w: 560, h: 560, mask: 'none', fit: 'contain', fx: { opacity: 0.22 } }] : []),
-          ...(input.logos?.[0]?.src ? [{ type: 'logo', kind: 'league', src: input.logos[0].src, x: W - SAFE - 240, y: H - SAFE - 240, w: 240, h: 240, fx: { opacity: 0.18 }, mono: pal.ink }] : []),
+          ...(input.logos?.[0]?.src ? [{ type: 'logo', kind: 'league', src: input.logos[0].src, x: W - SAFE - 260, y: H - SAFE - foot - 280, w: 260, h: 260, fx: { opacity: 0.16 }, mono: pal.ink }] : []),
           kickerPill(input, pal),
-          { type: 'shape', shape: 'rect', x: SAFE, y: 200, w: W - SAFE * 2, h: 6, color: pal.ink },
-          headlineText(input, pal, { x: SAFE, y: 240, w: W - SAFE * 2, h: H - 240 - SAFE - 120 }, { size: 260, minSize: 90, maxLines: 5, valign: 'top', lineHeight: 0.86 }),
-          { type: 'shape', shape: 'rect', x: SAFE, y: H - SAFE - 96, w: W - SAFE * 2, h: 6, color: pal.ink },
-          ...(input.number?.value ? [{ type: 'text', role: 'label', text: upper(`${input.number.prefix || ''}${input.number.value}${input.number.suffix || ''} ${input.number.label || ''}`), x: SAFE, y: H - SAFE - 70, w: W - SAFE * 2, h: 66, font: 'condensed', size: 44, minSize: 26, maxLines: 1, color: pal.accent, align: 'left', valign: 'bottom', tracking: 2, factId: input.number.factId || '' }] : []),
+          { type: 'shape', shape: 'rect', x: SAFE, y: top - 26, w: W - SAFE * 2, h: 6, color: pal.ink },
+          headlineText(input, pal, { x: SAFE, y: top, w: W - SAFE * 2, h: H - top - SAFE - foot }, { size: 330, minSize: 90, maxLines: 6, valign: 'middle', lineHeight: 0.86 }),
+          { type: 'shape', shape: 'rect', x: SAFE, y: H - SAFE - foot + 10, w: W - SAFE * 2, h: 6, color: pal.ink },
+          ...(deck ? [{ type: 'text', role: 'body', text: deck, x: SAFE, y: H - SAFE - foot + 36, w: W - SAFE * 2, h: 110, font: 'body', size: 38, minSize: 26, maxLines: 2, color: pal.ink, align: 'left', valign: 'top' }] : []),
+          statLayer(H - SAFE - 70, pal.accent),
         ];
       },
     },
@@ -913,13 +962,13 @@
         const logo = input.logos?.[0]?.src || input.record?.logo || '';
         const lw = logo ? 170 : 0;
         const n = input.number?.value ? input.number : (input.numbers || []).find(x => x.value || x.display);
-        const strap = n ? upper(`${n.prefix || ''}${n.value || n.display}${n.suffix || ''} ${n.label || ''}`) : upper(input.name || input.sport);
+        const strap = n ? upper(`${n.prefix || ''}${n.value || n.display}${n.suffix || ''} ${n.label || ''}`) : upper(input.name);
         return [
           { type: 'background', fill: { kind: 'solid', colors: [p.bg] } },
           { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', vignette: 0.35, ...(v === 2 ? { tritone: p.tone } : {}) },
           mist(W, H, p, 0.55),
           { type: 'shape', shape: 'texture', texture: 'scan', color: '#000000', opacity: 0.06 },
-          { type: 'pill', role: 'kicker', text: upper(input.kicker || input.sport || 'Live'), x: SAFE, y, h: 56, color: p.onAccent, bg: p.accent, maxW: 640 },
+          { type: 'pill', role: 'kicker', text: upper(input.kicker || 'Live'), x: SAFE, y, h: 56, color: p.onAccent, bg: p.accent, maxW: 640 },
           ...(logo ? [
             { type: 'shape', shape: 'rect', x: SAFE, y: y + 66, w: lw, h: 170, color: p.accent },
             { type: 'logo', kind: 'team', src: logo, x: SAFE + 20, y: y + 86, w: lw - 40, h: 130 },
@@ -951,7 +1000,7 @@
         const tone = v === 2 ? { tritone: [ink, mix(spot, ink, 0.2), paper], levels: true } : { halftone: { cell: 7, color: ink, angle: 45 }, grayscale: true, levels: true, curve: 1.4 };
         return [
           { type: 'background', fill: { kind: 'solid', colors: [paper] }, texture: 'grain', textureOpacity: 0.12 },
-          { type: 'text', role: 'kicker', text: upper(input.sport ? `${input.sport} Extra` : input.kicker || 'Extra'), x: SAFE, y: SAFE, w: W - SAFE * 2 - 200, h: 104, font: 'display', size: 104, minSize: 50, maxLines: 1, color: ink, align: 'left', valign: 'middle', guard: false },
+          { type: 'text', role: 'kicker', text: upper(input.kicker || 'ES Extra'), x: SAFE, y: SAFE, w: W - SAFE * 2 - 200, h: 104, font: 'display', size: 104, minSize: 50, maxLines: 1, color: ink, align: 'left', valign: 'middle', guard: false },
           { type: 'shape', shape: 'rect', x: SAFE, y: 178, w: W - SAFE * 2, h: 8, color: ink },
           { type: 'shape', shape: 'rect', x: SAFE, y: 192, w: W - SAFE * 2, h: 2, color: ink },
           { type: 'text', role: 'label', text: upper(input.kicker || input.name || ''), x: SAFE, y: 204, w: (W - SAFE * 2) * 0.62, h: 40, font: 'condensed', size: 26, minSize: 22, maxLines: 1, color: ink, align: 'left', valign: 'middle', guard: false },
@@ -1026,7 +1075,7 @@
           ...(has.photo(input) ? [{ type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', blur: 5, tritone: ['#000000', mix(p.bg, neon, 0.25), mix(neon, '#FFFFFF', 0.3)], vignette: 0.7, fx: { opacity: 0.55 } }] : []),
           { type: 'shape', shape: 'texture', texture: 'scan', color: '#000000', opacity: 0.22 },
           ...(cut ? [{ type: 'cutout', src: input.cutout.src, x: 140, y: 560, w: 800, h: H - 560, anchor: 'bottom', rim: { color: core, width: 6, angle: -90, alpha: 0.95 }, fx: { shadow: { color: neon, blur: 60, x: 0, y: 0, alpha: 0.45 } } }, mist(W, H, { ...p, mist: '#000000' }, 0.82, 0.9)] : []),
-          { type: 'pill', role: 'kicker', text: upper(input.kicker || input.sport || ''), x: SAFE, y: SAFE + 12, h: 52, color: '#000000', bg: core, maxW: 640, fx: { glow: { color: neon, blur: 30, alpha: 0.8 } } },
+          { type: 'pill', role: 'kicker', text: upper(input.kicker || ''), x: SAFE, y: SAFE + 12, h: 52, color: '#000000', bg: core, maxW: 640, fx: { glow: { color: neon, blur: 30, alpha: 0.8 } } },
           { type: 'shape', shape: 'rect', x: SAFE, y: cut ? 196 : 300, w: W - SAFE * 2, h: 6, color: core, fx: { glow } },
           {
             type: 'text', role: 'headline', text: upper(input.headline), x: SAFE, y: cut ? 220 : 330, w: W - SAFE * 2, h: cut ? 330 : 520,
@@ -1062,11 +1111,11 @@
         return [
           { type: 'background', fill: { kind: 'solid', colors: [p.bg] }, texture: 'grain', textureOpacity: light ? 0.06 : 0.08 },
           { type: 'shape', shape: 'rect', x: SAFE, y: SAFE + 22, w: 26, h: 26, color: accent },
-          { type: 'text', role: 'kicker', text: upper(input.kicker || input.sport || ''), x: SAFE + 44, y: SAFE + 14, w: span(8), h: 42, font: 'condensed', size: 30, minSize: 22, maxLines: 1, color: ink, align: 'left', valign: 'middle' },
+          { type: 'text', role: 'kicker', text: upper(input.kicker || ''), x: SAFE + 44, y: SAFE + 14, w: span(8), h: 42, font: 'condensed', size: 30, minSize: 22, maxLines: 1, color: ink, align: 'left', valign: 'middle' },
           { type: 'shape', shape: 'rect', x: SAFE, y: 196, w: W - SAFE * 2, h: 3, color: ink },
           ...(photo ? [{ type: 'photo', src: input.photo.src, focus: input.photo.focus, x: cx(6), y: 236, w: span(6), h: 470, mask: 'rect', grayscale: true, curve: 1.4 }] : []),
           ...(n ? [numberLayer(n, { x: SAFE, y: 236, w: photo ? span(6) - 10 : W - SAFE * 2, h: 470 }, accent, { size: photo ? 300 : 520, labelColor: ink, labelSize: 32, valign: 'top' })]
-            : [{ type: 'text', role: 'label', text: upper(input.name || input.sport || ''), x: SAFE, y: 236, w: photo ? span(6) - 10 : W - SAFE * 2, h: 470, font: 'display', size: 210, minSize: 80, maxLines: 3, lineHeight: 0.86, color: accent, align: 'left', valign: 'top' }]),
+            : [{ type: 'text', role: 'label', text: upper(input.name || ''), x: SAFE, y: 236, w: photo ? span(6) - 10 : W - SAFE * 2, h: 470, font: 'display', size: 210, minSize: 80, maxLines: 3, lineHeight: 0.86, color: accent, align: 'left', valign: 'top' }]),
           { type: 'shape', shape: 'rect', x: SAFE, y: 740, w: W - SAFE * 2, h: 3, color: ink },
           { type: 'text', role: 'headline', text: upper(input.headline), x: SAFE, y: 780, w: span(9), h: H - SAFE - 780, font: 'display', size: 128, minSize: 60, maxLines: 4, color: ink, align: 'left', valign: 'top', highlight: { words: (input.highlight || []).map(upper), color: accent } },
           ...(clean(input.body) ? [{ type: 'text', role: 'body', text: clean(input.body), x: cx(9) + 10, y: 786, w: span(3) - 10, h: H - SAFE - 786, font: 'body', size: 24, minSize: 22, maxLines: 10, lineHeight: 1.32, color: p.inkSoft || ink, align: 'left', valign: 'top' }] : []),
@@ -1210,12 +1259,13 @@
           { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', grayscale: true, blur: 10, fx: { opacity: 0.12, blend: pal.mode === 'light' ? 'multiply' : 'screen' } },
           kickerPill(input, pal),
           {
-            type: 'text', role: 'headline', text: upper(input.headline), x: SAFE, y: 200, w: W - SAFE * 2, h: H - 200 - 230, font: 'display', size: 380, minSize: 120, maxLines: 4, lineHeight: 0.84,
-            color: pal.ink, align: v === 1 ? 'left' : 'center', valign: 'middle', knockout: { src: input.photo.src, focus: input.photo.focus, levels: true, ...(v === 1 ? {} : { tritone: tone, curve: 1.1 }) },
+            // gen4: with no tag above it, the words start at the top (no empty top band).
+            type: 'text', role: 'headline', text: upper(input.headline), x: SAFE, y: clean(input.kicker) ? 200 : 170, w: W - SAFE * 2, h: H - (clean(input.kicker) ? 200 : 170) - 230, font: 'display', size: clean(input.kicker) ? 380 : 420, minSize: 120, maxLines: 4, lineHeight: 0.84,
+            color: pal.ink, align: v === 1 ? 'left' : 'center', valign: clean(input.kicker) ? 'middle' : 'top', knockout: { src: input.photo.src, focus: input.photo.focus, levels: true, ...(v === 1 ? {} : { tritone: tone, curve: 1.1 }) },
             fx: { shadow: { color: '#000000', blur: 30, x: 0, y: 12, alpha: pal.mode === 'light' ? 0.18 : 0.5 } },
           },
           { type: 'shape', shape: 'rect', x: SAFE, y: H - SAFE - 150, w: W - SAFE * 2, h: 3, color: pal.ink, opacity: 0.6 },
-          { type: 'text', role: 'label', text: upper(input.name || input.kicker || input.sport || ''), x: SAFE, y: H - SAFE - 120, w: W - SAFE * 2, h: 120, font: 'display', size: 76, minSize: 40, maxLines: 1, color: pal.accent, align: v === 1 ? 'left' : 'center', valign: 'middle' },
+          { type: 'text', role: 'label', text: upper(input.name || input.kicker || ''), x: SAFE, y: H - SAFE - 120, w: W - SAFE * 2, h: 120, font: 'display', size: 76, minSize: 40, maxLines: 1, color: pal.accent, align: v === 1 ? 'left' : 'center', valign: 'middle' },
         ];
       },
     },
@@ -1516,7 +1566,7 @@
         return [
           { type: 'background', fill: { kind: 'solid', colors: [pal.bg] }, ...(pal.toneName === 'paper' ? { texture: 'grain', textureOpacity: 0.12 } : {}) },
           { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: pal.toneName === 'paper' ? SAFE : 0, y: pal.toneName === 'paper' ? (input.swipe ? 214 : 170) : 0, w: pal.toneName === 'paper' ? W - SAFE * 2 : W, h: pal.toneName === 'paper' ? cardY + 120 - (input.swipe ? 214 : 170) : H, mask: pal.toneName === 'paper' ? 'round' : 'rect', radius: 10, vignette: pal.toneName === 'paper' ? 0 : 0.35, ...treatFor(pal) },
-          ...(pal.toneName === 'paper' ? [{ type: 'text', role: 'kicker', text: upper(input.kicker || input.sport || ''), x: topX(input), y: SAFE + 14, w: topW(input, W), h: 70, font: 'display', size: 72, minSize: 40, maxLines: 1, color: pal.ink, align: 'left', valign: 'top' }] : [mist(W, H, pal, 0.45, 0.9, pal.toneName === 'vivid' ? pal.bg : pal.toneName === 'esblue' ? ES.navy : '#000000')]),
+          ...(pal.toneName === 'paper' ? [{ type: 'text', role: 'kicker', text: upper(input.kicker || ''), x: topX(input), y: SAFE + 14, w: topW(input, W), h: 70, font: 'display', size: 72, minSize: 40, maxLines: 1, color: pal.ink, align: 'left', valign: 'top' }] : [mist(W, H, pal, 0.45, 0.9, pal.toneName === 'vivid' ? pal.bg : pal.toneName === 'esblue' ? ES.navy : '#000000')]),
           { type: 'shape', shape: 'rect', x: SAFE, y: cardY, w: W - SAFE * 2, h: cardH, color: card, radius: 14, fx: { shadow: { color: '#000000', blur: 40, x: 0, y: 16, alpha: 0.35 } } },
           { type: 'shape', shape: 'rect', x: v === 1 ? W / 2 - 32 : SAFE + 40, y: cardY + 36, w: 64, h: 52, color: tagC },
           { type: 'shape', shape: 'quote', x: v === 1 ? W / 2 - 22 : SAFE + 50, y: cardY + 46, w: 44, h: 32, color: bestInk(tagC) },
@@ -1825,7 +1875,7 @@
           { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: photoH, mask: 'rect', levels: true, ...(pal.toneName === 'editorial' && v === 2 ? { grayscale: true } : {}) },
           { type: 'shape', shape: 'gradient', x: 0, y: 0, w: W, h: 230, color: '#000000', stops: [[0, 0.4], [1, 0]] },
           ...(inset && v !== 2 ? [{ type: 'photo', src: inset.src, focus: inset.focus, x: insetX, y: photoH - 200, w: insetW, h: insetH, mask: 'rect', border: { color: pal.bg, width: 12 }, fx: { shadow: { color: '#000000', blur: 30, x: 0, y: 14, alpha: 0.3 } } }] : []),
-          { type: 'text', role: 'kicker', text: upper(input.kicker || input.sport || ''), x: v === 1 && inset ? SAFE + insetW + 30 : SAFE, y: textY, w: textW, h: 40, font: 'condensed', size: 32, minSize: 24, maxLines: 1, color: pal.accent, align: 'left', valign: 'top', tracking: 3 },
+          { type: 'text', role: 'kicker', text: upper(input.kicker || ''), x: v === 1 && inset ? SAFE + insetW + 30 : SAFE, y: textY, w: textW, h: 40, font: 'condensed', size: 32, minSize: 24, maxLines: 1, color: pal.accent, align: 'left', valign: 'top', tracking: 3 },
           { type: 'text', role: 'headline', text: upper(input.headline), x: v === 1 && inset ? SAFE + insetW + 30 : SAFE, y: textY + 56, w: textW, h: H - SAFE - textY - 56 - (clean(input.body) ? 110 : 0), font: 'display', size: 150, minSize: 50, maxLines: 4, lineHeight: 0.9, color: pal.ink, align: 'left', valign: 'top', highlight: { words: (input.highlight || []).map(upper), color: pal.accent } },
           ...(clean(input.body) ? [{ type: 'text', role: 'body', text: clean(input.body), x: SAFE, y: H - SAFE - 90, w: W - SAFE * 2, h: 90, font: 'body', size: 30, minSize: 24, maxLines: 2, color: mix(pal.ink, pal.bg, 0.2), align: 'left', valign: 'bottom' }] : []),
         ];
@@ -1865,8 +1915,12 @@
             : { type: 'photo', src: src.src, focus: src.focus, ...photoBox, mask: 'rect', ...t },
           { type: 'shape', shape: 'rect', x: right ? W - pw : pw - 10, y: 0, w: 10, h: H, color: pal.accent },
           !lead ? null : { type: 'text', role: dup ? 'kicker' : 'name', text: upper(lead), x: right ? tx : topX(input) === SAFE ? tx : topX(input), y: nameY, w: nameW, h: 380, font: 'display', size: 170, minSize: 40, maxLines: 3, lineHeight: 0.86, color: pal.accent, align: 'left', valign: 'top' },
-          ...(st ? [numberLayer({ ...st, label: st.label }, { x: tx, y: nameY + 420, w: tw, h: 300 }, pal.ink, { align: 'left', size: 260, labelSize: 34 })] : []),
-          { type: 'text', role: 'headline', text: upper(input.headline), x: tx, y: H - SAFE - 330 - (input.swipe ? 56 : 0), w: tw, h: 330, font: 'display', size: 96, minSize: 40, maxLines: 5, lineHeight: 0.9, color: pal.ink, align: 'left', valign: 'bottom', highlight: { words: (input.highlight || []).map(upper), color: pal.accent } },
+          // gen4: no tag to lead with (no sport kicker any more): the headline leads
+          // the panel big at the top and the stat closes it at the foot.
+          ...(st ? [numberLayer({ ...st, label: st.label }, lead ? { x: tx, y: nameY + 420, w: tw, h: 300 } : { x: tx, y: H - SAFE - 300 - (input.swipe ? 56 : 0), w: tw, h: 300 }, pal.ink, { align: 'left', size: 260, labelSize: 34 })] : []),
+          lead
+            ? { type: 'text', role: 'headline', text: upper(input.headline), x: tx, y: H - SAFE - 330 - (input.swipe ? 56 : 0), w: tw, h: 330, font: 'display', size: 96, minSize: 40, maxLines: 5, lineHeight: 0.9, color: pal.ink, align: 'left', valign: 'bottom', highlight: { words: (input.highlight || []).map(upper), color: pal.accent } }
+            : { type: 'text', role: 'headline', text: upper(input.headline), x: right ? tx : topX(input) === SAFE ? tx : topX(input), y: nameY, w: nameW, h: st ? H - nameY - SAFE - 340 : H - nameY - SAFE, font: 'display', size: 170, minSize: 44, maxLines: 6, lineHeight: 0.86, color: pal.accent, align: 'left', valign: st ? 'top' : 'middle', highlight: { words: (input.highlight || []).map(upper), color: pal.ink } },
           swipePill(input, pal, W, H),
         ];
       },
@@ -1936,11 +1990,13 @@
           cut
             ? { ...cutLayer(input.cutout, { x: panelX - 30, y: panelY - 240, w: panelW + 60, h: panelH + 240 }, pal, { align: 'center', mono: pal.toneName === 'editorial' }), maxW: panelW + 120 }
             : { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: panelX, y: panelY, w: panelW, h: panelH, mask: 'round', radius: 16, ...treatFor(pal) },
-          { type: 'text', role: 'kicker', text: upper(input.kicker || input.sport || ''), x: right ? topX(input) : tx, y: top, w: right ? Math.min(tw, topW(input, W)) : Math.min(tw, W - SAFE - LOGO.w - SAFE - tx), h: 40, font: 'condensed', size: 32, minSize: 22, maxLines: 1, color: pal.accent, align: 'left', valign: 'top', tracking: 3 },
+          { type: 'text', role: 'kicker', text: upper(input.kicker || ''), x: right ? topX(input) : tx, y: top, w: right ? Math.min(tw, topW(input, W)) : Math.min(tw, W - SAFE - LOGO.w - SAFE - tx), h: 40, font: 'condensed', size: 32, minSize: 22, maxLines: 1, color: pal.accent, align: 'left', valign: 'top', tracking: 3 },
           numberLayer({ ...st, label: '' }, { x: tx, y: top + 60, w: tw, h: numH }, pal.accent, { align: 'left', size: 460, noLabel: true }),
           tagPill(st.label, tx, top + 60 + numH + 24, pal, { maxW: tw, h: 46 }),
           { type: 'shape', shape: 'rect', x: tx, y: headY, w: 110, h: 10, color: pal.accent },
-          { type: 'text', role: 'headline', text: upper(input.headline), x: tx, y: headY + 34, w: tw, h: H - SAFE - headY - 34, font: 'display', size: 120, minSize: 44, maxLines: 6, lineHeight: 0.9, color: pal.ink, align: 'left', valign: 'top', highlight: { words: (input.highlight || []).map(upper), color: pal.accent } },
+          // gen4: the headline sits on the foot line, level with the panel (a short
+          // headline no longer leaves the lower corner empty), set as big as it fits.
+          { type: 'text', role: 'headline', text: upper(input.headline), x: tx, y: headY + 34, w: tw, h: H - SAFE - headY - 34, font: 'display', size: 170, minSize: 44, maxLines: 6, lineHeight: 0.9, color: pal.ink, align: 'left', valign: 'bottom', highlight: { words: (input.highlight || []).map(upper), color: pal.accent } },
         ];
       },
     },
@@ -2050,6 +2106,16 @@
   // and the story kinds it serves (for the no-AI plan's priority lists).
   const NEEDS = Object.fromEntries(ARCHETYPES.map(a => [a.id, a.needs]));
 
+  // A photo / art layer drawn faded inside a box (not a full-bleed field): the
+  // "washed-out trophy box over the headline" class. Full-bleed fields (a
+  // blurred own-photo behind a cut-out, a knockout texture) are kept.
+  function fadedImage(layer, W, H) {
+    if (layer.type !== 'photo') return false;
+    const opacity = layer.fx?.opacity ?? 1;
+    const fullBleed = (layer.w || 0) >= W * 0.95 && (layer.h || 0) >= H * 0.6;
+    if (layer.role === 'art') return opacity < 0.5;
+    return !fullBleed && opacity < 0.5;
+  }
   const fits = (id, input = {}) => Boolean(BY_ID[id] && BY_ID[id].fits(normalizeInput(input)));
   const fitting = (input = {}) => { const i = normalizeInput(input); return ARCHETYPES.filter(a => a.fits(i)).map(a => a.id); };
 
@@ -2063,7 +2129,11 @@
     const tone = archetype.looks ? toneFor(archetype, norm, variant) : norm.tone && archetype.tones.includes(norm.tone) ? norm.tone : '';
     const p = tone ? tonePalette(base, tone) : base;
     const layers = archetype.build({ ...norm, palette: p }, variant).filter(Boolean)
-      .filter(layer => !layer.hidden);
+      .filter(layer => !layer.hidden)
+      // gen4: no empty tag boxes, and no washed-out picture boxes (an image
+      // that is not a full-bleed field is either shown properly or not at all).
+      .filter(layer => !((layer.type === 'text' || layer.type === 'pill') && !clean(layer.text)))
+      .filter(layer => !fadedImage(layer, W, H));
     // Looks derive every colour in code from the tone palette (team colours,
     // their readable shades, ES colours, neutrals): register them as allowed.
     if (archetype.looks) p.allowed = [...new Set([...p.allowed, ...layers.flatMap(sceneColors)])];
@@ -2367,6 +2437,27 @@
     return next;
   }
 
+  function emptyHalf(report = {}, scene = {}) {
+    const W = scene.size?.w || 1080;
+    const H = scene.size?.h || 1350;
+    const boxes = (report.items || []).map(i => i.box).filter(Boolean)
+      .concat((scene.layers || []).filter(l => ['photo', 'cutout', 'logo', 'chart'].includes(l.type) || (l.type === 'shape' && !['grain', 'texture'].includes(l.shape) && !l.mist && !((l.w || 0) >= W * 0.95 && (l.h || 0) >= H * 0.95)))
+        .filter(l => (l.fx?.opacity ?? l.opacity ?? 1) >= 0.3 && (l.w || 0) > 0 && (l.h || 0) > 0)
+        .map(l => ({ x: l.x || 0, y: l.y || 0, w: l.w, h: l.h })));
+    const cover = (x0, y0, x1, y1) => {
+      let hit = 0; let total = 0;
+      for (let i = 0; i < 12; i += 1) for (let j = 0; j < 12; j += 1) {
+        const x = x0 + (i + 0.5) * (x1 - x0) / 12; const y = y0 + (j + 0.5) * (y1 - y0) / 12;
+        total += 1;
+        if (boxes.some(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h)) hit += 1;
+      }
+      return hit / total;
+    };
+    if (cover(0, H * 0.55, W, H) < 0.12) return 'lower';
+    if (cover(0, 0, W, H * 0.45) < 0.08) return 'upper';
+    return '';
+  }
+
   // ─── Free heuristic score (pre-filter and the no-AI judge) ──────────────
   // report: from render() (measured text sizes, overflow, contrast samples).
   function scoreReport(report = {}, scene = {}) {
@@ -2388,6 +2479,10 @@
     const textLayers = (scene.layers || []).filter(l => TEXTISH.has(l.type)).length;
     if (textLayers > 9) { score -= 0.4; issues.push({ fix: 'less-clutter', what: `${textLayers} text elements` }); }
     if ((report.missing || []).length) { score -= 0.8; issues.push({ fix: '', what: `missing image (${report.missing.length})` }); }
+    // gen4: an empty half (the Manfred poster's blank lower half). Measured text
+    // boxes plus the image and shape layers; backgrounds and textures never count.
+    const empty = emptyHalf(report, scene);
+    if (empty) { score -= 0.9; issues.push({ fix: 'bigger-headline', what: `the ${empty} half is empty` }); }
     return { score: Math.max(1, Math.min(5, Number(score.toFixed(2)))), issues, fix: issues.find(i => i.fix)?.fix || '' };
   }
 
@@ -3963,6 +4058,112 @@
     return next;
   }
 
+  // ─── gen4: design-time repairs ─────────────────────────────────────────
+  // The judge's (and the free checks') repairable issues, applied while
+  // designing so nobody sees a design that needs a small fix. Pure: returns
+  // { scene, applied: [{ op, issue }], skipped: [{ op, issue, why }] }.
+  //   repairs: [{ op, issue, text?, nth? }]
+  //     op: one of FIXES, or 'flip-tone' | 'headline' (text) | 'label' (nth, text)
+  //         | 'drop-stat' (nth) | 'remove-tag' | 'drop-image' | 'swap-photo'
+  //         | 'use-cutout' | 'use-photo'
+  //   ctx: { input (the direction's composer input), photos: [{ src, cutout }], facts }
+  // Every step is re-checked with checkScene (numbers stay facts); a step that
+  // fails the gate is skipped, never applied.
+  const REPAIR_OPS = [...FIXES, 'flip-tone', 'headline', 'label', 'drop-stat', 'remove-tag', 'drop-image', 'swap-photo', 'use-cutout', 'use-photo'];
+  // The looks to rebuild into when a design must show the person.
+  const PERSON_LOOKS = ['cover-boxes', 'stat-stack', 'frame-break', 'hero-number', 'magazine-cover', 'editorial-feature', 'pill-stack', 'lower-third', 'record-alert', 'light-stat', 'quote-boxes', 'duotone-hero', 'split-panel'];
+  function repair(scene, repairs = [], ctx = {}) {
+    let current = scene;
+    const applied = [];
+    const skipped = [];
+    const facts = ctx.facts || scene?.facts || [];
+    const factDigits = new Set(facts.flatMap(f => digitsIn(f.text)));
+    const shows = sc => (sc?.layers || []).some(l => l.type === 'cutout' || (l.type === 'photo' && l.role !== 'art' && (l.fx?.opacity ?? 1) >= 0.5));
+    const rebuild = (id, input, variant = 0) => {
+      try {
+        if (!fits(id, input)) return null;
+        const built = build(id, input, variant);
+        const checked = checkScene(built, { facts: input.facts || facts });
+        return checked.ok ? Object.assign(checked.scene, { id: current.id, ...(current.extra ? { extra: current.extra } : {}) }) : null;
+      } catch (error) { return null; }
+    };
+    const seen = new Set();
+    for (const raw of Array.isArray(repairs) ? repairs.slice(0, 6) : []) {
+      const r = typeof raw === 'string' ? { op: raw } : (raw || {});
+      const op = String(r.op || '');
+      const issue = clean(r.issue || r.text || op).slice(0, 160);
+      const key = `${op}|${r.nth ?? ''}`;
+      if (!REPAIR_OPS.includes(op) || seen.has(key)) { skipped.push({ op, issue, why: 'unknown or repeated' }); continue; }
+      seen.add(key);
+      let next = null;
+      const copy = () => JSON.parse(JSON.stringify(current));
+      if (FIXES.includes(op)) next = applyFix(current, op);
+      else if (op === 'flip-tone') next = applyFix(current, 'swap-palette');
+      else if (op === 'headline') {
+        const text = clean(r.text).replace(/[“”"]/g, '');
+        const stray = digitsIn(text).filter(d => !factDigits.has(d));
+        if (text && words(text).length <= 9 && !stray.length) {
+          next = copy();
+          const layer = next.layers.find(l => l.role === 'headline');
+          if (layer) { layer.text = upper(text); if (layer.highlight) layer.highlight.words = (layer.highlight.words || []).filter(w => upper(text).includes(w)); } else next = null;
+        }
+      } else if (op === 'label') {
+        const text = clean(r.text);
+        if (text && !/\d/.test(text) && words(text).length <= 4) {
+          next = copy();
+          const nums = next.layers.filter(l => l.type === 'number' && l.label);
+          const layer = nums[Number(r.nth) || 0];
+          if (layer) layer.label = upper(text); else next = null;
+        }
+      } else if (op === 'drop-stat') {
+        next = copy();
+        const nums = next.layers.filter(l => l.type === 'number');
+        const layer = nums[Number(r.nth) || 0];
+        if (layer && nums.length > 1) next.layers = next.layers.filter(l => l !== layer); else next = null;
+      } else if (op === 'remove-tag') {
+        next = copy();
+        const before = next.layers.length;
+        next.layers = next.layers.filter(l => l.role !== 'kicker');
+        if (next.layers.length === before) next = null;
+      } else if (op === 'drop-image' || op === 'swap-photo') {
+        const pool = (ctx.photos || []).filter(p => p?.src && p.src !== mainPhoto(current) && p.src !== ctx.input?.photo?.src);
+        if (op === 'swap-photo' && pool.length && mainPhoto(current)) {
+          next = swapPhoto(current, { from: mainPhoto(current), to: pool[0].src, cutout: pool[0].cutout || '' });
+        } else if (ctx.input) {
+          // Rebuild the same composition without the weak image (it reflows), else
+          // with the next ES photo, else drop the boxed image layers.
+          const without = { ...ctx.input, photo: null, photos: [], art: null };
+          if (!without.cutout) without.cutouts = [];
+          next = rebuild(current.archetype, without, current.variant || 0);
+          if (!next && pool.length) next = rebuild(current.archetype, { ...ctx.input, photo: { src: pool[0].src }, cutout: pool[0].cutout ? { src: pool[0].cutout } : ctx.input.cutout }, current.variant || 0);
+        }
+        if (!next) {
+          next = copy();
+          const W = next.size?.w || 1080; const H = next.size?.h || 1350;
+          const before = next.layers.length;
+          next.layers = next.layers.filter(l => !(l.type === 'photo' && (l.role === 'art' || !((l.w || 0) >= W * 0.95 && (l.h || 0) >= H * 0.6))));
+          if (next.layers.length === before) next = null;
+        }
+      } else if (op === 'use-cutout' || op === 'use-photo') {
+        const input = ctx.input;
+        if (input && (input.cutout?.src || (op === 'use-photo' && input.photo?.src))) {
+          const order = [current.archetype, ...PERSON_LOOKS.filter(id => id !== current.archetype)];
+          for (const id of order) {
+            const candidate = rebuild(id, input, 0);
+            if (candidate && (op === 'use-photo' ? shows(candidate) : candidate.layers.some(l => l.type === 'cutout')) && !(id === current.archetype && shows(current) === shows(candidate))) { next = candidate; break; }
+          }
+        }
+      }
+      if (!next) { skipped.push({ op, issue, why: 'not possible on this design' }); continue; }
+      const checked = checkScene(next, { facts });
+      if (!checked.ok) { skipped.push({ op, issue, why: 'failed the ES check' }); continue; }
+      current = Object.assign(checked.scene, { id: scene.id, ...(scene.tone && !checked.scene.tone ? { tone: scene.tone } : {}) });
+      applied.push({ op, issue });
+    }
+    if (applied.length) current.repaired = [...(scene.repaired || []), ...applied.map(a => a.issue)];
+    return { scene: current, applied, skipped };
+  }
+
   // The photo a card's Swap photo replaces (never concept art).
   function mainPhoto(scene) {
     const layer = (scene.layers || []).find(l => l.type === 'photo' && l.role !== 'art' && !String(l.src || '').startsWith('proc:'));
@@ -3970,7 +4171,7 @@
   }
 
   return {
-    mainPhoto,
+    mainPhoto, repair, REPAIR_OPS, PERSON_LOOKS, cleanKicker,
     VERSION, SIZES, SAFE, LOGO, FONTS, LAYER_TYPES, ROLES, FIXES, FX_LIMITS, PROC_ART, ARCHETYPES, BY_ID, NEEDS, TONES, FAMILIES,
     normalizeInput, tonePalette, toneFor,
     fits, fitting, build, candidates, makePalette, flipPalette, checkScene, applyFix, scoreReport,

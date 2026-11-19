@@ -197,7 +197,9 @@ const plans = {};
   ] }, sga, { photos: { 'Shai Gilgeous-Alexander': [{ src: '/s1.jpg', id: 'p1a', person: 'Shai Gilgeous-Alexander' }, { src: '/s2.jpg', id: 'p1b', person: 'Shai Gilgeous-Alexander' }] }, cutouts: {}, art: {} }, { want: 4 });
   assert.match(fam.dropped.map(d => d.why).join(' '), /second cover design/, 'one design per ES family in a set of 4');
 
-  // Through plan(): Haiku first; the plan is thin, so Sonnet once; the set is repaired in code.
+  // Through plan(), in auto mode (GENERATE_ART_DIRECTOR_MODEL=auto; gen4 made Sonnet the
+  // default): Haiku first; the plan is thin, so Sonnet once; the set is repaired in code.
+  process.env.GENERATE_ART_DIRECTOR_MODEL = 'auto';
   C.setAssetService(cutService);
   C.PLAN_CACHE.clear();
   aiCalls.length = 0;
@@ -232,7 +234,19 @@ const plans = {};
   // GENERATE_ART_DIRECTOR_MODEL=sonnet forces Sonnet.
   assert.equal(C.directorTier('sonnet'), 'best');
   assert.equal(C.directorTier('haiku'), 'main');
-  assert.equal(C.directorTier(''), 'auto');
+  assert.equal(C.directorTier('auto'), 'auto');
+  assert.equal(C.directorTier(''), 'best', 'gen4: Sonnet art-directs by default (quality first)');
+  // Default (no env): one Sonnet call.
+  delete process.env.GENERATE_ART_DIRECTOR_MODEL;
+  C.PLAN_CACHE.clear();
+  aiCalls.length = 0;
+  directorReplies = [{ directions: [
+    { story: 's1', archetype: 'typographic', headline: 'Bryson takes on Europe', tone: 'light' },
+    { story: 's1', archetype: 'trading-card', headline: 'Europe calls Bryson', photo: 'p1b', tone: 'dark' },
+  ] }];
+  await C.plan({ brief: `${brief} `, found: {}, want: 4, localFind: async person => photosFor(person), lessons: [] });
+  assert.equal(aiCalls.length, 1, 'default: one director call');
+  assert.match(aiCalls[0].model, /sonnet/, 'default director is Sonnet');
 }
 
 // ── 4. Set design helpers ────────────────────────────────────────────────
@@ -324,20 +338,43 @@ const plans = {};
   assert.equal(out.set.toneVariety, 2);
   assert.equal(out.set.codeToneVariety, 1, 'code agrees: one tone three times');
   assert.equal(out.set.change, 'd3');
+  // gen4: the judge's problems are repairs the page applies while designing
+  // (never "Apply" chips); old-style replies map onto repair ops.
   const d3 = out.directions.find(d => d.id === 'd3');
-  assert.ok(d3.critique.improvements.some(i => i.fix.op === 'palette' && i.fix.flip), 'tone fix: one-click palette flip');
-  assert.ok(d3.critique.improvements.some(i => /garbled/.test(i.text) && i.fix.op === 'assist' && /label/.test(i.fix.instruction)), 'label fix');
+  assert.ok(d3.repairs.some(r => r.op === 'flip-tone'), 'tone fix: a repair (palette flip)');
   const d1 = out.directions.find(d => d.id === 'd1');
-  assert.ok(d1.critique.improvements.some(i => i.fix.op === 'fix' && i.fix.name === 'brighten-photo'), 'weak image -> brighten');
-  assert.ok(d1.critique.improvements.some(i => i.fix.op === 'assist' && /cut-out/.test(i.fix.instruction)), 'use-cutout fix');
+  assert.ok(d1.repairs.some(r => r.op === 'drop-image'), 'weak, murky image -> dropped while designing');
+  assert.ok(d1.repairs.some(r => r.op === 'use-cutout'), 'use-cutout repair');
   const d2 = out.directions.find(d => d.id === 'd2');
-  assert.ok(d2.critique.improvements.some(i => i.fix.op === 'assist' && /not a real stat/.test(i.fix.instruction)), 'drop-stat fix');
+  assert.ok(d2.repairs.some(r => r.op === 'drop-stat'), 'drop-stat repair');
   assert.ok(d2.scores.d2c1.stats === 1 && d1.scores.d1c1.image === 1, 'new rubric lines scored');
-  // The fix ops are ones the design assistant applies.
+  out.directions.forEach(d => {
+    assert.deepEqual(d.critique.improvements, [], `${d.id}: no repair is shown as a suggestion`);
+    assert.deepEqual(d.review, { autoFixed: [], suggestions: [] });
+    d.repairs.forEach(r => assert.ok(COMPOSE.REPAIR_OPS.includes(r.op), `known repair op ${r.op}`));
+  });
+  assert.ok(prompt.includes('repairs') && prompt.includes('drop-image') && prompt.includes('remove-tag'), 'the judge is asked for repairs');
   const ASSIST = require(path.resolve('generate-assistant.js'));
-  const ops = out.directions.flatMap(d => d.critique.improvements.map(i => i.fix.op));
-  ops.forEach(op => assert.ok(['assist', 'fix', 'palette', 'text', 'remove', 'photo', 'archetype'].includes(op), `known op ${op}`));
   assert.ok(ASSIST, 'generate-assistant.js loads');
+  // New-style reply: repairs with text, and one creative idea (a repair-like "idea" is refused).
+  C.JUDGE_CACHE.clear();
+  judgeReply = { directions: [
+    { id: 'd1', best: 'd1c1', scores: {}, repairs: [{ issue: 'Headline drops the colon after MANFRED', op: 'headline', text: 'Manfred: owners won\'t budge' }, { issue: 'MLB tag', op: 'remove-tag' }, { issue: 'nonsense', op: 'paint-it-red' }], idea: 'Try a versus layout with Manfred and Tony Clark' },
+    { id: 'd2', best: 'd2c1', scores: {}, repairs: [], idea: 'Fix the murky photo' },
+  ] };
+  const fresh = await C.judge({ brief: 'x', sets: sets.slice(0, 2).map((s, i) => ({ ...s, items: [{ id: s.items[0].id, image: `${img}n${i}` }] })), heuristics: {} });
+  const n1 = fresh.directions.find(d => d.id === 'd1');
+  assert.deepEqual(n1.repairs.map(r => r.op), ['headline', 'remove-tag'], 'unknown ops dropped');
+  assert.equal(n1.repairs[0].text, 'Manfred: owners won\'t budge');
+  assert.deepEqual(n1.review.suggestions, ['Try a versus layout with Manfred and Tony Clark']);
+  assert.equal(n1.critique.improvements[0].fix.op, 'assist');
+  assert.deepEqual(fresh.directions.find(d => d.id === 'd2').review.suggestions, [], 'a repair is never a suggestion');
+  // Recheck: the second look says so in the prompt and logs its own feature.
+  C.JUDGE_CACHE.clear();
+  aiCalls.length = 0;
+  judgeReply = { directions: [{ id: 'd1', best: 'd1c1', scores: {}, repairs: [] }] };
+  await C.judge({ brief: 'x', sets: [{ ...sets[0], items: [{ id: 'd1c1', image: `${img}r` }] }], heuristics: {}, recheck: true });
+  assert.match(aiCalls[0].messages[0].content[0].text, /SECOND LOOK/);
   // Without a model score the set verdict comes from code (tones sent by the page).
   C.JUDGE_CACHE.clear();
   judgeReply = { directions: [] };
@@ -345,7 +382,8 @@ const plans = {};
   assert.equal(coded.set.toneVariety, 5, 'light and dark, three tones');
   assert.equal(coded.set.change, '');
   // The judge's critiques teach the right topics.
-  const signals = M.judgeSignals(out.directions, { sport: 'Golf' });
+  // es-generate.js hands the judge's issues to the learning model (as before).
+  const signals = M.judgeSignals(out.directions.map(d => ({ ...d, critique: { ...d.critique, improvements: d.issues.map(text => ({ text })) } })), { sport: 'Golf' });
   const topics = new Set(signals.flatMap(M.observationsFrom).map(o => o.topic));
   ['stat-meaning', 'label-sense', 'no-cutout', 'image-weak'].forEach(t => assert.ok(topics.has(t), `learns ${t}`));
 }
