@@ -45,6 +45,14 @@ const slug = text => squash(text).replace(/ /g, '-').slice(0, 40);
 // Ordered: the first match wins (specific before general). `fix` is the
 // composer's one-click fix for it (FrameUpCompose.FIXES or an assistant macro).
 const TOPICS = [
+  // gen-director (2026-11-20): the content and set failures a senior designer
+  // catches first. Specific, so they sit before the visual topics.
+  { id: 'stat-meaning', re: /\bcoverage counts?\b|\bnot a (?:real |meaningful )?stat\b|\bmeaningless (?:stat|number|numbers)\b|\b(?:year|date|season)\b[^.]{0,25}\b(?:as|is) (?:a |the )?(?:stat|hero number|number)\b|\b\d+\s+stories\b|\b\d+\s+outlets\b|\bour own (?:coverage|counts)\b/i, lesson: 'Numbers are real story stats (scores, records, money, rankings), never our coverage counts, years or dates.', fix: '' },
+  { id: 'label-sense', re: /\bgarbled\b|\blabel\b[^.]{0,30}\b(?:doesn'?t read|does not read|nonsense|broken|confusing|unclear|makes no sense|cut off)\b|\bdoesn'?t read as a (?:stat )?label\b|\bstat labels?\b[^.]{0,20}\b(?:wrong|bad)\b/i, lesson: 'Every stat label is a short noun phrase from the facts (PASSING YARDS), never words cut from the next sentence.', fix: '' },
+  { id: 'duplicate', re: /\brepeat(?:s|ed|ing)? the (?:hero )?(?:number|headline|label|year)\b|\bduplicat(?:e|ed|es|ion)\b|\bsaid twice\b|\bredundant\b|\bsays? it twice\b/i, lesson: 'Say each fact once: the headline never repeats the hero number or its label.', fix: '' },
+  { id: 'tone-monotone', re: /\bsame (?:dark |colou?r )?tones?\b|\ball (?:dark|the same tone|navy|green)\b|\bmonoton(?:e|ous)\b|\btone variety\b|\bno light (?:design|tone|version)\b|\bsamey\b|\bflip it for variety\b/i, lesson: 'Mix tones across a set: a light paper or white design beside dark and vivid team colour.', fix: 'swap-palette' },
+  { id: 'no-cutout', re: /\bno (?:player |star )?(?:photo|cut-?out|image) of\b|\bnamed but no\b|\bneeds? (?:a |the )?(?:player )?cut-?out\b|\bno cut-?out\b|\blead(?:s)? with (?:a |the |their |his |her )?(?:photo|cut-?out)\b|\bwithout (?:a |any )?(?:player )?(?:photo|cut-?out)\b/i, lesson: 'When a star is named, lead at least one design with their cut-out, big and in front.', fix: '' },
+  { id: 'image-weak', re: /\b(?:photo|image|picture)\b[^.]{0,30}\b(?:tiny|too small|adds nothing|lost in|faded|barely visible|postage stamp)\b|\btiny (?:photo|image)\b/i, lesson: 'Use photography big and bright; a tiny or faded photo adds nothing.', fix: 'brighten-photo' },
   { id: 'photo-dark', re: /\b(?:photo|image|picture|background)\b[^.]{0,30}\b(?:too dark|dark|dim|murky|muddy|underexposed|gloomy)\b|\b(?:too dark|dim|murky|muddy|underexposed)\b[^.]{0,20}\b(?:photo|image|picture)\b|\bbright(?:en|er)\b/i, lesson: 'Keep the hero photo bright; darken only the strip behind the text.', fix: 'brighten-photo' },
   { id: 'text-over-busy', re: /\b(?:headline|text|type|copy|words?)\b[^.]{0,40}\b(?:over|on|across|behind)\b[^.]{0,20}\b(?:busy|face|crowd|detail|clutter)|\b(?:busy|cluttered)\b[^.]{0,20}\b(?:behind|under)\b[^.]{0,15}\b(?:headline|text|type)\b/i, lesson: 'Never set type over a busy area or a face; give it a mist or a colour band.', fix: 'darker-mist' },
   { id: 'low-contrast', re: /\bcontrast\b|\bhard to read\b|\billegible\b|\blegib|\bwashed[- ]out\b|\bblends? into\b|\bunreadable\b/i, lesson: 'Check text contrast: light type on a dark field or the reverse, never mid-tones.', fix: 'more-contrast' },
@@ -64,6 +72,28 @@ const TOPICS = [
   { id: 'generic', re: /\btemplate\b|\bgeneric\b|\bstock\b|\bplain\b|\bpredictable\b|\bmore drama\b|\bdrama(?:tic)?\b|\bboring\b|\bflat\b/i, lesson: 'Push past the template look: one bold idea (cut-out, giant number, duotone, light).', fix: 'more-drama' },
 ];
 const TOPIC_BY_ID = Object.fromEntries(TOPICS.map(t => [t.id, t]));
+
+// ─── House lessons (seeded from real failures, always on) ─────────────────
+// The 2026-11-20 review of a live Generate set (a golf brief about a named
+// star) found every one of these. They go into the art director's and the
+// judge's prompts on every run, after the learned lessons, in the free slots
+// (a learned lesson on the same topic replaces its seed). They are not stored
+// rows, so they never decay and never crowd the team's own lessons out.
+const SEED_LESSONS = [
+  { topic: 'stat-meaning', text: TOPICS.find(t => t.id === 'stat-meaning').lesson, why: 'shipped "4 STORIES · 6 OUTLETS" as stats' },
+  { topic: 'stat-meaning-year', text: 'A year or date is never the hero number ("2027 SEASON"); lead with a score, record, money or ranking, or with type and photo.', why: 'shipped "2027" as the big number' },
+  { topic: 'duplicate', text: TOPICS.find(t => t.id === 'duplicate').lesson, why: '"2027 SEASON" over "THE 2027 SEASON STARTS..."' },
+  { topic: 'label-sense', text: TOPICS.find(t => t.id === 'label-sense').lesson, why: 'shipped "2027 SEASON WHY FANS"' },
+  { topic: 'tone-monotone', text: TOPICS.find(t => t.id === 'tone-monotone').lesson, why: 'three designs in the same dark green / navy' },
+  { topic: 'no-cutout', text: TOPICS.find(t => t.id === 'no-cutout').lesson, why: 'a famous golfer named, no cut-out, a murky golf-ball photo instead' },
+  { topic: 'empty-space', text: 'Fill the canvas: no empty quadrant; a 3-number grid in a 2x2 leaves a hole.', why: 'by-the-numbers with an empty quadrant' },
+].map((seed, i) => ({ id: `H${i + 1}`, key: `seed:global:${seed.topic}`, kind: 'avoid', scope: 'global', scopeValue: '', seed: true, ...seed }));
+// The run's lessons plus the house lessons whose topic is not already there.
+function withSeeds(selected = [], { limit = 6 } = {}) {
+  const topics = new Set((selected || []).map(l => l.topic).filter(Boolean));
+  const seeds = SEED_LESSONS.filter(seed => !topics.has(seed.topic) && !topics.has(seed.topic.replace(/-year$/, ''))).slice(0, Math.max(0, limit));
+  return [...(selected || []), ...seeds];
+}
 
 // Assistant requests say what the design lacked ("use a darker photo" means
 // the type was hard to read; "move the number left" is taste, no lesson).
@@ -242,9 +272,17 @@ function selectLessons(lessons = [], { sport = '', archetypes = [], brand = '', 
 // Prompt lines (for the director and the judge).
 function promptLines(selected = [], { who = 'director' } = {}) {
   if (!selected.length) return [];
-  const avoid = selected.filter(l => l.kind === 'avoid');
-  const prefer = selected.filter(l => l.kind === 'prefer');
-  return [
+  // House lessons (seeds) get their own heading: they are ES rules, not what this team taught.
+  const seeds = selected.filter(l => l.seed);
+  const house = seeds.length ? [
+    who === 'judge' ? 'ES house lessons (real failures). A design that repeats one scores 1-2 on the matching rubric line and says so:' : 'ES house lessons (real failures, never repeat them):',
+    ...seeds.map(l => `- [${l.id}] ${l.text}`),
+  ] : [];
+  const learned = selected.filter(l => !l.seed);
+  if (!learned.length) return house;
+  const avoid = learned.filter(l => l.kind === 'avoid');
+  const prefer = learned.filter(l => l.kind === 'prefer');
+  return [...house,
     who === 'judge'
       ? 'Team lessons (learned from past runs). If a design repeats one of these mistakes, say so in its improvements and score it down:'
       : 'Team lessons (learned from what editors fixed, rejected and shipped). Do not repeat these mistakes:',
@@ -408,7 +446,7 @@ function eventFor(signal) {
 }
 
 module.exports = {
-  TOPICS, SIGNALS, SCOPES, HALF_LIFE_DAYS, ACTIVE_WEIGHT,
+  TOPICS, SIGNALS, SCOPES, HALF_LIFE_DAYS, ACTIVE_WEIGHT, SEED_LESSONS, withSeeds,
   topicOf, intentTopic, keyFor, observationsFrom, distil, decayed, hitRate, selectLessons, promptLines, adminView,
   loadLessons, lessonsFor, learn, judgeSignals, normalizeSignal, eventFor,
   _test: {
