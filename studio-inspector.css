@@ -1180,3 +1180,7 @@ html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] >
   html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-accordion-chevron,
   .fi-resize::before { transition: none !important; }
 }
+
+/* A section with no controls for the current template (frameup-inspector.js
+   collapseEmptySections) disappears instead of leaving an empty band. */
+html[data-studio-shell="on"] .panel .studio-dock-section.fi-section-empty { display: none !important; }

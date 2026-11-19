@@ -50,14 +50,14 @@
     padding-bottom: 0;
   }
 
-  html:not([data-theme="dark"])[data-studio-shell="on"]:root body .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input) {
+  html:not([data-theme="dark"])[data-studio-shell="on"]:root body .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input, .widget-paste-link-input) {
     border: 1px solid var(--es-line-2) !important;
     border-radius: var(--es-radius-control) !important;
     background-color: var(--es-bg);
     transition: border-color 140ms var(--es-ease), box-shadow 140ms var(--es-ease);
   }
 
-  html[data-studio-shell="on"]:root body .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, .select-dropdown-trigger):not(.studio-ai-search input):focus,
+  html[data-studio-shell="on"]:root body .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, .select-dropdown-trigger):not(.studio-ai-search input, .widget-paste-link-input):focus,
   html[data-studio-shell="on"]:root body .panel .select-dropdown.is-open > .select-dropdown-trigger {
     border-color: var(--es-focus-color) !important;
     box-shadow: var(--es-focus-halo) !important;
@@ -65,7 +65,7 @@
   }
 
   @media (hover: hover) {
-    html:not([data-theme="dark"])[data-studio-shell="on"]:root body .panel :is(input[type="text"], input[type="url"], textarea, .select-dropdown-trigger):not(.studio-ai-search input):not(:focus):hover {
+    html:not([data-theme="dark"])[data-studio-shell="on"]:root body .panel :is(input[type="text"], input[type="url"], textarea, .select-dropdown-trigger):not(.studio-ai-search input, .widget-paste-link-input):not(:focus):hover {
       border-color: var(--es-ink-3) !important;
     }
   }

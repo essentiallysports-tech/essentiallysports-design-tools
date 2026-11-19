@@ -259,6 +259,19 @@
       // No photo controls for this template (HTML widgets…): no title either.
       const empty = ![...block.children].some(child => child !== title && child.getBoundingClientRect().height > 0);
       if (title.hidden !== empty) title.hidden = empty;
+      collapseEmptySections();
+    }
+
+    // A panel section whose controls are all hidden for this template must not
+    // leave an empty band between two dividers. Judged by each child's own
+    // display (not its height), so it still works while the section is hidden.
+    const shown = el => !el.hidden && win.getComputedStyle(el).display !== 'none';
+    function collapseEmptySections() {
+      doc.querySelectorAll('.panel .studio-dock-section').forEach(section => {
+        const content = [...section.children].filter(child => !child.classList.contains('fi-section-title'));
+        const empty = !content.some(child => shown(child) && (child.childElementCount > 0 || (child.textContent || '').trim()));
+        section.classList.toggle('fi-section-empty', empty);
+      });
     }
 
     const sections = () => [...doc.querySelectorAll('.panel [data-studio-accordion-section]')].filter(s => !s.hidden);

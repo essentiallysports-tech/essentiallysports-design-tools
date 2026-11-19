@@ -807,7 +807,7 @@ html:not([data-theme="dark"])[data-studio-shell="on"] .studio-inspector-tab.is-a
 }
 
 /* Fields: 12px radius (--es-radius-control), 1px line-2 outline, ink-3 on hover, blue border + halo on focus / open */
-html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input){
+html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input, .widget-paste-link-input){
   border: 1px solid var(--es-line-2) !important;
   border-radius: var(--es-radius-control) !important;
   background-color: var(--es-bg);
@@ -815,18 +815,18 @@ html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="tex
   transition: border-color var(--es-dur) var(--es-ease), box-shadow var(--es-dur) var(--es-ease);
 }
 
-html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input):hover{
+html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input, .widget-paste-link-input):hover{
   border-color: var(--es-ink-3) !important;
 }
 
-html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input):focus,
+html:not([data-theme="dark"])[data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input, .widget-paste-link-input):focus,
 html:not([data-theme="dark"])[data-studio-shell="on"] .panel .select-dropdown.is-open > .select-dropdown-trigger{
   border-color: var(--es-focus-color) !important;
   box-shadow: var(--es-focus-halo) !important;
   outline: none !important;
 }
 
-html[data-theme="dark"][data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input):focus,
+html[data-theme="dark"][data-studio-shell="on"] .panel :is(input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea, select, .select-dropdown-trigger):not(.studio-ai-search input, .widget-paste-link-input):focus,
 html[data-theme="dark"][data-studio-shell="on"] .panel .select-dropdown.is-open > .select-dropdown-trigger{
   border-color: var(--es-focus-color) !important;
   box-shadow: var(--es-focus-halo) !important;
