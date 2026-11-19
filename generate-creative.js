@@ -277,8 +277,12 @@
     const dir = card._dir;
     const scene = card._scene;
     const layout = scene.archetypeName || dir.archetypeName;
-    card.querySelector('.gen-card__type').textContent = layout;
-    card.querySelector('.gen-cc__name').textContent = dir.name || dir.archetypeName;
+    const typeEl = card.querySelector('.gen-card__type');
+    typeEl.textContent = layout;
+    typeEl.title = layout; // the badge shortens with an ellipsis on narrow cards
+    const nameEl = card.querySelector('.gen-cc__name');
+    nameEl.textContent = dir.name || dir.archetypeName;
+    nameEl.title = nameEl.textContent;
     const story = cleanStory(dir.storyText);
     const storyEl = card.querySelector('.gen-cc__story');
     storyEl.textContent = story;
@@ -535,6 +539,11 @@
   }
 
   // ── The run ──────────────────────────────────────────────────────────────
+  // Errors we catch but still want to see (Dashboard → Errors).
+  function report(error, where) {
+    try { window.FrameUpErrors?.report?.(error, { area: 'generate', where }); } catch (e) { /* never break the run */ }
+    try { console.error(`[generate:${where}]`, error); } catch (e) { /* noop */ }
+  }
   async function run(brief) {
     const g = G();
     if (!g || g.isBusy()) return;
@@ -551,6 +560,7 @@
     const progress = g.startProgress(['Reading ES coverage', 'Art director planning', 'Composing candidates', 'Art director judging'], [2400, 9000]);
     // The editor frame records exports in the Gallery; load it while we work.
     g.renderer?.().catch(() => {});
+    let rendered = false;
     try {
       const plan = await g.callApi('/api/es-generate', { mode: 'creative', brief, count: n, steer: g.steer() });
       if (!plan?.directions?.length) {
@@ -560,7 +570,7 @@
         return 'fallback';
       }
       // Imagery v3: cut out the hero subject(s) in the browser before composing.
-      await addCutouts(plan);
+      try { await addCutouts(plan); } catch (error) { report(error, 'creative-cutouts'); }
       progress.designing?.();
       // Every candidate small, with the free check.
       const sets = [];
@@ -590,23 +600,36 @@
       });
       state.cards = cards;
       els.grid.replaceChildren(...cards);
-      for (const card of cards) await preview(card);
+      // From here the designs are on screen: a later step failing must never
+      // wipe them or switch Generate to the template flow (it used to: four
+      // designs appeared, then the page fell back to "Directions first").
+      rendered = true;
+      for (const card of cards) { try { await preview(card); } catch (error) { report(error, 'creative-preview'); } }
       const seconds = progress.stop();
-      g.rememberBrief?.(brief);
-      window.FrameUpPosted?.markGenerateRun?.({ count: cards.length, format: 'creative' });
+      try { g.rememberBrief?.(brief); } catch (error) { report(error, 'creative-remember'); }
+      try { window.FrameUpPosted?.markGenerateRun?.({ count: cards.length, format: 'creative' }); } catch (error) { report(error, 'creative-posted'); }
       const cost = (plan.cost?.total || 0) + (judged.cost || 0);
       const composed = plan.directions.reduce((k, d) => k + d.candidates.length, 0);
       const fewer = cards.length < n ? ` <span class="gen-summary__muted">(asked for ${n}; the brief had ${cards.length} strong idea${cards.length === 1 ? '' : 's'})</span>` : '';
       g.setSummary(`<span class="gen-mode is-ai">Creative</span><span class="gen-mode">${judged.source === 'vision' ? 'Art director · vision' : 'Quick check'}</span><span><strong>${cards.length} design${cards.length === 1 ? '' : 's'}</strong> from ${composed} compositions · ${Math.max(1, Math.round(seconds))}s · ${plan.cached ? 'cached' : money(cost)}${fewer}</span><span class="gen-summary__hint">Click a design to open it</span>`);
-      renderDropped(plan);
-      if (plan.research?.articles) g.showResearch(plan.research.articles);
-      g.track('generate_run', { runId: plan.runId, payload: { look: 'creative', designs: cards.length, asked: n, cost, judge: judged.source } });
+      try { renderDropped(plan); } catch (error) { report(error, 'creative-dropped'); }
+      try { if (plan.research?.articles) g.showResearch(plan.research.articles); } catch (error) { report(error, 'creative-research'); }
+      try { g.track('generate_run', { runId: plan.runId, payload: { look: 'creative', designs: cards.length, asked: n, cost, judge: judged.source } }); } catch (error) { /* tracking never matters */ }
     } catch (error) {
       progress.stop();
+      // A limit or switched-off reply is the person's own state, not a bug:
+      // it is shown, never logged as an error.
+      const limited = error?.status === 429 || error?.status === 503 || /limit|budget|switched off/i.test(String(error?.message || ''));
+      if (!limited) report(error, rendered ? 'creative-after-render' : 'creative-run');
+      if (rendered) {
+        // Designs are already showing: keep them, never fall back.
+        g.setNotice('Some finishing touches did not load', ' Your designs are ready below.');
+        return;
+      }
       els.grid.replaceChildren();
       // A limit or switched-off reply is shown as is; any other failure falls
       // back to ES templates so Generate always produces something.
-      if (error?.status === 429 || error?.status === 503 || /limit|budget|switched off/i.test(String(error?.message || ''))) {
+      if (limited) {
         els.empty.hidden = false;
         g.setNotice('Could not compose designs', ` ${error.message || 'Something went wrong.'} Your brief is still here.`, '', { label: 'Try again', run: () => run(brief) });
         return 'stop';
@@ -648,7 +671,9 @@
     const A = window.FrameUpAssets;
     if (!items.length || !A?.prepareCutouts || !C()?.candidates) return;
     let made;
-    try { made = await A.prepareCutouts(items, { max: 3 }); } catch (error) { return; }
+    try { made = await A.prepareCutouts(items, { max: 3 }); } catch (error) { report(error, 'creative-cutouts'); return; }
+    if (!made) return;
+    plan.imagery = plan.imagery || {};
     plan.imagery.cutoutCost = made.cost || 0;
     if (plan.cost) plan.cost.total = Number(((plan.cost.total || 0) + (made.cost || 0)).toFixed(5));
     if (!made.cutouts?.length) return;
