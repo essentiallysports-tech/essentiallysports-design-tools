@@ -59,8 +59,8 @@
 <link rel="stylesheet" href="frameup-posted.css?v=20261118-rel1">
 <script src="frameup-impact.js?v=20261118-rel1"></script>
 <script src="frameup-posted.js?v=20261118-rel1"></script>
-<link rel="stylesheet" href="generate-creative.css?v=20261120-rel2">
-<script src="frameup-compose.js?v=20261121-rel" defer></script>
+<link rel="stylesheet" href="generate-creative.css?v=20261121-qa-generate">
+<script src="frameup-compose.js?v=20261121-qa-generate" defer></script>
 <script src="frameup-cutout.js?v=20261120-img1" defer></script>
 <script src="frameup-assets.js?v=20261121-rel" defer></script>
 <script src="generate-focus.js?v=20261120-rel2" defer></script>
@@ -92,15 +92,17 @@
     .gen-actions__buttons { display: flex; align-items: center; gap: var(--es-space-2, 8px); margin-left: auto; }
     .gen-actions__buttons .es-btn[hidden] { display: none; }
     .gen-actions__buttons #gen-submit { min-width: 168px; padding-inline: var(--es-space-5, 20px); }
-    .gen-kbd { margin-left: var(--es-space-1, 4px); padding: 0 6px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--es-line); color: var(--es-ink-3); font: 500 11px/18px var(--es-font-ui); letter-spacing: .02em; }
+    .gen-kbd { margin-left: var(--es-space-1, 4px); padding: 0 var(--es-space-2, 8px); border-radius: 6px; box-shadow: inset 0 0 0 1px var(--es-line); color: var(--es-ink-3); font: 500 11px/18px var(--es-font-ui); letter-spacing: .02em; }
 
     /* Trending · Recent · Try (2026-11-19): three rows, three jobs, three looks.
        Each is a <details>; the header is the label (no fixed label column, so
        nothing clips). Trending = outlined live chips; Recent = a compact list
        with Run again; Try = format cards with the template art. */
-    .gen-quick { display: grid; gap: var(--es-space-4, 16px); margin-top: var(--es-space-6, 24px); }
+    /* One rhythm for the quick rows (owner, 2026-11-21): 32px between sections,
+       12px from a section title to its content, 8px between items. */
+    .gen-quick { display: grid; gap: var(--es-space-8, 32px); margin-top: var(--es-space-8, 32px); }
     .gen-quick[hidden], .gen-quick:empty { display: none; }
-    .gen-quick__split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--es-space-4, 16px) var(--es-space-6, 24px); align-items: start; }
+    .gen-quick__split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--es-space-8, 32px) var(--es-space-6, 24px); align-items: start; }
     .gen-quick__split.is-single { grid-template-columns: minmax(0, 1fr); }
     .gen-quick__split:empty { display: none; }
     .gen-qs { min-width: 0; }
@@ -123,14 +125,15 @@
     .gen-qs__chev svg { width: 16px; height: 16px; }
     .gen-qs[open] .gen-qs__chev { transform: rotate(180deg); }
     /* Trending: outlined pills; logo, rising dot, the story, its age. */
-    .gen-tchips { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); min-width: 0; }
+    /* Even grid, not ragged pills: every trend chip the same width per row. */
+    .gen-tchips { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: var(--es-space-2, 8px); min-width: 0; }
     /* Each trend is an .es-chip (UI Library: 32px, 10px radius, 1px outline); these only lay out its parts. */
-    .gen-tchip { max-width: min(100%, 420px); min-width: 0; padding-left: var(--es-space-2, 8px); gap: var(--es-space-2, 8px); }
-    .gen-tchip__logo { flex: none; width: 20px; height: 20px; box-sizing: border-box; padding: 3px; border-radius: 50%; background: var(--league-bg, #F2F4F7); object-fit: contain; }
+    .gen-tchip { width: 100%; max-width: none; min-width: 0; justify-content: flex-start; padding-left: var(--es-space-2, 8px); gap: var(--es-space-2, 8px); }
+    .gen-tchip__logo { flex: none; width: 20px; height: 20px; box-sizing: border-box; padding: var(--es-space-1, 4px); border-radius: 50%; background: var(--league-bg, #F2F4F7); object-fit: contain; }
     .gen-tchip__tag { flex: none; padding-left: 4px; color: var(--es-brand-text, #0A62C7); font-weight: 600; }
     .gen-tchip__rising { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #E5484D; box-shadow: 0 0 0 3px rgb(229 72 77 / .16); }
     .gen-tchip__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .gen-tchip__age { flex: none; color: var(--es-ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+    .gen-tchip__age { flex: none; margin-left: auto; color: var(--es-ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
     /* Recent: a compact list in a quiet well. */
     .gen-recent { display: grid; margin: 0; padding: var(--es-space-1, 4px); border-radius: var(--es-radius-control, 12px); background: var(--es-sunk); list-style: none; }
     .gen-recent__row { display: flex; align-items: center; gap: var(--es-space-1, 4px); min-width: 0; }
@@ -144,7 +147,9 @@
     .gen-recent__run:hover { background: var(--es-bg); }
     :is(.gen-recent__fill, .gen-recent__run):focus-visible { outline: var(--es-focus-outline); outline-offset: -2px; }
     /* Try: format cards with the ES template art. */
-    .gen-try { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: var(--es-space-2, 8px); }
+    /* Two columns beside Recent (4 cards, no lone card or empty slot); wider when alone. */
+    .gen-try { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-2, 8px); }
+    .gen-quick__split.is-single .gen-try { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
     .gen-try__card { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: var(--es-space-3, 12px); min-width: 0; padding: var(--es-space-2, 8px) var(--es-space-3, 12px) var(--es-space-2, 8px) var(--es-space-2, 8px); border: 0; border-radius: var(--es-radius-control, 12px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); color: var(--es-ink); text-align: left; cursor: pointer; transition: box-shadow var(--es-dur) var(--es-ease); }
     .gen-try__card:hover { box-shadow: inset 0 0 0 1px var(--es-line-2); }
     .gen-try__card:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
@@ -179,7 +184,7 @@
     .gen-notice.is-warn { background: var(--es-warn-soft, #fff4d6); }
 
     /* Empty state: live trends to start from (no big empty box). */
-    .gen-empty { display: grid; gap: var(--es-space-3, 12px); margin-top: var(--es-space-10, 40px); }
+    .gen-empty { display: grid; gap: var(--es-space-3, 12px); margin-top: var(--es-space-8, 32px); }
     .gen-empty[hidden] { display: none; }
     .gen-empty__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--es-space-2, 8px); min-height: 32px; }
     .gen-empty__title { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); margin: 0; color: var(--es-ink); font: var(--es-type-panel-title-weight, 800) var(--es-type-panel-title-size, 18px)/1.2 var(--es-font-display); letter-spacing: var(--es-type-section-tracking, .005em); text-transform: uppercase; }
@@ -226,7 +231,7 @@
     .gen-fcard__art img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .3s var(--es-ease, ease); }
     /* Auto: a 2×2 of the real template art with a small AI mark, so it sits
        in the same family as the thumbnails instead of a loud gradient tile. */
-    .gen-fcard__art.is-auto { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px; place-items: stretch; padding: 6px; }
+    .gen-fcard__art.is-auto { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: var(--es-space-1, 4px); place-items: stretch; padding: var(--es-space-2, 8px); }
     .gen-fcard__art.is-auto img { min-height: 0; border-radius: 4px; opacity: .9; }
     .gen-fcard__mark { position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--es-bg); box-shadow: 0 1px 2px rgb(14 16 20 / .14), inset 0 0 0 1px var(--es-line); color: var(--es-brand-text, #0A62C7); transform: translate(-50%, -50%); }
     .gen-fcard__mark svg { width: 16px; height: 16px; }
@@ -240,8 +245,8 @@
     .gen-fcard.is-fit .gen-fcard__art::after { content: ''; position: absolute; top: 8px; left: 8px; z-index: 1; width: 10px; height: 10px; border-radius: 50%; background: #0A7DFA; box-shadow: 0 0 0 2px #fff; }
     @media (hover: hover) and (prefers-reduced-motion: no-preference) { .gen-fcard:hover .gen-fcard__art:not(.is-auto) img { transform: scale(1.04); } }
     @container (max-width: 930px) {
-      .gen-format__list { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 96px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding-inline: var(--es-space-2, 8px); scrollbar-width: thin; }
-      .gen-fcard { scroll-snap-align: start; }
+      /* Narrower: the formats wrap into rows, so no format is cut off at the edge. */
+      .gen-format__list { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
     }
     .gen-format__note { display: flex; flex: 1 1 260px; flex-wrap: wrap; align-items: baseline; gap: 0 var(--es-space-1, 4px); min-width: 0; margin: 0; color: var(--es-ink-3); font-size: var(--es-type-meta-size); line-height: var(--es-type-meta-line); }
     .gen-format__note strong { color: var(--es-ink); font-weight: 600; }
@@ -398,7 +403,7 @@
       .gen-grid { grid-template-columns: minmax(0, 1fr); }
       .gen-thumb { flex-basis: 52px; height: 65px; }
       .gen-progress__time { margin-left: 0; }
-      .gen-format__list { grid-auto-columns: 84px; }
+      .gen-format__list { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: var(--es-space-2, 8px); }
       .gen-actions__hint { flex-basis: 100%; }
       .gen-actions__buttons { width: 100%; }
       .gen-actions__buttons .es-btn { flex: 1 1 auto; }
@@ -545,7 +550,8 @@
       .gen-director__buttons { width: 100%; margin-left: 0; }
       .gen-director__buttons .es-btn { flex: 1 1 auto; }
       .gen-steer__group { width: 100%; }
-      .gen-steer__group .es-segmented { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+      /* Every choice visible (no hidden sideways scroll that cuts "Emotional" in half): wrap into rows. */
+      .gen-steer__group .es-segmented { display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); max-width: 100%; }
     }
     @media (prefers-reduced-motion: reduce) { .gen-switch__track, .gen-switch__track::after, .gen-dir { transition: none; } }
     html[data-theme="dark"] .gen-steer, html[data-theme="dark"] .gen-director__foot { border-top-color: #2A2D34; }
@@ -1056,7 +1062,9 @@
         const split = document.createElement('div');
         split.className = 'gen-quick__split';
         if (recent.length) split.append(quickSection('recent', 'Recent', ICON.history, recentList(recent.slice(0, 3)), { action: { label: 'Clear', run: forgetRecent } }));
-        const starters = EXAMPLES.filter(([, text]) => !recent.some(item => item.brief === text));
+        // Beside Recent: 4 formats (a full 2 × 2), alone: up to 6 (no lone card).
+        const startersAll = EXAMPLES.filter(([, text]) => !recent.some(item => item.brief === text));
+        const starters = startersAll.slice(0, recent.length ? 4 : Math.min(6, startersAll.length - (startersAll.length % 2 && startersAll.length > 2 ? 1 : 0)));
         if (starters.length) split.append(quickSection('try', 'Try a format', ICON.lightbulb, tryCards(starters)));
         if (split.children.length) sections.push(split);
         split.classList.toggle('is-single', split.children.length === 1);

@@ -277,8 +277,12 @@
     const dir = card._dir;
     const scene = card._scene;
     const layout = scene.archetypeName || dir.archetypeName;
-    card.querySelector('.gen-card__type').textContent = layout;
-    card.querySelector('.gen-cc__name').textContent = dir.name || dir.archetypeName;
+    const typeEl = card.querySelector('.gen-card__type');
+    typeEl.textContent = layout;
+    typeEl.title = layout; // the badge shortens with an ellipsis on narrow cards
+    const nameEl = card.querySelector('.gen-cc__name');
+    nameEl.textContent = dir.name || dir.archetypeName;
+    nameEl.title = nameEl.textContent;
     const story = cleanStory(dir.storyText);
     const storyEl = card.querySelector('.gen-cc__story');
     storyEl.textContent = story;
@@ -613,7 +617,10 @@
       try { g.track('generate_run', { runId: plan.runId, payload: { look: 'creative', designs: cards.length, asked: n, cost, judge: judged.source } }); } catch (error) { /* tracking never matters */ }
     } catch (error) {
       progress.stop();
-      report(error, rendered ? 'creative-after-render' : 'creative-run');
+      // A limit or switched-off reply is the person's own state, not a bug:
+      // it is shown, never logged as an error.
+      const limited = error?.status === 429 || error?.status === 503 || /limit|budget|switched off/i.test(String(error?.message || ''));
+      if (!limited) report(error, rendered ? 'creative-after-render' : 'creative-run');
       if (rendered) {
         // Designs are already showing: keep them, never fall back.
         g.setNotice('Some finishing touches did not load', ' Your designs are ready below.');
@@ -622,7 +629,7 @@
       els.grid.replaceChildren();
       // A limit or switched-off reply is shown as is; any other failure falls
       // back to ES templates so Generate always produces something.
-      if (error?.status === 429 || error?.status === 503 || /limit|budget|switched off/i.test(String(error?.message || ''))) {
+      if (limited) {
         els.empty.hidden = false;
         g.setNotice('Could not compose designs', ` ${error.message || 'Something went wrong.'} Your brief is still here.`, '', { label: 'Try again', run: () => run(brief) });
         return 'stop';
