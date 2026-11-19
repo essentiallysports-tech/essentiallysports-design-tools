@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "about": "Shared FrameUp audio library, used by Video Ads (video-ads.html) and, later, Reels Studio. EMPTY ON PURPOSE until the owner adds licensed tracks. To add a track: (1) put the file in assets/audio/ named after its id, e.g. assets/audio/fourth-quarter-drive.mp3 (mp3, m4a or wav; same origin, so the browser can mix it into the export); (2) add an entry to \"tracks\" below with the fields listed in \"fields\"; (3) set licence.paid to true ONLY if the licence covers paid ads on every platform (Meta, TikTok, YouTube), and licence.organic to true if it covers organic posts; (4) commit both files. Never add trending commercial songs. Entries with a bad id, path or licence are skipped and the rest still load.",
+  "about": "Shared FrameUp audio library, used by Video Ads (video-ads.html) and, later, Reels Studio. To add a track: (1) licensed tracks: upload the file to the PRIVATE Supabase bucket frameup-audio (the repo is public, so never commit licensed audio) and set file to storage:frameup-audio/<id>.m4a; free/own tracks may go in assets/audio/<id>.mp3 instead; (2) add an entry to \"tracks\" below with the fields listed in \"fields\"; (3) set licence.paid to true ONLY if the licence covers paid ads on every platform (Meta, TikTok, YouTube), and licence.organic to true if it covers organic posts; (4) commit both files. Never add trending commercial songs. Entries with a bad id, path or licence are skipped and the rest still load.",
   "fields": {
     "id": "lowercase slug, unique, same as the file name (a-z, 0-9, -)",
     "title": "track title shown in the picker",
@@ -19,9 +19,112 @@
     "bpm": 128,
     "durationSec": 62,
     "file": "assets/audio/fourth-quarter-drive.mp3",
-    "licence": { "organic": true, "paid": true, "note": "Epidemic Sound Enterprise #0000" },
+    "licence": {
+      "organic": true,
+      "paid": true,
+      "note": "Epidemic Sound Enterprise #0000"
+    },
     "addedBy": "Suhail",
     "addedAt": "2026-11-18"
   },
-  "tracks": []
+  "tracks": [
+    {
+      "id": "calm-deeper",
+      "title": "Calm (Deeper Sound)",
+      "mood": "calm",
+      "durationSec": 99.2,
+      "file": "storage:frameup-audio/calm-deeper.m4a",
+      "licence": {
+        "organic": true,
+        "paid": true,
+        "note": "Licensed stock track; owner confirmed paid + organic use (2026-11-19). Stored privately in Supabase, never public."
+      },
+      "addedBy": "Suhail",
+      "addedAt": "2026-11-19"
+    },
+    {
+      "id": "calm-lofi",
+      "title": "Calm Lo-fi",
+      "mood": "calm",
+      "durationSec": 111.2,
+      "file": "storage:frameup-audio/calm-lofi.m4a",
+      "licence": {
+        "organic": true,
+        "paid": true,
+        "note": "Licensed stock track; owner confirmed paid + organic use (2026-11-19). Stored privately in Supabase, never public."
+      },
+      "addedBy": "Suhail",
+      "addedAt": "2026-11-19"
+    },
+    {
+      "id": "calm-lofi-short",
+      "title": "Calm Lo-fi (short)",
+      "mood": "calm",
+      "durationSec": 63.2,
+      "file": "storage:frameup-audio/calm-lofi-short.m4a",
+      "licence": {
+        "organic": true,
+        "paid": true,
+        "note": "Licensed stock track; owner confirmed paid + organic use (2026-11-19). Stored privately in Supabase, never public."
+      },
+      "addedBy": "Suhail",
+      "addedAt": "2026-11-19"
+    },
+    {
+      "id": "chill-beat",
+      "title": "Calm Chill Beat",
+      "mood": "calm",
+      "durationSec": 118.0,
+      "file": "storage:frameup-audio/chill-beat.m4a",
+      "licence": {
+        "organic": true,
+        "paid": true,
+        "note": "Licensed stock track; owner confirmed paid + organic use (2026-11-19). Stored privately in Supabase, never public."
+      },
+      "addedBy": "Suhail",
+      "addedAt": "2026-11-19"
+    },
+    {
+      "id": "chill-beat-no-intro",
+      "title": "Calm Chill Beat (no intro)",
+      "mood": "calm",
+      "durationSec": 102.0,
+      "file": "storage:frameup-audio/chill-beat-no-intro.m4a",
+      "licence": {
+        "organic": true,
+        "paid": true,
+        "note": "Licensed stock track; owner confirmed paid + organic use (2026-11-19). Stored privately in Supabase, never public."
+      },
+      "addedBy": "Suhail",
+      "addedAt": "2026-11-19"
+    },
+    {
+      "id": "chill-beat-short",
+      "title": "Calm Chill Beat (short)",
+      "mood": "calm",
+      "durationSec": 38.0,
+      "file": "storage:frameup-audio/chill-beat-short.m4a",
+      "licence": {
+        "organic": true,
+        "paid": true,
+        "note": "Licensed stock track; owner confirmed paid + organic use (2026-11-19). Stored privately in Supabase, never public."
+      },
+      "addedBy": "Suhail",
+      "addedAt": "2026-11-19"
+    },
+    {
+      "id": "summer-hip-hop",
+      "title": "Summer Hip Hop",
+      "mood": "analysis",
+      "durationSec": 102.1,
+      "file": "storage:frameup-audio/summer-hip-hop.m4a",
+      "licence": {
+        "organic": true,
+        "paid": true,
+        "note": "Licensed stock track; owner confirmed paid + organic use (2026-11-19). Stored privately in Supabase, never public."
+      },
+      "addedBy": "Suhail",
+      "addedAt": "2026-11-19"
+    }
+  ]
 }

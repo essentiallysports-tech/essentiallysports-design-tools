@@ -4472,12 +4472,22 @@
     // Safari's decodeAudioData is callback-only.
     return new Promise((resolve, reject) => { const p = ac.decodeAudioData(arrayBuffer, resolve, reject); if (p && p.then) p.then(resolve, reject); });
   }
+  // Licensed library tracks live in a private Supabase bucket: a signed URL
+  // (10 minutes) for the signed-in ES user, then a plain CORS fetch.
+  async function fetchStoredTrack({ bucket, path }) {
+    const auth = window.ESAuth;
+    const client = (await auth?.ensureSupabaseReady?.()) ? auth.getSupabaseClient?.() : null;
+    if (!client?.storage) throw new Error('sign-in needed');
+    const { data, error } = await client.storage.from(bucket).createSignedUrl(path, 600);
+    if (error || !data?.signedUrl) throw new Error(error?.message || 'no signed url');
+    return fetch(data.signedUrl, { credentials: 'omit' });
+  }
   async function loadTrack(track) {
     if (!track || trackBuffers.get(track.id)?.buffer || trackBuffers.get(track.id)?.loading) return;
     trackBuffers.set(track.id, { loading: true });
     renderSound();
     try {
-      const res = await fetch(track.file, { credentials: 'same-origin' });
+      const res = track.storage ? await fetchStoredTrack(track.storage) : await fetch(track.file, { credentials: 'same-origin' });
       if (!res.ok) throw new Error(String(res.status));
       const buffer = await decode(await res.arrayBuffer());
       trackBuffers.set(track.id, { buffer });

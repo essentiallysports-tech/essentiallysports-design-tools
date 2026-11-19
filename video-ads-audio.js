@@ -16,6 +16,8 @@
   else root.VideoAdsAudio = factory();
 }(typeof self !== 'undefined' ? self : this, () => {
   const LIBRARY_URL = 'audio-library.json';
+  const AUDIO_BUCKET = 'frameup-audio';
+  const STORAGE_FILE = /^storage:frameup-audio\/([A-Za-z0-9][A-Za-z0-9._-]{0,100}\.(?:mp3|m4a|wav))$/i;
   const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
   const EMPTY_LIBRARY = 'No tracks yet. Upload your own, or ask an admin to add library tracks.';
   const MODES = ['muted', 'original', 'library', 'upload'];
@@ -65,8 +67,11 @@
       const title = String(t.title || '').trim();
       if (!title) return skip('missing title');
       const file = String(t.file || '').trim();
-      // Same origin only, inside assets/audio/, so the browser can mix it (no CORS).
-      if (!/^assets\/audio\/[A-Za-z0-9._-]+\.(mp3|m4a|wav)$/i.test(file) || file.includes('..')) return skip('file must be assets/audio/<name>.mp3|m4a|wav');
+      // Same origin (assets/audio/<name>), or FrameUp's private Supabase bucket
+      // (storage:frameup-audio/<name>, read through a short-lived signed URL,
+      // so licensed tracks are never public).
+      const stored = file.match(STORAGE_FILE);
+      if (!stored && (!/^assets\/audio\/[A-Za-z0-9._-]+\.(mp3|m4a|wav)$/i.test(file) || file.includes('..'))) return skip('file must be assets/audio/<name> or storage:frameup-audio/<name> (.mp3|m4a|wav)');
       const lic = t.licence && typeof t.licence === 'object' ? t.licence : null;
       if (!lic || typeof lic.organic !== 'boolean' || typeof lic.paid !== 'boolean') return skip('licence needs organic and paid true/false');
       if (!lic.organic && !lic.paid) return skip('licence clears neither organic nor paid use');
@@ -74,6 +79,7 @@
       seen.add(id);
       out.tracks.push({
         id, title, file,
+        storage: stored ? { bucket: AUDIO_BUCKET, path: stored[1] } : null,
         mood: String(t.mood || '').trim(),
         bpm: Number.isFinite(Number(t.bpm)) && Number(t.bpm) > 0 ? Math.round(Number(t.bpm)) : null,
         durationSec: durationSec > 0 ? durationSec : 0,
@@ -302,7 +308,7 @@
   }
 
   return {
-    LIBRARY_URL, MAX_UPLOAD_BYTES, EMPTY_LIBRARY, MODES, DEFAULTS, DB_MIN, DB_MAX, FADE_MAX,
+    LIBRARY_URL, AUDIO_BUCKET, MAX_UPLOAD_BYTES, EMPTY_LIBRARY, MODES, DEFAULTS, DB_MIN, DB_MAX, FADE_MAX,
     dbToGain, parseLibrary, loadLibrary, licenceLabel, validateUpload,
     normalize, persistable, usesMusic, usesOriginal, levels, audible,
     envelope, envelopeRamps, trackPosition, clampOffset, describe, record, createMixer,

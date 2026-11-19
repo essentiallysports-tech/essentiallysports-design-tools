@@ -169,14 +169,33 @@ const buffer = { duration: 30 };
   assert.equal(A.clampOffset(-3, 30), 0);
 }
 
-// 6. Library parsing and the empty state (the shipped file is empty).
+// 6. Library parsing. The shipped library: licensed tracks, all in the
+// private bucket (the repo is public: never a licensed file in assets/).
 {
   const shipped = JSON.parse(fs.readFileSync(new URL('../audio-library.json', import.meta.url), 'utf8'));
   const lib = A.parseLibrary(shipped);
-  assert.equal(lib.empty, true);
-  assert.equal(lib.tracks.length, 0);
-  assert.match(shipped.about, /assets\/audio\//, 'about says where files go');
-  assert.equal(lib.emptyMessage, 'No tracks yet. Upload your own, or ask an admin to add library tracks.');
+  assert.equal(lib.skipped.length, 0, JSON.stringify(lib.skipped));
+  assert.equal(lib.tracks.length, 7);
+  assert.equal(lib.empty, false);
+  lib.tracks.forEach(t => {
+    assert.match(t.file, /^storage:frameup-audio\/[a-z0-9-]+\.m4a$/, `${t.id} is in the private bucket`);
+    assert.deepEqual(t.storage, { bucket: 'frameup-audio', path: `${t.id}.m4a` });
+    assert.ok(t.licence.paid && t.licence.organic && t.licence.note, `${t.id} licence recorded`);
+    assert.ok(t.durationSec > 30);
+  });
+  assert.match(shipped.about, /PRIVATE Supabase bucket frameup-audio/, 'about says where licensed files go');
+  assert.equal(A.parseLibrary({ tracks: [] }).emptyMessage, 'No tracks yet. Upload your own, or ask an admin to add library tracks.');
+  // Storage paths: only the frameup-audio bucket, a plain file name.
+  const st = { id: 'st', title: 'St', durationSec: 60, licence: { organic: true, paid: true } };
+  const sp = A.parseLibrary({ tracks: [
+    { ...st, file: 'storage:frameup-audio/st.m4a' },
+    { ...st, id: 'other-bucket', file: 'storage:frameup-previews/st.m4a' },
+    { ...st, id: 'nested', file: 'storage:frameup-audio/a/../st.m4a' },
+    { ...st, id: 'type', file: 'storage:frameup-audio/st.exe' },
+  ] });
+  assert.deepEqual(sp.tracks.map(t => t.id), ['st']);
+  assert.equal(sp.tracks[0].storage.path, 'st.m4a');
+  assert.equal(A.AUDIO_BUCKET, 'frameup-audio');
   // The documented example is a valid track.
   const ex = A.parseLibrary({ version: 1, tracks: [shipped.example] });
   assert.equal(ex.tracks.length, 1, JSON.stringify(ex.skipped));
