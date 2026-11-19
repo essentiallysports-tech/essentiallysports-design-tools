@@ -184,7 +184,7 @@
     return `<article class="dov-kpi" data-impact-kpi="${esc(key)}">
       <h3 class="dov-kpi-label es-type-eyebrow">${esc(label)}</h3>
       <p class="dov-kpi-value">${esc(value)}</p>
-      <p class="dov-kpi-delta">${deltaHtml}</p>
+      ${deltaHtml ? `<p class="dov-kpi-delta">${deltaHtml}</p>` : ''}
       <p class="dov-kpi-meta" title="${esc(meta)}">${esc(meta)}</p>
     </article>`;
   }
@@ -454,7 +454,7 @@
       const fetcher = window.ESAuth?.fetchWithAuth || fetch;
       const response = await fetcher('/api/impact-stats');
       const body = await response.json().catch(() => null);
-      state.api = response.ok && body?.ok ? body : { sources: { beehiiv: { label: 'Beehiiv API', configured: false }, meta: { label: 'Meta Ads API', configured: false } } };
+      state.api = response.ok && body?.ok && body.sources && typeof body.sources === 'object' ? body : { sources: { beehiiv: { label: 'Beehiiv API', configured: false }, meta: { label: 'Meta Ads API', configured: false } } };
     } catch (error) {
       state.api = { sources: { beehiiv: { label: 'Beehiiv API', configured: false }, meta: { label: 'Meta Ads API', configured: false } } };
     }

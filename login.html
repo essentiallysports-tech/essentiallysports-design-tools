@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="/vendor/supabase-js-2.118.0.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260714-authcallback1"></script>
-  <script src="es-auth.js?v=20261120-rel3"></script>
+  <script src="es-auth.js?v=20261121-qa-auth-errors"></script>
   <script src="auth-flow.js?v=20261120-rel3"></script>
 <style>
   @font-face {
@@ -910,6 +910,8 @@
   html[data-theme="dark"] .login-confirmation h2 { color: #FFFFFF; }
   html[data-theme="dark"] .login-confirmation p { color: var(--es-slate-200, #98A6BF); }
   .login-confirmation-status.is-error { color: var(--es-bad); }
+  /* Nothing to say yet: no reserved gap (the live region still announces). */
+  .login-confirmation-status:empty { min-height: 0; margin-top: 0; }
   html[data-theme="dark"] .login-confirmation-status { color: var(--es-good-on-dark, #4CC985); }
   html[data-theme="dark"] .login-confirmation-status.is-error { color: var(--es-bad-on-dark, #FF8A8A); }
   .login-confirmation-icon.is-warn { background: var(--es-warn-soft); color: var(--es-warn); }
@@ -934,6 +936,9 @@
   .login-diagnose .login-confirmation-actions { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
   @media (max-width: 520px) { .login-diagnose .login-confirmation-actions { grid-template-columns: 1fr; } }
   .login-diagnose .login-alt { justify-self: start; margin-top: var(--es-space-3, 12px); }
+  .login-alt[data-offered-above] { display: none !important; }
+  /* The note under the details box spans the same width as the box. */
+  .login-diagnose .login-help { max-width: none; width: 100%; }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
 <link rel="stylesheet" href="theme.css?v=20261117-ready1">
@@ -998,7 +1003,7 @@
       <p id="diagnose-summary">Checking this browser…</p>
       <ul class="login-checks" id="diagnose-checks" aria-live="polite"></ul>
       <div class="login-confirmation-actions">
-        <button class="login-secondary-button" id="diagnose-clear" type="button">Clear sign-in data and try again</button>
+        <button class="login-secondary-button es-btn--primary" id="diagnose-clear" type="button">Clear sign-in data and try again</button>
         <button class="login-secondary-button" id="diagnose-copy" type="button">Copy details</button>
       </div>
       <p class="login-confirmation-status" id="diagnose-status" role="status" aria-live="polite"></p>
@@ -1079,6 +1084,9 @@
       actionButton.textContent = ACTION_LABELS[action] || action;
       return actionButton;
     }));
+    // The same offer twice reads as a glitch: while the error offers a
+    // sign-in link, the one under the form steps aside.
+    magicLinkButton.toggleAttribute('data-offered-above', actions.includes('magic'));
   }
 
   function setBusy(control, isBusy, label) {

@@ -270,6 +270,13 @@ assert.doesNotMatch(supabaseSignupHookMigration, /return\s+'\{\}'::jsonb\s*;/i);
 // 'not-approved') under a boot timeout, and only bounces to login when the
 // check really finished; a failed check shows the boot error instead.
 assert.match(dashboardHtmlSource, /const\s+sessionPromise\s*=\s*withBootTimeout\(\s*window\.ESAuth\?\.sessionStatus/);
+// The checks that run beside the session check never become uncaught
+// rejections (they reached the error log as "role permission check timed
+// out" when an earlier check had already failed), and share its 9 s budget.
+for (const name of ['adminPromise', 'userPromise', 'rolePromise']) {
+  assert.match(dashboardHtmlSource, new RegExp(`const\\s+${name}\\s*=\\s*handled\\(withBootTimeout\\([\\s\\S]*?,\\s*9000,`));
+}
+assert.match(dashboardHtmlSource, /function handled\(promise\)\s*\{\s*promise\.catch\(\(\) => \{\}\);\s*return promise;/);
 assert.match(dashboardHtmlSource, /if\s*\(sessionState\s*!==\s*'valid'\)\s*\{[\s\S]*?loginUrl\?\.\('dashboard\.html'\)/);
 assert.match(dashboardHtmlSource, /showDashboardBootError\(error\);/);
 assert.doesNotMatch(loginHtmlSource, /id="login-name"|name="name"/);
@@ -284,7 +291,10 @@ assert.match(authCallbackHtmlSource, /window\.location\.replace\(redirectTarget\
 assert.match(authCallbackHtmlSource, /result\?\.requiresLogin/);
 assert.match(loginHtmlSource, /confirmation'\)\s*===\s*'success'/);
 assert.match(resetPasswordHtmlSource, /ESAuth\?\.completeAuthCallback/);
-assert.match(resetPasswordHtmlSource, /Request a new password reset link from the FrameUp login page\./);
+// An invalid or expired recovery link is never a dead end: the page offers a
+// new link right there (it used to point people to the login page instead).
+assert.match(resetPasswordHtmlSource, /function showErrorState[\s\S]*?newLinkForm\.hidden = false;/);
+assert.match(resetPasswordHtmlSource, /This password recovery link is invalid or has expired\./);
 assert.match(resetPasswordHtmlSource, /normalizedMessage\.includes\('confirmation link'\)/);
 assert.match(profileHtmlSource, /id="open-delete-account"/);
 assert.match(profileHtmlSource, /id="delete-account-confirmation"/);

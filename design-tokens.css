@@ -347,14 +347,18 @@ html[data-theme="dark"] {
 }
 
 /* Focus, non-text controls: keyboard only, one 2px ES-blue outline with a 2px
-   offset. A mouse click shows no ring. */
-:is(a, button, summary, [role="button"], [role="tab"], [role="radio"], [role="checkbox"], [role="switch"], [role="option"], [role="menuitem"], [tabindex]:not(input, select, textarea), input:is([type="range"], [type="checkbox"], [type="radio"], [type="color"], [type="file"])):focus-visible {
+   offset. A mouse click shows no ring. [qa-auth-errors] Not on tabindex="-1"
+   panels and headings: script focuses them for screen readers (a sign-in
+   panel, a dialog) and the ring drew a box around the whole panel. */
+:is(a, button, summary, [role="button"], [role="tab"], [role="radio"], [role="checkbox"], [role="switch"], [role="option"], [role="menuitem"], [tabindex]:not(input, select, textarea, [tabindex="-1"]), input:is([type="range"], [type="checkbox"], [type="radio"], [type="color"], [type="file"])):focus-visible {
   outline: var(--es-focus-outline) !important;
   outline-offset: var(--es-focus-offset) !important;
 }
 :is(a, button, summary, [role="button"], [role="tab"], [tabindex]:not(input, select, textarea)):focus:not(:focus-visible) {
   outline: none;
 }
+/* [qa-auth-errors] …nor the browser's own ring on them. */
+:where([tabindex="-1"]:not(a, button, input, select, textarea, [role])):focus { outline: none; }
 
 /* Dropdown triggers styled as fields are buttons, but they take the field
    focus (blue border + halo), not the button outline, so they never double up. */

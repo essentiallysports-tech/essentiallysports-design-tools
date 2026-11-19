@@ -134,7 +134,7 @@ body.auth-state-page {
 .auth-state-input {
   width: 100%;
   height: var(--es-field-h, 40px);
-  padding: 0 var(--es-space-10, 40px) 0 var(--es-field-pad-x, 12px);
+  padding: 0 var(--es-field-pad-x, 12px);
   border: 1.5px solid var(--es-line-2);
   border-radius: var(--es-radius-control);
   background: var(--auth-surface);
@@ -146,6 +146,12 @@ body.auth-state-page {
 
 html[data-theme="dark"] .auth-state-input {
   border-color: var(--dk-line-2);
+}
+
+/* Room for the show/hide button only where there is one (an email field
+   reserved it too, which cut "you@essentiallysports.com" on phones). */
+.auth-state-input-wrap .auth-state-input {
+  padding-right: var(--es-space-10, 40px);
 }
 
 .auth-state-input:focus,
@@ -185,6 +191,9 @@ html[data-theme="dark"] .auth-state-password-toggle:focus-visible {
 @media (pointer: coarse) {
   .auth-state-input {
     height: var(--es-tap);
+  }
+
+  .auth-state-input-wrap .auth-state-input {
     padding-right: 48px;
   }
 
@@ -218,6 +227,12 @@ html[data-theme="dark"] .auth-state-password-toggle:focus-visible {
   font-size: 15px;
   font-weight: 500;
   line-height: 1.4;
+}
+
+/* Nothing to say yet: no reserved gap (the live region still announces). */
+.auth-state-status:empty {
+  min-height: 0;
+  margin: 0;
 }
 
 .auth-state-status.is-error {

@@ -214,6 +214,42 @@ await test('requireAuth: ordinary no-session still redirects with the reason and
   assert.equal(e.window.ESAuth.recentAuthBounces().length, 1);
 });
 
+await test('after sign-in only notable trips reach the error log, one group per kind (routine ones are forgotten)', async () => {
+  const e = env({ href: 'https://frameup.essentiallysports.com/index.html' });
+  const sent = [];
+  e.window.fetch = async (url, init = {}) => { if (String(url).includes('/api/client-errors')) sent.push(JSON.parse(init.body)); return { ok: true, status: 202 }; };
+  const now = Date.now();
+  e.localStorage.setItem('es.authBounces.v1', JSON.stringify([
+    { id: 'a', at: now - 9 * 3600e3, reason: 'no-session', page: '/index.html', notable: false, diag: {} },
+    { id: 'b', at: now - 8 * 3600e3, reason: 'session-expired', page: '/gallery.html', diag: {} },
+    { id: 'c', at: now - 7 * 3600e3, reason: 'check-failed', page: '/index.html', notable: true, diag: { storageWritable: true, online: true } },
+  ]));
+  e.localStorage.setItem(KEY, JSON.stringify(makeSession()));
+  assert.equal(await e.window.ESAuth.requireAuth('index.html'), true);
+  for (let i = 0; i < 40 && !sent.length; i += 1) await new Promise(r => setTimeout(r, 10));
+  assert.equal(sent.length, 1, 'one report');
+  assert.equal(sent[0].errors.length, 1, 'only the notable trip');
+  const [row] = sent[0].errors;
+  assert.equal(row.message, 'auth-bounce: check-failed on /index.html');
+  assert.match(row.fingerprint, /^[0-9a-f]{8}$/, 'stable fingerprint, so the Errors view groups it');
+  assert.match(row.stack, /storageWritable=true/);
+  assert.equal(e.window.ESAuth.recentAuthBounces(24 * 3600e3).length, 0, 'records cleared');
+  // Routine trips on their own: nothing sent, records still cleared.
+  const quiet = env({ href: 'https://frameup.essentiallysports.com/index.html' });
+  const quietSent = [];
+  quiet.window.fetch = async url => { if (String(url).includes('/api/client-errors')) quietSent.push(url); return { ok: true, status: 202 }; };
+  quiet.window.ESAuth.recordAuthEvent('no-session');
+  assert.equal(quiet.window.ESAuth.recentAuthBounces().at(-1).notable, false);
+  quiet.localStorage.setItem(KEY, JSON.stringify(makeSession()));
+  assert.equal(await quiet.window.ESAuth.requireAuth('index.html'), true);
+  await new Promise(r => setTimeout(r, 120));
+  assert.equal(quietSent.length, 0, 'a plain signed-out visit is never an error');
+  assert.equal(quiet.window.ESAuth.recentAuthBounces().length, 0);
+  // A second trip within 2 minutes is a loop: notable.
+  assert.equal(quiet.window.ESAuth.recordAuthEvent('no-session').notable, false);
+  assert.equal(quiet.window.ESAuth.recordAuthEvent('no-session').notable, true);
+});
+
 await test('loop breaker data: 3 bounces in 2 min are visible to login.html; clearing removes only sign-in keys', async () => {
   const e = env();
   ['no-session', 'check-failed', 'no-session'].forEach(reason => e.window.ESAuth.recordAuthEvent(reason));
