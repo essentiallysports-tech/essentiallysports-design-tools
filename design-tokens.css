@@ -247,14 +247,16 @@
      Only colours change between themes; size, radius, padding, font, rim
      width and motion are the same in both. */
   --es-btn-rim-width: 1.5px;
-  --es-btn-rim-turn: 5s;
+  --es-btn-rim-turn: 2.8s; /* same as the Ask AI button */
   --es-rim-stops: #0A6FDE, #0A7DFA 18%, #54A4FB 36%, #00B3E6 52%, #9DCBFD 64%, #54A4FB 80%, #0A6FDE;
   --es-rim-stops-bright: #54A4FB, #9DCBFD 18%, #CEE5FE 32%, #00B3E6 50%, #9DCBFD 66%, #54A4FB 82%, #54A4FB;
-  /* Light: a deeper rim so it reads on white and on the #EEF0F3 stage (every stop 3:1+ on white). */
-  --es-btn-rim: #0A6FDE, #0A7DFA 18%, #3D95F7 36%, #0099CC 52%, #3D95F7 66%, #0A7DFA 82%, #0A6FDE;
-  --es-btn-rim-hover: #0A7DFA, #3D95F7 18%, #00B3E6 34%, #0099CC 50%, #54A4FB 66%, #3D95F7 82%, #0A7DFA;
+  /* Gradient-stroke buttons match the Ask AI button (owner, 2026-11-21): a quiet
+     blue rim with one bright comet that turns, white fill, soft glow on hover. */
+  --es-btn-rim: rgb(10 111 222 / .35) 0deg 200deg, #9DCBFD 250deg, #54A4FB 300deg, #0A6FDE 340deg, rgb(10 111 222 / .35) 360deg;
+  --es-btn-rim-hover: rgb(10 111 222 / .35) 0deg 200deg, #9DCBFD 250deg, #54A4FB 300deg, #0A6FDE 340deg, rgb(10 111 222 / .35) 360deg;
+  --es-btn-rim-glow: 0 6px 18px -8px rgb(10 125 250 / .55);
   --es-btn-primary-bg: #FFFFFF;
-  --es-btn-primary-bg-hover: #F7F9FC;
+  --es-btn-primary-bg-hover: #FFFFFF;
   --es-btn-primary-ink: #0E1014;
   --es-btn-bg: #FFFFFF;
   --es-btn-bg-hover: #F0F2F5;
@@ -285,10 +287,10 @@
 }
 
 html[data-theme="dark"] {
-  --es-btn-rim: var(--es-rim-stops);
-  --es-btn-rim-hover: var(--es-rim-stops-bright);
-  --es-btn-primary-bg: #101114;
-  --es-btn-primary-bg-hover: #1C1E23;
+  --es-btn-rim: rgb(84 164 251 / .35) 0deg 200deg, #9DCBFD 250deg, #54A4FB 300deg, #0A6FDE 340deg, rgb(84 164 251 / .35) 360deg;
+  --es-btn-rim-hover: rgb(84 164 251 / .35) 0deg 200deg, #9DCBFD 250deg, #54A4FB 300deg, #0A6FDE 340deg, rgb(84 164 251 / .35) 360deg;
+  --es-btn-primary-bg: #1F2126;
+  --es-btn-primary-bg-hover: #1F2126;
   --es-btn-primary-ink: #FFFFFF;
   --es-btn-bg: #1F2126;
   --es-btn-bg-hover: #2A2D34;
@@ -309,9 +311,10 @@ html[data-theme="dark"] {
 /* Surfaces that stay light in dark mode (the editor's white canvas) keep
    the light button colours. */
 html[data-theme="dark"] .canvas-empty-hint {
-  --es-btn-rim: #0A6FDE, #0A7DFA 18%, #3D95F7 36%, #0099CC 52%, #3D95F7 66%, #0A7DFA 82%, #0A6FDE;
+  --es-btn-rim: rgb(10 111 222 / .35) 0deg 200deg, #9DCBFD 250deg, #54A4FB 300deg, #0A6FDE 340deg, rgb(10 111 222 / .35) 360deg;
+  --es-btn-rim-hover: rgb(10 111 222 / .35) 0deg 200deg, #9DCBFD 250deg, #54A4FB 300deg, #0A6FDE 340deg, rgb(10 111 222 / .35) 360deg;
   --es-btn-primary-bg: #FFFFFF;
-  --es-btn-primary-bg-hover: #F7F9FC;
+  --es-btn-primary-bg-hover: #FFFFFF;
   --es-btn-primary-ink: #0E1014;
   --es-btn-bg: #FFFFFF;
   --es-btn-bg-hover: #F0F2F5;
@@ -3207,7 +3210,7 @@ html[data-theme="dark"] :is(.mobile-menu-account, .profile-menu) .profile-name {
     background:
       linear-gradient(var(--es-btn-primary-bg-hover), var(--es-btn-primary-bg-hover)) padding-box,
       conic-gradient(from var(--es-rim-angle, 0deg), var(--es-btn-rim-hover)) border-box !important;
-    box-shadow: var(--ais-glow) !important;
+    box-shadow: var(--es-btn-rim-glow, 0 6px 18px -8px rgb(10 125 250 / .55)) !important;
     color: var(--es-btn-primary-ink) !important;
   }
   @media (prefers-reduced-motion: no-preference) {
