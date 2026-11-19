@@ -3,6 +3,28 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-21-gen5-photos",
+      "date": "2026-11-21",
+      "title": "Generate: the right player in every photo",
+      "items": [
+        {
+          "title": "The right player, checked",
+          "text": "Before a photo is used for a named player, Generate checks the caption, the team, the jersey number and who else is in the frame. A teammate, an opponent, a reporter or a player with the same name is never shown as them.",
+          "page": "generate.html"
+        },
+        {
+          "title": "A different photo on every design",
+          "text": "Each design in a set gets its own photo whenever ES has more than one of that player.",
+          "page": "generate.html"
+        },
+        {
+          "title": "League stories",
+          "text": "For a league or company story with no named player, photos must show people tied to it. If none check out, the design uses the logo or type instead.",
+          "page": "generate.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-21-gen4-ui",
       "date": "2026-11-21",
       "title": "Generate: clearer ideas, a time estimate and better briefs",

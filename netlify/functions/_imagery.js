@@ -32,6 +32,7 @@
 // deterministic name (cutoutPath(sourceUrl)); every later run, on any server,
 // finds it with a HEAD request and gets the cut-out at $0.
 const crypto = require('crypto');
+const VERIFY = require('./_photo-verify.js');
 
 const clock = { now: () => Date.now() };
 const ES_WP_API = 'https://www.essentiallysports.com/wp-json/wp/v2';
@@ -48,8 +49,10 @@ const LIMITS = {
   heroes: 4, // subjects searched in full (3 sources, vision ranking)
   extras: 9, // extra people searched lightly for headshot grids
   perSubject: 8, // ranked photos kept per subject
+  pool: 32, // candidates checked per subject (text checks are free; vision sees the best 8)
   visionPerRun: 4, // vision calls per run at most
-  visionPhotos: 8, // photos per vision call
+  visionPhotos: 8, // photos per vision call (a person)
+  visionPhotosTeam: 4, // photos per vision call (a team / league: the caption already ties them)
   cutoutsPerRun: 3, // cut-outs the browser makes per run at most
 };
 
@@ -347,7 +350,7 @@ async function gatherPhotos(subject, deps, { light = false } = {}) {
     const [agency, articles, media] = await Promise.all([
       deps.agency(q, light ? 6 : 12).catch(() => []),
       !light && order === 0 ? deps.articles(q).catch(() => []) : Promise.resolve([]),
-      deps.media(q, light ? 6 : 10).catch(() => []),
+      deps.media(q, light ? 6 : 16).catch(() => []),
     ]);
     (agency || []).forEach(item => gathered.push({ order, weight: 3, photo: photoRecord(item, 'es-agency', matched) }));
     (articles || []).filter(a => a.image).forEach(a => gathered.push({ order, weight: 2, photo: photoRecord({ id: a.url, sourceUrl: a.image, title: a.title, articleUrl: a.url, date: a.date }, 'es-article', matched) }));
@@ -439,7 +442,7 @@ async function probeAll(photos, deps) {
 const GRAPHIC = /\b(?:logo|logos|graphic|graphics|collage|silhouette|screenshot|screengrab|screen grab|tweet|twitter|instagram|x post|thumbnail|illustration|poster|infographic|banner|meme|composite|split|edit|edited|vector|icon|wallpaper|cartoon|mockup|template|ai generated|photoshop)\b/i;
 const KIND_WORDS = [
   ['celebration', /\b(?:celebrat\w*|fist pump\w*|lifts? the|raises? the|hoists?|kiss\w* the|wins? the|champagne|trophy celebration|jubilant)\b/i],
-  ['action', /\b(?:drives?|swing\w*|tees? off|putts?|chips?|shoots?|dunks?|lay ?up|rebounds?|throws?|passes|rush\w*|runs? with|tackl\w*|catch\w*|serves?|returns? a shot|forehand|backhand|pitch\w*|bats?|swings? at|hits?|scores?|kicks?|dribbl\w*|sprints?|in action|races?|laps?|during (?:the )?(?:first|second|third|fourth|final)|during (?:round|the game|the match|the race|a game|a match)|drives to the basket|runs the ball|scrambles?)\b/i],
+  ['action', /\b(?:action during|in action|drives?|swing\w*|tees? off|putts?|chips?|shoots?|dunks?|lay ?up|rebounds?|throws?|passes|rush\w*|runs? with|tackl\w*|catch\w*|serves?|returns? a shot|forehand|backhand|pitch\w*|bats?|swings? at|hits?|scores?|kicks?|dribbl\w*|sprints?|in action|races?|laps?|during (?:the )?(?:first|second|third|fourth|final)|during (?:round|the game|the match|the race|a game|a match)|drives to the basket|runs the ball|scrambles?)\b/i],
   ['reaction', /\b(?:reacts?|reaction|frustrat\w*|dejected|shouts?|yells?|screams?|smiles?|smiling|laughs?)\b/i],
   ['portrait', /\b(?:portrait|headshot|head shot|poses?|posing|looks? on|media day|press conference|presser|interview|speaks? (?:to|with)|listens?|walks? (?:on|off|to)|warms? up|warm-?ups?)\b/i],
   ['crowd', /\b(?:fans|crowd|supporters|spectators|gallery)\b/i],
@@ -518,7 +521,7 @@ function heuristics(photo, subject) {
   return {
     nameHit,
     teamHit,
-    graphic: GRAPHIC.test(`${photo.title} ${fileWords(photo.sourceUrl)}`) || /\bgraphic\b|\billustration\b/i.test(photo.caption),
+    graphic: GRAPHIC.test(`${photo.title} ${fileWords(photo.sourceUrl)}`) || /\bgraphic\b|\billustration\b|\bsilhou?ette\b|\bcollage\b/i.test(photo.caption),
     group: groupHint(photo, subject),
     kind: gameCaption ? 'action' : OFF_FIELD.test(`${photo.title} ${photo.caption}`) && subject.kind === 'person' ? 'offfield' : kindHint(`${photo.caption} ${photo.title} ${fileWords(photo.sourceUrl)}`),
     other: otherLead(photo, subject),
@@ -637,57 +640,105 @@ function diversify(photos, count) {
   return out;
 }
 
-// Rank one subject's pool: probe sizes, free signals, vision for people.
+// Rank one subject's pool: probe sizes, free signals, the right-person check
+// (_photo-verify.js: caption / headline / file evidence, then one vision call),
+// and score. gen5: a person's photo is kept only when something says it is
+// them and nothing says it is someone else (an opponent, a reporter, a
+// namesake on another team); a team's or league's only when the caption ties
+// the person in it to that team / league.
 async function rankFor(subject, pool, deps, ctx, { allowVision = true } = {}) {
+  const isPerson = subject.kind === 'person';
   const hs = new Map(pool.map(p => [p, heuristics(p, subject)]));
+  const evs = new Map(pool.map(p => [p, isPerson ? VERIFY.evidence(p, subject) : VERIFY.teamEvidence(p, subject)]));
+  // The person's team: the brief's team the captions agree on (else the captions' own vote).
+  let facts = { team: subject.team || '', briefTeams: subject.teams || [], opponents: subject.opponents || [] };
+  if (isPerson) {
+    pool.forEach(p => { p._ev = evs.get(p); });
+    const cons = VERIFY.consensusTeam(pool, subject);
+    pool.forEach(p => { delete p._ev; });
+    const team = cons.team || subject.team || '';
+    const briefTeams = (subject.teams || []).filter(Boolean);
+    const opponents = [...new Set([...(subject.opponents || []), ...(cons.fromBrief ? briefTeams.filter(t => !VERIFY.sameTeam(t, team)) : [])])];
+    facts = { team, briefTeams, opponents };
+  }
+  const subjectFacts = { ...subject, team: facts.team || subject.team || '', opponents: facts.opponents, teamColors: subject.teamColors || teamColorsOf(facts.team || subject.team || subject.full || subject.name) };
+  const free = new Map(pool.map(p => [p, VERIFY.decide(p, subject, evs.get(p), null, facts)]));
+  const textOk = p => !free.get(p).drop;
   // Sizes for the most promising photos only (the CDN is slow on cold files).
-  const promising = pool.map(p => ({ p, s: scorePhoto(p, subject, hs.get(p), null) })).filter(x => !x.s.drop || x.s.drop === 'too small')
-    .sort((a, b) => b.s.score - a.s.score).slice(0, 12).map(x => x.p);
-  await probeSizes(promising, deps);
+  const freeScore = p => scorePhoto(p, subject, hs.get(p), null);
+  const order = pool.filter(textOk).map(p => ({ p, s: freeScore(p), v: free.get(p).verified }))
+    .sort((a, b) => (a.s.drop ? 1 : 0) - (b.s.drop ? 1 : 0) || (b.v - a.v) || b.s.score - a.s.score).map(x => x.p);
+  const probing = probeSizes(order.slice(0, 12), deps);
   let verdicts = new Map();
   let cost = 0;
   let called = false;
-  if (allowVision && pool.length >= 1) {
-    // Vision sees the most promising photos first (by the free score).
-    const pre = pool.map(p => ({ p, s: scorePhoto(p, subject, hs.get(p), null) }))
-      .sort((a, b) => (a.s.drop ? 1 : 0) - (b.s.drop ? 1 : 0) || b.s.score - a.s.score).map(x => x.p);
-    const res = await visionVerdicts(subject, pre.filter(p => !hs.get(p).graphic), deps, ctx);
-    verdicts = res.verdicts;
-    cost = res.cost;
-    called = res.called;
+  if (allowVision && order.length && (deps.verify || deps.vision)) {
+    const shown = order.filter(p => !hs.get(p).graphic);
+    if (deps.verify) {
+      const res = await deps.verify(subjectFacts, shown, { track: { email: ctx.email, token: ctx.token, runId: ctx.runId }, stemOf: p => photoStem(p.sourceUrl), max: isPerson ? LIMITS.visionPhotos : LIMITS.visionPhotosTeam });
+      verdicts = new Map([...res.verdicts.entries()]);
+      cost = res.cost || 0;
+      called = Boolean(res.called);
+    } else {
+      // Older callers inject vision({ subject, photos }) rows (subject / alone / face / kind / fx, fy).
+      const res = await visionVerdicts(subject, shown, deps, ctx);
+      res.verdicts.forEach((v, url) => verdicts.set(photoStem(url), { match: v.subject === false ? 'no' : 'unsure', evidence: 'older check', people: v.alone ? 1 : 3, main: v.alone, role: '', kind: v.kind, focus: v.focal ? { x: Math.max(0, v.focal.x - 0.2), y: Math.max(0, v.focal.y - 0.2), w: 0.4, h: 0.6, fx: v.focal.x, fy: v.focal.y } : null, cutout: v.cutout, quality: v.quality, graphic: v.graphic, face: v.face, legacy: true }));
+      cost = res.cost;
+      called = res.called;
+    }
   }
+  await probing;
   const ranked = [];
   const dropped = [];
   pool.forEach(photo => {
     const h = hs.get(photo);
-    const v = verdicts.get(photo.sourceUrl) || null;
-    const s = scorePhoto(photo, subject, h, v);
+    const ev = evs.get(photo);
+    const v = verdicts.get(photoStem(photo.sourceUrl)) || null;
+    const d = v ? VERIFY.decide(photo, subject, ev, v, facts) : free.get(photo);
+    // The legacy rows say nothing about who it is: text evidence still decides.
+    if (v?.legacy && v.match !== 'no' && !d.drop) { d.verified = free.get(photo).verified; d.verifiedBy = free.get(photo).verifiedBy; }
+    const legacyV = v ? { subject: v.match !== 'no', alone: v.legacy ? v.main : v.main, face: v.legacy ? v.face : v.main, quality: v.quality, kind: v.kind, graphic: v.graphic, cutout: v.cutout } : null;
+    const s = scorePhoto(photo, subject, h, legacyV);
+    let drop = d.drop || s.drop;
+    // gen5: never a guess. A person's (or team's) photo needs positive evidence.
+    if (!drop && !d.verified) drop = d.why || 'not verified';
+    if (drop) { dropped.push({ sourceUrl: photo.sourceUrl, why: drop }); return; }
+    // A team photo with a player the caption names is a player photo, not a venue.
+    const kind = d.kind || (v?.kind) || h.kind || (isPerson ? 'portrait' : ev.leadName ? 'action' : 'venue');
+    const main = isPerson ? d.main : true;
+    const focus = d.focus || null;
     const record = {
       ...photo,
-      kind: v?.kind || h.kind || (subject.kind === 'person' ? 'portrait' : 'venue'),
-      focal: v?.focal || null,
-      face: v ? v.face : null,
-      alone: v ? v.alone : !h.group,
+      kind,
+      focal: focus ? { x: focus.fx ?? Number((focus.x + focus.w / 2).toFixed(3)), y: focus.fy ?? Number((focus.y + Math.min(focus.h, 0.5) / 3).toFixed(3)) } : null,
+      focus: focus ? { x: focus.x, y: focus.y, w: focus.w, h: focus.h } : null,
+      face: v ? Boolean(v.legacy ? v.face : v.main) : null,
+      alone: main,
+      main,
+      verified: true,
+      verifiedBy: d.verifiedBy,
+      otherTeam: d.otherTeam || '',
       checked: Boolean(v),
       nameHit: h.nameHit,
-      cutoutOk: subject.kind === 'person' && !s.drop && !['crowd', 'venue', 'object', 'group'].includes(v?.kind || h.kind) && (v ? v.cutout && v.alone : !h.group && ['action', 'portrait', 'celebration', 'reaction', ''].includes(h.kind)) && (Math.min(photo.width || 0, photo.height || 0) >= 600 || !photo.width),
-      score: s.score,
+      cutoutOk: isPerson && main && (v ? (v.legacy ? v.cutout && v.main : d.cutoutOk) : ['action', 'portrait', 'celebration', 'reaction', ''].includes(h.kind) && !h.group)
+        && !['crowd', 'venue', 'object', 'group', 'offfield'].includes(kind) && (Math.min(photo.width || 0, photo.height || 0) >= 600 || !photo.width),
+      // Main subject, on-field, the brief's team first: then the usual score.
+      score: Number((s.score + (main ? 0.08 : -0.12) + (kind === 'offfield' ? -0.15 : 0) + (d.otherTeam ? -0.1 : 0) + (d.verifiedBy === 'vision' || d.verifiedBy === 'caption' ? 0.04 : 0)).toFixed(3)),
       quality: s.parts,
-      why: s.why,
+      why: [...s.why, `verified by ${d.verifiedBy}`],
     };
-    if (s.drop) dropped.push({ sourceUrl: photo.sourceUrl, why: s.drop });
-    else ranked.push(record);
+    ranked.push(record);
   });
   ranked.sort((a, b) => b.score - a.score);
-  // Without vision, a person's photo that never names them is a guess: keep it
-  // only when fewer than 3 photos do name them.
-  if (subject.kind === 'person') {
-    const unnamed = p => !p.checked && p.nameHit === 0;
-    if (ranked.filter(p => !unnamed(p)).length >= 3) {
-      for (let i = ranked.length - 1; i >= 0; i -= 1) if (unnamed(ranked[i])) dropped.push({ sourceUrl: ranked.splice(i, 1)[0].sourceUrl, why: 'does not name the person' });
-    }
+  // A group shot (someone else in the frame) only when the person has fewer than 2 photos of their own.
+  if (isPerson && ranked.filter(p => p.main).length >= 2) {
+    for (let i = ranked.length - 1; i >= 0; i -= 1) if (!ranked[i].main) dropped.push({ sourceUrl: ranked.splice(i, 1)[0].sourceUrl, why: 'someone else shares the frame' });
   }
-  return { ranked, dropped, cost, vision: called };
+  return { ranked, dropped, cost, vision: called, team: facts.team, opponents: facts.opponents };
+}
+function teamColorsOf(name) {
+  const entry = name ? libraryTeam(name) : null;
+  return entry?.colors || [];
 }
 
 // ─── 7. Logos ──────────────────────────────────────────────────────────────
@@ -729,9 +780,12 @@ function cutoutPath(sourceUrl) {
 async function prepareImagery(read = {}, ctx = {}, deps = {}) {
   const started = clock.now();
   const { heroes, extras, dropped: droppedNames } = await subjectsFor(read, deps);
+  // gen5: the brief's teams and other people, for the right-person check.
+  const briefTeams = (read.teams || []).filter(t => t.kind === 'team').map(t => t.full || t.name).slice(0, 4);
+  [...heroes, ...extras].forEach(s => { if (s.kind === 'person') { s.teams = briefTeams; s.others = [...heroes, ...extras].filter(o => o.kind === 'person' && o.name !== s.name).map(o => o.name).slice(0, 6); } });
   let cost = 0;
   const gateOpen = await (async () => {
-    if (!deps.vision) return false;
+    if (!deps.verify && !deps.vision) return false;
     if (ctx.gated || !deps.gate) return true;
     try { return !(await deps.gate(ctx, 'generate-photo-pick')); } catch { return false; }
   })();
@@ -744,7 +798,7 @@ async function prepareImagery(read = {}, ctx = {}, deps = {}) {
   // People first (their photos are the most specific), then teams / events.
   const order = heroes.map((s, i) => i).sort((a, b) => (heroes[a].kind === 'person' ? 0 : 1) - (heroes[b].kind === 'person' ? 0 : 1) || a - b);
   const owned = new Array(heroes.length);
-  order.forEach(i => { owned[i] = take(pools[i]).slice(0, 16); });
+  order.forEach(i => { owned[i] = take(pools[i]).slice(0, LIMITS.pool); });
   const extraOwned = extraPools.map(list => take(list).slice(0, 6));
 
   const bySubject = {};
@@ -822,6 +876,9 @@ async function findSubjectPhotos(args = {}, ctx = {}, deps = {}) {
   const count = Math.max(1, Math.min(12, Number(args.count) || 6));
   const exclude = (Array.isArray(args.exclude) ? args.exclude : []).map(String).slice(0, 50);
   const teamName = clean(args.team).slice(0, 80);
+  // gen5 facts from the brief: its teams, the opponents, the other people named.
+  const list = value => (Array.isArray(value) ? value : []).map(v => clean(v).slice(0, 80)).filter(Boolean).slice(0, 6);
+  const facts = { teams: list(args.teams), opponents: list(args.opponents), others: list(args.others) };
   let subject = null;
   let why = '';
   if (clean(args.person)) {
@@ -836,24 +893,24 @@ async function findSubjectPhotos(args = {}, ctx = {}, deps = {}) {
       const r = await resolveName(name, deps);
       if (r) { name = r; kind = 'person'; } else { kind = ''; why = 'single word that is not a known ES name'; }
     }
-    if (kind === 'person') subject = { name, kind: 'person', team: teamName };
+    if (kind === 'person') subject = { name, kind: 'person', team: teamName, ...facts, others: facts.others.filter(o => o.toLowerCase() !== name.toLowerCase()) };
     else if (kind === 'team' || kind === 'league' || kind === 'venue') subject = { name, kind };
     else why = why || (kind ? `a ${kind}, not a person` : 'not a name');
   } else if (teamName) {
     const entry = libraryTeam(teamName);
     const kind = classifyName(teamName);
-    subject = { name: teamName, kind: kind === 'league' || /\b(?:tour|league)\b/i.test(teamName) ? 'league' : kind === 'venue' ? 'venue' : 'team', full: entry?.name && entry.name !== teamName ? entry.name : '' };
+    subject = { name: teamName, kind: kind === 'league' || entry?.kind === 'league' || /\b(?:tour|league|golf)\b/i.test(teamName) ? 'league' : kind === 'venue' ? 'venue' : 'team', full: entry?.name && entry.name !== teamName ? entry.name : '', short: entry?.short && entry.short !== teamName ? entry.short : '', ...facts };
   } else if (clean(args.query)) {
     subject = { name: clean(args.query).slice(0, 80), kind: 'event' };
   }
   const logos = logosFor({ sport: args.sport, teams: teamName ? [teamEntryFor(teamName)].filter(Boolean) : [] });
   if (!subject) return { ok: true, photos: [], cutouts: [], headshots: [], logos, cutoutPlan: [], subject: null, dropped: why, ranked: false, cost: 0 };
 
-  let gateOpen = Boolean(deps.vision);
+  let gateOpen = Boolean(deps.verify || deps.vision);
   if (gateOpen && !ctx.gated && deps.gate) {
     try { gateOpen = !(await deps.gate(ctx, 'generate-photo-pick')); } catch { gateOpen = false; }
   }
-  const gathered = dedupe(await gatherPhotos(subject, deps).catch(() => []), exclude).slice(0, 16);
+  const gathered = dedupe(await gatherPhotos(subject, deps).catch(() => []), exclude).slice(0, LIMITS.pool);
   const res = await rankFor(subject, gathered, deps, ctx, { allowVision: gateOpen });
   const picked = diversify(res.ranked, count);
   const isPerson = subject.kind === 'person';
@@ -861,9 +918,10 @@ async function findSubjectPhotos(args = {}, ctx = {}, deps = {}) {
     id: p.id, url: p.url, src: p.url, sourceUrl: p.sourceUrl, title: p.title, caption: p.caption, credit: p.credit, articleUrl: p.articleUrl, date: p.date,
     width: p.width || null, height: p.height || null,
     ...(isPerson ? { person: subject.name } : { team: subject.name }),
-    kind: contractKind(p.kind), detail: p.kind, ...(p.focal ? { focal: p.focal } : {}),
+    kind: contractKind(p.kind), detail: p.kind, shot: p.kind, ...(p.focal ? { focal: p.focal } : {}), ...(p.focus ? { focus: p.focus } : {}),
     score: p.score, source: p.source, matched: p.matched, rights: p.rights,
-    face: p.face, alone: p.alone, checked: p.checked, cutoutOk: Boolean(p.cutoutOk), quality: p.quality,
+    face: p.face, alone: p.alone, main: Boolean(p.main), checked: p.checked, cutoutOk: Boolean(p.cutoutOk), quality: p.quality,
+    verified: Boolean(p.verified), verifiedBy: p.verifiedBy || '', ...(p.otherTeam ? { otherTeam: p.otherTeam } : {}),
   }));
   // Cut-outs: this subject's best solo photos; already stored ones come back now ($0).
   const plan = isPerson ? picked.filter(p => p.cutoutOk).slice(0, 2).map(p => ({ fromPhoto: p.url, sourceUrl: p.sourceUrl, person: subject.name, path: cutoutPath(p.sourceUrl), width: p.width, height: p.height })) : [];
@@ -881,7 +939,7 @@ async function findSubjectPhotos(args = {}, ctx = {}, deps = {}) {
   const headshots = best ? [{ url: best.url, person: subject.name, ...(teamName ? { team: teamName } : {}), ...(best.focal ? { focal: best.focal } : {}), fromPhoto: best.url }] : [];
   return {
     ok: true, photos, cutouts, headshots, logos, cutoutPlan: plan.filter(c => !c.done).map(({ done, ...c }) => c),
-    subject: { name: subject.name, kind: subject.kind }, dropped: res.dropped, ranked: res.vision, cost: Number((res.cost || 0).toFixed(5)),
+    subject: { name: subject.name, kind: subject.kind, ...(res.team ? { team: res.team } : {}), ...(res.opponents?.length ? { opponents: res.opponents } : {}) }, dropped: res.dropped, ranked: res.vision, cost: Number((res.cost || 0).toFixed(5)),
   };
 }
 const contractKind = kind => (['action', 'portrait', 'crowd', 'venue', 'object'].includes(kind) ? kind : kind === 'celebration' || kind === 'reaction' ? 'action' : kind === 'group' ? 'crowd' : 'portrait');
@@ -900,6 +958,7 @@ function contractPhoto(p) {
     ...(p.focal ? { focal: p.focal } : {}),
     score: p.score, source: p.source, rights: p.rights,
     sourceUrl: p.sourceUrl, title: p.title, caption: p.caption, credit: p.credit, date: p.date, cutoutOk: Boolean(p.cutoutOk), face: p.face, checked: p.checked,
+    verified: Boolean(p.verified), verifiedBy: p.verifiedBy || '', main: Boolean(p.main), shot: p.kind || '', ...(p.focus ? { focus: p.focus } : {}),
   };
 }
 
