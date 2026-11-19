@@ -265,11 +265,20 @@
     // A panel section whose controls are all hidden for this template must not
     // leave an empty band between two dividers. Judged by each child's own
     // display (not its height), so it still works while the section is hidden.
-    const shown = el => !el.hidden && win.getComputedStyle(el).display !== 'none';
+    const shown = el => !el.hidden && win.getComputedStyle(el).display !== 'none' && win.getComputedStyle(el).visibility !== 'hidden';
+    const CONTROL = /^(INPUT|SELECT|TEXTAREA|BUTTON|IMG|CANVAS|SVG|VIDEO|LABEL)$/i;
+    // True when the element, or anything inside it, would actually show something.
+    function hasVisibleContent(el, depth = 0) {
+      if (!shown(el) || depth > 8) return false;
+      if (CONTROL.test(el.tagName)) return true;
+      const ownText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+      if (ownText) return true;
+      return [...el.children].some(child => hasVisibleContent(child, depth + 1));
+    }
     function collapseEmptySections() {
       doc.querySelectorAll('.panel .studio-dock-section').forEach(section => {
         const content = [...section.children].filter(child => !child.classList.contains('fi-section-title'));
-        const empty = !content.some(child => shown(child) && (child.childElementCount > 0 || (child.textContent || '').trim()));
+        const empty = !content.some(child => hasVisibleContent(child));
         section.classList.toggle('fi-section-empty', empty);
       });
     }
@@ -443,6 +452,13 @@
     const list = doc.querySelector('[data-studio-accordion-list]');
     if (list) observer.observe(list, { subtree: false, childList: false, attributes: true, attributeFilter: ['class'] });
     list?.querySelectorAll('[data-studio-accordion-section]').forEach(section => observer.observe(section, { attributes: true, attributeFilter: ['class', 'hidden'] }));
+    // Template / asset switches change which controls a section has: re-check
+    // the photo title and empty sections then too (they used to keep stale
+    // state until the next layer change, leaving an empty band in the panel).
+    observer.observe(doc.body, { attributes: true, attributeFilter: ['data-current-page', 'data-newsletter-asset', 'data-workspace', 'class'] });
+    const sectionWatch = new win.MutationObserver(() => win.requestAnimationFrame(() => { ensurePhotoTitle(); }));
+    doc.querySelectorAll('.panel .studio-dock-section').forEach(section => sectionWatch.observe(section, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'style', 'class'] }));
+    doc.addEventListener('change', event => { if (event.target.closest?.('.panel, .app')) queue(); }, true);
     const appEl = app();
     if (appEl) observer.observe(appEl, { attributes: true, attributeFilter: ['class', 'data-workspace'] });
     observer.observe(doc.body, { attributes: true, attributeFilter: ['data-current-page', 'data-instagram-post-type', 'data-youtube-variation', 'data-youtube-quote', 'data-newsletter-asset'] });
