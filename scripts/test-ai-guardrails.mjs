@@ -5,9 +5,9 @@
 //   1. prices: Anthropic list prices, every default model priced, long context, audio
 //   2. kill switches (AI_DISABLE): no fetch, feature and task names, prefixes, "all"
 //   3. economy mode (AI_ECONOMY=1): best runs on main
-//   4. team cap (AI_TEAM_WEEKLY_LIMIT_USD): off when unset, under, at, over
+//   4. team cap: $45 by default (policy), AI_TEAM_WEEKLY_LIMIT_USD only lowers it; under, at, over
 //   5. fail open with a warning event / fail closed with AI_FAIL_CLOSED=1
-//   6. every AI handler: team-limit 429, feature-off 503 with no AI call, trend rules
+//   6. every AI handler: team over the cap -> free mode (200, no AI call), feature-off 503, trend rules
 //   7. logUsage: cache tokens, task, run id; works before the migration (PGRST204)
 //   8. prompt cache: tiny prompts not marked, rejected hint warns, Video Ads copy, Generate prefix
 //   9. alerts with a mocked webhook: thresholds, once per week, user 80%, off without env
@@ -183,20 +183,25 @@ const reset = () => { calls = []; warnings.length = 0; };
 // ── 4. Team cap ────────────────────────────────────────────────────────────
 {
   reset();
-  assert.equal(gw.teamWeeklyLimitUsd(), 0, 'off when unset');
+  // Policy (owner 2026-11-20): $45 team cap by default, just under the $50 Gateway budget.
+  assert.equal(gw.teamWeeklyLimitUsd(), 45, '$45 when unset');
   assert.equal(await gw.aiSpendGate('tok', { feature: 'generate' }), null);
-  assert.equal(fetched(h => h.endsWith('frameup_team_ai_spend')).length, 0, 'no team RPC while the team cap is off');
-  for (const bad of ['', '0', '-5', 'abc']) { process.env.AI_TEAM_WEEKLY_LIMIT_USD = bad; assert.equal(gw.teamWeeklyLimitUsd(), 0, `"${bad}" keeps the team cap off`); }
-  process.env.AI_TEAM_WEEKLY_LIMIT_USD = '60';
-  teamSpend = { status: 200, body: [{ total_usd: 59.99 }] };
+  assert.equal(fetched(h => h.endsWith('frameup_team_ai_spend')).length, 1, 'the team RPC is read with no env set');
+  for (const bad of ['', '0', '-5', 'abc', '60', '$100']) { process.env.AI_TEAM_WEEKLY_LIMIT_USD = bad; assert.equal(gw.teamWeeklyLimitUsd(), 45, `"${bad}" keeps the $45 policy cap`); }
+  process.env.AI_TEAM_WEEKLY_LIMIT_USD = '$40';
+  assert.equal(gw.teamWeeklyLimitUsd(), 40, '"$40" lowers it');
+  process.env.AI_TEAM_WEEKLY_LIMIT_USD = '30 USD';
+  assert.equal(gw.teamWeeklyLimitUsd(), 30, '"30 USD" lowers it');
+  process.env.AI_TEAM_WEEKLY_LIMIT_USD = '44.5';
+  teamSpend = { status: 200, body: [{ total_usd: 44.49 }] };
   assert.equal(await gw.aiSpendGate('tok', { feature: 'generate' }), null, 'under the team cap');
   const [request] = fetched(h => h.endsWith('frameup_team_ai_spend'));
   assert.equal(request.headers.Authorization, 'Bearer tok', 'team spend is read with the caller\'s session');
   assert.equal(request.body.p_since, gw.weekStartUtc().toISOString(), 'since Monday 00:00 UTC');
-  teamSpend = { status: 200, body: [{ total_usd: '60' }] };
+  teamSpend = { status: 200, body: [{ total_usd: '44.5' }] };
   assert.deepEqual(await gw.aiSpendGate('tok', { feature: 'generate' }), {
-    status: 429, reason: 'team-limit',
-    error: "The team has used this week's $60 AI budget, so AI features are paused until Monday. Everything else still works.",
+    status: 429, reason: 'team-limit', free: 'team-limit',
+    error: "The team has used this week's $44.50 AI budget, so AI features are paused until Monday. Everything else still works.",
   }, 'at the team cap');
   teamSpend = { status: 200, body: { total_usd: 75 } };
   assert.equal((await gw.aiSpendGate('tok', {})).reason, 'team-limit', 'a scalar-object reply counts');
@@ -278,14 +283,16 @@ const cases = [
 gatewayReply = null;
 for (const [name, handler, body, feature] of cases) {
   const isTrend = feature.startsWith('trend-');
-  // Team over its cap: a calm 429 and no AI call.
+  // Team over its cap: free mode (200, the no-AI path or skipped) and no AI call.
   process.env.AI_TEAM_WEEKLY_LIMIT_USD = '40';
   teamSpend = { status: 200, body: [{ total_usd: 41 }] };
   reset();
   const team = await call(handler, body);
-  assert.equal(team.status, 429, `${name}: team over the cap → 429`);
+  assert.equal(team.status, 200, `${name}: team over the cap → free mode, not an error`);
+  assert.equal(team.body.ok, true, `${name}: ok`);
+  assert.equal(team.body.mode, 'free', `${name}: mode free`);
   assert.equal(team.body.reason, 'team-limit', `${name}: reason team-limit`);
-  assert.match(team.body.error, /team has used this week's \$40 AI budget/, `${name}: team message`);
+  assert.match(team.body.notice, /^The team's AI budget for this week is used up, so FrameUp is in free mode/, `${name}: team note`);
   assert.equal(aiCalls(), 0, `${name}: no AI call over the team cap`);
   if (isTrend && body.mode === 'enrich') assert.ok(team.body.items?.t1?.titles?.length, `${name}: free ideas still come back`);
   teamSpend = { status: 200, body: [{ total_usd: 0 }] };
@@ -445,12 +452,12 @@ for (const [name, handler, body, feature] of cases) {
   alerts._reset();
   process.env.SLACK_AI_ALERTS_WEBHOOK_URL = SLACK;
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-test';
-  process.env.AI_TEAM_WEEKLY_LIMIT_USD = '100';
-  teamSpend = { status: 200, body: [{ total_usd: 85 }] };
+  process.env.AI_TEAM_WEEKLY_LIMIT_USD = '40';
+  teamSpend = { status: 200, body: [{ total_usd: 34 }] };
   reset();
   assert.equal(await gw.aiSpendGate('tok', { feature: 'generate' }), null, '85%: still allowed');
   assert.equal(slackPosts().length, 1, 'crossing 80% alerts straight away');
-  assert.match(slackPosts()[0].body.text, /80% of this week's \$100\.00 AI budget/);
+  assert.match(slackPosts()[0].body.text, /80% of this week's \$40\.00 AI budget/);
   reset();
   await gw.aiSpendGate('tok', { feature: 'generate' });
   assert.equal(slackPosts().length, 0, 'not again on the next request');
@@ -508,8 +515,10 @@ for (const [name, handler, body, feature] of cases) {
   mySpend = { status: 200, body: [{ total_usd: 20 }] };
   reset();
   const capped = await call(handlers.reels, { action: 'transcribe', fileName: 'a.wav', mimeType: 'audio/wav', data: Buffer.from('fake-audio').toString('base64') });
-  assert.equal(capped.status, 429);
-  assert.equal(capped.body.reason, 'weekly-limit');
+  assert.equal(capped.status, 200, 'over the cap: free mode, captions off with a note');
+  assert.equal(capped.body.mode, 'free');
+  assert.equal(capped.body.reason, 'user-limit');
+  assert.equal(capped.body.skipped, true);
   assert.equal(fetched(h => h.includes('openai.com')).length, 0);
   mySpend = { status: 200, body: [{ total_usd: 0 }] };
   delete process.env.REELS_TRANSCRIBE;
@@ -520,13 +529,13 @@ for (const [name, handler, body, feature] of cases) {
   const status = require(path.join(fnDir, 'ai-status.js'));
   const denied = await status.handler({ httpMethod: 'GET', headers: {} });
   assert.equal(denied.statusCode, 401, 'signed-in users only');
-  process.env.AI_TEAM_WEEKLY_LIMIT_USD = '75';
+  process.env.AI_TEAM_WEEKLY_LIMIT_USD = '35';
   process.env.AI_DISABLE = 'video-ads-find-clips';
   process.env.AI_ECONOMY = 'true';
   process.env.SLACK_AI_ALERTS_WEBHOOK_URL = SLACK;
   const got = JSON.parse((await status.handler({ httpMethod: 'GET', headers: { authorization: 'Bearer tok' } })).body);
   assert.equal(got.userWeeklyLimitUsd, 20, '$20 per person by default');
-  assert.equal(got.teamWeeklyLimitUsd, 75);
+  assert.equal(got.teamWeeklyLimitUsd, 35);
   assert.deepEqual(got.disabled, ['video-ads-find-clips']);
   assert.equal(got.economy, true);
   assert.equal(got.failClosed, false);

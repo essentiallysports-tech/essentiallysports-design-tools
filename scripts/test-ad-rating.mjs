@@ -323,12 +323,14 @@ assert.match(res.body.error, /wrong format/);
 assert.equal(res.body.score, undefined);
 assert.equal(gatewayRequests.length, 2, 'only one retry');
 
-// Budget used up: 503 with reason "budget".
+// Gateway budget used up: free mode (ai-free-mode), never a raw error.
 reset();
 gatewayReplies.push({ status: 402, body: { error: { message: 'Spend limit reached for this API key' } } });
 res = await post({ frames: [JPEG], context: CONTEXT });
-assert.equal(res.status, 503);
-assert.equal(res.body.reason, 'budget');
+assert.equal(res.status, 200);
+assert.equal(res.body.mode, 'free');
+assert.equal(res.body.reason, 'gateway-budget');
+assert.equal(res.body.skipped, true);
 
 // Cut-off reply: retried once asking for brevity.
 reset();

@@ -80,7 +80,7 @@ function reachedThresholds(total, limit, thresholds = TEAM_THRESHOLDS) {
 }
 
 function teamMessage(threshold, total, limit) {
-  if (threshold >= 100) return `:rotating_light: FrameUp AI: the team has used this week's ${usd(limit)} AI budget (${usd(total)} so far). AI features are paused until Monday 00:00 UTC; raise AI_TEAM_WEEKLY_LIMIT_USD in Vercel to resume.`;
+  if (threshold >= 100) return `:rotating_light: FrameUp AI: the team has used this week's ${usd(limit)} AI budget (${usd(total)} so far). AI features are paused until Monday 00:00 UTC (FrameUp runs in free mode); to resume sooner, raise POLICY in netlify/functions/_ai-gateway.js and the Gateway budget.`;
   return `:warning: FrameUp AI: the team has used ${threshold}% of this week's ${usd(limit)} AI budget (${usd(total)} so far). It resets Monday 00:00 UTC.`;
 }
 

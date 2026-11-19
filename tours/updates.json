@@ -185,6 +185,25 @@
       ]
     },
     {
+      "id": "2026-11-20-ai-free-mode",
+      "date": "2026-11-20",
+      "title": "Free mode: FrameUp keeps working when the week's AI budget is used",
+      "commit": "663c020",
+      "items": [
+        {
+          "title": "Weekly AI budgets",
+          "text": "Each person has $20 of AI a week and the team $45. Your sidebar card shows how much you have used and when it resets (Monday).",
+          "page": "generate.html",
+          "target": ".es-usage"
+        },
+        {
+          "title": "Free mode instead of errors",
+          "text": "Over a budget, every tool keeps working without AI: Generate makes ES template designs, Video Ads writes copy from templates and finds clips in the library, Reels builds the plan from your brief, and Trends shows quick headline ideas. A short note at the top says so.",
+          "page": "generate.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-19-hero-generate",
       "date": "2026-11-19",
       "title": "Generate: stat lines, records, carousels and no blank photos",

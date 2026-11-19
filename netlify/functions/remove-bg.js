@@ -36,7 +36,7 @@
 // cost from the response's token usage) and counts toward the shared
 // per-person hourly and weekly AI caps.
 const { verifyEsUser, authConfig } = require('./_supabase-auth.js');
-const { logUsage, userOverHourlyLimit, userOverWeeklyLimit, weeklyLimitMessage } = require('./_ai-gateway.js');
+const { logUsage, userOverHourlyLimit, aiSpendGate, freeModeGate, withAiMode } = require('./_ai-gateway.js');
 
 const OPENAI_EDITS = 'https://api.openai.com/v1/images/edits';
 const GATEWAY_EDITS = 'https://ai-gateway.vercel.sh/v1/images/edits';
@@ -304,7 +304,8 @@ async function removeBackgroundMask(dataUrl, size, env = process.env) {
 }
 exports.removeBackgroundMask = removeBackgroundMask;
 
-exports.handler = async function handler(event) {
+// withAiMode (ai-free-mode): over a weekly budget the reply is { ok: true, mode: 'free', skipped: true }.
+exports.handler = withAiMode(async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' }, body: '' };
   if (event.httpMethod !== 'GET' && event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed.' });
   const auth = await verifyEsUser(event);
@@ -333,7 +334,10 @@ exports.handler = async function handler(event) {
 
   const email = auth.user?.email || 'unknown';
   const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
-  if (await userOverWeeklyLimit(token)) return json(429, { error: weeklyLimitMessage(), reason: 'weekly-limit' });
+  // Person and team weekly budgets (was the personal cap only).
+  const gate = await aiSpendGate(token, { feature: 'remove-bg' });
+  freeModeGate(gate);
+  if (gate) return json(gate.status, { error: gate.error, reason: gate.reason });
   if (!underLimit(email, hourlyLimit()) || await userOverHourlyLimit(token)) {
     return json(429, { error: 'That is a lot of background removals this hour. Try again later.', reason: 'limit' });
   }
@@ -361,6 +365,6 @@ exports.handler = async function handler(event) {
     if (error.moderation) return json(422, { error: 'This photo couldn’t be processed by the cut-out model.', reason: 'moderation' });
     return json(502, { error: 'The background could not be removed. Try again in a moment.' });
   }
-};
+});
 
 exports._test = { diagnostics, isAdmin, gatewayRequest, openAiRequest, base64ImageType, provider, envVar, configured, model, quality, hourlyLimit, briaCost, openAiCost, underLimit, parseImage, resultUrl, recent, MAX_BYTES, OPENAI_EDITS, GATEWAY_EDITS, BRIA_ENDPOINT, DEFAULT_MODEL, PROMPT };

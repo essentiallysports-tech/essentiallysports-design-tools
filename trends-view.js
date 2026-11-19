@@ -169,13 +169,16 @@
   // (a ghost button in the action row) asks for them; then 3 compact
   // headlines with copy buttons. Quick (rule) ideas show only when AI can't
   // answer, with the reason. The post kit always has them.
+  // Free mode (frameup-ai-mode.js: over this week's AI budget): AI angles are
+  // hidden; headline ideas come from the free rules.
+  const aiOn = () => Boolean(data?.aiEnrich) && !window.FrameUpAI?.isFree;
   function ideasHtml(item, isNew) {
     const ai = aiFor(item);
     const state = aiState.get(item.id);
     if (state === 'loading') return `<div class="trend-ideas__list" aria-busy="true" aria-label="Writing headline ideas">${'<span class="trend-idea is-skeleton es-skeleton"></span>'.repeat(3)}</div>`;
-    const fallback = !ai && (state === 'limited' || state === 'off' || state === 'error');
+    const fallback = !ai && (state === 'limited' || state === 'off' || state === 'free' || state === 'error');
     const titles = (ai?.titles?.length ? ai.titles : fallback ? item.titles || [] : []).slice(0, 3);
-    const note = !fallback ? '' : state === 'limited' ? 'AI limit reached for now, so these are quick ideas.'
+    const note = !fallback ? '' : state === 'free' ? 'Free mode this week, so these are quick ideas.' : state === 'limited' ? 'AI limit reached for now, so these are quick ideas.'
       : state === 'off' ? 'AI angles are switched off for now, so these are quick ideas.' : 'AI angles didn’t load, so these are quick ideas.';
     if (!titles.length) return note ? `<p class="trend-ideas__note">${esc(note.replace(/, so these are quick ideas\./, '.'))}</p>` : '';
     return `<p class="es-sr-only">${ai ? 'Headline ideas, written by AI from the story' : 'Quick headline ideas'}</p><ul class="trend-ideas__list${isNew ? ' is-new' : ''}">${titles.map(t => `<li class="trend-idea"><a class="trend-idea__go" href="${esc(designUrl(item, t))}" data-design title="Design a post with this headline"><span>${esc(t)}</span></a><button class="trend-idea__copy" type="button" data-copy="${esc(t)}" aria-label="Copy headline: ${esc(t)}" title="Copy">${ICON.copy}</button></li>`).join('')}</ul>${note ? `<p class="trend-ideas__note">${esc(note)}</p>` : ''}`;
@@ -183,7 +186,7 @@
   // The ghost "Headline ideas" button: only while there is something to ask.
   function ideasBtnHtml(item) {
     const state = aiState.get(item.id);
-    if (!data?.aiEnrich || aiFor(item) || state === 'loading' || state === 'limited' || state === 'off') return '';
+    if (!data?.aiEnrich || aiFor(item) || state === 'loading' || state === 'limited' || state === 'off' || state === 'free') return '';
     return `<button class="es-btn es-btn--sm es-btn--tertiary td-ideas-btn" type="button" data-ai>${ICON.sparkles}<span>${state === 'error' ? 'Try ideas again' : 'Headline ideas'}</span></button>`;
   }
 
@@ -283,10 +286,10 @@
       : busy ? '<span class="td-kit__state">Writing…</span>'
       : state === 'limited' ? '<span class="td-kit__state">AI limit reached: quick ideas</span>'
       : (state === 'off' || data?.aiOff) ? '<span class="td-kit__state">AI is off: quick ideas</span>'
-      : data?.aiEnrich ? `<button class="td-icon-btn" type="button" data-ai>${ICON.sparkles}<span>${state === 'error' ? 'Try AI again' : 'AI angles'}</span></button>` : '<span class="td-kit__state">Quick ideas</span>';
+      : aiOn() ? `<button class="td-icon-btn" type="button" data-ai>${ICON.sparkles}<span>${state === 'error' ? 'Try AI again' : 'AI angles'}</span></button>` : '<span class="td-kit__state">Quick ideas</span>';
     const hook = busy ? sk(40)
       : kit.hook ? `<p class="td-kit__quote${isNew ? ' is-new' : ''}">${esc(kit.hook)}</p>`
-      : `<p class="td-kit__empty">${data?.aiEnrich && state !== 'off' && state !== 'limited' ? 'The hook comes with AI angles.' : 'Write the first line in Reels Studio.'}</p>`;
+      : `<p class="td-kit__empty">${aiOn() && state !== 'off' && state !== 'limited' ? 'The hook comes with AI angles.' : 'Write the first line in Reels Studio.'}</p>`;
     const team = kit.team ? `<span class="td-kit__team"><span class="es-team-logo" style="--logo:24px">${kit.team.logo ? `<img src="${esc(kit.team.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('es-team-logo--dot')">` : ''}</span>${esc(kit.team.name)} logo</span>` : '';
     const brand = brands().find(b => b.label === kit.video?.brand);
     return `<div class="td-kit__grid">
@@ -434,7 +437,7 @@
       setEmpty(entries.length ? null : prefs.brand && liveItems().some(i => i.category === active) ? 'brand' : 'sport');
     }
     entered = true;
-    els.aiAll.hidden = !data.aiEnrich || active === 'saved';
+    els.aiAll.hidden = !aiOn() || active === 'saved';
     rove();
     window.AIStudio?.reveal(els.body);
   }
@@ -480,14 +483,16 @@
       const items = ids.map(id => { const item = findItem(id); return { id, title: item.title, related: (item.related || []).slice(0, 2).map(r => r.title), sport: labelOf(item.category) }; });
       const response = await authFetch('/api/trend-design', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'enrich', items }) });
       const json = await response.json().catch(() => null);
+      const free = json?.mode === 'free';
       limited = response.status === 429 || Boolean(json?.limited);
       const off = json?.limited === 'off';
+      if (free) message = json.notice || '';
       message = json?.error || '';
       const got = json?.items || {};
       ids.forEach(id => {
         const value = got[id];
         if (value?.ai) { aiCache.set(id, { why: value.why || '', titles: value.titles || [], hook: value.hook || '', ai: true, at: Date.now() }); aiState.delete(id); }
-        else aiState.set(id, off ? 'off' : limited ? 'limited' : 'error');
+        else aiState.set(id, free ? 'free' : off ? 'off' : limited ? 'limited' : 'error');
       });
     } catch (error) {
       ids.forEach(id => aiState.set(id, 'error'));
@@ -497,7 +502,8 @@
     ids.forEach(id => paintAi(id, true));
     const done = ids.filter(id => aiCache.has(id)).length;
     if (done) announce(`AI angles ready for ${done} trend${done === 1 ? '' : 's'}.`);
-    if (limited) toast(message || 'AI limit reached for now. Quick headline ideas still work.');
+    if (ids.some(id => aiState.get(id) === 'free')) { if (window.FrameUpAI?.isFree) els.aiAll.hidden = true; }
+    else if (limited) toast(message || 'AI limit reached for now. Quick headline ideas still work.');
     else if (!done) toast('AI angles didn’t load. Quick headline ideas still work.');
     if (aiQueue.size) flushAi();
   }
@@ -508,6 +514,7 @@
       return box.height && box.bottom > 0 && box.top < window.innerHeight;
     }).map(rowEl => rowEl.dataset.id);
   }
+  window.FrameUpAI?.onChange?.(next => { if (next.mode === 'free') els.aiAll.hidden = true; });
   els.aiAll.addEventListener('click', () => {
     // The picks first (the stories most likely to be posted), then what's on screen.
     const picks = [...els.body.querySelectorAll('.trend-row.is-pick[data-id]')].map(r => r.dataset.id);

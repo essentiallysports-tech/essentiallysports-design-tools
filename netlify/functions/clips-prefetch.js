@@ -33,7 +33,7 @@
 const crypto = require('node:crypto');
 const { authConfig, bearerToken } = require('./_supabase-auth.js');
 const { request, serviceRoleKey } = require('./_supabase-rest.js');
-const { gatewayConfigured, featureDisabled, aiSpendGate } = require('./_ai-gateway.js');
+const { gatewayConfigured, featureDisabled, cronSpendGate, freeModeGate, withAiMode } = require('./_ai-gateway.js');
 const TEAMS = require('../../video-ads-teams.js');
 const { clipPipeline: P } = require('./video-ads.js');
 
@@ -260,8 +260,11 @@ async function refreshEngagement({ limit = CONFIG.engagement, now = Date.now() }
 async function classifyPass({ capUsd, runId, limit = CONFIG.classifyPerBatch }) {
   const out = { candidates: 0, classified: 0, notGame: 0, cost: 0, skipped: 0, calls: 0, stored: 0 };
   if (!(capUsd > 0) || !gatewayConfigured() || featureDisabled(CLASSIFY_FEATURE)) { out.off = true; return out; }
-  const gate = await withTimeout(aiSpendGate('', { feature: CLASSIFY_FEATURE }), 3000, null);
-  if (gate) { out.off = gate.reason || true; return out; }
+  // No user session in a cron: the team's week is read with the service role.
+  // At or over the team cap the AI pass is skipped;
+  // the rules still label clips and the job succeeds (ai-free-mode).
+  const gate = await withTimeout(cronSpendGate({ feature: CLASSIFY_FEATURE }), 3000, null);
+  if (gate) { out.off = gate.free || gate.reason || true; return out; }
   // Read without the game-action filter: rows the rules would hide still get an AI verdict.
   const rows = (await Promise.all(P.AD_SPORTS.map(sport => withTimeout(LIB.read({ sport, sinceHours: P.FIND_CLIPS.maxAgeHours }), 3500, []))))
     .flat()
@@ -427,7 +430,7 @@ async function diagnostics(env = process.env) {
   };
 }
 
-exports.handler = async function handler(event) {
+exports.handler = withAiMode(async function handler(event) {
   if (!['GET', 'POST'].includes(event.httpMethod)) return json(405, { ok: false, error: 'Method not allowed.' });
   const query = event.queryStringParameters || {};
   if (String(query.diag || '') === '1') {
@@ -443,6 +446,8 @@ exports.handler = async function handler(event) {
   const { batches } = settings();
   const batch = query.batch === undefined || query.batch === '' ? 1 : Number(query.batch);
   if (!Number.isInteger(batch) || batch < 1 || batch > batches) return json(400, { ok: false, error: `batch must be 1..${batches}.` });
+  // ai-free-mode: team over this week's budget -> free sources and rules only (the job still succeeds).
+  freeModeGate(await withTimeout(cronSpendGate({ feature: FEATURE }), 3000, null));
   try {
     const summary = await runBatch({ batch });
     console.log(JSON.stringify({ event: 'clips-prefetch', batch, teams: summary.teams, done: summary.done, saved: summary.saved, cost: summary.cost, ms: summary.ms }));
@@ -452,6 +457,6 @@ exports.handler = async function handler(event) {
     console.error('clips-prefetch failed:', error);
     return json(502, { ok: false, error: 'The clip prefetch failed.' });
   }
-};
+});
 
 exports._test = { refreshEngagement, classifyPass, classifySpentToday, cronAuthorized, planBatch, allTeams, settings, makeBudget, refreshTeam, runBatch, recheckLinks, diagnostics, trendingTeams, chainNext, CONFIG, CRON_SCHEDULE };

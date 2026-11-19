@@ -52,7 +52,7 @@
 const { verifyEsUser, bearerToken } = require('./_supabase-auth.js');
 const { getTrends } = require('./trend-design.js');
 const { _helpers: tweet } = require('./tweet-oembed.js');
-const { aiText, aiWebResearch, gatewayConfigured, isBudgetError, userOverHourlyLimit, aiSpendGate, featureDisabled, featureOffMessage } = require('./_ai-gateway.js');
+const { aiText, aiWebResearch, gatewayConfigured, isBudgetError, userOverHourlyLimit, aiSpendGate, featureDisabled, featureOffMessage, freeModeGate, inFreeMode, withAiMode } = require('./_ai-gateway.js');
 const RULES = require('../../frameup-rules.js');
 const rest = require('./_supabase-rest.js');
 const BRANDS = require('../../video-ads-brands.js');
@@ -2040,11 +2040,71 @@ async function grammar(body, track) {
   return { ...value, dropped, cached: false, cost: money(result.cost) };
 }
 
+// ─── ai-free-mode: rule-based ad copy (no AI) ──────────────────────────────
+// Over this week's AI budget, copy comes from templates built only from what
+// the editor gave (the moment's title, teams, typed headlines) and the
+// newsletter's own label, league, audience and approved claims. Every variant
+// still goes through autoFix + checkVariant, so the ES rules hold.
+const FREE_THEM = ['Endless scrolling', 'Hot takes everywhere', 'Stories you missed'];
+function freeTemplates(ctx, wantStyle) {
+  const { brand, facts } = ctx;
+  const subject = ctx.trend.title || ctx.typedItems[0] || (ctx.teams.length ? ctx.teams.slice(0, 2).join(' vs ') : '');
+  const moment = subject ? trimToWords(swapBanned(subject), 14).replace(/[.!]+$/, '') : '';
+  const team = ctx.teams[0] || '';
+  const claims = facts.claims.slice(0, 3).map(c => String(c).replace(/[.]+$/, ''));
+  const claimLine = claims.length ? `${claims.slice(0, 2).join('. ')}.` : `Sign up for ${brand.label}.`;
+  const about = `${brand.label} covers ${brand.league} for ${brand.audience}.`;
+  const offer = `${brand.label} is free. Sign up today.`;
+  const items = [...new Set([ctx.trend.title, ...ctx.headlines, ...ctx.typedItems].filter(Boolean))].slice(0, 3).map(t => cutWords(swapBanned(t), SL.itemWords));
+  const listTitle = `${brand.short || brand.league} stories today`;
+  const classic = [
+    { style: 'highlight', headline: moment || `${brand.league} news for ${brand.audience}`, body: [about, claimLine] },
+    { style: 'condensed', headline: team ? `${team} fans, stay in the loop` : `Stay in the loop on ${brand.league}`, body: [moment ? `${moment}.` : about, claimLine] },
+    { style: 'simple', headline: `Get ${brand.label} in your inbox`, body: [about, claimLine] },
+  ].map(v => ({ ...v, cta: brand.cta, highlight: v.style === 'highlight' ? closestPhrase(v.headline, '') : '', offer, listTitle: items.length >= 3 ? listTitle : '', items: items.length >= 3 ? items : [], them: claims.length >= 2 ? FREE_THEM.slice(0, 2) : [], us: claims.length >= 2 ? claims.slice(0, 2) : [], why: 'free template' }));
+  if (!wantStyle) return classic;
+  if (CLASSIC.includes(wantStyle)) return classic.map(v => ({ ...v, style: wantStyle, highlight: wantStyle === 'highlight' ? closestPhrase(v.headline, '') : '' }));
+  return [classic[0]].map(v => ({ ...v, style: wantStyle, listTitle: `${listTitle}`, items, them: FREE_THEM.slice(0, Math.min(3, Math.max(2, claims.length))), us: claims }));
+}
+async function freeCopy(body, track) {
+  const claims = await claimsFor(BRANDS.byId(body.brandId), track.token);
+  const ctx = copyContext(body, { claims: claims.claims });
+  ctx.brand = { ...ctx.brand, verifiedClaims: claims.claims, claimsApproved: claims.approved };
+  const { brand, facts } = ctx;
+  if (!ctx.trend.title && !ctx.teams.length && !ctx.notes && !ctx.color && !ctx.typedItems.length) {
+    return { ok: false, status: 400, error: 'Pick a clip, a moment or a colour first, or write a note about the ad.' };
+  }
+  const wantStyle = STYLES.includes(body.style) ? body.style : '';
+  const ranking = await styleRanking(brand, ctx.sport, track.token).catch(() => []);
+  const skip = wantStyle ? skipReason(wantStyle, factsForSuggestion(ctx, body)) : null;
+  if (skip) return { ok: false, status: 422, reason: 'skip', ...skip, suggestion: suggestionFor(ctx, body, ranking) };
+  const good = [];
+  const autoFixed = [];
+  freeTemplates(ctx, wantStyle).forEach(raw => {
+    const repaired = autoFix(raw, brand, facts, wantStyle);
+    const checked = checkVariant(repaired.raw, brand, facts, wantStyle);
+    if (!checked.errors.length && !good.some(v => v.headline === checked.variant.headline)) { good.push(checked.variant); autoFixed.push(...repaired.fixes); }
+  });
+  return { ok: true, variants: rankVariants(good, brand), autoFixed: autoFixed.slice(0, 12), lessons: { examples: 0, rules: 0 }, suggestion: suggestionFor(ctx, body, ranking), source: 'template', cached: false, cost: 0 };
+}
+// The no-AI answer for each AI mode in free mode.
+async function freeModeRun(mode, body, track) {
+  if (mode === 'copy') return freeCopy(body, track);
+  if (mode === 'find-clips' || mode === 'moments-with-clips') {
+    // The clip library + free public sources; never the paid web search.
+    const free = await AI_MODES[mode](body, { ...track, freeOnly: true }).catch(() => null);
+    return free?.ok ? free : { ok: true, clips: [], moments: [], freeOnly: true };
+  }
+  // chat / grammar need the AI: skipped (the page keeps its free local checks).
+  return { ok: true, skipped: true };
+}
+
 const AI_MODES = { 'find-clips': findClips, 'moments-with-clips': momentsWithClips, copy, chat, grammar };
 // The usage feature (and AI_DISABLE name) of each mode.
 const MODE_FEATURES = { 'find-clips': 'video-ads-find-clips', 'moments-with-clips': 'video-ads-moments-with-clips', copy: 'video-ads-copy', chat: 'video-ads-chat', grammar: 'video-ads-grammar' };
 
-exports.handler = async function handler(event) {
+// withAiMode (ai-free-mode): one free-mode store per request; replies carry mode: 'free'.
+exports.handler = withAiMode(async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'POST, OPTIONS' }, body: '' };
   if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'Method not allowed.' });
   const auth = await verifyEsUser(event);
@@ -2117,15 +2177,22 @@ exports.handler = async function handler(event) {
         const cached = grammarCached(body);
         if (cached) return json(200, cached);
       }
+      // ai-free-mode: over this week's AI budget -> the free path (templates, library, free sources).
+      const gate = process.env.AI_GATEWAY_API_KEY && !inFreeMode() ? await aiSpendGate(token, { feature }) : null;
+      if (inFreeMode() || freeModeGate(gate)) {
+        const free = await freeModeRun(body.mode, body, track);
+        return json(free.ok ? 200 : (free.status || 400), free);
+      }
       if (!gatewayConfigured()) return blocked(503, { ok: false, reason: 'off', error: 'AI is not available right now.' });
       if (await userOverHourlyLimit(token)) return blocked(429, { ok: false, reason: 'limit', error: "You've used a lot of AI this hour. Take a short break and try again soon." });
-      const gate = await aiSpendGate(token, { feature });
       if (gate) return blocked(gate.status, { ok: false, reason: gate.reason, error: gate.error });
       if (String(event.body || '').length > 60000) return json(413, { ok: false, error: 'That request is too large.' });
       try {
         const result = await AI_MODES[body.mode](body, track);
         return json(result.ok ? 200 : (result.status || 502), result);
       } catch (error) {
+        // ai-free-mode: a Gateway budget stop mid-run -> the free path.
+        if (inFreeMode()) { const free = await freeModeRun(body.mode, body, track); return json(free.ok ? 200 : (free.status || 400), free); }
         if (isBudgetError(error)) return blocked(503, { ok: false, reason: 'budget', error: "This week's AI budget is used up, so AI features are paused until it resets." });
         if (body.mode === 'find-clips') {
           console.error('video-ads find-clips failed:', error);
@@ -2143,10 +2210,11 @@ exports.handler = async function handler(event) {
     console.error('video-ads failed:', error);
     return json(502, { ok: false, error: 'Video Ads is unavailable right now. Try again in a moment.' });
   }
-};
+});
 
 exports._test = {
   variantsFrom, isVideoUrl, sizeFromUrl, clipFromPost, trends, checkVariant, autoFix, trimToWords, swapBanned, closestPhrase, copyContext, suggestStyle, skipReason, styleFieldsOf,
+  freeCopy, freeTemplates, freeModeRun,
   MODE_FEATURES, COPY_SYSTEM, COPY_CACHE, copyKey, rankVariants, claimsFor, checkClaims, saveClaims, claimsMode, resetClaims() { claimsCache = { at: 0, rows: null }; }, findClips, momentsWithClips, teamInTitle, MOMENT_CACHE, MOMENTS, looksOld, ageHoursOf, copy, chat, CLIP_CACHE, FIND_CLIPS, grammar, checkGrammarIssues, GRAMMAR_CACHE,
   MOMENT_TITLE_CACHE, MOMENTS_LIB, CLASSIFY, assembleMoments, searchPlan, webPrompt, xQueryFor, xApiSearch, assessClip, freshClip, scoreClip, rankClips, mediaKey, qualityLabel, CLIP_TTL_MS, SOURCES,
   LIBRARY, CLIP_LIBRARY, libraryMode, PICK_MAX, pickedTeams, pickedColors, teamsForColors, matchedTeams, clipKey, libraryClips, nearestFallback, runSources, verifyCandidate, checkMedia, mediaHostAllowed, teamsInText, clipTeams, softKey,

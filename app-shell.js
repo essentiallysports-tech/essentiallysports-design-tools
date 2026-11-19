@@ -256,8 +256,10 @@
   // ─── Personal AI usage (sidebar footer) ────────────────────────────────
   // The signed-in person's AI spend this week (Monday 00:00 UTC onward), read
   // with the frameup_my_ai_spend() database function. The server enforces the
-  // same cap (netlify/functions/_ai-gateway.js, AI_USER_WEEKLY_LIMIT_USD).
-  // Until that function exists, or if it errors, the card stays hidden.
+  // same cap (netlify/functions/_ai-gateway.js POLICY: $20 a person, $45 the
+  // team). The limit, free mode and (for admins) the team's week come from
+  // /api/ai-status through window.FrameUpAI (frameup-ai-mode.js) when the page
+  // loads it; $20 is the fallback. Until the spend can be read the card stays hidden.
   const AI_WEEKLY_USER_LIMIT_USD = 20;
   const USAGE_CACHE_KEY = 'frameup.aiUsage.v1';
   const USAGE_CACHE_MS = 60 * 1000;
@@ -271,6 +273,7 @@
   ];
   let usageSlot = null;
   let usageLoading = false;
+  let usageLast = null; // { data, ai } of the last render
 
   function weekStartUtc(now = new Date()) {
     const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
@@ -318,14 +321,25 @@
     usageSlot.innerHTML = '';
   }
 
-  function renderUsage(data) {
+  function renderUsage(data, ai = null) {
     if (!usageSlot) return;
+    // The database read failed but /api/ai-status has this person's week: use it.
+    if ((!data || !Number.isFinite(Number(data.total_usd))) && Number.isFinite(Number(ai?.userSpentUsd))) data = { total_usd: Number(ai.userSpentUsd) };
     const total = Number(data?.total_usd);
     if (!data || !Number.isFinite(total)) { hideUsage(); return; }
-    const limit = AI_WEEKLY_USER_LIMIT_USD;
+    usageLast = { data, ai };
+    const limit = Number(ai?.userLimitUsd) > 0 ? Number(ai.userLimitUsd) : AI_WEEKLY_USER_LIMIT_USD;
+    const free = ai?.mode === 'free';
     const ratio = Math.max(0, total / limit);
-    const state = ratio >= 1 ? 'over' : ratio >= 0.8 ? 'warn' : 'ok';
+    const state = free || ratio >= 1 ? 'over' : ratio >= 0.8 ? 'warn' : 'ok';
     const reset = resetText();
+    // Admins also see the team's week (aggregate only).
+    const teamSpent = Number(ai?.teamSpentUsd);
+    const teamLimit = Number(ai?.teamLimitUsd);
+    const teamLine = ai?.admin && Number.isFinite(teamSpent) && teamLimit > 0
+      ? `<span class="es-usage__team">Team: ${money(teamSpent)} of $${teamLimit}${ai.reason === 'team-limit' || ai.reason === 'gateway-budget' ? ' · free mode' : ''}</span>`
+      : '';
+    const resetLine = free ? `Free mode · AI back ${reset}` : state === 'over' ? `Limit reached · resets ${reset}` : `Resets ${reset}`;
     const nextReset = weekStartUtc();
     nextReset.setUTCDate(nextReset.getUTCDate() + 7);
     const resetTitle = `Resets ${nextReset.toLocaleString(undefined, { weekday: 'long', hour: 'numeric', minute: '2-digit' })} (Monday 00:00 UTC)`;
@@ -341,6 +355,7 @@
     const tag = clickable ? 'button' : 'div';
     const percent = Math.min(100, Math.round(ratio * 100));
     usageSlot.dataset.state = state;
+    usageSlot.dataset.free = String(free);
     usageSlot.innerHTML = `
       <${tag} class="es-usage__card"${clickable ? ` type="button" aria-expanded="false" aria-controls="es-usage-pop" aria-label="AI usage: ${money(total)} of $${limit} this week. Show breakdown"` : ''} title="${escapeText(resetTitle)}">
         <span class="es-usage__row">
@@ -348,7 +363,8 @@
           <span class="es-usage__amount"><strong>${money(total)}</strong> of $${limit}</span>
         </span>
         <span class="es-usage__bar" role="progressbar" aria-label="AI usage this week" aria-valuemin="0" aria-valuemax="${limit}" aria-valuenow="${Math.min(limit, Math.round(total * 100) / 100)}" aria-valuetext="${money(total)} of $${limit}"><span class="es-usage__fill" style="width:${percent}%"></span></span>
-        <span class="es-usage__reset">${state === 'over' ? `Limit reached · resets ${reset}` : `Resets ${reset}`}</span>
+        <span class="es-usage__reset">${resetLine}</span>
+        ${teamLine}
       </${tag}>
       ${clickable ? `<div class="es-usage__pop" id="es-usage-pop" role="group" aria-label="AI usage by feature" hidden>
         <p class="es-usage__pop-head"><span>This week</span><strong>${money(total)}</strong></p>
@@ -371,7 +387,12 @@
     if (!usageSlot || usageLoading) return;
     const since = weekStartUtc().toISOString();
     const cached = force ? null : readUsageCache(since);
-    if (cached) { if (cached.data) renderUsage(cached.data); else hideUsage(); return; }
+    const aiStatus = () => (window.FrameUpAI?.status ? window.FrameUpAI.status().catch(() => null) : Promise.resolve(null));
+    if (cached) {
+      const ai = await aiStatus();
+      if (cached.data || ai) renderUsage(cached.data, ai); else hideUsage();
+      return;
+    }
     let client = null;
     try { client = window.ESAuth?.getSupabaseClient?.(); } catch (error) { client = null; }
     if (!client || typeof client.rpc !== 'function') return; // auth not ready yet
@@ -386,7 +407,8 @@
       usageLoading = false;
     }
     writeUsageCache(since, data);
-    if (data) renderUsage(data); else hideUsage();
+    const ai = await aiStatus();
+    if (data || ai) renderUsage(data, ai); else hideUsage();
   }
 
   function startUsage(slot) {
@@ -403,6 +425,12 @@
       slot.querySelector('button.es-usage__card')?.focus();
     });
     window.addEventListener('es:auth-ready', () => loadUsage());
+    // Free mode switched on by a reply (frameup-ai-mode.js): repaint with it.
+    window.FrameUpAI?.onChange?.(next => {
+      if (!usageLast) return;
+      const ai = { ...(usageLast.ai || {}), mode: next.mode, reason: next.reason };
+      renderUsage(usageLast.data, ai);
+    });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadUsage(); });
     window.addEventListener('focus', () => loadUsage());
     setInterval(() => { if (document.visibilityState === 'visible') loadUsage({ force: true }); }, USAGE_REFRESH_MS);

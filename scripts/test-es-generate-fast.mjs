@@ -171,8 +171,10 @@ assert.equal(res.status, 200, 'a name-only scene falls back to an empty arena fo
 assert.equal(res.body.scene, 'empty wnba stadium at night under bright floodlights');
 gatewayMode = 'budget';
 res = await post(img.handler, { scene: 'empty football stadium at night' });
-assert.equal(res.status, 503);
-assert.equal(res.body.reason, 'budget');
+assert.equal(res.status, 200, 'Gateway budget used up: free mode (ai-free-mode)');
+assert.equal(res.body.mode, 'free');
+assert.equal(res.body.reason, 'gateway-budget');
+assert.equal(res.body.skipped, true);
 assert.equal((await img.handler({ httpMethod: 'GET', headers: {} })).statusCode, 405);
 
 // 8. The per-user hourly cap.

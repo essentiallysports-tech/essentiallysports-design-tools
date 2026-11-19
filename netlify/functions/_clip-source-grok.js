@@ -38,7 +38,7 @@
 // switched off by AI_DISABLE=video-ads-find-clips).
 
 const SOURCES = require('../../video-ads-sources.js');
-const { logUsage, aiSpendGate, featureDisabled } = require('./_ai-gateway.js');
+const { logUsage, aiSpendGate, featureDisabled, freeModeGate } = require('./_ai-gateway.js');
 
 const FEATURE = 'video-ads-find-clips-grok';
 const GATEWAY = 'https://ai-gateway.vercel.sh/v1';
@@ -378,6 +378,7 @@ async function search({ sport, team, teams = [], color, query, sinceHours = 120,
   if (featureDisabled(FEATURE)) { diag.mode = 'feature-off'; return result(); }
   if (token) {
     const blocked = await aiSpendGate(token, { feature: FEATURE });
+    freeModeGate(blocked); // ai-free-mode
     if (blocked) { diag.mode = 'blocked'; diag.blocked = blocked.reason; return result(); }
   }
 
