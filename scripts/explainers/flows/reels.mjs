@@ -15,12 +15,19 @@ export default {
   posterAt: 30,
   async run(rec, page) {
     // Back to the Story step with the format tiles showing.
+    // Back to the start with the format tiles showing. In a data flow the tiles
+    // live in the Format step's gallery; otherwise in the Story step's entry.
+    // Returns the container to click a format in.
+    const shown = sel => page.evaluate(`(() => { const e = document.querySelector('${sel} [data-gformat="gameswing"]'); if (!e) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; })()`);
+    const stepOn = step => page.evaluate(`(() => { const b = document.querySelector('#rm-steps [data-step="${step}"]'); if (!b || b.disabled) return false; return b.getBoundingClientRect().width > 0; })()`);
     const toStart = async () => {
-      if (await page.evaluate(`Boolean(document.querySelector('#rm-steps [data-step="topic"], .rm-steps [data-step="topic"]'))`)) {
-        await rec.click('[data-step="topic"]', { after: 800 });
+      for (const [step, root] of [['format', '#rm-pane-format'], ['topic', '#rm-fmt-entry']]) {
+        if (!(await stepOn(step))) continue;
+        await rec.click(`#rm-steps [data-step="${step}"]`, { after: 900 });
+        if (await shown(root)) return root;
       }
-      const tiles = await page.evaluate(`(() => { const e = document.querySelector('#rm-fmt-entry [data-gformat="gameswing"]'); if (!e) return false; const r = e.getBoundingClientRect(); return r.width > 0; })()`);
-      if (!tiles) throw new Error('could not get back to the format tiles');
+      if (await shown('#rm-fmt-entry')) return '#rm-fmt-entry';
+      throw new Error('could not get back to the format tiles');
     };
     await rec.pause(600);
     await rec.say('Start with the story. Pick one of today’s trending stories.');
@@ -66,8 +73,9 @@ export default {
     await rec.pause(600);
 
     await rec.say('Game Swing turns a finished game into a reel.');
-    await toStart();
-    await rec.click('#rm-fmt-entry [data-gformat="gameswing"]');
+    let root = await toStart();
+    await rec.reveal(`${root} [data-gformat="gameswing"]`);
+    await rec.click(`${root} [data-gformat="gameswing"]`);
     await rec.waitFor(`document.querySelector('#rm-games [data-game="401873063"]')`, 15000);
     await rec.pause(500);
     await rec.click('#rm-games [data-game="401873063"]');
@@ -83,8 +91,9 @@ export default {
     await rec.click('#rm-play', { after: 2600 });
 
     await rec.say('Replay takes one clip and finds the setup, the play and the reaction.');
-    await toStart();
-    await rec.click('#rm-fmt-entry [data-gformat="replay"]');
+    root = await toStart();
+    await rec.reveal(`${root} [data-gformat="replay"]`);
+    await rec.click(`${root} [data-gformat="replay"]`);
     await rec.waitFor(`document.querySelector('#rm-c-xform')`, 10000);
     await rec.click('#rm-c-link', { dx: 0.3 });
     await rec.type('https://x.com/NFL/status/1855000000000000001', { cps: 45 });
