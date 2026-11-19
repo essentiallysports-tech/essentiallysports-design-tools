@@ -469,6 +469,7 @@
 <script src="frameup-posted.js?v=20261121-rel2"></script>
 <script src="frameup-impact-view.js?v=20261121-rel2"></script>
 <script src="dashboard-insights.js?v=20261119-rel3"></script>
+<script src="frameup-learning.js?v=20261121-learn" defer></script>
 <link rel="stylesheet" href="dashboard-insights.css?v=20261119-rel3">
 </head>
 <body class="dashboard-page" data-dashboard-view="overview">
@@ -686,6 +687,17 @@
                   <div><h3 class="dov-card-title es-type-card-title">AI spend · this week</h3><p class="dov-card-meta">Since Monday 00:00 UTC: team total against the team cap, top people and features, cost per export, cache hits and Sonnet share</p></div>
                 </header>
                 <div class="dov-card-body" id="ai-spend"></div>
+              </article>
+            </section>
+
+            <!-- gen4-learning: what Generate learned from downloads (frameup-learning.js mounts #gen-learning) -->
+            <section class="dov-section" aria-labelledby="dov-learning-title" data-dashboard-panel="gen-learning">
+              <h2 class="dov-section-title es-type-section" id="dov-learning-title">Generate learning</h2>
+              <article class="dov-card">
+                <header class="dov-card-head">
+                  <div><h3 class="dov-card-title es-type-card-title">What goes final, what gets changed · last 8 weeks</h3><p class="dov-card-meta">Every Generate download is compared with the design as delivered. Changes that repeat become lessons for the next run</p></div>
+                </header>
+                <div class="dov-card-body" id="gen-learning"><div class="empty">Loading…</div></div>
               </article>
             </section>
 

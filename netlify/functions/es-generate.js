@@ -1931,7 +1931,9 @@ async function creative({ brief, steer = {}, token, email, count = 4 }) {
   // 1-8 designs (default 4); the composer scales candidates and caps the judge.
   const want = Math.min(Math.max(parseInt(count, 10) || 4, 1), 8);
   // The learning model: the team's lessons for this sport go into the director's prompt.
-  const lessons = ({ sport }) => creativeMemory.lessonsFor({ token, sport });
+  // gen4-learning: every archetype's lessons (the director has not picked yet),
+  // what people change before export, and the ranking line (7 + 1 <= the composer's 8).
+  const lessons = ({ sport }) => creativeMemory.lessonsFor({ token, sport, archetypes: '*', limit: 7, rank: true });
   const result = await composer.plan({ brief, found, steer, want, track: { email, token, runId }, localFind, nameCandidates, lessons });
   return {
     ...result,
@@ -2112,17 +2114,19 @@ exports.handler = withAiMode(async function handler(event) {
       const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
       const checked = creativeMemory.normalizeSignal(body.signal);
       if (checked.error) return json(400, { ok: false, error: checked.error });
-      const logged = creativeMemory.eventFor(checked.signal);
-      const [learned] = await Promise.all([
-        creativeMemory.learn({ token, signals: [checked.signal] }),
-        logged ? directionMemory.recordEvent({ token, email: auth.user.email, event: logged }) : Promise.resolve(false),
-      ]);
-      return json(200, { ok: true, observed: learned.observed });
+      // gen4-learning: learn first, so an export's row carries its summary
+      // (unchanged / changes / repeats) for the repeat-change trend.
+      const learned = await creativeMemory.learn({ token, signals: [checked.signal] });
+      const logged = creativeMemory.eventFor(checked.signal, learned.summary);
+      if (logged) await directionMemory.recordEvent({ token, email: auth.user.email, event: logged });
+      return json(200, { ok: true, observed: learned.observed, ...(learned.summary ? { summary: learned.summary } : {}) });
     }
-    // Creative: what the learning model knows (admin view data).
+    // Creative: what the learning model knows (admin view data). gen4-learning:
+    // plus the repeat-change trend (admins only: it reads the team's exports).
     if (body.mode === 'creative-lessons') {
       const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');
-      return json(200, creativeMemory.adminView(await creativeMemory.loadLessons({ token })));
+      const [lessons, admin] = await Promise.all([creativeMemory.loadLessons({ token }), creativeMemory.isAdmin(token)]);
+      return json(200, { ...creativeMemory.adminView(lessons), admin, trend: admin ? await creativeMemory.loadTrend({ token }) : null });
     }
     if (body.mode === 'onbrand') {
       const token = String(event.headers?.authorization || event.headers?.Authorization || '').replace(/^Bearer\s+/i, '');

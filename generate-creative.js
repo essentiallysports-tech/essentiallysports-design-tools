@@ -781,7 +781,8 @@
     } catch (error) { /* the download still happened */ }
     window.FrameUpPosted?.exported?.({ source: 'generate', title: card._dir.name || scene.archetypeName, template: `Creative · ${scene.archetypeName}`, style: scene.archetype, brand: 'essentiallysports', aiMade: 'generate' });
     G().track('design_exported', { runId: state.run?.plan?.runId, directionId: card._dir.id, postType: `creative:${scene.archetype}`, payload: { look: 'creative', fix: scene.fixApplied || '', versions: card._history?.entries.length || 1, size: `${scene.size.w}x${scene.size.h}` } });
-    window.FrameUpAssistant?.signal?.('export', card._designId);
+    // gen4-learning hook: what went final (the diff vs the delivered design) -> the learning model (frameup-learning.js).
+    if (window.FrameUpLearning) window.FrameUpLearning.capture({ event: 'download', designId: card._designId, format: type }); else window.FrameUpAssistant?.signal?.('export', card._designId);
   }
 
   function photosPanel(card) {
