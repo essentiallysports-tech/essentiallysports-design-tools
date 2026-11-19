@@ -126,7 +126,7 @@
   ],
   "functions": {
     "api/es-generate.js": {
-      "maxDuration": 60
+      "maxDuration": 180
     },
     "api/es-generate-image.js": {
       "maxDuration": 60
@@ -171,7 +171,7 @@
       "maxDuration": 60
     },
     "api/gen-assets.js": {
-      "maxDuration": 60
+      "maxDuration": 120
     },
     "api/reel-maker.js": {
       "maxDuration": 60

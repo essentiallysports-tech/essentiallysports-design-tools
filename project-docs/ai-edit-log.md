@@ -4,6 +4,13 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-21 — Generate: no more 504 timeouts (Claude, integrator)
+
+- Live error log: `/api/es-generate` returned 504 five times on Creative runs after imagery v3 (60 s function limit). A pre-render timeout made the page fall back to the ES template flow.
+- `vercel.json`: `api/es-generate.js` maxDuration 60 → 180, `api/gen-assets.js` 60 → 120 (Enterprise plan).
+- `_composer.js` `resolvePhotos`: each subject's `findPhotos` has a hard budget (`GENERATE_PHOTO_BUDGET_MS`, default 20 s); on timeout the quick local ES search serves that subject.
+- `generate-creative.js`: a 504 / timeout before any design shows "That took too long" with Try again, instead of silently switching to templates. Test added to `test-generate-run.mjs`.
+
 ## Standing rules
 - Repo: `essentiallysports-tech/essentiallysports-design-tools`, origin = org repo directly (not a fork).
 - Always give a local preview link before pushing.

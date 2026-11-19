@@ -627,6 +627,13 @@
         return;
       }
       els.grid.replaceChildren();
+      // A server timeout is not "Creative can't do this brief": say so and offer
+      // a retry, instead of silently switching to the ES template flow.
+      if (/\(504\)|timed? ?out|timeout/i.test(String(error?.message || '')) || error?.status === 504) {
+        els.empty.hidden = false;
+        g.setNotice('That took too long', ' The art director ran out of time on this brief. Try again: the second run is usually faster (photos are cached).', '', { label: 'Try again', run: () => run(brief) });
+        return 'stop';
+      }
       // A limit or switched-off reply is shown as is; any other failure falls
       // back to ES templates so Generate always produces something.
       if (limited) {

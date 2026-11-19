@@ -116,6 +116,10 @@ try {
   assert.equal(r.result, 'fallback', 'no designs made: ES templates take over');
   assert.equal(r.cards, 0);
   assert.ok(r.reports.some(x => /^creative-run/.test(x)), 'and the failure is reported');
+  // …a server timeout stops with a retry notice (never a silent template switch)…
+  r = await runCase('timeout', { fail: { plan: 'Request failed (504).' } });
+  assert.equal(r.result, 'stop', 'a 504 offers a retry instead of templates');
+  assert.ok(r.notices.some(n => /took too long/.test(n)), `timeout notice: ${r.notices.join(' | ')}`);
   // …and a limit stops with a notice, not logged as an error.
   r = await runCase('limit', { fail: { plan: 'You have reached the hourly limit for Generate.' } });
   assert.equal(r.result, 'stop');

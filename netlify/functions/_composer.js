@@ -424,6 +424,17 @@ function dedupePhotos(list = []) {
   });
 }
 
+// Time budget for one subject's imagery (ms). Override: GENERATE_PHOTO_BUDGET_MS.
+const PHOTO_BUDGET_MS = Math.max(4000, Number(process.env.GENERATE_PHOTO_BUDGET_MS) || 20000);
+const BUDGET_HIT = Symbol('budget');
+function withBudget(promise, ms) {
+  let timer;
+  return Promise.race([
+    Promise.resolve(promise).finally(() => clearTimeout(timer)),
+    new Promise(resolve => { timer = setTimeout(() => resolve(BUDGET_HIT), ms); }),
+  ]);
+}
+
 // Photos per person (asset service findPhotos, else the local ES search).
 // localFind(person) -> [{ url, sourceUrl, title }] (es-generate.js photoCandidates).
 // Stories with no named person get photos of their team / league (event
@@ -443,7 +454,12 @@ async function resolvePhotos(read, { localFind = null, track = null, extras = nu
     const isTeam = read.teams.some(t => t.name === person);
     try {
       if (service?.findPhotos) {
-        const res = await service.findPhotos({ ...(isTeam ? { team: person, query: person } : { person }), sport: read.sport, count: 6, track });
+        // Each subject's imagery has a hard time budget: a slow ES image server or
+        // vision call must never push the whole Creative run past the function
+        // limit (live: es-generate 504s after imagery v3). On timeout the quick
+        // local ES search below serves that subject instead.
+        const res = await withBudget(service.findPhotos({ ...(isTeam ? { team: person, query: person } : { person }), sport: read.sport, count: 6, track }), PHOTO_BUDGET_MS);
+        if (res === BUDGET_HIT) throw Object.assign(new Error('imagery over budget'), { budget: true });
         // Ranked by the service (score); kind / size / focus kept for the director and the renderer.
         const raw = (res?.photos || res?.candidates || (Array.isArray(res) ? res : [])).filter(p => p && (p.url || p.src));
         raw.sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
@@ -457,7 +473,12 @@ async function resolvePhotos(read, { localFind = null, track = null, extras = nu
       } else if (localFind) {
         list = (await localFind(person)).map(p => ({ src: p.url || p.src, title: p.title || '', person, source: 'es' }));
       }
-    } catch (error) { list = []; }
+    } catch (error) {
+      list = [];
+      if (error?.budget && localFind) {
+        try { list = ((await withBudget(localFind(person), 8000)) || []).filter?.(Boolean).map(p => ({ src: p.url || p.src, title: p.title || '', person, source: 'es' })) || []; } catch (e) { list = []; }
+      }
+    }
     return dedupePhotos(list.filter(p => p.src)).slice(0, 5).map(p => ({ ...p, team: isTeam }));
   }));
   subjects.forEach((person, i) => { out[person] = lists[i]; });
