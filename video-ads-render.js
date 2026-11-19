@@ -13,7 +13,8 @@
 // Figma file (ADS page: the three 9:16 "NFL-ad-with-logo" frames and the three
 // 9:16 CFB frames, one per copy style). Spacing is measured the way Figma
 // draws it, from the cap top of a line to the baseline of the last line:
-//   body       Roboto Medium 49.19px, line height 1.11, a blank line between
+//   body       Roboto Medium 49.19px, line height 1.2 (Figma, re-checked 2026-11-21),
+//              a 1px black outline (Figma text stroke), a blank line between
 //              paragraphs (no gap for a single line break)
 //   condensed  Acumin Pro Condensed Black 85px, line height 1.11, centred
 //              (long headlines step down to ~73px to stay within 3 lines);
@@ -61,7 +62,8 @@
     headlineWidth: 0.8775, // a centred condensed headline wraps in a narrower box (824 of 939px in the NFL ad)
     gapHead: { condensed: 90, highlight: 117 }, // headline baseline → body cap top
     body: 49.19,
-    bodyLine: 1.11,
+    bodyLine: 1.2, // Figma: Roboto Medium, line height 1.2
+    bodyOutline: 1, // Figma: 1px black stroke on the Roboto copy (at 1080 wide)
     gapCta: 120, // last baseline → CTA top
     cta: 51.73,
     unsubscribe: 24.89, // the Figma size; drawn at UNSUB_MIN at least (55+ readers, research §3.2)
@@ -333,6 +335,8 @@
                 fill: token.lit ? brand.highlight.fg : '#FFFFFF',
                 shadow: token.lit ? false : (headline ? SHADOW.headline : SHADOW.body),
                 boost: headline ? paragraph.size * BASE.boost : 0,
+                // Roboto copy carries the template's 1px black outline (scaled with the frame).
+                outline: !headline && !token.lit ? BASE.bodyOutline * scale : 0,
               });
             });
           });
@@ -814,6 +818,19 @@
         ctx.shadowColor = shadow.color;
         ctx.shadowBlur = shadow.blur;
         ctx.shadowOffsetY = shadow.y;
+      }
+      if (op.outline) {
+        // Outside stroke: a canvas stroke is centred on the glyph edge, so draw
+        // it twice as wide under the fill and only the outer half shows.
+        ctx.save();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = op.outline * 2;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(op.text, op.x, op.y);
+        ctx.restore();
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
       }
       ctx.fillText(op.text, op.x, op.y);
       ctx.shadowColor = 'transparent';
