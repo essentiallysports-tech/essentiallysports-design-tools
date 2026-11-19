@@ -4,6 +4,14 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-20 — Generate: AI steps get the 180 s budget; Sonnet directs again (Claude)
+- Status: local, not pushed yet.
+- `es-generate.js` time guards were still tuned for the old 60 s function limit (their comment said so) after `3d4d45a` raised `maxDuration` to 180 s. Retuned: director start-by 9 s → 25 s, director call 12 s → 20 s, director retry-by 12 s → 30 s, `direct` retry-by 30 s → 60 s, repair start-by 25 s → 90 s, review start-by 38 s → 110 s, escalate start-by 20 s → 125 s (it was earlier than the review it follows, so it only ran on unusually fast runs). Latest finish ~150 s.
+- Review call cap 12 s → 20 s: live reviews of 3 cards took 7-9 s; one run came back `quality.reviewed: false` (the review silently dropped).
+- Director default `auto` (Haiku first) → `best` (Sonnet). In live runs Haiku's reply was cut off at `maxTokens` 1400 on every brief, so every run paid for a wasted Haiku call plus Sonnet and lost ~7 s. Director `maxTokens` 1400 → 2600. `GENERATE_DIRECTOR_MODEL=auto` still brings back Haiku-first. If that env var is set on Vercel, this default change has no effect there.
+- Measured locally (same Caitlin Clark brief, real Gateway calls): before 29-31 s, 2 of 3 designs, Haiku cut-off + Sonnet; after 24 s, 3 of 3 designs, Sonnet first try, review ran.
+- Tests updated where they pinned old values (`test-es-generate-direction` research-slow guard now uses `DIRECTOR_START_BY_MS`; director default/max_tokens in `test-creative-director`, `test-generate-director-mode`). 15 Generate suites pass. Plan: `project-docs/generate-next-research-plan.md` item 1.
+
 ## 2026-11-19 — Manish Kalsi (Claude): Newsletter "Archive Page FI" asset, 834 x 555 (branch manish/archive-page-fi)
 - Status: `pushed in 49af2b4`, live on frameup.essentiallysports.com.
 - New Newsletter asset in Feature images, built from Figma ES Design Team Files node 2365-65: its own 834 x 555 size (`NEWSLETTER_ASSET_TYPES["archive-page-fi"].workspace`), photo (sample golf photo until one is uploaded), a bottom overlay over the last 165px (clear -> 12% -> 45% -> 75% black) and a white-outlined "⚡ QUICK READ" tag 30px from the left and bottom, 57px tall. Tag text is editable (Text On Design, one line, upper-cased; empty = QUICK READ). New `drawNewsletterArchivePageFI` in `index.html`; no shared draw code changed, so other exports are untouched (not re-hashed).

@@ -153,7 +153,8 @@ assert.match(request, /Steer from the editor: question/);
 assert.match(request, /Return 3 concepts/);
 assert.ok(request.length < 2500 + brief.length + 1500, 'the research digest is capped at 2,500 characters');
 assert.doesNotMatch(directorRequest({ brief, read, steer: 'viral' }), /Steer from the editor/, 'unknown steers are ignored');
-assert.equal(directorTier(''), 'auto', 'Haiku first with Sonnet escalation by default');
+assert.equal(directorTier(''), 'best', 'Sonnet directs by default');
+assert.equal(directorTier('auto'), 'auto', 'Haiku first with Sonnet escalation on request');
 assert.equal(directorTier('best'), 'best', 'Sonnet override');
 assert.equal(directorTier('haiku'), 'main');
 assert.equal(directorTier('main'), 'main');
@@ -197,7 +198,7 @@ assert.equal(models.length, 1, 'a budget error is not retried');
 globalThis.fetch = async (url, options) => {
   const body = JSON.parse(options.body);
   assert.match(JSON.stringify(body.system), /creative director/);
-  assert.equal(body.max_tokens, 1400);
+  assert.equal(body.max_tokens, 2600);
   return reply(200, { content: [{ type: 'text', text: JSON.stringify({ read: { subject: 'Caitlin Clark', team: 'Indiana Fever', sport: 'WNBA', moment: 'Fever beat the Sky' }, concepts: [concept({})] }) }], usage: { input_tokens: 2600, output_tokens: 600, cache_read_input_tokens: 1300 } });
 };
 result = await runDirector(args);

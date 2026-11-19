@@ -32,15 +32,17 @@ const STATS_TYPES = new Set(['stats-single-ent', 'stats-double-ent', 'player-sta
 
 // Which model directs. GENERATE_DIRECTOR_MODEL (GENERATE_DIRECTOR_TIER is read
 // too, the name used in the research doc):
-//   unset / auto           Haiku first; Sonnet once when Haiku fails or its
+//   unset / best / sonnet  Sonnet always. The default again since 2026-11-20:
+//                          in live runs Haiku's reply was cut off on every
+//                          brief, so "auto" paid for a wasted Haiku call plus
+//                          Sonnet and added ~7s (owner now: spend where it helps).
+//   auto                   Haiku first; Sonnet once when Haiku fails or its
 //                          concepts fail validation (fewer than 2 survive).
-//                          The default since 2026-11-18 (owner: minimal spend,
-//                          best results). project-docs/ai-strategy-and-costs.md, B1.
-//   best / sonnet          Sonnet always (quality-first override).
 //   main / haiku           Haiku only (economy).
 function directorTier(value = process.env.GENERATE_DIRECTOR_MODEL || process.env.GENERATE_DIRECTOR_TIER || '') {
   const wanted = String(value).trim().toLowerCase();
-  if (!wanted || wanted === 'auto') return 'auto';
+  if (!wanted) return 'best';
+  if (wanted === 'auto') return 'auto';
   return /^(?:main|haiku)$|haiku/.test(wanted) ? 'main' : 'best';
 }
 
@@ -488,7 +490,9 @@ async function runDirector({
         cacheSystem: true,
         messages: [{ role: 'user', content: request }],
         effort: 'low',
-        maxTokens: 1400,
+        // 1400 cut Haiku off on every live brief (4 concepts of JSON); room
+        // so a full answer always fits.
+        maxTokens: 2600,
         timeoutMs,
         track: track ? { ...track, feature: 'generate-director' } : undefined,
       });

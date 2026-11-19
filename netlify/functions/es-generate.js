@@ -73,18 +73,24 @@ const TOOL_OVERRIDES = {
   images: process.env.ES_MCP_SEARCH_TOOL || '',
 };
 const MAX_DESIGNS = 4;
-// Time guards (ms since the run started). Vercel gives this function 60s; these
-// keep a run under ~50s: the director only starts while research was quick,
-// and the slow optional steps are skipped late in a run.
-const DIRECTOR_START_BY_MS = 9000;
-const DIRECTOR_RETRY_BY_MS = 12000;
-const DIRECTOR_TIMEOUT_MS = 12000;
+// Time guards (ms since the run started). vercel.json gives this function 180s
+// (raised from 60s in 3d4d45a; these were still tuned for 60s until then).
+// Latest finish: escalation starts by 125s and its call is capped at 25s, so a
+// run ends by ~150s, leaving headroom for the photo await and the response.
+// The director only starts while research was quick enough; slow optional
+// steps are skipped late in a run.
+const DIRECTOR_START_BY_MS = 25000;
+const DIRECTOR_RETRY_BY_MS = 30000;
+const DIRECTOR_TIMEOUT_MS = 20000;
 // The directions step (mode 'direct') writes no designs, so an auto-mode
-// Sonnet escalation may still start up to 30s in.
-const DIRECT_RETRY_BY_MS = 30000;
-const REPAIR_START_BY_MS = 25000;
-const REVIEW_START_BY_MS = 38000;
-const ESCALATE_START_BY_MS = 20000;
+// Sonnet escalation may still start up to 60s in.
+const DIRECT_RETRY_BY_MS = 60000;
+const REPAIR_START_BY_MS = 90000;
+const REVIEW_START_BY_MS = 110000;
+// Escalation runs after the review (call capped at 20s), so it needs a later
+// cut-off than the review; it used to be earlier (20s vs 38s) and so only
+// ran on unusually fast runs.
+const ESCALATE_START_BY_MS = 125000;
 const clock = { now: () => Date.now() };
 // Hosts the /api/es-image-search proxy will fetch (same list as es-image-search.js);
 // a photo on any other host would fail to load in the editor.
@@ -1300,7 +1306,9 @@ async function reviewDesigns(brief, designs, track) {
     'Reply with JSON only: {"cards": [{"card": 1, "best": 0, "score": 4.2, "strong": "...", "note": "..."}]}',
   ].join('\n');
   try {
-    const { text, cost, model } = await aiText({ tier: 'review', messages: [{ role: 'user', content: prompt }], json: true, maxTokens: 1200, timeoutMs: 12000, track: { ...track, feature: 'generate-review' } });
+    // 20s: live reviews of 3 cards took 7-9s, and a 12s cap silently dropped
+    // the review on slower replies (reviewed: false, no scores).
+    const { text, cost, model } = await aiText({ tier: 'review', messages: [{ role: 'user', content: prompt }], json: true, maxTokens: 1200, timeoutMs: 20000, track: { ...track, feature: 'generate-review' } });
     const verdicts = Array.isArray(extractJson(text)?.cards) ? extractJson(text).cards : [];
     verdicts.forEach(verdict => {
       const spec = designs[Number(verdict?.card) - 1];

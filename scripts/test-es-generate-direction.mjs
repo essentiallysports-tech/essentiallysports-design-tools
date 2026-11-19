@@ -198,13 +198,14 @@ assert.equal(res.body.learning.corpus, 'legacy');
 assert.match(seen.writer[0], /- \[Cover\] brief "clark after the fever win" -> the team used: Can Anyone Stop Clark\?/, 'the writer sees exactly the old example lines');
 assert.equal(res.body.designs.length, 2);
 
-// 7. The time guard: research slower than 9s skips the director.
+// 7. The time guard: research slower than DIRECTOR_START_BY_MS skips the director.
 globalThis.fetch = realFetch;
 gen = load();
 directorMode = 'ok';
 const clock = gen._test.clock;
+const step = gen._test.DIRECTOR_START_BY_MS + 1000;
 let fake = 0;
-clock.now = () => (fake += 10000); // every reading jumps 10s: research "takes" 10s
+clock.now = () => (fake += step); // every reading jumps past the guard: research is "too slow"
 reset();
 res = await post({ brief });
 assert.equal(seen.director.length, 0, 'slow research: no director');
