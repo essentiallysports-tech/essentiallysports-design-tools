@@ -1459,6 +1459,7 @@
   // A stats post's label box: the director's hook ("MVP CALLING?") when it is
   // one, else the headline (the story), never a sport tag.
   const isHook = t => /[!?]$/.test(clean(t)) && words(t).length <= 5;
+  const isRank = st => /^(?:#|no\.?)$/i.test(clean(st?.prefix)) || /^(?:no\.|#)/i.test(clean(st?.value));
 
   const LOOKS = [
     {
@@ -1520,7 +1521,8 @@
       needs: 'a person with a cut-out + one real stat or record',
       kinds: ['record', 'count', 'pct', 'person', 'money'],
       tones: ['vivid', 'dark', 'esblue', 'duotone'],
-      fits: i => has.cutout(i) && Boolean(heroStat(i)) && has.headline(i),
+      // gen5: a rank ("No. 3 Texas") is not a player's stat: no stats post for it.
+      fits: i => has.cutout(i) && Boolean(heroStat(i)) && !isRank(heroStat(i)) && has.headline(i),
       build(input, v) {
         // gen5 board STATS POST (2335:230 "1000+", 2335:798 "25-2").
         const { W, H } = frame(input);
@@ -1555,7 +1557,7 @@
       needs: 'a person (cut-out or photo) + 2-3 real stats',
       kinds: ['count', 'person', 'compare'],
       tones: ['vivid', 'dark', 'esblue', 'duotone'],
-      fits: i => (has.cutout(i) || has.photo(i)) && statList(i).length >= 2 && has.headline(i),
+      fits: i => (has.cutout(i) || has.photo(i)) && statList(i).filter(st => !isRank(st)).length >= 2 && has.headline(i),
       build(input, v) {
         const { W, H } = frame(input);
         const pal = input.palette;
@@ -1842,7 +1844,7 @@
         const max = Math.max(...bars.map(b => b.n));
         const titleY = input.swipe ? 214 : SAFE;
         const sub = clean(input.kicker) || clean(input.label);
-        const top = titleY + (sub ? 250 : 200);
+        const top = titleY + (sub ? 290 : 250);
         const cutH = has.cutout(input) ? Math.round(H * 0.48) : 0;
         // No image at the foot: the bars take the page (bigger, more air).
         const bare = !has.cutout(input) && !has.photo(input);
@@ -1866,7 +1868,7 @@
               { type: 'shape', shape: 'rect', x: SAFE, y, w: barW, h: barH, color: dark ? mix(page, '#FFFFFF', 0.1) : '#FFFFFF', opacity: dark ? 1 : 0.35 },
               { type: 'shape', shape: 'rect', x: SAFE, y, w, h: barH, color: fill },
               { type: 'shape', shape: 'frame', x: SAFE, y, w: barW, h: barH, color: dark ? '#FFFFFF' : '#000000', lineWidth: 2 },
-              { type: 'text', role: 'label', text: upper(b.text), x: SAFE + 40, y: y + barH * 0.14, w: Math.max(180, w - 60), h: barH * 0.72, font: 'display', size: 90, minSize: 30, maxLines: 1, color: bestInk(fill), align: 'left', valign: 'middle', guard: false },
+              { type: 'text', role: 'label', text: upper(b.text), ...(b.factId ? { factId: b.factId } : {}), x: SAFE + 40, y: y + barH * 0.14, w: Math.max(180, w - 60), h: barH * 0.72, font: 'display', size: 90, minSize: 30, maxLines: 1, color: bestInk(fill), align: 'left', valign: 'middle', guard: false },
               tagPill(b.label, SAFE + w - 380, y - 40, pal, { h: 36, maxW: 380, align: 'right', bg: tagBg, ink: bestInk(tagBg) }),
             ];
           }),
@@ -1961,7 +1963,7 @@
       needs: 'a record / milestone story (input.record, or record words in the brief) + a cut-out (or photo)',
       kinds: ['record', 'count', 'money'],
       tones: ['vivid', 'esblue', 'dark'],
-      fits: i => Boolean(heroStat(i)) && has.cutout(i) && has.headline(i) && isRecordStory(i),
+      fits: i => Boolean(heroStat(i)) && !isRank(heroStat(i)) && has.cutout(i) && has.headline(i) && isRecordStory(i),
       build(input, v) {
         // gen5 board stats post with a label box ("HISTORY" 2335:779,
         // "RECORD ALERT!" 2335:1725): the number huge, the player bleeding off
@@ -2106,7 +2108,7 @@
       needs: 'one real stat + a cut-out (or photo)',
       kinds: ['count', 'money', 'pct', 'record'],
       tones: ['light', 'paper', 'editorial'],
-      fits: i => Boolean(heroStat(i)) && (has.cutout(i) || has.photo(i)) && has.headline(i),
+      fits: i => Boolean(heroStat(i)) && !isRank(heroStat(i)) && (has.cutout(i) || has.photo(i)) && has.headline(i),
       build(input, v) {
         // gen5: the board's light page (bar graph 2335:1297 / listicle 2335:2341):
         // #E8E8E8 with grit, a black title box under the top edge, the number

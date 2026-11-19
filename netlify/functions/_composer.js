@@ -665,6 +665,7 @@ function inputsFor(direction, read, assets = {}) {
 // gen5: the ES board's own sections lead (stats post, cover image, quote,
 // bar graph / listicle); older posters follow only when nothing better fits.
 const PRIORITY = {
+  multi: ['stat-column', 'stat-stack'],
   money: ['stat-stack', 'record-alert', 'cover-boxes', 'prize-poster', 'big-number'],
   count: ['stat-stack', 'stat-column', 'bar-race', 'cover-boxes', 'unit-grid', 'big-number'],
   pct: ['stat-stack', 'bar-race', 'cover-boxes', 'big-number'],
@@ -689,7 +690,7 @@ Object.keys(PRIORITY).forEach(kind => (COMPOSE.ARCHETYPES || []).forEach(a => {
 // object ("Joe Burrow threw" when "for 409 yards" was cut); else the subject.
 const NUM_VERBS = /^(?:stays|stay|remains|remain|becomes|become|holds|hold|climbs|rises|falls|drops|jumps|threw|throws|throw|scored|scores|score|had|has|have|caught|catches|drove|drives|hit|hits|ran|runs|rushed|rushes|posted|posts|recorded|records|signs|signed|sign|agrees|agreed|earned|earns|won|wins|made|makes|shot|shoots|averaged|averages|totaled|totals|added|adds|grabbed|grabs|dished|collected|finished|finishes|improve|improves|improved|sits|sit|stands|moves|move|is|are|was|were|leads|led|reach|reaches|reached|hits|tallied|logged|notched|racked)$/i;
 // Words that carry a story's turn: a headline cut never drops them.
-const TURN = /\b(?:best|record|history|historic|first|ever|unpaid|not|never|no|without|despite|but|yet|while|whereas|bankrupt\w*|fail\w*|loss|lost|loses|lose|fired|banned|suspended|fined|injur\w*|out for|denied|refused|rejected|cut|released|unsigned|snubbed|quit|retire\w*)\b/i;
+const TURN = /\b(?:best|record|history|historic|first|ever|unpaid|not|never|no|without|despite|but|while|whereas|bankrupt\w*|fail\w*|loss|lost|loses|lose|fired|banned|suspended|fined|injur\w*|out for|denied|refused|rejected|cut|released|unsigned|snubbed|quit|retire\w*)\b/i;
 const turnWords = h => (String(h || '').match(new RegExp(TURN.source, 'gi')) || []).map(w => w.toLowerCase());
 // The story's last turn word (its point) survives in a replacement headline.
 const keepsTurnOf = (was, h) => { const t = turnWords(was); return !t.length || turnWords(h).includes(t[t.length - 1]); };
@@ -723,6 +724,8 @@ function codeHeadline(text, story, read, { fallback = '', all = false, long = fa
       || new RegExp(`^[,;]?\\s*(?:(?:for|of|to)\\s+(?:(?:a|an|the|his|her|their)\\s+)?|in\\s+)${num}`, 'i').test(after)
       || ((NUM_VERBS.test(last) || /^[a-z]+(?:ing|ed)$/.test(h.split(' ').pop() || '')) && new RegExp(`^\\s*(?:(?:a|an|the|his|her|their)\\s+)?${num}`, 'i').test(after))
       || WEAK_TAIL.test(last) || /^(?:most|least|more|less|fewer|best|worst)$/.test(last)
+      // "... host No. 1 | Georgia": a number that leads into a name was cut from it.
+      || (/^#?\d/.test(last) && /^\s+[A-Z]/.test(after))
       // "Josh Allen goes over | 1000+ yards": the number was what the last word pointed at.
       || (/^(?:over|past|beyond|under|nearly|almost|about|around|top|tops|hit|hits|reach|reaches|passes|surpasses|eclipses)$/.test(last) && new RegExp(`^\\s*${num}`, 'i').test(after));
   };
@@ -774,7 +777,14 @@ function codeHeadline(text, story, read, { fallback = '', all = false, long = fa
     const last = accs[accs.length - 1];
     const tail = clean(flat.slice(last.text.length)).replace(/^[,;:]\s*/, '').replace(/^(?:as|while|but|yet|whereas|and|after|before)\s+/i, '');
     const subject = (story?.people?.[0] || story?.subject || properNames(flat)[0] || '').trim();
-    if (subject && TURN.test(tail) && tail.split(' ').length >= 3 && !squash(tail).includes(squash(subject).trim())) options.push(tidy(`${subject}: ${tail}`, 12));
+    if (subject && TURN.test(tail) && tail.split(' ').length >= 3 && !/^(?:in|on|at|for|to|with|by|of|from|over|into|after|before)\b/i.test(tail) && !squash(tail).includes(squash(subject).trim())) options.push(tidy(`${subject}: ${tail}`, 12));
+    // The second clause as its own headline when it has its own subject ("No. 3 Texas host No. 1 Georgia on Saturday").
+    accs.forEach(a => {
+      const rest = clean(flat.slice(a.text.length)).replace(/^[,;:]\s*/, '');
+      if (!/^(?:as|while|but|whereas|and)\s+/i.test(rest)) return;
+      const own = rest.replace(/^(?:as|while|but|whereas|and)\s+/i, '');
+      if (/^(?:[A-Z]|No\.|#?\d)/.test(own) && own.split(' ').length >= 4 && own.split(' ').length <= maxWords) options.push(tidy(own));
+    });
   }
   if (!options.length || options[options.length - 1] === whole) {
     if (nWords >= 3) options.push(tidy(flat));
@@ -860,6 +870,8 @@ function heroFact(facts = [], archetype = '') {
 
 function storyKinds(read, story) {
   const kinds = read.facts.filter(f => f.story === story.id && isStat(f, 2)).map(f => f.kind);
+  // gen5: three or more real stats: the board's stat column (13 / 9 / 4) leads.
+  if (read.facts.filter(f => f.story === story.id && isStat(f, 2) && ['count', 'pct', 'ratio'].includes(f.kind)).length >= 3) kinds.unshift('multi');
   if (read.quotes.some(q => q.story === story.id)) kinds.push('quote');
   if (story.people?.length) kinds.push('person');
   if (!kinds.length) kinds.push('none');
