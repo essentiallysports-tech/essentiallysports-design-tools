@@ -1216,16 +1216,32 @@
     els.back.hidden = i === 0;
     els.next.hidden = i === STEPS.length - 1;
     if (i < STEPS.length - 1) els.nextText.textContent = `Next: ${STEP_LABEL[STEPS[i + 1]]}`;
-    // The footer's Next is the primary action once this step is done.
-    els.next.classList.toggle('es-btn--primary', stepDone(state.step));
+    // The footer's Next is the primary action once this step is done, unless
+    // the step shows its own key action (one primary button per view).
+    syncNextPrimary();
   }
+  function syncNextPrimary() {
+    const pane = document.querySelector(`.va-pane[data-pane="${state.step}"]`);
+    const own = pane ? [...pane.querySelectorAll('.es-btn--primary')].some(b => b.checkVisibility()) : false;
+    els.next.classList.toggle('es-btn--primary', stepDone(state.step) && !own);
+  }
+  // Pane content re-renders on its own (results, sets, retries): keep Next in step.
+  let nextSync = 0;
+  new MutationObserver(() => { if (!nextSync) nextSync = requestAnimationFrame(() => { nextSync = 0; syncNextPrimary(); }); })
+    .observe(els.panelScroll, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden', 'disabled'] });
   function goStep(id, { focus = true } = {}) {
     if (!STEPS.includes(id)) return;
     const changedStep = id !== state.step;
     state.step = id;
     document.querySelectorAll('.va-pane').forEach(pane => { pane.hidden = pane.dataset.pane !== id; });
     els.panelScroll.scrollTop = 0;
-    if (changedStep && window.matchMedia('(max-width: 900px)').matches) reveal($('va-panel'));
+    if (changedStep && window.matchMedia('(max-width: 900px)').matches) {
+      // Phones: an open Frame / Tint rail makes the pinned preview so tall the
+      // new step barely shows, so a step change folds it away.
+      const railEl = $('va-rail');
+      if (railEl?.dataset.open) railEl.querySelector(`[data-rail="${railEl.dataset.open}"]`)?.click();
+      reveal($('va-panel'));
+    }
     renderSteps();
     if (id === 'clip') {
       // By colour starts from the Copy choices until changed by hand.
@@ -1603,12 +1619,12 @@
     const platformLabel = PLATFORM[platform] || platform.replace(/^\w/, ch => ch.toUpperCase());
     const via = VIA_LABEL[c.via];
     return `<article class="va-clip${inAd ? ' is-in' : ''}${busy ? ' is-busy' : ''}${via ? ' is-fallback' : ''}" style="--i:${i}">
-      <span class="va-clip__thumb"${thumb ? ` style="background-image:url('${esc(thumb)}')"` : ''}>${tag && !inAd ? `<span class="va-clip__tag va-clip__tag--${kind === 'official' ? 'official' : 'verified'}" title="${tagTitle}">${ICON.check}${tag}</span>` : ''}${quality ? `<span class="va-clip__q" title="Best version">${esc(quality)}</span>` : ''}${secs ? `<span class="va-clip__dur">${esc(fmt(secs))}</span>` : ''}${c.hasAudio === false && !inAd ? '<span class="va-clip__mute" title="This file has no sound">No sound</span>' : ''}${inAd ? `<span class="va-clip__in">${ICON.check}In the ad</span>` : ''}</span>
+      <span class="va-clip__thumb"${thumb ? ` style="background-image:url('${esc(thumb)}')"` : ''}>${tag && !inAd ? `<span class="va-clip__tag va-clip__tag--${kind === 'official' ? 'official' : 'verified'}" title="${tagTitle}">${ICON.check}${tag}</span>` : ''}${quality ? `<span class="va-clip__q" title="Best version">${esc(quality)}</span>` : ''}${secs ? `<span class="va-clip__dur">${esc(fmt(secs))}</span>` : ''}${c.hasAudio === false && !inAd ? `<span class="va-clip__mute" title="This file has no sound">${ICON.soundOff}<span>No sound</span></span>` : ''}${inAd ? `<span class="va-clip__in">${ICON.check}In the ad</span>` : ''}</span>
       ${via ? `<span class="va-clip__via" title="${esc(via[1])}">${esc(via[0])}</span>` : ''}
       <span class="va-clip__who"><span class="va-clip__plat va-clip__plat--${esc(platform.replace(/[^a-z]/g, ''))}" title="From ${esc(platformLabel)}">${esc(platformLabel)}</span><span class="va-clip__handle">${handle ? `@${esc(handle)}` : 'Post'}</span>${age ? `<span class="va-clip__age">${esc(age)}</span>` : ''}</span>
       ${c.text ? `<span class="va-clip__text">${esc(c.text)}</span>` : ''}
       <span class="va-clip__actions">
-        <button class="es-btn es-btn--sm es-btn--still${inAd || busy ? '' : ' es-btn--primary'}" type="button" ${attr}="${i}"${busy || inAd ? ' disabled' : ''}>${busy ? 'Loading…' : inAd ? 'Using it' : 'Use clip'}</button>
+        <button class="es-btn es-btn--sm" type="button" ${attr}="${i}"${busy || inAd ? ' disabled' : ''}>${busy ? 'Loading…' : inAd ? 'Using it' : 'Use clip'}</button>
         ${safeUrl(c.url) ? `<a class="va-icon-btn va-icon-btn--sm" href="${esc(c.url)}" target="_blank" rel="noopener" aria-label="Open the post by ${esc(handle || platformLabel)}" title="Open the post">${ICON.external}</a>` : ''}
       </span>
     </article>`;
@@ -1686,14 +1702,14 @@
     const title = m.title || (c.text ? String(c.text).slice(0, 90) : `${SPORT_LABEL[m.sport] || ''} highlight`.trim());
     const open = openAngles[scope] === m.id;
     return `<article class="va-clip va-mo${inAd ? ' is-in' : ''}${busy ? ' is-busy' : ''}${via ? ' is-fallback' : ''}${open ? ' is-open' : ''}" style="--i:${i}" aria-label="${esc(title)}">
-      <span class="va-clip__thumb"${thumb ? ` style="background-image:url('${esc(thumb)}')"` : ''}>${tag && !inAd ? `<span class="va-clip__tag va-clip__tag--${kind === 'official' ? 'official' : 'verified'}">${ICON.check}${tag}</span>` : ''}${quality ? `<span class="va-clip__q" title="Best version">${esc(quality)}</span>` : ''}${secs ? `<span class="va-clip__dur">${esc(fmt(secs))}</span>` : ''}${c.hasAudio === false && !inAd ? '<span class="va-clip__mute" title="This file has no sound">No sound</span>' : ''}${inAd ? `<span class="va-clip__in">${ICON.check}In the ad</span>` : ''}</span>
+      <span class="va-clip__thumb"${thumb ? ` style="background-image:url('${esc(thumb)}')"` : ''}>${tag && !inAd ? `<span class="va-clip__tag va-clip__tag--${kind === 'official' ? 'official' : 'verified'}">${ICON.check}${tag}</span>` : ''}${quality ? `<span class="va-clip__q" title="Best version">${esc(quality)}</span>` : ''}${secs ? `<span class="va-clip__dur">${esc(fmt(secs))}</span>` : ''}${c.hasAudio === false && !inAd ? `<span class="va-clip__mute" title="This file has no sound">${ICON.soundOff}<span>No sound</span></span>` : ''}${inAd ? `<span class="va-clip__in">${ICON.check}In the ad</span>` : ''}</span>
       ${via ? `<span class="va-clip__via" title="${esc(via[1])}">${esc(via[0])}</span>` : ''}
       <span class="va-mo__title"${m.titleBy === 'ai' ? ' title="Short title written from the post text"' : ''}>${esc(title)}</span>
       ${teams.length ? `<span class="va-mo__teams"${matched.length ? ` aria-label="Matched ${esc(matched.map(n => teamObj(n, m.sport).short || n).join(', '))}"` : ''}>${teams.map(t => { const hit = matched.includes(t.name); return `<span class="va-mo__team${hit ? ' is-match' : ''}" title="${esc(t.name)}${hit ? ' (matched)' : ''}">${teamMark(t, 18)}<span>${esc(t.short || t.name)}</span></span>`; }).join('')}</span>` : ''}
       <span class="va-mo__meta"><span class="va-clip__plat va-clip__plat--${esc(platform.replace(/[^a-z]/g, ''))}" title="From ${esc(platformLabel)}${handle ? ` · @${esc(handle)}` : ''}">${esc(platformLabel)}</span>${age ? `<span>${esc(age)}</span>` : ''}${eng ? `<span class="va-mo__eng">${esc(eng)}</span>` : ''}</span>
       ${m.angles > 0 ? `<button class="va-mo__angles" type="button" data-mo-angles="${i}" aria-expanded="${open}">${open ? 'Hide angles' : `+${m.angles} angle${m.angles === 1 ? '' : 's'}`}</button>` : ''}
       <span class="va-clip__actions">
-        <button class="es-btn es-btn--sm es-btn--still${inAd || busy ? '' : ' es-btn--primary'}" type="button" data-mo-use="${i}"${busy || inAd ? ' disabled' : ''}>${busy ? 'Loading…' : inAd ? 'Using it' : 'Use clip'}</button>
+        <button class="es-btn es-btn--sm" type="button" data-mo-use="${i}"${busy || inAd ? ' disabled' : ''}>${busy ? 'Loading…' : inAd ? 'Using it' : 'Use clip'}</button>
         ${safeUrl(c.url) ? `<a class="va-icon-btn va-icon-btn--sm" href="${esc(c.url)}" target="_blank" rel="noopener" aria-label="Open the post${handle ? ` by @${esc(handle)}` : ''}" title="Open the post">${ICON.external}</a>` : ''}
       </span>
     </article>`;
@@ -2634,7 +2650,7 @@
         <span class="va-variant__style">${esc(B.STYLES[style]?.label || '')}</span>
         ${applied
           ? `<span class="va-variant__state">${ICON.check}In the ad</span>`
-          : `<button class="es-btn es-btn--sm${state.appliedVariant < 0 ? ' es-btn--primary es-btn--still' : ''}" type="button" data-use="${i}">Use this</button>`}
+          : `<button class="es-btn es-btn--sm" type="button" data-use="${i}">Use this</button>`}
       </div>
     </article>`;
   }
@@ -2747,7 +2763,10 @@
     els.aiWriteText.textContent = has ? 'Write 3 more' : 'Write 3 options';
     renderAi();
   }
-  const aiError = (text, act) => `<div class="va-ai-error" role="alert">${ICON.alert}<span>${esc(text)}</span><button class="va-link" type="button" data-act="${act}">${ICON.retry}Try again</button></div>`;
+  // Free mode (the week's AI budget is used): retrying can't work until it resets, so no "Try again".
+  const freeMode = () => document.documentElement.dataset.aiMode === 'free';
+  const retryLink = attr => (freeMode() ? '' : `<button class="va-link" type="button" ${attr}>${ICON.retry}Try again</button>`);
+  const aiError = (text, act) => `<div class="va-ai-error" role="alert">${ICON.alert}<span>${esc(text)}</span>${retryLink(`data-act="${act}"`)}</div>`;
   function renderVariants() {
     renderCopyAction();
     if (state.draftsStatus === 'loading') {
@@ -2825,6 +2844,7 @@
   els.aiActions.addEventListener('click', event => {
     const b = event.target.closest('[data-ai]');
     if (!b || b.disabled) return;
+    if (b.getAttribute('aria-disabled') === 'true') { toast(b.title || 'Ask AI is resting this week. You can still type your own copy.'); return; }
     if (b.dataset.ai === 'write') generateDrafts();
     else if (b.dataset.ai === 'grammar') checkGrammar();
     else sendChat(b.dataset.say || b.textContent);
@@ -3073,10 +3093,10 @@
     const last = lastPatchIndex();
     els.thread.innerHTML = state.chat.map((m, mi) => {
       if (m.pending) return `<li class="va-msg va-msg--assistant"><span class="va-msg__avatar" aria-hidden="true">${ICON.sparkle}</span><div class="va-msg__bubble va-msg__bubble--typing"><span class="va-sr">Ask AI is writing</span>${dots}</div></li>`;
-      if (m.role === 'user') return `<li class="va-msg va-msg--user"><div class="va-msg__bubble"><p>${esc(m.content)}</p></div></li>`;
+      if (m.role === 'user') return `<li class="va-msg va-msg--user"><div class="va-msg__bubble"><p class="va-msg__text">${esc(m.content)}</p></div></li>`;
       const fields = m.patch ? Object.keys(m.patch).filter(k => m.patch[k] != null) : [];
       return `<li class="va-msg va-msg--assistant${m.error ? ' is-error' : ''}"><span class="va-msg__avatar" aria-hidden="true">${m.error ? ICON.alert : ICON.sparkle}</span><div class="va-msg__bubble">
-        ${String(m.content || '').split(/\n{2,}/).map(p => `<p>${esc(p)}</p>`).join('')}
+        ${String(m.content || '').split(/\n{2,}/).map(p => `<p class="va-msg__text">${esc(p)}</p>`).join('')}
         ${fields.length ? `<p class="va-msg__applied">${ICON.check}<span>Changed ${esc(fields.join(', '))}${m.undone ? ' (undone)' : ''}</span>${!m.undone && mi === last ? `<button class="va-link" type="button" data-undo="${mi}">${ICON.undo}Undo</button>` : ''}</p>` : ''}
         ${m.retry ? `<button class="va-link" type="button" data-retry="${mi}">${ICON.retry}Try again</button>` : ''}
       </div></li>
@@ -3265,7 +3285,7 @@
       : styles.filter(st => gridReady(st).ok).flatMap(st => state.exportIds.filter(id => !layoutFor(id, { ...state, style: st }).fits).map(id => `${B.STYLES[st].label} ${id.replace('x', ':')}`));
     const notReady = setMode ? [] : styles.map(st => ({ st, r: gridReady(st) })).filter(x => !x.r.ok);
     const notes = [];
-    if (!hasClip()) notes.push(`<div class="va-notice">${ICON.film}<span><b>No clip yet.</b> Add one, or use an animated background: ${S.isNew(state.style) ? 'this style needs no footage.' : 'no footage needed.'}</span><span class="va-notice__acts"><button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="make-animated">Animated background</button><button class="es-btn es-btn--sm" type="button" data-act="to-clip">Find a clip</button></span></div>`);
+    if (!hasClip()) notes.push(`<div class="va-notice">${ICON.film}<span><b>No clip yet.</b> Add one, or use an animated background: ${S.isNew(state.style) ? 'this style needs no footage.' : 'no footage needed.'}</span><span class="va-notice__acts"><button class="es-btn es-btn--sm" type="button" data-act="make-animated">Animated background</button><button class="es-btn es-btn--sm" type="button" data-act="to-clip">Find a clip</button></span></div>`);
     if (notReady.length) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>${esc(B.STYLES[notReady[0].st].label)} needs ${esc(notReady[0].r.missing)}.</b></span><button class="es-btn es-btn--sm" type="button" data-act="to-copy">Add it</button></div>`);
     if (tooLong.length) notes.push(`<div class="va-notice va-notice--warn">${ICON.alert}<span><b>Copy is too long</b> for ${esc(tooLong.slice(0, 3).join(', '))}.</span><button class="es-btn es-btn--sm" type="button" data-act="to-copy">Shorten</button></div>`);
     const soundWait = A.usesMusic(state.sound) && !soundBuffer();
@@ -4077,7 +4097,7 @@
       return;
     }
     if (st.status === 'error') {
-      els.setBody.innerHTML = `<div class="va-ai-error" role="alert">${ICON.alert}<span>${esc(st.error)}</span><button class="va-link" type="button" data-set-act="retry">${ICON.retry}Try again</button></div>
+      els.setBody.innerHTML = `<div class="va-ai-error" role="alert">${ICON.alert}<span>${esc(st.error)}</span>${retryLink('data-set-act="retry"')}</div>
         <button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-set-act="fallback">Use my copy in 3 styles instead</button>`;
       return;
     }
@@ -4267,7 +4287,7 @@
       : `<p class="va-preflight__clear">${ICON.check}<span>All clear: a clear free offer, easy to read, calm, and it fits every size.</span></p>`;
     let ai = '';
     if (v.ratingStatus === 'loading') ai = `<p class="va-hint">${dots}Scoring 3 frames with the ES rubric…</p>`;
-    else if (v.ratingStatus === 'error') ai = `<div class="va-ai-error" role="alert">${ICON.alert}<span>${esc(v.error)}</span><button class="va-link" type="button" data-pf="score">${ICON.retry}Try again</button></div>`;
+    else if (v.ratingStatus === 'error') ai = `<div class="va-ai-error" role="alert">${ICON.alert}<span>${esc(v.error)}</span>${retryLink('data-pf="score"')}</div>`;
     else if (v.rating) {
       const fixes = (v.rating.fixes || []).slice(0, 3);
       ai = `<div class="va-preflight__score" id="va-rating"></div>${fixes.length ? `<h4 class="va-rate-heading">Top fixes</h4><ul class="va-preflight__aifix">${fixes.map((f, i) => `<li><span>${esc(f.change)}</span><button class="es-btn es-btn--sm" type="button" data-aifix="${i}">Ask AI to fix</button></li>`).join('')}</ul>` : ''}${v.rating.cachedHere ? '<p class="va-hint">Same ad as before: shown from this session, no new AI call.</p>' : ''}`;
@@ -4651,7 +4671,7 @@
   if (!fromHandoff && remembered.last && B.AD_BRANDS.some(b => b.id === remembered.last)) {
     setBrand(remembered.last);
     state.brandChosen = true;
-    if (applyDefaults(remembered.last)) toast(`Using your ${brand().label} settings.`, { action: { label: 'Reset', fn: resetDefaults }, timeout: 4200 });
+    if (applyDefaults(remembered.last)) toast(`Using your saved settings for ${brand().label}.`, { action: { label: 'Reset', fn: resetDefaults }, timeout: 4200 });
   }
   syncFields();
   renderSwatches();
