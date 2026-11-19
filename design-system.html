@@ -21,8 +21,8 @@
   <link rel="stylesheet" href="theme.css?v=20261117-ready1">
   <link rel="stylesheet" href="site-chrome.css?v=20261120-rel2">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="design-tokens.css?v=20261121-hyg">
-<link rel="stylesheet" href="es-ui.css?v=20261120-rel2">
+  <link rel="stylesheet" href="design-tokens.css?v=20261121-qa-pages">
+<link rel="stylesheet" href="es-ui.css?v=20261121-qa-pages">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <!-- Component sources for the AI, Video Ads and logo specimens below. -->
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
@@ -31,7 +31,7 @@
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
 <script src="frameup-ai-mode.js?v=20261121-rel"></script>
-<script src="app-shell.js?v=20261121-rel"></script>
+<script src="app-shell.js?v=20261121-qa-pages"></script>
 <link rel="stylesheet" href="frameup-tour.css?v=20261120-rel2">
 <script src="frameup-tour.js?v=20261117-tour1"></script>
 <script src="tours/updates.js?v=20261117-tour1"></script>
@@ -436,7 +436,7 @@
         <label class="ds-find__field">
           <span class="ds-find__sr">Search the UI Library</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
-          <input type="search" id="ds-find-input" placeholder="Search components, e.g. button" autocomplete="off" spellcheck="false" aria-describedby="ds-find-count" aria-keyshortcuts="/">
+          <input type="search" id="ds-find-input" placeholder="Find a component" autocomplete="off" spellcheck="false" aria-describedby="ds-find-count" aria-keyshortcuts="/">
           <kbd class="es-kbd" aria-hidden="true">/</kbd>
         </label>
         <span class="ds-find__count" id="ds-find-count" role="status" aria-live="polite"></span>
@@ -462,7 +462,7 @@
         <div class="ds-sub" id="colour">
           <h3>Colour: ES Blue</h3>
           <p class="ds-rule">One brand colour. <b>Blue 500</b> is the logo blue; <b>Blue 600</b> fills anything with a white label; <b>Blue 400 and 300</b> are for text and icons on dark only. No purple anywhere in the UI.</p>
-          <div class="ds-swatches">
+          <div class="ds-swatches" data-qa-allow="contrast">
             <div class="ds-swatch"><span style="background:var(--es-blue-100);color:#0E1014">Aa</span><b>Blue 100</b><small>--es-blue-100 · #E8F2FF</small></div>
             <div class="ds-swatch"><span style="background:var(--es-blue-200);color:#0E1014">Aa</span><b>Blue 200</b><small>--es-blue-200 · #CEE5FE</small></div>
             <div class="ds-swatch"><span style="background:var(--es-blue-300);color:#0E1014">Aa</span><b>Blue 300</b><small>--es-blue-300 · #9DCBFD</small></div>
@@ -477,7 +477,7 @@
         <div class="ds-sub">
           <h3>Colour: black and slate</h3>
           <p class="ds-rule">The dark theme's scale. Black is the page, Slate 800 the cards and panels, 700 and 600 the fields, lines and hover; Slate 200, 100 and white are text.</p>
-          <div class="ds-swatches">
+          <div class="ds-swatches" data-qa-allow="contrast">
             <div class="ds-swatch"><span style="background:var(--es-black);color:#FFFFFF">Aa</span><b>Black</b><small>--es-black · #101114</small></div>
             <div class="ds-swatch"><span style="background:var(--es-slate-800);color:#FFFFFF">Aa</span><b>Slate 800</b><small>--es-slate-800 · #1F2126</small></div>
             <div class="ds-swatch"><span style="background:var(--es-slate-700);color:#FFFFFF">Aa</span><b>Slate 700</b><small>--es-slate-700 · #2A2D34</small></div>
@@ -522,7 +522,7 @@
         <div class="ds-sub">
           <h3>Colour: status</h3>
           <p class="ds-rule">Status is always colour plus a word or icon, never colour alone. Text sits on the matching soft fill.</p>
-          <div class="ds-swatches">
+          <div class="ds-swatches" data-qa-allow="contrast">
             <div class="ds-swatch"><span style="background:var(--es-good-soft);color:var(--es-good)">Done</span><b>Good</b><small>--es-good #0E7A3D · --es-good-soft</small></div>
             <div class="ds-swatch"><span style="background:var(--es-warn-soft);color:var(--es-warn)">Due soon</span><b>Warn</b><small>--es-warn #B45309 · --es-warn-soft</small></div>
             <div class="ds-swatch"><span style="background:var(--es-bad-soft);color:var(--es-bad)">Overdue</span><b>Bad</b><small>--es-bad #C42323 · --es-bad-soft</small></div>
@@ -535,7 +535,7 @@
           <p class="ds-rule">Body text 4.5:1, large text and non-text 3:1, in both themes.</p>
           <ul class="ds-contrast">
             <li><span class="ds-contrast__pill" style="background:#0A6FDE;color:#FFFFFF">White on Blue 600</span>4.8:1. The blue that takes a white label.</li>
-            <li><span class="ds-contrast__pill" style="background:#0A7DFA;color:#FFFFFF">White on Blue 500</span>3.9:1. Large text only; never a button label.</li>
+            <li data-qa-allow="contrast"><span class="ds-contrast__pill" style="background:#0A7DFA;color:#FFFFFF">White on Blue 500</span>3.9:1. Large text only; never a button label.</li>
             <li><span class="ds-contrast__pill" style="background:#101114;color:#54A4FB">Blue 400 on Black</span>7.3:1 (6.2:1 on Slate 800). Blue text on dark only: on white it is 2.6:1.</li>
             <li><span class="ds-contrast__pill" style="background:#FFFFFF;color:#0A62C7;box-shadow:inset 0 0 0 1px #DFE2E7">Brand text on white</span>5.9:1 (<code>--es-brand-text</code>).</li>
             <li><span class="ds-contrast__pill" style="background:#FFFFFF;color:#565C67;box-shadow:inset 0 0 0 1px #DFE2E7">Ink 3 on white</span>6.7:1; Slate 200 on Slate 800 is 6.6:1.</li>
@@ -757,7 +757,7 @@
         <div class="ds-sub">
           <h3>Icons in buttons</h3>
           <p class="ds-rule">Lucide icons, stroke 2, always <code>currentColor</code>: 16px in small buttons, 18px everywhere else, 8px from the label. Icon-only buttons need an <code>aria-label</code>.</p>
-          <div class="ds-row">
+          <div class="ds-row" data-qa-allow="button-heights">
             <button class="es-btn es-btn--sm" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Copy link · 16</button>
             <button class="es-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>Upload · 18</button>
             <button class="es-icon-btn" type="button" aria-label="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg></button>

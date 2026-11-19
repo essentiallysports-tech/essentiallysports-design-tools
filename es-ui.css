@@ -263,7 +263,8 @@ html[data-theme="dark"] .es-tabs__ink { background: #54A4FB; }
 .es-chip:is(:disabled, [aria-disabled="true"]):hover { background: var(--es-bg); }
 /* Count inside a chip ("NFL 12"): quiet, tabular; inherits on a selected chip. */
 .es-chip__count { color: var(--es-ink-3); font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }
-.es-chip:is([aria-pressed="true"], [aria-checked="true"]) .es-chip__count { color: inherit; opacity: .72; }
+/* Full colour: at .72 opacity the count fell to 3.1:1 on the selected chip (Pages QA 2026-11-21). */
+.es-chip:is([aria-pressed="true"], [aria-checked="true"]) .es-chip__count { color: inherit; }
 /* A league logo, team logo or colour dot leads the label at 18px. */
 .es-chip > :is(img, .es-team-logo, .es-chip__dot):first-child { flex: none; }
 .es-chip__dot { width: 12px; height: 12px; border-radius: 50%; background: var(--dot, currentColor); box-shadow: inset 0 0 0 1px rgb(127 127 127 / .4); }
@@ -1717,13 +1718,14 @@ html[data-theme="dark"] body.dashboard-page .export-list-row .export-list-time {
    Always open (no collapse), narrower, with tighter type: 14px items,
    11px group labels, 18px icons. */
 .es-sidebar { --es-type-nav-size: 14px; --es-type-nav-group-size: 11px; padding: 14px 10px 10px; }
-.es-sidebar__brand { min-height: 36px; margin-bottom: 4px; padding: 0 6px; }
+.es-sidebar__brand { min-height: 36px; margin-bottom: 4px; padding: 0 8px; }
 .es-sidebar__logo img { height: 18px; }
-.es-sidebar__search { min-height: 36px; margin-bottom: 10px; padding: 0 6px 0 10px; font-size: 13px; }
+.es-sidebar__search { min-height: 36px; margin-bottom: 8px; padding: 0 8px; font-size: 13px; }
 .es-sidebar__search svg { width: 16px; height: 16px; }
 .es-sidebar__section { margin-bottom: 8px; }
 .es-sidebar__label { padding: 10px 8px 4px; letter-spacing: .02em; }
-.es-sidebar .es-nav-item { gap: 10px; min-height: 34px; padding: 0 8px; border-radius: 10px; }
+/* On the 8px grid: logo, search and nav icons share one 8px inset (Pages QA 2026-11-21). */
+.es-sidebar .es-nav-item { gap: 8px; min-height: 34px; padding: 0 8px; border-radius: 10px; }
 .es-sidebar .es-nav-item + .es-nav-item { margin-top: 2px; }
 .es-sidebar .es-nav-item svg { width: 18px; height: 18px; }
 .es-sidebar .es-nav-item .es-badge { min-height: 18px; padding: 0 6px; font-size: 11px; }
