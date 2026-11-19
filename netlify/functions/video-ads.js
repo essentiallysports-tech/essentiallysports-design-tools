@@ -9,7 +9,11 @@
 //               message), see _clip-link.js, so the browser downloads the clip
 //               itself. Video bytes never pass through this function
 //               (serverless responses are capped at ~4.5 MB).
-//   find-clips  X posts with video from the last 5 days of one team (or up
+//   find-clips  Trusted clips only (_clip-trust.js: team / league / network
+//               accounts and sites) from each sport's window (NFL 5 days, CFB
+//               7, MLB 30 in its offseason; windowFor), incl. the free ESPN /
+//               MLB.com source (_clip-source-sites.js). Originally:
+//               X posts with video from the last 5 days of one team (or up
 //               to 6: `teams: []`, any of them), the teams in a colour (or up
 //               to 6: `colors: []`), or a moment, aimed at verified sources
 //               (video-ads-sources.js): one x.com-only web search (Haiku, up
@@ -68,15 +72,23 @@ const CLIP_LIBRARY = require('./_clip-library.js');
 const CLIP_LINK = require('./_clip-link.js');
 // Is it great game action? (AI verdict stored per clip, else free rules.)
 const CLASSIFY = require('./_clip-classify.js');
+// The one trusted-source allowlist (team / league / network accounts and sites).
+const TRUST = require('./_clip-trust.js');
 
 // Extra clip sources (shared interface, scratchpad clips-contract.md), loaded
 // defensively: each lives on its own branch until merged. CLIPS_EXTRA_SOURCES=off
 // switches them all off.
 const isOffValue = value => /^(off|0|false|no|disabled)$/i.test(String(value ?? '').trim());
 let EXTRA_SOURCES = [];
-['./_clip-source-grok.js', './_clip-source-public.js'].forEach(file => {
+// _clip-source-sites.js: ESPN (college football) and MLB.com clips, free.
+// Literal require() calls, so Vercel's file tracing bundles every source.
+[
+  ['./_clip-source-sites.js', () => require('./_clip-source-sites.js')],
+  ['./_clip-source-grok.js', () => require('./_clip-source-grok.js')],
+  ['./_clip-source-public.js', () => require('./_clip-source-public.js')],
+].forEach(([file, load]) => {
   try {
-    const mod = require(file);
+    const mod = load();
     if (mod && typeof mod.search === 'function' && typeof mod.configured === 'function') EXTRA_SOURCES.push(mod);
   } catch (error) {
     if (error?.code !== 'MODULE_NOT_FOUND') console.warn(`video-ads: clip source ${file} failed to load: ${error.message}`);
@@ -280,6 +292,33 @@ const FIND_CLIPS = {
   // Quality floor: 720p, one shared constant (CLIP_MIN_SHORT_SIDE, _clip-library.js).
   minShortSide: CLIP_LIBRARY.CLIP_MIN_SHORT_SIDE, minSeconds: 4, maxSeconds: 120,
 };
+// How far back each sport looks (owner, 2026-11-19: CFB and MLB showed few
+// clips). NFL keeps its 5 days. College football plays once a week, so 7 days
+// always covers last weekend's games (5 days lost Saturday's games by
+// Thursday). MLB in its offseason (Nov 5 - Feb 19) looks back 30 days,
+// labelled "Recent highlights (last 30 days)", instead of showing nothing;
+// when no game at all was played in that window, MLB.com's last games of the
+// season are shown, labelled (LAST_GAMES_HOURS).
+const SPORT_WINDOW_HOURS = { nfl: 120, cfb: 168, mlb: 120 };
+const MLB_OFFSEASON_HOURS = 720;
+const LAST_GAMES_HOURS = 150 * 24;
+function mlbOffseason(now = Date.now()) {
+  const d = new Date(now);
+  const m = d.getUTCMonth() + 1;
+  const day = d.getUTCDate();
+  return (m === 11 && day >= 5) || m === 12 || m === 1 || (m === 2 && day < 20);
+}
+function windowFor(sport, now = Date.now()) {
+  if (sport === 'mlb' && mlbOffseason(now)) return MLB_OFFSEASON_HOURS;
+  return SPORT_WINDOW_HOURS[sport] || FIND_CLIPS.maxAgeHours;
+}
+const windowWords = hours => (hours % 24 === 0 ? `${hours / 24} days` : `${hours} hours`);
+// For the page: { hours, days, label, offseason }.
+function windowInfo(sport, now = Date.now()) {
+  const hours = windowFor(sport, now);
+  const offseason = sport === 'mlb' && mlbOffseason(now);
+  return { hours, days: Math.round(hours / 24), offseason, label: offseason ? `Recent highlights (last ${windowWords(hours)})` : `Last ${windowWords(hours)}` };
+}
 const X_DOMAINS = ['x.com', 'twitter.com'];
 const X_API = 'https://api.x.com/2';
 const xApiOn = () => Boolean(process.env.X_BEARER_TOKEN);
@@ -310,19 +349,26 @@ function ageHoursOf(postedAt, now = Date.now()) {
 
 // ── Search plan: who to target and how to ask ─────────────────────────────
 // { kind, subject, official:[handles], league:[], media:[], queries:[], terms:[] }
-function searchPlan({ sport, team = null, teams = [], query = '' }) {
-  const { league, media } = SOURCES.sourcesFor(sport);
+function searchPlan({ sport, team = null, teams = [], query = '', now = Date.now() }) {
+  const base = SOURCES.sourcesFor(sport);
+  const media = base.media;
   const sportName = SPORT_NAMES[sport];
+  const windowHours = windowFor(sport, now);
+  const span = windowWords(windowHours);
   if (team) {
     const own = SOURCES.handleFor(team);
+    // College teams: their own conference's accounts lead the league list.
+    const conf = sport === 'cfb' ? SOURCES.conferenceFor(team) : [];
+    const league = [...new Set([...conf, ...base.league])];
     const queries = [
       own ? `x.com/${own} status video` : `${team.name} video highlights`,
       `${team.name} highlights video this week`,
       `@${league[0]} ${team.short} highlight`,
       `${media.slice(0, 2).map(h => `@${h}`).join(' OR ')} ${team.short}`,
     ];
-    return { kind: 'team', subject: `${sportName} team: ${team.name} (only this team)`, official: own ? [own] : [], league, media, queries, terms: [team.short, team.name] };
+    return { kind: 'team', subject: `${sportName} team: ${team.name} (only this team)`, official: own ? [own] : [], league, media, queries, terms: [team.short, team.name], windowHours, span };
   }
+  const league = base.league;
   if (teams.length) {
     const official = teams.map(t => SOURCES.handleFor(t)).filter(Boolean);
     const queries = [
@@ -330,15 +376,15 @@ function searchPlan({ sport, team = null, teams = [], query = '' }) {
       `${sportName} highlights ${teams.slice(0, 4).map(t => t.short).join(' ')}`,
       `@${league[0]} highlights ${teams.slice(0, 3).map(t => t.short).join(' OR ')}`,
     ];
-    return { kind: 'color', subject: `${sportName} teams: ${teams.map(t => t.name).join(', ')}`, official, league, media, queries, terms: teams.map(t => t.short) };
+    return { kind: 'color', subject: `${sportName} teams: ${teams.map(t => t.name).join(', ')}`, official, league, media, queries, terms: teams.map(t => t.short), windowHours, span };
   }
   // No team, colour or query: the sport's most-watched highlights (By moment).
   if (!query) {
     const outlets = [...league.slice(0, 2), ...media.slice(0, 2)];
     return {
-      kind: 'sport', subject: `${sportName}: the most-watched game highlights of the last 5 days`, official: [], league, media,
+      kind: 'sport', subject: `${sportName}: the most-watched game highlights of the last ${span}`, official: [], league, media,
       queries: [`${outlets.map(h => `@${h}`).join(' OR ')} highlight video`, `${sportName} viral highlight this week`, `@${league[0]} top plays`, `${sportName} best plays video`],
-      terms: [],
+      terms: [], windowHours, span,
     };
   }
   const named = teamInTitle(query, sport);
@@ -349,7 +395,7 @@ function searchPlan({ sport, team = null, teams = [], query = '' }) {
     `${media.slice(0, 2).map(h => `@${h}`).join(' OR ')} ${query}`,
     `${query} highlight`,
   ];
-  return { kind: 'query', subject: `${sportName} moment: ${query}`, official: own ? [own] : [], league, media, queries, terms: keyTerms(query, named) };
+  return { kind: 'query', subject: `${sportName} moment: ${query}`, official: own ? [own] : [], league, media, queries, terms: keyTerms(query, named), windowHours, span };
 }
 
 // A few distinctive words of a moment title (names, teams) for X API queries.
@@ -370,8 +416,8 @@ function webPrompt(plan, { since, candidates = FIND_CLIPS.candidates, maxUses = 
     handleList('- networks', plan.media),
     `Run up to ${maxUses} focused searches, for example:`,
     ...plan.queries.slice(0, maxUses).map((q, i) => `${i + 1}. ${q}`),
-    `Find X posts made in the last 5 days (120 hours) (after ${since} UTC) that carry native video from this week's games: highlights, big plays, celebrations. Status links only (https://x.com/<handle>/status/<id>), not profile pages or articles.`,
-    'Prefer the verified accounts above; other accounts only when they posted the video themselves.',
+    `Find X posts made in the last ${plan.span || '5 days'} (${plan.windowHours || FIND_CLIPS.maxAgeHours} hours) (after ${since} UTC) that carry native video from recent games: highlights, big plays, celebrations. Status links only (https://x.com/<handle>/status/<id>), not profile pages or articles.`,
+    'Only posts by official accounts: the team, league, conference and network accounts above, or another official team / league / network account. Never fan, aggregator or parody accounts.',
     `Reply with JSON only: {"posts": [{"url": "https://x.com/<handle>/status/<id>", "date": "YYYY-MM-DD the post was made"}]} (up to ${candidates}, verified accounts first, newest first).`,
   ].filter(Boolean).join('\n');
 }
@@ -379,8 +425,8 @@ function webPrompt(plan, { since, candidates = FIND_CLIPS.candidates, maxUses = 
 const SEARCH_SYSTEM = [
   'You find the newest sports video posts on X (Twitter) for EssentiallySports newsletter ads.',
   'Search, then reply with JSON only. List only X post URLs you actually saw in search results; never make one up or change an id.',
-  'Freshness matters most: only posts made in the last 5 days (120 hours). No throwbacks, anniversaries or re-uploads of old games.',
-  'Quality next: official team, league and network accounts post the cleanest HD video, so look there first.',
+  'Freshness matters most: only posts made inside the window the request gives. No throwbacks, anniversaries or re-uploads of old games.',
+  'Trusted sources only: official team, league, conference and network accounts. Never list fan, aggregator or parody accounts.',
 ].join('\n');
 
 // ── X API v2 (optional, X_BEARER_TOKEN) ───────────────────────────────────
@@ -406,11 +452,12 @@ function xQueryFor(plan) {
 }
 
 // Recent posts with native video from the X API, shaped like clipFromPost().
-async function xApiSearch(query, { max = FIND_CLIPS.candidates } = {}) {
+async function xApiSearch(query, { max = FIND_CLIPS.candidates, sinceHours = FIND_CLIPS.maxAgeHours } = {}) {
   const params = new URLSearchParams({
     query,
     max_results: String(Math.max(10, Math.min(100, max))),
-    start_time: new Date(Date.now() - FIND_CLIPS.maxAgeHours * 3600e3 + 60e3).toISOString(),
+    // Recent search covers the last 7 days at most.
+    start_time: new Date(Date.now() - Math.min(sinceHours, 167) * 3600e3 + 60e3).toISOString(),
     expansions: 'attachments.media_keys,author_id',
     'tweet.fields': 'created_at,public_metrics,author_id,attachments',
     'media.fields': 'type,variants,duration_ms,preview_image_url,public_metrics,width,height',
@@ -460,12 +507,12 @@ function mediaKey(clip) {
 }
 
 const SOURCE_POINTS = { official: 40, league: 32, media: 26, other: 0 };
-function scoreClip(c) {
+function scoreClip(c, windowHours = FIND_CLIPS.maxAgeHours) {
   let score = SOURCE_POINTS[c.source] ?? 0;
   if (c.source === 'other' && /^(organization|business|government)$/i.test(c.verifiedType || '')) score += 10;
   const side = c.shortSide || 0;
   score += side >= 1080 ? 20 : side >= 720 ? 15 : side >= 480 ? 6 : 3;
-  score += 20 * Math.max(0, 1 - (Number(c.ageHours) || 0) / FIND_CLIPS.maxAgeHours);
+  score += 20 * Math.max(0, 1 - (Number(c.ageHours) || 0) / windowHours);
   // The AI quality score (1-5), when the daily job has judged the clip.
   if (c.ai && c.ai.by === 'ai' && Number(c.ai.quality) >= 1) score += 3 * (Number(c.ai.quality) - 3);
   if (c.views > 0) score += Math.min(15, 2.5 * Math.log10(1 + c.views));
@@ -479,9 +526,16 @@ function scoreClip(c) {
 // One verified post -> { clip } or { reason } (the diag bucket it fell into).
 function assessClip(c, { sport = '', now = Date.now() } = {}) {
   if (!c?.ok || !c.variants?.length) return { reason: c?.reason === 'no-video' ? 'noVideo' : 'failed' };
+  // Trusted sources only (_clip-trust.js): team / league / network accounts and sites.
+  const platform = c.platform || 'x';
+  const trust = TRUST.classify({ platform, handle: c.handle, url: c.url, mediaUrl: platform === 'x' ? '' : c.variants[0]?.url });
+  if (!trust.trusted) return { reason: 'untrusted' };
   const age = ageHoursOf(c.postedAt, now);
   if (age === null) return { reason: 'noDate' };
-  if (age > FIND_CLIPS.maxAgeHours) return { reason: 'tooOld' };
+  // MLB offseason: MLB.com's last games of the season, labelled, when the window had none.
+  const lastGames = Boolean(c.lastGames) && sport === 'mlb' && age <= LAST_GAMES_HOURS;
+  const windowHours = windowFor(sport, now);
+  if (age > windowHours && !lastGames) return { reason: 'tooOld' };
   if (looksOld(c.text, new Date(now))) return { reason: 'throwback' };
   const best = c.variants[0];
   const side = shortSide(best);
@@ -505,9 +559,11 @@ function assessClip(c, { sport = '', now = Date.now() } = {}) {
     likes: Number(c.likes || 0),
     views: Number(c.views || 0),
     verifiedType: c.verifiedType || '',
-    platform: c.platform || 'x',
+    platform,
+    trust: { kind: trust.kind, label: trust.label, site: trust.site },
   };
   clip.sourceKind = clip.source === 'other' ? 'fan' : clip.source;
+  if (lastGames && age > windowHours) clip.lastGames = true;
   if (typeof c.hasAudio === 'boolean') clip.hasAudio = c.hasAudio;
   if (c.foundBy) clip.foundBy = c.foundBy;
   if (Array.isArray(c.teams) && c.teams.length) clip.teams = c.teams.slice(0, 8);
@@ -515,15 +571,20 @@ function assessClip(c, { sport = '', now = Date.now() } = {}) {
   if (c.ai && typeof c.ai.isGameAction === 'boolean') clip.ai = c.ai;
   // Game action only (podcasts, pressers, promos and memes are dropped).
   if (!CLASSIFY.isGreat(clip)) return { reason: 'notGame' };
-  clip.score = scoreClip(clip);
+  clip.score = scoreClip(clip, windowHours);
   return { clip };
 }
 
 // X posts: the verified-source registry decides (never a source's claim).
 // Other platforms: the source module's sourceKind ('fan' -> 'other').
 function sourceOf(c, sport) {
-  if (!c.platform || c.platform === 'x') return SOURCES.classifyHandle(c.handle, sport);
-  return ['official', 'league', 'media'].includes(c.sourceKind) ? c.sourceKind : 'other';
+  if (!c.platform || c.platform === 'x') {
+    // Ranking is per sport; a trusted account of another sport's list ranks as media.
+    const kind = SOURCES.classifyHandle(c.handle, sport);
+    return kind === 'other' && SOURCES.classifyHandle(c.handle) !== 'other' ? 'media' : kind;
+  }
+  const kind = TRUST.classify({ platform: c.platform, url: c.url, mediaUrl: c.variants?.[0]?.url }).kind;
+  return ['official', 'league', 'media'].includes(kind) ? kind : 'other';
 }
 
 // Kept for callers that only want the clip (or null).
@@ -552,7 +613,7 @@ function rankClips(clips, diag = null) {
   return kept.sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || a.ageHours - b.ageHours);
 }
 
-const newDiag = strategy => ({ strategy, searched: 0, listed: 0, nonPost: 0, candidates: 0, noVideo: 0, failed: 0, noDate: 0, tooOld: 0, throwback: 0, lowQuality: 0, badLength: 0, notGame: 0, dupes: 0, kept: 0 });
+const newDiag = strategy => ({ strategy, searched: 0, listed: 0, nonPost: 0, candidates: 0, noVideo: 0, failed: 0, untrusted: 0, noDate: 0, tooOld: 0, throwback: 0, lowQuality: 0, badLength: 0, notGame: 0, dupes: 0, kept: 0 });
 
 // Verifies candidate posts in parallel and buckets the failures into diag.
 async function verifyAll(urls, { sport, diag }) {
@@ -578,7 +639,7 @@ async function searchRound(plan, { sport, track, feature, maxUses, maxCostUsd, t
   if (freeOnly && !xApiOn()) return { clips: [], cost: 0, diag: { ...diag, strategy: 'none' } };
   if (xApiOn()) {
     try {
-      const found = await xApiSearch(xQueryFor(plan));
+      const found = await xApiSearch(xQueryFor(plan), { sinceHours: plan.windowHours || FIND_CLIPS.maxAgeHours });
       diag.searched = 1;
       diag.listed = found.length;
       diag.candidates = found.length;
@@ -592,7 +653,7 @@ async function searchRound(plan, { sport, track, feature, maxUses, maxCostUsd, t
       if (freeOnly) return { clips: [], cost: 0, diag: { ...diag, strategy: 'none' } };
     }
   }
-  const since = new Date(Date.now() - FIND_CLIPS.maxAgeHours * 3600e3).toISOString().slice(0, 16).replace('T', ' ');
+  const since = new Date(Date.now() - (plan.windowHours || FIND_CLIPS.maxAgeHours) * 3600e3).toISOString().slice(0, 16).replace('T', ' ');
   const result = await aiWebResearch({
     tier: 'search', system: SEARCH_SYSTEM, prompt: webPrompt(plan, { since, maxUses }),
     maxUses, maxTokens: FIND_CLIPS.maxTokens, maxCostUsd, timeoutMs, allowedDomains: X_DOMAINS,
@@ -609,16 +670,20 @@ async function searchRound(plan, { sport, track, feature, maxUses, maxCostUsd, t
   diag.searched = result.searches || 0;
   diag.listed = all.length;
   diag.nonPost = all.length - xPosts.length;
-  // Verified accounts first, so the candidate cap never cuts them.
+  // Trusted accounts only (no fetch is spent on a fan post); /i/status links
+  // carry no handle yet, so they are verified and judged by their real author.
   const rank = url => ({ official: 0, league: 1, media: 2, other: 3 })[SOURCES.classifyHandle(url.split('/')[3], sport)];
-  const candidates = [...new Set(xPosts.map(u => tweet.normalizeTweetUrl(u)))].sort((a, b) => rank(a) - rank(b)).slice(0, FIND_CLIPS.candidates);
+  const unique = [...new Set(xPosts.map(u => tweet.normalizeTweetUrl(u)))];
+  const trusted = unique.filter(u => { const h = TRUST.xHandleOf(u); return !h || TRUST.isTrusted({ platform: 'x', handle: h }); });
+  diag.untrusted = unique.length - trusted.length;
+  const candidates = trusted.sort((a, b) => rank(a) - rank(b)).slice(0, FIND_CLIPS.candidates);
   diag.candidates = candidates.length;
   const clips = rankClips(await verifyAll(candidates, { sport, diag }), diag);
   diag.kept = clips.length;
   return { clips, cost: result.cost, diag };
 }
 
-const noteFor = n => (n < FIND_CLIPS.minClips ? { note: `Only ${n} clip${n === 1 ? '' : 's'} from the last 5 days.` } : {});
+const noteFor = (n, sport = '') => (n < FIND_CLIPS.minClips ? { note: `Only ${n} clip${n === 1 ? '' : 's'} from the last ${windowWords(windowFor(sport))}.` } : {});
 // One key per selection: a single team / colour keeps its old key; several are
 // keyed by the sorted selection, so Alabama+Auburn and Auburn+Alabama share one.
 const clipKey = (strategy, sport, { team, teams = [], color, colors = [], query }) => `${strategy}|${sport}|${team ? `team:${team.name.toLowerCase()}`
@@ -669,22 +734,24 @@ function matchedTeams(clip, selection, sport) {
   return selection.filter(t => about.has(t.name.toLowerCase())).map(t => t.name);
 }
 
-// Re-ages cached clips, drops the ones that crossed 120h, and re-ranks.
-// Fallback clips labelled 'older' may be up to the library's 7 days.
-const reAge = clips => clips
+// Re-ages cached clips, drops the ones that crossed the sport's window, and
+// re-ranks. Fallback clips labelled 'older' may be up to the library's 7 days,
+// MLB's labelled last games of the season up to LAST_GAMES_HOURS.
+const reAge = (clips, sport = '') => clips
   .map(c => ({ ...c, ageHours: Math.round(ageHoursOf(c.postedAt) ?? Infinity) }))
-  .filter(c => c.ageHours <= (c.via === 'older' ? CLIP_LIBRARY.KEEP_DAYS * 24 : FIND_CLIPS.maxAgeHours))
-  .map(c => (c.source ? { ...c, score: scoreClip(c) } : c))
+  .filter(c => c.ageHours <= (c.via === 'lastgames' ? LAST_GAMES_HOURS : c.via === 'older' ? Math.max(CLIP_LIBRARY.KEEP_DAYS * 24, windowFor(sport)) : windowFor(sport)))
+  .map(c => (c.source ? { ...c, score: scoreClip(c, windowFor(sport)) } : c))
   .sort((a, b) => viaRank(a) - viaRank(b) || (b.score ?? 0) - (a.score ?? 0) || a.ageHours - b.ageHours);
 // The request's own clips first, then widened ones, then labelled fallbacks.
-const VIA_ORDER = { search: 0, league: 1, color: 2, older: 3, sport: 4, colorx: 5 };
+const VIA_ORDER = { search: 0, league: 1, color: 2, older: 3, lastgames: 3, sport: 4, colorx: 5 };
 function viaRank(c) { return VIA_ORDER[c.via] ?? 0; }
 
 function fromCache(key) {
   const hit = CLIP_CACHE.get(key);
   if (!hit || Date.now() - hit.at >= CLIP_TTL_MS) return null;
-  const clips = reAge(hit.value.clips);
-  const note = hit.value.widened || hit.value.fallback ? { note: hit.value.note } : noteFor(clips.length);
+  const sport = String(key).split('|')[1] || '';
+  const clips = reAge(hit.value.clips, sport);
+  const note = hit.value.widened || hit.value.fallback || hit.value.lastGames ? { note: hit.value.note } : noteFor(clips.length, sport);
   return { ...hit.value, clips, ...note, cached: true, cost: 0 };
 }
 function toCache(key, value) {
@@ -697,23 +764,56 @@ function toCache(key, value) {
 // response carries (the page shows 9 at a time, "Load more" for the rest).
 const LIBRARY = { enough: 9, readMs: 3500, writeMs: 3000, sourceMs: 25000, maxOut: 36, fallbackFill: 9, momentSources: 3, momentPaid: 2 };
 
-// Hosts a direct (non-X) MP4 may come from. All answer CORS * (measured by
-// the clips-public branch, 2026-11-17), so the browser downloads them itself
-// and no server stream is needed. CLIPS_MEDIA_HOSTS adds exact host names.
-const MEDIA_HOSTS = [/^video\.twimg\.com$/, /^v\.redd\.it$/, /^(?:[a-z0-9-]+\.)*streamable\.com$/, /^(?:[a-z0-9-]+\.)*bsky\.network$/, /^bsky\.social$/];
+// Hosts a direct (non-X) MP4 may come from: the trusted video CDNs in
+// _clip-trust.js (X, ESPN, MLB.com; all answer CORS *, measured 2026-11-19),
+// so the browser downloads them itself and no server stream is needed.
+// Reddit, Bluesky and Streamable files are no longer search results (trusted
+// sources only). CLIPS_MEDIA_HOSTS adds exact host names for the file check;
+// a clip is still shown only when its page is on the trusted list.
 function mediaHostAllowed(raw, env = process.env) {
   let u;
   try { u = new URL(String(raw)); } catch { return false; }
   if (u.protocol !== 'https:' || u.username || u.password || (u.port && u.port !== '443')) return false;
   const host = u.hostname.toLowerCase();
   const extra = String(env.CLIPS_MEDIA_HOSTS || '').split(',').map(h => h.trim().toLowerCase()).filter(Boolean);
-  return MEDIA_HOSTS.some(re => re.test(host)) || extra.includes(host);
+  return TRUST.mediaHostTrusted(u.toString()) || extra.includes(host);
+}
+
+// Width / height of an MP4 from its header: the first track header box
+// ('tkhd') in the first 64 KB (files with the index up front, like ESPN's).
+// -> { width, height } or null. Never reads more than 64 KB.
+function mp4Dims(bytes) {
+  const buf = Buffer.from(bytes || []);
+  let at = -1;
+  while ((at = buf.indexOf('tkhd', at + 1)) > 3) {
+    const version = buf[at + 4];
+    const off = at + 4 + 4 + (version === 1 ? 32 : 20) + 8 + 8 + 36;
+    if (off + 8 > buf.length) return null;
+    const width = Math.round(buf.readUInt32BE(off) / 65536);
+    const height = Math.round(buf.readUInt32BE(off + 4) / 65536);
+    if (width > 0 && height > 0) return { width, height };
+  }
+  return null;
 }
 
 // Is a direct MP4 still there? HEAD, or a 2-byte range GET when HEAD is
 // refused. Never reads the video. -> { ok, dead, status }
-async function checkMedia(url) {
+// probe: true reads the first 64 KB instead (a range GET) to learn the size.
+async function checkMedia(url, { probe = false } = {}) {
   if (!mediaHostAllowed(url)) return { ok: false, dead: false, status: 0, reason: 'host' };
+  if (probe) {
+    try {
+      const response = await fetch(url, { headers: { 'User-Agent': 'FrameUp/1.0', Range: 'bytes=0-65535' }, redirect: 'follow', signal: AbortSignal.timeout(5000) });
+      const type = response.headers?.get?.('content-type') || '';
+      const ok = (response.status === 200 || response.status === 206) && (!type || /video|octet-stream|binary|mp4/i.test(type));
+      let dims = null;
+      if (ok && response.status === 206) dims = mp4Dims(new Uint8Array(await response.arrayBuffer()).slice(0, 65536));
+      else { try { await response.body?.cancel?.(); } catch { /* nothing to cancel */ } }
+      return { ok, dead: [404, 410].includes(response.status), status: response.status, ...(dims || {}) };
+    } catch {
+      return { ok: false, dead: false, status: 0 };
+    }
+  }
   const looksVideo = type => !type || /video|octet-stream|binary|mp4/i.test(type);
   const ask = async (method, headers = {}) => {
     const response = await fetch(url, { method, headers: { 'User-Agent': 'FrameUp/1.0 (+https://frameup.essentiallysports.com)', ...headers }, redirect: 'follow', signal: AbortSignal.timeout(5000) });
@@ -744,8 +844,11 @@ async function verifyCandidate(cand) {
     return result.ok ? { ...result, platform: 'x', ...extra } : result;
   }
   if (!cand.mediaUrl) return { ok: false, reason: 'no-video' };
-  const media = await checkMedia(cand.mediaUrl);
+  // A file of unknown size: read its header (64 KB) so the 720p floor is measured.
+  const media = await checkMedia(cand.mediaUrl, { probe: !(Number(cand.width) && Number(cand.height)) });
   if (!media.ok) return { ok: false, reason: media.dead ? 'dead' : 'unreachable' };
+  const width = Number(cand.width) || media.width || 0;
+  const height = Number(cand.height) || media.height || 0;
   return {
     ok: true,
     url: httpsUrl(cand.url) || cand.mediaUrl,
@@ -758,8 +861,9 @@ async function verifyCandidate(cand) {
     likes: Number(cand.likes || 0),
     views: Number(cand.views || 0),
     verifiedType: '',
-    variants: [{ url: cand.mediaUrl, width: Number(cand.width || 0), height: Number(cand.height || 0), bitrate: 0 }],
+    variants: [{ url: cand.mediaUrl, width, height, bitrate: 0 }],
     sourceKind: cand.sourceKind,
+    ...(cand.lastGames ? { lastGames: true } : {}),
     ...(typeof cand.hasAudio === 'boolean' ? { hasAudio: cand.hasAudio } : {}),
     ...extra,
   };
@@ -782,7 +886,7 @@ async function runSources(opts, { track = {}, freeOnly = false, paid = true, onl
   const runs = await Promise.all(active.map(async s => {
     try {
       const result = await withTimeout(s.search({
-        sinceHours: FIND_CLIPS.maxAgeHours, limit: FIND_CLIPS.candidates, ...opts,
+        sinceHours: windowFor(opts.sport), limit: FIND_CLIPS.candidates, ...opts,
         track: { ...track, feature: `video-ads-clips-${s.id}` }, token: track.token || '', env: process.env,
       }), timeoutMs, null);
       if (!result) return { id: s.id, candidates: [], cost: 0, diag: { timeout: 1 } };
@@ -801,6 +905,14 @@ async function runSources(opts, { track = {}, freeOnly = false, paid = true, onl
     const d = { ...run.diag, found: run.candidates.length, verified: 0, kept: 0, cost: money(run.cost) };
     diag[run.id] = d;
     run.candidates.forEach(cand => {
+      // Trusted sources only, before anything is fetched: an X post by a known
+      // account (or an /i/ link, judged by its real author once verified), or
+      // a page + file on a trusted site. Reddit / Bluesky / Streamable posts
+      // still lead to official X posts, but their own uploads are dropped.
+      const xPost = isXPost(cand.url) && (cand.platform === 'x' || !cand.mediaUrl);
+      const handle = xPost ? (cand.handle || TRUST.xHandleOf(cand.url)) : '';
+      const ok = xPost ? (!handle || TRUST.isTrusted({ platform: 'x', handle })) : TRUST.isTrusted({ platform: cand.platform, url: cand.url, mediaUrl: cand.mediaUrl || '' });
+      if (!ok) { d.untrusted = (d.untrusted || 0) + 1; return; }
       const key = isXPost(cand.url) ? tweet.normalizeTweetUrl(cand.url) : cand.url;
       if (seen.has(key)) { d.known = (d.known || 0) + 1; return; }
       seen.add(key);
@@ -821,14 +933,29 @@ async function runSources(opts, { track = {}, freeOnly = false, paid = true, onl
 }
 
 // Teams named in a text (full name, or a short name unique within the sport).
+// Longer names are matched first and blanked out, so "Kansas State" is not
+// also read as "Kansas", nor "Virginia Tech" as "Virginia".
 function teamsInText(text, sport) {
-  const value = String(text || '');
+  let value = String(text || '');
   if (!value) return [];
   const list = TEAMS.TEAMS.filter(t => t.sport === sport);
   const shortCount = new Map();
   list.forEach(t => shortCount.set(t.short.toLowerCase(), (shortCount.get(t.short.toLowerCase()) || 0) + 1));
-  const has = name => new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(name)}(?![\\p{L}\\p{N}])`, 'iu').test(value);
-  return list.filter(t => has(t.name) || (shortCount.get(t.short.toLowerCase()) === 1 && has(t.short))).map(t => t.name);
+  const names = [];
+  list.forEach(t => {
+    names.push({ team: t, name: t.name });
+    if (shortCount.get(t.short.toLowerCase()) === 1) names.push({ team: t, name: t.short });
+  });
+  names.sort((a, b) => b.name.length - a.name.length);
+  const found = new Set();
+  names.forEach(({ team, name }) => {
+    const re = new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(name)}(?![\\p{L}\\p{N}])`, 'giu');
+    if (re.test(value)) {
+      found.add(team.name);
+      value = value.replace(re, ' ');
+    }
+  });
+  return list.filter(t => found.has(t.name)).map(t => t.name);
 }
 
 // The teams a clip is about: the official account's team, teams named in its
@@ -864,12 +991,15 @@ async function libraryClips({ sport, teams = [], terms = [], token = '' } = {}) 
   const now = Date.now();
   const clips = (rows || [])
     .map(c => ({ ...c, ageHours: Math.round(ageHoursOf(c.postedAt, now) ?? Infinity) }))
-    .filter(c => Number.isFinite(c.ageHours) && !looksOld(c.text, new Date(now)) && CLASSIFY.isGreat(c))
+    // Trusted sources only: rows saved before the rule (fan / Reddit / Bluesky clips) are hidden.
+    .filter(c => Number.isFinite(c.ageHours) && TRUST.isTrusted({ platform: c.platform || 'x', handle: c.handle, url: c.url, mediaUrl: c.platform && c.platform !== 'x' ? c.variants?.[0]?.url : '' }))
+    .filter(c => !looksOld(c.text, new Date(now)) && CLASSIFY.isGreat(c))
     .filter(c => !terms.length || termHit(c, terms))
-    .map(c => ({ ...c, score: scoreClip(c) }));
+    .map(c => ({ ...TRUST.withTrust(c), score: scoreClip(c, windowFor(sport, now)) }));
+  const windowHours = windowFor(sport, now);
   return {
-    fresh: rankClips(clips.filter(c => c.ageHours <= FIND_CLIPS.maxAgeHours)),
-    older: rankClips(clips.filter(c => c.ageHours > FIND_CLIPS.maxAgeHours)),
+    fresh: rankClips(clips.filter(c => c.ageHours <= windowHours)),
+    older: rankClips(clips.filter(c => c.ageHours > windowHours)),
   };
 }
 
@@ -947,12 +1077,16 @@ async function findClips(body, track) {
   const libTeams = team ? [team] : teams.length ? teams : (named ? [named] : []);
   const terms = query ? keyTerms(query, named) : [];
   const lib = await libraryClips({ sport, teams: libTeams, terms: named ? [] : terms, token: track.token });
-  const viaOf = c => (team && (c.source === 'league' || c.source === 'media') ? 'league' : 'search');
+  // A league / network clip that is about the team (an ESPN or MLB.com clip
+  // tagged with it) counts as the team's own result, not a widening.
+  const aboutTeam = c => Boolean(team) && clipTeams(c, { sport }).includes(team.name);
+  const viaOf = c => (c.lastGames ? 'lastgames' : team && (c.source === 'league' || c.source === 'media') && !(c.platform && c.platform !== 'x' && aboutTeam(c)) ? 'league' : 'search');
+  const win = windowInfo(sport);
   if (lib.fresh.length >= LIBRARY.enough) {
     const clips = tagMatched(lib.fresh.slice(0, LIBRARY.maxOut).map(c => ({ ...c, via: viaOf(c) })));
     clips.sort((a, b) => viaRank(a) - viaRank(b) || b.score - a.score);
     const diag = { ...newDiag('library'), kept: clips.length, sources: { library: lib.fresh.length }, ms: Date.now() - started };
-    return { ok: true, teams: teamsOut, clips, strategy: 'library', diag, fromLibrary: true, cached: false, cost: 0 };
+    return { ok: true, teams: teamsOut, clips, strategy: 'library', diag, window: win, fromLibrary: true, cached: false, cost: 0 };
   }
   if (track.skipAi) return null; // not enough in the library: the caller gates and comes back
 
@@ -1032,6 +1166,14 @@ async function findClips(body, track) {
   const saved = await saveToLibrary([...found.map(c => ({ ...c, via: viaOf(c) })), ...widenFound], { sport, team: team || named });
   if (saved) diag.librarySaved = saved;
 
+  // MLB offseason, nothing played in the window: MLB.com's last games, labelled.
+  const lastGames = clips.length > 0 && clips.every(c => c.via === 'lastgames');
+  if (lastGames) {
+    const day = clips.map(c => c.postedAt).sort().pop();
+    const when = day ? new Date(day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '';
+    note = `No ${SPORT_NAMES[sport]} games in the last ${windowWords(win.hours)} — showing highlights from the last games of the season${when ? ` (${when})` : ''}.`;
+  }
+
   // 4. Never empty while the library has something nearby (labelled).
   let fallback = null;
   if (clips.length < FIND_CLIPS.minClips) {
@@ -1047,9 +1189,10 @@ async function findClips(body, track) {
   diag.kept = clips.length;
   diag.fromLibrary = clips.filter(c => fromLib.has(c.url) || c.fromLibrary).length;
   diag.ms = Date.now() - started;
-  const value = { ok: true, teams: teamsOut, clips, strategy: diag.strategy, diag, ...(widened ? { widened } : {}), ...(fallback ? { fallback } : {}), ...(widened || fallback ? { note } : {}) };
+  const labelled = widened || fallback || lastGames;
+  const value = { ok: true, teams: teamsOut, clips, strategy: diag.strategy, diag, window: win, ...(widened ? { widened } : {}), ...(fallback ? { fallback } : {}), ...(lastGames ? { lastGames: true } : {}), ...(labelled ? { note } : {}) };
   if (!freeOnly) toCache(key, value);
-  return { ...value, ...(widened || fallback ? {} : noteFor(clips.filter(c => c.via !== 'older').length)), cached: false, cost: money(cost), ...(freeOnly ? { freeOnly: true } : {}) };
+  return { ...value, ...(labelled ? {} : noteFor(clips.filter(c => c.via !== 'older').length, sport)), cached: false, cost: money(cost), ...(freeOnly ? { freeOnly: true } : {}) };
 }
 
 // ─── By moment: the most popular clips of the last 5 days ─────────────────
@@ -1163,16 +1306,18 @@ function momentsCached(key) {
 
 // Pool -> the reply (clusters, ranking, never-empty fill, facets).
 async function assembleMoments(pool, { sports, track, diag, older = [] }) {
-  const built = MOMENTS_LIB.buildMoments(pool);
+  // The widest window of the sports shown (each clip already passed its own sport's).
+  const windowHours = Math.max(...sports.map(s => windowFor(s)));
+  const built = MOMENTS_LIB.buildMoments(pool, { windowHours });
   let moments = built.moments;
   let note = '';
   let ranking = built.thin ? 'newest' : 'trending';
   if (moments.length < MOMENTS.minFresh && older.length) {
     const have = new Set(pool.map(c => c.url));
-    const fill = MOMENTS_LIB.buildMoments(older.filter(c => !have.has(c.url)).map(c => ({ ...c, via: 'older' })), { windowHours: CLIP_LIBRARY.KEEP_DAYS * 24 }).moments;
+    const fill = MOMENTS_LIB.buildMoments(older.filter(c => !have.has(c.url)).map(c => ({ ...c, via: 'older' })), { windowHours: Math.max(windowHours, CLIP_LIBRARY.KEEP_DAYS * 24) }).moments;
     if (fill.length) {
       moments = [...moments, ...fill.map(m => ({ ...m, via: 'older' }))];
-      note = 'Few fresh clips this week — older clips (5-7 days) from the clip library are added at the end.';
+      note = 'Few fresh clips this week — older clips from the clip library (up to 7 days) are added at the end.';
     }
   }
   if (!note && ranking === 'newest' && moments.length) note = 'Not enough view counts yet to rank by trending — showing the newest verified clips.';
@@ -1181,7 +1326,9 @@ async function assembleMoments(pool, { sports, track, diag, older = [] }) {
   diag.kept = out.length;
   diag.clips = out.reduce((n, m) => n + m.clips.length, 0);
   diag.clustered = pool.length - built.moments.length;
-  return { moments: out, ranking, note, facets: MOMENTS_LIB.momentFacets(out.map(m => ({ ...m, teams: m.teams.map(t => t.name) }))), cost };
+  // Per sport: how far back it looked ("Recent highlights (last 30 days)" for MLB's offseason).
+  const windows = Object.fromEntries(sports.map(s => [s, windowInfo(s)]));
+  return { moments: out, ranking, note, windows, facets: MOMENTS_LIB.momentFacets(out.map(m => ({ ...m, teams: m.teams.map(t => t.name) }))), cost };
 }
 
 async function momentsWithClips(body, track) {
@@ -1204,12 +1351,19 @@ async function momentsWithClips(body, track) {
   const older = libs.flatMap(r => r.older.map(c => poolClip(c, r.s)));
   const diag = { ...newDiag('library'), sources: { library: pool.length } };
   let cost = 0;
-  const enough = list => MOMENTS_LIB.buildMoments(list).moments.length >= MOMENTS.enough;
+  // Fair per sport: "All sports" used to count NFL's moments toward the whole
+  // pool, so a full NFL pool left CFB and MLB with no top-up at all. Now each
+  // sport needs its own share (enough / number of sports, at least minFresh).
+  const share = Math.max(MOMENTS.minFresh, Math.ceil(MOMENTS.enough / sports.length));
+  const momentsIn = (list, s) => MOMENTS_LIB.buildMoments(list.filter(c => c.sport === s), { windowHours: windowFor(s) }).moments.length;
+  const thinSports = list => sports.filter(s => momentsIn(list, s) < share);
+  const enough = list => thinSports(list).length === 0;
   if (!enough(pool)) {
     if (track.skipAi) return null; // thin: the caller gates and comes back
-    // 2a. Free top-up: X API (when configured) + the free public sources, per sport.
+    // 2a. Free top-up: X API (when configured) + the free sources (official
+    // sites, public discovery), for each thin sport only.
     const known = new Set(pool.map(c => c.url));
-    const free = await Promise.all(sports.map(async s => {
+    const free = await Promise.all(thinSports(pool).map(async s => {
       const [xr, extra] = await Promise.all([
         xApiOn() ? searchRound(searchPlan({ sport: s }), { sport: s, track, feature: 'video-ads-moments-with-clips', freeOnly: true, maxUses: 0, maxCostUsd: 0, timeoutMs: 12000 }).catch(() => null) : null,
         runSources({ sport: s }, { track, freeOnly: true, known, timeoutMs: 15000 }),
@@ -1221,7 +1375,7 @@ async function momentsWithClips(body, track) {
     pool = [...pool, ...found.filter(c => !known.has(c.url))];
     // 2b. Paid, only when still thin and AI is allowed: the thinnest sport.
     if (!freeOnly && !enough(pool)) {
-      const counts = sports.map(s => ({ s, n: pool.filter(c => c.sport === s).length })).sort((a, b) => a.n - b.n);
+      const counts = thinSports(pool).map(s => ({ s, n: momentsIn(pool, s) })).sort((a, b) => a.n - b.n);
       const s = counts[0].s;
       const [web, paid] = await Promise.all([
         xApiOn() ? null : searchRound(searchPlan({ sport: s }), { sport: s, track, feature: 'video-ads-moments-with-clips', maxUses: MOMENTS.paidUses, maxCostUsd: MOMENTS.paidCostUsd, timeoutMs: 25000 }).catch(() => null),
@@ -1296,6 +1450,7 @@ async function libraryMode(body, { token = '' } = {}) {
     clips: picked.length > 1 ? sorted.slice(offset, offset + limit).map(c => ({ ...c, matched: matchedTeams(c, picked, sport) })) : sorted.slice(offset, offset + limit),
     teams: teamsOut,
     newestAt: fresh.reduce((max, c) => (!max || c.postedAt > max ? c.postedAt : max), ''),
+    window: windowInfo(sport),
     store: CLIP_LIBRARY.status().store,
   };
 }
@@ -2116,7 +2271,14 @@ exports.handler = withAiMode(async function handler(event) {
     if (body.mode === 'clip') {
       // Any video link (X, Bluesky, Reddit, Streamable, Vimeo, Drive, Dropbox,
       // direct files, pages with og:video) -> direct file URLs (_clip-link.js).
-      const result = await CLIP_LINK.resolveLink(String(body.url || '').slice(0, 2000), { clipFromPost });
+      // A Google (Videos / Search) redirect link is followed to where it leads.
+      // Any link works (the user's choice); the reply says whether its source
+      // is on the trusted list ("Unverified source" otherwise).
+      const result = await CLIP_LINK.resolveLink(TRUST.unwrapRedirect(String(body.url || '').slice(0, 2000)), { clipFromPost });
+      if (result.ok) {
+        const t = TRUST.classify({ platform: result.platform, handle: result.handle, url: result.openUrl || result.url });
+        result.trust = { trusted: t.trusted, kind: t.kind, label: t.label, site: t.site };
+      }
       return json(result.ok ? 200 : result.status, result);
     }
     if (body.mode === 'research') return json(410, { ok: false, error: 'Research was removed.' });
@@ -2217,6 +2379,7 @@ exports._test = {
   freeCopy, freeTemplates, freeModeRun,
   MODE_FEATURES, COPY_SYSTEM, COPY_CACHE, copyKey, rankVariants, claimsFor, checkClaims, saveClaims, claimsMode, resetClaims() { claimsCache = { at: 0, rows: null }; }, findClips, momentsWithClips, teamInTitle, MOMENT_CACHE, MOMENTS, looksOld, ageHoursOf, copy, chat, CLIP_CACHE, FIND_CLIPS, grammar, checkGrammarIssues, GRAMMAR_CACHE,
   MOMENT_TITLE_CACHE, MOMENTS_LIB, CLASSIFY, assembleMoments, searchPlan, webPrompt, xQueryFor, xApiSearch, assessClip, freshClip, scoreClip, rankClips, mediaKey, qualityLabel, CLIP_TTL_MS, SOURCES,
+  TRUST, windowFor, windowInfo, mlbOffseason, mp4Dims, LAST_GAMES_HOURS,
   LIBRARY, CLIP_LIBRARY, libraryMode, PICK_MAX, pickedTeams, pickedColors, teamsForColors, matchedTeams, clipKey, libraryClips, nearestFallback, runSources, verifyCandidate, checkMedia, mediaHostAllowed, teamsInText, clipTeams, softKey,
   useSources(list) { EXTRA_SOURCES = Array.isArray(list) ? list : []; },
   useLearning(mod) { learning = { lessonsFor: async () => ({ examples: [], rules: [] }), styleRankingFor: async () => [], recordEvent: async () => false, ...mod }; },
@@ -2226,4 +2389,5 @@ exports._test = {
 exports.clipPipeline = {
   AD_SPORTS, FIND_CLIPS, LIBRARY, CLIP_LIBRARY, searchPlan, searchRound, runSources, rankClips, saveToLibrary, clipFromPost, checkMedia,
   assessClip, teamInTitle, teamOut, isXPost, xApiOn, clipSources, isPaidSource, trends, mediaKey, CLASSIFY, libraryClips,
+  TRUST, windowFor,
 };

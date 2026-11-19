@@ -974,7 +974,18 @@
   // here" card instead of a dead end. -> true when the clip is in the ad.
   let loadingClip = '';
   const LK = window.VideoAdsLinks || null;
-  const PLATFORM_NAME = { x: 'X', reddit: 'Reddit', bluesky: 'Bluesky', streamable: 'Streamable', vimeo: 'Vimeo', drive: 'Google Drive', dropbox: 'Dropbox', direct: 'Web', web: 'Web' };
+  const PLATFORM_NAME = { x: 'X', espn: 'ESPN', mlb: 'MLB.com', reddit: 'Reddit', bluesky: 'Bluesky', streamable: 'Streamable', vimeo: 'Vimeo', drive: 'Google Drive', dropbox: 'Dropbox', direct: 'Web', web: 'Web' };
+  // Where a clip came from, from the server's trusted-source check
+  // (netlify/functions/_clip-trust.js): "@Yankees · team account",
+  // "MLB.com · league site", "ESPN · network". Pasted links that are not on
+  // the trusted list say "Unverified source".
+  const trustLabel = c => (c && c.trust && typeof c.trust.label === 'string' ? c.trust.label : '');
+  // How far back a list looked, from the server ("Last 7 days", "Recent
+  // highlights (last 30 days)") -> "last 7 days" for running text.
+  const spanOf = (win, fallback = 'last 5 days') => {
+    const m = String(win && win.label ? win.label : '').match(/last \d+ \w+/i);
+    return m ? m[0].toLowerCase() : fallback;
+  };
   // "@NFL", but "r/nfl" for a subreddit.
   const atHandle = h => { const v = String(h || '').replace(/^@/, ''); return /^r\//.test(v) ? v : `@${v}`; };
   async function downloadClip(variant, meta) {
@@ -1075,9 +1086,12 @@
         ? `<div class="va-qualities" role="group" aria-label="Clip quality"><span class="va-hint">Quality</span>${variants.slice(0, 4).map((v, i) => `<button class="es-chip" type="button" data-q="${i}" aria-pressed="${i === view.chosen}">${esc(v.quality || `Version ${i + 1}`)}</button>`).join('')}</div>`
         : '';
       const notes = [d.audioNote, low ? 'Below 720p: it may look soft in a 1080-wide ad. Pick a higher quality if there is one.' : ''].filter(Boolean);
+      const trusted = d.trust ? d.trust.trusted === true : null;
+      const trustChip = trusted === null ? '' : `<p class="va-linkres__src${trusted ? ' is-trusted' : ' is-unverified'}">${trusted ? ICON.check : ICON.alert}<span>${trusted ? esc(d.trust.label) : 'Unverified source: not an official team, league or network account or site'}</span></p>`;
       box.innerHTML = `<div class="va-linkres__card${view.loading ? ' is-busy' : ''}">
         <div class="va-linkres__top">${platPill(d.platform, d.platformLabel)}<span class="va-linkres__who">${handle ? esc(atHandle(handle)) : esc(d.author || (d.text ? String(d.text).slice(0, 60) : (PLATFORM_NAME[d.platform] === 'Web' ? 'Video file' : 'Video')))}</span>${q ? `<span class="va-linkres__q${low ? ' is-low' : ''}" title="${low ? 'Below 720p' : 'Quality of the version in the ad'}">${esc(q)}</span>` : ''}</div>
         ${meta.length ? `<p class="va-linkres__meta">${meta.map(esc).join('<span aria-hidden="true"> · </span>')}</p>` : ''}
+        ${trustChip}
         ${chips}
         ${notes.map(n => `<p class="va-linkres__note">${ICON.alert}<span>${esc(n)}</span></p>`).join('')}
       </div>`;
@@ -1534,7 +1548,7 @@
       if (token !== findTokens[kind]) return;
       const clips = (Array.isArray(data.clips) ? data.clips : []).filter(c => c && Array.isArray(c.variants) && c.variants.some(v => v && v.url));
       const teams = Array.isArray(data.teams) && data.teams.length ? data.teams : previewTeams;
-      finds[kind] = { ...finds[kind], status: clips.length ? 'done' : 'empty', clips, teams, cached: Boolean(data.cached), note: typeof data.note === 'string' ? data.note : '' };
+      finds[kind] = { ...finds[kind], status: clips.length ? 'done' : 'empty', clips, teams, cached: Boolean(data.cached), note: typeof data.note === 'string' ? data.note : '', window: data.window && typeof data.window === 'object' ? data.window : null };
       if (state.context.kind === kind) state.context.teams = teams.map(t => t.name).filter(Boolean);
       // Nothing fresh: the nearest clips from the shared library before "No fresh clips".
       if (!clips.length && params.sport) loadFindFallback(kind, token);
@@ -1595,8 +1609,8 @@
   const PAGE = 9;
   const newView = () => ({ shown: PAGE, sort: 'trending', teams: [] });
   const views = { team: newView(), color: newView(), moment: newView() };
-  const PLATFORM = { x: 'X', reddit: 'Reddit', bluesky: 'Bluesky', streamable: 'Streamable' };
-  const VIA_LABEL = { older: ['Older', 'Older than 5 days, from the clip library'], sport: ['Same league', 'Another team in this league, from the clip library'], colorx: ['Same colour', 'A team of the same colour in another sport, from the clip library'], color: ['Same colour', 'A team of the same colour'] };
+  const PLATFORM = { x: 'X', espn: 'ESPN', mlb: 'MLB.com', reddit: 'Reddit', bluesky: 'Bluesky', streamable: 'Streamable' };
+  const VIA_LABEL = { lastgames: ['Last games', 'From the last games of the season (offseason)'], older: ['Older', 'Older than this search looks back, from the clip library'], sport: ['Same league', 'Another team in this league, from the clip library'], colorx: ['Same colour', 'A team of the same colour in another sport, from the clip library'], color: ['Same colour', 'A team of the same colour'] };
   const clipAge = c => {
     const hours = Number.isFinite(Number(c.ageHours)) && c.ageHours !== null && c.ageHours !== '' ? Number(c.ageHours) : (c.postedAt ? (Date.now() - new Date(c.postedAt).getTime()) / 3600e3 : NaN);
     return Number.isFinite(hours) ? (hours < 1 ? 'Just now' : hours < 24 ? `${Math.round(hours)}h ago` : `${Math.round(hours / 24)} day${Math.round(hours / 24) === 1 ? '' : 's'} ago`) : '';
@@ -1621,7 +1635,7 @@
     return `<article class="va-clip${inAd ? ' is-in' : ''}${busy ? ' is-busy' : ''}${via ? ' is-fallback' : ''}" style="--i:${i}">
       <span class="va-clip__thumb"${thumb ? ` style="background-image:url('${esc(thumb)}')"` : ''}>${tag && !inAd ? `<span class="va-clip__tag va-clip__tag--${kind === 'official' ? 'official' : 'verified'}" title="${tagTitle}">${ICON.check}${tag}</span>` : ''}${quality ? `<span class="va-clip__q" title="Best version">${esc(quality)}</span>` : ''}${secs ? `<span class="va-clip__dur">${esc(fmt(secs))}</span>` : ''}${c.hasAudio === false && !inAd ? `<span class="va-clip__mute" title="This file has no sound">${ICON.soundOff}<span>No sound</span></span>` : ''}${inAd ? `<span class="va-clip__in">${ICON.check}In the ad</span>` : ''}</span>
       ${via ? `<span class="va-clip__via" title="${esc(via[1])}">${esc(via[0])}</span>` : ''}
-      <span class="va-clip__who"><span class="va-clip__plat va-clip__plat--${esc(platform.replace(/[^a-z]/g, ''))}" title="From ${esc(platformLabel)}">${esc(platformLabel)}</span><span class="va-clip__handle">${handle ? `@${esc(handle)}` : 'Post'}</span>${age ? `<span class="va-clip__age">${esc(age)}</span>` : ''}</span>
+      <span class="va-clip__who"><span class="va-clip__plat va-clip__plat--${esc(platform.replace(/[^a-z]/g, ''))}" title="From ${esc(platformLabel)}">${esc(platformLabel)}</span><span class="va-clip__handle">${trustLabel(c) ? esc(trustLabel(c)) : handle ? `@${esc(handle)}` : 'Post'}</span>${age ? `<span class="va-clip__age">${esc(age)}</span>` : ''}</span>
       ${c.text ? `<span class="va-clip__text">${esc(c.text)}</span>` : ''}
       <span class="va-clip__actions">
         <button class="es-btn es-btn--sm" type="button" ${attr}="${i}"${busy || inAd ? ' disabled' : ''}>${busy ? 'Loading…' : inAd ? 'Using it' : 'Use clip'}</button>
@@ -1669,7 +1683,9 @@
   function momentsOf(clips, sport = '') {
     const list = (clips || []).filter(c => c && Array.isArray(c.variants) && c.variants.some(v => v && v.url)).map(c => ({ ...c, sport: c.sport || sport }));
     if (!MO) return list.map((c, i) => ({ id: `c${i}`, title: '', titleBy: 'post', sport: c.sport, teams: c.teams || [], clips: [c], angles: 0, views: Number(c.views) || 0, likes: Number(c.likes) || 0, engagement: Number(c.views) || 0, postedAt: c.postedAt, latestAt: c.postedAt, score: Number(c.score) || 0, ...(c.via ? { via: c.via } : {}) }));
-    return MO.buildMoments(list, { windowHours: 168 }).moments.map(m => (m.clips.every(c => c.via) ? { ...m, via: m.clips[0].via } : m));
+    // The server already applied each sport's window (MLB's offseason looks
+    // back 30 days, last games of the season longer), so nothing is cut here.
+    return MO.buildMoments(list, { windowHours: 150 * 24 }).moments.map(m => (m.clips.every(c => c.via) ? { ...m, via: m.clips[0].via } : m));
   }
   const sortMoments = (list, sort) => (MO ? MO.sortMoments(list, sort) : list);
   const teamObj = (t, sport) => {
@@ -1706,6 +1722,7 @@
       ${via ? `<span class="va-clip__via" title="${esc(via[1])}">${esc(via[0])}</span>` : ''}
       <span class="va-mo__title"${m.titleBy === 'ai' ? ' title="Short title written from the post text"' : ''}>${esc(title)}</span>
       ${teams.length ? `<span class="va-mo__teams"${matched.length ? ` aria-label="Matched ${esc(matched.map(n => teamObj(n, m.sport).short || n).join(', '))}"` : ''}>${teams.map(t => { const hit = matched.includes(t.name); return `<span class="va-mo__team${hit ? ' is-match' : ''}" title="${esc(t.name)}${hit ? ' (matched)' : ''}">${teamMark(t, 18)}<span>${esc(t.short || t.name)}</span></span>`; }).join('')}</span>` : ''}
+      ${trustLabel(c) ? `<span class="va-mo__src" title="Posted by ${esc(trustLabel(c))}">${esc(trustLabel(c))}</span>` : ''}
       <span class="va-mo__meta"><span class="va-clip__plat va-clip__plat--${esc(platform.replace(/[^a-z]/g, ''))}" title="From ${esc(platformLabel)}${handle ? ` · @${esc(handle)}` : ''}">${esc(platformLabel)}</span>${age ? `<span>${esc(age)}</span>` : ''}${eng ? `<span class="va-mo__eng">${esc(eng)}</span>` : ''}</span>
       ${m.angles > 0 ? `<button class="va-mo__angles" type="button" data-mo-angles="${i}" aria-expanded="${open}">${open ? 'Hide angles' : `+${m.angles} angle${m.angles === 1 ? '' : 's'}`}</button>` : ''}
       <span class="va-clip__actions">
@@ -1788,7 +1805,7 @@
     const more = allTeams.length - teams.length;
     const teamsHtml = teams.length ? `<ul class="va-teams" aria-label="Matched teams">${teams.map(t => `<li class="va-team" aria-label="${esc(t.name || t.short)}">${teamMark(t, 20)}<span>${esc(t.short || t.name)}</span></li>`).join('')}${more > 0 ? `<li class="va-team va-team--more" title="${esc(allTeams.slice(6).map(t => t.short || t.name).join(', '))}">+${more} more</li>` : ''}</ul>` : '';
     if (f.status === 'loading') {
-      els.found.innerHTML = `${teamsHtml}<p class="va-working">${dots}Looking for clips from the last 5 days…</p>
+      els.found.innerHTML = `${teamsHtml}<p class="va-working">${dots}Looking for recent clips from official accounts and sites…</p>
         <div class="va-clipgrid va-clipgrid--3" aria-hidden="true">${Array.from({ length: 6 }, (_, i) => `<div class="va-clip va-clip--skeleton" style="--i:${i}"><span class="va-clip__thumb va-shimmer"></span><span class="va-line va-shimmer" style="width:46%"></span><span class="va-line va-shimmer"></span></div>`).join('')}</div>`;
       els.found.setAttribute('aria-busy', 'true');
       return;
@@ -1797,7 +1814,7 @@
     // Empty or failed, but the library has clips for the sport: show those, labelled.
     const fb = (f.status === 'empty' || f.status === 'error') && f.fallback?.length ? f.fallback : null;
     if (fb) {
-      const why = f.status === 'error' ? 'The live search didn’t finish' : `Nothing from the last 5 days for ${esc(what)} yet`;
+      const why = f.status === 'error' ? 'The live search didn’t finish' : `Nothing from the ${esc(spanOf(f.window))} for ${esc(what)} yet`;
       els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}
         <div class="va-found__head"><h3>From the clip library</h3><span class="va-hint">${esc(SPORT_LABEL[f.params.sport] || '')}</span></div>
         <p class="va-found__note">${why} — here are the newest ${esc(SPORT_LABEL[f.params.sport] || '')} clips we have instead.</p>
@@ -1820,7 +1837,7 @@
       const another = { team: 'Try another team', color: 'Try another colour', moment: 'Try another moment' }[kind];
       const pick = { team: ['other-team', 'Pick a team'], color: ['other-color', 'Pick a colour'], moment: ['other-moment', 'Pick a moment'] }[kind];
       const title = { team: `No fresh ${esc(f.label || 'team')} clips yet`, color: `No fresh clips for ${esc(what)} yet`, moment: 'No fresh clips for this moment yet' }[kind];
-      const where = kind === 'moment' ? 'We checked X and the clip library for a video of it from the last 5 days.' : 'We checked the clip library, the official team, league and network accounts, and everyone else, for the last 5 days.';
+      const where = kind === 'moment' ? `We checked official accounts, league and network sites and the clip library for a video of it from the ${esc(spanOf(f.window))}.` : `We checked the clip library and the official team, league and network accounts and sites for the ${esc(spanOf(f.window))}.`;
       els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}<div class="va-empty-state">${ICON.film}<strong>${title}</strong><span>${where} ${another}, or make the ad without a clip.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="${pick[0]}">${pick[1]}</button></div>${noClipBlock()}</div>`;
       return;
     }
@@ -1834,7 +1851,7 @@
     const fresh = f.clips.filter(c => !VIA_LABEL[c.via] || c.via === 'color').length;
     const angles = f.clips.length - total;
     els.found.innerHTML = `${kind === 'team' ? '' : teamsHtml}
-      <div class="va-found__head"><h3>${total} play${total === 1 ? '' : 's'}</h3><span class="va-hint">${fresh === f.clips.length ? 'Last 5 days' : `${fresh} from the last 5 days`}${angles > 0 ? ` · ${angles} more angle${angles === 1 ? '' : 's'}` : ''}</span></div>
+      <div class="va-found__head"><h3>${total} play${total === 1 ? '' : 's'}</h3><span class="va-hint">${fresh === f.clips.length ? esc(f.window?.label || 'Last 5 days') : `${fresh} from the ${esc(spanOf(f.window))}`}${angles > 0 ? ` · ${angles} more angle${angles === 1 ? '' : 's'}` : ''}</span></div>
       ${f.note ? `<p class="va-found__note">${esc(f.note)}</p>` : ''}
       ${clipTools(kind)}
       ${shown.length ? momentGrid(shown, `found-${kind}`, kind === 'team' && f.teams.length > 1 ? f.teams.map(t => t.name) : []) : '<p class="va-hint">No clips for those teams in these results. Pick “All teams”.</p>'}
@@ -2132,7 +2149,7 @@
       const items = (Array.isArray(data.moments) ? data.moments : [])
         .map(m => ({ ...m, id: String(m.id || ''), clips: usableClips(m.clips), angles: Math.max(0, usableClips(m.clips).length - 1) }))
         .filter(m => m.id && m.clips.length && (sport === 'all' || !m.sport || m.sport === sport));
-      fresh[sport] = { status: items.length ? 'done' : 'empty', items, ranking: data.ranking === 'newest' ? 'newest' : 'trending', note: typeof data.note === 'string' ? data.note : '' };
+      fresh[sport] = { status: items.length ? 'done' : 'empty', items, ranking: data.ranking === 'newest' ? 'newest' : 'trending', note: typeof data.note === 'string' ? data.note : '', windows: data.windows && typeof data.windows === 'object' ? data.windows : null };
       if (!items.length) loadMomentFallback(sport, token);
     } catch (error) {
       if (token !== freshToken) return;
@@ -2183,7 +2200,7 @@
     }
     const f = fresh[state.sport];
     if (!f || f.status === 'loading') {
-      els.trendsStatus.textContent = 'Finding the most popular clips of the last 5 days…';
+      els.trendsStatus.textContent = 'Finding the most popular recent clips…';
       els.trends.innerHTML = skeletonRows();
       els.trends.setAttribute('aria-busy', 'true');
       return;
@@ -2191,6 +2208,8 @@
     els.trends.removeAttribute('aria-busy');
     const all = state.sport === 'all' || !SPORT_LABEL[state.sport];
     const sportName = all ? '' : SPORT_LABEL[state.sport];
+    // Each sport looks back its own window (NFL 5 days, CFB 7, MLB 30 in the offseason).
+    const span = all ? 'latest games' : spanOf(f.windows && f.windows[state.sport]);
     const tries = all
       ? `${['nfl', 'cfb', 'mlb'].map(id => `<button class="es-btn es-btn--sm" type="button" data-act="sport-${id}">${SPORT_LABEL[id]}</button>`).join('')}<button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-team">By team</button>`
       : `<button class="es-btn es-btn--sm" type="button" data-act="sport-all">All sports</button><button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="to-team">By team</button>`;
@@ -2200,7 +2219,7 @@
       els.trendsStatus.textContent = '';
       const why = f.status === 'error'
         ? `The check didn’t finish${f.error ? ` (${esc(f.error)})` : ''}. Try again, or search by team.`
-        : `Nothing ${sportName ? `in ${esc(sportName)} ` : ''}has a verified 720p game clip from the last 5 days yet. Try ${all ? 'one sport at a time' : 'all sports'}, or search by team.`;
+        : `Nothing ${sportName ? `in ${esc(sportName)} ` : ''}has a verified 720p game clip from the ${esc(span)} yet. Try ${all ? 'one sport at a time' : 'all sports'}, or search by team.`;
       els.trends.innerHTML = `<li class="va-empty-state${f.status === 'error' ? ' va-empty-state--bad' : ''}">${ICON.film}<strong>No trending clips yet</strong><span>${why}</span><div class="va-empty-state__actions">${f.status === 'error' ? `<button class="es-btn es-btn--sm es-btn--primary es-btn--still" type="button" data-act="retry-moments">${ICON.retry}Try again</button>` : ''}${tries}</div>${noClipBlock()}</li>`;
       return;
     }
@@ -2208,13 +2227,13 @@
     const shown = view.slice(0, mo.shown);
     const ranking = fromLibrary ? 'newest' : f.ranking;
     const filterLabel = [mo.teams.map(n => teamObj(n).short || n).join(', '), mo.colors.length ? `${mo.colors.map(id => colorById(id).label.split(' ')[0].toLowerCase()).join(' / ')} teams` : ''].filter(Boolean).join(' · ');
-    els.trendsStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b data-es-tick="va-moments">${view.length}</b> ${view.length === 1 ? 'play' : 'plays'}${filterLabel ? ` for ${esc(filterLabel)}` : ''}, last 5 days · ${ranking === 'newest' ? 'newest first' : 'ranked by views per hour'}</span>`;
+    els.trendsStatus.innerHTML = `<span class="es-live-dot" aria-hidden="true"></span><span><b data-es-tick="va-moments">${view.length}</b> ${view.length === 1 ? 'play' : 'plays'}${filterLabel ? ` for ${esc(filterLabel)}` : ''}, ${esc(span)} · ${ranking === 'newest' ? 'newest first' : 'ranked by views per hour'}</span>`;
     const note = fromLibrary
       ? `<p class="va-found__note">${f.status === 'error' ? 'The trending check didn’t finish' : 'No trending clips yet'} — here are the newest ${esc(sportName)} clips from the clip library.</p>`
       : f.note ? `<p class="va-found__note">${esc(f.note)}</p>` : '';
     const handoff = mo.handoff ? `<p class="va-mo-handoff">From Trends: <b>${esc(mo.handoff.title)}</b> <button class="va-link" type="button" data-act="mo-clear">Show all teams</button></p>` : '';
     const empty = !view.length
-      ? `<div class="va-empty-state">${ICON.film}<strong>No ${esc(filterLabel || 'matching')} plays in the last 5 days yet</strong><span>Clear the filter, or search that team directly.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="mo-clear">Show all</button>${mo.teams.length ? `<button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="mo-find-team">${mo.teams.length === 1 ? `Find ${esc(teamObj(mo.teams[0]).short || mo.teams[0])} clips` : `Find clips for ${mo.teams.length} teams`}</button>` : ''}</div>${noClipBlock({ compact: true })}</div>`
+      ? `<div class="va-empty-state">${ICON.film}<strong>No ${esc(filterLabel || 'matching')} plays in the ${esc(span)} yet</strong><span>Clear the filter, or search that team directly.</span><div class="va-empty-state__actions"><button class="es-btn es-btn--sm" type="button" data-act="mo-clear">Show all</button>${mo.teams.length ? `<button class="es-btn es-btn--sm es-btn--ghost" type="button" data-act="mo-find-team">${mo.teams.length === 1 ? `Find ${esc(teamObj(mo.teams[0]).short || mo.teams[0])} clips` : `Find clips for ${mo.teams.length} teams`}</button>` : ''}</div>${noClipBlock({ compact: true })}</div>`
       : '';
     els.trends.innerHTML = `<li class="va-mo-wrap">${handoff}${momentTools(items)}${note}${empty || momentGrid(shown, 'moment', mo.teams.length > 1 ? mo.teams : [])}${moreButton(view.length - shown.length, 'mo-more')}${view.length ? noClipBlock({ compact: true }) : ''}</li>`;
   }

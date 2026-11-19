@@ -740,6 +740,29 @@
       ]
     },
     {
+      "id": "2026-11-19-video-ads-clip-sources",
+      "date": "2026-11-19",
+      "title": "Video Ads: more college football and MLB clips, from official sources only",
+      "commit": "3d4d45a",
+      "items": [
+        {
+          "title": "Many more college football and MLB clips",
+          "text": "Find a clip now also looks at ESPN's college football play clips and MLB.com highlights, and covers every Power Four team. College football looks back 7 days, so last weekend's games are always there.",
+          "page": "video-ads.html"
+        },
+        {
+          "title": "MLB in the offseason",
+          "text": "MLB shows recent highlights from the last 30 days, labelled. If no games were played in that time, you get the last games of the season, marked Last games.",
+          "page": "video-ads.html"
+        },
+        {
+          "title": "Official sources only",
+          "text": "Every clip comes from a team, league or network account or site, and each card says who posted it, like “@Yankees · team account” or “MLB.com · league site”. Fan accounts, Reddit and Bluesky no longer appear. A link you paste still works, marked Unverified source if it isn't official.",
+          "page": "video-ads.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-18-director",
       "date": "2026-11-18",
       "title": "The creative director, ES guidelines and Bring it on-brand",
