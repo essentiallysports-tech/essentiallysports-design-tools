@@ -139,6 +139,29 @@
       ]
     },
     {
+      "id": "2026-11-20-gen-looks",
+      "date": "2026-11-20",
+      "title": "Generate: 17 new ES design looks in 7 tones",
+      "commit": "0328b3b",
+      "items": [
+        {
+          "title": "Looks from the ES board",
+          "text": "Generate now designs like the ES social team: stat posts with the player cut out over the number, covers with stepped highlight boxes, quote posts and quote cards, ranked tables, headshot grids, bar graphs, post cards, stat sheets and more.",
+          "page": "generate.html"
+        },
+        {
+          "title": "More than one mood",
+          "text": "Each design picks a tone: light, paper, vivid team colour, dark, duotone, black-and-white editorial or ES blue. Every text colour is checked so it stays readable.",
+          "page": "generate.html"
+        },
+        {
+          "title": "Better cut-outs",
+          "text": "Cut-outs get a soft shadow, a rim light in the team colour and a blurred copy of their own photo behind them. Some designs let the player step out of the photo frame.",
+          "page": "generate.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-19-hero-generate",
       "date": "2026-11-19",
       "title": "Generate: stat lines, records, carousels and no blank photos",

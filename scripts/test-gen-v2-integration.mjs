@@ -39,7 +39,7 @@ const BRYSON = 'Story: Story: Bryson DeChambeau takes his game to Europe after a
 
 // ── gen-styles → _composer.js ─────────────────────────────────────────────
 {
-  assert.equal(COMPOSE.ARCHETYPES.length, 29);
+  assert.equal(COMPOSE.ARCHETYPES.filter(a => !a.looks).length, 29, 'the 29 v1/v2 archetypes are all still there');
   assert.ok(!/Needs: undefined/.test(K.DIRECTOR_SYSTEM()), 'every archetype has a Needs line');
   const src = fs.readFileSync('netlify/functions/_composer.js', 'utf8');
   assert.match(src, /\['collage-strip', 'film-strip', 'photo-mosaic'\]\.includes\(archetype\) && photo/);
