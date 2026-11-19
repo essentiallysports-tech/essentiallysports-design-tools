@@ -115,11 +115,11 @@ const bodyOps = nflAd.ops.filter(op => op.type === 'text' && /px Roboto,/.test(o
 assert.ok(bodyOps.every(op => sizeOf(op.font) === 49.2 && /^500 /.test(op.font)), 'body is Roboto Medium 49.19px');
 const headOps = nflAd.ops.filter(op => op.type === 'text' && /Acumin/.test(op.font) && op.text !== 'SIGN UP FOR THE HUDDLE');
 assert.ok(headOps.every(op => sizeOf(op.font) === 85.2), 'condensed headline is 85px');
-// Line pitch 1.11 inside a paragraph (also for a typed line break), one blank line between paragraphs.
+// Line pitch 1.2 (Figma, 2026-11-21) inside a paragraph (also for a typed line break), one blank line between paragraphs.
 const baselines = [...new Set(bodyOps.map(op => Math.round(op.y * 100) / 100))].sort((a, b) => a - b);
 const steps = baselines.slice(1).map((y, i) => Math.round((y - baselines[i]) * 10) / 10);
-const pitch = Math.round(49.19 * 1.11 * 10) / 10;
-assert.ok(steps.every(step => Math.abs(step - pitch) < 0.2 || Math.abs(step - 2 * pitch) < 0.2), `body rhythm is 1.11 lines with blank lines between paragraphs (${steps})`);
+const pitch = Math.round(49.19 * 1.2 * 10) / 10;
+assert.ok(steps.every(step => Math.abs(step - pitch) < 0.2 || Math.abs(step - 2 * pitch) < 0.2), `body rhythm is 1.2 lines with blank lines between paragraphs (${steps})`);
 assert.ok(steps.some(step => Math.abs(step - 2 * pitch) < 0.2), 'paragraphs are a blank line apart');
 const why = bodyOps.find(op => op.text === 'Every');
 const that = bodyOps.find(op => op.text === 'That’s');
@@ -318,3 +318,11 @@ assert.equal(R.tintLayers({ color: 'red', amount: 0.3 })[0].color, '#000000');
 }
 
 console.log('Video Ads renderer tests passed.');
+
+// Roboto copy carries Figma's 1px black outline; headlines and highlighted words don't.
+{
+  const R2 = require('../video-ads-render.js');
+  assert.equal(R2.BASE.bodyOutline, 1, 'body outline is 1px at 1080 wide');
+  assert.equal(R2.BASE.bodyLine, 1.2, 'body line height is 1.2');
+}
+console.log('video ads render: body line height 1.2 and 1px outline');
