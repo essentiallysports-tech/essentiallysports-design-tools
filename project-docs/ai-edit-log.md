@@ -4,6 +4,14 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-19 — Suhail (Claude): team setup for more than one person (branch chore/team-setup)
+- Status: `[committed on chore/team-setup — not pushed]`.
+- `CLAUDE.md`: team rules first (session start, own branch `<name>/<topic>`, never push to main, ask before push, stay in your area, conflicts, edit-log format with names, security, design / cost / cache-key rules, checks, releases); the existing UI QA section kept as is.
+- `scripts/release/`: the release kit moved into the repo (merge.sh, union.py, jsonmerge.py, bump.py, inline-syntax.mjs) plus `run-suite.sh` (whole suite or a subset; fails only on new failures).
+- `ONBOARDING.md`: setup for a new teammate's Claude Code (access, clone, git identity, tools, account, no keys) and how a change flows to a PR.
+- `.github/pull_request_template.md`: checklist (rebased, suite, viewports, cache keys, edit log, release note, cost).
+- From now on every entry starts with the person's name.
+
 ## 2026-11-21 — Generate v4 UI: ideas, ETA, sources, AI usage, briefs (gen4-ui, branch feature/gen4-ui)
 
 - Status: `[committed on feature/gen4-ui — not pushed]`. Base fix/generate-timeout. Agent B of 3 (owner points 1, 6, 7, 8, 10).

@@ -1,5 +1,74 @@
 # FrameUp: instructions for Claude
 
+FrameUp is EssentiallySports' internal AI design tool (https://frameup.essentiallysports.com).
+More than one person works on it, each with their own Claude. These rules keep everyone's
+work visible and stop people overwriting each other. They apply to every session.
+
+## Start of every session
+1. Read the top of `project-docs/ai-edit-log.md` (the shared handoff log) to see what others are doing.
+2. `git fetch origin` and compare with `origin/main` before assuming anything is current.
+   Others push to `main` too; never trust a stale local copy.
+3. `HANDOFF.md` is the background on the stack, pages and services.
+
+## Working together (no overrides)
+- **Never commit or push directly to `main`.** Work on your own branch, named
+  `<your-name>/<short-topic>` (for example `vinay/video-ads-captions`).
+- **Never push, merge or open a PR without the person you work for saying so** in this session.
+  "Push" means: rebase on the latest `origin/main`, run the checks below, then push the branch and
+  open a pull request. Only fast-forward `main`; never force-push `main`, never rewrite others' commits.
+- **Stay in your area.** Before editing a file, check `git log -5 --format='%an %ar %s' -- <file>` and the
+  edit log. If someone else changed it in the last few days or has it "in progress", tell the person
+  you work for before touching it.
+- **Conflicts:** never resolve a conflict by dropping the other side's code. If a conflict is not a
+  plain list (script tags, log entries, release notes), stop and ask.
+- **Who did what:** commits carry your own git name and email (`git config user.name` / `user.email`
+  must be the real person). Every edit-log entry starts with the person's name.
+
+## Edit log (`project-docs/ai-edit-log.md`)
+Add an entry at the top for every change: `## YYYY-MM-DD — <Name>: <what> (branch <branch>)`, then
+status (`in progress` / `committed, not pushed` / `pushed in <sha>`), what changed and why, the tests run,
+and anything unverified. Update the status when it ships.
+
+## Security and data (non-negotiable)
+- Never read, print, store or paste passwords, API keys or tokens. Keys live only in Vercel and in a
+  git-ignored `.env.local`. If a secret is needed, the person pastes it in themselves.
+- Never write to production Supabase from a script or test. Mock AI, Supabase and other paid calls in tests.
+- Do not bypass security checks or permission prompts. If an action is blocked, stop and ask.
+- Never change Vercel or Supabase settings, AI budget caps or design rules without the owner's approval.
+
+## Code and design rules
+- Stack: static HTML/CSS/JS; serverless functions in `netlify/functions/*.js` with thin adapters in
+  `api/*.js` (each listed in `vercel.json`); Supabase for auth and data; AI through the Vercel AI
+  Gateway (`netlify/functions/_ai-gateway.js`).
+- Design system: `design-tokens.css`, `es-ui.css`, the UI Library (`design-system.html`) and
+  `project-docs/frameup-design-system.md`. ES fonts only (Acumin, Roboto, Roboto Condensed), no purple,
+  8px grid, tokens over hard-coded values, one primary button per view, visible focus, labels and aria,
+  light and dark, no horizontal scroll at 1440 / 1280 / 1024 / 375.
+- **Exports:** editor template exports (Social, YouTube, Newsletter in `index.html`) must stay
+  byte-identical unless the change is intended and called out.
+- **Cache keys:** when you change a client JS/CSS/JSON file, bump its `?v=` on every page that loads it
+  (`python3 scripts/release/bump.py <key>` does this for everything changed vs `origin/main`).
+- **AI cost:** cheapest model that works, cache results, log with `logUsage`, gate with `aiSpendGate`
+  and the hourly/weekly limits. Budget policy is set in code: $20/week per person, $45 team cap, free mode
+  above. Flag any change that raises cost per run.
+- User-facing copy: plain English, short, no jargon. Never invent numbers, quotes or facts.
+- User-visible changes get a release note in `tours/updates.json` (`node scripts/add-release-note.mjs`).
+
+## Checks before asking to push
+- `bash scripts/release/run-suite.sh` runs every `scripts/test-*.mjs` and `scripts/check-*.mjs`
+  (add words to run a subset, e.g. `run-suite.sh gen`). Only these may fail:
+  test-color-swatch-states, test-newsletter-header-options, test-reels-transcription-framework.
+  UI sweeps can be flaky under load: rerun a failing one alone before treating it as real.
+- `node scripts/release/inline-syntax.mjs` checks inline scripts in every page.
+- Add tests for what you build.
+- Local preview: `.claude/launch.json` (`static-site`, port 8934). Use a free port and stop what you start.
+
+## Releases (combining several branches)
+`scripts/release/merge.sh <release-worktree> <branch>` merges a branch and auto-resolves only the safe
+conflicts (script tags, the edit log, `tours/updates.json`, `vercel.json`); it stops on real code
+conflicts. Then bump cache keys, run the suite, and ask before pushing.
+
+
 ## Mandatory UI Quality Assurance
 
 After every task that changes the frontend UI, run a visual QA pass before marking the task complete.
