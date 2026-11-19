@@ -18,6 +18,30 @@
 //                a run's prompt, the judge's critique either repeats its topic
 //                (a recurrence) or not (a hit). hitRate = hits / (hits + recurrences).
 //
+// gen4-learning (2026-11-21): learning from what goes FINAL. On every export
+// the page (frameup-learning.js) sends the structured diff between the design
+// as Generate delivered it and as it was downloaded: headline shortened or
+// rewritten, kicker / body cut, photo swapped (and what kind it was: a
+// no-person scene shot, a player photo, a cut-out), size switched, palette
+// flipped, composition shuffled, fixes applied, assistant asks. Then:
+//   change lessons  "chg-*" topics: what people change every time, per
+//                   archetype / sport / global ("On Stat Stack people shorten
+//                   the headline (12 to 5 words)"). Stored as kind 'avoid'
+//                   rows (no migration needed); they go to the director and the
+//                   judge as "do this while designing". Their hit / recurrence
+//                   is scored only on exports (the real outcome), never by the judge.
+//   preferences     an unchanged export ("ships as is") is strong taste
+//                   evidence for its archetype and tone; a changed export weak;
+//                   a shuffle away is a reject. rankBias() turns them into
+//                   archetype / tone scores: a ranking line goes into the
+//                   director's prompt (it picks the archetypes and tones) and
+//                   rankDirections() orders the code plan's fill.
+//   repeat-change   every export is logged (frameup_generate_direction_events,
+//   rate            payload.learn) as unchanged / changed / repeat: a repeat is
+//                   a change whose lesson was ALREADY active, i.e. the model
+//                   knew and the design still needed it. trendFrom() gives the
+//                   weekly repeat-change rate and ship-as-is rate for admins.
+//
 // Storage: frameup_creative_lessons (migration 20261118130000), written only
 // through the security-definer RPC frameup_creative_lessons_bump (deltas,
 // capped per call), team-readable. Signals that fit go to the existing
@@ -166,6 +190,9 @@ function observationsFrom(signal = {}) {
       const t = TOPIC_BY_ID[shorter ? 'headline-long' : 'headline-weak'];
       push({ kind: 'avoid', topic: t.id, text: t.lesson, source: type });
     }
+  } else if (type === 'export' && signal.diff) {
+    // gen4-learning: the export's diff (what changed before it went final).
+    return exportObservations(signal);
   } else if ((type === 'pick' || type === 'export' || (type === 'thumb' && Number(signal.value) > 0)) && signal.archetype) {
     // Taste: which compositions editors ship, per sport (or overall).
     const scope = sport ? { scope: 'sport', scopeValue: sport } : { scope: 'global', scopeValue: '' };
@@ -178,6 +205,140 @@ function observationsFrom(signal = {}) {
     }
   }
   return out;
+}
+
+// ─── gen4-learning: what people change before export ─────────────────────
+// The page's diff (frameup-learning.js diffScenes) is cleaned here, then each
+// change becomes a "chg-*" observation. Size lessons are kept for the admin
+// view but never prompted (the director does not pick the size).
+const SIZE_KEYS = ['portrait', 'story', 'square'];
+const TONE_KEYS = ['light', 'paper', 'vivid', 'dark', 'duotone', 'editorial', 'esblue'];
+const PHOTO_KINDS = ['scene', 'person', 'cutout', 'none'];
+const isChangeTopic = topic => /^chg-/.test(String(topic || ''));
+const UNPROMPTED = new Set(['chg-size-story', 'chg-size-square', 'chg-size-portrait']);
+// A change lesson and the critique topic it is about (one prompt slot each).
+const RELATED = { 'chg-headline-shorter': 'headline-long', 'chg-headline-rewrite': 'headline-weak', 'chg-photo-scene': 'no-cutout', 'chg-palette-light': 'tone-monotone', 'chg-palette-dark': 'tone-monotone' };
+
+const int = (value, max = 99) => Math.max(0, Math.min(max, Math.round(Number(value) || 0)));
+const oneOf = (value, list) => (list.includes(String(value || '')) ? String(value) : '');
+function cleanDiff(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const out = {};
+  const text = role => {
+    const t = raw[role];
+    if (!t || typeof t !== 'object') return;
+    out[role] = { beforeWords: int(t.beforeWords), afterWords: int(t.afterWords), removed: Boolean(t.removed), before: clean(t.before, 120), after: clean(t.after, 120) };
+  };
+  ['headline', 'kicker', 'body', 'quote', 'name'].forEach(text);
+  if (raw.photo && typeof raw.photo === 'object') out.photo = { from: oneOf(raw.photo.from, PHOTO_KINDS) || 'none', to: oneOf(raw.photo.to, PHOTO_KINDS) || 'none', crowd: Boolean(raw.photo.crowd) };
+  if (raw.size && typeof raw.size === 'object' && oneOf(raw.size.to, SIZE_KEYS)) out.size = { from: oneOf(raw.size.from, SIZE_KEYS), to: oneOf(raw.size.to, SIZE_KEYS) };
+  if (raw.palette && typeof raw.palette === 'object') {
+    const to = raw.palette.to === 'light' ? 'light' : raw.palette.to === 'dark' ? 'dark' : '';
+    if (to) out.palette = { from: to === 'light' ? 'dark' : 'light', to };
+  }
+  if (raw.archetype && typeof raw.archetype === 'object') {
+    const from = clean(raw.archetype.from, 40).replace(/[^\w-]/g, '');
+    const to = clean(raw.archetype.to, 40).replace(/[^\w-]/g, '');
+    if (from && to && from !== to) out.archetype = { from, to };
+  }
+  out.fixes = int(raw.fixes, 20);
+  out.asks = int(raw.asks, 20);
+  out.steps = int(raw.steps, 200);
+  return out;
+}
+
+// diff -> the list of change topics (stable order), with the numbers the lesson cites.
+function changesOf(diff) {
+  if (!diff) return [];
+  const out = [];
+  const h = diff.headline;
+  if (h && (h.before !== h.after || h.beforeWords !== h.afterWords)) {
+    if (h.afterWords && h.beforeWords && h.afterWords <= h.beforeWords - 2) out.push({ topic: 'chg-headline-shorter', a: h.beforeWords, b: h.afterWords });
+    else if (h.afterWords >= h.beforeWords + 2) out.push({ topic: 'chg-headline-longer', a: h.beforeWords, b: h.afterWords });
+    else out.push({ topic: 'chg-headline-rewrite' });
+  }
+  if (diff.kicker && (diff.kicker.removed || diff.kicker.before !== diff.kicker.after)) out.push({ topic: diff.kicker.removed || !diff.kicker.afterWords ? 'chg-kicker-cut' : 'chg-kicker-edit' });
+  if (diff.body && (diff.body.removed || diff.body.before !== diff.body.after)) out.push({ topic: diff.body.removed || diff.body.afterWords < diff.body.beforeWords ? 'chg-body-cut' : 'chg-body-edit' });
+  if ((diff.quote && diff.quote.before !== diff.quote.after) || (diff.name && diff.name.before !== diff.name.after)) out.push({ topic: 'chg-text-edit' });
+  if (diff.photo) out.push({ topic: diff.photo.crowd || diff.photo.from === 'scene' || diff.photo.from === 'none' ? 'chg-photo-scene' : diff.photo.from === 'cutout' ? 'chg-photo-cutout' : 'chg-photo-person' });
+  if (diff.size?.to) out.push({ topic: `chg-size-${diff.size.to}` });
+  if (diff.palette?.to) out.push({ topic: `chg-palette-${diff.palette.to}` });
+  if (diff.archetype) out.push({ topic: 'chg-shuffle', from: diff.archetype.from });
+  if (diff.fixes) out.push({ topic: 'chg-fix' });
+  if (diff.asks) out.push({ topic: 'chg-ask' });
+  return out;
+}
+// Shuffles, fixes and asks have their own signals (reject / improvement /
+// assistant), so they count as changes but teach no second lesson here.
+const OWN_SIGNAL = new Set(['chg-shuffle', 'chg-fix', 'chg-ask']);
+const SIZE_NAME = { story: '9:16 story', square: '1:1 square', portrait: '4:5 portrait' };
+function changeText(change, { on = '' } = {}) {
+  const where = on ? ` on ${on}` : '';
+  const On = on ? `On ${on}, people` : 'People';
+  switch (change.topic) {
+    case 'chg-headline-shorter': return `${On} shorten the headline before posting (${change.a} to ${change.b} words); write it that short from the start.`;
+    case 'chg-headline-longer': return `${On} add words to the headline before posting (${change.a} to ${change.b} words); say who and what in it.`;
+    case 'chg-headline-rewrite': return `${On} rewrite the headline before posting; lead with a sharper hook from the facts.`;
+    case 'chg-kicker-cut': return `${On} delete the kicker before posting; leave it out unless it adds a fact.`;
+    case 'chg-kicker-edit': return `${On} rewrite the kicker before posting; make it a short, specific label.`;
+    case 'chg-body-cut': return `${On} cut the body copy before posting; keep it to one short line or drop it.`;
+    case 'chg-body-edit': return `${On} rewrite the body copy before posting; one plain sentence with the key fact.`;
+    case 'chg-text-edit': return `${On} correct the quote or name text before posting; use the exact words and spelling from the story.`;
+    case 'chg-photo-scene': return `${On} swap out no-person photos (crowd, venue, objects) before posting; lead with a clear photo of the named player or team.`;
+    case 'chg-photo-person': return `${On} swap the player photo before posting; pick the sharpest, closest ES shot of the person named.`;
+    case 'chg-photo-cutout': return `${On} replace the cut-out before posting; use a clean cut-out or a full photo instead.`;
+    case 'chg-palette-light': return `${On} flip the design to a light field before posting; start it light.`;
+    case 'chg-palette-dark': return `${On} flip the design to a dark field before posting; start it dark.`;
+    default:
+      if (/^chg-size-/.test(change.topic)) return `People resize designs${where} to ${SIZE_NAME[change.topic.slice(9)] || 'another size'} before posting; offer that size first.`;
+      return '';
+  }
+}
+
+function exportObservations(signal) {
+  const out = [];
+  const diff = signal.diff;
+  const name = clean(signal.archetypeName || signal.archetype, 40);
+  const sport = clean(signal.sport, 20);
+  const changes = changesOf(diff);
+  const unchanged = !changes.length; // edited and undone back counts as unchanged
+  const scopes = scopesFor(signal);
+  changes.filter(c => !OWN_SIGNAL.has(c.topic)).forEach(change => scopes.forEach(s => {
+    const on = s.scope === 'archetype' ? name : s.scope === 'sport' ? `${sport} designs` : s.scope === 'brand' ? `${clean(signal.brand, 40)} designs` : '';
+    const text = changeText(change, { on });
+    if (!text) return;
+    const base = { kind: 'avoid', topic: change.topic, text, source: 'export', weight: 1.5 };
+    out.push({ ...base, ...s, key: keyFor({ ...base, ...s }) });
+  }));
+  // Taste: shipped as is = strong; shipped after changes = weak.
+  if (signal.archetype) {
+    const scope = sport ? { scope: 'sport', scopeValue: sport } : { scope: 'global', scopeValue: '' };
+    const base = { kind: 'prefer', topic: `prefer-${slug(signal.archetype)}`, text: `Editors ship the ${name || signal.archetype} composition${sport ? ` for ${sport}` : ''}${unchanged ? ' as is' : ''}; offer it when the brief fits.`, source: 'export', weight: unchanged ? 2.5 : 1 };
+    out.push({ ...base, ...scope, key: keyFor({ ...base, ...scope }) });
+  }
+  const tone = oneOf(signal.tone, TONE_KEYS);
+  if (tone && unchanged) {
+    const scope = sport ? { scope: 'sport', scopeValue: sport } : { scope: 'global', scopeValue: '' };
+    const base = { kind: 'prefer', topic: `prefer-tone-${tone}`, text: `Designs in the ${tone} tone ship as is${sport ? ` for ${sport}` : ''}; include one when the archetype allows.`, source: 'export', weight: 1.5 };
+    out.push({ ...base, ...scope, key: keyFor({ ...base, ...scope }) });
+  }
+  return out;
+}
+
+// One export's outcome for the repeat-change log. lessons = before this export.
+//   repeats: changes whose lesson (any of the export's scopes) was already active.
+function exportSummary(signal, lessons = [], { now = Date.now() } = {}) {
+  const changes = changesOf(signal.diff);
+  const keys = new Set(scopesFor(signal).flatMap(s => changes.map(c => keyFor({ kind: 'avoid', topic: c.topic, ...s }))));
+  const active = new Set(lessons.filter(l => keys.has(l.key) && isActive(l, now)).map(l => l.topic));
+  const topics = [...new Set(changes.map(c => c.topic))];
+  return {
+    unchanged: !changes.length,
+    changes: topics,
+    repeats: topics.filter(t => active.has(t)),
+    archetype: signal.archetype || '',
+    tone: oneOf(signal.tone, TONE_KEYS),
+  };
 }
 
 // ─── Lessons: distil, decay, select ───────────────────────────────────────
@@ -200,7 +361,9 @@ const isActive = (lesson, now) => decayed(lesson, now) >= ACTIVE_WEIGHT;
 //   injected: keys of the lessons that were in this run's prompts. Their topic
 //             observed again = a recurrence; not observed = a hit.
 // deltas are what the RPC adds (so parallel servers never overwrite each other).
-function distil(lessons = [], observations = [], { now = Date.now(), injected = [] } = {}) {
+//   outcome:  true for an export (the real outcome). Change lessons ("chg-*")
+//             only score hits / recurrences on outcomes, never on the judge's pass.
+function distil(lessons = [], observations = [], { now = Date.now(), injected = [], outcome = false } = {}) {
   const byKey = new Map(lessons.map(l => [l.key, { ...l }]));
   const deltas = new Map();
   const delta = (lesson, change) => {
@@ -224,7 +387,7 @@ function distil(lessons = [], observations = [], { now = Date.now(), injected = 
     lesson.evidence = Number((decayed(lesson, now) + obs.weight).toFixed(3));
     lesson.lastSeen = new Date(now).toISOString();
     lesson.sources = { ...(lesson.sources || {}), [obs.source]: Number(lesson.sources?.[obs.source] || 0) + 1 };
-    const recurred = Boolean(wasActive && injected.includes(obs.key) && lesson.kind === 'avoid' && !seenKeys.has(obs.key));
+    const recurred = Boolean(wasActive && injected.includes(obs.key) && lesson.kind === 'avoid' && !seenKeys.has(obs.key) && (outcome || !isChangeTopic(lesson.topic)));
     if (recurred) {
       lesson.recurrences = Number(lesson.recurrences || 0) + 1;
       lesson.lastRecurredAt = lesson.lastSeen;
@@ -236,6 +399,7 @@ function distil(lessons = [], observations = [], { now = Date.now(), injected = 
   injected.forEach(key => {
     const lesson = byKey.get(key);
     if (!lesson || lesson.kind !== 'avoid' || seenKeys.has(key)) return;
+    if (isChangeTopic(lesson.topic) !== Boolean(outcome)) return; // outcomes score change lessons; the judge scores critique lessons
     lesson.hits = Number(lesson.hits || 0) + 1;
     delta(lesson, { hits: 1 });
   });
@@ -246,27 +410,93 @@ function distil(lessons = [], observations = [], { now = Date.now(), injected = 
 // The lessons for one run: active, in scope (global, its sport, its
 // archetypes, its brand), the strongest first. Avoid-lessons first (the
 // mistakes), then up to 2 taste lessons.
-function selectLessons(lessons = [], { sport = '', archetypes = [], brand = '', limit = 6, now = Date.now() } = {}) {
-  const wantArch = new Set((archetypes || []).map(slug));
+// gen4-learning: archetypes '*' (the director, before it has picked any) takes
+// archetype lessons for every archetype; change lessons ("chg-*", what people
+// change before export) get up to 3 slots of their own; with rank: true a
+// ranking line (rankBias: archetypes and tones that ship / get shuffled away)
+// rides along as kind 'rank'.
+function selectLessons(lessons = [], { sport = '', archetypes = [], brand = '', limit = 6, now = Date.now(), rank = false } = {}) {
+  const anyArch = archetypes === '*';
+  const wantArch = new Set((anyArch ? [] : archetypes || []).map(slug));
   const inScope = l => l.scope === 'global'
     || (l.scope === 'sport' && sport && slug(l.scopeValue) === slug(sport))
-    || (l.scope === 'archetype' && wantArch.has(slug(l.scopeValue)))
+    || (l.scope === 'archetype' && (anyArch || wantArch.has(slug(l.scopeValue))))
     || (l.scope === 'brand' && brand && slug(l.scopeValue) === slug(brand));
   const boost = { archetype: 1.3, sport: 1.2, brand: 1.2, global: 1 };
-  const ranked = lessons.filter(l => inScope(l) && isActive(l, now))
+  const ranked = lessons.filter(l => inScope(l) && isActive(l, now) && !UNPROMPTED.has(l.topic))
     .map(l => ({ ...l, weight: decayed(l, now), score: decayed(l, now) * boost[l.scope] }))
     .sort((a, b) => b.score - a.score);
-  // One lesson per topic (the most specific scope wins its slot).
+  // One lesson per topic (the most specific scope wins its slot); with '*' one
+  // per topic and archetype, so "shorten the headline on Stat Stack" and "on
+  // Scoreboard" can both reach the director.
   const seen = new Set();
   const unique = ranked.filter(l => {
-    const id = l.topic || l.key;
+    const id = anyArch && l.scope === 'archetype' && isChangeTopic(l.topic) ? `${l.topic}@${slug(l.scopeValue)}` : (l.topic || l.key);
     if (seen.has(id)) return false;
     seen.add(id);
     return true;
   });
-  const avoid = unique.filter(l => l.kind === 'avoid').slice(0, Math.max(1, limit - 2));
-  const prefer = unique.filter(l => l.kind === 'prefer').slice(0, 2);
-  return [...avoid, ...prefer].slice(0, limit).map((l, i) => ({ id: `L${i + 1}`, key: l.key, text: l.text, kind: l.kind, scope: l.scope, scopeValue: l.scopeValue, topic: l.topic, weight: l.weight, hitRate: hitRate(l) }));
+  const changeCap = Math.min(3, Math.max(0, limit - 3));
+  const change = unique.filter(l => l.kind === 'avoid' && isChangeTopic(l.topic)).slice(0, changeCap);
+  // A critique lesson whose change twin is already in steps aside.
+  const twins = new Set(change.map(l => RELATED[l.topic]).filter(Boolean));
+  const avoidAll = unique.filter(l => l.kind === 'avoid' && !isChangeTopic(l.topic) && !twins.has(l.topic));
+  const prefer = unique.filter(l => l.kind === 'prefer' && !/^prefer-tone-/.test(l.topic)).slice(0, 2);
+  const avoid = avoidAll.slice(0, Math.max(1, limit - 2 - change.length));
+  const out = [...avoid, ...change, ...prefer].slice(0, limit).map((l, i) => ({ id: `L${i + 1}`, key: l.key, text: l.text, kind: l.kind, scope: l.scope, scopeValue: l.scopeValue, topic: l.topic, weight: l.weight, hitRate: hitRate(l), ...(isChangeTopic(l.topic) ? { change: true } : {}) }));
+  if (rank) {
+    const line = rankLine(rankBias(lessons, { sport, now }));
+    if (line) out.push({ id: `L${out.length + 1}`, key: 'rank', text: line, kind: 'rank', scope: sport ? 'sport' : 'global', scopeValue: sport, topic: 'rank' });
+  }
+  return out;
+}
+
+// ─── gen4-learning: preferences -> archetype / tone ranking ──────────────
+// Scores from active taste lessons in scope (global + the sport): prefer-<id>
+// adds its decayed weight, reject-<id> subtracts it; tones from
+// prefer-tone-<t> and from palette-flip change lessons (people flip dark ->
+// light: light +). Only scores at or past the activation weight count.
+// anySport: true (the admin view) counts every sport's lessons.
+function rankBias(lessons = [], { sport = '', now = Date.now(), anySport = false } = {}) {
+  const archetypes = {};
+  const tones = {};
+  const add = (map, id, w) => { if (id) map[id] = Number(((map[id] || 0) + w).toFixed(3)); };
+  lessons.forEach(l => {
+    const inScope = l.scope === 'global' || (l.scope === 'sport' && (anySport || (sport && slug(l.scopeValue) === slug(sport))));
+    if (!inScope) return;
+    const w = decayed(l, now);
+    if (w < 0.5) return;
+    const topic = String(l.topic || '');
+    if (l.kind === 'prefer' && /^prefer-tone-/.test(topic)) add(tones, topic.slice(12), w);
+    else if (l.kind === 'prefer' && /^prefer-/.test(topic)) add(archetypes, topic.slice(7), w);
+    else if (/^reject-/.test(topic)) add(archetypes, topic.slice(7), -w);
+    else if (topic === 'chg-palette-light') { add(tones, 'light', w / 2); add(tones, 'dark', -w / 2); }
+    else if (topic === 'chg-palette-dark') { add(tones, 'dark', w / 2); add(tones, 'light', -w / 2); }
+  });
+  const keep = map => Object.fromEntries(Object.entries(map).filter(([, v]) => Math.abs(v) >= ACTIVE_WEIGHT).sort((a, b) => b[1] - a[1]));
+  return { archetypes: keep(archetypes), tones: keep(tones) };
+}
+function rankLine(bias) {
+  const up = Object.entries(bias.archetypes).filter(([, v]) => v > 0).slice(0, 3).map(([id]) => id);
+  const down = Object.entries(bias.archetypes).filter(([, v]) => v < 0).sort((a, b) => a[1] - b[1]).slice(0, 2).map(([id]) => id);
+  const tonesUp = Object.entries(bias.tones).filter(([, v]) => v > 0).slice(0, 2).map(([id]) => id);
+  const parts = [];
+  if (up.length) parts.push(`rank these archetypes first when the brief fits (editors ship them): ${up.join(', ')}`);
+  if (down.length) parts.push(`rank these last (editors shuffle away from them): ${down.join(', ')}`);
+  if (tonesUp.length) parts.push(`tones that ship as is: ${tonesUp.join(', ')}`);
+  return parts.length ? `Ranking from past exports: ${parts.join('; ')}.` : '';
+}
+// Orders a list of directions (or anything with .archetype / .tone) by the
+// learned bias: stable, so the composer's own order breaks ties. In place;
+// returns the list. Used by the composer's code-plan fill (marked hook).
+function rankDirections(list, { sport = '', lessons = null, bias = null, now = Date.now() } = {}) {
+  if (!Array.isArray(list) || list.length < 2) return list;
+  const b = bias || rankBias(lessons || mergeLists(cache.rows || [], [...memory.values()]), { sport, now });
+  if (!Object.keys(b.archetypes).length && !Object.keys(b.tones).length) return list;
+  const score = d => (b.archetypes[d?.archetype] || 0) + (b.tones[d?.tone] || 0) / 2;
+  const order = list.map((d, i) => ({ d, i, s: score(d) })).sort((x, y) => y.s - x.s || x.i - y.i).map(x => x.d);
+  order.forEach((d, i) => { list[i] = d; });
+  return list;
 }
 
 // Prompt lines (for the director and the judge).
@@ -280,14 +510,23 @@ function promptLines(selected = [], { who = 'director' } = {}) {
   ] : [];
   const learned = selected.filter(l => !l.seed);
   if (!learned.length) return house;
-  const avoid = learned.filter(l => l.kind === 'avoid');
+  const isChange = l => l.change || isChangeTopic(l.topic);
+  const avoid = learned.filter(l => l.kind === 'avoid' && !isChange(l));
+  const change = learned.filter(l => l.kind === 'avoid' && isChange(l));
   const prefer = learned.filter(l => l.kind === 'prefer');
+  const rank = learned.filter(l => l.kind === 'rank');
   return [...house,
-    who === 'judge'
+    ...(avoid.length ? [who === 'judge'
       ? 'Team lessons (learned from past runs). If a design repeats one of these mistakes, say so in its improvements and score it down:'
       : 'Team lessons (learned from what editors fixed, rejected and shipped). Do not repeat these mistakes:',
-    ...avoid.map(l => `- [${l.id}] ${l.text}`),
+    ...avoid.map(l => `- [${l.id}] ${l.text}`)] : []),
+    // gen4-learning: what people change before they post, every time.
+    ...(change.length ? [who === 'judge'
+      ? 'What editors change before posting, every time. A design that still needs one of these changes is not finished: fix it now (it is a repair, not a suggestion) and score it down if it cannot be fixed:'
+      : 'What editors change before posting, every time (do it while designing, so they do not have to):',
+    ...change.map(l => `- [${l.id}] ${l.text}`)] : []),
     ...(prefer.length ? ['Taste (what editors ship):', ...prefer.map(l => `- [${l.id}] ${l.text}`)] : []),
+    ...(who === 'judge' ? [] : rank.map(l => `- [${l.id}] ${l.text}`)),
   ];
 }
 
@@ -300,9 +539,13 @@ function adminView(lessons = [], { now = Date.now(), limit = 20 } = {}) {
   const measured = rows.filter(r => r.hitRate != null);
   const hits = measured.reduce((n, r) => n + r.hits, 0);
   const misses = measured.reduce((n, r) => n + r.recurrences, 0);
+  // gen4-learning: what people change every time, and what ships (with bias).
+  const changes = rows.filter(r => isChangeTopic(r.topic) && r.weight >= 0.5).sort((a, b) => b.weight - a.weight).slice(0, limit);
   return {
     top,
     recurring,
+    changes,
+    preferences: rankBias(lessons, { now, anySport: true }),
     totals: { lessons: rows.length, active: rows.filter(r => r.active).length, hits, recurrences: misses, hitRate: hits + misses ? Number((hits / (hits + misses)).toFixed(2)) : null },
   };
 }
@@ -373,30 +616,120 @@ async function saveDeltas({ token, deltas = [] } = {}) {
 }
 
 // The lessons for a run's prompts. Never throws; [] without memory.
-async function lessonsFor({ token, sport = '', archetypes = [], brand = '', limit = 6 } = {}) {
+// gen4-learning: archetypes '*' + rank: true is the director's call (all
+// archetype lessons, the ranking line); the judge passes its archetypes.
+async function lessonsFor({ token, sport = '', archetypes = [], brand = '', limit = 6, rank = false } = {}) {
   try {
-    return selectLessons(await loadLessons({ token }), { sport, archetypes, brand, limit });
+    return selectLessons(await loadLessons({ token }), { sport, archetypes, brand, limit, rank });
   } catch (error) {
     return [];
   }
 }
 
+// The injected keys an export can score: change lessons in the export's own
+// scopes (global, its sport, its final archetype, its brand).
+function scopedInjected(signal, keys = []) {
+  const want = new Set(scopesFor(signal).map(s => `${s.scope}${s.scopeValue ? `=${slug(s.scopeValue)}` : ''}`));
+  return (Array.isArray(keys) ? keys : []).map(String).filter(key => {
+    const [kind, scope, topic] = key.split(':');
+    return kind === 'avoid' && isChangeTopic(topic) && want.has(scope);
+  });
+}
+
 // Learn from signals. injected: lesson keys that were in this run's prompts.
-// Returns { observed, lessons: changed lesson keys, saved }.
+// An export with a diff is an outcome: its change lessons score hits /
+// recurrences, and its summary (unchanged / changes / repeats) is returned
+// for the repeat-change log.
+// Returns { observed, changed: changed lesson keys, saved, summary }.
 async function learn({ token, signals = [], injected = [] } = {}) {
   try {
     const observations = signals.flatMap(observationsFrom);
-    if (!observations.length && !injected.length) return { observed: 0, changed: [], saved: false };
+    const exported = signals.find(sig => sig && sig.type === 'export' && sig.diff);
+    const keys = exported ? scopedInjected(exported, injected.length ? injected : exported.injected) : injected;
+    if (!observations.length && !keys.length && !exported) return { observed: 0, changed: [], saved: false, summary: null };
     const current = await loadLessons({ token });
-    const { lessons, deltas } = distil(current, observations, { injected });
+    const summary = exported ? exportSummary(exported, current) : null;
+    if (summary) logExport(summary);
+    const { lessons, deltas } = distil(current, observations, { injected: keys, outcome: Boolean(exported) });
     const changed = new Set(deltas.map(d => d.key));
     lessons.filter(l => changed.has(l.key)).forEach(l => memory.set(l.key, l));
     if (memory.size > MAX_LESSONS) memory = new Map([...memory.entries()].sort((a, b) => decayed(b[1]) - decayed(a[1])).slice(0, MAX_LESSONS));
     const saved = await saveDeltas({ token, deltas });
-    return { observed: observations.length, changed: [...changed], saved };
+    return { observed: observations.length, changed: [...changed], saved, summary };
   } catch (error) {
-    return { observed: 0, changed: [], saved: false };
+    return { observed: 0, changed: [], saved: false, summary: null };
   }
+}
+
+// ─── gen4-learning: repeat-change trend (admins) ─────────────────────────
+// Each export's summary is logged in frameup_generate_direction_events
+// (payload.learn, written with the creative-signal's design_exported row) and
+// in this instance's memory (the fallback). trendFrom() buckets them by week:
+//   exports, shipAsIs (unchanged), changed, repeat (>= 1 change whose lesson
+//   was already active), repeatRate = repeat / exports (lower is better: the
+//   model learned), shipRate = shipAsIs / exports (higher is better), and the
+//   top changes overall.
+const EVENTS_TABLE = 'frameup_generate_direction_events';
+const WEEK = 7 * DAY;
+let exportLog = []; // { at, learn } newest last, this instance
+function logExport(summary, at = Date.now()) {
+  exportLog.push({ at, learn: summary });
+  if (exportLog.length > 500) exportLog = exportLog.slice(-500);
+}
+function trendFrom(rows = [], { now = Date.now(), weeks = 8 } = {}) {
+  const start = now - weeks * WEEK;
+  const buckets = Array.from({ length: weeks }, (_, i) => ({ weekStart: new Date(start + i * WEEK).toISOString().slice(0, 10), exports: 0, shipAsIs: 0, changed: 0, repeat: 0 }));
+  const topics = {};
+  (Array.isArray(rows) ? rows : []).forEach(row => {
+    const at = toTime(row.at || row.created_at);
+    const l = row.learn || row.payload?.learn;
+    if (!l || !at || at < start || at > now + DAY) return;
+    const b = buckets[Math.min(weeks - 1, Math.floor((at - start) / WEEK))];
+    b.exports += 1;
+    if (l.unchanged) b.shipAsIs += 1; else b.changed += 1;
+    if (Array.isArray(l.repeats) && l.repeats.length) b.repeat += 1;
+    (Array.isArray(l.changes) ? l.changes : []).forEach(t => { topics[t] = (topics[t] || 0) + 1; });
+  });
+  const rate = (n, d) => (d ? Number((n / d).toFixed(2)) : null);
+  buckets.forEach(b => { b.repeatRate = rate(b.repeat, b.exports); b.shipRate = rate(b.shipAsIs, b.exports); });
+  const total = buckets.reduce((t, b) => ({ exports: t.exports + b.exports, shipAsIs: t.shipAsIs + b.shipAsIs, repeat: t.repeat + b.repeat }), { exports: 0, shipAsIs: 0, repeat: 0 });
+  const withData = buckets.filter(b => b.exports);
+  const first = withData[0];
+  const last = withData[withData.length - 1];
+  return {
+    weeks: buckets,
+    totals: { ...total, repeatRate: rate(total.repeat, total.exports), shipRate: rate(total.shipAsIs, total.exports) },
+    // Change in repeat rate from the first to the latest week with exports (negative = learning).
+    repeatRateDelta: first && last && first !== last ? Number((last.repeatRate - first.repeatRate).toFixed(2)) : null,
+    topChanges: Object.entries(topics).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([topic, count]) => ({ topic, count })),
+  };
+}
+async function isAdmin(token) {
+  if (!token) return false;
+  try {
+    const response = await fetchImpl(`${authConfig().url}/rest/v1/rpc/is_es_designer_admin`, { method: 'POST', headers: headers(token, { 'Content-Type': 'application/json' }), body: '{}', signal: AbortSignal.timeout(3000) });
+    return response.ok && (await response.json()) === true;
+  } catch (error) {
+    return false;
+  }
+}
+// The trend for the admin view: the team's logged exports (admins read all
+// rows through RLS), else this instance's log. Never throws.
+async function loadTrend({ token, weeks = 8, now = Date.now() } = {}) {
+  let rows = null;
+  if (token) {
+    try {
+      const since = new Date(now - weeks * WEEK).toISOString();
+      const query = `select=created_at,payload&type=eq.design_exported&payload-%3E%3Esignal=eq.export&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=2000`;
+      const response = await fetchImpl(`${authConfig().url}/rest/v1/${EVENTS_TABLE}?${query}`, { headers: { ...headers(token), Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(4000) });
+      if (response.ok) {
+        const list = await response.json();
+        if (Array.isArray(list)) rows = list.filter(r => r?.payload?.learn);
+      }
+    } catch (error) { rows = null; }
+  }
+  const source = rows && rows.length ? 'team' : 'instance';
+  return { ...trendFrom(rows && rows.length ? rows : exportLog, { now, weeks }), source };
 }
 
 // A judge's critiques -> signals (one per improvement, plus nextTime).
@@ -411,9 +744,12 @@ function judgeSignals(directions = [], { sport = '', archetypeOf = {} } = {}) {
 }
 
 // Normalises a page signal (mode 'creative-signal'). Returns { signal } or { error }.
+// gen4-learning: the page's FrameUpLearning.capture() shape is accepted too:
+// { runId, designId, archetype, tone, event: 'export'|'download'|'edit'|'assist'|'reject'|'apply', diff?, injected? }
+const EVENT_ALIAS = { export: 'export', download: 'export', edit: 'edit', assist: 'assistant', reject: 'reject', apply: 'improvement', pick: 'pick', thumb: 'thumb' };
 function normalizeSignal(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { error: 'Invalid signal.' };
-  const type = String(raw.type || '');
+  const type = String(raw.type || EVENT_ALIAS[String(raw.event || '')] || '');
   if (!SIGNALS.includes(type) || type === 'judge') return { error: 'Unknown signal.' };
   const archetype = clean(raw.archetype, 40).replace(/[^\w-]/g, '');
   return {
@@ -429,6 +765,10 @@ function normalizeSignal(raw) {
       value: Math.max(-1, Math.min(1, Number(raw.value) || 0)),
       runId: /^[\w-]{1,64}$/.test(String(raw.runId || '')) ? String(raw.runId) : '',
       designId: clean(raw.designId, 40).replace(/[^\w:.-]/g, ''),
+      tone: oneOf(raw.tone, TONE_KEYS),
+      ...(type === 'export' && raw.diff ? { diff: cleanDiff(raw.diff) } : {}),
+      ...(Array.isArray(raw.injected) ? { injected: raw.injected.slice(0, 16).map(k => clean(k, 200)).filter(k => /^avoid:[\w=-]+:[\w-]+$/.test(k)) } : {}),
+      ...(raw.event === 'download' ? { format: clean(raw.format, 10).replace(/[^\w/]/g, '') } : {}),
     },
   };
 }
@@ -438,19 +778,23 @@ function normalizeSignal(raw) {
 // thumbs / reject -> more / less_like_this, edits -> direction_edited,
 // improvement and assistant -> fix_applied.
 const EVENT_FOR = { pick: 'direction_chosen', export: 'design_exported', reject: 'less_like_this', edit: 'direction_edited', improvement: 'fix_applied', assistant: 'fix_applied' };
-function eventFor(signal) {
+// summary: learn()'s export summary, logged as payload.learn (the repeat-change trend).
+function eventFor(signal, summary = null) {
   const type = signal.type === 'thumb' ? (signal.value < 0 ? 'less_like_this' : 'more_like_this') : EVENT_FOR[signal.type];
   if (!type) return null;
   const directionId = (signal.designId.split(':').pop() || '').replace(/[^\w-]/g, '').slice(0, 24) || undefined;
-  return { type, runId: signal.runId || undefined, directionId, sport: signal.sport || undefined, angle: signal.text ? signal.text.slice(0, 160) : undefined, payload: { look: 'creative', signal: signal.type, archetype: signal.archetype, value: signal.value || undefined, ...(signal.before ? { before: { angle: signal.before }, after: { angle: signal.after } } : {}) } };
+  return { type, runId: signal.runId || undefined, directionId, sport: signal.sport || undefined, angle: signal.text ? signal.text.slice(0, 160) : undefined, payload: { look: 'creative', signal: signal.type, archetype: signal.archetype, value: signal.value || undefined, ...(signal.before ? { before: { angle: signal.before }, after: { angle: signal.after } } : {}), ...(signal.tone ? { tone: signal.tone } : {}), ...(summary ? { learn: summary } : {}), ...(signal.diff ? { diff: signal.diff } : {}) } };
 }
 
 module.exports = {
   TOPICS, SIGNALS, SCOPES, HALF_LIFE_DAYS, ACTIVE_WEIGHT, SEED_LESSONS, withSeeds,
   topicOf, intentTopic, keyFor, observationsFrom, distil, decayed, hitRate, selectLessons, promptLines, adminView,
   loadLessons, lessonsFor, learn, judgeSignals, normalizeSignal, eventFor,
+  // gen4-learning
+  cleanDiff, changesOf, changeText, exportObservations, exportSummary, scopedInjected, isChangeTopic,
+  rankBias, rankLine, rankDirections, trendFrom, loadTrend, isAdmin,
   _test: {
-    reset: () => { memory = new Map(); cache = { at: 0, rows: null }; tableMissingUntil = 0; },
+    reset: () => { memory = new Map(); cache = { at: 0, rows: null }; tableMissingUntil = 0; exportLog = []; },
     setFetch: fn => { fetchImpl = fn; },
     memory: () => memory,
   },

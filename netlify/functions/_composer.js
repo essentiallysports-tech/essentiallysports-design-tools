@@ -1668,6 +1668,7 @@ async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = 
   // Fill any gap with the code plan (different archetypes and photos).
   if (directions.length < want) {
     const base = planDeterministic(read, assets, { want: want + 4 });
+    MEMORY.rankDirections?.(base, { sport: read.sport }); // gen4-learning hook: learned archetype / tone ranking (_creative-memory.js)
     const usedArch = new Set(directions.map(d => d.archetype));
     const usedPhotos = new Set(directions.filter(d => d.photo).map(d => photoKey(d.photo.src)));
     const families = new Map();

@@ -24,6 +24,15 @@ and what's still uncommitted.
 
 ## Entries
 
+### 2026-11-21 — Generate v4 point 4: learn from what goes final (branch feature/gen4-learning)
+- Status: `[committed on feature/gen4-learning — not pushed]`. Agent C of the gen-v4 set; based on fix/generate-timeout.
+- **Capture** (`frameup-learning.js`, new, `window.FrameUpLearning`): on every Generate download it diffs the design as delivered (history entry 0) against the downloaded version: headline / kicker / body words, photo swapped (no-person scene shot, player photo or cut-out), size, palette flip, shuffle, fixes, assistant asks. Shuffles send a `reject` from the `frameup:design-changed` event (no hook). Hooks: one line in `generate-creative.js` (`exportCard`), one script tag in `generate.html`; `generate-focus.js` needed none (its export goes through `exportCard`).
+- **Learning** (`_creative-memory.js`): `chg-*` change lessons per archetype / sport / global ("On Stat Stack, people shorten the headline (9 to 3 words)"), stored as kind `avoid` rows (no migration). Unchanged exports = strong taste for the archetype and tone; shuffles = rejects. Same 21-day decay. Change lessons score hits / recurrences only on exports (the outcome), never on the judge pass.
+- **Injection**: director gets every archetype's change lessons plus a ranking line (`lessonsFor({ archetypes: '*', limit: 7, rank: true })` in `es-generate.js creative()`); judge gets "not finished: fix it now" for its archetypes. Size lessons are admin-only. One marked hook line in `_composer.js` (`MEMORY.rankDirections?.(base, ...)`) orders the code-plan fill by the learned bias.
+- **Admin trend**: every export's summary (unchanged / changes / repeats) rides in the `design_exported` row's `payload.learn`; `creative-lessons` returns `trend` (admins, `is_es_designer_admin`). Dashboard: new "Generate learning" card (`#gen-learning`) with weekly repeat-change rate, ship-as-is rate, top changes, active lessons, compositions.
+- Tests: `scripts/test-gen-learning.mjs` (added to `test:generate`).
+
+
 ### 2026-11-21 — Final QA: Generate (branch qa/final-generate)
 - Status: `[committed on qa/final-generate — not pushed]`. From origin/main 6769e54. Final-QA agent 1 of 6 (area: generate).
 - **New checks** (real headless Chrome over CDP, no deps, skip when Chrome is missing; shared harness `scripts/_qa-chrome.mjs`, fixtures `scripts/_qa-generate-fixtures.mjs`):
