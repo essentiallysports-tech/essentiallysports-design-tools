@@ -689,7 +689,7 @@ Object.keys(PRIORITY).forEach(kind => (COMPOSE.ARCHETYPES || []).forEach(a => {
 // object ("Joe Burrow threw" when "for 409 yards" was cut); else the subject.
 const NUM_VERBS = /^(?:stays|stay|remains|remain|becomes|become|holds|hold|climbs|rises|falls|drops|jumps|threw|throws|throw|scored|scores|score|had|has|have|caught|catches|drove|drives|hit|hits|ran|runs|rushed|rushes|posted|posts|recorded|records|signs|signed|sign|agrees|agreed|earned|earns|won|wins|made|makes|shot|shoots|averaged|averages|totaled|totals|added|adds|grabbed|grabs|dished|collected|finished|finishes|improve|improves|improved|sits|sit|stands|moves|move|is|are|was|were|leads|led|reach|reaches|reached|hits|tallied|logged|notched|racked)$/i;
 // Words that carry a story's turn: a headline cut never drops them.
-const TURN = /\b(?:unpaid|not|never|no|without|despite|but|yet|while|whereas|bankrupt\w*|fail\w*|loss|lost|loses|lose|fired|banned|suspended|fined|injur\w*|out for|denied|refused|rejected|cut|released|unsigned|snubbed|quit|retire\w*)\b/i;
+const TURN = /\b(?:best|record|history|historic|first|ever|unpaid|not|never|no|without|despite|but|yet|while|whereas|bankrupt\w*|fail\w*|loss|lost|loses|lose|fired|banned|suspended|fined|injur\w*|out for|denied|refused|rejected|cut|released|unsigned|snubbed|quit|retire\w*)\b/i;
 const turnWords = h => (String(h || '').match(new RegExp(TURN.source, 'gi')) || []).map(w => w.toLowerCase());
 // The story's last turn word (its point) survives in a replacement headline.
 const keepsTurnOf = (was, h) => { const t = turnWords(was); return !t.length || turnWords(h).includes(t[t.length - 1]); };
@@ -754,14 +754,19 @@ function codeHeadline(text, story, read, { fallback = '', all = false, long = fa
   }
   // The clause right after each cut (the next cut, or the end).
   accs.forEach((a, i) => { a.next = (accs[i + 1] ? accs[i + 1].text : flat).slice(a.text.length); });
-  const fitsCut = a => a.text.split(' ').length <= maxWords;
+  // A cover cut says a whole thing: 5+ words ("The Lakers trade" is not a headline).
+  const minCut = long ? 5 : 4;
+  const fitsCut = a => a.text.split(' ').length <= maxWords && a.text.split(' ').length >= minCut;
   const firstPoint = accs.find(a => fitsCut(a) && !TURN.test(a.next));
   const turnLost = !firstPoint && accs.some(a => TURN.test(a.next));
   const nWords = flat.split(' ').length;
   // The whole story first when every cut would lose its turn (up to 14 words).
-  if (turnLost && nWords <= 14 && !options.includes(whole)) options.unshift(tidy(flat, 14));
+  const turnCap = long ? 16 : 14;
+  if (turnLost && nWords <= turnCap && !options.includes(whole)) options.unshift(tidy(flat, turnCap));
   const lead = firstPoint || (nWords <= maxWords ? null : accs.filter(fitsCut).pop());
-  if (lead) options.push(tidy(lead.text));
+  // A long story reads better cut at its first complete point (board covers run 4-9 words).
+  if (firstPoint && nWords > 9 && !turnLost) options.unshift(tidy(firstPoint.text));
+  else if (lead) options.push(tidy(lead.text));
   if (all) accs.filter(fitsCut).forEach(a => options.push(tidy(a.text)));
   // gen5: "LIV Golf: UK suppliers went unpaid" (the subject + the turn clause),
   // a second reading that keeps the point when the whole story is used once.

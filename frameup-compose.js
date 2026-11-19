@@ -1439,7 +1439,7 @@
     // Cover boxes: the darker team colour as the box, the brighter as the type
     // (Browns brown box / orange type, Lakers purple / gold); white type when
     // the pair does not read at display size.
-    const pair = second && contrast(second, field) >= 3 ? (lum(field) <= lum(second) ? [field, second] : [second, field]) : [field, '#FFFFFF'];
+    const pair = second && contrast(second, field) >= 4.5 ? (lum(field) <= lum(second) ? [field, second] : [second, field]) : [field, '#FFFFFF'];
     const labelInk = [sig, field, second].filter(Boolean).find(c => contrast(c, '#FFFFFF') >= 3 && sat(c) > 0.3) || readable(field, '#FFFFFF', 4.5);
     return { field, deep: mix(field, '#000000', 0.55), second, sig, box: pair[0], boxInk: pair[1], invBox: pair[1] === '#FFFFFF' ? '#FFFFFF' : pair[1], invInk: pair[0], labelInk };
   }
