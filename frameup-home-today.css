@@ -283,7 +283,8 @@ a.home-today__trend-title:focus-visible,
 .home-today__shot-link:is(:hover, :focus-visible) .home-today__shot-tag { opacity: 1; }
 @media (hover: none) { .home-today__shot-tag { opacity: 1; } }
 .home-today__shot-cap { display: grid; gap: 1px; min-width: 0; }
-.home-today__shot-cap strong { overflow: hidden; font-size: 13px; font-weight: 600; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
+/* Two lines before the ellipsis: one line cut short titles to "Scheffler wi…" on phones (Pages QA 2026-11-21). */
+.home-today__shot-cap strong { display: -webkit-box; overflow: hidden; font-size: 13px; font-weight: 600; line-height: 18px; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .home-today__shot-cap small { overflow: hidden; color: var(--ht-ink-3); font-size: 12px; line-height: 16px; text-overflow: ellipsis; white-space: nowrap; }
 .home-today__shot-cap .es-skeleton { height: 10px; }
 
@@ -379,8 +380,11 @@ html.es-shell .home-today { padding-top: var(--es-space-12) !important; }
   .home-today__tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .home-today__tool { min-height: 0; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: none; align-items: center; padding: var(--es-space-3); }
 }
+/* Phones: the two-line description stays whole ("Brief to on-bran…" was cut
+   at one line); tiles start at the top so a one-line tile lines up with its
+   neighbour. Pages QA 2026-11-21. */
 @container today (max-width: 440px) {
-  .home-today__tool small { -webkit-line-clamp: 1; }
+  .home-today__tool { align-items: start; }
 }
 @media (max-width: 900px) {
   .home-today, html.es-shell .home-today { width: calc(100% - 2 * var(--es-page-gutter-phone, 16px)) !important; padding-top: var(--es-space-6) !important; }

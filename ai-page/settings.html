@@ -22,15 +22,15 @@
 <link rel="stylesheet" href="../theme.css?v=20261117-ready1">
   <link rel="stylesheet" href="../site-chrome.css?v=20261120-rel2">
   <link rel="stylesheet" href="../cta-hover.css?v=20261115-btn1">
-  <link rel="stylesheet" href="../design-tokens.css?v=20261121-hyg">
-<link rel="stylesheet" href="../es-ui.css?v=20261120-rel2">
+  <link rel="stylesheet" href="../design-tokens.css?v=20261121-qa-pages">
+<link rel="stylesheet" href="../es-ui.css?v=20261121-qa-pages">
   <link rel="stylesheet" href="../es-motion.css?v=20261115-btn1">
-  <link rel="stylesheet" href="account-pages.css?v=20261120-rel2">
+  <link rel="stylesheet" href="account-pages.css?v=20261121-qa-pages">
   <script src="../theme.js?v=20261120-rel2"></script>
   <script src="../site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="../site-chrome.js?v=20261120-rel2"></script>
 <script src="../frameup-ai-mode.js?v=20261121-rel"></script>
-<script src="../app-shell.js?v=20261121-rel"></script>
+<script src="../app-shell.js?v=20261121-qa-pages"></script>
 <link rel="stylesheet" href="../frameup-tour.css?v=20261120-rel2">
 <script src="../frameup-tour.js?v=20261117-tour1"></script>
 <script src="../tours/updates.js?v=20261117-tour1"></script>
@@ -287,7 +287,9 @@
       // ─── AI usage (same read as the sidebar card: frameup_my_ai_spend) ──
       const usageBody = document.getElementById('usage-body');
       const usageRefresh = document.getElementById('usage-refresh');
-      const LIMIT = Number(window.FrameUpUsage?.limit) || 20;
+      // The live limit comes from /api/ai-status (the sidebar card uses the same);
+      // $20 is only the fallback (it said "$20" beside a "$50" sidebar card).
+      let LIMIT = Number(window.FrameUpUsage?.limit) || 20;
       const FEATURES = [[/^generate-scene-image/, 'Scene images'], [/^generate/, 'Generate'], [/^trend/, 'Trends'], [/^video-ads/, 'Video Ads'], [/^reels/, 'Reels Studio']];
       const money = value => `$${(Math.round(value * 100) / 100).toFixed(2)}`;
       const esc = value => String(value).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
@@ -361,6 +363,8 @@
           const result = await client.rpc('frameup_my_ai_spend', { p_since: weekStartUtc().toISOString() });
           if (result?.error) throw new Error('The usage report couldn’t be read. It may not be set up yet.');
           const data = Array.isArray(result?.data) ? result.data[0] || null : result?.data || null;
+          const ai = await (window.FrameUpAI?.status?.() || Promise.resolve(null)).catch(() => null);
+          if (Number(ai?.userLimitUsd) > 0) LIMIT = Number(ai.userLimitUsd);
           renderUsage(data || { total_usd: 0, by_feature: {}, calls: 0 });
           window.FrameUpUsage?.refresh?.();
         } catch (error) {

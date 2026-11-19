@@ -5150,14 +5150,21 @@ body[data-current-page="faq"] .faq-cta-art img {
     .frame-hero {
       align-items: stretch;
     }
+    /* Pages QA 2026-11-21: the slide is the banner plus its buttons, no
+       fixed height, so no empty band between the artwork and the CTA. */
     .frame-hero-slider {
       aspect-ratio: auto;
-      height: clamp(236px, 62vw, 320px);
+      height: auto;
+    }
+    .frame-hero-slide {
+      display: flex;
+      flex-direction: column;
     }
     .frame-banner {
       width: 100%;
-      height: 100%;
+      height: auto;
       min-height: 0;
+      aspect-ratio: 3836 / 955;
       object-fit: contain;
       object-position: center top;
     }
@@ -5171,13 +5178,16 @@ body[data-current-page="faq"] .faq-cta-art img {
     .frame-hero-actions,
     [data-hero-slide="0"] .frame-hero-actions,
     [data-hero-slide="1"] .frame-hero-actions {
-      left: 16px;
-      right: 16px;
-      top: auto;
-      bottom: 16px;
-      flex-direction: column;
+      position: static;
+      margin-top: auto;
+      padding: 16px;
+      flex-direction: row;
       align-items: stretch;
-      gap: 10px;
+      gap: 8px;
+    }
+    .frame-hero-actions .frame-hero-cta {
+      flex: 1 1 0;
+      min-width: 0;
     }
     .frame-hero-cta,
     .frame-cta,
@@ -7895,20 +7905,20 @@ body[data-current-page="faq"] .faq-cta-art img {
 <link rel="stylesheet" href="site-chrome.css?v=20261120-rel2">
 <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
 <link rel="stylesheet" href="how-it-works.css?v=20261115-btn1">
-<link rel="stylesheet" href="design-tokens.css?v=20261121-hyg">
-<link rel="stylesheet" href="es-ui.css?v=20261120-rel2">
+<link rel="stylesheet" href="design-tokens.css?v=20261121-qa-pages">
+<link rel="stylesheet" href="es-ui.css?v=20261121-qa-pages">
 <link rel="stylesheet" href="logo-picker.css?v=20261120-rel2">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
 <link rel="stylesheet" href="frameup-posted.css?v=20261118-rel1">
 <link rel="stylesheet" href="editor-polish.css?v=20261121-hyg">
 <link rel="stylesheet" href="frameup-quick-wins.css?v=20261118-rel1">
 <link rel="stylesheet" href="frameup-editor-assist.css?v=20261119-rel3">
-<link rel="stylesheet" href="frameup-home-today.css?v=20261120-rel2">
+<link rel="stylesheet" href="frameup-home-today.css?v=20261121-qa-pages">
 <script src="theme.js?v=20261120-rel2"></script>
 <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
 <script src="site-chrome.js?v=20261120-rel2"></script>
 <script src="frameup-ai-mode.js?v=20261121-rel"></script>
-<script src="app-shell.js?v=20261121-rel"></script>
+<script src="app-shell.js?v=20261121-qa-pages"></script>
 <link rel="stylesheet" href="frameup-tour.css?v=20261120-rel2">
 <script src="frameup-tour.js?v=20261117-tour1"></script>
 <script src="tours/updates.js?v=20261117-tour1"></script>
@@ -24622,7 +24632,7 @@ loadFont().then(() => render());
 <script src="frameup-templates.js?v=20261119-rel3"></script>
 <script src="frameup-spec.js?v=20261119-rel3"></script>
 <script src="frameup-impact.js?v=20261118-rel1"></script>
-<script src="frameup-posted.js?v=20261118-rel1"></script>
+<script src="frameup-posted.js?v=20261121-qa-pages"></script>
 <script src="frameup-zip.js?v=20261118-rel1"></script>
 <script src="frameup-size-pack.js?v=20261118-rel1"></script>
 <script src="frameup-cutout.js?v=20261118-rel1"></script>

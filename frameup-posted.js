@@ -320,7 +320,7 @@
       inputmode: 'url',
       autocomplete: 'off',
       spellcheck: 'false',
-      placeholder: 'https://www.instagram.com/p/…',
+      placeholder: 'Paste the post link',
       'aria-describedby': hintId,
     });
     const save = el('button', { type: 'submit', class: `es-btn es-btn--sm${compact ? '' : ' es-btn--static'}`, text: 'Save' });

@@ -276,7 +276,8 @@ body.account-v2 .acc-profile .summary-meta { margin: 0 !important; color: var(--
 body.account-v2 .acc-profile .summary-meta.is-empty { display: none !important; }
 body.account-v2 .acc-avatar-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--es-space-1, 4px); }
 body.account-v2 .acc-avatar-actions [hidden] { display: none !important; }
-body.account-v2 .acc-avatar-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+/* Pages QA 2026-11-21: !important, a shared phone rule widened this hidden file input to the screen and the page scrolled sideways. */
+body.account-v2 .acc-avatar-input { position: absolute; width: 1px !important; height: 1px !important; min-width: 0 !important; overflow: hidden; clip-path: inset(50%); opacity: 0; pointer-events: none; }
 body.account-v2 .acc-avatar-help { margin: 0; color: var(--es-ink-3); font-size: 12px; line-height: 1.45; }
 body.account-v2 .acc-profile .profile-form-card { padding: var(--acc-card-pad) !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
 body.account-v2 .acc-profile .profile-form-card .acc-card__title { margin-bottom: var(--es-space-5, 20px); }

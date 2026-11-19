@@ -3,6 +3,30 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-21-pages-polish",
+      "date": "2026-11-21",
+      "title": "Home, Settings and guides: small fixes on every screen size",
+      "commit": "6769e54",
+      "items": [
+        {
+          "title": "Settings shows your real AI limit",
+          "text": "The AI usage card in Settings now shows the same weekly limit as the sidebar card.",
+          "page": "ai-page/settings.html"
+        },
+        {
+          "title": "Tidier Home on phones",
+          "text": "The banner no longer leaves an empty band above its button, and tool and post names show in full instead of being cut off.",
+          "page": "index.html",
+          "route": "#frames"
+        },
+        {
+          "title": "Easier to read",
+          "text": "Settings rows share one title style, selected filter counts are easier to read, and How FrameUp works keeps its title on one line on laptops.",
+          "page": "how-frameup-works.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-20-inspector",
       "date": "2026-11-20",
       "title": "Editor: a cleaner settings panel that follows your selection",

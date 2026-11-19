@@ -20,7 +20,8 @@
 /* ─── Hero ─── */
 .how-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 520px);
+  /* The copy keeps 320px: at 1024 the art took 520px and squeezed the title to one word a line (Pages QA 2026-11-21). */
+  grid-template-columns: minmax(min(100%, 320px), 1fr) minmax(0, 520px);
   align-items: center;
   gap: 24px 40px;
   padding: 40px;

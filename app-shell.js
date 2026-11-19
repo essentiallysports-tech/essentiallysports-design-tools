@@ -760,7 +760,7 @@
     palette.className = 'es-palette';
     palette.setAttribute('aria-label', 'Search FrameUp');
     palette.innerHTML = `
-      <div class="es-palette__search">${ICONS.search}<input type="text" placeholder="Search pages, templates and actions…" aria-label="Search" autocomplete="off" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="es-palette-list"><kbd class="es-kbd">Esc</kbd></div>
+      <div class="es-palette__search">${ICONS.search}<input type="text" placeholder="Search FrameUp…" aria-label="Search" autocomplete="off" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="es-palette-list"><kbd class="es-kbd">Esc</kbd></div>
       <div class="es-palette__list" id="es-palette-list" role="listbox" aria-label="Results"></div>`;
     document.body.appendChild(palette);
     const input = palette.querySelector('input');
