@@ -133,6 +133,14 @@
     el.setAttribute('role', tone === 'error' ? 'alert' : 'status');
     el.innerHTML = `<span>${esc(text)}</span>${action ? `<button class="es-toast-action" type="button">${esc(action.label)}</button>` : ''}`;
     if (action) el.querySelector('button').addEventListener('click', () => { action.run(); el.remove(); });
+    // Side by side (wide screens): toasts sit centred under the preview, never
+    // over the panel's Back / Next / Export. Stacked (phones): under the top bar.
+    const wide = window.matchMedia?.('(min-width: 901px)').matches;
+    const stageEl = $('rm-stage');
+    const sr = wide && stageEl ? stageEl.getBoundingClientRect() : null;
+    els.toasts.classList.toggle('is-stage', Boolean(sr && sr.width));
+    els.toasts.style.left = sr && sr.width ? `${Math.round(sr.left + sr.width / 2)}px` : '';
+    els.toasts.style.maxWidth = sr && sr.width ? `${Math.round(sr.width - 32)}px` : '';
     els.toasts.append(el);
     setTimeout(() => { el.classList.add('is-leaving'); setTimeout(() => el.remove(), 260); }, action ? 5000 : 3200);
   }
@@ -541,7 +549,8 @@
   let sampleSource = null;
   function voicePickerHtml(where) {
     const v = state.config.voice;
-    if (!v.ready) return `<h3 class="rm-sec__title">Voice</h3><p class="rm-hint">${esc(v.reason || 'No voice is set up. Reels export with captions.')}</p>`;
+    // In Review the fold's own note (#rm-voice-note) already says why; one line, not two.
+    if (!v.ready) return where === 'edit' ? '' : `<h3 class="rm-sec__title">Voice</h3><p class="rm-hint">${esc(v.reason || 'No voice is set up. Reels export with captions.')}</p>`;
     const list = v.voices || [];
     const est = F.estimateCost({ voiceMode: v.mode, voiceModel: v.model, voChars: voChars(), tier: 'economy' }).lines.find(l => l.id === 'voice').usd;
     return `<div class="rm-sec__head"><h3 class="rm-sec__title">Voice</h3>
@@ -3017,7 +3026,7 @@
         <label class="rm-trim__row"><span>Starts</span><input type="range" data-seg="in" min="0" max="${c.duration.toFixed(1)}" step="0.1" value="${s.in}" aria-valuetext="${G.fmtSec(s.in)}"><output id="rm-seg-in">${G.fmtSec(s.in)}</output></label>
         <label class="rm-trim__row"><span>Ends</span><input type="range" data-seg="out" min="0" max="${c.duration.toFixed(1)}" step="0.1" value="${s.out}" aria-valuetext="${G.fmtSec(s.out)}"><output id="rm-seg-out">${G.fmtSec(s.out)}</output></label>
         <p class="rm-hint">Three frames come from this stretch: the setup, the play and the reaction.</p></fieldset>
-      <div class="rm-c-actions"><button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-cclear>Pick another</button><button class="es-btn es-btn--primary" type="button" data-cuse ${needRights ? 'aria-disabled="true"' : ''}>Use this clip</button></div>
+      <div class="rm-c-actions"><button class="es-btn es-btn--tertiary" type="button" data-cclear>Pick another</button><button class="es-btn es-btn--primary" type="button" data-cuse ${needRights ? 'aria-disabled="true"' : ''}>Use this clip</button></div>
       ${needRights ? '<p class="rm-hint rm-err">Tick the rights box above to use an upload.</p>' : ''}
     </div>`;
   }
