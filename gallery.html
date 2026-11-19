@@ -148,35 +148,6 @@
       .gallery-viewer__nav { top: auto; bottom: var(--es-space-5, 20px); transform: none; }
       .gallery-viewer__info { padding: var(--es-space-4, 16px); max-height: 40dvh; }
     }
-
-    /* ES Image Pool: standalone search-and-grab section, independent of the
-       gallery grid above it. */
-    .es-image-pool { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 0 0 var(--es-space-12, 48px); font-family: var(--es-font-ui); color: var(--es-ink); }
-    .es-image-pool__head h2 { margin: 0 0 var(--es-space-1, 4px); font-family: var(--es-font-display); font-size: 22px; font-weight: 800; }
-    .es-image-pool__head p { margin: 0 0 var(--es-space-5, 20px); color: var(--es-ink-3); font-size: var(--es-type-body-size); }
-    .es-image-pool__form { display: flex; align-items: center; gap: var(--es-space-3, 12px); margin-bottom: var(--es-space-5, 20px); }
-    .es-image-pool__form .es-search { flex: 0 1 420px; }
-    .es-image-pool__status { margin: 0 0 var(--es-space-4, 16px); color: var(--es-ink-3); font-size: var(--es-type-meta-size); }
-    .es-image-pool__status:empty { display: none; }
-    .es-image-pool__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: var(--es-space-4, 16px); }
-    .es-image-pool__card { display: grid; gap: var(--es-space-2, 8px); }
-    .es-image-pool__thumb { position: relative; display: block; aspect-ratio: 4 / 3; overflow: hidden; border-radius: var(--es-radius-md, 14px); background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); }
-    .es-image-pool__thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .25s var(--es-ease); }
-    .es-image-pool__thumb img.is-loaded { opacity: 1; }
-    .es-image-pool__card.is-skeleton .es-image-pool__thumb::before { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 15%, rgb(84 164 251 / .16) 45%, rgb(0 179 230 / .12) 60%, transparent 85%); transform: translateX(-100%); animation: galleryShimmer 1.4s ease-in-out infinite; }
-    .es-image-pool__actions { display: flex; gap: var(--es-space-2, 8px); }
-    .es-image-pool__actions .es-btn { flex: 1 1 0; justify-content: center; }
-    @media (prefers-reduced-motion: reduce) {
-      .es-image-pool__card.is-skeleton .es-image-pool__thumb::before { animation: none !important; }
-    }
-    @media (max-width: 900px) {
-      .es-image-pool { width: auto; padding: 0 var(--es-space-4, 16px) var(--es-space-12, 48px); }
-      .es-image-pool__form { flex-wrap: wrap; }
-      .es-image-pool__form .es-search { flex: 1 1 100%; }
-      .es-image-pool__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-3, 12px); }
-    }
-    html[data-theme="dark"] .es-image-pool__thumb { background: #1f1f1f; box-shadow: inset 0 0 0 1px #2e2e2e; }
-    html[data-theme="dark"] .es-image-pool__card.is-skeleton .es-image-pool__thumb::before { background: linear-gradient(100deg, transparent 15%, rgb(84 164 251 / .2) 45%, rgb(0 179 230 / .14) 60%, transparent 85%); }
   </style>
 </head>
 <body class="gallery-body">
@@ -271,32 +242,6 @@
       <button class="es-btn" type="button" id="gallery-more" hidden>Load more</button>
     </div>
   </main>
-
-  <section class="es-image-pool" id="es-image-pool" aria-labelledby="es-image-pool-title">
-    <div class="es-image-pool__head">
-      <h2 id="es-image-pool-title">ES Image Pool</h2>
-      <p>Search EssentiallySports&rsquo; licensed photo library. Copy a link or download any image.</p>
-    </div>
-    <form class="es-image-pool__form" id="es-image-pool-form">
-      <label class="es-search" for="es-image-pool-search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
-        <input type="search" id="es-image-pool-search" placeholder="Search for a player, team, or topic" aria-label="Search for a player, team, or topic" autocomplete="off">
-      </label>
-      <button type="submit" class="es-btn es-btn--primary es-btn--sm" id="es-image-pool-submit">Search</button>
-    </form>
-    <p class="es-image-pool__status" id="es-image-pool-status" aria-live="polite"></p>
-    <div class="es-error-state" id="es-image-pool-error" role="alert" hidden>
-      <span class="es-error-state__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
-      <p class="es-error-state__title">Couldn&rsquo;t search the image pool</p>
-      <p class="es-error-state__copy" id="es-image-pool-error-copy">Check your connection and try again.</p>
-      <button class="es-btn es-btn--sm" type="button" id="es-image-pool-retry">Try again</button>
-    </div>
-    <div class="es-empty" id="es-image-pool-empty" hidden>
-      <p class="es-empty__title" id="es-image-pool-empty-title">No images found</p>
-      <p class="es-empty__copy" id="es-image-pool-empty-copy">Try another search.</p>
-    </div>
-    <div class="es-image-pool__grid" id="es-image-pool-grid"></div>
-  </section>
 
   <dialog class="gallery-viewer" id="gallery-viewer" aria-labelledby="gallery-viewer-title">
     <button class="gallery-viewer__close" type="button" data-viewer-close aria-label="Close">
@@ -810,140 +755,6 @@
 
       const start = () => loadPage();
       if (window.ESDashboardData) start(); else window.addEventListener('load', start, { once: true });
-    })();
-  </script>
-
-  <script>
-    // ES Image Pool: standalone search of ES Storage's licensed image library,
-    // independent of the gallery grid above. Reuses the /api/es-image-search
-    // proxy used by index.html's picker, but this section only copies links
-    // and downloads images (never opens the editor).
-    (() => {
-      const els = {
-        form: document.getElementById('es-image-pool-form'),
-        input: document.getElementById('es-image-pool-search'),
-        submit: document.getElementById('es-image-pool-submit'),
-        status: document.getElementById('es-image-pool-status'),
-        grid: document.getElementById('es-image-pool-grid'),
-        error: document.getElementById('es-image-pool-error'),
-        errorCopy: document.getElementById('es-image-pool-error-copy'),
-        retry: document.getElementById('es-image-pool-retry'),
-        empty: document.getElementById('es-image-pool-empty'),
-        emptyTitle: document.getElementById('es-image-pool-empty-title'),
-        emptyCopy: document.getElementById('es-image-pool-empty-copy'),
-      };
-      let lastQuery = '';
-
-      function filenameFor(result, index) {
-        const base = String(result.title || result.caption || `es-image-${index + 1}`)
-          .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `es-image-${index + 1}`;
-        return `${base}.jpg`;
-      }
-
-      function setSkeleton(show) {
-        els.grid.innerHTML = show
-          ? Array.from({ length: 8 }, () => '<span class="es-image-pool__card is-skeleton"><span class="es-image-pool__thumb"></span></span>').join('')
-          : '';
-      }
-
-      async function searchEsImagePool(query) {
-        const apiUrl = `/api/es-image-search?query=${encodeURIComponent(query)}&per_page=45`;
-        if (!window.ESAuth?.fetchWithAuth) throw new Error('Authenticated image search is unavailable.');
-        const response = await window.ESAuth.fetchWithAuth(apiUrl);
-        if (!response.ok) throw new Error(`Image search failed: ${response.status}`);
-        const data = await response.json();
-        return Array.isArray(data?.results) ? data.results : [];
-      }
-
-      function renderResults(results, query) {
-        els.grid.innerHTML = '';
-        results.forEach((result, index) => {
-          const imageUrl = result.proxyUrl || result.sourceUrl;
-          if (!imageUrl) return;
-          const alt = result.title || result.caption || `${query} image ${index + 1}`;
-
-          const card = document.createElement('div');
-          card.className = 'es-image-pool__card';
-
-          const thumb = document.createElement('span');
-          thumb.className = 'es-image-pool__thumb';
-          const img = document.createElement('img');
-          img.src = imageUrl;
-          img.alt = alt;
-          img.loading = 'lazy';
-          img.decoding = 'async';
-          img.addEventListener('load', () => img.classList.add('is-loaded'), { once: true });
-          thumb.appendChild(img);
-
-          const actions = document.createElement('div');
-          actions.className = 'es-image-pool__actions';
-
-          const copyBtn = document.createElement('button');
-          copyBtn.type = 'button';
-          copyBtn.className = 'es-btn es-btn--sm';
-          copyBtn.textContent = 'Copy link';
-          copyBtn.setAttribute('aria-label', `Copy link to ${alt}`);
-          copyBtn.addEventListener('click', async () => {
-            try {
-              await navigator.clipboard.writeText(imageUrl);
-              copyBtn.textContent = 'Copied!';
-            } catch (error) {
-              copyBtn.textContent = 'Couldn’t copy';
-            } finally {
-              setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 1500);
-            }
-          });
-
-          const downloadLink = document.createElement('a');
-          downloadLink.className = 'es-btn es-btn--sm';
-          downloadLink.href = result.proxyUrl || result.sourceUrl;
-          downloadLink.download = filenameFor(result, index);
-          downloadLink.textContent = 'Download';
-          downloadLink.setAttribute('aria-label', `Download ${alt}`);
-
-          actions.append(copyBtn, downloadLink);
-          card.append(thumb, actions);
-          els.grid.appendChild(card);
-        });
-      }
-
-      async function runSearch(query) {
-        const cleanQuery = String(query || '').trim();
-        if (!cleanQuery) return;
-        lastQuery = cleanQuery;
-        els.submit.disabled = true;
-        els.error.hidden = true;
-        els.empty.hidden = true;
-        els.status.textContent = `Searching for “${cleanQuery}”…`;
-        setSkeleton(true);
-        try {
-          const results = await searchEsImagePool(cleanQuery);
-          const usable = results.filter(item => item?.proxyUrl || item?.sourceUrl);
-          setSkeleton(false);
-          if (!usable.length) {
-            els.empty.hidden = false;
-            els.emptyTitle.textContent = 'No images found';
-            els.emptyCopy.textContent = `No images found for “${cleanQuery}”. Try another search.`;
-            els.status.textContent = `No images found for “${cleanQuery}”.`;
-            return;
-          }
-          renderResults(usable, cleanQuery);
-          els.status.textContent = `${usable.length} image${usable.length === 1 ? '' : 's'} found for “${cleanQuery}”.`;
-        } catch (error) {
-          setSkeleton(false);
-          els.error.hidden = false;
-          els.errorCopy.textContent = error?.message || 'Check your connection and try again.';
-          els.status.textContent = 'Image search failed.';
-        } finally {
-          els.submit.disabled = false;
-        }
-      }
-
-      els.form.addEventListener('submit', event => {
-        event.preventDefault();
-        runSearch(els.input.value);
-      });
-      els.retry.addEventListener('click', () => runSearch(lastQuery));
     })();
   </script>
 </body>

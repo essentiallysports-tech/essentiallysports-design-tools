@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ES Image Pool | FrameUp</title>
+  <meta name="description" content="Search EssentiallySports' licensed photo library. Copy a link or download any image.">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preload" href="/vendor/supabase-js-2.118.0.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
+  <script src="frameup-errors.js?v=20261121-rel2"></script>
+  <script src="es-auth-config.js?v=20260707-auth4"></script>
+  <script src="es-auth.js?v=20261121-rel2"></script>
+  <script>
+    window.ESAuth?.requireAuth(`image-pool.html${window.location.search}${window.location.hash}`);
+  </script>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
+  <link rel="stylesheet" href="theme.css?v=20261117-ready1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261120-rel2">
+  <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261121-rel2">
+  <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
+  <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
+  <script src="theme.js?v=20261120-rel2"></script>
+  <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
+  <script src="site-chrome.js?v=20261120-rel2"></script>
+  <script src="frameup-ai-mode.js?v=20261121-rel"></script>
+  <script src="app-shell.js?v=20261122-rel"></script>
+  <link rel="stylesheet" href="frameup-tour.css?v=20261120-rel2">
+  <script src="frameup-tour.js?v=20261117-tour1"></script>
+  <script src="tours/updates.js?v=20261117-tour1"></script>
+  <script src="tours/tours.js?v=20261123-tours"></script>
+  <script src="tours/tour-launcher.js?v=20261120-rel2"></script>
+  <script src="es-motion.js?v=20261115-ds1"></script>
+  <style>
+    .image-pool-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: var(--es-space-8, 32px) 0 var(--es-space-12, 48px); font-family: var(--es-font-ui); color: var(--es-ink); }
+    .es-image-pool__form { display: flex; align-items: center; gap: var(--es-space-3, 12px); margin: var(--es-space-6, 24px) 0 var(--es-space-3, 12px); }
+    .es-image-pool__chips { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); margin-bottom: var(--es-space-5, 20px); }
+    .es-image-pool__form .es-search { flex: 0 1 420px; }
+    .es-image-pool__status { margin: 0 0 var(--es-space-4, 16px); color: var(--es-ink-3); font-size: var(--es-type-meta-size); }
+    .es-image-pool__status:empty { display: none; }
+    .es-image-pool__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); gap: var(--es-space-5, 20px); }
+    .es-image-pool__card { display: grid; gap: var(--es-space-2, 8px); }
+    .es-image-pool__thumb { position: relative; display: block; aspect-ratio: 4 / 3; overflow: hidden; border-radius: var(--es-radius-md, 14px); background: var(--es-sunk); box-shadow: inset 0 0 0 1px var(--es-line); }
+    .es-image-pool__thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .25s var(--es-ease); }
+    .es-image-pool__thumb img.is-loaded { opacity: 1; }
+    .es-image-pool__card.is-skeleton .es-image-pool__thumb::before { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 15%, rgb(84 164 251 / .16) 45%, rgb(0 179 230 / .12) 60%, transparent 85%); transform: translateX(-100%); animation: esImagePoolShimmer 1.4s ease-in-out infinite; }
+    @keyframes esImagePoolShimmer { to { transform: translateX(100%); } }
+    .es-image-pool__actions { display: flex; gap: var(--es-space-2, 8px); }
+    .es-image-pool__actions .es-btn { flex: 1 1 0; justify-content: center; }
+    @media (prefers-reduced-motion: reduce) {
+      .es-image-pool__card.is-skeleton .es-image-pool__thumb::before { animation: none !important; }
+    }
+    @media (max-width: 900px) {
+      .image-pool-page { width: auto; padding: var(--es-space-6, 24px) var(--es-space-4, 16px) var(--es-space-12, 48px); }
+      .es-image-pool__form { flex-wrap: wrap; }
+      .es-image-pool__form .es-search { flex: 1 1 100%; }
+      .es-image-pool__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-3, 12px); }
+    }
+    html[data-theme="dark"] .es-image-pool__thumb { background: #1f1f1f; box-shadow: inset 0 0 0 1px #2e2e2e; }
+    html[data-theme="dark"] .es-image-pool__card.is-skeleton .es-image-pool__thumb::before { background: linear-gradient(100deg, transparent 15%, rgb(84 164 251 / .2) 45%, rgb(0 179 230 / .14) 60%, transparent 85%); }
+  </style>
+</head>
+<body class="image-pool-body">
+  <nav class="navbar">
+    <a class="navbar-logo" href="index.html" aria-label="EssentiallySports home">
+      <img src="brand-logo-blue.svg" alt="EssentiallySports">
+    </a>
+    <div class="navbar-menu">
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#intro" aria-haspopup="true" aria-expanded="false">Resources</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Resources">
+          <a href="index.html#logo-guidelines" data-route="logo-guidelines" role="menuitem">Logo Guidelines</a>
+          <a href="index.html#social-guidelines" data-route="social-guidelines" role="menuitem">Social Media Guidelines</a>
+          <a href="index.html#video-guidelines" data-route="video-guidelines" role="menuitem">Video Guidelines</a>
+        </div>
+      </div>
+      <div class="nav-dropdown">
+        <a class="nav-trigger has-chevron" href="index.html#frames" data-route="frames" aria-haspopup="true" aria-expanded="false">Design Tools</a>
+        <div class="nav-dropdown-menu" role="menu" aria-label="Design workspaces">
+          <a href="index.html#frames" data-route="frames" role="menuitem">Home</a>
+          <a href="index.html#instagram" data-route="instagram" role="menuitem">Social Media</a>
+          <a href="index.html#youtube" data-route="youtube" role="menuitem">YouTube</a>
+          <a href="index.html#newsletter" data-route="newsletter" role="menuitem">Newsletter</a>
+          <a href="reels.html" role="menuitem">Reel Captions</a>
+        </div>
+      </div>
+      <a href="design-request.html">Design Request</a>
+      <a href="generate.html">Generate</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="image-pool.html" aria-current="page">ES Image Pool</a>
+      <a href="dashboard.html" data-admin-only hidden aria-hidden="true">Dashboard</a>
+      <a href="index.html#faq" data-route="faq">FAQ</a>
+      <a href="tool-feedback.html">Tool Feedback</a>
+    </div>
+    <div class="navbar-right">
+      <div class="profile-menu" id="profile-menu"></div>
+      <a class="navbar-icon-btn" href="https://www.facebook.com/essentiallysports" title="Facebook" aria-label="Facebook"><img src="social-icons/nav-facebook.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://twitter.com/es_sportsnews" title="X" aria-label="X"><img src="social-icons/nav-x.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.linkedin.com/company/essentiallysports" title="LinkedIn" aria-label="LinkedIn"><img src="social-icons/nav-linkedin.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.instagram.com/essentiallysports" title="Instagram" aria-label="Instagram"><img src="social-icons/nav-instagram.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://www.youtube.com/essentiallysports" title="YouTube" aria-label="YouTube"><img src="social-icons/nav-youtube.svg" alt=""></a>
+      <a class="navbar-icon-btn" href="https://news.google.com/publications/CAAqBwgKMJqW_gwwkoGBAw" title="Google News" aria-label="Google News"><img src="social-icons/nav-google-news.svg" alt=""></a>
+    </div>
+  </nav>
+
+  <main class="image-pool-page" id="main">
+    <header class="es-page-head">
+      <h1>ES Image Pool</h1>
+      <p>Search EssentiallySports&rsquo; licensed photo library. Copy a link or download any image.</p>
+    </header>
+
+    <form class="es-image-pool__form" id="es-image-pool-form">
+      <label class="es-search" for="es-image-pool-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        <input type="search" id="es-image-pool-search" placeholder="Search for a player, team, or topic" aria-label="Search for a player, team, or topic" autocomplete="off">
+      </label>
+      <button type="submit" class="es-btn es-btn--primary es-btn--sm" id="es-image-pool-submit">Search</button>
+    </form>
+    <div class="es-image-pool__chips" id="es-image-pool-chips" role="group" aria-label="Browse by sport">
+      <button type="button" class="es-chip" data-pool-query="NFL" aria-pressed="false">NFL</button>
+      <button type="button" class="es-chip" data-pool-query="NBA" aria-pressed="false">NBA</button>
+      <button type="button" class="es-chip" data-pool-query="MLB" aria-pressed="false">MLB</button>
+      <button type="button" class="es-chip" data-pool-query="College Football" aria-pressed="false">College Football</button>
+      <button type="button" class="es-chip" data-pool-query="Golf" aria-pressed="false">Golf</button>
+      <button type="button" class="es-chip" data-pool-query="Tennis" aria-pressed="false">Tennis</button>
+      <button type="button" class="es-chip" data-pool-query="WNBA" aria-pressed="false">WNBA</button>
+    </div>
+    <p class="es-image-pool__status" id="es-image-pool-status" aria-live="polite"></p>
+    <div class="es-error-state" id="es-image-pool-error" role="alert" hidden>
+      <span class="es-error-state__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
+      <p class="es-error-state__title">Couldn&rsquo;t search the image pool</p>
+      <p class="es-error-state__copy" id="es-image-pool-error-copy">Check your connection and try again.</p>
+      <button class="es-btn es-btn--sm" type="button" id="es-image-pool-retry">Try again</button>
+    </div>
+    <div class="es-empty" id="es-image-pool-empty" hidden>
+      <p class="es-empty__title" id="es-image-pool-empty-title">No images found</p>
+      <p class="es-empty__copy" id="es-image-pool-empty-copy">Try another search.</p>
+    </div>
+    <div class="es-image-pool__grid" id="es-image-pool-grid"></div>
+  </main>
+
+  <footer class="site-footer" aria-label="Site footer"></footer>
+
+  <script>
+    // ES Image Pool: a standalone search of ES Storage's licensed image
+    // library. Reuses the /api/es-image-search proxy used by index.html's
+    // in-editor picker, but this page only copies links and downloads
+    // images (it never opens the editor).
+    (() => {
+      const els = {
+        form: document.getElementById('es-image-pool-form'),
+        input: document.getElementById('es-image-pool-search'),
+        submit: document.getElementById('es-image-pool-submit'),
+        status: document.getElementById('es-image-pool-status'),
+        grid: document.getElementById('es-image-pool-grid'),
+        error: document.getElementById('es-image-pool-error'),
+        errorCopy: document.getElementById('es-image-pool-error-copy'),
+        retry: document.getElementById('es-image-pool-retry'),
+        empty: document.getElementById('es-image-pool-empty'),
+        emptyTitle: document.getElementById('es-image-pool-empty-title'),
+        emptyCopy: document.getElementById('es-image-pool-empty-copy'),
+        chips: document.getElementById('es-image-pool-chips'),
+      };
+      let lastQuery = '';
+
+      function markChip(query) {
+        els.chips.querySelectorAll('[data-pool-query]').forEach(chip => {
+          chip.setAttribute('aria-pressed', String(chip.dataset.poolQuery.toLowerCase() === query.toLowerCase()));
+        });
+      }
+
+      // WordPress titles arrive with HTML entities (&#8211;); decode as text only.
+      const entityBox = document.createElement('textarea');
+      function decodeEntities(value) {
+        entityBox.innerHTML = String(value || '');
+        return entityBox.value.trim();
+      }
+
+      function filenameFor(result, index) {
+        const base = decodeEntities(result.title || result.caption || `es-image-${index + 1}`)
+          .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `es-image-${index + 1}`;
+        return `${base}.jpg`;
+      }
+
+      function setSkeleton(show) {
+        els.grid.innerHTML = show
+          ? Array.from({ length: 8 }, () => '<span class="es-image-pool__card is-skeleton"><span class="es-image-pool__thumb"></span></span>').join('')
+          : '';
+      }
+
+      async function searchEsImagePool(query) {
+        const apiUrl = `/api/es-image-search?query=${encodeURIComponent(query)}&per_page=45`;
+        if (!window.ESAuth?.fetchWithAuth) throw new Error('Authenticated image search is unavailable.');
+        const response = await window.ESAuth.fetchWithAuth(apiUrl);
+        if (!response.ok) throw new Error(`Image search failed: ${response.status}`);
+        const data = await response.json();
+        return Array.isArray(data?.results) ? data.results : [];
+      }
+
+      function renderResults(results, query) {
+        els.grid.innerHTML = '';
+        results.forEach((result, index) => {
+          const imageUrl = result.proxyUrl || result.sourceUrl;
+          if (!imageUrl) return;
+          const alt = decodeEntities(result.title || result.caption) || `${query} image ${index + 1}`;
+
+          const card = document.createElement('div');
+          card.className = 'es-image-pool__card';
+
+          const thumb = document.createElement('span');
+          thumb.className = 'es-image-pool__thumb';
+          const img = document.createElement('img');
+          img.src = imageUrl;
+          img.alt = alt;
+          img.loading = 'lazy';
+          img.decoding = 'async';
+          img.addEventListener('load', () => img.classList.add('is-loaded'), { once: true });
+          thumb.appendChild(img);
+
+          const actions = document.createElement('div');
+          actions.className = 'es-image-pool__actions';
+
+          const copyBtn = document.createElement('button');
+          copyBtn.type = 'button';
+          copyBtn.className = 'es-btn es-btn--sm';
+          copyBtn.textContent = 'Copy link';
+          copyBtn.setAttribute('aria-label', `Copy link to ${alt}`);
+          copyBtn.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(imageUrl);
+              copyBtn.textContent = 'Copied!';
+            } catch (error) {
+              copyBtn.textContent = 'Couldn’t copy';
+            } finally {
+              setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 1500);
+            }
+          });
+
+          const downloadLink = document.createElement('a');
+          downloadLink.className = 'es-btn es-btn--sm';
+          downloadLink.href = result.proxyUrl || result.sourceUrl;
+          downloadLink.download = filenameFor(result, index);
+          downloadLink.textContent = 'Download';
+          downloadLink.setAttribute('aria-label', `Download ${alt}`);
+
+          actions.append(copyBtn, downloadLink);
+          card.append(thumb, actions);
+          els.grid.appendChild(card);
+        });
+      }
+
+      async function runSearch(query) {
+        const cleanQuery = String(query || '').trim();
+        if (!cleanQuery) return;
+        lastQuery = cleanQuery;
+        markChip(cleanQuery);
+        els.submit.disabled = true;
+        els.error.hidden = true;
+        els.empty.hidden = true;
+        els.status.textContent = `Searching for “${cleanQuery}”…`;
+        setSkeleton(true);
+        try {
+          const results = await searchEsImagePool(cleanQuery);
+          const usable = results.filter(item => item?.proxyUrl || item?.sourceUrl);
+          setSkeleton(false);
+          if (!usable.length) {
+            els.empty.hidden = false;
+            els.emptyTitle.textContent = 'No images found';
+            els.emptyCopy.textContent = `No images found for “${cleanQuery}”. Try another search.`;
+            els.status.textContent = `No images found for “${cleanQuery}”.`;
+            return;
+          }
+          renderResults(usable, cleanQuery);
+          els.status.textContent = `${usable.length} image${usable.length === 1 ? '' : 's'} found for “${cleanQuery}”.`;
+        } catch (error) {
+          setSkeleton(false);
+          els.error.hidden = false;
+          els.errorCopy.textContent = error?.message || 'Check your connection and try again.';
+          els.status.textContent = 'Image search failed.';
+        } finally {
+          els.submit.disabled = false;
+        }
+      }
+
+      els.form.addEventListener('submit', event => {
+        event.preventDefault();
+        runSearch(els.input.value);
+      });
+      els.retry.addEventListener('click', () => runSearch(lastQuery));
+      els.chips.addEventListener('click', event => {
+        const chip = event.target.closest('[data-pool-query]');
+        if (!chip) return;
+        els.input.value = chip.dataset.poolQuery;
+        runSearch(chip.dataset.poolQuery);
+      });
+
+      // Open as a gallery, not an empty box: a ?q= link searches that, else NFL.
+      const initial = new URLSearchParams(window.location.search).get('q') || 'NFL';
+      els.input.value = initial;
+      const start = () => runSearch(initial);
+      // Search needs the signed-in session; wait for the auth check to finish.
+      if (document.documentElement.style.visibility === 'hidden') window.addEventListener('es:auth-ready', start, { once: true });
+      else start();
+    })();
+  </script>
+</body>
+</html>
