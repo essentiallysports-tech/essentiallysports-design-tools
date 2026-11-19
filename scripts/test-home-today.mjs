@@ -52,7 +52,8 @@ test('Generate links carry only the story (autorun off)', () => {
   assert.match(href, /&autorun=0$/);
   const brief = decodeURIComponent(href.split('brief=')[1].split('&')[0]);
   assert.ok(brief.includes('Mahomes says knee "feels great"'));
-  assert.ok(brief.includes('Sport: NFL'));
+  assert.ok(!/Sport:/.test(brief), 'gen v4: no Sport line in the brief');
+  assert.match(href, /&league=NFL&/, 'the league rides beside the brief');
 });
 
 test('team pulse counts the last 7 days from the Gallery list only', () => {

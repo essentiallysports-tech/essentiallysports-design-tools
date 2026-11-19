@@ -182,7 +182,8 @@ test('trends: one per sport for All, filtered for one sport', () => {
   assert.deepEqual(H.pickTrends(trends, 'nfl', 4).map(t => t.title), ['a', 'b']);
   const href = H.trendHref({ title: 'Chiefs clinch the West' }, 'NFL');
   assert.match(href, /autorun=0$/);
-  assert.equal(new URL(href, 'http://x/').searchParams.get('brief'), 'Chiefs clinch the West\nSport: NFL');
+  assert.equal(new URL(href, 'http://x/').searchParams.get('brief'), 'Chiefs clinch the West.');
+  assert.equal(new URL(href, 'http://x/').searchParams.get('league'), 'NFL', 'gen v4: the league rides beside the brief');
 });
 test('requests: overdue first, then soonest due', () => {
   const rows = [

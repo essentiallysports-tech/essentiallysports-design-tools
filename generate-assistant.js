@@ -478,8 +478,72 @@
     merged.improvements = merged.improvements.filter(i => !(done && i.fix?.op === 'fix' && i.fix.name === done)).map((i, n) => ({ ...i, id: `i${n + 1}` }));
     return merged;
   }
-  // One-line label for a suggestion chip ("Apply: brighten photo").
-  const chipLabel = item => `Apply: ${clean(item.text, 60).replace(/[.]+$/, '').replace(/^./, c => c.toLowerCase())}`;
+  // A suggestion chip's label: the whole suggestion, never cut mid-word (the
+  // chip wraps). Sentence case, no closing full stop.
+  const chipLabel = item => clean(item?.text, 400).replace(/[.]+$/, '').replace(/^./, c => c.toUpperCase());
+
+  // ─── Design review (gen v4) ────────────────────────────────────────────
+  // The server fixes small problems WHILE designing and returns
+  //   design.review = { autoFixed: [...], suggestions: [...] }
+  // where suggestions are creative ideas only ("Try a versus layout"). The page
+  // shows autoFixed as one quiet line and suggestions as chips. A repair that
+  // still reaches the page (an older server, the quick check) is never offered
+  // as a suggestion: repairs are the director's job before delivery.
+  const REPAIR = /\b(?:murky|washed[- ]?out|irrelevant|unrelated|blurr?y|blurred|low[- ]?res|pixel\w*|grainy|missing|absent|no (?:photo|image|picture|logo|cut-?out|face)|without (?:a |any )?(?:photo|image|picture)|shows no|dropp?(?:ed|s)|typo|misspel\w*|colon|comma|apostrophe|punctuation|capitali[sz]\w*|tag|cut off|cropp?ed|clipp?ed|overlap\w*|collid\w*|clash\w*|covers? (?:the |his |her )?(?:face|head|text|headline|number)|hidden behind|behind the (?:headline|text|number)|too (?:small|dark|light|bright|faint|busy|long|tight|close|low|thin)|hard to (?:read|see)|legib\w*|contrast|unreadable|off[- ]cent\w*|misalign\w*|empty|blank|cramped|crowded|wrong|incorrect|mismatch\w*|(?:does not|doesn't|not) match|error|broken|lacks?|stray|duplicated?|repeated|safe (?:area|zone)|margins?|edges?|could (?:be|use) (?:a )?\w+er|needs? (?:to|a|more|less)|should (?:be|have))\b/i;
+  const IDEA = /^(?:try|swap|switch|lead with|open with|make it|go (?:bolder|bigger|darker|lighter|minimal|editorial|retro)|turn|flip|consider|experiment|play|pair|frame|tell|build|add (?:a |an )?(?:quote|stat|second|countdown|timeline|versus|comparison|record|split)|use (?:a |the )?\S+ (?:layout|look|style|treatment))\b/i;
+  function isRepair(item) {
+    const text = clean(typeof item === 'string' ? item : item?.text, 400);
+    if (!text) return true;
+    const fix = item && typeof item === 'object' ? item.fix : null;
+    const name = fix?.op === 'fix' ? fix.name : fix && fix.op && !OPS.includes(fix.op) && fix.op !== 'assist' ? fix.op : '';
+    if (name) return true; // a named composer fix is a repair by definition
+    if (IDEA.test(text)) return REPAIR.test(text.replace(IDEA, ''));
+    return REPAIR.test(text);
+  }
+  // { given, autoFixed: [string], suggestions: [{ text, fix }] } from any review
+  // shape: strings or { text | what | note | label } items, several sources.
+  const noteText = item => clean(typeof item === 'string' ? item : item?.text || item?.what || item?.note || item?.label || '', 200).replace(/[.]+$/, '');
+  function normalizeReview(...sources) {
+    const autoFixed = [];
+    const suggestions = [];
+    let given = false;
+    sources.filter(s => s && typeof s === 'object').forEach(s => {
+      if (Array.isArray(s.autoFixed) || Array.isArray(s.suggestions)) given = true;
+      (Array.isArray(s.autoFixed) ? s.autoFixed : []).forEach(item => {
+        const text = noteText(item);
+        if (text && !autoFixed.some(x => x.toLowerCase() === text.toLowerCase())) autoFixed.push(text);
+      });
+      (Array.isArray(s.suggestions) ? s.suggestions : []).forEach(item => {
+        const text = noteText(item);
+        if (!text || suggestions.some(x => x.text.toLowerCase() === text.toLowerCase())) return;
+        suggestions.push({ text, fix: item && typeof item === 'object' && item.fix ? item.fix : null });
+      });
+    });
+    return { given, autoFixed: autoFixed.slice(0, 8), suggestions: suggestions.filter(s => !isRepair(s)).slice(0, 3) };
+  }
+  // "Brighter photo, the colon after MANFRED and 1 more." Every item is named
+  // in full (no cut words); past four they are counted.
+  function fixedLine(autoFixed = [], { max = 4 } = {}) {
+    const list = (autoFixed || []).map(noteText).filter(Boolean);
+    if (!list.length) return '';
+    const shown = list.slice(0, max).map((t, i) => (i === 0 ? t.replace(/^./, c => c.toUpperCase()) : t.replace(/^[A-Z](?=[a-z])/, c => c.toLowerCase())));
+    const rest = list.length - shown.length;
+    const parts = rest > 0 ? [...shown, `${rest} more`] : shown;
+    return `${parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0]}.`;
+  }
+  // What a design shows after delivery: what works and next time (director /
+  // judge), autoFixed (with the judge's one in-code fix) and improvements =
+  // creative suggestions only. Ids stay stable, so Apply matches everywhere.
+  function reviewCritique(directionCritique, verdictCritique, scene, ...reviews) {
+    const merged = designCritique(directionCritique, verdictCritique, scene);
+    const review = normalizeReview(...reviews, scene?.review);
+    const own = scene?.fixApplied ? String(scene.fixApplied).replace(/-/g, ' ') : '';
+    const autoFixed = own && !review.autoFixed.some(x => x.toLowerCase().includes(own.toLowerCase())) ? [...review.autoFixed, own] : review.autoFixed;
+    const improvements = review.given
+      ? review.suggestions.map((s, n) => ({ id: `s${n + 1}`, text: s.text, fix: s.fix && (OPS.includes(s.fix.op) || s.fix.op === 'assist') ? s.fix : { op: 'assist', instruction: s.text }, source: 'review' }))
+      : merged.improvements.filter(i => !isRepair(i));
+    return { ...merged, improvements, autoFixed, reviewed: review.given };
+  }
 
   // ─── Cost per design count (shown before a run) ────────────────────────
   // director (Sonnet, ~$0.008 for 4, grows with count), vision judge (Sonnet,
@@ -495,7 +559,7 @@
     return { count: n, candidatesPerDesign: perDesign, low: Number(low.toFixed(3)), high: Number(high.toFixed(3)), label: `~$${low.toFixed(2)}–$${high.toFixed(2)}` };
   }
 
-  const engine = { VERSION, OPS, MACROS, resolveTarget, applyOne, applyPatch, validate, localIntent, inputsFromScene, createHistory, mergeCritique, designCritique, chipLabel, costEstimate };
+  const engine = { VERSION, OPS, MACROS, resolveTarget, applyOne, applyPatch, validate, localIntent, inputsFromScene, createHistory, mergeCritique, designCritique, reviewCritique, normalizeReview, isRepair, fixedLine, chipLabel, costEstimate };
 
   // ─── Browser controller ────────────────────────────────────────────────
   const hasDom = typeof document !== 'undefined' && typeof window !== 'undefined';
@@ -704,7 +768,7 @@
     if (item.fix && item.fix.op && item.fix.op !== 'assist') {
       const res = applyPatch(scene, [item.fix], contextFor(entry));
       if (res.ok) {
-        const label = chipLabel(item).replace(/^Apply: /, 'Applied: ');
+        const label = `Applied: ${chipLabel(item).replace(/^[A-Z](?=[a-z])/, c => c.toLowerCase())}`;
         await pushScene(entry, res.scene, label, 'improvement');
         result = { ok: true, reply: `${label}.`, cost: 0 };
       }
@@ -749,7 +813,7 @@
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-.fa-chat{display:grid;gap:var(--es-space-3,12px);min-width:0;font-family:var(--es-font-ui,Roboto,sans-serif);color:var(--es-ink)}
+.fa-chat{display:grid;gap:var(--es-space-4,16px);min-width:0;font-family:var(--es-font-ui,Roboto,sans-serif);color:var(--es-ink)}
 .fa-chat__head{display:flex;align-items:center;gap:var(--es-space-2,8px);flex-wrap:wrap}
 .fa-chat__title{margin:0;font-size:var(--es-type-card-title-size,16px);font-weight:var(--es-type-card-title-weight,700);line-height:1.3;margin-right:auto}
 .fa-chat__log{list-style:none;margin:0;padding:0;display:grid;gap:var(--es-space-2,8px);max-height:320px;overflow:auto;overscroll-behavior:contain}
@@ -759,12 +823,22 @@
 .fa-chat__msg--assistant{justify-self:start;max-width:100%}
 .fa-chat__msg small{display:block;margin-top:var(--es-space-1,4px);color:var(--es-ink-3);font-size:var(--es-type-helper-size,12px)}
 .fa-chat__msg--busy{color:var(--es-ink-3)}
-.fa-chat__chips{display:flex;flex-wrap:wrap;gap:var(--es-space-2,8px)}
-.fa-chat__chips:empty{display:none}
-.fa-chat__chips .es-chip{max-width:100%;white-space:normal;text-align:left;line-height:1.3;padding-block:6px}
-.fa-chat__chips .es-chip[aria-pressed="true"]{cursor:default}
+.fa-chat__ideas{display:grid;gap:var(--es-space-2,8px);min-width:0}
+.fa-chat__ideas[hidden]{display:none}
+.fa-chat__eyebrow{margin:0;color:var(--es-ink-3);font-size:var(--es-type-eyebrow-size,12px);font-weight:var(--es-type-eyebrow-weight,600);letter-spacing:var(--es-type-eyebrow-tracking,.04em);line-height:16px;text-transform:uppercase}
+.fa-chat__chips{display:grid;gap:var(--es-space-2,8px);min-width:0}
+.fa-chat__chips .es-chip{display:flex;align-items:flex-start;gap:var(--es-space-2,8px);width:100%;max-width:100%;height:auto;min-height:40px;padding:var(--es-space-2,8px) var(--es-space-3,12px);white-space:normal;overflow-wrap:anywhere;text-align:left;line-height:20px;justify-content:flex-start}
+.fa-chat__chips .es-chip svg{flex:none;width:16px;height:16px;margin-top:2px;color:var(--es-brand-text,#0A62C7)}
+.fa-chat__chips .es-chip span{min-width:0}
+.fa-fixed{display:flex;align-items:flex-start;gap:var(--es-space-2,8px);margin:0;color:var(--es-ink-3);font-size:var(--es-type-helper-size,12px);line-height:16px}
+.fa-fixed[hidden]{display:none}
+.fa-fixed svg{flex:none;width:14px;height:14px;margin-top:1px;color:var(--es-good,#13804B)}
+.fa-fixed b{color:var(--es-ink-2,#3f4450);font-weight:600}
+html[data-theme="dark"] .fa-fixed b{color:#DCE3EE}
+html[data-theme="dark"] .fa-fixed svg{color:#4ADE80}
+html[data-theme="dark"] .fa-chat__chips .es-chip svg{color:#7DB8FF}
 .fa-chat__form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--es-space-2,8px);align-items:end}
-.fa-chat__form textarea{min-height:44px;max-height:140px;padding:10px 14px;resize:vertical;line-height:1.4}
+.fa-chat__form textarea{min-height:64px;max-height:160px;padding:var(--es-space-2,8px) var(--es-space-3,12px);resize:vertical;line-height:20px}
 .fa-chat__hint{margin:0;color:var(--es-ink-3);font-size:var(--es-type-helper-size,12px);line-height:1.4}
 .fa-chat [hidden]{display:none!important}
 .fa-chat__sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -773,7 +847,10 @@
     document.head.append(style);
   }
 
-  const STARTERS = ['Make the headline punchier', 'Brighten the photo', 'More drama', 'Add the team logo', 'Move the number left'];
+  // With no ideas from the director: creative asks to start from (never repairs).
+  const STARTERS = ['Make the headline punchier', 'Try a darker, moodier look', 'Add the team logo', 'Try another layout', 'More drama'];
+  const SPARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>';
+  const TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
 
   function mount(slotEl, opts = {}) {
     if (!slotEl) return null;
@@ -787,20 +864,24 @@
       <div class="fa-chat" role="region" aria-labelledby="${uid}-title">
         <div class="fa-chat__head">
           <h3 class="fa-chat__title" id="${uid}-title">AI assistant</h3>
-          <span class="es-badge" data-fa="cost" title="AI cost of this design's chat">$0.000</span>
+          <span class="es-badge" data-fa="cost" title="AI cost of this design's chat" hidden>$0.000</span>
           <button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-fa="undo" aria-keyshortcuts="Control+Z Meta+Z">Undo</button>
           <button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-fa="redo" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z">Redo</button>
         </div>
+        <p class="fa-fixed" data-fa="fixed" hidden></p>
         <ol class="fa-chat__log" aria-live="polite" aria-label="Conversation"></ol>
-        <div class="fa-chat__chips" role="group" aria-label="Suggestions"></div>
+        <div class="fa-chat__ideas" data-fa="ideas" hidden>
+          <p class="fa-chat__eyebrow" id="${uid}-ideas">Ideas to try</p>
+          <div class="fa-chat__chips" role="group" aria-labelledby="${uid}-ideas"></div>
+        </div>
         <form class="fa-chat__form">
           <label class="es-field">
             <span class="fa-chat__sr">Tell the assistant what to change</span>
-            <textarea class="es-input" rows="2" maxlength="300" placeholder="Make the headline punchier, use a darker photo, swap to the versus layout…"></textarea>
+            <textarea class="es-input" rows="2" maxlength="300" placeholder="Ask for a change, e.g. a darker photo"></textarea>
           </label>
           <button class="es-btn es-btn--sm" type="submit">Send</button>
         </form>
-        <p class="fa-chat__hint">Numbers stay facts from the brief, and every change passes the ES check. Simple asks are free; others use Haiku (Sonnet for layout changes).</p>
+        <p class="fa-chat__hint">Facts and numbers stay from the brief, and every change passes the ES check. Simple asks are free; others use a small AI call (Haiku, or Sonnet for a new layout).</p>
       </div>`;
     const $ = sel => slotEl.querySelector(sel);
     const logEl = $('.fa-chat__log');
@@ -833,9 +914,19 @@
       $('[data-fa="undo"]').disabled = !canUndo(entry);
       $('[data-fa="redo"]').disabled = !canRedo(entry);
       $('[data-fa="cost"]').textContent = money(entry.cost);
-      const items = (critiqueOf(entry)?.improvements || []).filter(i => !entry.applied.has(i.id));
-      const list = items.length ? items.map(i => ({ id: i.id, label: chipLabel(i) })) : STARTERS.filter(s => !/logo/i.test(s) || contextFor(entry).logos.length).slice(0, 4).map(s => ({ text: s, label: s }));
-      chips.innerHTML = list.map(c => `<button class="es-chip" type="button" ${c.id ? `data-fa-improve="${esc(c.id)}"` : `data-fa-say="${esc(c.text)}"`}>${esc(c.label)}</button>`).join('');
+      $('[data-fa="cost"]').hidden = !(entry.cost > 0);
+      const crit = critiqueOf(entry);
+      // The fixes the director made before delivery: one quiet line.
+      const fixed = fixedLine(crit?.autoFixed || []);
+      const fixedEl = $('[data-fa="fixed"]');
+      fixedEl.hidden = !fixed;
+      fixedEl.innerHTML = fixed ? `${TICK}<span><b>Fixed while designing:</b> ${esc(fixed)}</span>` : '';
+      // Creative ideas from the director (full text), else starter asks.
+      const items = (crit?.improvements || []).filter(i => !entry.applied.has(i.id) && !isRepair(i));
+      const list = items.length ? items.map(i => ({ id: i.id, label: chipLabel(i) })) : STARTERS.filter(s => !/logo/i.test(s) || contextFor(entry).logos.length).slice(0, 3).map(s => ({ text: s, label: s }));
+      $('.fa-chat__eyebrow').textContent = items.length ? 'Ideas to try' : 'Try asking';
+      $('[data-fa="ideas"]').hidden = !list.length;
+      chips.innerHTML = list.map(c => `<button class="es-chip" type="button" ${c.id ? `data-fa-improve="${esc(c.id)}"` : `data-fa-say="${esc(c.text)}"`}>${c.id ? SPARK : ''}<span>${esc(c.label)}</span></button>`).join('');
       send.disabled = busy;
       input.disabled = busy;
     };

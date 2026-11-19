@@ -118,7 +118,7 @@ const bigNumber = nflPlan.directions.find(d => d.archetype === 'big-number').can
   assert.ok(!merged.improvements.some(i => i.fix.name === 'brighten-photo'), 'the fix the judge already applied is not offered again');
   assert.deepEqual(merged.improvements.map(i => i.id), merged.improvements.map((_, n) => `i${n + 1}`));
   assert.equal(merged.strengths[0], 'Winner row in Bengals orange');
-  assert.equal(A.chipLabel({ text: 'Photo too dark behind the headline.' }), 'Apply: photo too dark behind the headline');
+  assert.equal(A.chipLabel({ text: 'try a versus layout with both teams and the final score between them.' }), 'Try a versus layout with both teams and the final score between them', 'gen v4: full text, never cut');
 }
 
 // ── 2. Lessons: topics, dedupe, distillation, decay, hit rate ─────────────

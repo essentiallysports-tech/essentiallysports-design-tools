@@ -132,16 +132,131 @@
   }
 
   // ── Hand-offs ──────────────────────────────────────────────────────────
-  function briefFor(item, { headline = '', why = '', sportLabel = '' } = {}) {
+  // A Generate brief from a trend (gen v4): a real brief, never a raw headline
+  // with "Sport: X" lines. Built only from the trend's own words (its headline,
+  // the related headlines, the AI "why fans care" line), so nothing is invented:
+  //   {Who}: {what happened}.          who = the team / person when the
+  //                                     headline does not already name them
+  //   Context: {related}. {related}.    key facts and numbers from the coverage
+  //   Why fans care: {angle}.           the angle, when the feed has one
+  // An editor's "Headline:" pick stays first (the server puts it on a cover).
+  // The league travels beside the brief (sportForBrief / ?sport=), not in it.
+  const SPORT_KEY = 'frameup.generate.briefSport.v1';
+  const squash = text => String(text || '').replace(/\s+/g, ' ').trim();
+  // A headline as a sentence: no " - Outlet" tail, ends with a full stop.
+  function asSentence(text, source = '') {
+    let t = squash(text);
+    if (source && t.endsWith(` - ${source}`)) t = t.slice(0, -(source.length + 3));
+    t = t.replace(/\s+[-–|]\s+[A-Z][\w.&' ]{1,30}$/, m => (/\d/.test(m) ? m : '')).trim();
+    if (!t) return '';
+    return /[.!?…"”')]$/.test(t) ? t : `${t}.`;
+  }
+  const words = text => squash(text).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(' ').filter(w => w.length > 2);
+  // Two headlines saying the same thing (most of the words shared).
+  function sameStory(a, b) {
+    const x = new Set(words(a));
+    const y = words(b);
+    if (!x.size || !y.length) return false;
+    const shared = y.filter(w => x.has(w)).length;
+    return shared / Math.min(x.size, y.length) >= 0.7;
+  }
+  const mentions = (text, name) => {
+    const n = squash(name).toLowerCase();
+    if (!n) return true;
+    const t = squash(text).toLowerCase();
+    const last = n.split(' ').pop();
+    return t.includes(n) || (last.length >= 4 && new RegExp(`\\b${last.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(t));
+  };
+  function buildBrief({ headline = '', who = '', what = '', context = [], why = '', extra = [] } = {}) {
     const lines = [];
-    if (headline) lines.push(`Headline: ${headline}`);
-    lines.push(headline ? `Story: ${item.title}` : item.title);
-    const context = item.related && item.related[0] && item.related[0].title;
-    if (context && context.toLowerCase() !== String(item.title).toLowerCase()) lines.push(`Context: ${context}`);
-    if (why) lines.push(`Why fans care: ${why}`);
-    if (item.team && item.team.name) lines.push(`Team: ${item.team.name}`);
-    lines.push(`Sport: ${sportLabel || SHORT[item.category] || item.category}`);
-    return lines.join('\n').slice(0, 1400);
+    if (headline) lines.push(`Headline: ${squash(headline)}`);
+    const lead = asSentence(what);
+    if (lead) lines.push(who && !mentions(lead, who) ? `${squash(who)}: ${lead}` : lead);
+    const more = context.map(c => asSentence(c)).filter(Boolean);
+    if (more.length) lines.push(`Context: ${more.join(' ')}`);
+    const angle = asSentence(why);
+    if (angle) lines.push(`Why fans care: ${angle}`);
+    extra.forEach(line => { if (squash(line)) lines.push(squash(line)); });
+    return lines.join('\n');
+  }
+  function briefFor(item, { headline = '', why = '', sportLabel = '' } = {}) {
+    const title = squash(item && item.title);
+    const related = ((item && item.related) || [])
+      .map(r => ({ title: squash(typeof r === 'string' ? r : r && r.title), source: (r && r.source) || '' }))
+      .filter(r => r.title && r.title.toLowerCase() !== title.toLowerCase());
+    const team = (item && item.team && item.team.name) || '';
+    let who = team;
+    let what = title;
+    // A search trend's title is the search ("Lebron James"): the news under it
+    // says what happened, and the search names who.
+    if (item && item.type === 'search' && related.length) {
+      who = title;
+      what = asSentence(related[0].title, related[0].source);
+      related.shift();
+    }
+    const context = [];
+    related.forEach(r => {
+      if (context.length < 2 && !sameStory(what, r.title) && !context.some(c => sameStory(c, r.title))) context.push(asSentence(r.title, r.source));
+    });
+    const text = buildBrief({ headline, who, what, context, why }).slice(0, 1400);
+    const sport = sportLabel || (item && item.category && item.category !== 'others' ? SHORT[item.category] || '' : '');
+    if (sport) rememberSport(text, sport);
+    return text;
+  }
+  // A brief in the old labelled shape ("Story: …\nTeam: …\nSport: NBA", from an
+  // older link, a Recent item or ES MCP's trending tool) as a real brief, with
+  // its league kept aside: { text, sport }. Any other text comes back as is.
+  function tidyBrief(raw) {
+    const text = String(raw || '').replace(/\r/g, '').trim();
+    const lines = text.split('\n');
+    const labelled = lines.filter(line => /^\s*(?:story|sport|team|context|why fans care|headline)\s*:/i.test(line));
+    if (!labelled.some(line => /^\s*(?:story|sport|team)\s*:/i.test(line))) return { text, sport: '' };
+    const parts = { headline: '', who: '', what: '', context: [], why: '', extra: [] };
+    let sport = '';
+    lines.forEach(line => {
+      const m = line.match(/^\s*(story|sport|team|context|why fans care|headline)\s*:\s*(.*)$/i);
+      if (!m) { if (squash(line)) { if (!parts.what) parts.what = line; else parts.extra.push(line); } return; }
+      const [, label, value] = m;
+      const key = label.toLowerCase();
+      if (key === 'sport') sport = squash(value);
+      else if (key === 'team') parts.who = squash(value);
+      else if (key === 'story') parts.what = value.replace(/^\s*story\s*:\s*/i, '');
+      else if (key === 'context') parts.context.push(value);
+      else if (key === 'why fans care') parts.why = value;
+      else parts.headline = value;
+    });
+    return { text: buildBrief(parts), sport };
+  }
+  // The league for a brief, kept beside it (keyed by its first line) so the
+  // brief can read like a brief and Generate still knows the sport.
+  const briefKey = text => squash(String(text || '').split('\n').find(line => squash(line) && !/^\s*headline\s*:/i.test(line)) || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 80);
+  function storage() { try { return typeof window !== 'undefined' && window.localStorage ? window.localStorage : null; } catch (error) { return null; } }
+  function rememberSport(text, sport) {
+    const key = briefKey(text);
+    const store = storage();
+    if (!key || !sport || !store) return;
+    try {
+      const map = JSON.parse(store.getItem(SPORT_KEY) || '{}') || {};
+      delete map[key];
+      map[key] = squash(sport).slice(0, 30);
+      const keys = Object.keys(map);
+      keys.slice(0, Math.max(0, keys.length - 40)).forEach(k => delete map[k]);
+      store.setItem(SPORT_KEY, JSON.stringify(map));
+    } catch (error) { /* storage blocked */ }
+  }
+  function sportForBrief(text) {
+    const key = briefKey(text);
+    const store = storage();
+    if (!key || !store) return '';
+    try { return String((JSON.parse(store.getItem(SPORT_KEY) || '{}') || {})[key] || ''); } catch (error) { return ''; }
+  }
+  // What Generate sends: the brief as written, plus its league on a last
+  // "Sport:" line (the server reads it) when the person did not write one.
+  function withSport(text, sport = '') {
+    const brief = String(text || '').trim();
+    if (!brief || /^\s*sport\s*:/im.test(brief)) return brief;
+    const league = squash(sport) || sportForBrief(brief);
+    return league ? `${brief}\nSport: ${league}` : brief;
   }
   const relatedOut = item => (item.related || []).slice(0, 3).map(r => ({ title: r.title, url: r.url, source: r.source }));
   // Video Ads: sessionStorage carries the full story; the URL works in a new tab.
@@ -294,7 +409,7 @@
     SHORT, AD_SPORTS, REEL_SPORTS, KEYS, BRANDS, TEMPLATES, AI_TTL_MS, SHORTCUTS,
     isFresh, ago, agoLong, freshness, brandList, brandOf, matchesBrand,
     pickScore, topPicks, foldStorylines, whyNow,
-    briefFor, videoHandoff, reelHandoff,
+    briefFor, tidyBrief, rememberSport, sportForBrief, withSport, videoHandoff, reelHandoff,
     templateFor, photoFor, kitFor, kitText, shortlistText,
     readAiCache, writeAiCache, shortcut,
     ROW_ACTIONS, VIDEO_NA, rowActions, isLogoImage,

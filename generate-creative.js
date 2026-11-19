@@ -67,6 +67,11 @@
     return est != null ? money(est) : '';
   };
 
+  // ETA (gen v4): seconds for n designs in this look, from the model and this
+  // browser's past runs. A named person in the brief means photos + cut-outs.
+  const people = () => Boolean(G()?.found?.()?.name);
+  const etaFor = n => U()?.etaEstimate?.(U().etaHistory(), { look, count: n, people: people() }) || null;
+
   // ── Look switch and the number of designs (in the composer) ───────────────
   function mountSwitch() {
     const steer = document.getElementById('gen-steer');
@@ -145,7 +150,12 @@
     const preview = n => {
       const est = estLabel(n);
       const cost = document.getElementById('gen-count-cost');
-      if (cost && est) cost.innerHTML = `<span class="gen-sr">Estimated AI cost for ${n} design${n === 1 ? '' : 's'}: </span>est. ${est}<span class="gen-count__per" aria-hidden="true"> · ${look === 'creative' ? 'art-directed' : 'templates'}</span>`;
+      const eta = etaFor(n);
+      const time = eta ? U().etaLabel(eta.seconds) : '';
+      if (cost && est) {
+        cost.innerHTML = `<span class="gen-sr">Estimated AI cost for ${n} design${n === 1 ? '' : 's'}: </span>est. ${est}${time ? `<span class="gen-count__eta"><span class="gen-sr">, takes </span><span aria-hidden="true"> · </span>${time.replace(/^about /, '~')}</span>` : ''}<span class="gen-count__per" aria-hidden="true"> · ${look === 'creative' ? 'art-directed' : 'templates'}</span>`;
+        cost.title = eta ? `${time.replace(/^a/, 'A')} for ${n} design${n === 1 ? '' : 's'}${people() ? ' with photos and cut-outs' : ''}. ${eta.learned >= 3 ? `Learned from your last ${eta.learned} runs.` : 'Gets more accurate as you run Generate.'}` : '';
+      }
     };
     expect.addEventListener('pointerover', event => { const b = event.target.closest('[data-count]'); if (b && !b.disabled) preview(Number(b.dataset.count)); });
     expect.addEventListener('pointerleave', () => preview(wanted()));
@@ -155,13 +165,15 @@
   }
   function paintCount() {
     const expect = document.getElementById('gen-expect');
+    if (!expect?.querySelector('[data-count]')) return;
     if (!expect) return;
     const n = wanted();
     expect.querySelectorAll('[data-count]').forEach(b => {
       const value = Number(b.dataset.count);
       const off = look === 'templates' && value > 4;
       b.disabled = off;
-      b.title = off ? 'ES templates make up to 4 designs' : `${value} design${value === 1 ? '' : 's'} · est. ${estLabel(value)}`;
+      const eta = off ? null : etaFor(value);
+      b.title = off ? 'ES templates make up to 4 designs' : `${value} design${value === 1 ? '' : 's'} · est. ${estLabel(value)}${eta ? ` · ${U().etaLabel(eta.seconds)}` : ''}`;
       b.setAttribute('aria-checked', String(value === n));
       b.tabIndex = value === n ? 0 : -1;
     });
@@ -235,9 +247,10 @@
         <details class="gen-cc__director">
           <summary><span class="gen-cc__who">${ICON.clapper}Director</span><span class="gen-cc__lede"></span><span class="gen-cc__more" hidden></span><span class="gen-cc__chev" aria-hidden="true">${ICON.chevron}</span></summary>
           <div class="gen-cc__crit">
+            <p class="gen-cc__fixed" hidden></p>
             <p class="gen-cc__note-text"></p>
             <ul class="gen-cc__good" hidden></ul>
-            <div class="gen-cc__better" hidden><p class="gen-cc__eyebrow">What could be better</p><ul></ul></div>
+            <div class="gen-cc__better" hidden><p class="gen-cc__eyebrow">Ideas to try</p><ul></ul></div>
             <p class="gen-cc__next" hidden></p>
           </div>
         </details>
@@ -266,7 +279,9 @@
     // gen-brain: one critique ("what could be better") for the card, the
     // focus view and the assistant, so Apply ids match everywhere.
     const A = window.FrameUpAssistant;
-    card._critique = A?.designCritique ? A.designCritique(dir.critique, verdict?.critique, card._scene) : null;
+    // gen v4: the server's design.review ({ autoFixed, suggestions }) wins:
+    // small fixes were made while designing; only creative ideas are offered.
+    card._critique = A?.reviewCritique ? A.reviewCritique(dir.critique, verdict?.critique, card._scene, verdict?.review, dir.review) : A?.designCritique ? A.designCritique(dir.critique, verdict?.critique, card._scene) : null;
     // The assistant changes this design only through C's commit() (one history).
     A?.register?.(card._designId, { getScene: () => card._scene, setScene: (scene, meta) => design(card._designId)?.setScene(scene, meta), runId: state.run?.plan?.runId || '', critique: card._critique });
     fill(card);
@@ -325,12 +340,15 @@
   }
   const noteOf = card => {
     const scene = card._scene;
-    const note = card._verdict.note || card._dir.note || '';
-    return `${note}${scene.fixApplied ? `${note ? ' ' : ''}Fix applied: ${scene.fixApplied.replace(/-/g, ' ')}.` : ''}`.trim();
+    // The judge's in-code fix is listed under "Fixed while designing" instead.
+    return String(card._verdict.note || card._dir.note || '').trim() || (scene.fixApplied && !card._critique ? `Fix applied: ${scene.fixApplied.replace(/-/g, ' ')}.` : '');
   };
   // card._critique is gen-brain's merged critique (director + judge, ids i1..),
   // the same object the assistant holds, so Apply ids match on both sides.
-  const critiqueOf = card => (U()?.critiqueFor ? U().critiqueFor({ verdict: { ...card._verdict, critique: card._critique || card._verdict.critique }, dir: card._dir, scene: card._scene, report: card._report }) : { source: 'quick', strengths: [], improvements: [], nextTime: '' });
+  const critiqueOf = card => {
+    const crit = U()?.critiqueFor ? U().critiqueFor({ verdict: { ...card._verdict, critique: card._critique || card._verdict.critique }, dir: card._dir, scene: card._scene, report: card._report }) : { source: 'quick', strengths: [], improvements: [], nextTime: '' };
+    return { ...crit, autoFixed: card._critique?.autoFixed || [] };
+  };
   // A fix the composer can apply here, free: { op:'fix', name } (gen-brain) or
   // a bare { op:'<fix>' } (the quick check).
   const localFix = fix => { const name = fix?.op === 'fix' ? fix.name : fix?.op; return name && C()?.FIXES?.includes(name) ? name : ''; };
@@ -340,19 +358,23 @@
   function paintCritique(card) {
     const note = noteOf(card);
     const crit = critiqueOf(card);
-    card.querySelector('.gen-cc__lede').textContent = note || (crit.improvements[0]?.text ?? 'No notes on this version.');
+    const fixed = window.FrameUpAssistant?.fixedLine ? window.FrameUpAssistant.fixedLine(crit.autoFixed) : '';
+    card.querySelector('.gen-cc__lede').textContent = note || (crit.improvements[0]?.text ?? (fixed ? `Fixed while designing: ${fixed}` : 'No notes on this version.'));
+    const fixedEl = card.querySelector('.gen-cc__fixed');
+    fixedEl.hidden = !fixed;
+    fixedEl.innerHTML = fixed ? `${ICON.check}<span><b>Fixed while designing:</b> ${G().esc(fixed)}</span>` : '';
     card.querySelector('.gen-cc__note-text').textContent = note;
     card.querySelector('.gen-cc__note-text').hidden = !note;
     const more = card.querySelector('.gen-cc__more');
     const toImprove = crit.improvements.filter(i => !isApplied(card, i.id)).length;
     more.hidden = !toImprove;
-    more.textContent = toImprove ? `${toImprove} to improve` : '';
+    more.textContent = toImprove ? `${toImprove} idea${toImprove === 1 ? '' : 's'}` : '';
     const good = card.querySelector('.gen-cc__good');
     good.hidden = !crit.strengths.length;
     good.innerHTML = crit.strengths.map(s => `<li>${ICON.check}<span>${G().esc(s)}</span></li>`).join('');
     const better = card.querySelector('.gen-cc__better');
     better.hidden = !crit.improvements.length;
-    better.querySelector('.gen-cc__eyebrow').textContent = crit.source === 'quick' ? 'What could be better · quick check' : 'What could be better';
+    better.querySelector('.gen-cc__eyebrow').textContent = 'Ideas to try';
     const viaAssistant = typeof window.FrameUpAssistant?.applyImprovement === 'function';
     better.querySelector('ul').innerHTML = crit.improvements.map(i => {
       const local = localFix(i.fix);
@@ -366,7 +388,7 @@
     next.hidden = !crit.nextTime;
     next.innerHTML = crit.nextTime ? `${ICON.bulb}<span><b>Next time</b> ${G().esc(crit.nextTime)}</span>` : '';
     const details = card.querySelector('.gen-cc__director');
-    details.hidden = !note && !crit.improvements.length && !crit.strengths.length;
+    details.hidden = !note && !crit.improvements.length && !crit.strengths.length && !fixed;
   }
 
   // ── Every change goes through here ───────────────────────────────────────
@@ -557,7 +579,9 @@
     document.getElementById('gen-setbar')?.setAttribute('hidden', '');
     els.grid.replaceChildren(...Array.from({ length: n }, skeleton));
     els.grid.setAttribute('aria-busy', 'true');
-    const progress = g.startProgress(['Reading ES coverage', 'Art director planning', 'Composing candidates', 'Art director judging'], [2400, 9000]);
+    const withPeople = people();
+    const eta = U()?.etaEstimate?.(U().etaHistory(), { look: 'creative', count: n, people: withPeople });
+    const progress = g.startProgress(['Reading ES coverage', 'Art director planning', 'Composing candidates', 'Art director judging'], [2400, 9000], { eta: eta?.seconds || 0 });
     // The editor frame records exports in the Gallery; load it while we work.
     g.renderer?.().catch(() => {});
     let rendered = false;
@@ -606,6 +630,8 @@
       rendered = true;
       for (const card of cards) { try { await preview(card); } catch (error) { report(error, 'creative-preview'); } }
       const seconds = progress.stop();
+      // Learn this browser's real run time for the next estimate (cached runs say little).
+      if (!plan.cached) { try { U()?.etaSave?.({ look: 'creative', count: n, people: withPeople, s: seconds }); paintCount(); } catch (error) { /* optional */ } }
       try { g.rememberBrief?.(brief); } catch (error) { report(error, 'creative-remember'); }
       try { window.FrameUpPosted?.markGenerateRun?.({ count: cards.length, format: 'creative' }); } catch (error) { report(error, 'creative-posted'); }
       const cost = (plan.cost?.total || 0) + (judged.cost || 0);
@@ -846,6 +872,8 @@
   window.FrameUpCreative = Object.freeze({
     isOn, run, mountSwitch, state,
     count: () => wanted(),
+    // The brief changed (who it names): repaint the cost + time estimate.
+    paintEstimate: () => paintCount(),
     design, designs,
     track: (type, extra = {}) => G()?.track?.(type, { runId: state.run?.plan?.runId, ...extra }),
   });
