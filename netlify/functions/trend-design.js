@@ -132,7 +132,7 @@ const COMPILED = Object.fromEntries(Object.entries(RULES).map(([cat, rules]) => 
 // hockey") is not college football: it goes to Others, with a score strong
 // enough that a College Football search hint can't pull it back.
 const NOT_FOOTBALL = /(^|[^a-z])(basketball|hoops|hockey|volleyball|soccer|softball|lacrosse|wrestling|gymnastics|ncaab|march madness|final four)([^a-z]|$)/i;
-const FOOTBALL = /(^|[^a-z])(football|cfp|heisman|bowl game|quarterback|touchdown|ncaaf)([^a-z]|$)/i;
+const FOOTBALL = /(^|[^a-z])(football|cfp|heisman|bowl game|quarterback|touchdown|ncaaf|nfl)([^a-z]|$)/i;
 
 function classify(text) {
   const t = ` ${String(text || '').toLowerCase()} `;
@@ -807,6 +807,10 @@ async function buildTrends(sources = SOURCES, { window = '1d', now = Date.now() 
     let cat = category;
     // A focused category search keeps its own category unless the text points clearly elsewhere.
     if (item.hint && (!cat || (cat !== item.hint && score < 6))) cat = item.hint;
+    // The story's own title wins over its related headlines and the search hint:
+    // "Boston College Basketball" is not NFL or college football, even when the
+    // related stories are about football.
+    if ((cat === 'nfl' || cat === 'cfb') && NOT_FOOTBALL.test(` ${item.title} `) && !FOOTBALL.test(` ${item.title} `)) cat = 'others';
     // Google Search trends cover every topic: keep one only with a clear
     // sports signal (a league, team or player name, not just a sporty word).
     if (item.type === 'search') {
