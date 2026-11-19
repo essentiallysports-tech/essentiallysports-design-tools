@@ -1685,6 +1685,11 @@ html:not([data-theme="dark"]) .va-rail__sw[aria-checked="true"] { box-shadow: 0 
 .va-make__desc { align-self: start; min-width: 0; color: var(--va-ink-3); font-size: 12px; line-height: 1.35; }
 .va-make__len { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-1, 4px); }
 .va-make__len .va-hint { margin-right: var(--es-space-1, 4px); }
+.va-make__custom-len { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--va-line-2); color: var(--va-ink-3); font: 500 13px/1 var(--es-font-ui); }
+.va-make__custom-len.is-active { box-shadow: inset 0 0 0 1.5px var(--va-accent); color: var(--va-ink); }
+.va-make__custom-len input { width: 2.4em; border: 0; background: transparent; color: inherit; font: inherit; text-align: right; -moz-appearance: textfield; }
+.va-make__custom-len input::-webkit-outer-spin-button, .va-make__custom-len input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.va-make__custom-len input:focus-visible { outline: 0; }
 @media (prefers-reduced-motion: no-preference) {
   .va-make__art--anim { animation: vaMakeDrift 8s ease-in-out infinite alternate; }
 }
@@ -1751,6 +1756,53 @@ html:not([data-theme="dark"]) .va-rail__sw[aria-checked="true"] { box-shadow: 0 
 .va-safe__area--rail span { left: auto; right: 4px; writing-mode: vertical-rl; }
 .va-safe__band { position: absolute; left: 0; right: 0; box-shadow: inset 0 1px 0 rgb(111 212 154 / .9), inset 0 -1px 0 rgb(111 212 154 / .9); }
 .va-safe__band span { top: 6px; right: 6px; left: auto; background: rgb(6 43 21 / .85); }
+
+/* Move/resize text (Simple/Condensed/Highlight only -- video-ads.js
+   copyAdjustFor). Percent-positioned over the box's own natural extent,
+   same technique as .va-safe above, so it tracks the preview at any size.
+   Border/handle colours are fixed (not var(--va-accent-text)/var(--va-warn))
+   because this sits flush on the ad canvas, which stays dark regardless of
+   the site's light/dark theme -- those variables flip for light mode and
+   go nearly invisible on that always-dark backdrop (same reasoning as the
+   canvas-empty-hint fix elsewhere in this file). The reset button is a
+   floating chip, not flush on the canvas, so it keeps following the theme. */
+.va-copybox { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.va-copybox[hidden] { display: none; }
+.va-copybox__box {
+  position: absolute; box-sizing: border-box; pointer-events: auto; cursor: grab;
+  border: 2px dashed #54A4FB; border-radius: 10px;
+  background: rgb(10 125 250 / .1);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / .35);
+  transition: background .12s ease, border-color .12s ease;
+}
+.va-copybox__box:hover, .va-copybox__box:focus-visible { background: rgb(10 125 250 / .18); }
+.va-copybox__box:active { cursor: grabbing; }
+.va-copybox__box:focus-visible { outline: 2px solid #54A4FB; outline-offset: 2px; }
+.va-copybox.is-outside .va-copybox__box { border-color: #f5b26b; background: rgb(245 158 11 / .1); }
+.va-copybox__reset {
+  position: absolute; top: -14px; left: -14px; width: 28px; height: 28px; display: none;
+  align-items: center; justify-content: center; border-radius: 50%; border: 0;
+  background: var(--va-surface); color: var(--va-ink-2); box-shadow: var(--va-shadow), inset 0 0 0 1px var(--va-line-2);
+  cursor: pointer; --es-icon: 14px;
+}
+.va-copybox__reset svg { width: 14px; height: 14px; }
+.va-copybox.is-adjusted .va-copybox__reset { display: flex; }
+.va-copybox__handle {
+  position: absolute; right: -8px; bottom: -8px; width: 18px; height: 18px; border-radius: 50%;
+  background: #54A4FB; box-shadow: 0 0 0 2px #101114, 0 1px 3px rgb(14 16 20 / .4);
+  cursor: nwse-resize;
+}
+.va-copybox.is-outside .va-copybox__handle { background: #f5b26b; }
+.va-copybox__handle:focus-visible { outline: 2px solid #54A4FB; outline-offset: 2px; }
+.va-copybox__warn {
+  position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); max-width: calc(100% - 24px);
+  margin: 0; padding: 6px 12px; border-radius: 999px; display: none; text-align: center;
+  background: rgb(245 158 11 / .95); color: #1a1200; font: 600 12px/1.3 var(--es-font-ui); white-space: nowrap;
+}
+.va-copybox.is-outside .va-copybox__warn { display: block; }
+@media (max-width: 600px) {
+  .va-copybox__warn { white-space: normal; font-size: 11px; }
+}
 
 /* Export: the test set */
 .va-grid { gap: var(--es-space-2, 8px); }

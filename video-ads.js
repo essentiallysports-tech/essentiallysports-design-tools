@@ -47,6 +47,7 @@
     bodies: [$('va-body-1'), $('va-body-2'), $('va-body-3')], addPara: $('va-add-para'), cta: $('va-cta'), unsub: $('va-unsub'),
     styleFields: $('va-style-fields'), classicFields: $('va-classic-fields'), suggest: $('va-suggest'), styleCount: $('va-style-count'), zone: $('va-zone'), zoneRow: $('va-zone-row'),
     safeToggle: $('va-safe-toggle'), safe: $('va-safe'), grid: $('va-grid'), gridStyles: $('va-grid-styles'), gridNames: $('va-grid-names'), rightsRow: $('va-rights-row'),
+    moveTextToggle: $('va-move-text-toggle'), copybox: $('va-copybox'), copyboxBox: $('va-copybox-box'), copyboxHandle: $('va-copybox-handle'), copyboxReset: $('va-copybox-reset'), copyboxWarn: $('va-copybox-warn'),
     exsizes: $('va-exsizes'), exmode: $('va-exmode'), exmodeRow: $('va-exmode-row'), gridRow: $('va-grid-row'),
     set: $('va-set'), setBody: $('va-set-body'), setMake: $('va-set-make'), setMakeText: $('va-set-make-text'), setBrand: $('va-set-brand'), setEditing: $('va-set-editing'),
     metaFill: $('va-meta-fill'), metaNote: $('va-meta-note'),
@@ -94,6 +95,11 @@
     grid: { on: false, styles: [] }, // Export 3 styles
     align: 'auto', // 'auto' follows the style (see layoutFor); 'left' / 'center' force it
     anchor: 'center',
+    // The copy block's own move/resize, per style (classic styles only --
+    // see layoutFor). dx/dy are fractions of the frame's width/height (so
+    // one nudge reads the same across 9:16/4:5/1:1); scale multiplies the
+    // auto-fit size. {} picks up copyAdjustFor's default per style on first use.
+    copyAdjust: {},
     scrim: 0.45, blur: 0, zoom: 1, panX: 0, panY: 0, fade: null, vignette: 0,
     // Frame + Tint rail: how the clip sits in the ad (FRAME_DEFAULTS below).
     fit: 'fill', tintId: 'black', tintAmount: 0.45, tintCustom: '#0B2265',
@@ -330,16 +336,75 @@
       us: Array.isArray(src.us) ? filled(src.us) : d.us,
     };
   }
+  // Move/resize range: enough room to matter, short of letting the block
+  // wander off-frame or shrink/grow past readable. Crossing the safe rect
+  // inside this range is still allowed -- isTextOutsideSafe below just flags
+  // it, per "give them a bit of room... not compromise much on safe zones".
+  const COPY_ADJUST_RANGE = { dx: 0.16, dy: 0.16, scaleMin: 0.8, scaleMax: 1.3 };
+  const COPY_ADJUST_DEFAULT = Object.freeze({ dx: 0, dy: 0, scale: 1 });
+  function copyAdjustFor(style) {
+    return state.copyAdjust[style] || COPY_ADJUST_DEFAULT;
+  }
+  function setCopyAdjust(style, next) {
+    const r = COPY_ADJUST_RANGE;
+    state.copyAdjust = {
+      ...state.copyAdjust,
+      [style]: {
+        dx: Math.max(-r.dx, Math.min(r.dx, next.dx)),
+        dy: Math.max(-r.dy, Math.min(r.dy, next.dy)),
+        scale: Math.max(r.scaleMin, Math.min(r.scaleMax, next.scale)),
+      },
+    };
+  }
+  function resetCopyAdjust(style) {
+    const next = { ...state.copyAdjust };
+    delete next[style];
+    state.copyAdjust = next;
+  }
+  // Turns the stored (fraction-based, style-keyed) adjustment into a px
+  // transform for this specific frame size, plus whether it pokes outside
+  // the safe rect. Cheap and pure -- safe to call on every pointermove/draw,
+  // unlike layoutFor itself (a binary-search fit). null transform means
+  // "draw exactly as laid out", so every call site can pass it straight to
+  // R.drawFrame without a null check.
+  function resolveTextAdjust(layout, size) {
+    if (!layout?.bbox) return { transform: null, outside: false };
+    const adjust = copyAdjustFor(layout.style);
+    if (!adjust.dx && !adjust.dy && adjust.scale === 1) return { transform: null, outside: false };
+    const bbox = layout.bbox;
+    const transform = {
+      dx: adjust.dx * size.width,
+      dy: adjust.dy * size.height,
+      scale: adjust.scale,
+      originX: bbox.x + bbox.w / 2,
+      originY: bbox.y + bbox.h / 2,
+    };
+    const w = bbox.w * transform.scale;
+    const h = bbox.h * transform.scale;
+    const x = transform.originX + transform.dx - w / 2;
+    const y = transform.originY + transform.dy - h / 2;
+    const safe = layout.safeRect;
+    const outside = Boolean(safe) && (x < safe.left || y < safe.top || x + w > safe.right || y + h > safe.bottom);
+    return { transform, outside };
+  }
   const layoutFor = (sizeId, src = state) => {
     const c = resolvedCopy(src);
-    return R.fitLayout(measure, {
+    const size = B.SIZES[sizeId];
+    const result = R.fitLayout(measure, {
       ...c,
       cta: src.cta || brand().cta,
       // As in the Figma ads: Simple and Condensed are centred, Highlight is set flush left.
       align: state.align === 'auto' ? (src.style === 'highlight' ? 'left' : 'center') : state.align,
       anchor: state.anchor,
       safeZone: state.safeZone,
-    }, brand(), B.SIZES[sizeId], logo.img ? logo : null);
+    }, brand(), size, logo.img ? logo : null);
+    // Only the classic styles (Simple/Condensed/Highlight) get a bbox back --
+    // Today's 3 / Us vs Them use their own layout system and keep the
+    // original fixed placement for now. Tag the style used, since the move/
+    // resize box (resolveTextAdjust) is keyed by it and callers only have
+    // this result object to go on, not the `src` it was built from.
+    result.style = src.style;
+    return result;
   };
   // The ad's own clock for the timed entrances: seconds since the trim start.
   const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -436,6 +501,38 @@
     ].join('');
   }
 
+  // Move/resize text (classic styles only -- see copyAdjustFor/layoutFor).
+  let moveTextOn = false;
+  function renderCopyBox() {
+    if (!els.copybox) return;
+    const isClassic = Boolean(B.STYLES[state.style]?.classic);
+    els.moveTextToggle?.toggleAttribute('disabled', !isClassic);
+    els.moveTextToggle?.setAttribute('aria-pressed', String(moveTextOn && isClassic));
+    const show = moveTextOn && isClassic && current?.bbox;
+    els.copybox.hidden = !show;
+    if (!show) return;
+    const sz = size();
+    const adjust = copyAdjustFor(state.style);
+    const bbox = current.bbox;
+    const { transform, outside } = resolveTextAdjust(current, sz);
+    const t = transform || { dx: 0, dy: 0, scale: 1, originX: bbox.x + bbox.w / 2, originY: bbox.y + bbox.h / 2 };
+    const w = bbox.w * t.scale;
+    const h = bbox.h * t.scale;
+    const x = t.originX + t.dx - w / 2;
+    const y = t.originY + t.dy - h / 2;
+    const pct = (v, total) => `${(v / total) * 100}%`;
+    els.copyboxBox.style.left = pct(x, sz.width);
+    els.copyboxBox.style.top = pct(y, sz.height);
+    els.copyboxBox.style.width = pct(w, sz.width);
+    els.copyboxBox.style.height = pct(h, sz.height);
+    const isAdjusted = Boolean(adjust.dx || adjust.dy || adjust.scale !== 1);
+    els.copybox.classList.toggle('is-adjusted', isAdjusted);
+    els.copybox.classList.toggle('is-outside', outside);
+    const pctScale = Math.round(adjust.scale * 100);
+    els.copyboxHandle.setAttribute('aria-valuenow', String(pctScale));
+    els.copyboxHandle.setAttribute('aria-valuetext', `${pctScale}% size`);
+  }
+
   function fitCanvasDisplay() {
     const s = size();
     const cs = getComputedStyle(els.drop);
@@ -484,6 +581,7 @@
     els.fit.classList.toggle('is-bad', !current.fits);
     els.highlightRow.hidden = state.style !== 'highlight';
     renderSafe();
+    renderCopyBox();
     if (els.styles.childElementCount) { syncStyles(); renderThumbs(); }
     const lit = state.highlight.trim();
     els.highlightWarn.hidden = !lit || state.headline.toLowerCase().includes(lit.toLowerCase());
@@ -511,7 +609,7 @@
   function draw() {
     if (!current) return;
     const s = size();
-    R.drawFrame(ctx, { width: s.width, height: s.height, video: hasClip() ? els.video : placeholder, bg: bg(), ops: current.ops, logoImage: logo.img, blurCanvas, source: still ? still.source() : undefined, ...previewClock() });
+    R.drawFrame(ctx, { width: s.width, height: s.height, video: hasClip() ? els.video : placeholder, bg: bg(), ops: current.ops, logoImage: logo.img, blurCanvas, source: still ? still.source() : undefined, textAdjust: resolveTextAdjust(current, s).transform, ...previewClock() });
     sampleGlow();
     // Letterboxed placement: Meta's blurred fill, from a tiny copy of the ad (CSS blurs it).
     if (els.device.dataset.fit === 'letterbox') { try { els.metaFill.getContext('2d').drawImage(els.canvas, 0, 0, els.metaFill.width, els.metaFill.height); } catch (error) { /* keep the last fill */ } }
@@ -869,12 +967,27 @@
         card('to-link', `<span class="va-make__art" aria-hidden="true">${ICON.link}</span>`, 'Paste an X link', 'Any public post.'),
       ]),
     ].join('');
-    const lens = [5, 8, 10, 15].map(n => `<button class="es-chip" type="button" data-act="still-len" data-len="${n}" aria-pressed="${n === stillSeconds}">${n} s</button>`).join('');
+    const presets = [5, 8, 10, 15, 20];
+    const isCustom = !presets.includes(stillSeconds);
+    const lens = presets.map(n => `<button class="es-chip" type="button" data-act="still-len" data-len="${n}" aria-pressed="${n === stillSeconds}">${n} s</button>`).join('');
     return `<div class="va-make${compact ? ' va-make--compact' : ''}" role="group" aria-label="Make it without a clip">
       <p class="va-make__title">${compact ? 'No video? Make it without a clip' : 'Make it without a clip'}</p>
       <div class="va-make__grid">${cards}</div>
-      <div class="va-make__len" role="group" aria-label="Length without a clip"><span class="va-hint">Length</span>${lens}</div>
+      <div class="va-make__len" role="group" aria-label="Length without a clip">
+        <span class="va-hint">Length</span>${lens}
+        <label class="va-make__custom-len${isCustom ? ' is-active' : ''}">
+          <input type="number" inputmode="numeric" data-act="still-len-custom" min="${R.STILL.minSeconds}" max="${R.STILL.maxSeconds}" step="1" value="${stillSeconds}" aria-label="Custom length in seconds">s
+        </label>
+      </div>
     </div>`;
+  }
+  // Shared by the chip clicks and the custom input: clamp, apply, and keep
+  // whatever's already on screen (an animated/photo still, or just the
+  // picker) in sync without a full re-render.
+  function setStillSeconds(next) {
+    stillSeconds = Math.max(R.STILL.minSeconds, Math.min(R.STILL.maxSeconds, Math.round(Number(next)) || R.STILL.defaultSeconds));
+    if (still) useStill(still.kind, { image: still.image, name: still.kind === 'photo' ? state.clip?.name : '' });
+    else renderNoClip();
   }
   // Handles a no-clip action from any empty state. True when handled.
   function noClipAct(event) {
@@ -883,20 +996,25 @@
     if (act === 'make-animated') { useStill('animated'); return true; }
     if (act === 'make-photo') { photoInput.click(); return true; }
     if (act === 'make-upload') { els.file.click(); return true; }
-    if (act === 'still-len') {
-      stillSeconds = Math.max(R.STILL.minSeconds, Math.min(R.STILL.maxSeconds, Number(el.dataset.len) || R.STILL.defaultSeconds));
-      if (still) useStill(still.kind, { image: still.image, name: still.kind === 'photo' ? state.clip?.name : '' });
-      else renderNoClip();
-      return true;
-    }
+    if (act === 'still-len') { setStillSeconds(el.dataset.len); return true; }
     return false;
   }
+  // The custom length field: 'input' events don't bubble through the click
+  // delegation above, so it gets its own listener, document-wide (the field
+  // is re-created on every noClipBlock() render, in several different
+  // containers -- see the noClipBlock() call sites).
+  document.addEventListener('change', event => {
+    const field = event.target.closest('[data-act="still-len-custom"]');
+    if (field) setStillSeconds(field.value);
+  });
   // Keeps every visible no-clip block in step (selected card, length).
   function renderNoClip() {
     const box = document.getElementById('va-noclip-link');
     if (box) box.innerHTML = noClipBlock({ compact: true });
     document.querySelectorAll('.va-make:not(.va-make--compact)').forEach(block => {
       block.querySelectorAll('[data-act="still-len"]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.len) === stillSeconds)));
+      const custom = block.querySelector('[data-act="still-len-custom"]');
+      if (custom && document.activeElement !== custom) custom.value = stillSeconds;
       ['animated', 'photo'].forEach(kind => block.querySelector(`[data-act="make-${kind}"]`)?.setAttribute('aria-pressed', String(Boolean(still && still.kind === kind))));
     });
   }
@@ -2366,7 +2484,7 @@
         const c = canvas.getContext('2d');
         c.setTransform(canvas.width / size4x5.width, 0, 0, canvas.height / size4x5.height, 0, 0);
         try {
-          R.drawFrame(c, { width: size4x5.width, height: size4x5.height, video: null, bg: { tint: { color: '#000000', amount: 0 } }, ops: layout.ops, logoImage: logo.img });
+          R.drawFrame(c, { width: size4x5.width, height: size4x5.height, video: null, bg: { tint: { color: '#000000', amount: 0 } }, ops: layout.ops, logoImage: logo.img, textAdjust: resolveTextAdjust(layout, size4x5).transform });
         } catch (error) { /* a thumbnail never breaks the page */ }
         c.setTransform(1, 0, 0, 1, 0, 0);
       });
@@ -3522,7 +3640,7 @@
     // The export always runs the timeline (reduced motion only calms the preview).
     const drawAll = () => {
       const t = Math.max(0, els.video.currentTime - state.trimIn);
-      targets.forEach(x => R.drawFrame(x.ctx, { width: x.s.width, height: x.s.height, video: els.video, bg: bg(), ops: x.layout.ops, logoImage: logo.img, blurCanvas: x.blur, source: still ? still.source() : undefined, t, duration: span }));
+      targets.forEach(x => R.drawFrame(x.ctx, { width: x.s.width, height: x.s.height, video: els.video, bg: bg(), ops: x.layout.ops, logoImage: logo.img, blurCanvas: x.blur, source: still ? still.source() : undefined, t, duration: span, textAdjust: resolveTextAdjust(x.layout, x.s).transform }));
     };
     const onVisibility = () => {
       if (document.hidden && !finished) { els.video.pause(); soundSync(); targets.forEach(t => t.recorder.state === 'recording' && t.recorder.pause()); els.exportStatus.textContent = 'Paused: come back to this tab to keep recording.'; }
@@ -3695,6 +3813,106 @@
 
   // Safe zone overlay: where Meta's UI covers the ad.
   els.safeToggle.addEventListener('click', () => { safeOverlay = !safeOverlay; renderSafe(); });
+
+  // Move/resize text: drag the box to move it, the corner dot to resize it.
+  // Cheap repaint while dragging (draw() + renderCopyBox() re-read state.copyAdjust
+  // live via resolveTextAdjust -- no need to re-run layoutFor's fit search);
+  // the dirty/export-state commit (changed()) is debounced the same way the
+  // clip-pan drag above does it, so a drag doesn't spam undo/export-reset.
+  let copyBoxTimer;
+  function copyBoxChanged({ commit = true } = {}) {
+    draw();
+    renderCopyBox();
+    clearTimeout(copyBoxTimer);
+    if (commit) copyBoxTimer = setTimeout(changed, 250);
+  }
+  if (els.moveTextToggle) {
+    els.moveTextToggle.addEventListener('click', () => {
+      moveTextOn = !moveTextOn;
+      renderCopyBox();
+    });
+  }
+  if (els.copyboxReset) {
+    els.copyboxReset.addEventListener('click', event => {
+      event.stopPropagation();
+      resetCopyAdjust(state.style);
+      copyBoxChanged();
+      toast('Text position and size reset', { timeout: 1600 });
+    });
+  }
+  if (els.copyboxBox) {
+    let moveDrag = null;
+    els.copyboxBox.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || event.target !== els.copyboxBox) return;
+      const rect = els.canvas.getBoundingClientRect();
+      const a = copyAdjustFor(state.style);
+      moveDrag = { id: event.pointerId, x: event.clientX, y: event.clientY, startDx: a.dx, startDy: a.dy, rectW: rect.width, rectH: rect.height };
+      try { els.copyboxBox.setPointerCapture(event.pointerId); } catch {}
+      event.preventDefault();
+    });
+    els.copyboxBox.addEventListener('pointermove', event => {
+      if (!moveDrag || event.pointerId !== moveDrag.id) return;
+      const a = copyAdjustFor(state.style);
+      setCopyAdjust(state.style, {
+        dx: moveDrag.startDx + (event.clientX - moveDrag.x) / moveDrag.rectW,
+        dy: moveDrag.startDy + (event.clientY - moveDrag.y) / moveDrag.rectH,
+        scale: a.scale,
+      });
+      copyBoxChanged({ commit: false });
+    });
+    const endMoveDrag = event => {
+      if (!moveDrag || event.pointerId !== moveDrag.id) return;
+      moveDrag = null;
+      copyBoxChanged();
+    };
+    els.copyboxBox.addEventListener('pointerup', endMoveDrag);
+    els.copyboxBox.addEventListener('pointercancel', endMoveDrag);
+    els.copyboxBox.addEventListener('keydown', event => {
+      const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
+      if (!dir) return;
+      event.preventDefault();
+      const step = event.shiftKey ? 0.04 : 0.01;
+      const a = copyAdjustFor(state.style);
+      setCopyAdjust(state.style, { dx: a.dx + dir[0] * step, dy: a.dy + dir[1] * step, scale: a.scale });
+      copyBoxChanged();
+    });
+  }
+  if (els.copyboxHandle) {
+    let resizeDrag = null;
+    els.copyboxHandle.addEventListener('pointerdown', event => {
+      if (event.button !== 0) return;
+      event.stopPropagation();
+      const rect = els.copyboxBox.getBoundingClientRect();
+      const a = copyAdjustFor(state.style);
+      resizeDrag = { id: event.pointerId, x: event.clientX, y: event.clientY, startScale: a.scale, refPx: Math.max(40, rect.width) };
+      try { els.copyboxHandle.setPointerCapture(event.pointerId); } catch {}
+      event.preventDefault();
+    });
+    els.copyboxHandle.addEventListener('pointermove', event => {
+      if (!resizeDrag || event.pointerId !== resizeDrag.id) return;
+      const a = copyAdjustFor(state.style);
+      const delta = (event.clientX - resizeDrag.x) + (event.clientY - resizeDrag.y);
+      setCopyAdjust(state.style, { dx: a.dx, dy: a.dy, scale: resizeDrag.startScale + delta / resizeDrag.refPx });
+      copyBoxChanged({ commit: false });
+    });
+    const endResizeDrag = event => {
+      if (!resizeDrag || event.pointerId !== resizeDrag.id) return;
+      resizeDrag = null;
+      copyBoxChanged();
+    };
+    els.copyboxHandle.addEventListener('pointerup', endResizeDrag);
+    els.copyboxHandle.addEventListener('pointercancel', endResizeDrag);
+    els.copyboxHandle.addEventListener('keydown', event => {
+      const dir = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[event.key];
+      if (!dir) return;
+      event.preventDefault();
+      event.stopPropagation(); // else it also bubbles into the box's own arrow-key move handler
+      const step = event.shiftKey ? 0.08 : 0.02;
+      const a = copyAdjustFor(state.style);
+      setCopyAdjust(state.style, { dx: a.dx, dy: a.dy, scale: a.scale + dir * step });
+      copyBoxChanged();
+    });
+  }
 
   // Meta preview: frames the canvas as the placement it will run in.
   els.metaToggle.addEventListener('click', () => {
@@ -4144,7 +4362,7 @@
         const c = canvas.getContext('2d');
         c.setTransform(canvas.width / sz.width, 0, 0, canvas.height / sz.height, 0, 0);
         try {
-          R.drawFrame(c, { width: sz.width, height: sz.height, video: hasClip() ? els.video : placeholder, bg: bg(), ops: layout.ops, logoImage: logo.img, blurCanvas, source: still ? still.source() : undefined });
+          R.drawFrame(c, { width: sz.width, height: sz.height, video: hasClip() ? els.video : placeholder, bg: bg(), ops: layout.ops, logoImage: logo.img, blurCanvas, source: still ? still.source() : undefined, textAdjust: resolveTextAdjust(layout, sz).transform });
         } catch (error) { /* a thumbnail never breaks the page */ }
         c.setTransform(1, 0, 0, 1, 0, 0);
       });
@@ -4365,7 +4583,7 @@
       const times = window.VideoAdsRating.pickFrameTimes(duration, 3);
       const layout = layoutFor(state.size);
       const frames = await window.VideoAdsRating.captureFrames(async t => {
-        R.drawFrame(octx, { width: sz.width, height: sz.height, video: els.video, bg: bg(), ops: layout.ops, logoImage: logo.img, blurCanvas: offBlur, source: still ? still.source() : undefined, t, duration });
+        R.drawFrame(octx, { width: sz.width, height: sz.height, video: els.video, bg: bg(), ops: layout.ops, logoImage: logo.img, blurCanvas: offBlur, source: still ? still.source() : undefined, t, duration, textAdjust: resolveTextAdjust(layout, sz).transform });
         return off;
       }, times);
       const c = resolvedCopy();

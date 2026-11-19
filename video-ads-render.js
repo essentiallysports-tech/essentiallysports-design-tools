@@ -306,6 +306,12 @@
     const xFor = width => (align === 'left' ? left : left + (best.maxWidth - width) / 2);
     const ops = [];
     if (logoOp) ops.push(logoOp);
+    // The copy block's own natural (pre-adjust) box, and the safe rect it's
+    // meant to stay inside -- both in frame px. Used by the move/resize
+    // control (video-ads.js layoutFor) as the scale pivot and the warning
+    // threshold; this function itself never applies a user adjustment.
+    const bbox = { x: xFor(best.maxWidth), y, w: best.maxWidth, h: best.height };
+    const safeRect = { left, top, right: size.width - left, bottom: bottomEdge };
 
     best.blocks.forEach(block => {
       if (block.kind === 'text') {
@@ -347,7 +353,7 @@
         y = emitCta(ops, measure, block, brand, xFor(block.w), y, align);
       }
     });
-    return { ops, scale, fits, height: best.height, available, zone: size.zone || 'classic' };
+    return { ops, scale, fits, height: best.height, available, zone: size.zone || 'classic', bbox, safeRect };
   }
 
   // ─── Safe zones ──────────────────────────────────────────────────────────
@@ -746,10 +752,27 @@
 
   // clock: { t, duration } for timed entrances (see Motion); omit it to draw
   // every op settled. Ops without anim or alpha are drawn exactly as before.
-  function drawOps(ctx, ops, logoImage, clock = null) {
+  // adjust: { dx, dy, scale, originX, originY } from the move/resize control
+  // (video-ads.js layoutFor) -- applied to every op except the logo, around
+  // its own pivot, outside the per-op animation transform below (so a timed
+  // entrance still settles into the moved/resized position, not the
+  // original one).
+  function drawOps(ctx, ops, logoImage, clock = null, adjust = null) {
     const t = clock && clock.t != null && Number.isFinite(Number(clock.t)) ? Number(clock.t) : null;
     const k = t == null ? 1 : animScale(ops, clock.duration);
+    const useAdjust = Boolean(adjust && (adjust.dx || adjust.dy || adjust.scale !== 1));
     ops.forEach(op => {
+      const adjustThis = useAdjust && op.type !== 'logo';
+      if (adjustThis) {
+        ctx.save();
+        ctx.translate(adjust.originX + adjust.dx, adjust.originY + adjust.dy);
+        ctx.scale(adjust.scale, adjust.scale);
+        ctx.translate(-adjust.originX, -adjust.originY);
+      }
+      drawOneOp(op);
+      if (adjustThis) ctx.restore();
+    });
+    function drawOneOp(op) {
       const timed = t != null && op.anim;
       if (!timed && op.alpha == null) { drawOp(ctx, op, logoImage); return; }
       const st = timed ? animAt(op, t, k) : { alpha: 1, dy: 0, scale: 1, wipe: 1 };
@@ -774,7 +797,7 @@
       }
       drawOp(ctx, op, logoImage);
       ctx.restore();
-    });
+    }
   }
 
   function drawOp(ctx, op, logoImage) {
@@ -875,7 +898,12 @@
   //        an animated gradient in two colours: drifting light, a slow light
   //        sweep, vignette and grain. Every motion repeats once per
   //        `duration`, so it loops without a jump.
-  const STILL = { minSeconds: 5, maxSeconds: 15, defaultSeconds: 8 };
+  // maxSeconds was 15 (the longest of the old fixed-length chips); raised so
+  // a custom length (video-ads.js noClipBlock) can go further. Ken Burns pan
+  // and the generated-gradient animation both scale by progress (0-1), so
+  // any duration here plays correctly -- nothing else in this file assumes
+  // a 15s ceiling.
+  const STILL = { minSeconds: 5, maxSeconds: 30, defaultSeconds: 8 };
   const KEN_BURNS = { from: 1, to: 1.14, panX: [-0.35, 0.35], panY: [0.15, -0.15] };
   const clamp01 = v => Math.max(0, Math.min(1, Number(v) || 0));
   const stillProgress = (t, duration) => clamp01((Number(t) || 0) / Math.max(0.1, Number(duration) || STILL.defaultSeconds));
@@ -980,7 +1008,7 @@
   }
 
   // Video (optionally blurred), scrim, vignette, bottom fade, overlay.
-  function drawClipFrame(ctx, { width, height, video, bg = {}, ops = [], logoImage = null, blurCanvas = null, generated = null, t, duration }) {
+  function drawClipFrame(ctx, { width, height, video, bg = {}, ops = [], logoImage = null, blurCanvas = null, generated = null, t, duration, textAdjust = null }) {
     ctx.save();
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, width, height);
@@ -1057,7 +1085,7 @@
       ctx.fillStyle = g;
       ctx.fillRect(0, start, width, height - start);
     }
-    drawOps(ctx, ops, logoImage, t == null ? null : { t, duration });
+    drawOps(ctx, ops, logoImage, t == null ? null : { t, duration }, textAdjust);
     ctx.restore();
   }
 

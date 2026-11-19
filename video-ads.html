@@ -104,6 +104,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" stroke-dasharray="3 2.4"/><path d="M5 15h14"/><path d="M5 6h14"/></svg>
               <span>Safe zone</span>
             </button>
+            <button class="es-btn es-btn--sm" type="button" id="va-move-text-toggle" aria-pressed="false" aria-label="Move text" title="Move or resize the text on the ad (Simple, Condensed and Highlight only)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M15 19l-3 3-3-3"/><path d="M19 9l3 3-3 3"/><path d="M2 12h20"/><path d="M12 2v20"/></svg>
+              <span>Move text</span>
+            </button>
             <button class="va-icon-btn va-only-mobile" type="button" id="va-mini" aria-pressed="false" aria-label="Shrink preview" title="Shrink preview">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 10 7-7"/><path d="M20 10h-6V4"/><path d="m3 21 7-7"/><path d="M4 14h6v6"/></svg>
             </button>
@@ -166,6 +170,15 @@
               <canvas class="va-meta-fill" id="va-meta-fill" width="54" height="96" aria-hidden="true"></canvas>
               <div class="va-meta-over" id="va-meta-over" aria-hidden="true"></div>
               <div class="va-safe" id="va-safe" aria-hidden="true" hidden></div>
+              <div class="va-copybox" id="va-copybox" hidden>
+                <div class="va-copybox__box" id="va-copybox-box" tabindex="0" role="button" aria-label="Move the text. Drag, or use arrow keys; Shift+arrow resizes.">
+                  <button class="va-copybox__reset" type="button" id="va-copybox-reset" title="Reset text position and size" aria-label="Reset text position and size">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+                  </button>
+                  <span class="va-copybox__handle" id="va-copybox-handle" role="slider" tabindex="0" aria-label="Resize the text" aria-valuetext="Default size" aria-valuemin="80" aria-valuemax="130" aria-valuenow="100"></span>
+                </div>
+                <p class="va-copybox__warn" id="va-copybox-warn" role="status">Past the safe area — may get covered on some placements</p>
+              </div>
             </div>
             <div class="va-meta-foot" id="va-meta-foot" aria-hidden="true"></div>
           </div>
