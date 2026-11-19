@@ -239,6 +239,12 @@ function factsIn(text, storyId, start = 1) {
     // A label starts with a noun ("5 to win" has none).
     const label = NOUN_STOP.test(clean(m[3]).split(' ')[0] || '') || /^(?:to|is|was|are|were|will|has|had)$/i.test(clean(m[3]).split(' ')[0] || '') ? '' : labelAfter(m[3]);
     if (ident) { add({ kind: 'date', text: clean(text.slice(Math.max(0, at - 12), at).match(/[A-Za-z.#]+\s*$/)?.[0] + num), prefix: '', value: num, suffix: '', label: '', display: num }, at, num.length); continue; }
+    // gen5: "shoots 72% from the field": a percentage is a fact even when no noun follows it.
+    if (!label && m[2] === '%') {
+      const field = /^\s*from the field/i.test(text.slice(at + num.length + 1, at + num.length + 24));
+      add({ kind: 'pct', text: `${num}%${field ? ' from the field' : ''}`, prefix: '', value: num, suffix: '%', label: field ? 'from the field' : '', display: `${num}%` }, at, num.length + 1);
+      continue;
+    }
     if (!label || /^(?:am|pm|th|st|nd|rd)$/i.test(label)) continue;
     // "1000+ rushing yards": the plus stays with the number (a count, not a %).
     const unit = m[2] || '';
@@ -783,7 +789,9 @@ function codeHeadline(text, story, read, { fallback = '', all = false, long = fa
       const rest = clean(flat.slice(a.text.length)).replace(/^[,;:]\s*/, '');
       if (!/^(?:as|while|but|whereas|and)\s+/i.test(rest)) return;
       const own = rest.replace(/^(?:as|while|but|whereas|and)\s+/i, '');
-      if (/^(?:[A-Z]|No\.|#?\d)/.test(own) && own.split(' ').length >= 4 && own.split(' ').length <= maxWords) options.push(tidy(own));
+      // Only a clause that names someone the story is about ("UK suppliers went unpaid" alone loses LIV Golf).
+      const named = [...(read.people || []), ...(read.teams || []).flatMap(t => [t.name, t.full])].filter(Boolean).some(n => own.includes(n));
+      if (named && /^(?:[A-Z]|No\.|#?\d)/.test(own) && own.split(' ').length >= 4 && own.split(' ').length <= maxWords) options.push(tidy(own));
     });
   }
   if (!options.length || options[options.length - 1] === whole) {

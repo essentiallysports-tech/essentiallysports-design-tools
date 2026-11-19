@@ -117,6 +117,13 @@ const shared = {
   assert.equal(composer.cardTitle('Suppliers left unpaid', read, 'cover-boxes'), 'Suppliers left unpaid');
   const bills = composer.readCreative('Josh Allen leads the Bills past the Chiefs.\nSport: NFL');
   assert.equal(composer.cardTitle('Bills night cover', bills, 'cover-boxes'), 'Bills night cover', 'the brief\'s own team may be named');
+  // "72% from the field" is a fact (the headline keeps it), and a team ranking is no stats post.
+  const jokic = composer.readCreative('Nikola Jokic shoots 72% from the field in a triple-double: 31 points, 14 rebounds and 11 assists.\nSport: NBA');
+  assert.ok(jokic.facts.some(f => f.kind === 'pct' && f.value === '72'));
+  assert.match(composer.codeHeadline(jokic.stories[0].text, jokic.stories[0], jokic, { long: true }), /72%/);
+  assert.ok(!C.fits('stat-stack', { ...C.normalizeInput({ headline: 'Arch Manning faces his biggest test', cutout: { src: '/c.png' }, photo: { src: '/p.jpg' } }), number: { prefix: '#', value: '3', label: '' } }), 'No. 3 Texas is not a stats post');
+  // A second reading never drops the subject ("UK suppliers went unpaid" alone).
+  assert.ok(composer.codeHeadline(st.text, st, read, { all: true, long: true }).every(h => /LIV/.test(h)), 'every LIV reading names LIV Golf');
   // Quote speaker is the person, not the team.
   const kerr = composer.readCreative('Steve Kerr on the Warriors\' slow start: "We have to be better, and it starts with me."\nSport: NBA');
   assert.equal(kerr.quotes[0].by, 'Steve Kerr');

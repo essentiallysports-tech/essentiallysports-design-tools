@@ -2108,7 +2108,7 @@
       needs: 'one real stat + a cut-out (or photo)',
       kinds: ['count', 'money', 'pct', 'record'],
       tones: ['light', 'paper', 'editorial'],
-      fits: i => Boolean(heroStat(i)) && !isRank(heroStat(i)) && (has.cutout(i) || has.photo(i)) && has.headline(i),
+      fits: i => Boolean(heroStat(i)) && !isRank(heroStat(i)) && has.cutout(i) && has.headline(i),
       build(input, v) {
         // gen5: the board's light page (bar graph 2335:1297 / listicle 2335:2341):
         // #E8E8E8 with grit, a black title box under the top edge, the number
