@@ -352,7 +352,7 @@ html.es-shell.es-editor .es-topbar:has(.fu-canvas-bar) { gap: var(--es-space-3, 
 .fu-view-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--es-space-2, 8px);
   height: 36px;
   min-width: 0;
   padding: 0 var(--es-space-3, 12px);
@@ -370,7 +370,7 @@ html.es-shell.es-editor .es-topbar:has(.fu-canvas-bar) { gap: var(--es-space-3, 
 .fu-format-chip__label { min-width: 0; overflow: hidden; color: var(--es-ink); text-overflow: ellipsis; }
 .fu-format-chip__size { flex: none; color: var(--es-ink-3); font-weight: 500; font-variant-numeric: tabular-nums; }
 .fu-format-chip svg, .fu-view-btn svg { flex: none; width: 16px; height: 16px; }
-.fu-format-chip.is-compact { padding: 0 10px; }
+.fu-format-chip.is-compact { padding: 0 var(--es-space-3, 12px); }
 .fu-format-chip.is-compact .fu-format-chip__size,
 .fu-format-chip.is-compact > svg { display: none; }
 .fu-format-chip__label { min-width: 48px; }

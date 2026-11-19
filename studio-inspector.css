@@ -1184,3 +1184,35 @@ html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] >
 /* A section with no controls for the current template (frameup-inspector.js
    collapseEmptySections) disappears instead of leaving an empty band. */
 html[data-studio-shell="on"] .panel .studio-dock-section.fi-section-empty { display: none !important; }
+
+/* Layers open on a narrow laptop (QA 2026-11-21): below 1280px an open Layers
+   column squeezed the canvas to ~176px at 1024 (the empty-canvas buttons
+   spilled out and the canvas bar slid under Export). The canvas keeps the
+   48px rail's room and the open list floats over it as a drawer instead. */
+@media (min-width: 901px) and (max-width: 1279px) {
+  html[data-studio-shell="on"]:root body .app[data-workspace].has-layers-panel:not(.layers-collapsed) {
+    grid-template-columns: 48px minmax(0, 1fr) var(--fi-w-user, var(--fi-w)) !important;
+  }
+  /* It starts under the floating undo / redo / canvas bar so both stay usable. */
+  html[data-studio-shell="on"]:root body .app[data-workspace].has-layers-panel:not(.layers-collapsed) > .layers-panel {
+    width: var(--fu-layers-w, 240px);
+    height: calc(100% - 64px);
+    margin-top: 64px;
+    align-self: start;
+    z-index: 900;
+    border-top: 1px solid var(--es-line);
+    border-top-right-radius: 12px;
+    box-shadow: 16px 0 40px -16px rgb(14 16 20 / .28);
+  }
+  html.es-shell.es-editor:root:has(.app[data-workspace].has-layers-panel:not(.layers-collapsed)) .es-topbar {
+    left: calc(var(--es-shell-offset) + 48px + 16px);
+  }
+}
+
+/* Open sections clip with a margin (QA 2026-11-21): overflow:hidden (kept for
+   the fold animation) cut the left edge of the selected colour's 2px ring and
+   of focus rings on full-width fields. */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.studio-accordion-section.is-open, .studio-accordion-section.is-open > .studio-accordion-collapse > .studio-accordion-body, .studio-accordion-section.is-open .studio-accordion-body) {
+  overflow: clip !important;
+  overflow-clip-margin: 6px;
+}

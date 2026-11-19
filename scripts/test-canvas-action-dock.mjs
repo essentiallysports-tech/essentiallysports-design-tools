@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 
 const html = fs.readFileSync('index.html', 'utf8');
+const polish = fs.readFileSync('editor-polish.css', 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -46,7 +47,7 @@ assert(
   'Collapsed search must remain inert and keyboard-safe.',
 );
 assert(
-  /content:\s*\['quote-logo-control',\s*'\.text-card',\s*'swipe-button-card'\]/.test(html),
+  /content:\s*\['quote-logo-control',\s*'\.text-card',(?:\s*'[\w-]+',)*\s*'swipe-button-card'\]/.test(html),
   'Swipe Button must remain inside the Content panel.',
 );
 assert(
@@ -54,4 +55,21 @@ assert(
   'Layout panel must not retain the Swipe Button control.',
 );
 
-console.log('Canvas action dock tests passed.');
+// QA 2026-11-21: at 1024 the dock was capped by a formula that assumed an open
+// 240px Layers column, so Upload Image / ES Image Pool spilled out of the card.
+// The cap now follows the real column, and the image buttons may wrap.
+assert(
+  /\.has-layers-panel\.layers-collapsed \{ --fu-dock-left: 48px; \}/.test(polish)
+    && /\.canvas-stack > \.canvas-bottom-actions \{\s*max-width: min\(800px, calc\(100vw - var\(--es-shell-offset, 0px\) - var\(--fu-dock-left\) - var\(--fu-inspector-w/.test(polish),
+  'The dock must be capped by the real canvas column (Layers rail or open column, plus the inspector).',
+);
+assert(
+  /\.canvas-bottom-actions \.canvas-primary-actions \{\s*flex-wrap: wrap !important;/.test(polish),
+  'Upload Image and ES Image Pool must wrap inside the dock instead of overflowing it.',
+);
+assert(
+  /@media \(min-width: 1024px\) \{\s*html\[data-studio-shell="on"\]:root body \.canvas-stack > \.canvas-bottom-actions \{ margin-left: 0 !important; margin-right: 0 !important; \}/.test(polish),
+  'The dock must not carry auto side margins on top of its left:50% centring.',
+);
+
+console.log('Canvas action dock tests passed. (The live overflow check is scripts/check-editor-ui.mjs.)');

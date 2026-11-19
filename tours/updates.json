@@ -3,6 +3,32 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-21-qa-editor",
+      "date": "2026-11-21",
+      "title": "Editor: tidier toolbar and panels on laptops and phones",
+      "commit": "6769e54",
+      "items": [
+        {
+          "title": "The canvas toolbar fits",
+          "text": "On smaller laptops the zoom, slide and image buttons stay inside the toolbar under the canvas, and it sits centred under your design.",
+          "page": "index.html",
+          "route": "#instagram"
+        },
+        {
+          "title": "Layers floats on smaller laptops",
+          "text": "Below 1280px, opening Layers slides the list over the canvas instead of squeezing the design to a sliver.",
+          "page": "index.html",
+          "route": "#youtube"
+        },
+        {
+          "title": "Phone panels",
+          "text": "A tab with nothing to change for a template now says so, and dark mode no longer shows white cards behind light text.",
+          "page": "index.html",
+          "route": "#newsletter"
+        }
+      ]
+    },
+    {
       "id": "2026-11-20-inspector",
       "date": "2026-11-20",
       "title": "Editor: a cleaner settings panel that follows your selection",

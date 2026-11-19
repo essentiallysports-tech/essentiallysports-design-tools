@@ -80,7 +80,8 @@
     border-radius: 12px;
   }
 
-  html[data-studio-shell="on"]:root body .panel :is(.ig-chip, .ig-reset, .listicle-logo-button) {
+  /* Remove sits beside Change: same 32px row height (it was 34px). */
+  html[data-studio-shell="on"]:root body .panel :is(.ig-chip, .ig-reset, .listicle-logo-button, .listicle-logo-remove) {
     height: 32px;
     min-height: 32px;
     border-radius: 10px;
@@ -770,9 +771,16 @@ html[data-studio-shell="on"]:root body .canvas-bottom-actions .carousel-slide-ar
     pointer-events: none;
   }
 }
-/* Search open: the dock is one row of zoom + search, as before. */
-@media (min-width: 901px) {
+/* Search open: zoom + search side by side once the column has room (1280+);
+   on narrower columns they stack, as the closed dock does (QA 2026-11-21: at
+   1024 the search field overflowed the dock's left edge). With a slide pager
+   the field takes its own full row under zoom | pager. */
+@media (min-width: 1280px) {
   html[data-studio-shell="on"]:root body .canvas-stack > .canvas-bottom-actions.is-ai-search-expanded { grid-template-columns: auto auto !important; }
+  html[data-studio-shell="on"]:root body .canvas-stack > .canvas-bottom-actions.is-ai-search-expanded:has(> .carousel-workspace-nav:not(.view-hidden)) > .canvas-primary-actions { grid-column: 1 / -1 !important; }
+}
+@media (min-width: 901px) and (max-width: 1279px) {
+  html[data-studio-shell="on"]:root body .canvas-stack > .canvas-bottom-actions.is-ai-search-expanded { grid-template-columns: auto !important; }
 }
 
 /* Dark */
@@ -847,3 +855,96 @@ html[data-studio-shell="on"]:root body :is(.studio-ai-search, .canvas-ai-search-
   outline: none !important;
   box-shadow: none !important;
 }
+
+/* Canvas dock fits its column (QA 2026-11-21). The shared cap in
+   design-tokens.css assumed an open 240px Layers column, so with Layers folded
+   to its 48px rail at 1024 the dock was capped at 166px and Upload Image /
+   ES Image Pool spilled out of the card. Cap it by the real column instead
+   (shell + Layers column + inspector + the canvas card's 32px sides), and let
+   the two image buttons wrap under each other when even that is too narrow.
+   The page-specific margin-inline:auto pushed the dock 51-72px right of the
+   canvas; left:50% + translateX(-50%) already centres it. */
+@media (min-width: 901px) {
+  html[data-studio-shell="on"]:root body .app[data-workspace] { --fu-dock-left: 0px; }
+  html[data-studio-shell="on"]:root body .app[data-workspace].has-layers-panel:not(.layers-collapsed) { --fu-dock-left: var(--fu-layers-w, 240px); }
+  html[data-studio-shell="on"]:root body .app[data-workspace].has-layers-panel.layers-collapsed { --fu-dock-left: 48px; }
+  /* Below 1280 an open Layers list floats over the canvas (studio-inspector.css). */
+  @media (max-width: 1279px) {
+    html[data-studio-shell="on"]:root body .app[data-workspace].has-layers-panel:not(.layers-collapsed) { --fu-dock-left: 48px; }
+  }
+  html[data-studio-shell="on"]:root body .app[data-workspace] .canvas-stack > .canvas-bottom-actions {
+    max-width: min(800px, calc(100vw - var(--es-shell-offset, 0px) - var(--fu-dock-left) - var(--fu-inspector-w, max(370px, 26vw)) - 64px)) !important;
+  }
+  html[data-studio-shell="on"]:root body .canvas-stack > .canvas-bottom-actions .canvas-primary-actions {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    max-width: 100%;
+  }
+}
+@media (min-width: 1024px) {
+  html[data-studio-shell="on"]:root body .canvas-stack > .canvas-bottom-actions { margin-left: 0 !important; margin-right: 0 !important; }
+}
+
+/* Empty-canvas hint in dark mode (QA 2026-11-21): the canvas stays white, so
+   the hint keeps light-mode ink. #98A6BF on white was 2.4:1. */
+html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-empty-hint > span { color: #5B6270 !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-empty-hint strong { color: #2B3039 !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .canvas-empty-hint > svg { color: #5B6270; }
+
+/* Phone sheets, dark (QA 2026-11-21): the same lighter #2A2D34 bands with no
+   padding that the desktop rule above flattens showed on phones as a box with
+   a square corner behind the field and the label touching its edge. */
+@media (max-width: 900px) {
+  html[data-theme="dark"][data-studio-shell="on"]:root body .panel :is(.studio-dock-section, .youtube-control-row, .newsletter-control-row, .swipe-button-control, .image-tool-panel) {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Phone Media sheet (QA 2026-11-21): one primary per view, and the top bar's
+   Export is it, so Upload image is a secondary button like ES Image Pool. */
+@media (max-width: 900px) {
+  html[data-studio-shell="on"]:root body .mobile-editor-media-actions button:first-child {
+    border-color: var(--es-line) !important;
+    background: #FFFFFF !important;
+    color: #10243C !important;
+  }
+  html[data-theme="dark"][data-studio-shell="on"]:root body.is-mobile-workspace-active .mobile-editor-media-actions button:first-child {
+    background: var(--m-raised) !important;
+    border-color: var(--m-line) !important;
+    color: var(--m-text) !important;
+  }
+}
+
+/* Phone sheets, dark (QA 2026-11-21): index.html paints these section cards
+   #FFFFFF on phones in both themes, so in dark mode the light labels sat on
+   white (Logo position 1.7:1, widget field labels 1.7:1). Let them take the
+   sheet's dark surface. */
+@media (max-width: 900px) {
+  html[data-theme="dark"][data-studio-shell="on"]:root body .studio-accordion-body :is(.card, .text-card, .swipe-button-control, .advanced-card, .quote-logo-control, #widget-main-fields, #widget-picks-fields, #trivia-fields, #ticker-fields, #list-fields, #list2-fields) {
+    background: transparent !important;
+  }
+}
+
+/* Phone paste-link fields (QA 2026-11-21): the phone 44px touch height on the
+   input overflowed its 38px bordered field by 3px top and bottom. The field
+   grows to 44px (the touch target) and the input fills it; the thumbnail
+   beside it matches. */
+@media (max-width: 900px) {
+  html[data-studio-shell="on"]:root body .panel .widget-paste-link-field.is-open { height: 44px !important; min-height: 44px !important; }
+  html[data-studio-shell="on"]:root body .panel .widget-paste-link-field .widget-paste-link-input { min-height: 0 !important; height: 100% !important; }
+  html[data-studio-shell="on"]:root body .panel .widget-image-row .widget-image-thumb { width: 44px; height: 44px; }
+}
+
+/* Image tool tabs (Background / Entity 1 / Entity 2) outside the desktop dock,
+   i.e. the phone Media sheet (QA 2026-11-21): they fell back to the browser's
+   Arial, and the active label (#0A6FDE on Blue 100) was 4.3:1. */
+html[data-studio-shell="on"]:root body .image-tool-button { font-family: var(--es-font-ui); }
+@media (max-width: 900px) {
+  html[data-studio-shell="on"]:root body .image-tool-button:is(:hover, .is-active):not(.export-tool-button) { color: var(--es-brand-text); }
+}
+
+/* Dock search submit (QA 2026-11-21): a filled blue square made a second
+   primary next to Export. Quiet icon button, like the panel's Search. */
+html[data-studio-shell="on"]:root body .canvas-ai-search-submit { background: var(--es-sunk); color: var(--es-ink); }
+html[data-studio-shell="on"]:root body .canvas-ai-search-submit:hover { background: var(--es-hover, var(--es-sunk)); color: var(--es-ink); }
