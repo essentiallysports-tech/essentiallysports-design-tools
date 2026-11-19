@@ -552,10 +552,11 @@
   function costEstimate(count = 4, { assets = true } = {}) {
     const n = Math.max(1, Math.min(8, Math.round(Number(count) || 4)));
     const perDesign = n > 4 ? 2 : 3;
-    // gen4: Sonnet art director by default, plus one second look at repaired designs.
-    const director = 0.02 + 0.001 * n;
-    const judge = 0.002 + 0.0009 * n * perDesign;
-    const recheck = 0.004 + 0.0015 * n;
+    // gen5: Opus art director, a Sonnet judge with 3 ES board references, one
+    // second look at repaired designs (the server caps a run at $0.25).
+    const director = 0.045 + 0.006 * n;
+    const judge = 0.012 + 0.0022 * n * perDesign;
+    const recheck = 0.008 + 0.002 * n;
     const low = director + judge + recheck + (assets ? 0.02 : 0);
     const high = director + judge + recheck + (assets ? 0.03 + 0.03 * Math.min(n, 6) : 0);
     return { count: n, candidatesPerDesign: perDesign, low: Number(low.toFixed(3)), high: Number(high.toFixed(3)), label: `~$${low.toFixed(2)}–$${high.toFixed(2)}` };

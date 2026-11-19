@@ -117,7 +117,8 @@ const PROBE = `(async (jobs, scale) => {
     for (let k = 0; k < Math.min(cutLayers.length, drawn.length); k++) {
       const head = await headOf(cutLayers[k].src, drawn[k]);
       if (!head) continue;
-      numItems.slice(0, numBefore[k]).forEach(n => { if (meet(head, n.box, 4)) problems.push('number under the head: ' + Math.round(area(head, n.box)) + 'px²'); });
+      // gen5: a board number may sit behind the head for its declared foot (n.overlap, as on the ES board's "25-2").
+      numItems.slice(0, numBefore[k]).forEach(n => { const box = n.overlap ? { ...n.box, h: n.box.h * (1 - n.overlap) } : n.box; if (meet(head, box, n.overlap ? 0 : 4)) problems.push('number under the head: ' + Math.round(area(head, box)) + 'px²'); });
       // Text drawn after the figure, over its face (the middle of the head box).
       const face = { x: head.x + head.w * 0.2, y: head.y + head.h * 0.25, w: head.w * 0.6, h: head.h * 0.55 };
       const after = drawn[k].at != null ? items.slice(drawn[k].at) : [];
@@ -192,7 +193,7 @@ try {
   // you fix some; QA_DESIGNS_VERBOSE=1 lists every one.
   // gen4-quality (2026-11-21): 86 / 59 / 490 -> 75 / 55 / 452 (typographic poster, light stat card,
   // big-number with cut-out, split panel without a tag).
-  const CEILING = { 'text collision': 75, 'cut off': 55, 'empty area': 452 };
+  const CEILING = { 'text collision': 68, 'cut off': 55, 'empty area': 422 };
   const over = Object.entries(CEILING).filter(([k, max]) => (byKind[k] || 0) > max);
   over.forEach(([k, max]) => console.log(`FAIL ${k}: ${byKind[k]} designs, more than the known ${max} (run with QA_DESIGNS_VERBOSE=1)`));
   if (fatal.length || over.length) exitCode = 1;

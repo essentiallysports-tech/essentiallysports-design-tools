@@ -3,15 +3,34 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
-      "id": "2026-11-19-music-for-video-ads",
-      "date": "2026-11-19",
-      "title": "Music for Video Ads",
-      "commit": "f634298",
+      "id": "2026-11-23-gen5-board",
+      "date": "2026-11-23",
+      "title": "Generate: designs built like the ES board",
       "items": [
         {
-          "title": "Video Ads",
-          "text": "Seven licensed music tracks in the Sound step (calm, lo-fi, chill and hip hop), cleared for organic posts and paid ads.",
-          "page": "video-ads.html"
+          "title": "Stats posts like ours",
+          "text": "One big number under the ES logo, the player cut out over it, a white label box and the team's colours behind.",
+          "page": "generate.html"
+        },
+        {
+          "title": "Covers with real highlight boxes",
+          "text": "Headlines sit in tight team-colour boxes, one idea per line, over a full photo.",
+          "page": "generate.html"
+        },
+        {
+          "title": "Quotes and bar graphs",
+          "text": "Quotes set in white boxes over the speaker, and comparisons drawn as the board's bar graph.",
+          "page": "generate.html"
+        },
+        {
+          "title": "Headlines keep the point",
+          "text": "A shortened headline never drops the part of the story that matters, and design names never read like a team.",
+          "page": "generate.html"
+        },
+        {
+          "title": "A stronger art director",
+          "text": "A better AI model plans each set and checks it against real ES posts. A run costs about $0.10 to $0.25, shown when it finishes.",
+          "page": "generate.html"
         }
       ]
     },
@@ -343,6 +362,19 @@
           "title": "Free mode instead of errors",
           "text": "Over a budget, every tool keeps working without AI: Generate makes ES template designs, Video Ads writes copy from templates and finds clips in the library, Reels builds the plan from your brief, and Trends shows quick headline ideas. A short note at the top says so.",
           "page": "generate.html"
+        }
+      ]
+    },
+    {
+      "id": "2026-11-19-music-for-video-ads",
+      "date": "2026-11-19",
+      "title": "Music for Video Ads",
+      "commit": "f634298",
+      "items": [
+        {
+          "title": "Video Ads",
+          "text": "Seven licensed music tracks in the Sound step (calm, lo-fi, chill and hip hop), cleared for organic posts and paid ads.",
+          "page": "video-ads.html"
         }
       ]
     },

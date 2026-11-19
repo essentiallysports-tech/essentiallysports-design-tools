@@ -22,7 +22,8 @@ assert.equal(U.cleanStory(''), '');
 // ── estimateCost: per choice, monotonic, templates stop at 4 ─────────────
 const costs = [1, 2, 4, 6, 8].map(n => U.estimateCost(n, 'creative'));
 costs.slice(1).forEach((c, i) => assert.ok(c > costs[i], 'more designs cost more'));
-assert.ok(costs[2] > 0.07 && costs[2] < 0.23, `4 creative designs within the logged range ($0.07-0.23): ${costs[2]}`);
+// gen5: Opus director + Sonnet judge with board references (AI capped at $0.25 a run), plus cut-outs.
+assert.ok(costs[2] > 0.1 && costs[2] < 0.3, `4 creative designs within the expected range ($0.10-0.30): ${costs[2]}`);
 assert.equal(U.estimateCost(8, 'templates'), U.estimateCost(4, 'templates'));
 assert.equal(U.estimateCost(99), U.estimateCost(8), 'clamped to 8');
 assert.equal(U.estimateCost(0), U.estimateCost(4), 'bad input = the default 4');

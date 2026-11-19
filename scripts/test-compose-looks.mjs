@@ -220,6 +220,9 @@ const swapped = C.swapPhoto(C.build('frame-break', shared, 0), { from: '', to: '
 assert.equal(swapped.layers.find(l => l.type === 'cutout').breakout.photo, '/p/new.jpg', 'swap photo keeps the frame and its cut-out together');
 // Staggered highlight boxes are plain data the renderer reads (cover).
 const cover = C.build('cover-boxes', shared, 0).layers.find(l => l.role === 'headline');
-assert.ok(cover.box && Array.isArray(cover.box.stagger), 'ES staggered highlight boxes');
+// gen5: the board's steps are in cap heights (box.cascade), boxes in the board style.
+assert.ok(cover.box && Array.isArray(cover.box.cascade) && cover.box.cascade.some(n => n >= 0.5), 'ES staggered highlight boxes (deliberate steps)');
+assert.equal(cover.box.style, 'board');
+assert.equal(cover.phrase, true, 'cover boxes break at phrase boundaries');
 
 console.log(`compose looks: ${LOOKS.length} looks x ${C.TONES.length} tones, shared input shape, content rules - ok`);

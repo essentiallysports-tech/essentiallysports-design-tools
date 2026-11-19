@@ -235,8 +235,9 @@ const plans = {};
   assert.equal(C.directorTier('sonnet'), 'best');
   assert.equal(C.directorTier('haiku'), 'main');
   assert.equal(C.directorTier('auto'), 'auto');
-  assert.equal(C.directorTier(''), 'best', 'gen4: Sonnet art-directs by default (quality first)');
-  // Default (no env): one Sonnet call.
+  assert.equal(C.directorTier(''), 'top', 'gen5: Opus art-directs by default (owner: use a good model)');
+  assert.equal(C.directorTier('opus'), 'top');
+  // Default (no env): one Opus call.
   delete process.env.GENERATE_ART_DIRECTOR_MODEL;
   C.PLAN_CACHE.clear();
   aiCalls.length = 0;
@@ -246,7 +247,7 @@ const plans = {};
   ] }];
   await C.plan({ brief: `${brief} `, found: {}, want: 4, localFind: async person => photosFor(person), lessons: [] });
   assert.equal(aiCalls.length, 1, 'default: one director call');
-  assert.match(aiCalls[0].model, /sonnet/, 'default director is Sonnet');
+  assert.match(aiCalls[0].model, /opus/, 'default director is Opus');
 }
 
 // ── 4. Set design helpers ────────────────────────────────────────────────

@@ -2084,6 +2084,8 @@ exports.handler = withAiMode(async function handler(event) {
         lessons,
         // gen4: the page's second look after it applied the repairs (once per run).
         recheck: body.recheck === true,
+        // gen5: what the run already spent (the director), so the judge keeps the run under its cap.
+        spent: Math.max(0, Math.min(1, Number(body.spent) || 0)),
         timeoutMs: body.recheck === true ? 15000 : 20000,
         track: { email: auth.user.email, token, runId: String(body.runId || '').slice(0, 40) },
       });
