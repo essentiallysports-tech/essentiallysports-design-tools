@@ -2297,7 +2297,10 @@
   body[data-current-page="newsletter"][data-newsletter-asset="youtube-fi"] .color-card,
   body[data-current-page="newsletter"][data-newsletter-asset="tag-fi"] .color-card,
   body[data-current-page="newsletter"][data-newsletter-asset="tag-fi"] #pill-position-card,
-  body[data-current-page="newsletter"][data-newsletter-asset="tag-fi"] #swipe-button-card {
+  body[data-current-page="newsletter"][data-newsletter-asset="tag-fi"] #swipe-button-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="archive-page-fi"] .color-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="archive-page-fi"] #pill-position-card,
+  body[data-current-page="newsletter"][data-newsletter-asset="archive-page-fi"] #swipe-button-card {
     display: none;
   }
   body[data-current-page="newsletter"][data-newsletter-asset="widgets"] .text-card,
@@ -8294,6 +8297,7 @@ body[data-current-page="faq"] .faq-cta-art img {
             <option value="feature-image" data-tag="locked">Feature Image</option>
             <option value="youtube-fi">Video FI (Play Button)</option>
             <option value="tag-fi">Tag FI (Corner Label)</option>
+            <option value="archive-page-fi">Archive Page FI</option>
           </optgroup>
           <optgroup label="Infographic FIs" id="newsletter-infographic-group"></optgroup>
           <optgroup label="Section headers">
@@ -14172,6 +14176,25 @@ const NEWSLETTER_ASSET_TYPES = {
       randomBottomRange: 0,
     },
   },
+  // Archive page feature image (Figma ES Design Team Files, node 2365-65):
+  // its own 834 x 555 size, a dark overlay along the bottom and a
+  // "Quick Read" tag with a lightning bolt in the bottom-left corner.
+  'archive-page-fi': {
+    label: 'Archive Page FI',
+    slug: 'archive-page-fi',
+    placeholder: 'QUICK READ',
+    maxLines: 1,
+    photoTitle: 'Select Archive Page FI Background',
+    photoRole: 'Archive Page FI background image',
+    workspace: {
+      width: 834,
+      height: 555,
+      maxLines: 1,
+      defaultBottomAnchor: 30,
+      randomBottomMin: 30,
+      randomBottomRange: 0,
+    },
+  },
   widgets: {
     label: 'Desktop News Layout',
     slug: 'widget',
@@ -14741,6 +14764,8 @@ function getActivePostTypeConfig() {
         ? drawNewsletterYoutubeFI
         : activeNewsletterAsset === 'tag-fi'
         ? drawNewsletterTagFI
+        : activeNewsletterAsset === 'archive-page-fi'
+        ? drawNewsletterArchivePageFI
         : isInfographicAsset()
         ? drawInfographic
         : drawCoverPost,
@@ -14919,6 +14944,7 @@ function drawNewsletterFeatureImage(ctx, W, H, scale) {
 const NEWSLETTER_SAMPLE_PHOTOS = {
   'youtube-fi': 'assets/infographics/sample-tennis.webp',
   'tag-fi': 'assets/infographics/sample-golf.webp',
+  'archive-page-fi': 'assets/infographics/sample-golf.webp',
 };
 const newsletterSampleImages = {};
 
@@ -15067,6 +15093,100 @@ function drawNewsletterTagFI(ctx, W, H, scale) {
   );
   ctx.fillStyle = tagColors.text;
   ctx.fillText(label, x + padX + inkLeft, baseline);
+
+  if (scale === 1) {
+    state.lastTextBounds = { x, y, w: width, h: height };
+    state.textHitRects = [{ x, y, w: width, h: height }];
+  }
+}
+
+// Archive Page FI (Figma node 2365-65). Measured from the frame at 834 x 555:
+// overlay over the bottom ~165px, from ~10% black at its top edge to ~75% at
+// the foot; tag 30px from the left and bottom, 57px tall, 2px white outline,
+// yellow bolt, white condensed capitals.
+const ARCHIVE_PAGE_FI_DEFAULT_TAG = 'QUICK READ';
+const ARCHIVE_PAGE_FI = {
+  overlayHeight: 165,
+  overlayStops: [[0, 'rgba(0,0,0,0)'], [0.06, 'rgba(0,0,0,0.12)'], [0.5, 'rgba(0,0,0,0.45)'], [1, 'rgba(0,0,0,0.75)']],
+  tagX: 30,
+  tagBottom: 30,
+  tagHeight: 57,
+  tagStroke: 2,
+  tagPadLeft: 12,
+  tagPadRight: 12,
+  boltWidth: 19,
+  boltHeight: 33,
+  boltGap: 8,
+  fontSize: 40,
+  minFontSize: 22,
+  boltColor: '#FFC629',
+  textColor: '#FFFFFF',
+  strokeColor: '#FFFFFF',
+};
+
+function drawArchivePageFIBolt(ctx, x, y, w, h) {
+  // Lightning bolt (Lucide "zap" proportions) filling a w x h box.
+  const pts = [[0.58, 0], [0, 0.58], [0.46, 0.58], [0.38, 1], [1, 0.4], [0.54, 0.4], [0.58, 0]];
+  ctx.beginPath();
+  pts.forEach(([px, py], i) => {
+    const X = x + px * w;
+    const Y = y + py * h;
+    if (i === 0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y);
+  });
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawNewsletterArchivePageFI(ctx, W, H, scale) {
+  const s = scale;
+  const cfg = ARCHIVE_PAGE_FI;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#EEF2EA';
+  ctx.fillRect(0, 0, W, H);
+
+  const photo = state.photo || getNewsletterSamplePhoto('archive-page-fi');
+  if (photo) {
+    if (state.photo) drawCoverImage(ctx, state.photo, W, H, scale);
+    else drawCoverImageInRect(ctx, photo, 0, 0, W, H, false);
+  }
+
+  // Bottom overlay, always drawn so the white tag reads on any photo.
+  const overlayTop = H - cfg.overlayHeight * s;
+  const overlay = ctx.createLinearGradient(0, overlayTop, 0, H);
+  cfg.overlayStops.forEach(([at, color]) => overlay.addColorStop(at, color));
+  ctx.fillStyle = overlay;
+  ctx.fillRect(0, overlayTop, W, H - overlayTop);
+
+  const label = (String(state.lines[0] || '').trim() || ARCHIVE_PAGE_FI_DEFAULT_TAG).toUpperCase();
+  const x = cfg.tagX * s;
+  const height = cfg.tagHeight * s;
+  const y = H - cfg.tagBottom * s - height;
+  const boltW = cfg.boltWidth * s;
+  const boltH = cfg.boltHeight * s;
+  const textX = x + (cfg.tagPadLeft + cfg.boltWidth + cfg.boltGap) * s;
+  const maxTextWidth = Math.max(1, W - cfg.tagX * s - textX - cfg.tagPadRight * s);
+  ctx.font = `900 ${Math.round(cfg.fontSize * s)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
+  const fontSize = fitCanvasFont(ctx, label, maxTextWidth, cfg.fontSize * s, cfg.minFontSize * s);
+  ctx.font = `900 ${Math.round(fontSize)}px "${POST_FONT_FAMILY}", "Roboto Condensed", sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  const metrics = ctx.measureText(label);
+  const inkLeft = Number.isFinite(metrics.actualBoundingBoxLeft) ? metrics.actualBoundingBoxLeft : 0;
+  const inkWidth = Number.isFinite(metrics.actualBoundingBoxRight) ? inkLeft + metrics.actualBoundingBoxRight : metrics.width;
+  const capAscent = ctx.measureText('H').actualBoundingBoxAscent || fontSize * 0.72;
+  const width = Math.ceil(textX - x + inkWidth + cfg.tagPadRight * s);
+  const baseline = y + (height + capAscent) / 2;
+
+  const stroke = cfg.tagStroke * s;
+  ctx.strokeStyle = cfg.strokeColor;
+  ctx.lineWidth = stroke;
+  ctx.strokeRect(x + stroke / 2, y + stroke / 2, width - stroke, height - stroke);
+
+  ctx.fillStyle = cfg.boltColor;
+  drawArchivePageFIBolt(ctx, x + cfg.tagPadLeft * s, y + (height - boltH) / 2, boltW, boltH);
+
+  ctx.fillStyle = cfg.textColor;
+  ctx.fillText(label, textX + inkLeft, baseline);
 
   if (scale === 1) {
     state.lastTextBounds = { x, y, w: width, h: height };
@@ -21684,6 +21804,7 @@ function syncPostTypeControls() {
       activeNewsletterAsset === 'feature-image' ||
       activeNewsletterAsset === 'youtube-fi' ||
       activeNewsletterAsset === 'tag-fi' ||
+      activeNewsletterAsset === 'archive-page-fi' ||
       activeNewsletterAsset === 'section-header' ||
       activeNewsletterAsset === 'section-header-2'
     );
@@ -24692,7 +24813,7 @@ loadFont().then(() => render());
 <script src="frameup-extras.js?v=20261120-rel4"></script>
 <script src="frameup-rules.js?v=20261118-hero-editor"></script>
 <script src="es-guidelines.js?v=20261123-gen5"></script>
-<script src="frameup-editor-assist.js?v=20261119-rel3"></script>
+<script src="frameup-editor-assist.js?v=20261119-archivefi"></script>
 <!-- Editor UI styles load here, after first paint: they only style what frameup-editor-ui.js adds. -->
 <link rel="stylesheet" href="frameup-editor-ui.css?v=20261121-rel2">
 <script src="frameup-editor-ui.js?v=20261121-rel2"></script>

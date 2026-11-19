@@ -4,6 +4,12 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-19 — Manish Kalsi (Claude): Newsletter "Archive Page FI" asset, 834 x 555 (branch manish/archive-page-fi)
+- Status: `committed, not pushed`.
+- New Newsletter asset in Feature images, built from Figma ES Design Team Files node 2365-65: its own 834 x 555 size (`NEWSLETTER_ASSET_TYPES["archive-page-fi"].workspace`), photo (sample golf photo until one is uploaded), a bottom overlay over the last 165px (clear -> 12% -> 45% -> 75% black) and a white-outlined "⚡ QUICK READ" tag 30px from the left and bottom, 57px tall. Tag text is editable (Text On Design, one line, upper-cased; empty = QUICK READ). New `drawNewsletterArchivePageFI` in `index.html`; no shared draw code changed, so other exports are untouched (not re-hashed).
+- Measurements were taken from the rendered Figma frame (view-only, not Dev Mode), so gradient stops, font size and bolt colour (#FFC629) are close, not exact.
+- Also: dropdown option, CSS hiding colour / pill / swipe cards, colour card list, editor-assist entry, release note `2026-11-19-archive-page-fi` (tags the template New). Cache key `20261119-archivefi` (frameup-editor-assist.js in index.html). No thumbnail yet (the picker shows the label).
+- Tests: new `scripts/test-newsletter-archive-page-fi.mjs`; `inline-syntax` ok; `check-editor-ui` probe at 375 / 768 / 1024 / 1440, light + dark: no issues (screenshots `.claude/shots/archive-fi-*.png`).
 ## 2026-11-19 — Suhail (Claude): Video Ads music library, 7 licensed tracks (branch feature/va-music)
 - Status: `[committed, not pushed]`. Needs the migration `supabase/migrations/20261119120000_frameup_audio_bucket.sql` run and the 7 files uploaded to bucket `frameup-audio` before the push.
 - Owner confirmed the tracks are licensed for organic + paid. The repo is public, so the audio lives in a PRIVATE bucket: `audio-library.json` entries use `file: storage:frameup-audio/<id>.m4a`; `video-ads-audio.js` parses them (`track.storage`), `video-ads.js` `fetchStoredTrack` gets a 10-minute signed URL for the signed-in user.

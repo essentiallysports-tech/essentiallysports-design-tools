@@ -401,6 +401,25 @@
       ]
     },
     {
+      "id": "2026-11-19-archive-page-fi",
+      "date": "2026-11-19",
+      "title": "Archive Page FI for newsletters",
+      "commit": "cc0f8a2",
+      "items": [
+        {
+          "title": "Newsletter",
+          "text": "New Archive Page FI asset at 834 x 555: your photo with a dark fade along the bottom and a Quick Read tag you can rename.",
+          "page": "index.html"
+        }
+      ],
+      "templates": [
+        [
+          "newsletter",
+          "archive-page-fi"
+        ]
+      ]
+    },
+    {
       "id": "2026-11-19-hero-generate",
       "date": "2026-11-19",
       "title": "Generate: stat lines, records, carousels and no blank photos",

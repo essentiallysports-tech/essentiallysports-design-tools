@@ -50,6 +50,7 @@
       'feature-image': { best: 'The issue’s lead image', keywords: 'feature image lead hero' },
       'youtube-fi': { best: 'Link to a video', keywords: 'video youtube play button' },
       'tag-fi': { best: 'A feature image with a label', keywords: 'tag label corner category' },
+      'archive-page-fi': { best: 'An archive page image with a Quick Read tag', keywords: 'archive page quick read hit tag 834 feature image' },
       'section-header': { best: 'Start a section', keywords: 'section header divider title strip' },
       'section-header-2': { best: 'Start a section, centred', keywords: 'section header divider title strip centered' },
       widgets: { best: 'Desktop news layout', keywords: 'html widget news layout' },
