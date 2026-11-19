@@ -6,7 +6,7 @@
 // Once a day (owner decision, 2026-11-18). One daily run refreshes every NFL,
 // CFB and MLB team. A Vercel function has 60 s, so the run is split into
 // batches: the team list (stable order) is dealt round-robin into
-// CLIPS_PREFETCH_BATCHES (default 10) shares, and each call does one share:
+// CLIPS_PREFETCH_BATCHES (default 12; 133 teams since 2026-11-19, <= 12 per batch) shares, and each call does one share:
 //   GET /api/clips-prefetch?batch=K        (K = 1..N; no batch = 1)
 // vercel.json has one daily cron per batch, five minutes apart from 10:00 UTC
 // (about 5-6am ET). Batch 1 also does today's trending teams first. Each batch
@@ -102,7 +102,7 @@ async function isAdmin(token) {
 
 const usdEnv = (value, fallback) => (Number.isFinite(Number(value)) && value !== '' && value != null ? Math.max(0, Number(value)) : fallback);
 const settings = (env = process.env) => {
-  const batches = Math.max(1, Math.min(24, Math.floor(Number(env.CLIPS_PREFETCH_BATCHES) || 10)));
+  const batches = Math.max(1, Math.min(24, Math.floor(Number(env.CLIPS_PREFETCH_BATCHES) || 12)));
   const maxUsd = usdEnv(env.CLIPS_PREFETCH_MAX_USD, 0.75);
   // Classification has its own daily cap (owner: <= $0.30/day).
   const classifyUsd = usdEnv(env.CLIPS_CLASSIFY_MAX_USD, 0.3);

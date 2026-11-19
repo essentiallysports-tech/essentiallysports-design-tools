@@ -162,6 +162,34 @@
     t('cfb', 'Utah Utes', 'Utah', ['#BE0000', '#FFFFFF'], ['red', 'silver']),
     // Independent
     t('cfb', 'Notre Dame Fighting Irish', 'Notre Dame', ['#0C2340', '#C99700'], ['navy', 'gold']),
+    // Added 2026-11-19: the rest of the ACC and Big 12, top Group of Five
+    // programs, then the last two Big Ten teams (Northwestern, Rutgers).
+    // Names, colours and logo ids from ESPN's team API (color /
+    // alternateColor; Syracuse and Cincinnati list their main colour second
+    // there, so the two are swapped to keep colors[0] the primary colour).
+    t('cfb', 'Boston College Eagles', 'Boston College', ['#8C2232', '#DBCCA6'], ['maroon', 'gold']),
+    t('cfb', 'California Golden Bears', 'Cal', ['#041E42', '#FFC72C'], ['navy', 'gold']),
+    t('cfb', 'Duke Blue Devils', 'Duke', ['#00539B', '#FFFFFF'], ['blue', 'silver']),
+    t('cfb', 'NC State Wolfpack', 'NC State', ['#CC0000', '#FFFFFF'], ['red', 'silver']),
+    t('cfb', 'Pittsburgh Panthers', 'Pitt', ['#003594', '#FFB81C'], ['blue', 'gold']),
+    t('cfb', 'Stanford Cardinal', 'Stanford', ['#8C1515', '#FFFFFF'], ['red', 'silver']),
+    t('cfb', 'Syracuse Orange', 'Syracuse', ['#FF431B', '#000E54'], ['orange', 'navy']),
+    t('cfb', 'Virginia Cavaliers', 'Virginia', ['#232D4B', '#F84C1E'], ['navy', 'orange']),
+    t('cfb', 'Wake Forest Demon Deacons', 'Wake Forest', ['#CEB888', '#2C2A29'], ['gold', 'black']),
+    t('cfb', 'Arizona Wildcats', 'Arizona', ['#CC0033', '#003366'], ['red', 'navy']),
+    t('cfb', 'Cincinnati Bearcats', 'Cincinnati', ['#E00122', '#000000'], ['red', 'black']),
+    t('cfb', 'Houston Cougars', 'Houston', ['#C8102E', '#FFFFFF'], ['red', 'silver']),
+    t('cfb', 'Iowa State Cyclones', 'Iowa State', ['#AE192D', '#FFC72A'], ['red', 'gold']),
+    t('cfb', 'Kansas Jayhawks', 'Kansas', ['#0051BA', '#E8000D'], ['blue', 'red']),
+    t('cfb', 'UCF Knights', 'UCF', ['#000000', '#B4A169'], ['black', 'gold']),
+    t('cfb', 'West Virginia Mountaineers', 'West Virginia', ['#EAAA00', '#002855'], ['gold', 'navy']),
+    t('cfb', 'Boise State Broncos', 'Boise State', ['#0033A0', '#D64309'], ['blue', 'orange']),
+    t('cfb', 'Memphis Tigers', 'Memphis', ['#004991', '#8E908F'], ['blue', 'silver']),
+    t('cfb', 'Tulane Green Wave', 'Tulane', ['#006747', '#418FDE'], ['green', 'blue']),
+    t('cfb', 'UNLV Rebels', 'UNLV', ['#CF0A2C', '#CAC8C8'], ['red', 'silver']),
+    t('cfb', 'James Madison Dukes', 'James Madison', ['#450084', '#CBB677'], ['purple', 'gold']),
+    t('cfb', 'Northwestern Wildcats', 'Northwestern', ['#492F92', '#FFFFFF'], ['purple', 'silver']),
+    t('cfb', 'Rutgers Scarlet Knights', 'Rutgers', ['#CE0E2D', '#FFFFFF'], ['red', 'silver']),
   ];
 
   // Team logos, hot-linked from ESPN's public logo CDN (no files in the repo).
@@ -190,6 +218,9 @@
       '130', '127', '135', '158', '194', '2483', '213', '2509', '26', '30',
       '264', '275', '228', '52', '59', '97', '2390', '153', '2567', '259',
       '9', '239', '252', '38', '2306', '197', '2628', '2641', '254', '87',
+      '103', '25', '150', '152', '221', '24', '183', '258', '154', '12',
+      '2132', '248', '66', '2305', '2116', '277', '68', '235', '2655', '2439',
+      '256', '77', '164',
     ],
   };
   SPORTS.forEach(({ id }) => {

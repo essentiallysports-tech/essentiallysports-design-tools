@@ -138,10 +138,15 @@ assert.equal(_test.assessClip({ ...base, variants: v(854, 480) }).reason, 'lowQu
 assert.equal(_test.FIND_CLIPS.minShortSide, 720, 'one shared 720p floor');
 assert.equal(_test.assessClip({ ...base, variants: [{ url: 'https://video.twimg.com/x/clip.mp4', width: 0, height: 0, bitrate: 0 }] }).reason, 'lowQuality', 'unknown size dropped: it cannot prove 720p');
 assert.equal(_test.assessClip({ ...base, text: 'Full press conference with the head coach', variants: v(1280, 720) }, { sport: 'nfl' }).reason, 'notGame', 'a presser is not game action');
-const fan = _test.assessClip({ ...base, url: url('fan', 2), handle: 'fan', views: 5e6, variants: v(1080, 1920, 2) }, { sport: 'nfl' }).clip;
+// Trusted sources only (owner, 2026-11-19): a viral fan post is dropped, whatever its views.
+assert.equal(_test.assessClip({ ...base, url: url('fan', 2), handle: 'fan', views: 5e6, variants: v(1080, 1920, 2) }, { sport: 'nfl' }).reason, 'untrusted', 'a fan post is never a result');
 const net = _test.assessClip({ ...base, url: url('NFLonCBS', 3), handle: 'NFLonCBS', variants: v(1280, 720, 3) }, { sport: 'nfl' }).clip;
-assert.deepEqual(_test.rankClips([fan, net, good]).map(c => c.handle), ['Chiefs', 'NFLonCBS', 'fan'], 'official, then media, then a viral fan post');
-const repost = _test.assessClip({ ...base, url: url('fan', 4), handle: 'fan', variants: v(1080, 1920, 1) }, { sport: 'nfl' }).clip;
+const leagueClip = _test.assessClip({ ...base, url: url('NFL', 5), handle: 'NFL', variants: v(1280, 720, 5) }, { sport: 'nfl' }).clip;
+assert.deepEqual(_test.rankClips([net, leagueClip, good]).map(c => c.handle), ['Chiefs', 'NFL', 'NFLonCBS'], 'official, then league, then network');
+assert.equal(good.trust.label, '@Chiefs · team account', 'each clip says who posted it');
+assert.equal(net.trust.label, '@NFLonCBS · network');
+assert.equal(leagueClip.trust.label, '@NFL · league account');
+const repost = _test.assessClip({ ...base, url: url('NFLonFOX', 4), handle: 'NFLonFOX', variants: v(1080, 1920, 1) }, { sport: 'nfl' }).clip;
 const diag = { dupes: 0 };
 const deduped = _test.rankClips([repost, good], diag);
 assert.deepEqual(deduped.map(c => c.url), [good.url], 'the same video re-posted: the official copy is kept');
@@ -152,13 +157,14 @@ posts = {
   11: { handle: 'Chiefs', ageH: 3, w: 1080, h: 1920 },
   12: { handle: 'Chiefs', ageH: 10, w: 1280, h: 720 },
   13: { handle: 'NFL', ageH: 1, w: 1280, h: 720 },
-  14: { handle: 'fan', ageH: 1, w: 640, h: 360 }, // 360p
+  14: { handle: 'NFLonFOX', ageH: 1, w: 640, h: 360 }, // 360p
   15: { handle: 'Chiefs', ageH: 5, secs: 300 }, // 5 minutes
+  19: { handle: 'chiefsfan99', ageH: 1, w: 1280, h: 720 }, // a fan account: never fetched
   16: { handle: 'NFLonCBS', ageH: 4, media: 11 }, // re-post of 11
   17: { handle: 'Chiefs', video: false },
   18: { handle: 'Chiefs', ageH: 2, w: 1280, h: 720 },
 };
-messagesHandler = () => searchReply([url('fan', 14), url('NFL', 13), url('Chiefs', 11), url('Chiefs', 12), url('Chiefs', 15), url('NFLonCBS', 16), url('Chiefs', 17), url('Chiefs', 18), 'https://x.com/Chiefs', 'https://www.espn.com/a']);
+messagesHandler = () => searchReply([url('NFLonFOX', 14), url('NFL', 13), url('Chiefs', 11), url('Chiefs', 12), url('Chiefs', 15), url('NFLonCBS', 16), url('Chiefs', 17), url('Chiefs', 18), url('chiefsfan99', 19), 'https://x.com/Chiefs', 'https://www.espn.com/a']);
 let res = await post({ mode: 'find-clips', sport: 'nfl', team: 'Chiefs' });
 assert.equal(res.status, 200, JSON.stringify(res.body));
 assert.equal(aiCalls.length, 1);
@@ -171,6 +177,7 @@ assert.equal(d.lowQuality, 1);
 assert.equal(d.badLength, 1);
 assert.equal(d.noVideo, 1);
 assert.equal(d.dupes, 1);
+assert.equal(d.untrusted, 1, 'the fan post was dropped before any fetch');
 assert.equal(d.kept, 4);
 assert.ok(res.body.cost <= _test.FIND_CLIPS.maxCostUsd && res.body.cost > 0.04, `one search costs at most $0.06 (${res.body.cost})`);
 
@@ -247,8 +254,8 @@ assert.equal(res.body.diag.lowQuality, 1);
 assert.ok([..._test.CLIP_CACHE.keys()].includes('xapi|nfl|team:green bay packers'));
 // X refuses (rate limit): web search takes over.
 xHandler = () => reply(429, { title: 'Too Many Requests' });
-posts = { 51: { handle: 'Bears', ageH: 2 }, 52: { handle: 'Bears', ageH: 3 }, 53: { handle: 'Bears', ageH: 4 } };
-messagesHandler = () => searchReply([url('Bears', 51), url('Bears', 52), url('Bears', 53)]);
+posts = { 51: { handle: 'ChicagoBears', ageH: 2 }, 52: { handle: 'ChicagoBears', ageH: 3 }, 53: { handle: 'ChicagoBears', ageH: 4 } };
+messagesHandler = () => searchReply([url('ChicagoBears', 51), url('ChicagoBears', 52), url('ChicagoBears', 53)]);
 res = await post({ mode: 'find-clips', sport: 'nfl', team: 'Bears' });
 assert.equal(res.status, 200);
 assert.equal(aiCalls.length, 1, 'fell back to web search');

@@ -47,7 +47,9 @@ const hoursAgo = h => new Date(Date.now() - h * 3600e3).toISOString();
 const clip = (i, sport, extra = {}) => ({
   url: `https://x.com/team${i}/status/${1000 + i}`,
   handle: ['NFL', 'ESPNCFB', 'MLB', 'Buckeyes', 'Yankees', 'Chiefs'][i % 6],
-  platform: ['x', 'reddit', 'bluesky', 'streamable'][i % 4],
+  // Trusted sources only (2026-11-19): X accounts, ESPN and MLB.com, each with its label.
+  platform: ['x', 'espn', 'x', 'mlb'][i % 4],
+  trust: { kind: ['official', 'media', 'league', 'league'][i % 4], label: [`@${['NFL', 'ESPNCFB', 'MLB', 'Buckeyes', 'Yankees', 'Chiefs'][i % 6]} · team account`, 'ESPN · network', '@MLBNetwork · league account', 'MLB.com · league site'][i % 4] },
   text: ['Unreal one-handed grab in the end zone to win it late in the fourth quarter', 'Walk-off homer!', 'What a run', 'Pick six to seal the game and the season, with a very long caption that keeps going on and on'][i % 4],
   thumb: `https://fixtures.test/thumb-${i % 3}.webp`,
   duration: 12 + i, quality: i % 2 ? '720p' : '1080p', sourceKind: ['official', 'league', 'media', ''][i % 4],

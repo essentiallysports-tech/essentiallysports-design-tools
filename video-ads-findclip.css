@@ -109,6 +109,15 @@
 .va-linkres__meta { margin: 0; color: var(--va-ink-2); font: 500 13px/1.4 var(--es-font-ui); font-variant-numeric: tabular-nums; }
 .va-linkres__note { display: flex; align-items: flex-start; gap: var(--es-space-2, 8px); margin: 0; color: var(--va-ink-2); font-size: 13px; line-height: 1.4; --es-icon: 16px; }
 .va-linkres__note svg { flex: none; width: 16px; height: 16px; margin-top: 1px; color: var(--va-warn, #b26a00); }
+/* Pasted link: is it from a trusted source? (_clip-trust.js on the server) */
+.va-linkres__src { display: flex; align-items: flex-start; gap: var(--es-space-2, 8px); margin: 0; color: var(--va-ink-2); font: 500 13px/1.4 var(--es-font-ui); overflow-wrap: anywhere; --es-icon: 16px; }
+.va-linkres__src svg { flex: none; width: 16px; height: 16px; margin-top: 1px; }
+.va-linkres__src.is-trusted svg { color: var(--va-good); }
+.va-linkres__src.is-unverified svg { color: var(--va-warn, #b26a00); }
+/* Who posted a listed clip ("@Yankees · team account", "MLB.com · league site"). */
+.va-mo__src { display: -webkit-box; min-width: 0; overflow: hidden; color: var(--va-ink-2); font: 600 12px/1.3 var(--es-font-ui); overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.va-clip__plat--espn { --va-plat: #CC0000; }
+.va-clip__plat--mlb { --va-plat: #2B6CB0; }
 .va-linkres .va-qualities { gap: var(--es-space-2, 8px); }
 .va-linkres .va-qualities .va-hint { margin-right: var(--es-space-1, 4px); }
 

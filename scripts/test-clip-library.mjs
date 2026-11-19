@@ -120,7 +120,7 @@ globalThis.fetch = async (url, options = {}) => {
     } });
   }
   if (href.startsWith('https://cdn.syndication.twimg.com/')) return reply(404, {});
-  if (/bsky\.network|v\.redd\.it|streamable\.com/.test(href)) {
+  if (/bsky\.network|v\.redd\.it|streamable\.com|espnmedia-cdn\.akamaized\.net/.test(href)) {
     mediaChecks.push({ href, method: options.method || 'GET' });
     const status = mediaStatus(href);
     return reply(status, undefined, { 'content-type': 'video/mp4' });
@@ -180,6 +180,9 @@ const freeSource = { id: 'public', configured: () => true, async search(opts) { 
 const grokSource = { id: 'grok', configured: () => true, async search(opts) { sourceCalls.push({ id: 'grok', opts }); return { candidates: paidCandidates(opts), cost: 0.02, diag: { searched: 1 } }; } };
 T.useSources([freeSource, grokSource]);
 const BSKY = n => `https://morel.us-east.host.bsky.network/xrpc/com.atproto.sync.getBlob?did=did:plc:x&cid=c${n}`;
+// A trusted site clip (ESPN page + its MP4 on ESPN's CDN).
+const ESPNM = n => `https://espnmedia-cdn.akamaized.net/espn/media/16x9/wsc/c${n}/c${n}.mp4`;
+const ESPNP = n => `https://www.espn.com/video/clip/_/id/${n}/clip`;
 
 // ═══ 1. Library before the migration ═══════════════════════════════════════
 resetAll();
@@ -277,12 +280,14 @@ posts = {
 };
 messagesHandler = () => searchReply([xurl('packers', 11), xurl('NFL', 12)]);
 freeCandidates = () => [
-  // A Bluesky re-upload of the NFL post: same length, same caption -> duplicate.
-  { url: 'https://bsky.app/profile/nflmirror/post/1', platform: 'bluesky', handle: 'nflmirror', postedAt: hAgo(2), text: 'Packers walk-off field goal wins it at Lambeau tonight', mediaUrl: BSKY(1), durationMs: 15000, width: 1280, height: 720, sourceKind: 'fan' },
-  // A different Bluesky clip.
-  { url: 'https://bsky.app/profile/fan/post/2', platform: 'bluesky', handle: 'gbfan', postedAt: hAgo(4), text: 'Packers sideline celebration after the touchdown', mediaUrl: BSKY(2), durationMs: 20000, width: 1080, height: 1920, sourceKind: 'fan', hasAudio: true },
+  // ESPN's copy of the NFL post: same length, same caption -> duplicate.
+  { url: ESPNP(1), platform: 'espn', handle: '', postedAt: hAgo(2), text: 'Packers walk-off field goal wins it at Lambeau tonight', mediaUrl: ESPNM(1), durationMs: 15000, width: 1280, height: 720, sourceKind: 'media' },
+  // A different ESPN clip (a trusted network site).
+  { url: ESPNP(2), platform: 'espn', handle: '', postedAt: hAgo(4), text: 'Packers sideline celebration after the touchdown', mediaUrl: ESPNM(2), durationMs: 20000, width: 1080, height: 1920, sourceKind: 'media', hasAudio: true },
   // No verified time: dropped.
-  { url: 'https://bsky.app/profile/fan/post/3', platform: 'bluesky', handle: 'gbfan', postedAt: null, text: 'Packers', mediaUrl: BSKY(3), durationMs: 20000, width: 1280, height: 720, sourceKind: 'fan' },
+  { url: ESPNP(3), platform: 'espn', handle: '', postedAt: null, text: 'Packers', mediaUrl: ESPNM(3), durationMs: 20000, width: 1280, height: 720, sourceKind: 'media' },
+  // Trusted sources only: a fan's Bluesky upload is dropped before any fetch.
+  { url: 'https://bsky.app/profile/fan/post/5', platform: 'bluesky', handle: 'gbfan', postedAt: hAgo(3), text: 'Packers TD from my seat', mediaUrl: BSKY(5), durationMs: 20000, width: 1080, height: 1920, sourceKind: 'fan' },
   // A host that is not allowed: never fetched.
   { url: 'https://evil.example/post/4', platform: 'web', handle: 'x', postedAt: hAgo(1), text: 'Packers', mediaUrl: 'https://evil.example/a.mp4', durationMs: 20000, width: 1280, height: 720 },
 ];
@@ -295,28 +300,34 @@ assert.equal(sourceCalls[0].opts.team.name, 'Green Bay Packers', 'sources get th
 assert.ok(!mediaChecks.some(c => c.href.includes('evil.example')), 'unknown media hosts are never fetched');
 const urls = res.body.clips.map(c => c.url);
 assert.ok(urls.includes(xurl('packers', 11)) && urls.includes(xurl('packers', 14)) && urls.includes(xurl('NFL', 12)));
-assert.ok(urls.includes('https://bsky.app/profile/fan/post/2'));
-assert.ok(!urls.includes(xurl('fan1', 13)), 'the re-post of the same X video is dropped');
-assert.ok(!urls.includes('https://bsky.app/profile/nflmirror/post/1'), 'the cross-platform re-upload is dropped');
+assert.ok(urls.includes(ESPNP(2)), 'a trusted site clip is kept');
+assert.ok(!urls.includes(xurl('fan1', 13)), 'a fan account re-post is dropped');
+assert.ok(!urls.includes(ESPNP(1)), 'the cross-platform copy is dropped');
+assert.ok(!urls.includes('https://bsky.app/profile/fan/post/5'), 'a fan upload is never a result');
+assert.ok(!mediaChecks.some(c => c.href.includes('bsky.network')), 'untrusted files are never checked');
 assert.ok(urls.includes(xurl('packers', 9001)), 'the library clip is part of the merge');
 assert.equal(res.body.clips[0].sourceKind, 'official', 'official first');
-const bsky = res.body.clips.find(c => c.platform === 'bluesky');
-assert.equal(bsky.sourceKind, 'fan');
-assert.equal(bsky.hasAudio, true);
-assert.equal(bsky.variants[0].url, BSKY(2), 'the browser downloads the MP4 directly');
-assert.ok(res.body.clips.every(c => c.platform && c.sourceKind && c.via));
+const espn = res.body.clips.find(c => c.platform === 'espn');
+assert.equal(espn.sourceKind, 'media');
+assert.equal(espn.trust.label, 'ESPN · network', 'the source is named on the card');
+assert.equal(espn.hasAudio, true);
+assert.equal(espn.variants[0].url, ESPNM(2), 'the browser downloads the MP4 directly');
+assert.ok(res.body.clips.every(c => c.platform && c.sourceKind && c.via && c.trust?.label));
+assert.ok(res.body.clips.every(c => c.sourceKind !== 'fan'), 'no fan clips at all');
 const ds = res.body.diag.sources;
 assert.equal(ds.library, 1);
 assert.equal(ds.web, 2);
-assert.equal(ds.public.found, 4);
-assert.equal(ds.public.kept, 2, 'passed verification (the re-upload is removed later, as a duplicate)');
-assert.equal(ds.grok.kept, 2);
+assert.equal(ds.public.found, 5);
+assert.equal(ds.public.untrusted, 2, 'the fan upload and the unknown host');
+assert.equal(ds.public.kept, 2, 'passed verification (the copy is removed later, as a duplicate)');
+assert.equal(ds.grok.untrusted, 1, 'the fan re-post');
+assert.equal(ds.grok.kept, 1);
 assert.ok(res.body.cost > 0.02 && res.body.cost <= 0.1, `cost ${res.body.cost}`);
 // Written back for everyone, tagged with the team.
 const saved = db.frameup_clip_library.filter(r => r.teams.includes('Green Bay Packers')).map(r => r.url);
 assert.ok(saved.includes(xurl('packers', 11)) && saved.includes(xurl('packers', 14)));
 assert.ok(saved.includes(xurl('NFL', 12)), 'a league clip naming the team is tagged with it');
-assert.equal(db.frameup_clip_library.find(r => r.url === 'https://bsky.app/profile/fan/post/2').platform, 'bluesky');
+assert.equal(db.frameup_clip_library.find(r => r.url === ESPNP(2)).platform, 'espn');
 assert.ok(res.body.diag.librarySaved >= 4);
 
 // ═══ 4. Never empty ════════════════════════════════════════════════════════
@@ -431,13 +442,13 @@ assert.equal((await call({}, { authorization: 'Bearer wrong' })).status, 401);
 assert.equal(C.cronAuthorized({ Authorization: 'Bearer cron-secret-123' }), true);
 assert.equal(C.cronAuthorized({ 'x-cron-secret': 'cron-secret-123' }), true, 'external schedulers may send x-cron-secret');
 assert.equal(C.cronAuthorized({ authorization: 'Bearer cron-secret-1234' }), false);
-assert.equal((await call({ batch: '11' }, { authorization: 'Bearer cron-secret-123' })).status, 400, 'batch out of range');
+assert.equal((await call({ batch: '13' }, { authorization: 'Bearer cron-secret-123' })).status, 400, 'batch out of range');
 
 // 7b. Daily schedule: one vercel.json cron per batch, all daily, before the US morning.
 const vercel = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
 const crons = vercel.crons.filter(c => c.path.startsWith('/api/clips-prefetch'));
 const { batches, maxUsd } = C.settings({});
-assert.equal(batches, 10);
+assert.equal(batches, 12);
 assert.equal(maxUsd, 0.75, 'default daily AI cap');
 assert.equal(C.settings({ CLIPS_PREFETCH_MAX_USD: '0' }).maxUsd, 0, 'a cap of 0 means no AI');
 // One daily cron starts batch 1 and each batch chains the next (Hobby allows 2 crons).
@@ -480,7 +491,7 @@ process.env.CLIPS_PREFETCH_MAX_USD = '0.1';
 trendItems = [{ id: 't1', category: 'nfl', title: 'Chiefs stun Bills in overtime thriller', publishedAt: hAgo(3) }];
 sourceCalls.length = 0;
 let nextId = 700;
-freeCandidates = opts => [{ url: `https://bsky.app/profile/m/post/${nextId += 1}`, platform: 'bluesky', handle: 'mirror', postedAt: hAgo(2), text: `${opts.team?.name || ''} highlight ${nextId}`, mediaUrl: BSKY(nextId), durationMs: 12000, width: 1280, height: 720, sourceKind: 'fan' }];
+freeCandidates = opts => { nextId += 1; return [{ url: ESPNP(nextId), platform: 'espn', handle: '', postedAt: hAgo(2), text: `${opts.team?.name || ''} highlight ${nextId}`, mediaUrl: ESPNM(nextId), durationMs: 12000, width: 1280, height: 720, sourceKind: 'media' }]; };
 paidCandidates = () => [];
 messagesHandler = () => searchReply([], 2, 20000);
 res = await call({ batch: '1' }, { authorization: 'Bearer cron-secret-123' });
@@ -515,11 +526,11 @@ delete process.env.CLIPS_PREFETCH_MAX_USD;
 // 7f. Dead links and purge.
 resetAll();
 await LIB.write([
-  { clip: { url: 'https://bsky.app/profile/a/post/1', platform: 'bluesky', handle: 'a', text: 'Alive', postedAt: hAgo(30), durationMs: 10000, variants: [{ url: BSKY(801), width: 1280, height: 720 }] }, sport: 'nfl', teams: [] },
-  { clip: { url: 'https://bsky.app/profile/a/post/2', platform: 'bluesky', handle: 'a', text: 'Gone', postedAt: hAgo(30), durationMs: 10000, variants: [{ url: BSKY(802), width: 1280, height: 720 }] }, sport: 'nfl', teams: [] },
+  { clip: { url: `${ESPNP(801)}/post/1`, platform: 'espn', handle: '', text: 'Alive', postedAt: hAgo(30), durationMs: 10000, variants: [{ url: ESPNM(801), width: 1280, height: 720 }] }, sport: 'nfl', teams: [] },
+  { clip: { url: `${ESPNP(802)}/post/2`, platform: 'espn', handle: '', text: 'Gone', postedAt: hAgo(30), durationMs: 10000, variants: [{ url: ESPNM(802), width: 1280, height: 720 }] }, sport: 'nfl', teams: [] },
 ]);
 db.frameup_clip_library.forEach(r => { r.last_checked = hAgo(30); });
-db.frameup_clip_library.push({ ...db.frameup_clip_library[0], url: 'https://bsky.app/profile/a/post/old', posted_at: hAgo(200) });
+db.frameup_clip_library.push({ ...db.frameup_clip_library[0], url: `${ESPNP(803)}/post/old`, posted_at: hAgo(200) });
 mediaStatus = href => (href.includes('c802') ? 404 : 200);
 const re = await C.recheckLinks();
 assert.equal(re.dead, 1);
@@ -545,7 +556,7 @@ assert.equal(res.body.config.serviceKey, true);
 assert.equal(res.body.schedule.cron, '0 10 * * *');
 assert.ok(res.body.library.bySport && typeof res.body.library.total === 'number');
 assert.ok(res.body.lastDaily && res.body.lastDaily.batchesRun.includes(3));
-assert.equal(res.body.lastDaily.batchesExpected, 10);
+assert.equal(res.body.lastDaily.batchesExpected, 12);
 assert.ok(Array.isArray(res.body.runs));
 assert.deepEqual(res.body.config.sources.map(s => s.id), ['public', 'grok']);
 

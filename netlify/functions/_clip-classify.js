@@ -33,7 +33,10 @@ const str = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max
 
 // ── Rules ─────────────────────────────────────────────────────────────────
 const NOT_GAME = /\b(podcast|episode|ep\.?\s?\d|full show|the show|on air|live show|livestream|stream(?:ing)? now|press conference|presser|media availability|availability|interview|sits? down with|joins us|joined|speaks? (?:to|with|on|about)|talks?(?: about| with)?|discuss(?:es|ing)?|q&a|ama|mic['’]?d up podcast|reacts?|reaction|breakdown|film (?:room|study)|analysis|preview show|mailbag|tickets?|on sale|giveaway|merch|shop now|presented by|sponsored|schedule (?:release|reveal)|wallpaper|graphic|poster|uniform reveal|meme|caption this|vote now|birthday|happy birthday)\b/i;
-const GAME = /\b(touchdown|td|pick[- ]?six|interception|int\b|sack|fumble|field goal|fg\b|2-?pt|two-point|kick return|punt return|one-handed|catch|grab|run|rushing|scramble|dime|bomb|deep ball|hail mary|walk-?off|home run|homer|hr\b|grand slam|strikeout|struck out|k'?s\b|no-hitter|double play|diving|robbed|steal|rbi|go-ahead|game-winning|game winner|clutch|comeback|highlights?|play of the (?:day|game)|what a (?:play|catch|throw|run|grab|hit)|scores?|scoring|goal line|end zone|celebrat\w*)\b/i;
+const GAME = /\b(touchdown|td|pick[- ]?six|interception|int\b|sack|fumble|field goal|fg\b|2-?pt|two-point|kick return|punt return|one-handed|catch|grab|run|rushing|scramble|dime|bomb|deep ball|hail mary|walk-?off|home run|homer|hr\b|grand slam|strikeout|struck out|k'?s\b|no-hitter|double play|diving|robbed|steal|rbi|go-ahead|game-winning|game winner|clutch|comeback|highlights?|play of the (?:day|game)|what a (?:play|catch|throw|run|grab|hit)|scores?|scoring|goal line|end zone|celebrat\w*|innings?|scoreless|strikeouts?|fans (?:\w+ )?(?:\d+|two|three|four|five|six|seven|eight|nine|ten)|single|double|triple|base hit|pitch(?:es|ing)?|throws?|pass(?:es)?|connects|hauls? in|picked off|picked)\b/i;
+// Added 2026-11-19: baseball and college football play words from MLB.com and
+// ESPN clip titles ("tosses 5 2/3 scoreless innings", "connects for 9-yard TD
+// pass"), which the rules missed when a clip ran past 90 s.
 
 function heuristic(clip = {}) {
   const text = `${clip.text || ''}`;
