@@ -7381,6 +7381,25 @@ body[data-current-page="faq"] .faq-cta-art img {
       background: #FFFFFF;
     }
 
+    /* A tab with no controls for this template says so (QA 2026-11-21:
+       Content on Video FI opened as a blank sheet). */
+    html[data-studio-shell="on"] .mobile-editor-empty:not([hidden]) {
+      display: grid;
+      flex: 0 0 auto;
+      align-content: start;
+      gap: 4px;
+      margin: 0;
+      padding: 32px 16px;
+      color: var(--es-ink-3);
+      font-family: var(--es-font-ui);
+      font-size: 15px;
+      line-height: 1.4;
+      text-align: center;
+    }
+    html[data-studio-shell="on"] .mobile-editor-empty strong { color: var(--es-ink); font-size: 16px; font-weight: 600; }
+    html[data-theme="dark"][data-studio-shell="on"] .mobile-editor-empty strong { color: #FFFFFF; }
+    html[data-studio-shell="on"] body.is-mobile-sheet-open .panel .is-mobile-last { border-bottom-color: transparent !important; }
+
     html[data-studio-shell="on"] .mobile-editor-sheet-grip {
       position: absolute;
       top: 7px;
@@ -7890,7 +7909,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
-<link rel="stylesheet" href="studio-inspector.css?v=20261121-hyg">
+<link rel="stylesheet" href="studio-inspector.css?v=20261121-qa-editor">
 <link rel="stylesheet" href="theme.css?v=20261117-ready1">
 <link rel="stylesheet" href="site-chrome.css?v=20261120-rel2">
 <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
@@ -7900,7 +7919,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 <link rel="stylesheet" href="logo-picker.css?v=20261120-rel2">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
 <link rel="stylesheet" href="frameup-posted.css?v=20261118-rel1">
-<link rel="stylesheet" href="editor-polish.css?v=20261121-hyg">
+<link rel="stylesheet" href="editor-polish.css?v=20261121-qa-editor">
 <link rel="stylesheet" href="frameup-quick-wins.css?v=20261118-rel1">
 <link rel="stylesheet" href="frameup-editor-assist.css?v=20261119-rel3">
 <link rel="stylesheet" href="frameup-home-today.css?v=20261120-rel2">
@@ -24056,6 +24075,40 @@ loadFont().then(() => render());
     });
     const primary = document.querySelector('[data-studio-primary-controls]');
     primary?.classList.toggle('is-mobile-primary-visible', !!primary.querySelector('.is-mobile-tool-visible'));
+    // Measured once the tab's mode has applied (the inspector mode settles a
+    // frame or two later).
+    requestAnimationFrame(() => syncMobileEmptyNote(panelName));
+    setTimeout(() => syncMobileEmptyNote(document.body.dataset.mobileEditorPanel || panelName), 300);
+  }
+
+  // Some templates have nothing for a tab (Video FI has no text): show a short
+  // note instead of a blank sheet.
+  function syncMobileEmptyNote(panelName) {
+    const panel = document.querySelector('.app[data-workspace] > .panel');
+    if (!panel) return;
+    let note = panel.querySelector('[data-mobile-editor-empty]');
+    if (!note) {
+      note = document.createElement('p');
+      note.className = 'mobile-editor-empty';
+      note.dataset.mobileEditorEmpty = 'true';
+      note.setAttribute('role', 'status');
+      note.hidden = true;
+      panel.querySelector('.mobile-editor-sheet-head')?.insertAdjacentElement('afterend', note);
+    }
+    note.hidden = true;
+    if (!document.body.classList.contains('is-mobile-sheet-open') || !mobileSheetQuery.matches) return;
+    const tools = [...panel.querySelectorAll('input:not([type=hidden]), select, textarea, button, img')]
+      .filter(node => !node.closest('.mobile-editor-sheet-head') && node.getClientRects().length > 0);
+    // A divider with nothing under it reads as an empty band: drop the bottom
+    // line of the last block in the sheet.
+    panel.querySelectorAll('.mobile-editor-media-actions, .studio-control-dock').forEach(block => {
+      const follows = tools.some(node => !block.contains(node) && (block.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING));
+      block.classList.toggle('is-mobile-last', !follows);
+    });
+    if (tools.length) return;
+    const label = (mobileEditorPanels[panelName] || mobileEditorPanels.content).label;
+    note.innerHTML = `<strong>No ${label.toLowerCase()} settings for this template</strong><span>Try another tab below.</span>`;
+    note.hidden = false;
   }
 
   function syncMobileEditorMeta() {
@@ -24631,8 +24684,8 @@ loadFont().then(() => render());
 <script src="es-guidelines.js?v=20261121-rel"></script>
 <script src="frameup-editor-assist.js?v=20261119-rel3"></script>
 <!-- Editor UI styles load here, after first paint: they only style what frameup-editor-ui.js adds. -->
-<link rel="stylesheet" href="frameup-editor-ui.css?v=20261120-rel4">
-<script src="frameup-editor-ui.js?v=20261120-rel4"></script>
+<link rel="stylesheet" href="frameup-editor-ui.css?v=20261121-qa-editor">
+<script src="frameup-editor-ui.js?v=20261121-qa-editor"></script>
 <script src="frameup-inspector.js?v=20261121-hyg4" defer></script>
 </body>
 </html>

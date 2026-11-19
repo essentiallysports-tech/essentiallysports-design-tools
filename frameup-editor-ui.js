@@ -350,7 +350,11 @@
       if (layer.id === 'pills') {
         const palette = st.pillPalette || {};
         const bg = palette.background || palette.bg || palette.pill || '#0A0A0A';
-        const fg = palette.foreground || palette.text || '#FFFFFF';
+        // The editor's own text colour for this pair (a pair may carry no
+        // foreground; white on a white pill read as an empty square).
+        let fg = '';
+        try { fg = call('getTextColorForPair', palette, call('getBrandEntry', st.sport, st.team)) || ''; } catch (error) { fg = ''; }
+        fg = fg || palette.foreground || palette.text || '#FFFFFF';
         return `<span class="fu-layer-swatch" style="background:${esc(bg)};color:${esc(fg)}" aria-hidden="true">Aa</span>`;
       }
       return '';
