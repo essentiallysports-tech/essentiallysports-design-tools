@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FrameUp explainer encoder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Condensed:wght@600;700;800&display=block" rel="stylesheet">
+<style>html,body{margin:0;background:#0B1220}canvas{display:block}</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+// The encoder: plays a recorded timeline (screencast frames, cursor track,
+// clicks, captions, voice lines) in real time onto a 1920x1080 canvas and
+// records it with MediaRecorder (H.264 + AAC in an MP4). Also draws the poster,
+// and makes contact sheets / stills from a finished MP4.
+const W = 1920, H = 1080;
+const APP = { x: 240, y: 36, w: 1440, h: 900, r: 14 };
+const BLUE = '#0A7DFA', BLUE_FILL = '#0A6FDE', INK = '#0B1220';
+const cv = document.getElementById('c');
+const g = cv.getContext('2d');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let LOGO = null;
+
+async function loadImage(src) { const i = new Image(); i.src = src; await i.decode(); return i; }
+async function ready() {
+  await Promise.all(['400 30px Roboto', '500 30px Roboto', '700 30px Roboto', '700 60px "Roboto Condensed"', '800 60px "Roboto Condensed"', '600 30px "Roboto Condensed"'].map(f => document.fonts.load(f)));
+  LOGO = await loadImage('/brand-logo-white.svg');
+}
+
+// ── Drawing helpers ─────────────────────────────────────────────────────────
+function rr(x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
+function background() {
+  const gr = g.createLinearGradient(0, 0, W, H);
+  gr.addColorStop(0, '#0A1A33'); gr.addColorStop(1, '#06101F');
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  const glow = g.createRadialGradient(360, 120, 0, 360, 120, 1100);
+  glow.addColorStop(0, 'rgba(10,125,250,0.22)'); glow.addColorStop(1, 'rgba(10,125,250,0)');
+  g.fillStyle = glow; g.fillRect(0, 0, W, H);
+}
+function appFrame(img) {
+  g.save();
+  g.shadowColor = 'rgba(0,0,0,0.45)'; g.shadowBlur = 48; g.shadowOffsetY = 18;
+  rr(APP.x, APP.y, APP.w, APP.h, APP.r); g.fillStyle = '#fff'; g.fill();
+  g.restore();
+  if (img) { g.save(); rr(APP.x, APP.y, APP.w, APP.h, APP.r); g.clip(); g.drawImage(img, APP.x, APP.y, APP.w, APP.h); g.restore(); }
+  g.save(); rr(APP.x + 0.5, APP.y + 0.5, APP.w - 1, APP.h - 1, APP.r); g.strokeStyle = 'rgba(255,255,255,0.10)'; g.lineWidth = 1; g.stroke(); g.restore();
+}
+function logo(x, y, w, alpha = 1) { if (!LOGO) return; const h = w * LOGO.height / LOGO.width; g.save(); g.globalAlpha = alpha; g.drawImage(LOGO, x, y, w, h); g.restore(); return h; }
+function footer() {
+  logo(APP.x, 993, 168, 0.95);
+}
+function wrapLines(text, maxW) {
+  const words = text.split(/\s+/); const lines = []; let cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; }
+  if (cur) lines.push(cur);
+  return lines;
+}
+function caption(text, n, age) {
+  if (!text) return;
+  const k = Math.min(1, age / 0.26); const e = 1 - Math.pow(1 - k, 3);
+  g.save();
+  g.globalAlpha = e;
+  g.font = '500 30px Roboto';
+  const maxText = 940;
+  let lines = wrapLines(text, maxText);
+  const textW = Math.max(...lines.map(l => g.measureText(l).width));
+  const padL = 84, padR = 34, lh = 40;
+  const bw = Math.ceil(textW + padL + padR), bh = 32 + lines.length * lh;
+  const cx = W / 2, by = 1008 - bh / 2 + (1 - e) * 10;
+  const bx = cx - bw / 2;
+  g.shadowColor = 'rgba(0,0,0,0.35)'; g.shadowBlur = 24; g.shadowOffsetY = 6;
+  rr(bx, by, bw, bh, 18); g.fillStyle = 'rgba(16,20,28,0.94)'; g.fill();
+  g.shadowColor = 'transparent';
+  g.strokeStyle = 'rgba(255,255,255,0.10)'; g.lineWidth = 1; rr(bx + 0.5, by + 0.5, bw - 1, bh - 1, 18); g.stroke();
+  // Step badge: ES blue square with the step number.
+  rr(bx + 18, by + bh / 2 - 22, 44, 44, 10); g.fillStyle = BLUE_FILL; g.fill();
+  g.fillStyle = '#fff'; g.font = '800 26px "Roboto Condensed"'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(String(n), bx + 40, by + bh / 2 + 1);
+  g.textAlign = 'left'; g.font = '500 30px Roboto'; g.fillStyle = '#fff';
+  lines.forEach((l, i) => g.fillText(l, bx + padL, by + 16 + lh / 2 + i * lh + 1));
+  g.restore();
+}
+function cursor(x, y, press) {
+  const s = 1.18 * (1 - press * 0.12);
+  g.save();
+  g.translate(APP.x + x, APP.y + y); g.scale(s, s);
+  g.shadowColor = 'rgba(0,0,0,0.35)'; g.shadowBlur = 6; g.shadowOffsetY = 2;
+  g.beginPath();
+  g.moveTo(0, 0); g.lineTo(0, 21); g.lineTo(5.2, 16.2); g.lineTo(8.6, 24); g.lineTo(12, 22.6); g.lineTo(8.7, 15); g.lineTo(15.4, 15); g.closePath();
+  g.fillStyle = '#111'; g.fill();
+  g.shadowColor = 'transparent';
+  g.lineWidth = 1.6; g.strokeStyle = '#fff'; g.lineJoin = 'round'; g.stroke();
+  g.restore();
+}
+function ripple(x, y, age) {
+  const k = age / 0.5; if (k < 0 || k > 1) return;
+  const e = 1 - Math.pow(1 - k, 2);
+  g.save();
+  g.beginPath(); g.arc(APP.x + x, APP.y + y, 8 + e * 30, 0, Math.PI * 2);
+  g.fillStyle = `rgba(10,125,250,${0.28 * (1 - k)})`; g.fill();
+  g.lineWidth = 2.5; g.strokeStyle = `rgba(10,125,250,${0.85 * (1 - k)})`; g.stroke();
+  g.restore();
+}
+function titleCard(m, img, alpha, kind) {
+  g.save();
+  g.globalAlpha = alpha;
+  background();
+  if (img) { g.save(); g.globalAlpha = alpha * 0.22; g.filter = 'blur(14px)'; g.drawImage(img, APP.x, APP.y, APP.w, APP.h); g.restore(); }
+  const shade = g.createLinearGradient(0, 0, 0, H); shade.addColorStop(0, 'rgba(6,16,31,0.55)'); shade.addColorStop(1, 'rgba(6,16,31,0.92)');
+  g.fillStyle = shade; g.fillRect(0, 0, W, H);
+  const left = 200;
+  logo(left, 150, 260);
+  g.textBaseline = 'alphabetic';
+  if (kind === 'title') {
+    g.font = '700 30px "Roboto Condensed"'; g.fillStyle = '#7CB8FF'; g.letterSpacing = '6px';
+    g.fillText('FRAMEUP  ·  HOW TO USE', left, 420);
+    g.letterSpacing = '0px';
+    g.font = '800 168px "Roboto Condensed"';
+    const name = m.title.toUpperCase();
+    const tw = g.measureText(name).width;
+    rr(left - 24, 452, tw + 48, 182, 6); g.fillStyle = BLUE_FILL; g.fill();
+    g.fillStyle = '#fff'; g.fillText(name, left, 604);
+    g.font = '400 44px Roboto'; g.fillStyle = '#E3ECF8';
+    wrapLines(m.tagline, 1300).forEach((l, i) => g.fillText(l, left, 726 + i * 58));
+    g.font = '500 26px Roboto'; g.fillStyle = 'rgba(227,236,248,0.6)';
+    g.fillText(`${Math.round(m.totalSec)} second walkthrough`, left, 920);
+  } else {
+    g.font = '700 30px "Roboto Condensed"'; g.fillStyle = '#7CB8FF'; g.letterSpacing = '6px';
+    g.fillText(`THAT'S ${m.title.toUpperCase()}`, left, 420);
+    g.letterSpacing = '0px';
+    g.font = '800 120px "Roboto Condensed"'; g.fillStyle = '#fff';
+    g.fillText('TRY IT NOW', left, 560);
+    g.font = '700 64px "Roboto Condensed"';
+    const url = 'frameup.essentiallysports.com';
+    const tw = g.measureText(url).width;
+    rr(left - 20, 610, tw + 40, 96, 6); g.fillStyle = BLUE_FILL; g.fill();
+    g.fillStyle = '#fff'; g.fillText(url, left, 680);
+    g.font = '400 36px Roboto'; g.fillStyle = '#E3ECF8';
+    g.fillText(m.endLine || `Open ${m.title} from the FrameUp sidebar.`, left, 800);
+  }
+  g.restore();
+}
+
+// ── Frames ──────────────────────────────────────────────────────────────────
+function makeFrames(m) {
+  const frames = m.frames; const cache = new Map(); const loading = new Set();
+  const at = t => { let lo = 0, hi = frames.length - 1, ans = 0; while (lo <= hi) { const mid = (lo + hi) >> 1; if (frames[mid].t <= t) { ans = mid; lo = mid + 1; } else hi = mid - 1; } return ans; };
+  async function load(i) {
+    if (cache.has(i) || loading.has(i) || i < 0 || i >= frames.length) return;
+    loading.add(i);
+    try { const b = await (await fetch(m.frameBase + frames[i].f)).blob(); cache.set(i, await createImageBitmap(b)); } catch {}
+    loading.delete(i);
+  }
+  let last = null;
+  return {
+    async preload(tMs, aheadMs = 2500) { const a = at(tMs); const jobs = []; for (let i = a; i < frames.length && frames[i].t <= tMs + aheadMs; i++) jobs.push(load(i)); jobs.push(load(a)); await Promise.all(jobs); },
+    get(tMs) {
+      const i = at(tMs);
+      for (let j = i; j < frames.length && frames[j].t <= tMs + 2500; j++) if (!cache.has(j)) load(j);
+      for (const k of cache.keys()) if (k < i - 2) { cache.get(k).close?.(); cache.delete(k); }
+      if (cache.has(i)) last = cache.get(i);
+      return last;
+    },
+  };
+}
+function cursorAt(track, t) {
+  if (!track.length) return null;
+  let lo = 0, hi = track.length - 1;
+  if (t <= track[0].t) return track[0];
+  if (t >= track[hi].t) return track[hi];
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (track[mid].t <= t) lo = mid; else hi = mid; }
+  const a = track[lo], b = track[hi]; const k = (t - a.t) / Math.max(1, b.t - a.t);
+  return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+}
+
+// One frame of the explainer at time t (seconds).
+function drawAt(m, F, t) {
+  const T1 = m.titleSec, T2 = m.titleSec + m.duration / 1000, T3 = T2 + m.endSec;
+  const appT = Math.min(Math.max(0, (t - T1) * 1000), m.duration);
+  const img = F.get(appT);
+  background();
+  appFrame(img);
+  if (t >= T1 - 0.6 && t < T2 + 0.6) {
+    const p = cursorAt(m.track, appT);
+    if (p) {
+      const c = m.clicks.filter(c => appT >= c.t && appT - c.t < 500);
+      c.forEach(c => ripple(c.x, c.y, (appT - c.t) / 1000));
+      const press = m.clicks.some(c => Math.abs(appT - c.t - 60) < 90) ? 1 : 0;
+      cursor(p.x, p.y, press);
+    }
+  }
+  footer(m);
+  // Captions
+  let ci = -1; for (let i = 0; i < m.captions.length; i++) if (appT >= m.captions[i].t) ci = i;
+  if (ci >= 0 && t >= T1 && t < T2) {
+    const c = m.captions[ci];
+    const next = m.captions[ci + 1];
+    const end = next ? next.t : m.duration;
+    const age = (appT - c.t) / 1000;
+    const outK = Math.min(1, (end - appT) / 180);
+    g.save(); g.globalAlpha = Math.max(0, outK); caption(c.text, ci + 1, age); g.restore();
+  }
+  if (t < T1) titleCard(m, img, t < T1 - 0.55 ? 1 : (T1 - t) / 0.55, 'title');
+  if (t >= T2) titleCard(m, img, Math.min(1, (t - T2) / 0.55), 'end');
+  return t < T3;
+}
+
+// The voice track: every line placed at its time, rendered offline.
+async function voiceTrack(m) {
+  const total = m.titleSec + m.duration / 1000 + m.endSec;
+  const rate = 48000;
+  const off = new OfflineAudioContext(2, Math.ceil(total * rate), rate);
+  const lines = [...(m.extraVoice || []), ...m.captions.map(c => ({ voice: c.voice, at: m.titleSec + c.t / 1000 }))];
+  for (const l of lines) {
+    const buf = await off.decodeAudioData(await (await fetch(m.voiceBase + l.voice)).arrayBuffer());
+    const src = off.createBufferSource(); src.buffer = buf;
+    const gain = off.createGain(); gain.gain.value = 0.95;
+    src.connect(gain).connect(off.destination); src.start(l.at);
+  }
+  return off.startRendering();
+}
+
+async function upload(url, blob) { const r = await fetch(url, { method: 'POST', body: blob }); if (!r.ok) throw new Error('upload failed ' + r.status); }
+
+window.renderVideo = async (m) => {
+  await ready();
+  const F = makeFrames(m);
+  await F.preload(0, 3000);
+  const total = m.titleSec + m.duration / 1000 + m.endSec;
+  const stream = cv.captureStream(30);
+  let ac = null, src = null;
+  if (m.audio) {
+    const buf = await voiceTrack(m);
+    ac = new AudioContext({ sampleRate: 48000 }); await ac.resume();
+    src = ac.createBufferSource(); src.buffer = buf;
+    const dest = ac.createMediaStreamDestination(); src.connect(dest);
+    stream.addTrack(dest.stream.getAudioTracks()[0]);
+  }
+  const mime = m.audio ? 'video/mp4;codecs=avc1.640028,mp4a.40.2' : 'video/mp4;codecs=avc1.640028';
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 9_000_000, audioBitsPerSecond: 160_000 });
+  const chunks = []; rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  drawAt(m, F, 0);
+  rec.start(1000);
+  const t0 = performance.now() + 50;
+  if (src) src.start(ac.currentTime + 0.05);
+  let late = 0, drawn = 0;
+  await new Promise(res => {
+    const tick = () => {
+      const t = (performance.now() - t0) / 1000;
+      if (t >= 0) { drawAt(m, F, t); drawn++; }
+      if (t < total) requestAnimationFrame(tick); else res();
+    };
+    requestAnimationFrame(tick);
+  });
+  const stopped = new Promise(r => { rec.onstop = r; });
+  rec.stop(); await stopped;
+  if (src) src.stop();
+  const blob = new Blob(chunks, { type: 'video/mp4' });
+  await upload(m.uploadUrl, blob);
+  return { bytes: blob.size, drawn, seconds: total, fps: drawn / total };
+};
+
+window.renderPoster = async (m, atSec, url) => {
+  await ready();
+  const F = makeFrames(m);
+  const appT = Math.max(0, (atSec - m.titleSec) * 1000);
+  await F.preload(appT, 0); await F.preload(0, 0);
+  // Poster: the title card over a crisp frame from the walkthrough.
+  const img = F.get(appT);
+  background(); appFrame(img);
+  g.save(); g.globalAlpha = 1;
+  const shade = g.createLinearGradient(0, 0, W * 0.75, 0); shade.addColorStop(0, 'rgba(6,16,31,0.96)'); shade.addColorStop(0.55, 'rgba(6,16,31,0.82)'); shade.addColorStop(1, 'rgba(6,16,31,0.15)');
+  g.fillStyle = shade; g.fillRect(0, 0, W, H);
+  g.restore();
+  const left = 160;
+  logo(left, 150, 240);
+  g.font = '700 30px "Roboto Condensed"'; g.fillStyle = '#7CB8FF'; g.letterSpacing = '6px'; g.fillText('FRAMEUP  ·  HOW TO USE', left, 420); g.letterSpacing = '0px';
+  g.font = '800 160px "Roboto Condensed"'; const name = m.title.toUpperCase(); const tw = g.measureText(name).width;
+  rr(left - 24, 452, tw + 48, 176, 6); g.fillStyle = BLUE_FILL; g.fill(); g.fillStyle = '#fff'; g.fillText(name, left, 598);
+  g.font = '400 42px Roboto'; g.fillStyle = '#E3ECF8'; wrapLines(m.tagline, 900).forEach((l, i) => g.fillText(l, left, 716 + i * 56));
+  // Play button
+  g.beginPath(); g.arc(left + 44, 920, 44, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill();
+  g.beginPath(); g.moveTo(left + 32, 896); g.lineTo(left + 32, 944); g.lineTo(left + 70, 920); g.closePath(); g.fillStyle = BLUE_FILL; g.fill();
+  g.font = '500 30px Roboto'; g.fillStyle = '#fff'; g.fillText(`Watch the ${Math.round(m.totalSec)}-second walkthrough`, left + 112, 931);
+  const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+  await upload(url, blob);
+  return blob.size;
+};
+
+// Stills from a finished MP4: a contact sheet (cols x rows) and, optionally,
+// one JPEG every `every` seconds for frame-by-frame review.
+window.inspect = async ({ src, cols = 4, rows = 5, sheetUrl, every = 0, stillUrl = '' }) => {
+  await ready();
+  const v = document.createElement('video'); v.muted = true; v.src = URL.createObjectURL(await (await fetch(src)).blob()); v.preload = 'auto';
+  await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('video failed to load')); });
+  const dur = v.duration;
+  const seek = t => new Promise(r => { v.onseeked = () => r(); v.currentTime = Math.min(dur - 0.05, t); });
+  const n = cols * rows; const cw = 480, ch = 270, pad = 16, head = 96;
+  const sheet = document.createElement('canvas'); sheet.width = cols * cw + (cols + 1) * pad; sheet.height = head + rows * (ch + 34) + pad;
+  const s = sheet.getContext('2d');
+  s.fillStyle = INK; s.fillRect(0, 0, sheet.width, sheet.height);
+  s.fillStyle = '#fff'; s.font = '800 40px "Roboto Condensed"'; s.fillText(`${window.__sheetTitle || 'Explainer'} · contact sheet`, pad, 58);
+  s.font = '400 22px Roboto'; s.fillStyle = 'rgba(255,255,255,0.7)'; s.fillText(`${dur.toFixed(1)} s · 1920×1080 · one still every ${(dur / n).toFixed(1)} s`, pad, 86);
+  for (let i = 0; i < n; i++) {
+    const t = (i + 0.5) * dur / n; await seek(t);
+    const x = pad + (i % cols) * (cw + pad), y = head + Math.floor(i / cols) * (ch + 34);
+    s.drawImage(v, x, y, cw, ch);
+    s.fillStyle = 'rgba(255,255,255,0.75)'; s.font = '500 18px Roboto'; s.fillText(`${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`, x, y + ch + 24);
+  }
+  await upload(sheetUrl, await new Promise(r => sheet.toBlob(r, 'image/png')));
+  let stills = 0;
+  if (every > 0) {
+    const c = document.createElement('canvas'); c.width = 960; c.height = 540; const x = c.getContext('2d');
+    for (let t = 0.2; t < dur; t += every) {
+      await seek(t); x.drawImage(v, 0, 0, 960, 540);
+      await upload(stillUrl + `&name=still-${String(Math.round(t * 10)).padStart(5, '0')}.jpg`, await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85)));
+      stills++;
+    }
+  }
+  return { dur, stills, w: v.videoWidth, h: v.videoHeight };
+};
+
+// A neutral stand-in clip for the stubbed clip sources: a night stadium with
+// floodlights, a twinkling crowd and a slow camera pan over the field. No real
+// footage is used (the demo has no rights-cleared game clips offline).
+window.makeBroll = async ({ seconds = 8, url, thumbUrl }) => {
+  const c = document.createElement('canvas'); c.width = 1280; c.height = 720; const x = c.getContext('2d');
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const crowd = Array.from({ length: 900 }, () => ({ x: rnd() * 1800 - 260, y: 150 + rnd() * 170, p: rnd() * 6.28, s: 0.6 + rnd() * 1.6, f: rnd() < 0.04 }));
+  const lights = [[-120, 70], [260, 52], [760, 48], [1180, 60], [1500, 74]];
+  const draw = t => {
+    const pan = -t * 34, zoom = 1 + t * 0.012;
+    x.save(); x.translate(640, 360); x.scale(zoom, zoom); x.translate(-640 + pan * 0.35, -360);
+    const sky = x.createLinearGradient(0, 0, 0, 330); sky.addColorStop(0, '#060B16'); sky.addColorStop(1, '#14223A');
+    x.fillStyle = sky; x.fillRect(-400, -100, 2200, 440);
+    // stands
+    const st = x.createLinearGradient(0, 130, 0, 330); st.addColorStop(0, '#0E1626'); st.addColorStop(1, '#1D2A40');
+    x.fillStyle = st; x.fillRect(-400, 130, 2200, 200);
+    for (const d of crowd) { const a = d.f ? (Math.sin(t * 9 + d.p) > 0.92 ? 1 : 0.15) : 0.25 + 0.2 * Math.sin(t * 2 + d.p); x.fillStyle = d.f ? `rgba(255,255,255,${a})` : `rgba(${150 + d.s * 40},${160 + d.s * 30},${190},${a})`; x.fillRect(d.x, d.y, d.s, d.s); }
+    // floodlights
+    for (const [lx, ly] of lights) {
+      const gl = x.createRadialGradient(lx, ly, 0, lx, ly, 260); gl.addColorStop(0, 'rgba(255,250,235,0.55)'); gl.addColorStop(0.25, 'rgba(210,225,255,0.16)'); gl.addColorStop(1, 'rgba(200,220,255,0)');
+      x.fillStyle = gl; x.fillRect(lx - 260, ly - 260, 520, 520);
+      x.fillStyle = '#FFFDF4'; for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) x.fillRect(lx - 30 + i * 16, ly - 8 + j * 12, 11, 8);
+    }
+    x.restore();
+    // field (perspective, pans with the camera)
+    const fy = 318;
+    const fg = x.createLinearGradient(0, fy, 0, 720); fg.addColorStop(0, '#1F5A2E'); fg.addColorStop(1, '#2F7D3E');
+    x.fillStyle = fg; x.fillRect(0, fy, 1280, 720 - fy);
+    for (let k = 0; k < 14; k++) { x.fillStyle = k % 2 ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.04)'; x.beginPath(); const off = ((pan * 1.4) % 240 + 240) % 240; const a = -1200 + k * 240 + off; x.moveTo(640 + (a - 640) * 0.18, fy); x.lineTo(640 + (a + 240 - 640) * 0.18, fy); x.lineTo(a + 240, 720); x.lineTo(a, 720); x.fill(); }
+    x.strokeStyle = 'rgba(255,255,255,0.75)'; x.lineWidth = 3;
+    for (let k = -6; k < 8; k++) { const off = ((pan * 1.4) % 240 + 240) % 240; const a = k * 240 + off; x.beginPath(); x.moveTo(640 + (a - 640) * 0.18, fy); x.lineTo(a, 720); x.stroke(); }
+    x.beginPath(); x.moveTo(0, fy + 70); x.lineTo(1280, fy + 70); x.strokeStyle = 'rgba(255,255,255,0.35)'; x.lineWidth = 2; x.stroke();
+    // haze + vignette
+    const hz = x.createLinearGradient(0, 260, 0, 420); hz.addColorStop(0, 'rgba(180,200,230,0)'); hz.addColorStop(0.5, 'rgba(180,200,230,0.10)'); hz.addColorStop(1, 'rgba(180,200,230,0)'); x.fillStyle = hz; x.fillRect(0, 260, 1280, 160);
+    const vg = x.createRadialGradient(640, 360, 300, 640, 360, 820); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)'); x.fillStyle = vg; x.fillRect(0, 0, 1280, 720);
+  };
+  for (const [i, t] of [[0, 1], [1, 3.5], [2, 6.5]]) { draw(t); await upload(thumbUrl + `&name=broll-thumb-${i}.webp`, await new Promise(r => c.toBlob(r, 'image/webp', 0.86))); }
+  const rec = new MediaRecorder(c.captureStream(30), { mimeType: 'video/mp4;codecs=avc1.640028', videoBitsPerSecond: 5_000_000 });
+  const chunks = []; rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.start(500); const t0 = performance.now();
+  await new Promise(res => { const tick = () => { const t = (performance.now() - t0) / 1000; draw(t); if (t < seconds) requestAnimationFrame(tick); else res(); }; tick(); });
+  const done = new Promise(r => { rec.onstop = r; }); rec.stop(); await done;
+  await upload(url, new Blob(chunks, { type: 'video/mp4' }));
+  return true;
+};
+</script>
+</body>
+</html>
