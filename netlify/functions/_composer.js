@@ -360,7 +360,9 @@ function readCreative(brief, found = {}, tools = {}) {
       if (!teams.some(t => t.id === entry.id)) teams.push({ name: entry.short || name, full: entry.name, kind: 'team', logo: entry.file || entry.url || '', colors: entry.colors || [], id: entry.id, kit: kit || '' });
       return;
     }
-    if (/^[A-Z][A-Za-z'.-]+(?:\s+[A-Z][A-Za-z'.-]+){1,2}$/.test(name) && !/^[A-Z]{2,}\b/.test(name) && !/\b(?:Tour|League|Night|Football|Conference|North|South|East|West|Thanksgiving|Championships?|School|Academy|Arena|Stadium|Park|Center|Centre|Cup|Open|Series|Prix|Bowl|Classic|Masters|Games|Finals?|Playoffs?|Institute|University|College|Club|Award|Trophy|Week|Day)\b/.test(name)) people.push(name);
+    if (/^[A-Z][A-Za-z'.-]+(?:\s+[A-Z][A-Za-z'.-]+){1,2}$/.test(name) && !/^[A-Z]{2,}\b/.test(name) && !/\b(?:Tour|League|Night|Football|Conference|North|South|East|West|Thanksgiving|Championships?|School|Academy|Arena|Stadium|Park|Center|Centre|Cup|Open|Series|Prix|Bowl|Classic|Masters|Games|Finals?|Playoffs?|Institute|University|College|Club|Award|Trophy|Week|Day)\b/.test(name)
+      // gen5: "the Connecticut Sun" is a team the logo library does not know, never a person.
+      && !new RegExp(`\\bthe ${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(text)) people.push(name);
   });
   (typeof tools.nameCandidates === 'function' ? tools.nameCandidates(text) : []).forEach(n => { if (!people.includes(n) && !teams.some(t => t.name === n || t.full === n)) people.push(n); });
   const mentions = (text, name) => Boolean(name) && new RegExp(`(?:^|[^A-Za-z])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z])`).test(text);
@@ -436,11 +438,16 @@ function procArtFor(text, sport) {
 // (/api/es-image-search?image=<ES CDN url>); the key is the proxied image's,
 // never "es-image-search" (every ES photo collapsed into one, so a run had
 // one usable photo and fell back to type-only designs or fewer designs).
+// gen5: the same agency frame under another file name (imago1083443391h.jpg,
+// imago1083443391-1536x1024.jpg, USATSI_27252598_168414837_lowres.jpg) is one photo.
 function photoKey(url) {
   let raw = String(url || '');
   const proxied = raw.match(/[?&]image=([^&]+)/);
   if (proxied) { try { raw = decodeURIComponent(proxied[1]); } catch (error) { raw = proxied[1]; } }
-  return raw.toLowerCase().split('?')[0].replace(/^.*\//, '')
+  const file = raw.toLowerCase().split('?')[0].replace(/^.*\//, '');
+  const agency = file.match(/(usatsi|imago|imagn|reuters|getty(?:images)?|afp)[_-]?(\d{6,})/);
+  if (agency) return `${agency[1] === 'imagn' ? 'usatsi' : agency[1].replace(/images$/, '')}-${agency[2]}`;
+  return file
     .replace(/-e\d{6,}/g, '').replace(/-\d{2,4}x\d{2,4}/g, '').replace(/-scaled/g, '').replace(/\.(?:jpe?g|png|webp)(?:\.(?:jpe?g|png|webp))?$/, '');
 }
 function dedupePhotos(list = []) {
@@ -454,7 +461,7 @@ function dedupePhotos(list = []) {
 }
 
 // Time budget for one subject's imagery (ms). Override: GENERATE_PHOTO_BUDGET_MS.
-const PHOTO_BUDGET_MS = Math.max(4000, Number(process.env.GENERATE_PHOTO_BUDGET_MS) || 20000);
+const PHOTO_BUDGET_MS = Math.max(4000, Number(process.env.GENERATE_PHOTO_BUDGET_MS) || 26000);
 const BUDGET_HIT = Symbol('budget');
 function withBudget(promise, ms) {
   let timer;
@@ -470,6 +477,29 @@ function withBudget(promise, ms) {
 // imagery for backgrounds and split screens; never cut out as a person).
 // extras (optional, filled in place): cut-outs, headshots and logos the asset
 // service (gen-imagery) returned with the photos, in the shared input shape.
+// gen5: what the right-person check needs to know from the brief: its teams
+// (the person's team is the one the photo captions agree on; the others are
+// opponents) and the other people it names (never labelled as this person).
+function photoFactsFor(read, name) {
+  const isTeam = read.teams.some(t => t.name === name);
+  if (isTeam) return { teams: [], others: read.people.slice(0, 6) };
+  return {
+    teams: read.teams.filter(t => t.kind === 'team').map(t => t.full || t.name).slice(0, 4),
+    others: read.people.filter(p => p !== name).slice(0, 6),
+  };
+}
+const VERIFY = require('./_photo-verify.js');
+// The quick local ES search (no captions): only a headline that leads with the person counts.
+function verifiedLocal(list, person, isTeam) {
+  return (list || []).filter(Boolean).map(p => {
+    const photo = { src: p.url || p.src, title: p.title || '', person, source: 'es' };
+    // A team: a headline that opens with the team ("Eagles host Cowboys...", "Eagles' Jalen Hurts...").
+    if (isTeam) return new RegExp(`^\\W*${person.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(photo.title) ? { ...photo, verified: true, verifiedBy: 'title', main: true, kind: '' } : null;
+    const ev = VERIFY.evidence({ title: photo.title, caption: '', sourceUrl: p.sourceUrl || photo.src, source: 'es-article' }, { name: person, kind: 'person' });
+    return ev.named && ev.lead === 'subject' && !ev.others.length ? { ...photo, verified: true, verifiedBy: 'title', main: true, kind: VERIFY.OFF_FIELD.test(photo.title) ? 'offfield' : '' } : null;
+  }).filter(Boolean);
+}
+
 async function resolvePhotos(read, { localFind = null, track = null, extras = null } = {}) {
   const out = {};
   const service = assetService();
@@ -487,12 +517,16 @@ async function resolvePhotos(read, { localFind = null, track = null, extras = nu
         // vision call must never push the whole Creative run past the function
         // limit (live: es-generate 504s after imagery v3). On timeout the quick
         // local ES search below serves that subject instead.
-        const res = await withBudget(service.findPhotos({ ...(isTeam ? { team: person, query: person } : { person }), sport: read.sport, count: 6, track }), PHOTO_BUDGET_MS);
+        // A team by its full name ("Inter Miami CF", not "Miami": that is also a college).
+        const full = isTeam ? (read.teams.find(t => t.name === person)?.full || person) : '';
+        const res = await withBudget(service.findPhotos({ ...(isTeam ? { team: full, query: full } : { person }), ...photoFactsFor(read, person), sport: read.sport, count: 6, track }), PHOTO_BUDGET_MS);
         if (res === BUDGET_HIT) throw Object.assign(new Error('imagery over budget'), { budget: true });
         // Ranked by the service (score); kind / size / focus kept for the director and the renderer.
         const raw = (res?.photos || res?.candidates || (Array.isArray(res) ? res : [])).filter(p => p && (p.url || p.src));
         raw.sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
-        list = raw.map(p => ({ src: p.url || p.src, title: p.title || '', person, source: p.source || 'es', ...photoMeta({ ...p, person }), ...(p.cutout || p.cutoutUrl ? { cutoutSrc: p.cutout?.url || p.cutout || p.cutoutUrl } : {}) }));
+        // gen5: only photos the service verified (an older service without the check: its list as is).
+        const checked = raw.some(p => p.verified != null);
+        list = raw.filter(p => !checked || p.verified).map(p => ({ src: p.url || p.src, title: p.title || '', person, source: p.source || 'es', ...photoMeta({ ...p, person, kind: p.shot || p.detail || p.kind }), ...(p.cutout || p.cutoutUrl ? { cutoutSrc: p.cutout?.url || p.cutout || p.cutoutUrl } : {}) }));
         if (extras && !Array.isArray(res)) {
           (res?.cutouts || []).forEach(c => { if (c?.url && c.fromPhoto) extras.cutouts[c.fromPhoto] = c.url; });
           (res?.headshots || []).forEach(h => { if (h?.url && !extras.headshots.some(x => x.url === h.url)) extras.headshots.push({ url: h.url, person: h.person || person, ...(h.team ? { team: h.team } : {}) }); });
@@ -500,12 +534,12 @@ async function resolvePhotos(read, { localFind = null, track = null, extras = nu
         }
         list.forEach(p => { if (extras && p.cutoutSrc) extras.cutouts[p.src] = p.cutoutSrc; });
       } else if (localFind) {
-        list = (await localFind(person)).map(p => ({ src: p.url || p.src, title: p.title || '', person, source: 'es' }));
+        list = verifiedLocal(await localFind(person), person, isTeam);
       }
     } catch (error) {
       list = [];
       if (error?.budget && localFind) {
-        try { list = ((await withBudget(localFind(person), 8000)) || []).filter?.(Boolean).map(p => ({ src: p.url || p.src, title: p.title || '', person, source: 'es' })) || []; } catch (e) { list = []; }
+        try { const found = await withBudget(localFind(person), 8000); list = Array.isArray(found) ? verifiedLocal(found, person, isTeam) : []; } catch (e) { list = []; }
       }
     }
     return dedupePhotos(list.filter(p => p.src)).slice(0, 5).map(p => ({ ...p, team: isTeam }));
@@ -570,7 +604,7 @@ function beforeNumbers(text, facts = []) {
 }
 
 // Photo metadata from the asset service (gen-imagery), when it gave any.
-const photoMeta = p => Object.fromEntries(['width', 'height', 'person', 'kind', 'score', 'source', 'rights'].filter(k => p?.[k] != null && p[k] !== '').map(k => [k, k === 'person' && typeof p[k] !== 'string' ? '' : p[k]]).concat(p?.focus || p?.focal ? [['focus', p.focus || p.focal]] : []));
+const photoMeta = p => Object.fromEntries(['width', 'height', 'person', 'kind', 'score', 'source', 'rights', 'verified', 'verifiedBy', 'main', 'cutoutOk'].filter(k => p?.[k] != null && p[k] !== '').map(k => [k, k === 'person' && typeof p[k] !== 'string' ? '' : p[k]]).concat(p?.focus || p?.focal ? [['focus', p.focus || p.focal]] : []));
 // input.cutouts: the hero cut-out first, then this design's other people (named in the brief).
 function cutoutsFor(direction, assets = {}) {
   const list = [];
@@ -837,7 +871,10 @@ function directionSkeleton(read, story, archetype, assets, used) {
   const hero = heroFact(facts, archetype);
   const team = read.teams.find(t => story.teams?.includes(t.id));
   const person = story.people?.[0] || '';
-  const photos = (assets.photos?.[person] || (!person && team ? assets.photos?.[team.name] : null) || []).filter(p => !used.photos.has(photoKey(p.src)));
+  // gen5: an unused photo first; the relaxed pass may repeat one only when the person has no other.
+  const pool = assets.photos?.[person] || (!person && team ? assets.photos?.[team.name] : null) || [];
+  const fresh = pool.filter(p => !used.photos.has(photoKey(p.src)));
+  const photos = fresh.length || !used.repeatOk ? fresh : pool;
   const art = assets.art?.[story.id] || null;
   const scoreFact = facts.find(f => f.kind === 'score');
   let text = archetype === 'scoreboard' && scoreFact ? clean(story.text.replace(scoreFact.text, '').replace(/\s+(?:at|to)\s+\d{1,2}-\d{1,2}$/, ''))
@@ -860,7 +897,8 @@ function directionSkeleton(read, story, archetype, assets, used) {
     factIds: facts.map(f => f.id),
     person,
     photo: photos[0] || null,
-    photos: photos.slice(1, 4),
+    // Supporting images (strips, collages): fresh ones first; the relaxed pass may fill with used ones.
+    photos: [...photos.slice(1), ...(used.repeatOk ? pool.filter(p => !photos.includes(p)) : [])].slice(0, 3),
     cutout: person && assets.cutouts?.[photos[0]?.src] && !['crowd', 'venue', 'object'].includes(String(photos[0]?.kind || '')) ? { src: assets.cutouts[photos[0].src] } : null,
     art,
     palette: '',
@@ -972,7 +1010,7 @@ function planDeterministic(read, assets = {}, { want = 4 } = {}) {
       // art-led posters wait for the relaxed pass.
       // Relaxed pass (gen4: the count asked for is always honoured): photos may
       // repeat across designs and the focal cap is lifted.
-      const dir = { ...directionSkeleton(read, story, archetype, assets, relax ? { ...used, photos: new Set() } : used), ...extra };
+      const dir = { ...directionSkeleton(read, story, archetype, assets, relax ? { ...used, repeatOk: true } : used), ...extra };
       const input = inputsFor(dir, read, assets);
       if (!COMPOSE.fits(archetype, input)) return false;
       const lead = story.people?.[0];
@@ -2152,6 +2190,7 @@ async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = 
   // existing design in the other tone (never fewer designs than asked).
   topUp(directions, { want, read, assets, review, finish, perDesign });
   ensureLight(directions, { read, assets, review, finish });
+  distinctPhotos(directions, read, assets, { finish, review });
   designTimeFixes(directions, read, assets, review);
   setCritique(directions, read, assets, review);
   review.checks = setChecks(directions, read, assets);
@@ -2175,13 +2214,47 @@ async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = 
   return value;
 }
 
+// gen5 (live: designs 1 and 3 of a run used the same golfer close-up): every
+// design in a run gets its own photo whenever its person (or team) has another
+// verified one. A cut-out-led design moves to another photo that has a cut-out;
+// a swap that no longer fits the composition is not made.
+function distinctPhotos(directions, read, assets, { finish, review } = {}) {
+  const keyOf = d => (d.photo ? photoKey(d.photo.src) : '');
+  const seen = new Set();
+  directions.forEach((d, i) => {
+    const key = keyOf(d);
+    if (!key) return;
+    if (!seen.has(key)) { seen.add(key); return; }
+    const owner = (typeof d.photo.person === 'string' && d.photo.person) || d.person || '';
+    const taken = new Set(directions.map(keyOf).filter(Boolean));
+    const pool = (assets.photos?.[owner] || []).filter(p => !taken.has(photoKey(p.src)));
+    const wantCut = Boolean(d.cutout);
+    const ordered = wantCut ? pool.filter(p => assets.cutouts?.[p.src]) : pool.filter(p => !['crowd', 'venue', 'object'].includes(String(p.kind || '')) || ['crowd', 'venue', 'object'].includes(String(d.photo.kind || '')));
+    for (const alt of ordered) {
+      const trial = { ...d, photo: alt, photos: (d.photos || []).filter(p => photoKey(p.src) !== photoKey(alt.src)), cutout: wantCut ? { src: assets.cutouts[alt.src] } : null, candidates: [], holes: [] };
+      if (!COMPOSE.fits(trial.archetype, inputsFor(trial, read, assets))) continue;
+      const done = finish ? finish(trial) : trial;
+      if (!done.candidates?.length || done.holes?.length) continue;
+      directions[i] = done;
+      seen.add(photoKey(alt.src));
+      review?.fixed?.push({ check: 'same-photo', what: `${d.id}: another photo of ${owner || 'the subject'} (the same one was on another design)` });
+      return;
+    }
+    seen.add(key);
+  });
+  return directions;
+}
+
 function publicDirection(d) {
   return {
     id: d.id, source: d.source, story: d.story, storyText: d.storyText, archetype: d.archetype, archetypeName: d.archetypeName,
     family: familyOf(d.archetype), tone: d.tone || '', cutoutLed: Boolean(d.cutoutLed),
     name: d.name || d.archetypeName, headline: d.headline, kicker: d.kicker, note: d.note,
     facts: (d.factIds || []).slice(0, 8), cited: (d.cited || []).map(({ id, url, title }) => ({ id, url, title })),
-    photo: d.photo ? { src: d.photo.src, person: d.photo.person || d.person } : null,
+    // gen5 contract for the renderer: verified (the right person, checked), kind
+    // (action | portrait | celebration | reaction | offfield | group | crowd | venue | object),
+    // focus ({ x, y, w, h } 0-1, the subject's box, when the check saw it), main (the person dominates the frame).
+    photo: d.photo ? { src: d.photo.src, person: d.photo.person || d.person, verified: d.photo.verified ?? null, verifiedBy: d.photo.verifiedBy || '', kind: d.photo.kind || '', focus: d.photo.focus || null, main: d.photo.main ?? null, cutoutOk: Boolean(d.photo.cutoutOk) } : null,
     photos: d.swaps || [],
     cutout: d.cutout || null,
     art: d.art ? { src: d.art.src, ai: Boolean(d.art.ai) } : null,
@@ -2426,7 +2499,7 @@ module.exports = {
   unquote,
   editorialKicker,
   readCreative, splitStories, factsIn, properNames, planDeterministic, validateDirections, runArtDirector, DIRECTOR_SYSTEM, directorRequest,
-  inputsFor, scenesFor, plan, judge, judgePrompt, dedupePhotos, photoKey, procArtFor, paletteFor, paletteByKey, defaultNote,
+  inputsFor, scenesFor, plan, judge, judgePrompt, dedupePhotos, photoKey, photoFactsFor, distinctPhotos, resolvePhotos, procArtFor, paletteFor, paletteByKey, defaultNote,
   setAssetService, PLAN_CACHE, JUDGE_CACHE, NEEDS, RUBRIC,
   critiqueFromModel, codeCritique, mergeCritiques, fixFor, budgetFor, FIX_TEXT,
   // gen-director: content sense and set design.

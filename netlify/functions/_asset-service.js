@@ -907,21 +907,27 @@ async function findPhotos(args = {}, ctx = {}) {
   const query = cleanQuery(args.query);
   const count = Math.max(1, Math.min(12, Number(args.count) || 6));
   const exclude = (Array.isArray(args.exclude) ? args.exclude : []).map(String).slice(0, 50);
+  // gen5 facts for the right-person check: the brief's teams, opponents and other people.
+  const names = value => (Array.isArray(value) ? value : []).map(cleanQuery).filter(Boolean).slice(0, 6);
+  const teams = names(args.teams);
+  const opponents = names(args.opponents);
+  const others = names(args.others);
   if (!person && !team && !query && !sport) return fail('empty', 'Name a person, team or topic to find ES photos.');
   const deps = imageryDeps(ctx);
   // Older callers inject rank({ person, photos }) -> { scores: [{ n, subject, score, kind, graphic }] }.
-  if (ctx.deps?.rank && !ctx.deps?.vision) {
+  if (ctx.deps?.rank && !ctx.deps?.vision && !ctx.deps?.verify) {
+    deps.verify = null;
     deps.vision = async ({ subject, photos, track }) => {
       const res = await ctx.deps.rank({ person: subject.name, photos, track });
       return { cost: res.cost || 0, rows: (res.scores || []).map(r => ({ n: r.n, subject: r.subject, alone: true, face: r.kind === 'portrait', quality: r.score, kind: r.kind, graphic: r.graphic, cutout: !r.graphic && r.kind !== 'group' })) };
     };
   }
-  const key = JSON.stringify({ person, team, sport, query, count, exclude, v: 3 });
+  const key = JSON.stringify({ person, team, sport, query, count, exclude, teams, opponents, others, v: 5 });
   const hit = PHOTO_CACHE.get(key);
   if (hit && clock.now() - hit.at < PHOTO_TTL_MS) return { ...(await refreshCutouts(hit.value, deps)), cost: 0, cached: true };
   let result;
   try {
-    result = await IMAGERY.findSubjectPhotos({ person, team, sport, query: query || (!person && !team ? sport : ''), count, exclude }, ctx, deps);
+    result = await IMAGERY.findSubjectPhotos({ person, team, sport, query: query || (!person && !team ? sport : ''), count, exclude, teams, opponents, others }, ctx, deps);
   } catch (error) {
     return { ok: true, photos: [], cutouts: [], headshots: [], logos: [], cutoutPlan: [], cost: 0, cached: false, ranked: false, rights: PHOTO_RIGHTS['es-media'] };
   }
@@ -949,6 +955,7 @@ async function refreshCutouts(value, deps) {
 // vision ranker (only with a Gateway key, behind the spend gate), and a HEAD on
 // the shared cut-out store.
 const IMAGERY = require('./_imagery.js');
+const VERIFY = require('./_photo-verify.js');
 const IMAGERY_CACHE = new Map();
 const IMAGERY_TTL_MS = 15 * 60 * 1000;
 function imageryDeps(ctx = {}) {
@@ -959,7 +966,10 @@ function imageryDeps(ctx = {}) {
     agency: base.agency,
     media: base.media,
     articles: base.articles,
-    vision: gateway.gatewayConfigured() ? args => IMAGERY._test.defaultVision({ ...args, gateway }) : null,
+    // gen5: the right-person check (_photo-verify.js, Claude Sonnet by default:
+    // GENERATE_PHOTO_VERIFY_TIER), one call per subject, verdicts cached 7 days per photo.
+    verify: gateway.gatewayConfigured() ? (subject, photos, opts) => VERIFY.verifyWithVision(subject, photos, { ...opts, gateway }) : null,
+    vision: null,
     gate: (c, feature) => gate(c, feature),
     storageHas: storage.on ? async path => {
       const url = publicUrl(path);
