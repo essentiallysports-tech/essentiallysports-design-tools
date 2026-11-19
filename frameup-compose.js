@@ -3374,8 +3374,8 @@
     const scale = Math.min(h / trimmed.height, (layer.maxW || w) / trimmed.width);
     const dw = trimmed.width * scale;
     const dh = trimmed.height * scale;
-    const dx = layer.align === 'left' ? x : layer.align === 'right' ? x + w - dw : x + (w - dw) / 2;
-    const dy = layer.anchor === 'center' ? y + (h - dh) / 2 : layer.anchor === 'top' ? y : y + h - dh;
+    let dx = layer.align === 'left' ? x : layer.align === 'right' ? x + w - dw : x + (w - dw) / 2;
+    let dy = layer.anchor === 'center' ? y + (h - dh) / 2 : layer.anchor === 'top' ? y : y + h - dh;
     // Work at the drawn size (sharp, and the rim width is in canvas px).
     const cw = Math.max(1, Math.round(dw * s));
     const ch = Math.max(1, Math.round(dh * s));
@@ -3387,6 +3387,10 @@
     if (layer.levels) autoLevels(src);
     if (layer.duotone || layer.tritone) toneMap(src, layer.tritone || layer.duotone, layer.curve || 1.25);
     if (layer.fade) fadeMask(src, layer.fade);
+    // render() may move the figure so its head and face stay clear of the
+    // numbers behind it and the text over it (layer._move, a second pass).
+    if (layer._move) { dx += layer._move.x; dy += layer._move.y; }
+    const head = headZone(src, s);
     if (layer.sticker) {
       // Die-cut sticker edge: the silhouette grown in 24 directions, filled.
       const sw = Math.max(1, (layer.sticker.width || 14) * s);
@@ -3411,9 +3415,104 @@
       g.drawImage(rimLight(src, layer.rim.color || '#FFFFFF', Math.max(1.5, (layer.rim.width || 5) * s), layer.rim.angle, layer.rim.alpha ?? 0.85), dx * s, dy * s);
       g.restore();
     }
-    report.cutouts = (report.cutouts || []).concat([{ x: dx, y: dy, w: dw, h: dh }]);
+    report.cutouts = (report.cutouts || []).concat([{ x: dx, y: dy, w: dw, h: dh, head: head ? { x: dx + head.x, y: dy + head.y, w: head.w, h: head.h } : null, moved: layer._move || null, at: report.items.length, layer: report.layerIndex }]);
     src = null;
   }
+
+  // The head (and face) of a cut-out figure, in scene units relative to the
+  // drawn figure: the top of the first solid band of the silhouette (a raised
+  // arm, club or bat above it is too thin to count), about a head tall, across
+  // the columns around the band's peak. null when there is no clear figure.
+  function headZone(canvas, s) {
+    let data;
+    try { data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data; } catch (error) { return null; }
+    const cw = canvas.width;
+    const ch = canvas.height;
+    const step = Math.max(1, Math.round(Math.max(cw, ch) / 320));
+    const solid = (xx, yy) => data[(yy * cw + xx) * 4 + 3] > 96;
+    const rows = [];
+    for (let yy = 0; yy < ch; yy += step) {
+      let n = 0;
+      for (let xx = 0; xx < cw; xx += step) if (solid(xx, yy)) n += 1;
+      rows.push(n * step);
+    }
+    const widest = Math.max(...rows);
+    if (widest < 4) return null;
+    const firstRow = rows.findIndex(n => n >= 0.16 * widest);
+    if (firstRow < 0) return null;
+    const top = firstRow * step;
+    const rest = ch - top;
+    // About a head tall: a full figure's head is short, a bust's is large.
+    const bh = Math.max(step * 2, Math.min(0.34 * rest, 0.45 * widest));
+    const cols = new Array(Math.ceil(cw / step)).fill(0);
+    for (let yy = top; yy < Math.min(ch, top + bh); yy += step) {
+      for (let xx = 0, k = 0; xx < cw; xx += step, k += 1) if (solid(xx, yy)) cols[k] += 1;
+    }
+    const peak = Math.max(...cols);
+    if (!peak) return null;
+    const at = cols.indexOf(peak);
+    let a = at; let b = at;
+    while (a > 0 && cols[a - 1] >= peak * 0.4) a -= 1;
+    while (b < cols.length - 1 && cols[b + 1] >= peak * 0.4) b += 1;
+    const x0 = a * step; const x1 = Math.min(cw, (b + 1) * step);
+    const padX = (x1 - x0) * 0.06;
+    return { x: (x0 - padX) / s, y: top / s, w: (x1 - x0 + padX * 2) / s, h: bh / s };
+  }
+  const boxesMeet = (a, b, gap = 0) => a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
+  // After a first pass: where a cut-out's head sits under a number drawn
+  // behind it, or its face under text drawn over it, the smallest move of the
+  // figure (down, sideways, or both) that clears them, keeping the head on the
+  // design and most of the figure in frame. When no move clears a number, the
+  // number is set smaller, above the head. null = nothing to change.
+  const faceOf = h => ({ x: h.x + h.w * 0.15, y: h.y + h.h * 0.2, w: h.w * 0.7, h: h.h * 0.7 });
+  function planHeadroom(scene, report) {
+    const W = scene.size?.w || 1080;
+    const H = scene.size?.h || 1350;
+    const GAP = 14;
+    const items = report.items || [];
+    const moves = {};
+    const shrink = {};
+    (report.cutouts || []).forEach(cut => {
+      if (!cut.head || cut.layer == null) return;
+      const nums = items.slice(0, cut.at).filter(i => i.type === 'number' && i.box && i.layer != null);
+      const over = items.slice(cut.at).filter(i => i.box && i.box.w > 1 && i.box.h > 1 && ['text', 'pill', 'number'].includes(i.type));
+      const fits = (mx, my, withNums = true) => {
+        const head = { ...cut.head, x: cut.head.x + mx, y: cut.head.y + my };
+        if (head.x < 0 || head.x + head.w > W || head.y < 0 || head.y + head.h * 0.8 > H - SAFE * 0.5) return false;
+        if (Math.min(W, cut.x + mx + cut.w) - Math.max(0, cut.x + mx) < cut.w * 0.7) return false;
+        if (withNums && nums.some(n => boxesMeet(head, n.box, GAP))) return false;
+        const face = faceOf(head);
+        return !over.some(i => boxesMeet(face, i.box, 4));
+      };
+      if (fits(0, 0)) return;
+      const tries = [];
+      for (let iy = 0; iy <= 20; iy += 1) {
+        for (let ix = -16; ix <= 16; ix += 1) tries.push({ x: (ix / 40) * cut.w, y: (iy / 40) * cut.h, cost: (iy / 40) * cut.h + Math.abs(ix / 40) * cut.w * 1.3 });
+      }
+      tries.sort((p, q) => p.cost - q.cost);
+      let best = tries.find(t => fits(t.x, t.y));
+      if (!best) {
+        // No move clears the numbers: the lowest spot where the face stays
+        // clear (the most room above the head), then the numbers it still
+        // meets are set smaller, above the head.
+        const open = tries.filter(t => fits(t.x, t.y, false));
+        best = open.length ? open.reduce((p, q) => (q.y > p.y || (q.y === p.y && Math.abs(q.x) < Math.abs(p.x)) ? q : p)) : { x: 0, y: 0 };
+        const head = { ...cut.head, x: cut.head.x + best.x, y: cut.head.y + best.y };
+        nums.filter(n => boxesMeet(head, n.box, GAP)).forEach(n => {
+          const room = head.y - GAP - n.top;
+          if (room >= n.box.h * 0.35) shrink[n.layer] = Math.min(shrink[n.layer] ?? Infinity, room);
+        });
+      }
+      if (best.x || best.y) moves[cut.layer] = { x: Math.round(best.x), y: Math.round(best.y) };
+    });
+    if (!Object.keys(moves).length && !Object.keys(shrink).length) return null;
+    return {
+      ...scene,
+      layers: scene.layers.map((layer, i) => (moves[i] ? { ...layer, _move: moves[i] }
+        : shrink[i] != null ? { ...layer, h: Math.max(40, Math.round(shrink[i])), valign: 'top', _shrunk: true } : layer)),
+    };
+  }
+
   const trimCache = new WeakMap();
   function trim(img) {
     if (trimCache.has(img)) return trimCache.get(img);
@@ -3697,7 +3796,7 @@
     if (label) {
       drawText(g, { type: 'text', role: 'label', text: label, x: layer.x, y: base + labelGap, w: layer.w, h: labelCap * 2 + labelSize * 0.5, font: 'condensed', size: labelSize, minSize: Math.min(labelSize, 22), maxLines: 2, lineHeight: 1.05, color: layer.labelColor || layer.color, align: layer.align, valign: 'top', guard: layer.guard }, s, report);
     }
-    report.items.push({ type: 'number', role: 'number', size, overflow: m.total > layer.w + 1, contrast: 0, box: { x: x0, y: top, w: m.total, h: capH } });
+    report.items.push({ type: 'number', role: 'number', size, overflow: m.total > layer.w + 1, contrast: 0, box: { x: x0, y: top, w: m.total, h: capH }, layer: report.layerIndex, top: layer.y });
   }
 
   function drawChart(g, layer, s, report) {
@@ -3789,7 +3888,7 @@
 
   // Draw a scene. canvas: an HTMLCanvasElement (resized here). scale: 1 = 1080 wide.
   // Returns a report: measured text sizes, overflow, contrast, missing images.
-  async function render(scene, canvas, { scale = 1 } = {}) {
+  async function render(scene, canvas, { scale = 1, pass = 1 } = {}) {
     const W = scene.size?.w || 1080;
     const H = scene.size?.h || 1350;
     canvas.width = Math.round(W * scale);
@@ -3798,10 +3897,11 @@
     await ensureFonts();
     // Images load in parallel before drawing in order.
     await Promise.all(scene.layers.flatMap(l => [l.src, l.image?.src, l.knockout?.src, l.breakout?.photo].filter(Boolean)).map(loadImage));
-    const report = { items: [], missing: [], palette: scene.palette || null };
+    const report = { items: [], missing: [], palette: scene.palette || null, size: { w: W, h: H } };
     g.clearRect(0, 0, canvas.width, canvas.height);
     g.imageSmoothingQuality = 'high';
-    for (const layer of scene.layers) {
+    for (const [index, layer] of scene.layers.entries()) {
+      report.layerIndex = index;
       g.save();
       try {
         if (layer.type !== 'background') layerTransform(g, layer, scale);
@@ -3818,8 +3918,13 @@
         g.restore();
       }
     }
+    delete report.layerIndex;
+    // Heads and faces stay clear of numbers and text: one more pass when needed.
+    const roomy = pass === 1 && report.cutouts?.length ? planHeadroom(scene, report) : null;
+    if (roomy) return render(roomy, canvas, { scale, pass: 2 });
     await drawEsLogo(g, scene, scale);
     delete report.palette;
+    delete report.size;
     report.heuristic = scoreReport(report, scene);
     return report;
   }

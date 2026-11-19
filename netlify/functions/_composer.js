@@ -61,7 +61,7 @@ function extractJson(text) {
 // ─── 1. Stories and facts (code only) ─────────────────────────────────────
 const MONEY = /\$\s?(\d[\d,]*(?:\.\d+)?)\s*(million|billion|thousand|mil|bn|m|b|k)?\b/gi;
 const PAIR = /(?:^|[^\d/.$-])(\d{1,3}(?:,\d{3})?)\s?[-–]\s?(\d{1,3}(?:,\d{3})?)(?![\d/.%-])/g;
-const COUNT = /(?:^|[^\d$.,/-])(\d[\d,]*(?:\.\d+)?)(%?)\s+([A-Za-z][A-Za-z'-]*(?:\s+[A-Za-z][A-Za-z'-]*){0,3})/g;
+const COUNT = /(?:^|[^\d$.,/-])(\d[\d,]*(?:\.\d+)?)(%|\+)?\s+([A-Za-z][A-Za-z'-]*(?:\s+[A-Za-z][A-Za-z'-]*){0,3})/g;
 const NOUN_STOP = /^(?:and|or|but|on|in|at|to|for|with|the|a|an|as|of|from|by|after|before|since|while|when|this|that|his|her|their|its)$/i;
 const SUFFIX = { million: 'M', mil: 'M', m: 'M', billion: 'B', bn: 'B', b: 'B', thousand: 'K', k: 'K' };
 const RECORD_CUE = /\b(?:start|starts|started|record|at|to|improve|improves|improved|fall|falls|fell|move|moves|moved|sit|sits|season|now)\s*(?:the\s+season\s+)?(?:at\s+|to\s+)?$/i;
@@ -239,7 +239,9 @@ function factsIn(text, storyId, start = 1) {
     const label = NOUN_STOP.test(clean(m[3]).split(' ')[0] || '') || /^(?:to|is|was|are|were|will|has|had)$/i.test(clean(m[3]).split(' ')[0] || '') ? '' : labelAfter(m[3]);
     if (ident) { add({ kind: 'date', text: clean(text.slice(Math.max(0, at - 12), at).match(/[A-Za-z.#]+\s*$/)?.[0] + num), prefix: '', value: num, suffix: '', label: '', display: num }, at, num.length); continue; }
     if (!label || /^(?:am|pm|th|st|nd|rd)$/i.test(label)) continue;
-    add({ kind: m[2] ? 'pct' : 'count', text: clean(`${num}${m[2]} ${label}`), prefix: '', value: num, suffix: m[2] || '', label, display: `${num}${m[2]}` }, at, num.length + (m[2] || '').length + 1 + label.length);
+    // "1000+ rushing yards": the plus stays with the number (a count, not a %).
+    const unit = m[2] || '';
+    add({ kind: unit === '%' ? 'pct' : 'count', text: clean(`${num}${unit} ${label}`), prefix: '', value: num, suffix: unit, label, display: `${num}${unit}` }, at, num.length + unit.length + 1 + label.length);
   }
   return facts;
 }
@@ -652,7 +654,9 @@ function codeHeadline(text, story, read, { fallback = '', all = false } = {}) {
     return carriesOn || /^\d+-[a-z]+,?$/i.test(h.split(' ').pop() || '')
       || new RegExp(`^[,;]?\\s*(?:(?:for|of|to)\\s+(?:(?:a|an|the|his|her|their)\\s+)?|in\\s+)${num}`, 'i').test(after)
       || ((NUM_VERBS.test(last) || /^[a-z]+(?:ing|ed)$/.test(h.split(' ').pop() || '')) && new RegExp(`^\\s*(?:(?:a|an|the|his|her|their)\\s+)?${num}`, 'i').test(after))
-      || WEAK_TAIL.test(last);
+      || WEAK_TAIL.test(last)
+      // "Josh Allen goes over | 1000+ yards": the number was what the last word pointed at.
+      || (/^(?:over|past|beyond|under|nearly|almost|about|around|top|tops|hit|hits|reach|reaches|passes|surpasses|eclipses)$/.test(last) && new RegExp(`^\\s*${num}`, 'i').test(after));
   };
   const tidy = h => {
     let words = clean(h).replace(/[“”"]/g, '').replace(/[.;:,]+$/, '').split(' ').filter(Boolean);
