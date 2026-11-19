@@ -95,7 +95,7 @@
       { page: 'generate.html', target: '#gen-steer', icon: I.sliders, title: 'Steer the director', text: 'Set the tone and audience. Directions first shows the plan before designs.' },
       { page: 'generate.html', target: '#gen-submit', icon: I.sparkles, title: 'Generate', text: 'The director proposes 2–4 directions. Pick, edit or make them all. ⌘↵.' },
       { page: 'generate.html', target: ['#gen-director:not([hidden])', '#gen-submit'], icon: I.lightbulb, title: 'Creative directions', text: 'Each has an angle, a hook, why it works and the past ES posts behind it.' },
-      { page: 'generate.html', target: ['#gen-grid .gen-note', '#gen-grid'], icon: I.flag, title: 'Director’s note', text: 'What works on each design, plus one fix you can apply in a click.' },
+      { page: 'generate.html', target: ['#gen-grid .gen-note', '#gen-grid'], icon: I.flag, title: 'Director’s note', text: 'What works, what was fixed while designing, and ideas to try.' },
       { page: 'generate.html', target: '#gen-onbrand-open', icon: I.image, title: 'Bring it on-brand', text: 'Drop any design or carousel. The director flags what is off-guide and remakes it.' },
       { page: 'generate.html', target: '#gen-quick', icon: I.lightbulb, title: 'Starters', text: 'Try one to see how a good brief looks.' },
       { page: 'generate.html', target: ['#gen-grid .gen-card', '#gen-empty'], icon: I.trending, title: 'Start from a live trend', text: 'What fans read right now, one click from a design.' },
@@ -131,9 +131,9 @@
       { page: 'video-ads.html', target: '#va-headline', placement: 'left', icon: I.type, title: 'Your copy', text: 'Headline, highlight, body and button. Checks flag problems as you type.' },
       { page: 'video-ads.html', target: '#va-ask-ai', placement: 'left', icon: I.sparkles, title: 'Ask AI', text: 'Write 3 options, check grammar, shorten or punch it up. ⌘J.' },
       { page: 'video-ads.html', target: '#va-styles', placement: 'left', icon: I.palette, title: 'Style', text: 'Simple, Condensed or Highlight.' },
-      { page: 'video-ads.html', target: '.va-step[data-step="clip"]', icon: I.film, title: 'Find a clip', text: 'By team, colour, moment or link. Fresh clips from the last 5 days.' },
+      { page: 'video-ads.html', target: '.va-step[data-step="clip"]', icon: I.film, title: 'Find a clip', text: 'By team, colour, moment or link. Recent clips from official team and league accounts only.' },
       { page: 'video-ads.html', target: '#va-transport', placement: 'top', icon: I.scissors, title: 'Trim', text: 'Drag the handles to keep the best seconds. Space plays.' },
-      { page: 'video-ads.html', target: '.va-step[data-step="export"]', icon: I.download, title: 'Export', text: 'MP4 in 9:16, 4:5 and 1:1.' },
+      { page: 'video-ads.html', target: '.va-step[data-step="export"]', icon: I.download, title: 'Export', text: 'MP4 in 9:16, 4:5 and 1:1. Add licensed music in Sound, cleared for organic and paid.' },
     ],
   });
 
