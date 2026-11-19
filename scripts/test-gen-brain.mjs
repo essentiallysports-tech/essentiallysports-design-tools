@@ -64,7 +64,8 @@ const nflRead = P.readCreative(NFL, {});
 const ctxFor = plan => ({ compose: COMPOSE, logos: plan.read.teams.filter(t => t.logo).map(t => ({ src: t.logo, name: t.name })), photos: [], facts: plan.read.facts.map(f => ({ id: f.id, text: f.text })) });
 const nflCtx = ctxFor(nflPlan);
 const scoreboard = nflPlan.directions.find(d => d.archetype === 'scoreboard').candidates[0];
-const bigNumber = nflPlan.directions.find(d => d.archetype === 'big-number').candidates[0];
+// gen4: the code plan now leads with board-grade looks; the big-number poster is built directly.
+const bigNumber = nflPlan.directions.find(d => d.archetype === 'big-number')?.candidates[0] || COMPOSE.build('big-number', { ...(nflPlan.directions.find(d => d.input?.number)?.input || nflPlan.directions[0].input), cutout: null, cutouts: [] }, 0);
 
 // ── 1. Critique shape ─────────────────────────────────────────────────────
 {
@@ -97,9 +98,10 @@ const bigNumber = nflPlan.directions.find(d => d.archetype === 'big-number').can
   const judged = await P.judge({ brief: NFL, sets: [{ direction: 'd1', archetype: 'scoreboard', items: [{ id: 'd1c1', image: `${img}1` }] }], lessons: [{ id: 'L1', key: 'k1', text: 'Keep headlines to 2-6 words so they set big.', kind: 'avoid' }] });
   const c = judged.directions[0].critique;
   assert.deepEqual(c.strengths, ['Winner row in Bengals orange']);
-  assert.deepEqual(c.improvements.map(i => i.id), ['j1', 'j2', 'j3']);
-  assert.deepEqual(c.improvements[0].fix, { op: 'fix', name: 'brighten-photo' });
-  assert.equal(c.improvements[1].fix.op, 'assist', 'an unknown fix name is never trusted');
+  // gen4: problems are repairs applied while designing, never chips; an unknown fix name is never trusted.
+  assert.deepEqual(c.improvements, [], 'no repair is offered as a suggestion');
+  assert.deepEqual(judged.directions[0].repairs.map(r => r.op), ['brighten-photo']);
+  assert.ok(judged.directions[0].issues.includes('Kicker repeats the headline'), 'every issue still reaches the learning model');
   assert.match(c.nextTime, /brighter photos/);
   const judgeText = aiRequests.at(-1).messages[0].content[0].text;
   assert.ok(judgeText.includes('Keep headlines to 2-6 words'), 'lessons are injected into the judge prompt');
@@ -110,11 +112,13 @@ const bigNumber = nflPlan.directions.find(d => d.archetype === 'big-number').can
   delete process.env.AI_GATEWAY_API_KEY;
   P.JUDGE_CACHE.clear();
   const free = await P.judge({ sets: [{ direction: 'd9', items: [{ id: 'd9c1', image: `${img}X` }] }], heuristics: { d9c1: { score: 3.2, fix: 'darker-mist' } } });
-  assert.deepEqual(free.directions[0].critique.improvements[0].fix, { op: 'fix', name: 'darker-mist' });
+  assert.deepEqual(free.directions[0].repairs, [{ op: 'darker-mist', issue: 'The type sits on a busy part of the photo; a deeper mist would help.' }], 'the quick check\'s fix is a repair too');
+  assert.deepEqual(free.directions[0].critique.improvements, []);
   process.env.AI_GATEWAY_API_KEY = key;
 
   // Merging on the page: judge first, director / checks after, no duplicates, applied fix dropped.
-  const merged = A.designCritique({ strengths: ['Cut-out gives depth'], improvements: [{ id: 'c1', text: 'The number could be bigger', fix: { op: 'fix', name: 'bigger-number' } }] }, c, { fixApplied: 'brighten-photo' });
+  const legacy = { strengths: c.strengths, improvements: [{ id: 'j1', text: 'Photo too dark behind the headline', fix: { op: 'fix', name: 'brighten-photo' } }], nextTime: c.nextTime };
+  const merged = A.designCritique({ strengths: ['Cut-out gives depth'], improvements: [{ id: 'c1', text: 'The number could be bigger', fix: { op: 'fix', name: 'bigger-number' } }] }, legacy, { fixApplied: 'brighten-photo' });
   assert.ok(!merged.improvements.some(i => i.fix.name === 'brighten-photo'), 'the fix the judge already applied is not offered again');
   assert.deepEqual(merged.improvements.map(i => i.id), merged.improvements.map((_, n) => `i${n + 1}`));
   assert.equal(merged.strengths[0], 'Winner row in Bengals orange');
@@ -281,7 +285,10 @@ const bigNumber = nflPlan.directions.find(d => d.archetype === 'big-number').can
   // Archetype swap and size change rebuild from the scene (scores kept).
   const story = A.applyPatch(scoreboard, [{ op: 'size', size: 'story' }], nflCtx);
   assert.ok(story.ok && story.scene.size.h === 1920 && story.scene.archetype === 'scoreboard');
-  const typo = A.applyPatch(bigNumber, [{ op: 'archetype', id: 'typographic' }], nflCtx);
+  // gen4: the typographic poster needs a 3+ word headline (never a name alone).
+  const worded = JSON.parse(JSON.stringify(bigNumber));
+  (worded.layers.find(l => l.role === 'headline') || {}).text = 'BENGALS ROUT THE STEELERS';
+  const typo = A.applyPatch(worded, [{ op: 'archetype', id: 'typographic' }], nflCtx);
   assert.ok(typo.ok && typo.scene.archetype === 'typographic');
   assert.equal(A.applyPatch(bigNumber, [{ op: 'archetype', id: 'not-a-layout' }], nflCtx).ok, false);
 
@@ -355,7 +362,9 @@ const bigNumber = nflPlan.directions.find(d => d.archetype === 'big-number').can
   aiReplies = [{ directions: [{ id: 'd1', best: 'd1c1', scores: {}, improvements: [{ text: 'Number lacks its unit', fix: '' }], nextTime: 'Always label numbers.' }] }];
   const judged = await post({ mode: 'creative-judge', brief: NFL, sport: 'NFL', sets: [{ direction: 'd1', archetype: 'big-number', items: [{ id: 'd1c1', image: 'data:image/jpeg;base64,QkJC' }] }] });
   assert.equal(judged.status, 200);
-  assert.equal(judged.body.directions[0].critique.improvements[0].text, 'Number lacks its unit');
+  // gen4: the issue is not a chip; it still reaches the learning model.
+  assert.deepEqual(judged.body.directions[0].critique.improvements, []);
+  assert.ok(judged.body.directions[0].issues.includes('Number lacks its unit'));
   assert.ok([...M._test.memory().values()].some(l => l.topic === 'number-unit'), 'the judge teaches the memory');
 }
 

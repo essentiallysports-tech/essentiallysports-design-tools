@@ -571,6 +571,7 @@
     if (!g || g.isBusy()) return;
     const { els } = g;
     const n = wanted();
+    const runStarted = Date.now();
     g.setBusy(true);
     g.setNotice('');
     els.empty.hidden = true;
@@ -614,13 +615,18 @@
       } catch (error) { /* the heuristic picks below */ }
       state.run = { brief, plan, judged };
       registry.clear();
-      const cards = plan.directions.map(dir => {
-        const verdict = (judged.directions || []).find(v => v.id === dir.id) || {};
-        const ranked = [...dir.candidates].sort((a, b) => (heuristics[b.id]?.score || 0) - (heuristics[a.id]?.score || 0));
-        const best = dir.candidates.find(s => s.id === verdict.best) || ranked[0];
-        const fix = verdict.fix || (judged.source !== 'vision' ? heuristics[best.id]?.fix : '');
-        const scene = fix ? C().applyFix(best, fix) : best;
-        return buildCard(dir, { ...verdict, best: best.id, scene, source: judged.source, scores: verdict.scores || Object.fromEntries(dir.candidates.map(s => [s.id, { total: heuristics[s.id]?.score }])) });
+      // gen4-quality: design-time repairs. The judge's repairable issues (and,
+      // in free mode, the quick check's fix) are applied here in code before
+      // anyone sees the design, then the repaired picks get ONE second look.
+      const picks = await repairPicks({ plan, judged, heuristics, brief, started: runStarted });
+      const cards = picks.map(({ dir, verdict, best, scene, applied }) => {
+        // Contract (gen4): design.review = { autoFixed, suggestions }; suggestions are creative only.
+        const review = { autoFixed: [...new Set([...(dir.review?.autoFixed || []), ...applied.map(a => repairLabel(a))])], suggestions: (verdict.review?.suggestions || dir.review?.suggestions || []).slice(0, 2) };
+        dir.review = review;
+        const critique = { strengths: verdict.critique?.strengths || [], improvements: review.suggestions.map((text, i) => ({ id: `j${i + 1}`, text, fix: { op: 'assist', instruction: text }, source: 'judge' })), nextTime: verdict.critique?.nextTime || '' };
+        const card = buildCard(dir, { ...verdict, critique, best: best.id, scene, source: judged.source, scores: verdict.scores || Object.fromEntries(dir.candidates.map(s => [s.id, { total: heuristics[s.id]?.score }])) });
+        card._review = review;
+        return card;
       });
       state.cards = cards;
       els.grid.replaceChildren(...cards);
@@ -732,6 +738,55 @@
       });
       dir.cutout = { src: cut.url };
     });
+  }
+
+  // ── gen4-quality: repairs while designing ────────────────────────────────
+  // One plain line per repair for "Fixed while designing: ...".
+  const REPAIR_LABELS = {
+    'drop-image': 'removed a weak photo', 'swap-photo': 'swapped in a better photo', 'use-cutout': 'brought in the player cut-out', 'use-photo': 'brought in a photo of the person',
+    'remove-tag': 'removed a sport tag', headline: 'fixed the headline', label: 'fixed a stat label', 'drop-stat': 'removed a number that was not a stat',
+    'flip-tone': 'changed the tone for variety', 'bigger-headline': 'made the headline bigger', 'bigger-number': 'made the number bigger', 'more-contrast': 'raised the contrast',
+    'darker-mist': 'deepened the shade behind the text', 'brighten-photo': 'brightened the photo', 'darken-photo': 'darkened the photo', 'move-headline-up': 'moved the headline up',
+    'less-clutter': 'removed clutter', 'shorter-headline': 'tightened the headline', 'swap-palette': 'flipped the palette', 'more-depth': 'added depth', 'add-scrim': 'added a shade behind the text',
+  };
+  const repairLabel = a => REPAIR_LABELS[a.op] || String(a.issue || a.op).replace(/-/g, ' ');
+  // The second look runs only while the whole run is comfortably inside the
+  // page's patience (the function limit is per call; this caps the wait).
+  const RECHECK_BY_MS = 110000;
+  async function repairPicks({ plan, judged, heuristics, brief, started }) {
+    const fix1 = (scene, repairs, dir) => (C().repair ? C().repair(scene, repairs, { input: dir.input, photos: dir.photos || [], facts: scene.facts })
+      : { scene: repairs[0] && C().FIXES.includes(repairs[0].op) ? C().applyFix(scene, repairs[0].op) : scene, applied: repairs[0] && C().FIXES.includes(repairs[0].op) ? [repairs[0]] : [] });
+    const picks = plan.directions.map(dir => {
+      const verdict = (judged.directions || []).find(v => v.id === dir.id) || {};
+      const ranked = [...dir.candidates].sort((a, b) => (heuristics[b.id]?.score || 0) - (heuristics[a.id]?.score || 0));
+      const best = dir.candidates.find(s => s.id === verdict.best) || ranked[0];
+      const repairs = Array.isArray(verdict.repairs) ? [...verdict.repairs] : [];
+      const quick = verdict.fix || (judged.source !== 'vision' ? heuristics[best.id]?.fix : '');
+      if (quick && !repairs.some(r => r.op === quick)) repairs.push({ op: quick, issue: quick });
+      let res = { scene: best, applied: [] };
+      try { res = fix1(best, repairs, dir); } catch (error) { report(error, 'creative-repair'); }
+      return { dir, verdict, best, scene: res.scene, applied: res.applied || [] };
+    });
+    const fixed = picks.filter(p => p.applied.length);
+    if (judged.source !== 'vision' || !fixed.length || Date.now() - started > RECHECK_BY_MS) return picks;
+    try {
+      const sets = [];
+      for (const p of fixed) {
+        const { dataUrl } = await small(p.scene);
+        sets.push({ direction: p.dir.id, archetype: p.scene.archetype, tone: p.scene.tone || '', items: [{ id: p.scene.id, image: dataUrl }] });
+      }
+      const again = await G().callApi('/api/es-generate', { mode: 'creative-judge', recheck: true, brief, runId: plan.runId, sport: plan.read?.sport || '', sets, heuristics: {} });
+      judged.cost = Number(((judged.cost || 0) + (Number(again?.cost) || 0)).toFixed(5));
+      judged.recheck = { designs: sets.length, cost: Number(again?.cost) || 0 };
+      (again?.directions || []).forEach(v => {
+        const p = picks.find(x => x.dir.id === v.id);
+        if (!p || !Array.isArray(v.repairs) || !v.repairs.length) return;
+        const res = fix1(p.scene, v.repairs, p.dir);
+        p.scene = res.scene;
+        p.applied.push(...(res.applied || []));
+      });
+    } catch (error) { /* the first repairs stand */ }
+    return picks;
   }
 
   // Ideas the director had that code dropped (off-brief, invented numbers...).
@@ -876,6 +931,8 @@
     // The brief changed (who it names): repaint the cost + time estimate.
     paintEstimate: () => paintCount(),
     design, designs,
+    // gen4: design.review = { autoFixed, suggestions } for a design id.
+    review: id => registry.get(id)?._review || null,
     track: (type, extra = {}) => G()?.track?.(type, { runId: state.run?.plan?.runId, ...extra }),
   });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountSwitch);

@@ -110,6 +110,29 @@
       ]
     },
     {
+      "id": "2026-11-21-gen4-quality",
+      "date": "2026-11-21",
+      "title": "Generate: better designs, fixed before you see them",
+      "commit": "3d4d45a",
+      "items": [
+        {
+          "title": "You get the number of designs you pick",
+          "text": "Ask for 1 to 8 designs and you get exactly that many, even when the story has no stats.",
+          "page": "generate.html"
+        },
+        {
+          "title": "Small fixes happen while designing",
+          "text": "A murky or off-topic photo, a dropped colon or a missing photo of the person named is fixed before the design reaches you. The director only suggests new ideas now.",
+          "page": "generate.html"
+        },
+        {
+          "title": "Real photos, no sport tags",
+          "text": "When a player or coach is named, every design shows them, never a faded picture box. Designs no longer carry MLB, NFL or GOLF tags.",
+          "page": "generate.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-20-inspector",
       "date": "2026-11-20",
       "title": "Editor: a cleaner settings panel that follows your selection",

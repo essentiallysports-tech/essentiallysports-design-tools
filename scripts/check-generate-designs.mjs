@@ -190,7 +190,9 @@ try {
   // Layout debts that are not fixed yet (mostly 1:1 and 9:16 resizes of a few
   // compositions): ratcheted, so they can only go down. Lower these numbers when
   // you fix some; QA_DESIGNS_VERBOSE=1 lists every one.
-  const CEILING = { 'text collision': 86, 'cut off': 59, 'empty area': 490 };
+  // gen4-quality (2026-11-21): 86 / 59 / 490 -> 75 / 55 / 452 (typographic poster, light stat card,
+  // big-number with cut-out, split panel without a tag).
+  const CEILING = { 'text collision': 75, 'cut off': 55, 'empty area': 452 };
   const over = Object.entries(CEILING).filter(([k, max]) => (byKind[k] || 0) > max);
   over.forEach(([k, max]) => console.log(`FAIL ${k}: ${byKind[k]} designs, more than the known ${max} (run with QA_DESIGNS_VERBOSE=1)`));
   if (fatal.length || over.length) exitCode = 1;

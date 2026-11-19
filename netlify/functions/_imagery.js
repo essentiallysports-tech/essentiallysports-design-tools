@@ -485,9 +485,34 @@ function ageDays(photo) {
   if (years.length) return (clock.now() - Date.UTC(Math.max(...years), 6, 1)) / 864e5;
   return null;
 }
+// gen4 free signals (no vision key, or before it): an article lead image whose
+// headline opens with ANOTHER person's name is that person's photo ("Stephen A.
+// Smith refuses to budge..." on a LeBron James search); off-field and family
+// shots (wife, red carpet, premiere) are wrong for a sports design; an agency
+// game caption ("Josh Allen 17 of the Buffalo Bills") is an in-game photo.
+const OFF_FIELD = /\b(?:wife|husband|girlfriend|boyfriend|fianc[eé]e?|wedding|engaged|engagement|red carpet|gala|premiere|hollywood|met gala|fashion|vacation|baby|daughter|son|family|kids|mom|mother|dad|father|house|mansion|home amenity|podcast|commercial|empire state|actress|actor|singer|rapper|celebrity)\b/i;
+const LEAD_STOP = /^(?:the|a|an|my|our|his|her|their|we|i|it|this|that|why|how|what|who|when|where|after|before|breaking|report|watch|nfl|nba|mlb|nhl|wnba|espn|fans|new|top|best|first|last)$/i;
+function leadName(title) {
+  // A quoted line opens many ES headlines ("“We're Not Playing...”: Josh Allen"): never a name.
+  if (/^[“"'‘]/.test(String(title || '').trim())) return '';
+  const m = String(title || '').match(/^([A-Z][a-z'.-]+(?:\s+[A-Z]\.)?(?:\s+[A-Z][a-z'.-]+){1,2})\b/);
+  if (!m || LEAD_STOP.test(m[1].split(' ')[0])) return '';
+  return m[1];
+}
+function otherLead(photo, subject) {
+  if (subject.kind !== 'person' || photo.caption) return false;
+  const lead = leadName(photo.title);
+  if (!lead || lead.split(' ').length < 2) return false;
+  const l = norm(lead);
+  if (nameTokens(subject).some(n => l.includes(n) || n.includes(l.trim()))) return false;
+  if (l.includes(` ${surnameOf(subject.name)} `)) return false;
+  // A team or event opener ("Lakers Vs. Bulls", "NBA Play-In") is not a person.
+  return !EVENT_WORD.test(lead) && !/\b(?:vs|v)\b/i.test(lead) && !libraryTeam(lead);
+}
 function heuristics(photo, subject) {
   const text = `${photo.title} ${photo.caption} ${fileWords(photo.sourceUrl)}`;
   const nameHit = mentions(text, subject);
+  const gameCaption = subject.kind === 'person' && new RegExp(`\\b${surnameOf(subject.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(?:\\(?\\d{1,2}\\)?)\\s+(?:of|for)\\s+the\\b`, 'i').test(norm(photo.caption || '').replace(/\s+/g, ' '));
   // The story's team in the caption ("Messi ... Inter Miami") beats another team's shirt.
   const teamHit = subject.kind === 'person' && subject.team ? norm(text).includes(` ${norm(subject.team).trim()} `) : false;
   return {
@@ -495,7 +520,8 @@ function heuristics(photo, subject) {
     teamHit,
     graphic: GRAPHIC.test(`${photo.title} ${fileWords(photo.sourceUrl)}`) || /\bgraphic\b|\billustration\b/i.test(photo.caption),
     group: groupHint(photo, subject),
-    kind: kindHint(`${photo.caption} ${photo.title} ${fileWords(photo.sourceUrl)}`),
+    kind: gameCaption ? 'action' : OFF_FIELD.test(`${photo.title} ${photo.caption}`) && subject.kind === 'person' ? 'offfield' : kindHint(`${photo.caption} ${photo.title} ${fileWords(photo.sourceUrl)}`),
+    other: otherLead(photo, subject),
     age: ageDays(photo),
   };
 }
@@ -559,8 +585,8 @@ async function visionVerdicts(subject, photos, deps, ctx) {
 // 0-1. Weights: subject 0.35, resolution 0.2, visibility 0.15, quality 0.1,
 // kind 0.1, recency 0.1. Hard drops: graphics, the wrong person, tiny files.
 const KIND_VALUE = {
-  person: { action: 1, celebration: 1, portrait: 0.85, reaction: 0.85, group: 0.45, crowd: 0.35, venue: 0.3, object: 0.3, '': 0.6 },
-  team: { action: 1, celebration: 1, crowd: 0.85, venue: 0.85, group: 0.8, reaction: 0.75, portrait: 0.6, object: 0.5, '': 0.6 },
+  person: { action: 1, celebration: 1, portrait: 0.85, reaction: 0.85, group: 0.45, crowd: 0.35, venue: 0.3, object: 0.3, offfield: 0.1, '': 0.6 },
+  team: { action: 1, celebration: 1, crowd: 0.85, venue: 0.85, group: 0.8, reaction: 0.75, portrait: 0.6, object: 0.5, offfield: 0.3, '': 0.6 },
 };
 function scorePhoto(photo, subject, h, v) {
   const isPerson = subject.kind === 'person';
@@ -570,6 +596,8 @@ function scorePhoto(photo, subject, h, v) {
   if (v?.graphic || (!v && h.graphic)) drop = 'graphic';
   else if (v && isPerson && v.subject === false) drop = 'not the person';
   else if (!v && isPerson && h.nameHit === 0 && photo.matched !== 'person') drop = 'not about the person';
+  else if (!v && isPerson && h.other) drop = 'another person leads the story';
+  else if (!v && isPerson && h.kind === 'offfield') drop = 'off-field (family, red carpet)';
   else if (short && short < 400) drop = 'too small';
   else if (v && v.quality <= 1) drop = 'blurry or murky';
   const subjectScore = v ? (v.subject ? 1 : 0) : h.nameHit === 2 ? 0.8 : h.nameHit === 1 ? 0.65 : isPerson ? 0.25 : 0.5;
