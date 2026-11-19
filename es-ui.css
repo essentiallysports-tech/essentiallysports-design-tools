@@ -106,7 +106,7 @@
   border-radius: 14px;
   background: #efeff1;
 }
-.es-segmented--full { display: flex; width: 100%; }
+.es-segmented--full { display: flex; box-sizing: border-box; width: 100%; } /* border-box: the track padding no longer pushes it 8px past its column */
 .es-segmented__item {
   flex: 1 1 0;
   display: inline-flex;
