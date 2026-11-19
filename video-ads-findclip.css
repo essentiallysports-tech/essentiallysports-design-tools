@@ -57,6 +57,13 @@
 .va-pane[data-pane="clip"] .va-clip__dur { bottom: var(--es-space-2, 8px); right: var(--es-space-2, 8px); }
 .va-pane[data-pane="clip"] :is(.va-clip__tag, .va-clip__in, .va-clip__q, .va-clip__dur, .va-clip__mute) { padding: var(--es-space-1, 4px) 6px; line-height: 1; white-space: nowrap; }
 .va-pane[data-pane="clip"] .va-clip__tag:has(+ .va-clip__mute) { max-width: calc(50% - 12px); overflow: hidden; text-overflow: ellipsis; }
+/* "No sound": an icon; in the clip grids just the icon (the label stays for screen readers),
+   so the source tag beside it is never cut or covered. */
+.va-clip__mute { display: inline-flex; align-items: center; gap: var(--es-space-1, 4px); }
+.va-clip__mute svg { flex: none; width: 12px; height: 12px; }
+.va-pane[data-pane="clip"] .va-clipgrid--3 .va-clip__mute { padding: var(--es-space-1, 4px); }
+.va-pane[data-pane="clip"] .va-clipgrid--3 .va-clip__mute > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.va-pane[data-pane="clip"] .va-clipgrid--3 .va-clip__tag:has(+ .va-clip__mute) { max-width: calc(100% - 44px); }
 
 /* Title: two lines at most, the same height in every card. */
 .va-pane[data-pane="clip"] .va-mo__title { -webkit-line-clamp: 2; line-clamp: 2; min-height: calc(2 * 1.3em); }

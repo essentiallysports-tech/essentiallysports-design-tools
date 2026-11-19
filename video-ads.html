@@ -26,9 +26,9 @@
   <link rel="stylesheet" href="es-ui.css?v=20261120-rel2">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
-  <link rel="stylesheet" href="video-ads.css?v=20261120-rel4">
+  <link rel="stylesheet" href="video-ads.css?v=20261121-qa-video-ads">
   <link rel="stylesheet" href="video-ads-moments.css?v=20261119-rel">
-  <link rel="stylesheet" href="video-ads-findclip.css?v=20261120-rel4">
+  <link rel="stylesheet" href="video-ads-findclip.css?v=20261121-qa-video-ads">
   <script src="theme.js?v=20261120-rel2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
@@ -270,10 +270,10 @@
                   </button>
                 </div>
                 <div class="va-ai__actions" id="va-ai-actions" role="group" aria-label="Quick actions">
-                  <button class="va-ai__act" type="button" data-ai="write"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg><span id="va-ai-write-text">Write 3 options</span></button>
-                  <button class="va-ai__act" type="button" data-ai="grammar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 15 4-8 4 8"/><path d="M4 13h6"/><path d="m15 13 2 2 4-4"/></svg><span>Check grammar</span></button>
-                  <button class="va-ai__act" type="button" data-ai="shorten" data-say="Shorten the copy. Keep the hook and that it’s free."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 6H3"/><path d="M21 12H3"/><path d="M11 18H3"/></svg><span>Shorten</span></button>
-                  <button class="va-ai__act" type="button" data-ai="punchier" data-say="Make the headline punchier."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg><span>Make it punchier</span></button>
+                  <button class="va-ai__act" type="button" data-ai="write" data-ai-only><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg><span id="va-ai-write-text">Write 3 options</span></button>
+                  <button class="va-ai__act" type="button" data-ai="grammar" data-ai-only><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 15 4-8 4 8"/><path d="M4 13h6"/><path d="m15 13 2 2 4-4"/></svg><span>Check grammar</span></button>
+                  <button class="va-ai__act" type="button" data-ai="shorten" data-ai-only data-say="Shorten the copy. Keep the hook and that it’s free."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 6H3"/><path d="M21 12H3"/><path d="M11 18H3"/></svg><span>Shorten</span></button>
+                  <button class="va-ai__act" type="button" data-ai="punchier" data-ai-only data-say="Make the headline punchier."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg><span>Make it punchier</span></button>
                 </div>
                 <details class="va-ai__context" id="va-ai-context">
                   <summary><span id="va-ai-context-sum">Add context</span><span class="va-ai__optional">Optional</span></summary>
@@ -475,10 +475,10 @@
             <div class="va-sound__mix" id="va-sound-mix" hidden>
               <label class="va-switch va-sound__keep" id="va-sound-keep-row"><input type="checkbox" id="va-sound-keep"><span class="va-switch__track" aria-hidden="true"></span><span>Keep the clip’s sound underneath <span class="va-hint">Ducked to −12 dB under the music</span></span></label>
               <div class="va-sound__sliders">
-                <label class="va-sound__slider" id="va-sound-music-row"><span class="va-sound__row"><span>Music volume</span><output id="va-sound-music-val">−6 dB</output></span><input class="va-rail__range" type="range" id="va-sound-music" min="-40" max="6" step="1" value="-6"></label>
-                <label class="va-sound__slider" id="va-sound-orig-row"><span class="va-sound__row"><span>Clip volume</span><output id="va-sound-orig-val">0 dB</output></span><input class="va-rail__range" type="range" id="va-sound-orig" min="-40" max="6" step="1" value="0"></label>
-                <label class="va-sound__slider" id="va-sound-fade-row"><span class="va-sound__row"><span>Fade in and out</span><output id="va-sound-fade-val">0.5 s</output></span><input class="va-rail__range" type="range" id="va-sound-fade" min="0" max="3" step="0.1" value="0.5"></label>
-                <label class="va-sound__slider" id="va-sound-offset-row"><span class="va-sound__row"><span>Start the track at</span><output id="va-sound-offset-val">0:00.0</output></span><input class="va-rail__range" type="range" id="va-sound-offset" min="0" max="0" step="0.1" value="0"></label>
+                <label class="va-sound__slider" id="va-sound-music-row" for="va-sound-music"><span class="va-sound__row"><span>Music volume</span><output id="va-sound-music-val">−6 dB</output></span><input class="va-rail__range" type="range" id="va-sound-music" min="-40" max="6" step="1" value="-6"></label>
+                <label class="va-sound__slider" id="va-sound-orig-row" for="va-sound-orig"><span class="va-sound__row"><span>Clip volume</span><output id="va-sound-orig-val">0 dB</output></span><input class="va-rail__range" type="range" id="va-sound-orig" min="-40" max="6" step="1" value="0"></label>
+                <label class="va-sound__slider" id="va-sound-fade-row" for="va-sound-fade"><span class="va-sound__row"><span>Fade in and out</span><output id="va-sound-fade-val">0.5 s</output></span><input class="va-rail__range" type="range" id="va-sound-fade" min="0" max="3" step="0.1" value="0.5"></label>
+                <label class="va-sound__slider" id="va-sound-offset-row" for="va-sound-offset"><span class="va-sound__row"><span>Start the track at</span><output id="va-sound-offset-val">0:00.0</output></span><input class="va-rail__range" type="range" id="va-sound-offset" min="0" max="0" step="0.1" value="0"></label>
               </div>
               <label class="va-switch" id="va-sound-loop-row"><input type="checkbox" id="va-sound-loop" checked><span class="va-switch__track" aria-hidden="true"></span><span>Loop to the ad’s length <span class="va-hint">Off: silence after the track ends</span></span></label>
             </div>
@@ -529,6 +529,6 @@
   <script src="video-ads-audio.js?v=20261119-rel"></script>
   <script src="es-motion.js?v=20261115-ds1"></script>
   <script src="league-logos.js?v=20261117-logo1"></script>
-  <script src="video-ads.js?v=20261121-rel"></script>
+  <script src="video-ads.js?v=20261121-qa-video-ads"></script>
 </body>
 </html>

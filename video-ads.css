@@ -25,7 +25,7 @@
   --va-line-2: var(--es-slate-600, #3B4049);
   --va-ink: var(--es-slate-100, #BFC8D9);
   --va-ink-2: var(--es-slate-200, #98A6BF);
-  --va-ink-3: var(--es-slate-300, #8490A6);
+  --va-ink-3: #8A96AC; /* slate 300 lifted a touch: 4.6:1 on cards (#8490A6 was 4.3:1) */
   --va-white: var(--es-white, #FFFFFF);
   --va-accent: var(--es-blue-600, #0A6FDE);
   --va-accent-press: var(--es-blue-700, #085EBC);
@@ -609,6 +609,8 @@ html[data-theme="dark"] .va-tab[aria-selected="true"] { background: #2a2a2a; }
 .va-msg.is-error .va-msg__avatar { background: var(--va-bad); }
 .va-msg__bubble { display: grid; gap: var(--es-space-2, 8px); min-width: 0; max-width: 86%; padding: var(--es-space-3, 12px) var(--es-space-4, 16px); border-radius: 16px 16px 16px 6px; background: var(--va-sunk); color: var(--va-ink); font-size: 14px; line-height: 1.5; }
 .va-msg__bubble p { margin: 0; }
+/* A class on the bubble text keeps theme.css's dark paragraph colour off it (white on the blue user bubble). */
+.va-msg__text { color: inherit; }
 .va-msg--user .va-msg__bubble { border-radius: 16px 16px 6px 16px; background: var(--va-accent); color: #fff; }
 .va-msg.is-error .va-msg__bubble { background: var(--va-bad-soft); }
 .va-msg__bubble--typing { padding: var(--es-space-3, 12px) var(--es-space-4, 16px); }
@@ -713,7 +715,7 @@ html:not([data-theme="dark"]) .va-sound { --rail-track: rgb(14 16 20 / .14); }
 @media (min-width: 901px) { .va-toolbar { flex-wrap: nowrap; } .va-toolbar > .es-segmented { flex: none; } }
 #va-meta-toggle > span, #va-safe-toggle > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 /* A narrow stage (about 1024-1200 wide windows): tighter, text-only segments so the one row still fits. */
-@media (min-width: 901px) and (max-width: 1199px) { .va-stage .va-toolbar, .va-stage .va-toolbar__end { gap: 4px; } .va-stage .va-toolbar { padding-inline: 10px; } }
+@media (min-width: 901px) and (max-width: 1199px) { .va-stage .va-toolbar, .va-stage .va-toolbar__end { gap: 4px; } .va-stage .va-toolbar { padding-inline: var(--es-space-2, 8px); } }
 @media (min-width: 901px) {
   @container va-toolbar (max-width: 640px) {
     .va-toolbar .es-segmented__item { gap: 4px; padding-inline: 8px; }
@@ -733,7 +735,7 @@ html:not([data-theme="dark"]) .va-sound { --rail-track: rgb(14 16 20 / .14); }
 .va-toast { display: flex; align-items: center; gap: var(--es-space-3, 12px); padding: var(--es-space-2, 8px) var(--es-space-2, 8px) var(--es-space-2, 8px) var(--es-space-4, 16px); border-radius: 14px; background: #1F2126; box-shadow: 0 16px 40px -12px rgb(0 0 0 / .5), inset 0 0 0 1px rgb(255 255 255 / .08); color: #fff; font: 500 14px/1.35 var(--es-font-ui); pointer-events: auto; animation: vaToast var(--es-dur-step, 300ms) var(--va-ease-in) backwards; }
 .va-toast span { min-width: 0; }
 .va-toast:not(:has(button)) { padding: var(--es-space-3, 12px) var(--es-space-4, 16px); }
-.va-toast button { min-height: 32px; padding: 0 12px; border: 0; border-radius: 9px; background: rgb(255 255 255 / .1); color: var(--va-accent-text); font: 700 13px var(--es-font-ui); cursor: pointer; }
+.va-toast button { min-height: 32px; padding: 0 12px; border: 0; border-radius: 9px; background: rgb(255 255 255 / .1); color: var(--es-blue-300, #7CB9FF); font: 700 13px var(--es-font-ui); cursor: pointer; }
 .va-toast button:hover { background: rgb(255 255 255 / .18); }
 .va-toast--bad { background: #3b1010; }
 .va-toast--good { background: #0d2a1a; }
@@ -1058,7 +1060,7 @@ html:not([data-theme="dark"]) .va-swatch[aria-checked="true"] .va-swatch__dot { 
 .va-found__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--es-space-2); }
 .va-found__head h3 { margin: 0; color: var(--va-white); font: var(--es-type-card-title-weight, 600) 15px/1.3 var(--es-font-ui); }
 .va-teams { display: flex; flex-wrap: wrap; gap: var(--es-space-2); margin: 0; padding: 0; list-style: none; }
-.va-team { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px 0 8px; border-radius: 999px; background: var(--va-sunk); color: var(--va-ink); font: 500 13px/1 var(--es-font-ui); }
+.va-team { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); min-height: 28px; padding: 0 var(--es-space-3, 12px) 0 var(--es-space-2, 8px); border-radius: 999px; background: var(--va-sunk); color: var(--va-ink); font: 500 13px/1 var(--es-font-ui); }
 /* Team mark (2026-11-17): the team logo on a fixed white circle with a 1px
    line ring, so the box never shifts and dark logos read in dark mode. No
    logo, or one that fails to load: the old two-colour dot, centred in the
@@ -1069,7 +1071,7 @@ html:not([data-theme="dark"]) .va-swatch[aria-checked="true"] .va-swatch__dot { 
 .va-logo--dot::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%); box-shadow: inset 0 0 0 1px rgb(127 127 127 / .35); }
 .va-team:not(.va-team--more) { padding-left: 4px; }
 .va-swatch-teams { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--es-space-3); }
-.va-swatch-team { display: inline-flex; align-items: center; gap: 6px; }
+.va-swatch-team { display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); }
 .va-clip__in { position: absolute; left: 6px; top: 6px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; background: var(--es-blue-600, #0A6FDE); color: #fff; font: 600 11px/1 var(--es-font-ui); --es-icon: 12px; }
 .va-clip.is-in { box-shadow: inset 0 0 0 2px var(--va-accent); }
 .va-clip__actions .es-btn { flex: 1 1 auto; }
@@ -1192,6 +1194,9 @@ html:not([data-theme="dark"]) .va-swatch[aria-checked="true"] .va-swatch__dot { 
 @media (prefers-reduced-motion: reduce) { .va-ai__bar::after { width: 100%; animation: none; opacity: .6; } }
 .va-ai__out { display: grid; gap: var(--es-space-3); min-width: 0; }
 .va-ai__out > :empty, .va-ai__out > [hidden] { display: none; }
+/* Nothing to show yet: pull up by one gap so the empty live region adds no extra band (it stays in the
+   accessibility tree, so the first result is still announced). */
+.va-ai__out:not(:has(> :not(:empty):not([hidden]))) { margin-top: calc(-1 * var(--es-space-3, 12px)); }
 .va-ai__label { display: inline-flex; align-items: center; gap: var(--es-space-1); margin: 0; color: var(--va-ink-2); font: 500 12.5px/1.3 var(--es-font-ui); --es-icon: 14px; }
 .va-ai__label svg { width: 14px; height: 14px; color: var(--va-good); }
 .va-ai .va-variants { gap: var(--es-space-2); }
@@ -1635,7 +1640,7 @@ html:not([data-theme="dark"]) .va-rail { --rail-track: rgb(14 16 20 / .12); --ra
 .va-rail__btn:disabled svg { opacity: .35; }
 
 /* Swatches: 3 per row, quiet blue ring when picked */
-.va-rail__swatches { grid-template-columns: repeat(3, 24px); row-gap: var(--es-space-3, 12px); padding: 3px 3px 0; }
+.va-rail__swatches { grid-template-columns: repeat(3, 24px); row-gap: var(--es-space-3, 12px); padding: var(--es-space-1, 4px) var(--es-space-1, 4px) 0; }
 .va-rail__sw { width: 24px; height: 24px; }
 .va-rail__sw[aria-checked="true"],
 html:not([data-theme="dark"]) .va-rail__sw[aria-checked="true"] { box-shadow: 0 0 0 2px var(--va-stage-bg, #1F2126), 0 0 0 3.5px var(--rail-ring); }
@@ -1657,7 +1662,7 @@ html:not([data-theme="dark"]) .va-rail__sw[aria-checked="true"] { box-shadow: 0 
 
 /* ── Clip cards: verified source + quality (20261117-clips2) ───────────── */
 /* On the thumbnail: source tag top-left, quality bottom-left, length bottom-right. */
-.va-clip__tag { position: absolute; left: 6px; top: 6px; display: inline-flex; align-items: center; gap: 3px; padding: 4px 7px 4px 5px; border-radius: 6px; background: rgb(0 0 0 / .72); color: #fff; font: 600 11px/1 var(--es-font-ui); --es-icon: 11px; }
+.va-clip__tag { position: absolute; left: 6px; top: 6px; display: inline-flex; align-items: center; gap: var(--es-space-1, 4px); padding: 4px 7px 4px 5px; border-radius: 6px; background: rgb(0 0 0 / .72); color: #fff; font: 600 11px/1 var(--es-font-ui); --es-icon: 11px; }
 .va-clip__tag svg { width: 11px; height: 11px; stroke-width: 3; }
 .va-clip__tag--official svg { color: #6fd49a; }
 .va-clip__tag--verified svg { color: #7cb9ff; }
@@ -1708,7 +1713,7 @@ html:not([data-theme="dark"]) .va-rail__sw[aria-checked="true"] { box-shadow: 0 
 .va-suggest.is-current { background: var(--va-good-soft); box-shadow: inset 0 0 0 1px rgb(111 212 154 / .3); }
 .va-suggest.is-current > svg { color: var(--va-good); }
 .va-suggest__alts { flex: 1 1 100%; color: var(--va-ink-2); font-size: 12.5px; }
-.va-suggest__alts .va-link { min-height: 28px; padding: 0 2px; }
+.va-suggest__alts .va-link { min-height: 28px; padding: 0; }
 
 /* Classic styles: Meta Reels safe zone or Classic (9:16). */
 .va-zone { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--es-space-2, 8px); }
