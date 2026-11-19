@@ -209,27 +209,46 @@ function chapterCard(label, k, kicker) {
 
 // ── Frames ──────────────────────────────────────────────────────────────────
 function makeFrames(m) {
+  // Frames are fetched and decoded ahead by OUTPUT time: each draw asks for
+  // the frames the next AHEAD ms of the edit will show (the edit may skip or
+  // speed through source time), and drops everything else. A frame still on
+  // screen is never closed. `stale` counts draws that had to reuse an older
+  // frame because the right one wasn't decoded yet.
   const frames = m.frames; const cache = new Map(); const loading = new Set();
   const at = t => { let lo = 0, hi = frames.length - 1, ans = 0; while (lo <= hi) { const mid = (lo + hi) >> 1; if (frames[mid].t <= t) { ans = mid; lo = mid + 1; } else hi = mid - 1; } return ans; };
   async function load(i) {
     if (cache.has(i) || loading.has(i) || i < 0 || i >= frames.length) return;
     loading.add(i);
-    try { const b = await (await fetch(m.frameBase + frames[i].f)).blob(); cache.set(i, await createImageBitmap(b)); } catch {}
+    try { const b = await (await fetch(m.frameBase + frames[i].f)).blob(); const bm = await createImageBitmap(b); if (keep.has(i) || i === shownI) cache.set(i, bm); else bm.close(); } catch {}
     loading.delete(i);
   }
-  let last = null, lastI = -1;
+  let keep = new Set(), shownI = -1, shown = null;
+  const stats = { draws: 0, stale: 0, worstMs: 0, streakFrom: -1 };
   return {
-    at,
-    async preload(tMs, aheadMs = 2500) { const a = at(tMs); const jobs = []; for (let i = a; i < frames.length && frames[i].t <= tMs + aheadMs && jobs.length < 60; i++) jobs.push(load(i)); jobs.push(load(a)); await Promise.all(jobs); },
-    // ahead(): frames the next `ms` of OUTPUT time will need (the edit may skip).
-    get(tMs, nextTimes = []) {
-      const i = at(tMs);
-      for (const nt of nextTimes) { const j = at(nt); for (let k = j; k < j + 3 && k < frames.length; k++) if (!cache.has(k)) load(k); }
-      for (let j = i; j < frames.length && j < i + 6; j++) if (!cache.has(j)) load(j);
-      for (const k of cache.keys()) if (k < i - 2 && !nextTimes.some(nt => Math.abs(at(nt) - k) < 3)) { cache.get(k).close?.(); cache.delete(k); }
-      if (cache.has(i)) { last = cache.get(i); lastI = i; }
-      else if (lastI >= 0 && !cache.has(lastI)) last = null;
-      return last;
+    at, stats,
+    async preload(list) { keep = new Set([...keep, ...list]); await Promise.all(list.map(i => load(i))); },
+    // srcNow: source ms to show now; ahead: source ms the coming draws need.
+    get(srcNow, ahead = [], nowMs = 0) {
+      const i = at(srcNow);
+      // Every frame between now and the look-ahead samples (draw times fall
+      // between samples), at most 8 per gap where the edit speeds through.
+      const order = [i]; let prev = i;
+      for (const t of ahead) { const j = at(t); if (j > prev) { for (let k = prev + 1; k <= j && k - prev <= 8; k++) order.push(k); if (j - prev > 8) order.push(j); } else if (j !== prev) order.push(j); prev = j; }
+      const want = new Set(order);
+      keep = want;
+      // Load in order of need (now first), a few at a time.
+      let started = 0;
+      for (const j of order) { if (!cache.has(j) && !loading.has(j)) { load(j); if (++started >= 8) break; } }
+      stats.draws++;
+      if (cache.has(i)) {
+        shown = cache.get(i); shownI = i;
+        if (stats.streakFrom >= 0) { stats.worstMs = Math.max(stats.worstMs, nowMs - stats.streakFrom); stats.streakFrom = -1; }
+      } else if (shownI !== i) {
+        stats.stale++;
+        if (stats.streakFrom < 0) stats.streakFrom = nowMs;
+      }
+      for (const [k, bm] of cache) if (!want.has(k) && k !== shownI) { bm.close(); cache.delete(k); }
+      return shown;
     },
   };
 }
@@ -239,8 +258,8 @@ function drawAt(m, F, t, firstImg) {
   const T1 = m.titleSec, A = m.edit.duration / 1000, T2 = T1 + A, T3 = T2 + m.endSec;
   const o = Math.min(Math.max(0, (t - T1) * 1000), m.edit.duration);
   const srcT = toSrc(m, o);
-  const look = [0.25, 0.5, 0.8, 1.2, 1.8].map(d => toSrc(m, Math.min(m.edit.duration, o + d * 1000)));
-  const img = F.get(srcT, look) || firstImg;
+  const look = []; for (let d = 33; d <= 2000; d += 33) look.push(toSrc(m, Math.min(m.edit.duration, o + d)));
+  const img = F.get(srcT, look, t * 1000) || firstImg;
   if (t < T1 - 0.75) { titleCard(m, t, firstImg); return true; }
   if (t < T1) {
     // Title -> app: the card lifts away, the app rises into place.
@@ -368,15 +387,22 @@ window.analyze = async (m) => {
 };
 
 window.renderVideo = async (m) => {
+  const say = (...a) => console.log('[enc]', ...a);
+  say('render: start', m.audio ? 'with sound' : 'captions only');
   await ready();
+  say('render: fonts ready');
   const F = makeFrames(m);
-  await F.preload(0, 3000);
-  const firstImg = F.get(0);
+  { const list = []; for (let o = 0; o <= 2000; o += 33) list.push(F.at(toSrc(m, o))); await F.preload([...new Set(list)]); }
+  // The title card's backdrop: its own copy, so the frame cache can't close it.
+  const first0 = F.get(0, Array.from({ length: 60 }, (_, k) => toSrc(m, k * 33)));
+  const firstImg = first0 ? await createImageBitmap(first0) : null;
+  say('render: frames preloaded');
   const total = m.totalSec;
   const stream = cv.captureStream(30);
   let ac = null, src = null, stats = null;
   if (m.audio) {
     const s = await soundtrack(m); stats = s.stats;
+    say('render: soundtrack mixed');
     ac = new AudioContext({ sampleRate: 48000 }); await ac.resume();
     src = ac.createBufferSource(); src.buffer = s.mix;
     const dest = ac.createMediaStreamDestination(); src.connect(dest);
@@ -389,21 +415,24 @@ window.renderVideo = async (m) => {
   rec.start(1000);
   const t0 = performance.now() + 50;
   if (src) src.start(ac.currentTime + 0.05);
-  let drawn = 0;
+  let drawn = 0, errors = 0;
   await new Promise(res => {
     const tick = () => {
       const t = (performance.now() - t0) / 1000;
-      if (t >= 0) { drawAt(m, F, t, firstImg); drawn++; }
+      // One bad frame must not stop the render (the promise would never end).
+      if (t >= 0) { try { drawAt(m, F, t, firstImg); drawn++; } catch (e) { errors++; if (errors < 4) say('render: frame error', e.message); } }
       if (t < total) requestAnimationFrame(tick); else res();
     };
     requestAnimationFrame(tick);
   });
   const stopped = new Promise(r => { rec.onstop = r; });
+  say('render: drawn', drawn, 'frames', errors ? `(${errors} frame errors)` : '', `stale draws ${F.stats.stale}, longest ${Math.round(F.stats.worstMs)} ms`);
   rec.stop(); await stopped;
   if (src) src.stop();
   const blob = new Blob(chunks, { type: 'video/mp4' });
+  say('render: uploading', Math.round(blob.size / 1e6), 'MB');
   await upload(m.uploadUrl, blob);
-  return { bytes: blob.size, drawn, seconds: total, fps: drawn / total, audio: stats };
+  return { bytes: blob.size, drawn, errors, stale: F.stats.stale, staleWorstMs: Math.round(F.stats.worstMs), seconds: total, fps: drawn / total, audio: stats };
 };
 
 window.renderPoster = async (m, atSec, url) => {
@@ -411,7 +440,7 @@ window.renderPoster = async (m, atSec, url) => {
   const F = makeFrames(m);
   const o = Math.max(0, (atSec - m.titleSec) * 1000);
   const srcT = toSrc(m, o);
-  await F.preload(srcT, 0);
+  await F.preload([F.at(srcT)]);
   const img = F.get(srcT);
   background(0); drawApp(m, img, WIDE, srcT, { cursorOn: false });
   const shade = g.createLinearGradient(0, 0, W * 0.75, 0); shade.addColorStop(0, 'rgba(5,13,26,0.96)'); shade.addColorStop(0.55, 'rgba(5,13,26,0.84)'); shade.addColorStop(1, 'rgba(5,13,26,0.15)');

@@ -42,6 +42,7 @@ and what's still uncommitted.
 - **Trends** (`flows/trends.mjs`, new; server stub builds the feed with the real `trend-design.js` from synthetic RSS, AI angles answered locally): board + signals, AI angles (why fans care, headline ideas), sport and newsletter filters, post kit, Design post -> Generate with a ready brief.
 - Recorded: Video Ads only (owner's call; scratchpad `explainers/`). Trends, Reels Studio and Generate flows are ready to record with the new editing but were not recorded (Generate's designs are being rebuilt).
 - Tests: `scripts/test-explainers.mjs` (four flows, Trends stub, voice pick order, edit trims / holds / camera smoothness / caption chunks).
+- Encoder fixes found in review: frames are prefetched by output time (every frame the next 2 s of the edit shows; the old look-ahead skipped most frames and froze the picture for up to 9 s), a frame on screen is never closed (drawing a closed bitmap killed the render loop and hung the encode), a fresh encoder page per encode, and a Node-side timeout so a dead renderer fails instead of hanging. The log now reports stale draws (0 in the final Video Ads cut).
 
 ## 2026-11-19 — Suhail (Claude): team rule A, direct pushes to main, no PRs (branch chore/team-setup)
 - Status: `[pushed]`. Owner chose direct pushes over pull requests.

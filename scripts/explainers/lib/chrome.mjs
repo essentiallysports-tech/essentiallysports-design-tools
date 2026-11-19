@@ -29,7 +29,12 @@ async function connect(wsUrl) {
   });
   const send = (method, params = {}) => new Promise(r => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
   const evaluate = async (expr, timeout = 600000) => {
-    const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true, timeout });
+    // Also time out here: if the renderer dies, Chrome never answers.
+    let timer;
+    const r = await Promise.race([
+      send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true, timeout }),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`evaluate timed out after ${Math.round(timeout / 1000)} s`)), timeout + 5000); }),
+    ]).finally(() => clearTimeout(timer));
     if (r.error) throw new Error(r.error.message);
     if (r.result?.exceptionDetails) throw new Error(r.result.exceptionDetails.text + ' ' + (r.result.exceptionDetails.exception?.description || ''));
     return r.result?.result?.value;

@@ -65,7 +65,13 @@ let exit = 0;
 try {
   // ── 0. Stand-in clip (night stadium b-roll) for the stubbed clip sources ──
   const enc = await chrome.page(`${base}/__explainer/compose.html`);
-  await enc.send('Page.enable'); await enc.send('Runtime.enable');
+  await enc.send('Page.enable'); await enc.send('Runtime.enable'); await enc.send('Inspector.enable').catch(() => {});
+  // The encoder's own messages and failures, in the log (a hang is otherwise silent).
+  enc.on(msg => {
+    if (msg.method === 'Runtime.consoleAPICalled' && /^\[enc\]/.test(msg.params.args?.[0]?.value || '')) log(msg.params.args.map(a => a.value ?? '').join(' '));
+    if (msg.method === 'Runtime.exceptionThrown') log('encoder error:', (msg.params.exceptionDetails.exception?.description || msg.params.exceptionDetails.text).split('\n')[0]);
+    if (msg.method === 'Inspector.targetCrashed') log('encoder tab crashed');
+  });
   for (let i = 0; i < 100 && !(await enc.evaluate('typeof window.renderVideo === "function"').catch(() => false)); i++) await sleep(100);
   if (!fs.existsSync(path.join(mediaDir, 'broll.mp4'))) {
     fs.mkdirSync(mediaDir, { recursive: true });
@@ -122,10 +128,18 @@ try {
     voiceLines: timeline.captions.map(c => ({ voice: c.voice, at: titleSec + toOut(edit, c.t) / 1000 })),
     extraVoice: [{ voice: titleV.file, at: 0.5 }, { voice: endV.file, at: titleSec + appSec + 0.55 }],
   };
+  const freshEncoder = async () => {
+    await enc.send('Page.reload', { ignoreCache: false });
+    for (let i = 0; i < 100; i++) { await sleep(100); if (await enc.evaluate('typeof window.renderVideo === "function" && document.readyState === "complete"').catch(() => false)) break; }
+    await enc.send('Page.bringToFront');
+  };
   const name = `${TOOL}-explainer`;
   const encode = async (audio, file) => {
     const raw = path.join(WORK, `${file}.raw.mp4`);
-    const r = await enc.evaluate(`renderVideo(${JSON.stringify({ ...m, audio, uploadUrl: `/__upload?name=${file}.raw.mp4` })})`);
+    // A fresh encoder page per encode: a second long render in the same tab
+    // can run the renderer out of memory and hang with no error.
+    await freshEncoder();
+    const r = await enc.evaluate(`renderVideo(${JSON.stringify({ ...m, audio, uploadUrl: `/__upload?name=${file}.raw.mp4` })})`, Math.round(totalSec * 3000 + 60000));
     log(`${file}: ${(r.bytes / 1e6).toFixed(1)} MB, ${r.fps.toFixed(1)} fps drawn`);
     if (r.audio) log(`mix: voice ${r.audio.voiceDb} dBFS, music under voice ${r.audio.musicUnderVoiceDb} dBFS (${r.audio.voiceOverMusicDb} dB below), music between lines ${r.audio.musicInGapsDb} dBFS`);
     const final = path.join(OUT, `${file}.mp4`);
@@ -137,6 +151,7 @@ try {
   if (CAPTIONS_ONLY) await encode(false, `${name}-captions-only`);
 
   // ── 3. Poster, captions file, contact sheet ──────────────────────────────
+  await freshEncoder();
   await enc.evaluate(`renderPoster(${JSON.stringify(m)}, ${titleSec + Math.min(appSec - 1, flow.posterAt ?? appSec / 2)}, '/__upload?name=poster.png')`);
   fs.copyFileSync(path.join(WORK, 'poster.png'), path.join(OUT, `${name}-poster.png`));
   const srt = [
