@@ -11,11 +11,18 @@ work visible and stop people overwriting each other. They apply to every session
 3. `HANDOFF.md` is the background on the stack, pages and services.
 
 ## Working together (no overrides)
-- **Never commit or push directly to `main`.** Work on your own branch, named
-  `<your-name>/<short-topic>` (for example `vinay/video-ads-captions`).
-- **Never push, merge or open a PR without the person you work for saying so** in this session.
-  "Push" means: rebase on the latest `origin/main`, run the checks below, then push the branch and
-  open a pull request. Only fast-forward `main`; never force-push `main`, never rewrite others' commits.
+Everyone pushes straight to `main` (no pull requests). Git never silently overwrites work: a push from
+an out-of-date copy is rejected. Work is lost only by force-pushing or by resolving a conflict badly,
+so those are the rules that matter:
+- **Work on a local branch** named `<your-name>/<short-topic>` (for example `vinay/video-ads-captions`),
+  so half-done work never reaches `main` by accident. Commit there as you go.
+- **Never push without the person you work for saying "push"** in this session. "Push" means:
+  1. `git fetch origin` and rebase your branch on the latest `origin/main`;
+  2. resolve conflicts keeping both sides (see below), then run the checks below;
+  3. `git push origin HEAD:main`. If it is rejected because `main` moved, fetch, rebase, re-check and
+     push again. **Never use `--force` / `--force-with-lease` on `main`**, never rewrite or revert
+     someone else's commits without asking;
+  4. confirm the live site (Vercel deploys `main` automatically) and update your edit-log entry.
 - **Stay in your area.** Before editing a file, check `git log -5 --format='%an %ar %s' -- <file>` and the
   edit log. If someone else changed it in the last few days or has it "in progress", tell the person
   you work for before touching it.

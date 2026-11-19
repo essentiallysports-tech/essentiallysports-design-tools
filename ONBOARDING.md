@@ -27,20 +27,19 @@ Claude, the same way the rest of the team does, without anyone overwriting anyon
 ## 2. How a change works
 1. **Say what you're taking on**, so two people don't edit the same thing (tell Suhail, and Claude adds
    it to `project-docs/ai-edit-log.md`).
-2. **Ask Claude for the change.** It works on a branch named `<your-name>/<topic>`, never on `main`.
+2. **Ask Claude for the change.** It works on a local branch named `<your-name>/<topic>`.
 3. **Preview it locally:** Claude starts the local site (port 8934) and checks it in the browser.
 4. **Run the checks:** `bash scripts/release/run-suite.sh` (Claude does this before asking to push).
-5. **Say "push"** when you're happy. Claude rebases on the latest `main`, pushes your branch and opens a
-   pull request. Nothing goes live until the PR is merged into `main` (Vercel deploys `main`
-   automatically).
+5. **Say "push"** when you're happy. Claude pulls in everyone else's latest work, re-runs the checks
+   and pushes to `main`. Vercel then deploys it to the live site within a couple of minutes.
+   Claude never force-pushes, so nobody's work can be overwritten.
 
 ## 3. Who did what
 - `git log --author="Your Name"` or GitHub's history and blame show each person's commits.
-- Each pull request records what changed, why and who approved it.
 - `project-docs/ai-edit-log.md` is the shared handoff log; every entry starts with a name.
 
 ## 4. Things never to do
-- Push or commit straight to `main`, or force-push.
+- Force-push (`--force`), or push without saying "push" first.
 - Put passwords, API keys or tokens in chat, files or commits.
 - Change Vercel or Supabase settings, AI budget caps or the design rules without Suhail's OK.
 - Resolve a merge conflict by deleting someone else's code. Ask instead.

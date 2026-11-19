@@ -4,6 +4,10 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-19 — Suhail (Claude): team rule A, direct pushes to main, no PRs (branch chore/team-setup)
+- Status: `[pushed]`. Owner chose direct pushes over pull requests.
+- `CLAUDE.md` / `ONBOARDING.md`: everyone pushes to `main` after "push": fetch, rebase, keep both sides on conflicts, run checks, `git push origin HEAD:main`; never force-push. PR template removed. GitHub admin asked to block force pushes and deletion on `main` only.
+
 ## 2026-11-19 — Suhail (Claude): team setup for more than one person (branch chore/team-setup)
 - Status: `[committed on chore/team-setup — not pushed]`.
 - `CLAUDE.md`: team rules first (session start, own branch `<name>/<topic>`, never push to main, ask before push, stay in your area, conflicts, edit-log format with names, security, design / cost / cache-key rules, checks, releases); the existing UI QA section kept as is.
