@@ -1548,15 +1548,18 @@ const directionOut = (concept, picked = []) => ({
 
 // Research, the team's past posts and the director's memory, in parallel.
 // Shared by the directions step (mode 'direct') and the designs step.
-async function prepare({ brief, formats, token, trend = null }) {
+async function prepare({ brief, formats, token, email = '', trend = null }) {
   const notes = [];
   const allowedTypes = (Array.isArray(formats) ? formats : []).filter(type => TEMPLATES[type]);
   const discovered = await discover(notes);
   const { mcp, tools } = discovered;
-  const [found, corpus, signals] = await Promise.all([
+  // shown: this person's own last directions (template + hook), so the
+  // director varies them (variety; empty without the table or a token).
+  const [found, corpus, signals, shown] = await Promise.all([
     research(brief, mcp, tools, notes, trend),
     loadCorpus(token).catch(() => ({ rows: [], source: 'none', designs: [] })),
     directionMemory.signalsFor({ token }).catch(() => directionMemory.EMPTY),
+    directionMemory.recentFor({ token, email }).catch(() => directionMemory.EMPTY_RECENT),
   ]);
   const read = readBriefFor(brief, found, allowedTypes);
   // The trend's team (the feed matched it to the story) when the brief and the
@@ -1571,7 +1574,7 @@ async function prepare({ brief, formats, token, trend = null }) {
   }
   const pastPosts = normalizeCorpus(corpus.rows);
   const picked = pickPastPosts(pastPosts, { ...read, brief }, { allowedTypes, signals });
-  return { ...discovered, notes, allowedTypes, found, corpus, signals, read, pastPosts, picked };
+  return { ...discovered, notes, allowedTypes, found, corpus, signals, read, pastPosts, picked, recent: shown?.classic || [] };
 }
 
 // Step 1 of the director-first flow: the director's 2-4 named directions for
@@ -1583,8 +1586,8 @@ async function directions({ brief, formats, count, token, email, steer, trend = 
   const elapsed = () => clock.now() - started;
   const runId = newRunId();
   const want = Math.min(Math.max(parseInt(count, 10) || MAX_DESIGNS, 2), MAX_DESIGNS);
-  const prep = await prepare({ brief, formats, token, trend });
-  const { tools, notes, allowedTypes, found, corpus, signals, read, pastPosts, picked } = prep;
+  const prep = await prepare({ brief, formats, token, email, trend });
+  const { tools, notes, allowedTypes, found, corpus, signals, read, pastPosts, picked, recent } = prep;
   const researchMs = elapsed();
   const provider = tools.think ? null : pickProvider();
   const base = {
@@ -1609,6 +1612,7 @@ async function directions({ brief, formats, count, token, email, steer, trend = 
     pastIds: picked.map((_, index) => `P${index + 1}`),
     houseStyle: styleLines,
     memory: signals.lines || [],
+    recent,
     digest: found.digest,
     corpus: found.corpus || found.digest,
     ideas: found.trendIdeas || '',
@@ -1686,7 +1690,7 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
   const runId = newRunId();
   let want = Math.min(Math.max(parseInt(count, 10) || MAX_DESIGNS, 1), MAX_DESIGNS);
   // Past team posts (the brain's memory) and the director's memory load alongside the research.
-  const { mcp, tools, toolNames, error: mcpError, notes, allowedTypes, found, corpus, signals, read, pastPosts, picked } = await prepare({ brief, formats, token, trend });
+  const { mcp, tools, toolNames, error: mcpError, notes, allowedTypes, found, corpus, signals, read, pastPosts, picked, recent } = await prepare({ brief, formats, token, email, trend });
   const researchMs = elapsed();
   const steerIn = director.normalizeSteer(steer);
   // Before the corpus migration is applied (legacy source) the writer sees the
@@ -1741,6 +1745,7 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
       pastPosts: formatPastPosts(picked),
       houseStyle: styleLines,
       memory: signals.lines || [],
+      recent,
       digest: found.digest,
       corpus: found.corpus || found.digest,
       ideas: found.trendIdeas || '',
@@ -2040,12 +2045,34 @@ async function generate({ brief, formats, count, avoid, token, email, steer = ''
 // facts, photos (a different one per design), cut-outs and concept art when the
 // asset service is there, the art director's directions and 2-3 candidate
 // scenes each. The page renders the candidates and calls mode 'creative-judge'.
-async function creative({ brief, steer = {}, token, email, count = 4, trend = null }) {
+// Variety (owner: "rotate the strong looks"): fresh (Generate / Try again)
+// skips the plan cache; nonce seeds the shuffle; recent is the page's own
+// history ([{ archetype, tone }], localStorage), merged with this person's
+// logged runs (directions_shown rows); avoid: lines the editor already has.
+const recentFromBody = list => (Array.isArray(list) ? list.slice(0, 24) : [])
+  .map(item => (typeof item === 'string' ? { archetype: item } : item && typeof item === 'object' ? { archetype: item.archetype, tone: item.tone } : null))
+  .filter(item => item && /^[a-z0-9-]{2,40}$/.test(String(item.archetype || '')))
+  .map(item => ({ archetype: String(item.archetype), tone: /^[a-z]{2,12}$/.test(String(item.tone || '')) ? String(item.tone) : '' }));
+function mergeRecent(client = [], logged = []) {
+  const seen = new Set();
+  return [...client, ...logged].filter(l => {
+    const key = `${l.archetype}|${l.tone}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 12);
+}
+
+async function creative({ brief, steer = {}, token, email, count = 4, trend = null, fresh = false, nonce = '', recent = [], avoid = [] }) {
   const started = clock.now();
   const runId = newRunId();
   const notes = [];
   const { mcp, tools } = await discover(notes);
-  const found = await research(brief, mcp, tools, notes, trend);
+  const [found, logged] = await Promise.all([
+    research(brief, mcp, tools, notes, trend),
+    directionMemory.recentFor({ token, email }).catch(() => directionMemory.EMPTY_RECENT),
+  ]);
+  const history = mergeRecent(recentFromBody(recent), logged?.creative || []);
   // ES photos of one person: MCP image search, then ES story images that name them.
   const localFind = async person => {
     const surname = squash(String(person).split(' ').pop());
@@ -2057,10 +2084,16 @@ async function creative({ brief, steer = {}, token, email, count = 4, trend = nu
   // The learning model: the team's lessons for this sport go into the director's prompt.
   // gen4-learning: every archetype's lessons (the director has not picked yet),
   // what people change before export, and the ranking line (7 + 1 <= the composer's 8).
-  const lessons = ({ sport }) => creativeMemory.lessonsFor({ token, sport, archetypes: '*', limit: 7, rank: true });
+  const lessons = ({ sport, recent: shown = [] }) => creativeMemory.lessonsFor({ token, sport, archetypes: '*', limit: 7, rank: true, recent: shown });
   // A trend run plans from more context than the same brief alone: its own cache entry.
   const cacheKey = found.trend ? `${brief}|${JSON.stringify(steer)}|${want}|trend:${found.trend.id || found.trend.title}` : '';
-  const result = await composer.plan({ brief, found, steer, want, track: { email, token, runId }, localFind, nameCandidates, lessons, cacheKey });
+  const avoidLines = (Array.isArray(avoid) ? avoid : []).map(line => clean(line).slice(0, 120)).filter(Boolean).slice(0, 12);
+  const seed = /^[\w-]{1,64}$/.test(String(nonce || '')) ? String(nonce) : runId;
+  const result = await composer.plan({ brief, found, steer, want, track: { email, token, runId }, localFind, nameCandidates, lessons, cacheKey, fresh: fresh === true, seed, recent: history, avoid: avoidLines });
+  // This person's history for the next run (their own row; RLS checks it).
+  if (!result.cached && result.looks?.length) {
+    await directionMemory.recordEvent({ token, email, event: { type: 'directions_shown', runId, sport: result.read?.sport || '', payload: { look: 'creative', looks: result.looks.slice(0, 8) } } }).catch(() => false);
+  }
   return {
     ...result,
     runId,
@@ -2292,7 +2325,7 @@ exports.handler = withAiMode(async function handler(event) {
     const runBrief = trend ? TREND.withTrendSport(brief, trend) : brief;
     // Creative: composed designs (the page renders and judges the candidates).
     if (body.mode === 'creative') {
-      return json(200, await creative({ brief: runBrief, steer, token, email: auth.user.email, count: body.count, trend }));
+      return json(200, await creative({ brief: runBrief, steer, token, email: auth.user.email, count: body.count, trend, fresh: body.fresh === true, nonce: String(body.nonce || '').slice(0, 64), recent: body.recent, avoid: body.avoid }));
     }
     // Director-first step 1: the named directions only (no designs yet).
     if (body.mode === 'direct') {

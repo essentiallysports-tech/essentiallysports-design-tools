@@ -415,7 +415,7 @@ function distil(lessons = [], observations = [], { now = Date.now(), injected = 
 // change before export) get up to 3 slots of their own; with rank: true a
 // ranking line (rankBias: archetypes and tones that ship / get shuffled away)
 // rides along as kind 'rank'.
-function selectLessons(lessons = [], { sport = '', archetypes = [], brand = '', limit = 6, now = Date.now(), rank = false } = {}) {
+function selectLessons(lessons = [], { sport = '', archetypes = [], brand = '', limit = 6, now = Date.now(), rank = false, recent = [] } = {}) {
   const anyArch = archetypes === '*';
   const wantArch = new Set((anyArch ? [] : archetypes || []).map(slug));
   const inScope = l => l.scope === 'global'
@@ -445,7 +445,7 @@ function selectLessons(lessons = [], { sport = '', archetypes = [], brand = '', 
   const avoid = avoidAll.slice(0, Math.max(1, limit - 2 - change.length));
   const out = [...avoid, ...change, ...prefer].slice(0, limit).map((l, i) => ({ id: `L${i + 1}`, key: l.key, text: l.text, kind: l.kind, scope: l.scope, scopeValue: l.scopeValue, topic: l.topic, weight: l.weight, hitRate: hitRate(l), ...(isChangeTopic(l.topic) ? { change: true } : {}) }));
   if (rank) {
-    const line = rankLine(rankBias(lessons, { sport, now }));
+    const line = rankLine(rankBias(lessons, { sport, now }), { recent });
     if (line) out.push({ id: `L${out.length + 1}`, key: 'rank', text: line, kind: 'rank', scope: sport ? 'sport' : 'global', scopeValue: sport, topic: 'rank' });
   }
   return out;
@@ -482,8 +482,10 @@ function preferredArchetypes(sport = '', { now = Date.now() } = {}) {
   const b = rankBias(mergeLists(cache.rows || [], [...memory.values()]), { sport, now });
   return new Set(Object.entries(b.archetypes).filter(([, v]) => v > 0).map(([id]) => id));
 }
-function rankLine(bias) {
-  const up = Object.entries(bias.archetypes).filter(([, v]) => v > 0).slice(0, 3).map(([id]) => id);
+// recent: looks this person was just shown (variety) are never "ranked first" again.
+function rankLine(bias, { recent = [] } = {}) {
+  const shown = new Set(Array.isArray(recent) ? recent.map(String) : []);
+  const up = Object.entries(bias.archetypes).filter(([id, v]) => v > 0 && !shown.has(id)).slice(0, 3).map(([id]) => id);
   const down = Object.entries(bias.archetypes).filter(([, v]) => v < 0).sort((a, b) => a[1] - b[1]).slice(0, 2).map(([id]) => id);
   const tonesUp = Object.entries(bias.tones).filter(([, v]) => v > 0).slice(0, 2).map(([id]) => id);
   const parts = [];
@@ -492,15 +494,25 @@ function rankLine(bias) {
   if (tonesUp.length) parts.push(`tones that ship as is: ${tonesUp.join(', ')}`);
   return parts.length ? `Ranking from past exports: ${parts.join('; ')}.` : '';
 }
+// Variety (owner: "different every time"): a look this person was just shown
+// loses RECENT_PENALTY; a shipped look's lift is capped at PREFER_CAP (below
+// the penalty), so a preferred look can't win every run.
+const RECENT_PENALTY = 4;
+const PREFER_CAP = 3;
 // Orders a list of directions (or anything with .archetype / .tone) by the
 // learned bias: stable, so the composer's own order breaks ties. In place;
 // returns the list. Used by the composer's code-plan fill (marked hook).
-function rankDirections(list, { sport = '', lessons = null, bias = null, now = Date.now() } = {}) {
+// recent: archetype ids just shown to this person (penalised); groupOf(d): a
+// band that always sorts first (the composer: strong looks before tier 3).
+function rankDirections(list, { sport = '', lessons = null, bias = null, now = Date.now(), recent = null, groupOf = null } = {}) {
   if (!Array.isArray(list) || list.length < 2) return list;
   const b = bias || rankBias(lessons || mergeLists(cache.rows || [], [...memory.values()]), { sport, now });
-  if (!Object.keys(b.archetypes).length && !Object.keys(b.tones).length) return list;
-  const score = d => (b.archetypes[d?.archetype] || 0) + (b.tones[d?.tone] || 0) / 2;
-  const order = list.map((d, i) => ({ d, i, s: score(d) })).sort((x, y) => y.s - x.s || x.i - y.i).map(x => x.d);
+  const shown = recent instanceof Set ? recent : new Set(Array.isArray(recent) ? recent : []);
+  if (!Object.keys(b.archetypes).length && !Object.keys(b.tones).length && !shown.size) return list;
+  const capped = v => Math.min(PREFER_CAP, Number(v) || 0);
+  const score = d => capped(b.archetypes[d?.archetype]) + capped(b.tones[d?.tone]) / 2 - (shown.has(d?.archetype) ? RECENT_PENALTY : 0);
+  const group = d => (typeof groupOf === 'function' ? Number(groupOf(d)) || 0 : 0);
+  const order = list.map((d, i) => ({ d, i, s: score(d), g: group(d) })).sort((x, y) => x.g - y.g || y.s - x.s || x.i - y.i).map(x => x.d);
   order.forEach((d, i) => { list[i] = d; });
   return list;
 }
@@ -624,9 +636,9 @@ async function saveDeltas({ token, deltas = [] } = {}) {
 // The lessons for a run's prompts. Never throws; [] without memory.
 // gen4-learning: archetypes '*' + rank: true is the director's call (all
 // archetype lessons, the ranking line); the judge passes its archetypes.
-async function lessonsFor({ token, sport = '', archetypes = [], brand = '', limit = 6, rank = false } = {}) {
+async function lessonsFor({ token, sport = '', archetypes = [], brand = '', limit = 6, rank = false, recent = [] } = {}) {
   try {
-    return selectLessons(await loadLessons({ token }), { sport, archetypes, brand, limit, rank });
+    return selectLessons(await loadLessons({ token }), { sport, archetypes, brand, limit, rank, recent });
   } catch (error) {
     return [];
   }
@@ -798,7 +810,7 @@ module.exports = {
   loadLessons, lessonsFor, learn, judgeSignals, normalizeSignal, eventFor,
   // gen4-learning
   cleanDiff, changesOf, changeText, exportObservations, exportSummary, scopedInjected, isChangeTopic,
-  rankBias, rankLine, rankDirections, preferredArchetypes, trendFrom, loadTrend, isAdmin,
+  rankBias, rankLine, rankDirections, preferredArchetypes, RECENT_PENALTY, PREFER_CAP, trendFrom, loadTrend, isAdmin,
   _test: {
     reset: () => { memory = new Map(); cache = { at: 0, rows: null }; tableMissingUntil = 0; exportLog = []; },
     setFetch: fn => { fetchImpl = fn; },

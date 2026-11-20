@@ -2321,8 +2321,11 @@
   }
 
   // 2-3 candidates for one direction: the archetype's variants (no AI).
-  function candidates(id, input = {}, count = 3) {
-    return [0, 1, 2].slice(0, Math.max(1, Math.min(3, count))).map(variant => build(id, input, variant));
+  // offset (0-2, the run's seed): which variant leads, so two runs of the same
+  // brief do not open on the same variant; 0 = the old order [0, 1, 2].
+  function candidates(id, input = {}, count = 3, offset = 0) {
+    const k = ((Math.floor(Number(offset) || 0) % 3) + 3) % 3;
+    return [0, 1, 2].map(i => (i + k) % 3).slice(0, Math.max(1, Math.min(3, count))).map(variant => build(id, input, variant));
   }
 
   // ─── The ES guideline gate for composed designs ─────────────────────────
