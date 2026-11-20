@@ -223,12 +223,61 @@ async function signalsFor({ token } = {}) {
   return value;
 }
 
+// ─── Variety: what THIS person was just shown ──────────────────────────────
+// Creative runs log a directions_shown row with payload { look: 'creative',
+// looks: [{ archetype, tone }] } (es-generate creative()); the templates look
+// logs its directions ({ postType, hook }) from the page. recentFor reads the
+// person's own latest rows (filtered by their email: admins can read every
+// row) so the next run picks different looks. Never throws; empty without a
+// token, without the table or when Supabase is slow.
+const ID_RE = /^[a-z0-9-]{2,40}$/;
+function deriveRecent(rows = [], { runs = 3, looks = 12 } = {}) {
+  const creativeRuns = [];
+  const classic = [];
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (!row || (row.type && row.type !== 'directions_shown')) continue;
+    const payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
+    if (payload.look === 'creative' && Array.isArray(payload.looks)) {
+      if (creativeRuns.length >= runs) continue;
+      const set = payload.looks.slice(0, 8)
+        .map(l => ({ archetype: String(l?.archetype || '').toLowerCase(), tone: String(l?.tone || '').toLowerCase() }))
+        .filter(l => ID_RE.test(l.archetype))
+        .map(l => ({ archetype: l.archetype, tone: /^[a-z]{2,12}$/.test(l.tone) ? l.tone : '' }));
+      if (set.length) creativeRuns.push(set);
+    } else if (Array.isArray(payload.directions) && classic.length < looks) {
+      payload.directions.slice(0, 6).forEach(d => {
+        const postType = String(d?.postType || '');
+        if (POST_TYPES.includes(postType) && classic.length < looks) classic.push({ postType, hook: HOOKS.includes(d?.hook) ? d.hook : '' });
+      });
+    }
+  }
+  return { creative: creativeRuns.flat().slice(0, looks), creativeRuns, classic };
+}
+const EMPTY_RECENT = Object.freeze({ creative: [], creativeRuns: [], classic: [] });
+
+async function recentFor({ token, email, runs = 3, looks = 12, timeoutMs = 2000 } = {}) {
+  try {
+    if (!token || !email || Date.now() < tableMissingUntil || typeof authConfig !== 'function') return EMPTY_RECENT;
+    const who = encodeURIComponent(String(email).trim().toLowerCase());
+    const query = `select=created_at,type,payload&type=eq.directions_shown&user_email=eq.${who}&order=created_at.desc&limit=${Math.max(runs * 2, 8)}`;
+    const response = await fetch(`${authConfig().url}/rest/v1/${TABLE}?${query}`, { headers: headers(token), signal: AbortSignal.timeout(timeoutMs) });
+    if (response.status === 404) tableMissingUntil = Date.now() + CACHE_MS;
+    if (!response.ok) return EMPTY_RECENT;
+    return deriveRecent(await response.json(), { runs, looks });
+  } catch {
+    return EMPTY_RECENT;
+  }
+}
+
 module.exports = {
   EVENT_TYPES,
   normalizeEvent,
   recordEvent,
   deriveSignals,
   signalsFor,
+  deriveRecent,
+  recentFor,
+  EMPTY_RECENT,
   EMPTY,
   _test: { scrub, reset: () => { cache = { at: 0, ttl: 0, value: null }; tableMissingUntil = 0; } },
 };

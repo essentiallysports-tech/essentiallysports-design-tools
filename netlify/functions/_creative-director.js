@@ -358,7 +358,16 @@ function compactRead(read = {}) {
   });
 }
 
-function directorRequest({ brief, read = {}, allowedTypes = [], steer = '', pastPosts = '', houseStyle = [], lessons = [], teamHints = [], memory = [], digest = '', want = 4, ideas = '' } = {}) {
+// Variety: this person's last directions ([{ postType, hook }], newest first),
+// so the director stops opening every run on the same covers.
+function recentLine(recent = []) {
+  const list = (Array.isArray(recent) ? recent : []).filter(r => r && POST_TYPES.includes(r.postType)).slice(0, 8);
+  if (!list.length) return '';
+  const covers = list.filter(r => r.postType === 'cover').length;
+  return `This person was just shown (newest first): ${list.map(r => (r.hook ? `${r.postType} / ${r.hook}` : r.postType)).join(', ')}. Choose different templates and hook types this time where the brief allows${covers >= 2 ? '; at most one cover unless only covers fit' : ''}; reuse one only if nothing else fits the facts.`;
+}
+
+function directorRequest({ brief, read = {}, allowedTypes = [], steer = '', pastPosts = '', houseStyle = [], lessons = [], teamHints = [], memory = [], digest = '', want = 4, ideas = '', recent = [] } = {}) {
   const parts = [
     `Brief: ${String(brief || '').slice(0, 1500)}`,
     `What the brief gives you (code-checked): ${compactRead(read)}`,
@@ -372,6 +381,8 @@ function directorRequest({ brief, read = {}, allowedTypes = [], steer = '', past
   if (s.less.length) parts.push(`The editor wants less like (avoid these angles and their hooks): ${s.less.map(a => JSON.stringify(a)).join('; ')}.`);
   if (pastPosts) parts.push(`Past ES posts the team shipped (style and template choice only, never their facts):\n${pastPosts}`);
   if (memory.length) parts.push(`What ES editors picked and exported lately:\n${memory.slice(0, 5).map(line => `- ${line}`).join('\n')}`);
+  const shown = recentLine(recent);
+  if (shown) parts.push(shown);
   if (houseStyle.length) parts.push(`ES house style:\n${houseStyle.map(line => `- ${line}`).join('\n')}`);
   if (lessons.length) parts.push(`Editors' lessons:\n${lessons.slice(0, 6).map(line => `- ${line}`).join('\n')}`);
   if (teamHints.length) parts.push(`Team hints: ${teamHints.slice(0, 8).map(hint => `editors set ${hint.person} -> ${hint.team}`).join('; ')}`);
@@ -478,12 +489,12 @@ function validateConcepts(parsed, { read = {}, allowedTypes = [], want = 4, brie
 async function runDirector({
   brief, read, allowedTypes = [], steer = '', pastPosts = '', pastIds = [], houseStyle = [], lessons = [], teamHints = [], memory = [],
   digest = '', corpus = '', want = 4, templates = {}, tier = directorTier(), track = null,
-  timeoutMs = 12000, startedAt = Date.now(), retryByMs = 12000, now = () => Date.now(), ideas = '',
+  timeoutMs = 12000, startedAt = Date.now(), retryByMs = 12000, now = () => Date.now(), ideas = '', recent = [],
 } = {}) {
   const result = { concepts: [], read: null, model: '', cost: 0, source: 'none', calls: 0, escalated: false };
   try {
     const system = DIRECTOR_SYSTEM(templates);
-    const request = directorRequest({ brief, read, allowedTypes, steer, pastPosts, houseStyle, lessons, teamHints, memory, digest, want, ideas });
+    const request = directorRequest({ brief, read, allowedTypes, steer, pastPosts, houseStyle, lessons, teamHints, memory, digest, want, ideas, recent });
     const { aiText, isBudgetError } = gateway();
     const ask = async askTier => {
       result.calls += 1;

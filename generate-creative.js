@@ -566,6 +566,27 @@
     try { window.FrameUpErrors?.report?.(error, { area: 'generate', where }); } catch (e) { /* never break the run */ }
     try { console.error(`[generate:${where}]`, error); } catch (e) { /* noop */ }
   }
+  // ── Variety: what this browser was just shown (last 3 runs, 12 looks) ─────
+  // A per-viewer convenience next to the server's own history (it logs every
+  // run's looks); the server validates and caps what is sent.
+  const LOOKS_KEY = 'frameup.generate.recentLooks.v1';
+  function recentLooks() {
+    try {
+      const runs = JSON.parse(localStorage.getItem(LOOKS_KEY) || '[]');
+      return (Array.isArray(runs) ? runs : []).slice(0, 3).flatMap(r => (Array.isArray(r?.looks) ? r.looks : []))
+        .filter(l => l && typeof l.archetype === 'string').slice(0, 12).map(l => ({ archetype: l.archetype, tone: String(l.tone || '') }));
+    } catch (error) { return []; }
+  }
+  function rememberLooks(looks) {
+    if (!Array.isArray(looks) || !looks.length) return;
+    try {
+      const runs = JSON.parse(localStorage.getItem(LOOKS_KEY) || '[]');
+      const next = [{ at: Date.now(), looks: looks.slice(0, 8).map(l => ({ archetype: String(l.archetype || ''), tone: String(l.tone || '') })) }, ...(Array.isArray(runs) ? runs : [])].slice(0, 3);
+      localStorage.setItem(LOOKS_KEY, JSON.stringify(next));
+    } catch (error) { /* storage blocked: the server history still works */ }
+  }
+  const runNonce = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
   async function run(brief) {
     const g = G();
     if (!g || g.isBusy()) return;
@@ -587,7 +608,10 @@
     g.renderer?.().catch(() => {});
     let rendered = false;
     try {
-      const plan = await g.callApi('/api/es-generate', { mode: 'creative', brief, count: n, steer: g.steer() });
+      // Variety: every Generate / Try again is a fresh plan (no plan cache), seeded
+      // by a nonce, told what this browser was just shown.
+      const plan = await g.callApi('/api/es-generate', { mode: 'creative', brief, count: n, steer: g.steer(), fresh: true, nonce: runNonce(), recent: recentLooks() });
+      try { rememberLooks(plan?.looks || (plan?.directions || []).map(d => ({ archetype: d.archetype, tone: d.tone || '' }))); } catch (error) { /* history is optional */ }
       if (!plan?.directions?.length) {
         progress.stop();
         els.grid.replaceChildren();
@@ -646,7 +670,7 @@
       g.setSummary(`<span class="gen-mode is-ai">Creative</span><span class="gen-mode">${judged.source === 'vision' ? 'Art director · vision' : 'Quick check'}</span><span><strong>${cards.length} design${cards.length === 1 ? '' : 's'}</strong> from ${composed} compositions · ${Math.max(1, Math.round(seconds))}s · ${plan.cached ? 'cached' : money(cost)}${fewer}</span><span class="gen-summary__hint">Click a design to open it</span>`);
       try { renderDropped(plan); } catch (error) { report(error, 'creative-dropped'); }
       try { if (plan.research?.articles) g.showResearch(plan.research.articles); } catch (error) { report(error, 'creative-research'); }
-      try { g.track('generate_run', { runId: plan.runId, payload: { look: 'creative', designs: cards.length, asked: n, cost, judge: judged.source } }); } catch (error) { /* tracking never matters */ }
+      try { g.track('generate_run', { runId: plan.runId, payload: { look: 'creative', designs: cards.length, asked: n, cost, judge: judged.source, looks: (plan.looks || []).slice(0, 8) } }); } catch (error) { /* tracking never matters */ }
     } catch (error) {
       progress.stop();
       // A limit or switched-off reply is the person's own state, not a bug:

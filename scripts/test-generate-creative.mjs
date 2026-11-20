@@ -280,7 +280,12 @@ const post = body => gen.handler({ httpMethod: 'POST', headers: { authorization:
   assert.equal(res.body.kind, 'creative');
   assert.ok(res.body.runId);
   assert.ok(res.body.directions.length >= 2);
-  assert.equal(res.body.directions[0].archetype, 'record-badge');
+  // Variety (rotate the strong looks): a run is seeded, so the director's
+  // tier-3 pick makes way for any strong look the code plan fits. No photos
+  // here, so none fits: the director's own pick comes back first among tier 3.
+  const tiers = res.body.directions.map(d => (C.tierOf(d.archetype) <= 2 ? 0 : 1));
+  assert.deepEqual(tiers, [...tiers].sort(), `strong looks before tier 3: ${res.body.directions.map(d => d.archetype)}`);
+  assert.equal(res.body.directions.find(d => C.tierOf(d.archetype) > 2)?.archetype, 'record-badge', 'the director\'s tier-3 pick before the code\'s');
   assert.ok(typeof res.body.meta.costUsd === 'number');
   judgeReply = { directions: [] };
   const judged = await post({ mode: 'creative-judge', brief: NBA, sets: [], heuristics: {} });

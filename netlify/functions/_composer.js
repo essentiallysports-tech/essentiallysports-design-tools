@@ -965,6 +965,60 @@ const TIER = {
   'pill-stack': 2, 'lower-third': 2, 'duotone-hero': 2, 'versus-split': 2, 'split-versus': 2, 'stat-bars': 2, 'post-card': 2,
 };
 const tierOf = id => TIER[id] || 3;
+
+// ─── Variety (owner: "rotate the strong looks") ───────────────────────────
+// A run carries read.variety = { seed, recent: Set of archetypes, tones: [] }:
+// what this person was just shown (last ~3 runs / 12 looks) and a seed (the
+// run id / the page's nonce). With a seed, ties between strong looks resolve
+// in a seeded order and a recently shown look ranks after every other strong
+// look (never after a tier-3 one). No seed: the old fixed order (QA fixtures,
+// internal re-calls).
+const seedHash = value => {
+  let h = 2166136261;
+  for (const ch of String(value || '')) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+};
+// A stable number in [0, 1) per (seed, key): the same seed gives the same order.
+const seededRank = (seed, key) => {
+  let t = (seedHash(`${seed}|${key}`) + 0x6D2B79F5) >>> 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+const STRONG_LOOKS = () => Object.keys(TIER).filter(id => COMPOSE.BY_ID?.[id]);
+// Validates the history sent by the page / read from the events table:
+// [{ archetype, tone }] or ['archetype'], known ids only, at most 12 looks.
+function normalizeRecent(list) {
+  const out = [];
+  (Array.isArray(list) ? list : []).slice(0, 24).forEach(item => {
+    const archetype = String(typeof item === 'string' ? item : item?.archetype || '').trim().toLowerCase();
+    const tone = String(typeof item === 'string' ? '' : item?.tone || '').trim().toLowerCase();
+    if (!COMPOSE.BY_ID?.[archetype] || out.length >= 12) return;
+    out.push({ archetype, tone: TONES.includes(tone) ? tone : '' });
+  });
+  return out;
+}
+function varietyFor({ seed = '', recent = [] } = {}) {
+  const looks = normalizeRecent(recent);
+  // Newest first: the first 4 looks are (about) the last run.
+  return { seed: String(seed || '').slice(0, 80), recent: new Set(looks.map(l => l.archetype)), lastTones: looks.slice(0, 4).map(l => l.tone).filter(Boolean), looks };
+}
+const varietyOf = read => (read && read.variety && read.variety.seed ? read.variety : null);
+// A list of archetype ids in variety order: strong (tier 1-2) before tier 3,
+// not-just-shown before just-shown, then the seed's shuffle. Unchanged without a seed.
+function lookOrder(read, ids = []) {
+  const v = varietyOf(read);
+  if (!v) return ids;
+  return ids.map((id, i) => ({ id, i, key: [tierOf(id) <= 2 ? 0 : 1, v.recent.has(id) ? 1 : 0, seededRank(v.seed, id)] }))
+    .sort((a, b) => a.key[0] - b.key[0] || a.key[1] - b.key[1] || a.key[2] - b.key[2] || a.i - b.i)
+    .map(x => x.id);
+}
+// The learning hook's options for a variety run: the recency penalty beats a
+// prefer lesson (_creative-memory.js caps it), and tier 3 stays last.
+const varietyRank = read => {
+  const v = varietyOf(read);
+  return v ? { recent: v.recent, groupOf: d => (tierOf(d?.archetype) <= 2 ? 0 : 1) } : {};
+};
 // Archetypes that show the person when the input has their photo / cut-out
 // (built once from a full sample input; no AI, no network).
 let SHOWS_CACHE = null;
@@ -991,6 +1045,15 @@ function rankArchetypes(read, story, assets, preferred = []) {
   const hasPhotos = Boolean(person && (assets.photos?.[person] || []).length);
   const pool = [...new Set([...preferred, ...(COMPOSE.ARCHETYPES || []).map(a => a.id)])];
   const at = id => { const i = preferred.indexOf(id); return i < 0 ? 99 : i; };
+  const v = varietyOf(read);
+  // Variety: strong looks first, then the ones this person was NOT just shown,
+  // then the story kind's own picks, then tier, then the seed's shuffle (the
+  // kind's fixed order no longer decides which strong look leads).
+  if (v) {
+    return pool.map((id, i) => ({ id, i, key: [hasPhotos && !showsPerson().has(id) ? 1 : 0, tierOf(id) <= 2 ? 0 : 1, v.recent.has(id) ? 1 : 0, at(id) < 99 ? 0 : 1, tierOf(id), seededRank(v.seed, id), i] }))
+      .sort((a, b) => a.key.reduce((d, k, j) => d || k - b.key[j], 0))
+      .map(x => x.id);
+  }
   // The story kind's own picks lead when they are good (tier 1-2): a quote
   // story gets a quote look before a generic cover.
   return pool.map((id, i) => ({ id, i, key: [hasPhotos && !showsPerson().has(id) ? 1 : 0, at(id) < 99 && tierOf(id) <= 2 ? 0 : 1, tierOf(id), at(id), i] }))
@@ -1007,6 +1070,9 @@ function planDeterministic(read, assets = {}, { want = 4 } = {}) {
   // gen4-learning: looks the team keeps shipping for this sport pass the tier filter.
   let liked = new Set();
   try { liked = MEMORY.preferredArchetypes?.(read.sport) || liked; } catch (error) { liked = new Set(); }
+  // Variety runs: tier 3 only in the relaxed passes, liked or not (owner:
+  // weaker looks only when nothing stronger fits).
+  if (varietyOf(read)) liked = new Set();
   // Pass 1: one design per ES family (stats, cover, quote, grid...); pass 2
   // allows a second of a family only when the brief cannot fill the set otherwise.
   const run = (cap, keep = [], relax = false, anyLook = false) => {
@@ -1138,11 +1204,21 @@ const TONE_PREF = {
 };
 // Tones for a set: each design a tone its archetype supports, different from
 // the others where it can be, and light and dark mixed (2+ designs).
-function assignTones(directions = []) {
+// variety ({ seed, lastTones }): each family's tone order is rotated by the
+// seed, and the tones the person's last run used go to the back.
+function assignTones(directions = [], variety = null) {
   const used = new Map();
+  const rotate = (list, key) => {
+    if (!variety?.seed || list.length < 2) return list;
+    const k = Math.floor(seededRank(variety.seed, `tone|${key}`) * list.length);
+    return [...list.slice(k), ...list.slice(0, k)];
+  };
+  const last = new Set(variety?.lastTones || []);
+  const freshFirst = list => (last.size ? [...list.filter(t => !last.has(t)), ...list.filter(t => last.has(t))] : list);
   directions.forEach(d => {
     const support = tonesOf(d.archetype);
-    const pref = [...(TONES.includes(d.tone) ? [d.tone] : []), ...(TONE_PREF[familyOf(d.archetype)] || []), ...support].filter(t => support.includes(t));
+    const family = familyOf(d.archetype);
+    const pref = freshFirst([...(TONES.includes(d.tone) ? [d.tone] : []), ...rotate(TONE_PREF[family] || [], family), ...rotate(support, d.archetype)]).filter(t => support.includes(t));
     d.tone = pref.find(t => !used.has(t)) || pref[0] || support[0] || 'dark';
     used.set(d.tone, (used.get(d.tone) || 0) + 1);
   });
@@ -1377,7 +1453,9 @@ function DIRECTOR_SYSTEM() {
     '- note: the director\'s note, SPECIFIC to this design (what the eye sees first, what is cut out, what colour does what), max 22 words. No generic praise.',
     '- Plan designs that need no fixing. strengths (1-2, what works, max 12 words each); improvements: [] unless you have ONE genuinely different creative idea starting with "Try" ("Try a versus layout with both quarterbacks"); never list repairs. nextTime (one lesson for future designs, max 16 words).',
     '- name: 2-4 plain words that describe the design ("Record night stat post", "Kerr quote"). Never a team nickname or a word that reads as one (Bills, Heat, Jets, Kings, Thunder, Giants), never a sport or league tag.',
-    '- The ES board (the bar): stats posts set ONE number huge under the ES mark with the player cut out over its foot, a white label box with a short hook ("RECORD ALERT!", "MVP CALLING?", "ON PACE FOR HISTORY") or the headline; covers stack the headline in team-colour boxes, one idea per box line ("PERFECT / TIMING / TO SACK / SANDERS!"); quotes set 3-8 words of the speaker in white boxes over a dark portrait. Pick stat-stack / record-alert / stat-column, cover-boxes / name-stack / team-post, quote-boxes, bar-race / ranked-table first; trading cards, collage strips and posters only when nothing else fits.',
+    '- The ES board (the bar): stats posts set ONE number huge under the ES mark with the player cut out over its foot, a white label box with a short hook ("RECORD ALERT!", "MVP CALLING?", "ON PACE FOR HISTORY") or the headline; covers stack the headline in team-colour boxes, one idea per box line ("PERFECT / TIMING / TO SACK / SANDERS!"); quotes set 3-8 words of the speaker in white boxes over a dark portrait.',
+    `- Strong looks (rotate through ALL of them; there is no fixed first pick): ${STRONG_LOOKS().join(', ')}. Every other archetype (trading cards, collage strips, posters) only when no strong look fits the facts.`,
+    '- If the request says what this person was just shown, choose different looks and different tones this time; reuse one only if nothing else fits the facts.',
     '- A set of 4 uses at least 3 different ES families (stats, cover, quote, extra, bar-graph, listicle) when the brief allows; never three photo-top / headline-bottom covers.',
     '- headline cuts keep the point of the story: "LIV GOLF PAID PLAYERS MILLIONS AS UK SUPPLIERS WENT UNPAID", never "LIV GOLF PAID PLAYERS MILLIONS".',
     '- If team lessons are listed, follow them: they are mistakes editors already fixed.',
@@ -1388,7 +1466,26 @@ function DIRECTOR_SYSTEM() {
   ].join('\n');
 }
 
-function directorRequest(read, assets, { steer = {}, want = 4, lessons = [] } = {}) {
+// The editor's steer beyond tone / audience (hook, more / less like) and the
+// lines to avoid ("Try another"): Creative used to drop them.
+const STEER_HOOK = { claim: 'bold-claim hooks', question: 'question hooks', stats: 'numbers-first designs', emotion: 'emotion-led designs', debate: 'debate hooks (a take fans will argue about)' };
+const quoteList = list => (Array.isArray(list) ? list : []).map(x => String(x || '').replace(/\s+/g, ' ').trim().slice(0, 120)).filter(Boolean).slice(0, 6).map(x => JSON.stringify(x)).join('; ');
+function steerLines(steer = {}, avoid = []) {
+  const lines = [];
+  if (STEER_HOOK[steer.hook]) lines.push(`Steer from the editor: at least 2 designs use ${STEER_HOOK[steer.hook]} when the facts allow.`);
+  if (quoteList(steer.more)) lines.push(`The editor wants more like: ${quoteList(steer.more)}. Keep that spirit with fresh looks and words.`);
+  if (quoteList(steer.less)) lines.push(`The editor wants less like (avoid these angles, looks and hooks): ${quoteList(steer.less)}.`);
+  if (quoteList(avoid)) lines.push(`Already used (never repeat these headlines or lines): ${quoteList(avoid)}.`);
+  return lines;
+}
+// What this person was just shown (variety): newest first.
+function recentLine(read) {
+  const looks = read?.variety?.looks || [];
+  if (!looks.length) return '';
+  return `This person was just shown (newest first): ${looks.map(l => (l.tone ? `${l.archetype} (${l.tone})` : l.archetype)).join(', ')}. Choose different looks and tones this time; reuse one only if nothing else fits the facts.`;
+}
+
+function directorRequest(read, assets, { steer = {}, want = 4, lessons = [], avoid = [] } = {}) {
   const photoList = Object.entries(assets.photos || {}).flatMap(([person, list]) => list.map((p, i) => ({ id: p.id || `${person}#${i + 1}`, person, cutout: Boolean(assets.cutouts?.[p.src]), ...(p.kind ? { kind: p.kind } : {}), ...(p.team ? { team: true } : {}) })));
   return [
     `Brief: ${read.brief.slice(0, 1200)}`,
@@ -1401,6 +1498,8 @@ function directorRequest(read, assets, { steer = {}, want = 4, lessons = [] } = 
     `Palettes: ${JSON.stringify(paletteChoices(read))}`,
     steer.tone ? `Tone: ${steer.tone}.` : '',
     steer.audience ? `Audience: ${steer.audience === 'diehard' ? 'die-hard fans (insider detail)' : 'casual fans (big picture)'}.` : '',
+    ...steerLines(steer, avoid),
+    recentLine(read),
     read.research.length ? `ES research (cite by id only if you use it):\n${read.research.map(a => `${a.id}: ${a.title} — ${a.excerpt}`).join('\n')}` : '',
     // The Trends story behind the brief: real headlines (context for the
     // angle, not new facts) and its AI angle ideas, labelled as ideas.
@@ -1579,20 +1678,26 @@ function artDirectorTier(value = process.env.GENERATE_ART_DIRECTOR_MODEL || '') 
 }
 // The most a 4-design run may spend on AI (director + judge + second look).
 const RUN_CAP_USD = Number(process.env.GENERATE_RUN_CAP_USD) > 0 ? Math.min(0.5, Number(process.env.GENERATE_RUN_CAP_USD)) : 0.25;
+// Variety (owner: "rotate the strong looks"; spend is not a blocker): the
+// director thinks a little harder about a fresh set ('low' before).
+// GENERATE_ART_DIRECTOR_EFFORT=low brings the old setting back.
+const directorEffort = (value = process.env.GENERATE_ART_DIRECTOR_EFFORT || '') => (['low', 'medium', 'high'].includes(String(value).trim().toLowerCase()) ? String(value).trim().toLowerCase() : 'medium');
 
-async function runArtDirector({ read, assets, steer = {}, want = 4, lessons = [], track = null, timeoutMs = 20000, tier = artDirectorTier() } = {}) {
+async function runArtDirector({ read, assets, steer = {}, want = 4, lessons = [], avoid = [], track = null, timeoutMs = 20000, tier = artDirectorTier() } = {}) {
   const result = { directions: [], dropped: [], cost: 0, model: '', source: 'none', calls: 0, escalated: false };
   try {
     const { aiText, isBudgetError } = gateway();
+    const effort = directorEffort();
     const ask = async (askTier, ms = timeoutMs) => {
       result.calls += 1;
       const reply = await aiText({
         tier: askTier,
         system: DIRECTOR_SYSTEM(),
         cacheSystem: true,
-        messages: [{ role: 'user', content: directorRequest(read, assets, { steer, want, lessons }) }],
-        effort: 'low',
-        maxTokens: 1800 + 380 * Math.max(0, want - 4),
+        messages: [{ role: 'user', content: directorRequest(read, assets, { steer, want, lessons, avoid }) }],
+        effort,
+        // Room for a fuller answer at medium effort (a cut-off reply falls back a tier).
+        maxTokens: (effort === 'low' ? 1800 : 2400) + 380 * Math.max(0, want - 4),
         timeoutMs: ms,
         track: track ? { ...track, feature: 'generate-creative-director' } : undefined,
       });
@@ -1681,7 +1786,7 @@ function ensureCutoutLed(directions, read, assets) {
       : [...directions].reverse().find(d => families.filter(f => f === familyOf(d.archetype)).length > 1)
         || [...directions].reverse().find(d => d.source === 'code' && !(d.photo && !d.cutout))
         || directions[directions.length - 1];
-    const order = [...new Set([...PRIORITY.person, ...COMPOSE.ARCHETYPES.map(a => a.id)])];
+    const order = lookOrder(read, [...new Set([...PRIORITY.person, ...COMPOSE.ARCHETYPES.map(a => a.id)])]);
     const usedArch = new Set(directions.filter(d => d !== target).map(d => d.archetype));
     const otherFamilies = new Set(directions.filter(d => d !== target).map(d => familyOf(d.archetype)));
     const tryArch = strict => order.find(id => {
@@ -1733,7 +1838,7 @@ function ensureImageLed(directions, read, assets) {
       const photo = (assets.photos[person] || []).find(p => !usedPhotos.has(photoKey(p.src)));
       if (!photo) continue;
       const story = read.stories.find(st => (st.people || []).includes(person)) || read.stories[0];
-      const order = [...new Set([...PRIORITY.person, ...COMPOSE.ARCHETYPES.map(a => a.id)])];
+      const order = lookOrder(read, [...new Set([...PRIORITY.person, ...COMPOSE.ARCHETYPES.map(a => a.id)])]);
       const build = id => {
         const skel = { ...directionSkeleton(read, story, id, assets, { photos: new Set(), headline: true }), person, photo: { ...photo, person }, cutout: assets.cutouts?.[photo.src] ? { src: assets.cutouts[photo.src] } : null, source: 'code', note: '' };
         const input = inputsFor(skel, read, assets);
@@ -1792,7 +1897,7 @@ function designSet(directions, read, assets) {
   directions.forEach(d => { d.cutoutLed = usesCutout(sceneOf(d, read, assets)); });
   dedupeHeadlines(directions, read, assets, review);
   const before = directions.map(d => d.tone || '');
-  assignTones(directions);
+  assignTones(directions, varietyOf(read));
   directions.forEach((d, i) => { if (before[i] && before[i] !== d.tone) review.fixed.push({ check: 'tone-variety', what: `${d.id} ${before[i]} -> ${d.tone}` }); });
   return review;
 }
@@ -1958,7 +2063,7 @@ function ensureLight(directions, { read, assets, review, finish }) {
 function topUp(directions, { want, read, assets, review, finish, perDesign }) {
   if (directions.length >= want) return;
   const base = planDeterministic(read, assets, { want: want + 12 });
-  MEMORY.rankDirections?.(base, { sport: read.sport }); // gen4-learning hook
+  MEMORY.rankDirections?.(base, { sport: read.sport, ...varietyRank(read) }); // gen4-learning hook
   const usedArch = new Set(directions.map(d => d.archetype));
   const tones = new Set(directions.map(d => d.tone));
   for (const d of base) {
@@ -2074,7 +2179,10 @@ function scenesFor(direction, read, assets, perDesign = 3) {
   const input = inputsFor(direction, read, assets);
   const facts = input.facts;
   const out = [];
-  COMPOSE.candidates(direction.archetype, input, perDesign).forEach((scene, i) => {
+  // Variety: which variants (and which leads) come from the run's seed.
+  const v = varietyOf(read);
+  const offset = v ? Math.floor(seededRank(v.seed, `variant|${direction.archetype}`) * 3) : 0;
+  COMPOSE.candidates(direction.archetype, input, perDesign, offset).forEach((scene, i) => {
     const checked = COMPOSE.checkScene(scene, { facts });
     if (!checked.ok) return;
     scene.id = `${direction.id}c${i + 1}`;
@@ -2092,13 +2200,19 @@ function scenesFor(direction, read, assets, perDesign = 3) {
 // plan: the server step of a Creative run. Returns directions with candidates.
 // opts: { brief, found, steer, want (1-8), track, localFind, nameCandidates, director: true,
 //         lessons: [] or async ({ sport }) => [] (the learning model, _creative-memory.js) }
-async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = null, localFind = null, nameCandidates = null, director = true, cacheKey = '', lessons: lessonSource = null } = {}) {
+// Variety: fresh (Generate / Try again) skips the plan cache; seed (the page's
+// nonce or the run id) shuffles ties between strong looks; recent ([{ archetype,
+// tone }], newest first) is what this person was just shown; avoid: lines the
+// editor already has. Research, photo and judge caches are unaffected.
+async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = null, localFind = null, nameCandidates = null, director = true, cacheKey = '', lessons: lessonSource = null, fresh = false, seed = '', recent = [], avoid = [] } = {}) {
   const { want, perDesign } = budgetFor(wantRaw);
   const key = cacheKey || `${brief}|${JSON.stringify(steer)}|${want}`;
-  const hit = PLAN_CACHE.get(key);
+  const hit = fresh ? null : PLAN_CACHE.get(key);
   if (hit && now() - hit.at < PLAN_TTL_MS) return { ...hit.value, cached: true, cost: { ...hit.value.cost, total: 0, cachedFrom: hit.value.cost.total } };
   const started = now();
   const read = readCreative(brief, found, { nameCandidates });
+  const runSeed = String(seed || '') || (fresh ? `fresh-${started}` : '');
+  if (runSeed) read.variety = varietyFor({ seed: runSeed, recent });
   // es-generate research: the Trends story the brief came from (optional).
   if (found.trend) {
     read.trend = { lines: (found.trendLines || []).slice(0, 7), ideas: found.trendIdeas || '', whyNow: found.trend.whyNow || '', team: found.trend.team || '' };
@@ -2114,22 +2228,38 @@ async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = 
   // Team lessons for this sport (never blocks the run).
   let lessons = [];
   try {
-    lessons = typeof lessonSource === 'function' ? await lessonSource({ sport: read.sport }) : Array.isArray(lessonSource) ? lessonSource : [];
+    lessons = typeof lessonSource === 'function' ? await lessonSource({ sport: read.sport, recent: [...(read.variety?.recent || [])] }) : Array.isArray(lessonSource) ? lessonSource : [];
   } catch (error) { lessons = []; }
   lessons = (lessons || []).slice(0, 8);
   let ai = { directions: [], dropped: [], cost: 0, model: '', source: 'none' };
-  if (director) ai = await runArtDirector({ read, assets, steer, want, lessons, track });
+  if (director) ai = await runArtDirector({ read, assets, steer, want, lessons, avoid, track });
   let directions = ai.directions;
+  // Variety runs (owner: weaker looks only when nothing stronger fits): a
+  // tier-3 pick by the director makes way; the code plan below fills the gap
+  // with a strong look, and only falls back to tier 3 when none fits (then
+  // the director's own tier-3 picks come back before the code's).
+  let weakPicks = [];
+  if (varietyOf(read) && directions.some(d => tierOf(d.archetype) > 2)) {
+    weakPicks = directions.filter(d => tierOf(d.archetype) > 2);
+    directions = directions.filter(d => tierOf(d.archetype) <= 2).map((d, i) => ({ ...d, id: `d${i + 1}` }));
+  }
   // Fill any gap with the code plan (different archetypes and photos).
   if (directions.length < want) {
     const base = planDeterministic(read, assets, { want: want + 4 });
-    MEMORY.rankDirections?.(base, { sport: read.sport }); // gen4-learning hook: learned archetype / tone ranking (_creative-memory.js)
+    MEMORY.rankDirections?.(base, { sport: read.sport, ...varietyRank(read) }); // gen4-learning hook: learned archetype / tone ranking (_creative-memory.js)
     const usedArch = new Set(directions.map(d => d.archetype));
     const usedPhotos = new Set(directions.filter(d => d.photo).map(d => photoKey(d.photo.src)));
     const families = new Map();
     directions.forEach(d => families.set(familyOf(d.archetype), (families.get(familyOf(d.archetype)) || 0) + 1));
     // Different ES families first; a repeat family only when nothing else fits.
-    [want <= 4 ? 1 : 2, 2, 9].forEach(cap => base.forEach(d => {
+    // Variety runs: strong looks in every pass before any tier 3, and within a
+    // family cap the looks this person was not just shown first.
+    const v = varietyOf(read);
+    const caps = [want <= 4 ? 1 : 2, 2, 9];
+    const band = d => (tierOf(d.archetype) <= 2 ? 0 : 1) * 2 + (v?.recent.has(d.archetype) ? 1 : 0);
+    const passes = v ? [...caps.flatMap(cap => [0, 1].map(b => ({ cap, b }))), ...caps.map(cap => ({ cap, b: 3 }))] : caps.map(cap => ({ cap, b: -1 }));
+    passes.forEach(({ cap, b }) => (b === 3 ? [...weakPicks, ...base] : base).forEach(d => {
+      if (b >= 0 && band(d) > b) return;
       // The last pass may reuse a photo (gen4: the count is always honoured).
       if (directions.length >= want || usedArch.has(d.archetype) || (cap < 9 && d.photo && usedPhotos.has(photoKey(d.photo.src)))) return;
       if ((families.get(familyOf(d.archetype)) || 0) >= cap) return;
@@ -2139,6 +2269,7 @@ async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = 
       directions.push({ ...d, id: `d${directions.length + 1}` });
     }));
   }
+  weakPicks.filter(w => !directions.some(d => d.archetype === w.archetype)).forEach(d => ai.dropped.push({ archetype: d.archetype, headline: d.headline, why: 'a weaker look while strong looks fit' }));
   // The set as a whole: a cut-out-led design for a named star, tones mixed
   // light and dark, then (below) candidates without holes.
   const review = designSet(directions, read, assets);
@@ -2178,7 +2309,7 @@ async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = 
     const ranked = needPhoto ? [...pool.filter(showsPhoto), ...pool.filter(b => !showsPhoto(b))] : pool;
     // gen4: photo-led first (when the person has photos), board-grade (tier) next, then family variety.
     const byFamily = list => [...list.filter(b => b.story === d.story && !families.has(familyOf(b.archetype))), ...list.filter(b => !families.has(familyOf(b.archetype))), ...list];
-    const tiered = list => [...list].sort((a, b) => tierOf(a.archetype) - tierOf(b.archetype));
+    const tiered = list => { const at = lookOrder(read, list.map(b => b.archetype)); return [...list].sort((a, b) => tierOf(a.archetype) - tierOf(b.archetype) || at.indexOf(a.archetype) - at.indexOf(b.archetype)); };
     const photoFirst = needPhoto ? [...byFamily(tiered(pool.filter(showsPhoto))), ...byFamily(tiered(pool.filter(b => !showsPhoto(b))))] : byFamily(tiered(ranked));
     const ordered = [...new Set(photoFirst)].map(carry);
     // The set's only cut-out-led design is replaced by another cut-out-led one when one fits.
@@ -2235,6 +2366,9 @@ async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = 
     budget: { count: want, candidatesPerDesign: perDesign },
     assets: { service: Boolean(assetService()), cutouts: Object.keys(cutouts).length, photos: Object.values(photos).reduce((n, l) => n + l.length, 0) },
     cost,
+    // What this run showed (the next run's history) and what it avoided.
+    looks: directions.map(d => ({ archetype: d.archetype, tone: d.tone || '' })),
+    variety: { fresh: Boolean(fresh), seeded: Boolean(runSeed), avoided: read.variety ? read.variety.looks.length : 0 },
     ms: now() - started,
   };
   if (PLAN_CACHE.size > 60) PLAN_CACHE.delete(PLAN_CACHE.keys().next().value);
@@ -2523,7 +2657,9 @@ async function judge({ brief, sets = [], heuristics = {}, lessons = [], track = 
 module.exports = {
   repairsFrom,
   designTimeFixes, isCreativeIdea, repairFor, topUp,
-  TIER, tierOf, showsPerson, rankArchetypes, cardTitle, judgeTierFor, judgeEstimate, RUN_CAP_USD, artDirectorTier,
+  TIER, tierOf, showsPerson, rankArchetypes,
+  // Variety (rotate the strong looks).
+  normalizeRecent, varietyFor, lookOrder, seededRank, STRONG_LOOKS, directorEffort, cardTitle, judgeTierFor, judgeEstimate, RUN_CAP_USD, artDirectorTier,
   unquote,
   editorialKicker,
   readCreative, addTrendTeam, splitStories, factsIn, properNames, planDeterministic, validateDirections, runArtDirector, DIRECTOR_SYSTEM, directorRequest,
