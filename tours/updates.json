@@ -3,6 +3,28 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-25-generate-creative-quality",
+      "date": "2026-11-25",
+      "title": "Better Creative designs",
+      "items": [
+        {
+          "title": "Generate",
+          "text": "Photos now frame the player properly: faces stay in the picture in tall and zoomed layouts, and a swapped photo is framed on its own player.",
+          "page": "generate.html"
+        },
+        {
+          "title": "Generate",
+          "text": "Pills match the editor: every pill (headlines, kickers, labels, name tags) is Acumin Black in your team's brand-kit colours, straight and solid.",
+          "page": "generate.html"
+        },
+        {
+          "title": "Generate",
+          "text": "A new mix every time: Generate remembers the looks you were just shown and picks different layouts and colours on the next run.",
+          "page": "generate.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-23-music-for-video-ads",
       "date": "2026-11-23",
       "title": "Music for Video Ads",
