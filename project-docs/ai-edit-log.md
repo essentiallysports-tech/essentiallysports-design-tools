@@ -5,7 +5,7 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 and what's still uncommitted.
 
 ## 2026-11-20 — Suhail: Dashboard "Exports over time" chart fix (branch suhail/dashboard-chart-fix)
-- Status: committed, not pushed.
+- Status: pushed in d7f241f.
 - Why: at 90 days the chart drew ~90 jagged daily points, and the SVG stretches to its box (preserveAspectRatio none), so the end dot was squashed into an oval at the right edge.
 - Changed (`dashboard.html`, `dashboard-ui-system.css`): ranges over 30 days plot weekly totals (weeks end today; tooltip "Week of …", meta "weekly · peak N in the week of …"); dots are HTML marks over the SVG so they stay round; right padding 8 → 14. 24h / 7d / 30d unchanged. Cache key `dashboard-ui-system.css?v=20261125-chart`. Release note `2026-11-25-dashboard-trend-chart`.
 - Tests: inline-syntax, check-dashboard-ui, check-dashboard-supabase, test-usage-tracking, test-impact, test-home-today pass. Local QA with 700 mock exports: dot 10×10 px at 24h/7d/30d/90d, inside the card; 375 px dark, no horizontal scroll; hover tooltip "58 exports · Week of Oct 3".
