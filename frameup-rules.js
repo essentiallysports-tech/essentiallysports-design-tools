@@ -68,5 +68,78 @@
   // Real stat labels (Player Stats / Head-to-Head).
   const STAT_LABELS = /^(PTS|REB|REBS|AST|ASTS|STL|BLK|TOV|FG|FG%|3PM|3PT|FT|FT%|YDS|YARDS|TD|TDS|INT|INTS|REC|CAR|RUSH|SACK|SACKS|TKL|TKLS|HR|RBI|AVG|ERA|SO|K|HITS|SB|OPS|WHIP|GOALS|G|A|SOG|SV|SAVES|PPG|RPG|APG|SPG|BPG|MIN|MINS|ACES|WINS|W|L|PCT|QBR|CMP|ATT|RTG|BIRDIES|EAGLES|PAR)$/i;
 
-  return { VERSION: '2026-11-15', CANVAS, SAFE_AREA, FIT, BANNED, WEAK_WORDS, VOICE, STAT_LABELS };
+  // The ES pill: the editor's Cover pill (index.html PILL_*, drawPills,
+  // getPillFont). Acumin Pro Condensed Black ("Acumin Post", 900), uppercase,
+  // no letter-spacing, a sharp solid box; 130px type in a 122px pill with
+  // 18.4 / 21.88px side padding; stacked rows touch (each row starts just under
+  // the letters of the one above). Any pill size keeps these proportions.
+  // scripts/test-pill-rules.mjs checks these numbers against index.html.
+  const PILL = Object.freeze({
+    family: 'Acumin Post',
+    file: 'fonts/acumin-post-legacy.otf',
+    weight: 900,
+    upper: true,
+    letterSpacing: 0,
+    radius: 0,
+    size: 130,
+    height: 122,
+    padLeft: 18.4,
+    padRight: 21.88,
+    edgeGap: 1,
+    rowGap: 1,
+    minSize: FIT.cover.pill.minSize,
+    heightRatio: 122 / 130,
+    padLeftRatio: 18.4 / 130,
+    padRightRatio: 21.88 / 130,
+    bestChars: [10, 16],
+    mistContrast: 2.4,
+  });
+  // One pill row at a type size: box height, side padding, the text's top
+  // padding (cap height centred), its baseline from the box top and the step
+  // to the next stacked row (drawPills). cap = the measured cap height of "A";
+  // scale = export scale (the 1px gaps scale with the canvas, not the type).
+  function pillMetrics(size, cap, scale = 1) {
+    const h = size * PILL.heightRatio;
+    const capH = cap > 0 ? cap : size * 0.68;
+    const topPad = Math.max(0, Math.round((h - capH) * 0.5));
+    const baseline = Math.min(topPad + capH, h - Math.round(2 * scale));
+    const step = Math.max(Math.round(h * 0.55), h - topPad + Math.round(PILL.edgeGap * scale)) + Math.round(PILL.rowGap * scale);
+    return { size, h, padLeft: size * PILL.padLeftRatio, padRight: size * PILL.padRightRatio, topPad, baseline, step, cap: capH };
+  }
+
+  // Pill text colour (index.html getMistColorForPair / getTextColorForPair,
+  // Social): the pair's mist when it reads (contrast >= 2.4), else the better
+  // of white / black. pair = { background, foreground, mist }; others = the
+  // rest of that brand-kit entry's pairs (the editor's fallback mist).
+  const hexOk = v => /^#[0-9a-f]{6}$/i.test(String(v || ''));
+  function luminance(hex) {
+    const value = (hexOk(hex) ? hex : '#000000').replace('#', '');
+    const lin = c => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    const [r, g, b] = [0, 2, 4].map(i => lin(parseInt(value.slice(i, i + 2), 16) / 255));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+  function contrastRatio(a, b) {
+    const x = luminance(a);
+    const y = luminance(b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  }
+  function pillMist(pair = {}, others = []) {
+    const bg = String(pair.background || '').toLowerCase();
+    if (pair.mist && pair.mist.toLowerCase() !== bg) return pair.mist;
+    const alternate = (others || []).find(p => p?.background && p.background.toLowerCase() !== bg);
+    if (alternate) return alternate.background;
+    if (pair.foreground && pair.foreground.toLowerCase() !== bg) return pair.foreground;
+    return bg === '#000000' ? '#FFFFFF' : '#000000';
+  }
+  function pillTextColor(pair = {}, others = []) {
+    const bg = pair?.background || '#1A1A1A';
+    const mist = pillMist({ ...pair, background: bg }, others);
+    if (mist && mist.toLowerCase() !== bg.toLowerCase() && contrastRatio(bg, mist) >= PILL.mistContrast) return mist;
+    const candidates = [mist, '#FFFFFF', '#000000'].filter((color, index, arr) => (
+      color && color.toLowerCase() !== bg.toLowerCase() && arr.findIndex(c => c?.toLowerCase() === color.toLowerCase()) === index
+    ));
+    return candidates.sort((a, b) => contrastRatio(bg, b) - contrastRatio(bg, a))[0] || '#FFFFFF';
+  }
+
+  return { VERSION: '2026-11-25', CANVAS, SAFE_AREA, FIT, BANNED, WEAK_WORDS, VOICE, STAT_LABELS, PILL, pillMetrics, pillMist, pillTextColor, contrastRatio };
 }));
