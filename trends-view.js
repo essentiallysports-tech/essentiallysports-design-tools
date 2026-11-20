@@ -154,6 +154,7 @@
     // The league rides along too (the page's brief -> league map keeps only the
     // last 40 briefs, so a long board could lose it).
     const category = findItem(id)?.category;
+    window.FrameUpTrack?.track?.('open', { tool: 'trends', action: 'design-post', label: findItem(id)?.title || brief, meta: { template: template || '', sport: category ? labelOf(category) : '' } });
     document.dispatchEvent(new CustomEvent('ais:design', { detail: { brief, source: 'trends', trendId: id, format: template || '', trend: trendOf(id), ...(category ? { sport: labelOf(category) } : {}) } }));
   }
 
@@ -565,6 +566,7 @@
       area.remove();
     }
     if (!ok) { toast(`Couldn’t copy. Select the text and copy it by hand.`); return; }
+    window.FrameUpTrack?.track?.('copy', { tool: 'trends', action: String(what).toLowerCase(), label: String(text).split('\n')[0].slice(0, 160) });
     announce(`${what} copied.`);
     if (!button) { toast(`${what} copied`); return; }
     const before = button.innerHTML;

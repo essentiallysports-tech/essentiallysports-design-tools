@@ -10,7 +10,8 @@
   <script src="frameup-errors.js?v=20261121-rel2"></script>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261121-rel2"></script>
-  <script src="dashboard-data.js?v=20261120-rel3"></script>
+  <script src="frameup-track.js?v=20261125-tracking"></script>
+  <script src="dashboard-data.js?v=20261125-tracking"></script>
   <script src="dashboard-people.js?v=20261120-rel3"></script>
   <script src="ai-usage-summary.js?v=20261118-rel1"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -466,8 +467,11 @@
 <link rel="stylesheet" href="frameup-posted.css?v=20261118-rel1">
 <link rel="stylesheet" href="frameup-impact.css?v=20261118-rel1">
 <script src="frameup-impact.js?v=20261118-rel1"></script>
-<script src="frameup-posted.js?v=20261121-rel2"></script>
+<script src="frameup-posted.js?v=20261125-tracking"></script>
 <script src="frameup-impact-view.js?v=20261121-rel2"></script>
+<link rel="stylesheet" href="frameup-usage.css?v=20261125-tracking">
+<script src="frameup-usage.js?v=20261125-tracking"></script>
+<script src="frameup-usage-view.js?v=20261125-tracking"></script>
 <script src="dashboard-insights.js?v=20261119-rel3"></script>
 <script src="frameup-learning.js?v=20261122-rel" defer></script>
 <link rel="stylesheet" href="dashboard-insights.css?v=20261119-rel3">
@@ -517,13 +521,18 @@
     <aside class="dashboard-sidebar" aria-label="Dashboard navigation">
       <nav class="sidebar-nav">
         <button class="is-active" type="button" data-dashboard-view="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Overview</span></button>
+        <button type="button" data-dashboard-view="usage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span>Usage</span></button>
         <button type="button" data-dashboard-view="impact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg><span>Impact</span></button>
-        <button type="button" data-dashboard-view="board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v14"/><path d="M12 3v8"/><path d="M19 3v18"/></svg><span>Request Board</span><span class="nav-count" data-request-count>0</span></button>
-        <button type="button" data-dashboard-view="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg><span>Request List</span><span class="nav-count" data-open-request-count>0</span></button>
-        <button type="button" data-dashboard-view="designs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg><span>Review Exports</span><span class="nav-count" data-design-count>0</span></button>
-        <button type="button" data-dashboard-view="feedback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M7 11h10"/><path d="M7 15h6"/><path d="M7 7h8"/></svg><span>Tool Feedback</span><span class="nav-count" data-feedback-count>0</span></button>
+        <span class="dash-tab-sep" aria-hidden="true"></span>
+        <button type="button" data-dashboard-view="board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v14"/><path d="M12 3v8"/><path d="M19 3v18"/></svg><span>Board</span><span class="nav-count" data-request-count>0</span></button>
+        <button type="button" data-dashboard-view="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg><span>Requests</span><span class="nav-count" data-open-request-count>0</span></button>
+        <span class="dash-tab-sep" aria-hidden="true"></span>
+        <button type="button" data-dashboard-view="designs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg><span>Exports</span><span class="nav-count" data-design-count>0</span></button>
+        <button type="button" data-dashboard-view="feedback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M7 11h10"/><path d="M7 15h6"/><path d="M7 7h8"/></svg><span>Feedback</span><span class="nav-count" data-feedback-count>0</span></button>
+        <button type="button" data-dashboard-view="activity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg><span>Activity</span></button>
+        <span class="dash-tab-sep" aria-hidden="true"></span>
         <button type="button" data-dashboard-view="people"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg><span>People</span><span class="nav-count" data-online-count>1</span></button>
-        <button type="button" data-dashboard-view="access"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg><span>Access Requests</span><span class="nav-count" data-access-count>0</span></button>
+        <button type="button" data-dashboard-view="access"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg><span>Access</span><span class="nav-count" data-access-count>0</span></button>
       </nav>
     </aside>
 
@@ -597,7 +606,7 @@
             </section>
 
             <section class="dov-section" aria-labelledby="dov-activity-title">
-              <h2 class="dov-section-title es-type-section" id="dov-activity-title">Activity</h2>
+              <h2 class="dov-section-title es-type-section" id="dov-activity-title">Exports and activity</h2>
               <div class="dov-grid is-2-1">
                 <article class="dov-card">
                   <header class="dov-card-head">
@@ -663,7 +672,10 @@
             </section>
 
             <section class="dov-section" aria-labelledby="dov-usage-title">
-              <h2 class="dov-section-title es-type-section" id="dov-usage-title">Usage</h2>
+              <div class="dov-section-head">
+                <h2 class="dov-section-title es-type-section" id="dov-usage-title">Workspaces and templates</h2>
+                <button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-dashboard-view="usage">Everything taken</button>
+              </div>
               <div class="dov-grid is-1-1">
                 <article class="dov-card">
                   <header class="dov-card-head">
@@ -734,14 +746,14 @@
 
           <section class="panel task-list-panel" data-view-section="list">
             <div class="panel-head">
-              <div><h2 class="panel-title">Request list</h2><p class="panel-subtitle">Design requests with admin controls. Exports stay in Review Exports.</p></div>
+              <div><h2 class="panel-title">Request list</h2><p class="panel-subtitle">Design requests with admin controls. Editor exports are under Exports.</p></div>
             </div>
             <div id="tasks-table"></div>
           </section>
 
           <section class="panel" data-view-section="people" data-dashboard-panel="people">
             <div class="panel-head">
-              <div><h2 class="panel-title">People</h2><p class="panel-subtitle">Everyone with a FrameUp account or access request. Search, filter by status, change roles (Server Owners), approve requests and unstick confirmations.</p></div>
+              <div><h2 class="panel-title">People</h2><p class="panel-subtitle">Everyone with a FrameUp account or access request: roles, approvals and stuck confirmations.</p></div>
             </div>
             <div class="people-list" id="people-list"></div>
           </section>
@@ -761,23 +773,25 @@
 
           <section class="panel export-review-shell" data-view-section="designs" data-dashboard-panel="designs">
             <div class="panel-head">
-              <div><h2 class="panel-title">Review Exports</h2><p class="panel-subtitle">Every downloaded design captured for admin review.</p></div>
+              <div><h2 class="panel-title">Exports</h2><p class="panel-subtitle">Every editor export, newest first, for review. Downloads, copies and links from every tool are under Usage.</p></div>
             </div>
             <div id="designs-table"></div>
           </section>
 
           <section class="panel feedback-review-shell" data-view-section="feedback" data-dashboard-panel="feedback">
             <div class="panel-head">
-              <div><h2 class="panel-title">Tool Feedback</h2><p class="panel-subtitle">Feedback submitted from FrameUp tools, saved through authenticated ES sessions.</p></div>
+              <div><h2 class="panel-title">Tool Feedback</h2><p class="panel-subtitle">Feedback people sent from FrameUp tools.</p></div>
             </div>
             <div id="feedback-table"></div>
           </section>
+
+          <section class="dov usage-view" id="usage-view" data-view-section="usage" aria-labelledby="usage-title" hidden></section>
 
           <section class="impact-view" id="impact-view" data-view-section="impact" aria-label="Impact" hidden></section>
 
           <section class="panel" data-view-section="activity" data-dashboard-panel="activity">
             <div class="panel-head">
-              <div><h2 class="panel-title">Activity</h2><p class="panel-subtitle">Submissions, exports, assignment changes, and status moves.</p></div>
+              <div><h2 class="panel-title">Activity log</h2><p class="panel-subtitle">Request submissions, editor exports, assignments and status changes. For everything people take from FrameUp, see Usage.</p></div>
             </div>
             <div class="activity-list" id="activity-list"></div>
           </section>
@@ -843,7 +857,7 @@
     ]);
     let peopleAdmin = null;
     const DASHBOARD_SEEN_KEY = 'es.dashboard.seenBadges.v1';
-    const DASHBOARD_VIEWS = new Set(['overview', 'impact', 'board', 'list', 'designs', 'feedback', 'people', 'access', 'activity']);
+    const DASHBOARD_VIEWS = new Set(['overview', 'usage', 'impact', 'board', 'list', 'designs', 'feedback', 'people', 'access', 'activity']);
     let dashboardUser = { name: 'ES Admin', email: '', role: 'Admin', accessRole: 'Admin', designation: 'Design Operations' };
     let canAssignDashboardRoles = false;
     let selectedTaskId = '';

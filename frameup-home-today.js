@@ -626,7 +626,12 @@
           return;
         }
         const handoff = event.target.closest('[data-today-handoff]');
-        if (handoff) { storeHandoff(handoff); return; }
+        if (handoff) {
+          storeHandoff(handoff);
+          const item = trendData?.items?.find(i => i.id === handoff.dataset.todayTrend);
+          win.FrameUpTrack?.track?.('open', { tool: 'home', action: `trend-${handoff.dataset.todayHandoff || 'post'}`, label: item?.title || '' });
+          return;
+        }
         const retry = event.target.closest('[data-today-retry]');
         if (retry) {
           const job = retry.dataset.todayRetry;

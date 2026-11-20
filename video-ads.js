@@ -3697,6 +3697,7 @@
     });
     els.files.hidden = false;
     els.files.innerHTML = rows.map(r => `<li><span class="va-files__icon" aria-hidden="true">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="va-files__name">${esc(r.fileName)}</span><span class="va-meta">${r.mb.toFixed(1)} MB</span><a class="va-link" href="${r.href}" download="${esc(r.fileName)}">Download again</a></li>`).join('');
+    els.files.querySelectorAll('a[download]').forEach(link => link.addEventListener('click', () => window.FrameUpTrack?.track?.('download', { tool: 'video-ads', action: 'download-again', label: link.getAttribute('download') })));
     els.exportStatus.textContent = (ext === 'mp4'
       ? `Downloaded ${targets.length} MP4${targets.length > 1 ? 's' : ''} (${span.toFixed(1)}s).`
       : 'Downloaded as WebM: this browser can’t record MP4. Use Chrome or Edge for MP4.') + (withSound ? '' : ' No sound (Muted).');
@@ -3709,6 +3710,7 @@
       const sizes = targets.map(t => `${t.s.width}x${t.s.height}`);
       const adNames = rows.map(r => r.fileName.replace(/\.[a-z0-9]+$/i, ''));
       const styles = [...new Set(rows.map(r => r.style))];
+      window.FrameUpTrack?.track?.('export', { tool: 'video-ads', action: ext, label: plain(state.headline).slice(0, 120), meta: { count: rows.length, sizes, styles, brand: brand().id, ai: Boolean(state.aiCopy) } });
       window.FrameUpPosted?.exported?.({ source: 'video-ads', title: plain(state.headline).slice(0, 120), template: styles.join(','), style: styles.join(','), angle: items && items.length ? items.map(x => x.angle).join(',') : angle(), brand: brand().id, sizes, adNames, aiMade: state.aiCopy ? 'video-ads' : '', count: rows.length });
     } catch (error) { /* never block an export */ }
     return rows;

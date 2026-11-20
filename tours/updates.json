@@ -3,6 +3,22 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-25-usage-tracking",
+      "date": "2026-11-25",
+      "title": "Usage: everything taken from FrameUp",
+      "commit": "597e93d",
+      "items": [
+        {
+          "title": "What gets counted",
+          "text": "FrameUp now counts every download, copy and shared link, not only exports: ES photos, caption files, copied headlines and HTML, image links, Video Ads and Reels files, and designs opened from Generate, Trends or the Gallery. It saves what was taken and from which tool, never the image itself."
+        },
+        {
+          "title": "Dashboard for admins",
+          "text": "A new Usage tab shows it all by type, tool and person, with a daily chart and the latest activity. The dashboard tabs are shorter and grouped."
+        }
+      ]
+    },
+    {
       "id": "2026-11-25-generate-creative-quality",
       "date": "2026-11-25",
       "title": "Better Creative designs",

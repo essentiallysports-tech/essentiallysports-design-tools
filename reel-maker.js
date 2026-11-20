@@ -2238,8 +2238,10 @@
       const a = document.createElement('a');
       a.href = fileUrl; a.download = name;
       document.body.append(a); a.click(); setTimeout(() => a.remove(), 1000);
+      window.FrameUpTrack?.track?.('export', { tool: 'reels-studio', action: result.ext, label: name, meta: { format: state.plan.format, seconds: Math.round(tl.durationMs / 1000), audio: Boolean(result.hasAudio) } });
       els.files.hidden = false;
       els.files.innerHTML = `<li><span class="rm-files__icon">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="rm-files__name">${esc(name)}</span><span class="rm-meta">${(result.blob.size / 1048576).toFixed(1)} MB · ${(tl.durationMs / 1000).toFixed(1)} s</span><a class="rm-link" href="${fileUrl}" download="${esc(name)}">Download again</a></li>`;
+      els.files.querySelector('a[download]')?.addEventListener('click', () => window.FrameUpTrack?.track?.('download', { tool: 'reels-studio', action: 'download-again', label: name }));
       const hasAi = L.usedAssets(tl).some(id => tl.assets[id]?.rights?.ai);
       const voiced = X.mixPlan(tl, state.buffers).vo;
       els.exportStatus.textContent = `${result.ext === 'mp4' ? 'Exported' : 'Exported as WebM (this browser can’t make MP4; use Chrome or Edge)'}${result.hasAudio ? (voiced ? ' with the voiceover' : ' with music') : ' with captions only (no audio)'}. ${hasAi ? 'It has AI-generated scenes: turn on the platform’s AI label when you post.' : 'No AI-generated video in it.'}`;
@@ -3735,6 +3737,7 @@
       document.body.append(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 4000);
       els.carouselStatus.textContent = `Exported ${slides.length} slides (${(blob.size / 1048576).toFixed(1)} MB).`;
       logEvent('carousel_export', { slides: slides.length, format: state.plan.format, target: state.target });
+      window.FrameUpTrack?.track?.('export', { tool: 'reels-studio', action: 'zip', label: name, meta: { kind: 'carousel', count: slides.length, format: state.plan.format } });
       toast('Carousel exported', { tone: 'good' });
     } catch (error) {
       els.carouselStatus.textContent = error.message || 'The carousel export failed. Try again.';

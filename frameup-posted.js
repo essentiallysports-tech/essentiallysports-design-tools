@@ -578,6 +578,7 @@
     markGenerateRun(meta = {}) {
       if (!designStartedAt) designStartedAt = Date.now();
       track('generate_run', { source: 'generate', meta });
+      window.FrameUpTrack?.track?.('generate', { tool: 'generate', action: String(meta.format || 'run'), meta: { count: meta.count } });
     },
     close: closeCard,
   });

@@ -10,6 +10,7 @@
   <script src="frameup-errors.js?v=20261121-rel2"></script>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261121-rel2"></script>
+  <script src="frameup-track.js?v=20261125-tracking"></script>
   <script>
     window.ESAuth?.requireAuth(`generate.html${window.location.search}${window.location.hash}`);
   </script>
@@ -58,7 +59,7 @@
 <script src="league-logos.js?v=20261117-logo1"></script>
 <link rel="stylesheet" href="frameup-posted.css?v=20261118-rel1">
 <script src="frameup-impact.js?v=20261118-rel1"></script>
-<script src="frameup-posted.js?v=20261121-rel2"></script>
+<script src="frameup-posted.js?v=20261125-tracking"></script>
 <link rel="stylesheet" href="generate-creative.css?v=20261122-rel">
 <script src="frameup-rules.js?v=20261125-pills" defer></script>
 <script src="frameup-compose.js?v=20261125-genq" defer></script>
@@ -66,7 +67,7 @@
 <script src="frameup-assets.js?v=20261121-rel" defer></script>
 <script src="generate-focus.js?v=20261122-rel" defer></script>
 <script src="generate-assistant.js?v=20261125-framing" defer></script>
-<script src="generate-creative.js?v=20261125-genq" defer></script>
+<script src="generate-creative.js?v=20261125-gentrack" defer></script>
 <script src="frameup-learning.js?v=20261122-rel" defer></script><!-- gen4-learning: export / shuffle capture -->
   <style>
     html:not([data-theme="dark"]) body.gen-body { background: #fff; }
@@ -883,7 +884,7 @@
 
   <!-- Trends view: pure logic + the board (the Generate view is the next script). -->
   <script src="trends-logic.js?v=20261124-trendctx"></script>
-  <script src="trends-view.js?v=20261124-trendctx"></script>
+  <script src="trends-view.js?v=20261125-tracking"></script>
   <script>
     // FrameUp Generate: brief → /api/es-generate (ES research + AI copy +
     // template checks + ES photo) → each design rendered by the real editor in
@@ -2396,6 +2397,7 @@
             return;
           }
           track('design_opened', designEvent(spec));
+          window.FrameUpTrack?.track?.('open', { tool: 'generate', action: 'open-in-editor', label: (spec.lines || []).join(' ') || spec.title || spec.label, meta: { template: spec.label || spec.postType } });
           window.location.href = 'index.html#instagram';
         } else if (act === 'download') {
           button.disabled = true;
@@ -2404,6 +2406,7 @@
           try {
             await (await renderer()).exportSpec(spec);
             track('design_exported', designEvent(spec, { score: spec.review?.score ?? null, fixApplied: Boolean(spec.critique?.applied) }));
+            window.FrameUpTrack?.track?.('export', { tool: 'generate', action: 'image', label: (spec.lines || []).join(' ') || spec.title || spec.label, meta: { template: spec.label || spec.postType, look: 'templates' } });
             // "Posted it?" card + export event (frameup-posted.js).
             window.FrameUpPosted?.exported?.({ source: 'generate', title: (spec.lines || []).join(' ') || spec.title || spec.label, template: spec.label || spec.postType, style: spec.postType, brand: 'essentiallysports', aiMade: 'generate' });
             // Say it worked, then bring the results summary back.
@@ -2656,6 +2659,7 @@
           return;
         }
         specs.forEach(spec => track('design_opened', designEvent(spec, { set: specs.length })));
+        window.FrameUpTrack?.track?.('open', { tool: 'generate', action: 'open-carousel', label: versionText(specs[0].postType, specs[0]).slice(0, 120), meta: { count: specs.length } });
         window.location.href = 'index.html#instagram';
       });
       setBar.zip.addEventListener('click', async () => {
@@ -2671,6 +2675,7 @@
           const name = `frameup-${(lastBrief || 'set').split(/\s+/).slice(0, 5).join(' ')}`;
           const result = await api.exportSet(specs, name);
           specs.forEach(spec => track('design_exported', designEvent(spec, { set: specs.length, score: spec.review?.score ?? null })));
+          window.FrameUpTrack?.track?.('export', { tool: 'generate', action: 'zip', label: result.filename, meta: { count: result.count, kind: 'set' } });
           window.FrameUpPosted?.exported?.({ source: 'generate', title: `${result.count}-design set: ${versionText(specs[0].postType, specs[0]).slice(0, 80)}`, template: 'Carousel set', style: specs.map(spec => spec.postType).join(','), brand: 'essentiallysports', aiMade: 'generate' });
           setSummary(`<span>${window.FrameUpMotion ? window.FrameUpMotion.check() : ''}<strong>${result.count} designs downloaded</strong> as ${esc(result.filename)}.</span>`);
         } catch (error) {

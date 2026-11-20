@@ -540,7 +540,10 @@
       applyImprovement: id => applyImprovement(card, id),
       isApplied: id => isApplied(card, id),
       export: type => exportCard(card, type),
-      openInEditor: typeof window.FrameUpCompose?.openInEditor === 'function' ? () => window.FrameUpCompose.openInEditor(card._scene) : undefined,
+      openInEditor: typeof window.FrameUpCompose?.openInEditor === 'function' ? () => {
+        window.FrameUpTrack?.track?.('open', { tool: 'generate', action: 'open-in-editor', label: card._dir?.name || card._scene.archetypeName, meta: { look: 'creative', template: card._scene.archetype } });
+        return window.FrameUpCompose.openInEditor(card._scene);
+      } : undefined,
     };
   }
   const designs = () => state.cards.filter(c => c.isConnected).map(c => design(c._designId)).filter(Boolean);
@@ -845,6 +848,7 @@
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
     G().setSummary(`<span><strong>${type === 'image/jpeg' ? 'JPEG' : 'PNG'} downloaded</strong> · ${scene.size.w} × ${scene.size.h}</span>`);
+    window.FrameUpTrack?.track?.('export', { tool: 'generate', action: type === 'image/jpeg' ? 'jpg' : 'png', label: card._dir.name || scene.archetypeName, meta: { look: 'creative', template: scene.archetype, size: `${scene.size.w}x${scene.size.h}` } });
     // Gallery record (the editor frame has dashboard-data.js loaded).
     try {
       await Promise.race([G().renderer?.(), new Promise(resolve => setTimeout(resolve, 8000))]).catch(() => {});

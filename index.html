@@ -10,7 +10,8 @@
 <script src="frameup-errors.js?v=20261121-rel2"></script>
 <script src="es-auth-config.js?v=20260707-auth4"></script>
 <script src="es-auth.js?v=20261121-rel2"></script>
-  <script src="dashboard-data.js?v=20261120-rel3"></script>
+<script src="frameup-track.js?v=20261125-tracking"></script>
+  <script src="dashboard-data.js?v=20261125-tracking"></script>
 <script>
   (() => {
     window.ESAuth?.requireAuth(`index.html${window.location.search}${window.location.hash}`);
@@ -19271,6 +19272,7 @@ async function copyImageLink() {
     // Optional UTM tags (frameup-posted.js toggle); the stored file and its path don't change.
     const utmContext = { brand: activeWorkspace === 'newsletter' ? state.newsletterBrand : 'essentiallysports', designId: path.split('/').pop().replace(/\.[a-z0-9]+$/i, ''), workspace: activeWorkspace };
     const url = window.FrameUpPosted?.decorateLink?.(publicUrl, utmContext) || publicUrl;
+    window.FrameUpTrack?.track?.('share', { tool: window.FrameUpTrack.toolForWorkspace(activeWorkspace), action: 'image-link', label: name, meta: { size: `${plan.width}x${plan.height}` } });
     if (await copyTextToClipboard(url)) {
       showToast('Image link copied', 'success');
       setStatus('Link copied: ' + url, 'ok');
@@ -22574,6 +22576,7 @@ function copyWidgetHtml(html, button) {
   const utmContext = { brand: state.newsletterBrand || 'essentiallysports', designId: activeNewsletterAsset || 'widget', workspace: 'newsletter' };
   html = window.FrameUpPosted?.decorateHtml?.(rawHtml, utmContext) ?? rawHtml;
   const onCopied = () => {
+    window.FrameUpTrack?.track?.('copy', { tool: 'newsletter', action: 'widget-html', label: activeNewsletterAsset || 'widget', meta: { brand: utmContext.brand } });
     window.FrameUpPosted?.afterCopy?.({ kind: 'html', raw: rawHtml, ctx: utmContext, title: 'Newsletter widget' });
     if (!button) return;
     const label = button.querySelector('span');
@@ -24801,14 +24804,14 @@ loadFont().then(() => render());
 <script src="frameup-autosave.js?v=20261119-rel3"></script>
 <script src="frameup-designs.js?v=20261118-rel1"></script>
 <script src="trends-logic.js?v=20261124-trendctx" defer></script>
-<script src="frameup-home-today.js?v=20261124-trendctx" defer></script>
+<script src="frameup-home-today.js?v=20261125-tracking" defer></script>
 <script src="frameup-cloud-drafts.js?v=20261119-rel3"></script>
 <script src="frameup-templates.js?v=20261119-rel3"></script>
 <script src="frameup-spec.js?v=20261119-rel3"></script>
 <script src="frameup-impact.js?v=20261118-rel1"></script>
-<script src="frameup-posted.js?v=20261121-rel2"></script>
+<script src="frameup-posted.js?v=20261125-tracking"></script>
 <script src="frameup-zip.js?v=20261118-rel1"></script>
-<script src="frameup-size-pack.js?v=20261118-rel1"></script>
+<script src="frameup-size-pack.js?v=20261125-tracking"></script>
 <script src="frameup-cutout.js?v=20261118-rel1"></script>
 <script src="frameup-extras.js?v=20261120-rel4"></script>
 <script src="frameup-rules.js?v=20261125-pills"></script>

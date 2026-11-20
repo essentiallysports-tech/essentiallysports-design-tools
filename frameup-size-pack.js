@@ -396,6 +396,7 @@
         const zipBytes = g.FrameUpZip.zip(files);
         downloadBlob(new Blob([zipBytes], { type: 'application/zip' }), `${slug(stem) || 'frameup'}-size-pack.zip`);
         toast(`Downloaded ${files.length} sizes`, 'success');
+        try { g.FrameUpTrack?.track?.('export', { tool: 'social', action: 'zip', label: stem, meta: { kind: 'size-pack', count: files.length, sizes: chosen.map(item => item.target.id), format: format.ext } }); } catch (error) { /* never blocks */ }
         close();
       } catch (error) {
         console.error('Size pack download failed:', error);

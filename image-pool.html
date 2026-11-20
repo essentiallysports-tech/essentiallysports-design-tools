@@ -10,6 +10,7 @@
   <script src="frameup-errors.js?v=20261121-rel2"></script>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261121-rel2"></script>
+  <script src="frameup-track.js?v=20261125-tracking"></script>
   <script>
     window.ESAuth?.requireAuth(`image-pool.html${window.location.search}${window.location.hash}`);
   </script>
@@ -379,6 +380,7 @@
       async function copyLink(result, button) {
         try {
           await navigator.clipboard.writeText(shareUrlFor(result));
+          window.FrameUpTrack?.track?.('share', { tool: 'image-pool', action: 'photo-link', label: result.title || result.caption || '', meta: { credit: result.credit || '' } });
           toast('Link copied');
           if (button) {
             button.classList.add('is-done');
@@ -518,6 +520,7 @@
           download.className = 'pool-icon-btn';
           download.href = result.proxyUrl || result.sourceUrl;
           download.download = filenameFor(result, index);
+          download.dataset.download = String(index);
           download.title = 'Download';
           download.setAttribute('aria-label', `Download ${label}`);
           download.innerHTML = ICON_DOWNLOAD;
@@ -692,11 +695,19 @@
         if (event.key === 'ArrowRight') { event.preventDefault(); stepViewer(1); }
       });
       els.viewerCopy.addEventListener('click', () => copyLink(state.items[state.viewerIndex]));
+      // Dashboard → Usage: every photo saved from the pool (grid or viewer).
+      function trackPhotoDownload(result, index) {
+        if (!result) return;
+        window.FrameUpTrack?.track?.('download', { tool: 'image-pool', action: 'photo', label: filenameFor(result, index), meta: { credit: result.credit || '' } });
+      }
+      els.viewerDownload.addEventListener('click', () => trackPhotoDownload(state.items[state.viewerIndex], state.viewerIndex));
 
       // ── Events ───────────────────────────────────────────────────────────
       els.grid.addEventListener('click', event => {
         const copy = event.target.closest('[data-copy]');
         if (copy) { copyLink(state.items[Number(copy.dataset.copy)], copy); return; }
+        const saved = event.target.closest('[data-download]');
+        if (saved) { trackPhotoDownload(state.items[Number(saved.dataset.download)], Number(saved.dataset.download)); return; }
         const open = event.target.closest('[data-open]');
         if (open) { lastOpener = open; openViewer(Number(open.dataset.open)); }
       });

@@ -1222,6 +1222,29 @@
     }
   }
 
+  // Dashboard → Usage (frameup-track.js): every editor export, whichever page
+  // made it. Fire-and-forget; inside an iframe (Generate's renderer) the
+  // tracker is off and the page that owns the button logs instead.
+  function trackDesignExport(record) {
+    try {
+      const tracker = window.FrameUpTrack;
+      if (!tracker?.track) return;
+      const mime = String(record.metadata?.mimeType || '').toLowerCase();
+      tracker.track('export', {
+        tool: tracker.toolForWorkspace(record.workspace),
+        action: mime.includes('png') ? 'png' : mime.includes('jpeg') || mime.includes('jpg') ? 'jpg' : 'image',
+        label: record.title,
+        meta: {
+          template: record.workspaceVariant,
+          size: String(record.metadata?.outputSize || '').replace(/\s*×\s*/, 'x').replace(/px$/, ''),
+          from: record.metadata?.generated ? 'generate' : '',
+        },
+      });
+    } catch (error) {
+      // Tracking never blocks an export.
+    }
+  }
+
   async function recordDesignExport(payload = {}) {
     const design = payload.design && typeof payload.design === 'object' ? payload.design : null;
     const user = await getCurrentUser();
@@ -1262,6 +1285,7 @@
       },
     };
     writeDesigns([record, ...designs].slice(0, 500));
+    trackDesignExport(record);
     const task = taskFromDesign(record);
     if (task.previewDataUrl) task.metadata = { ...task.metadata, previewPath: fullPreviewPath(task.id) };
     writeTasks(mergeTasks([task], readTasks()).slice(0, 750));

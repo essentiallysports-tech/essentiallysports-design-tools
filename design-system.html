@@ -10,6 +10,7 @@
   <script src="frameup-errors.js?v=20261121-rel2"></script>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261121-rel2"></script>
+  <script src="frameup-track.js?v=20261125-tracking"></script>
   <script>
     window.ESAuth?.requireAuth(`design-system.html${window.location.search}${window.location.hash}`);
   </script>
@@ -1264,7 +1265,7 @@
         const tok = event.target.closest('.ds-tok');
         if (!tok) return;
         const value = tok.textContent.trim();
-        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(value).then(() => toast('Copied ' + value), () => toast('Couldn’t copy. Select the text instead.', true));
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(value).then(() => { toast('Copied ' + value); window.FrameUpTrack?.track?.('copy', { tool: 'design-system', action: 'token', label: value }); }, () => toast('Couldn’t copy. Select the text instead.', true));
         else toast('Couldn’t copy. Select the text instead.', true);
       });
 
