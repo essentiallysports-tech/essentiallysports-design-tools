@@ -133,7 +133,9 @@ assert.ok(Math.abs(arc.value - 484 / 706) < 0.001, 'arc fill is 484 of 706');
 // ── 5. Palette roles are contrast-checked ──────────────────────────────────
 [['#FB4F14', '#000000'], ['#552583', '#FDB927'], ['#0B5D3B', '#FFD54A'], ['#C4CED4', '#000000'], []].forEach(colors => {
   const p = C.makePalette(colors);
-  assert.ok(C._test.contrast(p.onAccent, p.accent) >= 4.5, `${colors}: text on accent reads`);
+  // Text on an accent pill follows the editor's pair rule (mist >= 2.4:1, else white / black).
+  assert.ok(C._test.contrast(p.onAccent, p.accent) >= 2.4, `${colors}: text on accent reads`);
+  assert.equal(p.onAccent, C.pillTextColor({ background: p.accent, mist: p.bg }), `${colors}: onAccent is the pill rule`);
   assert.ok(C._test.contrast(p.inkSoft, p.bg) >= 4.5, `${colors}: soft ink reads`);
   ['onAccent', 'inkSoft', 'deep', 'rim', ...p.tone.map((_, i) => i)].forEach(k => {
     const c = typeof k === 'number' ? p.tone[k] : p[k];
@@ -142,8 +144,24 @@ assert.ok(Math.abs(arc.value - 484 / 706) < 0.001, 'arc fill is 484 of 706');
   const f = C.flipPalette(p);
   assert.ok(f.onAccent && f.allowed.includes(f.onAccent), 'flipped palette keeps the roles');
 });
-// Lakers: team purple on gold pills (the ES pill guide).
+// Lakers: team purple on gold pills (the field colour reads on the accent, >= 2.4:1).
 assert.equal(C.makePalette(['#552583', '#FDB927']).onAccent, C.makePalette(['#552583', '#FDB927']).bg);
+// With the brand-kit pair (what the composer passes): the pill is the pair's
+// background and its text the editor's rule (Lakers: gold pill, purple text;
+// Golf Green & Gold: the mist is too close to the green, so white).
+{
+  const lakers = C.makePalette(['#FAB624', '#542C81'], { pair: { background: '#FAB624', foreground: '#542C81', mist: '#542C81' } });
+  assert.equal(lakers.pillBg, '#FAB624');
+  assert.equal(lakers.pillInk, '#542C81');
+  assert.ok(lakers.allowed.includes('#FAB624') && lakers.allowed.includes('#542C81'));
+  const golf = C.makePalette(['#0B5D3B', '#FFD54A', '#073F28'], { pair: { background: '#0B5D3B', foreground: '#FFD54A', mist: '#073F28' } });
+  const golfDark = C.tonePalette(golf, 'light');
+  assert.equal(golfDark.box, '#0B5D3B', 'tone boxes use the pair background');
+  assert.equal(golfDark.boxInk, '#FFFFFF', 'mist under 2.4:1 -> white');
+  assert.deepEqual(golfDark.pair, golf.pair, 'the pair survives the tone palette');
+  assert.equal(C.boardColors(golfDark, {}).box, '#0B5D3B', 'board boxes use the pair background');
+  assert.equal(C.boardColors(golfDark, {}).boxInk, '#FFFFFF');
+}
 // Old serialized palettes (no roles) still build.
 const old = { ...pal };
 ['onAccent', 'inkSoft', 'deep', 'rim', 'tone'].forEach(k => delete old[k]);
@@ -193,6 +211,111 @@ assert.ok(depth.layers.some(l => l.shape === 'vignette'));
       }
     }
   }
+}
+
+// ── 7. Pills follow the editor's rules (Acumin Black, straight, one colour) ──
+{
+  // Every pill layer of every composition (all variants, all tones of the looks).
+  const kitPal = C.makePalette(['#FAB624', '#542C81'], { name: 'Lakers', pair: { background: '#FAB624', foreground: '#542C81', mist: '#542C81' } });
+  let checked = 0;
+  for (const a of C.ARCHETYPES) {
+    for (const palette of [pal, kitPal]) {
+      for (const tone of a.looks ? a.tones : ['']) {
+        const input = { ...rich, palette, swipe: true, ...(tone ? { tone } : {}) };
+        if (!C.fits(a.id, input)) continue;
+        [0, 1, 2].forEach(v => {
+          const scene = C.build(a.id, input, v);
+          scene.layers.filter(C.isPillLayer).forEach(l => {
+            checked += 1;
+            const tag = `${a.id} v${v} ${tone} ${l.role}`;
+            assert.equal(l.font, 'pill', `${tag}: pill font`);
+            assert.ok(!('weight' in l) && !('tracking' in l), `${tag}: no weight / tracking override`);
+            assert.equal(l.text, l.text.toUpperCase(), `${tag}: uppercase`);
+            assert.ok(!l.fx?.rotate && !l.fx?.tilt && !l.fx?.shadow && !l.fx?.glow, `${tag}: straight, no shadow or glow`);
+            assert.ok(!l.radius, `${tag}: sharp corners`);
+            if (l.type === 'text') {
+              assert.ok(!l.box.colors, `${tag}: one box colour`);
+              assert.ok(!(l.highlight?.words || []).length, `${tag}: no second-colour words in a pill`);
+            }
+          });
+        });
+      }
+    }
+  }
+  assert.ok(checked > 200, `pill layers checked (${checked})`);
+  assert.match(C.FONTS.pill, /^"Acumin Post"/, 'pill font is the editor\'s Acumin Post (Acumin Pro Condensed Black)');
+
+  // Drawn with a recording canvas: the boxes, fonts and colours the renderer uses.
+  const fakeCtx = () => {
+    const calls = { rects: [], texts: [], fonts: [], spacing: [] };
+    const g = {
+      calls, globalAlpha: 1, fillStyle: '#000', shadowColor: 'transparent', textAlign: 'left', textBaseline: 'alphabetic',
+      _font: '10px x', get font() { return this._font; }, set font(v) { this._font = v; calls.fonts.push(v); },
+      _ls: '0px', get letterSpacing() { return this._ls; }, set letterSpacing(v) { this._ls = v; calls.spacing.push(v); },
+      save() {}, restore() {}, beginPath() {}, fill() {}, rect() {}, clip() {},
+      measureText(t) { const size = Number((this._font.match(/([\d.]+)px/) || [])[1] || 10); return { width: String(t).length * size * 0.42, actualBoundingBoxAscent: size * 0.7, actualBoundingBoxDescent: 0 }; },
+      fillRect(x, y, w, h) { calls.rects.push({ x, y, w, h, fill: this.fillStyle }); },
+      fillText(t, x, y) { calls.texts.push({ t, x, y, fill: this.fillStyle, font: this._font }); },
+      getImageData() { throw new Error('no pixels'); },
+    };
+    return g;
+  };
+  const scene = C.build('pill-stack', { ...rich, palette: kitPal, headline: 'Lebron to break another NBA record tonight' }, 0);
+  const head = scene.layers.find(l => l.role === 'headline');
+  const g = fakeCtx();
+  const report = { items: [], palette: scene.palette };
+  C._pill.drawText(g, head, 1, report);
+  const item = report.items[0];
+  assert.ok(item.pill, 'a boxed headline reports its pill rows');
+  assert.match(item.pill.font, /^900 [\d.]+px "Acumin Post"/, 'headline pills: Acumin Black 900');
+  assert.equal(item.pill.tracking, 0, 'no letter-spacing');
+  assert.ok(g.calls.spacing.every(v => v === '0px'), 'letter-spacing set to 0');
+  const rows = item.pill.rows;
+  assert.ok(rows.length >= 2, 'a stacked headline');
+  assert.equal(g.calls.rects.length, rows.length, 'one sharp box per row');
+  assert.ok(new Set(g.calls.rects.map(r => r.fill)).size === 1 && g.calls.rects[0].fill === '#FAB624', 'every row the pair background');
+  const size = item.size;
+  const m = C.pillMetrics(size, size * 0.7);
+  rows.forEach(r => assert.ok(Math.abs(r.h - size * 122 / 130) < 1e-6, 'pill height 122/130 of the type'));
+  assert.ok(Math.abs(item.pill.padLeft - size * 18.4 / 130) < 1e-6 && Math.abs(item.pill.padRight - size * 21.88 / 130) < 1e-6, 'editor padding ratio');
+  for (let i = 1; i < rows.length; i += 1) {
+    const gap = rows[i].y - rows[i - 1].y;
+    assert.ok(Math.abs(gap - m.step) < 1e-6, 'row step = the editor formula');
+    assert.ok(rows[i].y <= rows[i - 1].y + rows[i - 1].h, 'stacked rows touch (no gap)');
+    assert.ok(rows[i].y >= rows[i - 1].y + m.topPad + m.cap, 'the next row never covers the letters above');
+  }
+  g.calls.texts.forEach((t, i) => {
+    assert.equal(t.t, t.t.toUpperCase(), 'uppercase');
+    assert.equal(t.fill, '#542C81', 'text = the pair rule (Lakers purple on gold)');
+  });
+  // Text starts at the left padding of its row.
+  const firstWord = g.calls.texts[0];
+  assert.ok(Math.abs(firstWord.x - (rows[0].x + item.pill.padLeft)) < 1e-6, 'text at the left padding');
+
+  // Small pills: the same font and proportions, scaled to the pill height.
+  const kick = { type: 'pill', role: 'kicker', text: 'record alert!', x: 50, y: 62, h: 58, color: '#FFFFFF', bg: '#0A7DFA', maxW: 700, fx: { rotate: 6, shadow: { blur: 10 }, glow: { blur: 20 } }, radius: 12 };
+  const g2 = fakeCtx();
+  const r2 = { items: [], palette: {} };
+  C._pill.drawPill(g2, kick, 1, r2);
+  const k = r2.items[0];
+  assert.match(k.pill.font, /^900 [\d.]+px "Acumin Post"/, 'kicker: Acumin Black 900');
+  assert.ok(Math.abs(k.size - 58 * 130 / 122) < 1e-6, 'kicker type 130/122 of its height');
+  assert.ok(Math.abs(k.pill.padLeft - 58 / (122 / 130) * 18.4 / 130) < 1e-6, 'kicker: editor padding ratio');
+  assert.equal(k.pill.tracking, 0);
+  assert.equal(g2.calls.texts[0].t, 'RECORD ALERT!', 'kicker uppercase');
+  assert.equal(g2.calls.rects.length, 1, 'kicker: one sharp rectangle (no rounded corners)');
+  assert.equal(g2.shadowBlur, undefined, 'no shadow / glow set');
+  assert.equal(k.pill.ink, C.pillTextColor({ background: '#0A7DFA', mist: '#FFFFFF' }), 'kicker text: the pair rule');
+  // A layer colour that does not reach 2.4:1 gives way to white / black.
+  const g3 = fakeCtx();
+  const r3 = { items: [], palette: {} };
+  C._pill.drawPill(g3, { ...kick, color: '#3A8BFF' }, 1, r3);
+  assert.equal(r3.items[0].pill.ink, '#000000');
+  // Too wide for maxW: the type shrinks inside the same pill height (drawPills).
+  const g4 = fakeCtx();
+  const r4 = { items: [], palette: {} };
+  C._pill.drawPill(g4, { ...kick, text: 'a very long kicker that cannot fit', maxW: 300 }, 1, r4);
+  assert.ok(r4.items[0].box.w <= 300 + 1 && r4.items[0].box.h === 58, 'shrinks the type, keeps the pill');
 }
 
 console.log('compose styles checks passed');

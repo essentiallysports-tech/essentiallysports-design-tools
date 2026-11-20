@@ -27,7 +27,8 @@
  * render-time contrast guard recolours (flat field) or scrims (busy photo)
  * any text that measures under 3:1 (4.5:1 small). Fonts are ES only
  * (Acumin Pro Condensed for display, Roboto Condensed for labels, Roboto for
- * body). The ES logo is never a free layer: the renderer always draws the ES
+ * body); every pill is the editor's Cover pill (Acumin Black, frameup-rules
+ * PILL). The ES logo is never a free layer: the renderer always draws the ES
  * mark top-right (top-left with a swipe button), 122x104, 50px in, last.
  * UMD: window.FrameUpCompose in the browser, module.exports under Node.
  */
@@ -42,12 +43,27 @@
   const SIZES = { portrait: { w: 1080, h: 1350 }, story: { w: 1080, h: 1920 }, square: { w: 1080, h: 1080 } };
   const SAFE = 50;
   const LOGO = { w: 122, h: 104 };
+  // The ES pill (frameup-rules.js PILL: the editor's Cover pill). Node
+  // requires the rulebook; the browser reads window.FrameUpRules when the page
+  // loads it; a page that loads only this file uses the same numbers inline
+  // (scripts/test-pill-rules.mjs keeps the copies equal).
+  const RULES = (() => {
+    try { if (typeof module === 'object' && module.exports && typeof require === 'function') return require('./frameup-rules.js'); } catch (error) { /* inline copy below */ }
+    return typeof self !== 'undefined' && self.FrameUpRules ? self.FrameUpRules : null;
+  })();
+  const PILL = RULES?.PILL || Object.freeze({
+    family: 'Acumin Post', file: 'fonts/acumin-post-legacy.otf', weight: 900, upper: true, letterSpacing: 0, radius: 0,
+    size: 130, height: 122, padLeft: 18.4, padRight: 21.88, edgeGap: 1, rowGap: 1, minSize: 84,
+    heightRatio: 122 / 130, padLeftRatio: 18.4 / 130, padRightRatio: 21.88 / 130, bestChars: [10, 16], mistContrast: 2.4,
+  });
   const FONTS = {
     display: '"Acumin Pro Condensed Local", "Acumin Pro Condensed Web", "Roboto Condensed", "Arial Narrow", sans-serif',
     condensed: '"Roboto Condensed", "Acumin Pro Condensed Local", "Arial Narrow", sans-serif',
     body: 'Roboto, "Roboto Condensed", Arial, sans-serif',
+    // Every pill (headline boxes, kickers, labels, name tags, swipe): Acumin Black.
+    pill: `"${PILL.family}", "Acumin Pro Condensed Local", "Roboto Condensed", sans-serif`,
   };
-  const FONT_WEIGHT = { display: 700, condensed: 800, body: 500 };
+  const FONT_WEIGHT = { display: 700, condensed: 800, body: 500, pill: PILL.weight };
   const LAYER_TYPES = ['background', 'photo', 'cutout', 'text', 'number', 'shape', 'logo', 'chart', 'pill'];
   const ROLES = ['kicker', 'headline', 'highlight', 'body', 'number', 'label', 'quote', 'name'];
   const BLENDS = ['normal', 'multiply', 'screen', 'overlay', 'soft-light', 'hard-light', 'lighten', 'darken', 'color-dodge'];
@@ -96,11 +112,44 @@
 
   const ES = { blue: '#0A7DFA', navy: '#033162', black: '#000000', white: '#FFFFFF', ink: '#111111', paper: '#F4F2EE', grey: '#9AA3AE' };
 
+  // ─── ES pills (the editor's rules, frameup-rules.js) ───────────────────
+  // pillMetrics(size, cap): box height, side padding, top padding, baseline and
+  // the touching row step for one pill row. pillTextColor(pair, others): the
+  // pair's mist when it reads (>= 2.4:1), else white or black.
+  const pillMetrics = RULES?.pillMetrics || ((size, cap, scale = 1) => {
+    const h = size * PILL.heightRatio;
+    const capH = cap > 0 ? cap : size * 0.68;
+    const topPad = Math.max(0, Math.round((h - capH) * 0.5));
+    const baseline = Math.min(topPad + capH, h - Math.round(2 * scale));
+    const step = Math.max(Math.round(h * 0.55), h - topPad + Math.round(PILL.edgeGap * scale)) + Math.round(PILL.rowGap * scale);
+    return { size, h, padLeft: size * PILL.padLeftRatio, padRight: size * PILL.padRightRatio, topPad, baseline, step, cap: capH };
+  });
+  const pillTextColor = RULES?.pillTextColor || ((pair = {}, others = []) => {
+    const bg = pair?.background || '#1A1A1A';
+    const low = String(bg).toLowerCase();
+    let mist = pair.mist && pair.mist.toLowerCase() !== low ? pair.mist : '';
+    if (!mist) mist = (others || []).find(o => o?.background && o.background.toLowerCase() !== low)?.background || '';
+    if (!mist) mist = pair.foreground && pair.foreground.toLowerCase() !== low ? pair.foreground : low === '#000000' ? '#FFFFFF' : '#000000';
+    if (mist.toLowerCase() !== low && contrast(bg, mist) >= PILL.mistContrast) return mist;
+    const candidates = [mist, '#FFFFFF', '#000000'].filter((c, i, arr) => c && c.toLowerCase() !== low && arr.findIndex(x => x.toLowerCase() === c.toLowerCase()) === i);
+    return candidates.sort((a, b) => contrast(bg, b) - contrast(bg, a))[0] || '#FFFFFF';
+  });
+  // The text on a pill of colour bg: the brand-kit pair's rule when bg is the
+  // pair's background, else the same rule with the layer's colour as the mist.
+  function pillInk(bg, preferred, palette = {}) {
+    const pair = palette?.pair;
+    if (pair?.background && normHex(pair.background) === normHex(bg)) return pillTextColor(pair, palette.pairs || []);
+    return pillTextColor({ background: normHex(bg) || '#1A1A1A', mist: normHex(preferred) || '' });
+  }
+
   // A palette from up to three brand colours (team kit, logo library, league).
   // Roles: bg (dark field), bg2 (second field), ink (text on bg), accent
   // (highlight / numbers on bg), paper (light band), paperInk, mist (bg at 90%).
   // allowed: every colour the scene may use (the palette, its shades, ES colours).
-  function makePalette(colors = [], { name = '', mode = 'dark' } = {}) {
+  // pair / pairs: the brand-kit pair ({ background, foreground, mist }) and
+  // the rest of its entry's pairs; pills use it as the editor does.
+  const cleanPair = x => (x && normHex(x.background) ? { background: normHex(x.background), foreground: normHex(x.foreground) || '', mist: normHex(x.mist) || '' } : null);
+  function makePalette(colors = [], { name = '', mode = 'dark', pair = null, pairs = [] } = {}) {
     const list = colors.map(normHex).filter(Boolean);
     const base = list.length ? list : [ES.navy, ES.blue];
     const byDark = [...base].sort((a, b) => lum(a) - lum(b));
@@ -117,6 +166,7 @@
     const paperInk = contrast(bg, paper) >= 4.5 ? bg : '#000000';
     const bg2 = mix(bg, accent, 0.18);
     const palette = { name: name || 'ES', bg, bg2, ink, accent, accent2, paper, paperInk, mist: bg, mode, base: base.slice(0, 4) };
+    if (cleanPair(pair)) Object.assign(palette, { pair: cleanPair(pair), pairs: (pairs || []).map(cleanPair).filter(Boolean).slice(0, 8) });
     if (mode === 'light') Object.assign(palette, { bg: paper, ink: paperInk, paper: bg, paperInk: ink, bg2: mix(paper, accent, 0.12) });
     finishPalette(palette, base);
     // Variants and the swap-palette fix draw with the flipped palette: allow its roles too.
@@ -130,9 +180,14 @@
   //   tone      tritone ramp for photos: deep shadow, team colour mid, light
   //   rim       rim-light colour for cut-outs (the accent, lifted)
   function finishPalette(p, base = []) {
-    const best = (on, list) => list.slice().sort((a, b) => contrast(b, on) - contrast(a, on))[0];
-    // Team colour on the accent when it reads (purple on gold), else the best of black / white.
-    p.onAccent = contrast(p.bg, p.accent) >= 4.5 ? p.bg : best(p.accent, [p.bg, '#FFFFFF', '#000000']);
+    // Text on an accent pill, the editor's rule: the brand-kit pair's text when
+    // the accent is the pair's background, else the field colour when it reads
+    // (purple on gold, >= 2.4:1), else white or black.
+    const pair = cleanPair(p.pair);
+    p.onAccent = pair && pair.background === normHex(p.accent) ? pillTextColor(pair, p.pairs || []) : pillTextColor({ background: normHex(p.accent) || '#FFFFFF', mist: normHex(p.bg) });
+    // The brand-kit pill: the pair's background when it stands off the field, else the accent.
+    p.pillBg = pair && contrast(pair.background, p.bg) >= 1.5 ? pair.background : p.accent;
+    p.pillInk = pillInk(p.pillBg, p.onAccent, p);
     p.inkSoft = contrast(mix(p.ink, p.bg, 0.25), p.bg) >= 4.5 ? mix(p.ink, p.bg, 0.25) : p.ink;
     p.deep = mix(p.bg, '#000000', 0.45);
     p.rim = mix(p.accent, '#FFFFFF', 0.35);
@@ -142,7 +197,7 @@
     // Panel tints: the field lifted toward its ink / accent (cards, tracks, slabs).
     for (let k = 0; k <= 12; k += 1) shades.push(mix(p.bg, p.ink, 0.04 + k * 0.02));
     [0.08, 0.12, 0.18, 0.28, 0.35].forEach(t => shades.push(mix(p.bg, p.accent, t), mix(p.accent, p.bg, t)));
-    p.allowed = [...new Set([...base, p.bg, p.bg2, p.ink, p.accent, p.accent2, p.paper, p.paperInk, p.onAccent, p.inkSoft, p.deep, p.rim, ...p.tone, ES.blue, ES.black, ES.white, ES.ink, ES.paper, ES.navy, ES.grey, '#000000', '#FFFFFF', ...shades, ...(p.allowed || [])].filter(Boolean).map(normHex))];
+    p.allowed = [...new Set([...base, p.bg, p.bg2, p.ink, p.accent, p.accent2, p.paper, p.paperInk, p.onAccent, p.inkSoft, p.deep, p.rim, p.pillBg, p.pillInk, ...(pair ? [pair.background, pair.foreground, pair.mist] : []), ...p.tone, ES.blue, ES.black, ES.white, ES.ink, ES.paper, ES.navy, ES.grey, '#000000', '#FFFFFF', ...shades, ...(p.allowed || [])].filter(Boolean).map(normHex))];
     return p;
   }
   // The same palette, light/dark swapped (a variant and the swap-palette fix).
@@ -390,6 +445,13 @@
         };
       }
     }
+    // Pills in the brand-kit pair (the editor's Cover pill) when the pair's
+    // background stands off this tone's field; ES blue keeps its own boxes.
+    const kit = cleanPair(p.pair);
+    if (kit && tone !== 'esblue' && contrast(kit.background, r.bg) >= 1.5) {
+      r.box = kit.background;
+      r.boxInk = pillTextColor(kit, p.pairs || []);
+    }
     // A second colour for highlighted words inside a box, only when it reads.
     if (!r.boxHi) {
       const hi = cols.concat([ES.blue]).filter(c => normHex(c) !== normHex(r.box) && contrast(c, r.box) >= 3).sort((a, b) => sat(b) - sat(a))[0];
@@ -399,7 +461,7 @@
     // Small type (under 60px) straight on the field: ink when it reaches 4.5:1,
     // else the better of black / white (white on ES blue is 3.9:1, display only).
     r.inkSmall = contrast(r.ink, r.bg) >= 4.5 ? r.ink : bestInk(r.bg);
-    const pal = finishPalette({ name: p.name || 'ES', base: cols, ...r, toneName: tone }, cols);
+    const pal = finishPalette({ name: p.name || 'ES', base: cols, ...r, toneName: tone, ...(kit ? { pair: kit, pairs: p.pairs || [] } : {}) }, cols);
     // Duotone ramp (photo shadows in the field colour, highlights in the team colour).
     pal.duo = [mix(pal.bg, '#000000', 0.4), readable(sig, '#000000', 3.2), mix(sig, '#FFFFFF', 0.86)];
     pal.allowed = [...new Set([...pal.allowed, ...[r.box, r.boxInk, r.boxHi, r.tag, r.tagInk, r.rule, r.inkSmall, ...pal.duo, '#EBEAE6', mix('#EBEAE6', '#000000', 0.06), mix('#FFFFFF', '#000000', 0.06)].map(normHex).filter(Boolean)])];
@@ -854,8 +916,9 @@
         const { W, H, p } = frame(input);
         const right = v === 1;
         const two = v === 2;
-        const pillText = p.onAccent;
-        const hiColor = contrast(p.ink, p.accent) >= 3 ? p.ink : pillText;
+        // The editor's Cover pill: the brand-kit pair (one colour, no second-colour words).
+        const pillBg = p.pillBg || p.accent;
+        const pillText = p.pillInk || p.onAccent;
         return [
           { type: 'background', fill: { kind: 'solid', colors: [p.bg] } },
           { type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', flip: right, vignette: 0.25 },
@@ -863,9 +926,9 @@
           kickerPill(input, { ...p, accent: p.ink, onAccent: p.bg }),
           {
             type: 'text', role: 'headline', text: upper(input.headline), x: SAFE, y: H - SAFE - 450, w: W - SAFE * 2 - 80, h: 450,
-            font: 'display', size: 128, minSize: 64, maxLines: 4, color: pillText, align: right ? 'right' : 'left', valign: 'bottom',
-            box: { color: p.accent, ...(two ? { colors: [p.accent, contrast(pillText, p.ink) >= 4.5 ? p.ink : p.accent2] } : {}) },
-            highlight: { words: two ? [] : (input.highlight || []).map(upper), color: hiColor },
+            font: 'pill', size: 128, minSize: 64, maxLines: 4, color: pillText, align: right ? 'right' : 'left', valign: 'bottom',
+            // v2: the editor's staggered stack (rows offset, same colour).
+            box: { color: pillBg, ...(two ? { stagger: [0, 60] } : {}) },
           },
           grain(0.05),
         ];
@@ -1084,7 +1147,7 @@
           ...(has.photo(input) ? [{ type: 'photo', src: input.photo.src, focus: input.photo.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', blur: 5, tritone: ['#000000', mix(p.bg, neon, 0.25), mix(neon, '#FFFFFF', 0.3)], vignette: 0.7, fx: { opacity: 0.55 } }] : []),
           { type: 'shape', shape: 'texture', texture: 'scan', color: '#000000', opacity: 0.22 },
           ...(cut ? [{ type: 'cutout', src: input.cutout.src, x: 140, y: 560, w: 800, h: H - 560, anchor: 'bottom', rim: { color: core, width: 6, angle: -90, alpha: 0.95 }, fx: { shadow: { color: neon, blur: 60, x: 0, y: 0, alpha: 0.45 } } }, mist(W, H, { ...p, mist: '#000000' }, 0.82, 0.9)] : []),
-          { type: 'pill', role: 'kicker', text: upper(input.kicker || ''), x: SAFE, y: SAFE + 12, h: 52, color: '#000000', bg: core, maxW: 640, fx: { glow: { color: neon, blur: 30, alpha: 0.8 } } },
+          { type: 'pill', role: 'kicker', text: upper(input.kicker || ''), x: SAFE, y: SAFE + 12, h: 52, color: '#000000', bg: core, maxW: 640 },
           { type: 'shape', shape: 'rect', x: SAFE, y: cut ? 196 : 300, w: W - SAFE * 2, h: 6, color: core, fx: { glow } },
           {
             type: 'text', role: 'headline', text: upper(input.headline), x: SAFE, y: cut ? 220 : 330, w: W - SAFE * 2, h: cut ? 330 : 520,
@@ -1227,7 +1290,7 @@
     },
     {
       id: 'sticker-collage', name: 'Sticker collage', focal: 'athlete',
-      about: 'Playful and loud: the player die-cut like a sticker on a starburst, tilted sticker pills for the stat and the name.',
+      about: 'Playful and loud: the player die-cut like a sticker on a starburst, ES pills for the stat and the name.',
       needs: 'a person with an ES photo (cut out) + a headline',
       kinds: ['person', 'count', 'record'],
       fits: i => has.cutout(i) && has.headline(i),
@@ -1242,12 +1305,13 @@
           { type: 'shape', shape: 'starburst', x: mirror ? 60 : 160, y: 170, w: 860, h: 860, points: 22, inner: 0.82, color: pal.accent, fx: { rotate: mirror ? -8 : 8 } },
           { type: 'shape', shape: 'circle', x: mirror ? 210 : 310, y: 320, w: 560, h: 560, color: mix(pal.accent, pal.bg, 0.35), opacity: 0.5 },
           { type: 'cutout', src: input.cutout.src, x: mirror ? 40 : 200, y: 180, w: 840, h: 860, anchor: 'bottom', sticker: { color: '#FFFFFF', width: 14 }, fx: { rotate: mirror ? 3 : -3, shadow: { color: '#000000', blur: 30, x: 8, y: 16, alpha: 0.45 } } },
-          ...(stat ? [{ type: 'pill', role: 'label', text: stat, x: mirror ? W - SAFE - 470 : SAFE, y: 600, h: 70, size: 40, color: pal.bg, bg: '#FFFFFF', maxW: 470, factId: n.factId || '', fx: { rotate: mirror ? 6 : -6, shadow: { color: '#000000', blur: 16, x: 4, y: 8, alpha: 0.4 } } }] : []),
-          ...(clean(input.name) ? [{ type: 'pill', role: 'name', text: upper(input.name), x: mirror ? SAFE : W - SAFE - 420, y: 860, h: 64, size: 38, color: pal.onAccent, bg: pal.accent, maxW: 420, fx: { rotate: mirror ? -5 : 5, shadow: { color: '#000000', blur: 16, x: 4, y: 8, alpha: 0.4 } } }] : []),
+          // Pills stay ES pills here too: straight, solid, no shadow (owner 2026-11-25).
+          ...(stat ? [{ type: 'pill', role: 'label', text: stat, x: mirror ? W - SAFE - 470 : SAFE, y: 600, h: 70, color: pal.bg, bg: '#FFFFFF', maxW: 470, factId: n.factId || '' }] : []),
+          ...(clean(input.name) ? [{ type: 'pill', role: 'name', text: upper(input.name), x: mirror ? SAFE : W - SAFE - 420, y: 860, h: 64, color: pal.pillInk || pal.onAccent, bg: pal.pillBg || pal.accent, maxW: 420 }] : []),
           kickerPill(input, { ...pal, accent: '#FFFFFF', onAccent: pal.bg }),
           {
-            type: 'text', role: 'headline', text: upper(input.headline), x: SAFE, y: 1010, w: W - SAFE * 2, h: H - SAFE - 1010, font: 'display', size: 110, minSize: 56, maxLines: 2,
-            color: pal.onAccent, align: 'center', valign: 'bottom', box: { color: pal.accent, colors: [pal.accent, '#FFFFFF'] }, highlight: { words: [], color: pal.onAccent }, fx: { rotate: mirror ? 2 : -2, shadow: { color: '#000000', blur: 20, x: 0, y: 10, alpha: 0.35 } },
+            type: 'text', role: 'headline', text: upper(input.headline), x: SAFE, y: 1010, w: W - SAFE * 2, h: H - SAFE - 1010, font: 'pill', size: 110, minSize: 56, maxLines: 2,
+            color: pal.pillInk || pal.onAccent, align: 'center', valign: 'bottom', box: { color: pal.pillBg || pal.accent },
           },
           grain(0.07),
         ];
@@ -1384,10 +1448,12 @@
     if (!src?.src) return null;
     return { type: 'photo', src: src.src, focus: src.focus, x: 0, y: 0, w: W, h: H, mask: 'rect', zoom: opts.zoom || 1.12, blur: opts.blur ?? 16, vignette: 0.35, ...treatFor(pal), fx: { opacity: opts.opacity ?? 0.85 } };
   };
-  // ES highlight-box headline: one solid box per line, lines staggered.
+  // ES highlight-box headline: one solid box per line, lines staggered. The
+  // boxes are ES pills (Acumin Black, the editor's padding, touching rows);
+  // phrase breaks lean toward 10-16 characters a line (frameup-rules VOICE).
   const esHead = (text, pal, box, opts = {}) => ({
     type: 'text', role: opts.role || 'headline', text: upper(text), ...box,
-    font: 'display', size: opts.size || 120, minSize: opts.minSize || 52, maxLines: opts.maxLines || 3, lineHeight: 0.9,
+    font: 'pill', size: opts.size || 120, minSize: opts.minSize || 52, maxLines: opts.maxLines || 3, lineHeight: 0.9,
     color: opts.ink || pal.boxInk, align: opts.align || 'left', valign: opts.valign || 'bottom',
     // gen5: every boxed headline breaks at phrase boundaries (one idea a line).
     phrase: true,
@@ -1446,7 +1512,9 @@
     // Cover boxes: the darker team colour as the box, the brighter as the type
     // (Browns brown box / orange type, Lakers purple / gold); white type when
     // the pair does not read at display size.
-    const pair = second && contrast(second, field) >= 4.5 ? (lum(field) <= lum(second) ? [field, second] : [second, field]) : [field, '#FFFFFF'];
+    // The brand-kit pair wins when the palette carries one (the editor's pill).
+    const kit = cleanPair(pal.pair);
+    const pair = kit ? [kit.background, pillTextColor(kit, pal.pairs || [])] : second && contrast(second, field) >= 4.5 ? (lum(field) <= lum(second) ? [field, second] : [second, field]) : [field, '#FFFFFF'];
     const labelInk = [sig, field, second].filter(Boolean).find(c => contrast(c, '#FFFFFF') >= 3 && sat(c) > 0.3) || readable(field, '#FFFFFF', 4.5);
     return { field, deep: mix(field, '#000000', 0.55), second, sig, box: pair[0], boxInk: pair[1], invBox: pair[1] === '#FFFFFF' ? '#FFFFFF' : pair[1], invInk: pair[0], labelInk };
   }
@@ -2299,7 +2367,9 @@
       // gen4: no empty tag boxes, and no washed-out picture boxes (an image
       // that is not a full-bleed field is either shown properly or not at all).
       .filter(layer => !((layer.type === 'text' || layer.type === 'pill') && !clean(layer.text)))
-      .filter(layer => !fadedImage(layer, W, H));
+      .filter(layer => !fadedImage(layer, W, H))
+      // Every pill follows the editor's rules (Acumin Black, straight, one colour).
+      .map(pillStyle);
     // Looks derive every colour in code from the tone palette (team colours,
     // their readable shades, ES colours, neutrals): register them as allowed.
     if (archetype.looks) p.allowed = [...new Set([...p.allowed, ...layers.flatMap(sceneColors)])];
@@ -3070,13 +3140,15 @@
     if (capCache[font]) return capCache[font];
     const prev = g.font;
     g.font = fontString(font, 200);
-    const m = g.measureText('HEXB');
+    // Pills centre on the cap height of "A", as the editor's drawPills does.
+    const m = g.measureText(font === 'pill' ? 'A' : 'HEXB');
     const r = m.actualBoundingBoxAscent > 0 ? m.actualBoundingBoxAscent / 200 : (font === 'display' ? 0.72 : 0.71);
     g.font = prev;
     if (fontsReady) capCache[font] = r;
     return r;
   }
   function autoTracking(font, size) {
+    if (font === 'pill') return PILL.letterSpacing * size;
     if (font === 'display') return size >= 260 ? -0.022 * size : size >= 160 ? -0.016 * size : size >= 96 ? -0.01 * size : size >= 60 ? -0.004 * size : 0.006 * size;
     if (font === 'condensed') return size <= 30 ? 0.08 * size : size <= 52 ? 0.05 * size : 0.02 * size;
     return 0;
@@ -3131,11 +3203,34 @@
     return [...lines.slice(0, -2), prev.join(' '), last];
   }
 
-  function boxMetrics(layer, cap) {
-    const b = layer.box || {};
-    // gen5 board boxes (Figma 2335:1869 / 2335:1418): tight pads, touching lines.
-    if (b.style === 'board') return { padX: b.pad ?? Math.round(cap * 0.17), padY: b.padY ?? Math.round(cap * 0.15), gap: b.gap ?? 0 };
-    return { padX: b.pad ?? Math.round(cap * 0.34), padY: b.padY ?? Math.round(cap * 0.2), gap: b.gap ?? Math.round(cap * 0.16) };
+  // Highlight boxes are ES pills (the editor's Cover pill, frameup-rules PILL):
+  // a box of 122/130 of the type size, 18.4 / 21.88 (of 130) side padding, the
+  // cap height centred, and stacked rows that touch (each row starts just under
+  // the letters above). Board boxes (gen5) follow the same rule.
+  function boxMetrics(layer, cap, size) {
+    const m = pillMetrics(size, cap);
+    return { ...m, padX: (m.padLeft + m.padRight) / 2, padY: m.topPad, gap: m.step - m.h };
+  }
+  const isPillLayer = l => Boolean(l && (l.type === 'pill' || (l.type === 'text' && l.box)));
+  // Pills are solid, straight and one colour, like the editor: Acumin Black,
+  // uppercase, no tracking, no tilt / shadow / glow, no second-colour words,
+  // no alternating box colours. Applied to every built scene.
+  function pillStyle(layer) {
+    if (!isPillLayer(layer)) return layer;
+    const out = { ...layer, text: upper(layer.text), font: 'pill' };
+    delete out.weight;
+    delete out.tracking;
+    delete out.radius;
+    if (out.fx) {
+      const { rotate, tilt, shadow, glow, ...rest } = out.fx;
+      if (Object.keys(rest).length) out.fx = rest; else delete out.fx;
+    }
+    if (out.type === 'text') {
+      const { colors, ...box } = out.box;
+      out.box = { ...box, color: box.color || (colors || [])[0] };
+      if (out.highlight) out.highlight = { ...out.highlight, words: [] };
+    }
+    return out;
   }
   // ES staggered boxes: each line steps in by box.stagger[i] px (cycled), or
   // by box.cascade[i] cap heights (gen5: the board's deliberate steps, 0.4-1.4
@@ -3178,7 +3273,9 @@
   }
   // Best line breaks at one size: every line fits, at most maxLines lines,
   // the least total break cost (plus a little rag). null when nothing fits.
-  function phraseWrap(g, text, width, track, maxLines, keep) {
+  // target [lo, hi]: pill lines read best at 10-16 characters (frameup-rules
+  // VOICE); a line outside that costs a little, so breaks lean toward it.
+  function phraseWrap(g, text, width, track, maxLines, keep, target = null) {
     const tokens = words(text);
     const n = tokens.length;
     if (!n) return null;
@@ -3192,7 +3289,9 @@
         const w = widthOf(i, j);
         if (w > width) break;
         const brk = j < n ? breakCost(tokens, j - 1, keepPairs) : 0;
-        const rag = (j < n ? 1.2 * (1 - w / width) ** 2 : 0) + (j - i === 1 && tokens[i].replace(/[^\w]/g, '').length <= 4 && n > 2 ? 4 : 0);
+        const chars = target ? tokens.slice(i, j).join(' ').length : 0;
+        const aim = target ? 0.12 * Math.max(0, chars - target[1], target[0] - chars) : 0;
+        const rag = (j < n ? 1.2 * (1 - w / width) ** 2 : 0) + (j - i === 1 && tokens[i].replace(/[^\w]/g, '').length <= 4 && n > 2 ? 4 : 0) + aim;
         for (let k = 1; k <= maxLines; k += 1) {
           const from = best[i][k - 1];
           if (!from) continue;
@@ -3221,41 +3320,48 @@
     return { lines: out, cost: pick.cost, worst: pick.worst };
   }
   // Vertical metrics for one size: where the first baseline sits from the box
-  // top, the line step, and the block height for n lines.
+  // top, the line step, and the block height for n lines. Boxed text is set as
+  // ES pills (Acumin Black, uppercase, touching rows).
   function vMetrics(g, layer, size) {
-    const font = layer.font || 'display';
-    const caps = isCaps(clean(layer.text));
+    const font = layer.box ? 'pill' : layer.font || 'display';
+    const caps = Boolean(layer.box) || isCaps(clean(layer.text));
     const cap = capRatio(g, font) * size;
     const lh = layer.lineHeight || (font === 'display' ? 0.9 : 1.18);
-    const box = layer.box ? boxMetrics(layer, cap) : null;
-    const step = box ? cap + box.padY * 2 + box.gap : Math.max(size * lh, caps ? cap * 1.12 : size);
-    const first = (box ? box.padY : 0) + (caps ? cap : size * 0.78);
-    const tail = (box ? box.padY : 0) + (caps ? 0 : size * 0.22);
+    const box = layer.box ? boxMetrics(layer, cap, size) : null;
+    const step = box ? box.step : Math.max(size * lh, caps ? cap * 1.12 : size);
+    const first = box ? box.baseline : caps ? cap : size * 0.78;
+    const tail = box ? box.h - box.baseline : caps ? 0 : size * 0.22;
     return { font, caps, cap, lh, step, first, tail, box, height: n => first + (n - 1) * step + tail };
   }
 
   function fitText(g, layer) {
-    const font = layer.font || 'display';
-    const phrased = Boolean(layer.phrase) && font === 'display';
+    const font = layer.box ? 'pill' : layer.font || 'display';
+    const pill = font === 'pill';
+    const text = pill ? upper(layer.text) : layer.text;
+    const phrased = Boolean(layer.phrase) && (font === 'display' || pill);
     const maxLines = layer.maxLines || 3;
-    let size = layer.size || 100;
-    const min = layer.minSize || Math.min(size, 24);
+    const start = layer.size || 100;
+    const ownMin = layer.minSize || Math.min(start, 24);
+    // A headline pill never drops below the rulebook's Cover pill minimum
+    // (84px on the 1080 canvas) unless its words would not fit at all.
+    const floor = pill && layer.role === 'headline' ? Math.min(start, Math.max(ownMin, PILL.minSize)) : ownMin;
     const attempt = sz => {
       const vm = vMetrics(g, layer, sz);
-      const track = layer.tracking ?? autoTracking(font, sz);
-      g.font = fontString(font, sz, layer.weight);
+      const track = pill ? autoTracking('pill', sz) : layer.tracking ?? autoTracking(font, sz);
+      g.font = fontString(font, sz, pill ? undefined : layer.weight);
       setTracking(g, track);
-      const markW = layer.quoteMarks && vm.box ? vm.cap + vm.box.padY * 2 : 0;
-      const avail = layer.w - (vm.box ? vm.box.padX * 2 + staggerMax(layer, vm.cap) : 0) - markW;
+      // Quote squares: one pill height beside the words (both sides when centred).
+      const markW = layer.quoteMarks && vm.box ? vm.box.h * (layer.align === 'center' ? 2 : 1) : 0;
+      const avail = layer.w - (vm.box ? vm.box.padLeft + vm.box.padRight + staggerMax(layer, vm.cap) : 0) - markW;
       if (phrased) {
-        const pw = phraseWrap(g, layer.text, avail, track, maxLines, layer.keep);
-        return { vm, track, avail, lines: pw ? pw.lines : wrap(g, layer.text, avail, track), worst: pw ? pw.worst : 99, phrased: Boolean(pw) };
+        const pw = phraseWrap(g, text, avail, track, maxLines, layer.keep, pill ? PILL.bestChars : null);
+        return { vm, track, avail, lines: pw ? pw.lines : wrap(g, text, avail, track), worst: pw ? pw.worst : 99, phrased: Boolean(pw) };
       }
-      const lines = wrap(g, layer.text, avail, track);
+      const lines = wrap(g, text, avail, track);
       return { vm, track, avail, lines };
     };
     const finish = (sz, a, overflow) => {
-      let lines = a.lines || [layer.text];
+      let lines = a.lines || [text];
       if (!overflow && a.phrased) return { size: sz, lines, lh: a.vm.lh, vm: a.vm, track: a.track, overflow };
       if (!overflow) lines = layer.role === 'body' || font === 'body' ? unwidow(g, lines, a.avail, a.track) : (layer.balance === false ? lines : balance(g, lines, a.avail, a.track));
       return { size: sz, lines, lh: a.vm.lh, vm: a.vm, track: a.track, overflow };
@@ -3263,22 +3369,27 @@
     // gen5: phrase-set display lines (layer.phrase): the largest size that
     // fits wins unless its breaks split a phrase; then up to 22% smaller for
     // clean breaks, else the largest fit.
-    let first = null;
-    while (size >= min) {
-      const a = attempt(size);
-      if (a.lines && a.lines.length <= maxLines && a.vm.height(a.lines.length) <= layer.h + 1) {
-        if (!phrased || a.worst < 9) return finish(size, a, false);
-        if (!first) first = { size, a };
-        if (size < first.size * 0.78) break;
+    const search = min => {
+      let size = start;
+      let first = null;
+      while (size >= min) {
+        const a = attempt(size);
+        if (a.lines && a.lines.length <= maxLines && a.vm.height(a.lines.length) <= layer.h + 1) {
+          if (!phrased || a.worst < 9) return finish(size, a, false);
+          if (!first) first = { size, a };
+          if (size < first.size * 0.78) break;
+        }
+        size -= Math.max(1, Math.round(size * 0.04));
       }
-      size -= Math.max(1, Math.round(size * 0.04));
-    }
-    if (first) return finish(first.size, first.a, false);
-    const a = attempt(min);
-    const lines = a.lines || [layer.text];
+      return first ? finish(first.size, first.a, false) : null;
+    };
+    const found = search(floor) || (floor > ownMin ? search(ownMin) : null);
+    if (found) return found;
+    const a = attempt(ownMin);
+    const lines = a.lines || [text];
     const overflow = !a.lines || lines.length > maxLines || a.vm.height(Math.min(lines.length, maxLines)) > layer.h + 1;
     a.lines = lines.slice(0, maxLines);
-    return finish(min, a, overflow);
+    return finish(ownMin, a, overflow);
   }
 
   // Colour statistics under a box: 3x3 samples -> mean, every sample, busyness.
@@ -4082,6 +4193,8 @@
 
   function drawText(g, layer, s, report) {
     if (!clean(layer.text)) return;
+    // Boxed text is an ES pill stack: solid, straight, one colour (pillStyle).
+    if (layer.box) layer = pillStyle(layer);
     const fit = fitText(g, layer);
     const { vm } = fit;
     const block = vm.height(fit.lines.length);
@@ -4090,14 +4203,20 @@
     else if (layer.valign === 'middle') y0 = layer.y + (layer.h - block) / 2;
     const key = w => w.replace(/[^\w$%'-]/g, '').replace(/^'+|'+$/g, '').toUpperCase();
     const hl = new Set((layer.highlight?.words || []).flatMap(w => words(w)).map(key).filter(Boolean));
-    g.font = fontString(vm.font, fit.size, layer.weight);
+    const weight = vm.box ? undefined : layer.weight;
+    g.font = fontString(vm.font, fit.size, weight);
     setTracking(g, fit.track);
     const placed = fit.lines.map((line, i) => {
       const width = textW(g, line, fit.track);
-      const padX = (vm.box ? vm.box.padX : 0) + (layer.quoteMarks && vm.box && layer.align !== 'center' ? (vm.cap + vm.box.padY * 2) * (layer.align === 'right' ? 1 : 1) : 0);
+      const mark = layer.quoteMarks && vm.box && layer.align !== 'center' ? vm.box.h : 0;
       const shift = vm.box ? staggerAt(layer, i, vm.cap) * (layer.align === 'right' ? -1 : layer.align === 'center' ? 0.5 : 1) : 0;
-      const lx = (layer.align === 'center' ? layer.x + (layer.w - width) / 2 : layer.align === 'right' ? layer.x + layer.w - width - padX : layer.x + padX) + shift;
-      return { line, width, lx, base: y0 + vm.first + i * vm.step };
+      let lx;
+      if (vm.box) {
+        // Pill rows: the editor's left / right padding around the words.
+        const boxW = width + vm.box.padLeft + vm.box.padRight;
+        lx = layer.align === 'center' ? layer.x + (layer.w - boxW) / 2 + vm.box.padLeft : layer.align === 'right' ? layer.x + layer.w - width - vm.box.padRight - mark : layer.x + vm.box.padLeft + mark;
+      } else lx = layer.align === 'center' ? layer.x + (layer.w - width) / 2 : layer.align === 'right' ? layer.x + layer.w - width : layer.x;
+      return { line, width, lx: lx + shift, base: y0 + vm.first + i * vm.step };
     });
     const minX = Math.min(...placed.map(p => p.lx));
     const maxX = Math.max(...placed.map(p => p.lx + p.width));
@@ -4107,7 +4226,8 @@
     const decorative = (layer.fx?.opacity ?? 1) < 0.6 || layer.guard === false || Boolean(layer.knockout);
     let stats = sampleStats(g, inkBox.x, inkBox.y, inkBox.w, inkBox.h, s);
     let guarded = '';
-    let color = layer.color;
+    // Pill text follows the editor's pair rule (mist when it reads, else white / black).
+    let color = vm.box ? pillInk(layer.box.color, layer.color, report.palette || {}) : layer.color;
     if (stats && !vm.box && !decorative && GUARD_ROLES.has(layer.role)) {
       const worst = Math.min(...stats.cols.map(c => contrast(layer.color, c)));
       const need = fit.size >= 60 ? 3 : 4.5;
@@ -4141,24 +4261,32 @@
     }
     g.save();
     applyFx(g, { ...(layer.fx || {}), shadow: null, glow: null }, s);
-    g.font = fontString(vm.font, fit.size * s, layer.weight);
+    g.font = fontString(vm.font, fit.size * s, weight);
     setTracking(g, fit.track * s);
     g.textBaseline = 'alphabetic';
-    // Highlight boxes (ES pills): one per line, cap-height padded, equal gaps.
+    // Highlight boxes (ES pills): one solid, sharp box per line in one colour,
+    // the editor's padding, rows touching (the next row covers the bottom
+    // padding of the one above, never its letters).
+    const rows = [];
     if (vm.box) {
-      placed.forEach((p, i) => {
-        const colors = layer.box.colors || [layer.box.color];
-        g.fillStyle = colors[i % colors.length];
-        g.fillRect((p.lx - vm.box.padX) * s, (p.base - vm.cap - vm.box.padY) * s, (p.width + vm.box.padX * 2) * s, (vm.cap + vm.box.padY * 2) * s);
+      g.fillStyle = layer.box.color;
+      placed.forEach(p => {
+        const row = { x: p.lx - vm.box.padLeft, y: p.base - vm.box.baseline, w: p.width + vm.box.padLeft + vm.box.padRight, h: vm.box.h };
+        rows.push(row);
+        g.fillRect(row.x * s, row.y * s, row.w * s, row.h * s);
       });
       // gen5 board quote squares (2335:1418): 65% black, the size of a box
       // line, before the first line and after the last.
       if (layer.quoteMarks && placed.length) {
-        const side = vm.cap + vm.box.padY * 2;
+        const side = vm.box.h;
         const mark = (x, y, glyph) => {
           g.save();
           g.fillStyle = 'rgba(0,0,0,0.65)';
           g.fillRect(x * s, y * s, side * s, side * s);
+          // The glyph stays inside its square (touching pill rows sit right above it).
+          g.beginPath();
+          g.rect(x * s, y * s, side * s, side * s);
+          g.clip();
           g.fillStyle = '#FFFFFF';
           g.font = fontString('display', side * 2.1 * s);
           setTracking(g, 0);
@@ -4169,8 +4297,8 @@
         };
         const a = placed[0];
         const z = placed[placed.length - 1];
-        mark(a.lx - vm.box.padX - side, a.base - vm.cap - vm.box.padY, '\u201C');
-        mark(z.lx + z.width + vm.box.padX, z.base - vm.cap - vm.box.padY, '\u201D');
+        mark(a.lx - vm.box.padLeft - side, a.base - vm.box.baseline, '\u201C');
+        mark(z.lx + z.width + vm.box.padRight, z.base - vm.box.baseline, '\u201D');
       }
     }
     const paint = (fillFor) => placed.forEach(p => {
@@ -4182,7 +4310,7 @@
         cursor += g.measureText(piece).width / s;
       });
     });
-    const fillFor = word => (hl.has(key(word)) && (!guarded || guarded === 'scrim') ? layer.highlight.color : color);
+    const fillFor = word => (!vm.box && hl.has(key(word)) && (!guarded || guarded === 'scrim') ? layer.highlight.color : color);
     const glow = layer.fx?.glow;
     const shadow = layer.fx?.shadow;
     if (glow) {
@@ -4224,43 +4352,58 @@
     g.restore();
     const under = stats?.mean || '';
     const worstC = stats ? Math.min(...stats.cols.map(c => contrast(color, c))) : 0;
-    report.items.push({ type: 'text', role: layer.role, size: fit.size, lines: fit.lines.length, overflow: fit.overflow, contrast: vm.box ? contrast(layer.color, (layer.box.colors || [layer.box.color])[0]) : under ? contrast(color, under) : 0, worst: vm.box ? 0 : worstC, busy: stats?.busy || 0, guarded, box: { x: minX, y: y0, w: maxX - minX, h: block } });
+    report.items.push({
+      type: 'text', role: layer.role, size: fit.size, lines: fit.lines.length, overflow: fit.overflow, contrast: vm.box ? contrast(color, layer.box.color) : under ? contrast(color, under) : 0, worst: vm.box ? 0 : worstC, busy: stats?.busy || 0, guarded, box: { x: minX, y: y0, w: maxX - minX, h: block },
+      ...(vm.box ? { pill: { font: fontString(vm.font, fit.size, weight), tracking: fit.track, ink: color, bg: layer.box.color, padLeft: vm.box.padLeft, padRight: vm.box.padRight, rows, text: fit.lines } } : {}),
+    });
   }
 
+  // A single ES pill (kicker, label, name tag, swipe): the editor's Cover pill
+  // scaled to the layer's height. Acumin Black 900, uppercase, no tracking,
+  // type at 130/122 of the pill height, the editor's side padding, the cap
+  // height centred, a sharp solid box; no tilt, shadow or glow. When the words
+  // are wider than maxW the type shrinks inside the same pill (as drawPills).
   function drawPill(g, layer, s, report) {
     if (!clean(layer.text)) return;
-    const font = layer.font || 'condensed';
+    layer = pillStyle(layer);
+    const text = layer.text;
     const h = layer.h || 52;
-    let size = layer.size || Math.round(h * 0.6);
-    const track = sz => (layer.tracking ?? autoTracking(font, sz));
+    const nominal = h / PILL.heightRatio;
+    const padLeft = nominal * PILL.padLeftRatio;
+    const padRight = nominal * PILL.padRightRatio;
+    let size = nominal;
+    const track = sz => autoTracking('pill', sz);
     g.save();
     applyFx(g, layer.fx, s);
-    g.font = fontString(font, size, layer.weight);
+    g.font = fontString('pill', size);
     setTracking(g, track(size));
-    const padX = Math.round(h * 0.34);
-    let width = textW(g, layer.text, track(size));
-    while (layer.maxW && width + padX * 2 > layer.maxW && size > 18) {
+    let width = textW(g, text, track(size));
+    while (layer.maxW && width + padLeft + padRight > layer.maxW && size > 14) {
       size -= 1;
-      g.font = fontString(font, size, layer.weight);
+      g.font = fontString('pill', size);
       setTracking(g, track(size));
-      width = textW(g, layer.text, track(size));
+      width = textW(g, text, track(size));
     }
-    const cap = capRatio(g, font) * size;
-    const w = width + padX * 2;
+    const cap = capRatio(g, 'pill') * size;
+    const topPad = Math.max(0, Math.round((h - cap) * 0.5));
+    const baseline = Math.min(topPad + cap, h - 2);
+    const w = width + padLeft + padRight;
     const x = layer.align === 'right' ? layer.x + (layer.maxW || w) - w : layer.align === 'center' ? layer.x + ((layer.maxW || w) - w) / 2 : layer.x;
     g.fillStyle = layer.bg;
-    if (layer.radius && g.roundRect) { g.beginPath(); g.roundRect(x * s, layer.y * s, w * s, h * s, layer.radius * s); g.fill(); } else g.fillRect(x * s, layer.y * s, w * s, h * s);
-    g.shadowColor = 'transparent';
-    g.font = fontString(font, size * s, layer.weight);
+    g.fillRect(x * s, layer.y * s, w * s, h * s);
+    g.font = fontString('pill', size * s);
     setTracking(g, track(size) * s);
-    // Contrast-checked: a pill whose text would not read gets black or white.
-    const ink = contrast(layer.color, layer.bg) >= 3 ? layer.color : ['#000000', '#FFFFFF'].sort((a, b) => contrast(b, layer.bg) - contrast(a, layer.bg))[0];
+    // The editor's pair rule: the mist when it reads (>= 2.4:1), else white / black.
+    const ink = pillInk(layer.bg, layer.color, report.palette || {});
     g.fillStyle = ink;
+    g.textAlign = 'left';
     g.textBaseline = 'alphabetic';
-    // Optically centred on the cap height (not the em box).
-    g.fillText(layer.text, (x + padX) * s, (layer.y + (h + cap) / 2) * s);
+    g.fillText(text, (x + padLeft) * s, (layer.y + baseline) * s);
     g.restore();
-    report.items.push({ type: 'pill', role: layer.role, size, overflow: false, contrast: contrast(ink, layer.bg), box: { x, y: layer.y, w, h } });
+    report.items.push({
+      type: 'pill', role: layer.role, size, overflow: false, contrast: contrast(ink, layer.bg), box: { x, y: layer.y, w, h },
+      pill: { font: fontString('pill', size), tracking: track(size), ink, bg: layer.bg, padLeft, padRight, rows: [{ x, y: layer.y, w, h }], text: [text] },
+    });
   }
 
   function drawNumber(g, layer, s, report) {
@@ -4391,15 +4534,22 @@
     if (typeof document === 'undefined' || !document.fonts?.load) return;
     if (!fontsAdded && typeof FontFace !== 'undefined') {
       fontsAdded = true;
-      const has = [...document.fonts].some(face => /Acumin Pro Condensed Local/.test(face.family));
-      if (!has) {
+      const faces = [...document.fonts];
+      const has = family => faces.some(face => String(face.family).replace(/["']/g, '') === family);
+      const add = async (family, file, weight) => {
         try {
-          const face = new FontFace('Acumin Pro Condensed Local', `url(${SCRIPT_BASE}fonts/acumin-pro-condensed-bold.otf) format("opentype")`, { weight: '700', style: 'normal' });
+          const face = new FontFace(family, `url(${SCRIPT_BASE}${file}) format("opentype")`, { weight, style: 'normal' });
           document.fonts.add(await face.load());
         } catch (error) { /* falls back to Roboto Condensed */ }
-      }
+      };
+      await Promise.all([
+        has('Acumin Pro Condensed Local') ? null : add('Acumin Pro Condensed Local', 'fonts/acumin-pro-condensed-bold.otf', '700'),
+        // The pill face: the editor's "Acumin Post" (Acumin Pro Condensed Black) at 900.
+        has(PILL.family) ? null : add(PILL.family, PILL.file, String(PILL.weight)),
+      ]);
     }
     await Promise.all([
+      document.fonts.load(fontString('pill', 100)),
       document.fonts.load(fontString('display', 100)),
       document.fonts.load(fontString('condensed', 40)),
       document.fonts.load(fontString('body', 30)),
@@ -4440,7 +4590,7 @@
       report.layerIndex = index;
       g.save();
       try {
-        if (layer.type !== 'background') layerTransform(g, layer, scale);
+        if (layer.type !== 'background' && !isPillLayer(layer)) layerTransform(g, layer, scale);
         if (layer.type === 'background') await drawBackground(g, layer, W, H, scale);
         else if (layer.type === 'shape') drawShape(g, layer, W, H, scale);
         else if (layer.type === 'photo') await drawPhoto(g, layer, scale, report);
@@ -4618,6 +4768,8 @@
   return {
     mainPhoto, repair, REPAIR_OPS, PERSON_LOOKS, cleanKicker,
     VERSION, SIZES, SAFE, LOGO, FONTS, LAYER_TYPES, ROLES, FIXES, FX_LIMITS, PROC_ART, ARCHETYPES, BY_ID, NEEDS, TONES, FAMILIES,
+    // ES pills (the editor's rules) and their renderer, for tests.
+    PILL, pillMetrics, pillTextColor, pillInk, pillStyle, isPillLayer, _pill: { drawText, drawPill, fitText, vMetrics },
     normalizeInput, tonePalette, toneFor,
     fits, fitting, build, candidates, makePalette, flipPalette, checkScene, applyFix, scoreReport,
     render, toDataUrl, editableText, setText, swapPhoto,

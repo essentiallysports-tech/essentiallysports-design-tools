@@ -408,16 +408,25 @@ function addTrendTeam(read, teamName) {
 
 // ─── 2. Palette ───────────────────────────────────────────────────────────
 const GOLF_KIT = BRAND_KIT.filter(e => e.sport === 'Golf');
+// The brand-kit pair as named roles (the editor's pill: background = pill,
+// text = mist when it reads, else white / black) plus the entry's other pairs.
+// colors stays the flat list everything else reads.
+const kitPair = kit => (kit?.primary?.background ? {
+  pair: { background: kit.primary.background, foreground: kit.primary.foreground || '', mist: kit.primary.mist || '' },
+  pairs: (kit.palette || []).map(p => ({ background: p.background, foreground: p.foreground || '', mist: p.mist || '' })),
+} : {});
+// A composer palette (paletteFor / paletteByKey) as a Compose palette, pair included.
+const composePalette = (pal, mode) => COMPOSE.makePalette(pal.colors, { name: pal.name, ...(mode ? { mode } : {}), ...(pal.pair ? { pair: pal.pair, pairs: pal.pairs || [] } : {}) });
 function paletteFor(read, story, { team = null } = {}) {
   const t = team || read.teams.find(x => story?.teams?.includes(x.id) && x.kind === 'team') || read.teams.find(x => x.kind === 'team');
   if (t) {
     const kit = BRAND_KIT.find(e => (e.variation || e.team) === t.kit);
     const colors = [...new Set([...(kit ? [kit.primary.background, kit.primary.foreground] : []), ...(t.colors || [])])];
-    return { key: `team:${t.name}`, colors, name: t.name };
+    return { key: `team:${t.name}`, colors, name: t.name, ...kitPair(kit) };
   }
   if (read.sport === 'Golf') {
     const gg = GOLF_KIT.find(e => e.variation === 'Green & Gold') || GOLF_KIT[0];
-    return { key: 'golf:Green & Gold', colors: [gg.primary.background, gg.primary.foreground, gg.primary.mist], name: 'Golf · Green & Gold' };
+    return { key: 'golf:Green & Gold', colors: [gg.primary.background, gg.primary.foreground, gg.primary.mist], name: 'Golf · Green & Gold', ...kitPair(gg) };
   }
   return { key: 'es', colors: ['#033162', '#0A7DFA', '#FFFFFF'], name: 'ES' };
 }
@@ -434,7 +443,7 @@ function paletteByKey(read, key, story) {
   }
   if (key && key.startsWith('golf:')) {
     const kit = GOLF_KIT.find(e => `golf:${e.variation}` === key);
-    if (kit) return { key, colors: [kit.primary.background, kit.primary.foreground, kit.primary.mist, ...kit.palette.map(p => p.background)].slice(0, 4), name: `Golf · ${kit.variation}` };
+    if (kit) return { key, colors: [kit.primary.background, kit.primary.foreground, kit.primary.mist, ...kit.palette.map(p => p.background)].slice(0, 4), name: `Golf · ${kit.variation}`, ...kitPair(kit) };
   }
   if (key === 'es') return { key: 'es', colors: ['#033162', '#0A7DFA', '#FFFFFF'], name: 'ES' };
   return paletteFor(read, story);
@@ -672,7 +681,7 @@ function inputsFor(direction, read, assets = {}) {
   const input = {
     size: direction.size || 'portrait',
     sport: read.sport,
-    palette: tone ? paletteForTone(pal, tone) : COMPOSE.makePalette(pal.colors, { name: pal.name }),
+    palette: tone ? paletteForTone(pal, tone) : composePalette(pal),
     ...(tone ? { tone } : {}),
     kicker: direction.kicker,
     headline: direction.headline,
@@ -712,7 +721,7 @@ function inputsFor(direction, read, assets = {}) {
     const loser = winner === ta ? tb : ta;
     input.score = { a: { name: winner.name, value: String(hi), logo: winner.logo }, b: { name: loser.name, value: String(lo), logo: loser.logo }, tag: direction.kicker || 'FINAL', factId: scoreFact.id };
     const winTeam = winner;
-    if (!direction.palette) input.palette = tone ? paletteForTone(paletteFor(read, story, { team: winTeam }), tone) : COMPOSE.makePalette(paletteFor(read, story, { team: winTeam }).colors, { name: winTeam.name });
+    if (!direction.palette) input.palette = tone ? paletteForTone(paletteFor(read, story, { team: winTeam }), tone) : composePalette({ ...paletteFor(read, story, { team: winTeam }), name: winTeam.name });
   }
   if (recordFact) {
     const t = storyTeams.find(x => x.kind === 'team') || read.teams.find(x => x.kind === 'team');
@@ -1256,7 +1265,8 @@ function assignTones(directions = [], variety = null) {
 function paletteForTone(pal, tone) {
   const colors = tone === 'esblue' ? ['#033162', '#0A7DFA', '#FFFFFF'] : pal.colors;
   const name = tone === 'esblue' ? 'ES' : pal.name;
-  return COMPOSE.makePalette(colors, { name, mode: isLightTone(tone) ? 'light' : 'dark' });
+  // ES blue draws ES colours, so no team pair; every other tone keeps the brand-kit pair.
+  return composePalette(tone === 'esblue' ? { colors, name } : { ...pal, colors, name }, isLightTone(tone) ? 'light' : 'dark');
 }
 
 // A scene's image use: a cut-out layer (the board's stat posts and covers), a photo.
@@ -1457,7 +1467,7 @@ function DIRECTOR_SYSTEM() {
     '- Use a different archetype for every design, and a different focal element (athlete / number / data / type / art / logo / contrast) where you can.',
     '- Numbers: only by fact id (numberFact, factIds). Never type a number into the headline unless it is that exact fact. Never invent results, records or prizes.',
     '- Headlines come from the brief\'s story. An angle from ES research must name the research id in "sources"; otherwise stay on the brief.',
-    '- headline: 2-8 words, a hook (claim or question), uppercase is applied for you. Keep the punctuation that carries meaning ("MANFRED: OWNERS WON\'T BUDGE"); never a chopped quote. kicker: "" by default; only an editorial hook of 2-4 words ("RECORD ALERT!", "MVP CALLING?"), never a sport, league, team or person name (no "MLB", "NFL", "GOLF" tags). highlight: 1-2 words of the headline to set in the accent colour. label: 1-4 words under the number.',
+    '- headline: 2-8 words, a hook (claim or question), uppercase is applied for you. Headlines are set as stacked ES pills (Acumin Black): write them to break into lines of about 10-16 characters ("LEBRON TO BREAK / ANOTHER RECORD"). Keep the punctuation that carries meaning ("MANFRED: OWNERS WON\'T BUDGE"); never a chopped quote. kicker: "" by default; only an editorial hook of 2-4 words ("RECORD ALERT!", "MVP CALLING?"), never a sport, league, team or person name (no "MLB", "NFL", "GOLF" tags). highlight: 1-2 words of the headline to set in the accent colour. label: 1-4 words under the number.',
     '- photo: a photo id from the list (each design a different photo) or "" (art-led designs need none). Never ask for a photo of a person the brief does not name.',
     '- art: a short concept for an AI background or object (trophy, ball, stadium light, money, cards, weather, motion). Never people, faces, jerseys, logos or text.',
     '- note: the director\'s note, SPECIFIC to this design (what the eye sees first, what is cut out, what colour does what), max 22 words. No generic praise.',
