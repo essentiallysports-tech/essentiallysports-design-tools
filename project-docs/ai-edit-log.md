@@ -4,6 +4,12 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-20 — Suhail: Dashboard "Exports over time" chart fix (branch suhail/dashboard-chart-fix)
+- Status: committed, not pushed.
+- Why: at 90 days the chart drew ~90 jagged daily points, and the SVG stretches to its box (preserveAspectRatio none), so the end dot was squashed into an oval at the right edge.
+- Changed (`dashboard.html`, `dashboard-ui-system.css`): ranges over 30 days plot weekly totals (weeks end today; tooltip "Week of …", meta "weekly · peak N in the week of …"); dots are HTML marks over the SVG so they stay round; right padding 8 → 14. 24h / 7d / 30d unchanged. Cache key `dashboard-ui-system.css?v=20261125-chart`. Release note `2026-11-25-dashboard-trend-chart`.
+- Tests: inline-syntax, check-dashboard-ui, check-dashboard-supabase, test-usage-tracking, test-impact, test-home-today pass. Local QA with 700 mock exports: dot 10×10 px at 24h/7d/30d/90d, inside the card; 375 px dark, no horizontal scroll; hover tooltip "58 exports · Week of Oct 3".
+
 ## 2026-11-20 — Suhail: Track everything taken from FrameUp + dashboard cleanup (branch suhail/dashboard-tracking)
 - Status: pushed in a744d0d. Live check 2026-11-20: a Gallery "Make another" row reached the table and shows in Dashboard > Usage. Migration `supabase/migrations/20261125120000_frameup_usage_events.sql` run 2026-11-20 in the Supabase SQL editor (table created, RLS on, insert-own + admins-read policies checked, 0 rows).
 - Why: owner asked to see everything taken from FrameUp, not only editor exports, and a tidier, categorised dashboard.

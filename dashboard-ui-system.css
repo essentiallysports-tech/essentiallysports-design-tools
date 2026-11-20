@@ -2254,8 +2254,10 @@ body.dashboard-page .dov-chart svg { display: block; flex: 1; width: 100%; heigh
 body.dashboard-page .dov-chart-grid { stroke: var(--dov-line); stroke-width: 1; vector-effect: non-scaling-stroke; }
 body.dashboard-page .dov-chart-area { fill: var(--dov-brand); opacity: .1; }
 body.dashboard-page .dov-chart-line { fill: none; stroke: var(--dov-brand); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-body.dashboard-page .dov-chart-dot { fill: var(--dov-surface); stroke: var(--dov-brand); stroke-width: 2; vector-effect: non-scaling-stroke; }
-body.dashboard-page .dov-chart-dot.is-last { fill: var(--dov-brand); }
+body.dashboard-page .dov-chart-plot { position: relative; display: flex; flex: 1; flex-direction: column; }
+body.dashboard-page .dov-chart-pts { position: absolute; inset: 0; pointer-events: none; }
+body.dashboard-page .dov-chart-pt { position: absolute; width: 6px; height: 6px; border: 2px solid var(--dov-brand); border-radius: 50%; background: var(--dov-surface); transform: translate(-50%, -50%); }
+body.dashboard-page .dov-chart-pt.is-last { width: 10px; height: 10px; background: var(--dov-brand); box-shadow: 0 0 0 2px var(--dov-surface); }
 body.dashboard-page .dov-chart .chart-hover-line { stroke: var(--dov-muted); stroke-width: 1; vector-effect: non-scaling-stroke; transition: transform 120ms var(--es-ease); }
 body.dashboard-page .dov-chart-max {
   position: absolute;

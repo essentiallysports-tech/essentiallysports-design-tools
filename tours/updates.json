@@ -3,6 +3,19 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-25-dashboard-trend-chart",
+      "date": "2026-11-25",
+      "title": "Clearer export chart",
+      "commit": "fd9a99d",
+      "items": [
+        {
+          "title": "Dashboard",
+          "text": "The Exports over time chart shows weekly totals for 90 days instead of a jagged daily line, and its dots stay round and inside the card.",
+          "page": "dashboard.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-25-usage-tracking",
       "date": "2026-11-25",
       "title": "Usage: everything taken from FrameUp",

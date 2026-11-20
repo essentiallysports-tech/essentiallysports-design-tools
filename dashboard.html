@@ -445,7 +445,7 @@
   </style>
   <link rel="stylesheet" href="dashboard-v2.css?v=20261117-focus1">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
-  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261121-rel2">
+  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261125-chart">
 <link rel="stylesheet" href="theme.css?v=20261117-ready1">
   <link rel="stylesheet" href="site-chrome.css?v=20261120-rel2">
 <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
@@ -1695,9 +1695,26 @@
     }
 
     function bucketLabel(bucket) {
-      return bucket.hourly
-        ? bucket.date.toLocaleTimeString('en-US', { hour: 'numeric' })
-        : formatChartDayLabel(bucket.date);
+      if (bucket.hourly) return bucket.date.toLocaleTimeString('en-US', { hour: 'numeric' });
+      return bucket.weekly ? `Week of ${formatChartDayLabel(bucket.date)}` : formatChartDayLabel(bucket.date);
+    }
+
+    // Long ranges read better as weekly totals: 90 daily points are a jagged
+    // comb. Weeks end today, so the last point is always the current week.
+    function weeklySeries(daily) {
+      const weeks = [];
+      for (let end = daily.length; end > 0; end -= 7) {
+        const chunk = daily.slice(Math.max(0, end - 7), end);
+        weeks.unshift({
+          start: chunk[0].start,
+          end: chunk.at(-1).end,
+          date: chunk[0].date,
+          hourly: false,
+          weekly: true,
+          count: chunk.reduce((sum, b) => sum + b.count, 0),
+        });
+      }
+      return weeks;
     }
 
     function sparkline(values = []) {
@@ -1926,19 +1943,22 @@
       const gate = sectionGate(state, { rows: 1, kind: 'chart' });
       if (gate) { setHtml(target, gate); return; }
       const days = activeMetricRangeDays;
-      const series = bucketSeries(allExports(state), rangeBuckets(days));
+      const daily = bucketSeries(allExports(state), rangeBuckets(days));
+      const weekly = days > 30;
+      const series = weekly ? weeklySeries(daily) : daily;
       const total = series.reduce((sum, b) => sum + b.count, 0);
       const peak = series.reduce((best, b) => (b.count > best.count ? b : best), series[0]);
+      const step = days === 1 ? 'hourly' : weekly ? 'weekly' : 'daily';
       setHtml('#dov-trend-meta', total
-        ? `${fmt(total)} exports · ${days === 1 ? 'hourly' : 'daily'} · peak ${fmt(peak.count)} on ${escapeHtml(bucketLabel(peak))}`
-        : `${days === 1 ? 'Hourly' : 'Daily'} exports in the ${rangeText(days)}`);
+        ? `${fmt(total)} exports · ${step} · peak ${fmt(peak.count)} ${weekly ? 'in the week of' : 'on'} ${escapeHtml(weekly ? formatChartDayLabel(peak.date) : bucketLabel(peak))}`
+        : `${step[0].toUpperCase()}${step.slice(1)} exports in the ${rangeText(days)}`);
       if (!total) {
         setHtml(target, emptyState(`No exports in the ${rangeText(days)}`, 'Pick a longer range above to see the trend.'));
         return;
       }
       const width = 640;
       const height = 180;
-      const pad = { l: 8, r: 8, t: 16, b: 8 };
+      const pad = { l: 8, r: 14, t: 16, b: 8 };
       const plotW = width - pad.l - pad.r;
       const plotH = height - pad.t - pad.b;
       const max = Math.max(1, ...series.map(b => b.count));
@@ -1951,20 +1971,27 @@
       const tickCount = Math.min(days === 90 ? 7 : 6, points.length);
       const tickStep = tickCount > 1 ? (points.length - 1) / (tickCount - 1) : 0;
       const ticks = Array.from({ length: tickCount }, (_, i) => points[Math.round(i * tickStep)]);
+      // The SVG stretches to its box (preserveAspectRatio none), which would
+      // squash SVG circles into ovals; the dots are HTML so they stay round.
+      const pct = (v, of) => `${((v / of) * 100).toFixed(2)}%`;
+      const dotAt = (p, last) => `<span class="dov-chart-pt${last ? ' is-last' : ''}" style="left:${pct(p.x, width)};top:${pct(p.y, height)}"></span>`;
       const dots = points.length <= 31
-        ? points.map((p, i) => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${i === points.length - 1 ? 4 : 2.5}" class="dov-chart-dot${i === points.length - 1 ? ' is-last' : ''}"/>`).join('')
-        : `<circle cx="${points.at(-1).x.toFixed(1)}" cy="${points.at(-1).y.toFixed(1)}" r="4" class="dov-chart-dot is-last"/>`;
+        ? points.map((p, i) => dotAt(p, i === points.length - 1)).join('')
+        : dotAt(points.at(-1), true);
+      const tickLabel = p => (p.weekly ? formatChartDayLabel(p.date) : bucketLabel(p));
       setHtml(target, `
         <div class="exports-trend-chart-wrap dov-chart">
           <span class="dov-chart-max" aria-hidden="true">${fmt(max)}</span>
-          <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="Exports in the ${attr(rangeText(days))}: ${total} in total, peak ${peak.count} on ${attr(bucketLabel(peak))}">
-            ${grid}
-            <path d="${area}" class="dov-chart-area"/>
-            <path d="${line}" class="dov-chart-line"/>
-            ${dots}
-            <line class="chart-hover-line" x1="0" y1="${pad.t}" x2="0" y2="${floorY}" opacity="0"/>
-          </svg>
-          <div class="chart-x-axis dov-chart-axis">${ticks.map(p => `<span class="chart-x-label" style="left:${((p.x / width) * 100).toFixed(2)}%">${escapeHtml(bucketLabel(p))}</span>`).join('')}</div>
+          <div class="dov-chart-plot">
+            <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="Exports in the ${attr(rangeText(days))}, ${step}: ${total} in total, peak ${peak.count} ${weekly ? 'in the week of' : 'on'} ${attr(weekly ? formatChartDayLabel(peak.date) : bucketLabel(peak))}">
+              ${grid}
+              <path d="${area}" class="dov-chart-area"/>
+              <path d="${line}" class="dov-chart-line"/>
+              <line class="chart-hover-line" x1="0" y1="${pad.t}" x2="0" y2="${floorY}" opacity="0"/>
+            </svg>
+            <div class="dov-chart-pts" aria-hidden="true">${dots}</div>
+          </div>
+          <div class="chart-x-axis dov-chart-axis">${ticks.map(p => `<span class="chart-x-label" style="left:${((p.x / width) * 100).toFixed(2)}%">${escapeHtml(tickLabel(p))}</span>`).join('')}</div>
           <div class="chart-tooltip"></div>
         </div>`);
       bindExportsTrendHover(target, points, width);
