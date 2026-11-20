@@ -4,6 +4,8 @@
 //   - a number glyph under a cut-out's head or face (measured here from the
 //     cut-out's own pixels, not from the renderer's report);
 //   - text drawn over a cut-out's face (headline, pill, label);
+//   - the subject outside the frame: a photo's head outside its slot (or a
+//     subject that fits the crop cut by it), a cut-out's head off the canvas;
 //   - two text blocks colliding (one drawn over the other);
 //   - text that does not fit its box (cut off);
 //   - a missing image;
@@ -108,6 +110,7 @@ const PROBE = `(async (jobs, scale) => {
     try { report = await C.render(scene, canvas, { scale }); } catch (error) { out.push({ ...job.meta, problems: ['render failed: ' + error.message] }); continue; }
     const problems = [];
     const items = report.items || [];
+    const canvasBox = { x: 0, y: 0, w: scene.size?.w || 1080, h: scene.size?.h || 1350 };
     // Cut-outs, in drawing order, with the number items drawn before each.
     const cutLayers = scene.layers.filter(l => l.type === 'cutout' && !l.breakout);
     const numBefore = []; let nNum = 0;
@@ -123,7 +126,20 @@ const PROBE = `(async (jobs, scale) => {
       const face = { x: head.x + head.w * 0.2, y: head.y + head.h * 0.25, w: head.w * 0.6, h: head.h * 0.55 };
       const after = drawn[k].at != null ? items.slice(drawn[k].at) : [];
       after.filter(i => i.box && i.type !== 'number' && meet(face, i.box, 2)).forEach(i => problems.push('text over the face: ' + (i.role || i.type)));
+      // The head on the canvas (90% of the check's own head box).
+      if (area(head, canvasBox) < 0.9 * head.w * head.h) problems.push('subject outside the frame: cut-out head off the canvas');
     }
+    // Photo layers: the renderer reports each crop and where the subject's head
+    // and box land. The head must be inside the slot (on the canvas), and a
+    // subject that fits the crop must show (90% of its box inside the slot).
+    (report.photos || []).forEach(p => {
+      if (!p.head) return;
+      const s = p.slot;
+      const vis = { x: Math.max(0, s.x), y: Math.max(0, s.y), w: Math.min(canvasBox.w, s.x + s.w) - Math.max(0, s.x), h: Math.min(canvasBox.h, s.y + s.h) - Math.max(0, s.y) };
+      const inVis = pt => pt.x >= vis.x - 1 && pt.x <= vis.x + vis.w + 1 && pt.y >= vis.y - 1 && pt.y <= vis.y + vis.h + 1;
+      if (!inVis(p.head)) problems.push('subject outside the frame: head outside the ' + p.how + ' slot (layer ' + p.layer + ')');
+      else if (p.box && p.fits && area(p.box, vis) < 0.9 * p.box.w * p.box.h) problems.push('subject outside the frame: subject cut by the ' + p.how + ' slot (layer ' + p.layer + ')');
+    });
     // Text collisions: two text blocks of different roles drawn over each other.
     const texts = items.filter(i => i.box && i.box.w > 2 && i.box.h > 2 && (i.type === 'text' || i.type === 'pill' || i.type === 'number'));
     for (let i = 0; i < texts.length; i++) for (let j = i + 1; j < texts.length; j++) {
@@ -177,7 +193,7 @@ try {
   const byKind = {};
   bad.forEach(r => r.problems.forEach(p => { const k = p.split(':')[0]; byKind[k] = (byKind[k] || 0) + 1; }));
   // Fatal everywhere: these were fixed at the root (renderer / gate) and must stay at 0.
-  const FATAL = /^(number under the head|text over the face|missing image|render failed)/;
+  const FATAL = /^(number under the head|text over the face|subject outside the frame|missing image|render failed)/;
   const fatal = bad.filter(r => r.problems.some(p => FATAL.test(p)));
   const verbose = process.env.QA_DESIGNS_VERBOSE;
   (verbose ? bad : fatal).forEach(r => console.log(`${fatal.includes(r) ? 'FAIL' : 'known'} ${r.brief} · ${r.scene.archetype} · ${r.why} · ${r.scene.tone || ''}: ${[...new Set(r.problems)].join('; ')}`));

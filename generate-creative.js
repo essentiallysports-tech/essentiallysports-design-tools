@@ -515,7 +515,7 @@
       swapPhoto: index => {
         const photo = card._dir.photos?.[index];
         if (!photo) return false;
-        return commit(card, C().swapPhoto(card._scene, { from: C().mainPhoto(card._scene), to: photo.src, cutout: photo.cutout || '' }), { label: 'Swapped photo', source: 'photo' });
+        return commit(card, C().swapPhoto(card._scene, { from: C().mainPhoto(card._scene), to: photo.src, cutout: photo.cutout || '', photo }), { label: 'Swapped photo', source: 'photo' });
       },
       resize: key => {
         // Built from its inputs when the server sends them (plan.directions[].input),

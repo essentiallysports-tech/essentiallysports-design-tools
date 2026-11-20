@@ -49,9 +49,11 @@ const LIMITS = {
   heroes: 4, // subjects searched in full (3 sources, vision ranking)
   extras: 9, // extra people searched lightly for headshot grids
   perSubject: 8, // ranked photos kept per subject
-  pool: 32, // candidates checked per subject (text checks are free; vision sees the best 8)
+  pool: 32, // candidates checked per subject (text checks are free; vision sees the best 12)
   visionPerRun: 4, // vision calls per run at most
-  visionPhotos: 8, // photos per vision call (a person)
+  // 12 (was 8, owner-approved spend): more of the kept photos carry the
+  // subject's box and head, so the designs frame the person right.
+  visionPhotos: 12, // photos per vision call (a person)
   visionPhotosTeam: 4, // photos per vision call (a team / league: the caption already ties them)
   cutoutsPerRun: 3, // cut-outs the browser makes per run at most
 };
@@ -707,10 +709,13 @@ async function rankFor(subject, pool, deps, ctx, { allowVision = true } = {}) {
     const kind = d.kind || (v?.kind) || h.kind || (isPerson ? 'portrait' : ev.leadName ? 'action' : 'venue');
     const main = isPerson ? d.main : true;
     const focus = d.focus || null;
+    // focal = the head: the vision check's head point when it gave one (cached
+    // verdicts from before it did have none), else estimated from the box top.
+    const head = d.head || v?.head || null;
     const record = {
       ...photo,
       kind,
-      focal: focus ? { x: focus.fx ?? Number((focus.x + focus.w / 2).toFixed(3)), y: focus.fy ?? Number((focus.y + Math.min(focus.h, 0.5) / 3).toFixed(3)) } : null,
+      focal: head ? { x: head.x, y: head.y } : focus ? { x: focus.fx ?? Number((focus.x + focus.w / 2).toFixed(3)), y: focus.fy ?? Number((focus.y + Math.min(focus.h, 0.5) / 3).toFixed(3)) } : null,
       focus: focus ? { x: focus.x, y: focus.y, w: focus.w, h: focus.h } : null,
       face: v ? Boolean(v.legacy ? v.face : v.main) : null,
       alone: main,

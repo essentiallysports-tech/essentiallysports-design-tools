@@ -12,18 +12,19 @@
 //      of the Atlanta Falcons") or that names nobody is never labelled as the
 //      person.
 //   2. A vision check (production, Claude Sonnet through the Gateway, one call
-//      per subject with up to 8 photos, cached per photo for 7 days). The model
+//      per subject with up to 12 photos, cached per photo for 7 days). The model
 //      is never asked to recognise a face: it reads the uniform, the team
 //      colours, the number, the setting and the caption, and says how
 //      many people are in the frame, who the main subject is, the kind of shot,
-//      the focus box and whether a clean cut-out is possible.
+//      the focus box, where the head sits in the frame (a position, like the
+//      box) and whether a clean cut-out is possible.
 //
 // decide() combines both into the fields the plan carries for every photo:
 //   verified (true only with positive evidence and nothing against it),
 //   verifiedBy ('vision' | 'caption' | 'title' | 'file'), main (the person is
 //   the main subject), kind (action | portrait | celebration | reaction |
 //   offfield | group | crowd | venue | object), focus ({ x, y, w, h } 0-1),
-//   cutoutOk, and why (a short reason when it is not verified).
+//   head ({ x, y } 0-1, the head's centre, or null), cutoutOk, and why (a short reason when it is not verified).
 
 const clock = { now: () => Date.now() };
 
@@ -461,23 +462,55 @@ function verifyPrompt(subject, photos) {
     '"people": how many people are clearly visible, "main": true if one person clearly dominates the frame,',
     '"role": player | coach | official | reporter | fan | family | executive | other (of the main subject),',
     '"kind": action | portrait | celebration | reaction | offfield | group | crowd | venue | object,',
-    '"box": [x, y, w, h] the main subject (0-1 from the top-left), "cutout": true if the main subject is alone with head and upper body in frame,',
+    '"box": [x, y, w, h] the main subject: left, top, width, height (0-1 from the top-left),',
+    '"head": [x, y] where the main subject\'s head is in the frame (its centre, 0-1 from the top-left; a position only, like the box, never used to tell who it is),',
+    '"cutout": true if the main subject is alone with head and upper body in frame,',
     '"quality": 1-5 (5 = sharp, well lit; 1 = blurry, dark, tiny), "graphic": true for logos, collages, edited graphics or screenshots.',
-    'Reply with JSON only: {"photos":[{"n":1,"match":"yes","evidence":"Bills #17, caption","people":1,"main":true,"role":"player","kind":"action","box":[0.3,0.1,0.4,0.8],"cutout":true,"quality":4,"graphic":false}]}');
+    'Reply with JSON only: {"photos":[{"n":1,"match":"yes","evidence":"Bills #17, caption","people":1,"main":true,"role":"player","kind":"action","box":[0.3,0.1,0.4,0.8],"head":[0.5,0.18],"cutout":true,"quality":4,"graphic":false}]}');
   return lines.join(' ');
 }
 const VERDICTS = new Map();
 const VERDICT_TTL_MS = 7 * 24 * 3600e3;
 const VERDICT_MAX = 5000;
 const verdictKey = (subject, stem) => `${norm(subject.name).trim()}|${norm(subject.team || '').trim()}|${stem}`;
-const unit = v => (Number.isFinite(Number(v)) ? Math.max(0, Math.min(1, Number(v))) : null);
 function parseRows(text) {
   const match = String(text || '').match(/\{[\s\S]*\}/);
   if (!match) return [];
   try { const rows = JSON.parse(match[0])?.photos; return Array.isArray(rows) ? rows : []; } catch { return []; }
 }
+// The subject's box as { x, y, w, h } (0-1), or null when it is not usable.
+// Takes [x, y, w, h]; a corner form [x0, y0, x1, y1] (some replies) is detected
+// when the size form would run off the frame and the corners would not.
+const EDGE = 0.02;
+const num = v => (v === null || v === '' || typeof v === 'boolean' || !Number.isFinite(Number(v)) ? null : Number(v));
+const r4 = v => Number(v.toFixed(4));
+function boxOf(raw) {
+  if (!Array.isArray(raw) || raw.length !== 4) return null;
+  const n = raw.map(num);
+  if (n.some(v => v == null || v < -EDGE || v > 1 + EDGE)) return null;
+  let [x, y, w, h] = n.map(v => Math.max(0, Math.min(1, v)));
+  if (x + w > 1 + EDGE || y + h > 1 + EDGE) {
+    if (!(w > x && h > y)) return null;
+    w -= x;
+    h -= y;
+  }
+  w = Math.min(w, 1 - x);
+  h = Math.min(h, 1 - y);
+  if (w < 0.02 || h < 0.02) return null;
+  return { x: r4(x), y: r4(y), w: r4(w), h: r4(h) };
+}
+// The head's centre { x, y } (0-1): inside the frame, and in (or just by) the
+// box when there is one; else null (the renderer estimates it from the box).
+function headOf(raw, box) {
+  const list = Array.isArray(raw) ? raw : raw && typeof raw === 'object' ? [raw.x, raw.y] : null;
+  if (!list || list.length < 2) return null;
+  const [x, y] = list.map(num);
+  if (x == null || y == null || x < 0 || x > 1 || y < 0 || y > 1) return null;
+  if (box && (x < box.x - 0.05 || x > box.x + box.w + 0.05 || y < box.y - 0.05 || y > box.y + box.h + 0.05)) return null;
+  return { x: r4(x), y: r4(y) };
+}
 function normalizeRow(row) {
-  const box = Array.isArray(row.box) && row.box.length === 4 ? row.box.map(unit) : null;
+  const focus = boxOf(row.box);
   return {
     match: ['yes', 'no', 'unsure'].includes(String(row.match).toLowerCase()) ? String(row.match).toLowerCase() : 'unsure',
     evidence: clean(row.evidence).slice(0, 80),
@@ -485,7 +518,8 @@ function normalizeRow(row) {
     main: row.main === true,
     role: String(row.role || '').toLowerCase().slice(0, 20),
     kind: String(row.kind || '').toLowerCase().slice(0, 20),
-    focus: box && box.every(v => v != null) ? { x: box[0], y: box[1], w: box[2], h: box[3] } : null,
+    focus,
+    head: headOf(row.head, focus),
     cutout: row.cutout === true,
     quality: Math.max(1, Math.min(5, Number(row.quality) || 3)),
     graphic: row.graphic === true,
@@ -494,7 +528,7 @@ function normalizeRow(row) {
 // One call for a subject's photos. deps.gateway: _ai-gateway.js; deps.model: a tier.
 // Returns { verdicts: Map(stem -> verdict), cost, called, cached }.
 const VISION_TIER = () => process.env.GENERATE_PHOTO_VERIFY_TIER || 'best';
-async function verifyWithVision(subject, photos, { gateway, track = {}, stemOf = p => p.sourceUrl, max = 8, timeoutMs = 16000 } = {}) {
+async function verifyWithVision(subject, photos, { gateway, track = {}, stemOf = p => p.sourceUrl, max = 12, timeoutMs = 16000 } = {}) {
   const verdicts = new Map();
   const unseen = [];
   photos.forEach(photo => {
@@ -563,6 +597,7 @@ function decide(photo, subject, ev, v, ctx = {}) {
     if (person && ['reporter', 'fan', 'family', 'official'].includes(v.role) && v.match !== 'yes') { res.drop = `the main subject is a ${v.role}`; return res; }
     res.kind = v.kind || '';
     res.focus = v.focus;
+    res.head = v.head || null;
     res.main = v.main && v.people <= 3;
     res.verified = v.match === 'yes' || (v.match === 'unsure' && Boolean(ev.named) && ev.lead === 'subject' && !ev.others.length);
     res.verifiedBy = v.match === 'yes' ? 'vision' : res.verified ? ev.named : '';
@@ -584,5 +619,5 @@ module.exports = {
   evidence, teamEvidence, consensusTeam, decide, verifyWithVision, verifyPrompt, visionUrl,
   peopleIn, teamOfIn, teamsIn, headlineLead, isPerson, sameTeam, decap,
   VERDICTS, OFF_FIELD,
-  _test: { clock, norm, nearlySame, normalizeRow, parseRows, fileWordsOf, teamIndex },
+  _test: { clock, norm, nearlySame, normalizeRow, boxOf, headOf, parseRows, fileWordsOf, teamIndex },
 };
