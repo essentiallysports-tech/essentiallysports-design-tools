@@ -302,7 +302,7 @@
         const pick = (ctx.photos || []).find(p => p.src === op.src);
         if (!pick) return { scene, error: 'Only this design\'s ES photos can be used.' };
         if (!C) return { scene, error: 'The composer is not loaded.' };
-        next = C.swapPhoto(next, { from: C.mainPhoto(next), to: pick.src, cutout: pick.cutout || '' });
+        next = C.swapPhoto(next, { from: C.mainPhoto(next), to: pick.src, cutout: pick.cutout || '', photo: pick });
         break;
       }
       case 'palette': {

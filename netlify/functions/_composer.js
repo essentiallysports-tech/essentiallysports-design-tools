@@ -548,7 +548,7 @@ async function resolvePhotos(read, { localFind = null, track = null, extras = nu
         list = raw.filter(p => !checked || p.verified).map(p => ({ src: p.url || p.src, title: p.title || '', person, source: p.source || 'es', ...photoMeta({ ...p, person, kind: p.shot || p.detail || p.kind }), ...(p.cutout || p.cutoutUrl ? { cutoutSrc: p.cutout?.url || p.cutout || p.cutoutUrl } : {}) }));
         if (extras && !Array.isArray(res)) {
           (res?.cutouts || []).forEach(c => { if (c?.url && c.fromPhoto) extras.cutouts[c.fromPhoto] = c.url; });
-          (res?.headshots || []).forEach(h => { if (h?.url && !extras.headshots.some(x => x.url === h.url)) extras.headshots.push({ url: h.url, person: h.person || person, ...(h.team ? { team: h.team } : {}) }); });
+          (res?.headshots || []).forEach(h => { if (h?.url && !extras.headshots.some(x => x.url === h.url)) extras.headshots.push({ url: h.url, person: h.person || person, ...(h.team ? { team: h.team } : {}), ...(isPoint(h.focal) ? { focal: h.focal } : {}) }); });
           (res?.logos || []).forEach(l => { if (l?.url && !extras.logos.some(x => x.url === l.url)) extras.logos.push({ url: l.url, team: l.team || '', league: l.league || '' }); });
         }
         list.forEach(p => { if (extras && p.cutoutSrc) extras.cutouts[p.src] = p.cutoutSrc; });
@@ -577,7 +577,7 @@ function sideFor(read, story, assets, used) {
   const pool = assets.photos?.[team?.name] || assets.photos?.[story.people?.[0]] || [];
   const photo = pool.find(p => !used.has(photoKey(p.src))) || null;
   if (photo) used.add(photoKey(photo.src));
-  return { title: team?.name || story.subject, number: { prefix: f.prefix, value: f.value, suffix: f.suffix, label: f.label, factId: f.id }, logo: team?.logo ? { src: team.logo } : null, photo: photo ? { src: photo.src } : null };
+  return { title: team?.name || story.subject, number: { prefix: f.prefix, value: f.value, suffix: f.suffix, label: f.label, factId: f.id }, logo: team?.logo ? { src: team.logo } : null, photo: photo ? { src: photo.src, ...framing(photo) } : null };
 }
 
 // ─── 4. Directions ────────────────────────────────────────────────────────
@@ -623,7 +623,17 @@ function beforeNumbers(text, facts = []) {
 }
 
 // Photo metadata from the asset service (gen-imagery), when it gave any.
-const photoMeta = p => Object.fromEntries(['width', 'height', 'person', 'kind', 'score', 'source', 'rights', 'verified', 'verifiedBy', 'main', 'cutoutOk'].filter(k => p?.[k] != null && p[k] !== '').map(k => [k, k === 'person' && typeof p[k] !== 'string' ? '' : p[k]]).concat(p?.focus || p?.focal ? [['focus', p.focus || p.focal]] : []));
+// Framing: focus = the subject's box { x, y, w, h } (or a point when that is all
+// there is), focal = the head point, box = the box again (explicit), so the
+// renderer has both the head and the subject's extent.
+const isPoint = f => Boolean(f) && Number.isFinite(Number(f.x)) && Number.isFinite(Number(f.y));
+const isBox = f => isPoint(f) && Number(f.w) > 0 && Number(f.h) > 0;
+const framing = p => ({
+  ...(isPoint(p?.focus) ? { focus: p.focus } : isPoint(p?.focal) ? { focus: p.focal } : {}),
+  ...(isPoint(p?.focal) ? { focal: p.focal } : {}),
+  ...(isBox(p?.box) ? { box: p.box } : isBox(p?.focus) ? { box: p.focus } : {}),
+});
+const photoMeta = p => ({ ...Object.fromEntries(['width', 'height', 'person', 'kind', 'score', 'source', 'rights', 'verified', 'verifiedBy', 'main', 'cutoutOk'].filter(k => p?.[k] != null && p[k] !== '').map(k => [k, k === 'person' && typeof p[k] !== 'string' ? '' : p[k]])), ...framing(p) });
 // input.cutouts: the hero cut-out first, then this design's other people (named in the brief).
 function cutoutsFor(direction, assets = {}) {
   const list = [];
@@ -675,13 +685,13 @@ function inputsFor(direction, read, assets = {}) {
     number: num && num.kind !== 'score' && num.kind !== 'compare' && isStat(num, 3) ? { prefix: num.prefix, value: num.kind === 'record' ? num.value : num.value, suffix: num.suffix, label: direction.label || num.label, factId: num.id } : null,
     numbers,
     // gen5: agent A's verdicts ride along (photo.verified / kind / focus) for the looks.
-    photo: photo ? { src: photo.src, focus: photo.focus, ...(photo.kind ? { kind: photo.kind } : {}), ...(photo.verified != null ? { verified: photo.verified } : {}) } : null,
+    photo: photo ? { src: photo.src, focus: photo.focus, ...framing(photo), ...(photo.width ? { width: photo.width, height: photo.height } : {}), ...(photo.kind ? { kind: photo.kind } : {}), ...(photo.verified != null ? { verified: photo.verified } : {}) } : null,
     // Shared input shape (gen-v3 contract): every item carries src and url;
     // photos are the extra moments (the main photo is input.photo).
     photos: (direction.photos || []).map(p => ({ src: p.src, url: p.src, label: p.label || '', ...photoMeta(p), ...(p.verified != null ? { verified: p.verified } : {}) })),
     cutout: cutout ? { src: cutout.src } : null,
     cutouts: cutoutsFor(direction, assets),
-    headshots: (assets.headshots || []).filter(h => h?.url).slice(0, 9).map(h => ({ url: h.url, src: h.url, person: h.person || '', ...(h.team ? { team: h.team } : {}) })),
+    headshots: (assets.headshots || []).filter(h => h?.url).slice(0, 9).map(h => ({ url: h.url, src: h.url, person: h.person || '', ...(h.team ? { team: h.team } : {}), ...(isPoint(h.focal) ? { focal: h.focal } : {}) })),
     art: direction.art ? { src: direction.art.src } : null,
     logos: storyTeams.filter(t => t.logo).map(t => ({ src: t.logo, url: t.logo, name: t.name, team: t.name, league: t.kind === 'league' ? t.name : read.sport || '' })),
     quote: quote ? { text: quote.text, by: quote.by } : null,
@@ -2155,7 +2165,7 @@ async function plan({ brief, found = {}, steer = {}, want: wantRaw = 4, track = 
     d.critique = mergeCritiques(d.critique, d.candidates[0] ? codeCritique(d.candidates[0], d, read, assets) : null);
     // Swap photo: every ES photo of this design's person (or team), with its cut-out when one was made.
     const owner = d.photo?.person || d.person || read.teams.find(t => read.stories.find(s => s.id === d.story)?.teams?.includes(t.id))?.name || '';
-    d.swaps = dedupePhotos([d.photo, ...(d.photos || []), ...(photos[owner] || [])].filter(Boolean)).map(p => ({ src: p.src, person: p.person || owner, cutout: cutouts[p.src] || '' }));
+    d.swaps = dedupePhotos([d.photo, ...(d.photos || []), ...(photos[owner] || [])].filter(Boolean)).map(p => ({ src: p.src, person: p.person || owner, cutout: cutouts[p.src] || '', ...framing(p), ...(p.width ? { width: p.width, height: p.height } : {}) }));
     return d;
   };
   directions.forEach(finish);

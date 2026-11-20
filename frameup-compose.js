@@ -256,7 +256,11 @@
     const asImage = x => {
       const src = srcOf(x);
       if (!src) return null;
-      return x && typeof x === 'object' ? (x.src === src ? x : { ...x, src }) : { src };
+      if (!x || typeof x !== 'object') return { src };
+      // Framing: the box with its head point folded into focus (see focusOf).
+      const focus = focusOf(x);
+      const same = JSON.stringify(focus) === JSON.stringify(x.focus);
+      return x.src === src && same ? x : { ...x, src, ...(focus && !same ? { focus } : {}) };
     };
     const uniq = list => {
       const seen = new Set();
@@ -280,6 +284,9 @@
       out.cutouts = cuts;
     }
     if (Array.isArray(input.headshots)) out.headshots = uniq(input.headshots.map(asImage));
+    // Split screens and quote pairs carry their own photos: framed the same way.
+    if (Array.isArray(input.sides)) out.sides = input.sides.map(sd => (sd?.photo && typeof sd.photo === 'object' && asImage(sd.photo) ? { ...sd, photo: asImage(sd.photo) } : sd));
+    if (Array.isArray(input.quotes)) out.quotes = input.quotes.map(q => (q?.photo && typeof q.photo === 'object' && asImage(q.photo) ? { ...q, photo: asImage(q.photo) } : q));
     if (Array.isArray(input.logos)) out.logos = input.logos.map(l => { const im = asImage(l); return im ? { ...im, name: l.name || l.team || '' } : null; }).filter(Boolean);
     if (input.tone != null && !TONES.includes(input.tone)) delete out.tone;
     // gen4: never a sport / league tag ("MLB", "CHIEFS · NFL") as a kicker.
@@ -1817,7 +1824,7 @@
               ...(r.value ? [{ type: 'text', role: 'label', text: upper(r.value), x: valueX, y: y + 18, w: valueW, h: rowH - 36, font: 'display', size: Math.round(rowH * 0.4), minSize: 28, maxLines: 1, color: readable(pal.accent, pal.bg, 3), align: 'right', valign: 'middle' }] : []),
               ...(r.headshot ? [r.headshotCut
                 ? { type: 'cutout', src: r.headshot, x: W - SAFE - shotW, y: y + 4, w: shotW, h: rowH - 6, anchor: 'bottom', fx: { shadow: { color: '#000000', blur: 12, x: 0, y: 4, alpha: 0.25 } } }
-                : { type: 'photo', src: r.headshot, focus: { x: 0.5, y: 0.22 }, x: W - SAFE - shotW, y: y + 10, w: shotW, h: rowH - 18, mask: 'round', radius: 6, zoom: 1.25 }] : []),
+                : { type: 'photo', src: r.headshot, focus: r.headshotFocus || { x: 0.5, y: 0.22 }, x: W - SAFE - shotW, y: y + 10, w: shotW, h: rowH - 18, mask: 'round', radius: 6, zoom: 1.25 }] : []),
               { type: 'shape', shape: 'rect', x: SAFE, y: y + rowH - 2, w: W - SAFE * 2, h: 2, color: rule },
             ];
           }),
@@ -1904,7 +1911,7 @@
           { type: 'shape', shape: 'rect', x: 0, y: 0, w: W, h: H, color: pal.toneName === 'vivid' ? pal.bg : pal.deep, opacity: v === 2 ? 0.55 : 0.4 },
           ...(head ? [esHead(input.headline, pal, v === 1 ? { x: SAFE, y: cardY + cardH + 50, w: W - SAFE * 2, h: H - SAFE - cardY - cardH - 50 - (input.swipe ? 56 : 0) } : { x: SAFE, y: top, w: W - SAFE * 2, h: headH }, { size: 110, minSize: 44, maxLines: 2, words: input.highlight, valign: v === 1 ? 'top' : 'bottom' })] : []),
           { type: 'shape', shape: 'rect', x: cx, y: cardY, w: cardW, h: cardH, color: '#FFFFFF', radius: 22, fx: { shadow: { color: '#000000', blur: 50, x: 0, y: 20, alpha: 0.45 } } },
-          ...(avatar ? [{ type: 'photo', src: avatar, focus: { x: 0.5, y: 0.25 }, x: cx + 40, y: cardY + 40, w: 90, h: 90, mask: 'circle', zoom: 1.3 }]
+          ...(avatar ? [{ type: 'photo', src: avatar, focus: allPhotos(input).concat(input.headshots || []).find(p => p.src === avatar)?.focus || { x: 0.5, y: 0.25 }, x: cx + 40, y: cardY + 40, w: 90, h: 90, mask: 'circle', zoom: 1.3 }]
             : logo ? [{ type: 'shape', shape: 'circle', x: cx + 40, y: cardY + 40, w: 90, h: 90, color: '#F2F2F2' }, { type: 'logo', kind: 'team', src: logo, x: cx + 52, y: cardY + 52, w: 66, h: 66 }]
               : [{ type: 'shape', shape: 'circle', x: cx + 40, y: cardY + 40, w: 90, h: 90, color: readable(signature(teamColors(pal)), '#FFFFFF', 3) }]),
           { type: 'text', role: 'name', text: clean(post.name), x: cx + 150, y: cardY + 50, w: cardW - 190, h: 42, font: 'body', size: 36, minSize: 24, maxLines: 1, color: '#111111', align: 'left', valign: 'top', weight: 700 },
@@ -2168,13 +2175,14 @@
     const logoFor = r => srcOf(r.logo) || (i.logos || []).find(l => r.team && squashed(l.name) === squashed(r.team))?.src || '';
     const shotFor = r => {
       const own = srcOf(r.headshot);
-      if (own) return own;
+      if (own) return { src: own, focus: typeof r.headshot === 'object' ? focusOf(r.headshot) : undefined };
       const hit = (i.headshots || []).find(h => h.person && r.name && squashed(h.person) === squashed(r.name));
-      return hit?.src || '';
+      return { src: hit?.src || '', focus: hit ? focusOf(hit) : undefined };
     };
     return rows.filter(r => clean(r?.name)).map(r => {
-      const headshot = shotFor(r);
-      return { rank: r.rank, name: clean(r.name), value: clean(r.value || ''), logo: logoFor(r), headshot, headshotCut: /\.png(\?|$)/i.test(headshot), color: r.color || '' };
+      const shot = shotFor(r);
+      const headshot = shot.src;
+      return { rank: r.rank, name: clean(r.name), value: clean(r.value || ''), logo: logoFor(r), headshot, ...(shot.focus ? { headshotFocus: shot.focus } : {}), headshotCut: /\.png(\?|$)/i.test(headshot), color: r.color || '' };
     });
   }
   // Bars: numbers that share a unit (all % / all $ / all plain), largest first kept in order.
@@ -3307,16 +3315,105 @@
     }
   }
 
-  // Cover-crop source rect for a box, around a focus point (0..1).
+  // A photo's framing, 0..1 of the image. focus is either a point { x, y }
+  // (the crop centres on it) or the subject's box { x, y, w, h } (top-left and
+  // size, from the vision check) with an optional head point { hx, hy }.
+  // -> { head, box } (null when not known). Without a head point the head is
+  // estimated near the top of the box.
+  const unitOf = v => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Math.max(0, Math.min(1, Number(v))));
+  function framingOf(focus) {
+    const none = { head: null, box: null };
+    if (!focus || typeof focus !== 'object') return none;
+    const x = unitOf(focus.x);
+    const y = unitOf(focus.y);
+    if (x == null || y == null) return none;
+    const w = Math.min(Number(focus.w), 1 - x);
+    const h = Math.min(Number(focus.h), 1 - y);
+    if (!(w > 0.005 && h > 0.005)) return { head: { x, y }, box: null };
+    const box = { x, y, w, h };
+    const hx = unitOf(focus.hx);
+    const hy = unitOf(focus.hy);
+    const head = hx != null && hy != null ? { x: hx, y: hy } : { x: x + w / 2, y: y + Math.min(h, 0.5) * 0.3 };
+    return { head, box };
+  }
+  // The renderer's focus for an image the composer gave: its box with the head
+  // point folded in ({ x, y, w, h, hx, hy }), else its point, else nothing.
+  //   accepts { focus, focal, box, head } as the composer / gen-imagery send them.
+  const pointOf = f => (f && Number.isFinite(Number(f.x)) && Number.isFinite(Number(f.y)) ? { x: Number(f.x), y: Number(f.y) } : null);
+  const boxOfFocus = f => (pointOf(f) && Number(f.w) > 0 && Number(f.h) > 0 ? { x: Number(f.x), y: Number(f.y), w: Number(f.w), h: Number(f.h) } : null);
+  function focusOf(p) {
+    if (!p || typeof p !== 'object') return undefined;
+    const box = boxOfFocus(p.box) || boxOfFocus(p.focus);
+    const head = pointOf(p.head) || pointOf(p.focal) || (p.focus && Number.isFinite(Number(p.focus.hx)) ? { x: Number(p.focus.hx), y: Number(p.focus.hy) } : null);
+    if (box) return { ...box, ...(head ? { hx: head.x, hy: head.y } : {}) };
+    return head || pointOf(p.focus) || undefined;
+  }
+
+  // Cover-crop source rect for a box (w x h) from an image (iw x ih).
+  //   focus = a point: centred on it (as before).
+  //   focus = the subject's box: the head about a third down and centred across,
+  //     then the crop moves so the whole box is inside when it fits; a box larger
+  //     than the crop keeps its top (the head) in.
+  //   no focus: the upper third (0.5, 0.28); a wide slot from a tall photo
+  //     crops near the top, where the head usually is.
+  // The crop always stays inside the image (the photo covers the slot).
   function coverRect(iw, ih, w, h, focus = {}, zoom = 1) {
     const scale = Math.max(w / iw, h / ih) * zoom;
     const sw = w / scale;
     const sh = h / scale;
-    const fx = focus.x ?? 0.5;
-    const fy = focus.y ?? 0.35;
-    const sx = Math.max(0, Math.min(iw - sw, iw * fx - sw / 2));
-    const sy = Math.max(0, Math.min(ih - sh, ih * fy - sh / 2));
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const { head, box } = framingOf(focus);
+    let sx;
+    let sy;
+    if (box) {
+      const bx = box.x * iw; const bw = box.w * iw;
+      const by = box.y * ih; const bh = box.h * ih;
+      const hx = head.x * iw; const hy = head.y * ih;
+      sx = hx - sw / 2;
+      if (bw <= sw) sx = clamp(sx, bx + bw - sw, bx);
+      sy = hy - sh * 0.36;
+      if (bh <= sh) sy = clamp(sy, by + bh - sh, by);
+      else sy = clamp(by - sh * 0.04, hy - sh * 0.45, hy - sh * 0.12);
+    } else if (head) {
+      sx = iw * head.x - sw / 2;
+      sy = ih * head.y - sh / 2;
+    } else {
+      sx = iw * 0.5 - sw / 2;
+      sy = ih * 0.28 - sh / 2;
+      if (sh < ih * 0.6) sy = Math.min(sy, ih * 0.08);
+    }
+    sx = Math.max(0, Math.min(iw - sw, sx));
+    sy = Math.max(0, Math.min(ih - sh, sy));
     return { sx, sy, sw, sh };
+  }
+  // Where a photo's subject lands on the canvas: the head point and the box,
+  // mapped through the crop into the layer's slot (x, y, w, h; flip mirrors).
+  function framedOnCanvas(iw, ih, slot, crop, focus, flip = false) {
+    const { head, box } = framingOf(focus);
+    const mx = px => { const t = (px * iw - crop.sx) / crop.sw; return slot.x + (flip ? 1 - t : t) * slot.w; };
+    const my = py => slot.y + ((py * ih - crop.sy) / crop.sh) * slot.h;
+    const r = v => Math.round(v * 10) / 10;
+    const out = { head: null, box: null };
+    if (head) out.head = { x: r(mx(head.x)), y: r(my(head.y)) };
+    if (box) {
+      const xa = mx(box.x); const xb = mx(box.x + box.w);
+      out.box = { x: r(Math.min(xa, xb)), y: r(my(box.y)), w: r(Math.abs(xb - xa)), h: r(my(box.y + box.h) - my(box.y)) };
+      // Fits = the subject is no bigger than the crop (then all of it must show).
+      out.fits = box.w * iw <= crop.sw + 0.5 && box.h * ih <= crop.sh + 0.5;
+    }
+    return out;
+  }
+  function reportPhoto(report, img, layer, slot, focus, zoom, how) {
+    if (!report || !img?.width) return;
+    const crop = coverRect(img.width, img.height, slot.w, slot.h, focus, zoom || 1);
+    const at = framedOnCanvas(img.width, img.height, slot, crop, focus, Boolean(layer.flip));
+    const r = v => Math.round(v * 10) / 10;
+    report.photos = (report.photos || []).concat([{
+      src: layer.src || '', layer: report.layerIndex, how, slot: { x: slot.x, y: slot.y, w: slot.w, h: slot.h },
+      crop: { sx: r(crop.sx), sy: r(crop.sy), sw: r(crop.sw), sh: r(crop.sh), iw: img.width, ih: img.height },
+      framing: framingOf(focus).box ? 'box' : framingOf(focus).head ? 'point' : 'default',
+      head: at.head, box: at.box, fits: Boolean(at.fits),
+    }]);
   }
 
   function maskPath(g, layer, s) {
@@ -3645,6 +3742,7 @@
     }
     g.drawImage(photoBuffer(img, layer, s), x * s, y * s);
     g.restore();
+    reportPhoto(report, img, layer, { x, y, w, h }, layer.focus, layer.zoom, 'photo');
     if (layer.border) {
       g.save();
       g.strokeStyle = layer.border.color; g.lineWidth = layer.border.width * s;
@@ -3692,6 +3790,7 @@
     } else {
       const { sx, sy, sw, sh } = coverRect(ph.width, ph.height, F.w, F.h, b.focus, b.zoom || 1);
       bg.drawImage(ph, sx, sy, sw, sh, 0, 0, bw, bh);
+      reportPhoto(report, ph, { src: b.photo }, F, b.focus, b.zoom, 'breakout');
       // Not in register: the photo becomes a soft field, so the subject never doubles.
       buf = blurCanvas(buf, 18 * s);
     }
@@ -3766,7 +3865,11 @@
     const aspect = trimmed.height / Math.max(1, trimmed.width);
     const full = aspect > 1.7;
     const bleed = layer.bleed ? (full ? 1.5 : aspect > 1.25 ? 1.0 : 0.95) : 1;
-    const scale = Math.min((h * bleed) / trimmed.height, (layer.maxW || w) / trimmed.width);
+    // A figure set to one side is never wider than the canvas (else its far
+    // side, often the face, runs off the edge).
+    const sided = layer.align === 'left' || layer.align === 'right';
+    const maxW = sided ? Math.min(layer.maxW || w, report.size?.w || Infinity) : (layer.maxW || w);
+    const scale = Math.min((h * bleed) / trimmed.height, maxW / trimmed.width);
     const dw = trimmed.width * scale;
     const dh = trimmed.height * scale;
     let dx = layer.align === 'left' ? x : layer.align === 'right' ? x + w - dw : x + (w - dw) / 2;
@@ -3871,28 +3974,38 @@
       if (!cut.head || cut.layer == null) return;
       const nums = items.slice(0, cut.at).filter(i => i.type === 'number' && i.box && i.layer != null);
       const over = items.slice(cut.at).filter(i => i.box && i.box.w > 1 && i.box.h > 1 && ['text', 'pill', 'number'].includes(i.type));
-      const fits = (mx, my, withNums = true) => {
+      // The head fully on the canvas, and at least 85% of the figure's width.
+      const headIn = (mx, my) => {
         const head = { ...cut.head, x: cut.head.x + mx, y: cut.head.y + my };
         if (head.x < 0 || head.x + head.w > W || head.y < 0 || head.y + head.h * 0.8 > H - SAFE * 0.5) return false;
-        if (Math.min(W, cut.x + mx + cut.w) - Math.max(0, cut.x + mx) < cut.w * 0.7) return false;
+        return Math.min(W, cut.x + mx + cut.w) - Math.max(0, cut.x + mx) >= cut.w * 0.85;
+      };
+      const fits = (mx, my, withNums = true) => {
+        const head = { ...cut.head, x: cut.head.x + mx, y: cut.head.y + my };
+        if (!headIn(mx, my)) return false;
         // gen5: a board number may sit behind the head (n.overlap of its foot).
         if (withNums && nums.some(n => boxesMeet(head, n.overlap ? { ...n.box, h: n.box.h * (1 - n.overlap) } : n.box, n.overlap ? 0 : GAP))) return false;
         const face = faceOf(head);
         return !over.some(i => boxesMeet(face, i.box, 4));
       };
       if (fits(0, 0)) return;
+      // Side moves are capped (a quarter of the figure) so the face never
+      // slides off the edge; down moves up to half the figure; up moves only
+      // when the head sits too low on the canvas.
       const tries = [];
-      for (let iy = 0; iy <= 20; iy += 1) {
-        for (let ix = -16; ix <= 16; ix += 1) tries.push({ x: (ix / 40) * cut.w, y: (iy / 40) * cut.h, cost: (iy / 40) * cut.h + Math.abs(ix / 40) * cut.w * 1.3 });
+      for (let iy = cut.head.y + cut.head.h * 0.8 > H - SAFE * 0.5 ? -8 : 0; iy <= 20; iy += 1) {
+        for (let ix = -10; ix <= 10; ix += 1) tries.push({ x: (ix / 40) * cut.w, y: (iy / 40) * cut.h, cost: Math.abs(iy / 40) * cut.h * (iy < 0 ? 3 : 1) + Math.abs(ix / 40) * cut.w * 1.3 });
       }
       tries.sort((p, q) => p.cost - q.cost);
       let best = tries.find(t => fits(t.x, t.y));
       if (!best) {
         // No move clears the numbers: the lowest spot where the face stays
         // clear (the most room above the head), then the numbers it still
-        // meets are set smaller, above the head.
+        // meets are set smaller, above the head. Failing that, the smallest
+        // move that keeps the head on the canvas.
         const open = tries.filter(t => fits(t.x, t.y, false));
-        best = open.length ? open.reduce((p, q) => (q.y > p.y || (q.y === p.y && Math.abs(q.x) < Math.abs(p.x)) ? q : p)) : { x: 0, y: 0 };
+        best = open.length ? open.reduce((p, q) => (q.y > p.y || (q.y === p.y && Math.abs(q.x) < Math.abs(p.x)) ? q : p))
+          : tries.find(t => headIn(t.x, t.y)) || { x: 0, y: 0 };
         const head = { ...cut.head, x: cut.head.x + best.x, y: cut.head.y + best.y };
         nums.filter(n => boxesMeet(head, n.box, GAP)).forEach(n => {
           const room = head.y - GAP - n.top;
@@ -4371,13 +4484,17 @@
     return next;
   }
   // Swap the photo (and its cut-out) everywhere it is used.
-  function swapPhoto(scene, { from, to, cutout = '' }) {
+  // The new photo's framing goes with it (photo: { focus, focal, box } as the
+  // plan's swaps carry it, or focus); the old photo's framing never stays.
+  function swapPhoto(scene, { from, to, cutout = '', focus, photo } = {}) {
     const next = JSON.parse(JSON.stringify(scene));
+    const framed = focusOf(photo) || focusOf({ focus });
+    const setFocus = obj => { if (framed) obj.focus = { ...framed }; else delete obj.focus; };
     next.layers.forEach(layer => {
-      if (layer.type === 'photo' && layer.role !== 'art' && (!from || layer.src === from)) layer.src = to;
+      if (layer.type === 'photo' && layer.role !== 'art' && (!from || layer.src === from)) { layer.src = to; setFocus(layer); }
       if (layer.type === 'cutout' && cutout) {
         layer.src = cutout;
-        if (layer.breakout) layer.breakout.photo = to;
+        if (layer.breakout) { layer.breakout.photo = to; setFocus(layer.breakout); }
       }
     });
     return next;
@@ -4453,7 +4570,7 @@
       } else if (op === 'drop-image' || op === 'swap-photo') {
         const pool = (ctx.photos || []).filter(p => p?.src && p.src !== mainPhoto(current) && p.src !== ctx.input?.photo?.src);
         if (op === 'swap-photo' && pool.length && mainPhoto(current)) {
-          next = swapPhoto(current, { from: mainPhoto(current), to: pool[0].src, cutout: pool[0].cutout || '' });
+          next = swapPhoto(current, { from: mainPhoto(current), to: pool[0].src, cutout: pool[0].cutout || '', photo: pool[0] });
         } else if (ctx.input) {
           // Rebuild the same composition without the weak image (it reflows), else
           // with the next ES photo, else drop the boxed image layers.
@@ -4503,5 +4620,7 @@
     render, toDataUrl, editableText, setText, swapPhoto,
     BOARD, CASCADES, boardColors, pickPhoto, dropOrphanRules,
     _test: { contrast, mix, lum, normHex, digitsIn, logoZone, coverRect, readable, phraseWrap, keepPairsOf },
+    // Photo framing (tests): the crop, the subject on the canvas, cut-out headroom.
+    _framing: { coverRect, framingOf, focusOf, framedOnCanvas, planHeadroom },
   };
 }));

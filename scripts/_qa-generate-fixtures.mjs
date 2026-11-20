@@ -52,13 +52,22 @@ export function qaFile(url) {
   return { type: 'image/svg+xml', body: figureSvg({ pose, colour, cutout: kind === 'cutout' }) };
 }
 
+// Each figure's framing as the vision check returns it (0-1 of the 900 x 1200
+// photo): focus = the subject's box, focal = the head's centre.
+const FRAMING = {
+  stand: { focus: { x: 0.2111, y: 0.0817, w: 0.5778, h: 0.9183 }, focal: { x: 0.5, y: 0.1583 } },
+  bust: { focus: { x: 0.0444, y: 0.1167, w: 0.9111, h: 0.8833 }, focal: { x: 0.5, y: 0.275 } },
+  swing: { focus: { x: 0.1889, y: 0, w: 0.6778, h: 1 }, focal: { x: 0.4778, y: 0.25 } },
+};
+const framingFor = (who, n) => FRAMING[POSES[(hash(who) + Number(n)) % POSES.length]];
+
 const fakeAssets = {
   async findPhotos({ person = '', team = '' } = {}) {
     if (team || !person) return { photos: [], cutouts: [], headshots: [], logos: [] };
     const who = slug(person);
-    const photos = [1, 2, 3].map(n => ({ url: `/__qa/photo/${who}-${n}.svg`, person, kind: n === 2 ? 'portrait' : 'action', score: 0.9 - n * 0.1, width: 900, height: 1200, source: 'es', rights: 'es-licensed' }));
+    const photos = [1, 2, 3].map(n => ({ url: `/__qa/photo/${who}-${n}.svg`, person, kind: n === 2 ? 'portrait' : 'action', score: 0.9 - n * 0.1, width: 900, height: 1200, source: 'es', rights: 'es-licensed', ...framingFor(who, n) }));
     const cutouts = [1, 2].map(n => ({ url: `/__qa/cutout/${who}-${n}.svg`, fromPhoto: photos[n - 1].url, person, width: 900, height: 1200 }));
-    return { photos, cutouts, headshots: [{ url: `/__qa/photo/${who}-2.svg`, person }], logos: [] };
+    return { photos, cutouts, headshots: [{ url: `/__qa/photo/${who}-2.svg`, person, focal: framingFor(who, 2).focal }], logos: [] };
   },
 };
 
