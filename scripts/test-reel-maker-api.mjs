@@ -76,7 +76,7 @@ await test('config: the Gateway key alone turns the house voice on; music bed of
   assert.equal(body.voice.model, 'elevenlabs/eleven-v4');
   assert.deepEqual(body.voice.voices.map(v => v.name), ['Brian', 'Liam', 'Sarah', 'Bella']);
   ['nPczCjzI2devNBz1zQrb', 'TX3LPaxmHKxFdv7VOQHJ', 'EXAVITQu4vr4xnSDxMaL', 'hpp4J3VqNfWAUOO0d1Us'].forEach(id => assert.equal(JSON.stringify(body).includes(id), false));
-  assert.deepEqual(body.styles, ['classic', 'explainer', 'series', 'countdown']);
+  assert.deepEqual(body.styles, ['es', 'classic', 'explainer', 'series', 'countdown']);
   assert.equal(body.aiClips.ready, false, 'AI clips are off by default');
   assert.equal(body.aiClips.max, 2);
   assert.equal(body.music.ready, false);
@@ -180,12 +180,12 @@ await test('unknown mode is 400; revise with no reel is 400', async () => {
   assert.equal((await call({ mode: 'revise', plan: { beats: [] } })).status, 400);
 });
 
-await test('plan: style picked or suggested (code, free); returned with the plan', async () => {
+await test('plan: style picked or suggested (code, free; ES Reels is the house style); returned with the plan', async () => {
   gateway.aiText = async () => ({ text: JSON.stringify({ format: 'stat', beats: [] }), model: 'anthropic/claude-haiku-5.5', cost: 0.001 });
   const auto = await call({ mode: 'plan', brief: 'Moneyball for the Steelers: cap space is the problem and the draft is the fix.' });
-  assert.equal(auto.body.style, 'series');
-  assert.equal(auto.body.suggestedStyle.id, 'series');
-  assert.equal(auto.body.plan.style, 'series');
+  assert.equal(auto.body.style, 'es');
+  assert.equal(auto.body.suggestedStyle.id, 'es');
+  assert.equal(auto.body.plan.style, 'es');
   const picked = await call({ mode: 'plan', brief: 'Moneyball for the Steelers: cap space is the problem and the draft is the fix.', style: 'explainer' });
   assert.equal(picked.body.style, 'explainer');
 });

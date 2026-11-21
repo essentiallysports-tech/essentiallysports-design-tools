@@ -216,7 +216,9 @@
   // A floating layer (toast, popover) covering one of the view's key actions
   // (opts.keyActions: the step buttons). Covering a field for a few seconds is
   // what a toast does; covering Next / Export is not.
-  const floats = vis.filter(e => css(e).position === 'fixed' && e.children.length && e.getBoundingClientRect().height > 8);
+  // A modal dialog (showModal) covers the page on purpose: the page behind is inert.
+  const isModal = e => { try { return e.matches(':modal'); } catch { return false; } };
+  const floats = vis.filter(e => css(e).position === 'fixed' && e.children.length && e.getBoundingClientRect().height > 8 && !isModal(e));
   floats.forEach(f => {
     const fr = f.getBoundingClientRect();
     vis.filter(c => (opts.keyActions || []).some(k => c.matches(k))).forEach(c => {

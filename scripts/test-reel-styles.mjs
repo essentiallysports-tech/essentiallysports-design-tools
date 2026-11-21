@@ -64,8 +64,9 @@ function stubCtx() {
 }
 const env = () => ({ measure, images: { 'img:1': { naturalWidth: 1600, naturalHeight: 1067 }, 'logo:es': { width: 123, height: 105 }, 'logo:team': { width: 200, height: 200 } }, videos: { 'clip:1': { readyState: 4, videoWidth: 1280, videoHeight: 720 } }, cutouts: { 'clip:1': { width: 600, height: 900 } } });
 
-test('style data: four styles, ES fonts only, no purple, every beat kind has a layout', () => {
-  assert.deepEqual(S.STYLE_IDS, ['classic', 'explainer', 'series', 'countdown']);
+test('style data: five styles (ES Reels first, the default), ES fonts only, no purple, every beat kind has a layout', () => {
+  assert.deepEqual(S.STYLE_IDS, ['es', 'classic', 'explainer', 'series', 'countdown']);
+  assert.equal(S.DEFAULT_STYLE, 'es');
   S.STYLE_IDS.forEach(id => assert.deepEqual(S.validateStyle(S.STYLES[id]), [], id));
   assert.ok(S.isPurple('#7B2FBE') && !S.isPurple('#1F6FEB') && !S.isPurple('#D93A2F'), 'the purple check works');
   assert.deepEqual(S.COMPONENT_KINDS, F.COMPONENT_KINDS, 'formats and styles agree on the data beats');
@@ -89,8 +90,11 @@ S.STYLE_IDS.forEach(styleId => {
     tl.tracks.graphics.forEach(g => { for (const dt of [0, 150, 500, 1500]) R.drawFrame(ctx, tl, Math.min(g.outMs - 1, g.inMs + dt), e); });
     assert.ok(calls.fillText > beats.length * 4, 'text drawn');
     const boxes = R.allBoxes(measure, tl);
-    const SAFE = R.SAFE;
-    const out = boxes.filter(b => b.x < SAFE.left - 0.5 || b.x + b.w > SAFE.right + 0.5 || b.y < SAFE.top - 0.5 || b.y + b.h > SAFE.bottom + 0.5);
+    // ES Reels lays out in the ES safe frame (x 40-1040, y 300-1640); the
+    // other looks keep their platform zone. The ES mark follows the ES rule
+    // (right 60, top 330) in every style.
+    const SAFE = styleId === 'es' ? { left: 40, right: 1040, top: 300, bottom: 1640 } : R.SAFE;
+    const out = boxes.filter(b => b.role !== 'es-mark').filter(b => b.x < SAFE.left - 0.5 || b.x + b.w > SAFE.right + 0.5 || b.y < SAFE.top - 0.5 || b.y + b.h > SAFE.bottom + 0.5);
     assert.deepEqual(out.map(b => `${b.beat}:${b.role}:${Math.round(b.x)},${Math.round(b.y)},${Math.round(b.w)}x${Math.round(b.h)}`), []);
     });
   });
@@ -140,11 +144,15 @@ test('clips: one shot per clip, played from the trim point, looping a short clip
   assert.ok(R.clipTime(shot, 7000) < 8, 'loops inside the clip');
 });
 
-test('suggestStyle: Top 5 -> Countdown, cap / draft talk -> Series, numbers -> Explainer, news -> Classic', () => {
-  assert.equal(S.suggestStyle({ format: 'top5', text: 'Best QBs' }).id, 'countdown');
-  assert.equal(S.suggestStyle({ text: 'Moneyball for the Steelers: cap space and the draft' }).id, 'series');
-  assert.equal(S.suggestStyle({ text: 'Mahomes averages 6.5 yards per throw, 234th of 714 seasons' }).id, 'explainer');
-  assert.equal(S.suggestStyle({ text: 'Chiefs sign a receiver' }).id, 'classic');
+test('suggestStyle: ES Reels for every news reel (the house style); data formats keep their owner defaults', () => {
+  ['Best QBs', 'Moneyball for the Steelers: cap space and the draft', 'Mahomes averages 6.5 yards per throw, 234th of 714 seasons', 'Chiefs sign a receiver'].forEach(text => assert.equal(S.suggestStyle({ text }).id, 'es', text));
+  assert.equal(S.suggestStyle({ format: 'top5', text: 'Best QBs' }).id, 'es');
+  assert.equal(S.suggestStyle({ format: 'gameswing' }).id, 'series');
+  // The old heuristics stay available for a hand-picked look.
+  assert.equal(S.legacySuggestStyle({ format: 'top5', text: 'Best QBs' }).id, 'countdown');
+  assert.equal(S.legacySuggestStyle({ text: 'Moneyball for the Steelers: cap space and the draft' }).id, 'series');
+  assert.equal(S.legacySuggestStyle({ text: 'Mahomes averages 6.5 yards per throw, 234th of 714 seasons' }).id, 'explainer');
+  assert.equal(S.legacySuggestStyle({ text: 'Chiefs sign a receiver' }).id, 'classic');
 });
 
 test('planVisualMix: about 80% of the time is clips; faces and the end card stay stills', () => {

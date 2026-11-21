@@ -440,7 +440,7 @@ test('slides: drawn on a 1080x1350 canvas with the ES mark top-right; logo place
     const clip = calls.find(c => c[0] === 'rect');
     assert.deepEqual(clip.slice(1), [0, 0, 1080, 1350]);
     const [m] = R.logoPlacements(s);
-    assert.deepEqual([m.x, m.y, m.w, m.h], [R.SLIDE_MARK.x, 60, 122, 104]);
+    assert.deepEqual([m.x, m.y, m.w, m.h], [R.SLIDE_MARK.x, 60, 80, 80], 'the 80 px ES mark, right 60');
     R.allBoxes(measure, s).filter(b => b.text != null).forEach(b => assert.ok(b.x >= 59.5 && b.x + b.w <= 1020.5 && b.y >= 59.5 && b.y + b.h <= 1290.5, `${s.slide.id} ${b.role} ${JSON.stringify(b)}`));
   });
 });

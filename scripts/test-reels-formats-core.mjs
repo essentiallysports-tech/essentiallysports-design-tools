@@ -144,7 +144,8 @@ await test('elements: stub draws a labelled placeholder in every style and never
   }
   assert.equal(S.drawPlaceholder(null, 'scorebug').element, 'scorebug', 'no context: returns the op only');
   assert.equal(S.suggestStyle({ format: 'gameswing' }).id, 'series');
-  assert.equal(S.suggestStyle({ format: 'top5', text: '' }).id, 'countdown', 'news suggestion unchanged');
+  assert.equal(S.suggestStyle({ format: 'top5', text: '' }).id, 'es', 'news reels default to the ES house style (2026-11-21)');
+  assert.equal(S.legacySuggestStyle({ format: 'top5', text: '' }).id, 'countdown', 'the old suggestion is kept for hand-picked looks');
 });
 
 // ─── Flow (reel-flow.js) ──────────────────────────────────────────────────

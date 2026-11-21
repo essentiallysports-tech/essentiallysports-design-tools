@@ -18,6 +18,7 @@
 const crypto = require('node:crypto');
 const F = require('../../reel-formats.js');
 const STYLES = require('../../reel-styles.js');
+const ES = require('../../reel-es.js');
 const RULES = require('../../frameup-rules.js');
 const TEAMS = require('../../video-ads-teams.js');
 const BRAND_KIT = require('../../brand-kit.js');
@@ -136,7 +137,22 @@ const COMPONENT_SPEC = {
   roles: 'roles: 2-4 position cards. "roles":[{"role":"WR","value":"#31","note":"short","tone":"bad|good"}]. Values from SOURCES.',
   mystery: 'mystery: a "?" card for the open question. text + "detail".',
 };
+// ES Reels (the ES video team's system, reel-es.js): the model picks one of
+// the seven blocks for every beat, with exactly its fields.
+const ES_SPEC = [
+  'STYLE: ES Reels, the ES video team\'s system. Every beat ALSO carries "block", exactly one of these (only these fields):',
+  '- hook (beat 1 only, kind "hook"): {"type":"hook","pills":[{"text":"THE CUBS LOST.","color":"ink"},{"text":"THIS BAR GOT PAID.","color":"red"}],"stamp":{"text":"PAID"}}. 2-3 pills of up to 14 characters that state the tension, readable at frame one. Optional one-word stamp: the payoff word, said in the vo.',
+  '- statement (kind "point", "context" or "payoff"): {"type":"statement","lines":[{"text":"IT WASN\'T","color":"ink"},{"text":"INSURANCE.","color":"blue"}]}. 1-3 lines, each under 14 characters.',
+  '- number (kind "stat"): {"type":"number","kicker":"KALSHI TRADES","value":274000,"prefix":"","suffix":"","label":"CONTRACTS","color":"blue"}. One number from SOURCES, up to 6 digits; prefix "$", suffix "%" or "M". Also set "stat":{"value":"274,000","label":"contracts"}.',
+  '- dots (kind "dotrank"): {"type":"dots","label":"EVERY BET ON GAMES","count":2521,"highlight":1,"note":"1 WAS INSURANCE"}. Scale ("1 in 2,500"): count up to 2600, both numbers from SOURCES. Also set "dotrank":{"total":"2521","rank":"1","label":"..."}.',
+  '- compare (kind "bars"): {"type":"compare","kicker":"HOW THEY BET","items":[{"label":"ON THE GAMES","value":692,"display":"$692M","color":"red"},{"label":"AS INSURANCE","value":0.3,"display":"$0.3M","color":"green"}]}. 2-4 items, values from SOURCES. Also set "bars":[{"label":"...","value":"$692M"}].',
+  '- quote (kind "quote"): {"type":"quote","text":"exact words, under 70 characters","who":"ANDY REID"}. Also set "quote":{"text":"...","by":"Andy Reid"}.',
+  '- endcard (the last beat, kind "cta"): {"type":"endcard"}. It shows "WE BRING / THE RECEIPTS.", the ES logotype and the source line; its vo is not read.',
+  'Colours: ink and blue carry structure. green (money won, the good side) and red (loss, wrong) only for meaning, at most two per beat. Never yellow on screen (captions use it).',
+  'On-screen words are a headline, not the sentence. Numbers on screen exactly as the vo says them. One idea per beat. In each vo, wrap the one word that carries the meaning in *asterisks* (it turns yellow in the captions).',
+].join('\n');
 function styleRequest(style) {
+  if (style && style.engine === 'es') return ES_SPEC;
   if (!style || !style.components.length) return '';
   const long = style.seconds.max > 90;
   return [
@@ -216,8 +232,13 @@ function validatePlan(parsed, { read, format, steer = '', style: styleId = '' } 
   const raw = Array.isArray(parsed && parsed.beats) ? parsed.beats.slice(0, 14) : [];
   let dropped = 0;
   const beats = [];
-  raw.forEach((b, index) => {
-    if (!b || typeof b !== 'object') { dropped += 1; return; }
+  raw.forEach((b0, index) => {
+    if (!b0 || typeof b0 !== 'object') { dropped += 1; return; }
+    // ES Reels: the block decides the kind and fills the fields the checks
+    // below read (stat, bars, dotrank, quote), so its numbers and quotes are
+    // held to the same rules.
+    const esBlock = style.engine === 'es' && b0.block && ES.BLOCK_TYPES.includes(b0.block.type) ? ES.cleanBlock(b0.block) : null;
+    const b = esBlock ? { ...b0, ...ES.legacyFields(esBlock), text: b0.text || ES.blockText(esBlock), vo: b0.vo } : b0;
     let kind = F.KINDS.includes(b.kind) ? b.kind : 'point';
     if (!allowed.includes(kind)) kind = index === 0 ? 'hook' : (spec.kinds.includes('point') ? 'point' : 'context');
     if (fmt === 'top5' && !['hook', 'rank', 'cta'].includes(kind)) { dropped += 1; issues.push('A non-ranked beat was dropped from the Top 5.'); return; }
@@ -257,6 +278,12 @@ function validatePlan(parsed, { read, format, steer = '', style: styleId = '' } 
     const bad = F.unsourcedNumbers(beat, sourceSet, fmt);
     if (bad.length) { dropped += 1; issues.push(`A beat with ${bad.join(', ')} (not in the sources) was dropped.`); return; }
     if (beat.emphasis && !squash(beat.text).includes(squash(beat.emphasis))) beat.emphasis = '';
+    if (esBlock && ES.KIND_FOR[esBlock.type] === beat.kind) {
+      beat.block = esBlock;
+      if (esBlock.type === 'quote' && beat.quote) beat.block = { ...esBlock, text: beat.quote.text, who: esBlock.who || beat.quote.by.toUpperCase() };
+      const bad2 = F.unsourcedNumbers({ block: beat.block }, sourceSet, fmt);
+      if (bad2.length) { dropped += 1; issues.push(`A beat with ${bad2.join(', ')} (not in the sources) was dropped.`); return; }
+    }
     beats.push(beat);
   });
 

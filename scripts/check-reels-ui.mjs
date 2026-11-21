@@ -6,8 +6,9 @@
 // It walks every state of reel-maker.html at 1440, 1024 and 375, and audits each
 // one in light and dark:
 //   Story (trends loading / loaded / empty / error, "Start from data" collapsed and
-//   expanded, Brief, All settings), the making stepper, Review (every fold, all 4
-//   styles, quality checks), Export (organic / paid), Game Swing / Replay / Archive
+//   expanded, Brief, All settings), the making stepper, Review (every fold, all 5
+//   styles, quality checks), Script (ES Reels: your words, block editor, the ES
+//   checklist, guidelines dialog, safe-frame overlay, 4:5 export size), Export (organic / paid), Game Swing / Replay / Archive
 //   (sources incl. loading / error / empty, story, review with scrubbers and
 //   sources, export, carousel), free mode, and the server-offline draft.
 // Each state fails on: doubled borders, empty bands, clipped text, horizontal
@@ -289,7 +290,8 @@ for (const w of WIDTHS) {
   await click('#rm-statusline');
   await openFold('#rm-style-fold');
   const styles = await evaluate(`[...document.querySelectorAll('#rm-styles-edit [role="radio"]')].map(b => b.dataset.style || b.getAttribute('data-style') || b.textContent.trim())`);
-  if (!styles || styles.length !== 4) behaviour.push(`review: expected 4 styles, found ${styles?.length || 0}`);
+  if (!styles || styles.length !== 5) behaviour.push(`review: expected 5 styles, found ${styles?.length || 0}`);
+  if (styles && styles[0] !== 'es') behaviour.push(`review: ES Reels should be the first style, found ${styles[0]}`);
   for (let i = 0; i < (styles?.length || 0); i++) {
     await step(`style ${styles[i]}`, async () => { await evaluate(`document.querySelectorAll('#rm-styles-edit [role="radio"]')[${i}].click()`); await waitFor(`document.querySelectorAll('#rm-styles-edit [role="radio"]')[${i}].getAttribute('aria-checked') === 'true'`, 3000, 'style picked'); });
     await sleep(300);
@@ -313,6 +315,56 @@ for (const w of WIDTHS) {
   }
   await step('Paid ad', async () => { await must('#rm-target [data-target="paid"]'); await waitFor(`document.querySelector('#rm-target [data-target="paid"]').getAttribute('aria-checked') === 'true'`, 2000, 'paid picked'); });
   await audit('export-paid', w);
+
+  // ── Script (ES Reels): the person's words, never rewritten ──
+  await load();
+  await step('Script tab', async () => {
+    await must('#rm-source [data-source="script"]');
+    await waitFor(`!document.querySelector('#rm-source-script').hidden`, 2000, 'script field');
+  });
+  await step('empty script is refused', async () => {
+    await must('#rm-write');
+    await waitFor(`/script first/i.test(document.querySelector('#rm-write-status').textContent)`, 2000, '"Paste your script first"');
+  });
+  await audit('story-script-empty-error', w);
+  const SCRIPT = 'The Cubs lost on Sunday. But one bar in Chicago got *paid.* Kalshi says 1 in 2,500 bets was insurance. Bettors put $692M on the games, compared to $0.3M as insurance. Fans are still arguing about it.';
+  await typeInto('#rm-script', SCRIPT);
+  await typeInto('#rm-script-source', 'Source: Kalshi');
+  await audit('story-script', w);
+  await step('Make from script', async () => {
+    await must('#rm-write');
+    await waitFor(`!document.querySelector('#rm-pane-edit').hidden`, 30000, 'Review step');
+  });
+  await scrollTop();
+  await audit('script-review', w);
+  await step('script kept word for word', async () => {
+    const vo = await evaluate(`window.ReelMakerPage.state.plan.beats.map(b => b.vo).filter(Boolean).join(' ')`);
+    if (vo !== SCRIPT) throw new Error(`VO changed: ${vo}`);
+    if (!(await evaluate(`document.querySelector('#rm-revise').hidden`))) throw new Error('Revise with AI is offered on a script reel');
+    const st = await evaluate(`document.querySelector('#rm-statusline-text').textContent`);
+    if (!/Safe frame ✓/.test(st)) throw new Error(`status line: ${st}`);
+  });
+  await step('ES checklist', async () => { await must('#rm-statusline'); await waitFor(`!document.querySelector('#rm-checklist').hidden && document.querySelectorAll('#rm-checklist li').length === 8`, 2000, 'checklist rows'); });
+  await audit('script-checklist', w);
+  await click('#rm-statusline');
+  await step('block editor', async () => {
+    await must('#rm-strip [data-pick]:nth-of-type(1)');
+    await evaluate(`document.querySelectorAll('#rm-strip [data-pick]')[3]?.click()`);
+    await waitFor(`document.querySelector('#rm-beats [data-field="es.type"]')`, 3000, 'block picker');
+  });
+  await audit('script-block-editor', w);
+  await step('guidelines dialog', async () => { await must('#rm-lint [data-open-guide], [data-open-guide]'); await waitFor(`document.querySelector('#rm-guide').open && document.querySelectorAll('#rm-guide-body section').length >= 5`, 2000, 'guidelines'); });
+  await audit('script-guidelines', w);
+  await evaluate(`document.querySelector('#rm-guide').close()`);
+  await step('safe frame overlay', async () => { await must('#rm-safe-toggle'); await waitFor(`!document.querySelector('#rm-safe').hidden && document.querySelector('#rm-safe').classList.contains('rm-safe--es')`, 2000, 'ES safe frame'); });
+  await audit('script-safe-frame', w);
+  await click('#rm-safe-toggle');
+  await step('Export size 4:5', async () => {
+    await must('#rm-next'); await waitFor(`!document.querySelector('#rm-pane-export').hidden`, 4000, 'Export step');
+    await must('#rm-aspect [data-aspect="4:5"]'); await waitFor(`document.querySelector('#rm-aspect [data-aspect="4:5"]').getAttribute('aria-checked') === 'true'`, 2000, '4:5 picked');
+  });
+  await scrollTop();
+  await audit('script-export-45', w);
 
   // ── Game Swing ──
   await load();

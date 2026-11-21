@@ -46,17 +46,19 @@ const PLAN = {
 const build = (style, extra = {}) => R.buildTimeline(PLAN, { style, team: PLAN.team, corpus, ...extra });
 
 // ─── Logo ──────────────────────────────────────────────────────────────────
-await test('logo: the official mark (vector paths from the brand file) at 122x104, top-right, on every beat of every style', () => {
+await test('logo (ES video system): the official ES letters in an 80 px blue square, right 60, top 330, on the hook and the end card only, in every style', () => {
   assert.ok(R.BRAND.mark.d.startsWith('M54.1567 57.7938'), 'path data from assets/brand-logos/essentiallysports-mark.svg');
   assert.equal(R.BRAND.mark.box, '#0A7DFA');
   S.STYLE_IDS.forEach(style => {
     const tl = build(style);
     const marks = R.logoPlacements(tl);
-    assert.equal(marks.length, tl.beats.length, style);
+    assert.deepEqual(marks.map(m => m.beat), [tl.beats[0].id, tl.beats.at(-1).id], `${style}: hook + end card`);
+    assert.ok(marks.at(-1).endcard, style);
     marks.forEach(m => {
-      assert.equal(m.w, 122); assert.equal(m.h, 104);
-      assert.ok(m.x + m.w <= R.SAFE.right && m.x + m.w >= R.SAFE.right - 60, `${style} right edge ${m.x + m.w}`);
-      assert.ok(m.y >= R.SAFE.top && m.y <= R.SAFE.top + 60, `${style} top ${m.y}`);
+      assert.equal(m.w, 80); assert.equal(m.h, 80);
+      assert.equal(m.x + m.w, 1080 - 60, `${style} right 60`);
+      assert.equal(m.y, 330, `${style} top 330`);
+      assert.equal(m.clear, 40, 'clear space: half its height');
     });
     assert.equal(tl.assets['logo:es'].src, 'assets/brand-logos/essentiallysports-mark.svg');
   });
@@ -86,7 +88,10 @@ await test('logo: colourway follows what is under it (black on ES blue, blue els
   R.drawFrame(stubCtx(calls), tl, 1500, { measure, images: { 'logo:es': logo } });
   const last = calls.images[calls.images.length - 1];
   assert.equal(last[0], logo, 'the ES mark is the last image drawn (over the finish pass)');
-  assert.deepEqual(last.slice(1), [R.ES_MARK.x, R.ES_MARK.y, 122, 104]);
+  // Node has no Path2D: the mark falls back to the official file, scaled
+  // uniformly to 80 px wide and centred in the 80 px blue square.
+  const h = (80 * R.BRAND.mark.h) / R.BRAND.mark.w;
+  assert.deepEqual(last.slice(1).map(v => Math.round(v * 100) / 100), [R.ES_MARK.x, Math.round((R.ES_MARK.y + (80 - h) / 2) * 100) / 100, 80, Math.round(h * 100) / 100]);
 });
 
 await test('logo lint: missing, scaled, moved or crowded marks are critical; a non-official file is critical', () => {
@@ -94,20 +99,20 @@ await test('logo lint: missing, scaled, moved or crowded marks are critical; a n
   const ok = R.logoPlacements(tl);
   const lint = marks => L.lintTimeline(tl, { marks }).issues.filter(i => i.id === 'logo');
   assert.ok(lint(ok.slice(1)).some(i => i.severity === 'critical' && /no ES logo/.test(i.message)), 'missing on beat 1');
-  assert.ok(lint(ok.map(m => ({ ...m, w: 76, h: 65 }))).some(i => /not 122x104/.test(i.message)), 'scaled');
+  assert.ok(lint(ok.map(m => ({ ...m, w: 76, h: 65 }))).some(i => /not 80x80/.test(i.message)), 'scaled');
   assert.ok(lint(ok.map(m => ({ ...m, x: 84 }))).some(i => /not top-right/.test(i.message)), 'moved top-left (the old bug)');
-  const crowd = L.lintTimeline(tl, { boxes: [{ beat: 'b1', role: 'headline', text: 'TOO WIDE', x: 600, y: 300, w: 300, h: 60 }] }).issues;
+  const crowd = L.lintTimeline(tl, { boxes: [{ beat: 'b1', role: 'headline', text: 'TOO WIDE', x: 700, y: 330, w: 300, h: 60 }] }).issues;
   assert.ok(crowd.some(i => i.id === 'logo' && i.severity === 'critical' && /clear space/.test(i.message)));
   const fake = { ...tl, assets: { ...tl.assets, 'logo:es': { ...tl.assets['logo:es'], src: 'es-badge-text.png' } } };
   assert.ok(L.lintTimeline(fake, {}).issues.some(i => i.id === 'logo' && /official/.test(i.message)));
 });
 
-await test('end card: the official wordmark (417 px), Essentially Golf on golf reels; no "ES" set in type', () => {
+await test('end card: the official logotype at 96 px tall (ES video system), Essentially Golf on golf reels; no "ES" set in type', () => {
   ['classic', 'explainer'].forEach(style => {
     const tl = build(style);
     const ops = R.layoutGraphic(measure, tl.tracks.graphics.at(-1), tl);
     const wm = ops.find(o => o.type === 'wordmark');
-    assert.ok(wm && wm.brand === 'wordmark' && wm.w === 417, style);
+    assert.ok(wm && wm.brand === 'wordmark' && wm.h === 96 && wm.w === Math.round((96 * 258) / 30.6864), style);
     assert.ok(!ops.some(o => /^ESSENTIALLYSPORTS$|^ES$/.test(String(o.text || ''))), `${style}: no typeset logo`);
   });
   const golf = R.buildTimeline({ ...PLAN, sport: 'golf' }, { style: 'explainer', corpus });

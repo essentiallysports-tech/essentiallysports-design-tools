@@ -38,6 +38,15 @@
 // (ReelReplay.buildSlides) draws as a carousel slide. News formats keep the
 // v1 path byte-identical.
 //
+// ES house style (2026-11-21, the ES video team's reels system from Vinay):
+// style 'es' (reel-styles.js, the default) runs reel-es.js: seven blocks
+// (hook, statement, number, dots, compare, quote, endcard) on ES paper, the
+// blue-then-ink slab wipe on every cut, one-line captions at y 1172, the ES
+// mark on the hook and the end card only, the logotype on the end card. The
+// shared brand layer applies to every style: the 80 px ES mark (right 60,
+// top 330) on the hook and the end card, the 96 px logotype, no glow on
+// text, no light leaks.
+//
 // Visuals: a shot's asset is a photo, an AI scene still, an uploaded image, a
 // video clip (env.videos[assetId], the page keeps it at clipTimes()), or a
 // team graphic tile. A shot with no asset draws the style's designed motion
@@ -50,10 +59,11 @@
     // in the browser (looked up again at call time), so a page that has not
     // loaded them still renders every news reel as before.
     node ? require('./reel-timeline.js') : root.ReelTimeline, node ? require('./reel-replay.js') : root.ReelReplay,
+    node ? require('./reel-es.js') : root.ReelES,
   );
   if (node) module.exports = api;
   else root.ReelRender = api;
-}(typeof self !== 'undefined' ? self : this, (VA, F, S, T0, RP0) => {
+}(typeof self !== 'undefined' ? self : this, (VA, F, S, T0, RP0, ES0) => {
   'use strict';
 
   const W = 1080;
@@ -91,8 +101,16 @@
     wordmark: { src: "brand-logo-blue.svg", w: 258, h: 30.6864, box: "#0A7DFA", d: "M15.7625 16.9716H9.00991V22.2688H16.6542L16.0565 26.3933H3.98584V4.16406H16.0695V8.34263H9.00991V12.8145H15.7625V16.9716Z M22.7979 19.9598C22.9265 21.7856 23.4475 23.0418 24.9788 23.0418C26.4665 23.0418 26.9433 22.0436 26.9433 20.7801C26.9433 19.2418 26.1675 18.3371 23.5443 16.9971C19.6705 15.0035 18.2076 13.3209 18.2076 10.054C18.2076 6.25137 20.5389 3.75781 24.957 3.75781C30.1542 3.75781 31.6412 6.99468 31.6837 10.4082H26.7504C26.6652 8.86015 26.3812 7.5299 24.9257 7.5299C23.7861 7.5299 23.2762 8.26674 23.2762 9.50705C23.2762 10.7803 23.7743 11.4369 26.1996 12.6452C30.3332 14.7199 32.0879 16.4743 32.0879 20.2117C32.0879 23.8862 29.9333 26.8141 24.9275 26.8141C19.5039 26.8141 17.8493 23.7339 17.7405 19.9601H22.7976L22.7979 19.9598Z M38.5253 19.9598C38.6539 21.7856 39.1749 23.0418 40.7062 23.0418C42.1938 23.0418 42.6706 22.0436 42.6706 20.7801C42.6706 19.2418 41.8948 18.3371 39.2716 16.9971C35.3978 15.0035 33.935 13.3209 33.935 10.054C33.935 6.25137 36.2663 3.75781 40.6844 3.75781C45.8815 3.75781 47.3686 6.99468 47.411 10.4082H42.4778C42.3926 8.86015 42.1086 7.5299 40.6531 7.5299C39.5134 7.5299 39.0036 8.26674 39.0036 9.50705C39.0036 10.7803 39.5016 11.4369 41.927 12.6452C46.0605 14.7199 47.8153 16.4743 47.8153 20.2117C47.8153 23.8862 45.6607 26.8141 40.6549 26.8141C35.2312 26.8141 33.5767 23.7339 33.4679 19.9601H38.525L38.5253 19.9598Z M61.6666 16.9716H54.914V22.2688H62.5583L61.9606 26.3933H49.8896V4.16406H61.9735V8.34263H54.914V12.8145H61.6666V16.9716Z M64.4897 26.3933V4.16406H70.097C73.4875 14.6412 74.2748 17.16 74.5039 18.1752H74.595C74.3739 15.378 74.3043 11.7147 74.3043 8.24564V4.16406H78.8294V26.3936H73.3047C69.7824 14.8393 69.1207 12.5994 68.87 11.6386H68.7674C68.9438 14.3132 69.0369 18.4309 69.0369 22.0672V26.3936H64.49L64.4897 26.3933Z M84.8904 8.34263H80.4927V4.16406H94.3789V8.34263H90.0041V26.3936H84.8904V8.34263Z M101.146 4.16406V26.3936H96.0216V4.16406H101.146Z M108.565 21.6355L107.806 26.3936H102.68L107.08 4.16406H114.282L118.738 26.3936H113.416L112.634 21.6355H108.565ZM111.955 17.3396C111.449 14.0963 110.96 10.4782 110.678 8.43462H110.51C110.292 10.5664 109.747 14.0945 109.219 17.3396H111.955Z M120.36 4.16406H125.485V22.2444H132.561L132.084 26.3936H120.36V4.16406Z M134.134 4.16406H139.259V22.2444H146.335L145.858 26.3936H134.134V4.16406Z M149.185 26.3936V19.178C149.185 18.8568 149.153 18.5206 149.008 18.1552L143.777 4.16406H149.432C150.355 7.5182 151.382 11.3802 151.927 14.1116C152.544 11.5948 153.652 7.43444 154.477 4.16406H159.775L154.466 18.2093C154.388 18.4547 154.322 18.7063 154.322 19.0916V26.3936H149.185Z M165.334 19.9598C165.463 21.7856 165.984 23.0418 167.515 23.0418C169.003 23.0418 169.48 22.0436 169.48 20.7801C169.48 19.2418 168.704 18.3371 166.081 16.9971C162.207 15.0035 160.744 13.3209 160.744 10.054C160.744 6.25137 163.075 3.75781 167.494 3.75781C172.69 3.75781 174.177 6.99468 174.22 10.4082H169.287C169.201 8.86015 168.917 7.5299 167.462 7.5299C166.322 7.5299 165.812 8.26674 165.812 9.50705C165.812 10.7803 166.31 11.4369 168.736 12.6452C172.87 14.7199 174.625 16.4743 174.625 20.2117C174.625 23.8862 172.469 26.8141 167.464 26.8141C162.041 26.8141 160.385 23.7339 160.277 19.9601H165.334L165.334 19.9598Z M176.705 4.16406H184.023C187.894 4.16406 190.676 6.30023 190.676 10.9026C190.676 15.5467 188.181 17.7158 183.795 17.7158H181.795V26.3936H176.705V4.16406H176.705ZM181.795 13.8079H183.126C184.892 13.8079 185.563 12.9494 185.563 10.8597C185.563 8.79114 184.673 8.00022 183.232 8.00022H181.795V13.8082L181.795 13.8079Z M207.325 15.1396C207.325 23.2863 205.095 26.8141 199.552 26.8141C194.384 26.8141 192.09 23.2269 192.09 15.0276C192.09 7.15104 194.64 3.75781 199.761 3.75781C205.019 3.75781 207.325 7.40557 207.325 15.1396ZM197.442 15.0294C197.442 20.5168 197.939 22.7999 199.697 22.7999C201.553 22.7999 201.974 20.6758 201.974 15.0294C201.974 9.75277 201.532 7.79354 199.697 7.79354C197.93 7.79354 197.442 9.84799 197.442 15.0294Z M214.756 17.2973V26.3933H209.699V4.16406H217.23C221.533 4.16406 223.725 6.29376 223.725 10.3195C223.725 13.3971 222.207 14.8372 220.863 15.3677C222.608 16.1446 223.431 17.5733 223.431 20.7708V21.544C223.431 24.0156 223.529 25.4166 223.671 26.3936H218.699C218.438 25.5351 218.349 23.5574 218.349 21.3839V20.6185C218.349 17.9898 217.818 17.2973 215.859 17.2973H214.756ZM214.768 13.4726H215.955C217.871 13.4726 218.61 12.7819 218.61 10.6096C218.61 8.77791 217.962 7.977 216.28 7.977H214.768V13.4726Z M229.381 8.34263H224.983V4.16406H238.869V8.34263H234.494V26.3936H229.381V8.34263Z M244.729 19.9598C244.858 21.7856 245.379 23.0418 246.91 23.0418C248.398 23.0418 248.875 22.0436 248.875 20.7801C248.875 19.2418 248.099 18.3371 245.476 16.9971C241.602 15.0035 240.139 13.3209 240.139 10.054C240.139 6.25137 242.47 3.75781 246.889 3.75781C252.085 3.75781 253.572 6.99468 253.615 10.4082H248.682C248.596 8.86015 248.312 7.5299 246.858 7.5299C245.717 7.5299 245.207 8.26674 245.207 9.50705C245.207 10.7803 245.705 11.4369 248.131 12.6452C252.265 14.7199 254.02 16.4743 254.02 20.2117C254.02 23.8862 251.865 26.8141 246.859 26.8141C241.436 26.8141 239.781 23.7339 239.672 19.9601H244.729L244.729 19.9598Z" },
     golf: { src: "assets/brand-logos/essentially-golf-wordmark.svg", w: 1318.35, h: 177.884, box: "#008F00", d: "M92.7824 74.5834V98.1091H54.8456V127.933H97.7789L94.4479 151.088H26.7168V26.05H94.4479V49.5757H54.8456V74.5834H92.7824ZM106.646 114.781H134.959C135.7 125.155 138.476 132.193 147.173 132.193C155.501 132.193 158.091 126.637 158.091 119.412C158.091 110.891 153.836 105.704 139.031 98.1091C117.38 86.9946 109.236 77.5472 109.236 59.2084C109.236 37.7203 122.191 23.6418 146.988 23.6418C176.227 23.6418 184.555 41.9808 184.74 61.0607H157.166C156.612 52.3544 154.946 44.9448 146.803 44.9448C140.511 44.9448 137.551 49.0201 137.551 56.0593C137.551 63.2836 140.326 66.9885 154.02 73.6572C177.153 85.3275 186.961 95.3306 186.961 116.263C186.961 137.01 174.932 153.496 146.803 153.496C116.454 153.496 107.201 136.084 106.646 114.781ZM196.826 114.781H225.139C225.88 125.155 228.655 132.193 237.353 132.193C245.681 132.193 248.271 126.637 248.271 119.412C248.271 110.891 244.015 105.704 229.21 98.1091C207.558 86.9946 199.416 77.5472 199.416 59.2084C199.416 37.7203 212.37 23.6418 237.168 23.6418C266.407 23.6418 274.735 41.9808 274.919 61.0607H247.346C246.79 52.3544 245.125 44.9448 236.983 44.9448C230.691 44.9448 227.73 49.0201 227.73 56.0593C227.73 63.2836 230.506 66.9885 244.2 73.6572C267.332 85.3275 277.141 95.3306 277.141 116.263C277.141 137.01 265.112 153.496 236.983 153.496C206.633 153.496 197.38 136.084 196.826 114.781ZM356.815 74.5834V98.1091H318.878V127.933H361.811L358.48 151.088H290.749V26.05H358.48V49.5757H318.878V74.5834H356.815ZM399.78 151.088H374.242V26.05H405.702C424.763 84.957 429.019 99.2206 430.315 104.777H430.87C429.574 89.0323 429.204 68.4705 429.204 49.0201V26.05H454.557V151.088H423.652C403.851 86.0684 400.15 73.472 398.855 68.1H398.299C399.225 83.1046 399.78 106.26 399.78 126.637V151.088ZM489.755 151.088V49.5757H465.143V26.05H542.867V49.5757H518.439V151.088H489.755ZM554.059 26.05H582.742V151.088H554.059V26.05ZM648.959 124.229H626.196L621.94 151.088H593.256L617.869 26.05H658.212L683.195 151.088H653.4L648.959 124.229ZM629.898 100.147H645.258C642.296 81.8079 639.52 61.4313 638.04 49.9462H637.115C635.819 61.9869 632.859 81.8079 629.898 100.147ZM692.852 151.088V26.05H721.536V127.748H761.138L758.548 151.088H692.852ZM771.103 151.088V26.05H799.787V127.748H839.391L836.799 151.088H771.103ZM883.181 151.088H854.497V110.521C854.497 108.668 854.312 106.815 853.387 104.777L824.147 26.05H855.792C860.974 44.9448 866.711 66.618 869.857 81.9931C873.188 67.7294 879.479 44.389 884.106 26.05H913.715L884.106 104.963C883.551 106.445 883.181 107.742 883.181 109.964V151.088ZM1032.49 79.3997V151.088H1011.39C1010.84 147.754 1010.47 144.605 1010.28 141.271C1004.91 150.904 995.475 153.496 985.668 153.496C960.87 153.496 949.396 134.787 949.396 89.4028C949.396 39.7579 966.421 23.8271 993.81 23.8271C1028.97 23.8271 1031.93 51.7986 1032.12 61.4313H1003.43C1003.06 55.3182 1002.32 46.4266 992.885 46.4266C982.151 46.4266 979.561 60.5051 979.561 89.588C979.561 119.597 981.967 130.897 992.33 130.897C1001.03 130.897 1003.62 123.488 1003.62 109.964V101.999H991.404V79.3997H1032.49ZM1089.92 23.6418C1119.34 23.6418 1132.3 44.2037 1132.3 87.7356C1132.3 133.676 1119.9 153.496 1088.81 153.496C1059.75 153.496 1046.99 133.305 1046.99 87.1799C1046.99 42.7219 1061.24 23.6418 1089.92 23.6418ZM1089.55 46.4266C1079.74 46.4266 1076.97 57.9117 1076.97 87.1799C1076.97 117.93 1079.74 130.897 1089.55 130.897C1099.92 130.897 1102.32 118.856 1102.32 87.1799C1102.32 57.356 1099.92 46.4266 1089.55 46.4266ZM1147.91 151.088V26.05H1176.59V127.748H1216.19L1213.6 151.088H1147.91ZM1226.16 151.088V26.05H1293.89V49.3906H1254.65V76.4359H1291.3V99.5911H1254.65V151.088H1226.16Z" },
   };
-  const ES_MARK = { w: 122, h: 104, x: 870, y: 288, clear: 50 };
-  const WORDMARK = { w: 417, h: Math.round((417 * 30.6864) / 258) };
+  // The ES video system (reel-es.js): an 80 px blue square with the official
+  // ES letters, right 60, top 330, clear space half its height; on the hook
+  // and the end card only. The logotype (blue block, white ESSENTIALLY
+  // SPORTS) at 96 px tall on the end card.
+  const ES_MARK = { w: 80, h: 80, x: W - 60 - 80, y: 330, clear: 40 };
+  const WORDMARK = { w: Math.round((96 * 258) / 30.6864), h: 96 };
+  const getES = () => ES0 || (typeof self !== 'undefined' && self.ReelES) || null;
+  // An ES house-style reel (v1 news timelines; data formats in the ES style
+  // keep their data layouts and get the ES palette, captions and wipe).
+  const isEs = timeline => Boolean(timeline && timeline.v !== 2 && S.get(timeline.style).engine === 'es' && getES());
 
   // ─── Easing ─────────────────────────────────────────────────────────────
   const clamp01 = v => Math.max(0, Math.min(1, Number(v) || 0));
@@ -331,6 +349,23 @@
     return T ? T.normalizeTimeline(v2) : v2;
   }
 
+  // *word* emphasis in a VO line (all styles strip the asterisks).
+  function parseVoEmphasis(vo) {
+    const E = getES();
+    if (E) return E.parseEmphasis(vo);
+    const text = String(vo || '').replace(/\*/g, '');
+    return { text, words: F.words(text), flags: [] };
+  }
+  // The end card's source line from the reel's sources (sites only; a brief
+  // or a script gives none, so the person types it).
+  function sourceLineFrom(sources) {
+    const hosts = [];
+    (sources || []).forEach(s => {
+      try { const h = new URL(String(s && s.url)).hostname.replace(/^www\./, ''); if (h && !hosts.includes(h)) hosts.push(h); } catch { /* no url */ }
+    });
+    return hosts.length ? `Source: ${hosts.slice(0, 3).join(', ')}` : '';
+  }
+
   function buildTimeline(plan, opts = {}) {
     const fmt = F.FORMATS[plan && plan.format] ? plan.format : 'explainer';
     const style = S.get(opts.style || (plan && plan.style));
@@ -342,6 +377,10 @@
     const photos = opts.photos || {};
     const team = opts.team && opts.team.name ? { name: clean(opts.team.name, 80), colors: (opts.team.colors || []).filter(c => HEX6.test(String(c))).slice(0, 2), logo: opts.team.logo || '' } : null;
     const captionStyle = style.caption.mode === 'user' ? (opts.captionStyle === 'box' ? 'box' : 'highlight') : style.caption.mode;
+    // ES house style (reel-es.js): blocks, one shot per scene with the
+    // drift, the end card last for exactly 3 s and no voiceover on it.
+    const ES = !dm && style.engine === 'es' ? getES() : null;
+    const size = ES && (opts.aspect === '4:5' || (plan && plan.aspect === '4:5')) ? [W, 1350] : [W, H];
     const voiceMode = ['elevenlabs', 'gateway'].includes(opts.voiceMode) ? opts.voiceMode : 'off';
     const assets = { ...(opts.assets || {}) };
     const beats = [];
@@ -351,18 +390,31 @@
     const words = [];
     let t = 0;
     const list = (plan && Array.isArray(plan.beats) ? plan.beats : []).slice(0, style.beats.max);
+    // ES: the end card closes every reel; one is added when the plan has none.
+    if (ES && list.length && !list.some(b => b && (b.kind === 'cta' || (b.block && b.block.type === 'endcard')))) list.push({ id: 'es-end', kind: 'cta', block: { type: 'endcard' }, text: '', vo: '' });
+    // ES with no recorded voice: the person's VO length (if they gave one)
+    // spreads over the beats in proportion to their words; else 2.6 words/s.
+    const voScale = ES && plan && Number(plan.voLengthMs) > 0 && !Object.keys(voice).length
+      ? Number(plan.voLengthMs) / Math.max(1, list.reduce((a, b) => a + F.estimateVoMs(ES.plainVo(clean(b && b.vo, 320))), 0)) : 1;
+    let estimated = 0;
     list.forEach((raw, index) => {
       const id = clean(raw.id, 24) || `b${index + 1}`;
-      const kind = dm ? dataKind(raw, dm) : (F.KINDS.includes(raw.kind) ? raw.kind : 'point');
-      const vo = clean(raw.vo, 320);
+      const kind0 = dm ? dataKind(raw, dm) : (F.KINDS.includes(raw.kind) ? raw.kind : 'point');
+      const block = ES ? ES.blockOf({ ...raw, kind: kind0 }) : null;
+      const kind = block ? ES.KIND_FOR[block.type] : kind0;
+      const isEnd = Boolean(block && block.type === 'endcard');
+      const vo = isEnd ? '' : clean(raw.vo, 320);
+      const emph = parseVoEmphasis(vo);
       const v = voice[id] || null;
-      const voMs = v && v.durationMs > 0 ? Math.round(v.durationMs) : F.estimateVoMs(vo);
+      if (vo && !(v && v.durationMs > 0)) estimated += 1;
+      const voMs = v && v.durationMs > 0 ? Math.round(v.durationMs) : Math.round(F.estimateVoMs(emph.text) * voScale);
       const lead = index === 0 ? F.PACE.voLeadMs : 120;
       const last = index === list.length - 1;
       // Data plans (reel-data.js) carry holdMs: the beat's designed hold.
       const hold = dm && Number(raw.holdMs) > 0 ? Math.max(1200, Math.min(7000, Math.round(Number(raw.holdMs)))) : 0;
-      const min = Math.max(hold, (dm && DATA_MIN_MS[kind]) || 0) || F.PACE.beatMinMs[kind] || F.PACE.beatMinMs.default;
-      const dur = Math.max(min, voMs ? lead + voMs + (last ? F.PACE.endTailMs : F.PACE.tailMs) : min);
+      const min = Math.max(hold, (dm && DATA_MIN_MS[kind]) || 0, ES && kind === 'hook' ? 3000 : 0) || F.PACE.beatMinMs[kind] || F.PACE.beatMinMs.default;
+      // ES: the reel ends 3 s after the end card starts.
+      const dur = isEnd ? ES.LIMITS.endcardMs : Math.max(min, voMs ? lead + voMs + (last ? F.PACE.endTailMs : F.PACE.tailMs) : min);
       const beat = {
         id, kind, inMs: t, outMs: t + dur,
         text: clean(raw.text, 120), vo, emphasis: clean(raw.emphasis, 40),
@@ -380,9 +432,11 @@
       // Shots: a beat longer than shotMaxMs gets a second (or third) shot, so
       // the picture changes every 1.5–3.2 s. A clip moves by itself: one shot
       // per clip, the clip plays from its trim point.
-      const picks = (photos[id] || []).filter(a => assets[a]);
+      // ES: media only on the blocks that take it (hook, statement); the
+      // others sit on ES paper. One shot per scene, drifting 1 -> 1.1.
+      const picks = (ES && !ES.BLOCKS[block.type].media ? [] : (photos[id] || [])).filter(a => assets[a] && !(ES && assets[a].kind === 'design'));
       const isClip = a => assets[a] && assets[a].kind === 'clip';
-      const n = picks.length && isClip(picks[0]) ? Math.min(2, picks.length) : Math.min(3, Math.max(1, Math.ceil(dur / F.PACE.shotMaxMs)));
+      const n = ES ? 1 : (picks.length && isClip(picks[0]) ? Math.min(2, picks.length) : Math.min(3, Math.max(1, Math.ceil(dur / F.PACE.shotMaxMs))));
       for (let k = 0; k < n; k += 1) {
         const inMs = t + Math.round((dur * k) / n);
         const outMs = t + Math.round((dur * (k + 1)) / n);
@@ -401,31 +455,51 @@
           })() : null,
           // Push-ins only, at most +8% (rule: <= 10%); a repeated photo punches
           // in tighter on a different focus instead of repeating the move.
-          motion: asset && isClip(asset) ? { from: 1.0, to: 1.03, focus: [0.5, 0.42], drift: [0, 0] } : sameAgain
+          motion: ES ? { from: ES.MOTION.driftFrom, to: asset && isClip(asset) ? 1.03 : ES.MOTION.driftTo, focus: [0.5, 0.32], drift: [0, 0] } : asset && isClip(asset) ? { from: 1.0, to: 1.03, focus: [0.5, 0.42], drift: [0, 0] } : sameAgain
             ? { from: 1.1, to: 1.16, focus: [odd ? 0.42 : 0.58, 0.34], drift: [odd ? 0.06 : -0.06, 0.02] }
             : { from: 1.0, to: 1.08, focus: [0.5, 0.36], drift: [odd ? -0.05 : 0.05, -0.03] },
         });
       }
 
-      const layout = (dm && DATA_TEMPLATES.has(kind) ? kind : style.layouts[kind]) || 'headline-visual';
+      const layout = ES ? `es-${block.type}` : ((dm && DATA_TEMPLATES.has(kind) ? kind : style.layouts[kind]) || 'headline-visual');
+      if (ES) { beat.block = block; if (!beat.text) beat.text = clean(ES.blockText(block), 120); }
       graphics.push({
         id: `${id}g`, beat: id, template: layout === 'legacy' ? (TEMPLATE_FOR[kind] || 'text') : layout, kind, inMs: t, outMs: t + dur, index,
-        data: { text: beat.text, emphasis: beat.emphasis, label: beat.label, stat: beat.stat, rank: beat.rank, name: beat.name, detail: beat.detail, quote: beat.quote, visual: beat.visual, ...componentData(raw, id, photos, assets), ...(dm ? { refs: beat.refs, ...frameCaptions(raw) } : {}) },
+        data: { text: beat.text, emphasis: beat.emphasis, label: beat.label, stat: beat.stat, rank: beat.rank, name: beat.name, detail: beat.detail, quote: beat.quote, visual: beat.visual, ...componentData(raw, id, photos, assets), ...(dm ? { refs: beat.refs, ...frameCaptions(raw) } : {}), ...(ES ? { block } : {}) },
+        ...(ES && picks.length ? { media: true } : {}),
       });
 
       if (vo) {
         const start = t + lead;
-        const span = voMs || F.estimateVoMs(vo);
+        const span = voMs || F.estimateVoMs(emph.text);
         const timed = v && Array.isArray(v.words) && v.words.length
-          ? v.words.map(word => ({ w: clean(word.w, 40), s: start + Math.round(word.s), e: start + Math.round(word.e) })).filter(word => word.w)
-          : estimateWordTimes(vo, start, span);
-        timed.forEach(word => words.push({ ...word, beat: id }));
+          ? v.words.map(word => ({ w: clean(word.w, 40).replace(/\*/g, ''), s: start + Math.round(word.s), e: start + Math.round(word.e) })).filter(word => word.w)
+          : estimateWordTimes(emph.text, start, span);
+        // *word* in the VO (and, in the ES style, the beat's highlight word)
+        // shows in yellow in the captions.
+        const hl = ES && !emph.flags.some(Boolean) && beat.emphasis ? beat.emphasis.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+        timed.forEach((word, k) => {
+          const em = (timed.length === emph.flags.length && emph.flags[k]) || (hl && word.w.toLowerCase().replace(/[^a-z0-9]/g, '') === hl);
+          words.push({ ...word, beat: id, ...(em ? { em: true } : {}) });
+        });
         if (v && v.asset) audio.push({ id: `vo-${id}`, kind: 'vo', beat: id, asset: v.asset, inMs: start, durMs: span, gainDb: 0 });
       }
       t += dur;
     });
 
     const durationMs = t;
+    // ES: the stamp lands when its word is spoken (else 40% into the hook).
+    if (ES) {
+      graphics.forEach(g => {
+        const st = g.data.block && g.data.block.stamp;
+        if (!st) return;
+        const dur = g.outMs - g.inMs;
+        const key = String(st.text).toLowerCase().replace(/[^a-z0-9]/g, '');
+        const word = words.find(w => w.beat === g.beat && w.w.toLowerCase().replace(/[^a-z0-9]/g, '') === key);
+        const at = st.at != null ? st.at * 1000 : (word ? word.s - g.inMs : dur * 0.4);
+        g.stampAt = Math.round(Math.max(300, Math.min(dur - 400, at)));
+      });
+    }
     // Clip sound is MUTED by default (owner, 2026-11-18): the mix is voice
     // plus music. With opts.clipAudio on, each clip shot adds its own sound
     // from the shot's trim point, low (-12 dB) and ducked to -26 dB under the
@@ -459,7 +533,7 @@
     }
 
     const highlight = accessibleHighlight(team ? team.colors : []);
-    const cards = captionCards(words, { style: captionStyle === 'box' ? 'box' : 'highlight' });
+    const cards = captionCards(words, captionStyle === 'es' ? { style: 'highlight', maxWords: 3, maxChars: 22 } : { style: captionStyle === 'box' ? 'box' : 'highlight' });
     const sx = plan && plan.strip && plan.strip.value ? { label: clean(plan.strip.label, 32), value: clean(plan.strip.value, 14), of: clean(plan.strip.of, 14), note: clean(plan.strip.note, 48), tone: plan.strip.tone === 'good' ? 'good' : 'bad' } : null;
     const out = {
       v: 1, fps: FPS, size: [W, H], durationMs,
@@ -474,6 +548,13 @@
       sources: (opts.sources || []).slice(0, 20),
       corpus: String(opts.corpus || '').slice(0, 12000),
     };
+    if (ES) {
+      out.size = size;
+      out.sourceLine = clean((plan && plan.sourceLine) || sourceLineFrom(opts.sources), 120);
+      // Times are estimates (2.6 words a second) until the voice is recorded.
+      out.timing = { estimate: estimated > 0, wordsPerSecond: F.PACE.wordsPerSecond, ...(voScale !== 1 ? { voLengthMs: Number(plan.voLengthMs) } : {}) };
+      if (plan && plan.script && plan.script.locked) out.script = { locked: true };
+    }
     return dm ? toV2(out, dm, plan) : out;
   }
 
@@ -506,7 +587,7 @@
     // wipe, lift); the outgoing beat is drawn whole until it has left, so it
     // does not fade first. Classic keeps its 180 ms fade and photo cross-fade.
     const st = S.get(timeline.style);
-    const pushes = st.engine !== 'classic' && ['slide', 'wipe', 'flip'].includes(st.motion.transition);
+    const pushes = st.engine !== 'classic' && ['slide', 'wipe', 'flip', 'slab'].includes(st.motion.transition);
     const trMs = st.motion.transitionMs || 0;
     let transition = null;
     if (pushes && graphic && gi > 0 && gLocal < trMs) {
@@ -583,10 +664,12 @@
     return { ops, height, bottom: top + height };
   }
   const upperMeasure = measure => (text, f) => measure(String(text).toUpperCase(), f);
+  const ES_TEMPLATES = new Set(['es-hook', 'es-statement', 'es-number', 'es-dots', 'es-compare', 'es-quote', 'es-endcard']);
 
   // Ops for one graphic. Boxes: every op has x, y (baseline), w, size, so a
   // box is [x, y - size*CAP, w, size*CAP] (what the lint checks against SAFE).
   function layoutGraphic(measure, graphic, timeline = {}) {
+    if (ES_TEMPLATES.has(graphic.template) && getES()) return getES().layoutBlock(measure, graphic, timeline);
     if (SLIDE_TEMPLATES.has(graphic.template)) return layoutSlide(measure, graphic, { style: 'classic', tracks: { video: [] }, beats: [], ...timeline });
     if (S.LAYOUTS.includes(graphic.template) && graphic.template !== 'legacy') return layoutStyled(measure, graphic, { style: 'classic', tracks: { video: [] }, beats: [], ...timeline });
     const d = graphic.data || {};
@@ -666,6 +749,7 @@
   }
 
   function layoutCaption(measure, card, timeline) {
+    if (timeline.captionStyle === 'es' && getES()) return getES().layoutCaption(measure, card, timeline);
     if (timeline.captionStyle === 'block') return layoutBlockCaption(measure, card, timeline);
     const words = timeline.tracks.captions.words;
     const style = timeline.captionStyle;
@@ -699,6 +783,8 @@
 
   // Boxes of every text op in the reel (for the safe-zone lint).
   function textBoxes(measure, timeline) {
+    // ES: hug boxes, tilted stamps and one-line captions (reel-es.js).
+    if (isEs(timeline)) return getES().textBoxes(measure, timeline, layoutGraphic);
     const boxes = [];
     timeline.tracks.graphics.forEach(g => layoutGraphic(measure, g, timeline).forEach(op => {
       if (op.type === 'word' || op.type === 'count' || op.type === 'pill' || op.type === 'text') {
@@ -718,7 +804,7 @@
   function allBoxes(measure, timeline) {
     const out = [];
     const add = (beat, op) => {
-      if (op.noBox) return;
+      if (op.noBox || op.type === 'media') return;
       if (op.type === 'word' || op.type === 'count' || op.type === 'text') out.push({ beat, role: op.role, text: op.text, x: op.x, y: op.y - op.size * CAP, w: op.w, h: op.size * CAP });
       else if (op.type === 'dotring') out.push({ beat, role: op.role, x: op.cx - op.r1 - 3, y: op.cy - op.r1 - 3, w: op.r1 * 2 + 6, h: op.r1 * 2 + 6 });
       else if (op.w != null && op.h != null && op.type !== 'mark') out.push({ beat, role: op.role, x: op.x, y: op.y, w: op.w, h: op.h });
@@ -727,7 +813,11 @@
       layoutGraphic(measure, g, timeline).forEach(op => add(g.beat, op));
       layoutChrome(measure, timeline, { beatIndex: i, graphic: g }).forEach(op => add(g.beat, op));
     });
-    timeline.tracks.captions.cards.forEach(card => layoutCaption(measure, card, timeline).ops.forEach(op => out.push({ beat: card.beat, role: 'caption', text: op.text, x: op.box ? op.box.x : op.x, y: op.box ? op.box.y : op.y - op.size * CAP, w: op.box ? op.box.w : op.w, h: op.box ? op.box.h : op.size * CAP })));
+    timeline.tracks.captions.cards.forEach(card => {
+      const cap = layoutCaption(measure, card, timeline);
+      if (cap.style === 'es' && cap.box) { out.push({ beat: card.beat, role: 'caption', text: cap.ops.map(o => o.text).join(' '), ...cap.box }); return; }
+      cap.ops.forEach(op => out.push({ beat: card.beat, role: 'caption', text: op.text, x: op.box ? op.box.x : op.x, y: op.box ? op.box.y : op.y - op.size * CAP, w: op.box ? op.box.w : op.w, h: op.box ? op.box.h : op.size * CAP }));
+    });
     return out;
   }
 
@@ -921,10 +1011,12 @@
     ctx.fillRect(0, 640, W, H - 640);
   }
 
-  function textShadow(ctx, on) {
-    ctx.shadowColor = on ? 'rgba(0,0,0,0.38)' : 'transparent';
-    ctx.shadowBlur = on ? 28 : 0;
-    ctx.shadowOffsetY = on ? 4 : 0;
+  // No glow on text (ES video system, banned): a soft blurred shadow read as
+  // glow, so type is flat; the photo grade keeps it legible.
+  function textShadow(ctx) {
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
   }
 
   function drawGraphic(ctx, frame, timeline, env) {
@@ -1103,19 +1195,45 @@
     cache.set(key, bg);
     return bg;
   }
+  // The ES mark: an 80 px blue square with the official ES letters
+  // (reel-es.js drawMark), in the guideline colourway for what is under it.
+  function drawSquareMark(ctx, x, y, size, variant, env) {
+    const E = getES();
+    if (variant === 'black' || !E) {
+      ctx.save();
+      ctx.fillStyle = variant === 'black' ? '#000000' : '#0A7DFA';
+      ctx.fillRect(x, y, size, size);
+      const h = (size * BRAND.mark.h) / BRAND.mark.w;
+      drawBrand(ctx, 'mark', x, y + (size - h) / 2, size, h, variant, env);
+      ctx.restore();
+      return;
+    }
+    E.drawMark(ctx, x, y, size, { BRAND, drawBrand }, env);
+  }
   function drawEsMark(ctx, frame, timeline, env) {
+    if (frame.graphic && !showsMark(timeline, frame.graphic)) return '';
     const variant = markVariant(markBackground(ctx, frame, timeline, env));
-    drawBrand(ctx, 'mark', ES_MARK.x, ES_MARK.y, ES_MARK.w, ES_MARK.h, variant, env);
+    drawSquareMark(ctx, ES_MARK.x, ES_MARK.y, ES_MARK.w, variant, env);
     return variant;
   }
-  // Where the brand sits on each beat (the lint and the tests read this).
+  const END_TEMPLATES = new Set(['cta', 'endcard', 'es-endcard', 'slide-cta']);
+  // The ES video system: the mark on the hook (the first scene) and the end card only.
+  function showsMark(timeline, g) {
+    if (!g) return false;
+    if (isEs(timeline)) return getES().MARK_BLOCKS.has((g.data && g.data.block && g.data.block.type) || '');
+    const list = (timeline && timeline.tracks && timeline.tracks.graphics) || [];
+    return END_TEMPLATES.has(g.template) || g.inMs === 0 || g === list[0] || (list[0] && g.id === list[0].id);
+  }
+  // Where the brand sits (the lint and the tests read this): one entry per
+  // beat that shows the mark (slides: every slide).
   function logoPlacements(timeline) {
     if (timeline && timeline.canvas && Number(timeline.canvas.h) === 1350) {
       return (timeline.tracks.graphics || []).map(g => ({ beat: g.beat, kind: 'mark', x: SLIDE_MARK.x, y: SLIDE_MARK.y, w: SLIDE_MARK.w, h: SLIDE_MARK.h, clear: SLIDE_MARK.clear, endcard: g.template === 'slide-cta', slide: true }));
     }
-    return (timeline.tracks.graphics || []).map(g => ({
-      beat: g.beat, kind: 'mark', x: ES_MARK.x, y: ES_MARK.y, w: ES_MARK.w, h: ES_MARK.h, clear: ES_MARK.clear,
-      endcard: g.template === 'cta' || g.template === 'endcard',
+    const mk = isEs(timeline) ? getES().markRect(timeline.size) : ES_MARK;
+    return (timeline.tracks.graphics || []).filter(g => showsMark(timeline, g)).map(g => ({
+      beat: g.beat, kind: 'mark', x: mk.x, y: mk.y, w: mk.w, h: mk.h, clear: mk.clear,
+      endcard: END_TEMPLATES.has(g.template),
     }));
   }
 
@@ -1485,9 +1603,12 @@
   // Chrome drawn on every frame: eyebrow, ES badge, series tag, data strip, rail.
   function layoutChrome(measure, timeline, frame) {
     const style = S.get(timeline.style);
-    // The ES mark (drawn last by drawEsMark; listed here for the boxes).
-    const ops = [{ type: 'esmark', role: 'es-mark', x: ES_MARK.x, y: ES_MARK.y, w: ES_MARK.w, h: ES_MARK.h }];
-    if (style.engine === 'classic') return ops;
+    // The ES mark (drawn last by drawEsMark; listed here for the boxes), on
+    // the hook and the end card only (ES video system).
+    const g0 = frame && frame.graphic;
+    const mk = isEs(timeline) ? getES().markRect(timeline.size) : ES_MARK;
+    const ops = !g0 || showsMark(timeline, g0) ? [{ type: 'esmark', role: 'es-mark', x: mk.x, y: mk.y, w: mk.w, h: mk.h }] : [];
+    if (style.engine === 'classic' || isEs(timeline)) return ops;
     // Data beats own the top of the frame (scorebug, panel header, year rail).
     if (frame && frame.graphic && DATA_TEMPLATES.has(frame.graphic.template)) return ops;
     const c = style.chrome;
@@ -2512,7 +2633,7 @@
         if (n) bg = `#${hex2(r / n)}${hex2(gg / n)}${hex2(b / n)}`;
       } catch { /* tainted: keep the paper */ }
     }
-    drawBrand(ctx, 'mark', SLIDE_MARK.x, SLIDE_MARK.y, SLIDE_MARK.w, SLIDE_MARK.h, markVariant(bg), env);
+    drawSquareMark(ctx, SLIDE_MARK.x, SLIDE_MARK.y, SLIDE_MARK.w, markVariant(bg), env);
     ctx.restore();
     return frame;
   }
@@ -2812,10 +2933,9 @@
     void pal;
   }
 
-  // ─── Finish: vignette, light leak, grain (pros' last pass) ─────────────
-  // Under the ES mark, never over it (no effects on the logo). Leaks only on
-  // dark looks, only at a beat change, at most 16%: used sparingly.
-  const LEAK_MS = 640;
+  // ─── Finish: vignette, grain (pros' last pass) ─────────────────────────
+  // Under the ES mark, never over it (no effects on the logo). The light leak
+  // was removed (2026-11-21): lens flares are banned in the ES video system.
   function drawFinish(ctx, frame, timeline, env) {
     const style = S.get(timeline.style);
     const dark = style.theme === 'dark';
@@ -2826,21 +2946,7 @@
       v.addColorStop(1, dark ? 'rgba(0,0,0,0.38)' : 'rgba(40,34,24,0.10)');
       ctx.fillStyle = v;
       ctx.fillRect(0, 0, W, H);
-      const g = frame.graphic;
-      const leakAt = g ? g.local : Infinity;
-      if (dark && g && leakAt < LEAK_MS && (frame.beatIndex > 0 || g.local < LEAK_MS)) {
-        const a = 0.16 * Math.sin(Math.PI * progress(leakAt, 0, LEAK_MS));
-        const right = frame.beatIndex % 2 === 1;
-        const x = right ? W * 1.02 : -W * 0.02;
-        const leak = ctx.createRadialGradient(x, H * 0.28, 0, x, H * 0.28, H * 0.62);
-        leak.addColorStop(0, `rgba(255,178,102,${a.toFixed(3)})`);
-        leak.addColorStop(0.45, `rgba(255,120,64,${(a * 0.45).toFixed(3)})`);
-        leak.addColorStop(1, 'rgba(255,120,64,0)');
-        ctx.globalCompositeOperation = 'screen';
-        ctx.fillStyle = leak;
-        ctx.fillRect(0, 0, W, H);
-        ctx.globalCompositeOperation = 'source-over';
-      }
+      // No light leaks (lens flares are banned in the ES video system).
     }
     if (env.grain && typeof ctx.createPattern === 'function') {
       const pattern = ctx.createPattern(env.grain, 'repeat');
@@ -2863,6 +2969,13 @@
     if (!tr) { drawStyledGraphic(ctx, frame, timeline, env, style, pal); return; }
     const e = ease.inOutQuart(tr.p);
     const out = { ...frame, graphic: tr.from, shot: tr.fromShot || frame.shot };
+    if (tr.kind === 'slab' && getES()) {
+      // ES slab wipe (data formats in the ES style): the cut under the ink.
+      if (tr.p < 0.5) drawStyledGraphic(ctx, out, timeline, env, style, pal);
+      else { drawBackground(ctx, timeline, frame, env, style, pal); drawStyledGraphic(ctx, frame, timeline, env, style, pal); }
+      getES().drawSlab(ctx, tr.p, getES().geometry(timeline.size));
+      return;
+    }
     if (tr.kind === 'slide') {
       ctx.save(); ctx.translate(-W * e, 0); drawStyledGraphic(ctx, out, timeline, env, style, pal); ctx.restore();
       ctx.save(); ctx.translate(W * (1 - e), 0); drawStyledGraphic(ctx, frame, timeline, env, style, pal); ctx.restore();
@@ -2888,7 +3001,8 @@
     drawBackground(ctx, timeline, frame, env, style, pal);
     drawStyledGraphics(ctx, frame, timeline, env, style, pal);
     drawChrome(ctx, frame, timeline, env, style, pal);
-    if (timeline.captionStyle === 'block') drawBlockCaption(ctx, frame, timeline, env, style, pal);
+    if (timeline.captionStyle === 'es' && getES()) getES().drawCaption(ctx, frame, timeline, env);
+    else if (timeline.captionStyle === 'block') drawBlockCaption(ctx, frame, timeline, env, style, pal);
     else drawCaption(ctx, frame, timeline, env);
   }
 
@@ -2897,6 +3011,14 @@
     // A 4:5 carousel slide (canvas 1080x1350) draws as a slide.
     if (timeline && timeline.canvas && Number(timeline.canvas.h) === 1350) return drawSlideFrame(ctx, timeline, tMs, env);
     const frame = frameAt(timeline, tMs);
+    // ES house style: paper, blocks, slab wipes, one-line captions and its
+    // own marks (no vignette or finish pass: flat 2D).
+    if (isEs(timeline)) {
+      ctx.save();
+      getES().drawFrame(ctx, timeline, frame, env, { drawVisual, drawBrand, BRAND }, layoutGraphic);
+      ctx.restore();
+      return frame;
+    }
     ctx.save();
     if (S.get(timeline.style).engine !== 'classic') {
       drawStyledFrame(ctx, timeline, frame, env);
@@ -2922,6 +3044,7 @@
     buildTimeline, frameAt, wrap, fitText, layoutGraphic, layoutCaption, layoutChrome, textBoxes, drawFrame,
     clipTimes, clipTime, drawVisual, allBoxes, CHART_LAYOUTS,
     BRAND, ES_MARK, WORDMARK, CAPTION_W, LOGO_CLEAR, markVariant, drawBrand, logoPlacements, wordmarkFor, drawFinish,
+    isEs, showsMark, drawSquareMark, ES_TEMPLATES, sourceLineFrom, parseVoEmphasis,
     // Data formats (Phase 1)
     DATA_TEMPLATES, SLIDE_TEMPLATES, SLIDE_MARK, SLIDE_SAFE, DATA_MIN_MS, canvasOf, scoreState, swingFor, momentInfo, periodLabel, teamColours, bestInk,
     provenanceNumbers, unbackedNumbers, wpOnScreen, drawSlideFrame,
