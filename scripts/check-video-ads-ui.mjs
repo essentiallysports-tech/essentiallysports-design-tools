@@ -3,7 +3,9 @@
 // chat / errors, daily set; Clip: every tab with results, empty, error and
 // multi-pick; the stage: sizes, Meta preview, safe zone, Frame + Tint rail,
 // with and without a clip; Export: sound modes, 3-style grid, set mode,
-// preflight, progress and done; free mode), at 1440, 1024 and 375, in light
+// preflight, progress and done; free mode; Competitor ads: sample data, not set
+// up, loading, results, every section, empty, error, over the cap, Use this
+// idea), at 1440, 1024 and 375, in light
 // and dark, and fails on:
 //    1 doubled borders (a control's box inside an equally sized bordered box)
 //    2 empty bands (a visible section or card with nothing visible in it)
@@ -66,6 +68,7 @@ const variants = [
 ];
 function apiReply(body, url) {
   if (url === '/api/ai-status') return api.scenario === 'free' ? { ok: true, mode: 'free', reason: 'user-limit', userLimitUsd: 20 } : { ok: true, mode: 'ai' };
+  if (url === '/api/meta-ads') return metaReply(body);
   if (url !== '/api/video-ads') return { ok: true };
   const m = body?.mode;
   if (api.scenario === 'error') return [500, { ok: false, error: 'Video Ads is unavailable right now.' }];
@@ -85,6 +88,18 @@ function apiReply(body, url) {
     case 'claims': return { ok: true, canEdit: false, claims: {} };
     default: return { ok: true };
   }
+}
+// Competitor ads (/api/meta-ads): the sample data reshaped as live replies.
+const DEMO = (() => { const box = {}; new Function('self', fs.readFileSync(path.join(ROOT, 'video-ads-competitors-demo.js'), 'utf8'))(box); return box.VideoAdsCompetitorsDemo; })();
+function metaReply(body) {
+  const m = body?.mode;
+  if (m === 'status') return { ok: true, configured: api.scenario !== 'comp-off', capUsd: 4, estimateUsd: 0.015, perResultUsd: 0.0003 };
+  if (api.scenario === 'comp-off') return [503, { ok: false, reason: 'not-set-up', error: "Competitor ads isn't set up yet. Ask an admin to add APIFY_TOKEN in Vercel to turn this on." }];
+  if (api.scenario === 'error') return [502, { ok: false, reason: 'apify', error: "The ad library check didn't work. Try again in a moment." }];
+  if (api.scenario === 'comp-cap') return [429, { ok: false, reason: 'over-cap', error: "This week's $4 budget for competitor checks is used up. Checks come back Monday; earlier results in this tab still work." }];
+  if (m === 'ads') { const d = DEMO.ads(body.query || '', { empty: api.scenario === 'empty' }); delete d.sample; return { ...d, cost: { usd: 0.015, results: 50, cached: false } }; }
+  if (m === 'analyze') { const a = DEMO.analysis({ ads: body.ads || [], matchedPage: { pageName: body.target } }); delete a.sample; return { ...a, cost: { usd: 0.0021, cached: false } }; }
+  return { ok: true };
 }
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.webm': 'video/webm', '.mp3': 'audio/mpeg', '.otf': 'font/otf', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.ico': 'image/x-icon' };
 const server = http.createServer((req, res) => {
@@ -363,11 +378,11 @@ const SESSION = `(() => { const b64=o=>btoa(JSON.stringify(o)).replace(/=+$/,'')
 async function viewport(width, height) {
   await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 768 });
 }
-async function load() {
+async function load(page = '/video-ads.html') {
   await send('Page.navigate', { url: `${base}/__blank` });
   for (let i = 0; i < 40 && (await evaluate('location.href').catch(() => '')) !== `${base}/__blank`; i++) await sleep(100);
   await evaluate(SESSION);
-  await send('Page.navigate', { url: `${base}/video-ads.html` });
+  await send('Page.navigate', { url: `${base}${page}` });
   for (let i = 0; i < 80; i++) {
     await sleep(250);
     const ok = await evaluate("Boolean(document.querySelector('#va-styles [role=radio]')) && document.documentElement.style.visibility !== 'hidden' && !/login/.test(location.pathname)").catch(() => false);
@@ -470,6 +485,23 @@ const S = [
   // Empty: no clip yet (fresh page), and free mode (AI over budget)
   { name: 'fresh/export-no-clip', reload: true, js: `__va.step('export')`, expect: `__va.$('#va-export').disabled || /clip|animate/i.test(__va.text('#va-ready')) || 'no-clip export state unclear'` },
   { name: 'fresh/animated', js: `(async () => { __va.click('#va-empty-animated'); return true; })()`, until: `__va.$('#va-busy').hidden`, expect: `!__va.$('#va-play').disabled || 'No clip? Animate gave nothing to play'` },
+  // Competitor ads: sample data (localhost), then the live API path (?demo=off).
+  { name: 'comp/sample-open', reload: true, js: `__va.click('#va-comp-open')`, expect: `!__va.$('#va-comp').hidden && __va.$('.va-work').hidden && __va.$('#va-comp-demo') ? true : 'Competitor ads did not open with the sample-data bar'` },
+  { name: 'comp/sample-results', js: `__va.click('#va-comp-picks [data-pick="Sample Sports Daily"]')`, until: `document.querySelectorAll('#va-comp-out .va-comp-ad').length > 0 && !document.querySelector('#va-comp-out [aria-busy=true]')`, wait: 9000, expect: `document.querySelectorAll('.va-comp-stat').length === 7 && /Sample data/.test(__va.text('#va-comp-out')) || 'sample results or summary missing'` },
+  ...['testing', 'trends', 'notWorking', 'ideas', 'all'].map(id => ({ name: `comp/sample-${id}`, js: `__va.click('#va-comp-tab-${id}')`, expect: `__va.$('#va-comp-tab-${id}').getAttribute('aria-selected') === 'true' && __va.text('#va-comp-sec').length > 20 || 'section ${id} empty'` })),
+  { name: 'comp/sample-error', js: `(async () => { const s = __va.$('#va-comp-demo-state'); s.value = 'error'; s.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`, until: `/didn’t work/.test(__va.text('#va-comp-out'))` },
+  { name: 'comp/use-idea', js: `(async () => { const s = __va.$('#va-comp-demo-state'); s.value = 'live'; s.dispatchEvent(new Event('change', { bubbles: true })); for (let i = 0; i < 60 && !document.querySelector('[data-comp-sec=ideas] .va-comp-tab__n'); i++) await __va.sleep(100); __va.click('#va-comp-tab-ideas'); __va.click('[data-use-idea="0"]'); return true; })()`, until: `__va.$('#va-comp').hidden`, expect: `window.VideoAdsPage.state.brandId === 'the-huddle' && window.VideoAdsPage.state.style === 'highlight' && /one short email/.test(window.VideoAdsPage.state.headline) && __va.$('#va-headline').value === window.VideoAdsPage.state.headline || 'Use this idea did not fill the copy'` },
+  { name: 'comp/use-idea-undo', js: `(async () => { window.VideoAdsPage.undo(); return true; })()`, expect: `!/one short email/.test(window.VideoAdsPage.state.headline) || 'Undo did not put the copy back'` },
+  { name: 'comp/not-set-up', reload: true, page: '/video-ads.html?demo=off', scenario: 'comp-off', js: `__va.click('#va-comp-open')`, until: `!__va.$('#va-comp-setup').hidden`, expect: `/APIFY_TOKEN in Vercel/.test(__va.text('#va-comp-setup')) && __va.$('#va-comp-check').disabled && !__va.$('#va-comp-demo') || 'not-set-up state missing'` },
+  { name: 'comp/idle', reload: true, page: '/video-ads.html?demo=off', js: `__va.click('#va-comp-open')`, until: `/per check/.test(__va.text('#va-comp-cost'))`, expect: `/About \\$0\\.015 per check/.test(__va.text('#va-comp-cost')) || 'estimated cost not shown before running'` },
+  { name: 'comp/empty-input', js: `(async () => { __va.type('#va-comp-q', ''); __va.$('#va-comp-form').requestSubmit(); return true; })()`, expect: `__va.$('#va-comp-q').getAttribute('aria-invalid') === 'true' || 'empty check not explained'` },
+  { name: 'comp/loading', delay: 2500, js: `(async () => { __va.type('#va-comp-q', 'Sample Gridiron Brief'); __va.$('#va-comp-form').requestSubmit(); await __va.sleep(400); return true; })()`, expect: `/Checking/.test(__va.text('#va-comp-out')) && __va.$('#va-comp-check').disabled || 'no loading state'` },
+  { name: 'comp/results', js: `true`, until: `document.querySelectorAll('#va-comp-out .va-comp-ad').length > 0 && !document.querySelector('#va-comp-out [aria-busy=true]')`, wait: 9000, expect: `/Cost \\$0\\.015/.test(__va.text('#va-comp-out')) || 'real cost not shown after running'` },
+  { name: 'comp/results-ideas', js: `__va.click('#va-comp-tab-ideas')`, expect: `document.querySelectorAll('[data-use-idea]').length === 5 || 'ideas missing'` },
+  { name: 'comp/empty', scenario: 'empty', js: `(async () => { __va.type('#va-comp-q', 'Nobody'); __va.$('#va-comp-form').requestSubmit(); return true; })()`, until: `/No live ads found/.test(__va.text('#va-comp-out'))` },
+  { name: 'comp/error', scenario: 'error', js: `(async () => { __va.type('#va-comp-q', 'Broken'); __va.$('#va-comp-form').requestSubmit(); return true; })()`, until: `/didn’t work/.test(__va.text('#va-comp-out'))`, expect: `__va.$('#va-comp-out [data-comp-retry]') ? true : 'no retry on error'` },
+  { name: 'comp/over-cap', scenario: 'comp-cap', js: `(async () => { __va.type('#va-comp-q', 'Capped'); __va.$('#va-comp-form').requestSubmit(); return true; })()`, until: `/Weekly limit/.test(__va.text('#va-comp-out'))` },
+  { name: 'comp/close', js: `(async () => { __va.click('#va-comp-close'); return true; })()`, expect: `__va.$('#va-comp').hidden && !__va.$('.va-work').hidden && document.activeElement === __va.$('#va-comp-open') || 'Back to your ad did not return'` },
   { name: 'free/copy', reload: true, scenario: 'free', js: `(async () => { __va.step('copy'); __va.aiOpen(); __va.click('[data-ai="write"]'); return true; })()`, until: `document.documentElement.dataset.aiMode === 'free' && !__va.$('#va-ai-progress').checkVisibility()` },
   { name: 'free/set', scenario: 'free', js: `(async () => { __va.click('#va-ai-close'); __va.click('#va-set-make'); return true; })()`, until: `__va.$('#va-set-body').children.length > 0` },
 ];
@@ -505,7 +537,7 @@ try {
     await viewport(w, h);
     for (const st of S) {
       if (st.vp && !st.vp.includes(w)) continue;
-      if (st === S[0] || st.reload) { api.scenario = 'ok'; api.delay = 0; await load(); await evaluate(H); }
+      if (st === S[0] || st.reload) { api.scenario = 'ok'; api.delay = 0; await load(st.page); await evaluate(H); }
       if (st === S[0] && w === VIEWPORTS.find(v => !only || !/^\d/.test(only) || only.startsWith(String(v[0])))[0]) {
         await evaluate(CANARY);
         const r = await evaluate(AUDIT);
@@ -532,7 +564,7 @@ try {
       }
       await theme('light');
       // The error scenario's own stubbed 500s are expected; anything else is a real error.
-      const errs = consoleErrors.slice(errAt).filter(e => !/supabase\.co|ERR_FAILED|net::ERR/.test(e) && !(st.scenario === 'error' && /status of 500/.test(e)));
+      const errs = consoleErrors.slice(errAt).filter(e => !/supabase\.co|ERR_FAILED|net::ERR/.test(e) && !(st.scenario === 'error' && /status of 500/.test(e)) && !(['error', 'comp-cap', 'comp-off'].includes(st.scenario) && /status of (429|502|503).*\/api\/meta-ads/.test(e)));
       if (errs.length) results.push({ vp: w, theme: '-', state: st.name, fail: errs.map(e => 'console: ' + e), warn: [] });
       api.delay = 0;
     }
