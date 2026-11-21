@@ -418,6 +418,9 @@
         mimeType: row.meta_mime_type || '',
         exportScale: row.meta_export_scale || '',
         previewPath: row.meta_preview_path || '',
+        ...(row.meta_nl_asset ? { newsletterAsset: row.meta_nl_asset, newsletterAssetLabel: row.meta_nl_asset_label || '' } : {}),
+        ...(row.meta_nl_brand ? { newsletterBrand: row.meta_nl_brand, newsletterBrandLabel: row.meta_nl_brand_label || '' } : {}),
+        ...(row.meta_format ? { format: row.meta_format } : {}),
       };
     return normalizeTask({
       id: row.id,
@@ -731,6 +734,12 @@
     'meta_mime_type:metadata->>mimeType',
     'meta_export_scale:metadata->>exportScale',
     'meta_preview_path:metadata->>previewPath',
+    // Dashboard → Newsletter (null on older rows and other workspaces).
+    'meta_nl_asset:metadata->>newsletterAsset',
+    'meta_nl_asset_label:metadata->>newsletterAssetLabel',
+    'meta_nl_brand:metadata->>newsletterBrand',
+    'meta_nl_brand_label:metadata->>newsletterBrandLabel',
+    'meta_format:metadata->>format',
   ].join(',');
 
   async function fetchSupabaseTasks() {
@@ -1238,6 +1247,10 @@
           template: record.workspaceVariant,
           size: String(record.metadata?.outputSize || '').replace(/\s*×\s*/, 'x').replace(/px$/, ''),
           from: record.metadata?.generated ? 'generate' : '',
+          // Newsletter exports: asset id and newsletter brand.
+          asset: record.metadata?.newsletterAsset || '',
+          brand: record.metadata?.newsletterBrand || '',
+          brandLabel: record.metadata?.newsletterBrandLabel || '',
         },
       });
     } catch (error) {
@@ -1960,6 +1973,34 @@
     return { rows: data || [], ready: true };
   }
 
+  // Usage log rows (admins read all; frameup_usage_events, frameup-track.js).
+  // Returns { rows, ready }; ready is false before the usage-events migration
+  // has run or when the read fails. tool / categories narrow the read.
+  async function fetchUsageEvents({ sinceIso, tool = '', categories = [] } = {}) {
+    const client = getSupabaseClient();
+    const session = await getAuthenticatedSession();
+    if (!client || !session?.user?.email) return { rows: [], ready: false };
+    const rows = [];
+    try {
+      for (let from = 0; from < 20000; from += 1000) {
+        let query = client.from('frameup_usage_events')
+          .select('id,created_at,user_email,category,tool,action,label,meta')
+          .order('created_at', { ascending: false });
+        if (sinceIso) query = query.gte('created_at', sinceIso);
+        if (tool) query = query.eq('tool', tool);
+        if (categories.length) query = query.in('category', categories);
+        const { data, error } = await query.range(from, from + 999);
+        if (error) throw error;
+        rows.push(...(data || []));
+        if (!data || data.length < 1000) break;
+      }
+    } catch (error) {
+      console.warn('[usage] frameup_usage_events read failed:', error?.message || error);
+      return { rows: [], ready: false, error: String(error?.message || error) };
+    }
+    return { rows, ready: true };
+  }
+
   // The shareable copy of an exported design (text, settings, web photo
   // links), used by "Open in editor" in the Gallery.
   async function fetchGalleryDesign(id) {
@@ -2024,6 +2065,7 @@
     fetchGalleryDesign,
     fetchAiUsage,
     fetchClientErrors,
+    fetchUsageEvents,
     fetchGalleryThumbs,
     emitDashboardChange,
   });
