@@ -3,6 +3,24 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-21-dashboard-newsletter",
+      "date": "2026-11-21",
+      "title": "Newsletter exports on the Dashboard",
+      "commit": "d2f1442",
+      "items": [
+        {
+          "title": "Dashboard",
+          "text": "A new Newsletter tab shows every newsletter export: how many this week and over 7, 30 and 90 days, the most exported asset and the most active person, a chart over time, and breakdowns by asset, person and newsletter. The list of recent exports has previews, filters and a search.",
+          "page": "dashboard.html",
+          "route": "#newsletter"
+        },
+        {
+          "title": "Newsletter",
+          "text": "Newsletter exports now record which asset and which newsletter they were made for, so the Dashboard can group them. The exported images don't change."
+        }
+      ]
+    },
+    {
       "id": "2026-11-21-dashboard-trend-chart",
       "date": "2026-11-21",
       "title": "Clearer export chart",

@@ -11,7 +11,7 @@
 <script src="es-auth-config.js?v=20260707-auth4"></script>
 <script src="es-auth.js?v=20261121-rel2"></script>
 <script src="frameup-track.js?v=20261125-tracking"></script>
-  <script src="dashboard-data.js?v=20261125-tracking"></script>
+  <script src="dashboard-data.js?v=20261121-nl"></script>
 <script>
   (() => {
     window.ESAuth?.requireAuth(`index.html${window.location.search}${window.location.hash}`);
@@ -19272,7 +19272,7 @@ async function copyImageLink() {
     // Optional UTM tags (frameup-posted.js toggle); the stored file and its path don't change.
     const utmContext = { brand: activeWorkspace === 'newsletter' ? state.newsletterBrand : 'essentiallysports', designId: path.split('/').pop().replace(/\.[a-z0-9]+$/i, ''), workspace: activeWorkspace };
     const url = window.FrameUpPosted?.decorateLink?.(publicUrl, utmContext) || publicUrl;
-    window.FrameUpTrack?.track?.('share', { tool: window.FrameUpTrack.toolForWorkspace(activeWorkspace), action: 'image-link', label: name, meta: { size: `${plan.width}x${plan.height}` } });
+    window.FrameUpTrack?.track?.('share', { tool: window.FrameUpTrack.toolForWorkspace(activeWorkspace), action: 'image-link', label: name, meta: { size: `${plan.width}x${plan.height}`, ...(activeWorkspace === 'newsletter' ? newsletterTrackMeta() : {}) } });
     if (await copyTextToClipboard(url)) {
       showToast('Image link copied', 'success');
       setStatus('Link copied: ' + url, 'ok');
@@ -19288,6 +19288,40 @@ async function copyImageLink() {
     if (button) button.disabled = false;
     setTimeout(() => { if (label) label.textContent = 'Copy link'; }, 1800);
   }
+}
+
+// Dashboard → Newsletter: which asset and which newsletter an export or copy
+// was made for. Tracking only: nothing here changes what is exported. The
+// HTML builders (Trivia, Ticker, Desktop News Layout) keep their own brand.
+function newsletterExportInfo() {
+  try {
+    const asset = activeNewsletterAsset || DEFAULT_NEWSLETTER_ASSET;
+    const brandList = asset === 'trivia' ? TRIVIA_BRANDS : asset === 'ticker' ? TICKER_BRANDS : NEWSLETTER_BRANDS;
+    const brandId = asset === 'trivia'
+      ? (triviaBuilderState?.brandId || TRIVIA_BRANDS[0]?.id)
+      : asset === 'ticker'
+        ? (tickerBuilderState?.brandId || TICKER_BRANDS[0]?.id)
+        : asset === 'widgets'
+          ? (widgetBuilderState?.brandId || WIDGET_BRAND_IDS[0])
+          : (activeWorkspace === 'newsletter' ? state : workspaceStates.newsletter)?.newsletterBrand;
+    const brand = brandList.find(item => item.id === brandId);
+    return {
+      newsletterAsset: asset,
+      newsletterAssetLabel: NEWSLETTER_ASSET_TYPES[asset]?.label || asset,
+      newsletterBrand: brandId || '',
+      newsletterBrandLabel: brand?.label || '',
+    };
+  } catch (error) {
+    return {};
+  }
+}
+
+// The same, as short keys for the usage log (frameup-track.js meta).
+function newsletterTrackMeta() {
+  const info = newsletterExportInfo();
+  const meta = { asset: info.newsletterAsset, template: info.newsletterAssetLabel, brand: info.newsletterBrand, brandLabel: info.newsletterBrandLabel };
+  Object.keys(meta).forEach(key => { if (!meta[key]) delete meta[key]; });
+  return meta;
 }
 
 function downloadImage() {
@@ -19336,6 +19370,11 @@ function downloadImage() {
           workspaceId: activeWorkspace,
           canvasName: getCurrentCanvasName() || '',
           outputSize: `${W} × ${H}px`,
+          // Newsletter only: asset id + label, newsletter brand, file type.
+          ...(activeWorkspace === 'newsletter' ? {
+            ...newsletterExportInfo(),
+            format: /png/i.test(workspace.exportType) ? 'PNG' : 'JPEG',
+          } : {}),
         },
       });
       // Device copy (with photos) for Recent designs, keyed like the Gallery.
@@ -22576,7 +22615,7 @@ function copyWidgetHtml(html, button) {
   const utmContext = { brand: state.newsletterBrand || 'essentiallysports', designId: activeNewsletterAsset || 'widget', workspace: 'newsletter' };
   html = window.FrameUpPosted?.decorateHtml?.(rawHtml, utmContext) ?? rawHtml;
   const onCopied = () => {
-    window.FrameUpTrack?.track?.('copy', { tool: 'newsletter', action: 'widget-html', label: activeNewsletterAsset || 'widget', meta: { brand: utmContext.brand } });
+    window.FrameUpTrack?.track?.('copy', { tool: 'newsletter', action: 'widget-html', label: activeNewsletterAsset || 'widget', meta: { brand: utmContext.brand, ...newsletterTrackMeta(), format: 'HTML' } });
     window.FrameUpPosted?.afterCopy?.({ kind: 'html', raw: rawHtml, ctx: utmContext, title: 'Newsletter widget' });
     if (!button) return;
     const label = button.querySelector('span');

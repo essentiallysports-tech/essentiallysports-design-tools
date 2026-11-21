@@ -168,7 +168,26 @@ assertContains(
   'dark dashboard offline color override exists'
 );
 
+// Dashboard → Newsletter: its own tab and section, mounted by
+// frameup-newsletter-view.js, styled on the shared .dov cards.
+const newsletterCss = read('frameup-newsletter-view.css');
+const newsletterView = read('frameup-newsletter-view.js');
+assertContains(html, 'data-dashboard-view="newsletter"', 'dashboard Newsletter tab is missing', 'dashboard has a Newsletter tab');
+assertContains(html, 'id="newsletter-view" data-view-section="newsletter"', 'dashboard Newsletter section is missing', 'dashboard has a Newsletter section');
+assertContains(newsletterView, "document.getElementById('newsletter-view')", 'the Newsletter view does not mount into its section', 'the Newsletter view mounts into its section');
+for (const state of ['dov-skel', 'dov-empty', 'dov-error']) {
+  assertContains(newsletterView, state, `the Newsletter view has no ${state} state`, `the Newsletter view has a ${state} state`);
+}
+for (const label of ['aria-label="Newsletter export filters"', 'for="nl-search"', '<caption class="sr-only">']) {
+  assertContains(newsletterView, label, `the Newsletter view is missing ${label}`, `the Newsletter view has ${label}`);
+}
+assertBalancedCss('frameup-newsletter-view.css', newsletterCss);
+if (/#[0-9a-f]{3,8}\b|rgb\(/i.test(newsletterCss)) fail('frameup-newsletter-view.css hard-codes a colour; use tokens');
+else pass('frameup-newsletter-view.css uses tokens only');
+assertContains(newsletterCss, '@media (max-width: 720px)', 'the Newsletter view has no phone layout', 'the Newsletter view has a phone layout');
+
 const finalLayerSources = [
+  ['frameup-newsletter-view.css', newsletterCss],
   [files.html, html],
   [files.system, system],
   [files.theme, theme],

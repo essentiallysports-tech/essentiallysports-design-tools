@@ -11,7 +11,7 @@
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261121-rel2"></script>
   <script src="frameup-track.js?v=20261125-tracking"></script>
-  <script src="dashboard-data.js?v=20261125-tracking"></script>
+  <script src="dashboard-data.js?v=20261121-nl"></script>
   <script src="dashboard-people.js?v=20261120-rel3"></script>
   <script src="ai-usage-summary.js?v=20261118-rel1"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -472,6 +472,9 @@
 <link rel="stylesheet" href="frameup-usage.css?v=20261125-tracking">
 <script src="frameup-usage.js?v=20261125-tracking"></script>
 <script src="frameup-usage-view.js?v=20261125-tracking"></script>
+<link rel="stylesheet" href="frameup-newsletter-view.css?v=20261121-nl">
+<script src="frameup-newsletter-stats.js?v=20261121-nl"></script>
+<script src="frameup-newsletter-view.js?v=20261121-nl"></script>
 <script src="dashboard-insights.js?v=20261119-rel3"></script>
 <script src="frameup-learning.js?v=20261122-rel" defer></script>
 <link rel="stylesheet" href="dashboard-insights.css?v=20261119-rel3">
@@ -528,6 +531,7 @@
         <button type="button" data-dashboard-view="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg><span>Requests</span><span class="nav-count" data-open-request-count>0</span></button>
         <span class="dash-tab-sep" aria-hidden="true"></span>
         <button type="button" data-dashboard-view="designs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg><span>Exports</span><span class="nav-count" data-design-count>0</span></button>
+        <button type="button" data-dashboard-view="newsletter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="10" y="6" rx="1"/></svg><span>Newsletter</span></button>
         <button type="button" data-dashboard-view="feedback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M7 11h10"/><path d="M7 15h6"/><path d="M7 7h8"/></svg><span>Feedback</span><span class="nav-count" data-feedback-count>0</span></button>
         <button type="button" data-dashboard-view="activity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg><span>Activity</span></button>
         <span class="dash-tab-sep" aria-hidden="true"></span>
@@ -787,6 +791,8 @@
 
           <section class="dov usage-view" id="usage-view" data-view-section="usage" aria-labelledby="usage-title" hidden></section>
 
+          <section class="dov newsletter-view" id="newsletter-view" data-view-section="newsletter" aria-labelledby="newsletter-title" hidden></section>
+
           <section class="impact-view" id="impact-view" data-view-section="impact" aria-label="Impact" hidden></section>
 
           <section class="panel" data-view-section="activity" data-dashboard-panel="activity">
@@ -857,7 +863,7 @@
     ]);
     let peopleAdmin = null;
     const DASHBOARD_SEEN_KEY = 'es.dashboard.seenBadges.v1';
-    const DASHBOARD_VIEWS = new Set(['overview', 'usage', 'impact', 'board', 'list', 'designs', 'feedback', 'people', 'access', 'activity']);
+    const DASHBOARD_VIEWS = new Set(['overview', 'usage', 'impact', 'board', 'list', 'designs', 'newsletter', 'feedback', 'people', 'access', 'activity']);
     let dashboardUser = { name: 'ES Admin', email: '', role: 'Admin', accessRole: 'Admin', designation: 'Design Operations' };
     let canAssignDashboardRoles = false;
     let selectedTaskId = '';
@@ -1535,6 +1541,10 @@
           });
       }
     }
+
+    // Dashboard → Newsletter (frameup-newsletter-view.js) uses the same
+    // on-screen preview loader for its table.
+    window.FrameUpDashboardPreviews = Object.freeze({ hydrate: () => hydrateExportPreviews() });
 
     function hydrateExportPreviews() {
       exportPreviewObserver?.disconnect();
@@ -2753,6 +2763,7 @@
       renderPeople(state);
       renderAccessRequests();
       renderActivity(state);
+      window.FrameUpNewsletterView?.render?.();
       bindDashboardChoiceControls();
     }
 
