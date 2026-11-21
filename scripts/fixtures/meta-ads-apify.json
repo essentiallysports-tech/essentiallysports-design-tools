@@ -1,0 +1,107 @@
+{
+  "_note": "Items shaped like the igolaizola~facebook-ad-library-scraper output (Meta's collated_results passed through, plus one flat camelCase item), modelled on fb-ad-library-mcp tests/fixtures/graphql_search.json (MIT). Brands and copy are made up for tests. now = 2026-11-21T12:00:00Z.",
+  "items": [
+    {
+      "ad_archive_id": "1000000000000001",
+      "collation_count": 3,
+      "is_active": true,
+      "page_id": "200000000001",
+      "page_name": "Sample Sports Daily",
+      "start_date": 1758456000,
+      "end_date": 1763726400,
+      "publisher_platform": ["FACEBOOK", "INSTAGRAM", "AUDIENCE_NETWORK"],
+      "snapshot": {
+        "page_name": "Sample Sports Daily",
+        "page_profile_uri": "https://www.facebook.com/samplesportsdaily/",
+        "page_profile_picture_url": "https://scontent-iad3-1.xx.fbcdn.net/v/t39.35426-6/p60.jpg",
+        "display_format": "VIDEO",
+        "body": { "text": "The 5 stories every fan needs before work. Free, every morning." },
+        "title": "Sports news in 5 minutes",
+        "caption": "samplesportsdaily.com",
+        "cta_text": "Sign up",
+        "cta_type": "SIGN_UP",
+        "link_url": "https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.samplesportsdaily.com%2Fsubscribe%3Futm_source%3Dfb&h=AT0",
+        "images": [],
+        "cards": [],
+        "videos": [
+          { "video_hd_url": "https://video-iad3-1.xx.fbcdn.net/v/t42/hd.mp4", "video_sd_url": "https://video-iad3-1.xx.fbcdn.net/v/t42/sd.mp4", "video_preview_image_url": "https://scontent-iad3-1.xx.fbcdn.net/v/t15/preview1.jpg" }
+        ]
+      }
+    },
+    {
+      "ad_archive_id": "1000000000000002",
+      "is_active": true,
+      "page_id": "200000000001",
+      "page_name": "Sample Sports Daily",
+      "start_date": "1763208000",
+      "publisher_platform": ["INSTAGRAM"],
+      "snapshot": {
+        "display_format": "IMAGE",
+        "body": { "text": "Your team. Your inbox. No noise." },
+        "title": "Join free",
+        "cta_text": "Subscribe",
+        "cta_type": "SUBSCRIBE",
+        "link_url": "https://samplesportsdaily.com/join",
+        "images": [ { "original_image_url": "https://scontent-iad3-1.xx.fbcdn.net/v/t39/orig2.jpg", "resized_image_url": "https://scontent-iad3-1.xx.fbcdn.net/v/t39/s600x600_2.jpg" } ],
+        "videos": [],
+        "cards": []
+      }
+    },
+    {
+      "ad_archive_id": "1000000000000003",
+      "is_active": true,
+      "page_id": "200000000002",
+      "page_name": "Sample Gridiron Brief",
+      "start_date": 1762000000,
+      "total_active_time": 1728000,
+      "publisher_platform": ["FACEBOOK"],
+      "snapshot": {
+        "display_format": "CAROUSEL",
+        "body": { "text": "Three reads for Sunday." },
+        "cta_text": "Learn more",
+        "cta_type": "LEARN_MORE",
+        "images": [],
+        "videos": [],
+        "cards": [
+          { "title": "Card one", "body": "First", "cta_text": "Learn more", "link_url": "https://gridironbrief.example/1", "original_image_url": "https://scontent-iad3-1.xx.fbcdn.net/v/c1.jpg", "resized_image_url": "https://scontent-iad3-1.xx.fbcdn.net/v/c1s.jpg", "video_hd_url": null, "video_sd_url": null },
+          { "title": "Card two", "body": "Second", "link_url": "https://gridironbrief.example/2", "original_image_url": "https://scontent-iad3-1.xx.fbcdn.net/v/c2.jpg" },
+          { "title": "Card three", "body": "Third", "video_sd_url": "https://video-iad3-1.xx.fbcdn.net/v/c3.mp4", "video_preview_image_url": "https://scontent-iad3-1.xx.fbcdn.net/v/c3p.jpg" }
+        ]
+      }
+    },
+    {
+      "ad_archive_id": "1000000000000004",
+      "is_active": false,
+      "page_id": "200000000002",
+      "page_name": "Sample Gridiron Brief",
+      "start_date": 1762560000,
+      "end_date": 1762905600,
+      "publisher_platform": ["FACEBOOK", "MESSENGER"],
+      "snapshot": {
+        "display_format": "DPA",
+        "body": { "text": "Last chance: 50% off premium picks!" },
+        "cta_text": "Shop now",
+        "images": [],
+        "videos": [],
+        "cards": [
+          { "title": "Single card", "original_image_url": "http://insecure.example/x.jpg" }
+        ]
+      }
+    },
+    {
+      "adArchiveID": "1000000000000005",
+      "isActive": true,
+      "pageID": "200000000003",
+      "pageName": "Sample Morning Letter",
+      "startDate": "2026-11-19",
+      "publisherPlatform": ["FACEBOOK", "INSTAGRAM"],
+      "body": "Smart, short, free. Read it in the time it takes to drink your coffee.",
+      "title": "The newsletter 4 million people open",
+      "ctaText": "Subscribe",
+      "linkUrl": "https://morningletter.example/?ref=meta"
+    },
+    { "ad_archive_id": "1000000000000001", "page_name": "Duplicate of the first", "snapshot": { "display_format": "IMAGE" } },
+    { "page_name": "No id at all", "snapshot": { "body": { "text": "dropped" } } },
+    "not an object"
+  ]
+}

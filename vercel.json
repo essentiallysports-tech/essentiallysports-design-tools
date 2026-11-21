@@ -181,6 +181,9 @@
     },
     "api/auth-bounce.js": {
       "maxDuration": 10
+    },
+    "api/meta-ads.js": {
+      "maxDuration": 120
     }
   },
   "crons": [

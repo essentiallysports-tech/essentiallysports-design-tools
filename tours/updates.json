@@ -312,6 +312,23 @@
       ]
     },
     {
+      "id": "2026-11-21-video-ads-competitor-ads",
+      "date": "2026-11-21",
+      "title": "Video Ads: competitor ads",
+      "commit": "97ad00e",
+      "items": [
+        {
+          "title": "See what competitors run",
+          "text": "A new Competitor ads button beside the Video Ads steps checks the live Facebook and Instagram ads of sports publishers and newsletters: what has run 30+ days (likely working), what is new this week, the trends, and what likely didn't work.",
+          "page": "video-ads.html"
+        },
+        {
+          "title": "Ideas for our newsletters",
+          "text": "Each check ends with ad ideas for Essentially CFB, ES Dugout and The Huddle. Use this idea fills your copy; Undo puts it back. A check costs under 2 cents, repeat checks within 30 minutes are free, and nothing is saved."
+        }
+      ]
+    },
+    {
       "id": "2026-11-20-inspector",
       "date": "2026-11-20",
       "title": "Editor: a cleaner settings panel that follows your selection",
