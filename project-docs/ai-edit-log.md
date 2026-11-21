@@ -4,8 +4,15 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-21 — Suhail (Claude): What's new dates fixed (branch suhail/release-note-dates)
+- Status: pushed.
+- Six release notes were dated ahead of their release (2026-11-23 / 2026-11-25), so they sat above newer notes and Manish's Archive Page FI note was buried. They are now dated 2026-11-21 (today) with matching ids, and the 2026-11-21 block is ordered by when each note really landed (newest first).
+- `tours/updates.js`: `RENAMED` maps the old ids to the new ones, so anyone who already saw a note isn't shown it again; newer notes still show. The profile menu's What's new dot may light up once.
+- Rule for everyone: date a release note with the day it goes live, never ahead (`add-release-note.mjs` already does).
+- Tests: test-tour (new rename cases), test-newsletter-archive-page-fi.
+
 ## 2026-11-21 — Suhail: full check of main; tests no longer touch production; Video Ads toolbar fix (branch suhail/reels-sweep-no-prod-writes)
-- Status: committed, not pushed.
+- Status: pushed in 1437087.
 - Why: a full suite run on main (clean LF copy) found: the Reels sweep sent requests to production Supabase with its fake QA session (usage tracker rows and the AI spend meter; all refused with 401, nothing written); the "Move text" label overflowed the Video Ads toolbar around 1024; two tests still expected old behaviour.
 - Changed: `check-reels-ui` blocks `*.supabase.co/rest/v1/*`; `check-editor-ui` and `check-panel-hygiene` block the usage-events endpoint (both fake a session); `check-pages-ui`, `check-video-ads-ui`, `check-generate-ui` already mock or block Supabase. `video-ads.css`: "Move text" collapses to its icon when the toolbar is under 900px, like Meta preview and Safe zone (cache key `20261125-movelbl` on video-ads.html, design-system.html). `test-video-ads-render` expects the 30 s custom length (2db0038); `test-ai-guardrails` expects Sonnet as default director (f7e049e) and still checks the auto mode (Haiku first, Sonnet on escalation).
 - Tests: full suite on a clean LF copy of main: everything passes except the 3 allowed failures; reels, video-ads and panel-hygiene sweeps now pass; editor sweep passes alone (accordion timing flakes under load). Video Ads toolbar checked at 1024 and 1440.
@@ -70,7 +77,7 @@ and what's still uncommitted.
 - Also: dropdown option, CSS hiding colour / pill / swipe cards, colour card list, editor-assist entry, release note `2026-11-19-archive-page-fi` (tags the template New). Cache key `20261119-archivefi` (frameup-editor-assist.js in index.html). No thumbnail yet (the picker shows the label).
 - Tests: new `scripts/test-newsletter-archive-page-fi.mjs`; `inline-syntax` ok; `check-editor-ui` probe at 375 / 768 / 1024 / 1440, light + dark: no issues (screenshots `.claude/shots/archive-fi-*.png`). Related suites pass (editor-assist, tour, stat-templates, panel-hygiene, site-chrome, gen-ui, reels-gallery-ui). Full `check-editor-ui` sweep fails on this Windows machine on other Newsletter templates (widgets / ticker / list2 / tag-fi empty bands), the same as on untouched origin/main (31 problems there); none on archive-page-fi. Full run-suite not run.
 ## 2026-11-19 — Suhail (Claude): Video Ads music library, 7 licensed tracks (branch feature/va-music)
-- Status: `[committed, not pushed]`. Needs the migration `supabase/migrations/20261119120000_frameup_audio_bucket.sql` run and the 7 files uploaded to bucket `frameup-audio` before the push.
+- Status: pushed in fe375a7 (migration run, 7 files uploaded to the private bucket `frameup-audio`).
 - Owner confirmed the tracks are licensed for organic + paid. The repo is public, so the audio lives in a PRIVATE bucket: `audio-library.json` entries use `file: storage:frameup-audio/<id>.m4a`; `video-ads-audio.js` parses them (`track.storage`), `video-ads.js` `fetchStoredTrack` gets a 10-minute signed URL for the signed-in user.
 - Files (AAC 192k m4a, 0.9-2.7 MB): calm-deeper, calm-lofi, calm-lofi-short, chill-beat, chill-beat-no-intro, chill-beat-short, summer-hip-hop. Local copies outside the repo: ~/Downloads/frameup-audio-upload/.
 - Tests: test-video-ads-audio (shipped library, storage path rules), all Video Ads tests. Cache key 20261119-music. Release note 2026-11-19-music-for-video-ads.

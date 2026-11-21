@@ -47,7 +47,19 @@
    * - seen id still in the manifest: newer when it sits after the newest.
    * - seen id gone (renamed/removed): compare the YYYY-MM-DD prefixes.
    */
+  // Notes that were once dated ahead of their release (2026-11-21 fix): a
+  // person who saw the old id has seen the renamed note.
+  const RENAMED = {
+    '2026-11-25-dashboard-trend-chart': '2026-11-21-dashboard-trend-chart',
+    '2026-11-25-usage-tracking': '2026-11-21-usage-tracking',
+    '2026-11-25-generate-creative-quality': '2026-11-21-generate-creative-quality',
+    '2026-11-19-archive-page-fi': '2026-11-21-archive-page-fi',
+    '2026-11-23-music-for-video-ads': '2026-11-21-music-for-video-ads',
+    '2026-11-23-gen5-board': '2026-11-21-gen5-board',
+  };
+
   function isNewer(newestId, lastSeenId, entries = []) {
+    lastSeenId = RENAMED[lastSeenId] || lastSeenId;
     if (!newestId || !lastSeenId || newestId === lastSeenId) return false;
     const ids = entries.map(entry => entry.id);
     const seenAt = ids.indexOf(lastSeenId);
@@ -231,6 +243,7 @@
     entriesOf,
     sortEntries,
     isNewer,
+    RENAMED,
     pendingEntry,
     pageLabel,
     buildUpdateTour,

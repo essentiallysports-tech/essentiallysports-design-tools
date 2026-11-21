@@ -59,7 +59,7 @@ and anything unverified. Update the status when it ships.
   and the hourly/weekly limits. Budget policy is set in code: $20/week per person, $45 team cap, free mode
   above. Flag any change that raises cost per run.
 - User-facing copy: plain English, short, no jargon. Never invent numbers, quotes or facts.
-- User-visible changes get a release note in `tours/updates.json` (`node scripts/add-release-note.mjs`).
+- User-visible changes get a release note in `tours/updates.json` (`node scripts/add-release-note.mjs`), dated the day it goes live (never ahead: What's new sorts by date).
 
 ## Checks before asking to push
 - `bash scripts/release/run-suite.sh` runs every `scripts/test-*.mjs` and `scripts/check-*.mjs`

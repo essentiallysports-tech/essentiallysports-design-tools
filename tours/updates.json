@@ -3,8 +3,8 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
-      "id": "2026-11-25-dashboard-trend-chart",
-      "date": "2026-11-25",
+      "id": "2026-11-21-dashboard-trend-chart",
+      "date": "2026-11-21",
       "title": "Clearer export chart",
       "commit": "fd9a99d",
       "items": [
@@ -16,8 +16,8 @@
       ]
     },
     {
-      "id": "2026-11-25-usage-tracking",
-      "date": "2026-11-25",
+      "id": "2026-11-21-usage-tracking",
+      "date": "2026-11-21",
       "title": "Usage: everything taken from FrameUp",
       "commit": "597e93d",
       "items": [
@@ -32,8 +32,8 @@
       ]
     },
     {
-      "id": "2026-11-25-generate-creative-quality",
-      "date": "2026-11-25",
+      "id": "2026-11-21-generate-creative-quality",
+      "date": "2026-11-21",
       "title": "Better Creative designs",
       "items": [
         {
@@ -54,8 +54,27 @@
       ]
     },
     {
-      "id": "2026-11-23-music-for-video-ads",
-      "date": "2026-11-23",
+      "id": "2026-11-21-archive-page-fi",
+      "date": "2026-11-21",
+      "title": "Archive Page FI for newsletters",
+      "commit": "cc0f8a2",
+      "items": [
+        {
+          "title": "Newsletter",
+          "text": "New Archive Page FI asset at 834 x 555: your photo with a dark fade along the bottom and a Quick Read tag you can rename.",
+          "page": "index.html"
+        }
+      ],
+      "templates": [
+        [
+          "newsletter",
+          "archive-page-fi"
+        ]
+      ]
+    },
+    {
+      "id": "2026-11-21-music-for-video-ads",
+      "date": "2026-11-21",
       "title": "Music for Video Ads",
       "commit": "f634298",
       "items": [
@@ -67,8 +86,30 @@
       ]
     },
     {
-      "id": "2026-11-23-gen5-board",
-      "date": "2026-11-23",
+      "id": "2026-11-21-gen5-photos",
+      "date": "2026-11-21",
+      "title": "Generate: the right player in every photo",
+      "items": [
+        {
+          "title": "The right player, checked",
+          "text": "Before a photo is used for a named player, Generate checks the caption, the team, the jersey number and who else is in the frame. A teammate, an opponent, a reporter or a player with the same name is never shown as them.",
+          "page": "generate.html"
+        },
+        {
+          "title": "A different photo on every design",
+          "text": "Each design in a set gets its own photo whenever ES has more than one of that player.",
+          "page": "generate.html"
+        },
+        {
+          "title": "League stories",
+          "text": "For a league or company story with no named player, photos must show people tied to it. If none check out, the design uses the logo or type instead.",
+          "page": "generate.html"
+        }
+      ]
+    },
+    {
+      "id": "2026-11-21-gen5-board",
+      "date": "2026-11-21",
       "title": "Generate: designs built like the ES board",
       "items": [
         {
@@ -94,6 +135,29 @@
         {
           "title": "A stronger art director",
           "text": "A better AI model plans each set and checks it against real ES posts. A run costs about $0.10 to $0.25, shown when it finishes.",
+          "page": "generate.html"
+        }
+      ]
+    },
+    {
+      "id": "2026-11-21-gen4-quality",
+      "date": "2026-11-21",
+      "title": "Generate: better designs, fixed before you see them",
+      "commit": "3d4d45a",
+      "items": [
+        {
+          "title": "You get the number of designs you pick",
+          "text": "Ask for 1 to 8 designs and you get exactly that many, even when the story has no stats.",
+          "page": "generate.html"
+        },
+        {
+          "title": "Small fixes happen while designing",
+          "text": "A murky or off-topic photo, a dropped colon or a missing photo of the person named is fixed before the design reaches you. The director only suggests new ideas now.",
+          "page": "generate.html"
+        },
+        {
+          "title": "Real photos, no sport tags",
+          "text": "When a player or coach is named, every design shows them, never a faded picture box. Designs no longer carry MLB, NFL or GOLF tags.",
           "page": "generate.html"
         }
       ]
@@ -128,6 +192,30 @@
         {
           "title": "AI usage explained",
           "text": "Open the AI usage card for your spend by tool, the team's week, what counts, when it resets and what free mode means."
+        }
+      ]
+    },
+    {
+      "id": "2026-11-21-qa-auth-errors",
+      "date": "2026-11-21",
+      "title": "Sign-in and Dashboard: tidier screens, a cleaner error log",
+      "commit": "6769e54",
+      "items": [
+        {
+          "title": "Errors shows real problems",
+          "text": "Ordinary sign-outs, offline moments, \"not set up yet\" answers and the browser's resize notices no longer count as errors. Sign-in trouble is grouped and marked Sign-in.",
+          "page": "dashboard.html",
+          "route": "overview"
+        },
+        {
+          "title": "People lines up",
+          "text": "Role, last seen and status sit in the same columns on every row, and the list keeps the panel's margins.",
+          "page": "dashboard.html",
+          "route": "people"
+        },
+        {
+          "title": "Sign-in screens",
+          "text": "No doubled sign-in link after a wrong password, full email hints on phones, and no box drawn around the sign-in help panel."
         }
       ]
     },
@@ -178,75 +266,6 @@
           "title": "Easier to read",
           "text": "Settings rows share one title style, selected filter counts are easier to read, and How FrameUp works keeps its title on one line on laptops.",
           "page": "how-frameup-works.html"
-        }
-      ]
-    },
-    {
-      "id": "2026-11-21-qa-auth-errors",
-      "date": "2026-11-21",
-      "title": "Sign-in and Dashboard: tidier screens, a cleaner error log",
-      "commit": "6769e54",
-      "items": [
-        {
-          "title": "Errors shows real problems",
-          "text": "Ordinary sign-outs, offline moments, \"not set up yet\" answers and the browser's resize notices no longer count as errors. Sign-in trouble is grouped and marked Sign-in.",
-          "page": "dashboard.html",
-          "route": "overview"
-        },
-        {
-          "title": "People lines up",
-          "text": "Role, last seen and status sit in the same columns on every row, and the list keeps the panel's margins.",
-          "page": "dashboard.html",
-          "route": "people"
-        },
-        {
-          "title": "Sign-in screens",
-          "text": "No doubled sign-in link after a wrong password, full email hints on phones, and no box drawn around the sign-in help panel."
-        }
-      ]
-    },
-    {
-      "id": "2026-11-21-gen4-quality",
-      "date": "2026-11-21",
-      "title": "Generate: better designs, fixed before you see them",
-      "commit": "3d4d45a",
-      "items": [
-        {
-          "title": "You get the number of designs you pick",
-          "text": "Ask for 1 to 8 designs and you get exactly that many, even when the story has no stats.",
-          "page": "generate.html"
-        },
-        {
-          "title": "Small fixes happen while designing",
-          "text": "A murky or off-topic photo, a dropped colon or a missing photo of the person named is fixed before the design reaches you. The director only suggests new ideas now.",
-          "page": "generate.html"
-        },
-        {
-          "title": "Real photos, no sport tags",
-          "text": "When a player or coach is named, every design shows them, never a faded picture box. Designs no longer carry MLB, NFL or GOLF tags.",
-          "page": "generate.html"
-        }
-      ]
-    },
-    {
-      "id": "2026-11-21-gen5-photos",
-      "date": "2026-11-21",
-      "title": "Generate: the right player in every photo",
-      "items": [
-        {
-          "title": "The right player, checked",
-          "text": "Before a photo is used for a named player, Generate checks the caption, the team, the jersey number and who else is in the frame. A teammate, an opponent, a reporter or a player with the same name is never shown as them.",
-          "page": "generate.html"
-        },
-        {
-          "title": "A different photo on every design",
-          "text": "Each design in a set gets its own photo whenever ES has more than one of that player.",
-          "page": "generate.html"
-        },
-        {
-          "title": "League stories",
-          "text": "For a league or company story with no named player, photos must show people tied to it. If none check out, the design uses the logo or type instead.",
-          "page": "generate.html"
         }
       ]
     },
@@ -449,25 +468,6 @@
           "text": "Over a budget, every tool keeps working without AI: Generate makes ES template designs, Video Ads writes copy from templates and finds clips in the library, Reels builds the plan from your brief, and Trends shows quick headline ideas. A short note at the top says so.",
           "page": "generate.html"
         }
-      ]
-    },
-    {
-      "id": "2026-11-19-archive-page-fi",
-      "date": "2026-11-19",
-      "title": "Archive Page FI for newsletters",
-      "commit": "cc0f8a2",
-      "items": [
-        {
-          "title": "Newsletter",
-          "text": "New Archive Page FI asset at 834 x 555: your photo with a dark fade along the bottom and a Quick Read tag you can rename.",
-          "page": "index.html"
-        }
-      ],
-      "templates": [
-        [
-          "newsletter",
-          "archive-page-fi"
-        ]
       ]
     },
     {

@@ -125,6 +125,13 @@ test('isNewer: first visit, same id, older seen id, unknown seen id', () => {
   assert.equal(Updates.isNewer('2026-11-15-ai-studio', '2026-11-17-tours', entries), false, 'seen something newer');
   assert.equal(Updates.isNewer('2026-11-17-tours', '2026-10-01-removed-note', entries), true, 'removed id: compare dates');
   assert.equal(Updates.isNewer('2026-11-17-tours', '2026-12-01-future', entries), false);
+  // Notes once dated ahead of their release were renamed: a person who saw the
+  // old id has seen the renamed note, and newer notes still show.
+  const renamed = [{ id: '2026-11-22-next', date: '2026-11-22' }, { id: '2026-11-21-dashboard-trend-chart', date: '2026-11-21' }];
+  assert.equal(Updates.RENAMED['2026-11-25-dashboard-trend-chart'], '2026-11-21-dashboard-trend-chart');
+  assert.equal(Updates.isNewer('2026-11-21-dashboard-trend-chart', '2026-11-25-dashboard-trend-chart', renamed), false, 'old id = seen');
+  assert.equal(Updates.isNewer('2026-11-22-next', '2026-11-25-dashboard-trend-chart', renamed), true, 'a newer note still shows');
+  Object.entries(Updates.RENAMED).forEach(([from, to]) => assert.ok(to.startsWith('2026-11-21') && from !== to));
 });
 
 test('pendingEntry: newest unseen and fresh only; drafts ignored', () => {
