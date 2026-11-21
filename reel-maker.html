@@ -87,11 +87,11 @@
         </div>
         <div class="rm-device" id="rm-device">
           <canvas class="rm-canvas" id="rm-canvas" width="1080" height="1920" role="img" aria-label="Reel preview"></canvas>
-          <div class="rm-safe" id="rm-safe" hidden aria-hidden="true"><span>Safe zone</span></div>
+          <div class="rm-safe" id="rm-safe" hidden aria-hidden="true"><span>Safe zone</span><i class="rm-safe__caption"></i><i class="rm-safe__mark"></i></div>
           <div class="rm-empty-stage" id="rm-empty-stage">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/></svg>
             <p>Your reel plays here.</p>
-            <span>Pick a trend or write a brief, then Make my reel.</span>
+            <span>Pick a trend, write a brief or paste your script, then Make my reel.</span>
           </div>
         </div>
         <div class="rm-slidenav" id="rm-slidenav" hidden>
@@ -148,6 +148,7 @@
               <div class="es-segmented rm-seg" role="radiogroup" aria-label="Start from" id="rm-source">
                 <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-source="trend">Trend</button>
                 <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-source="brief">Brief</button>
+                <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-source="script">Script</button>
               </div>
             </div>
             <div class="rm-source" id="rm-source-trend">
@@ -164,6 +165,25 @@
                 <label class="es-field__label" for="rm-brief">Brief</label>
                 <textarea class="es-input rm-brief" id="rm-brief" rows="6" maxlength="2400" placeholder="Josh Allen threw for 412 yards and 4 TDs as the Bills beat the Chiefs 31-28. It's his third 400-yard game this season." aria-describedby="rm-brief-hint"></textarea>
                 <p class="es-field__hint" id="rm-brief-hint">Who, what happened, and the numbers. Every number in the reel must come from here or a source.</p>
+              </div>
+            </div>
+            <div class="rm-source" id="rm-source-script" hidden>
+              <div class="es-field">
+                <label class="es-field__label" for="rm-script">Your script</label>
+                <textarea class="es-input rm-brief" id="rm-script" rows="7" maxlength="4000" placeholder="The Cubs lost. This bar got *paid.* Kalshi says 1 in 2,500 bets was insurance." aria-describedby="rm-script-hint"></textarea>
+                <p class="es-field__hint" id="rm-script-hint">Your words, as you'll say them. Reels Studio splits them into scenes and never rewrites them. Wrap a key word in *asterisks* to make it yellow in the captions.</p>
+              </div>
+              <div class="rm-script-row">
+                <div class="es-field">
+                  <label class="es-field__label" for="rm-script-source">Source line</label>
+                  <input class="es-input" id="rm-script-source" type="text" maxlength="120" placeholder="Source: ESPN, Kalshi" aria-describedby="rm-script-source-hint">
+                  <p class="es-field__hint" id="rm-script-source-hint">Shown on the end card. Every claim needs a source.</p>
+                </div>
+                <div class="es-field">
+                  <label class="es-field__label" for="rm-script-vo">Voiceover length (seconds)</label>
+                  <input class="es-input" id="rm-script-vo" type="number" min="5" max="180" step="0.1" inputmode="decimal" placeholder="Optional" aria-describedby="rm-script-vo-hint">
+                  <p class="es-field__hint" id="rm-script-vo-hint">Without it, scenes are timed at 2.6 words a second. Times are estimates until the voice is in.</p>
+                </div>
               </div>
             </div>
             <div class="rm-picked" id="rm-picked" hidden></div>
@@ -184,6 +204,7 @@
           <ol class="rm-making" id="rm-making" aria-label="Making your reel" hidden></ol>
           <span class="es-sr-only" id="rm-making-live" aria-live="polite"></span>
           <p class="rm-status" id="rm-write-status" role="status" aria-live="polite"></p>
+          <p class="rm-guide-row"><button class="rm-link rm-guide-link" type="button" data-open-guide aria-haspopup="dialog">ES video guidelines</button><span class="rm-hint">How every ES reel looks, moves and reads.</span></p>
 
           <details class="rm-fold" id="rm-settings">
             <summary><span class="rm-fold__title">All settings</span><span class="rm-fold__meta" id="rm-settings-meta">Auto</span></summary>
@@ -243,6 +264,8 @@
               <h3 class="rm-sec__title">Quality checks</h3>
               <span class="es-badge" id="rm-lint-badge"></span>
             </div>
+            <ul class="rm-checklist" id="rm-checklist" aria-label="ES video checklist" hidden></ul>
+            <button class="rm-link rm-guide-link" type="button" data-open-guide aria-haspopup="dialog">ES video guidelines</button>
             <ul class="rm-issues" id="rm-issues"></ul>
             <div class="rm-cost" id="rm-cost-edit"></div>
           </div>
@@ -353,6 +376,13 @@
 
         <!-- Step 3: Export -->
         <div class="rm-pane" id="rm-pane-export" data-pane="export" hidden>
+          <div class="rm-sec" id="rm-aspect-sec" hidden>
+            <span class="es-field__label" id="rm-aspect-label">Size</span>
+            <div class="es-segmented es-segmented--full rm-seg" role="radiogroup" aria-labelledby="rm-aspect-label" id="rm-aspect">
+              <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-aspect="9:16">Reel 9:16</button>
+              <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-aspect="4:5">Feed 4:5</button>
+            </div>
+          </div>
           <div class="rm-sec">
             <span class="es-field__label" id="rm-target-label">Where it will run</span>
             <div class="es-segmented es-segmented--full rm-seg" role="radiogroup" aria-labelledby="rm-target-label" id="rm-target">
@@ -403,6 +433,17 @@
       </section>
     </div>
 
+    <dialog class="es-dialog rm-photos rm-guide" id="rm-guide" aria-labelledby="rm-guide-title">
+      <form method="dialog" class="rm-photos__head">
+        <h2 class="rm-photos__title" id="rm-guide-title">ES video guidelines</h2>
+        <button class="rm-icon-btn" value="cancel" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </form>
+      <p class="rm-hint">The ES video team's reels system (from Vinay), built into Reels Studio. Every reel follows it.</p>
+      <div class="rm-guide__body" id="rm-guide-body"></div>
+    </dialog>
+
     <dialog class="es-dialog rm-photos" id="rm-photos" aria-labelledby="rm-photos-title">
       <form method="dialog" class="rm-photos__head">
         <h2 class="rm-photos__title" id="rm-photos-title">Choose a photo</h2>
@@ -434,6 +475,7 @@
   <script src="frameup-cutout.js?v=20261118-rel1"></script>
   <script src="reel-formats.js?v=20261119-rel4"></script>
   <script src="reel-styles.js?v=20261119-rel4"></script>
+  <script src="reel-es.js?v=20261121-es1"></script>
   <script src="reel-timeline.js?v=20261120-rel2"></script>
   <script src="reel-replay.js?v=20261119-rel4"></script>
   <script src="reel-data.js?v=20261119-rel4"></script>

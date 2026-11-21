@@ -16,6 +16,12 @@
 //                       clock, playcard, panel3, timeline-node, source-chip,
 //                       attribution) and their per-style tokens
 //
+// 2026-11-21: 'es' (the ES video team's reels system, reel-es.js) is the
+// house style and the default for news reels. Every style shares its brand
+// layer: ES blue #0A7DFA, ink #121212, the signal colours green #1BC47D,
+// red #E8322B, yellow #FFC52F, paper #F1EFEA on the light looks; the ES mark
+// and logotype rules are in reel-render.js.
+//
 // Studied from two published ES reels (a light "data explainer" and the
 // "ES Moneyball" analytics series) and rebuilt on one 8-pt grid inside the
 // Reels safe zone (x 65-1015, y 270-1580). Fonts: Acumin Pro Condensed,
@@ -50,7 +56,8 @@
   // Data-format layouts (Phase 1): one per data beat kind, the same name in
   // every style (reel-render.js draws them with each style's element tokens).
   const DATA_LAYOUTS = ['play', 'wpline', 'moment', 'panel3'];
-  const LAYOUTS = ['legacy', 'headline-visual', 'stat-hero', 'rank-card', 'quote', 'bars', 'versus', 'dotrank', 'chips', 'steps', 'tiles', 'roles', 'mystery', 'endcard', ...DATA_LAYOUTS];
+  const ES_LAYOUTS = ['es-hook', 'es-statement', 'es-number', 'es-dots', 'es-compare', 'es-quote', 'es-endcard'];
+  const LAYOUTS = [...ES_LAYOUTS, 'legacy', 'headline-visual', 'stat-hero', 'rank-card', 'quote', 'bars', 'versus', 'dotrank', 'chips', 'steps', 'tiles', 'roles', 'mystery', 'endcard', ...DATA_LAYOUTS];
   const STANDARD_LAYOUTS = {
     hook: 'headline-visual', context: 'headline-visual', point: 'headline-visual', payoff: 'headline-visual',
     stat: 'stat-hero', rank: 'rank-card', quote: 'quote', cta: 'endcard',
@@ -60,14 +67,38 @@
   // 8-pt grid inside the safe zone. Light styles use one column x 88-992.
   const GRID = { unit: 8, left: 88, right: 992, top: 288, captionTop: 1336, captionBottom: 1512, bottom: 1560 };
 
+  // The ES brand layer (reel-es.js TOKENS) every style draws with.
+  const BRAND = { blue: '#0A7DFA', ink: '#121212', paper: '#F1EFEA', green: '#1BC47D', red: '#E8322B', yellow: '#FFC52F' };
+  // Each Reels Studio beat kind on its ES block (reel-es.js BLOCK_FOR_KIND).
+  const ES_KIND_LAYOUTS = { hook: 'es-hook', context: 'es-statement', point: 'es-statement', payoff: 'es-statement', rank: 'es-statement', steps: 'es-statement', tiles: 'es-statement', mystery: 'es-statement', stat: 'es-number', dotrank: 'es-dots', chips: 'es-dots', bars: 'es-compare', versus: 'es-compare', roles: 'es-compare', quote: 'es-quote', cta: 'es-endcard' };
+
   const STYLES = {
+    es: {
+      id: 'es',
+      label: 'ES Reels',
+      blurb: 'The ES video team\'s system: paper, boxed pills, counting numbers, dots and bars, slab wipes and one-line captions.',
+      theme: 'light',
+      engine: 'es', // reel-es.js draws it
+      palette: { bg: BRAND.paper, paper: BRAND.paper, panel: '#FFFFFF', ink: BRAND.ink, muted: '#5C5A55', line: '#CFCBC2', accent: BRAND.blue, hi: BRAND.yellow, hiInk: BRAND.ink, good: BRAND.green, bad: BRAND.red, chip: BRAND.ink, chipInk: '#FFFFFF', mystery: '#DEDAD1', rule: BRAND.blue, texture: 'none' },
+      type: { display: CONDENSED, label: LABEL, body: BODY, headline: [150, 88], stat: [300, 150], cardValue: [104, 64], labelSize: 34, eyebrow: 28, bodySize: 34, caption: [84, 48] },
+      caption: { mode: 'es' }, // one line at y 1172, 1-3 words, *emphasis* yellow
+      motion: { enter: 'rise', durMs: 400, stagger: 160, transition: 'slab', transitionMs: 500 },
+      chrome: { bug: false, eyebrow: false, badge: 'top-right', seriesTag: false, strip: false, rail: false },
+      emphasis: 'highlight',
+      visual: 'fullbleed', cutout: false,
+      layouts: { ...STANDARD_LAYOUTS, ...ES_KIND_LAYOUTS },
+      components: ['bars', 'dotrank', 'chips'],
+      seconds: { target: [20, 60], max: 90 },
+      beats: { max: 16 },
+      voWords: [40, 160],
+    },
     classic: {
       id: 'classic',
       label: 'ES Classic',
       blurb: 'Dark, full-bleed ES photos with slow push-ins and bold captions.',
       theme: 'dark',
       engine: 'classic', // the original Reels Studio look (story beats keep their legacy layouts)
-      palette: { bg: '#0B0D12', paper: '#0B0D12', panel: '#16191F', ink: '#FFFFFF', muted: 'rgba(255,255,255,0.72)', line: 'rgba(255,255,255,0.22)', accent: '#0A6FDE', hi: '#FFD23F', hiInk: '#101114', good: '#1E9E5A', bad: '#D93A2F', chip: '#FFD23F', chipInk: '#101114', mystery: '#2A2E37' },
+      palette: { bg: BRAND.ink, paper: BRAND.ink, panel: '#1E1E1E', ink: '#FFFFFF', muted: 'rgba(255,255,255,0.72)', line: 'rgba(255,255,255,0.22)', accent: BRAND.blue, hi: BRAND.yellow, hiInk: BRAND.ink, good: BRAND.green, bad: BRAND.red, chip: BRAND.yellow, chipInk: BRAND.ink, mystery: '#2A2A2A' },
       type: { display: CONDENSED, label: LABEL, body: BODY, headline: [116, 78], stat: [360, 160], cardValue: [120, 72], labelSize: 34, eyebrow: 30, bodySize: 44, caption: [96, 64] },
       caption: { mode: 'user' }, // Highlight or Box, the editor picks
       motion: { enter: 'rise', durMs: 380, stagger: 45, transition: 'crossfade', transitionMs: 220 },
@@ -85,7 +116,7 @@
       blurb: 'Light paper, a cut-out player over a framed photo, a stat hero, dot rankings and comparison cards.',
       theme: 'light',
       engine: 'styled',
-      palette: { bg: '#ECEAE6', paper: '#ECEAE6', panel: '#FFFFFF', ink: '#111214', muted: '#62656D', line: '#C9C6C0', accent: '#1F6FEB', hi: '#FFD23F', hiInk: '#111214', good: '#1E9E5A', bad: '#D93A2F', chip: '#111214', chipInk: '#FFFFFF', mystery: '#D6D3CD', rule: '#1F6FEB', texture: 'dots' },
+      palette: { bg: BRAND.paper, paper: BRAND.paper, panel: '#FFFFFF', ink: BRAND.ink, muted: '#5C5A55', line: '#CFCBC2', accent: BRAND.blue, hi: BRAND.yellow, hiInk: BRAND.ink, good: BRAND.green, bad: BRAND.red, chip: BRAND.ink, chipInk: '#FFFFFF', mystery: '#DEDAD1', rule: BRAND.blue, texture: 'dots' },
       type: { display: CONDENSED, label: LABEL, body: BODY, headline: [104, 72], stat: [320, 160], cardValue: [96, 64], labelSize: 32, eyebrow: 28, bodySize: 32, caption: [68, 52] },
       caption: { mode: 'block', box: '#111214', ink: '#FFFFFF', active: '#FFD23F' },
       motion: { enter: 'rise', durMs: 420, stagger: 40, transition: 'slide', transitionMs: 420 }, // a push: out-going beat leaves left, the next arrives composed
@@ -104,7 +135,7 @@
       blurb: 'A dashboard: series tag, a data strip on every scene, step tracker, team tiles and position cards.',
       theme: 'light',
       engine: 'styled',
-      palette: { bg: '#E8E7E3', paper: '#E8E7E3', panel: '#FFFFFF', ink: '#111214', muted: '#5E6168', line: '#111214', accent: '#1F6FEB', hi: '#FFD23F', hiInk: '#111214', good: '#1E9E5A', bad: '#D93A2F', chip: '#FFD23F', chipInk: '#111214', mystery: '#D3D1CB', rule: '#111214', texture: 'grid' },
+      palette: { bg: BRAND.paper, paper: BRAND.paper, panel: '#FFFFFF', ink: BRAND.ink, muted: '#5C5A55', line: BRAND.ink, accent: BRAND.blue, hi: BRAND.yellow, hiInk: BRAND.ink, good: BRAND.green, bad: BRAND.red, chip: BRAND.yellow, chipInk: BRAND.ink, mystery: '#DEDAD1', rule: BRAND.ink, texture: 'grid' },
       type: { display: CONDENSED, label: LABEL, body: BODY, headline: [96, 68], stat: [300, 150], cardValue: [112, 68], labelSize: 30, eyebrow: 26, bodySize: 30, caption: [64, 50] },
       caption: { mode: 'block', box: '#111214', ink: '#FFFFFF', active: '#FFD23F' },
       motion: { enter: 'wipe', durMs: 420, stagger: 60, transition: 'wipe', transitionMs: 380 }, // a left-to-right wipe behind an ink bar
@@ -120,10 +151,10 @@
     countdown: {
       id: 'countdown',
       label: 'ES Countdown',
-      blurb: 'Ranked photo cards that flip in, a 5-to-1 rail and gold rank numerals on deep navy.',
+      blurb: 'Ranked photo cards that flip in, a 5-to-1 rail and yellow rank numerals on ES ink.',
       theme: 'dark',
       engine: 'styled',
-      palette: { bg: '#0D1220', paper: '#0D1220', panel: '#161D30', ink: '#FFFFFF', muted: 'rgba(255,255,255,0.74)', line: 'rgba(255,255,255,0.2)', accent: '#2F80ED', hi: '#F2B33D', hiInk: '#0D1220', good: '#2FB36B', bad: '#E5484D', chip: '#F2B33D', chipInk: '#0D1220', mystery: '#232B40', rule: '#F2B33D', texture: 'lines' },
+      palette: { bg: BRAND.ink, paper: BRAND.ink, panel: '#1E1E1E', ink: '#FFFFFF', muted: 'rgba(255,255,255,0.74)', line: 'rgba(255,255,255,0.2)', accent: BRAND.blue, hi: BRAND.yellow, hiInk: BRAND.ink, good: BRAND.green, bad: BRAND.red, chip: BRAND.yellow, chipInk: BRAND.ink, mystery: '#2A2A2A', rule: BRAND.yellow, texture: 'lines' },
       type: { display: CONDENSED, label: LABEL, body: BODY, headline: [104, 72], stat: [300, 150], cardValue: [104, 68], labelSize: 32, eyebrow: 28, bodySize: 34, caption: [88, 62] },
       caption: { mode: 'highlight' },
       motion: { enter: 'flip', durMs: 460, stagger: 50, transition: 'flip', transitionMs: 380 }, // the last card lifts away, the next flips in
@@ -137,7 +168,9 @@
       voWords: [55, 130],
     },
   };
-  const STYLE_IDS = ['classic', 'explainer', 'series', 'countdown'];
+  const STYLE_IDS = ['es', 'classic', 'explainer', 'series', 'countdown'];
+  // The house style for news reels (ES video team, 2026-11-21).
+  const DEFAULT_STYLE = 'es';
   const get = id => STYLES[id] || STYLES.classic;
 
   // ─── Elements for the data formats (Phase 0 contract) ─────────────────────
@@ -165,6 +198,7 @@
   // Absent = the element's default token map above.
   const ELEMENT_TOKENS = {
     classic: { scorebug: { fill: 'bg' }, panel3: { gutter: 'ink' }, 'timeline-node': { line: 'line' } },
+    es: {},
     explainer: {},
     series: { scorebug: { fill: 'ink', ink: 'paper', muted: 'hi' }, clock: { fill: 'hi', ink: 'hiInk' } },
     countdown: { 'timeline-node': { node: 'hi' }, clock: { fill: 'hi', ink: 'hiInk' } },
@@ -232,6 +266,12 @@
   const FORMAT_STYLES = { gameswing: 'series', replay: 'classic', archive: 'countdown' };
   function suggestStyle({ format = '', text = '' } = {}) {
     if (FORMAT_STYLES[format]) return { id: FORMAT_STYLES[format], why: `The ${get(FORMAT_STYLES[format]).label} look is the house style for this format.` };
+    void text;
+    return { id: DEFAULT_STYLE, why: 'The ES video team\'s house style for every reel.' };
+  }
+  // The pre-2026-11-21 suggestion between the other looks (kept for the
+  // picker's "why" lines and for anyone who picks a look by hand).
+  function legacySuggestStyle({ format = '', text = '' } = {}) {
     const t = String(text || '');
     const numbers = (t.match(/\d[\d,.]*/g) || []).length;
     if (format === 'top5' || /\btop[\s-]?(?:5|five|10|ten)\b|\bcountdown\b|\branked\b/i.test(t)) return { id: 'countdown', why: 'A ranked list: cards flip in from 5 to 1.' };
@@ -269,8 +309,8 @@
     ALL_KINDS.forEach(kind => { if (!LAYOUTS.includes(style.layouts && style.layouts[kind])) problems.push(`${style.id}: no layout for ${kind}`); });
     (style.components || []).forEach(k => { if (!COMPONENT_KINDS.includes(k)) problems.push(`${style.id}: unknown component ${k}`); });
     if (!(style.seconds && style.seconds.max >= style.seconds.target[1])) problems.push(`${style.id}: seconds`);
-    if (!['crossfade', 'slide', 'wipe', 'flip'].includes(style.motion && style.motion.transition)) problems.push(`${style.id}: transition`);
-    if (!['user', 'block', 'highlight', 'box'].includes(style.caption && style.caption.mode)) problems.push(`${style.id}: caption mode`);
+    if (!['crossfade', 'slide', 'wipe', 'flip', 'slab'].includes(style.motion && style.motion.transition)) problems.push(`${style.id}: transition`);
+    if (!['user', 'block', 'highlight', 'box', 'es'].includes(style.caption && style.caption.mode)) problems.push(`${style.id}: caption mode`);
     // Data-format elements: every token resolves to an ES font or a non-purple colour.
     ELEMENT_IDS.forEach(id => {
       const over = (ELEMENT_TOKENS[style.id] || {})[id] || {};
@@ -285,7 +325,7 @@
   }
 
   return {
-    STYLES, STYLE_IDS, STORY_KINDS, COMPONENT_KINDS, ALL_KINDS, LAYOUTS, DATA_LAYOUTS, GRID, FONTS, CONDENSED, LABEL, BODY, get, kindsFor, suggestStyle, validateStyle, isPurple,
+    STYLES, STYLE_IDS, DEFAULT_STYLE, BRAND, ES_LAYOUTS, legacySuggestStyle, STORY_KINDS, COMPONENT_KINDS, ALL_KINDS, LAYOUTS, DATA_LAYOUTS, GRID, FONTS, CONDENSED, LABEL, BODY, get, kindsFor, suggestStyle, validateStyle, isPurple,
     ELEMENTS, ELEMENT_IDS, ELEMENT_TOKENS, FORMAT_STYLES, elementTokens, elementBox, drawPlaceholder,
   };
 }));

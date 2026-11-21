@@ -9,16 +9,23 @@
 // Critical: no on-screen claim in the first 2 s, text outside the safe zone,
 // low caption contrast, a length far outside 8–90 s, numbers with no source,
 // assets without rights that cover the target (organic / paid).
+//
+// 2026-11-21, the ES video team's system (reel-es.js): every reel keeps words
+// inside the ES safe frame (x 40-1040, y 300-1640) and carries the 80 px ES
+// mark on the hook and the end card. ES-style reels add the kit's checklist
+// (signal colours, copy lengths, numbers as spoken, end card + source, frame
+// one, banned items) via ReelES.checks.
 (function (root, factory) {
   const node = typeof module === 'object' && module.exports;
   const api = factory(
     node ? require('./reel-formats.js') : root.ReelFormats,
     node ? require('./reel-render.js') : root.ReelRender,
     node ? require('./frameup-rules.js') : root.FrameUpRules,
+    node ? require('./reel-es.js') : root.ReelES,
   );
   if (node) module.exports = api;
   else root.ReelLint = api;
-}(typeof self !== 'undefined' ? self : this, (F, R, RULES) => {
+}(typeof self !== 'undefined' ? self : this, (F, R, RULES, ES) => {
   'use strict';
 
   const LIMITS = {
@@ -56,12 +63,13 @@
     return [...ids];
   }
 
-  function lintTimeline(timeline, { boxes = null, target = 'organic', extraSources = '', marks = null } = {}) {
+  function lintTimeline(timeline, { boxes = null, target = 'organic', extraSources = '', marks = null, measure = null } = {}) {
     const issues = [];
     if (!timeline || !Array.isArray(timeline.beats) || !timeline.beats.length) {
       return { issues: [issue('empty', 'critical', 'The reel has no beats yet.', 'Write the reel first.')], critical: 1, warnings: 0, ok: false };
     }
     const fmt = F.FORMATS[timeline.format] || F.FORMATS.explainer;
+    const es = Boolean(ES && R.isEs && R.isEs(timeline));
     const seconds = timeline.durationMs / 1000;
     // Long-form styles (Data Explainer, Analytics Series) run to 120 s.
     const maxSeconds = Math.max(LIMITS.maxSeconds, (timeline.limits && timeline.limits.maxSeconds) || 0);
@@ -80,7 +88,7 @@
     // Hook in the first 2 s, VO from the first frames.
     const first = timeline.beats[0];
     const firstGraphic = timeline.tracks.graphics[0];
-    if (!firstGraphic || firstGraphic.inMs > LIMITS.hookMs || !String(firstGraphic.data.text || firstGraphic.data.stat?.value || '').trim()) {
+    if (es) { /* ES: the frame-one check (ReelES.checks) covers the hook. */ } else if (!firstGraphic || firstGraphic.inMs > LIMITS.hookMs || !String(firstGraphic.data.text || firstGraphic.data.stat?.value || '').trim()) {
       issues.push(issue('hook', 'critical', 'No claim on screen in the first 2 seconds.', 'Give the first beat a short on-screen line.', first.id));
     } else if (first.kind !== 'hook') {
       issues.push(issue('hook', 'warning', 'The reel does not open on a hook beat.', 'Move the strongest line or number to beat 1.', first.id));
@@ -102,17 +110,19 @@
       });
     });
     const last = timeline.beats[timeline.beats.length - 1];
-    if (last.kind !== 'cta') issues.push(issue('ending', 'warning', 'The reel does not end on a question or end card.', 'End with a question that invites comments.', last.id));
+    if (!es && last.kind !== 'cta') issues.push(issue('ending', 'warning', 'The reel does not end on a question or end card.', 'End with a question that invites comments.', last.id));
 
     // Pacing: a visual change every few seconds.
-    timeline.tracks.video.forEach(shot => {
+    // (ES: one photo per scene, drifting 1 -> 1.1, is the system's own pace.)
+    if (!es) timeline.tracks.video.forEach(shot => {
       if (!shot.clip && shot.outMs - shot.inMs > LIMITS.shotMaxMs) issues.push(issue('pacing', 'warning', `A shot holds ${((shot.outMs - shot.inMs) / 1000).toFixed(1)} s with one move.`, 'Add a second photo to this beat.', shot.beat));
     });
 
     // Safe zones (boxes from ReelRender.textBoxes with the real font metrics).
-    if (Array.isArray(boxes)) {
+    if (Array.isArray(boxes) && !es) {
       const S = R.SAFE;
-      const out = boxes.filter(b => b.x < S.left - 0.5 || b.x + b.w > S.right + 0.5 || b.y < S.top - 0.5 || b.y + b.h > S.bottom + 0.5);
+      // (The ES mark follows its own rule below: right 60, top 330.)
+      const out = boxes.filter(b => b.role !== 'es-mark').filter(b => b.x < S.left - 0.5 || b.x + b.w > S.right + 0.5 || b.y < S.top - 0.5 || b.y + b.h > S.bottom + 0.5);
       const seen = new Set();
       out.forEach(b => {
         const key = `${b.beat}:${b.role}`;
@@ -122,39 +132,52 @@
       });
     }
 
-    // Brand (VB-02, SM-02, BL-05/06): the official ES mark on every beat,
-    // 122 x 104, top-right inside the safe zone, nothing in its 50 px clear
-    // space. A missing or misplaced mark blocks export.
+    // Brand (ES video system, 2026-11-21): the official ES mark as an 80 px
+    // blue square, right 60, top 330, on the hook (beat 1) and the end card,
+    // nothing in its clear space (half its height). A missing or misplaced
+    // mark blocks export.
     const OFFICIAL_MARK = /(^|\/)assets\/brand-logos\/essentiallysports-mark\.svg$/;
     const placed = Array.isArray(marks) ? marks : (R.logoPlacements ? R.logoPlacements(timeline) : []);
     const esAsset = timeline.assets && timeline.assets['logo:es'];
     if (!esAsset || !OFFICIAL_MARK.test(String(esAsset.src || ''))) issues.push(issue('logo', 'critical', 'The ES logo is not the official mark.', 'Use the ES mark from assets/brand-logos (the renderer draws it for you).'));
-    const spec = R.ES_MARK || { w: 122, h: 104, clear: 50 };
-    timeline.beats.forEach((beat, index) => {
+    const spec = es ? ES.markRect(timeline.size) : (R.ES_MARK || { w: 80, h: 80, x: 940, y: 330, clear: 40 });
+    const markBeats = timeline.beats.map((b, i) => ({ b, i })).filter(({ b, i }) => i === 0 || b.kind === 'cta');
+    markBeats.forEach(({ b: beat, i: index }) => {
       const m = placed.find(x => x.beat === beat.id);
-      if (!m) { issues.push(issue('logo', 'critical', `Beat ${index + 1} has no ES logo.`, 'The ES mark must be on every frame.', beat.id)); return; }
+      if (!m) { issues.push(issue('logo', 'critical', `Beat ${index + 1} has no ES logo.`, index === 0 ? 'The ES mark sits top-right on the hook.' : 'The ES mark sits top-right on the end card.', beat.id)); return; }
       if (Math.abs(m.w - spec.w) > 0.5 || Math.abs(m.h - spec.h) > 0.5) issues.push(issue('logo', 'critical', `Beat ${index + 1}: the ES logo is ${Math.round(m.w)}x${Math.round(m.h)}, not ${spec.w}x${spec.h}.`, 'Never scale the logo.', beat.id));
-      const S0 = R.SAFE;
-      const inSafe = m.x >= S0.left - 0.5 && m.x + m.w <= S0.right + 0.5 && m.y >= S0.top - 0.5 && m.y + m.h <= S0.bottom + 0.5;
-      const topRight = m.x + m.w >= S0.right - 60 && m.y <= S0.top + 60;
-      if (!inSafe || !topRight) issues.push(issue('logo', 'critical', `Beat ${index + 1}: the ES logo is not top-right inside the safe zone.`, 'The mark sits top-right on every frame; never move it.', beat.id));
+      if (Math.abs(m.x - spec.x) > 0.5 || Math.abs(m.y - spec.y) > 0.5) issues.push(issue('logo', 'critical', `Beat ${index + 1}: the ES logo is not top-right (right 60, top 330).`, 'Never move the mark.', beat.id));
     });
     if (Array.isArray(boxes) && placed.length) {
-      const m = placed[0];
-      const c = m.clear != null ? m.clear : spec.clear;
-      const zone = { x: m.x - c, y: m.y - c, w: m.w + 2 * c, h: m.h + 2 * c };
       const seen = new Set();
-      boxes.filter(b => b.role !== 'es-mark' && b.x < zone.x + zone.w - 0.5 && b.x + b.w > zone.x + 0.5 && b.y < zone.y + zone.h - 0.5 && b.y + b.h > zone.y + 0.5).forEach(b => {
+      placed.forEach(m => {
+        const c = m.clear != null ? m.clear : spec.clear;
+        const zone = { x: m.x - c, y: m.y - c, w: m.w + 2 * c, h: m.h + 2 * c };
+        boxes.filter(b => b.beat === m.beat && b.role !== 'es-mark' && b.x < zone.x + zone.w - 0.5 && b.x + b.w > zone.x + 0.5 && b.y < zone.y + zone.h - 0.5 && b.y + b.h > zone.y + 0.5).forEach(b => {
+          const key = `${b.beat}:${b.role}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          issues.push(issue('logo', 'critical', `“${String(b.text || b.role).slice(0, 24)}” sits in the ES logo's clear space.`, `Keep ${c} px clear round the logo: shorten the line.`, b.beat));
+        });
+      });
+    }
+    // The ES safe frame for every style: no words above y 300, within 40 px
+    // of the sides, or below y 1640 (the ES checks below cover ES reels).
+    if (Array.isArray(boxes) && ES && !es && timeline.v !== 2) {
+      const seen = new Set();
+      boxes.filter(b => b.text && ES.outsideSafe(b, timeline.size)).forEach(b => {
         const key = `${b.beat}:${b.role}`;
         if (seen.has(key)) return;
         seen.add(key);
-        issues.push(issue('logo', 'critical', `“${String(b.text || b.role).slice(0, 24)}” sits in the ES logo's clear space.`, 'Keep 50 px clear round the logo: shorten the line.', b.beat));
+        issues.push(issue('safe-frame', 'critical', `“${String(b.text).slice(0, 24)}” is outside the ES safe frame (no words above y 300 or below y 1640).`, 'Shorten the line.', b.beat));
       });
     }
+    // The ES system's checklist (ES-style reels).
+    if (es) issues.push(...ES.checks(timeline, { boxes, measure: typeof measure === 'function' ? measure : null, layout: R.layoutGraphic }));
 
     // Captions: contrast and card size.
     const hl = timeline.highlight || R.ES_BLUE;
-    if (timeline.captionStyle !== 'box' && R.contrast('#FFFFFF', hl) < LIMITS.contrastMin) {
+    if (!['box', 'es'].includes(timeline.captionStyle) && R.contrast('#FFFFFF', hl) < LIMITS.contrastMin) {
       issues.push(issue('caption-contrast', 'critical', `White captions on ${hl} are ${R.contrast('#FFFFFF', hl).toFixed(1)}:1. They need ${LIMITS.contrastMin}:1.`, 'Switch the caption colour to ES Blue.'));
     }
     const words = timeline.tracks.captions.words;
@@ -163,6 +186,7 @@
     });
     if (!words.length) issues.push(issue('captions', 'warning', 'No captions: most people watch with the sound off.', 'Add voiceover lines to the beats.'));
     if (timeline.voice.mode === 'off') issues.push(issue('voice', 'info', 'Captions only, no voiceover. Voiceover is what makes a reel count as original on Instagram and Facebook.'));
+    if (es && timeline.timing && timeline.timing.estimate) issues.push(issue('timing', 'info', timeline.timing.voLengthMs ? `Scene times are spread over your ${(timeline.timing.voLengthMs / 1000).toFixed(0)} s voiceover by word count: estimates until the voice is recorded.` : 'Scene times are estimates (2.6 words a second) until the voiceover is recorded.', 'Record or load the voiceover to lock the cuts to it.'));
 
     // Facts: every number must come from the sources (blocking). The walk
     // covers every component field (bars, versus, dot rank, chips, tiles,
@@ -186,7 +210,7 @@
     timeline.tracks.video.forEach(shot => {
       if (shot.asset && !timeline.assets[shot.asset]) issues.push(issue('visual', 'critical', 'A beat points at a clip or picture that is gone.', 'Pick another visual for it.', shot.beat));
     });
-    timeline.beats.forEach((beat, index) => {
+    if (!es) timeline.beats.forEach((beat, index) => {
       if (beat.kind === 'cta' || SELF_VISUAL.has(beat.kind)) return;
       const shots = timeline.tracks.video.filter(s => s.beat === beat.id);
       if (shots.length && shots.every(s => !s.asset)) issues.push(issue('visual', 'warning', `Beat ${index + 1} has no clip or picture yet (it shows plain black).`, 'Use "Fill visuals", or pick a clip, photo or team graphic.', beat.id));

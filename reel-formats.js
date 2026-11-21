@@ -282,6 +282,17 @@
     if (b.steps) out.push(b.steps.label, ...(b.kind === 'steps' ? [] : [b.steps.current, b.steps.total]));
     arr(b.tiles).forEach(x => out.push(x && x.label, x && x.chip));
     arr(b.roles).forEach(x => out.push(x && x.role, x && x.value, x && x.note));
+    // ES Reels blocks (reel-es.js): every on-screen field of the block.
+    const k = b.block;
+    if (k && typeof k === 'object') {
+      arr(k.pills).forEach(x => out.push(x && x.text));
+      if (k.stamp) out.push(k.stamp.text);
+      arr(k.lines).forEach(x => out.push(x && x.text));
+      if (k.type === 'number') out.push(k.display || `${k.prefix || ''}${k.value}${k.suffix || ''}`, k.label, k.kicker);
+      if (k.type === 'dots') out.push(k.count, k.highlight, k.label, k.note);
+      if (k.type === 'compare') { out.push(k.kicker); arr(k.items).forEach(x => out.push(x && x.label, x && x.display, x && x.value)); }
+      if (k.type === 'quote') out.push(k.text, k.who);
+    }
     return out.filter(v => v != null && v !== '').map(String);
   }
   // Plan-level fields drawn on screen (eyebrow, the series tag, the data strip).

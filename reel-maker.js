@@ -35,6 +35,9 @@
   // page is exactly the news flow.
   const G = window.ReelGallery || null;
   const TL = window.ReelTimeline || null;
+  // ES Reels (2026-11-21): the ES video team's design system (reel-es.js),
+  // the house style. "Script": the person's own words, never rewritten.
+  const ES = window.ReelES || null;
   if (!F || !R || !L || !S || !X || !FLOW) return;
 
   const $ = id => document.getElementById(id);
@@ -69,7 +72,7 @@
   };
   const KIND_NAME = { hook: 'Hook', context: 'Context', point: 'Point', stat: 'Stat', rank: 'Rank', quote: 'Quote', payoff: 'Why it matters', cta: 'End card', bars: 'Bars', versus: 'Versus', dotrank: 'Dot ranking', chips: 'Squares', steps: 'Steps', tiles: 'Team tiles', roles: 'Position cards', mystery: 'Mystery card', play: 'Play', wpline: 'Win probability', moment: 'Moment', panel3: '3 frames' };
   // Where a beat's picture came from (the fill chain), in plain words.
-  const SOURCE_NAME = { 'x-clip': 'Official X clip', upload: 'Your upload', 'upload-clip': 'Your clip', photo: 'ES photo', headshot: 'ES photo', tile: 'Team graphic', scene: 'AI scene', 'ai-clip': 'AI b-roll clip', design: 'Designed background', none: 'Nothing yet (plain black)' };
+  const SOURCE_NAME = { 'x-clip': 'Official X clip', upload: 'Your upload', 'upload-clip': 'Your clip', photo: 'ES photo', headshot: 'ES photo', tile: 'Team graphic', scene: 'AI scene', 'ai-clip': 'AI b-roll clip', design: 'Designed background', paper: 'ES paper (no photo)', none: 'Nothing yet (plain black)' };
   const SPORT_LABEL = { nfl: 'NFL', cfb: 'College FB', mlb: 'MLB', golf: 'Golf' };
   const LOCAL_KEY = 'frameup.reels.projects.v1';
   const HANDOFF_KEY = 'frameup.reelMoment.v1';
@@ -100,6 +103,8 @@
     clipsOn: $('rm-clips-on'), aiclipsOn: $('rm-aiclips-on'), aiclipsRow: $('rm-aiclips-row'), aiclipsNote: $('rm-aiclips-note'),
     statusline: $('rm-statusline'), statuslineText: $('rm-statusline-text'), lint: $('rm-lint'), costEdit: $('rm-cost-edit'),
     musicMeta: $('rm-music-meta'), sourcesMeta: $('rm-sources-meta'), visualFile: $('rm-visual-file'), capstyleField: $('rm-capstyle-field'),
+    sourceScript: $('rm-source-script'), script: $('rm-script'), scriptSource: $('rm-script-source'), scriptVo: $('rm-script-vo'),
+    checklist: $('rm-checklist'), guide: $('rm-guide'), guideBody: $('rm-guide-body'), aspect: $('rm-aspect'), aspectSec: $('rm-aspect-sec'),
   };
   const ctx = els.canvas.getContext('2d');
 
@@ -116,7 +121,7 @@
     timeline: null, lint: null, t: 0, playing: false, busy: '',
     cloud: true,
     // reels-styles
-    style: 'auto', styleSuggested: { id: 'classic', why: '' },
+    style: 'auto', styleSuggested: { id: (S.DEFAULT_STYLE || 'classic'), why: '' }, aspect: '9:16',
     voiceOn: true, voiceId: 'brian', voiceError: '', voiceMaking: false,
     useClips: true, aiClips: false, aiClipsUsed: 0, clipAudio: false,
     videos: {}, cutouts: {}, visualSrc: {}, clipPool: [], clipPoolKey: '', selected: '',
@@ -125,6 +130,11 @@
   state.spent.clips = 0;
   state.spent.scenes = 0;
   const styleId = () => (state.plan && state.plan.style) || (state.style === 'auto' ? state.styleSuggested.id : state.style);
+  // The ES house style is on (and reel-es.js loaded).
+  const esOn = () => Boolean(ES && S.get(styleId()).engine === 'es' && !(state.plan && F.isDataFormat && F.isDataFormat(state.plan.format)));
+  const scriptLocked = () => Boolean(state.plan && state.plan.script && state.plan.script.locked);
+  // A beat's name in the strip and the editor (its ES block in the ES style).
+  const beatName = beat => (esOn() ? ES.BLOCKS[ES.blockOf(beat).type].label : (KIND_NAME[beat.kind] || beat.kind));
 
   // ─── Small helpers ───────────────────────────────────────────────────────
   function toast(text, { tone = '', action = null } = {}) {
@@ -226,9 +236,11 @@
   loadImage('assets/brand-logos/essentiallysports-mark.svg').then(img => { if (img) { state.images['logo:es'] = img; draw(); } });
   // Text is measured with the real artwork fonts: when a font finishes
   // loading, cached widths and layouts are thrown away and the frame redrawn.
+  // The 4:5 export draws its own timeline: no caches built for the 9:16 one.
+  const envFor = tl => (tl === state.timeline ? env : { ...env, layoutCache: null, captionCache: null });
   const fontsChanged = () => { measureCache.clear(); layoutCache = new Map(); captionCache = new Map(); if (state.timeline) rebuild(); };
   document.fonts?.addEventListener?.('loadingdone', fontsChanged);
-  Promise.all([`700 120px "Acumin Pro Condensed Local"`, '700 50px Roboto', '600 48px Roboto', '500 44px Roboto'].map(f => document.fonts.load(f).catch(() => {}))).then(fontsChanged);
+  Promise.all([`700 120px "Acumin Pro Condensed Local"`, '800 120px "Roboto Condensed"', '700 50px Roboto', '600 48px Roboto', '500 44px Roboto'].map(f => document.fonts.load(f).catch(() => {}))).then(fontsChanged);
 
   // ─── Voice cache (IndexedDB): re-renders and reopened reels never re-bill ─
   const VoiceCache = (() => {
@@ -310,6 +322,7 @@
     radios(els.source, 'source', state.source);
     els.sourceTrend.hidden = state.source !== 'trend';
     els.sourceBrief.hidden = state.source !== 'brief';
+    if (els.sourceScript) els.sourceScript.hidden = state.source !== 'script';
     renderPicked();
     renderFormats();
     renderCost();
@@ -461,6 +474,7 @@
 
   // ─── Styles: picker with live thumbnails drawn by the renderer ──────────
   const SAMPLE = {
+    es: { beats: [{ id: 's1', kind: 'hook', block: { type: 'hook', pills: [{ text: 'ALLEN BROKE', color: 'ink' }, { text: 'THE RECORD.', color: 'blue' }], stamp: { text: 'RECORD' } }, text: 'Allen broke the record', vo: 'Josh Allen broke the *record.*' }] },
     classic: { beats: [{ id: 's1', kind: 'hook', text: 'Allen breaks the Bills record', vo: 'Josh Allen just broke the Bills record.', emphasis: 'record' }] },
     explainer: { eyebrow: 'Josh Allen · Every season', beats: [{ id: 's1', kind: 'stat', text: 'Average throw depth', vo: 'His average throw travels 8.4 yards.', stat: { value: '8.4', label: 'Yards per throw' }, visual: 'chart', chips: { filled: '1', total: '5', label: 'Deep shots' } }] },
     series: { series: { tag: 'ES Moneyball' }, strip: { label: 'Cap space', value: '-$12.3M', of: '$40M', tone: 'bad' }, beats: [{ id: 's1', kind: 'roles', text: 'Where the holes are', vo: 'Here is where the holes are.', roles: [{ role: 'WR', value: '#31', tone: 'bad' }, { role: 'LB', value: 'FA', tone: 'bad' }, { role: 'DB', value: '3 FAs', tone: 'bad' }, { role: 'DL', value: '#2', tone: 'good' }] }] },
@@ -708,6 +722,7 @@
   async function makeReel() {
     if (state.flow.making) return;
     if (G && TL && dataFmt()) { await makeDataReel(); return; }
+    if (state.source === 'script' && ES) { await makeFromScript(); return; }
     const brief = state.source === 'brief' ? els.brief.value.trim() : '';
     const trend = state.source === 'trend' ? state.trend : null;
     if (!brief && !trend) {
@@ -748,6 +763,25 @@
         return;
       }
     }
+    await finishMake(started);
+  }
+  // Your script (ES video system): your words, word for word, split into
+  // scenes with a block each (code only, $0). Nothing is rewritten.
+  async function makeFromScript() {
+    const script = els.script.value.trim();
+    if (F.wordCount(script) < 6) { els.writeStatus.textContent = 'Paste your script first: a sentence or two at least.'; els.script.focus(); return; }
+    setWriteBusy(true);
+    flowEvent({ type: 'make' });
+    els.writeStatus.textContent = '';
+    const started = Date.now();
+    const plan = ES.scriptToPlan(script, { sourceLine: els.scriptSource.value.trim(), voLengthSec: Number(els.scriptVo.value) || 0, sport: state.sport, format: state.format === 'auto' ? 'explainer' : state.format });
+    plan.style = state.style === 'auto' ? 'es' : state.style;
+    applyPlan({ plan, source: 'script', notice: 'Your script, word for word: each line has a block. Change a block or its on-screen words below; your voiceover lines stay as you wrote them.', corpus: [script, plan.sourceLine].filter(Boolean).join('\n'), sources: [{ type: 'script', title: 'Your script' }] }, { brief: script, go: false });
+    logEvent('plan', { source: 'script', format: plan.format, style: plan.style, beats: plan.beats.length, cost: 0 });
+    flowEvent({ type: 'stage-done', stage: 'script', note: `${plan.beats.length} scenes from your words · $0` });
+    await finishMake(started);
+  }
+  async function finishMake(started) {
     // 2. Voice (automatic when it is set up and on).
     if (state.config.voice.ready && state.voiceOn) {
       const out = await makeVoice({ auto: true });
@@ -847,7 +881,7 @@
     };
   }
   async function usePhoto(beatId, photo, { quiet = false } = {}) {
-    if (!photo) { setVisual(beatId, [designAsset()], 'design'); rebuild(); renderBeats(); return; }
+    if (!photo) { if (esOn()) setVisual(beatId, [], 'paper'); else setVisual(beatId, [designAsset()], 'design'); rebuild(); renderBeats(); return; }
     state.assets[photo.id] = photoAsset(photo);
     setVisual(beatId, [photo.id], 'photo');
     if (!quiet) { rebuild(); renderBeats(); }
@@ -1087,6 +1121,9 @@
       const pick = list.find(p => !used.has(p.id) && (!p.width || p.width >= 600)) || list.find(p => !used.has(p.id));
       if (pick) { used.add(pick.id); await usePhoto(beat.id, pick, { quiet: true }); state.visualSrc[beat.id] = beat.visual === 'headshot' ? 'headshot' : 'photo'; return 'photo'; }
     }
+    // ES Reels: with no photo the scene sits on ES paper (on brand); no
+    // gradient team tile or designed background is filled in for it.
+    if (esOn()) { if (beat.visual === 'scene' && await aiScene(beat)) return 'scene'; setVisual(beat.id, [], 'paper'); return 'paper'; }
     if (team && await teamTile(beat.id, team)) return 'tile';
     if (beat.visual === 'scene' && await aiScene(beat)) return 'scene';
     setVisual(beat.id, [designAsset()], 'design');
@@ -1155,7 +1192,8 @@
     const plan = state.plan;
     if (!plan) return { note: '' };
     if (!state.timeline) rebuild();
-    const beats = plan.beats.filter(b => !only || only.includes(b.id));
+    // ES: media only on the blocks that take it (hook, statement); the rest sit on ES paper.
+    const beats = plan.beats.filter(b => (!only || only.includes(b.id)) && (!esOn() || ES.takesMedia(b)));
     const pool = await clipPool(plan);
     const aiLeft = state.aiClips && state.config.aiClips?.ready ? Math.max(0, state.config.aiClips.max - state.aiClipsUsed) : 0;
     const durs = plan.beats.map(b => { const t = state.timeline.beats.find(x => x.id === b.id); return { id: b.id, kind: b.kind, visual: b.visual, durMs: t ? t.outMs - t.inMs : 2000 }; });
@@ -1309,6 +1347,7 @@
     photoTarget = beatId;
     const beat = state.plan.beats.find(b => b.id === beatId);
     els.photosQ.value = beat?.photo || state.plan.team?.name || '';
+    els.photosNone.textContent = esOn() ? 'No photo: use ES paper' : 'Use the designed background';
     els.photos.showModal();
     els.photosQ.focus();
     runPhotoSearch();
@@ -1349,24 +1388,30 @@
     });
     return out;
   }
-  function rebuild() {
-    if (!state.plan) return;
+  function buildOptions(extra = {}) {
     const voice = voiceFor();
     const voiceMode = Object.keys(voice).length ? state.config.voice.mode : 'off';
-    state.timeline = R.buildTimeline(state.plan, {
+    return {
       style: styleId(), voice, photos: state.photos, assets: { ...state.assets }, team: state.plan.team, captionStyle: state.captionStyle,
       voiceMode, music: state.music ? { asset: 'music' } : null, sources: state.sources, corpus: state.corpus,
       // Clip sound is muted unless "Original clip audio" is on (then only clips that have a sound track).
       clipAudio: state.clipAudio ? Object.keys(state.buffers).filter(k => k.startsWith('clipaudio:') && state.buffers[k]).map(k => k.slice(10)) : false,
       ...dataBuildOptions(),
-    });
+      ...extra,
+    };
+  }
+  function rebuild() {
+    if (!state.plan) return;
+    state.timeline = R.buildTimeline(state.plan, buildOptions());
     // Data formats: timeline v2 fields (data, replay, outputs); the lint reads
     // the data's facts as a source. News reels are built exactly as before.
     const facts = G && TL ? dataFacts() : '';
     if (G && TL) dataTimeline(state.timeline);
     layoutCache = new Map();
     captionCache = new Map();
-    state.lint = L.lintTimeline(state.timeline, { boxes: R.textBoxes(measure, state.timeline), target: state.target, extraSources: facts ? [els.extraSource.value, facts].filter(Boolean).join('\n') : els.extraSource.value });
+    state.lint = L.lintTimeline(state.timeline, { boxes: R.textBoxes(measure, state.timeline), measure, target: state.target, extraSources: facts ? [els.extraSource.value, facts].filter(Boolean).join('\n') : els.extraSource.value });
+    // A script reel keeps the person's words: say so if an edit changed them.
+    if (scriptLocked() && ES && !ES.voMatchesScript(state.plan)) state.lint.issues.push({ id: 'script', severity: 'info', message: 'The voiceover lines no longer match your original script word for word.', fix: 'That is fine if you edited them yourself.', beat: '' });
     state.mix = null;
     // A clip added while "Original clip audio" is on gets its sound decoded, then the mix is rebuilt.
     if (state.clipAudio && Object.entries(state.assets).some(([id, a]) => a.kind === 'clip' && a.src && !(`clipaudio:${id}` in state.buffers))) clipSounds().then(n => { if (n) rebuild(); });
@@ -1396,7 +1441,7 @@
     if (!tl) return;
     const sec = tl.durationMs / 1000;
     els.beatsMeta.textContent = `${tl.beats.length} beats · ${sec.toFixed(0)} s`;
-    els.stageMeta.textContent = `${F.FORMATS[tl.format].label} · ${sec.toFixed(1)} s · 1080×1920`;
+    els.stageMeta.textContent = `${F.FORMATS[tl.format].label} · ${sec.toFixed(1)} s · 1080×1920${tl.timing && tl.timing.estimate ? ' · times estimated' : ''}`;
     els.time.textContent = `${fmtTime(state.t)} / ${fmtTime(tl.durationMs)}`;
     // Beat times in the list.
     els.beats.querySelectorAll('[data-beat]').forEach(li => {
@@ -1413,7 +1458,13 @@
     const order = { critical: 0, warning: 1, info: 2 };
     const list = [...lint.issues].sort((a, b) => order[a.severity] - order[b.severity]);
     const tl = state.timeline;
-    els.statuslineText.textContent = FLOW.statusLine({ critical: lint.critical, warnings: lint.warnings, seconds: tl ? tl.durationMs / 1000 : 0, usd: totalSpent(), money: F.money }) + (state.voiceError && state.voiceOn ? ' · voice failed, captions only' : '');
+    // ES: the kit's "Check" result, "Safe frame ✓" when every word is inside it.
+    const safeOk = esOn() && !lint.issues.some(i => i.id === 'safe-frame' || i.id === 'safe-zone');
+    els.statuslineText.textContent = FLOW.statusLine({ critical: lint.critical, warnings: lint.warnings, seconds: tl ? tl.durationMs / 1000 : 0, usd: totalSpent(), money: F.money }) + (esOn() ? (safeOk ? ' · Safe frame ✓' : ' · Safe frame ✗') : '') + (state.voiceError && state.voiceOn ? ' · voice failed, captions only' : '');
+    if (els.checklist) {
+      els.checklist.hidden = !esOn();
+      els.checklist.innerHTML = esOn() ? ES.checklist(lint.issues).map(row => `<li class="rm-check-row${row.ok ? ' is-ok' : ` is-${row.severity}`}"><span class="rm-check-row__mark" aria-hidden="true">${row.ok ? ICON.check : (row.severity === 'critical' ? ICON.alert : ICON.warn)}</span><span>${esc(row.label)}${row.ok ? ' ✓' : (row.n > 1 ? ` (${row.n})` : '')}</span><span class="es-sr-only">${row.ok ? ', passes' : ', needs a look'}</span></li>`).join('') : '';
+    }
     els.statusline.dataset.tone = lint.critical ? 'bad' : (lint.warnings ? 'warn' : 'good');
     els.lintBadge.className = `es-badge ${lint.critical ? 'es-badge--bad' : (lint.warnings ? 'es-badge--warn' : 'es-badge--good')}`;
     els.lintBadge.textContent = lint.critical ? `${lint.critical} to fix` : (lint.warnings ? `${lint.warnings} to review` : 'All clear');
@@ -1461,7 +1512,9 @@
     renderSources();
     renderStyles();
     els.capstyleField.hidden = S.get(styleId()).caption.mode !== 'user';
-    $('rm-revise').hidden = !state.config.ai || state.config.offline;
+    syncSafe();
+    // Your script is never rewritten: no AI revise on a script reel.
+    $('rm-revise').hidden = !state.config.ai || state.config.offline || scriptLocked();
     if (G && TL) renderDataReview();
   }
   els.summary.addEventListener('click', event => {
@@ -1477,7 +1530,60 @@
   });
 
   const count = (text, max) => { const n = F.wordCount(text); return `<span class="rm-count${n > max ? ' is-over' : ''}">${n}/${max}</span>`; };
+  // ES Reels: each beat edits as its block, with exactly the block's fields.
+  const COLOR_HINT = 'Add | blue, | red or | green after a line to colour it (red and green mean loss and win).';
+  const rowsOf = list => list.map(x => `${x.text}${x.color && x.color !== 'ink' ? ` | ${x.color}` : ''}`).join('\n');
+  function esFields(beat) {
+    const id = beat.id;
+    const b = ES.blockOf(beat);
+    const f = (field, label, value, { area = false, maxlength = 120, placeholder = '', type = 'text', hint = '', rows = 2 } = {}) => `
+      <div class="rm-bf"><div class="rm-bf__row"><label class="rm-bf__label" for="rm-${field.replace(/\./g, '-')}-${esc(id)}">${label}</label></div>
+      ${area ? `<textarea class="es-input rm-bf__input" id="rm-${field.replace(/\./g, '-')}-${esc(id)}" data-field="${field}" rows="${rows}" maxlength="${maxlength}" placeholder="${esc(placeholder)}"${hint ? ` aria-describedby="rm-${field.replace(/\./g, '-')}-${esc(id)}-hint"` : ''}>${esc(value)}</textarea>` : `<input class="es-input rm-bf__input" id="rm-${field.replace(/\./g, '-')}-${esc(id)}" data-field="${field}" type="${type}" maxlength="${maxlength}" value="${esc(value)}" placeholder="${esc(placeholder)}"${type === 'number' ? ' inputmode="decimal" step="any"' : ''}${hint ? ` aria-describedby="rm-${field.replace(/\./g, '-')}-${esc(id)}-hint"` : ''}>`}
+      ${hint ? `<p class="es-field__hint" id="rm-${field.replace(/\./g, '-')}-${esc(id)}-hint">${esc(hint)}</p>` : ''}</div>`;
+    const colorSel = (field, value) => `<div class="rm-bf"><label class="rm-bf__label" for="rm-${field.replace(/\./g, '-')}-${esc(id)}">Colour</label><select class="es-select rm-bf__input" id="rm-${field.replace(/\./g, '-')}-${esc(id)}" data-field="${field}">${['blue', 'ink', 'green', 'red'].map(c => `<option value="${c}"${c === value ? ' selected' : ''}>${c[0].toUpperCase()}${c.slice(1)}</option>`).join('')}</select></div>`;
+    const parts = [`<div class="rm-bf"><label class="rm-bf__label" for="rm-estype-${esc(id)}">Block</label><select class="es-select rm-bf__input" id="rm-estype-${esc(id)}" data-field="es.type">${ES.BLOCK_TYPES.map(t => `<option value="${t}"${t === b.type ? ' selected' : ''}>${ES.BLOCKS[t].label}</option>`).join('')}</select></div>`];
+    if (b.type === 'hook') {
+      parts.push(f('es.pills', 'Pills (one per line, about 14 characters each)', rowsOf(b.pills || []), { area: true, rows: 3, maxlength: 140, hint: COLOR_HINT }));
+      parts.push(`<div class="rm-bf-pair">${f('es.stamp.text', 'Stamp word', b.stamp ? b.stamp.text : '', { maxlength: 20, placeholder: 'Optional, one word' })}${f('es.stamp.at', 'Stamp lands at (s)', b.stamp && b.stamp.at != null ? b.stamp.at : '', { type: 'number', maxlength: 5, placeholder: 'When it is said' })}</div>`);
+    } else if (b.type === 'statement') {
+      parts.push(f('es.lines', 'Lines (1 to 3, under 14 characters each)', rowsOf(b.lines || []), { area: true, rows: 3, maxlength: 140, hint: COLOR_HINT }));
+    } else if (b.type === 'number') {
+      parts.push(`<div class="rm-bf-pair">${f('es.kicker', 'Kicker', b.kicker || '', { maxlength: 40 })}${f('es.label', 'Label', b.label || '', { maxlength: 40 })}</div>`);
+      parts.push(`<div class="rm-bf-trio">${f('es.prefix', 'Before', b.prefix || '', { maxlength: 3, placeholder: '$' })}${f('es.value', 'Number', b.value, { type: 'number', maxlength: 12 })}${f('es.suffix', 'After', b.suffix || '', { maxlength: 4, placeholder: '% or M' })}</div>`, colorSel('es.color', b.color || 'blue'));
+    } else if (b.type === 'dots') {
+      parts.push(`<div class="rm-bf-pair">${f('es.count', 'Dots', b.count, { type: 'number', maxlength: 5, hint: 'Up to 2,600.' })}${f('es.highlight', 'Green ones', b.highlight, { type: 'number', maxlength: 5 })}</div>`);
+      parts.push(`<div class="rm-bf-pair">${f('es.label', 'Label', b.label || '', { maxlength: 40 })}${f('es.note', 'Note', b.note || '', { maxlength: 40 })}</div>`);
+    } else if (b.type === 'compare') {
+      parts.push(f('es.kicker', 'Kicker', b.kicker || '', { maxlength: 40 }));
+      parts.push(f('es.items', 'Bars (label = value as shown, 2 to 4 lines)', (b.items || []).map(it => `${it.label} = ${it.display || it.value}${it.color ? ` | ${it.color}` : ''}`).join('\n'), { area: true, rows: 4, maxlength: 200, hint: 'Bars scale to the biggest value. Add | red or | green for meaning.' }));
+    } else if (b.type === 'quote') {
+      parts.push(f('es.text', 'Quote (their exact words, under 70 characters)', b.text || '', { area: true, maxlength: 200 }), f('es.who', 'Who said it', b.who || '', { maxlength: 60 }));
+    } else if (b.type === 'endcard') {
+      const cta = b.cta || ES.DEFAULT_CTA;
+      parts.push(`<div class="rm-bf-pair">${f('es.cta.0', 'Line 1', cta[0] || '', { maxlength: 30 })}${f('es.cta.1', 'Line 2', cta[1] || '', { maxlength: 30 })}</div>`);
+      parts.push(f('plan.sourceLine', 'Source line', state.plan.sourceLine || state.timeline?.sourceLine || '', { maxlength: 120, placeholder: 'Source: ESPN, Kalshi', hint: 'Shown on the end card. Every claim needs a source.' }));
+      return parts.join('');
+    }
+    parts.push(`<div class="rm-bf"><div class="rm-bf__row"><label class="rm-bf__label" for="rm-vo-${esc(id)}">${scriptLocked() ? 'Voiceover (your words)' : 'Voiceover'}</label>${count(beat.vo, F.PACE.voMaxWords)}</div><textarea class="es-input rm-bf__input" id="rm-vo-${esc(id)}" data-field="vo" rows="2" maxlength="300" aria-describedby="rm-vo-${esc(id)}-hint">${esc(beat.vo)}</textarea><p class="es-field__hint" id="rm-vo-${esc(id)}-hint">Wrap the key word in *asterisks* to make it yellow in the captions.</p></div>`);
+    return parts.join('');
+  }
+  // Applies an edit to the beat's ES block (and the fields the rest of Reels Studio reads).
+  function setEsField(beat, field, value) {
+    const key = field.slice(3);
+    let b = ES.blockOf(beat);
+    if (key === 'type') b = ES.blockOf({ ...beat, block: null, kind: ES.KIND_FOR[value] });
+    else if (key === 'pills' || key === 'lines') b[key] = String(value).split('\n').map(line => { const [t, c] = line.split('|'); return { text: t.trim(), color: (c || 'ink').trim().toLowerCase() }; }).filter(x => x.text);
+    else if (key === 'items') b.items = String(value).split('\n').map(line => { const [main, c] = line.split('|'); const [label, ...rest] = main.split('='); const display = rest.join('=').trim(); return { label: label.trim(), display, value: display, ...(c ? { color: c.trim().toLowerCase() } : {}) }; }).filter(x => x.label);
+    else if (key.startsWith('stamp.')) { const k = key.slice(6); const st = { ...(b.stamp || {}) }; if (value === '' || value == null) delete st[k]; else st[k] = k === 'at' ? Number(value) : value; b.stamp = st.text ? st : undefined; }
+    else if (key.startsWith('cta.')) { const cta = (b.cta || ES.DEFAULT_CTA).slice(); cta[Number(key.slice(4))] = value; b.cta = cta; }
+    else b[key] = value;
+    if (b.type === 'number' && key !== 'type') delete b.display;
+    const legacy = ES.legacyFields(ES.cleanBlock(b));
+    ['stat', 'bars', 'dotrank', 'quote', 'chips', 'versus', 'roles'].forEach(k => { delete beat[k]; });
+    Object.assign(beat, legacy);
+  }
   function beatFields(beat, i) {
+    if (esOn()) return esFields(beat);
     const id = beat.id;
     const f = (field, label, value, { max = 0, area = false, maxlength = 120, placeholder = '' } = {}) => `
       <div class="rm-bf"><div class="rm-bf__row"><label class="rm-bf__label" for="rm-${field}-${esc(id)}">${label}</label>${max ? count(value, max) : ''}</div>
@@ -1512,7 +1618,7 @@
     return `<div class="rm-visual">
       <button class="rm-thumb${img ? '' : ' is-empty'}" type="button" data-photo aria-label="Choose a photo for this beat">${img ? (img.tagName === 'CANVAS' ? '<span class="rm-thumb__canvas" data-thumb-canvas></span>' : `<img src="${esc(img.src)}" alt="">`) : ICON.image}${clip ? `<span class="rm-thumb__badge">${ICON.film}</span>` : ''}</button>
       <div class="rm-visual__meta"><p class="rm-visual__src">${esc(SOURCE_NAME[src] || src)}${asset?.rights?.credit ? ` · ${esc(asset.rights.credit)}` : ''}</p>
-        <p class="rm-hint">${note ? esc(note) : (src === 'none' ? 'Plain black until you pick something.' : esc(asset?.label || ''))}</p>
+        <p class="rm-hint">${note ? esc(note) : (src === 'none' || src === 'paper' ? (esOn() ? 'The scene sits on ES paper until you pick a photo.' : 'Plain black until you pick something.') : esc(asset?.label || ''))}</p>
         <div class="rm-visual__actions">
           ${btn('swap-clip', clip ? 'Swap clip' : 'Use a clip', ICON.film)}
           ${btn('photo', 'Use photo', ICON.image)}
@@ -1533,9 +1639,9 @@
       const on = beat.id === state.selected;
       const issue = state.lint?.issues.find(x => x.beat === beat.id && x.severity !== 'info');
       const w = b ? Math.max(56, Math.min(140, (b.outMs - b.inMs) / 40)) : 64;
-      return `<li><button class="rm-chipbeat${on ? ' is-on' : ''}${issue ? ` has-${issue.severity}` : ''}" type="button" data-pick="${esc(beat.id)}" aria-pressed="${on}" style="--w:${w}px" aria-label="Beat ${i + 1}, ${esc(KIND_NAME[beat.kind] || beat.kind)}${b ? `, ${fmtTime(b.inMs)}` : ''}">
-        <span class="rm-chipbeat__img">${img && img.src ? `<img src="${esc(img.src)}" alt="">` : ''}${state.assets[id]?.kind === 'clip' ? `<span class="rm-chipbeat__clip">${ICON.film}</span>` : ''}</span>
-        <span class="rm-chipbeat__n">${i + 1}</span><span class="rm-chipbeat__kind">${esc(KIND_NAME[beat.kind] || beat.kind)}</span></button></li>`;
+      return `<li><button class="rm-chipbeat${on ? ' is-on' : ''}${issue ? ` has-${issue.severity}` : ''}" type="button" data-pick="${esc(beat.id)}" aria-pressed="${on}" style="--w:${w}px" aria-label="Beat ${i + 1}, ${esc(beatName(beat))}${b ? `, ${fmtTime(b.inMs)}` : ''}">
+        <span class="rm-chipbeat__img${esOn() && !(img && (img.src || img.tagName === 'CANVAS')) ? ' is-paper' : ''}">${img && img.src ? `<img src="${esc(img.src)}" alt="">` : ''}${state.assets[id]?.kind === 'clip' ? `<span class="rm-chipbeat__clip">${ICON.film}</span>` : ''}</span>
+        <span class="rm-chipbeat__n">${i + 1}</span><span class="rm-chipbeat__kind">${esc(beatName(beat))}</span></button></li>`;
     }).join('') + `<li><button class="rm-chipbeat rm-chipbeat--add" type="button" id="rm-add-beat" aria-label="Add a beat" ${state.plan.beats.length >= S.get(styleId()).beats.max ? 'disabled' : ''}>${ICON.plus}</button></li>`;
     // Canvas posters (clips) are drawn into the chips.
     els.strip.querySelectorAll('[data-pick]').forEach(btn => {
@@ -1558,7 +1664,9 @@
   }
   function addBeat() {
     const at = Math.max(1, state.plan.beats.findIndex(b => b.id === state.selected) + 1 || state.plan.beats.length - 1);
-    const beat = { id: `b${Date.now().toString(36)}`, kind: 'point', text: 'New point', vo: 'Say what this beat adds.', emphasis: '', photo: state.plan.team?.name || '' };
+    const beat = esOn()
+      ? { id: `b${Date.now().toString(36)}`, ...ES.legacyFields({ type: 'statement', lines: [{ text: 'NEW POINT', color: 'ink' }] }), vo: scriptLocked() ? '' : 'Say what this beat adds.', emphasis: '', photo: '' }
+      : { id: `b${Date.now().toString(36)}`, kind: 'point', text: 'New point', vo: 'Say what this beat adds.', emphasis: '', photo: state.plan.team?.name || '' };
     state.plan.beats.splice(Math.min(at, state.plan.beats.length - 1), 0, beat);
     state.selected = beat.id;
     rebuild();
@@ -1578,14 +1686,14 @@
     const voiced = state.voice[beat.id] && state.voice[beat.id].text === beat.vo;
     els.beats.innerHTML = `<li class="rm-beat" data-beat="${esc(beat.id)}" data-kind="${esc(beat.kind)}">
         <div class="rm-beat__head">
-          <button class="rm-beat__seek" type="button" data-seek="${esc(beat.id)}" aria-label="Play from beat ${i + 1}"><span class="rm-beat__n">${i + 1}</span><span class="rm-beat__kind">${esc(KIND_NAME[beat.kind] || beat.kind)}${beat.kind === 'rank' ? ` #${beat.rank}` : ''}</span><span class="rm-beat__time">${b ? `${fmtTime(b.inMs)}–${fmtTime(b.outMs)}` : ''}</span>${voiced ? '<span class="rm-beat__vo" title="Voiceover ready">VO</span>' : ''}</button>
+          <button class="rm-beat__seek" type="button" data-seek="${esc(beat.id)}" aria-label="Play from beat ${i + 1}"><span class="rm-beat__n">${i + 1}</span><span class="rm-beat__kind">${esc(beatName(beat))}${beat.kind === 'rank' && !esOn() ? ` #${beat.rank}` : ''}</span><span class="rm-beat__time">${b ? `${fmtTime(b.inMs)}–${fmtTime(b.outMs)}` : ''}</span>${voiced ? '<span class="rm-beat__vo" title="Voiceover ready">VO</span>' : ''}</button>
           <span class="rm-beat__tools">
             <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-move="-1" aria-label="Move beat ${i + 1} earlier" ${i === 0 ? 'disabled' : ''}>${ICON.up}</button>
             <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-move="1" aria-label="Move beat ${i + 1} later" ${i === state.plan.beats.length - 1 ? 'disabled' : ''}>${ICON.down}</button>
             <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-remove aria-label="Delete beat ${i + 1}" ${state.plan.beats.length <= 2 ? 'disabled' : ''}>${ICON.trash}</button>
           </span>
         </div>
-        ${beat.kind === 'cta' ? '' : visualCard(beat)}
+        ${beat.kind === 'cta' ? '' : (esOn() && !ES.takesMedia(beat) ? '<p class="rm-hint rm-beat__paper">This block sits on ES paper: no photo needed.</p>' : visualCard(beat))}
         <div class="rm-beat__fields">${beatFields(beat, i)}</div>
         <p class="rm-beat__flag" aria-live="polite"></p>
       </li>`;
@@ -1598,6 +1706,8 @@
     if (keepId) { const el = $(keepId); if (el) { el.focus(); const len = el.value.length; try { el.setSelectionRange(len, len); } catch { /* not a text field */ } } }
   }
   function setField(beat, field, value) {
+    if (field === 'plan.sourceLine') { state.plan.sourceLine = value; return; }
+    if (field.startsWith('es.') && ES) { setEsField(beat, field, value); return; }
     if (field.startsWith('rows.')) {
       const kind = field.slice(5);
       const keys = { bars: ['label', 'value'], versus: ['name', 'value'], roles: ['role', 'value'], tiles: ['team', 'label'] }[kind];
@@ -1617,6 +1727,7 @@
     const beat = state.plan.beats.find(b => b.id === li.dataset.beat);
     if (!beat) return;
     setField(beat, input.dataset.field, input.value);
+    if (input.dataset.field === 'es.type') { rebuild(); renderBeats(); els.beats.querySelector('[data-field="es.type"]')?.focus(); return; }
     if (beat.kind === 'rank' && input.dataset.field === 'name') beat.text = input.value;
     if (input.dataset.field === 'vo') voiceSoon();
     const counter = input.closest('.rm-bf')?.querySelector('.rm-count');
@@ -1655,7 +1766,8 @@
   function seekBeat(id) {
     const b = state.timeline?.beats.find(x => x.id === id);
     if (!b) return;
-    seek(b.inMs + 1);
+    // ES: land just after the slab wipe, so the picked scene shows (not the cut).
+    seek(b.inMs + (esOn() && b.inMs > 0 ? Math.min(700, Math.max(1, b.outMs - b.inMs - 1)) : 1));
   }
 
   // Revise.
@@ -1701,7 +1813,7 @@
   // ─── Voice ───────────────────────────────────────────────────────────────
   function voiceCounts() {
     const beats = state.plan?.beats || [];
-    const withVo = beats.filter(b => (b.vo || '').trim()).length;
+    const withVo = beats.filter(b => (b.vo || '').trim() && !(esOn() && ES.blockOf(b).type === 'endcard')).length;
     const voiced = beats.filter(b => state.voice[b.id] && state.voice[b.id].text === b.vo && state.voice[b.id].voiceId === state.voiceId).length;
     return { withVo, voiced };
   }
@@ -1739,7 +1851,7 @@
       state.voiceMaking = true;
       state.voiceError = '';
       const voiceId = state.voiceId;
-      const beats = state.plan.beats.filter(b => (b.vo || '').trim() && !(state.voice[b.id] && state.voice[b.id].text === b.vo && state.voice[b.id].voiceId === voiceId));
+      const beats = state.plan.beats.filter(b => (b.vo || '').trim() && !(esOn() && ES.blockOf(b).type === 'endcard') && !(state.voice[b.id] && state.voice[b.id].text === b.vo && state.voice[b.id].voiceId === voiceId));
       const bar = els.voiceProgress.querySelector('span');
       els.voiceProgress.hidden = false;
       bar.style.width = '4%';
@@ -1756,7 +1868,7 @@
         try {
           let rec = await VoiceCache.get(key);
           if (!rec) {
-            const data = await api({ mode: 'voice', text: beat.vo, beat: beat.id, voice: voiceId, hook });
+            const data = await api({ mode: 'voice', text: ES ? ES.plainVo(beat.vo) : beat.vo, beat: beat.id, voice: voiceId, hook });
             state.spent.voice += Number(data.cost) || 0;
             if (data.alignedBy) state.alignedBy = data.alignedBy;
             rec = { bytes: b64ToBytes(data.audio).buffer, mime: data.mime, words: data.words || [], model: data.model };
@@ -1904,7 +2016,7 @@
   // ─── Sources ─────────────────────────────────────────────────────────────
   function renderSources() {
     els.sourcesMeta.textContent = state.sources.length ? `${state.sources.length}` : '';
-    els.sourcesList.innerHTML = state.sources.length ? state.sources.map(s => `<li><span class="rm-src__type">${esc({ brief: 'Brief', trend: 'Trend', news: 'News', 'fact-check': 'Fact check' }[s.type] || 'Source')}</span>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}${ICON.link}</a>` : `<span>${esc(s.title)}</span>`}</li>`).join('') : '<li class="rm-hint">No sources yet.</li>';
+    els.sourcesList.innerHTML = state.sources.length ? state.sources.map(s => `<li><span class="rm-src__type">${esc({ brief: 'Brief', trend: 'Trend', news: 'News', 'fact-check': 'Fact check', script: 'Script' }[s.type] || 'Source')}</span>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}${ICON.link}</a>` : `<span>${esc(s.title)}</span>`}</li>`).join('') : '<li class="rm-hint">No sources yet.</li>';
   }
   els.extraSource.addEventListener('input', debounce(() => { state.extraSource = els.extraSource.value; rebuild(); }, 300));
 
@@ -2062,7 +2174,16 @@
     const on = els.safeToggle.getAttribute('aria-pressed') !== 'true';
     els.safeToggle.setAttribute('aria-pressed', String(on));
     els.safe.hidden = !on;
+    syncSafe();
   });
+  // ES Reels: the ES safe frame (no words above y 300, within 40 px of the
+  // sides, or below y 1640), the caption line (y 1172) and the ES mark's spot.
+  function syncSafe() {
+    const es = esOn();
+    els.safe.classList.toggle('rm-safe--es', es);
+    const label = els.safe.querySelector('span');
+    if (label) label.textContent = es ? 'Safe frame' : 'Safe zone';
+  }
   document.addEventListener('keydown', event => {
     if (event.key !== ' ' || event.target.closest('input, textarea, select, button, [contenteditable], dialog')) return;
     if (!state.timeline) return;
@@ -2070,7 +2191,24 @@
     if (state.playing) stop(); else play();
   });
 
+  // ─── ES video guidelines (the ES video team's system, in plain English) ──
+  function openGuide(event) {
+    if (!els.guide || !ES) return;
+    if (!els.guideBody.childElementCount) {
+      els.guideBody.innerHTML = ES.GUIDELINES.map(sec => `<section class="rm-guide__sec"><h3>${esc(sec.title)}</h3><ul>${sec.items.map(t => `<li>${esc(t)}</li>`).join('')}</ul></section>`).join('');
+    }
+    els.guide.showModal();
+    if (event) logEvent('edit', { what: 'es-guidelines' });
+  }
+  document.querySelectorAll('[data-open-guide]').forEach(btn => btn.addEventListener('click', openGuide));
+
   // ─── Step 3: Export ──────────────────────────────────────────────────────
+  els.aspect?.addEventListener('click', event => {
+    const btn = event.target.closest('[data-aspect]');
+    if (!btn) return;
+    state.aspect = btn.dataset.aspect === '4:5' ? '4:5' : '9:16';
+    radios(els.aspect, 'aspect', state.aspect);
+  });
   els.target.addEventListener('click', event => {
     const btn = event.target.closest('[data-target]');
     if (!btn) return;
@@ -2080,6 +2218,7 @@
   });
   function renderExport() {
     if (!state.timeline) return;
+    if (els.aspectSec) { els.aspectSec.hidden = !esOn(); radios(els.aspect, 'aspect', state.aspect); }
     // One row per kind of asset with the same rights (6 voiceover clips = 1 row).
     const KIND_PLURAL = { photo: 'ES photos', vo: 'Voiceover clips', logo: 'Logos', graphic: 'Graphics', clip: 'Official X clips', scene: 'AI scenes', tile: 'Team graphics' };
     const groups = new Map();
@@ -2131,6 +2270,7 @@
     await document.fonts.ready;
     await Promise.all([
       document.fonts.load(`700 120px ${R.CONDENSED}`).catch(() => {}),
+      document.fonts.load('800 120px "Roboto Condensed"').catch(() => {}),
       document.fonts.load('700 50px Roboto').catch(() => {}),
       document.fonts.load('600 48px Roboto').catch(() => {}),
       document.fonts.load('500 44px Roboto').catch(() => {}),
@@ -2143,14 +2283,15 @@
   async function encodeWebCodecs(tl, mix, onProgress, job) {
     if (typeof window.VideoEncoder !== 'function') throw new Error('no-webcodecs');
     const MB = await import(MEDIABUNNY);
-    if (!(await MB.canEncodeVideo('avc', { width: 1080, height: 1920 }))) throw new Error('no-avc');
+    const [cw, ch] = tl.size || [1080, 1920];
+    if (!(await MB.canEncodeVideo('avc', { width: cw, height: ch }))) throw new Error('no-avc');
     if (mix && !(await MB.canEncodeAudio('aac', { numberOfChannels: 2, sampleRate: 48000 }))) throw new Error('no-aac');
     const canvas = document.createElement('canvas');
-    canvas.width = 1080; canvas.height = 1920;
+    canvas.width = cw; canvas.height = ch;
     const c = canvas.getContext('2d');
     job.cancel = async () => { job.cancelled = true; };
     Object.values(state.videos).forEach(v => { try { v.pause(); } catch { /* fine */ } });
-    const out = await X.encodeMediabunny({ MB, canvas, durationMs: tl.durationMs, mix, fps: 30, onProgress, job, prepare: seekClipsExact, draw: t => R.drawFrame(c, tl, t, env) });
+    const out = await X.encodeMediabunny({ MB, canvas, durationMs: tl.durationMs, mix, fps: 30, onProgress, job, prepare: seekClipsExact, draw: t => R.drawFrame(c, tl, t, envFor(tl)) });
     return { blob: new Blob([out.buffer], { type: 'video/mp4' }), ext: 'mp4', how: 'webcodecs', hasAudio: out.hasAudio };
   }
   // Fallback: the Video Ads path, real time (MediaRecorder).
@@ -2158,7 +2299,7 @@
     const mimeType = pickRecorderFormat();
     if (!mimeType) throw new Error('This browser cannot record video. Use Chrome or Edge.');
     const canvas = document.createElement('canvas');
-    canvas.width = 1080; canvas.height = 1920;
+    [canvas.width, canvas.height] = tl.size || [1080, 1920];
     const c = canvas.getContext('2d');
     const stream = canvas.captureStream(30);
     const ac = audioContext();
@@ -2168,7 +2309,7 @@
     const chunks = [];
     recorder.ondataavailable = e => { if (e.data?.size) chunks.push(e.data); };
     const stopped = new Promise(resolve => { recorder.onstop = resolve; });
-    R.drawFrame(c, tl, 0, env);
+    R.drawFrame(c, tl, 0, envFor(tl));
     recorder.start(500);
     const t0 = ac.currentTime + 0.06;
     if (src) src.start(t0);
@@ -2178,7 +2319,7 @@
         const t = (ac.currentTime - t0) * 1000;
         if (job.cancelled || t >= tl.durationMs) { resolve(); return; }
         syncClips(Math.max(0, t), true);
-        R.drawFrame(c, tl, Math.max(0, t), env);
+        R.drawFrame(c, tl, Math.max(0, t), envFor(tl));
         onProgress(t / tl.durationMs);
         requestAnimationFrame(tick);
       };
@@ -2207,8 +2348,15 @@
     if (!state.lint.ok) { renderExport(); logEvent('lint_blocked', { issues: state.lint.issues.filter(i => i.severity === 'critical').map(i => i.id) }); return; }
     stop();
     const job = { cancelled: false };
+    // ES Reels: the 4:5 feed version is the same reel laid out on 1080x1350
+    // (the ES rules scaled), checked again before it is encoded.
+    let tl = state.timeline;
+    if (esOn() && state.aspect === '4:5') {
+      tl = R.buildTimeline(state.plan, buildOptions({ aspect: '4:5' }));
+      const lint45 = L.lintTimeline(tl, { boxes: R.textBoxes(measure, tl), measure, target: state.target, extraSources: els.extraSource.value });
+      if (!lint45.ok) { els.exportStatus.textContent = `The 4:5 version needs a fix first: ${lint45.issues.find(i => i.severity === 'critical').message}`; return; }
+    }
     state.exporting = job;
-    const tl = state.timeline;
     const bar = els.exportProgress.querySelector('span');
     els.exportProgress.hidden = false;
     bar.style.width = '0%';
@@ -2234,7 +2382,7 @@
       progress(1);
       if (fileUrl) URL.revokeObjectURL(fileUrl);
       fileUrl = URL.createObjectURL(result.blob);
-      const name = `es-reel-${slug(state.plan.title)}-1080x1920.${result.ext}`;
+      const name = `es-reel-${slug(state.plan.title)}-${(tl.size || [1080, 1920]).join('x')}.${result.ext}`;
       const a = document.createElement('a');
       a.href = fileUrl; a.download = name;
       document.body.append(a); a.click(); setTimeout(() => a.remove(), 1000);

@@ -265,7 +265,8 @@ test('paid-league-footage: a paid export of an X or library clip warns; an ES up
 
 test('scorebug-clear: a scorebug in the ES mark\'s clear space blocks export', () => {
   const { tl } = dataLint('timeline-v2-gameswing.json');
-  const boxes = R.allBoxes(measure, tl).map(b => (b.role === 'scorebug' ? { ...b, w: 800 } : b));
+  // The ES mark sits right 60, top 330 (clear space from x 900): a scorebug running to x 948 is in it.
+  const boxes = R.allBoxes(measure, tl).map(b => (b.role === 'scorebug' ? { ...b, w: 860 } : b));
   const res = L.lintTimeline(tl, { boxes, extraSources: T.digestFacts(tl.data.game) });
   assert.ok(has(res, 'scorebug-clear'));
 });
