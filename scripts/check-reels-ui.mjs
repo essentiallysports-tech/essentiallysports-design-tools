@@ -148,7 +148,7 @@ const ws = new WebSocket(pageT.webSocketDebuggerUrl);
 await new Promise(r => ws.addEventListener('open', r, { once: true }));
 let id = 0; const pending = new Map();
 let consoleErrors = [];
-const IGNORE_CONSOLE = [/fonts\.(googleapis|gstatic)/, /cdn\.jsdelivr/, /favicon/];
+const IGNORE_CONSOLE = [/supabase\.co\/rest\/v1\//, /fonts\.(googleapis|gstatic)/, /cdn\.jsdelivr/, /favicon/];
 ws.addEventListener('message', e => {
   const m = JSON.parse(e.data);
   if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); return; }
@@ -160,6 +160,9 @@ const send = (method, params = {}) => new Promise(r => { const i = ++id; pending
 const evaluate = async expr => { const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true, timeout: 60000 }); if (r.result?.exceptionDetails) throw new Error(r.result.exceptionDetails.text + ' ' + (r.result.exceptionDetails.exception?.description || '')); return r.result?.result?.value; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 await send('Page.enable'); await send('Runtime.enable'); await send('Log.enable');
+// Tests never write to production Supabase: the usage tracker (frameup-track.js) would send its rows
+// with the fake QA session above, and the AI spend meter would read with it: block Supabase data calls (they fail either way).
+await send('Network.enable'); await send('Network.setBlockedURLs', { urls: ['*://*.supabase.co/rest/v1/*'] });
 await send('Browser.setDownloadBehavior', { behavior: 'deny' }).catch(() => {}); // exports are checked, never saved
 
 async function setViewport(w) {

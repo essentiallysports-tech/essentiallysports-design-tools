@@ -314,7 +314,7 @@ assert.equal(R.tintLayers({ color: 'red', amount: 0.3 })[0].color, '#000000');
   const textAt = log.findIndex(e => e.fn === 'fillText');
   assert.ok(log[0].fn === 'save' && firstGrad > 0 && firstGrad < pattern && pattern < tintAt && tintAt < textAt, 'gradient, grain, then tint, then copy');
   assert.ok(log.filter(e => e.fn === 'createRadialGradient').length >= 3, 'two lights and a vignette (plus the frame vignette)');
-  assert.deepEqual(R.STILL, { minSeconds: 5, maxSeconds: 15, defaultSeconds: 8 });
+  assert.deepEqual(R.STILL, { minSeconds: 5, maxSeconds: 30, defaultSeconds: 8 }); // custom length up to 30 s (2db0038)
 }
 
 console.log('Video Ads renderer tests passed.');

@@ -51,6 +51,7 @@ const evaluate = async expr => { const r = await send('Runtime.evaluate', { expr
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 await send('Page.enable');
+await send('Network.enable'); await send('Network.setBlockedURLs', { urls: ['*://*.supabase.co/rest/v1/frameup_usage_events*'] }); // tests never write usage rows to production
 await send('Page.navigate', { url: `${base}/__blank` });
 for (let i = 0; i < 40 && (await evaluate('location.href')) !== `${base}/__blank`; i++) await sleep(150);
 // A fake, unexpired, unsigned session: only the page's own gate reads it (APIs are stubbed).

@@ -713,7 +713,7 @@ html:not([data-theme="dark"]) .va-sound { --rail-track: rgb(14 16 20 / .14); }
    (Button padding comes from the es-buttons layer, !important.) */
 .va-toolbar { container: va-toolbar / inline-size; }
 @media (min-width: 901px) { .va-toolbar { flex-wrap: nowrap; } .va-toolbar > .es-segmented { flex: none; } }
-#va-meta-toggle > span, #va-safe-toggle > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+#va-meta-toggle > span, #va-safe-toggle > span, #va-move-text-toggle > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 /* A narrow stage (about 1024-1200 wide windows): tighter, text-only segments so the one row still fits. */
 @media (min-width: 901px) and (max-width: 1199px) { .va-stage .va-toolbar, .va-stage .va-toolbar__end { gap: 4px; } .va-stage .va-toolbar { padding-inline: var(--es-space-2, 8px); } }
 @media (min-width: 901px) {
@@ -729,6 +729,8 @@ html:not([data-theme="dark"]) .va-sound { --rail-track: rgb(14 16 20 / .14); }
 }
 @container va-toolbar (min-width: 760px) { #va-meta-toggle > span { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; } }
 @container va-toolbar (min-width: 860px) { #va-safe-toggle > span { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; } }
+/* "Move text" shows its word last, once all three labels fit; below that it is the icon (aria-label + title say it). */
+@container va-toolbar (min-width: 900px) { #va-move-text-toggle > span { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; } }
 
 /* ── Dialog + toasts ───────────────────────────────────────────────── */
 .va-toasts { position: fixed; left: 50%; top: 20px; z-index: 3000; display: grid; justify-items: center; gap: 8px; width: max-content; max-width: calc(100vw - 32px); transform: translateX(-50%); pointer-events: none; }

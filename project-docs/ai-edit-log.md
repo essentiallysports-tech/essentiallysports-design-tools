@@ -4,6 +4,12 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-21 — Suhail: full check of main; tests no longer touch production; Video Ads toolbar fix (branch suhail/reels-sweep-no-prod-writes)
+- Status: committed, not pushed.
+- Why: a full suite run on main (clean LF copy) found: the Reels sweep sent requests to production Supabase with its fake QA session (usage tracker rows and the AI spend meter; all refused with 401, nothing written); the "Move text" label overflowed the Video Ads toolbar around 1024; two tests still expected old behaviour.
+- Changed: `check-reels-ui` blocks `*.supabase.co/rest/v1/*`; `check-editor-ui` and `check-panel-hygiene` block the usage-events endpoint (both fake a session); `check-pages-ui`, `check-video-ads-ui`, `check-generate-ui` already mock or block Supabase. `video-ads.css`: "Move text" collapses to its icon when the toolbar is under 900px, like Meta preview and Safe zone (cache key `20261125-movelbl` on video-ads.html, design-system.html). `test-video-ads-render` expects the 30 s custom length (2db0038); `test-ai-guardrails` expects Sonnet as default director (f7e049e) and still checks the auto mode (Haiku first, Sonnet on escalation).
+- Tests: full suite on a clean LF copy of main: everything passes except the 3 allowed failures; reels, video-ads and panel-hygiene sweeps now pass; editor sweep passes alone (accordion timing flakes under load). Video Ads toolbar checked at 1024 and 1440.
+
 ## 2026-11-20 — Suhail: Dashboard "Exports over time" chart fix (branch suhail/dashboard-chart-fix)
 - Status: pushed in d7f241f.
 - Why: at 90 days the chart drew ~90 jagged daily points, and the SVG stretches to its box (preserveAspectRatio none), so the end dot was squashed into an oval at the right edge.

@@ -87,6 +87,7 @@ async function openTab() {
     return r.result?.result?.value;
   };
   await send('Page.enable'); await send('Runtime.enable'); await send('Log.enable');
+  await send('Network.enable'); await send('Network.setBlockedURLs', { urls: ['*://*.supabase.co/rest/v1/frameup_usage_events*'] }); // tests never write usage rows to production
   await send('Emulation.setFocusEmulationEnabled', { enabled: true });
   return { ws, send, evaluate, errors, targetId: t.id };
 }
