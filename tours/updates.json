@@ -3,6 +3,30 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-21-es-reels-system",
+      "date": "2026-11-21",
+      "title": "Reels Studio: the ES video team's design system",
+      "commit": "97ad00e",
+      "items": [
+        {
+          "title": "Every reel in the ES system",
+          "text": "The ES video team's reels design system (from Vinay) is now built into Reels Studio and is the default style: ES paper, boxed pills, counting numbers, dots and bars, the blue-then-ink slab wipe on every cut, one-line captions and the ES end card with the source line.",
+          "page": "reel-maker.html"
+        },
+        {
+          "title": "Bring your own script",
+          "text": "Pick Script, paste your words and Reels Studio splits them into scenes with a block each. Your script is never rewritten. Without a voiceover, scenes are timed at 2.6 words a second and marked as estimates.",
+          "page": "reel-maker.html",
+          "target": "#rm-source [data-source=\"script\"]"
+        },
+        {
+          "title": "Checks and guidelines",
+          "text": "Quality checks now include the system's checklist (safe frame, signal colours, copy length, numbers as spoken, end card and source, frame one, banned items) and say Safe frame with a tick when every word is inside. Open ES video guidelines for the rules in plain English, and export a 4:5 feed version too.",
+          "page": "reel-maker.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-21-dashboard-newsletter",
       "date": "2026-11-21",
       "title": "Newsletter exports on the Dashboard",
@@ -286,48 +310,6 @@
           "page": "how-frameup-works.html"
         }
       ]
-    },
-    {
-      "id": "2026-11-21-es-reels-system",
-      "date": "2026-11-21",
-      "title": "Reels Studio: the ES video team's design system",
-      "commit": "97ad00e",
-      "items": [
-        {
-          "title": "Every reel in the ES system",
-          "text": "The ES video team's reels design system (from Vinay) is now built into Reels Studio and is the default style: ES paper, boxed pills, counting numbers, dots and bars, the blue-then-ink slab wipe on every cut, one-line captions and the ES end card with the source line.",
-          "page": "reel-maker.html"
-        },
-        {
-          "title": "Bring your own script",
-          "text": "Pick Script, paste your words and Reels Studio splits them into scenes with a block each. Your script is never rewritten. Without a voiceover, scenes are timed at 2.6 words a second and marked as estimates.",
-          "page": "reel-maker.html",
-          "target": "#rm-source [data-source=\"script\"]"
-        },
-        {
-          "title": "Checks and guidelines",
-          "text": "Quality checks now include the system's checklist (safe frame, signal colours, copy length, numbers as spoken, end card and source, frame one, banned items) and say Safe frame with a tick when every word is inside. Open ES video guidelines for the rules in plain English, and export a 4:5 feed version too.",
-          "page": "reel-maker.html"
-        }
-      ]
-    },
-    {
-      "id": "2026-11-21-video-ads-competitor-ads",
-      "date": "2026-11-21",
-      "title": "Video Ads: competitor ads",
-      "commit": "97ad00e",
-      "items": [
-        {
-          "title": "See what competitors run",
-          "text": "A new Competitor ads button beside the Video Ads steps checks the live Facebook and Instagram ads of sports publishers and newsletters: what has run 30+ days (likely working), what is new this week, the trends, and what likely didn't work.",
-          "page": "video-ads.html"
-        },
-        {
-          "title": "Ideas for our newsletters",
-          "text": "Each check ends with ad ideas for Essentially CFB, ES Dugout and The Huddle. Use this idea fills your copy; Undo puts it back. A check costs under 2 cents, repeat checks within 30 minutes are free, and nothing is saved."
-        }
-      ],
-      "draft": true
     },
     {
       "id": "2026-11-20-inspector",
