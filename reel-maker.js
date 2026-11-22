@@ -3991,4 +3991,26 @@
   window.addEventListener('beforeunload', () => { if (state.plan) store.set(LOCAL_KEY, [snapshot(), ...store.get(LOCAL_KEY, []).filter(p => p.id !== state.projectId)].slice(0, 12)); });
 
   window.ReelMakerPage = { pickFormat: G && TL ? pickFormat : null, openGallery: G && TL ? openGallery : null, setSource: G && TL ? setSource : null, setView: G && TL ? setView : null, state, rebuild, applyPlan, draw, seek, play, stop, goStep, renderMix, exportReel, makeVoice, restore, loadConfig, loadTrends, makeReel, fillVisuals, selectBeat, renderEdit, renderStyles, visualAction, addClipAsset, setVisual, clipShare };
+  // ── Page context for add-on modules (Reels Studio 2.0) ────────────────────
+  // New features (storyboard, media tray, voice input, ideas room, radar,
+  // a11y) live in their own files and attach here instead of growing this
+  // one. No behaviour change: this only publishes what the page already has.
+  //   ctx.on(event, fn) / ctx.emit(event, data): 'plan' (a plan was applied),
+  //   'rebuild' (timeline rebuilt), 'beat' (selection changed), 'step'.
+  //   ctx.register(name, api): a module publishes its own API for others.
+  const ctxListeners = new Map();
+  const pageCtx = {
+    state, els, store, F, R, ES: window.ReelES || null,
+    api, toast, logEvent, goStep, rebuild, draw, seek, play, stop, applyPlan, restore, snapshot,
+    selectBeat, addBeat, renderBeats, renderStrip, renderEdit, renderExport, renderLint, renderAutoline, renderStyles, renderTrends, renderRecent,
+    setEsField, setField, esFields, beatFields, visualCard, visualAction, setVisual,
+    addClipAsset, loadClip, useXClip, usePhoto, searchPhotos, fillVisuals, setMusic,
+    makeReel, makeFromScript, makeVoice, ensureVoice, restoreVoiceFromCache, renderMix, exportReel, exportCarousel, costHtml, readHandoff,
+    modules: {},
+    register(name, moduleApi) { pageCtx.modules[name] = moduleApi; pageCtx.emit('module', { name }); return moduleApi; },
+    on(event, fn) { if (!ctxListeners.has(event)) ctxListeners.set(event, new Set()); ctxListeners.get(event).add(fn); return () => ctxListeners.get(event)?.delete(fn); },
+    emit(event, data) { (ctxListeners.get(event) || []).forEach(fn => { try { fn(data); } catch (error) { window.FrameUpErrors?.report?.(error, `reels ctx ${event}`); } }); },
+  };
+  window.ReelMakerCtx = pageCtx;
+  document.dispatchEvent(new CustomEvent('reelmaker:ready', { detail: { ctx: pageCtx } }));
 })();
