@@ -2347,3 +2347,8 @@ exports.handler = withAiMode(async function handler(event) {
 
 // Pure helpers, exported for scripts/test-es-generate.mjs.
 exports._test = { creative, onBrand, searchPhotos, classicPhotos, verifiedPhotosFor, IMAGE_SEARCH_CACHE, PHOTO_PICK_CACHE, readBrief: readBriefFor, directorAllowed, directorNote, designsPerDirection, pastPostCard, REWRITES, clock, DIRECTOR_START_BY_MS, TEMPLATES, checkFields, checkSpec, classifyTools, buildArgs, extractJson, draftPlan, chunkWords, keyTerms, mainWord, sportFromUrl, brandHints, parseEsArticles, buildPrompt, parseTableBrief, tableDesign, fakeQuote, squash, repairPrompt, nameCandidates, esCoverage, sceneText, pickPhoto, photoCandidates, COVERAGE_CACHE, pickProvider, chat };
+
+// ── Reels 2.0: lane B ── ES data for the Reels ideas room and news reels
+// (netlify/functions/_reel-ideas.js). Additive: the same functions Generate
+// uses, exported as they are; nothing above changes.
+exports.esData = { esCoverage, queryEsArticles, research, discover, keyTerms, nameCandidates, isEsUrl };
